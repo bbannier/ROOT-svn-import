@@ -103,6 +103,9 @@ SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 endif
 endif
+ifeq ($(PLATFORM),ios)
+MODULES      += graf2d/ios
+endif
 ifeq ($(BUILDX11),yes)
 MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
@@ -210,7 +213,6 @@ ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
 endif
 ifeq ($(BUILDCLING),yes)
-# to be added to the unconditional MODULES list above once cling is in trunk
 MODULES      += cint/cling
 endif
 ifeq ($(BUILDROOFIT),yes)
@@ -292,7 +294,7 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench proof/afdsmgrd
+                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -315,8 +317,11 @@ BOOTLIBS     := -lCore -lCint -lMathCore
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += -lCintex -lReflex
 endif
-ROOTLIBS     := $(BOOTLIBS) -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
-                -lTree -lMatrix -lThread
+ifeq ($(BUILDCLING),yes)
+BOOTLIBS     += -lCling
+endif
+ROOTLIBS     := -lRIO -lHist -lGraf -lGraf3d -lGpad \
+                -lTree -lMatrix -lNet -lThread $(BOOTLIBS)
 RINTLIBS     := -lRint
 else
 CINTLIBS     := $(LPATH)/libCint.lib
@@ -326,11 +331,14 @@ BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 endif
-ROOTLIBS     := $(BOOTLIBS) $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
-                $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
-                $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
-                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
-                $(LPATH)/libThread.lib
+ifeq ($(BUILDCLING),yes)
+BOOTLIBS     += $(LPATH)/libCling.lib
+endif
+ROOTLIBS     := $(LPATH)/libRIO.lib $(LPATH)/libHist.lib \
+                $(LPATH)/libGraf.lib $(LPATH)/libGraf3d.lib \
+                $(LPATH)/libGpad.lib $(LPATH)/libTree.lib \
+                $(LPATH)/libMatrix.lib $(LPATH)/libNet.lib \
+                $(LPATH)/libThread.lib $(BOOTLIBS)
 RINTLIBS     := $(LPATH)/libRint.lib
 endif
 
@@ -496,12 +504,12 @@ STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
 
 ##### libCore #####
 
-COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) \
+COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) $(ZIPL) \
                 $(SYSTEML) $(CLIBL) $(METAUTILSL) $(TEXTINPUTL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(LZMAO) \
-                $(CLIBO) $(METAUTILSO) $(TEXTINPUTO) $(CLINGO)
-COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) \
-                $(CLIBDO) $(METAUTILSDO) $(TEXTINPUTDO) $(CLINGDO)
+                $(CLIBO) $(METAUTILSO) $(TEXTINPUTO)
+COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) $(ZIPDO) \
+                $(CLIBDO) $(METAUTILSDO) $(TEXTINPUTDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
@@ -525,6 +533,9 @@ ifeq ($(EXPLICITLINK),yes)
 MAINLIBS     := $(CORELIB) $(CINTLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 MAINLIBS     += $(CINTEXLIB) $(REFLEXLIB)
+endif
+ifeq ($(BUILDCLING),yes)
+MAINLIBS     += $(CLINGLIB)
 endif
 else
 MAINLIBS      =
@@ -568,18 +579,6 @@ cint/cint/lib/G__c_%.o: cint/cint/lib/G__c_%.c
 	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
 	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
 
-G__%.o: G__%.cxx
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CXXFLAGS) -D__cplusplus -I$(CINTDIRL)/prec_stl \
-	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CXX) $(NOOPT) $(CXXFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
-
-G__c_%.o: G__c_%.c
-	$(MAKEDEP) -R -f$(patsubst %.o,%.d,$@) -Y -w 1000 -- \
-	   $(CFLAGS) -I$(CINTDIRL)/prec_stl \
-	   -I$(CINTDIRSTL) -I$(CINTDIR)/inc -- $<
-	$(CC) $(NOOPT) $(CFLAGS) -I. -I$(CINTDIR)/inc  $(CXXOUT)$@ -c $<
-
 cint/cint/%.o: cint/cint/%.cxx
 	$(MAKEDEP) -R -fcint/cint/$*.d -Y -w 1000 -- $(CINTCXXFLAGS) -I. -D__cplusplus -- $<
 	$(CXX) $(OPT) $(CINTCXXFLAGS) -I. $(CXXOUT)$@ -c $<
@@ -604,9 +603,20 @@ build/rmkdepend/%.o: $(ROOT_SRCDIR)/build/rmkdepend/%.c
 
 define SRCTOOBJ_template
 $(1)/%_tmp.o: $(1)/%_tmp.cxx
-	$$(MAKEDIR)
 	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
 	$$(CXX) $$(OPT) $$(CXXFLAGS) $$(CXXOUT)$$@ -c $$<
+
+$(1)/src/G__%.o: $(1)/src/G__%.cxx
+	$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
+	  $$(CXXFLAGS) -D__cplusplus -I$$(CINTDIRL)/prec_stl \
+	  -I$$(CINTDIRSTL) -I$$(CINTDIR)/inc -- $$<
+	$$(CXX) $$(NOOPT) $$(CXXFLAGS) -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
+
+$(1)/src/G__c_%.o: $(1)/src/G__c_%.c
+	$$(MAKEDEP) -R -f$$(patsubst %.o,%.d,$$@) -Y -w 1000 -- \
+	  $$(CFLAGS) -I$$(CINTDIRL)/prec_stl \
+	  -I$$(CINTDIRSTL) -I$$(CINTDIR)/inc -- $$<
+	$$(CC) $$(NOOPT) $$(CFLAGS) -I. -I$$(CINTDIR)/inc  $$(CXXOUT)$$@ -c $$<
 
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.cxx
 	$$(MAKEDIR)
@@ -754,7 +764,8 @@ $(COMPILEDATA): $(ROOT_SRCDIR)/config/Makefile.$(ARCH) config/Makefile.comp \
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
-	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" "$(EXPLICITLINK)"
+	   "$(MAKESHAREDLIB)" "$(MAKEEXE)" "$(ARCH)" "$(ROOTBUILD)" \
+	   "$(EXPLICITLINK)"
 
 ifeq ($(HOST),)
 build/dummy.d: config Makefile $(ALLHDRS) $(RMKDEP) $(BINDEXP)
@@ -765,15 +776,15 @@ endif
 	   touch $@; \
 	fi)
 
-$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
+$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(CLINGDEP) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 else
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
 	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
@@ -1015,7 +1026,7 @@ $(ROOTA) $(PROOFSERVA): $(ROOTALIB) $(MAKESTATIC) $(STATICOBJLIST)
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)" $(STATICOBJLIST)
 
-$(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST)
+$(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST) $(IOSO)
 	@$(MAKESTATICLIB) $(STATICOBJLIST)
 
 plugins-ios: $(ROOTEXE)

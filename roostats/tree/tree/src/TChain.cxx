@@ -289,7 +289,18 @@ Int_t TChain::Add(const char* name, Long64_t nentries /* = kBigNumber */)
    //            ... do something with f ...
    //         }
    //
-   // The function returns the total number of files connected.
+   // Return value:
+   //
+   // If nentries>0 (including the default of kBigNumber) and no
+   // wildcarding is used, ALWAYS returns 1 without regard to whether
+   // the file exists or contains the correct tree.
+   //
+   // If wildcarding is used, regardless of the value of nentries,
+   // returns the number of files matching the name without regard to
+   // whether they contain the correct tree.
+   //
+   // If nentries<=0 and wildcarding is not used, return 1 if the file
+   // exists and contains the correct tree and 0 otherwise.
 
    // case with one single file
    if (!TString(name).MaybeWildcard()) {
@@ -412,6 +423,10 @@ Int_t TChain::AddFile(const char* name, Long64_t nentries /* = kBigNumber */, co
    //
    // The function returns 1 if the file is successfully connected, 0 otherwise.
 
+   if(name==0 || name[0]=='\0') {
+      Error("AddFile", "No file name; no files connected");
+      return 0;
+   }
 
    const char *treename = GetName();
    if (tname && strlen(tname) > 0) treename = tname;
@@ -999,6 +1014,27 @@ TFile* TChain::GetFile() const
 }
 
 //______________________________________________________________________________
+TLeaf* TChain::GetLeaf(const char* branchname, const char *leafname)
+{
+   // -- Return a pointer to the leaf name in the current tree.
+   
+   if (fProofChain && !(fProofChain->TestBit(kProofLite))) {
+      // Make sure the element list is uptodate
+      if (!TestBit(kProofUptodate))
+         SetProof(kTRUE, kTRUE);
+      return fProofChain->GetLeaf(branchname, leafname);
+   }
+   if (fTree) {
+      return fTree->GetLeaf(branchname, leafname);
+   }
+   LoadTree(0);
+   if (fTree) {
+      return fTree->GetLeaf(branchname, leafname);
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
 TLeaf* TChain::GetLeaf(const char* name)
 {
    // -- Return a pointer to the leaf name in the current tree.
@@ -1183,6 +1219,14 @@ Long64_t TChain::LoadTree(Long64_t entry)
    //
    // The input argument entry is the entry serial number in the whole chain.
    //
+   // In case of error, LoadTree returns a negative number:
+   //   -1: The chain is empty.
+   //   -2: The requested entry number of less than zero or too large for the chain.
+   //       or too large for the large TTree.
+   //   -3: The file corresponding to the entry could not be correctly open
+   //   -4: The TChainElement corresponding to the entry is missing or 
+   //       the TTree is missing from the file.
+   //
    // Note: This is the only routine which sets the value of fTree to
    //       a non-zero pointer.
    //
@@ -1195,7 +1239,7 @@ Long64_t TChain::LoadTree(Long64_t entry)
 
    if (!fNtrees) {
       // -- The chain is empty.
-      return 1;
+      return -1;
    }
 
    if ((entry < 0) || ((entry > 0) && (entry >= fEntries && entry!=(theBigNumber-1) ))) {

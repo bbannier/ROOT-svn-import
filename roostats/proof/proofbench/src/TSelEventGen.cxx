@@ -36,13 +36,15 @@
 #include "TRandom.h"
 #include "Event.h"
 #include "TProofServ.h"
+#include "TMacro.h"
 
 ClassImp(TSelEventGen)
 
 //______________________________________________________________________________
 TSelEventGen::TSelEventGen()
              : fBaseDir(""), fNEvents(100000), fNTracks(100), fNTracksMax(-1),
-               fRegenerate(kFALSE), fTotalGen(0), fFilesGenerated(0), fChain(0)
+               fRegenerate(kFALSE), fTotalGen(0), fFilesGenerated(0),
+               fGenerateFun(0), fChain(0)
 {
    // Constructor
    if (gProofServ){
@@ -119,7 +121,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
                   u.SetFile(TString::Format("%s/%s", fBaseDir.Data(), u.GetFile())); 
                if ((gSystem->AccessPathName(u.GetFile()) &&
                     gSystem->mkdir(u.GetFile(), kTRUE) == 0) ||
-                    gSystem->AccessPathName(u.GetFile(), kWritePermission)) {
+                    !gSystem->AccessPathName(u.GetFile(), kWritePermission)) {
                     // Directory is writable
                     fBaseDir = u.GetFile();
                     Info("SlaveBegin", "Using directory \"%s\"", fBaseDir.Data());
@@ -188,6 +190,13 @@ void TSelEventGen::SlaveBegin(TTree *tree)
          }
          continue;
       }
+      if (sinput.Contains("PROOF_GenerateFun")){
+         TNamed *a = dynamic_cast<TNamed*>(obj);
+         if (!(fGenerateFun = dynamic_cast<TMacro *>(fInput->FindObject(a->GetTitle())))) {
+            Error("SlaveBegin", "PROOF_GenerateFun requires the TMacro object in the input list");
+         }
+         continue;
+      }
    }
    
    if (!found_basedir){
@@ -227,7 +236,7 @@ void TSelEventGen::SlaveBegin(TTree *tree)
 }
 
 //______________________________________________________________________________
-Long64_t TSelEventGen::GenerateFiles(TString filename, Long64_t sizenevents)
+Long64_t TSelEventGen::GenerateFiles(const char *filename, Long64_t sizenevents)
 {
 //Generate files for IO-bound run
 //Input parameters
@@ -267,7 +276,7 @@ Long64_t TSelEventGen::GenerateFiles(TString filename, Long64_t sizenevents)
 //   f->SetCompressionLevel(0); //no compression
    Int_t ntrks = fNTracks;
    
-   Info("GenerateFiles", "Generating %s", filename.Data());   
+   Info("GenerateFiles", "Generating %s", filename);   
    while (sizenevents--){
       //event->Build(i++,fNTracksBench,0);
       if (fNTracksMax > fNTracks) {
@@ -278,8 +287,7 @@ Long64_t TSelEventGen::GenerateFiles(TString filename, Long64_t sizenevents)
       size_generated+=eventtree->Fill();
    }
    nentries=eventtree->GetEntries();
-   Info("GenerateFiles", "%s generated with %lld entries", filename.Data(),
-                                                              nentries);
+   Info("GenerateFiles", "%s generated with %lld entries", filename, nentries);
    savedir = gDirectory;
 
    f = eventtree->GetCurrentFile();
@@ -380,9 +388,30 @@ Bool_t TSelEventGen::Process(Long64_t entry)
       SafeDelete(f);
    } 
 
+   // Make sure there is enough space left of the device, if local
+   if (!gSystem->AccessPathName(fBaseDir)) {
+      Long_t devid, devbsz, devbtot, devbfree;
+      gSystem->GetFsInfo(fBaseDir, &devid, &devbsz, &devbtot, &devbfree);
+      // Must be more than 10% of space and at least 1 GB
+      Long_t szneed = 1024 * 1024 * 1024, tomb = 1024 * 1024;
+      if (devbfree * devbsz < szneed || devbfree < 0.1 * devbtot) {
+         Error("Process", "not enough free space on device (%ld MB < {%ld, %ld} MB):"
+                          " skipping generation of: %s",
+                          (devbfree * devbsz) / tomb,
+                          szneed / tomb, (Long_t) (0.1 * devbtot * devbsz / tomb),
+                          filename.Data());
+         fStatus = TSelector::kAbortFile;
+      }
+   }
+
    if (!filefound) {  // Generate
       gRandom->SetSeed(static_cast<UInt_t>(TMath::Hash(seed)));
-      entries_file = GenerateFiles(filename, neventstogenerate);
+      if (fGenerateFun) {
+         TString fargs = TString::Format("\"%s\",%lld", filename.Data(), neventstogenerate);        
+         entries_file = (Long64_t) fGenerateFun->Exec(fargs);
+      } else {
+         entries_file = GenerateFiles(filename, neventstogenerate);
+      }
 
       TFile *f = TFile::Open(filename);
       if (f && !f->IsZombie()) {
@@ -391,6 +420,7 @@ Bool_t TSelEventGen::Process(Long64_t entry)
          f->Close();
       } else {
          Error("Process", "can not open generated file: %s", filename.Data());
+         fStatus = TSelector::kAbortFile;
          return kFALSE;
       }
       

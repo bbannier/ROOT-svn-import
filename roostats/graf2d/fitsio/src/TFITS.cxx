@@ -289,7 +289,10 @@ Bool_t TFITSHDU::LoadHDU(TString& filepath_filter)
          //Read image sizes in each dimension
          param_dimsizes = new long[param_ndims];
          fits_get_img_size(fp, param_ndims, param_dimsizes, &status);
-         if (status) goto ERR;
+         if (status) {
+            delete [] param_dimsizes;
+            goto ERR;
+         }
 
          fSizes = new TArrayI(param_ndims);
          fSizes = new TArrayI(param_ndims);
@@ -785,6 +788,7 @@ TImage *TFITSHDU::ReadAsImage(Int_t layer, TImagePalette *pal)
    //Build the image stretching pixels into a range from 0.0 to 255.0
    //TImage *im = new TImage(width, height);
    TImage *im = TImage::Create();
+   if (!im) return 0;
    TArrayD *layer_pixels = new TArrayD(pixels_per_layer);
 
 
@@ -880,7 +884,6 @@ TMatrixD* TFITSHDU::ReadAsMatrix(Int_t layer, Option_t *opt)
    Int_t offset;
    register UInt_t i;
    TMatrixD *mat=0;
-   double *layer_pixels=0;
    
    width  = Int_t(fSizes->GetAt(0));
    height = Int_t(fSizes->GetAt(1));
@@ -888,6 +891,8 @@ TMatrixD* TFITSHDU::ReadAsMatrix(Int_t layer, Option_t *opt)
    pixels_per_layer = UInt_t(width) * UInt_t(height);
    offset = layer * pixels_per_layer;
    
+   double *layer_pixels = new double[pixels_per_layer];
+
    if ((opt[0] == 'S') || (opt[0] == 's')) {
       //Stretch
       // Get the maximum and minimum pixel values in the layer to auto-stretch pixels
@@ -913,7 +918,6 @@ TMatrixD* TFITSHDU::ReadAsMatrix(Int_t layer, Option_t *opt)
       } else {
          factor = 1.0 / (maxval-minval);
          mat = new TMatrixD(height, width);
-         layer_pixels = new double[pixels_per_layer];
       
          for (i = 0; i < pixels_per_layer; i++) {
             layer_pixels[i] = factor * (fPixels->GetAt(offset + i) - minval);
@@ -922,7 +926,6 @@ TMatrixD* TFITSHDU::ReadAsMatrix(Int_t layer, Option_t *opt)
       
    } else {
       //No stretching
-      layer_pixels = new double[pixels_per_layer];
       mat = new TMatrixD(height, width);
       
       for (i = 0; i < pixels_per_layer; i++) {
@@ -930,8 +933,9 @@ TMatrixD* TFITSHDU::ReadAsMatrix(Int_t layer, Option_t *opt)
       }
    }
 
-   mat->Use(height, width, layer_pixels);
+   if (mat) mat->Use(height, width, layer_pixels);
 
+   delete [] layer_pixels;
    return mat;
 }
 

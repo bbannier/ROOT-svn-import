@@ -112,7 +112,7 @@
 #include "import.h"
 #include "export.h"
 #include "ascmap.h"
-#include "bmp.h"
+//#include "bmp.h"
 
 #ifdef jmpbuf
 #undef jmpbuf
@@ -147,6 +147,7 @@ ASImage2file( ASImage *im, const char *dir, const char *file,
 	int   filename_len, dirname_len = 0 ;
 	char *realfilename = NULL ;
 	Bool  res = False ;
+   int typei = (int) type;
 
 	if( im == NULL ) return False;
 
@@ -166,7 +167,7 @@ ASImage2file( ASImage *im, const char *dir, const char *file,
 		unix_path2dos_path( realfilename );
 #endif
 	}
-	if( type >= ASIT_Unknown || type < 0 )
+	if( type >= ASIT_Unknown || typei < 0 )
 		show_error( "Hmm, I don't seem to know anything about format you trying to write file \"%s\" in\n.\tPlease check the manual", realfilename );
    	else if( as_image_file_writers[type] )
    		res = as_image_file_writers[type](im, realfilename, params);
@@ -182,7 +183,7 @@ ASImage2file( ASImage *im, const char *dir, const char *file,
 /***********************************************************************************/
 /* Some helper functions :                                                         */
 
-static FILE*
+FILE*
 open_writeable_image_file( const char *path )
 {
 	FILE *fp = NULL;
@@ -496,7 +497,7 @@ ASImage2png_int ( ASImage *im, void *data, png_rw_ptr write_fn, png_flush_ptr fl
 	png_ptr = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
     if ( png_ptr != NULL )
     	if( (info_ptr = png_create_info_struct(png_ptr)) != NULL )
-			if( setjmp(png_ptr->jmpbuf) )
+			if( setjmp(png_jmpbuf(png_ptr)) )
 			{
 				png_destroy_info_struct(png_ptr, (png_infopp) &info_ptr);
 				info_ptr = NULL ;
@@ -925,100 +926,7 @@ ASImage2ppm ( ASImage *im, const char *path,  ASImageExportParams *params )
 }
 
 /***********************************************************************************/
-/* Windows BMP file format :   									   				   */
-static size_t
-bmp_write32 (FILE *fp, CARD32 *data, int count)
-{
-  	size_t total = count;
-	if( count > 0 )
-	{
-#ifdef WORDS_BIGENDIAN                         /* BMPs are encoded as Little Endian */
-		CARD8 *raw = (CARD8*)data ;
-#endif
-		count = 0 ;
-#ifdef WORDS_BIGENDIAN                         /* BMPs are encoded as Little Endian */
-		while( count < total )
-		{
-			data[count] = (raw[0]<<24)|(raw[1]<<16)|(raw[2]<<8)|raw[3];
-			++count ;
-			raw += 4 ;
-		}
-#endif
-		total = fwrite((char*) data, sizeof (CARD8), total<<2, fp)>>2;
-	}
-	return total;
-}
-
-static size_t
-bmp_write16 (FILE *fp, CARD16 *data, int count)
-{
-  	size_t total = count;
-	if( count > 0 )
-	{
-#ifdef WORDS_BIGENDIAN                         /* BMPs are encoded as Little Endian */
-		CARD8 *raw = (CARD8*)data ;
-#endif
-		count = 0 ;
-#ifdef WORDS_BIGENDIAN                         /* BMPs are encoded as Little Endian */
-		while( count < total )
-		{
-			data[count] = (raw[0]<<16)|raw[1];
-			++count ;
-			raw += 2 ;
-		}
-#endif
-		total = fwrite((char*) data, sizeof (CARD8), total<<1, fp)>>1;
-	}
-	return total;
-}
-
-Bool
-ASImage2bmp ( ASImage *im, const char *path,  ASImageExportParams *params )
-{
-	Bool success = False;
-	FILE *outfile = NULL ;
-	START_TIME(started);
-
-	if ((outfile = open_writeable_image_file( path )) != NULL)
-	{
-		void *bmbits ;
-		BITMAPINFO *bmi = ASImage2DBI( get_default_asvisual(), im, 0, 0, im->width, im->height, &bmbits, 0 );
-		if( bmi != NULL && bmbits != NULL ) 
-		{
-			BITMAPFILEHEADER bmh ;
-			int bits_size = (((bmi->bmiHeader.biWidth*3+3)/4)*4)*bmi->bmiHeader.biHeight;          /* DWORD aligned */
-
-			bmh.bfType = BMP_SIGNATURE;
-		    bmh.bfSize = 14+bmi->bmiHeader.biSize+bits_size; /* Specifies the size, in bytes, of the bitmap file */
-		    bmh.bfReserved1 = 0;
-			bmh.bfReserved2 = 0;
-		    bmh.bfOffBits = 14+bmi->bmiHeader.biSize; /* Specifies the offset, in bytes, 
-							   * from the BITMAPFILEHEADER structure to the bitmap bits */
-			/* writing off the header */
-			bmp_write16( outfile, &bmh.bfType, 1 );
-			bmp_write32( outfile, &bmh.bfSize, 3 );
-			/* writing off the bitmapinfo : */
-			bmp_write32( outfile, &bmi->bmiHeader.biSize, 1 );
-			bmp_write32( outfile, (CARD32*)&bmi->bmiHeader.biWidth, 2 );
-			bmp_write16( outfile, &bmi->bmiHeader.biPlanes, 2 );
-			/* bmi->bmiHeader.biCompression = 0 ; */
-			bmp_write32( outfile, &bmi->bmiHeader.biCompression, 6 );
-
-			/* writing off the bitmapbits */
-			if (fwrite( bmbits, sizeof(CARD8), bits_size, outfile ) == bits_size)
-				success = True;
-				
-			free( bmbits );
-			free( bmi );
-			
-		}
-		if (outfile != stdout)
-			fclose(outfile);
-	}
-	SHOW_TIME("image export",started);
-	return success;
-}
-
+/* Windows BMP file format :   	see bmp.c								   				   */
 /***********************************************************************************/
 /* Windows ICO/CUR file format :   									   			   */
 Bool

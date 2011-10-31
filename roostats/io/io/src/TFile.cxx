@@ -1,3 +1,4 @@
+
 // @(#)root/io:$Id$
 // Author: Rene Brun   28/11/94
 
@@ -114,9 +115,7 @@
 #include <set>
 #include "TSchemaRule.h"
 #include "TSchemaRuleSet.h"
-
-TFile *gFile;                 //Pointer to current file
-
+#include "TThreadSlots.h"
 
 Long64_t TFile::fgBytesRead  = 0;
 Long64_t TFile::fgBytesWrite = 0;
@@ -881,10 +880,14 @@ void TFile::Close(Option_t *option)
    }
    pidDeleted.Delete();
 
-   R__LOCKGUARD2(gROOTMutex);
-   gROOT->GetListOfFiles()->Remove(this);
-   gROOT->GetListOfBrowsers()->RecursiveRemove(this);
-   gROOT->GetListOfClosedObjects()->Add(this);
+   if (!IsZombie()) {
+      R__LOCKGUARD2(gROOTMutex);
+      gROOT->GetListOfFiles()->Remove(this);
+      gROOT->GetListOfBrowsers()->RecursiveRemove(this);
+      gROOT->GetListOfClosedObjects()->Add(this);
+   } else {
+      // If we are a zombie, we are already in the list of closed objects.
+   }
 }
 
 //____________________________________________________________________________________
@@ -901,6 +904,21 @@ TKey* TFile::CreateKey(TDirectory* mother, const void* obj, const TClass* cl, co
    // Creates key for object and converts data to buffer.
 
    return new TKey(obj, cl, name, bufsize, mother);
+}
+
+//____________________________________________________________________________________
+TFile *&TFile::CurrentFile()
+{
+   // Return the current ROOT file if any.
+   // Note that if 'cd' has been called on a TDirectory that does not belong to a file,
+   // gFile will be unchanged and still points to the file of the previous current
+   // directory that was a file.
+   
+   static TFile *currentFile = 0;
+   if (!gThreadTsd)
+      return currentFile;
+   else
+      return *(TFile**)(*gThreadTsd)(&currentFile,ROOT::kFileThreadSlot);   
 }
 
 //______________________________________________________________________________
@@ -1088,6 +1106,9 @@ Int_t TFile::GetRecordHeader(char *buf, Long64_t first, Int_t maxbytes, Int_t &n
    // Note that the arguments objlen and keylen are returned only
    // if maxbytes >=16
 
+   nbytes = 0;
+   objlen = 0;
+   keylen = 0;
    if (first < fBEGIN) return 0;
    if (first > fEND)   return 0;
    Seek(first);
@@ -2048,9 +2069,6 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
       return 0;
    }
 
-   TDirectory *cursav = gDirectory;
-   cd();
-
    if (gDebug) {
       if (!GetTitle() || strlen(GetTitle()) == 0)
          Info("Write", "writing name = %s", GetName());
@@ -2065,11 +2083,6 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
    WriteHeader();                     // Now write file header
    fMustFlush = kTRUE;
 
-   if (cursav) {
-      cursav->cd();
-   } else {
-      gDirectory = 0;
-   }
    return nbytes;
 }
 
@@ -2839,7 +2852,10 @@ void TFile::ReadStreamerInfo()
       TObjLink *lnk = list->FirstLink();
       while (lnk) {
          info = (TStreamerInfo*)lnk->GetObject();
-
+         if (info == 0) {
+            lnk = lnk->Next();
+            continue;
+         }
          if (info->IsA() != TStreamerInfo::Class()) {
             if (mode==1) {
                TObject *obj = (TObject*)info;
@@ -2861,6 +2877,11 @@ void TFile::ReadStreamerInfo()
          }
          // This is a quick way (instead of parsing the name) to see if this is
          // the description of an STL container.
+         if (info->GetElements()==0) {
+            Warning("ReadStreamerInfo","The StreamerInfo for %s does not have a list of elements.",info->GetName());
+            lnk = lnk->Next();
+            continue;
+         }
          TObject *element = info->GetElements()->UncheckedAt(0);
          Bool_t isstl = element && strcmp("This",element->GetName())==0;
 
@@ -2992,11 +3013,12 @@ void TFile::WriteStreamerInfo()
          }
       }
    }
-   if (list.GetSize() == 0) return;
+
+   // Write the StreamerInfo list even if it is empty.
    fClassIndex->fArray[0] = 2; //to prevent adding classes in TStreamerInfo::TagFile
 
    if (listOfRules.GetEntries()) {
-      // Only the list of rules if we have something to say.
+      // Only add the list of rules if we have something to say.
       list.Add(&listOfRules);
    }
 
@@ -3348,68 +3370,77 @@ TFile *TFile::Open(const char *url, Option_t *options, const char *ftitle,
                return TFile::Open(fh);
       }
 
-      // Resolve the file type; this also adjusts names
-      TString lfname = gEnv->GetValue("Path.Localroot", "");
-      type = GetType(name, option, &lfname);
+      TString urlOptions(urlname.GetOptions());
+      if (urlOptions.BeginsWith("pmerge") || urlOptions.Contains("&pmerge") || urlOptions.Contains(" pmerge")) {
+         type = kMerge;
 
-      if (type == kLocal) {
-
-         // Local files
-         if (lfname.IsNull()) {
-            urlname.SetHost("");
-            urlname.SetProtocol("file");
-            lfname = urlname.GetUrl();
-         }
-         f = new TFile(lfname.Data(), option, ftitle, compress);
-
-      } else if (type == kNet) {
-
-         // Network files
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
-            if (h->LoadPlugin() == -1)
-               return 0;
-            f = (TFile*) h->ExecPlugin(5, name.Data(), option, ftitle, compress, netopt);
-         }
-
-      } else if (type == kWeb) {
-
-         // Web files
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
-            if (h->LoadPlugin() == -1)
-               return 0;
-            f = (TFile*) h->ExecPlugin(2, name.Data(), option);
-         }
-
-      } else if (type == kFile) {
-
-         // 'file:' protocol
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name)) &&
-            h->LoadPlugin() == 0) {
-            name.ReplaceAll("file:", "");
-            f = (TFile*) h->ExecPlugin(4, name.Data(), option, ftitle, compress);
-         } else
-            f = new TFile(name.Data(), option, ftitle, compress);
-
+         // Pass the full name including the url options:
+         f = (TFile*) gROOT->ProcessLineFast(TString::Format("new TParallelMergingFile(\"%s\",\"%s\",\"%s\",%d)",n.Data(),option,ftitle,compress));
+        
       } else {
-
-         // no recognized specification: try the plugin manager
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name.Data()))) {
-            if (h->LoadPlugin() == -1)
-               return 0;
-            TClass *cl = TClass::GetClass(h->GetClass());
-            if (cl && cl->InheritsFrom("TNetFile"))
+         // Resolve the file type; this also adjusts names
+         TString lfname = gEnv->GetValue("Path.Localroot", "");
+         type = GetType(name, option, &lfname);
+         
+         if (type == kLocal) {
+            
+            // Local files
+            if (lfname.IsNull()) {
+               urlname.SetHost("");
+               urlname.SetProtocol("file");
+               lfname = urlname.GetUrl();
+            }
+            f = new TFile(lfname.Data(), option, ftitle, compress);
+            
+         } else if (type == kNet) {
+            
+            // Network files
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
+               if (h->LoadPlugin() == -1)
+                  return 0;
                f = (TFile*) h->ExecPlugin(5, name.Data(), option, ftitle, compress, netopt);
-            else
+            }
+            
+         } else if (type == kWeb) {
+            
+            // Web files
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
+               if (h->LoadPlugin() == -1)
+                  return 0;
+               f = (TFile*) h->ExecPlugin(2, name.Data(), option);
+            }
+            
+         } else if (type == kFile) {
+            
+            // 'file:' protocol
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name)) &&
+                h->LoadPlugin() == 0) {
+               name.ReplaceAll("file:", "");
                f = (TFile*) h->ExecPlugin(4, name.Data(), option, ftitle, compress);
+            } else
+               f = new TFile(name.Data(), option, ftitle, compress);
+            
          } else {
-            // Just try to open it locally but via TFile::Open, so that we pick-up the correct
-            // plug-in in the case file name contains information about a special backend (e.g.
-            // "srm://srm.cern.ch//castor/cern.ch/grid/..." should be considered a castor file
-            // /castor/cern.ch/grid/...").
-            f = TFile::Open(urlname.GetFileAndOptions(), option, ftitle, compress);
+            
+            // no recognized specification: try the plugin manager
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name.Data()))) {
+               if (h->LoadPlugin() == -1)
+                  return 0;
+               TClass *cl = TClass::GetClass(h->GetClass());
+               if (cl && cl->InheritsFrom("TNetFile"))
+                  f = (TFile*) h->ExecPlugin(5, name.Data(), option, ftitle, compress, netopt);
+               else
+                  f = (TFile*) h->ExecPlugin(4, name.Data(), option, ftitle, compress);
+            } else {
+               // Just try to open it locally but via TFile::Open, so that we pick-up the correct
+               // plug-in in the case file name contains information about a special backend (e.g.
+               // "srm://srm.cern.ch//castor/cern.ch/grid/..." should be considered a castor file
+               // /castor/cern.ch/grid/...").
+               f = TFile::Open(urlname.GetFileAndOptions(), option, ftitle, compress);
+            }
          }
       }
-
+      
       if (f && f->IsZombie()) {
          delete f;
          f = 0;
@@ -3988,7 +4019,9 @@ TFile::EFileType TFile::GetType(const char *name, Option_t *option, TString *pre
       //
       // Adjust the type according to findings
       type = (localFile) ? kLocal : type;
-   } else if (!strncmp(name, "http:", 5)) {
+   } else if (!strncmp(name, "http:", 5) ||
+              !strncmp(name, "as3:", 4) ||
+              !strncmp(name, "gs:", 3)) {
       //
       // Web file
       type = kWeb;

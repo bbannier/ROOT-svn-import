@@ -28,8 +28,9 @@ MACOSXVERS    = $(MACOSX_DEPLOYMENT_TARGET)
 endif
 
 # Compiler:
-# From "Apple clang version 3.0" (OSX 10.7 and IOS 5.0) we will take clang as default
-APPLE_CLANG  := $(shell clang -v 2>&1 | sed -n "s/^Apple.*version //p" | cut -d . -f 1)
+# From "Apple clang version ... (based on LLVM 3.0svn)"
+# i.e. OSX 10.7 we will take clang as default
+APPLE_CLANG  := $(shell clang -v 2>&1 | sed -n "s/.*based on LLVM //p" | cut -d . -f 1)
 ifeq ($(APPLE_CLANG),)
 APPLE_CLANG  := 1
 endif
@@ -78,11 +79,11 @@ CINTCFLAGS   += -D__DARWIN_UNIX03=1
 endif
 ifeq ($(subst $(MACOSX_MINOR),,1234),1234)
 ifeq ($(USECONFIG),FALSE)
-SOFLAGS       = -dynamiclib -single_module \
-                -undefined dynamic_lookup -install_name @rpath/
+SOFLAGS       = -dynamiclib -single_module -Wl,-dead_strip_dylibs \
+                -install_name @rpath/
 else
-SOFLAGS       = -dynamiclib -single_module \
-                -undefined dynamic_lookup -install_name $(LIBDIR)/
+SOFLAGS       = -dynamiclib -single_module -Wl,-dead_strip_dylibs \
+                -install_name $(LIBDIR)/
 endif
 FORCELINK     = no
 NEEDFINK      = no
@@ -125,10 +126,12 @@ XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm $(EXTRA_LDFLAGS) $(FINK_LDFLAGS) -ldl
 
 # Fortran:
-F77           = gfortran
+F77ORG        = gfortran
 F77FLAGS      = -m32 -std=legacy
+ifneq ($(F77),)
 F77LIBS      := $(shell $(F77) -m32 -print-file-name=libgfortran.dylib 2>&1 | grep /)
 F77LIBS      += $(shell $(F77) -m32 -print-file-name=libgfortranbegin.a 2>&1 | grep /)
+endif
 
 # Override default in Makefile.config
 INSTALL      := /bin/cp -pPR
@@ -152,5 +155,5 @@ showld:
 	@echo "$(LD)"
 
 showf77:
-	@echo "$(F77)"
+	@echo "$(F77ORG)"
 endif

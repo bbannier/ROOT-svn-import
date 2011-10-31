@@ -69,8 +69,9 @@ GLLIBDEPM              = $(G3DLIB) $(GUILIB) $(GRAFLIB) $(HISTLIB) $(GEDLIB) \
                          $(MATHCORELIB) $(TREELIB) $(TREEPLAYERLIB)
 HBOOKLIBDEPM           = $(HISTLIB) $(MATRIXLIB) $(TREELIB) $(GRAFLIB) \
                          $(TREEPLAYERLIB) $(IOLIB) $(MINICERNLIB)
-GEOMLIBDEPM            = $(IOLIB) $(MATHCORELIB)
-GEOMPAINTERLIBDEPM     = $(GEOMLIB) $(TREELIB) $(G3DLIB) $(HISTLIB) $(GPADLIB) $(IOLIB) $(MATHCORELIB)
+GEOMLIBDEPM            = $(IOLIB) $(THREADLIB) $(MATHCORELIB)
+GEOMPAINTERLIBDEPM     = $(GEOMLIB) $(TREELIB) $(G3DLIB) $(HISTLIB) $(GPADLIB) \
+                         $(IOLIB) $(MATHCORELIB)
 GEOMBUILDERLIBDEPM     = $(GEOMLIB) $(G3DLIB) $(GPADLIB) $(GRAFLIB) $(GUILIB) \
                          $(GEDLIB)
 QTROOTLIBDEPM          = $(GUILIB) $(GQTLIB)
@@ -78,8 +79,8 @@ GQTLIBDEPM             = $(GUILIB) $(GPADLIB) $(GRAFLIB) $(RINTLIB)
 RUBYLIBDEPM            = $(HISTLIB) $(MATHCORELIB)
 GUIBLDLIBDEPM          = $(GUILIB) $(GRAFLIB) $(MATHCORELIB)
 FOAMLIBDEPM            = $(HISTLIB) $(MATHCORELIB)
-ALIENLIBDEPM           = $(XMLLIB) $(NETXLIB) $(TREELIB) $(PROOFPLAYERLIB) \
-                         $(NETLIB) $(IOLIB)
+ALIENLIBDEPM           = $(XMLLIB) $(NETXLIB) $(TREELIB) $(PROOFLIB) \
+                         $(PROOFPLAYERLIB) $(NETLIB) $(IOLIB)
 ROOFITCORELIBDEPM      = $(HISTLIB) $(GRAFLIB) $(MATRIXLIB) $(TREELIB) \
                          $(MINUITLIB) $(IOLIB) $(MATHCORELIB) $(FOAMLIB)
 ROOFITLIBDEPM          = $(ROOFITCORELIB) $(TREELIB) $(IOLIB) $(MATRIXLIB) \
@@ -121,14 +122,14 @@ GDMLLIBDEPM            = $(GEOMLIB) $(XMLLIB) $(HISTLIB) $(IOLIB)
 UNURANLIBDEPM          = $(HISTLIB) $(MATHCORELIB)
 WIN32GDKLIBDEPM        = $(GRAFLIB)
 X11TTFLIBDEPM          = $(X11LIB) $(GRAFLIB)
-MONALISALIBDEPM        = $(NETLIB) $(IOLIB)
+MONALISALIBDEPM        = $(NETLIB) $(IOLIB) $(MATHCORELIB)
 EVELIBDEPM             = $(GEOMLIB) $(GEOMPAINTERLIB) $(G3DLIB) $(GUILIB) \
                          $(GPADLIB) $(GRAFLIB) $(HISTLIB) $(PHYSICSLIB) \
                          $(GEDLIB) $(EGLIB) $(TREELIB) $(TREEPLAYERLIB) \
                          $(GLLIB) $(IOLIB) $(RINTLIB) $(MATHCORELIB)
 GVIZ3DLIBDEPM          = $(GUILIB) $(GEDLIB) $(GPADLIB) $(G3DLIB) $(GRAFLIB) \
                          $(GEOMLIB) $(GLLIB)
-MEMSTATLIBDEPM         = $(TREELIB) $(GPADLIB) $(GRAFLIB)
+MEMSTATLIBDEPM         = $(TREELIB) $(GPADLIB) $(GRAFLIB) $(HISTLIB) $(IOLIB)
 MEMSTATGUILIBDEPM      = $(MEMSTATLIB) $(TREELIB) $(GUILIB)
 RECLIBDEPM             = $(IOLIB) $(TREELIB) $(GUILIB) $(THREADLIB)
 FITSIOLIBDEPM          = $(HISTLIB) $(GPADLIB) $(GRAFLIB) $(MATRIXLIB)
@@ -324,7 +325,7 @@ GLLIBEXTRA              = lib/libGraf3d.lib lib/libGui.lib lib/libGraf.lib \
 HBOOKLIBEXTRA           = lib/libHist.lib lib/libMatrix.lib lib/libTree.lib \
                           lib/libGraf.lib lib/libTreePlayer.lib lib/libRIO.lib \
                           lib/libminicern.lib
-GEOMLIBEXTRA            = lib/libRIO.lib lib/libMathCore.lib
+GEOMLIBEXTRA            = lib/libRIO.lib lib/libThread.lib lib/libMathCore.lib
 GEOMPAINTERLIBEXTRA     = lib/libGeom.lib lib/libTree.lib lib/libGraf3d.lib \
                           lib/libHist.lib lib/libGpad.lib lib/libRIO.lib \
                           lib/libMathCore.lib
@@ -339,7 +340,8 @@ GUIHTMLLIBEXTRA         = lib/libGui.lib lib/libGraf.lib lib/libNet.lib
 XMLLIBEXTRA             = lib/libRIO.lib
 FOAMLIBEXTRA            = lib/libHist.lib lib/libMathCore.lib
 ALIENLIBEXTRA           = lib/libXMLIO.lib lib/libNetx.lib lib/libTree.lib \
-                          lib/libProofPlayer.lib lib/libNet.lib lib/RIO.lib
+                          lib/libProof.lib lib/libProofPlayer.lib \
+                          lib/libNet.lib lib/RIO.lib
 ROOFITCORELIBEXTRA      = lib/libHist.lib lib/libGraf.lib lib/libMatrix.lib \
                           lib/libTree.lib lib/libMinuit.lib lib/libRIO.lib \
                           lib/libMathCore.lib lib/libFoam.lib
@@ -385,7 +387,7 @@ MYSQLLIBEXTRA           = lib/libNet.lib lib/libRIO.lib
 GDMLLIBEXTRA            = lib/libGeom.lib lib/libXMLIO.lib lib/libHist.lib \
                           lib/libRIO.lib
 UNURANLIBEXTRA          = lib/libHist.lib lib/libMathCore.lib
-MONALISALIBEXTRA        = lib/libNet.lib lib/libRIO.lib
+MONALISALIBEXTRA        = lib/libNet.lib lib/libRIO.lib lib/libMathCore.lib
 EVELIBEXTRA             = lib/libGeom.lib lib/libGeomPainter.lib \
                           lib/libGpad.lib lib/libGraf3d.lib lib/libGui.lib \
                           lib/libGraf.lib lib/libHist.lib lib/libPhysics.lib \
@@ -395,7 +397,8 @@ EVELIBEXTRA             = lib/libGeom.lib lib/libGeomPainter.lib \
 GVIZ3DLIBEXTRA          = lib/libGui.lib lib/libRGL.lib lib/libGeom.lib \
                           lib/libGed.lib lib/libGpad.lib lib/libGraf3d.lib \
                           lib/libGraf.lib
-MEMSTATLIBEXTRA         = lib/libTree.lib lib/libGpad.lib lib/libGraf.lib
+MEMSTATLIBEXTRA         = lib/libTree.lib lib/libGpad.lib lib/libGraf.lib \
+                          lib/libHist.lib lib/libRIO.lib
 MEMSTATGUILIBEXTRA      = lib/libMemStat.lib lib/libTree.lib lib/libGui.lib
 RECLIBEXTRA             = lib/libGui.lib lib/libRIO.lib lib/libTree.lib \
                           lib/libThread.lib
@@ -444,10 +447,8 @@ X3DLIBEXTRA             = -Llib -lGraf3d -lGui
 EGLIBEXTRA              = -Llib -lGraf3d -lGraf -lGpad -lMathCore
 VMCLIBEXTRA             = -Llib -lEG -lGeom -lMathCore
 PHYSICSLIBEXTRA         = -Llib -lMatrix -lMathCore
-PYTHIA6LIBEXTRA         = -Llib -lEG -lGraf -lVMC -lPhysics $(FPYTHIA6LIBDIR) \
-                          $(FPYTHIA6LIB)
-PYTHIA8LIBEXTRA         = -Llib -lEG -lGraf -lVMC -lPhysics $(FPYTHIA8LIBDIR) \
-                          $(FPYTHIA8LIB)
+PYTHIA6LIBEXTRA         = -Llib -lEG -lGraf -lVMC -lPhysics
+PYTHIA8LIBEXTRA         = -Llib -lEG -lGraf -lVMC -lPhysics
 X11TTFLIBEXTRA          = -Llib -lGX11 -lGraf
 TABLELIBEXTRA           = -Llib -lTree -lGpad -lGraf3d -lGraf -lHist -lRIO \
                           -lMathCore
@@ -455,7 +456,7 @@ GLLIBEXTRA              = -Llib -lGpad -lGraf3d -lGui -lGraf -lHist -lGed \
                           -lMathCore -lTree -lTreePlayer -lRIO
 HBOOKLIBEXTRA           = -Llib -lHist -lMatrix -lTree -lGraf -lTreePlayer \
                           -lRIO -lminicern
-GEOMLIBEXTRA            = -Llib -lRIO -lMathCore
+GEOMLIBEXTRA            = -Llib -lRIO -lThread -lMathCore
 GEOMPAINTERLIBEXTRA     = -Llib -lGeom -lTree -lGraf3d -lHist -lGpad -lRIO \
                           -lMathCore
 GEOMBUILDERLIBEXTRA     = -Llib -lGeom -lGraf3d -lGpad -lGraf -lGui -lGed
@@ -479,7 +480,8 @@ GUIBLDLIBEXTRA          = -Llib -lGui -lGraf -lMathCore
 GUIHTMLLIBEXTRA         = -Llib -lGui -lGraf -lNet
 XMLLIBEXTRA             = -Llib -lRIO
 FOAMLIBEXTRA            = -Llib -lHist -lMathCore
-ALIENLIBEXTRA           = -Llib -lXMLIO -lNetx -lTree -lProofPlayer -lNet -lRIO
+ALIENLIBEXTRA           = -Llib -lXMLIO -lNetx -lTree -lProof -lProofPlayer \
+                          -lNet -lRIO
 ROOFITCORELIBEXTRA      = -Llib -lHist -lGraf -lMatrix -lTree -lMinuit -lRIO \
                           -lMathCore -lFoam
 ROOFITLIBEXTRA          = -Llib -lRooFitCore -lTree -lRIO -lMatrix -lMathCore
@@ -515,12 +517,12 @@ PGSQLLIBEXTRA           = -Llib -lNet -lRIO
 MYSQLLIBEXTRA           = -Llib -lNet -lRIO
 GDMLLIBEXTRA            = -Llib -lGeom -lXMLIO -lHist -lRIO
 UNURANLIBEXTRA          = -Llib -lHist -lMathCore
-MONALISALIBEXTRA        = -Llib -lNet -lRIO
+MONALISALIBEXTRA        = -Llib -lNet -lRIO -lMathCore
 EVELIBEXTRA             = -Llib -lGeom -lGeomPainter -lGraf3d -lGui -lGpad \
                           -lGraf -lHist -lPhysics -lGed -lEG -lTree \
                           -lTreePlayer -lRGL -lRIO -lRint -lMathCore
 GVIZ3DLIBEXTRA          = -Llib -lGui -lGed -lGpad -lGraf3d -lGraf -lGeom -lRGL
-MEMSTATLIBEXTRA         = -Llib -lTree -lGpad -lGraf
+MEMSTATLIBEXTRA         = -Llib -lTree -lGpad -lGraf -lHist -lRIO
 MEMSTATGUILIBEXTRA      = -Llib -lMemStat -lTree -lGui
 RECLIBEXTRA             = -Llib -lGui -lRIO -lTree -lThread
 FITSIOLIBEXTRA          = -Llib -lHist -lGpad -lGraf -lMatrix

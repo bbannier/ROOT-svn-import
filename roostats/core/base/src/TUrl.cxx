@@ -189,11 +189,7 @@ tryfile:
       SetProtocol(u, kTRUE);
       *s = sav;
       s += 3;
-      if (!*s) {
-         // error if we are at end of string
-         fPort = -1;
-         goto cleanup;
-      }
+      // allow url of form: "proto://"
    } else {
       if (defaultIsFile) {
          char *newu = new char [strlen("file:") + strlen(u0) + 1];
@@ -209,7 +205,7 @@ tryfile:
    u = s;
    t = s;
 again:
-   if ((s = strchr(t, '@'))) {
+   if ((s = strchr(t, '@')) && (s < strchr(t, '/') || !strchr(t, '/'))) {
       if (*(s-1) == '\\') {
          t = s+1;
          goto again;
@@ -417,6 +413,7 @@ const char *TUrl::GetUrl(Bool_t withDeflt) const
           (fProtocol.BeginsWith("root")  && fPort == 1094) ||
           (!fProtocol.CompareTo("ftp")   && fPort == 20)   ||
           (!fProtocol.CompareTo("news")  && fPort == 119)  ||
+          (!fProtocol.CompareTo("https") && fPort == 443)  ||
           fPort == 0) {
          deflt = kTRUE;
          ((TUrl *)this)->SetBit(kUrlHasDefaultPort);
@@ -519,6 +516,8 @@ void TUrl::SetProtocol(const char *proto, Bool_t setDefaultPort)
    if (setDefaultPort) {
       if (!fProtocol.CompareTo("http"))
          fPort = 80;
+      else if (!fProtocol.CompareTo("https"))
+         fPort = 443;
       else if (fProtocol.BeginsWith("proof"))  // can also be proofs or proofk
          fPort = 1093;
       else if (fProtocol.BeginsWith("root"))   // can also be roots or rootk

@@ -118,6 +118,7 @@ TProofProgressDialog::TProofProgressDialog(TProof *proof, const char *selector,
       if (ib != kNPOS) {
          TString svnr;
          // Strip of also the 'r' in front of the number
+         // coverity[unchecked_value]
          vrs.Tokenize(svnr, from, "|");
          if (svnr.IsDigit()) {
             if (gDebug)
@@ -1215,11 +1216,12 @@ void TProofProgressDialog::DoPlotRateGraph()
 
    // Event Rate plot
    TPad *cpad = (TPad *) c1->GetPad(kEvrt);
-   cpad->cd();
-   cpad->SetFillColor(0);
-   cpad->SetBorderMode(20);
-   cpad->SetFrameBorderMode(0);
-
+   if (cpad) {
+      cpad->cd();
+      cpad->SetFillColor(0);
+      cpad->SetBorderMode(20);
+      cpad->SetFrameBorderMode(0);
+   }
    fRateGraph->SetMinimum(0.);
    fRateGraph->SetMaximum(eymx*1.1);
    fRateGraph->SetLineColor(50);
@@ -1256,11 +1258,12 @@ void TProofProgressDialog::DoPlotRateGraph()
    // MB Rate plot
    if (fMBRtGraph) {
       cpad = (TPad *) c1->GetPad(kMBrt);
-      cpad->cd();
-      cpad->SetFillColor(0);
-      cpad->SetBorderMode(0);
-      cpad->SetFrameBorderMode(0);
-
+      if (cpad) {
+         cpad->cd();
+         cpad->SetFillColor(0);
+         cpad->SetBorderMode(0);
+         cpad->SetFrameBorderMode(0);
+      }
       fMBRtGraph->SetFillColor(38);
       TH1F *graph2 = new TH1F("graph2","Average read chunck size (MBs/request)",100,
                                fRateGraph->GetXaxis()->GetXmin(),fRateGraph->GetXaxis()->GetXmax());
@@ -1276,11 +1279,12 @@ void TProofProgressDialog::DoPlotRateGraph()
    // MB Rate plot
    if (fActWGraph) {
       cpad = (TPad *) c1->GetPad(kActW);
-      cpad->cd();
-      cpad->SetFillColor(0);
-      cpad->SetBorderMode(0);
-      cpad->SetFrameBorderMode(0);
-
+      if (cpad) {
+         cpad->cd();
+         cpad->SetFillColor(0);
+         cpad->SetBorderMode(0);
+         cpad->SetFrameBorderMode(0);
+      }
       fActWGraph->SetMinimum(0.);
       fActWGraph->SetMaximum(wymx*1.1);
       fActWGraph->SetLineColor(50);
@@ -1296,11 +1300,12 @@ void TProofProgressDialog::DoPlotRateGraph()
    // MB Rate plot
    if (fTotSGraph) {
       cpad = (TPad *) c1->GetPad(kSess);
-      cpad->cd();
-      cpad->SetFillColor(0);
-      cpad->SetBorderMode(0);
-      cpad->SetFrameBorderMode(0);
-
+      if (cpad) {
+         cpad->cd();
+         cpad->SetFillColor(0);
+         cpad->SetBorderMode(0);
+         cpad->SetFrameBorderMode(0);
+      }
       fTotSGraph->SetMinimum(0.);
       fTotSGraph->SetMaximum(tymx*1.1);
       fTotSGraph->SetLineColor(50);

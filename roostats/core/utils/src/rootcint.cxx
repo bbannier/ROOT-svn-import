@@ -524,7 +524,7 @@ const char *GetExePath()
    while ((p = strchr(p, '\\')))
       *(p++) = '/';
    exepath = buf;
-   delete buf;
+   delete[] buf;
 #endif
    }
    return exepath.c_str();
@@ -1084,25 +1084,6 @@ bool HasOldMerge(G__ClassInfo &cl)
 }
 
 //______________________________________________________________________________
-bool HasReset(G__ClassInfo &cl)
-{
-   // Return true if the class has a method ResetAfterMerge(TFileMergeInfo *)
-   
-   // Detect if the class has a 'new' Merge function.
-   // bool hasMethod = cl.HasMethod("DirectoryAutoAdd");
-   
-   // Detect if the class or one of its parent has a DirectoryAutoAdd
-   long offset;
-   const char *proto = "Option_t*";
-   const char *name = "Reset";
-   
-   G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
-   bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
-   
-   return hasMethodWithSignature;
-}
-
-//______________________________________________________________________________
 bool HasResetAfterMerge(G__ClassInfo &cl)
 {
    // Return true if the class has a method ResetAfterMerge(TFileMergeInfo *)
@@ -1113,7 +1094,7 @@ bool HasResetAfterMerge(G__ClassInfo &cl)
    // Detect if the class or one of its parent has a DirectoryAutoAdd
    long offset;
    const char *proto = "TFileMergeInfo*";
-   const char *name = "MergeAfterReset";
+   const char *name = "ResetAfterMerge";
    
    G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
    bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
@@ -1940,11 +1921,6 @@ void WriteAuxFunctions(G__ClassInfo &cl)
       << "   static void reset_" << mappedname.c_str() << "(void *obj,TFileMergeInfo *info) {" << std::endl
       << "      ((" << classname.c_str() << "*)obj)->ResetAfterMerge(info);" << std::endl
       << "   }" << std::endl;
-   } else if (HasReset(cl)) {
-      (*dictSrcOut) << "   // Wrapper around the Reset function." << std::endl
-      << "   static void reset_" << mappedname.c_str() << "(void *obj,TFileMergeInfo *info) {" << std::endl
-      << "      ((" << classname.c_str() << "*)obj)->Reset(info ? info->fOptions.Data() : \"\");" << std::endl
-      << "   }" << std::endl;
    }
    (*dictSrcOut) << "} // end of namespace ROOT for class " << classname.c_str() << std::endl << std::endl;
 }
@@ -2572,7 +2548,7 @@ void WriteClassInit(G__ClassInfo &cl)
    if (HasNewMerge(cl) || HasOldMerge(cl)) {
       (*dictSrcOut)<< "   static Long64_t merge_" << mappedname.c_str() << "(void *obj, TCollection *coll,TFileMergeInfo *info);" << std::endl;
    }
-   if (HasResetAfterMerge(cl) || HasReset(cl)) {
+   if (HasResetAfterMerge(cl)) {
       (*dictSrcOut)<< "   static void reset_" << mappedname.c_str() << "(void *obj, TFileMergeInfo *info);" << std::endl;
    }
    //--------------------------------------------------------------------------
@@ -2770,7 +2746,7 @@ void WriteClassInit(G__ClassInfo &cl)
    if (HasNewMerge(cl) || HasOldMerge(cl)) {
       (*dictSrcOut) << "      instance.SetMerge(&merge_" << mappedname.c_str() << ");" << std::endl;
    }
-   if (HasResetAfterMerge(cl) || HasReset(cl)) {
+   if (HasResetAfterMerge(cl)) {
       (*dictSrcOut) << "      instance.SetResetAfterMerge(&reset_" << mappedname.c_str() << ");" << std::endl;      
    }
    if (bset) {
@@ -4068,8 +4044,7 @@ void StrcpyWithEsc(string& escaped, const char *original)
    // Copy original into escaped BUT make sure that the \ characters
    // are properly escaped (on Windows temp files have \'s).
 
-   int j, k;
-   j = 0; k = 0;
+   int j = 0;
    escaped = "";
    while (original[j] != '\0') {
       if (original[j] == '\\')
@@ -4834,11 +4809,17 @@ int main(int argc, char **argv)
          il = i;
          if (i != argc-1) {
             Error(0, "%s: %s must be last file on command line\n", argv[0], argv[i]);
+            if (use_preprocessor) {
+               fclose(bundle);
+            }
             return 1;
          }
       }
       if (!strcmp(argv[i], "-c")) {
          Error(0, "%s: option -c must come directly after the output file\n", argv[0]);
+         if (use_preprocessor) {
+            fclose(bundle);
+         }
          return 1;
       }
       if (use_preprocessor && *argv[i] != '-' && *argv[i] != '+') {

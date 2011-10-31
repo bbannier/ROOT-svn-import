@@ -226,7 +226,7 @@ Bool_t TStreamerElement::CannotSplit() const
    // the special characters "||" as the first characters in the
    // comment field.
 
-   if (strspn(GetTitle(),"||") == 2) return kTRUE;
+   if (GetTitle()[0] != 0 && strspn(GetTitle(),"||") == 2) return kTRUE;
    TClass *cl = GetClassPointer();
    if (!cl) return kFALSE;  //basic type
 
@@ -887,8 +887,8 @@ Int_t TStreamerLoop::GetSize() const
 {
    // Returns size of counter in bytes.
 
-   if (fArrayLength) return fArrayLength*sizeof(Int_t);
-   return sizeof(Int_t);
+   if (fArrayLength) return fArrayLength*sizeof(void*);
+   return sizeof(void*);
 }
 
 //______________________________________________________________________________

@@ -1405,8 +1405,9 @@ void TProofServ::HandleSocketInput()
       // If something wrong went on during processing and we do not have
       // any worker anymore, we shutdown this session
       Bool_t masterOnly = gEnv->GetValue("Proof.MasterOnly", kFALSE);
+      Bool_t dynamicStartup = gEnv->GetValue("Proof.DynamicStartup", kFALSE);
       Int_t ngwrks = fProof->GetListOfActiveSlaves()->GetSize() + fProof->GetListOfInactiveSlaves()->GetSize();
-      if (rc == 0 && ngwrks == 0 && !masterOnly) {
+      if (rc == 0 && ngwrks == 0 && !masterOnly && !dynamicStartup) {
          SendAsynMessage(" *** No workers left: cannot continue! Terminating ... *** ");
          Terminate(0);
       }
@@ -2821,6 +2822,8 @@ Int_t TProofServ::SetupCommon()
    gSystem->Umask(022);
 
 #ifdef R__UNIX
+   // Add bindir to PATH
+   TString path(gSystem->Getenv("PATH"));
    TString bindir;
 # ifdef ROOTBINDIR
    bindir = ROOTBINDIR;
@@ -2828,19 +2831,47 @@ Int_t TProofServ::SetupCommon()
    bindir = gSystem->Getenv("ROOTSYS");
    if (!bindir.IsNull()) bindir += "/bin";
 # endif
+   // Augment PATH, if required
+   // ^<compiler>, <compiler>, ^<sysbin>, <sysbin>
+   TString paths = gEnv->GetValue("ProofServ.BinPaths", "");
+   if (paths.Length() > 0) {
+      Int_t icomp = 0;
+      if (paths.Contains("^<compiler>"))
+	 icomp = 1;
+      else if (paths.Contains("<compiler>"))
+	 icomp = -1;
+      if (icomp != 0) {
 # ifdef COMPILER
-   TString compiler = COMPILER;
-   if (compiler.Index("is ") != kNPOS)
-      compiler.Remove(0, compiler.Index("is ") + 3);
-   compiler = gSystem->DirName(compiler);
-   if (!bindir.IsNull()) bindir += ":";
-   bindir += compiler;
+         TString compiler = COMPILER;
+         if (compiler.Index("is ") != kNPOS)
+            compiler.Remove(0, compiler.Index("is ") + 3);
+         compiler = gSystem->DirName(compiler);
+         if (icomp == 1) {
+            if (!bindir.IsNull()) bindir += ":";
+            bindir += compiler;
+         } else if (icomp == -1) {
+            if (!path.IsNull()) path += ":";
+            path += compiler;
+         }
 #endif
+      }
+      Int_t isysb = 0;
+      if (paths.Contains("^<sysbin>"))
+	 isysb = 1;
+      else if (paths.Contains("<sysbin>"))
+	 isysb = -1;
+      if (isysb != 0) {
+         if (isysb == 1) {
+            if (!bindir.IsNull()) bindir += ":";
+            bindir += "/bin:/usr/bin:/usr/local/bin";
+         } else if (isysb == -1) {
+            if (!path.IsNull()) path += ":";
+            path += "/bin:/usr/bin:/usr/local/bin";
+         }
+      }
+   }
+   // Final insert
    if (!bindir.IsNull()) bindir += ":";
-   bindir += "/bin:/usr/bin:/usr/local/bin";
-   // Add bindir to PATH
-   TString path(gSystem->Getenv("PATH"));
-   if (!path.IsNull()) path.Insert(0, ":");
    path.Insert(0, bindir);
    gSystem->Setenv("PATH", path);
 #endif
@@ -2901,9 +2932,53 @@ Int_t TProofServ::SetupCommon()
    }
    ResolveKeywords(fDataDir);
    if (gSystem->AccessPathName(fDataDir))
-      gSystem->mkdir(fDataDir, kTRUE);
+      if (gSystem->mkdir(fDataDir, kTRUE) != 0) {
+         Warning("SetupCommon", "problems creating path '%s' (errno: %d)",
+                                fDataDir.Data(), TSystem::GetErrno());
+      }
    if (gProofDebugLevel > 0)
       Info("SetupCommon", "data directory set to %s", fDataDir.Data());
+
+   // Check and apply possible options
+   // (see http://root.cern.ch/drupal/content/configuration-reference-guide#datadir)
+   TString dataDirOpts = gEnv->GetValue("ProofServ.DataDirOpts","");
+   if (!dataDirOpts.IsNull()) {
+      // Do they apply to this server type
+      Bool_t doit = kTRUE;
+      if ((IsMaster() && !dataDirOpts.Contains("M")) ||
+         (!IsMaster() && !dataDirOpts.Contains("W"))) doit = kFALSE;
+      if (doit) {
+         // Get the wanted mode
+         UInt_t m = 0755;
+         if (dataDirOpts.Contains("g")) m = 0775;
+         if (dataDirOpts.Contains("a") || dataDirOpts.Contains("o")) m = 0777;
+         if (gProofDebugLevel > 0)
+            Info("SetupCommon", "requested mode for data directories is '%o'", m);
+         // Loop over paths
+         FileStat_t st;
+         TString p, subp;
+         Int_t from = 0;
+         if (fDataDir.BeginsWith("/")) p = "/";
+         while (fDataDir.Tokenize(subp, from, "/")) {
+            if (subp.IsNull()) continue;
+            p += subp;
+            if (gSystem->GetPathInfo(p, st) == 0) {
+               if (st.fUid == (Int_t) gSystem->GetUid() && st.fGid == (Int_t) gSystem->GetGid()) {
+                  if (gSystem->Chmod(p.Data(), m) != 0) {
+                     Warning("SetupCommon", "problems setting mode '%o' on path '%s' (errno: %d)",
+                                            m, p.Data(), TSystem::GetErrno());  
+                     break;
+                  }
+               }
+               p += "/";
+            } else {
+               Warning("SetupCommon", "problems stat-ing path '%s' (errno: %d; datadir: %s)",
+                                       p.Data(), TSystem::GetErrno(), fDataDir.Data());  
+               break;
+            }
+         }
+      }
+   }
 
    // List of directories where to look for global packages
    TString globpack = gEnv->GetValue("Proof.GlobalPackageDirs","");
@@ -4936,6 +5011,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   // Package not found
                   SendAsynMessage(TString::Format("%s: kBuildPackage: failure locating %s ...",
                                        noth.Data(), package.Data()));
+                  status = -1;
                   break;
                }
             }
@@ -5013,16 +5089,19 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                               // Cleanup
                               SafeDelete(md5local);
                            } else {
-                              Error("HandleCache", "kBuildPackage: failure calculating MD5sum for '%s'", par.Data());
+                              Warning("HandleCache", "kBuildPackage: failure calculating/saving MD5sum for '%s'", par.Data());
                            }
                         }
                         delete [] gunzip;
-                     } else
+                     } else {
                         Error("HandleCache", "kBuildPackage: %s not found", kGUNZIP);
+                        status = -1;
+                     }
                   } else {
                      SendAsynMessage(TString::Format("%s: %s: ROOT version inconsistency (current: %s, build: %s):"
                                           " global package: cannot re-build!!! ",
                                           noth.Data(), package.Data(), gROOT->GetVersion(), v.Data()));
+                     status = -1;
                   }
                }
 
@@ -5104,6 +5183,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   // Package not found
                   SendAsynMessage(TString::Format("%s: kLoadPackage: failure locating %s ...",
                                        noth.Data(), package.Data()));
+                  status = -1;
                   break;
                }
             }

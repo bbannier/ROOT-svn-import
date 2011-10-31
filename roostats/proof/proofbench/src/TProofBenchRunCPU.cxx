@@ -18,6 +18,8 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include "RConfigure.h"
+
 #include "TProofBenchRunCPU.h"
 #include "TProofNodes.h"
 #include "TFileCollection.h"
@@ -214,7 +216,11 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
       // Is it the default selector?
       if (fSelName == kPROOF_BenchSelCPUDef) {
          // Load the parfile
-         TString par = TString::Format("%s%s.par", kPROOF_BenchSrcDir, kPROOF_BenchCPUSelPar);
+#ifdef R__HAVE_CONFIG
+         TString par = TString::Format("%s/%s%s.par", ROOTETCDIR, kPROOF_BenchParDir, kPROOF_BenchCPUSelPar);
+#else
+         TString par = TString::Format("$ROOTSYS/etc/%s%s.par", kPROOF_BenchParDir, kPROOF_BenchCPUSelPar);
+#endif
          Info("Run", "Uploading '%s' ...", par.Data());
          if (fProof->UploadPackage(par) != 0) {
             Error("Run", "problems uploading '%s' - cannot continue", par.Data());
@@ -328,9 +334,6 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
             //FillPerfStatPerfPlots(t, profile_perfstat_event, nactive);
             FillPerfStatPerfPlots(t, nactive);
 
-            t->SetDirectory(fDirProofBench);
-            t->SetDirectory(gDirectory);
-
             // Build up new name
             TString newname = TString::Format("%s_%s_%dwrks%dthtry", t->GetName(), GetName(), nactive, j);
             t->SetName(newname);
@@ -341,12 +344,15 @@ void TProofBenchRunCPU::Run(Long64_t nevents, Int_t start, Int_t stop,
                if (!fDirProofBench->GetDirectory(dirn))
                   fDirProofBench->mkdir(dirn, "RunCPU results");
                if (fDirProofBench->cd(dirn)) {
+                  t->SetDirectory(fDirProofBench);
                   t->Write();
+                  l->Remove(t);
                } else {
                   Warning("Run", "cannot cd to subdirectory '%s' to store the results!", dirn.Data());
                }
                curdir->cd();
             }
+            
          } else {
             Error("RunBenchmark", "tree %s not found", perfstats_name.Data());
          }

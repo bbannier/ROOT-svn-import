@@ -16,7 +16,6 @@
 #include "TBufferFile.h"
 #include "TMath.h"
 #include "TTreeCache.h"
-#include "TTreeCacheUnzip.h"
 #include "TVirtualPerfStats.h"
 #include "TTimeStamp.h"
 
@@ -156,7 +155,7 @@ void TBasket::AdjustSize(Int_t newsize)
       fBuffer = fBufferRef->Buffer();
    } else {
       fBufferRef->Expand(newsize);
-   }      
+   }
    fBranch->GetTree()->IncrementTotalBuffers(newsize-fBufferSize);
    fBufferSize  = newsize;
 }
@@ -165,9 +164,6 @@ void TBasket::AdjustSize(Int_t newsize)
 Long64_t TBasket::CopyTo(TFile *to) 
 {
    // Copy the basket of this branch onto the file to.
-
-//   Global variables no longer required by key store   
-//   TDirectory::TContext c(gDirectory,to);
 
    fBufferRef->SetWriteMode();
    Int_t nout = fNbytes - fKeylen;
@@ -859,7 +855,7 @@ Int_t TBasket::WriteBuffer()
    //
 
    const Int_t kWrite = 1;
-   TDirectory::TContext ctxt(0);
+
    TFile *file = fBranch->GetFile(kWrite);
    if (!file) return 0;
    if (!file->IsWritable()) { 

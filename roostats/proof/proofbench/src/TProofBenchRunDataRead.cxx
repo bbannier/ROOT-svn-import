@@ -21,6 +21,8 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include "RConfigure.h"
+
 #include "TProofBenchRunDataRead.h"
 #include "TProofBenchDataSet.h"
 #include "TProofNodes.h"
@@ -150,7 +152,11 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
       // Is it the default selector?
       if (fSelName == kPROOF_BenchSelDataDef) {
          // Load the parfile
-         TString par = TString::Format("%s%s.par", kPROOF_BenchSrcDir, kPROOF_BenchDataSelPar);
+#ifdef R__HAVE_CONFIG
+         TString par = TString::Format("%s/%s%s.par", ROOTETCDIR, kPROOF_BenchParDir, kPROOF_BenchDataSelPar);
+#else
+         TString par = TString::Format("$ROOTSYS/etc/%s%s.par", kPROOF_BenchParDir, kPROOF_BenchDataSelPar);
+#endif
          Info("Run", "Uploading '%s' ...", par.Data());
          if (fProof->UploadPackage(par) != 0) {
             Error("Run", "problems uploading '%s' - cannot continue", par.Data());
@@ -276,7 +282,6 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
             TTree* tnew=(TTree*)t->Clone("tnew");
 
             FillPerfStatProfiles(tnew, nactive);
-            tnew->SetDirectory(fDirProofBench);
 
             //change the name
             TString newname = TString::Format("%s_%s_%dwrks%dthtry", t->GetName(), GetName(), nactive, j);
@@ -288,7 +293,9 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
                if (!fDirProofBench->GetDirectory(dirn))
                   fDirProofBench->mkdir(dirn, "RunDataRead results");
                if (fDirProofBench->cd(dirn)) {
+                  tnew->SetDirectory(fDirProofBench);
                   tnew->Write();
+                  l->Remove(tnew);
                } else {
                   Warning("Run", "cannot cd to subdirectory '%s' to store the results!", dirn.Data());
                }
@@ -431,7 +438,11 @@ TFileCollection *TProofBenchRunDataRead::GetDataSet(const char *dset,
    }
    
    // Separate info per server
+#if ROOT_VERSION_CODE >= ROOT_VERSION(5,30,0)
    TMap *mpref = fcref->GetFilesPerServer(fProof->GetMaster(), kTRUE);
+#else
+   TMap *mpref = fcref->GetFilesPerServer(fProof->GetMaster());
+#endif
    if (!mpref) {
       SafeDelete(fcref);
       Error("GetDataSet", "problems classifying info on per-server base");

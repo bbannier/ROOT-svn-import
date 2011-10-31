@@ -47,6 +47,10 @@
 #include <set>
 #include <string>
 
+#ifdef __APPLE__
+#include <dlfcn.h>
+#endif
+
 using namespace std;
 
 R__EXTERN int optind;
@@ -264,7 +268,7 @@ void* TCint::fgSetOfSpecials = 0;
 ClassImp(TCint)
 
 //______________________________________________________________________________
-TCint::TCint(const char *name, const char *title) : TInterpreter(name, title), fSharedLibs(""), fSharedLibsSerial(-1)
+TCint::TCint(const char *name, const char *title) : TInterpreter(name, title), fSharedLibs(""),fSharedLibsSerial(-1),fGlobalsListSerial(-1)
 {
    // Initialize the CINT interpreter interface.
 
@@ -771,6 +775,11 @@ void TCint::UpdateListOfGlobals()
       return;
    }
 
+   if (fGlobalsListSerial == G__DataMemberInfo::SerialNumber()) {
+      return;
+   }
+   fGlobalsListSerial = G__DataMemberInfo::SerialNumber();
+
    R__LOCKGUARD2(gCINTMutex);
 
    G__DataMemberInfo t, *a;
@@ -1003,8 +1012,10 @@ Bool_t TCint::CheckClassInfo(const char *name, Bool_t autoload /*= kTRUE*/)
    if (tagnum >= 0) {
       G__ClassInfo info(tagnum);
       // If autoloading is off then Property() == 0 for autoload entries.
-      if (!autoload && !info.Property())
-         return kTRUE;
+      if (!autoload && !info.Property()) {
+          delete [] classname;
+          return kTRUE;
+      }
       if (info.Property() & (G__BIT_ISENUM | G__BIT_ISCLASS | G__BIT_ISSTRUCT | G__BIT_ISUNION | G__BIT_ISNAMESPACE)) {
          // We are now sure that the entry is not in fact an autoload entry.
          delete [] classname;
@@ -1861,7 +1872,7 @@ Int_t TCint::AutoLoad(const char *cls)
    Int_t oldvalue = G__set_class_autoloading(0);
 
    // lookup class to find list of dependent libraries
-   TString deplibs = gInterpreter->GetClassSharedLibs(cls);
+   TString deplibs = GetClassSharedLibs(cls);
    if (!deplibs.IsNull()) {
       TString delim(" ");
       TObjArray *tokens = deplibs.Tokenize(delim);
@@ -2116,7 +2127,11 @@ const char* TCint::GetSharedLibs()
             needToSkip = (!strncmp(basename, excludelist[i], excludelen[i]));
       }
       if (!needToSkip &&
-           ((len>2 && strcmp(end-2,".a") == 0)    ||
+           (
+#if defined(R__MACOSX) && defined(MAC_OS_X_VERSION_10_5)
+            (dlopen_preflight(filename)) || 
+#endif            
+            (len>2 && strcmp(end-2,".a") == 0)    ||
             (len>3 && (strcmp(end-3,".sl") == 0   ||
                        strcmp(end-3,".dl") == 0   ||
                        strcmp(end-3,".so") == 0)) ||
@@ -2153,8 +2168,14 @@ const char *TCint::GetClassSharedLibs(const char *cls)
       // convert "-" to " ", since class names may have
       // blanks and TEnv considers a blank a terminator
       c.ReplaceAll(" ", "-");
-      const char *libs = fMapfile->GetValue(c, "");
-      return (*libs) ? libs : 0;
+      // Use TEnv::Lookup here as the rootmap file must start with Library.
+      // and do not support using any stars (so we do not need to waste time
+      // with the search made by TEnv::GetValue).
+      TEnvRec *libs_record = fMapfile->Lookup(c);
+      if (libs_record) {
+         const char *libs = libs_record->GetValue();
+         return (*libs) ? libs : 0;
+      }
    }
    return 0;
 }

@@ -72,21 +72,12 @@
 
 #include "TFileMerger.h"
 
-TList *FileList;
-TFile *Target, *Source;
-Bool_t noTrees;
-Bool_t fastMethod;
-Bool_t reoptimize;
-
-int AddFile(TList* sourcelist, std::string entry, int newcomp) ;
-int MergeRootfile( TDirectory *target, TList *sourcelist);
-
 //___________________________________________________________________________
 int main( int argc, char **argv )
 {
 
    if ( argc < 3 || "-h" == string(argv[1]) || "--help" == string(argv[1]) ) {
-      cout << "Usage: " << argv[0] << " [-f[0-9]] [-k] [-T] [-O] targetfile source1 [source2 source3 ...]" << endl;
+      cout << "Usage: " << argv[0] << " [-f[0-9]] [-k] [-T] [-O] [-n maxopenedfiles] [-v verbosity] targetfile source1 [source2 source3 ...]" << endl;
       cout << "This program will add histograms from a list of root files and write them" << endl;
       cout << "to a target root file. The target file is newly created and must not " << endl;
       cout << "exist, or if -f (\"force\") is given, must not be one of the source files." << endl;
@@ -94,6 +85,8 @@ int main( int argc, char **argv )
       cout << "If the option -k is used, hadd will not exit on corrupt or non-existant input files but skip the offending files instead." << endl;
       cout << "If the option -T is used, Trees are not merged" <<endl;
       cout << "If the option -O is used, when merging TTree, the basket size is re-optimized" <<endl;
+      cout << "If the option -v is used, explicitly set the verbosity level; 0 request no output, 99 is the default" <<endl;
+      cout << "If the option -n is used, hadd will open at most 'maxopenedfiles' at once, use 0 to request to use the system maximum." << endl;
       cout << "When -the -f option is specified, one can also specify the compression" <<endl;
       cout << "level of the target file. By default the compression level is 1, but" <<endl;
       cout << "if \"-f0\" is specified, the target file will not be compressed." <<endl;
@@ -102,13 +95,15 @@ int main( int argc, char **argv )
       cout << " a slower method is used"<<endl;
       return 1;
    }
-   FileList = new TList();
 
    Bool_t force = kFALSE;
    Bool_t skip_errors = kFALSE;
-   reoptimize = kFALSE;
-   noTrees = kFALSE;
+   Bool_t reoptimize = kFALSE;
+   Bool_t noTrees = kFALSE;
+   Int_t maxopenedfiles = 0;
+   Int_t verbosity = 99;
 
+   int outputPlace = 0;
    int ffirst = 2;
    Int_t newcomp = 1;
    for( int a = 1; a < argc; ++a ) {
@@ -124,6 +119,35 @@ int main( int argc, char **argv )
       } else if ( strcmp(argv[a],"-O") == 0 ) {
          reoptimize = kTRUE;
          ++ffirst;
+      } else if ( strcmp(argv[a],"-n") == 0 ) {
+         if (a+1 >= argc) {
+            cerr << "Error: no maximum number of opened was provided after -n.\n";
+         } else {
+            long request = strtol(argv[a+1], 0, 10);
+            if (request < kMaxLong && request >= 0) {
+               maxopenedfiles = (Int_t)request;
+               ++a;
+               ++ffirst;
+            } else {
+               cerr << "Error: could not parse the max number of opened file passed after -n: " << argv[a+1] << ". We will use the system maximum.\n";
+            }
+         }
+         ++ffirst;
+      } else if ( strcmp(argv[a],"-v") == 0 ) {
+         if (a+1 >= argc) {
+            cerr << "Error: no verbosity level was provided after -v.\n";
+         } else {
+            long request = strtol(argv[a+1], 0, 10);
+            if (request < kMaxLong && request >= 0) {
+               verbosity = (Int_t)request;
+               ++a;
+               ++ffirst;
+            } else {
+               cerr << "Error: could not parse the verbosity level passed after -v: " << argv[a+1] << ". We will use the default value (99).\n";
+            }
+         }
+         ++ffirst;
+      } else if ( argv[a][0] == '-' ) {
       } else if ( argv[a][0] == '-' ) {
          char ft[4];
          for( int j=0; j<=9; ++j ) {
@@ -135,27 +159,47 @@ int main( int argc, char **argv )
                break;
             }
          }
+         if (!force) {
+            // Bad argument
+            cerr << "Error: option " << argv[a] << " is not a supported option.\n";
+            ++ffirst;
+         }
+      } else if (!outputPlace) {
+         outputPlace = a;
       }
    }
 
    gSystem->Load("libTreePlayer");
 
-   cout << "Target file: " << argv[ffirst-1] << endl;
+   const char *targetname = 0;
+   if (outputPlace) {
+      targetname = argv[outputPlace];
+   } else {
+      targetname = argv[ffirst-1];
+   }
+      
+   if (verbosity > 1) {
+      cout << "hadd Target file: " << targetname << endl;
+   }
 
    TFileMerger merger(kFALSE,kFALSE);
-   merger.SetPrintLevel(99);
-   if (!merger.OutputFile(argv[ffirst-1],force,newcomp) ) {
-      cerr << "Error opening target file (does " << argv[ffirst-1] << " exist?)." << endl;
+   merger.SetMsgPrefix("hadd");
+   merger.SetPrintLevel(verbosity - 1);
+   if (maxopenedfiles > 0) {
+      merger.SetMaxOpenedFiles(maxopenedfiles);
+   }
+   if (!merger.OutputFile(targetname,force,newcomp) ) {
+      cerr << "hadd error opening target file (does " << argv[ffirst-1] << " exist?)." << endl;
       cerr << "Pass \"-f\" argument to force re-creation of output file." << endl;
       exit(1);
    }
 
-   fastMethod = kTRUE;
+   
    for ( int i = ffirst; i < argc; i++ ) {
       if (argv[i] && argv[i][0]=='@') {
          std::ifstream indirect_file(argv[i]+1);
          if( ! indirect_file.is_open() ) {
-            std::cerr<< "Could not open indirect file " << (argv[i]+1) << std::endl;
+            std::cerr<< "hadd could not open indirect file " << (argv[i]+1) << std::endl;
             return 1;
          }
          while( indirect_file ){
@@ -167,27 +211,34 @@ int main( int argc, char **argv )
          }         
       } else if( ! merger.AddFile(argv[i]) ) {
          if ( skip_errors ) {
-            cerr << "Skipping file with error: " << argv[i] << endl;
+            cerr << "hadd skipping file with error: " << argv[i] << endl;
          } else {
-            cerr << "Exiting due to error in " << argv[i] << endl;
+            cerr << "hadd exiting due to error in " << argv[i] << endl;
             return 1;
          }
       }
    }
-   if (merger.HasCompressionChange() && !reoptimize) {
-      // Don't warn if the user any request re-optimization.
-      cout <<"Sources and Target have different compression levels"<<endl;
-      cout <<"Merging will be slower"<<endl;
+   if (reoptimize) {
+      merger.SetFastMethod(kFALSE);
+   } else {
+      if (merger.HasCompressionChange()) {
+         // Don't warn if the user any request re-optimization.
+         cout <<"hadd Sources and Target have different compression levels"<<endl;
+         cout <<"hadd merging will be slower"<<endl;
+      }
    }
-
+   merger.SetNotrees(noTrees);
    Bool_t status = merger.Merge();
 
-   //must delete Target to avoid a problem with dictionaries in~ TROOT
-   delete Target;
-
    if (status) {
+      if (verbosity == 1) {
+         cout << "hadd merged " << merger.GetMergeList()->GetEntries() << " input files in " << targetname << ".\n";
+      }
       return 0;
    } else {
+      if (verbosity == 1) {
+         cout << "hadd failure during the merge of " << merger.GetMergeList()->GetEntries() << " input files in " << targetname << ".\n";
+      }
       return 1;
    }
 }

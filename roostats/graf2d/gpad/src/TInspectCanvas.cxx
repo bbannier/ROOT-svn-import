@@ -74,6 +74,7 @@ TInspectCanvas::TInspectCanvas() : TCanvas()
    fObjects    = 0;
    fLogx       = kFALSE;
    fLogy       = kFALSE;
+   SetFillColor(0);
 }
 
 
@@ -89,6 +90,7 @@ TInspectCanvas::TInspectCanvas(UInt_t ww, UInt_t wh)
    fObjects    = new TList;
    fLogx       = kFALSE;
    fLogy       = kFALSE;
+   SetFillColor(0);
 }
 
 
@@ -153,9 +155,11 @@ void TInspectCanvas::InspectObject(TObject *obj)
    Int_t nh = nrows*15;
    Int_t nw = 700;
    TVirtualPad *canvas = GetVirtCanvas();
-   canvas->Clear();                // remove primitives from canvas
-   canvas->SetCanvasSize(nw, nh);  // set new size of drawing area
-   canvas->Range(0,-3,20,nreal+4);
+   if (canvas) {
+      canvas->Clear();                // remove primitives from canvas
+      canvas->SetCanvasSize(nw, nh);  // set new size of drawing area
+      canvas->Range(0,-3,20,nreal+4);
+   }
 
    Float_t xvalue = 5;
    Float_t xtitle = 8;

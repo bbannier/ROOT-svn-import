@@ -74,6 +74,9 @@ set_source_files_properties(${CMAKE_SOURCE_DIR}/core/base/src/TPRegexp.cxx
                             ${BASE1_DICTIONARY} ${BASE2_DICTIONARY}
                             COMPILE_FLAGS -I${PCRE_INCLUDE_DIR}
                            )
+set_source_files_properties(${CMAKE_SOURCE_DIR}/core/lzma/src/ZipLZMA.c
+                            COMPILE_FLAGS -I${LZMA_INCLUDE_DIR}
+                           )
 
 if(${GCC_MAJOR} EQUAL 4 AND ${GCC_MINOR} EQUAL 1)
   set_source_files_properties(${CMAKE_SOURCE_DIR}/core/base/src/TString.cxx
@@ -103,11 +106,12 @@ ROOT_GENERATE_ROOTMAP(Core LINKDEF ${LibCore_LINKDEF})
 include_directories( ${INCLUDE_DIRECTORIES})
 
 if(WIN32)
-   set(corelinklibs Cint shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
+   set(corelinklibs shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
 endif()
 
 ROOT_LINKER_LIBRARY(Core ${LibCore_SRCS} ${CORE_DICTIONARIES} 
-                    LIBRARIES ${PCRE_LIBRARIES} ${LZMA_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
+                    LIBRARIES ${PCRE_LIBRARIES} ${LZMA_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs}
+                    DEPENDENCIES Cint)
  
 add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY BASE_DICTIONARY)
 if(UNIX)

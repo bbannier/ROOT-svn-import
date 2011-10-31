@@ -232,7 +232,7 @@ void Event::SetRandomVertex() {
 }
 
 //______________________________________________________________________________
-Track::Track(const Track &orig) : TObject(orig)
+Track::Track(const Track &orig) : TObject(orig),fTriggerBits(orig.fTriggerBits)
 {
    // Copy a track object
 
@@ -266,9 +266,6 @@ Track::Track(const Track &orig) : TObject(orig)
       fPointValue = 0;
    }
    fValid  = orig.fValid;
-
-   fTriggerBits = orig.fTriggerBits;
-
 }
 
 //______________________________________________________________________________
@@ -321,6 +318,63 @@ Track::Track(Float_t random) : TObject(),fTriggerBits(64)
       fPointValue = 0;
    }
    fValid  = Int_t(0.6+gRandom->Rndm(1));
+}
+
+//______________________________________________________________________________
+Track &Track::operator=(const Track &orig)
+{
+   // Copy a track
+   
+   TObject::operator=(orig);
+   fPx = orig.fPx;
+   fPy = orig.fPy;
+   fPz = orig.fPx; 
+   fRandom = orig.fRandom;
+   fMass2 = orig.fMass2;
+   fBx = orig.fBx;
+   fBy = orig.fBy;
+   fMeanCharge = orig.fMeanCharge;
+   fXfirst = orig.fXfirst;
+   fXlast  = orig.fXlast;
+   fYfirst = orig.fYfirst;
+   fYlast  = orig.fYlast;
+   fZfirst = orig.fZfirst;
+   fZlast  = orig.fZlast;
+   fCharge = orig.fCharge;
+   
+   fVertex[0] = orig.fVertex[0];
+   fVertex[1] = orig.fVertex[1];
+   fVertex[2] = orig.fVertex[2];
+   fNpoint = orig.fNpoint;
+   if (fNsp > orig.fNsp) {
+      fNsp = orig.fNsp;
+      if (fNsp == 0) {
+         delete [] fPointValue;
+         fPointValue = 0;
+      } else {
+         for(int i=0; i<fNsp; i++) {
+            fPointValue[i] = orig.fPointValue[i];
+         }         
+      }
+   } else {
+      if (fNsp) {
+         delete [] fPointValue;
+      }
+      fNsp = orig.fNsp;
+      if (fNsp) {
+         fPointValue = new Double32_t[fNsp];
+         for(int i=0; i<fNsp; i++) {
+            fPointValue[i] = orig.fPointValue[i];
+         }
+      } else {
+         fPointValue = 0;
+      }
+   }
+   fValid  = orig.fValid;
+   
+   fTriggerBits = orig.fTriggerBits;
+   
+   return *this;
 }
 
 //______________________________________________________________________________

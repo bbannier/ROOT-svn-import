@@ -574,7 +574,7 @@ All the histograms read after this call will use the current style.
 
 
 The histogram classes inherit from the attribute classes:
-<tt>TAttLine</tt>, <tt>TAttFill</tt>, <tt>TAttMarker</tt> and <tt>TAttText</tt>.
+<tt>TAttLine</tt>, <tt>TAttFill</tt> and <tt>TAttMarker</tt>.
 See the description of these classes for the list of options.
 
 
@@ -2438,7 +2438,7 @@ Begin_Html
 
 3D implicit functions (<tt>TF3</tt>) can be drawn as iso-surfaces.
 The implicit function f(x,y,z) = 0 is drawn in cartesian coordinates.
-In the following example the options "FB" and "BB" suppress the 
+In the following example the options "FB" and "BB" suppress the
 "Front Box" and "Back Box" around the plot.
 
 End_Html
@@ -2900,9 +2900,19 @@ Int_t THistPainter::DistancetoPrimitive(Int_t px, Int_t py)
    if (fH->GetDimension() == 2) {
       if (fH->InheritsFrom(TH2Poly::Class())) {
          TH2Poly *th2 = (TH2Poly*)fH;
-         Int_t bin = th2->FindBin(gPad->AbsPixeltoX(px), gPad->AbsPixeltoY(py));
-         if (bin>0) {curdist =1; goto FUNCTIONS;}
-         else return big;
+         Double_t xmin, ymin, xmax, ymax;
+         gPad->GetRangeAxis(xmin, ymin, xmax, ymax);
+         Double_t pxu = gPad->AbsPixeltoX(px);
+         Double_t pyu = gPad->AbsPixeltoY(py);
+         if ((pxu>xmax) || (pxu < xmin) || (pyu>ymax) || (pyu < ymin)) {
+            curdist = big;
+            goto FUNCTIONS;
+         } else {
+            Int_t bin = th2->FindBin(pxu, pyu);
+            if (bin>0) curdist = 1;
+            else       curdist = big;
+            goto FUNCTIONS;
+         }
       }
       Int_t delta2 = 5; //Give a margin of delta2 pixels to be in the 2-d area
       if ( px > puxmin + delta2
@@ -4591,7 +4601,8 @@ void THistPainter::PaintContour(Option_t *option)
       PaintSurface(option);
       gPad->SetPhi(phisave);
       gPad->SetTheta(thesave);
-      gPad->GetView()->SetBit(kCannotRotate); //tested in ExecuteEvent
+      TView *view = gPad->GetView();
+      if (view) view->SetBit(kCannotRotate); //tested in ExecuteEvent
       PaintAxis();
       return;
    }
@@ -5156,23 +5167,26 @@ void THistPainter::PaintErrors(Option_t *)
       }
 
       //          draw the error bars
-
       if (optionE && drawmarker) {
-         if (yi3 < yi1 - s2y) gPad->PaintLine(xi3,yi3,xi4,yi1 - s2y);
-         if (yi1 + s2y < yi4) gPad->PaintLine(xi3,yi1 + s2y,xi4,yi4);
+         if ((yi3 < yi1 - s2y) && (yi3 < ymax)) gPad->PaintLine(xi3,yi3,xi4,TMath::Min(yi1 - s2y,ymax));
+         if ((yi1 + s2y < yi4) && (yi4 > ymin)) gPad->PaintLine(xi3,TMath::Max(yi1 + s2y, ymin),xi4,yi4);
          // don't duplicate the horizontal line
          if (Hoption.Hist != 2){
-            if (xi1 < xi3 - s2x) gPad->PaintLine(xi1,yi1,xi3 - s2x,yi2);
-            if (xi3 + s2x < xi2) gPad->PaintLine(xi3 + s2x,yi1,xi2,yi2);
+            if (yi1<ymax && yi1>ymin) {
+              if (xi1 < xi3 - s2x) gPad->PaintLine(xi1,yi1,xi3 - s2x,yi2);
+              if (xi3 + s2x < xi2) gPad->PaintLine(xi3 + s2x,yi1,xi2,yi2);
+            }
          }
       }
       if (optionE && !drawmarker && ey1 != 0) {
-         if (yi3 < yi4) gPad->PaintLine(xi3,yi3,xi4,yi4);
-         if (yi1 < yi4) gPad->PaintLine(xi3,yi1,xi4,yi4);
+         if ((yi3 < yi1) && (yi3 < ymax)) gPad->PaintLine(xi3,yi3,xi4,TMath::Min(yi1,ymax));
+         if ((yi1 < yi4) && (yi4 > ymin)) gPad->PaintLine(xi3,TMath::Max(yi1,ymin),xi4,yi4);
          // don't duplicate the horizontal line
          if (Hoption.Hist != 2){
-            if (xi1 < xi3) gPad->PaintLine(xi1,yi1,xi3,yi2);
-            if (xi3 < xi2) gPad->PaintLine(xi3,yi1,xi2,yi2);
+            if (yi1<ymax && yi1>ymin) {
+               if (xi1 < xi3) gPad->PaintLine(xi1,yi1,xi3,yi2);
+               if (xi3 < xi2) gPad->PaintLine(xi3,yi1,xi2,yi2);
+            }
          }
       }
 
@@ -5620,7 +5634,8 @@ void THistPainter::PaintH3(Option_t *option)
 
    // Draw axis
    view->SetOutlineToCube();
-   view->GetOutline()->Paint(option);
+   TSeqCollection *ol = view->GetOutline();
+   if (ol) ol->Paint(option);
    Hoption.System = kCARTESIAN;
    TGaxis *axis = new TGaxis();
    PaintLegoAxis(axis,90);
@@ -6113,6 +6128,12 @@ void THistPainter::PaintH3Iso()
 
    Double_t dcol = 0.5/Double_t(nbcol);
    TColor *colref = gROOT->GetColor(fH->GetFillColor());
+   if (!colref) {
+      delete [] x;
+      delete [] y;
+      delete [] z;
+      return;
+   }
    Float_t r, g, b, hue, light, satur;
    colref->GetRGB(r,g,b);
    TColor::RGBtoHLS(r,g,b,hue,light,satur);
@@ -6120,7 +6141,7 @@ void THistPainter::PaintH3Iso()
    for (Int_t col=0;col<nbcol;col++) {
       acol = gROOT->GetColor(col+icol1);
       TColor::HLStoRGB(hue, .4+col*dcol, satur, r, g, b);
-      acol->SetRGB(r, g, b);
+      if (acol) acol->SetRGB(r, g, b);
    }
 
    fLego->InitMoveScreen(-1.1,1.1);
@@ -6410,6 +6431,7 @@ void THistPainter::PaintLegoAxis(TGaxis *axis, Double_t ang)
 
    Double_t *rmin = view->GetRmin();
    Double_t *rmax = view->GetRmax();
+   if (!rmin || !rmax) return;
 
    // Initialize the axis options
    if (x1[0] > x2[0]) strlcpy(chopax, "SDH=+",8);
@@ -6636,8 +6658,8 @@ void THistPainter::PaintScatterPlot(Option_t *option)
       char *blank = strstr(oscat," "); if (blank) *blank = 0;
       sscanf(oscat+5,"%lg",&scale);
    }
-   // use an independent instance of a random generator 
-   // instead of gRandom to avoid conflicts and 
+   // use an independent instance of a random generator
+   // instead of gRandom to avoid conflicts and
    // to get same random numbers when drawing the same histogram
    TRandom2 random;
    marker=0;
@@ -7571,6 +7593,7 @@ void THistPainter::PaintSurface(Option_t *)
       icol1 = 201;
       Double_t dcol = 0.5/Double_t(nbcol);
       TColor *colref = gROOT->GetColor(fH->GetFillColor());
+      if (!colref) return;
       Float_t r,g,b,hue,light,satur;
       colref->GetRGB(r,g,b);
       TColor::RGBtoHLS(r,g,b,hue,light,satur);
@@ -7682,6 +7705,7 @@ void THistPainter::PaintTriangles(Option_t *option)
       }
       Double_t *rmin = viewsame->GetRmin();
       Double_t *rmax = viewsame->GetRmax();
+      if (!rmin || !rmax) return;
       fXbuf[0] = rmin[0];
       fYbuf[0] = rmax[0];
       fXbuf[1] = rmin[1];
@@ -8020,7 +8044,7 @@ void THistPainter::PaintTH2PolyScatterPlot(Option_t *)
 
 
    // use an independent instance of a random generator
-   // instead of gRandom to avoid conflicts and 
+   // instead of gRandom to avoid conflicts and
    // to get same random numbers when drawing the same histogram
    TRandom2 random;
 
@@ -8898,7 +8922,7 @@ void THistPainter::SetShowProjection(const char *option,Int_t nbins)
    else                fShowOption = option+2;
    fShowProjection = projection+100*nbins;
    gROOT->MakeDefCanvas();
-   gPad->SetName(Form("%lx_c_projection_%d", (ULong_t)fH, fShowProjection));
+   gPad->SetName(Form("c_%lx_projection_%d", (ULong_t)fH, fShowProjection));
    gPad->SetGrid();
 }
 
@@ -8935,7 +8959,7 @@ void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
 
    // Create or set the new canvas proj x
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("c_%lx_projection_%d",
                                                                               (ULong_t)fH, fShowProjection));
    if (c) {
       c->Clear();
@@ -8996,7 +9020,7 @@ void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
 
    // Create or set the new canvas proj y
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("c_%lx_projection_%d",
                                                                               (ULong_t)fH, fShowProjection));
    if(c) {
       c->Clear();
@@ -9047,6 +9071,7 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
 
    // Erase old position and draw a line at current position
    TView *view = gPad->GetView();
+   if (!view) return;
    TH3 *h3 = (TH3*)fH;
    TAxis *xaxis = h3->GetXaxis();
    TAxis *yaxis = h3->GetYaxis();
@@ -9075,7 +9100,7 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
    Double_t cx    = (pxmax-pxmin)/(uxmax-uxmin);
    Double_t cy    = (pymax-pymin)/(uymax-uymin);
    TVirtualPad *padsav = gPad;
-   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("%lx_c_projection_%d",
+   TVirtualPad *c = (TVirtualPad*)gROOT->GetListOfCanvases()->FindObject(Form("c_%lx_projection_%d",
                                                                               (ULong_t)fH, fShowProjection));
    if(!c) {
       fShowProjection = 0;
@@ -9180,11 +9205,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             TH1 *hp = h3->Project3D("x");
             yaxis->SetRange(firstY,lastY);
             zaxis->SetRange(firstZ,lastZ);
-            hp->SetFillColor(38);
-            hp->SetTitle(Form("ProjectionX of biny=%d binz=%d", biny, binz));
-            hp->SetXTitle(fH->GetXaxis()->GetTitle());
-            hp->SetYTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               hp->SetTitle(Form("ProjectionX of biny=%d binz=%d", biny, binz));
+               hp->SetXTitle(fH->GetXaxis()->GetTitle());
+               hp->SetYTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9285,11 +9312,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             TH1 *hp = h3->Project3D("y");
             xaxis->SetRange(firstX,lastX);
             zaxis->SetRange(firstZ,lastZ);
-            hp->SetFillColor(38);
-            hp->SetTitle(Form("ProjectionY of binx=%d binz=%d", binx, binz));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetYTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               hp->SetTitle(Form("ProjectionY of binx=%d binz=%d", binx, binz));
+               hp->SetXTitle(fH->GetYaxis()->GetTitle());
+               hp->SetYTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9390,11 +9419,13 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             TH1 *hp = h3->Project3D("z");
             xaxis->SetRange(firstX,lastX);
             yaxis->SetRange(firstY,lastY);
-            hp->SetFillColor(38);
-            hp->SetTitle(Form("ProjectionZ of binx=%d biny=%d", binx, biny));
-            hp->SetXTitle(fH->GetZaxis()->GetTitle());
-            hp->SetYTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               hp->SetTitle(Form("ProjectionZ of binx=%d biny=%d", binx, biny));
+               hp->SetXTitle(fH->GetZaxis()->GetTitle());
+               hp->SetYTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9458,13 +9489,15 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             c->cd();
             TH2 *hp = (TH2*)h3->Project3D("xy");
             zaxis->SetRange(first,last);
-            hp->SetFillColor(38);
-            if(nbins==1)hp->SetTitle(Form("ProjectionXY of binz=%d (%.1f)", binz,value1));
-            else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetYTitle(fH->GetXaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               if(nbins==1)hp->SetTitle(Form("ProjectionXY of binz=%d (%.1f)", binz,value1));
+               else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
+               hp->SetXTitle(fH->GetYaxis()->GetTitle());
+               hp->SetYTitle(fH->GetXaxis()->GetTitle());
+               hp->SetZTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9527,13 +9560,15 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             c->cd();
             TH2 *hp = (TH2*)h3->Project3D("yx");
             zaxis->SetRange(first,last);
-            hp->SetFillColor(38);
-            if(nbins==1)hp->SetTitle(Form("ProjectionYX of binz=%d (%.1f)", binz,value1));
-            else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetXaxis()->GetTitle());
-            hp->SetYTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               if(nbins==1)hp->SetTitle(Form("ProjectionYX of binz=%d (%.1f)", binz,value1));
+               else        hp->SetTitle(Form("ProjectionXY, binz range=%d-%d (%.1f-%.1f)", binz,binz+nbins-1,value1,value2));
+               hp->SetXTitle(fH->GetXaxis()->GetTitle());
+               hp->SetYTitle(fH->GetYaxis()->GetTitle());
+               hp->SetZTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9596,13 +9631,15 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             c->cd();
             TH2 *hp = (TH2*)h3->Project3D("xz");
             yaxis->SetRange(first,last);
-            hp->SetFillColor(38);
-            if(nbins==1)hp->SetTitle(Form("ProjectionXZ of biny=%d (%.1f)", biny,value1));
-            else        hp->SetTitle(Form("ProjectionXZ, biny range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetZaxis()->GetTitle());
-            hp->SetYTitle(fH->GetXaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               if(nbins==1)hp->SetTitle(Form("ProjectionXZ of biny=%d (%.1f)", biny,value1));
+               else        hp->SetTitle(Form("ProjectionXZ, biny range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
+               hp->SetXTitle(fH->GetZaxis()->GetTitle());
+               hp->SetYTitle(fH->GetXaxis()->GetTitle());
+               hp->SetZTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9665,13 +9702,15 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             c->cd();
             TH2 *hp = (TH2*)h3->Project3D("zx");
             yaxis->SetRange(first,last);
-            hp->SetFillColor(38);
-            if(nbins==1)hp->SetTitle(Form("ProjectionZX of biny=%d (%.1f)", biny,value1));
-            else        hp->SetTitle(Form("ProjectionZX, binY range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetXaxis()->GetTitle());
-            hp->SetYTitle(fH->GetZaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               if(nbins==1)hp->SetTitle(Form("ProjectionZX of biny=%d (%.1f)", biny,value1));
+               else        hp->SetTitle(Form("ProjectionZX, binY range=%d-%d (%.1f-%.1f)", biny,biny+nbins-1,value1,value2));
+               hp->SetXTitle(fH->GetXaxis()->GetTitle());
+               hp->SetYTitle(fH->GetZaxis()->GetTitle());
+               hp->SetZTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9734,13 +9773,15 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             c->cd();
             TH2 *hp = (TH2*)h3->Project3D("yz");
             xaxis->SetRange(first,last);
-            hp->SetFillColor(38);
-            if(nbins==1)hp->SetTitle(Form("ProjectionYZ of binx=%d (%.1f)", binx,value1));
-            else        hp->SetTitle(Form("ProjectionYZ, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetZaxis()->GetTitle());
-            hp->SetYTitle(fH->GetYaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               if(nbins==1)hp->SetTitle(Form("ProjectionYZ of binx=%d (%.1f)", binx,value1));
+               else        hp->SetTitle(Form("ProjectionYZ, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
+               hp->SetXTitle(fH->GetZaxis()->GetTitle());
+               hp->SetYTitle(fH->GetYaxis()->GetTitle());
+               hp->SetZTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 
@@ -9803,14 +9844,15 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
             c->cd();
             TH2 *hp = (TH2*)h3->Project3D("zy");
             xaxis->SetRange(first,last);
-            hp->SetFillColor(38);
-
-            if(nbins==1)hp->SetTitle(Form("ProjectionZY of binx=%d (%.1f)", binx,value1));
-            else        hp->SetTitle(Form("ProjectionZY, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
-            hp->SetXTitle(fH->GetYaxis()->GetTitle());
-            hp->SetYTitle(fH->GetZaxis()->GetTitle());
-            hp->SetZTitle("Number of Entries");
-            hp->Draw(fShowOption.Data());
+            if (hp) {
+               hp->SetFillColor(38);
+               if(nbins==1)hp->SetTitle(Form("ProjectionZY of binx=%d (%.1f)", binx,value1));
+               else        hp->SetTitle(Form("ProjectionZY, binx range=%d-%d (%.1f-%.1f)", binx,binx+nbins-1,value1,value2));
+               hp->SetXTitle(fH->GetYaxis()->GetTitle());
+               hp->SetYTitle(fH->GetZaxis()->GetTitle());
+               hp->SetZTitle("Number of Entries");
+               hp->Draw(fShowOption.Data());
+            }
          }
          break;
 

@@ -23,7 +23,38 @@
 
 #include <algorithm>
 
+#include <cctype>
+
 namespace textinput {
+
+  // Functions to find first/last non alphanumeric ("word-boundaries")
+  size_t find_first_non_alnum(const std::string &str,
+                              std::string::size_type index = 0) {
+    bool atleast_one_alnum = false;
+    std::string::size_type len = str.length();
+    for(; index < len; ++index) {
+      const char c = str[index];
+      bool is_alpha = isalnum(c) || c == '_';
+      if (is_alpha) atleast_one_alnum = true;
+      else if (atleast_one_alnum) return index;
+    }
+    return std::string::npos;
+  }
+
+  size_t find_last_non_alnum(const std::string &str,
+                             std::string::size_type index = std::string::npos) {
+    std::string::size_type len = str.length();
+    if (index == std::string::npos) index = len - 1;
+    bool atleast_one_alnum = false;
+    for(; index != std::string::npos; --index) {
+      const char c = str[index];
+      bool is_alpha = isalnum(c) || c == '_';
+      if (is_alpha) atleast_one_alnum = true;
+      else if (atleast_one_alnum) return index;
+    }
+    return std::string::npos;
+  }
+
   Editor::EProcessResult
   Editor::Process(Command cmd, EditorRange& R) {
     switch (cmd.GetKind()) {
@@ -92,15 +123,17 @@ namespace textinput {
       }
     }
     if (NewHistEntry != (size_t) -1) {
-      if (NewHistEntry != fCurHistEntry) {
-        fCurHistEntry = NewHistEntry;
-        Line = Hist->GetLine(fCurHistEntry);
-        R.fEdit.Extend(Range::AllText());
-        R.fDisplay.Extend(Range::AllText());
-        // Resets mode, thus can't call:
-        // ProcessMove(kMoveEnd, R);
-        fContext->SetCursor(Line.length());
-      }
+      // No, even if they are unchanged: we might have
+      // subsequent ^R updates triggered by faking a different
+      // fCurHistEntry.
+      // if (NewHistEntry != fCurHistEntry) {
+      fCurHistEntry = NewHistEntry;
+      Line = Hist->GetLine(fCurHistEntry);
+      R.fEdit.Extend(Range::AllText());
+      R.fDisplay.Extend(Range::AllText());
+      // Resets mode, thus can't call:
+      // ProcessMove(kMoveEnd, R);
+      fContext->SetCursor(Line.length());
       return true;
     }
 
@@ -111,7 +144,7 @@ namespace textinput {
   void
   Editor::CancelSpecialInputMode(Range& DisplayR) {
     if (fMode == kInputMode) return;
-    fContext->GetKeyBinding()->SetAllowEscModifier(false);
+    fContext->GetKeyBinding()->EnableEscCmd(false);
     SetEditorPrompt(Text());
     DisplayR.ExtendPromptUpdate(Range::kUpdateEditorPrompt);
     fMode = kInputMode;
@@ -195,6 +228,21 @@ namespace textinput {
         fSearch.erase(fSearch.length() - 1);
         SetReverseHistSearchPrompt(R.fDisplay);
         if (UpdateHistSearch(R)) return kPRSuccess;
+        return kPRError;
+      } else if (M == kCmdReverseSearch) {
+        // Search again. Move to older hist entry:
+        size_t prevHistEntry = fCurHistEntry;
+        // intentional overflow from -1 to 0:
+        if (fCurHistEntry + 1 >= fContext->GetHistory()->GetSize()) {
+          return kPRError;
+        }
+        if (fCurHistEntry == (size_t)-1) {
+          fCurHistEntry = 0;
+        } else {
+          ++fCurHistEntry;
+        }
+        if (UpdateHistSearch(R)) return kPRSuccess;
+        fCurHistEntry = prevHistEntry;
         return kPRError;
       } else {
         CancelSpecialInputMode(R.fDisplay);
@@ -319,6 +367,8 @@ namespace textinput {
         Line = fUndoBuf.back().first;
         fContext->SetCursor(fUndoBuf.back().second);
         fUndoBuf.pop_back();
+        R.fEdit.Extend(Range::AllText());
+        R.fDisplay.Extend(Range::AllText());
         return kPRSuccess;
       case kCmdHistNewer:
         // already newest?
@@ -360,7 +410,7 @@ namespace textinput {
         fMode = kHistSearchMode;
         fSearch.clear();
         SetReverseHistSearchPrompt(R.fDisplay);
-        fContext->GetKeyBinding()->SetAllowEscModifier(true);
+        fContext->GetKeyBinding()->EnableEscCmd(true);
         if (UpdateHistSearch(R)) return kPRSuccess;
         return kPRError;
       case kCmdHistReplay:
@@ -405,15 +455,15 @@ namespace textinput {
 
   size_t
   Editor::FindWordBoundary(int Direction) {
-    static const char space[] = " \x9";
 
     const Text& Line = fContext->GetLine();
     size_t Cursor = fContext->GetCursor();
 
     if (Direction < 0 && Cursor < 2) return 0;
+
     size_t ret = Direction > 0 ?
-      Line.GetText().find_first_of(space, Cursor + 1)
-    : Line.GetText().find_last_of(space, Cursor - 2);
+      find_first_non_alnum(Line.GetText(), Cursor + 1)
+    : find_last_non_alnum(Line.GetText(), Cursor - 2);
 
     if (ret == std::string::npos) {
       if (Direction > 0) return Line.length();

@@ -46,10 +46,10 @@ XPDDEP       := $(XPCONNO:.o=.d)
 XPDLIB       := $(LPATH)/libXrdProofd.$(SOEXT)
 
 # Extra include paths and libs
-XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
-XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
+XPDINCEXTRA  := $(XROOTDDIRI:%=-I%)
+XPDINCEXTRA  += $(PROOFDDIRI:%=-I%)
 
-XPDLIBEXTRA  += $(XROOTDDIRL)/libXrdClient.lib
+XPDLIBEXTRA  := $(XROOTDDIRL)/libXrdClient.lib
 
 # used in the main Makefile
 PROOFDEXEH   := $(MODDIRI)/proofdp.h
@@ -122,18 +122,18 @@ XPCONNO      := $(call stripsrc,$(MODDIRS)/XrdProofConn.o \
 
 # Extra include paths and libs
 XPROOFDEXELIBS :=
-XPROOFDEXESYSLIBS := $(DNSSDLIB)
+XPROOFDEXESYSLIBS :=
 XPROOFDEXE     :=
 ifeq ($(HASXRD),yes)
 XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
 XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
-XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdOuc -lXrdNet -lXrdSys \
-                  -lXrdClient -lXrdSut $(DNSSDLIB)
+XPDLIBEXTRA    := -L$(XROOTDDIRL) -lXrdClient -lXrdNet -lXrdOuc \
+                  -lXrdSys -lXrdSut
 XPROOFDEXELIBS := $(XROOTDDIRL)/libXrd.a $(XROOTDDIRL)/libXrdClient.a \
-                  $(XROOTDDIRL)/libXrdNet.a \
-                  $(XROOTDDIRL)/libXrdOuc.a \
+                  $(XROOTDDIRL)/libXrdNet.a $(XROOTDDIRL)/libXrdOuc.a \
                   $(XROOTDDIRL)/libXrdSys.a $(XROOTDDIRL)/libXrdSut.a
-# Starting from Jul 2010 XrdNet has been split in two libs: XrdNet and XrdNetUtil;
+# Starting from Jul 2010 XrdNet has been split in two libs:
+#    XrdNet and XrdNetUtil
 # both are needed
 XRDNETUTIL     :=
 ifneq ($(XRDVERSION),)
@@ -146,6 +146,7 @@ XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdNetUtil
 XPROOFDEXELIBS += $(XROOTDDIRL)/libXrdNetUtil.a
 endif
 XPDLIBEXTRA    +=  $(DNSSDLIB)
+XPROOFDEXELIBS +=  $(DNSSDLIB)
 
 ifeq ($(PLATFORM),solaris)
 XPROOFDEXESYSLIBS := -lsendfile
@@ -174,21 +175,25 @@ endif
 include/%.h:    $(PROOFDDIRI)/%.h
 		cp $< $@
 
-$(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO) $(STRLCPYO)
+$(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO) \
+                $(STRLCPYO)
 		$(LD) $(LDFLAGS) -o $@ $(PROOFDEXEO) $(RPDUTILO) $(GLBPATCHO) \
-		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(STRLCPYO) $(SYSLIBS)
+		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(STRLCPYO) \
+		   $(SYSLIBS)
 
 $(XPROOFDEXE):  $(XPDO) $(XPROOFDEXELIBS) $(XRDPROOFXD) $(RPDCONNO)
-		$(LD) $(LDFLAGS) -o $@ $(XPDO) $(RPDCONNO) $(XPROOFDEXELIBS) $(SYSLIBS) $(XPROOFDEXESYSLIBS)
+		$(LD) $(LDFLAGS) -o $@ $(XPDO) $(RPDCONNO) $(XPROOFDEXELIBS) \
+		   $(SYSLIBS) $(XPROOFDEXESYSLIBS)
 
-$(XPDLIB):      $(XPDO) $(XPDH) $(ORDER_) $(MAINLIBS) $(XRDPROOFXD) $(RPDCONNO)
+$(XPDLIB):      $(XPDO) $(XPDH) $(XPROOFDEXELIBS) $(ORDER_) $(MAINLIBS) \
+                $(XRDPROOFXD) $(RPDCONNO)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libXrdProofd.$(SOEXT) $@ "$(XPDO) $(RPDCONNO)" \
 		   "$(XPDLIBEXTRA)"
 
 $(PROOFEXECVEXE): $(PROOFEXECVO) $(RPDCONNO) $(RPDPRIVO)
-		  $(LD) $(LDFLAGS) -o $@ $(PROOFEXECVO) $(RPDCONNO) $(RPDPRIVO) \
-		  $(SYSLIBS)
+		  $(LD) $(LDFLAGS) -o $@ $(PROOFEXECVO) $(RPDCONNO) \
+		    $(RPDPRIVO) $(SYSLIBS)
 
 all-$(MODNAME): $(PROOFDEXE) $(XPROOFDEXE) $(PROOFEXECVEXE) $(XPDLIB)
 
@@ -222,6 +227,14 @@ $(XPDO): CXXFLAGS += -Wno-deprecated
 endif
 endif
 
+endif
+
+ifeq ($(PLATFORM),macosx)
+$(XPDLIB): SOFLAGS := -undefined dynamic_lookup $(SOFLAGS)
+endif
+ifeq ($(PLATFORM),linux)
+comma := ,
+$(XPDLIB): LDFLAGS := $(subst -Wl$(comma)--no-undefined,,$(LDFLAGS))
 endif
 
 $(PROOFEXECVO): $(RPDCONNO) $(RPDPRIVO)

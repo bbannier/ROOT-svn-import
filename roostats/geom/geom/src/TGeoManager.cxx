@@ -284,6 +284,7 @@
 #include "TKey.h"
 #include "THashList.h"
 #include "TClass.h"
+#include "TThread.h"
 
 #include "TGeoVoxelFinder.h"
 #include "TGeoElement.h"
@@ -322,8 +323,61 @@ TGeoManager *gGeoManager = 0;
 
 ClassImp(TGeoManager)
 
-Bool_t TGeoManager::fgLock = kFALSE;
+Bool_t TGeoManager::fgLock         = kFALSE;
+Bool_t TGeoManager::fgLockNavigators = kFALSE;
 Int_t  TGeoManager::fgVerboseLevel = 1;
+Int_t  TGeoManager::fgNumThreads   = 0;
+TGeoManager::ThreadsMap_t TGeoManager::fgThreadId;
+
+//______________________________________________________________________________
+TGeoManager::ThreadData_t::ThreadData_t() :
+   fIntSize(0), fDblSize(0), fIntBuffer(0), fDblBuffer(0)
+{
+   // Constructor.
+}
+
+//______________________________________________________________________________
+TGeoManager::ThreadData_t::~ThreadData_t()
+{
+   // Destructor.
+
+   delete [] fIntBuffer;
+   delete [] fDblBuffer;
+}
+
+//______________________________________________________________________________
+TGeoManager::ThreadData_t& TGeoManager::GetThreadData() const
+{
+   Int_t tid = TGeoManager::ThreadId();
+   TThread::Lock();
+   if (tid >= fThreadSize)
+   {
+      fThreadData.resize(tid + 1);
+      fThreadSize = tid + 1;
+   }
+   if (fThreadData[tid] == 0)
+   {
+      fThreadData[tid] = new ThreadData_t;
+   }
+   TThread::UnLock();
+   return *fThreadData[tid];
+}
+
+//______________________________________________________________________________
+void TGeoManager::ClearThreadData() const
+{
+   std::vector<ThreadData_t*>::iterator i = fThreadData.begin();
+   while (i != fThreadData.end())
+   {
+      delete *i;
+      ++i;
+   }
+   fThreadData.clear();
+   fThreadSize = 0;
+   TIter next(fVolumes);
+   TGeoVolume *vol;
+   while ((vol=(TGeoVolume*)next())) vol->ClearThreadData();
+}
 
 //_____________________________________________________________________________
 TGeoManager::TGeoManager()
@@ -362,7 +416,6 @@ TGeoManager::TGeoManager()
       fNpdg = 0;
       fPdgNames = 0;
       memset(fPdgId, 0, 256*sizeof(Int_t));
-      fNavigators = 0;
       fCurrentTrack = 0;
       fCurrentVolume = 0;
       fTopVolume = 0;
@@ -380,9 +433,6 @@ TGeoManager::TGeoManager()
       fUniqueVolumes = 0;
       fNodeIdArray = 0;
       fClippingShape = 0;
-      fIntSize = fDblSize = 1000;
-      fIntBuffer = 0;
-      fDblBuffer = 0;
       fMatrixTransform = kFALSE;
       fMatrixReflection = kFALSE;
       fGLMatrix = 0;
@@ -394,6 +444,9 @@ TGeoManager::TGeoManager()
       fNPNEId = 0;
       fKeyPNEId = 0;
       fValuePNEId = 0;
+      fMultiThread = kFALSE;
+      ClearThreadsMap();
+      fThreadSize = 0;
    } else {
       Init();
       gGeoIdentity = 0;
@@ -457,7 +510,6 @@ void TGeoManager::Init()
    fNpdg = 0;
    fPdgNames = 0;
    memset(fPdgId, 0, 256*sizeof(Int_t));
-   fNavigators = new TObjArray();
    fCurrentTrack = 0;
    fCurrentVolume = 0;
    fTopVolume = 0;
@@ -475,9 +527,6 @@ void TGeoManager::Init()
    fUniqueVolumes = new TObjArray(256);
    fNodeIdArray = 0;
    fClippingShape = 0;
-   fIntSize = fDblSize = 1000;
-   fIntBuffer = new Int_t[1000];
-   fDblBuffer = new Double_t[1000];
    fMatrixTransform = kFALSE;
    fMatrixReflection = kFALSE;
    fGLMatrix = new TGeoHMatrix();
@@ -489,6 +538,9 @@ void TGeoManager::Init()
    fNPNEId = 0;
    fKeyPNEId = 0;
    fValuePNEId = 0;
+   fMultiThread = kFALSE;
+   ClearThreadsMap();
+   fThreadSize = 0;
 }
 
 //_____________________________________________________________________________
@@ -529,7 +581,6 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fGVolumes(gm.fGVolumes),
   fTracks(gm.fTracks),
   fPdgNames(gm.fPdgNames),
-  fNavigators(gm.fNavigators),
   fMaterials(gm.fMaterials),
   fMedia(gm.fMedia),
   fNodes(gm.fNodes),
@@ -545,11 +596,7 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fClippingShape(gm.fClippingShape),
   fElementTable(gm.fElementTable),
   fNodeIdArray(gm.fNodeIdArray),
-  fIntSize(gm.fIntSize),
-  fDblSize(gm.fDblSize),
-  fIntBuffer(gm.fIntBuffer),
   fNLevel(gm.fNLevel),
-  fDblBuffer(gm.fDblBuffer),
   fPaintVolume(gm.fPaintVolume),
   fHashVolumes(gm.fHashVolumes),
   fHashGVolumes(gm.fHashGVolumes),
@@ -558,11 +605,14 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fSizePNEId(0),
   fNPNEId(0),
   fKeyPNEId(0),
-  fValuePNEId(0)
+  fValuePNEId(0),
+  fMultiThread(kFALSE),
+  fThreadSize(0)
 {
    //copy constructor
    for(Int_t i=0; i<256; i++)
       fPdgId[i]=gm.fPdgId[i];
+   ClearThreadsMap();
 }
 
 //_____________________________________________________________________________
@@ -608,7 +658,6 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fGVolumes=gm.fGVolumes;
       fTracks=gm.fTracks;
       fPdgNames=gm.fPdgNames;
-      fNavigators=gm.fNavigators;
       fMaterials=gm.fMaterials;
       fMedia=gm.fMedia;
       fNodes=gm.fNodes;
@@ -624,11 +673,7 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fClippingShape=gm.fClippingShape;
       fElementTable=gm.fElementTable;
       fNodeIdArray=gm.fNodeIdArray;
-      fIntSize=gm.fIntSize;
-      fDblSize=gm.fDblSize;
-      fIntBuffer=gm.fIntBuffer;
       fNLevel=gm.fNLevel;
-      fDblBuffer=gm.fDblBuffer;
       fPaintVolume=gm.fPaintVolume;
       fHashVolumes=gm.fHashVolumes;
       fHashGVolumes=gm.fHashGVolumes;
@@ -638,6 +683,9 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fNPNEId = 0;
       fKeyPNEId = 0;
       fValuePNEId = 0;
+      fMultiThread = kFALSE;
+      ClearThreadsMap();
+      ClearThreadData();
    }
    return *this;
 }
@@ -656,6 +704,8 @@ TGeoManager::~TGeoManager()
 //   TIter next(brlist);
 //   TBrowser *browser = 0;
 //   while ((browser=(TBrowser*)next())) browser->RecursiveRemove(this);
+   ClearThreadsMap();
+   ClearThreadData();
    delete TGeoBuilder::Instance(this);
    if (fBits)  delete [] fBits;
    SafeDelete(fNodes);
@@ -675,11 +725,9 @@ TGeoManager::~TGeoManager()
    if (fTracks) {fTracks->Delete(); SafeDelete( fTracks );}
    SafeDelete( fUniqueVolumes );
    if (fPdgNames) {fPdgNames->Delete(); SafeDelete( fPdgNames );}
-   if (fNavigators) {fNavigators->Delete(); SafeDelete( fNavigators );}
+   ClearNavigators();
    CleanGarbage();
    SafeDelete( fPainter ); 
-   delete [] fDblBuffer;
-   delete [] fIntBuffer;
    SafeDelete( fGLMatrix ); 
    if (fSizePNEId) {
       delete [] fKeyPNEId;
@@ -792,31 +840,134 @@ Int_t TGeoManager::AddVolume(TGeoVolume *volume)
 }
 
 //_____________________________________________________________________________
-Int_t TGeoManager::AddNavigator(TGeoNavigator *navigator)
+TGeoNavigator *TGeoManager::AddNavigator()
 {
 // Add a navigator in the list of navigators. If it is the first one make it
 // current navigator.
-   if (!fCurrentNavigator) fCurrentNavigator = navigator;
-   Int_t index = fNavigators->GetEntriesFast();
-   fNavigators->Add(navigator);
-   if (fClosed) {
-      navigator->BuildCache(kTRUE,kFALSE);
+   if (fMultiThread) TThread::Lock();
+//   if (fgLockNavigators) {
+//      Error("AddNavigator", "Navigators are locked. Use SetNavigatorsLock(false) first.");
+//      return 0;
+//   }
+   Long_t threadId = (fMultiThread)?TThread::SelfId():999;
+   NavigatorsMap_t::const_iterator it = fNavigators.find(threadId);
+   TGeoNavigatorArray *array = 0;
+   if (it != fNavigators.end()) array = it->second;
+   else {
+      array = new TGeoNavigatorArray(this);
+      fNavigators.insert(NavigatorsMap_t::value_type(threadId, array));
    }
-   return index;
+   TGeoNavigator *nav = array->AddNavigator();
+   if (fMultiThread) TThread::UnLock();
+   return nav;
+}   
+
+//_____________________________________________________________________________
+TGeoNavigator *TGeoManager::GetCurrentNavigator() const
+{
+// Returns current navigator for the calling thread.
+   if (!fMultiThread) return fCurrentNavigator;
+   Long_t threadId = TThread::SelfId();
+   NavigatorsMap_t::const_iterator it = fNavigators.find(threadId);
+   if (it == fNavigators.end()) return 0;
+   TGeoNavigatorArray *array = it->second;
+   return array->GetCurrentNavigator();
+}
+
+//_____________________________________________________________________________
+TGeoNavigatorArray *TGeoManager::GetListOfNavigators() const
+{
+// Get list of navigators for the calling thread.
+   Long_t threadId = (fMultiThread)?TThread::SelfId():999;
+   NavigatorsMap_t::const_iterator it = fNavigators.find(threadId);
+   if (it == fNavigators.end()) return 0;
+   TGeoNavigatorArray *array = it->second;
+   return array;
 }
 
 //_____________________________________________________________________________
 Bool_t TGeoManager::SetCurrentNavigator(Int_t index)
 {
-// Switch to another navigator.
-   if (index<0 || index>=fNavigators->GetEntriesFast()) {
-      Error("SetCurrentNavigator", "index %i not in range [0, %d]", index, fNavigators->GetEntriesFast()-1);
+// Switch to another existing navigator for the calling thread.
+   Long_t threadId = (fMultiThread)?TThread::SelfId():999;
+   NavigatorsMap_t::const_iterator it = fNavigators.find(threadId);
+   if (it == fNavigators.end()) {
+      Error("SetCurrentNavigator", "No navigator defined for thread %ld\n", threadId);
+      return kFALSE;
+   }   
+   TGeoNavigatorArray *array = it->second;
+   TGeoNavigator *nav = array->SetCurrentNavigator(index);
+   if (!nav) {
+      Error("SetCurrentNavigator", "Navigator %d not existing for thread %ld\n", index, threadId);
       return kFALSE;
    }
-   fCurrentNavigator = (TGeoNavigator*) fNavigators->At(index);
+   if (!fMultiThread) fCurrentNavigator = nav;
    return kTRUE;
 }
 
+//_____________________________________________________________________________
+void TGeoManager::ClearNavigators()
+{
+// Clear all navigators.
+   if (fMultiThread) TThread::Lock();
+   TGeoNavigatorArray *arr = 0;
+   for (NavigatorsMap_t::iterator it = fNavigators.begin();
+        it != fNavigators.end(); it++) {
+      arr = (*it).second;
+      if (arr) delete arr;
+   }
+   fNavigators.clear();   
+   if (fMultiThread) TThread::UnLock();
+}
+
+//_____________________________________________________________________________
+void TGeoManager::RemoveNavigator(const TGeoNavigator *nav)
+{
+// Clear a single navigator.
+   if (fMultiThread) TThread::Lock();
+   for (NavigatorsMap_t::const_iterator it = fNavigators.begin();
+        it != fNavigators.end(); it++) {
+      TGeoNavigatorArray *arr = (*it).second;
+      if (arr) {
+         if ((TGeoNavigator*)arr->Remove((TObject*)nav)) {
+            delete nav;
+            return;
+         }
+      }   
+   }
+   Error("Remove navigator", "Navigator %p not found", nav);
+   if (fMultiThread) TThread::UnLock();
+}      
+
+//_____________________________________________________________________________
+void TGeoManager::ClearThreadsMap()
+{
+// Clear the current map of threads. This will be filled again by the calling
+// threads via ThreadId calls.
+   TThread::Lock();
+//   if (!fgThreadId.empty()) fgThreadId.clear();
+   fgNumThreads = 0;
+   TThread::UnLock();
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::ThreadId()
+{
+// Translates the current thread id to an ordinal number. This can be used to
+// manage data which is pspecific for a given thread.
+   Int_t tid = 0;
+   if (gGeoManager && !gGeoManager->IsMultiThread()) return 0;
+   Long_t selfId = TThread::SelfId();
+   TGeoManager::ThreadsMapIt_t it = fgThreadId.find(selfId);
+   if (it != fgThreadId.end()) return it->second;
+   // Map needs to be updated.
+   TThread::Lock();
+   fgThreadId[selfId] = fgNumThreads;
+   tid = fgNumThreads++;
+   TThread::UnLock();
+   return tid;
+}   
+   
 //_____________________________________________________________________________
 void TGeoManager::Browse(TBrowser *b)
 {
@@ -878,14 +1029,14 @@ void TGeoManager::UnbombTranslation(const Double_t *tr, Double_t *bombtr)
 void TGeoManager::DoBackupState()
 {
 // Backup the current state without affecting the cache stack.
-   fCurrentNavigator->DoBackupState();
+   GetCurrentNavigator()->DoBackupState();
 }
 
 //_____________________________________________________________________________
 void TGeoManager::DoRestoreState()
 {
 // Restore a backed-up state without affecting the cache stack.
-   fCurrentNavigator->DoRestoreState();
+   GetCurrentNavigator()->DoRestoreState();
 }
 
 //_____________________________________________________________________________
@@ -1250,12 +1401,12 @@ void TGeoManager::CloseGeometry(Option_t *option)
 //   while ((browser=(TBrowser*)next())) browser->Refresh();
    TString opt(option);
    opt.ToLower();
-   Bool_t dummy = opt.Contains("d");
+//   Bool_t dummy = opt.Contains("d");
    Bool_t nodeid = opt.Contains("i");
    // Create a geometry navigator if not present
-   if (!fCurrentNavigator) AddNavigator(new TGeoNavigator(this));
+   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
    TGeoNavigator *nav = 0;
-   Int_t nnavigators = fNavigators->GetEntriesFast();
+   Int_t nnavigators = GetListOfNavigators()->GetEntriesFast();
    // Check if the geometry is streamed from file
    if (fIsGeomReading) {
       if (fgVerboseLevel>0) Info("CloseGeometry","Geometry loaded from file...");
@@ -1269,16 +1420,20 @@ void TGeoManager::CloseGeometry(Option_t *option)
          SetTopVolume(fMasterVolume);
          if (fStreamVoxels && fgVerboseLevel>0) Info("CloseGeometry","Voxelization retrieved from file");
          Voxelize("ALL");
-         for (Int_t i=0; i<nnavigators; i++) {
-            nav = (TGeoNavigator*)fNavigators->At(i);
-            nav->BuildCache(dummy,nodeid);
+         if (nodeid) {
+            for (Int_t i=0; i<nnavigators; i++) {
+               nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+               nav->GetCache()->BuildIdArray();
+            }   
          }
       } else {
          Warning("CloseGeometry", "top node was streamed!");
          Voxelize("ALL");
-         for (Int_t i=0; i<nnavigators; i++) {
-            nav = (TGeoNavigator*)fNavigators->At(i);
-            nav->BuildCache(dummy,nodeid);
+         if (nodeid) {
+            for (Int_t i=0; i<nnavigators; i++) {
+               nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+               nav->GetCache()->BuildIdArray();
+            }   
          }
       }
       if (!fHashVolumes) {
@@ -1307,9 +1462,11 @@ void TGeoManager::CloseGeometry(Option_t *option)
 //   BuildIdArray();
    Voxelize("ALL");
    if (fgVerboseLevel>0) Info("CloseGeometry","Building cache...");
-   for (Int_t i=0; i<nnavigators; i++) {
-      nav = (TGeoNavigator*)fNavigators->At(i);
-      nav->BuildCache(dummy,nodeid);
+   if (nodeid) {
+      for (Int_t i=0; i<nnavigators; i++) {
+         nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+         nav->GetCache()->BuildIdArray();
+      }   
    }
    fClosed = kTRUE;
    if (fgVerboseLevel>0) {
@@ -1365,14 +1522,14 @@ void TGeoManager::CdNode(Int_t nodeid)
 {
 // Change current path to point to the node having this id.
 // Node id has to be in range : 0 to fNNodes-1 (no check for performance reasons)
-   fCurrentNavigator->CdNode(nodeid);
+   GetCurrentNavigator()->CdNode(nodeid);
 }
 
 //_____________________________________________________________________________
 Int_t TGeoManager::GetCurrentNodeId() const
 {
 // Get the unique ID of the current node.
-   return fCurrentNavigator->GetCurrentNodeId();
+   return GetCurrentNavigator()->GetCurrentNodeId();
 }
 
 //_____________________________________________________________________________
@@ -1380,7 +1537,7 @@ void TGeoManager::CdTop()
 {
 // Make top level node the current node. Updates the cache accordingly.
 // Determine the overlapping state of current node.
-   fCurrentNavigator->CdTop();
+   GetCurrentNavigator()->CdTop();
 }
 
 //_____________________________________________________________________________
@@ -1388,21 +1545,21 @@ void TGeoManager::CdUp()
 {
 // Go one level up in geometry. Updates cache accordingly.
 // Determine the overlapping state of current node.
-   fCurrentNavigator->CdUp();
+   GetCurrentNavigator()->CdUp();
 }
 //_____________________________________________________________________________
 void TGeoManager::CdDown(Int_t index)
 {
 // Make a daughter of current node current. Can be called only with a valid
 // daughter index (no check). Updates cache accordingly.
-   fCurrentNavigator->CdDown(index);
+   GetCurrentNavigator()->CdDown(index);
 }
 
 //_____________________________________________________________________________
 void TGeoManager::CdNext()
 {
 // Do a cd to the node found next by FindNextBoundary
-   fCurrentNavigator->CdNext();
+   GetCurrentNavigator()->CdNext();
 }
 
 //_____________________________________________________________________________
@@ -1410,14 +1567,14 @@ Bool_t TGeoManager::cd(const char *path)
 {
 // Browse the tree of nodes starting from fTopNode according to pathname.
 // Changes the path accordingly.
-   return fCurrentNavigator->cd(path);
+   return GetCurrentNavigator()->cd(path);
 }
 
 //_____________________________________________________________________________
 Bool_t TGeoManager::CheckPath(const char *path) const
 {
 // Check if a geometry path is valid without changing the state of the current navigator.
-   return fCurrentNavigator->CheckPath(path);
+   return GetCurrentNavigator()->CheckPath(path);
 }
 
 //_____________________________________________________________________________
@@ -1586,7 +1743,7 @@ void TGeoManager::TestOverlaps(const char* path)
 void TGeoManager::GetBranchNames(Int_t *names) const
 {
 // Fill volume names of current branch into an array.
-   fCurrentNavigator->GetBranchNames(names);
+   GetCurrentNavigator()->GetBranchNames(names);
 }
 //_____________________________________________________________________________
 const char *TGeoManager::GetPdgName(Int_t pdg) const
@@ -1623,14 +1780,14 @@ void TGeoManager::SetPdgName(Int_t pdg, const char *name)
 void TGeoManager::GetBranchNumbers(Int_t *copyNumbers, Int_t *volumeNumbers) const
 {
 // Fill node copy numbers of current branch into an array.
-   fCurrentNavigator->GetBranchNumbers(copyNumbers, volumeNumbers);
+   GetCurrentNavigator()->GetBranchNumbers(copyNumbers, volumeNumbers);
 }
 
 //_____________________________________________________________________________
 void TGeoManager::GetBranchOnlys(Int_t *isonly) const
 {
 // Fill node copy numbers of current branch into an array.
-   fCurrentNavigator->GetBranchOnlys(isonly);
+   GetCurrentNavigator()->GetBranchOnlys(isonly);
 }
 
 //_____________________________________________________________________________
@@ -1648,8 +1805,8 @@ void TGeoManager::GetBombFactors(Double_t &bombx, Double_t &bomby, Double_t &bom
 TGeoHMatrix *TGeoManager::GetHMatrix()
 {
 // Return stored current matrix (global matrix of the next touched node).
-   if (!fCurrentNavigator) return NULL;
-   return fCurrentNavigator->GetHMatrix();
+   if (!GetCurrentNavigator()) return NULL;
+   return GetCurrentNavigator()->GetHMatrix();
 }
 
 //_____________________________________________________________________________
@@ -1672,7 +1829,7 @@ Int_t TGeoManager::GetVirtualLevel()
 // Find level of virtuality of current overlapping node (number of levels
 // up having the same tracking media.
 
-   return fCurrentNavigator->GetVirtualLevel();
+   return GetCurrentNavigator()->GetVirtualLevel();
 }
 //_____________________________________________________________________________
 TVirtualGeoTrack *TGeoManager::FindTrackWithId(Int_t id) const
@@ -1738,14 +1895,14 @@ Int_t TGeoManager::GetTrackIndex(Int_t id) const
 Bool_t TGeoManager::GotoSafeLevel()
 {
 // Go upwards the tree until a non-overlaping node
-   return fCurrentNavigator->GotoSafeLevel();
+   return GetCurrentNavigator()->GotoSafeLevel();
 }
 
 //_____________________________________________________________________________
 Int_t TGeoManager::GetSafeLevel() const
 {
 // Go upwards the tree until a non-overlaping node
-   return fCurrentNavigator->GetSafeLevel();
+   return GetCurrentNavigator()->GetSafeLevel();
 }
 
 //_____________________________________________________________________________
@@ -1791,7 +1948,7 @@ Double_t TGeoManager::Safety(Bool_t inside)
 // Compute safe distance from the current point. This represent the distance
 // from POINT to the closest boundary.
 
-   return fCurrentNavigator->Safety(inside);
+   return GetCurrentNavigator()->Safety(inside);
 }
 
 //_____________________________________________________________________________
@@ -2152,7 +2309,7 @@ TGeoNode *TGeoManager::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
 {
 // Returns the deepest node containing fPoint, which must be set a priori.
 
-   return fCurrentNavigator->SearchNode(downwards, skipnode);
+   return GetCurrentNavigator()->SearchNode(downwards, skipnode);
 }
 
 //_____________________________________________________________________________
@@ -2160,7 +2317,7 @@ TGeoNode *TGeoManager::CrossBoundaryAndLocate(Bool_t downwards, TGeoNode *skipno
 {
 // Cross next boundary and locate within current node
 // The current point must be on the boundary of fCurrentNode.
-   return fCurrentNavigator->CrossBoundaryAndLocate(downwards, skipnode);
+   return GetCurrentNavigator()->CrossBoundaryAndLocate(downwards, skipnode);
 }
 
 //_____________________________________________________________________________
@@ -2171,7 +2328,7 @@ TGeoNode *TGeoManager::FindNextBoundaryAndStep(Double_t stepmax, Bool_t compsafe
 // propagate with fStep=SNEXT (distance to boundary) and locate/return the next
 // node.
 
-   return fCurrentNavigator->FindNextBoundaryAndStep(stepmax, compsafe);
+   return GetCurrentNavigator()->FindNextBoundaryAndStep(stepmax, compsafe);
 }
 
 //_____________________________________________________________________________
@@ -2190,7 +2347,7 @@ TGeoNode *TGeoManager::FindNextBoundary(Double_t stepmax, const char *path, Bool
 //        they want this computed for the current point.
 
    // convert current point and direction to local reference
-   return fCurrentNavigator->FindNextBoundary(stepmax,path, frombdr);
+   return GetCurrentNavigator()->FindNextBoundary(stepmax,path, frombdr);
 }
 
 //_____________________________________________________________________________
@@ -2200,28 +2357,28 @@ TGeoNode *TGeoManager::FindNextDaughterBoundary(Double_t *point, Double_t *dir, 
 // The point and direction must be converted in the coordinate system of the current volume.
 // The proposed step limit is fStep.
 
-   return fCurrentNavigator->FindNextDaughterBoundary(point, dir, idaughter, compmatrix);
+   return GetCurrentNavigator()->FindNextDaughterBoundary(point, dir, idaughter, compmatrix);
 }
 
 //_____________________________________________________________________________
 void TGeoManager::ResetState()
 {
 // Reset current state flags.
-   fCurrentNavigator->ResetState();
+   GetCurrentNavigator()->ResetState();
 }
 
 //_____________________________________________________________________________
 TGeoNode *TGeoManager::FindNode(Bool_t safe_start)
 {
 // Returns deepest node containing current point.
-   return fCurrentNavigator->FindNode(safe_start);
+   return GetCurrentNavigator()->FindNode(safe_start);
 }
 
 //_____________________________________________________________________________
 TGeoNode *TGeoManager::FindNode(Double_t x, Double_t y, Double_t z)
 {
 // Returns deepest node containing current point.
-   return fCurrentNavigator->FindNode(x, y, z);
+   return GetCurrentNavigator()->FindNode(x, y, z);
 }
 
 //_____________________________________________________________________________
@@ -2229,7 +2386,7 @@ Double_t *TGeoManager::FindNormalFast()
 {
 // Computes fast normal to next crossed boundary, assuming that the current point
 // is close enough to the boundary. Works only after calling FindNextBoundary.
-   return fCurrentNavigator->FindNormalFast();
+   return GetCurrentNavigator()->FindNormalFast();
 }
 
 //_____________________________________________________________________________
@@ -2239,21 +2396,21 @@ Double_t *TGeoManager::FindNormal(Bool_t forward)
 // crossed when propagating on a straight line from a given point/direction.
 // Returns the normal vector cosines in the MASTER coordinate system. The dot
 // product of the normal and the current direction is positive defined.
-   return fCurrentNavigator->FindNormal(forward);
+   return GetCurrentNavigator()->FindNormal(forward);
 }
 
 //_____________________________________________________________________________
 Bool_t TGeoManager::IsSameLocation(Double_t x, Double_t y, Double_t z, Bool_t change)
 {
 // Checks if point (x,y,z) is still in the current node.
-   return fCurrentNavigator->IsSameLocation(x,y,z,change);
+   return GetCurrentNavigator()->IsSameLocation(x,y,z,change);
 }
 
 //_____________________________________________________________________________
 Bool_t TGeoManager::IsSamePoint(Double_t x, Double_t y, Double_t z) const
 {
 // Check if a new point with given coordinates is the same as the last located one.
-   return fCurrentNavigator->IsSamePoint(x,y,z);
+   return GetCurrentNavigator()->IsSamePoint(x,y,z);
 }
 
 //_____________________________________________________________________________
@@ -2262,8 +2419,8 @@ Bool_t TGeoManager::IsInPhiRange() const
 // True if current node is in phi range
    if (!fPhiCut) return kTRUE;
    const Double_t *origin;
-   if (!fCurrentNavigator || !fCurrentNavigator->GetCurrentNode()) return kFALSE;
-   origin = ((TGeoBBox*)fCurrentNavigator->GetCurrentVolume()->GetShape())->GetOrigin();
+   if (!GetCurrentNavigator() || !GetCurrentNavigator()->GetCurrentNode()) return kFALSE;
+   origin = ((TGeoBBox*)GetCurrentNavigator()->GetCurrentVolume()->GetShape())->GetOrigin();
    Double_t point[3];
    LocalToMaster(origin, &point[0]);
    Double_t phi = TMath::ATan2(point[1], point[0])*TMath::RadToDeg();
@@ -2277,7 +2434,7 @@ TGeoNode *TGeoManager::InitTrack(const Double_t *point, const Double_t *dir)
 {
 // Initialize current point and current direction vector (normalized)
 // in MARS. Return corresponding node.
-   return fCurrentNavigator->InitTrack(point, dir);
+   return GetCurrentNavigator()->InitTrack(point, dir);
 }
 
 //_____________________________________________________________________________
@@ -2285,21 +2442,21 @@ TGeoNode *TGeoManager::InitTrack(Double_t x, Double_t y, Double_t z, Double_t nx
 {
 // Initialize current point and current direction vector (normalized)
 // in MARS. Return corresponding node.
-   return fCurrentNavigator->InitTrack(x,y,z,nx,ny,nz);
+   return GetCurrentNavigator()->InitTrack(x,y,z,nx,ny,nz);
 }
 
 //_____________________________________________________________________________
 void TGeoManager::InspectState() const
 {
 // Inspects path and all flags for the current state.
-   fCurrentNavigator->InspectState();
+   GetCurrentNavigator()->InspectState();
 }
 
 //_____________________________________________________________________________
 const char *TGeoManager::GetPath() const
 {
 // Get path to the current node in the form /node0/node1/...
-   return fCurrentNavigator->GetPath();
+   return GetCurrentNavigator()->GetPath();
 }
 
 //_____________________________________________________________________________
@@ -2491,7 +2648,7 @@ void TGeoManager::Voxelize(Option_t *option)
 {
 // Voxelize all non-divided volumes.
    TGeoVolume *vol;
-   TGeoVoxelFinder *vox = 0;
+//   TGeoVoxelFinder *vox = 0;
    if (!fStreamVoxels && fgVerboseLevel>0) Info("Voxelize","Voxelizing...");
 //   Int_t nentries = fVolumes->GetSize();
    TIter next(fVolumes);
@@ -2499,9 +2656,9 @@ void TGeoManager::Voxelize(Option_t *option)
       if (!fIsGeomReading) vol->SortNodes();
       if (!fStreamVoxels) {
          vol->Voxelize(option);
-      } else {
-         vox = vol->GetVoxels();
-         if (vox) vox->CreateCheckList();
+//      } else {
+//         vox = vol->GetVoxels();
+//         if (vox) vox->CreateCheckList(0);
       }
       if (!fIsGeomReading) vol->FindOverlaps();
    }
@@ -2945,7 +3102,7 @@ TGeoNode *TGeoManager::Step(Bool_t is_geom, Bool_t cross)
 // must be true (default). The cross flag specifies if the boundary should be
 // crossed in case of a geometry step (default true). Returns new node after step.
 // Set also on boundary condition.
-   return fCurrentNavigator->Step(is_geom, cross);
+   return GetCurrentNavigator()->Step(is_geom, cross);
 }
 
 //_____________________________________________________________________________
@@ -2988,10 +3145,10 @@ void TGeoManager::SetTopVolume(TGeoVolume *vol)
    fTopNode->SetNumber(1);
    fTopNode->SetTitle("Top logical node");
    fNodes->AddAt(fTopNode, 0);
-   if (!fCurrentNavigator) AddNavigator(new TGeoNavigator(this));
-   Int_t nnavigators = fNavigators->GetEntriesFast();
+   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
+   Int_t nnavigators = GetListOfNavigators()->GetEntriesFast();
    for (Int_t i=0; i<nnavigators; i++) {
-      TGeoNavigator *nav = (TGeoNavigator*)fNavigators->At(i);
+      TGeoNavigator *nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
       nav->ResetAll();
    }
 }
@@ -3386,14 +3543,13 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
       }
    } else {
       // import from a root file
-      TFile *old = gFile;
+      TDirectory::TContext ctxt(0);
       // in case a web file is specified, use the cacheread option to cache
       // this file in the cache directory
       TFile *f = 0;
       if (strstr(filename,"http")) f = TFile::Open(filename,"CACHEREAD");
       else                         f = TFile::Open(filename);
       if (!f || f->IsZombie()) {
-         if (old) old->cd();
          ::Error("TGeoManager::Import", "Cannot open file");
          return 0;
       }
@@ -3408,7 +3564,6 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
             break;
          }
       }
-      if (old) old->cd();
       delete f;
    }
    if (!gGeoManager) return 0;
@@ -3475,24 +3630,26 @@ Bool_t TGeoManager::InitArrayPNE() const
 Int_t *TGeoManager::GetIntBuffer(Int_t length)
 {
 // Get a temporary buffer of Int_t*
-   if (length>fIntSize) {
-      delete [] fIntBuffer;
-      fIntBuffer = new Int_t[length];
-      fIntSize = length;
+   ThreadData_t &td = GetThreadData();
+   if (length>td.fIntSize) {
+      delete [] td.fIntBuffer;
+      td.fIntBuffer = new Int_t[length];
+      td.fIntSize = length;
    }
-   return fIntBuffer;
+   return td.fIntBuffer;
 }
 
 //______________________________________________________________________________
 Double_t *TGeoManager::GetDblBuffer(Int_t length)
 {
 // Get a temporary buffer of Double_t*
-   if (length>fDblSize) {
-      delete [] fDblBuffer;
-      fDblBuffer = new Double_t[length];
-      fDblSize = length;
+   ThreadData_t &td = GetThreadData();
+   if (length>td.fDblSize) {
+      delete [] td.fDblBuffer;
+      td.fDblBuffer = new Double_t[length];
+      td.fDblSize = length;
    }
-   return fDblBuffer;
+   return td.fDblBuffer;
 }
 
 //______________________________________________________________________________
@@ -3520,14 +3677,14 @@ void TGeoManager::SetTminTmax(Double_t tmin, Double_t tmax)
 void TGeoManager::MasterToTop(const Double_t *master, Double_t *top) const
 {
 // Convert coordinates from master volume frame to top.
-   fCurrentNavigator->MasterToLocal(master, top);
+   GetCurrentNavigator()->MasterToLocal(master, top);
 }
 
 //______________________________________________________________________________
 void TGeoManager::TopToMaster(const Double_t *top, Double_t *master) const
 {
  // Convert coordinates from top volume frame to master.
-   fCurrentNavigator->LocalToMaster(top, master);
+   GetCurrentNavigator()->LocalToMaster(top, master);
 }
 
 

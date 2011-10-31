@@ -105,9 +105,13 @@ options="                    \
    enable_xrootd             \
 "
 
+ENABLEALL="no"
 DEFAULTENABLE="yes"
 for flag in "$@"; do
     case $flag in
+    --all)
+       ENABLEALL="yes"
+       break ;;
     --gminimal)
        DEFAULTENABLE="no"
        MINIMALENABLE="enable_x11"
@@ -132,7 +136,7 @@ for c in $options $deprecated_options; do
 done
 for c in $options ; do eval ${c}_explicit="" ; done
 
-enable_cling=
+enable_cling=no
 enable_afs=no
 enable_alloc=no
 enable_gdml=no
@@ -159,6 +163,17 @@ enable_builtin_pcre=no
 enable_builtin_zlib=no
 enable_builtin_lzma=no
 enable_afdsmgrd=no
+
+if test "x$ENABLEALL" = "xyes"; then
+    enable_gdml=yes
+    enable_qt=yes
+    enable_qtgsi=yes
+    enable_roofit=yes
+    enable_minuit2=yes
+    enable_ruby=yes
+    enable_table=yes
+    enable_unuran=yes
+fi
 
 # Remove old log file
 rm -f $logfile
@@ -333,6 +348,54 @@ check_libpic() {
 }
 
 #_____________________________________________________________________
+check_libcompat() {
+    # This function will try to find out if a library [$1] contains 
+    # compatible 64 bit or 32 bit code matching the selected architecture.
+    # Currently only MacOS X supports universal libs.
+    # The result of the check is stored in is_libcompat, 1 if true,
+    # 0 otherwise, which should be immediately copied, since the variable
+    # will be overwritten at next invocation of this function.
+
+    is_libcompat=0
+    is_libnotcompat=0
+    ret=0
+
+    # Assert that we got enough arguments
+    if test $# -ne 1 ; then
+        echo "check_libcompat: not 1 argument"
+        return 1
+    fi
+
+    # Save arguments in logical names
+    chklibcompat=$1
+    logmsg "Checking if $chklibcompat contains compatible code"
+
+    case $arch in
+    macosx)
+        logmsg " lipo -info $chklibcompat | grep ' i386'"
+        if lipo -info $chklibcompat | grep ' i386' > /dev/null 2>& 1 ; then
+            ret=1
+        fi
+        ;;
+    macosx64)
+        logmsg " lipo -info $chklibcompat | grep ' x86_64'"
+        if lipo -info $chklibcompat | grep ' x86_64' > /dev/null 2>& 1 ; then
+            ret=1
+        fi
+        ;;
+    esac
+
+    logmsg " result: $ret"
+    if test $ret -eq 1 ; then
+        is_libcompat=1
+        logmsg " is a compatible library"
+    else
+        is_libnotcompat=1
+        logmsg " is a not-compatible library"
+    fi
+}
+
+#_____________________________________________________________________
 check_lib64() {
     # This function will try to find out if a library [$1] contains 64 bit
     # or 32 bit code. Currently works only for linux.
@@ -501,6 +564,12 @@ check_library() {
                                 break 4
                             fi
                         else
+                            if test "x$checklibcompat" = "xyes" ; then
+                                check_libcompat $n
+                                if test $is_libcompat -eq 0 ; then
+                                    break 4
+                                fi
+                            fi
                             found_dir=$l
                             found_lib=$j
                             if test "x$arch" = "linux"; then
@@ -1348,6 +1417,7 @@ enable/disable options, prefix with either --enable- or --disable-
   chirp              Chirp filesystem support, requires cctools >= 3.2.2
   cintex             Build the libCintex Reflex interface library
   clarens            Clarens RPC support, optionally used by PROOF
+  cling              Use cling as interpreter backend (experimental!), needs --with-llvm-config
   dcache             dCache support, requires libdcap from DESY
   exceptions         Turn on compiler exception handling capability
   explicitlink       Explicitly link with all dependent libraries
@@ -1403,6 +1473,10 @@ minimal set of libraries, can be combined with above --enable-... options
   --minimal          Do not automatically search for support libraries
   --gminimal         Do not automatically search for support libraries, but include X11
 
+maximal set of libraries, enables all optional packages
+
+  --all              Do try to enable all optional support libraries
+
 with options, prefix with --with-, enables corresponding support
 
   afs                AFS support, location of AFS distribution
@@ -1452,6 +1526,7 @@ with options, prefix with --with-, enables corresponding support
   krb5-libdir        Kerberos5 support, location of libkrb5
   ldap-incdir        LDAP support, location of ldap.h
   ldap-libdir        LDAP support, location of libldap
+  llvm-config        LLVM/clang for cling, location of llvm-config script
   monalisa-incdir    Monalisa support, location of ApMon.h
   monalisa-libdir    Monalisa support, location of libapmoncpp
   mysql-incdir       MySQL support, location of mysql.h
@@ -1464,9 +1539,9 @@ with options, prefix with --with-, enables corresponding support
   oracle-libdir      Oracle support, location of libocci
   pgsql-incdir       PostgreSQL support, location of libpq-fe.h
   pgsql-libdir       PostgreSQL support, location of libpq
-  pythia6-libdir     PYHTIA6 support, location of libPythia6
-  pythia8-incdir     PYHTIA8 support, location of Pythia8 includes
-  pythia8-libdir     PYHTIA8 support, location of libpythia8.so
+  pythia6-libdir     PYTHIA6 support, location of libPythia6
+  pythia8-incdir     PYTHIA8 support, location of Pythia8 includes
+  pythia8-libdir     PYTHIA8 support, location of libpythia8.so
   python-incdir      Python support, location of Python.h
   python-libdir      Python support, location of libpython
   qt-incdir          Qt support, location of Qt/qglobal.h
@@ -1594,6 +1669,9 @@ hpuxia64acc)
 solaris64CC5)
    logmsg "Will check Solaris 64bit libraries"
    checksolaris64="yes" ;;
+macosx*)
+   logmsg "Will check for compatible libraries"
+   checklibcompat="yes" ;;
 ios*)
    logmsg "Will check iOS SDK libraries"
    message "Checking for iOS SDK"
@@ -1697,6 +1775,7 @@ if test $# -gt 0 ; then
       --no-create)             noact="yes"           ;;
       --nohowto)               nohowto="yes"         ;;
       --fail-on-missing)       fail_on_missing="yes" ;;
+      --all)                   ;;
       --minimal)               ;;
       --gminimal)              ;;
       --host)                  savearch=$arch
@@ -1754,6 +1833,7 @@ if test $# -gt 0 ; then
       --with-krb5-libdir=*)    krb5libdir=$optarg    ; enable_krb5="yes"    ;;
       --with-ldap-incdir=*)    ldapincdir=$optarg    ; enable_ldap="yes"    ;;
       --with-ldap-libdir=*)    ldaplibdir=$optarg    ; enable_ldap="yes"    ;;
+      --with-llvm-config=*)    llvmconfig=$optarg    ;; # require explicit --enable-cling
       --with-mysql-incdir=*)   mysqlincdir=$optarg   ; enable_mysql="yes"   ;;
       --with-mysql-libdir=*)   mysqllibdir=$optarg   ; enable_mysql="yes"   ;;
       --with-monalisa-incdir=*)monalisaincdir=$optarg; enable_monalisa="yes";;
@@ -2430,8 +2510,9 @@ if test "x$enable_builtin_lzma" = "xno" ; then
     check_header "lzma.h" "" \
         $LZMA ${LZMA:+$LZMA/include} \
         ${finkdir:+$finkdir/include} \
-        /usr/local/include /usr/include/lzma /usr/local/include/lzma \
-        /opt/lzma/include /usr/include
+        /usr/local/include /usr/include \
+        /usr/local/include/lzma /usr/include/lzma \
+        /opt/lzma/include
     if test "x$found_dir" = "x" ; then
         enable_builtin_lzma=yes
     else
@@ -2494,15 +2575,6 @@ if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
         "$opengllibdir" $opengllibdirs
     opengllib=$found_lib
     opengllibdir=$found_dir
-
-    # Mac OS X 10.5.0 problem
-    if test "x$platform" = "xmacosx"; then
-       if test "x$macosx106" = "x"; then
-          if test ! "x$macosx105" = "x"; then
-             opengllib="-dylib_file /usr/X11R6/lib/libGL.dylib:/usr/X11R6/lib/libGL.dylib"
-          fi
-       fi
-    fi
 
     check_library "libGLU libMesaGLU" "$enable_shared" \
         "$keep" $opengllibdirs
@@ -3090,6 +3162,21 @@ if test ! "x$enable_rfio" = "xno" ; then
                         break ;
                     fi
                 done
+                # Explicit linking: which libraries are needed to satisfy symbols
+                # from libshift?
+                # 2.1.8:
+                shiftlibdep="-lcastorrfio -lcastorClient -lcastorns"
+                check_link "$shiftlib $shiftlibdep" "$shiftlibdir" rfio_fchmod
+                if test $link_result -eq 1 ; then
+                    shiftlib="$shiftlib $shiftlibdep"
+                else
+                    # 2.1.9 has new library layout
+                    shiftlibdep="-lcastorrfio -lcastorclient -lcastorcommon"
+                    check_link "$shiftlib $shiftlibdep" "$shiftlibdir" rfio_fchmod
+                    if test $link_result -eq 1 ; then
+                        shiftlib="$shiftlib $shiftlibdep"
+                    fi
+                fi
                 ;;
            solaris)    shiftlib="$shiftlib -lposix4" ;;
            win32)      shiftincdir="$shiftincdir $shiftincdir/../win32"
@@ -3170,12 +3257,27 @@ if test ! "x$enable_castor" = "xno" ; then
         case $platform in
            linux)      castorlib="$castorlib -lnsl"
                 for i in "" -ladns ; do
-                    check_link "$shiftlib $i" "$shiftlibdir" rfio_fchmod
+                    check_link "$castorlib $i" "$castorlibdir" rfio_fchmod
                     if test $link_result -eq 1 ; then
                         castorlib="$castorlib $i" ;
                         break ;
                     fi
                 done
+                # Explicit linking: which libraries are needed to satisfy symbols
+                # from libshift?
+                # 2.1.8:
+                castorlibdep="-lcastorrfio -lcastorClient -lcastorns"
+                check_link "$castorlib $castorlibdep" "$castorlibdir" rfio_fchmod
+                if test $link_result -eq 1 ; then
+                    castorlib="$castorlib $castorlibdep"
+                else
+                    # 2.1.9 has new library layout
+                    castorlibdep="-lcastorrfio -lcastorclient -lcastorns -lcastorcommon"
+                    check_link "$castorlib $castorlibdep" "$castorlibdir" rfio_fchmod
+                    if test $link_result -eq 1 ; then
+                        castorlib="$castorlib $castorlibdep"
+                    fi
+                fi
                 ;;
            solaris)    castorlib="$castorlib -lposix4" ;;
            win32)      castorincdir="$castorincdir $castorincdir/../win32"
@@ -3313,6 +3415,10 @@ if test ! "x$enable_fitsio" = "xno"; then
 
     if test "x$cfitsioincdir" = "x" || test "x$cfitsiolib" = "x"; then
         enable_fitsio="no"
+    else
+        case $platform in
+            linux)     cfitsiolib="$cfitsiolib -lpthread -lz"    ;;
+        esac
     fi
 fi
 check_explicit "$enable_fitsio" "$enable_fitsio_explicit" \
@@ -3360,6 +3466,12 @@ if test ! "x$enable_gviz" = "xno"; then
         ${finkdir:+$finkdir/lib} \
         /usr/local/lib /usr/lib
     gvizlib4=$found_lib
+    check_library "libexpat expat" "$enable_shared" "$gvizlibdir" \
+        $GVIZ ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
+        ${finkdir:+$finkdir/lib} \
+        /usr/local/lib /usr/lib
+    gvizlib5=$found_lib
+    gvizlibdir5=$found_dir
 
     # the plugin libraries are in the directory "$gvizlibdir"/graphviz
     gvizlibpdir=""
@@ -3374,7 +3486,7 @@ if test ! "x$enable_gviz" = "xno"; then
         ${finkdir:+$finkdir/lib/graphviz} \
         /usr/local/lib/graphviz /usr/lib/graphviz
     gvizlibp1=$found_lib
-    gvizlibpir=$found_dir
+    gvizlibpdir=$found_dir
 
     if test "x$gvizincdir" = "x" || test "x$gvizlib1"  = "x" ||
        test "x$gvizlib2"   = "x" || test "x$gvizlib3"  = "x" ||
@@ -3389,14 +3501,20 @@ if test ! "x$enable_gviz" = "xno"; then
                enable_gviz="no"
            else
                gvizcflags=-DGVIZ_STATIC
-               gvizlib="$gvizlibp1 $gvizlib1 $gvizlib2 $gvizlib3 $gvizlib4 -lexpat"
+               gvizlib="$gvizlibp1 $gvizlib1 $gvizlib2 $gvizlib3 $gvizlib4 $gvizlibdir5 $gvizlib5 -lz"
            fi
        else
-           gvizlib="$gvizlibir $gvizlib1"
+           gvizlib="$gvizlibir $gvizlib1 $gvizlib2 $gvizlib3 $gvizlib4 $gvizlibdir5 $gvizlib5 -lz"
        fi
        if test "x$platform" = "xwin32"; then
            gvizcflags=
            gvizlib="$gvizlibp1 $gvizlib1 $gvizlib2 $gvizlib3 $gvizlib4"
+       else
+           if test "x$gvizlib5" = "x" ; then
+               enable_gviz="no"
+               gvizlib=
+               gvizcflags=
+           fi
        fi
     fi
 fi
@@ -3418,6 +3536,10 @@ if test ! "x$enable_pythia6" = "xno" ; then
         pythia6cppflags=-DPYTHIA6_${pythia6uscore}_UNDERSCORE
         pythia6lib=
         pythia6dir=
+        case $platform in
+            macosx) pythia6lib="-undefined dynamic_lookup" ;;
+            linux) 
+        esac
         result "Using custom pythia6 library with $pythia6uscore underscore"
     else
         check_library "libPythia6" "$enable_shared" "$pythia6libdir" \
@@ -3609,7 +3731,7 @@ if test ! "x$enable_hdfs" = "xno" ; then
     else
         case $platform in
             linux)
-                check_link $hdfslib "$hdfslibdir" hdfsConnect
+                check_link "$hdfslib $jvmlib" "$hdfslibdir $jvmlibdir" hdfsConnect
                 if test $link_result -eq 0 ; then
                     enable_hdfs="no"
                 fi
@@ -3620,7 +3742,9 @@ if test ! "x$enable_hdfs" = "xno" ; then
                 fi
                 ;;
         esac
-        echo "HDFS disabled due to failed compile and link test"
+        if test "x$enable_hdfs" = "xno"; then
+            echo "HDFS disabled due to failed compile and link test"
+        fi
     fi
 fi
 check_explicit "$enable_hdfs" "$enable_hdfs_explicit" \
@@ -3825,8 +3949,8 @@ if test ! "x$enable_asimage" = "xno" ; then
           $ASIMAGE ${ASIMAGE:+$ASIMAGE/include} \
           ${ASPNG:+$ASPNG/include} \
           ${finkdir:+$finkdir/include} \
-          /usr/local/include /usr/include /usr/local/include/libpng \
-          /opt/include
+          /usr/local/include /usr/X11/include /usr/include \
+          /usr/local/include/libpng /opt/include
        aspngincdir=$found_dir
        if test ! "x$enable_astiff" = "xno" ; then
            check_header "tiffio.h" "" \
@@ -3860,7 +3984,7 @@ if test ! "x$enable_asimage" = "xno" ; then
            check_library $k "$enable_shared" "" \
                $ASIMAGE ${ASIMAGE:+$ASIMAGE/lib} ${ASPNG:+$ASPNG/lib} \
                ${finkdir:+$finkdir/lib} \
-               /usr/local/lib /usr/lib /opt/lib
+               /usr/local/lib /usr/X11/lib /usr/lib /opt/lib
            if test "x$k" = "xlibz" ; then
                found_libz=$found_lib
                found_dirz=$found_dir
@@ -4029,7 +4153,8 @@ if test ! "x$enable_ruby" = "xno" ; then
     fi
     check_header "ruby.h" "$rubyincdir" \
         $RUBYDIR ${RUBYDIR:+$RUBYDIR/include} \
-        $rubysysincdir $rubysysincdir2
+        $rubysysincdir $rubysysincdir2 \
+        /usr/local/include/ruby /usr/include/ruby
     rubyinc=$found_hdr
     rubyincdir=$found_dir
 
@@ -4042,7 +4167,8 @@ if test ! "x$enable_ruby" = "xno" ; then
     check_library "$check_library_options" \
         "$enable_shared" "$rubylibdir" \
         $RUBYDIR ${RUBYDIR:+$RUBYDIR/lib} \
-        $rubysyslibdir
+        $rubysyslibdir \
+        /usr/local/lib /usr/lib
     rubylib=$found_lib
     rubylibdir=$found_dir
 
@@ -5445,6 +5571,14 @@ if test ! "x$enable_mathmore" = "xno"; then
             ${finkdir:+$finkdir/lib} \
             /usr/local/lib /usr/lib /opt/gsl/lib
 
+        if test "x$checklibcompat" = "xyes" ; then
+            if test $is_libnotcompat -eq 1 ; then
+                # on OSX if libgsl exists but is not compatible
+                gslskip="skip"
+                enable_mathmore="no"
+            fi
+        fi
+
         if test ! "x$found_lib" = "x"; then
             gsllibs=$found_lib
             gsllibdir=$found_dir
@@ -5578,25 +5712,6 @@ else
 fi
 check_explicit "$enable_genvector" "$enable_genvector_explicit" \
       "Explicitly required GenVector dependencies not fulfilled"
-
-######################################################################
-#
-### echo %%% Cling - LLVM/clang based interpreter prototype
-#
-if test ! "x$enable_cling" = "xno"; then
-    if test -d cint/cling; then
-        message "Checking whether to build cling"
-        enable_cling="yes"
-        hascling="define"
-        result "yes"
-    else
-        enable_cling="no"
-        hascling="undef"
-    fi
-else
-    enable_cling="no"
-    hascling="undef"
-fi
 
 ######################################################################
 #
@@ -5848,13 +5963,47 @@ result "$enable_afdsmgrd$afdsmgrdapmonmsg"
 
 ######################################################################
 #
+### echo %%% Cling - LLVM/clang based interpreter prototype
+#
+message "Checking whether to integrate experimental cling"
+hascling="undef"
+clingextrares=""
+if test ! "x$enable_cling" = "xno"; then
+    # allow LLVMDIR instead of --with--llvmconfig
+    if test "x$llvmconfig" = "x" ; then
+        if test ! "x$LLVMDIR" = "x" ; then
+            llvmconfig="$LLVMDIR/bin"
+        else
+            clingextrares="(needs --with-llvm-config or \$LLVMDIR)"
+        fi
+        result "no"
+    fi
+    if test ! "x$llvmconfig" = "x"; then
+        if test -d "$llvmconfig"; then
+            llvmconfig=$llvmconfig/llvm-config
+        fi
+        if test -f $llvmconfig && test -x $llvmconfig; then
+            hascling="define"
+        fi
+    fi
+fi
+if test "x$hascling" = "xundef"; then
+    enable_cling="no"
+    result "no $clingextrares"
+else
+    enable_cling="yes"
+    result "yes"
+fi
+
+######################################################################
+#
 ### echo %%% What dictionaries to build
 #
 # Can be either CINT (default), reflex, or gccxml.
 # Option will be passed to rootcint(_tmp),
 # and root-config --libs will have -lReflex if needed.
 #
-
+message "Checking what type of dictionaries to build"
 # --with-dicttype overrides env var ROOTDICTTYPE
 if test "x$dicttype" = "x" ; then
     dicttype="$ROOTDICTTYPE"
@@ -5882,10 +6031,7 @@ case "$dicttype" in
 esac
 
 # Print info if dicttype!=cint, or --with-dict overrides $ROOTDICTTYPE
-if test ! "x$dicttype" = "xcint" \
-     -o ! "x$dicttype" = "x$ROOTDICTTYPE"; then
-    result "Generating $dicttype dictionaries."
-fi
+result "$dicttype"
 
 ######################################################################
 #
@@ -6017,8 +6163,9 @@ esac
 ### echo %%% Explicitlink - explicitly link with all dependent libraries
 #
 case $arch in
-freebsd*|openbsd|aix*|win32*)
+macosx*|freebsd*|openbsd|aix*|win32*|linux*)
     enable_explicitlink="yes"
+    issue_explicitlink_warning="no"
     ;;
 esac
 if test "x$enable_explicitlink" = "xyes" && test ! "x$platform" = "xwin32"; then
@@ -6391,6 +6538,7 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@ldaplibdir@|$ldaplibdir|"            \
     -e "s|@ldflags@||"                          \
     -e "s|@libdir@|$libdir|"                    \
+    -e "s|@llvmconfig@|$llvmconfig|"            \
     -e "s|@macrodir@|$macrodir|"                \
     -e "s|@mandir@|$mandir|"                    \
     -e "s|@mkliboption@|$mkliboption|"          \
@@ -6624,7 +6772,7 @@ rm -f RConfigOptions.tmp
 if test ! "x$enable_ruby" = "xno"; then
    echo "" >> RConfigOptions-out.tmp
    ruby -rrbconfig -e 'puts Config::CONFIG["ruby_version"]' | \
-   sed 's/^\([0-9]\)\.\([0-9]\)/#define R__RUBY_MAJOR \1@#define R__RUBY_MINOR \2/' | \
+   sed 's/^\([0-9]\)\.\([0-9]\).*$/#define R__RUBY_MAJOR \1@#define R__RUBY_MINOR \2/' | \
    tr '@' '\n' >> RConfigOptions-out.tmp
 fi
 
@@ -7013,8 +7161,8 @@ if test ! "x$haveconfig" = "x" ; then
 fi
 result ""
 if test "x$issue_explicitlink_warning" = "xyes"; then
-    result "*** Explicit linking is required ror Ruby support."
-    result "*** If lib/*.so's exsist created without explicit linking,"
+    result "*** Explicit linking is required for Ruby support."
+    result "*** If lib/*.so's exist created without explicit linking,"
     result "*** please remove them first using: rm -f lib/*.so."
     result ""
 fi

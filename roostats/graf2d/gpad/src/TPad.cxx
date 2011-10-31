@@ -532,7 +532,10 @@ void TPad::Clear(Option_t *option)
 
    cd();
 
-   if (TestBit(kClearAfterCR)) getchar();
+   if (TestBit(kClearAfterCR)) {
+      int readch;
+      readch = getchar();
+   }
 
    if (!gPad->IsBatch()) GetPainter()->ClearDrawable();
    if (gVirtualPS && gPad == gPad->GetCanvas()) gVirtualPS->NewPage();
@@ -2329,6 +2332,8 @@ void TPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
                      hobj->SetMaximum(xxmax);
                      hobj->SetBit(TH1::kIsZoomed);
                   } else {
+                     bin1 = hobj->GetYaxis()->FindFixBin(xmin);
+                     bin2 = hobj->GetYaxis()->FindFixBin(xmax);
                      hobj->GetYaxis()->SetRange(bin1,bin2);
                   }
                }

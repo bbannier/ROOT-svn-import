@@ -1391,7 +1391,7 @@ const char *TUnixSystem::TempDirectory() const
    // Return a user configured or systemwide directory to create
    // temporary files in.
 
-   const char *dir =  gSystem->Getenv("TMPDIR");
+   const char *dir = gSystem->Getenv("TMPDIR");
    if (!dir || gSystem->AccessPathName(dir, kWritePermission))
       dir = "/tmp";
 
@@ -2119,7 +2119,7 @@ void TUnixSystem::StackTrace()
 #ifdef ROOTETCDIR
       gdbscript.Form("%s/gdb-backtrace.sh", ROOTETCDIR);
 #else
-      gdbscript.Form("%s/etc/gdb-backtrace.sh", gSystem->Getenv("ROOTSYS"));
+      gdbscript.Form("%s/etc/gdb-backtrace.sh", Getenv("ROOTSYS"));
 #endif
       if (AccessPathName(gdbscript, kReadPermission)) {
          fprintf(stderr, "Error in <TUnixSystem::StackTrace> script %s is missing\n", gdbscript.Data());
@@ -2794,8 +2794,7 @@ const char *TUnixSystem::GetLinkedLibraries()
       return 0;
 
 #if !defined(R__MACOSX)
-   char *exe = gSystem->Which(Getenv("PATH"), gApplication->Argv(0),
-                              kExecutePermission);
+   char *exe = Which(Getenv("PATH"), gApplication->Argv(0), kExecutePermission);
    if (!exe) {
       once = kTRUE;
       return 0;
@@ -3834,8 +3833,12 @@ const char *TUnixSystem::UnixHomedirectory(const char *name)
       if (mydir[0])
          return mydir;
       pw = getpwuid(getuid());
-      if (pw) {
+      if (pw && pw->pw_dir) {
          strncpy(mydir, pw->pw_dir, kMAXPATHLEN-1);
+         mydir[sizeof(mydir)-1] = '\0';
+         return mydir;
+      } else if (gSystem->Getenv("HOME")) {
+         strncpy(mydir, gSystem->Getenv("HOME"), kMAXPATHLEN-1);
          mydir[sizeof(mydir)-1] = '\0';
          return mydir;
       }
@@ -4453,6 +4456,14 @@ char *TUnixSystem::DynamicPathName(const char *lib, Bool_t quiet)
    char *name;
 
    int ext = 0, len = strlen(lib);
+#ifdef __APPLE__
+   // On a MAC, a library might not have any extensions, so let's try the raw
+   // name first.
+   name = gSystem->Which(GetDynamicPath(), lib, kReadPermission);
+   if (name) {
+      return name;
+   }
+#endif
    if (len > 3 && (!strcmp(lib+len-3, ".so")    ||
                    !strcmp(lib+len-3, ".dl")    ||
                    !strcmp(lib+len-4, ".dll")   ||

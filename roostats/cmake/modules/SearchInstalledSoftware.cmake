@@ -74,9 +74,9 @@ if(builtin_lzma)
 	  PREFIX LZMA
 	  INSTALL_DIR ${CMAKE_BINARY_DIR}
       CONFIGURE_COMMAND "" BUILD_COMMAND ""
-	  INSTALL_COMMAND cmake -E copy lib/liblzma.dll <INSTALL_DIR>/bin
+	  INSTALL_COMMAND cmake -E copy lib/liblzma.dll <INSTALL_DIR>/bin/${CMAKE_CFG_INTDIR}
 	  BUILD_IN_SOURCE 1)
-    install(FILES ${CMAKE_BINARY_DIR}/bin/liblzma.dll DESTINATION bin)
+    install(FILES ${CMAKE_BINARY_DIR}/LZMA/src/LZMA/lib/liblzma.dll DESTINATION bin)
     set(LZMA_LIBRARIES ${CMAKE_BINARY_DIR}/LZMA/src/LZMA/lib/liblzma.lib)
     set(LZMA_INCLUDE_DIR ${CMAKE_BINARY_DIR}/LZMA/src/LZMA/include)
   else() 
@@ -321,6 +321,13 @@ if(krb5)
       message(STATUS "Kerberos 5 not found. Switching off krb5 option")
       set(krb5 OFF CACHE BOOL "" FORCE)
     endif()
+  endif()
+endif()
+
+if(krb5 OR afs)
+  find_library(COMERR_LIBRARY com_err)
+  if(COMERR_LIBRARY)
+    set(COMERR_LIBRARIES ${COMERR_LIBRARY})
   endif()
 endif()
 
