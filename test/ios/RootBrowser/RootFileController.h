@@ -10,8 +10,7 @@
 }
 
 - (void) fileWasSelected : (FileShortcut*) shortcut;
-- (void) addFileShortcut : (NSString *) fileName;
-- (void) hideFileOpenView;
+- (void) addRootFile : (NSString *) fileName;
 
 - (IBAction) textFieldDidEndOnExit : (id) sender;
 - (IBAction) textFieldEditingDidEnd : (id) sender;

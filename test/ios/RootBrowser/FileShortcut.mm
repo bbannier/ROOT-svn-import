@@ -7,11 +7,16 @@
 //C++ (ROOT) imports.
 #import "IOSFileContainer.h"
 
-@implementation FileShortcut
+@implementation FileShortcut {
+   UIViewController *controller;
+
+   UIImage *filePictogram;
+   UIImage *backgroundImage;
+   
+   ROOT::iOS::FileContainer *fileContainer;
+}
 
 @synthesize fileName;
-@synthesize filePath;
-@synthesize errorMessage;
 
 //____________________________________________________________________________________________________
 + (CGFloat) iconWidth
@@ -32,47 +37,19 @@
 }
 
 //____________________________________________________________________________________________________
-- (void) initFileContainer : (NSString *) path
-{
-   //C++ part. Open the file and read its contents.
-   fileContainer = ROOT::iOS::CreateFileContainer([path cStringUsingEncoding : [NSString defaultCStringEncoding]]);
-}
-
-//____________________________________________________________________________________________________
-- (void) setPathAndName : (NSString *) path
-{
-   self.filePath = path;
-   //extract file name substring.
-   if (fileContainer)
-      self.fileName = [NSString stringWithFormat : @"%s", fileContainer->GetFileName()];
-}
-
-//____________________________________________________________________________________________________
-- (void) initImages
-{
-   filePictogram = [UIImage imageNamed : @"file_icon.png"];
-   backgroundImage = [UIImage imageNamed:@"file_shortcut_background.png"];
-}
-
-//____________________________________________________________________________________________________
-- (void) initGestures 
-{
-   UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap)];
-   [self addGestureRecognizer:tap];
-}
-
-//____________________________________________________________________________________________________
-- (id)initWithFrame:(CGRect)frame controller : (UIViewController *)c filePath : (NSString *)path
+- (id) initWithFrame : (CGRect)frame controller : (UIViewController *)viewController fileContainer : (ROOT::iOS::FileContainer *)container;
 {
    self = [super initWithFrame : frame];
    
    if (self) {
-      controller = c;
-
-      [self initFileContainer : path];      
-      [self setPathAndName : path];
-      [self initImages];
-      [self initGestures];
+      controller = viewController;
+      fileContainer = container;
+      
+      self.fileName = [NSString stringWithFormat : @"%s", fileContainer->GetFileName()];
+      filePictogram = [UIImage imageNamed : @"file_icon.png"];
+      backgroundImage = [UIImage imageNamed : @"file_shortcut_background.png"];
+      UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap)];
+      [self addGestureRecognizer:tap];
    
       self.opaque = NO;
    }
@@ -81,7 +58,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (void)drawRect:(CGRect)rect
+- (void) drawRect : (CGRect)rect
 {
    // Drawing code
    CGContextRef ctx = UIGraphicsGetCurrentContext();

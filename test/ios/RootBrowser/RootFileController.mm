@@ -5,12 +5,23 @@
 #import "FileShortcut.h"
 #import "Shortcuts.h"
 
-@implementation RootFileController {
+#import "IOSFileContainer.h"
+
+
+
+@interface RootFileController () {
+@private
    NSMutableArray *fileContainers;
 }
 
+- (void) hideFileOpenView;
+
+@end
+
+@implementation RootFileController
+
 //____________________________________________________________________________________________________
-- (id)initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
+- (id) initWithNibName : (NSString *)nibNameOrNil bundle : (NSBundle *)nibBundleOrNil
 {
    self = [super initWithNibName : nibNameOrNil bundle : nibBundleOrNil];
    
@@ -39,7 +50,7 @@
 }
 
 //____________________________________________________________________________________________________
-- (void)didReceiveMemoryWarning
+- (void) didReceiveMemoryWarning
 {
     // Releases the view if it doesn't have a superview.
     [super didReceiveMemoryWarning];
@@ -89,15 +100,13 @@
 }
 
 //____________________________________________________________________________________________________
-- (void)viewDidLoad
+- (void) viewDidLoad
 {
    [super viewDidLoad];
- //  [self correctFrames];
- //  scrollView.bounces = NO;
 }
 
 //____________________________________________________________________________________________________
-- (void)viewDidUnload
+- (void) viewDidUnload
 {
     [super viewDidUnload];
     // Release any retained subviews of the main view.
@@ -105,19 +114,11 @@
 }
 
 //____________________________________________________________________________________________________
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
+- (BOOL) shouldAutorotateToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation
 {
     // Return YES for supported orientations
 	return YES;
 }
-
-/*
-//____________________________________________________________________________________________________
-- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
-{
-   [self correctFrames];
-}
-*/
 
 //____________________________________________________________________________________________________
 - (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval) duration
@@ -125,15 +126,15 @@
    [self correctFramesForOrientation : interfaceOrientation];
 }
 
-#pragma mark View management.
+#pragma mark - View management.
 
 //____________________________________________________________________________________________________
-- (void) addFileShortcut : (NSString *) fileName
+- (void) addRootFile : (NSString *) fileName
 {
-   const CGRect shortcutFrame = CGRectMake(0.f, 0.f, [FileShortcut iconWidth], [FileShortcut iconHeight]);
-   FileShortcut *newShortcut = [[FileShortcut alloc] initWithFrame : shortcutFrame controller : self filePath : fileName];
+   //Open the file and read its contents.
+   ROOT::iOS::FileContainer *fileContainer = ROOT::iOS::CreateFileContainer([fileName cStringUsingEncoding : [NSString defaultCStringEncoding]]);
 
-   if (![newShortcut getFileContainer]) {
+   if (!fileContainer) {
       UIAlertView *alert = [[UIAlertView alloc] initWithTitle : @"File Open Error:"
                                                 message : [NSString stringWithFormat:@"Could not open %@", fileName]
                                                 delegate : nil
@@ -143,6 +144,8 @@
       return;
    }
 
+   const CGRect shortcutFrame = CGRectMake(0.f, 0.f, [FileShortcut iconWidth], [FileShortcut iconHeight]);
+   FileShortcut *newShortcut = [[FileShortcut alloc] initWithFrame : shortcutFrame controller : self fileContainer : fileContainer];
    [fileContainers addObject : newShortcut];
    [scrollView addSubview : newShortcut];   
    [self placeFileShortcuts];
@@ -151,6 +154,10 @@
 //____________________________________________________________________________________________________
 - (void) fileWasSelected : (FileShortcut*) shortcut
 {
+   //
+   
+   //
+
    FileContentController *contentController = [[FileContentController alloc] initWithNibName : @"FileContentController" bundle : nil];
    [contentController activateForFile : [shortcut getFileContainer]];
    [self.navigationController pushViewController : contentController animated : YES];
@@ -196,7 +203,7 @@
 {
    NSString *filePath = fileNameField.text;
    if (filePath) {//TODO - do I need this check?
-      [self addFileShortcut : filePath];
+      [self addRootFile : filePath];
    }
 }
 
@@ -211,21 +218,6 @@
 //____________________________________________________________________________________________________
 - (void) hideFileOpenView
 {
-   /*
-   UIAlertView *a = [[UIAlertView alloc] initWithTitle:@"aaa" message:@"bbb" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles: nil];
-   [a show];
-   [a release];
-
-   NSEnumerator *enumerator = [fileContainers objectEnumerator];
-
-   while (UIView *v = [enumerator nextObject]) {
-      [v removeFromSuperview];
-   }
-
-   [fileContainers removeAllObjects];
-   */
-   
-
    [fileNameField resignFirstResponder];
    fileOpenView.hidden = YES;
    [self animateFileOpenView];
