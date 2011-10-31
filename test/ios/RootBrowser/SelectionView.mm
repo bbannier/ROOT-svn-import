@@ -7,9 +7,11 @@
 //C++ (ROOT) imports.
 #import "IOSPad.h"
 
-static const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
+const CGRect selectionHintFrame = CGRectMake(0.f, 0.f, 250.f, 300.f);
 
-@implementation SelectionView
+@implementation SelectionView {
+   ROOT::iOS::Pad *pad;
+}
 
 @synthesize panActive;
 @synthesize panStart;

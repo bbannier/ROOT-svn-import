@@ -36,7 +36,7 @@ enum Mode {
 @implementation ROOTObjectController {
    Mode mode;
 
-   EditorView *editorView;
+   __weak EditorView *editorView;
    ObjectInspector *objectInspector;
    
    PadView *editablePadView;

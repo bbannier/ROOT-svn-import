@@ -111,7 +111,6 @@ const CGRect nestedComponentFrame = CGRectMake(0.f, tabBarHeight, 250.f, totalHe
 //____________________________________________________________________________________________________
 - (void) resetInspector
 {
-   NSLog(@"reset pad's inspector");
    tabBar.selectedItem = [[tabBar items] objectAtIndex : 0];
    [self showTicksAndGridInspector];
 }

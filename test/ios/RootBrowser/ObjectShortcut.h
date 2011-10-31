@@ -2,15 +2,7 @@
 
 @class FileContentController;
 
-class TObject;
-
-@interface ObjectShortcut : UIView {
-   UIImage *icon;
-
-   FileContentController *controller;
-   unsigned objectIndex;
-   NSString *objectName;
-}
+@interface ObjectShortcut : UIView
 
 @property (nonatomic, retain) UIImage *icon;
 @property (nonatomic, readonly) unsigned objectIndex;

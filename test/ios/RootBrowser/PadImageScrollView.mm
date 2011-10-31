@@ -12,7 +12,11 @@ static const CGFloat defaultImageH = 700.f;
 static const CGFloat maxZoom = 2.f;
 static const CGFloat minZoom = 1.f;
 
-@implementation PadImageScrollView
+@implementation PadImageScrollView {
+   ROOT::iOS::Pad *pad;
+   
+   PadImageView *nestedView;
+}
 
 @synthesize padImage;
 
