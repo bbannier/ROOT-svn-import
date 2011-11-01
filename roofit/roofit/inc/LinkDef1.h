@@ -46,7 +46,6 @@
 #pragma link C++ class RooMultiBinomial+ ;
 #pragma link C++ class Roo1DMomentMorphFunction+ ;
 #pragma link C++ class Roo2DMomentMorphFunction+ ;
-
 /* #pragma link C++ class std::vector< TVector2 >; */
 /* #pragma link C++ class std::vector< TVector2 >::iterator ; */
 /* #pragma link C++ class RooPolyMorph2D+ ; */
