@@ -31,10 +31,8 @@
       fileContainers = [[NSMutableArray alloc] init];
    
       self.navigationItem.title = @"ROOT files";
-      UIBarButtonItem *backButton = [[UIBarButtonItem alloc] initWithTitle : @"Back to ROOT files" style:UIBarButtonItemStylePlain target : nil action : nil];
-      self.navigationItem.backBarButtonItem = backButton;
-      UIBarButtonItem *leftButton = [[UIBarButtonItem alloc] initWithTitle : @"Open file" style:UIBarButtonItemStylePlain target : self action : @selector(showFileOpenView)];
-      self.navigationItem.leftBarButtonItem = leftButton;
+      self.navigationItem.backBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Back to ROOT files" style:UIBarButtonItemStylePlain target : nil action : nil];
+      self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle : @"Open file" style:UIBarButtonItemStylePlain target : self action : @selector(showFileOpenView)];
 
       scrollView.bounces = NO;
       
@@ -146,18 +144,17 @@
 
    const CGRect shortcutFrame = CGRectMake(0.f, 0.f, [FileShortcut iconWidth], [FileShortcut iconHeight]);
    FileShortcut *newShortcut = [[FileShortcut alloc] initWithFrame : shortcutFrame controller : self fileContainer : fileContainer];
-   [fileContainers addObject : newShortcut];
-   [scrollView addSubview : newShortcut];   
-   [self placeFileShortcuts];
+   if (newShortcut) {//What if alloc returned nil?
+      [fileContainers addObject : newShortcut];
+      [scrollView addSubview : newShortcut];   
+      [self placeFileShortcuts];
+   }  else
+      ROOT::iOS::DeleteFileContainer(fileContainer);
 }
 
 //____________________________________________________________________________________________________
 - (void) fileWasSelected : (FileShortcut*) shortcut
 {
-   //
-   
-   //
-
    FileContentController *contentController = [[FileContentController alloc] initWithNibName : @"FileContentController" bundle : nil];
    [contentController activateForFile : [shortcut getFileContainer]];
    [self.navigationController pushViewController : contentController animated : YES];

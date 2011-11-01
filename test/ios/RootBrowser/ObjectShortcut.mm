@@ -48,7 +48,7 @@
 {
    self = [super initWithFrame:frame];
 
-   if (self) {
+   if (self) {   
       //ROOT's staff.
       controller = c;
       objectIndex = objIndex;

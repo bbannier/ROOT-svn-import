@@ -3,14 +3,18 @@
 
 #import "TApplication.h"
 
-@implementation root_browserAppDelegate
+@implementation root_browserAppDelegate {
+   TApplication *rootApp;
+
+   UINavigationController *navigationController;
+}
 
 @synthesize window=_window;
 
 //____________________________________________________________________________________________________
 - (void) initRootController
 {
-   rootController = [[RootFileController alloc] initWithNibName : @"RootFileController" bundle : nil];
+   RootFileController *rootController = [[RootFileController alloc] initWithNibName : @"RootFileController" bundle : nil];
    
    NSString *demosPath = [[NSBundle mainBundle] pathForResource : @"demos" ofType : @"root"];
    if (demosPath)
