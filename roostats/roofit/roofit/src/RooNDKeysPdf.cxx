@@ -103,52 +103,6 @@ RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title,
 }
 
 
-//_____________________________________________________________________________
-RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title,
-			   const RooArgList& varList, RooDataSet& data, const TVectorD& rho,
-			   TString options, Double_t nSigma, Bool_t rotate) : 
-  RooAbsPdf(name,title),
-  _varList("varList","List of variables",this),
-  _data(data),
-  _options(options),
-  _widthFactor(-1.0), // rho externally provided, so set to dummy value
-  _nSigma(nSigma),
-  _weights(&_weights0),
-  _rotate(rotate)
-{
-  // Constructor
-  _varItr    = _varList.createIterator() ;
-
-  TIterator* varItr = varList.createIterator() ;
-  RooAbsArg* var ;
-  for (Int_t i=0; (var = (RooAbsArg*)varItr->Next()); ++i) {
-    if (!dynamic_cast<RooAbsReal*>(var)) {
-      coutE(InputArguments) << "RooNDKeysPdf::ctor(" << GetName() << ") ERROR: variable " << var->GetName() 
-			    << " is not of type RooAbsReal" << endl ;
-      assert(0) ;
-    }
-    _varList.add(*var) ;
-    _varName.push_back(var->GetName());
-  }
-  delete varItr ;
-
-  // copy rho widths
-  if( _varList.getSize() != rho.GetNrows() ) {
-    coutE(InputArguments) << "ERROR:  RooNDKeysPdf::RooNDKeysPdf() : The vector-size of rho is different from that of varList."
-			  << "Unable to create the PDF." << endl;
-    assert ( _varList.getSize()==rho.GetNrows() );
-  }
-
-  // negative width factor will serve as a switch in initialize()
-  // negative value means that a vector has been provided as input,
-  // and that _rho has already been set ...
-  _rho.resize( rho.GetNrows() );
-  for  (Int_t j=0; j<rho.GetNrows(); j++) { _rho[j]=rho[j]; }
-
-  createPdf(); // calls initialize ...
-}
-
-
 
 //_____________________________________________________________________________
 RooNDKeysPdf::RooNDKeysPdf(const char *name, const char *title,
@@ -412,8 +366,7 @@ RooNDKeysPdf::initialize() const
   //_sortIdcs.resize(_nDim);
   _sortTVIdcs.resize(_nDim);
 
-  if (_widthFactor>0) { _rho.resize(_nDim,_widthFactor); }
-  // else: _rho has been provided as external input
+  _rho.resize(_nDim,_widthFactor);
 
   _x.resize(_nDim,0.);
   _x0.resize(_nDim,0.);

@@ -78,9 +78,6 @@ protected:
   RooListProxy _lowSet ;            // Low-side variation
   RooListProxy _highSet ;            // High-side varaition
   RooListProxy _paramSet ;            // interpolation parameters
-  mutable TIterator* _paramIter ;  //! Iterator over paramSet
-  mutable TIterator* _lowIter ;  //! Iterator over lowSet
-  mutable TIterator* _highIter ;  //! Iterator over highSet
   Bool_t _positiveDefinite; // protect against negative and 0 bins.
 
   std::vector<int> _interpCode;

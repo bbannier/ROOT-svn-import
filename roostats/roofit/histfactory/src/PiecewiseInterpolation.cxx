@@ -32,9 +32,6 @@ ClassImp(PiecewiseInterpolation)
 //_____________________________________________________________________________
 PiecewiseInterpolation::PiecewiseInterpolation()
 {
-  _lowIter = _lowSet.createIterator() ;
-  _highIter = _highSet.createIterator() ;
-  _paramIter = _paramSet.createIterator() ;
   _positiveDefinite=false;
 }
 
@@ -59,19 +56,15 @@ PiecewiseInterpolation::PiecewiseInterpolation(const char* name, const char* tit
   //
   // If takeOwnership is true the PiecewiseInterpolation object will take ownership of the arguments in sumSet
 
-  _lowIter = _lowSet.createIterator() ;
-  _highIter = _highSet.createIterator() ;
-  _paramIter = _paramSet.createIterator() ;
-
   // KC: check both sizes
   if (lowSet.getSize() != highSet.getSize()) {
     coutE(InputArguments) << "PiecewiseInterpolation::ctor(" << GetName() << ") ERROR: input lists should be of equal length" << endl ;
     RooErrorHandler::softAbort() ;    
   }
 
-  TIterator* inputIter1 = lowSet.createIterator() ;
+  RooFIter inputIter1 = lowSet.fwdIterator() ;
   RooAbsArg* comp ;
-  while((comp = (RooAbsArg*)inputIter1->Next())) {
+  while((comp = inputIter1.next())) {
     if (!dynamic_cast<RooAbsReal*>(comp)) {
       coutE(InputArguments) << "PiecewiseInterpolation::ctor(" << GetName() << ") ERROR: component " << comp->GetName() 
 			    << " in first list is not of type RooAbsReal" << endl ;
@@ -82,11 +75,10 @@ PiecewiseInterpolation::PiecewiseInterpolation(const char* name, const char* tit
       _ownedList.addOwned(*comp) ;
     }
   }
-  delete inputIter1 ;
 
 
-  TIterator* inputIter2 = highSet.createIterator() ;
-  while((comp = (RooAbsArg*)inputIter2->Next())) {
+  RooFIter inputIter2 = highSet.fwdIterator() ;
+  while((comp = inputIter2.next())) {
     if (!dynamic_cast<RooAbsReal*>(comp)) {
       coutE(InputArguments) << "PiecewiseInterpolation::ctor(" << GetName() << ") ERROR: component " << comp->GetName() 
 			    << " in first list is not of type RooAbsReal" << endl ;
@@ -97,11 +89,10 @@ PiecewiseInterpolation::PiecewiseInterpolation(const char* name, const char* tit
       _ownedList.addOwned(*comp) ;
     }
   }
-  delete inputIter2 ;
 
 
-  TIterator* inputIter3 = paramSet.createIterator() ;
-  while((comp = (RooAbsArg*)inputIter3->Next())) {
+  RooFIter inputIter3 = paramSet.fwdIterator() ;
+  while((comp = inputIter3.next())) {
     if (!dynamic_cast<RooAbsReal*>(comp)) {
       coutE(InputArguments) << "PiecewiseInterpolation::ctor(" << GetName() << ") ERROR: component " << comp->GetName() 
 			    << " in first list is not of type RooAbsReal" << endl ;
@@ -113,7 +104,6 @@ PiecewiseInterpolation::PiecewiseInterpolation(const char* name, const char* tit
     }
     _interpCode.push_back(0); // default code: linear interpolation
   }
-  delete inputIter3 ;
 }
 
 
@@ -130,10 +120,6 @@ PiecewiseInterpolation::PiecewiseInterpolation(const PiecewiseInterpolation& oth
 {
   // Copy constructor
 
-  _lowIter = _lowSet.createIterator() ;
-  _highIter = _highSet.createIterator() ;
-  _paramIter = _paramSet.createIterator() ;
-  
   // Member _ownedList is intentionally not copy-constructed -- ownership is not transferred
 }
 
@@ -143,10 +129,6 @@ PiecewiseInterpolation::PiecewiseInterpolation(const PiecewiseInterpolation& oth
 PiecewiseInterpolation::~PiecewiseInterpolation() 
 {
   // Destructor
-
-  if (_lowIter) delete _lowIter ;
-  if (_highIter) delete _highIter ;
-  if (_paramIter) delete _paramIter ;
 }
 
 
@@ -160,10 +142,6 @@ Double_t PiecewiseInterpolation::evaluate() const
   ///////////////////
   Double_t nominal = _nominal;
   Double_t sum(nominal) ;
-  _lowIter->Reset() ;
-  _highIter->Reset() ;
-  _paramIter->Reset() ;
-  
 
   RooAbsReal* param ;
   RooAbsReal* high ;
@@ -171,9 +149,13 @@ Double_t PiecewiseInterpolation::evaluate() const
   //  const RooArgSet* nset = _paramList.nset() ;
   int i=0;
 
-  while((param=(RooAbsReal*)_paramIter->Next())) {
-    low = (RooAbsReal*)_lowIter->Next() ;
-    high = (RooAbsReal*)_highIter->Next() ;
+  RooFIter lowIter(_lowSet.fwdIterator()) ;
+  RooFIter highIter(_highSet.fwdIterator()) ;
+  RooFIter paramIter(_paramSet.fwdIterator()) ;
+
+  while((param=(RooAbsReal*)paramIter.next())) {
+    low = (RooAbsReal*)lowIter.next() ;
+    high = (RooAbsReal*)highIter.next() ;
 
     /* // MB : old bit of interpolation code
     if(param->getVal()>0)
@@ -285,17 +267,17 @@ Int_t PiecewiseInterpolation::getAnalyticalIntegralWN(RooArgSet& allVars, RooArg
   cache->_funcIntList.addOwned(*funcInt) ;
 
   // do variations
-  _lowIter->Reset() ;
-  _highIter->Reset() ;
-  _paramIter->Reset() ;
+  RooFIter lowIter(_lowSet.fwdIterator()) ;
+  RooFIter highIter(_highSet.fwdIterator()) ;
+  RooFIter paramIter(_paramSet.fwdIterator()) ;
 
   int i=0;
-  while(_paramIter->Next() ) {
-    func = (RooAbsReal*)_lowIter->Next() ;
+  while(paramIter.next() ) {
+    func = (RooAbsReal*)lowIter.next() ;
     funcInt = func->createIntegral(analVars) ;
     cache->_lowIntList.addOwned(*funcInt) ;
 
-    func = (RooAbsReal*)_highIter->Next() ;
+    func = (RooAbsReal*)highIter.next() ;
     funcInt = func->createIntegral(analVars) ;
     cache->_highIntList.addOwned(*funcInt) ;
     ++i;
@@ -318,16 +300,16 @@ Double_t PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSe
 
   CacheElem* cache = (CacheElem*) _normIntMgr.getObjByIndex(code-1) ;
 
-  TIterator* funcIntIter = cache->_funcIntList.createIterator() ;
-  TIterator* lowIntIter = cache->_lowIntList.createIterator() ;
-  TIterator* highIntIter = cache->_highIntList.createIterator() ;
+  RooFIter funcIntIter = cache->_funcIntList.fwdIterator() ;
+  RooFIter lowIntIter = cache->_lowIntList.fwdIterator() ;
+  RooFIter highIntIter = cache->_highIntList.fwdIterator() ;
   RooAbsReal *funcInt(0), *low(0), *high(0), *param(0) ;
   Double_t value(0) ;
   Double_t nominal(0);
 
   // get nominal 
   int i=0;
-  while(( funcInt = (RooAbsReal*)funcIntIter->Next())) {
+  while(( funcInt = (RooAbsReal*)funcIntIter.next())) {
     value += funcInt->getVal() ;
     nominal = value;
     i++;
@@ -336,7 +318,7 @@ Double_t PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSe
 
   // now get low/high variations
   i = 0;
-  _paramIter->Reset() ;
+  RooFIter paramIter(_paramSet.fwdIterator()) ;
 
   /* // MB : old bit of interpolation code
   while( (param=(RooAbsReal*)_paramIter->Next()) ) {
@@ -352,9 +334,9 @@ Double_t PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSe
   }
   */
 
-  while( (param=(RooAbsReal*)_paramIter->Next()) ) {
-    low = (RooAbsReal*)lowIntIter->Next() ;
-    high = (RooAbsReal*)highIntIter->Next() ;
+  while( (param=(RooAbsReal*)paramIter.next()) ) {
+    low = (RooAbsReal*)lowIntIter.next() ;
+    high = (RooAbsReal*)highIntIter.next() ;
 
     if(_interpCode.empty() || _interpCode.at(i)==0){
       // piece-wise linear
@@ -399,10 +381,6 @@ Double_t PiecewiseInterpolation::analyticalIntegralWN(Int_t code, const RooArgSe
     }
     ++i;
   }
-
-  delete funcIntIter; 
-  delete lowIntIter;
-  delete highIntIter; 
 
   return value;
 }
