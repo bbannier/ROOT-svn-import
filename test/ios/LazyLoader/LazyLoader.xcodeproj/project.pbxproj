@@ -12,9 +12,21 @@
 		70980E921461828A002AB58F /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980E911461828A002AB58F /* CoreGraphics.framework */; };
 		70980E981461828A002AB58F /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 70980E961461828A002AB58F /* InfoPlist.strings */; };
 		70980E9A1461828A002AB58F /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 70980E991461828A002AB58F /* main.m */; };
-		70980E9E1461828A002AB58F /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 70980E9D1461828A002AB58F /* AppDelegate.m */; };
+		70980E9E1461828A002AB58F /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70980E9D1461828A002AB58F /* AppDelegate.mm */; };
 		70980EA11461828A002AB58F /* MainStoryboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 70980E9F1461828A002AB58F /* MainStoryboard.storyboard */; };
-		70980EA41461828A002AB58F /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 70980EA31461828A002AB58F /* ViewController.m */; };
+		70980EA41461828A002AB58F /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70980EA31461828A002AB58F /* ViewController.mm */; };
+		70980EAC14618A13002AB58F /* generic_th1.png in Resources */ = {isa = PBXBuildFile; fileRef = 70980EAA14618A13002AB58F /* generic_th1.png */; };
+		70980EAD14618A13002AB58F /* generic_th2.png in Resources */ = {isa = PBXBuildFile; fileRef = 70980EAB14618A13002AB58F /* generic_th2.png */; };
+		70980EB014618A70002AB58F /* FileUtils.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70980EAE14618A70002AB58F /* FileUtils.cxx */; };
+		70980EB5146190CB002AB58F /* libRoot.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980EB1146190CB002AB58F /* libRoot.a */; };
+		70980EB6146190CB002AB58F /* libfreetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980EB2146190CB002AB58F /* libfreetype.a */; };
+		70980EB7146190CB002AB58F /* liblzma.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980EB3146190CB002AB58F /* liblzma.a */; };
+		70980EB8146190CB002AB58F /* libpcre.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980EB4146190CB002AB58F /* libpcre.a */; };
+		70980EBE1461A413002AB58F /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980EBD1461A413002AB58F /* libz.dylib */; };
+		70980EC01461A43E002AB58F /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980EBF1461A43E002AB58F /* CoreText.framework */; };
+		70980EC31461A589002AB58F /* system.plugins-ios in Resources */ = {isa = PBXBuildFile; fileRef = 70980EC11461A589002AB58F /* system.plugins-ios */; };
+		70980EC41461A589002AB58F /* system.rootrc in Resources */ = {isa = PBXBuildFile; fileRef = 70980EC21461A589002AB58F /* system.rootrc */; };
+		70980EC61461A6CE002AB58F /* mo.root in Resources */ = {isa = PBXBuildFile; fileRef = 70980EC51461A6CE002AB58F /* mo.root */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,10 +39,23 @@
 		70980E991461828A002AB58F /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		70980E9B1461828A002AB58F /* LazyLoader-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "LazyLoader-Prefix.pch"; sourceTree = "<group>"; };
 		70980E9C1461828A002AB58F /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		70980E9D1461828A002AB58F /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		70980E9D1461828A002AB58F /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
 		70980EA01461828A002AB58F /* en */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = en; path = en.lproj/MainStoryboard.storyboard; sourceTree = "<group>"; };
 		70980EA21461828A002AB58F /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		70980EA31461828A002AB58F /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		70980EA31461828A002AB58F /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
+		70980EAA14618A13002AB58F /* generic_th1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = generic_th1.png; path = LazyLoader/generic_th1.png; sourceTree = "<group>"; };
+		70980EAB14618A13002AB58F /* generic_th2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = generic_th2.png; path = LazyLoader/generic_th2.png; sourceTree = "<group>"; };
+		70980EAE14618A70002AB58F /* FileUtils.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileUtils.cxx; sourceTree = "<group>"; };
+		70980EAF14618A70002AB58F /* FileUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FileUtils.h; sourceTree = "<group>"; };
+		70980EB1146190CB002AB58F /* libRoot.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libRoot.a; path = ../../../lib/libRoot.a; sourceTree = "<group>"; };
+		70980EB2146190CB002AB58F /* libfreetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfreetype.a; path = ../../../lib/libfreetype.a; sourceTree = "<group>"; };
+		70980EB3146190CB002AB58F /* liblzma.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblzma.a; path = ../../../lib/liblzma.a; sourceTree = "<group>"; };
+		70980EB4146190CB002AB58F /* libpcre.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpcre.a; path = ../../../lib/libpcre.a; sourceTree = "<group>"; };
+		70980EBD1461A413002AB58F /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		70980EBF1461A43E002AB58F /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
+		70980EC11461A589002AB58F /* system.plugins-ios */ = {isa = PBXFileReference; lastKnownFileType = text; name = "system.plugins-ios"; path = "../../../etc/system.plugins-ios"; sourceTree = "<group>"; };
+		70980EC21461A589002AB58F /* system.rootrc */ = {isa = PBXFileReference; lastKnownFileType = text; name = system.rootrc; path = ../../../etc/system.rootrc; sourceTree = "<group>"; };
+		70980EC51461A6CE002AB58F /* mo.root */ = {isa = PBXFileReference; lastKnownFileType = file; name = mo.root; path = LazyLoader/mo.root; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,6 +63,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70980EC01461A43E002AB58F /* CoreText.framework in Frameworks */,
+				70980EBE1461A413002AB58F /* libz.dylib in Frameworks */,
+				70980EB5146190CB002AB58F /* libRoot.a in Frameworks */,
+				70980EB6146190CB002AB58F /* libfreetype.a in Frameworks */,
+				70980EB7146190CB002AB58F /* liblzma.a in Frameworks */,
+				70980EB8146190CB002AB58F /* libpcre.a in Frameworks */,
 				70980E8E1461828A002AB58F /* UIKit.framework in Frameworks */,
 				70980E901461828A002AB58F /* Foundation.framework in Frameworks */,
 				70980E921461828A002AB58F /* CoreGraphics.framework in Frameworks */,
@@ -50,6 +81,17 @@
 		70980E7E1461828A002AB58F = {
 			isa = PBXGroup;
 			children = (
+				70980EC51461A6CE002AB58F /* mo.root */,
+				70980EC11461A589002AB58F /* system.plugins-ios */,
+				70980EC21461A589002AB58F /* system.rootrc */,
+				70980EBF1461A43E002AB58F /* CoreText.framework */,
+				70980EBD1461A413002AB58F /* libz.dylib */,
+				70980EB1146190CB002AB58F /* libRoot.a */,
+				70980EB2146190CB002AB58F /* libfreetype.a */,
+				70980EB3146190CB002AB58F /* liblzma.a */,
+				70980EB4146190CB002AB58F /* libpcre.a */,
+				70980EAA14618A13002AB58F /* generic_th1.png */,
+				70980EAB14618A13002AB58F /* generic_th2.png */,
 				70980E931461828A002AB58F /* LazyLoader */,
 				70980E8C1461828A002AB58F /* Frameworks */,
 				70980E8A1461828A002AB58F /* Products */,
@@ -77,11 +119,13 @@
 		70980E931461828A002AB58F /* LazyLoader */ = {
 			isa = PBXGroup;
 			children = (
+				70980EAE14618A70002AB58F /* FileUtils.cxx */,
+				70980EAF14618A70002AB58F /* FileUtils.h */,
 				70980E9C1461828A002AB58F /* AppDelegate.h */,
-				70980E9D1461828A002AB58F /* AppDelegate.m */,
+				70980E9D1461828A002AB58F /* AppDelegate.mm */,
 				70980E9F1461828A002AB58F /* MainStoryboard.storyboard */,
 				70980EA21461828A002AB58F /* ViewController.h */,
-				70980EA31461828A002AB58F /* ViewController.m */,
+				70980EA31461828A002AB58F /* ViewController.mm */,
 				70980E941461828A002AB58F /* Supporting Files */,
 			);
 			path = LazyLoader;
@@ -148,6 +192,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70980EC61461A6CE002AB58F /* mo.root in Resources */,
+				70980EC31461A589002AB58F /* system.plugins-ios in Resources */,
+				70980EC41461A589002AB58F /* system.rootrc in Resources */,
+				70980EAC14618A13002AB58F /* generic_th1.png in Resources */,
+				70980EAD14618A13002AB58F /* generic_th2.png in Resources */,
 				70980E981461828A002AB58F /* InfoPlist.strings in Resources */,
 				70980EA11461828A002AB58F /* MainStoryboard.storyboard in Resources */,
 			);
@@ -161,8 +210,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				70980E9A1461828A002AB58F /* main.m in Sources */,
-				70980E9E1461828A002AB58F /* AppDelegate.m in Sources */,
-				70980EA41461828A002AB58F /* ViewController.m in Sources */,
+				70980E9E1461828A002AB58F /* AppDelegate.mm in Sources */,
+				70980EA41461828A002AB58F /* ViewController.mm in Sources */,
+				70980EB014618A70002AB58F /* FileUtils.cxx in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -193,6 +243,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
@@ -219,6 +270,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
@@ -238,9 +290,22 @@
 		70980EA81461828A002AB58F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "LazyLoader/LazyLoader-Prefix.pch";
+				HEADER_SEARCH_PATHS = ../../../include;
 				INFOPLIST_FILE = "LazyLoader/LazyLoader-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					../../../lib,
+					"\"$(SRCROOT)/../../../lib\"",
+				);
+				OTHER_LDFLAGS = (
+					../../../hist/hist/src/G__Hist.o,
+					../../../hist/histpainter/src/G__HistPainter.o,
+					../../../graf3d/g3d/src/G__G3D.o,
+					../../../net/net/src/G__Net.o,
+					../../../io/io/src/G__IO.o,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -249,9 +314,22 @@
 		70980EA91461828A002AB58F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "LazyLoader/LazyLoader-Prefix.pch";
+				HEADER_SEARCH_PATHS = ../../../include;
 				INFOPLIST_FILE = "LazyLoader/LazyLoader-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					../../../lib,
+					"\"$(SRCROOT)/../../../lib\"",
+				);
+				OTHER_LDFLAGS = (
+					../../../hist/hist/src/G__Hist.o,
+					../../../hist/histpainter/src/G__HistPainter.o,
+					../../../graf3d/g3d/src/G__G3D.o,
+					../../../net/net/src/G__Net.o,
+					../../../io/io/src/G__IO.o,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
