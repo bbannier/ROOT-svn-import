@@ -240,8 +240,10 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
     cout << "Setting Parameter of Interest as :" << POI << endl;
     RooRealVar* poi = (RooRealVar*) ws->var(POI.c_str());
     RooArgSet * params= new RooArgSet;
-    params->add(*poi);
-    proto_config->SetParameters(*params);
+    if(poi){
+      params->add(*poi);
+    }
+    proto_config->SetParametersOfInterest(*params);
     
     
     // Gamma/Uniform Constraints:
@@ -253,15 +255,21 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
     
     // fill out ModelConfig and export
     RooAbsData* expData = ws->data("asimovData");
-    proto_config->GuessObsAndNuisance(*expData);
+    if(poi){
+      proto_config->GuessObsAndNuisance(*expData);
+    }
     ws->writeToFile((outputFileNamePrefix+"_"+ch_name+"_"+rowTitle+"_model.root").c_str());
     
     // do fit unless exportOnly requested
     if(!exportOnly){
-      if(ws->data("obsData")){
-	factory.FitModel(ws, ch_name, "newSimPdf", "obsData", false);
-      } else {
-	factory.FitModel(ws, ch_name, "newSimPdf", "asimovData", false);
+      if(!poi){
+	cout <<"can't do fit for this channel, no parameter of interest"<<endl;
+      } else{
+	if(ws->data("obsData")){
+	  factory.FitModel(ws, ch_name, "newSimPdf", "obsData", false);
+	} else {
+	  factory.FitModel(ws, ch_name, "newSimPdf", "asimovData", false);
+	}
       }
       
     }
@@ -289,9 +297,11 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
     RooRealVar* poi = (RooRealVar*) ws->var((POI).c_str());
     //RooRealVar* poi = (RooRealVar*) ws->var((POI+"_comb").c_str());
     RooArgSet * params= new RooArgSet;
-    cout << poi << endl;
-    params->add(*poi);
-    combined_config->SetParameters(*params);
+    //    cout << poi << endl;
+    if(poi){
+      params->add(*poi);
+    }
+    combined_config->SetParametersOfInterest(*params);
     ws->Print();
     
     // Set new PDF if there are gamma/uniform constraint terms
