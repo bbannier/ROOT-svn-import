@@ -28,6 +28,7 @@ for simple problems, but it scales to much more complicated cases.
 #include "TFile.h"
 #include "TROOT.h"
 #include "TCanvas.h"
+#include "TMath.h"
 #include "RooWorkspace.h"
 #include "RooAbsData.h"
 
@@ -136,7 +137,7 @@ void StandardBayesianMCMCDemo(const char* infile = "",
   mcmc.SetConfidenceLevel(0.95); // 95% interval
   //  mcmc.SetProposalFunction(*pf);
   mcmc.SetProposalFunction(sp);
-  mcmc.SetNumIters(1000000);         // Metropolis-Hastings algorithm iterations
+  mcmc.SetNumIters(10000);         // Metropolis-Hastings algorithm iterations
   mcmc.SetNumBurnInSteps(50);       // first N steps to be ignored as burn-in
 
   // default is the shortest interval.  here use central
@@ -148,26 +149,27 @@ void StandardBayesianMCMCDemo(const char* infile = "",
   MCMCInterval* interval = mcmc.GetInterval();
 
   // make a plot
-  TCanvas* c1 = new TCanvas("IntervalPlot");
+  //TCanvas* c1 = 
+  new TCanvas("IntervalPlot");
   MCMCIntervalPlot plot(*interval);
   plot.Draw();
 
   TCanvas* c2 = new TCanvas("extraPlots");
-  RooArgSet* list = mc->GetNuisanceParameters();
-  if(list->getSize()>4){
+  const RooArgSet* list = mc->GetNuisanceParameters();
+  if(list->getSize()>1){
     double n = list->getSize();
-    int nx = (int)sqrt(n) ;
-    int ny = TMath::CeilNint(n/nx);
-    nx = TMath::CeilNint( sqrt(n) );
-    c2->Divide(ny,nx);
+    int ny = TMath::CeilNint( sqrt(n) );
+    int nx = TMath::CeilNint(double(n)/ny);
+    c2->Divide( nx,ny);
   }
 
+  // draw a scatter plot of chain results for poi vs each nuisance parameters
   TIterator* it = mc->GetNuisanceParameters()->createIterator();
   RooRealVar* nuis = NULL;
-  int iPad=0; // iPad, that's funny
-  while(nuis = (RooRealVar*) it->Next()){
-    c2->cd(iPad);
-    plot.Draw(*firstPOI,*nuis);
+  int iPad=1; // iPad, that's funny
+  while( (nuis = (RooRealVar*) it->Next() )){
+    c2->cd(iPad++);
+    plot.DrawChainScatter(*firstPOI,*nuis);
   }
   
   // print out the iterval on the first Parameter of Interest

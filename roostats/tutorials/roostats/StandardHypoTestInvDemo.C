@@ -14,6 +14,7 @@
 #include "TCanvas.h"
 #include "TLine.h"
 #include "TStopwatch.h"
+#include "TROOT.h"
 
 #include "RooStats/HybridCalculator.h"
 #include "RooStats/FrequentistCalculator.h"
@@ -38,6 +39,7 @@ using namespace RooStats;
 bool plotHypoTestResult = true; 
 bool useProof = true;
 bool optimize = false;
+bool useVectorStore = false;
 bool generateBinned = false; 
 bool writeResult = false;
 int nworkers = 4;
@@ -46,6 +48,7 @@ int nToyToRebuild = 100;
 double nToysRatio = 2; // ratio Ntoys S+b/ntoysB
 double maxPOI = -1;
 const char * massValue = 0;
+TString  minimizerType;
 
 // internal routine to run the inverter
 HypoTestInverterResult * RunInverter(RooWorkspace * w, const char * modelSBName, const char * modelBName, const char * dataName,
@@ -55,7 +58,7 @@ HypoTestInverterResult * RunInverter(RooWorkspace * w, const char * modelSBName,
 
 
 
-void StandardHypoTestInvDemo(const char * fileName =0,
+void StandardHypoTestInvDemo(const char * infile =0,
                              const char * wsName = "combined",
                              const char * modelSBName = "ModelConfig",
                              const char * modelBName = "",
@@ -108,12 +111,43 @@ void StandardHypoTestInvDemo(const char * fileName =0,
 
 
    */
-
-   if (fileName==0) { 
+   
+   TString fileName(infile);
+   if (fileName.IsNull()) { 
       fileName = "results/example_combined_GaussExample_model.root";
-      std::cout << "Use standard file generated with HistFactory :" << fileName << std::endl;
+      std::cout << "Use standard file generated with HistFactory : " << fileName << std::endl;
    }
-   TFile * file = new TFile(fileName); 
+
+   // open file and check if input file exists
+   TFile * file = TFile::Open(fileName); 
+
+  // if input file was specified but not found, quit
+  if(!file && !TString(infile).IsNull()){
+     cout <<"file " << fileName << " not found" << endl;
+     return;
+  } 
+
+  // if default file not found, try to create it
+  if(!file ){
+    // Normally this would be run on the command line
+    cout <<"will run standard hist2workspace example"<<endl;
+    gROOT->ProcessLine(".! prepareHistFactory .");
+    gROOT->ProcessLine(".! hist2workspace config/example.xml");
+    cout <<"\n\n---------------------"<<endl;
+    cout <<"Done creating example input"<<endl;
+    cout <<"---------------------\n\n"<<endl;
+
+    // now try to access the file again
+    file = TFile::Open(fileName);
+
+  }
+
+  if(!file){
+    // if it is still not there, then we can't continue
+    cout << "Not able to run hist2workspace to create example input" <<endl;
+    return;
+  }
+
 
    RooWorkspace * w = dynamic_cast<RooWorkspace*>( file->Get(wsName) );
    HypoTestInverterResult * r = 0; 
@@ -195,7 +229,11 @@ void StandardHypoTestInvDemo(const char * fileName =0,
    // plot test statistics distributions for the two hypothesis 
    if (plotHypoTestResult) { 
       TCanvas * c2 = new TCanvas();
-      if (nEntries > 1) c2->Divide( 2, TMath::Ceil(double(nEntries)/2));
+      if (nEntries > 1) { 
+         int ny = TMath::CeilNint( sqrt(nEntries) );
+         int nx = TMath::CeilNint(double(nEntries)/ny);
+         c2->Divide( nx,ny);
+      }
       for (int i=0; i<nEntries; i++) {
          if (nEntries > 1) c2->cd(i+1);
          SamplingDistPlot * pl = plot->MakeTestStatPlot(i);
@@ -226,6 +264,11 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
    }
    else 
       std::cout << "Using data set " << dataName << std::endl;
+
+   if (useVectorStore) { 
+      RooAbsData::defaultStorageType = RooAbsData::Vector;
+      data->convertToVectorStore() ;
+   }
 
    
    // get models from WS
@@ -294,12 +337,14 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
 
    // fit the data first (need to use constraint )
    Info( "StandardHypoTestInvDemo"," Doing a first fit to the observed data ");
+   if (minimizerType.IsNull()) minimizerType = ROOT::Math::MinimizerOptions::DefaultMinimizerType();
    RooArgSet constrainParams;
    if (sbModel->GetNuisanceParameters() ) constrainParams.add(*sbModel->GetNuisanceParameters());
    RooStats::RemoveConstantParameters(&constrainParams);
    TStopwatch tw; 
    tw.Start(); 
-   RooFitResult * fitres = sbModel->GetPdf()->fitTo(*data,InitialHesse(false), Hesse(false),Minimizer("Minuit2","Migrad"), Strategy(0), PrintLevel(1), Constrain(constrainParams), Save(true) );
+   RooFitResult * fitres = sbModel->GetPdf()->fitTo(*data,InitialHesse(false), Hesse(false),
+                                                    Minimizer(minimizerType,"Migrad"), Strategy(0), PrintLevel(1), Constrain(constrainParams), Save(true) );
    if (fitres->status() != 0) { 
       Warning("StandardHypoTestInvDemo","Fit to the model failed - try with strategy 1 and perform first an Hesse computation");
       fitres = sbModel->GetPdf()->fitTo(*data,InitialHesse(true), Hesse(false),Minimizer("Minuit2","Migrad"), Strategy(1), PrintLevel(1), Constrain(constrainParams), Save(true) );
@@ -333,7 +378,7 @@ HypoTestInverterResult *  RunInverter(RooWorkspace * w, const char * modelSBName
    
    ProfileLikelihoodTestStat profll(*sbModel->GetPdf());
    if (testStatType == 3) profll.SetOneSided(1);
-   profll.SetMinimizer("Minuit2");
+   profll.SetMinimizer(minimizerType);
    if (optimize) { 
       profll.SetReuseNLL(true);
       slrts.setReuseNLL(true);
