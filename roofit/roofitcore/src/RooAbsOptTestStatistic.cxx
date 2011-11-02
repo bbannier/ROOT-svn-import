@@ -54,6 +54,7 @@
 #include "RooAbsDataStore.h"
 #include "RooCategory.h"
 #include "RooDataSet.h"
+#include "RooProdPdf.h"
 
 ClassImp(RooAbsOptTestStatistic)
 ;
@@ -65,11 +66,18 @@ RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
   // Default Constructor
 
   // Initialize all non-persisted data members
-  _normSet = 0 ;
+
   _funcObsSet = 0 ;
-  _dataClone = 0 ;
+  _funcCloneSet = 0 ;
   _funcClone = 0 ;
+
+  _normSet = 0 ;
+  _dataClone = 0 ;
   _projDeps = 0 ;
+
+  _origFunc = 0 ;
+  _origData = 0 ;
+
   _ownData = kTRUE ;
   _sealed = kFALSE ;
 }
@@ -79,7 +87,7 @@ RooAbsOptTestStatistic:: RooAbsOptTestStatistic()
 //_____________________________________________________________________________
 RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *title, RooAbsReal& real, RooAbsData& indata,
 					       const RooArgSet& projDeps, const char* rangeName, const char* addCoefRangeName,
-					       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange, Bool_t cloneInputData) : 
+					       Int_t nCPU, Bool_t interleave, Bool_t verbose, Bool_t splitCutRange, Bool_t /*cloneInputData*/) : 
   RooAbsTestStatistic(name,title,real,indata,projDeps,rangeName, addCoefRangeName, nCPU, interleave, verbose, splitCutRange),
   _projDeps(0),
   _sealed(kFALSE)
@@ -97,18 +105,24 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const char *name, const char *tit
   // If splitCutRange is true, a different rangeName constructed as rangeName_{catName} will be used
   // as range definition for each index state of a RooSimultaneous
 
-  cloneInputData=1;
   // Don't do a thing in master mode
 
   if (operMode()!=Slave) {
+    _funcObsSet = 0 ;
+    _funcCloneSet = 0 ;
+    _funcClone = 0 ;
     _normSet = 0 ;
     _dataClone = 0 ;
-    _funcClone = 0 ;
-    _projDeps = 0 ;
+    _projDeps = 0 ;    
+    _origFunc = 0 ;
+    _origData = 0 ;
     _ownData = kFALSE ;
     _sealed = kFALSE ;
     return ;
   }
+
+  _origFunc = 0 ; //other._origFunc ;
+  _origData = 0 ; // other._origData ;
 
   initSlave(real,indata,projDeps,rangeName,addCoefRangeName) ;
 }
@@ -120,18 +134,25 @@ RooAbsOptTestStatistic::RooAbsOptTestStatistic(const RooAbsOptTestStatistic& oth
   // Copy constructor
 
   // Don't do a thing in master mode
-  if (operMode()!=Slave) {
-    _projDeps = 0 ;
+  if (operMode()!=Slave) {    
+
+    _funcObsSet = 0 ;
+    _funcCloneSet = 0 ;
+    _funcClone = 0 ;
     _normSet = other._normSet ? ((RooArgSet*) other._normSet->snapshot()) : 0 ;   
+    _dataClone = 0 ;
+    _projDeps = 0 ;    
+    _origFunc = 0 ;
+    _origData = 0 ;
     _ownData = kFALSE ;
     return ;
   }
   
-  _origFunc = other._origFunc ;
-  _origData = other._origData ;
+  _origFunc = 0 ; //other._origFunc ;
+  _origData = 0 ; // other._origData ;
   _projDeps = 0 ;
   
-  initSlave(*other._origFunc,*other._origData,other._projDeps?*other._projDeps:RooArgSet(),other._rangeName.c_str(),other._addCoefRangeName.c_str()) ;
+  initSlave(*other._funcClone,*other._dataClone,other._projDeps?*other._projDeps:RooArgSet(),other._rangeName.c_str(),other._addCoefRangeName.c_str()) ;
 }
 
 
@@ -151,6 +172,7 @@ void RooAbsOptTestStatistic::initSlave(RooAbsReal& real, RooAbsData& indata, con
 
   // Clone FUNC
   _funcClone = (RooAbsReal*) real.cloneTree() ;
+  _funcCloneSet = 0 ;
 
   // Attach FUNC to data set  
   _funcObsSet = _funcClone->getObservables(indata) ;
@@ -159,8 +181,26 @@ void RooAbsOptTestStatistic::initSlave(RooAbsReal& real, RooAbsData& indata, con
   RooArgSet* origParams = (RooArgSet*) real.getParameters(indata) ;
   _funcClone->recursiveRedirectServers(*origParams) ;
 
-  // Add parameters as servers
-  _paramSet.add(*origParams) ;
+
+  // If PDF is a RooProdPdf (with possible constraint terms)
+  // analyze pdf for actual parameters (i.e those in unconnected constraint terms should be
+  // ignored as here so that the test statistic will not be recalculated if those
+  // are changed
+  RooProdPdf* pdfWithCons = dynamic_cast<RooProdPdf*>(_funcClone) ;
+  if (pdfWithCons) {
+    
+    RooArgSet* connPars = pdfWithCons->getConnectedParameters(*indata.get()) ;
+    // Add connected parameters as servers
+    _paramSet.removeAll() ;
+    _paramSet.add(*connPars) ;
+    delete connPars ;
+
+  } else {
+    // Add parameters as servers
+    _paramSet.add(*origParams) ;
+  }
+
+
   delete origParams ;
 
   // Store normalization set  
@@ -343,8 +383,8 @@ void RooAbsOptTestStatistic::initSlave(RooAbsReal& real, RooAbsData& indata, con
   // *** PART 4 *** Finalization and activation of optimization          *
   // *********************************************************************
 
-  _origFunc = _func ;
-  _origData = _data ;
+  //_origFunc = _func ;
+  //_origData = _data ;
 
   // Redirect pointers of base class to clone 
   _func = _funcClone ;
@@ -679,3 +719,5 @@ const RooAbsData& RooAbsOptTestStatistic::data() const
   }
   return *_dataClone ; 
 }
+
+
