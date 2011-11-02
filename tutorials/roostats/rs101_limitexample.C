@@ -99,7 +99,6 @@ void rs101_limitexample()
   modelConfig.SetPdf(*modelWithConstraints);
   modelConfig.SetParametersOfInterest(paramOfInterest);
 
-
   // First, let's use a Calculator based on the Profile Likelihood Ratio
   //ProfileLikelihoodCalculator plc(*data, *modelWithConstraints, paramOfInterest); 
   ProfileLikelihoodCalculator plc(*data, modelConfig); 
