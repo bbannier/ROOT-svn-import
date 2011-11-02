@@ -821,9 +821,6 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
   // Also return list of normalization sets to be used to evaluate 
   // each component in the list correctly.
 
-  RooArgList* partListPointer=(RooArgList*)partList ;
-  RooLinkedList* nsetListPointer=(RooLinkedList*)nsetList ;
-
 //   cout << "   FOLKERT::RooProdPdf::getPartIntList(" << GetName() <<")  nset = " << (nset?*nset:RooArgSet()) << endl 
 //        << "   _normRange = " << _normRange << endl 
 //        << "   iset = " << (iset?*iset:RooArgSet()) << endl 
@@ -1168,9 +1165,6 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
 //   cout << endl ;
 //   delete nliter ;
 
-  partListPointer=(RooArgList*)partList ;
-  nsetListPointer=(RooLinkedList*)nsetList ;
-
 //   cout << "   FOLKERT::RooProdPdf::getPartIntList END(" << GetName() <<")  nset = " << (nset?*nset:RooArgSet()) << endl 
 //        << "   _normRange = " << _normRange << endl 
 //        << "   iset = " << (iset?*iset:RooArgSet()) << endl 
@@ -1224,7 +1218,6 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
   TIterator* iter2 = cache._denList.createIterator() ;
   TIterator* itern = cache._normList.MakeIterator() ;
   RooAbsReal* part, *num, *den ;
-  RooArgSet* nset ;
   RooArgSet nomList ;
 
   list<string> rangeComps ;
@@ -1246,8 +1239,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 
   while((part=(RooAbsReal*)iterp->Next())) {
 
-    // coverity[UNUSED_VALUE]
-    nset = (RooArgSet*) itern->Next() ;
+    itern->Next() ;
     num = (RooAbsReal*) iter1->Next() ;
     den = (RooAbsReal*) iter2->Next() ;
     
@@ -2251,6 +2243,32 @@ RooArgSet* RooProdPdf::getConstraints(const RooArgSet& observables, RooArgSet& c
   delete cexl ;
 
   return finalConstraints ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooArgSet* RooProdPdf::getConnectedParameters(const RooArgSet& observables) const
+{
+  // Return all parameter constraint p.d.f.s on parameters listed in constrainedParams
+  // The observables set is required to distinguish unambiguously p.d.f in terms 
+  // of observables and parameters, which are not constraints, and p.d.fs in terms
+  // of parameters only, which can serve as constraints p.d.f.s
+
+  RooFIter iter = _pdfList.fwdIterator() ;
+  RooAbsArg* arg ;
+  RooArgSet* connectedPars  = new RooArgSet("connectedPars") ;
+  while((arg=iter.next())) {
+    // Check if term is relevant
+    if (arg->dependsOn(observables)) {
+      RooArgSet* tmp = arg->getParameters(observables) ;
+      connectedPars->add(*tmp) ;
+      delete tmp ;
+    } else {
+    }
+  }
+  return connectedPars ;
 }
 
 
