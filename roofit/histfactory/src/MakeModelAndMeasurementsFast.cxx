@@ -92,7 +92,11 @@ using namespace RooFit;
 using namespace RooStats;
 using namespace HistFactory;
 
-void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, TXMLNode* node);
+void processMeasurement(string outputFileNamePrefix, 
+			vector<string> xml_input, 
+			TXMLNode* node,
+			vector<string> preprocessFunctions);
+
 void processMeasurementXML(TXMLNode* node, 
 			   string& outputFileName, string outputFileNamePrefix, 
 			   Double_t& nominalLumi, Double_t& lumiRelError, Double_t& lumiError,
@@ -129,6 +133,7 @@ void fastDriver(string input){
   if( rootNode->GetNodeName() != TString( "Combination" ) ){ return; }
 
   string outputFileNamePrefix;
+  vector<string> preprocessFunctions;
   vector<string> xml_input;
   
   TListIter attribIt = rootNode->GetAttributes();
@@ -142,6 +147,9 @@ void fastDriver(string input){
   TXMLNode* node = rootNode->GetChildren();
   while( node != 0 ) {
     if( node->GetNodeName() == TString( "Input" ) ) { xml_input.push_back(node->GetText()); }
+    if( node->GetNodeName() == TString( "Function" ) ) { 
+      preprocessFunctions.push_back(ParseFunctionConfig(node ) ); 
+    }
     node = node->GetNextNode();
   }
   
@@ -149,13 +157,14 @@ void fastDriver(string input){
   node = rootNode->GetChildren();
   while( node != 0 ) {
     if( node->GetNodeName() != TString( "Measurement" ) ) {  node = node->GetNextNode(); continue; }
-    processMeasurement(outputFileNamePrefix,xml_input,node); // MB : I moved this to a separate function
+    processMeasurement(outputFileNamePrefix,xml_input,node,preprocessFunctions); // MB : I moved this to a separate function
     node = node->GetNextNode(); // next measurement
   } 
 }
 
 
-void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, TXMLNode* node)
+void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, TXMLNode* node,
+			vector<string> preprocessFunctions)
 {  
   string outputFileName;
   Double_t nominalLumi=0, lumiRelError=0, lumiError=0;
@@ -205,6 +214,7 @@ void processMeasurement(string outputFileNamePrefix, vector<string> xml_input, T
   vector<string> ch_names;
   TFile* outFile = new TFile(outputFileName.c_str(), "recreate");
   HistoToWorkspaceFactoryFast factory(outputFileNamePrefix, rowTitle, systToFix, nominalLumi, lumiError, lowBin, highBin , outFile);
+  factory.SetFunctionsToPreprocess(preprocessFunctions);
   
   // for results tables
   fprintf(factory.pFile, " %s &", rowTitle.c_str() );
