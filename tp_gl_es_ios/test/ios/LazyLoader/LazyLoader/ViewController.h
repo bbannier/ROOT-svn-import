@@ -1,5 +1,8 @@
 #import <UIKit/UIKit.h>
 
-@interface ViewController : UIViewController
+@class ThumbnailView;
 
+@interface ViewController : UIViewController {
+   __weak IBOutlet ThumbnailView *thumbnailView;
+}
 @end
