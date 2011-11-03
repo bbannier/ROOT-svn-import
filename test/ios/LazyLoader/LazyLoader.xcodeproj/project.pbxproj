@@ -27,6 +27,8 @@
 		70980EC31461A589002AB58F /* system.plugins-ios in Resources */ = {isa = PBXBuildFile; fileRef = 70980EC11461A589002AB58F /* system.plugins-ios */; };
 		70980EC41461A589002AB58F /* system.rootrc in Resources */ = {isa = PBXBuildFile; fileRef = 70980EC21461A589002AB58F /* system.rootrc */; };
 		70980EC61461A6CE002AB58F /* mo.root in Resources */ = {isa = PBXBuildFile; fileRef = 70980EC51461A6CE002AB58F /* mo.root */; };
+		70EFD1E81462DB1400E159C8 /* ThumbnailView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70EFD1E71462DB1400E159C8 /* ThumbnailView.mm */; };
+		70EFD1F11462EE7800E159C8 /* ObjectShortcut.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70EFD1F01462EE7800E159C8 /* ObjectShortcut.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +58,11 @@
 		70980EC11461A589002AB58F /* system.plugins-ios */ = {isa = PBXFileReference; lastKnownFileType = text; name = "system.plugins-ios"; path = "../../../etc/system.plugins-ios"; sourceTree = "<group>"; };
 		70980EC21461A589002AB58F /* system.rootrc */ = {isa = PBXFileReference; lastKnownFileType = text; name = system.rootrc; path = ../../../etc/system.rootrc; sourceTree = "<group>"; };
 		70980EC51461A6CE002AB58F /* mo.root */ = {isa = PBXFileReference; lastKnownFileType = file; name = mo.root; path = LazyLoader/mo.root; sourceTree = "<group>"; };
+		70EFD1E61462DB1400E159C8 /* ThumbnailView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThumbnailView.h; sourceTree = "<group>"; };
+		70EFD1E71462DB1400E159C8 /* ThumbnailView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ThumbnailView.mm; sourceTree = "<group>"; };
+		70EFD1EF1462EE7800E159C8 /* ObjectShortcut.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectShortcut.h; sourceTree = "<group>"; };
+		70EFD1F01462EE7800E159C8 /* ObjectShortcut.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjectShortcut.mm; sourceTree = "<group>"; };
+		70EFD1F21462FC2C00E159C8 /* ThumbnailViewDatasource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThumbnailViewDatasource.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,6 +133,11 @@
 				70980E9F1461828A002AB58F /* MainStoryboard.storyboard */,
 				70980EA21461828A002AB58F /* ViewController.h */,
 				70980EA31461828A002AB58F /* ViewController.mm */,
+				70EFD1E61462DB1400E159C8 /* ThumbnailView.h */,
+				70EFD1E71462DB1400E159C8 /* ThumbnailView.mm */,
+				70EFD1EF1462EE7800E159C8 /* ObjectShortcut.h */,
+				70EFD1F01462EE7800E159C8 /* ObjectShortcut.mm */,
+				70EFD1F21462FC2C00E159C8 /* ThumbnailViewDatasource.h */,
 				70980E941461828A002AB58F /* Supporting Files */,
 			);
 			path = LazyLoader;
@@ -213,6 +225,8 @@
 				70980E9E1461828A002AB58F /* AppDelegate.mm in Sources */,
 				70980EA41461828A002AB58F /* ViewController.mm in Sources */,
 				70980EB014618A70002AB58F /* FileUtils.cxx in Sources */,
+				70EFD1E81462DB1400E159C8 /* ThumbnailView.mm in Sources */,
+				70EFD1F11462EE7800E159C8 /* ObjectShortcut.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -354,6 +368,7 @@
 				70980EA91461828A002AB58F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
