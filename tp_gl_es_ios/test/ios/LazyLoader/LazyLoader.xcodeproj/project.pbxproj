@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		70930DF214698B21002CD77B /* ImageLoader.mm in Sources */ = {isa = PBXBuildFile; fileRef = 70930DF114698B21002CD77B /* ImageLoader.mm */; };
 		70980E8E1461828A002AB58F /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980E8D1461828A002AB58F /* UIKit.framework */; };
 		70980E901461828A002AB58F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980E8F1461828A002AB58F /* Foundation.framework */; };
 		70980E921461828A002AB58F /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 70980E911461828A002AB58F /* CoreGraphics.framework */; };
@@ -32,6 +33,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		70930DED14698A7A002CD77B /* ImageLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageLoader.h; sourceTree = "<group>"; };
+		70930DF114698B21002CD77B /* ImageLoader.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ImageLoader.mm; sourceTree = "<group>"; };
 		70980E891461828A002AB58F /* LazyLoader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LazyLoader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		70980E8D1461828A002AB58F /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		70980E8F1461828A002AB58F /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -139,6 +142,8 @@
 				70EFD1EF1462EE7800E159C8 /* ObjectShortcut.h */,
 				70EFD1F01462EE7800E159C8 /* ObjectShortcut.mm */,
 				70980E941461828A002AB58F /* Supporting Files */,
+				70930DED14698A7A002CD77B /* ImageLoader.h */,
+				70930DF114698B21002CD77B /* ImageLoader.mm */,
 			);
 			path = LazyLoader;
 			sourceTree = "<group>";
@@ -227,6 +232,7 @@
 				70980EB014618A70002AB58F /* FileUtils.cxx in Sources */,
 				70EFD1E81462DB1400E159C8 /* ThumbnailView.mm in Sources */,
 				70EFD1F11462EE7800E159C8 /* ObjectShortcut.mm in Sources */,
+				70930DF214698B21002CD77B /* ImageLoader.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
