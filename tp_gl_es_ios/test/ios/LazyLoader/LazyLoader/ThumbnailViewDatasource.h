@@ -1,8 +1,10 @@
 #import <Foundation/Foundation.h>
 
-@class ObjectShortcut;
+@class ThumbnailView;
 
 @protocol ThumbnailViewDatasource <NSObject>
-- (ObjectShortcut *) thumbnailAtIndex : (unsigned)index;
-- (unsigned) numberOfThumbnails;
+- (NSInteger) numberOfItemsInView : (ThumbnailView *)view;
+- (UIView *) viewForItemInView : (ThumbnailView *)view atIndex : (NSInteger)index;
+- (void) loadThumbnailForView : (UIView *)view;
 @end
+

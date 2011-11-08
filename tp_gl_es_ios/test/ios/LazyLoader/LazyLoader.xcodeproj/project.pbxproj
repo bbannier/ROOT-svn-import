@@ -62,7 +62,7 @@
 		70EFD1E71462DB1400E159C8 /* ThumbnailView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ThumbnailView.mm; sourceTree = "<group>"; };
 		70EFD1EF1462EE7800E159C8 /* ObjectShortcut.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectShortcut.h; sourceTree = "<group>"; };
 		70EFD1F01462EE7800E159C8 /* ObjectShortcut.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ObjectShortcut.mm; sourceTree = "<group>"; };
-		70EFD1F21462FC2C00E159C8 /* ThumbnailViewDatasource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThumbnailViewDatasource.h; sourceTree = "<group>"; };
+		70FE0EA91463DA6900E5CFC5 /* ThumbnailViewDatasource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThumbnailViewDatasource.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,6 +126,7 @@
 		70980E931461828A002AB58F /* LazyLoader */ = {
 			isa = PBXGroup;
 			children = (
+				70FE0EA91463DA6900E5CFC5 /* ThumbnailViewDatasource.h */,
 				70980EAE14618A70002AB58F /* FileUtils.cxx */,
 				70980EAF14618A70002AB58F /* FileUtils.h */,
 				70980E9C1461828A002AB58F /* AppDelegate.h */,
@@ -137,7 +138,6 @@
 				70EFD1E71462DB1400E159C8 /* ThumbnailView.mm */,
 				70EFD1EF1462EE7800E159C8 /* ObjectShortcut.h */,
 				70EFD1F01462EE7800E159C8 /* ObjectShortcut.mm */,
-				70EFD1F21462FC2C00E159C8 /* ThumbnailViewDatasource.h */,
 				70980E941461828A002AB58F /* Supporting Files */,
 			);
 			path = LazyLoader;

@@ -1,12 +1,17 @@
 #import "AppDelegate.h"
 
-@implementation AppDelegate
+#import "TApplication.h"
+
+@implementation AppDelegate {
+   TApplication *rootApp;
+}
 
 @synthesize window = _window;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     // Override point for customization after application launch.
+    rootApp = new TApplication("iosApp", 0, 0);
     return YES;
 }
 							
@@ -47,6 +52,11 @@
     Save data if appropriate.
     See also applicationDidEnterBackground:.
     */
+}
+
+- (void) dealloc
+{
+   delete rootApp;
 }
 
 @end

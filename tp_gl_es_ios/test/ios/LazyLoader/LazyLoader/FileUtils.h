@@ -50,7 +50,10 @@ public:
    ~FileContainer();
 
    size_type GetNumberOfObjects()const;
-   TObject *GetObject(size_type ind)const;
+   TObject *GetObject(size_type ind);
+//   TObject LoadObject(size_type ind);
+   const char *GetObjectName(size_type ind)const;
+   ObjectType GetObjectType(size_type ind)const;
    Pad *GetPadAttached(size_type ind)const;
 
    void SetErrorDrawOption(size_type ind, EHistogramErrorOption opt);

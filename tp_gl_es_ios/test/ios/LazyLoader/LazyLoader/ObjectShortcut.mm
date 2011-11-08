@@ -13,6 +13,7 @@
 
 @synthesize viewTag;
 @synthesize objectName;
+@synthesize image = thumbnail;
 
 + (CGFloat) imageWidth
 {
@@ -29,6 +30,11 @@
    return 100.f;
 }
 
++ (CGSize) shortcutSize
+{
+   return CGSizeMake([ObjectShortcut imageWidth], [ObjectShortcut imageHeight]);
+}
+
 - (id) initWithFrame : (CGRect)rect
 {
    if (self = [super initWithFrame : rect]) {
@@ -41,23 +47,30 @@
 
 - (void) setObjectType : (ROOT::iOS::Browser::ObjectType)objType
 {
-   using namespace ROOT::iOS::Browser;
+
    
    type = objType;
-   if (type == ObjectType::h1d)
-      thumbnail = [UIImage imageNamed : @"generic_th1.png"];
-   else
-      thumbnail = [UIImage imageNamed : @"generic_th2.png"];
 }
 
 - (void) drawRect : (CGRect)rect
 {
+   using namespace ROOT::iOS::Browser;
+
+   if (!thumbnail) {
+      if (type == ObjectType::h1d)
+         thumbnail = [UIImage imageNamed : @"generic_th1.png"];
+      else
+         thumbnail = [UIImage imageNamed : @"generic_th2.png"];
+   }
+
+
    [thumbnail drawAtPoint : CGPointZero];
 
    CGContextRef ctx = UIGraphicsGetCurrentContext();
    CGContextSetRGBFillColor(ctx, 1.f, 1.f, 1.f, 1.f);
-   const CGRect textRect = CGRectMake(0.f, [ObjectShortcut imageHeight], [ObjectShortcut imageWidth], [ObjectShortcut textHeight]);
+   const CGRect textRect = CGRectMake(0.f, [ObjectShortcut imageHeight], [ObjectShortcut imageWidth], 30.f);
    [objectName drawInRect : textRect withFont : [UIFont systemFontOfSize : 16] lineBreakMode : UILineBreakModeWordWrap alignment : UITextAlignmentCenter];
+//   NSLog(@"obj name is %@", objectName);
 }
 
 
