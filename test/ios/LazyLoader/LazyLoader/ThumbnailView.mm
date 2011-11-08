@@ -2,7 +2,7 @@
 
 #import "ViewController.h"
 
-const int preloadRows = 2;
+const int preloadRows = 0;
 
 @interface ThumbnailView () <UIScrollViewDelegate> {
    UIScrollView *scroll;
@@ -262,12 +262,8 @@ const int preloadRows = 2;
 //____________________________________________________________________________________________________
 - (void) loadDataForVisibleRange
 {
-   if ([delegate respondsToSelector:@selector(loadThumbnailForView:)]) {
-      for (UIView *view in visibleThumbnails) {
-         [(ViewController *)delegate loadThumbnailForView : view];
-         [view setNeedsDisplay];
-      }
-   }
+   if ([delegate respondsToSelector:@selector(loadDataForVisibleRange:)])
+      [delegate loadDataForVisibleRange : visibleThumbnails];
 }
 
 //____________________________________________________________________________________________________
@@ -291,6 +287,18 @@ const int preloadRows = 2;
       //Load objects.
       [self loadDataForVisibleRange];
    }
+}
+
+//____________________________________________________________________________________________________
+- (void) scrollViewWillBeginDragging:(UIScrollView *)scrollView
+{
+   [delegate cancelDataLoad];
+}
+
+//____________________________________________________________________________________________________
+- (void) scrollViewWillBeginDecelerating:(UIScrollView *)scrollView
+{
+   [delegate cancelDataLoad];
 }
 
 @end

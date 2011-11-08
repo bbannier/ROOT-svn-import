@@ -1,7 +1,7 @@
 #import "ViewController.h"
 #import "ObjectShortcut.h"
 #import "ThumbnailView.h"
-
+#import "ImageLoader.h"
 
 #import "FileUtils.h"
 
@@ -12,6 +12,8 @@
    ROOT::iOS::Browser::FileContainer *fileContainer;
    ThumbnailView *thumbnailView;
    NSMutableSet *imageCache;
+   
+   NSOperationQueue *queue;
 }
 
 //____________________________________________________________________________________________________
@@ -105,7 +107,6 @@
    using namespace ROOT::iOS;
    
    if (fileContainer->GetObject(view.tag)) {
-      NSLog(@"%d", view.tag);
       Pad *pad = fileContainer->GetPadAttached(view.tag);
       //generate thumbnail.
       
@@ -167,14 +168,25 @@
 {
    ((ObjectShortcut *)view).image = nil;
 }
-/*
-- (void) loadDataForVisibleRange
+
+- (void) loadDataForVisibleRange : (NSMutableSet *)range
 {
-   const unsigned last = thumbnailView.lastVisibleThumbnail;
-   for (unsigned i = thumbnailView.firstVisibleThumbnail; i <= last; ++i) {
-      UIView * v = [thumbnailView vi
+
+   /*queue = [[NSOperationQueue alloc] init];
+   NSMutableSet *copy = [range copy];
+   ImageLoader *loader = [[ImageLoader alloc] initWithContainer : fileContainer andViews : copy];
+   [queue addOperation : loader];*/
+   
+   for (UIView *v in range) {
+      [self loadThumbnailForView : v];
+      [v setNeedsDisplay];
    }
 }
-*/
+
+- (void) cancelDataLoad
+{
+ //  [queue cancelAllOperations];
+}
+
 
 @end

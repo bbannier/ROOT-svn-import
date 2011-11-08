@@ -12,7 +12,8 @@
 - (void) cacheDataForThumbnail : (UIView *)view;
 //- (void) loadDataForVisibleRange;
 
-- (void) loadThumbnailForView : (UIView *)view;
+//- (void) loadThumbnailForView : (UIView *)view;
+
 //
 
 @end

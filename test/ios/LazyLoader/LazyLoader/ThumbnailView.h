@@ -8,7 +8,8 @@
 - (UIView *) thumbnailAtIndex : (unsigned)index;
 @optional
 - (void) cacheDataForThumbnail : (UIView *)view;
-- (void) loadDataForVisibleRange;
+- (void) loadDataForVisibleRange : (NSMutableSet *)visibleThumbnails;
+- (void) cancelDataLoad;
 @end
 
 /*
