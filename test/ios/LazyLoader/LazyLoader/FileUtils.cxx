@@ -6,8 +6,10 @@
 #include "TList.h"
 #include "TFile.h"
 #include "TKey.h"
+#include "TH1.h"
 
 #include "FileUtils.h"
+#include "IOSPad.h"
 
 namespace ROOT {
 namespace iOS {
@@ -140,12 +142,17 @@ FileContainer::FileContainer(const std::string &fileName)
    FillVisibleTypes(visibleTypes);
 
    ScanFileForVisibleObjects(fFileHandler.get(), visibleTypes, fFileContents, fOptions);
+   fAttachedPads.resize(fFileContents.size());
 }
 
 //__________________________________________________________________________________________________________________________
 FileContainer::~FileContainer()
 {
    //I'll need this to delete loaded objects and attached files later.
+   for (auto objHandler : fFileContents)
+      delete objHandler.fObject;
+   for (auto pad : fAttachedPads)
+      delete pad;
 }
 
 //__________________________________________________________________________________________________________________________
@@ -155,16 +162,45 @@ FileContainer::size_type FileContainer::GetNumberOfObjects()const
 }
 
 //__________________________________________________________________________________________________________________________
-TObject *FileContainer::GetObject(size_type ind)const
+TObject *FileContainer::GetObject(size_type ind)
 {
-   return fFileContents[ind].fObject;
+   ObjectHandler &handler = fFileContents[ind];
+   if (!handler.fObject) {
+      handler.fObject = fFileHandler->Get(handler.fFileKey->GetName());
+      if (!handler.fObject)
+         return 0;
+
+      if (TH1 *hist = dynamic_cast<TH1 *>(handler.fObject))
+         hist->SetDirectory(0);
+
+      handler.fObject->SetBit(kCanDelete, kFALSE);
+      handler.fObject->SetBit(kMustCleanup, kFALSE);
+      
+      fAttachedPads[ind] = new Pad(150, 150);
+      fAttachedPads[ind]->cd();
+      handler.fObject->Draw();
+   }
+   
+   return handler.fObject;
+}
+
+//__________________________________________________________________________________________________________________________
+const char *FileContainer::GetObjectName(size_type ind)const
+{
+   return fFileContents[ind].fFileKey->GetName();
+}
+
+//__________________________________________________________________________________________________________________________
+ObjectType FileContainer::GetObjectType(size_type ind)const
+{
+   return fFileContents[ind].fType;
 }
 
 //__________________________________________________________________________________________________________________________
 Pad *FileContainer::GetPadAttached(size_type ind)const
 {
    //No pad was attached yet.
-   return 0;//fAttachedPads[ind];
+   return fAttachedPads[ind];
 }
 
 //__________________________________________________________________________________________________________________________
