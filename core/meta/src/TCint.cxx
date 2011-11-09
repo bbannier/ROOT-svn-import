@@ -1918,7 +1918,7 @@ int tcling_TypedefInfo::GetIdx() const
    return fIdx;
 }
 
-tcling_TypedefInfo::Init(const char* name)
+void tcling_TypedefInfo::Init(const char* name)
 {
    fprintf(stderr, "tcling_TypedefInfo::Init(name): looking up typedef: %s\n",
       name);
@@ -1982,9 +1982,10 @@ bool tcling_TypedefInfo::IsValidClang() const
    return fDecl;
 }
 
-long tlcing_TypedefInfo::Property() const
+long tcling_TypedefInfo::Property() const
 {
    return fTypedefInfo->Property();
+#if 0
    if (!IsValid()) {
       return 0L;
    }
@@ -1995,7 +1996,8 @@ long tlcing_TypedefInfo::Property() const
    property |= G__BIT_ISTYPEDEF;
    const clang::TypedefNameDecl* TD =
       llvm::dyn_cast<clang::TypedefNameDecl>(fDecl);
-   clang::QualType QT = TD->getUnderlyingType()->getCanonicalType();
+   clang::QualType UT = TD->getUnderlyingType();
+   clang::QualType QT = UT->getCanonicalType();
    if (QT->isConstQualified()) {
       property |= G__BIT_ISCONSTANT;
    }
@@ -2011,6 +2013,9 @@ long tlcing_TypedefInfo::Property() const
       }
       else if (QT->isPointerType()) {
          property |= G__BIT_ISPOINTER;
+         if (QT->isConstQualified()) {
+            property |= G__BIT_ISPCONSTANT;
+         }
          QT = llvm::cast<clang::PointerType>(QT)->getPointeeType();
          continue;
       }
@@ -2026,6 +2031,9 @@ long tlcing_TypedefInfo::Property() const
    if (QT->isConstQualified()) {
       property |= G__BIT_ISCONSTANT;
    }
+   return property;
+#endif // 0
+   //--
 }
 
 int tcling_TypedefInfo::Size() const
@@ -2078,7 +2086,8 @@ const char* tcling_TypedefInfo::Name() const
    static std::string fullname;
    fullname.clear();
    clang::PrintingPolicy P(fDecl->getASTContext().getPrintingPolicy());
-   fDecl->getNameForDiagnostic(fullname, P, true);
+   llvm::dyn_cast<clang::NamedDecl>(fDecl)->
+      getNameForDiagnostic(fullname, P, true);
    return fullname.c_str();
 }
 
