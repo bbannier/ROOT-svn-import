@@ -37,15 +37,15 @@
 #include "TObjString.h"
 #include "TMap.h"
 
-TClassTable *gClassTable;
+TClassTable* gClassTable;
 
-TClassRec  **TClassTable::fgTable;
-TClassRec  **TClassTable::fgSortedTable;
+TClassRec**  TClassTable::fgTable;
+TClassRec**  TClassTable::fgSortedTable;
 int          TClassTable::fgSize;
 int          TClassTable::fgTally;
 Bool_t       TClassTable::fgSorted;
 int          TClassTable::fgCursor;
-TClassTable::IdMap_t *TClassTable::fgIdMap;
+TClassTable::IdMap_t* TClassTable::fgIdMap;
 
 ClassImp(TClassTable)
 
@@ -54,8 +54,8 @@ ClassImp(TClassTable)
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetSelect.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -169,62 +169,80 @@ std::vector<const clang::Decl*>* tcling_Dict::Typedefs()
    return typedefs;
 }
 
+std::multimap<const std::string, const clang::Decl*>*
+tcling_Dict::TypedefNameToDecl()
+{
+   static std::multimap<const std::string, const clang::Decl*>*
+      typedefNameToDecl =
+         new std::multimap<const std::string, const clang::Decl*>;
+   return typedefNameToDecl;
+}
+
+std::map<const clang::Decl*, int>* tcling_Dict::TypedefDeclToIdx()
+{
+   static std::map<const clang::Decl*, int>* typedefDeclToIdx =
+      new std::map<const clang::Decl*, int>;
+   return typedefDeclToIdx;
+}
+
 std::string tcling_Dict::get_fully_qualified_name(const clang::NamedDecl* D)
 {
-   clang::PrintingPolicy P(getCI()->getASTContext().PrintingPolicy);
-  const clang::DeclContext* Ctx = D->getDeclContext();
-  typedef llvm::SmallVector<const clang::DeclContext*, 8> ContextsTy;
-  ContextsTy Contexts;
-  while (Ctx && llvm::isa<clang::NamedDecl>(Ctx)) {
-    Contexts.push_back(Ctx);
-    Ctx = Ctx->getParent();
-  };
-  std::string QualName;
-  llvm::raw_string_ostream OS(QualName);
-  for (
-    ContextsTy::reverse_iterator I = Contexts.rbegin(), E = Contexts.rend();
-    I != E;
-    ++I
-  ) {
-    if (const clang::ClassTemplateSpecializationDecl* Spec =
-        llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(*I)
-    ) {
-      const clang::TemplateArgumentList& TemplateArgs = Spec->getTemplateArgs();
-      std::string TemplateArgsStr =
-        clang::TemplateSpecializationType::PrintTemplateArgumentList(
-          TemplateArgs.data(), TemplateArgs.size(), P);
-      OS << Spec->getName() << TemplateArgsStr;
-    } else if (const clang::NamespaceDecl* ND =
-               llvm::dyn_cast<clang::NamespaceDecl>(*I)
-    ) {
-      if (ND->isAnonymousNamespace()) {
-        OS << "<anonymous namespace>";
+   clang::PrintingPolicy P(getCI()->getASTContext().getPrintingPolicy());
+   const clang::DeclContext* Ctx = D->getDeclContext();
+   typedef llvm::SmallVector<const clang::DeclContext*, 8> ContextsTy;
+   ContextsTy Contexts;
+   while (Ctx && llvm::isa<clang::NamedDecl>(Ctx)) {
+      Contexts.push_back(Ctx);
+      Ctx = Ctx->getParent();
+   };
+   std::string QualName;
+   llvm::raw_string_ostream OS(QualName);
+   for (
+      ContextsTy::reverse_iterator I = Contexts.rbegin(), E = Contexts.rend();
+      I != E;
+      ++I
+   ) {
+      if (const clang::ClassTemplateSpecializationDecl* Spec =
+               llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(*I)
+         ) {
+         const clang::TemplateArgumentList& TemplateArgs = Spec->getTemplateArgs();
+         std::string TemplateArgsStr =
+            clang::TemplateSpecializationType::PrintTemplateArgumentList(
+               TemplateArgs.data(), TemplateArgs.size(), P);
+         OS << Spec->getName() << TemplateArgsStr;
+      }
+      else if (const clang::NamespaceDecl* ND =
+                  llvm::dyn_cast<clang::NamespaceDecl>(*I)
+              ) {
+         if (ND->isAnonymousNamespace()) {
+            OS << "<anonymous namespace>";
+         }
+         else {
+            OS << ND;
+         }
+      }
+      else if (const clang::RecordDecl* RD =
+                  llvm::dyn_cast<clang::RecordDecl>(*I)
+              ) {
+         if (!RD->getIdentifier()) {
+            OS << "<anonymous " << RD->getKindName() << '>';
+         }
+         else {
+            OS << RD;
+         }
       }
       else {
-        OS << ND;
+         OS << llvm::cast<clang::NamedDecl>(*I);
       }
-    } else if (const clang::RecordDecl* RD =
-               llvm::dyn_cast<clang::RecordDecl>(*I)
-    ) {
-      if (!RD->getIdentifier()) {
-        OS << "<anonymous " << RD->getKindName() << '>';
-      }
-      else {
-        OS << RD;
-      }
-    }
-    else {
-      OS << llvm::cast<clang::NamedDecl>(*I);
-    }
-    OS << "::";
-  }
-  if (D->getDeclName()) {
-    OS << D;
-  }
-  else {
-    OS << "<anonymous>";
-  }
-  return OS.str();
+      OS << "::";
+   }
+   if (D->getDeclName()) {
+      OS << D;
+   }
+   else {
+      OS << "<anonymous>";
+   }
+   return OS.str();
 }
 
 static clang::CompilerInstance* createCI()
@@ -239,9 +257,9 @@ static clang::CompilerInstance* createCI()
       //  Buffer the error messages while we process
       //  the compiler options.
       //
-      clang::TextDiagnosticBuffer* DiagsBuffer = new clang::TextDiagnosticBuffer();
+      clang::TextDiagnosticBuffer* DiagsBuffer = new clang::TextDiagnosticBuffer;
       // Diags takes ownership of DiagsBuffer
-      clang::Diagnostic Diags(DiagID, DiagsBuffer);
+      clang::DiagnosticsEngine Diags(DiagID, DiagsBuffer);
       clang::CompilerInvocation::CreateFromArgs(CI->getInvocation(),
             fake_argv + 1, fake_argv + fake_argc, Diags);
       if (
@@ -286,12 +304,14 @@ static clang::CompilerInstance* getCI()
    if (!m_CI) {
       return 0;
    }
+#if 0
    m_CI->createDiagnostics(fake_argc - 1, const_cast<char**>(fake_argv + 1));
    if (!m_CI->hasDiagnostics()) {
       delete m_CI;
       m_CI = 0;
       return 0;
    }
+#endif // 0
    return m_CI;
 }
 
@@ -316,13 +336,16 @@ static void visit_namespace_decl(const clang::NamespaceDecl* D, int level)
    //printf("namespace %s {\n", D->getNameAsString().c_str());
    //printf("namespace %s\n", D->getNameAsString().c_str());
    //printf("namespace %s\n", tcling_Dict::get_fully_qualified_name(D).c_str());
-   std::string fullname(tcling_Dict::get_fully_qualified_name(D));
-   std::string shortname(fullname);
-   if (fullname.substr(0, 5) == "std::") {
-      shortname.erase(0, 5);
-   }
+   std::string fullname;
+   clang::PrintingPolicy P(D->getASTContext().getPrintingPolicy());
+   D->getNameForDiagnostic(fullname, P, true);
+   //std::string fullname(tcling_Dict::get_fully_qualified_name(D));
    tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
-   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+   if (fullname.substr(0, 5) == "std::") {
+      std::string shortname(fullname);
+      shortname.erase(0, 5);
+      tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+   }
    tcling_Dict::Classes()->push_back(D);
    tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
    visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
@@ -345,13 +368,16 @@ static void visit_enum_decl(const clang::EnumDecl* D, int level)
    //printf("%s", D->getNameAsString().c_str());
    //printf("enum %s\n", D->getNameAsString().c_str());
    //printf("enum %s\n", tcling_Dict::get_fully_qualified_name(D).c_str());
-   std::string fullname(tcling_Dict::get_fully_qualified_name(D));
-   std::string shortname(fullname);
-   if (fullname.substr(0, 5) == "std::") {
-      shortname.erase(0, 5);
-   }
+   std::string fullname;
+   clang::PrintingPolicy P(D->getASTContext().getPrintingPolicy());
+   D->getNameForDiagnostic(fullname, P, true);
+   //std::string fullname(tcling_Dict::get_fully_qualified_name(D));
    tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
-   tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+   if (fullname.substr(0, 5) == "std::") {
+      std::string shortname(fullname);
+      shortname.erase(0, 5);
+      tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+   }
    tcling_Dict::Classes()->push_back(D);
    tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
 #if 0 // c++2011
@@ -371,13 +397,16 @@ static void visit_record_decl(const clang::RecordDecl* D, int level)
    //printf("%s", D->getKindName());
    if (D->getIdentifier()) {
       //printf(" %s", D->getNameAsString().c_str());
-      std::string fullname(tcling_Dict::get_fully_qualified_name(D));
-      std::string shortname(fullname);
-      if (fullname.substr(0, 5) == "std::") {
-         shortname.erase(0, 5);
-      }
+      std::string fullname;
+      clang::PrintingPolicy P(D->getASTContext().getPrintingPolicy());
+      D->getNameForDiagnostic(fullname, P, true);
+      //std::string fullname(tcling_Dict::get_fully_qualified_name(D));
       tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
-      tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+      if (fullname.substr(0, 5) == "std::") {
+         std::string shortname(fullname);
+         shortname.erase(0, 5);
+         tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+      }
       tcling_Dict::Classes()->push_back(D);
       tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
    }
@@ -392,29 +421,35 @@ static void visit_cxxrecord_decl(const clang::CXXRecordDecl* D, int level)
 {
    //printf("%s", D->getKindName());
    if (D->getIdentifier()) {
-     //printf(" %s", D->getNameAsString().c_str());
-     if (D->isDefinition()) {
-       std::string name = tcling_Dict::get_fully_qualified_name(D);
-       //if (name == "TObject") {
+      //printf(" %s", D->getNameAsString().c_str());
+      if (D->isDefinition()) {
+         std::string name = tcling_Dict::get_fully_qualified_name(D);
+         //if (name == "TObject") {
          //fprintf(stderr, "inserting class: %s  Decl: 0x%016lx\n", tcling_Dict::get_fully_qualified_name(D).c_str(), (long) D);
-         //std::multimap<const std::string, const clang::Decl*>::iterator iter = 
+         //std::multimap<const std::string, const clang::Decl*>::iterator iter =
          //tcling_Dict::ClassNameToDecl()->insert(std::make_pair(tcling_Dict::get_fully_qualified_name(D), D));
          //fprintf(stderr, "inserted  class: %s  Decl: 0x%016lx\n", iter->first.c_str(), (long) iter->second);
          //tcling_Dict::Classes()->push_back(D);
          //tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
-       //}
-       //else {
-         std::string fullname(tcling_Dict::get_fully_qualified_name(D));
-         std::string shortname(fullname);
-         if (fullname.substr(0, 5) == "std::") {
-            shortname.erase(0, 5);
-         }
+         //}
+         //else {
+         std::string fullname;
+         clang::PrintingPolicy P(D->getASTContext().getPrintingPolicy());
+         D->getNameForDiagnostic(fullname, P, true);
+         //std::string fullname(tcling_Dict::get_fully_qualified_name(D));
+         //fprintf(stderr, "inserting: %s\n", fullname.c_str());
          tcling_Dict::ClassNameToDecl()->insert(std::make_pair(fullname, D));
-         tcling_Dict::ClassNameToDecl()->insert(std::make_pair(shortname, D));
+         if (fullname.substr(0, 5) == "std::") {
+            std::string shortname(fullname);
+            shortname.erase(0, 5);
+            //fprintf(stderr, "inserting: %s\n", shortname.c_str());
+            tcling_Dict::ClassNameToDecl()->insert(
+               std::make_pair(shortname, D));
+         }
          tcling_Dict::Classes()->push_back(D);
          tcling_Dict::ClassDeclToIdx()->insert(std::make_pair(D, tcling_Dict::Classes()->size() - 1));
-       //}
-     }
+         //}
+      }
    }
    //printf(" %s", tcling_Dict::get_fully_qualified_name(D).c_str());
    //printf("\n");
@@ -442,6 +477,10 @@ static void visit_cxxrecord_decl(const clang::CXXRecordDecl* D, int level)
 
 static void visit_class_template_specialization_decl(const clang::ClassTemplateSpecializationDecl* D, int level)
 {
+   //std::string fullname;
+   //clang::PrintingPolicy P(D->getASTContext().getPrintingPolicy());
+   //D->getNameForDiagnostic(fullname, P, true);
+   //fprintf(stderr, "class template specialization: %s\n", fullname.c_str());
    visit_cxxrecord_decl(D, level);
 }
 
@@ -456,13 +495,25 @@ static void visit_typedef_decl(const clang::TypedefDecl* D, int level)
    //printf("%s", D->getNameAsString().c_str());
    //printf("%s", tcling_Dict::get_fully_qualified_name(D).c_str());
    //printf("\n");
+   std::string fullname;
+   clang::PrintingPolicy P(D->getASTContext().getPrintingPolicy());
+   D->getNameForDiagnostic(fullname, P, true);
+   //std::string fullname(tcling_Dict::get_fully_qualified_name(D));
+   tcling_Dict::TypedefNameToDecl()->insert(std::make_pair(fullname, D));
+   if (fullname.substr(0, 5) == "std::") {
+      std::string shortname(fullname);
+      shortname.erase(0, 5);
+      tcling_Dict::TypedefNameToDecl()->insert(std::make_pair(shortname, D));
+   }
    tcling_Dict::Typedefs()->push_back(D);
+   tcling_Dict::TypedefDeclToIdx()->insert(
+      std::make_pair(D, tcling_Dict::Typedefs()->size() - 1));
 }
 
 static void visit_function_decl(const clang::FunctionDecl* D, int level)
 {
    if (D->isGlobal()) {
-       tcling_Dict::GlobalFunctions()->push_back(D);
+      tcling_Dict::GlobalFunctions()->push_back(D);
    }
 }
 
@@ -473,17 +524,17 @@ static void visit_var_decl(const clang::VarDecl* D, int level)
    //const clang::ParmVarDecl* Parm = clang::dyn_cast<clang::ParmVarDecl>(D);
    //clang::QualType QT = D->getType();
    //if (Parm) {
-      //QT = Parm->getOriginalType();
+   //QT = Parm->getOriginalType();
    //}
    //{
-      // Actually print var.
-      //if (SC != clang::SC_None) {
-         //printf("%s ", clang::VarDecl::getStorageClassSpecifierString(SC));
-      //}
-      //if (D->isThreadSpecified()) {
-         //printf("__thread ");
-      //}
-      //printf("%s %s", QT.getAsString().c_str(), D->getNameAsString().c_str());
+   // Actually print var.
+   //if (SC != clang::SC_None) {
+   //printf("%s ", clang::VarDecl::getStorageClassSpecifierString(SC));
+   //}
+   //if (D->isThreadSpecified()) {
+   //printf("__thread ");
+   //}
+   //printf("%s %s", QT.getAsString().c_str(), D->getNameAsString().c_str());
    //}
    if (D->hasGlobalStorage() && !D->isStaticDataMember()) {
       tcling_Dict::GlobalVars()->push_back(D);
@@ -492,13 +543,13 @@ static void visit_var_decl(const clang::VarDecl* D, int level)
 
 static void visit_translation_unit_decl(const clang::TranslationUnitDecl* D, int level)
 {
-  visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
+   visit_decl_context(llvm::dyn_cast<clang::DeclContext>(D), level + 1);
 }
 
 static void visit_decl(const clang::Decl* D, int level)
 {
    clang::ASTContext& Context = getCI()->getASTContext();
-   clang::PrintingPolicy Policy(Context.PrintingPolicy);
+   clang::PrintingPolicy Policy(Context.getPrintingPolicy());
    switch (D->getKind()) {
       case clang::Decl::AccessSpec: // Decl
       case clang::Decl::Block: // Decl
@@ -593,7 +644,7 @@ static void visit_decl(const clang::Decl* D, int level)
 static void visit_decl_context(const clang::DeclContext* DC, int level)
 {
    clang::ASTContext& Context = getCI()->getASTContext();
-   clang::PrintingPolicy Policy(Context.PrintingPolicy);
+   clang::PrintingPolicy Policy(Context.getPrintingPolicy());
    for (
       clang::DeclContext::decl_iterator D_Iter = DC->decls_begin(),
       DEnd = DC->decls_end();
@@ -623,12 +674,9 @@ static void visit_decl_context(const clang::DeclContext* DC, int level)
 static void init_class_map()
 {
    llvm::InitializeAllTargets();
-   llvm::InitializeAllMCAsmInfos();
-   llvm::InitializeAllMCCodeGenInfos();
-   llvm::InitializeAllMCSubtargetInfos();
+   llvm::InitializeAllTargetMCs();
    llvm::InitializeAllAsmPrinters();
    llvm::InitializeAllAsmParsers();
-
    m_llvm_context = new llvm::LLVMContext;
    m_CI = createCI();
    tcling_Dict::GetCI(m_CI);
@@ -641,7 +689,7 @@ static void init_class_map()
    clang::Preprocessor& PP = CI->getPreprocessor();
    CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
    CI->setASTContext(new clang::ASTContext(CI->getLangOpts(),
-                                           PP.getSourceManager(), CI->getTarget(), PP.getIdentifierTable(),
+                                           PP.getSourceManager(), &CI->getTarget(), PP.getIdentifierTable(),
                                            PP.getSelectorTable(), PP.getBuiltinInfo(), 0));
    CI->setASTConsumer(new clang::ASTConsumer());
    PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
@@ -672,110 +720,116 @@ static void shutdown_class_map()
 //______________________________________________________________________________
 namespace ROOT {
 
-   class TMapTypeToClassRec {
+class TMapTypeToClassRec {
 #if defined R__USE_STD_MAP
-     // This wrapper class allow to avoid putting #include <map> in the
-     // TROOT.h header file.
-   public:
+   // This wrapper class allow to avoid putting #include <map> in the
+   // TROOT.h header file.
+public:
 #ifdef R__GLOBALSTL
-      typedef map<string, TClassRec*>           IdMap_t;
+   typedef map<string, TClassRec*>           IdMap_t;
 #else
-      typedef std::map<std::string, TClassRec*> IdMap_t;
+   typedef std::map<std::string, TClassRec*> IdMap_t;
 #endif
-      typedef IdMap_t::key_type                 key_type;
-      typedef IdMap_t::const_iterator           const_iterator;
-      typedef IdMap_t::size_type                size_type;
+   typedef IdMap_t::key_type                 key_type;
+   typedef IdMap_t::const_iterator           const_iterator;
+   typedef IdMap_t::size_type                size_type;
 #ifdef R__WIN32
-      // Window's std::map does NOT defined mapped_type
-      typedef TClassRec*                        mapped_type;
+   // Window's std::map does NOT defined mapped_type
+   typedef TClassRec*                        mapped_type;
 #else
-      typedef IdMap_t::mapped_type              mapped_type;
+   typedef IdMap_t::mapped_type              mapped_type;
 #endif
 
-   private:
-      IdMap_t fMap;
+private:
+   IdMap_t fMap;
 
-   public:
-      void Add(const key_type &key, mapped_type &obj) {
-         fMap[key] = obj;
+public:
+   void Add(const key_type& key, mapped_type& obj) {
+      fMap[key] = obj;
+   }
+
+   mapped_type Find(const key_type& key) const {
+      IdMap_t::const_iterator iter = fMap.find(key);
+      mapped_type cl = 0;
+      if (iter != fMap.end()) {
+         cl = iter->second;
       }
+      return cl;
+   }
 
-      mapped_type Find(const key_type &key) const {
+   void Remove(const key_type& key) {
+      fMap.erase(key);
+   }
 
-         IdMap_t::const_iterator iter = fMap.find(key);
-         mapped_type cl = 0;
-         if (iter != fMap.end()) cl = iter->second;
-         return cl;
+   void Print() {
+      Info("TMapTypeToClassRec::Print", "printing the typeinfo map in TClassTable");
+      for (const_iterator iter = fMap.begin(); iter != fMap.end(); iter++) {
+         printf("Key: %40s 0x%lx\n", iter->first.c_str(), iter->second);
       }
-
-      void Remove(const key_type &key) { fMap.erase(key); }
-
-      void Print() {
-         Info("TMapTypeToClassRec::Print", "printing the typeinfo map in TClassTable");
-         for (const_iterator iter = fMap.begin(); iter != fMap.end(); iter++) {
-            printf("Key: %40s 0x%lx\n", iter->first.c_str(), iter->second);
-         }
-      }
+   }
 #else
-   private:
-      TMap fMap;
-   public:
+private:
+   TMap fMap;
+public:
 #ifdef R__COMPLETE_MEM_TERMINATION
-      ~TMapTypeToClassRec() {
-         TIter next(&fMap);
-         TObjString *key;
-         while((key = (TObjString*)next())) {
-            delete key;
-         }         
+   ~TMapTypeToClassRec() {
+      TIter next(&fMap);
+      TObjString* key;
+      while ((key = (TObjString*)next())) {
+         delete key;
       }
+   }
 #endif
 
-      void Add(const char *key, TClassRec *&obj) {
-         TObjString *realkey = new TObjString(key);
-         fMap.Add(realkey, (TObject*)obj);
-      }
+   void Add(const char* key, TClassRec *&obj) {
+      TObjString* realkey = new TObjString(key);
+      fMap.Add(realkey, (TObject*)obj);
+   }
 
-      TClassRec *Find(const char *key) const {
-         const TPair *a = (const TPair *)fMap.FindObject(key);
-         if (a) return (TClassRec*) a->Value();
-         return 0;
+   TClassRec* Find(const char* key) const {
+      const TPair* a = (const TPair*)fMap.FindObject(key);
+      if (a) {
+         return (TClassRec*) a->Value();
       }
+      return 0;
+   }
 
-      void Remove(const char *key) {
-         TObjString realkey(key);
-         TObject *actual = fMap.Remove(&realkey);
-         delete actual;
-      }
+   void Remove(const char* key) {
+      TObjString realkey(key);
+      TObject* actual = fMap.Remove(&realkey);
+      delete actual;
+   }
 
-      void Print() {
-         Info("TMapTypeToClassRec::Print", "printing the typeinfo map in TClassTable");
-         TIter next(&fMap);
-         TObjString *key;
-         while((key = (TObjString*)next())) {
-            printf("Key: %s\n",key->String().Data());
-            TClassRec *data = (TClassRec*)fMap.GetValue(key);
-            if (data) {
-               printf("  class: %s %d\n",data->fName,data->fId);
-            } else {
-               printf("  no class: \n");
-            }
+   void Print() {
+      Info("TMapTypeToClassRec::Print", "printing the typeinfo map in TClassTable");
+      TIter next(&fMap);
+      TObjString* key;
+      while ((key = (TObjString*)next())) {
+         printf("Key: %s\n", key->String().Data());
+         TClassRec* data = (TClassRec*)fMap.GetValue(key);
+         if (data) {
+            printf("  class: %s %d\n", data->fName, data->fId);
+         }
+         else {
+            printf("  no class: \n");
          }
       }
+   }
 #endif
-   };
+};
 }
 
 //______________________________________________________________________________
 TClassTable::TClassTable()
 {
    // TClassTable is a singleton (i.e. only one can exist per application).
-
-   if (gClassTable) return;
-
+   if (gClassTable) {
+      return;
+   }
    fgSize  = 1009;  //this is thge result of (int)TMath::NextPrime(1000);
    fgTable = new TClassRec* [fgSize];
    fgIdMap = new IdMap_t;
-   memset(fgTable, 0, fgSize*sizeof(TClassRec*));
+   memset(fgTable, 0, fgSize * sizeof(TClassRec*));
    gClassTable = this;
 }
 
@@ -783,156 +837,171 @@ TClassTable::TClassTable()
 TClassTable::~TClassTable()
 {
    // TClassTable singleton is deleted in Terminate().
-
    // Try to avoid spurrious warning from memory leak checkers.
-   if (gClassTable != this) return;
-
+   if (gClassTable != this) {
+      return;
+   }
    for (Int_t i = 0; i < fgSize; i++) {
-      TClassRec *r = fgTable[i];
+      TClassRec* r = fgTable[i];
       while (r) {
          delete [] r->fName;
-         TClassRec *next = r->fNext;
+         TClassRec* next = r->fNext;
          delete r;
          r = next;
       }
    }
-   delete [] fgTable; fgTable = 0;
-   delete [] fgSortedTable; fgSortedTable = 0;
-   delete fgIdMap; fgIdMap = 0;
+   delete [] fgTable;
+   fgTable = 0;
+   delete [] fgSortedTable;
+   fgSortedTable = 0;
+   delete fgIdMap;
+   fgIdMap = 0;
 }
 
 //______________________________________________________________________________
-void TClassTable::Print(Option_t *option) const
+void TClassTable::Print(Option_t* option) const
 {
    // Print the class table. Before printing the table is sorted
    // alphabetically. Only classes specified in option are listed.
    // The default is to list all classes.
    // Standard wilcarding notation supported.
-
-   if (fgTally == 0 || !fgTable)
+   if (fgTally == 0 || !fgTable) {
       return;
-
+   }
    SortTable();
-
    int n = 0, ninit = 0, nl = 0;
-
    int nch = strlen(option);
    TRegexp re(option, kTRUE);
-
    Printf("\nDefined classes");
    Printf("class                                 version  bits  initialized");
    Printf("================================================================");
    for (int i = 0; i < fgTally; i++) {
-      if (!fgTable[i]) continue;
-      TClassRec *r = fgSortedTable[i];
-      if (!r) break;
+      if (!fgTable[i]) {
+         continue;
+      }
+      TClassRec* r = fgSortedTable[i];
+      if (!r) {
+         break;
+      }
       n++;
       TString s = r->fName;
-      if (nch && strcmp(option,r->fName) && s.Index(re) == kNPOS) continue;
+      if (nch && strcmp(option, r->fName) && s.Index(re) == kNPOS) {
+         continue;
+      }
       nl++;
       if (TClass::GetClass(r->fName, kFALSE)) {
          ninit++;
          Printf("%-35s %6d %7d       Yes", r->fName, r->fId, r->fBits);
-      } else
+      }
+      else {
          Printf("%-35s %6d %7d       No",  r->fName, r->fId, r->fBits);
+      }
    }
    Printf("----------------------------------------------------------------");
-   Printf("Listed Classes: %4d  Total classes: %4d   initialized: %4d",nl, n, ninit);
+   Printf("Listed Classes: %4d  Total classes: %4d   initialized: %4d", nl, n, ninit);
    Printf("================================================================\n");
 }
 
 //---- static members --------------------------------------------------------
 
 //______________________________________________________________________________
-char *TClassTable::At(int index)
+char* TClassTable::At(int index)
 {
-    // Returns class at index from sorted class table. Don't use this iterator
-    // while modifying the class table. The class table can be modified
-    // when making calls like TClass::GetClass(), etc.
-    // Returns 0 if index points beyond last class name.
-
+   // Returns class at index from sorted class table. Don't use this iterator
+   // while modifying the class table. The class table can be modified
+   // when making calls like TClass::GetClass(), etc.
+   // Returns 0 if index points beyond last class name.
    SortTable();
    if (index >= 0 && index < fgTally) {
-      TClassRec *r = fgSortedTable[index];
-      if (r) return r->fName;
+      TClassRec* r = fgSortedTable[index];
+      if (r) {
+         return r->fName;
+      }
    }
    return 0;
 }
 
 //______________________________________________________________________________
-int   TClassTable::Classes() { return fgTally; }
+int   TClassTable::Classes()
+{
+   return fgTally;
+}
 //______________________________________________________________________________
-void  TClassTable::Init() { fgCursor = 0; SortTable(); }
+void  TClassTable::Init()
+{
+   fgCursor = 0;
+   SortTable();
+}
 
-namespace ROOT { class TForNamespace {}; } // Dummy class to give a typeid to namespace (see also TGenericClassInfo)
+namespace ROOT {
+class TForNamespace {};   // Dummy class to give a typeid to namespace (see also TGenericClassInfo)
+}
 
 //______________________________________________________________________________
-void TClassTable::Add(const char *cname, Version_t id,  const type_info &info,
+void TClassTable::Add(const char* cname, Version_t id,  const type_info& info,
                       VoidFuncPtr_t dict, Int_t pragmabits)
 {
    // Add a class to the class table (this is a static function).
-
    if (!gClassTable) {
       new TClassTable;
       init_class_map();
    }
-
    // Only register the name without the default STL template arguments ...
-   TClassEdit::TSplitType splitname( cname, TClassEdit::kLong64 );
+   TClassEdit::TSplitType splitname(cname, TClassEdit::kLong64);
    std::string shortName;
    splitname.ShortType(shortName, TClassEdit::kDropStlDefault);
-
    // check if already in table, if so return
-   TClassRec *r = FindElementImpl(shortName.c_str(), kTRUE);
+   TClassRec* r = FindElementImpl(shortName.c_str(), kTRUE);
    if (r->fName) {
-      if ( strcmp(r->fInfo->name(),typeid(ROOT::TForNamespace).name())==0
-           && strcmp(info.name(),typeid(ROOT::TForNamespace).name())==0 ) {
+      if (strcmp(r->fInfo->name(), typeid(ROOT::TForNamespace).name()) == 0
+            && strcmp(info.name(), typeid(ROOT::TForNamespace).name()) == 0) {
          // We have a namespace being reloaded.
          // This okay we just keep the old one.
          return;
       }
-      if (splitname.IsSTLCont()==0) {
+      if (splitname.IsSTLCont() == 0) {
          // Warn only for class that are not STL containers.
          ::Warning("TClassTable::Add", "class %s already in TClassTable", cname);
       }
       return;
    }
-
    r->fName = StrDup(shortName.c_str());
    r->fId   = id;
    r->fBits = pragmabits;
    r->fDict = dict;
    r->fInfo = &info;
-
-   fgIdMap->Add(info.name(),r);
-
+   fgIdMap->Add(info.name(), r);
    fgTally++;
    fgSorted = kFALSE;
 }
 
 //______________________________________________________________________________
-void TClassTable::Remove(const char *cname)
+void TClassTable::Remove(const char* cname)
 {
    // Remove a class from the class table. This happens when a shared library
    // is unloaded (i.e. the dtor's of the global init objects are called).
-
-   if (!gClassTable || !fgTable) return;
-
+   if (!gClassTable || !fgTable) {
+      return;
+   }
    int slot = 0;
-   const char *p = cname;
-
-   while (*p) slot = slot<<1 ^ *p++;
-   if (slot < 0) slot = -slot;
+   const char* p = cname;
+   while (*p) {
+      slot = slot << 1 ^ *p++;
+   }
+   if (slot < 0) {
+      slot = -slot;
+   }
    slot %= fgSize;
-
-   TClassRec *r;
-   TClassRec *prev = 0;
+   TClassRec* r;
+   TClassRec* prev = 0;
    for (r = fgTable[slot]; r; r = r->fNext) {
       if (!strcmp(r->fName, cname)) {
-         if (prev)
+         if (prev) {
             prev->fNext = r->fNext;
-         else
+         }
+         else {
             fgTable[slot] = r->fNext;
+         }
          fgIdMap->Remove(r->fInfo->name());
          delete [] r->fName;
          delete r;
@@ -945,26 +1014,28 @@ void TClassTable::Remove(const char *cname)
 }
 
 //______________________________________________________________________________
-TClassRec *TClassTable::FindElementImpl(const char *cname, Bool_t insert)
+TClassRec* TClassTable::FindElementImpl(const char* cname, Bool_t insert)
 {
    // Find a class by name in the class table (using hash of name). Returns
    // 0 if the class is not in the table. Unless arguments insert is true in
    // which case a new entry is created and returned.
-
    int slot = 0;
-   const char *p = cname;
-
-   while (*p) slot = slot<<1 ^ *p++;
-   if (slot < 0) slot = -slot;
+   const char* p = cname;
+   while (*p) {
+      slot = slot << 1 ^ *p++;
+   }
+   if (slot < 0) {
+      slot = -slot;
+   }
    slot %= fgSize;
-
-   TClassRec *r;
-
+   TClassRec* r;
    for (r = fgTable[slot]; r; r = r->fNext)
-      if (strcmp(cname,r->fName)==0) return r;
-
-   if (!insert) return 0;
-
+      if (strcmp(cname, r->fName) == 0) {
+         return r;
+      }
+   if (!insert) {
+      return 0;
+   }
    r = new TClassRec;
    r->fName = 0;
    r->fId   = 0;
@@ -972,60 +1043,60 @@ TClassRec *TClassTable::FindElementImpl(const char *cname, Bool_t insert)
    r->fInfo = 0;
    r->fNext = fgTable[slot];
    fgTable[slot] = r;
-
    return r;
 }
 
 //______________________________________________________________________________
-TClassRec *TClassTable::FindElement(const char *cname, Bool_t insert)
+TClassRec* TClassTable::FindElement(const char* cname, Bool_t insert)
 {
    // Find a class by name in the class table (using hash of name). Returns
    // 0 if the class is not in the table. Unless arguments insert is true in
    // which case a new entry is created and returned.
-
-   if (!fgTable) return 0;
-
+   if (!fgTable) {
+      return 0;
+   }
    // Only register the name without the default STL template arguments ...
-   TClassEdit::TSplitType splitname( cname, TClassEdit::kLong64 );
+   TClassEdit::TSplitType splitname(cname, TClassEdit::kLong64);
    std::string shortName;
    splitname.ShortType(shortName, TClassEdit::kDropStlDefault);
-
    return FindElementImpl(shortName.c_str(), insert);
 }
 
 //______________________________________________________________________________
-Version_t TClassTable::GetID(const char *cname)
+Version_t TClassTable::GetID(const char* cname)
 {
    // Returns the ID of a class.
-
-   TClassRec *r = FindElement(cname);
-   if (r) return r->fId;
+   TClassRec* r = FindElement(cname);
+   if (r) {
+      return r->fId;
+   }
    return -1;
 }
 
 //______________________________________________________________________________
-Int_t TClassTable::GetPragmaBits(const char *cname)
+Int_t TClassTable::GetPragmaBits(const char* cname)
 {
    // Returns the pragma bits as specified in the LinkDef.h file.
-
-   TClassRec *r = FindElement(cname);
-   if (r) return r->fBits;
+   TClassRec* r = FindElement(cname);
+   if (r) {
+      return r->fBits;
+   }
    return 0;
 }
 
 //______________________________________________________________________________
-VoidFuncPtr_t TClassTable::GetDict(const char *cname)
+VoidFuncPtr_t TClassTable::GetDict(const char* cname)
 {
    // Given the class name returns the Dictionary() function of a class
    // (uses hash of name).
-
    if (gDebug > 9) {
       ::Info("GetDict", "searches for %s", cname);
       fgIdMap->Print();
    }
-
-   TClassRec *r = FindElement(cname);
-   if (r) return r->fDict;
+   TClassRec* r = FindElement(cname);
+   if (r) {
+      return r->fDict;
+   }
    return 0;
 }
 
@@ -1034,40 +1105,40 @@ VoidFuncPtr_t TClassTable::GetDict(const type_info& info)
 {
    // Given the type_info returns the Dictionary() function of a class
    // (uses hash of type_info::name()).
-
    if (gDebug > 9) {
       ::Info("GetDict", "searches for %s at 0x%lx", info.name(), (Long_t)&info);
       fgIdMap->Print();
    }
-
-   TClassRec *r = fgIdMap->Find(info.name());
-   if (r) return r->fDict;
+   TClassRec* r = fgIdMap->Find(info.name());
+   if (r) {
+      return r->fDict;
+   }
    return 0;
 }
 
 
 //______________________________________________________________________________
 extern "C" {
-   static int ClassComp(const void *a, const void *b)
+   static int ClassComp(const void* a, const void* b)
    {
       // Function used for sorting classes alphabetically.
-
-      return strcmp((*(TClassRec **)a)->fName, (*(TClassRec **)b)->fName);
+      return strcmp((*(TClassRec**)a)->fName, (*(TClassRec**)b)->fName);
    }
 }
 
 //______________________________________________________________________________
-char *TClassTable::Next()
+char* TClassTable::Next()
 {
-    // Returns next class from sorted class table. Don't use this iterator
-    // while modifying the class table. The class table can be modified
-    // when making calls like TClass::GetClass(), etc.
-
+   // Returns next class from sorted class table. Don't use this iterator
+   // while modifying the class table. The class table can be modified
+   // when making calls like TClass::GetClass(), etc.
    if (fgCursor < fgTally) {
-      TClassRec *r = fgSortedTable[fgCursor++];
+      TClassRec* r = fgSortedTable[fgCursor++];
       return r->fName;
-   } else
+   }
+   else {
       return 0;
+   }
 }
 
 //______________________________________________________________________________
@@ -1075,27 +1146,30 @@ void TClassTable::PrintTable()
 {
    // Print the class table. Before printing the table is sorted
    // alphabetically.
-
-   if (fgTally == 0 || !fgTable)
+   if (fgTally == 0 || !fgTable) {
       return;
-
+   }
    SortTable();
-
    int n = 0, ninit = 0;
-
    Printf("\nDefined classes");
    Printf("class                                 version  bits  initialized");
    Printf("================================================================");
    for (int i = 0; i < fgTally; i++) {
-      if (!fgTable[i]) continue;
-      TClassRec *r = fgSortedTable[i];
-      if (!r) break;
+      if (!fgTable[i]) {
+         continue;
+      }
+      TClassRec* r = fgSortedTable[i];
+      if (!r) {
+         break;
+      }
       n++;
       if (TClass::GetClass(r->fName, kFALSE)) {
          ninit++;
          Printf("%-35s %6d %7d       Yes", r->fName, r->fId, r->fBits);
-      } else
+      }
+      else {
          Printf("%-35s %6d %7d       No",  r->fName, r->fId, r->fBits);
+      }
    }
    Printf("----------------------------------------------------------------");
    Printf("Total classes: %4d   initialized: %4d", n, ninit);
@@ -1106,17 +1180,15 @@ void TClassTable::PrintTable()
 void TClassTable::SortTable()
 {
    // Sort the class table by ascending class ID's.
-
    if (!fgSorted) {
       delete [] fgSortedTable;
       fgSortedTable = new TClassRec* [fgTally];
-
       int j = 0;
       for (int i = 0; i < fgSize; i++)
-         for (TClassRec *r = fgTable[i]; r; r = r->fNext)
+         for (TClassRec* r = fgTable[i]; r; r = r->fNext) {
             fgSortedTable[j++] = r;
-
-      ::qsort(fgSortedTable, fgTally, sizeof(TClassRec *), ::ClassComp);
+         }
+      ::qsort(fgSortedTable, fgTally, sizeof(TClassRec*), ::ClassComp);
       fgSorted = kTRUE;
    }
 }
@@ -1125,38 +1197,39 @@ void TClassTable::SortTable()
 void TClassTable::Terminate()
 {
    // Deletes the class table (this static class function calls the dtor).
-
    if (gClassTable) {
       for (int i = 0; i < fgSize; i++)
-         for (TClassRec *r = fgTable[i]; r; ) {
-            TClassRec *t = r;
+         for (TClassRec* r = fgTable[i]; r;) {
+            TClassRec* t = r;
             r = r->fNext;
             fgIdMap->Remove(r->fInfo->name());
             delete [] t->fName;
             delete t;
          }
-      delete [] fgTable; fgTable = 0;
-      delete [] fgSortedTable; fgSortedTable = 0;
-      delete fgIdMap; fgIdMap = 0;
+      delete [] fgTable;
+      fgTable = 0;
+      delete [] fgSortedTable;
+      fgSortedTable = 0;
+      delete fgIdMap;
+      fgIdMap = 0;
       fgSize = 0;
       SafeDelete(gClassTable);
    }
 }
 
 //______________________________________________________________________________
-void ROOT::AddClass(const char *cname, Version_t id,
+void ROOT::AddClass(const char* cname, Version_t id,
                     const type_info& info,
                     VoidFuncPtr_t dict,
                     Int_t pragmabits)
 {
    // Global function called by the ctor of a class's init class
    // (see the ClassImp macro).
-
    TClassTable::Add(cname, id, info, dict, pragmabits);
 }
 
 //______________________________________________________________________________
-void ROOT::ResetClassVersion(TClass *cl, const char *cname, Short_t newid)
+void ROOT::ResetClassVersion(TClass* cl, const char* cname, Short_t newid)
 {
    // Global function to update the version number.
    // This is called via the RootClassVersion macro.
@@ -1170,26 +1243,29 @@ void ROOT::ResetClassVersion(TClass *cl, const char *cname, Short_t newid)
    //   The Class Version 0 request the whole object to be transient
    //   The Class Version 1, unless specify via ClassDef indicates that the
    //      I/O should use the TClass checksum to distinguish the layout of the class
-
-   if (cname && cname!=(void*)-1) {
-      TClassRec *r = TClassTable::FindElement(cname,kFALSE);
-      if (r) r->fId = newid;
+   if (cname && cname != (void*) - 1) {
+      TClassRec* r = TClassTable::FindElement(cname, kFALSE);
+      if (r) {
+         r->fId = newid;
+      }
    }
    if (cl) {
       if (cl->fVersionUsed) {
          // Problem, the reset is called after the first usage!
-         if (cname!=(void*)-1)
-            Error("ResetClassVersion","Version number of %s can not be changed after first usage!",
+         if (cname != (void*) - 1)
+            Error("ResetClassVersion", "Version number of %s can not be changed after first usage!",
                   cl->GetName());
-      } else {
+      }
+      else {
          if (newid < 0) {
-            Error("SetClassVersion","The class version (for %s) must be positive (value %d is ignored)",cl->GetName(),newid);
+            Error("SetClassVersion", "The class version (for %s) must be positive (value %d is ignored)", cl->GetName(), newid);
          }
-         if (cname==(void*)-1) {
-            if (cl->fClassVersion<newid && 2<=newid) {
+         if (cname == (void*) - 1) {
+            if (cl->fClassVersion < newid && 2 <= newid) {
                cl->SetClassVersion(newid);
             }
-         } else {
+         }
+         else {
             cl->SetClassVersion(newid);
          }
       }
@@ -1198,11 +1274,10 @@ void ROOT::ResetClassVersion(TClass *cl, const char *cname, Short_t newid)
 
 
 //______________________________________________________________________________
-void ROOT::RemoveClass(const char *cname)
+void ROOT::RemoveClass(const char* cname)
 {
    // Global function called by the dtor of a class's init class
    // (see the ClassImp macro).
-
    // don't delete class information since it is needed by the I/O system
    // to write the StreamerInfo to file
    if (cname) {
@@ -1212,10 +1287,12 @@ void ROOT::RemoveClass(const char *cname)
       // We still keep the TClass object around because TFile needs to
       // get to the TStreamerInfo.
       if (gROOT && gROOT->GetListOfClasses()) {
-         TObject *pcname;
-         if ((pcname=gROOT->GetListOfClasses()->FindObject(cname))) {
-            TClass *cl = dynamic_cast<TClass*>(pcname);
-            if (cl) cl->SetUnloaded();
+         TObject* pcname;
+         if ((pcname = gROOT->GetListOfClasses()->FindObject(cname))) {
+            TClass* cl = dynamic_cast<TClass*>(pcname);
+            if (cl) {
+               cl->SetUnloaded();
+            }
          }
       }
       TClassTable::Remove(cname);
@@ -1223,28 +1300,29 @@ void ROOT::RemoveClass(const char *cname)
 }
 
 //______________________________________________________________________________
-TNamed *ROOT::RegisterClassTemplate(const char *name, const char *file,
+TNamed* ROOT::RegisterClassTemplate(const char* name, const char* file,
                                     Int_t line)
 {
    // Global function to register the implementation file and line of
    // a class template (i.e. NOT a concrete class).
-
    static TList table;
    static Bool_t isInit = kFALSE;
    if (!isInit) {
       table.SetOwner(kTRUE);
       isInit = kTRUE;
    }
-
    TString classname(name);
    Ssiz_t loc = classname.Index("<");
-   if (loc >= 1) classname.Remove(loc);
+   if (loc >= 1) {
+      classname.Remove(loc);
+   }
    if (file) {
-      TNamed *obj = new TNamed((const char*)classname, file);
+      TNamed* obj = new TNamed((const char*)classname, file);
       obj->SetUniqueID(line);
       table.Add(obj);
       return obj;
-   } else {
+   }
+   else {
       return (TNamed*)table.FindObject(classname);
    }
 }
