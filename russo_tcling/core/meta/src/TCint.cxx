@@ -1985,7 +1985,6 @@ bool tcling_TypedefInfo::IsValidClang() const
 long tcling_TypedefInfo::Property() const
 {
    return fTypedefInfo->Property();
-#if 0
    if (!IsValid()) {
       return 0L;
    }
@@ -1996,9 +1995,8 @@ long tcling_TypedefInfo::Property() const
    property |= G__BIT_ISTYPEDEF;
    const clang::TypedefNameDecl* TD =
       llvm::dyn_cast<clang::TypedefNameDecl>(fDecl);
-   clang::QualType UT = TD->getUnderlyingType();
-   clang::QualType QT = UT->getCanonicalType();
-   if (QT->isConstQualified()) {
+   clang::QualType QT = TD->getUnderlyingType().getCanonicalType();
+   if (QT.isConstQualified()) {
       property |= G__BIT_ISCONSTANT;
    }
    while (1) {
@@ -2013,7 +2011,7 @@ long tcling_TypedefInfo::Property() const
       }
       else if (QT->isPointerType()) {
          property |= G__BIT_ISPOINTER;
-         if (QT->isConstQualified()) {
+         if (QT.isConstQualified()) {
             property |= G__BIT_ISPCONSTANT;
          }
          QT = llvm::cast<clang::PointerType>(QT)->getPointeeType();
@@ -2025,15 +2023,13 @@ long tcling_TypedefInfo::Property() const
       }
       break;
    }
-   if (QT->IsBuiltinType()) {
+   if (QT->isBuiltinType()) {
       property |= G__BIT_ISFUNDAMENTAL;
    }
-   if (QT->isConstQualified()) {
+   if (QT.isConstQualified()) {
       property |= G__BIT_ISCONSTANT;
    }
    return property;
-#endif // 0
-   //--
 }
 
 int tcling_TypedefInfo::Size() const
