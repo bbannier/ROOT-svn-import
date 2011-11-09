@@ -35,28 +35,28 @@
 
 class TClassRec {
 public:
-   char            *fName;
+   char*            fName;
    Version_t        fId;
    Int_t            fBits;
    VoidFuncPtr_t    fDict;
-   const type_info *fInfo;
-   TClassRec       *fNext;
+   const type_info* fInfo;
+   TClassRec*       fNext;
 };
 
 namespace ROOT {
-   class TMapTypeToClassRec;
+class TMapTypeToClassRec;
 }
 
 class TClassTable : public TObject {
 
-friend  void ROOT::ResetClassVersion(TClass*, const char*, Short_t);
+   friend  void ROOT::ResetClassVersion(TClass*, const char*, Short_t);
 
 private:
    typedef ROOT::TMapTypeToClassRec IdMap_t;
 
-   static TClassRec  **fgTable;
-   static TClassRec  **fgSortedTable;
-   static IdMap_t     *fgIdMap;
+   static TClassRec**  fgTable;
+   static TClassRec**  fgSortedTable;
+   static IdMap_t*     fgIdMap;
    static int          fgSize;
    static int          fgTally;
    static Bool_t       fgSorted;
@@ -64,8 +64,8 @@ private:
 
    TClassTable();
 
-   static TClassRec   *FindElementImpl(const char *cname, Bool_t insert);
-   static TClassRec   *FindElement(const char *cname, Bool_t insert=kFALSE);
+   static TClassRec*   FindElementImpl(const char* cname, Bool_t insert);
+   static TClassRec*   FindElement(const char* cname, Bool_t insert = kFALSE);
    static void         SortTable();
 
 public:
@@ -74,53 +74,58 @@ public:
 
    ~TClassTable();
 
-   static void          Add(const char *cname, Version_t id,
-                            const type_info &info, VoidFuncPtr_t dict,
+   static void          Add(const char* cname, Version_t id,
+                            const type_info& info, VoidFuncPtr_t dict,
                             Int_t pragmabits);
-   static char         *At(int index);
+   static char*         At(int index);
    int                  Classes();
-   static Version_t     GetID(const char *cname);
-   static Int_t         GetPragmaBits(const char *name);
-   static VoidFuncPtr_t GetDict(const char *cname);
+   static Version_t     GetID(const char* cname);
+   static Int_t         GetPragmaBits(const char* name);
+   static VoidFuncPtr_t GetDict(const char* cname);
    static VoidFuncPtr_t GetDict(const type_info& info);
    static void          Init();
-   static char         *Next();
-   void                 Print(Option_t *option="") const;
+   static char*         Next();
+   void                 Print(Option_t* option = "") const;
    static void          PrintTable();
-   static void          Remove(const char *cname);
+   static void          Remove(const char* cname);
    static void          Terminate();
 
-   ClassDef(TClassTable,0)  //Table of known classes
+   ClassDef(TClassTable, 0) //Table of known classes
 };
 
-R__EXTERN TClassTable *gClassTable;
+R__EXTERN TClassTable* gClassTable;
 
 namespace clang {
-  class ASTContext;
-  class CompilerInstance;
-  class Decl;
-  class NamedDecl;
-  class TranslationUnitDecl;
+class ASTContext;
+class CompilerInstance;
+class Decl;
+class NamedDecl;
+class TranslationUnitDecl;
 }
 
 class tcling_Dict { // Singleton
 public:
-  static clang::CompilerInstance* GetCI(clang::CompilerInstance* ci = 0);
-  static clang::ASTContext* GetASTContext(clang::ASTContext* ctx = 0);
-  static const clang::TranslationUnitDecl* GetTranslationUnitDecl(const clang::TranslationUnitDecl* = 0);
-  static std::multimap<const std::string, const clang::Decl*>* ClassNameToDecl();
-  static std::map<const clang::Decl*, int>* ClassDeclToIdx();
-  static std::vector<const clang::Decl*>* Classes();
-  static std::vector<const clang::Decl*>* GlobalVars();
-  static std::vector<const clang::Decl*>* GlobalFunctions();
-  static std::vector<const clang::Decl*>* Typedefs();
-  static std::string get_fully_qualified_name(const clang::NamedDecl* D);
+   static clang::CompilerInstance* GetCI(clang::CompilerInstance* ci = 0);
+   static clang::ASTContext* GetASTContext(clang::ASTContext* ctx = 0);
+   static const clang::TranslationUnitDecl* GetTranslationUnitDecl(
+      const clang::TranslationUnitDecl* = 0);
+   static std::multimap<const std::string, const clang::Decl*>*
+      ClassNameToDecl();
+   static std::map<const clang::Decl*, int>* ClassDeclToIdx();
+   static std::vector<const clang::Decl*>* Classes();
+   static std::vector<const clang::Decl*>* GlobalVars();
+   static std::vector<const clang::Decl*>* GlobalFunctions();
+   static std::vector<const clang::Decl*>* Typedefs();
+   static std::multimap<const std::string, const clang::Decl*>*
+      TypedefNameToDecl();
+   static std::map<const clang::Decl*, int>* TypedefDeclToIdx();
+   static std::string get_fully_qualified_name(const clang::NamedDecl* D);
 };
 
 namespace ROOT {
-   extern void AddClass(const char *cname, Version_t id, VoidFuncPtr_t dict,
-                        Int_t pragmabits);
-   extern void RemoveClass(const char *cname);
+extern void AddClass(const char* cname, Version_t id, VoidFuncPtr_t dict,
+   Int_t pragmabits);
+extern void RemoveClass(const char* cname);
 }
 
 #endif
