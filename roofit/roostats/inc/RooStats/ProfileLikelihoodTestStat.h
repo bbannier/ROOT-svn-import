@@ -67,9 +67,9 @@ namespace RooStats {
         fLastData = 0;
 	fOneSided = false;
         fReuseNll = false;
-	fMinimizer=ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
-	fStrategy=ROOT::Math::MinimizerOptions::DefaultStrategy();
-	fPrintLevel=ROOT::Math::MinimizerOptions::DefaultPrintLevel();
+	fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
+	fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
+	fPrintLevel=::ROOT::Math::MinimizerOptions::DefaultPrintLevel();
 
      }
      ProfileLikelihoodTestStat(RooAbsPdf& pdf) {
@@ -80,9 +80,9 @@ namespace RooStats {
        fLastData = 0;
        fOneSided = false;
        fReuseNll = false;
-       fMinimizer=ROOT::Math::MinimizerOptions::DefaultMinimizerType();
-       fStrategy=ROOT::Math::MinimizerOptions::DefaultStrategy();
-       fPrintLevel=ROOT::Math::MinimizerOptions::DefaultPrintLevel();
+       fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
+       fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
+       fPrintLevel=::ROOT::Math::MinimizerOptions::DefaultPrintLevel();
      }
      virtual ~ProfileLikelihoodTestStat() {
        //       delete fRand;
@@ -117,7 +117,8 @@ namespace RooStats {
        //paramsOfInterest.getRealValue(firstPOI->GetName());
 
        RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-       RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+
+       if (fPrintLevel < 3) RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
        // simple
        Bool_t reuse=(fReuseNll || fgAlwaysReuseNll) ;
@@ -268,12 +269,14 @@ namespace RooStats {
        tsw.Stop();
        double fitTime2 = tsw.CpuTime();
        //std::cout 
-       ooccoutD((TObject*)0,Eval) 
-          << "ProfileLikelihoodTestStat:Evaluate - mu hat = " << fit_favored_mu 
-          <<  " uncond ML = " << uncondML << " cond ML = " << ret+uncondML 
-          << " pll =  " << ret 
-          << " time (create/fit1/2) " << createTime << " , " << fitTime1 << " , " << fitTime2  
-          << std::endl;
+       //ooccoutD((TObject*)0,Eval) 
+       if (fPrintLevel > 0) 
+          std::cout 
+             << "ProfileLikelihoodTestStat:Evaluate - mu hat = " << fit_favored_mu 
+             <<  " uncond ML = " << uncondML << " cond ML = " << ret+uncondML 
+             << " pll =  " << ret 
+             << " time (create/fit1/2) " << createTime << " , " << fitTime1 << " , " << fitTime2  
+             << std::endl;
 
 
 
@@ -312,9 +315,11 @@ namespace RooStats {
 
 	RooMinimizer minim(*fNll);
 	minim.setStrategy(fStrategy);
-        //LM: RooMinimizer.setPrintLevel has +1 offset - so subtruct  here -1
-	minim.setPrintLevel(fPrintLevel-1);
-	minim.optimizeConst(true);
+        //LM: RooMinimizer.setPrintLevel has +1 offset - so subtruct  here -1 + an extra -1 
+        int level = (fPrintLevel == 0) ? -1 : fPrintLevel -2;
+	minim.setPrintLevel(level);
+        // this cayses a memory leak
+	minim.optimizeConst(true); 
 	for (int tries = 0, maxtries = 4; tries <= maxtries; ++tries) {
 	  //	 status = minim.minimize(fMinimizer, ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str());
 	  status = minim.minimize(fMinimizer, "Minimize");
@@ -331,8 +336,11 @@ namespace RooStats {
 	    }
 	  }
 	}
-	//	cout <<"fNll = " <<  fNll->getVal()<<endl;
-	return fNll->getVal();
+
+        double val =  fNll->getVal();
+        //minim.optimizeConst(false); 
+
+	return val;
       }
 
    private:
