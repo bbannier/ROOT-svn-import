@@ -204,7 +204,7 @@ Bool_t PyROOT::TIntRefConverter::SetArg(
       if ( func ) {
          G__value v;
          G__setnull( &v );
-         v.ref = (long)&((PyIntObject*)pyobject)->ob_ival;
+         v.ref = (Long_t)&((PyIntObject*)pyobject)->ob_ival;
          G__letint( &v, 'i', para.fl );
          func->SetArg( v );
       }
@@ -222,7 +222,7 @@ Bool_t PyROOT::TIntRefConverter::SetArg(
    if ( para.fv && buflen && func ) {
       G__value v;
       G__setnull( &v );
-      v.ref = (long)para.fv;
+      v.ref = (Long_t)para.fv;
       G__letint( &v, 'i', para.fl );
       func->SetArg( v );
       return kTRUE;
@@ -546,6 +546,7 @@ namespace {
    inline Bool_t CArraySetArg(
       PyObject* pyobject, PyROOT::TParameter& para, G__CallFunc* func, char tc, int size )
    {
+   // general case of loading a C array pointer (void* + type code) as function argument
       int buflen = PyROOT::Utility::GetBuffer( pyobject, tc, size, para.fv );
       if ( ! para.fv || buflen == 0 )
          return kFALSE;
@@ -968,7 +969,7 @@ Bool_t PyROOT::TVoidPtrPtrConverter::SetArg(
 PyObject* PyROOT::TVoidPtrPtrConverter::FromMemory( void* address )
 {
 // read a void** from address; since this is unknown, long is used (user can cast)
-   return PyLong_FromLong( (long)*((long**)address) );
+   return PyLong_FromLong( (Long_t)*((Long_t**)address) );
 }
 
 //____________________________________________________________________________
@@ -1213,6 +1214,7 @@ namespace {
    public:
       InitConvFactories_t()
       {
+      // load all converter factories in the global map 'gConvFactories'
          int nf = sizeof( factories_ ) / sizeof( factories_[ 0 ] );
          for ( int i = 0; i < nf; ++i ) {
             gConvFactories[ factories_[ i ].first ] = factories_[ i ].second;

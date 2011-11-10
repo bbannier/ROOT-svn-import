@@ -27,6 +27,7 @@ NETXDEP      := $(NETXO:.o=.d) $(NETXDO:.o=.d)
 NETXLIB      := $(LPATH)/libNetx.$(SOEXT)
 NETXMAP      := $(NETXLIB:.$(SOEXT)=.rootmap)
 
+ifeq ($(HASXRD),yes)
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(NETXH))
 ALLLIBS      += $(NETXLIB)
@@ -34,6 +35,7 @@ ALLMAPS      += $(NETXMAP)
 
 # include all dependency files
 INCLUDEFILES += $(NETXDEP)
+endif
 
 # When using an external XROOTD distribution XROOTDDIRI and XROOTDDIRL
 # are undefined and have to point to the specified inc and lib dirs.
@@ -58,8 +60,12 @@ endif
 ifeq ($(PLATFORM),win32)
 NETXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.lib
 else
+ifeq ($(HASXRDUTILS),no)
 NETXLIBEXTRA += -L$(XROOTDDIRL) -lXrdOuc -lXrdSys \
                 -lXrdClient -lpthread
+else
+NETXLIBEXTRA += -L$(XROOTDDIRL) -lXrdUtils -lXrdClient
+endif
 endif
 
 ##### local rules #####

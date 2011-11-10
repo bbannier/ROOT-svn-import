@@ -604,12 +604,13 @@ TProof::~TProof()
       TIter nextpackage(fEnabledPackagesOnClient);
       while (TObjString *package = dynamic_cast<TObjString*>(nextpackage())) {
          FileStat_t stat;
-         gSystem->GetPathInfo(package->String(), stat);
-         // check if symlink, if so unlink
-         // NOTE: GetPathInfo() returns 1 in case of symlink that does not point to
-         // existing file or to a directory, but if fIsLink is true the symlink exists
-         if (stat.fIsLink)
-            gSystem->Unlink(package->String());
+         if (gSystem->GetPathInfo(package->String(), stat) == 0) {
+            // check if symlink, if so unlink
+            // NOTE: GetPathInfo() returns 1 in case of symlink that does not point to
+            // existing file or to a directory, but if fIsLink is true the symlink exists
+            if (stat.fIsLink)
+               gSystem->Unlink(package->String());
+         }
       }
    }
 
@@ -1281,8 +1282,8 @@ Int_t TProof::AddWorkers(TList *workerList)
       while ((os = (TObjString *) nxp())) {
          // Upload and Enable methods are intelligent and avoid
          // re-uploading or re-enabling of a package to a node that has it.
-         UploadPackage(os->GetName());
-         EnablePackage(os->GetName(), (TList *)0, kTRUE);
+         if (UploadPackage(os->GetName()) >= 0)
+            EnablePackage(os->GetName(), (TList *)0, kTRUE);
       }
    }
 
@@ -4608,16 +4609,18 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
       if (ienl != kNPOS) {
          // Get entrylist name or path
          enl = name(ienl, name.Length());
+         el = 0;
+         TObject *oel = 0;
          // If not in the input list ...
-         el = (GetInputList()) ? dynamic_cast<TEntryList *>(GetInputList()->FindObject(enl)) : 0;
+         TList *inpl = GetInputList();
+         if (inpl && (oel = inpl->FindObject(enl))) el = dynamic_cast<TEntryList *>(oel);
          // ... check the heap
-         if (!el && gDirectory) {
-            if ((el = dynamic_cast<TEntryList *>(gDirectory->FindObject(enl)))) {
+         if (!el && gDirectory && (oel = gDirectory->FindObject(enl))) {
+            if ((el = dynamic_cast<TEntryList *>(oel))) {
                // Add to the input list (input data not available on master where
                // this info will be processed)
-               if (fProtocol >= 28) {
-                  if (!(GetInputList()->FindObject(el->GetName()))) AddInput(el);
-               }
+               if (fProtocol >= 28)
+                  if (!(inpl->FindObject(el->GetName()))) AddInput(el);
             }
          }
          // If not in the heap, check a file, if any
@@ -4634,7 +4637,7 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
                               // Add to the input list (input data not available on master where
                               // this info will be processed)
                               if (fProtocol >= 28) {
-                                 if (!(GetInputList()->FindObject(el->GetName()))) {
+                                 if (!(inpl->FindObject(el->GetName()))) {
                                     el = (TEntryList *) el->Clone();
                                     AddInput(el);
                                  }
@@ -5627,8 +5630,8 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
    }
 
    // Get info about the file
-   Long64_t size;
-   Long_t id, flags, modtime;
+   Long64_t size = -1;
+   Long_t id, flags, modtime = 0;
    if (gSystem->GetPathInfo(file, &id, &size, &flags, &modtime) == 1) {
       Error("SendFile", "cannot stat file %s", file);
       return -1;
@@ -6024,6 +6027,11 @@ void TProof::ClearData(UInt_t what, const char *dsname)
          // Fill the host info
          TString host, file;
          // Take info from the current url
+         if (!(fi->GetFirstUrl())) {
+            Error("ClearData", "GetFirstUrl() returns NULL for '%s' - skipping",
+                               fi->GetName());
+            continue;
+         }
          TUrl uf(*(fi->GetFirstUrl()));
          file = uf.GetFile();
          host = uf.GetHost();

@@ -2530,6 +2530,8 @@ void* TBranchElement::GetValuePointer() const
       return 0;
    } else if (fType == 41) {
       return 0;
+   } else if (prID < 0) {
+      return object;
    } else {
       //return GetInfoImp()->GetValue(object,fID,j,-1);
       if (!GetInfoImp() || !object) return 0;
@@ -2852,6 +2854,7 @@ void TBranchElement::InitializeOffsets()
                // -- My parent's parent is not a top-level branch.
                // Remove the base class name suffix from the parent name.
                // Note: The pattern is the name of the base class.
+               // coverity[forward_null] branchElem is non zero here since fType==1 and thus fID > -1
                TString pattern(branchElem->GetName());
                if (pattern.Length() <= parentName.Length()) {
                   if (!strcmp(parentName.Data() + (parentName.Length() - pattern.Length()), pattern.Data())) {

@@ -702,7 +702,8 @@ void TDataSetManager::MonitorUsedSpace(TVirtualMonitoringWriter *monitoring)
          list->Add(new TParameter<Long64_t>(user->String().Data(), size2->GetVal()));
       }
 
-      monitoring->SendParameters(list, group->String());
+      if (!monitoring->SendParameters(list, group->String()))
+         Warning("MonitorUsedSpace", "problems sending monitoring parameters");
       delete list;
    }
 }
@@ -888,9 +889,16 @@ Bool_t TDataSetManager::ParseUri(const char *uri,
    // Get individual values from tokens
    Int_t from = 1;
    TString group, user, name;
-   path.Tokenize(group, from, "/");
-   path.Tokenize(user, from, "/");
-   path.Tokenize(name, from, "/");
+   if (path.Tokenize(group, from, "/")) {
+      if (path.Tokenize(user, from, "/")) {
+         if (!path.Tokenize(name, from, "/"))
+            Warning("ParseUri", "problems parsing out the name");
+      } else {
+         Warning("ParseUri", "problems parsing out the user");
+      }
+   } else {
+      Warning("ParseUri", "problems parsing out the group");
+   }
 
    // The fragment may contain the subdir and the object name in the form '[subdir/]objname'
    TString tree = resolved.GetFragment();
@@ -1288,7 +1296,8 @@ Int_t TDataSetManager::ScanDataSet(TFileCollection *dataset,
                   if (touch) {
                      // Actually access the file
                      char tmpChar = 0;
-                     file->ReadBuffer(&tmpChar, 1);
+                     if (file->ReadBuffer(&tmpChar, 1))
+                        ::Warning("TDataSetManager::ScanDataSet", "problems reading 1 byte from open file");
                      // Count
                      ftouched++;
                   }

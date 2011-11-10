@@ -12,7 +12,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 
 #include "llvm/LLVMContext.h"
@@ -35,20 +34,15 @@ namespace cling {
                                         int argc,
                                         const char* const *argv,
                                         const char* llvmdir) {
-    return createCI(llvm::MemoryBuffer::getMemBuffer(code), 0, argc, argv, llvmdir);
+    return createCI(llvm::MemoryBuffer::getMemBuffer(code),argc, argv, llvmdir);
   }
 
   
   CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
-                                        PragmaNamespace* Pragma, 
                                         int argc, 
                                         const char* const *argv,
                                         const char* llvmdir){
     // main's argv[0] is skipped!
-
-    if (!Pragma) {
-      Pragma = new PragmaNamespace("cling");
-    }
 
     // Create an instance builder, passing the llvmdir and arguments.
     //
@@ -139,7 +133,6 @@ namespace cling {
     // Set up the preprocessor
     CI->createPreprocessor();
     Preprocessor& PP = CI->getPreprocessor();
-    PP.AddPragmaHandler(Pragma);
     PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
                                            PP.getLangOptions());
     /*NoBuiltins = */ //true);
@@ -161,13 +154,18 @@ namespace cling {
     // Set CodeGen options
     // CI->getCodeGenOpts().DebugInfo = 1; // want debug info
     // CI->getCodeGenOpts().EmitDeclMetadata = 1; // For unloading, for later
-    CI->getCodeGenOpts().OptimizationLevel = 0; // see pure SSA, that come out
-    assert((CI->getCodeGenOpts().VerifyModule = 1) && "When asserts are on, let's also assert the module");
+    CI->getCodeGenOpts().OptimizationLevel = 0; // see pure SSA, that comes out
+    // When asserts are on, TURN ON not compare the VerifyModule
+    assert(CI->getCodeGenOpts().VerifyModule = 1);
     return CI;
   }
 
   void CIFactory::SetClingCustomLangOpts(LangOptions& Opts) {
     Opts.EmitAllDecls = 1;
+    Opts.ObjCNonFragileABI2 = 0;
+    Opts.Exceptions = 1;
+    Opts.CXXExceptions = 1;
+    Opts.Deprecated = 1;
   }
 
   void CIFactory::SetClingTargetLangOpts(LangOptions& Opts, 
@@ -177,6 +175,18 @@ namespace cling {
       Opts.MSCVersion = 1300;
       // Should fix http://llvm.org/bugs/show_bug.cgi?id=10528
       Opts.DelayedTemplateParsing = 1;
+    } else {
+      Opts.MicrosoftExt = 0;
+    }
+    if (Target.getTriple().getArch() == llvm::Triple::x86) {
+       Opts.ObjCNonFragileABI = 1;
+    } else {
+       Opts.ObjCNonFragileABI = 0;
+    }
+    if (Target.getTriple().isOSDarwin()) {
+       Opts.NeXTRuntime = 1;
+    } else {
+       Opts.NeXTRuntime = 0;
     }
   }
 } // end namespace
