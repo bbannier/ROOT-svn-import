@@ -8,10 +8,6 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
-
-#include <iostream>
-#include <cstring>
-
 #include <CoreText/CTStringAttributes.h>
 #include <CoreText/CTFont.h>
 #include <CoreText/CTLine.h>
@@ -445,24 +441,19 @@ void Painter::SetMarkerColor()const
    if (MarkerIsFilledPolygon(gVirtualX->GetMarkerStyle())) {
       if (fPainterMode == kPaintToView) {
          SetMarkerFillColor(fCtx, gVirtualX->GetMarkerColor());
-      } else if (fPainterMode == kPaintToSelectionBuffer) {
-         SetPolygonColorForCurrentObjectID();
       } else if (fPainterMode == kPaintShadow) {
-         CGContextSetRGBFillColor(fCtx, 0.1f, 0.1f, 0.1f, 0.2f);      
+         CGContextSetRGBFillColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);      
       } else if (fPainterMode == kPaintSelected) {
-         CGContextSetRGBFillColor(fCtx, 1.f, 0.f, 0.4f, 0.8f);
+         CGContextSetRGBFillColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
       }
    } else {
       if (fPainterMode == kPaintToView) {
          SetMarkerStrokeColor(fCtx, gVirtualX->GetMarkerColor());
-      } else if (fPainterMode == kPaintToSelectionBuffer) {
-         SetLineColorForCurrentObjectID();
-         CGContextSetLineWidth(fCtx, 40.f);//Ohh yeahhh, really thiiick line!
       } else if (fPainterMode == kPaintShadow) {
-         CGContextSetRGBStrokeColor(fCtx, 0.1f, 0.1f, 0.1f, 0.2f);
+         CGContextSetRGBStrokeColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
          CGContextSetLineWidth(fCtx, 5.f);
       } else if (fPainterMode == kPaintSelected) {
-         CGContextSetRGBStrokeColor(fCtx, 1.f, 0.f, 0.4f, 0.2f);
+         CGContextSetRGBStrokeColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
          CGContextSetLineWidth(fCtx, 5.f);
       }   
    }
@@ -475,21 +466,6 @@ void Painter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
    //Skip polymarker if draw thumbnails.
    if (fPainterMode == kPaintThumbnail)
       return;
-      
-   const Util::CGStateGuard contextGuard(fCtx);
-
-   SetMarkerColor();
-   
-   Style_t markerStyle = gVirtualX->GetMarkerStyle();
-   if (markerStyle == kDot || markerStyle == kFullDotMedium) {
-      if (fPainterMode == kPaintToSelectionBuffer) {
-         //Too tiny objects to be selected by touch. Make them bigger.
-         markerStyle = kFullDotLarge;
-      } else if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow) {
-         //To tiny, highlight and shadow are almost invisible. Make them bigger.
-         markerStyle = kFullDotMedium;
-      }
-   }
 
    fPolyMarker.resize(n);
    for (Int_t i = 0; i < n; ++i) {
@@ -497,8 +473,16 @@ void Painter::DrawPolyMarker(Int_t n, const Double_t *x, const Double_t *y)
       p.SetX(fConverter.XToView(x[i]));
       p.SetY(fConverter.YToView(y[i]));
    }
+      
+   const Util::CGStateGuard contextGuard(fCtx);
 
-   GraphicUtils::DrawPolyMarker(fCtx, fPolyMarker, gVirtualX->GetMarkerSize(), markerStyle);
+   if (fPainterMode == kPaintToSelectionBuffer) {
+      SetPolygonColorForCurrentObjectID();
+      GraphicUtils::DrawPolyMarker(fCtx, fPolyMarker, 5.f, kFullDotLarge);//Draw large circles into picker's buffer.
+   } else {
+      SetMarkerColor();
+      GraphicUtils::DrawPolyMarker(fCtx, fPolyMarker, gVirtualX->GetMarkerSize(), gVirtualX->GetMarkerStyle());
+   }
 }
 
 //_________________________________________________________________
@@ -598,12 +582,6 @@ void Painter::SetTransform(UInt_t w, Double_t xMin, Double_t xMax, UInt_t h, Dou
 //_________________________________________________________________
 void Painter::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
 {
-  /* if (fPainterMode == kPaintThumbnail) {
-      h = 1;
-      w = std::strlen(text);
-      return;
-   }*/
-   
    fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
    fFontManager.GetTextBounds(w, h, text);
 }

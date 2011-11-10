@@ -580,8 +580,9 @@ TPacketizerAdaptive::TPacketizerAdaptive(TDSet *dset, TList *slaves,
    fConfigParams->Add(new TParameter<Int_t>("PROOF_PacketAsAFraction", fPacketAsAFraction));
 
    Double_t baseLocalPreference = 1.2;
-   TProof::GetParameter(input, "PROOF_BaseLocalPreference", baseLocalPreference);
    fBaseLocalPreference = (Float_t)baseLocalPreference;
+   if (TProof::GetParameter(input, "PROOF_BaseLocalPreference", baseLocalPreference) == 0)
+      fBaseLocalPreference = (Float_t)baseLocalPreference;
 
    fFileNodes = new TList;
    fFileNodes->SetOwner();
@@ -1096,6 +1097,10 @@ void TPacketizerAdaptive::Reset()
    TObject *key;
    while ((key = slaves.Next()) != 0) {
       TSlaveStat *slstat = (TSlaveStat*) fSlaveStats->GetValue(key);
+      if (!slstat) {
+         Warning("Reset", "TSlaveStat associated to key '%s' is NULL", key->GetName());
+         continue;
+      }
       // Find out which file nodes are on the worker machine and assign the
       // one with less workers assigned
       TFileNode *fnmin = 0;
@@ -1172,6 +1177,11 @@ void TPacketizerAdaptive::ValidateFiles(TDSet *dset, TList *slaves,
          // find a file
 
          TSlaveStat *slstat = (TSlaveStat*)fSlaveStats->GetValue(s);
+         if (!slstat) {
+            Error("ValidateFiles", "TSlaveStat associated to slave '%s' is NULL", s->GetName());
+            continue;
+         }
+
          TFileNode *node = 0;
          TFileStat *file = 0;
 

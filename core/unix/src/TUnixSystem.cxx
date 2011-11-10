@@ -2843,30 +2843,32 @@ const char *TUnixSystem::GetLinkedLibraries()
    const char *cSOEXT=".so";
 #endif
    FILE *p = OpenPipe(TString::Format("%s %s", cLDD, exe), "r");
-   TString ldd;
-   while (ldd.Gets(p)) {
-      TString delim(" \t");
-      TObjArray *tok = ldd.Tokenize(delim);
-
-      // expected format:
-      //    libCore.so => /home/rdm/root/lib/libCore.so (0x40017000)
-      TObjString *solibName = (TObjString*)tok->At(2);
-      if (!solibName) {
-         // case where there is only one name of the list:
-         //    /usr/platform/SUNW,UltraAX-i2/lib/libc_psr.so.1
-         solibName = (TObjString*)tok->At(0);
-      }
-      if (solibName) {
-         TString solib = solibName->String();
-         if (solib.EndsWith(cSOEXT)) {
-            if (!linkedLibs.IsNull())
-               linkedLibs += " ";
-            linkedLibs += solib;
+   if (p) {
+      TString ldd;
+      while (ldd.Gets(p)) {
+         TString delim(" \t");
+         TObjArray *tok = ldd.Tokenize(delim);
+         
+         // expected format:
+         //    libCore.so => /home/rdm/root/lib/libCore.so (0x40017000)
+         TObjString *solibName = (TObjString*)tok->At(2);
+         if (!solibName) {
+            // case where there is only one name of the list:
+            //    /usr/platform/SUNW,UltraAX-i2/lib/libc_psr.so.1
+            solibName = (TObjString*)tok->At(0);
          }
+         if (solibName) {
+            TString solib = solibName->String();
+            if (solib.EndsWith(cSOEXT)) {
+               if (!linkedLibs.IsNull())
+                  linkedLibs += " ";
+               linkedLibs += solib;
+            }
+         }
+         delete tok;
       }
-      delete tok;
+      ClosePipe(p);
    }
-   ClosePipe(p);
 #endif
 
    delete [] exe;
@@ -3126,7 +3128,7 @@ char *TUnixSystem::GetServiceByPort(int port)
 
 //______________________________________________________________________________
 int TUnixSystem::ConnectService(const char *servername, int port,
-                                int tcpwindowsize)
+                                int tcpwindowsize, const char *protocol)
 {
    // Connect to service servicename on server servername.
 
@@ -3135,11 +3137,16 @@ int TUnixSystem::ConnectService(const char *servername, int port,
    } else if (!gSystem->AccessPathName(servername) || servername[0] == '/') {
       return UnixUnixConnect(servername);
    }
+   
+   if (!strcmp(protocol, "udp")){
+      return UnixUdpConnect(servername, port);
+   }
+   
    return UnixTcpConnect(servername, port, tcpwindowsize);
 }
 
 //______________________________________________________________________________
-int TUnixSystem::OpenConnection(const char *server, int port, int tcpwindowsize)
+int TUnixSystem::OpenConnection(const char *server, int port, int tcpwindowsize, const char *protocol)
 {
    // Open a connection to a service on a server. Returns -1 in case
    // connection cannot be opened.
@@ -3148,7 +3155,7 @@ int TUnixSystem::OpenConnection(const char *server, int port, int tcpwindowsize)
    // tcpwindowsize > 65KB and for platforms supporting window scaling).
    // Is called via the TSocket constructor.
 
-   return ConnectService(server, port, tcpwindowsize);
+   return ConnectService(server, port, tcpwindowsize, protocol);
 }
 
 //______________________________________________________________________________
@@ -3166,6 +3173,14 @@ int TUnixSystem::AnnounceTcpService(int port, Bool_t reuse, int backlog,
    // or -3 if listen() failed.
 
    return UnixTcpService(port, reuse, backlog, tcpwindowsize);
+}
+
+//______________________________________________________________________________
+int TUnixSystem::AnnounceUdpService(int port, int backlog)
+{
+   // Announce UDP service.
+
+   return UnixUdpService(port, backlog);
 }
 
 //______________________________________________________________________________
@@ -4069,6 +4084,52 @@ int TUnixSystem::UnixTcpConnect(const char *hostname, int port,
    return sock;
 }
 
+
+//______________________________________________________________________________
+int TUnixSystem::UnixUdpConnect(const char *hostname, int port)
+{
+   // Creates a UDP socket connection
+   // Is called via the TSocket constructor. Returns -1 in case of error.
+
+   short  sport;
+   struct servent *sp;
+
+   if ((sp = getservbyport(htons(port), kProtocolName)))
+      sport = sp->s_port;
+   else
+      sport = htons(port);
+
+   TInetAddress addr = gSystem->GetHostByName(hostname);
+   if (!addr.IsValid()) return -1;
+   UInt_t adr = htonl(addr.GetAddress());
+
+   struct sockaddr_in server;
+   memset(&server, 0, sizeof(server));
+   memcpy(&server.sin_addr, &adr, sizeof(adr));
+   server.sin_family = addr.GetFamily();
+   server.sin_port   = sport;
+
+   // Create socket
+   int sock;
+   if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+      ::SysError("TUnixSystem::UnixUdpConnect", "socket (%s:%d)",
+                 hostname, port);
+      return -1;
+   }
+
+   while (connect(sock, (struct sockaddr*) &server, sizeof(server)) == -1) {
+      if (GetErrno() == EINTR)
+         ResetErrno();
+      else {
+         ::SysError("TUnixSystem::UnixUdpConnect", "connect (%s:%d)",
+                    hostname, port);
+         close(sock);
+         return -1;
+      }
+   }
+   return sock;
+}
+
 //______________________________________________________________________________
 int TUnixSystem::UnixUnixConnect(int port)
 {
@@ -4170,6 +4231,7 @@ int TUnixSystem::UnixTcpService(int port, Bool_t reuse, int backlog,
    if (port > 0) {
       if (bind(sock, (struct sockaddr*) &inserver, sizeof(inserver))) {
          ::SysError("TUnixSystem::UnixTcpService", "bind");
+         close(sock);
          return -2;
       }
    } else {
@@ -4180,6 +4242,7 @@ int TUnixSystem::UnixTcpService(int port, Bool_t reuse, int backlog,
       } while (bret < 0 && GetErrno() == EADDRINUSE && tryport < kSOCKET_MAXPORT);
       if (bret < 0) {
          ::SysError("TUnixSystem::UnixTcpService", "bind (port scan)");
+         close(sock);
          return -2;
       }
    }
@@ -4187,6 +4250,68 @@ int TUnixSystem::UnixTcpService(int port, Bool_t reuse, int backlog,
    // Start accepting connections
    if (listen(sock, backlog)) {
       ::SysError("TUnixSystem::UnixTcpService", "listen");
+      close(sock);
+      return -3;
+   }
+
+   return sock;
+}
+
+//______________________________________________________________________________
+int TUnixSystem::UnixUdpService(int port, int backlog)
+{
+   // Open a socket, bind to it and start listening for UDP connections
+   // on the port. If reuse is true reuse the address, backlog specifies
+   // how many sockets can be waiting to be accepted. If port is 0 a port
+   // scan will be done to find a free port. This option is mutual exlusive
+   // with the reuse option.
+
+   const short kSOCKET_MINPORT = 5000, kSOCKET_MAXPORT = 15000;
+   short  sport, tryport = kSOCKET_MINPORT;
+   struct servent *sp;
+
+   if ((sp = getservbyport(htons(port), kProtocolName)))
+      sport = sp->s_port;
+   else
+      sport = htons(port);
+
+   // Create udp socket
+   int sock;
+   if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+      ::SysError("TUnixSystem::UnixUdpService", "socket");
+      return -1;
+   }
+
+   struct sockaddr_in inserver;
+   memset(&inserver, 0, sizeof(inserver));
+   inserver.sin_family = AF_INET;
+   inserver.sin_addr.s_addr = htonl(INADDR_ANY);
+   inserver.sin_port = sport;
+
+   // Bind socket
+   if (port > 0) {
+      if (bind(sock, (struct sockaddr*) &inserver, sizeof(inserver))) {
+         ::SysError("TUnixSystem::UnixUdpService", "bind");
+         close(sock);
+         return -2;
+      }
+   } else {
+      int bret;
+      do {
+         inserver.sin_port = htons(tryport++);
+         bret = bind(sock, (struct sockaddr*) &inserver, sizeof(inserver));
+      } while (bret < 0 && GetErrno() == EADDRINUSE && tryport < kSOCKET_MAXPORT);
+      if (bret < 0) {
+         ::SysError("TUnixSystem::UnixUdpService", "bind (port scan)");
+         close(sock);
+         return -2;
+      }
+   }
+
+   // Start accepting connections
+   if (listen(sock, backlog)) {
+      ::SysError("TUnixSystem::UnixUdpService", "listen");
+      close(sock);
       return -3;
    }
 
@@ -4249,12 +4374,14 @@ int TUnixSystem::UnixUnixService(const char *sockpath, int backlog)
 
    if (bind(sock, (struct sockaddr*) &unserver, strlen(unserver.sun_path)+2)) {
       ::SysError("TUnixSystem::UnixUnixService", "bind");
+      close(sock);
       return -1;
    }
 
    // Start accepting connections
    if (listen(sock, backlog)) {
       ::SysError("TUnixSystem::UnixUnixService", "listen");
+      close(sock);
       return -1;
    }
 
@@ -5022,43 +5149,49 @@ static void GetLinuxSysInfo(SysInfo_t *sysinfo)
 
    TString s;
    FILE *f = fopen("/proc/cpuinfo", "r");
-   while (s.Gets(f)) {
-      if (s.BeginsWith("model name")) {
-         TPRegexp("^.+: *(.*$)").Substitute(s, "$1");
-         sysinfo->fModel = s;
+   if (f) {
+      while (s.Gets(f)) {
+         if (s.BeginsWith("model name")) {
+            TPRegexp("^.+: *(.*$)").Substitute(s, "$1");
+            sysinfo->fModel = s;
+         }
+         if (s.BeginsWith("cpu MHz")) {
+            TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
+            sysinfo->fCpuSpeed = s.Atoi();
+         }
+         if (s.BeginsWith("cache size")) {
+            TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
+            sysinfo->fL2Cache = s.Atoi();
+         }
+         if (s.BeginsWith("processor")) {
+            TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
+            sysinfo->fCpus = s.Atoi();
+            sysinfo->fCpus++;
+         }
       }
-      if (s.BeginsWith("cpu MHz")) {
-         TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
-         sysinfo->fCpuSpeed = s.Atoi();
-      }
-      if (s.BeginsWith("cache size")) {
-         TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
-         sysinfo->fL2Cache = s.Atoi();
-      }
-      if (s.BeginsWith("processor")) {
-         TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
-         sysinfo->fCpus = s.Atoi();
-         sysinfo->fCpus++;
-      }
+      fclose(f);
    }
-   fclose(f);
 
    f = fopen("/proc/meminfo", "r");
-   while (s.Gets(f)) {
-      if (s.BeginsWith("MemTotal")) {
-         TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
-         sysinfo->fPhysRam = (s.Atoi() / 1024);
-         break;
+   if (f) {
+      while (s.Gets(f)) {
+         if (s.BeginsWith("MemTotal")) {
+            TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");
+            sysinfo->fPhysRam = (s.Atoi() / 1024);
+            break;
+         }
       }
+      fclose(f);
    }
-   fclose(f);
 
    f = gSystem->OpenPipe("uname -s -p", "r");
-   s.Gets(f);
-   Ssiz_t from = 0;
-   s.Tokenize(sysinfo->fOS, from);
-   s.Tokenize(sysinfo->fCpuType, from);
-   gSystem->ClosePipe(f);
+   if (f) {
+      s.Gets(f);
+      Ssiz_t from = 0;
+      s.Tokenize(sysinfo->fOS, from);
+      s.Tokenize(sysinfo->fCpuType, from);
+      gSystem->ClosePipe(f);
+   }
 }
 
 //______________________________________________________________________________
@@ -5070,6 +5203,7 @@ static void ReadLinuxCpu(long *ticks)
 
    TString s;
    FILE *f = fopen("/proc/stat", "r");
+   if (!f) return;
    s.Gets(f);
    // user, user nice, sys, idle
    sscanf(s.Data(), "%*s %ld %ld %ld %ld", &ticks[0], &ticks[3], &ticks[1], &ticks[2]);
@@ -5122,6 +5256,7 @@ static void GetLinuxMemInfo(MemInfo_t *meminfo)
 
    TString s;
    FILE *f = fopen("/proc/meminfo", "r");
+   if (!f) return;
    while (s.Gets(f)) {
       if (s.BeginsWith("MemTotal")) {
          TPRegexp("^.+: *([^ ]+).*").Substitute(s, "$1");

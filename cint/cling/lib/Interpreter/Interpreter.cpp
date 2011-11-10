@@ -21,7 +21,6 @@
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
-#include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
 
@@ -175,7 +174,6 @@ namespace cling {
   m_ValuePrinterEnabled(false),
   m_LastDump(0)
   {
-    m_PragmaHandler = new PragmaNamespace("cling");
 
     std::vector<unsigned> LeftoverArgsIdx;
     m_Opts = InvocationOptions::CreateFromArgs(argc, argv, LeftoverArgsIdx);
@@ -189,8 +187,8 @@ namespace cling {
       LeftoverArgs.push_back(argv[LeftoverArgsIdx[I]]);
     }
  
-    m_IncrParser.reset(new IncrementalParser(this, &getPragmaHandler(),
-                                             LeftoverArgs.size(), &LeftoverArgs[0],
+    m_IncrParser.reset(new IncrementalParser(this, LeftoverArgs.size(),
+                                             &LeftoverArgs[0],
                                              llvmdir));
     m_ExecutionContext.reset(new ExecutionContext());
 
@@ -263,7 +261,7 @@ namespace cling {
         clang::DeclarationName N = F->getDeclName();
         if (N.isIdentifier()) {
           clang::IdentifierInfo* II = N.getAsIdentifierInfo();
-          if (II->getName().find("__cling_Un1Qu3") == 0) {
+          if (II && (II->getName().find("__cling_Un1Qu3") == 0)) {
             RunFunction(II->getName());
           }
         }
@@ -573,6 +571,7 @@ namespace cling {
     // get the Type
     FunctionDecl* TopLevelFD 
       = dyn_cast<FunctionDecl>(DGRs.front().getSingleDecl());
+    assert(TopLevelFD && "No Decls Parsed?");
     CurContext = TheSema.CurContext;
     TheSema.CurContext = TopLevelFD;
     ASTContext& Context(getCI()->getASTContext());

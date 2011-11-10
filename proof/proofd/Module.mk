@@ -123,10 +123,11 @@ XPCONNO      := $(call stripsrc,$(MODDIRS)/XrdProofConn.o \
 # Extra include paths and libs
 XPROOFDEXELIBS :=
 XPROOFDEXESYSLIBS :=
-XPROOFDEXE     :=
+XPROOFDEXE     := bin/xproofd
 ifeq ($(HASXRD),yes)
 XPDINCEXTRA    := $(XROOTDDIRI:%=-I%)
 XPDINCEXTRA    += $(PROOFDDIRI:%=-I%)
+ifeq ($(HASXRDUTILS),no)
 XPDLIBEXTRA    := -L$(XROOTDDIRL) -lXrdClient -lXrdNet -lXrdOuc \
                   -lXrdSys -lXrdSut
 XPROOFDEXELIBS := $(XROOTDDIRL)/libXrd.a $(XROOTDDIRL)/libXrdClient.a \
@@ -145,13 +146,19 @@ ifeq ($(XRDNETUTIL),yes)
 XPDLIBEXTRA    += -L$(XROOTDDIRL) -lXrdNetUtil
 XPROOFDEXELIBS += $(XROOTDDIRL)/libXrdNetUtil.a
 endif
+
+else
+
+XPDLIBEXTRA    := -L$(XROOTDDIRL) -lXrdClient -lXrdUtils
+XPROOFDEXELIBS := -L$(XROOTDDIRL) -lXrdMain -lXrdClient -lXrdUtils
+
+endif
 XPDLIBEXTRA    +=  $(DNSSDLIB)
 XPROOFDEXELIBS +=  $(DNSSDLIB)
 
 ifeq ($(PLATFORM),solaris)
 XPROOFDEXESYSLIBS := -lsendfile
 endif
-XPROOFDEXE     := bin/xproofd
 endif
 
 # used in the main Makefile
@@ -181,11 +188,11 @@ $(PROOFDEXE):   $(PROOFDEXEO) $(RSAO) $(SNPRINTFO) $(GLBPATCHO) $(RPDUTILO) \
 		   $(RSAO) $(SNPRINTFO) $(CRYPTLIBS) $(AUTHLIBS) $(STRLCPYO) \
 		   $(SYSLIBS)
 
-$(XPROOFDEXE):  $(XPDO) $(XPROOFDEXELIBS) $(XRDPROOFXD) $(RPDCONNO)
+$(XPROOFDEXE):  $(XPDO) $(XRDPROOFXD) $(RPDCONNO)
 		$(LD) $(LDFLAGS) -o $@ $(XPDO) $(RPDCONNO) $(XPROOFDEXELIBS) \
 		   $(SYSLIBS) $(XPROOFDEXESYSLIBS)
 
-$(XPDLIB):      $(XPDO) $(XPDH) $(XPROOFDEXELIBS) $(ORDER_) $(MAINLIBS) \
+$(XPDLIB):      $(XPDO) $(XPDH) $(ORDER_) $(MAINLIBS) \
                 $(XRDPROOFXD) $(RPDCONNO)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libXrdProofd.$(SOEXT) $@ "$(XPDO) $(RPDCONNO)" \
@@ -230,7 +237,9 @@ endif
 endif
 
 ifeq ($(PLATFORM),macosx)
+ifeq ($(HASXRDUTILS),no)
 $(XPDLIB): SOFLAGS := -undefined dynamic_lookup $(SOFLAGS)
+endif
 endif
 ifeq ($(PLATFORM),linux)
 comma := ,

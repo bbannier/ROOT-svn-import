@@ -36,6 +36,7 @@ PROOFXDEP    := $(PROOFXO:.o=.d) $(PROOFXDO:.o=.d)
 PROOFXLIB    := $(LPATH)/libProofx.$(SOEXT)
 PROOFXMAP    := $(PROOFXLIB:.$(SOEXT)=.rootmap)
 
+ifeq ($(HASXRD),yes)
 # used in the main Makefile
 ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(PROOFXH))
 ALLLIBS      += $(PROOFXLIB)
@@ -43,6 +44,7 @@ ALLMAPS      += $(PROOFXMAP)
 
 # include all dependency files
 INCLUDEFILES += $(PROOFXDEP)
+endif
 
 # When using an external XROOTD distribution XROOTDDIRI and XROOTDDIRL
 # are undefined and have to point to the specified inc and lib dirs.
@@ -66,6 +68,7 @@ PROOFXINCEXTRA += $(PROOFDDIRI:%=-I%)
 ifeq ($(PLATFORM),win32)
 PROOFXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.lib
 else
+ifeq ($(HASXRDUTILS),no)
 PROOFXLIBEXTRA += -L$(XROOTDDIRL) -lXrdOuc -lXrdSys -lXrdNet -lXrdClient \
                   -lpthread
 # Starting from Jul 2010 XrdNet has been split in two libs:
@@ -79,6 +82,9 @@ XRDNETUTIL     := $(shell if test $(XRDVERSION) -gt 20100729; then \
 endif
 ifeq ($(XRDNETUTIL),yes)
 PROOFXLIBEXTRA += -lXrdNetUtil
+endif
+else
+PROOFXLIBEXTRA += -L$(XROOTDDIRL) -lXrdUtils -lXrdClient
 endif
 endif
 
