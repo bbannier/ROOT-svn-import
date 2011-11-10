@@ -2735,7 +2735,6 @@ void TCint::SetGetline(const char * (*getlineFunc)(const char* prompt),
    G__SetGetlineFunc(getlineFunc, histaddFunc);
 }
 
-
 //______________________________________________________________________________
 void TCint::RecursiveRemove(TObject* obj)
 {
@@ -3483,7 +3482,6 @@ const char* TCint::GetCurrentMacroName() const
    //   TCint::GetTopLevelMacroName() returns ./mymacro.C
    return G__get_ifile()->name;
 }
-
 
 //______________________________________________________________________________
 const char* TCint::TypeName(const char* typeDesc)
@@ -4300,24 +4298,28 @@ int TCint::DisplayClass(FILE* fout, char* name, int base, int start) const
    // Interface to CINT function
    return G__display_class(fout, name, base, start);
 }
+
 //______________________________________________________________________________
 int TCint::DisplayIncludePath(FILE* fout) const
 {
    // Interface to CINT function
    return G__display_includepath(fout);
 }
+
 //______________________________________________________________________________
-void*  TCint::FindSym(const char* entry) const
+void* TCint::FindSym(const char* entry) const
 {
    // Interface to CINT function
    return G__findsym(entry);
 }
+
 //______________________________________________________________________________
-void   TCint::GenericError(const char* error) const
+void TCint::GenericError(const char* error) const
 {
    // Interface to CINT function
    G__genericerror(error);
 }
+
 //______________________________________________________________________________
 Long_t TCint::GetExecByteCode() const
 {
@@ -4331,86 +4333,100 @@ Long_t TCint::Getgvp() const
    // Interface to CINT function
    return (Long_t)G__getgvp();
 }
+
 //______________________________________________________________________________
 const char* TCint::Getp2f2funcname(void* receiver) const
 {
    // Interface to CINT function
    return G__p2f2funcname(receiver);
 }
+
 //______________________________________________________________________________
-int    TCint::GetSecurityError() const
+int TCint::GetSecurityError() const
 {
    // Interface to CINT function
    return G__get_security_error();
 }
+
 //______________________________________________________________________________
-int    TCint::LoadFile(const char* path) const
+int TCint::LoadFile(const char* path) const
 {
    // Interface to CINT function
    return G__loadfile(path);
 }
+
 //______________________________________________________________________________
-void   TCint::LoadText(const char* text) const
+void TCint::LoadText(const char* text) const
 {
    // Interface to CINT function
    G__load_text(text);
 }
+
 //______________________________________________________________________________
 const char* TCint::MapCppName(const char* name) const
 {
    // Interface to CINT function
    return G__map_cpp_name(name);
 }
+
 //______________________________________________________________________________
-void   TCint::SetAlloclockfunc(void (*p)()) const
+void TCint::SetAlloclockfunc(void (*p)()) const
 {
    // Interface to CINT function
    G__set_alloclockfunc(p);
 }
+
 //______________________________________________________________________________
-void   TCint::SetAllocunlockfunc(void (*p)()) const
+void TCint::SetAllocunlockfunc(void (*p)()) const
 {
    // Interface to CINT function
    G__set_allocunlockfunc(p);
 }
+
 //______________________________________________________________________________
-int    TCint::SetClassAutoloading(int autoload) const
+int TCint::SetClassAutoloading(int autoload) const
 {
    // Interface to CINT function
    return G__set_class_autoloading(autoload);
 }
+
 //______________________________________________________________________________
-void   TCint::SetErrmsgcallback(void* p) const
+void TCint::SetErrmsgcallback(void* p) const
 {
    // Interface to CINT function
    G__set_errmsgcallback(p);
 }
+
 //______________________________________________________________________________
-void   TCint::Setgvp(Long_t gvp) const
+void TCint::Setgvp(Long_t gvp) const
 {
    // Interface to CINT function
    G__setgvp(gvp);
 }
+
 //______________________________________________________________________________
-void   TCint::SetRTLD_NOW() const
+void TCint::SetRTLD_NOW() const
 {
    // Interface to CINT function
    G__Set_RTLD_NOW();
 }
+
 //______________________________________________________________________________
-void   TCint::SetRTLD_LAZY() const
+void TCint::SetRTLD_LAZY() const
 {
    // Interface to CINT function
    G__Set_RTLD_LAZY();
 }
+
 //______________________________________________________________________________
-void   TCint::SetTempLevel(int val) const
+void TCint::SetTempLevel(int val) const
 {
    // Interface to CINT function
    G__settemplevel(val);
 }
+
 //______________________________________________________________________________
-int    TCint::UnloadFile(const char* path) const
+int TCint::UnloadFile(const char* path) const
 {
    // Interface to CINT function
    return G__unloadfile(path);
@@ -4419,7 +4435,10 @@ int    TCint::UnloadFile(const char* path) const
 
 
 //______________________________________________________________________________
-// G__CallFunc interface
+//
+//  G__CallFunc interface
+//
+
 //______________________________________________________________________________
 void  TCint::CallFunc_Delete(CallFunc_t* func) const
 {
@@ -4427,6 +4446,7 @@ void  TCint::CallFunc_Delete(CallFunc_t* func) const
    G__CallFunc* f = (G__CallFunc*)func;
    delete f;
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_Exec(CallFunc_t* func, void* address) const
 {
@@ -4434,6 +4454,7 @@ void  TCint::CallFunc_Exec(CallFunc_t* func, void* address) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->Exec(address);
 }
+
 //______________________________________________________________________________
 Long_t  TCint::CallFunc_ExecInt(CallFunc_t* func, void* address) const
 {
@@ -4441,6 +4462,7 @@ Long_t  TCint::CallFunc_ExecInt(CallFunc_t* func, void* address) const
    G__CallFunc* f = (G__CallFunc*)func;
    return f->ExecInt(address);
 }
+
 //______________________________________________________________________________
 Long_t  TCint::CallFunc_ExecInt64(CallFunc_t* func, void* address) const
 {
@@ -4448,6 +4470,7 @@ Long_t  TCint::CallFunc_ExecInt64(CallFunc_t* func, void* address) const
    G__CallFunc* f = (G__CallFunc*)func;
    return f->ExecInt64(address);
 }
+
 //______________________________________________________________________________
 Double_t  TCint::CallFunc_ExecDouble(CallFunc_t* func, void* address) const
 {
@@ -4455,6 +4478,7 @@ Double_t  TCint::CallFunc_ExecDouble(CallFunc_t* func, void* address) const
    G__CallFunc* f = (G__CallFunc*)func;
    return f->ExecDouble(address);
 }
+
 //______________________________________________________________________________
 CallFunc_t* TCint::CallFunc_Factory() const
 {
@@ -4462,6 +4486,7 @@ CallFunc_t* TCint::CallFunc_Factory() const
    G__CallFunc* f = new G__CallFunc();
    return f;
 }
+
 //______________________________________________________________________________
 CallFunc_t* TCint::CallFunc_FactoryCopy(CallFunc_t* func) const
 {
@@ -4470,6 +4495,7 @@ CallFunc_t* TCint::CallFunc_FactoryCopy(CallFunc_t* func) const
    G__CallFunc* f  = new G__CallFunc(*f1);
    return f;
 }
+
 //______________________________________________________________________________
 MethodInfo_t* TCint::CallFunc_FactoryMethod(CallFunc_t* func) const
 {
@@ -4478,6 +4504,7 @@ MethodInfo_t* TCint::CallFunc_FactoryMethod(CallFunc_t* func) const
    G__MethodInfo* info = new G__MethodInfo((*f).GetMethodInfo());
    return info;
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_Init(CallFunc_t* func) const
 {
@@ -4485,6 +4512,7 @@ void  TCint::CallFunc_Init(CallFunc_t* func) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->Init();
 }
+
 //______________________________________________________________________________
 bool  TCint::CallFunc_IsValid(CallFunc_t* func) const
 {
@@ -4492,6 +4520,7 @@ bool  TCint::CallFunc_IsValid(CallFunc_t* func) const
    G__CallFunc* f = (G__CallFunc*)func;
    return f->IsValid();
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_ResetArg(CallFunc_t* func) const
 {
@@ -4499,6 +4528,7 @@ void  TCint::CallFunc_ResetArg(CallFunc_t* func) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->ResetArg();
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetArg(CallFunc_t* func, Long_t param) const
 {
@@ -4506,6 +4536,7 @@ void  TCint::CallFunc_SetArg(CallFunc_t* func, Long_t param) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->SetArg(param);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetArg(CallFunc_t* func, Double_t param) const
 {
@@ -4513,6 +4544,7 @@ void  TCint::CallFunc_SetArg(CallFunc_t* func, Double_t param) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->SetArg(param);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetArg(CallFunc_t* func, Long64_t param) const
 {
@@ -4520,6 +4552,7 @@ void  TCint::CallFunc_SetArg(CallFunc_t* func, Long64_t param) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->SetArg(param);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetArg(CallFunc_t* func, ULong64_t param) const
 {
@@ -4527,6 +4560,7 @@ void  TCint::CallFunc_SetArg(CallFunc_t* func, ULong64_t param) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->SetArg(param);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetArgArray(CallFunc_t* func, Long_t* paramArr, Int_t nparam) const
 {
@@ -4534,6 +4568,7 @@ void  TCint::CallFunc_SetArgArray(CallFunc_t* func, Long_t* paramArr, Int_t npar
    G__CallFunc* f = (G__CallFunc*)func;
    f->SetArgArray(paramArr, nparam);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetArgs(CallFunc_t* func, const char* param) const
 {
@@ -4541,6 +4576,7 @@ void  TCint::CallFunc_SetArgs(CallFunc_t* func, const char* param) const
    G__CallFunc* f = (G__CallFunc*)func;
    f->SetArgs(param);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetFunc(CallFunc_t* func, ClassInfo_t* info, const char* method, const char* params, Long_t* offset) const
 {
@@ -4548,6 +4584,7 @@ void  TCint::CallFunc_SetFunc(CallFunc_t* func, ClassInfo_t* info, const char* m
    G__CallFunc* f = (G__CallFunc*)func;
    f->SetFunc((G__ClassInfo*)info, method, params, offset);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetFunc(CallFunc_t* func, MethodInfo_t* info) const
 {
@@ -4556,6 +4593,7 @@ void  TCint::CallFunc_SetFunc(CallFunc_t* func, MethodInfo_t* info) const
    G__MethodInfo* minfo = (G__MethodInfo*)info;
    f->SetFunc(*minfo);
 }
+
 //______________________________________________________________________________
 void  TCint::CallFunc_SetFuncProto(CallFunc_t* func, ClassInfo_t* info, const char* method, const char* proto, Long_t* offset) const
 {
@@ -4985,14 +5023,18 @@ const char* TCint::DataMemberInfo_ValidArrayIndex(DataMemberInfo_t* dminfo) cons
 
 
 //______________________________________________________________________________
-// G__MethodInfo interface
+//
+//  G__MethodInfo interface
+//
+
 //______________________________________________________________________________
-void  TCint::MethodInfo_Delete(MethodInfo_t* minfo) const
+void TCint::MethodInfo_Delete(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    delete info;
 }
+
 //______________________________________________________________________________
 void  TCint::MethodInfo_CreateSignature(MethodInfo_t* minfo, TString& signature) const
 {
@@ -5021,6 +5063,7 @@ void  TCint::MethodInfo_CreateSignature(MethodInfo_t* minfo, TString& signature)
    }
    signature += ")";
 }
+
 //______________________________________________________________________________
 MethodInfo_t* TCint::MethodInfo_Factory() const
 {
@@ -5028,6 +5071,7 @@ MethodInfo_t* TCint::MethodInfo_Factory() const
    G__MethodInfo* info = new G__MethodInfo();
    return info;
 }
+
 //______________________________________________________________________________
 MethodInfo_t* TCint::MethodInfo_FactoryCopy(MethodInfo_t* minfo) const
 {
@@ -5036,6 +5080,7 @@ MethodInfo_t* TCint::MethodInfo_FactoryCopy(MethodInfo_t* minfo) const
    G__MethodInfo* info  = new G__MethodInfo(*info1);
    return info;
 }
+
 //______________________________________________________________________________
 void* TCint::MethodInfo_InterfaceMethod(MethodInfo_t* minfo) const
 {
@@ -5053,41 +5098,47 @@ void* TCint::MethodInfo_InterfaceMethod(MethodInfo_t* minfo) const
    }
    return (void*)pfunc;
 }
+
 //______________________________________________________________________________
-bool  TCint::MethodInfo_IsValid(MethodInfo_t* minfo) const
+bool TCint::MethodInfo_IsValid(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->IsValid();
 }
+
 //______________________________________________________________________________
-int   TCint::MethodInfo_NArg(MethodInfo_t* minfo) const
+int TCint::MethodInfo_NArg(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->NArg();
 }
+
 //______________________________________________________________________________
-int   TCint::MethodInfo_NDefaultArg(MethodInfo_t* minfo) const
+int TCint::MethodInfo_NDefaultArg(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->NDefaultArg();
 }
+
 //______________________________________________________________________________
-int   TCint::MethodInfo_Next(MethodInfo_t* minfo) const
+int TCint::MethodInfo_Next(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->Next();
 }
+
 //______________________________________________________________________________
-Long_t  TCint::MethodInfo_Property(MethodInfo_t* minfo) const
+Long_t TCint::MethodInfo_Property(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->Property();
 }
+
 //______________________________________________________________________________
 void* TCint::MethodInfo_Type(MethodInfo_t* minfo) const
 {
@@ -5095,6 +5146,7 @@ void* TCint::MethodInfo_Type(MethodInfo_t* minfo) const
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->Type();
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodInfo_GetMangledName(MethodInfo_t* minfo) const
 {
@@ -5102,6 +5154,7 @@ const char* TCint::MethodInfo_GetMangledName(MethodInfo_t* minfo) const
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->GetMangledName();
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodInfo_GetPrototype(MethodInfo_t* minfo) const
 {
@@ -5109,6 +5162,7 @@ const char* TCint::MethodInfo_GetPrototype(MethodInfo_t* minfo) const
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->GetPrototype();
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodInfo_Name(MethodInfo_t* minfo) const
 {
@@ -5116,6 +5170,7 @@ const char* TCint::MethodInfo_Name(MethodInfo_t* minfo) const
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->Name();
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodInfo_TypeName(MethodInfo_t* minfo) const
 {
@@ -5123,6 +5178,7 @@ const char* TCint::MethodInfo_TypeName(MethodInfo_t* minfo) const
    G__MethodInfo* info = (G__MethodInfo*)minfo;
    return info->Type()->Name();
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodInfo_Title(MethodInfo_t* minfo) const
 {
@@ -5132,7 +5188,10 @@ const char* TCint::MethodInfo_Title(MethodInfo_t* minfo) const
 }
 
 //______________________________________________________________________________
-// G__MethodArgInfo interface
+//
+//  G__MethodArgInfo interface
+//
+
 //______________________________________________________________________________
 void  TCint::MethodArgInfo_Delete(MethodArgInfo_t* marginfo) const
 {
@@ -5140,6 +5199,7 @@ void  TCint::MethodArgInfo_Delete(MethodArgInfo_t* marginfo) const
    G__MethodArgInfo* info = (G__MethodArgInfo*)marginfo;
    delete info;
 }
+
 //______________________________________________________________________________
 MethodArgInfo_t* TCint::MethodArgInfo_Factory() const
 {
@@ -5147,6 +5207,7 @@ MethodArgInfo_t* TCint::MethodArgInfo_Factory() const
    G__MethodArgInfo* info = new G__MethodArgInfo();
    return info;
 }
+
 //______________________________________________________________________________
 MethodArgInfo_t* TCint::MethodArgInfo_FactoryCopy(MethodArgInfo_t* marginfo) const
 {
@@ -5155,6 +5216,7 @@ MethodArgInfo_t* TCint::MethodArgInfo_FactoryCopy(MethodArgInfo_t* marginfo) con
    G__MethodArgInfo* info  = new G__MethodArgInfo(*info1);
    return info;
 }
+
 //______________________________________________________________________________
 bool  TCint::MethodArgInfo_IsValid(MethodArgInfo_t* marginfo) const
 {
@@ -5162,6 +5224,7 @@ bool  TCint::MethodArgInfo_IsValid(MethodArgInfo_t* marginfo) const
    G__MethodArgInfo* info = (G__MethodArgInfo*)marginfo;
    return info->IsValid();
 }
+
 //______________________________________________________________________________
 int  TCint::MethodArgInfo_Next(MethodArgInfo_t* marginfo) const
 {
@@ -5169,6 +5232,7 @@ int  TCint::MethodArgInfo_Next(MethodArgInfo_t* marginfo) const
    G__MethodArgInfo* info = (G__MethodArgInfo*)marginfo;
    return info->Next();
 }
+
 //______________________________________________________________________________
 Long_t TCint::MethodArgInfo_Property(MethodArgInfo_t* marginfo) const
 {
@@ -5176,6 +5240,7 @@ Long_t TCint::MethodArgInfo_Property(MethodArgInfo_t* marginfo) const
    G__MethodArgInfo* info = (G__MethodArgInfo*)marginfo;
    return info->Property();
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodArgInfo_DefaultValue(MethodArgInfo_t* marginfo) const
 {
@@ -5183,6 +5248,7 @@ const char* TCint::MethodArgInfo_DefaultValue(MethodArgInfo_t* marginfo) const
    G__MethodArgInfo* info = (G__MethodArgInfo*)marginfo;
    return info->DefaultValue();;
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodArgInfo_Name(MethodArgInfo_t* marginfo) const
 {
@@ -5190,6 +5256,7 @@ const char* TCint::MethodArgInfo_Name(MethodArgInfo_t* marginfo) const
    G__MethodArgInfo* info = (G__MethodArgInfo*)marginfo;
    return info->Name();
 }
+
 //______________________________________________________________________________
 const char* TCint::MethodArgInfo_TypeName(MethodArgInfo_t* marginfo) const
 {
