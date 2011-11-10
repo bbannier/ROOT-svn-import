@@ -28,11 +28,13 @@
 #include "RooCategory.h"
 #include "RooRealVar.h"
 #include "RooMinimizer.h"
+#include "RooFitResult.h"
 #include "RooNLLVar.h"
 #include "Math/MinimizerOptions.h"
 #include "RooPoisson.h"
 #include "RooUniform.h"
 #include <cmath>
+#include <typeinfo>
 
 #include "TStopwatch.h"
 
@@ -235,11 +237,12 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     //LM: RooMinimizer.setPrintLevel has +1 offset - so subtruct  here -1
     minim.setPrintLevel(minimPrintLevel-1);
     int status = -1;
-    //	minim.optimizeConst(true);
+    minim.optimizeConst(true);
     for (int tries = 0, maxtries = 4; tries <= maxtries; ++tries) {
        //	 status = minim.minimize(fMinimizer, ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str());
        TString minimizer = ROOT::Math::MinimizerOptions::DefaultMinimizerType(); 
-       status = minim.minimize(minimizer, "Minimize");
+       TString algorithm = ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo(); 
+       status = minim.minimize(minimizer, algorithm);       
        if (status == 0) {  
           break;
        } else {
@@ -254,11 +257,22 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
        }
     }
 
+    RooFitResult * result = 0; 
+    double val =  -1;
+
+    if (status == 0) { 
+       result = minim.save();
+       val = result->minNll();
+    }
+    else { 
+       oocoutE((TObject*)0,Fitting) << "FIT FAILED !- return a NaN NLL " << std::endl;
+       val =  TMath::QuietNaN();       
+    }
+
+    minim.optimizeConst(false);
+
     RooMsgService::instance().setGlobalKillBelow(msglevel);
 
-    // return max value of nll
-    
-    double val =  nll->getVal(); 
     double muTest = 0; 
     if (verbose > 0) { 
        std::cout << "AsymptoticCalculator::EvaluateNLL -  value = " << val;
@@ -276,11 +290,6 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
 
     delete allParams;
     delete nll;
-
-    if (status != 0) {
-       oocoutE((TObject*)0,Fitting) << "FIT FAILED !- return a NaN NLL " << std::endl;
-       return TMath::QuietNaN();
-    }
 
     return val;
 }
