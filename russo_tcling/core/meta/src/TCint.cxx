@@ -2112,7 +2112,19 @@ public:
    explicit tcling_MethodInfo(tcling_ClassInfo*);
    tcling_MethodInfo(const tcling_MethodInfo&);
    tcling_MethodInfo& operator=(const tcling_MethodInfo&);
+   void CreateSignature(TString& signature) const;
+   void* InterfaceMethod() const;
    bool IsValid() const;
+   int NArg() const;
+   int NDefaultArg() const;
+   int Next() const;
+   long Property() const;
+   void* Type() const;
+   const char* GetMangledName() const;
+   const char* GetPrototype() const;
+   const char* Name() const;
+   const char* TypeName() const;
+   const char* Title() const;
 private:
    //
    // CINT material.
@@ -2202,9 +2214,97 @@ tcling_MethodInfo& tcling_MethodInfo::operator=(
    return *this;
 }
 
+void tcling_MethodInfo::CreateSignature(TString& signature) const
+{
+   G__MethodArgInfo arg(*fMethodInfo);
+   int ifirst = 0;
+   signature = "(";
+   while (arg.Next()) {
+      if (ifirst) {
+         signature += ", ";
+      }
+      if (arg.Type() == 0) {
+         break;
+      }
+      signature += arg.Type()->Name();
+      if (arg.Name() && strlen(arg.Name())) {
+         signature += " ";
+         signature += arg.Name();
+      }
+      if (arg.DefaultValue()) {
+         signature += " = ";
+         signature += arg.DefaultValue();
+      }
+      ifirst++;
+   }
+   signature += ")";
+}
+
+void* tcling_MethodInfo::InterfaceMethod() const
+{
+   G__InterfaceMethod p = fMethodInfo->InterfaceMethod();
+   if (!p) {
+      struct G__bytecodefunc* bytecode = fMethodInfo->GetBytecode();
+      if (bytecode) {
+         p = (G__InterfaceMethod) G__exec_bytecode;
+      }
+   }
+   return (void*) p;
+}
+
 bool tcling_MethodInfo::IsValid() const
 {
-   return false;
+   return fMethodInfo->IsValid();
+}
+
+int tcling_MethodInfo::NArg() const
+{
+   return fMethodInfo->NArg();
+}
+
+int tcling_MethodInfo::NDefaultArg() const
+{
+   return fMethodInfo->NDefaultArg();
+}
+
+int tcling_MethodInfo::Next() const
+{
+   return fMethodInfo->Next();
+}
+
+long tcling_MethodInfo::Property() const
+{
+   return fMethodInfo->Property();
+}
+
+void* tcling_MethodInfo::Type() const
+{
+   return fMethodInfo->Type();
+}
+
+const char* tcling_MethodInfo::GetMangledName() const
+{
+   return fMethodInfo->GetMangledName();
+}
+
+const char* tcling_MethodInfo::GetPrototype() const
+{
+   return fMethodInfo->GetPrototype();
+}
+
+const char* tcling_MethodInfo::Name() const
+{
+   return fMethodInfo->Name();
+}
+
+const char* tcling_MethodInfo::TypeName() const
+{
+   return fMethodInfo->Type()->Name();
+}
+
+const char* tcling_MethodInfo::Title() const
+{
+   return fMethodInfo->Title();
 }
 
 //______________________________________________________________________________
@@ -5138,159 +5238,109 @@ const char* TCint::DataMemberInfo_ValidArrayIndex(DataMemberInfo_t* dminfo) cons
 void TCint::MethodInfo_Delete(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*) minfo;
-   delete info;
+   delete (tcling_MethodInfo*) minfo;
 }
 
 //______________________________________________________________________________
-void  TCint::MethodInfo_CreateSignature(MethodInfo_t* minfo, TString& signature) const
+void TCint::MethodInfo_CreateSignature(MethodInfo_t* minfo, TString& signature) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
-   G__MethodArgInfo arg(*info);
-   int ifirst = 0;
-   signature = "(";
-   while (arg.Next()) {
-      if (ifirst) {
-         signature += ", ";
-      }
-      if (arg.Type() == 0) {
-         break;
-      }
-      signature += arg.Type()->Name();
-      if (arg.Name() && strlen(arg.Name())) {
-         signature += " ";
-         signature += arg.Name();
-      }
-      if (arg.DefaultValue()) {
-         signature += " = ";
-         signature += arg.DefaultValue();
-      }
-      ifirst++;
-   }
-   signature += ")";
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
+   info->CreateSignature(signature);
 }
 
 //______________________________________________________________________________
 MethodInfo_t* TCint::MethodInfo_Factory() const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = new G__MethodInfo();
-   return info;
+   return (MethodInfo_t*) new tcling_MethodInfo();
 }
 
 //______________________________________________________________________________
 MethodInfo_t* TCint::MethodInfo_FactoryCopy(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info1 = (G__MethodInfo*)minfo;
-   G__MethodInfo* info  = new G__MethodInfo(*info1);
-   return info;
+   return (MethodInfo_t*) new tcling_MethodInfo(*(tcling_MethodInfo*)minfo);
 }
 
 //______________________________________________________________________________
 void* TCint::MethodInfo_InterfaceMethod(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
-   G__InterfaceMethod pfunc = info->InterfaceMethod();
-   if (!pfunc) {
-      struct G__bytecodefunc* bytecode = info->GetBytecode();
-      if (bytecode) {
-         pfunc = (G__InterfaceMethod)G__exec_bytecode;
-      }
-      else {
-         pfunc = (G__InterfaceMethod)NULL;
-      }
-   }
-   return (void*)pfunc;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
+   return info->InterfaceMethod();
 }
 
 //______________________________________________________________________________
 bool TCint::MethodInfo_IsValid(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->IsValid();
 }
 
 //______________________________________________________________________________
 int TCint::MethodInfo_NArg(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->NArg();
 }
 
 //______________________________________________________________________________
 int TCint::MethodInfo_NDefaultArg(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->NDefaultArg();
 }
 
 //______________________________________________________________________________
 int TCint::MethodInfo_Next(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->Next();
 }
 
 //______________________________________________________________________________
 Long_t TCint::MethodInfo_Property(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->Property();
 }
 
 //______________________________________________________________________________
 void* TCint::MethodInfo_Type(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->Type();
 }
 
 //______________________________________________________________________________
 const char* TCint::MethodInfo_GetMangledName(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->GetMangledName();
 }
 
 //______________________________________________________________________________
 const char* TCint::MethodInfo_GetPrototype(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->GetPrototype();
 }
 
 //______________________________________________________________________________
 const char* TCint::MethodInfo_Name(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->Name();
 }
 
 //______________________________________________________________________________
 const char* TCint::MethodInfo_TypeName(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
-   return info->Type()->Name();
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
+   return info->Name();
 }
 
 //______________________________________________________________________________
 const char* TCint::MethodInfo_Title(MethodInfo_t* minfo) const
 {
-   // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
    return info->Title();
 }
 
