@@ -1713,6 +1713,7 @@ tcling_TypeInfo::tcling_TypeInfo(G__value* val)
       return;
    }
    fClassInfo  = new G__ClassInfo(tagnum);
+   return;
    const char* name = fClassInfo->Fullname();
    fprintf(stderr, "tcling_TypeInfo(val): looking up cling class: %s  "
            "tagnum: %d\n", name, tagnum);
@@ -1773,6 +1774,7 @@ void tcling_TypeInfo::Init(const char* name)
       return;
    }
    fClassInfo  = new G__ClassInfo(tagnum);
+   return;
    const char* fullname = fClassInfo->Fullname();
    fprintf(stderr, "tcling_TypeInfo::Init(name): looking up cling class: %s  "
            "tagnum: %d\n", fullname, tagnum);
