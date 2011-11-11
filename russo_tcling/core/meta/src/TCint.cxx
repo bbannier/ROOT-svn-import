@@ -78,7 +78,19 @@ R__EXTERN int optind;
 //
 //
 
+class tcling_MethodInfo;
+
 class tcling_ClassInfo {
+public: // Types
+   enum MatchMode {
+      ExactMatch = 0,
+      ConversionMatch = 1,
+      ConversionMatchBytecode = 2
+   };
+   enum InheritanceMode {
+      InThisScope = 0,
+      WithInheritance = 1
+   }; 
 public:
    ~tcling_ClassInfo();
    explicit tcling_ClassInfo();
@@ -93,6 +105,10 @@ public:
    void Delete(void* arena) const;
    void DeleteArray(void* arena, bool dtorOnly) const;
    void Destruct(void* arena) const;
+   int NMethods() const;
+   tcling_MethodInfo* GetMethod(const char* fname, const char* arg,
+      long* poffset, MatchMode mode = ConversionMatch,
+      InheritanceMode imode = WithInheritance) const;
    int GetMethodNArg(const char* method, const char* proto) const;
    bool HasDefaultConstructor() const;
    bool HasMethod(const char* name) const;
@@ -134,6 +150,277 @@ private:
    /// Our iterator, index into tcling class table.
    int fIdx;
 };
+
+class tcling_BaseClassInfo {
+public:
+   ~tcling_BaseClassInfo();
+   explicit tcling_BaseClassInfo(); // NOT IMPLEMENTED.
+   explicit tcling_BaseClassInfo(tcling_ClassInfo*);
+   tcling_BaseClassInfo(const tcling_BaseClassInfo&);
+   tcling_BaseClassInfo& operator=(const tcling_BaseClassInfo&);
+   G__BaseClassInfo* GetBaseClassInfo() const;
+   tcling_ClassInfo* GetDerivedClassInfo() const;
+   tcling_ClassInfo* GetClassInfo() const;
+   long GetOffsetBase() const;
+   int InternalNext(int onlyDirect);
+   int Next();
+   int Next(int onlyDirect);
+   long Offset() const;
+   long Property() const;
+   long Tagnum() const;
+   const char* FullName() const;
+   const char* Name() const;
+   const char* TmpltName() const;
+   bool IsValid() const;
+private:
+   //
+   // CINT material.
+   //
+   /// CINT base class info, we own.
+   G__BaseClassInfo* fBaseClassInfo;
+   //
+   // Cling material.
+   //
+   /// Class we were intialized with, we own.
+   tcling_ClassInfo* fDerivedClassInfo;
+   /// Flag to provide Cint semantics for iterator advancement (not first time)
+   bool fFirstTime;
+   /// Flag for signaling the need to descend on this advancement.
+   bool fDescend;
+   /// Current class whose bases we are iterating through, we do *not* own.
+   const clang::Decl* fDecl;
+   /// Current iterator.
+   clang::CXXRecordDecl::base_class_const_iterator fIter;
+   /// Class info of base class our iterator is currently pointing at, we own.
+   tcling_ClassInfo* fClassInfo;
+   /// Iterator stack.
+   std::vector < std::pair < std::pair < const clang::Decl*,
+       clang::CXXRecordDecl::base_class_const_iterator > , long > > fIterStack;
+   /// Offset of the current base, fDecl, in the most-derived class.
+   long fOffset;
+};
+
+class tcling_DataMemberInfo {
+public:
+   ~tcling_DataMemberInfo();
+   explicit tcling_DataMemberInfo();
+   explicit tcling_DataMemberInfo(tcling_ClassInfo*);
+   tcling_DataMemberInfo(const tcling_DataMemberInfo&);
+   tcling_DataMemberInfo& operator=(const tcling_DataMemberInfo&);
+   G__DataMemberInfo* GetDataMemberInfo() const;
+   G__ClassInfo* GetClassInfo() const;
+   tcling_ClassInfo* GetTClingClassInfo() const;
+   clang::Decl* GetDecl() const;
+   int GetIdx() const;
+   int ArrayDim() const;
+   bool IsValid() const;
+   int MaxIndex(int dim) const;
+   bool Next();
+   long Offset() const;
+   long Property() const;
+   long TypeProperty() const;
+   int TypeSize() const;
+   const char* TypeName() const;
+   const char* TypeTrueName() const;
+   const char* Name() const;
+   const char* Title() const;
+   const char* ValidArrayIndex() const;
+private:
+   void InternalNextValidMember();
+private:
+   //
+   // CINT material.
+   //
+   /// CINT data member info, we own.
+   G__DataMemberInfo* fDataMemberInfo;
+   /// CINT class info, we own.
+   G__ClassInfo* fClassInfo;
+   //
+   // Clang material.
+   //
+   /// Class we are iterating over, we own.
+   tcling_ClassInfo* fTClingClassInfo;
+   /// We need to skip the first increment to support the cint Next() semantics.
+   bool fFirstTime;
+   /// Current decl.
+   clang::DeclContext::decl_iterator fIter;
+   /// Recursion stack for traversing nested transparent scopes.
+   std::vector<clang::DeclContext::decl_iterator> fIterStack;
+};
+
+class tcling_TypeInfo {
+public:
+   ~tcling_TypeInfo();
+   explicit tcling_TypeInfo();
+   explicit tcling_TypeInfo(const char* name);
+   explicit tcling_TypeInfo(G__value* val);
+   tcling_TypeInfo(const tcling_TypeInfo&);
+   tcling_TypeInfo& operator=(const tcling_TypeInfo&);
+   G__TypeInfo* GetTypeInfo() const;
+   G__ClassInfo* GetClassInfo() const;
+   clang::Decl* GetDecl() const;
+   void Init(const char* name);
+   bool IsValid() const;
+   const char* Name() const;
+   long Property() const;
+   int RefType() const;
+   int Size() const;
+   const char* TrueName() const;
+private:
+   //
+   //  CINT part
+   //
+   /// CINT type info, we own.
+   G__TypeInfo* fTypeInfo;
+   /// CINT class info, we own.
+   G__ClassInfo* fClassInfo;
+   //
+   //  Cling part
+   //
+   /// Clang AST Node for the type, we do *not* own.
+   clang::Decl* fDecl;
+};
+
+class tcling_TypedefInfo {
+public:
+   ~tcling_TypedefInfo();
+   explicit tcling_TypedefInfo();
+   explicit tcling_TypedefInfo(const char*);
+   tcling_TypedefInfo(const tcling_TypedefInfo&);
+   tcling_TypedefInfo& operator=(const tcling_TypedefInfo&);
+   G__TypedefInfo* GetTypedefInfo() const;
+   clang::Decl* GetDecl() const;
+   int GetIdx() const;
+   void Init(const char* name);
+   bool IsValid() const;
+   bool IsValidCint() const;
+   bool IsValidClang() const;
+   long Property() const;
+   int Size() const;
+   const char* TrueName() const;
+   const char* Name() const;
+   const char* Title() const;
+   int Next();
+private:
+   //
+   //  CINT info.
+   //
+   /// CINT typedef info for this class, we own.
+   G__TypedefInfo* fTypedefInfo;
+   //
+   //  clang info.
+   //
+   /// Clang AST Node for this typedef, we do *not* own.
+   clang::Decl* fDecl;
+   /// Index in typedef table of fDecl.
+   int fIdx;
+};
+
+class tcling_MethodInfo {
+public:
+   ~tcling_MethodInfo();
+   explicit tcling_MethodInfo();
+   explicit tcling_MethodInfo(G__MethodInfo* info); // FIXME
+   explicit tcling_MethodInfo(tcling_ClassInfo*);
+   tcling_MethodInfo(const tcling_MethodInfo&);
+   tcling_MethodInfo& operator=(const tcling_MethodInfo&);
+   G__MethodInfo* GetMethodInfo() const;
+   void CreateSignature(TString& signature) const;
+   G__InterfaceMethod InterfaceMethod() const;
+   bool IsValid() const;
+   int NArg() const;
+   int NDefaultArg() const;
+   int Next() const;
+   long Property() const;
+   void* Type() const;
+   const char* GetMangledName() const;
+   const char* GetPrototype() const;
+   const char* Name() const;
+   const char* TypeName() const;
+   const char* Title() const;
+private:
+   //
+   // CINT material.
+   //
+   /// cint method iterator, we own.
+   G__MethodInfo* fMethodInfo;
+   //
+   // Cling material.
+   //
+   /// Class, namespace, or translation unit we were initialized with.
+   tcling_ClassInfo* fInitialClassInfo;
+   /// Class, namespace, or translation unit we are iterating over now.
+   clang::Decl* fDecl;
+   /// Our iterator.
+   clang::DeclContext::decl_iterator fIter;
+   /// Our iterator's current function.
+   clang::Decl* fFunction;
+};
+
+class tcling_MethodArgInfo {
+public:
+   ~tcling_MethodArgInfo();
+   explicit tcling_MethodArgInfo();
+   explicit tcling_MethodArgInfo(tcling_MethodInfo*);
+   tcling_MethodArgInfo(const tcling_MethodArgInfo&);
+   tcling_MethodArgInfo& operator=(const tcling_MethodArgInfo&);
+   G__MethodInfo* GetMethodArgInfo() const;
+   bool IsValid() const;
+   int Next() const;
+   long Property() const;
+   const char* DefaultValue() const;
+   const char* Name() const;
+   const char* TypeName() const;
+private:
+   //
+   // CINT material.
+   //
+   /// cint method argument iterator, we own.
+   G__MethodArgInfo* fMethodArgInfo;
+   //
+   // Cling material.
+   //
+};
+
+class tcling_CallFunc {
+public:
+   ~tcling_CallFunc();
+   explicit tcling_CallFunc();
+   tcling_CallFunc(const tcling_CallFunc&);
+   tcling_CallFunc& operator=(const tcling_CallFunc&);
+   void Exec(void* address) const;
+   long ExecInt(void* address) const;
+   long ExecInt64(void* address) const;
+   double ExecDouble(void* address) const;
+   void* FactoryMethod() const;
+   void Init() const;
+   G__InterfaceMethod InterfaceMethod() const;
+   bool IsValid() const;
+   void ResetArg() const;
+   void SetArg(long param) const;
+   void SetArg(double param) const;
+   void SetArg(long long param) const;
+   void SetArg(unsigned long long param) const;
+   void SetArgArray(long* paramArr, int nparam) const;
+   void SetArgs(const char* param) const;
+   void SetFunc(tcling_ClassInfo* info, const char* method, const char* params, long* offset) const;
+   void SetFunc(tcling_MethodInfo* info) const;
+   void SetFuncProto(tcling_ClassInfo* info, const char* method, const char* proto, long* offset) const;
+private:
+   //
+   // CINT material.
+   //
+   /// cint method iterator, we own.
+   G__CallFunc* fCallFunc;
+   //
+   // Cling material.
+   //
+};
+
+//______________________________________________________________________________
+//
+//
+//
 
 tcling_ClassInfo::~tcling_ClassInfo()
 {
@@ -313,6 +600,26 @@ void tcling_ClassInfo::Destruct(void* arena) const
 {
    // Note: This is an interpreter function.
    return fClassInfo->Destruct(arena);
+}
+
+int tcling_ClassInfo::NMethods() const
+{
+   // FIXME: Implement this with clang!
+   return fClassInfo->NMethods();
+}
+
+tcling_MethodInfo* tcling_ClassInfo::GetMethod(const char* fname,
+   const char* arg, long* poffset, MatchMode mode /*= ConversionMatch*/,
+   InheritanceMode imode /*= WithInheritance*/) const
+{
+   // FIXME: Implement this with clang!
+   G__MethodInfo* mi = new G__MethodInfo(fClassInfo->GetMethod(
+      fname, arg, poffset, (Cint::G__ClassInfo::MatchMode) mode,
+      (Cint::G__ClassInfo::InheritanceMode) imode));
+   tcling_MethodInfo* tmi = new tcling_MethodInfo(mi);
+   delete mi;
+   mi = 0;
+   return tmi;
 }
 
 int tcling_ClassInfo::GetMethodNArg(const char* method, const char* proto) const
@@ -682,55 +989,6 @@ const char* tcling_ClassInfo::TmpltName() const
 //
 //
 
-class tcling_BaseClassInfo {
-public:
-   ~tcling_BaseClassInfo();
-   explicit tcling_BaseClassInfo(); // NOT IMPLEMENTED.
-   explicit tcling_BaseClassInfo(tcling_ClassInfo*);
-   tcling_BaseClassInfo(const tcling_BaseClassInfo&);
-   tcling_BaseClassInfo& operator=(const tcling_BaseClassInfo&);
-   G__BaseClassInfo* GetBaseClassInfo() const;
-   tcling_ClassInfo* GetDerivedClassInfo() const;
-   tcling_ClassInfo* GetClassInfo() const;
-   long GetOffsetBase() const;
-   int InternalNext(int onlyDirect);
-   int Next();
-   int Next(int onlyDirect);
-   long Offset() const;
-   long Property() const;
-   long Tagnum() const;
-   const char* FullName() const;
-   const char* Name() const;
-   const char* TmpltName() const;
-   bool IsValid() const;
-private:
-   //
-   // CINT material.
-   //
-   /// CINT base class info, we own.
-   G__BaseClassInfo* fBaseClassInfo;
-   //
-   // Cling material.
-   //
-   /// Class we were intialized with, we own.
-   tcling_ClassInfo* fDerivedClassInfo;
-   /// Flag to provide Cint semantics for iterator advancement (not first time)
-   bool fFirstTime;
-   /// Flag for signaling the need to descend on this advancement.
-   bool fDescend;
-   /// Current class whose bases we are iterating through, we do *not* own.
-   const clang::Decl* fDecl;
-   /// Current iterator.
-   clang::CXXRecordDecl::base_class_const_iterator fIter;
-   /// Class info of base class our iterator is currently pointing at, we own.
-   tcling_ClassInfo* fClassInfo;
-   /// Iterator stack.
-   std::vector < std::pair < std::pair < const clang::Decl*,
-       clang::CXXRecordDecl::base_class_const_iterator > , long > > fIterStack;
-   /// Offset of the current base, fDecl, in the most-derived class.
-   long fOffset;
-};
-
 tcling_BaseClassInfo::~tcling_BaseClassInfo()
 {
    delete fBaseClassInfo;
@@ -1099,54 +1357,6 @@ bool tcling_BaseClassInfo::IsValid() const
 //
 //
 //
-
-class tcling_DataMemberInfo {
-public:
-   ~tcling_DataMemberInfo();
-   explicit tcling_DataMemberInfo();
-   explicit tcling_DataMemberInfo(tcling_ClassInfo*);
-   tcling_DataMemberInfo(const tcling_DataMemberInfo&);
-   tcling_DataMemberInfo& operator=(const tcling_DataMemberInfo&);
-   G__DataMemberInfo* GetDataMemberInfo() const;
-   G__ClassInfo* GetClassInfo() const;
-   tcling_ClassInfo* GetTClingClassInfo() const;
-   clang::Decl* GetDecl() const;
-   int GetIdx() const;
-   int ArrayDim() const;
-   bool IsValid() const;
-   int MaxIndex(int dim) const;
-   bool Next();
-   long Offset() const;
-   long Property() const;
-   long TypeProperty() const;
-   int TypeSize() const;
-   const char* TypeName() const;
-   const char* TypeTrueName() const;
-   const char* Name() const;
-   const char* Title() const;
-   const char* ValidArrayIndex() const;
-private:
-   void InternalNextValidMember();
-private:
-   //
-   // CINT material.
-   //
-   /// CINT data member info, we own.
-   G__DataMemberInfo* fDataMemberInfo;
-   /// CINT class info, we own.
-   G__ClassInfo* fClassInfo;
-   //
-   // Clang material.
-   //
-   /// Class we are iterating over, we own.
-   tcling_ClassInfo* fTClingClassInfo;
-   /// We need to skip the first increment to support the cint Next() semantics.
-   bool fFirstTime;
-   /// Current decl.
-   clang::DeclContext::decl_iterator fIter;
-   /// Recursion stack for traversing nested transparent scopes.
-   std::vector<clang::DeclContext::decl_iterator> fIterStack;
-};
 
 tcling_DataMemberInfo::~tcling_DataMemberInfo()
 {
@@ -1655,38 +1865,6 @@ const char* tcling_DataMemberInfo::ValidArrayIndex() const
 //
 //
 
-class tcling_TypeInfo {
-public:
-   ~tcling_TypeInfo();
-   explicit tcling_TypeInfo();
-   explicit tcling_TypeInfo(G__value* val);
-   tcling_TypeInfo(const tcling_TypeInfo&);
-   tcling_TypeInfo& operator=(const tcling_TypeInfo&);
-   G__TypeInfo* GetTypeInfo() const;
-   G__ClassInfo* GetClassInfo() const;
-   clang::Decl* GetDecl() const;
-   void Init(const char* name);
-   bool IsValid() const;
-   const char* Name() const;
-   long Property() const;
-   int RefType() const;
-   int Size() const;
-   const char* TrueName() const;
-private:
-   //
-   //  CINT part
-   //
-   /// CINT type info, we own.
-   G__TypeInfo* fTypeInfo;
-   /// CINT class info, we own.
-   G__ClassInfo* fClassInfo;
-   //
-   //  Cling part
-   //
-   /// Clang AST Node for the type, we do *not* own.
-   clang::Decl* fDecl;
-};
-
 tcling_TypeInfo::~tcling_TypeInfo()
 {
    delete fTypeInfo;
@@ -1703,6 +1881,31 @@ tcling_TypeInfo::tcling_TypeInfo()
    fClassInfo = new G__ClassInfo;
 }
 
+tcling_TypeInfo::tcling_TypeInfo(const char* name)
+   : fTypeInfo(0), fClassInfo(0), fDecl(0)
+{
+   fTypeInfo = new G__TypeInfo(name);
+   int tagnum = fTypeInfo->Tagnum();
+   if (tagnum == -1) {
+      fClassInfo = new G__ClassInfo;
+      return;
+   }
+   fClassInfo = new G__ClassInfo(tagnum);
+   return;
+   fprintf(stderr, "tcling_TypeInfo(name): looking up cling class: %s  "
+           "tagnum: %d\n", name, tagnum);
+   std::multimap<const std::string, const clang::Decl*>::iterator iter =
+      tcling_Dict::ClassNameToDecl()->find(name);
+   if (iter == tcling_Dict::ClassNameToDecl()->end()) {
+      fprintf(stderr, "tcling_TypeInfo(name): cling class not found: %s  "
+              "tagnum: %d\n", name, tagnum);
+      return;
+   }
+   fDecl = (clang::Decl*) iter->second;
+   fprintf(stderr, "tcling_TypeInfo(name): cling class found: %s  "
+           "tagnum: %d  Decl: 0x%lx\n", name, tagnum, (long) fDecl);
+}
+
 tcling_TypeInfo::tcling_TypeInfo(G__value* val)
    : fTypeInfo(0), fClassInfo(0), fDecl(0)
 {
@@ -1712,7 +1915,7 @@ tcling_TypeInfo::tcling_TypeInfo(G__value* val)
       fClassInfo = new G__ClassInfo;
       return;
    }
-   fClassInfo  = new G__ClassInfo(tagnum);
+   fClassInfo = new G__ClassInfo(tagnum);
    return;
    const char* name = fClassInfo->Fullname();
    fprintf(stderr, "tcling_TypeInfo(val): looking up cling class: %s  "
@@ -1825,40 +2028,6 @@ const char* tcling_TypeInfo::TrueName() const
 //
 //
 
-class tcling_TypedefInfo {
-public:
-   ~tcling_TypedefInfo();
-   explicit tcling_TypedefInfo();
-   tcling_TypedefInfo(const tcling_TypedefInfo&);
-   tcling_TypedefInfo& operator=(const tcling_TypedefInfo&);
-   G__TypedefInfo* GetTypedefInfo() const;
-   clang::Decl* GetDecl() const;
-   int GetIdx() const;
-   void Init(const char* name);
-   bool IsValid() const;
-   bool IsValidCint() const;
-   bool IsValidClang() const;
-   long Property() const;
-   int Size() const;
-   const char* TrueName() const;
-   const char* Name() const;
-   const char* Title() const;
-   int Next();
-private:
-   //
-   //  CINT info.
-   //
-   /// CINT typedef info for this class, we own.
-   G__TypedefInfo* fTypedefInfo;
-   //
-   //  clang info.
-   //
-   /// Clang AST Node for this typedef, we do *not* own.
-   clang::Decl* fDecl;
-   /// Index in typedef table of fDecl.
-   int fIdx;
-};
-
 tcling_TypedefInfo::~tcling_TypedefInfo()
 {
    delete fTypedefInfo;
@@ -1870,6 +2039,12 @@ tcling_TypedefInfo::tcling_TypedefInfo()
    : fTypedefInfo(0), fDecl(0), fIdx(-1)
 {
    fTypedefInfo = new G__TypedefInfo();
+}
+
+tcling_TypedefInfo::tcling_TypedefInfo(const char* name)
+   : fTypedefInfo(0), fDecl(0), fIdx(-1)
+{
+   fTypedefInfo = new G__TypedefInfo(name);
 }
 
 tcling_TypedefInfo::tcling_TypedefInfo(const tcling_TypedefInfo& rhs)
@@ -2104,47 +2279,6 @@ int tcling_TypedefInfo::Next()
 //
 //
 
-class tcling_MethodInfo {
-public:
-   ~tcling_MethodInfo();
-   explicit tcling_MethodInfo();
-   explicit tcling_MethodInfo(G__MethodInfo* info); // FIXME
-   explicit tcling_MethodInfo(tcling_ClassInfo*);
-   tcling_MethodInfo(const tcling_MethodInfo&);
-   tcling_MethodInfo& operator=(const tcling_MethodInfo&);
-   G__MethodInfo* GetMethodInfo() const;
-   void CreateSignature(TString& signature) const;
-   void* InterfaceMethod() const;
-   bool IsValid() const;
-   int NArg() const;
-   int NDefaultArg() const;
-   int Next() const;
-   long Property() const;
-   void* Type() const;
-   const char* GetMangledName() const;
-   const char* GetPrototype() const;
-   const char* Name() const;
-   const char* TypeName() const;
-   const char* Title() const;
-private:
-   //
-   // CINT material.
-   //
-   /// cint method iterator, we own.
-   G__MethodInfo* fMethodInfo;
-   //
-   // Cling material.
-   //
-   /// Class, namespace, or translation unit we were initialized with.
-   tcling_ClassInfo* fInitialClassInfo;
-   /// Class, namespace, or translation unit we are iterating over now.
-   clang::Decl* fDecl;
-   /// Our iterator.
-   clang::DeclContext::decl_iterator fIter;
-   /// Our iterator's current function.
-   clang::Decl* fFunction;
-};
-
 tcling_MethodInfo::~tcling_MethodInfo()
 {
    delete fMethodInfo;
@@ -2264,7 +2398,7 @@ void tcling_MethodInfo::CreateSignature(TString& signature) const
    signature += ")";
 }
 
-void* tcling_MethodInfo::InterfaceMethod() const
+G__InterfaceMethod tcling_MethodInfo::InterfaceMethod() const
 {
    G__InterfaceMethod p = fMethodInfo->InterfaceMethod();
    if (!p) {
@@ -2273,7 +2407,7 @@ void* tcling_MethodInfo::InterfaceMethod() const
          p = (G__InterfaceMethod) G__exec_bytecode;
       }
    }
-   return (void*) p;
+   return p;
 }
 
 bool tcling_MethodInfo::IsValid() const
@@ -2335,31 +2469,6 @@ const char* tcling_MethodInfo::Title() const
 //
 //
 //
-
-class tcling_MethodArgInfo {
-public:
-   ~tcling_MethodArgInfo();
-   explicit tcling_MethodArgInfo();
-   explicit tcling_MethodArgInfo(tcling_MethodInfo*);
-   tcling_MethodArgInfo(const tcling_MethodArgInfo&);
-   tcling_MethodArgInfo& operator=(const tcling_MethodArgInfo&);
-   G__MethodInfo* GetMethodArgInfo() const;
-   bool IsValid() const;
-   int Next() const;
-   long Property() const;
-   const char* DefaultValue() const;
-   const char* Name() const;
-   const char* TypeName() const;
-private:
-   //
-   // CINT material.
-   //
-   /// cint method argument iterator, we own.
-   G__MethodArgInfo* fMethodArgInfo;
-   //
-   // Cling material.
-   //
-};
 
 tcling_MethodArgInfo::~tcling_MethodArgInfo()
 {
@@ -2444,40 +2553,6 @@ const char* tcling_MethodArgInfo::TypeName() const
 //
 //
 
-class tcling_CallFunc {
-public:
-   ~tcling_CallFunc();
-   explicit tcling_CallFunc();
-   tcling_CallFunc(const tcling_CallFunc&);
-   tcling_CallFunc& operator=(const tcling_CallFunc&);
-   void Exec(void* address) const;
-   long ExecInt(void* address) const;
-   long ExecInt64(void* address) const;
-   double ExecDouble(void* address) const;
-   void* FactoryMethod() const;
-   void Init() const;
-   bool IsValid() const;
-   void ResetArg() const;
-   void SetArg(long param) const;
-   void SetArg(double param) const;
-   void SetArg(long long param) const;
-   void SetArg(unsigned long long param) const;
-   void SetArgArray(long* paramArr, int nparam) const;
-   void SetArgs(const char* param) const;
-   void SetFunc(tcling_ClassInfo* info, const char* method, const char* params, long* offset) const;
-   void SetFunc(tcling_MethodInfo* info) const;
-   void SetFuncProto(tcling_ClassInfo* info, const char* method, const char* proto, long* offset) const;
-private:
-   //
-   // CINT material.
-   //
-   /// cint method iterator, we own.
-   G__CallFunc* fCallFunc;
-   //
-   // Cling material.
-   //
-};
-
 tcling_CallFunc::~tcling_CallFunc()
 {
    delete fCallFunc;
@@ -2539,12 +2614,20 @@ double tcling_CallFunc::ExecDouble(void* address) const
 void* tcling_CallFunc::FactoryMethod() const
 {
    G__MethodInfo* info = new G__MethodInfo(fCallFunc->GetMethodInfo());
-   return (void*) new tcling_MethodInfo(info); // FIXME
+   tcling_MethodInfo* tcling_mi = new tcling_MethodInfo(info);
+   delete info;
+   info = 0;
+   return (void*) tcling_mi; // FIXME
 }
 
 void tcling_CallFunc::Init() const
 {
    fCallFunc->Init();
+}
+
+G__InterfaceMethod tcling_CallFunc::InterfaceMethod() const
+{
+   return fCallFunc->InterfaceMethod();
 }
 
 bool tcling_CallFunc::IsValid() const
@@ -3334,10 +3417,10 @@ void TCint::UpdateListOfGlobals()
       // It already called us again.
       return;
    }
-   if (fGlobalsListSerial == G__DataMemberInfo::SerialNumber()) {
-      return;
-   }
-   fGlobalsListSerial = G__DataMemberInfo::SerialNumber();
+   //////if (fGlobalsListSerial == G__DataMemberInfo::SerialNumber()) {
+   //////   return;
+   //////}
+   //////fGlobalsListSerial = G__DataMemberInfo::SerialNumber();
    R__LOCKGUARD2(gCINTMutex);
    tcling_DataMemberInfo* t = (tcling_DataMemberInfo*) DataMemberInfo_Factory();
    // Loop over all global vars known to cint.
@@ -3368,20 +3451,19 @@ void TCint::UpdateListOfGlobalFunctions()
       return;
    }
    R__LOCKGUARD2(gCINTMutex);
-   G__MethodInfo t;
-   G__MethodInfo* a = 0;
-   void* vt = 0;
+   tcling_MethodInfo t;
    while (t.Next()) {
       // if name cannot be obtained no use to put in list
       if (t.IsValid() && t.Name()) {
          Bool_t needToAdd = kTRUE;
          // first remove if already in list
-         TList* listFuncs = ((THashTable*)(gROOT->fGlobalFunctions))->GetListForObject(t.Name());
-         if (listFuncs && (vt = (void*)t.InterfaceMethod())) {
+         TList* listFuncs = ((THashTable*)(gROOT->fGlobalFunctions))->
+            GetListForObject(t.Name());
+         if (listFuncs && t.InterfaceMethod()) {
             Long_t prop = -1;
             TIter iFunc(listFuncs);
-            TFunction* f = 0;
             Bool_t foundStart = kFALSE;
+            TFunction* f = 0;
             while (needToAdd && (f = (TFunction*)iFunc())) {
                if (strcmp(f->GetName(), t.Name())) {
                   if (foundStart) {
@@ -3390,18 +3472,17 @@ void TCint::UpdateListOfGlobalFunctions()
                   continue;
                }
                foundStart = kTRUE;
-               if (vt == f->InterfaceMethod()) {
+               if (f->InterfaceMethod()) {
                   if (prop == -1) {
                      prop = t.Property();
                   }
-                  needToAdd = !((prop & G__BIT_ISCOMPILED)
-                                || t.GetMangledName() == f->GetMangledName());
+                  needToAdd = !(prop & G__BIT_ISCOMPILED) &&
+                     (t.GetMangledName() != f->GetMangledName());
                }
             }
          }
          if (needToAdd) {
-            a = new G__MethodInfo(t);
-            gROOT->fGlobalFunctions->Add(new TFunction(a));
+            gROOT->fGlobalFunctions->Add(new TFunction(new tcling_MethodInfo(t)));
          }
       }
    }
@@ -3445,12 +3526,12 @@ void TCint::UpdateListOfTypes()
 //______________________________________________________________________________
 void TCint::SetClassInfo(TClass* cl, Bool_t reload)
 {
-   // Set pointer to CINT's G__ClassInfo in TClass.
+   // Set pointer to the tcling_ClassInfo in TClass.
    R__LOCKGUARD2(gCINTMutex);
    if (cl->fClassInfo && !reload) {
       return;
    }
-   delete(tcling_ClassInfo*) cl->fClassInfo;
+   delete (tcling_ClassInfo*) cl->fClassInfo;
    cl->fClassInfo = 0;
    cl->fDecl = 0;
    std::string name(cl->GetName());
@@ -3554,7 +3635,7 @@ Bool_t TCint::CheckClassInfo(const char* name, Bool_t autoload /*= kTRUE*/)
          return kFALSE;
       }
       *current = '\0';
-      G__ClassInfo info(classname);
+      tcling_ClassInfo info(classname);
       if (!info.IsValid()) {
          delete[] classname;
          return kFALSE;
@@ -3580,7 +3661,7 @@ Bool_t TCint::CheckClassInfo(const char* name, Bool_t autoload /*= kTRUE*/)
          return kTRUE;
       }
    }
-   G__TypedefInfo t(name);
+   tcling_TypedefInfo t(name);
    if (t.IsValid() && !(t.Property() & G__BIT_ISFUNDAMENTAL)) {
       delete[] classname;
       return kTRUE;
@@ -3618,11 +3699,11 @@ void TCint::CreateListOfDataMembers(TClass* cl)
       return;
    }
    cl->fData = new TList;
-   G__DataMemberInfo t(*(G__ClassInfo*)cl->GetClassInfo());
+   tcling_DataMemberInfo t((tcling_ClassInfo*)cl->GetClassInfo());
    while (t.Next()) {
       // if name cannot be obtained no use to put in list
       if (t.IsValid() && t.Name() && strcmp(t.Name(), "G__virtualinfo")) {
-         G__DataMemberInfo* a = new G__DataMemberInfo(t);
+         tcling_DataMemberInfo* a = new tcling_DataMemberInfo(t);
          cl->fData->Add(new TDataMember(a, cl));
       }
    }
@@ -3637,12 +3718,11 @@ void TCint::CreateListOfMethods(TClass* cl)
       return;
    }
    cl->fMethod = new THashList;
-   G__MethodInfo* a;
-   G__MethodInfo t(*(G__ClassInfo*)cl->GetClassInfo());
+   tcling_MethodInfo t((tcling_ClassInfo*)cl->GetClassInfo());
    while (t.Next()) {
       // if name cannot be obtained no use to put in list
       if (t.IsValid() && t.Name()) {
-         a = new G__MethodInfo(t);
+         tcling_MethodInfo* a = new tcling_MethodInfo(t);
          cl->fMethod->Add(new TMethod(a, cl));
       }
    }
@@ -3654,7 +3734,7 @@ void TCint::UpdateListOfMethods(TClass* cl)
    // Update the list of pointers to method for TClass cl, if necessary
    if (cl->fMethod) {
       R__LOCKGUARD2(gCINTMutex);
-      G__ClassInfo* info = (G__ClassInfo*) cl->GetClassInfo();
+      tcling_ClassInfo* info = (tcling_ClassInfo*) cl->GetClassInfo();
       if (!info || cl->fMethod->GetEntries() == info->NMethods()) {
          return;
       }
@@ -3673,11 +3753,11 @@ void TCint::CreateListOfMethodArgs(TFunction* m)
       return;
    }
    m->fMethodArgs = new TList;
-   G__MethodArgInfo t(*(G__MethodInfo*)m->fInfo);
+   // FIXME, direct use of data member.
+   tcling_MethodArgInfo t((tcling_MethodInfo*)m->fInfo);
    while (t.Next()) {
-      // if type cannot be obtained no use to put in list
-      if (t.IsValid() && t.Type()) {
-         G__MethodArgInfo* a = new G__MethodArgInfo(t);
+      if (t.IsValid()) {
+         tcling_MethodArgInfo* a = new tcling_MethodArgInfo(t);
          m->fMethodArgs->Add(new TMethodArg(a, m));
       }
    }
@@ -3699,7 +3779,11 @@ Int_t TCint::GenerateDictionary(const char* classes, const char* includes /* = 0
    }
    // Split the input list
    std::vector<std::string> listClasses;
-   for (const char* current = classes, *prev = classes; *current != 0; ++current) {
+   for (
+      const char* current = classes, *prev = classes;
+      *current != 0;
+      ++current
+   ) {
       if (*current == ';') {
          listClasses.push_back(std::string(prev, current - prev));
          prev = current + 1;
@@ -3710,7 +3794,11 @@ Int_t TCint::GenerateDictionary(const char* classes, const char* includes /* = 0
       }
    }
    std::vector<std::string> listIncludes;
-   for (const char* current = includes, *prev = includes; *current != 0; ++current) {
+   for (
+      const char* current = includes, *prev = includes;
+      *current != 0;
+      ++current
+   ) {
       if (*current == ';') {
          listIncludes.push_back(std::string(prev, current - prev));
          prev = current + 1;
@@ -3721,7 +3809,8 @@ Int_t TCint::GenerateDictionary(const char* classes, const char* includes /* = 0
       }
    }
    // Generate the temporary dictionary file
-   return TCint_GenerateDictionary(listClasses, listIncludes, std::vector<std::string>(), std::vector<std::string>());
+   return TCint_GenerateDictionary(listClasses, listIncludes,
+      std::vector<std::string>(), std::vector<std::string>());
 }
 
 
@@ -3733,16 +3822,22 @@ TString TCint::GetMangledName(TClass* cl, const char* method,
    // params (params is a string of actual arguments, not formal ones). If the
    // class is 0 the global function list will be searched.
    R__LOCKGUARD2(gCINTMutex);
-   G__CallFunc func;
-   Long_t offset;
+   tcling_CallFunc func;
    if (cl) {
-      func.SetFunc((G__ClassInfo*)cl->GetClassInfo(), method, params, &offset);
+      Long_t offset;
+      func.SetFunc((tcling_ClassInfo*)cl->GetClassInfo(), method, params,
+         &offset);
    }
    else {
-      G__ClassInfo gcl;
+      tcling_ClassInfo gcl;
+      Long_t offset;
       func.SetFunc(&gcl, method, params, &offset);
    }
-   return func.GetMethodInfo().GetMangledName();
+   tcling_MethodInfo* mi = (tcling_MethodInfo*) func.FactoryMethod();
+   const char* mangled_name = mi->GetMangledName();
+   delete mi;
+   mi = 0;
+   return mangled_name;
 }
 
 //______________________________________________________________________________
@@ -3755,11 +3850,11 @@ TString TCint::GetMangledNameWithPrototype(TClass* cl, const char* method,
    R__LOCKGUARD2(gCINTMutex);
    Long_t offset;
    if (cl) {
-      return ((G__ClassInfo*)cl->GetClassInfo())->
-             GetMethod(method, proto, &offset).GetMangledName();
+      return ((tcling_ClassInfo*)cl->GetClassInfo())->
+             GetMethod(method, proto, &offset)->GetMangledName();
    }
-   G__ClassInfo gcl;
-   return gcl.GetMethod(method, proto, &offset).GetMangledName();
+   tcling_ClassInfo gcl;
+   return gcl.GetMethod(method, proto, &offset)->GetMangledName();
 }
 
 //______________________________________________________________________________
@@ -3770,13 +3865,15 @@ void* TCint::GetInterfaceMethod(TClass* cl, const char* method,
    // parameters params (params is a string of actual arguments, not formal
    // ones). If the class is 0 the global function list will be searched.
    R__LOCKGUARD2(gCINTMutex);
-   G__CallFunc func;
-   Long_t offset;
+   tcling_CallFunc func;
    if (cl) {
-      func.SetFunc((G__ClassInfo*)cl->GetClassInfo(), method, params, &offset);
+      Long_t offset;
+      func.SetFunc((tcling_ClassInfo*)cl->GetClassInfo(), method, params,
+         &offset);
    }
    else {
-      G__ClassInfo gcl;
+      tcling_ClassInfo gcl;
+      Long_t offset;
       func.SetFunc(&gcl, method, params, &offset);
    }
    return (void*) func.InterfaceMethod();
@@ -3791,14 +3888,15 @@ void* TCint::GetInterfaceMethodWithPrototype(TClass* cl, const char* method,
    // function list will be searched.
    R__LOCKGUARD2(gCINTMutex);
    G__InterfaceMethod f;
-   Long_t offset;
    if (cl) {
-      f = ((G__ClassInfo*)cl->GetClassInfo())->
-          GetMethod(method, proto, &offset).InterfaceMethod();
+      Long_t offset;
+      f = ((tcling_ClassInfo*)cl->GetClassInfo())->
+          GetMethod(method, proto, &offset)->InterfaceMethod();
    }
    else {
-      G__ClassInfo gcl;
-      f = gcl.GetMethod(method, proto, &offset).InterfaceMethod();
+      Long_t offset;
+      tcling_ClassInfo gcl;
+      f = gcl.GetMethod(method, proto, &offset)->InterfaceMethod();
    }
    return (void*) f;
 }
@@ -3830,9 +3928,9 @@ void TCint::Execute(const char* function, const char* params, int* error)
 {
    // Execute a global function with arguments params.
    R__LOCKGUARD2(gCINTMutex);
-   G__CallFunc func;
-   G__ClassInfo cl;
+   tcling_ClassInfo cl;
    Long_t offset;
+   tcling_CallFunc func;
    func.SetFunc(&cl, function, params, &offset);
    func.Exec(0);
    if (error) {
@@ -3846,17 +3944,14 @@ void TCint::Execute(TObject* obj, TClass* cl, const char* method,
 {
    // Execute a method from class cl with arguments params.
    R__LOCKGUARD2(gCINTMutex);
-   void*       address;
-   Long_t      offset;
-   G__CallFunc func;
-   // If the actuall class of this object inherit 2nd (or more) from TObject,
+   // If the actual class of this object inherits 2nd (or more) from TObject,
    // 'obj' is unlikely to be the start of the object (as described by IsA()),
    // hence gInterpreter->Execute will improperly correct the offset.
    void* addr = cl->DynamicCast(TObject::Class(), obj, kFALSE);
-   // set pointer to interface method and arguments
-   func.SetFunc((G__ClassInfo*)cl->GetClassInfo(), method, params, &offset);
-   // call function
-   address = (void*)((Long_t)addr + offset);
+   Long_t offset = 0L;
+   tcling_CallFunc func;
+   func.SetFunc((tcling_ClassInfo*)cl->GetClassInfo(), method, params, &offset);
+   void* address = (void*)((Long_t)addr + offset);
    func.Exec(address);
    if (error) {
       *error = G__lasterror();
@@ -3864,8 +3959,8 @@ void TCint::Execute(TObject* obj, TClass* cl, const char* method,
 }
 
 //______________________________________________________________________________
-void TCint::Execute(TObject* obj, TClass* cl, TMethod* method, TObjArray* params,
-                    int* error)
+void TCint::Execute(TObject* obj, TClass* cl, TMethod* method,
+      TObjArray* params, int* error)
 {
    // Execute a method from class cl with the arguments in array params
    // (params[0] ... params[n] = array of TObjString parameters).
@@ -3892,8 +3987,8 @@ void TCint::Execute(TObject* obj, TClass* cl, TMethod* method, TObjArray* params
       TIter next(params);
       for (Int_t i = 0; i < argc; i ++) {
          TMethodArg* arg = (TMethodArg*) argList->At(i);
-         G__TypeInfo type(arg->GetFullTypeName());
-         TObjString* nxtpar = (TObjString*)next();
+         tcling_TypeInfo type(arg->GetFullTypeName());
+         TObjString* nxtpar = (TObjString*) next();
          if (i) {
             complete += ',';
          }
@@ -4468,6 +4563,7 @@ Int_t TCint::AutoLoadCallback(const char* cls, const char* lib)
 }
 
 //______________________________________________________________________________
+//FIXME: Use of G__ClassInfo in the interface!
 void* TCint::FindSpecialObject(const char* item, G__ClassInfo* type,
                                void** prevObj, void** assocPtr)
 {
@@ -5533,7 +5629,7 @@ MethodInfo_t* TCint::MethodInfo_FactoryCopy(MethodInfo_t* minfo) const
 void* TCint::MethodInfo_InterfaceMethod(MethodInfo_t* minfo) const
 {
    tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
-   return info->InterfaceMethod();
+   return (void*) info->InterfaceMethod();
 }
 
 //______________________________________________________________________________
