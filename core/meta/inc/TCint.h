@@ -313,7 +313,6 @@ public:
    // G__TypedefInfo interface
    virtual void   TypedefInfo_Delete(TypedefInfo_t *tinfo) const;
    virtual TypedefInfo_t  *TypedefInfo_Factory() const;
-   virtual TypedefInfo_t  *TypedefInfo_Factory(int typenum) const;
    virtual TypedefInfo_t  *TypedefInfo_FactoryCopy(TypedefInfo_t *tinfo) const;
    virtual void   TypedefInfo_Init(TypedefInfo_t *tinfo, const char *funcname) const;
    virtual bool   TypedefInfo_IsValid(TypedefInfo_t *tinfo) const;

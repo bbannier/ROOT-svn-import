@@ -345,6 +345,7 @@ bool tcling_ClassInfo::HasMethod(const char* name) const
       llvm::dyn_cast<clang::CXXRecordDecl>(fDecl);
    if (!CRD) {
       // Must be an enum or namespace.
+      // FIXME: Make it work for a namespace!
       return false;
    }
    std::string given_name(name);
@@ -1828,7 +1829,6 @@ public:
    explicit tcling_TypedefInfo();
    tcling_TypedefInfo(const tcling_TypedefInfo&);
    tcling_TypedefInfo& operator=(const tcling_TypedefInfo&);
-   explicit tcling_TypedefInfo(int);
    G__TypedefInfo* GetTypedefInfo() const;
    clang::Decl* GetDecl() const;
    int GetIdx() const;
@@ -1841,6 +1841,7 @@ public:
    const char* TrueName() const;
    const char* Name() const;
    const char* Title() const;
+   int Next();
 private:
    //
    //  CINT info.
@@ -1866,11 +1867,13 @@ tcling_TypedefInfo::~tcling_TypedefInfo()
 tcling_TypedefInfo::tcling_TypedefInfo()
    : fTypedefInfo(0), fDecl(0), fIdx(-1)
 {
+   fTypedefInfo = new G__TypedefInfo();
 }
 
 tcling_TypedefInfo::tcling_TypedefInfo(const tcling_TypedefInfo& rhs)
 {
    fTypedefInfo = new G__TypedefInfo(rhs.fTypedefInfo->Typenum());
+   return;
    fDecl = rhs.fDecl;
    fIdx = rhs.fIdx;
 }
@@ -1882,24 +1885,10 @@ tcling_TypedefInfo& tcling_TypedefInfo::operator=(const tcling_TypedefInfo& rhs)
    }
    delete fTypedefInfo;
    fTypedefInfo = new G__TypedefInfo(rhs.fTypedefInfo->Typenum());
+   return *this;
    fDecl = rhs.fDecl;
    fIdx = rhs.fIdx;
    return *this;
-}
-
-tcling_TypedefInfo::tcling_TypedefInfo(int typenum)
-   : fTypedefInfo(new G__TypedefInfo(typenum)), fDecl(0), fIdx(-1)
-{
-   // Note:  We are going to implement this with typenum being either
-   //        a cint typenum, or an index into the Typedefs() table.
-   //const char* name = fTypedefInfo->Name();
-   //fprintf(stderr, "tcling_TypedefInfo(name): looking up typedef: %s\n", name);
-   //std::multimap<const std::string, const clang::Decl*>::iterator iter =
-   //tcling_Dict::ClassNameToDecl()->find(name);
-   //if (iter != tcling_Dict::ClassNameToDecl()->end()) {
-   //fDecl = (clang::Decl*) iter->second;
-   //fprintf(stderr, "tcling_TypedefInfo(name): found typedef: %s  Decl: 0x%lx\n", name, (long) fDecl);
-   //}
 }
 
 G__TypedefInfo* tcling_TypedefInfo::GetTypedefInfo() const
@@ -1919,11 +1908,12 @@ int tcling_TypedefInfo::GetIdx() const
 
 void tcling_TypedefInfo::Init(const char* name)
 {
-   fprintf(stderr, "tcling_TypedefInfo::Init(name): looking up typedef: %s\n",
-           name);
+   //fprintf(stderr, "tcling_TypedefInfo::Init(name): looking up typedef: %s\n",
+   //        name);
    fDecl = 0;
    fIdx = -1;
    fTypedefInfo->Init(name);
+   return;
    if (!fTypedefInfo->IsValid()) {
       fprintf(stderr, "tcling_TypedefInfo::Init(name): could not find cint "
               "typedef for name: %s\n", name);
@@ -1958,17 +1948,13 @@ void tcling_TypedefInfo::Init(const char* name)
 
 bool tcling_TypedefInfo::IsValid() const
 {
+   return IsValidCint();
    return IsValidCint() || IsValidClang();
 }
 
 bool tcling_TypedefInfo::IsValidCint() const
 {
-   if (fTypedefInfo) {
-      if (fTypedefInfo->IsValid()) {
-         return true;
-      }
-   }
-   return false;
+   return fTypedefInfo->IsValid();
 }
 
 bool tcling_TypedefInfo::IsValidClang() const
@@ -2097,6 +2083,18 @@ const char* tcling_TypedefInfo::Title() const
    }
    // FIXME: This needs information from the comments in the header file.
    return fTypedefInfo->Title();
+}
+
+int tcling_TypedefInfo::Next()
+{
+   return fTypedefInfo->Next();
+   if (!IsValid()) {
+      return 0;
+   }
+   if (!IsValidClang()) {
+      return fTypedefInfo->Next();
+   }
+   return fTypedefInfo->Next();
 }
 
 //______________________________________________________________________________
@@ -3413,21 +3411,20 @@ void TCint::UpdateListOfTypes()
    // Update the list of pointers to Datatype (typedef) definitions. This
    // function is called by TROOT::GetListOfTypes().
    R__LOCKGUARD2(gCINTMutex);
-   // Remember the index of the last type that we looked at,
-   // so that we don't keep reprocessing the same types.
-   static int last_typenum = -1;
-   // Also remember the count from the last time the dictionary
-   // was rewound.  If it's been rewound since the last time we've
-   // been called, then we recan everything.
-   static int last_scratch_count = 0;
-   int this_scratch_count = G__scratch_upto(0);
-   if (this_scratch_count != last_scratch_count) {
-      last_scratch_count = this_scratch_count;
-      last_typenum = -1;
-   }
-   // Scan from where we left off last time.
-   tcling_TypedefInfo* tcling_info = (tcling_TypedefInfo*) TypedefInfo_Factory(last_typenum);
-   G__TypedefInfo* t = tcling_info->GetTypedefInfo();
+   //////// Remember the index of the last type that we looked at,
+   //////// so that we don't keep reprocessing the same types.
+   //////static int last_typenum = -1;
+   //////// Also remember the count from the last time the dictionary
+   //////// was rewound.  If it's been rewound since the last time we've
+   //////// been called, then we recan everything.
+   //////static int last_scratch_count = 0;
+   //////int this_scratch_count = G__scratch_upto(0);
+   //////if (this_scratch_count != last_scratch_count) {
+   //////   last_scratch_count = this_scratch_count;
+   //////   last_typenum = -1;
+   //////}
+   //////// Scan from where we left off last time.
+   tcling_TypedefInfo* t = (tcling_TypedefInfo*) TypedefInfo_Factory();
    while (t->Next()) {
       const char* name = t->Name();
       if (gROOT && gROOT->fTypes && t->IsValid() && name) {
@@ -3436,9 +3433,9 @@ void TCint::UpdateListOfTypes()
          // (as is done in UpdateListOfGlobals()),
          // this 'feature' is being used in TROOT::GetType().
          if (!d) {
-            gROOT->fTypes->Add(new TDataType(new tcling_TypedefInfo(t->Typenum())));
+            gROOT->fTypes->Add(new TDataType(new tcling_TypedefInfo(*t)));
          }
-         last_typenum = t->Typenum();
+         //////last_typenum = t->Typenum();
       }
    }
 }
@@ -5689,7 +5686,7 @@ const char* TCint::MethodArgInfo_TypeName(MethodArgInfo_t* marginfo) const
 //______________________________________________________________________________
 void TCint::TypeInfo_Delete(TypeInfo_t* tinfo) const
 {
-   delete(tcling_TypeInfo*) tinfo;
+   delete (tcling_TypeInfo*) tinfo;
 }
 
 //______________________________________________________________________________
@@ -5768,19 +5765,13 @@ const char* TCint::TypeInfo_TrueName(TypeInfo_t* tinfo) const
 //______________________________________________________________________________
 void TCint::TypedefInfo_Delete(TypedefInfo_t* tinfo) const
 {
-   delete(tcling_TypedefInfo*) tinfo;
+   delete (tcling_TypedefInfo*) tinfo;
 }
 
 //______________________________________________________________________________
 TypedefInfo_t* TCint::TypedefInfo_Factory() const
 {
    return (TypedefInfo_t*) new tcling_TypedefInfo();
-}
-
-//______________________________________________________________________________
-TypedefInfo_t* TCint::TypedefInfo_Factory(int typenum) const
-{
-   return (TypedefInfo_t*) new tcling_TypedefInfo(typenum);
 }
 
 //______________________________________________________________________________
