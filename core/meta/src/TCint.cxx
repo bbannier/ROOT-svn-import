@@ -2105,6 +2105,113 @@ const char* tcling_TypedefInfo::Title() const
 //
 //
 
+class tcling_MethodInfo {
+public:
+   ~tcling_MethodInfo();
+   explicit tcling_MethodInfo(); // NOT IMPLEMENTED.
+   explicit tcling_MethodInfo(tcling_ClassInfo*);
+   tcling_MethodInfo(const tcling_MethodInfo&);
+   tcling_MethodInfo& operator=(const tcling_MethodInfo&);
+   bool IsValid() const;
+private:
+   //
+   // CINT material.
+   //
+   /// cint method iterator, we own.
+   G__MethodInfo* fMethodInfo;
+   //
+   // Cling material.
+   //
+   /// Class, namespace, or translation unit we were initialized with.
+   tcling_ClassInfo* fInitialClassInfo;
+   /// Class, namespace, or translation unit we are iterating over now.
+   clang::Decl* fDecl;
+   /// Our iterator.
+   clang::DeclContext::decl_iterator fIter;
+   /// Our iterator's current function.
+   clang::Decl* fFunction;
+};
+
+tcling_MethodInfo::~tcling_MethodInfo()
+{
+   delete fMethodInfo;
+   fMethodInfo = 0;
+   delete fInitialClassInfo;
+   fInitialClassInfo = 0;
+   fDecl = 0;
+   fFunction = 0;
+}
+
+tcling_MethodInfo::tcling_MethodInfo(tcling_ClassInfo* tcling_class_info)
+   : fMethodInfo(0)
+   , fInitialClassInfo(0)
+   , fDecl(0)
+   , fFunction(0)
+{
+   if (!tcling_class_info || !tcling_class_info->IsValid()) {
+      fMethodInfo = new G__MethodInfo();
+      fInitialClassInfo = new tcling_ClassInfo;
+      return;
+   }
+   fMethodInfo = new G__MethodInfo();
+   fMethodInfo->Init(*tcling_class_info->GetClassInfo());
+   fInitialClassInfo = new tcling_ClassInfo(*tcling_class_info);
+}
+
+tcling_MethodInfo::tcling_MethodInfo(const tcling_MethodInfo& rhs)
+   : fMethodInfo(0)
+   , fInitialClassInfo(0)
+   , fDecl(0)
+   , fFunction(0)
+{
+   if (!rhs.IsValid()) {
+      fMethodInfo = new G__MethodInfo();
+      fInitialClassInfo = new tcling_ClassInfo;
+      return;
+   }
+   fMethodInfo = new G__MethodInfo(*rhs.fMethodInfo);
+   fInitialClassInfo = new tcling_ClassInfo(*rhs.fInitialClassInfo);
+   fDecl = rhs.fDecl;
+   fIter = rhs.fIter;
+   fFunction = rhs.fFunction;
+}
+
+tcling_MethodInfo& tcling_MethodInfo::operator=(
+   const tcling_MethodInfo& rhs)
+{
+   if (this == &rhs) {
+      return *this;
+   }
+   if (!rhs.IsValid()) {
+      delete fMethodInfo;
+      fMethodInfo = new G__MethodInfo();
+      delete fInitialClassInfo;
+      fInitialClassInfo = new tcling_ClassInfo;
+      fDecl = 0;
+      fFunction = 0;
+   }
+   else {
+      delete fMethodInfo;
+      fMethodInfo = new G__MethodInfo(*rhs.fMethodInfo);
+      delete fInitialClassInfo;
+      fInitialClassInfo = new tcling_ClassInfo(*rhs.fInitialClassInfo);
+      fDecl = rhs.fDecl;
+      fIter = rhs.fIter;
+      fFunction = rhs.fFunction;
+   }
+   return *this;
+}
+
+bool tcling_MethodInfo::IsValid() const
+{
+   return false;
+}
+
+//______________________________________________________________________________
+//
+//
+//
+
 extern "C" int ScriptCompiler(const char* filename, const char* opt)
 {
    return gSystem->CompileMacro(filename, opt);
@@ -5031,7 +5138,7 @@ const char* TCint::DataMemberInfo_ValidArrayIndex(DataMemberInfo_t* dminfo) cons
 void TCint::MethodInfo_Delete(MethodInfo_t* minfo) const
 {
    // Interface to CINT function
-   G__MethodInfo* info = (G__MethodInfo*)minfo;
+   G__MethodInfo* info = (G__MethodInfo*) minfo;
    delete info;
 }
 
