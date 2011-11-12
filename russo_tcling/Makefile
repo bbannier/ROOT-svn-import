@@ -534,7 +534,7 @@ endif
 ##### In case shared libs need to resolve all symbols (e.g.: aix, win32) #####
 #CORELIBEXTRA += -L/local2/russo/llvm/lib -ludis86 -lclangFrontendTool -lclangFrontend -lclangDriver -lclangSerialization -lclangCodeGen -lclangParse -lclangSema -lclangAnalysis -lclangIndex -lclangRewrite -lclangAST -lclangLex -lclangBasic -lLLVMMCJIT -lLLVMRuntimeDyld -lLLVMObject -lLLVMMCDisassembler -lLLVMLinker -lLLVMipo -lLLVMInterpreter -lLLVMInstrumentation -lLLVMJIT -lLLVMExecutionEngine -lLLVMBitWriter -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMX86Desc -lLLVMSelectionDAG -lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMX86Info -lLLVMAsmPrinter -lLLVMMCParser -lLLVMCodeGen -lLLVMScalarOpts -lLLVMInstCombine -lLLVMTransformUtils -lLLVMipa -lLLVMAsmParser -lLLVMArchive -lLLVMBitReader -lLLVMAnalysis -lLLVMTarget -lLLVMMC -lLLVMCore -lLLVMSupport
 
-CORELIBEXTRA += -L/local2/russo/llvm/lib -lpsrclang -lLLVM-3.0svn -ludis86 -ldl
+CORELIBEXTRA += -L/local2/russo/llvm/lib -lpsrclang -lpsrllvm -ludis86 -ldl
 
 ifeq ($(EXPLICITLINK),yes)
 MAINLIBS     := $(CORELIB) $(CINTLIB)
