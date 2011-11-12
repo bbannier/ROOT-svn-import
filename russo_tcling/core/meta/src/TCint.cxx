@@ -1377,6 +1377,8 @@ tcling_DataMemberInfo::tcling_DataMemberInfo()
    , fFirstTime(true)
    , fIter(tcling_Dict::GetTranslationUnitDecl()->decls_begin())
 {
+   fClassInfo = new G__ClassInfo();
+   fTClingClassInfo = new tcling_ClassInfo();
    // Move to first global variable.
    InternalNextValidMember();
 }
@@ -1389,13 +1391,15 @@ tcling_DataMemberInfo::tcling_DataMemberInfo(tcling_ClassInfo* tcling_class_info
 {
    if (!tcling_class_info || !tcling_class_info->IsValid()) {
       fDataMemberInfo = new G__DataMemberInfo;
+      fClassInfo = new G__ClassInfo();
+      fTClingClassInfo = new tcling_ClassInfo();
       fIter = tcling_Dict::GetTranslationUnitDecl()->decls_begin();
       // Move to first global variable.
       InternalNextValidMember();
       return;
    }
    fDataMemberInfo = new G__DataMemberInfo(*tcling_class_info->GetClassInfo());
-   fClassInfo  = new G__ClassInfo(tcling_class_info->GetClassInfo()->Tagnum());
+   fClassInfo = new G__ClassInfo(*tcling_class_info->GetClassInfo());
    fTClingClassInfo = new tcling_ClassInfo(*tcling_class_info);
    fIter = llvm::dyn_cast<clang::DeclContext>(tcling_class_info->GetDecl())->
            decls_begin();
@@ -1406,7 +1410,7 @@ tcling_DataMemberInfo::tcling_DataMemberInfo(tcling_ClassInfo* tcling_class_info
 tcling_DataMemberInfo::tcling_DataMemberInfo(const tcling_DataMemberInfo& rhs)
 {
    fDataMemberInfo = new G__DataMemberInfo(*rhs.fDataMemberInfo);
-   fClassInfo = new G__ClassInfo(rhs.fClassInfo->Tagnum());
+   fClassInfo = new G__ClassInfo(*rhs.fClassInfo);
    fTClingClassInfo = new tcling_ClassInfo(*rhs.fTClingClassInfo);
    fFirstTime = rhs.fFirstTime;
    fIter = rhs.fIter;
@@ -1415,17 +1419,18 @@ tcling_DataMemberInfo::tcling_DataMemberInfo(const tcling_DataMemberInfo& rhs)
 
 tcling_DataMemberInfo& tcling_DataMemberInfo::operator=(const tcling_DataMemberInfo& rhs)
 {
-   if (this != &rhs) {
-      delete fDataMemberInfo;
-      fDataMemberInfo = new G__DataMemberInfo(*rhs.fDataMemberInfo);
-      delete fClassInfo;
-      fClassInfo = new G__ClassInfo(rhs.fClassInfo->Tagnum());
-      delete fTClingClassInfo;
-      fTClingClassInfo = new tcling_ClassInfo(*rhs.fTClingClassInfo);
-      fFirstTime = rhs.fFirstTime;
-      fIter = rhs.fIter;
-      fIterStack = rhs.fIterStack;
+   if (this == &rhs) {
+      return *this;
    }
+   delete fDataMemberInfo;
+   fDataMemberInfo = new G__DataMemberInfo(*rhs.fDataMemberInfo);
+   delete fClassInfo;
+   fClassInfo = new G__ClassInfo(*rhs.fClassInfo);
+   delete fTClingClassInfo;
+   fTClingClassInfo = new tcling_ClassInfo(*rhs.fTClingClassInfo);
+   fFirstTime = rhs.fFirstTime;
+   fIter = rhs.fIter;
+   fIterStack = rhs.fIterStack;
    return *this;
 }
 
