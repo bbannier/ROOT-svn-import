@@ -269,7 +269,7 @@ Int_t PiecewiseInterpolation::getAnalyticalIntegralWN(RooArgSet& allVars, RooArg
 
   // Force using numeric integration
   // use special numeric integrator  
-  return 0;
+  //  return 0;
   
 
   // KC: check if interCode=0 for all 
