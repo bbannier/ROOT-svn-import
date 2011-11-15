@@ -1044,19 +1044,19 @@ Double_t RooAddPdf::expectedEvents(const RooArgSet* nset) const
 
   } else {
 
-    RooFIter iter = _pdfList.fwdIterator() ;
-    RooAbsPdf* pdf ;
     if (_allExtendable) {
 
+      RooFIter iter = _pdfList.fwdIterator() ;
+      RooAbsPdf* pdf ;
       while((pdf=(RooAbsPdf*)iter.next())) {
 	expectedTotal += pdf->expectedEvents(nset) ; 
       }
 
     } else {
 
-      RooFIter iter = _coefList.fwdIterator() ;
+      RooFIter citer = _coefList.fwdIterator() ;
       RooAbsReal* coef ;
-      while((coef=(RooAbsReal*)iter.next())) {
+      while((coef=(RooAbsReal*)citer.next())) {
 	Double_t ncomp = coef->getVal(nset) ;
 	expectedTotal += ncomp ;      
       }
