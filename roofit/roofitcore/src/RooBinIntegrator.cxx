@@ -174,7 +174,7 @@ Double_t RooBinIntegrator::integral(const Double_t *yvec)
     thisX = _xmin + (i+0.5)*_binWidth;
     sum+= integrand(xvec(thisX))*_binWidth;
   }
-  cout <<" sum = " <<sum<<endl;
+  //  cout <<" sum = " <<sum<<endl;
   return sum;
 
 }
