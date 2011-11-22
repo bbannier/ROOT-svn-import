@@ -1,10 +1,14 @@
+#include <Cocoa/Cocoa.h>
+
 #include "TGQuartz.h"
 
 ClassImp(TGQuartz)
 
 //______________________________________________________________________________
-TGQuartz::TGQuartz()
+TGQuartz::TGQuartz(const char *name, const char *title)
+            : TGCocoa(name, title)
 {
+   NSLog(@"TGQuartz was created %s %s", name, title);
 }
 
 //______________________________________________________________________________

@@ -4,22 +4,19 @@
 
 #include "TGCocoa.h"
 
-@interface AAA : NSObject 
-@end
-
-@implementation AAA
-@end
 
 ClassImp(TGCocoa)
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
 {
-   std::cout<<"Hello from Cocoa\n";
    NSLog(@"Hello from ObjC runtime");
+}
 
-   AAA * p = [[AAA alloc] init];
-   [p release];
+//______________________________________________________________________________
+TGCocoa::TGCocoa(const char *name, const char *title)
+            : TVirtualX(name, title)
+{
 }
 
 //______________________________________________________________________________
