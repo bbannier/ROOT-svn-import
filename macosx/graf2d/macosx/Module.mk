@@ -21,6 +21,8 @@ MACOSXDH        := $(MACOSXDS:.cxx=.h)
 MACOSXH1        := $(wildcard $(MODDIRI)/T*.h)
 MACOSXH         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MACOSXS         := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
+MACOSXSOBJCPP   := $(wildcard $(MODDIRS)/*.mm)
+MACOSXOBJCPPO   := $(MACOSXSOBJCPP:.mm=.o)
 MACOSXO         := $(MACOSXS:.cxx=.o)
 
 
@@ -43,13 +45,10 @@ INCLUDEFILES += $(MACOSXDEP)
 include/%.h:    $(MACOSXDIRI)/%.h
 		cp $< $@
 
-$(MACOSXLIB):      $(MACOSXO) $(MACOSXDO) $(ORDER_) $(MAINLIBS)
+$(MACOSXLIB):      $(MACOSXO) $(MACOSXOBJCPPO) $(MACOSXDO) $(ORDER_) $(MAINLIBS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-		   "$(SOFLAGS)" libGMACOSX.$(SOEXT) $@ "$(MACOSXO) $(MACOSXDO)" \
+		   "$(SOFLAGS)" libGMACOSX.$(SOEXT) $@ "$(MACOSXO) $(MACOSXOBJCPPO)" "$(MACOSXDO)" \
 		   "$(MACOSXLIBEXTRA)"
-         
-$MACOSXOBJCO: $(MACOSXS2)
-
 
 $(MACOSXDS):       $(MACOSXH1) $(MACOSXL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
@@ -62,6 +61,8 @@ $(MACOSXMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(MACOSXL)
 
 all-$(MODNAME): $(MACOSXLIB) $(MACOSXMAP)
 
+$(MACOSXOBJCPPO): $(MACOSXSOBJCPP)
+
 clean-$(MODNAME):
 		@rm -f $(MACOSXO) $(MACOSXDO)
 
@@ -72,7 +73,5 @@ distclean-$(MODNAME): clean-$(MODNAME)
 
 distclean::     distclean-$(MODNAME)
 
-$(MACOSXO): 
-      CXXFLAGS += -ObjC++
 $(MACOSXO):
       LDFLAGS += -framework Cocoa
