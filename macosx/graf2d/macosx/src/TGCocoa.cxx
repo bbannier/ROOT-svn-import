@@ -1,6 +1,26 @@
+#include <iostream>
+
+#include  <Cocoa/Cocoa.h>
+
 #include "TGCocoa.h"
 
-//ClassImp(TGCocoa)
+@interface AAA : NSObject 
+@end
+
+@implementation AAA
+@end
+
+ClassImp(TGCocoa)
+
+//______________________________________________________________________________
+TGCocoa::TGCocoa()
+{
+   std::cout<<"Hello from Cocoa\n";
+   NSLog(@"Hello from ObjC runtime");
+
+   AAA * p = [[AAA alloc] init];
+   [p release];
+}
 
 //______________________________________________________________________________
 void TGCocoa::GetWindowAttributes(Window_t /*id*/, WindowAttributes_t & /*attr*/)

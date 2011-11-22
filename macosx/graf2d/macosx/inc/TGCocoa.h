@@ -11,7 +11,7 @@
 
 class TGCocoa : public TVirtualX {
 public:
-   
+   TGCocoa();
    //TVirtualX final-overriders.
    virtual Bool_t    Init(void *display);
    virtual void      ClearWindow();
@@ -261,7 +261,7 @@ private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
 
-   //ClassDef(TGCocoa); //TVirtualX for MacOS X.
+   ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
 
 #endif
