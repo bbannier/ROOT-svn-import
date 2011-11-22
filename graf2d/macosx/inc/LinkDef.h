@@ -5,6 +5,6 @@
 #pragma link off all functions;
 
 #pragma link C++ class TGCocoa;
-//#pragma link C++ class TGQuartz; 
+#pragma link C++ class TGQuartz; 
 
 #endif

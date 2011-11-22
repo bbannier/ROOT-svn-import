@@ -5,9 +5,12 @@
 #include "TVirtualX.h"
 #endif
 
-//
-//This class implements window management part of TVirtualX for MacOS X, using Cocoa.
-//
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// This class implements window management part of TVirtualX            //
+// for MacOS X, using Cocoa.                                            //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
 
 class TGCocoa : public TVirtualX {
 public:
