@@ -559,7 +559,7 @@ INCLUDEFILES :=
 
 ##### RULES #####
 
-.SUFFIXES: .cxx .d
+.SUFFIXES: .cxx .mm .d
 .PRECIOUS: include/%.h
 
 # special rules (need to be defined before generic ones)
@@ -657,6 +657,10 @@ $(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 %.o: %.c
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+
+%.o: %.mm
+	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CXXFLAGS) -ObjC++ $(CXXOUT)$@ -c $<
 
 %.o: %.f
 ifeq ($(F77),f2c)
