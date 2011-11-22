@@ -46,7 +46,7 @@ include/%.h:    $(MACOSXDIRI)/%.h
 		cp $< $@
 
 $(MACOSXLIB):      $(MACOSXO) $(MACOSXOBJCPPO) $(MACOSXDO) $(ORDER_) $(MAINLIBS)
-		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
+		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" " -framework Cocoa " \
 		   "$(SOFLAGS)" libGMACOSX.$(SOEXT) $@ "$(MACOSXO) $(MACOSXOBJCPPO)" "$(MACOSXDO)" \
 		   "$(MACOSXLIBEXTRA)"
 
@@ -72,6 +72,3 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(MACOSXDEP) $(MACOSXDS) $(MACOSXDH) $(MACOSXLIB) $(MACOSXMAP)
 
 distclean::     distclean-$(MODNAME)
-
-$(MACOSXO):
-      LDFLAGS += -framework Cocoa
