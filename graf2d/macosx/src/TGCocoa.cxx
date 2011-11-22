@@ -255,6 +255,22 @@ Int_t TGCocoa::InitWindow(ULong_t /*window*/)
    // Creates a new window and return window number.
    // Returns -1 if window initialization fails.
 
+   NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+   
+   [NSApplication sharedApplication];
+   
+   NSWindow *window = [[NSWindow alloc]
+                       initWithContentRect:NSMakeRect(0.0f, 0.0f, 640.0f, 480.0f)
+                       styleMask: NSTitledWindowMask | NSClosableWindowMask |
+                       NSMiniaturizableWindowMask | NSResizableWindowMask
+                       backing:NSBackingStoreBuffered defer:YES];
+   
+   [window makeKeyAndOrderFront:nil];
+   
+   [[NSApplication sharedApplication] run];
+   
+   
+   [pool drain];
    return 0;
 }
 
