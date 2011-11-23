@@ -10,13 +10,14 @@ ClassImp(TGCocoa)
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
 {
-   NSLog(@"Hello from ObjC runtime");
+   NSLog(@"TGCocoa default ctor");
 }
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title)
 {
+   NSLog(@"TGCocoa %s %s", name, title);
 }
 
 //______________________________________________________________________________
