@@ -13,6 +13,7 @@
 //////////////////////////////////////////////////////////////////////////
 class TGQuartz : public TGCocoa {
 public:
+   TGQuartz();
    TGQuartz(const char *name, const char *title);
    
    //Final-overriders for TVirtualX.

@@ -47,7 +47,7 @@ include/%.h:    $(MACOSXDIRI)/%.h
 
 $(MACOSXLIB):      $(MACOSXO) $(MACOSXOBJCPPO) $(MACOSXDO) $(ORDER_) $(MAINLIBS)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" " -framework Cocoa " \
-		   "$(SOFLAGS)" libGMACOSX.$(SOEXT) $@ "$(MACOSXO) $(MACOSXOBJCPPO)" "$(MACOSXDO)" \
+		   "$(SOFLAGS)" $@ "$(MACOSXO) $(MACOSXOBJCPPO)" "$(MACOSXDO)" \
 		   "$(MACOSXLIBEXTRA)"
 
 $(MACOSXDS):       $(MACOSXH1) $(MACOSXL) $(ROOTCINTTMPDEP)
@@ -61,10 +61,8 @@ $(MACOSXMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(MACOSXL)
 
 all-$(MODNAME): $(MACOSXLIB) $(MACOSXMAP)
 
-$(MACOSXOBJCPPO): $(MACOSXSOBJCPP)
-
 clean-$(MODNAME):
-		@rm -f $(MACOSXO) $(MACOSXDO)
+		@rm -f $(MACOSXO) $(MACOSXDO) $(MACOSXOBJCPPO)
 
 clean::         clean-$(MODNAME)
 

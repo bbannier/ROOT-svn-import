@@ -5,6 +5,12 @@
 ClassImp(TGQuartz)
 
 //______________________________________________________________________________
+TGQuartz::TGQuartz()
+{
+   NSLog(@"TGQuartz default ctor");
+}
+
+//______________________________________________________________________________
 TGQuartz::TGQuartz(const char *name, const char *title)
             : TGCocoa(name, title)
 {
