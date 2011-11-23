@@ -584,6 +584,12 @@ void TApplication::LoadGraphicsLibs()
    title   = title1 + "Win32gdk";
 #endif
 
+#ifdef R__MACOSX
+   nativex = "quartz";
+   name    = "quartz";
+   title   = title1 + "Quartz"; 
+#endif
+
    TString guiBackend(gEnv->GetValue("Gui.Backend", "native"));
    guiBackend.ToLower();
    if (guiBackend == "native") {
