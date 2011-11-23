@@ -12,6 +12,16 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+
+struct CocoaWindow_t {
+   Int_t    fOpen;                // 1 if the window is open, 0 if not
+//   NSWindow fWindow;              // Cocoa window
+   UInt_t fWindow;
+   UInt_t   fWidth;               // width of the window
+   UInt_t   fHeight;              // height of the window
+};
+
+
 class TGCocoa : public TVirtualX {
 public:
    TGCocoa();
@@ -264,6 +274,10 @@ public:
 private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
+   
+   Int_t          fMaxNumberOfWindows;    //Maximum number of windows
+   CocoaWindow_t *fWindows;               //List of windows
+
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };

@@ -11,6 +11,8 @@ ClassImp(TGCocoa)
 TGCocoa::TGCocoa()
 {
    NSLog(@"TGCocoa default ctor");
+   
+   fMaxNumberOfWindows = 10;
 }
 
 //______________________________________________________________________________
@@ -18,6 +20,13 @@ TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title)
 {
    NSLog(@"TGCocoa %s %s", name, title);
+   
+   Int_t i;
+   
+   fMaxNumberOfWindows = 10;
+   
+   fWindows = (CocoaWindow_t*) TStorage::Alloc(fMaxNumberOfWindows*sizeof(CocoaWindow_t));
+   for (i = 0; i < fMaxNumberOfWindows; i++) fWindows[i].fOpen = 0;
 }
 
 //______________________________________________________________________________
@@ -85,9 +94,27 @@ void TGCocoa::GetPasteBuffer(Window_t /*id*/, Atom_t /*atom*/, TString &/*text*/
 //______________________________________________________________________________
 Bool_t TGCocoa::Init(void * /*display*/)
 {
-   // Initializes the X system. Returns kFALSE in case of failure.
-   // It is implementation dependent.
+   // Initializes the Cocoa and Quartz system. Returns kFALSE in case of failure.
+/*
+   if (!gdk_initialized) {
+      if (!gdk_init_check(NULL, NULL)) return kFALSE;
+      gdk_initialized = true;
+   }
+   
+   if (!gClipboardAtom) {
+      gClipboardAtom = gdk_atom_intern("CLIPBOARD", kFALSE);
+   }
+   
+   return kTRUE;
+*/
+   
+   /* Initialize application */
+   [NSApplication sharedApplication];
 
+   
+   
+   
+   
    return kFALSE;
 }
 
@@ -238,13 +265,14 @@ Bool_t TGCocoa::HasTTFonts() const
 }
 
 //______________________________________________________________________________
-Window_t TGCocoa::GetWindowID(Int_t /*wid*/)
+Window_t TGCocoa::GetWindowID(Int_t wid)
 {
-   // Returns the X11 window identifier.
+   // Returns the Cocoa window identifier.
    //
    // wid - workstation identifier (input)
 
-   return 0;
+   if (!fWindows) return 0;
+   return (Window_t) fWindows[wid].fWindow;
 }
 
 //______________________________________________________________________________
