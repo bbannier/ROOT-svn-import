@@ -660,7 +660,7 @@ $(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 
 %.o: %.mm
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CXXFLAGS) -ObjC++ $(CXXOUT)$@ -c $<
+	$(CXX) $(OPT) $(CXXFLAGS) -ObjC++ -std=c++0x $(CXXOUT)$@ -c $<
 
 %.o: %.f
 ifeq ($(F77),f2c)

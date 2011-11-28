@@ -5,22 +5,16 @@
 #include "TVirtualX.h"
 #endif
 
+#ifndef ROOT_X11Colors
+#include "X11Colors.h"
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // This class implements window management part of TVirtualX            //
 // for MacOS X, using Cocoa.                                            //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
-
-
-struct CocoaWindow_t {
-   Int_t    fOpen;                // 1 if the window is open, 0 if not
-//   NSWindow fWindow;              // Cocoa window
-   UInt_t fWindow;
-   UInt_t   fWidth;               // width of the window
-   UInt_t   fHeight;              // height of the window
-};
-
 
 class TGCocoa : public TVirtualX {
 public:
@@ -275,9 +269,7 @@ private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
    
-   Int_t          fMaxNumberOfWindows;    //Maximum number of windows
-   CocoaWindow_t *fWindows;               //List of windows
-
+   ROOT::MacOSX::X11::ColorParser fX11ColorParser;
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };

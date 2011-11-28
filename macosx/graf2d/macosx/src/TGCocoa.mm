@@ -10,23 +10,12 @@ ClassImp(TGCocoa)
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
 {
-   NSLog(@"TGCocoa default ctor");
-   
-   fMaxNumberOfWindows = 10;
 }
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title)
 {
-   NSLog(@"TGCocoa %s %s", name, title);
-   
-   Int_t i;
-   
-   fMaxNumberOfWindows = 10;
-   
-   fWindows = (CocoaWindow_t*) TStorage::Alloc(fMaxNumberOfWindows*sizeof(CocoaWindow_t));
-   for (i = 0; i < fMaxNumberOfWindows; i++) fWindows[i].fOpen = 0;
 }
 
 //______________________________________________________________________________
@@ -35,8 +24,7 @@ void TGCocoa::GetWindowAttributes(Window_t /*id*/, WindowAttributes_t & /*attr*/
 }
 
 //______________________________________________________________________________
-Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char * /*cname*/,
-                             ColorStruct_t & /*color*/)
+Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char * /*cname*/, ColorStruct_t & /*color*/)
 {
    // Looks up the string name of a color "cname" with respect to the screen
    // associated with the specified colormap. It returns the exact color value.
@@ -95,25 +83,6 @@ void TGCocoa::GetPasteBuffer(Window_t /*id*/, Atom_t /*atom*/, TString &/*text*/
 Bool_t TGCocoa::Init(void * /*display*/)
 {
    // Initializes the Cocoa and Quartz system. Returns kFALSE in case of failure.
-/*
-   if (!gdk_initialized) {
-      if (!gdk_init_check(NULL, NULL)) return kFALSE;
-      gdk_initialized = true;
-   }
-   
-   if (!gClipboardAtom) {
-      gClipboardAtom = gdk_atom_intern("CLIPBOARD", kFALSE);
-   }
-   
-   return kTRUE;
-*/
-   
-   /* Initialize application */
-   [NSApplication sharedApplication];
-
-   
-   
-   
    
    return kFALSE;
 }
@@ -270,9 +239,7 @@ Window_t TGCocoa::GetWindowID(Int_t wid)
    // Returns the Cocoa window identifier.
    //
    // wid - workstation identifier (input)
-
-   if (!fWindows) return 0;
-   return (Window_t) fWindows[wid].fWindow;
+   return Window_t();
 }
 
 //______________________________________________________________________________
@@ -280,23 +247,6 @@ Int_t TGCocoa::InitWindow(ULong_t /*window*/)
 {
    // Creates a new window and return window number.
    // Returns -1 if window initialization fails.
-
-   NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
-   
-   [NSApplication sharedApplication];
-   
-   NSWindow *window = [[NSWindow alloc]
-                       initWithContentRect:NSMakeRect(0.0f, 0.0f, 640.0f, 480.0f)
-                       styleMask: NSTitledWindowMask | NSClosableWindowMask |
-                       NSMiniaturizableWindowMask | NSResizableWindowMask
-                       backing:NSBackingStoreBuffered defer:YES];
-   
-   [window makeKeyAndOrderFront:nil];
-   
-   [[NSApplication sharedApplication] run];
-   
-   
-   [pool drain];
    return 0;
 }
 
@@ -873,13 +823,7 @@ Window_t TGCocoa::CreateWindow(Window_t /*parent*/, Int_t /*x*/, Int_t /*y*/,
 //______________________________________________________________________________
 Int_t TGCocoa::OpenDisplay(const char * /*dpyName*/)
 {
-   // Opens connection to display server (if such a thing exist on the
-   // current platform). The encoding and interpretation of the display
-   // name
-   // On X11 this method returns on success the X display socket descriptor
-   // >0, 0 in case of batch mode, and <0 in case of failure (cannot connect
-   // to display dpyName).
-
+   //
    return 0;
 }
 
