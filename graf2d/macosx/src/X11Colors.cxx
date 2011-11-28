@@ -115,10 +115,12 @@ bool ColorParser::LookupColorByName(const TString &colorName, ColorStruct_t &col
    std::map<TString, RGB_t>::const_iterator it = fX11RGB.find(colorName);
 
    if (it != fX11RGB.end()) {
+      color.fPixel = 0;
+
       color.fRed = it->second.fRed * 65535 / 255;
       color.fGreen = it->second.fGreen * 65535 / 255;
       color.fBlue = it->second.fBlue * 65535 / 255;
-      
+
       return true;
    }
 #ifdef DEBUG_ROOT_COCOA

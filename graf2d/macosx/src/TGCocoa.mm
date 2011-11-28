@@ -24,51 +24,35 @@ void TGCocoa::GetWindowAttributes(Window_t /*id*/, WindowAttributes_t & /*attr*/
 }
 
 //______________________________________________________________________________
-Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char * /*cname*/, ColorStruct_t & /*color*/)
+Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char *colorName, ColorStruct_t &color)
 {
-   // Looks up the string name of a color "cname" with respect to the screen
-   // associated with the specified colormap. It returns the exact color value.
-   // If the color name is not in the Host Portable Character Encoding,
-   // the result is implementation dependent.
-   //
-   // cmap  - the colormap
-   // cname - the color name string; use of uppercase or lowercase
-   //         does not matter
-   // color - returns the exact color value for later use
-   //
+   //"Color" passed as colorName, can be one of the names, defined in X11/rgb.txt,
+   //or rgb triplet, which looks like: #rgb #rrggbb #rrrgggbbb #rrrrggggbbbb,
+   //where r, g, and b - are hex digits.
+   return fX11ColorParser.ParseColor(colorName, color);
+}
+
+//______________________________________________________________________________
+Bool_t TGCocoa::AllocColor(Colormap_t /*cmap*/, ColorStruct_t &color)
+{
+   //   
+   color.fPixel = ((color.fRed >> 8) & 0xFF) << 16 | ((color.fGreen >> 8) & 0xFF) << 8 | ((color.fGreen >> 8) & 0xFF);
    return kTRUE;
 }
 
 //______________________________________________________________________________
-Bool_t TGCocoa::AllocColor(Colormap_t /*cmap*/, ColorStruct_t & /*color*/)
-{
-   // Allocates a read-only colormap entry corresponding to the closest RGB
-   // value supported by the hardware. If no cell could be allocated it
-   // returns kFALSE, otherwise kTRUE.
-   //
-   // The pixel value is set to default. Let system think we could allocate
-   // color.
-   //
-   // cmap  - the colormap
-   // color - specifies and returns the values actually used in the cmap
-   return kTRUE;
-}
-
-//______________________________________________________________________________
-void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & /*color*/)
+void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & color)
 {
    // Returns the current RGB value for the pixel in the "color" structure
-   //
-   // The color components are set to default.
-   //
-   // cmap  - the colormap
-   // color - specifies and returns the RGB values for the pixel specified
-   //         in the structure
+   color.fRed = color.fPixel >> 16 & 0xFF;
+   color.fGreen = color.fPixel >> 7 & 0xFF;
+   color.fBlue = color.fPixel & 0xFF;
 }
 
 //______________________________________________________________________________
 void TGCocoa::NextEvent(Event_t & /*event*/)
 {
+
 }
 
 //______________________________________________________________________________
@@ -234,7 +218,7 @@ Bool_t TGCocoa::HasTTFonts() const
 }
 
 //______________________________________________________________________________
-Window_t TGCocoa::GetWindowID(Int_t wid)
+Window_t TGCocoa::GetWindowID(Int_t /*wid*/)
 {
    // Returns the Cocoa window identifier.
    //
