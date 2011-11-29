@@ -21,6 +21,9 @@
 // by Olivier Couet (package X11INT).                                   //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+
+#include <iostream>
+
 #include "TROOT.h"
 #include "TColor.h"
 #include "TGX11.h"
@@ -43,6 +46,7 @@
 #ifdef R__AIX
 #   include <sys/socket.h>
 #endif
+
 
 extern float   XRotVersion(char*, int);
 extern void    XRotSetMagnification(float);
@@ -1262,8 +1266,11 @@ Int_t TGX11::InitWindow(ULong_t win)
 
    Window wind = (Window) win;
 
+
+
    XGetGeometry(fDisplay, wind, &root, &xval, &yval, &wval, &hval, &border, &depth);
 
+   std::cout<<"InitWindow called with "<<win<<" w == "<<wval<<" h == "<<hval<<std::endl;
    // Select next free window number
 
 again:
@@ -1329,7 +1336,7 @@ again:
 Int_t TGX11::AddWindow(ULong_t qwid, UInt_t w, UInt_t h)
 {
    // Register a window created by Qt as a ROOT window (like InitWindow()).
-
+std::cout<<"AddWindow\n";
    Int_t wid;
 
    // Select next free window number

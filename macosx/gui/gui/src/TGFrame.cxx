@@ -228,6 +228,7 @@ TGFrame::TGFrame(TGClient *c, Window_t id, const TGWindow *parent)
    fHeight      = attributes.fHeight;
    fBorderWidth = attributes.fBorderWidth;
    fEventMask   = (UInt_t) attributes.fYourEventMask;
+   
    fBackground  = 0;
    fOptions     = 0;
    fMinWidth    = 0;
