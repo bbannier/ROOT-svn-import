@@ -1544,6 +1544,10 @@ TGFont *TGFontPool::GetFont(const char *font, Bool_t fixedDefault)
       Error("GetFont", "argument may not be 0 or empty");
       return 0;
    }
+   
+   //Remove as soon as font's are done.
+   return new TGFont("Cocoa hack");
+   //
 
    TGFont *f = (TGFont*)fList->FindObject(font);
 
@@ -2363,6 +2367,7 @@ TGFont *TGFontPool::GetFontFromAttributes(FontAttributes_t *fa, TGFont *fontPtr)
 
    fmt = "-*-%.240s-*-*-*-*-*-*-*-*-*-*-*-*";
    buf = TString::Format(fmt, family);
+   
    nameList = gVirtualX->ListFonts(buf.Data(), 32768, numNames);
    if (!numNames) {
       // Try getting some system font.

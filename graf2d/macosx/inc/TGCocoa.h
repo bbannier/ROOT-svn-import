@@ -1,6 +1,8 @@
 #ifndef ROOT_TGCocoa
 #define ROOT_TGCocoa
 
+#include <memory>
+
 #ifndef ROOT_TVirtualX
 #include "TVirtualX.h"
 #endif
@@ -15,6 +17,16 @@
 // for MacOS X, using Cocoa.                                            //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
+
+namespace ROOT {
+namespace MacOSX {
+namespace Details {
+
+class CocoaPrivate;
+
+}
+}
+}
 
 class TGCocoa : public TVirtualX {
 public:
@@ -268,8 +280,9 @@ public:
 private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
-   
-   ROOT::MacOSX::X11::ColorParser fX11ColorParser;
+
+   //As soon as ROOT can be compiled with 0x11 library, replace auto_ptr.
+   std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl;//!
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };

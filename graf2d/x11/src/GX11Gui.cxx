@@ -40,6 +40,9 @@
 
 #include <X11/extensions/shape.h>
 
+
+#include <iostream>
+
 //---- MWM Hints stuff
 
 struct MWMHintsProperty_t {
@@ -392,6 +395,11 @@ Window_t TGX11::CreateWindow(Window_t parent, Int_t x, Int_t y,
       xmask |= CWBorderPixel;
       xattr.border_pixel = fBlackPixel;
    }
+   
+   Window_t rezWin = (Window_t) XCreateWindow(fDisplay, (Window) parent, x, y,
+                                   w, h, border, depth, clss, (Visual*)visual,
+                                   xmask, &xattr);
+   std::cout<<"TGX11::CreateWindow, new window "<<rezWin<<std::endl;
 
    return (Window_t) XCreateWindow(fDisplay, (Window) parent, x, y,
                                    w, h, border, depth, clss, (Visual*)visual,
