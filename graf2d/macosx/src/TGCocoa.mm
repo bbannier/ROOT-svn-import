@@ -777,10 +777,13 @@ void TGCocoa::WritePixmap(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/, char * /*px
 
 //---- Methods used for GUI -----
 //______________________________________________________________________________
-void TGCocoa::MapWindow(Window_t /*wid*/)
+void TGCocoa::MapWindow(Window_t wid)
 {
    // Maps the window "wid" and all of its subwindows that have had map
    // requests. This function has no effect if the window is already mapped.
+#ifdef DEBUG_ROOT_COCOA
+   std::cout<<"TGCocoa::MapWindow, wid == "<<wid<<std::endl;
+#endif
 }
 
 //______________________________________________________________________________
@@ -788,14 +791,34 @@ void TGCocoa::MapSubwindows(Window_t /*wid*/)
 {
    // Maps all subwindows for the specified window "wid" in top-to-bottom
    // stacking order.
+   
 }
 
 //______________________________________________________________________________
-void TGCocoa::MapRaised(Window_t /*wid*/)
+void TGCocoa::MapRaised(Window_t wid)
 {
    // Maps the window "wid" and all of its subwindows that have had map
    // requests on the screen and put this window on the top of of the
    // stack of all windows.
+   
+   //Just a sketch code.
+#ifdef DEBUG_ROOT_COCOA
+   std::cout<<"TGCocoa::MapRaised, wid == "<<wid<<std::endl;
+#endif
+
+   ROOT::MacOSX::Util::AutoreleasePool pool;
+
+   auto winIter = fPimpl->fWindows.find(wid);
+
+#ifdef DEBUG_ROOT_COCOA
+   if (winIter == fPimpl->fWindows.end()) {
+      std::cout<<"TGCocoa::MapRaised, bad window id "<<wid<<std::endl;
+      throw std::runtime_error("TGCocoa::MapRaised, bad window id");
+   }
+#endif
+
+   NSWindow *cocoaWin = (NSWindow *)fPimpl->fWindows[wid].fCocoaWindow.Get();
+   [cocoaWin orderFront : nil];
 }
 
 //______________________________________________________________________________
@@ -823,10 +846,13 @@ void TGCocoa::DestroySubwindows(Window_t /*wid*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::RaiseWindow(Window_t /*wid*/)
+void TGCocoa::RaiseWindow(Window_t wid)
 {
    // Raises the specified window to the top of the stack so that no
    // sibling window obscures it.
+#ifdef DEBUG_ROOT_COCOA
+   std::cout<<"TGCocoa::RaiseWindow was called with wid == "<<wid<<std::endl;
+#endif
 }
 
 //______________________________________________________________________________
@@ -927,61 +953,39 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
                                SetWindowAttributes_t * /*attr*/,
                                UInt_t /*wtype*/)
 {
-   // Creates an unmapped subwindow for a specified parent window and returns
-   // the created window. The created window is placed on top in the stacking
-   // order with respect to siblings. The coordinate system has the X axis
-   // horizontal and the Y axis vertical with the origin [0,0] at the
-   // upper-left corner. Each window and pixmap has its own coordinate system.
-   //
-   // parent - the parent window
-   // x, y   - coordinates, the top-left outside corner of the window's
-   //          borders; relative to the inside of the parent window's borders
-   // w, h   - width and height of the created window; do not include the
-   //          created window's borders
-   // border - the border pixel value of the window
-   // depth  - the window's depth
-   // clss   - the created window's class; can be InputOutput, InputOnly, or
-   //          CopyFromParent
-   // visual - the visual type
-   // attr   - the structure from which the values are to be taken.
-   // wtype  - the window type
-   
+   //Do not know at the moment, what to do with ALL this possible X11 parameters, which
+   //means nothing for Cocoa. TODO: create window correctly to emulate what ROOT wants from TGCocoa.
+   //This implementation is just a sketch to try.
    //
 #ifdef DEBUG_ROOT_COCOA
    std::cout<<"CreateWindow was called "<<parent<<' '<<x<<' '<<y<<' '<<w<<' '<<h<<' '<<border<<' '<<depth<<std::endl;
 #endif
    //
-   /*
-   XSetWindowAttributes xattr;
-   ULong_t              xmask = 0;
 
-   if (attr)
-      MapSetWindowAttributes(attr, xmask, xattr);
-
-   if (depth == 0)
-      depth = fDepth;
-   if (visual == 0)
-      visual = fVisual;
-   if (fColormap && !(xmask & CWColormap)) {
-      xmask |= CWColormap;
-      xattr.colormap = fColormap;
-   }
-   if ((Window)parent == fRootWin && fRootWin != fVisRootWin) {
-      xmask |= CWBorderPixel;
-      xattr.border_pixel = fBlackPixel;
-   }
-
-   return (Window_t) XCreateWindow(fDisplay, (Window) parent, x, y,
-                                   w, h, border, depth, clss, (Visual*)visual,
-                                   xmask, &xattr);
-   */
-   NSRect contentRect = {};
-   contentRect.origin.x = x;
-   contentRect.origin.y = y;
-   contentRect.size.width = w;
-   contentRect.size.height = h;
-
+   //Check if really need this.
+   ROOT::MacOSX::Util::AutoreleasePool pool;
    
+   if (!parent) {//parent == root window.
+      NSRect contentRect = {};
+      contentRect.origin.x = x;
+      contentRect.origin.y = y;
+      contentRect.size.width = w;
+      contentRect.size.height = h;
+      NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+      NSWindow *newWindow = [[NSWindow alloc] initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
+      
+      WindowAttributes_t winAttr;
+      winAttr.fX = x;
+      winAttr.fY = y;
+      winAttr.fWidth = w;
+      winAttr.fHeight = h;
+      
+      const Window_t result = fPimpl->RegisterWindow(newWindow, winAttr);
+      [newWindow release];//Owned by fPimpl now.
+      return result;
+   } else {
+      //If it's a child window, create NSView???
+   }
 
    return 0;
 }
