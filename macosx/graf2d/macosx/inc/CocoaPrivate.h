@@ -2,6 +2,7 @@
 #define ROOT_CocoaPrivate
 
 #include <vector>
+#include <map>
 
 #ifndef ROOT_CocoaUtils
 #include "CocoaUtils.h"
@@ -26,6 +27,7 @@ struct CocoaWindowAttributes {
    Util::StrongReference fCocoaWindow;
    
    CocoaWindowAttributes();
+   CocoaWindowAttributes(const WindowAttributes_t &winAttr, NSWindow *nsWin);
 };
 
 class CocoaPrivate {
@@ -39,9 +41,15 @@ private:
    CocoaPrivate &operator = (const CocoaPrivate &rhs) = delete;
 
    void InitX11RootWindow();
+
+   unsigned RegisterWindow(NSWindow *nsWin, const WindowAttributes_t &winAttr);
+   void DeleteWindow(unsigned windowID);
    
    X11::ColorParser fX11ColorParser;
-   std::vector<CocoaWindowAttributes> fWindows;
+
+   unsigned fCurrentWindowID;
+   std::vector<unsigned> fFreeWindowIDs;
+   std::map<unsigned, CocoaWindowAttributes> fWindows;
 };
 
 }

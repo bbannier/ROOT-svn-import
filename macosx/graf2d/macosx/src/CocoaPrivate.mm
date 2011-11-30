@@ -46,11 +46,6 @@ struct WindowAttributes_t {
 //
 */
 
-//______________________________________________________________________________
-void GetWindowAttributesFromScreen(NSScreen *screen, CocoaWindowAttributes &cocoaWin)
-{
-}
-
 }
 
 
@@ -61,7 +56,15 @@ CocoaWindowAttributes::CocoaWindowAttributes()
 }
 
 //______________________________________________________________________________
+CocoaWindowAttributes::CocoaWindowAttributes(const WindowAttributes_t &winAttr, NSWindow *nsWin)
+                         : fROOTWindowAttribs(winAttr),
+                           fCocoaWindow(nsWin)
+{
+}
+
+//______________________________________________________________________________
 CocoaPrivate::CocoaPrivate()
+               : fCurrentWindowID(1)//0 is for 'ROOT', any real window has id > 0.
 {
    //Init NSApplication.
    Util::AutoreleasePool pool;
@@ -84,8 +87,8 @@ void CocoaPrivate::InitX11RootWindow()
    if (screens) {
       NSScreen *mainScreen = [screens objectAtIndex : 0];
       if (mainScreen) {
-         fWindows.push_back(CocoaWindowAttributes());
-         CocoaWindowAttributes &cocoaWin = fWindows.back();
+         fWindows[0] = CocoaWindowAttributes();
+         CocoaWindowAttributes &cocoaWin = fWindows[0];
 
          WindowAttributes_t &rootAttr = cocoaWin.fROOTWindowAttribs;
          const NSRect frame = [mainScreen frame];
@@ -109,6 +112,55 @@ void CocoaPrivate::InitX11RootWindow()
          throw std::runtime_error("screen at index 0 is nil");
    } else 
       throw std::runtime_error("-screens returned nil");
+}
+
+//______________________________________________________________________________
+unsigned CocoaPrivate::RegisterWindow(NSWindow *nsWin, const WindowAttributes_t &winAttr)
+{
+   //In case of X11, gVirtualX->CreateWindow returns some 'descriptor' (integer number),
+   //which is valid for X11 calls and window can be identified by this descriptor.
+   //With Cocoa, we have NSWindow pointers, which can not be simply returned from CreateWindow.
+   //So I need some mapping between real NSObjects and ROOT's integers.
+   //I have an internal numbering - just subsequent numbers. NSWindow has -windowNumber
+   //method - I'll probably use it in future, but still the machinery will be almost the same.
+   //If window is closed, it's id will go to fFreeWindowIDs array. So, check it first:
+   
+   unsigned newID = 0;
+
+   if (fFreeWindowIDs.size()) {
+      newID = fFreeWindowIDs.back();
+      fFreeWindowIDs.pop_back();
+   } else
+      newID = fCurrentWindowID++;
+
+#ifdef DEBUG_ROOT_COCOA
+   if (fWindows.find(newID) != fWindows.end()) {
+      std::cout<<"new window ID "<<newID<<" is still in use\n";
+      throw std::runtime_error("window id is still in use");
+   }
+#endif
+
+   fWindows[newID] = CocoaWindowAttributes(winAttr, nsWin);
+   
+   return newID;
+}
+
+//______________________________________________________________________________
+void CocoaPrivate::DeleteWindow(unsigned winID)
+{
+   auto winIter = fWindows.find(winID);
+
+#ifdef DEBUG_ROOT_COCOA
+   if (winIter == fWindows.end()) {
+      std::cout<<"Attempt to delete window, which is not registered : "<<winID<<std::endl;
+      throw std::runtime_error("Non existing winID in DeleteWindow");
+   }
+#endif
+   
+   //Probably, I'll need some additional cleanup here later. Now just delete NSWindow and
+   //reuse its id.
+   fFreeWindowIDs.push_back(winID);
+   fWindows.erase(winIter);//StrongReference should do its work here.
 }
 
 }

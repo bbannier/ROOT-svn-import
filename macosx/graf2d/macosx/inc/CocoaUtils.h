@@ -22,7 +22,10 @@ public:
    StrongReference &operator = (const StrongReference &rhs);
    StrongReference &operator = (NSObject *nsObject);
    
-   NSObject *Get()const;
+   NSObject *Get()const
+   {
+      return fNSObject;
+   }
 private:
    NSObject *fNSObject;
 };
