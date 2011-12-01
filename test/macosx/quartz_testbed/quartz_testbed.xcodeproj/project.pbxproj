@@ -18,6 +18,13 @@
 		7038665814879AA2001E4D5F /* QuartzTest.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 7038665714879AA2001E4D5F /* QuartzTest.cxx */; };
 		7038665B14879C61001E4D5F /* libHist.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665A14879C61001E4D5F /* libHist.so */; };
 		7089AD391487B188004DF640 /* libGMACOSX.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD381487B188004DF640 /* libGMACOSX.so */; };
+		7089AD3C1487B3D5004DF640 /* TestPad.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7089AD3A1487B3D5004DF640 /* TestPad.mm */; };
+		7089AD3E1487B421004DF640 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD3D1487B421004DF640 /* Quartz.framework */; };
+		7089AD401487B44C004DF640 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD3F1487B44C004DF640 /* QuartzCore.framework */; };
+		7089AD451487BBB2004DF640 /* libGpad.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD411487BBB2004DF640 /* libGpad.so */; };
+		7089AD461487BBB2004DF640 /* libGraf.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD421487BBB2004DF640 /* libGraf.so */; };
+		7089AD471487BBB2004DF640 /* libGraf3d.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD431487BBB2004DF640 /* libGraf3d.so */; };
+		7089AD481487BBB2004DF640 /* libHistPainter.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD441487BBB2004DF640 /* libHistPainter.so */; };
 		70D2601B148782B300F1E183 /* TestPadStub.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70D26018148782B300F1E183 /* TestPadStub.cxx */; };
 /* End PBXBuildFile section */
 
@@ -42,6 +49,14 @@
 		7038665914879ACF001E4D5F /* QuartzTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzTest.h; sourceTree = "<group>"; };
 		7038665A14879C61001E4D5F /* libHist.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libHist.so; path = ../../../lib/libHist.so; sourceTree = "<group>"; };
 		7089AD381487B188004DF640 /* libGMACOSX.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGMACOSX.so; path = ../../../lib/libGMACOSX.so; sourceTree = "<group>"; };
+		7089AD3A1487B3D5004DF640 /* TestPad.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TestPad.mm; sourceTree = "<group>"; };
+		7089AD3B1487B3D5004DF640 /* TestPad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestPad.h; sourceTree = "<group>"; };
+		7089AD3D1487B421004DF640 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
+		7089AD3F1487B44C004DF640 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		7089AD411487BBB2004DF640 /* libGpad.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGpad.so; path = ../../../lib/libGpad.so; sourceTree = "<group>"; };
+		7089AD421487BBB2004DF640 /* libGraf.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGraf.so; path = ../../../lib/libGraf.so; sourceTree = "<group>"; };
+		7089AD431487BBB2004DF640 /* libGraf3d.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGraf3d.so; path = ../../../lib/libGraf3d.so; sourceTree = "<group>"; };
+		7089AD441487BBB2004DF640 /* libHistPainter.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libHistPainter.so; path = ../../../lib/libHistPainter.so; sourceTree = "<group>"; };
 		70D26018148782B300F1E183 /* TestPadStub.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestPadStub.cxx; sourceTree = "<group>"; };
 		70D26019148782B300F1E183 /* TestPadStub.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestPadStub.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -51,6 +66,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7089AD451487BBB2004DF640 /* libGpad.so in Frameworks */,
+				7089AD461487BBB2004DF640 /* libGraf.so in Frameworks */,
+				7089AD471487BBB2004DF640 /* libGraf3d.so in Frameworks */,
+				7089AD481487BBB2004DF640 /* libHistPainter.so in Frameworks */,
+				7089AD401487B44C004DF640 /* QuartzCore.framework in Frameworks */,
+				7089AD3E1487B421004DF640 /* Quartz.framework in Frameworks */,
 				7089AD391487B188004DF640 /* libGMACOSX.so in Frameworks */,
 				7038665B14879C61001E4D5F /* libHist.so in Frameworks */,
 				7038665514878ACC001E4D5F /* libCore.so in Frameworks */,
@@ -64,6 +85,12 @@
 		7037779914877BF500BDCEBF = {
 			isa = PBXGroup;
 			children = (
+				7089AD411487BBB2004DF640 /* libGpad.so */,
+				7089AD421487BBB2004DF640 /* libGraf.so */,
+				7089AD431487BBB2004DF640 /* libGraf3d.so */,
+				7089AD441487BBB2004DF640 /* libHistPainter.so */,
+				7089AD3F1487B44C004DF640 /* QuartzCore.framework */,
+				7089AD3D1487B421004DF640 /* Quartz.framework */,
 				7089AD381487B188004DF640 /* libGMACOSX.so */,
 				7038665A14879C61001E4D5F /* libHist.so */,
 				7038665414878ACC001E4D5F /* libCore.so */,
@@ -103,6 +130,8 @@
 		703777AE14877BF500BDCEBF /* quartz_testbed */ = {
 			isa = PBXGroup;
 			children = (
+				7089AD3A1487B3D5004DF640 /* TestPad.mm */,
+				7089AD3B1487B3D5004DF640 /* TestPad.h */,
 				70D26018148782B300F1E183 /* TestPadStub.cxx */,
 				70D26019148782B300F1E183 /* TestPadStub.h */,
 				703777BA14877BF500BDCEBF /* AppDelegate.h */,
@@ -197,6 +226,7 @@
 				703777C714877C9700BDCEBF /* QuartzView.mm in Sources */,
 				70D2601B148782B300F1E183 /* TestPadStub.cxx in Sources */,
 				7038665814879AA2001E4D5F /* QuartzTest.cxx in Sources */,
+				7089AD3C1487B3D5004DF640 /* TestPad.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
