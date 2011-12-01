@@ -27,12 +27,18 @@
    NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
    CGContextRef cgContext = (CGContextRef)[nsContext graphicsPort];
    
+   CGContextTranslateCTM(cgContext, 0.f, dirtyRect.size.height);
+   CGContextScaleCTM(cgContext, 1.f, -1.f);
+   
    test->SetContext(cgContext);
    test->SetPadSizes(dirtyRect.size.width, dirtyRect.size.height);
    test->Draw();
+
+//   CGContextSetRGBStrokeColor(cgContext, 0.f, 0.f, 0.f, 1.f);
+//   CGContextStrokeRect(cgContext, CGRectMake(0.f, 0.f, 500.f, 500.f));
    
-   CGContextSetRGBFillColor(cgContext, 1.f, 0.3f, 0.f, 1.f);
-   CGContextFillRect(cgContext, dirtyRect);
+  // CGContextSetRGBFillColor(cgContext, 1.f, 0.3f, 0.f, 1.f);
+  // CGContextFillRect(cgContext, dirtyRect);
 }
 
 - (void) dealloc

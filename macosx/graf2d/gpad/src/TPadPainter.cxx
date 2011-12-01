@@ -321,7 +321,6 @@ void TPadPainter::DrawLineNDC(Double_t u1, Double_t v1, Double_t u2, Double_t v2
 void TPadPainter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, EBoxMode mode)
 {
    // Paint a simple box.
-
    Int_t px1 = gPad->XtoPixel(x1);
    Int_t px2 = gPad->XtoPixel(x2);
    Int_t py1 = gPad->YtoPixel(y1);
