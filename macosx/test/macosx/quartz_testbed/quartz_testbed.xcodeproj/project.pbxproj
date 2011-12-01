@@ -13,7 +13,11 @@
 		703777B914877BF500BDCEBF /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 703777B714877BF500BDCEBF /* Credits.rtf */; };
 		703777BC14877BF500BDCEBF /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 703777BB14877BF500BDCEBF /* AppDelegate.m */; };
 		703777BF14877BF500BDCEBF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 703777BD14877BF500BDCEBF /* MainMenu.xib */; };
-		703777C714877C9700BDCEBF /* QuartzView.m in Sources */ = {isa = PBXBuildFile; fileRef = 703777C614877C9700BDCEBF /* QuartzView.m */; };
+		703777C714877C9700BDCEBF /* QuartzView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 703777C614877C9700BDCEBF /* QuartzView.mm */; };
+		7038665514878ACC001E4D5F /* libCore.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665414878ACC001E4D5F /* libCore.so */; settings = {ATTRIBUTES = (Required, ); }; };
+		7038665814879AA2001E4D5F /* QuartzTest.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 7038665714879AA2001E4D5F /* QuartzTest.cxx */; };
+		7038665B14879C61001E4D5F /* libHist.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665A14879C61001E4D5F /* libHist.so */; };
+		70D2601B148782B300F1E183 /* TestPadStub.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70D26018148782B300F1E183 /* TestPadStub.cxx */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,7 +35,13 @@
 		703777BB14877BF500BDCEBF /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		703777BE14877BF500BDCEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		703777C514877C9700BDCEBF /* QuartzView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzView.h; sourceTree = "<group>"; };
-		703777C614877C9700BDCEBF /* QuartzView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = QuartzView.m; sourceTree = "<group>"; };
+		703777C614877C9700BDCEBF /* QuartzView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QuartzView.mm; sourceTree = "<group>"; };
+		7038665414878ACC001E4D5F /* libCore.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libCore.so; path = ../../../lib/libCore.so; sourceTree = "<group>"; };
+		7038665714879AA2001E4D5F /* QuartzTest.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = QuartzTest.cxx; sourceTree = "<group>"; };
+		7038665914879ACF001E4D5F /* QuartzTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzTest.h; sourceTree = "<group>"; };
+		7038665A14879C61001E4D5F /* libHist.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libHist.so; path = ../../../lib/libHist.so; sourceTree = "<group>"; };
+		70D26018148782B300F1E183 /* TestPadStub.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestPadStub.cxx; sourceTree = "<group>"; };
+		70D26019148782B300F1E183 /* TestPadStub.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestPadStub.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +49,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7038665B14879C61001E4D5F /* libHist.so in Frameworks */,
+				7038665514878ACC001E4D5F /* libCore.so in Frameworks */,
 				703777A914877BF500BDCEBF /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -49,6 +61,8 @@
 		7037779914877BF500BDCEBF = {
 			isa = PBXGroup;
 			children = (
+				7038665A14879C61001E4D5F /* libHist.so */,
+				7038665414878ACC001E4D5F /* libCore.so */,
 				703777AE14877BF500BDCEBF /* quartz_testbed */,
 				703777A714877BF500BDCEBF /* Frameworks */,
 				703777A514877BF500BDCEBF /* Products */,
@@ -85,11 +99,15 @@
 		703777AE14877BF500BDCEBF /* quartz_testbed */ = {
 			isa = PBXGroup;
 			children = (
+				70D26018148782B300F1E183 /* TestPadStub.cxx */,
+				70D26019148782B300F1E183 /* TestPadStub.h */,
 				703777BA14877BF500BDCEBF /* AppDelegate.h */,
 				703777BB14877BF500BDCEBF /* AppDelegate.m */,
 				703777BD14877BF500BDCEBF /* MainMenu.xib */,
 				703777C514877C9700BDCEBF /* QuartzView.h */,
-				703777C614877C9700BDCEBF /* QuartzView.m */,
+				703777C614877C9700BDCEBF /* QuartzView.mm */,
+				7038665914879ACF001E4D5F /* QuartzTest.h */,
+				7038665714879AA2001E4D5F /* QuartzTest.cxx */,
 				703777AF14877BF500BDCEBF /* Supporting Files */,
 			);
 			path = quartz_testbed;
@@ -172,7 +190,9 @@
 			files = (
 				703777B514877BF500BDCEBF /* main.m in Sources */,
 				703777BC14877BF500BDCEBF /* AppDelegate.m in Sources */,
-				703777C714877C9700BDCEBF /* QuartzView.m in Sources */,
+				703777C714877C9700BDCEBF /* QuartzView.mm in Sources */,
+				70D2601B148782B300F1E183 /* TestPadStub.cxx in Sources */,
+				7038665814879AA2001E4D5F /* QuartzTest.cxx in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -227,6 +247,8 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../../include;
+				LIBRARY_SEARCH_PATHS = ../../../lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -248,6 +270,8 @@
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../../include;
+				LIBRARY_SEARCH_PATHS = ../../../lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
 			};
@@ -259,6 +283,12 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "quartz_testbed/quartz_testbed-Prefix.pch";
 				INFOPLIST_FILE = "quartz_testbed/quartz_testbed-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(SRCROOT)/../../../lib";
+				LIBRARY_SEARCH_PATHS = (
+					../../../lib,
+					"\"$(SRCROOT)/../../../lib\"",
+				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -270,6 +300,12 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "quartz_testbed/quartz_testbed-Prefix.pch";
 				INFOPLIST_FILE = "quartz_testbed/quartz_testbed-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(SRCROOT)/../../../lib";
+				LIBRARY_SEARCH_PATHS = (
+					../../../lib,
+					"\"$(SRCROOT)/../../../lib\"",
+				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -294,6 +330,7 @@
 				703777C414877BF500BDCEBF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
