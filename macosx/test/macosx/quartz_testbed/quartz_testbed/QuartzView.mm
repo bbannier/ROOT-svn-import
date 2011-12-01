@@ -1,11 +1,16 @@
 #import "QuartzView.h"
 
-@implementation QuartzView
+#import "QuartzTest.h"
+
+@implementation QuartzView {
+   QuartzTest *test;
+}
 
 - (id)initWithFrame:(NSRect)frame
 {
    if (self = [super initWithFrame : frame]) {
       // Initialization code here.
+      test = new QuartzTest(frame.size.width, frame.size.height);
    }
     
    return self;

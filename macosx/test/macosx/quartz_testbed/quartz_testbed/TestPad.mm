@@ -1,14 +1,3 @@
-// @(#)root/graf2d:$Id$
-// Author: Timur Pocheptsov, 14/8/2011
-
-/*************************************************************************
- * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
- * All rights reserved.                                                  *
- *                                                                       *
- * For the licensing terms see $ROOTSYS/LICENSE.                         *
- * For the list of contributors see $ROOTSYS/README/CREDITS.             *
- *************************************************************************/
-
 #include <algorithm>
 #include <stdexcept>
 
@@ -27,9 +16,6 @@
 #include "TMath.h"
 #include "TH1.h"
 
-//Internal (module) includes.
-//#include "IOSGraphicUtils.h"
-//#include "IOSFillPatterns.h"
 #include "TestPad.h"
 
 //______________________________________________________________________________
@@ -124,8 +110,6 @@ void TestPad::SetViewWH(UInt_t viewW, UInt_t viewH)
    fViewH = viewH;
    
    ResizePad();
-   
-   //fPainter.SetTransform(fViewW, GetX1(), GetX2(), fViewH, GetY1(), GetY2());
 }
 
 //______________________________________________________________________________
@@ -456,8 +440,6 @@ void TestPad::Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
 
    // compute pad conversion coefficients
    ResizePad();
-
-   //fPainter.SetTransform(GetWw(), GetX1(), GetX2(), GetWh(), GetY1(), GetY2());
 }
 
 //______________________________________________________________________________
@@ -529,7 +511,6 @@ void TestPad::SetEditable(Bool_t mode)
 TVirtualPad *TestPad::cd(Int_t)
 {
    gPad = this;
-  // fPainter.SetTransform(GetWw(), GetX1(), GetX2(), GetWh(), GetY1(), GetY2());
 
    return this;
 }
@@ -782,7 +763,7 @@ void TestPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Optio
       if (style > 3000 && style < 4000) {
          if (style < 3026) {
             // draw stipples with fFillColor foreground
-      //      fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+            fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
          }
 
          if (style >= 3100 && style < 4000) {
@@ -795,21 +776,22 @@ void TestPad::PaintBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, Optio
          //special case for TAttFillCanvas
          if (gVirtualX->GetFillColor() == 10) {
             gVirtualX->SetFillColor(1);
-     //       fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+            fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
             gVirtualX->SetFillColor(10);
          }
       } else if (style >= 4000 && style <= 4100) {
          // For style >=4000 we make the window transparent.
          // From 4000 to 4100 the window is 100% transparent to 100% opaque
          //ignore this style option when this is the canvas itself
-     //    fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+         fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
       } else {
-     //    fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
+         fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kFilled);
       }
 
-      if (option[0] == 'l');// fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
+      if (option[0] == 'l') 
+         fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
    } else {
-    //  fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
+      fPainter.DrawBox(x1, y1, x2, y2, TVirtualPadPainter::kHollow);
       if (option[0] == 's') gVirtualX->SetFillStyle(style0);
    }
 }
@@ -852,7 +834,7 @@ void TestPad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
       return;
    }
 
- //  fPainter.DrawFillArea(n, &x[0], &y[0]);
+   fPainter.DrawFillArea(n, &x[0], &y[0]);
 }
 
 //______________________________________________________________________________
@@ -896,7 +878,7 @@ void TestPad::PaintLine(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
       if (Clip(x,y,fX1,fY1,fX2,fY2) == 2) return;
    }
 
-//   fPainter.DrawLine(x[0], y[0], x[1], y[1]);
+   fPainter.DrawLine(x[0], y[0], x[1], y[1]);
 }
 
 //______________________________________________________________________________
@@ -905,8 +887,8 @@ void TestPad::PaintLineNDC(Double_t u1, Double_t v1,Double_t u2, Double_t v2)
    const Double_t xRange = GetX2() - GetX1();
    const Double_t yRange = GetY2() - GetY1();
 
- //  fPainter.DrawLine(GetX1() + u1 * xRange, GetY1() + v1 * yRange, 
-   //                  GetX1() + u2 * xRange, GetY1() + v2 * yRange);
+   fPainter.DrawLine(GetX1() + u1 * xRange, GetY1() + v1 * yRange, 
+                     GetX1() + u2 * xRange, GetY1() + v2 * yRange);
 }
 
 //______________________________________________________________________________
@@ -973,7 +955,7 @@ void TestPad::PaintPolyLine(Int_t n, Float_t *x, Float_t *y, Option_t *)
       np++;
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
- //     fPainter.DrawPolyLine(np, &x[i1], &y[i1]);
+      fPainter.DrawPolyLine(np, &x[i1], &y[i1]);
       if (iclip) {
          x[i] = x1;
          y[i] = y1;
@@ -1021,7 +1003,7 @@ void TestPad::PaintPolyLine(Int_t n, Double_t *x, Double_t *y, Option_t *option)
       if (i1 < 0) i1 = i;
       if (iclip == 0 && i < n-2) continue;
       
-   //   fPainter.DrawPolyLine(np, &x[i1], &y[i1]);
+      fPainter.DrawPolyLine(np, &x[i1], &y[i1]);
       if (iclip) {
          x[i] = x1;
          y[i] = y1;
@@ -1039,7 +1021,7 @@ void TestPad::PaintPolyLineNDC(Int_t n, Double_t *x, Double_t *y, Option_t *)
    if (n <= 0) //Check from original TPad.
       return;
 
- //  fPainter.DrawPolyLineNDC(n, x, y);
+   fPainter.DrawPolyLineNDC(n, x, y);
 }
 
 //______________________________________________________________________________
@@ -1075,7 +1057,7 @@ void TestPad::PaintPolyMarker(Int_t nn, Float_t *x, Float_t *y, Option_t *)
       }
       if (np == 0) continue;
       
-   //   fPainter.DrawPolyMarker(np, &x[i1], &y[i1]);
+      fPainter.DrawPolyMarker(np, &x[i1], &y[i1]);
       
       i1 = -1;
       np = 0;
@@ -1104,7 +1086,7 @@ void TestPad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
       }
       if (np == 0) continue;
       
-  //    fPainter.DrawPolyMarker(np, &x[i1], &y[i1]);
+      fPainter.DrawPolyMarker(np, &x[i1], &y[i1]);
       
       i1 = -1;
       np = 0;
@@ -1115,7 +1097,7 @@ void TestPad::PaintPolyMarker(Int_t nn, Double_t *x, Double_t *y, Option_t *)
 void TestPad::PaintText(Double_t x, Double_t y, const char *text)
 {
    // Paint text in CurrentPad World coordinates.
-  // fPainter.DrawText(x, y, text, TVirtualPadPainter::kClear);
+   fPainter.DrawText(x, y, text, TVirtualPadPainter::kClear);
 }
 
 
@@ -1123,9 +1105,7 @@ void TestPad::PaintText(Double_t x, Double_t y, const char *text)
 void TestPad::PaintTextNDC(Double_t u, Double_t v, const char *text)
 {
    // Paint text in CurrentPad NDC coordinates.
-   const Double_t xRange = GetX2() - GetX1();
-   const Double_t yRange = GetY2() - GetY1();
- //  fPainter.DrawText(gPad->GetX1() + u * xRange, gPad->GetY1() + v * yRange, text, TVirtualPadPainter::kClear);
+   fPainter.DrawTextNDC(u, v, text, TVirtualPadPainter::kClear);
 }
 
 //______________________________________________________________________________
@@ -1225,15 +1205,9 @@ void TestPad::RedrawAxis(Option_t *option)
 }
 
 //______________________________________________________________________________
-void TestPad::GetTextExtent(UInt_t &w, UInt_t &h, const char *text)
-{
- //  fPainter.GetTextExtent(w, h, text);
-}
-
-//______________________________________________________________________________
 void TestPad::SetContext(CGContextRef ctx)
 {
-  // fPainter.SetContext(ctx);
+//   fPainter.SetContext(ctx);
 }
 
 //______________________________________________________________________________
@@ -1641,7 +1615,7 @@ void TestPad::PaintBorder(Color_t color, Bool_t tops)
 
    if (fBorderMode == -1) gVirtualX->SetFillColor(dark);
    else                   gVirtualX->SetFillColor(light);
-   //fPainter.DrawFillArea(7, frameXs, frameYs);
+   fPainter.DrawFillArea(7, frameXs, frameYs);
 
    // Draw bottom&right part of the box
    frameXs[0] = xl;              frameYs[0] = yl;
@@ -1654,7 +1628,7 @@ void TestPad::PaintBorder(Color_t color, Bool_t tops)
 
    if (fBorderMode == -1) gVirtualX->SetFillColor(light);
    else                   gVirtualX->SetFillColor(dark);
-   //fPainter.DrawFillArea(7, frameXs, frameYs);
+   fPainter.DrawFillArea(7, frameXs, frameYs);
 
    gVirtualX->SetFillColor(-1);
    SetFillColor(oldcolor);
@@ -1900,118 +1874,9 @@ TVirtualViewer3D *TestPad::GetViewer3D(Option_t *)
 //______________________________________________________________________________
 void TestPad::ExecuteRotateView(Int_t evType, Int_t px, Int_t py)
 {
-   fView->ExecuteRotateView(evType, px, py);
 }
 
 //______________________________________________________________________________
 void TestPad::ExecuteEventAxis(Int_t event, Int_t px, Int_t py, TAxis *axis)
 {
-   //This copy is a copy&paste&cut_half_of_guts from original TPad.
-   //I do not understand at the moment, why this code is here and not in TAxis.
-
-   static Int_t axisNumber;
-   static Double_t ratio1, ratio2;
-   static Int_t px1old, py1old, px2old, py2old;
-   Int_t bin1, bin2;
-   Double_t temp, xmin,xmax;
-
-   switch (event) {
-
-   case kButton1Down:
-      axisNumber = 1;
-      if (!strcmp(axis->GetName(),"xaxis")) {
-         axisNumber = 1;
-         if (!IsVertical()) axisNumber = 2;
-      }
-      if (!strcmp(axis->GetName(),"yaxis")) {
-         axisNumber = 2;
-         if (!IsVertical()) axisNumber = 1;
-      }
-      if (!strcmp(axis->GetName(),"zaxis")) {
-         axisNumber = 3;
-      }
-         if (axisNumber == 1) {
-            ratio1 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
-            px1old = XtoAbsPixel(GetUxmin()+ratio1*(GetUxmax() - GetUxmin()));
-            py1old = YtoAbsPixel(GetUymin());
-            px2old = px1old;
-            py2old = YtoAbsPixel(GetUymax());
-         } else if (axisNumber == 2) {
-            ratio1 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
-            py1old = YtoAbsPixel(GetUymin()+ratio1*(GetUymax() - GetUymin()));
-            px1old = XtoAbsPixel(GetUxmin());
-            px2old = XtoAbsPixel(GetUxmax());
-            py2old = py1old;
-         } else {
-            ratio1 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
-            py1old = YtoAbsPixel(GetUymin()+ratio1*(GetUymax() - GetUymin()));
-            px1old = XtoAbsPixel(GetUxmax());
-            px2old = XtoAbsPixel(GetX2());
-            py2old = py1old;
-         }
-      // No break !!!
-
-   case kButton1Motion:
-         if (axisNumber == 1) {
-            ratio2 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
-            px2old = XtoAbsPixel(GetUxmin()+ratio2*(GetUxmax() - GetUxmin()));
-         } else {
-            ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
-            py2old = YtoAbsPixel(GetUymin()+ratio2*(GetUymax() - GetUymin()));
-         }
-   break;
-
-   case kButton1Up:
-
-      if (1) {
-         if (axisNumber == 1) {
-            ratio2 = (AbsPixeltoX(px) - GetUxmin())/(GetUxmax() - GetUxmin());
-            xmin = GetUxmin() +ratio1*(GetUxmax() - GetUxmin());
-            xmax = GetUxmin() +ratio2*(GetUxmax() - GetUxmin());
-         } else if (axisNumber == 2) {
-            ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
-            xmin = GetUymin() +ratio1*(GetUymax() - GetUymin());
-            xmax = GetUymin() +ratio2*(GetUymax() - GetUymin());
-         } else {
-            ratio2 = (AbsPixeltoY(py) - GetUymin())/(GetUymax() - GetUymin());
-            xmin = ratio1;
-            xmax = ratio2;
-         }
-         if (xmin > xmax) {
-            temp   = xmin;
-            xmin   = xmax;
-            xmax   = temp;
-            temp   = ratio1;
-            ratio1 = ratio2;
-            ratio2 = temp;
-         }
-
-         // xmin and xmax need to be adjusted in case of CONT4.
-
-         if (!strcmp(axis->GetName(),"xaxis")) axisNumber = 1;
-         if (!strcmp(axis->GetName(),"yaxis")) axisNumber = 2;
-         if (ratio2 - ratio1 > 0.05) {
-            //update object owning this axis
-            TH1 *hobj1 = (TH1*)axis->GetParent();
-            bin1 = axis->FindFixBin(xmin);
-            bin2 = axis->FindFixBin(xmax);
-            if (axisNumber == 1) axis->SetRange(bin1,bin2);
-            if (axisNumber == 2 && hobj1) {
-               if (hobj1->GetDimension() == 1) {
-                  if (hobj1->GetNormFactor() != 0) {
-                     Double_t norm = hobj1->GetSumOfWeights()/hobj1->GetNormFactor();
-                     xmin *= norm;
-                     xmax *= norm;
-                  }
-                  hobj1->SetMinimum(xmin);
-                  hobj1->SetMaximum(xmax);
-                  hobj1->SetBit(TH1::kIsZoomed);
-               } else {
-                  axis->SetRange(bin1,bin2);
-               }
-            }
-         }
-      }
-      break;
-   }
 }
