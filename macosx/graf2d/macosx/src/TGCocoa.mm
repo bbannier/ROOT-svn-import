@@ -589,28 +589,6 @@ void TGCocoa::SetDrawMode(EDrawMode /*mode*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetFillColor(Color_t /*cindex*/)
-{
-   // Sets color index "cindex" for fill areas.
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetFillStyle(Style_t /*style*/)
-{
-   // Sets fill area style.
-   //
-   // style - compound fill area interior style
-   //         style = 1000 * interiorstyle + styleindex
-
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetLineColor(Color_t /*cindex*/)
-{
-   // Sets color index "cindex" for drawing lines.
-}
-
-//______________________________________________________________________________
 void TGCocoa::SetLineType(Int_t /*n*/, Int_t * /*dash*/)
 {
    // Sets the line type.
@@ -621,45 +599,6 @@ void TGCocoa::SetLineType(Int_t /*n*/, Int_t * /*dash*/)
    //                 e.g. n = 4,dash = (6,3,1,3) gives a dashed-dotted line
    //                 with dash length 6 and a gap of 7 between dashes
    // dash(n) - dash segment lengths
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetLineStyle(Style_t /*linestyle*/)
-{
-   // Sets the line style.
-   //
-   // linestyle <= 1 solid
-   // linestyle  = 2 dashed
-   // linestyle  = 3 dotted
-   // linestyle  = 4 dashed-dotted
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetLineWidth(Width_t /*width*/)
-{
-   // Sets the line width.
-   //
-   // width - the line width in pixels
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetMarkerColor(Color_t /*cindex*/)
-{
-   // Sets color index "cindex" for markers.
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetMarkerSize(Float_t /*markersize*/)
-{
-   // Sets marker size index.
-   //
-   // markersize - the marker scale factor
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetMarkerStyle(Style_t /*markerstyle*/)
-{
-   // Sets marker style.
 }
 
 //______________________________________________________________________________
@@ -682,21 +621,6 @@ void TGCocoa::SetRGB(Int_t /*cindex*/, Float_t /*r*/, Float_t /*g*/, Float_t /*b
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetTextAlign(Short_t /*talign*/)
-{
-   // Sets the text alignment.
-   //
-   // talign = txalh horizontal text alignment
-   // talign = txalv vertical text alignment
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetTextColor(Color_t /*cindex*/)
-{
-   // Sets the color index "cindex" for text.
-}
-
-//______________________________________________________________________________
 Int_t TGCocoa::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
 {
    // Sets text font to specified name "fontname".This function returns 0 if
@@ -710,21 +634,9 @@ Int_t TGCocoa::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetTextFont(Font_t /*fontnumber*/)
-{
-   // Sets the current text font number.
-}
-
-//______________________________________________________________________________
 void TGCocoa::SetTextMagnitude(Float_t /*mgn*/)
 {
    // Sets the current text magnification factor to "mgn"
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetTextSize(Float_t /*textsize*/)
-{
-   // Sets the current text size to "textsize"
 }
 
 //______________________________________________________________________________
@@ -2164,4 +2076,108 @@ Int_t TGCocoa::SupportsExtension(const char *) const
    // in case of error (like server not initialized).
 
    return -1;
+}
+
+
+//TAttLine.
+//______________________________________________________________________________
+void TGCocoa::SetLineColor(Color_t cindex)
+{
+   // Sets color index "cindex" for drawing lines.
+   TAttLine::SetLineColor(cindex);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetLineStyle(Style_t linestyle)
+{
+   // Sets the line style.
+   //
+   // linestyle <= 1 solid
+   // linestyle  = 2 dashed
+   // linestyle  = 3 dotted
+   // linestyle  = 4 dashed-dotted
+   TAttLine::SetLineStyle(linestyle);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetLineWidth(Width_t width)
+{
+   // Sets the line width.
+   //
+   // width - the line width in pixels
+   TAttLine::SetLineWidth(width);
+}
+
+//TAttFill.
+//______________________________________________________________________________
+void TGCocoa::SetFillColor(Color_t cindex)
+{
+   // Sets color index "cindex" for fill areas.
+   TAttFill::SetFillColor(cindex);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetFillStyle(Style_t style)
+{
+   // Sets fill area style.
+   //
+   // style - compound fill area interior style
+   //         style = 1000 * interiorstyle + styleindex
+   TAttFill::SetFillStyle(style);
+}
+
+//TAttMarker.
+//______________________________________________________________________________
+void TGCocoa::SetMarkerColor(Color_t cindex)
+{
+   // Sets color index "cindex" for markers.
+   TAttMarker::SetMarkerColor(cindex);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetMarkerSize(Float_t markersize)
+{
+   // Sets marker size index.
+   //
+   // markersize - the marker scale factor
+   TAttMarker::SetMarkerSize(markersize);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetMarkerStyle(Style_t markerstyle)
+{
+   // Sets marker style.
+   TAttMarker::SetMarkerStyle(markerstyle);
+}
+
+//TAttText.
+//______________________________________________________________________________
+void TGCocoa::SetTextAlign(Short_t talign)
+{
+   // Sets the text alignment.
+   //
+   // talign = txalh horizontal text alignment
+   // talign = txalv vertical text alignment
+   TAttText::SetTextAlign(talign);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetTextColor(Color_t cindex)
+{
+   // Sets the color index "cindex" for text.
+   TAttText::SetTextColor(cindex);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetTextFont(Font_t fontnumber)
+{
+   // Sets the current text font number.
+   TAttText::SetTextFont(fontnumber);
+}
+
+//______________________________________________________________________________
+void TGCocoa::SetTextSize(Float_t textsize)
+{
+   // Sets the current text size to "textsize"
+   TAttText::SetTextSize(textsize);
 }
