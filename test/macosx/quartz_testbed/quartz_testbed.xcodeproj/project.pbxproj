@@ -15,7 +15,7 @@
 		703777BF14877BF500BDCEBF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 703777BD14877BF500BDCEBF /* MainMenu.xib */; };
 		703777C714877C9700BDCEBF /* QuartzView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 703777C614877C9700BDCEBF /* QuartzView.mm */; };
 		7038665514878ACC001E4D5F /* libCore.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665414878ACC001E4D5F /* libCore.so */; settings = {ATTRIBUTES = (Required, ); }; };
-		7038665814879AA2001E4D5F /* QuartzTest.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 7038665714879AA2001E4D5F /* QuartzTest.cxx */; };
+		7038665814879AA2001E4D5F /* QuartzTest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7038665714879AA2001E4D5F /* QuartzTest.mm */; };
 		7038665B14879C61001E4D5F /* libHist.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665A14879C61001E4D5F /* libHist.so */; };
 		7089AD391487B188004DF640 /* libGMACOSX.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD381487B188004DF640 /* libGMACOSX.so */; };
 		7089AD3C1487B3D5004DF640 /* TestPad.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7089AD3A1487B3D5004DF640 /* TestPad.mm */; };
@@ -45,7 +45,7 @@
 		703777C514877C9700BDCEBF /* QuartzView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzView.h; sourceTree = "<group>"; };
 		703777C614877C9700BDCEBF /* QuartzView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QuartzView.mm; sourceTree = "<group>"; };
 		7038665414878ACC001E4D5F /* libCore.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libCore.so; path = ../../../lib/libCore.so; sourceTree = "<group>"; };
-		7038665714879AA2001E4D5F /* QuartzTest.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = QuartzTest.cxx; sourceTree = "<group>"; };
+		7038665714879AA2001E4D5F /* QuartzTest.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QuartzTest.mm; sourceTree = "<group>"; };
 		7038665914879ACF001E4D5F /* QuartzTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzTest.h; sourceTree = "<group>"; };
 		7038665A14879C61001E4D5F /* libHist.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libHist.so; path = ../../../lib/libHist.so; sourceTree = "<group>"; };
 		7089AD381487B188004DF640 /* libGMACOSX.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGMACOSX.so; path = ../../../lib/libGMACOSX.so; sourceTree = "<group>"; };
@@ -140,7 +140,7 @@
 				703777C514877C9700BDCEBF /* QuartzView.h */,
 				703777C614877C9700BDCEBF /* QuartzView.mm */,
 				7038665914879ACF001E4D5F /* QuartzTest.h */,
-				7038665714879AA2001E4D5F /* QuartzTest.cxx */,
+				7038665714879AA2001E4D5F /* QuartzTest.mm */,
 				703777AF14877BF500BDCEBF /* Supporting Files */,
 			);
 			path = quartz_testbed;
@@ -225,7 +225,7 @@
 				703777BC14877BF500BDCEBF /* AppDelegate.m in Sources */,
 				703777C714877C9700BDCEBF /* QuartzView.mm in Sources */,
 				70D2601B148782B300F1E183 /* TestPadStub.cxx in Sources */,
-				7038665814879AA2001E4D5F /* QuartzTest.cxx in Sources */,
+				7038665814879AA2001E4D5F /* QuartzTest.mm in Sources */,
 				7089AD3C1487B3D5004DF640 /* TestPad.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -265,6 +265,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_ENABLE_OBJC_ARC = NO;
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -297,6 +298,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_ENABLE_OBJC_ARC = NO;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -320,6 +322,7 @@
 		703777C314877BF500BDCEBF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "quartz_testbed/quartz_testbed-Prefix.pch";
 				INFOPLIST_FILE = "quartz_testbed/quartz_testbed-Info.plist";
@@ -337,6 +340,7 @@
 		703777C414877BF500BDCEBF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "quartz_testbed/quartz_testbed-Prefix.pch";
 				INFOPLIST_FILE = "quartz_testbed/quartz_testbed-Info.plist";

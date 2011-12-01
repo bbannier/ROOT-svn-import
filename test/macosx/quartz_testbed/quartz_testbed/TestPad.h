@@ -7,6 +7,10 @@
 
 #include <Cocoa/Cocoa.h>
 
+#ifndef ROOT_TPadPainter
+#include "TPadPainter.h"
+#endif
+
 #ifndef ROOT_TLine
 #include "TList.h"
 #endif
@@ -29,7 +33,6 @@ public:
       kClearAfterCR = BIT(14)
    };
 
-   void GetTextExtent(UInt_t &w, UInt_t &h, const char *text);
    void SetContext(CGContextRef ctx);
 
    TestPad(UInt_t w, UInt_t h);
@@ -54,6 +57,8 @@ public:
    Double_t GetHNDC() const {return fHNDC;}
 
    void SetViewWH(UInt_t w, UInt_t h);
+   
+
 
    
    UInt_t GetWw() const;
@@ -145,6 +150,8 @@ public:
    void RangeAxis(Double_t xmin, Double_t ymin, Double_t xmax, Double_t ymax);
    
    void GetPadPar(Double_t &xlow, Double_t &ylow, Double_t &xup, Double_t &yup);
+
+   TObject *GetSelected()const {return 0;}
 
    //TestPad's properties.
    void SetFillStyle(Style_t fstyle);
@@ -285,6 +292,9 @@ private:
    TFrame       *fFrame;           // Pointer to 2-D frame (if one exists)
    TView        *fView;            // Pointer to 3-D view (if one exists)
    
+
+   TPadPainter   fPainter;
+
    //
    TVirtualViewer3D *fViewer3D;
 
