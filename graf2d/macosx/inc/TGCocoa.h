@@ -276,6 +276,25 @@ public:
    virtual Bool_t       IsDNDAware(Window_t win, Atom_t *typelist);
 
    virtual Bool_t       IsCmdThread() const { return kTRUE; }
+   
+   //Replace empty overriders in TVirtualX:
+/*
+   virtual void         SetLineColor(Color_t cindex);
+   virtual void         SetLineStyle(Style_t linestyle);
+   virtual void         SetLineWidth(Width_t width);
+   virtual void         SetFillColor(Color_t cindex);
+   virtual void         SetFillStyle(Style_t style);
+   virtual void         SetMarkerColor(Color_t cindex);
+   virtual void         SetMarkerSize(Float_t markersize);
+   virtual void         SetMarkerStyle(Style_t markerstyle);
+   virtual void         SetTextAlign(Short_t talign);
+   virtual void         SetTextColor(Color_t cindex);
+   virtual void         SetTextFont(Font_t fontnumber);
+   virtual void         SetTextSize(Float_t textsize);
+
+   virtual void GetTextExtent(UInt_t &w, UInt_t &h, char *mess);
+  */    
+   using TVirtualX::SetTextFont;
 
 private:
    TGCocoa(const TGCocoa &rhs);
