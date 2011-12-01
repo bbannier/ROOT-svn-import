@@ -29,10 +29,16 @@ public:
    virtual void      DrawPolyMarker(Int_t n, TPoint *xy);
    virtual void      DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn, const char *text,
                               ETextMode mode);
+                              
+   //This function is just for test,
+   //will be removed in future.
+   void SetContext(void *ctx);
 
 private:
    TGQuartz(const TGQuartz &rhs);
    TGQuartz &operator = (const TGQuartz &rhs);
+   
+   void *fCtx;
    
    ClassDef(TGQuartz, 0);//2D graphics for Mac OSX.
 };

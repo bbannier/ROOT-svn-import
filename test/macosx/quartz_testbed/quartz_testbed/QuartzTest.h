@@ -14,6 +14,8 @@ public:
    QuartzTest(unsigned w, unsigned h);
    ~QuartzTest();
 
+   void SetContext(CGContextRef ctx);
+
    void SetPadSizes(unsigned w, unsigned h);
    void Draw()const;
 private:

@@ -36,7 +36,14 @@ void QuartzTest::SetPadSizes(unsigned w, unsigned h)
 }
 
 //______________________________________________________________________________
+void QuartzTest::SetContext(CGContextRef ctx)
+{
+   fQuartzSingleton.SetContext(ctx);
+}
+
+//______________________________________________________________________________
 void QuartzTest::Draw()const
 {
    fPad.Paint();
 }
+
