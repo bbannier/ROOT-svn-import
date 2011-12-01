@@ -1,4 +1,4 @@
-#define DEBUG_ROOT_COCOA
+//#define DEBUG_ROOT_COCOA
 
 #ifdef DEBUG_ROOT_COCOA
 #include <iostream>

@@ -19,6 +19,8 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
       fHist->SetBinContent(i + 1, TMath::Sin(0.01 * i));
 
    fPad.cd();
+   fPad.SetFillColor(kCyan);
+   fPad.SetFrameFillColor(kOrange);
 
    fHist->Draw();
 }
@@ -32,6 +34,7 @@ QuartzTest::~QuartzTest()
 //______________________________________________________________________________
 void QuartzTest::SetPadSizes(unsigned w, unsigned h)
 {
+   fPad.cd();
    fPad.SetViewWH(w, h);
 }
 
@@ -44,6 +47,7 @@ void QuartzTest::SetContext(CGContextRef ctx)
 //______________________________________________________________________________
 void QuartzTest::Draw()const
 {
+   fPad.cd();
    fPad.Paint();
 }
 
