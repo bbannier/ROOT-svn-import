@@ -27,6 +27,7 @@
    NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
    CGContextRef cgContext = (CGContextRef)[nsContext graphicsPort];
    
+   test->SetContext(cgContext);
    test->SetPadSizes(dirtyRect.size.width, dirtyRect.size.height);
    test->Draw();
    
