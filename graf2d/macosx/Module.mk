@@ -36,6 +36,8 @@ ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(MACOSXH))
 ALLLIBS     += $(MACOSXLIB)
 ALLMAPS     += $(MACOSXMAP)
 
+LDFLAGS     += -framework Cocoa
+
 # include all dependency files
 INCLUDEFILES += $(MACOSXDEP)
 
@@ -46,8 +48,8 @@ include/%.h:    $(MACOSXDIRI)/%.h
 		cp $< $@
 
 $(MACOSXLIB):      $(MACOSXO) $(MACOSXOBJCPPO) $(MACOSXDO) $(ORDER_) $(MAINLIBS)
-		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" " -framework Cocoa " \
-		   "$(SOFLAGS)" $@ "$(MACOSXO) $(MACOSXOBJCPPO)" "$(MACOSXDO)" \
+		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"  \
+         "$(SOFLAGS)" libGMACOSX.$(SOEXT) $@ "$(MACOSXO) $(MACOSXOBJCPPO)" "$(MACOSXDO)" \
 		   "$(MACOSXLIBEXTRA)"
 
 $(MACOSXDS):       $(MACOSXH1) $(MACOSXL) $(ROOTCINTTMPDEP)

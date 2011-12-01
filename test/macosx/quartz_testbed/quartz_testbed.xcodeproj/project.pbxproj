@@ -17,6 +17,7 @@
 		7038665514878ACC001E4D5F /* libCore.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665414878ACC001E4D5F /* libCore.so */; settings = {ATTRIBUTES = (Required, ); }; };
 		7038665814879AA2001E4D5F /* QuartzTest.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 7038665714879AA2001E4D5F /* QuartzTest.cxx */; };
 		7038665B14879C61001E4D5F /* libHist.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665A14879C61001E4D5F /* libHist.so */; };
+		7089AD391487B188004DF640 /* libGMACOSX.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7089AD381487B188004DF640 /* libGMACOSX.so */; };
 		70D2601B148782B300F1E183 /* TestPadStub.cxx in Sources */ = {isa = PBXBuildFile; fileRef = 70D26018148782B300F1E183 /* TestPadStub.cxx */; };
 /* End PBXBuildFile section */
 
@@ -40,6 +41,7 @@
 		7038665714879AA2001E4D5F /* QuartzTest.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = QuartzTest.cxx; sourceTree = "<group>"; };
 		7038665914879ACF001E4D5F /* QuartzTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzTest.h; sourceTree = "<group>"; };
 		7038665A14879C61001E4D5F /* libHist.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libHist.so; path = ../../../lib/libHist.so; sourceTree = "<group>"; };
+		7089AD381487B188004DF640 /* libGMACOSX.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libGMACOSX.so; path = ../../../lib/libGMACOSX.so; sourceTree = "<group>"; };
 		70D26018148782B300F1E183 /* TestPadStub.cxx */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestPadStub.cxx; sourceTree = "<group>"; };
 		70D26019148782B300F1E183 /* TestPadStub.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestPadStub.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -49,6 +51,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7089AD391487B188004DF640 /* libGMACOSX.so in Frameworks */,
 				7038665B14879C61001E4D5F /* libHist.so in Frameworks */,
 				7038665514878ACC001E4D5F /* libCore.so in Frameworks */,
 				703777A914877BF500BDCEBF /* Cocoa.framework in Frameworks */,
@@ -61,6 +64,7 @@
 		7037779914877BF500BDCEBF = {
 			isa = PBXGroup;
 			children = (
+				7089AD381487B188004DF640 /* libGMACOSX.so */,
 				7038665A14879C61001E4D5F /* libHist.so */,
 				7038665414878ACC001E4D5F /* libCore.so */,
 				703777AE14877BF500BDCEBF /* quartz_testbed */,
@@ -231,7 +235,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = NO;
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -248,7 +252,10 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../../../include;
-				LIBRARY_SEARCH_PATHS = ../../../lib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SRCROOT)/../../../lib",
+					../../../lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -260,7 +267,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_ARC = NO;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -271,7 +278,10 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../../../include;
-				LIBRARY_SEARCH_PATHS = ../../../lib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SRCROOT)/../../../lib",
+					../../../lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
 			};
