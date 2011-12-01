@@ -28,35 +28,60 @@ TGQuartz::TGQuartz(const char *name, const char *title)
 //______________________________________________________________________________
 void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 {
-   CGContextRef ctx = (CGContextRef)fCtx;
+   //This is just a sketch implementation.
+   
+   //TODO: check fill style (it can be polygon with some stipple).
+   //Think about gradient filling and transparency.
+   //What about outline? (TODO).
+   //What about different color spaces? (using RGB now, but ...)
+
+   CGContextRef ctx = (CGContextRef)fCtx;//This is context from CoreGraphics, it's up to me (TGCocoa) to manage it.
+
+   //This function modifies different state variables in context.
+   //The same context will be used by other functions.
+   //So either save and restore state (that's what I do here) or
+   //REMEMBER to set these states later to correct values 
+   //(correct from next operation's POV). 
+   CGContextSaveGState(ctx);
 
    if (mode == kFilled) {
-      const Float_t alpha = 1.f; //must be in gVirtualX.
+      //Fill the rectangle with solid color.
+   
+      const Float_t alpha = 1.f; //Alpha for filled area must be set externally, for example,
+                                 //add transparency into TAttFill, add global fill transparency
+                                 //and check them here.
       Float_t red = 1.f, green = 1.f, blue = 1.f; //White by default.
+      //Color in gVirtualX is already set by primitive or by pad,
+      //just extract RGB triplet here.
       if (const TColor *color = gROOT->GetColor(GetFillColor()))
          color->GetRGB(red, green, blue); 
 
       CGContextSetRGBFillColor(ctx, red, green, blue, alpha);
-      CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
-
-      CGContextSetLineWidth(ctx, 1.f);
       CGContextFillRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    } else {
+      //Find better way to specify line attributes like line caps
+      //and joins - TODO: this must go somehow to TAttLine, so we can set/get
+      //these parameters externally/internally. In this example - just hardcoded values.
       CGContextSetLineCap(ctx, kCGLineCapRound);
       CGContextSetLineJoin(ctx, kCGLineJoinMiter);
    
       if (GetLineWidth() > 1.f)
          CGContextSetLineWidth(ctx, GetLineWidth());
 
-      const Float_t alpha = 1.f;//Must come from gVirtualX.
+      const Float_t alpha = 1.f; //Alpha for line must be set externally, for example,
+                                 //add transparency into TAttLine, add global line transparency
+                                 //and check them here.
+
       Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
    
-      if (const TColor *color = gROOT->GetColor(gVirtualX->GetLineColor()))
+      if (const TColor *color = gROOT->GetColor(GetLineColor()))
          color->GetRGB(red, green, blue);
 
       CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
+
       if (y1 > y2)
          std::swap(y1, y2);
+
       CGContextStrokeRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    }
 }

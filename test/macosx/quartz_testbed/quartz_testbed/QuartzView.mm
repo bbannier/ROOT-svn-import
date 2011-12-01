@@ -33,6 +33,9 @@
    test->SetContext(cgContext);
    test->SetPadSizes(dirtyRect.size.width, dirtyRect.size.height);
    test->Draw();
+   
+   CGContextSaveGState(cgContext);
+   CGContextRestoreGState(cgContext);
 
 //   CGContextSetRGBStrokeColor(cgContext, 0.f, 0.f, 0.f, 1.f);
 //   CGContextStrokeRect(cgContext, CGRectMake(0.f, 0.f, 500.f, 500.f));
