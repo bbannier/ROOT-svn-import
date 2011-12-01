@@ -1,3 +1,4 @@
+#include <iostream>
 #include <algorithm>
 #include <stdexcept>
 
@@ -38,7 +39,7 @@ TestPad::TestPad(UInt_t w, UInt_t h)
    fPhi = 50;
 
    fAspectRatio = 0.;
-
+std::cout<<"gStyle: "<<gStyle<<std::endl;
    fTickx = gStyle->GetPadTickX();
    fTicky = gStyle->GetPadTickY();
 
