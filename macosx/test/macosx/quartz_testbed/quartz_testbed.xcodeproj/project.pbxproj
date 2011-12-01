@@ -1,0 +1,301 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		703777A914877BF500BDCEBF /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 703777A814877BF500BDCEBF /* Cocoa.framework */; };
+		703777B314877BF500BDCEBF /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 703777B114877BF500BDCEBF /* InfoPlist.strings */; };
+		703777B514877BF500BDCEBF /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 703777B414877BF500BDCEBF /* main.m */; };
+		703777B914877BF500BDCEBF /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 703777B714877BF500BDCEBF /* Credits.rtf */; };
+		703777BC14877BF500BDCEBF /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 703777BB14877BF500BDCEBF /* AppDelegate.m */; };
+		703777BF14877BF500BDCEBF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 703777BD14877BF500BDCEBF /* MainMenu.xib */; };
+		703777C714877C9700BDCEBF /* QuartzView.m in Sources */ = {isa = PBXBuildFile; fileRef = 703777C614877C9700BDCEBF /* QuartzView.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		703777A414877BF500BDCEBF /* quartz_testbed.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = quartz_testbed.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		703777A814877BF500BDCEBF /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		703777AB14877BF500BDCEBF /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		703777AC14877BF500BDCEBF /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		703777AD14877BF500BDCEBF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		703777B014877BF500BDCEBF /* quartz_testbed-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "quartz_testbed-Info.plist"; sourceTree = "<group>"; };
+		703777B214877BF500BDCEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		703777B414877BF500BDCEBF /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		703777B614877BF500BDCEBF /* quartz_testbed-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "quartz_testbed-Prefix.pch"; sourceTree = "<group>"; };
+		703777B814877BF500BDCEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
+		703777BA14877BF500BDCEBF /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		703777BB14877BF500BDCEBF /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		703777BE14877BF500BDCEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		703777C514877C9700BDCEBF /* QuartzView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzView.h; sourceTree = "<group>"; };
+		703777C614877C9700BDCEBF /* QuartzView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = QuartzView.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		703777A114877BF500BDCEBF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				703777A914877BF500BDCEBF /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		7037779914877BF500BDCEBF = {
+			isa = PBXGroup;
+			children = (
+				703777AE14877BF500BDCEBF /* quartz_testbed */,
+				703777A714877BF500BDCEBF /* Frameworks */,
+				703777A514877BF500BDCEBF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		703777A514877BF500BDCEBF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				703777A414877BF500BDCEBF /* quartz_testbed.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		703777A714877BF500BDCEBF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				703777A814877BF500BDCEBF /* Cocoa.framework */,
+				703777AA14877BF500BDCEBF /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		703777AA14877BF500BDCEBF /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				703777AB14877BF500BDCEBF /* AppKit.framework */,
+				703777AC14877BF500BDCEBF /* CoreData.framework */,
+				703777AD14877BF500BDCEBF /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		703777AE14877BF500BDCEBF /* quartz_testbed */ = {
+			isa = PBXGroup;
+			children = (
+				703777BA14877BF500BDCEBF /* AppDelegate.h */,
+				703777BB14877BF500BDCEBF /* AppDelegate.m */,
+				703777BD14877BF500BDCEBF /* MainMenu.xib */,
+				703777C514877C9700BDCEBF /* QuartzView.h */,
+				703777C614877C9700BDCEBF /* QuartzView.m */,
+				703777AF14877BF500BDCEBF /* Supporting Files */,
+			);
+			path = quartz_testbed;
+			sourceTree = "<group>";
+		};
+		703777AF14877BF500BDCEBF /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				703777B014877BF500BDCEBF /* quartz_testbed-Info.plist */,
+				703777B114877BF500BDCEBF /* InfoPlist.strings */,
+				703777B414877BF500BDCEBF /* main.m */,
+				703777B614877BF500BDCEBF /* quartz_testbed-Prefix.pch */,
+				703777B714877BF500BDCEBF /* Credits.rtf */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		703777A314877BF500BDCEBF /* quartz_testbed */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 703777C214877BF500BDCEBF /* Build configuration list for PBXNativeTarget "quartz_testbed" */;
+			buildPhases = (
+				703777A014877BF500BDCEBF /* Sources */,
+				703777A114877BF500BDCEBF /* Frameworks */,
+				703777A214877BF500BDCEBF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = quartz_testbed;
+			productName = quartz_testbed;
+			productReference = 703777A414877BF500BDCEBF /* quartz_testbed.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7037779B14877BF500BDCEBF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0420;
+			};
+			buildConfigurationList = 7037779E14877BF500BDCEBF /* Build configuration list for PBXProject "quartz_testbed" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 7037779914877BF500BDCEBF;
+			productRefGroup = 703777A514877BF500BDCEBF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				703777A314877BF500BDCEBF /* quartz_testbed */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		703777A214877BF500BDCEBF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				703777B314877BF500BDCEBF /* InfoPlist.strings in Resources */,
+				703777B914877BF500BDCEBF /* Credits.rtf in Resources */,
+				703777BF14877BF500BDCEBF /* MainMenu.xib in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		703777A014877BF500BDCEBF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				703777B514877BF500BDCEBF /* main.m in Sources */,
+				703777BC14877BF500BDCEBF /* AppDelegate.m in Sources */,
+				703777C714877C9700BDCEBF /* QuartzView.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		703777B114877BF500BDCEBF /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				703777B214877BF500BDCEBF /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		703777B714877BF500BDCEBF /* Credits.rtf */ = {
+			isa = PBXVariantGroup;
+			children = (
+				703777B814877BF500BDCEBF /* en */,
+			);
+			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		703777BD14877BF500BDCEBF /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				703777BE14877BF500BDCEBF /* en */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		703777C014877BF500BDCEBF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		703777C114877BF500BDCEBF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		703777C314877BF500BDCEBF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "quartz_testbed/quartz_testbed-Prefix.pch";
+				INFOPLIST_FILE = "quartz_testbed/quartz_testbed-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		703777C414877BF500BDCEBF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "quartz_testbed/quartz_testbed-Prefix.pch";
+				INFOPLIST_FILE = "quartz_testbed/quartz_testbed-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7037779E14877BF500BDCEBF /* Build configuration list for PBXProject "quartz_testbed" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				703777C014877BF500BDCEBF /* Debug */,
+				703777C114877BF500BDCEBF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		703777C214877BF500BDCEBF /* Build configuration list for PBXNativeTarget "quartz_testbed" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				703777C314877BF500BDCEBF /* Debug */,
+				703777C414877BF500BDCEBF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7037779B14877BF500BDCEBF /* Project object */;
+}
