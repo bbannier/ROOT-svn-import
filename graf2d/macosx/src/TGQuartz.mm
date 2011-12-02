@@ -6,6 +6,7 @@
 #include <iostream>
 //
 
+#include "TPoint.h"
 #include "TGQuartz.h"
 #include "TColor.h"
 #include "TROOT.h"
@@ -101,15 +102,53 @@ void TGQuartz::DrawFillArea(Int_t /*n*/, TPoint * /*xy*/)
 }
 
 //______________________________________________________________________________
-void TGQuartz::DrawLine(Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/)
+void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
-   //CGContextRef ctx = (CGContextRef)fCtx; 
+   // Draw a line.
+   // x1,y1        : begin of line
+   // x2,y2        : end of line
+      
+   CGContextRef ctx = (CGContextRef)fCtx;
+   
+   const Float_t alpha = 1.f;
+   
+   Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
+   
+   if (const TColor *color = gROOT->GetColor(GetLineColor()))
+      color->GetRGB(red, green, blue);
+   
+   CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
+   
+   CGContextBeginPath (ctx);
+   CGContextMoveToPoint(ctx, x1, y1);
+   CGContextAddLineToPoint(ctx, x2, y2);
+   CGContextStrokePath(ctx);
 }
 
 //______________________________________________________________________________
-void TGQuartz::DrawPolyLine(Int_t /*n*/, TPoint * /*xy*/)
+void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
 {
-   //CGContextRef ctx = (CGContextRef)fCtx;
+   // Draw a line through all points.
+   // n         : number of points
+   // xy        : list of points   
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   
+   const Float_t alpha = 1.f;
+   
+   Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
+   
+   if (const TColor *color = gROOT->GetColor(GetLineColor()))
+      color->GetRGB(red, green, blue);
+   
+   CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
+   
+   CGContextBeginPath (ctx);
+   for (Int_t i=1; i<n; i++) {
+      CGContextMoveToPoint    (ctx, xy[i-1].fX, xy[i-1].fY);
+      CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
+   }
+   CGContextStrokePath(ctx);
 }
 
 //______________________________________________________________________________
@@ -119,9 +158,20 @@ void TGQuartz::DrawPolyMarker(Int_t /*n*/, TPoint * /*xy*/)
 }
 
 //______________________________________________________________________________
-void TGQuartz::DrawText(Int_t /*x*/, Int_t /*y*/, Float_t /*angle*/, Float_t /*mgn*/, const char * /*text*/, ETextMode /*mode*/)
+void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t mgn, const char *text, ETextMode /*mode*/)
 {
-   //CGContextRef ctx = (CGContextRef)fCtx;
+   // Draw text
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   printf("mgn = %g\n",mgn);
+   CGContextSelectFont (ctx, 
+                        "Helvetica-Bold",
+                        10,
+                        kCGEncodingMacRoman);
+ //  CGContextSetCharacterSpacing (ctx, 10); 
+   CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
+   
+   CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
 }
 
 //______________________________________________________________________________
