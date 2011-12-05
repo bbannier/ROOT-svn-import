@@ -29,6 +29,9 @@ public:
 
 private:
 
+   void AddFileHandler(TFileHandler *fh);
+   TFileHandler *RemoveFileHandler(TFileHandler *fh);
+
    std::auto_ptr<TMacOSXSystemPrivate> fPimpl; //!
 
    TMacOSXSystem(const TMacOSXSystem &rhs);
