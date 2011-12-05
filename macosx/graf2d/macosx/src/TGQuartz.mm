@@ -6,8 +6,10 @@
 #include <iostream>
 //
 
-#include "TPoint.h"
+//#include "Cocoa"
+
 #include "TGQuartz.h"
+#include "TPoint.h"
 #include "TColor.h"
 #include "TROOT.h"
 
