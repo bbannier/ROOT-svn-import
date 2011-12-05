@@ -70,6 +70,12 @@ struct WindowAttributes_t {
 */
 
 //______________________________________________________________________________
+TGCocoa::~TGCocoa()
+{
+   //
+}
+
+//______________________________________________________________________________
 void TGCocoa::GetWindowAttributes(Window_t wid, WindowAttributes_t & attr)
 {
 #ifdef DEBUG_ROOT_COCOA

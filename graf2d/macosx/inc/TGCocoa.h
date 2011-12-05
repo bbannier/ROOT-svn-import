@@ -32,6 +32,8 @@ class TGCocoa : public TVirtualX {
 public:
    TGCocoa();
    TGCocoa(const char *name, const char *title);
+   
+   ~TGCocoa();
    //TVirtualX final-overriders.
    virtual Bool_t    Init(void *display);
    virtual void      ClearWindow();
