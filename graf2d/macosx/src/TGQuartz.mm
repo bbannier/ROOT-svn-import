@@ -11,7 +11,10 @@
 #include "TGQuartz.h"
 #include "TPoint.h"
 #include "TColor.h"
+#include "TMath.h"
 #include "TROOT.h"
+
+const Double_t kPI = TMath::Pi();
 
 ClassImp(TGQuartz)
 
@@ -165,14 +168,34 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t mgn, const 
    // Draw text
    
    CGContextRef ctx = (CGContextRef)fCtx;
-   printf("mgn = %g\n",mgn);
+ 
    CGContextSelectFont (ctx, 
                         "Helvetica-Bold",
                         10,
                         kCGEncodingMacRoman);
- //  CGContextSetCharacterSpacing (ctx, 10); 
-   CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
+
    
+   // Text color
+   const Float_t alpha = 1.f;
+   Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
+
+   if (const TColor *color = gROOT->GetColor(GetTextColor())) color->GetRGB(red, green, blue);
+//   CGContextSetRGBStrokeColor (ctx, red, green, blue, alpha);
+   CGContextSetRGBFillColor   (ctx, red, green, blue, alpha);
+
+   // Text drawing mode
+//   CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
+   CGContextSetTextDrawingMode (ctx, kCGTextFill); 
+
+
+
+   // Text rotation
+   CGAffineTransform TextTransform; 
+   TextTransform =  CGAffineTransformMakeRotation  (0.);
+   CGContextSetTextMatrix (ctx, TextTransform);    
+   TextTransform =  CGAffineTransformMakeScale     (1.,-1.); 
+   CGContextSetTextMatrix (ctx, TextTransform);    
+   // Draw the text
    CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
 }
 
