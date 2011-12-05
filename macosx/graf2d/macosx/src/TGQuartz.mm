@@ -163,7 +163,7 @@ void TGQuartz::DrawPolyMarker(Int_t /*n*/, TPoint * /*xy*/)
 }
 
 //______________________________________________________________________________
-void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t mgn, const char *text, ETextMode /*mode*/)
+void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn, const char *text, ETextMode /*mode*/)
 {
    // Draw text
    
@@ -190,11 +190,10 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t mgn, const 
 
 
    // Text rotation
-   CGAffineTransform TextTransform; 
-   TextTransform =  CGAffineTransformMakeRotation  (0.);
-   CGContextSetTextMatrix (ctx, TextTransform);    
-   TextTransform =  CGAffineTransformMakeScale     (1.,-1.); 
-   CGContextSetTextMatrix (ctx, TextTransform);    
+   CGAffineTransform tm; 
+   tm =  CGAffineTransformMakeRotation (-(angle*kPI)/180.);
+   tm =  CGAffineTransformScale (tm, 1., -1.); 
+   CGContextSetTextMatrix (ctx, tm);    
    // Draw the text
    CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
 }
