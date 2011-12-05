@@ -107,6 +107,13 @@ SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 endif
 endif
+
+#ifeq ($(PATFORM),macosx)
+MODULES      += core/mac
+SYSTEMO      += $(MACO)
+SYSTEMDO     += $(MACDO)
+#endif
+
 ifeq ($(PLATFORM),ios)
 MODULES      += graf2d/ios
 endif
@@ -791,7 +798,7 @@ endif
 $(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(CLINGLIB) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
+	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO) -framework Cocoa" \
 	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 else
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
