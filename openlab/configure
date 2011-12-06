@@ -590,7 +590,7 @@ check_library() {
                             fi
                             found_dir=$l
                             found_lib=$j
-                            if test "x$arch" = "linux"; then
+                            if test "x$arch" = "xlinux" ; then
                                check_lib64 $n
                             else
                                is_lib64=0
@@ -1607,7 +1607,7 @@ with compiler options, prefix with --with-, overrides default value
   clang              use clang compiler instead of gcc (mutual exclusive with
                      the cc, cxx and ld options)
 
-cross compiling options, currently only used when building for ios and iossim
+cross compiling options, currently only used when building for ios, iossim and Intel MIC
 
   --host[=hostarch]  host architecture to be used in case of cross compiling
   --with-hostcc      alternative host C compiler in case of cross compiling
@@ -1690,6 +1690,13 @@ linuxx8664*)
    logmsg "Will check 64bit libraries"
    checklinux64="yes"
    checklib64="yes" ;;
+linuxMICdirect)
+   logmsg "Will check 64bit libraries"
+   checklinux64="no"
+   checklib64="no" 
+   enable_cintex="no"
+   enable_reflex="no"
+;;
 hpuxia64acc)
    logmsg "Will check HP/UX 64bit libraries"
    checkhpux64="yes" ;;
@@ -2054,9 +2061,9 @@ fi
 
 ######################################################################
 #
-### echo %%% On iOS always disable X11
+### echo %%% On iOS and Intel MIC always disable X11
 #
-if test "x$platform" = "xios"; then
+if test "x$platform" = "xios" || test "x$platform" = "xmic" ; then
     enable_x11="no"
     if test "x$host" = "x"; then
         savearch=$arch
@@ -2387,7 +2394,7 @@ macosx)
         fi
     fi
     ;;
-linux|fbsd)
+linux|fbsd|mic)
     if test "x$enable_thread" = "x" || test "x$enable_thread" = "xyes"; then
         enable_thread="yes"
         threadflag="-pthread"
@@ -4291,7 +4298,7 @@ if test ! "x$enable_xml" = "xno" ; then
              win32gcc)  xmllib="$xmllib -liconv"              ;;
           esac
           case $platform in
-             linux)     xmllib="$xmllib -lpthread"            ;;
+             linux|mic)     xmllib="$xmllib -lpthread"            ;;
              win32)     xmlincdir="$xmlincdir $iconvincdir"
                         xmllib="$xmllib $iconvlib Ws2_32.lib" ;;
           esac
@@ -6120,7 +6127,7 @@ fi
 #
 setresuid="undef"
 case $platform in
-    linux)
+    linux|mic)
         message "Checking whether setresuid declared in /usr/include/unistd.h"
         if `grep setresuid /usr/include/unistd.h > /dev/null 2>&1` ; then
             setresuid="define"
