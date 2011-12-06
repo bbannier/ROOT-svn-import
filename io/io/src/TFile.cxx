@@ -80,6 +80,7 @@
 #include "Bytes.h"
 #include "Compression.h"
 #include "Riostream.h"
+#include "RConfigure.h"
 #include "Strlen.h"
 #include "TArrayC.h"
 #include "TClass.h"
@@ -115,9 +116,7 @@
 #include <set>
 #include "TSchemaRule.h"
 #include "TSchemaRuleSet.h"
-
-TFile *gFile;                 //Pointer to current file
-
+#include "TThreadSlots.h"
 
 Long64_t TFile::fgBytesRead  = 0;
 Long64_t TFile::fgBytesWrite = 0;
@@ -285,7 +284,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    //  this case, the file is scanned sequentially reading all logical blocks
    //  and attempting to rebuild a correct directory (see TFile::Recover).
    //  One can disable the automatic recovery procedure when reading one
-   //  or more files by setting the environment variable "TFile::Recover 0"
+   //  or more files by setting the environment variable "TFile.Recover: 0"
    //  in the system.rootrc file.
    //
 
@@ -495,7 +494,6 @@ TFile::TFile(const TFile &) : TDirectoryFile(), fInfoCache(0)
 TFile::~TFile()
 {
    // File destructor.
-
    Close();
 
    SafeDelete(fProcessIDs);
@@ -775,6 +773,11 @@ void TFile::Init(Bool_t create)
       if (fgReadInfo) {
          if (fSeekInfo > fBEGIN) {
             ReadStreamerInfo();
+            if (IsZombie()) {
+               R__LOCKGUARD2(gROOTMutex);
+               gROOT->GetListOfFiles()->Remove(this);
+               goto zombie;
+            }
          } else if (fVersion != gROOT->GetVersionInt() && fVersion > 30000) {
             Warning("Init","no StreamerInfo found in %s therefore preventing schema evolution when reading this file.",GetName());
          }
@@ -906,6 +909,21 @@ TKey* TFile::CreateKey(TDirectory* mother, const void* obj, const TClass* cl, co
    // Creates key for object and converts data to buffer.
 
    return new TKey(obj, cl, name, bufsize, mother);
+}
+
+//____________________________________________________________________________________
+TFile *&TFile::CurrentFile()
+{
+   // Return the current ROOT file if any.
+   // Note that if 'cd' has been called on a TDirectory that does not belong to a file,
+   // gFile will be unchanged and still points to the file of the previous current
+   // directory that was a file.
+   
+   static TFile *currentFile = 0;
+   if (!gThreadTsd)
+      return currentFile;
+   else
+      return *(TFile**)(*gThreadTsd)(&currentFile,ROOT::kFileThreadSlot);   
 }
 
 //______________________________________________________________________________
@@ -1093,6 +1111,9 @@ Int_t TFile::GetRecordHeader(char *buf, Long64_t first, Int_t maxbytes, Int_t &n
    // Note that the arguments objlen and keylen are returned only
    // if maxbytes >=16
 
+   nbytes = 0;
+   objlen = 0;
+   keylen = 0;
    if (first < fBEGIN) return 0;
    if (first > fEND)   return 0;
    Seek(first);
@@ -1283,6 +1304,8 @@ void TFile::Map()
    Short_t  keylen,cycle;
    UInt_t   datime;
    Int_t    nbytes,date,time,objlen,nwheader;
+   date = 0;
+   time = 0;
    Long64_t seekkey,seekpdir;
    char    *buffer;
    char     nwhc;
@@ -2053,9 +2076,6 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
       return 0;
    }
 
-   TDirectory *cursav = gDirectory;
-   cd();
-
    if (gDebug) {
       if (!GetTitle() || strlen(GetTitle()) == 0)
          Info("Write", "writing name = %s", GetName());
@@ -2070,11 +2090,6 @@ Int_t TFile::Write(const char *, Int_t opt, Int_t bufsiz)
    WriteHeader();                     // Now write file header
    fMustFlush = kTRUE;
 
-   if (cursav) {
-      cursav->cd();
-   } else {
-      gDirectory = 0;
-   }
    return nbytes;
 }
 
@@ -2278,6 +2293,9 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    //                   same effect as "new".
    // If option = "genreflex", then use genreflex rather than rootcint to generate
    //                   the dictionary.
+   // If option = "par", create a PAR file with the minimal set of code needed to read the content
+   //                   of the ROOT file. The name of the PAR file is basename(dirname), with extension
+   //                   '.par' enforced; the PAR file will be created at dirname(dirname) .
    // If, in addition to one of the 3 above options, the option "+" is specified,
    // the function will generate:
    //   - a script called MAKEP to build the shared lib
@@ -2313,7 +2331,56 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    TString opt = option;
    opt.ToLower();
-   {
+   Bool_t makepar = kFALSE;
+   TString parname, pardir;
+   if (opt.Contains("par")) {
+      // Create a PAR file
+      parname = gSystem->BaseName(dirname);
+      if (parname.EndsWith(".par")) parname.ReplaceAll(".par","");
+      pardir = gSystem->DirName(dirname);
+      // Cleanup or prepare the dirs
+      TString path, filepath;
+      void *dir = gSystem->OpenDirectory(pardir);
+      if (dir) {
+         path.Form("%s/%s", pardir.Data(), parname.Data());
+         void *dirp = gSystem->OpenDirectory(path);
+         if (dirp) {
+            path += "/PROOF-INF";
+            void *dirinf = gSystem->OpenDirectory(path);
+            const char *afile = 0;
+            if (dirinf) {
+               while ((afile = gSystem->GetDirEntry(dirinf))) {
+                  if (strcmp(afile,".") == 0) continue;
+                  if (strcmp(afile,"..") == 0) continue;
+                  filepath.Form("%s/%s", path.Data(), afile);
+                  if (gSystem->Unlink(filepath))
+                     Warning("MakeProject", "1: problems unlinking '%s' ('%s', '%s')", filepath.Data(), path.Data(), afile);
+               }
+               gSystem->FreeDirectory(dirinf);
+            }
+            gSystem->Unlink(path);
+            path.Form("%s/%s", pardir.Data(), parname.Data());
+            while ((afile = gSystem->GetDirEntry(dirp))) {
+               if (strcmp(afile,".") == 0) continue;
+               if (strcmp(afile,"..") == 0) continue;
+               filepath.Form("%s/%s", path.Data(), afile);
+               if (gSystem->Unlink(filepath))
+                  Warning("MakeProject", "2: problems unlinking '%s' ('%s', '%s')", filepath.Data(), path.Data(), afile);
+            }
+            gSystem->FreeDirectory(dirp);
+            if (gSystem->Unlink(path))
+               Warning("MakeProject", "problems unlinking '%s'", path.Data());
+         }
+      }
+      // Make sure that the relevant dirs exists: this is mandatory, so we fail if unsuccessful
+      path.Form("%s/%s/PROOF-INF", pardir.Data(), parname.Data());
+      if (gSystem->mkdir(path, kTRUE)) {
+         Error("MakeProject", "problems creating '%s'", path.Data());
+         return;
+      }
+      makepar = kTRUE;
+
+   } else {
       void *dir = gSystem->OpenDirectory(dirname);
       TString dirpath;
 
@@ -2369,6 +2436,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    }
 
    TString clean_dirname(dirname);
+   if (makepar) clean_dirname.Form("%s/%s", pardir.Data(), parname.Data());
    if (clean_dirname[clean_dirname.Length()-1]=='/') {
       clean_dirname.Remove(clean_dirname.Length()-1);
    } else if (clean_dirname[clean_dirname.Length()-1]=='\\') {
@@ -2378,6 +2446,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       }
    }
    TString subdirname( gSystem->BaseName(clean_dirname) );
+   if (makepar) subdirname = parname;
    if (subdirname == "") {
       Error("MakeProject","Directory name must not be empty.");
       return;
@@ -2530,31 +2599,35 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    printf("MakeProject has generated %d classes in %s\n",ngener,clean_dirname.Data());
 
    // generate the shared lib
-   if (!opt.Contains("+")) {
+   if (!opt.Contains("+") && !makepar) {
       delete list;
       filelist->Delete();
       delete filelist;
       return;
    }
 
-   // create the MAKEP file by looping on all *.h files
-   // delete MAKEP if it already exists
+   // Makefiles files
+   FILE *fpMAKE = 0;
+   if (!makepar) {
+      // Create the MAKEP file by looping on all *.h files
+      // delete MAKEP if it already exists
 #ifdef WIN32
-   path.Form("%s/makep.cmd",clean_dirname.Data());
+      path.Form("%s/makep.cmd",clean_dirname.Data());
 #else
-   path.Form("%s/MAKEP",clean_dirname.Data());
+      path.Form("%s/MAKEP",clean_dirname.Data());
 #endif
 #ifdef R__WINGCC
-   FILE *fpMAKE = fopen(path,"wb");
+      fpMAKE = fopen(path,"wb");
 #else
-   FILE *fpMAKE = fopen(path,"w");
+      fpMAKE = fopen(path,"w");
 #endif
-   if (!fpMAKE) {
-      Error("MakeProject", "cannot open file %s", path.Data());
-      delete list;
-      filelist->Delete();
-      delete filelist;
-      return;
+      if (!fpMAKE) {
+         Error("MakeProject", "cannot open file %s", path.Data());
+         delete list;
+         filelist->Delete();
+         delete filelist;
+         return;
+      }
    }
 
    // Add rootcint/genreflex statement generating ProjectDict.cxx
@@ -2574,13 +2647,18 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       return;
    }
 
-   if (genreflex) {
-      fprintf(fpMAKE,"genreflex %sProjectHeaders.h -o %sProjectDict.cxx --comments --iocomments %s ",subdirname.Data(),subdirname.Data(),gSystem->GetIncludePath());
-      path.Form("%s/%sSelection.xml",clean_dirname.Data(),subdirname.Data());
+   if (!makepar) {
+      if (genreflex) {
+         fprintf(fpMAKE,"genreflex %sProjectHeaders.h -o %sProjectDict.cxx --comments --iocomments %s ",subdirname.Data(),subdirname.Data(),gSystem->GetIncludePath());
+         path.Form("%s/%sSelection.xml",clean_dirname.Data(),subdirname.Data());
+      } else {
+         fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",subdirname.Data(),gSystem->GetIncludePath());
+         path.Form("%s/%sLinkDef.h",clean_dirname.Data(),subdirname.Data());
+      }
    } else {
-      fprintf(fpMAKE,"rootcint -f %sProjectDict.cxx -c %s ",subdirname.Data(),gSystem->GetIncludePath());
       path.Form("%s/%sLinkDef.h",clean_dirname.Data(),subdirname.Data());
    }
+      
    // Create the LinkDef.h or xml selection file by looping on all *.h files
    // replace any existing file.
 #ifdef R__WINGCC
@@ -2752,42 +2830,113 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    }
    fclose(fp);
    fclose(ifp);
-   if (genreflex) {
-      fprintf(fpMAKE,"-s %sSelection.xml \n",subdirname.Data());
+
+   if (!makepar) {
+      // add compilation line
+      TString sdirname(subdirname);
+      
+      TString cmd = gSystem->GetMakeSharedLib();
+      TString sources = TString::Format("%sProjectSource.cxx ", sdirname.Data());
+      cmd.ReplaceAll("$SourceFiles",sources.Data());
+      TString object = TString::Format("%sProjectSource.", sdirname.Data());
+      object.Append( gSystem->GetObjExt() );
+      cmd.ReplaceAll("$ObjectFiles", object.Data());
+      cmd.ReplaceAll("$IncludePath",TString(gSystem->GetIncludePath()) + " -I" + clean_dirname.Data());
+      cmd.ReplaceAll("$SharedLib",sdirname+"."+gSystem->GetSoExt());
+      cmd.ReplaceAll("$LinkedLibs",gSystem->GetLibraries("","SDL"));
+      cmd.ReplaceAll("$LibName",sdirname);
+      cmd.ReplaceAll("$BuildDir",".");
+      TString sOpt;
+      TString rootbuild = ROOTBUILD;
+      if (rootbuild.Index("debug",0,TString::kIgnoreCase)==kNPOS) {
+         sOpt = gSystem->GetFlagsOpt();
+      } else {
+         sOpt = gSystem->GetFlagsDebug();
+      }
+      cmd.ReplaceAll("$Opt", sOpt);
+
+      if (genreflex) {
+         fprintf(fpMAKE,"-s %sSelection.xml \n",subdirname.Data());
+      } else {
+         fprintf(fpMAKE,"%sProjectHeaders.h ",subdirname.Data());
+         fprintf(fpMAKE,"%sLinkDef.h \n",subdirname.Data());
+      }
+
+      fprintf(fpMAKE,"%s\n",cmd.Data());
+
+      printf("%s/MAKEP file has been generated\n", clean_dirname.Data());
+
+      fclose(fpMAKE);
+
    } else {
-      fprintf(fpMAKE,"%sProjectHeaders.h ",subdirname.Data());
-      fprintf(fpMAKE,"%sLinkDef.h \n",subdirname.Data());
+
+      // Create the Makefile
+      TString filemake = TString::Format("%s/Makefile", clean_dirname.Data());
+      if (MakeProjectParMake(parname, filemake.Data()) != 0) {
+         Error("MakeProject", "problems creating PAR make file '%s'", filemake.Data());
+         delete list;
+         filelist->Delete();
+         delete filelist;
+         return;
+      }
+      // Get Makefile.arch
+#ifdef ROOTETCDIR
+      TString mkarchsrc = TString::Format("%s/Makefile.arch", ROOTETCDIR);
+#else
+      TString mkarchsrc("$(ROOTSYS)/etc/Makefile.arch");
+#endif
+      if (gSystem->ExpandPathName(mkarchsrc))
+         Warning("MakeProject", "problems expanding '%s'", mkarchsrc.Data());
+      TString mkarchdst = TString::Format("%s/Makefile.arch", clean_dirname.Data());
+      if (gSystem->CopyFile(mkarchsrc.Data(), mkarchdst.Data(), kTRUE) != 0) {
+         Error("MakeProject", "problems retrieving '%s' to '%s'", mkarchsrc.Data(), mkarchdst.Data());
+         delete list;
+         filelist->Delete();
+         delete filelist;
+         return;
+      }
+      // Create the Makefile
+      TString proofinf = TString::Format("%s/PROOF-INF", clean_dirname.Data());
+      if (MakeProjectParProofInf(parname, proofinf.Data()) != 0) {
+         Error("MakeProject", "problems creating BUILD.sh and/or SETUP.C under '%s'", proofinf.Data());
+         delete list;
+         filelist->Delete();
+         delete filelist;
+         return;
+      }
+
+      // Make sure BUILD.sh is executable and create SETUP.C
+      TString cmod = TString::Format("chmod +x %s/PROOF-INF/BUILD.sh", clean_dirname.Data());
+#ifndef WIN32
+      gSystem->Exec(cmod.Data());
+#else
+      // not really needed for Windows but it would work both both Unix and NT
+      chmod(cmod.Data(), 00700);
+#endif
+      Printf("Files Makefile, Makefile.arch, PROOF-INF/BUILD.sh and"
+             " PROOF-INF/SETUP.C have been generated under '%s'", clean_dirname.Data());
+
+      // Generate the PAR file, if not Windows
+#ifndef WIN32
+      TString curdir = gSystem->WorkingDirectory();
+      if (gSystem->ChangeDirectory(pardir)) {
+         TString cmd = TString::Format("tar czvf %s.par %s", parname.Data(), parname.Data());
+         gSystem->Exec(cmd.Data());
+         if (gSystem->ChangeDirectory(curdir)) {
+            Info("MakeProject", "PAR file %s.par generated", clean_dirname.Data());
+         } else {
+            Warning("MakeProject", "problems changing directory back to '%s'", curdir.Data());
+         }
+      } else {
+         Error("MakeProject", "problems changing directory to '%s' - skipping PAR file generation", pardir.Data());
+      }
+#else
+      Warning("MakeProject", "on Windows systems the PAR file cannot be generated out of the package directory!");
+#endif
    }
 
-   // add compilation line
-   TString sdirname(subdirname);
-
-   TString cmd = gSystem->GetMakeSharedLib();
-   TString sources( sdirname+"ProjectSource.cxx ");
-   cmd.ReplaceAll("$SourceFiles",sources.Data());
-   TString object( sdirname + "ProjectSource." );
-   object.Append( gSystem->GetObjExt() );
-   cmd.ReplaceAll("$ObjectFiles", object.Data());
-   cmd.ReplaceAll("$IncludePath",TString(gSystem->GetIncludePath()) + " -I" + clean_dirname.Data());
-   cmd.ReplaceAll("$SharedLib",sdirname+"."+gSystem->GetSoExt());
-   cmd.ReplaceAll("$LinkedLibs",gSystem->GetLibraries("","SDL"));
-   cmd.ReplaceAll("$LibName",sdirname);
-   cmd.ReplaceAll("$BuildDir",".");
-   TString sOpt;
-   TString rootbuild = ROOTBUILD;
-   if (rootbuild.Index("debug",0,TString::kIgnoreCase)==kNPOS) {
-      sOpt = gSystem->GetFlagsOpt();
-   } else {
-      sOpt = gSystem->GetFlagsDebug();
-   }
-   cmd.ReplaceAll("$Opt", sOpt);
-
-   fprintf(fpMAKE,"%s\n",cmd.Data());
-
-   fclose(fpMAKE);
-   printf("%s/MAKEP file has been generated\n",clean_dirname.Data());
-
-   if (!opt.Contains("nocompilation")) {
+   
+   if (!makepar && !opt.Contains("nocompilation")) {
       // now execute the generated script compiling and generating the shared lib
       path = gSystem->WorkingDirectory();
       gSystem->ChangeDirectory(clean_dirname.Data());
@@ -2815,6 +2964,244 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    delete list;
    filelist->Delete();
    delete filelist;
+}
+
+//______________________________________________________________________________
+Int_t TFile::MakeProjectParMake(const char *pack, const char *filemake)
+{
+   // Create makefile at 'filemake' for PAR package 'pack'.
+   // Called by MakeProject when option 'par' is given.
+   // Return 0 on success, -1 on error.
+
+   // Output file path must be defined
+   if (!filemake || (filemake && strlen(filemake) <= 0)) {
+      Error("MakeProjectParMake", "path for output file undefined!");
+      return -1;
+   }
+
+   // Package name must be defined
+   if (!pack || (pack && strlen(pack) <= 0)) {
+      Error("MakeProjectParMake", "package name undefined!");
+      return -1;
+   }
+
+#ifdef R__WINGCC
+   FILE *fmk = fopen(filemake, "wb");
+#else
+   FILE *fmk = fopen(filemake, "w");
+#endif
+   if (!fmk) {
+      Error("MakeProjectParMake", "cannot create file '%s' (errno: %d)", filemake, TSystem::GetErrno());
+      return -1;
+   }
+
+   // Fill the file now
+   fprintf(fmk, "# Makefile for the ROOT test programs.\n");
+   fprintf(fmk, "# This Makefile shows how to compile and link applications\n");
+   fprintf(fmk, "# using the ROOT libraries on all supported platforms.\n");
+   fprintf(fmk, "#\n");
+   fprintf(fmk, "# Copyright (c) 2000 Rene Brun and Fons Rademakers\n");
+   fprintf(fmk, "#\n");
+   fprintf(fmk, "# Author: this makefile has been automatically generated via TFile::MakeProject\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "include Makefile.arch\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "#------------------------------------------------------------------------------\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "PACKO        = %sProjectSource.$(ObjSuf)\n", pack);
+   fprintf(fmk, "PACKS        = %sProjectSource.$(SrcSuf) %sProjectDict.$(SrcSuf)\n", pack, pack);
+   fprintf(fmk, "PACKSO       = lib%s.$(DllSuf)\n", pack);
+   fprintf(fmk, "\n");
+   fprintf(fmk, "ifeq ($(PLATFORM),win32)\n");
+   fprintf(fmk, "PACKLIB      = lib%s.lib\n", pack);
+   fprintf(fmk, "else\n");
+   fprintf(fmk, "PACKLIB      = $(PACKSO)\n");
+   fprintf(fmk, "endif\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "OBJS          = $(PACKO)\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "PROGRAMS      =\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "#------------------------------------------------------------------------------\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, ".SUFFIXES: .$(SrcSuf) .$(ObjSuf) .$(DllSuf)\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "all:            $(PACKLIB)\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "$(PACKSO):     $(PACKO)\n");
+   fprintf(fmk, "ifeq ($(ARCH),aix)\n");
+   fprintf(fmk, "\t\t/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^\n");
+   fprintf(fmk, "else\n");
+   fprintf(fmk, "ifeq ($(ARCH),aix5)\n");
+   fprintf(fmk, "\t\t/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^\n");
+   fprintf(fmk, "else\n");
+   fprintf(fmk, "ifeq ($(PLATFORM),macosx)\n");
+   fprintf(fmk, "# We need to make both the .dylib and the .so\n");
+   fprintf(fmk, "\t\t$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@ $(LIBS)\n");
+   fprintf(fmk, "ifneq ($(subst $(MACOSX_MINOR),,1234),1234)\n");
+   fprintf(fmk, "ifeq ($(MACOSX_MINOR),4)\n");
+   fprintf(fmk, "\t\tln -sf $@ $(subst .$(DllSuf),.so,$@)\n");
+   fprintf(fmk, "else\n");
+   fprintf(fmk, "\t\t$(LD) -bundle -undefined $(UNDEFOPT) $(LDFLAGS) $^ \\\n");
+   fprintf(fmk, "\t\t   $(OutPutOpt) $(subst .$(DllSuf),.so,$@)\n");
+   fprintf(fmk, "endif\n");
+   fprintf(fmk, "endif\n");
+   fprintf(fmk, "else\n");
+   fprintf(fmk, "ifeq ($(PLATFORM),win32)\n");
+   fprintf(fmk, "\t\tbindexplib $* $^ > $*.def\n");
+   fprintf(fmk, "\t\tlib -nologo -MACHINE:IX86 $^ -def:$*.def \\\n");
+   fprintf(fmk, "\t\t   $(OutPutOpt)$(PACKLIB)\n");
+   fprintf(fmk, "\t\t$(LD) $(SOFLAGS) $(LDFLAGS) $^ $*.exp $(LIBS) \\\n");
+   fprintf(fmk, "\t\t   $(OutPutOpt)$@\n");
+   fprintf(fmk, "else\n");
+   fprintf(fmk, "\t\t$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(LIBS) $(EXPLLINKLIBS)\n");
+   fprintf(fmk, "endif\n");
+   fprintf(fmk, "endif\n");
+   fprintf(fmk, "endif\n");
+   fprintf(fmk, "endif\n");
+   fprintf(fmk, "\t\t@echo \"$@ done\"\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "clean:\n");
+   fprintf(fmk, "\t\t@rm -f $(OBJS) core\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "distclean:      clean\n");
+   fprintf(fmk, "\t\t@rm -f $(PROGRAMS) $(PACKSO) $(PACKLIB) *Dict.* *.def *.exp \\\n");
+   fprintf(fmk, "\t\t   *.so *.lib *.dll *.d *.log .def so_locations\n");
+   fprintf(fmk, "\t\t@rm -rf cxx_repository\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "# Dependencies\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, "%sProjectSource.$(ObjSuf): %sProjectHeaders.h %sLinkDef.h %sProjectDict.$(SrcSuf)\n", pack, pack, pack, pack);
+   fprintf(fmk, "\n");
+   fprintf(fmk, "%sProjectDict.$(SrcSuf): %sProjectHeaders.h %sLinkDef.h\n", pack, pack, pack);
+   fprintf(fmk, "\t\t@echo \"Generating dictionary $@...\"\n");
+   fprintf(fmk, "\t\t@rootcint -f $@ -c $^\n");
+   fprintf(fmk, "\n");
+   fprintf(fmk, ".$(SrcSuf).$(ObjSuf):\n");
+   fprintf(fmk, "\t\t$(CXX) $(CXXFLAGS) -c $<\n");
+   fprintf(fmk, "\n");
+
+   // Close the file
+   fclose(fmk);
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+Int_t TFile::MakeProjectParProofInf(const char *pack, const char *proofinf)
+{
+   // Create BUILD.sh and SETUP.C under 'proofinf' for PAR package 'pack'.
+   // Called by MakeProject when option 'par' is given.
+   // Return 0 on success, -1 on error.
+
+   // Output directory path must be defined ...
+   if (!proofinf || (proofinf && strlen(proofinf) <= 0)) {
+      Error("MakeProjectParProofInf", "directory path undefined!");
+      return -1;
+   }
+
+   // ... and exist and be a directory
+   Int_t rcst = 0;
+   FileStat_t st;
+   if ((rcst = gSystem->GetPathInfo(proofinf, st)) != 0 || !R_ISDIR(st.fMode)) {
+      Error("MakeProjectParProofInf", "path '%s' %s", proofinf,
+                       ((rcst == 0) ? "is not a directory" : "does not exist"));
+      return -1;
+   }
+
+   // Package name must be defined
+   if (!pack || (pack && strlen(pack) <= 0)) {
+      Error("MakeProjectParProofInf", "package name undefined!");
+      return -1;
+   }
+
+   TString path;
+
+   // The BUILD.sh first
+   path.Form("%s/BUILD.sh", proofinf);
+#ifdef R__WINGCC
+   FILE *f = fopen(path.Data(), "wb");
+#else
+   FILE *f = fopen(path.Data(), "w");
+#endif
+   if (!f) {
+      Error("MakeProjectParProofInf", "cannot create file '%s' (errno: %d)",
+                                      path.Data(), TSystem::GetErrno());
+      return -1;
+   }
+
+   fprintf(f, "#! /bin/sh\n");
+   fprintf(f, "# Build libEvent library.\n");
+   fprintf(f, "\n");
+   fprintf(f, "#\n");
+   fprintf(f, "# The environment variables ROOTPROOFLITE and ROOTPROOFCLIENT can be used to\n");
+   fprintf(f, "# adapt the script to the calling environment\n");
+   fprintf(f, "#\n");
+   fprintf(f, "# if test ! \"x$ROOTPROOFLITE\" = \"x\"; then\n");
+   fprintf(f, "#    echo \"event-BUILD: PROOF-Lite node (session has $ROOTPROOFLITE workers)\"\n");
+   fprintf(f, "# elif test ! \"x$ROOTPROOFCLIENT\" = \"x\"; then\n");
+   fprintf(f, "#    echo \"event-BUILD: PROOF client\"\n");
+   fprintf(f, "# else\n");
+   fprintf(f, "#    echo \"event-BUILD: standard PROOF node\"\n");
+   fprintf(f, "# fi\n");
+   fprintf(f, "\n");
+   fprintf(f, "if [ \"\" = \"clean\" ]; then\n");
+   fprintf(f, "   make distclean\n");
+   fprintf(f, "   exit 0\n");
+   fprintf(f, "fi\n");
+   fprintf(f, "\n");
+   fprintf(f, "make\n");
+   fprintf(f, "rc=$?\n");
+   fprintf(f, "echo \"rc=$?\"\n");
+   fprintf(f, "if [ $? != \"0\" ] ; then\n");
+   fprintf(f, "   exit 1\n");
+   fprintf(f, "fi\n");
+   fprintf(f, "exit 0\n");
+
+   // Close the file
+   fclose(f);
+
+   // Then SETUP.C
+   path.Form("%s/SETUP.C", proofinf);
+#ifdef R__WINGCC
+   f = fopen(path.Data(), "wb");
+#else
+   f = fopen(path.Data(), "w");
+#endif
+   if (!f) {
+      Error("MakeProjectParProofInf", "cannot create file '%s' (errno: %d)",
+                                      path.Data(), TSystem::GetErrno());
+      return -1;
+   }
+
+   fprintf(f, "Int_t SETUP()\n");
+   fprintf(f, "{\n");
+   fprintf(f, "\n");
+   fprintf(f, "//\n");
+   fprintf(f, "// The environment variables ROOTPROOFLITE and ROOTPROOFCLIENT can be used to\n");
+   fprintf(f, "// adapt the macro to the calling environment\n");
+   fprintf(f, "//\n");
+   fprintf(f, "//   if (gSystem->Getenv(\"ROOTPROOFLITE\")) {\n");
+   fprintf(f, "//      Printf(\"event-SETUP: PROOF-Lite node (session has %%s workers)\",\n");
+   fprintf(f, "//                                   gSystem->Getenv(\"ROOTPROOFLITE\"));\n");
+   fprintf(f, "//   } else if (gSystem->Getenv(\"ROOTPROOFCLIENT\")) {\n");
+   fprintf(f, "//      Printf(\"event-SETUP: PROOF client\");\n");
+   fprintf(f, "//   } else {\n");
+   fprintf(f, "//      Printf(\"event-SETUP: standard PROOF node\");\n");
+   fprintf(f, "//   }\n");
+   fprintf(f, "\n");
+   fprintf(f, "   if (gSystem->Load(\"lib%s\") == -1)\n", pack);
+   fprintf(f, "      return -1;\n");
+   fprintf(f, "   return 0;\n");
+   fprintf(f, "}\n");
+   fprintf(f, "\n");
+
+   // Close the file
+   fclose(f);
+
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -3005,11 +3392,12 @@ void TFile::WriteStreamerInfo()
          }
       }
    }
-   if (list.GetSize() == 0) return;
+
+   // Write the StreamerInfo list even if it is empty.
    fClassIndex->fArray[0] = 2; //to prevent adding classes in TStreamerInfo::TagFile
 
    if (listOfRules.GetEntries()) {
-      // Only the list of rules if we have something to say.
+      // Only add the list of rules if we have something to say.
       list.Add(&listOfRules);
    }
 
@@ -3361,68 +3749,77 @@ TFile *TFile::Open(const char *url, Option_t *options, const char *ftitle,
                return TFile::Open(fh);
       }
 
-      // Resolve the file type; this also adjusts names
-      TString lfname = gEnv->GetValue("Path.Localroot", "");
-      type = GetType(name, option, &lfname);
+      TString urlOptions(urlname.GetOptions());
+      if (urlOptions.BeginsWith("pmerge") || urlOptions.Contains("&pmerge") || urlOptions.Contains(" pmerge")) {
+         type = kMerge;
 
-      if (type == kLocal) {
-
-         // Local files
-         if (lfname.IsNull()) {
-            urlname.SetHost("");
-            urlname.SetProtocol("file");
-            lfname = urlname.GetUrl();
-         }
-         f = new TFile(lfname.Data(), option, ftitle, compress);
-
-      } else if (type == kNet) {
-
-         // Network files
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
-            if (h->LoadPlugin() == -1)
-               return 0;
-            f = (TFile*) h->ExecPlugin(5, name.Data(), option, ftitle, compress, netopt);
-         }
-
-      } else if (type == kWeb) {
-
-         // Web files
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
-            if (h->LoadPlugin() == -1)
-               return 0;
-            f = (TFile*) h->ExecPlugin(2, name.Data(), option);
-         }
-
-      } else if (type == kFile) {
-
-         // 'file:' protocol
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name)) &&
-            h->LoadPlugin() == 0) {
-            name.ReplaceAll("file:", "");
-            f = (TFile*) h->ExecPlugin(4, name.Data(), option, ftitle, compress);
-         } else
-            f = new TFile(name.Data(), option, ftitle, compress);
-
+         // Pass the full name including the url options:
+         f = (TFile*) gROOT->ProcessLineFast(TString::Format("new TParallelMergingFile(\"%s\",\"%s\",\"%s\",%d)",n.Data(),option,ftitle,compress));
+        
       } else {
-
-         // no recognized specification: try the plugin manager
-         if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name.Data()))) {
-            if (h->LoadPlugin() == -1)
-               return 0;
-            TClass *cl = TClass::GetClass(h->GetClass());
-            if (cl && cl->InheritsFrom("TNetFile"))
+         // Resolve the file type; this also adjusts names
+         TString lfname = gEnv->GetValue("Path.Localroot", "");
+         type = GetType(name, option, &lfname);
+         
+         if (type == kLocal) {
+            
+            // Local files
+            if (lfname.IsNull()) {
+               urlname.SetHost("");
+               urlname.SetProtocol("file");
+               lfname = urlname.GetUrl();
+            }
+            f = new TFile(lfname.Data(), option, ftitle, compress);
+            
+         } else if (type == kNet) {
+            
+            // Network files
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
+               if (h->LoadPlugin() == -1)
+                  return 0;
                f = (TFile*) h->ExecPlugin(5, name.Data(), option, ftitle, compress, netopt);
-            else
+            }
+            
+         } else if (type == kWeb) {
+            
+            // Web files
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name))) {
+               if (h->LoadPlugin() == -1)
+                  return 0;
+               f = (TFile*) h->ExecPlugin(2, name.Data(), option);
+            }
+            
+         } else if (type == kFile) {
+            
+            // 'file:' protocol
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name)) &&
+                h->LoadPlugin() == 0) {
+               name.ReplaceAll("file:", "");
                f = (TFile*) h->ExecPlugin(4, name.Data(), option, ftitle, compress);
+            } else
+               f = new TFile(name.Data(), option, ftitle, compress);
+            
          } else {
-            // Just try to open it locally but via TFile::Open, so that we pick-up the correct
-            // plug-in in the case file name contains information about a special backend (e.g.
-            // "srm://srm.cern.ch//castor/cern.ch/grid/..." should be considered a castor file
-            // /castor/cern.ch/grid/...").
-            f = TFile::Open(urlname.GetFileAndOptions(), option, ftitle, compress);
+            
+            // no recognized specification: try the plugin manager
+            if ((h = gROOT->GetPluginManager()->FindHandler("TFile", name.Data()))) {
+               if (h->LoadPlugin() == -1)
+                  return 0;
+               TClass *cl = TClass::GetClass(h->GetClass());
+               if (cl && cl->InheritsFrom("TNetFile"))
+                  f = (TFile*) h->ExecPlugin(5, name.Data(), option, ftitle, compress, netopt);
+               else
+                  f = (TFile*) h->ExecPlugin(4, name.Data(), option, ftitle, compress);
+            } else {
+               // Just try to open it locally but via TFile::Open, so that we pick-up the correct
+               // plug-in in the case file name contains information about a special backend (e.g.
+               // "srm://srm.cern.ch//castor/cern.ch/grid/..." should be considered a castor file
+               // /castor/cern.ch/grid/...").
+               f = TFile::Open(urlname.GetFileAndOptions(), option, ftitle, compress);
+            }
          }
       }
-
+      
       if (f && f->IsZombie()) {
          delete f;
          f = 0;
@@ -4140,6 +4537,11 @@ Bool_t TFile::Cp(const char *dst, Bool_t progressbar, UInt_t buffersize)
    TString opt = dURL.GetOptions();
    if (opt != "") opt += "&";
    opt += raw;
+
+   // AliEn files need to know where the source file is
+   if (!strcmp(dURL.GetProtocol(), "alien"))
+      opt += TString::Format("&source=%s", GetName());
+   
    dURL.SetOptions(opt);
 
    char *copybuffer = 0;

@@ -27,6 +27,10 @@
 #include "TMatrixDSym.h"
 #include "TRootIOCtor.h"
 
+#include <vector>
+#include <string>
+#include <map>
+
 class RooArgSet ;
 class RooAbsPdf ;
 class RooPlot;
@@ -71,8 +75,13 @@ public:
   // Accessors
   inline Int_t status() const {
     // Return MINUIT status code
-    return _status ; 
+    return _status ;     
   }
+
+  inline UInt_t numStatusHistory() const { return _statusHistory.size() ; }
+  Int_t statusCodeHistory(UInt_t icycle) ;
+  const char* statusLabelHistory(UInt_t icycle) ;
+
   inline Int_t covQual() const { 
     // Return MINUIT quality code of covariance matrix
     return _covQual ; 
@@ -118,8 +127,9 @@ public:
 
   
   const TMatrixDSym& covarianceMatrix() const ;
-  TMatrixDSym reducedCovarianceMatrix(const RooArgList& params) const ;
   const TMatrixDSym& correlationMatrix() const ;
+  TMatrixDSym reducedCovarianceMatrix(const RooArgList& params) const ;
+  TMatrixDSym conditionalCovarianceMatrix(const RooArgList& params) const ;
 
 
   // Global correlation accessors
@@ -162,6 +172,7 @@ protected:
   void fillCorrMatrix() ;
   void fillCorrMatrix(const std::vector<double>& globalCC, const TMatrixDSym& corrs, const TMatrixDSym& covs) ;
   void fillLegacyCorrMatrix() const ;
+  void setStatusHistory(std::vector<std::pair<std::string,int> >& hist) { _statusHistory = hist ; }
 
   Double_t correlation(Int_t row, Int_t col) const;
   Double_t covariance(Int_t row, Int_t col) const;
@@ -185,7 +196,9 @@ protected:
   TMatrixDSym* _VM ;  // Covariance matrix 
   TVectorD* _GC ;     // Global correlation coefficients 
 
-  ClassDef(RooFitResult,4) // Container class for fit result
+  std::vector<std::pair<std::string,int> > _statusHistory ; // History of status codes
+  
+  ClassDef(RooFitResult,5) // Container class for fit result
 };
 
 #endif

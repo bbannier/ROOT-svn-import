@@ -82,7 +82,8 @@ public:
       ROOT::NewFunc_t fCtor;       // Method cache for containee constructor
       ROOT::DesFunc_t fDtor;       // Method cache for containee destructor
       ROOT::DelFunc_t fDelete;     // Method cache for containee delete
-      unsigned int    fCase;       // type of data of Value_type
+      UInt_t          fCase;       // type of data of Value_type
+      UInt_t          fProperties; // Additional properties of the value type (kNeedDelete)
       TClassRef       fType;       // TClass reference of Value_type in collection
       EDataType       fKind;       // kind of ROOT-fundamental type
       size_t          fSize;       // fSize of the contained object
@@ -90,7 +91,7 @@ public:
       // Copy constructor
       Value(const Value& inside);
       // Initializing constructor
-      Value(const std::string& info);
+      Value(const std::string& info, Bool_t silent);
       // Delete individual item from STL container
       void DeleteItem(void* ptr);
       
@@ -304,6 +305,7 @@ protected:
    typedef std::vector<EnvironBase_t*>     Proxies_t;
    mutable TObjArray *fReadMemberWise;                                   //Array of bundle of TStreamerInfoActions to stream out (read)
    mutable std::map<std::string, TObjArray*> *fConversionReadMemberWise; //Array of bundle of TStreamerInfoActions to stream out (read) derived from another class.
+   mutable TStreamerInfoActions::TActionSequence *fWriteMemberWise;
    typedef void (*Sizing_t)(void *obj, size_t size);
    typedef void* (*Feedfunc_t)(void *from, void *to, size_t size);
    typedef void* (*ArrIterfunc_t)(void *from, size_t size);
@@ -337,9 +339,9 @@ protected:
    DeleteTwoIterators_t fFunctionDeleteTwoIterators;
 
    // Late initialization of collection proxy
-   TGenCollectionProxy* Initialize() const;
+   TGenCollectionProxy* Initialize(Bool_t silent) const;
    // Some hack to avoid const-ness.
-   virtual TGenCollectionProxy* InitializeEx();
+   virtual TGenCollectionProxy* InitializeEx(Bool_t silent);
    // Call to delete/destruct individual contained item.
    virtual void DeleteItem(Bool_t force, void* ptr) const;
    // Allow to check function pointers.

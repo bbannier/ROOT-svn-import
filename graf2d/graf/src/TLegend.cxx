@@ -96,7 +96,7 @@ Begin_Macro(source)
 }
 End_Macro
 Begin_Html
-
+<br>
 Note that the <tt>TPad</tt> class has a method to build automatically a legend
 for all objects in the pad. It is called <tt>TPad::BuildLegend()</tt>.
 <p>
@@ -107,7 +107,7 @@ associated to this object and an option which a combination of:
 <li> L: draw line associated with TAttLine if obj inherits from TAttLine
 <li> P: draw polymarker associated with TAttMarker if obj inherits from TAttMarker
 <li> F: draw a box with fill associated wit TAttFill if obj inherits TAttFill
-<li> E: draw vertical error bar if option "L" is also specified
+<li> E: draw vertical error bar
 </ul>
 <p>
 As shown in the following example, passing a NULL pointer as first parameter in
@@ -130,6 +130,30 @@ Begin_Macro(source)
 
    leg->Draw();
    return c2;
+}
+End_Macro
+Begin_Html
+<br>
+It is possible to draw the legend entries over several columns using
+the method <tt>SetNColumns()</tt> like in the following example.
+
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *c3 = new TCanvas("c2","c2",500,300);
+ 
+   TLegend* leg = new TLegend(0.2, 0.2, .8, .8);
+   TH1* h = new TH1F("", "", 1, 0, 1);
+ 
+   leg-> SetNColumns(2);
+ 
+   leg->AddEntry(h, "Column 1 line 1", "l");
+   leg->AddEntry(h, "Column 2 line 1", "l");
+   leg->AddEntry(h, "Column 1 line 2", "l");
+   leg->AddEntry(h, "Column 2 line 2", "l");
+ 
+   leg->Draw();
+   return c3;
 }
 End_Macro
 */
@@ -423,17 +447,31 @@ TLegendEntry *TLegend::GetEntry() const
    Int_t nRows = GetNRows();
    if ( nRows == 0 ) return 0;
 
-   Double_t ymouse = gPad->AbsPixeltoY(gPad->GetEventY());
+   Double_t ymouse = gPad->AbsPixeltoY(gPad->GetEventY())-fY1;
    Double_t yspace = (fY2 - fY1)/nRows;
+   
+   Int_t nColumns = GetNColumns();
+   Double_t xmouse = gPad->AbsPixeltoX(gPad->GetEventX())-fX1;
+   Double_t xspace = 0.;
+   if (nColumns > 0) xspace = (fX2 - fX1)/nColumns;
 
-   Double_t ybottomOfEntry = fY2;  // y-location of bottom of 0th entry
+   Int_t ix = 1;
+   if (xspace > 0.) ix = (Int_t)(xmouse/xspace)+1;
+   if (ix > nColumns) ix = nColumns;
+   if (ix < 1)        ix = 1;
+   
+   Int_t iy = nRows-(Int_t)(ymouse/yspace);
+   if (iy > nRows) iy = nRows;
+   if (iy < 1)     iy = 1;
+   
+   Int_t nloops = TMath::Min(ix+(nColumns*(iy-1)), fPrimitives->GetSize());
+
    TIter next(fPrimitives);
-   TLegendEntry *entry;
-   while (( entry = (TLegendEntry *)next() )) {
-      ybottomOfEntry -= yspace;
-      if ( ybottomOfEntry < ymouse ) return entry;
-   }
-   return 0;
+   TLegendEntry *entry = 0;
+
+   for (Int_t i=1; i<= nloops; i++) entry = (TLegendEntry *)next();
+
+   return entry;
 }
 
 
@@ -760,6 +798,16 @@ void TLegend::PaintPrimitives()
          }
       }
 
+      // Draw error only
+
+      if (opt.Contains("e") && !(opt.Contains("l") || opt.Contains("f"))) {
+         TLine entryline(xsym, ysym - yspace*0.30,
+                         xsym, ysym + yspace*0.30);
+         entryline.SetBit(TLine::kLineNDC);
+         entry->TAttLine::Copy(entryline);
+         entryline.Paint();
+      }
+
       // Draw Polymarker
 
       if ( opt.Contains("p")) {
@@ -846,7 +894,7 @@ void TLegend::SetEntryLabel( const char* label )
    /* Begin_Html
    Edit the label of the entry pointed to by the mouse.
    End_Html */
-
+   
    TLegendEntry* entry = GetEntry();   // get entry pointed by the mouse
    if ( entry ) entry->SetLabel( label );
 }

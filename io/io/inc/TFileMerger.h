@@ -57,6 +57,7 @@ protected:
    Bool_t         fExplicitCompLevel;// True if the user explicitly requested a compressio level change (default kFALSE)
    Bool_t         fCompressionChange;// True if the output and input have different compression level (default kFALSE)
    Int_t          fPrintLevel;       // How much information to print out at run time.
+   TString        fMsgPrefix;        // Prefix to be used when printing informational message (default TFileMerger)
 
    Int_t          fMaxOpenedFiles;  // Maximum number of files opened at the same time by the TFileMerger.
    Bool_t         fLocal;           // Makes local copies of merging files if True (default is kTRUE)
@@ -65,7 +66,19 @@ protected:
    TList         *fExcessFiles;     //! List of TObjString containing the name of the files not yet added to fFileList due to user or system limitiation on the max number of files opened.
 
    Bool_t         OpenExcessFiles();
-public:   
+   virtual Bool_t AddFile(TFile *source, Bool_t own, Bool_t cpProgress);
+   virtual Bool_t MergeRecursive(TDirectory *target, TList *sourcelist, Int_t type = kRegular | kAll);
+
+public:
+   enum EPartialMergeType {
+      kRegular      = 0,             // Normal merge, overwritting the output file.
+      kIncremental  = BIT(1),        // Merge the input file with the content of the output file (if already exising).
+      kResetable    = BIT(2),        // Only the objects with a MergeAfterReset member function.
+      kNonResetable = BIT(3),        // Only the objects without a MergeAfterReset member function.
+
+      kAll            = BIT(2)|BIT(3),      // Merge all type of objects (default)
+      kAllIncremental = kIncremental | kAll // Merge incrementally all type of objects.
+   };
    TFileMerger(Bool_t isLocal = kTRUE, Bool_t histoOneGo = kTRUE);
    virtual ~TFileMerger();
 
@@ -77,6 +90,8 @@ public:
    TFile      *GetOutputFile() const { return fOutputFile; }
    Int_t       GetMaxOpenedFies() const { return fMaxOpenedFiles; }
    void        SetMaxOpenedFiles(Int_t newmax);
+   const char *GetMsgPrefix() const { return fMsgPrefix; }
+   void        SetMsgPrefix(const char *prefix);
 
     //--- file management interface
    virtual Bool_t SetCWD(const char * /*path*/) { MayNotUse("SetCWD"); return kFALSE; }
@@ -85,13 +100,15 @@ public:
    //--- file merging interface
    virtual void   Reset();
    virtual Bool_t AddFile(const char *url, Bool_t cpProgress = kTRUE);
+   virtual Bool_t AddFile(TFile *source, Bool_t cpProgress = kTRUE);
    virtual Bool_t AddAdoptFile(TFile *source, Bool_t cpProgress = kTRUE);
-   virtual Bool_t OutputFile(const char *url, Bool_t force = kTRUE);
+   virtual Bool_t OutputFile(const char *url, Bool_t force);
    virtual Bool_t OutputFile(const char *url, Bool_t force, Int_t compressionLevel);
+   virtual Bool_t OutputFile(const char *url, const char *mode = "RECREATE");
+   virtual Bool_t OutputFile(const char *url, const char *mode, Int_t compressionLevel);
    virtual void   PrintFiles(Option_t *options);
-   virtual Bool_t IncrementalMerge(Bool_t = kTRUE);
    virtual Bool_t Merge(Bool_t = kTRUE);
-   virtual Bool_t MergeRecursive(TDirectory *target, TList *sourcelist, Bool_t incremental = kFALSE);
+   virtual Bool_t PartialMerge(Int_t type = kAll | kIncremental);
    virtual void   SetFastMethod(Bool_t fast=kTRUE)  {fFastMethod = fast;}
    virtual void   SetNotrees(Bool_t notrees=kFALSE) {fNoTrees = notrees;}
    virtual void        RecursiveRemove(TObject *obj);

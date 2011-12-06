@@ -367,7 +367,7 @@ void TPaveText::InsertLine()
    // Add a new lineine at the mouse position.
 
    if (!gPad->IsEditable()) return;
-   Double_t ymouse, yobj;
+   Double_t ymouse=0, yobj;
    TObject *obj = GetObject(ymouse, yobj); //get object pointed by the mouse
    Double_t yline = (ymouse-fY1)/(fY2-fY1);
    TLine *newline = AddLine(0,yline,0,yline);
@@ -455,11 +455,6 @@ void TPaveText::PaintPrimitives(Int_t mode)
       if (mode == kDiamond) textsize *= 0.66;
       SetTextSize(textsize);
    }
-   Double_t yfont;
-   if (GetTextFont()%10 > 2)
-      yfont = (gPad->PixeltoY(Int_t(-textsize))-gPad->PixeltoY(0))/(y2-y1)*dy;
-   else
-      yfont = textsize*dy;
    Double_t ytext = fY2 + 0.5*yspace;
    Double_t xtext = 0;
    Int_t halign;

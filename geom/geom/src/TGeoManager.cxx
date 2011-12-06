@@ -323,8 +323,71 @@ TGeoManager *gGeoManager = 0;
 
 ClassImp(TGeoManager)
 
-Bool_t TGeoManager::fgLock = kFALSE;
+Bool_t TGeoManager::fgLock         = kFALSE;
+Bool_t TGeoManager::fgLockNavigators = kFALSE;
 Int_t  TGeoManager::fgVerboseLevel = 1;
+Int_t  TGeoManager::fgNumThreads   = 0;
+TGeoManager::ThreadsMap_t TGeoManager::fgThreadId;
+
+//______________________________________________________________________________
+TGeoManager::ThreadData_t::ThreadData_t() :
+   fIntSize(0), fDblSize(0), fIntBuffer(0), fDblBuffer(0)
+{
+   // Constructor.
+}
+
+//______________________________________________________________________________
+TGeoManager::ThreadData_t::~ThreadData_t()
+{
+   // Destructor.
+
+   delete [] fIntBuffer;
+   delete [] fDblBuffer;
+}
+
+//______________________________________________________________________________
+TGeoManager::ThreadData_t& TGeoManager::GetThreadData() const
+{
+   Int_t tid = TGeoManager::ThreadId();
+   if (tid >= fThreadSize)
+   {
+      TThread::Lock();
+      if (tid >= fThreadSize)
+      {
+         fThreadData.resize(tid + 1);
+         fThreadSize = tid + 1;
+      }
+      TThread::UnLock();
+   }
+   if (fThreadData[tid] == 0)
+   {
+      TThread::Lock();
+      if (fThreadData[tid] == 0)
+      {
+         fThreadData[tid] = new ThreadData_t;
+      }
+      TThread::UnLock();
+   }
+   return *fThreadData[tid];
+}
+
+//______________________________________________________________________________
+void TGeoManager::ClearThreadData() const
+{
+   TThread::Lock();
+   std::vector<ThreadData_t*>::iterator i = fThreadData.begin();
+   while (i != fThreadData.end())
+   {
+      delete *i;
+      ++i;
+   }
+   fThreadData.clear();
+   fThreadSize = 0;
+   TIter next(fVolumes);
+   TGeoVolume *vol;
+   while ((vol=(TGeoVolume*)next())) vol->ClearThreadData();
+   TThread::UnLock();
+}
 
 //_____________________________________________________________________________
 TGeoManager::TGeoManager()
@@ -380,9 +443,6 @@ TGeoManager::TGeoManager()
       fUniqueVolumes = 0;
       fNodeIdArray = 0;
       fClippingShape = 0;
-      fIntSize = fDblSize = 1000;
-      fIntBuffer = 0;
-      fDblBuffer = 0;
       fMatrixTransform = kFALSE;
       fMatrixReflection = kFALSE;
       fGLMatrix = 0;
@@ -395,6 +455,8 @@ TGeoManager::TGeoManager()
       fKeyPNEId = 0;
       fValuePNEId = 0;
       fMultiThread = kFALSE;
+      ClearThreadsMap();
+      fThreadSize = 0;
    } else {
       Init();
       gGeoIdentity = 0;
@@ -475,9 +537,6 @@ void TGeoManager::Init()
    fUniqueVolumes = new TObjArray(256);
    fNodeIdArray = 0;
    fClippingShape = 0;
-   fIntSize = fDblSize = 1000;
-   fIntBuffer = new Int_t[1000];
-   fDblBuffer = new Double_t[1000];
    fMatrixTransform = kFALSE;
    fMatrixReflection = kFALSE;
    fGLMatrix = new TGeoHMatrix();
@@ -490,6 +549,8 @@ void TGeoManager::Init()
    fKeyPNEId = 0;
    fValuePNEId = 0;
    fMultiThread = kFALSE;
+   ClearThreadsMap();
+   fThreadSize = 0;
 }
 
 //_____________________________________________________________________________
@@ -545,11 +606,7 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fClippingShape(gm.fClippingShape),
   fElementTable(gm.fElementTable),
   fNodeIdArray(gm.fNodeIdArray),
-  fIntSize(gm.fIntSize),
-  fDblSize(gm.fDblSize),
-  fIntBuffer(gm.fIntBuffer),
   fNLevel(gm.fNLevel),
-  fDblBuffer(gm.fDblBuffer),
   fPaintVolume(gm.fPaintVolume),
   fHashVolumes(gm.fHashVolumes),
   fHashGVolumes(gm.fHashGVolumes),
@@ -559,11 +616,13 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fNPNEId(0),
   fKeyPNEId(0),
   fValuePNEId(0),
-  fMultiThread(kFALSE)
+  fMultiThread(kFALSE),
+  fThreadSize(0)
 {
    //copy constructor
    for(Int_t i=0; i<256; i++)
       fPdgId[i]=gm.fPdgId[i];
+   ClearThreadsMap();
 }
 
 //_____________________________________________________________________________
@@ -624,11 +683,7 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fClippingShape=gm.fClippingShape;
       fElementTable=gm.fElementTable;
       fNodeIdArray=gm.fNodeIdArray;
-      fIntSize=gm.fIntSize;
-      fDblSize=gm.fDblSize;
-      fIntBuffer=gm.fIntBuffer;
       fNLevel=gm.fNLevel;
-      fDblBuffer=gm.fDblBuffer;
       fPaintVolume=gm.fPaintVolume;
       fHashVolumes=gm.fHashVolumes;
       fHashGVolumes=gm.fHashGVolumes;
@@ -639,6 +694,8 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fKeyPNEId = 0;
       fValuePNEId = 0;
       fMultiThread = kFALSE;
+      ClearThreadsMap();
+      ClearThreadData();
    }
    return *this;
 }
@@ -657,6 +714,8 @@ TGeoManager::~TGeoManager()
 //   TIter next(brlist);
 //   TBrowser *browser = 0;
 //   while ((browser=(TBrowser*)next())) browser->RecursiveRemove(this);
+   ClearThreadsMap();
+   ClearThreadData();
    delete TGeoBuilder::Instance(this);
    if (fBits)  delete [] fBits;
    SafeDelete(fNodes);
@@ -676,11 +735,9 @@ TGeoManager::~TGeoManager()
    if (fTracks) {fTracks->Delete(); SafeDelete( fTracks );}
    SafeDelete( fUniqueVolumes );
    if (fPdgNames) {fPdgNames->Delete(); SafeDelete( fPdgNames );}
-//   if (fNavigators) {fNavigators->Delete(); SafeDelete( fNavigators );}
+   ClearNavigators();
    CleanGarbage();
    SafeDelete( fPainter ); 
-   delete [] fDblBuffer;
-   delete [] fIntBuffer;
    SafeDelete( fGLMatrix ); 
    if (fSizePNEId) {
       delete [] fKeyPNEId;
@@ -797,6 +854,11 @@ TGeoNavigator *TGeoManager::AddNavigator()
 {
 // Add a navigator in the list of navigators. If it is the first one make it
 // current navigator.
+   if (fMultiThread) TThread::Lock();
+//   if (fgLockNavigators) {
+//      Error("AddNavigator", "Navigators are locked. Use SetNavigatorsLock(false) first.");
+//      return 0;
+//   }
    Long_t threadId = (fMultiThread)?TThread::SelfId():999;
    NavigatorsMap_t::const_iterator it = fNavigators.find(threadId);
    TGeoNavigatorArray *array = 0;
@@ -805,7 +867,9 @@ TGeoNavigator *TGeoManager::AddNavigator()
       array = new TGeoNavigatorArray(this);
       fNavigators.insert(NavigatorsMap_t::value_type(threadId, array));
    }
-   return array->AddNavigator();   
+   TGeoNavigator *nav = array->AddNavigator();
+   if (fMultiThread) TThread::UnLock();
+   return nav;
 }   
 
 //_____________________________________________________________________________
@@ -851,6 +915,69 @@ Bool_t TGeoManager::SetCurrentNavigator(Int_t index)
    return kTRUE;
 }
 
+//_____________________________________________________________________________
+void TGeoManager::ClearNavigators()
+{
+// Clear all navigators.
+   if (fMultiThread) TThread::Lock();
+   TGeoNavigatorArray *arr = 0;
+   for (NavigatorsMap_t::iterator it = fNavigators.begin();
+        it != fNavigators.end(); it++) {
+      arr = (*it).second;
+      if (arr) delete arr;
+   }
+   fNavigators.clear();   
+   if (fMultiThread) TThread::UnLock();
+}
+
+//_____________________________________________________________________________
+void TGeoManager::RemoveNavigator(const TGeoNavigator *nav)
+{
+// Clear a single navigator.
+   if (fMultiThread) TThread::Lock();
+   for (NavigatorsMap_t::const_iterator it = fNavigators.begin();
+        it != fNavigators.end(); it++) {
+      TGeoNavigatorArray *arr = (*it).second;
+      if (arr) {
+         if ((TGeoNavigator*)arr->Remove((TObject*)nav)) {
+            delete nav;
+            return;
+         }
+      }   
+   }
+   Error("Remove navigator", "Navigator %p not found", nav);
+   if (fMultiThread) TThread::UnLock();
+}      
+
+//_____________________________________________________________________________
+void TGeoManager::ClearThreadsMap()
+{
+// Clear the current map of threads. This will be filled again by the calling
+// threads via ThreadId calls.
+   TThread::Lock();
+//   if (!fgThreadId.empty()) fgThreadId.clear();
+   fgNumThreads = 0;
+   TThread::UnLock();
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::ThreadId()
+{
+// Translates the current thread id to an ordinal number. This can be used to
+// manage data which is pspecific for a given thread.
+   Int_t tid = 0;
+   if (gGeoManager && !gGeoManager->IsMultiThread()) return 0;
+   Long_t selfId = TThread::SelfId();
+   TGeoManager::ThreadsMapIt_t it = fgThreadId.find(selfId);
+   if (it != fgThreadId.end()) return it->second;
+   // Map needs to be updated.
+   TThread::Lock();
+   fgThreadId[selfId] = fgNumThreads;
+   tid = fgNumThreads++;
+   TThread::UnLock();
+   return tid;
+}   
+   
 //_____________________________________________________________________________
 void TGeoManager::Browse(TBrowser *b)
 {
@@ -2531,7 +2658,7 @@ void TGeoManager::Voxelize(Option_t *option)
 {
 // Voxelize all non-divided volumes.
    TGeoVolume *vol;
-   TGeoVoxelFinder *vox = 0;
+//   TGeoVoxelFinder *vox = 0;
    if (!fStreamVoxels && fgVerboseLevel>0) Info("Voxelize","Voxelizing...");
 //   Int_t nentries = fVolumes->GetSize();
    TIter next(fVolumes);
@@ -2539,9 +2666,9 @@ void TGeoManager::Voxelize(Option_t *option)
       if (!fIsGeomReading) vol->SortNodes();
       if (!fStreamVoxels) {
          vol->Voxelize(option);
-      } else {
-         vox = vol->GetVoxels();
-         if (vox) vox->CreateCheckList();
+//      } else {
+//         vox = vol->GetVoxels();
+//         if (vox) vox->CreateCheckList(0);
       }
       if (!fIsGeomReading) vol->FindOverlaps();
    }
@@ -3287,36 +3414,10 @@ Int_t TGeoManager::Export(const char *filename, const char *name, Option_t *opti
    if (sfile.Contains(".gdml")) {
       //Save geometry as a gdml file
       if (fgVerboseLevel>0) Info("Export","Exporting %s %s as gdml code", GetName(), GetTitle());
-      gROOT->ProcessLine("TPython::Exec(\"from math import *\")");
-
-      gROOT->ProcessLine("TPython::Exec(\"import writer\")");
-      gROOT->ProcessLine("TPython::Exec(\"import ROOTwriter\")");
-
-      // get TGeoManager and top volume
-      gROOT->ProcessLine("TPython::Exec(\"geomgr = ROOT.gGeoManager\")");
-      gROOT->ProcessLine("TPython::Exec(\"topV = geomgr.GetTopVolume()\")");
-
-      // instanciate writer
-      TString cmd=TString::Format("TPython::Exec(\"gdmlwriter = writer.writer('%s')\")",filename);
-      gROOT->ProcessLine(cmd);
-      gROOT->ProcessLine("TPython::Exec(\"binding = ROOTwriter.ROOTwriter(gdmlwriter)\")");
-
-      // dump materials
-      gROOT->ProcessLine("TPython::Exec(\"matlist = geomgr.GetListOfMaterials()\")");
-      gROOT->ProcessLine("TPython::Exec(\"binding.dumpMaterials(matlist)\")");
-
-      // dump solids
-      gROOT->ProcessLine("TPython::Exec(\"shapelist = geomgr.GetListOfShapes()\")");
-      gROOT->ProcessLine("TPython::Exec(\"binding.dumpSolids(shapelist)\")");
-
-      // dump geo tree
-      gROOT->ProcessLine("TPython::Exec(\"print 'Info in <TPython::Exec>: Traversing geometry tree'\")");
-      gROOT->ProcessLine("TPython::Exec(\"gdmlwriter.addSetup('default', '1.0', topV.GetName())\")");
-      gROOT->ProcessLine("TPython::Exec(\"binding.examineVol(topV)\")");
-
-      // write file
-      gROOT->ProcessLine("TPython::Exec(\"gdmlwriter.writeFile()\")");
-      if (fgVerboseLevel>0) printf("Info in <TPython::Exec>: GDML Export complete - %s is ready\n", filename);
+	  //C++ version
+      TString cmd ;
+	  cmd = TString::Format("TGDMLWrite::StartGDMLWriting(gGeoManager,\"%s\",\"%s\")", filename, option);
+	  gROOT->ProcessLineFast(cmd);
       return 1;
    }
    if (sfile.Contains(".root") || sfile.Contains(".xml")) {
@@ -3426,14 +3527,13 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
       }
    } else {
       // import from a root file
-      TFile *old = gFile;
+      TDirectory::TContext ctxt(0);
       // in case a web file is specified, use the cacheread option to cache
       // this file in the cache directory
       TFile *f = 0;
       if (strstr(filename,"http")) f = TFile::Open(filename,"CACHEREAD");
       else                         f = TFile::Open(filename);
       if (!f || f->IsZombie()) {
-         if (old) old->cd();
          ::Error("TGeoManager::Import", "Cannot open file");
          return 0;
       }
@@ -3448,7 +3548,6 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
             break;
          }
       }
-      if (old) old->cd();
       delete f;
    }
    if (!gGeoManager) return 0;
@@ -3515,24 +3614,26 @@ Bool_t TGeoManager::InitArrayPNE() const
 Int_t *TGeoManager::GetIntBuffer(Int_t length)
 {
 // Get a temporary buffer of Int_t*
-   if (length>fIntSize) {
-      delete [] fIntBuffer;
-      fIntBuffer = new Int_t[length];
-      fIntSize = length;
+   ThreadData_t &td = GetThreadData();
+   if (length>td.fIntSize) {
+      delete [] td.fIntBuffer;
+      td.fIntBuffer = new Int_t[length];
+      td.fIntSize = length;
    }
-   return fIntBuffer;
+   return td.fIntBuffer;
 }
 
 //______________________________________________________________________________
 Double_t *TGeoManager::GetDblBuffer(Int_t length)
 {
 // Get a temporary buffer of Double_t*
-   if (length>fDblSize) {
-      delete [] fDblBuffer;
-      fDblBuffer = new Double_t[length];
-      fDblSize = length;
+   ThreadData_t &td = GetThreadData();
+   if (length>td.fDblSize) {
+      delete [] td.fDblBuffer;
+      td.fDblBuffer = new Double_t[length];
+      td.fDblSize = length;
    }
-   return fDblBuffer;
+   return td.fDblBuffer;
 }
 
 //______________________________________________________________________________

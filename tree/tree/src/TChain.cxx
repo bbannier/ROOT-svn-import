@@ -54,6 +54,7 @@
 #include "TEntryList.h"
 #include "TEntryListFromFile.h"
 #include "TFileStager.h"
+#include "TFilePrefetch.h"
 
 const Long64_t theBigNumber = Long64_t(1234567890)<<28;
 
@@ -171,7 +172,7 @@ TChain::~TChain()
 {
    // -- Destructor.
    gROOT->GetListOfCleanups()->Remove(this);
-
+   
    SafeDelete(fProofChain);
    fStatus->Delete();
    delete fStatus;
@@ -179,6 +180,13 @@ TChain::~TChain()
    fFiles->Delete();
    delete fFiles;
    fFiles = 0;
+
+   //first delete cache if exists
+   if (fFile && fFile->GetCacheRead()) {
+      delete fFile->GetCacheRead();
+      fFile->SetCacheRead(0);
+   }
+
    delete fFile;
    fFile = 0;
    // Note: We do *not* own the tree.
@@ -1014,6 +1022,27 @@ TFile* TChain::GetFile() const
 }
 
 //______________________________________________________________________________
+TLeaf* TChain::GetLeaf(const char* branchname, const char *leafname)
+{
+   // -- Return a pointer to the leaf name in the current tree.
+   
+   if (fProofChain && !(fProofChain->TestBit(kProofLite))) {
+      // Make sure the element list is uptodate
+      if (!TestBit(kProofUptodate))
+         SetProof(kTRUE, kTRUE);
+      return fProofChain->GetLeaf(branchname, leafname);
+   }
+   if (fTree) {
+      return fTree->GetLeaf(branchname, leafname);
+   }
+   LoadTree(0);
+   if (fTree) {
+      return fTree->GetLeaf(branchname, leafname);
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
 TLeaf* TChain::GetLeaf(const char* name)
 {
    // -- Return a pointer to the leaf name in the current tree.
@@ -1198,6 +1227,14 @@ Long64_t TChain::LoadTree(Long64_t entry)
    //
    // The input argument entry is the entry serial number in the whole chain.
    //
+   // In case of error, LoadTree returns a negative number:
+   //   -1: The chain is empty.
+   //   -2: The requested entry number of less than zero or too large for the chain.
+   //       or too large for the large TTree.
+   //   -3: The file corresponding to the entry could not be correctly open
+   //   -4: The TChainElement corresponding to the entry is missing or 
+   //       the TTree is missing from the file.
+   //
    // Note: This is the only routine which sets the value of fTree to
    //       a non-zero pointer.
    //
@@ -1210,7 +1247,7 @@ Long64_t TChain::LoadTree(Long64_t entry)
 
    if (!fNtrees) {
       // -- The chain is empty.
-      return 1;
+      return -1;
    }
 
    if ((entry < 0) || ((entry > 0) && (entry >= fEntries && entry!=(theBigNumber-1) ))) {
@@ -1360,7 +1397,14 @@ Long64_t TChain::LoadTree(Long64_t entry)
    if (fFile) {
       if (!fDirectory->GetList()->FindObject(this)) {
          tpf = (TTreeCache*) fFile->GetCacheRead();
-         if (tpf) tpf->ResetCache();
+         if (tpf) {
+           tpf->ResetCache();
+           if (tpf->IsEnablePrefetching()){
+              //wait for thread to finish current work
+              tpf->GetPrefetchObj()->GetMutexSynch()->Lock();
+              tpf->GetPrefetchObj()->GetMutexSynch()->UnLock();
+           }
+         }
          fFile->SetCacheRead(0);
          if (fCanDeleteRefs) {
             fFile->Close("R");

@@ -312,6 +312,9 @@ Int_t RooMinuit::migrad()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("MIGRAD",_status) ;
+
   return _status ;
 }
 
@@ -342,6 +345,9 @@ Int_t RooMinuit::hesse()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("HESSE",_status) ;
+
   return _status ;
 }
 
@@ -372,6 +378,11 @@ Int_t RooMinuit::minos()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  cout << "MINOS: status = " << _status << endl ;
+  
+  saveStatus("MINOS",_status) ;
+
   return _status ;
 }
 
@@ -420,6 +431,9 @@ Int_t RooMinuit::minos(const RooArgSet& minosParamList)
   backProp() ;
 
   delete[] arglist ;
+  
+  saveStatus("MINOS",_status) ;
+
   return _status ;
 }
 
@@ -450,6 +464,9 @@ Int_t RooMinuit::seek()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("SEEK",_status) ;
+  
   return _status ;
 }
 
@@ -481,6 +498,9 @@ Int_t RooMinuit::simplex()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("SIMPLEX",_status) ;
+  
   return _status ;
 }
 
@@ -511,6 +531,9 @@ Int_t RooMinuit::improve()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("IMPROVE",_status) ;
+  
   return _status ;
 }
 
@@ -789,7 +812,7 @@ Bool_t RooMinuit::synchronize(Bool_t verbose)
 
 
 //_____________________________________________________________________________
-void RooMinuit::optimizeConst(Bool_t flag)
+void RooMinuit::optimizeConst(Int_t flag)
 {
   // If flag is true, perform constant term optimization on
   // function being minimized.
@@ -798,11 +821,11 @@ void RooMinuit::optimizeConst(Bool_t flag)
 
   if (_optConst && !flag){
     if (_printLevel>-1) coutI(Minimization) << "RooMinuit::optimizeConst: deactivating const optimization" << endl ;
-    _func->constOptimizeTestStatistic(RooAbsArg::DeActivate) ;
+    _func->constOptimizeTestStatistic(RooAbsArg::DeActivate,flag>1) ;
     _optConst = flag ;
   } else if (!_optConst && flag) {
     if (_printLevel>-1) coutI(Minimization) << "RooMinuit::optimizeConst: activating const optimization" << endl ;
-    _func->constOptimizeTestStatistic(RooAbsArg::Activate) ;
+    _func->constOptimizeTestStatistic(RooAbsArg::Activate,flag>1) ;
     _optConst = flag ;
   } else if (_optConst && flag) {
     if (_printLevel>-1) coutI(Minimization) << "RooMinuit::optimizeConst: const optimization already active" << endl ;
@@ -877,6 +900,8 @@ RooFitResult* RooMinuit::save(const char* userName, const char* userTitle)
   } else {
     fitRes->setCovarianceMatrix(*_extV) ;
   }
+
+  fitRes->setStatusHistory(_statusHistory) ;
 
   return fitRes ;
 }

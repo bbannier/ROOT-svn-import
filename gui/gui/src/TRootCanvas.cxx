@@ -894,7 +894,7 @@ again:
                      if (!gApplication->ReturnFromRun()) {
                         if ((TVirtualPadEditor::GetPadEditor(kFALSE) != 0))
                            TVirtualPadEditor::Terminate();
-                        delete this;
+                        SendCloseMessage();
                      }
                      if (TVirtualPadEditor::GetPadEditor(kFALSE) != 0)
                         TVirtualPadEditor::Terminate();
@@ -957,7 +957,7 @@ again:
                         //   m->Update();
                         TColorWheel *wheel = new TColorWheel();
                         wheel->Draw();
-                        padsav->cd();
+                        if (padsav) padsav->cd();
                      }
                      break;
                   case kViewFonts:
@@ -969,7 +969,7 @@ again:
                         TCanvas *m = new TCanvas("markers","Marker Types",600,200);
                         TMarker::DisplayMarkerTypes();
                         m->Update();
-                        padsav->cd();
+                        if (padsav) padsav->cd();
                      }
                      break;
                   case kViewIconify:
@@ -1464,7 +1464,7 @@ void TRootCanvas::CreateEditor()
    Int_t show = gEnv->GetValue("Canvas.ShowEditor", 0);
    gEnv->SetValue("Canvas.ShowEditor","true");
    fEditor = TVirtualPadEditor::LoadEditor();
-   fEditor->SetGlobal(kFALSE);
+   if (fEditor) fEditor->SetGlobal(kFALSE);
    fEditorFrame->SetEditable(kEditDisable);
    fEditorFrame->SetEditable(kFALSE);
 

@@ -361,31 +361,10 @@ enum EDictType {
 
 char *StrDup(const char *str);
 
-typedef map<string,bool> Funcmap_t;
-Funcmap_t gFunMap;
-
 vector<string> gIoConstructorTypes;
 void AddConstructorType(const char *arg)
 {
    if (arg) gIoConstructorTypes.push_back(string(arg));
-}
-
-//const char* root_style()  {
-//  static const char* s = ::getenv("MY_ROOT");
-//  return s;
-//}
-
-// static int check = 0;
-//______________________________________________________________________________
-void SetFun (const string &fname)
-{
-   gFunMap[fname] = true;
-}
-
-//______________________________________________________________________________
-bool GetFun(const string &fname)
-{
-   return gFunMap[fname];
 }
 
 //______________________________________________________________________________
@@ -1084,25 +1063,6 @@ bool HasOldMerge(G__ClassInfo &cl)
 }
 
 //______________________________________________________________________________
-bool HasReset(G__ClassInfo &cl)
-{
-   // Return true if the class has a method ResetAfterMerge(TFileMergeInfo *)
-   
-   // Detect if the class has a 'new' Merge function.
-   // bool hasMethod = cl.HasMethod("DirectoryAutoAdd");
-   
-   // Detect if the class or one of its parent has a DirectoryAutoAdd
-   long offset;
-   const char *proto = "Option_t*";
-   const char *name = "Reset";
-   
-   G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
-   bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
-   
-   return hasMethodWithSignature;
-}
-
-//______________________________________________________________________________
 bool HasResetAfterMerge(G__ClassInfo &cl)
 {
    // Return true if the class has a method ResetAfterMerge(TFileMergeInfo *)
@@ -1113,7 +1073,7 @@ bool HasResetAfterMerge(G__ClassInfo &cl)
    // Detect if the class or one of its parent has a DirectoryAutoAdd
    long offset;
    const char *proto = "TFileMergeInfo*";
-   const char *name = "MergeAfterReset";
+   const char *name = "ResetAfterMerge";
    
    G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
    bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
@@ -1401,8 +1361,6 @@ bool CheckConstructor(G__MethodInfo &methodinfo, int argRequested)
    return false;
 }
 
-
-
 //______________________________________________________________________________
 bool HasDefaultConstructor(G__ClassInfo& cl, string *arg)
 {
@@ -1483,38 +1441,6 @@ bool NeedConstructor(G__ClassInfo& cl)
                    && strncmp(cl.FileName(),"prec_stl",8)!=0 )
                ) && !(cl.Property() & G__BIT_ISABSTRACT));
    return res;
-}
-
-//______________________________________________________________________________
-bool CheckConstructor(G__ClassInfo& cl)
-{
-   // Return false if the constructor configuration is invalid
-
-   bool result = true;
-   if (NeedConstructor(cl)) {
-
-      bool custom = HasCustomOperatorNew(cl);
-      if (custom && cl.IsBase("TObject")) {
-         custom = false;
-      }
-      // if (custom) fprintf(stderr,"%s has custom operator new\n",cl.Name());
-
-      result = !HasDefaultConstructor(cl);
-   }
-
-   // For now we never issue a warning at rootcint time.
-   // There will be a warning at run-time.
-   result = true;
-#if 0
-   if (!result) {
-      //Error(cl.Fullname(), "I/O has been requested but there is no constructor calleable without arguments\n"
-      //      "\tand a custom operator new has been defined.\n"
-      //      "\tEither disable the I/O or add an explicit default constructor.\n",cl.Fullname());
-      Warning(cl.Fullname(), "I/O has been requested but is missing an explicit default constructor.\n"
-              "\tEither disable the I/O or add an explicit default constructor.\n",cl.Fullname());
-   }
-#endif
-   return result;
 }
 
 //______________________________________________________________________________
@@ -1939,11 +1865,6 @@ void WriteAuxFunctions(G__ClassInfo &cl)
       (*dictSrcOut) << "   // Wrapper around the Reset function." << std::endl
       << "   static void reset_" << mappedname.c_str() << "(void *obj,TFileMergeInfo *info) {" << std::endl
       << "      ((" << classname.c_str() << "*)obj)->ResetAfterMerge(info);" << std::endl
-      << "   }" << std::endl;
-   } else if (HasReset(cl)) {
-      (*dictSrcOut) << "   // Wrapper around the Reset function." << std::endl
-      << "   static void reset_" << mappedname.c_str() << "(void *obj,TFileMergeInfo *info) {" << std::endl
-      << "      ((" << classname.c_str() << "*)obj)->Reset(info ? info->fOptions.Data() : \"\");" << std::endl
       << "   }" << std::endl;
    }
    (*dictSrcOut) << "} // end of namespace ROOT for class " << classname.c_str() << std::endl << std::endl;
@@ -2572,7 +2493,7 @@ void WriteClassInit(G__ClassInfo &cl)
    if (HasNewMerge(cl) || HasOldMerge(cl)) {
       (*dictSrcOut)<< "   static Long64_t merge_" << mappedname.c_str() << "(void *obj, TCollection *coll,TFileMergeInfo *info);" << std::endl;
    }
-   if (HasResetAfterMerge(cl) || HasReset(cl)) {
+   if (HasResetAfterMerge(cl)) {
       (*dictSrcOut)<< "   static void reset_" << mappedname.c_str() << "(void *obj, TFileMergeInfo *info);" << std::endl;
    }
    //--------------------------------------------------------------------------
@@ -2770,7 +2691,7 @@ void WriteClassInit(G__ClassInfo &cl)
    if (HasNewMerge(cl) || HasOldMerge(cl)) {
       (*dictSrcOut) << "      instance.SetMerge(&merge_" << mappedname.c_str() << ");" << std::endl;
    }
-   if (HasResetAfterMerge(cl) || HasReset(cl)) {
+   if (HasResetAfterMerge(cl)) {
       (*dictSrcOut) << "      instance.SetResetAfterMerge(&reset_" << mappedname.c_str() << ");" << std::endl;      
    }
    if (bset) {
@@ -3626,11 +3547,6 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
    char cdim[1024];
    string cvar;
    string clName(G__map_cpp_name((char *)cl.Fullname()));
-   string fun;
-   int version = GetClassVersion(cl);
-   int clflag = 1;
-   if (version == 0 || cl.RootFlag() == 0) clflag = 0;
-   if (version < 0 && !(cl.RootFlag() & G__USEBYTECOUNT) ) clflag = 0;
 
    while (m.Next()) {
 
@@ -3638,7 +3554,6 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
       //  - static members
       //  - the member G__virtualinfo inserted by the CINT RTTI system
 
-      fun = string("R__") + clName + "_" + m.Name(); // sprintf(fun,"R__%s_%s",clName,m.Name());
       if (!(m.Property() & G__BIT_ISSTATIC) &&
           strcmp(m.Name(), "G__virtualinfo")) {
 
@@ -3696,14 +3611,8 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
                              << prefix << m.Name() << ");" << std::endl;
-               if (clflag && IsStreamable(m) && GetFun(fun))
-                  (*dictSrcOut) << "      R__cl->SetMemberStreamer(\"" << cvar << "\",R__"
-                                << clName << "_" << m.Name() << ");" << std::endl;
             } else if (m.Property() & G__BIT_ISPOINTER) {
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"*" << m.Name() << "\", &" << prefix << m.Name() << ");" << std::endl;
-               if (clflag && IsStreamable(m) && GetFun(fun))
-                  (*dictSrcOut) << "      R__cl->SetMemberStreamer(\"*" << m.Name() << "\",R__"
-                                << clName << "_" << m.Name() << ");" << std::endl;
             } else if (m.Property() & G__BIT_ISARRAY) {
                cvar = m.Name();
                for (int dim = 0; dim < m.ArrayDim(); dim++) {
@@ -3712,9 +3621,6 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                }
                (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", "
                              << prefix << m.Name() << ");" << std::endl;
-               if (clflag && IsStreamable(m) && GetFun(fun))
-                  (*dictSrcOut) << "      R__cl->SetMemberStreamer(\"" << cvar << "\",R__"
-                                << clName << "_" << m.Name() << ");"  << std::endl;
             } else if (m.Property() & G__BIT_ISREFERENCE) {
                // For reference we do not know what do not ... let's do nothing (hopefully the referenced objects is saved somewhere else!
 
@@ -3724,10 +3630,6 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                                 << prefix << m.Name() << ");" << std::endl;
                   (*dictSrcOut) << "      R__insp.InspectMember(" << GetNonConstMemberName(m,prefix)
                                 << ", \"" << m.Name() << ".\");"  << std::endl;
-                  if (clflag && IsStreamable(m) && GetFun(fun))
-                     //fprintf(fp, "      R__cl->SetMemberStreamer(strcat(R__parent,\"%s\"),R__%s_%s); R__parent[R__ncp] = 0;\n", m.Name(), clName, m.Name());
-                     (*dictSrcOut) << "      R__cl->SetMemberStreamer(\"" << m.Name() << "\",R__"
-                                   << clName << "_" << m.Name() << ");" << std::endl;
                } else {
                   // NOTE: something to be added here!
                   (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << m.Name()
@@ -3750,9 +3652,6 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
                                    << (!strncmp(m.Title(), "!", 1)?"true":"false")
                                    <<  ");" << std::endl;
                   }
-                  if (clflag && IsStreamable(m) && GetFun(fun))
-                     (*dictSrcOut) << "      R__cl->SetMemberStreamer(\"" << m.Name() << "\",R__"
-                                   << clName << "_" << m.Name() << ");" << std::endl;
                }
             }
          }
@@ -4068,8 +3967,7 @@ void StrcpyWithEsc(string& escaped, const char *original)
    // Copy original into escaped BUT make sure that the \ characters
    // are properly escaped (on Windows temp files have \'s).
 
-   int j, k;
-   j = 0; k = 0;
+   int j = 0;
    escaped = "";
    while (original[j] != '\0') {
       if (original[j] == '\\')
@@ -5140,10 +5038,6 @@ int main(int argc, char **argv)
                   has_input_error |= CheckInputOperator(cl,dicttype);
                }
             }
-         }
-         bool res = CheckConstructor(cl);
-         if (!res) {
-            // has_input_error = true;
          }
          has_input_error |= !CheckClassDef(cl);
       }

@@ -120,6 +120,7 @@ TPDF::TPDF() : TVirtualPS()
    fStartStream     = 0;
    fLineScale       = 0.;
    fObjPosSize      = 0;
+   fObjPos          = 0;
    fNbObj           = 0;
    fNbPage          = 0;
    fRange           = kFALSE;
@@ -585,9 +586,9 @@ void TPDF::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
    if (fMarkerStyle == 1) {
      msize = 1.;
    } else if (fMarkerStyle == 6) {
-     msize = 1.5;
+     msize = 1.;
    } else if (fMarkerStyle == 7) {
-     msize = 3.;
+     msize = 1.5;
    } else {
       const Int_t kBASEMARKER = 8;
       Float_t sbase = msize*kBASEMARKER;
@@ -1332,9 +1333,9 @@ void TPDF::Open(const char *fname, Int_t wtype)
 #else
       fStream->open(fname, ofstream::out);
 #endif
-   if (fStream == 0) {
+   if (fStream == 0 || !fStream->good()) {
       printf("ERROR in TPDF::Open: Cannot open file:%s\n",fname);
-      return;
+      if (fStream == 0) return;
    }
 
    gVirtualPS = this;
@@ -2028,8 +2029,9 @@ void TPDF::SetFillPatterns(Int_t ipat, Int_t color)
    // Set the fill patterns (1 to 25) for fill areas
 
    char cpat[10];
-   PrintStr(" /Cs8 cs");
    TColor *col = gROOT->GetColor(color);
+   if (!col) return;
+   PrintStr(" /Cs8 cs");
    Double_t colRed   = col->GetRed();
    Double_t colGreen = col->GetGreen();
    Double_t colBlue  = col->GetBlue();
@@ -2193,7 +2195,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
 
    if (txalh > 1) {
       TText t;
-      UInt_t w, h;
+      UInt_t w=0, h;
       t.SetTextSize(fTextSize);
       t.SetTextFont(fTextFont);
       t.GetTextExtent(w, h, chars);
@@ -2267,7 +2269,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
    TText t;
    t.SetTextSize(fTextSize * scale);
    t.SetTextFont(fTextFont);
-   UInt_t wa1, wa0;
+   UInt_t wa1=0, wa0=0;
    t.GetTextAdvance(wa0, chars, kFALSE);
    t.GetTextAdvance(wa1, chars);
    t.TAttText::Modify();
@@ -2278,7 +2280,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
    if (kerning) {
         charDeltas = new Int_t[len];
         for (Int_t i = 0;i < len;i++) {
-            UInt_t ww;
+            UInt_t ww=0;
             t.GetTextAdvance(ww, chars + i);
             charDeltas[i] = wa1 - ww;
         }
@@ -2289,7 +2291,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
         tmp[1] = 0;
         for (Int_t i = 1;i < len;i++) {
             tmp[0] = chars[i-1];
-            UInt_t width;
+            UInt_t width=0;
             t.GetTextAdvance(width, &tmp[0], kFALSE);
             Double_t wwl = gPad->AbsPixeltoX(width - charDeltas[i]) - gPad->AbsPixeltoX(0);
             wwl -= 0.5*(gPad->AbsPixeltoX(1) - gPad->AbsPixeltoX(0)); // half a pixel ~ rounding error

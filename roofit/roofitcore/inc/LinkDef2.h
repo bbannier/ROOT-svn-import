@@ -15,6 +15,7 @@
 #pragma link C++ class RooEllipse+ ;
 #pragma link C++ class RooErrorVar+ ;
 #pragma link C++ class RooFitResult- ;
+#pragma link C++ class RooFIter+ ;
 #pragma link C++ class RooFormula+ ;
 #pragma link C++ class RooFormulaVar+ ;
 #pragma link C++ class RooGaussKronrodIntegrator1D+ ;
@@ -28,6 +29,7 @@
 #pragma link C++ class RooHist+ ;
 #pragma link C++ class RooImproperIntegrator1D+ ;
 #pragma link C++ class RooIntegrator1D+ ;
+#pragma link C++ class RooBinIntegrator+ ;
 #pragma link C++ class RooIntegrator2D+ ;
 #pragma link C++ class RooIntegratorBinding+ ;
 #pragma link C++ class RooInt+ ;
@@ -64,7 +66,6 @@
 #pragma link C++ class RooProdGenContext+ ;
 #pragma link C++ class RooProduct+ ;
 #pragma link C++ class RooPullVar+ ;
-#pragma link C++ class RooParallelEvaluator- ;
 #pragma link C++ class RooQuasiRandomGenerator+ ;
 #pragma link C++ class RooRandom+ ;
 #pragma link off class RooErrorHandler+ ;

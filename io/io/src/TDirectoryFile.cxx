@@ -303,7 +303,7 @@ void TDirectoryFile::Build(TFile* motherFile, TDirectory* motherDir)
    fList       = new THashList(100,50);
    fKeys       = new THashList(100,50);
    fMother     = motherDir;
-   fFile       = motherFile ? motherFile : gFile;
+   fFile       = motherFile ? motherFile : TFile::CurrentFile();
    SetBit(kCanDelete);
 }
 
@@ -318,7 +318,7 @@ Bool_t TDirectoryFile::cd(const char *path)
    // ../aa. Returns kTRUE in case of success.
 
    Bool_t ok = TDirectory::cd(path);
-   if (ok) gFile = fFile;
+   if (ok) TFile::CurrentFile() = fFile;
    return ok;
 }
 
@@ -327,13 +327,13 @@ void TDirectoryFile::CleanTargets()
 {
    // Clean the pointers to this object (gDirectory, TContext, etc.)
 
-   TDirectory::CleanTargets();
 
    // After CleanTargets either gFile was changed appropriately
    // by a cd() or needs to be set to zero.
    if (gFile == this) {
       gFile = 0;
    }
+   TDirectory::CleanTargets();
 }
 
 //______________________________________________________________________________
@@ -364,31 +364,34 @@ TObject *TDirectoryFile::CloneObject(const TObject *obj, Bool_t autoadd /* = kTR
    TObject *newobj = (TObject*)(pobj+baseOffset);
 
    //create a buffer where the object will be streamed
-   TFile *filsav = gFile;
-   gFile = 0;
-   const Int_t bufsize = 10000;
-   TBuffer *buffer = new TBufferFile(TBuffer::kWrite,bufsize);
-   buffer->MapObject(obj);  //register obj in map to handle self reference
    {
-      Bool_t isRef = obj->TestBit(kIsReferenced); 
-      ((TObject*)obj)->ResetBit(kIsReferenced);	
+      // NOTE: do we still need to make this change to gFile?
+      // NOTE: This can not be 'gDirectory=0' as at least roofit expect gDirectory to not be null
+      // during the streaming ....
+      TFile *filsav = gFile;
+      gFile = 0;
+      const Int_t bufsize = 10000;
+      TBufferFile buffer(TBuffer::kWrite,bufsize);
+      buffer.MapObject(obj);  //register obj in map to handle self reference
+      {
+         Bool_t isRef = obj->TestBit(kIsReferenced); 
+         ((TObject*)obj)->ResetBit(kIsReferenced);	
+         
+         ((TObject*)obj)->Streamer(buffer);
+         
+         if (isRef) ((TObject*)obj)->SetBit(kIsReferenced);
+      }
       
-      ((TObject*)obj)->Streamer(*buffer);
-      
-      if (isRef) ((TObject*)obj)->SetBit(kIsReferenced);
+      // read new object from buffer
+      buffer.SetReadMode();
+      buffer.ResetMap();
+      buffer.SetBufferOffset(0);
+      buffer.MapObject(newobj);  //register obj in map to handle self reference
+      newobj->Streamer(buffer);
+      newobj->ResetBit(kIsReferenced);
+      newobj->ResetBit(kCanDelete);
+      gFile = filsav;
    }
-
-   // read new object from buffer
-   buffer->SetReadMode();
-   buffer->ResetMap();
-   buffer->SetBufferOffset(0);
-   buffer->MapObject(newobj);  //register obj in map to handle self reference
-   newobj->Streamer(*buffer);
-   newobj->ResetBit(kIsReferenced);
-   newobj->ResetBit(kCanDelete);
-   gFile = filsav;
-
-   delete buffer;
 
    if (autoadd) {
       ROOT::DirAutoAdd_t func = obj->IsA()->GetDirectoryAutoAdd();
@@ -1306,9 +1309,15 @@ Int_t TDirectoryFile::ReadTObject(TObject *obj, const char *keyname)
    // See TObject::Write().
 
    if (!fFile) { Error("Read","No file open"); return 0; }
-   TKey *key = (TKey*)fKeys->FindObject(keyname);
-   if (!key)   { Error("Read","Key not found"); return 0; }
-   return key->Read(obj);
+   TKey *key = 0;
+   TIter nextkey(GetListOfKeys());
+   while ((key = (TKey *) nextkey())) {
+      if (strcmp(keyname,key->GetName()) == 0) {
+         return key->Read(obj);
+      }
+   }
+   Error("Read","Key not found"); 
+   return 0;
 }
 
 //______________________________________________________________________________

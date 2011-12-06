@@ -58,18 +58,20 @@ public:
 
 protected:
 
-  Bool_t setDataSlave(RooAbsData& data, Bool_t cloneData=kTRUE) ;
+  Bool_t setDataSlave(RooAbsData& data, Bool_t cloneData=kTRUE, Bool_t ownNewDataAnyway=kFALSE) ;
+  void initSlave(RooAbsReal& real, RooAbsData& indata, const RooArgSet& projDeps, const char* rangeName, 
+		 const char* addCoefRangeName)  ;
 
   friend class RooAbsReal ;
 
   virtual Bool_t allowFunctionCache() { return kTRUE ;  }
-  void constOptimizeTestStatistic(ConstOpCode opcode) ;
+  void constOptimizeTestStatistic(ConstOpCode opcode, Bool_t doAlsoTrackingOpt=kTRUE) ;
 
   virtual Bool_t redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursive) ;
   virtual void printCompactTreeHook(ostream& os, const char* indent="") ;
   virtual RooArgSet requiredExtraObservables() const { return RooArgSet() ; }
   void optimizeCaching() ;
-  void optimizeConstantTerms(Bool_t) ;
+  void optimizeConstantTerms(Bool_t,Bool_t=kTRUE) ;
 
   RooArgSet*  _normSet ; // Pointer to set with observables used for normalization
   RooArgSet*  _funcCloneSet ; // Set owning all components of internal clone of input function
@@ -79,8 +81,14 @@ protected:
   Bool_t      _ownData  ; // Do we own the dataset
   Bool_t      _sealed ; // Is test statistic sealed -- i.e. no access to data 
   TString     _sealNotice ; // User-defined notice shown when reading a sealed likelihood 
-  RooArgSet   _ownedDataObs ; //! Dataset observables we've agreed to own
-  ClassDef(RooAbsOptTestStatistic,3) // Abstract base class for optimized test statistics
+  RooArgSet*  _funcObsSet ; // List of observables in the pdf expression
+  RooArgSet   _cachedNodes ; //! List of nodes that are cached as constant expressions
+  
+  RooAbsReal* _origFunc ; // Original function 
+  RooAbsData* _origData ; // Original data 
+  Bool_t      _optimized ; //!
+
+  ClassDef(RooAbsOptTestStatistic,4) // Abstract base class for optimized test statistics
 };
 
 #endif

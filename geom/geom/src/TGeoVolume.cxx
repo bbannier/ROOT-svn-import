@@ -344,6 +344,7 @@
 #include "TMap.h"
 #include "TFile.h"
 #include "TKey.h"
+#include "TThread.h"
 
 #include "TGeoManager.h"
 #include "TGeoNode.h"
@@ -356,6 +357,14 @@
 #include "TGeoVoxelFinder.h"
 
 ClassImp(TGeoVolume)
+
+//______________________________________________________________________________
+void TGeoVolume::ClearThreadData() const
+{
+   if (fFinder) fFinder->ClearThreadData();
+   if (fVoxels) fVoxels->ClearThreadData();
+   if (fShape)  fShape->ClearThreadData();
+}   
 
 //_____________________________________________________________________________
 TGeoVolume::TGeoVolume()
@@ -774,10 +783,9 @@ TGeoVolume *TGeoVolume::Import(const char *filename, const char *name, Option_t 
    // import from a gdml file
    } else {
    // import from a root file
-      TFile *old = gFile;
+      TDirectory::TContext ctxt(0);
       TFile *f = TFile::Open(filename);
       if (!f || f->IsZombie()) {
-         if (old) old->cd();
          printf("Error: TGeoVolume::Import : Cannot open file %s\n", filename);
          return 0;
       }
@@ -792,7 +800,6 @@ TGeoVolume *TGeoVolume::Import(const char *filename, const char *name, Option_t 
             break;
          }
       }
-      if (old) old->cd();
       delete f;         
    }
    if (!volume) return NULL;
@@ -2454,13 +2461,91 @@ void TGeoVolumeMulti::SetVisibility(Bool_t vis)
 
 ClassImp(TGeoVolumeAssembly)
 
+//______________________________________________________________________________
+TGeoVolumeAssembly::ThreadData_t::ThreadData_t() :
+   fCurrent(-1), fNext(-1)
+{
+   // Constructor.
+}
+
+//______________________________________________________________________________
+TGeoVolumeAssembly::ThreadData_t::~ThreadData_t()
+{
+   // Destructor.
+}
+
+//______________________________________________________________________________
+TGeoVolumeAssembly::ThreadData_t& TGeoVolumeAssembly::GetThreadData() const
+{
+   Int_t tid = TGeoManager::ThreadId();
+   if (tid >= fThreadSize)
+   {
+      TThread::Lock();
+      if (tid >= fThreadSize)
+      {
+         fThreadData.resize(tid + 1);
+         fThreadSize = tid + 1;
+      }
+      TThread::UnLock();
+   }
+   if (fThreadData[tid] == 0)
+   {
+      TThread::Lock();
+      if (fThreadData[tid] == 0)
+      {
+         fThreadData[tid] = new ThreadData_t;
+      }
+      TThread::UnLock();
+   }
+   return *fThreadData[tid];
+}
+
+//______________________________________________________________________________
+void TGeoVolumeAssembly::ClearThreadData() const
+{
+   TThread::Lock();
+   TGeoVolume::ClearThreadData();
+   std::vector<ThreadData_t*>::iterator i = fThreadData.begin();
+   while (i != fThreadData.end())
+   {
+      delete *i;
+      ++i;
+   }
+   fThreadData.clear();
+   fThreadSize = 0;
+   TThread::UnLock();
+}
+
+//______________________________________________________________________________
+Int_t TGeoVolumeAssembly::GetCurrentNodeIndex() const
+{
+   return GetThreadData().fCurrent;
+}
+
+//______________________________________________________________________________
+Int_t TGeoVolumeAssembly::GetNextNodeIndex() const
+{
+   return GetThreadData().fNext;
+}
+
+//______________________________________________________________________________
+void TGeoVolumeAssembly::SetCurrentNodeIndex(Int_t index)
+{
+   GetThreadData().fCurrent = index;
+}
+
+//______________________________________________________________________________
+void TGeoVolumeAssembly::SetNextNodeIndex(Int_t index)
+{
+   GetThreadData().fNext = index;
+}
+
 //_____________________________________________________________________________
 TGeoVolumeAssembly::TGeoVolumeAssembly()
                    :TGeoVolume()
 {
 // Default constructor
-   fCurrent = -1;
-   fNext = -1;
+   fThreadSize = 0;
 }
 
 //_____________________________________________________________________________
@@ -2471,16 +2556,16 @@ TGeoVolumeAssembly::TGeoVolumeAssembly(const char *name)
 // shape or medium.
    fName = name;
    fName = fName.Strip();
-   fCurrent = -1;
-   fNext = -1;
    fShape = new TGeoShapeAssembly(this);
    if (fGeoManager) fNumber = fGeoManager->AddVolume(this);
+   fThreadSize = 0;
 }
 
 //_____________________________________________________________________________
 TGeoVolumeAssembly::~TGeoVolumeAssembly()
 {
 // Destructor. The assembly is owner of its "shape".
+   ClearThreadData();
    if (fShape) delete fShape;
 }   
 

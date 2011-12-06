@@ -62,6 +62,7 @@
 #include "TIsAProxy.h"
 #include "TSchemaRule.h"
 #include "TSystem.h"
+#include "TThreadSlots.h"
 
 #include <cstdio>
 #include <cctype>
@@ -898,7 +899,7 @@ void TClass::Init(const char *name, Version_t cversion,
       ::Fatal("TClass::TClass", "ROOT system not initialized");
 
    // Always strip the default STL template arguments (from any template argument or the class name)
-   SetName(TClassEdit::ShortType(name, TClassEdit::kDropStlDefault).c_str());
+   fName           = TClassEdit::ShortType(name, TClassEdit::kDropStlDefault).c_str();
    fClassVersion   = cversion;
    fDeclFileName   = dfil ? dfil : "";
    fImplFileName   = ifil ? ifil : "";
@@ -917,11 +918,15 @@ void TClass::Init(const char *name, Version_t cversion,
 
    if (oldcl && oldcl->TestBit(kLoading)) {
       // Do not recreate a class while it is already being created!
+      
+      // We can no longer reproduce this case, to check whether we are, we use
+      // this code:
+      //    Fatal("Init","A bad replacement for %s was requested\n",name);
       return;
    }
 
    if (oldcl) {
-      gROOT->RemoveClass(oldcl);
+      TClass::RemoveClass(oldcl);
       // move the StreamerInfo immediately so that there are
       // properly updated!
 
@@ -942,7 +947,6 @@ void TClass::Init(const char *name, Version_t cversion,
       // Move the Schema Rules too.
       fSchemaRules = oldcl->fSchemaRules;
       oldcl->fSchemaRules = 0;
-
    }
 
    SetBit(kLoading);
@@ -1052,14 +1056,14 @@ void TClass::Init(const char *name, Version_t cversion,
    ResetBit(kLoading);
 
    if ( isStl || !strncmp(GetName(),"stdext::hash_",13) || !strncmp(GetName(),"__gnu_cxx::hash_",16) ) {
-      fCollectionProxy = TVirtualStreamerInfo::Factory()->GenEmulatedProxy( GetName() );
+      fCollectionProxy = TVirtualStreamerInfo::Factory()->GenEmulatedProxy( GetName(), silent );
       if (fCollectionProxy) {
          fSizeof = fCollectionProxy->Sizeof();
       } else if (!silent) {
          Warning("Init","Collection proxy for %s was not properly initialized!",GetName());
       }
       if (fStreamer==0) {
-         fStreamer =  TVirtualStreamerInfo::Factory()->GenEmulatedClassStreamer( GetName() );
+         fStreamer =  TVirtualStreamerInfo::Factory()->GenEmulatedClassStreamer( GetName(), silent );
       }
    }
 
@@ -1396,9 +1400,10 @@ Bool_t TClass::AddRule( const char *rule )
    }
    ROOT::TSchemaRuleSet* rset = cl->GetSchemaRules( kTRUE );
       
-   if( !rset->AddRule( ruleobj, ROOT::TSchemaRuleSet::kCheckConflict ) ) {
-      ::Warning( "TClass::AddRule", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules.",
-                ruleobj->GetTargetClass(), ruleobj->GetVersion(), ruleobj->GetTargetString() );
+   TString errmsg;
+   if( !rset->AddRule( ruleobj, ROOT::TSchemaRuleSet::kCheckConflict, &errmsg ) ) {
+      ::Warning( "TClass::AddRule", "The rule for class: \"%s\": version, \"%s\" and data members: \"%s\" has been skipped because it conflicts with one of the other rules (%s).",
+                ruleobj->GetTargetClass(), ruleobj->GetVersion(), ruleobj->GetTargetString(), errmsg.Data() );
       delete ruleobj;
       return kFALSE;
    }
@@ -1542,6 +1547,10 @@ void TClass::BuildRealData(void* pointer, Bool_t isTransient)
    // Only do this once.
    if (fRealData) {
       return;
+   }
+
+   if (fClassVersion == 0) {
+      isTransient = kTRUE;
    }
 
    // When called via TMapFile (e.g. Update()) make sure that the dictionary
@@ -1993,7 +2002,7 @@ TObject *TClass::Clone(const char *new_name) const
    }
    // Remove the copy before renaming it
    TClass::RemoveClass(copy);
-   copy->SetName(new_name);
+   copy->fName = new_name;
    TClass::AddClass(copy);
 
    copy->SetNew(fNew);
@@ -2357,7 +2366,7 @@ namespace {
       TClassStreamer          *fStreamer;
 
       static TClassLocalStorage *GetStorage(const TClass *cl) {
-         void **thread_ptr = (*gThreadTsd)(0,1);
+         void **thread_ptr = (*gThreadTsd)(0,ROOT::kClassThreadSlot);
          if (thread_ptr) {
             if (*thread_ptr==0) *thread_ptr = new TExMap();
             TExMap *lmap = (TExMap*)(*thread_ptr);
@@ -3508,6 +3517,12 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
       sinfo = (TVirtualStreamerInfo*) fStreamerInfo->At(fClassVersion);
    }
    if (!sinfo) {
+      if (fClassInfo && fRealData==0 &&  (gCint->ClassInfo_Property(fClassInfo) & kIsAbstract) ) {
+         // This class is abstract, we can not build a proper StreamerInfo unless we already have
+         // the list of real data.
+         // We have to wait until one of the derived class creates its StreamerInfo.
+         return 0;
+      }
       // We just were not able to find a streamer info, we have to make a new one.
       TMmallocDescTemp setreset;
       sinfo = TVirtualStreamerInfo::Factory()->NewInfo(const_cast<TClass*>(this));
@@ -3523,7 +3538,8 @@ TVirtualStreamerInfo* TClass::GetStreamerInfo(Int_t version) const
          //           to us by a global variable!  Don't call us unless you have
          //           set that variable properly with TStreamer::Optimize()!
          //
-         // FIXME: Why don't we call BuildOld() like we do below?  Answer: We are new and so don't have to do schema evolution?
+         // FIXME: Why don't we call BuildOld() like we do below?  
+         // Answer: We are new and so don't have to do schema evolution.
          sinfo->Build();
       }
    } else {

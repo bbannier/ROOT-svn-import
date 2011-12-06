@@ -2613,6 +2613,9 @@ void G__define_var(int tagnum, int typenum)
                else {
                   reg = G__null;
                }
+               if (var_type == 'u' && (new_name[0] == '*') && (reg.type == 'u')) {                  
+                  G__fundamental_conversion_operator('U' /* 'u'+'*' */,tagnum,typenum,G__reftype,G__constvar,&reg,0);
+               }
                G__prerun = store_prerun;
                G__decl = store_decl;
                G__constvar = store_constvar;

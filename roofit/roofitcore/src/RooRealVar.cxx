@@ -42,6 +42,7 @@
 #include "RooCmdConfig.h"
 #include "RooMsgService.h"
 #include "RooParamBinning.h"
+#include "RooVectorDataStore.h"
 
 
 ClassImp(RooRealVar)
@@ -57,6 +58,7 @@ RooRealVarSharedProperties RooRealVar::_nullProp("00000000-0000-0000-0000-000000
 RooRealVar::RooRealVar()  :  _error(0), _asymErrLo(0), _asymErrHi(0), _binning(0), _sharedProp(0)
 {  
   // Default constructor
+  _fast = kTRUE ;
 }
 
 
@@ -70,6 +72,7 @@ RooRealVar::RooRealVar(const char *name, const char *title,
   // _instanceList.registerInstance(this) ;
   _binning = new RooUniformBinning(-1,1,100) ;
   _value = value ;
+  _fast = kTRUE ;
   removeRange();
   setConstant(kTRUE) ;
 }  
@@ -84,6 +87,7 @@ RooRealVar::RooRealVar(const char *name, const char *title,
   // Constructor with range and unit. Initial value is center of range
 
   _binning = new RooUniformBinning(minValue,maxValue,100) ;
+  _fast = kTRUE ;
 
   if (RooNumber::isInfinite(minValue)) {
     if (RooNumber::isInfinite(maxValue)) {
@@ -117,6 +121,7 @@ RooRealVar::RooRealVar(const char *name, const char *title,
   // Constructor with value, range and unit
 
   _value = value ;
+  _fast = kTRUE ;
 
   _binning = new RooUniformBinning(minValue,maxValue,100) ;
   setRange(minValue,maxValue) ;
@@ -135,6 +140,7 @@ RooRealVar::RooRealVar(const RooRealVar& other, const char* name) :
   _sharedProp =  (RooRealVarSharedProperties*) _sharedPropList.registerProperties(other.sharedProp()) ;
   _binning = other._binning->clone() ;
   _binning->insertHook(*this) ;
+  _fast = kTRUE ;
 
   //cout << "RooRealVar::cctor(this = " << this << " name = " << GetName() << ", other = " << &other << ")" << endl ;
   
@@ -157,6 +163,7 @@ RooRealVar::RooRealVar(const RooRealVar& other, const char* name) :
 RooRealVar::~RooRealVar() 
 {
   // Destructor
+//   cout << "RooRealVar::dtor(" << this << ")" << endl ;
 
   delete _binning ;
   _altNonSharedBinning.Delete() ;
@@ -168,7 +175,7 @@ RooRealVar::~RooRealVar()
 
 
 //_____________________________________________________________________________
-Double_t RooRealVar::getVal(const RooArgSet*) const 
+Double_t RooRealVar::getValV(const RooArgSet*) const 
 { 
   // Return value of variable
 
@@ -656,7 +663,6 @@ void RooRealVar::printValue(ostream& os) const
     os << " +/- (" << getAsymErrorLo() << "," << getAsymErrorHi() << ")" ;
   }
 
-
 }
 
 
@@ -693,6 +699,9 @@ void RooRealVar::printExtras(ostream& os) const
   // Add comment with unit, if unit exists
   if (!_unit.IsNull())
     os << "// [" << getUnit() << "]" ;
+
+//   cout << " _value = " << &_value << " _error = " << &_error ;
+
   
 }
 
@@ -937,6 +946,39 @@ Double_t RooRealVar::chopAt(Double_t what, Int_t where) const
 
 
 //_____________________________________________________________________________
+void RooRealVar::attachToVStore(RooVectorDataStore& vstore) 
+{
+  // Overload RooAbsReal::attachToTree to also attach
+  // branches for errors  and/or asymmetric errors
+  // attribute StoreError and/or StoreAsymError are set
+
+  // Follow usual procedure for value
+ 
+  if (getAttribute("StoreError") || getAttribute("StoreAsymError") || vstore.isFullReal(this) ) {
+    
+    RooVectorDataStore::RealFullVector* rfv = vstore.addRealFull(this) ;
+    rfv->setBuffer(this,&_value) ;
+  
+    // Attach/create additional branch for error
+    if (getAttribute("StoreError") || vstore.hasError(this) ) {
+      rfv->setErrorBuffer(&_error) ;
+    }
+    
+    // Attach/create additional branches for asymmetric error
+    if (getAttribute("StoreAsymError") || vstore.hasAsymError(this)) {
+      rfv->setAsymErrorBuffer(&_asymErrLo,&_asymErrHi) ;
+    }
+
+  } else {
+
+    RooAbsReal::attachToVStore(vstore) ;
+
+  }
+}
+
+
+
+//_____________________________________________________________________________
 void RooRealVar::attachToTree(TTree& t, Int_t bufSize)
 {
   // Overload RooAbsReal::attachToTree to also attach
@@ -945,6 +987,8 @@ void RooRealVar::attachToTree(TTree& t, Int_t bufSize)
 
   // Follow usual procedure for value
   RooAbsReal::attachToTree(t,bufSize) ;
+//   cout << "RooRealVar::attachToTree(" << this << ") name = " << GetName() 
+//        << " StoreError = " << (getAttribute("StoreError")?"T":"F") << endl ;
 
   // Attach/create additional branch for error
   if (getAttribute("StoreError")) {
@@ -1026,14 +1070,14 @@ void RooRealVar::fillTreeBranch(TTree& t)
 
 
 //_____________________________________________________________________________
-void RooRealVar::copyCache(const RooAbsArg* source, Bool_t valueOnly) 
+void RooRealVar::copyCache(const RooAbsArg* source, Bool_t valueOnly, Bool_t setValDirty) 
 {
   // Copy the cached value of another RooAbsArg to our cache
   // Warning: This function copies the cached values of source,
   //          it is the callers responsibility to make sure the cache is clean
 
   // Follow usual procedure for valueklog
-  RooAbsReal::copyCache(source) ;
+  RooAbsReal::copyCache(source,valueOnly,setValDirty) ;
 
   if (valueOnly) return ;
 

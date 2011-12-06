@@ -29,6 +29,7 @@
 
 class RooArgSet ;
 class RooErrorVar ;
+class RooVectorDataStore ;
 
 class RooRealVar : public RooAbsRealLValue {
 public:
@@ -45,7 +46,7 @@ public:
   virtual ~RooRealVar();
   
   // Parameter value and error accessors
-  virtual Double_t getVal(const RooArgSet* nset=0) const ;
+  virtual Double_t getValV(const RooArgSet* nset=0) const ;
   virtual void setVal(Double_t value);
   inline Double_t getError() const { return _error>=0?_error:0. ; }
   inline Bool_t hasError(Bool_t allowZero=kTRUE) const { return allowZero ? (_error>=0) : (_error>0) ; }
@@ -92,7 +93,10 @@ public:
   inline virtual Bool_t isFundamental() const { return kTRUE; }
 
   // Force to be a leaf-node of any expression tree, even if we have (shape) servers
-  // virtual Bool_t isDerived() const { return kFALSE ; }
+  virtual Bool_t isDerived() const { 
+    // Does value or shape of this arg depend on any other arg?
+    return (_serverList.GetSize()>0 || _proxyList.GetSize()>0)?kTRUE:kFALSE; 
+  }
 
   // Printing interface (human readable)
   virtual void printValue(ostream& os) const ;
@@ -111,18 +115,23 @@ public:
 
   void deleteSharedProperties() ;
 
+  void copyCacheFast(const RooRealVar& other, Bool_t setValDirty=kTRUE) { _value = other._value ; if (setValDirty) setValueDirty() ; }
+
   protected:
 
   static Bool_t _printScientific ;
   static Int_t  _printSigDigits ;
 
   virtual void setVal(Double_t value, const char* rangeName) ;
+
+  friend class RooAbsRealLValue ;
   virtual void setValFast(Double_t value) { _value = value ; setValueDirty() ; }
 
 
   virtual Double_t evaluate() const { return _value ; } // dummy because we overloaded getVal()
-  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE, Bool_t setValDirty=kTRUE) ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) ;
+  virtual void attachToVStore(RooVectorDataStore& vstore) ;
   virtual void fillTreeBranch(TTree& t) ;
 
   Double_t chopAt(Double_t what, Int_t where) const ;

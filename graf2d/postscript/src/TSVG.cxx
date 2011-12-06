@@ -133,9 +133,9 @@ void TSVG::Open(const char *fname, Int_t wtype)
 
    // Open OS file
    fStream   = new ofstream(fname,ios::out);
-   if (fStream == 0) {
+   if (fStream == 0 || !fStream->good()) {
       printf("ERROR in TSVG::Open: Cannot open file:%s\n",fname);
-      return;
+      if (fStream == 0) return;
    }
 
    gVirtualPS = this;
@@ -1534,6 +1534,7 @@ void TSVG::Text(Double_t xx, Double_t yy, const char *chars)
       if (ic == 821) ichar = 8721;
       if (ic == 834) ichar = 8747;
       if (ic == 769) ichar =  177;
+      if (ic == 772) ichar =  215;
 
       // Greek characters
       if (ic == 918) ichar = 934;

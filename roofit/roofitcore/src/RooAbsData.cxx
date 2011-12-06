@@ -3,9 +3,8 @@
  * Package: RooFitCore                                                       *
  * @(#)root/roofitcore:$Id$
  * Authors:                                                                  *
- *   WV, Wouter Verkerke, UC Santa Barbara,  verkerke@slac.stanford.edu      *
- *   DK, David Kirkby,    UC Irvine,          dkirkby@uci.edu                *
- *   AL, Alfio Lazzaro,   CERN openlab, alfio.lazzaro@cern.ch                *
+ *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
+ *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
  *                                                                           *
  * Copyright (c) 2000-2005, Regents of the University of California          *
  *                          and Stanford University. All rights reserved.    *
@@ -33,6 +32,7 @@
 #include "TMath.h"
 
 #include "RooAbsData.h"
+#include "RooAbsData.h"
 #include "RooFormulaVar.h"
 #include "RooCmdConfig.h"
 #include "RooAbsRealLValue.h"
@@ -40,6 +40,10 @@
 #include "RooMultiCategory.h"
 #include "Roo1DTable.h"
 #include "RooAbsDataStore.h"
+#include "RooVectorDataStore.h"
+#include "RooTreeDataStore.h"
+#include "RooCompositeDataStore.h"
+#include "RooCategory.h"
 
 #include "RooRealVar.h"
 #include "RooGlobalFunc.h"
@@ -58,6 +62,15 @@ ClassImp(RooAbsData)
 ;
 
 static std::map<RooAbsData*,int> _dcc ;
+
+RooAbsData::StorageType RooAbsData::defaultStorageType=RooAbsData::Vector ;
+
+
+//_____________________________________________________________________________
+void RooAbsData::setDefaultStorageType(RooAbsData::StorageType s) 
+{
+  defaultStorageType = s ;
+}
 
 
 //_____________________________________________________________________________
@@ -155,7 +168,29 @@ RooAbsData::RooAbsData(const RooAbsData& other, const char* newname) :
   _iterator= _vars.createIterator();
   _cacheIter = _cachedVars.createIterator() ;
 
-  _dstore = other._dstore->clone(_vars,newname?newname:other.GetName()) ;
+
+  if (other._ownedComponents.size()>0) {
+
+    // copy owned components here
+
+    map<string,RooAbsDataStore*> smap ;
+    for (std::map<std::string,RooAbsData*>::const_iterator itero =other._ownedComponents.begin() ; itero!=other._ownedComponents.end() ; ++itero ) {
+      RooAbsData* dclone = (RooAbsData*) itero->second->Clone() ;
+      _ownedComponents[itero->first] = dclone ;
+      smap[itero->first] = dclone->store() ;
+    }
+
+    if (!dynamic_cast<const RooCompositeDataStore*>(other.store())) {
+      cout << "Huh, have owned components, but store is not composite?" << endl ;
+    }
+    RooCategory* idx = (RooCategory*) _vars.find(*((RooCompositeDataStore*)other.store())->index()) ;
+    _dstore = new RooCompositeDataStore(newname?newname:other.GetName(),other.GetTitle(),_vars,*idx,smap) ;
+    
+  } else {
+    
+    // Convert to vector store if default is vector
+    _dstore = other._dstore->clone(_vars,newname?newname:other.GetName()) ;
+  }
   
 }
 
@@ -165,13 +200,10 @@ RooAbsData::RooAbsData(const RooAbsData& other, const char* newname) :
 RooAbsData::~RooAbsData() 
 {
   // Destructor
-  //cout << "deleting dataset " << this << endl ;
 
   if (releaseVars(this)) {
     // will cause content to be deleted subsequently in dtor
-    //cout << "RooAbsData(" << this << ") deleting variables" << endl ;
   } else {
-    //cout << "RooAbsData(" << this << ") NOT deleting variables" << endl ;
     _vars.releaseOwnership() ; 
   }
   
@@ -186,6 +218,21 @@ RooAbsData::~RooAbsData()
   }
 
 }
+
+
+
+//_____________________________________________________________________________
+void RooAbsData::convertToVectorStore() 
+{
+  // Convert tree-based storage to vector-based storage
+  
+  if (dynamic_cast<RooTreeDataStore*>(_dstore)) {
+    RooVectorDataStore* newStore =  new RooVectorDataStore(*(RooTreeDataStore*)_dstore,_vars,GetName()) ;
+    delete _dstore ;
+    _dstore = newStore ;
+  }
+}
+
 
 
 
@@ -1462,12 +1509,21 @@ TH1 *RooAbsData::fillHistogram(TH1 *hist, const RooArgList &plotVars, const char
       break;
     }
 
+
     Double_t error2 = TMath::Power(hist->GetBinError(bin),2)-TMath::Power(weight(),2)  ;
-    Double_t we = weightError(RooAbsData::SumW2) ;
-
-
+    Double_t we = weightError(RooAbsData::SumW2) ;    
     if (we==0) we = weight() ;
     error2 += TMath::Power(we,2) ;
+    
+
+//     Double_t we = weightError(RooAbsData::SumW2) ;    
+//     Double_t error2(0) ;
+//     if (we==0) {      
+//       we = weight() ; //sqrt(weight()) ;
+//       error2 = TMath::Power(hist->GetBinError(bin),2)-TMath::Power(weight(),2) + TMath::Power(we,2) ;
+//     } else {
+//       error2 = TMath::Power(hist->GetBinError(bin),2)-TMath::Power(weight(),2) + TMath::Power(we,2) ;
+//     }
     //hist->AddBinContent(bin,weight());
     hist->SetBinError(bin,sqrt(error2)) ;
 
@@ -1541,6 +1597,7 @@ TList* RooAbsData::split(const RooAbsCategory& splitCat, Bool_t createEmptyDataS
       RooAbsData* subset = emptyClone(state->GetName(),state->GetName(),&subsetVars) ;
       dsetList->Add((RooAbsArg*)subset) ;    
     }
+    delete stateIter ;
   }
 
   
@@ -1580,8 +1637,7 @@ RooPlot* RooAbsData::plotOn(RooPlot* frame, const RooLinkedList& argList) const
   //                                     - Poisson draws asymmetric Poisson confidence intervals. 
   //                                     - SumW2 draws symmetric sum-of-weights error ( sum(w)^2/sum(w^2) )
   //                                     - None draws no error bars
-  // Binning(double xlo, double xhi, -- Use specified binning to draw dataset
-  //                      int nbins)
+  // Binning(int nbins, double xlo, double xhi) -- Use specified binning to draw dataset
   // Binning(const RooAbsBinning&)   -- Use specified binning to draw dataset
   // Binning(const char* name)       -- Use binning with specified name to draw dataset
   // RefreshNorm(Bool_t flag)        -- Force refreshing for PDF normalization information in frame.
@@ -2277,6 +2333,23 @@ Bool_t RooAbsData::allClientsCached(RooAbsArg* var, const RooArgSet& cacheList)
 
 
 //_____________________________________________________________________________
+void RooAbsData::attachBuffers(const RooArgSet& extObs) 
+{ 
+  _dstore->attachBuffers(extObs) ; 
+}
+
+
+
+//_____________________________________________________________________________
+void RooAbsData::resetBuffers() 
+{ 
+  _dstore->resetBuffers() ; 
+}
+ 
+
+
+
+//_____________________________________________________________________________
 Bool_t RooAbsData::canSplitFast() const 
 {
   
@@ -2300,15 +2373,27 @@ RooAbsData* RooAbsData::getSimData(const char* name)
 
 //_____________________________________________________________________________
 void RooAbsData::addOwnedComponent(const char* idxlabel, RooAbsData& data) 
-{
-  if (data.useVectors()!=useVectors()) {
-    coutE(InputArguments) << "RooAbsData::addOwnedComponent(" << GetName() 
-			  << ") ERROR: datastore type mismatch for dataset " 
-			  << data.GetName() << ". Ignore operation!" << endl ;
-    return;
-  }
-
+{ 
   _ownedComponents[idxlabel]= &data ;
+}
+
+
+//______________________________________________________________________________
+void RooAbsData::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class RooAbsData.
+
+   if (R__b.IsReading()) {
+      R__b.ReadClassBuffer(RooAbsData::Class(),this);
+
+      // Convert on the fly to vector storage if that the current working default
+      if (defaultStorageType==RooAbsData::Vector) {
+	convertToVectorStore() ;
+      }
+
+   } else {
+      R__b.WriteClassBuffer(RooAbsData::Class(),this);
+   }
 }
 
 
@@ -2340,16 +2425,4 @@ Bool_t RooAbsData::hasFilledCache() const
 const TTree* RooAbsData::tree() const 
 { 
   return _dstore->tree() ; 
-}
-
-//______________________________________________________________________________
-Bool_t RooAbsData::makeVectors() 
-{
-  return _dstore->makeVectors() ;
-}
-
-//______________________________________________________________________________
-Bool_t RooAbsData::useVectors() const
-{
-  return _dstore->useVectors() ;
 }

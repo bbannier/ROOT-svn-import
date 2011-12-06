@@ -105,7 +105,7 @@
 #include "TObjString.h"
 #include "TVirtualMutex.h"
 #ifdef R__HAS_CLING
-# include "TCling.h"
+# include "TCintWithCling.h"
 #else
 # include "TCint.h"
 #endif
@@ -123,6 +123,9 @@ extern "C" void R__SetZipMode(int);
 
 // Mutex for protection of concurrent gROOT access
 TVirtualMutex* gROOTMutex = 0;
+
+// For accesing TThread::Tsd indirectly.
+void **(*gThreadTsd)(void*,Int_t) = 0;
 
 //-------- Names of next three routines are a small homage to CMZ --------------
 //______________________________________________________________________________
@@ -295,8 +298,11 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fVersionInt      = 0;  // check in TROOT dtor in case TCint fails
    fClasses         = 0;  // might be checked via TCint ctor
 
+#ifdef R__HAS_CLING
+   fInterpreter     = new TCintWithCling("C/C++", "CINT+cling C/C++ Interpreter");
+#else
    fInterpreter     = new TCint("C/C++", "CINT C/C++ Interpreter");
-
+#endif
    fConfigOptions   = R__CONFIGUREOPTIONS;
    fConfigFeatures  = R__CONFIGUREFEATURES;
    fVersion         = ROOT_RELEASE;
@@ -317,7 +323,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    // initialize plugin manager early
    fPluginManager->LoadHandlersFromEnv(gEnv);
 #if defined(R__MACOSX) && (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
-   if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR) {
+   if (TARGET_OS_IPHONE | TARGET_IPHONE_SIMULATOR) {
       TEnv plugins(".plugins-ios");
       fPluginManager->LoadHandlersFromEnv(&plugins);
    }
@@ -561,12 +567,8 @@ TROOT::~TROOT()
 void TROOT::AddClass(TClass *cl)
 {
    // Add a class to the list and map of classes.
+   // This routine is deprecated, use TClass::AddClass directly.
 
-   //if (!cl) return;
-   //GetListOfClasses()->Add(cl);
-   //if (cl->GetTypeInfo()) {
-   //   fIdMap->Add(cl->GetTypeInfo()->name(),cl);
-   //}
    TClass::AddClass(cl);
 }
 
@@ -634,8 +636,11 @@ namespace {
          }
          cursor = cursor->Next();
       };
-      // Now were done, clear the list
-      files->Clear();
+      // Now were done, clear the list but do not delete the objecs as
+      // they have been moved to the list of closed objects and must be
+      // deleted from there in order to avoid a double delete from a
+      // use objects (on the interpreter stack).
+      files->Clear("nodelete");
    }
 }
 
@@ -794,21 +799,6 @@ TObject *TROOT::FindSpecialObject(const char *name, void *&where)
    TObject *temp = 0;
    where = 0;
 
-   if (!temp && !strcmp(name, "gPad")) {
-      temp = gPad;
-      if (gPad) {
-         TVirtualPad *canvas = gPad->GetVirtCanvas();
-         //this check in case call from TCanvas ctor
-         if (fCanvases->FindObject(canvas))
-            where = canvas;
-      }
-   }
-   if (!temp && !strcmp(name, "gVirtualX")) {
-      return gVirtualX;
-   }
-   if (!temp && !strcmp(name, "gInterpreter")) {
-      return gInterpreter;
-   }
    if (!temp) {
       temp  = fFiles->FindObject(name);
       where = fFiles;
@@ -1245,24 +1235,7 @@ TCollection *TROOT::GetListOfTypes(Bool_t load)
    if (!fTypes) {
       fTypes = new THashTable(100, 3);
       load = kTRUE;
-
-      // Add also basic types (like a identity typedef "typedef int int")
-      fTypes->Add(new TDataType("char"));
-      fTypes->Add(new TDataType("unsigned char"));
-      fTypes->Add(new TDataType("short"));
-      fTypes->Add(new TDataType("unsigned short"));
-      fTypes->Add(new TDataType("int"));
-      fTypes->Add(new TDataType("unsigned int"));
-      fTypes->Add(new TDataType("unsigned"));
-      fTypes->Add(new TDataType("long"));
-      fTypes->Add(new TDataType("unsigned long"));
-      fTypes->Add(new TDataType("long long"));
-      fTypes->Add(new TDataType("unsigned long long"));
-      fTypes->Add(new TDataType("float"));
-      fTypes->Add(new TDataType("double"));
-      fTypes->Add(new TDataType("void"));
-      fTypes->Add(new TDataType("bool"));
-      fTypes->Add(new TDataType("char*"));
+      TDataType::AddBuiltins(fTypes);
    }
 
    if (!fInterpreter)
@@ -1293,7 +1266,8 @@ void TROOT::Idle(UInt_t idleTimeInSec, const char *command)
 }
 
 //______________________________________________________________________________
-static TClass* R__GetClassIfKnown(const char* className) {
+static TClass* R__GetClassIfKnown(const char* className)
+{
    // Check whether className is a known class, and only autoload
    // if we can. Helper function for TROOT::IgnoreInclude().
 
@@ -1301,7 +1275,7 @@ static TClass* R__GetClassIfKnown(const char* className) {
    const char* libsToLoad = gInterpreter->GetClassSharedLibs(className);
    TClass* cla = 0;
    if (libsToLoad) {
-      // trigger autoload, and only cvreate TClass in this case.
+      // trigger autoload, and only create TClass in this case.
       return TClass::GetClass(className);
    } else if (gROOT->GetListOfClasses()
               && (cla = (TClass*)gROOT->GetListOfClasses()->FindObject(className))) {
@@ -1390,9 +1364,12 @@ void TROOT::InitSystem()
 
       gDebug = gEnv->GetValue("Root.Debug", 0);
 
-      //By default the zipmode is 1 (see Bits.h)
-      Int_t zipmode = gEnv->GetValue("Root.ZipMode",1);
-      if (zipmode !=1) R__SetZipMode(zipmode);
+      if (!gEnv->GetValue("Root.ErrorHandlers", 1))
+         gSystem->ResetSignals();
+
+      // by default the zipmode is 1 (see Bits.h)
+      Int_t zipmode = gEnv->GetValue("Root.ZipMode", 1);
+      if (zipmode != 1) R__SetZipMode(zipmode);
 
       const char *sdeb;
       if ((sdeb = gSystem->Getenv("ROOTDEBUG")))
@@ -1828,13 +1805,9 @@ void TROOT::RefreshBrowsers()
 //______________________________________________________________________________
 void TROOT::RemoveClass(TClass *oldcl)
 {
-   // Remove a class from the list and map of classes
+   // Remove a class from the list and map of classes.
+   // This routine is deprecated, use TClass::RemoveClass directly.
 
-   //if (!oldcl) return;
-   //GetListOfClasses()->Remove(oldcl);
-   //if (oldcl->GetTypeInfo()) {
-   //   fIdMap->Remove(oldcl->GetTypeInfo()->name());
-   //}
    TClass::RemoveClass(oldcl);
 }
 

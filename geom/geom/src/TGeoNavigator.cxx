@@ -48,6 +48,7 @@ TGeoNavigator::TGeoNavigator()
               :fStep(0.),
                fSafety(0.),
                fLastSafety(0.),
+               fThreadId(0),
                fLevel(0),
                fNmany(0),
                fNextDaughterIndex(0),
@@ -96,6 +97,7 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
               :fStep(0.),
                fSafety(0.),
                fLastSafety(0.),
+               fThreadId(0),
                fLevel(0),
                fNmany(0),
                fNextDaughterIndex(-2),
@@ -129,6 +131,8 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
                 
 {
 // Default constructor.
+   fThreadId = gGeoManager->ThreadId();
+   // printf("Navigator: threadId=%d\n", fThreadId);
    for (Int_t i=0; i<3; i++) {
       fNormal[i] = 0.;
       fCldir[i] = 0.;
@@ -142,6 +146,7 @@ TGeoNavigator::TGeoNavigator(TGeoManager* geom)
    fDivMatrix = new TGeoHMatrix();
    fDivMatrix->RegisterYourself();
    fOverlapClusters = new Int_t[fOverlapSize];
+   ResetAll();
 }      
 
 //_____________________________________________________________________________
@@ -150,6 +155,7 @@ TGeoNavigator::TGeoNavigator(const TGeoNavigator& gm)
                fStep(gm.fStep),
                fSafety(gm.fSafety),
                fLastSafety(gm.fLastSafety),
+               fThreadId(0),
                fLevel(gm.fLevel),
                fNmany(gm.fNmany),
                fNextDaughterIndex(gm.fNextDaughterIndex),
@@ -181,6 +187,7 @@ TGeoNavigator::TGeoNavigator(const TGeoNavigator& gm)
                fPath(gm.fPath)               
 {
 // Copy constructor.
+   fThreadId = gGeoManager->ThreadId();
    for (Int_t i=0; i<3; i++) {
       fNormal[i] = gm.fNormal[i];
       fCldir[i] = gm.fCldir[i];
@@ -202,6 +209,7 @@ TGeoNavigator& TGeoNavigator::operator=(const TGeoNavigator& gm)
       fStep = gm.fStep;
       fSafety = gm.fSafety;
       fLastSafety = gm.fLastSafety;
+      fThreadId = gGeoManager->ThreadId();
       fLevel = gm.fLevel;
       fNmany = gm.fNmany;
       fNextDaughterIndex = gm.fNextDaughterIndex;
@@ -1017,8 +1025,8 @@ TGeoNode *TGeoNavigator::FindNextDaughterBoundary(Double_t *point, Double_t *dir
    Int_t ncheck = 0;
    Int_t sumchecked = 0;
    Int_t *vlist = 0;
-   voxels->SortCrossedVoxels(point, dir);
-   while ((sumchecked<nd) && (vlist=voxels->GetNextVoxel(point, dir, ncheck))) {
+   voxels->SortCrossedVoxels(point, dir, fThreadId);
+   while ((sumchecked<nd) && (vlist=voxels->GetNextVoxel(point, dir, ncheck, fThreadId))) {
       for (i=0; i<ncheck; i++) {
          current = vol->GetNode(vlist[i]);
          if (fGeometry->IsActivityEnabled() && !current->GetVolume()->IsActive()) continue;
@@ -1668,7 +1676,6 @@ void TGeoNavigator::SafetyOverlaps()
       Int_t nmany = fNmany;
       Bool_t crtovlp = kFALSE;
       Bool_t nextovlp = kFALSE;
-      TGeoNode *current = fCurrentNode;
       TGeoNode *mother, *mup;
       TGeoHMatrix *matrix;
       while (nmany) {
@@ -1683,7 +1690,6 @@ void TGeoNavigator::SafetyOverlaps()
             matrix->MasterToLocal(fPoint,local);
             safe = mother->GetVolume()->GetShape()->Safety(local,kTRUE);
             if (safe<fSafety) fSafety = safe;
-            current = mother;
             crtovlp = nextovlp;
          }
          up++;
@@ -1811,7 +1817,7 @@ TGeoNode *TGeoNavigator::SearchNode(Bool_t downwards, const TGeoNode *skipnode)
    Int_t id;
    if (voxels) {
       // get the list of nodes passing thorough the current voxel
-      check_list = voxels->GetCheckList(&point[0], ncheck);
+      check_list = voxels->GetCheckList(&point[0], ncheck, fThreadId);
       // if none in voxel, see if this is the last one
       if (!check_list) {
          if (!fCurrentNode->GetVolume()->IsAssembly()) return fCurrentNode;
@@ -2088,7 +2094,6 @@ Bool_t TGeoNavigator::GotoSafeLevel()
       Int_t nmany = fNmany;
       Bool_t ovlp = kFALSE;
       Bool_t nextovlp = kFALSE;
-      TGeoNode *current = fCurrentNode;
       TGeoNode *mother, *mup;
       TGeoHMatrix *matrix;
       while (nmany) {
@@ -2109,7 +2114,6 @@ Bool_t TGeoNavigator::GotoSafeLevel()
                return GotoSafeLevel();
             }
          }   
-         current = mother;
          ovlp = nextovlp;
          up++;
       }            
@@ -2162,7 +2166,17 @@ Bool_t TGeoNavigator::IsSameLocation(Double_t x, Double_t y, Double_t z, Bool_t 
       Double_t dy = (y-fLastPoint[1]);
       Double_t dz = (z-fLastPoint[2]);
       Double_t dsq = dx*dx+dy*dy+dz*dz;
-      if (dsq<fLastSafety*fLastSafety) return kTRUE;
+      if (dsq<fLastSafety*fLastSafety) {
+         if (change) {
+            fPoint[0] = x;
+            fPoint[1] = y;
+            fPoint[2] = z;
+            memcpy(fLastPoint, fPoint, 3*sizeof(Double_t));
+            fLastSafety -= TMath::Sqrt(dsq);
+         }
+         return kTRUE;
+      }  
+      if (change) fLastSafety = 0;
    }
    if (fCurrentOverlapping) {
 //      TGeoNode *current = fCurrentNode;
@@ -2224,7 +2238,7 @@ Bool_t TGeoNavigator::IsSameLocation(Double_t x, Double_t y, Double_t z, Bool_t 
    Int_t ncheck = 0;
    Double_t local1[3];
    if (voxels) {
-      check_list = voxels->GetCheckList(local, ncheck);
+      check_list = voxels->GetCheckList(local, ncheck, fThreadId);
       if (!check_list) return kTRUE;
       if (!change) PushPath();
       for (Int_t id=0; id<ncheck; id++) {
@@ -2395,6 +2409,7 @@ ClassImp(TGeoNavigatorArray)
 TGeoNavigator *TGeoNavigatorArray::AddNavigator()
 {
 // Add a new navigator to the array.
+   SetOwner(kTRUE);
    TGeoNavigator *nav = new TGeoNavigator(fGeoManager);
    nav->BuildCache(kTRUE, kFALSE);
    Add(nav);

@@ -114,7 +114,6 @@ Int_t TProofBench::OpenOutFile(Bool_t wrt, Bool_t verbose)
    return rc;
 }
 
-
 //______________________________________________________________________________
 Int_t TProofBench::SetOutFile(const char *outfile, Bool_t verbose)
 {
@@ -145,6 +144,15 @@ Int_t TProofBench::SetOutFile(const char *outfile, Bool_t verbose)
                                " again or with another file", outfile);
    }
    return rc;
+}
+
+//______________________________________________________________________________
+void TProofBench::CloseOutFile()
+{
+   // Close output file
+
+   if (SetOutFile(0) != 0)
+      Warning("CloseOutFile", "problems closing '%s'", fOutFileName.Data());
 }
 
 //______________________________________________________________________________
@@ -220,7 +228,9 @@ void TProofBench::DrawCPU(const char *outfile, const char *opt)
       return;
    }
 
-   TDirectory *d = (TDirectory *) fout->Get("RunCPU");
+   TString oo(opt);
+   const char *dirn = (oo.Contains("x:")) ? "RunCPUx" : "RunCPU";
+   TDirectory *d = (TDirectory *) fout->Get(dirn);
    if (!d) {
       ::Error("DrawCPU", "could not find directory 'RunCPU' ...");
       fout->Close();
@@ -393,7 +403,9 @@ void TProofBench::DrawDataSet(const char *outfile, const char *opt, const char *
       ::Error("DrawDataSet", "could not open file '%s' ...", outfile);
       return;
    }
-   TDirectory *d = (TDirectory *) fout->Get("RunDataRead");
+   TString oo(opt);
+   const char *dirn = (oo.Contains("x:")) ? "RunDataReadx" : "RunDataRead";
+   TDirectory *d = (TDirectory *) fout->Get(dirn);
    if (!d) {
       ::Error("DrawDataSet", "could not find directory 'RunDataRead' ...");
       fout->Close();
@@ -631,34 +643,43 @@ Int_t TProofBench::MakeDataSet(const char *dset, Long64_t nevt, const char *fnro
       fProof->DeleteParameters("PROOF_ProcessNotAssigned");
    
    // Cleanup
-   fProof->GetInputList()->Remove(filesmap);
+   if (fProof->GetInputList()) fProof->GetInputList()->Remove(filesmap);
    filesmap->SetOwner(kTRUE);
    delete filesmap;
 
    // The dataset to be registered in the end with proper port
    TFileCollection *fc = new TFileCollection("dum", "dum");
 
-   fProof->GetOutputList()->Print();
-   TIter nxout(fProof->GetOutputList());
-   while ((obj = nxout())) {
-      TList *fli = dynamic_cast<TList *>(obj);
-      if (fli && TString(fli->GetName()).BeginsWith("PROOF_FilesGenerated_")) {
-         TIter nxfg(fli);
-         TFileInfo *fi = 0;
-         while ((fi = (TFileInfo *) nxfg()))
-            fc->Add(fi);
-         fli->SetOwner(kFALSE);
+   if (fProof->GetOutputList()) {
+      fProof->GetOutputList()->Print();
+      TIter nxout(fProof->GetOutputList());
+      while ((obj = nxout())) {
+         TList *fli = dynamic_cast<TList *>(obj);
+         if (fli && TString(fli->GetName()).BeginsWith("PROOF_FilesGenerated_")) {
+            TIter nxfg(fli);
+            TFileInfo *fi = 0;
+            while ((fi = (TFileInfo *) nxfg()))
+               fc->Add(fi);
+            fli->SetOwner(kFALSE);
+         }
       }
+      // Register the new dataset, overwriting any existing dataset wth the same name
+      // trusting the existing information
+      fc->Update();
+      if (fc->GetNFiles() > 0) {
+         if (!(fProof->RegisterDataSet(fDataSet, fc, "OT")))
+            Warning("MakeDataSet", "problems registering '%s'", dset);
+      } else {
+         Warning("MakeDataSet", "dataset '%s' is empty!", dset);
+      }
+   } else {
+      Warning("MakeDataSet", "PROOF output list is empty!");
    }
-   // Register the new dataset, overwriting any existing dataset wth the same name
-   // trusting the existing information
-   if (!(fProof->RegisterDataSet(fDataSet, fc, "OT")))
-      Warning("MakeDataSet", "problems registering '%s'", dset);
 
    SafeDelete(fc);
 
    // Get updated information
-   fc=fProof->GetDataSet(fDataSet);
+   fc = fProof->GetDataSet(fDataSet);
    fc->Print("F");
    
    SafeDelete(fc);

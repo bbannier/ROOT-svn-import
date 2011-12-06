@@ -423,9 +423,7 @@ void TGFileBrowser::AddRemoteFile(TObject *obj)
    // Add remote file in list tree.
 
    Bool_t      is_link;
-   Int_t       type, uid, gid;
-   Long_t      modtime;
-   Long64_t    size;
+   Int_t       type;
    TString     filename;
    const TGPicture *spic;
    TGPicture *pic;
@@ -433,10 +431,6 @@ void TGFileBrowser::AddRemoteFile(TObject *obj)
    FileStat_t sbuf;
 
    type    = 0;
-   size    = 0;
-   uid     = 0;
-   gid     = 0;
-   modtime = 0;
    is_link = kFALSE;
 
    TRemoteObject *robj = (TRemoteObject *)obj;
@@ -444,10 +438,6 @@ void TGFileBrowser::AddRemoteFile(TObject *obj)
    robj->GetFileStat(&sbuf);
    is_link = sbuf.fIsLink;
    type    = sbuf.fMode;
-   size    = sbuf.fSize;
-   uid     = sbuf.fUid;
-   gid     = sbuf.fGid;
-   modtime = sbuf.fMtime;
    filename = robj->GetName();
    if (R_ISDIR(type) || fFilter == 0 ||
        (fFilter && filename.Index(*fFilter) != kNPOS)) {
@@ -1103,7 +1093,9 @@ TString TGFileBrowser::FullPathName(TGListTreeItem* item)
    TString dirname = itm->GetText();
 
    while ((parent=itm->GetParent())) {
-      dirname = gSystem->ConcatFileName(parent->GetText(),dirname);
+      char *s = gSystem->ConcatFileName(parent->GetText(), dirname);
+      dirname = s;
+      delete [] s;
       itm = parent;
    }
    dirname = gSystem->ExpandPathName(dirname.Data());
@@ -1153,8 +1145,7 @@ static Bool_t IsTextFile(const char *candidate)
    FILE *infile;
    FileStat_t buf;
 
-   gSystem->GetPathInfo(candidate, buf);
-   if (!(buf.fMode & kS_IFREG))
+   if (gSystem->GetPathInfo(candidate, buf) || !(buf.fMode & kS_IFREG))
       return kFALSE;
 
    infile = fopen(candidate, "r");
@@ -1189,6 +1180,7 @@ static const TGPicture *MakeLinkPic(const TGPicture *pic)
    TImage *img1, *img2;
    if (pic) {
       img1 = TImage::Create();
+      if (img1 == 0) return pic;
       img1->SetImage(((const TGPicture *)pic)->GetPicture(),
                      ((const TGPicture *)pic)->GetMask());
       img2 = TImage::Open("slink_t.xpm");
@@ -1218,8 +1210,7 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
    char action[512];
    TString act;
    Bool_t is_link = kFALSE;
-   gSystem->GetPathInfo(item->GetText(), sbuf);
-   if (sbuf.fIsLink) {
+   if (!gSystem->GetPathInfo(item->GetText(), sbuf) && sbuf.fIsLink) {
       is_link = kTRUE;
       fullpath = gSystem->ExpandPathName(item->GetText());
    }
@@ -1333,8 +1324,8 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
                if ((fname!="..") && (fname!=".")) { // skip it
                   if (!fListTree->FindChildByName(item, fname)) {
                      itm = fListTree->AddItem(item, fname);
-                     gSystem->GetPathInfo(fname, sbuf);
-                     if (sbuf.fIsLink) {
+                     if (!gSystem->GetPathInfo(fname, sbuf) &&
+                         sbuf.fIsLink) {
                         // change the pictures if it is a symlink 
                         // (shortcut on Windows)
                         const TGPicture *opened = 0, *l_opened = 0;
@@ -1532,10 +1523,13 @@ char *TGFileBrowser::FormatFileInfo(const char *fname, Long64_t size, Long_t mod
    struct tm *newtime;
    time_t loctime = (time_t) modtime;
    newtime = localtime(&loctime);
-   infos += "\n";
-   infos += TString::Format("%d-%02d-%02d %02d:%02d", newtime->tm_year + 1900,
-           newtime->tm_mon+1, newtime->tm_mday, newtime->tm_hour,
-           newtime->tm_min);
+   if (newtime) {
+      infos += "\n";
+      infos += TString::Format("%d-%02d-%02d %02d:%02d",
+                               newtime->tm_year + 1900,
+                               newtime->tm_mon+1, newtime->tm_mday, 
+                               newtime->tm_hour, newtime->tm_min);
+   }
    return StrDup(infos.Data());
 }
 

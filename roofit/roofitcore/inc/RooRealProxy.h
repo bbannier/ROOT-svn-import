@@ -34,20 +34,11 @@ public:
   virtual ~RooRealProxy();
 
   // Accessors
-  inline operator Double_t() const { return _isFund?((RooAbsReal*)_arg)->_value:((RooAbsReal*)_arg)->getVal(_nset) ; }
-  inline Double_t operator[](Int_t i) const { 
-    RooAbsReal* realArg = (RooAbsReal*)_arg;
-    return realArg->_values.isVector() ? realArg->_value : realArg->_values[i];
-  }
-  /*
-  inline Int_t doValues(RooAbsReal::ImplSIMD impl) const {
-    RooAbsReal* realArg = (RooAbsReal*)_arg;
-    if (!_isFund)
-      realArg->getVal(_nset) ;
-    
-    return realArg->_values.getSize();
-  }
-  */
+#ifndef _WIN32
+  inline operator Double_t() const { return (_arg->_fast && !_arg->_inhibitDirty) ? ((RooAbsReal*)_arg)->_value : ((RooAbsReal*)_arg)->getVal(_nset) ; }
+#else
+  inline operator Double_t() const { return (_arg->_fast && !_arg->inhibitDirty()) ? ((RooAbsReal*)_arg)->_value : ((RooAbsReal*)_arg)->getVal(_nset) ; }
+#endif
 
   inline const RooAbsReal& arg() const { return (RooAbsReal&)*_arg ; }
 

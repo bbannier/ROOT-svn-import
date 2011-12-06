@@ -56,6 +56,7 @@
 #pragma link C++ class RooStats::HypoTestCalculatorGeneric+;
 #pragma link C++ class RooStats::HybridCalculator+;
 #pragma link C++ class RooStats::FrequentistCalculator+;
+#pragma link C++ class RooStats::AsymptoticCalculator+;
 #pragma link C++ class RooStats::HybridCalculatorOriginal+;
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;				 
@@ -115,6 +116,10 @@
 #pragma link C++ function RooStats::SignificanceToPValue(Double_t);
 #pragma link C++ function RooStats::RemoveConstantParameters(RooArgSet* set);
 #pragma link C++ function RooStats::SetParameters(const RooArgSet* , RooArgSet* );
+#pragma link C++ function RooStats::SetAllConstant(const RooAbsCollection & , bool );
+#pragma link C++ function RooStats::MakeNuisancePdf(RooAbsPdf & , const RooArgSet &, const char * );
+#pragma link C++ function RooStats::MakeNuisancePdf(const RooStats::ModelConfig & , const char * );
+
 
 // need for auto_ptr object in Likelihoodinterval since they are forwd declared
 #pragma extra_include "Math/IFunction.h";

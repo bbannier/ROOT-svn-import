@@ -996,6 +996,11 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 // IMPORTANT NOTE: If you intend to use the errors of this histogram later
 // you should call Sumw2 before making this operation.
 // This is particularly important if you fit the histogram after TH1::Add
+//
+//ANOTHER SPECIAL CASE : h1 = h2 and c2 < 0 
+// do a scaling   this = c1 * h1 / (bin Volume)
+//
+
 
    if (!h1 || !h2) {
       Error("Add","Attempt to add a non-existing histogram");
@@ -1035,10 +1040,11 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 
 // statistics can be preserved only in case of positive coefficients
 // otherwise with negative c1 (histogram subtraction) one risks to get negative variances
+// also in case of scaling with the width we cannot preserve the statistics
    Double_t s1[kNstat] = {0};
    Double_t s2[kNstat] = {0};
    Double_t s3[kNstat];
-   Bool_t resetStats = (c1*c2 < 0);
+   Bool_t resetStats = (c1*c2 < 0) || normWidth;
    if (!resetStats) {
       // need to initialize to zero s1 and s2 since 
       // GetStats fills only used elements depending on dimension and type
@@ -2061,7 +2067,7 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
       for (i=i_start; i<=i_end; i++) {
          for (j=j_start; j<=j_end; j++) {
             for (k=k_start; k<=k_end; k++) {
-               Int_t x=0, y=0;
+               Int_t x=0;
                bin1 = this->GetBinContent(i,j,k);
                bin2 = h2->GetBinContent(i,j,k);
                err2 = h2->GetBinError(i,j,k);
@@ -2101,7 +2107,6 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                   sum1++;
                   bin1++;
                   x++;
-                  y=1;
                   var1 = sum2*bin2 - sum1*err2;
                   var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
                }
@@ -2110,14 +2115,12 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                   sum1++;
                   bin1++;
                   x++;
-                  y=1;
                   var1 = sum2*bin2 - sum1*err2;
                   var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
                   while (var1*var1+bin1 == 0 || var1+var2 == 0) {
                      sum1++;
                      bin1++;
                      x++;
-                     y=1;
                      var1 = sum2*bin2 - sum1*err2;
                      var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
                   }
@@ -2287,6 +2290,10 @@ Double_t *TH1::GetIntegral()
 {
    //  Return a pointer to the array of bins integral.
    //  if the pointer fIntegral is null, TH1::ComputeIntegral is called
+   // The array dimension is the number of bins in the histograms
+   // including underflow and overflow (fNCells)
+   // the last value integral[fNCells] is set to the number of entries of 
+   // the histogram 
 
    if (!fIntegral) ComputeIntegral();
    return fIntegral;
@@ -3765,7 +3772,10 @@ Double_t TH1::GetEntries() const
 {
    // return the current number of entries
 
-   if (fBuffer) ((TH1*)this)->BufferEmpty();
+   if (fBuffer) { 
+      Int_t nentries = (Int_t) fBuffer[0];
+      if (nentries > 0) return nentries; 
+   }
 
    return fEntries;
 }
@@ -3932,11 +3942,19 @@ Int_t TH1::FitOptionsMake(Option_t *choptin, Foption_t &fitOption)
    if (opt.Contains("Q"))  fitOption.Quiet   = 1;
    if (opt.Contains("V")) {fitOption.Verbose = 1; fitOption.Quiet = 0;}
    if (opt.Contains("X"))  fitOption.Chi2    = 1;
-   if (opt.Contains("L"))  fitOption.Like    = 1;
-   //if (opt.Contains("LL")) fitOption.Like    = 2;
    if (opt.Contains("W"))  fitOption.W1      = 1;
    if (opt.Contains("WW")) fitOption.W1      = 2; //all bins have weight=1, even empty bins
-   if (opt.Contains("WL")){ fitOption.Like    = 2;  fitOption.W1=0;}//  (weighted likelihood)
+   // likelihood fit options
+   if (opt.Contains("L")) { 
+      fitOption.Like    = 1;
+      //if (opt.Contains("LL")) fitOption.Like    = 2;
+      if (opt.Contains("W")){ fitOption.Like    = 2;  fitOption.W1=0;}//  (weighted likelihood)
+      if (opt.Contains("MULTI")) { 
+         if (fitOption.Like == 2) fitOption.Like = 6; // weighted multinomial 
+         else fitOption.Like    = 4; // multinomial likelihood fit instead of Poisson
+         opt.ReplaceAll("MULTI","");
+      }
+   }
    if (opt.Contains("E"))  fitOption.Errors  = 1;
    if (opt.Contains("M"))  fitOption.More    = 1;
    if (opt.Contains("R"))  fitOption.Range   = 1;
@@ -5023,38 +5041,25 @@ Long64_t TH1::Merge(TCollection *li)
    if (!li) return 0;
    if (li->IsEmpty()) return (Int_t) GetEntries();
 
-   // We don't want to add the clone to gDirectory,
-   // so remove our kMustCleanup bit temporarily
-   Bool_t mustCleanup = TestBit(kMustCleanup);
-   if (mustCleanup) ResetBit(kMustCleanup);
+   // is this really needed ? 
    TList inlist;
-   TH1* hclone = (TH1*)Clone("FirstClone");
-   if (mustCleanup) SetBit(kMustCleanup);
-   R__ASSERT(hclone);
-   BufferEmpty(1);         // To remove buffer.
-   Reset();                // BufferEmpty sets limits so we can't use it later.
-   SetEntries(0);
-   inlist.Add(hclone);
    inlist.AddAll(li);
 
 
    TAxis newXAxis;
+
    Bool_t initialLimitsFound = kFALSE;
    Bool_t allHaveLabels = kTRUE;  // assume all histo have labels and check later
-   Bool_t same = kTRUE;
    Bool_t allHaveLimits = kTRUE;
+   Bool_t allSameLimits = kTRUE;
    Bool_t foundLabelHist = kFALSE;
 
+
    TIter next(&inlist);
-   while (TObject *o = next()) {
-      TH1* h = dynamic_cast<TH1*> (o);
-      if (!h) {
-         Error("Add","Attempt to add object of class: %s to a %s",
-            o->ClassName(),this->ClassName());
-         return -1;
-      }
+   // start looping with this histogram 
+   TH1 * h = this; 
+   do  {
       // skip empty histograms
-      // (call GetEntries() to flush eventually the buffer) 
       if (h->fTsumw == 0 && h->GetEntries() == 0) continue;
 
       Bool_t hasLimits = h->GetXaxis()->GetXmin() < h->GetXaxis()->GetXmax();
@@ -5062,18 +5067,28 @@ Long64_t TH1::Merge(TCollection *li)
 
       if (hasLimits) {
          h->BufferEmpty();
+         // this is executed the first time an histogram with limits is found
+         // to set some initial values on the new axis
          if (!initialLimitsFound) {
             initialLimitsFound = kTRUE;
             newXAxis.Set(h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),
                h->GetXaxis()->GetXmax());
          }
          else {
-            if (!RecomputeAxisLimits(newXAxis, *(h->GetXaxis()))) {
-               Error("Merge", "Cannot merge histograms - limits are inconsistent:\n "
-                  "first: (%d, %f, %f), second: (%d, %f, %f)",
-                  newXAxis.GetNbins(), newXAxis.GetXmin(), newXAxis.GetXmax(),
-                  h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),
-                  h->GetXaxis()->GetXmax());
+            // check first if histograms have same bins 
+            if (!SameLimitsAndNBins(newXAxis, *(h->GetXaxis())) ) { 
+               allSameLimits = kFALSE;
+               // recompute the limits in this case the optimal limits
+               // The condition to works is that the histogram have same bin with 
+               // and one common bin edge
+               if (!RecomputeAxisLimits(newXAxis, *(h->GetXaxis()))) {
+                  Error("Merge", "Cannot merge histograms - limits are inconsistent:\n "
+                        "first: (%d, %f, %f), second: (%d, %f, %f)",
+                        newXAxis.GetNbins(), newXAxis.GetXmin(), newXAxis.GetXmax(),
+                        h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),
+                        h->GetXaxis()->GetXmax());
+                  return -1;
+               }
             }
          }
       }
@@ -5110,31 +5125,70 @@ Long64_t TH1::Merge(TCollection *li)
             }
          }         
       }
-   }
-   next.Reset();
+   }    while ( ( h = dynamic_cast<TH1*> ( next() ) ) != NULL );
 
-   same = same && SameLimitsAndNBins(newXAxis, *GetXaxis());
-   if (!same && initialLimitsFound)
+   if (!h && (*next) ) {
+      Error("Merge","Attempt to merge object of class: %s to a %s",
+            (*next)->ClassName(),this->ClassName());
+      return -1;
+   }
+
+
+   next.Reset();
+   // In the case of histogram with different limits
+   // newXAxis will now have the new found limits
+   // but one needs first to clone this histogram to perform the merge
+   // The clone is not needed when all histograms have the same limits
+   TH1 * hclone = 0;
+   if (!allSameLimits) { 
+      // We don't want to add the clone to gDirectory,
+      // so remove our kMustCleanup bit temporarily
+      Bool_t mustCleanup = TestBit(kMustCleanup);
+      if (mustCleanup) ResetBit(kMustCleanup);
+      hclone = (TH1*)IsA()->New();
+      hclone->SetDirectory(0);
+      Copy(*hclone);
+      if (mustCleanup) SetBit(kMustCleanup);
+      BufferEmpty(1);         // To remove buffer.
+      Reset();                // BufferEmpty sets limits so we can't use it later.
+      SetEntries(0);
+      inlist.AddFirst(hclone);
+   }
+
+   if (!allSameLimits && initialLimitsFound)
       SetBins(newXAxis.GetNbins(), newXAxis.GetXmin(), newXAxis.GetXmax());
 
    if (!allHaveLimits && !allHaveLabels) {
       // fill this histogram with all the data from buffers of histograms without limits
-      while (TH1* h = (TH1*)next()) {
-         if (h->GetXaxis()->GetXmin() >= h->GetXaxis()->GetXmax() && h->fBuffer) {
+      while (TH1* hist = (TH1*)next()) {
+         // support also case where some histogram have limits and some have the buffer
+         if ( (hist->GetXaxis()->GetXmin() >= hist->GetXaxis()->GetXmax() ) && hist->fBuffer  ) { 
             // no limits
-            Int_t nbentries = (Int_t)h->fBuffer[0];
+            Int_t nbentries = (Int_t)hist->fBuffer[0];
             for (Int_t i = 0; i < nbentries; i++)
-               Fill(h->fBuffer[2*i + 2], h->fBuffer[2*i + 1]);
+               Fill(hist->fBuffer[2*i + 2], hist->fBuffer[2*i + 1]);
             // Entries from buffers have to be filled one by one
-            // because FillN doesn't resize histograms.
+            // because FillN doesn't resize histograms. 
          }
       }
-      if (!initialLimitsFound)
-         return (Int_t) GetEntries();  // all histograms have been processed
+
+      // all histograms have been processed
+      if (!initialLimitsFound ) { 
+         // here the case where all histograms don't have limits
+         // In principle I should not have copied in hclone since  
+         // when initialLimitsFound = false then allSameLimits should be  true
+         if (hclone) { 
+            inlist.Remove(hclone);
+            delete hclone; 
+         }
+         return (Int_t) GetEntries();  
+      }
       next.Reset();
    }
 
    //merge bin contents and errors
+   // in case when histogram have limits
+
    Double_t stats[kNstat], totstats[kNstat];
    for (Int_t i=0;i<kNstat;i++) {totstats[i] = stats[i] = 0;}
    GetStats(totstats);
@@ -5142,56 +5196,62 @@ Long64_t TH1::Merge(TCollection *li)
    Bool_t canRebin=TestBit(kCanRebin);
    // reset, otherwise setting the under/overflow will rebin and make a mess
    if (!allHaveLabels) ResetBit(kCanRebin); 
-   while (TH1* h=(TH1*)next()) {
+   while (TH1* hist=(TH1*)next()) {
       // process only if the histogram has limits; otherwise it was processed before
       // in the case of an existing buffer (see if statement just before) 
-      if (allHaveLabels || (h->GetXaxis()->GetXmin() < h->GetXaxis()->GetXmax()) ) {
+      if (allHaveLabels || (hist->GetXaxis()->GetXmin() < hist->GetXaxis()->GetXmax()) ) {
          // import statistics
-         h->GetStats(stats);
+         hist->GetStats(stats);
          for (Int_t i=0;i<kNstat;i++)
             totstats[i] += stats[i];
-         nentries += h->GetEntries();
+         nentries += hist->GetEntries();
 
          
-         Int_t nx = h->GetXaxis()->GetNbins();
+         Int_t nx = hist->GetXaxis()->GetNbins();
          // loop on bins of the histogram and do the merge 
          for (Int_t binx = 0; binx <= nx + 1; binx++) {
-            Double_t cu = h->GetBinContent(binx);
+            Double_t cu = hist->GetBinContent(binx);
             Double_t error1 = 0; 
             Int_t ix = -1; 
-            if (fSumw2.fN) error1= h->GetBinError(binx);
+            if (fSumw2.fN) error1= hist->GetBinError(binx);
             // do only for bins with non null bin content or non-null errors (if Sumw2)
             if (TMath::Abs(cu) > 0 || (fSumw2.fN && error1 > 0 ) ) {             
                // case  of overflow bins 
                // they do not make sense also in the case of labels
                if (!allHaveLabels) { 
                   // case of bins without labels 
-                  if (!same && ( binx==0 || binx== nx+1)) {
-                     Error("Merge", "Cannot merge histograms - the histograms have"
-                        " different limits and undeflows/overflows are present."
-                        " The initial histogram is now broken!");
-                     return -1;
+                  if (!allSameLimits)  { 
+                     if ( binx==0 || binx== nx+1) {
+                        Error("Merge", "Cannot merge histograms - the histograms have"
+                              " different limits and undeflows/overflows are present."
+                              " The initial histogram is now broken!");
+                        return -1;
+                     }
+                     // NOTE: in the case of one of the histogram  as labels - it is treated as 
+                     // an error and it has been flagged before 
+                     // since calling FindBin(x) for histo with labels does not make sense
+                     // and the result is unpredictable                      
+                     ix = fXaxis.FindBin(hist->GetXaxis()->GetBinCenter(binx));
                   }
-                  // NOTE: in the case of one of the histogram  as labels - it is treated as 
-                  // an error and it has been flagged before 
-                  // since calling FindBin(x) for histo with labels does not make sense
-                  // and the result is unpredictable 
-                  ix = fXaxis.FindBin(h->GetXaxis()->GetBinCenter(binx));
+                  else {
+                     // histogram have same limits - no need to call FindBin
+                     ix = binx; 
+                  }
                } else {
                   // here only in the case of bins with labels 
-                  const char* label=h->GetXaxis()->GetBinLabel(binx);
+                  const char* label=hist->GetXaxis()->GetBinLabel(binx);
                   // do we need to support case when there are bins with labels and bins without them ??
                   // NO -then return an error
                   if (label == 0 ) { 
                      Fatal("Merge","Histogram %s with labels has NULL label pointer for bin %d",
-                           h->GetName(),binx );
+                           hist->GetName(),binx );
                      return -1;
                   }
                   if (label[0] == 0 ) { // case label is "" , i.e. is not set 
                      // exclude underflow which could contain the non-existing labels
                      // thsi we could merge in all underflow
                      if ( binx > 0 && binx <= nx) {                         
-                        Error("Merge","Cannot merge ! Label histogram %s contains a bin %d which has not a label and has non-zero content ",h->GetName(),binx );
+                        Error("Merge","Cannot merge ! Label histogram %s contains a bin %d which has not a label and has non-zero content ",hist->GetName(),binx );
                         return -1;
                      }
                      else
@@ -5225,8 +5285,10 @@ Long64_t TH1::Merge(TCollection *li)
    //copy merged stats
    PutStats(totstats);
    SetEntries(nentries);
-   inlist.Remove(hclone);
-   delete hclone;
+   if (hclone) { 
+      inlist.Remove(hclone);
+      delete hclone;
+   }
    return (Long64_t)nentries;
 }
 
@@ -6423,11 +6485,19 @@ void TH1::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out <<"   "<<endl;
    out <<"   "<< ClassName() <<" *";
 
-   //histogram pointer has by default the histogram name.
-   //however, in case histogram has no directory, it is safer to add a incremental suffix
+   // Histogram pointer has by default the histogram name.
+   // However, in case the histogram has no directory, it is safer to add a incremental suffix.
+   // If the histogram belongs to a graph or a stack the suffix is not added because
+   // the graph and stack objects are not aware of this new name. Same thing if
+   // the histogram is drawn with the option COLZ because the TPaletteAxis drawn
+   // when this option is selected, does not know this new name either.
+   TString opt = option;
+   opt.ToLower();
    static Int_t hcounter = 0;
    TString histName = GetName();
-   if (!fDirectory && !histName.Contains("Graph") && !histName.Contains("_stack_")) {
+   if (!fDirectory && !histName.Contains("Graph") 
+                   && !histName.Contains("_stack_")
+                   && !opt.Contains("colz")) {
       hcounter++;
       histName += "__";
       histName += hcounter;
@@ -6543,7 +6613,7 @@ void TH1::SavePrimitiveHelp(ostream &out, const char *hname, Option_t *option /*
          out<<"   "<<hname<<"->GetListOfFunctions()->Add("<<obj->GetName()<<");"<<endl;
       } else if (obj->InheritsFrom("TPaveStats")) {
          out<<"   "<<hname<<"->GetListOfFunctions()->Add(ptstats);"<<endl;
-         out<<"   ptstats->SetParent("<<hname<<"->GetListOfFunctions());"<<endl;
+         out<<"   ptstats->SetParent("<<hname<<");"<<endl;
       } else {
          out<<"   "<<hname<<"->GetListOfFunctions()->Add("<<obj->GetName()<<","<<quote<<lnk->GetOption()<<quote<<");"<<endl;
       }
@@ -7301,7 +7371,8 @@ void TH1::SetContent(const Double_t *content)
    //               =====================================================
    Int_t bin;
    Double_t bincontent;
-   for (bin=0; bin<fNcells; bin++) {
+   int nbins = fNcells; // save value because SetBinContent can change fNCells
+   for (bin=0; bin<nbins; bin++) {
       bincontent = *(content + bin);
       SetBinContent(bin, bincontent);
    }

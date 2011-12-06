@@ -7,7 +7,7 @@
 # Author: Fons Rademakers, 29/2/2000
 
 ROOTSYS = ../../..
-include $(ROOTSYS)/test/Makefile.arch
+include $(ROOTSYS)/etc/Makefile.arch
 
 #------------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ endif
 endif
 
 # add MathMore lib
-ifeq ($(shell $(ROOTCONFIG) --has-mathmore),yes)
+ifeq ($(shell $(RC) --has-mathmore),yes)
 ifeq ($(PLATFORM),win32)
 EXTRALIBS+= '$(ROOTSYS)/lib/libMathMore.lib' 
 else
@@ -66,6 +66,10 @@ TESTSORT        = stdsort$(ExeSuf)
 TESTSORTORDEROBJ     = testSortOrder.$(ObjSuf)
 TESTSORTORDERSRC     = testSortOrder.$(SrcSuf)
 TESTSORTORDER        = testSortOrder$(ExeSuf)
+
+TESTSQUANTILESOBJ     = testSampleQuantiles.$(ObjSuf)
+TESTSQUANTILESSRC     = testSampleQuantiles.$(SrcSuf)
+TESTSQUANTILES        = testSampleQuantiles$(ExeSuf)
 
 SPECFUNERFOBJ     = testSpecFuncErf.$(ObjSuf)
 SPECFUNERFSRC     = testSpecFuncErf.$(SrcSuf)
@@ -121,10 +125,14 @@ KDTREEOBJ          = kDTreeTest.$(ObjSuf)
 KDTREESRC          = kDTreeTest.$(SrcSuf)
 KDTREE             = kDTreeTest
 
-OBJS          = $(SPECFUNBETAOBJ) $(SPECFUNBETAIOBJ) $(SPECFUNGAMMAOBJ) $(SPECFUNCISIOBJ) $(SPECFUNERFOBJ) $(TESTTMATHOBJ) $(BSEARCHTIMEOBJ)  $(TESTBSEARCHOBJ)  $(TESTSORTOBJ) $(TESTSORTORDEROBJ) $(STRESSTMATHOBJ) $(STRESSTF1OBJ) $(STRESSGOFOBJ) $(INTEGRATIONOBJ) $(INTEGRATIONMULTIOBJ) $(ROOTFINDEROBJ) $(DISTSAMPLEROBJ) $(KDTREEOBJ)
+NEWKDTREEOBJ          = newKDTreeTest.$(ObjSuf)
+NEWKDTREESRC          = newKDTreeTest.$(SrcSuf)
+NEWKDTREE             = newKDTreeTest
+
+OBJS          = $(SPECFUNBETAOBJ) $(SPECFUNBETAIOBJ) $(SPECFUNGAMMAOBJ) $(SPECFUNCISIOBJ) $(SPECFUNERFOBJ) $(TESTTMATHOBJ) $(BSEARCHTIMEOBJ)  $(TESTBSEARCHOBJ)  $(TESTSORTOBJ) $(TESTSQUANTILESOBJ) $(TESTSORTORDEROBJ) $(STRESSTMATHOBJ) $(STRESSTF1OBJ) $(INTEGRATIONOBJ) $(INTEGRATIONMULTIOBJ) $(ROOTFINDEROBJ) $(DISTSAMPLEROBJ) $(KDTREEOBJ) $(NEWKDTREEOBJ)
 
 
-PROGRAMS      =$(SPECFUNBETA) $(SPECFUNBETAI)  $(SPECFUNGAMMA) $(SPECFUNSICI) $(SPECFUNERF) $(TESTTMATH) $(BSEARCHTIME) $(TESTBSEARCH) $(TESTSORT) $(TESTSORTORDER) $(STRESSTMATH) $(STRESSTF1) $(STRESSGOF) $(ITERATOR)  $(INTEGRATION) $(INTEGRATIONMULTI) $(ROOTFINDER) $(DISTSAMPLER) $(KDTREE)
+PROGRAMS      =$(SPECFUNBETA) $(SPECFUNBETAI)  $(SPECFUNGAMMA) $(SPECFUNSICI) $(SPECFUNERF) $(TESTTMATH) $(BSEARCHTIME) $(TESTBSEARCH) $(TESTSORT) $(TESTSORTORDER) $(TESTSQUANTILES) $(STRESSTMATH) $(STRESSTF1) $(ITERATOR)  $(INTEGRATION) $(INTEGRATIONMULTI) $(ROOTFINDER) $(DISTSAMPLER) $(KDTREE) $(NEWKDTREE)
 
 
 .SUFFIXES: .$(SrcSuf) .$(ObjSuf) $(ExeSuf)
@@ -160,6 +168,11 @@ $(TESTSORT):      $(TESTSORTOBJ)
 $(TESTSORTORDER):      $(TESTSORTORDEROBJ)
 		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
+
+$(TESTSQUANTILES):      $(TESTSQUANTILESOBJ)
+		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
+		    @echo "$@ done"
+
 
 $(SPECFUNERF):      $(SPECFUNERFOBJ)
 		    $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
@@ -201,6 +214,9 @@ $(KDTREE):	$(KDTREEOBJ)
 		 $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		    @echo "$@ done"
 
+$(NEWKDTREE):	$(NEWKDTREEOBJ)
+		 $(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
+		    @echo "$@ done"
 
 $(STRESSGOF):      $(STRESSGOFOBJ)
 		    $(LD) $(LDFLAGS) $^ $(LIBS) $(EXTRALIBS) $(OutPutOpt)$@

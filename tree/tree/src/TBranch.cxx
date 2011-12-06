@@ -115,6 +115,7 @@ TBranch::TBranch()
 , fBrowsables(0)
 , fSkipZip(kFALSE)
 , fReadLeaves(&TBranch::ReadLeavesImpl)
+, fFillLeaves(&TBranch::FillLeavesImpl)
 {
    // Default constructor.  Used for I/O by default.
 
@@ -160,18 +161,22 @@ TBranch::TBranch(TTree *tree, const char* name, void* address, const char* leafl
 , fBrowsables(0)
 , fSkipZip(kFALSE)
 , fReadLeaves(&TBranch::ReadLeavesImpl)
+, fFillLeaves(&TBranch::FillLeavesImpl)
 {
-   //*-*-*-*-*-*-*-*-*-*-*-*-*Create a Branch*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-   //*-*                =====================
+   // Create a Branch as a child of a Tree
    //
-   //       * address is the address of the first item of a structure.
+   //       * address is the address of the first item of a structure
+   //         or the address of a pointer to an object (see example in TTree.cxx).
    //       * leaflist is the concatenation of all the variable names and types
    //         separated by a colon character :
-   //         The variable name and the variable type are separated by a slash (/).
-   //         The variable type may be 0,1 or 2 characters. If no type is given,
-   //         the type of the variable is assumed to be the same as the previous
-   //         variable. If the first variable does not have a type, it is assumed
-   //         of type F by default. The list of currently supported types is given below:
+   //         The variable name and the variable type are separated by a
+   //         slash (/). The variable type must be 1 character. (Characters
+   //         after the first are legal and will be appended to the visible
+   //         name of the leaf, but have no effect.) If no type is given, the
+   //         type of the variable is assumed to be the same as the previous
+   //         variable. If the first variable does not have a type, it is
+   //         assumed of type F by default. The list of currently supported
+   //         types is given below:
    //            - C : a character string terminated by the 0 character
    //            - B : an 8 bit signed integer (Char_t)
    //            - b : an 8 bit unsigned integer (UChar_t)
@@ -183,15 +188,7 @@ TBranch::TBranch(TTree *tree, const char* name, void* address, const char* leafl
    //            - D : a 64 bit floating point (Double_t)
    //            - L : a 64 bit signed integer (Long64_t)
    //            - l : a 64 bit unsigned integer (ULong64_t)
-   //
-   //         By default, a variable will be copied to the buffer with the number of
-   //         bytes specified in the type descriptor character. However, if the type
-   //         consists of 2 characters, the second character is an integer that
-   //         specifies the number of bytes to be used when copying the variable
-   //         to the output buffer. Example:
-   //             X         ; variable X, type Float_t
-   //             Y/I       : variable Y, type Int_t
-   //             Y/I2      ; variable Y, type Int_t converted to a 16 bit integer
+   //            - O : [the letter 'o', not a zero] a boolean (Bool_t)
    //
    //         Arrays of values are supported with the following syntax:
    //         If leaf name has the form var[nelem], where nelem is alphanumeric, then
@@ -223,8 +220,6 @@ TBranch::TBranch(TTree *tree, const char* name, void* address, const char* leafl
    //   only this object.
    //
    //    Note that this function is invoked by TTree::Branch
-   //
-   //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    Init(name,leaflist,compress);
 }
@@ -268,59 +263,12 @@ TBranch::TBranch(TBranch *parent, const char* name, void* address, const char* l
 , fBrowsables(0)
 , fSkipZip(kFALSE)
 , fReadLeaves(&TBranch::ReadLeavesImpl)
+, fFillLeaves(&TBranch::FillLeavesImpl)
 {
-   //*-*-*-*-*-*-*-*-*-*-*-*-*Create a Branch*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-   //*-*                =====================
+   // Create a Branch as a child of another Branch
    //
-   //       * address is the address of the first item of a structure
-   //         or the address of a pointer to an object (see example).
-   //       * leaflist is the concatenation of all the variable names and types
-   //         separated by a colon character :
-   //         The variable name and the variable type are separated by a slash (/).
-   //         The variable type may be 0,1 or 2 characters. If no type is given,
-   //         the type of the variable is assumed to be the same as the previous
-   //         variable. If the first variable does not have a type, it is assumed
-   //         of type F by default. The list of currently supported types is given below:
-   //            - C : a character string terminated by the 0 character
-   //            - B : an 8 bit signed integer (Char_t)
-   //            - b : an 8 bit unsigned integer (UChar_t)
-   //            - S : a 16 bit signed integer (Short_t)
-   //            - s : a 16 bit unsigned integer (UShort_t)
-   //            - I : a 32 bit signed integer (Int_t)
-   //            - i : a 32 bit unsigned integer (UInt_t)
-   //            - F : a 32 bit floating point (Float_t)
-   //            - D : a 64 bit floating point (Double_t)
-   //            - L : a 64 bit signed integer (Long64_t)
-   //            - l : a 64 bit unsigned integer (ULong64_t)
-   //
-   //         By default, a variable will be copied to the buffer with the number of
-   //         bytes specified in the type descriptor character. However, if the type
-   //         consists of 2 characters, the second character is an integer that
-   //         specifies the number of bytes to be used when copying the variable
-   //         to the output buffer. Example:
-   //             X         ; variable X, type Float_t
-   //             Y/I       : variable Y, type Int_t
-   //             Y/I2      ; variable Y, type Int_t converted to a 16 bit integer
-   //
-   //         Arrays of values are supported with the following syntax:
-   //         If leaf name has the form var[nelem], where nelem is alphanumeric, then
-   //         If nelem is a leaf name, it is used as the variable size of the array.
-   //              The leaf referred to by nelem **MUST** be an int (/I).
-   //         If leaf name has the form var[nelem], where nelem is a non-negative integer, then
-   //            it is used as the fixed size of the array.
-   //         If leaf name has the form of a multi dimension array (e.g. var[nelem][nelem2])
-   //            where nelem and nelem2 are non-negative integer) then
-   //            it is used as a 2 dimensional array of fixed size.
-   //         Any of other form is not supported.
-   //
-   //   See an example of a Branch definition in the TTree constructor.
-   //
-   //   Note that in case the data type is an object, this branch can contain
-   //   only this object.
-   //
-   //    Note that this function is invoked by TTree::Branch
-   //
-   //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+   // See documentation for 
+   // TBranch::TBranch(TTree *, const char *, void *, const char *, Int_t, Int_t) 
 
    Init(name,leaflist,compress);
 }
@@ -796,102 +744,17 @@ Int_t TBranch::Fill()
 
    buf->ResetMap();
 
-   Int_t lold = buf->Length();
-   Int_t objectStart = 0;
-   Int_t last = 0;
    Int_t lnew = 0;
    Int_t nbytes = 0;
 
    if (fEntryBuffer) {
-      if (fEntryBuffer->IsA() == TMessage::Class()) {
-         objectStart = 8;
-      }
-      if (fEntryBuffer->TestBit(TBufferFile::kNotDecompressed)) {
-         // The buffer given as input as not been decompressed.
-         if (basket->GetNevBuf()) {
-            // If the basket already contains entry we need to close it
-            // out. (This is because we can only transfer full compressed
-            // buffer)
-            WriteBasket(basket,fWriteBasket);
-            // And restart from scratch
-            return Fill();
-         }
-         Int_t startpos = fEntryBuffer->Length();
-         fEntryBuffer->SetBufferOffset(0);
-         static TBasket toread_fLast;
-         fEntryBuffer->SetReadMode();
-         toread_fLast.Streamer(*fEntryBuffer);
-         fEntryBuffer->SetWriteMode();
-         last = toread_fLast.GetLast();
-         // last now contains the decompressed number of bytes.
-         fEntryBuffer->SetBufferOffset(startpos);
-         buf->SetBufferOffset(0);
-         buf->SetBit(TBufferFile::kNotDecompressed);
-         basket->Update(lold);
-      } else {
-         // We are required to copy starting at the version number (so not
-         // including the class name.
-         // See if byte count is here, if not it class still be a newClass
-         const UInt_t kNewClassTag = 0xFFFFFFFF;
-         const UInt_t kByteCountMask = 0x40000000;  // OR the byte count with this
-         UInt_t tag = 0;
-         UInt_t startpos = fEntryBuffer->Length();
-         fEntryBuffer->SetBufferOffset(objectStart);
-         *fEntryBuffer >> tag;
-         if (tag & kByteCountMask) {
-            *fEntryBuffer >> tag;
-         }
-         if (tag == kNewClassTag) {
-            UInt_t maxsize = 256;
-            char* s = new char[maxsize];
-            Int_t name_start = fEntryBuffer->Length();
-            fEntryBuffer->ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end.
-            while (strlen(s) == (maxsize - 1)) {
-               // The classname is too large, try again with a large buffer.
-               fEntryBuffer->SetBufferOffset(name_start);
-               maxsize *= 2;
-               delete[] s;
-               s = new char[maxsize];
-               fEntryBuffer->ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end
-            }
-         } else {
-            fEntryBuffer->SetBufferOffset(objectStart);
-         }
-         objectStart = fEntryBuffer->Length();
-         fEntryBuffer->SetBufferOffset(startpos);
-         basket->Update(lold, objectStart - fEntryBuffer->GetBufferDisplacement());
-      }
-      fEntries++;
-      fEntryNumber++;
-      UInt_t len = 0;
-      UInt_t startpos = fEntryBuffer->Length();
-      if (startpos > UInt_t(objectStart)) {
-         // We assume this buffer have just been directly filled
-         // the current position in the buffer indicates the end of the object!
-         len = fEntryBuffer->Length() - objectStart;
-      } else {
-         // The buffer have been acquired either via TSocket or via
-         // TBuffer::SetBuffer(newloc,newsize)
-         // Only the actual size of the memory buffer gives us an hint about where
-         // the object ends.
-         len = fEntryBuffer->BufferSize() - objectStart;
-      }
-      buf->WriteBuf(fEntryBuffer->Buffer() + objectStart, len);
-      if (fEntryBuffer->TestBit(TBufferFile::kNotDecompressed)) {
-         // The original buffer came pre-compressed and thus the buffer Length
-         // does not really show the really object size
-         // lnew = nbytes = basket->GetLast();
-         nbytes = last;
-         lnew = last;
-      } else {
-         lnew = buf->Length();
-         nbytes = lnew - lold;
-      }
+      nbytes = FillEntryBuffer(basket,buf,lnew);
    } else {
+      Int_t lold = buf->Length();
       basket->Update(lold);
       ++fEntries;
       ++fEntryNumber;
-      FillLeaves(*buf);
+      (this->*fFillLeaves)(*buf);
       if (buf->GetMapCount()) {
          // The map is used.
          ResetBit(TBranch::kDoNotUseBufferMap);
@@ -925,14 +788,102 @@ Int_t TBranch::Fill()
 }
 
 //______________________________________________________________________________
-void TBranch::FillLeaves(TBuffer& b)
+Int_t TBranch::FillEntryBuffer(TBasket* basket, TBuffer* buf, Int_t& lnew) 
 {
-   // Fill each of the leaf of the branch.
+   // Copy the data from fEntryBuffer into the current basket.
 
-   for (Int_t i = 0; i < fNleaves; ++i) {
-      TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
-      leaf->FillBasket(b);
+   Int_t nbytes = 0;
+   Int_t objectStart = 0;
+   Int_t last = 0;
+   Int_t lold = buf->Length();
+   
+   // Handle the special case of fEntryBuffer != 0
+   if (fEntryBuffer->IsA() == TMessage::Class()) {
+      objectStart = 8;
    }
+   if (fEntryBuffer->TestBit(TBufferFile::kNotDecompressed)) {
+      // The buffer given as input has not been decompressed.
+      if (basket->GetNevBuf()) {
+         // If the basket already contains entry we need to close it
+         // out. (This is because we can only transfer full compressed
+         // buffer)
+         WriteBasket(basket,fWriteBasket);
+         // And restart from scratch
+         return Fill();
+      }
+      Int_t startpos = fEntryBuffer->Length();
+      fEntryBuffer->SetBufferOffset(0);
+      static TBasket toread_fLast;
+      fEntryBuffer->SetReadMode();
+      toread_fLast.Streamer(*fEntryBuffer);
+      fEntryBuffer->SetWriteMode();
+      last = toread_fLast.GetLast();
+      // last now contains the decompressed number of bytes.
+      fEntryBuffer->SetBufferOffset(startpos);
+      buf->SetBufferOffset(0);
+      buf->SetBit(TBufferFile::kNotDecompressed);
+      basket->Update(lold);
+   } else {
+      // We are required to copy starting at the version number (so not
+      // including the class name.
+      // See if byte count is here, if not it class still be a newClass
+      const UInt_t kNewClassTag = 0xFFFFFFFF;
+      const UInt_t kByteCountMask = 0x40000000;  // OR the byte count with this
+      UInt_t tag = 0;
+      UInt_t startpos = fEntryBuffer->Length();
+      fEntryBuffer->SetBufferOffset(objectStart);
+      *fEntryBuffer >> tag;
+      if (tag & kByteCountMask) {
+         *fEntryBuffer >> tag;
+      }
+      if (tag == kNewClassTag) {
+         UInt_t maxsize = 256;
+         char* s = new char[maxsize];
+         Int_t name_start = fEntryBuffer->Length();
+         fEntryBuffer->ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end.
+         while (strlen(s) == (maxsize - 1)) {
+            // The classname is too large, try again with a large buffer.
+            fEntryBuffer->SetBufferOffset(name_start);
+            maxsize *= 2;
+            delete[] s;
+            s = new char[maxsize];
+            fEntryBuffer->ReadString(s, maxsize); // Reads at most maxsize - 1 characters, plus null at end
+         }
+      } else {
+         fEntryBuffer->SetBufferOffset(objectStart);
+      }
+      objectStart = fEntryBuffer->Length();
+      fEntryBuffer->SetBufferOffset(startpos);
+      basket->Update(lold, objectStart - fEntryBuffer->GetBufferDisplacement());
+   }
+   fEntries++;
+   fEntryNumber++;
+   UInt_t len = 0;
+   UInt_t startpos = fEntryBuffer->Length();
+   if (startpos > UInt_t(objectStart)) {
+      // We assume this buffer have just been directly filled
+      // the current position in the buffer indicates the end of the object!
+      len = fEntryBuffer->Length() - objectStart;
+   } else {
+      // The buffer have been acquired either via TSocket or via
+      // TBuffer::SetBuffer(newloc,newsize)
+      // Only the actual size of the memory buffer gives us an hint about where
+      // the object ends.
+      len = fEntryBuffer->BufferSize() - objectStart;
+   }
+   buf->WriteBuf(fEntryBuffer->Buffer() + objectStart, len);
+   if (fEntryBuffer->TestBit(TBufferFile::kNotDecompressed)) {
+      // The original buffer came pre-compressed and thus the buffer Length
+      // does not really show the really object size
+      // lnew = nbytes = basket->GetLast();
+      nbytes = last;
+      lnew = last;
+   } else {
+      lnew = buf->Length();
+      nbytes = lnew - lold;
+   }
+   
+   return nbytes;
 }
 
 //______________________________________________________________________________
@@ -1127,8 +1078,7 @@ Int_t TBranch::FlushOneBasket(UInt_t ibasket)
 //______________________________________________________________________________
 TBasket* TBranch::GetBasket(Int_t basketnumber)
 {
-   //*-*-*-*-*Return pointer to basket basketnumber in this Branch*-*-*-*-*-*
-   //*-*      ====================================================
+   //         Return pointer to basket basketnumber in this Branch
 
    static Int_t nerrors = 0;
 
@@ -1186,8 +1136,7 @@ TBasket* TBranch::GetBasket(Int_t basketnumber)
 //______________________________________________________________________________
 Long64_t TBranch::GetBasketSeek(Int_t basketnumber) const
 {
-   //*-*-*-*-*Return address of basket in the file*-*-*-*-*-*
-   //*-*      ====================================
+   //         Return address of basket in the file
 
    if (basketnumber <0 || basketnumber > fWriteBasket) return 0;
    return fBasketSeek[basketnumber];
@@ -1493,8 +1442,7 @@ TBasket* TBranch::GetFreshBasket()
 //______________________________________________________________________________
 TLeaf* TBranch::GetLeaf(const char* name) const
 {
-   //*-*-*-*-*-*Return pointer to the 1st Leaf named name in thisBranch-*-*-*-*-*
-   //*-*        =======================================================
+   //           Return pointer to the 1st Leaf named name in thisBranch
 
    Int_t i;
    for (i=0;i<fNleaves;i++) {
@@ -1545,8 +1493,8 @@ TString TBranch::GetRealFileName() const
 //______________________________________________________________________________
 Int_t TBranch::GetRow(Int_t)
 {
-   //*-*-*-*-*Return all elements of one row unpacked in internal array fValues*-*
-   //*-*      =================================================================
+   // Return all elements of one row unpacked in internal array fValues
+   // [Actually just returns 1 (?)]
 
    return 1;
 }
@@ -1887,6 +1835,17 @@ void TBranch::ReadLeaves2Impl(TBuffer& b)
    
    ((TLeaf*) fLeaves.UncheckedAt(0))->ReadBasket(b);
    ((TLeaf*) fLeaves.UncheckedAt(1))->ReadBasket(b);
+}
+
+//______________________________________________________________________________
+void TBranch::FillLeavesImpl(TBuffer& b)
+{
+   // Loop on all leaves of this branch to fill Basket buffer.
+   
+   for (Int_t i = 0; i < fNleaves; ++i) {
+      TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
+      leaf->FillBasket(b);
+   }
 }
 
 //______________________________________________________________________________

@@ -180,7 +180,7 @@ void MCMCIntervalPlot::DrawPosterior(const Option_t* options)
       DrawPosteriorHist(options);
 }
 
-void* MCMCIntervalPlot::DrawPosteriorHist(const Option_t* options,
+void* MCMCIntervalPlot::DrawPosteriorHist(const Option_t* /*options*/,
       const char* title, Bool_t scale)
 {
    if (fPosteriorHist == NULL)
@@ -194,11 +194,11 @@ void* MCMCIntervalPlot::DrawPosteriorHist(const Option_t* options,
 
    // kbelasco: annoying hack because histogram drawing fails when it sees
    // an unrecognized option like POSTERIOR_HIST, etc.
-   const Option_t* myOpt = NULL;
+   //const Option_t* myOpt = NULL;
 
-   TString tmpOpt(options);
-   if (tmpOpt.Contains("same"))
-      myOpt = "same";
+   //TString tmpOpt(options);
+   //if (tmpOpt.Contains("same"))
+   //   myOpt = "same";
 
    // scale so highest bin has height 1
    if (scale)

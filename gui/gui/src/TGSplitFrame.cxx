@@ -59,7 +59,7 @@ TGSplitTool::TGSplitTool(const TGWindow *p, const TGFrame *f)
    fMap.SetOwner(kTRUE);
    fMap.SetOwnerValue(kFALSE);
    MapSubwindows();
-   Resize(f->GetWidth()/10, f->GetHeight()/10);
+   if (f) Resize(f->GetWidth()/10, f->GetHeight()/10);
    AddInput(kButtonPressMask | kButtonReleaseMask | kPointerMotionMask);
 
    fWindow = f;
@@ -230,9 +230,9 @@ void TGSplitTool::Show(Int_t x, Int_t y)
    gVirtualX->GrabPointer(fId, kButtonPressMask | kPointerMotionMask, kNone, 
                           fClient->GetResourcePool()->GetGrabCursor(), 
                           kTRUE, kFALSE);
-   Long_t args[2];
-   args[0] = x;
-   args[1] = y;
+   // Long_t args[2];
+   // args[0] = x;
+   // args[1] = y;
 }
 
 //______________________________________________________________________________

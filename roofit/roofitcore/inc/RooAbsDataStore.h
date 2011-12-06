@@ -35,6 +35,7 @@ public:
   RooAbsDataStore(const char* name, const char* title, const RooArgSet& vars) ; 
   RooAbsDataStore(const RooAbsDataStore& other, const char* newname=0) ; 
   RooAbsDataStore(const RooAbsDataStore& other, const RooArgSet& vars, const char* newname=0) ; 
+  virtual RooAbsDataStore* clone(const char* newname=0) const = 0 ;
   virtual RooAbsDataStore* clone(const RooArgSet& vars, const char* newname=0) const = 0 ;
   virtual ~RooAbsDataStore() ;
 
@@ -69,8 +70,14 @@ public:
   // General & bookkeeping methods
   virtual Bool_t valid() const = 0 ;
   virtual Int_t numEntries() const = 0 ;
+  virtual Double_t sumEntries() const { return 0 ; } ;
   virtual void reset() = 0 ;
 
+  // Buffer redirection routines used in inside RooAbsOptTestStatistics
+  virtual void attachBuffers(const RooArgSet& extObs) = 0 ; 
+  virtual void resetBuffers() = 0 ;
+
+  virtual void setExternalWeightArray(Double_t* /*arrayWgt*/, Double_t* /*arrayWgtErrLo*/, Double_t* /*arrayWgtErrHi*/, Double_t* /*arraySumW2*/) {} ;
 
   // Printing interface (human readable)
   inline virtual void Print(Option_t *options= 0) const {
@@ -95,23 +102,19 @@ public:
   virtual void setArgStatus(const RooArgSet& set, Bool_t active) = 0 ;
   const RooArgSet& cachedVars() const { return _cachedVars ; }
   virtual void resetCache() = 0 ;
+  virtual void recalculateCache() {} ;
 
   virtual void setDirtyProp(Bool_t flag) { _doDirtyProp = flag ; }
+  Bool_t dirtyProp() const { return _doDirtyProp ; }
 
   virtual void checkInit() const {} ;
   
   Bool_t hasFilledCache() const { return _cachedVars.getSize()>0 ; }
 
   virtual const TTree* tree() const { return 0 ; }
+  virtual void dump() {} 
 
-  // Dataset can be based on scalar value or vector variables
-  // kScalar is the default value everywhere
-  enum DataType { kScalar=0, kVector=1 } ;
-
-  // make vectors out of data in the datastore
-  virtual Bool_t makeVectors() = 0 ;
-  // Check if the dataset is based on scalars or vectors
-  virtual Bool_t useVectors() const { return _dataStoreType==RooAbsDataStore::kVector ; }
+  virtual void loadValues(const RooAbsDataStore *tds, const RooFormulaVar* select=0, const char* rangeName=0, Int_t nStart=0, Int_t nStop=2000000000) = 0 ;
 
  protected:
 
@@ -119,7 +122,6 @@ public:
   RooArgSet _cachedVars ;
   TIterator *_iterator;    //! Iterator over dimension variables
   TIterator *_cacheIter ;  //! Iterator over cached variables
-  RooAbsDataStore::DataType _dataStoreType ; //! Store the type of the datastore
 
   Bool_t _doDirtyProp ;    // Switch do (de)activate dirty state propagation when loading a data point
 

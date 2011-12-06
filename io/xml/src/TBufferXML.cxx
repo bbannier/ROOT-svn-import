@@ -106,6 +106,7 @@ TBufferXML::TBufferXML(TBuffer::EMode mode) :
 TBufferXML::TBufferXML(TBuffer::EMode mode, TXMLFile* file) :
    TBufferFile(mode),
    TXMLSetup(*file),
+   fXML(0),
    fStack(),
    fVersionBuf(-111),
    fObjMap(0),
@@ -1041,9 +1042,9 @@ void TBufferXML::WorkWithElement(TStreamerElement* elem, Int_t number)
       comp_type = info->GetTypes()[number];
 
       elem = info->GetStreamerElementReal(number, 0);
-   } else
+   } else if (elem) {
       comp_type = elem->GetType();
-
+   }
 
    if (elem==0) {
       Error("SetStreamerElementNumber", "streamer info returns elem = 0");
@@ -3095,7 +3096,7 @@ const char* TBufferXML::GetFloatFormat()
 }
 
 //______________________________________________________________________________
-Int_t TBufferXML::ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *obj) 
+Int_t TBufferXML::ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *obj) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
@@ -3132,7 +3133,7 @@ Int_t TBufferXML::ReadSequence(const TStreamerInfoActions::TActionSequence &sequ
 }
 
 //______________________________________________________________________________
-Int_t TBufferXML::ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
+Int_t TBufferXML::ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
@@ -3169,7 +3170,7 @@ Int_t TBufferXML::ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequence
 }
 
 //______________________________________________________________________________
-Int_t TBufferXML::ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
+Int_t TBufferXML::ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    

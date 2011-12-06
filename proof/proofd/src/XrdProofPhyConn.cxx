@@ -20,6 +20,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "XrdProofPhyConn.h"
+#include "XpdSysDNS.h"
 
 #include "XrdVersion.hh"
 #include "XrdClient/XrdClientEnv.hh"
@@ -27,7 +28,6 @@
 #include "XrdClient/XrdClientConst.hh"
 #include "XrdClient/XrdClientLogConnection.hh"
 #include "XrdClient/XrdClientMessage.hh"
-#include "XrdNet/XrdNetDNS.hh"
 #include "XrdSec/XrdSecInterface.hh"
 
 #ifndef WIN32
@@ -91,7 +91,7 @@ bool XrdProofPhyConn::Init(const char *url, int fd)
 
    // Host and Port
    if (!fTcp) {
-      fHost = XrdNetDNS::getHostName(((fUrl.Host.length() > 0) ?
+      fHost = XrdSysDNS::getHostName(((fUrl.Host.length() > 0) ?
                                        fUrl.Host.c_str() : "localhost"));
       fPort = -1;
       fUrl.Host = "";
@@ -195,7 +195,7 @@ int XrdProofPhyConn::TryConnect(int fd)
    const char *ctype[2] = {"UNIX", "TCP"};
 
    // Create physical connection
-#ifdef OLDXRCPHYCONN
+#if ROOTXRDVERS < ROOT_OldPhyConn
    fPhyConn = new XrdClientPhyConnection(this);
 #else
    fPhyConn = new XrdClientPhyConnection(this, 0);
@@ -203,7 +203,7 @@ int XrdProofPhyConn::TryConnect(int fd)
 
    // Connect
    bool isUnix = (fTcp) ? 0 : 1;
-#ifdef XRCPHYCNOREUSE
+#if ROOTXRDVERS < ROOT_PhyConnNoReuse
    if (fd > 0) {
       TRACE(XERR, "Reusing an existing connection (descriptor "<<fd<<
                   ") not supported by the xroot client version (requires xrootd >= 3.0.3)");

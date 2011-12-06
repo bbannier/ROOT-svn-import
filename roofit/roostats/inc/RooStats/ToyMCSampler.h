@@ -74,6 +74,8 @@ class ToyMCSampler: public TestStatSampler {
          fSize = 0.05;
          fNEvents = 0;
          fGenerateBinned = kFALSE;
+         fGenerateBinnedTag = "";
+         fGenerateAutoBinned = kTRUE;
          fExpectedNuisancePar = kFALSE;
 
          fToysInTails = 0.0;
@@ -93,6 +95,9 @@ class ToyMCSampler: public TestStatSampler {
 	_gs2 = NULL ;
 	_gs3 = NULL ;
 	_gs4 = NULL ;
+
+        //suppress messages for num integration of Roofit
+        RooMsgService::instance().getStream(1).removeTopic(RooFit::NumIntegration);
 
 	fUseMultiGen = kFALSE ;
       }
@@ -109,6 +114,8 @@ class ToyMCSampler: public TestStatSampler {
          fSize = 0.05;
          fNEvents = 0;
          fGenerateBinned = kFALSE;
+         fGenerateBinnedTag = "";
+         fGenerateAutoBinned = kTRUE;
          fExpectedNuisancePar = kFALSE;
 
          fToysInTails = 0.0;
@@ -128,6 +135,9 @@ class ToyMCSampler: public TestStatSampler {
 	_gs2 = NULL ;
 	_gs3 = NULL ;
 	_gs4 = NULL ;
+
+        //suppress messages for num integration of Roofit
+        RooMsgService::instance().getStream(1).removeTopic(RooFit::NumIntegration);
 
 	fUseMultiGen = kFALSE ;
       }
@@ -210,7 +220,7 @@ class ToyMCSampler: public TestStatSampler {
          if (fNullPOI) delete fNullPOI; fNullPOI = (RooArgSet*)nullpoi.snapshot(); 
       }
       // Set the Pdf, add to the the workspace if not already there
-      virtual void SetPdf(RooAbsPdf& pdf) { fPdf = &pdf; }
+      virtual void SetPdf(RooAbsPdf& pdf) { fPdf = &pdf; ClearCache(); }
       // How to randomize the prior. Set to NULL to deactivate randomization.
       virtual void SetPriorNuisance(RooAbsPdf* pdf) { fPriorNuisance = pdf; }
       // specify the nuisance parameters (eg. the rest of the parameters)
@@ -235,8 +245,12 @@ class ToyMCSampler: public TestStatSampler {
       // Checks for sufficient information to do a GetSamplingDistribution(...).
       Bool_t CheckConfig(void);
 
-      // control to use bin data generation
+      // control to use bin data generation (=> see RooFit::AllBinned() option)
       void SetGenerateBinned(bool binned = true) { fGenerateBinned = binned; }
+      // name of the tag for individual components to be generated binned (=> see RooFit::GenBinned() option)
+      void SetGenerateBinnedTag( const char* binnedTag = "" ) { fGenerateBinnedTag = binnedTag; }
+      // set auto binned generation (=> see RooFit::AutoBinned() option)
+      void SetGenerateAutoBinned( Bool_t autoBinned = kTRUE ) { fGenerateAutoBinned = autoBinned; }
 
       // Set the name of the sampling distribution used for plotting
       void SetSamplingDistName(const char* name) { if(name) fSamplingDistName = name; }
@@ -279,7 +293,8 @@ class ToyMCSampler: public TestStatSampler {
       // helper for GenerateToyData
       RooAbsData* Generate(RooAbsPdf &pdf, RooArgSet &observables, const RooDataSet *protoData=NULL, int forceEvents=0) const;
 
-
+      // helper method for clearing  the cache
+      void ClearCache();
 
       TestStatistic *fTestStat; // test statistic that is being sampled
       RooAbsPdf *fPdf; // model
@@ -294,6 +309,8 @@ class ToyMCSampler: public TestStatSampler {
       Double_t fSize;
       Bool_t fExpectedNuisancePar; // whether to use expectation values for nuisance parameters (ie Asimov data set)
       Bool_t fGenerateBinned;
+      TString fGenerateBinnedTag;
+      Bool_t fGenerateAutoBinned;
 
       // minimum no of toys in tails for adaptive sampling
       // (taking weights into account, therefore double)
@@ -329,7 +346,7 @@ class ToyMCSampler: public TestStatSampler {
       Bool_t fUseMultiGen ; // Use PrepareMultiGen?
 
    protected:
-   ClassDef(ToyMCSampler,2) // A simple implementation of the TestStatSampler interface
+   ClassDef(ToyMCSampler,3) // A simple implementation of the TestStatSampler interface
 };
 }
 

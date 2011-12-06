@@ -279,7 +279,7 @@ Reflex::Type::IsEquivalentTo(const Type& typ,
                   Type_Iterator pi2;
 
                   for (pi1 = t1.FunctionParameter_Begin(), pi2 = t2.FunctionParameter_Begin();
-                       pi1 != t1.FunctionParameter_End(), pi2 != t2.FunctionParameter_End();
+                       pi1 != t1.FunctionParameter_End() && pi2 != t2.FunctionParameter_End();
                        ++pi1, ++pi2) {
                      if (!pi1->IsEquivalentTo(*pi2, modifiers_mask)) {
                         return false;
@@ -375,7 +375,7 @@ Reflex::Type::IsSignatureEquivalentTo(const Type& typ,
                Type_Iterator pi2;
 
                for (pi1 = t1.FunctionParameter_Begin(), pi2 = t2.FunctionParameter_Begin();
-                    pi1 != t1.FunctionParameter_End(), pi2 != t2.FunctionParameter_End();
+                    pi1 != t1.FunctionParameter_End() && pi2 != t2.FunctionParameter_End();
                     ++pi1, ++pi2) {
                   if (!pi1->IsEquivalentTo(*pi2, modifiers_mask)) {
                      return false;
@@ -558,11 +558,15 @@ void
 Reflex::Type::Unload() const {
 //-------------------------------------------------------------------------------
 //  Unload a type, i.e. delete the TypeName's TypeBase object.
-   if (fTypeName)
-      const_cast<Reflex::TypeName*>(fTypeName)->Unload();
-   // The scope might have our name, better move it to the heap.
-   ScopeName* sn = (ScopeName*)(operator Scope().Id());
-   if (sn) sn->LiteralName().ToHeap();
+   if (Reflex::Instance::State() != Reflex::Instance::kHasShutDown) {
+      if (fTypeName)
+         const_cast<Reflex::TypeName*>(fTypeName)->Unload();
+      // The scope might have our name, better move it to the heap.
+      if (Reflex::Instance::State() != Reflex::Instance::kTearingDown) {
+         ScopeName* sn = (ScopeName*)(operator Scope().Id());
+         if (sn) sn->LiteralName().ToHeap();
+      }
+   }
 }
 
 

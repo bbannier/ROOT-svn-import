@@ -22,7 +22,6 @@
 #include "RooArgSet.h"
 #include "RooArgList.h"
 #include "RooGlobalFunc.h"
-#include "RooValues.h"
 
 class RooArgList ;
 class RooDataSet ;
@@ -40,6 +39,7 @@ class RooMultiGenFunction ;
 class RooFitResult ;
 class RooMoment ;
 class RooDerivative ;
+class RooVectorDataStore ;
 
 class TH1;
 class TH1F;
@@ -49,6 +49,7 @@ class TH3F;
 #include <list>
 #include <string>
 #include <iostream>
+using namespace std ;
 
 class RooAbsReal : public RooAbsArg {
 public:
@@ -61,26 +62,17 @@ public:
   virtual ~RooAbsReal();
 
   // Return value and unit accessors
-  virtual Double_t getVal(const RooArgSet* set=0) const ;
-  inline  Double_t getVal(const RooArgSet& set) const { 
-    // Return value with given choice of observables
-    return getVal(&set) ; 
+  inline Double_t getVal(const RooArgSet* set=0) const { 
+/*    if (_fast && !_inhibitDirty) cout << "RooAbsReal::getVal(" << GetName() << ") CLEAN value = " << _value << endl ;  */
+#ifndef _WIN32
+    return (_fast && !_inhibitDirty) ? _value : getValV(set) ; 
+#else
+    return (_fast && !inhibitDirty()) ? _value : getValV(set) ;     
+#endif
   }
+  inline  Double_t getVal(const RooArgSet& set) const { return _fast ? _value : getValV(&set) ; }
 
-  typedef RooValues<Double_t> RooValuesDouble ;
-
-  // Define which implementation to use for the SIMD evaluation
-  enum ImplSIMD { kNone=0, kOpenMP=1, kCUDA=2, kMIC=3 } ;
-  struct DeviceSIMD {
-    DeviceSIMD() : Impl(RooAbsReal::kNone), Device(0) { }
-    RooAbsReal::ImplSIMD Impl;
-    Int_t Device;
-  } ;
-
-  // Return the results in case of SIMD evaluation
-  virtual const RooValuesDouble* getValSIMD(Int_t start=0, Int_t end=0, 
-						const RooArgSet* set=0,
-						const RooAbsReal* mother=0) const ;
+  virtual Double_t getValV(const RooArgSet* set=0) const ;
 
   Double_t getPropagatedError(const RooFitResult& fr) ;
 
@@ -261,7 +253,7 @@ public:
     char _srvval[1024] ;
   } ;
 
-  enum ErrorLoggingMode { PrintErrors, CollectErrors, CountErrors } ;
+  enum ErrorLoggingMode { PrintErrors, CollectErrors, CountErrors, Ignore } ;
   static ErrorLoggingMode evalErrorLoggingMode() ;
   static void setEvalErrorLoggingMode(ErrorLoggingMode m) ;
   void logEvalError(const char* message, const char* serverValueString=0) const ;
@@ -275,7 +267,9 @@ public:
   static EvalErrorIter evalErrorIter() ;
 
   static void clearEvalErrorLog() ;
-
+  
+  virtual Bool_t isBinnedDistribution(const RooArgSet& /*obs*/) const { return kFALSE ; }
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const { return 0 ; }
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const { 
     // Interface for returning an optional hint for initial sampling points when constructing a curve 
     // projected on observable.
@@ -368,33 +362,20 @@ protected:
   }
   virtual Double_t evaluate() const = 0 ;
 
-  // By default they return kFALSE, i.e. algorithm does not exist
-  // Must overloading these functions in the children classes
-  virtual Bool_t evaluateAndNormalizeSIMD(RooAbsReal::DeviceSIMD /*deviceSIMD*/, Int_t /*start*/, Int_t /*end*/, 
-					  const RooAbsReal* /*mother*/, Double_t /*integral*/) const { return kFALSE; } 
-
   // Hooks for RooDataSet interface
   friend class RooRealIntegral ;
+  friend class RooVectorDataStore ;
   virtual void syncCache(const RooArgSet* set=0) { getVal(set) ; }
-  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE, Bool_t setValDirty=kTRUE) ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) ;
+  virtual void attachToVStore(RooVectorDataStore& vstore) ;
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   virtual void fillTreeBranch(TTree& t) ;
-
-  virtual Bool_t resizeVector(Int_t size=0) ;
-  virtual Bool_t reserveVector(Int_t size) ;
-  virtual Bool_t isVector() const ;
-  virtual Bool_t clearVector() ;
-  virtual void setValueVector(Int_t i) ;
-  virtual void getValueVector(Int_t i) ;
-  virtual void pushBackValueVector() ;
 
   Double_t _plotMin ;       // Minimum of plot range
   Double_t _plotMax ;       // Maximum of plot range
   Int_t    _plotBins ;      // Number of plot bins
-  mutable Double_t _value         ; // Cache for current value of object
-  mutable RooValuesDouble _values ; //! Cache for current SIMD values of object (transient values)
-  DeviceSIMD _deviceSIMD ;    // set which implementation and device to run on
+  mutable Double_t _value ; // Cache for current value of object
   TString  _unit ;          // Unit for objects value
   TString  _label ;         // Plot label for objects value
   Bool_t   _forceNumInt ;   // Force numerical integration if flag set

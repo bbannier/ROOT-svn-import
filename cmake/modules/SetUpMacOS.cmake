@@ -1,10 +1,11 @@
 set(ROOT_ARCHITECTURE macosx)
 set(ROOT_PLATFORM macosx)
 
-Set(SYSLIBS "-lm ${EXTRA_LDFLAGS} ${FINK_LDFLAGS} ${CMAKE_THREAD_LIBS_INIT} -ldl")
-Set(XLIBS "${XPMLIBDIR} ${XPMLIB} ${X11LIBDIR} -lXext -lX11")
-Set(CILIBS "-lm ${EXTRA_LDFLAGS} ${FINK_LDFLAGS} -ldl")
-#Set(CRYPTLIBS "-lcrypt")
+set(SYSLIBS "-lm ${EXTRA_LDFLAGS} ${FINK_LDFLAGS} ${CMAKE_THREAD_LIBS_INIT} -ldl")
+set(XLIBS "${XPMLIBDIR} ${XPMLIB} ${X11LIBDIR} -lXext -lX11")
+set(CILIBS "-lm ${EXTRA_LDFLAGS} ${FINK_LDFLAGS} -ldl")
+#set(CRYPTLIBS "-lcrypt")
+set(CMAKE_M_LIBS -lm)
 
 #---This is needed to help CMake to locate the X11 headers in the correct place and not under /usr/include
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /usr/X11R6)
@@ -23,7 +24,7 @@ if (CMAKE_SYSTEM_NAME MATCHES Darwin)
     #TODO: check haveconfig and rpath -> set rpath true
     #TODO: check Thread, define link command
     #TODO: more stuff check configure script
-    execute_process(COMMAND sysctl machdep.cpu.extfeatures OUTPUT_VARIABLE SYSCTL_OUTPUT)
+    execute_process(COMMAND /usr/sbin/sysctl machdep.cpu.extfeatures OUTPUT_VARIABLE SYSCTL_OUTPUT)
     if(${SYSCTL_OUTPUT} MATCHES 64)
        MESSAGE(STATUS "Found a 64bit system") 
        set(ROOT_ARCHITECTURE macosx64)
@@ -42,7 +43,9 @@ if (CMAKE_SYSTEM_NAME MATCHES Darwin)
   endif()
   
   if (CMAKE_COMPILER_IS_GNUCXX)
-     MESSAGE(STATUS "Found GNU compiler collection")
+     message(STATUS "Found GNU compiler collection")
+     execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+
      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -W -Wall -Woverloaded-virtual -fsigned-char -fno-common")
      SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe -W -Wall -fsigned-char -fno-common")
      SET(CMAKE_Fortran_FLAGS "${CMAKE_FORTRAN_FLAGS}")

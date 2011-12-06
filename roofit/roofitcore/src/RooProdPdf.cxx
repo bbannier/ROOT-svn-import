@@ -65,6 +65,7 @@
 
 #include <string.h>
 #include <sstream>
+#include <algorithm>
 
 #ifndef _WIN32
 #include <strings.h>
@@ -499,11 +500,11 @@ RooProdPdf::~RooProdPdf()
 
 
 //_____________________________________________________________________________
-Double_t RooProdPdf::getVal(const RooArgSet* set) const 
+Double_t RooProdPdf::getValV(const RooArgSet* set) const 
 {
   // Overload getVal() to intercept normalization set for use in evaluate()
   _curNormSet = (RooArgSet*)set ;
-  return RooAbsPdf::getVal(set) ;
+  return RooAbsPdf::getValV(set) ;
 }
 
 
@@ -512,18 +513,19 @@ Double_t RooProdPdf::getVal(const RooArgSet* set) const
 Double_t RooProdPdf::evaluate() const 
 {
   // Calculate current value of object
-
+  
   Int_t code ;
-  RooArgList *plist(0) ;
-  RooLinkedList *nlist(0) ;
-  getPartIntList(_curNormSet,0,plist,nlist,code) ;
+  CacheElem* cache = (CacheElem*) _cacheMgr.getObj(_curNormSet,0,&code) ;
+  
+  // If cache doesn't have our configuration, recalculate here
+  if (!cache) {
+    RooArgList *plist(0) ;
+    RooLinkedList *nlist(0) ;
+    getPartIntList(_curNormSet,0,plist,nlist,code) ;
+    cache = (CacheElem*) _cacheMgr.getObj(_curNormSet,0,&code) ;
+  }
 
-  // preceding call to getPartIntList guarantees non-null return
-  // coverity[NULL_RETURNS]
-  CacheElem* cache = (CacheElem*) _cacheMgr.getObj(_curNormSet,0,&code,0) ;
-  Double_t ret =  calculate(*cache) ;
-
-  return ret ;
+  return calculate(*cache) ;
 }
 
 
@@ -587,20 +589,20 @@ Double_t RooProdPdf::calculate(const RooProdPdf::CacheElem& cache, Bool_t /*verb
     Int_t n = cache._partList.getSize() ;
     
     Int_t i ;
-    RooLinkedListIter plIter = cache._partList.iterator() ;
-    RooLinkedListIter nlIter = cache._normList.iterator() ;
+    RooFIter plIter = cache._partList.fwdIterator() ;
+    RooFIter nlIter = cache._normList.fwdIterator() ;
 
     for (i=0 ; i<n ; i++) {
-      partInt = (RooAbsReal*) plIter.Next() ; //((RooAbsReal*)cache._partList.at(i)) ;
-      normSet = (RooArgSet*) nlIter.Next() ; // ((RooArgSet*)cache._normList.At(i)) ;    
+      partInt = (RooAbsReal*) plIter.next() ; //((RooAbsReal*)cache._partList.at(i)) ;
+      normSet = (RooArgSet*) nlIter.next() ; // ((RooArgSet*)cache._normList.At(i)) ;    
       Double_t piVal = partInt->getVal(normSet->getSize()>0 ? normSet : 0) ;
       //cout << "partInt " << partInt->GetName() << " is of type " << partInt->IsA()->GetName() << endl ;
-      if (dynamic_cast<RooAbsPdf*>(partInt)) {
-	cxcoutD(Eval) << "product term " << partInt->GetName() << " normalized over " << (normSet?*normSet:RooArgSet())  
-		      << " = " << partInt->getVal() << " / " << ((RooAbsPdf*)partInt)->getNorm(normSet) << " = " << piVal << endl ;
-      } else {
-	//cout << "product term " << partInt->GetName() << " normalized over " << (normSet?*normSet:RooArgSet()) << " = " << piVal << endl ;
-      }
+//       if (dynamic_cast<RooAbsPdf*>(partInt)) {
+// 	cxcoutD(Eval) << "product term " << partInt->GetName() << " normalized over " << (normSet?*normSet:RooArgSet())  
+// 		      << " = " << partInt->getVal() << " / " << ((RooAbsPdf*)partInt)->getNorm(normSet) << " = " << piVal << endl ;
+//       } else {
+// 	//cout << "product term " << partInt->GetName() << " normalized over " << (normSet?*normSet:RooArgSet()) << " = " << piVal << endl ;
+//       }
       value *= piVal ;
       if (value<_cutOff) {
 	break ;
@@ -820,9 +822,6 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
   // Also return list of normalization sets to be used to evaluate 
   // each component in the list correctly.
 
-  RooArgList* partListPointer=(RooArgList*)partList ;
-  RooLinkedList* nsetListPointer=(RooLinkedList*)nsetList ;
-
 //   cout << "   FOLKERT::RooProdPdf::getPartIntList(" << GetName() <<")  nset = " << (nset?*nset:RooArgSet()) << endl 
 //        << "   _normRange = " << _normRange << endl 
 //        << "   iset = " << (iset?*iset:RooArgSet()) << endl 
@@ -831,7 +830,7 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
   // Check if this configuration was created before
   Int_t sterileIdx(-1) ;
 
-  CacheElem* cache = (CacheElem*) _cacheMgr.getObj(nset,iset,&sterileIdx,RooNameReg::ptr(isetRangeName)) ;
+  CacheElem* cache = (CacheElem*) _cacheMgr.getObj(nset,iset,&sterileIdx,isetRangeName) ;
   if (cache) {
     code = _cacheMgr.lastIndex() ;
     partList = &cache->_partList ;
@@ -1167,9 +1166,6 @@ void RooProdPdf::getPartIntList(const RooArgSet* nset, const RooArgSet* iset,
 //   cout << endl ;
 //   delete nliter ;
 
-  partListPointer=(RooArgList*)partList ;
-  nsetListPointer=(RooLinkedList*)nsetList ;
-
 //   cout << "   FOLKERT::RooProdPdf::getPartIntList END(" << GetName() <<")  nset = " << (nset?*nset:RooArgSet()) << endl 
 //        << "   _normRange = " << _normRange << endl 
 //        << "   iset = " << (iset?*iset:RooArgSet()) << endl 
@@ -1223,7 +1219,6 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
   TIterator* iter2 = cache._denList.createIterator() ;
   TIterator* itern = cache._normList.MakeIterator() ;
   RooAbsReal* part, *num, *den ;
-  RooArgSet* nset ;
   RooArgSet nomList ;
 
   list<string> rangeComps ;
@@ -1245,8 +1240,7 @@ void RooProdPdf::rearrangeProduct(RooProdPdf::CacheElem& cache) const
 
   while((part=(RooAbsReal*)iterp->Next())) {
 
-    // coverity[UNUSED_VALUE]
-    nset = (RooArgSet*) itern->Next() ;
+    itern->Next() ;
     num = (RooAbsReal*) iter1->Next() ;
     den = (RooAbsReal*) iter2->Next() ;
     
@@ -1942,13 +1936,13 @@ Double_t RooProdPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, 
     getPartIntList(nset,iset,partIntList,normList,code2,rangeName) ;
 
     delete vars ;
-    delete nset ;
-    delete iset ;
 
     // preceding call to getPartIntList guarantees non-null return
     // coverity[NULL_RETURNS]
-    cache = (CacheElem*) _cacheMgr.getObj(nset,iset,&code2,RooNameReg::ptr(rangeName)) ;
+    cache = (CacheElem*) _cacheMgr.getObj(nset,iset,&code2,rangeName) ;
 
+    delete nset ;
+    delete iset ;
 
   } else {
 
@@ -2000,7 +1994,6 @@ Double_t RooProdPdf::expectedEvents(const RooArgSet* nset) const
   assert(_extendedIndex>=0) ;
   return ((RooAbsPdf*)_pdfList.at(_extendedIndex))->expectedEvents(nset) ;
 }
-
 
 
 
@@ -2256,6 +2249,32 @@ RooArgSet* RooProdPdf::getConstraints(const RooArgSet& observables, RooArgSet& c
 
 
 //_____________________________________________________________________________
+RooArgSet* RooProdPdf::getConnectedParameters(const RooArgSet& observables) const
+{
+  // Return all parameter constraint p.d.f.s on parameters listed in constrainedParams
+  // The observables set is required to distinguish unambiguously p.d.f in terms 
+  // of observables and parameters, which are not constraints, and p.d.fs in terms
+  // of parameters only, which can serve as constraints p.d.f.s
+
+  RooFIter iter = _pdfList.fwdIterator() ;
+  RooAbsArg* arg ;
+  RooArgSet* connectedPars  = new RooArgSet("connectedPars") ;
+  while((arg=iter.next())) {
+    // Check if term is relevant
+    if (arg->dependsOn(observables)) {
+      RooArgSet* tmp = arg->getParameters(observables) ;
+      connectedPars->add(*tmp) ;
+      delete tmp ;
+    } else {
+    }
+  }
+  return connectedPars ;
+}
+
+
+
+
+//_____________________________________________________________________________
 void RooProdPdf::getParametersHook(const RooArgSet* nset, RooArgSet* params, Bool_t stripDisconnected) const 
 {
   if (!stripDisconnected) return ;
@@ -2327,6 +2346,45 @@ std::list<Double_t>* RooProdPdf::plotSamplingHint(RooAbsRealLValue& obs, Double_
   RooAbsPdf* pdf ;
   while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
     list<Double_t>* hint = pdf->plotSamplingHint(obs,xlo,xhi) ;      
+    if (hint) {
+      return hint ;
+    }
+  }
+  
+  return 0 ;
+}
+
+
+
+//_____________________________________________________________________________
+Bool_t RooProdPdf::isBinnedDistribution(const RooArgSet& obs) const 
+{
+  // If all components that depend on obs are binned that so is the product
+  
+  _pdfIter->Reset() ;
+  RooAbsPdf* pdf ;
+  while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
+    if (pdf->dependsOn(obs) && !pdf->isBinnedDistribution(obs)) {
+      return kFALSE ;
+    }
+  }
+  
+  return kTRUE  ;  
+}
+
+
+
+
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* RooProdPdf::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const 
+{
+  // Forward the plot sampling hint from the p.d.f. that defines the observable obs  
+  _pdfIter->Reset() ;
+  RooAbsPdf* pdf ;
+  while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
+    list<Double_t>* hint = pdf->binBoundaries(obs,xlo,xhi) ;      
     if (hint) {
       return hint ;
     }

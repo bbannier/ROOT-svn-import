@@ -44,7 +44,7 @@ namespace RooStats {
       MetropolisHastings();
 
       // alternate constructor
-      MetropolisHastings(RooAbsReal& function, RooArgSet& paramsOfInterest,
+      MetropolisHastings(RooAbsReal& function, const RooArgSet& paramsOfInterest,
             ProposalFunction& proposalFunction, Int_t numIters);
 
       virtual ~MetropolisHastings() {}
@@ -53,10 +53,13 @@ namespace RooStats {
       // algorithm to generate Markov Chain of points in the parameter space
       virtual MarkovChain* ConstructChain();
 
-      // specify the parameters of interest in the interval
-      // kbelasco: should clone before removing constant parameters?
-      virtual void SetParameters(RooArgSet& set)
-      { fParameters = &set; RemoveConstantParameters(fParameters); }
+      // specify the parameters to store in the chain
+      // if not specified all of them will be stored
+      virtual void SetChainParameters(const RooArgSet& set)
+      { fChainParams.removeAll();  fChainParams.add(set);  RemoveConstantParameters(&fChainParams); }      
+      // specify all the parameters of interest in the interval
+      virtual void SetParameters(const RooArgSet& set)
+      { fParameters.removeAll();  fParameters.add(set);  RemoveConstantParameters(&fParameters); }
       // set the proposal function for suggesting new points for the MCMC
       virtual void SetProposalFunction(ProposalFunction& proposalFunction)
       { fPropFunc = &proposalFunction; }
@@ -77,7 +80,8 @@ namespace RooStats {
 
    protected:
       RooAbsReal* fFunction; // function that will generate likelihood values
-      RooArgSet* fParameters; // RooRealVars that define parameter space
+      RooArgSet fParameters; // RooRealVars that define all parameter space
+      RooArgSet fChainParams; // RooRealVars that are stored in the chain
       ProposalFunction* fPropFunc; // Proposal function for MCMC integration
       Int_t fNumIters; // number of iterations to run metropolis algorithm
       Int_t fNumBurnInSteps; // number of iterations to discard as burn-in, starting from the first
@@ -88,7 +92,7 @@ namespace RooStats {
       virtual Bool_t ShouldTakeStep(Double_t d);
       virtual Double_t CalcNLL(Double_t xL);
 
-      ClassDef(MetropolisHastings,1) // Markov Chain Monte Carlo calculator for Bayesian credible intervals
+      ClassDef(MetropolisHastings,2) // Markov Chain Monte Carlo calculator for Bayesian credible intervals
    };
 }
 

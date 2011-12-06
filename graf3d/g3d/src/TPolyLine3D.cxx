@@ -349,6 +349,7 @@ void TPolyLine3D::DrawOutlineCube(TList *outline, Double_t *rmin, Double_t *rmax
    TPolyLine3D *pl3d = (TPolyLine3D *)outline->First();
    if (!pl3d) {
       TView *view = gPad->GetView();
+      if (!view) return;
       TPolyLine3D *p1 = new TPolyLine3D(4);
       TPolyLine3D *p2 = new TPolyLine3D(4);
       TPolyLine3D *p3 = new TPolyLine3D(4);
@@ -504,7 +505,9 @@ void TPolyLine3D::Paint(Option_t * /* option */ )
    buffer.SetSectionsValid(TBuffer3D::kCore);
 
    // We fill kCore and kRawSizes on first pass and try with viewer
-   Int_t reqSections = gPad->GetViewer3D()->AddObject(buffer);
+   TVirtualViewer3D * viewer3D = gPad->GetViewer3D();
+   if (!viewer3D) return;
+   Int_t reqSections = viewer3D->AddObject(buffer);
    if (reqSections == TBuffer3D::kNone) {
       return;
    }
@@ -555,7 +558,7 @@ void TPolyLine3D::Paint(Option_t * /* option */ )
       buffer.SetSectionsValid(TBuffer3D::kRaw);
    }
 
-   gPad->GetViewer3D()->AddObject(buffer);
+   viewer3D->AddObject(buffer);
 }
 
 

@@ -70,7 +70,7 @@ include/%.h:    $(LZMADIRI)/%.h
 ifeq ($(BUILTINLZMA),yes)
 $(LZMALIB):     $(LZMALIBA)
 ifeq ($(PLATFORM),aix5)
-		ar rv $@ $(LZMALIBDIRS)/src/liblzma/.libs/*.o
+		ar rv $@ $(LZMALIBDIRS)/src/liblzma/*.o
 else
 		cp $< $@
 		@(if [ $(PLATFORM) = "macosx" ]; then \
@@ -187,9 +187,7 @@ clean::         clean-$(MODNAME)
 distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(LZMADEP)
 		@rm -rf $(call stripsrc,$(LZMADIRS)/$(LZMAVERS))
-ifeq ($(BUILTINLZMA),yes)
-		@rm -f $(LZMALIB)
-endif
+		@rm -f $(LPATH)/liblzma.*
 ifeq ($(PLATFORM),win32)
 		@rm -f $(LZMADLL)
 endif

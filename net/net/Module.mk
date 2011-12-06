@@ -31,8 +31,16 @@ NETS         := $(filter-out $(MODDIRS)/THTTPMessage.cxx,$(NETS))
 else
 NETNOCRYPTO  :=
 endif
-NETO         := $(call stripsrc,$(NETS:.cxx=.o))
 
+ifeq ($(SSLLIB),)
+NETSSL       :=
+NETH         := $(filter-out $(MODDIRI)/TSSLSocket.h,$(NETH))
+NETS         := $(filter-out $(MODDIRS)/TSSLSocket.cxx,$(NETS))
+else
+NETSSL       := -DR__SSL
+endif
+
+NETO         := $(call stripsrc,$(NETS:.cxx=.o))
 NETDEP       := $(NETO:.o=.d) $(NETDO:.o=.d)
 
 NETLIB       := $(LPATH)/libNet.$(SOEXT)
@@ -57,12 +65,12 @@ include/%.h:    $(NETDIRI)/%.h
 $(NETLIB):      $(NETO) $(NETDO) $(ORDER_) $(MAINLIBS) $(NETLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libNet.$(SOEXT) $@ "$(NETO) $(NETDO)" \
-		   "$(NETLIBEXTRA) $(CRYPTOLIBDIR) $(CRYPTOLIB)"
+		   "$(NETLIBEXTRA) $(CRYPTOLIBDIR) $(CRYPTOLIB) $(SSLLIB)"
 
 $(NETDS):       $(NETH) $(NETL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(NETNOCRYPTO) $(NETH) $(NETL)
+		$(ROOTCINTTMP) -f $@ -c $(NETNOCRYPTO) $(NETSSL) $(NETH) $(NETL)
 
 $(NETMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(NETL)
 		$(RLIBMAP) -o $@ -l $(NETLIB) -d $(NETLIBDEPM) -c $(NETL)
@@ -78,3 +86,9 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(NETDEP) $(NETDS) $(NETDH) $(NETLIB) $(NETMAP)
 
 distclean::     distclean-$(MODNAME)
+
+##### extra rules ######
+ifeq ($(MACOSX_MINOR),7)
+$(call stripsrc,$(NETDIRS)/TSSLSocket.o): CXXFLAGS += -Wno-deprecated-declarations
+endif
+$(call stripsrc,$(NETDIRS)/TWebFile.o): CXXFLAGS += $(NETSSL)

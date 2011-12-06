@@ -75,8 +75,6 @@
 TStreamerElement *TStreamerInfo::fgElement = 0;
 Int_t   TStreamerInfo::fgCount = 0;
 
-const Int_t kRegrouped = TStreamerInfo::kOffsetL;
-
 const Int_t kMaxLen = 1024;
 
 ClassImp(TStreamerInfo)
@@ -146,6 +144,8 @@ TStreamerInfo::TStreamerInfo()
    
    fReadObjectWise = 0;
    fReadMemberWise = 0;
+   fWriteObjectWise = 0;
+   fWriteMemberWise = 0;
 }
 
 //______________________________________________________________________________
@@ -177,6 +177,8 @@ TStreamerInfo::TStreamerInfo(TClass *cl)
    
    fReadObjectWise = 0;
    fReadMemberWise = 0;
+   fWriteObjectWise = 0;
+   fWriteMemberWise = 0;
 }
 
 //______________________________________________________________________________
@@ -195,6 +197,8 @@ TStreamerInfo::~TStreamerInfo()
 
    delete fReadObjectWise;
    delete fReadMemberWise;
+   delete fWriteObjectWise;
+   delete fWriteMemberWise;
 
    if (!fElements) return;
    fElements->Delete();
@@ -971,7 +975,8 @@ namespace {
       for (UInt_t i = oldlen, done = false, nest = 0; (i>0) && !done ; --i) {
          switch (oldClass->GetName()[i-1]) {
             case '>' : ++nest; break;
-            case '<' : --nest; break;
+            case '<' : if (nest==0) return kFALSE; // the name is not well formed, give up. 
+                       --nest; break;
             case ':' : if (nest == 0) oldname= &(oldClass->GetName()[i]); done = kTRUE; break;
          }
       }
@@ -1292,12 +1297,12 @@ void TStreamerInfo::BuildOld()
             // case the base class contains a member used as an array dimension in the derived classes.
             Int_t version = base->GetBaseVersion();
             TStreamerInfo* infobase = (TStreamerInfo*)baseclass->GetStreamerInfo(version);
-            if (infobase->GetTypes() == 0) {
+            if (infobase && infobase->GetTypes() == 0) {
                infobase->BuildOld();
             }
             Int_t baseOffset = fClass->GetBaseClassOffset(baseclass);
 
-            if (shouldHaveInfoLoc && baseclass->TestBit(TClass::kIsEmulation) ) {
+            if (infobase && shouldHaveInfoLoc && baseclass->TestBit(TClass::kIsEmulation) ) {
                if ( (fNVirtualInfoLoc + infobase->fNVirtualInfoLoc) > virtualInfoLocAlloc ) {
                   ULong_t *store = fVirtualInfoLoc;
                   virtualInfoLocAlloc = 16 * ( (fNVirtualInfoLoc + infobase->fNVirtualInfoLoc) / 16 + 1);
@@ -1854,6 +1859,8 @@ void TStreamerInfo::Clear(Option_t *option)
       
       if (fReadObjectWise) fReadObjectWise->fActions.clear();
       if (fReadMemberWise) fReadMemberWise->fActions.clear();
+      if (fWriteObjectWise) fWriteObjectWise->fActions.clear();
+      if (fWriteMemberWise) fWriteMemberWise->fActions.clear();
    }
 }
 
@@ -2538,8 +2545,9 @@ static void R__WriteDestructorBody(FILE *file, TIter &next)
          } else if ( element->IsBase() ) {
             ename = "this";
          }
-         TVirtualCollectionProxy *proxy = element->GetClassPointer()->GetCollectionProxy();
-         if (!element->TestBit(TStreamerElement::kDoNotDelete) && element->GetClassPointer() && proxy) {
+         TClass *cle = element->GetClassPointer();
+         TVirtualCollectionProxy *proxy = cle ? element->GetClassPointer()->GetCollectionProxy() : 0;
+         if (!element->TestBit(TStreamerElement::kDoNotDelete) && proxy) {
             Int_t stltype = ((TStreamerSTL*)element)->GetSTLtype();
             
             if (proxy->HasPointers()) {
@@ -2594,6 +2602,7 @@ void TStreamerInfo::GenerateDeclaration(FILE *fp, FILE *sfp, const TList *subCla
                isTemplate = kTRUE;
                break;
             case '>':
+               if (nest == 0) { cur = len; continue; } // the name is not well formed, give up.
                --nest;
                break;
             case ':': {
@@ -2990,15 +2999,18 @@ Int_t TStreamerInfo::GenerateHeaderFile(const char *dirname, const TList *subCla
 
    TString sourcename; sourcename.Form( "%s/%sProjectSource.cxx", dirname, gSystem->BaseName(dirname) );
    FILE *sfp = fopen( sourcename.Data(), "a" );
-   GenerateDeclaration(fp, sfp, subClasses);
-   
+   if (sfp) {
+      GenerateDeclaration(fp, sfp, subClasses);
+   } else {
+      Error("GenerateHeaderFile","Could not open %s for appending",sourcename.Data());
+   }
    TMakeProject::GeneratePostDeclaration(fp, this, inclist);
 
    fprintf(fp,"#endif\n");
 
    delete [] inclist;
    fclose(fp);
-   fclose(sfp);
+   if (sfp) fclose(sfp);
    return 1;
 }
 
@@ -4318,20 +4330,20 @@ void TStreamerInfo::TCompInfo::Update(const TClass *oldcl, TClass *newcl)
 
 //______________________________________________________________________________
 TVirtualCollectionProxy*
-TStreamerInfo::GenEmulatedProxy(const char* class_name)
+TStreamerInfo::GenEmulatedProxy(const char* class_name, Bool_t silent)
 {
    // Generate emulated collection proxy for a given class.
 
-   return TCollectionProxyFactory::GenEmulatedProxy(class_name);
+   return TCollectionProxyFactory::GenEmulatedProxy(class_name, silent);
 }
 
 //______________________________________________________________________________
 TClassStreamer*
-TStreamerInfo::GenEmulatedClassStreamer(const char* class_name)
+TStreamerInfo::GenEmulatedClassStreamer(const char* class_name, Bool_t silent)
 {
    // Generate emulated class streamer for a given collection class.
 
-   return TCollectionProxyFactory::GenEmulatedClassStreamer(class_name);
+   return TCollectionProxyFactory::GenEmulatedClassStreamer(class_name, silent);
 }
 
 //______________________________________________________________________________

@@ -32,7 +32,7 @@ PyROOT::ExecFactories_t PyROOT::gExecFactories;
 PyObject* PyROOT::TBoolExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python bool return value
-   PyObject* result = (bool)func->ExecInt( self ) ? Py_True : Py_False;
+   PyObject* result = (Bool_t)func->ExecInt( self ) ? Py_True : Py_False;
    Py_INCREF( result );
    return result;
 }
@@ -47,7 +47,7 @@ PyObject* PyROOT::TLongExecutor::Execute( G__CallFunc* func, void* self )
 PyObject* PyROOT::TCharExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python string return value
-   return PyROOT_PyUnicode_FromFormat( "%c", (int)func->ExecInt( self ) );
+   return PyROOT_PyUnicode_FromFormat( "%c", (Int_t)func->ExecInt( self ) );
 }
 
 //____________________________________________________________________________
@@ -82,7 +82,7 @@ PyObject* PyROOT::TULongLongExecutor::Execute( G__CallFunc* func, void* self )
 PyObject* PyROOT::TDoubleExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python float return value
-   return PyFloat_FromDouble( (double)func->ExecDouble( self ) );
+   return PyFloat_FromDouble( (Double_t)func->ExecDouble( self ) );
 }
 
 //____________________________________________________________________________
@@ -249,6 +249,7 @@ PyObject* PyROOT::TRootObjectByValueExecutor::Execute( G__CallFunc* func, void* 
 //____________________________________________________________________________
 PyObject* PyROOT::TRootObjectRefExecutor::Execute( G__CallFunc* func, void* self )
 {
+// executor binds the result to the left-hand side, overwriting if an old object
    PyObject* result = BindRootObject( (void*)func->ExecInt( self ), fClass );
    if ( ! result || ! fAssignable )
       return result;
@@ -448,6 +449,7 @@ namespace {
    public:
       InitExecFactories_t()
       {
+      // load all executor factories in the global map 'gExecFactories'
          int nf = sizeof( factories_ ) / sizeof( factories_[ 0 ] );
          for ( int i = 0; i < nf; ++i ) {
             gExecFactories[ factories_[ i ].first ] = factories_[ i ].second;

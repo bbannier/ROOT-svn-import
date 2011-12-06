@@ -25,6 +25,7 @@
 #pragma link C++ class RooSharedProperties+ ;
 #pragma link C++ class RooSharedPropertiesList+ ;
 #pragma link C++ class RooSimGenContext+ ;
+#pragma link C++ class RooSimSplitGenContext+ ;
 #pragma link C++ class RooStreamParser+ ;
 #pragma link C++ class RooStringVar+ ;
 #pragma link C++ class RooSuperCategory+ ;
@@ -44,7 +45,6 @@
 #pragma link C++ class RooMsgService+ ;
 #pragma link C++ class RooMsgService::StreamConfig+ ;
 #pragma link C++ class RooProjectedPdf+ ;
-#pragma link C++ class RooValues<Double_t>- ;
 #pragma link C++ class RooWorkspace- ;
 #pragma link C++ class RooWorkspace::CodeRepo- ;
 #pragma link C++ class RooWorkspace::WSDir+ ;
@@ -83,7 +83,8 @@
 #pragma link C++ class RooExpensiveObjectCache+ ;
 #pragma link C++ class RooExpensiveObjectCache::ExpensiveObject+ ;
 #pragma link C++ class std::map<std::string,RooAbsPdf*>+ ;
-#pragma link C++ class std::map<std::string,TH1*>+ ;
+// The nomap options excludes the class from the roomap file
+#pragma link C++ options=nomap class std::map<std::string,TH1*>+ ;
 #pragma link C++ class std::map<std::string,RooAbsDataStore*>+ ;
 #pragma link C++ class std::list<RooAbsData*>+ ;
 #pragma link C++ class std::list<TObject*>+ ;
@@ -108,6 +109,12 @@
 #pragma link C++ class RooCompositeDataStore+ ;
 #pragma link C++ class RooTreeData+ ;
 #pragma link C++ class RooRangeBoolean+ ;
+#pragma link C++ class RooVectorDataStore- ;
+#pragma link C++ class RooVectorDataStore::RealVector- ;
+#pragma link C++ class RooVectorDataStore::RealFullVector- ;
+#pragma link C++ class RooVectorDataStore::CatVector- ;
+#pragma link C++ class std::pair<std::string,RooAbsData*>+ ;
+#pragma link C++ class pair<int,RooLinkedListElem*>+ ;
 #ifndef __ROOFIT_NOROOMINIMIZER
 #pragma link C++ class RooMinimizer+ ;
 #pragma link C++ class RooMinimizerFcn+ ;
@@ -121,7 +128,8 @@
 #pragma link C++ class list<RooAbsStudy*>+ ;
 #pragma link C++ class map<string,RooDataSet*>+ ;
 #pragma link C++ class map<string,RooDataHist*>+ ;
-#pragma link C++ class map<string,TH1*>+ ;
+// The nomap options excludes the class from the roomap file
+#pragma link C++ options=nomap class map<string,TH1*>+ ;
 #pragma link C++ namespace RooCintUtils+ ;
 #pragma link off class RooErrorHandler+ ;
 #pragma link off class RooNag+ ;

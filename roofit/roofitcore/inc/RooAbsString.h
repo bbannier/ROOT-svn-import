@@ -19,6 +19,7 @@
 #include "RooAbsArg.h"
 
 class RooArgSet ;
+class RooVectorDataStore ;
 class TH1F ;
 
 class RooAbsString : public RooAbsArg {
@@ -52,21 +53,14 @@ protected:
   virtual Bool_t traceEvalHook(const char* value) const ;
   virtual TString evaluate() const { return "" ; }
 
-  virtual Bool_t resizeVector(Int_t /*size*/=0) { return kFALSE ; }
-  virtual Bool_t reserveVector(Int_t /*size*/) { return kFALSE ; }
-  virtual Bool_t isVector() const { return kFALSE ; }
-  virtual Bool_t clearVector() { return kFALSE ; }
-  virtual void setValueVector(Int_t /*i*/) { }
-  virtual void getValueVector(Int_t /*i*/) { }
-  virtual void pushBackValueVector() { }
-
   // Internal consistency checking (needed by RooDataSet)
   virtual Bool_t isValid() const ;
   virtual Bool_t isValidString(const char*, Bool_t printError=kFALSE) const ;
 
   virtual void syncCache(const RooArgSet* nset=0) ;
-  void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
+  void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE, Bool_t setValDiry=kTRUE) ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) ;
+  virtual void attachToVStore(RooVectorDataStore&) {}
   virtual void fillTreeBranch(TTree& t) ;
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   Int_t _len ; // Length of _value

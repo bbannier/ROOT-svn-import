@@ -227,6 +227,7 @@ protected:
 
    Int_t                 fSelectionBase;
    mutable Bool_t        fDrawPalette;
+   Bool_t                fDrawAxes;
 
 public:
 /*   TGLPlotPainter(TH1 *hist, TGLPlotCamera *camera, TGLPlotCoordinates *coord, Int_t context,
@@ -276,6 +277,11 @@ public:
 
    Bool_t           CutAxisSelected()const{return !fHighColor && fSelectedPart <= kZAxis && fSelectedPart >= kXAxis;}
    
+   void SetDrawFrontBox(Bool_t b) {fBackBox.SetDrawFront(b);}
+   void SetDrawBackBox(Bool_t b) {fBackBox.SetDrawBack(b);}
+   void SetDrawAxes(Bool_t s) {fDrawAxes = s;}
+   Bool_t GetDrawAxes() {return fDrawAxes;}
+
 protected:
    const TColor    *GetPadColor()const;
    //

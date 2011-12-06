@@ -1,6 +1,15 @@
 ############# MACROS ##############
 
-include ../Makefile.arch
+RC     := root-config
+ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
+MKARCH := $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
+endif
+ifneq ($(MKARCH),)
+include $(MKARCH)
+else
+ROOTSYS = ../..
+include $(ROOTSYS)/etc/Makefile.arch
+endif
 
 DICT      := HistViewerDict.$(SrcSuf)
 DICTH     := $(DICT:.$(SrcSuf)=.h)
@@ -32,7 +41,7 @@ $(DICT): $(HDRS)
 
 $(TARGETLIB): $(OBJS) $(DICTO)
 ifeq ($(PLATFORM),macosx)
-	$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@
+	$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@ $(GLIBS)
 else
 	$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(GLIBS) $(OutPutOpt)$@
 endif

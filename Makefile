@@ -103,6 +103,9 @@ SYSTEMO       = $(UNIXO)
 SYSTEMDO      = $(UNIXDO)
 endif
 endif
+ifeq ($(PLATFORM),ios)
+MODULES      += graf2d/ios
+endif
 ifeq ($(BUILDX11),yes)
 MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
@@ -206,12 +209,12 @@ endif
 ifeq ($(BUILDUNURAN),yes)
 MODULES      += math/unuran
 endif
+ifeq ($(BUILDCLING),yes)
+# put cling right behind of CINT; e.g. UTILS need it
+MODULES      := $(subst cint/cint,cint/cint cint/cling,$(MODULES))
+endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
-endif
-ifeq ($(BUILDCLING),yes)
-# to be added to the unconditional MODULES list above once cling is in trunk
-MODULES      += cint/cling
 endif
 ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
@@ -242,9 +245,6 @@ MODULES      += net/globusauth
 endif
 ifneq ($(F77),)
 MODULES      += misc/minicern hist/hbook
-endif
-ifeq ($(BUILDXRD),yes)
-MODULES      += net/xrootd
 endif
 ifeq ($(HASXRD),yes)
 MODULES      += net/netx
@@ -284,7 +284,7 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 rootx net/rootd io/dcache io/chirp hist/hbook graf2d/asimage \
                 net/ldap net/krb5auth net/rpdutils net/globusauth \
                 bindings/pyroot bindings/ruby io/gfal misc/minicern \
-                graf2d/qt gui/qtroot gui/qtgsi net/xrootd net/netx net/alien \
+                graf2d/qt gui/qtroot gui/qtgsi net/netx net/alien \
                 proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
                 tmva math/genetic io/hdfs graf2d/fitsio roofit/roofitcore \
@@ -292,7 +292,7 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench proof/afdsmgrd
+                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -311,26 +311,32 @@ ifneq ($(PLATFORM),win32)
 RPATH        := -L$(LPATH)
 CINTLIBS     := -lCint
 NEWLIBS      := -lNew
-BOOTLIBS     := -lCore -lCint -lMathCore
+BOOTLIBS     := -lCore -lCint
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += -lCintex -lReflex
 endif
-ROOTLIBS     := $(BOOTLIBS) -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad \
-                -lTree -lMatrix -lThread
+ifeq ($(BUILDCLING),yes)
+BOOTLIBS     += -lCling
+endif
+ROOTLIBS     := -lRIO -lHist -lGraf -lGraf3d -lGpad -lTree \
+                -lMatrix -lNet -lThread -lMathCore $(BOOTLIBS)
 RINTLIBS     := -lRint
 else
 CINTLIBS     := $(LPATH)/libCint.lib
 NEWLIBS      := $(LPATH)/libNew.lib
-BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib \
-                $(LPATH)/libMathcore.lib
+BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
 endif
-ROOTLIBS     := $(BOOTLIBS) $(LPATH)/libRIO.lib $(LPATH)/libNet.lib \
-                $(LPATH)/libHist.lib $(LPATH)/libGraf.lib \
-                $(LPATH)/libGraf3d.lib $(LPATH)/libGpad.lib \
-                $(LPATH)/libTree.lib $(LPATH)/libMatrix.lib \
-                $(LPATH)/libThread.lib
+ifeq ($(BUILDCLING),yes)
+BOOTLIBS     += $(LPATH)/libCling.lib
+endif
+ROOTLIBS     := $(LPATH)/libRIO.lib $(LPATH)/libHist.lib \
+                $(LPATH)/libGraf.lib $(LPATH)/libGraf3d.lib \
+                $(LPATH)/libGpad.lib $(LPATH)/libTree.lib \
+                $(LPATH)/libMatrix.lib $(LPATH)/libNet.lib \
+                $(LPATH)/libThread.lib $(LPATH)/libMathCore.lib \
+                $(BOOTLIBS)
 RINTLIBS     := $(LPATH)/libRint.lib
 endif
 
@@ -339,11 +345,11 @@ ROOTA        := bin/roota
 PROOFSERVA   := bin/proofserva
 
 # ROOTLIBSDEP is intended to match the content of ROOTLIBS
-BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB) $(MATHCORELIB)
+BOOTLIBSDEP   = $(ORDER_) $(CORELIB) $(CINTLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBSDEP  += $(CINTEXLIB) $(REFLEXLIB)
 endif
-ROOTLIBSDEP   = $(BOOTLIBSDEP) $(IOLIB) $(NETLIB) $(HISTLIB) \
+ROOTLIBSDEP   = $(BOOTLIBSDEP) $(MATHCORELIB) $(IOLIB) $(NETLIB) $(HISTLIB) \
                 $(GRAFLIB) $(G3DLIB) $(GPADLIB) $(TREELIB) $(MATRIXLIB)
 
 # Force linking of not referenced libraries
@@ -358,18 +364,19 @@ ROOTULIBS    := -Wl,-u,.G__cpp_setupG__Net      \
                 -Wl,-u,.G__cpp_setupG__Tree     \
                 -Wl,-u,.G__cpp_setupG__Thread   \
                 -Wl,-u,.G__cpp_setupG__Matrix
-BOOTULIBS    := -Wl,-u,.G__cpp_setupG__MathCore
 else
-ROOTULIBS    := -Wl,-u,_G__cpp_setupG__Net      \
-                -Wl,-u,_G__cpp_setupG__IO       \
-                -Wl,-u,_G__cpp_setupG__Hist     \
-                -Wl,-u,_G__cpp_setupG__Graf     \
-                -Wl,-u,_G__cpp_setupG__G3D      \
-                -Wl,-u,_G__cpp_setupG__GPad     \
-                -Wl,-u,_G__cpp_setupG__Tree     \
-                -Wl,-u,_G__cpp_setupG__Thread   \
-                -Wl,-u,_G__cpp_setupG__Matrix
-BOOTULIBS    := -Wl,-u,_G__cpp_setupG__MathCore
+ifeq ($(PLATFORM),macosx)
+LDSYMPREFIX  := _
+endif
+ROOTULIBS    := -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__Net      \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__IO       \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__Hist     \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__Graf     \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__G3D      \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__GPad     \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__Tree     \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__Thread   \
+                -Wl,-u,$(LDSYMPREFIX)G__cpp_setupG__Matrix
 endif
 endif
 ifeq ($(PLATFORM),win32)
@@ -382,7 +389,6 @@ ROOTULIBS    := -include:_G__cpp_setupG__Net    \
                 -include:_G__cpp_setupG__Tree   \
                 -include:_G__cpp_setupG__Thread \
                 -include:_G__cpp_setupG__Matrix
-BOOTULIBS    := -include:_G__cpp_setupG__MathCore
 endif
 
 ##### Compiler output option #####
@@ -493,15 +499,21 @@ ROOTMAP       = etc/system.rootmap
 
 STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
                   $(FREETYPELDFLAGS) $(FREETYPELIB)
+ifneq ($(SSLLIB),)
+STATICEXTRALIBS += $(SSLLIB)
+endif
+ifeq ($(XFTLIB),yes)
+STATICEXTRALIBS += -lXft
+endif
 
 ##### libCore #####
 
 COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) $(ZIPL) \
                 $(SYSTEML) $(CLIBL) $(METAUTILSL) $(TEXTINPUTL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(LZMAO) \
-                $(CLIBO) $(METAUTILSO) $(TEXTINPUTO) $(CLINGO)
+                $(CLIBO) $(METAUTILSO) $(METAUTILSTO) $(TEXTINPUTO)
 COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) $(ZIPDO) \
-                $(CLIBDO) $(METAUTILSDO) $(TEXTINPUTDO) $(CLINGDO)
+                $(CLIBDO) $(METAUTILSDO) $(TEXTINPUTDO)
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
@@ -525,6 +537,9 @@ ifeq ($(EXPLICITLINK),yes)
 MAINLIBS     := $(CORELIB) $(CINTLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 MAINLIBS     += $(CINTEXLIB) $(REFLEXLIB)
+endif
+ifeq ($(BUILDCLING),yes)
+MAINLIBS     += $(CLINGLIB)
 endif
 else
 MAINLIBS      =
@@ -765,15 +780,15 @@ endif
 	   touch $@; \
 	fi)
 
-$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
+$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(CLINGLIB) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 else
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
 	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
@@ -959,7 +974,7 @@ distclean:: clean
 	-@mv -f include/RConfigOptions.h- include/RConfigOptions.h
 	@rm -f bin/*.dll bin/*.exp bin/*.lib bin/*.pdb \
                lib/*.def lib/*.exp lib/*.lib lib/*.dll.a \
-               *.def .def
+               lib/*.so.* *.def .def
 ifeq ($(PLATFORM),macosx)
 	@rm -f lib/*.dylib
 	@rm -f lib/*.so
@@ -968,6 +983,7 @@ endif
 	-@(mv -f tutorials/gallery.root tutorials/gallery.root- >/dev/null 2>&1;true)
 	-@(mv -f tutorials/mlp/mlpHiggs.root tutorials/mlp/mlpHiggs.root- >/dev/null 2>&1;true)
 	-@(mv -f tutorials/quadp/stock.root tutorials/quadp/stock.root- >/dev/null 2>&1;true)
+	-@(mv -f tutorials/proof/ntprndm.root tutorials/proof/ntprndm.root- >/dev/null 2>&1;true)
 	@(find tutorials -name "files" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.root" -exec rm -rf {} \; >/dev/null 2>&1;true)
 	@(find tutorials -name "*.ps" -exec rm -rf {} \; >/dev/null 2>&1;true)
@@ -981,6 +997,7 @@ endif
 	-@(mv -f tutorials/gallery.root- tutorials/gallery.root >/dev/null 2>&1;true)
 	-@(mv -f tutorials/mlp/mlpHiggs.root- tutorials/mlp/mlpHiggs.root >/dev/null 2>&1;true)
 	-@(mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root >/dev/null 2>&1;true)
+	-@(mv -f tutorials/proof/ntprndm.root- tutorials/proof/ntprndm.root >/dev/null 2>&1;true)
 	@rm -f $(ROOTA) $(PROOFSERVA) $(ROOTALIB)
 	@rm -f $(CINTDIR)/include/*.dll $(CINTDIR)/include/*.so*
 	@rm -f $(CINTDIR)/stl/*.dll $(CINTDIR)/stl/*.so*
@@ -999,8 +1016,7 @@ maintainer-clean:: distclean
 	   etc/system.rootdaemonrc etc/root.mimes etc/daemons/rootd.rc.d \
 	   etc/daemons/rootd.xinetd etc/daemons/proofd.rc.d \
 	   etc/daemons/proofd.xinetd main/src/proofserv.sh main/src/roots.sh \
-	   etc/daemons/olbd.rc.d etc/daemons/xrootd.rc.d \
-	   etc/daemons/cmsd.rc.d macros/html.C \
+	   macros/html.C \
 	   build/misc/root-help.el build-arch-stamp build-indep-stamp \
 	   configure-stamp build-arch-cint-stamp config.status config.log
 
@@ -1015,7 +1031,7 @@ $(ROOTA) $(PROOFSERVA): $(ROOTALIB) $(MAKESTATIC) $(STATICOBJLIST)
 	@$(MAKESTATIC) $(PLATFORM) "$(CXX)" "$(CC)" "$(LD)" "$(LDFLAGS)" \
 	   "$(XLIBS)" "$(SYSLIBS)" "$(STATICEXTRALIBS)" $(STATICOBJLIST)
 
-$(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST)
+$(ROOTALIB): $(ALLLIBS) $(MAKESTATICLIB) $(STATICOBJLIST) $(IOSO)
 	@$(MAKESTATICLIB) $(STATICOBJLIST)
 
 plugins-ios: $(ROOTEXE)
@@ -1123,12 +1139,12 @@ install: all
 	   find $(DESTDIR)$(ETCDIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	   echo "Installing Autoconf macro in $(DESTDIR)$(ACLOCALDIR)"; \
 	   $(INSTALLDIR)                        $(DESTDIR)$(ACLOCALDIR); \
-	   $(INSTALLDATA) build/misc/root.m4    $(DESTDIR)$(ACLOCALDIR); \
+	   $(INSTALLDATA) $(ROOT_SRCDIR)/build/misc/root.m4 $(DESTDIR)$(ACLOCALDIR); \
 	   echo "Installing Emacs Lisp library in $(DESTDIR)$(ELISPDIR)"; \
 	   $(INSTALLDIR)                          $(DESTDIR)$(ELISPDIR); \
 	   $(INSTALLDATA) build/misc/root-help.el $(DESTDIR)$(ELISPDIR); \
 	   echo "Installing GDML conversion scripts in $(DESTDIR)$(LIBDIR)"; \
-	   $(INSTALLDATA) geom/gdml/*.py          $(DESTDIR)$(LIBDIR); \
+	   $(INSTALLDATA) $(ROOT_SRCDIR)/geom/gdml/*.py $(DESTDIR)$(LIBDIR); \
 	   find $(DESTDIR)$(DATADIR) -name CVS -exec rm -rf {} \; >/dev/null 2>&1; \
 	   find $(DESTDIR)$(DATADIR) -name .svn -exec rm -rf {} \; >/dev/null 2>&1; \
 	fi
@@ -1248,13 +1264,10 @@ runtimedirs:
 		--exclude system.rootauthrc \
 		--exclude system.rootdaemonrc \
 		--exclude system.rootrc \
-		--exclude cmsd.rc.d \
-		--exclude olbd.rc.d \
 		--exclude proofd.rc.d \
 		--exclude proofd.xinetd \
 		--exclude rootd.rc.d \
 		--exclude rootd.xinetd \
-		--exclude xrootd.rc.d \
 		--exclude svninfo.txt \
 		$(ROOT_SRCDIR)/etc . ; \
 	echo "Rsync'ing $(ROOT_SRCDIR)/macros..."; \

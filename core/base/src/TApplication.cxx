@@ -45,6 +45,11 @@
 #include "TBrowser.h"
 #include "TUrl.h"
 
+#if defined(R__MACOSX) && (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#include "TGIOS.h"
+#endif
+
+
 TApplication *gApplication = 0;
 Bool_t TApplication::fgGraphNeeded = kFALSE;
 Bool_t TApplication::fgGraphInit = kFALSE;
@@ -70,31 +75,24 @@ Bool_t TIdleTimer::Notify()
 ClassImp(TApplication)
 
 //______________________________________________________________________________
-TApplication::TApplication()
+TApplication::TApplication() :
+   fArgc(0), fArgv(0), fAppImp(0), fIsRunning(kFALSE), fReturnFromRun(kFALSE),
+   fNoLog(kFALSE), fNoLogo(kFALSE), fQuit(kFALSE), fUseMemstat(kFALSE),
+   fFiles(0), fIdleTimer(0), fSigHandler(0), fExitOnException(kDontExit),
+   fAppRemote(0)
 {
    // Default ctor. Can be used by classes deriving from TApplication.
 
-   fArgc            = 0;
-   fArgv            = 0;
-   fAppImp          = 0;
-   fAppRemote       = 0;
-   fIsRunning       = kFALSE;
-   fReturnFromRun   = kFALSE;
-   fNoLog           = kFALSE;
-   fNoLogo          = kFALSE;
-   fQuit            = kFALSE;
-   fUseMemstat      = kFALSE;
-   fFiles           = 0;
-   fIdleTimer       = 0;
-   fSigHandler      = 0;
-   fExitOnException = kDontExit;
    ResetBit(kProcessRemotely);
 }
 
 //______________________________________________________________________________
-TApplication::TApplication(const char *appClassName,
-                           Int_t *argc, char **argv, void *options,
-                           Int_t numOptions)
+TApplication::TApplication(const char *appClassName, Int_t *argc, char **argv,
+                           void * /*options*/, Int_t numOptions) :
+   fArgc(0), fArgv(0), fAppImp(0), fIsRunning(kFALSE), fReturnFromRun(kFALSE),
+   fNoLog(kFALSE), fNoLogo(kFALSE), fQuit(kFALSE), fUseMemstat(kFALSE),
+   fFiles(0), fIdleTimer(0), fSigHandler(0), fExitOnException(kDontExit),
+   fAppRemote(0)
 {
    // Create an application environment. The application environment
    // provides an interface to the graphics system and eventloop
@@ -137,26 +135,14 @@ TApplication::TApplication(const char *appClassName,
       fgApplications = new TList;
    fgApplications->Add(this);
 
-   if (options) { }  // use unused argument
-
    // copy command line arguments, can be later accessed via Argc() and Argv()
    if (argc && *argc > 0) {
       fArgc = *argc;
       fArgv = (char **)new char*[fArgc];
-   } else {
-      fArgc = 0;
-      fArgv = 0;
    }
 
    for (int i = 0; i < fArgc; i++)
       fArgv[i] = StrDup(argv[i]);
-
-   fNoLog           = kFALSE;
-   fNoLogo          = kFALSE;
-   fQuit            = kFALSE;
-   fUseMemstat      = kFALSE;
-   fExitOnException = kDontExit;
-   fAppImp          = 0;
 
    if (numOptions >= 0)
       GetOptions(argc, argv);
@@ -167,12 +153,7 @@ TApplication::TApplication(const char *appClassName,
    // Tell TSystem the TApplication has been created
    gSystem->NotifyApplicationCreated();
 
-   fIdleTimer     = 0;
-   fSigHandler    = 0;
-   fIsRunning     = kFALSE;
-   fReturnFromRun = kFALSE;
-   fAppImp        = gGuiFactory->CreateApplicationImp(appClassName, argc, argv);
-   fAppRemote     = 0;
+   fAppImp = gGuiFactory->CreateApplicationImp(appClassName, argc, argv);
    ResetBit(kProcessRemotely);
 
    // Make sure all registered dictionaries have been initialized
@@ -247,6 +228,12 @@ void TApplication::InitializeGraphics()
    fgGraphInit = kTRUE;
 
    // Load the graphics related libraries
+
+
+#if defined(R__MACOSX) && (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+   gVirtualX = new ROOT::iOS::TGIOS("TGIOS", "VirtualX for iOS");
+#else
+
    LoadGraphicsLibs();
 
    // Try to load TrueType font renderer. Only try to load if not in batch
@@ -307,6 +294,7 @@ void TApplication::InitializeGraphics()
          if (h > 0 && h < 1000) gStyle->SetScreenFactor(0.0011*h);
       }
    }
+#endif  // iOS
 }
 
 //______________________________________________________________________________

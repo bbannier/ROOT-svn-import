@@ -1,6 +1,15 @@
 ############# MACROS ##############
 
-include ../Makefile.arch
+RC     := root-config
+ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
+MKARCH := $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
+endif
+ifneq ($(MKARCH),)
+include $(MKARCH)
+else
+ROOTSYS = ../..
+include $(ROOTSYS)/etc/Makefile.arch
+endif
 
 DICT  := NdbDict.$(SrcSuf)
 DICTH := $(DICT:.$(SrcSuf)=.h)
@@ -42,7 +51,7 @@ $(TARGETPRG): $(XSOBJS) $(DBOBJS) $(DICTO)
 
 $(TARGETLIB): $(DBOBJS) $(DICTO)
 ifeq ($(PLATFORM),macosx)
-	$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@
+	$(LD) $(SOFLAGS)$@ $(LDFLAGS) $^ $(OutPutOpt) $@ $(LIBS)
 else
 	$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(GLIBS) $(OutPutOpt)$@
 endif

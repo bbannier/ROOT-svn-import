@@ -130,7 +130,6 @@ RooCmdArg Import(TTree& tree) ;
 RooCmdArg ImportFromFile(const char* fname, const char* tname) ;
 RooCmdArg StoreError(const RooArgSet& aset) ; 
 RooCmdArg StoreAsymError(const RooArgSet& aset) ; 
-RooCmdArg MakeVectors(Bool_t flag=kTRUE) ;
 RooCmdArg OwnLinked() ;
 
 // RooChi2Var::ctor arguments
@@ -167,7 +166,7 @@ RooCmdArg EventRange(Int_t nStart, Int_t nStop) ;
 
 // RooAbsPdf::fitTo arguments
 RooCmdArg FitOptions(const char* opts) ;
-RooCmdArg Optimize(Bool_t flag=kTRUE) ;
+RooCmdArg Optimize(Int_t flag=2) ;
 RooCmdArg ProjectedObservables(const RooArgSet& set) ; // obsolete, for backward compatibility
 RooCmdArg ConditionalObservables(const RooArgSet& set) ;
 RooCmdArg Verbose(Bool_t flag=kTRUE) ;
@@ -208,6 +207,9 @@ RooCmdArg Conditional(const RooArgSet& pdfSet, const RooArgSet& depSet, Bool_t d
 RooCmdArg ProtoData(const RooDataSet& protoData, Bool_t randomizeOrder=kFALSE, Bool_t resample=kFALSE) ;
 RooCmdArg NumEvents(Int_t numEvents) ;
 RooCmdArg NumEvents(Double_t numEvents) ;
+RooCmdArg AutoBinned(Bool_t flag=kTRUE) ;
+RooCmdArg GenBinned(const char* tag) ;
+RooCmdArg AllBinned() ;
 RooCmdArg ExpectedData(Bool_t flag=kTRUE) ; 
 RooCmdArg Asimov(Bool_t flag=kTRUE) ; 
 

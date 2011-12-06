@@ -37,7 +37,7 @@ ROOFITCOREH1   := Roo1DTable.h RooAbsArg.h RooAbsBinning.h RooAbsCategory.h \
                   RooAcceptReject.h RooAdaptiveGaussKronrodIntegrator1D.h \
                   RooAddGenContext.h RooAddition.h RooAddModel.h \
                   RooAICRegistry.h RooArgList.h RooArgProxy.h RooArgSet.h \
-                  RooBanner.h RooBinning.h RooBrentRootFinder.h  RooCategory.h \
+                  RooBanner.h RooBinning.h RooBinnedGenContext.h RooBrentRootFinder.h  RooCategory.h \
                   RooCategoryProxy.h RooCategorySharedProperties.h \
                   RooCatType.h RooChi2Var.h RooClassFactory.h RooCmdArg.h \
                   RooCmdConfig.h RooComplex.h RooConstVar.h RooConvCoefVar.h \
@@ -52,7 +52,7 @@ ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h 
                   RooGenContext.h RooGenericPdf.h RooGenProdProj.h RooGlobalFunc.h  \
                   RooGrid.h RooHashTable.h RooHistError.h \
                   RooHist.h RooImproperIntegrator1D.h \
-                  RooIntegrator1D.h RooIntegrator2D.h RooIntegratorBinding.h \
+                  RooBinIntegrator.h RooIntegrator1D.h RooIntegrator2D.h RooIntegratorBinding.h \
                   RooInt.h RooInvTransform.h RooLinearVar.h RooLinkedListElem.h \
                   RooLinkedList.h RooLinkedListIter.h RooLinTransBinning.h RooList.h \
                   RooListProxy.h RooMapCatEntry.h RooMappedCategory.h RooMath.h \
@@ -62,7 +62,7 @@ ROOFITCOREH2   := RooDouble.h RooEffGenContext.h RooEllipse.h RooErrorHandler.h 
                   RooNumConvolution.h RooNumConvPdf.h RooNumIntConfig.h RooNumIntFactory.h \
                   RooPlotable.h RooPlot.h RooPolyVar.h RooPrintable.h \
                   RooProdGenContext.h RooProduct.h RooPullVar.h \
-                  RooParallelEvaluator.h RooQuasiRandomGenerator.h RooRandom.h
+                  RooQuasiRandomGenerator.h RooRandom.h
 
 ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic.h \
                   RooRealBinding.h RooRealConstant.h RooRealIntegral.h \
@@ -70,14 +70,13 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooRealVarSharedProperties.h RooRefCountList.h RooScaledFunc.h \
                   RooSegmentedIntegrator1D.h RooSegmentedIntegrator2D.h \
                   RooSetPair.h RooSetProxy.h RooSharedProperties.h \
-                  RooSharedPropertiesList.h RooSimGenContext.h \
+                  RooSharedPropertiesList.h RooSimGenContext.h RooSimSplitGenContext.h \
                   RooStreamParser.h RooStringVar.h RooSuperCategory.h \
                   RooTable.h RooThreshEntry.h RooThresholdCategory.h \
                   RooTObjWrap.h RooTrace.h RooUniformBinning.h \
                   RooSimultaneous.h RooRealSumPdf.h RooResolutionModel.h \
                   RooProdPdf.h RooMCStudy.h RooSimPdfBuilder.h RooTruthModel.h RooMsgService.h \
-                  RooProjectedPdf.h RooValues.h \
-                  RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h \
+                  RooProjectedPdf.h RooWorkspace.h RooProfileLL.h RooAbsCachedPdf.h RooAbsSelfCachedPdf.h \
                   RooHistPdf.h RooCachedPdf.h RooFFTConvPdf.h RooDataHistSliceIter.h RooCacheManager.h \
                   RooAbsCache.h RooAbsCacheElement.h RooObjCacheManager.h RooExtendedTerm.h RooSentinel.h \
                   RooParamBinning.h RooConstraintSum.h RooRecursiveFraction.h RooDataWeightedAverage.h \
@@ -90,7 +89,7 @@ ROOFITCOREH3   := RooRandomizeParamMCSModule.h RooRangeBinning.h RooRealAnalytic
                   RooMultiVarGaussian.h RooXYChi2Var.h RooAbsDataStore.h RooTreeDataStore.h RooTreeData.h \
                   RooMinimizer.h RooMinimizerFcn.h RooMoment.h RooStudyManager.h RooAbsStudy.h \
                   RooGenFitStudy.h RooProofDriverSelector.h RooStudyPackage.h RooCompositeDataStore.h \
-		  RooRangeBoolean.h
+		  RooRangeBoolean.h RooVectorDataStore.h
 
 ROOFITCOREH1   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH1))
 ROOFITCOREH2   := $(patsubst %,$(MODDIRI)/%,$(ROOFITCOREH2))

@@ -24,6 +24,7 @@
 #include "TGeoBranchArray.h"
 
 #include "TMath.h"
+#include "TThread.h"
 #include "TString.h"
 #include "TGeoMatrix.h"
 #include "TGeoNavigator.h"
@@ -68,6 +69,7 @@ TGeoBranchArray& TGeoBranchArray::operator=(const TGeoBranchArray& other)
 {
 // Assignment.
    if (&other == this) return *this;
+   TThread::Lock();
    fLevel = other.fLevel;
    if (fLevel) fArray = new UShort_t[fLevel];
    if (other.fMatrix) {
@@ -75,6 +77,7 @@ TGeoBranchArray& TGeoBranchArray::operator=(const TGeoBranchArray& other)
       fMatrix->CopyFrom(other.fMatrix);
    }
    fClient = other.fClient;
+   TThread::UnLock();
    return *this;
 }   
 
@@ -209,12 +212,14 @@ TGeoNode *TGeoBranchArray::GetNode(UShort_t level) const
 void TGeoBranchArray::InitFromNavigator(TGeoNavigator *nav)
 {
 // Init the branch array from current navigator state.
+   TThread::Lock();
    UShort_t level = (UShort_t)nav->GetLevel();
    if (!fMatrix) fMatrix = new TGeoHMatrix();
    fMatrix->CopyFrom(nav->GetCurrentMatrix());
    if (!level) {
 //      delete [] fArray; fArray = 0;
       fLevel = 0;
+      TThread::UnLock();
       return;
    }
    if (!fArray || level>fLevel) {
@@ -229,6 +234,7 @@ void TGeoBranchArray::InitFromNavigator(TGeoNavigator *nav)
       fArray[fLevel-i-1] = index;
       mother = node;
    }   
+   TThread::UnLock();
 }
 
 //______________________________________________________________________________

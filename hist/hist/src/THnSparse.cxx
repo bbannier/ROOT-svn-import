@@ -13,6 +13,7 @@
 
 #include "TArrayI.h"
 #include "TAxis.h"
+#include "TBrowser.h"
 #include "TClass.h"
 #include "TCollection.h"
 #include "TDataMember.h"
@@ -24,6 +25,7 @@
 #include "TInterpreter.h"
 #include "TMath.h"
 #include "TRandom.h"
+#include "TVirtualPad.h"
 
 #include "TError.h"
 
@@ -1252,10 +1254,15 @@ TObject* THnSparse::ProjectionAny(Int_t ndim, const Int_t* dim,
    Double_t preverr = 0.;
    Double_t v = 0.;
 
+   Bool_t haveSkippedBin = false;
+
    for (Long64_t i = 0; i < GetNbins(); ++i) {
       v = GetBinContent(i, coord);
 
-      if (!IsInRange(coord)) continue;
+      if (!IsInRange(coord)) {
+         haveSkippedBin = true;
+         continue;
+      }
 
       for (Int_t d = 0; d < ndim; ++d) {
          bins[d] = coord[dim[d]];
@@ -1294,13 +1301,26 @@ TObject* THnSparse::ProjectionAny(Int_t ndim, const Int_t* dim,
    delete [] bins;
    delete [] coord;
 
-   if (wantSparse)
+   if (wantSparse) {
       // need to check also when producing a THnSparse how to reset the number of entries
       sparse->SetEntries(fEntries);
-   else  
-      // need to reset the statistics which will set also the number of entries
-      // according to the bins filled
-      hist->ResetStats(); 
+   } else {
+      if (!haveSkippedBin) {
+         hist->SetEntries(fEntries);
+      } else {
+         // re-compute the entries
+         // in case of error calculation (i.e. when Sumw2() is set)
+         // use the effective entries for the entries
+         // since this  is the only way to estimate them
+         hist->ResetStats();
+         Double_t entries = hist->GetEffectiveEntries();
+         if (!wantErrors) {
+            // to avoid numerical rounding
+            entries = TMath::Floor(entries + 0.5);
+         }
+         hist->SetEntries(entries);
+      }
+   }
 
    if (hadRange) {
       // reset kAxisRange bit:
@@ -2149,5 +2169,55 @@ void THnSparse::Print(Option_t* options) const
       Printf("  BIN CONTENT:");
       PrintEntries(0, -1, options);
    }
+}
+
+
+//______________________________________________________________________________
+void THnSparse::Browse(TBrowser *b)
+{
+   // Browse a THnSparse: create an entry (ROOT::THnSparseBrowsable) for each
+   // dimension.
+   if (fBrowsables.IsEmpty()) {
+      for (Int_t dim = 0; dim < fNdimensions; ++dim) {
+         fBrowsables[dim] = new ROOT::THnSparseBrowsable(this, dim);
+      }
+      fBrowsables.SetOwner();
+   }
+
+   for (Int_t dim = 0; dim < fNdimensions; ++dim) {
+      b->Add(fBrowsables[dim]);
+   }
+}
+
+
+//______________________________________________________________________________
+//______________________________________________________________________________
+ClassImp(ROOT::THnSparseBrowsable);
+
+//______________________________________________________________________________
+ROOT::THnSparseBrowsable::THnSparseBrowsable(THnSparse* hist, Int_t axis):
+   TNamed(TString::Format("axis %d", axis),
+          TString::Format("Projection on axis %d of sparse histogram", axis)),
+   fHist(hist), fAxis(axis), fProj(0)
+{
+   // Construct a THnSparseBrowsable.
+}
+
+//______________________________________________________________________________
+ROOT::THnSparseBrowsable::~THnSparseBrowsable()
+{
+   // Destruct a THnSparseBrowsable.
+   delete fProj;
+}
+
+//______________________________________________________________________________
+void ROOT::THnSparseBrowsable::Browse(TBrowser* b)
+{
+   // Browse an axis of a THnSparse, i.e. draw its projection.
+   if (!fProj) {
+      fProj = fHist->Projection(fAxis);
+   }
+   fProj->Draw(b ? b->GetDrawOption() : "");
+   gPad->Update();
 }
 

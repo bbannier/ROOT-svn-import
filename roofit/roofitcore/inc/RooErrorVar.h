@@ -24,6 +24,7 @@
 #include "RooAbsReal.h"
 #include "RooRealVar.h"
 #include "RooRealProxy.h"
+class RooVectorDataStore ;
 
 class RooErrorVar : public RooAbsRealLValue {
 public:
@@ -36,7 +37,7 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooErrorVar(*this,newname); }
   virtual ~RooErrorVar() ;
 
-  virtual Double_t getVal(const RooArgSet* set=0) const ; 
+  virtual Double_t getValV(const RooArgSet* set=0) const ; 
 
   virtual Double_t evaluate() const { 
     // return error of input RooRealVar

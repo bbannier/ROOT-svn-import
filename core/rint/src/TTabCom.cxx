@@ -766,7 +766,7 @@ Char_t TTabCom::AllAgreeOnChar(int i, const TSeqCollection * pList,
 
    TIter next(pList);
    TObject *pObj;
-   const char *s;
+   const char *s = "";
    char ch0;
    Bool_t isGood;
    Bool_t atLeast1GoodString;
@@ -789,7 +789,7 @@ Char_t TTabCom::AllAgreeOnChar(int i, const TSeqCollection * pList,
          // just use the first one.
          next.Reset();
          pObj = next();
-         s = pObj->GetName();
+         if (pObj) s = pObj->GetName();
          break;
       }
    }
@@ -1585,7 +1585,11 @@ TString TTabCom::DeterminePath(const TString & fileName,
       IfDebug(cerr << endl);
       IfDebug(cerr << "    fileName: " << fileName << endl);
       IfDebug(cerr << "    pathBase: " << newBase << endl);
-      IfDebug(cerr << " defaultPath: " << defaultPath << endl);
+      if (defaultPath) {
+         IfDebug(cerr << " defaultPath: " << defaultPath << endl);
+      } else {
+         IfDebug(cerr << " defaultPath: " << endl);
+      }         
       IfDebug(cerr << "extendedPath: " << extendedPath << endl);
       IfDebug(cerr << endl);
 
@@ -1607,7 +1611,7 @@ TString TTabCom::ExtendPath(const char originalPath[], TString newBase) const
 #endif
    TString dir;
    TString newPath;
-   str << originalPath;
+   if (originalPath) str << originalPath;
 
    while (str.good())
    {

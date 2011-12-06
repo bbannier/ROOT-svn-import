@@ -139,7 +139,7 @@ BinData::BinData(unsigned int n, const double * dataX, const double * dataY, con
 
    /// copy constructor 
 BinData::BinData(const BinData & rhs) : 
-   FitData(), 
+   FitData(rhs.Opt(), rhs.Range()), 
    fDim(rhs.fDim), 
    fPointSize(rhs.fPointSize), 
    fNPoints(rhs.fNPoints), 
@@ -154,7 +154,17 @@ BinData::BinData(const BinData & rhs) :
 }
 
 
+
 BinData & BinData::operator= (const BinData & rhs) { 
+   // assignment operator
+   
+   // copy  options but cannot copy  range since cannot be modified afterwards
+   DataOptions & opt = Opt();
+   opt = rhs.Opt();
+   //t.b.c
+   //DataRange & range = Range(); 
+   //range = rhs.Range();
+   //
    // assignment operator  
    if (&rhs == this) return *this; 
    fDim = rhs.fDim;  
@@ -457,25 +467,25 @@ BinData & BinData::LogTransform() {
       while (ip <  fNPoints ) {     
          assert( itr != data.end() );
          DataItr valitr = itr + fDim; 
-         double val = *(itr+fDim); 
+         double val = *(valitr); 
          if (val <= 0) { 
             MATH_ERROR_MSG("BinData::TransformLog","Some points have negative values - cannot apply a log transformation");
             // return an empty data-sets
             Resize(0);
             return *this; 
          }
-         *(itr+fDim) = std::log(val);
+         *(valitr) = std::log(val);
          // change also errors to 1/val * err
          if (type == kNoError ) { 
             // insert new error value 
-            DataItr errpos = data.insert(itr+fDim+1,val); 
+            DataItr errpos = data.insert(valitr+1,val); 
             // need to get new iterators for right position
             itr = errpos - fDim -1;
             //std::cout << " itr " << *(itr) << " itr +1 " << *(itr+1) << std::endl;
          }
          else if (type == kValueError) { 
              // new weight = val * old weight
-            *(itr+fDim+1) *= val; 
+            *(valitr+1) *= val; 
          } 
          else {
             // other case (error in value is stored) : new error = old_error/value 

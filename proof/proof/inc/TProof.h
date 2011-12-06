@@ -396,7 +396,14 @@ public:
       kMergerDown     = 4,         //Merger cannot serve
       kStopMerging    = 5,         //Master tells worker to stop merging (and return output)
       kOutputSent     = 6          //Worker reports sending its output to given worker
-  };
+   };
+   
+   enum EProofClearData {
+      kPurge        = 0x1,
+      kUnregistered = 0x2,
+      kDataset      = 0x4,
+      kForceClear   = 0x8
+   };
 
 private:
    enum EUrgent {
@@ -465,12 +472,6 @@ private:
    enum EProofShowQuotaOpt {
       kPerGroup = 0x1,
       kPerUser = 0x2
-   };
-   enum EProofClearData {
-      kPurge        = 0x1,
-      kUnregistered = 0x2,
-      kDataset      = 0x4,
-      kForceClear   = 0x8
    };
 
    Bool_t          fValid;           //is this a valid proof object
@@ -559,6 +560,8 @@ private:
    Bool_t          fFinalizationRunning;
    Int_t           fRedirectNext;
 
+   TString         fPerfTree;        // If non-null triggers saving of the performance info into fPerfTree
+   
    static TPluginHandler *fgLogViewer;  // Log dialog box plugin
 
 protected:
@@ -1013,6 +1016,10 @@ public:
    void        SetPrintProgress(PrintProgress_t pp) { fPrintProgress = pp; }
 
    void        SetProgressDialog(Bool_t on = kTRUE);
+   
+   // Enable the performance tree
+   Int_t       SavePerfTree(const char *pf = 0, const char *qref = 0);
+   void        SetPerfTree(const char *pf = "perftree.root", Bool_t withWrks = kFALSE);
 
    // Opening and managing PROOF connections
    static TProof       *Open(const char *url = 0, const char *conffile = 0,

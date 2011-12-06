@@ -29,6 +29,8 @@
 
 #include "RooNameReg.h"
 #include "RooNameReg.h"
+#include <iostream>
+using namespace std ;
 
 ClassImp(RooNameReg)
 ;
@@ -87,6 +89,8 @@ const TNamed* RooNameReg::constPtr(const char* inStr)
   // Handle null pointer case explicitly
   if (inStr==0) return 0 ;
 
+//   cout << "RooNameReg::constPtr(inStr=" << inStr << ") _htable entries = " << _htable.entries() << endl ;
+
   // See if name is already registered ;
   TNamed* t = (TNamed*) _htable.find(inStr) ;
   if (t) return t ;
@@ -115,7 +119,7 @@ const char* RooNameReg::constStr(const TNamed* namePtr)
 const TNamed* RooNameReg::ptr(const char* stringPtr) 
 { 
   // Return a unique TNamed pointer for given C++ string
-
+  if (stringPtr==0) return 0 ;
   return instance().constPtr(stringPtr) ; 
 }
 
@@ -124,6 +128,6 @@ const TNamed* RooNameReg::ptr(const char* stringPtr)
 const char* RooNameReg::str(const TNamed* ptr) 
 { 
   // Return C++ string corresponding to given TNamed pointer
-
+  if (ptr==0) return 0 ;
   return instance().constStr(ptr) ; 
 }

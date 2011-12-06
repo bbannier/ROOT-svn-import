@@ -72,6 +72,7 @@ TBufferSQL2::TBufferSQL2() :
    fReadVersionBuffer(-1),
    fObjIdCounter(1),
    fIgnoreVerification(kFALSE),
+   fCurrentData(0),
    fObjectsInfos(0),
    fFirstObjId(0),
    fLastObjId(0),
@@ -94,6 +95,7 @@ TBufferSQL2::TBufferSQL2(TBuffer::EMode mode) :
    fReadVersionBuffer(-1),
    fObjIdCounter(1),
    fIgnoreVerification(kFALSE),
+   fCurrentData(0),
    fObjectsInfos(0),
    fFirstObjId(0),
    fLastObjId(0),
@@ -121,6 +123,7 @@ TBufferSQL2::TBufferSQL2(TBuffer::EMode mode, TSQLFile* file) :
    fReadVersionBuffer(-1),
    fObjIdCounter(1),
    fIgnoreVerification(kFALSE),
+   fCurrentData(0),
    fObjectsInfos(0),
    fFirstObjId(0),
    fLastObjId(0),
@@ -2735,7 +2738,7 @@ const char* TBufferSQL2::GetFloatFormat()
 }
 
 //______________________________________________________________________________
-Int_t TBufferSQL2::ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *obj) 
+Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *obj) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
@@ -2772,7 +2775,7 @@ Int_t TBufferSQL2::ReadSequence(const TStreamerInfoActions::TActionSequence &seq
 }
 
 //______________________________________________________________________________
-Int_t TBufferSQL2::ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
+Int_t TBufferSQL2::ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
@@ -2809,7 +2812,7 @@ Int_t TBufferSQL2::ReadSequenceVecPtr(const TStreamerInfoActions::TActionSequenc
 }
 
 //______________________________________________________________________________
-Int_t TBufferSQL2::ReadSequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
+Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    

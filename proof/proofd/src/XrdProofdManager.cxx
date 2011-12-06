@@ -25,17 +25,13 @@
 
 #include "XrdProofdManager.h"
 
-#ifdef OLDXRDOUC
-#  include "XrdOuc/XrdOucPlugin.hh"
-#  include "XrdOuc/XrdOucTimer.hh"
-#else
-#  include "XrdSys/XrdSysPlugin.hh"
-#  include "XrdSys/XrdSysTimer.hh"
-#endif
-#include "XrdNet/XrdNetDNS.hh"
 #include "XrdOuc/XrdOucEnv.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSys/XrdSysPriv.hh"
+
+#include "XpdSysPlugin.h"
+#include "XpdSysTimer.h"
+#include "XpdSysDNS.h"
 
 #include "XrdProofdAdmin.h"
 #include "XrdProofdClient.h"
@@ -54,6 +50,13 @@
 
 // Tracing utilities
 #include "XrdProofdTrace.h"
+
+// Auxilliary sructure used internally to extract list of allowed/denied user names
+// when running in access control mode
+typedef struct {
+   XrdOucString allowed;
+   XrdOucString denied;
+} xpd_acm_lists_t;
 
 //--------------------------------------------------------------------------
 //
@@ -132,8 +135,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
 
    // Data dir
    fDataDir = "";        // Default <workdir>/<user>/data
-   fDataDirOpts = "gW";  // Default: user and group can write in it; create directories
-                         //          only for workers (or any type)
+   fDataDirOpts = "";    // Default: no action
 
    // Rootd file serving enabled by default in readonly mode
    fRootdExe = "<>";
@@ -158,6 +160,11 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
    // Proof admin path
    fAdminPath = pi->AdmPath;
    fAdminPath += "/.xproofd.";
+   
+   // Lib paths for proofserv
+   fBareLibPath = "";
+   fRemoveROOTLibPaths = 0;
+   fLibPathsToRemove.Purge();
 
    // Services
    fSched = pi->Sched;
@@ -265,7 +272,7 @@ bool XrdProofdManager::CheckMaster(const char *m)
 }
 
 //_____________________________________________________________________________
-int XrdProofdManager::CheckUser(const char *usr,
+int XrdProofdManager::CheckUser(const char *usr, const char *grp,
                                 XrdProofUI &ui, XrdOucString &e, bool &su)
 {
    // Check if the user is allowed to use the system
@@ -284,6 +291,12 @@ int XrdProofdManager::CheckUser(const char *usr,
       return -1;
    }
 
+   // Group must be defined
+   if (!grp || strlen(grp) <= 0) {
+      e = "CheckUser: 'grp' string is undefined ";
+      return -1;
+   }
+
    XrdSysMutexHelper mtxh(&fMutex);
 
    // Here we check if the user is known locally.
@@ -296,6 +309,7 @@ int XrdProofdManager::CheckUser(const char *usr,
          return -1;
       }
    } else {
+      // We assign the ui of the effective user
       if (XrdProofdAux::GetUserInfo(geteuid(), ui) != 0) {
          e = "CheckUser: problems getting user info for id: ";
          e += (int)geteuid();
@@ -320,60 +334,102 @@ int XrdProofdManager::CheckUser(const char *usr,
    // Privileged users are always allowed to connect.
    if (fOperationMode == kXPD_OpModeControlled) {
 
-      // Policy: check first the general switch for groups; a user of a specific group can be
-      // rejected by prefixing a '-'.
-      // If a user is explicitely allowed we give the green light even if her/its group is
-      // disallowed. If fAllowedUsers is empty, we just apply the group rules.
+      // Policy: check first the general directive for groups; a user of a specific group
+      // (both UNIX or PROOF groups) can be rejected by prefixing a '-'.
+      // The group check fails if active (the allowedgroups directive has entries) and at
+      // least of the two groups (UNIX or PROOF) are explicitely denied.
+      // The result of the group check is superseeded by any explicit speicification in the
+      // allowedusers, either positive or negative.
       //
-      // Example:
+      // Examples:
+      //   Consider user 'katy' with UNIX group 'alfa' and PROOF group 'student',
+      //   users 'jack' and 'john' with UNIX group 'alfa' and PROOF group 'postdoc'.
       //
-      // xpd.allowedgroups z2
-      // xpd.allowedusers -jgrosseo,ganis
-      //
-      // accepts connections from all group 'z2' except user 'jgrosseo' and from user 'ganis'
-      // even if not belonging to group 'z2'.
+      //   1.    xpd.allowedgroups alfa
+      //         Users 'katy', 'jack' and 'john' are allowed because part of UNIX group 'alfa' (no 'allowedusers' directive)
+      //   2.    xpd.allowedgroups student
+      //         User 'katy' is allowed because part of PROOF group 'student'; 
+      //         users 'jack' and 'john' are denied because not part of PROOF group 'student' (no 'allowedusers' directive)
+      //   3.    xpd.allowedgroups alfa,-student
+      //         User 'katy' is denied because part of PROOF group 'student' which is explicitely denied;
+      //         users 'jack' and 'john' are allowed becasue part of UNIX group 'alfa' (no 'allowedusers' directive)
+      //   4.    xpd.allowedgroups alfa,-student
+      //         xpd.allowedusers katy,-jack
+      //         User 'katy' is allowed because explicitely allowed by the 'allowedusers' directive;
+      //         user 'jack' is denied because explicitely denied by the 'allowedusers' directive;
+      //         user 'john' is allowed because part of 'alfa' and not explicitely denied by the 'allowedusers' directive
+      //         (the allowedgroups directive is in this case ignored for users 'katy' and 'jack').
 
       bool grpok = 1;
       // Check unix group
       if (fAllowedGroups.Num() > 0) {
          // Reset the flag
          grpok = 0;
-         // Get full group info
+         int ugrpok = 0, pgrpok = 0;
+         // Check UNIX group info
          XrdProofGI gi;
          if (XrdProofdAux::GetGroupInfo(ui.fGid, gi) == 0) {
             int *st = fAllowedGroups.Find(gi.fGroup.c_str());
             if (st) {
-               grpok = 1;
-            } else {
-               e = "CheckUser: group '";
-               e += gi.fGroup;
-               e += "' is not allowed to connect";
+               if (*st == 1) {
+                  ugrpok = 1;
+               } else {
+                  e = "Controlled access (UNIX group): user '";
+                  e += usr;
+                  e = "', UNIX group '";
+                  e += gi.fGroup;
+                  e += "' denied to connect";
+                  ugrpok = -1;
+               }
             }
          }
+         // Check PROOF group info
+         int *st = fAllowedGroups.Find(grp);
+         if (st) {
+            if (*st == 1) {
+               pgrpok = 1;
+            } else {
+               if (e.length() <= 0)
+                  e = "Controlled access";
+               e += " (PROOF group): user '";
+               e += usr;
+               e += "', PROOF group '";
+               e += grp;
+               e += "' denied to connect";
+               pgrpok = -1;
+            }
+         }
+         // At least one must be explicitly allowed with the other not explicitly denied
+         grpok = ((ugrpok == 1 && pgrpok >= 0) || (ugrpok >= 0 && pgrpok == 1)) ? 1 : 0;
       }
       // Check username
-      bool usrok = grpok;
+      int usrok = 0;
       if (fAllowedUsers.Num() > 0) {
+         // If we do not have a group specification we need to explicitly allow the user
+         if (fAllowedGroups.Num() <= 0) usrok = -1;
          // Look into the hash
          int *st = fAllowedUsers.Find(usr);
          if (st) {
             if (*st == 1) {
                usrok = 1;
             } else {
-               e = "CheckUser: user '";
+               e = "Controlled access: user '";
                e += usr;
-               e += "' is not allowed to connect";
-               usrok = 0;
+               e += "', PROOF group '";
+               e += grp;
+               e += "' not allowed to connect";
+               usrok = -1;
             }
          }
       }
       // Super users are always allowed
-      if (!usrok && su) {
+      if (su) {
          usrok = 1;
          e = "";
       }
-      // Return now if disallowed
-      if (!usrok) return -1;
+      // We fail if either the user is explicitely denied or it is not explicitely allowed
+      // and the group is denied
+      if (usrok == -1 || (!grpok && usrok != 1)) return -1;
    }
 
    // OK
@@ -528,18 +584,41 @@ static int FillKeyValues(const char *k, int *d, void *s)
 {
    // Add the key value in the string passed via the void argument
 
-   XrdOucString *ls = (XrdOucString *)s;
+   xpd_acm_lists_t *ls = (xpd_acm_lists_t *)s;
 
    if (ls) {
-      if (*d == 1) {
+      XrdOucString &ss = (*d == 1) ? ls->allowed : ls->denied;
+      // If not empty add a separation ','
+      if (ss.length() > 0) ss += ",";
+      // Add the key
+      if (k) ss += k;
+   } else {
+      // Not enough info: stop
+      return 1;
+   }
+
+   // Check next
+   return 0;
+}
+
+//______________________________________________________________________________
+static int RemoveInvalidUsers(const char *k, int *, void *s)
+{
+   // Add the key value in the string passed via the void argument
+
+   XrdOucString *ls = (XrdOucString *)s;
+
+   XrdProofUI ui;
+   if (XrdProofdAux::GetUserInfo(k, ui) != 0) {
+      // Username is unknown to the system: remove it to the list
+      if (ls) {
          // If not empty add a separation ','
          if (ls->length() > 0) *ls += ",";
          // Add the key
          if (k) *ls += k;
       }
-   } else {
-      // Not enough info: stop
-      return 1;
+      // Negative return removes from the table
+      return -1;
    }
 
    // Check next
@@ -585,7 +664,7 @@ int XrdProofdManager::Config(bool rcf)
       }
 
       // Local FQDN
-      char *host = XrdNetDNS::getHostName();
+      char *host = XrdSysDNS::getHostName();
       fHost = host ? host : "";
       SafeFree(host);
 
@@ -755,53 +834,86 @@ int XrdProofdManager::Config(bool rcf)
       while ((from = fSuperUsers.tokenize(usr, from, ',')) != STR_NPOS) {
          fAllowedUsers.Add(usr.c_str(), new int(1));
       }
+      // If not in multiuser mode make sure that the users in the allowed list
+      // are known to the system
+      if (!fMultiUser) {
+         XrdOucString ius;
+         fAllowedUsers.Apply(RemoveInvalidUsers, (void *)&ius);
+         if (ius.length()) {
+            XPDFORM(msg, "running in controlled access mode: users removed because"
+                         " unknown to the system: %s", ius.c_str());
+            TRACE(ALL, msg);
+         }
+      }
       // Extract now the list of allowed users
-      XrdOucString uls;
+      xpd_acm_lists_t uls;
       fAllowedUsers.Apply(FillKeyValues, (void *)&uls);
-      if (uls.length()) {
-         XPDFORM(msg, "running in controlled access mode: users allowed: %s", uls.c_str());
+      if (uls.allowed.length()) {
+         XPDFORM(msg, "running in controlled access mode: users allowed: %s", uls.allowed.c_str());
+         TRACE(ALL, msg);
+      }
+      if (uls.denied.length()) {
+         XPDFORM(msg, "running in controlled access mode: users denied: %s", uls.denied.c_str());
          TRACE(ALL, msg);
       }
       // Extract now the list of allowed groups
-      XrdOucString gls;
+      xpd_acm_lists_t gls;
       fAllowedGroups.Apply(FillKeyValues, (void *)&gls);
-      if (gls.length()) {
-         XPDFORM(msg, "running in controlled access mode: UNIX groups allowed: %s", gls.c_str());
+      if (gls.allowed.length()) {
+         XPDFORM(msg, "running in controlled access mode: UNIX groups allowed: %s", gls.allowed.c_str());
+         TRACE(ALL, msg);
+      }
+      if (gls.denied.length()) {
+         XPDFORM(msg, "running in controlled access mode: UNIX groups denied: %s", gls.denied.c_str());
          TRACE(ALL, msg);
       }
    }
-
+   
    // Bare lib path
    if (getenv(XPD_LIBPATH)) {
-      // Try to remove existing ROOT dirs in the path
-      XrdOucString paths = getenv(XPD_LIBPATH);
-      XrdOucString ldir;
-      int from = 0;
-      while ((from = paths.tokenize(ldir, from, ':')) != STR_NPOS) {
-         bool isROOT = 0;
-         if (ldir.length() > 0) {
-            // Check this dir
-            DIR *dir = opendir(ldir.c_str());
-            if (dir) {
-               // Scan the directory
-               struct dirent *ent = 0;
-               while ((ent = (struct dirent *)readdir(dir))) {
-                  if (!strncmp(ent->d_name, "libCore", 7)) {
-                     isROOT = 1;
-                     break;
+      XrdOucString ctrim;
+      if (fRemoveROOTLibPaths || fLibPathsToRemove.Num() > 0) {
+         // Try to remove existing ROOT dirs in the path
+         XrdOucString paths = getenv(XPD_LIBPATH);
+         XrdOucString ldir;
+         int from = 0;
+         while ((from = paths.tokenize(ldir, from, ':')) != STR_NPOS) {
+            bool remove = 0;
+            if (ldir.length() > 0) {
+               if (fLibPathsToRemove.Num() > 0 && fLibPathsToRemove.Find(ldir.c_str())) {
+                  remove = 1;
+               } else if (fRemoveROOTLibPaths) {
+                  // Check this dir
+                  DIR *dir = opendir(ldir.c_str());
+                  if (dir) {
+                     // Scan the directory
+                     struct dirent *ent = 0;
+                     while ((ent = (struct dirent *)readdir(dir))) {
+                        if (!strncmp(ent->d_name, "libCore", 7)) {
+                           remove = 1;
+                           break;
+                        }
+                     }
+                     // Close the directory
+                     closedir(dir);
                   }
                }
-               // Close the directory
-               closedir(dir);
             }
-            if (!isROOT) {
+            if (!remove) {
                if (fBareLibPath.length() > 0)
                   fBareLibPath += ":";
                fBareLibPath += ldir;
             }
          }
+         ctrim = " (lib paths filter applied)";
+      } else {
+         // Full path
+         ctrim = " (full ";
+         ctrim += XPD_LIBPATH;
+         ctrim += ")";
+         fBareLibPath = getenv(XPD_LIBPATH);
       }
-      TRACE(ALL, "bare lib path for proofserv: " << fBareLibPath);
+      TRACE(ALL, "bare lib path for proofserv" << ctrim <<": " << fBareLibPath);
    }
 
    // Groups
@@ -1028,6 +1140,7 @@ void XrdProofdManager::RegisterDirectives()
    Register("rootd", new XrdProofdDirective("rootd", this, &DoDirectiveClass));
    Register("rootdallow", new XrdProofdDirective("rootdallow", this, &DoDirectiveClass));
    Register("xrd.protocol", new XrdProofdDirective("xrd.protocol", this, &DoDirectiveClass));
+   Register("filterlibpaths", new XrdProofdDirective("filterlibpaths", this, &DoDirectiveClass));
    // Register config directives for strings
    Register("tmp", new XrdProofdDirective("tmp", (void *)&fTMPdir, &DoDirectiveString));
    Register("poolurl", new XrdProofdDirective("poolurl", (void *)&fPoolURL, &DoDirectiveString));
@@ -1147,6 +1260,8 @@ int XrdProofdManager::DoDirective(XrdProofdDirective *d,
       return DoDirectiveRootdAllow(val, cfg, rcf);
    } else if (d->fName == "xrd.protocol") {
       return DoDirectivePort(val, cfg, rcf);
+   } else if (d->fName == "filterlibpaths") {
+      return DoDirectiveFilterLibPaths(val, cfg, rcf);
    }
    TRACE(XERR, "unknown directive: " << d->fName);
    return -1;
@@ -1319,7 +1434,6 @@ int XrdProofdManager::DoDirectiveAllow(char *val, XrdOucStream *cfg, bool)
 int XrdProofdManager::DoDirectiveAllowedGroups(char *val, XrdOucStream *cfg, bool)
 {
    // Process 'allowedgroups' directive
-   XPDLOC(ALL, "Manager::DoDirectiveAllowedGroups")
 
    if (!val)
       // undefined inputs
@@ -1344,13 +1458,9 @@ int XrdProofdManager::DoDirectiveAllowedGroups(char *val, XrdOucStream *cfg, boo
          st = 0;
          grp.erasefromstart(1);
       }
-      int rc = 0;
-      if ((rc = XrdProofdAux::GetGroupInfo(grp.c_str(), gi)) == 0) {
-         // Group name is known to the system: add it to the list
-         fAllowedGroups.Add(grp.c_str(), new int(st));
-      } else {
-         TRACE(XERR, "problems getting info for group: '" << grp << "' - errno: " << -rc);
-      }
+      // Add it to the list (no check for the group file: we support also
+      // PROOF groups)
+      fAllowedGroups.Add(grp.c_str(), new int(st));
    }
 
    // Done
@@ -1361,7 +1471,6 @@ int XrdProofdManager::DoDirectiveAllowedGroups(char *val, XrdOucStream *cfg, boo
 int XrdProofdManager::DoDirectiveAllowedUsers(char *val, XrdOucStream *cfg, bool)
 {
    // Process 'allowedusers' directive
-   XPDLOC(ALL, "Manager::DoDirectiveAllowedUsers")
 
    if (!val)
       // undefined inputs
@@ -1386,13 +1495,9 @@ int XrdProofdManager::DoDirectiveAllowedUsers(char *val, XrdOucStream *cfg, bool
          st = 0;
          usr.erasefromstart(1);
       }
-      int rc = 0;
-      if ((rc = XrdProofdAux::GetUserInfo(usr.c_str(), ui)) == 0) {
-         // Username is known to the system: add it to the list
-         fAllowedUsers.Add(usr.c_str(), new int(st));
-      } else {
-         TRACE(XERR, "problems getting info for user: '" << usr << "' - errno: " << -rc);
-      }
+      // Add to the list; we will check later on the existence of the
+      // user in the password file, depending on the 'multiuser' settings
+      fAllowedUsers.Add(usr.c_str(), new int(st));
    }
 
    // Done
@@ -1645,6 +1750,44 @@ int XrdProofdManager::DoDirectiveRootdAllow(char *val, XrdOucStream *cfg, bool)
          if (h.length() > 0) fRootdAllow.push_back(h);
       }
    } while ((nxt = cfg->GetWord()));
+
+   // Done
+   return 0;
+}
+
+//______________________________________________________________________________
+int XrdProofdManager::DoDirectiveFilterLibPaths(char *val, XrdOucStream *cfg, bool)
+{
+   // Process 'filterlibpaths' directive
+   //  xpd.filterlibpaths 1|0 [path1,path2 path3 path4 ...]
+   XPDLOC(ALL, "Manager::DoDirectiveRemoveLibPaths")
+
+   if (!val)
+      // undefined inputs
+      return -1;
+
+   // Rebuild arguments list
+   fLibPathsToRemove.Purge();
+
+   TRACE(ALL, "val: "<< val);
+
+   // Whether to remove ROOT lib paths before adding the effective one
+   fRemoveROOTLibPaths = (!strcmp(val, "1") || !strcmp(val, "yes")) ? 1 : 0;
+   if (fRemoveROOTLibPaths)
+      TRACE(ALL, "Filtering out ROOT lib paths from "<<XPD_LIBPATH);
+
+   // Parse the rest, if any
+   char *nxt = 0;
+   while ((nxt = cfg->GetWord())) {
+      XrdOucString pps(nxt), p;
+      int from = 0;
+      while ((from = pps.tokenize(p, from, ',')) != -1) {
+         if (p.length() > 0) {
+            fLibPathsToRemove.Add(p.c_str(), 0, 0, Hash_data_is_key);
+            TRACE(ALL, "Filtering out from "<<XPD_LIBPATH<<" lib path '"<<p<<"'");
+         }
+      }
+   }
 
    // Done
    return 0;

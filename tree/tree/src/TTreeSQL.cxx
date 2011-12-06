@@ -257,6 +257,7 @@ Bool_t TTreeSQL::CheckTable(const TString &table) const
 
    if (fServer==0) return kFALSE;
    TSQLResult * tables = fServer->GetTables(fDB.Data(),table);
+   if (!tables) return kFALSE;
    TSQLRow * row = 0;
    while( (row = tables->Next()) ) {
       if(table.CompareTo(row->GetField(0),TString::kIgnoreCase)==0){
@@ -393,6 +394,7 @@ TString TTreeSQL::CreateBranches(TSQLResult * rs)
 
    for( int i=0; i < rows; ++i ) {
       TSQLRow * row = rs->Next();
+      if (!row) continue;
       type = row->GetField(1);
       Int_t index = type.First('(');
       if(index>0){
@@ -489,7 +491,6 @@ Bool_t TTreeSQL::CreateTable(const TString &table)
       return false;
    }
    Int_t i, j;
-   Int_t length;
    TString branchName, leafName, typeName;
    TString createSQL, alterSQL, str;
    Int_t nb = fBranches.GetEntriesFast();
@@ -506,7 +507,7 @@ Bool_t TTreeSQL::CreateTable(const TString &table)
          leaf = (TLeaf*)branch->GetListOfLeaves()->UncheckedAt(j);
          leafName = leaf->GetName();
          typeName = ConvertTypeName(leaf->GetTypeName());
-         length = leaf->GetLenStatic();
+         // length = leaf->GetLenStatic();
 
          if(i == 0 && j == 0) {
             createSQL = "";
@@ -680,7 +681,7 @@ Long64_t  TTreeSQL::GetEntries() const
    if (fServer==0) return GetEntriesFast();
    if (!CheckTable(fTable.Data())) return 0;
 
-   TTreeSQL* thisvar = (TTreeSQL*)this;
+   TTreeSQL* thisvar = const_cast<TTreeSQL*>(this);
 
    // What if the user already started to call GetEntry
    // What about the initial value of fEntries is it really 0?
@@ -691,10 +692,15 @@ Long64_t  TTreeSQL::GetEntries() const
    if (count==0) {
       thisvar->fEntries = 0;
    } else {
-      TString val = count->Next()->GetField(0);
-      Long_t ret;
-      sscanf(val.Data(), "%ld",&(ret) );
-      thisvar->fEntries = ret;
+      TSQLRow * row = count->Next();
+      if (row) {
+         TString val = row->GetField(0);
+         Long_t ret;
+         sscanf(val.Data(), "%ld",&(ret) );
+         thisvar->fEntries = ret;
+      } else {
+         thisvar->fEntries = 0;
+      }
    }
    return fEntries;
 }

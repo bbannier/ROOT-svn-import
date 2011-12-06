@@ -126,8 +126,11 @@ End_Html */
 
 #include "TEntryList.h"
 #include "TEntryListBlock.h"
+#include "TError.h"
+#include "TKey.h"
 #include "TTree.h"
 #include "TFile.h"
+#include "TRegexp.h"
 #include "TSystem.h"
 
 ClassImp(TEntryList)
@@ -729,6 +732,27 @@ Long64_t TEntryList::GetEntryAndTree(Int_t index, Int_t &treenum)
 }
 
 //______________________________________________________________________________
+void TEntryList::GetFileName(const char *filename, TString &fn, Bool_t *local)
+{
+   // To be able to re-localize the entry-list we identify the file by just the
+   // name and the anchor, i.e. we drop protocol, host, options, ... 
+   // The result in the form 'file#anchor' (or 'file', if no anchor is present)
+   // is saved in 'fn'.
+   // The function optionally (is 'local' is defined) checks file locality (i.e.
+   // protocol 'file://') returning the result in '*local' .
+
+   TUrl u(filename, kTRUE);
+   if (local) *local = (!strcmp(u.GetProtocol(), "file")) ? kTRUE : kFALSE;
+   if (strlen(u.GetAnchor()) > 0) {
+      fn.Form("%s#%s", u.GetFile(), u.GetAnchor());
+   } else {
+      fn = u.GetFile();
+   }
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
 TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename, Option_t *opt)
 {
    //return the entry list, correspoding to treename and filename
@@ -739,23 +763,19 @@ TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename,
    if (gDebug > 1)
       Info("GetEntryList","tree: %s, file: %s",
                           (treename ? treename : "-"), (filename ? filename : "-"));
-
+      
    if (!treename || !filename) return 0;
    TString option = opt;
    option.ToUpper();
    Bool_t nexp = option.Contains("NE");
 
    TString fn;
-   TUrl u(filename, kTRUE);
-   //fn = (!strcmp(u.GetProtocol(),"file")) ? u.GetFile() : filename;
-   Bool_t local=kFALSE;
-   if (!nexp){
-      local = !strcmp(u.GetProtocol(), "file");
-      if (local) fn = u.GetFile();
-      else fn = u.GetUrl();
-   } else {
-      fn = filename;
-   }
+   Bool_t local;
+   GetFileName(filename, fn, &local);
+   if (nexp) local = kFALSE;
+
+   if (gDebug > 1)
+      Info("GetEntryList", "file: %s, local? %d", filename, local);
 
    if (!fLists){
       //there are no sublists
@@ -786,6 +806,9 @@ TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename,
          stotal = templist->fTreeName + templist->fFileName;
          templist->fStringHash = stotal.Hash();
       }
+      if (gDebug > 1)
+         Info("GetEntryList", "file: %s (fn: %s), hash: %lu, element hash: %lu",
+                              filename, fn.Data(), newhash, templist->fStringHash);
       if (newhash == templist->fStringHash){
          if (!strcmp(templist->GetTreeName(), treename) && !strcmp(templist->GetFileName(), fn.Data())){
             return templist;
@@ -809,6 +832,9 @@ TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename,
             stotal = templist->fTreeName + templist->fFileName;
             templist->fStringHash = stotal.Hash();
          }
+         if (gDebug > 1)
+            Info("GetEntryList", "file: %s (longname: %s), hash: %lu, element hash: %lu",
+                                 filename, longname.Data(), newhash, templist->fStringHash);
          if (newhash == templist->fStringHash){
             if (!strcmp(templist->GetTreeName(), treename) && !strcmp(templist->GetFileName(), longname)){
                return templist;
@@ -951,7 +977,7 @@ void TEntryList::Print(const Option_t* option) const
    TString opt = option;
    opt.ToUpper();
    if (fBlocks) {
-      printf("%s %s\n", fTreeName.Data(), fFileName.Data());
+      Printf("%s %s %lld", fTreeName.Data(), fFileName.Data(), fN);
       if (opt.Contains("A")){
          TEntryListBlock* block = 0;
          for (Int_t i=0; i<fNBlocks; i++){
@@ -969,11 +995,11 @@ void TEntryList::Print(const Option_t* option) const
             elist->Print(option);
          }
       } else {
-         if (!fLists) printf("%s %s\n", fTreeName.Data(), fFileName.Data());
+         if (!fLists) Printf("%s %s %lld", fTreeName.Data(), fFileName.Data(), fN);
          else {
             TIter next(fLists);
             while ((elist = (TEntryList*)next())){
-               printf("%s %s\n", elist->GetTreeName(), elist->GetFileName());
+               Printf("%s %s %lld", elist->GetTreeName(), elist->GetFileName(), elist->GetN());
             }
          }
       }
@@ -1033,8 +1059,11 @@ void TEntryList::SetTree(const char *treename, const char *filename)
 
    TEntryList *elist = 0;
 
+   TString fn;
+   GetFileName(filename, fn);
+   
    TString stotal = treename;
-   stotal.Append(filename);
+   stotal.Append(fn.Data());
    //printf("setting tree %s\n", stotal.Data());
    ULong_t newhash = stotal.Hash();
    if (fLists) {
@@ -1046,14 +1075,14 @@ void TEntryList::SetTree(const char *treename, const char *filename)
       }
       if (newhash == fCurrent->fStringHash){
          //this list is current
-         if (!strcmp(fCurrent->fTreeName, treename) && !strcmp(fCurrent->fFileName, filename)){
+         if (!strcmp(fCurrent->fTreeName, treename) && !strcmp(fCurrent->fFileName, fn.Data())){
             return;
          }
       } 
       TIter next(fLists);
       while ((elist = (TEntryList*)next())){
          if (newhash == elist->fStringHash){
-            if (!strcmp(elist->GetTreeName(), treename) && !strcmp(elist->GetFileName(), filename)){
+            if (!strcmp(elist->GetTreeName(), treename) && !strcmp(elist->GetFileName(), fn.Data())){
                //the current entry list was changed. reset the fLastIndexQueried,
                //so that Next() doesn't start with the wrong current list
                //Also, reset those indices in the previously current list
@@ -1071,7 +1100,7 @@ void TEntryList::SetTree(const char *treename, const char *filename)
          }
       }
       //didn't find an entry list for this tree, create a new one
-      elist = new TEntryList("", "", treename, filename);
+      elist = new TEntryList("", "", treename, fn.Data());
       if (elist->GetDirectory()) {
          //sub lists are not added to the current directory
          elist->GetDirectory()->Remove(elist);
@@ -1084,7 +1113,7 @@ void TEntryList::SetTree(const char *treename, const char *filename)
       if (fN==0 && fTreeName=="" && fFileName==""){
          //this is the first tree set to this list
          fTreeName = treename;
-         fFileName = filename;
+         fFileName = fn;
          stotal = fTreeName + fFileName;
          //fStringHash = stotal.Hash();
          fStringHash = newhash;
@@ -1108,7 +1137,7 @@ void TEntryList::SetTree(const char *treename, const char *filename)
             fBlocks = 0;
             elist->fNBlocks = fNBlocks;
             fLists->Add(elist);
-            elist = new TEntryList("", "", treename, filename);
+            elist = new TEntryList("", "", treename, fn.Data());
             if (elist->GetDirectory()) {
                //sub lists are not added to the current directory
                elist->GetDirectory()->Remove(elist);
@@ -1151,9 +1180,9 @@ void TEntryList::SetTree(const TTree *tree)
          if (!gSystem->IsAbsoluteFileName(filename))
             gSystem->PrependPathName(gSystem->pwd(), filename);
          filename = gSystem->UnixPathName(filename);
-      } else {
-         filename = url.GetUrl();
+         url.SetFile(filename);
       }
+      filename = url.GetUrl();
    } else {
       //memory-resident
       filename = "";
@@ -1232,4 +1261,262 @@ TEntryList operator||(TEntryList &elist1, TEntryList &elist2)
    return eresult;
 }
 
+//________________________________________________________________________
+Int_t TEntryList::RelocatePaths(const char *newroot, const char *oldroot)
+{
+   // Relocate the file paths.
+   // If 'oldroot' is defined, replace 'oldroot' with 'newroot' in all file names,
+   // i.e. <oldroot>/re/st/of/the/path will become <newroot>/re/st/of/the/path .
+   // If 'oldroot' is null, the new path will be just <newroot>/path .
+   // Relocation is mandatory to use the entry-list with the same dataset at a different
+   // location (i.e. on a different cluster, machine or disks).
 
+   // At least newroot must be given
+   if (!newroot || (newroot && strlen(newroot) <= 0)) {
+      Warning("RelocatePaths", "the new location must be given!");
+      return -1;
+   }
+
+   if (strlen(GetName()) > 0)
+      Info("RelocatePaths", "'%s': relocating paths '%s' to '%s'",
+                            GetName(), oldroot ? oldroot : "*", newroot);
+
+   Int_t nrl = 0, xnrl = 0;
+   // Apply to all underlying lists, if any
+   if (fLists) {
+      TIter nxl(fLists);
+      TEntryList *enl = 0;
+      while ((enl = (TEntryList *) nxl())) {
+         if ((xnrl = enl->RelocatePaths(newroot, oldroot)) < 0) {
+            Warning("RelocatePaths", "problems relocating '%s'", enl->GetName());
+         } else {
+            nrl += xnrl;
+         }
+      }
+   }
+   // Apply to ourselves
+   TString temp;
+   Ssiz_t lo = 0;
+   if (oldroot && (lo = strlen(oldroot)) > 0) {
+      if (fFileName.BeginsWith(oldroot)) {
+         fFileName.Replace(0, lo, newroot);
+         nrl++;
+      }
+   } else {
+      Ssiz_t ilst = fFileName.Last('/');
+      if (ilst != kNPOS) {
+         fFileName.Replace(0, ilst, newroot);
+      } else {
+         fFileName.Insert(0, TString::Format("%s/", newroot));
+      }
+      nrl++;
+   }
+   if (fStringHash != 0) {
+      temp.Form("%s%s", fTreeName.Data(), fFileName.Data());
+      fStringHash = temp.Hash();
+   }
+
+   // Done
+   return nrl;
+}
+
+//________________________________________________________________________
+Int_t TEntryList::Relocate(const char *fn,
+                          const char *newroot, const char *oldroot, const char *enlnm)
+{
+   // Relocate entry list 'enlnm' in file 'fn' replacing 'oldroot' with 'newroot' in
+   // filenames. If 'enlnm' is null or '*' all entry lists in the file are relocated.
+   // Relocation is mandatory to use the entry-list with the same dataset at a different
+   // location (i.e. on a different cluster, machine or disks).
+   // This function can be called as many times as need to reach the desired result.
+   // The existing 'locations' can be checked qith TEntryList::Scan .
+   
+   // Open the file for updating
+   TFile *fl = TFile::Open(fn, "UPDATE");
+   if (!fl || (fl&& fl->IsZombie())) {
+      ::Error("TEntryList::Relocate", "file '%s' cannot be open for updating", fn);
+      return -1;
+   }
+
+   Int_t nrl = 0;
+   // Read the lists
+   TString nm(enlnm);
+   if (nm.IsNull()) nm = "*";
+   TRegexp nmrg(nm, kTRUE);
+   TIter nxk(fl->GetListOfKeys());
+   TKey *key = 0;
+   while ((key = (TKey *) nxk())) {
+      if (!strcmp(key->GetClassName(), "TEntryList")) {
+         TString knm(key->GetName());
+         if (knm.Index(nmrg) != kNPOS) {
+            TEntryList *enl = dynamic_cast<TEntryList *>(fl->Get(knm));
+            if (enl) {
+               Int_t xnrl = enl->RelocatePaths(newroot, oldroot);
+               if (xnrl >= 0) {
+                  enl->Write(knm, TObject::kOverwrite);
+                  nrl += xnrl;
+               } else {
+                  ::Error("TEntryList::Relocate", "problems relocating '%s' ...", enl->GetName());
+               }
+            }
+         }
+      }
+   }
+   // Close the file
+   fl->Close();
+   delete fl;
+   // Done
+   return nrl;
+}
+
+//______________________________________________________________________________
+static Int_t GetCommonString(TString a, TString b, TString &c)
+{
+   // Get in 'c' the string in common at the beginning of 'a' and 'b'
+   // Return
+   //          0         a and b are not contained in each other, i.e. c != a && c != b
+   //          1         a is contained in b, i.e. c == a (includes a == empty)
+   //          2         b is contained in a, i.e. c == b (includes b == empty)
+   //          3         b is a, i.e. c == b == a (includes a == b == empty)
+   // Auxilliary function for path scans.
+
+   if (a == b) {
+      c = a;
+      return 3;
+   }
+   if (a.IsNull()) {
+      c = "";
+      return 1;
+   }
+   if (b.IsNull()) {
+      c = "";
+      return 2;
+   }
+   Bool_t ashort = (a.Length() > b.Length()) ? kFALSE : kTRUE;
+   Ssiz_t len = (ashort) ? a.Length() : b.Length();
+   Int_t lcom = 0;
+   for (Int_t i = 0; i < len; i++) {
+      if (a[i] != b[i]) break;
+      lcom++;
+   }
+   if (lcom == len) {
+      c = ashort ? a : b;
+      return ashort ? 1 : 2;
+   }
+   c = a(0,lcom);
+   // Done      
+   return 0;
+}
+
+//________________________________________________________________________
+Int_t TEntryList::ScanPaths(TList *roots, Bool_t notify)
+{
+   // Scan the paths to find the common roots. If 'roots' is defined, add
+   // the found roots to the list as TObjStrings.
+   // Return the number of roots found. 
+
+   TList *xrl = roots ? roots : new TList;
+
+   Int_t nrl = 0;
+   // Apply to all underlying lists, if any
+   if (fLists) {
+      TIter nxl(fLists);
+      TEntryList *enl = 0;
+      while ((enl = (TEntryList *) nxl()))
+         nrl += enl->ScanPaths(xrl, kFALSE);
+   }
+   // Apply to ourselves
+   Bool_t newobjs = kTRUE;
+   TString path = gSystem->DirName(fFileName), com;
+   TObjString *objs = 0;
+   TIter nxr(xrl);
+   while ((objs = (TObjString *) nxr())) {
+      Int_t rc = 0;
+      if ((rc = GetCommonString(path, objs->GetString(), com)) != 2) {
+         TUrl ucom(com);
+         if (strlen(ucom.GetFile()) > 0 && strcmp(ucom.GetFile(), "/")) {
+            objs->SetString(com.Data());
+            newobjs = kFALSE;
+            break;
+         }
+      }
+   }
+   if (newobjs) xrl->Add(new TObjString(path));
+   
+   // Done
+   nrl = xrl->GetSize();
+   if (notify) {
+      Printf(" * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ *");
+      Printf(" * Entry-list: %s", GetName());
+      Printf(" *   %d commont root paths found", nrl);
+      nxr.Reset();
+      while ((objs = (TObjString *) nxr())) {
+         Printf(" *     %s", objs->GetName());
+      }
+      Printf(" * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ *");
+   }
+   
+   if (xrl != roots) {
+      xrl->SetOwner(kTRUE);
+      SafeDelete(xrl);
+   }
+
+   // Done
+   return nrl;
+}
+
+//________________________________________________________________________
+Int_t TEntryList::Scan(const char *fn, TList *roots)
+{
+   // Scan TEntryList in 'fn' to find the common parts of paths.
+   // If 'roots' is defined, add the found roots to the list as TObjStrings.
+   // Return the number of common root paths found. 
+   
+   // Open the file for updating
+   TFile *fl = TFile::Open(fn);
+   if (!fl || (fl&& fl->IsZombie())) {
+      ::Error("TEntryList::Relocate", "file '%s' cannot be open for reading", fn);
+      return -1;
+   }
+
+   Int_t nrs = 0;
+   // Read the lists
+   TIter nxk(fl->GetListOfKeys());
+   TKey *key = 0;
+   while ((key = (TKey *) nxk())) {
+      if (!strcmp(key->GetClassName(), "TEntryList")) {
+         TEntryList *enl = dynamic_cast<TEntryList *>(fl->Get(key->GetName()));
+         if (enl) {
+            nrs += enl->ScanPaths(roots);
+         } else {
+            ::Error("TEntryList::Scan", "object entry-list '%s' not found or not loadable!", key->GetName());
+         }
+      }
+   }
+   // Close the file
+   fl->Close();
+   delete fl;
+   
+   // Done
+   return nrs;
+}
+
+//______________________________________________________________________________
+void TEntryList::Streamer(TBuffer &b)
+{
+   // Custom streamer for class TEntryList to handle the different interpretation
+   // of fFileName between version 1 and >1 .
+
+   if (b.IsReading()) {
+      UInt_t R__s, R__c;
+      Version_t R__v = b.ReadVersion(&R__s, &R__c);
+      b.ReadClassBuffer(TEntryList::Class(), this, R__v, R__s, R__c);
+      if (R__v <= 1) {
+         // The filename contained also the protocol and host: this was dropped
+         // in version > 1 to allow re-localization
+         GetFileName(fFileName.Data(), fFileName);
+      }
+   } else {
+      b.WriteClassBuffer(TEntryList::Class(), this);
+   }
+}

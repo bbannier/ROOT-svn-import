@@ -270,7 +270,8 @@ TGTextEditor::TGTextEditor(TMacro *macro, const TGWindow *p, UInt_t w, UInt_t h)
       // remove the command line combo box and its associated label
       fComboCmd->UnmapWindow();
       fLabel->UnmapWindow();
-      fToolBar->GetButton(kM_FILE_EXIT)->SetState(kButtonDisabled);
+      if (fToolBar->GetButton(kM_FILE_EXIT))
+         fToolBar->GetButton(kM_FILE_EXIT)->SetState(kButtonDisabled);
       fToolBar->Layout();
    }
    if (macro) {
@@ -656,12 +657,10 @@ Bool_t TGTextEditor::HandleKey(Event_t *event)
    // Keyboard event handler.
 
    char   input[10];
-   Int_t  n;
    UInt_t keysym;
 
    if (event->fType == kGKeyPress) {
       gVirtualX->LookupString(event, input, sizeof(input), keysym);
-      n = strlen(input);
 
       switch ((EKeySym)keysym) {   // ignore these keys
          case kKey_Shift:

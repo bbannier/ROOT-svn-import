@@ -32,7 +32,6 @@
 #include "RooRealVar.h"
 #include "RooRandom.h"
 #include "RooMath.h"
-#include "RooParallelEvaluator.h"
 
 ClassImp(RooGaussian)
 
@@ -62,36 +61,13 @@ RooGaussian::RooGaussian(const RooGaussian& other, const char* name) :
 //_____________________________________________________________________________
 Double_t RooGaussian::evaluate() const
 {
-  return eval(x,mean,sigma);
-
+  Double_t arg= x - mean;  
+  Double_t sig = sigma ;
+  Double_t ret =exp(-0.5*arg*arg/(sig*sig)) ;
+//   cout << "gauss(" << GetName() << ") x = " << x << " mean = " << mean << " sigma = " << sigma << " ret = " << ret << endl ;
+  return ret ;
 }
 
-Bool_t RooGaussian::evaluateAndNormalizeSIMD(RooAbsReal::DeviceSIMD deviceSIMD, Int_t start, Int_t end, 
-					     const RooAbsReal* mother, Double_t integral) const
-{
-  /*
-  // Precalculate the values
-  if (mother==0)
-    InitSIMD();
-
-  Int_t size(0);
-  size = x.doValues(impl);
-  Int_t size2 = mean.doValues(impl);
-  if (size>0 && size2>0 && size!=size2)
-    // abort, running with different dimension
-    ;
-  if (size==0 && size2!=0) size = size2;
-  size2 = sigma.doValues(impl);
-  if (size>0 && size2>0 && size!=size2)
-    // abort, running with different dimension
-    ;
-  if (size==0 && size2!=0) size = size2;
-
-  // call the Parallel Evaluator
-  //  ParallelEvaluator(*this,data,
-  */
-  return kTRUE;
-}
 
 
 //_____________________________________________________________________________
@@ -115,9 +91,9 @@ Double_t RooGaussian::analyticalIntegral(Int_t code, const char* rangeName) cons
   Double_t ret = 0;
   if(code==1){  
     ret = rootPiBy2*sigma*(RooMath::erf((x.max(rangeName)-mean)/xscale)-RooMath::erf((x.min(rangeName)-mean)/xscale));
-    //cout << "Int_gauss_dx(mean=" << mean << ",sigma=" << sigma << ", xmin=" << x.min(rangeName) << ", xmax=" << x.max(rangeName) << ")=" << ret << endl ;
+//     cout << "Int_gauss_dx(mean=" << mean << ",sigma=" << sigma << ", xmin=" << x.min(rangeName) << ", xmax=" << x.max(rangeName) << ")=" << ret << endl ;
   } else if(code==2) {
-    ret = rootPiBy2*sigma*(RooMath::erf((mean.max(rangeName)-mean)/xscale)-RooMath::erf((mean.min(rangeName)-mean)/xscale));
+    ret = rootPiBy2*sigma*(RooMath::erf((mean.max(rangeName)-x)/xscale)-RooMath::erf((mean.min(rangeName)-x)/xscale));
   } else{
     cout << "Error in RooGaussian::analyticalIntegral" << endl;
   }
@@ -165,5 +141,4 @@ void RooGaussian::generateEvent(Int_t code)
 
   return;
 }
-
 

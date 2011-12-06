@@ -362,7 +362,7 @@ void RooAbsTestStatistic::printCompactTreeHook(ostream& os, const char* indent)
 
 
 //_____________________________________________________________________________
-void RooAbsTestStatistic::constOptimizeTestStatistic(ConstOpCode opcode)
+void RooAbsTestStatistic::constOptimizeTestStatistic(ConstOpCode opcode, Bool_t doAlsoTrackingOpt)
 {
   // Forward constant term optimization management calls to component
   // test statistics
@@ -371,11 +371,11 @@ void RooAbsTestStatistic::constOptimizeTestStatistic(ConstOpCode opcode)
   if (_gofOpMode==SimMaster) {
     // Forward to slaves
     for (i=0 ; i<_nGof ; i++) {
-      if (_gofArray[i]) _gofArray[i]->constOptimizeTestStatistic(opcode) ;
+      if (_gofArray[i]) _gofArray[i]->constOptimizeTestStatistic(opcode,doAlsoTrackingOpt) ;
     }
   } else if (_gofOpMode==MPMaster) {
     for (i=0 ; i<_nCPU ; i++) {
-      _mpfeArray[i]->constOptimizeTestStatistic(opcode) ;
+      _mpfeArray[i]->constOptimizeTestStatistic(opcode,doAlsoTrackingOpt) ;
     }
   }
 }
@@ -538,14 +538,14 @@ Bool_t RooAbsTestStatistic::setData(RooAbsData& indata, Bool_t cloneData)
 	_gofArray[i]->setDataSlave(indata,cloneData) ;
       }
     } else {
-      //cout << "NONEMPTY DATASET WITHOUT FAST SPLIT SUPPORT! "<< indata.GetName() << endl ;   
+//       cout << "NONEMPTY DATASET WITHOUT FAST SPLIT SUPPORT! "<< indata.GetName() << endl ;   
       const RooAbsCategoryLValue* indexCat = & ((RooSimultaneous*)_func)->indexCat() ;
       TList* dlist = indata.split(*indexCat,kTRUE) ;
       for (Int_t i=0 ; i<_nGof ; i++) {
 	RooAbsData* compData = (RooAbsData*) dlist->FindObject(_gofArray[i]->GetName()) ;
 	// 	cout << "component data for index " << _gofArray[i]->GetName() << " is " << compData << endl ;
 	if (compData) {
-	  _gofArray[i]->setDataSlave(*compData,kFALSE) ;
+	  _gofArray[i]->setDataSlave(*compData,kFALSE,kTRUE) ;
 	} else {
 	  coutE(DataHandling) << "RooAbsTestStatistic::setData(" << GetName() << ") ERROR: Cannot find component data for state " << _gofArray[i]->GetName() << endl ;
 	}	

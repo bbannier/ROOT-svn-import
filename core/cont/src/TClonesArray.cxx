@@ -545,6 +545,9 @@ void TClonesArray::ExpandCreateFast(Int_t n)
       }
       fCont[i] = fKeep->fCont[i];
    }
+   if (fLast >= n) {
+      memset(fCont + n, 0, (fLast - n + 1) * sizeof(TObject*));
+   }
    fLast = n - 1;
    Changed();
 }

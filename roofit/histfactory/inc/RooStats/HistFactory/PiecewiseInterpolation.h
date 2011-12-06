@@ -44,11 +44,21 @@ public:
   const RooArgList& paramList() const { return _paramSet ; }
 
   virtual Bool_t forceAnalyticalInt(const RooAbsArg&) const { return kTRUE ; }
+  Bool_t setBinIntegrator(RooArgSet& allVars) ;
 
   Int_t getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVars, const RooArgSet* normSet,const char* rangeName=0) const ;
   Double_t analyticalIntegralWN(Int_t code, const RooArgSet* normSet, const char* rangeName=0) const ;
 
   void setPositiveDefinite(bool flag=true){_positiveDefinite=flag;}
+
+  void setInterpCode(RooAbsReal& param, int code);
+  void setAllInterpCodes(int code);
+  void printAllInterpCodes();
+
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
+  virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const ; 
+  virtual Bool_t isBinnedDistribution(const RooArgSet& obs) const ;
+
 protected:
 
   class CacheElem : public RooAbsCacheElement {
@@ -73,14 +83,14 @@ protected:
   RooListProxy _lowSet ;            // Low-side variation
   RooListProxy _highSet ;            // High-side varaition
   RooListProxy _paramSet ;            // interpolation parameters
-  mutable TIterator* _paramIter ;  //! Iterator over paramSet
-  mutable TIterator* _lowIter ;  //! Iterator over lowSet
-  mutable TIterator* _highIter ;  //! Iterator over highSet
+  RooListProxy _normSet ;            // interpolation parameters
   Bool_t _positiveDefinite; // protect against negative and 0 bins.
+
+  std::vector<int> _interpCode;
 
   Double_t evaluate() const;
 
-  ClassDef(PiecewiseInterpolation,2) // Sum of RooAbsReal objects
+  ClassDef(PiecewiseInterpolation,3) // Sum of RooAbsReal objects
 };
 
 #endif

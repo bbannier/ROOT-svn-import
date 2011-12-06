@@ -12,6 +12,7 @@
 #include "TSystem.h"
 
 // Auxilliary functions
+int getDebugEnum(const char *what);
 Int_t getXrootdPid(Int_t port, const char *subdir = "xpdtut");
 Int_t checkXrootdAt(Int_t port, const char *host = "localhost");
 Int_t checkXproofdAt(Int_t port, const char *host = "localhost");
@@ -47,7 +48,9 @@ TProof *getProof(const char *url = "proof://localhost:40000", Int_t nwrks = -1, 
    //
    // The following arguments apply to xrootd responding at 'refloc' only:
    //     'nwrks'    Number of workers to be started. []
-   //     'dir'      Directory to be used for the files and working areas [].
+   //     'dir'      Directory to be used for the files and working areas []. When starting a new
+   //                instance of the daemon this directory is cleaned with 'rm -fr'. If 'dir'
+   //                is null, the default is used: '/tmp/<user>/.getproof'
    //     'opt'      Defines what to do if an existing xrootd uses the same ports; possible
    //                options are: "ask", ask the user; "force", kill the xrootd and start
    //                a new one; if any other string is specified the existing xrootd will be
@@ -101,6 +104,7 @@ TProof *getProof(const char *url = "proof://localhost:40000", Int_t nwrks = -1, 
    Bool_t ext = (strcmp(uu.GetHost(), uref.GetHost()) ||
                  (uu.GetPort() != uref.GetPort())) ? kTRUE : kFALSE;
    if (ext && url && strlen(url) > 0) {
+      Printf("getProof: trying to open a session on the external cluster at '%s'", url);
       if (!strcmp(url, "lite://")) {
          if (dir && strlen(dir) > 0) gEnv->SetValue("Proof.Sandbox", dir);
          if (nwrks > 0) uu.SetOptions(Form("workers=%d", nwrks));
@@ -146,8 +150,32 @@ TProof *getProof(const char *url = "proof://localhost:40000", Int_t nwrks = -1, 
 
    // Temp dir for tutorial daemons
    TString tutdir = dir;
-   if (tutdir.IsNull() || gSystem->AccessPathName(dir, kWritePermission)) {
-      Printf("getProof: tutorial dir missing or not writable - try temp ");
+   if (!tutdir.IsNull()) {
+      if (gSystem->AccessPathName(tutdir)) {
+         // Directory does not exist: try to make it
+         gSystem->mkdir(tutdir.Data(), kTRUE);
+         if (gSystem->AccessPathName(tutdir, kWritePermission)) {
+            if (gSystem->AccessPathName(tutdir)) {
+               Printf("getProof: unable to create the working area at the requested path: '%s'"
+                      " - cannot continue", tutdir.Data());
+            } else {
+               Printf("getProof: working area at the requested path '%s'"
+                      " created but it is not writable - cannot continue", tutdir.Data());
+            }
+            return p;
+         }
+      } else {
+         // Check if it is writable ...
+         if (gSystem->AccessPathName(dir, kWritePermission)) {
+            // ... fail if not
+            Printf("getProof: working area at the requested path '%s'"
+                      " exists but is not writable - cannot continue", tutdir.Data());
+            return p;
+         }
+      }
+   } else {
+      // Notify
+      Printf("getProof: working area not specified temp ");
       // Force "/tmp/<user>" whenever possible to avoid length problems on MacOsX
       tutdir="/tmp"; 
       if (gSystem->AccessPathName(tutdir, kWritePermission)) tutdir = gSystem->TempDirectory();
@@ -159,14 +187,18 @@ TProof *getProof(const char *url = "proof://localhost:40000", Int_t nwrks = -1, 
       }
       us.Form("/%s", ug->fUser.Data());
       if (!tutdir.EndsWith(us.Data())) tutdir += us;
-      gSystem->mkdir(tutdir.Data(), kTRUE);
-      if (gSystem->AccessPathName(tutdir, kWritePermission)) {
-         Printf("getProof: unable to get a writable tutorial directory (tried: %s)"
-                " - cannot continue", tutdir.Data());
-         return p;
+      // Add our own subdir
+      tutdir += "/.getproof";
+      if (gSystem->AccessPathName(tutdir)) {
+         gSystem->mkdir(tutdir.Data(), kTRUE);
+         if (gSystem->AccessPathName(tutdir, kWritePermission)) {
+            Printf("getProof: unable to get a writable working area (tried: %s)"
+                  " - cannot continue", tutdir.Data());
+            return p;
+         }
       }
    }
-   Printf("getProof: tutorial dir: %s", tutdir.Data());
+   Printf("getProof: working area (tutorial dir): %s", tutdir.Data());
 
    // Dataset dir
    TString datasetdir;
@@ -233,7 +265,6 @@ TProof *getProof(const char *url = "proof://localhost:40000", Int_t nwrks = -1, 
 
       // Cleanup, if required
       if (restart) {
-
          Printf("getProof: cleaning existing instance ...");
          // Cleaning up existing daemon
          cmd = Form("kill -9 %d", pid);
@@ -253,8 +284,9 @@ TProof *getProof(const char *url = "proof://localhost:40000", Int_t nwrks = -1, 
          return p;
       }
 
-      // Remove the tutorial dir
-      cmd = Form("rm -fr %s/*", tutdir.Data());
+      // Cleanup the working area
+      cmd = Form("rm -fr %s/xpdtut %s %s %s %s", tutdir.Data(), workarea.Data(),
+                                                 xpdcf.Data(), xpdpid.Data(), proofsessions.Data());
       gSystem->Exec(cmd);
 
       // Try to start something locally; create the xrootd config file
@@ -619,3 +651,58 @@ Int_t killXrootdAt(Int_t port, const char *id)
 #endif
 }
 
+int getDebugEnum(const char *what)
+{
+   // Check if 'what' matches one of the TProofDebug enum and return the corresponding
+   // integer. Relies on a perfect synchronization with the content of TProofDebug.h .
+
+   TString sws(what), sw;
+   int rcmask = 0;
+   int from = 0;
+   while (sws.Tokenize(sw, from , "|")) {
+      if (sw.BeginsWith("k")) sw.Remove(0,1);
+
+      if (sw == "None") {
+         rcmask |= TProofDebug::kNone;
+      } else if (sw == "Packetizer") {
+         rcmask |= TProofDebug::kPacketizer;
+      } else if (sw == "Loop") {
+         rcmask |= TProofDebug::kLoop;
+      } else if (sw == "Selector") {
+         rcmask |= TProofDebug::kSelector;
+      } else if (sw == "Output") {
+         rcmask |= TProofDebug::kOutput;
+      } else if (sw == "Input") {
+         rcmask |= TProofDebug::kInput;
+      } else if (sw == "Global") {
+         rcmask |= TProofDebug::kGlobal;
+      } else if (sw == "Package") {
+         rcmask |= TProofDebug::kPackage;
+      } else if (sw == "Feedback") {
+         rcmask |= TProofDebug::kFeedback;
+      } else if (sw == "Condor") {
+         rcmask |= TProofDebug::kCondor;
+      } else if (sw == "Draw") {
+         rcmask |= TProofDebug::kDraw;
+      } else if (sw == "Asyn") {
+         rcmask |= TProofDebug::kAsyn;
+      } else if (sw == "Cache") {
+         rcmask |= TProofDebug::kCache;
+      } else if (sw == "Collect") {
+         rcmask |= TProofDebug::kCollect;
+      } else if (sw == "Dataset") {
+         rcmask |= TProofDebug::kDataset;
+      } else if (sw == "Submerger") {
+         rcmask |= TProofDebug::kSubmerger;
+      } else if (sw == "Monitoring") {
+         rcmask |= TProofDebug::kMonitoring;
+      } else if (sw == "All") {
+         rcmask |= TProofDebug::kAll;
+      } else if (!sw.IsNull()) {
+         Printf("WARNING: requested debug enum name '%s' does not exist: assuming 'All'", sw.Data());
+         rcmask |= TProofDebug::kAll;
+      }
+   }
+   // Done
+   return rcmask;
+}

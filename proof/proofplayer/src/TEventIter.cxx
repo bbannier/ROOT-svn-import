@@ -446,6 +446,7 @@ TEventIterTree::TEventIterTree()
    fUseTreeCache = 1;
    fCacheSize = -1;
    fTreeCacheIsLearning = kTRUE;
+   fFileTrees = 0;
    fUseParallelUnzip = 0;
    fDontCacheFiles = kFALSE;
 }
@@ -521,18 +522,22 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
       // Set the file cache
       if (fUseTreeCache) {
          TFile *curfile = main->GetCurrentFile();
-         if (!fTreeCache) {
-            main->SetCacheSize(fCacheSize);
-            fTreeCache = (TTreeCache *)curfile->GetCacheRead();
-            if (fCacheSize < 0) fCacheSize = main->GetCacheSize();
+         if (curfile) {
+            if (!fTreeCache) {
+               main->SetCacheSize(fCacheSize);
+               fTreeCache = (TTreeCache *)curfile->GetCacheRead();
+               if (fCacheSize < 0) fCacheSize = main->GetCacheSize();
+            } else {
+               curfile->SetCacheRead(fTreeCache);
+               fTreeCache->UpdateBranches(main, kTRUE);
+            }
+            if (fTreeCache) {
+               fTreeCacheIsLearning = fTreeCache->IsLearning();
+               if (fTreeCacheIsLearning)
+                  Info("GetTrees","the tree cache is in learning phase");
+            }
          } else {
-            curfile->SetCacheRead(fTreeCache);
-            fTreeCache->UpdateBranches(main, kTRUE);
-         }
-         if (fTreeCache) {
-            fTreeCacheIsLearning = fTreeCache->IsLearning();
-            if (fTreeCacheIsLearning)
-               Info("GetTrees","the tree cache is in learning phase");
+            Warning("GetTrees", "default tree does nto have a file attached: corruption? Tree cache untouched");
          }
       } else {
          // Disable the cache
@@ -592,7 +597,6 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
       if (!(ft->fUsed)) {
          fFileTrees->Remove(ft);
          delete ft;
-      } else {
       }
    }
 
@@ -613,6 +617,8 @@ TTree* TEventIterTree::Load(TDSetElement *e, Bool_t &localfile)
    const char *fn = e->GetFileName();
    const char *dn = e->GetDirectory();
    const char *tn = e->GetObjName();
+   PDB(kLoop,2)
+      Info("Load","loading: fn:'%s' dn:'%s' tn:'%s'", fn, dn, tn);
 
    TFile *f = 0;
 
@@ -661,6 +667,8 @@ TTree* TEventIterTree::Load(TDSetElement *e, Bool_t &localfile)
    } else {
       // Fill locality boolean
       localfile = ft->fIsLocal;
+      PDB(kLoop,2)
+         Info("Load","file '%s' already open (local:%d)", fn, localfile);
    }
 
    // Check if the tree is already loaded
@@ -794,7 +802,7 @@ Long64_t TEventIterTree::GetNextEvent()
                // The old tree is owned by TFileTree and will be deleted there
                fTree = newTree;
                attach = kTRUE;
-               fOldBytesRead = fTree->GetCurrentFile()->GetBytesRead();
+               fOldBytesRead = (fTree->GetCurrentFile()) ? fTree->GetCurrentFile()->GetBytesRead() : 0;
             }
             // Set range to be analysed
             if (fTreeCache)

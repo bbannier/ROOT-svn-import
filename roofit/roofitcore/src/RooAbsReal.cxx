@@ -73,6 +73,7 @@
 #include "RooFitResult.h"
 #include "RooMoment.h"
 #include "RooBrentRootFinder.h"
+#include "RooVectorDataStore.h"
 
 #include "Riostream.h"
 
@@ -108,7 +109,7 @@ map<const RooAbsArg*,pair<string,list<RooAbsReal::EvalError> > > RooAbsReal::_ev
 
 
 //_____________________________________________________________________________
-RooAbsReal::RooAbsReal() : _values(_value), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
+RooAbsReal::RooAbsReal() : _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // coverity[UNINIT_CTOR]
   // Default constructor
@@ -119,7 +120,7 @@ RooAbsReal::RooAbsReal() : _values(_value), _specIntegratorConfig(0), _treeVar(k
 //_____________________________________________________________________________
 RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) : 
   RooAbsArg(name,title), _plotMin(0), _plotMax(0), _plotBins(100), 
-  _value(0), _values(_value), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
+  _value(0),  _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // Constructor with unit label
   setValueDirty() ;
@@ -133,7 +134,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, const char *unit) :
 RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t inMinVal,
 		       Double_t inMaxVal, const char *unit) :
   RooAbsArg(name,title), _plotMin(inMinVal), _plotMax(inMaxVal), _plotBins(100),
-  _value(0), _values(_value), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
+  _value(0), _unit(unit), _forceNumInt(kFALSE), _specIntegratorConfig(0), _treeVar(kFALSE), _selectComp(kTRUE), _lastNSet(0)
 {
   // Constructor with plot range and unit label
   setValueDirty() ;
@@ -146,7 +147,7 @@ RooAbsReal::RooAbsReal(const char *name, const char *title, Double_t inMinVal,
 //_____________________________________________________________________________
 RooAbsReal::RooAbsReal(const RooAbsReal& other, const char* name) : 
   RooAbsArg(other,name), _plotMin(other._plotMin), _plotMax(other._plotMax), 
-  _plotBins(other._plotBins), _value(other._value), _values(other._values), _unit(other._unit), _forceNumInt(other._forceNumInt), 
+  _plotBins(other._plotBins), _value(other._value), _unit(other._unit), _forceNumInt(other._forceNumInt), 
   _treeVar(other._treeVar), _selectComp(other._selectComp), _lastNSet(0)
 {
   // coverity[UNINIT_CTOR]
@@ -210,7 +211,7 @@ TString RooAbsReal::getTitle(Bool_t appendUnit) const
 
 
 //_____________________________________________________________________________
-Double_t RooAbsReal::getVal(const RooArgSet* nset) const
+Double_t RooAbsReal::getValV(const RooArgSet* nset) const
 {
   // Return value of object. If the cache is clean, return the
   // cached value, otherwise recalculate on the fly and refill
@@ -221,136 +222,13 @@ Double_t RooAbsReal::getVal(const RooArgSet* nset) const
     _lastNSet = (RooArgSet*) nset ;
   }
 
-  if (isValueDirty() || isShapeDirty()) {
-
+  if (isValueDirtyAndClear()) {
     _value = traceEval(nset) ;
-
-    clearValueDirty() ; 
-    clearShapeDirty() ; 
-
-  } else if (_cacheCheck) {
-    
-    // Check if cache contains value that evaluate() gives now
-    Double_t checkValue = traceEval(nset);
-
-    if (checkValue != _value) {
-      // If not, print warning
-      coutW(Eval) << "RooAbsReal::getVal(" << GetName() << ") WARNING: cache contains " << _value 
-		  << " but evaluate() returns " << checkValue << endl ;
-
-      // And update cache (so that we see the difference)
-      _value = checkValue ;
-    }                                                                                                
-    
-  }
+    //     clearValueDirty() ; 
+  } 
+//   cout << "RooAbsReal::getValV(" << GetName() << ") writing _value = " << _value << endl ;
 
   return _value ;
-}
-
-//_____________________________________________________________________________
-Bool_t RooAbsReal::resizeVector(Int_t size)
-{
-  _values.resizeCPU(size) ;
-  return kTRUE ;
-}
-
-//_____________________________________________________________________________
-Bool_t RooAbsReal::reserveVector(Int_t size)
-{
-  _values.reserveCPU(size) ;
-  return kTRUE ;
-}
-
-
-//_____________________________________________________________________________
-Bool_t RooAbsReal::isVector() const
-{
-  return _values.isVector() ;
-}
-
-//_____________________________________________________________________________
-Bool_t RooAbsReal::clearVector()
-{
-  _values.clearCPU() ;
-  return kTRUE ;
-}
-
-
-//_____________________________________________________________________________
-void RooAbsReal::setValueVector(Int_t i)
-{
-  _values[i] = _value ;
-}
-
-//_____________________________________________________________________________
-void RooAbsReal::getValueVector(Int_t i)
-{
-  _value = _values[i] ;  
-}
-
-//_____________________________________________________________________________
-void RooAbsReal::pushBackValueVector()
-{
-  _values.push_backCPU(_value) ;
-}
-
-
-//_____________________________________________________________________________
-const RooAbsReal::RooValuesDouble* RooAbsReal::getValSIMD(Int_t start, Int_t end, 
-							  const RooArgSet* nset,
-							  const RooAbsReal* mother) const
-{
-  // Return value of object. If the cache is clean, return the
-  // cached value, otherwise recalculate on the fly and refill
-  // the cache
-
-  // Check if InitSIMD was executed
-  if (_deviceSIMD.Impl==RooAbsReal::kNone) {
-    coutF(Eval) << "RooAbsReal::getValSIMD(" << GetName() << "): InitSIMD not executed" << endl ;
-    return 0;
-  }
-    
-
-  if (nset && nset!=_lastNSet) {
-    ((RooAbsReal*) this)->setProxyNormSet(nset) ;    
-    _lastNSet = (RooArgSet*) nset ;
-  }
-
-  if (evaluateAndNormalizeSIMD(_deviceSIMD,start,end,mother,1)) {
-    return &_values;
-  }
-
-  return 0;
-
-  /*
-
-  if (isValueDirty() || isShapeDirty()) {
-
-    _value = traceEval(nset) ;
-
-    clearValueDirty() ; 
-    clearShapeDirty() ; 
-
-  } else if (_cacheCheck) {
-    
-    // Check if cache contains value that evaluate() gives now
-    Double_t checkValue = traceEval(nset);
-
-    if (checkValue != _value) {
-      // If not, print warning
-      coutW(Eval) << "RooAbsReal::getVal(" << GetName() << ") WARNING: cache contains " << _value 
-		  << " but evaluate() returns " << checkValue << endl ;
-
-      // And update cache (so that we see the difference)
-      _value = checkValue ;
-    }                                                                                                
-    
-  }
-
-  return _value ;
-
-  */
-
 }
 
 
@@ -379,7 +257,7 @@ Double_t RooAbsReal::traceEval(const RooArgSet* /*nset*/) const
     logEvalError("function value is NAN") ;
   }
 
-  cxcoutD(Tracing) << "RooAbsReal::getVal(" << GetName() << ") operMode = " << _operMode << " recalculated, new value = " << value << endl ;
+  //cxcoutD(Tracing) << "RooAbsReal::getValF(" << GetName() << ") operMode = " << _operMode << " recalculated, new value = " << value << endl ;
   
   //Standard tracing code goes here
   if (!isValidReal(value)) {
@@ -388,7 +266,7 @@ Double_t RooAbsReal::traceEval(const RooArgSet* /*nset*/) const
   }
 
   //Call optional subclass tracing code
-  traceEvalHook(value) ;
+  //   traceEvalHook(value) ;
 
   return value ;
 }
@@ -1205,8 +1083,9 @@ TH1 *RooAbsReal::fillHistogram(TH1 *hist, const RooArgList &plotVars,
     
     hist->SetBinContent(hist->GetBin(xbin,ybin,zbin),result);
     if (setError) {
-      hist->SetBinError(hist->GetBin(xbin,ybin,zbin),result) ;
+      hist->SetBinError(hist->GetBin(xbin,ybin,zbin),sqrt(result)) ;
     }
+
     //cout << "bin " << bin << " -> (" << xbin << "," << ybin << "," << zbin << ") = " << result << endl;
   }
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
@@ -2952,7 +2831,7 @@ RooAbsFunc *RooAbsReal::bindVars(const RooArgSet &vars, const RooArgSet* nset, B
 
 
 //_____________________________________________________________________________
-void RooAbsReal::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/) 
+void RooAbsReal::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/, Bool_t setValDirty) 
 {
   // Copy the cached value of another RooAbsArg to our cache.
   // Warning: This function copies the cached values of source,
@@ -2975,8 +2854,20 @@ void RooAbsReal::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/)
       _value = other->_uintValue ;
     } 
   }
-  setValueDirty() ;
+  if (setValDirty) {
+    setValueDirty() ;
+  }
 }
+
+
+
+//_____________________________________________________________________________
+void RooAbsReal::attachToVStore(RooVectorDataStore& vstore) 
+{
+  RooVectorDataStore::RealVector* rv = vstore.addReal(this) ;
+  rv->setBuffer(this,&_value) ;
+}
+
 
 
 
@@ -2993,17 +2884,6 @@ void RooAbsReal::attachToTree(TTree& t, Int_t bufSize)
   // RooRealVar.  A flag is set that will cause copyCache to copy the
   // object value from the appropriate conversion buffer instead of
   // the _value buffer.
-
-  // check if this is already a vector
-  // if so, it will rise an errror
-  // (it is not possible to have a variable attached to multiple trees)
-  if (isVector()) {
-    coutW(InputArguments) << "RooAbsReal::attachToTree(" << GetName()
-			  << ") It is not possible to have a vector variable attached to multiple trees."
-			  << " Resetting the variable to scalar."
-			  << endl ;
-    _values.clearCPU();
-  }
 
   // First determine if branch is taken
   TString cleanName(cleanBranchName()) ;
@@ -3437,6 +3317,10 @@ void RooAbsReal::logEvalError(const RooAbsReal* originator, const char* origName
 {
   // Interface to insert remote error logging messages received by RooRealMPFE into current error loggin stream
 
+  if (_evalErrorMode==Ignore) {
+    return ;
+  }
+
   if (_evalErrorMode==CountErrors) {
     _evalErrorCount++ ;
     return ;
@@ -3488,6 +3372,10 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
   // A string with server names and values is constructed automatically for error logging
   // purposes, unless a custom string with similar information is passed as argument.
 
+  if (_evalErrorMode==Ignore) {
+    return ;
+  }
+
   if (_evalErrorMode==CountErrors) {
     _evalErrorCount++ ;
     return ;
@@ -3510,14 +3398,15 @@ void RooAbsReal::logEvalError(const char* message, const char* serverValueString
     ostringstream oss ;
     Bool_t first(kTRUE) ;
     for (Int_t i=0 ; i<numProxies() ; i++) {
-      //RooAbsProxy* p = getProxy(i) ;
+      RooAbsProxy* p = getProxy(i) ;
+      if (!p) continue ;
       //if (p->name()[0]=='!') continue ;
       if (first) {
 	first=kFALSE ;
       } else {
 	oss << ", " ;
       }
-      getProxy(i)->print(oss,kTRUE) ;
+      p->print(oss,kTRUE) ;
     }
     ee.setServerValues(oss.str().c_str()) ;
   }

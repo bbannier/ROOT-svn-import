@@ -703,7 +703,7 @@ void TGTab::SetText(const char *text)
 {
    // Set text to current tab.
 
-   GetCurrentTab()->SetText(new TGString(text));
+   if (GetCurrentTab()) GetCurrentTab()->SetText(new TGString(text));
    GetLayoutManager()->Layout();
 }
 
@@ -780,6 +780,7 @@ void TGTab::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    TGLayoutManager * lm;
    for (Int_t i=0; i<GetNumberOfTabs(); i++) {
       cf = GetTabContainer(i);
+      if (!cf || !GetTabTab(i)) continue;
       out << endl << "   // container of " << quote
           << GetTabTab(i)->GetString() << quote << endl;
       out << "   TGCompositeFrame *" << cf->GetName() << ";" << endl;

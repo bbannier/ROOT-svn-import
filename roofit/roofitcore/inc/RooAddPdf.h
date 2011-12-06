@@ -83,6 +83,8 @@ public:
   virtual void resetErrorCounters(Int_t resetValue=10) ;
 
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const ; 
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
+  Bool_t isBinnedDistribution(const RooArgSet& obs) const  ;
 
   void printMetaArgs(ostream& os) const ;
 
@@ -103,6 +105,7 @@ protected:
     virtual ~CacheElem() {} ;
 
     RooArgList _suppNormList ; // Supplemental normalization list
+    Bool_t    _needSupNorm ; // Does the above list contain any non-unit entries?
 
     RooArgList _projList ; // Projection integrals to be multiplied with coefficients
     RooArgList _suppProjList ; // Projection integrals to be multiplied with coefficients for supplemental normalization terms

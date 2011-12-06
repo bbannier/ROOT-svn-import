@@ -43,7 +43,7 @@ public:
   RooAbsCollection(const RooAbsCollection& other, const char *name="");
   RooAbsCollection& operator=(const RooAbsCollection& other);
   RooAbsCollection& assignValueOnly(const RooAbsCollection& other, Bool_t oneSafe=kFALSE) ;
-  RooAbsCollection& assignFast(const RooAbsCollection& other) ;
+  void assignFast(const RooAbsCollection& other, Bool_t setValDirty=kTRUE) ;
 
   // Copy list and contents (and optionally 'deep' servers)
   RooAbsCollection *snapshot(Bool_t deepCopy=kTRUE) const ;
@@ -78,9 +78,11 @@ public:
 
   // List search methods
   RooAbsArg *find(const char *name) const ;
+  RooAbsArg *find(const RooAbsArg&) const ;
+
   Bool_t contains(const RooAbsArg& var) const { 
     // Returns true if object with same name as var is contained in this collection
-    return (0 == find(var.GetName())) ? kFALSE:kTRUE; 
+    return (0 == find(var)) ? kFALSE:kTRUE; 
   }
   Bool_t containsInstance(const RooAbsArg& var) const { 
     // Returns true if var is contained in this collection
@@ -99,6 +101,7 @@ public:
   }
 
   RooLinkedListIter iterator(Bool_t dir = kIterForward) const ;
+  RooFIter fwdIterator() const ;
 
   inline Int_t getSize() const { 
     // Return the number of elements in the collection
@@ -162,15 +165,27 @@ protected:
 
   Bool_t _ownCont;  // Flag to identify a list that owns its contents.
   TString _name;    // Our name.
+  Bool_t _allRRV ; // All contents are RRV
 
   void safeDeleteList() ;
 
   // Support for snapshot method 
   Bool_t addServerClonesToList(const RooAbsArg& var) ;
 
+  inline TNamed* structureTag() { if (_structureTag==0) makeStructureTag() ; return _structureTag ; }
+  inline TNamed* typedStructureTag() { if (_typedStructureTag==0) makeTypedStructureTag() ; return _typedStructureTag ; }
+
+  mutable TNamed* _structureTag ; //! Structure tag
+  mutable TNamed* _typedStructureTag ; //! Typed structure tag
+  
+  inline void clearStructureTags() { _structureTag=0 ; _typedStructureTag = 0 ; }
+
+  void makeStructureTag() ;
+  void makeTypedStructureTag() ;
+  
 private:
 
-  ClassDef(RooAbsCollection,1) // Collection of RooAbsArg objects
+  ClassDef(RooAbsCollection,2) // Collection of RooAbsArg objects
 };
 
 #endif

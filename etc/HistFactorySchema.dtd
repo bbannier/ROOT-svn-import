@@ -2,11 +2,19 @@
 <!-- The top level combination spec -->
 <!-- OutputFilePrefix: Prefix to the output root file to be created (inspection histograms) -->
 <!-- Mode: Type of the analysis -->
-<!ELEMENT Combination (Input+,Measurement*)>
+<!ELEMENT Combination (Function*,Input+,Measurement*)>
 <!ATTLIST Combination
         OutputFilePrefix         CDATA            #REQUIRED
         Mode               CDATA            #REQUIRED
 > 
+
+<!-- Input files detailing the channels. One channel per file -->
+<!ELEMENT Function  EMPTY>
+<!ATTLIST Function 
+	  Name                 CDATA         #REQUIRED
+	  Expression           CDATA         #REQUIRED
+	  Dependents           CDATA         #REQUIRED
+>
 
 <!-- Input files detailing the channels. One channel per file -->
 <!ELEMENT Input (#PCDATA) >
@@ -24,9 +32,9 @@
         Name              CDATA            #REQUIRED
         Lumi              CDATA            #REQUIRED
         LumiRelErr        CDATA            #REQUIRED
-        BinLow            CDATA            #REQUIRED
-        BinHigh           CDATA            #REQUIRED
-        Mode              CDATA            #REQUIRED
+        BinLow            CDATA            #IMPLIED
+        BinHigh           CDATA            #IMPLIED
+        Mode              CDATA            #IMPLIED
         ExportOnly        CDATA            #IMPLIED
 >
 
@@ -116,7 +124,7 @@ For this element there is no sublemenents so the setting will only have local ef
         Val               CDATA            #REQUIRED
         High              CDATA            #REQUIRED
         Low               CDATA            #REQUIRED
-        Const             CDATA            #REQUIRED
+        Const             CDATA            #IMPLIED
 > 
 
 

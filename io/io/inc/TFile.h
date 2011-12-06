@@ -110,6 +110,10 @@ protected:
    Int_t         ReadBufferViaCache(char *buf, Int_t len);
    Int_t         WriteBufferViaCache(const char *buf, Int_t len);
 
+   // Creating projects
+   Int_t         MakeProjectParMake(const char *packname, const char *filename);
+   Int_t         MakeProjectParProofInf(const char *packname, const char *proofinfdir);
+
    // Interface to basic system I/O routines
    virtual Int_t    SysOpen(const char *pathname, Int_t flags, UInt_t mode);
    virtual Int_t    SysClose(Int_t fd);
@@ -147,7 +151,7 @@ public:
    enum ERelativeTo { kBeg = 0, kCur = 1, kEnd = 2 };
    enum { kStartBigFile  = 2000000000 };
    // File type
-   enum EFileType { kDefault = 0, kLocal = 1, kNet = 2, kWeb = 3, kFile = 4};
+   enum EFileType { kDefault = 0, kLocal = 1, kNet = 2, kWeb = 3, kFile = 4, kMerge = 5};
 
    TFile();
    TFile(const char *fname, Option_t *option="", const char *ftitle="", Int_t compress=1);
@@ -158,12 +162,14 @@ public:
    virtual TKey*       CreateKey(TDirectory* mother, const TObject* obj, const char* name, Int_t bufsize);
    virtual TKey*       CreateKey(TDirectory* mother, const void* obj, const TClass* cl,
                                  const char* name, Int_t bufsize);
+   static TFile      *&CurrentFile(); // Return the current file for this thread.
    virtual void        Delete(const char *namecycle="");
    virtual void        Draw(Option_t *option="");
    virtual void        DrawMap(const char *keys="*",Option_t *option=""); // *MENU*
    virtual void        FillBuffer(char *&buffer);
    virtual void        Flush();
    TArchiveFile       *GetArchive() const { return fArchive; }
+   Long64_t            GetArchiveOffset() const { return fArchiveOffset; }
    Int_t               GetBestBuffer() const;
    virtual Int_t       GetBytesToPrefetch() const;
    TFileCacheRead     *GetCacheRead() const;
@@ -287,6 +293,13 @@ public:
    ClassDef(TFile,8)  //ROOT file
 };
 
+#ifndef __CINT__
+#define gFile (TFile::CurrentFile())
+
+#elif defined(__MAKECINT__)
+// To properly handle the use of gFile in header files (in static declarations)
+R__EXTERN TFile   *gFile;
+#endif
 
 //
 // Class holding info about the file being opened
@@ -321,8 +334,6 @@ public:
    Int_t       GetCompress() const { return fCompress; }
    Int_t       GetNetOpt() const { return fNetOpt; }
 };
-
-R__EXTERN TFile   *gFile;
 
 //______________________________________________________________________________
 inline Int_t TFile::GetCompressionAlgorithm() const

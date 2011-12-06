@@ -4,7 +4,11 @@
 
 #---Enable FORTRAN (unfortunatelly is not nowt possible in all cases)-------------------------------
 if(NOT WIN32 AND NOT CMAKE_GENERATOR STREQUAL Xcode)
-  enable_language(Fortran)
+  #--Work-around for CMake issue 0009220
+  if(DEFINED CMAKE_Fortran_COMPILER AND CMAKE_Fortran_COMPILER MATCHES "^$")
+    set(CMAKE_Fortran_COMPILER CMAKE_Fortran_COMPILER-NOTFOUND)
+  endif()
+  enable_language(Fortran OPTIONAL)
 endif()
 
 
@@ -50,5 +54,7 @@ elseif(WIN32)
 endif()
 
 #---Print the final compiler flags--------------------------------------------------------------------
+message(STATUS "ROOT Platform: ${ROOT_PLATFORM}")
+message(STATUS "ROOT Architecture: ${ROOT_ARCHITECTURE}")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler Flags: ${CMAKE_CXX_FLAGS} ${ALL_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")

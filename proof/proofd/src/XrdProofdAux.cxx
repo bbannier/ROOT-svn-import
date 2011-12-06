@@ -22,14 +22,9 @@
 
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSys/XrdSysPriv.hh"
-#ifdef OLDXRDOUC
-#  include "XrdOuc/XrdOucError.hh"
-#  include "XrdOuc/XrdOucLogger.hh"
-#else
-#  include "XrdSys/XrdSysError.hh"
-#  include "XrdSys/XrdSysLogger.hh"
-#endif
 
+#include "XpdSysError.h"
+#include "XpdSysLogger.h"
 #include "XrdProofdAux.h"
 #include "XrdProofdConfig.h"
 #include "XrdProofdProtocol.h"
@@ -709,17 +704,17 @@ int XrdProofdAux::ChangeToDir(const char *dir, XrdProofUI ui, bool changeown)
    if (!dir || strlen(dir) <= 0)
       return -1;
 
-   if (changeown && (int) geteuid() != ui.fUid) {
+   if (changeown && ((int) geteuid() != ui.fUid || (int) getegid() != ui.fGid)) {
 
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, ui.fUid)) {
-         TRACE(XERR, changeown << ": could not get privileges; uid req:"<< ui.fUid <<
-                     ", euid: " << geteuid() <<", uid:"<<getuid() << "; errno: "<<errno);
+         TRACE(XERR, changeown << ": could not get privileges; {uid,gid} req: {"<< ui.fUid <<","<<ui.fGid<<
+                     "}, {euid,egid}: {" << geteuid() <<","<<getegid()<<"}, {uid,gid}: {"<<getuid()<<","<<getgid() << "}; errno: "<<errno);
          return -1;
       }
       if (chdir(dir) == -1) {
-         TRACE(XERR, changeown << ": can't change directory to "<< dir << " ui.fUid: " << ui.fUid <<
-                     ", euid: " << geteuid() <<", uid:"<<getuid()<<"; errno: "<<errno);
+         TRACE(XERR, changeown << ": can't change directory to '"<< dir<<"'; {ui.fUid,ui.fGid}: {"<< ui.fUid <<","<<ui.fGid<<
+                     "}, {euid,egid}: {" << geteuid() <<","<<getegid()<<"}, {uid,gid}: {"<<getuid()<<","<<getgid() << "}; errno: "<<errno);
          return -1;
       }
    } else {

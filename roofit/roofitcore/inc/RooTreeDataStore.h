@@ -34,6 +34,7 @@ public:
 
   // Empty ctor
   RooTreeDataStore(const char* name, const char* title, const RooArgSet& vars, const char* wgtVarName=0) ;
+  virtual RooAbsDataStore* clone(const char* newname=0) const { return new RooTreeDataStore(*this,newname) ; }
   virtual RooAbsDataStore* clone(const RooArgSet& vars, const char* newname=0) const { return new RooTreeDataStore(*this,vars,newname) ; }
 
   // Ctors from TTree
@@ -80,8 +81,14 @@ public:
 
   // General & bookkeeping methods
   virtual Bool_t valid() const ;
+  virtual Double_t sumEntries() const ;
   virtual Int_t numEntries() const ;
   virtual void reset() ;
+
+  // Buffer redirection routines used in inside RooAbsOptTestStatistics
+  virtual void attachBuffers(const RooArgSet& extObs) ; 
+  virtual void resetBuffers() ;  
+  void restoreAlternateBuffers() ;
   
   // Tree access
   TTree& tree() { return *_tree ; }
@@ -115,9 +122,9 @@ public:
   
   const RooArgSet& row() { return _varsww ; }
 
-  virtual Bool_t makeVectors() ;
-
  protected:
+
+  friend class RooVectorDataStore ;
 
   RooArgSet varsNoWeight(const RooArgSet& allVars, const char* wgtName=0) ;
   RooRealVar* weightVar(const RooArgSet& allVars, const char* wgtName=0) ;
@@ -149,6 +156,8 @@ public:
   mutable Double_t  _curWgtErrLo ; // Weight of current event
   mutable Double_t  _curWgtErrHi ; // Weight of current event
   mutable Double_t  _curWgtErr ;   // Weight of current event
+
+  RooArgSet _attachedBuffers ; //! Currently attached buffers (if different from _varsww)
 
   ClassDef(RooTreeDataStore,2) // TTree-based Data Storage class
 };

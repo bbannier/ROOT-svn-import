@@ -707,7 +707,6 @@ Double_t TGeoChecker::TimingPerVolume(TGeoVolume *vol)
    Double_t theta, phi;
    Int_t idaughter;
    fTimer->Start();
-   Double_t dist;
    Bool_t inside;
    for (Int_t i=0; i<1000000; i++) {
       lpt[0] = ox-dx+2*dx*gRandom->Rndm();
@@ -725,12 +724,12 @@ Double_t TGeoChecker::TimingPerVolume(TGeoVolume *vol)
       fGeoManager->SetStep(pstep);
       fGeoManager->ResetState();
       inside = kTRUE;
-      dist = TGeoShape::Big();
+      // dist = TGeoShape::Big();
       if (!vol->IsAssembly()) {
          inside = vol->Contains(lpt);
          if (!inside) {
-            dist = vol->GetShape()->DistFromOutside(lpt,ldir,3,pstep); 
-//            if (dist>=pstep) continue;
+            // dist = vol->GetShape()->DistFromOutside(lpt,ldir,3,pstep); 
+            // if (dist>=pstep) continue;
          } else {   
             vol->GetShape()->DistFromInside(lpt,ldir,3,pstep);
          }   
@@ -1151,6 +1150,7 @@ void TGeoChecker::CheckOverlapsBySampling(TGeoVolume *vol, Double_t /* ovlp */, 
    TGeoNode *node1, *node2;
    Int_t novlps = 0;
    TGeoHMatrix mat1, mat2;
+   Int_t tid = TGeoManager::ThreadId();
    while (ipoint < npoints) {
    // Shoot randomly in the bounding box.
       pt[0] = orig[0] - dx + 2.*dx*gRandom->Rndm();
@@ -1167,7 +1167,7 @@ void TGeoChecker::CheckOverlapsBySampling(TGeoVolume *vol, Double_t /* ovlp */, 
       // Check if the point is inside one or more daughters
       in = kFALSE;
       ipoint++;
-      check_list = voxels->GetCheckList(pt, ncheck);
+      check_list = voxels->GetCheckList(pt, ncheck, tid);
       if (!check_list || ncheck<2) continue;
       for (id=0; id<ncheck; id++) {
          id0 = check_list[id];
@@ -2110,7 +2110,6 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
 
    Double_t start[3];
    Double_t dir[3];
-   Int_t istep= 0;
    const Double_t *point = fGeoManager->GetCurrentPoint();
    vol->Draw();
    printf("Start... %i rays\n", nrays);
@@ -2161,7 +2160,6 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
          if (inull>5) break;
          normal = fGeoManager->FindNormalFast();
          if (!normal) break;
-         istep = 0;
          vis2 = endnode->IsOnScreen();
          if (ipoint>0) {
          // old visible node had an entry point -> finish segment
@@ -2665,12 +2663,12 @@ Double_t TGeoChecker::CheckVoxels(TGeoVolume *vol, TGeoVoxelFinder *voxels, Doub
    Double_t local[3];
    Int_t *checklist;
    Int_t ncheck;
-
+   Int_t tid = TGeoManager::ThreadId();
    timer.Start();
    for (Int_t i=0; i<npoints; i++) {
       point = xyz + 3*i;
       if (!shape->Contains(point)) continue;
-      checklist = voxels->GetCheckList(point, ncheck);
+      checklist = voxels->GetCheckList(point, ncheck, tid);
       if (!checklist) continue;
       if (!ncheck) continue;
       for (Int_t id=0; id<ncheck; id++) {
