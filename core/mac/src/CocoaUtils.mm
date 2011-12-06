@@ -1,5 +1,3 @@
-//#include <Foundation/Foundation.h>
-
 #include "CocoaUtils.h"
 
 namespace ROOT {

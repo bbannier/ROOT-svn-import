@@ -8,6 +8,7 @@
 
 #include  <Cocoa/Cocoa.h>
 
+#include "RootQuartzView.h"
 #include "CocoaPrivate.h"
 #include "CocoaUtils.h"
 #include "TGCocoa.h"
@@ -893,6 +894,10 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
       NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
       NSWindow *newWindow = [[NSWindow alloc] initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
       
+      RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : contentRect];
+      [newWindow setContentView : view];
+      [view release];
+
       WindowAttributes_t winAttr;
       winAttr.fX = x;
       winAttr.fY = y;
