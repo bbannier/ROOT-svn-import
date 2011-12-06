@@ -44,6 +44,11 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    TLine *l8  = new TLine(-2,.68,-1,.68); l8->SetLineStyle(8);   l8->Draw();
    TLine *l9  = new TLine(-2,.72,-1,.72); l9->SetLineStyle(9);   l9->Draw();
    TLine *l10 = new TLine(-2,.74,-1,.74); l10->SetLineStyle(10); l10->Draw();
+   
+   TLine *lw1  = new TLine(-2,.22,-1,.22); lw1->SetLineWidth(2);   lw1->Draw();
+   TLine *lw2  = new TLine(-2,.24,-1,.24); lw2->SetLineWidth(4);   lw2->Draw();
+   TLine *lw3  = new TLine(-2,.26,-1,.26); lw3->SetLineWidth(6);   lw3->Draw();
+   TLine *lw4  = new TLine(-2,.28,-1,.28); lw4->SetLineWidth(8);   lw4->Draw();
 }
 
 //______________________________________________________________________________

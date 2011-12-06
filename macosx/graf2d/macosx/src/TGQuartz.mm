@@ -266,12 +266,40 @@ void TGQuartz::SetLineStyle(Style_t lstyle)
 
 
 //______________________________________________________________________________
+void TGQuartz::SetLineType(Int_t n, Int_t *dash)
+{
+   // Sets the line type.
+   //
+   // n       - length of the dash list
+   //           n <= 0 use solid lines
+   //           n >  0 use dashed lines described by dash(n)
+   //                 e.g. n = 4,dash = (6,3,1,3) gives a dashed-dotted line
+   //                 with dash length 6 and a gap of 7 between dashes
+   // dash(n) - dash segment lengths
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   if (n) {
+      CGFloat lengths[n];
+      for (int i=0; i<n;i++) lengths[i] = (CGFloat)dash[i];
+      CGContextSetLineDash(ctx,0,lengths,n);
+   } else {
+      CGContextSetLineDash(ctx,0,NULL,0);
+   }
+}
+
+
+//______________________________________________________________________________
 void TGQuartz::SetLineWidth(Width_t width)
 {
    // Sets the line width.
    //
    // width - the line width in pixels
-   TAttLine::SetLineWidth(width);
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   if (fLineWidth == width) return;
+   fLineWidth = width;
+   CGFloat w = (CGFloat) fLineWidth;
+   CGContextSetLineWidth(ctx, w);
 }
 
 
@@ -352,28 +380,6 @@ void TGQuartz::SetTextSize(Float_t textsize)
 {
    // Sets the current text size to "textsize"
    TAttText::SetTextSize(textsize);
-}
-
-//______________________________________________________________________________
-void TGQuartz::SetLineType(Int_t n, Int_t *dash)
-{
-   // Sets the line type.
-   //
-   // n       - length of the dash list
-   //           n <= 0 use solid lines
-   //           n >  0 use dashed lines described by dash(n)
-   //                 e.g. n = 4,dash = (6,3,1,3) gives a dashed-dotted line
-   //                 with dash length 6 and a gap of 7 between dashes
-   // dash(n) - dash segment lengths
-   
-   CGContextRef ctx = (CGContextRef)fCtx;
-   if (n) {
-      CGFloat lengths[n];
-      for (int i=0; i<n;i++) lengths[i] = (CGFloat)dash[i];
-      CGContextSetLineDash(ctx,0,lengths,n);
-   } else {
-      CGContextSetLineDash(ctx,0,NULL,0);
-   }
 }
 
 
