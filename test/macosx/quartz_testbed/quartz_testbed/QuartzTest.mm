@@ -28,6 +28,7 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    fPad.SetGridy(1);
    
    TText *text = new TText(0.,.4,"Text Example");
+   text->SetTextColor(kGreen);
    text->SetTextAngle(30.);
    
    fHist->SetAxisColor(kRed);

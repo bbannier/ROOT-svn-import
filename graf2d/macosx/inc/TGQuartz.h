@@ -45,6 +45,8 @@ public:
    virtual void      SetTextFont(Font_t fontnumber);
    virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
    virtual void      SetTextSize(Float_t textsize);
+   
+           void       SetColor(Int_t ci);
 
                               
    //This function is just for test,

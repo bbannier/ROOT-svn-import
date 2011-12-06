@@ -125,14 +125,7 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
       
    CGContextRef ctx = (CGContextRef)fCtx;
    
-   const Float_t alpha = 1.f;
-   
-   Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
-   
-   if (const TColor *color = gROOT->GetColor(GetLineColor()))
-      color->GetRGB(red, green, blue);
-   
-   CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
+   SetColor(GetLineColor());
    
    CGContextBeginPath (ctx);
    CGContextMoveToPoint(ctx, x1, y1);
@@ -150,15 +143,8 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
    
    CGContextRef ctx = (CGContextRef)fCtx;
    
-   const Float_t alpha = 1.f;
-   
-   Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
-   
-   if (const TColor *color = gROOT->GetColor(GetLineColor()))
-      color->GetRGB(red, green, blue);
-   
-   CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
-   
+   SetColor(GetLineColor());
+
    CGContextBeginPath (ctx);
    for (Int_t i=1; i<n; i++) {
       CGContextMoveToPoint    (ctx, xy[i-1].fX, xy[i-1].fY);
@@ -186,29 +172,44 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const 
                         "Helvetica-Bold",
                         10,
                         kCGEncodingMacRoman);
-
    
    // Text color
-   const Float_t alpha = 1.f;
-   Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
-
-   if (const TColor *color = gROOT->GetColor(GetTextColor())) color->GetRGB(red, green, blue);
-//   CGContextSetRGBStrokeColor (ctx, red, green, blue, alpha);
-   CGContextSetRGBFillColor   (ctx, red, green, blue, alpha);
+   SetColor(GetTextColor());
 
    // Text drawing mode
-//   CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
+///CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
    CGContextSetTextDrawingMode (ctx, kCGTextFill); 
-
-
 
    // Text rotation
    CGAffineTransform tm; 
    tm =  CGAffineTransformMakeRotation (-(angle*kPI)/180.);
    tm =  CGAffineTransformScale (tm, 1., -1.); 
-   CGContextSetTextMatrix (ctx, tm);    
+   CGContextSetTextMatrix (ctx, tm); 
+   
    // Draw the text
    CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetColor(Int_t ci)
+{
+   // Set the current color.
+
+   CGContextRef ctx = (CGContextRef)fCtx;
+
+   TColor *color = gROOT->GetColor(ci);
+   if (!color) return;
+
+   const Float_t a = 1.f;
+   Float_t r = 0.f;
+   Float_t g = 0.f;
+   Float_t b = 0.f;
+
+   color->GetRGB(r, g, b);
+
+   CGContextSetRGBStrokeColor (ctx, r, g, b, a);
+   CGContextSetRGBFillColor   (ctx, r, g, b, a);
 }
 
 
