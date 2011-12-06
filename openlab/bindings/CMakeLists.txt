@@ -1,6 +1,0 @@
-if(python)
-  add_subdirectory(pyroot)
-endif()
-if(ruby)
-  add_subdirectory(ruby)
-endif()
