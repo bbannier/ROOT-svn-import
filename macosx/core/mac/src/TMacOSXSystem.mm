@@ -8,6 +8,7 @@
 
 #include "TSeqCollection.h"
 #include "TMacOSXSystem.h"
+#include "CocoaUtils.h"
 #include "TError.h"
 
 //
@@ -93,97 +94,6 @@ void TMacOSXSystem_WriteCallback(CFFileDescriptorRef /*fdref*/, CFOptionFlags /*
 
 }
 
-namespace {
-
-//
-//This RAII class here is only temporarily. It should go into some generic utilities/be replaced by standard library component later.
-//
-
-template<class RefType>
-class CFGuard {
-public:
-   CFGuard();
-   explicit CFGuard(RefType ref, bool initRetain);
-   CFGuard(const CFGuard &rhs);
-   
-   //TODO: Check ravlue references also.
-   CFGuard &operator = (const CFGuard &rhs);
-   CFGuard &operator = (RefType ref);
-
-   ~CFGuard();
-   
-   RefType Get()const
-   {
-      return fFdRef;
-   }
-   
-private:
-   RefType fFdRef;
-};
-
-//______________________________________________________________________________
-template<class RefType>
-CFGuard<RefType>::CFGuard()
-                    : fFdRef(0)
-{
-}
-
-//______________________________________________________________________________
-template<class RefType>
-CFGuard<RefType>::CFGuard(RefType ref, bool initRetain)
-                     : fFdRef(ref)
-{
-   if (initRetain)
-      CFRetain(ref);
-}
-
-//______________________________________________________________________________
-template<class RefType>
-CFGuard<RefType>::CFGuard(const CFGuard &rhs)
-{
-   fFdRef = rhs.fFdRef;
-   CFRetain(rhs.fFdRef);
-}
-
-//______________________________________________________________________________
-template<class RefType>
-CFGuard<RefType> &CFGuard<RefType>::operator = (const CFGuard &rhs)
-{
-   if (this != &rhs) {
-      CFRelease(fFdRef);
-      fFdRef = rhs.fFdRef;
-      CFRetain(fFdRef);
-   }
-
-   return *this;
-}
-
-//______________________________________________________________________________
-template<class RefType>
-CFGuard<RefType> &CFGuard<RefType>::operator = (RefType ref)
-{
-   if (fFdRef != ref) {
-      CFRelease(fFdRef);
-      fFdRef = ref;
-      CFRetain(ref);
-   }
-   
-   return *this;
-}
-
-//______________________________________________________________________________
-template<class RefType>
-CFGuard<RefType>::~CFGuard()
-{
-   CFRelease(fFdRef);
-}
-
-//
-//This RAII class should also go to some separate module, or be here and included by TGCocoa/TGQuartz. Right now, it's simply 
-//
-
-}
-
 //
 //Hidden implementation details (in particular, hidden from CINT).
 //
@@ -192,10 +102,10 @@ class TMacOSXSystemPrivate {
    friend class TMacOSXSystem;
    std::set<int> fFileDescriptors;
    
-   typedef CFGuard<CFFileDescriptorRef> cffile_type;
+   typedef ROOT::MacOSX::Util::CFGuard<CFFileDescriptorRef> cffile_type;
    std::vector<cffile_type> fCFFileDescriptors;
 
-   typedef CFGuard<CFRunLoopSourceRef> cfrl_type;
+   typedef ROOT::MacOSX::Util::CFGuard<CFRunLoopSourceRef> cfrl_type;
    std::vector<cfrl_type> fRunLoopSources;
    
    void SetFileDescriptors();

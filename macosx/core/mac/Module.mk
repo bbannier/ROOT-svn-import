@@ -16,7 +16,8 @@ MACDIRI      := $(MACDIR)/inc
 MACL	       := $(MODDIRI)/LinkDef.h
 MACDS			 := $(MODDIRS)/G__Mac.cxx
 MACDO        := $(MODDIRS)/G__Mac.o
-MACDH        := $(MACDS:.mm=.h)
+MACDH        := $(MACDS:.cxx=.h)
+MACH1        := $(wildcard $(MODDIRI)/T*.h)
 
 MACH         := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MACS         := $(wildcard $(MODDIRS)/*.mm)
@@ -39,7 +40,7 @@ include/%.h:    $(MACDIRI)/%.h
 $(MACDS):      $(MACH) $(MACL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(MACH) $(MACL)
+		$(ROOTCINTTMP) -f $@ -c $(MACH1) $(MACL)
 
 all-$(MODNAME): $(MACO) $(MACDO)
 
