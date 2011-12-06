@@ -178,6 +178,10 @@ CFGuard<RefType>::~CFGuard()
    CFRelease(fFdRef);
 }
 
+//
+//This RAII class should also go to some separate module, or be here and included by TGCocoa/TGQuartz. Right now, it's simply 
+//
+
 }
 
 //
