@@ -313,6 +313,11 @@ linuxx8664icc)
    auxcflags=
    auxlibs="-limf -lm -ldl"
    ;;
+linuxMICdirect)
+   # Intel MIC
+   auxcflags="-mmic"
+   auxlibs="-limf -lm -ldl"
+   ;;
 linuxalphagcc)
    # Alpha Linux with gcc
    auxcflags=

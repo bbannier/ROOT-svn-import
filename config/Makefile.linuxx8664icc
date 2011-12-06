@@ -46,6 +46,12 @@ ICC_MINOR    := $(shell $(CXX) -v 2>&1 | awk '{ if (NR==1) print $$3 }' | \
                 cut -d'.' -f2)
 endif
 
+ifeq ($(ICC_MAJOR),Mainline)
+ICC_MAJOR    := 12
+ICC_MINOR    := 0
+endif
+
+
 ifeq ($(ICC_MAJOR),9)
 CXXFLAGS     += -wd1572
 CFLAGS       += -wd1572
