@@ -11,7 +11,7 @@
 #include "TPadPainter.h"
 #endif
 
-#ifndef ROOT_TLine
+#ifndef ROOT_TList
 #include "TList.h"
 #endif
 

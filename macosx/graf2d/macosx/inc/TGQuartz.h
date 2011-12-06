@@ -29,6 +29,23 @@ public:
    virtual void      DrawPolyMarker(Int_t n, TPoint *xy);
    virtual void      DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn, const char *text,
                               ETextMode mode);
+   
+   virtual void      SetFillColor(Color_t cindex);
+   virtual void      SetFillStyle(Style_t style);
+   virtual void      SetLineColor(Color_t cindex);
+   virtual void      SetLineType(Int_t n, Int_t *dash);
+   virtual void      SetLineStyle(Style_t linestyle);
+   virtual void      SetLineWidth(Width_t width);
+   virtual void      SetMarkerColor(Color_t cindex);
+   virtual void      SetMarkerSize(Float_t markersize);
+   virtual void      SetMarkerStyle(Style_t markerstyle);
+   virtual void      SetOpacity(Int_t percent);
+   virtual void      SetTextAlign(Short_t talign=11);
+   virtual void      SetTextColor(Color_t cindex);
+   virtual void      SetTextFont(Font_t fontnumber);
+   virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
+   virtual void      SetTextSize(Float_t textsize);
+
                               
    //This function is just for test,
    //will be removed in future.
