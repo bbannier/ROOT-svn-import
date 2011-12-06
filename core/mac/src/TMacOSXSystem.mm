@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 #include <vector>
-#include <set>
+#include <map>
 
 #import <Cocoa/Cocoa.h>
 
@@ -99,8 +99,13 @@ void TMacOSXSystem_WriteCallback(CFFileDescriptorRef /*fdref*/, CFOptionFlags /*
 //
 
 class TMacOSXSystemPrivate {
+   enum class DescriptorType {
+      write,
+      read
+   };
+
    friend class TMacOSXSystem;
-   std::set<int> fFileDescriptors;
+   std::map<int, DescriptorType> fFileDescriptors;
    
    typedef ROOT::MacOSX::Util::CFGuard<CFFileDescriptorRef> cffile_type;
    std::vector<cffile_type> fCFFileDescriptors;
@@ -108,9 +113,51 @@ class TMacOSXSystemPrivate {
    typedef ROOT::MacOSX::Util::CFGuard<CFRunLoopSourceRef> cfrl_type;
    std::vector<cfrl_type> fRunLoopSources;
    
+   bool AddFileHandler(TFileHandler *fh);
+   bool RemoveFileHandler(TFileHandler *fh);
+   
    void SetFileDescriptors();
    void CloseFileDescriptors();
 };
+
+//______________________________________________________________________________
+bool TMacOSXSystemPrivate::AddFileHandler(TFileHandler *fh)
+{
+#ifdef DEBUG_ROOT_COCOA
+   NSLog(@"TMacOSXCSystemPrivate::AddFileHandler: fd is %d", fh->GetFd());
+#endif
+
+   if (fFileDescriptors.find(fh->GetFd()) == fFileDescriptors.end()) {
+      fFileDescriptors[fh->GetFd()] = fh->HasReadInterest() ? DescriptorType::read : DescriptorType::write;
+   } else {
+#ifdef DEBUG_ROOT_COCOA
+      NSLog(@"TMacOSXSystemPrivate::AddFileHandler: file descriptor %d was registered already", fh->GetFd());
+#endif
+      return false;
+   }
+
+   return true;
+}
+
+//______________________________________________________________________________
+bool TMacOSXSystemPrivate::RemoveFileHandler(TFileHandler *fh)
+{
+#ifdef DEBUG_ROOT_COCOA
+   NSLog(@"TMacOSXSystemPrivate::RemoveFileHandler, file descriptor is %d", fh->GetFd());
+#endif
+
+   auto fdIter = fFileDescriptors.find(fh->GetFd());
+   if (fdIter != fFileDescriptors.end()) {
+      fFileDescriptors.erase(fdIter);
+   } else {
+#ifdef DEBUG_ROOT_COCOA
+      NSLog(@"Attempt to remove unregistered file handler!");
+#endif
+      return false;
+   }
+
+   return true;
+}
 
 //______________________________________________________________________________
 void TMacOSXSystemPrivate::SetFileDescriptors()
@@ -120,17 +167,19 @@ void TMacOSXSystemPrivate::SetFileDescriptors()
 #endif
 
    for (auto fdIter = fFileDescriptors.begin(), end = fFileDescriptors.end(); fdIter != end; ++fdIter) {
-      cffile_type fdref(CFFileDescriptorCreate(kCFAllocatorDefault, *fdIter, false, TMacOSXSystem_ReadCallback, 0), false);//Check how to use red/write callbacks or one callback later.
+      const bool read = fdIter->second == DescriptorType::read;
+      cffile_type fdref(CFFileDescriptorCreate(kCFAllocatorDefault, fdIter->first, false, read ? TMacOSXSystem_ReadCallback : TMacOSXSystem_WriteCallback, 0), false);//Check how to use red/write callbacks or one callback later.
+
       if (!fdref.Get())
          throw std::runtime_error("TMacOSXSystemPrivate::SetFileDescriptors: CFFileDescriptorCreate failed");
 
-      CFFileDescriptorEnableCallBacks(fdref.Get(), kCFFileDescriptorReadCallBack);
+      CFFileDescriptorEnableCallBacks(fdref.Get(), read ? kCFFileDescriptorReadCallBack : kCFFileDescriptorWriteCallBack);
    
       cfrl_type runLoopSource(CFFileDescriptorCreateRunLoopSource(kCFAllocatorDefault, fdref.Get(), 0), false);
       if (!runLoopSource.Get())
          throw std::runtime_error("TMacOSXSystemPrivate::SetFileDescriptors: CFFileDescriptorCreateRunLoopSource failed");
 #ifdef DEBUG_ROOT_COCOA
-      NSLog(@"Set file descriptor for %d", *fdIter);
+      NSLog(@"Set file descriptor for %d", fdIter->first);
 #endif
       CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource.Get(), kCFRunLoopDefaultMode);
 
@@ -364,38 +413,16 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
 //______________________________________________________________________________
 void TMacOSXSystem::AddFileHandler(TFileHandler *fh)
 {
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TMacOSXSystem::AddFileHandler, file descriptor is: %d", fh->GetFd());
-#endif
-
-   if (fPimpl->fFileDescriptors.find(fh->GetFd()) == fPimpl->fFileDescriptors.end())
-      fPimpl->fFileDescriptors.insert(fh->GetFd());
-   else {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"File descriptor %d added twice", fh->GetFd());
-#endif
-      return;
+   if (fPimpl->AddFileHandler(fh)) {
+      TUnixSystem::AddFileHandler(fh);
    }
-
-   TUnixSystem::AddFileHandler(fh);
 }
 
 //______________________________________________________________________________
 TFileHandler *TMacOSXSystem::RemoveFileHandler(TFileHandler *fh)
 {
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TMacOSXSystem::RemoveFileHandler, file descriptor is %d", fh->GetFd());
-#endif
+   if (fPimpl->RemoveFileHandler(fh))
+      return TUnixSystem::RemoveFileHandler(fh);
 
-   auto fdIter = fPimpl->fFileDescriptors.find(fh->GetFd());
-   if (fdIter != fPimpl->fFileDescriptors.end()) {
-      fPimpl->fFileDescriptors.erase(fdIter);
-   } else {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"Attempt to remove unregistered file handler!");
-#endif
-      return fh;
-   }
-
-   return TUnixSystem::RemoveFileHandler(fh);
+   return 0;
 }
