@@ -12,11 +12,16 @@
 #include "TPoint.h"
 #include "TColor.h"
 #include "TMath.h"
+#include "TStyle.h"
+#include "TString.h"
+#include "TObjString.h"
+#include "TObjArray.h"
 #include "TROOT.h"
 
 const Double_t kPI = TMath::Pi();
 
 ClassImp(TGQuartz)
+
 
 //______________________________________________________________________________
 TGQuartz::TGQuartz()
@@ -24,12 +29,14 @@ TGQuartz::TGQuartz()
    NSLog(@"TGQuartz default ctor");
 }
 
+
 //______________________________________________________________________________
 TGQuartz::TGQuartz(const char *name, const char *title)
             : TGCocoa(name, title)
 {
    NSLog(@"TGQuartz was created %s %s", name, title);
 }
+
 
 //______________________________________________________________________________
 void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
@@ -94,17 +101,20 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
    CGContextRestoreGState(ctx);
 }
 
+
 //______________________________________________________________________________
 void TGQuartz::DrawCellArray(Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/, Int_t /*nx*/, Int_t /*ny*/, Int_t */*ic*/)
 {
 //   CGContextRef ctx = (CGContextRef)fCtx;
 }
 
+
 //______________________________________________________________________________
 void TGQuartz::DrawFillArea(Int_t /*n*/, TPoint * /*xy*/)
 {
    //CGContextRef ctx = (CGContextRef)fCtx;
 }
+
 
 //______________________________________________________________________________
 void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
@@ -129,6 +139,7 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
    CGContextAddLineToPoint(ctx, x2, y2);
    CGContextStrokePath(ctx);
 }
+
 
 //______________________________________________________________________________
 void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
@@ -156,14 +167,16 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
    CGContextStrokePath(ctx);
 }
 
+
 //______________________________________________________________________________
 void TGQuartz::DrawPolyMarker(Int_t /*n*/, TPoint * /*xy*/)
 {
    //CGContextRef ctx = (CGContextRef)fCtx;
 }
 
+
 //______________________________________________________________________________
-void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn, const char *text, ETextMode /*mode*/)
+void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const char *text, ETextMode /*mode*/)
 {
    // Draw text
    
@@ -198,8 +211,194 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn, const char
    CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
 }
 
+
 //______________________________________________________________________________
 void TGQuartz::SetContext(void *ctx)
 {
    fCtx = ctx;
 }
+
+
+//______________________________________________________________________________
+void TGQuartz::SetLineColor(Color_t cindex)
+{
+   // Sets color index "cindex" for drawing lines.
+   TAttLine::SetLineColor(cindex);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetLineStyle(Style_t lstyle)
+{
+   // Set line style.
+
+   static Int_t dashed[2] = {3,3};
+   static Int_t dotted[2] = {1,2};
+   static Int_t dasheddotted[4] = {3,4,1,4};
+
+   if (fLineStyle != lstyle) { //set style index only if different
+      fLineStyle = lstyle;
+      if (lstyle <= 1 ) {
+         SetLineType(0,0);
+      } else if (lstyle == 2 ) {
+         SetLineType(2,dashed);
+      } else if (lstyle == 3 ) {
+         SetLineType(2,dotted);
+      } else if (lstyle == 4 ) {
+         SetLineType(4,dasheddotted);
+      } else {
+         TString st = (TString)gStyle->GetLineStyleString(lstyle);
+         TObjArray *tokens = st.Tokenize(" ");
+         Int_t nt;
+         nt = tokens->GetEntries();
+         Int_t *linestyle = new Int_t[nt];
+         for (Int_t j = 0; j<nt; j++) {
+            Int_t it;
+            sscanf(((TObjString*)tokens->At(j))->GetName(), "%d", &it);
+            linestyle[j] = (Int_t)(it/4);
+         }
+         SetLineType(nt,linestyle);
+         delete [] linestyle;
+         delete tokens;
+      }
+   }
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetLineWidth(Width_t width)
+{
+   // Sets the line width.
+   //
+   // width - the line width in pixels
+   TAttLine::SetLineWidth(width);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetFillColor(Color_t cindex)
+{
+   // Sets color index "cindex" for fill areas.
+   TAttFill::SetFillColor(cindex);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetFillStyle(Style_t style)
+{
+   // Sets fill area style.
+   //
+   // style - compound fill area interior style
+   //         style = 1000 * interiorstyle + styleindex
+   TAttFill::SetFillStyle(style);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetMarkerColor(Color_t cindex)
+{
+   // Sets color index "cindex" for markers.
+   TAttMarker::SetMarkerColor(cindex);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetMarkerSize(Float_t markersize)
+{
+   // Sets marker size index.
+   //
+   // markersize - the marker scale factor
+   TAttMarker::SetMarkerSize(markersize);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetMarkerStyle(Style_t markerstyle)
+{
+   // Sets marker style.
+   TAttMarker::SetMarkerStyle(markerstyle);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetTextAlign(Short_t talign)
+{
+   // Sets the text alignment.
+   //
+   // talign = txalh horizontal text alignment
+   // talign = txalv vertical text alignment
+   TAttText::SetTextAlign(talign);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetTextColor(Color_t cindex)
+{
+   // Sets the color index "cindex" for text.
+   TAttText::SetTextColor(cindex);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetTextFont(Font_t fontnumber)
+{
+   // Sets the current text font number.
+   TAttText::SetTextFont(fontnumber);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetTextSize(Float_t textsize)
+{
+   // Sets the current text size to "textsize"
+   TAttText::SetTextSize(textsize);
+}
+
+//______________________________________________________________________________
+void TGQuartz::SetLineType(Int_t n, Int_t *dash)
+{
+   // Sets the line type.
+   //
+   // n       - length of the dash list
+   //           n <= 0 use solid lines
+   //           n >  0 use dashed lines described by dash(n)
+   //                 e.g. n = 4,dash = (6,3,1,3) gives a dashed-dotted line
+   //                 with dash length 6 and a gap of 7 between dashes
+   // dash(n) - dash segment lengths
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   if (n) {
+      CGFloat lengths[n];
+      for (int i=0; i<n;i++) lengths[i] = (CGFloat)dash[i];
+      CGContextSetLineDash(ctx,0,lengths,n);
+   } else {
+      CGContextSetLineDash(ctx,0,NULL,0);
+   }
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetOpacity(Int_t /*percent*/)
+{
+   // Sets opacity of the current window. This image manipulation routine
+   // works by adding to a percent amount of neutral to each pixels RGB.
+   // Since it requires quite some additional color map entries is it
+   // only supported on displays with more than > 8 color planes (> 256
+   // colors).
+}
+
+//______________________________________________________________________________
+Int_t TGQuartz::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
+{
+   // Sets text font to specified name "fontname".This function returns 0 if
+   // the specified font is found, 1 if it is not.
+   //
+   // mode - loading flag
+   //        mode = 0 search if the font exist (kCheck)
+   //        mode = 1 search the font and load it if it exists (kLoad)
+   
+   return 0;
+}
+
+
+

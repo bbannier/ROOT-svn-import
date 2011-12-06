@@ -594,8 +594,9 @@ void TGCocoa::SetDrawMode(EDrawMode /*mode*/)
    // mode = 4 set the suitable mode for cursor echo according to the vendor
 }
 
+/*
 //______________________________________________________________________________
-void TGCocoa::SetLineType(Int_t /*n*/, Int_t * /*dash*/)
+void TGCocoa::SetLineType(Int_t n, Int_t * dash)
 {
    // Sets the line type.
    //
@@ -608,7 +609,7 @@ void TGCocoa::SetLineType(Int_t /*n*/, Int_t * /*dash*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetOpacity(Int_t /*percent*/)
+void TGCocoa::SetOpacity(Int_t percent)
 {
    // Sets opacity of the current window. This image manipulation routine
    // works by adding to a percent amount of neutral to each pixels RGB.
@@ -616,7 +617,7 @@ void TGCocoa::SetOpacity(Int_t /*percent*/)
    // only supported on displays with more than > 8 color planes (> 256
    // colors).
 }
-
+*/
 //______________________________________________________________________________
 void TGCocoa::SetRGB(Int_t /*cindex*/, Float_t /*r*/, Float_t /*g*/, Float_t /*b*/)
 {
@@ -625,9 +626,9 @@ void TGCocoa::SetRGB(Int_t /*cindex*/, Float_t /*r*/, Float_t /*g*/, Float_t /*b
    // cindex  - color index
    // r, g, b - the red, green, blue intensities between 0.0 and 1.0
 }
-
+/*
 //______________________________________________________________________________
-Int_t TGCocoa::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
+Int_t TGCocoa::SetTextFont(char * fontname, ETextSetMode mode)
 {
    // Sets text font to specified name "fontname".This function returns 0 if
    // the specified font is found, 1 if it is not.
@@ -638,7 +639,7 @@ Int_t TGCocoa::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
 
    return 0;
 }
-
+*/
 //______________________________________________________________________________
 void TGCocoa::SetTextMagnitude(Float_t /*mgn*/)
 {
@@ -2084,7 +2085,7 @@ Int_t TGCocoa::SupportsExtension(const char *) const
    return -1;
 }
 
-
+/*
 //TAttLine.
 //______________________________________________________________________________
 void TGCocoa::SetLineColor(Color_t cindex)
@@ -2187,3 +2188,4 @@ void TGCocoa::SetTextSize(Float_t textsize)
    // Sets the current text size to "textsize"
    TAttText::SetTextSize(textsize);
 }
+*/

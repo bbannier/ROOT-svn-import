@@ -82,7 +82,7 @@ public:
    virtual void      SetDoubleBufferOFF();
    virtual void      SetDoubleBufferON();
    virtual void      SetDrawMode(EDrawMode mode);
-
+/*
    virtual void      SetFillColor(Color_t cindex);
    virtual void      SetFillStyle(Style_t style);
    virtual void      SetLineColor(Color_t cindex);
@@ -93,14 +93,14 @@ public:
    virtual void      SetMarkerSize(Float_t markersize);
    virtual void      SetMarkerStyle(Style_t markerstyle);
    virtual void      SetOpacity(Int_t percent);
-
+*/
    virtual void      SetRGB(Int_t cindex, Float_t r, Float_t g, Float_t b);
-   virtual void      SetTextAlign(Short_t talign=11);
-   virtual void      SetTextColor(Color_t cindex);
-   virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
-   virtual void      SetTextFont(Font_t fontnumber);
+//   virtual void      SetTextAlign(Short_t talign=11);
+//   virtual void      SetTextColor(Color_t cindex);
+//   virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
+//   virtual void      SetTextFont(Font_t fontnumber);
    virtual void      SetTextMagnitude(Float_t mgn);
-   virtual void      SetTextSize(Float_t textsize);
+//   virtual void      SetTextSize(Float_t textsize);
    virtual void      Sync(Int_t mode);
    virtual void      UpdateWindow(Int_t mode);
    virtual void      Warp(Int_t ix, Int_t iy, Window_t wid);

@@ -626,7 +626,7 @@ void TestPad::ResizePad(Option_t *)
    //     = fYtoPixelk + fYtoPixel*Log(y)
    //  ==> fYtoPixelk = pylow - Log(ymin)/beta
    //      fYtoPixel  = 1/beta
-
+   
    // Recompute subpad positions in case pad has been moved/resized
    fAbsXlowNDC  = fXlowNDC;
    fAbsYlowNDC  = fYlowNDC;
@@ -635,34 +635,38 @@ void TestPad::ResizePad(Option_t *)
    Double_t ww = fViewW;
    Double_t wh = fViewH;
    Double_t pxlow   = fAbsXlowNDC * ww;
+
    Double_t pylow   = (1-fAbsYlowNDC) * wh;
+
    Double_t pxrange = fAbsWNDC * ww;
+
    Double_t pyrange = -fAbsHNDC * wh;
+   
    // Linear X axis
    Double_t rounding = 0.00005;
    Double_t xrange  = fX2 - fX1;
-   fXtoAbsPixelk = rounding + pxlow - pxrange*fX1/xrange;      //origin at left
-   fXtoPixelk = rounding +  -pxrange*fX1/xrange;
-   fXtoPixel  = pxrange/xrange;
-   fAbsPixeltoXk = fX1 - pxlow*xrange/pxrange;
-   fPixeltoXk = fX1;
-   fPixeltoX  = xrange/pxrange;
+   fXtoAbsPixelk    = rounding + pxlow - pxrange*fX1/xrange;      //origin at left
+   fXtoPixelk       = rounding +  -pxrange*fX1/xrange;
+   fXtoPixel        = pxrange/xrange;
+   fAbsPixeltoXk    = fX1 - pxlow*xrange/pxrange;
+   fPixeltoXk       = fX1;
+   fPixeltoX        = xrange/pxrange;
    // Linear Y axis
    Double_t yrange  = fY2 - fY1;
-   fYtoAbsPixelk = rounding + pylow - pyrange*fY1/yrange;      //origin at top
-   fYtoPixelk = rounding +  -pyrange - pyrange*fY1/yrange;
-   fYtoPixel  = pyrange/yrange;
-   fAbsPixeltoYk = fY1 - pylow*yrange/pyrange;
-   fPixeltoYk = fY1;
-   fPixeltoY  = yrange/pyrange;
+   fYtoAbsPixelk    = rounding + pylow - pyrange*fY1/yrange;      //origin at top
+   fYtoPixelk       = rounding +  -pyrange - pyrange*fY1/yrange;
+   fYtoPixel        = pyrange/yrange;
+   fAbsPixeltoYk    = fY1 - pylow*yrange/pyrange;
+   fPixeltoYk       = fY1;
+   fPixeltoY        = yrange/pyrange;
    // Coefficients to convert from pad NDC coordinates to pixel coordinates
 
    fUtoAbsPixelk = rounding + pxlow;
-   fUtoPixelk = rounding;
-   fUtoPixel  = pxrange;
+   fUtoPixelk    = rounding;
+   fUtoPixel     = pxrange;
    fVtoAbsPixelk = rounding + pylow;
-   fVtoPixelk = -pyrange;
-   fVtoPixel  = pyrange;
+   fVtoPixelk    = -pyrange;
+   fVtoPixel      = pyrange;
    gVirtualX->SetLineWidth(-1);
    gVirtualX->SetTextSize(-1);
    if (fView)
