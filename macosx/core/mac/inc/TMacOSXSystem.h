@@ -29,6 +29,10 @@ public:
 
 private:
 
+   bool ProcessGuiEvents();
+   void WaitForGuiEvents();
+   void WaitForAllEvents(Long_t nextto);
+
    void AddFileHandler(TFileHandler *fh);
    TFileHandler *RemoveFileHandler(TFileHandler *fh);
 
