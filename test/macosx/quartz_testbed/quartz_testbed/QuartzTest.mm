@@ -3,6 +3,7 @@
 #include "TMath.h"
 #include "TH1.h"
 #include "TText.h"
+#include "TLatex.h"
 #include "TLine.h"
 
 
@@ -17,8 +18,9 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
                  fPad(w, h)
 {
    gVirtualX = &fQuartzSingleton;
+   unsigned i;
 
-   for (unsigned i = 0; i < nBins; ++i)
+   for (i=0; i < nBins; ++i)
       fHist->SetBinContent(i + 1, TMath::Sin(0.01 * i));
 
    fPad.cd();
@@ -27,14 +29,33 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    fPad.SetGridx(1);
    fPad.SetGridy(1);
    
-   TText *text = new TText(0.,.4,"Text Example");
-   text->SetTextColor(kGreen);
-   text->SetTextAngle(30.);
-   
    fHist->SetAxisColor(kRed);
    fHist->Draw();
+   
+   TText *text = new TText(-0.5,.7,"Text Example");
+   text->SetTextColor(kGreen-3);
+   text->SetTextAngle(30.);
+   text->SetTextSize(0.035);
+   text->SetTextFont(12);
    text->Draw();
    
+   static const char *fontname[] = {
+      "Times-Italic"         , "Times-Bold"         , "Times-BoldItalic",
+      "Helvetica"            , "Helvetica-Oblique"  , "Helvetica-Bold"  ,
+      "Helvetica-BoldOblique", "Courier"            , "Courier-Oblique" ,
+      "Courier-Bold"         , "Courier-BoldOblique", "Symbol"          ,
+      "Times-Roman"          , "ZapfDingbats"       , "Symbol"};
+   
+   TText *tl = new TText();
+   tl->SetTextSize(0.038);
+   tl->SetTextColor(kBlue-4);
+   Double_t xl=0.7,yl=0.1;
+   for (i=0; i<15; i++) {
+      tl->SetTextFont(10*(i+1)+2);
+      tl->DrawText(xl, yl, fontname[i]);
+      yl = yl+0.05;
+   }
+      
    TLine *l1  = new TLine(-2,.52,-1,.52); l1->SetLineStyle(1);   l1->Draw();
    TLine *l2  = new TLine(-2,.54,-1,.54); l2->SetLineStyle(2);   l2->Draw();
    TLine *l3  = new TLine(-2,.56,-1,.56); l3->SetLineStyle(3);   l3->Draw();
