@@ -34,34 +34,23 @@ class RooMinimizerFcn : public ROOT::Math::IBaseFunctionMultiDim {
 
  public:
 
-  RooMinimizerFcn(RooAbsReal *funct, RooMinimizer *context, 
-	       bool verbose = false);
+  RooMinimizerFcn(RooAbsReal *funct, const RooMinimizer *context);
   virtual ~RooMinimizerFcn();
 
   virtual ROOT::Math::IBaseFunctionMultiDim* Clone() const;
-  virtual unsigned int NDim() const { return _nDim; }
+  virtual UInt_t NDim() const { return _nDim; }
 
   RooArgList* GetFloatParamList() { return _floatParamList; }
   RooArgList* GetConstParamList() { return _constParamList; }
   RooArgList* GetInitFloatParamList() { return _initFloatParamList; }
   RooArgList* GetInitConstParamList() { return _initConstParamList; }
 
-  void SetEvalErrorWall(Bool_t flag) { _doEvalErrorWall = flag ; }
-  void SetPrintEvalErrors(Int_t numEvalErrors) { _printEvalErrors = numEvalErrors ; }
-  Bool_t SetLogFile(const char* inLogfile);
-  ofstream* GetLogFile() { return _logfile; }
-  void SetVerbose(Bool_t flag=kTRUE) { _verbose = flag ; }
-
-  Double_t& GetMaxFCN() { return _maxFCN; }
-  Int_t GetNumInvalidNLL() { return _numBadNLL; }
-
-  Bool_t Synchronize(std::vector<ROOT::Fit::ParameterSettings>& parameters, 
-		     Bool_t optConst, Bool_t verbose);
+  Bool_t Synchronize(std::vector<ROOT::Fit::ParameterSettings>& parameters);
   void BackProp(const ROOT::Fit::FitResult &results);  
   void ApplyCovarianceMatrix(TMatrixDSym& V); 
 
  private:
-  
+
   Double_t GetPdfParamVal(Int_t index);
   Double_t GetPdfParamErr(Int_t index);
   void SetPdfParamErr(Int_t index, Double_t value);
@@ -70,22 +59,13 @@ class RooMinimizerFcn : public ROOT::Math::IBaseFunctionMultiDim {
 
   inline Bool_t SetPdfParamVal(const Int_t &index, const Double_t &value) const;
 
-
-  virtual double DoEval(const double * x) const;  
+  virtual Double_t DoEval(const Double_t *x) const;  
 
 private:
   
   RooAbsReal *_funct;
-  RooMinimizer *_context;
-
-  mutable double _maxFCN;
-  mutable int _numBadNLL;
-  mutable int _printEvalErrors;
-  Bool_t _doEvalErrorWall;
-
-  int _nDim;
-  ofstream *_logfile;
-  bool _verbose;
+  const RooMinimizer *_context;
+  Int_t _nDim;
 
   RooArgList* _floatParamList;
   RooArgList* _constParamList;

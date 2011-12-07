@@ -121,10 +121,17 @@ RooMinimizer::RooMinimizer(RooAbsReal& function)
   _profile = kFALSE ;
   _printLevel = 1 ;
   _minimizerType = "Minuit"; // default minimizer
+  _maxFCN = -1e30; 
+  _numBadNLL = 0;
+  _printEvalErrors = 10;
+  _doEvalErrorWall = kTRUE;
+  _nFcnCalls = 0;
+  _logfile = 0;
+  
 
   if (_theFitter) delete _theFitter ;
   _theFitter = new ROOT::Fit::Fitter;
-  _fcn = new RooMinimizerFcn(_func,this,_verbose);
+  _fcn = new RooMinimizerFcn(_func,this);
   _theFitter->Config().SetMinimizer(_minimizerType.c_str());
   setEps(1.0); // default tolerance
   // default max number of calls
@@ -138,8 +145,7 @@ RooMinimizer::RooMinimizer(RooAbsReal& function)
   setErrorLevel(_func->defaultErrorLevel()) ;
 
   // Declare our parameters to MINUIT
-  _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		    _optConst,_verbose) ;
+  _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
 
   // Now set default verbosity
   if (RooMsgService::instance().silentMode()) {
@@ -256,8 +262,7 @@ RooFitResult* RooMinimizer::fit(const char* options)
 //_____________________________________________________________________________
 Int_t RooMinimizer::minimize(const char* type, const char* alg)
 {
-  _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		    _optConst,_verbose) ;
+  _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
 
   _theFitter->Config().SetMinimizer(type,alg);
 
@@ -287,8 +292,7 @@ Int_t RooMinimizer::migrad()
   // propagated back the RooRealVars representing
   // the floating parameters in the MINUIT operation
 
-  _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		    _optConst,_verbose) ;
+  _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
   profileStart() ;
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
   RooAbsReal::clearEvalErrorLog() ;
@@ -323,8 +327,7 @@ Int_t RooMinimizer::hesse()
   }
   else {
 
-    _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		    _optConst,_verbose) ;
+    _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
     profileStart() ;
     RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
     RooAbsReal::clearEvalErrorLog() ;
@@ -360,8 +363,7 @@ Int_t RooMinimizer::minos()
   }
   else {
 
-    _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		      _optConst,_verbose) ;
+    _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
     profileStart() ;
     RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
     RooAbsReal::clearEvalErrorLog() ;
@@ -398,8 +400,7 @@ Int_t RooMinimizer::minos(const RooArgSet& minosParamList)
   }
   else if (minosParamList.getSize()>0) {
 
-    _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		      _optConst,_verbose) ;
+    _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
     profileStart() ;
     RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
     RooAbsReal::clearEvalErrorLog() ;
@@ -448,8 +449,7 @@ Int_t RooMinimizer::seek()
   // propagated back the RooRealVars representing
   // the floating parameters in the MINUIT operation
 
-  _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		    _optConst,_verbose) ;
+  _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
   profileStart() ;
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
   RooAbsReal::clearEvalErrorLog() ;
@@ -477,8 +477,7 @@ Int_t RooMinimizer::simplex()
   // propagated back the RooRealVars representing
   // the floating parameters in the MINUIT operation
 
-  _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		    _optConst,_verbose) ;
+  _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
   profileStart() ;
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
   RooAbsReal::clearEvalErrorLog() ;
@@ -506,8 +505,7 @@ Int_t RooMinimizer::improve()
   // propagated back the RooRealVars representing
   // the floating parameters in the MINUIT operation
 
-  _fcn->Synchronize(_theFitter->Config().ParamsSettings(),
-		    _optConst,_verbose) ;
+  _fcn->Synchronize(_theFitter->Config().ParamsSettings()) ;
   profileStart() ;
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
   RooAbsReal::clearEvalErrorLog() ;
@@ -608,7 +606,7 @@ RooFitResult* RooMinimizer::save(const char* userName, const char* userTitle)
   fitRes->setStatus(_status) ;
   fitRes->setCovQual(_theFitter->GetMinimizer()->CovMatrixStatus()) ;
   fitRes->setMinNLL(_theFitter->Result().MinFcnValue()) ;
-  fitRes->setNumInvalidNLL(_fcn->GetNumInvalidNLL()) ;
+  fitRes->setNumInvalidNLL(_numBadNLL);
   fitRes->setEDM(_theFitter->Result().Edm()) ;
   fitRes->setFinalParList(saveFloatFinalList) ;
   if (!_extV) {
@@ -869,5 +867,30 @@ RooFitResult* RooMinimizer::lastMinuitFit(const RooArgList& varList)
   return res;
 
 }
+
+Bool_t RooMinimizer::setLogFile(const char* inLogfile)
+{
+  // Change the file name for logging of a RooMinimizer of all MINUIT steppings
+  // through the parameter space. If inLogfile is null, the current log file
+  // is closed and logging is stopped.
+
+  if (_logfile) {
+    oocoutI((TObject*)0,Minimization) << "RooMinimizerFcn::setLogFile: closing previous log file" << endl ;
+    _logfile->close() ;
+    delete _logfile ;
+    _logfile = 0 ;
+  }
+  _logfile = new ofstream(inLogfile) ;
+  if (!_logfile->good()) {
+    oocoutI((TObject*)0,Minimization) << "RooMinimizerFcn::setLogFile: cannot open file " << inLogfile << endl ;
+    _logfile->close() ;
+    delete _logfile ;
+    _logfile= 0;
+  }
+
+  return kFALSE ;
+
+}
+
 
 #endif

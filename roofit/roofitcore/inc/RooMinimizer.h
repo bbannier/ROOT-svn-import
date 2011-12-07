@@ -47,7 +47,7 @@ public:
   void setErrorLevel(Double_t level) ;
   void setEps(Double_t eps) ;
   void optimizeConst(Int_t flag) ;
-  void setEvalErrorWall(Bool_t flag) { _fcn->SetEvalErrorWall(flag); }
+  void setEvalErrorWall(Bool_t flag) { _doEvalErrorWall = flag; }
 
   RooFitResult* fit(const char* options) ;
 
@@ -67,10 +67,10 @@ public:
 		   Double_t n4=0, Double_t n5=0, Double_t n6=0) ;
 
   Int_t setPrintLevel(Int_t newLevel) ; 
-  void setPrintEvalErrors(Int_t numEvalErrors) { _fcn->SetPrintEvalErrors(numEvalErrors); }
-  void setVerbose(Bool_t flag=kTRUE) { _verbose = flag ; _fcn->SetVerbose(flag); }
+  void setPrintEvalErrors(Int_t numEvalErrors) { _printEvalErrors = numEvalErrors; }
+  void setVerbose(Bool_t flag=kTRUE) { _verbose = flag ; }
   void setProfile(Bool_t flag=kTRUE) { _profile = flag ; }
-  Bool_t setLogFile(const char* logf=0) { return _fcn->SetLogFile(logf); }
+  Bool_t setLogFile(const char* logf=0) ;
 
   void setMinimizerType(const char* type) ;
 
@@ -79,17 +79,22 @@ public:
 
   void saveStatus(const char* label, Int_t status) { _statusHistory.push_back(std::pair<std::string,int>(label,status)) ; }
   
+  inline Int_t getNFcnCalls() const { return _nFcnCalls; }
+  inline void resetNFcnCalls() { _nFcnCalls = 0; }
+
 protected:
 
   friend class RooAbsPdf ;
+  friend class RooMinimizerFcn ;
+
   void applyCovarianceMatrix(TMatrixDSym& V) ;
 
   void profileStart() ;
   void profileStop() ;
 
   inline Int_t getNPar() const { return _fcn->NDim() ; }
-  inline ofstream* logfile() const { return _fcn->GetLogFile(); }
-  inline Double_t& maxFCN() { return _fcn->GetMaxFCN() ; }
+  inline ofstream* logfile() const { return _logfile; }
+  inline Double_t& maxFCN() { return _maxFCN; }
 
 private:
 
@@ -107,6 +112,13 @@ private:
 
   RooMinimizerFcn *_fcn;
   std::string _minimizerType;
+  
+  mutable Double_t _maxFCN;
+  mutable Int_t _numBadNLL;
+  mutable Int_t _printEvalErrors;
+  Bool_t _doEvalErrorWall;
+  mutable Int_t _nFcnCalls;
+  ofstream *_logfile;
 
   static ROOT::Fit::Fitter *_theFitter ;
 

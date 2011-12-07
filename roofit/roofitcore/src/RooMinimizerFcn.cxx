@@ -38,14 +38,10 @@
 
 #include "RooMinimizer.h"
 
-RooMinimizerFcn::RooMinimizerFcn(RooAbsReal *funct, RooMinimizer* context,
-			   bool verbose) :
+RooMinimizerFcn::RooMinimizerFcn(RooAbsReal *funct, const RooMinimizer* context) :
   _funct(funct), _context(context),
   // Reset the *largest* negative log-likelihood value we have seen so far
-  _maxFCN(-1e30), _numBadNLL(0),  
-  _printEvalErrors(10), _doEvalErrorWall(kTRUE),
-  _nDim(0), _logfile(0),
-  _verbose(verbose)
+  _nDim(0)
 { 
 
   // Examine parameter list
@@ -96,11 +92,10 @@ RooMinimizerFcn::~RooMinimizerFcn()
 
 ROOT::Math::IBaseFunctionMultiDim* RooMinimizerFcn::Clone() const 
 {  
-  return new RooMinimizerFcn(_funct,_context,_verbose);
+  return new RooMinimizerFcn(_funct,_context);
 }
 
-Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& parameters, 
-				 Bool_t optConst, Bool_t verbose)
+Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& parameters)
 {
 
   // Internal function to synchronize TMinimizer with current
@@ -131,7 +126,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
       constStatChange=kTRUE ;
       _nDim++ ;
 
-      if (verbose) {
+      if (_context->_verbose) {
 	oocoutI(_context,Minimization) << "RooMinimizerFcn::synchronize: parameter " 
 				     << par->GetName() << " is now floating." << endl ;
       }
@@ -140,7 +135,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
     // Test if value changed
     if (par->getVal()!= oldpar->getVal()) {
       constValChange=kTRUE ;      
-      if (verbose) {
+      if (_context->_verbose) {
 	oocoutI(_context,Minimization) << "RooMinimizerFcn::synchronize: value of constant parameter " 
 				       << par->GetName() 
 				       << " changed from " << oldpar->getVal() << " to " 
@@ -204,7 +199,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
 	} else {
 	  pstep=1 ;
 	}						  
-	if(verbose) {
+	if(_context->_verbose) {
 	  oocoutW(_context,Minimization) << "RooMinimizerFcn::synchronize: WARNING: no initial error estimate available for "
 					 << par->GetName() << ": using " << pstep << endl;
 	}
@@ -243,7 +238,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
       // Parameter changes floating -> constant : update only value if necessary
       if (oldVar!=par->getVal()) {
 	parameters[index].SetValue(par->getVal());
-	if (verbose) {
+	if (_context->_verbose) {
 	  oocoutI(_context,Minimization) << "RooMinimizerFcn::synchronize: value of parameter " 
 					 << par->GetName() << " changed from " << oldVar 
 					 << " to " << par->getVal() << endl ;
@@ -251,7 +246,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
       }
       parameters[index].Fix();
       constStatChange=kTRUE ;
-      if (verbose) {
+      if (_context->_verbose) {
 	oocoutI(_context,Minimization) << "RooMinimizerFcn::synchronize: parameter " 
 				       << par->GetName() << " is now fixed." << endl ;
       }
@@ -263,7 +258,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
 	parameters[index].SetValue(par->getVal());
 	constValChange=kTRUE ;
 
-	if (verbose) {
+	if (_context->_verbose) {
 	  oocoutI(_context,Minimization) << "RooMinimizerFcn::synchronize: value of fixed parameter " 
 					 << par->GetName() << " changed from " << oldVar 
 					 << " to " << par->getVal() << endl ;
@@ -276,7 +271,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
 	parameters[index].Release();
 	constStatChange=kTRUE ;
 	
-	if (verbose) {
+	if (_context->_verbose) {
 	  oocoutI(_context,Minimization) << "RooMinimizerFcn::synchronize: parameter " 
 					 << par->GetName() << " is now floating." << endl ;
 	}
@@ -290,7 +285,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
       }
 
       // Inform user about changes in verbose mode
-      if (verbose) {
+      if (_context->_verbose) {
 	// if ierr<0, par was moved from the const list and a message was already printed
 
 	if (oldVar!=par->getVal()) {
@@ -313,7 +308,7 @@ Bool_t RooMinimizerFcn::Synchronize(std::vector<ROOT::Fit::ParameterSettings>& p
     }
   }
 
-  if (optConst) {
+  if (_context->_optConst) {
     if (constStatChange) {
 
       RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CollectErrors) ;
@@ -398,31 +393,6 @@ void RooMinimizerFcn::BackProp(const ROOT::Fit::FitResult &results)
 
 }
 
-Bool_t RooMinimizerFcn::SetLogFile(const char* inLogfile) 
-{
-  // Change the file name for logging of a RooMinimizer of all MINUIT steppings
-  // through the parameter space. If inLogfile is null, the current log file
-  // is closed and logging is stopped.
-
-  if (_logfile) {
-    oocoutI(_context,Minimization) << "RooMinimizerFcn::setLogFile: closing previous log file" << endl ;
-    _logfile->close() ;
-    delete _logfile ;
-    _logfile = 0 ;
-  }
-  _logfile = new ofstream(inLogfile) ;
-  if (!_logfile->good()) {
-    oocoutI(_context,Minimization) << "RooMinimizerFcn::setLogFile: cannot open file " << inLogfile << endl ;
-    _logfile->close() ;
-    delete _logfile ;
-    _logfile= 0;
-  }  
-  
-  return kFALSE ;
-
-}
-
-
 void RooMinimizerFcn::ApplyCovarianceMatrix(TMatrixDSym& V) 
 {
   // Apply results of given external covariance matrix. i.e. propagate its errors
@@ -444,7 +414,7 @@ Bool_t RooMinimizerFcn::SetPdfParamVal(const Int_t &index, const Double_t &value
 {
   RooRealVar* par = (RooRealVar*)_floatParamList->at(index);
   if (par->getVal()!=value) {
-    if (_verbose) cout << par->GetName() << "=" << value << ", " ;
+    if (_context->_verbose) cout << par->GetName() << "=" << value << ", " ;
     
     par->setVal(value);
     return kTRUE;
@@ -454,24 +424,25 @@ Bool_t RooMinimizerFcn::SetPdfParamVal(const Int_t &index, const Double_t &value
 }
 
 
-double RooMinimizerFcn::DoEval(const double *x) const 
+Double_t RooMinimizerFcn::DoEval(const Double_t *x) const 
 {
 
   // Set the parameter values for this iteration
-  for (int index = 0; index < _nDim; index++) {
-    if (_logfile) (*_logfile) << x[index] << " " ;
+  for (Int_t index = 0; index < _nDim; index++) {
+    if (_context->_logfile) (*(_context->_logfile)) << x[index] << " " ;
     SetPdfParamVal(index,x[index]);
   }
 
   // Calculate the function for these parameters
-  double fvalue = _funct->getVal();
+  Double_t fvalue = _funct->getVal();
+  _context->_nFcnCalls++ ;
   if (RooAbsPdf::evalError() || RooAbsReal::numEvalErrors()>0) {
 
-    if (_printEvalErrors>=0) {
+    if (_context->_printEvalErrors>=0) {
 
-      if (_doEvalErrorWall) {
+      if (_context->_doEvalErrorWall) {
         oocoutW(_context,Minimization) << "RooMinimizerFcn: Minimized function has error status." << endl 
-				       << "Returning maximum FCN so far (" << _maxFCN 
+				       << "Returning maximum FCN so far (" << _context->_maxFCN 
 				       << ") to force MIGRAD to back out of this region. Error log follows" << endl ;
       } else {
         oocoutW(_context,Minimization) << "RooMinimizerFcn: Minimized function has error status but is ignored" << endl ;
@@ -488,25 +459,25 @@ double RooMinimizerFcn::DoEval(const double *x) const
       delete iter ;
       ooccoutW(_context,Minimization) << endl ;
       
-      RooAbsReal::printEvalErrors(ooccoutW(_context,Minimization),_printEvalErrors) ;
+      RooAbsReal::printEvalErrors(ooccoutW(_context,Minimization),_context->_printEvalErrors) ;
       ooccoutW(_context,Minimization) << endl ;
     } 
 
-    if (_doEvalErrorWall) {
-      fvalue = _maxFCN ;
+    if (_context->_doEvalErrorWall) {
+      fvalue = _context->_maxFCN ;
     }
 
     RooAbsPdf::clearEvalError() ;
     RooAbsReal::clearEvalErrorLog() ;
-    _numBadNLL++ ;
-  } else if (fvalue>_maxFCN) {
-    _maxFCN = fvalue ;
+    _context->_numBadNLL++ ;
+  } else if (fvalue>_context->_maxFCN) {
+    _context->_maxFCN = fvalue ;
   }
       
   // Optional logging
-  if (_logfile) 
-    (*_logfile) << setprecision(15) << fvalue << setprecision(4) << endl;
-  if (_verbose) {
+  if (_context->_logfile) 
+    (*(_context->_logfile)) << setprecision(15) << fvalue << setprecision(4) << endl;
+  if (_context->_verbose) {
     cout << "\nprevFCN = " << setprecision(10) 
          << fvalue << setprecision(4) << "  " ;
     cout.flush() ;
