@@ -168,19 +168,10 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const 
    
    CGContextRef ctx = (CGContextRef)fCtx;
  
-   CGContextSelectFont (ctx, 
-                        "Helvetica-Bold",
-                        10,
-                        kCGEncodingMacRoman);
-   
    // Text color
    SetColor(GetTextColor());
 
-   // Text drawing mode
-///CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
-   CGContextSetTextDrawingMode (ctx, kCGTextFill); 
-
-   // Text rotation
+  // Text rotation
    CGAffineTransform tm; 
    tm =  CGAffineTransformMakeRotation (-(angle*kPI)/180.);
    tm =  CGAffineTransformScale (tm, 1., -1.); 
@@ -224,6 +215,7 @@ void TGQuartz::SetContext(void *ctx)
 void TGQuartz::SetLineColor(Color_t cindex)
 {
    // Sets color index "cindex" for drawing lines.
+
    TAttLine::SetLineColor(cindex);
 }
 
@@ -297,7 +289,7 @@ void TGQuartz::SetLineWidth(Width_t width)
    // width - the line width in pixels
    
    CGContextRef ctx = (CGContextRef)fCtx;
-   if (fLineWidth == width) return;
+   if (fLineWidth == width || width<0) return;
    fLineWidth = width;
    CGFloat w = (CGFloat) fLineWidth;
    CGContextSetLineWidth(ctx, w);
@@ -372,7 +364,28 @@ void TGQuartz::SetTextColor(Color_t cindex)
 void TGQuartz::SetTextFont(Font_t fontnumber)
 {
    // Sets the current text font number.
+   
    TAttText::SetTextFont(fontnumber);
+   
+   static const char *fontname[] = {
+      "Times-Italic"         , "Times-Bold"         , "Times-BoldItalic",
+      "Helvetica"            , "Helvetica-Oblique"  , "Helvetica-Bold"  ,
+      "Helvetica-BoldOblique", "Courier"            , "Courier-Oblique" ,
+      "Courier-Bold"         , "Courier-BoldOblique", "Symbol"          ,
+      "Times-Roman"          , "ZapfDingbats"       , "Symbol"};
+      
+   Int_t font = abs(fTextFont)/10;
+   if( font > 15 || font < 1) font = 1;
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextSelectFont (ctx, 
+                        fontname[font-1],
+                        GetTextSize(),
+                        kCGEncodingMacRoman);
+                        
+   // Text drawing mode
+///CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
+   CGContextSetTextDrawingMode (ctx, kCGTextFill);  
 }
 
 
@@ -380,7 +393,10 @@ void TGQuartz::SetTextFont(Font_t fontnumber)
 void TGQuartz::SetTextSize(Float_t textsize)
 {
    // Sets the current text size to "textsize"
+   
    TAttText::SetTextSize(textsize);
+   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextSetFontSize(ctx, textsize);
 }
 
 
