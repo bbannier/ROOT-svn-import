@@ -1,4 +1,4 @@
-//#define DEBUG_ROOT_COCOA
+#define DEBUG_ROOT_COCOA
 
 #include <stdexcept>
 #include <vector>
@@ -105,7 +105,9 @@ class TMacOSXSystemPrivate {
    };
 
 #ifdef DEBUG_ROOT_COCOA
+public:
    ~TMacOSXSystemPrivate();
+private:
 #endif
 
    friend class TMacOSXSystem;
@@ -281,7 +283,7 @@ bool TMacOSXSystem::ProcessGuiEvents()
          hadGuiEvent = true;
          //Process event.
 #ifdef DEBUG_ROOT_COCOA
-         NSLog(@"Got event %@", event);
+         NSLog(@"Non blocking processing: got event %@", event);
 #endif
       } else
          break;
@@ -302,11 +304,7 @@ void TMacOSXSystem::WaitForGuiEvents()
    NSLog(@"blocking call now - WaitForGuiEvents");
 #endif
 
-   NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : YES];
-
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"Got event %@", event);
-#endif
+   /*NSEvent *event = */[NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : NO];
 }
 
 //______________________________________________________________________________
@@ -323,14 +321,14 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
    }
 
    NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : YES];
-      
+
    if (event.type == NSApplicationDefined) {
       //TODO: this check is only for test, do it right later (somehow identify an event in a CFFileDescriptor).
       //Remove from event queue.
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got app defined event, try to remove from the queue");
 #endif
-      event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : nil inMode : NSDefaultRunLoopMode dequeue : YES];
+//      event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : nil inMode : NSDefaultRunLoopMode dequeue : YES];
 
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"???");
@@ -368,6 +366,7 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got a GUI (?) event %@", event);
 #endif
+      [NSApp postEvent : event atStart : YES];
    }
    
    fPimpl->CloseFileDescriptors();

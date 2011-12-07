@@ -893,6 +893,7 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
       contentRect.size.height = h;
       NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
       NSWindow *newWindow = [[NSWindow alloc] initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
+      [newWindow setAcceptsMouseMovedEvents : YES];
       
       RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : contentRect];
       [newWindow setContentView : view];
