@@ -1,4 +1,4 @@
-#define DEBUG_ROOT_COCOA
+//#define DEBUG_ROOT_COCOA
 
 #include <stdexcept>
 #include <vector>
@@ -260,6 +260,12 @@ TMacOSXSystem::TMacOSXSystem()
 #ifdef DEBUG_ROOT_COCOA
    NSLog(@"NSApplication is %@", [NSApplication sharedApplication]);
 #endif
+
+   //
+   ProcessSerialNumber psn = {0, kCurrentProcess}; //GetCurrentProcess(&psn);
+   TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+   SetFrontProcess(&psn);
+   //
 }
 
 //______________________________________________________________________________
@@ -366,7 +372,8 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got a GUI (?) event %@", event);
 #endif
-      [NSApp postEvent : event atStart : YES];
+      //[NSApp postEvent : event atStart : YES];
+      //Process GUI event HERE, DO NOT post it again (this will lead later to failure in CFFileDescriptorCreate for stdin (why????).
    }
    
    fPimpl->CloseFileDescriptors();
