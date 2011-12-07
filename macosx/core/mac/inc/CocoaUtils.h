@@ -47,30 +47,33 @@ template<class RefType>
 class CFGuard {
 public:
    CFGuard()
-      : fFdRef()
+      : fFdRef(0)
    {
    }
    
    explicit CFGuard(RefType ref, bool initRetain)
                : fFdRef(ref)
    {
-      if (initRetain)
+      if (initRetain && ref)
          CFRetain(ref);
    }
    
    CFGuard(const CFGuard &rhs)
    {
       fFdRef = rhs.fFdRef;
-      CFRetain(fFdRef);
+      if (fFdRef)
+         CFRetain(fFdRef);
    }
    
    //TODO: Check ravlue references also.
    CFGuard &operator = (const CFGuard &rhs)
    {
       if (this != &rhs) {
-         CFRelease(fFdRef);
+         if (fFdRef)
+            CFRelease(fFdRef);
          fFdRef = rhs.fFdRef;
-         CFRetain(fFdRef);
+         if (fFdRef)
+            CFRetain(fFdRef);
       }
       
       return *this;
@@ -78,7 +81,8 @@ public:
 
    ~CFGuard()
    {
-      CFRelease(fFdRef);
+      if (fFdRef)
+         CFRelease(fFdRef);
    }
    
    RefType Get()const
