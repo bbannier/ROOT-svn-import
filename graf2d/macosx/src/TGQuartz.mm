@@ -378,10 +378,18 @@ void TGQuartz::SetTextFont(Font_t fontnumber)
    if( font > 15 || font < 1) font = 1;
    
    CGContextRef ctx = (CGContextRef)fCtx;
-   CGContextSelectFont (ctx, 
-                        fontname[font-1],
-                        GetTextSize(),
-                        kCGEncodingMacRoman);
+   
+   if (font<12 || font==13) {
+      CGContextSelectFont (ctx, 
+                           fontname[font-1],
+                           GetTextSize(),
+                           kCGEncodingMacRoman);
+    } else {
+      CGContextSelectFont (ctx, 
+                           fontname[font-1],
+                           GetTextSize(),
+                           kCGEncodingFontSpecific);
+    }          
                         
    // Text drawing mode
 ///CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
