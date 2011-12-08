@@ -334,40 +334,13 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got app defined event, try to remove from the queue");
 #endif
-//      event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : nil inMode : NSDefaultRunLoopMode dequeue : YES];
-
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"???");
-#endif
 
       int mxfd = TMath::Max(fMaxrfd, fMaxwfd);
       mxfd++;
       // nothing ready, so setup select call
       *fReadready  = *fReadmask;
       *fWriteready = *fWritemask;
-         
-      fNfd = UnixSelect(mxfd, fReadready, fWriteready, nextto);
-      if (fNfd < 0 && fNfd != -2) {
-         TFdSet t;
-         for (int fd = 0; fd < mxfd; ++fd) {
-            t.Set(fd);
-            if (fReadmask->IsSet(fd)) {
-               const int rc = UnixSelect(fd + 1, &t, 0, 0);
-               if (rc < 0 && rc != -2) {
-                  SysError("DispatchOneEvent", "select: read error on %d\n", fd);
-                  fReadmask->Clr(fd);
-               }
-            }
-            if (fWritemask->IsSet(fd)) {
-               const int rc = UnixSelect(fd + 1, 0, &t, 0);
-               if (rc < 0 && rc != -2) {
-                  SysError("DispatchOneEvent", "select: write error on %d\n", fd);
-                  fWritemask->Clr(fd);
-               }
-            }
-            t.Clr(fd);
-         }
-      }
+      fNfd = 1;
    } else {
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got a GUI (?) event %@", event);
