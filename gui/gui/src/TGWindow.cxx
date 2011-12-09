@@ -57,13 +57,10 @@ TGWindow::TGWindow(const TGWindow *p, Int_t x, Int_t y, UInt_t w, UInt_t h,
    if (p) {
       fClient = p->fClient;
       if (fClient->IsEditable()) type = wtype & ~1;
-
       fParent = p;
+
       if (fParent && fParent->IsMapSubwindows()) {
-         fId = gVirtualX->CreateWindow(fParent->fId, x, y,
-                                     TMath::Max(w, (UInt_t) 1),
-                                     TMath::Max(h, (UInt_t) 1), border,
-                                     depth, clss, visual, attr, type);
+         fId = gVirtualX->CreateWindow(fParent->fId, x, y, TMath::Max(w, (UInt_t) 1), TMath::Max(h, (UInt_t) 1), border, depth, clss, visual, attr, type);
          fClient->RegisterWindow(this);
       }
       fNeedRedraw = kFALSE;

@@ -5,7 +5,6 @@
 int main(int argc, char ** argv)
 {
    TApplication app("test_app", &argc, argv);
-
    TGMainFrame *frame = new TGMainFrame(0, 400, 400);
 
    TGHorizontalFrame *nestedFrame = new TGHorizontalFrame(frame, 400, 400);
