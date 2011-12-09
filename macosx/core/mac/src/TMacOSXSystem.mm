@@ -260,12 +260,6 @@ TMacOSXSystem::TMacOSXSystem()
 #ifdef DEBUG_ROOT_COCOA
    NSLog(@"NSApplication is %@", [NSApplication sharedApplication]);
 #endif
-
-   //
-   ProcessSerialNumber psn = {0, kCurrentProcess}; //GetCurrentProcess(&psn);
-   TransformProcessType(&psn, kProcessTransformToForegroundApplication);
-   SetFrontProcess(&psn);
-   //
 }
 
 //______________________________________________________________________________
