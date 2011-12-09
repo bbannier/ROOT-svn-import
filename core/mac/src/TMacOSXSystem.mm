@@ -308,7 +308,7 @@ void TMacOSXSystem::WaitForGuiEvents()
 }
 
 //______________________________________________________________________________
-void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
+void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
 {
    //Wait for one event, do not dequeue (will be done by the following non-blocking call).
 #ifdef DEBUG_ROOT_COCOA
@@ -329,8 +329,6 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
       NSLog(@"got app defined event, try to remove from the queue");
 #endif
 
-      int mxfd = TMath::Max(fMaxrfd, fMaxwfd);
-      mxfd++;
       // nothing ready, so setup select call
       *fReadready  = *fReadmask;
       *fWriteready = *fWritemask;
