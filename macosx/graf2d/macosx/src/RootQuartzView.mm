@@ -18,7 +18,7 @@
 - (void) addChildView : (RootQuartzView *)childView
 {
    [self addSubview : childView];
-   [childView setParent : self];
+   [childView setParentView : self];
 }
 
 //______________________________________________________________________________
