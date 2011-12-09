@@ -56,7 +56,7 @@ CocoaWindowAttributes::CocoaWindowAttributes()
 }
 
 //______________________________________________________________________________
-CocoaWindowAttributes::CocoaWindowAttributes(const WindowAttributes_t &winAttr, NSWindow *nsWin)
+CocoaWindowAttributes::CocoaWindowAttributes(const WindowAttributes_t &winAttr, NSObject *nsWin)
                          : fROOTWindowAttribs(winAttr),
                            fCocoaWindow(nsWin)
 {
@@ -70,7 +70,7 @@ CocoaPrivate::CocoaPrivate()
    Util::AutoreleasePool pool;
    
    [NSApplication sharedApplication];
-   
+
    InitX11RootWindow();
 }
 
@@ -115,7 +115,7 @@ void CocoaPrivate::InitX11RootWindow()
 }
 
 //______________________________________________________________________________
-unsigned CocoaPrivate::RegisterWindow(NSWindow *nsWin, const WindowAttributes_t &winAttr)
+unsigned CocoaPrivate::RegisterWindow(NSObject *nsWin, const WindowAttributes_t &winAttr)
 {
    //In case of X11, gVirtualX->CreateWindow returns some 'descriptor' (integer number),
    //which is valid for X11 calls and window can be identified by this descriptor.
@@ -135,7 +135,7 @@ unsigned CocoaPrivate::RegisterWindow(NSWindow *nsWin, const WindowAttributes_t 
 
 #ifdef DEBUG_ROOT_COCOA
    if (fWindows.find(newID) != fWindows.end()) {
-      std::cout<<"new window ID "<<newID<<" is still in use\n";
+      NSLog(@"new window ID %u is still in use\n", newID);
       throw std::runtime_error("window id is still in use");
    }
 #endif
@@ -146,13 +146,27 @@ unsigned CocoaPrivate::RegisterWindow(NSWindow *nsWin, const WindowAttributes_t 
 }
 
 //______________________________________________________________________________
+id<RootGUIElement> CocoaPrivate::GetParentWindow(unsigned winID)
+{
+   auto winIter = fWindows.find(winID);
+
+#ifdef DEBUG_ROOT_COCOA
+   if (winIter == fWindows.end()) {
+      NSLog(@"Requested non-registered window with ID %u", winID);
+      throw std::runtime_error("Non-existing window requested");
+   }
+#endif
+   return (id<RootGUIElement>)winIter->second.fCocoaWindow.Get();
+}
+
+//______________________________________________________________________________
 void CocoaPrivate::DeleteWindow(unsigned winID)
 {
    auto winIter = fWindows.find(winID);
 
 #ifdef DEBUG_ROOT_COCOA
    if (winIter == fWindows.end()) {
-      std::cout<<"Attempt to delete window, which is not registered : "<<winID<<std::endl;
+      NSLog(@"Attempt to delete window, which is not registered : %u", winID);
       throw std::runtime_error("Non existing winID in DeleteWindow");
    }
 #endif
