@@ -110,9 +110,23 @@ void TGQuartz::DrawCellArray(Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y
 
 
 //______________________________________________________________________________
-void TGQuartz::DrawFillArea(Int_t /*n*/, TPoint * /*xy*/)
+void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
 {
-   //CGContextRef ctx = (CGContextRef)fCtx;
+   // Draw a filled area through all points.
+   // n         : number of points
+   // xy        : list of points
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+
+   SetColor(GetFillColor());
+
+   CGContextBeginPath (ctx);
+
+   CGContextMoveToPoint (ctx, xy[0].fX, xy[0].fY);
+
+   for (Int_t i=1; i<n; i++) CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
+
+   CGContextFillPath(ctx);
 }
 
 
@@ -146,10 +160,11 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
    SetColor(GetLineColor());
 
    CGContextBeginPath (ctx);
-   for (Int_t i=1; i<n; i++) {
-      CGContextMoveToPoint    (ctx, xy[i-1].fX, xy[i-1].fY);
-      CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
-   }
+   
+   CGContextMoveToPoint (ctx, xy[0].fX, xy[0].fY);
+
+   for (Int_t i=1; i<n; i++) CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
+      
    CGContextStrokePath(ctx);
 }
 

@@ -4,6 +4,8 @@
 #include "TH1.h"
 #include "TText.h"
 #include "TLatex.h"
+#include "TBox.h"
+#include "TPolyLine.h"
 #include "TLine.h"
 
 
@@ -30,6 +32,7 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    fPad.SetGridy(1);
    
    fHist->SetAxisColor(kRed);
+   fHist->SetLineColor(kRed+2);
    fHist->Draw();
    
    TText *text = new TText(-0.5,.7,"Text Example");
@@ -46,15 +49,30 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
       "Courier-Bold"         , "Courier-BoldOblique", "Symbol"          ,
       "Times-Roman"          , "ZapfDingbats"       , "Symbol"};
    
-   TText *tl = new TText();
+   TLatex *tl = new TLatex();
    tl->SetTextSize(0.038);
    tl->SetTextColor(kBlue-4);
    Double_t xl=0.7,yl=0.1;
    for (i=0; i<15; i++) {
       tl->SetTextFont(10*(i+1)+2);
       tl->DrawText(xl, yl, fontname[i]);
+       tl->DrawLatex(xl-0.8, yl, "a x^{2y}");
       yl = yl+0.05;
    }
+   
+   TText *symb = new TText(-2.8,.05,"abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+   symb->SetTextSize(0.035);
+   symb->SetTextFont(122);
+   symb->Draw();
+
+   TBox *b = new TBox(-2,0.4,-1,0.5);
+   b->Draw();
+   
+   Double_t xpl[4] = {-2,-1,0,-1};
+   Double_t ypl[4] = {.4,.5,.5,.4};
+   TPolyLine *pl = new TPolyLine(4,xpl,ypl);
+   pl->SetFillColor(kRed+3);
+   pl->Draw("f");
       
    TLine *l1  = new TLine(-2,.52,-1,.52); l1->SetLineStyle(1);   l1->Draw();
    TLine *l2  = new TLine(-2,.54,-1,.54); l2->SetLineStyle(2);   l2->Draw();
