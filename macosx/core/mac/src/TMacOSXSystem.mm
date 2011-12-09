@@ -124,6 +124,8 @@ private:
    
    bool SetFileDescriptors();
    void CloseFileDescriptors();
+   
+   const ROOT::MacOSX::Util::AutoreleasePool fPool;
 };
 
 #ifdef DEBUG_ROOT_COCOA
@@ -348,6 +350,7 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
 void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
 {
    //Here I try to emulate TUnixSystem's behavior, which is quite twisted.
+   const ROOT::MacOSX::Util::AutoreleasePool pool;
    
    Bool_t pollOnce = pendingOnly;
 
