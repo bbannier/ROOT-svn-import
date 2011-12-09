@@ -19,6 +19,7 @@ namespace Details = ROOT::MacOSX::Details;
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
+            : fForegroundProcess(false)
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
@@ -736,6 +737,21 @@ void TGCocoa::MapRaised(Window_t wid)
       throw std::runtime_error("TGCocoa::MapRaised, bad window id");
    }
 #endif
+
+   if (!fForegroundProcess) {
+      ProcessSerialNumber psn = {0, kCurrentProcess}; //GetCurrentProcess(&psn);
+      TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+      SetFrontProcess(&psn);
+      fForegroundProcess = true;
+   } else {
+      ProcessSerialNumber psn = {};    
+      if (GetCurrentProcess(&psn) == noErr)
+         SetFrontProcess(&psn);
+#ifdef DEBUG_ROOT_COCOA
+      else
+         NSLog(@"SetFrontProcess failed");
+#endif
+   }
 
    NSWindow *cocoaWin = (NSWindow *)fPimpl->fWindows[wid].fCocoaWindow.Get();
    [cocoaWin orderFront : nil];

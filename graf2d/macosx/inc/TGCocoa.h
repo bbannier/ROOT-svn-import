@@ -304,6 +304,7 @@ private:
 
    //As soon as ROOT can be compiled with 0x11 library, replace auto_ptr.
    std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl;//!
+   bool fForegroundProcess;
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
