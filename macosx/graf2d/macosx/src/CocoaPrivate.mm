@@ -146,7 +146,7 @@ unsigned CocoaPrivate::RegisterWindow(NSObject *nsWin, const WindowAttributes_t 
 }
 
 //______________________________________________________________________________
-id<RootGUIElement> CocoaPrivate::GetParentWindow(unsigned winID)
+id<RootGUIElement> CocoaPrivate::GetWindow(unsigned winID)
 {
    auto winIter = fWindows.find(winID);
 
@@ -173,6 +173,10 @@ void CocoaPrivate::DeleteWindow(unsigned winID)
    
    //Probably, I'll need some additional cleanup here later. Now just delete NSWindow and
    //reuse its id.
+   id window = winIter->second.fCocoaWindow.Get();
+   if ([window respondsToSelector : @selector(removeFromSuperview)])
+      [window removeFromSuperview];
+
    fFreeWindowIDs.push_back(winID);
    fWindows.erase(winIter);//StrongReference should do its work here.
 }

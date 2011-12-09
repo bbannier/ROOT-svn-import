@@ -7,7 +7,12 @@
 @protocol RootGUIElement <NSObject>
 @required
 
--(void) addChildView : (RootQuartzView *)child;
+- (void) addChildView : (RootQuartzView *)child;
+
+- (RootQuartzView *) getTopLevelView;
+
+- (void) setParent : (id<RootGUIElement>)parent;
+- (id<RootGUIElement>) parent;
 
 @end
 
