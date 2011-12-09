@@ -12,4 +12,10 @@
    CGContextFillRect(ctx, dirtyRect);
 }
 
+//______________________________________________________________________________
+- (void) addChildView : (RootQuartzView *)childView
+{
+   [self addSubview : childView];
+}
+
 @end

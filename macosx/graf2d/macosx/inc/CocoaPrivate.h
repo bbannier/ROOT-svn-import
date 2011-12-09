@@ -14,6 +14,7 @@
 #include "GuiTypes.h"
 #endif
 
+@protocol RootGUIElement;
 @class NSWindow;
 
 class TGCocoa;
@@ -27,7 +28,7 @@ struct CocoaWindowAttributes {
    Util::StrongReference fCocoaWindow;
    
    CocoaWindowAttributes();
-   CocoaWindowAttributes(const WindowAttributes_t &winAttr, NSWindow *nsWin);
+   CocoaWindowAttributes(const WindowAttributes_t &winAttr, NSObject *nsWin);
 };
 
 class CocoaPrivate {
@@ -42,7 +43,8 @@ private:
 
    void InitX11RootWindow();
 
-   unsigned RegisterWindow(NSWindow *nsWin, const WindowAttributes_t &winAttr);
+   unsigned RegisterWindow(NSObject *nsWin, const WindowAttributes_t &winAttr);
+   id<RootGUIElement> GetParentWindow(unsigned windowID);
    void DeleteWindow(unsigned windowID);
    
    X11::ColorParser fX11ColorParser;

@@ -8,6 +8,7 @@
 
 #include  <Cocoa/Cocoa.h>
 
+#include "RootQuartzWindow.h"
 #include "RootQuartzView.h"
 #include "CocoaPrivate.h"
 #include "CocoaUtils.h"
@@ -883,52 +884,91 @@ void TGCocoa::SetWindowBackgroundPixmap(Window_t /*wid*/, Pixmap_t /*pxm*/)
    // pixmap "pxm".
 }
 
+namespace {
+
+//______________________________________________________________________________
+RootQuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t border, Int_t depth,
+                                       UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t * /*attr*/, UInt_t /*wtype*/)
+{
+   NSRect contentRect = {};
+   contentRect.origin.x = x;
+   contentRect.origin.y = y;
+   contentRect.size.width = w;
+   contentRect.size.height = h;
+   NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+   RootQuartzWindow *newWindow = [[RootQuartzWindow alloc] initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
+   [newWindow setAcceptsMouseMovedEvents : YES];
+   
+   contentRect.origin = CGPointZero;
+   RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : contentRect];
+   newWindow.fTopLevelView = view;
+   [view release];
+
+   return newWindow;
+}
+
+//______________________________________________________________________________
+RootQuartzView *CreateChildView(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t border, Int_t depth,
+                                UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t * /*attr*/, UInt_t /*wtype*/)
+{
+   NSRect contentRect = {};
+   contentRect.origin = CGPointZero;
+   contentRect.size.width = w;
+   contentRect.size.height = h;
+   
+   RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : contentRect];
+   
+   return view;
+}
+
+//______________________________________________________________________________
+void SetWindowAttributes(const SetWindowAttributes_t * /*src*/, WindowAttributes_t * /*dst*/)
+{
+ /*  dst->fX = x;
+   dst->fY = y;
+   dst->fWidth = w;
+   dst->fHeight = h;*/
+}
+
+}
+
 //______________________________________________________________________________
 Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t border, Int_t depth,
-                               UInt_t /*clss*/, void * /*visual*/,
-                               SetWindowAttributes_t * /*attr*/,
-                               UInt_t /*wtype*/)
+                               UInt_t clss, void * visual, SetWindowAttributes_t * attr, UInt_t wtype)
 {
-   //Do not know at the moment, what to do with ALL this possible X11 parameters, which
+   //Do not know at the moment, what to do with ALL these possible X11 parameters, which
    //means nothing for Cocoa. TODO: create window correctly to emulate what ROOT wants from TGCocoa.
    //This implementation is just a sketch to try.
    //
 #ifdef DEBUG_ROOT_COCOA
-   std::cout<<"CreateWindow was called "<<parent<<' '<<x<<' '<<y<<' '<<w<<' '<<h<<' '<<border<<' '<<depth<<std::endl;
-#endif
-   //
-
+   NSLog(@"CreateWindow was called %d %d %d %u %u %u %d", parent, x, y, w, h, border, depth);
+#endif   
    //Check if really need this.
    ROOT::MacOSX::Util::AutoreleasePool pool;
+
+   WindowAttributes_t winAttr = {};
+   //
+   winAttr.fX = x;
+   winAttr.fY = y;
+   winAttr.fWidth = w;
+   winAttr.fHeight = h;
+   //
+   
+   SetWindowAttributes(attr, &winAttr);
    
    if (!parent) {//parent == root window.
-      NSRect contentRect = {};
-      contentRect.origin.x = x;
-      contentRect.origin.y = y;
-      contentRect.size.width = w;
-      contentRect.size.height = h;
-      NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
-      NSWindow *newWindow = [[NSWindow alloc] initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
-      [newWindow setAcceptsMouseMovedEvents : YES];
-      
-      RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : contentRect];
-      [newWindow setContentView : view];
-      [view release];
-
-      WindowAttributes_t winAttr;
-      winAttr.fX = x;
-      winAttr.fY = y;
-      winAttr.fWidth = w;
-      winAttr.fHeight = h;
-      
+      RootQuartzWindow *newWindow = CreateTopLevelWindow(x, y, w, h, border, depth, clss, visual, attr, wtype);
       const Window_t result = fPimpl->RegisterWindow(newWindow, winAttr);
       [newWindow release];//Owned by fPimpl now.
       return result;
    } else {
-      //If it's a child window, create NSView???
+      id<RootGUIElement> parentWin = fPimpl->GetParentWindow(parent);
+      RootQuartzView *childView = CreateChildView(x, y, w, h, border, depth, clss, visual, attr, wtype);
+      const Window_t result = fPimpl->RegisterWindow(childView, winAttr);
+      [parent addChildView : childView];
+      [childView release];
+      return result;
    }
-
-   return 0;
 }
 
 //______________________________________________________________________________
