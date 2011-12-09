@@ -1,6 +1,8 @@
 #import "RootQuartzView.h"
 
-@implementation RootQuartzView
+@implementation RootQuartzView {
+   RootQuartzView *fParentView;
+}
 
 //______________________________________________________________________________
 - (void) drawRect : (NSRect)dirtyRect
@@ -16,6 +18,19 @@
 - (void) addChildView : (RootQuartzView *)childView
 {
    [self addSubview : childView];
+   [childView setParent : self];
+}
+
+//______________________________________________________________________________
+- (RootQuartzView *) parentView
+{
+   return fParentView;
+}
+
+//______________________________________________________________________________
+- (void) setParentView : (RootQuartzView *)parent
+{
+   fParentView = parent;
 }
 
 @end

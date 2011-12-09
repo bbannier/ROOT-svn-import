@@ -8,6 +8,8 @@
 
 @interface RootQuartzView : NSView<RootGUIElement>
 - (void) addChildView : (RootQuartzView *)childView;
+- (void) setParentView : (RootQuartzView *)parent;
+- (RootQuartzView *) parentView;
 @end
 
 

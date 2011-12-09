@@ -960,13 +960,15 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
       RootQuartzWindow *newWindow = CreateTopLevelWindow(x, y, w, h, border, depth, clss, visual, attr, wtype);
       const Window_t result = fPimpl->RegisterWindow(newWindow, winAttr);
       [newWindow release];//Owned by fPimpl now.
+
       return result;
    } else {
-      id<RootGUIElement> parentWin = fPimpl->GetParentWindow(parent);
+      id<RootGUIElement> parentWin = fPimpl->GetWindow(parent);
       RootQuartzView *childView = CreateChildView(x, y, w, h, border, depth, clss, visual, attr, wtype);
       const Window_t result = fPimpl->RegisterWindow(childView, winAttr);
       [parent addChildView : childView];
       [childView release];
+
       return result;
    }
 }

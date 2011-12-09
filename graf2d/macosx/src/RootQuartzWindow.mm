@@ -18,4 +18,17 @@
    [fTopLevelView addSubview : view];
 }
 
+//______________________________________________________________________________
+- (void) setParentView : (RootQuartzView *)parent
+{
+   //
+}
+
+//______________________________________________________________________________
+- (RootQuartzView *) parentView
+{
+   return nil;
+}
+
+
 @end
