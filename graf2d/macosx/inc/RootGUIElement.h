@@ -8,11 +8,8 @@
 @required
 
 - (void) addChildView : (RootQuartzView *)child;
-
-- (RootQuartzView *) getTopLevelView;
-
-- (void) setParent : (id<RootGUIElement>)parent;
-- (id<RootGUIElement>) parent;
+- (void) setParentView : (id<RootGUIElement>)parent;
+- (id<RootGUIElement>) parentView;
 
 @end
 

@@ -283,12 +283,14 @@ bool TMacOSXSystem::ProcessGuiEvents()
       NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : nil inMode : NSDefaultRunLoopMode dequeue : YES];
       if (event) {
          hadGuiEvent = true;
+         [NSApp sendEvent : event];
          //Process event.
 #ifdef DEBUG_ROOT_COCOA
          NSLog(@"Non blocking processing: got event %@", event);
 #endif
-      } else
+      } else {
          break;
+      }
    }
 
 #ifdef DEBUG_ROOT_COCOA
@@ -306,7 +308,8 @@ void TMacOSXSystem::WaitForGuiEvents()
    NSLog(@"blocking call now - WaitForGuiEvents");
 #endif
 
-   /*NSEvent *event = */[NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : NO];
+   NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : YES];
+   [NSApp postEvent : event atStart : YES];
 }
 
 //______________________________________________________________________________
@@ -339,8 +342,7 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got a GUI (?) event %@", event);
 #endif
-      //[NSApp postEvent : event atStart : YES];
-      //Process GUI event HERE, DO NOT post it again (this will lead later to failure in CFFileDescriptorCreate for stdin (why????).
+      [NSApp postEvent : event atStart : YES];
    }
    
    fPimpl->CloseFileDescriptors();
