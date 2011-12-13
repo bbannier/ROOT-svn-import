@@ -6,6 +6,7 @@
 
 @synthesize fWinID;
 
+/*
 //______________________________________________________________________________
 - (void) drawRect : (NSRect)dirtyRect
 {
@@ -15,6 +16,8 @@
    CGContextSetRGBFillColor(ctx, 1.f, 0.3f, 0.f, 1.f);
    CGContextFillRect(ctx, dirtyRect);
 }
+*/
+
 
 //______________________________________________________________________________
 - (void) addChildView : (RootQuartzView *)childView
@@ -34,5 +37,12 @@
 {
    fParentView = parent;
 }
+
+//______________________________________________________________________________
+- (void) clearWidget
+{
+
+}
+
 
 @end

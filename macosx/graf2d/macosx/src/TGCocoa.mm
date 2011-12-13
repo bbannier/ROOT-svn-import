@@ -911,10 +911,13 @@ RootQuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UIn
    NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
    RootQuartzWindow *newWindow = [[RootQuartzWindow alloc] initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
    [newWindow setAcceptsMouseMovedEvents : YES];
-   
+
+
+   //Adjust view rect to exclude title bar????
+
    contentRect.origin = CGPointZero;
    RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : contentRect];
-   newWindow.fTopLevelView = view;
+   newWindow.fTopLevelView = view;   
    [view release];
 
    return newWindow;
@@ -1374,7 +1377,9 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    // x, y - coordinates, which are relative to the origin
    // w, h - the width and height which define the rectangle dimensions
 //#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TGCocoa::ClearArea %lu %d %d %u %u", wid, x, y, w, h);
+//   NSLog(@"TGCocoa::ClearArea %lu %d %d %u %u", wid, x, y, w, h);
+   id<RootGUIElement> widget = fPimpl->GetWindow(wid);
+   [widget clearWidget];
 //#endif
 }
 
