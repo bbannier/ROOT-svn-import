@@ -18,6 +18,9 @@
 - (void) windowDidResize : (NSNotification *)notification;
 - (void) windowDidMove : (NSNotification *)notification;
 
+//TEST
+- (void) clearWidget;
+
 @property (nonatomic, assign) RootQuartzView *fTopLevelView;
 @property (nonatomic, assign) unsigned fWinID;
 

@@ -1,5 +1,7 @@
 #define DEBUG_ROOT_COCOA
 
+#import <stdlib.h>
+
 #import "RootQuartzWindow.h"
 #import "RootQuartzView.h"
 
@@ -57,7 +59,7 @@
 #pragma mark - NSWindowDelegate methods.
 
 //______________________________________________________________________________
-- (void) queueConfigureNotify : (NSNotification *)notification
+- (void) queueConfigureNotify : (NSNotification *)notification expose : (BOOL) expose
 {
    TGCocoa *cocoa = (TGCocoa *)gVirtualX;//Uh-oh!
    RootQuartzWindow *win = (RootQuartzWindow *)notification.object;
@@ -73,8 +75,10 @@
    
    cocoa->QueueEvent(newEvent);
    
-   newEvent.fType = kExpose;//Baby did a bad bad thing :)))
-   cocoa->QueueEvent(newEvent);
+   if (expose) {
+      newEvent.fType = kExpose;//Baby did a bad bad thing :)))
+      cocoa->QueueEvent(newEvent);
+   }
 }
 
 //______________________________________________________________________________
@@ -83,7 +87,7 @@
    //Let's generate ConfigureNotify event.
    //Event_t newEvent = {};
    if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
-      [self queueConfigureNotify : notification];
+      [self queueConfigureNotify : notification expose : YES];
    }
 #ifdef DEBUG_ROOT_COCOA
    else
@@ -96,7 +100,7 @@
 {
    //Let's generate ConfigureNotify event.
    if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
-      [self queueConfigureNotify : notification];
+      [self queueConfigureNotify : notification expose : NO];
    }
 #ifdef DEBUG_ROOT_COCOA
    else
@@ -127,6 +131,34 @@
       NSLog(@"windowDidResize: Object %@ is not a RootQuartzWindow", notification.object);
 #endif
 
+}
+
+#pragma mark - Test
+
+- (void) clearWidget
+{
+  /* 
+   NSGraphicsContext *nsCtx = [NSGraphicsContext graphicsContextWithWindow : self];
+   if (!nsCtx) {
+//      NSLog(@"context creation failed");
+   } else {
+      CGContextRef cgCtx = (CGContextRef)[nsCtx graphicsPort];
+      const CGFloat r = rand() % 255 / 255.f;
+      const CGFloat g = rand() % 255 / 255.f;
+      const CGFloat b = rand() % 255 / 255.f;
+   
+      CGContextSetRGBFillColor(cgCtx, r, g, b, 1.f);
+      CGRect frame = self.frame;
+      frame.origin = CGPointZero;
+      
+      NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+      NSRect newRect = [NSWindow contentRectForFrameRect : frame styleMask : styleMask];
+//      NSLog(@"content rect is: %g %g %g %g", newRect.origin.x, newRect.origin.y, newRect.size.width, newRect.size.height);
+      
+      CGContextFillRect(cgCtx, newRect);
+      [nsCtx flushGraphics];
+      NSLog(@"flush graphics");
+   }*/
 }
 
 @end
