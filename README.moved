@@ -1,0 +1,7 @@
+cling has moved to
+http://root.cern.ch/svn/root/trunk/cint/cling
+
+To update an existing checkout area please use
+$ svn switch http://root.cern.ch/svn/root/trunk/cint/cling
+
+Yours, the cling team.
