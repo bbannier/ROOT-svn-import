@@ -8,11 +8,15 @@
 
 @class RootQuartzView;
 
-@interface RootQuartzWindow : NSWindow<RootGUIElement>
+@interface RootQuartzWindow : NSWindow<RootGUIElement, NSWindowDelegate>
 
 - (void) addChildView : (RootQuartzView *)childView;
 - (void) setParentView : (RootQuartzView *)parent;
 - (RootQuartzView *) parentView;
+
+//NSWindowDelegate.
+- (void) windowDidResize : (NSNotification *)notification;
+- (void) windowDidMove : (NSNotification *)notification;
 
 @property (nonatomic, assign) RootQuartzView *fTopLevelView;
 @end

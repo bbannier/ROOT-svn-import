@@ -699,13 +699,13 @@ void TGCocoa::WritePixmap(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/, char * /*px
 
 //---- Methods used for GUI -----
 //______________________________________________________________________________
-void TGCocoa::MapWindow(Window_t wid)
+void TGCocoa::MapWindow(Window_t /*wid*/)
 {
    // Maps the window "wid" and all of its subwindows that have had map
    // requests. This function has no effect if the window is already mapped.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::MapWindow, wid == "<<wid<<std::endl;
-#endif
+//#ifdef DEBUG_ROOT_COCOA
+//   std::cout<<"TGCocoa::MapWindow, wid == "<<wid<<std::endl;
+//#endif
 }
 
 //______________________________________________________________________________
@@ -755,7 +755,8 @@ void TGCocoa::MapRaised(Window_t wid)
    }
 
    NSWindow *cocoaWin = (NSWindow *)fPimpl->fWindows[wid].fCocoaWindow.Get();
-   [cocoaWin orderFront : nil];
+   [cocoaWin makeKeyAndOrderFront : cocoaWin];
+//   [cocoaWin orderFront : nil];
 }
 
 //______________________________________________________________________________
@@ -783,13 +784,13 @@ void TGCocoa::DestroySubwindows(Window_t /*wid*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::RaiseWindow(Window_t wid)
+void TGCocoa::RaiseWindow(Window_t /*wid*/)
 {
    // Raises the specified window to the top of the stack so that no
    // sibling window obscures it.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::RaiseWindow was called with wid == "<<wid<<std::endl;
-#endif
+//#ifdef DEBUG_ROOT_COCOA
+//   std::cout<<"TGCocoa::RaiseWindow was called with wid == "<<wid<<std::endl;
+//#endif
 }
 
 //______________________________________________________________________________
@@ -887,7 +888,7 @@ void TGCocoa::SetWindowBackgroundPixmap(Window_t /*wid*/, Pixmap_t /*pxm*/)
 namespace {
 
 //______________________________________________________________________________
-RootQuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t border, Int_t depth,
+RootQuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
                                        UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t * /*attr*/, UInt_t /*wtype*/)
 {
    NSRect contentRect = {};
@@ -908,7 +909,7 @@ RootQuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UIn
 }
 
 //______________________________________________________________________________
-RootQuartzView *CreateChildView(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t border, Int_t depth,
+RootQuartzView *CreateChildView(Int_t /*x*/, Int_t /*y*/, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
                                 UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t * /*attr*/, UInt_t /*wtype*/)
 {
    NSRect contentRect = {};
@@ -1913,7 +1914,7 @@ void TGCocoa::GetRegionBox(Region_t /*reg*/, Rectangle_t * /*rect*/)
 }
 
 //______________________________________________________________________________
-char **TGCocoa::ListFonts(const char *fontname, Int_t /*max*/, Int_t &count)
+char **TGCocoa::ListFonts(const char * /*fontname*/, Int_t /*max*/, Int_t &count)
 {
    // Returns list of font names matching fontname regexp, like "-*-times-*".
    // The pattern string can contain any characters, but each asterisk (*)
