@@ -123,7 +123,7 @@ void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & color)
 {
    // Returns the current RGB value for the pixel in the "color" structure
 #ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::QueryColor\n";
+   NSLog(@"TGCocoa::QueryColor");
 #endif
    color.fRed = color.fPixel >> 16 & 0xFF;
    color.fGreen = color.fPixel >> 7 & 0xFF;
@@ -131,11 +131,22 @@ void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & color)
 }
 
 //______________________________________________________________________________
-void TGCocoa::NextEvent(Event_t & /*event*/)
+void TGCocoa::NextEvent(Event_t &event)
 {
 #ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::NextEvent\n";
+   NSLog(@"TGCocoa::NextEvent");
 #endif
+   if (fEventQueue.size()) {
+      event = fEventQueue.back();
+      fEventQueue.pop_back();
+   }
+#ifdef DEBUG_ROOT_COCOA
+   else {
+      NSLog(@"TGCocoa::NextEvent: NextEvent called, but event queue is empty!");
+      throw std::runtime_error("NextEvent called on empty event queue");
+   }
+#endif
+   
 }
 
 //______________________________________________________________________________
@@ -1272,8 +1283,7 @@ Int_t TGCocoa::EventsPending()
 {
    // Returns the number of events that have been received from the X server
    // but have not been removed from the event queue.
-
-   return 0;
+   return Int_t(fEventQueue.size());
 }
 
 //______________________________________________________________________________
@@ -2150,107 +2160,28 @@ Int_t TGCocoa::SupportsExtension(const char *) const
    return -1;
 }
 
-/*
-//TAttLine.
 //______________________________________________________________________________
-void TGCocoa::SetLineColor(Color_t cindex)
+void TGCocoa::QueueEvent(const Event_t &event)
 {
-   // Sets color index "cindex" for drawing lines.
-   TAttLine::SetLineColor(cindex);
+   //Window delegate (and views?) calls this function
+   //and adds ROOT's events into the queue (which later
+   //will be processed by TGClient and ROOT's GUI).
+   fEventQueue.push_front(event);
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetLineStyle(Style_t linestyle)
+Int_t TGCocoa::CocoaToRootY(Int_t y)const
 {
-   // Sets the line style.
-   //
-   // linestyle <= 1 solid
-   // linestyle  = 2 dashed
-   // linestyle  = 3 dotted
-   // linestyle  = 4 dashed-dotted
-   TAttLine::SetLineStyle(linestyle);
+   if (fPimpl->fWindows.size()) {
+      //"Window" with index 0 is a fake "root" window,
+      //it has the sizes of a screen.
+      const WindowAttributes_t &attr = fPimpl->fWindows[0].fROOTWindowAttribs;
+      return attr.fHeight - y;
+   } else {
+#ifdef DEBUG_ROOT_COCOA
+      NSLog(@"CocoaToRootY: No root window found");
+      throw std::runtime_error("No root window found");
+#endif
+      return y;//Should never happen.
+   }
 }
-
-//______________________________________________________________________________
-void TGCocoa::SetLineWidth(Width_t width)
-{
-   // Sets the line width.
-   //
-   // width - the line width in pixels
-   TAttLine::SetLineWidth(width);
-}
-
-//TAttFill.
-//______________________________________________________________________________
-void TGCocoa::SetFillColor(Color_t cindex)
-{
-   // Sets color index "cindex" for fill areas.
-   TAttFill::SetFillColor(cindex);
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetFillStyle(Style_t style)
-{
-   // Sets fill area style.
-   //
-   // style - compound fill area interior style
-   //         style = 1000 * interiorstyle + styleindex
-   TAttFill::SetFillStyle(style);
-}
-
-//TAttMarker.
-//______________________________________________________________________________
-void TGCocoa::SetMarkerColor(Color_t cindex)
-{
-   // Sets color index "cindex" for markers.
-   TAttMarker::SetMarkerColor(cindex);
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetMarkerSize(Float_t markersize)
-{
-   // Sets marker size index.
-   //
-   // markersize - the marker scale factor
-   TAttMarker::SetMarkerSize(markersize);
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetMarkerStyle(Style_t markerstyle)
-{
-   // Sets marker style.
-   TAttMarker::SetMarkerStyle(markerstyle);
-}
-
-//TAttText.
-//______________________________________________________________________________
-void TGCocoa::SetTextAlign(Short_t talign)
-{
-   // Sets the text alignment.
-   //
-   // talign = txalh horizontal text alignment
-   // talign = txalv vertical text alignment
-   TAttText::SetTextAlign(talign);
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetTextColor(Color_t cindex)
-{
-   // Sets the color index "cindex" for text.
-   TAttText::SetTextColor(cindex);
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetTextFont(Font_t fontnumber)
-{
-   // Sets the current text font number.
-   TAttText::SetTextFont(fontnumber);
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetTextSize(Float_t textsize)
-{
-   // Sets the current text size to "textsize"
-   TAttText::SetTextSize(textsize);
-}
-*/

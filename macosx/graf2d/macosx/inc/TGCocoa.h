@@ -2,6 +2,7 @@
 #define ROOT_TGCocoa
 
 #include <memory>
+#include <deque>
 
 #ifndef ROOT_TVirtualX
 #include "TVirtualX.h"
@@ -297,6 +298,15 @@ public:
    virtual void GetTextExtent(UInt_t &w, UInt_t &h, char *mess);
   */    
    using TVirtualX::SetTextFont;
+   
+   
+   //These are additional functions to work with events.
+   //RootQuartzWindow will place events to event queue,
+   //to process it later somewhere else (in TMacOSXSystem, probably).
+   void QueueEvent(const Event_t &event);
+   //
+   //This function here is only in dev. version. TODO: structure this better.
+   Int_t CocoaToRootY(Int_t y)const;
 
 private:
    TGCocoa(const TGCocoa &rhs);
@@ -305,6 +315,8 @@ private:
    //As soon as ROOT can be compiled with 0x11 library, replace auto_ptr.
    std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl;//!
    bool fForegroundProcess;
+   
+   std::deque<Event_t> fEventQueue;
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
