@@ -10,6 +10,9 @@
 - (void) addChildView : (RootQuartzView *)childView;
 - (void) setParentView : (RootQuartzView *)parent;
 - (RootQuartzView *) parentView;
+
+@property (nonatomic, assign) unsigned fWinID;
+
 @end
 
 

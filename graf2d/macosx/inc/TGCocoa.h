@@ -305,7 +305,7 @@ public:
    //to process it later somewhere else (in TMacOSXSystem, probably).
    void QueueEvent(const Event_t &event);
    //
-   //This function here is only in dev. version. TODO: structure this better.
+   //These functions here are only in dev. version. TODO: structure this better.
    Int_t CocoaToRootY(Int_t y)const;
 
 private:

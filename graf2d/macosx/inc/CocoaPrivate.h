@@ -44,7 +44,7 @@ private:
    void InitX11RootWindow();
 
    unsigned RegisterWindow(NSObject *nsWin, const WindowAttributes_t &winAttr);
-   id<RootGUIElement> GetWindow(unsigned windowID);
+   id<RootGUIElement> GetWindow(unsigned windowID)const;
    void DeleteWindow(unsigned windowID);
    
    X11::ColorParser fX11ColorParser;

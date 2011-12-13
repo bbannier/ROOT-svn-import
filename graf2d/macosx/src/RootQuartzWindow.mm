@@ -10,6 +10,7 @@
 @implementation RootQuartzWindow
 
 @synthesize fTopLevelView;
+@synthesize fWinID;
 
 //______________________________________________________________________________
 - (id) initWithContentRect : (NSRect)contentRect styleMask : (NSUInteger)windowStyle backing : (NSBackingStoreType)bufferingType defer : (BOOL)deferCreation
@@ -68,7 +69,11 @@
    newEvent.fWidth = (Int_t)frame.size.width;
    newEvent.fHeight = (Int_t)frame.size.height;
    newEvent.fType = kConfigureNotify;
+   newEvent.fWindow = win.fWinID;
    
+   cocoa->QueueEvent(newEvent);
+   
+   newEvent.fType = kExpose;//Baby did a bad bad thing :)))
    cocoa->QueueEvent(newEvent);
 }
 
@@ -97,6 +102,31 @@
    else
       NSLog(@"windowDidResize: Object %@ is not a RootQuartzWindow", notification.object);
 #endif
+}
+
+//______________________________________________________________________________
+- (void) windowDidBecomeKey : (NSNotification *)notification
+{
+   //Let's generate ConfigureNotify event.
+   if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
+      TGCocoa *cocoa = (TGCocoa *)gVirtualX;//Uh-oh!
+      RootQuartzWindow *win = (RootQuartzWindow *)notification.object;
+      const NSRect frame = win.frame;
+   
+      Event_t newEvent = {};
+      newEvent.fX = (Int_t)frame.origin.x;
+      newEvent.fY = cocoa->CocoaToRootY((Int_t)frame.origin.y);
+      newEvent.fWidth = (Int_t)frame.size.width;
+      newEvent.fHeight = (Int_t)frame.size.height;
+      newEvent.fType = kExpose;
+      newEvent.fWindow = win.fWinID;
+      cocoa->QueueEvent(newEvent);
+   }
+#ifdef DEBUG_ROOT_COCOA
+   else
+      NSLog(@"windowDidResize: Object %@ is not a RootQuartzWindow", notification.object);
+#endif
+
 }
 
 @end

@@ -882,11 +882,12 @@ void TGCocoa::ReparentWindow(Window_t /*wid*/, Window_t /*pid*/, Int_t /*x*/, In
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetWindowBackground(Window_t /*wid*/, ULong_t /*color*/)
+void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
 {
    // Sets the background of the window "wid" to the specified color value
    // "color". Changing the background does not cause the window contents
    // to be changed.
+   NSLog(@"SetWindowBackground called for wid %lu, color is %xu", wid, (UInt_t)color);
 }
 
 //______________________________________________________________________________
@@ -971,6 +972,9 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
    if (!parent) {//parent == root window.
       RootQuartzWindow *newWindow = CreateTopLevelWindow(x, y, w, h, border, depth, clss, visual, attr, wtype);
       const Window_t result = fPimpl->RegisterWindow(newWindow, winAttr);
+
+      newWindow.fWinID = result;
+
       [newWindow release];//Owned by fPimpl now.
 
       return result;
@@ -978,6 +982,9 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
       id<RootGUIElement> parentWin = fPimpl->GetWindow(parent);
       RootQuartzView *childView = CreateChildView(x, y, w, h, border, depth, clss, visual, attr, wtype);
       const Window_t result = fPimpl->RegisterWindow(childView, winAttr);
+      
+      childView.fWinID = result;
+      
       [parentWin addChildView : childView];
       [childView release];
 
@@ -1343,8 +1350,7 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawLine(Drawable_t /*wid*/, GContext_t /*gc*/,
-                         Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/)
+void TGCocoa::DrawLine(Drawable_t wid, GContext_t /*gc*/, Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/)
 {
    // Uses the components of the specified GC to draw a line between the
    // specified set of points (x1, y1) and (x2, y2).
@@ -1355,11 +1361,11 @@ void TGCocoa::DrawLine(Drawable_t /*wid*/, GContext_t /*gc*/,
    // GC mode-dependent components: foreground, background, tile, stipple,
    // tile-stipple-x-origin, tile-stipple-y-origin, dash-offset, dash-list.
    // (see also the GCValues_t structure)
+   NSLog(@"TGCocoa::DrawLine for wid %lu", wid);
 }
 
 //______________________________________________________________________________
-void TGCocoa::ClearArea(Window_t /*wid*/, Int_t /*x*/, Int_t /*y*/,
-                          UInt_t /*w*/, UInt_t /*h*/)
+void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    // Paints a rectangular area in the specified window "id" according to
    // the specified dimensions with the window's background pixel or pixmap.
@@ -1367,16 +1373,15 @@ void TGCocoa::ClearArea(Window_t /*wid*/, Int_t /*x*/, Int_t /*y*/,
    // wid - specifies the window
    // x, y - coordinates, which are relative to the origin
    // w, h - the width and height which define the rectangle dimensions
+//#ifdef DEBUG_ROOT_COCOA
+   NSLog(@"TGCocoa::ClearArea %lu %d %d %u %u", wid, x, y, w, h);
+//#endif
 }
 
 //______________________________________________________________________________
-Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/,
-                             Event_t &/*ev*/)
+Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t &/*ev*/)
 {
-   // Check if there is for window "id" an event of type "type". If there
-   // is it fills in the event structure and return true. If no such event
-   // return false.
-
+   //Event was removed from queue already. X11 ...
    return kFALSE;
 }
 
