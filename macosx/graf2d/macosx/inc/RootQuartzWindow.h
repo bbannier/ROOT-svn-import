@@ -19,6 +19,9 @@
 - (void) windowDidMove : (NSNotification *)notification;
 
 @property (nonatomic, assign) RootQuartzView *fTopLevelView;
+@property (nonatomic, assign) unsigned fWinID;
+
+
 @end
 
 #endif

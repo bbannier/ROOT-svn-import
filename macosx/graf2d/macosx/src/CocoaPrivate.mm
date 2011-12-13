@@ -146,7 +146,7 @@ unsigned CocoaPrivate::RegisterWindow(NSObject *nsWin, const WindowAttributes_t 
 }
 
 //______________________________________________________________________________
-id<RootGUIElement> CocoaPrivate::GetWindow(unsigned winID)
+id<RootGUIElement> CocoaPrivate::GetWindow(unsigned winID)const
 {
    auto winIter = fWindows.find(winID);
 

@@ -11,6 +11,8 @@
 - (void) setParentView : (id<RootGUIElement>)parent;
 - (id<RootGUIElement>) parentView;
 
+@property (nonatomic, assign) unsigned fWinID;
+
 @end
 
 #endif

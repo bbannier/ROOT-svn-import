@@ -4,6 +4,8 @@
    RootQuartzView *fParentView;
 }
 
+@synthesize fWinID;
+
 //______________________________________________________________________________
 - (void) drawRect : (NSRect)dirtyRect
 {
