@@ -71,6 +71,7 @@ public:
 
 extern "C" {
 
+//______________________________________________________________________________
 void TMacOSXSystem_ReadCallback(CFFileDescriptorRef /*fdref*/, CFOptionFlags /*callBackTypes*/, void * /*info*/)
 {
 #ifdef DEBUG_ROOT_COCOA
@@ -82,6 +83,7 @@ void TMacOSXSystem_ReadCallback(CFFileDescriptorRef /*fdref*/, CFOptionFlags /*c
    [NSApp postEvent : fdEvent atStart : NO];
 }
 
+//______________________________________________________________________________
 void TMacOSXSystem_WriteCallback(CFFileDescriptorRef /*fdref*/, CFOptionFlags /*callBackTypes*/, void * /*info*/)
 {
 #ifdef DEBUG_ROOT_COCOA
@@ -129,6 +131,7 @@ private:
 };
 
 #ifdef DEBUG_ROOT_COCOA
+
 //______________________________________________________________________________
 TMacOSXSystemPrivate::~TMacOSXSystemPrivate()
 {
@@ -309,7 +312,8 @@ void TMacOSXSystem::WaitForGuiEvents()
 #endif
 
    NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : YES];
-   [NSApp postEvent : event atStart : YES];
+   //[NSApp postEvent : event atStart : YES];
+   [NSApp sendEvent : event];
 }
 
 //______________________________________________________________________________
@@ -342,7 +346,8 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got a GUI (?) event %@", event);
 #endif
-      [NSApp postEvent : event atStart : YES];
+      //[NSApp postEvent : event atStart : YES];
+      [NSApp sendEvent : event];
    }
    
    fPimpl->CloseFileDescriptors();
@@ -358,7 +363,11 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
 
    while (true) {
       //First handle any GUI events. Non-blocking call.
-      if (gXDisplay && ProcessGuiEvents()) {
+      
+      //I'm not sure at all, if I need to mimic 
+      //TUnixSystem's logic here. But if I do not use
+      //gXDisplay->Notify, ROOT's GUI will not work.
+      if (gXDisplay && gXDisplay->Notify()) {
          if (pendingOnly)
             return;
       }

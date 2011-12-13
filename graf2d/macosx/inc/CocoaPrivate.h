@@ -52,6 +52,8 @@ private:
    unsigned fCurrentWindowID;
    std::vector<unsigned> fFreeWindowIDs;
    std::map<unsigned, CocoaWindowAttributes> fWindows;
+   
+   NSEvent *fPendingEvent;
 };
 
 }
