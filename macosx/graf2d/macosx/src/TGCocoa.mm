@@ -4,6 +4,7 @@
 #include <iostream>
 #endif
 
+#include <algorithm>
 #include <stdexcept>
 
 #include  <Cocoa/Cocoa.h>
@@ -1383,10 +1384,45 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
 //#endif
 }
 
+namespace {
+
+class EventRemovalPredicate {
+public:
+   EventRemovalPredicate(Window_t wid, EGEventType type) : fWid(wid), fType(type)
+   {
+   }
+   Bool_t operator () (const Event_t &ev) const
+   {
+      if (fWid == ev.fWindow && ev.fType == fType)
+         return kTRUE;
+      return kFALSE;
+   }
+private:
+   Window_t fWid;
+   EGEventType fType;
+};
+
+}
+
 //______________________________________________________________________________
-Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t &/*ev*/)
+Bool_t TGCocoa::CheckEvent(Window_t wid, EGEventType type, Event_t &ev)
 {
    //Event was removed from queue already. X11 ...
+   Bool_t needRemoval = kFALSE;
+
+   for (auto event : fEventQueue) {
+      if (event.fType == type && event.fWindow == wid) {
+         needRemoval = kTRUE;
+         ev = event;
+      }
+   }
+   
+   if (needRemoval) {
+      //At least one event of such type was in a queue, we'll try to remove them all.
+      auto begin = std::remove_if(fEventQueue.begin(), fEventQueue.end(), EventRemovalPredicate(wid, type));
+      fEventQueue.erase(begin, fEventQueue.end());
+   }
+
    return kFALSE;
 }
 
