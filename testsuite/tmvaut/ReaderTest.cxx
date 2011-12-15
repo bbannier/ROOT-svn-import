@@ -124,7 +124,7 @@ void ReaderTest::run()
 
    std::vector< TMVA::Reader* > reader(nTest);
    for (int iTest=0;iTest<nTest;iTest++){
-      std::cout << "iTest="<<iTest<<std::endl;
+      //std::cout << "iTest="<<iTest<<std::endl;
       reader[iTest] = new TMVA::Reader( "!Color:Silent" );
       for (UInt_t i=0;i<fNVar;i++)
          reader[iTest]->AddVariable( fVariableNames->at(i),&testvar[i]);
@@ -134,7 +134,7 @@ void ReaderTest::run()
 
       // run the reader application and compare to test tree
       for (Long64_t ievt=0;ievt<nevt;ievt++) {
-         if (ievt<3) std::cout << "ievt="<<ievt<<std::endl;
+         //if (ievt<3) std::cout << "ievt="<<ievt<<std::endl;
          fTestTree->GetEntry(ievt);
          for (UInt_t i=0;i<fNVar;i++){
             testvarDouble[i]= testvar[i];
@@ -175,7 +175,7 @@ void ReaderTest::run()
          maxdiff = diff > maxdiff ? diff : maxdiff;
          sumdiff += diff;
          if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++;
-         if (ievt<5) std::cout << "i="<<iTest<<", readerVal="<<readerVal<<" testTarget"<<testTarget<<" diff="<<diff<<" stuckcount="<<stuckCount<<std::endl;
+         //if (ievt<5) std::cout << "i="<<iTest<<", readerVal="<<readerVal<<" testTarget"<<testTarget<<" diff="<<diff<<" stuckcount="<<stuckCount<<std::endl;
 
          if (iTest ==0 ) previousVal=readerVal;
       }
