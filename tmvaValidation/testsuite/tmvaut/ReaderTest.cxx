@@ -54,12 +54,7 @@ ReaderTest::ReaderTest(TString methodtitle,
    else fBranchNames =vars;
    fVariableNames=vars;
    fSpecNames = specs;
-   if (gSystem->AccessPathName( fWeightFile ))
-      gSystem->Exec(Form("wget http://www.uni-bonn.de/~etoerne/tmva/weightfiles/%s -O %s",fWeightFile.Data(),fWeightFile.Data()));
-   if (gSystem->AccessPathName( fTreeFilename ))  
-      gSystem->Exec(Form("wget http://www.uni-bonn.de/~etoerne/tmva/weightfiles/%s -O %s",fTreeFilename.Data(),fTreeFilename.Data()));
-   fTestFile = new TFile(fTreeFilename);
-   test_(fTestFile);
+   OpenFiles();
    if (!fTestFile) return;
    fTestTree = (TTree*)(fTestFile->Get(fTreeName));
    fNVar = fVariableNames->size();
@@ -77,15 +72,28 @@ ReaderTest::ReaderTest(TString methodtitle, TString weightfile, TString tmvafile
      fBranchNames(varlist),
      fSpecNames(new vector<TString>())  
 {
-   if (gSystem->AccessPathName( fWeightFile ))
-      gSystem->Exec(Form("wget http://www.uni-bonn.de/~etoerne/tmva/weightfiles/%s -O %s",fWeightFile.Data(),fWeightFile.Data()));
-   if (gSystem->AccessPathName( fTreeFilename ))  
-      gSystem->Exec(Form("wget http://www.uni-bonn.de/~etoerne/tmva/weightfiles/%s -O %s",fTreeFilename.Data(),fTreeFilename.Data()));
-   fTestFile = new TFile(fTreeFilename);
+   OpenFiles();
    if (!fTestFile) return;
    fTestTree = (TTree*)(fTestFile->Get(fTreeName));
    fNVar = fVariableNames->size();
    fNSpecs = fSpecNames->size();
+}
+
+void ReaderTest::OpenFiles()
+{
+   if (gSystem->AccessPathName( fWeightFile ))
+      gSystem->Exec(Form("wget http://www.uni-bonn.de/~etoerne/tmva/weightfiles/%s -O %s",fWeightFile.Data(),fWeightFile.Data()));
+   if (fWeightFile.Contains("PDEFoam")){
+      TString FoamRootFile = fWeightFile;
+      FoamRootFile.ReplaceAll(".xml","_foams.root");
+      if (gSystem->AccessPathName(FoamRootFile)) {
+         gSystem->Exec(Form("wget http://www.uni-bonn.de/~etoerne/tmva/weightfiles/%s -O %s",FoamRootFile.Data(),FoamRootFile.Data()));
+      }
+   }
+   if (gSystem->AccessPathName( fTreeFilename ))  
+      gSystem->Exec(Form("wget http://www.uni-bonn.de/~etoerne/tmva/weightfiles/%s -O %s",fTreeFilename.Data(),fTreeFilename.Data()));
+   fTestFile = new TFile(fTreeFilename);
+   test_(fTestFile);
 }
 
 ReaderTest::~ReaderTest()

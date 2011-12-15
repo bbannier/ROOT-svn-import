@@ -42,7 +42,9 @@ public:
               bool isRegression=false);
  
    virtual ~ReaderTest();
+   void OpenFiles();
    virtual void run();
+
 private:
    bool fIsRegression;
    TString fWeightFile, fTreeFilename,fTreeName,fMethodTitle;
