@@ -19,6 +19,7 @@
 #include "tmvaut/MethodUnitTestWithComplexData.h"
 #include "tmvaut/utSphereData.h"
 #include "tmvaut/RegressionUnitTestWithDeviation.h"
+#include "tmvaut/ReaderTest.h"
 #include "TMVA/Types.h"
 
 using namespace UnitTesting;
@@ -245,6 +246,62 @@ void addGeneralBoostTests(UnitTestSuite& TMVA_test, bool full=true )
 
 }
 
+void addEarlyVersionReaderTests(UnitTestSuite& TMVA_test, bool full=true )
+{
+   if (!full) return;
+   std::vector<TString> methods;
+   methods.push_back("Cuts");
+   methods.push_back("BDTG");
+   methods.push_back("FDA_GA");
+   methods.push_back("KNN");
+   methods.push_back("LD");
+   methods.push_back("MLP");
+   methods.push_back("PDEFoam");
+   std::vector<TString> methodsReg;
+   methodsReg.push_back("BDTG");
+   methods.push_back("FDA_GA");
+   methodsReg.push_back("KNN");
+   methodsReg.push_back("LD");
+   methodsReg.push_back("MLP");
+   methodsReg.push_back("PDEFoam");
+   std::vector<TString> versions;
+   versions.push_back("4.1.2");
+   versions.push_back("4.1.0");
+   versions.push_back("4.0.6");
+   versions.push_back("4.0.3");
+
+   // classification tests
+   std::vector<TString>::iterator itmeth=methods.begin();
+   for (; itmeth != methods.end();itmeth++){ 
+      std::vector<TString>::iterator itvers=versions.begin();
+      for (; itvers != versions.end();itvers++){ 
+         if (*itvers=="4.1.2" ) continue;
+         TMVA_test.addTest( new ReaderTest(
+                                                 *itmeth,
+                                                 TString("weights")+(*itvers)
+                                                 )); 
+      }
+   }
+
+   bool isRegression=true;
+   itmeth=methodsReg.begin();
+   for (; itmeth != methodsReg.end();itmeth++){ 
+      std::vector<TString>::iterator itvers=versions.begin();
+      for (; itvers != versions.end();itvers++){ 
+         if (*itmeth=="BDTG" && (*itvers=="4.0.6" || *itvers=="4.0.3") ) continue;
+         if (*itmeth=="KNN"  && (*itvers=="4.0.6" || *itvers=="4.0.3") ) continue;
+
+         TMVA_test.addTest( new ReaderTest(
+                                                 *itmeth,
+                                                 TString("weights")+(*itvers),
+                                                 isRegression
+                                                 )); 
+      }
+   }
+
+
+}
+
 int main(int argc, char **argv)
 {
 
@@ -275,6 +332,7 @@ int main(int argc, char **argv)
    addComplexClassificationTests(TMVA_test, full);
    addTestwithSphereTutorial(TMVA_test, full);
    addGeneralBoostTests(TMVA_test, full);
+   addEarlyVersionReaderTests(TMVA_test,full);
    // run all
    TMVA_test.run();
 
