@@ -251,6 +251,7 @@ void addEarlyVersionReaderTests(UnitTestSuite& TMVA_test, bool full=true )
    if (!full) return;
    std::vector<TString> methods;
    methods.push_back("Cuts");
+   methods.push_back("BDT");
    methods.push_back("BDTG");
    methods.push_back("FDA_GA");
    methods.push_back("KNN");
@@ -275,7 +276,6 @@ void addEarlyVersionReaderTests(UnitTestSuite& TMVA_test, bool full=true )
    for (; itmeth != methods.end();itmeth++){ 
       std::vector<TString>::iterator itvers=versions.begin();
       for (; itvers != versions.end();itvers++){ 
-         if (*itvers=="4.1.2" ) continue;
          TMVA_test.addTest( new ReaderTest(
                                                  *itmeth,
                                                  TString("weights")+(*itvers)
