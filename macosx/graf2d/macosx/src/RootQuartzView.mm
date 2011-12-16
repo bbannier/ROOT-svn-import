@@ -10,24 +10,6 @@
 
 @synthesize fWinID;
 
-
-//______________________________________________________________________________
-- (void) drawRect : (NSRect)dirtyRect
-{
-//   
-   if (fWinID) {
-      if (TGWindow *window = gClient->GetWindowById(fWinID)) {
-         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-         CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
-         TGCocoa *cocoa = static_cast<TGCocoa *>(gVirtualX);
-         cocoa->SetContext(ctx);
-         //
-         gClient->NeedRedraw(window, kTRUE);
-         //
-      }
-   }
-}
-
 //______________________________________________________________________________
 - (void) addChildView : (RootQuartzView *)childView
 {
@@ -47,13 +29,25 @@
    fParentView = parent;
 }
 
-//______________________________________________________________________________
-- (void) clearWidget
-{
+#pragma mark - Event handling.
 
+//______________________________________________________________________________
+- (void) drawRect : (NSRect)dirtyRect
+{
+//   
+   if (fWinID) {
+      if (TGWindow *window = gClient->GetWindowById(fWinID)) {
+         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+         CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
+         TGCocoa *cocoa = static_cast<TGCocoa *>(gVirtualX);
+         cocoa->SetContext(ctx);
+         //
+         gClient->NeedRedraw(window, kTRUE);
+         //
+      }
+   }
 }
 
-#pragma mark - Event handling.
 //______________________________________________________________________________
 - (void) setFrameSize : (NSSize)newSize
 {
