@@ -11,9 +11,6 @@
 - (void) setParentView : (id<RootGUIElement>)parent;
 - (id<RootGUIElement>) parentView;
 
-//This is a test function to check, if I can draw at any moment I want.
-- (void) clearWidget;
-
 @property (nonatomic, assign) unsigned fWinID;
 
 @end

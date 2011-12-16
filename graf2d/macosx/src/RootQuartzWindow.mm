@@ -140,32 +140,4 @@
 
 }
 
-#pragma mark - Test
-
-- (void) clearWidget
-{
-  /* 
-   NSGraphicsContext *nsCtx = [NSGraphicsContext graphicsContextWithWindow : self];
-   if (!nsCtx) {
-//      NSLog(@"context creation failed");
-   } else {
-      CGContextRef cgCtx = (CGContextRef)[nsCtx graphicsPort];
-      const CGFloat r = rand() % 255 / 255.f;
-      const CGFloat g = rand() % 255 / 255.f;
-      const CGFloat b = rand() % 255 / 255.f;
-   
-      CGContextSetRGBFillColor(cgCtx, r, g, b, 1.f);
-      CGRect frame = self.frame;
-      frame.origin = CGPointZero;
-      
-      NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
-      NSRect newRect = [NSWindow contentRectForFrameRect : frame styleMask : styleMask];
-//      NSLog(@"content rect is: %g %g %g %g", newRect.origin.x, newRect.origin.y, newRect.size.width, newRect.size.height);
-      
-      CGContextFillRect(cgCtx, newRect);
-      [nsCtx flushGraphics];
-      NSLog(@"flush graphics");
-   }*/
-}
-
 @end
