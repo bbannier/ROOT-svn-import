@@ -307,10 +307,8 @@ Bool_t TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Fl
 
    ItVarTypeIdxConst itEntry;
    ItVarTypeIdxConst itEntryEnd;
-   if (backTransformation && fGet.size()==0) std::cout << "inconsistent get/put sizes put="<<fPut.size()<<" get="<<fGet.size()<<(backTransformation? "backtrafo": "normal trafo") <<std::endl;
-   if (!backTransformation && fPut.size()==0) std::cout << "inconsistent get/put sizes put="<<fPut.size()<<" get="<<fGet.size()<<(backTransformation? "backtrafo": "normal trafo") <<std::endl;
 
-   if( fPut.size()>0 ){    
+   if( backTransformation ){
       itEntry = fPut.begin();
       itEntryEnd = fPut.end();
    }
@@ -349,7 +347,6 @@ Bool_t TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Fl
 	 hasMaskedEntries = kTRUE;
       }
    }
-   std::cout<<" VariableTransformBase::GetInput masksize="<<mask.size()<<std::endl;
    return hasMaskedEntries;
 }
 
@@ -357,10 +354,7 @@ Bool_t TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Fl
 void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>& output, std::vector<Char_t>& mask, const Event* oldEvent, Bool_t backTransformation ) const
 {
    // select the values from the event
-   std::cout << "hi this is VariableTransformBase::SetOutput out="<<(output.size()>0 ? output[0] : -1.)<< (backTransformation? " backtrafo" : " normal trafo")<<" mask size="<<mask.size()<<std::endl;
-   if (backTransformation && fGet.size()==0) std::cout << "inconsistent get/put sizes put="<<fPut.size()<<" get="<<fGet.size()<<(backTransformation? "backtrafo": "normal trafo")<< std::endl;
-   if (!backTransformation && fPut.size()==0) std::cout << "inconsistent get/put sizes put="<<fPut.size()<<" get="<<fGet.size()<<(backTransformation? "backtrafo": "normal trafo") <<std::endl;
-
+   
    std::vector<Float_t>::iterator itOutput = output.begin();
    std::vector<Char_t>::iterator  itMask   = mask.begin();
 
@@ -371,27 +365,18 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
 
       ItVarTypeIdxConst itEntry;
       ItVarTypeIdxConst itEntryEnd;
-         // !!!!!!!!!!!!!!!!!!!
-         // !!!!!!!!!!!!!!!!!!!
-         // !!!!!!!!!!!!!!!!!!!
-      if(fGet.size()>0 ){ // as in GetInput, but the other way round (from fPut for transformation, from fGet for backTransformation) //EVT TODO real change!!!!!!!!!!!!!
-         // !!!!!!!!!!!!!!!!!!!
-         // !!!!!!!!!!!!!!!!!!!
-         // !!!!!!!!!!!!!!!!!!!
-         // !!!!!!!!!!!!!!!!!!!
-         itEntry = fGet.begin();
-         itEntryEnd = fGet.end();
+
+      if( !backTransformation ){ // as in GetInput, but the other way round (from fPut for transformation, from fGet for backTransformation)
+	 itEntry = fPut.begin();
+	 itEntryEnd = fPut.end();
       }
       else {
-         itEntry = fPut.begin();
-         itEntryEnd = fPut.end();
+	 itEntry = fGet.begin();
+	 itEntryEnd = fGet.end();
       }
-      std::cout << "fGet size="<<fGet.size()<<std::endl;
-      std::cout << "fPut size="<<fPut.size()<<std::endl;
 
 
       for( ; itEntry != itEntryEnd; ++itEntry ) {
-         std::cout << "in itEntry loop"<<std::endl;
 
 	 if( (*itMask) ){ // if the value is masked
 	    continue;
@@ -401,7 +386,6 @@ void TMVA::VariableTransformBase::SetOutput( Event* event, std::vector<Float_t>&
 	 Int_t  idx  = (*itEntry).second;
 	 if (itOutput == output.end()) Log() << kFATAL << "Read beyond array boundaries in VariableTransformBase::SetOutput"<<Endl;
 	 Float_t value = (*itOutput);
-    std::cout << "type="<<type<<" value="<<value<< " idx="<<idx<<std::endl;
 
 	 switch( type ) {
 	 case 'v':
@@ -678,7 +662,6 @@ void TMVA::VariableTransformBase::AttachXMLTo(void* parent)
 //_______________________________________________________________________
 void TMVA::VariableTransformBase::ReadFromXML( void* selnode ) 
 {
-   std::cout << "reading xML transformations in VariableTransformBase"<<std::endl;
    // Read the input variables from the XML node
 
    void* inpnode = gTools().GetChild( selnode );
@@ -695,7 +678,7 @@ void TMVA::VariableTransformBase::ReadFromXML( void* selnode )
 
    UInt_t nInputs = 0;
    gTools().ReadAttr(inpnode, "NInputs", nInputs);
-   std::cout << "NInputs="<<nInputs<<std::endl;
+
    void* ch = gTools().GetChild( inpnode );
    while(ch) {
       TString typeString = "";
@@ -705,7 +688,7 @@ void TMVA::VariableTransformBase::ReadFromXML( void* selnode )
       gTools().ReadAttr(ch, "Type",  typeString);
       gTools().ReadAttr(ch, "Label", label);
       gTools().ReadAttr(ch, "Expression", expression);
-      std::cout << "typestring="<<typeString<<std::endl;
+   
       if( typeString == "Variable"  ){
 	 for( UInt_t ivar = 0; ivar < nvars; ++ivar ) { // search all variables
 	    if( fDsi.GetVariableInfo( ivar ).GetLabel() == label ||
