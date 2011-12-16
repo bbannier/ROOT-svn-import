@@ -119,7 +119,7 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
 
    CGContextRef ctx = (CGContextRef)fCtx;
 
- //  SetColor(GetFillColor());
+ //  SetFillColorIndex(GetFillColor());
 
    CGContextBeginPath (ctx);
 
@@ -140,7 +140,7 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
       
    CGContextRef ctx = (CGContextRef)fCtx;
    
-   SetColor(GetLineColor());
+   SetStrokeColorIndex(GetLineColor());
    
    CGContextBeginPath (ctx);
    CGContextMoveToPoint(ctx, x1, y1);
@@ -158,7 +158,7 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
    
    CGContextRef ctx = (CGContextRef)fCtx;
    
-   SetColor(GetLineColor());
+   SetStrokeColorIndex(GetLineColor());
 
    CGContextBeginPath (ctx);
    
@@ -185,7 +185,7 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const 
    CGContextRef ctx = (CGContextRef)fCtx;
  
    // Text color
-   SetColor(GetTextColor());
+   SetFillColorIndex(GetTextColor());
 
   // Text rotation
    CGAffineTransform tm; 
@@ -199,9 +199,30 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const 
 
 
 //______________________________________________________________________________
-void TGQuartz::SetColor(Int_t ci)
+void TGQuartz::SetFillColorIndex(Int_t ci)
 {
-   // Set the current color.
+   // Set the current fill color index.
+
+   CGContextRef ctx = (CGContextRef)fCtx;
+
+   TColor *color = gROOT->GetColor(ci);
+   if (!color) return;
+
+   const Float_t a = 1.f;
+   Float_t r = 0.f;
+   Float_t g = 0.f;
+   Float_t b = 0.f;
+
+   color->GetRGB(r, g, b);
+
+   CGContextSetRGBFillColor (ctx, r, g, b, a);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetStrokeColorIndex(Int_t ci)
+{
+   // Set the current fill color index.
 
    CGContextRef ctx = (CGContextRef)fCtx;
 
@@ -216,8 +237,8 @@ void TGQuartz::SetColor(Int_t ci)
    color->GetRGB(r, g, b);
 
    CGContextSetRGBStrokeColor (ctx, r, g, b, a);
-   CGContextSetRGBFillColor   (ctx, r, g, b, a);
 }
+
 
 //______________________________________________________________________________
 void TGQuartz::SetLineColor(Color_t cindex)
@@ -325,6 +346,7 @@ void TGQuartz::SetFillStyle(Style_t style)
    if (style == 1234) SetStencilPattern();
 }
 
+
 //______________________________________________________________________________
 static void DrawStencil (void */*st*/, CGContextRef ctx)
 {
@@ -357,8 +379,23 @@ void TGQuartz::SetStencilPattern()
    CGPatternRef pattern;
    CGColorSpaceRef baseSpace;
    CGColorSpaceRef patternSpace;
-   static const CGFloat color[4] = { .7, .1, 0.5, 1 };
-   static const CGPatternCallbacks callbacks = {0, &DrawStencil, NULL};
+   
+   TColor *color = gROOT->GetColor(GetFillColor());
+   if (!color) return;
+
+   const Float_t a = 1.f;
+   Float_t r = 0.f;
+   Float_t g = 0.f;
+   Float_t b = 0.f;
+
+   color->GetRGB(r, g, b);
+   
+   CGFloat RGB[4];
+   RGB[0] = r;
+   RGB[1] = g;
+   RGB[2] = b;
+   RGB[3] = a;
+   CGPatternCallbacks callbacks = {0, &DrawStencil, NULL};
  
    baseSpace = CGColorSpaceCreateDeviceRGB ();
    patternSpace = CGColorSpaceCreatePattern (baseSpace);
@@ -369,7 +406,7 @@ void TGQuartz::SetStencilPattern()
                              CGAffineTransformIdentity, 16, 16,
                              kCGPatternTilingConstantSpacing,
                              false, &callbacks);
-   CGContextSetFillPattern (ctx, pattern, color);
+   CGContextSetFillPattern (ctx, pattern, RGB);
    CGPatternRelease (pattern);
 }
 
@@ -477,6 +514,7 @@ void TGQuartz::SetOpacity(Int_t /*percent*/)
    // colors).
 }
 
+
 //______________________________________________________________________________
 Int_t TGQuartz::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
 {
@@ -489,6 +527,3 @@ Int_t TGQuartz::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
    
    return 0;
 }
-
-
-
