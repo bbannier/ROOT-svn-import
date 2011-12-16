@@ -574,6 +574,7 @@ Double_t TMVA::MethodANNBase::GetMvaValue( Double_t* err, Double_t* errUpper )
    const Event * ev = GetEvent();
 
    for (UInt_t i = 0; i < GetNvar(); i++) {
+      std::cout << "input val="<<ev->GetValue(i)<<std::endl;
       neuron = (TNeuron*)inputLayer->At(i);
       neuron->ForceValue( ev->GetValue(i) );
    }
