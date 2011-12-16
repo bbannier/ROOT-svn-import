@@ -61,7 +61,6 @@
    
    if (fWinID) {
       if (TGWindow *window = gClient->GetWindowById(fWinID)) {
-//         NSLog(@"send configure notify to TGWindow");
          //Should I also send setNeedsDisplay or not?
          //
          Event_t newEvent = {};

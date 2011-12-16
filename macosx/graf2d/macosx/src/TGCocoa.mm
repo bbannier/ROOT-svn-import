@@ -835,12 +835,19 @@ void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t 
    //        the window
 //   NSLog(@"move/resize for window %d, x == %d, y == %d, w == %d, h == %d", wid, x, y, w, h);
    //y = RootToCocoaY(y);
-/*   NSRect newFrame;
+   NSRect newFrame;
    newFrame.origin.x = x;
    newFrame.origin.y = y;
    newFrame.size.width = w;
    newFrame.size.height = h;
-  */ 
+
+   id<RootGUIElement> widget = fPimpl->GetWindow(wid);
+   if (![widget parentView]) {
+      //
+   } else {
+      NSView *contentView = [widget contentView];
+      contentView.frame = newFrame;
+   }
 }
 
 //______________________________________________________________________________
@@ -995,7 +1002,7 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
       const Window_t result = fPimpl->RegisterWindow(childView, winAttr);
       
       childView.fWinID = result;
-      
+
       [parentWin addChildView : childView];
       [childView release];
 
@@ -2229,9 +2236,10 @@ void TGCocoa::QueueEvent(const Event_t &event)
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::CocoaToRootY(Int_t y)const
+Int_t TGCocoa::CocoaToRootY(Window_t /*wid*/, Int_t y)const
 {
-   if (fPimpl->fWindows.size()) {
+ //  id<RootGUIElement> widget = fPimpl->GetWindow(wid);
+/*   if (fPimpl->fWindows.size()) {
       //"Window" with index 0 is a fake "root" window,
       //it has the sizes of a screen.
       const WindowAttributes_t &attr = fPimpl->fWindows[0].fROOTWindowAttribs;
@@ -2242,13 +2250,14 @@ Int_t TGCocoa::CocoaToRootY(Int_t y)const
       throw std::runtime_error("CocoaToRootY: No root window found");
 #endif
       return y;//Should never happen.
-   }
+   }*/
+   return y;
 }
-/*
+
 //______________________________________________________________________________
-Int_t TGCocoa::RootToCocoaY(Int_t y)const
+Int_t TGCocoa::RootToCocoaY(Window_t /*wid*/, Int_t y)const
 {
-   if (fPimpl->fWindows.size()) {
+/*   if (fPimpl->fWindows.size()) {
       //"Window" with index 0 is a fake "root" window,
       //it has the sizes of a screen.
       const WindowAttributes_t &attr = fPimpl->fWindows[0].fROOTWindowAttribs;
@@ -2257,11 +2266,11 @@ Int_t TGCocoa::RootToCocoaY(Int_t y)const
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"RootToCocoaY: No root window found");
       throw std::runtime_error("RootToCocoaY: No root window found");
-#endif
+#endif*/
       return y;//Should never happen.
-   }
+//   }
 }
-*/
+
 //______________________________________________________________________________
 void TGCocoa::SetContext(void *ctx)
 {
