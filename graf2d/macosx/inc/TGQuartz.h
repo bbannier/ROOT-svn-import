@@ -46,7 +46,9 @@ public:
    virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
    virtual void      SetTextSize(Float_t textsize);
    
-           void       SetColor(Int_t ci);
+           void      SetColor(Int_t ci);
+
+           void      SetStencilPattern();
 
 private:
    TGQuartz(const TGQuartz &rhs);
