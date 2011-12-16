@@ -16,6 +16,7 @@
 #include "TString.h"
 #include "TObjString.h"
 #include "TObjArray.h"
+#include "RStipples.h"
 #include "TROOT.h"
 
 const Double_t kPI = TMath::Pi();
@@ -92,8 +93,8 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 
       CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
 
-      if (y1 > y2)
-         std::swap(y1, y2);
+      if (x1 > x2) std::swap(x1, x2);
+      if (y1 > y2) std::swap(y1, y2);
 
       CGContextStrokeRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    }
@@ -115,10 +116,10 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    // Draw a filled area through all points.
    // n         : number of points
    // xy        : list of points
-   
+
    CGContextRef ctx = (CGContextRef)fCtx;
 
-   SetColor(GetFillColor());
+ //  SetColor(GetFillColor());
 
    CGContextBeginPath (ctx);
 
@@ -318,7 +319,58 @@ void TGQuartz::SetFillStyle(Style_t style)
    //
    // style - compound fill area interior style
    //         style = 1000 * interiorstyle + styleindex
-   TAttFill::SetFillStyle(style);
+   
+   TAttFill::SetFillStyle(style);   
+
+   if (style == 1234) SetStencilPattern();
+}
+
+//______________________________________________________________________________
+static void DrawStencil (void */*st*/, CGContextRef ctx)
+{
+   // Draw a stencil pattern from gStipples
+   
+   int i,j;
+
+   Int_t st = 25, x , y=0; 
+   for (i=0; i<31; i=i+2) {
+      x = 0;
+      for (j=0; j<8; j++) {
+         if (gStipples[st][i] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
+         x++;
+      }
+      for (j=0; j<8; j++) {
+         if (gStipples[st][i+1] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
+         x++;
+      }
+      y++;
+   }
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetStencilPattern()
+{
+   // Set the fill pattern
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   CGPatternRef pattern;
+   CGColorSpaceRef baseSpace;
+   CGColorSpaceRef patternSpace;
+   static const CGFloat color[4] = { .7, .1, 0.5, 1 };
+   static const CGPatternCallbacks callbacks = {0, &DrawStencil, NULL};
+ 
+   baseSpace = CGColorSpaceCreateDeviceRGB ();
+   patternSpace = CGColorSpaceCreatePattern (baseSpace);
+   CGContextSetFillColorSpace (ctx, patternSpace);
+   CGColorSpaceRelease (patternSpace);
+   CGColorSpaceRelease (baseSpace);
+   pattern = CGPatternCreate(NULL, CGRectMake(0, 0, 16, 16),
+                             CGAffineTransformIdentity, 16, 16,
+                             kCGPatternTilingConstantSpacing,
+                             false, &callbacks);
+   CGContextSetFillPattern (ctx, pattern, color);
+   CGPatternRelease (pattern);
 }
 
 

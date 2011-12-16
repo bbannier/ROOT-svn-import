@@ -31,6 +31,8 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    fPad.SetGridx(1);
    fPad.SetGridy(1);
    
+
+   
    fHist->SetAxisColor(kRed);
    fHist->SetLineColor(kRed+2);
    fHist->Draw();
@@ -69,9 +71,10 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    b->Draw();
    
    Double_t xpl[4] = {-2,-1,0,-1};
-   Double_t ypl[4] = {.4,.5,.5,.4};
+   Double_t ypl[4] = {.4,.1,.5,.4};
    TPolyLine *pl = new TPolyLine(4,xpl,ypl);
    pl->SetFillColor(kRed+3);
+   pl->SetFillStyle(1234);
    pl->Draw("f");
       
    TLine *l1  = new TLine(-2,.52,-1,.52); l1->SetLineStyle(1);   l1->Draw();
