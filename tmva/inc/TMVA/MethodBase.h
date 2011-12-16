@@ -674,7 +674,6 @@ inline const TMVA::Event* TMVA::MethodBase::GetEvent( const TMVA::Event* ev ) co
 
 inline const TMVA::Event* TMVA::MethodBase::GetEvent() const 
 {
-   std::cout << "hi this is MethodBase::GetEvent()"<< (fTmpEvent? "fTmpEvent is defined": "")<<std::endl;
    if(fTmpEvent)
       return GetTransformationHandler().Transform(fTmpEvent);
    else

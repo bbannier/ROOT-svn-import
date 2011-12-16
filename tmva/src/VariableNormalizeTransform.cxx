@@ -100,7 +100,6 @@ Bool_t TMVA::VariableNormalizeTransform::PrepareTransformation( const std::vecto
 //_______________________________________________________________________
 const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Event* const ev, Int_t cls ) const
 {
-   std::cout << "VariableNormalizeTransform::Transform"<<std::endl;
 
    // apply the normalization transformation
    if (!IsCreated()) Log() << kFATAL << "Transformation not yet created" << Endl;
@@ -112,10 +111,9 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
    //       else cls = (fMin.size()==1?0:2);
    //    }
    // EVT this is a workaround to address the reader problem with transforma and EvaluateMVA(std::vector<float/double> ,...) 
-   std::cout << "The Transform, old cls="<<cls<<std::endl;
    if (cls < 0 || cls >= (int) fMin.size()) cls = fMin.size()-1;
    // EVT workaround end
-   std::cout << "The Transform, new cls="<<cls<<std::endl;
+
    FloatVector input; // will be filled with the selected variables, targets, (spectators)
    FloatVector output; // will be filled with the selected variables, targets, (spectators)
    std::vector<Char_t> mask; // entries with kTRUE must not be transformed
@@ -131,10 +129,8 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
    std::vector<Char_t>::iterator itMask = mask.begin();
    for ( std::vector<Float_t>::iterator itInp = input.begin(), itInpEnd = input.end(); itInp != itInpEnd; ++itInp) { // loop over input variables
       if( (*itMask) ){
-         std::cout << "found masked var, iidx="<<iidx<<std::endl;
 	 ++iidx;
 	 ++itMask;
-
 	 // don't put any value into output if the value is masked
 	 continue;
       }
@@ -143,27 +139,23 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::Transform( const TMVA::Even
 
       min = minVector.at(iidx); 
       max = maxVector.at(iidx);
-
       Float_t offset = min;
       Float_t scale  = 1.0/(max-min);
 
       Float_t valnorm = (val-offset)*scale * 2 - 1;
-      std::cout << "The Transform, ivar="<<iidx<<" val="<<val<<", min="<<min<<" max="<<max<<" valnorm="<<valnorm <<std::endl;
       output.push_back( valnorm );
 
       ++iidx;
       ++itMask;
    }
-      std::cout << "hi this is VariableNormalizeTransform::Transform before Setoutput"<<output[0]<<std::endl;
+   
    SetOutput( fTransformedEvent, output, mask, ev );
-   std::cout << "hi this is VariableNormalizeTransform::Transform after Setoutput"<<fTransformedEvent->GetValue(0)<<std::endl;
    return fTransformedEvent;
 }
 
 //_______________________________________________________________________
 const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform( const TMVA::Event* const ev, Int_t cls ) const
 {
-   std::cout << "VariableNormalizeTransform::InverseTransform"<<std::endl;
    // apply the inverse transformation
    if (!IsCreated()) Log() << kFATAL << "Transformation not yet created" << Endl;
 
@@ -199,7 +191,7 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform( const TMV
 
       ++iidx;
    }
-   std::cout << "hi this is VariableNormalizeTransform::Transform before Setoutput"<<output[0]<<" masksize="<<mask.size()<<std::endl;
+
    SetOutput( fBackTransformedEvent, output, mask, ev, kTRUE );
 
    return fBackTransformedEvent;
@@ -361,8 +353,6 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
    if( inpnode != NULL )
       newFormat = kTRUE;
 
-   std::cout << "VariableNormalizeTransform::ReadFromXML( void* trfnode ) "<< (newFormat? " new format" : " old format") << std::endl;
-
    if( newFormat ){
       // ------------- new format --------------------
       // read input
@@ -412,7 +402,7 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
    // coverity[tainted_data_argument]
    gTools().ReadAttr(trfnode, "NTargets",   ntgts);
    // coverity[tainted_data_argument]
-   std::cout << "nvariables="<<nvars<<" ntragets="<<ntgts<<std::endl;
+
    for( UInt_t ivar = 0; ivar < nvars; ++ivar ){
       fGet.push_back(std::make_pair<Char_t,UInt_t>('v',ivar));
    }
@@ -453,7 +443,6 @@ void TMVA::VariableNormalizeTransform::ReadFromXML( void* trfnode )
       ch = gTools().GetNextChild( ch );
    }
    SetCreated();
-   PrintTransformation(std::cout);
 }
 
 //_______________________________________________________________________
@@ -530,7 +519,7 @@ void TMVA::VariableNormalizeTransform::ReadTransformationFromStream( std::istrea
 }
 
 //_______________________________________________________________________
-void TMVA::VariableNormalizeTransform::PrintTransformation( ostream& o  ) 
+void TMVA::VariableNormalizeTransform::PrintTransformation( ostream& /* o */ ) 
 {
    // prints the transformation ranges
 
@@ -539,16 +528,16 @@ void TMVA::VariableNormalizeTransform::PrintTransformation( ostream& o  )
    if (nCls <= 1 ) numC = 1;
    for (Int_t icls = 0; icls < numC; icls++ ) {
       if( icls == nCls )
-         o << "Transformation for all classes based on these ranges:" << Endl;
+         Log() << kINFO << "Transformation for all classes based on these ranges:" << Endl;
       else
-         o<< "Transformation for class " << icls << " based on these ranges:" << Endl;
+         Log() << kINFO << "Transformation for class " << icls << " based on these ranges:" << Endl;
       UInt_t iinp = 0;
       for( ItVarTypeIdxConst itGet = fGet.begin(), itGetEnd = fGet.end(); itGet != itGetEnd; ++itGet ){
          Char_t type = (*itGet).first;
          UInt_t idx  = (*itGet).second;
          
          TString typeString = (type=='v'?"Variable: ": (type=='t'?"Target : ":"Spectator : ") );
-         o << typeString.Data() << std::setw(20) << fMin[icls][idx] << std::setw(20) << fMax[icls][idx] << Endl;
+         Log() << typeString.Data() << std::setw(20) << fMin[icls][idx] << std::setw(20) << fMax[icls][idx] << Endl;
          
          ++iinp;
       }
