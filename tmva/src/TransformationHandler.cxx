@@ -157,6 +157,7 @@ const TMVA::Event* TMVA::TransformationHandler::Transform( const Event* ev ) con
 const TMVA::Event* TMVA::TransformationHandler::InverseTransform( const Event* ev, Bool_t suppressIfNoTargets ) const 
 {
    // the inverse transformation
+   if (fTransformationsReferenceClasses.empty()) return ev;
    TListIter trIt(&fTransformations, kIterBackward);
    std::vector< Int_t >::const_iterator rClsIt = fTransformationsReferenceClasses.end();
    rClsIt--;
