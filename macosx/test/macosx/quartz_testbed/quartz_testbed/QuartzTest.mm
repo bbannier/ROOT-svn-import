@@ -73,7 +73,7 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    Double_t xpl[4] = {-2,-1,0,-1};
    Double_t ypl[4] = {.4,.1,.5,.4};
    TPolyLine *pl = new TPolyLine(4,xpl,ypl);
-   pl->SetFillColor(kRed+3);
+   pl->SetFillColor(kGreen-2);
    pl->SetFillStyle(1234);
    pl->Draw("f");
       
