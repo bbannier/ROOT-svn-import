@@ -15,6 +15,13 @@
 @synthesize fWinID;
 
 //______________________________________________________________________________
+- (void) setFWinID : (unsigned) winID
+{
+   fTopLevelView.fWinID = winID;
+   fWinID = winID;
+}
+
+//______________________________________________________________________________
 - (id) initWithContentRect : (NSRect)contentRect styleMask : (NSUInteger)windowStyle backing : (NSBackingStoreType)bufferingType defer : (BOOL)deferCreation
 {
    self = [super initWithContentRect : contentRect styleMask : windowStyle backing : bufferingType defer : deferCreation];

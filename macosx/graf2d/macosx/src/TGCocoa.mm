@@ -2231,3 +2231,9 @@ Int_t TGCocoa::CocoaToRootY(Int_t y)const
       return y;//Should never happen.
    }
 }
+
+//______________________________________________________________________________
+void TGCocoa::SetContext(void *ctx)
+{
+   fCtx = ctx;
+}

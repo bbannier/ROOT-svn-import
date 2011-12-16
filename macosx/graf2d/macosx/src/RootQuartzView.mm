@@ -1,23 +1,32 @@
 #import "RootQuartzView.h"
 
+#import "TGWindow.h"
+#import "TGClient.h"
+#import "TGCocoa.h"
+
 @implementation RootQuartzView {
    RootQuartzView *fParentView;
 }
 
 @synthesize fWinID;
 
-/*
+
 //______________________________________________________________________________
 - (void) drawRect : (NSRect)dirtyRect
 {
-   NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-   CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
-   
-   CGContextSetRGBFillColor(ctx, 1.f, 0.3f, 0.f, 1.f);
-   CGContextFillRect(ctx, dirtyRect);
+//   
+   if (fWinID) {
+      if (TGWindow *window = gClient->GetWindowById(fWinID)) {
+         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+         CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
+         TGCocoa *cocoa = static_cast<TGCocoa *>(gVirtualX);
+         cocoa->SetContext(ctx);
+         //
+         gClient->NeedRedraw(window, kTRUE);
+         //
+      }
+   }
 }
-*/
-
 
 //______________________________________________________________________________
 - (void) addChildView : (RootQuartzView *)childView
@@ -42,6 +51,21 @@
 - (void) clearWidget
 {
 
+}
+
+#pragma mark - Event handling.
+//______________________________________________________________________________
+- (void) setFrameSize : (NSSize)newSize
+{
+   //Generate ConfigureNotify event and send it to ROOT's TGWindow.
+   if (fWinID) {
+      if (TGWindow *window = gClient->GetWindowById(fWinID)) {
+         NSLog(@"send configure notify to TGWindow");
+         //Should I also send setNeedsDisplay or not?
+      }
+   }
+   
+   [super setFrameSize : newSize];
 }
 
 
