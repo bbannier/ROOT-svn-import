@@ -4,6 +4,7 @@
 #include "Riostream.h"
 #include "TSystem.h"
 #include "TROOT.h"
+#include "TPluginManager.h"
 #include "TBenchmark.h"
 #include "TApplication.h"
 #include "tmvaut/UnitTestSuite.h"
@@ -113,6 +114,11 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
 
    if (full) TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kRuleFit, "RuleFit",
                                                                 "H:!V:RuleFitModule=RFTMVA:Model=ModRuleLinear:MinImp=0.001:RuleMinDist=0.001:NTrees=20:fEventsMin=0.01:fEventsMax=0.5:GDTau=-1.0:GDTauPrec=0.01:GDStep=0.01:GDNSteps=10000:GDErrScale=1.02" , 0.88, 0.92) );
+   if (full) {
+      TPluginManager* pluginManager = gROOT->GetPluginManager();
+      pluginManager->AddHandler("TMVA@@MethodBase", "BDTPlug", "TMVA::MethodBDT", "TMVA.1", "MethodBDT(TString,TString,DataSetInfo&,TString)");
+      TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kPlugins, "BDTPlug", "!H:!V:NTrees=400", 0.8, 0.95 ));
+   }
 }
 
 void addRegressionTests( UnitTestSuite& TMVA_test, bool full=true)
@@ -317,7 +323,6 @@ int main(int argc, char **argv)
    UnitTestSuite TMVA_test("TMVA unit testing");
 
    TMVA_test.intro();
-
    TMVA_test.addTest(new utEvent);
    TMVA_test.addTest(new utVariableInfo);
    TMVA_test.addTest(new utDataSetInfo);
