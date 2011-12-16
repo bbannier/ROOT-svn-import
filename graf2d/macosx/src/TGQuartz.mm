@@ -218,14 +218,6 @@ void TGQuartz::SetColor(Int_t ci)
    CGContextSetRGBFillColor   (ctx, r, g, b, a);
 }
 
-
-//______________________________________________________________________________
-void TGQuartz::SetContext(void *ctx)
-{
-   fCtx = ctx;
-}
-
-
 //______________________________________________________________________________
 void TGQuartz::SetLineColor(Color_t cindex)
 {

@@ -48,11 +48,6 @@ public:
    
            void       SetColor(Int_t ci);
 
-                              
-   //This function is just for test,
-   //will be removed in future.
-   void SetContext(void *ctx);
-
 private:
    TGQuartz(const TGQuartz &rhs);
    TGQuartz &operator = (const TGQuartz &rhs);

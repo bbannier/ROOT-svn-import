@@ -308,6 +308,8 @@ public:
    //These functions here are only in dev. version. TODO: structure this better.
    Int_t CocoaToRootY(Int_t y)const;
 
+   void SetContext(void *ctx);
+
 private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
@@ -317,6 +319,8 @@ private:
    bool fForegroundProcess;
    
    std::deque<Event_t> fEventQueue;
+
+   void *fCtx;
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
