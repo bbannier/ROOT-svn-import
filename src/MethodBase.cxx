@@ -1359,7 +1359,7 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
 
       if (nodeName=="GeneralInfo") {
          // read analysis type
-
+         std::cout <<"XML reading general info"<<std::endl;
          TString name(""),val("");
          void* antypeNode = gTools().GetChild(ch);
          while (antypeNode) {
@@ -1411,7 +1411,9 @@ void TMVA::MethodBase::ReadStateFromXML( void* methodNode )
          if (DataInfo().GetNTargets()==0 && DoRegression()) ReadTargetsFromXML(ch);
       }
       else if (nodeName=="Transformations") {
+         std::cout << "reading xML transformations"<<std::endl;
          GetTransformationHandler().ReadFromXML(ch);
+         std::cout << "reading xML transformations done"<<std::endl;
       }
       else if (nodeName=="MVAPdfs") {
          TString pdfname;
