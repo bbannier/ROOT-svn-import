@@ -276,7 +276,7 @@ TMacOSXSystem::~TMacOSXSystem()
 bool TMacOSXSystem::ProcessGuiEvents()
 {
    //This is a non-blocking function ('untilDate' is nil, so we try to take previous events (?), not waiting).
-   bool hadGuiEvent = false;
+/*   bool hadGuiEvent = false;
 
 #ifdef DEBUG_ROOT_COCOA
    NSLog(@"Enter non-blocking loop");
@@ -300,7 +300,8 @@ bool TMacOSXSystem::ProcessGuiEvents()
    NSLog(@"Exit non-blocking loop");
 #endif
 
-   return hadGuiEvent;
+   return hadGuiEvent;*/
+   return false;
 }
 
 //______________________________________________________________________________
@@ -367,10 +368,12 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
       //I'm not sure at all, if I need to mimic 
       //TUnixSystem's logic here. But if I do not use
       //gXDisplay->Notify, ROOT's GUI will not work.
+      /*
       if (gXDisplay && gXDisplay->Notify()) {
          if (pendingOnly)
             return;
       }
+      */
 
       //Check for file descriptors ready for reading/writing.
       if (fNfd > 0 && fFileHandler && fFileHandler->GetSize() > 0)
@@ -422,6 +425,9 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
       } else {
          //Wait for GUI events and for something else, like read/write from stdin/stdout (?).
          WaitForAllEvents(nextto);
+         //???
+         if (pendingOnly)
+            return;
       }
    }
 }

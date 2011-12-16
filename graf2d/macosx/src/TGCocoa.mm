@@ -127,7 +127,7 @@ void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & color)
    NSLog(@"TGCocoa::QueryColor");
 #endif
    color.fRed = color.fPixel >> 16 & 0xFF;
-   color.fGreen = color.fPixel >> 7 & 0xFF;
+   color.fGreen = color.fPixel >> 8 & 0xFF;
    color.fBlue = color.fPixel & 0xFF;
 }
 
@@ -824,8 +824,7 @@ void TGCocoa::MoveWindow(Window_t /*wid*/, Int_t /*x*/, Int_t /*y*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::MoveResizeWindow(Window_t /*wid*/, Int_t /*x*/, Int_t /*y*/,
-                                   UInt_t /*w*/, UInt_t /*h*/)
+void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    // Changes the size and location of the specified window "wid" without
    // raising it.
@@ -834,6 +833,14 @@ void TGCocoa::MoveResizeWindow(Window_t /*wid*/, Int_t /*x*/, Int_t /*y*/,
    //        relative to its parent.
    // w, h - the width and height, which define the interior size of
    //        the window
+//   NSLog(@"move/resize for window %d, x == %d, y == %d, w == %d, h == %d", wid, x, y, w, h);
+   //y = RootToCocoaY(y);
+/*   NSRect newFrame;
+   newFrame.origin.x = x;
+   newFrame.origin.y = y;
+   newFrame.size.width = w;
+   newFrame.size.height = h;
+  */ 
 }
 
 //______________________________________________________________________________
@@ -1326,13 +1333,18 @@ void TGCocoa::CopyArea(Drawable_t /*src*/, Drawable_t /*dest*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::ChangeWindowAttributes(Window_t /*wid*/, SetWindowAttributes_t * /*attr*/)
+void TGCocoa::ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr)
 {
-   // Changes the attributes of the specified window "wid" according the
-   // values provided in "attr". The mask data member of "attr" specifies
-   // which window attributes are defined in the attributes argument.
-   // This mask is the bitwise inclusive OR of the valid attribute mask
-   // bits; if it is zero, the attributes are ignored.
+   if (!wid)//Should never happen, this is 'root' window.
+      return;
+   
+   id<RootGUIElement> widget = fPimpl->GetWindow(wid);
+   RootQuartzView *view = (RootQuartzView *)[widget contentView];
+   
+   //There are a lot of X11 attribs. in SetWindowAttributes_t struct.
+   //Now set only background color.
+   if (attr->fMask & kWABackPixel)
+      view.fBackgroundColor = attr->fBackgroundPixel;
 }
 
 //______________________________________________________________________________
@@ -1377,11 +1389,27 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    // wid - specifies the window
    // x, y - coordinates, which are relative to the origin
    // w, h - the width and height which define the rectangle dimensions
-//#ifdef DEBUG_ROOT_COCOA
-//   NSLog(@"TGCocoa::ClearArea %lu %d %d %u %u", wid, x, y, w, h);
+
+   if (!wid) {//Should never happen ('root' window).
+      NSLog(@"clear area for 'root' window was called");
+      throw std::runtime_error("clear area for 'root' window was called");
+   }
+
+   if (!fCtx) {
+      NSLog(@"clear area called outside of drawRect function");
+      throw std::runtime_error("clear area called outside of drawRect function");
+   }
+
    id<RootGUIElement> widget = fPimpl->GetWindow(wid);
-   [widget clearWidget];
-//#endif
+   RootQuartzView *view = (RootQuartzView *)[widget contentView];
+   const Pixel_t color = view.fBackgroundColor;
+   const CGFloat red = ((color & 0xff0000) >> 16) / 255.f;
+   const CGFloat green = ((color & 0xff00) >> 8) / 255.f;
+   const CGFloat blue = (color & 0xff) / 255.f;
+   
+   CGContextRef ctx = static_cast<CGContextRef>(fCtx);
+   CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);//alpha can be also used.
+   CGContextFillRect(ctx, CGRectMake(x, y, w, h));
 }
 
 namespace {
@@ -1405,24 +1433,9 @@ private:
 }
 
 //______________________________________________________________________________
-Bool_t TGCocoa::CheckEvent(Window_t wid, EGEventType type, Event_t &ev)
+Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t & /*ev*/)
 {
-   //Event was removed from queue already. X11 ...
-   Bool_t needRemoval = kFALSE;
-
-   for (auto event : fEventQueue) {
-      if (event.fType == type && event.fWindow == wid) {
-         needRemoval = kTRUE;
-         ev = event;
-      }
-   }
-   
-   if (needRemoval) {
-      //At least one event of such type was in a queue, we'll try to remove them all.
-      auto begin = std::remove_if(fEventQueue.begin(), fEventQueue.end(), EventRemovalPredicate(wid, type));
-      fEventQueue.erase(begin, fEventQueue.end());
-   }
-
+   //No need in this.
    return kFALSE;
 }
 
@@ -2226,12 +2239,29 @@ Int_t TGCocoa::CocoaToRootY(Int_t y)const
    } else {
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"CocoaToRootY: No root window found");
-      throw std::runtime_error("No root window found");
+      throw std::runtime_error("CocoaToRootY: No root window found");
 #endif
       return y;//Should never happen.
    }
 }
-
+/*
+//______________________________________________________________________________
+Int_t TGCocoa::RootToCocoaY(Int_t y)const
+{
+   if (fPimpl->fWindows.size()) {
+      //"Window" with index 0 is a fake "root" window,
+      //it has the sizes of a screen.
+      const WindowAttributes_t &attr = fPimpl->fWindows[0].fROOTWindowAttribs;
+      return attr.fHeight - y;
+   } else {
+#ifdef DEBUG_ROOT_COCOA
+      NSLog(@"RootToCocoaY: No root window found");
+      throw std::runtime_error("RootToCocoaY: No root window found");
+#endif
+      return y;//Should never happen.
+   }
+}
+*/
 //______________________________________________________________________________
 void TGCocoa::SetContext(void *ctx)
 {
