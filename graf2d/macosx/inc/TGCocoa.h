@@ -306,10 +306,13 @@ public:
    void QueueEvent(const Event_t &event);
    //
    //These functions here are only in dev. version. TODO: structure this better.
-   Int_t CocoaToRootY(Int_t y)const;
+   Int_t CocoaToRootY(Window_t wid, Int_t y)const;
+   Int_t RootToCocoaY(Window_t wid, Int_t y)const;
 
    void SetContext(void *ctx);
 
+protected:
+   void *fCtx;
 private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
@@ -320,7 +323,7 @@ private:
    
    std::deque<Event_t> fEventQueue;
 
-   void *fCtx;
+
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };

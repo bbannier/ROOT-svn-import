@@ -52,8 +52,6 @@ private:
    TGQuartz(const TGQuartz &rhs);
    TGQuartz &operator = (const TGQuartz &rhs);
    
-   void *fCtx; // The graphics context
-   
    ClassDef(TGQuartz, 0);//2D graphics for Mac OSX.
 };
 
