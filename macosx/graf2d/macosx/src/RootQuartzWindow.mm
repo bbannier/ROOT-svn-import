@@ -68,7 +68,9 @@
 //______________________________________________________________________________
 - (void) queueConfigureNotify : (NSNotification *)notification expose : (BOOL) expose
 {
-   TGCocoa *cocoa = (TGCocoa *)gVirtualX;//Uh-oh!
+   (void)notification;
+   (void)expose;
+ /*  TGCocoa *cocoa = (TGCocoa *)gVirtualX;//Uh-oh!
    RootQuartzWindow *win = (RootQuartzWindow *)notification.object;
    const NSRect frame = win.frame;
    
@@ -85,7 +87,7 @@
    if (expose) {
       newEvent.fType = kExpose;//Baby did a bad bad thing :)))
       cocoa->QueueEvent(newEvent);
-   }
+   }*/
 }
 
 //______________________________________________________________________________
@@ -93,32 +95,37 @@
 {
    //Let's generate ConfigureNotify event.
    //Event_t newEvent = {};
-   if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
+
+
+/*   if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
       [self queueConfigureNotify : notification expose : YES];
    }
 #ifdef DEBUG_ROOT_COCOA
    else
       NSLog(@"windowDidResize: Object %@ is not a RootQuartzWindow", notification.object);
-#endif
+#endif*/
+   (void*)notification;
 }
 
 //______________________________________________________________________________
 - (void) windowDidMove : (NSNotification *)notification
 {
+   (void)notification;
    //Let's generate ConfigureNotify event.
-   if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
+/*   if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
       [self queueConfigureNotify : notification expose : NO];
    }
 #ifdef DEBUG_ROOT_COCOA
    else
       NSLog(@"windowDidResize: Object %@ is not a RootQuartzWindow", notification.object);
-#endif
+#endif*/
 }
 
 //______________________________________________________________________________
 - (void) windowDidBecomeKey : (NSNotification *)notification
 {
    //Let's generate ConfigureNotify event.
+/*
    if ([notification.object isKindOfClass : [RootQuartzWindow class]]) {
       TGCocoa *cocoa = (TGCocoa *)gVirtualX;//Uh-oh!
       RootQuartzWindow *win = (RootQuartzWindow *)notification.object;
@@ -137,7 +144,8 @@
    else
       NSLog(@"windowDidResize: Object %@ is not a RootQuartzWindow", notification.object);
 #endif
-
+*/
+   (void)notification;
 }
 
 @end

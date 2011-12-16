@@ -10,6 +10,7 @@
 - (void) addChildView : (RootQuartzView *)child;
 - (void) setParentView : (id<RootGUIElement>)parent;
 - (id<RootGUIElement>) parentView;
+- (NSView *) contentView;
 
 @property (nonatomic, assign) unsigned fWinID;
 

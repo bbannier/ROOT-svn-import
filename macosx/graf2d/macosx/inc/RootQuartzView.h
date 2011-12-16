@@ -11,7 +11,12 @@
 - (void) setParentView : (RootQuartzView *)parent;
 - (RootQuartzView *) parentView;
 
+- (NSView *)contentView;
+
 @property (nonatomic, assign) unsigned fWinID;
+
+//NSView does not have backgroundColor?
+@property (nonatomic, assign) unsigned long fBackgroundColor;
 
 @end
 

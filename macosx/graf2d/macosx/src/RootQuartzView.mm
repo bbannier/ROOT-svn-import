@@ -8,6 +8,7 @@
    RootQuartzView *fParentView;
 }
 
+@synthesize fBackgroundColor;
 @synthesize fWinID;
 
 //______________________________________________________________________________
@@ -39,11 +40,15 @@
       if (TGWindow *window = gClient->GetWindowById(fWinID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
          CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
+         
+         CGContextSaveGState(ctx);
+         
          TGCocoa *cocoa = static_cast<TGCocoa *>(gVirtualX);
          cocoa->SetContext(ctx);
          //
          gClient->NeedRedraw(window, kTRUE);
          //
+         CGContextRestoreGState(ctx);
       }
    }
 }
@@ -52,15 +57,32 @@
 - (void) setFrameSize : (NSSize)newSize
 {
    //Generate ConfigureNotify event and send it to ROOT's TGWindow.
+   [super setFrameSize : newSize];
+   
    if (fWinID) {
       if (TGWindow *window = gClient->GetWindowById(fWinID)) {
-         NSLog(@"send configure notify to TGWindow");
+//         NSLog(@"send configure notify to TGWindow");
          //Should I also send setNeedsDisplay or not?
+         //
+         Event_t newEvent = {};
+         newEvent.fType = kConfigureNotify;
+         
+         newEvent.fWindow = fWinID;
+         newEvent.fX = self.frame.origin.x;
+         newEvent.fY = self.frame.origin.y;
+         newEvent.fWidth = newSize.width;
+         newEvent.fHeight = newSize.height;
+         
+         window->HandleEvent(&newEvent);
+         //
       }
    }
-   
-   [super setFrameSize : newSize];
 }
 
+//______________________________________________________________________________
+- (NSView *)contentView
+{
+   return self;
+}
 
 @end
