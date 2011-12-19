@@ -12,6 +12,7 @@
 #include "RootQuartzWindow.h"
 #include "RootQuartzView.h"
 #include "CocoaPrivate.h"
+#include "QuartzFonts.h"
 #include "CocoaUtils.h"
 #include "TGCocoa.h"
 
@@ -1106,11 +1107,14 @@ Window_t TGCocoa::GetParent(Window_t /*wid*/) const
 }
 
 //______________________________________________________________________________
-FontStruct_t TGCocoa::LoadQueryFont(const char * /*font_name*/)
+FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
 {
    // Provides the most common way for accessing a font: opens (loads) the
    // specified font and returns a pointer to the appropriate FontStruct_t
    // structure. If the font does not exist, it returns NULL.
+   NSLog(@"TGCocoa::LoadQueryFont, font %s was requested", fontName);   
+   ROOT::MacOSX::Quartz::XLFDName xlfd = {};
+   ParseXLFDName(fontName, xlfd);
 
    return 0;
 }
