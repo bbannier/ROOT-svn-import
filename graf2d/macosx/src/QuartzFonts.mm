@@ -47,7 +47,7 @@ size_type GetXLFDNameComponentAsString(const std::string &name, const std::strin
    if (pos - start)
       component = name.substr(start, pos - start);
    else
-      throw std::runtime_error("Component " + componentName + " has length 0");
+      component = "";
    
    return pos;
 }
