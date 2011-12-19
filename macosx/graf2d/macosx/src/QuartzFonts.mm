@@ -9,6 +9,18 @@
 #include "QuartzFonts.h"
 #include "CocoaUtils.h"
 
+//
+// This thing sucks! (c) Duke Nukem.
+// This code really sucks, it's just a temporary
+// hack done fast, since it looks like I have
+// to implement everything myself and I needed
+// text and fonts immediately, I have to produce
+// this ...
+// Code is ugly and stupid, but I need it at the
+// moment.
+//
+
+
 namespace ROOT {
 namespace MacOSX {
 namespace Quartz {
@@ -85,9 +97,7 @@ size_type ParseWeight(const std::string &name, size_type pos, XLFDName &dst)
    //and integer.
    std::string weight;
    pos = GetXLFDNameComponentAsString(name, "weight", pos, weight);
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"requested font weight %s", weight.c_str());
-#endif
+
    if (weight != "bold")
       dst.fWeight = FontWeight::medium;
    else
@@ -229,7 +239,7 @@ bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
 }
 
 //______________________________________________________________________________
-CTFontRef FontManager::LoadFont(const XLFDName &xlfd)
+FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
 {
    using ROOT::MacOSX::Util::CFGuard;
    
@@ -238,15 +248,134 @@ CTFontRef FontManager::LoadFont(const XLFDName &xlfd)
    //if matching between name from xlfd and MacOS X font is correct.
 
    //CF expects CFStringRef, not c-string.
-   CFGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);
-   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//0 is for CGAffineTransform.
+   CFGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);//false - no initial retain.
+   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//0 is for CGAffineTransform, false - no initial retain.
    
    
    //What if this font was "loaded" already?
    if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
       fLoadedFonts[font.Get()] = font;
    
-   return font.Get();
+   return reinterpret_cast<FontStruct_t>(font.Get());
+}
+
+//______________________________________________________________________________
+void FontManager::UnloadFont(FontStruct_t font)
+{
+   CTFontRef fontRef = (CTFontRef)font;
+   auto fontIter = fLoadedFonts.find(fontRef);
+   if (fontIter == fLoadedFonts.end()) {
+      NSLog(@"attempt to unload font, not created by font manager");
+      throw std::runtime_error("attempt to unload font, not created by font manager");
+   }
+   
+   fLoadedFonts.erase(fontIter);
+}
+
+//______________________________________________________________________________
+unsigned FontManager::GetTextWidth(FontStruct_t font, const char *text, int nChars)
+{
+   //This is a temporary hack!!!
+   CTFontRef fontRef = (CTFontRef)font;
+   //nChars is either positive, or negative (take all string).
+   if (nChars < 0)
+      nChars = std::strlen(text);
+
+   if (fLoadedFonts.find(fontRef) == fLoadedFonts.end()) {
+#ifdef DEBUG_ROOT_COCOA
+      NSLog(@"GetTextWidth: requested font was not created by font manager");
+      throw std::runtime_error("GetTextWidth: requested font was not created by font manager");
+#endif
+      return 0;
+   } else {
+
+      std::string textLine(text, nChars);
+      CTLineGuard ctLine(textLine.c_str(), fontRef);
+      unsigned w = 0, h = 0;
+      ctLine.GetBounds(w, h);
+      return w;
+   }
+}
+
+//_________________________________________________________________
+void FontManager::GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDescent)
+{
+   CTFontRef fontRef = (CTFontRef)font;
+   
+   if (fLoadedFonts.find(fontRef) == fLoadedFonts.end()) {
+#ifdef DEBUG_ROOT_COCOA
+      NSLog(@"GetFontProperties, function was called for a font, which was not loaded by font manager");
+      throw std::runtime_error("GetFontProperties, function was called for a font, which was not loaded by font manager");
+#endif   
+   } else {
+   //Instead of this, use CT funtion to request ascent/descent.
+      CTLineGuard ctLine("LALALA", fontRef);
+      ctLine.GetAscentDescent(maxAscent, maxDescent);
+   }
+}
+
+//_________________________________________________________________
+CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font)
+                  : fCTLine(0)
+{
+   //Create attributed string with one attribue: the font.
+   CFStringRef keys[] = {kCTFontAttributeName};
+   CFTypeRef values[] = {font};
+   
+   Init(textLine, 1, keys, values);
+}
+
+//_________________________________________________________________
+CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font, Color_t /*color*/)
+                  : fCTLine(0)
+{
+   //Create attributed string with font and color.
+   //
+}
+
+//_________________________________________________________________
+CTLineGuard::~CTLineGuard()
+{
+   CFRelease(fCTLine);
+}
+
+//_________________________________________________________________   
+void CTLineGuard::GetBounds(UInt_t &w, UInt_t &h)const
+{
+   CGFloat ascent = 0.f, descent = 0.f, leading = 0.f;
+   w = UInt_t(CTLineGetTypographicBounds(fCTLine, &ascent, &descent, &leading));
+   h = UInt_t(ascent);// + descent + leading);
+}
+
+//_________________________________________________________________   
+void CTLineGuard::GetAscentDescent(Int_t &asc, Int_t &desc)const
+{
+   CGFloat ascent = 0.f, descent = 0.f, leading = 0.f;
+   CTLineGetTypographicBounds(fCTLine, &ascent, &descent, &leading);
+   asc = int(ascent);
+   desc = int(descent);
+}
+
+//_________________________________________________________________
+void CTLineGuard::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values)
+{
+   using ROOT::MacOSX::Util::CFGuard;
+   CFGuard<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault, 
+                                          (const void **)keys, (const void **)values, 
+                                          nAttribs, &kCFTypeDictionaryKeyCallBacks, 
+                                          &kCFTypeDictionaryValueCallBacks), false);
+   if (!stringAttribs.Get())
+      throw std::runtime_error("CTLineGuard: null attribs");
+
+   CFGuard<CFStringRef> wrappedCString(CFStringCreateWithCString(kCFAllocatorDefault, textLine, kCFStringEncodingMacRoman), false);
+   if (!wrappedCString.Get())
+      throw std::runtime_error("CTLineGuard: cstr wrapper");
+
+   CFGuard<CFAttributedStringRef> attributedString(CFAttributedStringCreate(kCFAllocatorDefault, wrappedCString.Get(), stringAttribs.Get()), false);
+   fCTLine = CTLineCreateWithAttributedString(attributedString.Get());
+
+   if (!fCTLine)
+      throw std::runtime_error("CTLineGuard: attrib string");
 }
 
 }

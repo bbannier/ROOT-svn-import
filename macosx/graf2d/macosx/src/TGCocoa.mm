@@ -310,16 +310,16 @@ void TGCocoa::GetRGB(Int_t /*index*/, Float_t &/*r*/, Float_t &/*g*/, Float_t &/
 }
 
 //______________________________________________________________________________
-void TGCocoa::GetTextExtent(UInt_t &/*w*/, UInt_t &/*h*/, char * /*mess*/)
+void TGCocoa::GetTextExtent(UInt_t &/*w*/, UInt_t &/*h*/, char *text)
 {
    // Returns the size of the specified character string "mess".
    //
    // w    - the text width
    // h    - the text height
    // mess - the string
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetTextExtent\n";
-#endif
+//#ifdef DEBUG_ROOT_COCOA
+   NSLog(@"GetTextExtent for text %s", text);
+//#endif
 }
 
 //______________________________________________________________________________
@@ -363,7 +363,7 @@ Bool_t TGCocoa::HasTTFonts() const
    std::cout<<"TGCocoa::HasTTFonts\n";
 #endif
 
-   return kTRUE;
+   return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -842,8 +842,10 @@ void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t 
    NSRect newFrame;
    newFrame.origin.x = x;
    newFrame.origin.y = y;
-   newFrame.size.width = w;
+
    newFrame.size.height = h;
+   newFrame.size.width = w;
+   
 
    id<RootGUIElement> widget = fPimpl->GetWindow(wid);
    if (![widget parentView]) {
@@ -906,7 +908,7 @@ void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
    // Sets the background of the window "wid" to the specified color value
    // "color". Changing the background does not cause the window contents
    // to be changed.
-   NSLog(@"SetWindowBackground called for wid %lu, color is %xu", wid, (UInt_t)color);
+//   NSLog(@"SetWindowBackground called for wid %lu, color is %xu", wid, (UInt_t)color);
 }
 
 //______________________________________________________________________________
@@ -998,7 +1000,6 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
       newWindow.fWinID = result;
 
       [newWindow release];//Owned by fPimpl now.
-
       return result;
    } else {
       id<RootGUIElement> parentWin = fPimpl->GetWindow(parent);
@@ -1009,7 +1010,6 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
 
       [parentWin addChildView : childView];
       [childView release];
-
       return result;
    }
 }
@@ -1115,11 +1115,9 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
    // Provides the most common way for accessing a font: opens (loads) the
    // specified font and returns a pointer to the appropriate FontStruct_t
    // structure. If the font does not exist, it returns NULL.
-   NSLog(@"TGCocoa::LoadQueryFont, font %s was requested", fontName);   
    ROOT::MacOSX::Quartz::XLFDName xlfd = {};
-   if (ParseXLFDName(fontName, xlfd)) {
-      return reinterpret_cast<FontStruct_t>(fFontManager->LoadFont(xlfd));
-   }
+   if (ParseXLFDName(fontName, xlfd))
+      return fFontManager->LoadFont(xlfd);
 
    return 0;
 }
@@ -1139,13 +1137,15 @@ void TGCocoa::DeleteFont(FontStruct_t /*fs*/)
 }
 
 //______________________________________________________________________________
-GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t * /*gval*/)
+GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t *gval)
 {
    // Creates a graphics context using the provided GCValues_t *gval structure.
    // The mask data member of gval specifies which components in the GC are
    // to be set using the information in the specified values structure.
    // It returns a graphics context handle GContext_t that can be used with any
    // destination drawable or O if the creation falls.
+
+//   NSLog(@"createGC called, font is %p", (void*)gval->fFont);
 
    return 0;
 }
@@ -1382,7 +1382,7 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawLine(Drawable_t wid, GContext_t /*gc*/, Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/)
+void TGCocoa::DrawLine(Drawable_t wid, GContext_t /*gc*/, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
    // Uses the components of the specified GC to draw a line between the
    // specified set of points (x1, y1) and (x2, y2).
@@ -1393,7 +1393,24 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t /*gc*/, Int_t /*x1*/, Int_t /*
    // GC mode-dependent components: foreground, background, tile, stipple,
    // tile-stipple-x-origin, tile-stipple-y-origin, dash-offset, dash-list.
    // (see also the GCValues_t structure)
-   NSLog(@"TGCocoa::DrawLine for wid %lu", wid);
+
+   //This is just a hack to show button.
+   if (!wid) {
+      NSLog(@"DrawLine was called for 'root' window");
+      throw std::runtime_error("DrawLine was called for 'root' window");
+   }
+   
+   CGContextRef ctx = (CGContextRef)fCtx;
+   if (!ctx) {
+      NSLog(@"DrawLine called outside of drawRect function");
+      throw std::runtime_error("DrawLine called outside of drawRect function");
+   }
+   
+   CGContextSetRGBStrokeColor(ctx, 0.f, 0.f, 0.f, 1.f);
+   CGContextBeginPath(ctx);
+   CGContextMoveToPoint(ctx, x1, y1);
+   CGContextAddLineToPoint(ctx, x2, y2);
+   CGContextStrokePath(ctx);
 }
 
 //______________________________________________________________________________
@@ -1415,6 +1432,8 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
       NSLog(@"clear area called outside of drawRect function");
       throw std::runtime_error("clear area called outside of drawRect function");
    }
+   
+   //NSLog(@"clear area for %d", wid);
 
    id<RootGUIElement> widget = fPimpl->GetWindow(wid);
    RootQuartzView *view = (RootQuartzView *)[widget contentView];
@@ -1602,38 +1621,36 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawString(Drawable_t /*wid*/, GContext_t /*gc*/, Int_t /*x*/,
-                           Int_t /*y*/, const char * /*s*/, Int_t /*len*/)
+void TGCocoa::DrawString(Drawable_t wid, GContext_t /*gc*/, Int_t x, Int_t y, const char *s, Int_t len)
 {
-   // Each character image, as defined by the font in the GC, is treated as an
-   // additional mask for a fill operation on the drawable.
-   //
    // wid  - the drawable
    // gc   - the GC
    // x, y - coordinates, which are relative to the origin of the specified
    //        drawable and define the origin of the first character
    // s    - the character string
    // len  - the number of characters in the string argument
-   //
-   // GC components in use: function, plane-mask, fill-style, font,
-   // subwindow-mode, clip-x-origin, clip-y-origin, and clip-mask.
-   // GC mode-dependent components: foreground, background, tile, stipple,
-   // tile-stipple-x-origin, and tile-stipple-y-origin.
-   // (see also the GCValues_t structure)
-
+   if (!wid) {
+      NSLog(@"TGCocoa::DrawString was called for 'root' window");
+      throw std::runtime_error("TGCocoa::DrawString was called for 'root' window");
+   }
+   
+   
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::TextWidth(FontStruct_t /*font*/, const char * /*s*/, Int_t /*len*/)
+Int_t TGCocoa::TextWidth(FontStruct_t font, const char *s, Int_t len)
 {
    // Return lenght of the string "s" in pixels. Size depends on font.
-   return 5;
+//   NSLog(@"text width requested for string %s, font is %p", s, (void*)font);
+   return fFontManager->GetTextWidth(font, s, len);
 }
 
 //______________________________________________________________________________
-void TGCocoa::GetFontProperties(FontStruct_t /*font*/, Int_t &/*max_ascent*/, Int_t &/*max_descent*/)
+void TGCocoa::GetFontProperties(FontStruct_t font, Int_t &maxAscent, Int_t &maxDescent)
 {
    // Returns the font properties.
+//   NSLog(@"GetFontProperties!!!");
+   fFontManager->GetFontProperties(font, maxAscent, maxDescent);
 }
 
 //______________________________________________________________________________
@@ -1655,10 +1672,11 @@ FontStruct_t TGCocoa::GetFontStruct(FontH_t /*fh*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::FreeFontStruct(FontStruct_t /*fs*/)
+void TGCocoa::FreeFontStruct(FontStruct_t fs)
 {
    // Frees the font structure "fs". The font itself will be freed when
    // no other resource references it.
+   fFontManager->UnloadFont(fs);
 }
 
 //______________________________________________________________________________
@@ -1680,7 +1698,7 @@ Int_t TGCocoa::KeysymToKeycode(UInt_t /*keysym*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::FillRectangle(Drawable_t /*wid*/, GContext_t /*gc*/,
+void TGCocoa::FillRectangle(Drawable_t wid, GContext_t /*gc*/,
                             Int_t /*x*/, Int_t /*y*/,
                             UInt_t /*w*/, UInt_t /*h*/)
 {
@@ -1692,6 +1710,7 @@ void TGCocoa::FillRectangle(Drawable_t /*wid*/, GContext_t /*gc*/,
    // GC mode-dependent components: foreground, background, tile, stipple,
    // tile-stipple-x-origin, and tile-stipple-y-origin.
    // (see also the GCValues_t structure)
+   NSLog(@"Fill rectangle for widget %d", wid);
 }
 
 //______________________________________________________________________________
