@@ -1544,10 +1544,6 @@ TGFont *TGFontPool::GetFont(const char *font, Bool_t fixedDefault)
       Error("GetFont", "argument may not be 0 or empty");
       return 0;
    }
-   
-   //Remove as soon as font's are done.
-   return new TGFont("Cocoa hack");
-   //
 
    TGFont *f = (TGFont*)fList->FindObject(font);
 

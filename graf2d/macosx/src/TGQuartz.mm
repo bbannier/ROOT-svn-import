@@ -460,7 +460,6 @@ void TGQuartz::SetTextColor(Color_t cindex)
 void TGQuartz::SetTextFont(Font_t fontnumber)
 {
    // Sets the current text font number.
-   
    TAttText::SetTextFont(fontnumber);
    
    static const char *fontname[] = {
