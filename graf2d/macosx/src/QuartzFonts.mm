@@ -7,6 +7,7 @@
 #import <Cocoa/Cocoa.h>
 
 #include "QuartzFonts.h"
+#include "CocoaUtils.h"
 
 namespace ROOT {
 namespace MacOSX {
@@ -81,10 +82,18 @@ size_type ParseFamilyName(const std::string &name, size_type pos, XLFDName &dst)
 size_type ParseWeight(const std::string &name, size_type pos, XLFDName &dst)
 {
    //Weight can be an integer, can be a word, can be a combination of a word
-   //and integer. Skip at the moment.
-   std::string dummy;
-   return GetXLFDNameComponentAsString(name, "weight", pos, dummy);
-//   return GetXLFDNameComponentAsInteger(name, "weight", pos, dst.fWeight);
+   //and integer.
+   std::string weight;
+   pos = GetXLFDNameComponentAsString(name, "weight", pos, weight);
+#ifdef DEBUG_ROOT_COCOA
+   NSLog(@"requested font weight %s", weight.c_str());
+#endif
+   if (weight != "bold")
+      dst.fWeight = FontWeight::medium;
+   else
+      dst.fWeight = FontWeight::bold;
+
+   return pos;
 }
 
 //______________________________________________________________________________
@@ -95,12 +104,12 @@ size_type ParseSlant(const std::string &name, size_type pos, XLFDName &dst)
    pos = GetXLFDNameComponentAsString(name, "slant", pos, slant);
    
    if (slant == "r" || slant == "R") {
-      dst.fSlant = Slant::regular;
+      dst.fSlant = FontSlant::regular;
       return pos;
    }
    
    if (slant == "i" || slant == "I") {
-      dst.fSlant = Slant::italic;
+      dst.fSlant = FontSlant::italic;
       return pos;
    }
    
@@ -217,6 +226,27 @@ bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
 #endif
       return false;
    }
+}
+
+//______________________________________________________________________________
+CTFontRef FontManager::LoadFont(const XLFDName &xlfd)
+{
+   using ROOT::MacOSX::Util::CFGuard;
+   
+   //This code is just a sketch. I have to check later,
+   //how to correctly create font with attributes from xlfd,
+   //if matching between name from xlfd and MacOS X font is correct.
+
+   //CF expects CFStringRef, not c-string.
+   CFGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);
+   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//0 is for CGAffineTransform.
+   
+   
+   //What if this font was "loaded" already?
+   if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
+      fLoadedFonts[font.Get()] = font;
+   
+   return font.Get();
 }
 
 }
