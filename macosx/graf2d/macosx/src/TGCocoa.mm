@@ -1114,7 +1114,9 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
    // structure. If the font does not exist, it returns NULL.
    NSLog(@"TGCocoa::LoadQueryFont, font %s was requested", fontName);   
    ROOT::MacOSX::Quartz::XLFDName xlfd = {};
-   ParseXLFDName(fontName, xlfd);
+   if (ParseXLFDName(fontName, xlfd)) {
+   
+   }
 
    return 0;
 }
