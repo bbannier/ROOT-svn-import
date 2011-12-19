@@ -19,6 +19,7 @@
 ClassImp(TGCocoa)
 
 namespace Details = ROOT::MacOSX::Details;
+namespace Quartz = ROOT::MacOSX::Quartz;
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
@@ -26,6 +27,7 @@ TGCocoa::TGCocoa()
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
+      fFontManager.reset(new Quartz::FontManager);
    } catch (const std::exception &) {
       //let's kill ROOT! without gui, no reason to live at all!
       throw;
@@ -38,6 +40,7 @@ TGCocoa::TGCocoa(const char *name, const char *title)
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
+      fFontManager.reset(new Quartz::FontManager);
    } catch (const std::exception &) {
       //let's kill ROOT! without gui, no reason to live at all!
       throw;   
@@ -1115,7 +1118,7 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
    NSLog(@"TGCocoa::LoadQueryFont, font %s was requested", fontName);   
    ROOT::MacOSX::Quartz::XLFDName xlfd = {};
    if (ParseXLFDName(fontName, xlfd)) {
-   
+      return reinterpret_cast<FontStruct_t>(fFontManager->LoadFont(xlfd));
    }
 
    return 0;
