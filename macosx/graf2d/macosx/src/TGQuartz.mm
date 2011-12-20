@@ -21,6 +21,10 @@
 
 const Double_t kPI = TMath::Pi();
 
+static Int_t gFillHollow;  // Flag if fill style is hollow
+static Int_t gFillPattern; // Fill pattern
+
+
 ClassImp(TGQuartz)
 
 
@@ -42,60 +46,20 @@ TGQuartz::TGQuartz(const char *name, const char *title)
 //______________________________________________________________________________
 void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 {
-   //This is just a sketch implementation.
-   
-   //TODO: check fill style (it can be polygon with some stipple).
-   //Think about gradient filling and transparency.
-   //What about outline? (TODO).
-   //What about different color spaces? (using RGB now, but ...)
+   // Draw a box
 
    CGContextRef ctx = (CGContextRef)fCtx;//This is context from CoreGraphics, it's up to me (TGCocoa) to manage it.
 
-   //This function modifies different state variables in context.
-   //The same context will be used by other functions.
-   //So either save and restore state (that's what I do here) or
-   //REMEMBER to set these states later to correct values 
-   //(correct from next operation's POV). 
    CGContextSaveGState(ctx);
 
-   if (mode == kFilled) {
-      //Fill the rectangle with solid color.
-   
-      const Float_t alpha = 1.f; //Alpha for filled area must be set externally, for example,
-                                 //add transparency into TAttFill, add global fill transparency
-                                 //and check them here.
-      Float_t red = 1.f, green = 1.f, blue = 1.f; //White by default.
-      //Color in gVirtualX is already set by primitive or by pad,
-      //just extract RGB triplet here.
-      if (const TColor *color = gROOT->GetColor(GetFillColor()))
-         color->GetRGB(red, green, blue); 
+   if (x1 > x2) std::swap(x1, x2);
+   if (y1 > y2) std::swap(y1, y2);
 
-      CGContextSetRGBFillColor(ctx, red, green, blue, alpha);
+   if (mode == kFilled) {
+      if (!gFillPattern) SetFillColorIndex(GetFillColor());
       CGContextFillRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    } else {
-      //Find better way to specify line attributes like line caps
-      //and joins - TODO: this must go somehow to TAttLine, so we can set/get
-      //these parameters externally/internally. In this example - just hardcoded values.
-      CGContextSetLineCap(ctx, kCGLineCapRound);
-      CGContextSetLineJoin(ctx, kCGLineJoinMiter);
-   
-      if (GetLineWidth() > 1.f)
-         CGContextSetLineWidth(ctx, GetLineWidth());
-
-      const Float_t alpha = 1.f; //Alpha for line must be set externally, for example,
-                                 //add transparency into TAttLine, add global line transparency
-                                 //and check them here.
-
-      Float_t red = 0.f, green = 0.f, blue = 0.f;//Black line by default.
-   
-      if (const TColor *color = gROOT->GetColor(GetLineColor()))
-         color->GetRGB(red, green, blue);
-
-      CGContextSetRGBStrokeColor(ctx, red, green, blue, alpha);
-
-      if (x1 > x2) std::swap(x1, x2);
-      if (y1 > y2) std::swap(y1, y2);
-
+      SetStrokeColorIndex(GetFillColor());
       CGContextStrokeRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    }
    
@@ -119,15 +83,19 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
 
    CGContextRef ctx = (CGContextRef)fCtx;
 
- //  SetFillColorIndex(GetFillColor());
-
    CGContextBeginPath (ctx);
 
    CGContextMoveToPoint (ctx, xy[0].fX, xy[0].fY);
 
    for (Int_t i=1; i<n; i++) CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
 
-   CGContextFillPath(ctx);
+   if (gFillHollow) {
+     SetStrokeColorIndex(GetFillColor());
+     CGContextStrokePath(ctx);
+   } else {
+      if (!gFillPattern) SetFillColorIndex(GetFillColor());
+      CGContextFillPath(ctx);
+   }
 }
 
 
@@ -343,7 +311,29 @@ void TGQuartz::SetFillStyle(Style_t style)
    
    TAttFill::SetFillStyle(style);   
 
-   if (style == 1234) SetStencilPattern();
+   Int_t fais = style/1000;
+   Int_t fasi = style%1000;   
+   
+   switch (fais) {
+      case 1:         // solid
+         gFillHollow  = 0;
+         gFillPattern = 0;
+         break;
+
+      case 2:         // pattern
+         gFillHollow = 1;
+         break;
+
+      case 3:         // hatch
+         gFillHollow  = 0;
+         gFillPattern = fasi;
+         SetStencilPattern();
+         break;
+         
+      default:
+         gFillHollow = 1;
+         break;
+   }
 }
 
 
@@ -405,9 +395,7 @@ void TGQuartz::SetStencilPattern()
    CGColorSpaceRelease (patternSpace);
    CGColorSpaceRelease (baseSpace);
    
-   fStencilNb = 24;
-   
-   pattern = CGPatternCreate(&fStencilNb, CGRectMake(0, 0, 16, 16),
+   pattern = CGPatternCreate(&gFillPattern, CGRectMake(0, 0, 16, 16),
                              CGAffineTransformIdentity, 16, 16,
                              kCGPatternTilingConstantSpacing,
                              false, &callbacks);
