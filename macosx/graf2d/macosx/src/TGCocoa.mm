@@ -1575,14 +1575,14 @@ void TGCocoa::GetGCValues(GContext_t /*gc*/, GCValues_t &/*gval*/)
 }
 
 //______________________________________________________________________________
-FontStruct_t TGCocoa::GetFontStruct(FontH_t /*fh*/)
+FontStruct_t TGCocoa::GetFontStruct(FontH_t fh)
 {
    // Retrieves the associated font structure of the font specified font
    // handle "fh".
    //
    // Free returned FontStruct_t using FreeFontStruct().
 
-   return 0;
+   return fh;
 }
 
 //______________________________________________________________________________

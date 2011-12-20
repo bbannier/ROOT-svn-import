@@ -263,9 +263,14 @@ FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
 void FontManager::UnloadFont(FontStruct_t font)
 {
    CTFontRef fontRef = (CTFontRef)font;
+   if (!fontRef) {
+      NSLog(@"attempt to unload null font");
+      return;
+   }
+
    auto fontIter = fLoadedFonts.find(fontRef);
    if (fontIter == fLoadedFonts.end()) {
-      NSLog(@"attempt to unload font, not created by font manager");
+      NSLog(@"attempt to unload font, not created by font manager %lu", font);
       throw std::runtime_error("attempt to unload font, not created by font manager");
    }
    
@@ -282,19 +287,21 @@ unsigned FontManager::GetTextWidth(FontStruct_t font, const char *text, int nCha
       nChars = std::strlen(text);
 
    if (fLoadedFonts.find(fontRef) == fLoadedFonts.end()) {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"GetTextWidth: requested font was not created by font manager");
-      throw std::runtime_error("GetTextWidth: requested font was not created by font manager");
-#endif
-      return 0;
-   } else {
-
-      std::string textLine(text, nChars);
-      CTLineGuard ctLine(textLine.c_str(), fontRef);
-      unsigned w = 0, h = 0;
-      ctLine.GetBounds(w, h);
-      return w;
+      NSLog(@"GetTextWidth: requested font %lu", font);
+      if (fLoadedFonts.size()) {
+         auto fontIter = fLoadedFonts.begin();
+         fontRef = fontIter->first;
+      } else {
+         throw std::runtime_error("GetTextWidth: requested font was not created by font manager");
+      }
    }
+   
+   std::string textLine(text, nChars);
+   CTLineGuard ctLine(textLine.c_str(), fontRef);
+   unsigned w = 0, h = 0;
+   ctLine.GetBounds(w, h);
+   return w;
+
 }
 
 //_________________________________________________________________
