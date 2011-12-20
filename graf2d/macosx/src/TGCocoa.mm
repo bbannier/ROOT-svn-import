@@ -1,4 +1,4 @@
-//#define DEBUG_ROOT_COCOA
+#define DEBUG_ROOT_COCOA
 
 #ifdef DEBUG_ROOT_COCOA
 #include <iostream>
@@ -86,15 +86,11 @@ TGCocoa::~TGCocoa()
 //______________________________________________________________________________
 void TGCocoa::GetWindowAttributes(Window_t wid, WindowAttributes_t & attr)
 {
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetWindowAttributes, wid == "<<wid<<std::endl;
-#endif
-
    if (wid < fPimpl->fWindows.size()) {
       attr = fPimpl->fWindows[wid].fROOTWindowAttribs;
    } else {
 #ifdef DEBUG_ROOT_COCOA
-      std::cout<<"TGCocoa::GetWindowAttributes, wid is "<<wid<<" but number of windows: "<<fPimpl->fWindows.size()<<std::endl;
+      NSLog(@"TGCocoa::GetWindowAttributes, wid is %lu but number of windows is %lu", wid, fPimpl->fWindows.size());
       throw std::runtime_error("Bad index for GetWindowAttributes");
 #endif
    }
@@ -106,9 +102,6 @@ Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char *colorName, ColorStru
    //"Color" passed as colorName, can be one of the names, defined in X11/rgb.txt,
    //or rgb triplet, which looks like: #rgb #rrggbb #rrrgggbbb #rrrrggggbbbb,
    //where r, g, and b - are hex digits.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::ParseColor\n";
-#endif
    return fPimpl->fX11ColorParser.ParseColor(colorName, color);
 }
 
@@ -130,22 +123,8 @@ void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & color)
 }
 
 //______________________________________________________________________________
-void TGCocoa::NextEvent(Event_t &event)
+void TGCocoa::NextEvent(Event_t &/*event*/)
 {
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TGCocoa::NextEvent");
-#endif
-   if (fEventQueue.size()) {
-      event = fEventQueue.back();
-      fEventQueue.pop_back();
-   }
-#ifdef DEBUG_ROOT_COCOA
-   else {
-      NSLog(@"TGCocoa::NextEvent: NextEvent called, but event queue is empty!");
-      throw std::runtime_error("NextEvent called on empty event queue");
-   }
-#endif
-   
 }
 
 //______________________________________________________________________________
@@ -160,45 +139,30 @@ void TGCocoa::GetPasteBuffer(Window_t /*id*/, Atom_t /*atom*/, TString &/*text*/
 Bool_t TGCocoa::Init(void * /*display*/)
 {
    // Initializes the Cocoa and Quartz system. Returns kFALSE in case of failure.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::Init\n";
-#endif
    return kFALSE;
 }
 
 //______________________________________________________________________________
 void TGCocoa::ClearWindow()
 {
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::ClearWindow";
-#endif
    // Clears the entire area of the current window.
 }
 
 //______________________________________________________________________________
 void TGCocoa::CloseWindow()
 {
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::CloseWindow";
-#endif
    // Deletes current window.
 }
 
 //______________________________________________________________________________
 void TGCocoa::ClosePixmap()
 {
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::ClosePixmap";
-#endif
    // Deletes current pixmap.
 }
 
 //______________________________________________________________________________
 void TGCocoa::CopyPixmap(Int_t /*wid*/, Int_t /*xpos*/, Int_t /*ypos*/)
 {
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::CopyPixmap";
-#endif
    // Copies the pixmap "wid" at the position [xpos,ypos] in the current window.
 }
 
@@ -217,9 +181,6 @@ void TGCocoa::DeleteOpenGLContext(Int_t /*wid*/)
 //______________________________________________________________________________
 UInt_t TGCocoa::ExecCommand(TGWin32Command * /*code*/)
 {
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::ExecCommand\n";
-#endif
    // Executes the command "code" coming from the other threads (Win32)
    return 0;
 }
@@ -228,9 +189,6 @@ UInt_t TGCocoa::ExecCommand(TGWin32Command * /*code*/)
 Int_t TGCocoa::GetDoubleBuffer(Int_t /*wid*/)
 {
    // Queries the double buffer value for the window "wid".
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetDoubleBuffer\n";
-#endif
    return 0;
 }
 
@@ -238,9 +196,6 @@ Int_t TGCocoa::GetDoubleBuffer(Int_t /*wid*/)
 void TGCocoa::GetCharacterUp(Float_t &chupx, Float_t &chupy)
 {
    // Returns character up vector.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetCharacterUp\n";
-#endif
    chupx = chupy = 0;
 }
 
@@ -253,9 +208,6 @@ void TGCocoa::GetGeometry(Int_t /*wid*/, Int_t & /*x*/, Int_t & /*y*/, UInt_t & 
    //        if wid < 0 the size of the display is returned
    // x, y - returned window position
    // w, h - returned window size
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetGeometry\n";
-#endif
 }
 
 //______________________________________________________________________________
@@ -269,9 +221,6 @@ const char *TGCocoa::DisplayName(const char *)
 Handle_t  TGCocoa::GetNativeEvent() const
 {
    // Returns the current native event handle.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetNativeEvent\n";
-#endif
    return 0;
 }
 
@@ -279,9 +228,6 @@ Handle_t  TGCocoa::GetNativeEvent() const
 ULong_t TGCocoa::GetPixel(Color_t /*cindex*/)
 {
    // Returns pixel value associated to specified ROOT color number "cindex".
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetPixel\n";
-#endif
    return 0;
 }
 
@@ -289,31 +235,22 @@ ULong_t TGCocoa::GetPixel(Color_t /*cindex*/)
 void TGCocoa::GetPlanes(Int_t & /*nplanes*/)
 {
    // Returns the maximum number of planes.
-#ifdef DEBUG_ROOT_COCOA
-//   std::cout<<"TGCocoa::GetPlanes\n";
-#endif
 }
 
 //______________________________________________________________________________
 void TGCocoa::GetRGB(Int_t /*index*/, Float_t &/*r*/, Float_t &/*g*/, Float_t &/*b*/)
 {
    // Returns RGB values for color "index".
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetRGB\n";
-#endif
 }
 
 //______________________________________________________________________________
-void TGCocoa::GetTextExtent(UInt_t &/*w*/, UInt_t &/*h*/, char *text)
+void TGCocoa::GetTextExtent(UInt_t &/*w*/, UInt_t &/*h*/, char * /*text*/)
 {
    // Returns the size of the specified character string "mess".
    //
    // w    - the text width
    // h    - the text height
-   // mess - the string
-//#ifdef DEBUG_ROOT_COCOA
-//   NSLog(@"GetTextExtent for text %s", text);
-//#endif
+   // text - the string
 }
 
 //______________________________________________________________________________
@@ -322,9 +259,6 @@ Int_t   TGCocoa::GetFontAscent() const
    // Returns the ascent of the current font (in pixels).
    // The ascent of a font is the distance from the baseline
    // to the highest position characters extend to
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetFontAscent\n";
-#endif
    return 0;
 }
 //______________________________________________________________________________
@@ -333,9 +267,6 @@ Int_t   TGCocoa::GetFontDescent() const
   // Returns the descent of the current font (in pixels.
   // The descent is the distance from the base line
   // to the lowest point characters extend to.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetFontDescent\n";
-#endif
    return 0;
 }
 
@@ -343,9 +274,6 @@ Int_t   TGCocoa::GetFontDescent() const
 Float_t TGCocoa::GetTextMagnitude()
 {
    // Returns the current font magnification factor
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetTextMagnitude\n";
-#endif
    return 0;
 }
 
@@ -353,10 +281,6 @@ Float_t TGCocoa::GetTextMagnitude()
 Bool_t TGCocoa::HasTTFonts() const
 {
    // Returns True when TrueType fonts are used
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::HasTTFonts\n";
-#endif
-
    return kFALSE;
 }
 
@@ -366,10 +290,6 @@ Window_t TGCocoa::GetWindowID(Int_t /*wid*/)
    // Returns the Cocoa window identifier.
    //
    // wid - workstation identifier (input)
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::GetWindowID\n";
-#endif
-
    return Window_t();
 }
 
@@ -378,10 +298,6 @@ Int_t TGCocoa::InitWindow(ULong_t /*window*/)
 {
    // Creates a new window and return window number.
    // Returns -1 if window initialization fails.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::InitWindow\n";
-#endif
-
    return 0;
 }
 
@@ -391,10 +307,6 @@ Int_t TGCocoa::AddWindow(ULong_t /*qwid*/, UInt_t /*w*/, UInt_t /*h*/)
    // Registers a window created by Qt as a ROOT window
    //
    // w, h - the width and height, which define the window size
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::AddWindow\n";
-#endif
-
    return 0;
 }
 
@@ -404,11 +316,6 @@ Int_t TGCocoa::AddPixmap(ULong_t /*pixind*/, UInt_t /*w*/, UInt_t /*h*/)
    // Registers a pixmap created by TGLManager as a ROOT pixmap
    //
    // w, h - the width and height, which define the pixmap size
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::AddPixmap\n";
-#endif
-
-
    return 0;
 }
 
@@ -417,10 +324,6 @@ Int_t TGCocoa::AddPixmap(ULong_t /*pixind*/, UInt_t /*w*/, UInt_t /*h*/)
 void TGCocoa::RemoveWindow(ULong_t /*qwid*/)
 {
    // Removes the created by Qt window "qwid".
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::RemoveWindow\n";
-#endif
-
 }
 
 //______________________________________________________________________________
@@ -432,10 +335,6 @@ void TGCocoa::MoveWindow(Int_t /*wid*/, Int_t /*x*/, Int_t /*y*/)
    //
    // x, y - coordinates, which define the new position of the window
    //        relative to its parent.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::MoveWindow\n";
-#endif
-
 }
 
 //______________________________________________________________________________
@@ -734,10 +633,6 @@ void TGCocoa::MapRaised(Window_t wid)
    // stack of all windows.
    
    //Just a sketch code.
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::MapRaised, wid == "<<wid<<std::endl;
-#endif
-
    ROOT::MacOSX::Util::AutoreleasePool pool;
 
    auto winIter = fPimpl->fWindows.find(wid);
@@ -759,8 +654,10 @@ void TGCocoa::MapRaised(Window_t wid)
       if (GetCurrentProcess(&psn) == noErr)
          SetFrontProcess(&psn);
 #ifdef DEBUG_ROOT_COCOA
-      else
+      else {
          NSLog(@"SetFrontProcess failed");
+         throw std::runtime_error("SetFrontProcess failed");
+      }
 #endif
    }
 
@@ -971,9 +868,6 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
    //means nothing for Cocoa. TODO: create window correctly to emulate what ROOT wants from TGCocoa.
    //This implementation is just a sketch to try.
    //
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"CreateWindow was called %d %d %d %u %u %u %d", parent, x, y, w, h, border, depth);
-#endif   
    //Check if really need this.
    ROOT::MacOSX::Util::AutoreleasePool pool;
 
@@ -1139,7 +1033,7 @@ GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t *gval)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ChangeGC(GContext_t gc, GCValues_t *gval)
+void TGCocoa::ChangeGC(GContext_t gc, GCValues_t * /*gval*/)
 {
    NSLog(@"changing GC %lu", gc);
    // Changes the components specified by the mask in gval for the specified GC.
@@ -1632,7 +1526,7 @@ void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const 
       NSLog(@"TGCocoa::DrawString was called for 'root' window");
       throw std::runtime_error("TGCocoa::DrawString was called for 'root' window");
    }
-   
+      
    CGContextRef ctx = (CGContextRef)fCtx;
    if (!ctx) {
       NSLog(@"TGCocoa::DrawString: function was called, but context not set");
@@ -1644,7 +1538,12 @@ void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const 
    y = view.frame.size.height - y;
    
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   ROOT::MacOSX::Quartz::CTLineGuard ctLine(text, (CTFontRef)gcVals.fFont);
+
+   if (len < 0)
+      len = std::strlen(text);
+   
+   const std::string substr(text, len);
+   ROOT::MacOSX::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont);
 
    CGContextSaveGState(ctx);
    CGContextSetTextPosition(ctx, x, y);
@@ -1725,7 +1624,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t /*gc*/,
    // GC mode-dependent components: foreground, background, tile, stipple,
    // tile-stipple-x-origin, and tile-stipple-y-origin.
    // (see also the GCValues_t structure)
-   NSLog(@"Fill rectangle for widget %d", wid);
+   NSLog(@"Fill rectangle for widget %lu", wid);
 }
 
 //______________________________________________________________________________
@@ -2034,7 +1933,7 @@ void TGCocoa::GetRegionBox(Region_t /*reg*/, Rectangle_t * /*rect*/)
 }
 
 //______________________________________________________________________________
-char **TGCocoa::ListFonts(const char * /*fontname*/, Int_t /*max*/, Int_t &count)
+char **TGCocoa::ListFonts(const char *fontname, Int_t /*max*/, Int_t &count)
 {
    // Returns list of font names matching fontname regexp, like "-*-times-*".
    // The pattern string can contain any characters, but each asterisk (*)
@@ -2048,9 +1947,7 @@ char **TGCocoa::ListFonts(const char * /*fontname*/, Int_t /*max*/, Int_t &count
    //            contain wildcard characters
    // max      - specifies the maximum number of names to be returned
    // count    - returns the actual number of font names
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::ListFonts: Font name is "<<fontname<<std::endl;
-#endif
+   NSLog(@"TGCocoa::ListFonts: called for fontname %s", fontname);
    count = 0;
 
    return 0;
