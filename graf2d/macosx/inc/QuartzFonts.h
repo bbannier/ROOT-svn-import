@@ -69,7 +69,8 @@ private:
 
 //Find better name.
 class CTLineGuard {
-   friend class Painter;
+   friend class TGCocoa;
+   friend class TGQuartz;
 
 public:
    CTLineGuard(const char *textLine, CTFontRef font);

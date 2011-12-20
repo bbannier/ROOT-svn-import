@@ -1,6 +1,7 @@
 #ifndef ROOT_TGCocoa
 #define ROOT_TGCocoa
 
+#include <vector>
 #include <memory>
 #include <deque>
 
@@ -330,7 +331,7 @@ private:
    
    std::deque<Event_t> fEventQueue;
 
-
+   std::vector<GCValues_t> fX11Contexts;
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
