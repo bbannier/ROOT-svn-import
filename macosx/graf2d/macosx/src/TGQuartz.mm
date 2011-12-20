@@ -348,21 +348,23 @@ void TGQuartz::SetFillStyle(Style_t style)
 
 
 //______________________________________________________________________________
-static void DrawStencil (void */*st*/, CGContextRef ctx)
+static void DrawStencil (void *sti, CGContextRef ctx)
 {
    // Draw a stencil pattern from gStipples
    
    int i,j;
+   
+   int *st = static_cast<int *>(sti);
 
-   Int_t st = 25, x , y=0; 
+   int x , y=0; 
    for (i=0; i<31; i=i+2) {
       x = 0;
       for (j=0; j<8; j++) {
-         if (gStipples[st][i] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
+         if (gStipples[*st][i] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
          x++;
       }
       for (j=0; j<8; j++) {
-         if (gStipples[st][i+1] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
+         if (gStipples[*st][i+1] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
          x++;
       }
       y++;
@@ -402,7 +404,10 @@ void TGQuartz::SetStencilPattern()
    CGContextSetFillColorSpace (ctx, patternSpace);
    CGColorSpaceRelease (patternSpace);
    CGColorSpaceRelease (baseSpace);
-   pattern = CGPatternCreate(NULL, CGRectMake(0, 0, 16, 16),
+   
+   fStencilNb = 24;
+   
+   pattern = CGPatternCreate(&fStencilNb, CGRectMake(0, 0, 16, 16),
                              CGAffineTransformIdentity, 16, 16,
                              kCGPatternTilingConstantSpacing,
                              false, &callbacks);
