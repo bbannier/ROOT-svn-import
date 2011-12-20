@@ -12,6 +12,13 @@
 @synthesize fWinID;
 
 //______________________________________________________________________________
+- (BOOL)wantsDefaultClipping
+{
+   //This is very arguable decision.
+   return NO;
+}
+
+//______________________________________________________________________________
 - (void) addChildView : (RootQuartzView *)childView
 {
    [self addSubview : childView];

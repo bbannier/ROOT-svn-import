@@ -99,9 +99,9 @@ bool ColorParser::ParseRGBTriplet(const TString &rgb, ColorStruct_t &color)const
    if (GetHex(rgb, 1, compLen, r) && GetHex(rgb, 1 + compLen, compLen, g) && GetHex(rgb, 1 + compLen * 2, compLen, b))
    {
       const unsigned bitPad = 16 - compLen * 4;
-      color.fRed   = r << bitPad;
-      color.fGreen = g << bitPad;
-      color.fBlue  = b << bitPad;
+      color.fRed   = r;// << bitPad;
+      color.fGreen = g;// << bitPad;
+      color.fBlue  = b;// << bitPad;
 
       return true;
    }
