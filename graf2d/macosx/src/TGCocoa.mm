@@ -115,11 +115,8 @@ Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char *colorName, ColorStru
 //______________________________________________________________________________
 Bool_t TGCocoa::AllocColor(Colormap_t /*cmap*/, ColorStruct_t &color)
 {
-   //   
-#ifdef DEBUG_ROOT_COCOA
-   std::cout<<"TGCocoa::AllocColor\n";
-#endif
-   color.fPixel = ((color.fRed >> 8) & 0xFF) << 16 | ((color.fGreen >> 8) & 0xFF) << 8 | ((color.fGreen >> 8) & 0xFF);
+//   color.fPixel = ((color.fRed >> 8) & 0xFF) << 16 | ((color.fGreen >> 8) & 0xFF) << 8 | ((color.fGreen >> 8) & 0xFF);
+   color.fPixel = ((color.fRed) & 0xFF) << 16 | ((color.fGreen) & 0xFF) << 8 | ((color.fGreen) & 0xFF);
    return kTRUE;
 }
 
@@ -127,9 +124,6 @@ Bool_t TGCocoa::AllocColor(Colormap_t /*cmap*/, ColorStruct_t &color)
 void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & color)
 {
    // Returns the current RGB value for the pixel in the "color" structure
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TGCocoa::QueryColor");
-#endif
    color.fRed = color.fPixel >> 16 & 0xFF;
    color.fGreen = color.fPixel >> 8 & 0xFF;
    color.fBlue = color.fPixel & 0xFF;
@@ -908,7 +902,7 @@ void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
    // Sets the background of the window "wid" to the specified color value
    // "color". Changing the background does not cause the window contents
    // to be changed.
-//   NSLog(@"SetWindowBackground called for wid %lu, color is %xu", wid, (UInt_t)color);
+   NSLog(@"SetWindowBackground called for wid %lu, color is %x", wid, (UInt_t)color);
 }
 
 //______________________________________________________________________________
@@ -1126,7 +1120,7 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
 FontH_t TGCocoa::GetFontHandle(FontStruct_t fs)
 {
    // Returns the font handle of the specified font structure "fs".
-   NSLog(@"GetFontHandle for %lu", fs);
+//   NSLog(@"GetFontHandle for %lu", fs);
    return (FontH_t)fs;
 }
 
@@ -1381,28 +1375,41 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 //______________________________________________________________________________
 void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
-   //This code is just a hack to show button.
+   //This code is just a hack to show a button or other widgets.
    
    if (!wid) {
       NSLog(@"DrawLine was called for 'root' window");
       throw std::runtime_error("DrawLine was called for 'root' window");
    }
    
+
+   
    CGContextRef ctx = (CGContextRef)fCtx;
    if (!ctx) {
       NSLog(@"DrawLine called outside of drawRect function");
       throw std::runtime_error("DrawLine called outside of drawRect function");
    }
-   
-   const GCValues_t &gcVals = fX11Contexts[gc - 1];
 
+   CGContextSetAllowsAntialiasing(ctx, 0);   
+   //This is all terrible and can live only in dev. version (several days).
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
    
+   Pixel_t foregroundColor = gcVals.fForeground;
+   const CGFloat red = (foregroundColor >> 16 & 0xff) / 255.f;
+   const CGFloat green = (foregroundColor >> 8 & 0xff) / 255.f;
+   const CGFloat blue = (foregroundColor & 0xff) / 255.f;
    
-//   CGContextSetRGBStrokeColor(ctx, 0.f, 0.f, 0.f, 1.f);
-//   CGContextBeginPath(ctx);
-//   CGContextMoveToPoint(ctx, x1, y1);
-//   CGContextAddLineToPoint(ctx, x2, y2);
-//   CGContextStrokePath(ctx);
+   const NSRect frame = [fPimpl->GetWindow(wid) contentView].frame;
+   y1 = frame.size.height - y1;
+   y2 = frame.size.height - y2;
+
+   CGContextSetRGBStrokeColor(ctx, red, green, blue, 1.f);
+   CGContextBeginPath(ctx);
+   CGContextMoveToPoint(ctx, x1, y1);
+   CGContextAddLineToPoint(ctx, x2, y2);
+   CGContextStrokePath(ctx);
+   
+   CGContextSetAllowsAntialiasing(ctx, 1);
 }
 
 //______________________________________________________________________________
@@ -1722,7 +1729,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t /*gc*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawRectangle(Drawable_t /*wid*/, GContext_t /*gc*/,
+void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t /*gc*/,
                             Int_t /*x*/, Int_t /*y*/,
                             UInt_t /*w*/, UInt_t /*h*/)
 {
@@ -1734,7 +1741,7 @@ void TGCocoa::DrawRectangle(Drawable_t /*wid*/, GContext_t /*gc*/,
    // GC mode-dependent components: foreground, background, tile, stipple,
    // tile-stipple-x-origin, tile-stipple-y-origin, dash-offset, dash-list.
    // (see also the GCValues_t structure)
-   NSLog(@"DrawRectangle");
+   NSLog(@"DrawRectangle was called for widget %lu", wid);
 }
 
 //______________________________________________________________________________
