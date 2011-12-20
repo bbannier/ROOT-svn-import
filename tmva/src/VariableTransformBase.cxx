@@ -308,7 +308,7 @@ Bool_t TMVA::VariableTransformBase::GetInput( const Event* event, std::vector<Fl
    ItVarTypeIdxConst itEntry;
    ItVarTypeIdxConst itEntryEnd;
 
-   if( backTransformation ){
+   if( backTransformation && !fPut.empty() ){
       itEntry = fPut.begin();
       itEntryEnd = fPut.end();
    }
