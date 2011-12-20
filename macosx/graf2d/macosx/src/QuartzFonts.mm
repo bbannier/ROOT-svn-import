@@ -308,7 +308,7 @@ void FontManager::GetFontProperties(FontStruct_t font, int &maxAscent, int &maxD
       throw std::runtime_error("GetFontProperties, function was called for a font, which was not loaded by font manager");
 #endif   
    } else {
-   //Instead of this, use CT funtion to request ascent/descent.
+      //Instead of this, use CT funtion to request ascent/descent.
       CTLineGuard ctLine("LALALA", fontRef);
       ctLine.GetAscentDescent(maxAscent, maxDescent);
    }

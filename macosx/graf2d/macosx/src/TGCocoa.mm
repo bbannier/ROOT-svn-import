@@ -318,7 +318,7 @@ void TGCocoa::GetTextExtent(UInt_t &/*w*/, UInt_t &/*h*/, char *text)
    // h    - the text height
    // mess - the string
 //#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"GetTextExtent for text %s", text);
+//   NSLog(@"GetTextExtent for text %s", text);
 //#endif
 }
 
@@ -1123,11 +1123,11 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
 }
 
 //______________________________________________________________________________
-FontH_t TGCocoa::GetFontHandle(FontStruct_t /*fs*/)
+FontH_t TGCocoa::GetFontHandle(FontStruct_t fs)
 {
    // Returns the font handle of the specified font structure "fs".
-
-   return 0;
+   NSLog(@"GetFontHandle for %lu", fs);
+   return (FontH_t)fs;
 }
 
 //______________________________________________________________________________
@@ -1139,20 +1139,15 @@ void TGCocoa::DeleteFont(FontStruct_t /*fs*/)
 //______________________________________________________________________________
 GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t *gval)
 {
-   // Creates a graphics context using the provided GCValues_t *gval structure.
-   // The mask data member of gval specifies which components in the GC are
-   // to be set using the information in the specified values structure.
-   // It returns a graphics context handle GContext_t that can be used with any
-   // destination drawable or O if the creation falls.
-
-//   NSLog(@"createGC called, font is %p", (void*)gval->fFont);
-
-   return 0;
+   //Here I have to imitate graphics context that exists in X11.
+   fX11Contexts.push_back(*gval);
+   return fX11Contexts.size();
 }
 
 //______________________________________________________________________________
-void TGCocoa::ChangeGC(GContext_t /*gc*/, GCValues_t * /*gval*/)
+void TGCocoa::ChangeGC(GContext_t gc, GCValues_t *gval)
 {
+   NSLog(@"changing GC %lu", gc);
    // Changes the components specified by the mask in gval for the specified GC.
    //
    // GContext_t gc   - specifies the GC to be changed
@@ -1166,12 +1161,14 @@ void TGCocoa::CopyGC(GContext_t /*org*/, GContext_t /*dest*/, Mask_t /*mask*/)
    // Copies the specified components from the source GC "org" to the
    // destination GC "dest". The "mask" defines which component to copy
    // and it is a data member of GCValues_t.
+   NSLog(@"CopyGC");
 }
 
 //______________________________________________________________________________
 void TGCocoa::DeleteGC(GContext_t /*gc*/)
 {
    // Deletes the specified GC "gc".
+   NSLog(@"DeleteGC");
 }
 
 //______________________________________________________________________________
@@ -1382,19 +1379,10 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawLine(Drawable_t wid, GContext_t /*gc*/, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
+void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
-   // Uses the components of the specified GC to draw a line between the
-   // specified set of points (x1, y1) and (x2, y2).
-   //
-   // GC components in use: function, plane-mask, line-width, line-style,
-   // cap-style, fill-style, subwindow-mode, clip-x-origin, clip-y-origin,
-   // and clip-mask.
-   // GC mode-dependent components: foreground, background, tile, stipple,
-   // tile-stipple-x-origin, tile-stipple-y-origin, dash-offset, dash-list.
-   // (see also the GCValues_t structure)
-
-   //This is just a hack to show button.
+   //This code is just a hack to show button.
+   
    if (!wid) {
       NSLog(@"DrawLine was called for 'root' window");
       throw std::runtime_error("DrawLine was called for 'root' window");
@@ -1406,11 +1394,15 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t /*gc*/, Int_t x1, Int_t y1, In
       throw std::runtime_error("DrawLine called outside of drawRect function");
    }
    
-   CGContextSetRGBStrokeColor(ctx, 0.f, 0.f, 0.f, 1.f);
-   CGContextBeginPath(ctx);
-   CGContextMoveToPoint(ctx, x1, y1);
-   CGContextAddLineToPoint(ctx, x2, y2);
-   CGContextStrokePath(ctx);
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+
+   
+   
+//   CGContextSetRGBStrokeColor(ctx, 0.f, 0.f, 0.f, 1.f);
+//   CGContextBeginPath(ctx);
+//   CGContextMoveToPoint(ctx, x1, y1);
+//   CGContextAddLineToPoint(ctx, x2, y2);
+//   CGContextStrokePath(ctx);
 }
 
 //______________________________________________________________________________
@@ -1621,7 +1613,7 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawString(Drawable_t wid, GContext_t /*gc*/, Int_t x, Int_t y, const char *s, Int_t len)
+void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len)
 {
    // wid  - the drawable
    // gc   - the GC
@@ -1629,12 +1621,28 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t /*gc*/, Int_t x, Int_t y, co
    //        drawable and define the origin of the first character
    // s    - the character string
    // len  - the number of characters in the string argument
-   if (!wid) {
+   if (!wID) {
       NSLog(@"TGCocoa::DrawString was called for 'root' window");
       throw std::runtime_error("TGCocoa::DrawString was called for 'root' window");
    }
    
+   CGContextRef ctx = (CGContextRef)fCtx;
+   if (!ctx) {
+      NSLog(@"TGCocoa::DrawString: function was called, but context not set");
+      throw std::runtime_error("TGCocoa::DrawString: function was called, but context not set");
+   }
    
+   id<RootGUIElement> widget = fPimpl->GetWindow(wID);
+   NSView *view = [widget contentView];
+   y = view.frame.size.height - y;
+   
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   ROOT::MacOSX::Quartz::CTLineGuard ctLine(text, (CTFontRef)gcVals.fFont);
+
+   CGContextSaveGState(ctx);
+   CGContextSetTextPosition(ctx, x, y);
+   CTLineDraw(ctLine.fCTLine, ctx);
+   CGContextRestoreGState(ctx);
 }
 
 //______________________________________________________________________________
@@ -1726,6 +1734,7 @@ void TGCocoa::DrawRectangle(Drawable_t /*wid*/, GContext_t /*gc*/,
    // GC mode-dependent components: foreground, background, tile, stipple,
    // tile-stipple-x-origin, tile-stipple-y-origin, dash-offset, dash-list.
    // (see also the GCValues_t structure)
+   NSLog(@"DrawRectangle");
 }
 
 //______________________________________________________________________________
