@@ -67,14 +67,21 @@ QuartzTest::QuartzTest(unsigned w, unsigned h)
    symb->SetTextFont(122);
    symb->Draw();
 
-   TBox *b = new TBox(-2,0.4,-1,0.5);
-   b->Draw();
+   Double_t y1=-0., y2=0.035;
+   for (i=1; i<=25; i++) {
+      TBox *b = new TBox(-4.,y1,-3,y2);
+      b->SetFillColor(kBlue+2);
+      b->SetFillStyle(3000+i);
+      b->Draw();
+      y1=y1+0.035;
+      y2=y2+0.035;
+   }
    
    Double_t xpl[4] = {-2,-1,0,-1};
    Double_t ypl[4] = {.4,.1,.5,.4};
    TPolyLine *pl = new TPolyLine(4,xpl,ypl);
-   pl->SetFillColor(kGreen-2);
-   pl->SetFillStyle(1234);
+   pl->SetFillColor(kRed-2);
+   pl->SetFillStyle(3001);
    pl->Draw("f");
       
    TLine *l1  = new TLine(-2,.52,-1,.52); l1->SetLineStyle(1);   l1->Draw();

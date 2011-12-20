@@ -53,9 +53,7 @@ public:
 private:
    TGQuartz(const TGQuartz &rhs);
    TGQuartz &operator = (const TGQuartz &rhs);
-   
-   Int_t fStencilNb;
-   
+      
    ClassDef(TGQuartz, 0);//2D graphics for Mac OSX.
 };
 
