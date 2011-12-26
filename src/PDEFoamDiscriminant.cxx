@@ -71,7 +71,7 @@ TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant(const TString& Name, UInt_t cls)
 //_____________________________________________________________________
 TMVA::PDEFoamDiscriminant::PDEFoamDiscriminant(const PDEFoamDiscriminant &From)
    : PDEFoam(From)
-   , fClass(0)
+   , fClass(From.fClass)
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;

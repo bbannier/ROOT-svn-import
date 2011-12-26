@@ -82,7 +82,7 @@ TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const TString& Name, SeparationBa
 //_____________________________________________________________________
 TMVA::PDEFoamDecisionTree::PDEFoamDecisionTree(const PDEFoamDecisionTree &From)
    : PDEFoamDiscriminant(From)
-   , fSepType(NULL)
+   , fSepType(From.fSepType)
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;

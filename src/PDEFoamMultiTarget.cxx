@@ -93,7 +93,7 @@ TMVA::PDEFoamMultiTarget::PDEFoamMultiTarget(const TString& Name, ETargetSelecti
 //_____________________________________________________________________
 TMVA::PDEFoamMultiTarget::PDEFoamMultiTarget(const PDEFoamMultiTarget &From)
    : PDEFoamEvent(From)
-   , fTargetSelection(kMean)
+   , fTargetSelection(From.fTargetSelection)
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
