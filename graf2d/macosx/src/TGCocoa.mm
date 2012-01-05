@@ -1,9 +1,3 @@
-#define DEBUG_ROOT_COCOA
-
-#ifdef DEBUG_ROOT_COCOA
-#include <iostream>
-#endif
-
 #include <algorithm>
 #include <stdexcept>
 
@@ -29,20 +23,19 @@ TGCocoa::TGCocoa()
       fPimpl.reset(new Details::CocoaPrivate);
       fFontManager.reset(new Quartz::FontManager);
    } catch (const std::exception &) {
-      //let's kill ROOT! without gui, no reason to live at all!
       throw;
    }
 }
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa(const char *name, const char *title)
-            : TVirtualX(name, title)              
+            : TVirtualX(name, title),
+              fForegroundProcess(false)             
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
       fFontManager.reset(new Quartz::FontManager);
    } catch (const std::exception &) {
-      //let's kill ROOT! without gui, no reason to live at all!
       throw;   
    }
 }
@@ -86,14 +79,10 @@ TGCocoa::~TGCocoa()
 //______________________________________________________________________________
 void TGCocoa::GetWindowAttributes(Window_t wid, WindowAttributes_t & attr)
 {
-   if (wid < fPimpl->fWindows.size()) {
-      attr = fPimpl->fWindows[wid].fROOTWindowAttribs;
-   } else {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"TGCocoa::GetWindowAttributes, wid is %lu but number of windows is %lu", wid, fPimpl->fWindows.size());
-      throw std::runtime_error("Bad index for GetWindowAttributes");
-#endif
-   }
+   assert(wid < fPimpl->fWindows.size() && "Bad window id");
+
+   //This hack with window attributes must be fixed.
+   attr = fPimpl->fWindows[wid].fROOTWindowAttribs;
 }
 
 //______________________________________________________________________________
@@ -108,8 +97,11 @@ Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char *colorName, ColorStru
 //______________________________________________________________________________
 Bool_t TGCocoa::AllocColor(Colormap_t /*cmap*/, ColorStruct_t &color)
 {
-//   color.fPixel = ((color.fRed >> 8) & 0xFF) << 16 | ((color.fGreen >> 8) & 0xFF) << 8 | ((color.fGreen >> 8) & 0xFF);
-   color.fPixel = ((color.fRed) & 0xFF) << 16 | ((color.fGreen) & 0xFF) << 8 | ((color.fGreen) & 0xFF);
+/*   const unsigned red = double(color.fRed) / 0xffff * 255;
+   const unsigned green = double(color.fGreen) / 0xffff * 255;
+   const unsigned blue = double(color.fBlue) / 0xffff * 255;
+   color.fPixel = red << 16 | green << 8 | blue;*/
+   color.fPixel = ((color.fRed) & 0xFF) << 16 | ((color.fGreen) & 0xFF) << 8 | ((color.fBlue) & 0xFF);
    return kTRUE;
 }
 
@@ -606,23 +598,19 @@ void TGCocoa::WritePixmap(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/, char * /*px
 }
 
 
-//---- Methods used for GUI -----
+//GUI
 //______________________________________________________________________________
 void TGCocoa::MapWindow(Window_t /*wid*/)
 {
    // Maps the window "wid" and all of its subwindows that have had map
    // requests. This function has no effect if the window is already mapped.
-//#ifdef DEBUG_ROOT_COCOA
-//   std::cout<<"TGCocoa::MapWindow, wid == "<<wid<<std::endl;
-//#endif
 }
 
 //______________________________________________________________________________
 void TGCocoa::MapSubwindows(Window_t /*wid*/)
 {
    // Maps all subwindows for the specified window "wid" in top-to-bottom
-   // stacking order.
-   
+   // stacking order.   
 }
 
 //______________________________________________________________________________
@@ -635,35 +623,18 @@ void TGCocoa::MapRaised(Window_t wid)
    //Just a sketch code.
    ROOT::MacOSX::Util::AutoreleasePool pool;
 
+   assert(wid != 0 && "Attempt to MapRaise 'root' window");
+
    auto winIter = fPimpl->fWindows.find(wid);
 
-#ifdef DEBUG_ROOT_COCOA
-   if (winIter == fPimpl->fWindows.end()) {
-      std::cout<<"TGCocoa::MapRaised, bad window id "<<wid<<std::endl;
-      throw std::runtime_error("TGCocoa::MapRaised, bad window id");
-   }
-#endif
+   assert(winIter != fPimpl->fWindows.end() && "MapRaised called with bad window id");
 
-   if (!fForegroundProcess) {
-      ProcessSerialNumber psn = {0, kCurrentProcess}; //GetCurrentProcess(&psn);
-      TransformProcessType(&psn, kProcessTransformToForegroundApplication);
-      SetFrontProcess(&psn);
-      fForegroundProcess = true;
-   } else {
-      ProcessSerialNumber psn = {};    
-      if (GetCurrentProcess(&psn) == noErr)
-         SetFrontProcess(&psn);
-#ifdef DEBUG_ROOT_COCOA
-      else {
-         NSLog(@"SetFrontProcess failed");
-         throw std::runtime_error("SetFrontProcess failed");
-      }
-#endif
-   }
-
-   NSWindow *cocoaWin = (NSWindow *)fPimpl->fWindows[wid].fCocoaWindow.Get();
-   [cocoaWin makeKeyAndOrderFront : cocoaWin];
-//   [cocoaWin orderFront : nil];
+   if (MakeProcessForeground()) {
+      NSWindow *cocoaWin = (NSWindow *)fPimpl->fWindows[wid].fCocoaWindow.Get();
+      [cocoaWin makeKeyAndOrderFront : cocoaWin];
+   }/* else {
+      ???
+   }*/
 }
 
 //______________________________________________________________________________
@@ -695,9 +666,6 @@ void TGCocoa::RaiseWindow(Window_t /*wid*/)
 {
    // Raises the specified window to the top of the stack so that no
    // sibling window obscures it.
-//#ifdef DEBUG_ROOT_COCOA
-//   std::cout<<"TGCocoa::RaiseWindow was called with wid == "<<wid<<std::endl;
-//#endif
 }
 
 //______________________________________________________________________________
@@ -728,8 +696,6 @@ void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t 
    //        relative to its parent.
    // w, h - the width and height, which define the interior size of
    //        the window
-//   NSLog(@"move/resize for window %d, x == %d, y == %d, w == %d, h == %d", wid, x, y, w, h);
-   //y = RootToCocoaY(y);
    NSRect newFrame;
    newFrame.origin.x = x;
    newFrame.origin.y = y;
@@ -743,13 +709,34 @@ void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t 
       //
    } else {
       NSView *contentView = [widget contentView];
+      NSView *parentView = (NSView*)[widget parentView];
+      newFrame.origin.y = parentView.frame.size.height - y - newFrame.size.height;
+
       contentView.frame = newFrame;
    }
 }
 
 //______________________________________________________________________________
-void TGCocoa::ResizeWindow(Window_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
+void TGCocoa::ResizeWindow(Window_t wID, UInt_t w, UInt_t h)
 {
+   id<RootGUIElement> win = fPimpl->GetWindow(wID);
+   if (![win parentView]) {
+      NSWindow *nsWin = (NSWindow *)win;
+      /*NSRect frame = nsWin.frame;
+      frame.size.width = w;
+      frame.size.height = h;*/
+//      nsWin.frame = frame;
+      NSSize newSize;
+      newSize.width = w;
+      newSize.height = h;
+      [nsWin setContentSize : newSize];
+   } else {
+      NSView *view = (NSView *)win;
+      NSRect frame = view.frame;
+      frame.size.width = w;
+      frame.size.height = h;
+      view.frame = frame;
+   }
    // Changes the width and height of the specified window "wid", not
    // including its borders. This function does not change the window's
    // upper-left coordinate.
@@ -836,11 +823,11 @@ RootQuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UIn
 }
 
 //______________________________________________________________________________
-RootQuartzView *CreateChildView(Int_t /*x*/, Int_t /*y*/, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
+RootQuartzView *CreateChildView(id<RootGUIElement> parent, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
                                 UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t * /*attr*/, UInt_t /*wtype*/)
 {
    NSRect contentRect = {};
-   contentRect.origin = CGPointZero;
+   contentRect.origin = CGPointMake(x, [parent contentView].frame.size.height - y);
    contentRect.size.width = w;
    contentRect.size.height = h;
    
@@ -891,7 +878,7 @@ Window_t TGCocoa::CreateWindow(Window_t parent, Int_t x, Int_t y, UInt_t w, UInt
       return result;
    } else {
       id<RootGUIElement> parentWin = fPimpl->GetWindow(parent);
-      RootQuartzView *childView = CreateChildView(x, y, w, h, border, depth, clss, visual, attr, wtype);
+      RootQuartzView *childView = CreateChildView(parentWin, x, y, w, h, border, depth, clss, visual, attr, wtype);
       const Window_t result = fPimpl->RegisterWindow(childView, winAttr);
       
       childView.fWinID = result;
@@ -1033,9 +1020,9 @@ GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t *gval)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ChangeGC(GContext_t gc, GCValues_t * /*gval*/)
+void TGCocoa::ChangeGC(GContext_t /*gc*/, GCValues_t * /*gval*/)
 {
-   NSLog(@"changing GC %lu", gc);
+ //  NSLog(@"changing GC %lu", gc);
    // Changes the components specified by the mask in gval for the specified GC.
    //
    // GContext_t gc   - specifies the GC to be changed
@@ -1049,14 +1036,14 @@ void TGCocoa::CopyGC(GContext_t /*org*/, GContext_t /*dest*/, Mask_t /*mask*/)
    // Copies the specified components from the source GC "org" to the
    // destination GC "dest". The "mask" defines which component to copy
    // and it is a data member of GCValues_t.
-   NSLog(@"CopyGC");
+  // NSLog(@"CopyGC");
 }
 
 //______________________________________________________________________________
 void TGCocoa::DeleteGC(GContext_t /*gc*/)
 {
    // Deletes the specified GC "gc".
-   NSLog(@"DeleteGC");
+  // NSLog(@"DeleteGC");
 }
 
 //______________________________________________________________________________
@@ -1236,8 +1223,7 @@ void TGCocoa::CopyArea(Drawable_t /*src*/, Drawable_t /*dest*/,
 //______________________________________________________________________________
 void TGCocoa::ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr)
 {
-   if (!wid)//Should never happen, this is 'root' window.
-      return;
+   assert(wid != 0 && "ChangeWindowAttributes was called for the 'root' window");
    
    id<RootGUIElement> widget = fPimpl->GetWindow(wid);
    RootQuartzView *view = (RootQuartzView *)[widget contentView];
@@ -1270,19 +1256,10 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
    //This code is just a hack to show a button or other widgets.
-   
-   if (!wid) {
-      NSLog(@"DrawLine was called for 'root' window");
-      throw std::runtime_error("DrawLine was called for 'root' window");
-   }
-   
-
+   assert(wid != 0 && "DrawLine called for 'root' window");
    
    CGContextRef ctx = (CGContextRef)fCtx;
-   if (!ctx) {
-      NSLog(@"DrawLine called outside of drawRect function");
-      throw std::runtime_error("DrawLine called outside of drawRect function");
-   }
+   assert(ctx != 0 && "DrawLine called, but context is null");
 
    CGContextSetAllowsAntialiasing(ctx, 0);   
    //This is all terrible and can live only in dev. version (several days).
@@ -1316,17 +1293,8 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    // x, y - coordinates, which are relative to the origin
    // w, h - the width and height which define the rectangle dimensions
 
-   if (!wid) {//Should never happen ('root' window).
-      NSLog(@"clear area for 'root' window was called");
-      throw std::runtime_error("clear area for 'root' window was called");
-   }
-
-   if (!fCtx) {
-      NSLog(@"clear area called outside of drawRect function");
-      throw std::runtime_error("clear area called outside of drawRect function");
-   }
-   
-   //NSLog(@"clear area for %d", wid);
+   assert(wid != 0 && "ClearArea called for 'root' window");
+   assert(fCtx != 0 && "ClearArea called, but context is null");
 
    id<RootGUIElement> widget = fPimpl->GetWindow(wid);
    RootQuartzView *view = (RootQuartzView *)[widget contentView];
@@ -1338,26 +1306,6 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    CGContextRef ctx = static_cast<CGContextRef>(fCtx);
    CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);//alpha can be also used.
    CGContextFillRect(ctx, CGRectMake(x, y, w, h));
-}
-
-namespace {
-
-class EventRemovalPredicate {
-public:
-   EventRemovalPredicate(Window_t wid, EGEventType type) : fWid(wid), fType(type)
-   {
-   }
-   Bool_t operator () (const Event_t &ev) const
-   {
-      if (fWid == ev.fWindow && ev.fType == fType)
-         return kTRUE;
-      return kFALSE;
-   }
-private:
-   Window_t fWid;
-   EGEventType fType;
-};
-
 }
 
 //______________________________________________________________________________
@@ -1522,16 +1470,12 @@ void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const 
    //        drawable and define the origin of the first character
    // s    - the character string
    // len  - the number of characters in the string argument
-   if (!wID) {
-      NSLog(@"TGCocoa::DrawString was called for 'root' window");
-      throw std::runtime_error("TGCocoa::DrawString was called for 'root' window");
-   }
+   
+   assert(wID != 0 && "DrawString tries to draw in a 'root' window");
       
    CGContextRef ctx = (CGContextRef)fCtx;
-   if (!ctx) {
-      NSLog(@"TGCocoa::DrawString: function was called, but context not set");
-      throw std::runtime_error("TGCocoa::DrawString: function was called, but context not set");
-   }
+   
+   assert(ctx != 0 && "DrawString was called, but context not set");
    
    id<RootGUIElement> widget = fPimpl->GetWindow(wID);
    NSView *view = [widget contentView];
@@ -1555,7 +1499,6 @@ void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const 
 Int_t TGCocoa::TextWidth(FontStruct_t font, const char *s, Int_t len)
 {
    // Return lenght of the string "s" in pixels. Size depends on font.
-//   NSLog(@"text width requested for string %s, font is %p", s, (void*)font);
    return fFontManager->GetTextWidth(font, s, len);
 }
 
@@ -1563,7 +1506,6 @@ Int_t TGCocoa::TextWidth(FontStruct_t font, const char *s, Int_t len)
 void TGCocoa::GetFontProperties(FontStruct_t font, Int_t &maxAscent, Int_t &maxDescent)
 {
    // Returns the font properties.
-//   NSLog(@"GetFontProperties!!!");
    fFontManager->GetFontProperties(font, maxAscent, maxDescent);
 }
 
@@ -1933,7 +1875,7 @@ void TGCocoa::GetRegionBox(Region_t /*reg*/, Rectangle_t * /*rect*/)
 }
 
 //______________________________________________________________________________
-char **TGCocoa::ListFonts(const char *fontname, Int_t /*max*/, Int_t &count)
+char **TGCocoa::ListFonts(const char * /*fontname*/, Int_t /*max*/, Int_t &count)
 {
    // Returns list of font names matching fontname regexp, like "-*-times-*".
    // The pattern string can contain any characters, but each asterisk (*)
@@ -1947,8 +1889,9 @@ char **TGCocoa::ListFonts(const char *fontname, Int_t /*max*/, Int_t &count)
    //            contain wildcard characters
    // max      - specifies the maximum number of names to be returned
    // count    - returns the actual number of font names
-   NSLog(@"TGCocoa::ListFonts: called for fontname %s", fontname);
    count = 0;
+
+   //Parse XLFD name, take family name and ask CoreText/Quartz?
 
    return 0;
 }
@@ -2168,12 +2111,12 @@ Int_t TGCocoa::SupportsExtension(const char *) const
 }
 
 //______________________________________________________________________________
-void TGCocoa::QueueEvent(const Event_t &event)
+void TGCocoa::QueueEvent(const Event_t &/*event*/)
 {
    //Window delegate (and views?) calls this function
    //and adds ROOT's events into the queue (which later
    //will be processed by TGClient and ROOT's GUI).
-   fEventQueue.push_front(event);
+   //fEventQueue.push_front(event);
 }
 
 //______________________________________________________________________________
@@ -2216,4 +2159,48 @@ Int_t TGCocoa::RootToCocoaY(Window_t /*wid*/, Int_t y)const
 void TGCocoa::SetContext(void *ctx)
 {
    fCtx = ctx;
+}
+
+//______________________________________________________________________________
+Bool_t TGCocoa::MakeProcessForeground()
+{
+   //We start root in a terminal window, so it's considered as a 
+   //background process. Background process has a lot of problems
+   //if it tries to create and manage windows.
+   //So, first time we convert process to foreground, next time
+   //we make it front.
+   
+   if (!fForegroundProcess) {
+      ProcessSerialNumber psn = {0, kCurrentProcess};
+
+      const OSStatus res1 = TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+      if (res1 != noErr) {
+         Error("MakeProcessForeground", "TransformProcessType failed with code %d", res1);
+         return kFALSE;
+      }
+   
+      const OSErr res2 = SetFrontProcess(&psn);
+      if (res2 != noErr) {
+         Error("MakeProcessForeground", "SetFrontProcess failed with code %d", res2);
+         return kFALSE;
+      }
+
+      fForegroundProcess = kTRUE;
+   } else {
+      ProcessSerialNumber psn = {};    
+
+      OSErr res = GetCurrentProcess(&psn);
+      if (res != noErr) {
+         Error("MapProcessForeground", "GetCurrentProcess failed with code %d", res);
+         return kFALSE;
+      }
+      
+      res = SetFrontProcess(&psn);
+      if (res != noErr) {
+         Error("MapProcessForeground", "SetFrontProcess failed with code %d", res);
+         return kFALSE;
+      }
+   }
+   
+   return kTRUE;
 }

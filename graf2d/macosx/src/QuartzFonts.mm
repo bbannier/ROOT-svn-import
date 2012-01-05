@@ -1,23 +1,17 @@
-#define DEBUG_ROOT_COCOA
-
 #include <stdexcept>
 #include <sstream>
+#include <cassert>
 #include <cctype>
 
 #import <Cocoa/Cocoa.h>
 
 #include "QuartzFonts.h"
 #include "CocoaUtils.h"
+#include "TError.h"
 
 //
-// This thing sucks! (c) Duke Nukem.
-// This code really sucks, it's just a temporary
-// hack done fast, since it looks like I have
-// to implement everything myself and I needed
-// text and fonts immediately, I have to produce
-// this ...
-// Code is ugly and stupid, but I need it at the
-// moment.
+// This code is just a temporary
+// hack done fast...
 //
 
 
@@ -204,10 +198,10 @@ size_type ParseEncoding(const std::string &name, size_type pos, XLFDName &dst)
 //______________________________________________________________________________
 bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
 {
+   assert(xlfdName.length() && "XLFD name is a string with a zero length");
+
    if (!xlfdName.length()) {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"XLFD name is a string with a zero length");
-#endif
+      ::Warning("ROOT::MacOSX::Quartz::ParseXLFDName: ", "XLFD name is a string with a zero length");
       return false;
    }
    
@@ -231,9 +225,7 @@ bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
 
       return true;
    } catch (const std::exception &e) {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"ParseXLFDName: Failed to parse - %s", e.what());
-#endif
+      ::Error("ROOT::MacOSX::Quartz::ParseXLFDName", "Failed to parse XLFD name - %s", e.what());
       return false;
    }
 }
@@ -263,16 +255,9 @@ FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
 void FontManager::UnloadFont(FontStruct_t font)
 {
    CTFontRef fontRef = (CTFontRef)font;
-   if (!fontRef) {
-      NSLog(@"attempt to unload null font");
-      return;
-   }
-
    auto fontIter = fLoadedFonts.find(fontRef);
-   if (fontIter == fLoadedFonts.end()) {
-      NSLog(@"attempt to unload font, not created by font manager %lu", font);
-      throw std::runtime_error("attempt to unload font, not created by font manager");
-   }
+
+   assert(fontIter != fLoadedFonts.end() && "Attempt to unload font, not created by font manager");
    
    fLoadedFonts.erase(fontIter);
 }
@@ -286,20 +271,15 @@ unsigned FontManager::GetTextWidth(FontStruct_t font, const char *text, int nCha
    if (nChars < 0)
       nChars = std::strlen(text);
 
-   if (fLoadedFonts.find(fontRef) == fLoadedFonts.end()) {
-      NSLog(@"GetTextWidth: requested font %lu", font);
-      if (fLoadedFonts.size()) {
-         auto fontIter = fLoadedFonts.begin();
-         fontRef = fontIter->first;
-      } else {
-         throw std::runtime_error("GetTextWidth: requested font was not created by font manager");
-      }
-   }
+   assert(fLoadedFonts.find(fontRef) != fLoadedFonts.end() && "Font was not created by font manager");
    
    std::string textLine(text, nChars);
-   CTLineGuard ctLine(textLine.c_str(), fontRef);
+   
    unsigned w = 0, h = 0;
+   
+   CTLineGuard ctLine(textLine.c_str(), fontRef);
    ctLine.GetBounds(w, h);
+
    return w;
 
 }
@@ -308,17 +288,13 @@ unsigned FontManager::GetTextWidth(FontStruct_t font, const char *text, int nCha
 void FontManager::GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDescent)
 {
    CTFontRef fontRef = (CTFontRef)font;
+
+   assert(fLoadedFonts.find(fontRef) != fLoadedFonts.end() && "Font was not created by font manager");
    
-   if (fLoadedFonts.find(fontRef) == fLoadedFonts.end()) {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"GetFontProperties, function was called for a font, which was not loaded by font manager");
-      throw std::runtime_error("GetFontProperties, function was called for a font, which was not loaded by font manager");
-#endif   
-   } else {
-      //Instead of this, use CT funtion to request ascent/descent.
-      CTLineGuard ctLine("LALALA", fontRef);
-      ctLine.GetAscentDescent(maxAscent, maxDescent);
-   }
+
+   //Instead of this, use CT funtion to request ascent/descent.
+   CTLineGuard ctLine("LALALA", fontRef);
+   ctLine.GetAscentDescent(maxAscent, maxDescent);
 }
 
 //_________________________________________________________________
@@ -333,7 +309,7 @@ CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font)
 }
 
 //_________________________________________________________________
-CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font, Color_t /*color*/)
+CTLineGuard::CTLineGuard(const char * /*textLine*/, CTFontRef /*font*/, Color_t /*color*/)
                   : fCTLine(0)
 {
    //Create attributed string with font and color.
