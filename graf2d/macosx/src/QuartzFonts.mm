@@ -267,12 +267,12 @@ unsigned FontManager::GetTextWidth(FontStruct_t font, const char *text, int nCha
 {
    //This is a temporary hack!!!
    CTFontRef fontRef = (CTFontRef)font;
+   assert(fLoadedFonts.find(fontRef) != fLoadedFonts.end() && "Font was not created by font manager");
+
    //nChars is either positive, or negative (take all string).
    if (nChars < 0)
       nChars = std::strlen(text);
 
-   assert(fLoadedFonts.find(fontRef) != fLoadedFonts.end() && "Font was not created by font manager");
-   
    std::string textLine(text, nChars);
    
    unsigned w = 0, h = 0;
@@ -290,7 +290,6 @@ void FontManager::GetFontProperties(FontStruct_t font, int &maxAscent, int &maxD
    CTFontRef fontRef = (CTFontRef)font;
 
    assert(fLoadedFonts.find(fontRef) != fLoadedFonts.end() && "Font was not created by font manager");
-   
 
    //Instead of this, use CT funtion to request ascent/descent.
    CTLineGuard ctLine("LALALA", fontRef);
