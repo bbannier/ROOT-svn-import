@@ -1506,7 +1506,7 @@ void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const 
 Int_t TGCocoa::TextWidth(FontStruct_t font, const char *s, Int_t len)
 {
    // Return lenght of the string "s" in pixels. Size depends on font.
-   return fFontManager->GetTextWidth(font, s, len);
+   return fFontManager->GetTextWidth(font, s, len) + 1;
 }
 
 //______________________________________________________________________________
