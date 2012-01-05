@@ -97,11 +97,10 @@ Bool_t TGCocoa::ParseColor(Colormap_t /*cmap*/, const char *colorName, ColorStru
 //______________________________________________________________________________
 Bool_t TGCocoa::AllocColor(Colormap_t /*cmap*/, ColorStruct_t &color)
 {
-/*   const unsigned red = double(color.fRed) / 0xffff * 255;
-   const unsigned green = double(color.fGreen) / 0xffff * 255;
-   const unsigned blue = double(color.fBlue) / 0xffff * 255;
-   color.fPixel = red << 16 | green << 8 | blue;*/
-   color.fPixel = ((color.fRed) & 0xFF) << 16 | ((color.fGreen) & 0xFF) << 8 | ((color.fBlue) & 0xFF);
+   const unsigned red = unsigned(double(color.fRed) / 0xFFFF * 0xFF);
+   const unsigned green = unsigned(double(color.fGreen) / 0xFFFF * 0xFF);
+   const unsigned blue = unsigned(double(color.fBlue) / 0xFFFF * 0xFF);
+   color.fPixel = red << 16 | green << 8 | blue;
    return kTRUE;
 }
 
@@ -109,9 +108,9 @@ Bool_t TGCocoa::AllocColor(Colormap_t /*cmap*/, ColorStruct_t &color)
 void TGCocoa::QueryColor(Colormap_t /*cmap*/, ColorStruct_t & color)
 {
    // Returns the current RGB value for the pixel in the "color" structure
-   color.fRed = color.fPixel >> 16 & 0xFF;
-   color.fGreen = color.fPixel >> 8 & 0xFF;
-   color.fBlue = color.fPixel & 0xFF;
+   color.fRed = (color.fPixel >> 16 & 0xFF) * 0xFFFF / 0xFF;
+   color.fGreen = (color.fPixel >> 8 & 0xFF) * 0xFFFF / 0xFF;
+   color.fBlue = (color.fPixel & 0xFF) * 0xFFFF / 0xFF;
 }
 
 //______________________________________________________________________________
