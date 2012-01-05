@@ -307,6 +307,8 @@ public:
    using TVirtualX::SetTextFont;
    
    
+   //Non virtual, non-overriding functions.
+   
    //These are additional functions to work with events.
    //RootQuartzWindow will place events to event queue,
    //to process it later somewhere else (in TMacOSXSystem, probably).
@@ -317,6 +319,10 @@ public:
    Int_t RootToCocoaY(Window_t wid, Int_t y)const;
 
    void SetContext(void *ctx);
+
+private:
+   Bool_t MakeProcessForeground();
+
 
 protected:
    void *fCtx;

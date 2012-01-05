@@ -1,11 +1,5 @@
-#define DEBUG_ROOT_COCOA //This directive is just to mark lines, which must be removed after code tested.
-
-#ifdef DEBUG_ROOT_COCOA
-#include <iostream>
-#endif
-
 #include "X11Colors.h"
-
+#include "TError.h"
 
 
 namespace ROOT {
@@ -53,9 +47,7 @@ bool GetHex(const TString &rgb, Ssiz_t first, Ssiz_t len, unsigned &component)
    for (; first < last; ++first) {
       unsigned val = 0;
       if (!HexCharToInt(rgb[first], val)) {
-#ifdef DEBUG_ROOT_COCOA
-         std::cout<<"X11Colors::error: Bad symbol in color component, hex digit expected, got "<<rgb[first]<<std::endl;
-#endif
+         ::Error("ROOT::MacOSX::X11::GetGex", "Bad symbol in color component, hex digit expected, got %c", rgb[first]);
          return false;
       } else
          component = (component << 4) | val;
@@ -85,10 +77,9 @@ bool ColorParser::ParseRGBTriplet(const TString &rgb, ColorStruct_t &color)const
    //Minimal triplet is #rgb, max. is #rrrrggggbbbb
    const Ssiz_t len = rgb.Length();
    if (len < 4 || len > 13 || (len - 1) % 3) {
-#ifdef DEBUG_ROOT_COCOA
-      std::cout<<"X11Colors::error: Bad color name or rgb triplet: "<<rgb.Data()<<std::endl;
-#endif
-      return false;//bad format.
+      //Bad format.
+      ::Error("ROOT::MacOSX::X11::ParseRGBTriplet", "Bad color name or rgb triplet %s", rgb.Data());
+      return false;
    }
 
    //TGX11 and TGWin32 sets this member to zero:
@@ -98,10 +89,14 @@ bool ColorParser::ParseRGBTriplet(const TString &rgb, ColorStruct_t &color)const
    unsigned r = 0, g = 0, b = 0;
    if (GetHex(rgb, 1, compLen, r) && GetHex(rgb, 1 + compLen, compLen, g) && GetHex(rgb, 1 + compLen * 2, compLen, b))
    {
-      const unsigned bitPad = 16 - compLen * 4;
-      color.fRed   = r;// << bitPad;
-      color.fGreen = g;// << bitPad;
-      color.fBlue  = b;// << bitPad;
+      //Problem with bitPad: ROOT uses 0xXX for component,
+      //X11's color component may be 0xXXXX.
+      //If I use bit pad, later I'll get wrong color.
+
+      const unsigned bitPad = 0;//16 - compLen * 4;
+      color.fRed   = r << bitPad;
+      color.fGreen = g << bitPad;
+      color.fBlue  = b << bitPad;
 
       return true;
    }
@@ -122,15 +117,10 @@ bool ColorParser::LookupColorByName(const TString &colorName, ColorStruct_t &col
       color.fBlue = it->second.fBlue * 65535 / 255;
 
       return true;
+   } else {
+      ::Error("ROOT::MacOSX::X11::ColorParser::LookupColorByName", "Could not find color with name %s", colorName.Data());
+      return false;
    }
-#ifdef DEBUG_ROOT_COCOA
-   else
-   {
-      std::cout<<"X11Colors::error: Could not find color with the name: "<<colorName.Data()<<std::endl;
-   }
-#endif
-
-   return false;
 }
 
 //______________________________________________________________________________

@@ -1,5 +1,3 @@
-#define DEBUG_ROOT_COCOA
-
 #import <stdlib.h>
 
 #import "RootQuartzWindow.h"
@@ -68,7 +66,7 @@
 //______________________________________________________________________________
 - (void) windowDidResize : (NSNotification *)notification
 {
-   (void*)notification;
+   (void)notification;
 }
 
 //______________________________________________________________________________
