@@ -1019,7 +1019,7 @@ GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t *gval)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ChangeGC(GContext_t /*gc*/, GCValues_t * /*gval*/)
+void TGCocoa::ChangeGC(GContext_t gc, GCValues_t *gval)
 {
  //  NSLog(@"changing GC %lu", gc);
    // Changes the components specified by the mask in gval for the specified GC.
@@ -1027,6 +1027,14 @@ void TGCocoa::ChangeGC(GContext_t /*gc*/, GCValues_t * /*gval*/)
    // GContext_t gc   - specifies the GC to be changed
    // GCValues_t gval - specifies the mask and the values to be set
    // (see also the GCValues_t structure)
+   
+   assert(gc <= fX11Contexts.size() && gc > 0 && "ChangeGC - stange context id");
+   
+   GCValues_t &x11Context = fX11Contexts[gc - 1];
+   const Mask_t &mask = gval->fMask;
+   if (mask & kGCFont) {
+      x11Context.fFont = gval->fFont;
+   }
 }
 
 //______________________________________________________________________________
@@ -1509,10 +1517,12 @@ void TGCocoa::GetFontProperties(FontStruct_t font, Int_t &maxAscent, Int_t &maxD
 }
 
 //______________________________________________________________________________
-void TGCocoa::GetGCValues(GContext_t /*gc*/, GCValues_t &/*gval*/)
+void TGCocoa::GetGCValues(GContext_t gc, GCValues_t &gval)
 {
    // Returns the components specified by the mask in "gval" for the
    // specified GC "gc" (see also the GCValues_t structure)
+   const GCValues_t &gcVal = fX11Contexts[gc - 1];
+   gval = gcVal;
 }
 
 //______________________________________________________________________________
@@ -1527,11 +1537,13 @@ FontStruct_t TGCocoa::GetFontStruct(FontH_t fh)
 }
 
 //______________________________________________________________________________
-void TGCocoa::FreeFontStruct(FontStruct_t fs)
+void TGCocoa::FreeFontStruct(FontStruct_t /*fs*/)
 {
    // Frees the font structure "fs". The font itself will be freed when
    // no other resource references it.
-   fFontManager->UnloadFont(fs);
+
+   //
+   // fFontManager->UnloadFont(fs);
 }
 
 //______________________________________________________________________________
