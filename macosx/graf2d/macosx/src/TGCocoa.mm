@@ -15,6 +15,30 @@ ClassImp(TGCocoa)
 namespace Details = ROOT::MacOSX::Details;
 namespace Quartz = ROOT::MacOSX::Quartz;
 
+
+namespace {
+
+class CGStateGuard {
+public:
+   CGStateGuard(CGContextRef ctx)
+      : fCtx(ctx)
+   {
+      CGContextSaveGState(ctx);
+   }
+   ~CGStateGuard()
+   {
+      CGContextRestoreGState(fCtx);
+   }
+   
+private:
+   CGContextRef fCtx;
+   
+   CGStateGuard(const CGStateGuard &rhs) = delete;
+   CGStateGuard &operator = (const CGStateGuard &rhs) = delete;
+};
+
+}
+
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
             : fForegroundProcess(false)
@@ -774,10 +798,11 @@ void TGCocoa::ReparentWindow(Window_t /*wid*/, Window_t /*pid*/, Int_t /*x*/, In
 //______________________________________________________________________________
 void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
 {
-   // Sets the background of the window "wid" to the specified color value
-   // "color". Changing the background does not cause the window contents
-   // to be changed.
-//   NSLog(@"SetWindowBackground called for wid %lu, color is %x", wid, (UInt_t)color);
+   assert(wid != 0 && "SetWindowBackground, can not set color for 'root' window");
+
+   id<RootGUIElement> widget = fPimpl->GetWindow(wid);
+   RootQuartzView *view = (RootQuartzView *)[widget contentView];
+   view.fBackgroundColor = color;
 }
 
 //______________________________________________________________________________
@@ -1003,9 +1028,9 @@ Window_t TGCocoa::GetParent(Window_t /*wid*/) const
 //______________________________________________________________________________
 FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
 {
-   // Provides the most common way for accessing a font: opens (loads) the
-   // specified font and returns a pointer to the appropriate FontStruct_t
-   // structure. If the font does not exist, it returns NULL.
+   //fontName is in XLFD format:
+   //-foundry-family- ..... etc., some components can be omitted and replaced by *.
+
    ROOT::MacOSX::Quartz::XLFDName xlfd = {};
    if (ParseXLFDName(fontName, xlfd))
       return fFontManager->LoadFont(xlfd);
@@ -1016,15 +1041,13 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
 //______________________________________________________________________________
 FontH_t TGCocoa::GetFontHandle(FontStruct_t fs)
 {
-   // Returns the font handle of the specified font structure "fs".
-//   NSLog(@"GetFontHandle for %lu", fs);
    return (FontH_t)fs;
 }
 
 //______________________________________________________________________________
-void TGCocoa::DeleteFont(FontStruct_t /*fs*/)
+void TGCocoa::DeleteFont(FontStruct_t fs)
 {
-   // Explicitely deletes the font structure "fs" obtained via LoadQueryFont().
+   fFontManager->UnloadFont(fs);
 }
 
 //______________________________________________________________________________
@@ -1277,34 +1300,55 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 }
 
 //______________________________________________________________________________
+void TGCocoa::SetStrokeParameters(const GCValues_t &gcVals)const
+{
+   assert(fCtx && "SetStrokeParameters, context is null");
+   CGContextRef ctx = (CGContextRef)fCtx;
+   
+   const Mask_t mask = gcVals.fMask;
+   
+   if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1)
+      CGContextSetLineWidth(ctx, gcVals.fLineWidth);
+
+   Pixel_t pixelColor = 0;
+
+   if (mask & kGCForeground)
+      pixelColor = gcVals.fForeground;
+   else if (mask & kGCBackground)
+      pixelColor = gcVals.fBackground;
+   else
+      assert(0 && "SetStrokeParameters, no color set in context");
+   
+   const CGFloat red = (pixelColor >> 16 & 0xff) / 255.f;
+   const CGFloat green = (pixelColor >> 8 & 0xff) / 255.f;
+   const CGFloat blue = (pixelColor & 0xff) / 255.f;
+
+   CGContextSetRGBStrokeColor(ctx, red, green, blue, 1.f);
+}
+
+//______________________________________________________________________________
 void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
    //This code is just a hack to show a button or other widgets.
-   assert(wid != 0 && "DrawLine called for 'root' window");
-   
+   assert(wid != 0 && "DrawLine, called for 'root' window");   
+   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawLine, strange context index");
+
    CGContextRef ctx = (CGContextRef)fCtx;
-   assert(ctx != 0 && "DrawLine called, but context is null");
+   assert(ctx != 0 && "DrawLine, context is null");
 
-   CGContextSetAllowsAntialiasing(ctx, 0);   
-   //This is all terrible and can live only in dev. version (several days).
+   const CGStateGuard ctxGuard(ctx);//Will restore parameters.
+
+   CGContextSetAllowsAntialiasing(ctx, 0);
+   
+   //This is all terrible and can live only in dev. version (?).
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   
-   Pixel_t foregroundColor = gcVals.fForeground;
-   const CGFloat red = (foregroundColor >> 16 & 0xff) / 255.f;
-   const CGFloat green = (foregroundColor >> 8 & 0xff) / 255.f;
-   const CGFloat blue = (foregroundColor & 0xff) / 255.f;
-   
-   const NSRect frame = [fPimpl->GetWindow(wid) contentView].frame;
-   y1 = frame.size.height - y1;
-   y2 = frame.size.height - y2;
 
-   CGContextSetRGBStrokeColor(ctx, red, green, blue, 1.f);
+   SetStrokeParameters(gcVals);
+    
    CGContextBeginPath(ctx);
-   CGContextMoveToPoint(ctx, x1, y1);
-   CGContextAddLineToPoint(ctx, x2, y2);
+   CGContextMoveToPoint(ctx, x1, RootToCocoaY(wid, y1));
+   CGContextAddLineToPoint(ctx, x2, RootToCocoaY(wid, y2));
    CGContextStrokePath(ctx);
-   
-   CGContextSetAllowsAntialiasing(ctx, 1);
 }
 
 //______________________________________________________________________________
@@ -1317,17 +1361,19 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    // x, y - coordinates, which are relative to the origin
    // w, h - the width and height which define the rectangle dimensions
 
-   assert(wid != 0 && "ClearArea called for 'root' window");
-   assert(fCtx != 0 && "ClearArea called, but context is null");
+   assert(wid != 0 && "ClearArea, called for the 'root' window");
+   assert(fCtx != 0 && "ClearArea, context is null");
 
-   id<RootGUIElement> widget = fPimpl->GetWindow(wid);
-   RootQuartzView *view = (RootQuartzView *)[widget contentView];
+   RootQuartzView *view = (RootQuartzView *)[fPimpl->GetWindow(wid) contentView];
+
    const Pixel_t color = view.fBackgroundColor;
-   const CGFloat red = ((color & 0xff0000) >> 16) / 255.f;
-   const CGFloat green = ((color & 0xff00) >> 8) / 255.f;
-   const CGFloat blue = (color & 0xff) / 255.f;
+   const CGFloat red = ((color & 0xFF0000) >> 16) / 255.f;
+   const CGFloat green = ((color & 0xFF00) >> 8) / 255.f;
+   const CGFloat blue = (color & 0xFF) / 255.f;
    
-   CGContextRef ctx = static_cast<CGContextRef>(fCtx);
+   CGContextRef ctx = (CGContextRef)fCtx;
+   const CGStateGuard ctxGuard(ctx);
+   
    CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);//alpha can be also used.
    CGContextFillRect(ctx, CGRectMake(x, y, w, h));
 }
@@ -1488,22 +1534,15 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
 //______________________________________________________________________________
 void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len)
 {
-   // wid  - the drawable
-   // gc   - the GC
-   // x, y - coordinates, which are relative to the origin of the specified
-   //        drawable and define the origin of the first character
-   // s    - the character string
-   // len  - the number of characters in the string argument
-   
-   assert(wID != 0 && "DrawString tries to draw in a 'root' window");
-      
+   assert(wID != 0 && "DrawString, called for the 'root' window");
+   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawString, bad GContext_t");
+   assert(fCtx != 0 && "DrawString, context is null");
+
    CGContextRef ctx = (CGContextRef)fCtx;
-   
-   assert(ctx != 0 && "DrawString was called, but context not set");
-   
-   id<RootGUIElement> widget = fPimpl->GetWindow(wID);
-   NSView *view = [widget contentView];
-   y = view.frame.size.height - y;
+   const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
+
+   //Text must be antialiased (or it looks like .... you know what :)).
+   CGContextSetAllowsAntialiasing(ctx, 1);
    
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
 
@@ -1514,7 +1553,7 @@ void TGCocoa::DrawString(Drawable_t wID, GContext_t gc, Int_t x, Int_t y, const 
    ROOT::MacOSX::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont);
 
    CGContextSaveGState(ctx);
-   CGContextSetTextPosition(ctx, x, y);
+   CGContextSetTextPosition(ctx, x, RootToCocoaY(wID, y));
    CTLineDraw(ctLine.fCTLine, ctx);
    CGContextRestoreGState(ctx);
 }
@@ -1582,35 +1621,61 @@ Int_t TGCocoa::KeysymToKeycode(UInt_t /*keysym*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::FillRectangle(Drawable_t wid, GContext_t /*gc*/,
-                            Int_t /*x*/, Int_t /*y*/,
-                            UInt_t /*w*/, UInt_t /*h*/)
+void TGCocoa::SetFilledAreaParameters(const GCValues_t &gcVals)const
 {
-   // Fills the specified rectangle defined by [x,y] [x+w,y] [x+w,y+h] [x,y+h].
-   // using the GC you specify.
-   //
-   // GC components in use are: function, plane-mask, fill-style,
-   // subwindow-mode, clip-x-origin, clip-y-origin, clip-mask.
-   // GC mode-dependent components: foreground, background, tile, stipple,
-   // tile-stipple-x-origin, and tile-stipple-y-origin.
-   // (see also the GCValues_t structure)
-  // NSLog(@"Fill rectangle for widget %lu", wid);
+   assert(fCtx && "SetFilledAreaParameters, context is null");
+   CGContextRef ctx = (CGContextRef)fCtx;
+   
+   const Mask_t mask = gcVals.fMask;
+   Pixel_t pixelColor = 0;
+      
+   if (mask & kGCBackground)
+      pixelColor = gcVals.fBackground;
+   else if (mask & kGCForeground)
+      pixelColor = gcVals.fForeground;
+   else
+      assert(0 && "SetFilledAreaParameters, context mask has no background/foreground bit set");
+   
+   const CGFloat red   = (pixelColor >> 16 & 0xFF) / 255.f;
+   const CGFloat green = (pixelColor >>  8 & 0xFF) / 255.f;
+   const CGFloat blue  = (pixelColor & 0xFF) / 255.f;
+   
+   CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t /*gc*/,
-                            Int_t /*x*/, Int_t /*y*/,
-                            UInt_t /*w*/, UInt_t /*h*/)
+void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
-   // Draws rectangle outlines of [x,y] [x+w,y] [x+w,y+h] [x,y+h]
-   //
-   // GC components in use: function, plane-mask, line-width, line-style,
-   // cap-style, join-style, fill-style, subwindow-mode, clip-x-origin,
-   // clip-y-origin, clip-mask.
-   // GC mode-dependent components: foreground, background, tile, stipple,
-   // tile-stipple-x-origin, tile-stipple-y-origin, dash-offset, dash-list.
-   // (see also the GCValues_t structure)
-   NSLog(@"DrawRectangle was called for widget %lu", wid);
+   assert(wid != 0 && "FillRectangle, called for the 'root' window");
+   assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
+   assert(fCtx && "FillRectangle, context is null");
+
+   CGContextRef ctx = (CGContextRef)fCtx;
+   const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
+
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   SetFilledAreaParameters(gcVals);
+
+   CGContextSetRGBStrokeColor(ctx, 1, 0, 0, 1.f);
+   const CGRect fillRect = CGRectMake(x, RootToCocoaY(wid, y), w, h);
+   CGContextFillRect(ctx, fillRect);
+}
+
+//______________________________________________________________________________
+void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
+{
+   assert(wid != 0 && "DrawRectangle, called for the 'root' window");
+   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawRectangle, bad GContext_t");
+   assert(fCtx && "DrawRectangle, context is null");
+
+   CGContextRef ctx = (CGContextRef)fCtx;
+   const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
+
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   SetStrokeParameters(gcVals);
+
+   const CGRect rect = CGRectMake(x, RootToCocoaY(wid, y), w, h);
+   CGContextStrokeRect(ctx, rect);
 }
 
 //______________________________________________________________________________
@@ -1717,13 +1782,24 @@ void TGCocoa::TranslateCoordinates(Window_t /*src*/, Window_t /*dest*/, Int_t /*
 }
 
 //______________________________________________________________________________
-void TGCocoa::GetWindowSize(Drawable_t /*wid*/, Int_t &/*x*/, Int_t &/*y*/, UInt_t &/*w*/, UInt_t &/*h*/)
+void TGCocoa::GetWindowSize(Drawable_t /*wid*/, Int_t & /*x*/, Int_t & /*y*/, UInt_t & /*w*/, UInt_t & /*h*/)
 {
    // Returns the location and the size of window "wid"
    //
    // x, y - coordinates of the upper-left outer corner relative to the
    //        parent window's origin
    // w, h - the inside size of the window, not including the border
+//   NSLog(@"GetWindowSize %lu called!", wid);
+/*
+   if (!wid) {
+      const WindowAttributes_t &attr = fPimpl->GetWindowAttributes(wid);
+      x = 0;
+      y = 0;
+      w = attr.fWidth;
+      h = attr.fHeight;
+   } else {
+      const NSRect 
+   }*/
 }
 
 //______________________________________________________________________________
@@ -2167,20 +2243,9 @@ Int_t TGCocoa::CocoaToRootY(Window_t /*wid*/, Int_t y)const
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::RootToCocoaY(Window_t /*wid*/, Int_t y)const
+Int_t TGCocoa::RootToCocoaY(Window_t wid, Int_t y)const
 {
-/*   if (fPimpl->fWindows.size()) {
-      //"Window" with index 0 is a fake "root" window,
-      //it has the sizes of a screen.
-      const WindowAttributes_t &attr = fPimpl->fWindows[0].fROOTWindowAttribs;
-      return attr.fHeight - y;
-   } else {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"RootToCocoaY: No root window found");
-      throw std::runtime_error("RootToCocoaY: No root window found");
-#endif*/
-      return y;//Should never happen.
-//   }
+   return [fPimpl->GetWindow(wid) contentView].frame.size.height - y;
 }
 
 //______________________________________________________________________________
