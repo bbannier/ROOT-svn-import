@@ -285,14 +285,6 @@ Window_t TGCocoa::GetWindowID(Int_t /*wid*/)
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::InitWindow(ULong_t /*window*/)
-{
-   // Creates a new window and return window number.
-   // Returns -1 if window initialization fails.
-   return 0;
-}
-
-//______________________________________________________________________________
 Int_t TGCocoa::AddWindow(ULong_t /*qwid*/, UInt_t /*w*/, UInt_t /*h*/)
 {
    // Registers a window created by Qt as a ROOT window
@@ -785,7 +777,7 @@ void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
    // Sets the background of the window "wid" to the specified color value
    // "color". Changing the background does not cause the window contents
    // to be changed.
-   NSLog(@"SetWindowBackground called for wid %lu, color is %x", wid, (UInt_t)color);
+//   NSLog(@"SetWindowBackground called for wid %lu, color is %x", wid, (UInt_t)color);
 }
 
 //______________________________________________________________________________
@@ -801,21 +793,22 @@ namespace {
 RootQuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
                                        UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t * /*attr*/, UInt_t /*wtype*/)
 {
-   NSRect contentRect = {};
-   contentRect.origin.x = x;
-   contentRect.origin.y = y;
-   contentRect.size.width = w;
-   contentRect.size.height = h;
+   NSRect winRect = {};
+   winRect.origin.x = x;
+   winRect.origin.y = y;
+   winRect.size.width = w;
+   winRect.size.height = h;
    NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
-   RootQuartzWindow *newWindow = [[RootQuartzWindow alloc] initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
+   RootQuartzWindow *newWindow = [[RootQuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
    [newWindow setAcceptsMouseMovedEvents : YES];
 
 
    //Adjust view rect to exclude title bar????
+   NSRect viewRect =  [NSWindow contentRectForFrameRect : winRect styleMask : styleMask];
 
-   contentRect.origin = CGPointZero;
-   RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : contentRect];
-   newWindow.fTopLevelView = view;   
+   viewRect.origin = CGPointZero;
+   RootQuartzView *view = [[RootQuartzView alloc] initWithFrame : viewRect];
+   newWindow.fTopLevelView = view;
    [view release];
 
    return newWindow;
@@ -844,6 +837,30 @@ void SetWindowAttributes(const SetWindowAttributes_t * /*src*/, WindowAttributes
    dst->fHeight = h;*/
 }
 
+}
+
+//______________________________________________________________________________
+Int_t TGCocoa::InitWindow(ULong_t parentID)
+{
+   // Creates a new window and return window number.
+   // Returns -1 if window initialization fails.
+//   NSLog(@"InitWindow was called with param %lu", window);
+
+   if (parentID) {
+      id<RootGUIElement> parentWin = fPimpl->GetWindow(parentID);
+      const WindowAttributes_t &attr = fPimpl->GetWindowAttributes(parentID);
+      
+      RootQuartzView *childView = CreateChildView(parentWin, attr.fX, attr.fY, attr.fWidth, attr.fHeight, attr.fBorderWidth, attr.fDepth, 0, 0, nullptr, 0);
+      const Window_t result = fPimpl->RegisterWindow(childView, attr);
+      
+      childView.fWinID = result;
+
+      [parentWin addChildView : childView];
+      [childView release];
+      return result;   
+   }
+
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1577,7 +1594,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t /*gc*/,
    // GC mode-dependent components: foreground, background, tile, stipple,
    // tile-stipple-x-origin, and tile-stipple-y-origin.
    // (see also the GCValues_t structure)
-   NSLog(@"Fill rectangle for widget %lu", wid);
+  // NSLog(@"Fill rectangle for widget %lu", wid);
 }
 
 //______________________________________________________________________________

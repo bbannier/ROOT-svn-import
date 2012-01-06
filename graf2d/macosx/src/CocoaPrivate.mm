@@ -147,6 +147,16 @@ id<RootGUIElement> CocoaPrivate::GetWindow(unsigned winID)const
 }
 
 //______________________________________________________________________________
+const WindowAttributes_t &CocoaPrivate::GetWindowAttributes(unsigned winID)const
+{
+   auto winIter = fWindows.find(winID);
+
+   assert(winIter != fWindows.end() && "Attributes for non-existing window requested");
+
+   return winIter->second.fROOTWindowAttribs;
+}
+
+//______________________________________________________________________________
 void CocoaPrivate::DeleteWindow(unsigned winID)
 {
    auto winIter = fWindows.find(winID);

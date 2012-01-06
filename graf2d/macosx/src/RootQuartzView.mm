@@ -11,12 +11,14 @@
 @synthesize fBackgroundColor;
 @synthesize fWinID;
 
+/*
 //______________________________________________________________________________
 - (BOOL)wantsDefaultClipping
 {
    //This is very arguable decision.
    return NO;
 }
+*/
 
 //______________________________________________________________________________
 - (void) addChildView : (RootQuartzView *)childView
@@ -42,7 +44,8 @@
 //______________________________________________________________________________
 - (void) drawRect : (NSRect)dirtyRect
 {
-//   
+   (void)dirtyRect;
+
    if (fWinID) {
       if (TGWindow *window = gClient->GetWindowById(fWinID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
