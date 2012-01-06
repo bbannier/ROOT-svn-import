@@ -27,6 +27,8 @@
 - (void) drawRect : (NSRect)dirtyRect
 {
    // Drawing code here.
+
+   
    NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
    CGContextRef cgContext = (CGContextRef)[nsContext graphicsPort];
    

@@ -45,6 +45,7 @@ private:
 
    unsigned RegisterWindow(NSObject *nsWin, const WindowAttributes_t &winAttr);
    id<RootGUIElement> GetWindow(unsigned windowID)const;
+   const WindowAttributes_t &GetWindowAttributes(unsigned winID)const;
    
    void DeleteWindow(unsigned windowID);
    
