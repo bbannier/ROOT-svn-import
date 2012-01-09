@@ -266,6 +266,11 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
       form     = -form;
       SetBit(kMenuBar,0);
    }
+   
+   //
+   fCanvas = this;
+   //
+   
    fCanvasID = -1;
    TCanvas *old = (TCanvas*)gROOT->GetListOfCanvases()->FindObject(name);
    if (old && old->IsOnHeap()) {
@@ -295,6 +300,8 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
          Int_t  uy = Int_t(cx*gStyle->GetCanvasDefY());
          fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, ux, uy, uw, uh);
       }
+      
+      std::cout<<"Create for form 1? "<<fCanvasImp;
       fCw = 500;
       fCh = 500;
       if (form == 2) fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, 20, 20, UInt_t(cx*500), UInt_t(cx*500));
@@ -304,6 +311,8 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }
+
+   std::cout<<"Call CreatePainter\n";
 
    CreatePainter();
 
@@ -1044,6 +1053,7 @@ void TCanvas::Flush()
    cd();
    if (!IsBatch()) {
       if (!UseGL()) {
+//         std::cout<<"SelectWindow "<<fCanvasID<<std::endl;
          gVirtualX->SelectWindow(fCanvasID);
          gPad = padsav; //don't do cd() because than also the pixmap is changed
          CopyPixmaps();
@@ -2178,9 +2188,9 @@ void TCanvas::CreatePainter()
 
    //Even for batch mode painter is still required, just to delegate
    //some calls to batch "virtual X".
-   if (!UseGL() || fBatch)
+   if (!UseGL() || fBatch) {
       fPainter = new TPadPainter;//Do not need plugin manager for this!
-   else {
+   } else {
       fPainter = TVirtualPadPainter::PadPainter("gl");
       if (!fPainter) {
          Error("CreatePainter", "GL Painter creation failed! Will use default!");
@@ -2195,7 +2205,7 @@ void TCanvas::CreatePainter()
 TVirtualPadPainter *TCanvas::GetCanvasPainter()
 {
    // Access and (probably) creation of pad painter.
-
+   std::cout<<"GetCanvasPainter\n";
    if (!fPainter) CreatePainter();
    return fPainter;
 }

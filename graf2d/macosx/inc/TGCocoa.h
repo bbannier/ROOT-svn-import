@@ -339,6 +339,8 @@ private:
    std::deque<Event_t> fEventQueue;
 
    std::vector<GCValues_t> fX11Contexts;
+   
+   void *fCurrentWindow;//TGX11 has a global variable for this!!!
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
