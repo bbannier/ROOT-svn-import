@@ -9,6 +9,7 @@
 
 @implementation RootQuartzWindow
 
+@synthesize fCurrentContext;
 @synthesize fTopLevelView;
 @synthesize fWinID;
 
@@ -80,6 +81,18 @@
 {
    //Let's generate ConfigureNotify event.
    (void)notification;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsPixmap
+{
+   return FALSE;
+}
+
+//______________________________________________________________________________
+- (CGContextRef) fCurrentContext
+{
+   return fTopLevelView.fCurrentContext;
 }
 
 @end

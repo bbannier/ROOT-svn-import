@@ -18,6 +18,9 @@
 //NSView does not have backgroundColor?
 @property (nonatomic, assign) unsigned long fBackgroundColor;
 
+@property (nonatomic, readonly) BOOL fIsPixmap;
+@property (nonatomic, assign) CGContextRef fCurrentContext;
+
 @end
 
 

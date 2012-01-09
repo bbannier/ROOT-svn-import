@@ -21,6 +21,8 @@
 @property (nonatomic, assign) RootQuartzView *fTopLevelView;
 @property (nonatomic, assign) unsigned fWinID;
 
+@property (nonatomic, readonly) BOOL fIsPixmap;
+@property (nonatomic, assign) CGContextRef fCurrentContext;
 
 @end
 

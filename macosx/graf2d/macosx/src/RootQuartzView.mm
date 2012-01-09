@@ -6,9 +6,12 @@
 
 @implementation RootQuartzView {
    RootQuartzView *fParentView;
+
+   CGContextRef fCurrentContext;
 }
 
 @synthesize fBackgroundColor;
+@synthesize fCurrentContext;
 @synthesize fWinID;
 
 /*
@@ -49,16 +52,23 @@
    if (fWinID) {
       if (TGWindow *window = gClient->GetWindowById(fWinID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-         CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
+
+         fCurrentContext = (CGContextRef)[nsContext graphicsPort];
          
-         CGContextSaveGState(ctx);
+         CGContextSaveGState(fCurrentContext);
          
          TGCocoa *cocoa = static_cast<TGCocoa *>(gVirtualX);
-         cocoa->SetContext(ctx);
+         
+         //Have a look, it's possible to set context when window selected (TGCocoa::SelectWindow),
+         //or DrawXXX(windowID ....) method called (take from windowID).
+         cocoa->SetContext(fCurrentContext);
          //
          gClient->NeedRedraw(window, kTRUE);
          //
-         CGContextRestoreGState(ctx);
+         CGContextRestoreGState(fCurrentContext);
+         //
+ //        fCurrentContext = 0;
+ //        cocoa->SetContext(0);
       }
    }
 }
@@ -92,6 +102,12 @@
 - (NSView *)contentView
 {
    return self;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsPixmap
+{
+   return FALSE;
 }
 
 @end

@@ -7,6 +7,7 @@
 #include "RootQuartzView.h"
 #include "CocoaPrivate.h"
 #include "QuartzFonts.h"
+#include "CocoaPixmap.h"
 #include "CocoaUtils.h"
 #include "TGCocoa.h"
 
@@ -41,7 +42,8 @@ private:
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
-            : fForegroundProcess(false)
+            : fForegroundProcess(false),
+              fCurrentWindow(0)
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
@@ -54,7 +56,8 @@ TGCocoa::TGCocoa()
 //______________________________________________________________________________
 TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title),
-              fForegroundProcess(false)             
+              fForegroundProcess(false),
+              fCurrentWindow(0)
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
@@ -172,13 +175,37 @@ void TGCocoa::CloseWindow()
 //______________________________________________________________________________
 void TGCocoa::ClosePixmap()
 {
+
    // Deletes current pixmap.
 }
 
 //______________________________________________________________________________
-void TGCocoa::CopyPixmap(Int_t /*wid*/, Int_t /*xpos*/, Int_t /*ypos*/)
+void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
 {
    // Copies the pixmap "wid" at the position [xpos,ypos] in the current window.
+   assert(fCurrentWindow != 0 && "CopyPixmap, current window is null");
+   assert(wid && "CopyPixmap, called for 'root' window");
+   
+   id<RootGUIElement> obj = fPimpl->GetWindow(wid);
+   assert(obj.fIsPixmap == TRUE && "CopyPixmap called for non-pixmap object");
+   
+   id<RootGUIElement> win = (id<RootGUIElement>)fCurrentWindow;
+
+   CGContextRef ctx = win.fCurrentContext;
+   if (!ctx)
+      return;
+
+//   assert(ctx != 0 && "CopyPixmap, destination context is null");
+
+   CocoaPixmap *pixmap = (CocoaPixmap*)obj;
+   CGImageRef image = pixmap.fImage;
+   assert(image != 0 && "CopyPixmap, source image is null");
+   
+   //
+   ypos = RootToCocoaY(win.fWinID, ypos);
+   const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
+   
+   CGContextDrawImage(ctx, imageRect, image);
 }
 
 //______________________________________________________________________________
@@ -300,12 +327,12 @@ Bool_t TGCocoa::HasTTFonts() const
 }
 
 //______________________________________________________________________________
-Window_t TGCocoa::GetWindowID(Int_t /*wid*/)
+Window_t TGCocoa::GetWindowID(Int_t wid)
 {
-   // Returns the Cocoa window identifier.
-   //
-   // wid - workstation identifier (input)
-   return Window_t();
+   //In case of X11, there is a mixture of 
+   //casted pointers (Window_t) and index in some internal array (TGX11), which
+   //contains such a pointer. On Mac, I always have indices. Yes, I'm smart.
+   return wid;
 }
 
 //______________________________________________________________________________
@@ -345,11 +372,21 @@ void TGCocoa::MoveWindow(Int_t /*wid*/, Int_t /*x*/, Int_t /*y*/)
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::OpenPixmap(UInt_t /*w*/, UInt_t /*h*/)
+Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
 {
-   // Creates a pixmap of the width "w" and height "h" you specified.
+   //Two stage creation.
+   CocoaPixmap *pixmap = [CocoaPixmap alloc];
+   if (![pixmap initWithSize : CGSizeMake(w, h)]) {
+      [pixmap release];
+      return -1;
+   }
 
-   return 0;
+   WindowAttributes_t wAttr = {};
+   wAttr.fWidth = w;
+   wAttr.fHeight = h;
+   unsigned newID = fPimpl->RegisterWindow(pixmap, wAttr);
+   //Register new pixmap.
+   return newID;
 }
 
 //______________________________________________________________________________
@@ -421,13 +458,19 @@ void TGCocoa::RescaleWindow(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::ResizePixmap(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
+Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 {
-   // Resizes the specified pixmap "wid".
-   //
-   // w, h - the width and height which define the pixmap dimensions
+   assert(wid != 0 && "ResizePixmap, pixmap with id 0");
 
-   return 0;
+   id<RootGUIElement> obj = fPimpl->GetWindow(wid);
+
+   assert(obj.fIsPixmap && "ResizePixmap, object is not a pixmap");
+
+   CocoaPixmap *pixmap = (CocoaPixmap *)obj;
+   if([pixmap resizePixmap : CGSizeMake(w, h)])
+      return wid;
+
+   return -1;
 }
 
 //______________________________________________________________________________
@@ -437,15 +480,38 @@ void TGCocoa::ResizeWindow(Int_t /*wid*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SelectWindow(Int_t /*wid*/)
+void TGCocoa::SelectWindow(Int_t wid)
 {
-   // Selects the window "wid" to which subsequent output is directed.
+   //This function can be called from pad/canvas, both for window and for pixmap.
+   //This makes things more difficult, since pixmap has it's own context,
+   //not related to context from RootQuartzView's -drawRect method.
+   //
+   
+   assert(wid != 0 && "SelectWindow, called for 'root' window");
+   
+   id<RootGUIElement> obj = fPimpl->GetWindow(wid);
+   
+   if (!obj.fIsPixmap) {
+      //This is really ugly thing, many thanks to TVirtualX/GUI design.
+      //Required, for example, for CopyPixmap to work.
+      fCurrentWindow = obj;
+   }
+
+//   NSLog(@"---------------- selecting context %p", obj.fCurrentContext);
+   SetContext(obj.fCurrentContext);
 }
 
 //______________________________________________________________________________
-void TGCocoa::SelectPixmap(Int_t /*qpixid*/)
+void TGCocoa::SelectPixmap(Int_t pixid)
 {
    // Selects the pixmap "qpixid".
+   assert(pixid != 0 && "SelectPixmap, called for 'root' window");
+
+   id<RootGUIElement> obj = fPimpl->GetWindow(pixid);
+   assert(obj.fIsPixmap == TRUE && "SelectPixmap, called for non-pixmap object");
+
+
+   SetContext(obj.fCurrentContext);
 }
 
 //______________________________________________________________________________
