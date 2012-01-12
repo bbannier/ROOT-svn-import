@@ -327,13 +327,13 @@ private:
 
 protected:
    void *fCtx;
+   std::auto_ptr<ROOT::MacOSX::Quartz::FontManager> fFontManager;//!
+
 private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
 
-   //As soon as ROOT can be compiled with 0x11 library, replace auto_ptr.
    std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl;//!
-   std::auto_ptr<ROOT::MacOSX::Quartz::FontManager> fFontManager;//!
    bool fForegroundProcess;
    
    std::deque<Event_t> fEventQueue;
