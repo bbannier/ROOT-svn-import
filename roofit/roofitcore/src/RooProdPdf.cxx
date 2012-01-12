@@ -65,6 +65,7 @@
 
 #include <string.h>
 #include <sstream>
+#include <algorithm>
 
 #ifndef _WIN32
 #include <strings.h>
@@ -225,7 +226,7 @@ RooProdPdf::RooProdPdf(const char* name, const char* title, const RooArgList& in
     RooAbsPdf* pdf = dynamic_cast<RooAbsPdf*>(arg) ;
     if (!pdf) {
       coutW(InputArguments) << "RooProdPdf::RooProdPdf(" << GetName() << ") list arg " 
-			    << pdf->GetName() << " is not a PDF, ignored" << endl ;
+			    << arg->GetName() << " is not a PDF, ignored" << endl ;
       continue ;
     }
     _pdfList.add(*pdf) ;
@@ -1935,13 +1936,13 @@ Double_t RooProdPdf::analyticalIntegralWN(Int_t code, const RooArgSet* normSet, 
     getPartIntList(nset,iset,partIntList,normList,code2,rangeName) ;
 
     delete vars ;
-    delete nset ;
-    delete iset ;
 
     // preceding call to getPartIntList guarantees non-null return
     // coverity[NULL_RETURNS]
     cache = (CacheElem*) _cacheMgr.getObj(nset,iset,&code2,rangeName) ;
 
+    delete nset ;
+    delete iset ;
 
   } else {
 
@@ -1993,7 +1994,6 @@ Double_t RooProdPdf::expectedEvents(const RooArgSet* nset) const
   assert(_extendedIndex>=0) ;
   return ((RooAbsPdf*)_pdfList.at(_extendedIndex))->expectedEvents(nset) ;
 }
-
 
 
 
@@ -2346,6 +2346,45 @@ std::list<Double_t>* RooProdPdf::plotSamplingHint(RooAbsRealLValue& obs, Double_
   RooAbsPdf* pdf ;
   while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
     list<Double_t>* hint = pdf->plotSamplingHint(obs,xlo,xhi) ;      
+    if (hint) {
+      return hint ;
+    }
+  }
+  
+  return 0 ;
+}
+
+
+
+//_____________________________________________________________________________
+Bool_t RooProdPdf::isBinnedDistribution(const RooArgSet& obs) const 
+{
+  // If all components that depend on obs are binned that so is the product
+  
+  _pdfIter->Reset() ;
+  RooAbsPdf* pdf ;
+  while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
+    if (pdf->dependsOn(obs) && !pdf->isBinnedDistribution(obs)) {
+      return kFALSE ;
+    }
+  }
+  
+  return kTRUE  ;  
+}
+
+
+
+
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* RooProdPdf::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const 
+{
+  // Forward the plot sampling hint from the p.d.f. that defines the observable obs  
+  _pdfIter->Reset() ;
+  RooAbsPdf* pdf ;
+  while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
+    list<Double_t>* hint = pdf->binBoundaries(obs,xlo,xhi) ;      
     if (hint) {
       return hint ;
     }

@@ -423,6 +423,9 @@ void RooAbsTestStatistic::initMPMode(RooAbsReal* real, RooAbsData* data, const R
     if (!doInline) coutI(Eval) << "RooAbsTestStatistic::initMPMode: starting remote server process #" << i << endl ;
     _mpfeArray[i] = new RooRealMPFE(Form("%s_%lx_MPFE%d",GetName(),(ULong_t)this,i),Form("%s_%lx_MPFE%d",GetTitle(),(ULong_t)this,i),*gof,doInline) ;
     _mpfeArray[i]->initialize() ;
+    if (doInline) {
+      _mpfeArray[i]->addOwnedComponents(*gof) ;
+    }
   }
   //cout << "initMPMode --- done" << endl ;
   return ;
@@ -538,14 +541,14 @@ Bool_t RooAbsTestStatistic::setData(RooAbsData& indata, Bool_t cloneData)
 	_gofArray[i]->setDataSlave(indata,cloneData) ;
       }
     } else {
-      //cout << "NONEMPTY DATASET WITHOUT FAST SPLIT SUPPORT! "<< indata.GetName() << endl ;   
+//       cout << "NONEMPTY DATASET WITHOUT FAST SPLIT SUPPORT! "<< indata.GetName() << endl ;   
       const RooAbsCategoryLValue* indexCat = & ((RooSimultaneous*)_func)->indexCat() ;
       TList* dlist = indata.split(*indexCat,kTRUE) ;
       for (Int_t i=0 ; i<_nGof ; i++) {
 	RooAbsData* compData = (RooAbsData*) dlist->FindObject(_gofArray[i]->GetName()) ;
 	// 	cout << "component data for index " << _gofArray[i]->GetName() << " is " << compData << endl ;
 	if (compData) {
-	  _gofArray[i]->setDataSlave(*compData,kFALSE) ;
+	  _gofArray[i]->setDataSlave(*compData,kFALSE,kTRUE) ;
 	} else {
 	  coutE(DataHandling) << "RooAbsTestStatistic::setData(" << GetName() << ") ERROR: Cannot find component data for state " << _gofArray[i]->GetName() << endl ;
 	}	

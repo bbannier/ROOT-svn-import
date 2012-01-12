@@ -194,6 +194,7 @@ namespace RooFit {
   RooCmdArg SplitRange(Bool_t flag)                      { return RooCmdArg("SplitRange",flag,0,0,0,0,0,0,0) ; }
   RooCmdArg SumCoefRange(const char* rangeName)          { return RooCmdArg("SumCoefRange",0,0,0,0,rangeName,0,0,0) ; }
   RooCmdArg Constrain(const RooArgSet& params)           { return RooCmdArg("Constrain",0,0,0,0,0,0,0,0,0,0,&params) ; }
+  RooCmdArg GlobalObservables(const RooArgSet& globs)    { return RooCmdArg("GlobalObservables",0,0,0,0,0,0,0,0,0,0,&globs) ; }
   RooCmdArg Constrained()                                { return RooCmdArg("Constrained",kTRUE,0,0,0,0,0,0,0) ; }
   RooCmdArg ExternalConstraints(const RooArgSet& cpdfs)  { return RooCmdArg("ExternalConstraints",0,0,0,0,0,0,&cpdfs,0,0,0,&cpdfs) ; }
   RooCmdArg PrintEvalErrors(Int_t numErrors)             { return RooCmdArg("PrintEvalErrors",numErrors,0,0,0,0,0,0,0) ; }
@@ -223,6 +224,10 @@ namespace RooFit {
   RooCmdArg NumEvents(Double_t numEvents)   { return RooCmdArg("NumEventsD",0,0,numEvents,0,0,0,0,0) ; }
   RooCmdArg ExpectedData(Bool_t flag)    { return RooCmdArg("ExpectedData",flag,0,0,0,0,0,0,0) ; }
   RooCmdArg Asimov(Bool_t flag)          { return ExpectedData(flag) ; }
+  RooCmdArg AutoBinned(Bool_t flag)      { return RooCmdArg("AutoBinned",flag,0,0,0,0,0,0,0) ; }
+  RooCmdArg GenBinned(const char* tag)   { return RooCmdArg("GenBinned",0,0,0,0,tag,0,0,0) ; }
+  RooCmdArg AllBinned()                  { return RooCmdArg("GenBinned",0,0,0,0,"*",0,0,0) ; }
+
   
   // RooAbsRealLValue::createHistogram arguments
   RooCmdArg YVar(const RooAbsRealLValue& var, const RooCmdArg& arg)       { return RooCmdArg("YVar",0,0,0,0,0,0,&var,0,&arg) ; }

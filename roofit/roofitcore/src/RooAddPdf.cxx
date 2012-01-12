@@ -79,7 +79,8 @@ RooAddPdf::RooAddPdf() :
   _refCoefNorm("!refCoefNorm","Reference coefficient normalization set",this,kFALSE,kFALSE),
   _refCoefRangeName(0),
   _codeReg(10),
-  _snormList(0)
+  _snormList(0),
+  _recursive(kFALSE)
 {
   // Default constructor used for persistence
 
@@ -104,7 +105,8 @@ RooAddPdf::RooAddPdf(const char *name, const char *title) :
   _coefList("!coefficients","List of coefficients",this),
   _snormList(0),
   _haveLastCoef(kFALSE),
-  _allExtendable(kFALSE)
+  _allExtendable(kFALSE),
+  _recursive(kFALSE)
 {
   // Dummy constructor 
   _pdfIter   = _pdfList.createIterator() ;
@@ -129,7 +131,8 @@ RooAddPdf::RooAddPdf(const char *name, const char *title,
   _pdfList("!pdfs","List of PDFs",this),
   _coefList("!coefficients","List of coefficients",this),
   _haveLastCoef(kFALSE),
-  _allExtendable(kFALSE)
+  _allExtendable(kFALSE),
+  _recursive(kFALSE)
 {
   // Constructor with two PDFs and one coefficient
 
@@ -157,7 +160,8 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& inPd
   _pdfList("!pdfs","List of PDFs",this),
   _coefList("!coefficients","List of coefficients",this),
   _haveLastCoef(kFALSE),
-  _allExtendable(kFALSE)
+  _allExtendable(kFALSE),
+  _recursive(kFALSE)
 { 
   // Generic constructor from list of PDFs and list of coefficients.
   // Each pdf list element (i) is paired with coefficient list element (i).
@@ -264,6 +268,8 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& inPd
 
   _coefCache = new Double_t[_pdfList.getSize()] ;
   _coefErrCount = _errorCount ;
+  _recursive = recursiveFractions ;
+
 }
 
 
@@ -278,7 +284,8 @@ RooAddPdf::RooAddPdf(const char *name, const char *title, const RooArgList& inPd
   _pdfList("!pdfs","List of PDFs",this),
   _coefList("!coefficients","List of coefficients",this),
   _haveLastCoef(kFALSE),
-  _allExtendable(kTRUE)
+  _allExtendable(kTRUE),
+  _recursive(kFALSE)
 { 
   // Generic constructor from list of extended PDFs. There are no coefficients as the expected
   // number of events from each components determine the relative weight of the PDFs.
@@ -324,7 +331,8 @@ RooAddPdf::RooAddPdf(const RooAddPdf& other, const char* name) :
   _pdfList("!pdfs",this,other._pdfList),
   _coefList("!coefficients",this,other._coefList),
   _haveLastCoef(other._haveLastCoef),
-  _allExtendable(other._allExtendable)
+  _allExtendable(other._allExtendable),
+  _recursive(other._recursive)
 {
   // Copy constructor
 
@@ -1035,12 +1043,29 @@ Double_t RooAddPdf::expectedEvents(const RooArgSet* nset) const
     RooFIter iter2 = cache->_rangeProjList.fwdIterator() ;
     RooFIter iter3 = _pdfList.fwdIterator() ;
 
-    RooAbsPdf* pdf ;
-    while ((pdf=(RooAbsPdf*)iter3.next())) {      
-      RooAbsReal* r1 = (RooAbsReal*)iter1.next() ;
-      RooAbsReal* r2 = (RooAbsReal*)iter2.next() ;
-      expectedTotal += (r2->getVal()/r1->getVal()) * pdf->expectedEvents(nset) ; 
-    }    
+    if (_allExtendable) {
+      
+      RooAbsPdf* pdf ;
+      while ((pdf=(RooAbsPdf*)iter3.next())) {      
+	RooAbsReal* r1 = (RooAbsReal*)iter1.next() ;
+	RooAbsReal* r2 = (RooAbsReal*)iter2.next() ;
+	expectedTotal += (r2->getVal()/r1->getVal()) * pdf->expectedEvents(nset) ; 
+      }    
+
+    } else {
+
+      RooFIter citer = _coefList.fwdIterator() ;
+      RooAbsReal* coef ;
+      while((coef=(RooAbsReal*)citer.next())) {
+	Double_t ncomp = coef->getVal(nset) ;
+	RooAbsReal* r1 = (RooAbsReal*)iter1.next() ;
+	RooAbsReal* r2 = (RooAbsReal*)iter2.next() ;
+	expectedTotal += (r2->getVal()/r1->getVal()) * ncomp ; 
+      }
+
+    }
+
+
 
   } else {
 
@@ -1113,7 +1138,6 @@ RooAbsGenContext* RooAddPdf::genContext(const RooArgSet &vars, const RooDataSet 
 {
   // Return specialized context to efficiently generate toy events from RooAddPdfs
   // return RooAbsPdf::genContext(vars,prototype,auxProto,verbose) ; // WVE DEBUG
-
   return new RooAddGenContext(*this,vars,prototype,auxProto,verbose) ;
 }
 
@@ -1144,6 +1168,8 @@ std::list<Double_t>* RooAddPdf::plotSamplingHint(RooAbsRealLValue& obs, Double_t
 
   _pdfIter->Reset() ;
   RooAbsPdf* pdf ;
+  Bool_t needClean(kFALSE) ;
+
   // Loop over components pdf
   while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
 
@@ -1166,13 +1192,85 @@ std::list<Double_t>* RooAddPdf::plotSamplingHint(RooAbsRealLValue& obs, Double_t
 	// Copy merged array without duplicates to new sumHintArrau
 	delete sumHint ;
 	sumHint = newSumHint ;
+	needClean = kTRUE ;
 	
       }
     }
   }
+  if (needClean) {
+    list<Double_t>::iterator new_end = unique(sumHint->begin(),sumHint->end()) ;
+    sumHint->erase(new_end,sumHint->end()) ;
+  }
 
   return sumHint ;
 }
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* RooAddPdf::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const 
+{
+  // Loop over components for plot sampling hints and merge them if there are multiple
+
+  list<Double_t>* sumBinB = 0 ;
+  Bool_t needClean(kFALSE) ;
+  
+  _pdfIter->Reset() ;
+  RooAbsPdf* pdf ;
+  // Loop over components pdf
+  while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
+
+    list<Double_t>* pdfBinB = pdf->binBoundaries(obs,xlo,xhi) ;
+
+    // Process hint
+    if (pdfBinB) {
+      if (!sumBinB) {
+
+	// If this is the first hint, then just save it
+	sumBinB = pdfBinB ;
+
+      } else {
+	
+	list<Double_t>* newSumBinB = new list<Double_t>(sumBinB->size()+pdfBinB->size()) ;
+
+	// Merge hints into temporary array
+	merge(pdfBinB->begin(),pdfBinB->end(),sumBinB->begin(),sumBinB->end(),newSumBinB->begin()) ;
+
+	// Copy merged array without duplicates to new sumBinBArrau
+	delete sumBinB ;
+	delete pdfBinB ;
+	sumBinB = newSumBinB ;
+	needClean = kTRUE ;	
+      }
+    }
+  }
+
+  // Remove consecutive duplicates
+  if (needClean) {    
+    list<Double_t>::iterator new_end = unique(sumBinB->begin(),sumBinB->end()) ;
+    sumBinB->erase(new_end,sumBinB->end()) ;
+  }
+
+  return sumBinB ;
+}
+
+
+//_____________________________________________________________________________
+Bool_t RooAddPdf::isBinnedDistribution(const RooArgSet& obs) const 
+{
+  // If all components that depend on obs are binned that so is the product
+  
+  _pdfIter->Reset() ;
+  RooAbsPdf* pdf ;
+  while((pdf=(RooAbsPdf*)_pdfIter->Next())) {
+    if (pdf->dependsOn(obs) && !pdf->isBinnedDistribution(obs)) {
+      return kFALSE ;
+    }
+  }
+  
+  return kTRUE  ;  
+}
+
+
 
 
 //_____________________________________________________________________________

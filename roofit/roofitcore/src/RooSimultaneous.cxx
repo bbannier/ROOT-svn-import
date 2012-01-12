@@ -45,6 +45,7 @@
 #include "RooAbsData.h"
 #include "Roo1DTable.h"
 #include "RooSimGenContext.h"
+#include "RooSimSplitGenContext.h"
 #include "RooDataSet.h"
 #include "RooCmdConfig.h"
 #include "RooNameReg.h"
@@ -54,6 +55,7 @@
 #include "RooCategory.h"
 #include "RooSuperCategory.h"
 #include "RooDataHist.h"
+#include "RooRandom.h"
 #include "RooArgSet.h"
 
 using namespace std ;
@@ -767,11 +769,11 @@ RooPlot* RooSimultaneous::plotOn(RooPlot *frame, RooLinkedList& cmdList) const
 // 					   stype,projDataTmp,projSet) ;
 
     // Override normalization and projection dataset
-    RooLinkedList cmdList2(cmdList) ;
     RooCmdArg tmp1 = RooFit::Normalization(scaleFactor*wTable->getFrac(_indexCat.arg().getLabel()),stype) ;
     RooCmdArg tmp2 = RooFit::ProjWData(*projDataSet,*projDataTmp) ;
 
     // WVE -- do not adjust normalization for asymmetry plots
+    RooLinkedList cmdList2(cmdList) ;
     if (!cmdList.find("Asymmetry")) {
       cmdList2.Add(&tmp1) ;
     }
@@ -993,6 +995,26 @@ void RooSimultaneous::selectNormalizationRange(const char* normRange2, Bool_t /*
 
 
 //_____________________________________________________________________________
+RooAbsGenContext* RooSimultaneous::autoGenContext(const RooArgSet &vars, const RooDataSet* prototype, 
+						  const RooArgSet* auxProto, Bool_t verbose, Bool_t autoBinned, const char* binnedTag) const 
+{
+  const char* idxCatName = _indexCat.arg().GetName() ;
+  
+  if (vars.find(idxCatName) && prototype==0 && (auxProto==0 || auxProto->getSize()==0) && (autoBinned || (binnedTag && strlen(binnedTag)))) {    
+
+    // Return special generator config that can also do binned generation for selected states
+    return new RooSimSplitGenContext(*this,vars,verbose,autoBinned,binnedTag) ;
+
+  } else {
+    
+    // Return regular generator config ;
+    return genContext(vars,prototype,auxProto,verbose) ;
+  }     
+}
+
+
+
+//_____________________________________________________________________________
 RooAbsGenContext* RooSimultaneous::genContext(const RooArgSet &vars, const RooDataSet *prototype, 
 					      const RooArgSet* auxProto, Bool_t verbose) const 
 {
@@ -1002,8 +1024,10 @@ RooAbsGenContext* RooSimultaneous::genContext(const RooArgSet &vars, const RooDa
   const RooArgSet* protoVars = prototype ? prototype->get() : 0 ;
 
   if (vars.find(idxCatName) || (protoVars && protoVars->find(idxCatName))) {
+
     // Generating index category: return special sim-context
     return new RooSimGenContext(*this,vars,prototype,auxProto,verbose) ;
+
   } else if (_indexCat.arg().isDerived()) {
     // Generating dependents of a derived index category
 
@@ -1026,6 +1050,7 @@ RooAbsGenContext* RooSimultaneous::genContext(const RooArgSet &vars, const RooDa
 
     if (allServers) {
       // Use simcontext if we have all servers
+
       return new RooSimGenContext(*this,vars,prototype,auxProto,verbose) ;
     } else if (!allServers && anyServer) {
       // Abort if we have only part of the servers
@@ -1045,6 +1070,35 @@ RooAbsGenContext* RooSimultaneous::genContext(const RooArgSet &vars, const RooDa
     return 0 ;
   }
   return ((RooAbsPdf*)proxy->absArg())->genContext(vars,prototype,auxProto,verbose) ;
+}
+
+
+
+
+//_____________________________________________________________________________
+RooDataHist* RooSimultaneous::fillDataHist(RooDataHist *hist,
+                                           const RooArgSet* nset,
+                                           Double_t scaleFactor,
+                                           Bool_t correctForBinVolume,
+                                           Bool_t showProgress) const
+{
+  if (RooAbsReal::fillDataHist (hist, nset, scaleFactor,
+                                correctForBinVolume, showProgress) == 0)
+    return 0;
+
+  Double_t sum = 0;
+  for (int i=0 ; i<hist->numEntries() ; i++) {
+    hist->get(i) ;
+    sum += hist->weight();
+  }
+  if (sum != 0) {
+    for (int i=0 ; i<hist->numEntries() ; i++) {
+      hist->get(i) ;
+      hist->set (hist->weight() / sum);
+    }
+  }
+
+  return hist;
 }
 
 
@@ -1093,31 +1147,7 @@ RooDataSet* RooSimultaneous::generateSimGlobal(const RooArgSet& whatVars, Int_t 
 
 
 
-//_____________________________________________________________________________
-RooDataHist* RooSimultaneous::fillDataHist(RooDataHist *hist,
-                                           const RooArgSet* nset,
-                                           Double_t scaleFactor,
-                                           Bool_t correctForBinVolume,
-                                           Bool_t showProgress) const
-{
-  if (RooAbsReal::fillDataHist (hist, nset, scaleFactor,
-                                correctForBinVolume, showProgress) == 0)
-    return 0;
 
-  Double_t sum = 0;
-  for (int i=0 ; i<hist->numEntries() ; i++) {
-    hist->get(i) ;
-    sum += hist->weight();
-  }
-  if (sum != 0) {
-    for (int i=0 ; i<hist->numEntries() ; i++) {
-      hist->get(i) ;
-      hist->set (hist->weight() / sum);
-    }
-  }
-
-  return hist;
-}
 
 
 
