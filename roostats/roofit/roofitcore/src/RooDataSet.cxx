@@ -733,11 +733,22 @@ RooDataSet::RooDataSet(const char *name, const char *title, TTree *intree,
   // operating exclusively and directly on the data set dimensions, the equivalent
   // constructor with a string based cut expression is recommended.
 
-  // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*intree,cutVar,wgtVarName) ;
+  // Create tree version of datastore 
+  RooTreeDataStore* tstore = new RooTreeDataStore(name,title,_vars,*intree,cutVar,wgtVarName) ;
 
+  // Convert to vector datastore if needed
+  if (defaultStorageType==Tree) {
+    _dstore = tstore ;
+  } else if (defaultStorageType==Vector) {
+    RooVectorDataStore* vstore = new RooVectorDataStore(name,title,_vars,wgtVarName) ;
+    _dstore = vstore ;
+    _dstore->append(*tstore) ;
+    delete tstore ;
+  } else {
+    _dstore = 0 ;
+  }
+  
   appendToDir(this,kTRUE) ;
-
   initialize(wgtVarName) ;
 }
 
@@ -763,8 +774,20 @@ RooDataSet::RooDataSet(const char *name, const char *title, TTree *intree,
   // equivalent constructor accepting RooFormulaVar reference as cut specification
   //
 
-  // Initialize datastore
-  _dstore = new RooTreeDataStore(name,title,_vars,*intree,selExpr,wgtVarName) ;
+  // Create tree version of datastore 
+  RooTreeDataStore* tstore = new RooTreeDataStore(name,title,_vars,*intree,selExpr,wgtVarName) ;
+
+  // Convert to vector datastore if needed
+  if (defaultStorageType==Tree) {
+    _dstore = tstore ;
+  } else if (defaultStorageType==Vector) {
+    RooVectorDataStore* vstore = new RooVectorDataStore(name,title,_vars,wgtVarName) ;
+    _dstore = vstore ;
+    _dstore->append(*tstore) ;
+    delete tstore ;
+  } else {
+    _dstore = 0 ;
+  }
 
   appendToDir(this,kTRUE) ;
 
@@ -833,23 +856,28 @@ RooAbsData* RooDataSet::cacheClone(const RooAbsArg* newCacheOwner, const RooArgS
 
 
 //_____________________________________________________________________________
-RooAbsData* RooDataSet::emptyClone(const char* newName, const char* newTitle, const RooArgSet* vars) const 
+RooAbsData* RooDataSet::emptyClone(const char* newName, const char* newTitle, const RooArgSet* vars, const char* wgtVarName) const 
 {
   // Return an empty clone of this dataset. If vars is not null, only the variables in vars
   // are added to the definition of the empty clone
 
   // If variables are given, be sure to include weight variable if it exists and is not included
   RooArgSet vars2 ;
+  RooRealVar* tmpWgtVar = _wgtVar ;
+  if (wgtVarName && vars && !_wgtVar) {
+    tmpWgtVar = (RooRealVar*) vars->find(wgtVarName) ;
+  }
+
   if (vars) {
     vars2.add(*vars) ;
     if (_wgtVar && !vars2.find(_wgtVar->GetName())) {
       vars2.add(*_wgtVar) ;
-    }
+    } 
   } else {
     vars2.add(_vars) ;
   }
-
-  RooDataSet* dset = new RooDataSet(newName?newName:GetName(),newTitle?newTitle:GetTitle(),vars2,_wgtVar?_wgtVar->GetName():0) ; 
+  
+  RooDataSet* dset = new RooDataSet(newName?newName:GetName(),newTitle?newTitle:GetTitle(),vars2,tmpWgtVar?tmpWgtVar->GetName():0) ;
   //if (_wgtVar) dset->setWeightVar(_wgtVar->GetName()) ;
   return dset ;
 }

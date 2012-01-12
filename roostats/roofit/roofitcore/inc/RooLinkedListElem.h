@@ -25,6 +25,34 @@ class TBuffer ;
 class RooLinkedListElem {
 public:
   // Initial element ctor
+  RooLinkedListElem() :
+    _prev(0), _next(0), _arg(0), _refCount(0) {
+  }
+   
+  void init(TObject* arg, RooLinkedListElem* after=0, Int_t* suc=0) {
+   _arg = arg ;
+   _refCount = 1 ;
+
+   if (after) {
+     _prev = after ;
+     _next = after->_next ;
+     after->_next = this ;
+     if (_next) {
+       _next->_prev = this ;
+     }     
+   }
+   _suc = suc ;
+   (*_suc)++ ;
+ }
+ 
+ void release() {
+   if (_prev) _prev->_next = _next ;
+   if (_next) _next->_prev = _prev ;   
+   _prev = 0 ;
+   _next = 0 ;
+   (*_suc)-- ;
+ }
+
   RooLinkedListElem(TObject* arg) : 
     // Constructor with payload
     _prev(0), _next(0), _arg(arg), _refCount(1) {
@@ -59,6 +87,7 @@ protected:
   RooLinkedListElem* _next ; // Link to next element in list
   TObject*   _arg ;          // Link to contents
   Int_t      _refCount ;     //! Reference count
+  Int_t*     _suc ; //! Store use count
 
 protected:
 

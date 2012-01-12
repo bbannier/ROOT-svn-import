@@ -43,7 +43,7 @@
 #include "RooMsgService.h"
 #include "RooNameReg.h"
 #include <memory>
-
+#include <algorithm>
 
 ClassImp(RooRealSumPdf)
 ;
@@ -444,6 +444,119 @@ Double_t RooRealSumPdf::expectedEvents(const RooArgSet* nset) const
   }
   return n ;
 }
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* RooRealSumPdf::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const
+{
+
+  list<Double_t>* sumBinB = 0 ;
+  Bool_t needClean(kFALSE) ;
+  
+  RooFIter iter = _funcList.fwdIterator() ;
+  RooAbsReal* func ;
+  // Loop over components pdf
+  while((func=(RooAbsReal*)iter.next())) {
+
+    list<Double_t>* funcBinB = func->binBoundaries(obs,xlo,xhi) ;
+    
+    // Process hint
+    if (funcBinB) {
+      if (!sumBinB) {
+	// If this is the first hint, then just save it
+	sumBinB = funcBinB ;
+      } else {
+	
+	list<Double_t>* newSumBinB = new list<Double_t>(sumBinB->size()+funcBinB->size()) ;
+
+	// Merge hints into temporary array
+	merge(funcBinB->begin(),funcBinB->end(),sumBinB->begin(),sumBinB->end(),newSumBinB->begin()) ;
+	
+	// Copy merged array without duplicates to new sumBinBArrau
+	delete sumBinB ;
+	delete funcBinB ;
+	sumBinB = newSumBinB ;
+	needClean = kTRUE ;	
+      }
+    }
+  }
+
+  // Remove consecutive duplicates
+  if (needClean) {
+    list<Double_t>::iterator new_end = unique(sumBinB->begin(),sumBinB->end()) ;
+    sumBinB->erase(new_end,sumBinB->end()) ;
+  }
+
+  return sumBinB ;
+}
+
+
+
+//_____________________________________________________________________________B
+Bool_t RooRealSumPdf::isBinnedDistribution(const RooArgSet& obs) const 
+{
+  // If all components that depend on obs are binned that so is the product
+  
+  RooFIter iter = _funcList.fwdIterator() ;
+  RooAbsReal* func ;
+  while((func=(RooAbsReal*)iter.next())) {
+    if (func->dependsOn(obs) && !func->isBinnedDistribution(obs)) {
+      return kFALSE ;
+    }
+  }
+  
+  return kTRUE  ;  
+}
+
+
+
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* RooRealSumPdf::plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const
+{
+  list<Double_t>* sumHint = 0 ;
+  Bool_t needClean(kFALSE) ;
+  
+  RooFIter iter = _funcList.fwdIterator() ;
+  RooAbsReal* func ;
+  // Loop over components pdf
+  while((func=(RooAbsReal*)iter.next())) {
+
+    list<Double_t>* funcHint = func->plotSamplingHint(obs,xlo,xhi) ;
+    
+    // Process hint
+    if (funcHint) {
+      if (!sumHint) {
+
+	// If this is the first hint, then just save it
+	sumHint = funcHint ;
+
+      } else {
+	
+	list<Double_t>* newSumHint = new list<Double_t>(sumHint->size()+funcHint->size()) ;
+	
+	// Merge hints into temporary array
+	merge(funcHint->begin(),funcHint->end(),sumHint->begin(),sumHint->end(),newSumHint->begin()) ;
+
+	// Copy merged array without duplicates to new sumHintArrau
+	delete sumHint ;
+	sumHint = newSumHint ;
+	needClean = kTRUE ;	
+      }
+    }
+  }
+
+  // Remove consecutive duplicates
+  if (needClean) {
+    list<Double_t>::iterator new_end = unique(sumHint->begin(),sumHint->end()) ;
+    sumHint->erase(new_end,sumHint->end()) ;
+  }
+
+  return sumHint ;
+}
+
+
 
 
 //_____________________________________________________________________________

@@ -56,7 +56,8 @@ public:
                        const RooCmdArg& arg1=RooCmdArg::none(),const RooCmdArg& arg2=RooCmdArg::none(),
                        const RooCmdArg& arg3=RooCmdArg::none(),const RooCmdArg& arg4=RooCmdArg::none(),
                        const RooCmdArg& arg5=RooCmdArg::none(),const RooCmdArg& arg6=RooCmdArg::none()) ;
-  RooDataSet *generate(const RooArgSet &whatVars, Int_t nEvents = 0, Bool_t verbose=kFALSE) const;
+  RooDataSet *generate(const RooArgSet &whatVars, Int_t nEvents = 0, Bool_t verbose=kFALSE, Bool_t autoBinned=kTRUE, 
+		       const char* binnedTag="", Bool_t expectedData=kFALSE) const;
   RooDataSet *generate(const RooArgSet &whatVars, const RooDataSet &prototype, Int_t nEvents= 0,
 		       Bool_t verbose=kFALSE, Bool_t randProtoOrder=kFALSE, Bool_t resampleProto=kFALSE) const;
 
@@ -90,15 +91,14 @@ public:
   RooDataSet* generate(GenSpec&) const ;
   
 
-  RooDataHist *generateBinned(const RooArgSet &whatVars, Double_t nEvents, const RooCmdArg& arg1,
+  virtual RooDataHist *generateBinned(const RooArgSet &whatVars, Double_t nEvents, const RooCmdArg& arg1,
 			      const RooCmdArg& arg2=RooCmdArg::none(), const RooCmdArg& arg3=RooCmdArg::none(),
 			      const RooCmdArg& arg4=RooCmdArg::none(), const RooCmdArg& arg5=RooCmdArg::none()) ;
-  RooDataHist *generateBinned(const RooArgSet &whatVars,  
+  virtual RooDataHist *generateBinned(const RooArgSet &whatVars,  
 			      const RooCmdArg& arg1=RooCmdArg::none(),const RooCmdArg& arg2=RooCmdArg::none(),
 			      const RooCmdArg& arg3=RooCmdArg::none(),const RooCmdArg& arg4=RooCmdArg::none(),
 			      const RooCmdArg& arg5=RooCmdArg::none(),const RooCmdArg& arg6=RooCmdArg::none()) ;
-  RooDataHist *generateBinned(const RooArgSet &whatVars, Double_t nEvents, Bool_t expectedData=kFALSE, Bool_t extended=kFALSE) const;
-
+  virtual RooDataHist *generateBinned(const RooArgSet &whatVars, Double_t nEvents, Bool_t expectedData=kFALSE, Bool_t extended=kFALSE) const;
 
   virtual RooDataSet* generateSimGlobal(const RooArgSet& whatVars, Int_t nEvents) ;
 
@@ -257,7 +257,8 @@ public:
 protected:
 
   RooDataSet *generate(RooAbsGenContext& context, const RooArgSet& whatVars, const RooDataSet* prototype,
-		       Int_t nEvents, Bool_t verbose, Bool_t randProtoOrder, Bool_t resampleProto, Bool_t skipInit=kFALSE) const ;
+		       Int_t nEvents, Bool_t verbose, Bool_t randProtoOrder, Bool_t resampleProto, Bool_t skipInit=kFALSE, 
+		       Bool_t extended=kFALSE) const ;
 
   // Implementation version
   virtual RooPlot* paramOn(RooPlot* frame, const RooArgSet& params, Bool_t showConstants=kFALSE,
@@ -274,14 +275,22 @@ protected:
   friend class RooAddGenContext ;
   friend class RooProdGenContext ;
   friend class RooSimGenContext ;
+  friend class RooSimSplitGenContext ;
   friend class RooConvGenContext ;
   friend class RooSimultaneous ;
   friend class RooAddGenContextOrig ;
+  friend class RooProdPdf ;
   friend class RooMCStudy ;
 
   Int_t* randomizeProtoOrder(Int_t nProto,Int_t nGen,Bool_t resample=kFALSE) const ;
+
+  virtual RooAbsGenContext* binnedGenContext(const RooArgSet &vars, Bool_t verbose= kFALSE) const ;
+
   virtual RooAbsGenContext* genContext(const RooArgSet &vars, const RooDataSet *prototype=0, 
 	                               const RooArgSet* auxProto=0, Bool_t verbose= kFALSE) const ;
+
+  virtual RooAbsGenContext* autoGenContext(const RooArgSet &vars, const RooDataSet* prototype=0, const RooArgSet* auxProto=0, 
+					   Bool_t verbose=kFALSE, Bool_t autoBinned=kTRUE, const char* binnedTag="") const ;
 
 
   friend class RooExtendPdf ;

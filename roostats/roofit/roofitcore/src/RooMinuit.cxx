@@ -154,6 +154,8 @@ RooMinuit::RooMinuit(RooAbsReal& function)
   _nPar      = _floatParamList->getSize() ;
   delete pIter ;
 
+  updateFloatVec() ;
+
   // Save snapshot of initial lists
   _initFloatParamList = (RooArgList*) _floatParamList->snapshot(kFALSE) ;
   _initConstParamList = (RooArgList*) _constParamList->snapshot(kFALSE) ;
@@ -312,6 +314,9 @@ Int_t RooMinuit::migrad()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("MIGRAD",_status) ;
+
   return _status ;
 }
 
@@ -342,6 +347,9 @@ Int_t RooMinuit::hesse()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("HESSE",_status) ;
+
   return _status ;
 }
 
@@ -372,6 +380,11 @@ Int_t RooMinuit::minos()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  cout << "MINOS: status = " << _status << endl ;
+  
+  saveStatus("MINOS",_status) ;
+
   return _status ;
 }
 
@@ -420,6 +433,9 @@ Int_t RooMinuit::minos(const RooArgSet& minosParamList)
   backProp() ;
 
   delete[] arglist ;
+  
+  saveStatus("MINOS",_status) ;
+
   return _status ;
 }
 
@@ -450,6 +466,9 @@ Int_t RooMinuit::seek()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("SEEK",_status) ;
+  
   return _status ;
 }
 
@@ -481,6 +500,9 @@ Int_t RooMinuit::simplex()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("SIMPLEX",_status) ;
+  
   return _status ;
 }
 
@@ -511,6 +533,9 @@ Int_t RooMinuit::improve()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("IMPROVE",_status) ;
+  
   return _status ;
 }
 
@@ -782,6 +807,8 @@ Bool_t RooMinuit::synchronize(Bool_t verbose)
 
   }
 
+  updateFloatVec() ;
+
   return 0 ;
 }
 
@@ -877,6 +904,8 @@ RooFitResult* RooMinuit::save(const char* userName, const char* userTitle)
   } else {
     fitRes->setCovarianceMatrix(*_extV) ;
   }
+
+  fitRes->setStatusHistory(_statusHistory) ;
 
   return fitRes ;
 }
@@ -1005,7 +1034,8 @@ Bool_t RooMinuit::setPdfParamVal(Int_t index, Double_t value, Bool_t verbose)
 {
   // Modify PDF parameter value by ordinal index (needed by MINUIT)
 
-  RooRealVar* par = (RooRealVar*)_floatParamList->at(index) ;
+  //RooRealVar* par = (RooRealVar*)_floatParamList->at(index) ;
+  RooRealVar* par = (RooRealVar*)_floatParamVec[index] ;
 
   if (par->getVal()!=value) {
     if (verbose) cout << par->GetName() << "=" << value << ", " ;
@@ -1102,6 +1132,19 @@ void RooMinuit::backProp()
   }
 }
 
+
+//_____________________________________________________________________________
+void RooMinuit::updateFloatVec() 
+{
+  _floatParamVec.clear() ;
+  RooFIter iter = _floatParamList->fwdIterator() ;
+  RooAbsArg* arg ;
+  _floatParamVec.reserve(_floatParamList->getSize()) ;
+  Int_t i(0) ;
+  while((arg=iter.next())) {
+    _floatParamVec[i++] = arg ;
+  }
+}
 
 
 

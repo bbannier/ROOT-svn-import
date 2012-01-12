@@ -20,12 +20,16 @@
 #include "TStopwatch.h"
 #include <fstream>
 #include "TMatrixDSymfwd.h"
+#include <vector>
+#include <string>
+#include <map>
 
 class RooAbsReal ;
 class RooFitResult ;
 class RooArgList ;
 class RooRealVar ;
 class RooArgSet ;
+class RooAbsArg ;
 class TVirtualFitter ;
 class TH2F ;
 class RooPlot ;
@@ -99,6 +103,10 @@ protected:
   void setPdfParamErr(Int_t index, Double_t loVal, Double_t hiVal) ;
   void clearPdfParamAsymErr(Int_t index) ;
 
+  void saveStatus(const char* label, Int_t status) { _statusHistory.push_back(std::pair<std::string,int>(label,status)) ; }
+
+  void updateFloatVec() ;
+
 private:
 
   Int_t       _evalCounter ;
@@ -114,6 +122,7 @@ private:
   Bool_t      _doEvalErrorWall ;
   Int_t       _maxEvalMult ;
   RooArgList* _floatParamList ;
+  std::vector<RooAbsArg*> _floatParamVec ;
   RooArgList* _initFloatParamList ;
   RooArgList* _constParamList ;
   RooArgList* _initConstParamList ;
@@ -128,6 +137,8 @@ private:
   TMatrixDSym* _extV ;
 
   static TVirtualFitter *_theFitter ; 
+
+  std::vector<std::pair<std::string,int> > _statusHistory ;
 
   RooMinuit(const RooMinuit&) ;
 	

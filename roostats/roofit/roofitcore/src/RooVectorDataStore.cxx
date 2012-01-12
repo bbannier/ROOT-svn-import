@@ -617,8 +617,10 @@ Double_t RooVectorDataStore::weightError(RooAbsData::ErrorType etype) const
     // We have a a weight variable, use that info
     if (_wgtVar->hasAsymError()) {
       return ( _wgtVar->getAsymErrorHi() - _wgtVar->getAsymErrorLo() ) / 2 ;
-    } else {
+    } else if (_wgtVar->hasError(kFALSE)) {
       return _wgtVar->getError() ;    
+    } else {
+      return 0 ;
     }
 
   } else {
@@ -1034,7 +1036,8 @@ void RooVectorDataStore::cacheArgs(const RooAbsArg* owner, RooArgSet& newVarSet,
   // Reorder cached elements. First constant nodes, then tracked nodes in order of dependence
 
   // Step 1 - split in constant and tracked
-  RooFIter itern = newVarSet.fwdIterator() ;
+  RooArgSet newVarSetCopy(newVarSet) ;
+  RooFIter itern = newVarSetCopy.fwdIterator() ;
   RooAbsArg* arg ;
   RooArgSet orderedArgs ;
   vector<RooAbsArg*> trackArgs ;
@@ -1042,7 +1045,16 @@ void RooVectorDataStore::cacheArgs(const RooAbsArg* owner, RooArgSet& newVarSet,
     if (arg->getAttribute("ConstantExpression")) {
       orderedArgs.add(*arg) ;
     } else {
-      trackArgs.push_back(arg) ;
+
+      // Explicitly check that arg depends on any of the observables, if this
+      // is not the case, skip it, as inclusion would result in repeated
+      // calculation of a function that has the same value for every event
+      // in the likelihood
+      if (arg->dependsOn(_vars) && !arg->getAttribute("NOCacheAndTrack")) {
+	trackArgs.push_back(arg) ;
+      } else {
+	newVarSet.remove(*arg) ;
+      }
     }
   }
 
@@ -1057,6 +1069,7 @@ void RooVectorDataStore::cacheArgs(const RooAbsArg* owner, RooArgSet& newVarSet,
   }
   
   // WVE need to prune tracking entries _below_ constant nodes as the're not needed
+//   cout << "Number of Cache-and-Tracked args are " << trackArgs.size() << endl ;
 //   cout << "Compound ordered cache parameters = " << endl ;
 //   orderedArgs.Print("v") ;
 

@@ -78,9 +78,11 @@ public:
 
   // List search methods
   RooAbsArg *find(const char *name) const ;
+  RooAbsArg *find(const RooAbsArg&) const ;
+
   Bool_t contains(const RooAbsArg& var) const { 
     // Returns true if object with same name as var is contained in this collection
-    return (0 == find(var.GetName())) ? kFALSE:kTRUE; 
+    return (0 == find(var)) ? kFALSE:kTRUE; 
   }
   Bool_t containsInstance(const RooAbsArg& var) const { 
     // Returns true if var is contained in this collection
@@ -170,6 +172,17 @@ protected:
   // Support for snapshot method 
   Bool_t addServerClonesToList(const RooAbsArg& var) ;
 
+  inline TNamed* structureTag() { if (_structureTag==0) makeStructureTag() ; return _structureTag ; }
+  inline TNamed* typedStructureTag() { if (_typedStructureTag==0) makeTypedStructureTag() ; return _typedStructureTag ; }
+
+  mutable TNamed* _structureTag ; //! Structure tag
+  mutable TNamed* _typedStructureTag ; //! Typed structure tag
+  
+  inline void clearStructureTags() { _structureTag=0 ; _typedStructureTag = 0 ; }
+
+  void makeStructureTag() ;
+  void makeTypedStructureTag() ;
+  
 private:
 
   ClassDef(RooAbsCollection,2) // Collection of RooAbsArg objects
