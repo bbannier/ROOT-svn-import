@@ -1,3 +1,9 @@
+#define DEBUG_ROOT_COCOA
+
+#ifdef DEBUG_ROOT_COCOA
+#import <fstream>
+#endif
+
 #import <cassert>
 
 #import "X11Drawables.h"
@@ -54,9 +60,86 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
    return int(parentView.frame.size.height - yROOT);
 }
 
+//______________________________________________________________________________
+void SetWindowAttributes(const SetWindowAttributes_t *attr, QuartzView *view)
+{
+   if (attr->fMask & kWABackPixel)
+      view.fBackgroundPixel = attr->fBackgroundPixel;
+   
+   if (attr->fMask & kWAEventMask)
+      view.fEventMask = attr->fEventMask;
+   
+   //TODO: More attributes to set.
+}
+
+//______________________________________________________________________________
+void SetWindowAttributes(const SetWindowAttributes_t *attr, QuartzWindow *window)
+{
+   assert(attr != nullptr && "SetWindowAttributes, attr parameter is null");
+   assert(window != nil && "SetWindowAttributes, window parameter is nil");
+
+   if (attr->fMask & kWABorderWidth) {
+      //Set border width.
+   }
+   
+   if (attr->fMask & kWAEventMask)
+      window.fEventMask = attr->fEventMask;
+   
+   SetWindowAttributes(attr, window.fContentView);
+}
+
 }
 }
 }
+
+#ifdef DEBUG_ROOT_COCOA
+
+namespace {
+
+void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
+{
+   //This function is loggin requests, at the moment I can not set all
+   //of these attributes, so I first have to check, what is actually
+   //requested by ROOT.
+   static std::ofstream logfile("win_attr.txt");
+
+   const Mask_t mask = attr->fMask;   
+   if (mask & kWABackPixmap)
+      logfile<<"win "<<winID<<": BackPixmap\n";
+   if (mask & kWABackPixel)
+      logfile<<"win "<<winID<<": BackPixel\n";
+   if (mask & kWABorderPixmap)
+      logfile<<"win "<<winID<<": BorderPixmap\n";
+   if (mask & kWABorderPixel)
+      logfile<<"win "<<winID<<": BorderPixel\n";
+   if (mask & kWABorderWidth)
+      logfile<<"win "<<winID<<": BorderWidth\n";
+   if (mask & kWABitGravity)
+      logfile<<"win "<<winID<<": BitGravity\n";
+   if (mask & kWAWinGravity)
+      logfile<<"win "<<winID<<": WinGravity\n";
+   if (mask & kWABackingStore)
+      logfile<<"win "<<winID<<": BackingStore\n";
+   if (mask & kWABackingPlanes)
+      logfile<<"win "<<winID<<": BackingPlanes\n";
+   if (mask & kWABackingPixel)
+      logfile<<"win "<<winID<<": BackingPixel\n";
+   if (mask & kWAOverrideRedirect)
+      logfile<<"win "<<winID<<": OverrideRedirect\n";
+   if (mask & kWASaveUnder)
+      logfile<<"win "<<winID<<": SaveUnder\n";
+   if (mask & kWAEventMask)
+      logfile<<"win "<<winID<<": EventMask\n";
+   if (mask & kWADontPropagate)
+      logfile<<"win "<<winID<<": DontPropagate\n";
+   if (mask & kWAColormap)
+      logfile<<"win "<<winID<<": Colormap\n";
+   if (mask & kWACursor)
+      logfile<<"win "<<winID<<": Cursor\n";
+}
+
+}
+#endif
 
 
 @implementation QuartzWindow {
@@ -67,6 +150,7 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
 @synthesize fBackBuffer;
 @synthesize fEventMask;
 @synthesize fContext;
+@synthesize fBackgroundPixel;
 
 //RootQuartzWindow's life cycle.
 
@@ -227,8 +311,12 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
 - (void) setAttributes : (const SetWindowAttributes_t *)attr
 {
    assert(attr != nullptr && "setAttributes, attr parameter is null");
-   
-   (void)attr;
+
+#ifdef DEBUG_ROOT_COCOA
+   log_attributes(attr, self.fID);
+#endif
+
+   ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
 }
 
 //NSWindowDelegate's methods here.
@@ -247,6 +335,7 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
 @synthesize fID;
 @synthesize fEventMask;
 @synthesize fContext;
+@synthesize fBackgroundPixel;
 
 //X11Drawable protocol.
 
@@ -342,7 +431,13 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
 //______________________________________________________________________________
 - (void) setAttributes : (const SetWindowAttributes_t *)attr
 {
-   (void)attr;
+   assert(attr != nullptr && "setAttributes, attr parameter is null");
+
+#ifdef DEBUG_ROOT_COCOA
+   log_attributes(attr, fID);
+#endif
+
+   ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
 }
 
 //Painting mechanics.
