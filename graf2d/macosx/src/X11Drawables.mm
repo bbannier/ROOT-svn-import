@@ -17,6 +17,7 @@ namespace X11 {
 
 //Coordinate conversion.
 
+//TODO: check how TGX11 extracts/changes window attributes.
 
 //______________________________________________________________________________
 int GlobalYCocoaToROOT(CGFloat yCocoa)
@@ -84,8 +85,58 @@ void SetWindowAttributes(const SetWindowAttributes_t *attr, QuartzWindow *window
    
    if (attr->fMask & kWAEventMask)
       window.fEventMask = attr->fEventMask;
+      
+   //TODO: More attributes to set.
    
    SetWindowAttributes(attr, window.fContentView);
+}
+
+//______________________________________________________________________________
+void GetWindowGeometry(id<X11Drawable> win, WindowAttributes_t *dst)
+{
+   assert(win != nil && "GetWindowGeometry, win parameter is nil");
+   assert(dst != nullptr && "GetWindowGeometry, dst paremeter is null");
+   
+   dst->fX = win.fX;
+   dst->fY = win.fYROOT;
+   
+   dst->fWidth = win.fWidth;
+   dst->fHeight = win.fHeight;
+}
+
+//______________________________________________________________________________
+void GetWindowAttributes(QuartzWindow *window, WindowAttributes_t *dst)
+{
+   assert(window != nil && "GetWindowAttributes, window parameter is nil");
+   assert(dst != nullptr && "GetWindowAttributes, attr parameter is null");
+   
+   GetWindowGeometry(window, dst);
+
+   //TODO: border.
+   //attr->fBorderWidth = [window ...]
+   //TODO: kInputOnly/kInputOutput
+   //attr->fClass
+   //TODO: depth
+   //attr->fDepth = 
+   //TODO: BitGravity
+   //attr->fBitGravity = ;
+   //TODO: WinGravity
+   //attr->fWinGravity = ;
+   
+   dst->fYourEventMask = window.fEventMask;
+}
+
+//______________________________________________________________________________
+void GetWindowAttributes(QuartzView *view, WindowAttributes_t *dst)
+{
+   assert(view != nil && "GetWindowAttributes, view parameter is nil");
+   assert(dst != nullptr && "GetWindowAttributes, attr parameter is null");
+   
+   GetWindowGeometry(view, dst);
+
+   //TODO: other parameters.
+   
+   dst->fYourEventMask = view.fEventMask;
 }
 
 }
