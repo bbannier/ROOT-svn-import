@@ -101,6 +101,11 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 
 @property (nonatomic, readonly) CGContextRef fContext;
 
+//Life-cycle.
+- (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle 
+       backing : (NSBackingStoreType) bufferingType defer : (BOOL) deferCreation
+       windowAttributes : (const SetWindowAttributes_t *)attr;
+
 //Geometry.
 - (int)      fX;
 - (int)      fYCocoa;
@@ -142,6 +147,9 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 @property (nonatomic, readonly) QuartzView *fContentView;
 
 @property (nonatomic, readonly) CGContextRef fContext;
+
+//Life-cycle.
+- (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr;
 
 //Geometry.
 - (int)      fX;

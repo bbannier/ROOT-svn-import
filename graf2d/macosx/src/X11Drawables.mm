@@ -155,14 +155,23 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //RootQuartzWindow's life cycle.
 
 //______________________________________________________________________________
-- (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle backing : (NSBackingStoreType) bufferingType defer : (BOOL) deferCreation
+- (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle backing : (NSBackingStoreType) bufferingType 
+       defer : (BOOL) deferCreation  windowAttributes : (const SetWindowAttributes_t *)attr
 {
    self = [super initWithContentRect : contentRect styleMask : windowStyle backing : bufferingType defer : deferCreation];
 
    if (self) {
-      fContext = nil;
+      fContext = nullptr;
       //self.delegate = ...
       //create content view here.
+      NSRect contentViewRect = contentRect;
+      contentViewRect.origin = CGPointZero;
+      QuartzView *view = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : attr];
+      [self setContentView : view];
+      [view release];
+      
+      if (attr)//TODO: what about deferCreation?
+         ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
    }
    
    return self;
@@ -336,6 +345,17 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 @synthesize fEventMask;
 @synthesize fContext;
 @synthesize fBackgroundPixel;
+
+//______________________________________________________________________________
+- (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
+{
+   if (self = [super initWithFrame : frame]) {
+      if (attr)
+         ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+   }
+   
+   return self;
+}
 
 //X11Drawable protocol.
 
