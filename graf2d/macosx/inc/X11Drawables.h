@@ -36,6 +36,9 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 @property (nonatomic, assign) unsigned fID; //Identifier used by TGCocoa and ROOT's GUI classes.
 @property (nonatomic, assign) unsigned fEventMask; //Specifies which events must be processed by widget.
 
+//
+@property (nonatomic, assign) unsigned long fBackgroundPixel;
+
 //In X11 drawable is window or pixmap, ROOT's GUI
 //also has this ambiguity. So I have a property
 //to check in TGCocoa, what's the object.
@@ -91,6 +94,8 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 @property (nonatomic, assign) unsigned fID;
 @property (nonatomic, assign) unsigned fEventMask;
 
+@property (nonatomic, assign) unsigned long fBackgroundPixel;
+
 @property (nonatomic, readonly) BOOL fIsPixmap;
 @property (nonatomic, readonly) QuartzView *fContentView;
 
@@ -130,6 +135,8 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 
 @property (nonatomic, assign) unsigned fID;
 @property (nonatomic, assign) unsigned fEventMask;
+
+@property (nonatomic, assign) unsigned long fBackgroundPixel;
 
 @property (nonatomic, readonly) BOOL fIsPixmap;
 @property (nonatomic, readonly) QuartzView *fContentView;
