@@ -673,8 +673,9 @@ void TGCocoa::MapWindow(Window_t wid)
    assert(wid != 0 && "MapWindow, called for 'root' window");
    
    if (MakeProcessForeground()) {
-      QuartzWindow *win = (QuartzWindow *)fPimpl->GetWindow(wid);
-      [win makeKeyAndOrderFront : win];
+      id<X11Drawable> window = fPimpl->GetWindow(wid);
+      //TODO: difference between MapWindow and MapRaised.
+      [window mapRaised];
    }
 }
 
