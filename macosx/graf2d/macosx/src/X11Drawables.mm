@@ -251,6 +251,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    [super dealloc];
 }
 
+///////////////////////////////////////////////////////////
 //X11Drawable's protocol.
 
 //______________________________________________________________________________
@@ -273,7 +274,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    return fContentView.fID;
 }
 
-//Window attributes, not really used, but set/got by GUI.
+/////////////////////////////////////////////////////////////
+//SetWindowAttributes_t/WindowAttributes_t.
 
 //______________________________________________________________________________
 - (unsigned long) fBackgroundPixel
@@ -443,7 +445,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    fContentView.fOverrideRedirect = redir;
 }
 
-///
+//End of SetWindowAttributes_t/WindowAttributes_t.
+/////////////////////////////////////////////////////////////
 
 //______________________________________________________________________________
 - (BOOL) fIsPixmap
@@ -545,7 +548,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(fContentView != nullptr && "getAttributes, content view is nil");
    assert(attr && "getAttributes, attr parameter is nil");
 
-   (void)attr;
+   ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
 }
 
 //______________________________________________________________________________
@@ -559,6 +562,10 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
 }
+
+//End of X11Drawable's protocol.
+///////////////////////////////////////////////////////////
+
 
 //NSWindowDelegate's methods here.
 
@@ -574,17 +581,23 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 @synthesize fBackBuffer;
 @synthesize fParentView;
 @synthesize fID;
+
+/////////////////////
+//SetWindowAttributes_t/WindowAttributes_t
 @synthesize fEventMask;
 @synthesize fClass;
 @synthesize fDepth;
 @synthesize fBitGravity;
 @synthesize fWinGravity;
-@synthesize fContext;
 @synthesize fBackgroundPixel;
 @synthesize fBackingPlanes;
 @synthesize fSaveUnder;
 @synthesize fIsMapped;
 @synthesize fOverrideRedirect;
+//SetWindowAttributes_t/WindowAttributes_t
+/////////////////////
+
+@synthesize fContext;
 
 //______________________________________________________________________________
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
@@ -597,6 +610,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    return self;
 }
 
+/////////////////////////////////////////////////////////////
 //X11Drawable protocol.
 
 //______________________________________________________________________________
@@ -685,7 +699,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) getAttributes : (WindowAttributes_t *)attr
 {
-   (void)attr;
+   assert(attr != nullptr && "getAttributes, attr parameter is null");
+   
+   ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
 }
 
 //______________________________________________________________________________
@@ -699,6 +715,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
 }
+
+//End of X11Drawable protocol.
+/////////////////////////////////////////////////////////////
 
 //Painting mechanics.
 
