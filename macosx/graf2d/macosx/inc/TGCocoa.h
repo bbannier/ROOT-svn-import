@@ -314,16 +314,12 @@ public:
    //to process it later somewhere else (in TMacOSXSystem, probably).
    void QueueEvent(const Event_t &event);
    //
-   //These functions here are only in dev. version. TODO: structure this better.
-   Int_t CocoaToRootY(Window_t wid, Int_t y)const;
-   Int_t RootToCocoaY(Window_t wid, Int_t y)const;
-
    void SetContext(void *ctx);
 
 private:
    Bool_t MakeProcessForeground();
-   void SetStrokeParameters(const GCValues_t &gcVals)const;
-   void SetFilledAreaParameters(const GCValues_t &gcVals)const;
+   void SetStrokeParameters(void *ctxPtr, const GCValues_t &gcVals)const;
+   void SetFilledAreaParameters(void *ctxPtr, const GCValues_t &gcVals)const;
 
 protected:
    void *fCtx;

@@ -15,6 +15,37 @@ namespace ROOT {
 namespace MacOSX {
 namespace X11 {
 
+//______________________________________________________________________________
+void GetRootWindowAttributes(WindowAttributes_t *attr)
+{
+   //'root' window does not exist, but we can request its attributes.
+   assert(attr != nullptr && "GetRootWindowAttributes, attr parameter is null");
+   
+   NSArray *screens = [NSScreen screens];
+   assert(screens != nil && "screens array is nil");
+   
+   NSScreen *mainScreen = [screens objectAtIndex : 0];
+   assert(mainScreen != nil && "screen with index 0 is nil");
+
+   *attr = WindowAttributes_t();
+   
+   attr->fX = 0;
+   attr->fY = 0;
+   
+   const NSRect frame = [mainScreen frame];
+   
+   attr->fWidth = frame.size.width;
+   attr->fHeight = frame.size.height;
+   attr->fBorderWidth = 0;
+   attr->fYourEventMask = 0;
+   attr->fAllEventMasks = 0;//???
+         //
+   attr->fDepth = NSBitsPerPixelFromDepth([mainScreen depth]);
+   attr->fVisual = 0;
+   attr->fRoot = 0;
+}
+
+
 //Coordinate conversion.
 
 //TODO: check how TGX11 extracts/changes window attributes.
@@ -235,9 +266,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       NSRect contentViewRect = contentRect;
       contentViewRect.origin.x = 0.f;
       contentViewRect.origin.y = 0.f;
-      QuartzView *view = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : 0];
-      [self setContentView : view];
-      [view release];
+      fContentView = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : 0];
+      [self setContentView : fContentView];
+      [fContentView release];
       
       if (attr)//TODO: what about deferCreation? at the moment, deferCreation is always 'NO'.
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
@@ -535,6 +566,13 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
+- (void) setX : (int) x rootY : (int) y
+{
+   const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
+   [self setFrameTopLeftPoint : topLeft];
+}
+
+//______________________________________________________________________________
 - (void) addChild : (QuartzView *) child
 {
    assert(fContentView != nil && "addChild, content view is nil");
@@ -562,6 +600,22 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 #endif
 
    ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+}
+
+//______________________________________________________________________________
+- (void) mapRaised
+{
+   self.fIsMapped = YES;
+   //
+   [self makeKeyAndOrderFront : self];
+}
+
+//______________________________________________________________________________
+- (void) unmapWindow
+{
+   self.fIsMapped = NO;
+   
+   [self orderOut : self];
 }
 
 //End of X11Drawable's protocol.
@@ -673,7 +727,14 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(!(newSize.height < 0) && "setDrawableSize, height is negative");
    
    //This will cause redraw(?)
-   [self setFrameSize : newSize];
+   
+   //In X11, resize changes the size, but upper-left corner is not changed.
+   //In Cocoa, bottom-left is fixed.
+   NSRect frame = self.frame;
+   const CGFloat yShift = newSize.height - frame.size.height;
+   frame.origin.y -= yShift;
+   
+   self.frame = frame;
 }
 
 //______________________________________________________________________________
@@ -683,11 +744,21 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    NSRect newFrame = {};
    newFrame.origin.x = x;
-   newFrame.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(fParentView, y);
+   newFrame.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(fParentView, y + h);
    newFrame.size.width = w;
    newFrame.size.height = h;
    
    self.frame = newFrame;
+}
+
+//______________________________________________________________________________
+- (void) setX : (int) x rootY : (int) y
+{
+   assert(fParentView != nil && "setX:rootY:, parent view is nil");
+   
+   NSRect newFrame = self.frame;
+   newFrame.origin.x = x;
+   newFrame.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(fParentView, y + newFrame.size.height);
 }
 
 //______________________________________________________________________________
@@ -717,6 +788,22 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 #endif
 
    ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+}
+
+//______________________________________________________________________________
+- (void) mapRaised
+{
+   fIsMapped = YES;
+   //
+   [self setHidden : NO];
+}
+
+//______________________________________________________________________________
+- (void) unmapWindow
+{
+   fIsMapped = NO;
+   
+   [self setHidden : YES];
 }
 
 //End of X11Drawable protocol.
