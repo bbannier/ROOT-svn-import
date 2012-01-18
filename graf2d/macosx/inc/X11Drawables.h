@@ -34,10 +34,35 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 @property (nonatomic, assign) QuartzPixmap *fBackBuffer;
 @property (nonatomic, assign) QuartzView *fParentView;
 @property (nonatomic, assign) unsigned fID; //Identifier used by TGCocoa and ROOT's GUI classes.
-@property (nonatomic, assign) unsigned fEventMask; //Specifies which events must be processed by widget.
 
-//
-@property (nonatomic, assign) unsigned long fBackgroundPixel;
+//As soon as I have to somehow emulate X11's behavior to make GUI happy,
+//I have this bunch of properties here to be set/read from a window.
+//Some of them are used, some are just pure "emulation".
+//Properties, which are used, are commented in a declaration.
+
+/////////////////////////////////////////////////////////////////
+//SetWindowAttributes_t/WindowAttributes_t
+
+@property (nonatomic, assign) long          fEventMask; //Specifies which events must be processed by widget.
+
+@property (nonatomic, assign) int           fClass;
+@property (nonatomic, assign) int           fDepth;
+
+@property (nonatomic, assign) int           fBitGravity;
+@property (nonatomic, assign) int           fWinGravity;
+
+@property (nonatomic, assign) unsigned long fBackgroundPixel;//At the moment used in a TGCocoa::ClearArea, for example.
+
+@property (nonatomic, assign) unsigned long fBackingPlanes;
+@property (nonatomic, assign) BOOL          fSaveUnder;
+
+@property (nonatomic, assign) BOOL          fIsMapped;//Visible/invisible.
+
+@property (nonatomic, assign) BOOL          fOverrideRedirect;
+
+//End of SetWindowAttributes_t/WindowAttributes_t
+/////////////////////////////////////////////////////////////////
+
 
 //In X11 drawable is window or pixmap, ROOT's GUI
 //also has this ambiguity. So I have a property
@@ -92,9 +117,27 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 @property (nonatomic, assign) QuartzPixmap *fBackBuffer;
 @property (nonatomic, assign) QuartzView *fParentView;
 @property (nonatomic, assign) unsigned fID;
-@property (nonatomic, assign) unsigned fEventMask;
+
+/////////////////////////////////////////////////////////////////
+//SetWindowAttributes_t/WindowAttributes_t
+
+@property (nonatomic, assign) long fEventMask;
+
+@property (nonatomic, assign) int fClass;
+@property (nonatomic, assign) int fDepth;
+
+@property (nonatomic, assign) int fBitGravity;
+@property (nonatomic, assign) int fWinGravity;
 
 @property (nonatomic, assign) unsigned long fBackgroundPixel;
+@property (nonatomic, assign) unsigned long fBackingPlanes;
+@property (nonatomic, assign) BOOL fSaveUnder;
+
+@property (nonatomic, assign) BOOL fIsMapped;
+@property (nonatomic, assign) BOOL fOverrideRedirect;
+
+//End of SetWindowAttributes_t/WindowAttributes_t
+/////////////////////////////////////////////////////////////////
 
 @property (nonatomic, readonly) BOOL fIsPixmap;
 @property (nonatomic, readonly) QuartzView *fContentView;
@@ -139,9 +182,27 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 @property (nonatomic, assign) QuartzView *fParentView;
 
 @property (nonatomic, assign) unsigned fID;
-@property (nonatomic, assign) unsigned fEventMask;
 
+/////////////////////////////////////////////////////////////////
+//SetWindowAttributes_t/WindowAttributes_t
+
+@property (nonatomic, assign) long fEventMask;
+
+@property (nonatomic, assign) int fClass;
+@property (nonatomic, assign) int fDepth;
+
+@property (nonatomic, assign) int fBitGravity;
+@property (nonatomic, assign) int fWinGravity;
+
+@property (nonatomic, assign) unsigned long fBackingPlanes;
 @property (nonatomic, assign) unsigned long fBackgroundPixel;
+@property (nonatomic, assign) BOOL fSaveUnder;
+
+@property (nonatomic, assign) BOOL fIsMapped;
+@property (nonatomic, assign) BOOL fOverrideRedirect;
+
+//End of SetWindowAttributes_t/WindowAttributes_t
+/////////////////////////////////////////////////////////////////
 
 @property (nonatomic, readonly) BOOL fIsPixmap;
 @property (nonatomic, readonly) QuartzView *fContentView;
