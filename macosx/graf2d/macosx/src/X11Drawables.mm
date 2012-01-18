@@ -226,19 +226,20 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    self = [super initWithContentRect : contentRect styleMask : windowStyle backing : bufferingType defer : deferCreation];
 
    if (self) {
-      //I'm pretty sure, ROOT's not able to draw GUI concurrently, thanks to global variables and gVirtualX itself.
+      //ROOT's not able to draw GUI concurrently, thanks to global variables and gVirtualX itself.
       [self setAllowsConcurrentViewDrawing : NO];
    
       fContext = nullptr;
       //self.delegate = ...
       //create content view here.
       NSRect contentViewRect = contentRect;
-      contentViewRect.origin = CGPointZero;
-      QuartzView *view = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : attr];
+      contentViewRect.origin.x = 0.f;
+      contentViewRect.origin.y = 0.f;
+      QuartzView *view = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : 0];
       [self setContentView : view];
       [view release];
       
-      if (attr)//TODO: what about deferCreation?
+      if (attr)//TODO: what about deferCreation? at the moment, deferCreation is always 'NO'.
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
    }
    
@@ -603,6 +604,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
 {
    if (self = [super initWithFrame : frame]) {
+      [self setCanDrawConcurrently : NO];
+   
       if (attr)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
    }
