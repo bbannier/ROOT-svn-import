@@ -14,7 +14,7 @@
 #include "GuiTypes.h"
 #endif
 
-@protocol RootGUIElement;
+@protocol X11Drawable;
 @class NSWindow;
 
 class TGCocoa;
@@ -22,14 +22,6 @@ class TGCocoa;
 namespace ROOT {
 namespace MacOSX {
 namespace Details {
-
-struct CocoaWindowAttributes {
-   WindowAttributes_t fROOTWindowAttribs;
-   Util::StrongReference fCocoaWindow;
-   
-   CocoaWindowAttributes();
-   CocoaWindowAttributes(const WindowAttributes_t &winAttr, NSObject *nsWin);
-};
 
 class CocoaPrivate {
    friend class TGCocoa;
@@ -41,21 +33,21 @@ private:
    CocoaPrivate(const CocoaPrivate &rhs) = delete;
    CocoaPrivate &operator = (const CocoaPrivate &rhs) = delete;
 
-   void InitX11RootWindow();
+   void               InitX11RootWindow();
+   unsigned           RegisterWindow(NSObject *nsWin);
+   id<X11Drawable>    GetWindow(unsigned windowID)const;
+   void               DeleteWindow(unsigned windowID);
+   
 
-   unsigned RegisterWindow(NSObject *nsWin, const WindowAttributes_t &winAttr);
-   id<RootGUIElement> GetWindow(unsigned windowID)const;
-   const WindowAttributes_t &GetWindowAttributes(unsigned winID)const;
-   
-   void DeleteWindow(unsigned windowID);
-   
-   X11::ColorParser fX11ColorParser;
-
-   unsigned fCurrentWindowID;
-   std::vector<unsigned> fFreeWindowIDs;
-   std::map<unsigned, CocoaWindowAttributes> fWindows;
-   
-   NSEvent *fPendingEvent;
+   //Color "parser": either parse string like "#ddeeaa", or
+   //search rgb.txt like table for named color.
+   X11::ColorParser                          fX11ColorParser;
+   //Id for the new registered window.
+   unsigned                                  fCurrentWindowID;
+   //Cache of ids.
+   std::vector<unsigned>                     fFreeWindowIDs;
+   //Cocoa objects (views, windows, "pixmaps").
+   std::map<unsigned, Util::StrongReference> fWindows;
 };
 
 }

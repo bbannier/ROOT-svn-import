@@ -11,6 +11,8 @@ namespace ROOT {
 namespace MacOSX {
 namespace X11 {
 
+void GetRootWindowAttributes(WindowAttributes_t *attr);
+
 //Coordinate conversion.
 int GlobalYCocoaToROOT(CGFloat yCocoa);
 //:)
@@ -96,6 +98,7 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 //(will be converted into Cocoa system internally).
 - (void)     setDrawableSize : (NSSize) newSize;
 - (void)     setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h;
+- (void)     setX : (int) x rootY : (int) y;
 
 //Nested views ("windows").
 - (void)     addChild : (QuartzView *)child;
@@ -103,6 +106,10 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 //X11/ROOT GUI's attributes
 - (void)     getAttributes : (WindowAttributes_t *) attr;
 - (void)     setAttributes : (const SetWindowAttributes_t *) attr;
+
+//
+- (void)     mapRaised;
+- (void)     unmapWindow;
 
 @end
 
@@ -160,6 +167,7 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 
 - (void)     setDrawableSize : (NSSize) newSize;
 - (void)     setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h;
+- (void)     setX : (int) x rootY : (int) y;
 
 //Children subviews.
 - (void)     addChild : (QuartzView *)child;
@@ -167,6 +175,10 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 //X11/ROOT GUI's attributes.
 - (void)     getAttributes : (WindowAttributes_t *) attr;
 - (void)     setAttributes : (const SetWindowAttributes_t *) attr;
+
+//
+- (void)     mapRaised;
+- (void)     unmapWindow;
 
 @end
 
@@ -223,6 +235,7 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 
 - (void)     setDrawableSize : (NSSize) newSize;
 - (void)     setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h;
+- (void)     setX : (int) x rootY : (int) y;
 
 //Children subviews.
 - (void)     addChild : (QuartzView *)child;
@@ -231,6 +244,9 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 - (void)     getAttributes : (WindowAttributes_t *)attr;
 - (void)     setAttributes : (const SetWindowAttributes_t *)attr;
 
+//
+- (void)     mapRaised;
+- (void)     unmapWindow;
 @end
 
 //
