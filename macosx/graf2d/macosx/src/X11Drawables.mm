@@ -62,33 +62,33 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
 }
 
 //______________________________________________________________________________
-void SetWindowAttributes(const SetWindowAttributes_t *attr, QuartzView *view)
+void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> window)
 {
-   if (attr->fMask & kWABackPixel)
-      view.fBackgroundPixel = attr->fBackgroundPixel;
-   
-   if (attr->fMask & kWAEventMask)
-      view.fEventMask = attr->fEventMask;
-   
-   //TODO: More attributes to set.
-}
+   const Mask_t mask = attr->fMask;
 
-//______________________________________________________________________________
-void SetWindowAttributes(const SetWindowAttributes_t *attr, QuartzWindow *window)
-{
-   assert(attr != nullptr && "SetWindowAttributes, attr parameter is null");
-   assert(window != nil && "SetWindowAttributes, window parameter is nil");
-
-   if (attr->fMask & kWABorderWidth) {
-      //Set border width.
-   }
+   if (mask & kWABackPixel)
+      window.fBackgroundPixel = attr->fBackgroundPixel;
    
-   if (attr->fMask & kWAEventMask)
+   if (mask & kWAEventMask)
       window.fEventMask = attr->fEventMask;
+
+   if (mask & kWABitGravity)
+      window.fBitGravity = attr->fBitGravity;
+
+   if (mask & kWAWinGravity)
+      window.fWinGravity = attr->fWinGravity;
+
+   if (mask & kWABackingPlanes)
+      window.fBackingPlanes = attr->fBackingPlanes;
       
-   //TODO: More attributes to set.
+   if (mask & kWASaveUnder)
+      window.fSaveUnder = attr->fSaveUnder;
+      
+   if (mask & kWAOverrideRedirect)
+      window.fOverrideRedirect = attr->fOverrideRedirect;
    
-   SetWindowAttributes(attr, window.fContentView);
+   //TODO: More attributes to set -
+   //cursor for example, etc.
 }
 
 //______________________________________________________________________________
@@ -105,38 +105,53 @@ void GetWindowGeometry(id<X11Drawable> win, WindowAttributes_t *dst)
 }
 
 //______________________________________________________________________________
-void GetWindowAttributes(QuartzWindow *window, WindowAttributes_t *dst)
+void GetWindowAttributes(id<X11Drawable> window, WindowAttributes_t *dst)
 {
    assert(window != nil && "GetWindowAttributes, window parameter is nil");
    assert(dst != nullptr && "GetWindowAttributes, attr parameter is null");
    
+   *dst = WindowAttributes_t();
+   
+   //fX, fY, fWidth, fHeight.
    GetWindowGeometry(window, dst);
 
-   //TODO: border.
-   //attr->fBorderWidth = [window ...]
-   //TODO: kInputOnly/kInputOutput
-   //attr->fClass
-   //TODO: depth
-   //attr->fDepth = 
-   //TODO: BitGravity
-   //attr->fBitGravity = ;
-   //TODO: WinGravity
-   //attr->fWinGravity = ;
+   //Actually, most of them are not used by GUI.
+   dst->fBorderWidth = 0;
+   dst->fDepth = window.fDepth;
+   //Dummy value.
+   dst->fVisual = 0;
+   //Dummy value.
+   dst->fRoot = 0;
+   dst->fClass = window.fClass;
+   dst->fBitGravity = window.fBitGravity;
+   dst->fWinGravity = window.fWinGravity;
+   //Dummy value.
+   dst->fBackingStore = kAlways;//??? CHECK
+   dst->fBackingPlanes = window.fBackingPlanes;
+
+   //Dummy value.
+   dst->fBackingPixel = 0;
    
+   dst->fSaveUnder = window.fSaveUnder;
+
+   //Dummy value.
+   dst->fColormap = 0;
+   //Dummy value.   
+   dst->fMapInstalled = kTRUE;
+
+   dst->fMapState = window.fIsMapped ? kIsViewable : kIsUnmapped;
+
+   //Dummy value. Actually, never used in ROOT's GUI.
+   dst->fAllEventMasks = 0;
    dst->fYourEventMask = window.fEventMask;
-}
-
-//______________________________________________________________________________
-void GetWindowAttributes(QuartzView *view, WindowAttributes_t *dst)
-{
-   assert(view != nil && "GetWindowAttributes, view parameter is nil");
-   assert(dst != nullptr && "GetWindowAttributes, attr parameter is null");
    
-   GetWindowGeometry(view, dst);
+   //Not used by GUI.
+   //dst->fDoNotPropagateMask
 
-   //TODO: other parameters.
-   
-   dst->fYourEventMask = view.fEventMask;
+   dst->fOverrideRedirect = window.fOverrideRedirect;
+
+   //Dummy value.
+   dst->fScreen = 0;
 }
 
 }
@@ -199,9 +214,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 @synthesize fBackBuffer;
-@synthesize fEventMask;
 @synthesize fContext;
-@synthesize fBackgroundPixel;
+
 
 //RootQuartzWindow's life cycle.
 
@@ -212,6 +226,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    self = [super initWithContentRect : contentRect styleMask : windowStyle backing : bufferingType defer : deferCreation];
 
    if (self) {
+      //I'm pretty sure, ROOT's not able to draw GUI concurrently, thanks to global variables and gVirtualX itself.
+      [self setAllowsConcurrentViewDrawing : NO];
+   
       fContext = nullptr;
       //self.delegate = ...
       //create content view here.
@@ -256,6 +273,56 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    return fContentView.fID;
 }
 
+//Window attributes, not really used, but set/got by GUI.
+
+//______________________________________________________________________________
+- (unsigned long) fBackgroundPixel
+{
+   assert(fContentView != nil && "fBackgroundPixel, content view is nil");
+   
+   return fContentView.fBackgroundPixel;
+}
+
+//______________________________________________________________________________
+- (void) setFBackgroundPixel : (unsigned long) pixel
+{
+   assert(fContentView != nil && "SetFBackgroundPixel, content view is nil");
+   
+   fContentView.fBackgroundPixel = pixel;
+}
+
+//______________________________________________________________________________
+- (long) fEventMask
+{
+   assert(fContentView != nil && "fEventMask, content view is nil");
+   
+   return fContentView.fEventMask;
+}
+
+//______________________________________________________________________________
+- (void) setFEventMask : (long)mask 
+{
+   assert(fContentView != nil && "setFEventMask, content view is nil");
+   
+   fContentView.fEventMask = mask;
+}
+
+//______________________________________________________________________________
+- (int) fClass
+{
+   assert(fContentView != nil && "fClass, content view is nil");
+   
+   return fContentView.fClass;
+}
+
+//______________________________________________________________________________
+- (void) setFClass : (int) windowClass
+{
+   assert(fContentView != nil && "setFClass, content view is nil");
+   
+   fContentView.fClass = windowClass;
+}
+
 //______________________________________________________________________________
 - (void) setFID : (unsigned) winID
 {
@@ -263,6 +330,120 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    fContentView.fID = winID;
 }
+
+//______________________________________________________________________________
+- (int) fDepth
+{
+   assert(fContentView != nil && "fDepth, content view is nil");
+   
+   return fContentView.fDepth;
+}
+
+//______________________________________________________________________________
+- (void) setFDepth : (int) depth
+{
+   assert(fContentView != nil && "setFDepth, content view is nil");
+   
+   fContentView.fDepth = depth;
+}
+
+//______________________________________________________________________________
+- (int) fBitGravity
+{
+   assert(fContentView != nil && "fBitGravity, content view is nil");
+   
+   return fContentView.fBitGravity;
+}
+
+//______________________________________________________________________________
+- (void) setFBitGravity : (int) bit
+{
+   assert(fContentView != nil && "setFBitGravity, content view is nil");
+
+   fContentView.fBitGravity = bit;
+}
+
+//______________________________________________________________________________
+- (int) fWinGravity
+{
+   assert(fContentView != nil && "fWinGravity, content view is nil");
+   
+   return fContentView.fWinGravity;
+}
+
+//______________________________________________________________________________
+- (void) setFWinGravity : (int) bit
+{
+   assert(fContentView != nil && "setFWinGravity, content view is nil");
+   
+   fContentView.fWinGravity = bit;
+}
+
+//______________________________________________________________________________
+- (unsigned long) fBackingPlanes
+{
+   assert(fContentView != nil && "fBackingPlanes, content view is nil");
+   
+   return fContentView.fBackingPlanes;
+}
+
+//______________________________________________________________________________
+- (void) setFBackingPlanes : (unsigned long) planes
+{
+   assert(fContentView != nil && "setFBackingPlanes, content view is nil");
+   
+   fContentView.fBackingPlanes = planes;
+}
+
+//______________________________________________________________________________
+- (BOOL) fSaveUnder
+{
+   assert(fContentView != nil && "fSaveUnder, content view is nil");
+   
+   return fContentView.fSaveUnder;
+}
+
+//______________________________________________________________________________
+- (void) setFSaveUnder : (BOOL) save
+{
+   assert(fContentView != nil && "setFSaveUnder, content view is nil");
+   
+   fContentView.fSaveUnder = save;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsMapped
+{
+   assert(fContentView != nil && "fIsMapped, content view is nil");
+   
+   return fContentView.fIsMapped;
+}
+
+//______________________________________________________________________________
+- (void) setFIsMapped : (BOOL) mapped
+{
+   assert(fContentView != nil && "setFIsMapped, content view is nil");
+   
+   fContentView.fIsMapped = mapped;
+}
+
+//______________________________________________________________________________
+- (BOOL) fOverrideRedirect
+{
+   assert(fContentView != nil && "fOverrideRedirect, content view is nil");
+   
+   return fContentView.fOverrideRedirect;
+}
+
+//______________________________________________________________________________
+- (void) setFOverrideRedirect : (BOOL) redir
+{
+   assert(fContentView != nil && "setFOverrideRedirect, content view is nil");
+   
+   fContentView.fOverrideRedirect = redir;
+}
+
+///
 
 //______________________________________________________________________________
 - (BOOL) fIsPixmap
@@ -394,8 +575,16 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 @synthesize fParentView;
 @synthesize fID;
 @synthesize fEventMask;
+@synthesize fClass;
+@synthesize fDepth;
+@synthesize fBitGravity;
+@synthesize fWinGravity;
 @synthesize fContext;
 @synthesize fBackgroundPixel;
+@synthesize fBackingPlanes;
+@synthesize fSaveUnder;
+@synthesize fIsMapped;
+@synthesize fOverrideRedirect;
 
 //______________________________________________________________________________
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
