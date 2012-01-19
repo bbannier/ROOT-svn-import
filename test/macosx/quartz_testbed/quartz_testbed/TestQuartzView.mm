@@ -1,8 +1,8 @@
-#import "QuartzView.h"
+#import "TestQuartzView.h"
 
 #import "QuartzTest.h"
 
-@implementation QuartzView {
+@implementation TestQuartzView {
    QuartzTest *test;
 }
 

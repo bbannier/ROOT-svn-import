@@ -732,8 +732,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    //In Cocoa, bottom-left is fixed.
    NSRect frame = self.frame;
    const CGFloat yShift = newSize.height - frame.size.height;
-   frame.origin.y -= yShift;
-   
+//   if (fID == 38) {
+//      NSLog(@"EXTENAL RESIZE: ")
+//   }
+ //  frame.origin.y -= yShift;
+   frame.size = newSize;
+    
    self.frame = frame;
 }
 
@@ -817,6 +821,19 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    (void)dirtyRect;//Not used at the moment.
 
    if (fID) {
+      if (fID == 38) {
+         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+         assert(nsContext != nil && "drawRect, currentContext returned nil");
+
+         fContext = (CGContextRef)[nsContext graphicsPort];
+         assert(fContext != nullptr && "drawRect, graphicsPort returned null");
+         
+         CGContextSetRGBFillColor(fContext, 1.f, 0.f, 0.f, 1.f);
+         CGContextFillRect(fContext, dirtyRect);
+         fContext = nullptr;
+         
+         return;
+      }
       if (TGWindow *window = gClient->GetWindowById(fID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
          assert(nsContext != nil && "drawRect, currentContext returned nil");
@@ -832,7 +849,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          
          CGContextRestoreGState(fContext);
 
-         fContext = 0;
+         fContext = nullptr;
       } else {
          NSLog(@"Warning: RootQuartzView, -drawRect method, no window for id %u was found", fID);
       }
@@ -841,10 +858,25 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 //Event handling.
 
+- (void) setFrame : (NSRect)newFrame
+{
+   [super setFrame : newFrame];
+   if (fID == 38) {
+      NSLog(@"-------------- %g %g %g %g", newFrame.origin.x, newFrame.origin.y, newFrame.size.width, newFrame.size.height);
+      if (newFrame.origin.y > 40.f) {
+   //      int * pp = 0;
+   //      pp[100] = 100;
+      }
+   }
+}
+
+
 //______________________________________________________________________________
 - (void) setFrameSize : (NSSize)newSize
 {
    //Generate ConfigureNotify event and send it to ROOT's TGWindow.
+
+   
    [super setFrameSize : newSize];
    
    if (fEventMask & kStructureNotifyMask) {//Check, if window wants such events.
@@ -868,6 +900,18 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          }
       }
    }
+}
+
+- (void) mouseDown : (NSEvent *)theEvent
+{
+   (void)theEvent;
+   NSLog(@"I'm %u, geometry: %g %g %g %g", fID, self.frame.origin.x, self.frame.origin.y, self.frame.size.width, self.frame.size.height);
+   if (fID == 38) {
+      NSRect frame = self.frame;
+      frame.origin.y = 0;
+      self.frame = frame;
+   }
+      
 }
 
 @end
