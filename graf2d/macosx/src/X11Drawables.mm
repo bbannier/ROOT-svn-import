@@ -39,7 +39,7 @@ void GetRootWindowAttributes(WindowAttributes_t *attr)
    attr->fBorderWidth = 0;
    attr->fYourEventMask = 0;
    attr->fAllEventMasks = 0;//???
-         //
+
    attr->fDepth = NSBitsPerPixelFromDepth([mainScreen depth]);
    attr->fVisual = 0;
    attr->fRoot = 0;
@@ -267,7 +267,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       contentViewRect.origin.x = 0.f;
       contentViewRect.origin.y = 0.f;
       fContentView = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : 0];
+      
+      fContentView.fResizedByROOT = YES;//If it will do any resize
       [self setContentView : fContentView];
+      fContentView.fResizedByROOT = NO;
+
       [fContentView release];
       
       if (attr)//TODO: what about deferCreation? at the moment, deferCreation is always 'NO'.
@@ -551,7 +555,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(!(newSize.width < 0) && "setDrawableSize, width is negative");
    assert(!(newSize.height < 0) && "setDrawableSize, height is negative");
    
+   fContentView.fResizedByROOT = YES;
    [self setContentSize : newSize];
+   fContentView.fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -562,14 +568,19 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    //Check how this is affected by title bar's height.
    const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
+
+   fContentView.fResizedByROOT = YES;
    [self setFrameTopLeftPoint : topLeft];
+   fContentView.fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
 - (void) setX : (int) x rootY : (int) y
 {
    const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
+   fContentView.fResizedByROOT = YES;
    [self setFrameTopLeftPoint : topLeft];
+   fContentView.fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -633,6 +644,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 @implementation QuartzView
 
+@synthesize fResizedByROOT;
 @synthesize fBackBuffer;
 @synthesize fParentView;
 @synthesize fID;
@@ -731,14 +743,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    //In X11, resize changes the size, but upper-left corner is not changed.
    //In Cocoa, bottom-left is fixed.
    NSRect frame = self.frame;
-   const CGFloat yShift = newSize.height - frame.size.height;
-//   if (fID == 38) {
-//      NSLog(@"EXTENAL RESIZE: ")
-//   }
- //  frame.origin.y -= yShift;
    frame.size = newSize;
-    
+   
+   fResizedByROOT = YES;
    self.frame = frame;
+   fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -752,7 +761,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    newFrame.size.width = w;
    newFrame.size.height = h;
    
+   fResizedByROOT = YES;
    self.frame = newFrame;
+   fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -763,6 +774,10 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    NSRect newFrame = self.frame;
    newFrame.origin.x = x;
    newFrame.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(fParentView, y + newFrame.size.height);
+   
+   fResizedByROOT = YES;
+   self.frame = newFrame;
+   fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -820,20 +835,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    (void)dirtyRect;//Not used at the moment.
 
-   if (fID) {
-      if (fID == 38) {
-         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-         assert(nsContext != nil && "drawRect, currentContext returned nil");
-
-         fContext = (CGContextRef)[nsContext graphicsPort];
-         assert(fContext != nullptr && "drawRect, graphicsPort returned null");
-         
-         CGContextSetRGBFillColor(fContext, 1.f, 0.f, 0.f, 1.f);
-         CGContextFillRect(fContext, dirtyRect);
-         fContext = nullptr;
-         
-         return;
-      }
+   if ((fEventMask & kExposureMask) && fID) {
       if (TGWindow *window = gClient->GetWindowById(fID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
          assert(nsContext != nil && "drawRect, currentContext returned nil");
@@ -858,16 +860,34 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 //Event handling.
 
+//______________________________________________________________________________
 - (void) setFrame : (NSRect)newFrame
 {
    [super setFrame : newFrame];
-   if (fID == 38) {
-      NSLog(@"-------------- %g %g %g %g", newFrame.origin.x, newFrame.origin.y, newFrame.size.width, newFrame.size.height);
-      if (newFrame.origin.y > 40.f) {
-   //      int * pp = 0;
-   //      pp[100] = 100;
+   //Generate configure notify?
+   
+   if ((fEventMask & kStructureNotifyMask) && fResizedByROOT == NO) {//Check, if window wants such events.
+      if (fID) {
+         if (TGWindow *window = gClient->GetWindowById(fID)) {
+            Event_t newEvent = {};
+
+            newEvent.fType = kConfigureNotify;         
+            newEvent.fWindow = fID;
+            newEvent.fX = newFrame.origin.x;
+            newEvent.fY = newFrame.origin.y;
+            newEvent.fWidth = newFrame.size.width;
+            newEvent.fHeight = newFrame.size.height;
+         
+            //TODO:
+            //1. generate time.
+            //2. check, what's actually required from configure notify.
+            window->HandleEvent(&newEvent);
+         } else {
+            NSLog(@"Warning: RootQuartzView, -setFrameSize method, no window for id %u was found", fID);
+         }
       }
    }
+
 }
 
 
@@ -879,7 +899,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    [super setFrameSize : newSize];
    
-   if (fEventMask & kStructureNotifyMask) {//Check, if window wants such events.
+   if ((fEventMask & kStructureNotifyMask) && fResizedByROOT == NO) {//Check, if window wants such events.
       if (fID) {
          if (TGWindow *window = gClient->GetWindowById(fID)) {
             Event_t newEvent = {};
@@ -902,31 +922,136 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    }
 }
 
+//______________________________________________________________________________
 - (void) mouseDown : (NSEvent *)theEvent
 {
    (void)theEvent;
-   NSLog(@"I'm %u, geometry: %g %g %g %g", fID, self.frame.origin.x, self.frame.origin.y, self.frame.size.width, self.frame.size.height);
-   if (fID == 38) {
-      NSRect frame = self.frame;
-      frame.origin.y = 0;
-      self.frame = frame;
-   }
-      
+   NSLog(@"me : %u", fID);
 }
 
 @end
 
+//
+//
+//
+//
+//
+//
 
 @implementation QuartzPixmap {
 @private
+   unsigned fWidth;
+   unsigned fHeight;
+   
+   CGContextRef fContext;
 }
 
 @synthesize fID;
 
 //______________________________________________________________________________
+- (id) initWithSize : (NSSize) pixmapSize
+{
+   if (self = [super init]) {
+      fWidth = 0;
+      fHeight = 0;
+      
+      if ([self resize : pixmapSize])
+         return self;
+   }
+   
+   //Yes, if context creation failed, the calling code should use
+   //separate alloc/init statements to check this.
+   return nil;
+}
+
+//______________________________________________________________________________
+- (void) dealloc
+{
+   if (fContext)
+      CGContextRelease(fContext);
+   [super dealloc];
+}
+
+//______________________________________________________________________________
+- (BOOL) resize : (NSSize) newSize
+{
+   assert(newSize.width > 0 && "Pixmap width must be positive");
+   assert(newSize.height > 0 && "Pixmap height must be positive");
+
+   CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();//[1]
+
+   if (!colorSpace) {
+      assert(colorSpace && "CGColorSpaceCreateDeviceRGB failed");
+      return NO;
+   }
+   
+   CGContextRef ctx = CGBitmapContextCreate(nullptr, newSize.width, newSize.height, 8, 0, colorSpace, kCGImageAlphaPremultipliedLast);//[2]
+
+   if (!ctx) {
+      CGColorSpaceRelease(colorSpace);//[1], ![2]
+      assert(ctx && "CGBitmapContextCreate failed");
+      return NO;
+   }
+
+   //
+   //For debug only: fill bitmap with green color.
+   //
+//   CGContextSetRGBFillColor(ctx, 0.f, 1.f, 0.f, 1.f);
+//   CGContextFillRect(ctx, CGRectMake(0.f, 0.f, newSize.width, newSize.height));
+
+   
+   if (fContext) {
+      //New context was created OK, we can release now the old one.
+      CGContextRelease(fContext);//[2]
+   }
+
+   //Size to be used later - to identify,
+   //if we really have to resize.
+   fWidth = newSize.width;
+   fHeight = newSize.height;
+   
+   fContext = ctx;//[2]
+
+   CGColorSpaceRelease(colorSpace);//[1]
+
+   return YES;
+
+}
+
+//______________________________________________________________________________
 - (BOOL) fIsPixmap
 {
    return YES;
+}
+
+//______________________________________________________________________________
+- (unsigned) fWidth
+{
+   assert(fContext && "fWidth, called for bad pixmap");
+   return fWidth;
+}
+
+//______________________________________________________________________________
+- (unsigned) fHeight
+{
+   assert(fContext != nullptr && "fHeight, called for bad pixmap");
+   return fHeight;
+}
+
+//______________________________________________________________________________
+- (NSSize) fSize
+{
+   NSSize size = {};
+   size.width = fWidth;
+   size.height = fHeight;
+   return size;
+}
+
+//______________________________________________________________________________
+- (CGContextRef) fContext
+{
+   assert(fContext != nullptr && "fContext, called for bad pixmap");   
+   return fContext;
 }
 
 @end
