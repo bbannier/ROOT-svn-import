@@ -322,6 +322,9 @@ private:
    void SetFilledAreaParameters(void *ctxPtr, const GCValues_t &gcVals)const;
 
 protected:
+
+   void *GetCurrentContext();
+
    void *fCtx;
    std::auto_ptr<ROOT::MacOSX::Quartz::FontManager> fFontManager;//!
 
@@ -336,7 +339,7 @@ private:
 
    std::vector<GCValues_t> fX11Contexts;
    
-   void *fCurrentWindow;//TGX11 has a global variable for this!!!
+   UInt_t fSelectedDrawable;
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };

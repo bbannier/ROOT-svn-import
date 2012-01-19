@@ -2205,7 +2205,6 @@ void TCanvas::CreatePainter()
 TVirtualPadPainter *TCanvas::GetCanvasPainter()
 {
    // Access and (probably) creation of pad painter.
-   std::cout<<"GetCanvasPainter\n";
    if (!fPainter) CreatePainter();
    return fPainter;
 }

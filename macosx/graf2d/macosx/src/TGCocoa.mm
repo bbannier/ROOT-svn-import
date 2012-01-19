@@ -41,12 +41,60 @@ private:
    CGStateGuard &operator = (const CGStateGuard &rhs) = delete;
 };
 
+//______________________________________________________________________________
+CGContextRef PrepareContext(QuartzView *view)
+{
+   //This function can be called:
+   //a)'normal' way - from view's drawRect method.
+   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
+   //   drawRect.
+   
+   assert(view != nil && "PrepareContext, view parameter is nil");
+   
+   if (view.fContext) {
+      //Ok, no need to lock, we were called from drawRect.
+      return view.fContext;
+   } else {
+      //Life is never easy, ROOT called graphics method, not AppKit.
+      if ([view lockFocusIfCanDraw]) {
+         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+         assert(nsContext != nil && "PrepareContext, currentContext is nil");
+
+         CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
+         assert(ctx != nullptr && "PrepareContext, graphicsPort is null");
+
+         return ctx;
+      }
+   }
+   
+   return nullptr;
+}
+
+//______________________________________________________________________________
+void FlushContext(QuartzView *view, CGContextRef ctx)
+{
+   //This function can be called:
+   //a)'normal' way - from view's drawRect method, nothing to do.
+   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
+   //   drawRect, I have to flush graphics and unlock focus.
+   
+   assert(view != nil && "FlushContext, view parameter is nil");
+   assert(ctx != nullptr && "FlushContext, ctx parameter is null");
+   
+   if (view.fContext)//Flush will be done by AppKit.
+      return;
+
+   //Case b): flush and unlock.
+   CGContextFlush(ctx);
+   [view unlockFocus];
+}
+
 }
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
             : fForegroundProcess(false),
-              fCurrentWindow(0)
+              fSelectedDrawable(0)
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
@@ -60,7 +108,7 @@ TGCocoa::TGCocoa()
 TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title),
               fForegroundProcess(false),
-              fCurrentWindow(0)
+              fSelectedDrawable(0)
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
@@ -156,8 +204,33 @@ void TGCocoa::ClosePixmap()
 }
 
 //______________________________________________________________________________
-void TGCocoa::CopyPixmap(Int_t /*wid*/, Int_t /*xpos*/, Int_t /*ypos*/)
+void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
 {
+//   const ROOT::MacOSX::Util::AutoreleasePool pool;
+
+   id<X11Drawable> source = fPimpl->GetWindow(wid);
+   assert(source.fIsPixmap == YES && "CopyPixmap, source is not a pixmap");
+   
+   QuartzPixmap *pixmap = (QuartzPixmap *)source;
+   
+   id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
+   
+   if (window.fBackBuffer) {
+      CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
+
+      CGContextRef dstCtx = window.fBackBuffer.fContext;
+      assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
+
+      const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
+
+      CGContextDrawImage(dstCtx, imageRect, image);
+      CGContextFlush(dstCtx);
+
+      CGImageRelease(image);
+   } else {
+      Warning("CopyPixmap", "Operation skipped, since destination window is not double buffered");
+   }
+
    // Copies the pixmap "wid" at the position [xpos,ypos] in the current window.
  /*  assert(fCurrentWindow != 0 && "CopyPixmap, current window is null");
    assert(wid && "CopyPixmap, called for 'root' window");
@@ -359,22 +432,24 @@ void TGCocoa::MoveWindow(Int_t wid, Int_t x, Int_t y)
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::OpenPixmap(UInt_t /*w*/, UInt_t /*h*/)
+Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
 {
    //Two stage creation.
- /*  CocoaPixmap *pixmap = [CocoaPixmap alloc];
-   if (![pixmap initWithSize : CGSizeMake(w, h)]) {
+   NSSize newSize = {};
+   newSize.width = w;
+   newSize.height = h;
+
+   QuartzPixmap *obj = [QuartzPixmap alloc];
+   if (QuartzPixmap *pixmap = [obj initWithSize : newSize]) {
+      pixmap.fID = fPimpl->RegisterWindow(pixmap);
       [pixmap release];
+      
+      return (Int_t)pixmap.fID;
+   } else {
+      Error("OpenPixmap", "Pixmap initialization failed");
+      [obj release];
       return -1;
    }
-
-   WindowAttributes_t wAttr = {};
-   wAttr.fWidth = w;
-   wAttr.fHeight = h;
-   unsigned newID = fPimpl->RegisterWindow(pixmap, wAttr);
-   //Register new pixmap.
-   return newID;*/
-   return 0;
 }
 
 //______________________________________________________________________________
@@ -446,17 +521,26 @@ void TGCocoa::RescaleWindow(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::ResizePixmap(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
+Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 {
- /*  assert(wid != 0 && "ResizePixmap, pixmap with id 0");
+   return -1;
+   
+   assert(wid != 0 && "ResizePixmap, called for 'root' window");
 
-   id<RootGUIElement> obj = fPimpl->GetWindow(wid);
+   id<X11Drawable> drawable = fPimpl->GetWindow(wid);
+   assert(drawable.fIsPixmap == YES && "ResizePixmap, object is not a pixmap");
 
-   assert(obj.fIsPixmap && "ResizePixmap, object is not a pixmap");
-
-   CocoaPixmap *pixmap = (CocoaPixmap *)obj;
-   if([pixmap resizePixmap : CGSizeMake(w, h)])
-      return wid;*/
+   QuartzPixmap *pixmap = (QuartzPixmap *)drawable;
+   
+   NSSize newSize = {};
+   newSize.width = w;
+   newSize.height = h;
+   
+   if ([pixmap resize : newSize]) {
+      
+   
+      return 1;
+   }
 
    return -1;
 }
@@ -465,7 +549,7 @@ Int_t TGCocoa::ResizePixmap(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
 void TGCocoa::ResizeWindow(Int_t wid)
 {
    // Resizes the window "wid" if necessary.
- //  std::cout<<"RESIZE WINDOW "<<wid<<std::endl;
+   //std::cout<<"RESIZE WINDOW "<<wid<<std::endl;
 }
 
 //______________________________________________________________________________
@@ -475,33 +559,38 @@ void TGCocoa::SelectWindow(Int_t wid)
    //This makes things more difficult, since pixmap has it's own context,
    //not related to context from RootQuartzView's -drawRect method.
    //
- //  std::cout<<"SELECT WINDOW "<<wid<<std::endl;
-  /* 
    assert(wid != 0 && "SelectWindow, called for 'root' window");
-   
-   id<RootGUIElement> obj = fPimpl->GetWindow(wid);
-   
-   if (!obj.fIsPixmap) {
-      //This is really ugly thing, many thanks to TVirtualX/GUI design.
-      //Required, for example, for CopyPixmap to work.
-      fCurrentWindow = obj;
-   }
 
-//   NSLog(@"---------------- selecting context %p", obj.fCurrentContext);
-   SetContext(obj.fCurrentContext);*/
+   fSelectedDrawable = wid;
+   
+   id<X11Drawable> drawable = fPimpl->GetWindow(wid);
+   if (drawable.fIsPixmap) {
+      //Apply transformation to context.
+      //CGContextRef ctx = drawable.fContext;
+      //CGContextTranslateCTM(ctx, 0.f, drawable.fHeight);
+      //CGContextScaleCTM(ctx, 1.f, -1.f);
+
+      //assert(ctx != nullptr && "SelectWindow, context in pixmap is null");
+   }
 }
 
 //______________________________________________________________________________
-void TGCocoa::SelectPixmap(Int_t /*pixid*/)
+void TGCocoa::SelectPixmap(Int_t pixid)
 {
-   // Selects the pixmap "qpixid".
- /*  assert(pixid != 0 && "SelectPixmap, called for 'root' window");
+   assert(pixid != 0 && "SelectPixmap, 'root' window can not be selected");
 
-   id<RootGUIElement> obj = fPimpl->GetWindow(pixid);
-   assert(obj.fIsPixmap == TRUE && "SelectPixmap, called for non-pixmap object");
+   fSelectedDrawable = pixid;
+   
+   id<X11Drawable> drawable = fPimpl->GetWindow(pixid);
+   if (drawable.fIsPixmap) {
+      //Apply transformation to context.
+      CGContextRef ctx = drawable.fContext;
+//      NSLog(@"pixmap's context is %p", ctx);
+      CGContextTranslateCTM(ctx, 0.f, drawable.fHeight);
+      CGContextScaleCTM(ctx, 1.f, -1.f);
 
-
-   SetContext(obj.fCurrentContext);*/
+      assert(ctx != nullptr && "SelectWindow, context in pixmap is null");
+   }
 }
 
 //______________________________________________________________________________
@@ -535,7 +624,7 @@ void TGCocoa::SetCursor(Int_t /*win*/, ECursor /*cursor*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetDoubleBuffer(Int_t /*wid*/, Int_t /*mode*/)
+void TGCocoa::SetDoubleBuffer(Int_t wid, Int_t mode)
 {
    // Sets the double buffer on/off on the window "wid".
    // wid  - window identifier.
@@ -544,18 +633,60 @@ void TGCocoa::SetDoubleBuffer(Int_t /*wid*/, Int_t /*mode*/)
    //        mode = 1 double buffer is on
    //        mode = 0 double buffer is off
 
+   if (wid == 999) {
+      NSLog(@"***** SET DOUBLE BUFFER FOR ALL WINDOWS *****");
+   } else {
+      fSelectedDrawable = wid;
+      mode ? SetDoubleBufferON() : SetDoubleBufferOFF();
+   }   
 }
 
 //______________________________________________________________________________
 void TGCocoa::SetDoubleBufferOFF()
 {
    // Turns double buffer mode off.
+   assert(fSelectedDrawable != 0 && "SetDoubleBufferOFF, called, but no correct window was selected before");
+   
+   id<X11Drawable> obj = fPimpl->GetWindow(fSelectedDrawable);
+   assert(obj.fIsPixmap == NO && "SetDoubleBufferOFF, selected drawable is a pixmap, it can not have a back buffer");
+   
+   QuartzPixmap *buffer = obj.fBackBuffer;
+   assert(buffer != nil && "SetDoubleBufferOFF, window does not have back buffer");
+
+   fPimpl->DeleteWindow(buffer.fID);
+   obj.fBackBuffer = nil;
 }
 
 //______________________________________________________________________________
 void TGCocoa::SetDoubleBufferON()
 {
    // Turns double buffer mode on.
+   assert(fSelectedDrawable != 0 && "SetDoubleBufferON, called, but no correct window was selected before");
+   
+   id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
+   assert(window.fIsPixmap == NO && "SetDoubleBufferON, selected drawable is a pixmap, can not attach pixmap to pixmap");
+   
+   const unsigned currW = window.fWidth;
+   const unsigned currH = window.fHeight;
+   
+   if (QuartzPixmap *currentPixmap = window.fBackBuffer) {
+      if (currH == currentPixmap.fHeight && currW == currentPixmap.fWidth)
+         return;
+   }
+   
+   const Int_t pixmapIndex = OpenPixmap(currW, currH);
+   if (pixmapIndex != -1) {
+      id<X11Drawable> newPixmap = fPimpl->GetWindow(pixmapIndex);
+      assert(newPixmap.fIsPixmap == YES && "SetDoubleBufferON, index returned by OpenPixmap points to non-pixmap object");
+      
+      if (window.fBackBuffer) {//Now we can delete the old one, since the new was created.
+         fPimpl->DeleteWindow(window.fBackBuffer.fID);
+      }
+
+      window.fBackBuffer = (QuartzPixmap *)newPixmap;
+   } else {
+      Error("SetDoubleBufferON", "Can not create a pixmap");
+   }
 }
 
 //______________________________________________________________________________
@@ -637,6 +768,25 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
    // according to "mode".
    //    mode = 1 update
    //    mode = 0 sync
+   assert(fSelectedDrawable != 0 && "UpdateWindow, no window was selected, can not update 'root' window");
+   
+   id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
+   if (QuartzPixmap *pixmap = window.fBackBuffer) {
+      QuartzView *dstView = window.fContentView;
+      assert(dstView != nil && "UpdateWindow, destination view is nil");
+      
+      if (CGContextRef ctx = PrepareContext(dstView)) {
+         CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
+         const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
+
+         CGContextDrawImage(ctx, imageRect, image);
+         //Unlock view and flush graphics.
+         FlushContext(dstView, ctx);
+         CGImageRelease(image);
+      } else {
+         Error("UpdateWindow", "Method called for direct rendering, but no context found");
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -1332,58 +1482,6 @@ void TGCocoa::SetStrokeParameters(void *contextPtr, const GCValues_t &gcVals)con
    const CGFloat blue = (pixelColor & 0xff) / 255.f;
 
    CGContextSetRGBStrokeColor(ctx, red, green, blue, 1.f);
-}
-
-namespace {
-
-//______________________________________________________________________________
-CGContextRef PrepareContext(QuartzView *view)
-{
-   //This function can be called:
-   //a)'normal' way - from view's drawRect method.
-   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
-   //   drawRect.
-   
-   assert(view != nil && "PrepareContext, view parameter is nil");
-   
-   if (view.fContext) {
-      //Ok, no need to lock, we were called from drawRect.
-      return view.fContext;
-   } else {
-      //Life is never easy, ROOT called graphics method, not AppKit.
-      if ([view lockFocusIfCanDraw]) {
-         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-         assert(nsContext != nil && "PrepareContext, currentContext is nil");
-
-         CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
-         assert(ctx != nullptr && "PrepareContext, graphicsPort is null");
-
-         return ctx;
-      }
-   }
-   
-   return nullptr;
-}
-
-//______________________________________________________________________________
-void FlushContext(QuartzView *view, CGContextRef ctx)
-{
-   //This function can be called:
-   //a)'normal' way - from view's drawRect method, nothing to do.
-   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
-   //   drawRect, I have to flush graphics and unlock focus.
-   
-   assert(view != nil && "FlushContext, view parameter is nil");
-   assert(ctx != nullptr && "FlushContext, ctx parameter is null");
-   
-   if (view.fContext)//Flush will be done by AppKit.
-      return;
-
-   //Case b): flush and unlock.
-   CGContextFlush(ctx);
-   [view unlockFocus];
-}
-
 }
 
 //______________________________________________________________________________
@@ -2326,6 +2424,22 @@ void TGCocoa::SetContext(void *ctx)
 }
 
 //______________________________________________________________________________
+void *TGCocoa::GetCurrentContext()
+{
+   assert(fSelectedDrawable != 0 && "GetCurrentContext, no context for 'root' window");
+   id<X11Drawable> pixmap = fPimpl->GetWindow(fSelectedDrawable);
+
+   if (pixmap.fIsPixmap == NO)
+   {
+      int * pp = 0;
+      pp[100] = 0;
+   }
+
+   assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");
+   return pixmap.fContext;
+}
+
+//______________________________________________________________________________
 Bool_t TGCocoa::MakeProcessForeground()
 {
    //We start root in a terminal window, so it's considered as a 
@@ -2368,3 +2482,4 @@ Bool_t TGCocoa::MakeProcessForeground()
    
    return kTRUE;
 }
+
