@@ -13,7 +13,7 @@
 		703777B914877BF500BDCEBF /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 703777B714877BF500BDCEBF /* Credits.rtf */; };
 		703777BC14877BF500BDCEBF /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 703777BB14877BF500BDCEBF /* AppDelegate.m */; };
 		703777BF14877BF500BDCEBF /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 703777BD14877BF500BDCEBF /* MainMenu.xib */; };
-		703777C714877C9700BDCEBF /* QuartzView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 703777C614877C9700BDCEBF /* QuartzView.mm */; };
+		703777C714877C9700BDCEBF /* TestQuartzView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 703777C614877C9700BDCEBF /* TestQuartzView.mm */; };
 		7038665514878ACC001E4D5F /* libCore.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665414878ACC001E4D5F /* libCore.so */; settings = {ATTRIBUTES = (Required, ); }; };
 		7038665814879AA2001E4D5F /* QuartzTest.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7038665714879AA2001E4D5F /* QuartzTest.mm */; };
 		7038665B14879C61001E4D5F /* libHist.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 7038665A14879C61001E4D5F /* libHist.so */; };
@@ -42,8 +42,8 @@
 		703777BA14877BF500BDCEBF /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		703777BB14877BF500BDCEBF /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		703777BE14877BF500BDCEBF /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		703777C514877C9700BDCEBF /* QuartzView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzView.h; sourceTree = "<group>"; };
-		703777C614877C9700BDCEBF /* QuartzView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QuartzView.mm; sourceTree = "<group>"; };
+		703777C514877C9700BDCEBF /* TestQuartzView.h */ = {isa = PBXFileReference; fileEncoding = 4; path = TestQuartzView.h; sourceTree = "<group>"; };
+		703777C614877C9700BDCEBF /* TestQuartzView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TestQuartzView.mm; sourceTree = "<group>"; };
 		7038665414878ACC001E4D5F /* libCore.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libCore.so; path = ../../../lib/libCore.so; sourceTree = "<group>"; };
 		7038665714879AA2001E4D5F /* QuartzTest.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QuartzTest.mm; sourceTree = "<group>"; };
 		7038665914879ACF001E4D5F /* QuartzTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QuartzTest.h; sourceTree = "<group>"; };
@@ -137,8 +137,8 @@
 				703777BA14877BF500BDCEBF /* AppDelegate.h */,
 				703777BB14877BF500BDCEBF /* AppDelegate.m */,
 				703777BD14877BF500BDCEBF /* MainMenu.xib */,
-				703777C514877C9700BDCEBF /* QuartzView.h */,
-				703777C614877C9700BDCEBF /* QuartzView.mm */,
+				703777C514877C9700BDCEBF /* TestQuartzView.h */,
+				703777C614877C9700BDCEBF /* TestQuartzView.mm */,
 				7038665914879ACF001E4D5F /* QuartzTest.h */,
 				7038665714879AA2001E4D5F /* QuartzTest.mm */,
 				703777AF14877BF500BDCEBF /* Supporting Files */,
@@ -223,7 +223,7 @@
 			files = (
 				703777B514877BF500BDCEBF /* main.m in Sources */,
 				703777BC14877BF500BDCEBF /* AppDelegate.m in Sources */,
-				703777C714877C9700BDCEBF /* QuartzView.mm in Sources */,
+				703777C714877C9700BDCEBF /* TestQuartzView.mm in Sources */,
 				70D2601B148782B300F1E183 /* TestPadStub.cxx in Sources */,
 				7038665814879AA2001E4D5F /* QuartzTest.mm in Sources */,
 				7089AD3C1487B3D5004DF640 /* TestPad.mm in Sources */,

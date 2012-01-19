@@ -1,6 +1,10 @@
 #include <algorithm>
 #include <stdexcept>
 
+//DEBUG
+#include <iostream>
+//
+
 #include  <Cocoa/Cocoa.h>
 
 #include "CocoaPrivate.h"
@@ -458,18 +462,20 @@ Int_t TGCocoa::ResizePixmap(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ResizeWindow(Int_t /*wid*/)
+void TGCocoa::ResizeWindow(Int_t wid)
 {
    // Resizes the window "wid" if necessary.
+ //  std::cout<<"RESIZE WINDOW "<<wid<<std::endl;
 }
 
 //______________________________________________________________________________
-void TGCocoa::SelectWindow(Int_t /*wid*/)
+void TGCocoa::SelectWindow(Int_t wid)
 {
    //This function can be called from pad/canvas, both for window and for pixmap.
    //This makes things more difficult, since pixmap has it's own context,
    //not related to context from RootQuartzView's -drawRect method.
    //
+ //  std::cout<<"SELECT WINDOW "<<wid<<std::endl;
   /* 
    assert(wid != 0 && "SelectWindow, called for 'root' window");
    
@@ -881,27 +887,25 @@ QuartzView *CreateChildView(QuartzView *parent, Int_t x, Int_t y, UInt_t w, UInt
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::InitWindow(ULong_t /*parentID*/)
+Int_t TGCocoa::InitWindow(ULong_t parentID)
 {
    // Creates a new window and return window number.
    // Returns -1 if window initialization fails.
-//   NSLog(@"InitWindow was called with param %lu", window);
-/*
+
+   WindowAttributes_t attr = {};
+
    if (parentID) {
-      id<RootGUIElement> parentWin = fPimpl->GetWindow(parentID);
-      const WindowAttributes_t &attr = fPimpl->GetWindowAttributes(parentID);
-      
-      RootQuartzView *childView = CreateChildView(parentWin, attr.fX, attr.fY, attr.fWidth, attr.fHeight, attr.fBorderWidth, attr.fDepth, 0, 0, nullptr, 0);
-      const Window_t result = fPimpl->RegisterWindow(childView, attr);
-      
-      childView.fWinID = result;
+      id<X11Drawable> parentWin = fPimpl->GetWindow(parentID);
+      [parentWin getAttributes : &attr];
+   } else
+      ROOT::MacOSX::X11::GetRootWindowAttributes(&attr);
+   
 
-      [parentWin addChildView : childView];
-      [childView release];
-      return result;   
-   }*/
-
-   return 0;
+   Int_t rez = CreateWindow(parentID, 0, 0, attr.fWidth, attr.fHeight, 0, attr.fDepth, attr.fClass, nullptr, nullptr, 0);
+   
+      NSLog(@"create canvas %lu %d", parentID, rez);
+   
+   return rez;
 }
 
 //______________________________________________________________________________
