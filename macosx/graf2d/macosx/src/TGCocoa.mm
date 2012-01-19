@@ -10,7 +10,6 @@
 #include "CocoaPrivate.h"
 #include "X11Drawables.h"
 #include "QuartzFonts.h"
-#include "CocoaPixmap.h"
 #include "CocoaUtils.h"
 #include "TGCocoa.h"
 
@@ -440,10 +439,9 @@ Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
    newSize.height = h;
 
    QuartzPixmap *obj = [QuartzPixmap alloc];
-   if (QuartzPixmap *pixmap = [obj initWithSize : newSize]) {
+   if (QuartzPixmap *pixmap = [obj initWithSize : newSize flipped : YES]) {
       pixmap.fID = fPimpl->RegisterWindow(pixmap);
       [pixmap release];
-      
       return (Int_t)pixmap.fID;
    } else {
       Error("OpenPixmap", "Pixmap initialization failed");
@@ -536,7 +534,7 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
    newSize.width = w;
    newSize.height = h;
    
-   if ([pixmap resize : newSize]) {
+   if ([pixmap resize : newSize flipped : YES]) {
       
    
       return 1;
@@ -546,7 +544,7 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ResizeWindow(Int_t wid)
+void TGCocoa::ResizeWindow(Int_t /*wid*/)
 {
    // Resizes the window "wid" if necessary.
    //std::cout<<"RESIZE WINDOW "<<wid<<std::endl;
@@ -562,16 +560,6 @@ void TGCocoa::SelectWindow(Int_t wid)
    assert(wid != 0 && "SelectWindow, called for 'root' window");
 
    fSelectedDrawable = wid;
-   
-   id<X11Drawable> drawable = fPimpl->GetWindow(wid);
-   if (drawable.fIsPixmap) {
-      //Apply transformation to context.
-      //CGContextRef ctx = drawable.fContext;
-      //CGContextTranslateCTM(ctx, 0.f, drawable.fHeight);
-      //CGContextScaleCTM(ctx, 1.f, -1.f);
-
-      //assert(ctx != nullptr && "SelectWindow, context in pixmap is null");
-   }
 }
 
 //______________________________________________________________________________
@@ -580,17 +568,6 @@ void TGCocoa::SelectPixmap(Int_t pixid)
    assert(pixid != 0 && "SelectPixmap, 'root' window can not be selected");
 
    fSelectedDrawable = pixid;
-   
-   id<X11Drawable> drawable = fPimpl->GetWindow(pixid);
-   if (drawable.fIsPixmap) {
-      //Apply transformation to context.
-      CGContextRef ctx = drawable.fContext;
-//      NSLog(@"pixmap's context is %p", ctx);
-      CGContextTranslateCTM(ctx, 0.f, drawable.fHeight);
-      CGContextScaleCTM(ctx, 1.f, -1.f);
-
-      assert(ctx != nullptr && "SelectWindow, context in pixmap is null");
-   }
 }
 
 //______________________________________________________________________________
@@ -674,18 +651,26 @@ void TGCocoa::SetDoubleBufferON()
          return;
    }
    
-   const Int_t pixmapIndex = OpenPixmap(currW, currH);
-   if (pixmapIndex != -1) {
-      id<X11Drawable> newPixmap = fPimpl->GetWindow(pixmapIndex);
-      assert(newPixmap.fIsPixmap == YES && "SetDoubleBufferON, index returned by OpenPixmap points to non-pixmap object");
-      
-      if (window.fBackBuffer) {//Now we can delete the old one, since the new was created.
-         fPimpl->DeleteWindow(window.fBackBuffer.fID);
-      }
+   NSSize newSize = {};
+   newSize.width = currW, newSize.height = currH;
+   
+   QuartzPixmap *mem = [QuartzPixmap alloc];
+   if (!mem) {
+      Error("SetDoubleBufferON", "QuartzPixmap alloc failed");
+      return;
+   }
+   
+   if (QuartzPixmap *pixmap = [mem initWithSize : newSize flipped : NO]) {
+      pixmap.fID = fPimpl->RegisterWindow(pixmap);
+      [pixmap release];
 
-      window.fBackBuffer = (QuartzPixmap *)newPixmap;
+      if (window.fBackBuffer)//Now we can delete the old one, since the new was created.
+         fPimpl->DeleteWindow(window.fBackBuffer.fID);
+
+      window.fBackBuffer = pixmap;
    } else {
-      Error("SetDoubleBufferON", "Can not create a pixmap");
+      [mem dealloc];
+      Error("SetDoubleBufferON", "Can't create a pixmap");
    }
 }
 
@@ -2428,14 +2413,14 @@ void *TGCocoa::GetCurrentContext()
 {
    assert(fSelectedDrawable != 0 && "GetCurrentContext, no context for 'root' window");
    id<X11Drawable> pixmap = fPimpl->GetWindow(fSelectedDrawable);
-
-   if (pixmap.fIsPixmap == NO)
-   {
-      int * pp = 0;
-      pp[100] = 0;
-   }
-
-   assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");
+   assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");   
+   
+   
+   
+  // const CGAffineTransform currentMatrix = CGContextGetCTM(pixmap.fContext);
+//   NSLog(@"current matrix is %g %g %g %g %g %g", currentMatrix.a, currentMatrix.b, currentMatrix.c, currentMatrix.d, currentMatrix.tx, currentMatrix.ty);
+   //NSLog(@"context is %p", ctx);
+   
    return pixmap.fContext;
 }
 

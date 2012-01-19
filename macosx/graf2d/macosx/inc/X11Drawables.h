@@ -263,8 +263,8 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 
 @property (nonatomic, readonly) CGContextRef fContext;
 
-- (id) initWithSize : (NSSize) frame;
-- (BOOL) resize : (NSSize) newSize;
+- (id) initWithSize : (NSSize) frame flipped : (BOOL) flip;
+- (BOOL) resize : (NSSize) newSize flipped : (BOOL) flip;
 
 - (unsigned) fWidth;
 - (unsigned) fHeight;

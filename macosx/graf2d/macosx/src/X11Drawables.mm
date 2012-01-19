@@ -949,13 +949,13 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 @synthesize fID;
 
 //______________________________________________________________________________
-- (id) initWithSize : (NSSize) pixmapSize
+- (id) initWithSize : (NSSize) pixmapSize flipped : (BOOL) flip
 {
    if (self = [super init]) {
       fWidth = 0;
       fHeight = 0;
       
-      if ([self resize : pixmapSize])
+      if ([self resize : pixmapSize flipped : flip])
          return self;
    }
    
@@ -973,7 +973,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (BOOL) resize : (NSSize) newSize
+- (BOOL) resize : (NSSize) newSize flipped : (BOOL) flip
 {
    assert(newSize.width > 0 && "Pixmap width must be positive");
    assert(newSize.height > 0 && "Pixmap height must be positive");
@@ -1011,6 +1011,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    fHeight = newSize.height;
    
    fContext = ctx;//[2]
+
+   if (flip) {
+      CGContextTranslateCTM(fContext, 0.f, fHeight);
+      CGContextScaleCTM(fContext, 1.f, -1.f);
+   }
 
    CGColorSpaceRelease(colorSpace);//[1]
 
