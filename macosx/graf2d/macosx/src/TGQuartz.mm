@@ -62,7 +62,7 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
       if (!gFillPattern) SetContextFillColor(GetFillColor());
       CGContextFillRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    } else {
-      SetContextStrokeColor(GetFillColor());
+      SetContextStrokeColor(GetLineColor());
       CGContextStrokeRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    }
    
