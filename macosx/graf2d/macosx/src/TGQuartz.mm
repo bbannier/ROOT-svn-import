@@ -51,7 +51,7 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 {
    // Draw a box
 
-   CGContextRef ctx = (CGContextRef)fCtx;//This is context from CoreGraphics, it's up to me (TGCocoa) to manage it.
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
    CGContextSaveGState(ctx);
 
@@ -59,10 +59,10 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
    if (y1 > y2) std::swap(y1, y2);
 
    if (mode == kFilled) {
-      if (!gFillPattern) SetFillColorIndex(GetFillColor());
+      if (!gFillPattern) SetContextFillColor(GetFillColor());
       CGContextFillRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    } else {
-      SetStrokeColorIndex(GetFillColor());
+      SetContextStrokeColor(GetFillColor());
       CGContextStrokeRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    }
    
@@ -73,7 +73,9 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 //______________________________________________________________________________
 void TGQuartz::DrawCellArray(Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/, Int_t /*nx*/, Int_t /*ny*/, Int_t */*ic*/)
 {
-//   CGContextRef ctx = (CGContextRef)fCtx;
+   // Draw CellArray
+   
+   //CGContextRef ctx = (CGContextRef)GetCurrentContext();
 }
 
 
@@ -84,7 +86,7 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    // n         : number of points
    // xy        : list of points
 
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
    CGContextBeginPath (ctx);
 
@@ -93,10 +95,10 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    for (Int_t i=1; i<n; i++) CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
 
    if (gFillHollow) {
-     SetStrokeColorIndex(GetFillColor());
+     SetContextStrokeColor(GetFillColor());
      CGContextStrokePath(ctx);
    } else {
-      if (!gFillPattern) SetFillColorIndex(GetFillColor());
+      if (!gFillPattern) SetContextFillColor(GetFillColor());
       CGContextFillPath(ctx);
    }
 }
@@ -109,9 +111,9 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
    // x1,y1        : begin of line
    // x2,y2        : end of line
       
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
    
-   SetStrokeColorIndex(GetLineColor());
+   SetContextStrokeColor(GetLineColor());
    
    CGContextBeginPath (ctx);
    CGContextMoveToPoint(ctx, x1, y1);
@@ -127,9 +129,9 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
    // n         : number of points
    // xy        : list of points   
    
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
    
-   SetStrokeColorIndex(GetLineColor());
+   SetContextStrokeColor(GetLineColor());
    
    SetLineStyle(GetLineStyle());
 
@@ -146,7 +148,9 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
 //______________________________________________________________________________
 void TGQuartz::DrawPolyMarker(Int_t /*n*/, TPoint * /*xy*/)
 {
-   //CGContextRef ctx = (CGContextRef)fCtx;
+   // Draw PolyMarker
+   
+   //CGContextRef ctx = (CGContextRef)GetCurrentContext();
 }
 
 
@@ -155,10 +159,10 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const 
 {
    // Draw text
    
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
  
    // Text color
-   SetFillColorIndex(GetTextColor());
+   SetContextFillColor(GetTextColor());
 
   // Text rotation
    CGAffineTransform tm; 
@@ -249,11 +253,11 @@ void Painter::DrawText(Double_t x, Double_t y, const CTLineGuard &ctLine)
 
 
 //______________________________________________________________________________
-void TGQuartz::SetFillColorIndex(Int_t ci)
+void TGQuartz::SetContextFillColor(Int_t ci)
 {
-   // Set the current fill color index.
+   // Set the current fill color ID.
 
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
    TColor *color = gROOT->GetColor(ci);
    if (!color) return;
@@ -270,11 +274,11 @@ void TGQuartz::SetFillColorIndex(Int_t ci)
 
 
 //______________________________________________________________________________
-void TGQuartz::SetStrokeColorIndex(Int_t ci)
+void TGQuartz::SetContextStrokeColor(Int_t ci)
 {
-   // Set the current fill color index.
+   // Set the current fill color ID.
 
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
    TColor *color = gROOT->GetColor(ci);
    if (!color) return;
@@ -303,7 +307,7 @@ void TGQuartz::SetLineColor(Color_t cindex)
 void TGQuartz::SetLineStyle(Style_t lstyle)
 {
    // Set line style.
-
+/*
    static Int_t dashed[2] = {3,3};
    static Int_t dotted[2] = {1,2};
    static Int_t dasheddotted[4] = {3,4,1,4};
@@ -333,7 +337,7 @@ void TGQuartz::SetLineStyle(Style_t lstyle)
          delete [] linestyle;
          delete tokens;
       }
-   }
+   }*/
 }
 
 
@@ -348,15 +352,16 @@ void TGQuartz::SetLineType(Int_t n, Int_t *dash)
    //                 e.g. n = 4,dash = (6,3,1,3) gives a dashed-dotted line
    //                 with dash length 6 and a gap of 7 between dashes
    // dash(n) - dash segment lengths
+   /*
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
    
-   CGContextRef ctx = (CGContextRef)fCtx;
    if (n) {
       CGFloat lengths[n];
       for (int i=0; i<n;i++) lengths[i] = (CGFloat)dash[i];
       CGContextSetLineDash(ctx,0,lengths,n);
    } else {
       CGContextSetLineDash(ctx,0,NULL,0);
-   }
+   }*/
 }
 
 
@@ -366,12 +371,13 @@ void TGQuartz::SetLineWidth(Width_t width)
    // Sets the line width.
    //
    // width - the line width in pixels
+   /*
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
    
-   CGContextRef ctx = (CGContextRef)fCtx;
    if (fLineWidth == width || width<0) return;
    fLineWidth = width;
    CGFloat w = (CGFloat) fLineWidth;
-   CGContextSetLineWidth(ctx, w);
+   CGContextSetLineWidth(ctx, w);*/
 }
 
 
@@ -379,6 +385,7 @@ void TGQuartz::SetLineWidth(Width_t width)
 void TGQuartz::SetFillColor(Color_t cindex)
 {
    // Sets color index "cindex" for fill areas.
+
    TAttFill::SetFillColor(cindex);
 }
 
@@ -409,7 +416,7 @@ void TGQuartz::SetFillStyle(Style_t style)
       case 3:         // hatch
          gFillHollow  = 0;
          gFillPattern = fasi;
-         SetStencilPattern();
+//         SetStencilPattern();
          break;
          
       default:
@@ -449,7 +456,7 @@ void TGQuartz::SetStencilPattern()
 {
    // Set the fill pattern
    
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
    CGPatternRef pattern;
    CGColorSpaceRef baseSpace;
    CGColorSpaceRef patternSpace;
@@ -490,6 +497,7 @@ void TGQuartz::SetStencilPattern()
 void TGQuartz::SetMarkerColor(Color_t cindex)
 {
    // Sets color index "cindex" for markers.
+
    TAttMarker::SetMarkerColor(cindex);
 }
 
@@ -500,6 +508,7 @@ void TGQuartz::SetMarkerSize(Float_t markersize)
    // Sets marker size index.
    //
    // markersize - the marker scale factor
+
    TAttMarker::SetMarkerSize(markersize);
 }
 
@@ -508,6 +517,7 @@ void TGQuartz::SetMarkerSize(Float_t markersize)
 void TGQuartz::SetMarkerStyle(Style_t markerstyle)
 {
    // Sets marker style.
+
    TAttMarker::SetMarkerStyle(markerstyle);
 }
 
@@ -519,6 +529,7 @@ void TGQuartz::SetTextAlign(Short_t talign)
    //
    // talign = txalh horizontal text alignment
    // talign = txalv vertical text alignment
+
    TAttText::SetTextAlign(talign);
 }
 
@@ -527,6 +538,7 @@ void TGQuartz::SetTextAlign(Short_t talign)
 void TGQuartz::SetTextColor(Color_t cindex)
 {
    // Sets the color index "cindex" for text.
+
    TAttText::SetTextColor(cindex);
 }
 
@@ -535,8 +547,9 @@ void TGQuartz::SetTextColor(Color_t cindex)
 void TGQuartz::SetTextFont(Font_t fontnumber)
 {
    // Sets the current text font number.
+
    TAttText::SetTextFont(fontnumber);
-   
+/*   
    static const char *fontname[] = {
       "Times-Italic"         , "Times-Bold"         , "Times-BoldItalic",
       "Helvetica"            , "Helvetica-Oblique"  , "Helvetica-Bold"  ,
@@ -547,7 +560,7 @@ void TGQuartz::SetTextFont(Font_t fontnumber)
    Int_t font = abs(fTextFont)/10;
    if( font > 15 || font < 1) font = 1;
    
-   CGContextRef ctx = (CGContextRef)fCtx;
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
    
    if (font<12 || font==13) {
       CGContextSelectFont (ctx, 
@@ -563,7 +576,7 @@ void TGQuartz::SetTextFont(Font_t fontnumber)
                         
    // Text drawing mode
 ///CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
-   CGContextSetTextDrawingMode (ctx, kCGTextFill);  
+   CGContextSetTextDrawingMode (ctx, kCGTextFill);  */
 }
 
 
@@ -572,9 +585,9 @@ void TGQuartz::SetTextSize(Float_t textsize)
 {
    // Sets the current text size to "textsize"
    
-   TAttText::SetTextSize(textsize);
-   CGContextRef ctx = (CGContextRef)fCtx;
-   CGContextSetFontSize(ctx, textsize);
+   TAttText::SetTextSize(textsize);/*
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   CGContextSetFontSize(ctx, textsize);*/
 }
 
 

@@ -46,8 +46,9 @@ public:
    virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
    virtual void      SetTextSize(Float_t textsize);
    
-           void      SetFillColorIndex(Int_t ci);
-           void      SetStrokeColorIndex(Int_t ci);
+           void      SetContextFillColor(Int_t ci);
+           void      SetContextStrokeColor(Int_t ci);
+           //void      SetLineStyleID(Int_t id);
            void      SetStencilPattern();
 
 private:
