@@ -33,7 +33,6 @@ public:
    virtual void      SetFillColor(Color_t cindex);
    virtual void      SetFillStyle(Style_t style);
    virtual void      SetLineColor(Color_t cindex);
-   virtual void      SetLineType(Int_t n, Int_t *dash);
    virtual void      SetLineStyle(Style_t linestyle);
    virtual void      SetLineWidth(Width_t width);
    virtual void      SetMarkerColor(Color_t cindex);
@@ -48,7 +47,9 @@ public:
    
            void      SetContextFillColor(Int_t ci);
            void      SetContextStrokeColor(Int_t ci);
-           //void      SetLineStyleID(Int_t id);
+           void      SetContextLineStyle(Int_t id);
+           void      SetContextLineType(Int_t n, Int_t *dash);
+           void      SetContextLineWidth(Int_t width);
            void      SetStencilPattern();
 
 private:
