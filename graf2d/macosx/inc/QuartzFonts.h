@@ -50,14 +50,19 @@ bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst);
 
 class FontManager {
 public:
-   //Select the existing font or create a new one and select it.
-   FontManager(){}
+   enum FontManagerDefaults {
+      fmdNOfFonts = 13
+   };
+   
+   FontManager();
+   ~FontManager();
    
    FontStruct_t LoadFont(const XLFDName &xlfd);
    void UnloadFont(FontStruct_t font);
 
    unsigned GetTextWidth(FontStruct_t font, const char *text, int nChars);
    void GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDescent);
+   CTFontRef SelectFont(Font_t fontIndex, Float_t fontSize);
 
 private:
    typedef ROOT::MacOSX::Util::CFGuard<CTFontRef> CTFontGuard_t;
@@ -65,6 +70,19 @@ private:
    
    FontManager(const FontManager &rhs) = delete;
    FontManager &operator = (const FontManager &rhs) = delete;
+   
+   typedef std::map<UInt_t, CTFontRef> FontMap_t;
+   typedef FontMap_t::iterator FontMapIter_t;
+   typedef FontMap_t::const_iterator FontMapConstIter_t;
+
+   FontMap_t fFonts[fmdNOfFonts];
+ 
+   CTFontRef fSelectedFont;
+   
+   std::vector<UniChar> fSymbolMap;
+   
+   void InitSymbolMap();
+
 };
 
 //Find better name.
