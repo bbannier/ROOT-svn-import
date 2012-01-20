@@ -838,11 +838,18 @@ void TGCocoa::UnmapWindow(Window_t wid)
 }
 
 //______________________________________________________________________________
-void TGCocoa::DestroyWindow(Window_t /*wid*/)
+void TGCocoa::DestroyWindow(Window_t wid)
 {
-   // Destroys the window "wid" as well as all of its subwindows.
-   // The window should never be referenced again. If the window specified
-   // by the "id" argument is mapped, it is unmapped automatically.
+   //
+   assert(wid != 0 && "DestroyWindow, called for 'root' window");
+   
+   id<X11Drawable> window = fPimpl->GetWindow(wid);
+   assert(window.fIsPixmap == NO && "DestroyWindow, called for pixmap");
+   
+   if (window.fBackBuffer)
+      fPimpl->DeleteWindow(window.fBackBuffer.fID);
+   
+   fPimpl->DeleteWindow(wid);
 }
 
 //______________________________________________________________________________
