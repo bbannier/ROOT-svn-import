@@ -5,6 +5,7 @@
 
 #import "GuiTypes.h"
 
+@protocol X11Drawable;
 @class QuartzView;
 
 namespace ROOT {
@@ -21,6 +22,7 @@ int GlobalYROOTToCocoa(CGFloat yROOT);
 int LocalYCocoaToROOT(QuartzView *parentView, CGFloat yCocoa);
 //:)
 int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
+int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 }
 }

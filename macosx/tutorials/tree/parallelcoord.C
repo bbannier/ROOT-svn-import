@@ -67,7 +67,7 @@ void parallelcoord() {
       nt->Fill(r1, r2, r3, r4, r5, r6);
    }
    nt->Draw("x:y:z:u:v:w","","para",5000);
-   TParallelCoord* para = (TParallelCoord*)gPad->GetListOfPrimitives()->FindObject("ParaCoord");
+/*   TParallelCoord* para = (TParallelCoord*)gPad->GetListOfPrimitives()->FindObject("ParaCoord");
    para->SetDotsSpacing(5);
    TParallelCoordVar* firstaxis = (TParallelCoordVar*)para->GetVarList()->FindObject("x");
    firstaxis->AddRange(new TParallelCoordRange(firstaxis,0.846018,1.158469));
@@ -77,4 +77,5 @@ void parallelcoord() {
    para->AddSelection("Orange");
    para->GetCurrentSelection()->SetLineColor(kOrange+9);
    firstaxis->AddRange(new TParallelCoordRange(firstaxis,-1.263024,-0.755292));
+*/
 }

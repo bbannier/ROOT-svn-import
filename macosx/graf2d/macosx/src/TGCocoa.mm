@@ -220,6 +220,8 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
       CGContextRef dstCtx = window.fBackBuffer.fContext;
       assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
 
+      ypos = ROOT::MacOSX::X11::LocalYROOTToCocoa(window.fBackBuffer, ypos + pixmap.fHeight);
+
       const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
 
       CGContextDrawImage(dstCtx, imageRect, image);
@@ -229,31 +231,6 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
    } else {
       Warning("CopyPixmap", "Operation skipped, since destination window is not double buffered");
    }
-
-   // Copies the pixmap "wid" at the position [xpos,ypos] in the current window.
- /*  assert(fCurrentWindow != 0 && "CopyPixmap, current window is null");
-   assert(wid && "CopyPixmap, called for 'root' window");
-   
-   id<RootGUIElement> obj = fPimpl->GetWindow(wid);
-   assert(obj.fIsPixmap == TRUE && "CopyPixmap called for non-pixmap object");
-   
-   id<RootGUIElement> win = (id<RootGUIElement>)fCurrentWindow;
-
-   CGContextRef ctx = win.fCurrentContext;
-   if (!ctx)
-      return;
-
-//   assert(ctx != 0 && "CopyPixmap, destination context is null");
-
-   CocoaPixmap *pixmap = (CocoaPixmap*)obj;
-   CGImageRef image = pixmap.fImage;
-   assert(image != 0 && "CopyPixmap, source image is null");
-   
-   //
-   ypos = RootToCocoaY(win.fWinID, ypos);
-   const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
-   
-   CGContextDrawImage(ctx, imageRect, image);*/
 }
 
 //______________________________________________________________________________
@@ -2414,12 +2391,6 @@ void *TGCocoa::GetCurrentContext()
    assert(fSelectedDrawable != 0 && "GetCurrentContext, no context for 'root' window");
    id<X11Drawable> pixmap = fPimpl->GetWindow(fSelectedDrawable);
    assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");   
-   
-   
-   
-  // const CGAffineTransform currentMatrix = CGContextGetCTM(pixmap.fContext);
-//   NSLog(@"current matrix is %g %g %g %g %g %g", currentMatrix.a, currentMatrix.b, currentMatrix.c, currentMatrix.d, currentMatrix.tx, currentMatrix.ty);
-   //NSLog(@"context is %p", ctx);
    
    return pixmap.fContext;
 }

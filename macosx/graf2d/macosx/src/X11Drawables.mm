@@ -92,6 +92,16 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
    return int(parentView.frame.size.height - yROOT);
 }
 
+
+//______________________________________________________________________________
+int LocalYROOTToCocoa(id<X11Drawable> drawable, CGFloat yROOT)
+{
+   //:)
+   assert(drawable != nil && "LocalYROOTToCocoa, drawable is nil");
+   
+   return int(drawable.fHeight - yROOT);
+}
+
 //______________________________________________________________________________
 void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> window)
 {
