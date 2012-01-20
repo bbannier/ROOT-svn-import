@@ -46,6 +46,7 @@ public:
    virtual void      SetTextSize(Float_t textsize);
    
            void      SetContextFillColor(Int_t ci);
+           void      SetContextFillStyle(Int_t id);
            void      SetContextStrokeColor(Int_t ci);
            void      SetContextLineStyle(Int_t id);
            void      SetContextLineType(Int_t n, Int_t *dash);

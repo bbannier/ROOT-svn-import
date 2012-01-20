@@ -53,6 +53,8 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
+   SetContextFillStyle(GetFillStyle());
+   
    CGContextSaveGState(ctx);
 
    if (x1 > x2) std::swap(x1, x2);
@@ -89,6 +91,8 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
 
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
+   SetContextFillStyle(GetFillStyle());
+   
    CGContextBeginPath (ctx);
 
    CGContextMoveToPoint (ctx, xy[0].fX, xy[0].fY);
@@ -207,7 +211,8 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const 
    CGContextTranslateCTM(ctx, -0.5 * w, -0.5 * h);
 
    CTLineDraw(ctLine.fCTLine, ctx);
-   CGContextRestoreGState(ctx);*/
+   CGContextRestoreGState(ctx);
+ */
 }
 
 /*
@@ -416,14 +421,21 @@ void TGQuartz::SetFillColor(Color_t cindex)
 void TGQuartz::SetFillStyle(Style_t style)
 {
    // Set fill area style.
+   
+   TAttFill::SetFillStyle(style);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::SetContextFillStyle(Int_t id)
+{
+   // Set fill area style.
    //
    // style - compound fill area interior style
    //         style = 1000 * interiorstyle + styleindex
-   
-   TAttFill::SetFillStyle(style);   
 
-   Int_t fais = style/1000;
-   Int_t fasi = style%1000;   
+   Int_t fais = id/1000;
+   Int_t fasi = id%1000;   
    
    switch (fais) {
       case 1:         // solid
@@ -438,7 +450,7 @@ void TGQuartz::SetFillStyle(Style_t style)
       case 3:         // hatch
          gFillHollow  = 0;
          gFillPattern = fasi;
-//         SetStencilPattern();
+         SetStencilPattern();
          break;
          
       default:
@@ -477,7 +489,7 @@ static void DrawStencil (void *sti, CGContextRef ctx)
 void TGQuartz::SetStencilPattern()
 {
    // Set the fill pattern
-   
+
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
    CGPatternRef pattern;
    CGColorSpaceRef baseSpace;
