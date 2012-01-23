@@ -9,7 +9,7 @@
 //#include "Cocoa"
 
 #include "QuartzFonts.h"
-
+#include "QuartzMarkers.h"
 
 #include "TGQuartz.h"
 #include "TPoint.h"
@@ -27,6 +27,7 @@ const Double_t kPI = TMath::Pi();
 static Int_t gFillHollow;  // Flag if fill style is hollow
 static Int_t gFillPattern; // Fill pattern
 
+using namespace ROOT;
 
 ClassImp(TGQuartz)
 
@@ -166,8 +167,14 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
    SetContextFillColor(GetMarkerColor());
+   
+   SetContextStrokeColor(GetMarkerColor());
+   
+   SetContextLineStyle(1);
+   
+   SetContextLineWidth(1);
 
-   for (Int_t i=0; i<n; i++) CGContextFillRect(ctx, CGRectMake(xy[i].fX, xy[i].fY, 1, 1));
+   Quartz::DrawPolyMarker(ctx, n, xy, GetMarkerSize(), GetMarkerStyle());
 }
 
 
