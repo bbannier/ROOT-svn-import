@@ -16,6 +16,7 @@
 namespace ROOT {
 namespace Quartz {
 
+   
 //______________________________________________________________________________
 void DrawMarkerDot(CGContextRef ctx, unsigned n, const TPoint *xy)
 {
@@ -23,8 +24,10 @@ void DrawMarkerDot(CGContextRef ctx, unsigned n, const TPoint *xy)
       CGContextFillRect(ctx, CGRectMake(xy[i].fX, xy[i].fY, 1.f, 1.f));
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerPlus(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerPlus(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                    Size_t markerSize)
 {
    const Double_t im = 4 * markerSize + 0.5;
    
@@ -44,8 +47,10 @@ void DrawMarkerPlus(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t marke
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerStar(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                    Size_t markerSize)
 {
    Double_t im = 4 * markerSize + 0.5;
    
@@ -87,8 +92,10 @@ void DrawMarkerStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t marke
    }
 }
 
+
 //______________________________________________________________________________
-void DrawMarkerOpenCircle(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerOpenCircle(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                          Size_t markerSize)
 {
    Double_t r = 4 * markerSize + 0.5;
    if (r > 100.)
@@ -105,8 +112,10 @@ void DrawMarkerOpenCircle(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerX(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerX(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                 Size_t markerSize)
 {
    const Double_t im = 0.707 * (4 * markerSize + 0.5) + 0.5;
    for (unsigned i = 0; i < n; ++i) {
@@ -125,6 +134,7 @@ void DrawMarkerX(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSi
    }
 }
 
+   
 //______________________________________________________________________________
 void DrawMarkerFullDotSmall(CGContextRef ctx, unsigned n, const TPoint *xy)
 {
@@ -144,6 +154,7 @@ void DrawMarkerFullDotSmall(CGContextRef ctx, unsigned n, const TPoint *xy)
    }
 }
 
+   
 //______________________________________________________________________________
 void DrawMarkerFullDotMedium(CGContextRef ctx, unsigned n, const TPoint *xy)
 {
@@ -151,8 +162,10 @@ void DrawMarkerFullDotMedium(CGContextRef ctx, unsigned n, const TPoint *xy)
       CGContextFillRect(ctx, CGRectMake(xy[i].fX - 1, xy[i].fY - 1, 3.f, 3.f));
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerFullDotLarge(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullDotLarge(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                            Size_t markerSize)
 {
    Double_t radius = 4 * markerSize + 0.5;
    if (radius > 100.)
@@ -169,8 +182,10 @@ void DrawMarkerFullDotLarge(CGContextRef ctx, unsigned n, const TPoint *xy, Size
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerFullSquare(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullSquare(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                          Size_t markerSize)
 {
    const Double_t im = 4 * markerSize + 0.5;
    for (unsigned i = 0; i < n; ++i) {
@@ -179,8 +194,10 @@ void DrawMarkerFullSquare(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerOpenSquare(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerOpenSquare(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                          Size_t markerSize)
 {
    const Double_t im = 4 * markerSize + 0.5;
    for (unsigned i = 0; i < n; ++i) {
@@ -191,7 +208,8 @@ void DrawMarkerOpenSquare(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t
 
 
 //______________________________________________________________________________
-void DrawMarkerFullTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                              Size_t markerSize)
 {
    const Double_t im = 4 * markerSize + 0.5;
    for (unsigned i = 0; i < n; ++i) {
@@ -205,8 +223,10 @@ void DrawMarkerFullTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, Si
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerOpenTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerOpenTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                              Size_t markerSize)
 {
    const Double_t im = 4 * markerSize + 0.5;
    for (unsigned i = 0; i < n; ++i) {
@@ -221,8 +241,10 @@ void DrawMarkerOpenTriangleUp(CGContextRef ctx, unsigned n, const TPoint *xy, Si
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerOpenTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerOpenTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                                Size_t markerSize)
 {
    const Int_t im = Int_t(4 * markerSize + 0.5);   
    for (unsigned i = 0; i < n; ++i) {
@@ -238,8 +260,10 @@ void DrawMarkerOpenTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, 
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerFullTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                                Size_t markerSize)
 {
    const Int_t im = Int_t(4 * markerSize + 0.5);   
    for (unsigned i = 0; i < n; ++i) {
@@ -254,8 +278,10 @@ void DrawMarkerFullTriangleDown(CGContextRef ctx, unsigned n, const TPoint *xy, 
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerFullDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                           Size_t markerSize)
 {
    const Int_t im  = Int_t(4 * markerSize + 0.5);
    const Int_t imx = Int_t(2.66 * markerSize + 0.5);
@@ -273,8 +299,10 @@ void DrawMarkerFullDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, Size_
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerOpenDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerOpenDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                           Size_t markerSize)
 {
    const Int_t im  = Int_t(4 * markerSize + 0.5);
    const Int_t imx = Int_t(2.66 * markerSize + 0.5);
@@ -293,8 +321,10 @@ void DrawMarkerOpenDiamond(CGContextRef ctx, unsigned n, const TPoint *xy, Size_
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerFullCross(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullCross(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                         Size_t markerSize)
 {
    const Int_t im  = Int_t(4 * markerSize + 0.5);
    const Int_t imx = Int_t(1.33 * markerSize + 0.5);
@@ -323,7 +353,8 @@ void DrawMarkerFullCross(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t 
 
 
 //______________________________________________________________________________
-void DrawMarkerOpenCross(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerOpenCross(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                         Size_t markerSize)
 {
    const Int_t im  = Int_t(4 * markerSize + 0.5);
    const Int_t imx = Int_t(1.33 * markerSize + 0.5);
@@ -350,8 +381,10 @@ void DrawMarkerOpenCross(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t 
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerFullStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerFullStar(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                        Size_t markerSize)
 {
    // HIGZ full star pentagone
    const Int_t im  = Int_t(4 * markerSize + 0.5);
@@ -414,8 +447,10 @@ void DrawMarkerFullStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t m
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawMarkerOpenStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t markerSize)
+void DrawMarkerOpenStar(CGContextRef ctx, unsigned n, const TPoint *xy, 
+                        Size_t markerSize)
 {
    const Int_t im  = Int_t(4 * markerSize + 0.5);
    const Int_t im1 = Int_t(0.66 * markerSize + 0.5);
@@ -443,8 +478,10 @@ void DrawMarkerOpenStar(CGContextRef ctx, unsigned n, const TPoint *xy, Size_t m
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *xy, Size_t markerSize, Style_t markerStyle)
+void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *xy, 
+                    Size_t markerSize, Style_t markerStyle)
 {
    switch (markerStyle) {
    case kDot:
@@ -512,8 +549,10 @@ void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *xy, Size_t
    }
 }
 
+   
 //______________________________________________________________________________
-void DrawPolyMarker(CGContextRef ctx, const std::vector<TPoint> &xy, Size_t markerSize, Style_t markerStyle)
+void DrawPolyMarker(CGContextRef ctx, const std::vector<TPoint> &xy, 
+                    Size_t markerSize, Style_t markerStyle)
 {
    DrawPolyMarker(ctx, xy.size(), &xy[0], markerSize, markerStyle);
 }

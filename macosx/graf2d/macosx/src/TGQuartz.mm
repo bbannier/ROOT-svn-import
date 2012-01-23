@@ -1,3 +1,15 @@
+// @(#)root/graf2d:$Id$
+// Author: Olivier Couet, 23/01/2012
+
+/*************************************************************************
+ * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+
 #include <algorithm>
 
 #include <Cocoa/Cocoa.h>
@@ -10,6 +22,8 @@
 
 #include "QuartzFonts.h"
 #include "QuartzMarkers.h"
+#include "QuartzFillArea.h"
+
 
 #include "TGQuartz.h"
 #include "TPoint.h"
@@ -19,13 +33,9 @@
 #include "TString.h"
 #include "TObjString.h"
 #include "TObjArray.h"
-#include "RStipples.h"
 #include "TROOT.h"
 
 const Double_t kPI = TMath::Pi();
-
-static Int_t gFillHollow;  // Flag if fill style is hollow
-static Int_t gFillPattern; // Fill pattern
 
 using namespace ROOT;
 
@@ -54,32 +64,23 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
-   SetContextFillStyle(GetFillStyle());
+   SetContextFillColor(GetFillColor());
    
-   CGContextSaveGState(ctx);
-
-   if (x1 > x2) std::swap(x1, x2);
-   if (y1 > y2) std::swap(y1, y2);
-
-   if (mode == kFilled) {
-      if (!gFillPattern) SetContextFillColor(GetFillColor());
-      CGContextFillRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
-   } else {
-      SetContextStrokeColor(GetLineColor());
-      CGContextStrokeRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
-   }
+   SetContextStrokeColor(GetLineColor());
    
-   CGContextRestoreGState(ctx);
-}
-
-
-//______________________________________________________________________________
-void TGQuartz::DrawCellArray(Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/, 
-                             Int_t /*nx*/, Int_t /*ny*/, Int_t */*ic*/)
-{
-   // Draw CellArray
+   TColor *color = gROOT->GetColor(GetFillColor());
+   if (!color) return;
    
-   //CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   Float_t r = 0.f;
+   Float_t g = 0.f;
+   Float_t b = 0.f;
+   Float_t a = 1.f;
+   
+   color->GetRGB(r, g, b);
+   
+   Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
+
+   Quartz::DrawBox(ctx, x1, y1, x2, y2, (Int_t)mode);
 }
 
 
@@ -92,21 +93,33 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
 
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
 
-   SetContextFillStyle(GetFillStyle());
+   SetContextStrokeColor(GetFillColor());
+
+   SetContextFillColor(GetFillColor());
+
+   TColor *color = gROOT->GetColor(GetFillColor());
+   if (!color) return;
    
-   CGContextBeginPath (ctx);
+   Float_t r = 0.f;
+   Float_t g = 0.f;
+   Float_t b = 0.f;
+   Float_t a = 1.f;
 
-   CGContextMoveToPoint (ctx, xy[0].fX, xy[0].fY);
+   color->GetRGB(r, g, b);
 
-   for (Int_t i=1; i<n; i++) CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
+   Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
 
-   if (gFillHollow) {
-     SetContextStrokeColor(GetFillColor());
-     CGContextStrokePath(ctx);
-   } else {
-      if (!gFillPattern) SetContextFillColor(GetFillColor());
-      CGContextFillPath(ctx);
-   }
+   Quartz::DrawFillArea(ctx, n, xy);
+}
+
+
+//______________________________________________________________________________
+void TGQuartz::DrawCellArray(Int_t /*x1*/, Int_t /*y1*/, Int_t /*x2*/, Int_t /*y2*/, 
+                             Int_t /*nx*/, Int_t /*ny*/, Int_t */*ic*/)
+{
+   // Draw CellArray
+   
+   //CGContextRef ctx = (CGContextRef)GetCurrentContext();
 }
 
 
@@ -179,7 +192,8 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 
 
 //______________________________________________________________________________
-void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const char *text, ETextMode /*mode*/)
+void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, 
+                        const char *text, ETextMode /*mode*/)
 {
    // Draw text
    
@@ -198,7 +212,8 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, const 
    CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
    
 /*
- CTFontRef currentFont = fFontManager->SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
+ CTFontRef currentFont = fFontManager->SelectFont(gVirtualX->GetTextFont(), 
+ gVirtualX->GetTextSize());
    
   //    if (!fSelectedFont)
   //    throw std::runtime_error("GetTextBounds: font not selected");
@@ -436,107 +451,6 @@ void TGQuartz::SetFillStyle(Style_t style)
    // Set fill area style.
    
    TAttFill::SetFillStyle(style);
-}
-
-
-//______________________________________________________________________________
-void TGQuartz::SetContextFillStyle(Int_t id)
-{
-   // Set fill area style.
-   //
-   // style - compound fill area interior style
-   //         style = 1000 * interiorstyle + styleindex
-
-   Int_t fais = id/1000;
-   Int_t fasi = id%1000;   
-   
-   switch (fais) {
-      case 1:         // solid
-         gFillHollow  = 0;
-         gFillPattern = 0;
-         break;
-
-      case 2:         // pattern
-         gFillHollow = 1;
-         break;
-
-      case 3:         // hatch
-         gFillHollow  = 0;
-         gFillPattern = fasi;
-         SetStencilPattern();
-         break;
-         
-      default:
-         gFillHollow = 1;
-         break;
-   }
-}
-
-
-//______________________________________________________________________________
-static void DrawStencil (void *sti, CGContextRef ctx)
-{
-   // Draw a stencil pattern from gStipples
-   
-   int i,j;
-   
-   int *st = static_cast<int *>(sti);
-
-   int x , y=0; 
-   for (i=0; i<31; i=i+2) {
-      x = 0;
-      for (j=0; j<8; j++) {
-         if (gStipples[*st][i] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
-         x++;
-      }
-      for (j=0; j<8; j++) {
-         if (gStipples[*st][i+1] & (1<<j)) CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
-         x++;
-      }
-      y++;
-   }
-}
-
-
-//______________________________________________________________________________
-void TGQuartz::SetStencilPattern()
-{
-   // Set the fill pattern
-
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-   CGPatternRef pattern;
-   CGColorSpaceRef baseSpace;
-   CGColorSpaceRef patternSpace;
-   
-   TColor *color = gROOT->GetColor(GetFillColor());
-   if (!color) return;
-
-   const Float_t a = 1.f;
-   Float_t r = 0.f;
-   Float_t g = 0.f;
-   Float_t b = 0.f;
-
-   color->GetRGB(r, g, b);
-   
-   CGFloat RGB[4];
-   RGB[0] = r;
-   RGB[1] = g;
-   RGB[2] = b;
-   RGB[3] = a;
-   CGPatternCallbacks callbacks = {0, &DrawStencil, NULL};
- 
-   baseSpace = CGColorSpaceCreateDeviceRGB ();
-   patternSpace = CGColorSpaceCreatePattern (baseSpace);
-   CGContextSetFillColorSpace (ctx, patternSpace);
-   CGColorSpaceRelease (patternSpace);
-   CGColorSpaceRelease (baseSpace);
-   
-   pattern = CGPatternCreate(&gFillPattern, CGRectMake(0, 0, 16, 16),
-                             CGAffineTransformIdentity, 16, 16,
-                             kCGPatternTilingConstantSpacing,
-                             false, &callbacks);
-   CGContextSetFillPattern (ctx, pattern, RGB);
-   CGPatternRelease (pattern);
 }
 
 
