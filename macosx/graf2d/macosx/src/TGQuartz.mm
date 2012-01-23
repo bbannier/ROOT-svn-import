@@ -157,11 +157,17 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
 
 
 //______________________________________________________________________________
-void TGQuartz::DrawPolyMarker(Int_t /*n*/, TPoint * /*xy*/)
+void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 {
    // Draw PolyMarker
+   // n         : number of points
+   // xy        : list of points   
    
-   //CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+
+   SetContextFillColor(GetMarkerColor());
+
+   for (Int_t i=0; i<n; i++) CGContextFillRect(ctx, CGRectMake(xy[i].fX, xy[i].fY, 1, 1));
 }
 
 
