@@ -1,5 +1,5 @@
 // @(#)root/graf2d:$Id$
-// Author: Timur Pocheptsov, 14/8/2011
+// Author: Olivier Couet, 23/01/2012
 
 /*************************************************************************
  * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
@@ -9,14 +9,14 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_QuartzMarkers
-#define ROOT_QuartzMarkers
+#ifndef ROOT_QuartzFillArea
+#define ROOT_QuartzFillArea
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// QuartzMarkers                                                        //
+// QuartzFillArea                                                       //
 //                                                                      //
-// Aux. functions to draw poly-markers.                                 //
+// Aux. functions to draw fill area.                                    //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -34,11 +34,14 @@
 
 namespace ROOT {
 namespace Quartz {
-
-void DrawPolyMarker(CGContextRef ctx, const std::vector<TPoint> &marker, 
-                    Size_t markerSize, Style_t markerStyle);
-void DrawPolyMarker(CGContextRef ctx, unsigned nPoints, const TPoint *marker, 
-                    Size_t markerSize, Style_t markerStyle);
+   
+void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,
+             Int_t mode);
+void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy);
+void SetFillStyle(CGContextRef ctx, Int_t style, 
+                  Float_t r, Float_t g, Float_t b, Float_t a);
+void SetStencilPattern(CGContextRef ctx, 
+                       Float_t r, Float_t g, Float_t b, Float_t a);
 
 }
 }
