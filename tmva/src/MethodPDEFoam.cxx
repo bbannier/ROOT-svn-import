@@ -692,11 +692,12 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
    // PDEFoam (fFoam[0]) and 'Density_bg' is the content of the cell
    // in the background PDEFoam (fFoam[1]).
    //
-   // In both cases the error on the discriminant is stored in 'err'.
+   // In both cases the error on the discriminant is stored in 'err'
+   // and 'errUpper'.  (Of course err and errUpper must be non-zero
+   // and point to valid address to make this work.)
 
    const Event* ev = GetEvent();
    Double_t discr = 0.;
-   Double_t discr_error = 0.;
 
    if (fSigBgSeparated) {
       std::vector<Float_t> xvec = ev->GetValues();
@@ -711,44 +712,62 @@ Double_t TMVA::MethodPDEFoam::GetMvaValue( Double_t* err, Double_t* errUpper )
          discr = density_sig/(density_sig+density_bg);
       else
          discr = 0.5; // assume 50% signal probability, if no events found (bad assumption, but can be overruled by cut on error)
-
-      // do error estimation (not jet used in TMVA)
-      Double_t neventsB = fFoam.at(1)->GetCellValue(xvec, kValue, fKernelEstimator);
-      Double_t neventsS = fFoam.at(0)->GetCellValue(xvec, kValue, fKernelEstimator);
-      Double_t scaleB = 1.;
-      Double_t errorS = TMath::Sqrt(neventsS); // estimation of statistical error on counted signal events
-      Double_t errorB = TMath::Sqrt(neventsB); // estimation of statistical error on counted background events
-
-      if (neventsS == 0) // no signal events in cell
-         errorS = 1.;
-      if (neventsB == 0) // no bg events in cell
-         errorB = 1.;
-
-      if ( (neventsS>1e-10) || (neventsB>1e-10) ) // eq. (5) in paper T.Carli, B.Koblitz 2002
-         discr_error = TMath::Sqrt( Sqr ( scaleB*neventsB
-                                          / Sqr(neventsS+scaleB*neventsB)
-                                          * errorS) +
-                                    Sqr ( scaleB*neventsS
-                                          / Sqr(neventsS+scaleB*neventsB)
-                                          * errorB) );
-      else discr_error = 1.;
-
-      if (discr_error < 1e-10) discr_error = 1.;
    }
    else { // Signal and Bg not separated
       // get discriminator direct from the foam
-      discr       = fFoam.at(0)->GetCellValue(ev->GetValues(), kValue, fKernelEstimator);
-      discr_error = fFoam.at(0)->GetCellValue(ev->GetValues(), kValueError, fKernelEstimator);
+      discr = fFoam.at(0)->GetCellValue(ev->GetValues(), kValue, fKernelEstimator);
    }
 
-   // attribute error
-   if (err != 0) *err = discr_error;
-   if (errUpper != 0) *errUpper = discr_error;
+   // calculate the error
+   if (err || errUpper) {
+      const Double_t discr_error = CalculateMVAError();
+      if (err != 0) *err = discr_error;
+      if (errUpper != 0) *errUpper = discr_error;
+   }
 
    if (fUseYesNoCell)
       return (discr < 0.5 ? -1 : 1);
    else
       return discr;
+}
+
+//_______________________________________________________________________
+Double_t TMVA::MethodPDEFoam::CalculateMVAError()
+{
+   // Calculate the error on the Mva value
+   //
+   // If fSigBgSeparated == true the error is calculated from the
+   // number of events in the signal and background PDEFoam cells.
+   //
+   // If fSigBgSeparated == false, the error is taken directly from
+   // the PDEFoam cell.
+
+   const Event* ev = GetEvent(); // current event
+   Double_t mvaError = 0.0; // the error on the Mva value
+
+   if (fSigBgSeparated) {
+      const std::vector<Float_t>& xvec = ev->GetValues();
+
+      const Double_t neventsB = fFoam.at(1)->GetCellValue(xvec, kValue, fKernelEstimator);
+      const Double_t neventsS = fFoam.at(0)->GetCellValue(xvec, kValue, fKernelEstimator);
+      const Double_t scaleB = 1.;
+      // estimation of statistical error on counted signal/background events
+      const Double_t errorS = neventsS == 0 ? 1.0 : TMath::Sqrt(neventsS);
+      const Double_t errorB = neventsB == 0 ? 1.0 : TMath::Sqrt(neventsB);
+
+      if ((neventsS > 1e-10) || (neventsB > 1e-10)) {
+         // eq. (5) in paper T.Carli, B.Koblitz 2002
+         mvaError = TMath::Sqrt(Sqr(scaleB * neventsB / Sqr(neventsS + scaleB * neventsB) * errorS) +
+                                Sqr(scaleB * neventsS / Sqr(neventsS + scaleB * neventsB) * errorB));
+      } else {
+         mvaError = 1.0;
+      }
+   } else { // Signal and Bg not separated
+      // get discriminator error direct from the foam
+      mvaError = fFoam.at(0)->GetCellValue(ev->GetValues(), kValueError, fKernelEstimator);
+   }
+
+   return mvaError;
 }
 
 //_______________________________________________________________________
