@@ -13,10 +13,6 @@
 #include "QuartzFillArea.h"
 #include "RStipples.h"
 
-//#ifndef ROOT_Rtypes
-//#include "Rtypes.h"
-//#endif
-
 static Int_t gFillHollow;  // Flag if fill style is hollow
 static Int_t gFillPattern; // Fill pattern
 
