@@ -60,9 +60,6 @@ public:
    
            void      SetContextFillColor(Int_t ci);
            void      SetContextStrokeColor(Int_t ci);
-           void      SetContextLineStyle(Int_t id);
-           void      SetContextLineType(Int_t n, Int_t *dash);
-           void      SetContextLineWidth(Int_t width);
 
 private:
    TGQuartz(const TGQuartz &rhs);
