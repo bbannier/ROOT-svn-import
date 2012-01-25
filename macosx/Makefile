@@ -10,7 +10,7 @@ MAKE_VERSION_MAJOR := $(word 1,$(subst ., ,$(MAKE_VERSION)))
 MAKE_VERSION_MINOR := $(shell echo $(word 2,$(subst ., ,$(MAKE_VERSION))) | \
                               sed 's/\([0-9][0-9]*\).*/\1/')
 MAKE_VERSION_MAJOR ?= 0
-MAKE_VERSION_MINOR ?= 0
+MAKE_VERSION_MINOR ?= 0:
 ORDER_ := $(shell test $(MAKE_VERSION_MAJOR) -gt 3 || \
                   test $(MAKE_VERSION_MAJOR) -eq 3 && \
                   test $(MAKE_VERSION_MINOR) -ge 80 && echo '|')
@@ -86,6 +86,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
 
 ifeq ($(PLATFORM),macosx)
 MODULES	     += graf2d/macosx
+MODULES	     += graf2d/quartz
 endif
 
 ifeq ($(ARCH),win32)
