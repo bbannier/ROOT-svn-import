@@ -9,8 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-#ifndef ROOT_QuartzMarkers
-#define ROOT_QuartzMarkers
+#ifndef ROOT_QuartzMarker
+#define ROOT_QuartzMarker
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //

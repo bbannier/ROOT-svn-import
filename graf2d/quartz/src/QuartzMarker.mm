@@ -11,7 +11,7 @@
 
 #include "TAttMarker.h"
 
-#include "QuartzMarkers.h"
+#include "QuartzMarker.h"
 
 namespace ROOT {
 namespace Quartz {
