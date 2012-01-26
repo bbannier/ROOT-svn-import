@@ -9,7 +9,7 @@
 
 #include "CocoaPrivate.h"
 #include "X11Drawables.h"
-#include "QuartzFonts.h"
+#include "QuartzText.h"
 #include "CocoaUtils.h"
 #include "TGCocoa.h"
 

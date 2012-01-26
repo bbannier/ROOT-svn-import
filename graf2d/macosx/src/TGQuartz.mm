@@ -20,7 +20,7 @@
 
 //#include "Cocoa"
 
-#include "QuartzFonts.h"
+#include "QuartzText.h"
 #include "QuartzMarker.h"
 #include "QuartzFillArea.h"
 #include "QuartzLine.h"

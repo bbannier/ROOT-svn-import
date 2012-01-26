@@ -5,7 +5,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-#include "QuartzFonts.h"
+#include "QuartzText.h"
 #include "CocoaUtils.h"
 #include "TError.h"
 
