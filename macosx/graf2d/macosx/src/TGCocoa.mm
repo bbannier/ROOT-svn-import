@@ -792,16 +792,22 @@ void TGCocoa::MapWindow(Window_t wid)
    
    if (MakeProcessForeground()) {
       id<X11Drawable> window = fPimpl->GetWindow(wid);
-      //TODO: difference between MapWindow and MapRaised.
-      [window mapRaised];
+      [window mapWindow];
    }
 }
 
 //______________________________________________________________________________
-void TGCocoa::MapSubwindows(Window_t /*wid*/)
+void TGCocoa::MapSubwindows(Window_t wid)
 {
    // Maps all subwindows for the specified window "wid" in top-to-bottom
    // stacking order.   
+   assert(wid != 0 && "MapSubwindows, called for 'root' window");
+   
+   if (MakeProcessForeground()) {
+      id<X11Drawable> window = fPimpl->GetWindow(wid);
+      [window mapSubwindows];
+   }
+
 }
 
 //______________________________________________________________________________
@@ -812,9 +818,7 @@ void TGCocoa::MapRaised(Window_t wid)
    // stack of all windows.
 
    assert(wid != 0 && "MapRaised, called for 'root' window");
-   
-   //Just a sketch code.
-   ROOT::MacOSX::Util::AutoreleasePool pool;//TODO
+   //ROOT::MacOSX::Util::AutoreleasePool pool;//TODO
 
    if (MakeProcessForeground()) {
       id<X11Drawable> window = fPimpl->GetWindow(wid);
