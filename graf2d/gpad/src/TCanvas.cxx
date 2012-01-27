@@ -301,7 +301,6 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
          fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, ux, uy, uw, uh);
       }
       
-      std::cout<<"Create for form 1? "<<fCanvasImp;
       fCw = 500;
       fCh = 500;
       if (form == 2) fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, 20, 20, UInt_t(cx*500), UInt_t(cx*500));
@@ -311,8 +310,6 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }
-
-   std::cout<<"Call CreatePainter\n";
 
    CreatePainter();
 
@@ -1053,7 +1050,6 @@ void TCanvas::Flush()
    cd();
    if (!IsBatch()) {
       if (!UseGL()) {
-//         std::cout<<"SelectWindow "<<fCanvasID<<std::endl;
          gVirtualX->SelectWindow(fCanvasID);
          gPad = padsav; //don't do cd() because than also the pixmap is changed
          CopyPixmaps();
