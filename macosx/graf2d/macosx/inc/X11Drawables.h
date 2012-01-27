@@ -57,12 +57,7 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 @property (nonatomic, assign) unsigned long fBackgroundPixel;//At the moment used in a TGCocoa::ClearArea, for example.
 
-@property (nonatomic, assign) unsigned long fBackingPlanes;
-@property (nonatomic, assign) BOOL          fSaveUnder;
-
 @property (nonatomic, assign) BOOL          fIsMapped;//Visible/invisible.
-
-@property (nonatomic, assign) BOOL          fOverrideRedirect;
 
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////
@@ -139,11 +134,8 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 @property (nonatomic, assign) int fWinGravity;
 
 @property (nonatomic, assign) unsigned long fBackgroundPixel;
-@property (nonatomic, assign) unsigned long fBackingPlanes;
-@property (nonatomic, assign) BOOL fSaveUnder;
 
 @property (nonatomic, assign) BOOL fIsMapped;
-@property (nonatomic, assign) BOOL fOverrideRedirect;
 
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////
@@ -209,12 +201,9 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 @property (nonatomic, assign) int fBitGravity;
 @property (nonatomic, assign) int fWinGravity;
 
-@property (nonatomic, assign) unsigned long fBackingPlanes;
 @property (nonatomic, assign) unsigned long fBackgroundPixel;
-@property (nonatomic, assign) BOOL fSaveUnder;
 
 @property (nonatomic, assign) BOOL fIsMapped;
-@property (nonatomic, assign) BOOL fOverrideRedirect;
 
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////

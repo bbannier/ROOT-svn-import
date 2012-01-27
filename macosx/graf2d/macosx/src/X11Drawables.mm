@@ -118,15 +118,6 @@ void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> wind
 
    if (mask & kWAWinGravity)
       window.fWinGravity = attr->fWinGravity;
-
-   if (mask & kWABackingPlanes)
-      window.fBackingPlanes = attr->fBackingPlanes;
-      
-   if (mask & kWASaveUnder)
-      window.fSaveUnder = attr->fSaveUnder;
-      
-   if (mask & kWAOverrideRedirect)
-      window.fOverrideRedirect = attr->fOverrideRedirect;
    
    //TODO: More attributes to set -
    //cursor for example, etc.
@@ -168,12 +159,12 @@ void GetWindowAttributes(id<X11Drawable> window, WindowAttributes_t *dst)
    dst->fWinGravity = window.fWinGravity;
    //Dummy value.
    dst->fBackingStore = kAlways;//??? CHECK
-   dst->fBackingPlanes = window.fBackingPlanes;
+   dst->fBackingPlanes = 0;
 
    //Dummy value.
    dst->fBackingPixel = 0;
    
-   dst->fSaveUnder = window.fSaveUnder;
+   dst->fSaveUnder = 0;
 
    //Dummy value.
    dst->fColormap = 0;
@@ -182,15 +173,13 @@ void GetWindowAttributes(id<X11Drawable> window, WindowAttributes_t *dst)
 
    dst->fMapState = window.fIsMapped ? kIsViewable : kIsUnmapped;
 
-   //Dummy value. Actually, never used in ROOT's GUI.
-   dst->fAllEventMasks = 0;
+   dst->fAllEventMasks = window.fEventMask;
    dst->fYourEventMask = window.fEventMask;
    
    //Not used by GUI.
    //dst->fDoNotPropagateMask
 
-   dst->fOverrideRedirect = window.fOverrideRedirect;
-
+   dst->fOverrideRedirect = 0;
    //Dummy value.
    dst->fScreen = 0;
 }
@@ -428,38 +417,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (unsigned long) fBackingPlanes
-{
-   assert(fContentView != nil && "fBackingPlanes, content view is nil");
-   
-   return fContentView.fBackingPlanes;
-}
-
-//______________________________________________________________________________
-- (void) setFBackingPlanes : (unsigned long) planes
-{
-   assert(fContentView != nil && "setFBackingPlanes, content view is nil");
-   
-   fContentView.fBackingPlanes = planes;
-}
-
-//______________________________________________________________________________
-- (BOOL) fSaveUnder
-{
-   assert(fContentView != nil && "fSaveUnder, content view is nil");
-   
-   return fContentView.fSaveUnder;
-}
-
-//______________________________________________________________________________
-- (void) setFSaveUnder : (BOOL) save
-{
-   assert(fContentView != nil && "setFSaveUnder, content view is nil");
-   
-   fContentView.fSaveUnder = save;
-}
-
-//______________________________________________________________________________
 - (BOOL) fIsMapped
 {
    assert(fContentView != nil && "fIsMapped, content view is nil");
@@ -473,22 +430,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(fContentView != nil && "setFIsMapped, content view is nil");
    
    fContentView.fIsMapped = mapped;
-}
-
-//______________________________________________________________________________
-- (BOOL) fOverrideRedirect
-{
-   assert(fContentView != nil && "fOverrideRedirect, content view is nil");
-   
-   return fContentView.fOverrideRedirect;
-}
-
-//______________________________________________________________________________
-- (void) setFOverrideRedirect : (BOOL) redir
-{
-   assert(fContentView != nil && "setFOverrideRedirect, content view is nil");
-   
-   fContentView.fOverrideRedirect = redir;
 }
 
 //End of SetWindowAttributes_t/WindowAttributes_t.
@@ -667,10 +608,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 @synthesize fBitGravity;
 @synthesize fWinGravity;
 @synthesize fBackgroundPixel;
-@synthesize fBackingPlanes;
-@synthesize fSaveUnder;
 @synthesize fIsMapped;
-@synthesize fOverrideRedirect;
 //SetWindowAttributes_t/WindowAttributes_t
 /////////////////////
 
