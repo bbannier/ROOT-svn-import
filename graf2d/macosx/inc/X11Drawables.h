@@ -106,7 +106,11 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 //
 - (void)     mapRaised;
+- (void)     mapWindow;
+- (void)     mapSubwindows;
+
 - (void)     unmapWindow;
+//
 
 @end
 
@@ -172,7 +176,11 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 //
 - (void)     mapRaised;
+- (void)     mapWindow;
+- (void)     mapSubwindows;
+
 - (void)     unmapWindow;
+//
 
 @end
 
@@ -238,7 +246,12 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 //
 - (void)     mapRaised;
+- (void)     mapWindow;
+- (void)     mapSubwindows;
+
 - (void)     unmapWindow;
+//
+
 @end
 
 //

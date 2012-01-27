@@ -568,8 +568,26 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mapRaised
 {
    self.fIsMapped = YES;
-   //
-   [self makeKeyAndOrderFront : self];
+
+   [self orderFront : self];
+   [fContentView setHidden : NO];
+}
+
+//______________________________________________________________________________
+- (void) mapWindow
+{
+   self.fIsMapped = YES;
+
+   [self orderFront : self];
+   [fContentView setHidden : NO];
+}
+
+//______________________________________________________________________________
+- (void) mapSubwindows
+{
+   self.fIsMapped = YES;
+
+   [fContentView mapSubwindows];
 }
 
 //______________________________________________________________________________
@@ -619,6 +637,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    if (self = [super initWithFrame : frame]) {
       [self setCanDrawConcurrently : NO];
+      
+      [self setHidden : YES];
    
       if (attr)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
@@ -761,15 +781,36 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mapRaised
 {
    fIsMapped = YES;
+   
+   //Change the order?
+   
    //
+   
    [self setHidden : NO];
+}
+
+//______________________________________________________________________________
+- (void) mapWindow
+{
+   fIsMapped = YES;   
+   [self setHidden : NO];
+}
+
+//______________________________________________________________________________
+- (void) mapSubwindows
+{
+   [self setHidden : NO];
+   fIsMapped = YES;
+   
+   [self setHidden : NO];
+   for (QuartzView * v in [self subviews])
+      [v mapSubwindows];
 }
 
 //______________________________________________________________________________
 - (void) unmapWindow
 {
    fIsMapped = NO;
-   
    [self setHidden : YES];
 }
 
