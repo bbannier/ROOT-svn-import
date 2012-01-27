@@ -21,6 +21,13 @@
 //////////////////////////////////////////////////////////////////////////
 
 namespace ROOT {
+
+namespace Quartz {
+      
+class FontManager;
+      
+}
+   
 namespace MacOSX {
 namespace Details {
 
@@ -28,11 +35,6 @@ class CocoaPrivate;
 
 }
 
-namespace Quartz {
-
-class FontManager;
-
-}
 }
 }
 
@@ -326,7 +328,7 @@ protected:
    void *GetCurrentContext();
 
    void *fCtx;
-   std::auto_ptr<ROOT::MacOSX::Quartz::FontManager> fFontManager;//!
+   std::auto_ptr<ROOT::Quartz::FontManager> fFontManager;//!
 
 private:
    TGCocoa(const TGCocoa &rhs);

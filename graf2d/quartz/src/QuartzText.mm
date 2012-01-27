@@ -16,7 +16,6 @@
 
 
 namespace ROOT {
-namespace MacOSX {
 namespace Quartz {
 
 const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] = 
@@ -565,6 +564,5 @@ void CTLineGuard::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys,
       throw std::runtime_error("CTLineGuard: attrib string");
 }
 
-}
 }
 }
