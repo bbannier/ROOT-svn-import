@@ -563,6 +563,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapRaised
 {
+   assert(fContentView && "mapRaised, content view is nil");
+
    [self orderFront : self];
    [fContentView setHidden : NO];
 }
@@ -570,6 +572,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapWindow
 {
+   assert(fContentView != nil && "mapWindow, content view is nil");
+
    [self orderFront : self];
    [fContentView setHidden : NO];
 }
@@ -577,12 +581,16 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapSubwindows
 {
+   assert(fContentView != nil && "mapSubwindows, content view is nil");
+
    [fContentView mapSubwindows];
 }
 
 //______________________________________________________________________________
 - (void) unmapWindow
 {
+   assert(fContentView != nil && "unmapWindow, content view is nil");
+
    [fContentView setHidden : YES];
    [self orderOut : self];
 }
@@ -783,11 +791,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapRaised
 {
-   //Change the order?
+   //Move view to the top of subviews (in UIKit there is a special method).   
    QuartzView *parent = fParentView;
    [self removeFromSuperview];
    [parent addSubview : self];
-   //   
+
    [self setHidden : NO];
 }
 
@@ -800,8 +808,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapSubwindows
 {
-   [self setHidden : NO];
-   
    [self setHidden : NO];
    for (QuartzView * v in [self subviews])
       [v mapSubwindows];
