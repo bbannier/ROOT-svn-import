@@ -16,7 +16,7 @@
 ClassImp(TGCocoa)
 
 namespace Details = ROOT::MacOSX::Details;
-namespace Quartz = ROOT::MacOSX::Quartz;
+namespace Quartz = ROOT::Quartz;
 
 
 namespace {
@@ -1163,7 +1163,7 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
    //fontName is in XLFD format:
    //-foundry-family- ..... etc., some components can be omitted and replaced by *.
 
-   ROOT::MacOSX::Quartz::XLFDName xlfd = {};
+   ROOT::Quartz::XLFDName xlfd = {};
    if (ParseXLFDName(fontName, xlfd))
       return fFontManager->LoadFont(xlfd);
 
@@ -1688,7 +1688,7 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
          len = std::strlen(text);
    
       const std::string substr(text, len);
-      ROOT::MacOSX::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont);
+      ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont);
 
       //CGContextSaveGState(ctx);
       CGContextSetTextPosition(ctx, x, LocalYROOTToCocoa(view, y));

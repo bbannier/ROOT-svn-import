@@ -10,7 +10,6 @@
 #include "GuiTypes.h"
 
 namespace ROOT {
-namespace MacOSX {
 namespace Quartz {
 
 //
@@ -110,7 +109,6 @@ private:
 };
 
 
-}
 }
 }
 
