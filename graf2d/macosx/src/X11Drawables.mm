@@ -845,7 +845,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    (void)dirtyRect;//Not used at the moment.
 
-   if ((fEventMask & kExposureMask) && fID) {
+   if (fID) {
       if (TGWindow *window = gClient->GetWindowById(fID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
          assert(nsContext != nil && "drawRect, currentContext returned nil");
@@ -855,10 +855,18 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          
          CGContextSaveGState(fContext);
 
-         //Ask ROOT's widget/window to draw.
-         gClient->NeedRedraw(window, kTRUE);
-         //
-         
+         if (fEventMask & kExposureMask) {
+            //Ask ROOT's widget/window to draw itself.
+            gClient->NeedRedraw(window, kTRUE);
+         } else if (fBackBuffer) {
+            //Very "special" window.
+            CGImageRef image = CGBitmapContextCreateImage(fBackBuffer.fContext);
+            const CGRect imageRect = CGRectMake(0, 0, fBackBuffer.fWidth, fBackBuffer.fHeight);
+
+            CGContextDrawImage(fContext, imageRect, image);
+            CGImageRelease(image);
+         }
+
          CGContextRestoreGState(fContext);
 
          fContext = nullptr;
