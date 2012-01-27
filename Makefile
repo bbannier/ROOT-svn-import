@@ -85,8 +85,8 @@ MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
                 gui/sessionviewer gui/guihtml gui/recorder
 
 ifeq ($(PLATFORM),macosx)
-MODULES	     += graf2d/macosx
 MODULES	     += graf2d/quartz
+MODULES	     += graf2d/macosx
 endif
 
 ifeq ($(ARCH),win32)
