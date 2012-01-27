@@ -171,7 +171,7 @@ void GetWindowAttributes(id<X11Drawable> window, WindowAttributes_t *dst)
    //Dummy value.   
    dst->fMapInstalled = kTRUE;
 
-   dst->fMapState = window.fIsMapped ? kIsViewable : kIsUnmapped;
+   dst->fMapState = window.fMapState;
 
    dst->fAllEventMasks = window.fEventMask;
    dst->fYourEventMask = window.fEventMask;
@@ -417,19 +417,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (BOOL) fIsMapped
+- (int) fMapState
 {
-   assert(fContentView != nil && "fIsMapped, content view is nil");
+   //Top-level window can be only kIsViewable or kIsUnmapped (not unviewable).
+   assert(fContentView != nil && "fMapState, content view is nil");
    
-   return fContentView.fIsMapped;
-}
-
-//______________________________________________________________________________
-- (void) setFIsMapped : (BOOL) mapped
-{
-   assert(fContentView != nil && "setFIsMapped, content view is nil");
-   
-   fContentView.fIsMapped = mapped;
+   if ([fContentView isHidden])
+      return kIsUnmapped;
+      
+   return kIsViewable;
 }
 
 //End of SetWindowAttributes_t/WindowAttributes_t.
@@ -567,8 +563,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapRaised
 {
-   self.fIsMapped = YES;
-
    [self orderFront : self];
    [fContentView setHidden : NO];
 }
@@ -576,8 +570,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapWindow
 {
-   self.fIsMapped = YES;
-
    [self orderFront : self];
    [fContentView setHidden : NO];
 }
@@ -585,16 +577,13 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapSubwindows
 {
-   self.fIsMapped = YES;
-
    [fContentView mapSubwindows];
 }
 
 //______________________________________________________________________________
 - (void) unmapWindow
 {
-   self.fIsMapped = NO;
-   
+   [fContentView setHidden : YES];
    [self orderOut : self];
 }
 
@@ -626,7 +615,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 @synthesize fBitGravity;
 @synthesize fWinGravity;
 @synthesize fBackgroundPixel;
-@synthesize fIsMapped;
 //SetWindowAttributes_t/WindowAttributes_t
 /////////////////////
 
@@ -778,21 +766,34 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
+- (int) fMapState
+{
+   if ([self isHidden])
+      return kIsUnmapped;
+
+   for (QuartzView *parent = fParentView; parent; parent = parent.fParentView) {
+      if ([parent isHidden]) {
+         return kIsUnviewable;
+      }
+   }
+
+   return kIsViewable;
+}
+
+//______________________________________________________________________________
 - (void) mapRaised
 {
-   fIsMapped = YES;
-   
    //Change the order?
-   
-   //
-   
+   QuartzView *parent = fParentView;
+   [self removeFromSuperview];
+   [parent addSubview : self];
+   //   
    [self setHidden : NO];
 }
 
 //______________________________________________________________________________
 - (void) mapWindow
 {
-   fIsMapped = YES;   
    [self setHidden : NO];
 }
 
@@ -800,7 +801,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mapSubwindows
 {
    [self setHidden : NO];
-   fIsMapped = YES;
    
    [self setHidden : NO];
    for (QuartzView * v in [self subviews])
@@ -810,7 +810,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) unmapWindow
 {
-   fIsMapped = NO;
    [self setHidden : YES];
 }
 
