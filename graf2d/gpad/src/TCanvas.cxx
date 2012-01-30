@@ -370,6 +370,11 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t ww, Int_t w
    fCw       = ww;
    fCh       = wh;
    fCanvasID = -1;
+   
+   //
+   fCanvas = this;
+   //
+   
    TCanvas *old = (TCanvas*)gROOT->GetListOfCanvases()->FindObject(name);
    if (old && old->IsOnHeap()) {
       Warning("Constructor","Deleting canvas with same name: %s",name);
@@ -386,6 +391,9 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t ww, Int_t w
    } else {
       Float_t cx = gStyle->GetScreenFactor();
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, UInt_t(cx*ww), UInt_t(cx*wh));
+      if (fCanvasID == -1 && fCanvasImp)
+         fCanvasID = fCanvasImp->InitWindow();
+
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }
@@ -445,6 +453,11 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t wtopx,
       wtopx    = -wtopx;
       SetBit(kMenuBar,0);
    }
+   
+   //
+   fCanvas = this;
+   //
+   
    fCw       = ww;
    fCh       = wh;
    fCanvasID = -1;
@@ -464,11 +477,12 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t wtopx,
    } else {                   //normal mode with a screen window
       Float_t cx = gStyle->GetScreenFactor();
       fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, Int_t(cx*wtopx), Int_t(cx*wtopy), UInt_t(cx*ww), UInt_t(cx*wh));
+      if (fCanvasID == -1 && fCanvasImp)
+         fCanvasID = fCanvasImp->InitWindow();
+      CreatePainter();
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }
-
-   CreatePainter();
 
    SetName(name);
    SetTitle(title); // requires fCanvasImp set
