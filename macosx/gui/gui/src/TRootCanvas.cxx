@@ -251,7 +251,6 @@ TRootContainer::TRootContainer(TRootCanvas *c, Window_t id, const TGWindow *p)
    : TGCompositeFrame(gClient, id, p)
 {
    // Create a canvas container.
-
    fCanvas = c;
 
    gVirtualX->GrabButton(fId, kAnyButton, kAnyModifier,

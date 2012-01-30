@@ -498,8 +498,6 @@ void TGCocoa::RescaleWindow(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
 //______________________________________________________________________________
 Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 {
-   return -1;
-   
    assert(wid != 0 && "ResizePixmap, called for 'root' window");
 
    id<X11Drawable> drawable = fPimpl->GetWindow(wid);
@@ -512,8 +510,6 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
    newSize.height = h;
    
    if ([pixmap resize : newSize flipped : YES]) {
-      
-   
       return 1;
    }
 
@@ -521,10 +517,18 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ResizeWindow(Int_t /*wid*/)
+void TGCocoa::ResizeWindow(Int_t wid)
 {
    // Resizes the window "wid" if necessary.
-   //std::cout<<"RESIZE WINDOW "<<wid<<std::endl;
+//   std::cout<<"RESIZE WINDOW "<<wid<<std::endl;
+   id<X11Drawable> window = fPimpl->GetWindow(wid);
+   if (window.fBackBuffer) {
+      int currentDrawable = fSelectedDrawable;
+      fSelectedDrawable = wid;
+      SetDoubleBufferON();
+      fSelectedDrawable = currentDrawable;
+   } 
+//   NSLog(@"w %u h %u", window.fWidth, window.fHeight);
 }
 
 //______________________________________________________________________________
@@ -586,7 +590,6 @@ void TGCocoa::SetDoubleBuffer(Int_t wid, Int_t mode)
    // mode - the on/off switch
    //        mode = 1 double buffer is on
    //        mode = 0 double buffer is off
-
    if (wid == 999) {
       NSLog(@"***** SET DOUBLE BUFFER FOR ALL WINDOWS *****");
    } else {
@@ -615,9 +618,12 @@ void TGCocoa::SetDoubleBufferOFF()
 void TGCocoa::SetDoubleBufferON()
 {
    // Turns double buffer mode on.
+
+   //NSLog(@"selected drawable %d", fSelectedDrawable);
    assert(fSelectedDrawable != 0 && "SetDoubleBufferON, called, but no correct window was selected before");
    
    id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
+   
    assert(window.fIsPixmap == NO && "SetDoubleBufferON, selected drawable is a pixmap, can not attach pixmap to pixmap");
    
    const unsigned currW = window.fWidth;
@@ -1022,11 +1028,8 @@ Int_t TGCocoa::InitWindow(ULong_t parentID)
       [parentWin getAttributes : &attr];
    } else
       ROOT::MacOSX::X11::GetRootWindowAttributes(&attr);
-   
 
    Int_t rez = CreateWindow(parentID, 0, 0, attr.fWidth, attr.fHeight, 0, attr.fDepth, attr.fClass, nullptr, nullptr, 0);
-   
-      NSLog(@"create canvas %lu %d", parentID, rez);
    
    return rez;
 }
@@ -1859,12 +1862,17 @@ void TGCocoa::DrawSegments(Drawable_t /*wid*/, GContext_t /*gc*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::SelectInput(Window_t /*wid*/, UInt_t /*evmask*/)
+void TGCocoa::SelectInput(Window_t wid, UInt_t evmask)
 {
    // Defines which input events the window is interested in. By default
    // events are propageted up the window stack. This mask can also be
    // set at window creation time via the SetWindowAttributes_t::fEventMask
    // attribute.
+   
+   assert(wid != 0 && "SelectInput, called for 'root' window");
+   
+   id<X11Drawable> window = fPimpl->GetWindow(wid);
+   window.fEventMask = evmask;
 }
 
 //______________________________________________________________________________

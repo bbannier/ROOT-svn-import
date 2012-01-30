@@ -1,3 +1,4 @@
+
 #define DEBUG_ROOT_COCOA
 
 #ifdef DEBUG_ROOT_COCOA
@@ -583,6 +584,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    assert(fContentView != nil && "mapSubwindows, content view is nil");
 
+//   [fContentView setHidden : NO];
    [fContentView mapSubwindows];
 }
 
@@ -808,9 +810,10 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mapSubwindows
 {
-   [self setHidden : NO];
-   for (QuartzView * v in [self subviews])
+   for (QuartzView * v in [self subviews]) {
+      [v setHidden : NO];
       [v mapSubwindows];
+   }
 }
 
 //______________________________________________________________________________
@@ -842,7 +845,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          if (fEventMask & kExposureMask) {
             //Ask ROOT's widget/window to draw itself.
             gClient->NeedRedraw(window, kTRUE);
-         } else if (fBackBuffer) {
+         }/* else */
+
+         if (fBackBuffer) {
             //Very "special" window.
             CGImageRef image = CGBitmapContextCreateImage(fBackBuffer.fContext);
             const CGRect imageRect = CGRectMake(0, 0, fBackBuffer.fWidth, fBackBuffer.fHeight);
@@ -855,7 +860,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
          fContext = nullptr;
       } else {
-         NSLog(@"Warning: RootQuartzView, -drawRect method, no window for id %u was found", fID);
+         NSLog(@"Warning: QuartzView, -drawRect method, no window for id %u was found", fID);
       }
    }
 }
@@ -863,64 +868,52 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //Event handling.
 
 //______________________________________________________________________________
-- (void) setFrame : (NSRect)newFrame
+- (void) generateConfigureNotify : (NSRect) newFrame
 {
-   [super setFrame : newFrame];
-   //Generate configure notify?
-   
-   if ((fEventMask & kStructureNotifyMask) && fResizedByROOT == NO) {//Check, if window wants such events.
-      if (fID) {
-         if (TGWindow *window = gClient->GetWindowById(fID)) {
-            Event_t newEvent = {};
+   if (self.fMapState == kIsUnmapped)
+      return;
 
-            newEvent.fType = kConfigureNotify;         
-            newEvent.fWindow = fID;
-            newEvent.fX = newFrame.origin.x;
-            newEvent.fY = newFrame.origin.y;
-            newEvent.fWidth = newFrame.size.width;
-            newEvent.fHeight = newFrame.size.height;
+   if (fID) {
+      if (TGWindow *window = gClient->GetWindowById(fID)) {
+         Event_t newEvent = {};
+
+         newEvent.fType = kConfigureNotify;         
+         newEvent.fWindow = fID;
+         newEvent.fX = newFrame.origin.x;
+         newEvent.fY = newFrame.origin.y;
+         newEvent.fWidth = newFrame.size.width;
+         newEvent.fHeight = newFrame.size.height;
          
-            //TODO:
-            //1. generate time.
-            //2. check, what's actually required from configure notify.
-            window->HandleEvent(&newEvent);
-         } else {
-            NSLog(@"Warning: RootQuartzView, -setFrameSize method, no window for id %u was found", fID);
-         }
+         //TODO:
+         //1. generate timestamp?
+         //2. check, what's actually required from configure notify.
+         window->HandleEvent(&newEvent);
+      } else {
+         NSLog(@"Warning: QuartzView, -generateConfigureNotify method, no window for id %u was found", fID);
       }
    }
 
+}
+
+//______________________________________________________________________________
+- (void) setFrame : (NSRect)newFrame
+{
+   [super setFrame : newFrame];
+
+   if (fEventMask & kStructureNotifyMask) {
+      [self generateConfigureNotify : newFrame];
+   }
 }
 
 
 //______________________________________________________________________________
 - (void) setFrameSize : (NSSize)newSize
 {
-   //Generate ConfigureNotify event and send it to ROOT's TGWindow.
-
-   
+   //Check, if setFrameSize calls setFrame.
    [super setFrameSize : newSize];
    
-   if ((fEventMask & kStructureNotifyMask) && fResizedByROOT == NO) {//Check, if window wants such events.
-      if (fID) {
-         if (TGWindow *window = gClient->GetWindowById(fID)) {
-            Event_t newEvent = {};
-
-            newEvent.fType = kConfigureNotify;         
-            newEvent.fWindow = fID;
-            newEvent.fX = self.frame.origin.x;
-            newEvent.fY = self.frame.origin.y;
-            newEvent.fWidth = newSize.width;
-            newEvent.fHeight = newSize.height;
-         
-            //TODO:
-            //1. generate time.
-            //2. check, what's actually required from configure notify.
-            window->HandleEvent(&newEvent);
-         } else {
-            NSLog(@"Warning: RootQuartzView, -setFrameSize method, no window for id %u was found", fID);
-         }
-      }
+   if (fEventMask & kStructureNotifyMask) {
+      [self generateConfigureNotify : self.frame];
    }
 }
 

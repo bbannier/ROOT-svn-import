@@ -271,7 +271,7 @@ Bool_t TGViewPort::HandleConfigureNotify(Event_t *event)
 {
    // Handle resize events.
 
-   if (!fContainer->InheritsFrom(TGContainer::Class())) {
+   if (!fContainer || !fContainer->InheritsFrom(TGContainer::Class())) {
       TGFrame::HandleConfigureNotify(event);
       return kTRUE;
    }
