@@ -1,3 +1,0 @@
-add_subdirectory(Interpreter)
-add_subdirectory(MetaProcessor)
-add_subdirectory(UserInterface)
