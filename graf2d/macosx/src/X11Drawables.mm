@@ -610,7 +610,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //
 //
 
-@implementation QuartzView
+@implementation QuartzView {
+   BOOL fHandleConfigureSent;
+}
 
 @synthesize fResizedByROOT;
 @synthesize fBackBuffer;
@@ -845,7 +847,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          if (fEventMask & kExposureMask) {
             //Ask ROOT's widget/window to draw itself.
             gClient->NeedRedraw(window, kTRUE);
-         }/* else */
+         }
 
          if (fBackBuffer) {
             //Very "special" window.
@@ -901,7 +903,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    [super setFrame : newFrame];
 
    if (fEventMask & kStructureNotifyMask) {
-      [self generateConfigureNotify : newFrame];
+     // [self generateConfigureNotify : newFrame];
    }
 }
 
@@ -910,11 +912,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) setFrameSize : (NSSize)newSize
 {
    //Check, if setFrameSize calls setFrame.
+   
    [super setFrameSize : newSize];
    
    if (fEventMask & kStructureNotifyMask) {
       [self generateConfigureNotify : self.frame];
    }
+   
+   //?
+   [self setNeedsDisplay : YES];
 }
 
 //______________________________________________________________________________
