@@ -307,6 +307,13 @@ void TCanvas::Constructor(const char *name, const char *title, Int_t form)
       if (form == 3) fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, 30, 30, UInt_t(cx*500), UInt_t(cx*500));
       if (form == 4) fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, 40, 40, UInt_t(cx*500), UInt_t(cx*500));
       if (form == 5) fCanvasImp = gGuiFactory->CreateCanvasImp(this, name, 50, 50, UInt_t(cx*500), UInt_t(cx*500));
+
+      //
+      if (fCanvasID == -1 && fCanvasImp)
+         fCanvasID = fCanvasImp->InitWindow();
+      //
+
+
       fCanvasImp->ShowMenuBar(TestBit(kMenuBar));
       fBatch = kFALSE;
    }

@@ -341,7 +341,7 @@ private:
 
    std::vector<GCValues_t> fX11Contexts;
    
-   UInt_t fSelectedDrawable;
+   Int_t fSelectedDrawable;
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
