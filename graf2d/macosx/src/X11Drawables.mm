@@ -11,6 +11,7 @@
 #import "TGWindow.h"
 #import "TGClient.h"
 #import "TGCocoa.h"
+#import "TClass.h"
 
 namespace ROOT {
 namespace MacOSX {
@@ -926,8 +927,52 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mouseDown : (NSEvent *)theEvent
 {
-   (void)theEvent;
-   NSLog(@"me : %u", fID);
+
+   if (fID) {
+      if (TGWindow * window = gClient->GetWindowById(fID)) {
+       if (fEventMask & kButtonPressMask) {
+            Event_t newEvent = {};
+            newEvent.fType = kButtonPress;
+            newEvent.fTime = [theEvent timestamp];//timestamp is a floating point number.
+            newEvent.fWindow = fID;
+            
+            const NSPoint clickPoint = [self convertPoint : [theEvent locationInWindow] fromView : nil];
+            
+            newEvent.fX = clickPoint.x;
+            newEvent.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clickPoint.y);
+            
+            window->HandleEvent(&newEvent);
+         } else //We can also check fDoNoPropagate mask and block the event (TODO).
+            [super mouseDown : theEvent];//Pass to the parent view.
+      } else {
+         NSLog(@"Warning: QuartzView, -mouseDown method, no window for id %u was found", fID);
+      }
+   } else
+      [super mouseDown : theEvent];//Will pass to parent view.
+}
+
+//______________________________________________________________________________
+- (void) mouseUp : (NSEvent *)theEvent
+{
+   if (fID) {
+      if (TGWindow * window = gClient->GetWindowById(fID)) {
+         if (fEventMask & kButtonReleaseMask) {
+            Event_t newEvent = {};
+            newEvent.fType = kButtonRelease;
+            newEvent.fTime = [theEvent timestamp];//timestamp is a floating point number.
+            
+            
+            //TODO: coordinates?
+            
+            newEvent.fWindow = fID;
+            window->HandleEvent(&newEvent);
+         } else
+            [super mouseUp : theEvent];//Pass to the parent view.
+      } else {
+         NSLog(@"Warning: QuartzView, -mouseDown method, no window for id %u was found", fID);
+      }
+   } else
+      [super mouseUp : theEvent];
 }
 
 @end

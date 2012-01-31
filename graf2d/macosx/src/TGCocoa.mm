@@ -84,7 +84,7 @@ void FlushContext(QuartzView *view, CGContextRef ctx)
       return;
 
    //Case b): flush and unlock.
-   CGContextFlush(ctx);
+ //  CGContextFlush(ctx);
    [view unlockFocus];
 }
 
@@ -1030,6 +1030,7 @@ Int_t TGCocoa::InitWindow(ULong_t parentID)
       ROOT::MacOSX::X11::GetRootWindowAttributes(&attr);
 
    Int_t rez = CreateWindow(parentID, 0, 0, attr.fWidth, attr.fHeight, 0, attr.fDepth, attr.fClass, nullptr, nullptr, 0);
+   NSLog(@"canvas %d", rez);
    
    return rez;
 }
@@ -1255,10 +1256,12 @@ void TGCocoa::SetCursor(Window_t /*wid*/, Cursor_t /*curid*/)
 }
 
 //______________________________________________________________________________
-Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
+Pixmap_t TGCocoa::CreatePixmap(Drawable_t wid, UInt_t w, UInt_t h)
 {
    // Creates a pixmap of the specified width and height and returns
    // a pixmap ID that identifies it.
+   NSLog(@"CreatePixmap called, wid == %lu, w == %u, h == %u", wid, w, h);
+
 
    return kNone;
 }
@@ -1279,6 +1282,8 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/,
    // forecolor     - the foreground pixel values to use
    // backcolor     - the background pixel values to use
    // depth         - the depth of the pixmap
+
+
 
    return 0;
 }
@@ -1479,6 +1484,15 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    if (CGContextRef ctx = PrepareContext(view)) {
       const CGStateGuard ctxGuard(ctx);
       //Draw line.
+      //This draw line is a special GUI method, it's used not by ROOT's graphics, but
+      //by widgets. The problem is, I can not draw the line at the top of widget (in X11's
+      //coordinate space it's at the bottom. So I have to make very tiny scaling here.
+      //Other solutions - add 1 pixel to the widget's height or substract 1 from y coordinate
+      //- are even WORSE (in the first case, we'll have to remember everywhere the real size,
+      //in the second - lines can be at y == height and y == height - 1, so it's not clear when to shift).
+      CGContextScaleCTM(ctx, 1.f, CGFloat(view.fHeight - 1) / view.fHeight);
+      
+      
       CGContextSetAllowsAntialiasing(ctx, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
       SetStrokeParameters(ctx, gcVals);
       CGContextBeginPath(ctx);
@@ -1575,8 +1589,8 @@ void TGCocoa::GrabKey(Window_t /*wid*/, Int_t /*keycode*/, UInt_t /*modifier*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::GrabButton(Window_t /*wid*/, EMouseButton /*button*/,
-                           UInt_t /*modifier*/, UInt_t /*evmask*/,
+void TGCocoa::GrabButton(Window_t wid, EMouseButton /*button*/,
+                           UInt_t /*modifier*/, UInt_t evmask,
                            Window_t /*confine*/, Cursor_t /*cursor*/,
                            Bool_t /*grab = kTRUE*/)
 {
@@ -1584,6 +1598,12 @@ void TGCocoa::GrabButton(Window_t /*wid*/, EMouseButton /*button*/,
    // certain mouse button is hit while certain modifier's (Shift, Control,
    // Meta, Alt) are active then the mouse will be grabed for window id.
    // When grab is false, ungrab the mouse button for this button and modifier.
+   assert(wid != 0 && "GrabButton, called for 'root' window");
+   
+//   if (evmask & kButtonPressMask) {
+NSLog(@"wid %lu, mask %u", wid, evmask);
+      fPimpl->GetWindow(wid).fEventMask |= evmask;
+//   }
 }
 
 //______________________________________________________________________________
@@ -1872,7 +1892,11 @@ void TGCocoa::SelectInput(Window_t wid, UInt_t evmask)
    assert(wid != 0 && "SelectInput, called for 'root' window");
    
    id<X11Drawable> window = fPimpl->GetWindow(wid);
-   window.fEventMask = evmask;
+   //This is wrong at the moment, I have it only for test: TODO.
+   //
+   //
+   //
+   window.fEventMask |= evmask;
 }
 
 //______________________________________________________________________________
@@ -1936,8 +1960,7 @@ void TGCocoa::LookupString(Event_t * /*event*/, char * /*buf*/, Int_t /*buflen*/
 }
 
 //______________________________________________________________________________
-void TGCocoa::TranslateCoordinates(Window_t /*src*/, Window_t /*dest*/, Int_t /*src_x*/, Int_t /*src_y*/, 
-                                   Int_t &/*dest_x*/, Int_t &/*dest_y*/, Window_t &/*child*/)
+void TGCocoa::TranslateCoordinates(Window_t src_w, Window_t dst_w, Int_t src_x, Int_t src_y, Int_t &dest_x, Int_t &dest_y, Window_t &child)
 {
    // Translates coordinates in one window to the coordinate space of another
    // window. It takes the "src_x" and "src_y" coordinates relative to the
@@ -1951,6 +1974,32 @@ void TGCocoa::TranslateCoordinates(Window_t /*src*/, Window_t /*dest*/, Int_t /*
    // child          - returns the child of "dest" if the coordinates
    //                  are contained in a mapped child of the destination
    //                  window; otherwise, child is set to 0
+//   NSLog(@"TranslateCoordinates was called %lu", child);
+
+//   assert(src != 0 && "TranslateCoordinates, src is a 'root' window");
+//   assert(dest != 0 && "TranslateCoordinates, dest is a 'root' window");
+//   NSLog(@"src %lu dest %lu x %d y %d", src, dest, src_x, src_y);
+   using namespace ROOT::MacOSX::X11;
+   
+   if (!src_w || !dst_w)
+      return;
+
+   QuartzView *srcView = fPimpl->GetWindow(src_w).fContentView;
+   QuartzView *dstView = fPimpl->GetWindow(dst_w).fContentView;   
+   
+   NSPoint srcPoint = {};
+   srcPoint.x = src_x;
+   srcPoint.y = LocalYROOTToCocoa(srcView, src_y);
+
+   NSPoint dstPoint = [dstView convertPoint : srcPoint fromView : srcView];
+   dest_x = dstPoint.x;
+   dest_y = LocalYCocoaToROOT(dstView, dstPoint.y);
+
+   if ([dstView superview])
+      dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
+
+   if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint])
+      child = view.fID;
 }
 
 //______________________________________________________________________________
@@ -2040,6 +2089,9 @@ void TGCocoa::Update(Int_t /*mode = 0*/)
    // Flushes (mode = 0, default) or synchronizes (mode = 1) X output buffer.
    // Flush flushes output buffer. Sync flushes buffer and waits till all
    // requests have been processed by X server.
+   
+   NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+   [nsContext flushGraphics];
 }
 
 //______________________________________________________________________________

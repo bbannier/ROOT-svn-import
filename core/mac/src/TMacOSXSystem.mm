@@ -9,6 +9,7 @@
 #include "TSeqCollection.h"
 #include "TMacOSXSystem.h"
 #include "CocoaUtils.h"
+#include "TVirtualX.h"
 #include "TError.h"
 
 //
@@ -315,6 +316,8 @@ void TMacOSXSystem::WaitForGuiEvents()
    NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : YES];
    //[NSApp postEvent : event atStart : YES];
    [NSApp sendEvent : event];
+   //
+   gVirtualX->Update(1);
 }
 
 //______________________________________________________________________________
@@ -349,6 +352,8 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
 #endif
       //[NSApp postEvent : event atStart : YES];
       [NSApp sendEvent : event];
+      //
+      gVirtualX->Update(1);
    }
    
    fPimpl->CloseFileDescriptors();
