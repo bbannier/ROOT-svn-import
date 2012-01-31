@@ -123,6 +123,16 @@ void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> wind
    
    //TODO: More attributes to set -
    //cursor for example, etc.
+   if (mask & kWAOverrideRedirect) {
+      //This is quite a special case.
+      //Unfortunately, as soon as this is Objective-C++, I 
+      //can not do the following test:
+      //if ([window isKindOfClass : [QuartzWindow : class]]) {
+      if (!window.fParentView) {
+         QuartzWindow *qw = (QuartzWindow *)window;
+         [qw setStyleMask : NSBorderlessWindowMask];
+      }
+   }
 }
 
 //______________________________________________________________________________
