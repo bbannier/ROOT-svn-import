@@ -12,6 +12,7 @@
 #include "QuartzText.h"
 #include "CocoaUtils.h"
 #include "TGCocoa.h"
+#include "TGFrame.h"//EFrameType.
 
 ClassImp(TGCocoa)
 
@@ -527,8 +528,7 @@ void TGCocoa::ResizeWindow(Int_t wid)
       fSelectedDrawable = wid;
       SetDoubleBufferON();
       fSelectedDrawable = currentDrawable;
-   } 
-//   NSLog(@"w %u h %u", window.fWidth, window.fHeight);
+   }
 }
 
 //______________________________________________________________________________
@@ -618,8 +618,6 @@ void TGCocoa::SetDoubleBufferOFF()
 void TGCocoa::SetDoubleBufferON()
 {
    // Turns double buffer mode on.
-
-   //NSLog(@"selected drawable %d", fSelectedDrawable);
    assert(fSelectedDrawable != 0 && "SetDoubleBufferON, called, but no correct window was selected before");
    
    id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
@@ -807,6 +805,7 @@ void TGCocoa::MapSubwindows(Window_t wid)
 {
    // Maps all subwindows for the specified window "wid" in top-to-bottom
    // stacking order.   
+   
    assert(wid != 0 && "MapSubwindows, called for 'root' window");
    
    if (MakeProcessForeground()) {
@@ -822,7 +821,7 @@ void TGCocoa::MapRaised(Window_t wid)
    // Maps the window "wid" and all of its subwindows that have had map
    // requests on the screen and put this window on the top of of the
    // stack of all windows.
-
+   
    assert(wid != 0 && "MapRaised, called for 'root' window");
    //ROOT::MacOSX::Util::AutoreleasePool pool;//TODO
 
@@ -977,7 +976,7 @@ namespace {
 
 //______________________________________________________________________________
 QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t depth,
-                                   UInt_t clss, void */*visual*/, SetWindowAttributes_t *attr, UInt_t /*wtype*/)
+                                   UInt_t clss, void */*visual*/, SetWindowAttributes_t *attr, UInt_t)
 {
    NSRect winRect = {};
    winRect.origin.x = x; 
@@ -986,8 +985,8 @@ QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t 
    winRect.size.height = h;
 
    //TODO check mask.
-   NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
-
+   const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+   //
    QuartzWindow *newWindow = [[QuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO windowAttributes : attr];
    //TODO should it be in setAttributes?
    [newWindow setAcceptsMouseMovedEvents : YES];
@@ -1029,10 +1028,7 @@ Int_t TGCocoa::InitWindow(ULong_t parentID)
    } else
       ROOT::MacOSX::X11::GetRootWindowAttributes(&attr);
 
-   Int_t rez = CreateWindow(parentID, 0, 0, attr.fWidth, attr.fHeight, 0, attr.fDepth, attr.fClass, nullptr, nullptr, 0);
-   NSLog(@"canvas %d", rez);
-   
-   return rez;
+   return CreateWindow(parentID, 0, 0, attr.fWidth, attr.fHeight, 0, attr.fDepth, attr.fClass, nullptr, nullptr, 0);
 }
 
 //______________________________________________________________________________
@@ -1201,7 +1197,6 @@ GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t *gval)
 //______________________________________________________________________________
 void TGCocoa::ChangeGC(GContext_t gc, GCValues_t *gval)
 {
- //  NSLog(@"changing GC %lu", gc);
    // Changes the components specified by the mask in gval for the specified GC.
    //
    // GContext_t gc   - specifies the GC to be changed
@@ -1223,14 +1218,12 @@ void TGCocoa::CopyGC(GContext_t /*org*/, GContext_t /*dest*/, Mask_t /*mask*/)
    // Copies the specified components from the source GC "org" to the
    // destination GC "dest". The "mask" defines which component to copy
    // and it is a data member of GCValues_t.
-  // NSLog(@"CopyGC");
 }
 
 //______________________________________________________________________________
 void TGCocoa::DeleteGC(GContext_t /*gc*/)
 {
    // Deletes the specified GC "gc".
-  // NSLog(@"DeleteGC");
 }
 
 //______________________________________________________________________________
@@ -1600,10 +1593,9 @@ void TGCocoa::GrabButton(Window_t wid, EMouseButton /*button*/,
    // When grab is false, ungrab the mouse button for this button and modifier.
    assert(wid != 0 && "GrabButton, called for 'root' window");
    
-//   if (evmask & kButtonPressMask) {
-NSLog(@"wid %lu, mask %u", wid, evmask);
-      fPimpl->GetWindow(wid).fEventMask |= evmask;
-//   }
+
+   //TODO: this is only test implementation of GrabButton.
+   fPimpl->GetWindow(wid).fEventMask |= evmask;
 }
 
 //______________________________________________________________________________
@@ -1981,25 +1973,48 @@ void TGCocoa::TranslateCoordinates(Window_t src_w, Window_t dst_w, Int_t src_x, 
 //   NSLog(@"src %lu dest %lu x %d y %d", src, dest, src_x, src_y);
    using namespace ROOT::MacOSX::X11;
    
-   if (!src_w || !dst_w)
+   if (src_w == 0 && dst_w == 0) {
+      Warning("TranslateCoordinates", "both source and destination windows are 'root' window");//TOOD
       return;
+   }
 
-   QuartzView *srcView = fPimpl->GetWindow(src_w).fContentView;
-   QuartzView *dstView = fPimpl->GetWindow(dst_w).fContentView;   
-   
-   NSPoint srcPoint = {};
-   srcPoint.x = src_x;
-   srcPoint.y = LocalYROOTToCocoa(srcView, src_y);
+   if (src_w && !dst_w) {
+      //This is a special case for popup menu. TODO: sure code must be more generic.
+      QuartzView *srcView = fPimpl->GetWindow(src_w).fContentView;
+      
+      NSPoint srcPoint = {};
+      srcPoint.x = src_x;
+      srcPoint.y = LocalYROOTToCocoa(srcView, src_y);
 
-   NSPoint dstPoint = [dstView convertPoint : srcPoint fromView : srcView];
-   dest_x = dstPoint.x;
-   dest_y = LocalYCocoaToROOT(dstView, dstPoint.y);
+      NSScreen *currentScreen = [[NSScreen screens] objectAtIndex : 0];
 
-   if ([dstView superview])
-      dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
+		const NSPoint windowPoint = [srcView convertPoint : srcPoint toView : nil];
+		const NSPoint screenPoint = [[srcView window] convertBaseToScreen : windowPoint];
+ 
+		dest_x = screenPoint.x;
+      dest_y = currentScreen.frame.size.height - screenPoint.y;
+      child = 0;
+   } else if (!src_w && dst_w) {
+      //From screen to view.
+   } else {
+      QuartzView *srcView = fPimpl->GetWindow(src_w).fContentView;
+      QuartzView *dstView = fPimpl->GetWindow(dst_w).fContentView;   
+      
+      NSPoint srcPoint = {};
+      srcPoint.x = src_x;
+      srcPoint.y = LocalYROOTToCocoa(srcView, src_y);
+      
 
-   if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint])
-      child = view.fID;
+      NSPoint dstPoint = [dstView convertPoint : srcPoint fromView : srcView];
+      dest_x = dstPoint.x;
+      dest_y = LocalYCocoaToROOT(dstView, dstPoint.y);
+
+      if ([dstView superview])
+         dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
+
+      if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint])
+         child = view.fID;
+   }
 }
 
 //______________________________________________________________________________
