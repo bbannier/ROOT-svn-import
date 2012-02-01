@@ -520,6 +520,28 @@ CTLineGuard::CTLineGuard(const char * /*textLine*/, CTFontRef /*font*/, Color_t 
 }
 
 //_________________________________________________________________
+CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font, const CGFloat *rgb)
+                  : fCTLine(0)
+{
+   //Create attributed string with font and color.
+   //TODO: use RAII?
+   CGColorSpaceRef rgbColorSpace = CGColorSpaceCreateDeviceRGB();//[1
+   if (!rgbColorSpace)
+      throw std::runtime_error("CTLineGuard: color space is null");
+
+   CGColorRef textColor = CGColorCreate(rgbColorSpace, rgb);//[2
+   //Not clear from docs, if textColor can be 0.
+   
+   CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorAttributeName};
+   CFTypeRef values[] = {font, textColor};
+
+   Init(textLine, 2, keys, values);
+
+   CGColorRelease(textColor);//2]
+   CGColorSpaceRelease(rgbColorSpace);//1]
+}
+
+//_________________________________________________________________
 CTLineGuard::~CTLineGuard()
 {
    CFRelease(fCTLine);

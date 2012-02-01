@@ -89,6 +89,27 @@ void FlushContext(QuartzView *view, CGContextRef ctx)
    [view unlockFocus];
 }
 
+//______________________________________________________________________________
+Bool_t ExtractColorFromX11Context(const GCValues_t &gcVals, CGFloat *rgb)
+{
+   Pixel_t pixelColor = 0;
+
+   if (gcVals.fMask & kGCForeground)
+      pixelColor = gcVals.fForeground;
+   else if (gcVals.fMask & kGCBackground)
+      pixelColor = gcVals.fBackground;
+   else
+      return kFALSE;//Do not modify rgb.
+   
+   //TODO: something not so lame!
+   rgb[0] = (pixelColor >> 16 & 0xff) / 255.f;
+   rgb[1] = (pixelColor >> 8 & 0xff) / 255.f;
+   rgb[2] = (pixelColor & 0xff) / 255.f;
+   
+   return kTRUE;
+}
+
+
 }
 
 //______________________________________________________________________________
@@ -750,7 +771,7 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
          FlushContext(dstView, ctx);
          CGImageRelease(image);
       } else {
-         Error("UpdateWindow", "Method called for direct rendering, but no context found");
+         //Error("UpdateWindow", "Method called for direct rendering, but no context found");
       }
    }
 }
@@ -1208,6 +1229,7 @@ void TGCocoa::ChangeGC(GContext_t gc, GCValues_t *gval)
    GCValues_t &x11Context = fX11Contexts[gc - 1];
    const Mask_t &mask = gval->fMask;
    if (mask & kGCFont) {
+      x11Context.fMask |= kGCFont;
       x11Context.fFont = gval->fFont;
    }
 }
@@ -1442,20 +1464,11 @@ void TGCocoa::SetStrokeParameters(void *contextPtr, const GCValues_t &gcVals)con
    if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1)
       CGContextSetLineWidth(ctx, gcVals.fLineWidth);
 
-   Pixel_t pixelColor = 0;
+   CGFloat rgb[3] = {};
+   if (!ExtractColorFromX11Context(gcVals, rgb))
+      Warning("SetStrokeParameters", "x11 context does not have line color information");
 
-   if (mask & kGCForeground)
-      pixelColor = gcVals.fForeground;
-   else if (mask & kGCBackground)
-      pixelColor = gcVals.fBackground;
-   else
-      assert(0 && "SetStrokeParameters, no color set in context");
-   
-   const CGFloat red = (pixelColor >> 16 & 0xff) / 255.f;
-   const CGFloat green = (pixelColor >> 8 & 0xff) / 255.f;
-   const CGFloat blue = (pixelColor & 0xff) / 255.f;
-
-   CGContextSetRGBStrokeColor(ctx, red, green, blue, 1.f);
+   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
 }
 
 //______________________________________________________________________________
@@ -1487,15 +1500,18 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
       
       
       CGContextSetAllowsAntialiasing(ctx, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
+      
       SetStrokeParameters(ctx, gcVals);
+   
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x1, LocalYROOTToCocoa(view, y1));
       CGContextAddLineToPoint(ctx, x2, LocalYROOTToCocoa(view, y2));
       CGContextStrokePath(ctx);
       //Flush and unlock if it's a "direct rendering".
       FlushContext(view, ctx);
-   } else
-      Error("DrawLine", "Method was called directly, but no graphics context can be found");
+   } else {
+      //Error("DrawLine", "Method was called directly, but no graphics context can be found");
+   }
 }
 
 //______________________________________________________________________________
@@ -1523,8 +1539,9 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
       CGContextFillRect(ctx, CGRectMake(x, y, w, h));
       //Flush and unlock if it's a "direct rendering".
       FlushContext(view, ctx);
-   } else
-      Error("ClearArea", "Method was called directly, but not graphics context can be found");
+   } else {
+    //  Error("ClearArea", "Method was called directly, but not graphics context can be found");
+   }
 }
 
 //______________________________________________________________________________
@@ -1685,6 +1702,8 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
    // a transient window or may treat it differently in other ways.
 }
 
+
+
 //______________________________________________________________________________
 void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len)
 {
@@ -1699,25 +1718,32 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
    
    if (CGContextRef ctx = PrepareContext(view)) {
       const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
-      //Text must be antialiased (or it looks like .... you know what :)).
+
+      //Text must be antialiased.
       CGContextSetAllowsAntialiasing(ctx, 1);
+      
       const GCValues_t &gcVals = fX11Contexts[gc - 1];
+      assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
 
       if (len < 0)
          len = std::strlen(text);
-   
       const std::string substr(text, len);
-      ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont);
+      
+      //Text can be not black, for example, highlighted label.
+      CGFloat textColor[4] = {0., 0., 0., 1.};//black by default.
+      //I do not check the results here, it's ok to have a black text.
+      ExtractColorFromX11Context(gcVals, textColor);
 
-      //CGContextSaveGState(ctx);
+      ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
+
       CGContextSetTextPosition(ctx, x, LocalYROOTToCocoa(view, y));
       CTLineDraw(ctLine.fCTLine, ctx);
-      //CGContextRestoreGState(ctx);
       
       //Flush and unlock if it's direct call.
       FlushContext(view, ctx);
-   } else
-      Error("DrawString", "Method called directly, but no graphics context can be found");
+   } else {
+    //  Error("DrawString", "Method called directly, but no graphics context can be found");
+   }
 }
 
 //______________________________________________________________________________
@@ -1788,21 +1814,11 @@ void TGCocoa::SetFilledAreaParameters(void *contextPtr, const GCValues_t &gcVals
    assert(contextPtr && "SetFilledAreaParameters, context parameter is null");
    CGContextRef ctx = (CGContextRef)contextPtr;
    
-   const Mask_t mask = gcVals.fMask;
-   Pixel_t pixelColor = 0;
-      
-   if (mask & kGCBackground)
-      pixelColor = gcVals.fBackground;
-   else if (mask & kGCForeground)
-      pixelColor = gcVals.fForeground;
-   else
-      assert(0 && "SetFilledAreaParameters, context mask has no background/foreground bit set");
+   CGFloat rgb[3] = {};
+   if (!ExtractColorFromX11Context(gcVals, rgb))
+      Warning("SetFilledAreaParameters", "no fill color found in x11 context");
    
-   const CGFloat red   = (pixelColor >> 16 & 0xFF) / 255.f;
-   const CGFloat green = (pixelColor >>  8 & 0xFF) / 255.f;
-   const CGFloat blue  = (pixelColor & 0xFF) / 255.f;
-   
-   CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);
+   CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
 }
 
 //______________________________________________________________________________
@@ -1820,6 +1836,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    if (CGContextRef ctx = PrepareContext(view)) {
       const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
 
+      //Fill color from context.
       const GCValues_t &gcVals = fX11Contexts[gc - 1];
       SetFilledAreaParameters(ctx, gcVals);
 
@@ -1828,8 +1845,9 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
       CGContextFillRect(ctx, fillRect);
       //Flush graphics and unlock focus, if called from ROOT.
       FlushContext(view, ctx);
-   } else
-      Error("FillRectangle", "Method was called directly, but no graphics context can be found");
+   } else {
+      //Error("FillRectangle", "Method was called directly, but no graphics context can be found");
+   }
 }
 
 //______________________________________________________________________________
@@ -1846,15 +1864,18 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    
    if (CGContextRef ctx = PrepareContext(view)) {
       const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
+      
+      //Line color from X11 context.
       const GCValues_t &gcVals = fX11Contexts[gc - 1];
       SetStrokeParameters(ctx, gcVals);
+      
       const CGRect rect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
       CGContextStrokeRect(ctx, rect);
       //Flush graphics and unlock focus, if called from ROOT.
       FlushContext(view, ctx);
-   } else
-      Error("DrawRectangle", "Method was called directly, but no graphics context can be found");
-
+   } else {
+    //  Error("DrawRectangle", "Method was called directly, but no graphics context can be found");
+   }
 }
 
 //______________________________________________________________________________
@@ -2078,7 +2099,7 @@ void TGCocoa::QueryPointer(Window_t /*wid*/, Window_t &/*rootw*/, Window_t &/*ch
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetForeground(GContext_t /*gc*/, ULong_t /*foreground*/)
+void TGCocoa::SetForeground(GContext_t gc, ULong_t foreground)
 {
    // Sets the foreground color for the specified GC (shortcut for ChangeGC
    // with only foreground mask set).
@@ -2086,6 +2107,12 @@ void TGCocoa::SetForeground(GContext_t /*gc*/, ULong_t /*foreground*/)
    // gc         - specifies the GC
    // foreground - the foreground you want to set
    // (see also the GCValues_t structure)
+   
+   assert(gc <= fX11Contexts.size() && gc > 0 && "ChangeGC - stange context id");
+   
+   GCValues_t &x11Context = fX11Contexts[gc - 1];
+   x11Context.fMask |= kGCForeground;
+   x11Context.fForeground = foreground;
 }
 
 //______________________________________________________________________________
@@ -2104,6 +2131,8 @@ void TGCocoa::Update(Int_t /*mode = 0*/)
    // Flushes (mode = 0, default) or synchronizes (mode = 1) X output buffer.
    // Flush flushes output buffer. Sync flushes buffer and waits till all
    // requests have been processed by X server.
+   
+   gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
    
    NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
    [nsContext flushGraphics];
