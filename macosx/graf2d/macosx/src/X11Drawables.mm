@@ -650,7 +650,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       [self setCanDrawConcurrently : NO];
       
       [self setHidden : YES];
-   
+      //Actually, check if view need this.
+      const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect;
+      NSTrackingArea *tracker = [[NSTrackingArea alloc] initWithRect : frame options : trackerOptions owner : self userInfo : nil];
+      [self addTrackingArea : tracker];
+      [tracker release];
+      //
       if (attr)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
    }
@@ -909,7 +914,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) setFrame : (NSRect)newFrame
+- (void) setFrame : (NSRect) newFrame
 {
    [super setFrame : newFrame];
 
@@ -920,7 +925,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 
 //______________________________________________________________________________
-- (void) setFrameSize : (NSSize)newSize
+- (void) setFrameSize : (NSSize) newSize
 {
    //Check, if setFrameSize calls setFrame.
    
@@ -935,7 +940,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) mouseDown : (NSEvent *)theEvent
+- (void) mouseDown : (NSEvent *) theEvent
 {
 
    if (fID) {
@@ -962,7 +967,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) mouseUp : (NSEvent *)theEvent
+- (void) mouseUp : (NSEvent *) theEvent
 {
    if (fID) {
       if (TGWindow * window = gClient->GetWindowById(fID)) {
@@ -983,6 +988,37 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       }
    } else
       [super mouseUp : theEvent];
+}
+
+//______________________________________________________________________________
+- (void) mouseEntered : (NSEvent *) theEvent
+{
+   (void)theEvent;
+ //  NSLog(@"mouse entered %u", fID);
+}
+
+//______________________________________________________________________________
+- (void) mouseExited : (NSEvent *) theEvent
+{
+   (void)theEvent;
+  // NSLog(@"mouse exited %u", fID);
+}
+
+//______________________________________________________________________________
+- (BOOL) acceptsFirstResponder
+{
+   return YES;
+}
+
+//______________________________________________________________________________
+- (void) mouseMoved : (NSEvent *) theEvent
+{
+   const NSPoint windowPoint = [theEvent locationInWindow];
+   NSView *candidateView = [[[self window] contentView] hitTest : windowPoint];
+   if (candidateView && candidateView == self) {
+      //Now, check flags and generate event.
+     // NSLog(@"Mouse moved %u", fID);
+   }
 }
 
 @end
