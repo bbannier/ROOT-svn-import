@@ -52,7 +52,7 @@ class TGIdleHandler;
 
 
 class TGClient : public TObject, public TQObject {
-
+   friend class TGCocoa;
 protected:
    Pixel_t         fBackColor;        // default background color
    Pixel_t         fForeColor;        // default foreground color

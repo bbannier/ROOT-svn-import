@@ -353,10 +353,10 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
       //[NSApp postEvent : event atStart : YES];
       [NSApp sendEvent : event];
       //
-      gVirtualX->Update(1);
    }
    
    fPimpl->CloseFileDescriptors();
+   gVirtualX->Update(1);
 }
 
 //______________________________________________________________________________

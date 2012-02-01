@@ -92,6 +92,7 @@ class CTLineGuard {
 public:
    CTLineGuard(const char *textLine, CTFontRef font);
    CTLineGuard(const char *textLine, CTFontRef font, Color_t color);
+   CTLineGuard(const char *textLine, CTFontRef font, const CGFloat *rgb);
 
    ~CTLineGuard();
    
