@@ -42,26 +42,26 @@ private:
 };
 
 //______________________________________________________________________________
-CGContextRef PrepareContext(QuartzView *view)
+CGContextRef LockView(QuartzView *view)
 {
    //This function can be called:
    //a)'normal' way - from view's drawRect method.
    //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
    //   drawRect.
    
-   assert(view != nil && "PrepareContext, view parameter is nil");
+   assert(view != nil && "UnlockView, view parameter is nil");
    
    if (view.fContext) {
       //Ok, no need to lock, we were called from drawRect.
       return view.fContext;
    } else {
-      //Life is never easy, ROOT called graphics method, not AppKit.
+      //ROOT called graphics method, not AppKit.
       if ([view lockFocusIfCanDraw]) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-         assert(nsContext != nil && "PrepareContext, currentContext is nil");
+         assert(nsContext != nil && "LockView, currentContext is nil");
 
          CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
-         assert(ctx != nullptr && "PrepareContext, graphicsPort is null");
+         assert(ctx != nullptr && "LockView, graphicsPort is null");
 
          return ctx;
       }
@@ -71,21 +71,19 @@ CGContextRef PrepareContext(QuartzView *view)
 }
 
 //______________________________________________________________________________
-void FlushContext(QuartzView *view, CGContextRef ctx)
+void UnlockView(QuartzView *view)
 {
    //This function can be called:
    //a)'normal' way - from view's drawRect method, nothing to do.
    //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
-   //   drawRect, I have to flush graphics and unlock focus.
+   //   drawRect, I have to unlock focus.
    
-   assert(view != nil && "FlushContext, view parameter is nil");
-   assert(ctx != nullptr && "FlushContext, ctx parameter is null");
+   assert(view != nil && "UnlockView, view parameter is nil");
    
-   if (view.fContext)//Flush will be done by AppKit.
+   if (view.fContext)
       return;
 
-   //Case b): flush and unlock.
- //  CGContextFlush(ctx);
+   //Case b): Unlock.
    [view unlockFocus];
 }
 
@@ -762,13 +760,13 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       QuartzView *dstView = window.fContentView;
       assert(dstView != nil && "UpdateWindow, destination view is nil");
       
-      if (CGContextRef ctx = PrepareContext(dstView)) {
+      if (CGContextRef ctx = LockView(dstView)) {
          CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
          const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
 
          CGContextDrawImage(ctx, imageRect, image);
          //Unlock view and flush graphics.
-         FlushContext(dstView, ctx);
+         UnlockView(dstView);
          CGImageRelease(image);
       } else {
          //Error("UpdateWindow", "Method called for direct rendering, but no context found");
@@ -1487,7 +1485,7 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];   
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    
-   if (CGContextRef ctx = PrepareContext(view)) {
+   if (CGContextRef ctx = LockView(view)) {
       const CGStateGuard ctxGuard(ctx);
       //Draw line.
       //This draw line is a special GUI method, it's used not by ROOT's graphics, but
@@ -1507,8 +1505,8 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
       CGContextMoveToPoint(ctx, x1, LocalYROOTToCocoa(view, y1));
       CGContextAddLineToPoint(ctx, x2, LocalYROOTToCocoa(view, y2));
       CGContextStrokePath(ctx);
-      //Flush and unlock if it's a "direct rendering".
-      FlushContext(view, ctx);
+      //Unlock if it's a "direct rendering".
+      UnlockView(view);
    } else {
       //Error("DrawLine", "Method was called directly, but no graphics context can be found");
    }
@@ -1531,14 +1529,14 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    const CGFloat green = ((color & 0xFF00) >> 8) / 255.f;
    const CGFloat blue  = (color & 0xFF) / 255.f;
    
-   if (CGContextRef ctx = PrepareContext(view)) {
+   if (CGContextRef ctx = LockView(view)) {
       const CGStateGuard ctxGuard(ctx);
       CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);//alpha can be also used.
       if (y)
          y = LocalYROOTToCocoa(view, y + h);
       CGContextFillRect(ctx, CGRectMake(x, y, w, h));
-      //Flush and unlock if it's a "direct rendering".
-      FlushContext(view, ctx);
+      //Unlock if it's a "direct rendering".
+      UnlockView(view);
    } else {
     //  Error("ClearArea", "Method was called directly, but not graphics context can be found");
    }
@@ -1716,7 +1714,7 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
 
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    
-   if (CGContextRef ctx = PrepareContext(view)) {
+   if (CGContextRef ctx = LockView(view)) {
       const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
 
       //Text must be antialiased.
@@ -1739,8 +1737,8 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
       CGContextSetTextPosition(ctx, x, LocalYROOTToCocoa(view, y));
       CTLineDraw(ctLine.fCTLine, ctx);
       
-      //Flush and unlock if it's direct call.
-      FlushContext(view, ctx);
+      //Unlock if it's direct call.
+      UnlockView(view);
    } else {
     //  Error("DrawString", "Method called directly, but no graphics context can be found");
    }
@@ -1833,7 +1831,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    
-   if (CGContextRef ctx = PrepareContext(view)) {
+   if (CGContextRef ctx = LockView(view)) {
       const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
 
       //Fill color from context.
@@ -1843,8 +1841,8 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
       //CGContextSetRGBStrokeColor(ctx, 1, 0, 0, 1.f);
       const CGRect fillRect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
       CGContextFillRect(ctx, fillRect);
-      //Flush graphics and unlock focus, if called from ROOT.
-      FlushContext(view, ctx);
+      //Unlock focus, if called from ROOT.
+      UnlockView(view);
    } else {
       //Error("FillRectangle", "Method was called directly, but no graphics context can be found");
    }
@@ -1862,7 +1860,7 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    
-   if (CGContextRef ctx = PrepareContext(view)) {
+   if (CGContextRef ctx = LockView(view)) {
       const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
       
       //Line color from X11 context.
@@ -1872,7 +1870,7 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
       const CGRect rect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
       CGContextStrokeRect(ctx, rect);
       //Flush graphics and unlock focus, if called from ROOT.
-      FlushContext(view, ctx);
+      UnlockView(view);
    } else {
     //  Error("DrawRectangle", "Method was called directly, but no graphics context can be found");
    }

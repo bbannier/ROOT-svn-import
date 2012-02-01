@@ -269,7 +269,9 @@ FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
 
    //CF expects CFStringRef, not c-string.
    CFGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);//false - no initial retain.
-   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//0 is for CGAffineTransform, false - no initial retain.
+
+   //TODO: pixelSize + 2 - this is just a temporary hack, because text in GUI is too tiny.
+   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize + 2, 0), false);//0 is for CGAffineTransform, false - no initial retain.
    
    
    //What if this font was "loaded" already?
