@@ -1,4 +1,3 @@
-
 #define DEBUG_ROOT_COCOA
 
 #ifdef DEBUG_ROOT_COCOA
@@ -1015,7 +1014,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    const NSPoint windowPoint = [theEvent locationInWindow];
    NSView *candidateView = [[[self window] contentView] hitTest : windowPoint];
-   if (candidateView && candidateView == self) {
+   if (candidateView == self) {
       //Now, check flags and generate event.
      // NSLog(@"Mouse moved %u", fID);
    }
