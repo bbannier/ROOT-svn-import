@@ -540,7 +540,6 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 void TGCocoa::ResizeWindow(Int_t wid)
 {
    // Resizes the window "wid" if necessary.
-//   std::cout<<"RESIZE WINDOW "<<wid<<std::endl;
    id<X11Drawable> window = fPimpl->GetWindow(wid);
    if (window.fBackBuffer) {
       int currentDrawable = fSelectedDrawable;
@@ -1216,28 +1215,79 @@ GContext_t TGCocoa::CreateGC(Drawable_t /*wid*/, GCValues_t *gval)
 //______________________________________________________________________________
 void TGCocoa::ChangeGC(GContext_t gc, GCValues_t *gval)
 {
-   // Changes the components specified by the mask in gval for the specified GC.
    //
-   // GContext_t gc   - specifies the GC to be changed
-   // GCValues_t gval - specifies the mask and the values to be set
-   // (see also the GCValues_t structure)
-   
    assert(gc <= fX11Contexts.size() && gc > 0 && "ChangeGC - stange context id");
+   assert(gval != nullptr && "ChangeGC, gval parameter is null");
    
    GCValues_t &x11Context = fX11Contexts[gc - 1];
    const Mask_t &mask = gval->fMask;
-   if (mask & kGCFont) {
-      x11Context.fMask |= kGCFont;
+   x11Context.fMask |= mask;
+   
+   //Not all of GCValues_t members are used, but
+   //all can be copied/set without any problem.
+   
+   if (mask & kGCFunction)
+      x11Context.fFunction = gval->fFunction;
+   if (mask & kGCPlaneMask)
+      x11Context.fPlaneMask = gval->fPlaneMask;
+   if (mask & kGCForeground)
+      x11Context.fForeground = gval->fForeground;
+   if (mask & kGCBackground)
+      x11Context.fBackground = gval->fBackground;
+   if (mask & kGCLineWidth)
+      x11Context.fLineWidth = gval->fLineWidth;
+   if (mask & kGCLineStyle)
+      x11Context.fLineStyle = gval->fLineStyle;
+   if (mask & kGCCapStyle)//nobody uses
+      x11Context.fCapStyle = gval->fCapStyle;
+   if (mask & kGCJoinStyle)//nobody uses
+      x11Context.fJoinStyle = gval->fJoinStyle;
+   if (mask & kGCFillStyle)
+      x11Context.fFillStyle = gval->fFillStyle;
+   if (mask & kGCFillRule)//nobody uses
+      x11Context.fFillRule = gval->fFillRule;
+   if (mask & kGCArcMode)//nobody uses
+      x11Context.fArcMode = gval->fArcMode;
+   if (mask & kGCTile)
+      x11Context.fTile = gval->fTile;
+   if (mask & kGCStipple)//nobody
+      x11Context.fStipple = gval->fStipple;
+   if (mask & kGCTileStipXOrigin)
+      x11Context.fTsXOrigin = gval->fTsXOrigin;
+   if (mask & kGCTileStipYOrigin)
+      x11Context.fTsYOrigin = gval->fTsYOrigin;
+   if (mask & kGCFont)
       x11Context.fFont = gval->fFont;
+   if (mask & kGCSubwindowMode)
+      x11Context.fSubwindowMode = gval->fSubwindowMode;
+   if (mask & kGCGraphicsExposures)
+      x11Context.fGraphicsExposures = gval->fGraphicsExposures;
+   if (mask & kGCClipXOrigin)
+      x11Context.fClipXOrigin = gval->fClipXOrigin;
+   if (mask & kGCClipYOrigin)
+      x11Context.fClipYOrigin = gval->fClipYOrigin;
+   if (mask & kGCClipMask)
+      x11Context.fClipMask = gval->fClipMask;
+   if (mask & kGCDashOffset)
+      x11Context.fDashOffset = gval->fDashOffset;
+   if (mask & kGCDashList) {
+      const unsigned nDashes = sizeof x11Context.fDashes / sizeof x11Context.fDashes[0];
+      for (unsigned i = 0; i < nDashes; ++i)
+         x11Context.fDashes[i] = gval->fDashes[i];
+      x11Context.fDashLen = gval->fDashLen;
    }
 }
 
 //______________________________________________________________________________
-void TGCocoa::CopyGC(GContext_t /*org*/, GContext_t /*dest*/, Mask_t /*mask*/)
+void TGCocoa::CopyGC(GContext_t src, GContext_t dst, Mask_t mask)
 {
-   // Copies the specified components from the source GC "org" to the
-   // destination GC "dest". The "mask" defines which component to copy
-   // and it is a data member of GCValues_t.
+   assert(src <= fX11Contexts.size() && src > 0 && "CopyGC, bad source context");   
+   assert(dst <= fX11Contexts.size() && dst > 0 && "CopyGC, bad destination context");
+   
+   GCValues_t srcContext = fX11Contexts[src - 1];
+   srcContext.fMask = mask;
+   
+   ChangeGC(dst, &srcContext);
 }
 
 //______________________________________________________________________________
