@@ -320,8 +320,6 @@ public:
 
 private:
    Bool_t MakeProcessForeground();
-   void SetStrokeParameters(void *ctxPtr, const GCValues_t &gcVals)const;
-   void SetFilledAreaParameters(void *ctxPtr, const GCValues_t &gcVals)const;
 
 protected:
 

@@ -11,8 +11,10 @@
 #include "X11Drawables.h"
 #include "QuartzText.h"
 #include "CocoaUtils.h"
+#include "TGClient.h"
 #include "TGCocoa.h"
-#include "TGFrame.h"//EFrameType.
+#include "TError.h"
+
 
 ClassImp(TGCocoa)
 
@@ -88,25 +90,53 @@ void UnlockView(QuartzView *view)
 }
 
 //______________________________________________________________________________
-Bool_t ExtractColorFromX11Context(const GCValues_t &gcVals, CGFloat *rgb)
+void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
 {
-   Pixel_t pixelColor = 0;
-
-   if (gcVals.fMask & kGCForeground)
-      pixelColor = gcVals.fForeground;
-   else if (gcVals.fMask & kGCBackground)
-      pixelColor = gcVals.fBackground;
-   else
-      return kFALSE;//Do not modify rgb.
-   
    //TODO: something not so lame!
    rgb[0] = (pixelColor >> 16 & 0xff) / 255.f;
    rgb[1] = (pixelColor >> 8 & 0xff) / 255.f;
    rgb[2] = (pixelColor & 0xff) / 255.f;
-   
-   return kTRUE;
 }
 
+//______________________________________________________________________________
+void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
+{
+   //This is initial version, must be more complex: dashes, joins, caps, etc. TODO.
+   //Also, fFunction can affect this, etc.
+
+   assert(ctx != nullptr && "SetStrokeParametersFromX11Context, context parameter is null");
+
+   const Mask_t mask = gcVals.fMask;
+   
+   if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1)
+      CGContextSetLineWidth(ctx, gcVals.fLineWidth);
+
+   CGFloat rgb[3] = {};
+   if (mask & kGCForeground)
+      PixelToRGB(gcVals.fForeground, rgb);
+   else
+      ::Warning("SetStrokeParametersFromX11Context", "x11 context does not have line color information");
+
+   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
+}
+
+//______________________________________________________________________________
+void SetFilledAreaParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
+{
+   //This is initial version, will be more complex - fill stype, patterns, tiles, etc. etc. TODO.
+
+   assert(ctx != nullptr && "SetFilledAreaParametersFromX11Context, context parameter is null");
+   
+   const Mask_t mask = gcVals.fMask;
+   
+   CGFloat rgb[3] = {};
+   if (mask & kGCForeground)
+      PixelToRGB(gcVals.fForeground, rgb);
+   else
+      ::Warning("SetFilledAreaParametersFromX11Context", "no fill color found in x11 context");
+   
+   CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
+}
 
 }
 
@@ -1502,24 +1532,6 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetStrokeParameters(void *contextPtr, const GCValues_t &gcVals)const
-{
-   assert(contextPtr != nullptr && "SetStrokeParameters, context parameter is null");
-
-   CGContextRef ctx = (CGContextRef)contextPtr;
-   const Mask_t mask = gcVals.fMask;
-   
-   if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1)
-      CGContextSetLineWidth(ctx, gcVals.fLineWidth);
-
-   CGFloat rgb[3] = {};
-   if (!ExtractColorFromX11Context(gcVals, rgb))
-      Warning("SetStrokeParameters", "x11 context does not have line color information");
-
-   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
-}
-
-//______________________________________________________________________________
 void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
    //This function can be called:
@@ -1549,7 +1561,7 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
       
       CGContextSetAllowsAntialiasing(ctx, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
       
-      SetStrokeParameters(ctx, gcVals);
+      SetStrokeParametersFromX11Context(ctx, gcVals);
    
       CGContextBeginPath(ctx);
       CGContextMoveToPoint(ctx, x1, LocalYROOTToCocoa(view, y1));
@@ -1780,7 +1792,8 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
       //Text can be not black, for example, highlighted label.
       CGFloat textColor[4] = {0., 0., 0., 1.};//black by default.
       //I do not check the results here, it's ok to have a black text.
-      ExtractColorFromX11Context(gcVals, textColor);
+      if (gcVals.fMask & kGCForeground)
+         PixelToRGB(gcVals.fForeground, textColor);
 
       ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
 
@@ -1857,19 +1870,6 @@ Int_t TGCocoa::KeysymToKeycode(UInt_t /*keysym*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetFilledAreaParameters(void *contextPtr, const GCValues_t &gcVals)const
-{
-   assert(contextPtr && "SetFilledAreaParameters, context parameter is null");
-   CGContextRef ctx = (CGContextRef)contextPtr;
-   
-   CGFloat rgb[3] = {};
-   if (!ExtractColorFromX11Context(gcVals, rgb))
-      Warning("SetFilledAreaParameters", "no fill color found in x11 context");
-   
-   CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
-}
-
-//______________________________________________________________________________
 void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    //Can be called in a 'normal way' - from drawRect method (QuartzView)
@@ -1886,7 +1886,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 
       //Fill color from context.
       const GCValues_t &gcVals = fX11Contexts[gc - 1];
-      SetFilledAreaParameters(ctx, gcVals);
+      SetFilledAreaParametersFromX11Context(ctx, gcVals);
 
       //CGContextSetRGBStrokeColor(ctx, 1, 0, 0, 1.f);
       const CGRect fillRect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
@@ -1915,7 +1915,7 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
       
       //Line color from X11 context.
       const GCValues_t &gcVals = fX11Contexts[gc - 1];
-      SetStrokeParameters(ctx, gcVals);
+      SetStrokeParametersFromX11Context(ctx, gcVals);
       
       const CGRect rect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
       CGContextStrokeRect(ctx, rect);
