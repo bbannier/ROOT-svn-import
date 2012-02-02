@@ -23,6 +23,8 @@
 #include "QuartzText.h"
 #include "QuartzMarker.h"
 #include "QuartzFillArea.h"
+#include "CocoaPrivate.h"
+#include "X11Drawables.h"
 #include "QuartzLine.h"
 
 #include "TGQuartz.h"
@@ -192,8 +194,19 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
  
    // Text color
    SetContextFillColor(GetTextColor());
+
+   assert(fSelectedDrawable != 0 && "no pixmap selected");
+   id<X11Drawable> pixmap = fPimpl->GetWindow(fSelectedDrawable);
+   assert(pixmap.fIsPixmap == YES && "selected drawable is not a pixmap");
    
-   Quartz::DrawText(ctx, (Double_t)x, (Double_t)y, angle, text);
+   CGContextSaveGState(ctx);
+   
+   CGContextTranslateCTM(ctx, 0.f, pixmap.fHeight);
+   CGContextScaleCTM(ctx, 1.f, -1.f);
+   
+   Quartz::DrawText(ctx, (Double_t)x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y), angle, text);
+   
+   CGContextRestoreGState(ctx);
 
 /*
  // Text rotation

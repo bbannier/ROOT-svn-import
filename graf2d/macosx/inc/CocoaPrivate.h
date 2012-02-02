@@ -17,6 +17,7 @@
 @protocol X11Drawable;
 @class NSWindow;
 
+class TGQuartz;
 class TGCocoa;
 
 namespace ROOT {
@@ -25,6 +26,7 @@ namespace Details {
 
 class CocoaPrivate {
    friend class TGCocoa;
+   friend class TGQuartz;
 public:
    ~CocoaPrivate();
 private:
