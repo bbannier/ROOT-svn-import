@@ -646,11 +646,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
 {
    if (self = [super initWithFrame : frame]) {
+      //Make this explicit (though memory is zero initialized).
+      fID = 0;
+   
       [self setCanDrawConcurrently : NO];
       
       [self setHidden : YES];
       //Actually, check if view need this.
       const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect;
+      frame.origin = CGPointZero;
       NSTrackingArea *tracker = [[NSTrackingArea alloc] initWithRect : frame options : trackerOptions owner : self userInfo : nil];
       [self addTrackingArea : tracker];
       [tracker release];
@@ -939,22 +943,42 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
+- (void) locationForEvent : (NSEvent *) cocoaEvent toROOTEvent : (Event_t *) rootEvent
+{
+   assert(cocoaEvent != nil && "locationForEvent, cocoaEvent parameter is nil");
+   assert(rootEvent != nullptr && "locationForEvent, rootEvent parameter is null");
+
+   const NSPoint clickPoint = [self convertPoint : [cocoaEvent locationInWindow] fromView : nil];
+   rootEvent->fX = clickPoint.x;
+   rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clickPoint.y);
+}
+
+//______________________________________________________________________________
+- (Event_t) createROOTEventFor : (NSEvent *) theEvent
+{
+   Event_t newEvent = {};
+   newEvent.fWindow = fID;
+   newEvent.fTime = [theEvent timestamp];
+   
+   return newEvent;
+}
+
+//______________________________________________________________________________
 - (void) mouseDown : (NSEvent *) theEvent
 {
 
    if (fID) {
-      if (TGWindow * window = gClient->GetWindowById(fID)) {
+      if (TGWindow *window = gClient->GetWindowById(fID)) {
        if (fEventMask & kButtonPressMask) {
-            Event_t newEvent = {};
+            Event_t newEvent = [self createROOTEventFor : theEvent];
             newEvent.fType = kButtonPress;
-            newEvent.fTime = [theEvent timestamp];//timestamp is a floating point number.
-            newEvent.fWindow = fID;
-            
+            [self locationForEvent : theEvent toROOTEvent : &newEvent];
+            /*
             const NSPoint clickPoint = [self convertPoint : [theEvent locationInWindow] fromView : nil];
             
             newEvent.fX = clickPoint.x;
             newEvent.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clickPoint.y);
-            
+            */
             window->HandleEvent(&newEvent);
          } else //We can also check fDoNoPropagate mask and block the event (TODO).
             [super mouseDown : theEvent];//Pass to the parent view.
@@ -969,16 +993,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mouseUp : (NSEvent *) theEvent
 {
    if (fID) {
-      if (TGWindow * window = gClient->GetWindowById(fID)) {
+      if (TGWindow *window = gClient->GetWindowById(fID)) {
          if (fEventMask & kButtonReleaseMask) {
-            Event_t newEvent = {};
+            Event_t newEvent = [self createROOTEventFor : theEvent];
             newEvent.fType = kButtonRelease;
-            newEvent.fTime = [theEvent timestamp];//timestamp is a floating point number.
-            
-            
             //TODO: coordinates?
-            
-            newEvent.fWindow = fID;
+            [self locationForEvent : theEvent toROOTEvent : &newEvent];
             window->HandleEvent(&newEvent);
          } else
             [super mouseUp : theEvent];//Pass to the parent view.
@@ -992,15 +1012,37 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mouseEntered : (NSEvent *) theEvent
 {
-   (void)theEvent;
- //  NSLog(@"mouse entered %u", fID);
+   if (fID) {
+      if (TGWindow *window = gClient->GetWindowById(fID)) {
+         if (fEventMask & kEnterWindowMask) {
+            Event_t newEvent = [self createROOTEventFor : theEvent];
+            newEvent.fType = kEnterNotify;
+            [self locationForEvent : theEvent toROOTEvent : &newEvent];
+            
+            window->HandleEvent(&newEvent);
+         }
+      } else {
+         NSLog(@"Warning: QuartzView, -mouseEntered method, no window for id %u was found", fID);
+      }
+   }
 }
 
 //______________________________________________________________________________
 - (void) mouseExited : (NSEvent *) theEvent
 {
-   (void)theEvent;
-  // NSLog(@"mouse exited %u", fID);
+   if (fID) {
+      if (TGWindow *window = gClient->GetWindowById(fID)) {
+         if (fEventMask & kLeaveWindowMask) {
+            Event_t newEvent = [self createROOTEventFor : theEvent];
+            newEvent.fType = kLeaveNotify;
+            [self locationForEvent : theEvent toROOTEvent : &newEvent];
+            
+            window->HandleEvent(&newEvent);
+         }
+      } else {
+         NSLog(@"Warning: QuartzView, -mouseExited method, no window for id %u was found", fID);
+      }
+   }
 }
 
 //______________________________________________________________________________
@@ -1014,9 +1056,22 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    const NSPoint windowPoint = [theEvent locationInWindow];
    NSView *candidateView = [[[self window] contentView] hitTest : windowPoint];
-   if (candidateView == self) {
-      //Now, check flags and generate event.
-     // NSLog(@"Mouse moved %u", fID);
+
+   if (candidateView != self)
+      return;
+
+   if (fID) {
+      if (TGWindow *window = gClient->GetWindowById(fID)) {
+         if (fEventMask & kPointerMotionMask) {
+            Event_t newEvent = [self createROOTEventFor : theEvent];
+            newEvent.fType = kMotionNotify;
+            [self locationForEvent : theEvent toROOTEvent : &newEvent];
+            
+            window->HandleEvent(&newEvent);
+         }
+      } else {
+         NSLog(@"Warning: QuartzView, -mouseMoved, no window for id %u was found", fID);
+      }
    }
 }
 
