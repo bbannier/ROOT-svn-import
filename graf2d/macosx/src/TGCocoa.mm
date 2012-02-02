@@ -1878,12 +1878,11 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 
    assert(wid != 0 && "FillRectangle, called for the 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
-
+   
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    
    if (CGContextRef ctx = LockView(view)) {
       const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
-
       //Fill color from context.
       const GCValues_t &gcVals = fX11Contexts[gc - 1];
       SetFilledAreaParametersFromX11Context(ctx, gcVals);
@@ -1894,7 +1893,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
       //Unlock focus, if called from ROOT.
       UnlockView(view);
    } else {
-      //Error("FillRectangle", "Method was called directly, but no graphics context can be found");
+      Error("FillRectangle", "Method was called directly, but no graphics context can be found");
    }
 }
 
