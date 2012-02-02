@@ -9,14 +9,12 @@
 #include "CocoaUtils.h"
 #include "GuiTypes.h"
 
+
 namespace ROOT {
 namespace Quartz {
-
-//
-// All stuff here is a subject to serious changes and modifications in a future
-// (may be even complete removal). Now I need this only to emulate 'X11' behavior,
-// expected from TGCocoa.
-//
+   
+void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
+              const char *text);
 
 enum class FontSlant {
    regular,
@@ -84,7 +82,7 @@ private:
 
 };
 
-//Find better name.
+// Core Text Line resource manager
 class CTLineGuard {
    friend class TGCocoa;
    friend class TGQuartz;
@@ -98,12 +96,12 @@ public:
    
    void GetBounds(UInt_t &w, UInt_t &h)const;
    void GetAscentDescent(Int_t &asc, Int_t &desc)const;
-   
+   CTLineRef fCTLine; //Core Text line, created from Attributed string.
+
 private:
 
    void Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values);
 
-   CTLineRef fCTLine; //Core Text line, created from Attributed string.
    
    CTLineGuard(const CTLineGuard &rhs) = delete;
    CTLineGuard &operator = (const CTLineGuard &rhs) = delete;

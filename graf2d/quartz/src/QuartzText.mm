@@ -18,7 +18,7 @@
 namespace ROOT {
 namespace Quartz {
 
-const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] = 
+const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] =
                                      {
                                       CFSTR("TimesNewRomanPS-ItalicMT"),
                                       CFSTR("TimesNewRomanPS-BoldMT"),
@@ -34,8 +34,41 @@ const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] =
                                       CFSTR("Helvetica"),
                                       CFSTR("TimesNewRomanPSMT")
                                      };
-                                     
+
 typedef std::string::size_type size_type;
+
+//______________________________________________________________________________
+void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
+              const char *text)
+{
+
+   // Draw text
+
+   CGContextSaveGState(ctx);
+ //  CGContextTranslateCTM(ctx, 0.f, dirtyRect.size.height);
+  // CGContextScaleCTM(ctx, 1.f, -1.f);
+   
+   CGContextSetAllowsAntialiasing(ctx, 1);
+
+   FontManager fm;
+   CTFontRef font;
+   font = fm.SelectFont(11,20); /// just to try
+
+   CTLineGuard ctLine(text, font);
+
+   CGContextSetTextPosition(ctx, x, y);
+
+   //CGContextTranslateCTM(ctx, x, y);
+  // CGContextRotateCTM(ctx, gVirtualX->GetTextAngle() * TMath::DegToRad());
+   //CGContextTranslateCTM(ctx, xc, yc);
+   //CGContextTranslateCTM(ctx, -0.5 * w, -0.5 * h);
+
+   CTLineDraw(ctLine.fCTLine, ctx);
+
+   printf("DrawText in QuartzText --> %s\n",text);
+
+   CGContextRestoreGState(ctx);
+}
 
 //______________________________________________________________________________
 template<class T>
@@ -45,20 +78,20 @@ void StringToInt(const std::string &str, const std::string &componentName, T &nu
       if (!std::isdigit(symbol))
          throw std::runtime_error("bad symbol while converting component " + componentName + " into number");
    }
-   
+
    std::istringstream in(str);
    in>>num;
 }
 
 //______________________________________________________________________________
-size_type GetXLFDNameComponentAsString(const std::string &name, const std::string & componentName, 
+size_type GetXLFDNameComponentAsString(const std::string &name, const std::string & componentName,
                                        size_type pos, std::string &component)
 {
    const size_type length = name.length();
    if (pos + 1 >= length)
       throw std::runtime_error("Unexpected end of name while parsing " + componentName);
 
-   //Starting symbol must be '-'.   
+   //Starting symbol must be '-'.
    if (name[pos] != '-')
       throw std::runtime_error("Component " + componentName + " must start from '-'");
 
@@ -66,12 +99,12 @@ size_type GetXLFDNameComponentAsString(const std::string &name, const std::strin
    ++pos;
    while (pos < length && name[pos] != '-')
       ++pos;
-      
+
    if (pos - start)
       component = name.substr(start, pos - start);
    else
       component = "";
-   
+
    return pos;
 }
 
@@ -122,17 +155,17 @@ size_type ParseSlant(const std::string &name, size_type pos, XLFDName &dst)
    //Slant can be regular or italic now.
    std::string slant;
    pos = GetXLFDNameComponentAsString(name, "slant", pos, slant);
-   
+
    if (slant == "r" || slant == "R") {
       dst.fSlant = FontSlant::regular;
       return pos;
    }
-   
+
    if (slant == "i" || slant == "I") {
       dst.fSlant = FontSlant::italic;
       return pos;
    }
-   
+
    throw std::runtime_error("ParseSlant: unknown slant: " + slant);
    return pos;//never executed.
 }
@@ -220,13 +253,13 @@ bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
       ::Warning("ROOT::MacOSX::Quartz::ParseXLFDName: ", "XLFD name is a string with a zero length");
       return false;
    }
-   
+
    try {
       std::string::size_type pos = 0;
-      
+
       pos = ParseFoundry(xlfdName, pos, dst);
       pos = ParseFamilyName(xlfdName, pos, dst);
-      pos = ParseWeight(xlfdName, pos, dst);      
+      pos = ParseWeight(xlfdName, pos, dst);
       pos = ParseSlant(xlfdName, pos, dst);
       pos = ParseSetwidth(xlfdName, pos, dst);
       pos = ParseAddstyle(xlfdName, pos, dst);
@@ -246,11 +279,14 @@ bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
    }
 }
 
+
 //_________________________________________________________________
 FontManager::FontManager()
                : fSelectedFont(0)
 {
 }
+
+
 //_________________________________________________________________
 FontManager::~FontManager()
 {
@@ -258,11 +294,13 @@ FontManager::~FontManager()
       for (FontMapIter_t it = fFonts[i].begin(); it != fFonts[i].end(); ++it)
          CFRelease(it->second);
 }
+
+
 //______________________________________________________________________________
 FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
 {
    using ROOT::MacOSX::Util::CFGuard;
-   
+
    //This code is just a sketch. I have to check later,
    //how to correctly create font with attributes from xlfd,
    //if matching between name from xlfd and MacOS X font is correct.
@@ -272,14 +310,15 @@ FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
 
    //TODO: pixelSize + 2 - this is just a temporary hack, because text in GUI is too tiny.
    CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize + 2, 0), false);//0 is for CGAffineTransform, false - no initial retain.
-   
-   
+
+
    //What if this font was "loaded" already?
    if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
       fLoadedFonts[font.Get()] = font;
-   
+
    return reinterpret_cast<FontStruct_t>(font.Get());
 }
+
 
 //______________________________________________________________________________
 void FontManager::UnloadFont(FontStruct_t font)
@@ -288,9 +327,10 @@ void FontManager::UnloadFont(FontStruct_t font)
    auto fontIter = fLoadedFonts.find(fontRef);
 
    assert(fontIter != fLoadedFonts.end() && "Attempt to unload font, not created by font manager");
-   
+
    fLoadedFonts.erase(fontIter);
 }
+
 
 //______________________________________________________________________________
 unsigned FontManager::GetTextWidth(FontStruct_t font, const char *text, int nChars)
@@ -304,15 +344,15 @@ unsigned FontManager::GetTextWidth(FontStruct_t font, const char *text, int nCha
       nChars = std::strlen(text);
 
    std::string textLine(text, nChars);
-   
+
    unsigned w = 0, h = 0;
-   
+
    CTLineGuard ctLine(textLine.c_str(), fontRef);
    ctLine.GetBounds(w, h);
 
    return w;
-
 }
+
 
 //_________________________________________________________________
 void FontManager::GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDescent)
@@ -326,22 +366,23 @@ void FontManager::GetFontProperties(FontStruct_t font, int &maxAscent, int &maxD
    ctLine.GetAscentDescent(maxAscent, maxDescent);
 }
 
+
 //_________________________________________________________________
 CTFontRef FontManager::SelectFont(Font_t fontIndex, Float_t fontSize)
 {
    fontIndex /= 10;
-printf("FontManager::SelectFont %d %f %d\n",fontIndex, fontSize, fmdNOfFonts);
+
    if (fontIndex > fmdNOfFonts || !fontIndex)
       throw std::runtime_error("SelectFont: index");
-   
+
    fontIndex -= 1;
-   
+
    if (fontIndex == 11 && !fSymbolMap.size())
       InitSymbolMap();
-   
+
    const UInt_t fixedSize = UInt_t(fontSize);
    FontMapIter_t it = fFonts[fontIndex].find(fixedSize);
-   
+
    if (it == fFonts[fontIndex].end()) {
       //Insert the new font.
      CTFontRef font(CTFontCreateWithName(fixedFontNames[fontIndex], fixedSize, 0));
@@ -381,7 +422,7 @@ void FontManager::InitSymbolMap()
    fSymbolMap[117] = 0x3C5; //upsilon
    fSymbolMap[102] = 0x3C6; //phi
    fSymbolMap[99]  = 0x3C7; //chi
-   fSymbolMap[121] = 0x3C8; //psi 
+   fSymbolMap[121] = 0x3C8; //psi
    fSymbolMap[119] = 0x3C9; //omega
 
    fSymbolMap[65] = 0x391; //Alpha
@@ -509,7 +550,7 @@ CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font)
    //Create attributed string with one attribue: the font.
    CFStringRef keys[] = {kCTFontAttributeName};
    CFTypeRef values[] = {font};
-   
+
    Init(textLine, 1, keys, values);
 }
 
@@ -533,7 +574,7 @@ CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font, const CGFloat *rg
 
    CGColorRef textColor = CGColorCreate(rgbColorSpace, rgb);//[2
    //Not clear from docs, if textColor can be 0.
-   
+
    CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorAttributeName};
    CFTypeRef values[] = {font, textColor};
 
@@ -549,7 +590,7 @@ CTLineGuard::~CTLineGuard()
    CFRelease(fCTLine);
 }
 
-//_________________________________________________________________   
+//_________________________________________________________________
 void CTLineGuard::GetBounds(UInt_t &w, UInt_t &h)const
 {
    CGFloat ascent = 0.f, descent = 0.f, leading = 0.f;
@@ -557,7 +598,7 @@ void CTLineGuard::GetBounds(UInt_t &w, UInt_t &h)const
    h = UInt_t(ascent);// + descent + leading);
 }
 
-//_________________________________________________________________   
+//_________________________________________________________________
 void CTLineGuard::GetAscentDescent(Int_t &asc, Int_t &desc)const
 {
    CGFloat ascent = 0.f, descent = 0.f, leading = 0.f;
@@ -570,9 +611,9 @@ void CTLineGuard::GetAscentDescent(Int_t &asc, Int_t &desc)const
 void CTLineGuard::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values)
 {
    using ROOT::MacOSX::Util::CFGuard;
-   CFGuard<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault, 
-                                          (const void **)keys, (const void **)values, 
-                                          nAttribs, &kCFTypeDictionaryKeyCallBacks, 
+   CFGuard<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault,
+                                          (const void **)keys, (const void **)values,
+                                          nAttribs, &kCFTypeDictionaryKeyCallBacks,
                                           &kCFTypeDictionaryValueCallBacks), false);
    if (!stringAttribs.Get())
       throw std::runtime_error("CTLineGuard: null attribs");

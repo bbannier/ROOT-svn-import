@@ -192,8 +192,11 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
  
    // Text color
    SetContextFillColor(GetTextColor());
+   
+   Quartz::DrawText(ctx, (Double_t)x, (Double_t)y, angle, text);
 
-  // Text rotation
+/*
+ // Text rotation
    CGAffineTransform tm; 
    tm =  CGAffineTransformMakeRotation (-(angle*kPI)/180.);
    tm =  CGAffineTransformScale (tm, 1., -1.); 
@@ -202,7 +205,6 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
    // Draw the text
    CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
    
-/*
  CTFontRef currentFont = fFontManager->SelectFont(gVirtualX->GetTextFont(), 
  gVirtualX->GetTextSize());
    
@@ -426,34 +428,6 @@ void TGQuartz::SetTextFont(Font_t fontnumber)
    // Set the current text font number.
 
    TAttText::SetTextFont(fontnumber);
-/*   
-   static const char *fontname[] = {
-      "Times-Italic"         , "Times-Bold"         , "Times-BoldItalic",
-      "Helvetica"            , "Helvetica-Oblique"  , "Helvetica-Bold"  ,
-      "Helvetica-BoldOblique", "Courier"            , "Courier-Oblique" ,
-      "Courier-Bold"         , "Courier-BoldOblique", "Symbol"          ,
-      "Times-Roman"          , "ZapfDingbats"       , "Symbol"};
-      
-   Int_t font = abs(fTextFont)/10;
-   if( font > 15 || font < 1) font = 1;
-   
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-   
-   if (font<12 || font==13) {
-      CGContextSelectFont (ctx, 
-                           fontname[font-1],
-                           GetTextSize(),
-                           kCGEncodingMacRoman);
-    } else {
-      CGContextSelectFont (ctx, 
-                           fontname[font-1],
-                           GetTextSize(),
-                           kCGEncodingFontSpecific);
-    }          
-                        
-   // Text drawing mode
-///CGContextSetTextDrawingMode (ctx, kCGTextFillStroke); 
-   CGContextSetTextDrawingMode (ctx, kCGTextFill);  */
 }
 
 
@@ -462,9 +436,7 @@ void TGQuartz::SetTextSize(Float_t textsize)
 {
    // Set the current text size to "textsize"
    
-   TAttText::SetTextSize(textsize);/*
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-   CGContextSetFontSize(ctx, textsize);*/
+   TAttText::SetTextSize(textsize);
 }
 
 
