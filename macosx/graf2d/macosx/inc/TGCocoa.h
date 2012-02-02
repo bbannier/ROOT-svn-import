@@ -332,14 +332,17 @@ private:
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);
 
-   std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl;//!
+
    bool fForegroundProcess;
    
    std::deque<Event_t> fEventQueue;
 
    std::vector<GCValues_t> fX11Contexts;
-   
+
+protected:
+
    Int_t fSelectedDrawable;
+   std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl;//!
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };

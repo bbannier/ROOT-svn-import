@@ -587,7 +587,6 @@ void TGCocoa::SelectWindow(Int_t wid)
    //not related to context from RootQuartzView's -drawRect method.
    //
    assert(wid != 0 && "SelectWindow, called for 'root' window");
-
    fSelectedDrawable = wid;
 }
 
