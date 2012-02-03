@@ -189,6 +189,15 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
                         const char *text, ETextMode /*mode*/)
 {
    // Draw text
+   if (fSelectedDrawable <= 0) {
+      Error("DrawText", "internal error, no pixmap was selected");
+      return;
+   }
+   
+   if (!fPimpl.get()) {
+      Error("DrawText", "internal error, internal data was not initialized correctly");
+      return;
+   }
    
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
  

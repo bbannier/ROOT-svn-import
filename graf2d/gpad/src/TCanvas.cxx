@@ -2136,6 +2136,11 @@ void TCanvas::Update()
    // Update canvas pad buffers.
 
    if (fUpdating) return;
+   
+   //
+   if (fPixmapID == -1)
+      return;
+   //
 
    if (gThreadXAR) {
       void *arr[2];
