@@ -1036,7 +1036,7 @@ QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t 
    //
    QuartzWindow *newWindow = [[QuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO windowAttributes : attr];
    //TODO should it be in setAttributes?
-   //[newWindow setAcceptsMouseMovedEvents : YES];
+   [newWindow setAcceptsMouseMovedEvents : YES];
    //
    newWindow.fDepth = depth;
    newWindow.fClass = clss;
