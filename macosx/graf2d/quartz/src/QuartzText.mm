@@ -65,7 +65,7 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
 
    CTLineDraw(ctLine.fCTLine, ctx);
 
-   printf("DrawText in QuartzText --> %s\n",text);
+   //printf("DrawText in QuartzText --> %s\n",text);
 
    CGContextRestoreGState(ctx);
 }
