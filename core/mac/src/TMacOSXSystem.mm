@@ -73,23 +73,24 @@ public:
 extern "C" {
 
 //______________________________________________________________________________
-void TMacOSXSystem_ReadCallback(CFFileDescriptorRef /*fdref*/, CFOptionFlags /*callBackTypes*/, void * /*info*/)
+void TMacOSXSystem_ReadCallback(CFFileDescriptorRef fdref, CFOptionFlags /*callBackTypes*/, void * /*info*/)
 {
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"ReadCallback was called, posting event");
-#endif
-   //
+   //We do not need this descriptor anymore.
+   CFFileDescriptorInvalidate(fdref);
+   CFRelease(fdref);
+   
    NSEvent *fdEvent = [NSEvent otherEventWithType : NSApplicationDefined location : NSMakePoint(0, 0) modifierFlags : 0
                        timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : 0 data2 : 0];
    [NSApp postEvent : fdEvent atStart : NO];
 }
 
 //______________________________________________________________________________
-void TMacOSXSystem_WriteCallback(CFFileDescriptorRef /*fdref*/, CFOptionFlags /*callBackTypes*/, void * /*info*/)
+void TMacOSXSystem_WriteCallback(CFFileDescriptorRef fdref, CFOptionFlags /*callBackTypes*/, void * /*info*/)
 {
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"WriteCallback was called, posting event");
-#endif
+   //We do not need this descriptor anymore.
+   CFFileDescriptorInvalidate(fdref);
+   CFRelease(fdref);
+
    NSEvent *fdEvent = [NSEvent otherEventWithType : NSApplicationDefined location : NSMakePoint(0, 0) modifierFlags : 0
                        timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : 0 data2 : 0];
    [NSApp postEvent : fdEvent atStart : NO];
@@ -116,17 +117,14 @@ private:
    friend class TMacOSXSystem;
    std::map<int, DescriptorType> fFileDescriptors;
    
-   typedef ROOT::MacOSX::Util::CFGuard<CFFileDescriptorRef> cffile_type;
-   std::vector<cffile_type> fCFFileDescriptors;
+   std::vector<CFFileDescriptorRef> fCFFileDescriptors;
 
-   typedef ROOT::MacOSX::Util::CFGuard<CFRunLoopSourceRef> cfrl_type;
-   std::vector<cfrl_type> fRunLoopSources;
-   
    bool AddFileHandler(TFileHandler *fh);
    bool RemoveFileHandler(TFileHandler *fh);
    
    bool SetFileDescriptors();
    void CloseFileDescriptors();
+   void CleanDescriptorArrays();
    
    const ROOT::MacOSX::Util::AutoreleasePool fPool;
 };
@@ -194,46 +192,32 @@ bool TMacOSXSystemPrivate::SetFileDescriptors()
    //in case of exception (std::bad_alloc) and
    //return false. Return true if everything is ok.
 
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"---------SetFileDescriptors");
-#endif
-
    try {
       for (auto fdIter = fFileDescriptors.begin(), end = fFileDescriptors.end(); fdIter != end; ++fdIter) {
          const bool read = fdIter->second == DescriptorType::read;
-         cffile_type fdref(CFFileDescriptorCreate(kCFAllocatorDefault, fdIter->first, false, read ? TMacOSXSystem_ReadCallback : TMacOSXSystem_WriteCallback, 0), false);//Check how to use red/write callbacks or one callback later.
+         CFFileDescriptorRef fdref = CFFileDescriptorCreate(kCFAllocatorDefault, fdIter->first, false, read ? TMacOSXSystem_ReadCallback : TMacOSXSystem_WriteCallback, 0);
 
-         if (!fdref.Get())
+         if (!fdref)
             throw std::runtime_error("TMacOSXSystemPrivate::SetFileDescriptors: CFFileDescriptorCreate failed");
 
-         CFFileDescriptorEnableCallBacks(fdref.Get(), read ? kCFFileDescriptorReadCallBack : kCFFileDescriptorWriteCallBack);
+         CFFileDescriptorEnableCallBacks(fdref, read ? kCFFileDescriptorReadCallBack : kCFFileDescriptorWriteCallBack);
       
-         cfrl_type runLoopSource(CFFileDescriptorCreateRunLoopSource(kCFAllocatorDefault, fdref.Get(), 0), false);
-         if (!runLoopSource.Get())
+         CFRunLoopSourceRef runLoopSource = CFFileDescriptorCreateRunLoopSource(kCFAllocatorDefault, fdref, 0);
+         
+         if (!runLoopSource) {
+            CFRelease(fdref);
             throw std::runtime_error("TMacOSXSystemPrivate::SetFileDescriptors: CFFileDescriptorCreateRunLoopSource failed");
-   #ifdef DEBUG_ROOT_COCOA
-         NSLog(@"Set file descriptor for %d", fdIter->first);
-   #endif
-         CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource.Get(), kCFRunLoopDefaultMode);
+         }
 
-         fRunLoopSources.push_back(runLoopSource);      
+         CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, kCFRunLoopDefaultMode);
+         CFRelease(runLoopSource);
+
          fCFFileDescriptors.push_back(fdref);
       }
    } catch (const std::exception &e) {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"TMacOSXSystemPrivate::SetFileDescriptors: %s", e.what());
-#endif
-      for (auto runLoop : fRunLoopSources)
-         CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoop.Get(), kCFRunLoopDefaultMode);
-      fRunLoopSources.clear();
-      fCFFileDescriptors.clear();
-      
+      CloseFileDescriptors();
       return false;
    }
-
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"SetFileDescriptors----------");
-#endif
 
    return true;
 }
@@ -241,13 +225,20 @@ bool TMacOSXSystemPrivate::SetFileDescriptors()
 //______________________________________________________________________________
 void TMacOSXSystemPrivate::CloseFileDescriptors()
 {
-   for(auto runLoop : fRunLoopSources)
-      CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoop.Get(), kCFRunLoopDefaultMode);
-
-   fRunLoopSources.clear();
-   fCFFileDescriptors.clear();
+   
+   for (auto fd : fCFFileDescriptors) {
+      CFFileDescriptorInvalidate(fd);
+      CFRelease(fd);
+   }   
+   
+   CleanDescriptorArrays();
 }
 
+//______________________________________________________________________________
+void TMacOSXSystemPrivate::CleanDescriptorArrays()
+{
+   fCFFileDescriptors.clear();
+}
 
 ClassImp(TMacOSXSystem)
 
@@ -346,6 +337,8 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
       *fReadready  = *fReadmask;
       *fWriteready = *fWritemask;
       fNfd = 1;
+      
+      fPimpl->CleanDescriptorArrays();
    } else {
 #ifdef DEBUG_ROOT_COCOA
       NSLog(@"got a GUI (?) event %@", event);
@@ -353,9 +346,10 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
       //[NSApp postEvent : event atStart : YES];
       [NSApp sendEvent : event];
       //
+      fPimpl->CloseFileDescriptors();
    }
-   
-   fPimpl->CloseFileDescriptors();
+      
+
    gVirtualX->Update(1);
 }
 
@@ -363,11 +357,13 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
 void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
 {
    //Here I try to emulate TUnixSystem's behavior, which is quite twisted.
-   const ROOT::MacOSX::Util::AutoreleasePool pool;
+
    
    Bool_t pollOnce = pendingOnly;
 
    while (true) {
+      const ROOT::MacOSX::Util::AutoreleasePool pool;
+
       //First handle any GUI events. Non-blocking call.
       
       //I'm not sure at all, if I need to mimic 
@@ -379,7 +375,6 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
             return;
       }
       */
-
       //Check for file descriptors ready for reading/writing.
       if (fNfd > 0 && fFileHandler && fFileHandler->GetSize() > 0)
          if (CheckDescriptors())

@@ -653,11 +653,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       
       [self setHidden : YES];
       //Actually, check if view need this.
-   //   const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect;
-   //   frame.origin = CGPointZero;
-   //   NSTrackingArea *tracker = [[NSTrackingArea alloc] initWithRect : frame options : trackerOptions owner : self userInfo : nil];
-   //   [self addTrackingArea : tracker];
-   //   [tracker release];
+      const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect;
+      frame.origin = CGPointZero;
+      NSTrackingArea *tracker = [[NSTrackingArea alloc] initWithRect : frame options : trackerOptions owner : self userInfo : nil];
+      [self addTrackingArea : tracker];
+      [tracker release];
       //
       if (attr)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
@@ -1013,7 +1013,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mouseEntered : (NSEvent *) theEvent
 {
    (void)theEvent;
-  /* if (fID) {
+   if (fID) {
       if (TGWindow *window = gClient->GetWindowById(fID)) {
          if (fEventMask & kEnterWindowMask) {
             Event_t newEvent = [self createROOTEventFor : theEvent];
@@ -1025,14 +1025,14 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       } else {
          NSLog(@"Warning: QuartzView, -mouseEntered method, no window for id %u was found", fID);
       }
-   }*/
+   }
 }
 
 //______________________________________________________________________________
 - (void) mouseExited : (NSEvent *) theEvent
 {
    (void)theEvent;
-  /* if (fID) {
+   if (fID) {
       if (TGWindow *window = gClient->GetWindowById(fID)) {
          if (fEventMask & kLeaveWindowMask) {
             Event_t newEvent = [self createROOTEventFor : theEvent];
@@ -1044,7 +1044,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       } else {
          NSLog(@"Warning: QuartzView, -mouseExited method, no window for id %u was found", fID);
       }
-   }*/
+   }
 }
 
 //______________________________________________________________________________
@@ -1056,8 +1056,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mouseMoved : (NSEvent *) theEvent
 {
-   (void)theEvent;
-  /* const NSPoint windowPoint = [theEvent locationInWindow];
+   const NSPoint windowPoint = [theEvent locationInWindow];
    NSView *candidateView = [[[self window] contentView] hitTest : windowPoint];
 
    if (candidateView != self)
@@ -1075,7 +1074,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       } else {
          NSLog(@"Warning: QuartzView, -mouseMoved, no window for id %u was found", fID);
       }
-   }*/
+   }
 }
 
 @end
