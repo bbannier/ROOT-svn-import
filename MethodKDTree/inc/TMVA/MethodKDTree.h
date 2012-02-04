@@ -54,7 +54,7 @@ namespace TMVA {
       void GetHelpMessage() const;
 
       // calculate range searching radius
-      void CalcRadius();
+      void CalculateRadius();
 
       // read KDTrees from file
       void ReadKDTreesFromFile();
@@ -62,6 +62,9 @@ namespace TMVA {
 
       // write KDTrees to file
       void WriteKDTreesToFile() const;
+
+      // Delete KDTrees
+      void DeleteKDTrees();
 
    private:
 
@@ -75,10 +78,11 @@ namespace TMVA {
 
       std::vector<TKDTreeIF*> fKDTree;    // grown KDTrees
       std::vector<TString> fKDTreeName;   // KDTree names
-      Float_t fRadiusFraction;            // radius of range searching sphere
-      Float_t fRadius;                    // absolute radius of range searching sphere
+      Float_t fTailCut;                   // fraction of outlier events
+      Float_t fVolFrac;                   // range searching volume
       Float_t fBucketSize;                // number of events in terminal nodes
       Bool_t fCompress;                   // compress ROOT output file
+      Float_t fRadius;                    // radius of range searching volume
 
       ClassDef(MethodKDTree, 0) // Multi-dimensional probability density estimator using TKDTree
    };
