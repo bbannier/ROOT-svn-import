@@ -93,7 +93,8 @@ namespace TMVA {
          kLD             ,
          kPlugins        ,
          kCategory       ,
-         kMaxMethod
+         kMaxMethod      ,
+         kKDTree
       };
 
       // available variable transformations

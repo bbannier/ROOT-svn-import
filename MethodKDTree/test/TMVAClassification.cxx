@@ -78,6 +78,7 @@ int main( int argc, char** argv )
    Use["PDEFoam"]         = 1;
    Use["PDEFoamBoost"]    = 0; // uses generalised MVA method boosting
    Use["KNN"]             = 1; // k-nearest neighbour method
+   Use["KDTree"]          = 0; // KDTree method
    //
    // --- Linear Discriminant Analysis
    Use["LD"]              = 1; // Linear Discriminant identical to Fisher
@@ -350,6 +351,11 @@ int main( int argc, char** argv )
    if (Use["KNN"])
       factory->BookMethod( TMVA::Types::kKNN, "KNN",
                            "H:nkNN=20:ScaleFrac=0.8:SigmaFact=1.0:Kernel=Gaus:UseKernel=F:UseWeight=T:!Trim" );
+
+   // KDTree classifier
+   if (Use["KDTree"])
+      factory->BookMethod( TMVA::Types::kKDTree, "KDTree",
+                           "!H:!V:RadiusFraction=0.3:BucketSize=300:Compress=T" );
 
    // H-Matrix (chi2-squared) method
    if (Use["HMatrix"])
