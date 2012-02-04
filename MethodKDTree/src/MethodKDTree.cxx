@@ -23,7 +23,6 @@ TMVA::MethodKDTree::MethodKDTree(const TString& jobName,
                                  TDirectory* theTargetDir)
    : MethodBase(jobName, Types::kKDTree, methodTitle, dsi, theOption, theTargetDir)
    , fKDTree()
-   , fTailCut(0.001)
    , fVolFrac(0.1)
    , fBucketSize(300)
    , fCompress(kTRUE)
@@ -38,7 +37,6 @@ TMVA::MethodKDTree::MethodKDTree(DataSetInfo& dsi,
                                  TDirectory* theTargetDir)
    : MethodBase(Types::kKDTree, dsi, theWeightFile, theTargetDir)
    , fKDTree()
-   , fTailCut(0.001)
    , fVolFrac(0.1)
    , fBucketSize(300)
    , fCompress(kTRUE)
@@ -85,7 +83,6 @@ Bool_t TMVA::MethodKDTree::HasAnalysisType(Types::EAnalysisType type, UInt_t num
 void TMVA::MethodKDTree::Init(void)
 {
    // default initialization called by all constructors
-   fTailCut        = 0.001;    // fraction of outlier events
    fVolFrac        = 0.1;      // range searching volume
    fBucketSize     = 300;      // number of events in terminal nodes
    fCompress       = kTRUE;    // compress ROOT output file
@@ -102,7 +99,6 @@ void TMVA::MethodKDTree::DeclareOptions()
    //
    // Declare MethodKDTree options
    //
-   DeclareOptionRef(fTailCut = 0.001,  "TailCut",  "Fraction of outlier events that are excluded");
    DeclareOptionRef(fVolFrac = 0.1,    "VolFrac",  "Relative size of range searching volume");
    DeclareOptionRef(fBucketSize = 300, "BucketSize", "Number of events in terminal nodes");
    DeclareOptionRef(fCompress = kTRUE, "Compress", "Compress ROOT output file");
@@ -112,10 +108,6 @@ void TMVA::MethodKDTree::DeclareOptions()
 void TMVA::MethodKDTree::ProcessOptions()
 {
    // process user options
-   if (!(fTailCut >= 0. && fTailCut <= 1.)) {
-      Log() << kWARNING << "TailCut not in [0,1] ==> using 0.001 instead" << Endl;
-      fTailCut = 0.001;
-   }
    if (!(fVolFrac >= 0. && fVolFrac <= 1.)) {
       Log() << kWARNING << "VolFrac not in [0,1] ==> using 0.1 instead" << Endl;
       fVolFrac = 0.1;
@@ -194,12 +186,6 @@ void TMVA::MethodKDTree::CalculateRadius()
       xmax[dim] = FLT_MIN;
    }
 
-   Log() << kDEBUG << "Number of training events: " << Data()->GetNTrainingEvents() << Endl;
-   // number of events that are outside the range
-   const Int_t nEventsOutside = (Int_t)(Data()->GetNTrainingEvents() * fTailCut);
-   // number of bins in histograms
-   const Int_t nRangeHistBins = 10000;
-
    // loop over all testing singnal and background events and
    // calculate minimal and maximal value of every variable
    for (Long64_t i = 0; i < GetNEvents() ; ++i) {
@@ -212,41 +198,6 @@ void TMVA::MethodKDTree::CalculateRadius()
             xmax[dim] = val;
       }
    }
-
-   // Create and fill histograms for each dimension (with same events
-   // as before), to determine range based on number of events outside
-   // the range
-   TH1F **range_h = new TH1F*[kDim];
-   for (UInt_t dim = 0; dim < kDim; ++dim) {
-      range_h[dim]  = new TH1F(Form("range%i", dim), "range", nRangeHistBins, xmin[dim], xmax[dim]);
-   }
-
-   // fill all testing events into histos
-   for (Long64_t i = 0; i < GetNEvents(); ++i) {
-      const Event* ev = GetEvent(i);
-      for (UInt_t dim = 0; dim < kDim; ++dim) {
-         range_h[dim]->Fill(ev->GetValue(dim));
-      }
-   }
-
-   // calc Xmin, Xmax from Histos
-   for (UInt_t dim = 0; dim < kDim; ++dim) {
-      for (Int_t i = 1; i < nRangeHistBins + 1; i++) { // loop over bins
-         if (range_h[dim]->Integral(0, i) > nEventsOutside) {
-            // calc left limit (integral over bins 0..i = nEventsOutside)
-            xmin[dim] = range_h[dim]->GetBinLowEdge(i);
-            break;
-         }
-      }
-      for (Int_t i = nRangeHistBins; i > 0; i--) {
-         // calc right limit (integral over bins i..max = nEventsOutside)
-         if (range_h[dim]->Integral(i, (nRangeHistBins + 1)) > nEventsOutside) {
-            xmax[dim] = range_h[dim]->GetBinLowEdge(i + 1);
-            break;
-         }
-      }
-   }
-   // now xmin[] and xmax[] contain upper/lower limits for every dimension
 
    // calculate the range searching volume
    Float_t volume = 1.0;
@@ -261,9 +212,6 @@ void TMVA::MethodKDTree::CalculateRadius()
    // clean up
    delete[] xmin;
    delete[] xmax;
-   for (UInt_t dim = 0; dim < kDim; ++dim)
-      delete range_h[dim];
-   delete[] range_h;
 }
 
 //_______________________________________________________________________
@@ -305,7 +253,6 @@ Double_t TMVA::MethodKDTree::GetMvaValue(Double_t* err, Double_t* errUpper)
 void TMVA::MethodKDTree::ReadWeightsFromXML(void* wghtnode)
 {
    // read KDTree variables from xml weight file
-   gTools().ReadAttr(wghtnode, "TailCut",           fTailCut);
    gTools().ReadAttr(wghtnode, "VolFrac",           fVolFrac);
    gTools().ReadAttr(wghtnode, "BucketSize",        fBucketSize);
    gTools().ReadAttr(wghtnode, "Compress",          fCompress);
@@ -377,7 +324,6 @@ void TMVA::MethodKDTree::AddWeightsXMLTo(void* parent) const
 {
    // create XML output of KDTree method variables
    void* wght = gTools().AddChild(parent, "Weights");
-   gTools().AddAttr(wght, "TailCut",           fTailCut);
    gTools().AddAttr(wght, "VolFrac",           fVolFrac);
    gTools().AddAttr(wght, "BucketSize",        fBucketSize);
    gTools().AddAttr(wght, "Compress",          fCompress);
