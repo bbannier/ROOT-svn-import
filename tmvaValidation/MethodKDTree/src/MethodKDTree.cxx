@@ -118,7 +118,7 @@ void TMVA::MethodKDTree::ProcessOptions()
    }
    if (!(fVolFrac >= 0. && fVolFrac <= 1.)) {
       Log() << kWARNING << "VolFrac not in [0,1] ==> using 0.1 instead" << Endl;
-      fTailCut = 0.1;
+      fVolFrac = 0.1;
    }
 
    if (fBucketSize > GetNEvents()) {
