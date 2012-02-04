@@ -366,7 +366,7 @@ void TMVAClassification( TString myMethodList = "" )
    // KDTree classifier
    if (Use["KDTree"])
       factory->BookMethod( TMVA::Types::kKDTree, "KDTree",
-                           "!H:!V:VolFrac=0.1:TailCut=0.001:BucketSize=300:Compress=T" );
+                           "!H:!V:VolFrac=0.1:BucketSize=300:Compress=T" );
 
    // H-Matrix (chi2-squared) method
    if (Use["HMatrix"])

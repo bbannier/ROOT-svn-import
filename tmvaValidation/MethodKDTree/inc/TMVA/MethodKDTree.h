@@ -81,7 +81,6 @@ namespace TMVA {
 
       std::vector<TKDTreeIF*> fKDTree;    // grown KDTrees
       std::vector<TString> fKDTreeName;   // KDTree names
-      Float_t fTailCut;                   // fraction of outlier events
       Float_t fVolFrac;                   // range searching volume
       Float_t fBucketSize;                // number of events in terminal nodes
       Bool_t fCompress;                   // compress ROOT output file
