@@ -43,7 +43,7 @@ DEFAULT_OUTFNAME = "TMVA.root"
 DEFAULT_INFNAME  = "tmva_class_example.root"
 DEFAULT_TREESIG  = "TreeS"
 DEFAULT_TREEBKG  = "TreeB"
-DEFAULT_METHODS  = "Cuts,CutsD,CutsPCA,CutsGA,CutsSA,Likelihood,LikelihoodD,LikelihoodPCA,LikelihoodKDE,LikelihoodMIX,PDERS,PDERSD,PDERSPCA,PDEFoam,PDEFoamBoost,KNN,LD,Fisher,FisherG,BoostedFisher,HMatrix,FDA_GA,FDA_SA,FDA_MC,FDA_MT,FDA_GAMT,FDA_MCMT,MLP,MLPBFGS,MLPBNN,CFMlpANN,TMlpANN,SVM,BDT,BDTD,BDTG,BDTB,RuleFit"
+DEFAULT_METHODS  = "Cuts,CutsD,CutsPCA,CutsGA,CutsSA,Likelihood,LikelihoodD,LikelihoodPCA,LikelihoodKDE,LikelihoodMIX,PDERS,PDERSD,PDERSPCA,PDEFoam,PDEFoamBoost,KNN,KDTree,LD,Fisher,FisherG,BoostedFisher,HMatrix,FDA_GA,FDA_SA,FDA_MC,FDA_MT,FDA_GAMT,FDA_MCMT,MLP,MLPBFGS,MLPBNN,CFMlpANN,TMlpANN,SVM,BDT,BDTD,BDTG,BDTB,RuleFit"
 
 # Print usage help
 def usage():
@@ -299,6 +299,11 @@ def main():
     if "KNN" in mlist:
         factory.BookMethod( TMVA.Types.kKNN, "KNN",
                             "H:nkNN=20:ScaleFrac=0.8:SigmaFact=1.0:Kernel=Gaus:UseKernel=F:UseWeight=T:!Trim" )
+
+   # KDTree classifier
+   if "KDTree" in mlist:
+      factory.BookMethod( TMVA.Types.kKDTree, "KDTree",
+                          "!H:!V:VolFrac=0.1:TailCut=0.001:BucketSize=300:Compress=T" )
 
     # H-Matrix (chi2-squared) method
     if "HMatrix" in mlist:
