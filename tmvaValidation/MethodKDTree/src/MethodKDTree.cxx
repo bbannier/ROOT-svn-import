@@ -240,7 +240,7 @@ Double_t TMVA::MethodKDTree::GetMvaValue(Double_t* err, Double_t* errUpper)
    const size_t nBkg = bkgNodes.size();
 
    // calculate the mva value
-   Float_t mvaValue = 0.;
+   Double_t mvaValue = 0.;
    if (nSig + nBkg > 0)
       mvaValue = 1.0 * nSig / (nSig + nBkg);
    else
