@@ -48,6 +48,9 @@ namespace TMVA {
       // ranking of input variables
       const Ranking* CreateRanking() { return NULL; }
 
+      // reset the method
+      virtual void Reset();
+
    protected:
 
       // get help message text

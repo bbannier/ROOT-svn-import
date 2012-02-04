@@ -56,11 +56,19 @@ TMVA::MethodKDTree::~MethodKDTree(void)
 //_______________________________________________________________________
 void TMVA::MethodKDTree::DeleteKDTrees()
 {
+   // Delete all KDTrees
    for (std::vector<TKDTreeIF*>::iterator it = fKDTree.begin();
         it != fKDTree.end(); ++it) {
       delete *it;
    }
    fKDTree.clear();
+}
+
+//_______________________________________________________________________
+void TMVA::MethodKDTree::Reset()
+{
+   // reset MethodKDTree:  delete all KDTrees
+   DeleteKDTrees();
 }
 
 //_______________________________________________________________________
@@ -123,6 +131,11 @@ void TMVA::MethodKDTree::ProcessOptions()
 //_______________________________________________________________________
 void TMVA::MethodKDTree::Train()
 {
+   // Train the method
+   //
+   // Create two KDTrees, one filled with signal, the other filled
+   // with background events.
+
    static const UInt_t nKDTrees = 2;
 
    for (UInt_t i = 0; i < nKDTrees; ++i) {
@@ -169,6 +182,8 @@ void TMVA::MethodKDTree::Train()
 //_______________________________________________________________________
 void TMVA::MethodKDTree::CalculateRadius()
 {
+   // Calculate the radius of the range searching sphere
+
    const UInt_t kDim = GetNvar(); // == Data()->GetNVariables();
    Float_t *xmin = new Float_t[kDim];
    Float_t *xmax = new Float_t[kDim];
@@ -254,6 +269,17 @@ void TMVA::MethodKDTree::CalculateRadius()
 //_______________________________________________________________________
 Double_t TMVA::MethodKDTree::GetMvaValue(Double_t* err, Double_t* errUpper)
 {
+   // Calculate the discriminant
+   //
+   //    D = N_sig / (N_bkg + N_sig)
+   //
+   // where
+   //
+   //    N_sig = # signal events in range searching sphere
+   //    N_bkg = # background events in range searching sphere
+   //
+   // If N_bkg + N_sig == 0, then 0.5 is returned.
+
    const Event* ev = GetEvent();
    std::vector<Float_t> xvec(ev->GetValues());
 
@@ -292,14 +318,14 @@ void TMVA::MethodKDTree::ReadWeightsFromXML(void* wghtnode)
 //_______________________________________________________________________
 void TMVA::MethodKDTree::ReadKDTreesFromFile()
 {
-   // read foams from file
+   // read KDTrees from file
 
    TString rootFileName(GetWeightFileName());
 
    // replace in case of txt weight file
    rootFileName.ReplaceAll(TString(".") + gConfig().GetIONames().fWeightFileExtension + ".txt", ".xml");
 
-   // add foam indicator to distinguish from main weight file
+   // add kdtree indicator to distinguish from main weight file
    rootFileName.ReplaceAll(".xml", "_kdtree.root");
 
    Log() << kINFO << "Read KDTrees from file: " << gTools().Color("lightblue")
