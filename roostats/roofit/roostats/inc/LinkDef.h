@@ -8,6 +8,9 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#pragma extra_include "vector";
+//#include <utility>
+
 #ifdef __CINT__ 
 
 #pragma link off all globals;
@@ -64,8 +67,10 @@
 #pragma link C++ class RooStats::TestStatSampler+; // interface, not concrete
 #pragma link C++ class RooStats::DebuggingSampler+;
 #pragma link C++ class RooStats::ToyMCSampler+;
+#pragma link C++ class RooStats::ToyMCImportanceSampler+;
 #pragma link C++ class RooStats::ToyMCSamplerOld+;
 #pragma link C++ class RooStats::ToyMCStudy+;
+#pragma link C++ class RooStats::ToyMCPayload+;
 #pragma link C++ class RooStats::ProofConfig+;
 
 #pragma link C++ class RooStats::TestStatistic+; // interface
@@ -127,5 +132,8 @@
 #pragma extra_include "Math/Minimizer.h";
 #pragma extra_include "RooFunctor.h";
 #pragma extra_include "TGraphErrors.h";
+
+
+
 
 #endif
