@@ -302,9 +302,6 @@ RooDataSet* ToyMCSampler::GetSamplingDistributions(RooArgSet& paramPointIn)
    fNToys = totToys;
 
    delete toymcstudy;
-   cout << "GetSamplingDistributions() done." << endl;
-   cout << "output: " << output << endl;
-   cout << "numEntries: " << output->numEntries() << endl;
    return output;
 }
 
@@ -353,12 +350,12 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
          // rename all variables to "NameOfSamplingDistribution_i_detailedOutputVariable"
          // for "namespacing" in the columns of the data set.
          // Titles remain the same.
-         cout << "Adding det out for TS " << i << endl;
+         //cout << "Adding det out for TS " << i << endl;
          TIterator* iter = detOut->createIterator();
          while(RooAbsArg* v = dynamic_cast<RooAbsArg*>( iter->Next() ) ) {
             TString origName( v->GetName() );
             v->SetName( TString::Format( "%s_%s", name.Data(), v->GetName() ) );
-            cout << "adding variable: " << v->GetName() << endl;
+            //cout << "adding variable: " << v->GetName() << endl;
             outputs->addColumn( *v );
             v->SetName( origName );
          }
@@ -367,10 +364,10 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
 
    // retrieve the set of variables to be stored and print some info
    RooArgSet* allVarsToBeSaved = new RooArgSet( *outputs->get() );
-   oocoutI((TObject*)NULL, InputArguments) << endl;
-   oocoutI((TObject*)NULL, InputArguments) << "The variables that will be stored for each toy:" << endl;
-   allVarsToBeSaved->Print();
-   oocoutI((TObject*)NULL, InputArguments) << endl;
+//    oocoutI((TObject*)NULL, InputArguments) << endl;
+//    oocoutI((TObject*)NULL, InputArguments) << "The variables that will be stored for each toy:" << endl;
+//    allVarsToBeSaved->Print();
+//    oocoutI((TObject*)NULL, InputArguments) << endl;
 
 
 
@@ -430,7 +427,7 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
       delete saveVarsWithGlobObsSet;      
       delete toydata;
 
-      cout << "weight for this data entry: " << weight << endl;
+      //cout << "weight for this data entry: " << weight << endl;
       outputs->add( *allVarsToBeSaved, weight );
 
 

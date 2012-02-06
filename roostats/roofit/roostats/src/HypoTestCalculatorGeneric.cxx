@@ -127,8 +127,8 @@ HypoTestResult* HypoTestCalculatorGeneric::GetHypoTest() const {
    RooArgList* allTS = NULL;
    if( toymcs ) {
       allTS = toymcs->EvaluateAllTestStatistics(*const_cast<RooAbsData*>(fData), nullP);
-      oocoutP((TObject*)0,Generation) << "All Test Statistics on data: " << endl;
-      allTS->Print("v");
+      //oocoutP((TObject*)0,Generation) << "All Test Statistics on data: " << endl;
+      //allTS->Print("v");
    }
 
    // set parameters back ... in case the evaluation of the test statistic

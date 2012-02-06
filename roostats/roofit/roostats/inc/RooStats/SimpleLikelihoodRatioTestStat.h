@@ -215,7 +215,7 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          //attachedSet->Print("v");
 
 
-         cout << endl << "SLRTS null NLL: " << nullNLL << "    alt NLL: " << altNLL << endl << endl;
+         //cout << endl << "SLRTS null NLL: " << nullNLL << "    alt NLL: " << altNLL << endl << endl;
 
 
          if (!reuse) { 
