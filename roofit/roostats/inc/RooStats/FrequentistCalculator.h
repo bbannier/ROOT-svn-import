@@ -43,10 +43,8 @@ namespace RooStats {
                         TestStatSampler* sampler=0
       ) :
          HypoTestCalculatorGeneric(data, altModel, nullModel, sampler),
-         fNullImportanceDensity(NULL),
-         fNullImportanceSnapshot(NULL),
-         fAltImportanceDensity(NULL),
-         fAltImportanceSnapshot(NULL),
+         fConditionalMLEsNull(NULL),
+         fConditionalMLEsAlt(NULL),
          fNToysNull(-1),
          fNToysAlt(-1),
          fNToysNullTail(0),
@@ -55,30 +53,17 @@ namespace RooStats {
       }
 
       ~FrequentistCalculator() {
-         if(fNullImportanceSnapshot) delete fNullImportanceSnapshot;
-         if(fAltImportanceSnapshot) delete fAltImportanceSnapshot;
       }
 
-
-      // sets importance density and snapshot (optional)
-      void SetNullImportanceDensity(RooAbsPdf *p, const RooArgSet *s = NULL) {
-         fNullImportanceDensity = p;
-         if(s) fNullImportanceSnapshot = (RooArgSet*)s->snapshot();
-         else fNullImportanceSnapshot = NULL;
-      }
-
-      // sets importance density and snapshot (optional)
-      void SetAltImportanceDensity(RooAbsPdf *p, const RooArgSet *s = NULL) {
-         fAltImportanceDensity = p;
-         if(s) fAltImportanceSnapshot = (RooArgSet*)s->snapshot();
-         else fAltImportanceSnapshot = NULL;
-      }
 
       // set number of toys
       void SetToys(int toysNull, int toysAlt) { fNToysNull = toysNull; fNToysAlt = toysAlt; }
 
       // set least number of toys in tails
       void SetNToysInTails(int toysNull, int toysAlt) { fNToysNullTail = toysNull; fNToysAltTail = toysAlt; }
+
+      void SetConditionalMLEsNull( const RooArgSet* c ) { fConditionalMLEsNull = c; }
+      void SetConditionalMLEsAlt( const RooArgSet* c ) { fConditionalMLEsAlt = c; }
 
    protected:
       // configure TestStatSampler for the Null run
@@ -88,12 +73,10 @@ namespace RooStats {
       int PreAltHook(RooArgSet *parameterPoint, double obsTestStat) const;
 
    protected:
-      // importance sampling
-      RooAbsPdf *fNullImportanceDensity;
-      const RooArgSet *fNullImportanceSnapshot;
-      RooAbsPdf *fAltImportanceDensity;
-      const RooArgSet *fAltImportanceSnapshot;
-
+      // MLE inputs
+      const RooArgSet* fConditionalMLEsNull;
+      const RooArgSet* fConditionalMLEsAlt;
+   
       // different number of toys for null and alt
       int fNToysNull;
       int fNToysAlt;
