@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <memory>
-#include <deque>
+#include <set>
 
 #ifndef ROOT_TVirtualX
 #include "TVirtualX.h"
@@ -334,10 +334,9 @@ private:
 
 
    bool fForegroundProcess;
-   
-   std::deque<Event_t> fEventQueue;
 
    std::vector<GCValues_t> fX11Contexts;
+   std::set<Window_t> fViewsToUpdate;
 
 protected:
 
