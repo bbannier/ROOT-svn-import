@@ -1068,7 +1068,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
             Event_t newEvent = [self createROOTEventFor : theEvent];
             newEvent.fType = kMotionNotify;
             [self locationForEvent : theEvent toROOTEvent : &newEvent];
-            
             window->HandleEvent(&newEvent);
          }
       } else {

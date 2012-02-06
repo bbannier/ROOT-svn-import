@@ -1472,7 +1472,7 @@ Int_t TGCocoa::EventsPending()
 {
    // Returns the number of events that have been received from the X server
    // but have not been removed from the event queue.
-   return Int_t(fEventQueue.size());
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1546,31 +1546,29 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];   
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    
-   if (CGContextRef ctx = LockView(view)) {
-      const CGStateGuard ctxGuard(ctx);
-      //Draw line.
-      //This draw line is a special GUI method, it's used not by ROOT's graphics, but
-      //by widgets. The problem is, I can not draw the line at the top of widget (in X11's
-      //coordinate space it's at the bottom. So I have to make very tiny scaling here.
-      //Other solutions - add 1 pixel to the widget's height or substract 1 from y coordinate
-      //- are even WORSE (in the first case, we'll have to remember everywhere the real size,
-      //in the second - lines can be at y == height and y == height - 1, so it's not clear when to shift).
-      CGContextScaleCTM(ctx, 1.f, CGFloat(view.fHeight - 1) / view.fHeight);
-      
-      
-      CGContextSetAllowsAntialiasing(ctx, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
-      
-      SetStrokeParametersFromX11Context(ctx, gcVals);
-   
-      CGContextBeginPath(ctx);
-      CGContextMoveToPoint(ctx, x1, LocalYROOTToCocoa(view, y1));
-      CGContextAddLineToPoint(ctx, x2, LocalYROOTToCocoa(view, y2));
-      CGContextStrokePath(ctx);
-      //Unlock if it's a "direct rendering".
-      UnlockView(view);
-   } else {
-      //Error("DrawLine", "Method was called directly, but no graphics context can be found");
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
    }
+
+   const CGStateGuard ctxGuard(view.fContext);
+   //Draw a line.
+   //This draw line is a special GUI method, it's used not by ROOT's graphics, but
+   //by widgets. The problem is, I can not draw the line at the top of widget (in X11's
+   //coordinate space it's at the bottom. So I have to make very tiny scaling here.
+   //Other solutions - add 1 pixel to the widget's height or substract 1 from y coordinate
+   //- are even WORSE (in the first case, we'll have to remember everywhere the real size,
+   //in the second - lines can be at y == height and y == height - 1, so it's not clear when to shift).
+   CGContextScaleCTM(view.fContext, 1.f, CGFloat(view.fHeight - 1) / view.fHeight);
+   CGContextSetAllowsAntialiasing(view.fContext, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
+      
+   SetStrokeParametersFromX11Context(view.fContext, gcVals);
+   
+   CGContextBeginPath(view.fContext);
+   CGContextMoveToPoint(view.fContext, x1, LocalYROOTToCocoa(view, y1));
+   CGContextAddLineToPoint(view.fContext, x2, LocalYROOTToCocoa(view, y2));
+   CGContextStrokePath(view.fContext);
 }
 
 //______________________________________________________________________________
@@ -1583,6 +1581,11 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    using namespace ROOT::MacOSX::X11;
    
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
+   }
 
    //TODO: remove this crap and do it right!!!
    const Pixel_t color = view.fBackgroundPixel;
@@ -1590,17 +1593,11 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    const CGFloat green = ((color & 0xFF00) >> 8) / 255.f;
    const CGFloat blue  = (color & 0xFF) / 255.f;
    
-   if (CGContextRef ctx = LockView(view)) {
-      const CGStateGuard ctxGuard(ctx);
-      CGContextSetRGBFillColor(ctx, red, green, blue, 1.f);//alpha can be also used.
-      if (y)
-         y = LocalYROOTToCocoa(view, y + h);
-      CGContextFillRect(ctx, CGRectMake(x, y, w, h));
-      //Unlock if it's a "direct rendering".
-      UnlockView(view);
-   } else {
-    //  Error("ClearArea", "Method was called directly, but not graphics context can be found");
-   }
+   const CGStateGuard ctxGuard(view.fContext);
+   CGContextSetRGBFillColor(view.fContext, red, green, blue, 1.f);//alpha can be also used.
+   if (y)
+      y = LocalYROOTToCocoa(view, y + h);
+   CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
 }
 
 //______________________________________________________________________________
@@ -1774,36 +1771,33 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawString, bad GContext_t");
 
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
-   
-   if (CGContextRef ctx = LockView(view)) {
-      const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
-
-      //Text must be antialiased.
-      CGContextSetAllowsAntialiasing(ctx, 1);
-      
-      const GCValues_t &gcVals = fX11Contexts[gc - 1];
-      assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
-
-      if (len < 0)
-         len = std::strlen(text);
-      const std::string substr(text, len);
-      
-      //Text can be not black, for example, highlighted label.
-      CGFloat textColor[4] = {0., 0., 0., 1.};//black by default.
-      //I do not check the results here, it's ok to have a black text.
-      if (gcVals.fMask & kGCForeground)
-         PixelToRGB(gcVals.fForeground, textColor);
-
-      ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
-
-      CGContextSetTextPosition(ctx, x, LocalYROOTToCocoa(view, y));
-      CTLineDraw(ctLine.fCTLine, ctx);
-      
-      //Unlock if it's direct call.
-      UnlockView(view);
-   } else {
-    //  Error("DrawString", "Method called directly, but no graphics context can be found");
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
    }
+   
+   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
+   //Text must be antialiased.
+   CGContextSetAllowsAntialiasing(view.fContext, 1);
+      
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
+
+   if (len < 0)
+      len = std::strlen(text);
+   const std::string substr(text, len);
+      
+   //Text can be not black, for example, highlighted label.
+   CGFloat textColor[4] = {0., 0., 0., 1.};//black by default.
+   //I do not check the results here, it's ok to have a black text.
+   if (gcVals.fMask & kGCForeground)
+      PixelToRGB(gcVals.fForeground, textColor);
+
+   ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
+
+   CGContextSetTextPosition(view.fContext, x, LocalYROOTToCocoa(view, y));
+   CTLineDraw(ctLine.fCTLine, view.fContext);
 }
 
 //______________________________________________________________________________
@@ -1879,21 +1873,20 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
    
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
-   
-   if (CGContextRef ctx = LockView(view)) {
-      const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
-      //Fill color from context.
-      const GCValues_t &gcVals = fX11Contexts[gc - 1];
-      SetFilledAreaParametersFromX11Context(ctx, gcVals);
-
-      //CGContextSetRGBStrokeColor(ctx, 1, 0, 0, 1.f);
-      const CGRect fillRect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
-      CGContextFillRect(ctx, fillRect);
-      //Unlock focus, if called from ROOT.
-      UnlockView(view);
-   } else {
-      Error("FillRectangle", "Method was called directly, but no graphics context can be found");
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
    }
+   
+   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
+   //Fill color from context.
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   SetFilledAreaParametersFromX11Context(view.fContext, gcVals);
+
+   //CGContextSetRGBStrokeColor(ctx, 1, 0, 0, 1.f);
+   const CGRect fillRect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
+   CGContextFillRect(view.fContext, fillRect);
 }
 
 //______________________________________________________________________________
@@ -1907,21 +1900,20 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawRectangle, bad GContext_t");
 
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
-   
-   if (CGContextRef ctx = LockView(view)) {
-      const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
-      
-      //Line color from X11 context.
-      const GCValues_t &gcVals = fX11Contexts[gc - 1];
-      SetStrokeParametersFromX11Context(ctx, gcVals);
-      
-      const CGRect rect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
-      CGContextStrokeRect(ctx, rect);
-      //Flush graphics and unlock focus, if called from ROOT.
-      UnlockView(view);
-   } else {
-    //  Error("DrawRectangle", "Method was called directly, but no graphics context can be found");
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
    }
+   
+   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
+      
+   //Line color from X11 context.
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   SetStrokeParametersFromX11Context(view.fContext, gcVals);
+      
+   const CGRect rect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
+   CGContextStrokeRect(view.fContext, rect);
 }
 
 //______________________________________________________________________________
@@ -2180,8 +2172,36 @@ void TGCocoa::Update(Int_t /*mode = 0*/)
    
    gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
    
-   NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-   [nsContext flushGraphics];
+   //NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+   //[nsContext flushGraphics];
+   CGContextRef prevContext = nullptr;
+   CGContextRef currContext = nullptr;
+   
+   for (auto viewID : fViewsToUpdate) {
+      QuartzView *view = fPimpl->GetWindow(viewID).fContentView;
+      if ((currContext = LockView(view))) {
+         //
+         view.fContext = currContext;
+         if (prevContext && prevContext != currContext)
+            CGContextFlush(prevContext);
+         prevContext = currContext;
+         //
+         //DoRedraw
+         TGWindow *window = gClient->GetWindowById(view.fID);
+         if (window)
+            gClient->NeedRedraw(window, kTRUE);
+         else
+            Warning("Update", "gClient did not find window for wid %u", view.fID);
+         //
+         UnlockView(view);
+         view.fContext = nullptr;
+      }
+   }
+   
+   if (currContext)
+      CGContextFlush(currContext);
+   
+   fViewsToUpdate.clear();
 }
 
 //______________________________________________________________________________

@@ -219,7 +219,7 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 @property (nonatomic, readonly) BOOL fIsPixmap;
 @property (nonatomic, readonly) QuartzView *fContentView;
 
-@property (nonatomic, readonly) CGContextRef fContext;
+@property (nonatomic, assign) CGContextRef fContext;
 
 //Life-cycle.
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *) attr;
