@@ -277,11 +277,11 @@ void SamplingDistPlot::Draw(Option_t * /*options */) {
    fRooPlot = xaxis.frame();
    fRooPlot->SetTitle("");
    if( !IsNaN(theYMax) ) {
-      coutI(InputArguments) << "Setting maximum to " << theYMax << endl;
+      //coutI(InputArguments) << "Setting maximum to " << theYMax << endl;
       fRooPlot->SetMaximum(theYMax);
    }
    if( !IsNaN(theYMin) ) {
-      coutI(InputArguments) << "Setting minimum to " << theYMin << endl;
+      //coutI(InputArguments) << "Setting minimum to " << theYMin << endl;
       fRooPlot->SetMinimum(theYMin);
    }
 
@@ -292,11 +292,11 @@ void SamplingDistPlot::Draw(Option_t * /*options */) {
       // add cloned objects to avoid mem leaks
       TH1 * cloneObj = (TH1*)obj->Clone();
       if( !IsNaN(theYMax) ) {
-         coutI(InputArguments) << "Setting maximum of TH1 to " << theYMax << endl;
+         //coutI(InputArguments) << "Setting maximum of TH1 to " << theYMax << endl;
          cloneObj->SetMaximum(theYMax);
       }
       if( !IsNaN(theYMin) ) {
-         coutI(InputArguments) << "Setting minimum of TH1 to " << theYMin << endl;
+         //coutI(InputArguments) << "Setting minimum of TH1 to " << theYMin << endl;
          cloneObj->SetMinimum(theYMin);
       }
       cloneObj->SetDirectory(0);
