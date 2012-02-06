@@ -43,6 +43,8 @@ namespace RooStats {
 
     SamplingDistribution(const char *name,const char *title, RooDataSet& dataSet, const char * varName = 0);
 
+    SamplingDistribution(const SamplingDistribution& other);
+
     // Default constructor for SamplingDistribution
     SamplingDistribution();
     
@@ -61,6 +63,9 @@ namespace RooStats {
   
     // merge two sampling distributions
     void Add(const SamplingDistribution* other);
+    
+    // add single element
+    void Add(const Double_t value, const Double_t weight = 1.0);
     
     // size of samples
     Int_t GetSize() const{return fSamplingDist.size();}
@@ -81,6 +86,10 @@ namespace RooStats {
 
     // calculate CDF as a special case of Integral(...) with lower limit equal to -inf
     Double_t CDF(Double_t x) const;
+    
+    // sets which algorithm to use for calculation of p-value error
+    void SetPValueErrorAlgo( int i=0 ) { fPValueErrorAlgo = i; }
+    int GetPValueErrorAlgo( void ) const { return fPValueErrorAlgo; }
 
   private:
 
@@ -89,6 +98,8 @@ namespace RooStats {
     // store a RooRealVar that this distribution corresponds to?
 
     TString fVarName;
+    
+    int fPValueErrorAlgo;
 
     mutable std::vector<Double_t> fSumW;   //! Chached vector with sum of the weight used to compute integral 
     mutable std::vector<Double_t> fSumW2;  //! Chached vector with sum of the weight used to compute integral error 
@@ -98,7 +109,7 @@ namespace RooStats {
     // internal function to sort values
     void SortValues() const;
     
-    ClassDef(SamplingDistribution,2)  // Class containing the results of the HybridCalculator
+    ClassDef(SamplingDistribution,3)  // Class containing the results of the HybridCalculator
   };
 }
 
