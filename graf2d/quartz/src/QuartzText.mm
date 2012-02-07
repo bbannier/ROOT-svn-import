@@ -39,35 +39,61 @@ typedef std::string::size_type size_type;
 
 //______________________________________________________________________________
 void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
+              Int_t align,
               const char *text)
 {
 
    // Draw text
-
-   CGContextSaveGState(ctx);
- //  CGContextTranslateCTM(ctx, 0.f, dirtyRect.size.height);
-  // CGContextScaleCTM(ctx, 1.f, -1.f);
    
    CGContextSetAllowsAntialiasing(ctx, 1);
+
 
    FontManager fm;
    CTFontRef font;
    font = fm.SelectFont(11,20); /// just to try
 
    CTLineGuard ctLine(text, font);
+   
+   UInt_t w = 0, h = 0;
+   ctLine.GetBounds(w, h);
+   
+   Double_t xc = 0., yc = 0.;
 
-   CGContextSetTextPosition(ctx, x, y);
+   const UInt_t hAlign = UInt_t(align / 10);   
+   switch (hAlign) {
+      case 1:
+         xc = x;
+         break;
+      case 2:
+         xc = x + 0.5 * w;
+         break;
+      case 3:
+         xc = x - w;
+         break;
+   }
+   
+   const UInt_t vAlign = UInt_t(align % 10);
+   switch (vAlign) {
+      case 1:
+         yc = y + 0.5 * h;
+         break;
+      case 2:
+         break;
+      case 3:
+         yc = y - 0.5 * h;
+         break;
+   }
+
+   CGContextSetTextPosition(ctx, 0.f, 0.f);
+   
+   CGContextTranslateCTM(ctx, xc, yc);
 
    //CGContextTranslateCTM(ctx, x, y);
-  // CGContextRotateCTM(ctx, gVirtualX->GetTextAngle() * TMath::DegToRad());
+   //CGContextRotateCTM(ctx, gVirtualX->GetTextAngle() * TMath::DegToRad());
    //CGContextTranslateCTM(ctx, xc, yc);
    //CGContextTranslateCTM(ctx, -0.5 * w, -0.5 * h);
 
    CTLineDraw(ctLine.fCTLine, ctx);
-
-   //printf("DrawText in QuartzText --> %s\n",text);
-
-   CGContextRestoreGState(ctx);
 }
 
 //______________________________________________________________________________

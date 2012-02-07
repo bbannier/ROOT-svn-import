@@ -14,7 +14,7 @@ namespace ROOT {
 namespace Quartz {
    
 void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
-              const char *text);
+              Int_t align, const char *text);
 
 enum class FontSlant {
    regular,
