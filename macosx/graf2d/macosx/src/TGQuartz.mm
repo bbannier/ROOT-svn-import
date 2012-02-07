@@ -224,54 +224,6 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
 
 }
 
-/*
-//_________________________________________________________________
-void Painter::DrawText(Double_t x, Double_t y, const CTLineGuard &ctLine)
-{
-   UInt_t w = 0, h = 0;
-   ctLine.GetBounds(w, h);
-   
-   x = fConverter.XToView(x);
-   y = fConverter.YToView(y);
-   
-   Double_t xc = 0., yc = 0.;
-   
-   const UInt_t hAlign = UInt_t(gVirtualX->GetTextAlign() / 10);   
-   switch (hAlign) {
-   case 1:
-      xc = 0.5 * w;
-      break;
-   case 2:
-      break;
-   case 3:
-      xc = -0.5 * w;
-      break;
-   }
-
-   const UInt_t vAlign = UInt_t(gVirtualX->GetTextAlign() % 10);
-   switch (vAlign) {
-   case 1:
-      yc = 0.5 * h;
-      break;
-   case 2:
-      break;
-   case 3:
-      yc = -0.5 * h;
-      break;
-   }
-   
-   CGContextSaveGState(fCtx);
-
-   CGContextSetTextPosition(fCtx, 0.f, 0.f);
-   CGContextTranslateCTM(fCtx, x, y);  
-   CGContextRotateCTM(fCtx, gVirtualX->GetTextAngle() * TMath::DegToRad());
-   CGContextTranslateCTM(fCtx, xc, yc);
-   CGContextTranslateCTM(fCtx, -0.5 * w, -0.5 * h);
-
-   CTLineDraw(ctLine.fCTLine, fCtx);
-   CGContextRestoreGState(fCtx);
-}*/
-
 
 //______________________________________________________________________________
 void TGQuartz::SetContextFillColor(Int_t ci)
