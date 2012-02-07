@@ -26,7 +26,7 @@ MACOSXOBJCPPO   := $(MACOSXSOBJCPP:.mm=.o)
 MACOSXO         := $(MACOSXS:.cxx=.o)
 
 
-MACOSXDEP       := $(MACOSXO:.o=.d) $(MACOSXDO:.o=.d)
+MACOSXDEP       := $(MACOSXO:.o=.d) $(MACOSXDO:.o=.d) $(MACOSXOBJCPPO:.o=.d)
 
 MACOSXLIB       := $(LPATH)/libGMACOSX.$(SOEXT)
 MACOSXMAP       := $(MACOSXLIB:.$(SOEXT)=.rootmap)
