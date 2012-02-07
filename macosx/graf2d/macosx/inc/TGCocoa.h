@@ -1,6 +1,7 @@
 #ifndef ROOT_TGCocoa
 #define ROOT_TGCocoa
 
+
 #include <vector>
 #include <memory>
 #include <set>
@@ -337,6 +338,9 @@ private:
 
    std::vector<GCValues_t> fX11Contexts;
    std::set<Window_t> fViewsToUpdate;
+   std::set<std::set<int> > superSet;
+   std::map<int, std::map<int,int> > mapmap;
+   std::map<double, double> igogo;
 
 protected:
 

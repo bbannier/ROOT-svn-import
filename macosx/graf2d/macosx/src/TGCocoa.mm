@@ -237,6 +237,7 @@ Bool_t TGCocoa::Init(void * /*display*/)
 void TGCocoa::ClearWindow()
 {
    // Clears the entire area of the current window.
+//   NSLog(@"clear window");
 }
 
 //______________________________________________________________________________
@@ -587,6 +588,7 @@ void TGCocoa::SelectWindow(Int_t wid)
    //not related to context from RootQuartzView's -drawRect method.
    //
    assert(wid != 0 && "SelectWindow, called for 'root' window");
+
    fSelectedDrawable = wid;
 }
 
@@ -1757,8 +1759,6 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
    // of the window "main_id". A window manager may decide not to decorate
    // a transient window or may treat it differently in other ways.
 }
-
-
 
 //______________________________________________________________________________
 void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len)
