@@ -26,7 +26,7 @@ QUARTZOBJCPPO   := $(QUARTZSOBJCPP:.mm=.o)
 QUARTZO         := $(QUARTZS:.cxx=.o)
 
 
-QUARTZDEP       := $(QUARTZO:.o=.d) $(QUARTZDO:.o=.d)
+QUARTZDEP       := $(QUARTZO:.o=.d) $(QUARTZDO:.o=.d) $(QUARTZOBJCPPO:.o=.d)
 
 QUARTZLIB       := $(LPATH)/libGQUARTZ.$(SOEXT)
 QUARTZMAP       := $(QUARTZLIB:.$(SOEXT)=.rootmap)
