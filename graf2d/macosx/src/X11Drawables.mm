@@ -270,7 +270,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       //ROOT's not able to draw GUI concurrently, thanks to global variables and gVirtualX itself.
       [self setAllowsConcurrentViewDrawing : NO];
    
-      fContext = nullptr;
+      fContext = nullptr;      
       //self.delegate = ...
       //create content view here.
       NSRect contentViewRect = contentRect;
@@ -620,9 +620,16 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //
 //
 
-@implementation QuartzView {
-   BOOL fHandleConfigureSent;
+@interface QuartzView () {
+@private
+   BOOL fFirstTimeMap;
 }
+
+- (void) generateConfigureNotify : (NSRect) newFrame;
+
+@end
+
+@implementation QuartzView
 
 @synthesize fResizedByROOT;
 @synthesize fBackBuffer;
@@ -646,9 +653,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
 {
    if (self = [super initWithFrame : frame]) {
+      fFirstTimeMap = YES;
+
       //Make this explicit (though memory is zero initialized).
       fID = 0;
-   
+
       [self setCanDrawConcurrently : NO];
       
       [self setHidden : YES];
@@ -803,9 +812,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       return kIsUnmapped;
 
    for (QuartzView *parent = fParentView; parent; parent = parent.fParentView) {
-      if ([parent isHidden]) {
+      if ([parent isHidden])
          return kIsUnviewable;
-      }
    }
 
    return kIsViewable;
@@ -818,21 +826,37 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    QuartzView *parent = fParentView;
    [self removeFromSuperview];
    [parent addSubview : self];
-
    [self setHidden : NO];
+
+   if (fFirstTimeMap && self.fMapState == kIsViewable) {
+      [self generateConfigureNotify : self.frame];
+      fFirstTimeMap = NO;
+   }
 }
 
 //______________________________________________________________________________
 - (void) mapWindow
-{
+{   
    [self setHidden : NO];
+
+   if (fFirstTimeMap && self.fMapState == kIsViewable) {
+      [self generateConfigureNotify : self.frame];
+      fFirstTimeMap = NO;
+   }
 }
 
 //______________________________________________________________________________
 - (void) mapSubwindows
 {
+   [self setHidden : NO];
    for (QuartzView * v in [self subviews]) {
       [v setHidden : NO];
+ 
+      if (fFirstTimeMap && self.fMapState == kIsViewable) {
+         [self generateConfigureNotify : self.frame];
+         fFirstTimeMap = NO;
+      }
+
       [v mapSubwindows];
    }
 }
@@ -891,13 +915,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) generateConfigureNotify : (NSRect) newFrame
 {
-   if (self.fMapState == kIsUnmapped)
-      return;
-
    if (fID) {
-      if (TGWindow *window = gClient->GetWindowById(fID)) {
+      if (TGWindow *window = gClient->GetWindowById(fID)) {      
          Event_t newEvent = {};
-
          newEvent.fType = kConfigureNotify;         
          newEvent.fWindow = fID;
          newEvent.fX = newFrame.origin.x;
@@ -934,7 +954,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    [super setFrameSize : newSize];
    
-   if (fEventMask & kStructureNotifyMask) {
+   if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable) {
       [self generateConfigureNotify : self.frame];
    }
    
@@ -966,7 +986,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mouseDown : (NSEvent *) theEvent
 {
-
    if (fID) {
       if (TGWindow *window = gClient->GetWindowById(fID)) {
        if (fEventMask & kButtonPressMask) {
