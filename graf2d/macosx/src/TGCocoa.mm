@@ -369,39 +369,6 @@ void TGCocoa::GetRGB(Int_t /*index*/, Float_t &/*r*/, Float_t &/*g*/, Float_t &/
    // Returns RGB values for color "index".
 }
 
-//______________________________________________________________________________
-void TGCocoa::GetTextExtent(UInt_t &/*w*/, UInt_t &/*h*/, char * /*text*/)
-{
-   // Returns the size of the specified character string "mess".
-   //
-   // w    - the text width
-   // h    - the text height
-   // text - the string
-}
-
-//______________________________________________________________________________
-Int_t   TGCocoa::GetFontAscent() const
-{
-   // Returns the ascent of the current font (in pixels).
-   // The ascent of a font is the distance from the baseline
-   // to the highest position characters extend to
-   return 0;
-}
-//______________________________________________________________________________
-Int_t   TGCocoa::GetFontDescent() const
-{
-  // Returns the descent of the current font (in pixels.
-  // The descent is the distance from the base line
-  // to the lowest point characters extend to.
-   return 0;
-}
-
-//______________________________________________________________________________
-Float_t TGCocoa::GetTextMagnitude()
-{
-   // Returns the current font magnification factor
-   return 0;
-}
 
 //______________________________________________________________________________
 Bool_t TGCocoa::HasTTFonts() const
