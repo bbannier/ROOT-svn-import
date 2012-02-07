@@ -58,6 +58,11 @@ public:
    virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
    virtual void      SetTextSize(Float_t textsize);
    
+   virtual void      GetTextExtent(UInt_t &w, UInt_t &h, char *mess);
+   virtual Int_t     GetFontAscent() const;
+   virtual Int_t     GetFontDescent() const ;
+   virtual Float_t   GetTextMagnitude();
+   
            void      SetContextFillColor(Int_t ci);
            void      SetContextStrokeColor(Int_t ci);
 
