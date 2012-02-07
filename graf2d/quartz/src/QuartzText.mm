@@ -75,9 +75,10 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
    const UInt_t vAlign = UInt_t(align % 10);
    switch (vAlign) {
       case 1:
-         yc = y + 0.5 * h;
+         yc = y;
          break;
       case 2:
+         yc = y + 0.5 * h;
          break;
       case 3:
          yc = y - 0.5 * h;
