@@ -213,49 +213,15 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
    CGContextTranslateCTM(ctx, 0.f, pixmap.fHeight);
    CGContextScaleCTM(ctx, 1.f, -1.f);
    
-   Quartz::DrawText(ctx, (Double_t)x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y), angle, text);
+   
+   Quartz::DrawText(ctx, (Double_t)x, 
+                    ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y), 
+                    angle, 
+                    GetTextAlign(),
+                    text);
    
    CGContextRestoreGState(ctx);
 
-/*
- // Text rotation
-   CGAffineTransform tm; 
-   tm =  CGAffineTransformMakeRotation (-(angle*kPI)/180.);
-   tm =  CGAffineTransformScale (tm, 1., -1.); 
-   CGContextSetTextMatrix (ctx, tm); 
-   
-   // Draw the text
-   CGContextShowTextAtPoint (ctx, (Float_t)x, (Float_t)y, text, strlen(text)); 
-   
- CTFontRef currentFont = fFontManager->SelectFont(gVirtualX->GetTextFont(), 
- gVirtualX->GetTextSize());
-   
-  //    if (!fSelectedFont)
-  //    throw std::runtime_error("GetTextBounds: font not selected");
-   
-   Font_t fontIndex = gVirtualX->GetTextFont() / 10 - 1;
-
-   UInt_t w = 0, h = 0;
-//   if (fontIndex == 11) {
-//      CTLineGuard ctLine(text, fSelectedFont, fSymbolMap);
-//      ctLine.GetBounds(w, h);
-//   } else {
-      CTLineGuard ctLine(text, fSelectedFont);
-      ctLine.GetBounds(w, h);
-//   }
-   
-   
-   CGContextSaveGState(ctx);
-
-   CGContextSetTextPosition(ctx, 0.f, 0.f);
-   CGContextTranslateCTM(ctx, x, y);  
-   CGContextRotateCTM(ctx, gVirtualX->GetTextAngle() * TMath::DegToRad());
-   CGContextTranslateCTM(ctx, xc, yc);
-   CGContextTranslateCTM(ctx, -0.5 * w, -0.5 * h);
-
-   CTLineDraw(ctLine.fCTLine, ctx);
-   CGContextRestoreGState(ctx);
- */
 }
 
 /*
