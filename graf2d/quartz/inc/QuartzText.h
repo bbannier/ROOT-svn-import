@@ -15,6 +15,8 @@ namespace Quartz {
    
 void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
               Int_t align, const char *text);
+void GetTextExtent(UInt_t &w, UInt_t &h, char *text);
+
 
 enum class FontSlant {
    regular,
