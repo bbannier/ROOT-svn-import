@@ -356,6 +356,38 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
+- (int) fGrabButton
+{
+   assert(fContentView != nil && "fGrabButton, content view is nil");
+   
+   return fContentView.fEventMask;
+}
+
+//______________________________________________________________________________
+- (void) setFGrabButton : (int) btn
+{
+   assert(fContentView != nil && "setFGrabButton, content view is nil");
+   
+   fContentView.fGrabButton = btn;
+}
+
+//______________________________________________________________________________
+- (unsigned) fGrabButtonEventMask
+{
+   assert(fContentView != nil && "fGrabButtonEventMask, content view is nil");
+   
+   return fContentView.fGrabButtonEventMask;
+}
+
+//______________________________________________________________________________
+- (void) setFGrabButtonEventMask : (unsigned) mask
+{
+   assert(fContentView != nil && "setFGrabButtonEventMask, content view is nil");
+   
+   fContentView.fGrabButtonEventMask = mask;
+}
+
+//______________________________________________________________________________
 - (int) fClass
 {
    assert(fContentView != nil && "fClass, content view is nil");
@@ -594,7 +626,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    assert(fContentView != nil && "mapSubwindows, content view is nil");
 
-//   [fContentView setHidden : NO];
    [fContentView mapSubwindows];
 }
 
@@ -647,6 +678,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //SetWindowAttributes_t/WindowAttributes_t
 /////////////////////
 
+@synthesize fGrabButton;
+@synthesize fGrabButtonEventMask;
 @synthesize fContext;
 
 //______________________________________________________________________________
@@ -828,10 +861,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    [parent addSubview : self];
    [self setHidden : NO];
 
-   if (fFirstTimeMap && self.fMapState == kIsViewable) {
+   if (fEventMask & kStructureNotifyMask)
       [self generateConfigureNotify : self.frame];
-      fFirstTimeMap = NO;
-   }
 }
 
 //______________________________________________________________________________
@@ -839,23 +870,18 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {   
    [self setHidden : NO];
 
-   if (fFirstTimeMap && self.fMapState == kIsViewable) {
+   if (fEventMask & kStructureNotifyMask)
       [self generateConfigureNotify : self.frame];
-      fFirstTimeMap = NO;
-   }
 }
 
 //______________________________________________________________________________
 - (void) mapSubwindows
 {
-   [self setHidden : NO];
    for (QuartzView * v in [self subviews]) {
       [v setHidden : NO];
  
-      if (fFirstTimeMap && self.fMapState == kIsViewable) {
-         [self generateConfigureNotify : self.frame];
-         fFirstTimeMap = NO;
-      }
+      if (v.fEventMask & kStructureNotifyMask)
+         [v generateConfigureNotify : v.frame];
 
       [v mapSubwindows];
    }
@@ -940,10 +966,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) setFrame : (NSRect) newFrame
 {
    [super setFrame : newFrame];
-
-   if (fEventMask & kStructureNotifyMask) {
-     // [self generateConfigureNotify : newFrame];
-   }
 }
 
 
@@ -954,12 +976,10 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    [super setFrameSize : newSize];
    
-   if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable) {
+   if (fEventMask & kStructureNotifyMask)
       [self generateConfigureNotify : self.frame];
-   }
-   
-   //?
-   [self setNeedsDisplay : YES];
+
+   [self setNeedsDisplay : YES];//?
 }
 
 //______________________________________________________________________________
@@ -984,47 +1004,68 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
+- (BOOL) viewGeneratesButtonPressEvent : (EMouseButton) btn
+{
+   if (fEventMask & kButtonPressMask)
+      return YES;
+
+   if (btn == fGrabButton && (fGrabButtonEventMask & kButtonPressMask))
+      return YES;
+   
+   return NO;
+}
+
+//______________________________________________________________________________
+- (BOOL) viewGeneratesButtonReleaseEvent : (EMouseButton) btn
+{
+   if (fEventMask & kButtonReleaseMask)
+      return YES;
+
+   if (btn == fGrabButton && (fGrabButtonEventMask & kButtonReleaseMask))
+      return YES;
+   
+   return NO;
+}
+
+//______________________________________________________________________________
 - (void) mouseDown : (NSEvent *) theEvent
 {
-   if (fID) {
-      if (TGWindow *window = gClient->GetWindowById(fID)) {
-       if (fEventMask & kButtonPressMask) {
-            Event_t newEvent = [self createROOTEventFor : theEvent];
-            newEvent.fType = kButtonPress;
-            [self locationForEvent : theEvent toROOTEvent : &newEvent];
-            /*
-            const NSPoint clickPoint = [self convertPoint : [theEvent locationInWindow] fromView : nil];
-            
-            newEvent.fX = clickPoint.x;
-            newEvent.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clickPoint.y);
-            */
-            window->HandleEvent(&newEvent);
-         } else //We can also check fDoNoPropagate mask and block the event (TODO).
-            [super mouseDown : theEvent];//Pass to the parent view.
-      } else {
-         NSLog(@"Warning: QuartzView, -mouseDown method, no window for id %u was found", fID);
-      }
-   } else
-      [super mouseDown : theEvent];//Will pass to parent view.
+   assert(fID != 0 && "mouseDown, fID is 0");
+   
+   TGWindow *window = gClient->GetWindowById(fID);
+   if (!window) {
+      NSLog(@"Warning: QuartzView, -mouseDown method, no window for id %u was found", fID);
+      return;
+   }
+   
+   if ([self viewGeneratesButtonPressEvent : kButton1]) {
+      Event_t newEvent = [self createROOTEventFor : theEvent];
+      newEvent.fType = kButtonPress;
+      [self locationForEvent : theEvent toROOTEvent : &newEvent];
+
+      window->HandleEvent(&newEvent);
+   } else //We can also check fDoNoPropagate mask and block the event (TODO).
+      [super mouseDown : theEvent];//Pass to the parent view.
 }
 
 //______________________________________________________________________________
 - (void) mouseUp : (NSEvent *) theEvent
 {
-   if (fID) {
-      if (TGWindow *window = gClient->GetWindowById(fID)) {
-         if (fEventMask & kButtonReleaseMask) {
-            Event_t newEvent = [self createROOTEventFor : theEvent];
-            newEvent.fType = kButtonRelease;
-            //TODO: coordinates?
-            [self locationForEvent : theEvent toROOTEvent : &newEvent];
-            window->HandleEvent(&newEvent);
-         } else
-            [super mouseUp : theEvent];//Pass to the parent view.
-      } else {
-         NSLog(@"Warning: QuartzView, -mouseDown method, no window for id %u was found", fID);
-      }
-   } else
+   assert(fID != 0 && "mouseUp, fID is 0");
+
+   TGWindow *window = gClient->GetWindowById(fID);
+   if (!window) {
+      NSLog(@"Warning: QuartzView, -mouseUp method, no window for id %u was found", fID);
+      return;
+   }
+   
+   if ([self viewGeneratesButtonReleaseEvent : kButton1]) {
+      Event_t newEvent = [self createROOTEventFor : theEvent];
+      newEvent.fType = kButtonRelease;
+      //TODO: coordinates?
+      [self locationForEvent : theEvent toROOTEvent : &newEvent];
+      window->HandleEvent(&newEvent);
+   } else //check do not propagate???
       [super mouseUp : theEvent];
 }
 
