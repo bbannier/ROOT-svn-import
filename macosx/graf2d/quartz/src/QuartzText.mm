@@ -40,19 +40,18 @@ typedef std::string::size_type size_type;
    
 //______________________________________________________________________________
 void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
-              Int_t align,
+              Int_t align, Int_t font, Float_t size,
               const char *text)
 {
    // Draw text
    
    CGContextSetAllowsAntialiasing(ctx, 1);
 
-
    FontManager fm;
-   CTFontRef font;
-   font = fm.SelectFont(11,20); /// just to try
+   CTFontRef fontref;
+   fontref = fm.SelectFont(font, size);
 
-   CTLineGuard ctLine(text, font);
+   CTLineGuard ctLine(text, fontref);
    
    UInt_t w = 0, h = 0;
    ctLine.GetBounds(w, h);
@@ -99,15 +98,16 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
 
    
 //______________________________________________________________________________
-void GetTextExtent(UInt_t &w, UInt_t &h, char *text)
+void GetTextExtent(UInt_t &w, UInt_t &h, Int_t font, Float_t size,
+                   char *text)
 {
    // Get text extent.
    
    FontManager fm;
-   CTFontRef font;
-   font = fm.SelectFont(11,20); /// just to try
+   CTFontRef fontref;
+   fontref = fm.SelectFont(font,size);
    
-   CTLineGuard ctLine(text, font);
+   CTLineGuard ctLine(text, fontref);
    
    ctLine.GetBounds(w, h);
 }
