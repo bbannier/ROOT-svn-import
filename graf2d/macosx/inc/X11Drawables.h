@@ -59,6 +59,7 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 @property (nonatomic, readonly) int         fMapState;
 
+
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////
 
@@ -76,6 +77,11 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 //about context, if it's not nil - we'll use it, but if it is nil,
 //we try to get current context and lock focus on the current view.
 @property (nonatomic, readonly) CGContextRef fContext;
+
+@property (nonatomic, assign) int fGrabButton;
+@property (nonatomic, assign) unsigned fGrabButtonEventMask;
+//modifier also.
+
 
 //Geometry: (readonly)
 - (int)      fX;
@@ -141,6 +147,7 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 @property (nonatomic, readonly) int fMapState;
 
+
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////
 
@@ -148,6 +155,9 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 @property (nonatomic, readonly) QuartzView *fContentView;
 
 @property (nonatomic, readonly) CGContextRef fContext;
+
+@property (nonatomic, assign) int fGrabButton;
+@property (nonatomic, assign) unsigned fGrabButtonEventMask;
 
 //Life-cycle.
 - (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle 
@@ -220,6 +230,11 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 @property (nonatomic, readonly) QuartzView *fContentView;
 
 @property (nonatomic, assign) CGContextRef fContext;
+
+@property (nonatomic, assign) int fGrabButton;
+@property (nonatomic, assign) unsigned fGrabButtonEventMask;
+//modifier also.
+
 
 //Life-cycle.
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *) attr;

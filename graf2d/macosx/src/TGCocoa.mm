@@ -1624,10 +1624,8 @@ void TGCocoa::GrabKey(Window_t /*wid*/, Int_t /*keycode*/, UInt_t /*modifier*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::GrabButton(Window_t wid, EMouseButton /*button*/,
-                           UInt_t /*modifier*/, UInt_t evmask,
-                           Window_t /*confine*/, Cursor_t /*cursor*/,
-                           Bool_t /*grab = kTRUE*/)
+void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t /*modifier*/, UInt_t evmask,
+                         Window_t /*confine*/, Cursor_t /*cursor*/, Bool_t grab)
 {
    // Establishes a passive grab on a certain mouse button. That is, when a
    // certain mouse button is hit while certain modifier's (Shift, Control,
@@ -1635,9 +1633,15 @@ void TGCocoa::GrabButton(Window_t wid, EMouseButton /*button*/,
    // When grab is false, ungrab the mouse button for this button and modifier.
    assert(wid != 0 && "GrabButton, called for 'root' window");
    
-
-   //TODO: this is only test implementation of GrabButton.
-   fPimpl->GetWindow(wid).fEventMask |= evmask;
+   id<X11Drawable> widget = fPimpl->GetWindow(wid);
+   
+   if (grab) {
+      widget.fGrabButton = button;
+      widget.fGrabButtonEventMask = evmask;
+   } else {
+      widget.fGrabButton = 0;
+      widget.fGrabButtonEventMask = 0;
+   }
 }
 
 //______________________________________________________________________________
