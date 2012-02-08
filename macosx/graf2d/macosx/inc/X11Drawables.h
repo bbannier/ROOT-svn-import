@@ -202,7 +202,6 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 @interface QuartzView : NSView<X11Drawable>
 
-@property (nonatomic, assign) BOOL fResizedByROOT;
 @property (nonatomic, assign) QuartzPixmap *fBackBuffer;
 @property (nonatomic, assign) QuartzView *fParentView;
 
