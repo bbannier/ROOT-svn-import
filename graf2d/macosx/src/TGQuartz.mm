@@ -218,6 +218,8 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
                     ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y), 
                     angle, 
                     GetTextAlign(),
+                    GetTextFont(),
+                    GetTextSize(),
                     text);
    
    CGContextRestoreGState(ctx);
@@ -233,7 +235,10 @@ void TGQuartz::GetTextExtent(UInt_t &w, UInt_t &h, char *text)
    // h    - the text height
    // text - the string
    
-   Quartz::GetTextExtent(w, h, text);
+   Quartz::GetTextExtent(w, h, 
+                         GetTextFont(),
+                         GetTextSize(),
+                         text);
 }
 
 
