@@ -37,12 +37,12 @@ const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] =
 
 typedef std::string::size_type size_type;
 
+   
 //______________________________________________________________________________
 void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
               Int_t align,
               const char *text)
 {
-
    // Draw text
    
    CGContextSetAllowsAntialiasing(ctx, 1);
@@ -96,6 +96,22 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
 
    CTLineDraw(ctLine.fCTLine, ctx);
 }
+
+   
+//______________________________________________________________________________
+void GetTextExtent(UInt_t &w, UInt_t &h, char *text)
+{
+   // Get text extent.
+   
+   FontManager fm;
+   CTFontRef font;
+   font = fm.SelectFont(11,20); /// just to try
+   
+   CTLineGuard ctLine(text, font);
+   
+   ctLine.GetBounds(w, h);
+}
+   
 
 //______________________________________________________________________________
 template<class T>
