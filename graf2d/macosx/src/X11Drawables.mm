@@ -278,9 +278,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       contentViewRect.origin.y = 0.f;
       fContentView = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : 0];
       
-      fContentView.fResizedByROOT = YES;//If it will do any resize
       [self setContentView : fContentView];
-      fContentView.fResizedByROOT = NO;
 
       [fContentView release];
       
@@ -545,9 +543,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(!(newSize.width < 0) && "setDrawableSize, width is negative");
    assert(!(newSize.height < 0) && "setDrawableSize, height is negative");
    
-   fContentView.fResizedByROOT = YES;
    [self setContentSize : newSize];
-   fContentView.fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -559,18 +555,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    //Check how this is affected by title bar's height.
    const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
 
-   fContentView.fResizedByROOT = YES;
    [self setFrameTopLeftPoint : topLeft];
-   fContentView.fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
 - (void) setX : (int) x rootY : (int) y
 {
    const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
-   fContentView.fResizedByROOT = YES;
+
    [self setFrameTopLeftPoint : topLeft];
-   fContentView.fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -651,10 +644,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //
 //
 
-@interface QuartzView () {
-@private
-   BOOL fFirstTimeMap;
-}
+@interface QuartzView ()
 
 - (void) generateConfigureNotify : (NSRect) newFrame;
 
@@ -662,7 +652,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 @implementation QuartzView
 
-@synthesize fResizedByROOT;
 @synthesize fBackBuffer;
 @synthesize fParentView;
 @synthesize fID;
@@ -686,8 +675,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
 {
    if (self = [super initWithFrame : frame]) {
-      fFirstTimeMap = YES;
-
       //Make this explicit (though memory is zero initialized).
       fID = 0;
 
@@ -774,9 +761,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    NSRect frame = self.frame;
    frame.size = newSize;
    
-   fResizedByROOT = YES;
    self.frame = frame;
-   fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -790,9 +775,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    newFrame.size.width = w;
    newFrame.size.height = h;
    
-   fResizedByROOT = YES;
    self.frame = newFrame;
-   fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
@@ -804,9 +787,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    newFrame.origin.x = x;
    newFrame.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(fParentView, y + newFrame.size.height);
    
-   fResizedByROOT = YES;
    self.frame = newFrame;
-   fResizedByROOT = NO;
 }
 
 //______________________________________________________________________________
