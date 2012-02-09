@@ -522,6 +522,8 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
    assert(drawable.fIsPixmap == YES && "ResizePixmap, object is not a pixmap");
 
    QuartzPixmap *pixmap = (QuartzPixmap *)drawable;
+   if (w == pixmap.fWidth && h == pixmap.fHeight)
+      return 1;
    
    NSSize newSize = {};
    newSize.width = w;

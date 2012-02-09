@@ -957,7 +957,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    [super setFrameSize : newSize];
    
-   if (fEventMask & kStructureNotifyMask)
+   if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable)
       [self generateConfigureNotify : self.frame];
 
    [self setNeedsDisplay : YES];//?
