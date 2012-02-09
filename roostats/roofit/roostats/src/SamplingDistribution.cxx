@@ -23,11 +23,6 @@ a weighted set of points (eg. for the FFT method).
 The class supports merging.
 */
 
-
-#ifndef ROO_MSG_SERVICE
-#include "RooMsgService.h"
-#endif
-
 #include "RooStats/SamplingDistribution.h"
 #include "RooNumber.h"
 #include "TMath.h"
@@ -56,8 +51,6 @@ SamplingDistribution::SamplingDistribution( const char *name, const char *title,
   fSampleWeights.resize(fSamplingDist.size(),1.0) ;  
 
   fVarName = varName;
-  
-  fPValueErrorAlgo = 0;
 }
 
 //_______________________________________________________
@@ -72,8 +65,6 @@ SamplingDistribution::SamplingDistribution( const char *name, const char *title,
   //  std::copy(samplingDist.begin(), samplingDist.end(), fSamplingDist.begin());
 
   fVarName = varName;
-
-  fPValueErrorAlgo = 0;
 }
 
 //_______________________________________________________
@@ -82,8 +73,6 @@ SamplingDistribution::SamplingDistribution( const char *name, const char *title,
 {
    // SamplingDistribution constructor (with name and title)
   fVarName = varName;
-
-  fPValueErrorAlgo = 0;
 }
 
 
@@ -108,41 +97,20 @@ SamplingDistribution::SamplingDistribution(
    if(fVarName.Length() == 0) {
       // no leak. none of these transfers ownership.
       fVarName = dataSet.get()->first()->GetName();
-      
-      if(dataSet.get()->getSize() > 1) {
-         ooccoutI((TObject*)NULL,InputArguments) << "Creating SamplingDistribution from data set with more than one column. Taking the first one." << endl;
-      }
    }
 
    for(Int_t i=0; i < dataSet.numEntries(); i++) {
       fSamplingDist.push_back(dataSet.get(i)->getRealValue(fVarName));
       fSampleWeights.push_back(dataSet.weight());
    }
-
-   fPValueErrorAlgo = 0;
 }
 
-//_______________________________________________________
-SamplingDistribution::SamplingDistribution(const SamplingDistribution& other) : 
-   TNamed( other )
-{
-  // SamplingDistribution constructor
-  fSamplingDist = other.GetSamplingDistribution();
-  fSampleWeights = other.GetSampleWeights();
-  // need to check STL stuff here.  Will this = operator work as wanted, or do we need:
-  //  std::copy(samplingDist.begin(), samplingDist.end(), fSamplingDist.begin());
-
-  fVarName = other.GetVarName();
-
-  fPValueErrorAlgo = other.GetPValueErrorAlgo();
-}
 
 //_______________________________________________________
 SamplingDistribution::SamplingDistribution( ) :
   TNamed("SamplingDistribution_DefaultName","SamplingDistribution")
 {
    // SamplingDistribution default constructor
-   fPValueErrorAlgo = 0;
 }
 
 //_______________________________________________________
@@ -190,16 +158,6 @@ void SamplingDistribution::Add(const SamplingDistribution* other)
      SetTitle(other->GetTitle());
 
 }
-
-
-//_______________________________________________________
-void SamplingDistribution::Add(const Double_t value, const Double_t weight)
-{
-   // push back elements
-   fSamplingDist.push_back(value);
-   fSampleWeights.push_back(weight);
-}
-
 
 
 //_______________________________________________________
@@ -312,20 +270,9 @@ Double_t SamplingDistribution::IntegralAndError(Double_t & error, Double_t low, 
 
       sum /= norm;
 
-      if( fPValueErrorAlgo == 0 ) {
-         // use formula for binomial error in case of weighted events 
-         // expression can be derived using a MLE for a weighted binomial likelihood 
-         error = std::sqrt( sum2 * (1. - 2. * sum) + norm2 * sum * sum ) / norm;  
-      }else if( fPValueErrorAlgo == 1 ) {
-         // overwrite with error given by Woodroofe
-         // sum is already divided by norm: ie sum = p
-         // M = indexHigh - indexLow
-         int M = indexHigh >= 0 ? indexHigh : 0;
-         M -= indexLow >= 0 ? indexLow : 0;
-         error = std::sqrt(    1./M  * sum2    -   sum*sum    );
-         // and then quote "sigma / sqrt(M)":
-         error /= std::sqrt( M );
-      }
+      // use formula for binomial error in case of weighted events 
+      // expression can be derived using a MLE for a weighted binomial likelihood 
+      error = std::sqrt( sum2 * (1. - 2. * sum) + norm2 * sum * sum ) / norm;  
    }
    else { 
       error = std::sqrt(sum2); 

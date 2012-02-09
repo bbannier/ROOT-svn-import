@@ -95,6 +95,14 @@ int HybridCalculator::PreNullHook(RooArgSet* /*parameterPoint*/, double obsTestS
          toymcs->SetToysBothTails(0, 0, obsTestStat); // disable adaptive sampling
       }
 
+      // importance sampling
+      if(fNullImportanceDensity) {
+         oocoutI((TObject*)0,InputArguments) << "Importance Sampling" << endl;
+         toymcs->SetImportanceDensity(fNullImportanceDensity);
+         if(fNullImportanceSnapshot) toymcs->SetImportanceSnapshot(*fNullImportanceSnapshot);
+      }else{
+         toymcs->SetImportanceDensity(NULL);       // disable importance sampling
+      }
       GetNullModel()->LoadSnapshot();
    }
 
@@ -148,6 +156,16 @@ int HybridCalculator::PreAltHook(RooArgSet* /*parameterPoint*/, double obsTestSt
          }
       }else{
          toymcs->SetToysBothTails(0, 0, obsTestStat); // disable adaptive sampling
+      }
+
+
+      // importance sampling
+      if(fAltImportanceDensity) {
+         oocoutI((TObject*)0,InputArguments) << "Importance Sampling" << endl;
+         toymcs->SetImportanceDensity(fAltImportanceDensity);
+         if(fAltImportanceSnapshot) toymcs->SetImportanceSnapshot(*fAltImportanceSnapshot);
+      }else{
+         toymcs->SetImportanceDensity(NULL);       // disable importance sampling
       }
    }
 
