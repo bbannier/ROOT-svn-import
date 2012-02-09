@@ -29,12 +29,11 @@ class HypoTestPlot: public SamplingDistPlot {
    public:
       /// Constructor
    HypoTestPlot() : SamplingDistPlot() , fHypoTestResult(0) {}   // needed for IO 
-      HypoTestPlot(HypoTestResult& result, Int_t bins=100, Option_t* opt = "NORMALIZE HIST");
-      HypoTestPlot(HypoTestResult& result, Int_t bins, Double_t min, Double_t max, Option_t* opt = "NORMALIZE HIST");
+      HypoTestPlot(HypoTestResult& result, Int_t bins=100);
       ~HypoTestPlot(void) {}
 
       // Applies a HypoTestResult.
-      void ApplyResult(HypoTestResult& result, Option_t* opt = "NORMALIZE HIST");
+      void ApplyResult(HypoTestResult& result);
       // Set default style options (also called in the constructor that takes a HypoTestResult).
       void ApplyDefaultStyle(void);
 
