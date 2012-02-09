@@ -918,29 +918,37 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //Event handling.
+//______________________________________________________________________________
+- (Event_t) createROOTEventFor : (NSEvent *) theEvent
+{
+   Event_t newEvent = {};
+   newEvent.fWindow = fID;
+   newEvent.fTime = [theEvent timestamp];
+   
+   return newEvent;
+}
 
 //______________________________________________________________________________
 - (void) generateConfigureNotify : (NSRect) newFrame
 {
-   if (fID) {
-      if (TGWindow *window = gClient->GetWindowById(fID)) {      
-         Event_t newEvent = {};
-         newEvent.fType = kConfigureNotify;         
-         newEvent.fWindow = fID;
-         newEvent.fX = newFrame.origin.x;
-         newEvent.fY = newFrame.origin.y;
-         newEvent.fWidth = newFrame.size.width;
-         newEvent.fHeight = newFrame.size.height;
-         
-         //TODO:
-         //1. generate timestamp?
-         //2. check, what's actually required from configure notify.
-         window->HandleEvent(&newEvent);
-      } else {
-         NSLog(@"Warning: QuartzView, -generateConfigureNotify method, no window for id %u was found", fID);
-      }
-   }
+   assert(fID != 0 && "generateConfigureNotify, fID is 0");
+   
+   TGWindow *window = gClient->GetWindowById(fID);
+   assert(window != nullptr && "generateConfigureNotify, window was not found");
+   
+   Event_t newEvent = {};
+   newEvent.fWindow = fID;
+   newEvent.fType = kConfigureNotify;         
 
+   newEvent.fX = newFrame.origin.x;
+   newEvent.fY = newFrame.origin.y;
+   newEvent.fWidth = newFrame.size.width;
+   newEvent.fHeight = newFrame.size.height;
+   
+   //TODO:
+   //1. generate timestamp?
+   //2. check, what's actually required from configure notify.
+   window->HandleEvent(&newEvent);
 }
 
 //______________________________________________________________________________
@@ -948,7 +956,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    [super setFrame : newFrame];
 }
-
 
 //______________________________________________________________________________
 - (void) setFrameSize : (NSSize) newSize
@@ -972,16 +979,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    const NSPoint clickPoint = [self convertPoint : [cocoaEvent locationInWindow] fromView : nil];
    rootEvent->fX = clickPoint.x;
    rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clickPoint.y);
-}
-
-//______________________________________________________________________________
-- (Event_t) createROOTEventFor : (NSEvent *) theEvent
-{
-   Event_t newEvent = {};
-   newEvent.fWindow = fID;
-   newEvent.fTime = [theEvent timestamp];
-   
-   return newEvent;
 }
 
 //______________________________________________________________________________
@@ -1014,10 +1011,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(fID != 0 && "mouseDown, fID is 0");
    
    TGWindow *window = gClient->GetWindowById(fID);
-   if (!window) {
-      NSLog(@"Warning: QuartzView, -mouseDown method, no window for id %u was found", fID);
-      return;
-   }
+   assert(window != nullptr && "mouseDown, window was not found");
    
    if ([self viewGeneratesButtonPressEvent : kButton1]) {
       Event_t newEvent = [self createROOTEventFor : theEvent];
@@ -1035,10 +1029,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(fID != 0 && "mouseUp, fID is 0");
 
    TGWindow *window = gClient->GetWindowById(fID);
-   if (!window) {
-      NSLog(@"Warning: QuartzView, -mouseUp method, no window for id %u was found", fID);
-      return;
-   }
+   assert(window != nullptr && "mouseUp, window was not found");
    
    if ([self viewGeneratesButtonReleaseEvent : kButton1]) {
       Event_t newEvent = [self createROOTEventFor : theEvent];
@@ -1053,38 +1044,34 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mouseEntered : (NSEvent *) theEvent
 {
-   (void)theEvent;
-   if (fID) {
-      if (TGWindow *window = gClient->GetWindowById(fID)) {
-         if (fEventMask & kEnterWindowMask) {
-            Event_t newEvent = [self createROOTEventFor : theEvent];
-            newEvent.fType = kEnterNotify;
-            [self locationForEvent : theEvent toROOTEvent : &newEvent];
-            
-            window->HandleEvent(&newEvent);
-         }
-      } else {
-         NSLog(@"Warning: QuartzView, -mouseEntered method, no window for id %u was found", fID);
-      }
+   assert(fID != 0 && "mouseEntered, fID is 0");
+   
+   TGWindow *window = gClient->GetWindowById(fID);
+   assert(window != nullptr && "mouseEntered, window was not found");
+   
+   if (fEventMask & kEnterWindowMask) {
+      Event_t newEvent = [self createROOTEventFor : theEvent];
+      newEvent.fType = kEnterNotify;
+      [self locationForEvent : theEvent toROOTEvent : &newEvent];
+      
+      window->HandleEvent(&newEvent);
    }
 }
 
 //______________________________________________________________________________
 - (void) mouseExited : (NSEvent *) theEvent
 {
-   (void)theEvent;
-   if (fID) {
-      if (TGWindow *window = gClient->GetWindowById(fID)) {
-         if (fEventMask & kLeaveWindowMask) {
-            Event_t newEvent = [self createROOTEventFor : theEvent];
-            newEvent.fType = kLeaveNotify;
-            [self locationForEvent : theEvent toROOTEvent : &newEvent];
-            
-            window->HandleEvent(&newEvent);
-         }
-      } else {
-         NSLog(@"Warning: QuartzView, -mouseExited method, no window for id %u was found", fID);
-      }
+   assert(fID != 0 && "mouseExited, fID is 0");
+   
+   TGWindow *window = gClient->GetWindowById(fID);
+   assert(window != nullptr && "mouseExited, window was not found");
+   
+   if (fEventMask & kLeaveWindowMask) {
+      Event_t newEvent = [self createROOTEventFor : theEvent];
+      newEvent.fType = kLeaveNotify;
+      [self locationForEvent : theEvent toROOTEvent : &newEvent];
+      
+      window->HandleEvent(&newEvent);
    }
 }
 
@@ -1097,23 +1084,22 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) mouseMoved : (NSEvent *) theEvent
 {
+   assert(fID != 0 && "mouseMoved, fID is 0");
+
    const NSPoint windowPoint = [theEvent locationInWindow];
    NSView *candidateView = [[[self window] contentView] hitTest : windowPoint];
 
    if (candidateView != self)
       return;
 
-   if (fID) {
-      if (TGWindow *window = gClient->GetWindowById(fID)) {
-         if (fEventMask & kPointerMotionMask) {
-            Event_t newEvent = [self createROOTEventFor : theEvent];
-            newEvent.fType = kMotionNotify;
-            [self locationForEvent : theEvent toROOTEvent : &newEvent];
-            window->HandleEvent(&newEvent);
-         }
-      } else {
-         NSLog(@"Warning: QuartzView, -mouseMoved, no window for id %u was found", fID);
-      }
+   TGWindow *window = gClient->GetWindowById(fID);
+   assert(window != nullptr && "mouseMoved, window was not found");
+
+   if (fEventMask & kPointerMotionMask) {
+      Event_t newEvent = [self createROOTEventFor : theEvent];
+      newEvent.fType = kMotionNotify;
+      [self locationForEvent : theEvent toROOTEvent : &newEvent];
+      window->HandleEvent(&newEvent);
    }
 }
 
