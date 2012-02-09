@@ -154,6 +154,12 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
       for (it = unknown.begin(); it != unknown.end(); ++it) {
          TClass* cl = TClass::GetClass(it->c_str());
          if (cl && cl->GetDeclFileName()) {
+#ifdef WIN32
+            TString drive;
+            if (cl->GetDeclFileName()[0] && cl->GetDeclFileName()[1] == ':') {
+               drive.Form("%c:/",cl->GetDeclFileName()[0]);
+            }
+#endif
             TString header(gSystem->BaseName(cl->GetDeclFileName()));
             TString dir(gSystem->DirName(cl->GetDeclFileName()));
             TString dirbase(gSystem->BaseName(dir));
@@ -162,7 +168,13 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
                    && dirbase != "prec_stl") {
                gSystem->PrependPathName(dirbase, header);
                dir = gSystem->DirName(dir);
+               dirbase = dir.Length() ? gSystem->BaseName(dir) : "";
             }
+#ifdef WIN32
+            if (drive.Length()) {
+               gSystem->PrependPathName(drive, header);
+            }
+#endif
             fileContent += TString("#include \"") + header + "\"\n";
          }
       }
@@ -666,12 +678,13 @@ void TCint::RecursiveRemove(TObject *obj)
    // CINT objects are always on the heap.
 
    R__LOCKGUARD(gCINTMutex);
+   std::set<TObject*>* setOfSpecials = (std::set<TObject*>*)fgSetOfSpecials;
 
-   if (obj->IsOnHeap() && fgSetOfSpecials && !((std::set<TObject*>*)fgSetOfSpecials)->empty()) {
-      std::set<TObject*>::iterator iSpecial = ((std::set<TObject*>*)fgSetOfSpecials)->find(obj);
-      if (iSpecial != ((std::set<TObject*>*)fgSetOfSpecials)->end()) {
+   if (obj->IsOnHeap() && fgSetOfSpecials && !setOfSpecials->empty()) {
+      std::set<TObject*>::iterator iSpecial = setOfSpecials->find(obj);
+      if (iSpecial != setOfSpecials->end()) {
          DeleteGlobal(obj);
-         ((std::set<TObject*>*)fgSetOfSpecials)->erase(iSpecial);
+         setOfSpecials->erase(iSpecial);
       }
    }
 }
@@ -1152,6 +1165,7 @@ Int_t TCint::GenerateDictionary(const char *classes, const char *includes /* = 0
    //    gInterpreter->GenerateDictionary("myclass","myclass.h;myhelper.h");
    
    if (classes == 0 || classes[0] == 0) return 0;
+   if (!includes) includes = "";
    
    // Split the input list
    std::vector<std::string> listClasses;

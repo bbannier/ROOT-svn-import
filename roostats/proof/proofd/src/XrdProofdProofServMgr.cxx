@@ -2165,12 +2165,6 @@ int XrdProofdProofServMgr::CreateFork(XrdProofdProtocol *p)
    } else {
       // Setup was successful
       XrdOucString info;
-      if (p->ConnType() == kXPD_ClientMaster) {
-         // Send also back the data pool url
-         info = fMgr->PoolURL();
-         if (!info.endswith('/')) info += '/';
-         info += fMgr->NameSpace();
-      }
       // The log file path (so we do it independently of a successful session startup)
       info += "|log:";
       info += xps->Fileout();
@@ -2726,8 +2720,8 @@ int XrdProofdProofServMgr::Recover(XpdClientSessions *cl)
    int nr = 0;
    XrdOucString emsg;
    XrdProofdProofServ *xps = 0;
-   int nps = 0, npsref = 0;
-   { XrdSysMutexHelper mhp(cl->fMutex); nps = cl->fProofServs.size(), npsref = nps; }
+   int nps = 0;
+   { XrdSysMutexHelper mhp(cl->fMutex); nps = cl->fProofServs.size(); }
    while (nps--) {
 
       { XrdSysMutexHelper mhp(cl->fMutex); xps = cl->fProofServs.front();

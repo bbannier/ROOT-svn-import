@@ -146,6 +146,8 @@ TGButton::TGButton(const TGWindow *p, Int_t id, GContext_t norm, UInt_t options)
 //      fOptions &= ~(kRaisedFrame | kDoubleBorder);
 //   }
 
+   // coverity[returned_null]
+   // coverity[dereference]
    if (p && p->IsA()->InheritsFrom(TGButtonGroup::Class())) {
       TGButtonGroup *bg = (TGButtonGroup*) p;
       bg->Insert(this, id);
@@ -511,15 +513,17 @@ void TGTextButton::Init()
    if ((hotchar = fLabel->GetHotChar()) != 0) {
       if ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0) {
          const TGMainFrame *main = (TGMainFrame *) GetMainFrame();
-         main->BindKey(this, fHKeycode, kKeyMod1Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
+         if (main) {
+            main->BindKey(this, fHKeycode, kKeyMod1Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
 
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+         }
       }
    }
    SetWindowAttributes_t wattr;
@@ -538,15 +542,17 @@ TGTextButton::~TGTextButton()
 
    if (fHKeycode && (fParent->MustCleanup() != kDeepCleanup)) {
       const TGMainFrame *main = (TGMainFrame *) GetMainFrame();
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask);
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
+      if (main) {
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask);
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
 
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
-      main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
+         main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+      }
    }
    if (fLabel) delete fLabel;
    if (fHasOwnFont) {
@@ -587,7 +593,7 @@ void TGTextButton::SetText(TGHotString *new_label)
    const TGMainFrame *main = (TGMainFrame *) GetMainFrame();
 
    if (fLabel) {
-      if (fHKeycode) {
+      if (main && fHKeycode) {
          main->RemoveBind(this, fHKeycode, kKeyMod1Mask);
          main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
          main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
@@ -603,7 +609,7 @@ void TGTextButton::SetText(TGHotString *new_label)
    
    fLabel = new_label;
    if ((hotchar = fLabel->GetHotChar()) != 0) {
-      if ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0)
+      if (main && ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0)) {
          main->BindKey(this, fHKeycode, kKeyMod1Mask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
@@ -613,6 +619,7 @@ void TGTextButton::SetText(TGHotString *new_label)
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+      }
    }
 
    Layout();
@@ -1146,15 +1153,17 @@ void TGCheckButton::Init()
    if ((hotchar = fLabel->GetHotChar()) != 0) {
       if ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0) {
          const TGMainFrame *main = (TGMainFrame *) GetMainFrame();
-         main->BindKey(this, fHKeycode, kKeyMod1Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
+         if (main) {
+            main->BindKey(this, fHKeycode, kKeyMod1Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
 
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+         }
       }
    }
    SetWindowName();
@@ -1377,14 +1386,13 @@ void TGCheckButton::DoRedraw()
 {
    // Draw the check button widget.
 
-   int x, y, y0, cw;
+   int x, y, y0;
 
    TGFrame::DoRedraw();
 
    x = 20;
    y = (fHeight - fTHeight) >> 1;
 
-   cw = 13;
    y0 = !fTHeight ? 0 : y + 1;
    if (fOn && fOff) {
       Int_t smax = TMath::Max(fOn->GetHeight(), fOff->GetHeight());
@@ -1505,15 +1513,17 @@ void TGRadioButton::Init()
    if ((hotchar = fLabel->GetHotChar()) != 0) {
       if ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0) {
          const TGMainFrame *main = (TGMainFrame *) GetMainFrame();
-         main->BindKey(this, fHKeycode, kKeyMod1Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
+         if (main) {
+            main->BindKey(this, fHKeycode, kKeyMod1Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
 
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+         }
       }
    }
 
@@ -2219,15 +2229,17 @@ void TGSplitButton::Init()
    if ((hotchar = fLabel->GetHotChar()) != 0) {
       if ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0) {
          const TGMainFrame *main = (TGMainFrame *) GetMainFrame();
-         main->BindKey(this, fHKeycode, kKeyMod1Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
+         if (main) {
+            main->BindKey(this, fHKeycode, kKeyMod1Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyLockMask);
 
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
-         main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
+            main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+         }
       }
    }
    SetWindowAttributes_t wattr;
@@ -2736,7 +2748,7 @@ void TGSplitButton::SetText(TGHotString *new_label)
    }
          
    if (fLabel) {
-      if (fHKeycode) {
+      if (main && fHKeycode) {
          main->RemoveBind(this, fHKeycode, kKeyMod1Mask);
          main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
          main->RemoveBind(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
@@ -2752,7 +2764,7 @@ void TGSplitButton::SetText(TGHotString *new_label)
 
    fLabel = new_label;
    if ((hotchar = fLabel->GetHotChar()) != 0) {
-      if ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0)
+      if (main && ((fHKeycode = gVirtualX->KeysymToKeycode(hotchar)) != 0)) {
          main->BindKey(this, fHKeycode, kKeyMod1Mask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyLockMask);
@@ -2762,6 +2774,7 @@ void TGSplitButton::SetText(TGHotString *new_label)
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyMod2Mask | kKeyLockMask);
          main->BindKey(this, fHKeycode, kKeyMod1Mask | kKeyShiftMask | kKeyMod2Mask | kKeyLockMask);
+      }
    }
 
    Layout();

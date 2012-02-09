@@ -816,6 +816,7 @@ Bool_t TRootCanvas::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                      break;
                   case kFileSaveAs:
                      {
+                        TString workdir = gSystem->WorkingDirectory();
                         static TString dir(".");
                         static Int_t typeidx = 0;
                         static Bool_t overwr = kFALSE;
@@ -825,6 +826,7 @@ Bool_t TRootCanvas::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                         fi.fFileTypeIdx = typeidx;
                         fi.fOverwrite = overwr;
                         new TGFileDialog(fClient->GetDefaultRoot(), this, kFDSave, &fi);
+                        gSystem->ChangeDirectory(workdir.Data());
                         if (!fi.fFilename) return kTRUE;
                         Bool_t  appendedType = kFALSE;
                         TString fn = fi.fFilename;
@@ -1318,7 +1320,7 @@ void TRootCanvas::PrintCanvas()
 
       TString fn = "rootprint";
       FILE *f = gSystem->TempFileName(fn, gEnv->GetValue("Print.Directory", gSystem->TempDirectory()));
-      fclose(f);
+      if (f) fclose(f);
       fn += TString::Format(".%s",gEnv->GetValue("Print.FileType", "pdf"));
       fCanvas->Print(fn);
 
@@ -1448,6 +1450,12 @@ void TRootCanvas::ShowEditor(Bool_t show)
       w = w - e;
    }
    Resize(w, h);
+   if (fParent && fParent != fClient->GetDefaultRoot()) {
+      // if the canvas is embedded (e.g. in the browser), then the layout of
+      // the main frame has to be re-applied when showing/hiding the editor
+      TGMainFrame *main = (TGMainFrame *)fParent->GetMainFrame();
+      if (main) main->Layout();
+   }
 
    if (savedPad) gPad = savedPad;
 }

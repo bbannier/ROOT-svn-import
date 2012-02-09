@@ -39,6 +39,18 @@ ClassImp(TCurlyArc)
 
 
 //______________________________________________________________________________
+TCurlyArc::TCurlyArc()
+{
+   // Default constructor
+   
+   fR1     = 0.;
+   fPhimin = 0.;
+   fPhimax = 0.;
+   fTheta  = 0.;
+}
+
+
+//______________________________________________________________________________
 TCurlyArc::TCurlyArc(Double_t x1, Double_t y1,
                    Double_t rad, Double_t phimin, Double_t phimax,
                    Double_t wl, Double_t amp)
@@ -153,7 +165,7 @@ void TCurlyArc::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    static Int_t px1,py1,npe,r1;
    static Int_t pxold, pyold;
    Int_t i, dpx, dpy;
-   Double_t angle,dx,dy,dphi,rTy,rBy,rLx,rRx;
+   Double_t angle,dx,dy,dphi,rLx,rRx;
    Double_t  phi0;
    static Bool_t pTop, pL, pR, pBot, pINSIDE;
    static Int_t pTx,pTy,pLx,pLy,pRx,pRy,pBx,pBy;
@@ -352,8 +364,8 @@ void TCurlyArc::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    case kButton1Up:
       fX1 = gPad->AbsPixeltoX(px1);
       fY1 = gPad->AbsPixeltoY(py1);
-      rBy = gPad->AbsPixeltoY(py1+r1);
-      rTy = gPad->AbsPixeltoY(py1-r1);
+      //rBy = gPad->AbsPixeltoY(py1+r1);
+      //rTy = gPad->AbsPixeltoY(py1-r1);
       rLx = gPad->AbsPixeltoX(px1+r1);
       rRx = gPad->AbsPixeltoX(px1-r1);
       fR1 = TMath::Abs(rRx-rLx)/2;

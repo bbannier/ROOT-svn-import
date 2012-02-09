@@ -399,7 +399,9 @@ Bool_t TShutdownTimer::Notify()
       TTimeStamp ts = xs->GetLastUsage();
       Long_t dt = (Long_t)(now.GetSec() - ts.GetSec()) * 1000 +
                   (Long_t)(now.GetNanoSec() - ts.GetNanoSec()) / 1000000 ;
-      Int_t to = gEnv->GetValue("ProofServ.ShutdonwTimeout", 20);
+      Int_t to = gEnv->GetValue("ProofServ.ShutdownTimeout", 20);
+      // Backward compaitibility: until 5.32 the variable was called ProofServ.ShutdonwTimeout
+      to = gEnv->GetValue("ProofServ.ShutdonwTimeout", to);
       if (dt > to * 60000) {
          Printf("TShutdownTimer::Notify: input socket: %p: did not show any activity"
                          " during the last %d mins: aborting", xs, to);
@@ -533,6 +535,13 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    // environment provides an eventloop via inheritance of TApplication.
    // Actual server creation work is done in CreateServer() to allow
    // overloading.
+
+   // If test and tty, we are done
+   Bool_t xtest = (argc && *argc == 1) ? kTRUE : kFALSE;
+   if (xtest) {
+      Printf("proofserv: command line testing: OK");
+      exit(0);
+   }
 
    // Read session specific rootrc file
    TString rcfile = gSystem->Getenv("ROOTRCFILE") ? gSystem->Getenv("ROOTRCFILE")
@@ -1259,6 +1268,14 @@ void TProofServ::GetOptions(Int_t *argc, char **argv)
 {
    // Get and handle command line options. Fixed format:
    // "proofserv"|"proofslave" <confdir>
+
+   Bool_t xtest = (argc && *argc > 3 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
+
+   // If test and tty
+   if (xtest && !(isatty(0) == 0 || isatty(1) == 0)) {
+      Printf("proofserv: command line testing: OK");
+      exit(0);
+   }
 
    if (*argc <= 1) {
       Fatal("GetOptions", "Must be started from proofd with arguments");
@@ -2592,7 +2609,6 @@ void TProofServ::SendStatistics()
    if (IsMaster()) {
       bytesread = fProof->GetBytesRead();
       cputime = fProof->GetCpuTime();
-      realtime = fProof->GetRealTime();
    }
 
    TMessage mess(kPROOF_GETSTATS);
@@ -3588,6 +3604,66 @@ void TProofServ::HandleArchive(TMessage *mess, TString *slb)
 }
 
 //______________________________________________________________________________
+TMap *TProofServ::GetDataSetNodeMap(const char *dsn, TString &emsg)
+{
+   // Get a map {server-name, list-of-files} for the daset dsn to be used in
+   // TPacketizerFile. Returns a pointer to the map (ownership of the caller).
+   // Or (TMap *)0 and an error message in emsg.
+
+   TMap *fcmap = 0;
+   emsg = "";
+   
+   // Make sure we have something in input and a dataset manager
+   if (!fDataSetManager) {
+      emsg.Form("dataset manager not initialized!");
+      return fcmap;
+   }
+   if (!dsn || (dsn && strlen(dsn) <= 0)) {
+      emsg.Form("dataset name undefined!");
+      return fcmap;
+   }
+
+   TFileCollection *fc = 0;
+   // Get the dataset
+   if (!(fc = fDataSetManager->GetDataSet(dsn))) {
+      emsg.Form("requested dataset '%s' does not exists", dsn);
+      return fcmap;
+   }
+    
+   // Prepare data set map
+   fcmap = new TMap();
+
+   TIter nxf(fc->GetList());
+   TFileInfo *fiind = 0;
+   TString key;
+   while ((fiind = (TFileInfo *)nxf())) {
+      TUrl *xurl = fiind->GetCurrentUrl();
+      // Find the key for this server
+      key.Form("%s://%s", xurl->GetProtocol(), xurl->GetHostFQDN());
+      if (xurl->GetPort() > 0) 
+         key += TString::Format(":%d", xurl->GetPort());
+         // Get the map entry for this key
+      TPair *ent = 0;
+      THashList* l = 0;
+      if ((ent = (TPair *) fcmap->FindObject(key.Data()))) {
+         // Attach to the list
+         l = (THashList *) ent->Value();
+      } else {
+         // Create list 
+         l = new THashList;
+         l->SetOwner(kTRUE);
+         // Add it to the map
+         fcmap->Add(new TObjString(key.Data()), l);
+      }
+      // Add fileinfo with index to list
+      l->Add(fiind);
+   }
+  
+   // Done
+   return fcmap;
+}
+
+//______________________________________________________________________________
 void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 {
    // Handle processing request.
@@ -3623,9 +3699,9 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 
    if (IsTopMaster()) {
 
+      TString emsg;
       // Make sure the dataset contains the information needed
       if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
-         TString emsg;
          if (TProof::AssertDataSet(dset, input, fDataSetManager, emsg) != 0) {
             SendAsynMessage(TString::Format("AssertDataSet on %s: %s",
                                  fPrefix.Data(), emsg.Data()));
@@ -3633,6 +3709,30 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
             // To terminate collection
             if (sync) SendLogFile();
             return;
+         }
+      } else if (hasNoData) {
+         // Check if we are required to process with TPacketizerFile a registered dataset
+         TNamed *ftp = dynamic_cast<TNamed *>(input->FindObject("PROOF_FilesToProcess"));
+         if (ftp) {
+            TString dsn(ftp->GetTitle());
+            if (!dsn.Contains(":") || dsn.BeginsWith("dataset:")) {
+               dsn.ReplaceAll("dataset:", "");
+               // Get the map for TPacketizerFile
+               TMap *fcmap = GetDataSetNodeMap(dsn, emsg);
+               if (!fcmap) {
+                  SendAsynMessage(TString::Format("HandleProcess on %s: %s",
+                                                  fPrefix.Data(), emsg.Data()));
+                  Error("HandleProcess", "%s", emsg.Data());
+                  // To terminate collection
+                  if (sync) SendLogFile();
+                  return;
+               }
+               input->Remove(ftp);
+               delete ftp;
+               fcmap->SetOwner(kTRUE);
+               fcmap->SetName("PROOF_FilesToProcess");
+               input->Add(fcmap);
+            }
          }
       }
 
@@ -3652,7 +3752,6 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
       SafeDelete(input);
 
       // Save input data, if any
-      TString emsg;
       if (TProof::SaveInputData(pq, fCacheDir.Data(), emsg) != 0)
          Warning("HandleProcess", "could not save input data: %s", emsg.Data());
 
@@ -3775,6 +3874,10 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 
    } else {
 
+      // Reset compute stopwatch: we include all what done from now on
+      fCompute.Reset();
+      fCompute.Start();
+
       // Set not idle
       SetIdle(kFALSE);
 
@@ -3811,6 +3914,9 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 
       // Signal the master that we are starting processing
       fSocket->Send(kPROOF_STARTPROCESS);
+
+      // Reset latency stopwatch
+      fLatency.Reset();
 
       // Process
       PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
@@ -3916,6 +4022,26 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
       }
       // Make also sure the input list objects are deleted
       fPlayer->GetInputList()->SetOwner(0);
+      
+      // Remove possible inputs from a file and the file, if any
+      TList *added = dynamic_cast<TList *>(input->FindObject("PROOF_InputObjsFromFile"));
+      if (added) {
+         if (added->GetSize() > 0) {
+            // The file must be the last one
+            TFile *f = dynamic_cast<TFile *>(added->Last());
+            if (f) {
+               added->Remove(f);
+               TIter nxo(added);
+               while ((o = nxo())) { input->Remove(o); }
+               input->Remove(added);
+               added->SetOwner(kFALSE);
+               added->Clear();
+               f->Close();
+               delete f;
+            }
+         }
+         SafeDelete(added);
+      }
       input->SetOwner();
       SafeDelete(input);
 
@@ -4111,10 +4237,14 @@ void TProofServ::ProcessNext(TString *slb)
    TList *input = 0;
    Long64_t nentries = -1, first = 0;
 
-   TObject *elist = 0;
+   // TObject *elist = 0;
    TProofQueryResult *pq = 0;
 
    // Process
+
+   // Reset compute stopwatch: we include all what done from now on
+   fCompute.Reset();
+   fCompute.Start();
 
    // Get next query info (also removes query from the list)
    pq = NextQuery();
@@ -4142,12 +4272,12 @@ void TProofServ::ProcessNext(TString *slb)
          Error("ProcessNext", "no TDset object: cannot continue");
          return;
       }
-      elist = 0;
-      if ((o = pq->GetInputObject("TEntryList")))
-         elist = o;
-      else if ((o = pq->GetInputObject("TEventList")))
-         elist = o;
-      //
+      // elist = 0;
+      // if ((o = pq->GetInputObject("TEntryList")))
+      //    elist = o;
+      // else if ((o = pq->GetInputObject("TEventList")))
+      //    elist = o;
+
       // Expand selector files
       if (pq->GetSelecImp()) {
          gSystem->Exec(TString::Format("%s %s", kRM, pq->GetSelecImp()->GetName()));
@@ -4253,8 +4383,10 @@ void TProofServ::ProcessNext(TString *slb)
       if (psr) {
          if (RegisterDataSets(input, fPlayer->GetOutputList()) != 0)
             Warning("ProcessNext", "problems registering produced datasets");
-         fPlayer->GetOutputList()->Remove(psr);
-         delete psr;
+         do {
+            fPlayer->GetOutputList()->Remove(psr);
+            delete psr;
+         } while ((psr = (TNamed *) fPlayer->GetOutputList()->FindObject("PROOFSERV_RegisterDataSet")));
       }
    }
 
@@ -4337,6 +4469,11 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
          if (!(fcn = (TNamed *) out->FindObject(tag))) continue;
          // Register option
          TString regopt(fcn->GetTitle());
+         // Sort according to the internal index, if required
+         if (regopt.Contains(":sortidx:")) {
+            ds->Sort(kTRUE);
+            regopt.ReplaceAll(":sortidx:", "");
+         }
          // Register this dataset
          if (fDataSetManager) {
             if (fDataSetManager->TestBit(TDataSetManager::kAllowRegister)) {
@@ -4382,9 +4519,11 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
             Error("RegisterDataSets", "dataset manager is undefined!");
             return -1;
          }
-         // Cleanup temporary stuff
-         out->Remove(fcn);
-         SafeDelete(fcn);
+         // Cleanup all temporary stuff (there may be more objects with the same name, created by each worker)
+         do {
+            out->Remove(fcn);
+            SafeDelete(fcn);
+         } while ((fcn = (TNamed *) out->FindObject(tag)));
       }
    }
 
@@ -5490,40 +5629,48 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
          if (slb) slb->Form("%d", type);
          break;
       case TProof::kLoadMacro:
+         {
+            (*mess) >> package;
 
-         (*mess) >> package;
+            // By first forwarding the load command to the unique workers
+            // and only then loading locally we load/build in parallel
+            if (IsMaster())
+               fProof->Load(package, kFALSE, kTRUE);
 
-         // By first forwarding the load command to the unique workers
-         // and only then loading locally we load/build in parallel
-         if (IsMaster())
-            fProof->Load(package, kFALSE, kTRUE);
+            // Atomic action
+            fCacheLock->Lock();
 
-         // Atomic action
-         fCacheLock->Lock();
+            // Load locally; the implementation and header files (and perhaps
+            // the binaries) are already in the cache
+            TString fn;
+            Ssiz_t from = 0;
+            while ((package.Tokenize(fn, from, ",")))
+               CopyFromCache(fn, kTRUE);
 
-         // Load locally; the implementation and header files (and perhaps
-         // the binaries) are already in the cache
-         CopyFromCache(package, kTRUE);
+            // Load the macro
+            TString pack(package);
+            if ((from = pack.Index(",")) != kNPOS) pack.Remove(from);
+            Info("HandleCache", "loading macro %s ...", pack.Data());
+            gROOT->ProcessLine(TString::Format(".L %s", pack.Data()));
 
-         // Load the macro
-         Info("HandleCache", "loading macro %s ...", package.Data());
-         gROOT->ProcessLine(TString::Format(".L %s", package.Data()));
+            // Cache binaries, if any new
+            from = 0;
+            while ((package.Tokenize(fn, from, ",")))
+               CopyToCache(fn, 1);
 
-         // Cache binaries, if any new
-         CopyToCache(package, 1);
+            // Release atomicity
+            fCacheLock->Unlock();
 
-         // Release atomicity
-         fCacheLock->Unlock();
+            // Now we collect the result from the unique workers and send the load request
+            // to the other workers (no compilation)
+            if (IsMaster())
+               fProof->Load(package, kFALSE, kFALSE);
 
-         // Now we collect the result from the unique workers and send the load request
-         // to the other workers (no compilation)
-         if (IsMaster())
-            fProof->Load(package, kFALSE, kFALSE);
+            // Notify the upper level
+            LogToMaster();
 
-         // Notify the upper level
-         LogToMaster();
-
-         if (slb) slb->Form("%d %s", type, package.Data());
+            if (slb) slb->Form("%d %s", type, package.Data());
+         }
          break;
       default:
          Error("HandleCache", "unknown type %d", type);
@@ -5797,7 +5944,7 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
 
       if (gProofServ != 0 && !recursive) {
          recursive = kTRUE;
-         gProofServ->GetSocket()->Send(kPROOF_FATAL);
+         if (gProofServ->GetSocket()) gProofServ->GetSocket()->Send(kPROOF_FATAL);
          recursive = kFALSE;
       }
 
@@ -6111,6 +6258,11 @@ void TProofServ::DeletePlayer()
    // Delete player instance.
 
    if (IsMaster()) {
+      PDB(kGlobal, 1) {
+         fCompute.Stop();
+         Printf(" +++ Latest processing times: %f s (CPU: %f s)",
+                fCompute.RealTime(), fCompute.CpuTime());
+      }
       if (fProof) fProof->SetPlayer(0);
    } else {
       SafeDelete(fPlayer);

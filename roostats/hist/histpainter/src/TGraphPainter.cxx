@@ -2305,10 +2305,10 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
-   Double_t *theEXlow  = theGraph->GetEXlow();
-   Double_t *theEYlow  = theGraph->GetEYlow();
-   Double_t *theEXhigh = theGraph->GetEXhigh();
-   Double_t *theEYhigh = theGraph->GetEYhigh();
+   Double_t *theEXlow  = theGraph->GetEXlow();  if (!theEXlow) return;
+   Double_t *theEYlow  = theGraph->GetEYlow();  if (!theEYlow) return;
+   Double_t *theEXhigh = theGraph->GetEXhigh(); if (!theEXhigh) return;
+   Double_t *theEYhigh = theGraph->GetEYhigh(); if (!theEYhigh) return;
 
    if (strchr(option,'X') || strchr(option,'x')) {PaintGraphSimple(theGraph, option); return;}
    Bool_t brackets = kFALSE;
@@ -2554,14 +2554,14 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
-   Double_t *theEXlow  = theGraph->GetEXlow();
-   Double_t *theEYlow  = theGraph->GetEYlow();
-   Double_t *theEXhigh = theGraph->GetEXhigh();
-   Double_t *theEYhigh = theGraph->GetEYhigh();
-   Double_t *theEXlowd  = theGraph->GetEXlowd();
-   Double_t *theEXhighd = theGraph->GetEXhighd();
-   Double_t *theEYlowd  = theGraph->GetEYlowd();
-   Double_t *theEYhighd = theGraph->GetEYhighd();
+   Double_t *theEXlow   = theGraph->GetEXlow();   if (!theEXlow) return;
+   Double_t *theEYlow   = theGraph->GetEYlow();   if (!theEYlow) return;
+   Double_t *theEXhigh  = theGraph->GetEXhigh();  if (!theEXhigh) return;
+   Double_t *theEYhigh  = theGraph->GetEYhigh();  if (!theEYhigh) return;
+   Double_t *theEXlowd  = theGraph->GetEXlowd();  if (!theEXlowd) return;
+   Double_t *theEXhighd = theGraph->GetEXhighd(); if (!theEXhighd) return;
+   Double_t *theEYlowd  = theGraph->GetEYlowd();  if (!theEYlowd) return;
+   Double_t *theEYhighd = theGraph->GetEYhighd(); if (!theEYhighd) return;
 
    if (strchr(option,'X') || strchr(option,'x')) {PaintGraphSimple(theGraph, option); return;}
    Bool_t brackets = kFALSE;
@@ -2810,8 +2810,8 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
-   Double_t *theEX = theGraph->GetEX();
-   Double_t *theEY = theGraph->GetEY();
+   Double_t *theEX = theGraph->GetEX(); if (!theEX) return;
+   Double_t *theEY = theGraph->GetEY(); if (!theEY) return;
 
    if (strchr(option,'X') || strchr(option,'x')) {PaintGraphSimple(theGraph, option); return;}
    Bool_t brackets = kFALSE;
@@ -3269,7 +3269,8 @@ void TGraphPainter::PaintGraphPolar(TGraph *theGraph, Option_t* options)
    while ((obj = next())) {
       if (!obj->InheritsFrom(TPaveText::Class())) continue;
       title = (TPaveText*)obj;
-      if (strcmp(title->GetName(),"title")) {title = 0; continue;}
+      if (title->GetName())
+         if (strcmp(title->GetName(),"title")) {title = 0; continue;}
       break;
    }
    if (nt == 0 || gStyle->GetOptTitle() <= 0) {

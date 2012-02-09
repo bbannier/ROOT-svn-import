@@ -132,7 +132,7 @@ zombie:
 TMemFile::TMemFile(const char *path, char *buffer, Long64_t size, Option_t *option,
                    const char *ftitle, Int_t compress):
    TFile(path, "WEB", ftitle, compress), fBlockList(size),  
-   fSize(size), fSysOffset(0), fBlockSeek(&(this->fBlockList)), fBlockOffset(0)
+   fSize(size), fSysOffset(0), fBlockSeek(&(fBlockList)), fBlockOffset(0)
 {
    // Usual Constructor.  See the TFile constructor for details.
 
@@ -182,7 +182,7 @@ zombie:
 TMemFile::TMemFile(const TMemFile &orig) :
    TFile(orig.GetEndpointUrl()->GetUrl(), "WEB", orig.GetTitle(), 
          orig.GetCompressionSettings() ), fBlockList(orig.GetEND()),  
-   fSize(orig.GetEND()), fSysOffset(0), fBlockSeek(&(this->fBlockList)), fBlockOffset(0)
+   fSize(orig.GetEND()), fSysOffset(0), fBlockSeek(&(fBlockList)), fBlockOffset(0)
 {
    // Copying the content of the TMemFile into another TMemFile.
    
@@ -317,6 +317,8 @@ void TMemFile::ResetAfterMerge(TFileMergeInfo *info)
    fNProcessIDs  = 0;
    fOffset       = 0;
    fCacheRead    = 0;
+   delete fCacheReadMap;
+   fCacheReadMap = 0;
    fCacheWrite   = 0;
    fReadCalls    = 0;
    if (fFree) {

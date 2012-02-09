@@ -24,7 +24,7 @@ if (CMAKE_SYSTEM_NAME MATCHES Darwin)
     #TODO: check haveconfig and rpath -> set rpath true
     #TODO: check Thread, define link command
     #TODO: more stuff check configure script
-    execute_process(COMMAND sysctl machdep.cpu.extfeatures OUTPUT_VARIABLE SYSCTL_OUTPUT)
+    execute_process(COMMAND /usr/sbin/sysctl machdep.cpu.extfeatures OUTPUT_VARIABLE SYSCTL_OUTPUT)
     if(${SYSCTL_OUTPUT} MATCHES 64)
        MESSAGE(STATUS "Found a 64bit system") 
        set(ROOT_ARCHITECTURE macosx64)
@@ -43,10 +43,12 @@ if (CMAKE_SYSTEM_NAME MATCHES Darwin)
   endif()
   
   if (CMAKE_COMPILER_IS_GNUCXX)
-     MESSAGE(STATUS "Found GNU compiler collection")
+     message(STATUS "Found GNU compiler collection")
+     execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+
      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -W -Wall -Woverloaded-virtual -fsigned-char -fno-common")
      SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe -W -Wall -fsigned-char -fno-common")
-     SET(CMAKE_Fortran_FLAGS "${CMAKE_FORTRAN_FLAGS}")
+     SET(CMAKE_Fortran_FLAGS "${CMAKE_FORTRAN_FLAGS} -std=legacy")
      SET(CINT_CXX_DEFINITIONS "-DG__REGEXP -DG__UNIX -DG__SHAREDLIB -DG__ROOT -DG__REDIRECTIO -DG__OSFDLL -DG__STD_EXCEPTION")
      SET(CINT_C_DEFINITIONS "-DG__REGEXP -DG__UNIX -DG__SHAREDLIB -DG__ROOT -DG__REDIRECTIO -DG__OSFDLL -DG__STD_EXCEPTION")
   

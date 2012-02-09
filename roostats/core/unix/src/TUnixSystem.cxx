@@ -194,7 +194,8 @@
 #elif defined(R__GLIBC) || defined(R__FBSD) || \
       (defined(R__SUNGCC3) && defined(__arch64__)) || \
       defined(R__OBSD) || defined(MAC_OS_X_VERSION_10_4) || \
-      (defined(R__AIX) && defined(_AIX43))
+      (defined(R__AIX) && defined(_AIX43)) || \
+      (defined(R__SOLARIS) && defined(_SOCKLEN_T))
 #   define USE_SOCKLEN_T
 #endif
 
@@ -227,9 +228,6 @@ extern "C" {
 #if defined(R__HPUX) && !defined(R__GNU)
 #   define HAVE_U_STACK_TRACE
 #endif
-#if defined(R__AIX)
-// #   define HAVE_XL_TRBK   // does not work as expected
-#endif
 #if (defined(R__LINUX) || defined(R__HURD)) && !defined(R__WINGCC)
 #   if __GLIBC__ == 2 && __GLIBC_MINOR__ >= 1
 #      define HAVE_BACKTRACE_SYMBOLS_FD
@@ -248,10 +246,6 @@ extern "C" {
 #ifdef HAVE_U_STACK_TRACE
    // HP-UX stack walker (http://devresource.hp.com/STK/partner/unwind.pdf)
    extern "C" void U_STACK_TRACE(void);
-#endif
-#ifdef HAVE_XL_TRBK
-   // AIX stack walker (from xlf FORTRAN 90 runtime).
-   extern "C" void xl__trbk(void);
 #endif
 #ifdef HAVE_BACKTRACE_SYMBOLS_FD
 #   include <execinfo.h>
@@ -273,6 +267,7 @@ extern "C" {
 #if (defined(R__LINUX) && !defined(R__WINGCC))
 #include <fpu_control.h>
 #include <fenv.h>
+#include <sys/prctl.h>    // for prctl() function used in StackTrace()
 #endif
 
 #if defined(R__MACOSX) && defined(__SSE2__)
@@ -377,21 +372,39 @@ static const char *GetExePath()
 {
    static TString exepath;
    if (exepath == "") {
-#ifdef __APPLE__
+#if defined(R__MACOSX)
       exepath = _dyld_get_image_name(0);
-#endif
-#ifdef __linux
-      char linkname[64];      // /proc/<pid>/exe
+#elif defined(R__LINUX) || defined(R__SOLARIS) || defined(R__FBSD)
       char buf[kMAXPATHLEN];  // exe path name
-      pid_t pid;
 
-      // get our pid and build the name of the link in /proc
-      pid = getpid();
-      snprintf(linkname,64, "/proc/%i/exe", pid);
-      int ret = readlink(linkname, buf, kMAXPATHLEN);
+      // get the name from the link in /proc
+#if defined(R__LINUX)
+      int ret = readlink("/proc/self/exe", buf, kMAXPATHLEN);
+#elif defined(R__SOLARIS)
+      int ret = readlink("/proc/self/path/a.out", buf, kMAXPATHLEN);
+#elif defined(R__FBSD)
+      int ret = readlink("/proc/curproc/file", buf, kMAXPATHLEN);
+#endif
       if (ret > 0 && ret < kMAXPATHLEN) {
          buf[ret] = 0;
          exepath = buf;
+      }
+#else
+      if (!gApplication)
+         return exepath;
+      TString p = gApplication->Argv(0);
+      if (p.BeginsWith("/"))
+         exepath = p;
+      else if (p.Contains("/")) {
+         exepath = gSystem->WorkingDirectory();
+         exepath += "/";
+         exepath += p;
+      } else {
+         char *exe = gSystem->Which(gSystem->Getenv("PATH"), p, kExecutePermission);
+         if (exe) {
+            exepath = exe;
+            delete [] exe;
+         }
       }
 #endif
    }
@@ -764,6 +777,14 @@ void TUnixSystem::ResetSignal(ESignals sig, Bool_t reset)
 }
 
 //______________________________________________________________________________
+void TUnixSystem::ResetSignals()
+{
+   // Reset signals handlers to previous behaviour.
+
+   UnixResetSignals();
+}
+
+//______________________________________________________________________________
 void TUnixSystem::IgnoreSignal(ESignals sig, Bool_t ignore)
 {
    // If ignore is true ignore the specified signal, else restore previous
@@ -825,7 +846,7 @@ Int_t TUnixSystem::GetFPEMask()
 #if defined(R__MACOSX) && defined(__SSE2__)
    // OS X uses the SSE unit for all FP math by default, not the x87 FP unit
    Int_t oldmask = ~_MM_GET_EXCEPTION_MASK();
-   
+
    if (oldmask & _MM_MASK_INVALID  )   mask |= kInvalid;
    if (oldmask & _MM_MASK_DIV_ZERO )   mask |= kDivByZero;
    if (oldmask & _MM_MASK_OVERFLOW )   mask |= kOverflow;
@@ -917,7 +938,7 @@ Int_t TUnixSystem::SetFPEMask(Int_t mask)
    if (mask & kOverflow )   newm |= _MM_MASK_OVERFLOW;
    if (mask & kUnderflow)   newm |= _MM_MASK_UNDERFLOW;
    if (mask & kInexact  )   newm |= _MM_MASK_INEXACT;
-   
+
    _MM_SET_EXCEPTION_MASK(_MM_GET_EXCEPTION_MASK() & ~newm);
 #endif
 
@@ -2082,7 +2103,7 @@ void TUnixSystem::Exit(int code, Bool_t mode)
    if (gInterpreter) {
       gInterpreter->ResetGlobals();
    }
-   
+
    if (mode)
       ::exit(code);
    else
@@ -2174,7 +2195,23 @@ void TUnixSystem::StackTrace()
    delete [] gdb;
    return;
 
-#elif defined(HAVE_U_STACK_TRACE) || defined(HAVE_XL_TRBK)   // hp-ux, aix
+#elif defined(R__AIX)
+   TString script = "procstack ";
+   script += GetPid();
+   Exec(script);
+   return;
+#elif defined(R__SOLARIS)
+   char *cppfilt = Which(Getenv("PATH"), "c++filt", kExecutePermission);
+   TString script = "pstack ";
+   script += GetPid();
+   if (cppfilt) {
+      script += " | ";
+      script += cppfilt;
+      delete [] cppfilt;
+   }
+   Exec(script);
+   return;
+#elif defined(HAVE_U_STACK_TRACE)  // hp-ux
 /*
    // FIXME: deal with inability to duplicate the file handle
    int stderrfd = dup(STDERR_FILENO);
@@ -2187,11 +2224,7 @@ void TUnixSystem::StackTrace()
       return;
    }
 */
-# if defined(HAVE_U_STACK_TRACE)                      // hp-ux
    U_STACK_TRACE();
-# elif defined(HAVE_XL_TRBK)                          // aix
-   xl__trbk();
-# endif
 /*
    fflush(stderr);
    dup2(stderrfd, STDERR_FILENO);
@@ -2250,6 +2283,13 @@ void TUnixSystem::StackTrace()
 #endif
    // gdb-backtrace.sh uses gdb to produce a backtrace. See if it is available.
    // If it is, use it. If not proceed as before.
+#if (defined(R__LINUX) && !defined(R__WINGCC))
+   // Declare the process that will be generating the stacktrace
+   // For more see: http://askubuntu.com/questions/41629/after-upgrade-gdb-wont-attach-to-process
+#ifdef PR_SET_PTRACER
+   prctl(PR_SET_PTRACER, getpid(), 0, 0, 0);
+#endif
+#endif
    char *gdb = Which(Getenv("PATH"), "gdb", kExecutePermission);
    if (gdb) {
       // write custom message file
@@ -2397,20 +2437,6 @@ void TUnixSystem::StackTrace()
       delete [] addr2line;
    }
    delete [] filter;
-#elif defined(PROG_PSTACK)                            // solaris
-# ifdef PROG_CXXFILT
-#  define CXXFILTER " | " PROG_CXXFILT
-# else
-#  define CXXFILTER
-# endif
-   // 64 should more than plenty for a space and a pid.
-   char buffer[sizeof(PROG_PSTACK) + 64 + 3 + sizeof(PROG_CXXFILT) + 64];
-   sprintf(buffer, "%s %lu%s 1>&%d", PROG_PSTACK, (ULong_t) getpid(),
-           "" CXXFILTER, fd);
-   buffer[sizeof (buffer)-1] = 0;
-   Exec(buffer);
-# undef CXXFILTER
-
 #elif defined(HAVE_EXCPT_H) && defined(HAVE_PDSC_H) && \
                                defined(HAVE_RLD_INTERFACE_H) // tru64
    // Tru64 stack walk.  Uses the exception handling library and the
@@ -2778,12 +2804,8 @@ const char *TUnixSystem::GetLinkedLibraries()
    // Get list of shared libraries loaded at the start of the executable.
    // Returns 0 in case list cannot be obtained or in case of error.
 
-#if !defined(R__MACOSX)
-   if (!gApplication) return 0;
-#endif
-
-   static Bool_t once = kFALSE;
    static TString linkedLibs;
+   static Bool_t once = kFALSE;
 
    R__LOCKGUARD2(gSystemMutex);
 
@@ -2794,15 +2816,12 @@ const char *TUnixSystem::GetLinkedLibraries()
       return 0;
 
 #if !defined(R__MACOSX)
-   char *exe = Which(Getenv("PATH"), gApplication->Argv(0), kExecutePermission);
-   if (!exe) {
-      once = kTRUE;
+   const char *exe = GetExePath();
+   if (!exe || !*exe)
       return 0;
-   }
 #endif
 
 #if defined(R__MACOSX)
-   char *exe = 0;
    DylibAdded(0, 0);
    linkedLibs = gLinkedDylibs;
 #if 0
@@ -2823,7 +2842,7 @@ const char *TUnixSystem::GetLinkedLibraries()
       ClosePipe(p);
    }
 #endif
-#elif defined(R__LINUX) || defined(R__SOLARIS)
+#elif defined(R__LINUX) || defined(R__SOLARIS) || defined(R__AIX)
 #if defined(R__WINGCC )
    const char *cLDD="cygcheck";
    const char *cSOEXT=".dll";
@@ -2840,7 +2859,11 @@ const char *TUnixSystem::GetLinkedLibraries()
    }
 #else
    const char *cLDD="ldd";
+#if defined(R__AIX)
+   const char *cSOEXT=".a";
+#else
    const char *cSOEXT=".so";
+#endif
 #endif
    FILE *p = OpenPipe(TString::Format("%s %s", cLDD, exe), "r");
    if (p) {
@@ -2848,7 +2871,7 @@ const char *TUnixSystem::GetLinkedLibraries()
       while (ldd.Gets(p)) {
          TString delim(" \t");
          TObjArray *tok = ldd.Tokenize(delim);
-         
+
          // expected format:
          //    libCore.so => /home/rdm/root/lib/libCore.so (0x40017000)
          TObjString *solibName = (TObjString*)tok->At(2);
@@ -2870,8 +2893,6 @@ const char *TUnixSystem::GetLinkedLibraries()
       ClosePipe(p);
    }
 #endif
-
-   delete [] exe;
 
    once = kTRUE;
 
@@ -3137,11 +3158,11 @@ int TUnixSystem::ConnectService(const char *servername, int port,
    } else if (!gSystem->AccessPathName(servername) || servername[0] == '/') {
       return UnixUnixConnect(servername);
    }
-   
+
    if (!strcmp(protocol, "udp")){
       return UnixUdpConnect(servername, port);
    }
-   
+
    return UnixTcpConnect(servername, port, tcpwindowsize);
 }
 
@@ -3582,6 +3603,9 @@ static void sighandler(int sig)
 void TUnixSystem::UnixSignal(ESignals sig, SigHandler_t handler)
 {
    // Set a signal handler for a signal.
+
+   if (gEnv && !gEnv->GetValue("Root.ErrorHandlers", 1))
+      return;
 
    if (gSignalMap[sig].fHandler != handler) {
       struct sigaction sigact;

@@ -74,8 +74,9 @@ TGeoBoolNode::ThreadData_t& TGeoBoolNode::GetThreadData() const
    }
    if (fThreadData[tid] == 0)
    {
+   if (fThreadData[tid] == 0)
       fThreadData[tid] = new ThreadData_t;
-   }
+   }   
    TThread::UnLock();
    return *fThreadData[tid];
 }
@@ -83,6 +84,7 @@ TGeoBoolNode::ThreadData_t& TGeoBoolNode::GetThreadData() const
 //______________________________________________________________________________
 void TGeoBoolNode::ClearThreadData() const
 {
+   TThread::Lock();
    std::vector<ThreadData_t*>::iterator i = fThreadData.begin();
    while (i != fThreadData.end())
    {
@@ -91,6 +93,7 @@ void TGeoBoolNode::ClearThreadData() const
    }
    fThreadData.clear();
    fThreadSize = 0;
+   TThread::UnLock();
 }
 
 //______________________________________________________________________________

@@ -154,6 +154,7 @@ TFile::TFile() : TDirectoryFile(), fInfoCache(0)
    fOffset          = 0;
    fArchive         = 0;
    fCacheRead       = 0;
+   fCacheReadMap    = new TMap();
    fCacheWrite      = 0;
    fArchiveOffset   = 0;
    fReadCalls       = 0;
@@ -284,7 +285,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    //  this case, the file is scanned sequentially reading all logical blocks
    //  and attempting to rebuild a correct directory (see TFile::Recover).
    //  One can disable the automatic recovery procedure when reading one
-   //  or more files by setting the environment variable "TFile::Recover 0"
+   //  or more files by setting the environment variable "TFile.Recover: 0"
    //  in the system.rootrc file.
    //
 
@@ -340,6 +341,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    fNProcessIDs  = 0;
    fOffset       = 0;
    fCacheRead    = 0;
+   fCacheReadMap = new TMap();
    fCacheWrite   = 0;
    fReadCalls    = 0;
    SetBit(kBinaryFile, kTRUE);
@@ -503,6 +505,7 @@ TFile::~TFile()
    SafeDelete(fOpenPhases);
    SafeDelete(fAsyncHandle);
    SafeDelete(fCacheRead);
+   SafeDelete(fCacheReadMap);
    SafeDelete(fCacheWrite);
 
    R__LOCKGUARD2(gROOTMutex);
@@ -773,6 +776,11 @@ void TFile::Init(Bool_t create)
       if (fgReadInfo) {
          if (fSeekInfo > fBEGIN) {
             ReadStreamerInfo();
+            if (IsZombie()) {
+               R__LOCKGUARD2(gROOTMutex);
+               gROOT->GetListOfFiles()->Remove(this);
+               goto zombie;
+            }
          } else if (fVersion != gROOT->GetVersionInt() && fVersion > 30000) {
             Warning("Init","no StreamerInfo found in %s therefore preventing schema evolution when reading this file.",GetName());
          }
@@ -1075,11 +1083,20 @@ void TFile::ResetErrno() const
 }
 
 //______________________________________________________________________________
-TFileCacheRead *TFile::GetCacheRead() const
+TFileCacheRead *TFile::GetCacheRead(TObject* tree) const
 {
    // Return a pointer to the current read cache.
 
-   return fCacheRead;
+   if (!tree) {
+      if (!fCacheRead && fCacheReadMap->GetSize() == 1) {
+         TIter next(fCacheReadMap);
+         return (TFileCacheRead *)fCacheReadMap->GetValue(next());
+      }
+      return fCacheRead;
+   }
+   TFileCacheRead *cache = (TFileCacheRead *)fCacheReadMap->GetValue(tree);
+   if (!cache) return fCacheRead;
+   return cache;
 }
 
 //______________________________________________________________________________
@@ -1988,7 +2005,7 @@ void TFile::SetCompressionSettings(Int_t settings)
 }
 
 //______________________________________________________________________________
-void TFile::SetCacheRead(TFileCacheRead *cache)
+void TFile::SetCacheRead(TFileCacheRead *cache, TObject* tree)
 {
    // Set a pointer to the read cache.
    // NOTE:  This relinquish ownership of the previous cache, so if you do not
@@ -1996,6 +2013,11 @@ void TFile::SetCacheRead(TFileCacheRead *cache)
    // cache), you ought to retrieve (and delete it if needed) using:
    //    TFileCacheRead *older = myfile->GetCacheRead();
 
+   if (tree) {
+      if (cache) fCacheReadMap->Add(tree, cache);
+      else fCacheReadMap->RemoveEntry(tree);
+   }
+   // For backward compatibility the last Cache set is the default cache.
    fCacheRead = cache;
 }
 
@@ -4532,6 +4554,11 @@ Bool_t TFile::Cp(const char *dst, Bool_t progressbar, UInt_t buffersize)
    TString opt = dURL.GetOptions();
    if (opt != "") opt += "&";
    opt += raw;
+
+   // AliEn files need to know where the source file is
+   if (!strcmp(dURL.GetProtocol(), "alien"))
+      opt += TString::Format("&source=%s", GetName());
+   
    dURL.SetOptions(opt);
 
    char *copybuffer = 0;

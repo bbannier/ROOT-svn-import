@@ -1,4 +1,5 @@
-// RUN: cat %s | %cling
+// RUN: cat %s | %cling -Xclang -verify
+
 // Actually test clang::DeclContext::removeDecl(). This function in clang is 
 // the main method that is used for the error recovery. This means when there 
 // is an error in cling's input we need to revert all the declarations that came
@@ -12,18 +13,6 @@
 // The current test checks if that codepath in removeDecl still exists because
 // it is important for the stable error recovery in cling
 
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/VerifyDiagnosticConsumer.h"
-
-#include "cling/Interpreter/Interpreter.h"
-
-clang::DiagnosticsEngine& Diags = gCling->getCI()->getDiagnostics();
-clang::DiagnosticConsumer* Client = new clang::VerifyDiagnosticConsumer(Diags);
-Diags.setClient(Client);
-
-.rawInput
-
 class MyClass {
   struct {
     int a;
@@ -31,6 +20,35 @@ class MyClass {
   };
 };
 
-.rawInput
+struct X {
+  union {
+    float f3;
+    double d2;
+  } named;
+
+  union {
+    int i;
+    float f;
+    
+    union {
+      float f2;
+      mutable double d;
+    };
+  };
+
+  void test_unqual_references();
+
+  struct {
+    int a;
+    float b;
+  };
+
+  void test_unqual_references_const() const;
+
+  mutable union { // expected-error{{anonymous union at class scope must not have a storage specifier}}
+    float c1;
+    double c2;
+  };
+};
 
 .q

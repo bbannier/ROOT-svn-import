@@ -1868,6 +1868,11 @@ gdk_window_set_icon(GdkWindow * window,
    icon_info.hbmMask = hbitmap_mask;
    icon_info.hbmColor = (HBITMAP) GDK_DRAWABLE_XID(pixmap);
 
+   hicon = (HICON)GetClassLong((HWND)GDK_DRAWABLE_XID(window), GCL_HICONSM);
+   if (hicon) DestroyIcon(hicon);
+   hicon = (HICON)GetClassLong((HWND)GDK_DRAWABLE_XID(window), GCL_HICON);
+   if (hicon) DestroyIcon(hicon);
+
    hicon = CreateIconIndirect(&icon_info);
 
    SetClassLong((HWND)GDK_DRAWABLE_XID(window), GCL_HICONSM, (LPARAM)CopyIcon(hicon));

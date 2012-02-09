@@ -1305,7 +1305,11 @@ static void G__redirectoutput(char *com
          if (isspace(*redirectin)) {
             *psin = G__sin;
 #ifndef G__WIN32
-            if (!strlen(stdinsav)) G__strlcpy(stdinsav, ttyname(STDIN_FILENO),sizeof(stdinsav));
+            if (!strlen(stdinsav) && ttyname(STDIN_FILENO)) {
+               G__strlcpy(stdinsav, ttyname(STDIN_FILENO), sizeof(stdinsav));
+            } else {
+               stdinsav[0] = 0;
+            }
 #endif
             G__sin = freopen(filename, "r", G__sin);
             if (!G__sin) {
@@ -1599,6 +1603,7 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
    short double_quote, single_quote;
 #ifdef G__ASM
    G__ALLOC_ASMENV;
+   (void)store_asm_loopcompile; // set but not used
 #endif
    char store_var_type;
    /* pass to parent otherwise not re-entrant */

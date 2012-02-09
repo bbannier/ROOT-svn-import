@@ -1751,6 +1751,17 @@ Bool_t TGX11::CheckEvent(Window_t id, EGEventType type, Event_t &ev)
    Event_t tev;
    XEvent  xev;
 
+   tev.fCode = 0;
+   tev.fState = 0;
+   tev.fWindow = 0;
+   tev.fUser[0] = tev.fUser[1] = tev.fUser[2] = tev.fUser[3] = tev.fUser[4] = 0;
+   tev.fCount = 0;
+   tev.fFormat = 0;
+   tev.fHandle = 0;
+   tev.fSendEvent = 0;
+   tev.fTime = 0;
+   tev.fX = tev.fY = 0;
+   tev.fXRoot = tev.fYRoot = 0;
    tev.fType = type;
    MapEvent(tev, xev);
 
@@ -2607,7 +2618,7 @@ Drawable_t TGX11::CreateImage(UInt_t width, UInt_t height)
                               0, 0, width, height, bitmap_pad, 0);
 
    // use calloc since Xlib will use free() in XDestroyImage
-   xim->data = (char *) calloc(xim->bytes_per_line * xim->height, 1);
+   if (xim) xim->data = (char *) calloc(xim->bytes_per_line * xim->height, 1);
 
    return (Drawable_t) xim;
 }

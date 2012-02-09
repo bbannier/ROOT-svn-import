@@ -25,7 +25,7 @@ namespace clang {
 namespace cling {
   class Interpreter;
   class Value;
-  
+ 
   class ExecutionContext {
   public:
     typedef void* (*LazyFunctionCreatorFunc_t)(const std::string&);
@@ -40,6 +40,17 @@ namespace cling {
     
     void executeFunction(llvm::StringRef function, 
                          llvm::GenericValue* returnValue = 0);
+
+	///\brief Adds a symbol (function) to the execution engine. 
+    ///
+	/// Allows runtime declaration of a function passing its pointer for being used 
+	/// by JIT generated code. 
+	///
+    /// @param[in] symbolName    - The name of the symbol as required by the linker (mangled if needed)
+    /// @param[in] symbolAddress - The function pointer to register
+	///
+	/// @return true if the symbol is successfully registered, false otherwise
+  	bool addSymbol(const char* symbolName,  void* symbolAddress);
     
   private:
     static void* HandleMissingFunction(const std::string&);

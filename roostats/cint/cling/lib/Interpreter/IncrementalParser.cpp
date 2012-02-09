@@ -44,13 +44,14 @@ namespace cling {
     m_Consumer(0),
     m_FirstTopLevelDecl(0),
     m_LastTopLevelDecl(0),
-    m_UsingStartupPCH(false)
+    m_SyntaxOnly(false)
   {
     CompilerInstance* CI 
       = CIFactory::createCI(llvm::MemoryBuffer::getMemBuffer("", "CLING"), 
                             argc, argv, llvmdir);
     assert(CI && "CompilerInstance is (null)!");
     m_CI.reset(CI);
+    m_SyntaxOnly = (CI->getFrontendOpts().ProgramAction == clang::frontend::ParseSyntaxOnly);
 
     CreateSLocOffsetGenerator();
 
@@ -69,13 +70,15 @@ namespace cling {
     VPS->Attach(m_Consumer);
     addConsumer(ChainedConsumer::kValuePrinterSynthesizer, VPS);
     addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
-    CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
-                                          "cling input",
-                                          CI->getCodeGenOpts(), 
+    if (!m_SyntaxOnly) {
+      CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
+                                            "cling input",
+                                            CI->getCodeGenOpts(), 
                                   /*Owned by codegen*/ * new llvm::LLVMContext()
-                                          );
-    assert(CG && "No CodeGen?!");
-    addConsumer(ChainedConsumer::kCodeGenerator, CG);
+                                            );
+      assert(CG && "No CodeGen?!");
+      addConsumer(ChainedConsumer::kCodeGenerator, CG);
+    }
     m_Consumer->Initialize(CI->getASTContext());
     m_Consumer->InitializeSema(CI->getSema());
     // Initialize the parser.
@@ -125,68 +128,16 @@ namespace cling {
   }
 
   IncrementalParser::~IncrementalParser() {
-     GetCodeGenerator()->ReleaseModule();
+     if (GetCodeGenerator()) {
+       GetCodeGenerator()->ReleaseModule();
+     }
   }
   
-  void IncrementalParser::Initialize(const char* startupPCH) {
+  void IncrementalParser::Initialize() {
 
     // Init the consumers    
 
-    loadStartupPCH(startupPCH);
-    if (!m_UsingStartupPCH) {
-      CompileAsIs(""); // Consume initialization.
-      // Set up common declarations which are going to be available
-      // only at runtime
-      // Make sure that the universe won't be included to compile time by using
-      // -D __CLING__ as CompilerInstance's arguments
-      CompileAsIs("#include \"cling/Interpreter/RuntimeUniverse.h\"");
-    }
-
-    // Attach the dynamic lookup
-    // if (isDynamicLookupEnabled())
-    //  getTransformer()->Initialize();
-  }
-
-  void IncrementalParser::loadStartupPCH(const char* filename) {
-    if (!filename || !filename[0]) return;
-    bool Preamble = m_CI->getPreprocessorOpts().PrecompiledPreambleBytes.first !=0;
-    llvm::OwningPtr<ExternalASTSource> 
-      EAS(CompilerInstance::createPCHExternalASTSource(filename,
-                                                       /* sysroot */"",
-                                                /* disable PCH validation*/true,
-                                                   /* disable stat cache */false,
-                                                       m_CI->getPreprocessor(),
-                                                       m_CI->getASTContext(),
-                                                 /* deserialization listener */0,
-                                                       Preamble
-                                                       )
-          );
-    if (EAS) {
-       m_CI->getASTContext().setExternalSource(EAS);
-       m_UsingStartupPCH = true;
-    } else {
-      // Valid file name but no (valid) PCH - recreate.
-      // We use createOutputFile here because this is exposed via libclang, and we
-      // must disable the RemoveFileOnSignal behavior.
-      llvm::raw_ostream *OS = m_CI->createOutputFile(filename, /*Binary=*/true,
-                                                     /*RemoveFileOnSignal=*/false,
-                                                     filename);
-      m_StartupPCHGenerator.reset(new PCHGenerator(m_CI->getPreprocessor(),
-                                                   filename,
-                                                   false, /*isModule*/
-                                                   "", /*isysroot*/
-                                                   OS
-                                                   )
-                                  );
-      m_StartupPCHGenerator->InitializeSema(m_CI->getSema());
-      addConsumer(ChainedConsumer::kPCHGenerator, m_StartupPCHGenerator.get());
-    }
-  }
-
-  void IncrementalParser::writeStartupPCH() {
-    if (!m_StartupPCHGenerator) return;
-    m_StartupPCHGenerator->HandleTranslationUnit(m_CI->getASTContext());
-    m_StartupPCHGenerator.reset(); // deletes StartupPCHGenerator
+    CompileAsIs(""); // Consume initialization.
   }
 
   IncrementalParser::EParseResult 
@@ -244,7 +195,9 @@ namespace cling {
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
     // Reset the module builder to clean up global initializers, c'tors, d'tors:
-    GetCodeGenerator()->Initialize(getCI()->getASTContext());
+    if (GetCodeGenerator()) {
+      GetCodeGenerator()->Initialize(getCI()->getASTContext());
+    }
 
     EParseResult Result = Parse(input);
 
@@ -256,7 +209,9 @@ namespace cling {
     DClient.EndSourceFile();
     m_CI->getDiagnostics().Reset();
 
-    m_Interpreter->runStaticInitializersOnce();
+    if (!m_SyntaxOnly) {
+      m_Interpreter->runStaticInitializersOnce();
+    }
 
     return Result;
   }
@@ -272,6 +227,9 @@ namespace cling {
     Preprocessor& PP = m_CI->getPreprocessor();
     DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
     DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
+    // Reset the transaction information
+    getLastTransaction().setBeforeFirstDecl(getCI()->getSema().CurContext);
+    
 
     if (input.size()) {
       std::ostringstream source_name;
@@ -313,8 +271,8 @@ namespace cling {
       if (ADecl) {
         DeclGroupRef DGR = ADecl.getAsVal<DeclGroupRef>();
         for (DeclGroupRef::iterator i=DGR.begin(); i< DGR.end(); ++i) {
-         if (!m_FirstTopLevelDecl) 	 
-           m_FirstTopLevelDecl = *i;
+         if (!m_FirstTopLevelDecl)
+           m_FirstTopLevelDecl = *((*i)->getDeclContext()->decls_begin());
 
           m_LastTopLevelDecl = *i;
         } 
@@ -370,7 +328,7 @@ namespace cling {
       m_Consumer->EnableConsumer(I);
   }
 
-  CodeGenerator* IncrementalParser::GetCodeGenerator() { 
+  CodeGenerator* IncrementalParser::GetCodeGenerator() const { 
     return 
       (CodeGenerator*)m_Consumer->getConsumer(ChainedConsumer::kCodeGenerator); 
   }

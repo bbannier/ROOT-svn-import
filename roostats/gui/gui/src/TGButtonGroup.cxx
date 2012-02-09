@@ -194,6 +194,8 @@ void TGButtonGroup::DrawBorder()
    r = fWidth - 1;
    // next three lines are for backward compatibility in case of horizontal layout
    TGLayoutManager * lm = GetLayoutManager();
+   // coverity[returned_null]
+   // coverity[dereference]
    if ((lm->InheritsFrom(TGHorizontalLayout::Class())) ||
        (lm->InheritsFrom(TGMatrixLayout::Class())))
       b = fHeight - 1;
@@ -379,6 +381,8 @@ Int_t TGButtonGroup::Insert(TGButton *button, Int_t id)
    fMapOfButtons->Add(button, (TObject*)bid);
    AddFrame(button);
 
+   // coverity[returned_null]
+   // coverity[dereference]
    SetRadioButtonExclusive(button->IsA()->InheritsFrom(TGRadioButton::Class()));
 
    Connect(button, "Clicked()" , "TGButtonGroup", this, "ReleaseButtons()");
@@ -509,6 +513,8 @@ void TGButtonGroup::ReleaseButtons()
    register TGButton *item = 0;
 
    while ((item = (TGButton*)next())) {    // loop over all buttons
+      // coverity[returned_null]
+      // coverity[dereference]
       if (btn != item && item->IsToggleButton() && item->IsOn() &&
           (fExclGroup || (item->IsA()->InheritsFrom(TGRadioButton::Class())
                           && btn->IsA()->InheritsFrom(TGRadioButton::Class())))) {
@@ -597,7 +603,11 @@ void TGButtonGroup::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    // font + GC
    option = GetName()+5;         // unique digit id of the name
    TString parGC, parFont;
+   // coverity[returned_null]
+   // coverity[dereference]
    parFont.Form("%s::GetDefaultFontStruct()",IsA()->GetName());
+   // coverity[returned_null]
+   // coverity[dereference]
    parGC.Form("%s::GetDefaultGC()()",IsA()->GetName());
 
    if ((GetDefaultFontStruct() != fFontStruct) || (GetDefaultGC()() != fNormGC)) {
@@ -644,6 +654,8 @@ void TGButtonGroup::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
    // setting layout manager
    out << "   " << GetName() <<"->SetLayoutManager(";
+   // coverity[returned_null]
+   // coverity[dereference]
    GetLayoutManager()->SavePrimitive(out, option);
    out << ");"<< endl;
 

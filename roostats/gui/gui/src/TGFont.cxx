@@ -1582,6 +1582,8 @@ TGFont *TGFontPool::GetFont(const char *font, Bool_t fixedDefault)
       }
    }
 
+   if (!f) return 0;
+
    fList->Add(f);
 
    f->SetRefCount(1);
@@ -2259,6 +2261,8 @@ char **TGFontPool::GetFontFamilies()
    char **nameList;
    char **dst;
 
+   // coverity[returned_null]
+   // coverity[dereference]
    nameList = gVirtualX->ListFonts("*", 10000, numNames);
 
    for (i = 0; i < numNames; i++) {
@@ -2368,6 +2372,8 @@ TGFont *TGFontPool::GetFontFromAttributes(FontAttributes_t *fa, TGFont *fontPtr)
       // Try getting some system font.
 
       buf = TString::Format(fmt, "fixed");
+      // coverity[returned_null]
+      // coverity[dereference]
       nameList = gVirtualX->ListFonts(buf.Data(), 32768, numNames);
 
       if (!numNames) {

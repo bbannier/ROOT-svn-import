@@ -137,7 +137,7 @@ void StandardBayesianMCMCDemo(const char* infile = "",
   mcmc.SetConfidenceLevel(0.95); // 95% interval
   //  mcmc.SetProposalFunction(*pf);
   mcmc.SetProposalFunction(sp);
-  mcmc.SetNumIters(10000);         // Metropolis-Hastings algorithm iterations
+  mcmc.SetNumIters(1000000);         // Metropolis-Hastings algorithm iterations
   mcmc.SetNumBurnInSteps(50);       // first N steps to be ignored as burn-in
 
   // default is the shortest interval.  here use central

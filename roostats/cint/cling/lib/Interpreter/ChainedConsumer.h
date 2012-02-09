@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/Redeclarable.h"
 #include "clang/Sema/SemaConsumer.h"
 
 #include <bitset>
@@ -19,6 +20,7 @@
 namespace clang {
   class ASTContext;
   class DeclContext;
+  class EnumDecl;
   class FunctionDecl;
   class NamedDecl;
   class NamespaceDecl;
@@ -38,7 +40,6 @@ namespace cling {
       kDeclExtractor,
       kValuePrinterSynthesizer,
       kASTDumper,
-      kPCHGenerator,
       kCodeGenerator,
       kConsumersCount
     };
@@ -47,7 +48,7 @@ namespace cling {
 
     // ASTConsumer
     virtual void Initialize(clang::ASTContext& Context);
-    virtual void HandleTopLevelDecl(clang::DeclGroupRef D);
+    virtual bool HandleTopLevelDecl(clang::DeclGroupRef D);
     virtual void HandleInterestingDecl(clang::DeclGroupRef D);
     virtual void HandleTagDeclDefinition(clang::TagDecl* D);
     virtual void HandleVTable(clang::CXXRecordDecl* RD, bool DefinitionRequired);
@@ -131,9 +132,42 @@ namespace cling {
     bool m_Queueing;
 
     bool isOnScopeChains(clang::NamedDecl* D);
+    void RevertNamedDecl(clang::NamedDecl* ND);
     void RevertVarDecl(clang::VarDecl* VD);
     void RevertFunctionDecl(clang::FunctionDecl* FD);
+    void RevertEnumDecl(clang::EnumDecl* ED);
     void RevertNamespaceDecl(clang::NamespaceDecl* NSD);
+
+    ///\brief 
+    /// Removes given declaration from the chain of redeclarations.
+    /// Rebuilds the chain and sets properly first and last redeclaration
+    ///
+    /// Returns the most recent redeclaration in the new chain
+    template <typename T>
+    T* RemoveFromRedeclChain(clang::Redeclarable<T>* R) {
+      llvm::SmallVector<T*, 4> PrevDecls;
+      T* PrevDecl = 0;
+
+      // [0]=>C [1]=>B [2]=>A ...
+      while ((PrevDecl = R->getPreviousDecl())) {
+        PrevDecls.push_back(PrevDecl);
+        R = PrevDecl;
+      }
+
+      if (!PrevDecls.empty()) {
+        // Put 0 in the end of the array so that the loop will reset the 
+        // pointer to latest redeclaration in the chain to itself.
+        //
+        PrevDecls.push_back(0);
+
+        // 0 <- A <- B <- C 
+        for(unsigned i = PrevDecls.size() - 1; i > 0; --i) {
+          PrevDecls[i-1]->setPreviousDeclaration(PrevDecls[i]);
+        }
+      }
+
+      return PrevDecls.empty() ? 0 : PrevDecls[0]->getMostRecentDecl();
+    }
 
     friend class IncrementalParser;
   };

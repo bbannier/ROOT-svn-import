@@ -2484,10 +2484,7 @@ TGeoVolumeAssembly::ThreadData_t& TGeoVolumeAssembly::GetThreadData() const
       fThreadData.resize(tid + 1);
       fThreadSize = tid + 1;
    }
-   if (fThreadData[tid] == 0)
-   {
-      fThreadData[tid] = new ThreadData_t;
-   }
+   if (fThreadData[tid] == 0) fThreadData[tid] = new ThreadData_t;
    TThread::UnLock();
    return *fThreadData[tid];
 }
@@ -2495,6 +2492,7 @@ TGeoVolumeAssembly::ThreadData_t& TGeoVolumeAssembly::GetThreadData() const
 //______________________________________________________________________________
 void TGeoVolumeAssembly::ClearThreadData() const
 {
+   TThread::Lock();
    TGeoVolume::ClearThreadData();
    std::vector<ThreadData_t*>::iterator i = fThreadData.begin();
    while (i != fThreadData.end())
@@ -2504,6 +2502,7 @@ void TGeoVolumeAssembly::ClearThreadData() const
    }
    fThreadData.clear();
    fThreadSize = 0;
+   TThread::UnLock();
 }
 
 //______________________________________________________________________________

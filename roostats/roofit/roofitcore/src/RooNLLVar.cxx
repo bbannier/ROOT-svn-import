@@ -35,6 +35,7 @@
 #include "RooCmdConfig.h"
 #include "RooMsgService.h"
 #include "RooAbsDataStore.h"
+#include "RooRealMPFE.h"
 
 #include "RooRealVar.h"
 
@@ -142,6 +143,31 @@ RooNLLVar::~RooNLLVar()
 
 
 
+
+//_____________________________________________________________________________
+void RooNLLVar::applyWeightSquared(Bool_t flag) 
+{ 
+  if (_gofOpMode==Slave) {
+    _weightSq = flag ; 
+    setValueDirty() ; 
+
+  } else if ( _gofOpMode==MPMaster) {
+
+    for (Int_t i=0 ; i<_nCPU ; i++) {
+      _mpfeArray[i]->applyNLLWeightSquared(flag) ;
+    }    
+
+  } else if ( _gofOpMode==SimMaster) {
+
+    for (Int_t i=0 ; i<_nGof ; i++) {
+      ((RooNLLVar*)_gofArray[i])->applyWeightSquared(flag) ;
+    }
+
+  }
+} 
+
+
+
 //_____________________________________________________________________________
 Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t stepSize) const 
 {
@@ -155,9 +181,9 @@ Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t s
   
   RooAbsPdf* pdfClone = (RooAbsPdf*) _funcClone ;
 
-//   cout << "RooNLLVar::evaluatePartition(" << GetName() << ")" << endl ;
+  // cout << "RooNLLVar::evaluatePartition(" << GetName() << ") projDeps = " << (_projDeps?*_projDeps:RooArgSet()) << endl ;
 
-  _dataClone->store()->recalculateCache() ;
+  _dataClone->store()->recalculateCache( _projDeps ) ;
 
   Double_t sumWeight(0) ;
   for (i=firstEvent ; i<lastEvent ; i+=stepSize) {

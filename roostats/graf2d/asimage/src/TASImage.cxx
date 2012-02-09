@@ -407,15 +407,25 @@ const char *TASImage::TypeFromMagicNumber(const char *file)
    switch (magic) {
       case 0x00:
       {
-         if (!fread(&magic, 1, 1, fp)) return 0;
-         if (!fread(&magic, 1, 1, fp)) return 0;
+         if (!fread(&magic, 1, 1, fp)) {
+            fclose(fp);
+            return 0;
+         }
+         if (!fread(&magic, 1, 1, fp)) {
+            fclose(fp);
+            return 0;
+         }
 
          ret = (magic == 1) ? "ico" : "cur";
          break;
       }
       case 0x25:
       {
-         if (!fread(&magic, 1, 1, fp)) return 0;
+         if (!fread(&magic, 1, 1, fp)) {
+            fclose(fp);
+            return 0;
+         }
+
          if (magic == 0x21) ret = "ps";
          else if (magic == 0x50) ret = "pdf";
          break;
@@ -1419,7 +1429,7 @@ void TASImage::Paint(Option_t *option)
          if (!fScaledImage) {
             fScaledImage = (TASImage*)TImage::Create();
             if (!fScaledImage) return;
-            
+
             if (fZoomWidth && fZoomHeight &&
                 ((fImage->width != fZoomWidth) || (fImage->height != fZoomHeight))) {
                // zoom and scale image
@@ -1487,6 +1497,7 @@ void TASImage::Paint(Option_t *option)
    if (gVirtualPS) {
       if (gVirtualPS->InheritsFrom("TImageDump")) { // PostScript is asimage
          TImage *dump = (TImage *)gVirtualPS->GetStream();
+         if (!dump) return;
          dump->Merge(fScaledImage ? fScaledImage : this, "alphablend",
                      gPad->XtoAbsPixel(0), gPad->YtoAbsPixel(1));
 
@@ -3817,7 +3828,7 @@ void TASImage::DrawLineInternal(UInt_t x1, UInt_t y1, UInt_t x2, UInt_t y2,
    int i1, i2;
    int x, y, xend, yend;
    int xdir, ydir;
-   int wid, q;
+   int q;
    int idx;
    int yy;
 
@@ -3861,8 +3872,6 @@ void TASImage::DrawLineInternal(UInt_t x1, UInt_t y1, UInt_t x2, UInt_t y2,
       DrawWideLine(x1, y1, x2, y2, color, thick);
       return;
    }
-
-   wid = 1;
 
    if (dy <= dx) {
       UInt_t ddy = dy << 1;
@@ -4801,6 +4810,7 @@ void TASImage::FillSpans(UInt_t npt, TPoint *ppt, UInt_t *widths, TImage *tile)
    Int_t ii = 0;
    UInt_t x = 0;
    UInt_t *arr = tile->GetArgbArray();
+   if (!arr) return;
    UInt_t xx = 0;
    UInt_t yy = 0;
    UInt_t yyy = 0;
@@ -5846,7 +5856,7 @@ void TASImage::DrawTextTTF(Int_t x, Int_t y, const char *text, Int_t size,
    TTGlyph *glyph = TTF::GetGlyphs();
 
    // compute the size and position  that will contain the text
-   Int_t Xoff = 0; if (TTF::GetBox().xMin < 0) Xoff = -TTF::GetBox().xMin;
+   // Int_t Xoff = 0; if (TTF::GetBox().xMin < 0) Xoff = -TTF::GetBox().xMin;
    Int_t Yoff = 0; if (TTF::GetBox().yMin < 0) Yoff = -TTF::GetBox().yMin;
    Int_t h    = TTF::GetBox().yMax + Yoff;
 

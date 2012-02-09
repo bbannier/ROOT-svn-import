@@ -223,7 +223,6 @@ Bool_t TTreeCacheUnzip::FillBuffer()
 
       TTree *tree = ((TBranch*)fBranches->UncheckedAt(0))->GetTree();
       Long64_t entry = tree->GetReadEntry();
-      Long64_t fEntryCurrentMax = 0;
       
       // If the entry is in the range we previously prefetched, there is 
       // no point in retrying.   Note that this will also return false
@@ -234,7 +233,6 @@ Bool_t TTreeCacheUnzip::FillBuffer()
       // Triggered by the user, not the learning phase
       if (entry == -1)  entry=0;
       
-      fEntryCurrentMax = fEntryCurrent;
       TTree::TClusterIterator clusterIter = tree->GetClusterIterator(entry);
       fEntryCurrent = clusterIter();
       fEntryNext = clusterIter.GetNextEntry();
@@ -246,11 +244,11 @@ Bool_t TTreeCacheUnzip::FillBuffer()
       // Check if owner has a TEventList set. If yes we optimize for this
       // Special case reading only the baskets containing entries in the
       // list.
-      TEventList *elist = fOwner->GetEventList();
+      TEventList *elist = fTree->GetEventList();
       Long64_t chainOffset = 0;
       if (elist) {
-         if (fOwner->IsA() ==TChain::Class()) {
-            TChain *chain = (TChain*)fOwner;
+         if (fTree->IsA() ==TChain::Class()) {
+            TChain *chain = (TChain*)fTree;
             Int_t t = chain->GetTreeNumber();
             chainOffset = chain->GetTreeOffset()[t];
          }
@@ -328,12 +326,12 @@ void TTreeCacheUnzip::StopLearningPhase()
 }
 
 //_____________________________________________________________________________
-void TTreeCacheUnzip::UpdateBranches(TTree *tree, Bool_t owner)
+void TTreeCacheUnzip::UpdateBranches(TTree *tree)
 {
    //update pointer to current Tree and recompute pointers to the branches in the cache
    R__LOCKGUARD(fMutexList);
 
-   TTreeCache::UpdateBranches(tree, owner);
+   TTreeCache::UpdateBranches(tree);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
