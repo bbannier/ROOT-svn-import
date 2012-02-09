@@ -2671,9 +2671,7 @@ void TMinuit::mnexcm(const char *command, Double_t *plist, Int_t llist, Int_t &i
    /* Initialized data */
 
    TString comand = command;
-   static TString clower = "abcdefghijklmnopqrstuvwxyz";
-   static TString cupper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-   const char *cname[40] = {
+   static const char *cname[40] = {
       "MINImize  ",
       "SEEk      ",
       "SIMplex   ",
@@ -4132,7 +4130,7 @@ L30:
          fG2[i-1]  = sag*2 / (d*d);
          fGrd[i-1] = (fs1 - fs2) / (d*2);
          if (ldebug) {
-            Printf("%4d%2d%12.5g%12.5g%12.5g%12.5g",i,idrv,fGstep[i-1],fG2[i-1],fGrd[i-1],sag);
+            Printf("%4d%2d%12.5g%12.5g%12.5g%12.5g%12.5g",i,idrv,fGstep[i-1],d,fG2[i-1],fGrd[i-1],sag);
          }
          if (fGstep[i-1] > 0) fGstep[i-1] =  TMath::Abs(d);
          else                 fGstep[i-1] = -TMath::Abs(d);
@@ -6952,7 +6950,7 @@ void TMinuit::mnset()
 
    /* Initialized data */
 
-   const char *cname[30] = {
+   static const char *cname[30] = {
       "FCN value ",
       "PARameters",
       "LIMits    ",
@@ -7008,7 +7006,7 @@ void TMinuit::mnset()
       "MNCONT: MNCONTOUR PLOT (MNCROS SEARCH) "};
 
    /* System generated locals */
-   Int_t f_inqu();
+   //Int_t f_inqu();
 
    /* Local variables */
    Double_t val;

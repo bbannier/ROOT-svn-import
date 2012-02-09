@@ -11,7 +11,7 @@
 #include "TGraph.h"
 #include "TMultiGraph.h"
 #include "TGraph2D.h"
-#include "THnSparse.h"
+#include "THnBase.h"
 
 #include "Fit/Fitter.h"
 #include "Fit/BinData.h"
@@ -48,7 +48,7 @@ namespace HFit {
    int GetDimension(const TGraph * ) { return 1; }
    int GetDimension(const TMultiGraph * ) { return 1; }
    int GetDimension(const TGraph2D * ) { return 2; }
-   int GetDimension(const THnSparse * s1) { return s1->GetNdimensions(); }
+   int GetDimension(const THnBase * s1) { return s1->GetNdimensions(); }
 
    int CheckFitFunction(const TF1 * f1, int hdim);
 
@@ -61,7 +61,7 @@ namespace HFit {
    void GetDrawingRange(TGraph * gr, ROOT::Fit::DataRange & range);
    void GetDrawingRange(TMultiGraph * mg, ROOT::Fit::DataRange & range);
    void GetDrawingRange(TGraph2D * gr, ROOT::Fit::DataRange & range);
-   void GetDrawingRange(THnSparse * s, ROOT::Fit::DataRange & range);
+   void GetDrawingRange(THnBase * s, ROOT::Fit::DataRange & range);
 
 
    template <class FitObject>
@@ -322,8 +322,12 @@ TFitResultPtr HFit::Fit(FitObject * h1, TF1 *f1 , Foption_t & fitOption , const 
    if (fitOption.User && userFcn) // user provided fit objective function
       fitok = fitter->FitFCN( userFcn );
    else if (fitOption.Like)  {// likelihood fit 
-      bool weight = (fitOption.Like > 1);
-      fitok = fitter->LikelihoodFit(*fitdata,weight);
+      // perform a weighted likelihood fit by applying weight correction to errors
+      bool weight = ((fitOption.Like & 2) == 2);
+      fitConfig.SetWeightCorrection(weight);
+      bool extended = ((fitOption.Like & 4 ) != 4 );
+      //if (!extended) Info("HFitImpl","Do a not -extended binned fit");
+      fitok = fitter->LikelihoodFit(*fitdata, extended);
    }
    else // standard least square fit
       fitok = fitter->Fit(*fitdata); 
@@ -497,7 +501,7 @@ void HFit::GetDrawingRange(TGraph2D * gr,  ROOT::Fit::DataRange & range) {
    if (h1) HFit::GetDrawingRange(h1, range);
 }
 
-void HFit::GetDrawingRange(THnSparse * s1, ROOT::Fit::DataRange & range) { 
+void HFit::GetDrawingRange(THnBase * s1, ROOT::Fit::DataRange & range) { 
    // get range from histogram and update the DataRange class  
    // if a ranges already exist in that dimension use that one
 
@@ -620,8 +624,17 @@ void ROOT::Fit::FitOptionsMake(const char *option, Foption_t &fitOption) {
    if (opt.Contains("L")) fitOption.Like    = 1;
    if (opt.Contains("X")) fitOption.Chi2    = 1;
    if (opt.Contains("I")) fitOption.Integral= 1;
-   if (opt.Contains("W")) fitOption.W1      = 1;
-   if (opt.Contains("WL")) { fitOption.Like   = 2; fitOption.W1=0; }
+   // likelihood fit options
+   if (opt.Contains("L")) { 
+      fitOption.Like    = 1;
+      //if (opt.Contains("LL")) fitOption.Like    = 2;
+      if (opt.Contains("W")){ fitOption.Like    = 2;  fitOption.W1=0;}//  (weighted likelihood)
+      if (opt.Contains("MULTI")) { 
+         if (fitOption.Like == 2) fitOption.Like = 6; // weighted multinomial 
+         else fitOption.Like    = 4; // multinomial likelihood fit instead of Poisson
+         opt.ReplaceAll("MULTI","");
+      }
+   }
    if (opt.Contains("E")) fitOption.Errors  = 1;
    if (opt.Contains("R")) fitOption.Range   = 1;
    if (opt.Contains("G")) fitOption.Gradient= 1;
@@ -729,10 +742,17 @@ TFitResultPtr ROOT::Fit::UnBinFit(ROOT::Fit::UnBinData * fitdata, TF1 * fitfunc,
       fitConfig.SetParabErrors(true);
       fitConfig.SetMinosErrors(true);
    }
+   // use weight correction
+   if ( (fitOption.Like & 2) == 2) 
+      fitConfig.SetWeightCorrection(true);
+
+   bool extended = (fitOption.Like & 1) == 1;
    
    bool fitok = false; 
-   fitok = fitter->Fit(*fitdata); 
- 
+   fitok = fitter->Fit(*fitdata, extended); 
+   if ( !fitok  && !fitOption.Quiet )
+      Warning("UnBinFit","Abnormal termination of minimization.");
+
    const ROOT::Fit::FitResult & fitResult = fitter->Result(); 
    // one could set directly the fit result in TF1
    int iret = fitResult.Status(); 
@@ -790,7 +810,7 @@ TFitResultPtr ROOT::Fit::FitObject(TH1 * h1, TF1 *f1 , Foption_t & foption , con
 moption, const char *goption, ROOT::Fit::DataRange & range) { 
    // check fit options
    // check if have weights in case of weighted likelihood
-   if (foption.Like > 1 && h1->GetSumw2N() == 0) { 
+   if ( ((foption.Like & 2) == 2) && h1->GetSumw2N() == 0) { 
       Warning("HFit::FitObject","A weighted likelihood fit is requested but histogram is not weighted - do a standard Likelihood fit");
       foption.Like = 1;
    }
@@ -819,7 +839,7 @@ TFitResultPtr ROOT::Fit::FitObject(TGraph2D * gr, TF1 *f1 , Foption_t & foption 
    return HFit::Fit(gr,f1,foption,moption,goption,range); 
 }
 
-TFitResultPtr ROOT::Fit::FitObject(THnSparse * s1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
+TFitResultPtr ROOT::Fit::FitObject(THnBase * s1, TF1 *f1 , Foption_t & foption , const ROOT::Math::MinimizerOptions & moption, const char *goption, ROOT::Fit::DataRange & range) { 
    // sparse histogram fitting
    return HFit::Fit(s1,f1,foption,moption,goption,range); 
 }

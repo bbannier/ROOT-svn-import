@@ -9,6 +9,7 @@
 
 #include "ChainedConsumer.h"
 
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/SourceLocation.h"
 
@@ -30,7 +31,6 @@ namespace clang {
   class FileID;
   class FunctionDecl;
   class Parser;
-  class PCHGenerator;
   class Sema;
   class SourceLocation;
 }
@@ -44,6 +44,33 @@ namespace cling {
   
   class IncrementalParser {
   public:
+    ///\brief Contains information about the last input
+    struct Transaction {      
+    private:
+      clang::Decl* m_BeforeFirst;
+      clang::Decl* m_LastDecl;
+      void setBeforeFirstDecl(clang::DeclContext* DC) {
+        class DeclContextExt : public clang::DeclContext {            
+        public:           
+          static clang::Decl* getLastDecl(DeclContext* DC) {
+            return ((DeclContextExt*)DC)->LastDecl;
+          }
+        };
+        m_BeforeFirst = DeclContextExt::getLastDecl(DC);
+      }
+    public:
+      clang::Decl* getFirstDecl() const {
+        return m_BeforeFirst->getNextDeclInContext();
+      }
+      clang::Decl* getLastDeclSlow() const {
+        clang::Decl* Result = getFirstDecl();
+        while (Result->getNextDeclInContext())
+          Result = Result->getNextDeclInContext();
+
+        return Result;
+      }
+      friend class IncrementalParser;
+    };
     enum EParseResult {
       kSuccess,
       kSuccessWithWarnings,
@@ -52,7 +79,7 @@ namespace cling {
     IncrementalParser(Interpreter* interp, int argc, const char* const *argv,
                       const char* llvmdir);
     ~IncrementalParser();
-    void Initialize(const char* startupPCH);
+    void Initialize();
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
     EParseResult CompileLineFromPrompt(llvm::StringRef input);
@@ -60,27 +87,26 @@ namespace cling {
     void Parse(llvm::StringRef input, 
                llvm::SmallVector<clang::DeclGroupRef, 4>& DGRs);
 
-    llvm::MemoryBuffer* getCurBuffer() {
+    llvm::MemoryBuffer* getCurBuffer() const {
       return m_MemoryBuffer.back();
     }
     void enablePrintAST(bool print /*=true*/) {
       m_Consumer->RestorePreviousState(ChainedConsumer::kASTDumper, print);
     }
     void enableDynamicLookup(bool value = true);
-    bool isDynamicLookupEnabled() { return m_DynamicLookupEnabled; }
+    bool isDynamicLookupEnabled() const { return m_DynamicLookupEnabled; }
+    bool isSyntaxOnly() const { return m_SyntaxOnly; }
     clang::Decl* getFirstTopLevelDecl() const { return m_FirstTopLevelDecl; }
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
+    Transaction& getLastTransaction() { return m_LastTransaction; }
     
     void addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
-    clang::CodeGenerator* GetCodeGenerator();
+    clang::CodeGenerator* GetCodeGenerator() const;
 
-    bool usingStartupPCH() const { return m_UsingStartupPCH; }
-    void writeStartupPCH();
   private:
     void CreateSLocOffsetGenerator();
     EParseResult Compile(llvm::StringRef input);
     EParseResult Parse(llvm::StringRef input);
-    void loadStartupPCH(const char* filename);
 
     Interpreter* m_Interpreter; // our interpreter context
     llvm::OwningPtr<clang::CompilerInstance> m_CI; // compiler instance.
@@ -91,9 +117,8 @@ namespace cling {
     ChainedConsumer* m_Consumer; // CI owns it
     clang::Decl* m_FirstTopLevelDecl; // first top level decl
     clang::Decl* m_LastTopLevelDecl; // last top level decl after most recent call to parse()
-    bool m_UsingStartupPCH; // Whether the interpreter is using a PCH file to accelerate its startup
-    std::string m_StartupPCHFilename; // Set when writing the PCH
-    llvm::OwningPtr<clang::PCHGenerator> m_StartupPCHGenerator; // Startup PCH generator
+    Transaction m_LastTransaction; // Holds information for the last transaction
+    bool m_SyntaxOnly; // whether to run codegen; cannot be flipped during lifetime of *this
   };
 }
 #endif // CLING_INCREMENTAL_PARSER_H

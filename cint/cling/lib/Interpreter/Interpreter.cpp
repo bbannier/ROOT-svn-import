@@ -108,7 +108,7 @@ namespace cling {
 
   Interpreter::NamedDeclResult::NamedDeclResult(llvm::StringRef Decl, 
                                                 Interpreter* interp, 
-                                                DeclContext* Within)
+                                                const DeclContext* Within)
     : m_Interpreter(interp),
       m_Context(m_Interpreter->getCI()->getASTContext()),
       m_CurDeclContext(Within),
@@ -120,10 +120,9 @@ namespace cling {
   Interpreter::NamedDeclResult&
   Interpreter::NamedDeclResult::LookupDecl(llvm::StringRef Decl) {
     DeclarationName Name(&m_Context.Idents.get(Decl));
-    DeclContext::lookup_result Lookup = m_CurDeclContext->lookup(Name);
-    // FIXME: We need to traverse over each found result in the pair in order to
-    // solve possible ambiguities.
-    if (Lookup.first != Lookup.second) {
+    DeclContext::lookup_const_result Lookup = m_CurDeclContext->lookup(Name);
+    // If more than one found return 0. Cannot handle ambiguities.
+    if (Lookup.second - Lookup.first == 1) {
       if (DeclContext* DC = dyn_cast<DeclContext>(*Lookup.first))
         m_CurDeclContext = DC;
       else
@@ -132,8 +131,7 @@ namespace cling {
       m_Result = (*Lookup.first);
     }
     else {
-      // TODO: Find the template instantiations with using a wrapper (getQualType). 
-        m_Result = 0;
+      m_Result = 0;
     }
 
     return *this;
@@ -166,8 +164,7 @@ namespace cling {
   //---------------------------------------------------------------------------
   // Constructor
   //---------------------------------------------------------------------------
-   Interpreter::Interpreter(int argc, const char* const *argv,
-                            const char* startupPCH /*= 0*/,
+   Interpreter::Interpreter(int argc, const char* const *argv, 
                             const char* llvmdir /*= 0*/):
   m_UniqueCounter(0),
   m_PrintAST(false),
@@ -178,10 +175,6 @@ namespace cling {
     std::vector<unsigned> LeftoverArgsIdx;
     m_Opts = InvocationOptions::CreateFromArgs(argc, argv, LeftoverArgsIdx);
     std::vector<const char*> LeftoverArgs;
-
-    // We do C++ by default:
-    LeftoverArgs.push_back("-x");
-    LeftoverArgs.push_back("c++");
 
     for (size_t I = 0, N = LeftoverArgsIdx.size(); I < N; ++I) {
       LeftoverArgs.push_back(argv[LeftoverArgsIdx[I]]);
@@ -204,17 +197,25 @@ namespace cling {
 #endif
 
     // Warm them up
-    m_IncrParser->Initialize(startupPCH);
-    if (m_IncrParser->usingStartupPCH()) {
-      processStartupPCH();
-    }
+    m_IncrParser->Initialize();
 
+	m_ExecutionContext->addSymbol("local_cxa_atexit", (void*)(intptr_t)&cling::runtime::internal::local_cxa_atexit);
+    
     if (getCI()->getLangOpts().CPlusPlus) {
-       // Set up the gCling variable - even if we use PCH ('this' is different)
-       processLine("#include \"cling/Interpreter/ValuePrinter.h\"\n");
-       std::stringstream initializer;
-       initializer << "gCling=(cling::Interpreter*)" << (long)this << ";";
-       processLine(initializer.str());
+      // Set up common declarations which are going to be available
+      // only at runtime
+      // Make sure that the universe won't be included to compile time by using
+      // -D __CLING__ as CompilerInstance's arguments
+      processLine("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+
+      // Set up the gCling variable
+      processLine("#include \"cling/Interpreter/ValuePrinter.h\"\n");
+      std::stringstream initializer;
+      initializer << "gCling=(cling::Interpreter*)" << (long)this << ";";
+      processLine(initializer.str());
+    }
+    else {
+      processLine("#include \"cling/Interpreter/CValuePrinter.h\"\n");
     }
 
     handleFrontendOptions();
@@ -237,35 +238,12 @@ namespace cling {
     return "$Id$";
   }
 
-  void Interpreter::writeStartupPCH() {
-    m_IncrParser->writeStartupPCH();
-  }
-
   void Interpreter::handleFrontendOptions() {
     if (m_Opts.ShowVersion) {
       llvm::outs() << getVersion() << '\n';
     }
     if (m_Opts.Help) {
       m_Opts.PrintHelp();
-    }
-  }
-
-  void Interpreter::processStartupPCH() {
-    clang::TranslationUnitDecl* TU = m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl();
-    for (clang::DeclContext::decl_iterator D = TU->decls_begin(),
-           E = TU->decls_end(); D != E; ++D) {
-      // That's probably overestimating
-      ++m_UniqueCounter;
-      const clang::FunctionDecl* F = dyn_cast<const clang::FunctionDecl>(*D);
-      if (F) {
-        clang::DeclarationName N = F->getDeclName();
-        if (N.isIdentifier()) {
-          clang::IdentifierInfo* II = N.getAsIdentifierInfo();
-          if (II && (II->getName().find("__cling_Un1Qu3") == 0)) {
-            RunFunction(II->getName());
-          }
-        }
-      }
     }
   }
    
@@ -379,7 +357,8 @@ namespace cling {
   
   Interpreter::CompilationResult
   Interpreter::processLine(const std::string& input_line, 
-                           bool rawInput /*= false*/) {
+                           bool rawInput /*= false*/,
+                           const Decl** D /*=0*/) {
     //
     //  Transform the input line to implement cint
     //  command line semantics (declarations are global),
@@ -401,7 +380,8 @@ namespace cling {
                               clang::diag::MAP_IGNORE, SourceLocation());
     Diag.setDiagnosticMapping(DiagnosticIDs::getIdFromName("warn_unused_call"),
                               clang::diag::MAP_IGNORE, SourceLocation());
-    CompilationResult Result = handleLine(wrapped, functName);
+    CompilationResult Result = handleLine(wrapped, functName, rawInput, D);
+
     return Result;
   }
 
@@ -414,6 +394,10 @@ namespace cling {
   bool Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
     if (getCI()->getDiagnostics().hasErrorOccurred())
       return false;
+
+    if (m_IncrParser->isSyntaxOnly()) {
+      return true;
+    }
 
     std::string mangledNameIfNeeded;
     FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
@@ -443,14 +427,20 @@ namespace cling {
     swrappername << "__cling_Un1Qu3" << m_UniqueCounter++;
     return swrappername.str();
   }
-  
+
   
   Interpreter::CompilationResult
-  Interpreter::handleLine(llvm::StringRef input, llvm::StringRef FunctionName) {
+  Interpreter::handleLine(llvm::StringRef input, llvm::StringRef FunctionName,
+                          bool rawInput, const Decl** D) {
     // if we are using the preprocessor
-    if (input[0] == '#') {
-      if (m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed)
+    if (rawInput || input[0] == '#') {
+      
+      if (m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed) {
+        if (D)
+          *D = m_IncrParser->getLastTransaction().getFirstDecl();
+
         return Interpreter::kSuccess;
+      }
       else
         return Interpreter::kFailure;
     }
@@ -458,6 +448,10 @@ namespace cling {
     if (m_IncrParser->CompileLineFromPrompt(input) 
         == IncrementalParser::kFailed)
         return Interpreter::kFailure;
+
+    if (D)
+      *D = m_IncrParser->getLastTransaction().getFirstDecl();
+
     //
     //  Run it using the JIT.
     //
@@ -527,7 +521,7 @@ namespace cling {
   }
 
   Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, 
-                                                       DeclContext* Within) {
+                                                       const DeclContext* Within) {
     if (!Within)
       Within = getCI()->getASTContext().getTranslationUnitDecl();
     return Interpreter::NamedDeclResult(Decl, this, Within);
@@ -701,5 +695,13 @@ namespace cling {
      return 0; // happiness
   }
 
+  bool Interpreter::addSymbol(const char* symbolName,  void* symbolAddress){
+	  // Forward to ExecutionContext;
+	  if (!symbolName || !symbolAddress )
+		  return false;
+
+	  return m_ExecutionContext->addSymbol(symbolName,  symbolAddress);
+  }
   
 } // namespace cling
+

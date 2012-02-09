@@ -1,14 +1,4 @@
-// RUN: cat %s | %cling -I%p
-
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/VerifyDiagnosticConsumer.h"
-
-#include "cling/Interpreter/Interpreter.h"
-
-clang::DiagnosticsEngine& Diags = gCling->getCI()->getDiagnostics();
-clang::DiagnosticConsumer* Client = new clang::VerifyDiagnosticConsumer(Diags);
-Diags.setClient(Client);
+// RUN: cat %s | %cling -Xclang -verify -I%p
 
 #define BEGIN_NAMESPACE namespace test_namespace {
 #define END_NAMESPACE }

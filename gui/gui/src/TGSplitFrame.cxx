@@ -230,9 +230,9 @@ void TGSplitTool::Show(Int_t x, Int_t y)
    gVirtualX->GrabPointer(fId, kButtonPressMask | kPointerMotionMask, kNone, 
                           fClient->GetResourcePool()->GetGrabCursor(), 
                           kTRUE, kFALSE);
-   Long_t args[2];
-   args[0] = x;
-   args[1] = y;
+   // Long_t args[2];
+   // args[0] = x;
+   // args[1] = y;
 }
 
 //______________________________________________________________________________
@@ -756,6 +756,8 @@ void TGSplitFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from the main frame type
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if ((GetOptions() & kHorizontalFrame) &&
        (lm->InheritsFrom(TGHorizontalLayout::Class()))) {

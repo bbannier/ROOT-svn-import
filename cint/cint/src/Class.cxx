@@ -602,7 +602,7 @@ G__InterfaceMethod Cint::G__ClassInfo::GetInterfaceMethod(const char* fname
   struct G__ifunc_table_internal *ifunc;
   char *funcname;
   char *param;
-  long index;
+  long index = 0;
 
   /* Search for method */
   if(-1==tagnum) ifunc = &G__ifunc;
@@ -633,7 +633,7 @@ G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,const char* arg
   struct G__ifunc_table_internal *ifunc;
   char *funcname;
   char *param;
-  long index;
+  long index = 0;
 
   /* Search for method */
   if(-1==tagnum) ifunc = &G__ifunc;
@@ -666,7 +666,7 @@ G__MethodInfo Cint::G__ClassInfo::GetMethod(const char* fname,struct G__param* l
 {
   struct G__ifunc_table_internal *ifunc;
   char *funcname = (char*)fname;
-  long index;
+  long index = 0;
 
   /* Search for method */
   if(-1==tagnum) ifunc = &G__ifunc;
@@ -729,7 +729,7 @@ G__DataMemberInfo Cint::G__ClassInfo::GetDataMember(const char* name,long* poffs
   int hash;
   int temp;
   long original=0;
-  int ig15;
+  int ig15 = 0;
   struct G__var_array *var;
   int store_tagnum;
   
@@ -1170,9 +1170,9 @@ void Cint::G__ClassInfo::DeleteArray(void* ary, int dtorOnly)
     ////int n = pp[-1];
     ////int element_size = pp[-2];
     char* r = ((char*) ary) + ((n - 1) * element_size) ;
-    int status = 0;
+    ////int status = 0;
     for (int i = n; i > 0; --i) {
-      status = G__calldtor(r, tagnum, 0);
+      /*status =*/ G__calldtor(r, tagnum, 0);
       // ???FIX ME:  What does status mean here?
       // if (!status) break;
       r -= element_size;

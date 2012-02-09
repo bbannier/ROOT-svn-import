@@ -70,26 +70,25 @@ TGeoPatternFinder::ThreadData_t::~ThreadData_t()
 TGeoPatternFinder::ThreadData_t& TGeoPatternFinder::GetThreadData() const
 {
    Int_t tid = TGeoManager::ThreadId();
+   TThread::Lock();
    if (tid >= fThreadSize)
    {
-      TThread::Lock();
       fThreadData.resize(tid + 1);
       fThreadSize = tid + 1;
-      TThread::UnLock();
    }
    if (fThreadData[tid] == 0)
    {
-      TThread::Lock();
       fThreadData[tid] = new ThreadData_t;
       fThreadData[tid]->fMatrix = CreateMatrix();
-      TThread::UnLock();
    }
+   TThread::UnLock();
    return *fThreadData[tid];
 }
 
 //______________________________________________________________________________
 void TGeoPatternFinder::ClearThreadData() const
 {
+   TThread::Lock();
    std::vector<ThreadData_t*>::iterator i = fThreadData.begin();
    while (i != fThreadData.end())
    {
@@ -98,6 +97,7 @@ void TGeoPatternFinder::ClearThreadData() const
    }
    fThreadData.clear();
    fThreadSize = 0;
+   TThread::UnLock();
 }
 
 //_____________________________________________________________________________

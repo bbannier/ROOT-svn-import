@@ -1892,17 +1892,25 @@ void         TGQt::ClearArea(Window_t id, Int_t x, Int_t y, UInt_t w, UInt_t h)
    if (id == kNone || id == kDefault ) return;
    QPainter paint(iwid(id));  
    paint.setBackgroundMode( Qt::OpaqueMode); // Qt::TransparentMode
-   TQtClientWidget *wd =  dynamic_cast<TQtClientWidget*>(wid(id));
+   TQtClientWidget *wd = dynamic_cast<TQtClientWidget*>(wid(id));
+   if (!wd) {
+      qDebug() << "TGQt::ClearArea: ***   wd = 0";
+      return;
+   }
    const QColor  *c = 0;
    const QPixmap *p = 0;
 #if QT_VERSION < 0x50000
-   c = wd ? wd->fEraseColor  : 0;
-   p = wd ? wd->fErasePixmap : 0;
+   c = wd->fEraseColor;
+   p = wd->fErasePixmap;
    const QColor  &cr = *c;
    const QPixmap &pr = *p;
 #else
-   const QColor  &cr = wd ? wd->palette().color(QPalette::Window) : *c;
-   c = wd ? &cr : 0;
+   const QColor  &cr = wd->palette().color(QPalette::Window);
+   c = &cr;
+   if (!p) {
+      qDebug() << "TGQt::ClearArea: ***   p = 0, code needs fixing";
+      return;
+   }
    const QPixmap &pr = *p;
 #endif
    if (int(w) <=0) {
@@ -2097,37 +2105,38 @@ void  TGQt::Warp(Int_t ix, Int_t iy, Window_t id) {
  }
 //______________________________________________________________________________
  void         TGQt::SetMWMHints(Window_t id, UInt_t /*value*/, UInt_t /*funcs*/,
-                            UInt_t /*input*/)
- {
+                           UInt_t /*input*/)
+{
     // Sets decoration style.
     // Set decoration style for MWM-compatible wm (mwm, ncdwm, fvwm?).
-//---- MWM hints stuff
-// These constants werer broowed from TGFrame.h to avoid circular depemdency.
-// The right place for them is sopmewhere in "base" (guitype.h for example)
-enum EMWMHints {
-   // functions
-   kMWMFuncAll      = BIT(0),
-   kMWMFuncResize   = BIT(1),
-   kMWMFuncMove     = BIT(2),
-   kMWMFuncMinimize = BIT(3),
-   kMWMFuncMaximize = BIT(4),
-   kMWMFuncClose    = BIT(5),
 
-   // input mode
-   kMWMInputModeless                = 0,
-   kMWMInputPrimaryApplicationModal = 1,
-   kMWMInputSystemModal             = 2,
-   kMWMInputFullApplicationModal    = 3,
+    //---- MWM hints stuff
+    // These constants were borowed from TGFrame.h to avoid circular dependency.
+    // The right place for them is somewhere in "base" (guitype.h for example)
+//    enum EMWMHints {
+//       // functions
+//       kMWMFuncAll      = BIT(0),
+//       kMWMFuncResize   = BIT(1),
+//       kMWMFuncMove     = BIT(2),
+//       kMWMFuncMinimize = BIT(3),
+//       kMWMFuncMaximize = BIT(4),
+//       kMWMFuncClose    = BIT(5),
 
-   // decorations
-   kMWMDecorAll      = BIT(0),
-   kMWMDecorBorder   = BIT(1),
-   kMWMDecorResizeH  = BIT(2),
-   kMWMDecorTitle    = BIT(3),
-   kMWMDecorMenu     = BIT(4),
-   kMWMDecorMinimize = BIT(5),
-   kMWMDecorMaximize = BIT(6)
-};
+       // input mode
+//       kMWMInputModeless                = 0,
+//       kMWMInputPrimaryApplicationModal = 1,
+//       kMWMInputSystemModal             = 2,
+//       kMWMInputFullApplicationModal    = 3,
+
+       // decorations
+//       kMWMDecorAll      = BIT(0),
+//       kMWMDecorBorder   = BIT(1),
+//       kMWMDecorResizeH  = BIT(2),
+//       kMWMDecorTitle    = BIT(3),
+//       kMWMDecorMenu     = BIT(4),
+//       kMWMDecorMinimize = BIT(5),
+//       kMWMDecorMaximize = BIT(6)
+//    };
 
    //MWMHintsProperty_t prop;
 

@@ -556,6 +556,8 @@ void TProof::InitMembers()
    fLastAssignedMerger = 0;
    fWorkersToMerge = 0;
    fFinalizationRunning = kFALSE;
+   
+   fPerfTree = "";
 
    // Check if the user defined a list of environment variables to send over:
    // include them into the dedicated list
@@ -971,116 +973,118 @@ void TProof::ParseConfigField(const char *config)
 {
    // The config file field may contain special instructions which need to be
    // parsed at the beginning, e.g. for debug runs with valgrind.
+   // Several options can be given separated by a ','
 
-   TString sconf(config);
+   TString sconf(config), opt;
+   Ssiz_t from = 0;
 
    // Analysise the field
    const char *cq = (IsLite()) ? "\"" : "";
-   Int_t ivg = kNPOS;
-   if ((ivg = sconf.Index("valgrind")) != kNPOS) {
-      Int_t jvg = sconf.Index(',', ivg);
-      Int_t lvg = (jvg != kNPOS) ? (jvg-ivg) : sconf.Length();
-      TString vgconf = sconf(ivg, lvg);
-      // Any existing valgrind setting? User can give full settings, which we fully respect,
-      // or pass additional options for valgrind by prefixing 'valgrind_opts:'. For example,
-      //    TProof::AddEnvVar("PROOF_MASTER_WRAPPERCMD", "valgrind_opts:--time-stamp --leak-check=full"
-      // will add option "--time-stamp --leak-check=full" to our default options
-      TString mst, wrk, all;
-      TList *envs = fgProofEnvList;
-      TNamed *n = 0;
-      if (envs) {
-         if ((n = (TNamed *) envs->FindObject("PROOF_WRAPPERCMD")))
-            all = n->GetTitle();
-         if ((n = (TNamed *) envs->FindObject("PROOF_MASTER_WRAPPERCMD")))
-            mst = n->GetTitle();
-         if ((n = (TNamed *) envs->FindObject("PROOF_SLAVE_WRAPPERCMD")))
-            wrk = n->GetTitle();
-      }
-      if (all != "" && mst == "") mst = all;
-      if (all != "" && wrk == "") wrk = all;
-      if (all != "" && all.BeginsWith("valgrind_opts:")) {
-         // The field is used to add an option Reset the setting
-         Info("ParseConfigField","valgrind run: resetting 'PROOF_WRAPPERCMD':"
-                                 " must be set again for next run , if any");
-         TProof::DelEnvVar("PROOF_WRAPPERCMD");
-      }
-      TString var, cmd;
-      cmd.Form("%svalgrind -v --suppressions=<rootsys>/etc/valgrind-root.supp", cq);
-      TString mstlab("NO"), wrklab("NO");
-      if (vgconf == "valgrind" || vgconf.Contains("master")) {
-         if (!IsLite()) {
-            // Check if we have to add a var
-            if (mst == "" || mst.BeginsWith("valgrind_opts:")) {
-               mst.ReplaceAll("valgrind_opts:","");
-               var.Form("%s --log-file=<logfilemst>.valgrind.log %s", cmd.Data(), mst.Data());
-               TProof::AddEnvVar("PROOF_MASTER_WRAPPERCMD", var);
-               mstlab = "YES";
-            } else if (mst != "") {
-               mstlab = "YES";
-            }
-         } else {
-            if (vgconf.Contains("master")) {
-               Warning("ParseConfigField",
-                       "master valgrinding does not make sense for PROOF-Lite: ignoring");
-               vgconf.ReplaceAll("master", "");
-               if (!vgconf.Contains("workers")) return;
-            }
-            if (vgconf == "valgrind" || vgconf == "valgrind=") vgconf = "valgrind=workers";
+   while (sconf.Tokenize(opt, from, ",")) {
+      if (opt.IsNull()) continue;
+   
+      if (opt.BeginsWith("valgrind")) {
+         // Any existing valgrind setting? User can give full settings, which we fully respect,
+         // or pass additional options for valgrind by prefixing 'valgrind_opts:'. For example,
+         //    TProof::AddEnvVar("PROOF_MASTER_WRAPPERCMD", "valgrind_opts:--time-stamp --leak-check=full"
+         // will add option "--time-stamp --leak-check=full" to our default options
+         TString mst, wrk, all;
+         TList *envs = fgProofEnvList;
+         TNamed *n = 0;
+         if (envs) {
+            if ((n = (TNamed *) envs->FindObject("PROOF_WRAPPERCMD")))
+               all = n->GetTitle();
+            if ((n = (TNamed *) envs->FindObject("PROOF_MASTER_WRAPPERCMD")))
+               mst = n->GetTitle();
+            if ((n = (TNamed *) envs->FindObject("PROOF_SLAVE_WRAPPERCMD")))
+               wrk = n->GetTitle();
          }
-      }
-      if (vgconf.Contains("=workers") || vgconf.Contains("+workers")) {
-         // Check if we have to add a var
-         if (wrk == "" || wrk.BeginsWith("valgrind_opts:")) {
-            wrk.ReplaceAll("valgrind_opts:","");
-            var.Form("%s --log-file=<logfilewrk>.valgrind.log %s%s", cmd.Data(), wrk.Data(), cq);
-            TProof::AddEnvVar("PROOF_SLAVE_WRAPPERCMD", var);
-            TString nwrks("2");
-            Int_t inw = vgconf.Index('#');
-            if (inw != kNPOS) {
-               nwrks = vgconf(inw+1, vgconf.Length());
-               if (!nwrks.IsDigit()) nwrks = "2";
-            }
-            // Set the relevant variables
+         if (all != "" && mst == "") mst = all;
+         if (all != "" && wrk == "") wrk = all;
+         if (all != "" && all.BeginsWith("valgrind_opts:")) {
+            // The field is used to add an option Reset the setting
+            Info("ParseConfigField","valgrind run: resetting 'PROOF_WRAPPERCMD':"
+                                    " must be set again for next run , if any");
+            TProof::DelEnvVar("PROOF_WRAPPERCMD");
+         }
+         TString var, cmd;
+         cmd.Form("%svalgrind -v --suppressions=<rootsys>/etc/valgrind-root.supp", cq);
+         TString mstlab("NO"), wrklab("NO");
+         if (opt == "valgrind" || opt.Contains("master")) {
             if (!IsLite()) {
-               TProof::AddEnvVar("PROOF_NWORKERS", nwrks);
+               // Check if we have to add a var
+               if (mst == "" || mst.BeginsWith("valgrind_opts:")) {
+                  mst.ReplaceAll("valgrind_opts:","");
+                  var.Form("%s --log-file=<logfilemst>.valgrind.log %s", cmd.Data(), mst.Data());
+                  TProof::AddEnvVar("PROOF_MASTER_WRAPPERCMD", var);
+                  mstlab = "YES";
+               } else if (mst != "") {
+                  mstlab = "YES";
+               }
             } else {
-               gEnv->SetValue("ProofLite.Workers", nwrks.Atoi());
+               if (opt.Contains("master")) {
+                  Warning("ParseConfigField",
+                        "master valgrinding does not make sense for PROOF-Lite: ignoring");
+                  opt.ReplaceAll("master", "");
+                  if (!opt.Contains("workers")) return;
+               }
+               if (opt == "valgrind" || opt == "valgrind=") opt = "valgrind=workers";
             }
-            wrklab = nwrks;
-            // Register the additional worker log in the session file
-            // (for the master is done automatically)
-            TProof::AddEnvVar("PROOF_ADDITIONALLOG", "valgrind.log*");
-         } else if (wrk != "") {
-            wrklab = "ALL";
          }
-      }
-      // Increase the relevant timeouts
-      if (!IsLite()) {
-         TProof::AddEnvVar("PROOF_INTWAIT", "5000");
-         gEnv->SetValue("Proof.SocketActivityTimeout", 6000);
-      } else {
-         gEnv->SetValue("ProofLite.StartupTimeOut", 5000);
-      }
-      // Warn for slowness
-      Printf(" ");
-      if (!IsLite()) {
-         Printf(" ---> Starting a debug run with valgrind (master:%s, workers:%s)", mstlab.Data(), wrklab.Data());
-      } else {
-         Printf(" ---> Starting a debug run with valgrind (workers:%s)", wrklab.Data());
-      }
-      Printf(" ---> Please be patient: startup may be VERY slow ...");
-      Printf(" ---> Logs will be available as special tags in the log window (from the progress dialog or TProof::LogViewer()) ");
-      Printf(" ---> (Reminder: this debug run makes sense only if you are running a debug version of ROOT)");
-      Printf(" ");
+         if (opt.Contains("=workers") || opt.Contains("+workers")) {
+            // Check if we have to add a var
+            if (wrk == "" || wrk.BeginsWith("valgrind_opts:")) {
+               wrk.ReplaceAll("valgrind_opts:","");
+               var.Form("%s --log-file=<logfilewrk>.valgrind.log %s%s", cmd.Data(), wrk.Data(), cq);
+               TProof::AddEnvVar("PROOF_SLAVE_WRAPPERCMD", var);
+               TString nwrks("2");
+               Int_t inw = opt.Index('#');
+               if (inw != kNPOS) {
+                  nwrks = opt(inw+1, opt.Length());
+                  if (!nwrks.IsDigit()) nwrks = "2";
+               }
+               // Set the relevant variables
+               if (!IsLite()) {
+                  TProof::AddEnvVar("PROOF_NWORKERS", nwrks);
+               } else {
+                  gEnv->SetValue("ProofLite.Workers", nwrks.Atoi());
+               }
+               wrklab = nwrks;
+               // Register the additional worker log in the session file
+               // (for the master is done automatically)
+               TProof::AddEnvVar("PROOF_ADDITIONALLOG", "valgrind.log*");
+            } else if (wrk != "") {
+               wrklab = "ALL";
+            }
+         }
+         // Increase the relevant timeouts
+         if (!IsLite()) {
+            TProof::AddEnvVar("PROOF_INTWAIT", "5000");
+            gEnv->SetValue("Proof.SocketActivityTimeout", 6000);
+         } else {
+            gEnv->SetValue("ProofLite.StartupTimeOut", 5000);
+         }
+         // Warn for slowness
+         Printf(" ");
+         if (!IsLite()) {
+            Printf(" ---> Starting a debug run with valgrind (master:%s, workers:%s)", mstlab.Data(), wrklab.Data());
+         } else {
+            Printf(" ---> Starting a debug run with valgrind (workers:%s)", wrklab.Data());
+         }
+         Printf(" ---> Please be patient: startup may be VERY slow ...");
+         Printf(" ---> Logs will be available as special tags in the log window (from the progress dialog or TProof::LogViewer()) ");
+         Printf(" ---> (Reminder: this debug run makes sense only if you are running a debug version of ROOT)");
+         Printf(" ");
 
-   } else if (sconf.BeginsWith("workers=")) {
+      } else if (opt.BeginsWith("workers=")) {
 
-      // Request for a given number of workers (within the max) or worker
-      // startup combination:
-      //      workers=5         start max 5 workers (or less, if less are assigned)
-      //      workers=2x        start max 2 workers (or less, if less are assigned)
-      sconf.ReplaceAll("workers=","");
-      TProof::AddEnvVar("PROOF_NWORKERS", sconf);
+         // Request for a given number of workers (within the max) or worker
+         // startup combination:
+         //      workers=5         start max 5 workers (or less, if less are assigned)
+         //      workers=2x        start max 2 workers (or less, if less are assigned)
+         opt.ReplaceAll("workers=","");
+         TProof::AddEnvVar("PROOF_NWORKERS", opt);
+      }
    }
 }
 
@@ -4398,6 +4402,12 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
       // reactivate the default application interrupt handler
       if (sh)
          gSystem->AddSignalHandler(sh);
+      // Save the performance info, if required
+      if (!fPerfTree.IsNull()) {
+         if (SavePerfTree() != 0) Error("Process", "saving performance info ...");
+         // Must be re-enabled each time
+         SetPerfTree(0);
+      }
    }
 
    return rv;
@@ -7710,7 +7720,7 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
          implname.Remove(icom);
       }
       TString basemacro = gSystem->BaseName(implname), mainmacro(implname);
-      TString acmode, args, io;
+      TString bmsg(basemacro), acmode, args, io;
       implname = gSystem->SplitAclicMode(implname, acmode, args, io);
 
       // Macro names must have a standard format
@@ -7778,17 +7788,26 @@ Int_t TProof::Load(const char *macro, Bool_t notOnClient, Bool_t uniqueWorkers,
          TIter nxfn(&addfiles);
          TObjString *os = 0;
          while ((os = (TObjString *) nxfn())) {
-            if (SendFile(os->GetName(), kAscii | kForward , "cache") == -1) {
+            // These files need to be available everywhere, cache and sandbox
+            if (SendFile(os->GetName(), kAscii | kForward, "cache") == -1) {
                Error("Load", "problems sending additional file %s", os->GetName());
                return -1;
             }
+            // Add the base names to the message broadcasted
+            bmsg += TString::Format(",%s", gSystem->BaseName(os->GetName()));
          }
          addfiles.SetOwner(kTRUE);
       }
          
       // The files are now on the workers: now we send the loading request
       TMessage mess(kPROOF_CACHE);
-      mess << Int_t(kLoadMacro) << basemacro;
+      if (GetRemoteProtocol() < 34) {
+         mess << Int_t(kLoadMacro) << basemacro;
+         // This may be needed
+         AddIncludePath("../../cache");
+      } else {
+         mess << Int_t(kLoadMacro) << bmsg;
+      }
       Broadcast(mess, kActive);
 
       // Load locally, if required
@@ -9586,12 +9605,12 @@ void TProof::SetAlias(const char *alias)
 }
 
 //______________________________________________________________________________
-Int_t TProof::UploadDataSet(const char *dataSetName,
-                            TList *files,
-                            const char *desiredDest,
-                            Int_t opt,
-                            TList *skippedFiles)
+Int_t TProof::UploadDataSet(const char *, TList *, const char *, Int_t, TList *)
 {
+   // *** This function is deprecated and will disappear in future versions ***
+   // *** It is just a wrapper around TFile::Cp. 
+   // *** Please use TProofMgr::UploadFiles.
+   //
    // Upload a set of files and save the list of files by name dataSetName.
    // The 'files' argument is a list of TFileInfo objects describing the files
    // as first url.
@@ -9619,176 +9638,18 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    // (*)|-------> call RegisterDataSet ------->|
    // (*) - optional
 
-   if (!IsValid()) {
-      Error("UploadDataSet", "not connected");
-      return -1;
-   }
-
-   if (fProtocol < 15) {
-      Info("UploadDataSet", "functionality not available: the server has an"
-                            " incompatible version of TFileInfo");
-      return -1;
-   }
-
-   if (IsLite()) {
-      Info("UploadDataSet", "Lite-session: functionality not needed - do nothing");
-      return -1;
-   }
-
-   // check if  dataSetName is not excluded
-   if (strchr(dataSetName, '/')) {
-      if (strstr(dataSetName, "public") != dataSetName) {
-         Error("UploadDataSet",
-               "Name of public dataset should start with public/");
-         return kError;
-      }
-   }
-   if ((opt & kOverwriteAllFiles && opt & kOverwriteNoFiles) ||
-       (opt & kNoOverwriteDataSet && opt & kAppend) ||
-       (opt & kOverwriteDataSet && opt & kAppend) ||
-       (opt & kNoOverwriteDataSet && opt & kOverwriteDataSet)) {
-      Error("UploadDataSet", "you specified contradicting options.");
-      return kError;
-   }
-
-   // Decode options
-   Int_t overwriteAll = (opt & kOverwriteAllFiles) ? kTRUE : kFALSE;
-   Int_t overwriteNone = (opt & kOverwriteNoFiles) ? kTRUE : kFALSE;
-   Int_t goodName = (opt & (kOverwriteDataSet | kAppend)) ? 1 : -1;
-   Int_t appendToDataSet = (opt & kAppend) ? kTRUE : kFALSE;
-   Int_t overwriteNoDataSet = (opt & kNoOverwriteDataSet) ? kTRUE : kFALSE;
-
-
-   //If skippedFiles is not provided we can not return list of skipped files.
-   if (!skippedFiles && overwriteNone) {
-      Error("UploadDataSet",
-            "Provide pointer to TList object as skippedFiles argument when using kOverwriteNoFiles option.");
-      return kError;
-   }
-   //If skippedFiles is provided but did not point to a TList the have to STOP
-   if (skippedFiles) {
-      if (skippedFiles->Class() != TList::Class()) {
-         Error("UploadDataSet",
-               "Provided skippedFiles argument does not point to a TList object.");
-         return kError;
-      }
-   }
-
-   Int_t fileCount = 0; // return value
-   if (goodName == -1) { // -1 for undefined
-      // First check whether this dataset already exists unless
-      // kAppend or kOverWriteDataSet
-      TMessage nameMess(kPROOF_DATASETS);
-      nameMess << Int_t(kCheckDataSetName);
-      nameMess << TString(dataSetName);
-      Broadcast(nameMess);
-      Collect(kActive, fCollectTimeout); //after each call to HandleDataSets
-      if (fStatus == -1) {
-         //We ask user to agree on overwriting the dataset name
-         while (goodName == -1 && !overwriteNoDataSet) {
-            Info("UploadDataSet", "dataset %s already exist. ",
-                   dataSetName);
-            Info("UploadDataSet", "do you want to overwrite it[Yes/No/Append]?");
-            TString answer;
-            answer.ReadToken(cin);
-            if (!strncasecmp(answer.Data(), "y", 1)) {
-               goodName = 1;
-            } else if (!strncasecmp(answer.Data(), "n", 1)) {
-               goodName = 0;
-            } else if (!strncasecmp(answer.Data(), "a", 1)) {
-               goodName = 1;
-               appendToDataSet = kTRUE;
-            }
-         }
-      } else {
-         goodName = 1;
-      }
-   } // if (goodName == -1)
-   if (goodName == 1) {  //must be == 1 as -1 was used for a bad name!
-
-      TString dest;
-      dest.Form("%s/%s/%s",  GetDataPoolUrl(), 
-                             gSystem->GetUserInfo()->fUser.Data(),
-                             desiredDest ? desiredDest : "");
-      dest.ReplaceAll("//", "/");
-      dest.Remove(TString::kTrailing, '/');
-
-      // Now we will actually copy files and create the TList object
-      TFileCollection *fileList = new TFileCollection();
-      TIter next(files);
-      while (TFileInfo *fileInfo = ((TFileInfo*)next())) {
-         TUrl *fileUrl = fileInfo->GetFirstUrl();
-         if (gSystem->AccessPathName(fileUrl->GetUrl()) == kFALSE) {
-            //matching dir entry
-            //getting the file name from the path represented by fileUrl
-            const char *ent = gSystem->BaseName(fileUrl->GetFile());
-
-            Int_t goodFileName = 1;
-            if (!overwriteAll &&
-               gSystem->AccessPathName(TString::Format("%s/%s", dest.Data(), ent), kFileExists)
-                  == kFALSE) {  //Destination file exists
-               goodFileName = -1;
-               while (goodFileName == -1 && !overwriteAll && !overwriteNone) {
-                  Info("UploadDataSet", "file %s/%s already exists. ", dest.Data(), ent);
-                  Info("UploadDataSet", "do you want to overwrite it [Yes/No/all/none]?");
-                  TString answer;
-                  answer.ReadToken(cin);
-                  if (!strncasecmp(answer.Data(), "y", 1))
-                     goodFileName = 1;
-                  else if (!strncasecmp(answer.Data(), "all", 3))
-                     overwriteAll = kTRUE;
-                  else if (!strncasecmp(answer.Data(), "none", 4))
-                     overwriteNone = kTRUE;
-                  else if (!strncasecmp(answer.Data(), "n", 1))
-                     goodFileName = 0;
-               }
-            } //if file exists
-
-            // Copy the file to the redirector indicated
-            if (goodFileName == 1 || overwriteAll) {
-               //must be == 1 as -1 was meant for bad name!
-               Info("UploadDataSet", "Uploading %s to %s/%s",
-                      fileUrl->GetUrl(), dest.Data(), ent);
-               if (TFile::Cp(fileUrl->GetUrl(), TString::Format("%s/%s", dest.Data(), ent))) {
-                  fileList->GetList()->Add(new TFileInfo(TString::Format("%s/%s", dest.Data(), ent)));
-               } else
-                  Error("UploadDataSet", "file %s was not copied", fileUrl->GetUrl());
-            } else {  // don't overwrite, but file exist and must be included
-               fileList->GetList()->Add(new TFileInfo(TString::Format("%s/%s", dest.Data(), ent)));
-               if (skippedFiles) {
-                  // user specified the TList *skippedFiles argument so we create
-                  // the list of skipped files
-                  skippedFiles->Add(new TFileInfo(fileUrl->GetUrl()));
-               }
-            }
-         } //if matching dir entry
-      } //while
-
-      if ((fileCount = fileList->GetList()->GetSize()) == 0) {
-         Info("UploadDataSet", "no files were copied. The dataset will not be saved");
-      } else {
-         TString o = (appendToDataSet) ? "" : "O";
-         if (!RegisterDataSet(dataSetName, fileList, o)) {
-            Error("UploadDataSet", "Error while saving dataset: %s", dataSetName);
-            fileCount = kError;
-         }
-      }
-      delete fileList;
-   } else if (overwriteNoDataSet) {
-      Info("UploadDataSet", "dataset %s already exists", dataSetName);
-      return kDataSetExists;
-   } //if(goodName == 1)
-
-   return fileCount;
+   Printf(" *** WARNING: this function is obsolete: it has been replaced by TProofMgr::UploadFiles ***");
+   
+   return -1;
 }
 
 //______________________________________________________________________________
-Int_t TProof::UploadDataSet(const char *dataSetName,
-                            const char *files,
-                            const char *desiredDest,
-                            Int_t opt,
-                            TList *skippedFiles)
+Int_t TProof::UploadDataSet(const char *, const char *, const char *, Int_t, TList *)
 {
+   // *** This function is deprecated and will disappear in future versions ***
+   // *** It is just a wrapper around TFile::Cp. 
+   // *** Please use TProofMgr::UploadFiles.
+   //
    // Upload a set of files and save the list of files by name dataSetName.
    // The mask 'opt' is a combination of EUploadOpt:
    //   kAppend             (0x1)   if set true files will be appended to
@@ -9808,91 +9669,33 @@ Int_t TProof::UploadDataSet(const char *dataSetName,
    // not uploaded.
    //
 
-   if (fProtocol < 15) {
-      Info("UploadDataSet", "functionality not available: the server has an"
-                            " incompatible version of TFileInfo");
-      return -1;
-   }
+   Printf(" *** WARNING: this function is obsolete: it has been replaced by TProofMgr::UploadFiles ***");
 
-   TList fileList;
-   fileList.SetOwner();
-   void *dataSetDir = gSystem->OpenDirectory(gSystem->DirName(files));
-   if (dataSetDir) {
-      const char* ent;
-      TString filesExp(gSystem->BaseName(files));
-      filesExp.ReplaceAll("*",".*");
-      TRegexp rg(filesExp);
-      while ((ent = gSystem->GetDirEntry(dataSetDir))) {
-         TString entryString(ent);
-         if (entryString.Index(rg) != kNPOS) {
-            // Matching dir entry: add to the list
-            TString u = TString::Format("file://%s/%s", gSystem->DirName(files), ent);
-            if (gSystem->AccessPathName(u, kReadPermission) == kFALSE)
-               fileList.Add(new TFileInfo(u));
-         } //if matching dir entry
-      } //while
-      // Close the directory
-      gSystem->FreeDirectory(dataSetDir);
-   } else {
-      Warning("UploadDataSet", "cannot open: directory '%s'", gSystem->DirName(files));
-   }
-   Int_t fileCount;
-   if ((fileCount = fileList.GetSize()) == 0)
-      Printf("No files match your selection. The dataset will not be saved");
-   else
-      fileCount = UploadDataSet(dataSetName, &fileList, desiredDest,
-                                opt, skippedFiles);
-   return fileCount;
+   return -1;
 }
 
 //______________________________________________________________________________
-Int_t TProof::UploadDataSetFromFile(const char *dataset, const char *file,
-                                    const char *dest, Int_t opt,
-                                    TList *skippedFiles)
+Int_t TProof::UploadDataSetFromFile(const char *, const char *, const char *, Int_t, TList *)
 {
+   // *** This function is deprecated and will disappear in future versions ***
+   // *** It is just a wrapper around TFile::Cp. 
+   // *** Please use TProofMgr::UploadFiles.
+   //
    // Upload files listed in "file" to PROOF cluster.
    // Where file = name of file containing list of files and
    // dataset = dataset name and opt is a combination of EUploadOpt bits.
    // Each file description (line) can include wildcards.
    // Check TFileInfo compatibility
 
-   if (fProtocol < 15) {
-      Info("UploadDataSetFromFile", "functionality not available: the server has an"
-                                    " incompatible version of TFileInfo");
-      return -1;
-   }
+   Printf(" *** WARNING: this function is obsolete: it has been replaced by TProofMgr::UploadFiles ***");
 
-   Int_t fileCount = -1;
-   // Create the list to feed UploadDataSet(char *dataset, TList *l, ...)
-   TList fileList;
-   fileList.SetOwner();
-   ifstream f;
-   f.open(gSystem->ExpandPathName(file), ifstream::out);
-   if (f.is_open()) {
-      while (f.good()) {
-         TString line;
-         line.ReadToDelim(f);
-         line.Strip(TString::kTrailing, '\n');
-         if (gSystem->AccessPathName(line, kReadPermission) == kFALSE)
-            fileList.Add(new TFileInfo(line));
-      }
-      f.close();
-      if ((fileCount = fileList.GetSize()) == 0)
-         Info("UploadDataSetFromFile",
-              "no files match your selection. The dataset will not be saved");
-      else
-         fileCount = UploadDataSet(dataset, &fileList, dest,
-                                   opt, skippedFiles);
-   } else {
-      Error("UploadDataSetFromFile", "unable to open the specified file");
-   }
-   // Done
-   return fileCount;
+    // Done
+   return -1;
 }
 
 //______________________________________________________________________________
 Bool_t TProof::RegisterDataSet(const char *dataSetName,
-                               TFileCollection *dataSet, const char* optStr)
+                               TFileCollection *dataSet, const char *optStr)
 {
    // Register the 'dataSet' on the cluster under the current
    // user, group and the given 'dataSetName'.
@@ -9904,6 +9707,8 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
    // is configured to allow so). By default the dataset is not verified.
    // If 'opts' contains 'T' the in the dataset object (status bits, meta,...)
    // is trusted, i.e. not reset (if the dataset manager is configured to allow so).
+   // If 'opts' contains 'S' validation would be run serially (meaningful only if
+   // validation is required).
    // Returns kTRUE on success.
 
    // Check TFileInfo compatibility
@@ -9918,10 +9723,20 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
       return kFALSE;
    }
 
+   Bool_t parallelverify = kFALSE;
+   TString sopt(optStr);
+   if (sopt.Contains("V") && fProtocol >= 34 && !sopt.Contains("S")) {
+      // We do verification in parallel later on; just register for now
+      parallelverify = kTRUE;
+      sopt.ReplaceAll("V", "");
+   }
+   // This would screw up things remotely, make sure is not there
+   sopt.ReplaceAll("S", "");
+
    TMessage mess(kPROOF_DATASETS);
    mess << Int_t(kRegisterDataSet);
    mess << TString(dataSetName);
-   mess << TString(optStr);
+   mess << sopt;
    mess.WriteObject(dataSet);
    Broadcast(mess);
 
@@ -9930,8 +9745,21 @@ Bool_t TProof::RegisterDataSet(const char *dataSetName,
    if (fStatus != 0) {
       Error("RegisterDataSet", "dataset was not saved");
       result = kFALSE;
+      return result;
    }
-   return result;
+
+   // If old server or not verifying in parallel we are done
+   if (!parallelverify) return result;
+   
+   // If we are here it means that we will verify in parallel
+   sopt += "V";
+   if (VerifyDataSet(dataSetName, sopt) < 0){
+      Error("RegisterDataSet", "problems verifying dataset '%s'", dataSetName);
+      return kFALSE;
+   }
+
+   // We are done
+   return kTRUE; 
 }
 
 //______________________________________________________________________________
@@ -10190,32 +10018,132 @@ TList* TProof::FindDataSets(const char* /*searchString*/, const char* /*optStr*/
 }
 
 //______________________________________________________________________________
-Int_t TProof::VerifyDataSet(const char *uri, const char* optStr)
+Int_t TProof::VerifyDataSet(const char *uri, const char *optStr)
 {
    // Verify if all files in the specified dataset are available.
    // Print a list and return the number of missing files.
+   // Returns -1 in case of error.
 
    if (fProtocol < 15) {
       Info("VerifyDataSet", "functionality not available: the server has an"
                             " incompatible version of TFileInfo");
-      return kError;
+      return -1;
    }
 
-   Int_t nMissingFiles = 0;
-   TMessage nameMess(kPROOF_DATASETS);
-   nameMess << Int_t(kVerifyDataSet);
-   nameMess << TString(uri ? uri : "");
-   nameMess << TString(optStr ? optStr : "");
-   Broadcast(nameMess);
+   // Sanity check
+   if (!uri || (uri && strlen(uri) <= 0)) {
+      Error("VerifyDataSet", "dataset name is is mandatory");
+      return -1;
+   }
 
-   Collect(kActive, fCollectTimeout);
+   Int_t nmissingfiles = 0;
 
-   if (fStatus < 0) {
-      Info("VerifyDataSet", "no such dataset %s", uri);
-      return  -1;
-   } else
-      nMissingFiles = fStatus;
-   return nMissingFiles;
+   TString sopt(optStr);
+   if (fProtocol < 34 || sopt.Contains("S")) {
+      sopt.ReplaceAll("S", "");
+      Info("VerifyDataSet", "Master-only verification");
+      TMessage nameMess(kPROOF_DATASETS);
+      nameMess << Int_t(kVerifyDataSet);
+      nameMess << TString(uri ? uri : "");
+      nameMess << sopt;
+      Broadcast(nameMess);
+
+      Collect(kActive, fCollectTimeout);
+
+      if (fStatus < 0) {
+         Info("VerifyDataSet", "no such dataset %s", uri);
+         return  -1;
+      } else
+         nmissingfiles = fStatus;
+      return nmissingfiles;
+   }
+
+   //Let PROOF master prepare node-files map
+   SetParameter("PROOF_FilesToProcess", Form("dataset:%s", uri));
+
+   // Use TPacketizerFile
+   TString oldpack;
+   if (TProof::GetParameter(GetInputList(), "PROOF_Packetizer", oldpack) != 0) oldpack = "";
+   SetParameter("PROOF_Packetizer", "TPacketizerFile");
+
+   // Add dataset name
+   SetParameter("PROOF_VerifyDataSet", uri);
+   // Add options
+   SetParameter("PROOF_VerifyDataSetOption", optStr);
+   Int_t oldifiip = -1;
+   if (TProof::GetParameter(GetInputList(), "PROOF_IncludeFileInfoInPacket", oldifiip) != 0) oldifiip = -1;
+   SetParameter("PROOF_IncludeFileInfoInPacket", (Int_t)1);
+
+   // TO DO : figure out mss and stageoption
+   const char* mss="";
+   SetParameter("PROOF_MSS", mss);
+   const char* stageoption="";
+   SetParameter("PROOF_StageOption", stageoption);
+
+   GetInputList()->Print();
+
+   // Process verification in parallel
+   Process("TSelVerifyDataSet", (Long64_t) 1);
+
+   // Restore packetizer
+   if (!oldpack.IsNull())
+      SetParameter("PROOF_Packetizer", oldpack);
+   else
+      DeleteParameters("PROOF_Packetizer");
+
+   // Delete or restore parameters
+   DeleteParameters("PROOF_FilesToProcess");
+   DeleteParameters("PROOF_VerifyDataSet");
+   DeleteParameters("PROOF_VerifyDataSetOption");
+   DeleteParameters("PROOF_MSS");
+   DeleteParameters("PROOF_StageOption");
+   if (oldifiip > -1) {
+      SetParameter("PROOF_IncludeFileInfoInPacket", oldifiip);
+   } else {
+      DeleteParameters("PROOF_IncludeFileInfoInPacket");
+   }
+
+   // Merge outputs
+   Int_t nopened = 0;
+   Int_t ntouched = 0;
+   Bool_t changed_ds = kFALSE;
+
+   TIter nxtout(GetOutputList());
+   TObject* obj;
+   TList *lfiindout = new TList;
+   while ((obj = nxtout())) {
+      TList *l = dynamic_cast<TList *>(obj);
+      if (l && TString(l->GetName()).BeginsWith("PROOF_ListFileInfos_")) {
+         TIter nxt(l);
+         TFileInfo *fiindout = 0;
+         while ((fiindout = (TFileInfo*) nxt())) {
+            lfiindout->Add(fiindout);
+         }
+      }
+      // Add up number of disppeared files
+      TParameter<Int_t>* pdisappeared = dynamic_cast<TParameter<Int_t>*>(obj);
+      if ( pdisappeared && TString(pdisappeared->GetName()).BeginsWith("PROOF_NoFilesDisppeared_")) {
+         nmissingfiles += pdisappeared->GetVal();
+      }
+      TParameter<Int_t>* pnopened = dynamic_cast<TParameter<Int_t>*>(obj);
+      if (pnopened && TString(pnopened->GetName()).BeginsWith("PROOF_NoFilesOpened_")) {
+         nopened += pnopened->GetVal();
+      }
+      TParameter<Int_t>* pntouched = dynamic_cast<TParameter<Int_t>*>(obj);
+      if (pntouched && TString(pntouched->GetName()).BeginsWith("PROOF_NoFilesTouched_")) {
+         ntouched += pntouched->GetVal();
+      }
+      TParameter<Bool_t>* pchanged_ds = dynamic_cast<TParameter<Bool_t>*>(obj);
+      if (pchanged_ds && TString(pchanged_ds->GetName()).BeginsWith("PROOF_DataSetChanged_")) {
+         if (pchanged_ds->GetVal() == kTRUE) changed_ds = kTRUE;
+      }
+   }
+
+   Info("VerifyDataset", "%s: changed? %d (# files opened = %d, # files touched = %d,"
+                         " # missing files = %d)",
+                         uri, changed_ds, nopened, ntouched, nmissingfiles);
+
+   return nmissingfiles;
 }
 
 //______________________________________________________________________________
@@ -11237,6 +11165,9 @@ Int_t TProof::GetInputData(TList *input, const char *cachedir, TString &emsg)
       return -1;
    }
 
+   // List of added objects (for proper cleaning ...)
+   TList *added = new TList;
+   added->SetName("PROOF_InputObjsFromFile");
    // Read the input data into the input list
    TFile *f = TFile::Open(fname.Data());
    if (f) {
@@ -11249,10 +11180,20 @@ Int_t TProof::GetInputData(TList *input, const char *cachedir, TString &emsg)
       TKey *k = 0;
       while ((k = (TKey *)nxk())) {
          TObject *o = f->Get(k->GetName());
-         if (o) input->Add(o);
+         if (o) {
+            input->Add(o);
+            added->Add(o);
+         }
       }
-      f->Close();
-      delete f;
+      // Add the file as last one
+      if (added->GetSize() > 0) {
+         added->Add(f);
+         input->Add(added);
+      } else {
+         // Cleanup the file now
+         f->Close();
+         delete f;
+      }
    } else {
       emsg.Form("could not open %s", fname.Data());
       return -1;
@@ -11415,3 +11356,91 @@ TFileCollection *TProof::GetMissingFiles(TQueryResult *qr)
    // Done
    return fc;
 }
+
+//______________________________________________________________________________
+void TProof::SetPerfTree(const char *pf, Bool_t withWrks)
+{
+   // Enable/Disable saving of the performance tree
+
+   if (pf && strlen(pf) > 0) {
+      fPerfTree = pf;
+      SetParameter("PROOF_StatsHist", "");
+      SetParameter("PROOF_StatsTrace", "");
+      if (withWrks) SetParameter("PROOF_SlaveStatsTrace", "");
+      Info("SetPerfTree", "saving of the performance tree enabled (%s)", fPerfTree.Data());
+   } else {
+      fPerfTree = "";
+      DeleteParameters("PROOF_StatsHist");
+      DeleteParameters("PROOF_StatsTrace");
+      DeleteParameters("PROOF_SlaveStatsTrace");
+      Info("SetPerfTree", "saving of the performance tree disabled");
+   }
+}
+
+//______________________________________________________________________________
+Int_t TProof::SavePerfTree(const char *pf, const char *ref)
+{
+   // Save performance information from TPerfStats to file 'pf'.
+   // If 'ref' is defined, do it for query 'ref'.
+   // Return 0 on sucecss, -1 in case of any error
+
+   if (!IsValid()) {
+      Error("SafePerfTree", "this TProof instance is invalid!");
+      return -1;
+   }
+
+   TList *outls = GetOutputList();
+   TString sref;
+   if (ref && strlen(ref) > 0) {
+      if (!fPlayer) {
+         Error("SafePerfTree", "requested to use query '%s' but player instance undefined!", ref);
+         return -1;
+      }
+      TQueryResult *qr = fPlayer->GetQueryResult(ref);
+      if (!qr) {
+         Error("SafePerfTree", "TQueryResult instance for query '%s' could not be retrieved", ref);
+         return -1;
+      }
+      outls = qr->GetOutputList();
+      sref.Form(" for requested query '%s'", ref); 
+   }
+   if (!outls || (outls && outls->GetSize() <= 0)) {
+      Error("SafePerfTree", "outputlist%s undefined or empty", sref.Data());
+      return -1;
+   }
+
+   TString fn = fPerfTree;
+   if (pf && strlen(pf)) fn = pf;
+   if (fn.IsNull()) fn = "perftree.root";
+
+   TFile f(fn, "RECREATE");
+   if (f.IsZombie()) {
+      Error("SavePerfTree", "could not open file '%s' for writing", fn.Data());
+   } else {
+      f.cd();
+      TIter nxo(outls);
+      TObject* obj = 0;
+      while ((obj = nxo())) {
+         TString objname(obj->GetName());
+         if (objname.BeginsWith("PROOF_")) {
+            // Must list the objects since other PROOF_ objects exist
+            // besides timing objects
+            if (objname == "PROOF_PerfStats" ||
+                objname == "PROOF_PacketsHist" ||
+                objname == "PROOF_EventsHist" ||
+                objname == "PROOF_NodeHist" ||
+                objname == "PROOF_LatencyHist" ||
+                objname == "PROOF_ProcTimeHist" ||
+                objname == "PROOF_CpuTimeHist")
+               obj->Write();
+         }
+      }
+      f.Close();
+   }
+   Info("SavePerfTree", "performance information%s saved in %s ...", sref.Data(), fn.Data());
+
+   // Done
+   return 0;
+}
+
+

@@ -11,11 +11,17 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/ArgList.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/Job.h"
+#include "clang/Driver/Tool.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Preprocessor.h"
 
 #include "llvm/LLVMContext.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -30,26 +36,45 @@ namespace cling {
   {
   }
 
-  CompilerInstance* CIFactory::createCI(llvm::StringRef code,
-                                        int argc,
-                                        const char* const *argv,
-                                        const char* llvmdir) {
-    return createCI(llvm::MemoryBuffer::getMemBuffer(code),argc, argv, llvmdir);
+  /// \brief Retrieves the clang CC1 specific flags out of the compilation's jobs
+  /// Returns NULL on error.
+  static const clang::driver::ArgStringList
+  *GetCC1Arguments(clang::DiagnosticsEngine *Diagnostics,
+		   clang::driver::Compilation *Compilation) {
+    // We expect to get back exactly one Command job, if we didn't something
+    // failed. Extract that job from the Compilation.
+    const clang::driver::JobList &Jobs = Compilation->getJobs();
+    if (!Jobs.size() || !isa<clang::driver::Command>(*Jobs.begin())) {
+      // diagnose this...
+      return NULL;
+    }
+
+    // The one job we find should be to invoke clang again.
+    const clang::driver::Command *Cmd
+      = cast<clang::driver::Command>(*Jobs.begin());
+    if (llvm::StringRef(Cmd->getCreator().getName()) != "clang") {
+      // diagnose this...
+      return NULL;
+    }
+
+    return &Cmd->getArguments();
   }
 
-  
-  CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer, 
-                                        int argc, 
-                                        const char* const *argv,
-                                        const char* llvmdir){
-    // main's argv[0] is skipped!
+  CompilerInstance* CIFactory::createCI(llvm::StringRef code,
+					int argc,
+					const char* const *argv,
+					const char* llvmdir) {
+    return createCI(llvm::MemoryBuffer::getMemBuffer(code), argc, argv,
+		    llvmdir);
+  }
 
+  CompilerInstance* CIFactory::createCI(llvm::MemoryBuffer* buffer,
+					int argc,
+					const char* const *argv,
+					const char* llvmdir) {
     // Create an instance builder, passing the llvmdir and arguments.
     //
     //  Initialize the llvm library.
-    //
-    // If not set, exception handling will not be turned on
-    llvm::JITExceptionHandling = true;
     llvm::InitializeNativeTarget();
     llvm::InitializeAllAsmPrinters();
     llvm::sys::Path resource_path;
@@ -73,47 +98,108 @@ namespace cling {
       //
       // Note: Otherwise it uses dladdr().
       //
-      resource_path = CompilerInvocation::GetResourcesPath("cling",
-                                       (void*)(intptr_t) locate_cling_executable
-                                                           );
+      resource_path
+	= CompilerInvocation::GetResourcesPath("cling",
+				       (void*)(intptr_t) locate_cling_executable
+					       );
     }
 
+    //______________________________________
+    DiagnosticOptions DefaultDiagnosticOptions;
+    DefaultDiagnosticOptions.ShowColors = 1;
+    TextDiagnosticPrinter* DiagnosticPrinter
+      = new TextDiagnosticPrinter(llvm::errs(), DefaultDiagnosticOptions);
+    llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagIDs(new DiagnosticIDs());
+    DiagnosticsEngine* Diagnostics
+      = new DiagnosticsEngine(DiagIDs, DiagnosticPrinter, /*Owns it*/ true); // LEAKS!
+
+    std::vector<const char*> argvCompile(argv, argv + argc);
+    // We do C++ by default; append right after argv[0] name
+    // Only insert it if there is no other "-x":
+    bool haveMinusX = false;
+    for (const char* const* iarg = argv; !haveMinusX && iarg < argv + argc;
+	 ++iarg) {
+      haveMinusX = !strcmp(*iarg, "-x");
+    }
+    if (!haveMinusX) {
+      argvCompile.insert(argvCompile.begin() + 1,"-x");
+      argvCompile.insert(argvCompile.begin() + 2, "c++");
+    }
+    argvCompile.push_back("-c");
+    argvCompile.push_back("-");
+
+    bool IsProduction = false;
+    assert(IsProduction = true && "set IsProduction if asserts are on.");
+    clang::driver::Driver Driver(argv[0], llvm::sys::getDefaultTargetTriple(),
+                                 "cling.out",
+                                 IsProduction,
+                                 *Diagnostics);
+    //Driver.setWarnMissingInput(false);
+    Driver.setCheckInputsExist(false); // think foo.C(12)
+    llvm::ArrayRef<const char*>RF(&(argvCompile[0]), argvCompile.size());
+    llvm::OwningPtr<clang::driver::Compilation>
+      Compilation(Driver.BuildCompilation(RF));
+    const clang::driver::ArgStringList* CC1Args
+      = GetCC1Arguments(Diagnostics, Compilation.get());
+    if (CC1Args == NULL) {
+      return 0;
+    }
+    clang::CompilerInvocation*
+      Invocation = new clang::CompilerInvocation; // LEAKS!
+    clang::CompilerInvocation::CreateFromArgs(*Invocation, CC1Args->data() + 1,
+                                              CC1Args->data() + CC1Args->size(),
+                                              *Diagnostics);
+    Invocation->getFrontendOpts().DisableFree = true;
+
+    // Update ResourceDir
+    if (Invocation->getHeaderSearchOpts().UseBuiltinIncludes &&
+	!resource_path.empty()) {
+      // header search opts' entry for resource_path/include isn't
+      // updated by providing a new resource path; update it manually.
+      clang::HeaderSearchOptions& Opts = Invocation->getHeaderSearchOpts();
+      llvm::sys::Path oldResInc(Opts.ResourceDir);
+      oldResInc.appendComponent("include");
+      llvm::sys::Path newResInc(resource_path);
+      newResInc.appendComponent("include");
+      bool foundOldResInc = false;
+      for (unsigned i = 0, e = Opts.UserEntries.size();
+	   !foundOldResInc && i != e; ++i) {
+	HeaderSearchOptions::Entry &E = Opts.UserEntries[i];
+	if (!E.IsUserSupplied && !E.IsFramework
+	    && E.Group == clang::frontend::System && E.IgnoreSysRoot
+	    && E.IsInternal && !E.ImplicitExternC
+	    && oldResInc.str() == E.Path) {
+	  E.Path = newResInc.str();
+	  foundOldResInc = true;
+	}
+      }
+
+      Opts.ResourceDir = resource_path.str();
+    }
 
     // Create and setup a compiler instance.
     CompilerInstance* CI = new CompilerInstance();
+    CI->setInvocation(Invocation);
+
+    CI->createDiagnostics(CC1Args->size(), CC1Args->data() + 1);
     {
       //
       //  Buffer the error messages while we process
       //  the compiler options.
       //
 
-      // Needed when we call CreateFromArgs
-      CI->createDiagnostics(0, 0);
-      CompilerInvocation::CreateFromArgs
-        (CI->getInvocation(), argv, argv + argc, CI->getDiagnostics());
-
-      // Reset the diagnostics options that came from CreateFromArgs
-      DiagnosticOptions& DiagOpts = CI->getDiagnosticOpts();
-      DiagOpts.ShowColors = 1;
-      DiagnosticConsumer* Client = new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
-      CI->createDiagnostics(0, 0, Client);
-
       // Set the language options, which cling needs
       SetClingCustomLangOpts(CI->getLangOpts());
 
-      if (CI->getHeaderSearchOpts().UseBuiltinIncludes &&
-          CI->getHeaderSearchOpts().ResourceDir.empty()) {
-        CI->getHeaderSearchOpts().ResourceDir = resource_path.str();
-      }
       CI->getInvocation().getPreprocessorOpts().addMacroDef("__CLING__");
       if (CI->getDiagnostics().hasErrorOccurred()) {
-        delete CI;
-        CI = 0;
-        return 0;
+	delete CI;
+	CI = 0;
+	return 0;
       }
     }
     CI->setTarget(TargetInfo::CreateTargetInfo(CI->getDiagnostics(),
-                                               CI->getTargetOpts()));
+					       Invocation->getTargetOpts()));
     if (!CI->hasTarget()) {
       delete CI;
       CI = 0;
@@ -121,29 +207,29 @@ namespace cling {
     }
     CI->getTarget().setForcedLangOptions(CI->getLangOpts());
     SetClingTargetLangOpts(CI->getLangOpts(), CI->getTarget());
-    
+
     // Set up source and file managers
     CI->createFileManager();
     CI->createSourceManager(CI->getFileManager());
-    
+
     // Set up the memory buffer
     if (buffer)
       CI->getSourceManager().createMainFileIDForMemBuffer(buffer);
-    
+
     // Set up the preprocessor
     CI->createPreprocessor();
     Preprocessor& PP = CI->getPreprocessor();
     PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-                                           PP.getLangOptions());
-    /*NoBuiltins = */ //true);
-    
+					   PP.getLangOptions());
+
     // Set up the ASTContext
     ASTContext *Ctx = new ASTContext(CI->getLangOpts(),
-                                     PP.getSourceManager(), &CI->getTarget(), PP.getIdentifierTable(),
-                                     PP.getSelectorTable(), PP.getBuiltinInfo(), 0);
+				     PP.getSourceManager(), &CI->getTarget(),
+				     PP.getIdentifierTable(),
+				     PP.getSelectorTable(), PP.getBuiltinInfo(),
+				     /*size_reserve*/0, /*DelayInit*/false);
     CI->setASTContext(Ctx);
-    //CI->getSourceManager().clearIDTables(); //do we really need it?
-    
+
     // Set up the ASTConsumers
     CI->setASTConsumer(new ChainedConsumer());
 
@@ -168,8 +254,8 @@ namespace cling {
     Opts.Deprecated = 1;
   }
 
-  void CIFactory::SetClingTargetLangOpts(LangOptions& Opts, 
-                                         const TargetInfo& Target) {
+  void CIFactory::SetClingTargetLangOpts(LangOptions& Opts,
+					 const TargetInfo& Target) {
     if (Target.getTriple().getOS() == llvm::Triple::Win32) {
       Opts.MicrosoftExt = 1;
       Opts.MSCVersion = 1300;
@@ -179,14 +265,14 @@ namespace cling {
       Opts.MicrosoftExt = 0;
     }
     if (Target.getTriple().getArch() == llvm::Triple::x86) {
-       Opts.ObjCNonFragileABI = 1;
+      Opts.ObjCNonFragileABI = 1;
     } else {
-       Opts.ObjCNonFragileABI = 0;
+      Opts.ObjCNonFragileABI = 0;
     }
     if (Target.getTriple().isOSDarwin()) {
-       Opts.NeXTRuntime = 1;
+      Opts.NeXTRuntime = 1;
     } else {
-       Opts.NeXTRuntime = 0;
+      Opts.NeXTRuntime = 0;
     }
   }
 } // end namespace

@@ -996,6 +996,11 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 // IMPORTANT NOTE: If you intend to use the errors of this histogram later
 // you should call Sumw2 before making this operation.
 // This is particularly important if you fit the histogram after TH1::Add
+//
+//ANOTHER SPECIAL CASE : h1 = h2 and c2 < 0 
+// do a scaling   this = c1 * h1 / (bin Volume)
+//
+
 
    if (!h1 || !h2) {
       Error("Add","Attempt to add a non-existing histogram");
@@ -1035,10 +1040,11 @@ void TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 
 // statistics can be preserved only in case of positive coefficients
 // otherwise with negative c1 (histogram subtraction) one risks to get negative variances
+// also in case of scaling with the width we cannot preserve the statistics
    Double_t s1[kNstat] = {0};
    Double_t s2[kNstat] = {0};
    Double_t s3[kNstat];
-   Bool_t resetStats = (c1*c2 < 0);
+   Bool_t resetStats = (c1*c2 < 0) || normWidth;
    if (!resetStats) {
       // need to initialize to zero s1 and s2 since 
       // GetStats fills only used elements depending on dimension and type
@@ -2061,7 +2067,7 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
       for (i=i_start; i<=i_end; i++) {
          for (j=j_start; j<=j_end; j++) {
             for (k=k_start; k<=k_end; k++) {
-               Int_t x=0, y=0;
+               Int_t x=0;
                bin1 = this->GetBinContent(i,j,k);
                bin2 = h2->GetBinContent(i,j,k);
                err2 = h2->GetBinError(i,j,k);
@@ -2101,7 +2107,6 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                   sum1++;
                   bin1++;
                   x++;
-                  y=1;
                   var1 = sum2*bin2 - sum1*err2;
                   var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
                }
@@ -2110,14 +2115,12 @@ Double_t TH1::Chi2TestX(const TH1* h2,  Double_t &chi2, Int_t &ndf, Int_t &igood
                   sum1++;
                   bin1++;
                   x++;
-                  y=1;
                   var1 = sum2*bin2 - sum1*err2;
                   var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
                   while (var1*var1+bin1 == 0 || var1+var2 == 0) {
                      sum1++;
                      bin1++;
                      x++;
-                     y=1;
                      var1 = sum2*bin2 - sum1*err2;
                      var2 = var1*var1 + 4*sum2*sum2*bin1*err2;
                   }
@@ -2287,6 +2290,10 @@ Double_t *TH1::GetIntegral()
 {
    //  Return a pointer to the array of bins integral.
    //  if the pointer fIntegral is null, TH1::ComputeIntegral is called
+   // The array dimension is the number of bins in the histograms
+   // including underflow and overflow (fNCells)
+   // the last value integral[fNCells] is set to the number of entries of 
+   // the histogram 
 
    if (!fIntegral) ComputeIntegral();
    return fIntegral;
@@ -3628,6 +3635,10 @@ TFitResultPtr TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xx
    ROOT::Fit::DataRange range(xxmin,xxmax);
    ROOT::Math::MinimizerOptions minOption;
 
+   // need to empty the buffer before 
+   // (t.b.d. do a ML unbinned fit with buffer data)
+   if (fBuffer) BufferEmpty();
+
    return ROOT::Fit::FitObject(this, f1 , fitOption , minOption, goption, range);
 }
 
@@ -3935,11 +3946,19 @@ Int_t TH1::FitOptionsMake(Option_t *choptin, Foption_t &fitOption)
    if (opt.Contains("Q"))  fitOption.Quiet   = 1;
    if (opt.Contains("V")) {fitOption.Verbose = 1; fitOption.Quiet = 0;}
    if (opt.Contains("X"))  fitOption.Chi2    = 1;
-   if (opt.Contains("L"))  fitOption.Like    = 1;
-   //if (opt.Contains("LL")) fitOption.Like    = 2;
    if (opt.Contains("W"))  fitOption.W1      = 1;
    if (opt.Contains("WW")) fitOption.W1      = 2; //all bins have weight=1, even empty bins
-   if (opt.Contains("WL")){ fitOption.Like    = 2;  fitOption.W1=0;}//  (weighted likelihood)
+   // likelihood fit options
+   if (opt.Contains("L")) { 
+      fitOption.Like    = 1;
+      //if (opt.Contains("LL")) fitOption.Like    = 2;
+      if (opt.Contains("W")){ fitOption.Like    = 2;  fitOption.W1=0;}//  (weighted likelihood)
+      if (opt.Contains("MULTI")) { 
+         if (fitOption.Like == 2) fitOption.Like = 6; // weighted multinomial 
+         else fitOption.Like    = 4; // multinomial likelihood fit instead of Poisson
+         opt.ReplaceAll("MULTI","");
+      }
+   }
    if (opt.Contains("E"))  fitOption.Errors  = 1;
    if (opt.Contains("M"))  fitOption.More    = 1;
    if (opt.Contains("R"))  fitOption.Range   = 1;
@@ -5205,17 +5224,23 @@ Long64_t TH1::Merge(TCollection *li)
                // they do not make sense also in the case of labels
                if (!allHaveLabels) { 
                   // case of bins without labels 
-                  if (!allSameLimits && ( binx==0 || binx== nx+1)) {
-                     Error("Merge", "Cannot merge histograms - the histograms have"
-                        " different limits and undeflows/overflows are present."
-                        " The initial histogram is now broken!");
-                     return -1;
+                  if (!allSameLimits)  { 
+                     if ( binx==0 || binx== nx+1) {
+                        Error("Merge", "Cannot merge histograms - the histograms have"
+                              " different limits and undeflows/overflows are present."
+                              " The initial histogram is now broken!");
+                        return -1;
+                     }
+                     // NOTE: in the case of one of the histogram  as labels - it is treated as 
+                     // an error and it has been flagged before 
+                     // since calling FindBin(x) for histo with labels does not make sense
+                     // and the result is unpredictable                      
+                     ix = fXaxis.FindBin(hist->GetXaxis()->GetBinCenter(binx));
                   }
-                  // NOTE: in the case of one of the histogram  as labels - it is treated as 
-                  // an error and it has been flagged before 
-                  // since calling FindBin(x) for histo with labels does not make sense
-                  // and the result is unpredictable 
-                  ix = fXaxis.FindBin(hist->GetXaxis()->GetBinCenter(binx));
+                  else {
+                     // histogram have same limits - no need to call FindBin
+                     ix = binx; 
+                  }
                } else {
                   // here only in the case of bins with labels 
                   const char* label=hist->GetXaxis()->GetBinLabel(binx);
@@ -6464,11 +6489,19 @@ void TH1::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out <<"   "<<endl;
    out <<"   "<< ClassName() <<" *";
 
-   //histogram pointer has by default the histogram name.
-   //however, in case histogram has no directory, it is safer to add a incremental suffix
+   // Histogram pointer has by default the histogram name.
+   // However, in case the histogram has no directory, it is safer to add a incremental suffix.
+   // If the histogram belongs to a graph or a stack the suffix is not added because
+   // the graph and stack objects are not aware of this new name. Same thing if
+   // the histogram is drawn with the option COLZ because the TPaletteAxis drawn
+   // when this option is selected, does not know this new name either.
+   TString opt = option;
+   opt.ToLower();
    static Int_t hcounter = 0;
    TString histName = GetName();
-   if (!fDirectory && !histName.Contains("Graph") && !histName.Contains("_stack_")) {
+   if (!fDirectory && !histName.Contains("Graph") 
+                   && !histName.Contains("_stack_")
+                   && !opt.Contains("colz")) {
       hcounter++;
       histName += "__";
       histName += hcounter;
@@ -7342,7 +7375,8 @@ void TH1::SetContent(const Double_t *content)
    //               =====================================================
    Int_t bin;
    Double_t bincontent;
-   for (bin=0; bin<fNcells; bin++) {
+   int nbins = fNcells; // save value because SetBinContent can change fNCells
+   for (bin=0; bin<nbins; bin++) {
       bincontent = *(content + bin);
       SetBinContent(bin, bincontent);
    }

@@ -55,10 +55,17 @@ else()
     get_filename_component(_location ${_location} PATH)
     get_filename_component(ROOTSYS ${_location} PATH)
   endif()
-  set(rootcint_cmd ${ROOTSYS}/bin/setenvwrap.csh ${ld_library_path}=${ROOTSYS}/lib ${ROOTSYS}/bin/rootcint)   
-  #set(rootcint_cmd rootcint)   
+  if(WIN32)
+    set(rootcint_cmd rootcint)   
+  else()
+    set(rootcint_cmd rootcint)   
+#    set(rootcint_cmd ${ROOTSYS}/bin/setenvwrap.csh ${ld_library_path}=${ROOTSYS}/lib ${ROOTSYS}/bin/rootcint)
+  endif()   
   set(rlibmap_cmd rlibmap)   
 endif()
+#---Dictionary dependencies to ${CMAKE_SOURCE_DIR}/cint/cint/inc/cintdictversion.h and rootcint executable 
+set(ROOTCINTDEP ${CMAKE_SOURCE_DIR}/cint/cint/inc/cintdictversion.h ROOTCINTTARGET)
+set(CINTDEP ${CMAKE_SOURCE_DIR}/cint/cint/inc/cintdictversion.h CINTTARGET)
 
 set(CMAKE_VERBOSE_MAKEFILES OFF)
 set(CMAKE_INCLUDE_CURRENT_DIR OFF)
@@ -90,25 +97,32 @@ function(ROOT_GET_SOURCES variable cwd )
 endfunction()
 
 #---------------------------------------------------------------------------------------------------
-#---REFLEX_GENERATE_DICTIONARY( dictionary headerfiles selectionfile OPTIONS opt1 opt2 ...)
+#---REFLEX_GENERATE_DICTIONARY( dictionary headerfiles SELECTION selectionfile OPTIONS opt1 opt2 ...)
 #---------------------------------------------------------------------------------------------------
-macro(REFLEX_GENERATE_DICTIONARY dictionary _headerfiles _selectionfile)  
-  find_package(GCCXML)
-  find_package(ROOT)
-  PARSE_ARGUMENTS(ARG "OPTIONS" "" ${ARGN})  
-  if( IS_ABSOLUTE ${_selectionfile}) 
-   set( selectionfile ${_selectionfile})
+macro(REFLEX_GENERATE_DICTIONARY dictionary)  
+  PARSE_ARGUMENTS(ARG "SELECTION;OPTIONS" "" ${ARGN})  
+  #---Get List of header files---------------
+  set(headerfiles)
+  foreach(fp ${ARG_DEFAULT_ARGS})
+    file(GLOB files inc/${fp})
+    if(files)
+      foreach(f ${files})
+        if(NOT f MATCHES LinkDef)
+          set(headerfiles ${headerfiles} ${f})
+        endif()
+      endforeach()
+    else()
+      set(headerfiles ${headerfiles} ${fp})
+    endif()
+  endforeach()
+  #---Get Selection file------------------------------------
+  if(IS_ABSOLUTE ${ARG_SELECTION})
+    set(selectionfile ${ARG_SELECTION})
   else() 
-   set( selectionfile ${CMAKE_CURRENT_SOURCE_DIR}/${_selectionfile}) 
-  endif()
-  if( IS_ABSOLUTE ${_headerfiles}) 
-    set( headerfiles ${_headerfiles})
-  else()
-    set( headerfiles ${CMAKE_CURRENT_SOURCE_DIR}/${_headerfiles})
+    set(selectionfile ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_SELECTION}})
   endif()
  
   set(gensrcdict ${dictionary}_dict.cpp)
-
   if(MSVC)
     set(gccxmlopts "--gccxmlopt=\"--gccxml-compiler cl\"")
   else()
@@ -120,16 +134,16 @@ macro(REFLEX_GENERATE_DICTIONARY dictionary _headerfiles _selectionfile)
   set(rootmapopts --rootmap=${rootmapname} --rootmap-lib=${libprefix}${dictionary}Dict)
 
   set(include_dirs -I${CMAKE_CURRENT_SOURCE_DIR})
-  get_directory_property(_incdirs INCLUDE_DIRECTORIES)
-  foreach( d ${_incdirs})    
+  get_directory_property(incdirs INCLUDE_DIRECTORIES)
+  foreach( d ${incdirs})    
    set(include_dirs ${include_dirs} -I${d})
   endforeach()
 
-  get_directory_property(_defs COMPILE_DEFINITIONS)
-  foreach( d ${_defs})    
+  get_directory_property(defs COMPILE_DEFINITIONS)
+  foreach( d ${defs})    
    set(definitions ${definitions} -D${d})
   endforeach()
-
+  
   add_custom_command(
     OUTPUT ${gensrcdict} ${rootmapname}     
     COMMAND ${ROOT_genreflex_cmd}       
@@ -139,8 +153,7 @@ macro(REFLEX_GENERATE_DICTIONARY dictionary _headerfiles _selectionfile)
 
   # Creating this target at ALL level enables the possibility to generate dictionaries (genreflex step)
   # well before the dependent libraries of the dictionary are build  
-  add_custom_target(${dictionary}Gen ALL DEPENDS ${gensrcdict})
- 
+  add_custom_target(${dictionary}Gen ALL DEPENDS ${gensrcdict}) 
 endmacro()
 
 #---------------------------------------------------------------------------------------------------
@@ -200,7 +213,7 @@ function(ROOT_GENERATE_DICTIONARY dictionary)
   add_custom_command(OUTPUT ${dictionary}.cxx ${dictionary}.h
                      COMMAND ${rootcint_cmd} -cint -f  ${dictionary}.cxx 
                                           -c ${ARG_OPTIONS} ${definitions} ${includedirs} ${rheaderfiles} ${_linkdef} 
-                     DEPENDS ${headerfiles} ${_linkdef} rootcint)
+                     DEPENDS ${headerfiles} ${_linkdef} ${ROOTCINTDEP})
 endfunction()
 
 
@@ -214,6 +227,11 @@ function(ROOT_LINKER_LIBRARY library)
     set(ARG_TYPE SHARED)
   endif()
   include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_BINARY_DIR}/include )
+  set(library_name ${library})
+  if(TARGET ${library})
+    message("Target ${library} already exists. Renaming target name to ${library}_new")
+    set(library ${library}_new)
+  endif()
   if(WIN32 AND NOT ARG_DLLEXPORT)
     #---create a list of all the object files-----------------------------
     if(CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -254,13 +272,15 @@ function(ROOT_LINKER_LIBRARY library)
     if(ARG_TYPE STREQUAL SHARED)
       set_target_properties(${library} PROPERTIES  ${ROOT_LIBRARY_PROPERTIES} )
     endif()
-    if(explicitlink)
+    if(explicitlink OR ROOT_explicitlink_FOUND)
       target_link_libraries(${library} ${ARG_LIBRARIES} ${ARG_DEPENDENCIES})
     else()
       target_link_libraries(${library} ${ARG_LIBRARIES})
     endif()
   endif()
   set_property(GLOBAL APPEND PROPERTY ROOT_EXPORTED_TARGETS ${library})
+  set_target_properties(${library} PROPERTIES OUTPUT_NAME ${library_name})
+  set_target_properties(${library} PROPERTIES LINK_INTERFACE_LIBRARIES "${ARG_DEPENDENCIES}")
   #----Installation details-------------------------------------------------------
   if(ARG_CMAKENOEXPORT)
     install(TARGETS ${library} RUNTIME DESTINATION bin
@@ -417,6 +437,11 @@ endfunction()
 function(ROOT_EXECUTABLE executable)
   PARSE_ARGUMENTS(ARG "LIBRARIES" "CMAKENOEXPORT" ${ARGN})
   ROOT_GET_SOURCES(exe_srcs src ${ARG_DEFAULT_ARGS})
+  set(executable_name ${executable})
+  if(TARGET ${executable})
+    message("Target ${executable} already exists. Renaming target name to ${executable}_new")
+    set(executable ${executable}_new)
+  endif()
   include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_BINARY_DIR}/include )
   add_executable( ${executable} ${exe_srcs})
   target_link_libraries(${executable} ${ARG_LIBRARIES} )
@@ -424,6 +449,7 @@ function(ROOT_EXECUTABLE executable)
     set_target_properties(${executable} PROPERTIES SUFFIX "")
   endif()
   set_property(GLOBAL APPEND PROPERTY ROOT_EXPORTED_TARGETS ${executable})
+  set_target_properties(${executable} PROPERTIES OUTPUT_NAME ${executable_name})
   #----Installation details------------------------------------------------------
   if(ARG_CMAKENOEXPORT)
     install(TARGETS ${executable} RUNTIME DESTINATION ${bin} COMPONENT applications)
@@ -491,16 +517,13 @@ endmacro()
 #                        [TIMEOUT seconds] 
 #                        [DEBUG]
 #                        [SOURCE_DIR dir] [BINARY_DIR dir]
+#                        [WORKING_DIR dir]
 #                        [BUILD target] [PROJECT project]
 #                        [PASSREGEX exp] [FAILREGEX epx])
 #
 function(ROOT_ADD_TEST test)
-  PARSE_ARGUMENTS(ARG "TIMEOUT;BUILD;OUTPUT;ERROR;SOURCE_DIR;BINARY_DIR;PROJECT;PASSREGEX;FAILREGEX;COMMAND;PRECMD;POSTCMD;ENVIRONMENT;DEPENDS" 
+  PARSE_ARGUMENTS(ARG "TIMEOUT;BUILD;OUTPUT;ERROR;SOURCE_DIR;BINARY_DIR;WORKING_DIR;PROJECT;PASSREGEX;FAILREGEX;COMMAND;PRECMD;POSTCMD;ENVIRONMENT;DEPENDS" 
                       "DEBUG" ${ARGN})
-
-  if(NOT CMAKE_GENERATOR MATCHES Makefiles)
-    set(_cfg $<CONFIGURATION>/)
-  endif()
   #- Handle COMMAND argument
   list(LENGTH ARG_COMMAND _len)
   if(_len LESS 1)
@@ -511,15 +534,12 @@ function(ROOT_ADD_TEST test)
     list(GET ARG_COMMAND 0 _prg)
     list(REMOVE_AT ARG_COMMAND 0)
     if(TARGET ${_prg})
-      get_target_property(_prg ${_prg} LOCATION)
-    endif()
-    if(NOT IS_ABSOLUTE ${_prg})
-      set(_prg ${CMAKE_CURRENT_BINARY_DIR}/${_cfg}${_prg})
-    else()
-    get_filename_component(_path ${_prg} PATH)
-    get_filename_component(_file ${_prg} NAME)
-      set(_prg ${_path}/${_cfg}${_file})
-    endif()
+	  set(_prg "$<TARGET_FILE:${_prg}>")
+	else()
+      if(NOT IS_ABSOLUTE ${_prg})
+        set(_prg ${CMAKE_CURRENT_BINARY_DIR}/${_prg})		
+      endif()
+	endif()
     set(_cmd ${_prg} ${ARG_COMMAND})
     string(REPLACE ";" "#" _cmd "${_cmd}")
   endif()
@@ -545,6 +565,10 @@ function(ROOT_ADD_TEST test)
 
   if(ARG_ERROR)
     set(_command ${_command} -DERR=${ARG_ERROR})
+  endif()
+  
+  if(ARG_WORKING_DIR)
+    set(_command ${_command} -DCWD=${ARG_WORKING_DIR})   
   endif()
 
   if(ARG_DEBUG)

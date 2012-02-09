@@ -241,7 +241,6 @@ void G__define_type()
    int taglen;
    G__value enumval;
    int store_tagdefining;
-   int typedef2 = 0;
    int itemp;
    int nindex = 0;
    int index[G__MAXVARDIM];
@@ -256,11 +255,9 @@ void G__define_type()
    int env_tagnum;
    int isconst = 0;
    fpos_t pos_p2fcomment;
-   int line_p2fcomment;
    int flag_p2f = 0;
    tagname[0] = '\0';
    fgetpos(G__ifile.fp, &pos_p2fcomment);
-   line_p2fcomment = G__ifile.line_number;
 #ifdef G__ASM
 #ifdef G__ASM_DBG
    if (G__asm_dbg && G__asm_noverflow) {
@@ -300,18 +297,27 @@ void G__define_type()
       }
       c = G__fgetname_template(type1, 0, "{");
    }
-   if (!strcmp(type1, "::")) {  // FIXME: This makes no sense, there cannot be typedef ::{...};
+   if (!strcmp(type1, "::")) {
       // skip a :: without a namespace in front of it (i.e. global namespace!)
       c = G__fgetspace(); // skip the next ':'
       c = G__fgetname_template(type1, 0, "{");
    }
-   if (!strncmp(type1, "::", 2)) { // Strip a leading :: (global namespace operator)
-      // A leading '::' causes other typename matching functions to fail so
-      // we remove it. This is not the ideal solution (neither was the one
-      // above since it does not allow for distinction between global
-      // namespace and local namespace) ... but at least it is an improvement
-      // over the current behavior.
-      strcpy((char*)type1, type1 + 2);  // Okay since we reduce the size ...
+   if (!strncmp(type1, "::", 2)) {
+      // Strip a leading :: (global namespace operator).
+      // A leading '::' causes other typename matching
+      // functions to fail so we remove it. This is not
+      // the ideal solution (neither is the one above)
+      // since it does not allow for decriminating between
+      // global namespace and local namespace, but at
+      // least it is an improvement over the current
+      // behavior.
+      //
+      // Note: We must use memmove because the source
+      //       and destination strings overlap!
+      //
+      int t1len = strlen(type1);
+      memmove(type1, type1 + 2, t1len - 2);
+      type1.Set(t1len - 2, '\0');
    }
    while (isspace(c)) {
       len = strlen(type1);
@@ -581,7 +587,6 @@ void G__define_type()
          tagtype = 0;
          tagname[0] = 0;
       }
-      typedef2 = 1;
    }
 
    if (isorgtypepointer) {
@@ -1394,6 +1399,20 @@ int G__search_typename(const char* typenamein, int typein, int tagnum, int refty
 
    /* allocate new type table entry */
    if (flag == 0 && typein) {
+      // If we already have a type/class of the same name that is registered in G__struct as forward declared and/or autoload,
+      // let's invalidate this entry.
+      int alias = G__defined_tagname(type_name,4);
+      if (alias != -1 && G__struct.type[alias] == 'a') {
+         char *old = G__struct.name[alias];
+         G__struct.namerange->Remove(old, alias);
+         
+         G__struct.name[alias] = (char*)malloc(strlen(old)+60);
+         strcpy(G__struct.name[alias],"@@ ex autload entry remove by typedef declaration @@"); // Okay, we allocated enough space
+         strcat(G__struct.name[alias],old); // Okay, we allocated enough space
+         G__struct.type[alias] = 0;
+         free(old);
+      }
+
       if (G__newtype.alltype == G__MAXTYPEDEF) {
          G__fprinterr(G__serr,
                       "Limitation: Number of typedef exceed %d FILE:%s LINE:%d\nFatal error, exit program. Increase G__MAXTYPEDEF in G__ci.h and recompile %s\n"

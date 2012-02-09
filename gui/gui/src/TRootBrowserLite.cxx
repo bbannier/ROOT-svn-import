@@ -447,6 +447,8 @@ TRootIconBox::TRootIconBox(TRootBrowserLite *browser, TGListView *lv, UInt_t opt
    fWasGrouped = kFALSE;
    fActiveObject = 0;
    fIsEmpty = kTRUE;
+   fLargeCachedPic = 0;
+   fSmallCachedPic = 0;
 
    // Don't use timer HERE (timer is set in TBrowser).
    StopRefreshTimer();
@@ -1437,17 +1439,15 @@ void TRootBrowserLite::AddToTree(TObject *obj, const char *name, Int_t check)
          fLt->SetToolTipItem(item, tip.Data());
       } else {
          // special case for remote object
-         Bool_t isRemote = kFALSE;
-         if (obj->InheritsFrom("TRemoteObject"))
-            isRemote = kTRUE;
-         else if (fListLevel) {
+         if (obj->InheritsFrom("TRemoteObject")) {
+            // Nothing to do
+         } else if (fListLevel) {
             // check also if one of its parents is a remote object
             TGListTreeItem *top = fListLevel;
             while (top->GetParent()) {
                TObject *tobj = (TObject *) top->GetUserData();
                if (tobj && (tobj->InheritsFrom("TRemoteObject") ||
                   tobj->InheritsFrom("TApplicationRemote"))) {
-                  isRemote = kTRUE;
                   break;
                }
                top = top->GetParent();
@@ -2174,7 +2174,7 @@ Bool_t TRootBrowserLite::ProcessMessage(Long_t msg, Long_t parm1, Long_t parm2)
                                  break;
                               }
                            }
-                           if (obj2->InheritsFrom("TTree")) {
+                           if (obj2 && obj2->InheritsFrom("TTree")) {
                               // if a tree not attached to any directory (e.g. in a TFolder)
                               // then attach it to the current directory (gDirectory)
                               cmd = TString::Format("((TTree *)0x%lx)->GetDirectory();",

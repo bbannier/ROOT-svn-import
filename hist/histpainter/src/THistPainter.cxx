@@ -2827,7 +2827,9 @@ Int_t THistPainter::DistancetoPrimitive(Int_t px, Int_t py)
    Int_t curdist = big;
    Int_t yxaxis, dyaxis,xyaxis, dxaxis;
    Bool_t dsame;
-   TString doption = gPad->GetPadPointer()->GetDrawOption();
+   TObject *PadPointer = gPad->GetPadPointer();
+   if (!PadPointer) return 0;
+   TString doption = PadPointer->GetDrawOption();
    Double_t factor = 1;
    if (fH->GetNormFactor() != 0) {
       factor = fH->GetNormFactor()/fH->GetSumOfWeights();
@@ -3615,7 +3617,7 @@ void THistPainter::Paint(Option_t *option)
    End_html */
 
    if (fH->GetBuffer()) fH->BufferEmpty(-1);
-   
+
    //For iOS: put the histogram on the top of stack of pickable objects.
    const TPickerStackGuard topPush(fH);
 
@@ -3778,7 +3780,7 @@ paintstat:
          if (obj->InheritsFrom(TF1::Class())) break;
          obj = 0;
       }
-      
+
       //Stat is painted twice (first, it will be in canvas' list of primitives),
       //second, it will be here, this is not required on iOS.
       //Condition is ALWAYS true on a platform different from iOS.
@@ -3895,7 +3897,7 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    feature is used to make sure that the grid is drawn in the background and
    the axis tick marks in the foreground of the pad.
    End_html */
-   
+
    //On iOS, grid should not be picable and can not be highlighted.
    //Condition is never true on a platform different from iOS.
    if (drawGridOnly && (gPad->PadInHighlightMode() || gPad->PadInSelectionMode()))
@@ -3963,12 +3965,11 @@ void THistPainter::PaintAxis(Bool_t drawGridOnly)
    }
 
    // Paint X axis
-   
+
    //To make X-axis selectable on iOS device.
    if (gPad->PadInSelectionMode())
       gPad->PushSelectableObject(fXaxis);
-   
-   
+
    //This condition is ALWAYS true, unless it works on iOS (can be false on iOS).
    if (gPad->PadInSelectionMode() || !gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && gPad->GetSelected() == fXaxis)) {
       ndivx = fXaxis->GetNdivisions();
@@ -4329,19 +4330,8 @@ void THistPainter::PaintBoxes(Option_t *)
    Double_t dymin = 0.51*(gPad->PadtoY(uy0)-gPad->PadtoY(uy1));
 
    Double_t zmin = fH->GetMinimum();
-   Double_t zmax = fH->GetMaximum();
-
-   if (Hoption.Logz) {
-      if (zmin > 0) {
-         zmin = TMath::Log10(zmin*0.1);
-         zmax = TMath::Log10(zmax);
-      } else {
-         return;
-      }
-   } else {
-      zmax = TMath::Max(TMath::Abs(zmin),TMath::Abs(zmax));
-      zmin = 0;
-   }
+   Double_t zmax = TMath::Max(TMath::Abs(fH->GetMaximum()),
+                              TMath::Abs(fH->GetMinimum()));
 
    // In case of option SAME, zmin and zmax values are taken from the
    // first plotted 2D histogram.
@@ -4351,7 +4341,8 @@ void THistPainter::PaintBoxes(Option_t *)
       while ((h2 = (TH2 *)next())) {
          if (!h2->InheritsFrom(TH2::Class())) continue;
          zmin = h2->GetMinimum();
-         zmax = h2->GetMaximum();
+         zmax = TMath::Max(TMath::Abs(h2->GetMaximum()),
+                           TMath::Abs(h2->GetMinimum()));
          if (Hoption.Logz) {
             zmax = TMath::Log10(zmax);
             if (zmin <= 0) {
@@ -4362,6 +4353,18 @@ void THistPainter::PaintBoxes(Option_t *)
          }
          break;
       }
+   }
+      
+   if (Hoption.Logz) {
+      if (zmin > 0) {
+         zmin = TMath::Log10(zmin*0.1);
+         zmax = TMath::Log10(zmax);
+      } else {
+         return;
+      }
+   } else {
+      zmin = 0;
+      zmax = TMath::Max(TMath::Abs(zmin),TMath::Abs(zmax));      
    }
 
    Double_t zratio, dz = zmax - zmin;
@@ -5022,9 +5025,7 @@ void THistPainter::PaintErrors(Option_t *)
    // On iOS, we do not highlight histogram, if it's not picked at the moment
    // (but part of histogram (axis or pavestat) was picked, that's why this code
    // is called at all. This conditional statement never executes on non-iOS platform.
-   if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH)
-      return;
-   
+   if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH) return;
 
    const Int_t kBASEMARKER=8;
    Double_t xp, yp, ex1, ex2, ey1, ey2;
@@ -5460,7 +5461,7 @@ void THistPainter::PaintFrame()
       if (frame) gPad->GetListOfPrimitives()->Remove(frame);
       return;
    }
-   
+
    //The next statement is always executed on non-iOS platform,
    //on iOS depends on pad mode.
    if (!gPad->PadInSelectionMode() && !gPad->PadInHighlightMode())
@@ -5494,7 +5495,7 @@ void THistPainter::PaintFunction(Option_t *)
       } else  {
          //Let's make this 'function' selectable on iOS device (for example, it can be TPaveStat).
          gPad->PushSelectableObject(obj);
-      
+
          //The next statement is ALWAYS executed on non-iOS platform, on iOS it depends on pad's mode
          //and picked object.
          if (!gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && obj == gPad->GetSelected()))
@@ -5560,8 +5561,10 @@ void THistPainter::PaintHist(Option_t *)
          if (Hoption.Logy) yb = TMath::Log10(TMath::Max(c1,.1*logymin));
          else              yb = c1;
       }
-      yb = TMath::Max(yb, ymin);
-      yb = TMath::Min(yb, ymax);
+      if(!Hoption.Line){
+         yb = TMath::Max(yb, ymin);
+         yb = TMath::Min(yb, ymax);
+      }
       keepy[j-first] = yb;
    }
 
@@ -7933,10 +7936,9 @@ void THistPainter::PaintTH2PolyBins(Option_t *option)
     option = "L" draw the bins as line.
     option = "P" draw the bins as markers.
     End_html */
-    
+
    //Do not highlight the histogram, if its part was picked.
-   if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH)
-      return;
+   if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH) return;
 
    TString opt = option;
    opt.ToLower();
@@ -7993,7 +7995,7 @@ void THistPainter::PaintTH2PolyColorLevels(Option_t *)
    /* Begin_html
     <a href="#HP20a">Control function to draw a TH2Poly as a color plot.</a>
     End_html */
-   
+
    //Do not highlight the histogram, if its part was picked.
    if (gPad->PadInHighlightMode() && gPad->GetSelected() != fH)
       return;
@@ -8295,9 +8297,16 @@ void THistPainter::PaintText(Option_t *)
       text.TAttText::Modify();
       Double_t dt = 0.02*(gPad->GetY2()-gPad->GetY1());
       for (Int_t i=Hparam.xfirst; i<=Hparam.xlast;i++) {
-         x  = fH->GetXaxis()->GetBinCenter(i);
+         if (Hoption.Bar) {
+            x  = fH->GetXaxis()->GetBinLowEdge(i)+
+                 fH->GetXaxis()->GetBinWidth(i)*
+                 (fH->GetBarOffset()+0.5*fH->GetBarWidth());
+         } else {
+            x  = fH->GetXaxis()->GetBinCenter(i);
+         }
          y  = fH->GetBinContent(i);
          yt = y;
+         if (gStyle->GetHistMinimumZero() && y<0) y = 0;
          if (getentries) yt = hp->GetBinEntries(i);
          snprintf(value,50,format,yt);
          if (Hoption.Logx) {
@@ -9045,7 +9054,7 @@ void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
    c->SetLogx(padsav->GetLogx());
 
    // Draw slice corresponding to mouse position
-   TH1D *hp = ((TH2*)fH)->ProjectionX("_px", biny1, biny2);
+   TH1D *hp = ((TH2*)fH)->ProjectionX("slice_px", biny1, biny2);
    if (hp) {
       hp->SetFillColor(38);
       if (biny1 == biny2) hp->SetTitle(Form("ProjectionX of biny=%d", biny1));
@@ -9106,7 +9115,7 @@ void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
    c->SetLogx(padsav->GetLogy());
 
    // Draw slice corresponding to mouse position
-   TH1D *hp = ((TH2*)fH)->ProjectionY("_py", binx1, binx2);
+   TH1D *hp = ((TH2*)fH)->ProjectionY("slice_py", binx1, binx2);
    if (hp) {
       hp->SetFillColor(38);
       if (binx1 == binx2) hp->SetTitle(Form("ProjectionY of binx=%d", binx1));
@@ -9166,8 +9175,10 @@ void THistPainter::ShowProjection3(Int_t px, Int_t py)
 
    int pxmin = gPad->XtoAbsPixel(uxmin);
    int pxmax = gPad->XtoAbsPixel(uxmax);
+   if (pxmin==pxmax) return;
    int pymin = gPad->YtoAbsPixel(uymin);
    int pymax = gPad->YtoAbsPixel(uymax);
+   if (pymin==pymax) return;
    Double_t cx    = (pxmax-pxmin)/(uxmax-uxmin);
    Double_t cy    = (pymax-pymin)/(uymax-uymin);
    TVirtualPad *padsav = gPad;

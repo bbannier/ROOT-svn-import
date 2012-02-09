@@ -101,15 +101,21 @@ namespace cling {
     private:
       Interpreter* m_Interpreter;
       clang::ASTContext& m_Context;
-      clang::DeclContext* m_CurDeclContext;
+      const clang::DeclContext* m_CurDeclContext;
       clang::NamedDecl* m_Result;
-      NamedDeclResult(llvm::StringRef Decl, Interpreter* interp, clang::DeclContext* Within = 0);
+      NamedDeclResult(llvm::StringRef Decl, Interpreter* interp, 
+                      const clang::DeclContext* Within = 0);
     public:
       NamedDeclResult& LookupDecl(llvm::StringRef);
       operator clang::NamedDecl* () const { return getSingleDecl(); }
       clang::NamedDecl* getSingleDecl() const;
       template<class T> T* getAs(){
-        return llvm::dyn_cast<T>(getSingleDecl());
+        clang::NamedDecl *result = getSingleDecl();
+        if (result) {
+           return llvm::dyn_cast<T>(result);
+        } else {
+           return 0;
+        }
       }
       
       friend class Interpreter;
@@ -124,8 +130,7 @@ namespace cling {
     //---------------------------------------------------------------------
     //! Constructor
     //---------------------------------------------------------------------
-    Interpreter(int argc, const char* const *argv,
-                const char* startupPCH = 0, const char* llvmdir = 0);
+    Interpreter(int argc, const char* const *argv, const char* llvmdir = 0);
     
     //---------------------------------------------------------------------
     //! Destructor
@@ -139,8 +144,25 @@ namespace cling {
     std::string createUniqueName();
     void AddIncludePath(const char *incpath);
     void DumpIncludePath();
+ 
+    ///\brief Compiles input line. 
+    ///
+    /// This is top most interface, which helps running statements and 
+    /// expressions on the global scope. If rawInput mode disabled the
+    /// input will be wrapped into wrapper function. Declaration extraction
+    /// will be enabled and all declarations will be extracted as global.
+    /// After compilation the wrapper will be executed.
+    /// 
+    /// If rawInput enabled no execution or declaration extraction is done
+    ///
+    /// @param[in] input_line - the input to be compiled
+    /// @param[in] rawInput - turns on or off the wrapping of the input
+    /// @param[out] D - returns the first declaration that was parsed from the
+    ///                 input
+    ///
     CompilationResult processLine(const std::string& input_line, 
-                                  bool rawInput = false);
+                                  bool rawInput = false,
+                                  const clang::Decl** D = 0);
     
     bool loadFile(const std::string& filename,
                   const std::string* trailcode = 0,
@@ -162,11 +184,11 @@ namespace cling {
     
     llvm::raw_ostream& getValuePrinterStream() const { return *m_ValuePrintStream; }
 
-    void writeStartupPCH();
-
     void runStaticInitializersOnce() const;
 
     int CXAAtExit(void (*func) (void*), void* arg, void* dso);
+
+	
     
   private:
     InvocationOptions m_Opts; // Interpreter options
@@ -192,13 +214,14 @@ namespace cling {
 
   private:
     void handleFrontendOptions();
-    void processStartupPCH();
     CompilationResult handleLine(llvm::StringRef Input,
-                                 llvm::StringRef FunctionName);
+                                 llvm::StringRef FunctionName,
+                                 bool rawInput = false, const clang::Decl** D = 0);
     void WrapInput(std::string& input, std::string& fname);
     bool RunFunction(llvm::StringRef fname, llvm::GenericValue* res = 0);
     friend class runtime::internal::LifetimeHandler;
     
+	bool addSymbol(const char* symbolName,  void* symbolAddress);
   public:
     ///\brief Evaluates given expression within given declaration context.
     ///
@@ -214,7 +237,8 @@ namespace cling {
     ///@param[in] Decl Declaration name.
     ///@param[in] Within Starting declaration context.
     ///
-    NamedDeclResult LookupDecl(llvm::StringRef Decl, clang::DeclContext* Within = 0);
+    NamedDeclResult LookupDecl(llvm::StringRef Decl, 
+                               const clang::DeclContext* Within = 0);
 
     ///\brief Sets callbacks needed for the dynamic lookup.
     void setCallbacks(InterpreterCallbacks* C);

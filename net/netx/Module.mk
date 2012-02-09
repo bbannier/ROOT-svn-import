@@ -53,7 +53,7 @@ endif
 # Xrootd includes
 NETXINCEXTRA := $(XROOTDDIRI:%=-I%)
 ifneq ($(EXTRA_XRDFLAGS),)
-NETXINCEXTRA += -Iproof/proofd/inc
+NETXINCEXTRA += -I$(ROOT_SRCDIR)/proof/proofd/inc
 endif
 
 # Xrootd client libs
@@ -61,10 +61,9 @@ ifeq ($(PLATFORM),win32)
 NETXLIBEXTRA += $(XROOTDDIRL)/libXrdClient.lib
 else
 ifeq ($(HASXRDUTILS),no)
-NETXLIBEXTRA += -L$(XROOTDDIRL) -lXrdOuc -lXrdSys \
-                -lXrdClient -lpthread
+NETXLIBEXTRA += $(XROOTDDIRL) -lXrdOuc -lXrdSys -lXrdClient -lpthread
 else
-NETXLIBEXTRA += -L$(XROOTDDIRL) -lXrdUtils -lXrdClient
+NETXLIBEXTRA += $(XROOTDDIRL) -lXrdUtils -lXrdClient
 endif
 endif
 

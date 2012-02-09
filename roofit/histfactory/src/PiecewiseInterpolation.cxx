@@ -107,6 +107,10 @@ PiecewiseInterpolation::PiecewiseInterpolation(const char* name, const char* tit
     }
     _interpCode.push_back(0); // default code: linear interpolation
   }
+
+  
+  // Choose special integrator by default 
+  specialIntegratorConfig(kTRUE)->method1D().setLabel("RooBinIntegrator") ;
 }
 
 
@@ -269,7 +273,7 @@ Int_t PiecewiseInterpolation::getAnalyticalIntegralWN(RooArgSet& allVars, RooArg
 
   // Force using numeric integration
   // use special numeric integrator  
-  //  return 0;
+  return 0;
   
 
   // KC: check if interCode=0 for all 
@@ -549,6 +553,44 @@ void PiecewiseInterpolation::printAllInterpCodes(){
     coutI(InputArguments) <<"interp code for " << _paramSet.at(i)->GetName() << " = " << _interpCode.at(i) <<endl;
   }
 }
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* PiecewiseInterpolation::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const 
+{
+  // WVE note: assumes nominal and alternates have identical structure, must add explicit check
+  return _nominal.arg().binBoundaries(obs,xlo,xhi) ;  
+}
+
+
+//_____________________________________________________________________________
+Bool_t PiecewiseInterpolation::isBinnedDistribution(const RooArgSet& obs) const 
+{
+  // WVE note: assumes nominal and alternates have identical structure, must add explicit check
+  return _nominal.arg().isBinnedDistribution(obs) ;
+}
+
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* PiecewiseInterpolation::plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const 
+{
+  return _nominal.arg().plotSamplingHint(obs,xlo,xhi) ;  
+}
+
+//______________________________________________________________________________
+void PiecewiseInterpolation::Streamer(TBuffer &R__b)
+{
+   // Stream an object of class PiecewiseInterpolation.
+
+   if (R__b.IsReading()) {
+      R__b.ReadClassBuffer(PiecewiseInterpolation::Class(),this);
+      specialIntegratorConfig(kTRUE)->method1D().setLabel("RooBinIntegrator") ;      
+   } else {
+      R__b.WriteClassBuffer(PiecewiseInterpolation::Class(),this);
+   }
+}
+
 
 
 /*

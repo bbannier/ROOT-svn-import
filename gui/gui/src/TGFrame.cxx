@@ -258,8 +258,11 @@ void TGFrame::DeleteWindow()
       if (gDNDManager->GetMainFrame() == this)
          gDNDManager->SetMainFrame(0);
    }
-   if (!TestBit(kDeleteWindowCalled))
+   if (!TestBit(kDeleteWindowCalled)) {
+      // coverity[returned_null]
+      // coverity[dereference]
       TTimer::SingleShot(150, IsA()->GetName(), this, "ReallyDelete()");
+   }
    SetBit(kDeleteWindowCalled);
 }
 
@@ -2165,6 +2168,8 @@ void TGGroupFrame::DrawBorder()
    t = (max_ascent + max_descent + 2) >> 1;
    r = fWidth - 1;
    // next three lines are for backward compatibility in case of horizontal layout
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if ((lm->InheritsFrom(TGHorizontalLayout::Class())) ||
        (lm->InheritsFrom(TGMatrixLayout::Class())))
@@ -2293,6 +2298,8 @@ TGHeaderFrame::TGHeaderFrame(const TGWindow *p, UInt_t w, UInt_t h,
    fOverButton = -1;
    fLastButton = -1;
    fNColumns   = 1;
+   fColHeader  = 0;
+   fSplitHeader = 0;
 
    gVirtualX->GrabButton(fId, kAnyButton, kAnyModifier,
                          kButtonPressMask | kButtonReleaseMask,
@@ -2720,6 +2727,8 @@ void TGCompositeFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from the composite frame type
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager *lm = GetLayoutManager();
    if ((GetOptions() & kHorizontalFrame) &&
        (lm->InheritsFrom(TGHorizontalLayout::Class()))) {
@@ -2933,6 +2942,8 @@ void TGMainFrame::SaveSource(const char *filename, Option_t *option)
    gListOfHiddenFrames->Clear();
 
    Bool_t usexy = kFALSE;
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if (lm->InheritsFrom("TGXYLayout"))
       usexy = kTRUE;
@@ -3035,6 +3046,8 @@ void TGMainFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from the main frame type
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if ((GetOptions() & kHorizontalFrame) &&
        (lm->InheritsFrom(TGHorizontalLayout::Class()))) {
@@ -3088,6 +3101,8 @@ void TGHorizontalFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from the main frame type
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if ((GetOptions() & kHorizontalFrame) &&
        (lm->InheritsFrom(TGHorizontalLayout::Class()))) {
@@ -3129,6 +3144,8 @@ void TGVerticalFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from the main frame type
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if ((GetOptions() & kHorizontalFrame) &&
        (lm->InheritsFrom(TGHorizontalLayout::Class()))) {
@@ -3179,7 +3196,11 @@ void TGGroupFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    // font + GC
    option = GetName()+5;         // unique digit id of the name
    TString parGC, parFont;
+   // coverity[returned_null]
+   // coverity[dereference]
    parFont.Form("%s::GetDefaultFontStruct()",IsA()->GetName());
+   // coverity[returned_null]
+   // coverity[dereference]
    parGC.Form("%s::GetDefaultGC()()",IsA()->GetName());
 
    if ((GetDefaultFontStruct() != fFontStruct) || (GetDefaultGC()() != fNormGC)) {
@@ -3234,6 +3255,8 @@ void TGGroupFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
    // setting layout manager
    out << "   " << GetName() <<"->SetLayoutManager(";
+   // coverity[returned_null]
+   // coverity[dereference]
    GetLayoutManager()->SavePrimitive(out, option);
    out << ");"<< endl;
 
@@ -3442,6 +3465,8 @@ void TGTransientFrame::SaveSource(const char *filename, Option_t *option)
    gListOfHiddenFrames->Clear();
 
    Bool_t usexy = kFALSE;
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if (lm->InheritsFrom("TGXYLayout"))
       usexy = kTRUE;
@@ -3531,6 +3556,8 @@ void TGTransientFrame::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
 
    // setting layout manager if it differs from transient frame type
+   // coverity[returned_null]
+   // coverity[dereference]
    TGLayoutManager * lm = GetLayoutManager();
    if ((GetOptions() & kHorizontalFrame) &&
        (lm->InheritsFrom(TGHorizontalLayout::Class()))) {

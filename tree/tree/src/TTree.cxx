@@ -529,7 +529,7 @@ Long64_t TTree::TClusterIterator::GetEstimatedClusterSize()
          // Humm ... let's double check on the file.
          TFile *file = fTree->GetCurrentFile();
          if (file) {
-            TFileCacheRead *cache = file->GetCacheRead();
+            TFileCacheRead *cache = file->GetCacheRead(fTree);
             if (cache) {
                cacheSize = cache->GetBufferSize();
             }
@@ -784,15 +784,9 @@ TTree::~TTree()
       //delete the file cache if it points to this Tree
       TFile *file = fDirectory->GetFile();
       if (file) {
-         TFileCacheRead *pf = file->GetCacheRead();
-         if (pf && pf->InheritsFrom(TTreeCache::Class())) {
-            TTreeCache *tpf = (TTreeCache*)pf;
-            if (tpf->GetOwner() == this) {
-               delete tpf;
-               tpf = 0;
-               file->SetCacheRead(0);
-            }
-         }
+         TFileCacheRead *pf = file->GetCacheRead(this);
+         file->SetCacheRead(0,this);
+         delete pf;
       }
    }
    // We don't own the leaves in fLeaves, the branches do.
@@ -893,7 +887,7 @@ void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
    
    TFile *f = GetCurrentFile();
    if (!f) return;
-   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
    if (tc) tc->AddBranch(bname,subbranches);
 }
 
@@ -906,7 +900,7 @@ void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
    
    TFile *f = GetCurrentFile();
    if (!f) return;
-   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
    if (tc) tc->AddBranch(b,subbranches);
 }
 
@@ -920,7 +914,7 @@ void TTree::DropBranchFromCache(const char*bname, Bool_t subbranches)
    
    TFile *f = GetCurrentFile();
    if (!f) return;
-   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
    if (tc) tc->DropBranch(bname,subbranches);
 }
 
@@ -933,7 +927,7 @@ void TTree::DropBranchFromCache(TBranch *b, Bool_t subbranches)
    
    TFile *f = GetCurrentFile();
    if (!f) return;
-   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
    if (tc) tc->DropBranch(b,subbranches);
 }
 
@@ -1448,6 +1442,19 @@ Int_t TTree::Branch(TCollection* li, Int_t bufsize /* = 32000 */, Int_t splitlev
    // to give names to collections to avoid misleading branch names or
    // identical branch names. By default collections have a name equal to
    // the corresponding class name, e.g. the default name for a TList is "TList".
+   // 
+   // And in general in any cases two or more master branches contain subbranches 
+   // with identical names, one must add a "." (dot) character at the end
+   // of the master branch name. This will force the name of the subbranch
+   // to be master.subbranch instead of simply subbranch.
+   // This situation happens when the top level object (say event)
+   // has two or more members referencing the same class.
+   // For example, if a Tree has two branches B1 and B2 corresponding
+   // to objects of the same class MyClass, one can do:
+   //       tree.Branch("B1.","MyClass",&b1,8000,1);
+   //       tree.Branch("B2.","MyClass",&b2,8000,1);
+   // if MyClass has 3 members a,b,c, the two instructions above will generate
+   // subbranches called B1.a, B1.b ,B1.c, B2.a, B2.b, B2.c
    //
    // Example--------------------------------------------------------------:
    /*
@@ -2643,49 +2650,51 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    // Create a clone of this tree and copy nentries.
    //
    // By default copy all entries.
-   // Note that only active branches are copied.
-   // The compression level of the cloned tree is set to the destination file's
-   // compression level.
+   // The compression level of the cloned tree is set to the destination
+   // file's compression level.
    //
-   // IMPORTANT: The cloned tree stays connected with this tree until this tree
-   //            is deleted.  In particular, any changes in branch addresses
-   //            in this tree are forwarded to the clone trees, unless a branch
-   //            in a clone tree has had its address changed, in which case
-   //            that change stays in effect.  When this tree is deleted, all the
-   //            addresses of the cloned tree are reset to their default values.
+   // NOTE: Only active branches are copied.
+   // NOTE: If the TTree is a TChain, the structure of the first TTree
+   //       is used for the copy.
    //
-   // If 'option' contains the word 'fast' and nentries is -1, the cloning will be
-   // done without unzipping or unstreaming the baskets (i.e., a direct copy of the
-   // raw bytes on disk).
+   // IMPORTANT: The cloned tree stays connected with this tree until
+   //            this tree is deleted. In particular, any changes in
+   //            branch addresses in this tree are forwarded to the
+   //            clone trees, unless a branch in a clone tree has had
+   //            its address changed, in which case that change stays in
+   //            effect. When this tree is deleted, all the addresses of
+   //            the cloned tree are reset to their default values.
    //
-   // When 'fast' is specified, 'option' can also contains a
-   // sorting order for the baskets in the output file.
+   // If 'option' contains the word 'fast' and nentries is -1, the
+   // cloning will be done without unzipping or unstreaming the baskets
+   // (i.e., a direct copy of the raw bytes on disk).
+   //
+   // When 'fast' is specified, 'option' can also contain a sorting
+   // order for the baskets in the output file.
    //
    // There are currently 3 supported sorting order:
    //    SortBasketsByOffset (the default)
    //    SortBasketsByBranch
    //    SortBasketsByEntry
    //
-   // When using SortBasketsByOffset the baskets are written in
-   // the output file in the same order as in the original file
-   // (i.e. the basket are sorted on their offset in the original
-   // file; Usually this also means that the baskets are sorted
-   // on the index/number of the _last_ entry they contain)
+   // When using SortBasketsByOffset the baskets are written in the
+   // output file in the same order as in the original file (i.e. the
+   // baskets are sorted by their offset in the original file; Usually
+   // this also means that the baskets are sorted by the index/number of
+   // the _last_ entry they contain)
    //
-   // When using SortBasketsByBranch all the baskets of each
-   // individual branches are stored contiguously.  This tends to
-   // optimize reading speed when reading a small number (1->5) of
-   // branches, since all their baskets will be clustered together
-   // instead of being spread across the file.  However it might
-   // decrease the performance when reading more branches (or the full
-   // entry).
+   // When using SortBasketsByBranch all the baskets of each individual
+   // branches are stored contiguously. This tends to optimize reading
+   // speed when reading a small number (1->5) of branches, since all
+   // their baskets will be clustered together instead of being spread
+   // across the file. However it might decrease the performance when
+   // reading more branches (or the full entry).
    //
-   // When using SortBasketsByEntry the baskets with the lowest
-   // starting entry are written first.  (i.e. the baskets are
-   // sorted on the index/number of the first entry they contain).
-   // This means that on the file the baskets will be in the order
-   // in which they will be needed when reading the whole tree
-   // sequentially.
+   // When using SortBasketsByEntry the baskets with the lowest starting
+   // entry are written first. (i.e. the baskets are sorted by the
+   // index/number of the first entry they contain). This means that on
+   // the file the baskets will be in the order in which they will be
+   // needed when reading the whole tree sequentially.
    //
    // For examples of CloneTree, see tutorials:
    //
@@ -2693,8 +2702,8 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    //
    //     A macro to copy a subset of a TTree to a new TTree.
    //
-   //     The input file has been generated by the program in $ROOTSYS/test/Event
-   //     with:  Event 1000 1 1 1
+   //     The input file has been generated by the program in
+   //     $ROOTSYS/test/Event with: Event 1000 1 1 1
    //
    //  -- copytree2
    //
@@ -2702,8 +2711,8 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
    //
    //     One branch of the new Tree is written to a separate file.
    //
-   //     The input file has been generated by the program in $ROOTSYS/test/Event
-   //     with:  Event 1000 1 1 1
+   //     The input file has been generated by the program in
+   //     $ROOTSYS/test/Event with: Event 1000 1 1 1
    //
 
    // Options
@@ -4670,10 +4679,13 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //  when calling mytree.GetEntry(i); only branches "a" and "b" will be read.
    //
    //  WARNING!!
-   //  If your Tree has been created in split mode with a parent branch "parent",
+   //  If your Tree has been created in split mode with a parent branch "parent.",
    //     mytree.SetBranchStatus("parent",1);
    //  will not activate the sub-branches of "parent". You should do:
    //     mytree.SetBranchStatus("parent*",1);
+   //
+   //  Without the trailing dot in the branch creation you have no choice but to 
+   //  call SetBranchStatus explicitly for each of the sub branches.
    //
    //  An alternative is to call directly
    //     brancha.GetEntry(i)
@@ -5910,7 +5922,8 @@ void TTree::OptimizeBaskets(ULong64_t maxMemory, Float_t minComp, Option_t *opti
       // Really, really never go lower than 8 bytes (we use this number
       // so that the calculation of the number of basket is consistent
       // but in fact SetBasketSize will not let the size go below
-      // 100+TBranch::fEntryOffsetLen)
+      // TBranch::fEntryOffsetLen + (100 + strlen(branch->GetName())
+      // (The 2nd part being a slight over estimate of the key length.
       static const UInt_t hardmin = 8;
       bmin = (bmin_new > hardmax) ? hardmax : ( bmin_new < hardmin ? hardmin : (UInt_t)bmin_new );
       bmax = (bmax_new > hardmax) ? bmin : (UInt_t)bmax_new;         
@@ -6081,7 +6094,7 @@ void TTree::PrintCacheStats(Option_t* option) const
 
    TFile *f = GetCurrentFile();
    if (!f) return;
-   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead(const_cast<TTree*>(this));
    if (tc) tc->Print(option);
 }
 
@@ -7107,15 +7120,17 @@ void TTree::SetCacheSize(Long64_t cacheSize)
       fCacheSize = cacheSize;
       return;
    }
-   TFileCacheRead* pf = file->GetCacheRead();
-   if (pf) {
+   // Only care about the 'current' TFileCacheRead if it is related to 
+   // this TTree.
+   TTreeCache* pf = dynamic_cast<TTreeCache*>(file->GetCacheRead(this));
+   if (pf && pf->GetTree()==this) {
       if (cacheSize == fCacheSize) {
          return;
       }
+      file->SetCacheRead(0, this);
       delete pf;
       pf = 0;
       if (cacheSize == 0) {
-         file->SetCacheRead(0);
          fCacheSize=0;
          return;
       }
@@ -7138,7 +7153,7 @@ void TTree::SetCacheEntryRange(Long64_t first, Long64_t last)
 
    TFile *f = GetCurrentFile();
    if (!f) return;
-   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
    if (tc) tc->SetEntryRange(first,last);
 }
 
@@ -7635,7 +7650,7 @@ void TTree::StopCacheLearningPhase()
 
    TFile *f = GetCurrentFile();
    if (!f) return;
-   TTreeCache *tc = (TTreeCache*)f->GetCacheRead();
+   TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
    if (tc) tc->StopLearningPhase();
 }
 

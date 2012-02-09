@@ -429,7 +429,11 @@ TEventIterTree::TFileTree::~TFileTree()
    // Default dtor.
 
    // Avoid destroying the cache; must be placed before deleting the trees
-   fFile->SetCacheRead(0);
+   TTree *tree = (TTree *)fTrees->First();
+   while (tree) {
+      fFile->SetCacheRead(0, tree);
+      tree = (TTree *)fTrees->After(tree);
+   }
    SafeDelete(fTrees);
    SafeDelete(fFile);
 }
@@ -525,11 +529,11 @@ TTree* TEventIterTree::GetTrees(TDSetElement *elem)
          if (curfile) {
             if (!fTreeCache) {
                main->SetCacheSize(fCacheSize);
-               fTreeCache = (TTreeCache *)curfile->GetCacheRead();
+               fTreeCache = (TTreeCache *)curfile->GetCacheRead(main);
                if (fCacheSize < 0) fCacheSize = main->GetCacheSize();
             } else {
-               curfile->SetCacheRead(fTreeCache);
-               fTreeCache->UpdateBranches(main, kTRUE);
+               curfile->SetCacheRead(fTreeCache, main);
+               fTreeCache->UpdateBranches(main);
             }
             if (fTreeCache) {
                fTreeCacheIsLearning = fTreeCache->IsLearning();
@@ -617,6 +621,8 @@ TTree* TEventIterTree::Load(TDSetElement *e, Bool_t &localfile)
    const char *fn = e->GetFileName();
    const char *dn = e->GetDirectory();
    const char *tn = e->GetObjName();
+   PDB(kLoop,2)
+      Info("Load","loading: fn:'%s' dn:'%s' tn:'%s'", fn, dn, tn);
 
    TFile *f = 0;
 
@@ -665,6 +671,8 @@ TTree* TEventIterTree::Load(TDSetElement *e, Bool_t &localfile)
    } else {
       // Fill locality boolean
       localfile = ft->fIsLocal;
+      PDB(kLoop,2)
+         Info("Load","file '%s' already open (local:%d)", fn, localfile);
    }
 
    // Check if the tree is already loaded

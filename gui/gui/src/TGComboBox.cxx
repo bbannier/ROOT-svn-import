@@ -347,7 +347,7 @@ void TGComboBox::EnableTextInput(Bool_t on)
 {
    // Switch text input or readonly mode of combobox (not perfect yet).
 
-   UInt_t w, h;
+   // UInt_t w, h;
    const char *text = "";
    Pixel_t back = TGFrame::GetWhitePixel(); // default
 
@@ -359,8 +359,8 @@ void TGComboBox::EnableTextInput(Bool_t on)
             fTextEntry->SetText(text);
          }
          RemoveFrame(fSelEntry);
-         w = fSelEntry->GetWidth();
-         h = fSelEntry->GetHeight();
+         //w = fSelEntry->GetWidth();
+         //h = fSelEntry->GetHeight();
          fSelEntry->DestroyWindow();
          delete fSelEntry;
          fSelEntry = 0;
@@ -374,6 +374,8 @@ void TGComboBox::EnableTextInput(Bool_t on)
       }
       fTextEntry->SetBackgroundColor(back);
       MapSubwindows();
+      // coverity[returned_null]
+      // coverity[dereference]
       GetLayoutManager()->Layout();
    } else {
       if (fTextEntry) {
@@ -381,8 +383,8 @@ void TGComboBox::EnableTextInput(Bool_t on)
          text = fTextEntry->GetText();
          RemoveFrame(fTextEntry);
          fTextEntry->DestroyWindow();
-         w = fTextEntry->GetWidth();
-         h = fTextEntry->GetHeight();
+         //w = fTextEntry->GetWidth();
+         //h = fTextEntry->GetHeight();
          delete fTextEntry;
          fTextEntry = 0;
       }
@@ -394,6 +396,8 @@ void TGComboBox::EnableTextInput(Bool_t on)
       }
       fSelEntry->SetBackgroundColor(back);
       MapSubwindows();
+      // coverity[returned_null]
+      // coverity[dereference]
       GetLayoutManager()->Layout();
    }
 }
@@ -564,6 +568,8 @@ Bool_t TGComboBox::ProcessMessage(Long_t msg, Long_t, Long_t parm2)
                   TGTextLBEntry *te = (TGTextLBEntry*)e;
                   fTextEntry->SetText(te->GetText()->GetString());
                }
+               // coverity[returned_null]
+               // coverity[dereference]
                GetLayoutManager()->Layout();
                fComboFrame->EndPopup();
                fDDButton->SetState(kButtonUp);

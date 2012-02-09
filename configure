@@ -397,7 +397,7 @@ check_libcompat() {
 #_____________________________________________________________________
 check_lib64() {
     # This function will try to find out if a library [$1] contains 64 bit
-    # or 32 bit code. Currently works only for linux.
+    # or 32 bit code. Currently works only for linux and solaris.
     # The result of the check is stored in is_lib64, 1 if true,
     # 0 otherwise, which should be immediately copied, since the variable
     # will be overwritten at next invocation of this function.
@@ -411,22 +411,41 @@ check_lib64() {
         return 1
     fi
 
+    filearg=
+    case $platform in
+        linux)   filearg="-L" ;;
+        solaris) ;;
+        *)       return 1;;
+    esac
+
     # Save arguments in logical names
     chklib64=$1
     logmsg "Checking if $chklib64 is a 64-bit library"
     if [ "x`basename $chklib64 .a`" != "x`basename $chklib64`" ]; then
         # we have an archive .a file
-        logmsg " objdump -a $chklib64 | grep 'x86-64'"
-        if objdump -a $chklib64 | grep 'x86-64' > /dev/null 2>& 1 ; then
-            ret=1
+        if [ "x$platform" = "xlinux" ]; then
+            logmsg " objdump -a $chklib64 | grep 'x86-64'"
+            if objdump -a $chklib64 | grep 'x86-64' > /dev/null 2>& 1 ; then
+                ret=1
+            fi
+        fi
+        if [ "x$platform" = "xsolaris" ]; then
+            chklib64file=`ar t $chklib64 | awk '{if (NR == 2) print $1}'`
+            logmsg " ar x $chklib64 $chklib64file"
+            ar x $chklib64 $chklib64file
+            logmsg " file $filearg $chklib64file | grep '64-bit'"
+            if file $filearg $chklib64file | grep '64-bit' > /dev/null 2>& 1 ; then
+                ret=1
+            fi
+            rm -f $chklib64file
         fi
     else
-        if file -L $chklib64 | grep 'ASCII' > /dev/null 2>& 1 ; then
+        if file $filearg $chklib64 | grep 'ASCII' > /dev/null 2>& 1 ; then
             check_link $chklib64
             ret=$link_result
         else
-            logmsg " file -L $chklib64 | grep '64-bit'"
-            if file -L $chklib64 | grep '64-bit' > /dev/null 2>& 1 ; then
+            logmsg " file $filearg $chklib64 | grep '64-bit'"
+            if file $filearg $chklib64 | grep '64-bit' > /dev/null 2>& 1 ; then
                 ret=1
             fi
         fi
@@ -516,7 +535,7 @@ check_library() {
             i="$i32"
         fi
         # look first in the lib64 directories
-        if test "x$checklib64" = "xyes" ; then
+        if test "x$checklinux64" = "xyes" ; then
             i64=`echo $i | sed -e 's|lib$|lib64|' -e 's|lib/|lib64/|'`
             i="$i64 $i"
         fi
@@ -535,10 +554,10 @@ check_library() {
             i64=`echo $i | sed 's|\(lib\)|\1/hpux64|'`
             i="$i64"
         fi
-        # look only in the amd64 directories
+        # look first in the amd64 directories
         if test "x$checksolaris64" = "xyes" ; then
             i64=`echo $i | sed 's|\(lib\)|\1/amd64|'`
-            i="$i64"
+            i="$i64 $i"
         fi
         logmsg " Checking in directories $i for $libs"
         for l in $i ; do
@@ -571,7 +590,7 @@ check_library() {
                             fi
                             found_dir=$l
                             found_lib=$j
-                            if test "x$arch" = "linux"; then
+                            if test "x$arch" = "xlinux"; then
                                check_lib64 $n
                             else
                                is_lib64=0
@@ -636,7 +655,7 @@ check_library() {
             fi
             found_raw_dir=${found_dir}
             if test ! "x$shared" = "xstaticonly" ; then
-              found_dir=-L${found_dir}
+                found_dir=-L${found_dir}
             fi
             # Avoid inclusion of /usr/lib, which is always included anyway
             if test "x$found_dir" = "x-L/usr/lib"   || \
@@ -646,6 +665,17 @@ check_library() {
             fi
             if test "x$debmultiarch" != "x" ; then
                 if test "x$found_dir" = "x-L/usr/lib/$debmultiarch" ; then
+                    found_dir=""
+                fi
+            fi
+            if test "x$checksolaris64" = "xyes" ; then
+                if test "x$found_dir" = "x-L/usr/lib/amd64" || \
+                   test "x$found_dir" = "x-L/usr/lib/64" ; then
+                    found_dir=""
+                fi
+            fi
+            if test "x$checkhpux64" = "xyes" ; then
+                if test "x$found_dir" = "x-L/usr/lib/hpux64" ; then
                     found_dir=""
                 fi
             fi
@@ -830,7 +860,7 @@ EOF
         logmsg " Failed code was"
         cat conftest.mk >> $logfile
     fi
-    rm -rf conftest.c conftest.mk conftest
+    rm -rf conftest.c conftest.mk conftest conftest.dSYM
 
     unset linklib
     unset linkdir
@@ -887,7 +917,7 @@ check_symbol() {
         usrlib="/usr/lib32 $usrlib"
     fi
     # look first in the lib64 directories
-    if test "x$checklib64" = "xyes" ; then
+    if test "x$checklinux64" = "xyes" ; then
         usrlib="/usr/lib64 $usrlib"
     fi
     # look first in the DEB_HOST_MULTIARCH directories
@@ -902,9 +932,9 @@ check_symbol() {
     if test "x$checkhpux64" = "xyes" ; then
         usrlib="/usr/lib/hpux64"
     fi
-    # look only in the amd64 directories
-    if test "x$checkamd64" = "xyes" ; then
-        usrlib="/usr/lib/amd64"
+    # look first in the amd64 directories
+    if test "x$checksolaris64" = "xyes" ; then
+        usrlib="/usr/lib/amd64 $usrlib"
     fi
 
     for d in "$symboldir" $usrlib ; do
@@ -990,8 +1020,8 @@ check_comp() {
     case $comptype in
     C)
         if test "x$altcc" = "x" ; then
-            if `make -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcc > /dev/null 2>&1` ; then
-                altcc=`make -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcc`
+            if `$gnumake -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcc > /dev/null 2>&1` ; then
+                altcc=`$gnumake -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcc`
             else
                 altcc=`grep '^CC ' ${ac_srcdir}/config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
             fi
@@ -1014,8 +1044,8 @@ check_comp() {
         ;;
     C++)
         if test "x$altcxx" = "x" ; then
-            if `make -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcxx > /dev/null 2>&1` ; then
-                altcxx=`make -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcxx`
+            if `$gnumake -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcxx > /dev/null 2>&1` ; then
+                altcxx=`$gnumake -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showcxx`
             else
                 altcxx=`grep '^CXX ' ${ac_srcdir}/config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
             fi
@@ -1038,8 +1068,8 @@ check_comp() {
         ;;
     LD)
         if test "x$altld" = "x" ; then
-            if `make -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showld > /dev/null 2>&1` ; then
-                altld=`make -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showld`
+            if `$gnumake -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showld > /dev/null 2>&1` ; then
+                altld=`$gnumake -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showld`
             else
                 altld=`grep '^LD ' ${ac_srcdir}/config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
             fi
@@ -1068,8 +1098,8 @@ check_comp() {
         ;;
     F77)
         if test "x$altf77" = "x" ; then
-            if `make -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showf77 > /dev/null 2>&1` ; then
-                altf77=`make -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showf77`
+            if `$gnumake -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showf77 > /dev/null 2>&1` ; then
+                altf77=`$gnumake -s -f ${ac_srcdir}/config/Makefile.$arch ROOT_SRCDIR=${ac_srcdir} CONFIGURE=yes showf77`
             else
                 altf77=`grep '^F77 ' ${ac_srcdir}/config/Makefile.$arch | awk '{ if (NF==3) {print $3; exit 0} }'`
             fi
@@ -1462,7 +1492,7 @@ enable/disable options, prefix with either --enable- or --disable-
   winrtdebug         Link against the Windows debug runtime library
   x11                X11 support
   xml                XML parser interface
-  xrootd             Build xrootd file server and its client (if supported)
+  xrootd             Build xrootd-dependent plugins for remote file access and PROOF (if supported)
   xft                Xft support (X11 antialiased fonts)
 
 minimal set of libraries, can be combined with above --enable-... options
@@ -1564,9 +1594,9 @@ with options, prefix with --with-, enables corresponding support
   xpm-libdir         XPM support, path to libXpm
   xft-libdir         Xft support, path to libXft
   xext-libdir        Xext support, path to libXext
-  xrootd             XROOTD support, path to external XROOTD distribution
-  xrootd-incdir      XROOTD support, path to external XROOTD header files (XrdVersion.hh, ...)
-  xrootd-libdir      XROOTD support, path to external XROOTD libraries
+  xrootd             XROOTD support, path to XROOTD distribution
+  xrootd-incdir      XROOTD support, path to XROOTD header files (XrdVersion.hh, ...)
+  xrootd-libdir      XROOTD support, path to XROOTD libraries (libXrdClient, ...)
 
 with compiler options, prefix with --with-, overrides default value
 
@@ -1658,13 +1688,15 @@ linuxppc64*|sgicc64)
    checkonlylib64="yes" ;;
 linuxx8664*)
    logmsg "Will check 64bit libraries"
+   checklinux64="yes"
    checklib64="yes" ;;
 hpuxia64acc)
    logmsg "Will check HP/UX 64bit libraries"
    checkhpux64="yes" ;;
 solaris64CC5)
    logmsg "Will check Solaris 64bit libraries"
-   checksolaris64="yes" ;;
+   checksolaris64="yes"
+   checklib64="yes" ;;
 macosx*)
    logmsg "Will check for compatible libraries"
    checklibcompat="yes" ;;
@@ -1729,12 +1761,27 @@ if test "x$platform" = "xmacosx" ; then
    fi
 fi
 
-debmultiarch=
-if `$cwhich dpkg-architecture > /dev/null 2>&1` ; then
-    if `dpkg-architecture -qDEB_HOST_MULTIARCH > /dev/null 2>&1` ; then
-        logmsg "Checking dpkg-architecture"
-        debmultiarch=`dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null`
-        logmsg "$debmultiarch"
+if test "x$platform" = "xlinux" ; then
+    linuxdist=
+    if `$cwhich lsb_release > /dev/null 2>&1` ; then
+       if lsb_release -d | grep 'Ubuntu' > /dev/null 2>& 1; then
+          linuxdist="ubuntu"
+       fi
+    fi
+
+    debmultiarch=
+    if test "x$linuxdist" = "xubuntu"; then
+        if `$cwhich dpkg-architecture > /dev/null 2>&1` ; then
+            if `dpkg-architecture -qDEB_HOST_MULTIARCH > /dev/null 2>&1` ; then
+                logmsg "Checking dpkg-architecture"
+                debmultiarch=`dpkg-architecture -qDEB_HOST_MULTIARCH 2> /dev/null`
+                logmsg "$debmultiarch"
+            fi
+        else
+            result "`basename $0`: dpkg-architecture MUST be installed"
+            result "See http://root.cern.ch/drupal/content/build-prerequisites"
+            exit 1
+        fi
     fi
 fi
 
@@ -1742,12 +1789,12 @@ fi
 #
 ### echo %%% Some clean up
 #
-trapcmd="rm -f Makefile.tmp RConfigure.tmp RConfigure-out.tmp \
+trapcmd="rm -rf Makefile.tmp RConfigure.tmp RConfigure-out.tmp \
          RConfigOptions.tmp RConfigOptions-out.tmp \
          Makefile-comp.tmp root-config.tmp rootrc.tmp \
          rootauthrc.tmp rootdaemonrc.tmp memprobe.tmp rootd.tmp \
          proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp conftest.mk \
-         conftest.c conftest "
+         conftest.c conftest conftest.dSYM"
 trap "$trapcmd; exit 1" 1 2 3 15
 trap "$trapcmd" 0
 
@@ -1794,6 +1841,9 @@ if test $# -gt 0 ; then
       --with-cern-libdir=*)    echo "WARNING: option $1 is deprecated and ignored"'!' ;;
       --with-chirp-incdir=*)   chirpincdir=$optarg   ; enable_chirp="yes"   ;;
       --with-chirp-libdir=*)   chirplibdir=$optarg   ; enable_chirp="yes"   ;;
+      --with-cint-maxstruct=*) cintmaxstruct=$optarg ;;
+      --with-cint-maxtypedef=*) cintmaxtypedef=$optarg;;
+      --with-cint-longline=*)  cintlongline=$optarg  ;;
       --with-cppunit=*)        cppunit=$optarg       ;;
       --with-dcap-incdir=*)    dcapincdir=$optarg    ; enable_dcache="yes"  ;;
       --with-dcap-libdir=*)    dcaplibdir=$optarg    ; enable_dcache="yes"  ;;
@@ -1998,9 +2048,9 @@ fi
 #
 if test "x$enable_soversion" = "xyes"; then
     logmsg "Enabling version numbers in so names"
-    major=`sed 's|\(.*\)\..*/.*|\1|' < build/version_number`
-    minor=`sed 's|.*\.\(.*\)/.*|\1|' < build/version_number`
-    revis=`sed 's|.*\..*/\([0-9]*\).*|\1|' < build/version_number`
+    major=`sed 's|\(.*\)\..*/.*|\1|' < ${ac_srcdir}/build/version_number`
+    minor=`sed 's|.*\.\(.*\)/.*|\1|' < ${ac_srcdir}/build/version_number`
+    revis=`sed 's|.*\..*/\([0-9]*\).*|\1|' < ${ac_srcdir}/build/version_number`
 
     mkliboption="-v $major $minor $revis "
     unset major
@@ -2061,10 +2111,10 @@ fi
 # Check for GNU make >= 3.80
 #
 message "Checking for GNU Make version >= 3.80"
-gnumake="make"
+gnumake="make --no-print-directory"
 gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
 if test ! "x$gnu" = "xGNU" ; then
-    gnumake="gmake"
+    gnumake="gmake --no-print-directory"
     gnu=`$gnumake -v 2>&1 | awk 'BEGIN { FS=" "} { if (NR==1) print $1 }'`
     if test ! "x$gnu" = "xGNU" ; then
         gnumake=""
@@ -2221,16 +2271,18 @@ if test ! "x$enable_x11" = "xno" ; then
         exit 1
     fi
 
-    check_header "X11/extensions/shape.h" "" \
-        ${finkdir:+$finkdir/include} \
-        /usr/include /usr/X11R6/include /usr/include/X11 /usr/openwin/include \
-        /usr/local/include /usr/local/include/X11 /usr/local/X11R6/include \
-        /usr/X11/include /usr/include/X11R5
+    if test ! "x$arch" = "xaix5" ; then
+        check_header "X11/extensions/shape.h" "" \
+            ${finkdir:+$finkdir/include} \
+            /usr/include /usr/X11R6/include /usr/include/X11 \
+            /usr/openwin/include /usr/local/include /usr/local/include/X11 \
+            /usr/local/X11R6/include /usr/X11/include /usr/include/X11R5
 
-    if test "x$found_dir" = "x" ; then
-        result "`basename $0`: X11/extensions/shape.h header MUST be installed"
-        result "See http://root.cern.ch/drupal/content/build-prerequisites"
-        exit 1
+        if test "x$found_dir" = "x" ; then
+            result "`basename $0`: X11/extensions/shape.h header MUST be installed"
+            result "See http://root.cern.ch/drupal/content/build-prerequisites"
+            exit 1
+        fi
     fi
 
     check_library "libXpm" "$enable_shared" "$xpmlibdir" \
@@ -2259,7 +2311,8 @@ if test ! "x$enable_x11" = "xno" ; then
         result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
-    if test ! "x$x11libdir" = "x$found_dir" ; then
+    if test "x$platform" = "xmacosx" &&
+       test ! "x$x11libdir" = "x$found_dir" ; then
         result "`basename $0`: libXft not in same directory as libX11"
         result "For consistency they should be in the same directory"
         exit 1
@@ -2276,7 +2329,8 @@ if test ! "x$enable_x11" = "xno" ; then
         result "See http://root.cern.ch/drupal/content/build-prerequisites"
         exit 1
     fi
-    if test ! "x$x11libdir" = "x$found_dir" ; then
+    if test "x$platform" = "xmacosx" &&
+       test ! "x$x11libdir" = "x$found_dir" ; then
         result "`basename $0`: libXext not in same directory as libX11"
         result "For consistency they should be in the same directory"
         exit 1
@@ -3041,21 +3095,6 @@ if test ! "x$enable_qt" = "xno" || \
             check_library "libQt3Support Qt3Support Qt3Support$qt4suffix Qt3Support4" \
                 "$enable_shared" "$found_raw_dir" ""
             qtlib="$qtlib $found_lib"
-            check_library "libQtOpenGL QtOpenGL QtOpenGL$qt4suffix QtOpenGL4" \
-                "$enable_shared" "$found_raw_dir" ""
-            qtlib="$qtlib $found_lib"
-            check_library "libQtSvg QtSvg QtSvg$qt4suffix QtSvg4" \
-                "$enable_shared" "$found_raw_dir" ""
-            qtlib="$qtlib $found_lib"
-            check_library "libQtXml QtXml QtXml$qt4suffix QtXml4" \
-                "$enable_shared" "$found_raw_dir" ""
-            qtlib="$qtlib $found_lib"
-            check_library "libQtWebKit QtWebKit QtWebKit$qt4suffix QtWebKit4" \
-                "$enable_shared" "$found_raw_dir" ""
-            qtlib="$qtlib $found_lib"
-            check_library "libQtNetwork QtNetwork QtNetwork$qt4suffix QtNetwork4" \
-                "$enable_shared" "$found_raw_dir" ""
-            qtlib="$qtlib $found_lib"
         else
             qtinc=
             qtmainincdir=
@@ -3156,7 +3195,7 @@ if test ! "x$enable_rfio" = "xno" ; then
         enable_rfio="no"
     else
         case $platform in
-           linux)      shiftlib="$shiftlib -lnsl"
+           linux | macosx)
                 for i in "" -ladns ; do
                     check_link "$shiftlib $i" "$shiftlibdir" rfio_fchmod
                     if test $link_result -eq 1 ; then
@@ -3166,18 +3205,13 @@ if test ! "x$enable_rfio" = "xno" ; then
                 done
                 # Explicit linking: which libraries are needed to satisfy symbols
                 # from libshift?
-                # 2.1.8:
-                shiftlibdep="-lcastorrfio -lcastorClient -lcastorns"
+                # 2.1.9 has new library layout
+                shiftlibdep="-lcastorrfio -lcastorclient -lcastorcommon"
                 check_link "$shiftlib $shiftlibdep" "$shiftlibdir" rfio_fchmod
                 if test $link_result -eq 1 ; then
                     shiftlib="$shiftlib $shiftlibdep"
                 else
-                    # 2.1.9 has new library layout
-                    shiftlibdep="-lcastorrfio -lcastorclient -lcastorcommon"
-                    check_link "$shiftlib $shiftlibdep" "$shiftlibdir" rfio_fchmod
-                    if test $link_result -eq 1 ; then
-                        shiftlib="$shiftlib $shiftlibdep"
-                    fi
+                    enable_rfio="no"
                 fi
                 ;;
            solaris)    shiftlib="$shiftlib -lposix4" ;;
@@ -3257,7 +3291,7 @@ if test ! "x$enable_castor" = "xno" ; then
         enable_castor="no"
     else
         case $platform in
-           linux)      castorlib="$castorlib -lnsl"
+           linux | macosx)
                 for i in "" -ladns ; do
                     check_link "$castorlib $i" "$castorlibdir" rfio_fchmod
                     if test $link_result -eq 1 ; then
@@ -3267,18 +3301,13 @@ if test ! "x$enable_castor" = "xno" ; then
                 done
                 # Explicit linking: which libraries are needed to satisfy symbols
                 # from libshift?
-                # 2.1.8:
-                castorlibdep="-lcastorrfio -lcastorClient -lcastorns"
+                # 2.1.9 has new library layout
+                castorlibdep="-lcastorrfio -lcastorclient -lcastorns -lcastorcommon"
                 check_link "$castorlib $castorlibdep" "$castorlibdir" rfio_fchmod
                 if test $link_result -eq 1 ; then
                     castorlib="$castorlib $castorlibdep"
                 else
-                    # 2.1.9 has new library layout
-                    castorlibdep="-lcastorrfio -lcastorclient -lcastorns -lcastorcommon"
-                    check_link "$castorlib $castorlibdep" "$castorlibdir" rfio_fchmod
-                    if test $link_result -eq 1 ; then
-                        castorlib="$castorlib $castorlibdep"
-                    fi
+                    enable_castor="no"
                 fi
                 ;;
            solaris)    castorlib="$castorlib -lposix4" ;;
@@ -3438,7 +3467,7 @@ check_explicit "$enable_fitsio" "$enable_fitsio_explicit" \
 if test ! "x$enable_gviz" = "xno"; then
     # Check for graphviz include and library
     check_header "gvc.h" "$gvizincdir" \
-        $GVIZ ${GVIZ:+$GVIZ/include} \
+        $GVIZ ${GVIZ:+$GVIZ/include/graphviz} ${GVIZ:+$GVIZ/include} \
         ${finkdir:+$finkdir/include/graphviz} \
         /usr/local/include/graphviz /usr/include/graphviz
     gvizinc=$found_hdr
@@ -3447,29 +3476,29 @@ if test ! "x$enable_gviz" = "xno"; then
     # At this time, libgvplugin_core.a should always be prefered over .so,
     # to avoid forcing users to install graphviz.
     check_library "libgvc gvc" "no" "$gvizlibdir" \
-        $GVIZ ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
+        $GVIZ ${GVIZ:+$GVIZ/lib/graphviz} ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
         ${finkdir:+$finkdir/lib} \
         /usr/local/lib /usr/lib
     gvizlib1=$found_lib
     gvizlib1raw=$found_raw_lib
     gvizlibir=$found_dir
     check_library "libgraph graph" "no" "$gvizlibdir" \
-        $GVIZ ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
+        $GVIZ ${GVIZ:+$GVIZ/lib/graphviz} ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
         ${finkdir:+$finkdir/lib} \
         /usr/local/lib /usr/lib
     gvizlib2=$found_lib
     check_library "libcdt cdt" "no" "$gvizlibdir" \
-        $GVIZ ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
+        $GVIZ ${GVIZ:+$GVIZ/lib/graphviz} ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
         ${finkdir:+$finkdir/lib} \
         /usr/local/lib /usr/lib
     gvizlib3=$found_lib
     check_library "libpathplan pathplan" "no" "$gvizlibdir" \
-        $GVIZ ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
+        $GVIZ ${GVIZ:+$GVIZ/lib/graphviz} ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
         ${finkdir:+$finkdir/lib} \
         /usr/local/lib /usr/lib
     gvizlib4=$found_lib
     check_library "libexpat expat" "$enable_shared" "$gvizlibdir" \
-        $GVIZ ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
+        $GVIZ ${GVIZ:+$GVIZ/lib/graphviz} ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
         ${finkdir:+$finkdir/lib} \
         /usr/local/lib /usr/lib
     gvizlib5=$found_lib
@@ -3484,7 +3513,7 @@ if test ! "x$enable_gviz" = "xno"; then
         gvizlibpdir="$gvizlibdir"
     fi
     check_library "libgvplugin_dot_layout gvplugin_dot_layout" "no" "$gvizlibpdir" \
-        $GVIZ ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
+        $GVIZ ${GVIZ:+$GVIZ/lib/graphviz} ${GVIZ:+$GVIZ/lib} ${GVIZ:+$GVIZ/.libs} \
         ${finkdir:+$finkdir/lib/graphviz} \
         /usr/local/lib/graphviz /usr/lib/graphviz
     gvizlibp1=$found_lib
@@ -4034,8 +4063,8 @@ if test ! "x$enable_ldap" = "xno"; then
     check_header "ldap.h" "$ldapincdir" \
         $LDAP ${LDAP:+$LDAP/include} \
         ${finkdir:+$finkdir/include} \
-        /usr/include /usr/local/include /usr/local/ldap/include \
-        /usr/include/ldap /usr/include/openldap /usr/ldap/include \
+        /usr/include/openldap /usr/include /usr/local/include \
+        /usr/local/ldap/include /usr/include/ldap /usr/ldap/include \
         /usr/local/include/ldap /usr/local/include/openldap \
         /usr/ldap /usr/local/ldap /opt/ldap /opt/ldap/include
     ldapinc=$found_hdr
@@ -4300,7 +4329,7 @@ if test "x$enable_xrootd" = "xyes" ; then
       # Standard paths
       xrdpaths="$XRDSYS /opt/xrootd /usr/local /usr"
       for stdp in $xrdpaths ; do
-         if test -d "$stdp/lib" ; then
+         if test -d "$stdp/lib" || test -d "$stdp/lib64" ; then
             xrdlibthree="$xrdlibthree $stdp/lib"
             xrdinctmp="$xrdinctmp $stdp/include/xrootd $stdp/include"
          fi
@@ -4438,7 +4467,7 @@ if test "x$enable_xrootd" = "xyes" ; then
    #
    # Check if bonjour is available for code potentially using it ...
    if test "x$enable_xrootd" = "xyes"; then
-      xrdlibdir=`echo $tmpxrdlibdir | sed -e 's/^-L//'`
+      xrdlibdir="$tmpxrdlibdir"
       if test "x$enable_bonjour" = "xyes"; then
          check_symbol XrdOucBonjour "$libxrdoucbjr" "$xrdlibdir"
          if test  $found_symbol -eq 0 ; then
@@ -5821,6 +5850,11 @@ if test ! "x$enable_clarens" = "xno" ; then
         clarensincdir=""
         clarenslibs=""
     fi
+    if test "x$cryptolib" = "x" ; then
+        # depends also on libcrypto
+        clarensincdir=""
+        clarenslibs=""
+    fi
     if test "x$clarensincdir" = "x" || test "x$clarenslibs" = "x"; then
         enable_clarens="no"
     fi
@@ -6401,6 +6435,9 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@chirpincdir@|$chirpincdir|"          \
     -e "s|@chirplib@|$chirplib|"                \
     -e "s|@chirplibdir@|$chirplibdir|"          \
+    -e "s|@cintmaxstruct@|$cintmaxstruct|"      \
+    -e "s|@cintmaxtypedef@|$cintmaxtypedef|"    \
+    -e "s|@cintlongline@|$cintlongline|"        \
     -e "s|@clarensincdir@|$clarensincdir|"      \
     -e "s|@clarenslibs@|$clarenslibs|"          \
     -e "s|@cintincdir@|$cintincdir|"            \
@@ -7075,6 +7112,8 @@ fi
 if test "x$nohowto" = "xyes" ; then
     exit 0
 fi
+
+gnumake=`echo $gnumake | sed 's,--no-print-directory,,'`
 
 result ""
 result "To build ROOT type:"

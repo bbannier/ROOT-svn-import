@@ -533,8 +533,9 @@ void TPad::Clear(Option_t *option)
    cd();
 
    if (TestBit(kClearAfterCR)) {
-      int readch;
-      readch = getchar();
+      // Intentional do not use the return value of getchar,
+      // we just want to get it and forget it
+      getchar();
    }
 
    if (!gPad->IsBatch()) GetPainter()->ClearDrawable();
@@ -1319,7 +1320,7 @@ void TPad::DrawClassObject(const TObject *classobj, Option_t *option)
          pt->SetTextAlign(12);
          pt->SetTextSize(tsiz);
          TBox *box = pt->AddBox(0,(y1+0.01-v1)/dv,0,(v2-0.01-v1)/dv);
-         box->SetFillColor(17);
+         if (box) box->SetFillColor(17);
          pt->AddLine(0,(y1-v1)/dv,0,(y1-v1)/dv);
          TText *title = pt->AddText(0.5,(0.5*(y1+v2)-v1)/dv,(char*)cl->GetName());
          title->SetTextAlign(22);
@@ -4121,8 +4122,8 @@ void TPad::Print(const char *filenam, Option_t *option)
    //               "ps"  - Postscript file is produced (see special cases below)
    //          "Portrait" - Postscript file is produced (Portrait)
    //         "Landscape" - Postscript file is produced (Landscape)
-   //            "Title:" - The character strin after "Title:" becomes a table
-   //                       of content entry.
+   //            "Title:" - The character string after "Title:" becomes a table
+   //                       of content entry (for PDF files).
    //               "eps" - an Encapsulated Postscript file is produced
    //           "Preview" - an Encapsulated Postscript file with preview is produced.
    //               "pdf" - a PDF file is produced
@@ -4463,8 +4464,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       gVirtualPS->SetName(psname);
       l = (char*)strstr(opt,"Title:");
       if (l) {
-         gVirtualPS->SetTitle(&opt[6]);
-         //Please fix this bug, we may overwrite an input argument
+         gVirtualPS->SetTitle(l+6);
          strcpy(l,"pdf");
       }
       gVirtualPS->Open(psname,pstype);
@@ -4492,9 +4492,10 @@ void TPad::Print(const char *filenam, Option_t *option)
       }
       l = (char*)strstr(opt,"Title:");
       if (l) {
-         gVirtualPS->SetTitle(&opt[6]);
-         //Please fix this bug, we may overwrite an input argument
+         gVirtualPS->SetTitle(l+6);
          strcpy(l,"pdf");
+      } else {
+         gVirtualPS->SetTitle("PDF");
       }
       Info("Print", "Current canvas added to %s file %s", opt, psname.Data());
       if (mustClose) {
@@ -4623,7 +4624,10 @@ void TPad::RedrawAxis(Option_t *option)
       }
       if (obj->InheritsFrom(TMultiGraph::Class())) {
          TMultiGraph *mg = (TMultiGraph*)obj;
-         if (mg) mg->GetHistogram()->DrawCopy("sameaxis");
+         if (mg) {
+            TH1F *h1f = mg->GetHistogram();
+            if (h1f) h1f->DrawCopy("sameaxis");
+         }
          return;
       }
       if (obj->InheritsFrom(TGraph::Class())) {
@@ -4633,7 +4637,10 @@ void TPad::RedrawAxis(Option_t *option)
       }
       if (obj->InheritsFrom(THStack::Class())) {
          THStack *hs = (THStack*)obj;
-         if (hs) hs->GetHistogram()->DrawCopy("sameaxis");
+         if (hs) {
+            TH1 *h1 = hs->GetHistogram();
+            if (h1) h1->DrawCopy("sameaxis");
+         }
          return;
       }
    }

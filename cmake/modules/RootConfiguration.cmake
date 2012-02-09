@@ -352,12 +352,16 @@ configure_file(${PROJECT_SOURCE_DIR}/config/RConfigure.in include/RConfigure.h)
 install(FILES ${CMAKE_BINARY_DIR}/include/RConfigure.h DESTINATION include)
 
 #---Configure and install various files----------------------------------------------------------------------
-execute_Process(COMMAND uname -a OUTPUT_VARIABLE BuildNodeInfo OUTPUT_STRIP_TRAILING_WHITESPACE )
+execute_Process(COMMAND hostname OUTPUT_VARIABLE BuildNodeInfo OUTPUT_STRIP_TRAILING_WHITESPACE )
 
 
 configure_file(${CMAKE_SOURCE_DIR}/config/rootrc.in ${CMAKE_BINARY_DIR}/etc/system.rootrc @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/config/RConfigOptions.in include/RConfigOptions.h)
-configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiledata.h)
+if(WIN32)
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.win32.in include/compiledata.h)
+else()
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiledata.h)
+endif()
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile-comp.in config/Makefile.comp)
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile.in config/Makefile.config)
 configure_file(${CMAKE_SOURCE_DIR}/config/mimes.unix.in ${CMAKE_BINARY_DIR}/etc/root.mimes)
@@ -414,6 +418,9 @@ configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.sh ${CMAKE_RUNTIME_OUTPUT_DIR
 configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.csh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.csh @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/config/genreflex.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/config/genreflex-rootcint.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex-rootcint @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/proofserv.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/proofserv @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/roots.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/roots @ONLY)
+
 if(WIN32)
   set(thisrootbat ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.bat)
   configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.bat ${thisrootbat} @ONLY)
@@ -427,6 +434,8 @@ install(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex
 			  ${thisrootbat}
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/root-config
               ${CMAKE_SOURCE_DIR}/cmake/scripts/setenvwrap.csh
+              ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/roots
+              ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/proofserv
               PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ 
                           GROUP_EXECUTE GROUP_READ 
                           WORLD_EXECUTE WORLD_READ 

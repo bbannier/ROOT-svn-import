@@ -5078,17 +5078,6 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
       return;
 
     int paran = ifunc->para_nu[j];
-    // our flag for globalfunctions
-    int globalfunc = 0;
-    // The other important point is that variadic functions take the parameters
-    // in the opposite order
-    if (ifunc->tagnum < 0)
-      globalfunc = 1;
-
-    // if this is a variadic func then pass the parameters
-    // in the same order of methods not the one of globals functions
-    if(ifunc->ansi[j] == 2)
-      globalfunc = 0;
 
     G__if_ary_union_constructor(fp, 0, ifunc);
 
@@ -5097,14 +5086,9 @@ void G__cppif_dummyobj(FILE *fp, struct G__ifunc_table_internal *ifunc, int i,in
 
     int k = 0;
     for (int counter=paran-1; counter>-1; counter--) {
-      int ispointer = 0;
       k = (paran-1) - counter;
 
       G__paramfunc *formal_param = ifunc->param[j][k];
-
-      if(isupper(formal_param->type)) {
-        ispointer = 1;
-      }
 
       if (counter!=paran-1)
         fprintf(fp,",");
@@ -5145,7 +5129,6 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
   int i = ifunc->tagnum;
   int isnonpublicnew;
   int isconstructor,iscopyconstructor,isdestructor,isassignmentoperator;
-  int virtualdtorflag;
   int dtoraccess=G__PUBLIC;
 
   dtoraccess=G__PUBLIC;
@@ -5170,7 +5153,6 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
     /* isvirtualdestructor=0; */
     isassignmentoperator=0;
     isnonpublicnew=G__isnonpublicnew(i);
-    virtualdtorflag=0;
 
     while (ifunc) {
       for (j = 0; j < ifunc->allifunc; ++j) {
@@ -5221,7 +5203,6 @@ void G__make_default_ifunc(G__ifunc_table_internal *ifunc_copy)
           } else if (ifunc->funcname[j][0] == '~') {
             // We have a destructor.
             dtoraccess = ifunc->access[j];
-            virtualdtorflag = ifunc->isvirtual[j] + (ifunc->ispurevirtual[j] * 2);
             if (G__PUBLIC != ifunc->access[j]) {
               ++isdestructor;
             }
@@ -5462,6 +5443,7 @@ void G__cppif_memfunc(FILE *fp, FILE *hfp)
       isnonpublicnew=G__isnonpublicnew(i);
 
       ifunc_default = ifunc;
+      (void) ifunc_default; // set but unused
 
 #ifdef G__NOSTUBS
       // 28-01-08
@@ -5950,9 +5932,9 @@ static void G__x8664_vararg(FILE *fp, int ifn, G__ifunc_table_internal *ifunc,
    fprintf(fp, "   const int imax = 6, dmax = 8, umax = 50;\n");
    fprintf(fp, "   int objsize, type, i, icnt = 0, dcnt = 0, ucnt = 0;\n");
    fprintf(fp, "   G__value *pval;\n");
-   fprintf(fp, "   G__int64 lval[imax];\n");
-   fprintf(fp, "   double dval[dmax];\n");
-   fprintf(fp, "   union { G__int64 lval; double dval; } u[umax];\n");
+   fprintf(fp, "   G__int64 lval[imax] = {0};\n");
+   fprintf(fp, "   double dval[dmax] = {0};\n");
+   fprintf(fp, "   union { G__int64 lval; double dval; } u[umax] = {{0}};\n");
               
    if (tagnum != -1 && !ifunc->staticalloc[ifn])
       fprintf(fp, "   lval[icnt] = G__getstructoffset(); icnt++; // this pointer\n");
@@ -7141,11 +7123,6 @@ void G__cppif_gendefault(FILE *fp, FILE* /*hfp*/, int tagnum,
         page = des_oper->page;
     }
 #endif
-
-    int isdestdefined = 1;
-    if(!G__struct.memfunc[tagnum]->mangled_name[0])
-      isdestdefined = 0;
-
 
 
 #ifdef G__NOSTUBS
@@ -9167,7 +9144,6 @@ void G__cpplink_memfunc(FILE *fp)
   /* int alltag=0; */
   int virtualdtorflag;
   int dtoraccess=G__PUBLIC;
-  struct G__ifunc_table_internal *ifunc_destructor=0;
 
   fprintf(fp,"\n/*********************************************************\n");
   fprintf(fp,"* Member function information setup for each class\n");
@@ -9284,8 +9260,6 @@ void G__cpplink_memfunc(FILE *fp)
               if (G__PUBLIC != ifunc->access[j]) {
                 ++isdestructor;
               }
-              else
-                ifunc_destructor = ifunc;
 
               if ((G__PROTECTED == ifunc->access[j]) && G__struct.protectedaccess[i] && !G__precomp_private) {
                 G__fprinterr(G__serr, "Limitation: can not generate dictionary for protected destructor for %s\n", G__fulltagname(i, 1));
@@ -9597,7 +9571,11 @@ void G__cpplink_memfunc(FILE *fp)
                && G__MACROLINK != ifunc->globalcomp[j]
               ) {
               int k;
+#ifndef _AIX
               fprintf(fp, ", (void*) G__func2void( (%s (*)("
+#else
+              fprintf(fp, ", (void*) ((%s (*)("
+#endif
                       , G__type2string(ifunc->type[j]
                                        ,ifunc->p_tagtable[j]
                                        ,ifunc->p_typetable[j]
@@ -9670,7 +9648,6 @@ void G__cpplink_memfunc(FILE *fp)
             } else if ('~' == ifunc->funcname[j][0]) {
               // destructor
               ++isdestructor;
-              ifunc_destructor = ifunc;
             } else if (!strcmp(ifunc->funcname[j], "operator new")) {
               ++isconstructor;
               ++iscopyconstructor;
@@ -10439,7 +10416,6 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
   if (tagnum < 0) return 0;
    
   char *p;
-  G__FastAllocString buf(G__ONELINE);
 
   if (G__struct.incsetup_memvar[tagnum]==0)
      G__struct.incsetup_memvar[tagnum] = new std::list<G__incsetup>();
@@ -10522,17 +10498,24 @@ int G__tagtable_setup(int tagnum,int size,int cpplink,int isabstract,const char 
         G__struct.incsetup_memfunc[tagnum]->push_back(setup_memfunc);
   }
   /* add template names */
-  buf = G__struct.name[tagnum];
-  if((p=strchr(buf,'<'))) {
-    *p='\0';
-    if(!G__defined_templateclass(buf)) {
+  G__FastAllocString cl_name = G__struct.name[tagnum]; 
+  G__FastAllocString cl_fullname = G__fulltagname(tagnum,0);
+  if((p=strchr(cl_name,'<'))) {
+    // p is the location in the unqualified name,
+    // let's calculate where in the qualified name it is.
+    char *q = ((char*)cl_fullname.data()) + strlen(cl_fullname.data()) - strlen(cl_name) + (p - cl_name);
+    *q='\0';
+    *p = '\0';
+    if(!G__defined_templateclass(cl_fullname)) {
       int store_def_tagnum = G__def_tagnum;
       int store_tagdefining = G__tagdefining;
       FILE* store_fp = G__ifile.fp;
       G__ifile.fp = (FILE*)NULL;
       G__def_tagnum = G__struct.parent_tagnum[tagnum];
       G__tagdefining = G__struct.parent_tagnum[tagnum];
-      G__createtemplateclass(buf,(struct G__Templatearg*)NULL,0);
+       
+      G__createtemplateclass(cl_name,(struct G__Templatearg*)NULL,0);
+
       G__ifile.fp = store_fp;
       G__def_tagnum = store_def_tagnum;
       G__tagdefining = store_tagdefining;
@@ -11833,7 +11816,6 @@ void G__specify_link(int link_stub)
   int rfNoStreamer = 0;
   int rfNoInputOper = 0;
   int rfUseBytecount = 0;
-  int rfNoMap = 0;
   int rfUseStubs = 0;
   int rfVersionNumber = -1;
 
@@ -11843,7 +11825,7 @@ void G__specify_link(int link_stub)
   *   nostreamer: set G__NOSTREAMER flag
   *   noinputoper: set G__NOINPUTOPERATOR flag
   *   evolution: set G__USEBYTECOUNT flag
-  *   nomap: (irgnored by CINT; prevents entry in ROOT's rootmap file)
+  *   nomap: (ignored by CINT; prevents entry in ROOT's rootmap file)
   *   version(x): sets the version number of the class to x
   *************************************************************************/
   if (!strncmp(buf,"options=", 8) || !strncmp(buf,"option=", 7)) {
@@ -11861,7 +11843,7 @@ void G__specify_link(int link_stub)
 
      for (std::list<std::string>::iterator iOpt = options.begin();
           iOpt != options.end(); ++iOpt)
-        if (*iOpt == "nomap") rfNoMap = 1; // ignored
+        if (*iOpt == "nomap") { /* ignored */ }
         else if (*iOpt == "nostreamer") rfNoStreamer = 1;
         else if (*iOpt == "noinputoper") rfNoInputOper = 1;
         else if (*iOpt == "evolution") rfUseBytecount = 1;

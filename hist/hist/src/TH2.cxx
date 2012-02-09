@@ -790,7 +790,7 @@ void TH2::FitSlicesX(TF1 *f1, Int_t firstybin, Int_t lastybin, Int_t cut, Option
    // arr's SetOwner() is called, to signal that it is the user's respponsability to
    // delete the histograms, possibly by deleting the arrary.
    //    TObjArray aSlices;
-   //    h2->FitSlicesX(func, 0, -1, "QNR", &aSlices);
+   //    h2->FitSlicesX(func, 0, -1, 0, "QNR", &aSlices);
    // will already delete the histograms once aSlice goes out of scope. aSlices will
    // contain the histogram for the i-th parameter of the fit function at aSlices[i];
    // aSlices[n] (n being the number of parameters) contains the chi2 distribution of
@@ -846,7 +846,7 @@ void TH2::FitSlicesY(TF1 *f1, Int_t firstxbin, Int_t lastxbin, Int_t cut, Option
    // arr's SetOwner() is called, to signal that it is the user's respponsability to
    // delete the histograms, possibly by deleting the arrary.
    //    TObjArray aSlices;
-   //    h2->FitSlicesX(func, 0, -1, "QNR", &aSlices);
+   //    h2->FitSlicesY(func, 0, -1, 0, "QNR", &aSlices);
    // will already delete the histograms once aSlice goes out of scope. aSlices will
    // contain the histogram for the i-th parameter of the fit function at aSlices[i];
    // aSlices[n] (n being the number of parameters) contains the chi2 distribution of
@@ -1573,21 +1573,28 @@ Long64_t TH2::Merge(TCollection *list)
          ny = h->GetYaxis()->GetNbins();
 
          for (biny = 0; biny <= ny + 1; biny++) {
-            iy = fYaxis.FindBin(h->GetYaxis()->GetBinCenter(biny));
+            if (!allSameLimits) 
+               iy = fYaxis.FindBin(h->GetYaxis()->GetBinCenter(biny));
+            else 
+               iy = biny; 
             for (binx = 0; binx <= nx + 1; binx++) {
-               ix = fXaxis.FindBin(h->GetXaxis()->GetBinCenter(binx));
                bin = binx +(nx+2)*biny;
-               ibin = ix +(nbix+2)*iy;
                cu = h->GetBinContent(bin);
-               if ((!allSameLimits) && (binx == 0 || binx == nx + 1
-                  || biny == 0 || biny == ny + 1)) {
-                     if (cu != 0) {
-                        Error("Merge", "Cannot merge histograms - the histograms have"
+               if (!allSameLimits) { 
+                  if (cu != 0 && ( h->IsBinUnderflow(bin) || h->IsBinOverflow(bin) )) {
+                     Error("Merge", "Cannot merge histograms - the histograms have"
                            " different limits and undeflows/overflows are present."
                            " The initial histogram is now broken!");
-                        return -1;
-                     }
+                     return -1;
+                  }
+                  ix = fXaxis.FindBin(h->GetXaxis()->GetBinCenter(binx));
                }
+               else { 
+                  // case histograms with the same limits 
+                  ix = binx; 
+               }
+               ibin = ix +(nbix+2)*iy;
+
                if (ibin < 0) continue;
                AddBinContent(ibin,cu);
                if (fSumw2.fN) {

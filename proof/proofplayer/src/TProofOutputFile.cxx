@@ -63,6 +63,7 @@ TProofOutputFile::TProofOutputFile(const char *path,
    //             'R'      register: dataset run with dataset registration
    //             'O'      overwrite: force dataset replacement during registration
    //             'V'      verify: verify the registered dataset
+   //             'H'      merge histograms in one go (option to TFileMerger)
    // Special 'option' values for backward compatibility:
    //              ""      equivalent to "M"
    //         "LOCAL"      equivalent to "ML" or "L"
@@ -71,6 +72,7 @@ TProofOutputFile::TProofOutputFile(const char *path,
    fMerged = kFALSE;
    fMerger = 0;
    fDataSet = 0;
+   fMergeHistosOneGo = kFALSE;
 
    // Fill the run type and option type
    fRunType = kMerge;
@@ -78,6 +80,7 @@ TProofOutputFile::TProofOutputFile(const char *path,
    if (option && strlen(option) > 0) {
       TString opt(option);
       if (opt.Contains("L") || (opt == "LOCAL")) fTypeOpt = kLocal;
+      if (opt.Contains("H")) fMergeHistosOneGo = kTRUE;
       if (!opt.Contains("M") && opt.Contains("D")) {
          // Dataset creation mode
          fRunType = kDataset;
@@ -201,7 +204,11 @@ void TProofOutputFile::Init(const char *path, const char *dsname)
 
    // Default output file name
    ResetBit(TProofOutputFile::kOutputFileNameSet);
-   fOutputFileName = gEnv->GetValue("Proof.OutputFile", "<file>");
+   fOutputFileName = "<file>";
+   if (gEnv->Lookup("Proof.OutputFile")) {
+      fOutputFileName = gEnv->GetValue("Proof.OutputFile", "<file>");
+      SetBit(TProofOutputFile::kOutputFileNameSet);
+   }
    // Add default file name
    TString fileName = path;
    if (!fileName.EndsWith(".root")) fileName += ".root";
@@ -300,6 +307,8 @@ Long64_t TProofOutputFile::Merge(TCollection* list)
 {
    // Merge objects from the list into this object
 
+   PDB(kOutput,2) Info("Merge","enter: merge? %d", IsMerge());
+
    // Needs somethign to merge
    if(!list || list->IsEmpty()) return 0;
    
@@ -340,10 +349,12 @@ Long64_t TProofOutputFile::Merge(TCollection* list)
          Error("Merge", "could not instantiate the file collection");
          return -1;
       }
+      fMerged = kTRUE;
       TString path;
       TFileInfo *fi = 0;
       // If new, add ourseelves
       dataset->Update();
+      PDB(kOutput,2) Info("Merge","dataset: %s (nfiles: %lld)", dataset->GetName(), dataset->GetNFiles());
       if (dataset->GetNFiles() == 0) {
          // Save the export and raw urls
          path.Form("%s/%s%s", GetDir(), GetFileName(), GetOptionsAnchor());
@@ -393,6 +404,7 @@ Long64_t TProofOutputFile::Merge(TCollection* list)
          }
       }
    }
+   PDB(kOutput,2) Info("Merge","Done");
 
    // Done
    return 0;
@@ -485,7 +497,7 @@ TFileMerger *TProofOutputFile::GetFileMerger(Bool_t local)
    // Get instance of the file merger to be used in 'merge' mode
 
    if (!fMerger)
-      fMerger = new TFileMerger(local);
+      fMerger = new TFileMerger(local, fMergeHistosOneGo);
    return fMerger;
 }
 
