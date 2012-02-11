@@ -79,7 +79,9 @@ namespace TMVA {
       // default initialisation called by all constructors
       void Init();
 
-      std::vector<TKDTreeIF*> fKDTree;    // grown KDTrees
+      typedef TKDTreeIF TKDTreeType;
+      typedef std::vector<TKDTreeType*> TKDTreeContainer;
+      TKDTreeContainer fKDTree;           // grown KDTrees
       std::vector<TString> fKDTreeName;   // KDTree names
       Float_t fVolFrac;                   // range searching volume
       Float_t fBucketSize;                // number of events in terminal nodes
