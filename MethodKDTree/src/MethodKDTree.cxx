@@ -57,7 +57,7 @@ TMVA::MethodKDTree::~MethodKDTree(void)
 void TMVA::MethodKDTree::DeleteKDTrees()
 {
    // Delete all KDTrees
-   for (std::vector<TKDTreeIF*>::iterator it = fKDTree.begin();
+   for (TKDTreeContainer::iterator it = fKDTree.begin();
         it != fKDTree.end(); ++it) {
       delete *it;
    }
@@ -171,7 +171,7 @@ void TMVA::MethodKDTree::Train()
       assert(eventCount == nEvents);
       Log() << kINFO << "Creating KDTree \"" << fKDTreeName.at(i) << "\"" << Endl;
 
-      TKDTreeIF *kdtree = new TKDTreeIF(nEvents, GetNvar(), fBucketSize);
+      TKDTreeType *kdtree = new TKDTreeType(nEvents, GetNvar(), fBucketSize);
       for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
          kdtree->SetData(ivar, data[ivar]);
       }
@@ -306,14 +306,14 @@ void TMVA::MethodKDTree::ReadKDTreesFromFile()
    rootFile->Close();
    delete rootFile;
 
-   for (std::vector<TKDTreeIF*>::iterator it = fKDTree.begin(); it != fKDTree.end(); ++it) {
+   for (TKDTreeContainer::iterator it = fKDTree.begin(); it != fKDTree.end(); ++it) {
       if (!(*it))
          Log() << kFATAL << "Could not load KDTree!" << Endl;
    }
 }
 
 //_______________________________________________________________________
-TKDTreeIF* TMVA::MethodKDTree::ReadClonedKDTreeFromFile(TFile* file, const TString& treeName) const
+TMVA::MethodKDTree::TKDTreeType* TMVA::MethodKDTree::ReadClonedKDTreeFromFile(TFile* file, const TString& treeName) const
 {
    if (file == NULL) {
       Log() << kWARNING << "<ReadClonedKDTreeFromFile>: NULL pointer given" << Endl;
@@ -321,12 +321,12 @@ TKDTreeIF* TMVA::MethodKDTree::ReadClonedKDTreeFromFile(TFile* file, const TStri
    }
 
    // try to load the kdtree from the file
-   TKDTreeIF *kdtree = (TKDTreeIF*) file->Get(treeName);
+   TKDTreeType *kdtree = (TKDTreeType*) file->Get(treeName);
    if (kdtree == NULL) {
       return NULL;
    }
    // try to clone the kdtree
-   kdtree = (TKDTreeIF*) kdtree->Clone();
+   kdtree = (TKDTreeType*) kdtree->Clone();
    if (kdtree == NULL) {
       Log() << kWARNING << "<ReadClonedKDTreeFromFile>: " << treeName
             << " could not be cloned!" << Endl;
