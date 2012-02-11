@@ -134,31 +134,44 @@ void TMVA::MethodKDTree::Train()
       // i == 0 : signal
       // i == 1 : background
 
-      // create vectors of data
-      vector<vector<Float_t>*> data;
-      for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
-         data.push_back(new vector<Float_t>());
+      // count number of events to be filled into the KDTree
+      Long64_t nEvents = 0;
+      for (Long64_t k = 0; k < GetNEvents(); ++k) {
+         const Event* ev = GetEvent(k);
+         if ((i == 0 && DataInfo().IsSignal(ev)) || (i == 1 && !DataInfo().IsSignal(ev))) {
+            if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight() <= 0)) {
+               ++nEvents;
+            }
+         }
       }
 
-      Log() << kVERBOSE << "Filling event arrays" << Endl;
+      // create vectors of data columns
+      vector<Float_t*> data;
+      for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
+         data.push_back(new Float_t[nEvents]);
+      }
+
+      Log() << kVERBOSE << "Filling " << nEvents << " events into the KDTree" << Endl;
 
       // fill event arrays
+      Long64_t eventCount = 0;
       for (Long64_t k = 0; k < GetNEvents(); ++k) {
          const Event* ev = GetEvent(k);
          if ((i == 0 && DataInfo().IsSignal(ev)) || (i == 1 && !DataInfo().IsSignal(ev))) {
             if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight() <= 0)) {
                for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
-                  data[ivar]->push_back(ev->GetValue(ivar));
+                  data[ivar][eventCount] = ev->GetValue(ivar);
                }
+               ++eventCount;
             }
          }
       }
-
+      assert(eventCount == nEvents);
       Log() << kINFO << "Creating KDTree \"" << fKDTreeName.at(i) << "\"" << Endl;
 
-      TKDTreeIF *kdtree = new TKDTreeIF(data[0]->size(), GetNvar(), 1);
+      TKDTreeIF *kdtree = new TKDTreeIF(nEvents, GetNvar(), 1);
       for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
-         kdtree->SetData(ivar, &(data[ivar]->front()));
+         kdtree->SetData(ivar, data[ivar]);
       }
       // make sure the KDTree deletes the data vector
       kdtree->SetOwner(kTRUE);
