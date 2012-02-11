@@ -160,6 +160,8 @@ void TMVA::MethodKDTree::Train()
       for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
          kdtree->SetData(ivar, &(data[ivar]->front()));
       }
+      // make sure the KDTree deletes the data vector
+      kdtree->SetOwner(kTRUE);
 
       Log() << kVERBOSE << "Building KDTree \"" << fKDTreeName.at(i) << "\" ... ";
       kdtree->Build();
