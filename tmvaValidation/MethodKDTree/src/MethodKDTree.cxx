@@ -169,7 +169,7 @@ void TMVA::MethodKDTree::Train()
       assert(eventCount == nEvents);
       Log() << kINFO << "Creating KDTree \"" << fKDTreeName.at(i) << "\"" << Endl;
 
-      TKDTreeIF *kdtree = new TKDTreeIF(nEvents, GetNvar(), 1);
+      TKDTreeIF *kdtree = new TKDTreeIF(nEvents, GetNvar(), fBucketSize);
       for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
          kdtree->SetData(ivar, data[ivar]);
       }
