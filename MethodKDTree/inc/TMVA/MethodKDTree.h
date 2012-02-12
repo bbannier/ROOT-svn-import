@@ -79,7 +79,9 @@ namespace TMVA {
       // default initialisation called by all constructors
       void Init();
 
-      typedef TKDTreeIF TKDTreeType;
+      typedef Int_t Index;                // KDTree index type
+      typedef Float_t Value;              // KDTree value type
+      typedef TKDTree<Index, Value> TKDTreeType;
       typedef std::vector<TKDTreeType*> TKDTreeContainer;
       TKDTreeContainer fKDTree;           // grown KDTrees
       std::vector<TString> fKDTreeName;   // KDTree names
