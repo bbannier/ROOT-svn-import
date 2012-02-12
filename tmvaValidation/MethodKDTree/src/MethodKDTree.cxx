@@ -148,9 +148,9 @@ void TMVA::MethodKDTree::Train()
       }
 
       // create vectors of data columns
-      vector<Float_t*> data;
+      vector<Value*> data;
       for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
-         data.push_back(new Float_t[nEvents]);
+         data.push_back(new Value[nEvents]);
       }
 
       Log() << kVERBOSE << "Filling " << nEvents << " events into the KDTree" << Endl;
