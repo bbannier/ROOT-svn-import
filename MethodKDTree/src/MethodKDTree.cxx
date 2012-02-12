@@ -153,7 +153,8 @@ void TMVA::MethodKDTree::Train()
          data.push_back(new Value[nEvents]);
       }
 
-      Log() << kVERBOSE << "Filling " << nEvents << " events into the KDTree" << Endl;
+      Log() << kVERBOSE << "Filling " << nEvents << " events into \""
+            << fKDTreeName.at(i) << "\"" << Endl;
 
       // fill event arrays
       Long64_t eventCount = 0;
@@ -381,4 +382,20 @@ void TMVA::MethodKDTree::WriteKDTreesToFile() const
 //_______________________________________________________________________
 void TMVA::MethodKDTree::GetHelpMessage() const
 {
+   Log() << Endl;
+   Log() << gTools().Color("bold") << "--- Short description:" << gTools().Color("reset") << Endl;
+   Log() << Endl;
+   Log() << "MethodKDTree is a self-adapting binning method to divide" << Endl;
+   Log() << "the multi-dimensional variable space into a finite number of" << Endl;
+   Log() << "subspaces using ROOT's TKDTree splitting algorithm." << Endl;
+   Log() << Endl;
+   Log() << gTools().Color("bold") << "--- Use of booking options:" << gTools().Color("reset") << Endl;
+   Log() << Endl;
+   Log() << "The following options can be set (the listed values are found" << Endl;
+   Log() << "to be a good starting point for most applications):" << Endl;
+   Log() << Endl;
+   Log() << "              VolFrac     0.1   Volume fraction of the phase space to use for" << Endl;
+   Log() << "                                the range-searching" << Endl;
+   Log() << "           BucketSize     300   Number of events in a node required to split node" << Endl;
+   Log() << "             Compress    True   Compress KDTree output file" << Endl;
 }
