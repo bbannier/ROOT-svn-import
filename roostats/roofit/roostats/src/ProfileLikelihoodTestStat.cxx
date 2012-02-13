@@ -32,9 +32,12 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        RooRealVar* firstPOI = dynamic_cast<RooRealVar*>( paramsOfInterest.first());       
        if (firstPOI) initial_mu_value = firstPOI->getVal();
        //paramsOfInterest.getRealValue(firstPOI->GetName());
+       if (fPrintLevel > 0) { 
+            cout << "POIs: " << endl;
+            paramsOfInterest.Print("v");
+       }
 
        RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-
        if (fPrintLevel < 3) RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
        // simple
@@ -52,10 +55,10 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
           //	 fProfile = (RooProfileLL*) fNll->createProfile(paramsOfInterest);
           created = kTRUE ;
           delete allParams;
-          //cout << "creating profile LL " << fNll << " " << fProfile << " data = " << &data << endl ;
+          if (fPrintLevel > 0) cout << "creating profile LL " << fNll << " " << fProfile << " data = " << &data << endl ;
        }
        if (reuse && !created) {
-          //cout << "reusing profile LL " << fNll << " new data = " << &data << endl ;
+          if (fPrintLevel > 0) cout << "reusing profile LL " << fNll << " new data = " << &data << endl ;
           fNll->setData(data,kFALSE) ;
        }
 
@@ -88,6 +91,28 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
 
           // get best fit value for one-sided interval 
           if (firstPOI) fit_favored_mu = attachedSet->getRealValue(firstPOI->GetName()) ;
+          
+          // save this snapshot
+          if( fDetailedOutputEnabled ) {
+             if( fDetailedOutput ) delete fDetailedOutput;
+
+             // monitor a few more variables
+             static RooRealVar* uncML = NULL;
+             if( !uncML ) {
+                uncML = new RooRealVar("uncondML","unconditional ML", uncondML);
+                uncML->setConstant( false );
+             }else{
+                uncML->setVal( uncondML );
+             }
+
+             attachedSet->add( *uncML );
+             fDetailedOutput = (const RooArgSet*)attachedSet->snapshot();
+             RooStats::RemoveConstantParameters( (RooArgSet*)fDetailedOutput );
+             
+//              cout << endl << "STORING THIS AS DETAILED OUTPUT:" << endl;
+//              fDetailedOutput->Print("v");
+//              cout << endl;
+          }
 
        }
        tsw.Stop();
@@ -102,7 +127,9 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        bool doConditionalFit = (type != 1); 
 
        // skip the conditional ML (the numerator) only when fit value is smaller than test value
-       if (fOneSided &&  fit_favored_mu > initial_mu_value) { 
+       if ( (fOneSided          &&  fit_favored_mu > initial_mu_value)  ||  // limit
+            (fOneSidedDiscovery &&  fit_favored_mu < initial_mu_value) )    // discovery (initial_mu should be zero in this case)
+       {
           doConditionalFit = false; 
           condML = uncondML;
        }
@@ -144,12 +171,12 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        if (fPrintLevel > 0) { 
           std::cout << "EvaluateProfileLikelihood - ";
           if (type <= 1)  
-             std::cout << "mu hat = " << fit_favored_mu  <<  " uncond ML = " << uncondML; 
+             std::cout << "mu hat = " << fit_favored_mu  <<  ", uncond ML = " << uncondML; 
           if (type != 1) 
-             std::cout << " cond ML = " << condML;
+             std::cout << ", cond ML = " << condML;
           if (type == 0)
-             std::cout << " pll =  " << condML-uncondML; 
-          std::cout << " time (create/fit1/2) " << createTime << " , " << fitTime1 << " , " << fitTime2  
+             std::cout << ", pll =  " << condML-uncondML; 
+          std::cout << ", time (create/fit1/fit2) " << createTime << " , " << fitTime1 << " , " << fitTime2  
                     << std::endl;
        }
 
@@ -171,7 +198,7 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        RooMsgService::instance().setGlobalKillBelow(msglevel);
 
        if(statusN!=0 || statusD!=0) {
-	 // ret= -1; // indicate failed fit (WVE is not used anywhere yet)
+	      return -1; // indicate failed fit (WVE is not used anywhere yet)
        }
 
        if (type == 1) return uncondML;

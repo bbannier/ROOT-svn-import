@@ -27,36 +27,42 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
 
    // ****** any TestStatSampler ********
 
-   // note: making nll or profile class variables can only be done in the constructor
-   // as all other hooks are const (which has to be because GetHypoTest is const). However,
-   // when setting it only in constructor, they would have to be changed every time SetNullModel
-   // or SetAltModel is called. Simply put, converting them into class variables breaks
-   // encapsulation.
-   RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-
 
    // create profile keeping everything but nuisance parameters fixed
    RooArgSet * allParams = fNullModel->GetPdf()->getParameters(*fData);
    RemoveConstantParameters(allParams);
 
-   RooArgSet allButNuisance(*allParams);
-   if (fNullModel->GetNuisanceParameters()) allButNuisance.remove(*fNullModel->GetNuisanceParameters());
-   // remove also the constant parameters otherwise RooProfileLL will float them
-   //RemoveConstantParameters(&allButNuisance);
-   RooAbsReal* nll = fNullModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
-   RooAbsReal* profile = nll->createProfile(allButNuisance);
-   profile->getVal(); // this will do fit and set nuisance parameters to profiled values
-   // add nuisance parameters to parameter point
-   if(fNullModel->GetNuisanceParameters())
-      parameterPoint->add(*fNullModel->GetNuisanceParameters());
+   if( fConditionalMLEsNull ) {
+      oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Null." << endl;
+      *allParams = *fConditionalMLEsNull;
+   }else{
+      oocoutI((TObject*)0,InputArguments) << "Profiling conditional MLEs for Null." << endl;
+      // note: making nll or profile class variables can only be done in the constructor
+      // as all other hooks are const (which has to be because GetHypoTest is const). However,
+      // when setting it only in constructor, they would have to be changed every time SetNullModel
+      // or SetAltModel is called. Simply put, converting them into class variables breaks
+      // encapsulation.
+      RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
+      RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
-
-
-   delete profile;
-   delete nll;
+      RooArgSet allButNuisance(*allParams);
+      if (fNullModel->GetNuisanceParameters()) allButNuisance.remove(*fNullModel->GetNuisanceParameters());
+      // remove also the constant parameters otherwise RooProfileLL will float them
+      //RemoveConstantParameters(&allButNuisance);
+      RooAbsReal* nll = fNullModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
+      RooAbsReal* profile = nll->createProfile(allButNuisance);
+      profile->getVal(); // this will do fit and set nuisance parameters to profiled values
+      // add nuisance parameters to parameter point
+      if(fNullModel->GetNuisanceParameters())
+         parameterPoint->add(*fNullModel->GetNuisanceParameters());
+   
+      delete profile;
+      delete nll;
+   
+      RooMsgService::instance().setGlobalKillBelow(msglevel);
+   }
+   
    delete allParams;
-   RooMsgService::instance().setGlobalKillBelow(msglevel);
 
 
 
@@ -85,14 +91,6 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
          toymcs->SetToysBothTails(0, 0, obsTestStat); // disable adaptive sampling
       }
 
-      // importance sampling
-      if(fNullImportanceDensity) {
-         oocoutI((TObject*)0,InputArguments) << "Importance Sampling" << endl;
-         toymcs->SetImportanceDensity(fNullImportanceDensity);
-         if(fNullImportanceSnapshot) toymcs->SetImportanceSnapshot(*fNullImportanceSnapshot);
-      }else{
-         toymcs->SetImportanceDensity(NULL);       // disable importance sampling
-      }
       GetNullModel()->LoadSnapshot();
    }
 
@@ -104,28 +102,35 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
 
    // ****** any TestStatSampler ********
 
-   RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-
    // create profile keeping everything but nuisance parameters fixed
    RooArgSet * allParams = fAltModel->GetPdf()->getParameters(*fData);
    RemoveConstantParameters(allParams);
 
-   RooArgSet allButNuisance(*allParams);
-   if (fAltModel->GetNuisanceParameters()) allButNuisance.remove(*fAltModel->GetNuisanceParameters());
-   // remove also the constant parameters otherwise RooProfileLL will float them
-   // RemoveConstantParameters(&allButNuisance);
-   RooAbsReal* nll = fAltModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
-   RooAbsReal* profile = nll->createProfile(allButNuisance);
-   profile->getVal(); // this will do fit and set nuisance parameters to profiled values
-   // add nuisance parameters to parameter point
-   if(fAltModel->GetNuisanceParameters())
-      parameterPoint->add(*fAltModel->GetNuisanceParameters());
+   if( fConditionalMLEsAlt ) {
+      oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Alt." << endl;
+      *allParams = *fConditionalMLEsAlt;
+   }else{
+      oocoutI((TObject*)0,InputArguments) << "Profiling conditional MLEs for Alt." << endl;
+      RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
+      RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
-   delete profile;
-   delete nll;
+      RooArgSet allButNuisance(*allParams);
+      if (fAltModel->GetNuisanceParameters()) allButNuisance.remove(*fAltModel->GetNuisanceParameters());
+      // remove also the constant parameters otherwise RooProfileLL will float them
+      // RemoveConstantParameters(&allButNuisance);
+      RooAbsReal* nll = fAltModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
+      RooAbsReal* profile = nll->createProfile(allButNuisance);
+      profile->getVal(); // this will do fit and set nuisance parameters to profiled values
+      // add nuisance parameters to parameter point
+      if(fAltModel->GetNuisanceParameters())
+         parameterPoint->add(*fAltModel->GetNuisanceParameters());
+      delete profile;
+      delete nll;
+
+      RooMsgService::instance().setGlobalKillBelow(msglevel);
+   }
+   
    delete allParams;
-   RooMsgService::instance().setGlobalKillBelow(msglevel);
 
 
 
@@ -155,15 +160,6 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
          toymcs->SetToysBothTails(0, 0, obsTestStat); // disable adaptive sampling
       }
 
-
-      // importance sampling
-      if(fAltImportanceDensity) {
-         oocoutI((TObject*)0,InputArguments) << "Importance Sampling" << endl;
-         toymcs->SetImportanceDensity(fAltImportanceDensity);
-         if(fAltImportanceSnapshot) toymcs->SetImportanceSnapshot(*fAltImportanceSnapshot);
-      }else{
-         toymcs->SetImportanceDensity(NULL);       // disable importance sampling
-      }
    }
 
    return 0;
