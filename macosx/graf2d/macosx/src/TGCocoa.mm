@@ -1,21 +1,18 @@
 #include <algorithm>
 #include <stdexcept>
 
-//DEBUG
-#include <iostream>
-//
-
 #include  <Cocoa/Cocoa.h>
 
 #include "CocoaPrivate.h"
-#include "X11Drawables.h"
+#include "QuartzWindow.h"
+#include "QuartzPixmap.h"
+#include "X11Drawable.h"
 #include "QuartzText.h"
 #include "CocoaUtils.h"
 #include "X11Events.h"
 #include "TGClient.h"
 #include "TGCocoa.h"
 #include "TError.h"
-
 
 ClassImp(TGCocoa)
 

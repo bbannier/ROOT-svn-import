@@ -2,7 +2,7 @@
 
 #include <Cocoa/Cocoa.h>
 
-#include "X11Drawables.h"
+#include "QuartzWindow.h"
 #include "X11Events.h"
 #include "TGClient.h"
 #include "TGWindow.h"
@@ -305,13 +305,8 @@ void EventTranslator::GenerateCrossingEventNormal(QuartzView *view, NSEvent *the
       //for one cursor move). In mouseEntered/mouseExited
       //I'm looking for the top level view under cursor and try to generate cross event
       //for this view.
-      NSLog(@"nothing to do, no crossing");
-      
       return;
    }
-
-   if (fViewUnderPointer)
-      NSLog(@"under pointer is %u", fViewUnderPointer.fID);
 
    if (!fViewUnderPointer) {
       //We enter window "from the screen" - do not leave any window.
