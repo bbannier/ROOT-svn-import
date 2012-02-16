@@ -5,14 +5,12 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include "TEnv.h"
+#include "TSystem.h"
+
 #include "QuartzText.h"
 #include "CocoaUtils.h"
 #include "TError.h"
-
-//
-// This code is just a temporary
-// hack done fast...
-//
 
 
 namespace ROOT {
@@ -37,14 +35,66 @@ const CFStringRef fixedFontNames[FontManager::fmdNOfFonts] =
 
 typedef std::string::size_type size_type;
 
-   
+
 //______________________________________________________________________________
 void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
               Int_t align, Int_t font, Float_t size,
               const char *text)
 {
    // Draw text
-   
+
+   if (font/10==12) {
+      //Font creation.
+      const char *ttpath = gEnv->GetValue("Root.TTFontPath","$(ROOTSYS)/fonts");
+      char *ttfont = gSystem->Which(ttpath, "symbol.ttf", kReadPermission);
+
+      CFStringRef path = CFStringCreateWithCString(kCFAllocatorDefault,
+                                                   ttfont,
+                                                   kCFURLPOSIXPathStyle);
+
+      CFArrayRef arr = CTFontManagerCreateFontDescriptorsFromURL(CFURLCreateWithFileSystemPath(kCFAllocatorDefault,
+                                                                                               path,
+                                                                                               kCFURLPOSIXPathStyle, false));
+      CFRelease(path);
+
+      CTFontDescriptorRef fontDesc = (CTFontDescriptorRef)CFArrayGetValueAtIndex(arr, 0);
+      CTFontRef fontref = CTFontCreateWithFontDescriptor(fontDesc, size, 0);
+      CFRelease(arr);
+
+      //Unicode string creation.
+      CFStringRef keys[] = {kCTFontAttributeName};
+      CFTypeRef values[] = {fontref};
+      unsigned len = (int)strlen(text);
+      UniChar unichars[len];
+      for (unsigned i = 0; i < len; ++i) unichars[i] = 0xF000 + (unsigned char)text[i];
+
+
+      const CFStringRef wrappedCString = CFStringCreateWithCharacters(kCFAllocatorDefault,
+                                                                      unichars,
+                                                                      sizeof unichars / sizeof unichars[0]);
+      const CFDictionaryRef stringAttribs = CFDictionaryCreate(kCFAllocatorDefault,
+                                                               (const void **)keys,
+                                                               (const void **)values,
+                                                               1,
+                                                               &kCFTypeDictionaryKeyCallBacks,
+                                                               &kCFTypeDictionaryValueCallBacks);
+      const CFAttributedStringRef attributedString = CFAttributedStringCreate(kCFAllocatorDefault,
+                                                                              wrappedCString,
+                                                                              stringAttribs);
+
+      const CTLineRef ctLine = CTLineCreateWithAttributedString(attributedString);
+
+      //Render the string.
+      CGContextSetTextPosition(ctx, 0.f, 0.f);
+
+      CGContextTranslateCTM(ctx, x, y);
+      CTLineDraw(ctLine, ctx);
+
+      CFRelease(ctLine);
+      CFRelease(fontref);
+      return;
+   }
+
    CGContextSetAllowsAntialiasing(ctx, 1);
 
    FontManager fm;
@@ -52,13 +102,13 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
    fontref = fm.SelectFont(font, size);
 
    CTLineGuard ctLine(text, fontref);
-   
+
    UInt_t w = 0, h = 0;
    ctLine.GetBounds(w, h);
-   
+
    Double_t xc = 0., yc = 0.;
 
-   const UInt_t hAlign = UInt_t(align / 10);   
+   const UInt_t hAlign = UInt_t(align / 10);
    switch (hAlign) {
       case 1:
          xc = x;
@@ -70,7 +120,7 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
          xc = x - w;
          break;
    }
-   
+
    const UInt_t vAlign = UInt_t(align % 10);
    switch (vAlign) {
       case 1:
@@ -85,7 +135,7 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
    }
 
    CGContextSetTextPosition(ctx, 0.f, 0.f);
-   
+
    CGContextTranslateCTM(ctx, xc, yc);
 
    //CGContextTranslateCTM(ctx, x, y);
@@ -96,22 +146,22 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
    CTLineDraw(ctLine.fCTLine, ctx);
 }
 
-   
+
 //______________________________________________________________________________
 void GetTextExtent(UInt_t &w, UInt_t &h, Int_t font, Float_t size,
                    char *text)
 {
    // Get text extent.
-   
+
    FontManager fm;
    CTFontRef fontref;
    fontref = fm.SelectFont(font,size);
-   
+
    CTLineGuard ctLine(text, fontref);
-   
+
    ctLine.GetBounds(w, h);
 }
-   
+
 
 //______________________________________________________________________________
 template<class T>
@@ -125,6 +175,7 @@ void StringToInt(const std::string &str, const std::string &componentName, T &nu
    std::istringstream in(str);
    in>>num;
 }
+
 
 //______________________________________________________________________________
 size_type GetXLFDNameComponentAsString(const std::string &name, const std::string & componentName,
@@ -151,9 +202,12 @@ size_type GetXLFDNameComponentAsString(const std::string &name, const std::strin
    return pos;
 }
 
+
 //______________________________________________________________________________
 template<class T>
-size_type GetXLFDNameComponentAsInteger(const std::string &name, const std::string &componentName, size_type pos, T &component)
+size_type GetXLFDNameComponentAsInteger(const std::string &name,
+                                        const std::string &componentName,
+                                        size_type pos, T &component)
 {
    std::string num;
    pos = GetXLFDNameComponentAsString(name, componentName, pos, num);
@@ -161,6 +215,7 @@ size_type GetXLFDNameComponentAsInteger(const std::string &name, const std::stri
 
    return pos;
 }
+
 
 //______________________________________________________________________________
 size_type ParseFoundry(const std::string &name, size_type pos, XLFDName &/*dst*/)
@@ -170,11 +225,13 @@ size_type ParseFoundry(const std::string &name, size_type pos, XLFDName &/*dst*/
    return GetXLFDNameComponentAsString(name, "foundry", pos, dummy);
 }
 
+
 //______________________________________________________________________________
 size_type ParseFamilyName(const std::string &name, size_type pos, XLFDName &dst)
 {
    return GetXLFDNameComponentAsString(name, "family name", pos, dst.fFamilyName);
 }
+
 
 //______________________________________________________________________________
 size_type ParseWeight(const std::string &name, size_type pos, XLFDName &dst)
@@ -191,6 +248,7 @@ size_type ParseWeight(const std::string &name, size_type pos, XLFDName &dst)
 
    return pos;
 }
+
 
 //______________________________________________________________________________
 size_type ParseSlant(const std::string &name, size_type pos, XLFDName &dst)
@@ -213,6 +271,7 @@ size_type ParseSlant(const std::string &name, size_type pos, XLFDName &dst)
    return pos;//never executed.
 }
 
+
 //______________________________________________________________________________
 size_type ParseSetwidth(const std::string &name, size_type pos, XLFDName &/*dst*/)
 {
@@ -220,6 +279,7 @@ size_type ParseSetwidth(const std::string &name, size_type pos, XLFDName &/*dst*
    std::string dummy;
    return GetXLFDNameComponentAsString(name, "setwidth", pos, dummy);
 }
+
 
 //______________________________________________________________________________
 size_type ParseAddstyle(const std::string &name, size_type pos, XLFDName &/*dst*/)
@@ -229,11 +289,13 @@ size_type ParseAddstyle(const std::string &name, size_type pos, XLFDName &/*dst*
    return GetXLFDNameComponentAsString(name, "addstyle", pos, dummy);
 }
 
+
 //______________________________________________________________________________
 size_type ParsePixelSize(const std::string &name, size_type pos, XLFDName &dst)
 {
    return GetXLFDNameComponentAsInteger(name, "pixel size", pos, dst.fPixelSize);
 }
+
 
 //______________________________________________________________________________
 size_type ParsePointSize(const std::string &name, size_type pos, XLFDName &/*dst*/)
@@ -243,6 +305,7 @@ size_type ParsePointSize(const std::string &name, size_type pos, XLFDName &/*dst
    return GetXLFDNameComponentAsString(name, "point size", pos, dummy);
 }
 
+
 //______________________________________________________________________________
 size_type ParseHoriz(const std::string &name, size_type pos, XLFDName &/*dst*/)
 {
@@ -250,6 +313,7 @@ size_type ParseHoriz(const std::string &name, size_type pos, XLFDName &/*dst*/)
    std::string dummy;
    return GetXLFDNameComponentAsString(name, "horizontal", pos, dummy);
 }
+
 
 //______________________________________________________________________________
 size_type ParseVert(const std::string &name, size_type pos, XLFDName &/*dst*/)
@@ -259,6 +323,7 @@ size_type ParseVert(const std::string &name, size_type pos, XLFDName &/*dst*/)
    return GetXLFDNameComponentAsString(name, "vertical", pos, dummy);
 }
 
+
 //______________________________________________________________________________
 size_type ParseSpacing(const std::string &name, size_type pos, XLFDName &/*dst*/)
 {
@@ -266,6 +331,7 @@ size_type ParseSpacing(const std::string &name, size_type pos, XLFDName &/*dst*/
    std::string dummy;
    return GetXLFDNameComponentAsString(name, "spacing", pos, dummy);
 }
+
 
 //______________________________________________________________________________
 size_type ParseAvgwidth(const std::string &name, size_type pos, XLFDName &/*dst*/)
@@ -275,17 +341,20 @@ size_type ParseAvgwidth(const std::string &name, size_type pos, XLFDName &/*dst*
    return GetXLFDNameComponentAsString(name, "average width", pos, dummy);
 }
 
+
 //______________________________________________________________________________
 size_type ParseRgstry(const std::string &name, size_type pos, XLFDName &dst)
 {
    return GetXLFDNameComponentAsString(name, "language", pos, dst.fRgstry);
 }
 
+
 //______________________________________________________________________________
 size_type ParseEncoding(const std::string &name, size_type pos, XLFDName &dst)
 {
    return GetXLFDNameComponentAsString(name, "encoding", pos, dst.fRgstry);
 }
+
 
 //______________________________________________________________________________
 bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
@@ -349,10 +418,15 @@ FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
    //if matching between name from xlfd and MacOS X font is correct.
 
    //CF expects CFStringRef, not c-string.
-   CFGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);//false - no initial retain.
+   CFGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault,
+                                                           xlfd.fFamilyName.c_str(),
+                                                           kCFStringEncodingMacRoman),
+                                 false);//false - no initial retain.
 
    //TODO: pixelSize + 2 - this is just a temporary hack, because text in GUI is too tiny.
-   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize + 2, 0), false);//0 is for CGAffineTransform, false - no initial retain.
+   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(),
+                                                xlfd.fPixelSize + 2, 0),
+                           false);//0 is for CGAffineTransform, false - no initial retain.
 
 
    //What if this font was "loaded" already?
@@ -420,8 +494,8 @@ CTFontRef FontManager::SelectFont(Font_t fontIndex, Float_t fontSize)
 
    fontIndex -= 1;
 
-   if (fontIndex == 11 && !fSymbolMap.size())
-      InitSymbolMap();
+//   if (fontIndex == 11 && !fSymbolMap.size())
+//      InitSymbolMap();
 
    const UInt_t fixedSize = UInt_t(fontSize);
    FontMapIter_t it = fFonts[fontIndex].find(fixedSize);
@@ -436,7 +510,7 @@ CTFontRef FontManager::SelectFont(Font_t fontIndex, Float_t fontSize)
    return fSelectedFont = it->second;
 }
 
-
+/*
 //_________________________________________________________________
 void FontManager::InitSymbolMap()
 {
@@ -583,7 +657,7 @@ void FontManager::InitSymbolMap()
    fSymbolMap[222] = 0x21D2;
    fSymbolMap[242] = 0x222B;
    fSymbolMap[36] = 0x2203;
-}
+}*/
 
 
 //_________________________________________________________________
@@ -597,6 +671,7 @@ CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font)
    Init(textLine, 1, keys, values);
 }
 
+
 //_________________________________________________________________
 CTLineGuard::CTLineGuard(const char * /*textLine*/, CTFontRef /*font*/, Color_t /*color*/)
                   : fCTLine(0)
@@ -604,6 +679,7 @@ CTLineGuard::CTLineGuard(const char * /*textLine*/, CTFontRef /*font*/, Color_t 
    //Create attributed string with font and color.
    //
 }
+
 
 //_________________________________________________________________
 CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font, const CGFloat *rgb)
@@ -627,11 +703,13 @@ CTLineGuard::CTLineGuard(const char *textLine, CTFontRef font, const CGFloat *rg
    CGColorSpaceRelease(rgbColorSpace);//1]
 }
 
+
 //_________________________________________________________________
 CTLineGuard::~CTLineGuard()
 {
    CFRelease(fCTLine);
 }
+
 
 //_________________________________________________________________
 void CTLineGuard::GetBounds(UInt_t &w, UInt_t &h)const
@@ -641,6 +719,7 @@ void CTLineGuard::GetBounds(UInt_t &w, UInt_t &h)const
    h = UInt_t(ascent);// + descent + leading);
 }
 
+
 //_________________________________________________________________
 void CTLineGuard::GetAscentDescent(Int_t &asc, Int_t &desc)const
 {
@@ -649,6 +728,7 @@ void CTLineGuard::GetAscentDescent(Int_t &asc, Int_t &desc)const
    asc = int(ascent);
    desc = int(descent);
 }
+
 
 //_________________________________________________________________
 void CTLineGuard::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values)
