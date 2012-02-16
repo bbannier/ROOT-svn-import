@@ -121,15 +121,19 @@ HypoTestResult* HypoTestCalculatorGeneric::GetHypoTest() const {
 
    // evaluate test statistic on data
    RooArgSet nullP(*nullSnapshot);
-   double obsTestStat = fTestStatSampler->EvaluateTestStatistic(*const_cast<RooAbsData*>(fData), nullP);
-   oocoutP((TObject*)0,Generation) << "Test Statistic on data: " << obsTestStat << endl;
+   double obsTestStat; 
    
    RooArgList* allTS = NULL;
    if( toymcs ) {
       allTS = toymcs->EvaluateAllTestStatistics(*const_cast<RooAbsData*>(fData), nullP);
       //oocoutP((TObject*)0,Generation) << "All Test Statistics on data: " << endl;
       //allTS->Print("v");
+      RooRealVar* firstTS = (RooRealVar*)allTS->at(0);
+      obsTestStat = firstTS->getVal();
+   }else{
+      obsTestStat = fTestStatSampler->EvaluateTestStatistic(*const_cast<RooAbsData*>(fData), nullP);
    }
+   oocoutP((TObject*)0,Generation) << "Test Statistic on data: " << obsTestStat << endl;
 
    // set parameters back ... in case the evaluation of the test statistic
    // modified something (e.g. a nuisance parameter that is not randomized

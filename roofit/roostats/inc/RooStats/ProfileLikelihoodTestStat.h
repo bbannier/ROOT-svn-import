@@ -69,6 +69,12 @@ namespace RooStats {
 	     fOneSidedDiscovery = false;
 	     fDetailedOutputEnabled = false;
         fDetailedOutput = NULL;
+      
+        fUncML = new RooRealVar("uncondML","unconditional ML", 0.0);
+        fFitStatus = new RooRealVar("fitStatus","fit status", 0.0);
+        fCovQual = new RooRealVar("covQual","quality of covariance matrix", 0.0);
+        fNumInvalidNLLEval = new RooRealVar("numInvalidNLLEval","number of invalid NLL evaluations", 0.0);
+      
         fVarName = "Profile Likelihood Ratio";
         fReuseNll = false;
 	fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
@@ -87,6 +93,12 @@ namespace RooStats {
 	    fOneSidedDiscovery = false;
 	    fDetailedOutputEnabled = false;
 	    fDetailedOutput = NULL;
+      
+       fUncML = new RooRealVar("uncondML","unconditional ML", 0.0);
+       fFitStatus = new RooRealVar("fitStatus","fit status", 0.0);
+       fCovQual = new RooRealVar("covQual","quality of covariance matrix", 0.0);
+       fNumInvalidNLLEval = new RooRealVar("numInvalidNLLEval","number of invalid NLL evaluations", 0.0);
+      
        fVarName = "Profile Likelihood Ratio";
        fReuseNll = false;
        fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
@@ -149,6 +161,11 @@ namespace RooStats {
       bool fDetailedOutputEnabled;
       const RooArgSet* fDetailedOutput; //!
       
+      RooRealVar* fUncML; //!
+      RooRealVar* fFitStatus; //!
+      RooRealVar* fCovQual; //!
+      RooRealVar* fNumInvalidNLLEval; //!      
+      
       TString fVarName;
 
       static Bool_t fgAlwaysReuseNll ;
@@ -159,7 +176,7 @@ namespace RooStats {
       Int_t fPrintLevel;
 
    protected:
-      ClassDef(ProfileLikelihoodTestStat,7)   // implements the profile likelihood ratio as a test statistic to be used with several tools
+      ClassDef(ProfileLikelihoodTestStat,8)   // implements the profile likelihood ratio as a test statistic to be used with several tools
    };
 }
 
