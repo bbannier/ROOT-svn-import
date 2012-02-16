@@ -55,10 +55,10 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
           //	 fProfile = (RooProfileLL*) fNll->createProfile(paramsOfInterest);
           created = kTRUE ;
           delete allParams;
-          if (fPrintLevel > 0) cout << "creating profile LL " << fNll << " " << fProfile << " data = " << &data << endl ;
+          if (fPrintLevel > 1) cout << "creating profile LL " << fNll << " " << fProfile << " data = " << &data << endl ;
        }
        if (reuse && !created) {
-          if (fPrintLevel > 0) cout << "reusing profile LL " << fNll << " new data = " << &data << endl ;
+          if (fPrintLevel > 1) cout << "reusing profile LL " << fNll << " new data = " << &data << endl ;
           fNll->setData(data,kFALSE) ;
        }
 
