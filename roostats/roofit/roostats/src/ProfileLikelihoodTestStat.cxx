@@ -87,31 +87,33 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        double fit_favored_mu = 0;
        int statusD = 0;
        if (type != 2) {
+          // minimize and count eval errors
+          fNll->clearEvalErrorLog();
           uncondML = GetMinNLL(statusD);
+          int invalidNLLEval = fNll->numEvalErrors();
 
           // get best fit value for one-sided interval 
           if (firstPOI) fit_favored_mu = attachedSet->getRealValue(firstPOI->GetName()) ;
           
           // save this snapshot
           if( fDetailedOutputEnabled ) {
-             if( fDetailedOutput ) delete fDetailedOutput;
-
-             // monitor a few more variables
-             static RooRealVar* uncML = NULL;
-             if( !uncML ) {
-                uncML = new RooRealVar("uncondML","unconditional ML", uncondML);
-                uncML->setConstant( false );
-             }else{
-                uncML->setVal( uncondML );
-             }
-
-             attachedSet->add( *uncML );
-             fDetailedOutput = (const RooArgSet*)attachedSet->snapshot();
-             RooStats::RemoveConstantParameters( (RooArgSet*)fDetailedOutput );
-             
-//              cout << endl << "STORING THIS AS DETAILED OUTPUT:" << endl;
-//              fDetailedOutput->Print("v");
-//              cout << endl;
+            if( fDetailedOutput ) delete fDetailedOutput;
+            
+            RooArgSet detOut( *attachedSet );
+            RooStats::RemoveConstantParameters( &detOut );
+            
+            // monitor a few more variables
+            fUncML->setVal( uncondML ); detOut.add( *fUncML );
+            fFitStatus->setVal( statusD ); detOut.add( *fFitStatus );
+            //fCovQual->setVal( covQual ); detOut.add( *fCovQual );
+            fNumInvalidNLLEval->setVal( invalidNLLEval ); detOut.add( *fNumInvalidNLLEval );
+            
+            // store it
+            fDetailedOutput = (const RooArgSet*)detOut.snapshot();
+            
+            cout << endl << "STORING THIS AS DETAILED OUTPUT:" << endl;
+            fDetailedOutput->Print("v");
+            cout << endl;
           }
 
        }

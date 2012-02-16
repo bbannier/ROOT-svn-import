@@ -323,9 +323,11 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
 
 
    // bug workaround: evaluate all test statistics once so that they have their detailed
-   // output generated
-   RooAbsData* dummyData = GenerateToyData(*paramPoint);
-   EvaluateAllTestStatistics(*dummyData, *paramPoint);
+   // output generated ... but only do that if there is no detailedOutput present already
+   if( fTestStatistics[0]  &&  !fTestStatistics[0]->GetDetailedOutput() ) {
+      RooAbsData* dummyData = GenerateToyData(*paramPoint);
+      EvaluateAllTestStatistics(*dummyData, *paramPoint);
+   }
 
 
    RooDataSet* outputs = new RooDataSet(
