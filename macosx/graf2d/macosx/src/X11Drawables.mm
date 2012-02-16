@@ -654,6 +654,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 @synthesize fBackBuffer;
 @synthesize fParentView;
+@synthesize fLevel;
 @synthesize fID;
 
 /////////////////////
@@ -677,7 +678,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    if (self = [super initWithFrame : frame]) {
       //Make this explicit (though memory is zero initialized).
       fID = 0;
-
+      fLevel = 0;
       [self setCanDrawConcurrently : NO];
       
       [self setHidden : YES];
@@ -797,6 +798,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    [self addSubview : child];
    child.fParentView = self;
+   child.fLevel = self.fLevel + 1;
 }
 
 //______________________________________________________________________________
