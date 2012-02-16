@@ -84,7 +84,7 @@ void SendLeaveEventClosedRange(QuartzView *from, QuartzView *to, NSEvent *theEve
    assert(theEvent != nil && "SendLeaveEventClosedRange, event parameter is nil");
 
    SendLeaveEventRange(from, to, theEvent);
-   SendLeaveEvent(from, theEvent);
+   SendLeaveEvent(to, theEvent);
 }
 
 //______________________________________________________________________________
@@ -265,8 +265,13 @@ void EventTranslator::GenerateCrossingEventNormal(QuartzView *view, NSEvent *the
       //for one cursor move). In mouseEntered/mouseExited
       //I'm looking for the top level view under cursor and try to generate cross event
       //for this view.
+      NSLog(@"nothing to do, no crossing");
+      
       return;
    }
+
+   if (fViewUnderPointer)
+      NSLog(@"under pointer is %u", fViewUnderPointer.fID);
 
    if (!fViewUnderPointer) {
       //We enter window "from the screen" - do not leave any window.

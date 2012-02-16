@@ -7,6 +7,7 @@
 #import <cassert>
 
 #import "X11Drawables.h"
+#import "X11Events.h"
 #import "TGWindow.h"
 #import "TGClient.h"
 #import "TGCocoa.h"
@@ -1051,6 +1052,20 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    TGWindow *window = gClient->GetWindowById(fID);
    assert(window != nullptr && "mouseEntered, window was not found");
    
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "mouseEntered, gVirtualX is null or not of TGCocoa type");
+
+   /*
+   const NSPoint windowPoint = [theEvent locationInWindow];
+   NSView *candidateView = [[[self window] contentView] hitTest : windowPoint];   
+   if (candidateView && ![candidateView isKindOfClass : [QuartzView class]]) {
+      NSLog(@"Error: hit test returned not a QuartzView!");
+      candidateView = nil;
+   }
+   
+   vx->GetEventTranslator()->GenerateCrossingEvent((QuartzView *)candidateView, theEvent);  
+   */
+   
    if (fEventMask & kEnterWindowMask) {
       Event_t newEvent = [self createROOTEventFor : theEvent];
       newEvent.fType = kEnterNotify;
@@ -1067,7 +1082,21 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    TGWindow *window = gClient->GetWindowById(fID);
    assert(window != nullptr && "mouseExited, window was not found");
+
+   /*
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "mouseExited, gVirtualX is null or not of TGCocoa type");
    
+   const NSPoint windowPoint = [theEvent locationInWindow];
+   NSView *candidateView = [[[self window] contentView] hitTest : windowPoint];
+   if (candidateView && ![candidateView isKindOfClass : [QuartzView class]]) {
+      NSLog(@"Error: hit test returned not a QuartzView!");
+      candidateView = nil;
+   }
+
+   vx->GetEventTranslator()->GenerateCrossingEvent((QuartzView *)candidateView, theEvent);
+   */
+
    if (fEventMask & kLeaveWindowMask) {
       Event_t newEvent = [self createROOTEventFor : theEvent];
       newEvent.fType = kLeaveNotify;
