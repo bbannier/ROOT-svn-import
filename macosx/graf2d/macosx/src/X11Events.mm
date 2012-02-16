@@ -17,6 +17,7 @@ namespace Detail {
 //______________________________________________________________________________
 Time_t TimeForCocoaEvent(NSEvent *theEvent)
 {
+   //1. Event is not nil.
    assert(theEvent != nil && "TimeForCocoaEvent, event parameter is nil");
 
    return [theEvent timestamp] * 1000;//TODO: check this!
@@ -25,6 +26,8 @@ Time_t TimeForCocoaEvent(NSEvent *theEvent)
 //______________________________________________________________________________
 Event_t NewX11EventFromCocoaEvent(unsigned windowID, NSEvent *theEvent)
 {
+   //1. Event is not nil.
+
    assert(theEvent != nil && "NewX11EventFromCocoaEvent, event parameter is nil");
 
    Event_t newEvent = {};
@@ -34,8 +37,29 @@ Event_t NewX11EventFromCocoaEvent(unsigned windowID, NSEvent *theEvent)
 }
 
 //______________________________________________________________________________
+void ConvertEventLocationToROOTXY(NSEvent *cocoaEvent, QuartzView *eventView, Event_t *rootEvent)
+{
+   //1. All parameters are valid.
+   //2. Both event and view must be in the same window.
+   //3. Event is inside view (even if it was not generated for a different view).
+
+   assert(cocoaEvent != nil && "ConvertEventLocationToROOTXY, cocoaEvent parameter is nil");
+   assert(eventView != nil && "ConvertEventLocationToROOTXY, eventView parameter is nil");
+   assert(rootEvent != nullptr && "ConvertEventLocationToROOTXY, rootEvent parameter is null");
+
+   const NSPoint clickPoint = [eventView convertPoint : [cocoaEvent locationInWindow] fromView : nil];
+   rootEvent->fX = clickPoint.x;
+   rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(eventView, clickPoint.y);
+   //NSLog(@"generated enter event, X %d, Y %d", rootEvent->fX, rootEvent->fY);
+}
+
+
+//______________________________________________________________________________
 void SendEnterEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
 {
+   //1. Parameters are valid.
+   //2. view.fID is valid.
+
    assert(view != nil && "SendEnterEvent, view parameter is nil");
    assert(theEvent != nil && "SendEnterEvent, event parameter is nil");
 
@@ -46,9 +70,11 @@ void SendEnterEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
       //NSLog(@"EnterNotify for %u", view.fID);
       Event_t enterEvent = NewX11EventFromCocoaEvent(view.fID, theEvent);
       enterEvent.fType = kEnterNotify;
-      //Coordinates!!!
+      //Coordinates. Event possible happend not in a view,
+      //but window should be the same. Also, coordinates are always
+      //inside a view.
+      ConvertEventLocationToROOTXY(theEvent, view, &enterEvent);
       
-      //
       enterEvent.fCode = detail;
       //Deliver!
       window->HandleEvent(&enterEvent);
@@ -58,6 +84,9 @@ void SendEnterEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
 //______________________________________________________________________________
 void SendLeaveEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
 {
+   //1. Parameters are valid.
+   //2. view.fID is valid.
+
    assert(view != nil && "SendLeaveEvent, view parameter is nil");
    assert(theEvent != nil && "SendLeaveEvent, event parameter is nil");
    
