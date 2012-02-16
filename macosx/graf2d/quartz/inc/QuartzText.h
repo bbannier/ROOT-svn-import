@@ -80,9 +80,9 @@ private:
  
    CTFontRef fSelectedFont;
    
-   std::vector<UniChar> fSymbolMap;
+  // std::vector<UniChar> fSymbolMap;
    
-   void InitSymbolMap();
+  // void InitSymbolMap();
 
 };
 
