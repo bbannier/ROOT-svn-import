@@ -4,6 +4,9 @@
 
 #include "X11Drawables.h"
 #include "X11Events.h"
+#include "TGClient.h"
+#include "TGWindow.h"
+#include "GuiTypes.h"
 
 namespace ROOT {
 namespace MacOSX {
@@ -12,26 +15,64 @@ namespace X11 {
 namespace Detail {
 
 //______________________________________________________________________________
-void SendEnterEvent(QuartzView *view, NSEvent *theEvent)
+Time_t TimeForCocoaEvent(NSEvent *theEvent)
+{
+   assert(theEvent != nil && "TimeForCocoaEvent, event parameter is nil");
+
+   return [theEvent timestamp] * 1000;//TODO: check this!
+}
+
+//______________________________________________________________________________
+Event_t NewX11EventFromCocoaEvent(unsigned windowID, NSEvent *theEvent)
+{
+   assert(theEvent != nil && "NewX11EventFromCocoaEvent, event parameter is nil");
+
+   Event_t newEvent = {};
+   newEvent.fWindow = windowID;
+   newEvent.fTime = TimeForCocoaEvent(theEvent);
+   return newEvent;
+}
+
+//______________________________________________________________________________
+void SendEnterEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
 {
    assert(view != nil && "SendEnterEvent, view parameter is nil");
    assert(theEvent != nil && "SendEnterEvent, event parameter is nil");
 
+   TGWindow *window = gClient->GetWindowById(view.fID);
+   assert(window != nullptr && "SendEnterEvent, window was not found");
+
    if (view.fEventMask & kEnterWindowMask) {
-      NSLog(@"EnterNotify for %u", view.fID);
-      //Call HandleEvent here.
+      //NSLog(@"EnterNotify for %u", view.fID);
+      Event_t enterEvent = NewX11EventFromCocoaEvent(view.fID, theEvent);
+      enterEvent.fType = kEnterNotify;
+      //Coordinates!!!
+      
+      //
+      enterEvent.fCode = detail;
+      //Deliver!
+      window->HandleEvent(&enterEvent);
    }
 }
 
 //______________________________________________________________________________
-void SendLeaveEvent(QuartzView *view, NSEvent *theEvent)
+void SendLeaveEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
 {
    assert(view != nil && "SendLeaveEvent, view parameter is nil");
    assert(theEvent != nil && "SendLeaveEvent, event parameter is nil");
+   
+   TGWindow *window = gClient->GetWindowById(view.fID);
+   assert(window != nullptr && "SendLeaveEvent, window was not found");
 
    if (view.fEventMask & kLeaveWindowMask) {
-      NSLog(@"LeaveNotify for %u", view.fID);
+      //NSLog(@"LeaveNotify for %u", view.fID);
       //Call HandleEvent here.
+      Event_t leaveEvent = NewX11EventFromCocoaEvent(view.fID, theEvent);
+      leaveEvent.fType = kLeaveNotify;
+      //Coordinates!!!
+      leaveEvent.fCode = detail;
+      //Deliver!
+      window->HandleEvent(&leaveEvent);
    }
 }
 
@@ -44,7 +85,7 @@ void SendEnterEventRange(QuartzView *from, QuartzView *to, NSEvent *theEvent)
    assert(theEvent != nil && "SendEnterEventRange, event parameter is nil");
    
    while (from != to) {
-      SendEnterEvent(from, theEvent);
+      SendEnterEvent(from, theEvent, kNotifyNormal);
       from = from.fParentView;
    }
 }
@@ -58,7 +99,7 @@ void SendEnterEventClosedRange(QuartzView *from, QuartzView *to, NSEvent *theEve
    assert(theEvent != nil && "SendEnterEventClosedRange, event parameter is nil");
    
    SendEnterEventRange(from, to, theEvent);
-   SendEnterEvent(to, theEvent);
+   SendEnterEvent(to, theEvent, kNotifyNormal);
 }
 
 //______________________________________________________________________________
@@ -70,7 +111,7 @@ void SendLeaveEventRange(QuartzView *from, QuartzView *to, NSEvent *theEvent)
    assert(theEvent != nil && "SendLeaveEventRange, event parameter is nil");
 
    while (from != to) {
-      SendLeaveEvent(from, theEvent);
+      SendLeaveEvent(from, theEvent, kNotifyNormal);
       from = from.fParentView;
    }
 }
@@ -84,7 +125,7 @@ void SendLeaveEventClosedRange(QuartzView *from, QuartzView *to, NSEvent *theEve
    assert(theEvent != nil && "SendLeaveEventClosedRange, event parameter is nil");
 
    SendLeaveEventRange(from, to, theEvent);
-   SendLeaveEvent(to, theEvent);
+   SendLeaveEvent(to, theEvent, kNotifyNormal);
 }
 
 //______________________________________________________________________________
@@ -170,10 +211,10 @@ void GenerateCrossingEventNormalChildToParent(QuartzView *parent, QuartzView *ch
    assert(theEvent != nil && "GenerateCrossingEventNormalChildToParent, event parameter is nil");
    assert(child.fParentView != nil && "GenerateCrossingEventNormalChildToParent, child parameter must have QuartzView* parent");
    
-   SendLeaveEvent(child, theEvent);
+   SendLeaveEvent(child, theEvent, kNotifyNormal);
 
    SendLeaveEventRange(child.fParentView, parent, theEvent);
-   SendEnterEvent(parent, theEvent);
+   SendEnterEvent(parent, theEvent, kNotifyNormal);
 }
 
 //______________________________________________________________________________
@@ -189,12 +230,12 @@ void GenerateCrossingEventNormalParentToChild(QuartzView *parent, QuartzView *ch
    assert(theEvent != nil && "GenerateCrossingEventNormalParentToChild, event parameter is nil");
    assert(child.fParentView != nil && "GenerateCrossingEventNormalParentToChild, child parameter must have QuartzView* parent");
    
-   SendLeaveEvent(parent, theEvent);
+   SendLeaveEvent(parent, theEvent, kNotifyNormal);
 
    //I do not know, if the order must be reversed, but if yes - it's already FAR TOO
    //expensive to do (but I'll reuse my 'branch' arrays from  FindLowestAncestor).
    SendEnterEventRange(child.fParentView, parent, theEvent);
-   SendEnterEvent(child, theEvent);
+   SendEnterEvent(child, theEvent, kNotifyNormal);
 }
 
 //______________________________________________________________________________
@@ -207,10 +248,9 @@ void GenerateCrossingEventNormalFromChild1ToChild2(QuartzView *child1, QuartzVie
    //Generate EnterNotify for window B, with detail == NotifyNonlinear.
    assert(child1 != nil && "GenerateCrossingEventNormalFromChild1ToChild2, child1 parameter is nil");
    assert(child2 != nil && "GenerateCrossingEventNormalFromChild1ToChild2, child2 parameter is nil");
-   assert(ancestor != nil && "GenerateCrossingEventNormalFromChild1ToChild2, ancestor parameter is nil");
    assert(theEvent != nil && "GenerateCrossingEventNormalFromChild1ToChild2, theEvent parameter is nil");
    
-   SendLeaveEvent(child1, theEvent);
+   SendLeaveEvent(child1, theEvent, kNotifyNormal);
    
    if (!ancestor) {
       //From child1 to it's top-level view.
@@ -225,7 +265,7 @@ void GenerateCrossingEventNormalFromChild1ToChild2(QuartzView *child1, QuartzVie
          SendEnterEventRange(child2.fParentView, ancestor, theEvent);
    }
    
-   SendEnterEvent(child2, theEvent);
+   SendEnterEvent(child2, theEvent, kNotifyNormal);
 }
 
 }//Detail
