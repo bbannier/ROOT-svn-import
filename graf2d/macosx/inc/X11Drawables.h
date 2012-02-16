@@ -206,6 +206,7 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 @property (nonatomic, assign) QuartzView *fParentView;
 
 @property (nonatomic, assign) unsigned fID;
+@property (nonatomic, assign) unsigned fLevel;
 
 /////////////////////////////////////////////////////////////////
 //SetWindowAttributes_t/WindowAttributes_t
