@@ -11,6 +11,7 @@
 #include "X11Drawables.h"
 #include "QuartzText.h"
 #include "CocoaUtils.h"
+#include "X11Events.h"
 #include "TGClient.h"
 #include "TGCocoa.h"
 #include "TError.h"
@@ -19,7 +20,7 @@
 ClassImp(TGCocoa)
 
 namespace Details = ROOT::MacOSX::Details;
-namespace Quartz = ROOT::Quartz;
+namespace X11 = ROOT::MacOSX::X11;//Oh, I hope, there is not such a stupid name in a global space :)
 
 
 namespace {
@@ -142,12 +143,14 @@ void SetFilledAreaParametersFromX11Context(CGContextRef ctx, const GCValues_t &g
 
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
-            : fForegroundProcess(false),
-              fSelectedDrawable(0)
+            : fSelectedDrawable(0),
+              fForegroundProcess(false)
+              
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
-      fFontManager.reset(new Quartz::FontManager);
+      fFontManager.reset(new ROOT::Quartz::FontManager);
+      fEventTranslator.reset(new X11::EventTranslator);
    } catch (const std::exception &) {
       throw;
    }
@@ -156,12 +159,13 @@ TGCocoa::TGCocoa()
 //______________________________________________________________________________
 TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title),
-              fForegroundProcess(false),
-              fSelectedDrawable(0)
+              fSelectedDrawable(0),
+              fForegroundProcess(false)              
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
-      fFontManager.reset(new Quartz::FontManager);
+      fFontManager.reset(new ROOT::Quartz::FontManager);
+      fEventTranslator.reset(new X11::EventTranslator);
    } catch (const std::exception &) {
       throw;   
    }
@@ -2514,6 +2518,7 @@ Bool_t TGCocoa::IsDNDAware(Window_t, Atom_t *)
    return kFALSE;
 }
 
+
 //______________________________________________________________________________
 Int_t TGCocoa::SupportsExtension(const char *) const
 {
@@ -2525,18 +2530,9 @@ Int_t TGCocoa::SupportsExtension(const char *) const
 }
 
 //______________________________________________________________________________
-void TGCocoa::QueueEvent(const Event_t &/*event*/)
+ROOT::MacOSX::X11::EventTranslator *TGCocoa::GetEventTranslator()
 {
-   //Window delegate (and views?) calls this function
-   //and adds ROOT's events into the queue (which later
-   //will be processed by TGClient and ROOT's GUI).
-   //fEventQueue.push_front(event);
-}
-
-//______________________________________________________________________________
-void TGCocoa::SetContext(void *ctx)
-{
-   fCtx = ctx;
+   return fEventTranslator.get();
 }
 
 //______________________________________________________________________________

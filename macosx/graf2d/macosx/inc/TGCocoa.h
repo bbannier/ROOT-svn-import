@@ -1,8 +1,6 @@
 #ifndef ROOT_TGCocoa
 #define ROOT_TGCocoa
 
-
-
 #include <vector>
 #include <memory>
 #include <set>
@@ -25,16 +23,17 @@
 namespace ROOT {
 
 namespace Quartz {
-      
 class FontManager;
-      
 }
    
 namespace MacOSX {
+
+namespace X11 {
+class EventTranslator;
+}
+
 namespace Details {
-
 class CocoaPrivate;
-
 }
 
 }
@@ -90,25 +89,10 @@ public:
    virtual void      SetDoubleBufferOFF();
    virtual void      SetDoubleBufferON();
    virtual void      SetDrawMode(EDrawMode mode);
-/*
-   virtual void      SetFillColor(Color_t cindex);
-   virtual void      SetFillStyle(Style_t style);
-   virtual void      SetLineColor(Color_t cindex);
-   virtual void      SetLineType(Int_t n, Int_t *dash);
-   virtual void      SetLineStyle(Style_t linestyle);
-   virtual void      SetLineWidth(Width_t width);
-   virtual void      SetMarkerColor(Color_t cindex);
-   virtual void      SetMarkerSize(Float_t markersize);
-   virtual void      SetMarkerStyle(Style_t markerstyle);
-   virtual void      SetOpacity(Int_t percent);
-*/
+
    virtual void      SetRGB(Int_t cindex, Float_t r, Float_t g, Float_t b);
-//   virtual void      SetTextAlign(Short_t talign=11);
-//   virtual void      SetTextColor(Color_t cindex);
-//   virtual Int_t     SetTextFont(char *fontname, ETextSetMode mode);
-//   virtual void      SetTextFont(Font_t fontnumber);
    virtual void      SetTextMagnitude(Float_t mgn);
-//   virtual void      SetTextSize(Float_t textsize);
+
    virtual void      Sync(Int_t mode);
    virtual void      UpdateWindow(Int_t mode);
    virtual void      Warp(Int_t ix, Int_t iy, Window_t wid);
@@ -287,61 +271,26 @@ public:
 
    virtual Bool_t       IsCmdThread() const { return kTRUE; }
    
-   //Replace empty overriders in TVirtualX:
-/*
-   virtual void         SetLineColor(Color_t cindex);
-   virtual void         SetLineStyle(Style_t linestyle);
-   virtual void         SetLineWidth(Width_t width);
-   virtual void         SetFillColor(Color_t cindex);
-   virtual void         SetFillStyle(Style_t style);
-   virtual void         SetMarkerColor(Color_t cindex);
-   virtual void         SetMarkerSize(Float_t markersize);
-   virtual void         SetMarkerStyle(Style_t markerstyle);
-   virtual void         SetTextAlign(Short_t talign);
-   virtual void         SetTextColor(Color_t cindex);
-   virtual void         SetTextFont(Font_t fontnumber);
-   virtual void         SetTextSize(Float_t textsize);
-
-  */    
-   using TVirtualX::SetTextFont;
-   
-   
    //Non virtual, non-overriding functions.
+   ROOT::MacOSX::X11::EventTranslator *GetEventTranslator();
    
-   //These are additional functions to work with events.
-   //RootQuartzWindow will place events to event queue,
-   //to process it later somewhere else (in TMacOSXSystem, probably).
-   void QueueEvent(const Event_t &event);
-   //
-   void SetContext(void *ctx);
+protected:
+   void *GetCurrentContext();
+   std::auto_ptr<ROOT::Quartz::FontManager> fFontManager; //!
+   Int_t fSelectedDrawable;
+   std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl; //!
 
 private:
    Bool_t MakeProcessForeground();
 
-protected:
-
-   void *GetCurrentContext();
-
-   void *fCtx;
-   std::auto_ptr<ROOT::Quartz::FontManager> fFontManager;//!
-
-private:
-   TGCocoa(const TGCocoa &rhs);
-   TGCocoa &operator = (const TGCocoa &rhs);
-
-
+   std::auto_ptr<ROOT::MacOSX::X11::EventTranslator> fEventTranslator; //!
    bool fForegroundProcess;
-
    std::vector<GCValues_t> fX11Contexts;
    std::set<Window_t> fViewsToUpdate;
-   std::set<std::set<int> > superSet;
-   std::map<int, std::map<int,int> > mapmap;
-   std::map<double, double> igogo;
 
-protected:
-
-   Int_t fSelectedDrawable;
-   std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl;//!
+   //I'd prefere to use = delete syntax from C++0x11, but this file is processed by CINT.
+   TGCocoa(const TGCocoa &rhs);
+   TGCocoa &operator = (const TGCocoa &rhs);
 
    ClassDef(TGCocoa, 0); //TVirtualX for MacOS X.
 };
