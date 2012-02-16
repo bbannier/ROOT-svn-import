@@ -63,10 +63,10 @@ RooDataSet* ToyMCImportanceSampler::GetSamplingDistributionsSingleWorker(RooArgS
    for( int i = -1; i < (int)fImportanceDensities.size(); i++ ) {
       if( i < 0 ) {
          // generate null toys
-         cout << endl << endl << "   GENERATING FROM NULL DENSITY " << endl << endl;
+         oocoutP((TObject*)0,Generation) << endl << endl << "   GENERATING FROM NULL DENSITY " << endl << endl;
          SetDensityToGenerateFromByIndex( 0, true ); // true = generate from null
       }else{
-         cout << endl << endl << "   GENERATING IMP DENS/SNAP "<<i+1<<"  OUT OF "<<fImportanceDensities.size()<<endl<<endl;
+         oocoutP((TObject*)0,Generation) << endl << endl << "   GENERATING IMP DENS/SNAP "<<i+1<<"  OUT OF "<<fImportanceDensities.size()<<endl<<endl;
          SetDensityToGenerateFromByIndex( i, false ); // false = generate not from null
       }
 
@@ -323,17 +323,17 @@ RooAbsData* ToyMCImportanceSampler::GenerateToyData(
 
    RooAbsData* data = NULL;
    if( fGenerateFromNull ) {
-      cout << "gen from null" << endl;
+      //cout << "gen from null" << endl;
       *allVars = *fNullSnapshots[fIndexGenDensity];
       data = Generate(*fNullDensities[fIndexGenDensity], observables);
    }else{
       // need to be careful here not to overwrite the current state of the
       // nuisance parameters, ie they must not be part of the snapshot
-      cout << "gen from imp" << endl;
+      //cout << "gen from imp" << endl;
       if(fImportanceSnapshots[fIndexGenDensity]) *allVars = *fImportanceSnapshots[fIndexGenDensity];
       data = Generate(*fImportanceDensities[fIndexGenDensity], observables);
    }
-   cout << "data generated: " << data << endl;
+   //cout << "data generated: " << data << endl;
 
 
 
@@ -428,10 +428,10 @@ int ToyMCImportanceSampler::CreateImpDensitiesForOnePOIAdaptively( RooAbsPdf& pd
    // check whether error is trustworthy
    if( poi.getError() > 0.01  &&  poi.getError() < 5.0 ) {
       n = poi.getVal() / (2.*nStdDevOverlap*poi.getError())  + 1; // round up
-      cout << "Using fitFavoredMu and error to set the number of imp points" << endl;
-      cout << "muhat: " << poi.getVal() << "    optimize for distance: " << 2.*nStdDevOverlap*poi.getError() << endl;
-      cout << "n = " << n << endl;
-      cout << "This results in a distance of: " << impMaxMu / n << endl;
+      oocoutI((TObject*)0,InputArguments) << "Using fitFavoredMu and error to set the number of imp points" << endl;
+      oocoutI((TObject*)0,InputArguments) << "muhat: " << poi.getVal() << "    optimize for distance: " << 2.*nStdDevOverlap*poi.getError() << endl;
+      oocoutI((TObject*)0,InputArguments) << "n = " << n << endl;
+      oocoutI((TObject*)0,InputArguments) << "This results in a distance of: " << impMaxMu / n << endl;
    }
    
    // exclude the null, just return the number of importance snapshots
