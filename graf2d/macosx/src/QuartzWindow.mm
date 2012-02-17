@@ -1082,6 +1082,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mouseMoved : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseMoved, fID is 0");
+   
+   if (fParentView)//Suppress events in all views, except the top-level one.
+      return;      //TODO: check, that it does not create additional problems.
 
    TGWindow *window = gClient->GetWindowById(fID);
    assert(window != nullptr && "mouseMoved, window was not found");
@@ -1090,13 +1093,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(vx != nullptr && "mouseMoved, gVirtualX is null or not of TGCocoa type");
    
    vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);
-/*
-   if (fEventMask & kPointerMotionMask) {
-      Event_t newEvent = [self createROOTEventFor : theEvent];
-      newEvent.fType = kMotionNotify;
-      [self locationForEvent : theEvent toROOTEvent : &newEvent];
-      window->HandleEvent(&newEvent);
-   }*/
 }
 
 @end
