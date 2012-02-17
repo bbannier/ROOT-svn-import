@@ -56,6 +56,12 @@ void ConvertEventLocationToROOTXY(NSEvent *cocoaEvent, QuartzView *eventView, Ev
 
    rootEvent->fX = viewPoint.x;
    rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(eventView, viewPoint.y);
+
+   WindowAttributes_t attr = {};
+   GetRootWindowAttributes(&attr);
+
+   rootEvent->fXRoot = screenPoint.x;
+   rootEvent->fYRoot = attr.fHeight - screenPoint.y;
 }
 
 
@@ -307,6 +313,22 @@ void GenerateCrossingEventNormalFromChild1ToChild2(QuartzView *child1, QuartzVie
    SendEnterEvent(child2, theEvent, kNotifyNormal);
 }
 
+//______________________________________________________________________________
+QuartzView *FindViewToPropagateEvent(QuartzView *viewFrom, Mask_t checkMask)
+{
+   assert(viewFrom != nil && "FindViewToPropagateEvent, view parameter is nil");
+   
+   if (viewFrom.fEventMask & checkMask)
+      return viewFrom;
+   
+   for (viewFrom = viewFrom.fParentView; viewFrom; viewFrom = viewFrom.fParentView) {
+      if (viewFrom.fEventMask & checkMask)
+         return viewFrom;
+   }
+
+   return nil;
+}
+
 }//Detail
 
 //______________________________________________________________________________
@@ -321,8 +343,16 @@ void EventTranslator::GenerateCrossingEvent(QuartzView *view, NSEvent *theEvent)
    //View parameter can be nil (we exit any window).
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
    
-   if (!HasGrab())
-      GenerateCrossingEventNormal(view, theEvent);
+   if (!HasGrab()) {
+      const NSPoint windowPoint = [theEvent locationInWindow];
+      NSView *candidateView = [[[view window] contentView] hitTest : windowPoint];
+      if (candidateView && ![candidateView isKindOfClass : [QuartzView class]]) {
+         NSLog(@"EventTranslator::Error: hit test returned not a QuartzView!");
+         candidateView = nil;
+      }
+
+      GenerateCrossingEventNormal((QuartzView *)candidateView, theEvent);
+   }
 }
 
 //______________________________________________________________________________
@@ -337,7 +367,7 @@ void EventTranslator::GenerateCrossingEventNormal(QuartzView *view, NSEvent *the
    //No grabs are active.
 
    assert(theEvent != nil && "GenerateCrossingEventNormal, event parameter is nil");
-   
+
    if (view == fViewUnderPointer) {
       //This can happen: tracking areas for stacked windows call
       //mouseExited even for overlapped views (so you have a bunch of mouseExited/mouseEntered
@@ -396,6 +426,50 @@ void EventTranslator::GenerateCrossingEventNormal(QuartzView *view, NSEvent *the
    }
 
    fViewUnderPointer = view;
+}
+
+//______________________________________________________________________________
+void EventTranslator::GeneratePointerMotionEvent(QuartzView *eventView, NSEvent *theEvent)
+{
+   assert(eventView != nil && "GeneratePointerMotionEvent, view parameter is nil");
+   assert(theEvent != nil && "GeneratePointerMotionEvent, event parameter is nil");
+
+   if (!HasGrab())
+      return GeneratePointerMotionEventNoGrab(eventView, theEvent);
+
+}
+
+//______________________________________________________________________________
+void EventTranslator::GeneratePointerMotionEventNoGrab(QuartzView *eventView, NSEvent *theEvent)
+{
+   //The problem is that mouse motion events come not only to the view on the top of a stack,
+   //but also to every view which is under cursor (even if it's overlapped).
+   //I do not know, why apple did this. For me - it's ridiculous. Also, I have to think
+   //about event propagation and all this makes things even more complex.
+
+   assert(eventView != nil && "GeneratePointerMotionEventNoGrab, view parameter is nil");
+   assert(theEvent != nil && "GeneratePointerMotionEventNoGrab, event parameter is nil");
+   
+   //Find view on the top of stack:
+   QuartzView *candidateView = (QuartzView *)[[[eventView window] contentView] hitTest : [theEvent locationInWindow]];
+   if (candidateView) {
+      //Do propagation.
+      candidateView = Detail::FindViewToPropagateEvent(candidateView, kPointerMotionMask);
+      if (candidateView) {
+         assert(candidateView.fID != 0 && "GeneratePointerMotionEventNoGrab, view's fID is 0");
+         
+         TGWindow *window = gClient->GetWindowById(candidateView.fID);
+         assert(window != nullptr && "GeneratePointerMotionEventNoGrab, no window was found");
+         
+         Event_t motionEvent = Detail::NewX11EventFromCocoaEvent(candidateView.fID, theEvent);
+         motionEvent.fType = kMotionNotify;
+         motionEvent.fState = 0;
+
+         Detail::ConvertEventLocationToROOTXY(theEvent, candidateView, &motionEvent);
+
+         window->HandleEvent(&motionEvent);
+      }
+   }
 }
 
 //______________________________________________________________________________
