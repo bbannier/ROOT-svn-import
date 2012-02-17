@@ -31,10 +31,12 @@ public:
    EventTranslator();
 
    void GenerateCrossingEvent(QuartzView *viewUnderPointer, NSEvent *theEvent);
+   void GeneratePointerMotionEvent(QuartzView *eventView, NSEvent *theEvent);
 private:
    bool HasGrab()const;
 
    void GenerateCrossingEventNormal(QuartzView *view, NSEvent *theEvent);
+   void GeneratePointerMotionEventNoGrab(QuartzView *view, NSEvent *theEvent);
 
    Ancestry FindRelation(QuartzView *view1, QuartzView *view2, QuartzView **lca);
 
