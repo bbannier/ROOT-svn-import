@@ -41,16 +41,21 @@ void ConvertEventLocationToROOTXY(NSEvent *cocoaEvent, QuartzView *eventView, Ev
 {
    //1. All parameters are valid.
    //2. Both event and view must be in the same window.
-   //3. Event is inside view (even if it was not generated for a different view).
 
    assert(cocoaEvent != nil && "ConvertEventLocationToROOTXY, cocoaEvent parameter is nil");
    assert(eventView != nil && "ConvertEventLocationToROOTXY, eventView parameter is nil");
    assert(rootEvent != nullptr && "ConvertEventLocationToROOTXY, rootEvent parameter is null");
 
-   const NSPoint clickPoint = [eventView convertPoint : [cocoaEvent locationInWindow] fromView : nil];
-   rootEvent->fX = clickPoint.x;
-   rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(eventView, clickPoint.y);
-   //NSLog(@"generated enter event, X %d, Y %d", rootEvent->fX, rootEvent->fY);
+   //TODO: can [event window] be nil? (this can probably happen with mouse grabs).
+   if (![cocoaEvent window])
+      NSLog(@"Error in ConvertEventLocationToROOTXY, window property of event is nil, can not convert coordinates correctly");
+   
+   const NSPoint screenPoint = [[cocoaEvent window] convertBaseToScreen : [cocoaEvent locationInWindow]];
+   NSPoint viewPoint = [[eventView window] convertScreenToBase : screenPoint];
+   viewPoint = [eventView convertPointFromBase : viewPoint];
+
+   rootEvent->fX = viewPoint.x;
+   rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(eventView, viewPoint.y);
 }
 
 
@@ -74,6 +79,7 @@ void SendEnterEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
       //but window should be the same. Also, coordinates are always
       //inside a view.
       ConvertEventLocationToROOTXY(theEvent, view, &enterEvent);
+      //NSLog(@"Enter %u at %d %d", view.fID, enterEvent.fX, enterEvent.fY);
       
       enterEvent.fCode = detail;
       //Deliver!
@@ -98,7 +104,11 @@ void SendLeaveEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
       //Call HandleEvent here.
       Event_t leaveEvent = NewX11EventFromCocoaEvent(view.fID, theEvent);
       leaveEvent.fType = kLeaveNotify;
-      //Coordinates!!!
+      //Coordinates. Event possible happend not in a view, also, coordinates are out of
+      //the view.
+      ConvertEventLocationToROOTXY(theEvent, view, &leaveEvent);
+      //NSLog(@"Leave %u at %d %d", view.fID, leaveEvent.fX, leaveEvent.fY);
+
       leaveEvent.fCode = detail;
       //Deliver!
       window->HandleEvent(&leaveEvent);
