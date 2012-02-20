@@ -90,6 +90,126 @@ unsigned GetKeyboardModifiersFromCocoaEvent(NSEvent *theEvent)
    return rootKeyModifiers;
 }
 
+//Misc. aux. functions.
+
+//______________________________________________________________________________
+bool IsParent(QuartzView *testParent, QuartzView *testChild)
+{
+   assert(testParent != nil && "IsParent, testParent parameter is nil");
+   assert(testChild != nil && "IsParent, testChild parameter is nil");
+   
+   if (testChild.fParentView) {
+      QuartzView *parent = testChild.fParentView;
+      while (parent) {
+         if(parent == testParent)
+            return true;
+         parent = parent.fParentView;
+      }
+   }
+
+   return false;
+}
+
+//______________________________________________________________________________
+void BuildAncestryBranch(QuartzView *view, std::vector<QuartzView *> &branch)
+{
+   assert(view != nil && "BuildAncestryBranch, view parameter is nil");
+   assert(view.fParentView != nil && "BuildAncestryBranch, view must have a parent");
+   assert(view.fLevel > 0 && "BuildAncestryBranch, view has nested level 0");
+
+   branch.resize(view.fLevel);
+   
+   QuartzView *parent = view.fParentView;
+   for (auto iter = branch.rbegin(), endIter = branch.rend(); iter != endIter; ++iter) {
+      assert(parent != nil && "BuildAncestryBranch, fParentView is nil");
+      *iter = parent;
+      parent = parent.fParentView;
+   }
+}
+
+//______________________________________________________________________________
+Ancestry FindLowestCommonAncestor(QuartzView *view1, std::vector<QuartzView *> &branch1, 
+                                  QuartzView *view2, std::vector<QuartzView *> &branch2, 
+                                  QuartzView **lca)
+{
+   //Search for the lowest common ancestor.
+   //View1 can not be parent of view2, view2 can not be parent of view1,
+   //I do not check this condition here.
+
+   assert(view1 != nil && "FindLowestCommonAncestor, view1 parameter is nil");
+   assert(view2 != nil && "findLowestCommonAncestor, view2 parameter is nil");
+   assert(lca != nullptr && "FindLowestCommonAncestor, lca parameter is null");
+   
+   if (!view1.fParentView)
+      return Ancestry::ancestorIsRoot;
+
+   if (!view2.fParentView)
+      return Ancestry::ancestorIsRoot;
+   
+   BuildAncestryBranch(view1, branch1);
+   BuildAncestryBranch(view2, branch2);
+   
+   QuartzView *ancestor = nil;
+   
+   for (unsigned i = 0, j = 0; i < view1.fLevel && j < view2.fLevel && branch1[i] == branch2[j]; ++i, ++j)
+      ancestor = branch1[i];
+
+   if (ancestor) {
+      *lca = ancestor;
+      return Ancestry::haveNonRootAncestor;
+   }
+   
+   return Ancestry::ancestorIsRoot;
+}
+
+//______________________________________________________________________________
+QuartzView *FindViewToPropagateEvent(QuartzView *viewFrom, Mask_t checkMask)
+{
+   assert(viewFrom != nil && "FindViewToPropagateEvent, view parameter is nil");
+   
+   if (viewFrom.fEventMask & checkMask)
+      return viewFrom;
+   
+   for (viewFrom = viewFrom.fParentView; viewFrom; viewFrom = viewFrom.fParentView) {
+      if (viewFrom.fEventMask & checkMask)
+         return viewFrom;
+   }
+
+   return nil;
+}
+
+//______________________________________________________________________________
+std::pair<QuartzView *, PointerGrab> FindGrabView(QuartzView *fromView, NSEvent *theEvent, EMouseButton btn)
+{
+   assert(fromView != nil && "FindGrabView, view parameter is nil");
+   assert(theEvent != nil && "FindGrabView, event parameter is nil");
+
+   const unsigned keyModifiers = Detail::GetKeyboardModifiersFromCocoaEvent(theEvent);
+   
+   QuartzView *grabView = 0;
+   QuartzView *buttonPressView = 0;
+   
+   for (QuartzView *view = fromView; view != nil; view = view.fParentView) {
+      //Top-first view to receive button press event.
+      if (!buttonPressView && (view.fEventMask & kButtonPressMask))
+         buttonPressView = view;
+
+      //Top-last view with passive grab.
+      if (view.fGrabButton == kAnyButton || view.fGrabButton == btn) {
+         //Check modifiers.
+         if (view.fGrabKeyModifiers & keyModifiers)
+            grabView = view;
+      }
+   }
+   
+   if (grabView)
+      return std::make_pair(grabView, PointerGrab::passiveGrab);
+   if (buttonPressView)
+      return std::make_pair(buttonPressView, PointerGrab::implicitGrab);
+
+   return std::make_pair((QuartzView *)0, PointerGrab::implicitGrab); 
+}
+
 //Aux. functions to generate events and call HandleEvent for a root window.
 
 //______________________________________________________________________________
@@ -221,126 +341,6 @@ void SendLeaveEventClosedRange(QuartzView *from, QuartzView *to, NSEvent *theEve
 
    SendLeaveEventRange(from, to, theEvent, mode);
    SendLeaveEvent(to, theEvent, mode);
-}
-
-//Misc. aux. functions.
-
-//______________________________________________________________________________
-bool IsParent(QuartzView *testParent, QuartzView *testChild)
-{
-   assert(testParent != nil && "IsParent, testParent parameter is nil");
-   assert(testChild != nil && "IsParent, testChild parameter is nil");
-   
-   if (testChild.fParentView) {
-      QuartzView *parent = testChild.fParentView;
-      while (parent) {
-         if(parent == testParent)
-            return true;
-         parent = parent.fParentView;
-      }
-   }
-
-   return false;
-}
-
-//______________________________________________________________________________
-void BuildAncestryBranch(QuartzView *view, std::vector<QuartzView *> &branch)
-{
-   assert(view != nil && "BuildAncestryBranch, view parameter is nil");
-   assert(view.fParentView != nil && "BuildAncestryBranch, view must have a parent");
-   assert(view.fLevel > 0 && "BuildAncestryBranch, view has nested level 0");
-
-   branch.resize(view.fLevel);
-   
-   QuartzView *parent = view.fParentView;
-   for (auto iter = branch.rbegin(), endIter = branch.rend(); iter != endIter; ++iter) {
-      assert(parent != nil && "BuildAncestryBranch, fParentView is nil");
-      *iter = parent;
-      parent = parent.fParentView;
-   }
-}
-
-//______________________________________________________________________________
-Ancestry FindLowestCommonAncestor(QuartzView *view1, std::vector<QuartzView *> &branch1, 
-                                  QuartzView *view2, std::vector<QuartzView *> &branch2, 
-                                  QuartzView **lca)
-{
-   //Search for the lowest common ancestor.
-   //View1 can not be parent of view2, view2 can not be parent of view1,
-   //I do not check this condition here.
-
-   assert(view1 != nil && "FindLowestCommonAncestor, view1 parameter is nil");
-   assert(view2 != nil && "findLowestCommonAncestor, view2 parameter is nil");
-   assert(lca != nullptr && "FindLowestCommonAncestor, lca parameter is null");
-   
-   if (!view1.fParentView)
-      return Ancestry::ancestorIsRoot;
-
-   if (!view2.fParentView)
-      return Ancestry::ancestorIsRoot;
-   
-   BuildAncestryBranch(view1, branch1);
-   BuildAncestryBranch(view2, branch2);
-   
-   QuartzView *ancestor = nil;
-   
-   for (unsigned i = 0, j = 0; i < view1.fLevel && j < view2.fLevel && branch1[i] == branch2[j]; ++i, ++j)
-      ancestor = branch1[i];
-
-   if (ancestor) {
-      *lca = ancestor;
-      return Ancestry::haveNonRootAncestor;
-   }
-   
-   return Ancestry::ancestorIsRoot;
-}
-
-//______________________________________________________________________________
-QuartzView *FindViewToPropagateEvent(QuartzView *viewFrom, Mask_t checkMask)
-{
-   assert(viewFrom != nil && "FindViewToPropagateEvent, view parameter is nil");
-   
-   if (viewFrom.fEventMask & checkMask)
-      return viewFrom;
-   
-   for (viewFrom = viewFrom.fParentView; viewFrom; viewFrom = viewFrom.fParentView) {
-      if (viewFrom.fEventMask & checkMask)
-         return viewFrom;
-   }
-
-   return nil;
-}
-
-//______________________________________________________________________________
-std::pair<QuartzView *, PointerGrab> FindGrabView(QuartzView *fromView, NSEvent *theEvent, EMouseButton btn)
-{
-   assert(fromView != nil && "FindGrabView, view parameter is nil");
-   assert(theEvent != nil && "FindGrabView, event parameter is nil");
-
-   const unsigned keyModifiers = Detail::GetKeyboardModifiersFromCocoaEvent(theEvent);
-   
-   QuartzView *grabView = 0;
-   QuartzView *buttonPressView = 0;
-   
-   for (QuartzView *view = fromView; view != nil; view = view.fParentView) {
-      //Top-first view to receive button press event.
-      if (!buttonPressView && (view.fEventMask & kButtonPressMask))
-         buttonPressView = view;
-
-      //Top-last view with passive grab.
-      if (view.fGrabButton == kAnyButton || view.fGrabButton == btn) {
-         //Check modifiers.
-         if (view.fGrabKeyModifiers & keyModifiers)
-            grabView = view;
-      }
-   }
-   
-   if (grabView)
-      return std::make_pair(grabView, PointerGrab::passiveGrab);
-   if (buttonPressView)
-      return std::make_pair(buttonPressView, PointerGrab::implicitGrab);
-
-   return std::make_pair((QuartzView *)0, PointerGrab::implicitGrab); 
 }
 
 //Top-level crossing event generators.
