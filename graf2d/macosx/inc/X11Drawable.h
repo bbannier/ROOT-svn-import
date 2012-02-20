@@ -62,8 +62,9 @@
 
 @property (nonatomic, assign) int fGrabButton;
 @property (nonatomic, assign) unsigned fGrabButtonEventMask;
+@property (nonatomic, assign) unsigned fGrabKeyModifiers;
+@property (nonatomic, assign) BOOL fOwnerEvents;
 //modifier also.
-
 
 //Geometry: (readonly)
 - (int)      fX;

@@ -1627,7 +1627,7 @@ void TGCocoa::GrabKey(Window_t /*wid*/, Int_t /*keycode*/, UInt_t /*modifier*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t /*modifier*/, UInt_t evmask,
+void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t modifier, UInt_t evmask,
                          Window_t /*confine*/, Cursor_t /*cursor*/, Bool_t grab)
 {
    // Establishes a passive grab on a certain mouse button. That is, when a
@@ -1639,11 +1639,15 @@ void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t /*modifier*/,
    id<X11Drawable> widget = fPimpl->GetWindow(wid);
    
    if (grab) {
+      widget.fOwnerEvents = YES;  //This is how TGX11 works.
       widget.fGrabButton = button;
       widget.fGrabButtonEventMask = evmask;
+      widget.fGrabKeyModifiers = modifier;
    } else {
-      widget.fGrabButton = 0;
+      widget.fOwnerEvents = NO;
+      widget.fGrabButton = -1;//0 is kAnyButton.
       widget.fGrabButtonEventMask = 0;
+      widget.fGrabKeyModifiers = 0;
    }
 }
 

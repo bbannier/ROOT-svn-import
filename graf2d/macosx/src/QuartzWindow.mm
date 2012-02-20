@@ -359,7 +359,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    assert(fContentView != nil && "fGrabButton, content view is nil");
    
-   return fContentView.fEventMask;
+   return fContentView.fGrabButton;
 }
 
 //______________________________________________________________________________
@@ -384,6 +384,38 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(fContentView != nil && "setFGrabButtonEventMask, content view is nil");
    
    fContentView.fGrabButtonEventMask = mask;
+}
+
+//______________________________________________________________________________
+- (unsigned) fGrabKeyModifiers
+{
+   assert(fContentView != nil && "fGrabKeyModifiers, content view is nil");
+   
+   return fContentView.fGrabKeyModifiers;
+}
+
+//______________________________________________________________________________
+- (void) setFGrabKeyModifiers : (unsigned) mod
+{
+   assert(fContentView != nil && "setFGrabKeyModifiers, content view is nil");
+   
+   fContentView.fGrabKeyModifiers = mod;
+}
+
+//______________________________________________________________________________
+- (BOOL) fOwnerEvents
+{
+   assert(fContentView != nil && "fOwnerEvents, content view is nil");
+
+   return fContentView.fOwnerEvents;
+}
+
+//______________________________________________________________________________
+- (void) setFOwnerEvents : (BOOL) owner
+{
+   assert(fContentView != nil && "setFOwnerEvents, content view is nil");
+
+   fContentView.fOwnerEvents = owner;
 }
 
 //______________________________________________________________________________
@@ -671,6 +703,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 @synthesize fGrabButton;
 @synthesize fGrabButtonEventMask;
+@synthesize fGrabKeyModifiers;
+@synthesize fOwnerEvents;
+
 @synthesize fContext;
 
 //______________________________________________________________________________
@@ -680,6 +715,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       //Make this explicit (though memory is zero initialized).
       fID = 0;
       fLevel = 0;
+      
+      //Passive grab parameters.
+      fGrabButton = -1;//0 is kAnyButton.
+      fGrabButtonEventMask = 0;
+      fOwnerEvents = NO;
+      
       [self setCanDrawConcurrently : NO];
       
       [self setHidden : YES];
@@ -1016,6 +1057,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    TGWindow *window = gClient->GetWindowById(fID);
    assert(window != nullptr && "mouseDown, window was not found");
    
+   /*
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx && "gVirtualX is either null or has type different from TGCocoa");
+   vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);
+   */
+
    if ([self viewGeneratesButtonPressEvent : kButton1]) {
       Event_t newEvent = [self createROOTEventFor : theEvent];
       newEvent.fType = kButtonPress;
