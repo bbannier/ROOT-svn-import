@@ -65,6 +65,9 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 @property (nonatomic, assign) int fGrabButton;
 @property (nonatomic, assign) unsigned fGrabButtonEventMask;
+@property (nonatomic, assign) unsigned fGrabKeyModifiers;
+@property (nonatomic, assign) BOOL fOwnerEvents;
+
 
 //Life-cycle.
 - (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle 
@@ -140,6 +143,8 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 @property (nonatomic, assign) int fGrabButton;
 @property (nonatomic, assign) unsigned fGrabButtonEventMask;
+@property (nonatomic, assign) unsigned fGrabKeyModifiers;
+@property (nonatomic, assign) BOOL fOwnerEvents;
 //modifier also.
 
 
