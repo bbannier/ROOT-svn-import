@@ -16,6 +16,7 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+@class QuartzWindow;
 @class QuartzView;
 @class NSEvent;
 
@@ -59,6 +60,7 @@ private:
    void GenerateButtonReleaseEventActiveGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
 
    Ancestry FindRelation(QuartzView *view1, QuartzView *view2, QuartzView **lca);
+   void SortTopLevelWindows();
 
    QuartzView *fViewUnderPointer;
    std::vector<QuartzView *> fBranch1;
@@ -67,6 +69,8 @@ private:
    PointerGrab fPointerGrab;
 //   EMouseButton fButtonPressed;//for implicit grab.
    QuartzView *fCurrentGrabView;
+   
+   std::vector<QuartzWindow *> fWindowStack;
 };
 
 }//X11

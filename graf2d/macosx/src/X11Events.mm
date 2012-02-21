@@ -696,7 +696,6 @@ void EventTranslator::GeneratePointerMotionEventNoGrab(QuartzView *eventView, NS
    assert(eventView != nil && "GeneratePointerMotionEventNoGrab, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEventNoGrab, event parameter is nil");
    
-//   NSLog(@"")
    //Find view on the top of stack:
    QuartzView *candidateView = (QuartzView *)[[[eventView window] contentView] hitTest : [theEvent locationInWindow]];
    if (candidateView) {
@@ -775,7 +774,18 @@ Ancestry EventTranslator::FindRelation(QuartzView *view1, QuartzView *view2, Qua
    return Detail::FindLowestCommonAncestor(view1, fBranch1, view2, fBranch2, lca);
 }
 
+//______________________________________________________________________________
+void EventTranslator::SortTopLevelWindows()
+{
+   fWindowStack.clear();
 
+   NSArray *orderedWindows = [NSApp orderedWindows];
+   for (NSWindow *window in orderedWindows) {
+      if (![window isKindOfClass : [QuartzWindow class]])
+         continue;
+      fWindowStack.push_back((QuartzWindow *)window);
+   }
+}
 
 }//X11
 }//MacOSX
