@@ -1057,20 +1057,10 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    TGWindow *window = gClient->GetWindowById(fID);
    assert(window != nullptr && "mouseDown, window was not found");
    
-   /*
+
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx && "gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);
-   */
-
-   if ([self viewGeneratesButtonPressEvent : kButton1]) {
-      Event_t newEvent = [self createROOTEventFor : theEvent];
-      newEvent.fType = kButtonPress;
-      [self locationForEvent : theEvent toROOTEvent : &newEvent];
-
-      window->HandleEvent(&newEvent);
-   } else //We can also check fDoNoPropagate mask and block the event (TODO).
-      [super mouseDown : theEvent];//Pass to the parent view.
 }
 
 //______________________________________________________________________________
@@ -1078,26 +1068,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    assert(fID != 0 && "mouseUp, fID is 0");
 
-   TGWindow *window = gClient->GetWindowById(fID);
-   assert(window != nullptr && "mouseUp, window was not found");
-   
-   if ([self viewGeneratesButtonReleaseEvent : kButton1]) {
-      Event_t newEvent = [self createROOTEventFor : theEvent];
-      newEvent.fType = kButtonRelease;
-      //TODO: coordinates?
-      [self locationForEvent : theEvent toROOTEvent : &newEvent];
-      window->HandleEvent(&newEvent);
-   } else //check do not propagate???
-      [super mouseUp : theEvent];
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx && "gVirtualX is either null or has type different from TGCocoa");
+   vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton1);
 }
 
 //______________________________________________________________________________
 - (void) mouseEntered : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseEntered, fID is 0");
-   
-   TGWindow *window = gClient->GetWindowById(fID);
-   assert(window != nullptr && "mouseEntered, window was not found");
    
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "mouseEntered, gVirtualX is null or not of TGCocoa type");
@@ -1109,9 +1088,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mouseExited : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseExited, fID is 0");
-   
-   TGWindow *window = gClient->GetWindowById(fID);
-   assert(window != nullptr && "mouseExited, window was not found");
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "mouseExited, gVirtualX is null or not of TGCocoa type");
@@ -1133,13 +1109,26 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    if (fParentView)//Suppress events in all views, except the top-level one.
       return;      //TODO: check, that it does not create additional problems.
 
-   TGWindow *window = gClient->GetWindowById(fID);
-   assert(window != nullptr && "mouseMoved, window was not found");
-   
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "mouseMoved, gVirtualX is null or not of TGCocoa type");
    
    vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);
+}
+
+//______________________________________________________________________________
+- (void) mouseDragged : (NSEvent *)theEvent
+{
+   assert(fID != 0 && "mouseDragged, fID is 0");
+   
+   //mouseMoved and mouseDragged work differently 
+   //(drag events are generated only for one view, where drag started).
+   //if (fParentView)
+   //   return;
+   
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "mouseMoved, gVirtualX is null or not of TGCocoa type");
+   
+   vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
 }
 
 @end
