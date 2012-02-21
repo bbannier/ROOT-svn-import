@@ -45,13 +45,18 @@ public:
    void GenerateCrossingEvent(QuartzView *viewUnderPointer, NSEvent *theEvent);
    void GeneratePointerMotionEvent(QuartzView *eventView, NSEvent *theEvent);
    void GenerateButtonPressEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
+   void GenerateButtonReleaseEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
 
 private:
    bool HasPointerGrab()const;
 
-   void GenerateCrossingEvent(QuartzView *viewUnderPointer, QuartzView *view, NSEvent *theEvent, EXMagic detail);
+   void GenerateCrossingEvent(QuartzView *viewUnderPointer, NSEvent *theEvent, EXMagic detail);
    void GeneratePointerMotionEventNoGrab(QuartzView *view, NSEvent *theEvent);
+
    void GenerateButtonPressEventNoGrab(QuartzView *view, NSEvent *theEvent, EMouseButton btn);
+
+   void GenerateButtonReleaseEventImplicitGrab(NSEvent *theEvent, EMouseButton btn);
+   void GenerateButtonReleaseEventActiveGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
 
    Ancestry FindRelation(QuartzView *view1, QuartzView *view2, QuartzView **lca);
 
