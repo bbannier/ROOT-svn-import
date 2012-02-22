@@ -5,6 +5,7 @@
 #include <Cocoa/Cocoa.h>
 
 #include "QuartzWindow.h"
+#include "CocoaUtils.h"
 #include "X11Events.h"
 #include "TGClient.h"
 #include "TGWindow.h"
@@ -686,6 +687,31 @@ void EventTranslator::GenerateButtonReleaseEvent(QuartzView *eventView, NSEvent 
 }
 
 //______________________________________________________________________________
+void EventTranslator::SetPointerGrab(QuartzView *grabView)
+{
+   assert(grabView != nil && "SetPointerGrab, view parameter is nil");
+   
+   //Now some magic to receive mouse move events even outside any window.
+   if (grabView.fGrabButtonEventMask & kPointerMotionMask)
+      [[grabView window] setAcceptsMouseMovedEvents : YES];
+      
+   fCurrentGrabView = grabView;
+   fPointerGrab = PointerGrab::activeGrab;
+}
+
+//______________________________________________________________________________
+void EventTranslator::CancelPointerGrab(QuartzView *grabView)
+{
+   assert(grabView != nil && "CancelPointerGrab, view parameter is nil");
+   assert(grabView == fCurrentGrabView && "CancelPointerGrab, view parameter is not a current grab view");
+   //
+   [[grabView window] setAcceptsMouseMovedEvents : NO];//Do not track mouse move events outside window anymore.
+   
+   fCurrentGrabView = nil;
+   fPointerGrab = PointerGrab::noGrab;
+}
+
+//______________________________________________________________________________
 void EventTranslator::GeneratePointerMotionEventNoGrab(QuartzView *eventView, NSEvent *theEvent)
 {
    //The problem is that mouse motion events come not only to the view on the top of a stack,
@@ -777,6 +803,8 @@ Ancestry EventTranslator::FindRelation(QuartzView *view1, QuartzView *view2, Qua
 //______________________________________________________________________________
 void EventTranslator::SortTopLevelWindows()
 {
+   const ROOT::MacOSX::Util::AutoreleasePool pool;
+
    fWindowStack.clear();
 
    NSArray *orderedWindows = [NSApp orderedWindows];
