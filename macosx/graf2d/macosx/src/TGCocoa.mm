@@ -1064,7 +1064,6 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
       
       const Window_t result = fPimpl->RegisterWindow(newWindow);
       newWindow.fID = result;
-
       [newWindow release];//Owned by fPimpl now.
 
       return result;
@@ -1666,17 +1665,17 @@ void TGCocoa::GrabPointer(Window_t wid, UInt_t eventMask, Window_t /*confine*/, 
 
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    if (grab) {
-   /*   view.fOwnerEvents = ownerEvents;
+      view.fOwnerEvents = ownerEvents;
       view.fGrabButtonEventMask = eventMask;
       //set the cursor.
       //set active grab.
-      fEventTranslator->SetPointerGrab(view);*/
+      fEventTranslator->SetPointerGrab(view);
    } else {
-   /*   //unset cursor?
+      //unset cursor?
       //cancel grab.
       fEventTranslator->CancelPointerGrab(view);
       view.fOwnerEvents = NO;
-      view.fGrabButtonEventMask = 0;*/
+      view.fGrabButtonEventMask = 0;
    }
 }
 

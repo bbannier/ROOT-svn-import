@@ -54,16 +54,23 @@ public:
 private:
    bool HasPointerGrab()const;
 
+
+   //Used both by grab and non-grab case.
    void GenerateCrossingEvent(QuartzView *viewUnderPointer, NSEvent *theEvent, EXMagic detail);
+   void GenerateCrossingEventActiveGrab(QuartzView *eventView, NSEvent *theEvent);
+
    void GeneratePointerMotionEventNoGrab(QuartzView *view, NSEvent *theEvent);
+   void GeneratePointerMotionEventActiveGrab(QuartzView *eventView, NSEvent *theEvent);
 
    void GenerateButtonPressEventNoGrab(QuartzView *view, NSEvent *theEvent, EMouseButton btn);
+   void GenerateButtonPressEventActiveGrab(QuartzView *view, NSEvent *theEvent, EMouseButton btn);
 
-   void GenerateButtonReleaseEventImplicitGrab(NSEvent *theEvent, EMouseButton btn);
+   void GenerateButtonReleaseEventNoGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    void GenerateButtonReleaseEventActiveGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
 
    Ancestry FindRelation(QuartzView *view1, QuartzView *view2, QuartzView **lca);
    void SortTopLevelWindows();
+   QuartzWindow *FindTopLevelWindowForMouseEvent();
 
    QuartzView *fViewUnderPointer;
    std::vector<QuartzView *> fBranch1;
