@@ -1007,8 +1007,6 @@ QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t 
    const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
    //
    QuartzWindow *newWindow = [[QuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : YES windowAttributes : attr];
-   //TODO should it be in setAttributes?
-   [newWindow setAcceptsMouseMovedEvents : YES];
    //
    newWindow.fDepth = depth;
    newWindow.fClass = clss;
@@ -1627,22 +1625,27 @@ void TGCocoa::GrabKey(Window_t /*wid*/, Int_t /*keycode*/, UInt_t /*modifier*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t modifier, UInt_t evmask,
+void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t keyModifiers, UInt_t eventMask,
                          Window_t /*confine*/, Cursor_t /*cursor*/, Bool_t grab)
 {
-   // Establishes a passive grab on a certain mouse button. That is, when a
-   // certain mouse button is hit while certain modifier's (Shift, Control,
-   // Meta, Alt) are active then the mouse will be grabed for window id.
-   // When grab is false, ungrab the mouse button for this button and modifier.
+   //Emulate "passive grab" feature of X11 (similar to "implicit grab" in Cocoa
+   //and implicit grab on X11, the difference is that "implicit grab" works as
+   //if owner_events parameter for XGrabButton was False, but in ROOT
+   //owner_events for XGrabButton is _always_ True.
+   //Confine will never be used - no such feature on MacOSX and
+   //I'm not going to emulate it..
+   //This function also does ungrab.
+   
    assert(wid != 0 && "GrabButton, called for 'root' window");
    
    id<X11Drawable> widget = fPimpl->GetWindow(wid);
    
    if (grab) {
-      widget.fOwnerEvents = YES;  //This is how TGX11 works.
+      widget.fOwnerEvents = YES;   //This is how TGX11 works.
       widget.fGrabButton = button;
-      widget.fGrabButtonEventMask = evmask;
-      widget.fGrabKeyModifiers = modifier;
+      widget.fGrabButtonEventMask = eventMask;
+      widget.fGrabKeyModifiers = keyModifiers;
+      //Set the cursor.
    } else {
       widget.fOwnerEvents = NO;
       widget.fGrabButton = -1;//0 is kAnyButton.
@@ -1652,20 +1655,44 @@ void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t modifier, UIn
 }
 
 //______________________________________________________________________________
-void TGCocoa::GrabPointer(Window_t /*wid*/, UInt_t /*evmask*/,
-                            Window_t /*confine*/, Cursor_t /*cursor*/,
-                            Bool_t /*grab = kTRUE*/,
-                            Bool_t /*owner_events = kTRUE*/)
+void TGCocoa::GrabPointer(Window_t wid, UInt_t eventMask, Window_t /*confine*/, Cursor_t /*cursor*/, Bool_t grab, Bool_t ownerEvents)
 {
-   // Establishes an active pointer grab. While an active pointer grab is in
-   // effect, further pointer events are only reported to the grabbing
-   // client window.
+   //Emulate pointer grab from X11.
+   //Confine will never be used - no such feature on MacOSX and
+   //I'm not going to emulate it..
+   //This function also does ungrab.
+
+   assert(wid != 0 && "GrabPointer, called for 'root' window");
+
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   if (grab) {
+   /*   view.fOwnerEvents = ownerEvents;
+      view.fGrabButtonEventMask = eventMask;
+      //set the cursor.
+      //set active grab.
+      fEventTranslator->SetPointerGrab(view);*/
+   } else {
+   /*   //unset cursor?
+      //cancel grab.
+      fEventTranslator->CancelPointerGrab(view);
+      view.fOwnerEvents = NO;
+      view.fGrabButtonEventMask = 0;*/
+   }
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetWindowName(Window_t /*wid*/, char * /*name*/)
+void TGCocoa::SetWindowName(Window_t wid, char *name)
 {
-   // Sets the window name.
+   if (!wid || !name)//This can happen.
+      return;
+   
+   id<X11Drawable> widget = fPimpl->GetWindow(wid);
+   if ([(NSObject *)widget isKindOfClass : [NSWindow class]]) {
+      const ROOT::MacOSX::Util::AutoreleasePool pool;
+      NSString *windowTitle = [NSString stringWithCString : name encoding : NSASCIIStringEncoding];
+      [(NSWindow *)widget setTitle : windowTitle];
+   } else
+      Error("SetWindowName", "Window for id %lu is not an NSWindow object", wid);
 }
 
 //______________________________________________________________________________
@@ -1756,6 +1783,8 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
    }
    
    const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
+   
+   CGContextSetTextMatrix(view.fContext, CGAffineTransformIdentity);
    //Text must be antialiased.
    CGContextSetAllowsAntialiasing(view.fContext, 1);
       

@@ -47,6 +47,9 @@ public:
    void GeneratePointerMotionEvent(QuartzView *eventView, NSEvent *theEvent);
    void GenerateButtonPressEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    void GenerateButtonReleaseEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
+   
+   void SetPointerGrab(QuartzView *grabView);
+   void CancelPointerGrab(QuartzView *grabView);
 
 private:
    bool HasPointerGrab()const;
