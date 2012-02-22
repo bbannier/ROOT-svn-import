@@ -199,16 +199,17 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
       return;
    }
    
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
- 
-   // Text color
-   SetContextFillColor(GetTextColor());
-
    assert(fSelectedDrawable != 0 && "no pixmap selected");
    id<X11Drawable> pixmap = fPimpl->GetWindow(fSelectedDrawable);
    assert(pixmap.fIsPixmap == YES && "selected drawable is not a pixmap");
    
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
    CGContextSaveGState(ctx);
+
+   //Before any core text drawing operations, reset text matrix.
+   CGContextSetTextMatrix(ctx, CGAffineTransformIdentity); 
+   // Text color
+   SetContextFillColor(GetTextColor());
    
    CGContextTranslateCTM(ctx, 0.f, pixmap.fHeight);
    CGContextScaleCTM(ctx, 1.f, -1.f);
