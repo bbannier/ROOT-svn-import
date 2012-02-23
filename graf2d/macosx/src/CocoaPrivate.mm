@@ -12,11 +12,27 @@ namespace Details {
 
 //______________________________________________________________________________
 CocoaPrivate::CocoaPrivate()
-               : fCurrentWindowID(1)//0 is for 'ROOT', any real window has id > 0.
+               : fCurrentWindowID(GetRootWindowID() + 1)//Any real window has id > rootID.
+                                                        //0 is also used by some X11 functions as None.
 {
    //Init NSApplication, if it was not done yet.
    Util::AutoreleasePool pool;
    [NSApplication sharedApplication];
+}
+
+//______________________________________________________________________________
+int CocoaPrivate::GetRootWindowID()const
+{
+   //First I had root ID == 0, but this is None in X11 and
+   //it can be used by ROOT, for example, I had trouble with
+   //gClient able to found TGWindow for None - crash!
+   return 1;
+}
+
+//______________________________________________________________________________
+bool CocoaPrivate::IsRootWindow(int wid)const
+{
+   return wid == GetRootWindowID();
 }
 
 //______________________________________________________________________________
@@ -54,6 +70,12 @@ unsigned CocoaPrivate::RegisterWindow(NSObject *nsWin)
 id<X11Drawable> CocoaPrivate::GetWindow(unsigned winID)const
 {
    auto winIter = fWindows.find(winID);
+
+   if (winIter == fWindows.end()) {
+      NSLog(@"%u", winID);
+      int * pp = 0;
+      pp[100] = 100;
+   }
 
    assert(winIter != fWindows.end() && "GetWindow, non-existing window requested");
 

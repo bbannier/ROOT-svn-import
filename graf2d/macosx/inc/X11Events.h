@@ -48,8 +48,8 @@ public:
    void GenerateButtonPressEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    void GenerateButtonReleaseEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    
-   void SetPointerGrab(QuartzView *grabView);
-   void CancelPointerGrab(QuartzView *grabView);
+   void SetPointerGrab(QuartzView *grabView, unsigned eventMask, bool ownerEvents);
+   void CancelPointerGrab();
 
 private:
    bool HasPointerGrab()const;
@@ -68,6 +68,7 @@ private:
    void GenerateButtonReleaseEventNoGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    void GenerateButtonReleaseEventActiveGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
 
+   void FindGrabView(QuartzView *fromView, NSEvent *theEvent, EMouseButton btn);
    Ancestry FindRelation(QuartzView *view1, QuartzView *view2, QuartzView **lca);
    void SortTopLevelWindows();
    QuartzWindow *FindTopLevelWindowForMouseEvent();
@@ -77,7 +78,10 @@ private:
    std::vector<QuartzView *> fBranch2;
    
    PointerGrab fPointerGrab;
-//   EMouseButton fButtonPressed;//for implicit grab.
+   unsigned fGrabEventMask;
+   bool fOwnerEvents;
+
+
    QuartzView *fCurrentGrabView;
    
    std::vector<QuartzWindow *> fWindowStack;
