@@ -32,6 +32,9 @@ public:
 private:
    CocoaPrivate();
    
+   int GetRootWindowID()const;
+   bool IsRootWindow(int wid)const;
+   
    CocoaPrivate(const CocoaPrivate &rhs) = delete;
    CocoaPrivate &operator = (const CocoaPrivate &rhs) = delete;
 
