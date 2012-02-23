@@ -11,6 +11,7 @@
 #include "CocoaUtils.h"
 #include "X11Events.h"
 #include "TGClient.h"
+#include "TGWindow.h"
 #include "TGCocoa.h"
 #include "TError.h"
 
@@ -1548,10 +1549,20 @@ Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t & /*e
 }
 
 //______________________________________________________________________________
-void TGCocoa::SendEvent(Window_t /*wid*/, Event_t * /*ev*/)
+void TGCocoa::SendEvent(Window_t wid, Event_t *event)
 {
    // Specifies the event "ev" is to be sent to the window "wid".
    // This function requires you to pass an event mask.
+//   NSLog(@"send a message to %lu", wid);
+   assert(!fPimpl->IsRootWindow(wid) && "SendEvent, can not send event to a root window");
+   assert(event != nullptr && "SendEvent, event parameter is null");
+   
+   id<X11Drawable> widget = fPimpl->GetWindow(wid);
+   assert(widget.fID != 0 && "SendEvent, widget.fID is 0");
+   
+   TGWindow *window = gClient->GetWindowById(wid);
+   assert(window != nullptr && "SendEvent, no window was found");
+   window->HandleEvent(event);
 }
 
 //______________________________________________________________________________
@@ -2598,4 +2609,3 @@ Bool_t TGCocoa::MakeProcessForeground()
    
    return kTRUE;
 }
-
