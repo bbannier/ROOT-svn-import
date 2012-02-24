@@ -105,6 +105,57 @@ int LocalYROOTToCocoa(id<X11Drawable> drawable, CGFloat yROOT)
 }
 
 //______________________________________________________________________________
+NSPoint TranslateToScreen(QuartzView *from, NSPoint point)
+{
+   assert(from != nil && "TranslateCoordinates, 'from' parameter is nil");
+   
+   //I do not know, if I can use convertToBacking ..... - have to check this.   
+   NSScreen *currentScreen = [[NSScreen screens] objectAtIndex : 0];
+	assert(currentScreen != nil && "TranslateToScreen, screen is nil");
+
+   const NSPoint winPoint = [from convertPoint : point toView : nil];
+   NSPoint screenPoint = [[from window] convertBaseToScreen : winPoint];
+ 
+   //This is Cocoa's coordinates, but for ROOT I have to convert.
+   screenPoint.y = currentScreen.frame.size.height - screenPoint.y;
+
+   return screenPoint;
+}
+
+//______________________________________________________________________________
+NSPoint TranslateFromScreen(NSPoint point, QuartzView *to)
+{
+   assert(to != nil && "TranslateCoordinates, 'to' parameter is nil");
+   
+   //May be I can use convertBackingTo .... have to check this.
+   const NSPoint winPoint = [[to window] convertScreenToBase : point];
+   return [to convertPoint : winPoint fromView : nil];
+}
+
+//______________________________________________________________________________
+NSPoint TranslateCoordinates(QuartzView *from, QuartzView *to, NSPoint sourcePoint)
+{
+   //Both views are valid.
+   assert(from != nil && "TranslateCoordinates, 'from' parameter is nil");
+   assert(to != nil && "TranslateCoordinates, 'to' parameter is nil");
+
+   if ([from window] == [to window]) {
+      //Both views are in the same window.
+      return [to convertPoint : sourcePoint fromView : from];      
+   } else {
+      //May be, I can do it in one call, but it's not obvious for me
+      //what is 'pixel aligned backing store coordinates' and
+      //if they are the same as screen coordinates.
+      
+      const NSPoint win1Point = [from convertPoint : sourcePoint toView : nil];
+      const NSPoint screenPoint = [[from window] convertBaseToScreen : win1Point];
+      const NSPoint win2Point = [[to window] convertScreenToBase : screenPoint];
+
+      return [to convertPoint : win2Point fromView : nil];
+   }
+}
+
+//______________________________________________________________________________
 void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> window)
 {
    const Mask_t mask = attr->fMask;

@@ -22,6 +22,10 @@ int LocalYCocoaToROOT(QuartzView *parentView, CGFloat yCocoa);
 int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
 int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
+NSPoint TranslateToScreen(QuartzView *from, NSPoint point);
+NSPoint TranslateFromScreen(NSPoint point, QuartzView *to);
+NSPoint TranslateCoordinates(QuartzView *fromView, QuartzView *toView, NSPoint sourcePoint);
+
 }
 }
 }
