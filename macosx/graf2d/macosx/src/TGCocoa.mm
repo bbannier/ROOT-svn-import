@@ -2038,25 +2038,33 @@ void TGCocoa::TranslateCoordinates(Window_t srcWin, Window_t dstWin, Int_t srcX,
       QuartzView *dstView = fPimpl->GetWindow(dstWin).fContentView;
       dstPoint = X11::TranslateFromScreen(srcPoint, dstView);
 
-      if ([dstView superview])
+      if ([dstView superview]) {
+         //hitTest requires a point in a superview's coordinate system.
+         //Even contentView of QuartzWindow has a superview (NSThemeFrame),
+         //so this should always work.
          dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
-      if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint]) {
-         if (view != dstView)
-            child = view.fID;
+         if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint]) {
+            if (view != dstView && view.fMapState == kIsViewable)
+               child = view.fID;
+         }
       }
    } else {
       QuartzView *srcView = fPimpl->GetWindow(srcWin).fContentView;
       QuartzView *dstView = fPimpl->GetWindow(dstWin).fContentView;
 
       dstPoint = X11::TranslateCoordinates(srcView, dstView, srcPoint);
-      if ([dstView superview])
+      if ([dstView superview]) {
+         //hitTest requires a point in a view's superview coordinate system.
+         //Even contentView of QuartzWindow has a superview (NSThemeFrame),
+         //so this should always work.
          dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
-      if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint]) {
-         if (view != dstView)
-            child = view.fID;
+         if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint]) {
+            if (view != dstView && view.fMapState == kIsViewable)
+               child = view.fID;
+         }
       }
    }
-   
+
    dstX = dstPoint.x;
    dstY = dstPoint.y;
 }
