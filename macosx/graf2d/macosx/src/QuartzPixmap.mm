@@ -13,16 +13,16 @@
 @synthesize fID;
 
 //______________________________________________________________________________
-- (id) initWithSize : (NSSize) pixmapSize flipped : (BOOL) flip
+- (id) initWithSize : (NSSize) pixmapSize
 {
    if (self = [super init]) {
       fWidth = 0;
       fHeight = 0;
       
-      if ([self resize : pixmapSize flipped : flip])
+      if ([self resize : pixmapSize])
          return self;
    }
-   
+
    //Yes, if context creation failed, the calling code should use
    //separate alloc/init statements to check this.
    return nil;
@@ -37,7 +37,7 @@
 }
 
 //______________________________________________________________________________
-- (BOOL) resize : (NSSize) newSize flipped : (BOOL) flip
+- (BOOL) resize : (NSSize) newSize
 {
    assert(newSize.width > 0 && "Pixmap width must be positive");
    assert(newSize.height > 0 && "Pixmap height must be positive");
@@ -60,8 +60,8 @@
    //
    //For debug only: fill bitmap with green color.
    //
-//   CGContextSetRGBFillColor(ctx, 0.f, 1.f, 0.f, 1.f);
-//   CGContextFillRect(ctx, CGRectMake(0.f, 0.f, newSize.width, newSize.height));
+   //CGContextSetRGBFillColor(ctx, 0.f, 1.f, 0.f, 1.f);
+   //CGContextFillRect(ctx, CGRectMake(0.f, 0.f, newSize.width, newSize.height));
 
    
    if (fContext) {
@@ -75,11 +75,6 @@
    fHeight = newSize.height;
    
    fContext = ctx;//[2]
-
-   if (flip) {
-      CGContextTranslateCTM(fContext, 0.f, fHeight);
-      CGContextScaleCTM(fContext, 1.f, -1.f);
-   }
 
    CGColorSpaceRelease(colorSpace);//[1]
 

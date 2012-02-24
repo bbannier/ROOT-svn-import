@@ -57,7 +57,7 @@ void ConvertEventLocationToROOTXY(NSEvent *cocoaEvent, QuartzView *eventView, Ev
    viewPoint = [eventView convertPointFromBase : viewPoint];
 
    rootEvent->fX = viewPoint.x;
-   rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(eventView, viewPoint.y);
+   rootEvent->fY = viewPoint.y;
 
    WindowAttributes_t attr = {};
    GetRootWindowAttributes(&attr);

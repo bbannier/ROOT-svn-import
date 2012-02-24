@@ -212,8 +212,7 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
    SetContextFillColor(GetTextColor());
    
    CGContextTranslateCTM(ctx, 0.f, pixmap.fHeight);
-   CGContextScaleCTM(ctx, 1.f, -1.f);
-   
+   CGContextScaleCTM(ctx, 1.f, -1.f);   
    
    Quartz::DrawText(ctx, (Double_t)x, 
                     ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y), 

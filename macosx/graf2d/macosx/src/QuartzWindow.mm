@@ -125,10 +125,8 @@ void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> wind
    //cursor for example, etc.
    if (mask & kWAOverrideRedirect) {
       //This is quite a special case.
-      //Unfortunately, as soon as this is Objective-C++, I 
-      //can not do the following test:
-      //if ([window isKindOfClass : [QuartzWindow : class]]) {
-      if (!window.fParentView) {
+      //TODO: Must be checked yet, if I understand this correctly!
+      if ([(NSObject *)window isKindOfClass : [QuartzWindow class]]) {
          QuartzWindow *qw = (QuartzWindow *)window;
          [qw setStyleMask : NSBorderlessWindowMask];
       }
@@ -142,7 +140,7 @@ void GetWindowGeometry(id<X11Drawable> win, WindowAttributes_t *dst)
    assert(dst != nullptr && "GetWindowGeometry, dst paremeter is null");
    
    dst->fX = win.fX;
-   dst->fY = win.fYROOT;
+   dst->fY = win.fY;
    
    dst->fWidth = win.fWidth;
    dst->fHeight = win.fHeight;
@@ -524,21 +522,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (int) fYCocoa
+- (int) fY
 {
-   return self.frame.origin.y;
-}
-
-//______________________________________________________________________________
-- (int) fYROOT
-{
-   //self.frame.origin.y is bottom-left corner's coordinate in a bottom-left system.
-   NSArray *screens = [NSScreen screens];
-   assert(screens != nil && "fYROOT, screens array is nil");
-   
-   NSScreen *mainScreen = [screens objectAtIndex : 0];
-   assert(mainScreen != nil && "fYROOT, main screen (index 0) is nil");
-   
    return ROOT::MacOSX::X11::GlobalYCocoaToROOT(self.frame.origin.y + self.frame.size.height);
 }
 
@@ -580,7 +565,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h
+- (void) setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h
 {
    const NSSize newSize = {.width = w, .height = h};
    [self setContentSize : newSize];
@@ -592,7 +577,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) setX : (int) x rootY : (int) y
+- (void) setX : (int) x Y : (int) y
 {
    const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
 
@@ -738,6 +723,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    return self;
 }
 
+//______________________________________________________________________________
+- (BOOL) isFlipped
+{
+   //Now view's placement, geometry, moving and resizing can be
+   //done with ROOT's (X11) coordinates without conversion.
+   return YES;
+}
+
+
 /////////////////////////////////////////////////////////////
 //X11Drawable protocol.
 
@@ -760,17 +754,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (int) fYCocoa
+- (int) fY
 {
    return self.frame.origin.y;
-}
-
-//______________________________________________________________________________
-- (int) fYROOT
-{
-   assert(fParentView != nil && "fYROOT, parent view is nil");
-   
-   return ROOT::MacOSX::X11::LocalYCocoaToROOT(fParentView, self.frame.origin.y + self.frame.size.height);
 }
 
 //______________________________________________________________________________
@@ -808,13 +794,13 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h
+- (void) setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h
 {
-   assert(fParentView != nil && "setX:rootY:width:height:, parent view is nil");
+   assert(fParentView != nil && "setX:Y:width:height:, parent view is nil");
 
    NSRect newFrame = {};
    newFrame.origin.x = x;
-   newFrame.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(fParentView, y + h);
+   newFrame.origin.y = y;
    newFrame.size.width = w;
    newFrame.size.height = h;
    
@@ -822,13 +808,13 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) setX : (int) x rootY : (int) y
+- (void) setX : (int) x Y : (int) y
 {
-   assert(fParentView != nil && "setX:rootY:, parent view is nil");
+   assert(fParentView != nil && "setX:Y:, parent view is nil");
    
    NSRect newFrame = self.frame;
    newFrame.origin.x = x;
-   newFrame.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(fParentView, y + newFrame.size.height);
+   newFrame.origin.y = y;
    
    self.frame = newFrame;
 }
@@ -1013,7 +999,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    [self setNeedsDisplay : YES];//?
 }
-
+/*
 //______________________________________________________________________________
 - (void) locationForEvent : (NSEvent *) cocoaEvent toROOTEvent : (Event_t *) rootEvent
 {
@@ -1048,6 +1034,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    return NO;
 }
+*/
 
 //______________________________________________________________________________
 - (void) mouseDown : (NSEvent *) theEvent
