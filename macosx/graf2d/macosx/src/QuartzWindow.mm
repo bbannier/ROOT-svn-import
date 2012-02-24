@@ -110,14 +110,11 @@ NSPoint TranslateToScreen(QuartzView *from, NSPoint point)
    assert(from != nil && "TranslateCoordinates, 'from' parameter is nil");
    
    //I do not know, if I can use convertToBacking ..... - have to check this.   
-   NSScreen *currentScreen = [[NSScreen screens] objectAtIndex : 0];
-	assert(currentScreen != nil && "TranslateToScreen, screen is nil");
-
    const NSPoint winPoint = [from convertPoint : point toView : nil];
    NSPoint screenPoint = [[from window] convertBaseToScreen : winPoint];
  
    //This is Cocoa's coordinates, but for ROOT I have to convert.
-   screenPoint.y = currentScreen.frame.size.height - screenPoint.y;
+   screenPoint.y = GlobalYCocoaToROOT(screenPoint.y);
 
    return screenPoint;
 }
@@ -127,6 +124,8 @@ NSPoint TranslateFromScreen(NSPoint point, QuartzView *to)
 {
    assert(to != nil && "TranslateCoordinates, 'to' parameter is nil");
    
+   point.y = GlobalYROOTToCocoa(point.y);
+
    //May be I can use convertBackingTo .... have to check this.
    const NSPoint winPoint = [[to window] convertScreenToBase : point];
    return [to convertPoint : winPoint fromView : nil];
