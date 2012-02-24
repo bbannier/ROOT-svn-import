@@ -76,16 +76,15 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 
 //Geometry.
 - (int)      fX;
-- (int)      fYCocoa;
-- (int)      fYROOT;
+- (int)      fY;
 
 - (unsigned) fWidth;
 - (unsigned) fHeight;
 - (NSSize)   fSize;
 
 - (void)     setDrawableSize : (NSSize) newSize;
-- (void)     setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h;
-- (void)     setX : (int) x rootY : (int) y;
+- (void)     setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h;
+- (void)     setX : (int) x Y : (int) y;
 
 //Children subviews.
 - (void)     addChild : (QuartzView *)child;
@@ -152,17 +151,19 @@ int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *) attr;
 
 //Geometry.
+
+- (BOOL)     isFlipped;//override method from NSView.
+
 - (int)      fX;
-- (int)      fYCocoa;
-- (int)      fYROOT;
+- (int)      fY;
 
 - (unsigned) fWidth;
 - (unsigned) fHeight;
 - (NSSize)   fSize;
 
 - (void)     setDrawableSize : (NSSize) newSize;
-- (void)     setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h;
-- (void)     setX : (int) x rootY : (int) y;
+- (void)     setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h;
+- (void)     setX : (int) x Y : (int) y;
 
 //Children subviews.
 - (void)     addChild : (QuartzView *)child;

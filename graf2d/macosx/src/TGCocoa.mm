@@ -109,6 +109,8 @@ void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVal
    
    if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1)
       CGContextSetLineWidth(ctx, gcVals.fLineWidth);
+   else
+      CGContextSetLineWidth(ctx, 1.);
 
    CGFloat rgb[3] = {};
    if (mask & kGCForeground)
@@ -275,8 +277,6 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
       CGContextRef dstCtx = window.fBackBuffer.fContext;
       assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
 
-      ypos = ROOT::MacOSX::X11::LocalYROOTToCocoa(window.fBackBuffer, ypos + pixmap.fHeight);
-
       const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
 
       CGContextDrawImage(dstCtx, imageRect, image);
@@ -336,7 +336,7 @@ void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
    } else {
       id<X11Drawable> window = fPimpl->GetWindow(wid);
       x = window.fX;
-      y = window.fYROOT;
+      y = window.fY;
       w = window.fWidth;
       h = window.fHeight;
    }
@@ -432,7 +432,7 @@ void TGCocoa::MoveWindow(Int_t wid, Int_t x, Int_t y)
 
    assert(!fPimpl->IsRootWindow(wid) && "MoveWindow, called for 'root' window");
 
-   [fPimpl->GetWindow(wid) setX : x rootY : y];
+   [fPimpl->GetWindow(wid) setX : x Y : y];
 }
 
 //______________________________________________________________________________
@@ -444,7 +444,7 @@ Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
    newSize.height = h;
 
    QuartzPixmap *obj = [QuartzPixmap alloc];
-   if (QuartzPixmap *pixmap = [obj initWithSize : newSize flipped : YES]) {
+   if (QuartzPixmap *pixmap = [obj initWithSize : newSize]) {
       pixmap.fID = fPimpl->RegisterWindow(pixmap);
       [pixmap release];
       return (Int_t)pixmap.fID;
@@ -539,7 +539,7 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
    newSize.width = w;
    newSize.height = h;
    
-   if ([pixmap resize : newSize flipped : YES])
+   if ([pixmap resize : newSize])
       return 1;
 
    return -1;
@@ -671,7 +671,7 @@ void TGCocoa::SetDoubleBufferON()
       return;
    }
    
-   if (QuartzPixmap *pixmap = [mem initWithSize : newSize flipped : NO]) {
+   if (QuartzPixmap *pixmap = [mem initWithSize : newSize]) {
       pixmap.fID = fPimpl->RegisterWindow(pixmap);
       [pixmap release];
 
@@ -886,7 +886,7 @@ void TGCocoa::MoveWindow(Window_t wid, Int_t x, Int_t y)
    //        relative to its parent.
    assert(!fPimpl->IsRootWindow(wid) && "MoveWindow, called for 'root' window");
    
-   [fPimpl->GetWindow(wid) setX : x rootY : y];
+   [fPimpl->GetWindow(wid) setX : x Y : y];
 }
 
 //______________________________________________________________________________
@@ -902,7 +902,7 @@ void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t 
    
    assert(!fPimpl->IsRootWindow(wid) && "MoveResizeWindow, called for 'root' window");
    
-   [fPimpl->GetWindow(wid) setX : x rootY : y width : w height : h];
+   [fPimpl->GetWindow(wid) setX : x Y : y width : w height : h];
 }
 
 //______________________________________________________________________________
@@ -989,12 +989,12 @@ QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t 
 }
 
 //______________________________________________________________________________
-QuartzView *CreateChildView(QuartzView *parent, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
+QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
                                 UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t *attr, UInt_t /*wtype*/)
 {
    NSRect viewRect = {};
    viewRect.origin.x = x;
-   viewRect.origin.y = ROOT::MacOSX::X11::LocalYROOTToCocoa(parent, y + Int_t(h));
+   viewRect.origin.y = y;
    viewRect.size.width = w;
    viewRect.size.height = h;
    
@@ -1479,7 +1479,7 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
    //   drawRect.
    using namespace ROOT::MacOSX::X11;
-
+   
    //This code is just a hack to show a button or other widgets.
    assert(!fPimpl->IsRootWindow(wid) && "DrawLine, called for 'root' window");   
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawLine, strange context index");
@@ -1496,19 +1496,21 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    const CGStateGuard ctxGuard(view.fContext);
    //Draw a line.
    //This draw line is a special GUI method, it's used not by ROOT's graphics, but
-   //by widgets. The problem is, I can not draw the line at the top of widget (in X11's
-   //coordinate space it's at the bottom. So I have to make very tiny scaling here.
-   //Other solutions - add 1 pixel to the widget's height or substract 1 from y coordinate
-   //- are even WORSE (in the first case, we'll have to remember everywhere the real size,
-   //in the second - lines can be at y == height and y == height - 1, so it's not clear when to shift).
-   CGContextScaleCTM(view.fContext, 1.f, CGFloat(view.fHeight - 1) / view.fHeight);
+   //widgets. The problem is:
+   //-I have to switch off anti-aliasing, since if anti-aliasing is on,
+   //the line is thick and has different color.
+   //-As soon as I switch-off anti-aliasing, and line is precise, I can not
+   //draw a line [0, 0, -> w, 0].
+   //I use a small translation, after all, this is ONLY gui method and it
+   //will not affect anything except GUI.
+   CGContextTranslateCTM(view.fContext, 0.f, 1.);
    CGContextSetAllowsAntialiasing(view.fContext, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
-      
+
    SetStrokeParametersFromX11Context(view.fContext, gcVals);
-   
+   CGContextSetLineWidth(view.fContext, 1.);   
    CGContextBeginPath(view.fContext);
-   CGContextMoveToPoint(view.fContext, x1, LocalYROOTToCocoa(view, y1));
-   CGContextAddLineToPoint(view.fContext, x2, LocalYROOTToCocoa(view, y2));
+   CGContextMoveToPoint(view.fContext, x1, y1);
+   CGContextAddLineToPoint(view.fContext, x2, y2);
    CGContextStrokePath(view.fContext);
 }
 
@@ -1536,8 +1538,6 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    
    const CGStateGuard ctxGuard(view.fContext);
    CGContextSetRGBFillColor(view.fContext, red, green, blue, 1.f);//alpha can be also used.
-   if (y)
-      y = LocalYROOTToCocoa(view, y + h);
    CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
 }
 
@@ -1553,7 +1553,6 @@ void TGCocoa::SendEvent(Window_t wid, Event_t *event)
 {
    // Specifies the event "ev" is to be sent to the window "wid".
    // This function requires you to pass an event mask.
-//   NSLog(@"send a message to %lu", wid);
    assert(!fPimpl->IsRootWindow(wid) && "SendEvent, can not send event to a root window");
    assert(event != nullptr && "SendEvent, event parameter is null");
    
@@ -1759,15 +1758,20 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
    }
    
    const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
-   
+
    CGContextSetTextMatrix(view.fContext, CGAffineTransformIdentity);
+   
+   //View is flipped, I have to transform for Core Text to work.
+   CGContextTranslateCTM(view.fContext, 0.f, view.fHeight);
+   CGContextScaleCTM(view.fContext, 1.f, -1.f);   
+
    //Text must be antialiased.
    CGContextSetAllowsAntialiasing(view.fContext, 1);
       
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
 
-   if (len < 0)
+   if (len < 0)//Negative length can come from caller.
       len = std::strlen(text);
    const std::string substr(text, len);
       
@@ -1862,13 +1866,13 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
       return;
    }
    
-   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
+   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
+
    //Fill color from context.
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    SetFilledAreaParametersFromX11Context(view.fContext, gcVals);
 
-   //CGContextSetRGBStrokeColor(ctx, 1, 0, 0, 1.f);
-   const CGRect fillRect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
+   const CGRect fillRect = CGRectMake(x, y, w, h);
    CGContextFillRect(view.fContext, fillRect);
 }
 
@@ -1889,13 +1893,13 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
       return;
    }
    
-   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
-      
+   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
+
    //Line color from X11 context.
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    SetStrokeParametersFromX11Context(view.fContext, gcVals);
       
-   const CGRect rect = CGRectMake(x, LocalYROOTToCocoa(view, y + h), w, h);
+   const CGRect rect = CGRectMake(x, y, w, h);
    CGContextStrokeRect(view.fContext, rect);
 }
 
@@ -2034,7 +2038,7 @@ void TGCocoa::TranslateCoordinates(Window_t src, Window_t dst, Int_t src_x, Int_
       
       NSPoint srcPoint = {};
       srcPoint.x = src_x;
-      srcPoint.y = LocalYROOTToCocoa(srcView, src_y);
+      srcPoint.y = src_y;
 
       NSScreen *currentScreen = [[NSScreen screens] objectAtIndex : 0];
 
@@ -2052,12 +2056,12 @@ void TGCocoa::TranslateCoordinates(Window_t src, Window_t dst, Int_t src_x, Int_
       
       NSPoint srcPoint = {};
       srcPoint.x = src_x;
-      srcPoint.y = LocalYROOTToCocoa(srcView, src_y);
+      srcPoint.y = src_y;
       
 
       NSPoint dstPoint = [dstView convertPoint : srcPoint fromView : srcView];
       dest_x = dstPoint.x;
-      dest_y = LocalYCocoaToROOT(dstView, dstPoint.y);
+      dest_y = dstPoint.y;
 
       if ([dstView superview])
          dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
@@ -2092,7 +2096,7 @@ void TGCocoa::GetWindowSize(Drawable_t wid, Int_t &x, Int_t &y, UInt_t &w, UInt_
    } else {
       id<X11Drawable> window = fPimpl->GetWindow(wid);
       x = window.fX;
-      y = window.fYROOT;
+      y = window.fY;
       w = window.fWidth;
       h = window.fHeight;
    }

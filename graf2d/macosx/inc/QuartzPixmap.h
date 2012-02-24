@@ -17,8 +17,8 @@
 
 @property (nonatomic, readonly) CGContextRef fContext;
 
-- (id) initWithSize : (NSSize) frame flipped : (BOOL) flip;
-- (BOOL) resize : (NSSize) newSize flipped : (BOOL) flip;
+- (id) initWithSize : (NSSize) frame;
+- (BOOL) resize : (NSSize) newSize;
 
 - (unsigned) fWidth;
 - (unsigned) fHeight;

@@ -68,13 +68,7 @@
 
 //Geometry: (readonly)
 - (int)      fX;
-
-//X11 (== ROOT's GUI) and Cocoa uses different coordinate systems:
-//in X11's window (0, 0) is a top-left corner,
-//in Cocoa's window it's bottom left.
-
-- (int)      fYCocoa; //bottom-left system.
-- (int)      fYROOT;  //top-left system.
+- (int)      fY; //top-left corner system.
 
 - (unsigned) fWidth;
 - (unsigned) fHeight;
@@ -83,8 +77,8 @@
 //Geometry: setters, parameters are in top-level system
 //(will be converted into Cocoa system internally).
 - (void)     setDrawableSize : (NSSize) newSize;
-- (void)     setX : (int) x rootY : (int) y width : (unsigned) w height : (unsigned) h;
-- (void)     setX : (int) x rootY : (int) y;
+- (void)     setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h;
+- (void)     setX : (int) x Y : (int) y;
 
 //Nested views ("windows").
 - (void)     addChild : (QuartzView *)child;
