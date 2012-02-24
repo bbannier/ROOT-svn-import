@@ -1930,11 +1930,8 @@ void TGCocoa::SelectInput(Window_t wid, UInt_t evmask)
    assert(!fPimpl->IsRootWindow(wid) && "SelectInput, called for 'root' window");
    
    id<X11Drawable> window = fPimpl->GetWindow(wid);
-   //This is wrong at the moment, I have it only for test: TODO.
-   //
-   //
-   //
-   window.fEventMask |= evmask;
+   //XSelectInput overrides previous mask.
+   window.fEventMask = evmask;
 }
 
 //______________________________________________________________________________
