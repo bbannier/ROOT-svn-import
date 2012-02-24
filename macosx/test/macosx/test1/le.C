@@ -114,9 +114,7 @@ void le()
 
    // main frame
    TGMainFrame *fMainFrame1209 = new TGMainFrame(gClient->GetRoot(),10, 10, kMainFrame | kVerticalFrame);
-   fMainFrame1209->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   fMainFrame1209->Resize(697,552);
-   
+   fMainFrame1209->AddInput(kEnterWindowMask | kLeaveWindowMask);   
    fMainFrame1209->SetName("fMainFrame1209");
    fMainFrame1209->SetLayoutBroken(kTRUE);
 
@@ -168,6 +166,7 @@ void le()
    fMainFrame1209->AddFrame(fHorizontalFrame615, new TGLayoutHints(kLHintsLeft | kLHintsTop,2,2,2,2));
    fHorizontalFrame615->MoveResize(8,16,680,528);
 
+   fMainFrame1209->Resize(697,552);
    fMainFrame1209->MapSubwindows();
    fMainFrame1209->Resize(fMainFrame1209->GetDefaultSize());
    fMainFrame1209->MapWindow();
