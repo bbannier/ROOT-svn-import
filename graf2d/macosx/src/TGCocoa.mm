@@ -1998,79 +1998,67 @@ void TGCocoa::LookupString(Event_t * /*event*/, char * /*buf*/, Int_t /*buflen*/
 }
 
 //______________________________________________________________________________
-void TGCocoa::TranslateCoordinates(Window_t src, Window_t dst, Int_t src_x, Int_t src_y, Int_t &dest_x, Int_t &dest_y, Window_t &child)
+void TGCocoa::TranslateCoordinates(Window_t srcWin, Window_t dstWin, Int_t srcX, Int_t srcY, Int_t &dstX, Int_t &dstY, Window_t &child)
 {
    // Translates coordinates in one window to the coordinate space of another
    // window. It takes the "src_x" and "src_y" coordinates relative to the
    // source window's origin and returns these coordinates to "dest_x" and
    // "dest_y" relative to the destination window's origin.
-   //
-   // src            - the source window
-   // dest           - the destination window
-   // src_x, src_y   - coordinates within the source window
-   // dest_x, dest_y - coordinates within the destination window
+
    // child          - returns the child of "dest" if the coordinates
    //                  are contained in a mapped child of the destination
    //                  window; otherwise, child is set to 0
-//   NSLog(@"TranslateCoordinates was called %lu", child);
 
-//   assert(src != 0 && "TranslateCoordinates, src is a 'root' window");
-//   assert(dest != 0 && "TranslateCoordinates, dest is a 'root' window");
-//   NSLog(@"src %lu dest %lu x %d y %d", src, dest, src_x, src_y);
-   using namespace ROOT::MacOSX::X11;
+   namespace X11 = ROOT::MacOSX::X11;
 
-   child = 0;
-   
-   if (!src || !dst)//This is from TGX11.
+   child = 0;   
+   if (!srcWin || !dstWin)//This is from TGX11, looks like this can happen.
       return;
    
-   const bool srcIsRoot = fPimpl->IsRootWindow(src);
-   const bool dstIsRoot = fPimpl->IsRootWindow(dst);
+   const bool srcIsRoot = fPimpl->IsRootWindow(srcWin);
+   const bool dstIsRoot = fPimpl->IsRootWindow(dstWin);
    
    if (srcIsRoot && dstIsRoot) {
-      Warning("TranslateCoordinates", "both source and destination windows are 'root' window");//TODO: can this ever happen?
+      //TODO: can this ever happen? If this is ok, I'll simply remove warning.
+      Warning("TranslateCoordinates", "both source and destination windows are 'root' window");
       return;
    }
+   
+   NSPoint srcPoint = {};
+   srcPoint.x = srcX;
+   srcPoint.y = srcY;
 
-   if (!srcIsRoot && dstIsRoot) {
-      //This is a special case for popup menu. TODO: sure code must be more generic.
-      QuartzView *srcView = fPimpl->GetWindow(src).fContentView;
-      
-      NSPoint srcPoint = {};
-      srcPoint.x = src_x;
-      srcPoint.y = src_y;
+   NSPoint dstPoint = {};
 
-      NSScreen *currentScreen = [[NSScreen screens] objectAtIndex : 0];
 
-		const NSPoint windowPoint = [srcView convertPoint : srcPoint toView : nil];
-		const NSPoint screenPoint = [[srcView window] convertBaseToScreen : windowPoint];
- 
-		dest_x = screenPoint.x;
-      dest_y = currentScreen.frame.size.height - screenPoint.y;
-      child = 0;
-   } else if (srcIsRoot && !dstIsRoot) {
-      //From screen to view.
-   } else {
-      QuartzView *srcView = fPimpl->GetWindow(src).fContentView;
-      QuartzView *dstView = fPimpl->GetWindow(dst).fContentView;   
-      
-      NSPoint srcPoint = {};
-      srcPoint.x = src_x;
-      srcPoint.y = src_y;
-      
-
-      NSPoint dstPoint = [dstView convertPoint : srcPoint fromView : srcView];
-      dest_x = dstPoint.x;
-      dest_y = dstPoint.y;
+   if (dstIsRoot) {
+      QuartzView *srcView = fPimpl->GetWindow(srcWin).fContentView;
+      dstPoint = X11::TranslateToScreen(srcView, srcPoint);
+   } else if (srcIsRoot) {
+      QuartzView *dstView = fPimpl->GetWindow(dstWin).fContentView;
+      dstPoint = X11::TranslateFromScreen(srcPoint, dstView);
 
       if ([dstView superview])
          dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
+      if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint]) {
+         if (view != dstView)
+            child = view.fID;
+      }
+   } else {
+      QuartzView *srcView = fPimpl->GetWindow(srcWin).fContentView;
+      QuartzView *dstView = fPimpl->GetWindow(dstWin).fContentView;
 
+      dstPoint = X11::TranslateCoordinates(srcView, dstView, srcPoint);
+      if ([dstView superview])
+         dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
       if (QuartzView *view = (QuartzView *)[dstView hitTest : dstPoint]) {
          if (view != dstView)
             child = view.fID;
       }
    }
+   
+   dstX = dstPoint.x;
+   dstY = dstPoint.y;
 }
 
 //______________________________________________________________________________
