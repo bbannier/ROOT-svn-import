@@ -305,7 +305,7 @@ void TMacOSXSystem::WaitForGuiEvents(Long_t nextto)
 #endif
 
    NSDate *untilDate = nil;
-   if (nextto > 0)
+   if (nextto >= 0)
       untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
    else
       untilDate = [NSDate distantFuture];
@@ -331,7 +331,7 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
    }
 
    NSDate *untilDate = nil;
-   if (nextto > 0)
+   if (nextto >= 0)
       untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
    else
       untilDate = [NSDate distantFuture];
@@ -375,17 +375,6 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
    while (true) {
       const ROOT::MacOSX::Util::AutoreleasePool pool;
 
-      //First handle any GUI events. Non-blocking call.
-      
-      //I'm not sure at all, if I need to mimic 
-      //TUnixSystem's logic here. But if I do not use
-      //gXDisplay->Notify, ROOT's GUI will not work.
-      /*
-      if (gXDisplay && gXDisplay->Notify()) {
-         if (pendingOnly)
-            return;
-      }
-      */
       //Check for file descriptors ready for reading/writing.
       if (fNfd > 0 && fFileHandler && fFileHandler->GetSize() > 0)
          if (CheckDescriptors())
