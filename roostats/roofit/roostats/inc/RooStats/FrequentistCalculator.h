@@ -53,6 +53,8 @@ namespace RooStats {
       }
 
       ~FrequentistCalculator() {
+         if( fConditionalMLEsNull ) delete fConditionalMLEsNull;
+         if( fConditionalMLEsAlt ) delete fConditionalMLEsAlt;
       }
 
 
@@ -62,8 +64,23 @@ namespace RooStats {
       // set least number of toys in tails
       void SetNToysInTails(int toysNull, int toysAlt) { fNToysNullTail = toysNull; fNToysAltTail = toysAlt; }
 
-      void SetConditionalMLEsNull( const RooArgSet* c ) { fConditionalMLEsNull = c; }
-      void SetConditionalMLEsAlt( const RooArgSet* c ) { fConditionalMLEsAlt = c; }
+      // set given nuisance parameters to a specific value that will be used instead of their
+      // profiled value for Null toys
+      void SetConditionalMLEsNull( const RooArgSet* c ) {
+         if( fConditionalMLEsNull ) delete fConditionalMLEsNull;
+         
+         if( c ) fConditionalMLEsNull = (const RooArgSet*)c->snapshot();
+         else fConditionalMLEsNull = NULL;
+      }
+
+      // set given nuisance parameters to a specific value that will be used instead of their
+      // profiled value for Alternate toys
+      void SetConditionalMLEsAlt( const RooArgSet* c ) {
+         if( fConditionalMLEsAlt ) delete fConditionalMLEsAlt;
+         
+         if( c ) fConditionalMLEsAlt = (const RooArgSet*)c->snapshot();
+         else fConditionalMLEsAlt = NULL;
+      }
 
    protected:
       // configure TestStatSampler for the Null run
