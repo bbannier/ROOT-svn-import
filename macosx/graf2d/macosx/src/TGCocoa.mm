@@ -244,7 +244,6 @@ Bool_t TGCocoa::Init(void * /*display*/)
 void TGCocoa::ClearWindow()
 {
    // Clears the entire area of the current window.
-//   NSLog(@"clear window");
 }
 
 //______________________________________________________________________________
