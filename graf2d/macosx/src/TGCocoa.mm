@@ -749,7 +749,10 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       } else {
          //Error("UpdateWindow", "Method called for direct rendering, but no context found");
       }
+
    }
+   
+   Update(1);//In case of X11, XFlush/XSync is done here.
 }
 
 //______________________________________________________________________________
