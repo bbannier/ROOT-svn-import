@@ -1,4 +1,4 @@
-//#define DEBUG_ROOT_COCOA
+//Author: Timur Pocheptsov 5/12/2011
 
 #include <stdexcept>
 #include <vector>
@@ -75,52 +75,58 @@ extern "C" {
 //______________________________________________________________________________
 void TMacOSXSystem_ReadCallback(CFFileDescriptorRef fdref, CFOptionFlags /*callBackTypes*/, void * /*info*/)
 {
+   //Native descriptor.
+   const int nativeFD = CFFileDescriptorGetNativeDescriptor(fdref);
+
    //We do not need this descriptor anymore.
    CFFileDescriptorInvalidate(fdref);
    CFRelease(fdref);
    
    NSEvent *fdEvent = [NSEvent otherEventWithType : NSApplicationDefined location : NSMakePoint(0, 0) modifierFlags : 0
-                       timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : 0 data2 : 0];
+                       timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : nativeFD data2 : 0];
    [NSApp postEvent : fdEvent atStart : NO];
 }
 
 //______________________________________________________________________________
 void TMacOSXSystem_WriteCallback(CFFileDescriptorRef fdref, CFOptionFlags /*callBackTypes*/, void * /*info*/)
 {
+   //Native descriptor.
+   const int nativeFD = CFFileDescriptorGetNativeDescriptor(fdref);
+
    //We do not need this descriptor anymore.
    CFFileDescriptorInvalidate(fdref);
    CFRelease(fdref);
 
    NSEvent *fdEvent = [NSEvent otherEventWithType : NSApplicationDefined location : NSMakePoint(0, 0) modifierFlags : 0
-                       timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : 0 data2 : 0];
+                       timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : nativeFD data2 : 0];
    [NSApp postEvent : fdEvent atStart : NO];
 }
 
 }
 
-//
-//Hidden implementation details (in particular, hidden from CINT).
-//
+namespace ROOT {
+namespace MacOSX {
+namespace Detail {
 
-class TMacOSXSystemPrivate {
+class MacOSXSystem {
+private:
    enum class DescriptorType {
       write,
       read
    };
-
 #ifdef DEBUG_ROOT_COCOA
 public:
    ~TMacOSXSystemPrivate();
 private:
 #endif
 
-   friend class TMacOSXSystem;
+   friend class ::TMacOSXSystem;
    std::map<int, DescriptorType> fFileDescriptors;
    
    std::vector<CFFileDescriptorRef> fCFFileDescriptors;
 
-   bool AddFileHandler(TFileHandler *fh);
-   bool RemoveFileHandler(TFileHandler *fh);
+   void AddFileHandler(TFileHandler *fh);
+   void RemoveFileHandler(TFileHandler *fh);
    
    bool SetFileDescriptors();
    void CloseFileDescriptors();
@@ -132,60 +138,37 @@ private:
 #ifdef DEBUG_ROOT_COCOA
 
 //______________________________________________________________________________
-TMacOSXSystemPrivate::~TMacOSXSystemPrivate()
+MacOSXSystem::~MacOSXSystem()
 {
    if (fCFFileDescriptors.size()) {
       NSLog(@"TMacOSXSystemPrivate::~TMacOSXSystemPrivate, file descriptors were not closed!!!");
       CloseFileDescriptors();
    }
 }
+
 #endif
 
 //______________________________________________________________________________
-bool TMacOSXSystemPrivate::AddFileHandler(TFileHandler *fh)
+void MacOSXSystem::AddFileHandler(TFileHandler *fh)
 {
    //Can throw std::bad_alloc. I'm not allocating any resources here, so I'm not going to catch here.
+   assert(fFileDescriptors.find(fh->GetFd()) == fFileDescriptors.end() && "AddFileHandler, file descriptor was registered already");
 
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TMacOSXCSystemPrivate::AddFileHandler: fd is %d", fh->GetFd());
-#endif
-
-   if (fFileDescriptors.find(fh->GetFd()) == fFileDescriptors.end()) {
-      fFileDescriptors[fh->GetFd()] = fh->HasReadInterest() ? DescriptorType::read : DescriptorType::write;
-   } else {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"TMacOSXSystemPrivate::AddFileHandler: file descriptor %d was registered already", fh->GetFd());
-#endif
-      return false;
-   }
-
-   return true;
+   fFileDescriptors[fh->GetFd()] = fh->HasReadInterest() ? DescriptorType::read : DescriptorType::write;
 }
 
 //______________________________________________________________________________
-bool TMacOSXSystemPrivate::RemoveFileHandler(TFileHandler *fh)
+void MacOSXSystem::RemoveFileHandler(TFileHandler *fh)
 {
    //Can not throw.
 
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TMacOSXSystemPrivate::RemoveFileHandler, file descriptor is %d", fh->GetFd());
-#endif
-
    auto fdIter = fFileDescriptors.find(fh->GetFd());
-   if (fdIter != fFileDescriptors.end()) {
-      fFileDescriptors.erase(fdIter);
-   } else {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"Attempt to remove unregistered file handler!");
-#endif
-      return false;
-   }
-
-   return true;
+   assert(fdIter != fFileDescriptors.end() && "RemoveFileHandler, file handler was not found");
+   fFileDescriptors.erase(fdIter);
 }
 
 //______________________________________________________________________________
-bool TMacOSXSystemPrivate::SetFileDescriptors()
+bool MacOSXSystem::SetFileDescriptors()
 {
    //Allocates some resources and can throw.
    //So, make sure resources are freed correctly
@@ -198,7 +181,7 @@ bool TMacOSXSystemPrivate::SetFileDescriptors()
          CFFileDescriptorRef fdref = CFFileDescriptorCreate(kCFAllocatorDefault, fdIter->first, false, read ? TMacOSXSystem_ReadCallback : TMacOSXSystem_WriteCallback, 0);
 
          if (!fdref)
-            throw std::runtime_error("TMacOSXSystemPrivate::SetFileDescriptors: CFFileDescriptorCreate failed");
+            throw std::runtime_error("MacOSXSystem::SetFileDescriptors: CFFileDescriptorCreate failed");
 
          CFFileDescriptorEnableCallBacks(fdref, read ? kCFFileDescriptorReadCallBack : kCFFileDescriptorWriteCallBack);
       
@@ -206,7 +189,7 @@ bool TMacOSXSystemPrivate::SetFileDescriptors()
          
          if (!runLoopSource) {
             CFRelease(fdref);
-            throw std::runtime_error("TMacOSXSystemPrivate::SetFileDescriptors: CFFileDescriptorCreateRunLoopSource failed");
+            throw std::runtime_error("MacOSXSystem::SetFileDescriptors: CFFileDescriptorCreateRunLoopSource failed");
          }
 
          CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, kCFRunLoopDefaultMode);
@@ -223,7 +206,7 @@ bool TMacOSXSystemPrivate::SetFileDescriptors()
 }
 
 //______________________________________________________________________________
-void TMacOSXSystemPrivate::CloseFileDescriptors()
+void MacOSXSystem::CloseFileDescriptors()
 {
    
    for (auto fd : fCFFileDescriptors) {
@@ -235,28 +218,24 @@ void TMacOSXSystemPrivate::CloseFileDescriptors()
 }
 
 //______________________________________________________________________________
-void TMacOSXSystemPrivate::CleanDescriptorArrays()
+void MacOSXSystem::CleanDescriptorArrays()
 {
    fCFFileDescriptors.clear();
 }
+
+}//Detail
+}//MacOSX
+}//ROOT
+
+namespace Private = ROOT::MacOSX::Detail;
 
 ClassImp(TMacOSXSystem)
 
 //______________________________________________________________________________
 TMacOSXSystem::TMacOSXSystem()
-                  : fPimpl(new TMacOSXSystemPrivate)
+                  : fPimpl(new ROOT::MacOSX::Detail::MacOSXSystem)
 {
-
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"TMacOSXSystem::TMacOSXSystem");
-   NSLog(@"Init NSApplication ... ");
-#endif
-
    [NSApplication sharedApplication];
-   
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"NSApplication is %@", [NSApplication sharedApplication]);
-#endif
 }
 
 //______________________________________________________________________________
@@ -300,10 +279,6 @@ bool TMacOSXSystem::ProcessGuiEvents()
 void TMacOSXSystem::WaitForGuiEvents(Long_t nextto)
 {
    //Wait for one event, do not dequeue (will be done by the following non-blocking call).
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"blocking call now - WaitForGuiEvents");
-#endif
-
    NSDate *untilDate = nil;
    if (nextto >= 0)//0 also means non-blocking call.
       untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
@@ -321,10 +296,6 @@ void TMacOSXSystem::WaitForGuiEvents(Long_t nextto)
 void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
 {
    //Wait for one event, do not dequeue (will be done by the following non-blocking call).
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"blocking call now - WaitForAllEvents");
-#endif
-
    if (!fPimpl->SetFileDescriptors()) {
       //I consider this error as fatal.
       Fatal("WaitForAllEvents", "SetFileDesciptors failed");
@@ -339,25 +310,25 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
    NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : untilDate inMode : NSDefaultRunLoopMode dequeue : YES];
 
    if (event.type == NSApplicationDefined) {
-      //TODO: this check is only for test, do it right later (somehow identify an event in a CFFileDescriptor).
-      //Remove from event queue.
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"got app defined event, try to remove from the queue");
-#endif
-
+      //NSLog(@"got user event! fd is %d", int(event.data1));
       // nothing ready, so setup select call
-      *fReadready  = *fReadmask;
-      *fWriteready = *fWritemask;
+      //*fReadready  = *fReadmask;
+      //*fWriteready = *fWritemask;
+      fReadready->Zero();
+      fWriteready->Zero();
       fNfd = 1;
       
+      auto fdIter = fPimpl->fFileDescriptors.find(event.data1);
+      assert(fdIter != fPimpl->fFileDescriptors.end() && "WaitForAllEvents, file descriptor from NSEvent not found");
+      if (fdIter->second == Private::MacOSXSystem::DescriptorType::read) {
+         fReadready->Set(event.data1);
+      } else {
+         fWriteready->Set(event.data1);
+      }
+                     
       fPimpl->CleanDescriptorArrays();
    } else {
-#ifdef DEBUG_ROOT_COCOA
-      NSLog(@"got a GUI (?) event %@", event);
-#endif
-      //[NSApp postEvent : event atStart : YES];
       [NSApp sendEvent : event];
-      //
       fPimpl->CloseFileDescriptors();
    }
 
@@ -435,14 +406,13 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
 //______________________________________________________________________________
 void TMacOSXSystem::AddFileHandler(TFileHandler *fh)
 {
-   if (fPimpl->AddFileHandler(fh))
-      TUnixSystem::AddFileHandler(fh);
+   fPimpl->AddFileHandler(fh);
+   TUnixSystem::AddFileHandler(fh);
 }
 
 //______________________________________________________________________________
 TFileHandler *TMacOSXSystem::RemoveFileHandler(TFileHandler *fh)
 {
-   if (fPimpl->RemoveFileHandler(fh))
-      return TUnixSystem::RemoveFileHandler(fh);
-   return fh;
+   fPimpl->RemoveFileHandler(fh);
+   return TUnixSystem::RemoveFileHandler(fh);
 }
