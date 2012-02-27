@@ -5,31 +5,31 @@ namespace MacOSX {
 namespace Util {
 
 //______________________________________________________________________________
-StrongReference::StrongReference()
+StrongReferenceNS::StrongReferenceNS()
                    : fNSObject(nil)
 {
 }
 
 //______________________________________________________________________________
-StrongReference::StrongReference(NSObject *nsObject)
+StrongReferenceNS::StrongReferenceNS(NSObject *nsObject)
                    : fNSObject([nsObject retain])
 {
 }
 
 //______________________________________________________________________________
-StrongReference::StrongReference(const StrongReference &rhs)
+StrongReferenceNS::StrongReferenceNS(const StrongReferenceNS &rhs)
                    : fNSObject([rhs.fNSObject retain])
 {
 }
 
 //______________________________________________________________________________
-StrongReference::~StrongReference()
+StrongReferenceNS::~StrongReferenceNS()
 {
    [fNSObject release];
 }
 
 //______________________________________________________________________________
-StrongReference &StrongReference::operator = (const StrongReference &rhs)
+StrongReferenceNS &StrongReferenceNS::operator = (const StrongReferenceNS &rhs)
 {
    if (&rhs != this) {
       //Even if both reference the same NSObject, it's ok to do release.
@@ -41,7 +41,7 @@ StrongReference &StrongReference::operator = (const StrongReference &rhs)
 }
 
 //______________________________________________________________________________
-StrongReference &StrongReference::operator = (NSObject *nsObject)
+StrongReferenceNS &StrongReferenceNS::operator = (NSObject *nsObject)
 {
    if (nsObject != fNSObject) {
       [fNSObject release];

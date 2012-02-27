@@ -7,18 +7,20 @@ namespace ROOT {
 namespace MacOSX {
 namespace Util {
 
-class StrongReference {
+//NS suffix == Cocoa classes. Not NSStrongReference, since
+//it will look like it's a Cocoa class.
+class StrongReferenceNS {
 public:
-   StrongReference();
-   StrongReference(NSObject *nsObject);
-   //Check also, if I want &&.
-   StrongReference(const StrongReference &rhs);
+   StrongReferenceNS();
+   StrongReferenceNS(NSObject *nsObject);
+   //Check &&.
+   StrongReferenceNS(const StrongReferenceNS &rhs);
 
    
-   ~StrongReference();
+   ~StrongReferenceNS();
 
-   StrongReference &operator = (const StrongReference &rhs);
-   StrongReference &operator = (NSObject *nsObject);
+   StrongReferenceNS &operator = (const StrongReferenceNS &rhs);
+   StrongReferenceNS &operator = (NSObject *nsObject);
    
    NSObject *Get()const
    {
@@ -28,8 +30,7 @@ private:
    NSObject *fNSObject;
 };
 
-
-//Replace with more generic RAII class later.
+//RAII class for autorelease pool.
 class AutoreleasePool {
 public:
    AutoreleasePool();
@@ -42,56 +43,58 @@ private:
    NSAutoreleasePool *fPool;
 };
 
-//Replace with more generic RAII class later.
+//Strong reference for Core Foundation objects (== CF).
+//Again, I'm using suffix, since with prefix it
+//looks like Core Foundation type.
 template<class RefType>
-class CFGuard {
+class StrongReferenceCF {
 public:
-   CFGuard()
-      : fFdRef(0)
+   StrongReferenceCF()
+      : fRef(0)
    {
    }
    
-   explicit CFGuard(RefType ref, bool initRetain)
-               : fFdRef(ref)
+   explicit StrongReferenceCF(RefType ref, bool initRetain)
+               : fRef(ref)
    {
       if (initRetain && ref)
          CFRetain(ref);
    }
    
-   CFGuard(const CFGuard &rhs)
+   StrongReferenceCF(const StrongReferenceCF &rhs)
    {
-      fFdRef = rhs.fFdRef;
-      if (fFdRef)
-         CFRetain(fFdRef);
+      fRef = rhs.fRef;
+      if (fRef)
+         CFRetain(fRef);
    }
    
-   //TODO: Check ravlue references also.
-   CFGuard &operator = (const CFGuard &rhs)
+   //TODO: &&
+   StrongReferenceCF &operator = (const StrongReferenceCF &rhs)
    {
       if (this != &rhs) {
-         if (fFdRef)
-            CFRelease(fFdRef);
-         fFdRef = rhs.fFdRef;
-         if (fFdRef)
-            CFRetain(fFdRef);
+         if (fRef)
+            CFRelease(fRef);
+         fRef = rhs.fRef;
+         if (fRef)
+            CFRetain(fRef);
       }
       
       return *this;
    }
 
-   ~CFGuard()
+   ~StrongReferenceCF()
    {
-      if (fFdRef)
-         CFRelease(fFdRef);
+      if (fRef)
+         CFRelease(fRef);
    }
    
    RefType Get()const
    {
-      return fFdRef;
+      return fRef;
    }
    
 private:
-   RefType fFdRef;
+   RefType fRef;
 };
 
 }

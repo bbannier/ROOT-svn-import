@@ -66,7 +66,7 @@ public:
    CTFontRef SelectFont(Font_t fontIndex, Float_t fontSize);
 
 private:
-   typedef ROOT::MacOSX::Util::CFGuard<CTFontRef> CTFontGuard_t;
+   typedef ROOT::MacOSX::Util::StrongReferenceCF<CTFontRef> CTFontGuard_t;
    std::map<CTFontRef, CTFontGuard_t> fLoadedFonts;
    
    FontManager(const FontManager &rhs) = delete;
