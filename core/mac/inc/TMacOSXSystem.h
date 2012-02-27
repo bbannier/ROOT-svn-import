@@ -1,3 +1,5 @@
+//Author: Timur Pocheptsov 5/12/2011
+
 #ifndef ROOT_TMacOSXSystem
 #define ROOT_TMacOSXSystem
 
@@ -7,21 +9,19 @@
 #include "TUnixSystem.h"
 #endif
 
-//
-// Event loop with MacOS X and Cocoa is different
-// from TUnixSystem. At the moment, I see this difference
-// primarily in DispatchOneEvent member-function. So I 
-// simply inherit TUnixSystem to just override DispatchOneEvent.
-// Class is placed in graf2d/macosx only in development branch,
-// later it should go into core/macosx, and graf2d/macosx module can
-// be renamed to 'graf2d/cocoa' or 'graf2d/quartz'.
-//
+////////////////////////////////////////////////////////////////////
+//                                                                //
+// Event loop with MacOS X and Cocoa is different                 //
+// from TUnixSystem. The difference is mainly                     //
+// in DispatchOneEvent, AddFileHandler and RemoveFileHandler.     //
+//                                                                //
+////////////////////////////////////////////////////////////////////
 
-//'Private' pimpl class to hide from CINT Objective-C specific (if I have one).
 namespace ROOT {
 namespace MacOSX {
 namespace Detail {
 
+//'Private' pimpl class to hide Apple's specific things from CINT.
 class MacOSXSystem;
 
 }
@@ -37,9 +37,8 @@ public:
 
 private:
 
-   bool ProcessGuiEvents();
-   void WaitForGuiEvents(Long_t nextto);
-   void WaitForAllEvents(Long_t nextto);
+//   void WaitForGuiEvents(Long_t nextto);
+   void WaitEvents(Long_t nextto);
 
    void AddFileHandler(TFileHandler *fh);
    TFileHandler *RemoveFileHandler(TFileHandler *fh);
@@ -51,7 +50,7 @@ private:
    TMacOSXSystem(const TMacOSXSystem &rhs);
    TMacOSXSystem &operator = (const TMacOSXSystem &rhs);
    
-   ClassDef(TMacOSXSystem, 0);//TSystem's implementation for Mac OSX.
+   ClassDef(TMacOSXSystem, 0);//TSystem for Mac OSX.
 };
 
 #endif
