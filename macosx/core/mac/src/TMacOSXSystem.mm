@@ -305,7 +305,7 @@ void TMacOSXSystem::WaitForGuiEvents(Long_t nextto)
 #endif
 
    NSDate *untilDate = nil;
-   if (nextto >= 0)
+   if (nextto >= 0)//0 also means non-blocking call.
       untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
    else
       untilDate = [NSDate distantFuture];
@@ -331,7 +331,7 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
    }
 
    NSDate *untilDate = nil;
-   if (nextto >= 0)
+   if (nextto >= 0)//0 also means non-blocking call.
       untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
    else
       untilDate = [NSDate distantFuture];
