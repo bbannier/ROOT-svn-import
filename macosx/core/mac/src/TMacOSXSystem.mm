@@ -241,7 +241,7 @@ ClassImp(TMacOSXSystem)
 
 //______________________________________________________________________________
 TMacOSXSystem::TMacOSXSystem()
-                  : fPimpl(new ROOT::MacOSX::Detail::MacOSXSystem)
+                  : fPimpl(new Private::MacOSXSystem)
 {
    [NSApplication sharedApplication];
 }
@@ -249,55 +249,6 @@ TMacOSXSystem::TMacOSXSystem()
 //______________________________________________________________________________
 TMacOSXSystem::~TMacOSXSystem()
 {
-}
-
-//______________________________________________________________________________
-bool TMacOSXSystem::ProcessGuiEvents()
-{
-   //This is a non-blocking function ('untilDate' is nil, so we try to take previous events (?), not waiting).
-/*   bool hadGuiEvent = false;
-
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"Enter non-blocking loop");
-#endif
-
-   while (true) {
-      NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : nil inMode : NSDefaultRunLoopMode dequeue : YES];
-      if (event) {
-         hadGuiEvent = true;
-         [NSApp sendEvent : event];
-         //Process event.
-#ifdef DEBUG_ROOT_COCOA
-         NSLog(@"Non blocking processing: got event %@", event);
-#endif
-      } else {
-         break;
-      }
-   }
-
-#ifdef DEBUG_ROOT_COCOA
-   NSLog(@"Exit non-blocking loop");
-#endif
-
-   return hadGuiEvent;*/
-   return false;
-}
-
-//______________________________________________________________________________
-void TMacOSXSystem::WaitForGuiEvents(Long_t nextto)
-{
-   //Wait for one event, do not dequeue (will be done by the following non-blocking call).
-   NSDate *untilDate = nil;
-   if (nextto >= 0)//0 also means non-blocking call.
-      untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
-   else
-      untilDate = [NSDate distantFuture];
-
-   NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : untilDate inMode : NSDefaultRunLoopMode dequeue : YES];
-   //[NSApp postEvent : event atStart : YES];
-   [NSApp sendEvent : event];
-   //
-   gVirtualX->Update(1);
 }
 
 //______________________________________________________________________________
@@ -321,9 +272,10 @@ void TMacOSXSystem::ProcessApplicationDefinedEvent(void *e)
 }
 
 //______________________________________________________________________________
-void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
+void TMacOSXSystem::WaitEvents(Long_t nextto)
 {
-   //Wait for one event, do not dequeue (will be done by the following non-blocking call).
+   //Wait for GUI/Non-GUI events.
+
    if (!fPimpl->SetFileDescriptors()) {
       //I consider this error as fatal.
       Fatal("WaitForAllEvents", "SetFileDesciptors failed");
@@ -362,8 +314,7 @@ void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
 void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
 {
    //Here I try to emulate TUnixSystem's behavior, which is quite twisted.
-
-   
+   //I'm not even sure, I need all this code :)   
    Bool_t pollOnce = pendingOnly;
 
    while (true) {
@@ -411,19 +362,10 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
          pollOnce = kFALSE;
       }
 
-      //Now, do a trick.
-      if (!fPimpl->fFileDescriptors.size()) {
-         //ConnectionNumber(x11display) is a file descriptor,
-         //but for Cocoa I do not have such a thing. Make a blocking call here, like I have a connection number and POSIX select.
-         WaitForGuiEvents(nextto);
-      } else {
-         //Wait for GUI events and for something else, like read/write from stdin/stdout (?).
-         WaitForAllEvents(nextto);
-
-         if (pendingOnly) {
-            return;
-         }
-      }
+      //Wait for GUI events and for something else, like read/write from stdin/stdout (?).
+      WaitEvents(nextto);
+      if (pendingOnly)
+         return;
    }
 }
 
