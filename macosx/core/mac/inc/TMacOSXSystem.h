@@ -17,8 +17,16 @@
 // be renamed to 'graf2d/cocoa' or 'graf2d/quartz'.
 //
 
-//'Private' pimpl to hide from CINT Objective-C specific (if I have one).
-class TMacOSXSystemPrivate;
+//'Private' pimpl class to hide from CINT Objective-C specific (if I have one).
+namespace ROOT {
+namespace MacOSX {
+namespace Detail {
+
+class MacOSXSystem;
+
+}
+}
+}
 
 class TMacOSXSystem : public TUnixSystem {
 public:
@@ -36,7 +44,7 @@ private:
    void AddFileHandler(TFileHandler *fh);
    TFileHandler *RemoveFileHandler(TFileHandler *fh);
 
-   std::auto_ptr<TMacOSXSystemPrivate> fPimpl; //!
+   std::auto_ptr<ROOT::MacOSX::Detail::MacOSXSystem> fPimpl; //!
 
    TMacOSXSystem(const TMacOSXSystem &rhs);
    TMacOSXSystem &operator = (const TMacOSXSystem &rhs);
