@@ -1647,7 +1647,6 @@ void TGCocoa::GrabPointer(Window_t wid, UInt_t eventMask, Window_t /*confine*/, 
    //Confine will never be used - no such feature on MacOSX and
    //I'm not going to emulate it..
    //This function also does ungrab.
-
    if (grab) {
       QuartzView *view = fPimpl->GetWindow(wid).fContentView;
       assert(!fPimpl->IsRootWindow(wid) && "GrabPointer, called for 'root' window");

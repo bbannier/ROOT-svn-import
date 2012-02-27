@@ -44,6 +44,8 @@ private:
    void AddFileHandler(TFileHandler *fh);
    TFileHandler *RemoveFileHandler(TFileHandler *fh);
 
+   void ProcessApplicationDefinedEvent(void *event);
+
    std::auto_ptr<ROOT::MacOSX::Detail::MacOSXSystem> fPimpl; //!
 
    TMacOSXSystem(const TMacOSXSystem &rhs);
