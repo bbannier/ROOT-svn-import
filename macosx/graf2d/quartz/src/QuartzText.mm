@@ -37,7 +37,7 @@ typedef std::string::size_type size_type;
 
 
 //______________________________________________________________________________
-void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
+void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t /*angle*/,
               Int_t align, Int_t font, Float_t size,
               const char *text)
 {
@@ -411,23 +411,23 @@ FontManager::~FontManager()
 //______________________________________________________________________________
 FontStruct_t FontManager::LoadFont(const XLFDName &xlfd)
 {
-   using ROOT::MacOSX::Util::CFGuard;
+   using ROOT::MacOSX::Util::StrongReferenceCF;
 
    //This code is just a sketch. I have to check later,
    //how to correctly create font with attributes from xlfd,
    //if matching between name from xlfd and MacOS X font is correct.
 
    //CF expects CFStringRef, not c-string.
-   CFGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault,
-                                                           xlfd.fFamilyName.c_str(),
-                                                           kCFStringEncodingMacRoman),
-                                 false);//false - no initial retain.
+   //Instead of StrongReference, use ScopeGuard class.
+   StrongReferenceCF<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault,
+                                                                     xlfd.fFamilyName.c_str(),
+                                                                     kCFStringEncodingMacRoman),
+                                           false);//false - no initial retain.
 
    //TODO: pixelSize + 2 - this is just a temporary hack, because text in GUI is too tiny.
-   CFGuard<CTFontRef> font(CTFontCreateWithName(fontName.Get(),
-                                                xlfd.fPixelSize + 2, 0),
-                           false);//0 is for CGAffineTransform, false - no initial retain.
-
+   StrongReferenceCF<CTFontRef> font(CTFontCreateWithName(fontName.Get(),
+                                                          xlfd.fPixelSize + 2, 0),
+                                     false);//0 is for CGAffineTransform, false - no initial retain.
 
    //What if this font was "loaded" already?
    if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
@@ -733,19 +733,21 @@ void CTLineGuard::GetAscentDescent(Int_t &asc, Int_t &desc)const
 //_________________________________________________________________
 void CTLineGuard::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values)
 {
-   using ROOT::MacOSX::Util::CFGuard;
-   CFGuard<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault,
-                                          (const void **)keys, (const void **)values,
-                                          nAttribs, &kCFTypeDictionaryKeyCallBacks,
-                                          &kCFTypeDictionaryValueCallBacks), false);
+   using ROOT::MacOSX::Util::StrongReferenceCF;
+   //Strong reference must be replaced with scope guards.
+
+   StrongReferenceCF<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault,
+                                                    (const void **)keys, (const void **)values,
+                                                    nAttribs, &kCFTypeDictionaryKeyCallBacks,
+                                                    &kCFTypeDictionaryValueCallBacks), false);
    if (!stringAttribs.Get())
       throw std::runtime_error("CTLineGuard: null attribs");
 
-   CFGuard<CFStringRef> wrappedCString(CFStringCreateWithCString(kCFAllocatorDefault, textLine, kCFStringEncodingMacRoman), false);
+   StrongReferenceCF<CFStringRef> wrappedCString(CFStringCreateWithCString(kCFAllocatorDefault, textLine, kCFStringEncodingMacRoman), false);
    if (!wrappedCString.Get())
       throw std::runtime_error("CTLineGuard: cstr wrapper");
 
-   CFGuard<CFAttributedStringRef> attributedString(CFAttributedStringCreate(kCFAllocatorDefault, wrappedCString.Get(), stringAttribs.Get()), false);
+   StrongReferenceCF<CFAttributedStringRef> attributedString(CFAttributedStringCreate(kCFAllocatorDefault, wrappedCString.Get(), stringAttribs.Get()), false);
    fCTLine = CTLineCreateWithAttributedString(attributedString.Get());
 
    if (!fCTLine)

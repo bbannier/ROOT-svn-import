@@ -46,13 +46,13 @@ private:
 
    //Color "parser": either parse string like "#ddeeaa", or
    //search rgb.txt like table for named color.
-   X11::ColorParser                          fX11ColorParser;
+   X11::ColorParser                            fX11ColorParser;
    //Id for the new registered window.
-   unsigned                                  fCurrentWindowID;
+   unsigned                                    fCurrentWindowID;
    //Cache of ids.
-   std::vector<unsigned>                     fFreeWindowIDs;
+   std::vector<unsigned>                       fFreeWindowIDs;
    //Cocoa objects (views, windows, "pixmaps").
-   std::map<unsigned, Util::StrongReference> fWindows;
+   std::map<unsigned, Util::StrongReferenceNS> fWindows;
 };
 
 }
