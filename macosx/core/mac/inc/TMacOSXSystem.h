@@ -30,7 +30,7 @@ public:
 private:
 
    bool ProcessGuiEvents();
-   void WaitForGuiEvents();
+   void WaitForGuiEvents(Long_t nextto);
    void WaitForAllEvents(Long_t nextto);
 
    void AddFileHandler(TFileHandler *fh);

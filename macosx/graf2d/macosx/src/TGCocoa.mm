@@ -730,6 +730,10 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "UpdateWindow, no window was selected, can not update 'root' window");
    
    id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
+   
+   if (fViewsToUpdate.find(fSelectedDrawable) == fViewsToUpdate.end())
+      fViewsToUpdate.insert(fSelectedDrawable);
+   
    if (QuartzPixmap *pixmap = window.fBackBuffer) {
       QuartzView *dstView = window.fContentView;
       assert(dstView != nil && "UpdateWindow, destination view is nil");
@@ -2183,9 +2187,19 @@ void TGCocoa::Update(Int_t /*mode = 0*/)
          //
          //DoRedraw
          TGWindow *window = gClient->GetWindowById(view.fID);
-         if (window)
+         if (window) {
             gClient->NeedRedraw(window, kTRUE);
-         else
+            
+            if (view.fBackBuffer) {
+               //Very "special" window.
+               CGImageRef image = CGBitmapContextCreateImage(view.fBackBuffer.fContext);
+               const CGRect imageRect = CGRectMake(0, 0, view.fBackBuffer.fWidth, view.fBackBuffer.fHeight);
+
+               CGContextDrawImage(view.fContext, imageRect, image);
+               CGImageRelease(image);
+            }
+            
+         } else
             Warning("Update", "gClient did not find window for wid %u", view.fID);
          //
          UnlockView(view);

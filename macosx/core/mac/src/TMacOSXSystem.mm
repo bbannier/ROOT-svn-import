@@ -297,14 +297,20 @@ bool TMacOSXSystem::ProcessGuiEvents()
 }
 
 //______________________________________________________________________________
-void TMacOSXSystem::WaitForGuiEvents()
+void TMacOSXSystem::WaitForGuiEvents(Long_t nextto)
 {
    //Wait for one event, do not dequeue (will be done by the following non-blocking call).
 #ifdef DEBUG_ROOT_COCOA
    NSLog(@"blocking call now - WaitForGuiEvents");
 #endif
 
-   NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : YES];
+   NSDate *untilDate = nil;
+   if (nextto > 0)
+      untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
+   else
+      untilDate = [NSDate distantFuture];
+
+   NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : untilDate inMode : NSDefaultRunLoopMode dequeue : YES];
    //[NSApp postEvent : event atStart : YES];
    [NSApp sendEvent : event];
    //
@@ -312,7 +318,7 @@ void TMacOSXSystem::WaitForGuiEvents()
 }
 
 //______________________________________________________________________________
-void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
+void TMacOSXSystem::WaitForAllEvents(Long_t nextto)
 {
    //Wait for one event, do not dequeue (will be done by the following non-blocking call).
 #ifdef DEBUG_ROOT_COCOA
@@ -324,7 +330,13 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
       Fatal("WaitForAllEvents", "SetFileDesciptors failed");
    }
 
-   NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : [NSDate distantFuture] inMode : NSDefaultRunLoopMode dequeue : YES];
+   NSDate *untilDate = nil;
+   if (nextto > 0)
+      untilDate = [NSDate dateWithTimeIntervalSinceNow : nextto / 1000.];
+   else
+      untilDate = [NSDate distantFuture];
+
+   NSEvent *event = [NSApp nextEventMatchingMask : NSAnyEventMask untilDate : untilDate inMode : NSDefaultRunLoopMode dequeue : YES];
 
    if (event.type == NSApplicationDefined) {
       //TODO: this check is only for test, do it right later (somehow identify an event in a CFFileDescriptor).
@@ -348,7 +360,6 @@ void TMacOSXSystem::WaitForAllEvents(Long_t /*nextto*/)
       //
       fPimpl->CloseFileDescriptors();
    }
-      
 
    gVirtualX->Update(1);
 }
@@ -421,7 +432,7 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
       if (!fPimpl->fFileDescriptors.size()) {
          //ConnectionNumber(x11display) is a file descriptor,
          //but for Cocoa I do not have such a thing. Make a blocking call here, like I have a connection number and POSIX select.
-         WaitForGuiEvents();
+         WaitForGuiEvents(nextto);
       } else {
          //Wait for GUI events and for something else, like read/write from stdin/stdout (?).
          WaitForAllEvents(nextto);
