@@ -8,41 +8,26 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
-
-
-#include <algorithm>
-
 #include <Cocoa/Cocoa.h>
 
-//DEBUG ONLY
-#include <iostream>
-//
-
-//#include "Cocoa"
-
-#include "QuartzText.h"
-#include "QuartzMarker.h"
 #include "QuartzFillArea.h"
+#include "QuartzMarker.h"
 #include "CocoaPrivate.h"
-#include "X11Drawables.h"
+#include "QuartzWindow.h"
+#include "X11Drawable.h"
+#include "QuartzText.h"
 #include "QuartzLine.h"
 
 #include "TGQuartz.h"
 #include "TPoint.h"
 #include "TColor.h"
-#include "TMath.h"
 #include "TStyle.h"
-#include "TString.h"
-#include "TObjString.h"
-#include "TObjArray.h"
 #include "TROOT.h"
-
-const Double_t kPI = TMath::Pi();
-
-using namespace ROOT;
+#include "TMath.h"
 
 ClassImp(TGQuartz)
 
+using namespace ROOT;
 
 //______________________________________________________________________________
 TGQuartz::TGQuartz()
