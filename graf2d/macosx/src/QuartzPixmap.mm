@@ -1,6 +1,9 @@
 //Author: Timur Pocheptsov 16/02/2012
 
 #import <algorithm>
+
+#include <fstream>
+
 #import <cassert>
 #import <cstddef>
 
@@ -191,7 +194,6 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
       //8 bits per component, 32 bits per pixel, 4 bytes per pixel, kCGImageAlphaLast:
       //all values hardcoded for TGCocoa::CreatePixmapFromData.
       fImage = CGImageCreate(width, height, 8, 32, width * 4, colorSpace, kCGImageAlphaLast, provider, 0, false, kCGRenderingIntentDefault);
-
       CGColorSpaceRelease(colorSpace);
       CGDataProviderRelease(provider);
       
@@ -200,10 +202,22 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
          return nil;
       }
 
+      fWidth = width;
+      fHeight = height;
+
       return self;
    }
    
    return nil;
+}
+
+//______________________________________________________________________________
+- (void) dealloc
+{
+   if (fImage)
+      CGImageRelease(fImage);
+   
+   [super dealloc];
 }
 
 //______________________________________________________________________________
@@ -222,6 +236,12 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 - (unsigned) fHeight
 {
    return fHeight;
+}
+
+//______________________________________________________________________________
+- (CGImageRef) fImage
+{
+   return fImage;
 }
 
 @end

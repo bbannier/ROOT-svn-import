@@ -82,6 +82,8 @@
 
 - (void)     unmapWindow;
 //
+- (void) copy : (id<X11Drawable>) src fromPoint : (ROOT::MacOSX::X11::Point_t) srcPoint 
+         size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint;
 
 @end
 
@@ -161,6 +163,9 @@
 
 - (void)     unmapWindow;
 //
+
+- (void)     copy : (id<X11Drawable>) src fromPoint : (ROOT::MacOSX::X11::Point_t) srcPoint 
+             size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint;
 
 @end
 

@@ -1443,25 +1443,36 @@ void TGCocoa::Bell(Int_t /*percent*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::CopyArea(Drawable_t /*src*/, Drawable_t /*dest*/,
-                       GContext_t /*gc*/, Int_t /*src_x*/, Int_t /*src_y*/,
-                       UInt_t /*width*/, UInt_t /*height*/,
-                       Int_t /*dest_x*/, Int_t /*dest_y*/)
+void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
 {
-   // Combines the specified rectangle of "src" with the specified rectangle
-   // of "dest" according to the "gc".
-   //
-   // src_x, src_y   - specify the x and y coordinates, which are relative
-   //                  to the origin of the source rectangle and specify
-   //                  upper-left corner.
-   // width, height  - the width and height, which are the dimensions of both
-   //                  the source and destination rectangles                                                                   //
-   // dest_x, dest_y - specify the upper-left corner of the destination
-   //                  rectangle
-   //
-   // GC components in use: function, plane-mask, subwindow-mode,
-   // graphics-exposure, clip-x-origin, clip-y-origin, and clip-mask.
-   // (see also the GCValues_t structure)
+   using ROOT::MacOSX::X11::DrawableSize_t;
+   using ROOT::MacOSX::X11::Point_t;
+
+   if (!src || !dst)//Can this happen? From TGX11.
+      return;
+      
+   assert(!fPimpl->IsRootWindow(src) && "CopyArea, src parameter is 'root' window");
+   assert(!fPimpl->IsRootWindow(dst) && "CopyArea, dst parameter is 'root' window");
+   
+   id<X11Drawable> srcDrawable = fPimpl->GetWindow(src);
+   id<X11Drawable> dstDrawable = fPimpl->GetWindow(dst);
+   
+   QuartzView *view = nil;
+   if ([(NSObject *)dstDrawable isKindOfClass : [QuartzView class]] || [(NSObject *)dstDrawable isKindOfClass : [QuartzWindow class]])
+      view = dstDrawable.fContentView;
+   
+   if (view && !view.fContext) {
+      if (fViewsToUpdate.find(view.fID) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(view.fID);
+      return;
+   }
+   
+   const Point_t srcPoint = std::make_pair(srcX, srcY);
+   const Point_t dstPoint = std::make_pair(dstX, dstY);
+   const DrawableSize_t copyAreaSize = std::make_pair(width, height);
+
+   //Check gc also???
+   [dstDrawable copy : srcDrawable fromPoint : srcPoint size : copyAreaSize toPoint : dstPoint];
 }
 
 //______________________________________________________________________________
@@ -1540,7 +1551,6 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    //Can be called from drawRect method and also by ROOT's GUI directly.
 
    assert(!fPimpl->IsRootWindow(wid) && "ClearArea, called for the 'root' window");
-
    using namespace ROOT::MacOSX::X11;
    
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
@@ -1871,6 +1881,9 @@ Int_t TGCocoa::KeysymToKeycode(UInt_t /*keysym*/)
 //______________________________________________________________________________
 void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
+   if (!wid)//I DO NOT KNOW, WHAT THE HELL THAT CRAP CALLS FillRectangle with invalid wid. SHIT!
+      return;
+
    //Can be called in a 'normal way' - from drawRect method (QuartzView)
    //or directly by ROOT.
    using namespace ROOT::MacOSX::X11;
@@ -2467,9 +2480,7 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
    assert(width != 0 && "CreatePixmapFromData, width parameter is 0");
    assert(height != 0 && "CreatePixmapFromData, height parameter is 0");
 
-   fImageBuffer.resize(width * height * 4);
-   std::copy(bits, bits + width * height * 4, &fImageBuffer[0]);
-   
+   fImageBuffer.assign(bits, bits + width * height * 4);
    BgraToRgba(&fImageBuffer[0], width, height);
    //Now we can create CGImageRef.
    QuartzImage *mem = [QuartzImage alloc];
@@ -2483,11 +2494,10 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
       Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
       return Pixmap_t();
    }
-   
-   //
+
    image.fID = fPimpl->RegisterWindow(image);
    [image release];
-   
+
    return image.fID;
 }
 
