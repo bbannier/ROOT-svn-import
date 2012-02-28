@@ -1,3 +1,5 @@
+// Author: Timur Pocheptsov 22/11/2011
+
 #ifndef ROOT_TGCocoa
 #define ROOT_TGCocoa
 
@@ -287,6 +289,9 @@ private:
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
    std::set<Window_t> fViewsToUpdate;
+   
+   //TODO: check the possible sizes of images, may be, this buffer is too large to keep.
+   std::vector<unsigned char> fImageBuffer;//!
 
    //I'd prefere to use = delete syntax from C++0x11, but this file is processed by CINT.
    TGCocoa(const TGCocoa &rhs);

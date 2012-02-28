@@ -1,3 +1,5 @@
+//Author: Timur Pocheptsov 16/02/2012
+
 #define DEBUG_ROOT_COCOA
 
 #ifdef DEBUG_ROOT_COCOA

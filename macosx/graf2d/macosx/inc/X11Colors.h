@@ -1,11 +1,15 @@
+//Author: Timur Pocheptsov 28/11/2011
+
 #ifndef ROOT_X11Colors
 #define ROOT_X11Colors
 
-//
-// ROOT's GUI depends and relies on X11 XParseColors.
-// Color can be specified by name (found in X11 rgb.txt)
-// or as RGB triplet: #rgb #rrggbb #rrrgggbbb #rrrrggggbbbb.
-//
+/////////////////////////////////////////////////////////////////
+//                                                             //
+// ROOT's GUI depends and relies on X11 XParseColors.          //
+// Color can be specified by name (found in X11 rgb.txt)       //
+// or as RGB triplet: #rgb #rrggbb #rrrgggbbb #rrrrggggbbbb.   //
+//                                                             //
+/////////////////////////////////////////////////////////////////
 
 #include <map>
 
@@ -44,11 +48,11 @@ private:
       unsigned fBlue;
    };
 
-   std::map<TString, RGB_t> fX11RGB;//X11 rgb.txt
+   std::map<TString, RGB_t> fX11RGB;//X11's rgb.txt
 };
 
-}
-}
-}
+}//X11
+}//MacOSX
+}//ROOT
 
 #endif

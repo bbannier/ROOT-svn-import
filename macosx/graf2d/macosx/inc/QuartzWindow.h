@@ -1,3 +1,5 @@
+//Author: Timur Pocheptsov 16/02/2012
+
 #ifndef ROOT_QuartzWindow
 #define ROOT_QuartzWindow
 
@@ -6,35 +8,11 @@
 #import "X11Drawable.h"
 #import "GuiTypes.h"
 
-namespace ROOT {
-namespace MacOSX {
-namespace X11 {
-
-void GetRootWindowAttributes(WindowAttributes_t *attr);
-
-//Coordinate conversion.
-int GlobalYCocoaToROOT(CGFloat yCocoa);
-//:)
-int GlobalYROOTToCocoa(CGFloat yROOT);
-
-int LocalYCocoaToROOT(QuartzView *parentView, CGFloat yCocoa);
-//:)
-int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
-int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
-
-NSPoint TranslateToScreen(QuartzView *from, NSPoint point);
-NSPoint TranslateFromScreen(NSPoint point, QuartzView *to);
-NSPoint TranslateCoordinates(QuartzView *fromView, QuartzView *toView, NSPoint sourcePoint);
-
-}
-}
-}
-
-//
-//
-//QuartzWindow class : top-level window. 
-//
-//
+////////////////////////////////////////////////
+//                                            //
+// QuartzWindow class : top-level window.     //
+//                                            //
+////////////////////////////////////////////////
 
 
 @interface QuartzWindow : NSWindow<X11Drawable>//, NSWindowDelegate>
@@ -107,11 +85,11 @@ NSPoint TranslateCoordinates(QuartzView *fromView, QuartzView *toView, NSPoint s
 
 @end
 
-//
-//
-//Child window.
-//
-//
+////////////////////////////////////////
+//                                    //
+// QuartzView class - child window.   //
+//                                    //
+////////////////////////////////////////
 
 @interface QuartzView : NSView<X11Drawable>
 
@@ -185,5 +163,29 @@ NSPoint TranslateCoordinates(QuartzView *fromView, QuartzView *toView, NSPoint s
 //
 
 @end
+
+
+//Aux. functions.
+namespace ROOT {
+namespace MacOSX {
+namespace X11 {
+
+void GetRootWindowAttributes(WindowAttributes_t *attr);
+
+//Coordinate conversion.
+int GlobalYCocoaToROOT(CGFloat yCocoa);
+int GlobalYROOTToCocoa(CGFloat yROOT);
+
+int LocalYCocoaToROOT(QuartzView *parentView, CGFloat yCocoa);
+int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT);
+int LocalYROOTToCocoa(id<X11Drawable> parentView, CGFloat yROOT);
+
+NSPoint TranslateToScreen(QuartzView *from, NSPoint point);
+NSPoint TranslateFromScreen(NSPoint point, QuartzView *to);
+NSPoint TranslateCoordinates(QuartzView *fromView, QuartzView *toView, NSPoint sourcePoint);
+
+}//X11
+}//MacOSX
+}//ROOT
 
 #endif

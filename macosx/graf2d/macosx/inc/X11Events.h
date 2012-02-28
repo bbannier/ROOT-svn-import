@@ -1,3 +1,5 @@
+//Author: Timur Pocheptsov 16/02/2012
+
 #ifndef ROOT_X11Events
 #define ROOT_X11Events
 
@@ -11,7 +13,7 @@
 //                                                                      //
 // EventTranslator class translates Cocoa events to 'ROOT's X11' events.//
 // In 90% cases there is no direct mapping from Cocoa event to          //
-// X11 event: Cocoa events are more simple (from user's POV).           //
+// X11 event: Cocoa events are more simple (from programmer's POV).     //
 // EventTranslator tries to emulate X11 behavior.                       //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////

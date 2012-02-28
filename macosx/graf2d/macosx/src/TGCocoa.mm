@@ -1,5 +1,12 @@
+// Author: Timur Pocheptsov 22/11/2011
+
 #include <algorithm>
 #include <stdexcept>
+
+//
+#include <iostream>
+#include <fstream>
+//
 
 #include  <Cocoa/Cocoa.h>
 
@@ -137,6 +144,20 @@ void SetFilledAreaParametersFromX11Context(CGContextRef ctx, const GCValues_t &g
       ::Warning("SetFilledAreaParametersFromX11Context", "no fill color found in x11 context");
    
    CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
+}
+
+//______________________________________________________________________________
+void BgraToRgba(unsigned char *data, unsigned w, unsigned h)
+{
+   //This function works only for TGCocoa::CreatePixmapFromData == number of components, types,
+   //byte order, etc. are fixed and known.
+   assert(data != nullptr && "BgraToRgba, image data is null");
+   assert(w != 0 && "BgraToRgba, image width is 0");
+   assert(h != 0 && "BgraToRgba, image height is 0");
+   
+   unsigned char *p = data;
+   for (unsigned i = 0, e = w * h; i < e; ++i, p += 4)
+      std::swap(p[0], p[2]);
 }
 
 }
@@ -443,7 +464,7 @@ Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
    newSize.height = h;
 
    QuartzPixmap *obj = [QuartzPixmap alloc];
-   if (QuartzPixmap *pixmap = [obj initWithSize : newSize]) {
+   if (QuartzPixmap *pixmap = [obj initWithW : w H : h]) {
       pixmap.fID = fPimpl->RegisterWindow(pixmap);
       [pixmap release];
       return (Int_t)pixmap.fID;
@@ -534,11 +555,7 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
    if (w == pixmap.fWidth && h == pixmap.fHeight)
       return 1;
    
-   NSSize newSize = {};
-   newSize.width = w;
-   newSize.height = h;
-   
-   if ([pixmap resize : newSize])
+   if ([pixmap resizeW : w H : h])
       return 1;
 
    return -1;
@@ -661,16 +678,13 @@ void TGCocoa::SetDoubleBufferON()
          return;
    }
    
-   NSSize newSize = {};
-   newSize.width = currW, newSize.height = currH;
-   
    QuartzPixmap *mem = [QuartzPixmap alloc];
    if (!mem) {
       Error("SetDoubleBufferON", "QuartzPixmap alloc failed");
       return;
    }
    
-   if (QuartzPixmap *pixmap = [mem initWithSize : newSize]) {
+   if (QuartzPixmap *pixmap = [mem initWithW : currW H : currH]) {
       pixmap.fID = fPimpl->RegisterWindow(pixmap);
       [pixmap release];
 
@@ -2093,8 +2107,15 @@ void TGCocoa::GetWindowSize(Drawable_t wid, Int_t &x, Int_t &y, UInt_t &w, UInt_
       h = attr.fHeight;
    } else {
       id<X11Drawable> window = fPimpl->GetWindow(wid);
-      x = window.fX;
-      y = window.fY;
+      //ROOT can ask window size for ... non-window drawable.
+      if (!window.fIsPixmap) {
+         x = window.fX;
+         y = window.fY;
+      } else {
+         x = 0;
+         y = 0;
+      }
+
       w = window.fWidth;
       h = window.fHeight;
    }
@@ -2437,15 +2458,37 @@ unsigned char *TGCocoa::GetColorBits(Drawable_t /*wid*/, Int_t /*x*/, Int_t /*y*
 }
 
 //______________________________________________________________________________
-Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char * /*bits*/, UInt_t /*width*/,
-                                       UInt_t /*height*/)
+Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t height)
 {
    // create pixmap from RGB data. RGB data is in format :
-   // b1, g1, r1, 0,  b2, g2, r2, 0 ... bn, gn, rn, 0 ..
+   // b1, g1, r1, a1,  b2, g2, r2, a2 ... bn, gn, rn, an ..
    //
-   // Pixels are numbered from left to right and from top to bottom.
-   // Note that data must be 32-bit aligned
-   return Pixmap_t();
+   assert(bits != nullptr && "CreatePixmapFromData, data parameter is null");
+   assert(width != 0 && "CreatePixmapFromData, width parameter is 0");
+   assert(height != 0 && "CreatePixmapFromData, height parameter is 0");
+
+   fImageBuffer.resize(width * height * 4);
+   std::copy(bits, bits + width * height * 4, &fImageBuffer[0]);
+   
+   BgraToRgba(&fImageBuffer[0], width, height);
+   //Now we can create CGImageRef.
+   QuartzImage *mem = [QuartzImage alloc];
+   if (!mem) {
+      Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
+      return Pixmap_t();
+   }
+   
+   QuartzImage *image = [mem initWithW : width H : height data: &fImageBuffer[0]];
+   if (!image) {
+      Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
+      return Pixmap_t();
+   }
+   
+   //
+   image.fID = fPimpl->RegisterWindow(image);
+   [image release];
+   
+   return image.fID;
 }
 
 //______________________________________________________________________________

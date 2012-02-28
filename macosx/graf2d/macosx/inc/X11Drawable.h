@@ -1,3 +1,5 @@
+//Author: Timur Pocheptsov 16/02/2012
+
 #ifndef ROOT_X11Drawable
 #define ROOT_X11Drawable
 
@@ -10,7 +12,7 @@
 
 /////////////////////////////////////////////////////////////////////////////////////
 //                                                                                 //
-// Protocol to emulate "drawables". It can be window, view (child window), pixmap. //
+// Protocol for "drawables". It can be window, view (child window), pixmap. //
 //                                                                                 //
 /////////////////////////////////////////////////////////////////////////////////////
 
