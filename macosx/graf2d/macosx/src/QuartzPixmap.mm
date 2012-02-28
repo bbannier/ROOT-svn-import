@@ -2,8 +2,6 @@
 
 #import <algorithm>
 
-#include <fstream>
-
 #import <cassert>
 #import <cstddef>
 
