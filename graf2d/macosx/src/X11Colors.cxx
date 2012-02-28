@@ -1,6 +1,7 @@
+//Author: Timur Pocheptsov 28/11/2011
+
 #include "X11Colors.h"
 #include "TError.h"
-
 
 namespace ROOT {
 namespace MacOSX {

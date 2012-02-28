@@ -1,3 +1,5 @@
+//Author: Timur Pocheptsov 16/02/2012
+
 #include <cassert>
 
 #include <Cocoa/Cocoa.h>
