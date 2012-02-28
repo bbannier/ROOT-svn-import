@@ -43,9 +43,12 @@
 @property (nonatomic, readonly) BOOL fIsPixmap;//???
 
 - (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data;
+- (void) dealloc;
 
 - (unsigned) fWidth;
 - (unsigned) fHeight;
+
+- (CGImageRef) fImage;
 
 @end
 

@@ -552,6 +552,16 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    return kIsViewable;
 }
 
+//______________________________________________________________________________
+- (void) copy : (id<X11Drawable>) src fromPoint : (ROOT::MacOSX::X11::Point_t) srcPoint 
+         size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint
+{
+   assert(fContentView != nil && "copy:fromPoint:size:toPoint:, fContentView is nil");
+
+   [fContentView copy : src fromPoint : srcPoint size : size toPoint : dstPoint];
+}
+
+
 //End of SetWindowAttributes_t/WindowAttributes_t.
 /////////////////////////////////////////////////////////////
 
@@ -954,6 +964,49 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) unmapWindow
 {
    [self setHidden : YES];
+}
+
+//______________________________________________________________________________
+- (void) copyImage : (QuartzImage *) srcImage fromPoint : (ROOT::MacOSX::X11::Point_t) point 
+         size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint
+{
+   assert(srcImage != nil && "copyImage:fromPoint:size:topPoint:, srcImage parameter is nil");
+   assert(srcImage.fImage != nil && "copyImage:fromPoint:size:topPoint:, srcImage.fImage is nil");
+   assert(self.fContext != nullptr && "copyImage:fromPoint:size:toPoint:, fContext is null");
+   
+   (void)point;//TODO:!!!
+   
+   CGImageRef image = srcImage.fImage;
+  // NSLog(@"draw image %p", image);
+   
+   const CGRect imageRect = CGRectMake(dstPoint.first, dstPoint.second, size.first, size.second);
+   CGContextDrawImage(self.fContext, imageRect, image);
+}
+
+//______________________________________________________________________________
+- (void) copy : (id<X11Drawable>) src fromPoint : (ROOT::MacOSX::X11::Point_t) srcPoint 
+         size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint
+{
+   //In C++ I would use multiple-dispatch (two parameters case), but here ...
+   assert(src != nil && "copy:fromPoint:size:toPoint:, src parameter is nil");
+   
+   NSObject *srcObj = (NSObject *)src;
+   
+   if ([srcObj isKindOfClass : [QuartzPixmap class]]) {
+      //
+      NSLog(@"QuartzView, copy:fromPoint:size:toPoint:, called with pixmap as source");
+   } else if ([srcObj isKindOfClass : [QuartzWindow class]]) {
+      //
+      NSLog(@"QuartzView, copy:fromPoint:size:toPoint:, called with QuartzWindow as source");
+      //QuartzWindow *topLevel = (QuartzWindow *)srcObj;
+      //QuartzView *srcView = topLevel.fContentView;
+      //[self copyView : srcView fromPoint : srcPoint size : size toPoint : dstPoint];
+   } else if ([srcObj isKindOfClass : [QuartzImage class]]) {
+      QuartzImage *image = (QuartzImage *)src;
+      [self copyImage : image fromPoint : srcPoint size : size toPoint : dstPoint];
+   } else {
+      assert(0 && @"copy:fromPoint:size:toPoint:, source is unknown");
+   }
 }
 
 //End of X11Drawable protocol.
