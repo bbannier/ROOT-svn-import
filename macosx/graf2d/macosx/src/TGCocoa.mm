@@ -927,7 +927,6 @@ void TGCocoa::ReparentWindow(Window_t /*wid*/, Window_t /*pid*/, Int_t /*x*/, In
    // position in the hierarchy, and inserts it as the child of the specified
    // parent. The window is placed in the stacking order on top with respect
    // to sibling windows.
-   NSLog(@"ReparentWindow was called");
 }
 
 //______________________________________________________________________________
@@ -2253,7 +2252,7 @@ void TGCocoa::Update(Int_t /*mode = 0*/)
    // Flush flushes output buffer. Sync flushes buffer and waits till all
    // requests have been processed by X server.
    
-//   gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
+   gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
    fCommandBuffer->Flush(fPimpl.get());
 }
 
