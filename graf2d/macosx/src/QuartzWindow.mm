@@ -553,12 +553,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src fromPoint : (ROOT::MacOSX::X11::Point_t) srcPoint 
-         size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint
+- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
-   assert(fContentView != nil && "copy:fromPoint:size:toPoint:, fContentView is nil");
+   assert(fContentView != nil && "copy:area:toPoint:, fContentView is nil");
 
-   [fContentView copy : src fromPoint : srcPoint size : size toPoint : dstPoint];
+   [fContentView copy : src area : area toPoint : dstPoint];
 }
 
 
@@ -967,45 +966,47 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) copyImage : (QuartzImage *) srcImage fromPoint : (ROOT::MacOSX::X11::Point_t) point 
-         size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint
+- (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
-   assert(srcImage != nil && "copyImage:fromPoint:size:topPoint:, srcImage parameter is nil");
-   assert(srcImage.fImage != nil && "copyImage:fromPoint:size:topPoint:, srcImage.fImage is nil");
-   assert(self.fContext != nullptr && "copyImage:fromPoint:size:toPoint:, fContext is null");
-   
-   (void)point;//TODO:!!!
+   assert(srcImage != nil && "copyImage:area:toPoint:, srcImage parameter is nil");
+   assert(srcImage.fImage != nil && "copyImage:area:toPoint:, srcImage.fImage is nil");
+   assert(self.fContext != nullptr && "copyImage:area:toPoint:, fContext is null");
    
    CGImageRef image = srcImage.fImage;
-  // NSLog(@"draw image %p", image);
    
-   const CGRect imageRect = CGRectMake(dstPoint.first, dstPoint.second, size.first, size.second);
+   CGContextSaveGState(self.fContext);
+
+   CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
+   CGContextScaleCTM(self.fContext, 1., -1.);
+
+   const int cocoaY = dstPoint.fY;
+   const CGRect imageRect = CGRectMake(dstPoint.fX, cocoaY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, image);
+   
+   CGContextRestoreGState(self.fContext);
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src fromPoint : (ROOT::MacOSX::X11::Point_t) srcPoint 
-         size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint
+- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
    //In C++ I would use multiple-dispatch (two parameters case), but here ...
-   assert(src != nil && "copy:fromPoint:size:toPoint:, src parameter is nil");
+   assert(src != nil && "copy:area:toPoint:, src parameter is nil");
    
    NSObject *srcObj = (NSObject *)src;
-   
    if ([srcObj isKindOfClass : [QuartzPixmap class]]) {
       //
-      NSLog(@"QuartzView, copy:fromPoint:size:toPoint:, called with pixmap as source");
+      NSLog(@"QuartzView, copy:area:toPoint:, called with pixmap as source");
    } else if ([srcObj isKindOfClass : [QuartzWindow class]]) {
       //
-      NSLog(@"QuartzView, copy:fromPoint:size:toPoint:, called with QuartzWindow as source");
+      NSLog(@"QuartzView, copy:area:toPoint:, called with QuartzWindow as source");
       //QuartzWindow *topLevel = (QuartzWindow *)srcObj;
       //QuartzView *srcView = topLevel.fContentView;
       //[self copyView : srcView fromPoint : srcPoint size : size toPoint : dstPoint];
    } else if ([srcObj isKindOfClass : [QuartzImage class]]) {
       QuartzImage *image = (QuartzImage *)src;
-      [self copyImage : image fromPoint : srcPoint size : size toPoint : dstPoint];
+      [self copyImage : image area : area toPoint : dstPoint];
    } else {
-      assert(0 && @"copy:fromPoint:size:toPoint:, source is unknown");
+      assert(0 && @"copy:area:toPoint:, source is unknown");
    }
 }
 

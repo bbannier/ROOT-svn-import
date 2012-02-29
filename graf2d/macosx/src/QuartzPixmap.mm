@@ -154,6 +154,7 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    unsigned fHeight;
    
    CGImageRef fImage;
+   unsigned char *fImageData;
 }
 
 @synthesize fID;
@@ -203,6 +204,8 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
       fWidth = width;
       fHeight = height;
 
+      fImageData = data;
+
       return self;
    }
    
@@ -212,8 +215,10 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 //______________________________________________________________________________
 - (void) dealloc
 {
-   if (fImage)
+   if (fImage) {
       CGImageRelease(fImage);
+      delete [] fImageData;
+   }
    
    [super dealloc];
 }
