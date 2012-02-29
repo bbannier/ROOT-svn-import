@@ -1446,6 +1446,204 @@ void TGCocoa::Bell(Int_t /*percent*/)
 }
 
 //______________________________________________________________________________
+void TGCocoa::ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr)
+{
+   assert(!fPimpl->IsRootWindow(wid) && "ChangeWindowAttributes, called for the 'root' window");
+   assert(attr != nullptr && "ChangeWindowAttributes, attr parameter is null");
+   
+   [fPimpl->GetWindow(wid) setAttributes : attr];
+}
+
+//______________________________________________________________________________
+void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
+                             Atom_t /*type*/, UChar_t * /*data*/,
+                             Int_t /*len*/)
+{
+   // Alters the property for the specified window and causes the X server
+   // to generate a PropertyNotify event on that window.
+   //
+   // wid       - the window whose property you want to change
+   // property - specifies the property name
+   // type     - the type of the property; the X server does not
+   //            interpret the type but simply passes it back to
+   //            an application that might ask about the window
+   //            properties
+   // data     - the property data
+   // len      - the length of the specified data format
+}
+
+//
+//GUI rendering part.
+//
+
+//______________________________________________________________________________
+void TGCocoa::DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
+{
+   //Can be called directly of when flushing command buffer.
+   assert(!fPimpl->IsRootWindow(wid) && "DrawLineAux, called for 'root' window");
+   
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+
+   const CGStateGuard ctxGuard(view.fContext);//Will restore state back.
+   //Draw a line.
+   //This draw line is a special GUI method, it's used not by ROOT's graphics, but
+   //widgets. The problem is:
+   //-I have to switch off anti-aliasing, since if anti-aliasing is on,
+   //the line is thick and has different color.
+   //-As soon as I switch-off anti-aliasing, and line is precise, I can not
+   //draw a line [0, 0, -> w, 0].
+   //I use a small translation, after all, this is ONLY gui method and it
+   //will not affect anything except GUI.
+   CGContextTranslateCTM(view.fContext, 0.f, 1.);
+   CGContextSetAllowsAntialiasing(view.fContext, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
+
+   SetStrokeParametersFromX11Context(view.fContext, gcVals);
+   CGContextSetLineWidth(view.fContext, 1.);   
+   CGContextBeginPath(view.fContext);
+   CGContextMoveToPoint(view.fContext, x1, y1);
+   CGContextAddLineToPoint(view.fContext, x2, y2);
+   CGContextStrokePath(view.fContext);
+}
+
+//______________________________________________________________________________
+void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
+{
+   //This function can be called:
+   //a)'normal' way - from view's drawRect method.
+   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
+   //   drawRect.   
+   //This code is just a hack to show a button or other widgets.
+   assert(!fPimpl->IsRootWindow(wid) && "DrawLine, called for 'root' window");   
+   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawLine, strange context index");
+
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
+   }
+
+   DrawLineAux(wid, gcVals, x1, y1, x2, y2);
+}
+
+//______________________________________________________________________________
+void TGCocoa::DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h)
+{
+   //Can be called directly or during flushing command buffer.
+   assert(!fPimpl->IsRootWindow(wid) && "DrawRectangleAux, called for the 'root' window");
+
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   
+   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
+
+   //Line color from X11 context.
+   SetStrokeParametersFromX11Context(view.fContext, gcVals);
+      
+   const CGRect rect = CGRectMake(x, y, w, h);
+   CGContextStrokeRect(view.fContext, rect);
+}
+
+
+//______________________________________________________________________________
+void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
+{
+   //Can be called in a 'normal way' - from drawRect method (QuartzView)
+   //or directly by ROOT.
+
+   assert(!fPimpl->IsRootWindow(wid) && "DrawRectangle, called for the 'root' window");
+   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawRectangle, bad GContext_t");
+
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
+   }
+
+   DrawRectangleAux(wid, gcVals, x, y, w, h);
+}
+
+//______________________________________________________________________________
+void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h)
+{
+   //Can be called directly or when flushing command buffer.
+   if (!wid)//From TGX11.
+      return;
+
+   assert(!fPimpl->IsRootWindow(wid) && "FillRectangleAux, called for the 'root' window");
+
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
+   //Fill color from X11 context.
+   SetFilledAreaParametersFromX11Context(view.fContext, gcVals);
+   const CGRect fillRect = CGRectMake(x, y, w, h);
+   CGContextFillRect(view.fContext, fillRect);
+}
+
+//______________________________________________________________________________
+void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
+{
+   //Can be called in a 'normal way' - from drawRect method (QuartzView)
+   //or directly by ROOT.
+
+   if (!wid)//From TGX11.
+      return;
+
+   assert(!fPimpl->IsRootWindow(wid) && "FillRectangle, called for the 'root' window");
+   assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
+
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];   
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   if (!view.fContext) {
+      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(wid);
+      return;
+   }
+   
+   FillRectangleAux(wid, gcVals, x, y, w, h);
+}
+
+//______________________________________________________________________________
+void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &/*gcVals*/, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
+{
+   //Called directly or when flushing command buffer.
+   if (!src || !dst)//Can this happen? From TGX11.
+      return;
+      
+   assert(!fPimpl->IsRootWindow(src) && "CopyAreaAux, src parameter is 'root' window");
+   assert(!fPimpl->IsRootWindow(dst) && "CopyAreaAux, dst parameter is 'root' window");
+   
+   id<X11Drawable> srcDrawable = fPimpl->GetWindow(src);
+   id<X11Drawable> dstDrawable = fPimpl->GetWindow(dst);
+   
+   QuartzView *view = nil;
+   if ([(NSObject *)dstDrawable isKindOfClass : [QuartzView class]] || [(NSObject *)dstDrawable isKindOfClass : [QuartzWindow class]])
+      view = dstDrawable.fContentView;
+   
+   if (view && !view.fContext) {
+      if (fViewsToUpdate.find(view.fID) == fViewsToUpdate.end())
+         fViewsToUpdate.insert(view.fID);
+      return;
+   }
+   
+   Point_t dstPoint = {};
+   dstPoint.fX = dstX;
+   dstPoint.fY = dstY;
+   
+   Rectangle_t copyArea = {};
+   copyArea.fX = srcX;
+   copyArea.fY = srcY;
+   copyArea.fWidth = (UShort_t)width;//!
+   copyArea.fHeight = (UShort_t)height;//!
+
+   //Check gc also???
+   [dstDrawable copy : srcDrawable area : copyArea toPoint : dstPoint];
+}
+
+//______________________________________________________________________________
 void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
 {
    if (!src || !dst)//Can this happen? From TGX11.
@@ -1482,73 +1680,64 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t 
 }
 
 //______________________________________________________________________________
-void TGCocoa::ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr)
+void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, const char *text, Int_t len)
 {
-   assert(!fPimpl->IsRootWindow(wid) && "ChangeWindowAttributes, called for the 'root' window");
-   assert(attr != nullptr && "ChangeWindowAttributes, attr parameter is null");
-   
-   [fPimpl->GetWindow(wid) setAttributes : attr];
-}
-
-//______________________________________________________________________________
-void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
-                             Atom_t /*type*/, UChar_t * /*data*/,
-                             Int_t /*len*/)
-{
-   // Alters the property for the specified window and causes the X server
-   // to generate a PropertyNotify event on that window.
-   //
-   // wid       - the window whose property you want to change
-   // property - specifies the property name
-   // type     - the type of the property; the X server does not
-   //            interpret the type but simply passes it back to
-   //            an application that might ask about the window
-   //            properties
-   // data     - the property data
-   // len      - the length of the specified data format
-}
-
-//______________________________________________________________________________
-void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
-{
-   //This function can be called:
-   //a)'normal' way - from view's drawRect method.
-   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
-   //   drawRect.
+   //Can be called by ROOT directly, or indirectly by AppKit.
    using namespace ROOT::MacOSX::X11;
-   
-   //This code is just a hack to show a button or other widgets.
-   assert(!fPimpl->IsRootWindow(wid) && "DrawLine, called for 'root' window");   
-   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawLine, strange context index");
 
-   const GCValues_t &gcVals = fX11Contexts[gc - 1];   
-   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   assert(!fPimpl->IsRootWindow(wid) && "DrawStringAux, called for the 'root' window");
+
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;   
+
+   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
+
+   CGContextSetTextMatrix(view.fContext, CGAffineTransformIdentity);
    
+   //View is flipped, I have to transform for Core Text to work.
+   CGContextTranslateCTM(view.fContext, 0.f, view.fHeight);
+   CGContextScaleCTM(view.fContext, 1.f, -1.f);   
+
+   //Text must be antialiased.
+   CGContextSetAllowsAntialiasing(view.fContext, 1);
+      
+   assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
+
+   if (len < 0)//Negative length can come from caller.
+      len = std::strlen(text);
+   const std::string substr(text, len);
+      
+   //Text can be not black, for example, highlighted label.
+   CGFloat textColor[4] = {0., 0., 0., 1.};//black by default.
+   //I do not check the results here, it's ok to have a black text.
+   if (gcVals.fMask & kGCForeground)
+      PixelToRGB(gcVals.fForeground, textColor);
+
+   ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
+
+   CGContextSetTextPosition(view.fContext, x, LocalYROOTToCocoa(view, y));
+   CTLineDraw(ctLine.fCTLine, view.fContext);
+}
+
+//______________________________________________________________________________
+void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len)
+{
+   //Can be called by ROOT directly, or indirectly by AppKit.
+
+   using namespace ROOT::MacOSX::X11;
+
+   assert(!fPimpl->IsRootWindow(wid) && "DrawString, called for the 'root' window");
+   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawString, bad GContext_t");
+
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
    if (!view.fContext) {
       if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
          fViewsToUpdate.insert(wid);
       return;
    }
-
-   const CGStateGuard ctxGuard(view.fContext);
-   //Draw a line.
-   //This draw line is a special GUI method, it's used not by ROOT's graphics, but
-   //widgets. The problem is:
-   //-I have to switch off anti-aliasing, since if anti-aliasing is on,
-   //the line is thick and has different color.
-   //-As soon as I switch-off anti-aliasing, and line is precise, I can not
-   //draw a line [0, 0, -> w, 0].
-   //I use a small translation, after all, this is ONLY gui method and it
-   //will not affect anything except GUI.
-   CGContextTranslateCTM(view.fContext, 0.f, 1.);
-   CGContextSetAllowsAntialiasing(view.fContext, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
-
-   SetStrokeParametersFromX11Context(view.fContext, gcVals);
-   CGContextSetLineWidth(view.fContext, 1.);   
-   CGContextBeginPath(view.fContext);
-   CGContextMoveToPoint(view.fContext, x1, y1);
-   CGContextAddLineToPoint(view.fContext, x2, y2);
-   CGContextStrokePath(view.fContext);
+   
+   DrawStringAux(wid, gcVals, x, y, text, len);
 }
 
 //______________________________________________________________________________
@@ -1576,6 +1765,11 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    CGContextSetRGBFillColor(view.fContext, red, green, blue, 1.f);//alpha can be also used.
    CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
 }
+
+//
+//End of GUI rendering part.
+//
+
 
 //______________________________________________________________________________
 Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t & /*ev*/)
@@ -1776,53 +1970,6 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len)
-{
-   //Can be called by ROOT directly, or indirectly by AppKit.
-
-   using namespace ROOT::MacOSX::X11;
-
-   assert(!fPimpl->IsRootWindow(wid) && "DrawString, called for the 'root' window");
-   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawString, bad GContext_t");
-
-   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
-   if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
-      return;
-   }
-   
-   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
-
-   CGContextSetTextMatrix(view.fContext, CGAffineTransformIdentity);
-   
-   //View is flipped, I have to transform for Core Text to work.
-   CGContextTranslateCTM(view.fContext, 0.f, view.fHeight);
-   CGContextScaleCTM(view.fContext, 1.f, -1.f);   
-
-   //Text must be antialiased.
-   CGContextSetAllowsAntialiasing(view.fContext, 1);
-      
-   const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
-
-   if (len < 0)//Negative length can come from caller.
-      len = std::strlen(text);
-   const std::string substr(text, len);
-      
-   //Text can be not black, for example, highlighted label.
-   CGFloat textColor[4] = {0., 0., 0., 1.};//black by default.
-   //I do not check the results here, it's ok to have a black text.
-   if (gcVals.fMask & kGCForeground)
-      PixelToRGB(gcVals.fForeground, textColor);
-
-   ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
-
-   CGContextSetTextPosition(view.fContext, x, LocalYROOTToCocoa(view, y));
-   CTLineDraw(ctLine.fCTLine, view.fContext);
-}
-
-//______________________________________________________________________________
 Int_t TGCocoa::TextWidth(FontStruct_t font, const char *s, Int_t len)
 {
    // Return lenght of the string "s" in pixels. Size depends on font.
@@ -1882,63 +2029,6 @@ Int_t TGCocoa::KeysymToKeycode(UInt_t /*keysym*/)
    // "keysym" is not defined for any keycode, returns zero.
 
    return 0;
-}
-
-//______________________________________________________________________________
-void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
-{
-   if (!wid)//I DO NOT KNOW, WHAT THE HELL THAT CRAP CALLS FillRectangle with invalid wid. SHIT!
-      return;
-
-   //Can be called in a 'normal way' - from drawRect method (QuartzView)
-   //or directly by ROOT.
-   using namespace ROOT::MacOSX::X11;
-
-   assert(!fPimpl->IsRootWindow(wid) && "FillRectangle, called for the 'root' window");
-   assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
-   
-   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
-   if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
-      return;
-   }
-   
-   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
-
-   //Fill color from context.
-   const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   SetFilledAreaParametersFromX11Context(view.fContext, gcVals);
-
-   const CGRect fillRect = CGRectMake(x, y, w, h);
-   CGContextFillRect(view.fContext, fillRect);
-}
-
-//______________________________________________________________________________
-void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
-{
-   //Can be called in a 'normal way' - from drawRect method (QuartzView)
-   //or directly by ROOT.
-   using namespace ROOT::MacOSX::X11;
-
-   assert(!fPimpl->IsRootWindow(wid) && "DrawRectangle, called for the 'root' window");
-   assert(gc > 0 && gc <= fX11Contexts.size() && "DrawRectangle, bad GContext_t");
-
-   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
-   if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
-      return;
-   }
-   
-   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
-
-   //Line color from X11 context.
-   const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   SetStrokeParametersFromX11Context(view.fContext, gcVals);
-      
-   const CGRect rect = CGRectMake(x, y, w, h);
-   CGContextStrokeRect(view.fContext, rect);
 }
 
 //______________________________________________________________________________
