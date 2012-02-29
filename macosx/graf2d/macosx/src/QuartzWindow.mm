@@ -723,12 +723,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //
 //
 
-@interface QuartzView ()
-
-- (void) generateConfigureNotify : (NSRect) newFrame;
-
-@end
-
 @implementation QuartzView
 
 @synthesize fBackBuffer;
@@ -933,8 +927,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    [parent addSubview : self];
    [self setHidden : NO];
 
-   if (fEventMask & kStructureNotifyMask)
-      [self generateConfigureNotify : self.frame];
+   if (fEventMask & kStructureNotifyMask) {
+      TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx && "mapRaised:, gVirtualX is either null or has type different from TGCocoa");
+      vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
+   }
 }
 
 //______________________________________________________________________________
@@ -942,8 +939,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {   
    [self setHidden : NO];
 
-   if (fEventMask & kStructureNotifyMask)
-      [self generateConfigureNotify : self.frame];
+   if (fEventMask & kStructureNotifyMask) {
+      TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx && "mapWindow:, gVirtualX is either null or has type different from TGCocoa");
+      vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
+
+   }
 }
 
 //______________________________________________________________________________
@@ -952,8 +953,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    for (QuartzView * v in [self subviews]) {
       [v setHidden : NO];
  
-      if (v.fEventMask & kStructureNotifyMask)
-         [v generateConfigureNotify : v.frame];
+      if (v.fEventMask & kStructureNotifyMask) {
+         TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+         assert(vx && "mapSubwindows:, gVirtualX is either null or has type different from TGCocoa");
+         vx->GetEventTranslator()->GenerateConfigureNotifyEvent(v, v.frame);
+      }
 
       [v mapSubwindows];
    }
@@ -1054,38 +1058,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //Event handling.
-//______________________________________________________________________________
-- (Event_t) createROOTEventFor : (NSEvent *) theEvent
-{
-   Event_t newEvent = {};
-   newEvent.fWindow = fID;
-   newEvent.fTime = [theEvent timestamp];
-   
-   return newEvent;
-}
-
-//______________________________________________________________________________
-- (void) generateConfigureNotify : (NSRect) newFrame
-{
-   assert(fID != 0 && "generateConfigureNotify, fID is 0");
-   
-   TGWindow *window = gClient->GetWindowById(fID);
-   assert(window != nullptr && "generateConfigureNotify, window was not found");
-   
-   Event_t newEvent = {};
-   newEvent.fWindow = fID;
-   newEvent.fType = kConfigureNotify;         
-
-   newEvent.fX = newFrame.origin.x;
-   newEvent.fY = newFrame.origin.y;
-   newEvent.fWidth = newFrame.size.width;
-   newEvent.fHeight = newFrame.size.height;
-   
-   //TODO:
-   //1. generate timestamp?
-   //2. check, what's actually required from configure notify.
-   window->HandleEvent(&newEvent);
-}
 
 //______________________________________________________________________________
 - (void) setFrame : (NSRect) newFrame
@@ -1100,47 +1072,14 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    [super setFrameSize : newSize];
    
-   if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable)
-      [self generateConfigureNotify : self.frame];
+   if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable) {
+      TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx && "setFrameSize:, gVirtualX is either null or has type different from TGCocoa");
+      vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
+   }
 
    [self setNeedsDisplay : YES];//?
 }
-/*
-//______________________________________________________________________________
-- (void) locationForEvent : (NSEvent *) cocoaEvent toROOTEvent : (Event_t *) rootEvent
-{
-   assert(cocoaEvent != nil && "locationForEvent, cocoaEvent parameter is nil");
-   assert(rootEvent != nullptr && "locationForEvent, rootEvent parameter is null");
-
-   const NSPoint clickPoint = [self convertPoint : [cocoaEvent locationInWindow] fromView : nil];
-   rootEvent->fX = clickPoint.x;
-   rootEvent->fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clickPoint.y);
-}
-
-//______________________________________________________________________________
-- (BOOL) viewGeneratesButtonPressEvent : (EMouseButton) btn
-{
-   if (fEventMask & kButtonPressMask)
-      return YES;
-
-   if (btn == fGrabButton && (fGrabButtonEventMask & kButtonPressMask))
-      return YES;
-   
-   return NO;
-}
-
-//______________________________________________________________________________
-- (BOOL) viewGeneratesButtonReleaseEvent : (EMouseButton) btn
-{
-   if (fEventMask & kButtonReleaseMask)
-      return YES;
-
-   if (btn == fGrabButton && (fGrabButtonEventMask & kButtonReleaseMask))
-      return YES;
-   
-   return NO;
-}
-*/
 
 //______________________________________________________________________________
 - (void) mouseDown : (NSEvent *) theEvent
@@ -1152,7 +1091,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx && "gVirtualX is either null or has type different from TGCocoa");
+   assert(vx && "mouseDown, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);
 }
 
@@ -1162,7 +1101,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(fID != 0 && "mouseUp, fID is 0");
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx && "gVirtualX is either null or has type different from TGCocoa");
+   assert(vx && "mouseUp, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton1);
 }
 
