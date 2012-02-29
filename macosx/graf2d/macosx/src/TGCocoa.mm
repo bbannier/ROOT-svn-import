@@ -1445,9 +1445,6 @@ void TGCocoa::Bell(Int_t /*percent*/)
 //______________________________________________________________________________
 void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
 {
-   using ROOT::MacOSX::X11::DrawableSize_t;
-   using ROOT::MacOSX::X11::Point_t;
-
    if (!src || !dst)//Can this happen? From TGX11.
       return;
       
@@ -1467,12 +1464,18 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t 
       return;
    }
    
-   const Point_t srcPoint = std::make_pair(srcX, srcY);
-   const Point_t dstPoint = std::make_pair(dstX, dstY);
-   const DrawableSize_t copyAreaSize = std::make_pair(width, height);
+   Point_t dstPoint = {};
+   dstPoint.fX = dstX;
+   dstPoint.fY = dstY;
+   
+   Rectangle_t copyArea = {};
+   copyArea.fX = srcX;
+   copyArea.fY = srcY;
+   copyArea.fWidth = (UShort_t)width;//!
+   copyArea.fHeight = (UShort_t)height;//!
 
    //Check gc also???
-   [dstDrawable copy : srcDrawable fromPoint : srcPoint size : copyAreaSize toPoint : dstPoint];
+   [dstDrawable copy : srcDrawable area : copyArea toPoint : dstPoint];
 }
 
 //______________________________________________________________________________
@@ -2480,25 +2483,43 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
    assert(width != 0 && "CreatePixmapFromData, width parameter is 0");
    assert(height != 0 && "CreatePixmapFromData, height parameter is 0");
 
-   fImageBuffer.assign(bits, bits + width * height * 4);
-   BgraToRgba(&fImageBuffer[0], width, height);
-   //Now we can create CGImageRef.
-   QuartzImage *mem = [QuartzImage alloc];
-   if (!mem) {
-      Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
-      return Pixmap_t();
-   }
+   QuartzImage *image = nil;
+
+   try {
+      //I'm not using vector here, since I have to pass this pointer to Obj-C code
+      //(and Obj-C object will own this memory later).
+      unsigned char *imageData = new unsigned char[width * height * 4];
+      std::copy(bits, bits + width * height * 4, imageData);
+      BgraToRgba(imageData, width, height);
    
-   QuartzImage *image = [mem initWithW : width H : height data: &fImageBuffer[0]];
-   if (!image) {
-      Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
-      return Pixmap_t();
+      //Now we can create CGImageRef.
+      QuartzImage *mem = [QuartzImage alloc];
+      if (!mem) {
+         Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
+         delete [] imageData;
+         return Pixmap_t();
+      }
+   
+      image = [mem initWithW : width H : height data: imageData];
+      if (!image) {
+         [mem release];
+         delete [] imageData;
+         Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
+         return Pixmap_t();
+      }
+      
+      //Now, imageData is owned by image.
+
+      image.fID = fPimpl->RegisterWindow(image);//This can throw.
+      [image release];
+      
+      return image.fID;      
+   } catch (const std::exception &e) {
+      [image release];//Also will delete imageData.
+      Error("CreatePixmapFromData", "%s", e.what());
    }
 
-   image.fID = fPimpl->RegisterWindow(image);
-   [image release];
-
-   return image.fID;
+   return Pixmap_t();
 }
 
 //______________________________________________________________________________

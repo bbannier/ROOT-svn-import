@@ -171,9 +171,9 @@ public:
    virtual Int_t        EventsPending();
    virtual void         NextEvent(Event_t &event);
    virtual void         Bell(Int_t percent);
-   virtual void         CopyArea(Drawable_t src, Drawable_t dest, GContext_t gc,
-                                 Int_t src_x, Int_t src_y, UInt_t width,
-                                 UInt_t height, Int_t dest_x, Int_t dest_y);
+   virtual void         CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc,
+                                 Int_t srcX, Int_t srcY, UInt_t width,
+                                 UInt_t height, Int_t dstX, Int_t dstY);
    virtual void         ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr);
    virtual void         ChangeProperty(Window_t wid, Atom_t property, Atom_t type,
                                        UChar_t *data, Int_t len);
@@ -290,9 +290,6 @@ private:
    std::vector<GCValues_t> fX11Contexts;
    std::set<Window_t> fViewsToUpdate;
    
-   //TODO: check the possible sizes of images, may be, this buffer is too large to keep.
-   std::vector<unsigned char> fImageBuffer;//!
-
    //I'd prefere to use = delete syntax from C++0x11, but this file is processed by CINT.
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);

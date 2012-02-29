@@ -3,25 +3,9 @@
 #ifndef ROOT_X11Drawable
 #define ROOT_X11Drawable
 
-#import <utility>//HOHO!
-
 #import <Cocoa/Cocoa.h>
 
 #import "GuiTypes.h"
-
-namespace ROOT {
-namespace MacOSX {
-namespace X11 {
-
-//CGSize/NSSize use double.
-typedef std::pair<unsigned, unsigned> DrawableSize_t;
-
-//CGPoint/NSPoint use double.
-typedef std::pair<int, int> Point_t;
-
-}
-}
-}
 
 @class QuartzPixmap;
 @class QuartzView;
@@ -112,9 +96,8 @@ typedef std::pair<int, int> Point_t;
 
 - (void)     unmapWindow;
 //
-
-- (void)     copy : (id<X11Drawable>) src fromPoint : (ROOT::MacOSX::X11::Point_t) srcPoint 
-             size : (ROOT::MacOSX::X11::DrawableSize_t) size toPoint : (ROOT::MacOSX::X11::Point_t) dstPoint;
+//Point_t, Rectangle_t are in GuiTypes.h
+- (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
 
 @end
 
