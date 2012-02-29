@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <cstring>
+#include <cassert>
 #include <memory>
 
 #include <Cocoa/Cocoa.h>
