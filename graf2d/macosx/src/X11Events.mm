@@ -505,6 +505,27 @@ EventTranslator::EventTranslator()
 }
 
 //______________________________________________________________________________
+void EventTranslator::GenerateConfigureNotifyEvent(QuartzView *view, const NSRect &newFrame)
+{
+   assert(view != nil && "GenerateConfigureNotifyEvent, view parameter is nil");
+
+   Event_t newEvent = {};
+   newEvent.fWindow = view.fID;
+   newEvent.fType = kConfigureNotify;         
+
+   newEvent.fX = newFrame.origin.x;
+   newEvent.fY = newFrame.origin.y;
+   //fXRoot?
+   //fYRoot?
+   newEvent.fWidth = newFrame.size.width;
+   newEvent.fHeight = newFrame.size.height;
+
+   TGWindow *window = gClient->GetWindowById(view.fID);
+   assert(window != nullptr && "GenerateConfigureNotifyEvent, window was not found");   
+   window->HandleEvent(&newEvent);
+}
+
+//______________________________________________________________________________
 void EventTranslator::GenerateCrossingEvent(QuartzView *view, NSEvent *theEvent)
 {
    //View parameter can be nil (we exit any window).
