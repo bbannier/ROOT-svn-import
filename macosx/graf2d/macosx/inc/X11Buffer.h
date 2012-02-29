@@ -34,10 +34,10 @@ class Command {
 
 protected:
    const Drawable_t fID;
-   const GContext_t fGC;
+   const GCValues_t fGC;
    
 public:
-   Command(Drawable_t wid, GContext_t gc);
+   Command(Drawable_t wid, const GCValues_t &gc);
    virtual ~Command();
 
    virtual void Execute()const = 0;
@@ -52,7 +52,7 @@ private:
    const Point_t fP2;
 
 public:
-   DrawLine(Drawable_t wid, GContext_t gc, const Point_t &p1, const Point_t &p2);
+   DrawLine(Drawable_t wid, const GCValues_t &gc, const Point_t &p1, const Point_t &p2);
    void Execute()const;
 };
 
@@ -72,7 +72,7 @@ private:
    const Point_t     fDstPoint;
 
 public:
-   CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, const Rectangle_t &area, const Point_t &dstPoint);
+   CopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, const Rectangle_t &area, const Point_t &dstPoint);
    void Execute()const;
 };
 
@@ -82,7 +82,7 @@ private:
    const std::string fText;
 
 public:
-   DrawString(Drawable_t wid, GContext_t gc, const Point_t &point, const std::string &text);
+   DrawString(Drawable_t wid, const GCValues_t &gc, const Point_t &point, const std::string &text);
    void Execute()const;
 };
 
@@ -91,7 +91,7 @@ private:
    const Rectangle_t fRectangle;
 
 public:
-   FillRectangle(Drawable_t wid, GContext_t gc, const Rectangle_t &rectangle);
+   FillRectangle(Drawable_t wid, const GCValues_t &gc, const Rectangle_t &rectangle);
    void Execute()const;
 };
 
@@ -100,7 +100,7 @@ private:
    Rectangle_t fRectangle;
 
 public:
-   DrawRectangle(Drawable_t wid, GContext_t gc, const Rectangle_t &rectangle);
+   DrawRectangle(Drawable_t wid, const GCValues_t &gc, const Rectangle_t &rectangle);
    void Execute()const;
 };
 
@@ -115,12 +115,12 @@ public:
    CommandBuffer();
    ~CommandBuffer();
 
-   void AddDrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
+   void AddDrawLine(Drawable_t wid, const GCValues_t &gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
    void AddClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
-   void AddCopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY);
-   void AddDrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len);
-   void AddFillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
-   void AddDrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   void AddCopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY);
+   void AddDrawString(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *text, Int_t len);
+   void AddFillRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   void AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
 
    void Flush(Details::CocoaPrivate *impl);
 private:

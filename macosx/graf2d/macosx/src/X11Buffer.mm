@@ -7,15 +7,15 @@
 #include "CocoaPrivate.h"
 #include "QuartzWindow.h"
 #include "QuartzPixmap.h"
-#include "TVirtualX.h"
 #include "X11Buffer.h"
+#include "TGCocoa.h"
 
 namespace ROOT {
 namespace MacOSX {
 namespace X11 {
 
 //______________________________________________________________________________
-Command::Command(Drawable_t wid, GContext_t gc)
+Command::Command(Drawable_t wid, const GCValues_t &gc)
             : fID(wid),
               fGC(gc)
 {
@@ -27,7 +27,7 @@ Command::~Command()
 }
 
 //______________________________________________________________________________
-DrawLine::DrawLine(Drawable_t wid, GContext_t gc, const Point_t &p1, const Point_t &p2)
+DrawLine::DrawLine(Drawable_t wid, const GCValues_t &gc, const Point_t &p1, const Point_t &p2)
             : Command(wid, gc),
               fP1(p1),
               fP2(p2)
@@ -37,12 +37,14 @@ DrawLine::DrawLine(Drawable_t wid, GContext_t gc, const Point_t &p1, const Point
 //______________________________________________________________________________
 void DrawLine::Execute()const
 {
-   gVirtualX->DrawLine(fID, fGC, fP1.fX, fP1.fY, fP2.fX, fP2.fY);
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->DrawLineAux(fID, fGC, fP1.fX, fP1.fY, fP2.fX, fP2.fY);
 }
 
 //______________________________________________________________________________
 ClearArea::ClearArea(Window_t wid, const Rectangle_t &area)
-             : Command(wid, GContext_t()),
+             : Command(wid, GCValues_t()),
                fArea(area)
 {
 }
@@ -50,11 +52,13 @@ ClearArea::ClearArea(Window_t wid, const Rectangle_t &area)
 //______________________________________________________________________________
 void ClearArea::Execute()const
 {
-   gVirtualX->ClearArea(fID, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight);   
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->ClearArea(fID, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight);   
 }
 
 //______________________________________________________________________________
-CopyArea::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, const Rectangle_t &area, const Point_t &dstPoint)
+CopyArea::CopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, const Rectangle_t &area, const Point_t &dstPoint)
                : Command(dst, gc),
                  fSrc(src),
                  fArea(area),
@@ -65,11 +69,13 @@ CopyArea::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, const Rectangl
 //______________________________________________________________________________
 void CopyArea::Execute()const
 {
-   gVirtualX->CopyArea(fSrc, fID, fGC, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight, fDstPoint.fX, fDstPoint.fY);
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->CopyAreaAux(fSrc, fID, fGC, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight, fDstPoint.fX, fDstPoint.fY);
 }
 
 //______________________________________________________________________________
-DrawString::DrawString(Drawable_t wid, GContext_t gc, const Point_t &point, const std::string &text)
+DrawString::DrawString(Drawable_t wid, const GCValues_t &gc, const Point_t &point, const std::string &text)
                : Command(wid, gc),
                  fPoint(point),
                  fText(text)
@@ -79,11 +85,13 @@ DrawString::DrawString(Drawable_t wid, GContext_t gc, const Point_t &point, cons
 //______________________________________________________________________________
 void DrawString::Execute()const
 {
-   gVirtualX->DrawString(fID, fGC, fPoint.fX, fPoint.fY, fText.c_str(), fText.length());
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->DrawStringAux(fID, fGC, fPoint.fX, fPoint.fY, fText.c_str(), fText.length());
 }
 
 //______________________________________________________________________________
-FillRectangle::FillRectangle(Drawable_t wid, GContext_t gc, const Rectangle_t &rectangle)
+FillRectangle::FillRectangle(Drawable_t wid, const GCValues_t &gc, const Rectangle_t &rectangle)
                   : Command(wid, gc),
                     fRectangle(rectangle)
 {
@@ -92,11 +100,13 @@ FillRectangle::FillRectangle(Drawable_t wid, GContext_t gc, const Rectangle_t &r
 //______________________________________________________________________________
 void FillRectangle::Execute()const
 {
-   gVirtualX->FillRectangle(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->FillRectangleAux(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
 }
 
 //______________________________________________________________________________
-DrawRectangle::DrawRectangle(Drawable_t wid, GContext_t gc, const Rectangle_t &rectangle)
+DrawRectangle::DrawRectangle(Drawable_t wid, const GCValues_t &gc, const Rectangle_t &rectangle)
                  : Command(wid, gc),
                    fRectangle(rectangle)
 {
@@ -105,7 +115,9 @@ DrawRectangle::DrawRectangle(Drawable_t wid, GContext_t gc, const Rectangle_t &r
 //______________________________________________________________________________
 void DrawRectangle::Execute()const
 {
-   gVirtualX->DrawRectangle(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->DrawRectangleAux(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
 }
 
 //______________________________________________________________________________
@@ -120,7 +132,7 @@ CommandBuffer::~CommandBuffer()
 }
 
 //______________________________________________________________________________
-void CommandBuffer::AddDrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
+void CommandBuffer::AddDrawLine(Drawable_t wid, const GCValues_t &gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
    try {
       Point_t p1 = {}; 
@@ -157,7 +169,7 @@ void CommandBuffer::AddClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_
 }
 
 //______________________________________________________________________________
-void CommandBuffer::AddCopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
+void CommandBuffer::AddCopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
 {
    try {
       Rectangle_t area = {};
@@ -177,7 +189,7 @@ void CommandBuffer::AddCopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, I
 }
 
 //______________________________________________________________________________
-void CommandBuffer::AddDrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *text, Int_t len)
+void CommandBuffer::AddDrawString(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *text, Int_t len)
 {
    try {
       if (len < 0)//Negative length can come from caller.
@@ -195,7 +207,7 @@ void CommandBuffer::AddDrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t 
 }
 
 //______________________________________________________________________________
-void CommandBuffer::AddFillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
+void CommandBuffer::AddFillRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    try {
       Rectangle_t r = {};
@@ -212,7 +224,7 @@ void CommandBuffer::AddFillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int
 }
 
 //______________________________________________________________________________
-void CommandBuffer::AddDrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
+void CommandBuffer::AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    try {
       Rectangle_t r = {};
