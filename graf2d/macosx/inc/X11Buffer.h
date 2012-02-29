@@ -30,6 +30,8 @@ class CocoaPrivate;
 namespace X11 {
 
 class Command {
+   friend class CommandBuffer;
+
 protected:
    const Drawable_t fID;
    const GContext_t fGC;
