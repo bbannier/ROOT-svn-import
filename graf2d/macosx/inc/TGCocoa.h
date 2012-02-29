@@ -172,14 +172,29 @@ public:
    virtual Int_t        EventsPending();
    virtual void         NextEvent(Event_t &event);
    virtual void         Bell(Int_t percent);
-   virtual void         CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc,
-                                 Int_t srcX, Int_t srcY, UInt_t width,
-                                 UInt_t height, Int_t dstX, Int_t dstY);
+
    virtual void         ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr);
    virtual void         ChangeProperty(Window_t wid, Atom_t property, Atom_t type,
                                        UChar_t *data, Int_t len);
+   
+   //Special methods to draw GUI elements.
+   //Versions with GCValues_t needed by X11::Command objects.
+           void         DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, Int_t y1, Int_t x2, Int_t y2);//Non-overrider.
    virtual void         DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
+           void         DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
+   virtual void         DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+           void         FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
+   virtual void         FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+           void         CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width,
+                                    UInt_t height, Int_t dstX, Int_t dstY);//Non-overrider.
+   virtual void         CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX, Int_t srcY, UInt_t width,
+                                 UInt_t height, Int_t dstX, Int_t dstY);
+           void         DrawStringAux(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *s, Int_t len);//Non-overrider.
+   virtual void         DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *s, Int_t len);
+
    virtual void         ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   //
+   
    virtual Bool_t       CheckEvent(Window_t wid, EGEventType type, Event_t &ev);
    virtual void         SendEvent(Window_t wid, Event_t *ev);
    virtual void         WMDeleteNotify(Window_t wid);
@@ -202,8 +217,7 @@ public:
                                        UInt_t wmax, UInt_t hmax, UInt_t winc, UInt_t hinc);
    virtual void         SetWMState(Window_t wid, EInitialState state);
    virtual void         SetWMTransientHint(Window_t wid, Window_t main_id);
-   virtual void         DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y,
-                                   const char *s, Int_t len);
+
    virtual Int_t        TextWidth(FontStruct_t font, const char *s, Int_t len);
    virtual void         GetFontProperties(FontStruct_t font, Int_t &max_ascent, Int_t &max_descent);
    virtual void         GetGCValues(GContext_t gc, GCValues_t &gval);
@@ -211,10 +225,6 @@ public:
    virtual void         FreeFontStruct(FontStruct_t fs);
    virtual void         ClearWindow(Window_t wid);
    virtual Int_t        KeysymToKeycode(UInt_t keysym);
-   virtual void         FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y,
-                                      UInt_t w, UInt_t h);
-   virtual void         DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y,
-                                      UInt_t w, UInt_t h);
    virtual void         DrawSegments(Drawable_t wid, GContext_t gc, Segment_t *seg, Int_t nseg);
    virtual void         SelectInput(Window_t wid, UInt_t evmask);
    virtual Window_t     GetInputFocus();
