@@ -522,6 +522,9 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 void TGCocoa::ResizeWindow(Int_t wid)
 {
    // Resizes the window "wid" if necessary.
+   if (!wid)//From TGX11.
+      return;
+   
    id<X11Drawable> window = fPimpl->GetWindow(wid);
    if (window.fBackBuffer) {
       int currentDrawable = fSelectedDrawable;
@@ -871,6 +874,9 @@ void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t 
    // w, h - the width and height, which define the interior size of
    //        the window
    
+   if (!wid)//From TGX11.
+      return;
+   
    assert(!fPimpl->IsRootWindow(wid) && "MoveResizeWindow, called for 'root' window");
    
    [fPimpl->GetWindow(wid) setX : x Y : y width : w height : h];
@@ -879,6 +885,9 @@ void TGCocoa::MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t 
 //______________________________________________________________________________
 void TGCocoa::ResizeWindow(Window_t wid, UInt_t w, UInt_t h)
 {
+   if (!wid)//From TGX11.
+      return;
+
    assert(!fPimpl->IsRootWindow(wid) && "ResizeWindow, called for 'root' window");
    
    const NSSize newSize = {.width = w, .height = h};
@@ -918,6 +927,7 @@ void TGCocoa::ReparentWindow(Window_t /*wid*/, Window_t /*pid*/, Int_t /*x*/, In
    // position in the hierarchy, and inserts it as the child of the specified
    // parent. The window is placed in the stacking order on top with respect
    // to sibling windows.
+   NSLog(@"ReparentWindow was called");
 }
 
 //______________________________________________________________________________
@@ -1396,6 +1406,9 @@ void TGCocoa::Bell(Int_t /*percent*/)
 //______________________________________________________________________________
 void TGCocoa::ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr)
 {
+   if (!wid)//From TGX11
+      return;
+
    assert(!fPimpl->IsRootWindow(wid) && "ChangeWindowAttributes, called for the 'root' window");
    assert(attr != nullptr && "ChangeWindowAttributes, attr parameter is null");
    
@@ -1461,6 +1474,10 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
    //   drawRect.   
    //This code is just a hack to show a button or other widgets.
+   
+   if (!wid) //From TGX11.
+      return;
+   
    assert(!fPimpl->IsRootWindow(wid) && "DrawLine, called for 'root' window");   
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawLine, strange context index");
 
@@ -1498,6 +1515,9 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 {
    //Can be called in a 'normal way' - from drawRect method (QuartzView)
    //or directly by ROOT.
+   
+   if (!wid)//From X11.
+      return;
 
    assert(!fPimpl->IsRootWindow(wid) && "DrawRectangle, called for the 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawRectangle, bad GContext_t");
@@ -1657,7 +1677,8 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
 {
    //Can be called by ROOT directly, or indirectly by AppKit.
 
-   using namespace ROOT::MacOSX::X11;
+   if (!wid)//from TGX11.
+      return;
 
    assert(!fPimpl->IsRootWindow(wid) && "DrawString, called for the 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawString, bad GContext_t");
@@ -2232,7 +2253,7 @@ void TGCocoa::Update(Int_t /*mode = 0*/)
    // Flush flushes output buffer. Sync flushes buffer and waits till all
    // requests have been processed by X server.
    
-   gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
+//   gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
    fCommandBuffer->Flush(fPimpl.get());
 }
 
