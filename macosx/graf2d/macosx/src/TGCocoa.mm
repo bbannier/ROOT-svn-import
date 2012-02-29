@@ -51,52 +51,6 @@ private:
 };
 
 //______________________________________________________________________________
-CGContextRef LockView(QuartzView *view)
-{
-   //This function can be called:
-   //a)'normal' way - from view's drawRect method.
-   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
-   //   drawRect.
-   
-   assert(view != nil && "UnlockView, view parameter is nil");
-   
-   if (view.fContext) {
-      //Ok, no need to lock, we were called from drawRect.
-      return view.fContext;
-   } else {
-      //ROOT called graphics method, not AppKit.
-      if ([view lockFocusIfCanDraw]) {
-         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-         assert(nsContext != nil && "LockView, currentContext is nil");
-
-         CGContextRef ctx = (CGContextRef)[nsContext graphicsPort];
-         assert(ctx != nullptr && "LockView, graphicsPort is null");
-
-         return ctx;
-      }
-   }
-   
-   return nullptr;
-}
-
-//______________________________________________________________________________
-void UnlockView(QuartzView *view)
-{
-   //This function can be called:
-   //a)'normal' way - from view's drawRect method, nothing to do.
-   //b) for 'direct rendering' - operation was initiated by ROOT's GUI, not by 
-   //   drawRect, I have to unlock focus.
-   
-   assert(view != nil && "UnlockView, view parameter is nil");
-   
-   if (view.fContext)
-      return;
-
-   //Case b): Unlock.
-   [view unlockFocus];
-}
-
-//______________________________________________________________________________
 void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
 {
    //TODO: something not so lame!
@@ -746,29 +700,23 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "UpdateWindow, no window was selected, can not update 'root' window");
    
    id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
-   
-   if (fViewsToUpdate.find(fSelectedDrawable) == fViewsToUpdate.end())
-      fViewsToUpdate.insert(fSelectedDrawable);
-   
+
    if (QuartzPixmap *pixmap = window.fBackBuffer) {
       QuartzView *dstView = window.fContentView;
       assert(dstView != nil && "UpdateWindow, destination view is nil");
       
-      if (CGContextRef ctx = LockView(dstView)) {
+      if (dstView.fContext) {
+         //We can draw directly.
          CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
          const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
-
-         CGContextDrawImage(ctx, imageRect, image);
-         //Unlock view and flush graphics.
-         UnlockView(dstView);
+         CGContextDrawImage(dstView.fContext, imageRect, image);
          CGImageRelease(image);
       } else {
-         //Error("UpdateWindow", "Method called for direct rendering, but no context found");
+         //Have to wait.
+         fCommandBuffer->AddUpdateWindow(dstView);
+         Update(1);
       }
-
    }
-   
-   Update(1);//In case of X11, XFlush/XSync is done here.
 }
 
 //______________________________________________________________________________
@@ -1520,8 +1468,7 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    
    if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
+      fCommandBuffer->AddDrawLine(wid, gcVals, x1, y1, x2, y2);
       return;
    }
 
@@ -1558,8 +1505,7 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
+      fCommandBuffer->AddDrawRectangle(wid, gcVals, x, y, w, h);
       return;
    }
 
@@ -1598,8 +1544,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    const GCValues_t &gcVals = fX11Contexts[gc - 1];   
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
+      fCommandBuffer->AddFillRectangle(wid, gcVals, x, y, w, h);
       return;
    }
    
@@ -1618,16 +1563,6 @@ void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &/*gc
    
    id<X11Drawable> srcDrawable = fPimpl->GetWindow(src);
    id<X11Drawable> dstDrawable = fPimpl->GetWindow(dst);
-   
-   QuartzView *view = nil;
-   if ([(NSObject *)dstDrawable isKindOfClass : [QuartzView class]] || [(NSObject *)dstDrawable isKindOfClass : [QuartzWindow class]])
-      view = dstDrawable.fContentView;
-   
-   if (view && !view.fContext) {
-      if (fViewsToUpdate.find(view.fID) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(view.fID);
-      return;
-   }
    
    Point_t dstPoint = {};
    dstPoint.fX = dstX;
@@ -1660,8 +1595,7 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t 
       view = dstDrawable.fContentView;
    
    if (view && !view.fContext) {
-      if (fViewsToUpdate.find(view.fID) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(view.fID);
+      fCommandBuffer->AddCopyArea(src, dst, GCValues_t(), srcX, srcY, width, height, dstX, dstY);
       return;
    }
    
@@ -1732,8 +1666,7 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
    if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
+      fCommandBuffer->AddDrawString(wid, gcVals, x, y, text, len);
       return;
    }
    
@@ -1750,8 +1683,7 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    
    QuartzView *view = fPimpl->GetWindow(wid).fContentView;
    if (!view.fContext) {
-      if (fViewsToUpdate.find(wid) == fViewsToUpdate.end())
-         fViewsToUpdate.insert(wid);
+      fCommandBuffer->AddClearArea(wid, x, y, w, h);
       return;
    }
 
@@ -2301,47 +2233,7 @@ void TGCocoa::Update(Int_t /*mode = 0*/)
    // requests have been processed by X server.
    
    gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
-   
-   //NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
-   //[nsContext flushGraphics];
-   CGContextRef prevContext = nullptr;
-   CGContextRef currContext = nullptr;
-   
-   for (auto viewID : fViewsToUpdate) {
-      QuartzView *view = fPimpl->GetWindow(viewID).fContentView;
-      if ((currContext = LockView(view))) {
-         //
-         view.fContext = currContext;
-         if (prevContext && prevContext != currContext)
-            CGContextFlush(prevContext);
-         prevContext = currContext;
-         //
-         //DoRedraw
-         TGWindow *window = gClient->GetWindowById(view.fID);
-         if (window) {
-            gClient->NeedRedraw(window, kTRUE);
-            
-            if (view.fBackBuffer) {
-               //Very "special" window.
-               CGImageRef image = CGBitmapContextCreateImage(view.fBackBuffer.fContext);
-               const CGRect imageRect = CGRectMake(0, 0, view.fBackBuffer.fWidth, view.fBackBuffer.fHeight);
-
-               CGContextDrawImage(view.fContext, imageRect, image);
-               CGImageRelease(image);
-            }
-            
-         } else
-            Warning("Update", "gClient did not find window for wid %u", view.fID);
-         //
-         UnlockView(view);
-         view.fContext = nullptr;
-      }
-   }
-   
-   if (currContext)
-      CGContextFlush(currContext);
-   
-   fViewsToUpdate.clear();
+   fCommandBuffer->Flush(fPimpl.get());
 }
 
 //______________________________________________________________________________

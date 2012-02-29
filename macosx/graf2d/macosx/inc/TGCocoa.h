@@ -5,7 +5,6 @@
 
 #include <vector>
 #include <memory>
-#include <set>
 
 #ifndef ROOT_TVirtualX
 #include "TVirtualX.h"
@@ -104,7 +103,7 @@ public:
    virtual Window_t  GetCurrentWindow() const;
    virtual Int_t     SupportsExtension(const char *ext) const;
 
-   //---- Methods used for GUI -----
+   //---- Methods to draw GUI -----
    virtual void      GetWindowAttributes(Window_t wid, WindowAttributes_t &attr);
    virtual void      MapWindow(Window_t wid);
    virtual void      MapSubwindows(Window_t wid);
@@ -300,7 +299,6 @@ private:
    std::auto_ptr<ROOT::MacOSX::X11::CommandBuffer>   fCommandBuffer; //!
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
-   std::set<Window_t> fViewsToUpdate;
    
    //I'd prefere to use = delete syntax from C++0x11, but this file is processed by CINT.
    TGCocoa(const TGCocoa &rhs);

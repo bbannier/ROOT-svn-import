@@ -20,6 +20,8 @@
 //                                                                              //
 //////////////////////////////////////////////////////////////////////////////////
 
+@class QuartzView;
+
 namespace ROOT {
 namespace MacOSX {
 
@@ -37,6 +39,7 @@ protected:
    const GCValues_t fGC;
    
 public:
+   Command(Drawable_t wid);
    Command(Drawable_t wid, const GCValues_t &gc);
    virtual ~Command();
 
@@ -104,6 +107,15 @@ public:
    void Execute()const;
 };
 
+class UpdateWindow : public Command {
+private:
+   QuartzView *fView;
+
+public:
+   UpdateWindow(QuartzView *view);
+   void Execute()const;
+};
+
 class CommandBuffer {
 private:
    CommandBuffer(const CommandBuffer &rhs) = delete;
@@ -121,6 +133,7 @@ public:
    void AddDrawString(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *text, Int_t len);
    void AddFillRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
    void AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   void AddUpdateWindow(QuartzView *view);
 
    void Flush(Details::CocoaPrivate *impl);
 private:
