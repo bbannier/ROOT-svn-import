@@ -23,6 +23,13 @@ Command::Command(Drawable_t wid, const GCValues_t &gc)
 }
 
 //______________________________________________________________________________
+Command::Command(Drawable_t wid)
+            : fID(wid),
+              fGC()
+{
+}
+
+//______________________________________________________________________________
 Command::~Command()
 {
 }
@@ -45,7 +52,7 @@ void DrawLine::Execute()const
 
 //______________________________________________________________________________
 ClearArea::ClearArea(Window_t wid, const Rectangle_t &area)
-             : Command(wid, GCValues_t()),
+             : Command(wid),
                fArea(area)
 {
 }
@@ -119,6 +126,28 @@ void DrawRectangle::Execute()const
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->DrawRectangleAux(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
+}
+
+//______________________________________________________________________________
+UpdateWindow::UpdateWindow(QuartzView *view)
+                : Command(view.fID),
+                  fView(view)
+{
+   assert(view != nil && "UpdateWindow, view parameter is nil");//view.fID will be also 0.
+}
+
+//______________________________________________________________________________
+void UpdateWindow::Execute()const
+{
+   assert(fView.fContext != nullptr && "Execute, view.fContext is null");
+
+   if (QuartzPixmap *pixmap = fView.fBackBuffer) {
+      CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
+      const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
+
+      CGContextDrawImage(fView.fContext, imageRect, image);
+      CGImageRelease(image);
+   }
 }
 
 //______________________________________________________________________________
@@ -234,6 +263,20 @@ void CommandBuffer::AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t
       r.fWidth = (UShort_t)w;
       r.fHeight = (UShort_t)h;
       std::auto_ptr<DrawRectangle> cmd(new DrawRectangle(wid, gc, r));
+      fCommands.push_back(cmd.get());
+      cmd.release();
+   } catch (const std::exception &) {
+      throw;
+   }
+}
+
+//______________________________________________________________________________
+void CommandBuffer::AddUpdateWindow(QuartzView *view)
+{
+   assert(view != nil && "AddUpdateWindow, view parameter is nil");
+   
+   try {
+      std::auto_ptr<UpdateWindow> cmd(new UpdateWindow(view));
       fCommands.push_back(cmd.get());
       cmd.release();
    } catch (const std::exception &) {
