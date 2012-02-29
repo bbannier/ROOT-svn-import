@@ -17,6 +17,7 @@
 #include "QuartzText.h"
 #include "CocoaUtils.h"
 #include "X11Events.h"
+#include "X11Buffer.h"
 #include "TGClient.h"
 #include "TGWindow.h"
 #include "TGCocoa.h"
@@ -172,6 +173,7 @@ TGCocoa::TGCocoa()
       fPimpl.reset(new Details::CocoaPrivate);
       fFontManager.reset(new ROOT::Quartz::FontManager);
       fEventTranslator.reset(new X11::EventTranslator);
+      fCommandBuffer.reset(new X11::CommandBuffer);
    } catch (const std::exception &) {
       throw;
    }
@@ -187,6 +189,7 @@ TGCocoa::TGCocoa(const char *name, const char *title)
       fPimpl.reset(new Details::CocoaPrivate);
       fFontManager.reset(new ROOT::Quartz::FontManager);
       fEventTranslator.reset(new X11::EventTranslator);
+      fCommandBuffer.reset(new X11::CommandBuffer);
    } catch (const std::exception &) {
       throw;   
    }

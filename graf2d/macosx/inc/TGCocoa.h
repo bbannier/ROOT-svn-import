@@ -32,6 +32,7 @@ namespace MacOSX {
 
 namespace X11 {
 class EventTranslator;
+class CommandBuffer;
 }
 
 namespace Details {
@@ -286,6 +287,7 @@ private:
    Bool_t MakeProcessForeground();
 
    std::auto_ptr<ROOT::MacOSX::X11::EventTranslator> fEventTranslator; //!
+   std::auto_ptr<ROOT::MacOSX::X11::CommandBuffer>   fCommandBuffer;
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
    std::set<Window_t> fViewsToUpdate;
