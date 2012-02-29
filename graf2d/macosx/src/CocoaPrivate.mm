@@ -70,15 +70,7 @@ unsigned CocoaPrivate::RegisterWindow(NSObject *nsWin)
 id<X11Drawable> CocoaPrivate::GetWindow(unsigned winID)const
 {
    auto winIter = fWindows.find(winID);
-
-   if (winIter == fWindows.end()) {
-      NSLog(@"%u", winID);
-      int * pp = 0;
-      pp[100] = 100;
-   }
-
    assert(winIter != fWindows.end() && "GetWindow, non-existing window requested");
-
    return (id<X11Drawable>)winIter->second.Get();
 }
 
