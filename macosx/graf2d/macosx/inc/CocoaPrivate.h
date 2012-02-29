@@ -22,11 +22,17 @@ class TGCocoa;
 
 namespace ROOT {
 namespace MacOSX {
+
+namespace X11 {
+class CommandBuffer;
+}
+
 namespace Details {
 
 class CocoaPrivate {
    friend class TGCocoa;
    friend class TGQuartz;
+   friend class X11::CommandBuffer;
 public:
    ~CocoaPrivate();
 private:

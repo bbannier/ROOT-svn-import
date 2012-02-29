@@ -2,7 +2,11 @@
 #include <cstring>
 #include <memory>
 
+#include <Cocoa/Cocoa.h>
+
 #include "CocoaPrivate.h"
+#include "QuartzWindow.h"
+#include "QuartzPixmap.h"
 #include "TVirtualX.h"
 #include "X11Buffer.h"
 
@@ -142,8 +146,8 @@ void CommandBuffer::AddClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_
       Rectangle_t r = {};
       r.fX = x;
       r.fY = y;
-      r.fWidth = w;
-      r.fHeight = h;
+      r.fWidth = (UShort_t)w;
+      r.fHeight = (UShort_t)h;
       std::auto_ptr<ClearArea> cmd(new ClearArea(wid, r));//Can throw, nothing leaks.
       fCommands.push_back(cmd.get());//this can throw.
       cmd.release();
@@ -159,8 +163,8 @@ void CommandBuffer::AddCopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, I
       Rectangle_t area = {};
       area.fX = srcX;
       area.fY = srcY;
-      area.fWidth = width;
-      area.fHeight = height;
+      area.fWidth = (UShort_t)width;
+      area.fHeight = (UShort_t)height;
       Point_t dstPoint = {};
       dstPoint.fX = dstX;
       dstPoint.fY = dstY;
@@ -197,8 +201,8 @@ void CommandBuffer::AddFillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int
       Rectangle_t r = {};
       r.fX = x;
       r.fY = y;
-      r.fWidth = w;
-      r.fHeight = h;
+      r.fWidth = (UShort_t)w;
+      r.fHeight = (UShort_t)h;
       std::auto_ptr<FillRectangle> cmd(new FillRectangle(wid, gc, r));
       fCommands.push_back(cmd.get());
       cmd.release();
@@ -214,8 +218,8 @@ void CommandBuffer::AddDrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int
       Rectangle_t r = {};
       r.fX = x;
       r.fY = y;
-      r.fWidth = w;
-      r.fHeight = h;
+      r.fWidth = (UShort_t)w;
+      r.fHeight = (UShort_t)h;
       std::auto_ptr<DrawRectangle> cmd(new DrawRectangle(wid, gc, r));
       fCommands.push_back(cmd.get());
       cmd.release();
@@ -225,9 +229,48 @@ void CommandBuffer::AddDrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int
 }
 
 //______________________________________________________________________________
-void CommandBuffer::Flush(Details::CocoaPrivate * /*impl*/)
+void CommandBuffer::Flush(Details::CocoaPrivate *impl)
 {
+   assert(impl != nullptr && "Flush, impl parameter is null");
+   
    //All magic is here.
+   CGContextRef prevContext = nullptr;
+   CGContextRef currContext = nullptr;
+
+   for (auto cmd : fCommands) {
+      assert(cmd != nullptr && "Flush, command is null");
+      
+      QuartzView *view = impl->GetWindow(cmd->fID).fContentView;
+      if ([view lockFocusIfCanDraw]) {
+         NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+         assert(nsContext != nil && "Flush, currentContext is nil");
+         currContext = (CGContextRef)[nsContext graphicsPort];
+         assert(currContext != nullptr && "Flush, graphicsPort is null");//remove this assert?
+         
+         view.fContext = currContext;
+         if (prevContext && prevContext != currContext)
+            CGContextFlush(prevContext);
+         prevContext = currContext;
+         
+         cmd->Execute();
+         if (view.fBackBuffer) {
+            //Very "special" window.
+            CGImageRef image = CGBitmapContextCreateImage(view.fBackBuffer.fContext);
+            const CGRect imageRect = CGRectMake(0, 0, view.fBackBuffer.fWidth, view.fBackBuffer.fHeight);
+
+            CGContextDrawImage(view.fContext, imageRect, image);
+            CGImageRelease(image);
+         }
+         
+         [view unlockFocus];
+         view.fContext = nullptr;
+      }
+   }
+   
+   if (currContext)
+      CGContextFlush(currContext);
+
+   ClearCommands();
 }
 
 //______________________________________________________________________________
