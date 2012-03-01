@@ -1041,11 +1041,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
          if (fBackBuffer) {
             //Very "special" window.
-            CGImageRef image = CGBitmapContextCreateImage(fBackBuffer.fContext);
-            const CGRect imageRect = CGRectMake(0, 0, fBackBuffer.fWidth, fBackBuffer.fHeight);
-
-            CGContextDrawImage(fContext, imageRect, image);
-            CGImageRelease(image);
+            CGImageRef image = [fBackBuffer createImageFromPixmap];// CGBitmapContextCreateImage(fBackBuffer.fContext);
+            if (image) {
+               const CGRect imageRect = CGRectMake(0, 0, fBackBuffer.fWidth, fBackBuffer.fHeight);
+               CGContextDrawImage(fContext, imageRect, image);
+               CGImageRelease(image);
+            }
          }
 
          CGContextRestoreGState(fContext);

@@ -2,128 +2,11 @@
 
 #import <algorithm>
 
+#import <cstdlib>
 #import <cassert>
 #import <cstddef>
 
 #import "QuartzPixmap.h"
-
-@implementation QuartzPixmap {
-@private
-   unsigned fWidth;
-   unsigned fHeight;
-   
-   CGContextRef fContext;
-}
-
-@synthesize fID;
-
-//______________________________________________________________________________
-- (id) initWithW : (unsigned) width H : (unsigned) height
-{
-   if (self = [super init]) {
-      fWidth = 0;
-      fHeight = 0;
-      
-      if ([self resizeW : width H : height])
-         return self;
-   }
-
-   //Yes, if context creation failed, the calling code should use
-   //separate alloc/init statements to check this.
-   return nil;
-}
-
-//______________________________________________________________________________
-- (void) dealloc
-{
-   if (fContext)
-      CGContextRelease(fContext);
-   [super dealloc];
-}
-
-//______________________________________________________________________________
-- (BOOL) resizeW : (unsigned) width H : (unsigned) height
-{
-   assert(width > 0 && "Pixmap width must be positive");
-   assert(height > 0 && "Pixmap height must be positive");
-
-   CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();//[1]
-
-   if (!colorSpace) {
-      assert(colorSpace && "CGColorSpaceCreateDeviceRGB failed");
-      return NO;
-   }
-   
-   CGContextRef ctx = CGBitmapContextCreate(nullptr, width, height, 8, 0, colorSpace, kCGImageAlphaPremultipliedLast);//[2]
-
-   if (!ctx) {
-      CGColorSpaceRelease(colorSpace);//[1], ![2]
-      assert(ctx && "CGBitmapContextCreate failed");
-      return NO;
-   }
-
-   //
-   //For debug only: fill bitmap with green color.
-   //
-   //CGContextSetRGBFillColor(ctx, 0.f, 1.f, 0.f, 1.f);
-   //CGContextFillRect(ctx, CGRectMake(0.f, 0.f, newSize.width, newSize.height));
-
-   
-   if (fContext) {
-      //New context was created OK, we can release now the old one.
-      CGContextRelease(fContext);//[2]
-   }
-
-   //Size to be used later - to identify,
-   //if we really have to resize.
-   fWidth = width;
-   fHeight = height;
-   
-   fContext = ctx;//[2]
-
-   CGColorSpaceRelease(colorSpace);//[1]
-
-   return YES;
-
-}
-
-//______________________________________________________________________________
-- (BOOL) fIsPixmap
-{
-   return YES;
-}
-
-//______________________________________________________________________________
-- (unsigned) fWidth
-{
-   assert(fContext && "fWidth, called for bad pixmap");
-   return fWidth;
-}
-
-//______________________________________________________________________________
-- (unsigned) fHeight
-{
-   assert(fContext != nullptr && "fHeight, called for bad pixmap");
-   return fHeight;
-}
-
-//______________________________________________________________________________
-- (NSSize) fSize
-{
-   NSSize size = {};
-   size.width = fWidth;
-   size.height = fHeight;
-   return size;
-}
-
-//______________________________________________________________________________
-- (CGContextRef) fContext
-{
-   assert(fContext != nullptr && "fContext, called for bad pixmap");   
-   return fContext;
-}
-
-@end
 
 //Call backs for data provider.
 extern "C" {
@@ -148,6 +31,176 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 
 }
 
+@implementation QuartzPixmap {
+@private
+   unsigned       fWidth;
+   unsigned       fHeight;
+   unsigned char *fData;
+   CGContextRef   fContext;
+}
+
+@synthesize fID;
+
+//______________________________________________________________________________
+- (id) initWithW : (unsigned) width H : (unsigned) height
+{
+   if (self = [super init]) {
+      fWidth = 0;
+      fHeight = 0;
+      fData = 0;
+      
+      if ([self resizeW : width H : height])
+         return self;
+   }
+
+   //Two step initialization:
+   //1. p = [QuartzPixmap alloc];
+   //2. p1 = [p initWithW : w H : h];
+   // if (!p1) [p release];
+   return nil;
+}
+
+//______________________________________________________________________________
+- (void) dealloc
+{
+   if (fContext)
+      CGContextRelease(fContext);
+   if (fData)
+      std::free(fData);
+
+   [super dealloc];
+}
+
+//______________________________________________________________________________
+- (BOOL) resizeW : (unsigned) width H : (unsigned) height
+{
+   assert(width > 0 && "Pixmap width must be positive");
+   assert(height > 0 && "Pixmap height must be positive");
+
+   unsigned char *memory = (unsigned char *)malloc(width * height * 4);//[0]
+   if (!memory) {
+      assert(0 && "resizeW:H:, malloc failed");
+      return NO;
+   }
+
+   CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();//[1]
+   if (!colorSpace) {
+      assert(0 && "resizeW:H:, CGColorSpaceCreateDeviceRGB failed");
+      std::free(memory);
+      return NO;
+   }
+
+   //
+   CGContextRef ctx = CGBitmapContextCreateWithData(memory, width, height, 8, width * 4, colorSpace, kCGImageAlphaPremultipliedLast, NULL, 0);
+   if (!ctx) {
+      assert(0 && "resizeW:H:, CGBitmapContextCreateWidthData failed");
+      CGColorSpaceRelease(colorSpace);
+      std::free(memory);
+      return NO;
+   }
+
+   if (fContext) {
+      //New context was created OK, we can release now the old one.
+      CGContextRelease(fContext);//[2]
+   }
+   
+   if (fData) {
+      //Release old memory.
+      std::free(fData);
+   }
+
+   //Size to be used later - to identify,
+   //if we really have to resize.
+   fWidth = width;
+   fHeight = height;
+   fData = memory;
+
+   fContext = ctx;//[2]
+
+   CGColorSpaceRelease(colorSpace);//[1]
+
+   return YES;
+
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsPixmap
+{
+   return YES;
+}
+
+//______________________________________________________________________________
+- (unsigned) fWidth
+{
+   assert(fContext != nullptr && "fWidth, called for bad pixmap");
+
+   return fWidth;
+}
+
+//______________________________________________________________________________
+- (unsigned) fHeight
+{
+   assert(fContext != nullptr && "fHeight, called for bad pixmap");
+
+   return fHeight;
+}
+
+//______________________________________________________________________________
+- (NSSize) fSize
+{
+   NSSize size = {};
+   size.width = fWidth;
+   size.height = fHeight;
+
+   return size;
+}
+
+//______________________________________________________________________________
+- (CGContextRef) fContext
+{
+   assert(fContext != nullptr && "fContext, called for bad pixmap");   
+   return fContext;
+}
+
+//______________________________________________________________________________
+- (unsigned char *) fData
+{
+   return fData;
+}
+
+//______________________________________________________________________________
+- (CGImageRef) createImageFromPixmap
+{
+   //
+   const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
+                                                            ROOT_QuartzImage_ReleaseBytePointer, 
+                                                            ROOT_QuartzImage_GetBytesAtPosition, 0};
+
+   
+   CGDataProviderRef provider = CGDataProviderCreateDirect(fData, fWidth * fHeight * 4, &providerCallbacks);
+   if (!provider) {
+      NSLog(@"pixmapToImage, CGDataProviderCreateDirect failed");
+      return nullptr;
+   }
+
+   //RGB - this is only for TGCocoa::CreatePixmapFromData.
+   CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+   if (!colorSpace) {
+      NSLog(@"pixmapToImage, CGColorSpaceCreateDeviceRGB failed");
+      CGDataProviderRelease(provider);
+      return nullptr;
+   }
+      
+   //8 bits per component, 32 bits per pixel, 4 bytes per pixel, kCGImageAlphaLast:
+   //all values hardcoded for TGCocoa.
+   CGImageRef image = CGImageCreate(fWidth, fHeight, 8, 32, fWidth * 4, colorSpace, kCGImageAlphaPremultipliedLast, provider, 0, false, kCGRenderingIntentDefault);
+   CGColorSpaceRelease(colorSpace);
+   CGDataProviderRelease(provider);
+   
+   return image;
+}
+
+@end
 
 @implementation QuartzImage {
    unsigned fWidth;
