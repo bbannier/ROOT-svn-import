@@ -248,18 +248,19 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
    
    id<X11Drawable> window = fPimpl->GetWindow(fSelectedDrawable);
    
-   if (window.fBackBuffer) {
-      CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
+   if (window.fBackBuffer) {      
+      CGImageRef image = [pixmap createImageFromPixmap];// CGBitmapContextCreateImage(pixmap.fContext);
+      if (image) {
+         CGContextRef dstCtx = window.fBackBuffer.fContext;
+         assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
 
-      CGContextRef dstCtx = window.fBackBuffer.fContext;
-      assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
+         const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
 
-      const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
+         CGContextDrawImage(dstCtx, imageRect, image);
+         CGContextFlush(dstCtx);
 
-      CGContextDrawImage(dstCtx, imageRect, image);
-      CGContextFlush(dstCtx);
-
-      CGImageRelease(image);
+         CGImageRelease(image);
+      }
    } else {
       Warning("CopyPixmap", "Operation skipped, since destination window is not double buffered");
    }
@@ -710,10 +711,12 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       
       if (dstView.fContext) {
          //We can draw directly.
-         CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
-         const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
-         CGContextDrawImage(dstView.fContext, imageRect, image);
-         CGImageRelease(image);
+         CGImageRef image = [pixmap createImageFromPixmap];//CGBitmapContextCreateImage(pixmap.fContext);
+         if (image) {
+            const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
+            CGContextDrawImage(dstView.fContext, imageRect, image);
+            CGImageRelease(image);
+         }
       } else {
          //Have to wait.
          fCommandBuffer->AddUpdateWindow(dstView);
@@ -2652,7 +2655,7 @@ void *TGCocoa::GetCurrentContext()
 {
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "GetCurrentContext, no context for 'root' window");
    id<X11Drawable> pixmap = fPimpl->GetWindow(fSelectedDrawable);
-   assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");   
+   assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");
    
    return pixmap.fContext;
 }

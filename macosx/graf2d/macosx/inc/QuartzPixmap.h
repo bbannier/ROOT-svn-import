@@ -13,8 +13,6 @@
 //                                                   //
 ///////////////////////////////////////////////////////
 
-//TODO: names are misleading and wrong.
-
 @interface QuartzPixmap : NSObject<X11Drawable>
 
 @property (nonatomic, assign) unsigned fID;
@@ -25,17 +23,20 @@
 - (id) initWithW : (unsigned) width H :(unsigned) height;
 - (BOOL) resizeW : (unsigned) width H : (unsigned) height;
 
+- (CGImageRef) createImageFromPixmap;
+
 - (unsigned) fWidth;
 - (unsigned) fHeight;
-//- (NSSize) fSize;
+- (unsigned char *) fData;
 
 @end
 
-//TODO: names are misleading and wrong.
-//This is only a temporary non-generic solution to
-//make TGCocoa work (CreatePixmapFromData, etc. - 
-//image created from data provided by
-//ASImage.
+/////////////////////////////////////////////////////////
+//                                                     //
+// CGImageRef, created from external data source (raw  //
+// data)                                               //
+//                                                     //
+/////////////////////////////////////////////////////////
 
 @interface QuartzImage : NSObject<X11Drawable>
 

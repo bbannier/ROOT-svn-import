@@ -142,9 +142,8 @@ void UpdateWindow::Execute()const
    assert(fView.fContext != nullptr && "Execute, view.fContext is null");
 
    if (QuartzPixmap *pixmap = fView.fBackBuffer) {
-      CGImageRef image = CGBitmapContextCreateImage(pixmap.fContext);
+      CGImageRef image = [pixmap createImageFromPixmap];//CGBitmapContextCreateImage(pixmap.fContext);
       const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
-
       CGContextDrawImage(fView.fContext, imageRect, image);
       CGImageRelease(image);
    }
@@ -311,11 +310,12 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
          cmd->Execute();
          if (view.fBackBuffer) {
             //Very "special" window.
-            CGImageRef image = CGBitmapContextCreateImage(view.fBackBuffer.fContext);
-            const CGRect imageRect = CGRectMake(0, 0, view.fBackBuffer.fWidth, view.fBackBuffer.fHeight);
-
-            CGContextDrawImage(view.fContext, imageRect, image);
-            CGImageRelease(image);
+            CGImageRef image = [view.fBackBuffer createImageFromPixmap];//CGBitmapContextCreateImage(view.fBackBuffer.fContext);
+            if (image) {
+               const CGRect imageRect = CGRectMake(0, 0, view.fBackBuffer.fWidth, view.fBackBuffer.fHeight);
+               CGContextDrawImage(view.fContext, imageRect, image);
+               CGImageRelease(image);
+            }
          }
          
          [view unlockFocus];
