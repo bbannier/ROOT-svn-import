@@ -118,7 +118,11 @@ public:
    virtual void      ResizeWindow(Window_t wid, UInt_t w, UInt_t h);
    virtual void      IconifyWindow(Window_t wid);
    virtual Bool_t    NeedRedraw(ULong_t tgwindow, Bool_t force);
+   
+           void      ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y);
+           void      ReparentTopLevel(Window_t wid, Window_t pid, Int_t x, Int_t y);
    virtual void      ReparentWindow(Window_t wid, Window_t pid, Int_t x, Int_t y);
+
    virtual void      SetWindowBackground(Window_t wid, ULong_t color);
    virtual void      SetWindowBackgroundPixmap(Window_t wid, Pixmap_t pxm);
    virtual Window_t  CreateWindow(Window_t parent, Int_t x, Int_t y,

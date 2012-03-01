@@ -115,6 +115,42 @@ void BgraToRgba(unsigned char *data, unsigned w, unsigned h)
       std::swap(p[0], p[2]);
 }
 
+//______________________________________________________________________________
+QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t depth,
+                                   UInt_t clss, void */*visual*/, SetWindowAttributes_t *attr, UInt_t)
+{
+   NSRect winRect = {};
+   winRect.origin.x = x; 
+   winRect.origin.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
+   winRect.size.width = w;
+   winRect.size.height = h;
+
+   //TODO check mask.
+   const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+   //
+   QuartzWindow *newWindow = [[QuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : YES windowAttributes : attr];
+   //
+   newWindow.fDepth = depth;
+   newWindow.fClass = clss;
+
+   return newWindow;
+}
+
+//______________________________________________________________________________
+QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
+                                UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t *attr, UInt_t /*wtype*/)
+{
+   NSRect viewRect = {};
+   viewRect.origin.x = x;
+   viewRect.origin.y = y;
+   viewRect.size.width = w;
+   viewRect.size.height = h;
+   
+   QuartzView *view = [[QuartzView alloc] initWithFrame : viewRect windowAttributes : attr];
+   
+   return view;
+}
+
 }
 
 //______________________________________________________________________________
@@ -923,13 +959,72 @@ Bool_t TGCocoa::NeedRedraw(ULong_t /*tgwindow*/, Bool_t /*force*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ReparentWindow(Window_t /*wid*/, Window_t /*pid*/, Int_t /*x*/, Int_t /*y*/)
+void TGCocoa::ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y)
+{
+   assert(!fPimpl->IsRootWindow(wid) && "ReparentChild, can not re-parent 'root' window");
+
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   if (fPimpl->IsRootWindow(pid)) {
+      //Make a top-level view from a child view.
+      [view retain];
+      [view removeFromSuperview];
+      view.fParentView = nil;
+      
+      NSRect frame = view.frame;
+      frame.origin = CGPointZero;
+      const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+      QuartzWindow *newTopLevel = [[QuartzWindow alloc] initWithContentRect : frame styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
+      
+      frame.origin = CGPointMake(x, y);
+      view.frame = frame;
+      [newTopLevel setContentView : view];
+
+      [view updateLevel : 0];
+      [view release];      
+   } else {
+      [view retain];
+      [view removeFromSuperview];
+      //
+      id<X11Drawable> newParent = fPimpl->GetWindow(pid);
+      assert(newParent.fIsPixmap == NO && "ReparentChild, pixmap can not be a new parent");
+
+      NSRect frame = view.frame;
+      frame.origin.x = x;
+      frame.origin.y = y;
+      view.frame = frame;
+      [newParent addChild : view];
+      [view release];
+   }
+}
+
+//______________________________________________________________________________
+void TGCocoa::ReparentTopLevel(Window_t /*wid*/, Window_t /*pid*/, Int_t /*x*/, Int_t /*y*/)
+{
+   assert(0 && "ReparentTopLevel, not implemented yet");
+   //I have to delete QuartzWindow here and place in its slot view + 
+   //reparent this view into pid.
+}
+
+//______________________________________________________________________________
+void TGCocoa::ReparentWindow(Window_t wid, Window_t pid, Int_t x, Int_t y)
 {
    // If the specified window is mapped, ReparentWindow automatically
    // performs an UnmapWindow request on it, removes it from its current
    // position in the hierarchy, and inserts it as the child of the specified
    // parent. The window is placed in the stacking order on top with respect
    // to sibling windows.
+   
+   assert(!fPimpl->IsRootWindow(wid) && "ReparentWindow, can not re-parent 'root' window");
+
+   QuartzView *view = fPimpl->GetWindow(wid).fContentView;
+   if (view.fParentView) {
+      ReparentChild(wid, pid, x, y);
+   } else {
+      //wid is a top-level window.
+      if (!fPimpl->IsRootWindow(pid))
+         ReparentTopLevel(wid, pid, x, y);
+      //else do nothing, still top-level.
+   }
 }
 
 //______________________________________________________________________________
@@ -946,46 +1041,6 @@ void TGCocoa::SetWindowBackgroundPixmap(Window_t /*wid*/, Pixmap_t /*pxm*/)
 {
    // Sets the background pixmap of the window "wid" to the specified
    // pixmap "pxm".
-}
-
-namespace {
-
-//______________________________________________________________________________
-QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t depth,
-                                   UInt_t clss, void */*visual*/, SetWindowAttributes_t *attr, UInt_t)
-{
-   NSRect winRect = {};
-   winRect.origin.x = x; 
-   winRect.origin.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
-   winRect.size.width = w;
-   winRect.size.height = h;
-
-   //TODO check mask.
-   const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
-   //
-   QuartzWindow *newWindow = [[QuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : YES windowAttributes : attr];
-   //
-   newWindow.fDepth = depth;
-   newWindow.fClass = clss;
-
-   return newWindow;
-}
-
-//______________________________________________________________________________
-QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
-                                UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t *attr, UInt_t /*wtype*/)
-{
-   NSRect viewRect = {};
-   viewRect.origin.x = x;
-   viewRect.origin.y = y;
-   viewRect.size.width = w;
-   viewRect.size.height = h;
-   
-   QuartzView *view = [[QuartzView alloc] initWithFrame : viewRect windowAttributes : attr];
-   
-   return view;
-}
-
 }
 
 //______________________________________________________________________________
