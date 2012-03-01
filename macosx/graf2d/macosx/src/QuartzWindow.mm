@@ -14,6 +14,7 @@
 #import "TGWindow.h"
 #import "TGClient.h"
 #import "TGCocoa.h"
+#import "TClass.h"
 
 namespace ROOT {
 namespace MacOSX {
@@ -682,6 +683,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    [self orderFront : self];
    [fContentView setHidden : NO];
+   [fContentView configureNotifyTree];
 }
 
 //______________________________________________________________________________
@@ -691,6 +693,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    [self orderFront : self];
    [fContentView setHidden : NO];
+   [fContentView configureNotifyTree];
 }
 
 //______________________________________________________________________________
@@ -699,6 +702,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(fContentView != nil && "mapSubwindows, content view is nil");
 
    [fContentView mapSubwindows];
+   [fContentView configureNotifyTree];
 }
 
 //______________________________________________________________________________
@@ -926,39 +930,19 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    [self removeFromSuperview];
    [parent addSubview : self];
    [self setHidden : NO];
-
-   if (fEventMask & kStructureNotifyMask) {
-      TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-      assert(vx && "mapRaised:, gVirtualX is either null or has type different from TGCocoa");
-      vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
-   }
 }
 
 //______________________________________________________________________________
 - (void) mapWindow
 {   
    [self setHidden : NO];
-
-   if (fEventMask & kStructureNotifyMask) {
-      TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-      assert(vx && "mapWindow:, gVirtualX is either null or has type different from TGCocoa");
-      vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
-
-   }
 }
 
 //______________________________________________________________________________
 - (void) mapSubwindows
 {
    for (QuartzView * v in [self subviews]) {
-      [v setHidden : NO];
- 
-      if (v.fEventMask & kStructureNotifyMask) {
-         TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-         assert(vx && "mapSubwindows:, gVirtualX is either null or has type different from TGCocoa");
-         vx->GetEventTranslator()->GenerateConfigureNotifyEvent(v, v.frame);
-      }
-
+      [v setHidden : NO]; 
       [v mapSubwindows];
    }
 }
@@ -967,6 +951,21 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) unmapWindow
 {
    [self setHidden : YES];
+}
+
+//______________________________________________________________________________
+- (void) configureNotifyTree
+{
+   if (self.fMapState == kIsViewable) {
+      if (fEventMask & kStructureNotifyMask) {
+         TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+         assert(vx && "configureNotifyTree, gVirtualX is either null or has type different from TGCocoa");
+         vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
+      }
+
+      for (QuartzView * v in [self subviews])
+         [v configureNotifyTree];
+   }
 }
 
 //______________________________________________________________________________
@@ -1086,10 +1085,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) mouseDown : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseDown, fID is 0");
-   
+      
    TGWindow *window = gClient->GetWindowById(fID);
    assert(window != nullptr && "mouseDown, window was not found");
    
+   NSLog(@"mouseDown in %u", fID);
+//   NSLog(@"underlaying type is: %s", window->GetName());
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx && "mouseDown, gVirtualX is either null or has type different from TGCocoa");

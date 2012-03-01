@@ -164,6 +164,9 @@
 //
 - (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
 
+//
+- (void)     configureNotifyTree;
+
 @end
 
 
