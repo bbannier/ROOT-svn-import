@@ -884,7 +884,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    [self addSubview : child];
    child.fParentView = self;
-   child.fLevel = self.fLevel + 1;
+   [child updateLevel : self.fLevel + 1];
 }
 
 //______________________________________________________________________________
@@ -965,6 +965,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       for (QuartzView * v in [self subviews])
          [v configureNotifyTree];
    }
+}
+
+//______________________________________________________________________________
+- (void) updateLevel : (unsigned) newLevel
+{
+   fLevel = newLevel;
+   
+   for (QuartzView *child in [self subviews])
+      [child updateLevel : fLevel + 1];
 }
 
 //______________________________________________________________________________

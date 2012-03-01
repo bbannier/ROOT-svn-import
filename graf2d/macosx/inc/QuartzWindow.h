@@ -52,6 +52,7 @@
 
 
 //Life-cycle.
+
 - (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle 
        backing : (NSBackingStoreType) bufferingType defer : (BOOL) deferCreation
        windowAttributes : (const SetWindowAttributes_t *) attr;
@@ -166,6 +167,7 @@
 
 //
 - (void)     configureNotifyTree;
+- (void)     updateLevel : (unsigned) newLevel;
 
 @end
 
