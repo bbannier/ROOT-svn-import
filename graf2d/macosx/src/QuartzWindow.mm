@@ -14,7 +14,6 @@
 #import "TGWindow.h"
 #import "TGClient.h"
 #import "TGCocoa.h"
-#import "TClass.h"
 
 namespace ROOT {
 namespace MacOSX {
@@ -1088,9 +1087,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       
    TGWindow *window = gClient->GetWindowById(fID);
    assert(window != nullptr && "mouseDown, window was not found");
-   
-   NSLog(@"mouseDown in %u", fID);
-//   NSLog(@"underlaying type is: %s", window->GetName());
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx && "mouseDown, gVirtualX is either null or has type different from TGCocoa");
