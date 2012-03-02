@@ -10,13 +10,6 @@ FontManager::FontManager()
 {
 }
 
-
-//_________________________________________________________________
-FontManager::~FontManager()
-{
-}
-
-
 //______________________________________________________________________________
 FontStruct_t FontManager::LoadFont(const X11::XLFDName &xlfd)
 {

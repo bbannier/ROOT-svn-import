@@ -90,7 +90,7 @@ bool ColorParser::ParseRGBTriplet(const TString &rgb, ColorStruct_t &color)const
    unsigned r = 0, g = 0, b = 0;
    if (GetHex(rgb, 1, compLen, r) && GetHex(rgb, 1 + compLen, compLen, g) && GetHex(rgb, 1 + compLen * 2, compLen, b))
    {
-      //Problem with bitPad: ROOT/X11's "pixel" uses 0xXX for component 
+      //Problem with bitPad: ROOT/X11's "pixel" uses 0xXX for component
       //(after all, pixel is 4 bytes in most cases),
       //X11's color component may be 0xXXXX.
 
@@ -108,7 +108,7 @@ bool ColorParser::ParseRGBTriplet(const TString &rgb, ColorStruct_t &color)const
 //______________________________________________________________________________
 bool ColorParser::LookupColorByName(const TString &colorName, ColorStruct_t &color)const
 {
-   std::map<TString, RGB_t>::const_iterator it = fX11RGB.find(colorName);
+   auto it = fX11RGB.find(colorName);
 
    if (it != fX11RGB.end()) {
       color.fPixel = 0;
