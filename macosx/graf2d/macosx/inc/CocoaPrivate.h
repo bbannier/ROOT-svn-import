@@ -7,9 +7,6 @@
 #ifndef ROOT_CocoaUtils
 #include "CocoaUtils.h"
 #endif
-#ifndef ROOT_QuartzText
-#include "QuartzText.h"
-#endif
 #ifndef ROOT_X11Colors
 #include "X11Colors.h"
 #endif
@@ -21,6 +18,9 @@
 #endif
 #ifndef ROOT_GuiTypes
 #include "GuiTypes.h"
+#endif
+#ifndef ROOT_GuiFonts
+#include "GuiFonts.h"
 #endif
 
 @protocol X11Drawable;
@@ -63,7 +63,7 @@ private:
    //Command buffer - for "buffered" drawing commands.
    X11::CommandBuffer                          fX11CommandBuffer;
    //Font manager - cache CTFontRef for GUI.
-   Quartz::FontManager                         fFontManager;
+   FontManager                                 fFontManager;
 
    //Id for the new registered drawable.
    unsigned                                    fCurrentDrawableID;
