@@ -27,7 +27,6 @@ namespace Details {
 class FontManager {
 public:
    FontManager();
-   ~FontManager();
    
    FontStruct_t LoadFont(const X11::XLFDName &xlfd);
    void UnloadFont(FontStruct_t font);
