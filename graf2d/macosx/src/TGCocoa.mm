@@ -956,8 +956,9 @@ Bool_t TGCocoa::NeedRedraw(ULong_t /*tgwindow*/, Bool_t /*force*/)
 void TGCocoa::ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y)
 {
    assert(!fPimpl->IsRootWindow(wid) && "ReparentChild, can not re-parent 'root' window");
-   
    //TODO: does ROOT cares about reparent X11 events?
+
+   const ROOT::MacOSX::Util::AutoreleasePool pool;//TODO: check?
 
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (fPimpl->IsRootWindow(pid)) {
@@ -999,6 +1000,8 @@ void TGCocoa::ReparentTopLevel(Window_t wid, Window_t pid, Int_t x, Int_t y)
    //reparent this view into pid.
    if (fPimpl->IsRootWindow(pid))//Nothing to do, wid is already a top-level window.
       return;
+   
+   const ROOT::MacOSX::Util::AutoreleasePool pool;//TODO: check?
    
    QuartzView *contentView = fPimpl->GetDrawable(wid).fContentView;
    [contentView retain];
@@ -2308,14 +2311,16 @@ void TGCocoa::SetClipRectangles(GContext_t /*gc*/, Int_t /*x*/, Int_t /*y*/,
 }
 
 //______________________________________________________________________________
-void TGCocoa::Update(Int_t /*mode = 0*/)
+void TGCocoa::Update(Int_t mode)
 {
    // Flushes (mode = 0, default) or synchronizes (mode = 1) X output buffer.
    // Flush flushes output buffer. Sync flushes buffer and waits till all
    // requests have been processed by X server.
-   
-   gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
-   fPimpl->fX11CommandBuffer.Flush(fPimpl.get());
+   if (mode == 2) {
+      gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
+   } else {
+      fPimpl->fX11CommandBuffer.Flush(fPimpl.get());
+   }
 }
 
 //______________________________________________________________________________
