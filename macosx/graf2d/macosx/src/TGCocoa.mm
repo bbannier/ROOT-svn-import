@@ -2524,13 +2524,14 @@ void TGCocoa::DeleteImage(Drawable_t /*img*/)
 Window_t TGCocoa::GetCurrentWindow() const
 {
    // pointer to the current internal window used in canvas graphics
+   if (fSelectedDrawable > fPimpl->GetRootWindowID())
+      return fSelectedDrawable;
 
    return Window_t();
 }
 
 //______________________________________________________________________________
-unsigned char *TGCocoa::GetColorBits(Drawable_t /*wid*/, Int_t /*x*/, Int_t /*y*/,
-                                     UInt_t /*w*/, UInt_t /*h*/)
+unsigned char *TGCocoa::GetColorBits(Drawable_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    // Returns an array of pixels created from a part of drawable (defined by x, y, w, h)
    // in format:
@@ -2540,6 +2541,21 @@ unsigned char *TGCocoa::GetColorBits(Drawable_t /*wid*/, Int_t /*x*/, Int_t /*y*
    // By default all pixels from the whole drawable are returned.
    //
    // Note that return array is 32-bit aligned
+   if (fPimpl->IsRootWindow(wid)) {
+      Warning("GetColorBits", "Called for root window");
+   } else {
+      assert(x >= 0 && "GetColorBits, x parameter is negative");
+      assert(y >= 0 && "GetColorBits, y parameter is negative");
+      assert(w != 0 && "GetColorBits, w parameter is 0");
+      assert(h != 0 && "GetColorBits, h parameter is 0");
+      
+      unsigned char *buffer = new unsigned char[w * h * 4]();//It's deleted by caller.
+      Rectangle_t area = {};
+      area.fX = x, area.fY = y, area.fWidth = w, area.fHeight = h;
+      [fPimpl->GetDrawable(wid) readColorBits : area intoBuffer : buffer];
+      
+      return buffer;
+   }
 
    return 0;
 }

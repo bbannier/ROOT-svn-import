@@ -277,6 +277,42 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 }
 
 //______________________________________________________________________________
+- (BOOL) isRectInside : (Rectangle_t) area
+{
+   if (area.fX < 0 || (unsigned)area.fX >= fWidth)
+      return NO;
+   if (area.fY < 0 || (unsigned)area.fY >= fHeight)
+      return NO;
+   if (area.fWidth > fWidth || !area.fWidth)
+      return NO;
+   if (area.fHeight > fHeight || !area.fHeight)
+      return NO;
+   
+   return YES;
+}
+
+//______________________________________________________________________________
+- (void) readColorBits : (Rectangle_t) area intoBuffer : (unsigned char *) buffer
+{
+   assert([self isRectInside : area] == YES && "readColorBits:intoBuffer: bad area parameter");
+
+   const unsigned char * line = fImageData + area.fY * fWidth * 4;
+   const unsigned char *pixel = line + area.fX * 4;
+   
+   for (UShort_t i = 0; i < area.fHeight; ++i) {
+      for (UShort_t j = 0; j < area.fWidth; ++j, pixel += 4) {
+         buffer[0] = pixel[2];
+         buffer[1] = pixel[1];
+         buffer[2] = pixel[0];
+         buffer[3] = pixel[3];
+      }
+
+      line += fWidth * 4;
+      pixel = line + area.fX * 4;
+   }
+}
+
+//______________________________________________________________________________
 - (BOOL) fIsPixmap
 {
    return YES;//??

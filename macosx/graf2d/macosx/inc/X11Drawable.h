@@ -99,6 +99,8 @@
 //Point_t, Rectangle_t are in GuiTypes.h
 - (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
 
+- (void) readColorBits : (Rectangle_t) area intoBuffer : (unsigned char *) buffer;
+
 @end
 
 #endif
