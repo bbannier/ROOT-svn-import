@@ -956,6 +956,8 @@ Bool_t TGCocoa::NeedRedraw(ULong_t /*tgwindow*/, Bool_t /*force*/)
 void TGCocoa::ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y)
 {
    assert(!fPimpl->IsRootWindow(wid) && "ReparentChild, can not re-parent 'root' window");
+   
+   //TODO: does ROOT cares about reparent X11 events?
 
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (fPimpl->IsRootWindow(pid)) {
@@ -969,34 +971,43 @@ void TGCocoa::ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y)
       const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
       QuartzWindow *newTopLevel = [[QuartzWindow alloc] initWithContentRect : frame styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
       
-      frame.origin = CGPointMake(x, y);
-      view.frame = frame;
+      [view setX : x Y : y];
       [newTopLevel setContentView : view];
+      fPimpl->ReplaceDrawable(wid, newTopLevel);
 
       [view updateLevel : 0];
-      [view release];      
+
+      [view release];
+      [newTopLevel release];
    } else {
       [view retain];
       [view removeFromSuperview];
       //
       id<X11Drawable> newParent = fPimpl->GetDrawable(pid);
       assert(newParent.fIsPixmap == NO && "ReparentChild, pixmap can not be a new parent");
-
-      NSRect frame = view.frame;
-      frame.origin.x = x;
-      frame.origin.y = y;
-      view.frame = frame;
+      [view setX : x Y : y];
       [newParent addChild : view];
       [view release];
    }
 }
 
 //______________________________________________________________________________
-void TGCocoa::ReparentTopLevel(Window_t /*wid*/, Window_t /*pid*/, Int_t /*x*/, Int_t /*y*/)
+void TGCocoa::ReparentTopLevel(Window_t wid, Window_t pid, Int_t x, Int_t y)
 {
    assert(0 && "ReparentTopLevel, not implemented yet");
    //I have to delete QuartzWindow here and place in its slot view + 
    //reparent this view into pid.
+   if (fPimpl->IsRootWindow(pid))//Nothing to do, wid is already a top-level window.
+      return;
+   
+   QuartzView *contentView = fPimpl->GetDrawable(wid).fContentView;
+   [contentView retain];
+   QuartzWindow *topLevel = (QuartzWindow *)[contentView window];
+   [topLevel setContentView : nil];
+   fPimpl->ReplaceDrawable(wid, contentView);
+   [contentView setX : x Y : y];
+   [fPimpl->GetDrawable(pid) addChild : contentView];
+   [contentView release];
 }
 
 //______________________________________________________________________________
@@ -1012,12 +1023,11 @@ void TGCocoa::ReparentWindow(Window_t wid, Window_t pid, Int_t x, Int_t y)
 
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (view.fParentView) {
+      //wi
       ReparentChild(wid, pid, x, y);
    } else {
-      //wid is a top-level window.
-      if (!fPimpl->IsRootWindow(pid))
-         ReparentTopLevel(wid, pid, x, y);
-      //else do nothing, still top-level.
+      //wid is a top-level window (or content view of such a window).
+      ReparentTopLevel(wid, pid, x, y);
    }
 }
 

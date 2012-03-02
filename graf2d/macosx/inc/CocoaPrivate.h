@@ -52,7 +52,10 @@ private:
    unsigned           RegisterDrawable(NSObject *nsObj);
    id<X11Drawable>    GetDrawable(unsigned drawableD)const;
    void               DeleteDrawable(unsigned drawableID);
-//   void               ReplaceDrawable(unsigned windowID);
+   
+   //This function resets strong reference, if you still want NSObject for drawableID to live,
+   //you have to retain the pointer (probably) and also drawableID will become id for nsObj (replacement).
+   void               ReplaceDrawable(unsigned drawableID, NSObject *nsObj);
 
    //Color "parser": either parse string like "#ddeeaa", or
    //search rgb.txt like table for named color.
