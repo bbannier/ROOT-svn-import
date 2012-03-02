@@ -52,6 +52,16 @@ StrongReferenceNS &StrongReferenceNS::operator = (NSObject *nsObject)
 }
 
 //______________________________________________________________________________
+void StrongReferenceNS::Reset(NSObject *object)
+{
+   if (fNSObject != object) {
+      NSObject *obj = [object retain];//Haha, is it possible to have 2 different pointers on the same object in Obj-C? :)
+      [fNSObject release];
+      fNSObject = obj;
+   }
+}
+
+//______________________________________________________________________________
 AutoreleasePool::AutoreleasePool()
                   : fPool([[NSAutoreleasePool alloc] init])
 {

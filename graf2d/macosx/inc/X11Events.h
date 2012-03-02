@@ -37,7 +37,7 @@ enum class PointerGrab {
    noGrab,
    implicitGrab,
    activeGrab,
-   passiveGrab//?
+   passiveGrab
 };
 
 class EventTranslator {
