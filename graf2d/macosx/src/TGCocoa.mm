@@ -3,11 +3,6 @@
 #include <algorithm>
 #include <stdexcept>
 
-//
-#include <iostream>
-#include <fstream>
-//
-
 #include  <Cocoa/Cocoa.h>
 
 #include "CocoaPrivate.h"
