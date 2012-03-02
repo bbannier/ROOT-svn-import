@@ -1899,16 +1899,20 @@ void TGCocoa::GrabPointer(Window_t wid, UInt_t eventMask, Window_t /*confine*/, 
 //______________________________________________________________________________
 void TGCocoa::SetWindowName(Window_t wid, char *name)
 {
-   if (!wid || !name)//This can happen.
+   if (!wid || !name)//From TGX11.
       return;
    
-   id<X11Drawable> widget = fPimpl->GetDrawable(wid);
-   if ([(NSObject *)widget isKindOfClass : [NSWindow class]]) {
-      const ROOT::MacOSX::Util::AutoreleasePool pool;
+   const ROOT::MacOSX::Util::AutoreleasePool pool;//TODO: check!
+   
+   id<X11Drawable> drawable = fPimpl->GetDrawable(wid);
+   
+   if ([(NSObject *)drawable isKindOfClass : [NSWindow class]]) {
       NSString *windowTitle = [NSString stringWithCString : name encoding : NSASCIIStringEncoding];
-      [(NSWindow *)widget setTitle : windowTitle];
-   } else
-      Error("SetWindowName", "Window for id %lu is not an NSWindow object", wid);
+      [(NSWindow *)drawable setTitle : windowTitle];
+   } 
+   //else: before I had a warning message here, but looks like 
+   //ROOT's GUI can call this method on non-toplevel window. 
+   //Just ignore this case.
 }
 
 //______________________________________________________________________________
