@@ -84,6 +84,14 @@ void CocoaPrivate::DeleteDrawable(unsigned drawableID)
    fDrawables.erase(drawableIter);//StrongReference should do work here.
 }
 
+//______________________________________________________________________________
+void CocoaPrivate::ReplaceDrawable(unsigned drawableID, NSObject *nsObj)
+{
+   auto drawableIter = fDrawables.find(drawableID);
+   assert(drawableIter != fDrawables.end() && "ReplaceDrawable, can not replace non existing drawable");
+   drawableIter->second.Reset(nsObj);
+}
+
 }
 }
 }
