@@ -1,10 +1,10 @@
+//Author: Timur Pocheptsov.
 #ifndef ROOT_QuartzText
 #define ROOT_QuartzText
 
-#include <string>
-#include <map>
-
-#include <ApplicationServices/ApplicationServices.h>
+//This must be changed: different header for iOS and MacOSX.
+#import <ApplicationServices/ApplicationServices.h>
+#include <Cocoa/Cocoa.h>
 
 #include "CocoaUtils.h"
 #include "GuiTypes.h"
@@ -13,104 +13,33 @@
 namespace ROOT {
 namespace Quartz {
    
-void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle,
-              Int_t align, Int_t font, Float_t size,
-              const char *text);
-void GetTextExtent(UInt_t &w, UInt_t &h, Int_t font, Float_t size,
-                   char *text);
-
-
-enum class FontSlant {
-   regular,
-   italic
-};
-
-enum class FontWeight {
-   medium,
-   bold
-};
-
-struct XLFDName {
-   //foundry *
-   std::string fFamilyName;
-   FontWeight fWeight;
-   FontSlant fSlant;
-   //width  *
-   //addstyle *
-   unsigned fPixelSize;
-   //points *
-   //horiz *
-   //vert *
-   //spacing *
-   //avgwidth *
-   std::string fRgstry;
-   std::string fEncoding;
-};
-
-bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst);
-
-class FontManager {
+// Core Text's CTLine wrapper.
+class TextLine {
 public:
-   enum FontManagerDefaults {
-      fmdNOfFonts = 13
-   };
-   
-   FontManager();
-   ~FontManager();
-   
-   FontStruct_t LoadFont(const XLFDName &xlfd);
-   void UnloadFont(FontStruct_t font);
+   TextLine(const char *textLine, CTFontRef font);
+   TextLine(const char *textLine, CTFontRef font, Color_t color);
+   TextLine(const char *textLine, CTFontRef font, const CGFloat *rgb);
 
-   unsigned GetTextWidth(FontStruct_t font, const char *text, int nChars);
-   void GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDescent);
-   CTFontRef SelectFont(Font_t fontIndex, Float_t fontSize);
+   ~TextLine();
 
-private:
-   typedef ROOT::MacOSX::Util::StrongReferenceCF<CTFontRef> CTFontGuard_t;
-   std::map<CTFontRef, CTFontGuard_t> fLoadedFonts;
-   
-   FontManager(const FontManager &rhs) = delete;
-   FontManager &operator = (const FontManager &rhs) = delete;
-   
-   typedef std::map<UInt_t, CTFontRef> FontMap_t;
-   typedef FontMap_t::iterator FontMapIter_t;
-   typedef FontMap_t::const_iterator FontMapConstIter_t;
-
-   FontMap_t fFonts[fmdNOfFonts];
- 
-   CTFontRef fSelectedFont;
-   
-  // std::vector<UniChar> fSymbolMap;
-   
-  // void InitSymbolMap();
-
-};
-
-// Core Text Line resource manager
-class CTLineGuard {
-   friend class TGCocoa;
-   friend class TGQuartz;
-
-public:
-   CTLineGuard(const char *textLine, CTFontRef font);
-   CTLineGuard(const char *textLine, CTFontRef font, Color_t color);
-   CTLineGuard(const char *textLine, CTFontRef font, const CGFloat *rgb);
-
-   ~CTLineGuard();
-   
    void GetBounds(UInt_t &w, UInt_t &h)const;
    void GetAscentDescent(Int_t &asc, Int_t &desc)const;
-   CTLineRef fCTLine; //Core Text line, created from Attributed string.
+
+   void DrawLine(CGContextRef ctx)const;
 
 private:
+   CTLineRef fCTLine; //Core Text line, created from Attributed string.
 
    void Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values);
 
-   
-   CTLineGuard(const CTLineGuard &rhs) = delete;
-   CTLineGuard &operator = (const CTLineGuard &rhs) = delete;
+   TextLine(const TextLine &rhs) = delete;
+   TextLine &operator = (const TextLine &rhs) = delete;
 };
 
+//By Olivier Couet.
+
+void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle, Int_t align, Int_t font, Float_t size, const char *text);
+void GetTextExtent(UInt_t &w, UInt_t &h, Int_t font, Float_t size, const char *text);
 
 }
 }

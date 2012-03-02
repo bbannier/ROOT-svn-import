@@ -1191,7 +1191,7 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
    //fontName is in XLFD format:
    //-foundry-family- ..... etc., some components can be omitted and replaced by *.
 
-   ROOT::Quartz::XLFDName xlfd = {};
+   ROOT::MacOSX::X11::XLFDName xlfd = {};
    if (ParseXLFDName(fontName, xlfd))
       return fPimpl->fFontManager.LoadFont(xlfd);
 
@@ -1717,10 +1717,10 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    if (gcVals.fMask & kGCForeground)
       PixelToRGB(gcVals.fForeground, textColor);
 
-   ROOT::Quartz::CTLineGuard ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
+   ROOT::Quartz::TextLine ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
 
    CGContextSetTextPosition(view.fContext, x, LocalYROOTToCocoa(view, y));
-   CTLineDraw(ctLine.fCTLine, view.fContext);
+   ctLine.DrawLine(view.fContext);
 }
 
 //______________________________________________________________________________
