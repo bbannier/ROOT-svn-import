@@ -1,3 +1,4 @@
+//Author: Timur Pocheptsov.
 #ifndef ROOT_CocoaUtils
 #define ROOT_CocoaUtils
 
@@ -9,6 +10,14 @@ namespace Util {
 
 //NS suffix == Cocoa classes. Not NSStrongReference, since
 //it will look like it's a Cocoa class.
+//Strong reference for Core Foundation objects (== CF).
+//Again, I'm using suffix, since with prefix it
+//looks like Core Foundation type.
+//These classes must be replaced by generic solution, which works with Cocoa and Core Foundation
+//resources + release function can be passed as a template parameter.
+//Such classes can be also used by my ios module for Core Foundation objects (Cocoa objects on
+//ios are managed by ARC, no need in RAII in that case). I'll try to add this nice features next week.
+
 class StrongReferenceNS {
 public:
    StrongReferenceNS();
@@ -26,6 +35,8 @@ public:
    {
       return fNSObject;
    }
+   
+   void Reset(NSObject *object);
 private:
    NSObject *fNSObject;
 };
@@ -43,9 +54,6 @@ private:
    NSAutoreleasePool *fPool;
 };
 
-//Strong reference for Core Foundation objects (== CF).
-//Again, I'm using suffix, since with prefix it
-//looks like Core Foundation type.
 template<class RefType>
 class StrongReferenceCF {
 public:

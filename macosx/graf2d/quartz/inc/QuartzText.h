@@ -1,5 +1,5 @@
-#ifndef ROOT_QuartzFonts
-#define ROOT_QuartzFonts
+#ifndef ROOT_QuartzText
+#define ROOT_QuartzText
 
 #include <string>
 #include <map>

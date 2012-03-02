@@ -7,25 +7,30 @@
 #ifndef ROOT_CocoaUtils
 #include "CocoaUtils.h"
 #endif
+#ifndef ROOT_QuartzText
+#include "QuartzText.h"
+#endif
 #ifndef ROOT_X11Colors
 #include "X11Colors.h"
+#endif
+#ifndef ROOT_X11Events
+#include "X11Events.h"
+#endif
+#ifndef ROOT_X11Buffer
+#include "X11Buffer.h"
 #endif
 #ifndef ROOT_GuiTypes
 #include "GuiTypes.h"
 #endif
 
 @protocol X11Drawable;
-@class NSWindow;
+@class NSObject;
 
 class TGQuartz;
 class TGCocoa;
 
 namespace ROOT {
 namespace MacOSX {
-
-namespace X11 {
-class CommandBuffer;
-}
 
 namespace Details {
 
@@ -44,21 +49,28 @@ private:
    CocoaPrivate(const CocoaPrivate &rhs) = delete;
    CocoaPrivate &operator = (const CocoaPrivate &rhs) = delete;
 
-   void               InitX11RootWindow();
-   unsigned           RegisterWindow(NSObject *nsWin);
-   id<X11Drawable>    GetWindow(unsigned windowID)const;
-   void               DeleteWindow(unsigned windowID);
-   
+   unsigned           RegisterDrawable(NSObject *nsObj);
+   id<X11Drawable>    GetDrawable(unsigned drawableD)const;
+   void               DeleteDrawable(unsigned drawableID);
+//   void               ReplaceDrawable(unsigned windowID);
 
    //Color "parser": either parse string like "#ddeeaa", or
    //search rgb.txt like table for named color.
    X11::ColorParser                            fX11ColorParser;
-   //Id for the new registered window.
-   unsigned                                    fCurrentWindowID;
+   //Event translator, converts Cocoa events into X11 events
+   //and generates X11 events.
+   X11::EventTranslator                        fX11EventTranslator;
+   //Command buffer - for "buffered" drawing commands.
+   X11::CommandBuffer                          fX11CommandBuffer;
+   //Font manager - cache CTFontRef for GUI.
+   Quartz::FontManager                         fFontManager;
+
+   //Id for the new registered drawable.
+   unsigned                                    fCurrentDrawableID;
    //Cache of ids.
-   std::vector<unsigned>                       fFreeWindowIDs;
+   std::vector<unsigned>                       fFreeDrawableIDs;
    //Cocoa objects (views, windows, "pixmaps").
-   std::map<unsigned, Util::StrongReferenceNS> fWindows;
+   std::map<unsigned, Util::StrongReferenceNS> fDrawables;
 };
 
 }

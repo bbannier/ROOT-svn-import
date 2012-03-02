@@ -31,7 +31,6 @@ namespace MacOSX {
 
 namespace X11 {
 class EventTranslator;
-class CommandBuffer;
 }
 
 namespace Details {
@@ -292,15 +291,14 @@ public:
    
 protected:
    void *GetCurrentContext();
-   std::auto_ptr<ROOT::Quartz::FontManager> fFontManager; //!
+
    Int_t fSelectedDrawable;
+
    std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl; //!
 
 private:
    Bool_t MakeProcessForeground();
 
-   std::auto_ptr<ROOT::MacOSX::X11::EventTranslator> fEventTranslator; //!
-   std::auto_ptr<ROOT::MacOSX::X11::CommandBuffer>   fCommandBuffer; //!
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
    
