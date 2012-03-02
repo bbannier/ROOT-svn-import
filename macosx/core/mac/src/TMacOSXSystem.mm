@@ -307,6 +307,7 @@ void TMacOSXSystem::WaitEvents(Long_t nextto)
 
    fPimpl->CloseFileDescriptors();
 
+   gVirtualX->Update(2);
    gVirtualX->Update(1);
 }
 
