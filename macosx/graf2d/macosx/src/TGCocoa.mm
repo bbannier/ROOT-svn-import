@@ -49,9 +49,9 @@ private:
 void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
 {
    //TODO: something not so lame!
-   rgb[0] = (pixelColor >> 16 & 0xff) / 255.f;
-   rgb[1] = (pixelColor >> 8 & 0xff) / 255.f;
-   rgb[2] = (pixelColor & 0xff) / 255.f;
+   rgb[0] = (pixelColor >> 16 & 0xff) / 255.;
+   rgb[1] = (pixelColor >> 8 & 0xff) / 255.;
+   rgb[2] = (pixelColor & 0xff) / 255.;
 }
 
 //______________________________________________________________________________
@@ -75,7 +75,7 @@ void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVal
    else
       ::Warning("SetStrokeParametersFromX11Context", "x11 context does not have line color information");
 
-   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
+   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
 }
 
 //______________________________________________________________________________
@@ -93,7 +93,7 @@ void SetFilledAreaParametersFromX11Context(CGContextRef ctx, const GCValues_t &g
    else
       ::Warning("SetFilledAreaParametersFromX11Context", "no fill color found in x11 context");
    
-   CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.f);
+   CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
 }
 
 //______________________________________________________________________________
@@ -274,7 +274,7 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
    id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
    
    if (window.fBackBuffer) {      
-      CGImageRef image = [pixmap createImageFromPixmap];// CGBitmapContextCreateImage(pixmap.fContext);
+      CGImageRef image = [pixmap createImageFromPixmap];
       if (image) {
          CGContextRef dstCtx = window.fBackBuffer.fContext;
          assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
@@ -736,7 +736,7 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       
       if (dstView.fContext) {
          //We can draw directly.
-         CGImageRef image = [pixmap createImageFromPixmap];//CGBitmapContextCreateImage(pixmap.fContext);
+         CGImageRef image = [pixmap createImageFromPixmap];
          if (image) {
             const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
             CGContextDrawImage(dstView.fContext, imageRect, image);
@@ -1708,7 +1708,7 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    
    //View is flipped, I have to transform for Core Text to work.
    CGContextTranslateCTM(view.fContext, 0.f, view.fHeight);
-   CGContextScaleCTM(view.fContext, 1.f, -1.f);   
+   CGContextScaleCTM(view.fContext, 1., -1.);   
 
    //Text must be antialiased.
    CGContextSetAllowsAntialiasing(view.fContext, 1);
@@ -1774,7 +1774,7 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    const CGFloat blue  = (color & 0xFF) / 255.f;
    
    const CGStateGuard ctxGuard(view.fContext);
-   CGContextSetRGBFillColor(view.fContext, red, green, blue, 1.f);//alpha can be also used.
+   CGContextSetRGBFillColor(view.fContext, red, green, blue, 1.);//alpha can be also used.
    CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
 }
 
