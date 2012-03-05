@@ -1362,16 +1362,50 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/,
 }
 
 //______________________________________________________________________________
-Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char * /*bitmap*/,
-                                 UInt_t /*width*/, UInt_t /*height*/)
+Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t width, UInt_t height)
 {
    // Creates a bitmap (i.e. pixmap with depth 1) from the bitmap data.
    //
    // wid           - specifies which screen the pixmap is created on
    // bitmap        - the data in bitmap format
    // width, height - define the dimensions of the pixmap
+   
+   QuartzImage *image = nil;
 
-   return 0;
+   try {
+      //I'm not using vector here, since I have to pass this pointer to Obj-C code
+      //(and Obj-C object will own this memory later).
+      unsigned char *imageData = new unsigned char[width * height];
+      std::copy(bitmap, bitmap + width * height, (char *)imageData);
+   
+      //Now we can create CGImageRef.
+      QuartzImage *mem = [QuartzImage alloc];
+      if (!mem) {
+         Error("CreateBitmap", "[QuartzImage alloc] failed");
+         delete [] imageData;
+         return Pixmap_t();
+      }
+   
+      image = [mem initMaskWithW : width H : height bitmapMask: imageData];
+      if (!image) {
+         [mem release];
+         delete [] imageData;
+         //Error message was produced by QuartzImage class.
+         return Pixmap_t();
+      }
+      
+      //Now, imageData is owned by image.
+
+      image.fID = fPimpl->RegisterDrawable(image);//This can throw.
+      [image release];
+      
+      return image.fID;      
+   } catch (const std::exception &e) {
+      [image release];//Also will delete imageData.
+      Error("CreateBitmap", "%s", e.what());
+   }
+
+   return Pixmap_t();
 }
 
 //______________________________________________________________________________
