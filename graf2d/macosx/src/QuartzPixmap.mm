@@ -11,18 +11,20 @@
 //Call backs for data provider.
 extern "C" {
 
+//______________________________________________________________________________
 const void* ROOT_QuartzImage_GetBytePointer(void *info)
 {
    assert(info != nullptr && "ROOT_QuartzImage_GetBytePointer, info parameter is null");
    return info;
 }
 
+//______________________________________________________________________________
 void ROOT_QuartzImage_ReleaseBytePointer(void *, const void *)
 {
    //Do nothing.
 }
 
-
+//______________________________________________________________________________
 std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t position, std::size_t count)
 {
     std::copy((char *)info + position, (char *)info + position + count, (char*)buffer);
@@ -259,6 +261,42 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 
       fImageData = data;
 
+      return self;
+   }
+   
+   return nil;
+}
+
+//______________________________________________________________________________
+- (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *)mask
+{
+   assert(width > 0 && "initMaskWithW:H:bitmapMask:, width parameter is zero");
+   assert(height > 0 && "initMaskWithW:H:bitmapMask:, height parameter is zero");
+   assert(mask != nullptr && "initMaskWithW:H:bitmapMask:, mask parameter is null");
+   
+   if (self = [super init]) {
+      const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
+                                                               ROOT_QuartzImage_ReleaseBytePointer, 
+                                                               ROOT_QuartzImage_GetBytesAtPosition, 0};
+      CGDataProviderRef provider = CGDataProviderCreateDirect(mask, width * height, &providerCallbacks);
+      if (!provider) {
+         NSLog(@"initMaskWithW:H:bitmapMask: CGDataProviderCreateDirect failed");
+         return nil;
+      }
+      
+      //1 bit for component, 1 pixel for bit, n bytes per row == width.
+      fImage = CGImageMaskCreate(width, height, 1, 1, width, provider, nullptr, false);//null -> decode, false -> shouldInterpolate.
+
+      if (!fImage) {
+         NSLog(@"initMaskWithW:H:bitmapMask:, CGImageMaskCreate failed");
+         return nil;
+      }
+      
+      fWidth = width;
+      fHeight = height;
+
+      fImageData = mask;
+      
       return self;
    }
    

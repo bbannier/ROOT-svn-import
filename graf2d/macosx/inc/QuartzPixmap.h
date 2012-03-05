@@ -44,6 +44,8 @@
 @property (nonatomic, readonly) BOOL fIsPixmap;//???
 
 - (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data;
+- (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *)mask;
+
 - (void) dealloc;
 
 - (unsigned) fWidth;
