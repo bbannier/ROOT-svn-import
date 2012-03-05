@@ -283,9 +283,8 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
          NSLog(@"initMaskWithW:H:bitmapMask: CGDataProviderCreateDirect failed");
          return nil;
       }
-      
-      //1 bit for component, 1 pixel for bit, n bytes per row == width.
-      fImage = CGImageMaskCreate(width, height, 1, 1, width, provider, nullptr, false);//null -> decode, false -> shouldInterpolate.
+
+      fImage = CGImageMaskCreate(width, height, 8, 8, width, provider, nullptr, false);//null -> decode, false -> shouldInterpolate.
 
       if (!fImage) {
          NSLog(@"initMaskWithW:H:bitmapMask:, CGImageMaskCreate failed");
@@ -330,23 +329,34 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 }
 
 //______________________________________________________________________________
-- (void) readColorBits : (Rectangle_t) area intoBuffer : (unsigned char *) buffer
+- (unsigned char *) readColorBits : (Rectangle_t) area
 {
    assert([self isRectInside : area] == YES && "readColorBits:intoBuffer: bad area parameter");
-
-   const unsigned char * line = fImageData + area.fY * fWidth * 4;
-   const unsigned char *pixel = line + area.fX * 4;
-   
-   for (UShort_t i = 0; i < area.fHeight; ++i) {
-      for (UShort_t j = 0; j < area.fWidth; ++j, pixel += 4) {
-         buffer[0] = pixel[2];
-         buffer[1] = pixel[1];
-         buffer[2] = pixel[0];
-         buffer[3] = pixel[3];
+   if (CGImageIsMask(fImage)) {
+      unsigned char *buffer = new unsigned char[fWidth * fHeight]();
+      for (unsigned i = 0; i < fWidth * fHeight; ++i) {
+         if (!fImageData[i])
+            buffer[i] = 1;
       }
+      return buffer;
+   } else {
+      unsigned char *buffer = new unsigned char[fWidth * fHeight * 4]();
+      const unsigned char * line = fImageData + area.fY * fWidth * 4;
+      const unsigned char *pixel = line + area.fX * 4;
+      
+      for (UShort_t i = 0; i < area.fHeight; ++i) {
+         for (UShort_t j = 0; j < area.fWidth; ++j, pixel += 4) {
+            buffer[0] = pixel[2];
+            buffer[1] = pixel[1];
+            buffer[2] = pixel[0];
+            buffer[3] = pixel[3];
+         }
 
-      line += fWidth * 4;
-      pixel = line + area.fX * 4;
+         line += fWidth * 4;
+         pixel = line + area.fX * 4;
+      }
+      
+      return buffer;
    }
 }
 

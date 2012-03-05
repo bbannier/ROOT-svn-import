@@ -43,6 +43,8 @@ public:
    Command(Drawable_t wid, const GCValues_t &gc);
    virtual ~Command();
 
+   virtual bool HasOperand(Drawable_t drawable)const;
+
    virtual void Execute()const = 0;
    
    Command(const Command &rhs) = delete;
@@ -76,6 +78,9 @@ private:
 
 public:
    CopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, const Rectangle_t &area, const Point_t &dstPoint);
+
+   bool HasOperand(Drawable_t drawable)const;
+
    void Execute()const;
 };
 
@@ -124,21 +129,28 @@ private:
    std::vector<Command *> fCommands;
 
 public:
+   typedef std::vector<Command *>::size_type size_type;
+
    CommandBuffer();
    ~CommandBuffer();
 
    void AddDrawLine(Drawable_t wid, const GCValues_t &gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
    void AddClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
-   void AddCopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY);
+   void AddCopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc,  Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY);
    void AddDrawString(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *text, Int_t len);
    void AddFillRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
    void AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
    void AddUpdateWindow(QuartzView *view);
 
    void Flush(Details::CocoaPrivate *impl);
+   void RemoveOperationsForDrawable(Drawable_t wid);
+   
+   size_type BufferSize()const
+   {
+      return fCommands.size();
+   }
 private:
    void ClearCommands();
-
 };
 
 }//X11

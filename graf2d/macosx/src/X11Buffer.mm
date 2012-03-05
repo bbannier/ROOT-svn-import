@@ -35,6 +35,12 @@ Command::~Command()
 }
 
 //______________________________________________________________________________
+bool Command::HasOperand(Drawable_t wid)const
+{
+   return wid == fID;      
+}
+
+//______________________________________________________________________________
 DrawLine::DrawLine(Drawable_t wid, const GCValues_t &gc, const Point_t &p1, const Point_t &p2)
             : Command(wid, gc),
               fP1(p1),
@@ -72,6 +78,12 @@ CopyArea::CopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, const R
                  fArea(area),
                  fDstPoint(dstPoint)
 {
+}
+
+//______________________________________________________________________________
+bool CopyArea::HasOperand(Drawable_t drawable)const
+{
+   return fID == drawable || fSrc == drawable || fGC.fClipMask == drawable;
 }
 
 //______________________________________________________________________________
@@ -198,7 +210,8 @@ void CommandBuffer::AddClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_
 }
 
 //______________________________________________________________________________
-void CommandBuffer::AddCopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
+void CommandBuffer::AddCopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, 
+                                Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
 {
    try {
       Rectangle_t area = {};
@@ -293,7 +306,9 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
    CGContextRef currContext = nullptr;
 
    for (auto cmd : fCommands) {
-      assert(cmd != nullptr && "Flush, command is null");
+      //assert(cmd != nullptr && "Flush, command is null");
+      if (!cmd)//Command was deleted because of DestroyWindow call.
+         continue;
       
       QuartzView *view = impl->GetDrawable(cmd->fID).fContentView;
       if ([view lockFocusIfCanDraw]) {
@@ -327,6 +342,17 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
       CGContextFlush(currContext);
 
    ClearCommands();
+}
+
+//______________________________________________________________________________
+void CommandBuffer::RemoveOperationsForDrawable(Drawable_t drawable)
+{
+   for (size_type i = 0; i < fCommands.size(); ++i) {
+      if (fCommands[i] && fCommands[i]->HasOperand(drawable)) {
+         delete fCommands[i];
+         fCommands[i] = 0;
+      }
+   }
 }
 
 //______________________________________________________________________________

@@ -2207,7 +2207,6 @@ Pixmap_t TASImage::GetMask()
    // The pixmap must deleted by user.
 
    Pixmap_t pxmap = 0;
-
    if (!InitVisual()) {
       Warning("GetMask", "Visual not initiated");
       return pxmap;

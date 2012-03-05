@@ -53,7 +53,7 @@
 
 - (CGImageRef) fImage;
 
-- (void) readColorBits : (Rectangle_t) area intoBuffer : (unsigned char *) buffer;
+- (unsigned char *) readColorBits : (Rectangle_t) area;
 
 @end
 

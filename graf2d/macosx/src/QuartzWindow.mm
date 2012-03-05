@@ -553,11 +553,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+- (void) copy : (id<X11Drawable>) src withMask : (QuartzImage *) mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
    assert(fContentView != nil && "copy:area:toPoint:, fContentView is nil");
 
-   [fContentView copy : src area : area toPoint : dstPoint];
+   [fContentView copy : src withMask : mask area : area toPoint : dstPoint];
 }
 
 
@@ -977,6 +977,41 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
+- (void) copyImage : (QuartzImage *) srcImage withMask : (QuartzImage *) mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+{
+   assert(srcImage != nil && "copyImage:withMask:area:toPoint:, srcImage parameter is nil");
+   assert(srcImage.fImage != nil && "copyImage:withMask:area:toPoint:, srcImage.fImage is nil");
+   assert(self.fContext != nullptr && "copyImage:withMask:area:toPoint:, fContext is null");
+   assert(mask.fImage != nil && "copyImage:withMask:area:toPoint:, mask.fImage is nil");
+   assert(CGImageIsMask(mask.fImage) == true && "copyImage:withMask:area:toPoint, mask.fImage is not a mask");
+
+   assert(mask.fWidth >= srcImage.fWidth && "mask width less than image width");
+   assert(mask.fHeight == srcImage.fHeight && "image and mask has different heights");
+
+   if (mask.fWidth != srcImage.fWidth) {
+   
+   } else {   
+      CGImageRef maskedImage = CGImageCreateWithMask(srcImage.fImage, mask.fImage);
+      if (!maskedImage) {
+         NSLog(@"copyImage:withMask:area:toPoint:, CGImageCreateWithMask failed");
+         return;
+      }
+
+      CGContextSaveGState(self.fContext);
+
+      CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
+      CGContextScaleCTM(self.fContext, 1., -1.);
+
+      const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+      CGContextDrawImage(self.fContext, imageRect, maskedImage);
+      CGImageRelease(maskedImage);
+      
+      CGContextRestoreGState(self.fContext);
+   }
+}
+
+
+//______________________________________________________________________________
 - (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
    assert(srcImage != nil && "copyImage:area:toPoint:, srcImage parameter is nil");
@@ -998,7 +1033,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+- (void) copy : (id<X11Drawable>) src withMask : (QuartzImage *) mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
    //In C++ I would use multiple-dispatch (two parameters case), but here ...
    assert(src != nil && "copy:area:toPoint:, src parameter is nil");
@@ -1015,7 +1050,10 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       //[self copyView : srcView fromPoint : srcPoint size : size toPoint : dstPoint];
    } else if ([srcObj isKindOfClass : [QuartzImage class]]) {
       QuartzImage *image = (QuartzImage *)src;
-      [self copyImage : image area : area toPoint : dstPoint];
+      if (mask)
+         [self copyImage : image withMask : mask area : area toPoint : dstPoint];
+      else 
+         [self copyImage : image area : area toPoint : dstPoint];
    } else {
       assert(0 && @"copy:area:toPoint:, source is unknown");
    }
