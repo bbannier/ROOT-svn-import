@@ -83,7 +83,7 @@
 
 - (void)     unmapWindow;
 //
-- (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
+- (void)     copy : (id<X11Drawable>) src withMask : (QuartzImage *) mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
 
 @end
 
@@ -163,7 +163,7 @@
 
 - (void)     unmapWindow;
 //
-- (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
+- (void)     copy : (id<X11Drawable>) src withMask : (QuartzImage *)mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
 
 //
 - (void)     configureNotifyTree;

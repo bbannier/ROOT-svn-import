@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <limits>
 
 #include  <Cocoa/Cocoa.h>
 
@@ -642,6 +643,9 @@ void TGCocoa::SetDoubleBufferOFF()
    QuartzPixmap *buffer = obj.fBackBuffer;
    assert(buffer != nil && "SetDoubleBufferOFF, window does not have back buffer");
 
+   if (fPimpl->fX11CommandBuffer.BufferSize())
+      fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(buffer.fID);
+
    fPimpl->DeleteDrawable(buffer.fID);
    obj.fBackBuffer = nil;
 }
@@ -674,8 +678,11 @@ void TGCocoa::SetDoubleBufferON()
       pixmap.fID = fPimpl->RegisterDrawable(pixmap);
       [pixmap release];
 
-      if (window.fBackBuffer)//Now we can delete the old one, since the new was created.
+      if (window.fBackBuffer) {//Now we can delete the old one, since the new was created.
+         if (fPimpl->fX11CommandBuffer.BufferSize())
+            fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(window.fBackBuffer.fID);
          fPimpl->DeleteDrawable(window.fBackBuffer.fID);
+      }
 
       window.fBackBuffer = pixmap;
    } else {
@@ -846,12 +853,23 @@ void TGCocoa::DestroyWindow(Window_t wid)
 {
    //
    assert(!fPimpl->IsRootWindow(wid) && "DestroyWindow, called for 'root' window");
-   
+      
    id<X11Drawable> window = fPimpl->GetDrawable(wid);
    assert(window.fIsPixmap == NO && "DestroyWindow, called for pixmap");
    
-   if (window.fBackBuffer)
+   if (fPimpl->fX11CommandBuffer.BufferSize()) {
+      
+   }
+   
+   if (window.fBackBuffer) {
+      if (fPimpl->fX11CommandBuffer.BufferSize())
+         fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(window.fBackBuffer.fID);
       fPimpl->DeleteDrawable(window.fBackBuffer.fID);
+   }
+   
+   if (fPimpl->fX11CommandBuffer.BufferSize())
+      fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(wid);
+   
    
    fPimpl->DeleteDrawable(wid);
 }
@@ -1369,15 +1387,28 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    // wid           - specifies which screen the pixmap is created on
    // bitmap        - the data in bitmap format
    // width, height - define the dimensions of the pixmap
-   
    QuartzImage *image = nil;
+   
+   assert(std::numeric_limits<unsigned char>::digits == 8 && "CreateBitmap, ASImage requires octets");
 
    try {
       //I'm not using vector here, since I have to pass this pointer to Obj-C code
       //(and Obj-C object will own this memory later).
-      unsigned char *imageData = new unsigned char[width * height];
-      std::copy(bitmap, bitmap + width * height, (char *)imageData);
-   
+      
+      //TASImage has a bug, it calculates size in pixels (making a with to multiple-of eight and 
+      //allocates memory as each bit occupies one byte, and later packs bits into bytes.
+      //Posylaiu luchi ponosa avtoru.
+
+      unsigned char *imageData = new unsigned char[width * height]();
+      for (unsigned i = 0, j = 0, e = width / 8 * height; i < e; ++i) {//TASImage supposes 8-bit bytes and packs mask bits.
+         for(unsigned bit = 0; bit < 8; ++bit, ++j) {
+            if (bitmap[i] & (1 << bit))
+               imageData[j] = 0;//Opaque.
+            else
+               imageData[j] = 255;//Masked out bit.
+         }
+      }
+
       //Now we can create CGImageRef.
       QuartzImage *mem = [QuartzImage alloc];
       if (!mem) {
@@ -1439,6 +1470,7 @@ Bool_t TGCocoa::CreatePictureFromData(Drawable_t /*wid*/, char ** /*data*/,
    // attributes "attr" are used for input and output. Returns kTRUE in
    // case of success, kFALSE otherwise. If the mask "pict_mask" does not
    // exist it is set to kNone.
+   NSLog(@"CreatePictureFromData");
 
    return kFALSE;
 }
@@ -1654,7 +1686,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    assert(!fPimpl->IsRootWindow(wid) && "FillRectangle, called for the 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
 
-   const GCValues_t &gcVals = fX11Contexts[gc - 1];   
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (!view.fContext) {
       fPimpl->fX11CommandBuffer.AddFillRectangle(wid, gcVals, x, y, w, h);
@@ -1665,7 +1697,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 }
 
 //______________________________________________________________________________
-void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &/*gcVals*/, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
+void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gcVals, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
 {
    //Called directly or when flushing command buffer.
    if (!src || !dst)//Can this happen? From TGX11.
@@ -1687,28 +1719,36 @@ void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &/*gc
    copyArea.fWidth = (UShort_t)width;//!
    copyArea.fHeight = (UShort_t)height;//!
 
-   //Check gc also???
-   [dstDrawable copy : srcDrawable area : copyArea toPoint : dstPoint];
+   QuartzImage *mask = nil;
+   if (gcVals.fClipMask) {
+      assert(fPimpl->GetDrawable(gcVals.fClipMask).fIsPixmap == YES && "CopyAreaAux, mask is not a pixmap");
+      mask = (QuartzImage *)fPimpl->GetDrawable(gcVals.fClipMask);
+   }
+      
+   [dstDrawable copy : srcDrawable withMask : mask area : copyArea toPoint : dstPoint];
 }
 
 //______________________________________________________________________________
-void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
+void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY)
 {
    if (!src || !dst)//Can this happen? From TGX11.
       return;
       
    assert(!fPimpl->IsRootWindow(src) && "CopyArea, src parameter is 'root' window");
    assert(!fPimpl->IsRootWindow(dst) && "CopyArea, dst parameter is 'root' window");
+   assert(gc > 0 && gc <= fX11Contexts.size() && "CopyArea, bad GContext_t");
    
    id<X11Drawable> srcDrawable = fPimpl->GetDrawable(src);
    id<X11Drawable> dstDrawable = fPimpl->GetDrawable(dst);
    
+   const GCValues_t &gcVals = fX11Contexts[gc - 1];
+   
    QuartzView *view = nil;
    if ([(NSObject *)dstDrawable isKindOfClass : [QuartzView class]] || [(NSObject *)dstDrawable isKindOfClass : [QuartzWindow class]])
       view = dstDrawable.fContentView;
-   
+
    if (view && !view.fContext) {
-      fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, GCValues_t(), srcX, srcY, width, height, dstX, dstY);
+      fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
       return;
    }
    
@@ -1722,8 +1762,13 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t /*gc*/, Int_t 
    copyArea.fWidth = (UShort_t)width;//!
    copyArea.fHeight = (UShort_t)height;//!
 
-   //Check gc also???
-   [dstDrawable copy : srcDrawable area : copyArea toPoint : dstPoint];
+   QuartzImage *mask = nil;
+   if (gcVals.fClipMask) {
+      assert(fPimpl->GetDrawable(gcVals.fClipMask).fIsPixmap == YES && "CopyArea, mask is not a pixmap");
+      mask = (QuartzImage *)fPimpl->GetDrawable(gcVals.fClipMask);
+   }
+
+   [dstDrawable copy : srcDrawable withMask : mask area : copyArea toPoint : dstPoint];
 }
 
 //______________________________________________________________________________
@@ -2583,12 +2628,11 @@ unsigned char *TGCocoa::GetColorBits(Drawable_t wid, Int_t x, Int_t y, UInt_t w,
       assert(w != 0 && "GetColorBits, w parameter is 0");
       assert(h != 0 && "GetColorBits, h parameter is 0");
       
-      unsigned char *buffer = new unsigned char[w * h * 4]();//It's deleted by caller.
+      //unsigned char *buffer = new unsigned char[w * h * 4]();//It's deleted by caller.
       Rectangle_t area = {};
       area.fX = x, area.fY = y, area.fWidth = w, area.fHeight = h;
-      [fPimpl->GetDrawable(wid) readColorBits : area intoBuffer : buffer];
-      
-      return buffer;
+      return [fPimpl->GetDrawable(wid) readColorBits : area];
+      //return buffer;
    }
 
    return 0;
@@ -2629,7 +2673,7 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
          return Pixmap_t();
       }
       
-      //Now, imageData is owned by image.
+      //Now imageData is owned by image.
 
       image.fID = fPimpl->RegisterDrawable(image);//This can throw.
       [image release];
