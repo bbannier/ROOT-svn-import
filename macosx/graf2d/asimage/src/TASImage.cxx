@@ -53,9 +53,6 @@ palette can be modified with a GUI, just select StartPaletteEditor() from the
 context menu.
 End_Html */
 
-#include <iostream>
-#include <fstream>
-
 #include "TASImage.h"
 #include "TASImagePlugin.h"
 #include "TROOT.h"
@@ -2298,16 +2295,6 @@ void TASImage::SetImage(Pixmap_t pxm, Pixmap_t mask)
          return;
       }
       
-      if (pxm == 202) {
-//         std::cout<<"TASImage::SetImage, create disable pictogram\n";
-         std::ofstream output("/Users/tpochep/colorbits.txt");
-         output<<w<<' '<<h<<std::endl;
-         for (unsigned i = 0; i < w * h * 4; ++i) {
-            output<<unsigned(bits[i])<<std::endl;
-         
-         }
-      }
-
       // no mask
       if (!mask) {
          fImage = bitmap2asimage(bits, w, h, 0, 0);
@@ -2315,16 +2302,7 @@ void TASImage::SetImage(Pixmap_t pxm, Pixmap_t mask)
          return;
       } 
       unsigned char *mask_bits = gVirtualX->GetColorBits(mask, 0, 0, w, h);
-      
-      if (mask == 203) {
-         std::cout<<"Dump mask! "<<pxm<<' '<<mask<<std::endl;
 
-         std::ofstream output("/Users/tpochep/mask.txt");
-         output<<w<<' '<<h<<std::endl;
-         for(unsigned i = 0; i < w * h; ++i)
-            output<<unsigned(mask_bits[i])<<std::endl;
-      }
-      
       fImage = bitmap2asimage(bits, w, h, 0, mask_bits);
       delete [] mask_bits;
       delete [] bits;
