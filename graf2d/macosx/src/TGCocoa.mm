@@ -22,7 +22,8 @@
 ClassImp(TGCocoa)
 
 namespace Details = ROOT::MacOSX::Details;
-namespace X11 = ROOT::MacOSX::X11;//Oh, I hope, there is not such a stupid name in a global space :)
+namespace Util = ROOT::MacOSX::Util;
+namespace X11 = ROOT::MacOSX::X11;
 
 
 namespace {
@@ -271,7 +272,6 @@ void TGCocoa::ClosePixmap()
 void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
 {
    //const ROOT::MacOSX::Util::AutoreleasePool pool;
-   using ROOT::MacOSX::Util::CFScopeGuard;
    
    id<X11Drawable> source = fPimpl->GetDrawable(wid);
    assert(source.fIsPixmap == YES && "CopyPixmap, source is not a pixmap");
@@ -281,7 +281,7 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
    id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
    
    if (window.fBackBuffer) {
-      CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
+      Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
       if (image.Get()) {
          CGContextRef dstCtx = window.fBackBuffer.fContext;
          assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
@@ -447,14 +447,12 @@ void TGCocoa::MoveWindow(Int_t wid, Int_t x, Int_t y)
 Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
 {
    //Two stage creation.
-   using ROOT::MacOSX::Util::NSScopeGuard;
-   
    NSSize newSize = {};
    newSize.width = w;
    newSize.height = h;
 
    try {
-      NSScopeGuard obj([QuartzPixmap alloc]);
+      Util::NSScopeGuard obj([QuartzPixmap alloc]);
       if (QuartzPixmap *pixmap = [(QuartzPixmap *)obj.Get() initWithW : w H : h]) {
          obj.Reset(pixmap);
          pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
@@ -662,9 +660,7 @@ void TGCocoa::SetDoubleBufferOFF()
 //______________________________________________________________________________
 void TGCocoa::SetDoubleBufferON()
 {
-   // Turns double buffer mode on.
-   using ROOT::MacOSX::Util::NSScopeGuard;
-   
+   // Turns double buffer mode on.   
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "SetDoubleBufferON, called, but no correct window was selected before");
    
    id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
@@ -680,7 +676,7 @@ void TGCocoa::SetDoubleBufferON()
    }
 
    try {
-      NSScopeGuard mem([QuartzPixmap alloc]);      
+      Util::NSScopeGuard mem([QuartzPixmap alloc]);      
       if (QuartzPixmap *pixmap = [(QuartzPixmap *)mem.Get() initWithW : currW H : currH]) {
          mem.Reset(pixmap);
          pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
@@ -742,8 +738,6 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
    //    mode = 1 update
    //    mode = 0 sync
    
-   using ROOT::MacOSX::Util::CFScopeGuard;
-   
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "UpdateWindow, no window was selected, can not update 'root' window");
    
    id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
@@ -754,7 +748,7 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       
       if (dstView.fContext) {
          //We can draw directly.
-         CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
+         Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
          if (image.Get()) {
             const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
             CGContextDrawImage(dstView.fContext, imageRect, image.Get());
@@ -1099,15 +1093,13 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
    //means nothing for Cocoa. TODO: create window correctly to emulate what ROOT wants from TGCocoa.
    //This implementation is just a sketch to try.
    //
-   //Check if really need this.
-   using namespace ROOT::MacOSX::Util;
-   
-   const AutoreleasePool pool;
+   //Check if really need this.   
+   const Util::AutoreleasePool pool;
    
    if (fPimpl->IsRootWindow(parentID)) {//parent == root window.
       try {
          QuartzWindow *newWindow = CreateTopLevelWindow(x, y, w, h, border, depth, clss, visual, attr, wtype);//Can throw.
-         const NSScopeGuard winGuard(newWindow);
+         const Util::NSScopeGuard winGuard(newWindow);
          const Window_t result = fPimpl->RegisterDrawable(newWindow);//Can throw.
          newWindow.fID = result;
          return result;
@@ -1118,7 +1110,7 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
       id<X11Drawable> parentWin = fPimpl->GetDrawable(parentID);
       try {
          QuartzView *childView = CreateChildView(parentWin.fContentView, x, y, w, h, border, depth, clss, visual, attr, wtype);//Can throw.
-         const NSScopeGuard viewGuard(childView);
+         const Util::NSScopeGuard viewGuard(childView);
          const Window_t result = fPimpl->RegisterDrawable(childView);//Can throw.
       
          childView.fID = result;
@@ -1403,8 +1395,6 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    // wid           - specifies which screen the pixmap is created on
    // bitmap        - the data in bitmap format
    // width, height - define the dimensions of the pixmap
-   using ROOT::MacOSX::Util::NSScopeGuard;
-   
    assert(std::numeric_limits<unsigned char>::digits == 8 && "CreateBitmap, ASImage requires octets");
 
    try {
@@ -1426,7 +1416,7 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
       }
 
       //Now we can create CGImageRef.
-      NSScopeGuard mem([QuartzImage alloc]);
+      Util::NSScopeGuard mem([QuartzImage alloc]);
       if (!mem.Get()) {
          Error("CreateBitmap", "[QuartzImage alloc] failed");
          delete [] imageData;
@@ -1776,8 +1766,6 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
 void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, const char *text, Int_t len)
 {
    //Can be called by ROOT directly, or indirectly by AppKit.
-   using namespace ROOT::MacOSX::X11;
-
    assert(!fPimpl->IsRootWindow(wid) && "DrawStringAux, called for the 'root' window");
 
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;   
@@ -1808,7 +1796,7 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    try {
       ROOT::Quartz::TextLine ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
 
-      CGContextSetTextPosition(view.fContext, x, LocalYROOTToCocoa(view, y));
+      CGContextSetTextPosition(view.fContext, x, X11::LocalYROOTToCocoa(view, y));
       ctLine.DrawLine(view.fContext);
    } catch (const std::exception &) {
       Error("DrawStringAux", "Got exception from TextLine");
@@ -1843,7 +1831,6 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    //Can be called from drawRect method and also by ROOT's GUI directly.
 
    assert(!fPimpl->IsRootWindow(wid) && "ClearArea, called for the 'root' window");
-   using namespace ROOT::MacOSX::X11;
    
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (!view.fContext) {
@@ -2632,12 +2619,10 @@ unsigned char *TGCocoa::GetColorBits(Drawable_t wid, Int_t x, Int_t y, UInt_t w,
       assert(y >= 0 && "GetColorBits, y parameter is negative");
       assert(w != 0 && "GetColorBits, w parameter is 0");
       assert(h != 0 && "GetColorBits, h parameter is 0");
-      
-      //unsigned char *buffer = new unsigned char[w * h * 4]();//It's deleted by caller.
+
       Rectangle_t area = {};
       area.fX = x, area.fY = y, area.fWidth = w, area.fHeight = h;
       return [fPimpl->GetDrawable(wid) readColorBits : area];
-      //return buffer;
    }
 
    return 0;
@@ -2648,8 +2633,6 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
 {
    // create pixmap from RGB data. RGB data is in format :
    // b1, g1, r1, a1,  b2, g2, r2, a2 ... bn, gn, rn, an.
-   
-   using ROOT::MacOSX::Util::NSScopeGuard;
    
    assert(bits != nullptr && "CreatePixmapFromData, data parameter is null");
    assert(width != 0 && "CreatePixmapFromData, width parameter is 0");
@@ -2663,7 +2646,7 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
       BgraToRgba(imageData, width, height);
    
       //Now we can create CGImageRef.
-      NSScopeGuard mem([QuartzImage alloc]);
+      Util::NSScopeGuard mem([QuartzImage alloc]);
       if (!mem.Get()) {
          Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
          delete [] imageData;
@@ -2682,7 +2665,7 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
       image.fID = fPimpl->RegisterDrawable(image);//This can throw.
       
       return image.fID;      
-   } catch (const std::exception &) {//bad alloc.
+   } catch (const std::exception &) {//Bad alloc.
       throw;
    }
 
