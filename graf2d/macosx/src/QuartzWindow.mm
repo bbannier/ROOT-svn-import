@@ -1017,19 +1017,36 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(srcImage != nil && "copyImage:area:toPoint:, srcImage parameter is nil");
    assert(srcImage.fImage != nil && "copyImage:area:toPoint:, srcImage.fImage is nil");
    assert(self.fContext != nullptr && "copyImage:area:toPoint:, fContext is null");
-   
-   CGImageRef image = srcImage.fImage;
+
+   CGImageRef subImage = nullptr;
+
+   bool needSubImage = false;
+   if (area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight)
+      needSubImage = true;
+   if (area.fX != 0 || area.fY != 0)
+      needSubImage = true;
+
+   if (needSubImage) {
+      subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
+      if (!subImage) {
+         NSLog(@"copyImage:srcImage:area:toPoint:, subimage creation failed");
+         return;
+      }
+   } else
+      subImage = srcImage.fImage;
    
    CGContextSaveGState(self.fContext);
 
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
 
-   const int cocoaY = dstPoint.fY;
-   const CGRect imageRect = CGRectMake(dstPoint.fX, cocoaY, area.fWidth, area.fHeight);
-   CGContextDrawImage(self.fContext, imageRect, image);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   CGContextDrawImage(self.fContext, imageRect, subImage);
    
    CGContextRestoreGState(self.fContext);
+   
+   if (needSubImage)
+      CGImageRelease(subImage);
 }
 
 //______________________________________________________________________________
@@ -1050,9 +1067,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       //[self copyView : srcView fromPoint : srcPoint size : size toPoint : dstPoint];
    } else if ([srcObj isKindOfClass : [QuartzImage class]]) {
       QuartzImage *image = (QuartzImage *)src;
-      if (mask)
+     /* if (mask)
          [self copyImage : image withMask : mask area : area toPoint : dstPoint];
-      else 
+      else */
          [self copyImage : image area : area toPoint : dstPoint];
    } else {
       assert(0 && @"copy:area:toPoint:, source is unknown");

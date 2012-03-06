@@ -6,6 +6,7 @@
 #import <Cocoa/Cocoa.h>
 
 #import "X11Drawable.h"
+#import "GuiTypes.h"
 
 ///////////////////////////////////////////////////////
 //                                                   //
@@ -45,6 +46,7 @@
 
 - (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data;
 - (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *)mask;
+//- (id) initWithImage : (QuartzImage *)image mask : (QuartzImage *)mask;
 
 - (void) dealloc;
 
@@ -57,5 +59,15 @@
 
 @end
 
+
+namespace ROOT {
+namespace MacOSX {
+namespace X11 {//X11 emulation. But must go into quartz module later.
+
+CGImageRef CreateSubImage(QuartzImage *image, const Rectangle_t &area);
+
+}
+}
+}
 
 #endif
