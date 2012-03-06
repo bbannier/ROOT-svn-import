@@ -332,33 +332,47 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 //______________________________________________________________________________
 - (unsigned char *) readColorBits : (Rectangle_t) area
 {
-   assert([self isRectInside : area] == YES && "readColorBits:intoBuffer: bad area parameter");
+   assert([self isRectInside : area] == YES && "readColorBits: bad area parameter");
+   //Image, bitmap - they all must be converted to ARGB (bitmap) or BGRA (image) (for libAfterImage).
+   unsigned char *buffer = new unsigned char[area.fWidth * area.fHeight * 4]();
+   unsigned char *dstPixel = buffer;
+
    if (CGImageIsMask(fImage)) {
-      unsigned char *buffer = new unsigned char[fWidth * fHeight]();
-      for (unsigned i = 0; i < fWidth * fHeight; ++i) {
-         if (!fImageData[i])
-            buffer[i] = 1;
+      //fImageData has 1 byte per pixel.
+      const unsigned char *line = fImageData + area.fY * fWidth;
+      const unsigned char *srcPixel =  line + area.fX;
+
+      for (UShort_t i = 0; i < area.fHeight; ++i) {
+         for (UShort_t j = 0; j < area.fWidth; ++j, ++srcPixel, dstPixel += 4) {
+            if (!srcPixel[0])
+               dstPixel[0] = 255;//can be 1 or anything different from 0.
+         }
+         
+         line += fWidth;
+         srcPixel = line + area.fX;
       }
-      return buffer;
+
    } else {
-      unsigned char *buffer = new unsigned char[fWidth * fHeight * 4]();
-      const unsigned char * line = fImageData + area.fY * fWidth * 4;
-      const unsigned char *pixel = line + area.fX * 4;
+      //fImageData has 1 byte per pixel.
+      const unsigned char *line = fImageData + area.fY * fWidth * 4;
+      const unsigned char *srcPixel = line + area.fX * 4;
       
       for (UShort_t i = 0; i < area.fHeight; ++i) {
-         for (UShort_t j = 0; j < area.fWidth; ++j, pixel += 4) {
-            buffer[0] = pixel[2];
-            buffer[1] = pixel[1];
-            buffer[2] = pixel[0];
-            buffer[3] = pixel[3];
+         for (UShort_t j = 0; j < area.fWidth; ++j, srcPixel += 4, dstPixel += 4) {
+            dstPixel[0] = srcPixel[2];
+            dstPixel[1] = srcPixel[1];
+            dstPixel[2] = srcPixel[0];
+            dstPixel[3] = srcPixel[3];
          }
 
          line += fWidth * 4;
-         pixel = line + area.fX * 4;
+         srcPixel = line + area.fX * 4;
       }
       
       return buffer;
    }
+   
+   return buffer;
 }
 
 //______________________________________________________________________________
