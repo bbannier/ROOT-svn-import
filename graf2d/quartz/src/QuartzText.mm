@@ -40,21 +40,19 @@ TextLine::TextLine(const char *textLine, CTFontRef font, const CGFloat *rgb)
             : fCTLine(0)
 {
    //Create attributed string with font and color.
-   //TODO: use RAII?
-   CGColorSpaceRef rgbColorSpace = CGColorSpaceCreateDeviceRGB();//[1
-   if (!rgbColorSpace)
-      throw std::runtime_error("CTLineGuard: color space is null");
+   using ROOT::MacOSX::Util::CFScopeGuard;
+   CFScopeGuard<CGColorSpaceRef> rgbColorSpace(CGColorSpaceCreateDeviceRGB());
+   
+   if (!rgbColorSpace.Get())
+      throw std::runtime_error("TexLine: color space is null");
 
-   CGColorRef textColor = CGColorCreate(rgbColorSpace, rgb);//[2
+   CFScopeGuard<CGColorRef> textColor(CGColorCreate(rgbColorSpace.Get(), rgb));
    //Not clear from docs, if textColor can be 0.
 
    CFStringRef keys[] = {kCTFontAttributeName, kCTForegroundColorAttributeName};
-   CFTypeRef values[] = {font, textColor};
+   CFTypeRef values[] = {font, textColor.Get()};
 
    Init(textLine, 2, keys, values);
-
-   CGColorRelease(textColor);//2]
-   CGColorSpaceRelease(rgbColorSpace);//1]
 }
 
 
@@ -87,21 +85,19 @@ void TextLine::GetAscentDescent(Int_t &asc, Int_t &desc)const
 //_________________________________________________________________
 void TextLine::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values)
 {
-   using MacOSX::Util::StrongReferenceCF;
+   using MacOSX::Util::CFScopeGuard;
    
    //Strong reference must be replaced with scope guards.
-   StrongReferenceCF<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault,
-                                                    (const void **)keys, (const void **)values,
-                                                    nAttribs, &kCFTypeDictionaryKeyCallBacks,
-                                                    &kCFTypeDictionaryValueCallBacks), false);
+   const CFScopeGuard<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **)values,
+                                                     nAttribs, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
    if (!stringAttribs.Get())
-      throw std::runtime_error("CTLineGuard: null attribs");
+      throw std::runtime_error("TextLine: null attribs");
 
-   StrongReferenceCF<CFStringRef> wrappedCString(CFStringCreateWithCString(kCFAllocatorDefault, textLine, kCFStringEncodingMacRoman), false);
+   const CFScopeGuard<CFStringRef> wrappedCString(CFStringCreateWithCString(kCFAllocatorDefault, textLine, kCFStringEncodingMacRoman));
    if (!wrappedCString.Get())
       throw std::runtime_error("CTLineGuard: cstr wrapper");
 
-   StrongReferenceCF<CFAttributedStringRef> attributedString(CFAttributedStringCreate(kCFAllocatorDefault, wrappedCString.Get(), stringAttribs.Get()), false);
+   CFScopeGuard<CFAttributedStringRef> attributedString(CFAttributedStringCreate(kCFAllocatorDefault, wrappedCString.Get(), stringAttribs.Get()));
    fCTLine = CTLineCreateWithAttributedString(attributedString.Get());
 
    if (!fCTLine)

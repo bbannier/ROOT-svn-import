@@ -13,7 +13,7 @@ FontManager::FontManager()
 //______________________________________________________________________________
 FontStruct_t FontManager::LoadFont(const X11::XLFDName &xlfd)
 {
-   using Util::StrongReferenceCF;
+   using Util::CFStrongReference;
 
    //This code is just a sketch. I have to check later,
    //how to correctly create font with attributes from xlfd,
@@ -21,9 +21,9 @@ FontStruct_t FontManager::LoadFont(const X11::XLFDName &xlfd)
 
    //CF expects CFStringRef, not c-string.
    //Instead of StrongReference, use ScopeGuard class.
-   StrongReferenceCF<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);//false - no initial retain.
+   CFStrongReference<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);//false - no initial retain.
    //TODO: pixelSize + 2 - this is just a temporary hack, because text in GUI is too tiny.
-   StrongReferenceCF<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize + 2, 0), false);//0 is for CGAffineTransform, false - no initial retain.
+   CFStrongReference<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize + 2, 0), false);//0 is for CGAffineTransform, false - no initial retain.
 
    //What if this font was "loaded" already?
    if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
