@@ -7,6 +7,7 @@
 
 #import "GuiTypes.h"
 
+@class QuartzWindow;
 @class QuartzPixmap;
 @class QuartzImage;
 @class QuartzView;
@@ -55,6 +56,7 @@
 @property (nonatomic, readonly) BOOL fIsPixmap;
 //Window has a content view, self is a content view for a view.
 @property (nonatomic, readonly) QuartzView *fContentView;
+@property (nonatomic, readonly) QuartzWindow *fQuartzWindow;
 
 //If we draw "in a normal mode" == drawing operation were called
 //from view's drawRect method, this property is not nil.
