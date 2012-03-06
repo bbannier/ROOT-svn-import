@@ -350,6 +350,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //X11Drawable's protocol.
 
 //______________________________________________________________________________
+- (QuartzWindow *) fQuartzWindow
+{
+   return self;
+}
+
+//______________________________________________________________________________
 - (QuartzView *) fParentView
 {
    return nil;
@@ -779,6 +785,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    }
    
    return self;
+}
+
+//______________________________________________________________________________
+- (QuartzWindow *) fQuartzWindow
+{
+   return (QuartzWindow *)[self window];
 }
 
 //______________________________________________________________________________

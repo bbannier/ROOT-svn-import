@@ -42,6 +42,7 @@
 
 @property (nonatomic, readonly) BOOL fIsPixmap;
 @property (nonatomic, readonly) QuartzView *fContentView;
+@property (nonatomic, readonly) QuartzWindow *fQuartzWindow;
 
 @property (nonatomic, readonly) CGContextRef fContext;
 
@@ -122,6 +123,7 @@
 
 @property (nonatomic, readonly) BOOL fIsPixmap;
 @property (nonatomic, readonly) QuartzView *fContentView;
+@property (nonatomic, readonly) QuartzWindow *fQuartzWindow;
 
 @property (nonatomic, assign) CGContextRef fContext;
 
