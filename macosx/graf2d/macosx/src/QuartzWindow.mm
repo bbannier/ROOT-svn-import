@@ -553,11 +553,11 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src withMask : (QuartzImage *) mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
 {
    assert(fContentView != nil && "copy:area:toPoint:, fContentView is nil");
 
-   [fContentView copy : src withMask : mask area : area toPoint : dstPoint];
+   [fContentView copy : src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
 }
 
 
@@ -977,37 +977,51 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) copyImage : (QuartzImage *) srcImage withMask : (QuartzImage *) mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+- (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area withMask : (QuartzImage *) mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
 {
-   assert(srcImage != nil && "copyImage:withMask:area:toPoint:, srcImage parameter is nil");
-   assert(srcImage.fImage != nil && "copyImage:withMask:area:toPoint:, srcImage.fImage is nil");
-   assert(self.fContext != nullptr && "copyImage:withMask:area:toPoint:, fContext is null");
-   assert(mask.fImage != nil && "copyImage:withMask:area:toPoint:, mask.fImage is nil");
-   assert(CGImageIsMask(mask.fImage) == true && "copyImage:withMask:area:toPoint, mask.fImage is not a mask");
+   //Check parameters.
+   assert(srcImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage parameter is nil");
+   assert(srcImage.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage.fImage is nil");
+   assert(mask != nil && "copyImage:area:withMask:clipOrigin:toPoint:, mask parameter is nil");
+   assert(mask.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
+   assert(CGImageIsMask(mask.fImage) == true && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
 
-   assert(mask.fWidth >= srcImage.fWidth && "mask width less than image width");
-   assert(mask.fHeight == srcImage.fHeight && "image and mask has different heights");
-
-   if (mask.fWidth != srcImage.fWidth) {
+   //Check self.
+   assert(self.fContext != nullptr && "copyImage:area:withMask:clipOrigin:toPoint:, self.fContext is null");
    
-   } else {   
-      CGImageRef maskedImage = CGImageCreateWithMask(srcImage.fImage, mask.fImage);
-      if (!maskedImage) {
-         NSLog(@"copyImage:withMask:area:toPoint:, CGImageCreateWithMask failed");
+   CGImageRef subImage = nullptr;
+   bool needSubImage = false;
+   if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
+      needSubImage = true;
+      subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
+      if (!subImage) {
+         NSLog(@"copyImage:area:withMask:clipOrigin:toPoint:, subimage creation failed");
          return;
       }
+   } else
+      subImage = srcImage.fImage;
 
-      CGContextSaveGState(self.fContext);
+   //Save context state.
+   CGContextSaveGState(self.fContext);
 
-      CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
-      CGContextScaleCTM(self.fContext, 1., -1.);
+   //Scale and translate to undo isFlipped.
+   CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
+   CGContextScaleCTM(self.fContext, 1., -1.);
+   //Set clip mask on a context.
+   clipXY.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clipXY.fY + mask.fHeight);
+   const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+   CGContextClipToMask(self.fContext, clipRect, mask.fImage);
+   
+   //Convert from X11 to Cocoa (as soon as we scaled y * -1).
+   dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   CGContextDrawImage(self.fContext, imageRect, subImage);
 
-      const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
-      CGContextDrawImage(self.fContext, imageRect, maskedImage);
-      CGImageRelease(maskedImage);
-      
-      CGContextRestoreGState(self.fContext);
-   }
+   //Restore context state.
+   CGContextRestoreGState(self.fContext);
+   
+   if (needSubImage)
+      CGImageRelease(subImage);
 }
 
 
@@ -1019,30 +1033,26 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    assert(self.fContext != nullptr && "copyImage:area:toPoint:, fContext is null");
 
    CGImageRef subImage = nullptr;
-
    bool needSubImage = false;
-   if (area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight)
+   if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
       needSubImage = true;
-   if (area.fX != 0 || area.fY != 0)
-      needSubImage = true;
-
-   if (needSubImage) {
       subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
       if (!subImage) {
-         NSLog(@"copyImage:srcImage:area:toPoint:, subimage creation failed");
+         NSLog(@"copyImage:area:toPoint:, subimage creation failed");
          return;
       }
    } else
       subImage = srcImage.fImage;
-   
+
    CGContextSaveGState(self.fContext);
 
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
 
+   dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + srcImage.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
-   
+
    CGContextRestoreGState(self.fContext);
    
    if (needSubImage)
@@ -1050,29 +1060,29 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src withMask : (QuartzImage *) mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
 {
    //In C++ I would use multiple-dispatch (two parameters case), but here ...
-   assert(src != nil && "copy:area:toPoint:, src parameter is nil");
+   assert(src != nil && "copy:area:withMask:clipOrigin:toPoint:, src parameter is nil");
    
    NSObject *srcObj = (NSObject *)src;
    if ([srcObj isKindOfClass : [QuartzPixmap class]]) {
       //
-      NSLog(@"QuartzView, copy:area:toPoint:, called with pixmap as source");
+      NSLog(@"QuartzView, copy:area:withMask:clipOrigin:toPoint:, called with pixmap as source");
    } else if ([srcObj isKindOfClass : [QuartzWindow class]]) {
       //
-      NSLog(@"QuartzView, copy:area:toPoint:, called with QuartzWindow as source");
+      NSLog(@"QuartzView, copy:area:withMask:clipOrigin:toPoint:, called with QuartzWindow as source");
       //QuartzWindow *topLevel = (QuartzWindow *)srcObj;
       //QuartzView *srcView = topLevel.fContentView;
       //[self copyView : srcView fromPoint : srcPoint size : size toPoint : dstPoint];
    } else if ([srcObj isKindOfClass : [QuartzImage class]]) {
       QuartzImage *image = (QuartzImage *)src;
-     /* if (mask)
-         [self copyImage : image withMask : mask area : area toPoint : dstPoint];
-      else */
+      if (mask)
+         [self copyImage : image area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
+      else
          [self copyImage : image area : area toPoint : dstPoint];
    } else {
-      assert(0 && @"copy:area:toPoint:, source is unknown");
+      assert(0 && "copy:area:withMask:clipOrigin:toPoint:, src is of unknown type");
    }
 }
 

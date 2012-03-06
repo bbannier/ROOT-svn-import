@@ -98,7 +98,8 @@
 - (void)     unmapWindow;
 //
 //Point_t, Rectangle_t are in GuiTypes.h
-- (void)     copy : (id<X11Drawable>) src withMask : (QuartzImage *)mask area : (Rectangle_t) area toPoint : (Point_t) dstPoint;
+- (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask 
+             clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint;
 
 - (unsigned char *) readColorBits : (Rectangle_t) area;
 
