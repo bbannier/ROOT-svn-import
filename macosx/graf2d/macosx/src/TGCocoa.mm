@@ -267,6 +267,8 @@ void TGCocoa::ClosePixmap()
 void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
 {
    //const ROOT::MacOSX::Util::AutoreleasePool pool;
+   using ROOT::MacOSX::Util::CFScopeGuard;
+   
    id<X11Drawable> source = fPimpl->GetDrawable(wid);
    assert(source.fIsPixmap == YES && "CopyPixmap, source is not a pixmap");
    
@@ -274,18 +276,16 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
    
    id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
    
-   if (window.fBackBuffer) {      
-      CGImageRef image = [pixmap createImageFromPixmap];
-      if (image) {
+   if (window.fBackBuffer) {
+      CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
+      if (image.Get()) {
          CGContextRef dstCtx = window.fBackBuffer.fContext;
          assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
 
          const CGRect imageRect = CGRectMake(xpos, ypos, pixmap.fWidth, pixmap.fHeight);
 
-         CGContextDrawImage(dstCtx, imageRect, image);
+         CGContextDrawImage(dstCtx, imageRect, image.Get());
          CGContextFlush(dstCtx);
-
-         CGImageRelease(image);
       }
    } else {
       Warning("CopyPixmap", "Operation skipped, since destination window is not double buffered");
@@ -733,6 +733,9 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
    // according to "mode".
    //    mode = 1 update
    //    mode = 0 sync
+   
+   using ROOT::MacOSX::Util::CFScopeGuard;
+   
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "UpdateWindow, no window was selected, can not update 'root' window");
    
    id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
@@ -743,11 +746,10 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       
       if (dstView.fContext) {
          //We can draw directly.
-         CGImageRef image = [pixmap createImageFromPixmap];
-         if (image) {
+         CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
+         if (image.Get()) {
             const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
-            CGContextDrawImage(dstView.fContext, imageRect, image);
-            CGImageRelease(image);
+            CGContextDrawImage(dstView.fContext, imageRect, image.Get());
          }
       } else {
          //Have to wait.
@@ -1387,7 +1389,7 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    // wid           - specifies which screen the pixmap is created on
    // bitmap        - the data in bitmap format
    // width, height - define the dimensions of the pixmap
-   QuartzImage *image = nil;
+   using ROOT::MacOSX::Util::NSScopeGuard;
    
    assert(std::numeric_limits<unsigned char>::digits == 8 && "CreateBitmap, ASImage requires octets");
 
@@ -1410,29 +1412,25 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
       }
 
       //Now we can create CGImageRef.
-      QuartzImage *mem = [QuartzImage alloc];
-      if (!mem) {
+      NSScopeGuard mem([QuartzImage alloc]);
+      if (!mem.Get()) {
          Error("CreateBitmap", "[QuartzImage alloc] failed");
          delete [] imageData;
          return Pixmap_t();
       }
    
-      image = [mem initMaskWithW : width H : height bitmapMask: imageData];
+      QuartzImage *image = [(QuartzImage *)mem.Get() initMaskWithW : width H : height bitmapMask: imageData];
       if (!image) {
-         [mem release];
          delete [] imageData;
          //Error message was produced by QuartzImage class.
          return Pixmap_t();
       }
       
+      mem.Reset(image);
       //Now, imageData is owned by image.
-
-      image.fID = fPimpl->RegisterDrawable(image);//This can throw.
-      [image release];
-      
+      image.fID = fPimpl->RegisterDrawable(image);//This can throw.      
       return image.fID;      
    } catch (const std::exception &e) {
-      [image release];//Also will delete imageData.
       Error("CreateBitmap", "%s", e.what());
    }
 
@@ -1793,10 +1791,14 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    if (gcVals.fMask & kGCForeground)
       PixelToRGB(gcVals.fForeground, textColor);
 
-   ROOT::Quartz::TextLine ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
+   try {
+      ROOT::Quartz::TextLine ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
 
-   CGContextSetTextPosition(view.fContext, x, LocalYROOTToCocoa(view, y));
-   ctLine.DrawLine(view.fContext);
+      CGContextSetTextPosition(view.fContext, x, LocalYROOTToCocoa(view, y));
+      ctLine.DrawLine(view.fContext);
+   } catch (const std::exception &) {
+      Error("DrawStringAux", "Got exception from TextLine");
+   }
 }
 
 //______________________________________________________________________________
@@ -2631,13 +2633,13 @@ unsigned char *TGCocoa::GetColorBits(Drawable_t wid, Int_t x, Int_t y, UInt_t w,
 Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t height)
 {
    // create pixmap from RGB data. RGB data is in format :
-   // b1, g1, r1, a1,  b2, g2, r2, a2 ... bn, gn, rn, an ..
-   //
+   // b1, g1, r1, a1,  b2, g2, r2, a2 ... bn, gn, rn, an.
+   
+   using ROOT::MacOSX::Util::NSScopeGuard;
+   
    assert(bits != nullptr && "CreatePixmapFromData, data parameter is null");
    assert(width != 0 && "CreatePixmapFromData, width parameter is 0");
    assert(height != 0 && "CreatePixmapFromData, height parameter is 0");
-
-   QuartzImage *image = nil;
 
    try {
       //I'm not using vector here, since I have to pass this pointer to Obj-C code
@@ -2647,30 +2649,27 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
       BgraToRgba(imageData, width, height);
    
       //Now we can create CGImageRef.
-      QuartzImage *mem = [QuartzImage alloc];
-      if (!mem) {
+      NSScopeGuard mem([QuartzImage alloc]);
+      if (!mem.Get()) {
          Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
          delete [] imageData;
          return Pixmap_t();
       }
    
-      image = [mem initWithW : width H : height data: imageData];
+      QuartzImage *image = [(QuartzImage *)mem.Get() initWithW : width H : height data: imageData];
       if (!image) {
-         [mem release];
          delete [] imageData;
          Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
          return Pixmap_t();
       }
       
+      mem.Reset(image);
       //Now imageData is owned by image.
-
       image.fID = fPimpl->RegisterDrawable(image);//This can throw.
-      [image release];
       
       return image.fID;      
    } catch (const std::exception &e) {
-      [image release];//Also will delete imageData.
-      Error("CreatePixmapFromData", "%s", e.what());
+      Error("CreatePixmapFromData", "Got exception from RegisterDrawable");
    }
 
    return Pixmap_t();
