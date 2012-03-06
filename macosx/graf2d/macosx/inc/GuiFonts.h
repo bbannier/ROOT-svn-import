@@ -35,7 +35,7 @@ public:
    void GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDescent);
 
 private:
-   typedef Util::StrongReferenceCF<CTFontRef> CTFontGuard_t;
+   typedef Util::CFStrongReference<CTFontRef> CTFontGuard_t;
    std::map<CTFontRef, CTFontGuard_t> fLoadedFonts;
    
    FontManager(const FontManager &rhs) = delete;

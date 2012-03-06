@@ -1,3 +1,4 @@
+//Author: Timur Pocheptsov.
 #include "CocoaUtils.h"
 
 namespace ROOT {
@@ -5,31 +6,31 @@ namespace MacOSX {
 namespace Util {
 
 //______________________________________________________________________________
-StrongReferenceNS::StrongReferenceNS()
+NSStrongReference::NSStrongReference()
                    : fNSObject(nil)
 {
 }
 
 //______________________________________________________________________________
-StrongReferenceNS::StrongReferenceNS(NSObject *nsObject)
+NSStrongReference::NSStrongReference(NSObject *nsObject)
                    : fNSObject([nsObject retain])
 {
 }
 
 //______________________________________________________________________________
-StrongReferenceNS::StrongReferenceNS(const StrongReferenceNS &rhs)
+NSStrongReference::NSStrongReference(const NSStrongReference &rhs)
                    : fNSObject([rhs.fNSObject retain])
 {
 }
 
 //______________________________________________________________________________
-StrongReferenceNS::~StrongReferenceNS()
+NSStrongReference::~NSStrongReference()
 {
    [fNSObject release];
 }
 
 //______________________________________________________________________________
-StrongReferenceNS &StrongReferenceNS::operator = (const StrongReferenceNS &rhs)
+NSStrongReference &NSStrongReference::operator = (const NSStrongReference &rhs)
 {
    if (&rhs != this) {
       //Even if both reference the same NSObject, it's ok to do release.
@@ -41,7 +42,7 @@ StrongReferenceNS &StrongReferenceNS::operator = (const StrongReferenceNS &rhs)
 }
 
 //______________________________________________________________________________
-StrongReferenceNS &StrongReferenceNS::operator = (NSObject *nsObject)
+NSStrongReference &NSStrongReference::operator = (NSObject *nsObject)
 {
    if (nsObject != fNSObject) {
       [fNSObject release];
@@ -52,13 +53,40 @@ StrongReferenceNS &StrongReferenceNS::operator = (NSObject *nsObject)
 }
 
 //______________________________________________________________________________
-void StrongReferenceNS::Reset(NSObject *object)
+void NSStrongReference::Reset(NSObject *object)
 {
    if (fNSObject != object) {
       NSObject *obj = [object retain];//Haha, is it possible to have 2 different pointers on the same object in Obj-C? :)
       [fNSObject release];
       fNSObject = obj;
    }
+}
+
+//______________________________________________________________________________
+NSScopeGuard::NSScopeGuard(NSObject *nsObject)
+          : fNSObject(nsObject)
+{
+}
+
+//______________________________________________________________________________
+NSScopeGuard::~NSScopeGuard()
+{
+   [fNSObject release];//nothing for nil.
+}
+   
+//______________________________________________________________________________
+void NSScopeGuard::Reset(NSObject *object)
+{
+   if (object != fNSObject) {
+      [fNSObject release];
+      fNSObject = object;
+   }
+}
+
+//______________________________________________________________________________
+void NSScopeGuard::Release()
+{
+   fNSObject = nil;
 }
 
 //______________________________________________________________________________

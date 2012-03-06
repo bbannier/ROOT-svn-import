@@ -73,7 +73,7 @@ private:
    //Cache of ids.
    std::vector<unsigned>                       fFreeDrawableIDs;
    //Cocoa objects (views, windows, "pixmaps").
-   std::map<unsigned, Util::StrongReferenceNS> fDrawables;
+   std::map<unsigned, Util::NSStrongReference> fDrawables;
 };
 
 }
