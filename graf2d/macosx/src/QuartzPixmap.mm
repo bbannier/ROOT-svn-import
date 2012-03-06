@@ -302,31 +302,6 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    
    return nil;
 }
-/*
-//______________________________________________________________________________
-- (id) initWithImage : (QuartzImage *)image mask : (QuartzImage *)mask
-{
-   assert(image != nil && "initWithImage:mask:, image parameter is nil");
-   assert(mask != nil && "initWithImage:mask, mask parameter is nil");
-   
-   if (self = [super init]) {
-   
-      fWidth = 0;
-      fHeight = 0;
-      fImageData = nullptr;
-   
-      if (image.fHeight == mask.fHeight && image.fWidth < mask.fWidth) {
-         //TASImage rounds all masks to be multiple of 8 in width.
-         //Height is not changed. If height is the same, I can take only part of original mask.
-      } else {
-         //For all other cases, just scale mask.
-         fWidth = image.fWidth;
-         fHeight = image.fHeight;
-         
-         
-      }
-   }
-}*/
 
 //______________________________________________________________________________
 - (void) dealloc
@@ -421,9 +396,7 @@ CGImageRef CreateSubImage(QuartzImage *image, const Rectangle_t &area)
 {
    assert(image != nil && "CreateSubImage, image parameter is nil");
 
-   const double cocoaY = LocalYROOTToCocoa(image, area.fY);
-   const CGRect subImageRect = CGRectMake(area.fX, cocoaY, area.fHeight, area.fWidth);
-
+   const CGRect subImageRect = CGRectMake(area.fX, area.fY, area.fHeight, area.fWidth);
    return CGImageCreateWithImageInRect(image.fImage, subImageRect);
 }
 

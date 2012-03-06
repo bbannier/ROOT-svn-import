@@ -46,7 +46,6 @@
 
 - (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data;
 - (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *)mask;
-//- (id) initWithImage : (QuartzImage *)image mask : (QuartzImage *)mask;
 
 - (void) dealloc;
 

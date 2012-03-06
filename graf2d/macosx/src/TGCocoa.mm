@@ -1712,20 +1712,26 @@ void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gcVa
    Point_t dstPoint = {};
    dstPoint.fX = dstX;
    dstPoint.fY = dstY;
-   
+
    Rectangle_t copyArea = {};
    copyArea.fX = srcX;
    copyArea.fY = srcY;
-   copyArea.fWidth = (UShort_t)width;//!
-   copyArea.fHeight = (UShort_t)height;//!
+   copyArea.fWidth = (UShort_t)width;//TODO: check size?
+   copyArea.fHeight = (UShort_t)height;//TODO: check size?
 
    QuartzImage *mask = nil;
-   if (gcVals.fClipMask) {
-      assert(fPimpl->GetDrawable(gcVals.fClipMask).fIsPixmap == YES && "CopyAreaAux, mask is not a pixmap");
+   if (gcVals.fMask & kGCClipMask) {
+      assert(fPimpl->GetDrawable(gcVals.fClipMask).fIsPixmap == YES && "CopyArea, mask is not a pixmap");
       mask = (QuartzImage *)fPimpl->GetDrawable(gcVals.fClipMask);
    }
-      
-   [dstDrawable copy : srcDrawable withMask : mask area : copyArea toPoint : dstPoint];
+   
+   Point_t clipOrigin = {};
+   if (gcVals.fMask & kGCClipXOrigin)
+      clipOrigin.fX = gcVals.fClipXOrigin;
+   if (gcVals.fMask & kGCClipYOrigin)
+      clipOrigin.fY = gcVals.fClipYOrigin;
+
+   [dstDrawable copy : srcDrawable area : copyArea withMask : mask clipOrigin : clipOrigin toPoint : dstPoint];
 }
 
 //______________________________________________________________________________
@@ -1737,38 +1743,21 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
    assert(!fPimpl->IsRootWindow(src) && "CopyArea, src parameter is 'root' window");
    assert(!fPimpl->IsRootWindow(dst) && "CopyArea, dst parameter is 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "CopyArea, bad GContext_t");
-   
-   id<X11Drawable> srcDrawable = fPimpl->GetDrawable(src);
-   id<X11Drawable> dstDrawable = fPimpl->GetDrawable(dst);
-   
+
+   id<X11Drawable> dstDrawable = fPimpl->GetDrawable(dst);   
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   
    QuartzView *view = nil;
-   if ([(NSObject *)dstDrawable isKindOfClass : [QuartzView class]] || [(NSObject *)dstDrawable isKindOfClass : [QuartzWindow class]])
+
+   if ([(NSObject *)dstDrawable respondsToSelector : @selector(fContentView)])
       view = dstDrawable.fContentView;
 
    if (view && !view.fContext) {
+      //We can copy into view only if context is not nil - we called from drawRect.
       fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
       return;
    }
    
-   Point_t dstPoint = {};
-   dstPoint.fX = dstX;
-   dstPoint.fY = dstY;
-   
-   Rectangle_t copyArea = {};
-   copyArea.fX = srcX;
-   copyArea.fY = srcY;
-   copyArea.fWidth = (UShort_t)width;//!
-   copyArea.fHeight = (UShort_t)height;//!
-
-   QuartzImage *mask = nil;
-   if (gcVals.fClipMask) {
-      assert(fPimpl->GetDrawable(gcVals.fClipMask).fIsPixmap == YES && "CopyArea, mask is not a pixmap");
-      mask = (QuartzImage *)fPimpl->GetDrawable(gcVals.fClipMask);
-   }
-
-   [dstDrawable copy : srcDrawable withMask : mask area : copyArea toPoint : dstPoint];
+   CopyAreaAux(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
 }
 
 //______________________________________________________________________________
