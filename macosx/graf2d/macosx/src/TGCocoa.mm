@@ -125,6 +125,8 @@ QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t 
    const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
    //
    QuartzWindow *newWindow = [[QuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : YES windowAttributes : attr];
+   if (!newWindow)
+      throw std::runtime_error("CreateTopLevelWindow failed");
    //
    newWindow.fDepth = depth;
    newWindow.fClass = clss;
@@ -143,6 +145,8 @@ QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w,
    viewRect.size.height = h;
    
    QuartzView *view = [[QuartzView alloc] initWithFrame : viewRect windowAttributes : attr];
+   if (!view)
+      throw std::runtime_error("CreateChildView failed");
    
    return view;
 }
@@ -443,19 +447,24 @@ void TGCocoa::MoveWindow(Int_t wid, Int_t x, Int_t y)
 Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
 {
    //Two stage creation.
+   using ROOT::MacOSX::Util::NSScopeGuard;
+   
    NSSize newSize = {};
    newSize.width = w;
    newSize.height = h;
 
-   QuartzPixmap *obj = [QuartzPixmap alloc];
-   if (QuartzPixmap *pixmap = [obj initWithW : w H : h]) {
-      pixmap.fID = fPimpl->RegisterDrawable(pixmap);
-      [pixmap release];
-      return (Int_t)pixmap.fID;
-   } else {
-      Error("OpenPixmap", "Pixmap initialization failed");
-      [obj release];
-      return -1;
+   try {
+      NSScopeGuard obj([QuartzPixmap alloc]);
+      if (QuartzPixmap *pixmap = [(QuartzPixmap *)obj.Get() initWithW : w H : h]) {
+         obj.Reset(pixmap);
+         pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
+         return (Int_t)pixmap.fID;
+      } else {
+         Error("OpenPixmap", "Pixmap initialization failed");
+         return -1;
+      }
+   } catch (const std::exception &) {//std::bad_alloc.
+      throw;
    }
 }
 
@@ -654,6 +663,8 @@ void TGCocoa::SetDoubleBufferOFF()
 void TGCocoa::SetDoubleBufferON()
 {
    // Turns double buffer mode on.
+   using ROOT::MacOSX::Util::NSScopeGuard;
+   
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "SetDoubleBufferON, called, but no correct window was selected before");
    
    id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
@@ -667,27 +678,24 @@ void TGCocoa::SetDoubleBufferON()
       if (currH == currentPixmap.fHeight && currW == currentPixmap.fWidth)
          return;
    }
-   
-   QuartzPixmap *mem = [QuartzPixmap alloc];
-   if (!mem) {
-      Error("SetDoubleBufferON", "QuartzPixmap alloc failed");
-      return;
-   }
-   
-   if (QuartzPixmap *pixmap = [mem initWithW : currW H : currH]) {
-      pixmap.fID = fPimpl->RegisterDrawable(pixmap);
-      [pixmap release];
 
-      if (window.fBackBuffer) {//Now we can delete the old one, since the new was created.
-         if (fPimpl->fX11CommandBuffer.BufferSize())
-            fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(window.fBackBuffer.fID);
-         fPimpl->DeleteDrawable(window.fBackBuffer.fID);
+   try {
+      NSScopeGuard mem([QuartzPixmap alloc]);      
+      if (QuartzPixmap *pixmap = [(QuartzPixmap *)mem.Get() initWithW : currW H : currH]) {
+         mem.Reset(pixmap);
+         pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
+         if (window.fBackBuffer) {//Now we can delete the old one, since the new was created.
+            if (fPimpl->fX11CommandBuffer.BufferSize())
+               fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(window.fBackBuffer.fID);
+            fPimpl->DeleteDrawable(window.fBackBuffer.fID);
+         }
+
+         window.fBackBuffer = pixmap;
+      } else {
+         Error("SetDoubleBufferON", "Can't create a pixmap");
       }
-
-      window.fBackBuffer = pixmap;
-   } else {
-      [mem dealloc];
-      Error("SetDoubleBufferON", "Can't create a pixmap");
+   } catch (const std::exception &) {//std::bad_alloc.
+      throw;
    }
 }
 
@@ -1092,28 +1100,34 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
    //This implementation is just a sketch to try.
    //
    //Check if really need this.
-   ROOT::MacOSX::Util::AutoreleasePool pool;
+   using namespace ROOT::MacOSX::Util;
+   
+   const AutoreleasePool pool;
    
    if (fPimpl->IsRootWindow(parentID)) {//parent == root window.
-      QuartzWindow *newWindow = CreateTopLevelWindow(x, y, w, h, border, depth, clss, visual, attr, wtype);
-      
-      const Window_t result = fPimpl->RegisterDrawable(newWindow);
-      newWindow.fID = result;
-      [newWindow release];//Owned by fPimpl now.
-
-      return result;
+      try {
+         QuartzWindow *newWindow = CreateTopLevelWindow(x, y, w, h, border, depth, clss, visual, attr, wtype);//Can throw.
+         const NSScopeGuard winGuard(newWindow);
+         const Window_t result = fPimpl->RegisterDrawable(newWindow);//Can throw.
+         newWindow.fID = result;
+         return result;
+      } catch (const std::exception &) {//Bad alloc.
+         throw;
+      }
    } else {
       id<X11Drawable> parentWin = fPimpl->GetDrawable(parentID);
+      try {
+         QuartzView *childView = CreateChildView(parentWin.fContentView, x, y, w, h, border, depth, clss, visual, attr, wtype);//Can throw.
+         const NSScopeGuard viewGuard(childView);
+         const Window_t result = fPimpl->RegisterDrawable(childView);//Can throw.
       
-      QuartzView *childView = CreateChildView(parentWin.fContentView, x, y, w, h, border, depth, clss, visual, attr, wtype);
-      const Window_t result = fPimpl->RegisterDrawable(childView);
-      
-      childView.fID = result;
-      [parentWin addChild : childView];
-
-      [childView release];//Owned by fPimpl now.
-
-      return result;
+         childView.fID = result;
+         [parentWin addChild : childView];
+         
+         return result;
+      } catch (const std::exception &) {//Bad alloc.
+         throw;
+      }
    }
 }
 
@@ -1430,8 +1444,8 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
       //Now, imageData is owned by image.
       image.fID = fPimpl->RegisterDrawable(image);//This can throw.      
       return image.fID;      
-   } catch (const std::exception &e) {
-      Error("CreateBitmap", "%s", e.what());
+   } catch (const std::exception &e) {//Bad alloc.
+      throw;
    }
 
    return Pixmap_t();
@@ -2668,8 +2682,8 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
       image.fID = fPimpl->RegisterDrawable(image);//This can throw.
       
       return image.fID;      
-   } catch (const std::exception &e) {
-      Error("CreatePixmapFromData", "Got exception from RegisterDrawable");
+   } catch (const std::exception &) {//bad alloc.
+      throw;
    }
 
    return Pixmap_t();
