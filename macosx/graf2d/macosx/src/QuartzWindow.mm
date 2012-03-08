@@ -737,6 +737,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 @synthesize fBackBuffer;
 @synthesize fParentView;
 @synthesize fLevel;
+@synthesize fIsOverlapped;
 @synthesize fID;
 
 /////////////////////
@@ -962,6 +963,56 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 - (void) unmapWindow
 {
    [self setHidden : YES];
+}
+
+//______________________________________________________________________________
+- (void) setOverlapped : (BOOL) overlap
+{
+   fIsOverlapped = overlap;
+   for (QuartzView *child in [self subviews])
+      [child setOverlapped : overlap];
+}
+
+//______________________________________________________________________________
+- (void) raiseWindow
+{
+   QuartzView *topView = (QuartzView *)[self retain];
+   QuartzView *superview = topView.fParentView;
+   
+   [topView removeFromSuperview];
+   
+   for (QuartzView *sibling in [superview subviews]) {
+      if (CGRectEqualToRect(sibling.frame, topView.frame))
+         [sibling setOverlapped : YES];
+   }
+
+   [topView setOverlapped : NO];   
+   [superview addSubview : topView positioned : NSWindowAbove relativeTo : nil];
+   [topView release];
+   //
+   [topView setNeedsDisplay : YES];//?
+}
+
+//______________________________________________________________________________
+- (void) lowerWindow
+{
+   QuartzView *topView = (QuartzView *)[self retain];
+   QuartzView *superview = topView.fParentView;
+   
+   [topView removeFromSuperview];
+   
+   NSEnumerator *reverseEnumerator = [[superview subviews] reverseObjectEnumerator];
+   for (QuartzView *sibling in reverseEnumerator) {
+      if (CGRectEqualToRect(sibling.frame, topView.frame)) {
+         [sibling setOverlapped : NO];
+         [sibling setNeedsDisplay : YES];
+         [topView setOverlapped : YES];
+         break;
+      }
+   }
+   
+   [superview addSubview : topView positioned : NSWindowBelow relativeTo : nil];
+   [topView release];
 }
 
 //______________________________________________________________________________

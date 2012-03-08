@@ -102,6 +102,7 @@
 
 @property (nonatomic, assign) unsigned fID;
 @property (nonatomic, assign) unsigned fLevel;
+@property (nonatomic, readonly) BOOL fIsOverlapped;
 
 /////////////////////////////////////////////////////////////////
 //SetWindowAttributes_t/WindowAttributes_t
@@ -165,6 +166,9 @@
 - (void)     mapSubwindows;
 
 - (void)     unmapWindow;
+//
+- (void)     raiseWindow;
+- (void)     lowerWindow;
 //
 - (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask 
              clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint;

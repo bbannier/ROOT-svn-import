@@ -886,17 +886,29 @@ void TGCocoa::DestroySubwindows(Window_t /*wid*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::RaiseWindow(Window_t /*wid*/)
+void TGCocoa::RaiseWindow(Window_t wid)
 {
    // Raises the specified window to the top of the stack so that no
    // sibling window obscures it.
+   assert(!fPimpl->IsRootWindow(wid) && "RaiseWindow, called for 'root' window");
+   
+   if (!fPimpl->GetDrawable(wid).fParentView)
+      return;
+      
+   [fPimpl->GetDrawable(wid) raiseWindow];
 }
 
 //______________________________________________________________________________
-void TGCocoa::LowerWindow(Window_t /*wid*/)
+void TGCocoa::LowerWindow(Window_t wid)
 {
    // Lowers the specified window "wid" to the bottom of the stack so
    // that it does not obscure any sibling windows.
+   assert(!fPimpl->IsRootWindow(wid) && "LowerWindow, called for 'root' window");
+   
+   if (!fPimpl->GetDrawable(wid).fParentView)
+      return;
+      
+   [fPimpl->GetDrawable(wid) lowerWindow];
 }
 
 //______________________________________________________________________________
@@ -1612,7 +1624,8 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    
    if (!view.fContext) {
-      fPimpl->fX11CommandBuffer.AddDrawLine(wid, gcVals, x1, y1, x2, y2);
+      if (!view.fIsOverlapped)
+         fPimpl->fX11CommandBuffer.AddDrawLine(wid, gcVals, x1, y1, x2, y2);
       return;
    }
 
@@ -1652,7 +1665,8 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (!view.fContext) {
-      fPimpl->fX11CommandBuffer.AddDrawRectangle(wid, gcVals, x, y, w, h);
+      if (!view.fIsOverlapped)
+         fPimpl->fX11CommandBuffer.AddDrawRectangle(wid, gcVals, x, y, w, h);
       return;
    }
 
@@ -1691,7 +1705,8 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (!view.fContext) {
-      fPimpl->fX11CommandBuffer.AddFillRectangle(wid, gcVals, x, y, w, h);
+      if (!view.fIsOverlapped)
+         fPimpl->fX11CommandBuffer.AddFillRectangle(wid, gcVals, x, y, w, h);
       return;
    }
    
@@ -1755,7 +1770,8 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
 
    if (view && !view.fContext) {
       //We can copy into view only if context is not nil - we called from drawRect.
-      fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
+      if (!view.fIsOverlapped)
+         fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
       return;
    }
    
@@ -1818,7 +1834,8 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
    if (!view.fContext) {
-      fPimpl->fX11CommandBuffer.AddDrawString(wid, gcVals, x, y, text, len);
+      if (!view.fIsOverlapped)
+         fPimpl->fX11CommandBuffer.AddDrawString(wid, gcVals, x, y, text, len);
       return;
    }
    
@@ -1834,7 +1851,8 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (!view.fContext) {
-      fPimpl->fX11CommandBuffer.AddClearArea(wid, x, y, w, h);
+      if (!view.fIsOverlapped)
+         fPimpl->fX11CommandBuffer.AddClearArea(wid, x, y, w, h);
       return;
    }
 
