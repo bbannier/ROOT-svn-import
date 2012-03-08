@@ -18,6 +18,8 @@
 #include "TGWindow.h"
 #include "TGCocoa.h"
 #include "TError.h"
+#include "TColor.h"
+#include "TROOT.h"
 
 ClassImp(TGCocoa)
 
@@ -365,10 +367,18 @@ Handle_t  TGCocoa::GetNativeEvent() const
 }
 
 //______________________________________________________________________________
-ULong_t TGCocoa::GetPixel(Color_t /*cindex*/)
+ULong_t TGCocoa::GetPixel(Color_t rootColorIndex)
 {
-   // Returns pixel value associated to specified ROOT color number "cindex".
-   return 0;
+   ULong_t pixel = 0;
+   if (const TColor *color = gROOT->GetColor(rootColorIndex)) {
+      Float_t red = 0.f, green = 0.f, blue = 0.f;
+      color->GetRGB(red, green, blue);
+      pixel = unsigned(red * 255) << 16;
+      pixel |= unsigned(green * 255) << 8;
+      pixel |= unsigned(blue * 255);
+   }
+
+   return pixel;
 }
 
 //______________________________________________________________________________
