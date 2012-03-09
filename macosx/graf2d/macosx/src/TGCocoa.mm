@@ -100,6 +100,62 @@ void SetFilledAreaParametersFromX11Context(CGContextRef ctx, const GCValues_t &g
    CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
 }
 
+struct PatternContext {
+   Mask_t       fMask;
+   ULong_t      fForeground;
+   ULong_t      fBackground;
+   QuartzImage *fImage;
+};
+
+//______________________________________________________________________________
+void DrawPattern(void *info, CGContextRef ctx)
+{
+   assert(info != nullptr && "DrawPattern, info parameter is null");
+   assert(ctx != nullptr && "DrawPattern, ctx parameter is null");
+
+   PatternContext *context = (PatternContext *)info;
+   assert(context->fImage != nil && "DrawPatter, stipple image is nil");
+
+   QuartzImage *stipple = context->fImage;
+   const CGRect patternRect = CGRectMake(0, 0, stipple.fWidth, stipple.fHeight);
+
+   if (context->fMask & kGCBackground) {
+      CGFloat rgb[3] = {};
+      PixelToRGB(context->fBackground, rgb);
+      CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
+      CGContextFillRect(ctx, patternRect);
+   }
+   
+   if (context->fMask & kGCForeground) {
+      CGFloat rgb[3] = {};
+      PixelToRGB(context->fForeground, rgb);
+      CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
+      CGContextClipToMask(ctx, patternRect, stipple.fImage);
+      CGContextFillRect(ctx, patternRect);
+   }
+}
+
+//______________________________________________________________________________
+void SetFilledAreaPattern(CGContextRef ctx, PatternContext *patternContext)
+{
+   assert(ctx != nullptr && "SetFilledAreaPattern, ctx parameter is null");
+   assert(patternContext != nullptr && "SetFilledAreaPattern, patternContext parameter is null");
+   assert(patternContext != nil && "SetFilledAreaPattern, stipple pixmap is nil");
+
+   const Util::CFScopeGuard<CGColorSpaceRef> patternColorSpace(CGColorSpaceCreatePattern(0));
+   CGContextSetFillColorSpace(ctx, patternColorSpace.Get());
+
+   CGPatternCallbacks callbacks = {};
+   callbacks.drawPattern = DrawPattern;
+   const CGRect patternRect = CGRectMake(0, 0, patternContext->fImage.fWidth, patternContext->fImage.fHeight);
+   const Util::CFScopeGuard<CGPatternRef> pattern(CGPatternCreate(patternContext, patternRect, CGAffineTransformIdentity, 
+                                                                  patternContext->fImage.fWidth, patternContext->fImage.fHeight, 
+                                                                  kCGPatternTilingNoDistortion, true, &callbacks));
+   
+   const CGFloat alpha = 1.;
+   CGContextSetFillPattern(ctx, pattern.Get(), &alpha);
+}
+
 //______________________________________________________________________________
 void BgraToRgba(unsigned char *data, unsigned w, unsigned h)
 {
@@ -153,6 +209,8 @@ QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w,
    
    return view;
 }
+
+
 
 }
 
@@ -962,7 +1020,10 @@ void TGCocoa::ResizeWindow(Window_t wid, UInt_t w, UInt_t h)
 
    assert(!fPimpl->IsRootWindow(wid) && "ResizeWindow, called for 'root' window");
    
-   const NSSize newSize = {.width = w, .height = h};
+   NSSize newSize = {};
+   newSize.width = w;
+   newSize.height = h;
+
    [fPimpl->GetDrawable(wid) setDrawableSize : newSize];
 }
 
@@ -1693,10 +1754,27 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
    assert(!fPimpl->IsRootWindow(wid) && "FillRectangleAux, called for the 'root' window");
 
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
+   //
    const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
-   //Fill color from X11 context.
+
+   CGRect fillRect = CGRectMake(x, y, w, h);
+
+   if (gcVals.fMask & kGCStipple) {
+      assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
+      PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, (QuartzImage *)fPimpl->GetDrawable(gcVals.fStipple)};
+      SetFilledAreaPattern(view.fContext, &patternContext);
+      
+      //Hack :(
+      fillRect.origin.x += 1.;
+      fillRect.origin.y += 1.;
+      fillRect.size.width -= 2.;
+      fillRect.size.height -= 2.;
+      //
+      CGContextFillRect(view.fContext, fillRect);
+      return;
+   }
+   
    SetFilledAreaParametersFromX11Context(view.fContext, gcVals);
-   const CGRect fillRect = CGRectMake(x, y, w, h);
    CGContextFillRect(view.fContext, fillRect);
 }
 

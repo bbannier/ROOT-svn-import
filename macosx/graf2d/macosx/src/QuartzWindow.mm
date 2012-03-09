@@ -634,11 +634,15 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h
 {
-   const NSSize newSize = {.width = w, .height = h};
+   NSSize newSize = {};
+   newSize.width = w;
+   newSize.height = h;
    [self setContentSize : newSize];
    
    //Check how this is affected by title bar's height.
-   const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
+   NSPoint topLeft = {};
+   topLeft.x = x;
+   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
 
    [self setFrameTopLeftPoint : topLeft];
 }
@@ -646,7 +650,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) setX : (int) x Y : (int) y
 {
-   const NSPoint topLeft = {.x = x, .y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y)};
+   NSPoint topLeft = {};
+   topLeft.x = x;
+   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
 
    [self setFrameTopLeftPoint : topLeft];
 }
