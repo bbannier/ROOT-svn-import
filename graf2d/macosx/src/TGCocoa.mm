@@ -1763,13 +1763,6 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
       assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
       PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, (QuartzImage *)fPimpl->GetDrawable(gcVals.fStipple)};
       SetFilledAreaPattern(view.fContext, &patternContext);
-      
-      //Hack :(
-      fillRect.origin.x += 1.;
-      fillRect.origin.y += 1.;
-      fillRect.size.width -= 2.;
-      fillRect.size.height -= 2.;
-      //
       CGContextFillRect(view.fContext, fillRect);
       return;
    }
