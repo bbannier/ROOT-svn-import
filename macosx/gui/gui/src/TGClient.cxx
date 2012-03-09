@@ -343,6 +343,7 @@ void TGClient::NeedRedraw(TGWindow *w, Bool_t force)
    if (gVirtualX->NeedRedraw((ULong_t)w,force)) return;
    if (force) {
       w->DoRedraw();
+      w->fNeedRedraw = kFALSE;
       return;
    }
    w->fNeedRedraw = kTRUE;

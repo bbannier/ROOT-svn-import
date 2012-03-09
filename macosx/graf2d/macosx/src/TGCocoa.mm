@@ -1872,6 +1872,12 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    const CGFloat green = ((color & 0xFF00) >> 8) / 255.f;
    const CGFloat blue  = (color & 0xFF) / 255.f;
    
+   //w and h can be 0 (comment from TGX11) - clear the entire window.
+   if (!w)
+      w = view.fWidth;
+   if (!h)
+      h = view.fHeight;
+   
    const CGStateGuard ctxGuard(view.fContext);
    CGContextSetRGBFillColor(view.fContext, red, green, blue, 1.);//alpha can be also used.
    CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
@@ -2129,10 +2135,10 @@ void TGCocoa::FreeFontStruct(FontStruct_t /*fs*/)
 }
 
 //______________________________________________________________________________
-void TGCocoa::ClearWindow(Window_t /*wid*/)
+void TGCocoa::ClearWindow(Window_t wid)
 {
-   // Clears the entire area in the specified window and it is equivalent to
-   // ClearArea(id, 0, 0, 0, 0)
+   // Clears the entire area in the specified window. Comment from TGX11.
+   ClearArea(wid, 0, 0, 0, 0);
 }
 
 //______________________________________________________________________________
