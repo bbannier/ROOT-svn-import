@@ -686,8 +686,8 @@ void EventTranslator::GeneratePointerMotionEvent(QuartzView *eventView, NSEvent 
 //______________________________________________________________________________
 void EventTranslator::GenerateButtonPressEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn)
 {
-   assert(eventView != nil && "GenerateMouseDownEvent, view parameter is nil");
-   assert(theEvent != nil && "GenerateMouseDownEvent, event parameter is nil");
+   assert(eventView != nil && "GenerateButtonPressEvent, view parameter is nil");
+   assert(theEvent != nil && "GenerateButtonpressEvent, event parameter is nil");
    
    if (fPointerGrab == PointerGrab::noGrab)
       return GenerateButtonPressEventNoGrab(eventView, theEvent, btn);
