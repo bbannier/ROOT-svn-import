@@ -105,6 +105,7 @@ struct PatternContext {
    ULong_t      fForeground;
    ULong_t      fBackground;
    QuartzImage *fImage;
+   CGSize       fPhase;
 };
 
 //______________________________________________________________________________
@@ -151,9 +152,9 @@ void SetFilledAreaPattern(CGContextRef ctx, PatternContext *patternContext)
    const Util::CFScopeGuard<CGPatternRef> pattern(CGPatternCreate(patternContext, patternRect, CGAffineTransformIdentity, 
                                                                   patternContext->fImage.fWidth, patternContext->fImage.fHeight, 
                                                                   kCGPatternTilingNoDistortion, true, &callbacks));
-   
    const CGFloat alpha = 1.;
    CGContextSetFillPattern(ctx, pattern.Get(), &alpha);
+   CGContextSetPatternPhase(ctx, patternContext->fPhase);
 }
 
 //______________________________________________________________________________
@@ -1785,8 +1786,11 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
    CGRect fillRect = CGRectMake(x, y, w, h);
 
    if (gcVals.fMask & kGCStipple) {
+      const CGPoint origin = [view convertPoint : view.frame.origin toView : nil];   
       assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
-      PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, (QuartzImage *)fPimpl->GetDrawable(gcVals.fStipple)};
+      PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, 
+                                       (QuartzImage *)fPimpl->GetDrawable(gcVals.fStipple), 
+                                       CGSizeMake(origin.x, origin.y)};
       SetFilledAreaPattern(view.fContext, &patternContext);
       CGContextFillRect(view.fContext, fillRect);
       return;
