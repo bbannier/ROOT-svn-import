@@ -1405,16 +1405,30 @@ void TGCocoa::ChangeGC(GContext_t gc, GCValues_t *gval)
       x11Context.fCapStyle = gval->fCapStyle;
    if (mask & kGCJoinStyle)//nobody uses
       x11Context.fJoinStyle = gval->fJoinStyle;
-   if (mask & kGCFillStyle)
-      x11Context.fFillStyle = gval->fFillStyle;
+   //
+   
    if (mask & kGCFillRule)//nobody uses
       x11Context.fFillRule = gval->fFillRule;
    if (mask & kGCArcMode)//nobody uses
       x11Context.fArcMode = gval->fArcMode;
-   if (mask & kGCTile)
+
+   if (mask & kGCFillStyle) {
+      x11Context.fFillStyle = gval->fFillStyle;
+      x11Context.fMask &= ~kGCStipple;
+      x11Context.fMask &= ~kGCTile;
+   }
+   if (mask & kGCTile) {
       x11Context.fTile = gval->fTile;
-   if (mask & kGCStipple)//nobody
+      x11Context.fMask &= ~kGCStipple;
+      x11Context.fMask &= ~kGCFillStyle;
+   }
+   if (mask & kGCStipple) {
       x11Context.fStipple = gval->fStipple;
+      x11Context.fMask &= ~kGCFillStyle;
+      x11Context.fMask &= ~kGCTile;
+   }
+   
+   //
    if (mask & kGCTileStipXOrigin)
       x11Context.fTsXOrigin = gval->fTsXOrigin;
    if (mask & kGCTileStipYOrigin)
@@ -1800,6 +1814,7 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
    CGRect fillRect = CGRectMake(x, y, w, h);
 
    if (gcVals.fMask & kGCStipple) {
+
       const CGPoint origin = [view convertPoint : view.frame.origin toView : nil];   
       assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
       PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, 
@@ -1827,6 +1842,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
+
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    if (!view.fContext) {
       if (!view.fIsOverlapped)
