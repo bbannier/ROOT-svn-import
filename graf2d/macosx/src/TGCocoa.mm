@@ -313,7 +313,18 @@ Bool_t TGCocoa::Init(void * /*display*/)
 //______________________________________________________________________________
 void TGCocoa::ClearWindow()
 {
-   // Clears the entire area of the current window.
+   //
+   assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "ClearWindow, fSelectedDrawable is invalid");
+
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(fSelectedDrawable);
+   if (drawable.fIsPixmap) {
+      CGContextRef pixmapCtx = drawable.fContext;
+      const CGStateGuard ctxGuard(pixmapCtx);
+      CGContextSetRGBFillColor(pixmapCtx, 1., 1., 1., 1.);
+      CGContextFillRect(pixmapCtx, CGRectMake(0, 0, drawable.fWidth, drawable.fHeight));
+   } else {
+      ClearArea(fSelectedDrawable, 0, 0, 0, 0);
+   }
 }
 
 //______________________________________________________________________________
@@ -2932,9 +2943,9 @@ ROOT::MacOSX::X11::EventTranslator *TGCocoa::GetEventTranslator()
 //______________________________________________________________________________
 void *TGCocoa::GetCurrentContext()
 {
-   assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "GetCurrentContext, no context for 'root' window");
+ //  assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "GetCurrentContext, no context for 'root' window");
    NSObject<X11Drawable> *pixmap = fPimpl->GetDrawable(fSelectedDrawable);
-   assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");
+ //  assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");
    
    return pixmap.fContext;
 }
