@@ -41,10 +41,6 @@
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef ROOT_TRandom3
-#include "TRandom3.h"
-#endif
-
 #ifndef ROOT_TMVA_MethodBase
 #include "TMVA/MethodBase.h"
 #endif
