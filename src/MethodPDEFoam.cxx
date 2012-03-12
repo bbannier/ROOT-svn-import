@@ -50,17 +50,11 @@
 // integration package TFoam included in the analysis package ROOT.
 // _______________________________________________________________________
 
-#include <iomanip>
-#include <cassert>
-#include <climits>
-
 #include "TMath.h"
-#include "Riostream.h"
 #include "TFile.h"
 
 #include "TMVA/MethodPDEFoam.h"
 #include "TMVA/Tools.h"
-#include "TMatrix.h"
 #include "TMVA/Ranking.h"
 #include "TMVA/Types.h"
 #include "TMVA/ClassifierFactory.h"
