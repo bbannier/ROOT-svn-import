@@ -60,11 +60,11 @@ unsigned CocoaPrivate::RegisterDrawable(NSObject *nsObj)
 }
 
 //______________________________________________________________________________
-id<X11Drawable> CocoaPrivate::GetDrawable(unsigned drawableID)const
+NSObject<X11Drawable> *CocoaPrivate::GetDrawable(unsigned drawableID)const
 {
    auto drawableIter = fDrawables.find(drawableID);
    assert(drawableIter != fDrawables.end() && "GetDrawable, non-existing drawable requested");
-   return (id<X11Drawable>)drawableIter->second.Get();
+   return drawableIter->second.Get();
 }
 
 //______________________________________________________________________________
@@ -76,9 +76,9 @@ void CocoaPrivate::DeleteDrawable(unsigned drawableID)
    
    //Probably, I'll need some additional cleanup here later. Now just delete NSObject and
    //reuse its id.
-   id drawable = drawableIter->second.Get();
-   if ([drawable respondsToSelector : @selector(removeFromSuperview)])
-      [drawable removeFromSuperview];
+   NSObject *base = drawableIter->second.Get();
+   if ([base isKindOfClass : [NSView class]])
+      [(NSView *)base removeFromSuperview];
 
    fFreeDrawableIDs.push_back(drawableID);
    fDrawables.erase(drawableIter);//StrongReference should do work here.

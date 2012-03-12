@@ -20,29 +20,69 @@ namespace Util {
 //                                                                 //
 /////////////////////////////////////////////////////////////////////
 
+template<class DerivedType>
 class NSStrongReference {
 public:
-   NSStrongReference();
-   NSStrongReference(NSObject *nsObject);//increases reference counter.
-
-   NSStrongReference(const NSStrongReference &rhs);//increases reference counter.
-   //I declared this as deleted explicitly, not
-   //to think about nice C++ rules :) The same for move assignment.
-   NSStrongReference(NSStrongReference &&rhs) = delete;
-
-   ~NSStrongReference();
-
-   NSStrongReference &operator = (const NSStrongReference &rhs);
-   NSStrongReference &operator = (NSObject *nsObject);
-   //Declare as deleted for clarity.
-   NSStrongReference &operator = (NSStrongReference &&rhs) = delete;
-   
-   NSObject *Get()const
+   NSStrongReference()
+      : fNSObject(nil)
    {
-      return fNSObject;
+   }
+
+   NSStrongReference(NSObject *nsObject)
+      : fNSObject([nsObject retain])
+   {
+   }
+
+   NSStrongReference(const NSStrongReference &rhs)
+      : fNSObject([rhs.fNSObject retain])
+   {
+   }
+
+
+   ~NSStrongReference()
+   {
+      [fNSObject release];
+   }
+
+   NSStrongReference &operator = (const NSStrongReference &rhs)
+   {
+      if (&rhs != this) {
+         //Even if both reference the same NSObject, it's ok to do release.
+         [fNSObject release];
+         fNSObject = [rhs.fNSObject retain];
+      }
+
+      return *this;
    }
    
-   void Reset(NSObject *object);//[fNSObject release]; fNSObject = [object retain]
+   NSStrongReference &operator = (NSObject *nsObject)
+   {
+      if (nsObject != fNSObject) {
+         [fNSObject release];
+         fNSObject = [nsObject retain];
+      }
+   
+      return *this;
+   }
+   
+   DerivedType *Get()const
+   {
+      return (DerivedType *)fNSObject;
+   }
+   
+   void Reset(NSObject *object)
+   {
+      if (fNSObject != object) {
+         NSObject *obj = [object retain];
+         [fNSObject release];
+         fNSObject = obj;
+      }
+   }
+
+   //Declare as deleted for clarity.
+   NSStrongReference &operator = (NSStrongReference &&rhs) = delete;
+   NSStrongReference(NSStrongReference &&rhs) = delete;
+
 private:
    NSObject *fNSObject;
 };
@@ -53,10 +93,17 @@ private:
 //                                                               //
 ///////////////////////////////////////////////////////////////////
 
+template<class DerivedType>
 class NSScopeGuard {
 public:
-   explicit NSScopeGuard(NSObject *nsObject);
-   ~NSScopeGuard();
+   explicit NSScopeGuard(NSObject *nsObject)
+               : fNSObject(nsObject)
+   {   
+   }
+   ~NSScopeGuard()
+   {
+      [fNSObject release];//nothing for nil.
+   }
    
    NSScopeGuard(const NSScopeGuard &rhs) = delete;
    //Declare as deleted for clarity.
@@ -66,13 +113,23 @@ public:
    //Declare as deleted for clarity.
    NSScopeGuard &operator = (NSScopeGuard &&rhs) = delete;
    
-   NSObject *Get()const
+   DerivedType *Get()const
    {
-      return fNSObject;
+      return (DerivedType *)fNSObject;
    }
    
-   void Reset(NSObject *object);//[fNSObject relese]; fNSObject = object;
-   void Release();
+   void Reset(NSObject *object)
+   {
+      if (object != fNSObject) {
+         [fNSObject release];
+         fNSObject = object;
+      }
+   }
+   
+   void Release()
+   {
+      fNSObject = nil;
+   }
 private:   
    NSObject *fNSObject;
 };
