@@ -710,6 +710,8 @@ void TGCocoa::SetDoubleBuffer(Int_t wid, Int_t mode)
 //______________________________________________________________________________
 void TGCocoa::SetDoubleBufferOFF()
 {
+   return;
+   /*
    // Turns double buffer mode off.
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "SetDoubleBufferOFF, called, but no correct window was selected before");
    
@@ -724,6 +726,7 @@ void TGCocoa::SetDoubleBufferOFF()
 
    fPimpl->DeleteDrawable(buffer.fID);
    obj.fBackBuffer = nil;
+   */
 }
 
 //______________________________________________________________________________
