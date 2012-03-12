@@ -256,7 +256,7 @@ void TGCocoa::GetWindowAttributes(Window_t wid, WindowAttributes_t &attr)
       //'root' window.
       ROOT::MacOSX::X11::GetRootWindowAttributes(&attr);
    } else {
-      id<X11Drawable> window = fPimpl->GetDrawable(wid);
+      NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
       [window getAttributes : &attr];
    }
 }
@@ -333,12 +333,12 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
 {
    //const ROOT::MacOSX::Util::AutoreleasePool pool;
    
-   id<X11Drawable> source = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *source = fPimpl->GetDrawable(wid);
    assert(source.fIsPixmap == YES && "CopyPixmap, source is not a pixmap");
    
    QuartzPixmap *pixmap = (QuartzPixmap *)source;
    
-   id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
+   NSObject<X11Drawable> *window = fPimpl->GetDrawable(fSelectedDrawable);
    
    if (window.fBackBuffer) {
       Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
@@ -402,7 +402,7 @@ void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
       w = attr.fWidth;
       h = attr.fHeight;
    } else {
-      id<X11Drawable> window = fPimpl->GetDrawable(wid);
+      NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
       x = window.fX;
       y = window.fY;
       w = window.fWidth;
@@ -520,8 +520,8 @@ Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
    newSize.height = h;
 
    try {
-      Util::NSScopeGuard obj([QuartzPixmap alloc]);
-      if (QuartzPixmap *pixmap = [(QuartzPixmap *)obj.Get() initWithW : w H : h]) {
+      Util::NSScopeGuard<QuartzPixmap> obj([QuartzPixmap alloc]);
+      if (QuartzPixmap *pixmap = [obj.Get() initWithW : w H : h]) {
          obj.Reset(pixmap);
          pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
          return (Int_t)pixmap.fID;
@@ -607,7 +607,7 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
 {
    assert(!fPimpl->IsRootWindow(wid) && "ResizePixmap, called for 'root' window");
 
-   id<X11Drawable> drawable = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
    assert(drawable.fIsPixmap == YES && "ResizePixmap, object is not a pixmap");
 
    QuartzPixmap *pixmap = (QuartzPixmap *)drawable;
@@ -627,7 +627,7 @@ void TGCocoa::ResizeWindow(Int_t wid)
    if (!wid)//From TGX11.
       return;
    
-   id<X11Drawable> window = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
    if (window.fBackBuffer) {
       int currentDrawable = fSelectedDrawable;
       fSelectedDrawable = wid;
@@ -712,7 +712,7 @@ void TGCocoa::SetDoubleBufferOFF()
    // Turns double buffer mode off.
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "SetDoubleBufferOFF, called, but no correct window was selected before");
    
-   id<X11Drawable> obj = fPimpl->GetDrawable(fSelectedDrawable);
+   NSObject<X11Drawable> *obj = fPimpl->GetDrawable(fSelectedDrawable);
    assert(obj.fIsPixmap == NO && "SetDoubleBufferOFF, selected drawable is a pixmap, it can not have a back buffer");
    
    QuartzPixmap *buffer = obj.fBackBuffer;
@@ -731,7 +731,7 @@ void TGCocoa::SetDoubleBufferON()
    // Turns double buffer mode on.   
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "SetDoubleBufferON, called, but no correct window was selected before");
    
-   id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
+   NSObject<X11Drawable> *window = fPimpl->GetDrawable(fSelectedDrawable);
    
    assert(window.fIsPixmap == NO && "SetDoubleBufferON, selected drawable is a pixmap, can not attach pixmap to pixmap");
    
@@ -744,8 +744,8 @@ void TGCocoa::SetDoubleBufferON()
    }
 
    try {
-      Util::NSScopeGuard mem([QuartzPixmap alloc]);      
-      if (QuartzPixmap *pixmap = [(QuartzPixmap *)mem.Get() initWithW : currW H : currH]) {
+      Util::NSScopeGuard<QuartzPixmap> mem([QuartzPixmap alloc]);      
+      if (QuartzPixmap *pixmap = [mem.Get() initWithW : currW H : currH]) {
          mem.Reset(pixmap);
          pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
          if (window.fBackBuffer) {//Now we can delete the old one, since the new was created.
@@ -808,7 +808,7 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
    
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "UpdateWindow, no window was selected, can not update 'root' window");
    
-   id<X11Drawable> window = fPimpl->GetDrawable(fSelectedDrawable);
+   NSObject<X11Drawable> *window = fPimpl->GetDrawable(fSelectedDrawable);
 
    if (QuartzPixmap *pixmap = window.fBackBuffer) {
       QuartzView *dstView = window.fContentView;
@@ -869,7 +869,7 @@ void TGCocoa::MapWindow(Window_t wid)
    assert(!fPimpl->IsRootWindow(wid) && "MapWindow, called for 'root' window");
    
    if (MakeProcessForeground()) {
-      id<X11Drawable> window = fPimpl->GetDrawable(wid);
+      NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
       [window mapWindow];
    }
 }
@@ -883,7 +883,7 @@ void TGCocoa::MapSubwindows(Window_t wid)
    assert(!fPimpl->IsRootWindow(wid) && "MapSubwindows, called for 'root' window");
    
    if (MakeProcessForeground()) {
-      id<X11Drawable> window = fPimpl->GetDrawable(wid);
+      NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
       [window mapSubwindows];
    }
 
@@ -900,7 +900,7 @@ void TGCocoa::MapRaised(Window_t wid)
    //ROOT::MacOSX::Util::AutoreleasePool pool;//TODO
 
    if (MakeProcessForeground()) {
-      id<X11Drawable> window = fPimpl->GetDrawable(wid);
+      NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
       [window mapRaised];
    }
 }
@@ -916,41 +916,66 @@ void TGCocoa::UnmapWindow(Window_t wid)
    
    ROOT::MacOSX::Util::AutoreleasePool pool;//TODO
    
-   id<X11Drawable> window = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
    [window unmapWindow];
 }
 
 //______________________________________________________________________________
 void TGCocoa::DestroyWindow(Window_t wid)
 {
-   //
-   assert(!fPimpl->IsRootWindow(wid) && "DestroyWindow, called for 'root' window");
+   //The XDestroyWindow function destroys the specified window as well as all of its subwindows
+   //and causes the X server to generate a DestroyNotify event for each window.  The window 
+   //should never be referenced again.  If the window specified by the w argument is mapped, 
+   //it is unmapped automatically.  The ordering of the
+   //DestroyNotify events is such that for any given window being destroyed, DestroyNotify is generated 
+   //on any inferiors of the window before being generated on the window itself.  The ordering 
+   //among siblings and across subhierarchies is not otherwise constrained.  
+   //If the window you specified is a root window, no windows are destroyed. Destroying a mapped window 
+   //will generate Expose events on other windows that were obscured by the window being destroyed. 
+
+   if (fPimpl->IsRootWindow(wid))
+      return;
       
-   id<X11Drawable> window = fPimpl->GetDrawable(wid);
-   assert(window.fIsPixmap == NO && "DestroyWindow, called for pixmap");
-   
-   if (fPimpl->fX11CommandBuffer.BufferSize()) {
-      
-   }
-   
-   if (window.fBackBuffer) {
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+   assert([drawable isKindOfClass : [QuartzWindow class]] || [drawable isKindOfClass : [QuartzView class]] && 
+          "DestroyWindow, can be called only for QuartzWindow or QuartzView object");
+
+   if (drawable.fBackBuffer) {
       if (fPimpl->fX11CommandBuffer.BufferSize())
-         fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(window.fBackBuffer.fID);
-      fPimpl->DeleteDrawable(window.fBackBuffer.fID);
+         fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(drawable.fBackBuffer.fID);
+      fPimpl->DeleteDrawable(drawable.fBackBuffer.fID);
    }
    
    if (fPimpl->fX11CommandBuffer.BufferSize())
       fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(wid);
-   
-   
+
+
+   DestroySubwindows(wid);
+   if (drawable.fEventMask & kStructureNotifyMask)
+      fPimpl->fX11EventTranslator.GenerateDestroyNotify(wid);
+
    fPimpl->DeleteDrawable(wid);
 }
 
 //______________________________________________________________________________
-void TGCocoa::DestroySubwindows(Window_t /*wid*/)
+void TGCocoa::DestroySubwindows(Window_t wid)
 {
    // The DestroySubwindows function destroys all inferior windows of the
    // specified window, in bottom-to-top stacking order.
+   if (fPimpl->IsRootWindow(wid))
+      return;
+   
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+   assert([drawable isKindOfClass : [QuartzView class]] || [drawable isKindOfClass : [QuartzWindow class]] &&
+          "DestroySubwindows, can be called only for QuartzView or QuartzWindow object");
+   
+   //I can not iterate on subviews array directly, since it'll be modified
+   //during this iteration - create a copy (and it'll also increase references,
+   //which will be decreased by guard's dtor).
+   const Util::NSScopeGuard<NSArray> children([[drawable.fContentView subviews] copy]);
+   
+   for (QuartzView *child in children.Get())
+      DestroyWindow(child.fID);
 }
 
 //______________________________________________________________________________
@@ -1084,7 +1109,7 @@ void TGCocoa::ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y)
       [view retain];
       [view removeFromSuperview];
       //
-      id<X11Drawable> newParent = fPimpl->GetDrawable(pid);
+      NSObject<X11Drawable> *newParent = fPimpl->GetDrawable(pid);
       assert(newParent.fIsPixmap == NO && "ReparentChild, pixmap can not be a new parent");
       [view setX : x Y : y];
       [newParent addChild : view];
@@ -1139,7 +1164,7 @@ void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
 {
    assert(!fPimpl->IsRootWindow(wid) && "SetWindowBackground, can not set color for 'root' window");
 
-   id<X11Drawable> window = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
    window.fBackgroundPixel = color;
 }
 
@@ -1161,7 +1186,7 @@ Int_t TGCocoa::InitWindow(ULong_t parentID)
    if (fPimpl->IsRootWindow(parentID)) {
       ROOT::MacOSX::X11::GetRootWindowAttributes(&attr);   
    } else {
-      id<X11Drawable> parentWin = fPimpl->GetDrawable(parentID);
+      NSObject<X11Drawable> *parentWin = fPimpl->GetDrawable(parentID);
       [parentWin getAttributes : &attr];
    }
 
@@ -1182,7 +1207,7 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
    if (fPimpl->IsRootWindow(parentID)) {//parent == root window.
       try {
          QuartzWindow *newWindow = CreateTopLevelWindow(x, y, w, h, border, depth, clss, visual, attr, wtype);//Can throw.
-         const Util::NSScopeGuard winGuard(newWindow);
+         const Util::NSScopeGuard<QuartzWindow> winGuard(newWindow);
          const Window_t result = fPimpl->RegisterDrawable(newWindow);//Can throw.
          newWindow.fID = result;
          return result;
@@ -1190,10 +1215,10 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
          throw;
       }
    } else {
-      id<X11Drawable> parentWin = fPimpl->GetDrawable(parentID);
+      NSObject<X11Drawable> *parentWin = fPimpl->GetDrawable(parentID);
       try {
          QuartzView *childView = CreateChildView(parentWin.fContentView, x, y, w, h, border, depth, clss, visual, attr, wtype);//Can throw.
-         const Util::NSScopeGuard viewGuard(childView);
+         const Util::NSScopeGuard<QuartzView> viewGuard(childView);
          const Window_t result = fPimpl->RegisterDrawable(childView);//Can throw.
       
          childView.fID = result;
@@ -1499,14 +1524,14 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
       }
 
       //Now we can create CGImageRef.
-      Util::NSScopeGuard mem([QuartzImage alloc]);
+      Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
       if (!mem.Get()) {
          Error("CreateBitmap", "[QuartzImage alloc] failed");
          delete [] imageData;
          return Pixmap_t();
       }
    
-      QuartzImage *image = [(QuartzImage *)mem.Get() initMaskWithW : width H : height bitmapMask: imageData];
+      QuartzImage *image = [mem.Get() initMaskWithW : width H : height bitmapMask: imageData];
       if (!image) {
          delete [] imageData;
          //Error message was produced by QuartzImage class.
@@ -1804,8 +1829,8 @@ void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gcVa
    assert(!fPimpl->IsRootWindow(src) && "CopyAreaAux, src parameter is 'root' window");
    assert(!fPimpl->IsRootWindow(dst) && "CopyAreaAux, dst parameter is 'root' window");
    
-   id<X11Drawable> srcDrawable = fPimpl->GetDrawable(src);
-   id<X11Drawable> dstDrawable = fPimpl->GetDrawable(dst);
+   NSObject<X11Drawable> *srcDrawable = fPimpl->GetDrawable(src);
+   NSObject<X11Drawable> *dstDrawable = fPimpl->GetDrawable(dst);
    
    Point_t dstPoint = {};
    dstPoint.fX = dstX;
@@ -1842,7 +1867,7 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
    assert(!fPimpl->IsRootWindow(dst) && "CopyArea, dst parameter is 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "CopyArea, bad GContext_t");
 
-   id<X11Drawable> dstDrawable = fPimpl->GetDrawable(dst);   
+   NSObject<X11Drawable> *dstDrawable = fPimpl->GetDrawable(dst);   
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    QuartzView *view = nil;
 
@@ -1974,7 +1999,7 @@ void TGCocoa::SendEvent(Window_t wid, Event_t *event)
    assert(!fPimpl->IsRootWindow(wid) && "SendEvent, can not send event to a root window");
    assert(event != nullptr && "SendEvent, event parameter is null");
    
-   id<X11Drawable> widget = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *widget = fPimpl->GetDrawable(wid);
    assert(widget.fID != 0 && "SendEvent, widget.fID is 0");
    
    TGWindow *window = gClient->GetWindowById(wid);
@@ -2036,7 +2061,7 @@ void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t keyModifiers,
    
    assert(!fPimpl->IsRootWindow(wid) && "GrabButton, called for 'root' window");
    
-   id<X11Drawable> widget = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *widget = fPimpl->GetDrawable(wid);
    
    if (grab) {
       widget.fOwnerEvents = YES;   //This is how TGX11 works.
@@ -2080,7 +2105,7 @@ void TGCocoa::SetWindowName(Window_t wid, char *name)
    
    const ROOT::MacOSX::Util::AutoreleasePool pool;//TODO: check!
    
-   id<X11Drawable> drawable = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
    
    if ([(NSObject *)drawable isKindOfClass : [NSWindow class]]) {
       NSString *windowTitle = [NSString stringWithCString : name encoding : NSASCIIStringEncoding];
@@ -2249,7 +2274,7 @@ void TGCocoa::SelectInput(Window_t wid, UInt_t evmask)
    
    assert(!fPimpl->IsRootWindow(wid) && "SelectInput, called for 'root' window");
    
-   id<X11Drawable> window = fPimpl->GetDrawable(wid);
+   NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
    //XSelectInput overrides previous mask.
    window.fEventMask = evmask;
 }
@@ -2407,7 +2432,7 @@ void TGCocoa::GetWindowSize(Drawable_t wid, Int_t &x, Int_t &y, UInt_t &w, UInt_
       w = attr.fWidth;
       h = attr.fHeight;
    } else {
-      id<X11Drawable> window = fPimpl->GetDrawable(wid);
+      NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
       //ROOT can ask window size for ... non-window drawable.
       if (!window.fIsPixmap) {
          x = window.fX;
@@ -2751,14 +2776,14 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
       BgraToRgba(imageData, width, height);
    
       //Now we can create CGImageRef.
-      Util::NSScopeGuard mem([QuartzImage alloc]);
+      Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
       if (!mem.Get()) {
          Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
          delete [] imageData;
          return Pixmap_t();
       }
    
-      QuartzImage *image = [(QuartzImage *)mem.Get() initWithW : width H : height data: imageData];
+      QuartzImage *image = [mem.Get() initWithW : width H : height data: imageData];
       if (!image) {
          delete [] imageData;
          Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
@@ -2901,7 +2926,7 @@ ROOT::MacOSX::X11::EventTranslator *TGCocoa::GetEventTranslator()
 void *TGCocoa::GetCurrentContext()
 {
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "GetCurrentContext, no context for 'root' window");
-   id<X11Drawable> pixmap = fPimpl->GetDrawable(fSelectedDrawable);
+   NSObject<X11Drawable> *pixmap = fPimpl->GetDrawable(fSelectedDrawable);
    assert(pixmap.fIsPixmap == YES && "GetCurrentContext, the selected drawable is not a pixmap");
    
    return pixmap.fContext;

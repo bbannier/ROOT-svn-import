@@ -46,6 +46,8 @@ public:
    EventTranslator();
 
    void GenerateConfigureNotifyEvent(QuartzView *view, const NSRect &newFrame);
+   void GenerateDestroyNotify(unsigned winID);
+
    void GenerateCrossingEvent(QuartzView *viewUnderPointer, NSEvent *theEvent);
    void GeneratePointerMotionEvent(QuartzView *eventView, NSEvent *theEvent);
    void GenerateButtonPressEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);

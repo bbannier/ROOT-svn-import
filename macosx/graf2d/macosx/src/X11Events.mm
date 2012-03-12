@@ -526,6 +526,20 @@ void EventTranslator::GenerateConfigureNotifyEvent(QuartzView *view, const NSRec
 }
 
 //______________________________________________________________________________
+void EventTranslator::GenerateDestroyNotify(unsigned /*winID*/)
+{
+/*
+   if (view.fEventMask & kStructureNotifyMask) {
+      Event_t event = {};
+      event.fHandle = view.fID;
+      
+      TGWindow *window = gClient->GetWindowById(view.fID);
+      assert(window != nullptr && "SendEnterEvent, window was not found");
+
+   }*/
+}
+
+//______________________________________________________________________________
 void EventTranslator::GenerateCrossingEvent(QuartzView *view, NSEvent *theEvent)
 {
    //View parameter can be nil (we exit any window).

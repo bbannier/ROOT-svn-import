@@ -49,9 +49,9 @@ private:
    CocoaPrivate(const CocoaPrivate &rhs) = delete;
    CocoaPrivate &operator = (const CocoaPrivate &rhs) = delete;
 
-   unsigned           RegisterDrawable(NSObject *nsObj);
-   id<X11Drawable>    GetDrawable(unsigned drawableD)const;
-   void               DeleteDrawable(unsigned drawableID);
+   unsigned               RegisterDrawable(NSObject *nsObj);
+   NSObject<X11Drawable> *GetDrawable(unsigned drawableD)const;
+   void                   DeleteDrawable(unsigned drawableID);
    
    //This function resets strong reference, if you still want NSObject for drawableID to live,
    //you have to retain the pointer (probably) and also drawableID will become id for nsObj (replacement).
@@ -73,7 +73,8 @@ private:
    //Cache of ids.
    std::vector<unsigned>                       fFreeDrawableIDs;
    //Cocoa objects (views, windows, "pixmaps").
-   std::map<unsigned, Util::NSStrongReference> fDrawables;
+   //As soon as NSObject<X11Drawable> is not a C++, even in C++0x11 I need a space :(
+   std::map<unsigned, Util::NSStrongReference<NSObject<X11Drawable> >> fDrawables;
 };
 
 }
