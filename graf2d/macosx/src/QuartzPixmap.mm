@@ -203,6 +203,62 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    return image;
 }
 
+//______________________________________________________________________________
+- (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area withMask : (QuartzImage *) mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+{
+   //Check parameters.
+   assert(srcImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage parameter is nil");
+   assert(srcImage.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage.fImage is nil");
+   
+   CGImageRef subImage = nullptr;
+   bool needSubImage = false;
+   if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
+      needSubImage = true;
+      subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
+      if (!subImage) {
+         NSLog(@"copyImage:area:withMask:clipOrigin:toPoint:, subimage creation failed");
+         return;
+      }
+   } else
+      subImage = srcImage.fImage;
+
+   //Save context state.
+   CGContextSaveGState(self.fContext);
+
+   CGContextTranslateCTM(self.fContext, 0., self.fHeight);
+   CGContextScaleCTM(self.fContext, 1., -1.);
+
+
+   if (mask) {
+      assert(mask.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint, mask is not nil, but mask.fImage is nil");
+      assert(CGImageIsMask(mask.fImage) && "copyImage:area:withMask:clipOrigin:toPoint, mask,fImage is not a mask");
+      clipXY.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
+      const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+      CGContextClipToMask(self.fContext, clipRect, mask.fImage);
+   }
+
+   dstPoint.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   CGContextDrawImage(self.fContext, imageRect, subImage);
+   //Restore context state.
+   CGContextRestoreGState(self.fContext);
+
+   if (needSubImage)
+      CGImageRelease(subImage);
+}
+
+//______________________________________________________________________________
+- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint
+{
+   if ([(NSObject *)src isKindOfClass : [QuartzImage class]]) {
+      [self copyImage : (QuartzImage *)src area : area withMask : mask clipOrigin : origin toPoint : dstPoint];
+   } else if ([(NSObject *)src isKindOfClass : [QuartzPixmap class]]) {
+   
+   } else
+      assert(0 && "Can copy only from pixmap or image");
+}
+
+
 @end
 
 @implementation QuartzImage {

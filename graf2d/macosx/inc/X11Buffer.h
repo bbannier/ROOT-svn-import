@@ -121,6 +121,12 @@ public:
    void Execute()const;
 };
 
+class DeletePixmap : public Command {
+public:
+   DeletePixmap(Pixmap_t pixmap);
+   void Execute()const;
+};
+
 class CommandBuffer {
 private:
    CommandBuffer(const CommandBuffer &rhs) = delete;
@@ -141,6 +147,7 @@ public:
    void AddFillRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
    void AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
    void AddUpdateWindow(QuartzView *view);
+   void AddDeletePixmap(Pixmap_t pixmap);
 
    void Flush(Details::CocoaPrivate *impl);
    void RemoveOperationsForDrawable(Drawable_t wid);

@@ -218,6 +218,7 @@ QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w,
 //______________________________________________________________________________
 TGCocoa::TGCocoa()
             : fSelectedDrawable(0),
+              fCocoaDraw(0),
               fForegroundProcess(false)
               
 {
@@ -232,6 +233,7 @@ TGCocoa::TGCocoa()
 TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title),
               fSelectedDrawable(0),
+              fCocoaDraw(0),
               fForegroundProcess(false)              
 {
    try {
@@ -1496,12 +1498,12 @@ void TGCocoa::SetCursor(Window_t /*wid*/, Cursor_t /*curid*/)
 }
 
 //______________________________________________________________________________
-Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
+Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, UInt_t w, UInt_t h)
 {
    // Creates a pixmap of the specified width and height and returns
    // a pixmap ID that identifies it.
 
-   return kNone;
+   return OpenPixmap(w, h);
 }
 //______________________________________________________________________________
 Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/,
@@ -1579,9 +1581,22 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
 }
 
 //______________________________________________________________________________
-void TGCocoa::DeletePixmap(Pixmap_t /*pmap*/)
+void TGCocoa::DeletePixmapAux(Pixmap_t pixmapID)
+{
+   fPimpl->DeleteDrawable(pixmapID);
+}
+
+//______________________________________________________________________________
+void TGCocoa::DeletePixmap(Pixmap_t pixmapID)
 {
    // Explicitely deletes the pixmap resource "pmap".
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(pixmapID);
+   assert(drawable.fIsPixmap == YES && "DeletePixmap, object is not a pixmap");
+   
+ //  if (!IsCocoaDraw())
+      fPimpl->fX11CommandBuffer.AddDeletePixmap(pixmapID);
+//   else
+//      fPimpl->DeleteDrawable(pixmapID);
 }
 
 //______________________________________________________________________________
@@ -1707,9 +1722,10 @@ void TGCocoa::DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, In
    //Can be called directly of when flushing command buffer.
    assert(!fPimpl->IsRootWindow(wid) && "DrawLineAux, called for 'root' window");
    
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
+   CGContextRef ctx = fPimpl->GetDrawable(wid).fContext;
+   assert(ctx != nullptr && "DrawLineAux, ctx is null");
 
-   const CGStateGuard ctxGuard(view.fContext);//Will restore state back.
+   const CGStateGuard ctxGuard(ctx);//Will restore state back.
    //Draw a line.
    //This draw line is a special GUI method, it's used not by ROOT's graphics, but
    //widgets. The problem is:
@@ -1719,15 +1735,15 @@ void TGCocoa::DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, In
    //draw a line [0, 0, -> w, 0].
    //I use a small translation, after all, this is ONLY gui method and it
    //will not affect anything except GUI.
-   CGContextTranslateCTM(view.fContext, 0.f, 1.);
-   CGContextSetAllowsAntialiasing(view.fContext, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
+   CGContextTranslateCTM(ctx, 0.f, 1.);
+   CGContextSetAllowsAntialiasing(ctx, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
 
-   SetStrokeParametersFromX11Context(view.fContext, gcVals);
-   CGContextSetLineWidth(view.fContext, 1.);   
-   CGContextBeginPath(view.fContext);
-   CGContextMoveToPoint(view.fContext, x1, y1);
-   CGContextAddLineToPoint(view.fContext, x2, y2);
-   CGContextStrokePath(view.fContext);
+   SetStrokeParametersFromX11Context(ctx, gcVals);
+   CGContextSetLineWidth(ctx, 1.);   
+   CGContextBeginPath(ctx);
+   CGContextMoveToPoint(ctx, x1, y1);
+   CGContextAddLineToPoint(ctx, x2, y2);
+   CGContextStrokePath(ctx);
 }
 
 //______________________________________________________________________________
@@ -1746,15 +1762,23 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawLine, strange context index");
 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
    
-   if (!view.fContext) {
-      if (!view.fIsOverlapped)
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+   if (!drawable.fIsPixmap) {
+      QuartzView *view = drawable.fContentView;
+      if (!view.fIsOverlapped) {
+         if (!view.fContext)
+            fPimpl->fX11CommandBuffer.AddDrawLine(wid, gcVals, x1, y1, x2, y2);
+         else
+            DrawLineAux(wid, gcVals, x1, y1, x2, y2);
+      }
+   } else {
+      if (!IsCocoaDraw())
          fPimpl->fX11CommandBuffer.AddDrawLine(wid, gcVals, x1, y1, x2, y2);
-      return;
+      else
+         DrawLineAux(wid, gcVals, x1, y1, x2, y2);
    }
-
-   DrawLineAux(wid, gcVals, x1, y1, x2, y2);
+   
 }
 
 //______________________________________________________________________________
@@ -1763,15 +1787,15 @@ void TGCocoa::DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
    //Can be called directly or during flushing command buffer.
    assert(!fPimpl->IsRootWindow(wid) && "DrawRectangleAux, called for the 'root' window");
 
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
-   
-   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
+   CGContextRef ctx = fPimpl->GetDrawable(wid).fContext;
+   assert(ctx && "DrawRectangleAux, ctx is null");
+   const CGStateGuard ctxGuard(ctx);//Will restore context state.
 
    //Line color from X11 context.
-   SetStrokeParametersFromX11Context(view.fContext, gcVals);
+   SetStrokeParametersFromX11Context(ctx, gcVals);
       
    const CGRect rect = CGRectMake(x, y, w, h);
-   CGContextStrokeRect(view.fContext, rect);
+   CGContextStrokeRect(ctx, rect);
 }
 
 
@@ -1788,14 +1812,23 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawRectangle, bad GContext_t");
 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
-   if (!view.fContext) {
-      if (!view.fIsOverlapped)
-         fPimpl->fX11CommandBuffer.AddDrawRectangle(wid, gcVals, x, y, w, h);
-      return;
-   }
+   
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
 
-   DrawRectangleAux(wid, gcVals, x, y, w, h);
+   if (!drawable.fIsPixmap) {
+      QuartzView *view = drawable.fContentView;
+      if (!view.fIsOverlapped) {
+         if (!view.fContext)
+            fPimpl->fX11CommandBuffer.AddDrawRectangle(wid, gcVals, x, y, w, h);
+         else
+            DrawRectangleAux(wid, gcVals, x, y, w, h);
+      }
+   } else {
+      if (!IsCocoaDraw())
+         fPimpl->fX11CommandBuffer.AddDrawRectangle(wid, gcVals, x, y, w, h);
+      else
+         DrawRectangleAux(wid, gcVals, x, y, w, h);
+   }
 }
 
 //______________________________________________________________________________
@@ -1806,27 +1839,34 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
       return;
 
    assert(!fPimpl->IsRootWindow(wid) && "FillRectangleAux, called for the 'root' window");
+   
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+   CGContextRef ctx = drawable.fContext;
+   CGSize patternPhase = {};
 
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
-   //
-   const CGStateGuard ctxGuard(view.fContext);//Will restore context state.
+   const CGRect fillRect = CGRectMake(x, y, w, h);
 
-   CGRect fillRect = CGRectMake(x, y, w, h);
+   if (!drawable.fIsPixmap) {
+      QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
+      const CGPoint origin = [view convertPoint : view.frame.origin toView : nil];
+      patternPhase.width = origin.x;
+      patternPhase.height = origin.y;
+   }
+
+   const CGStateGuard ctxGuard(ctx);//Will restore context state.
 
    if (gcVals.fMask & kGCStipple) {
-
-      const CGPoint origin = [view convertPoint : view.frame.origin toView : nil];   
       assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
       PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, 
                                        (QuartzImage *)fPimpl->GetDrawable(gcVals.fStipple), 
-                                       CGSizeMake(origin.x, origin.y)};
-      SetFilledAreaPattern(view.fContext, &patternContext);
-      CGContextFillRect(view.fContext, fillRect);
+                                       patternPhase};
+      SetFilledAreaPattern(ctx, &patternContext);
+      CGContextFillRect(ctx, fillRect);
       return;
    }
    
-   SetFilledAreaParametersFromX11Context(view.fContext, gcVals);
-   CGContextFillRect(view.fContext, fillRect);
+   SetFilledAreaParametersFromX11Context(ctx, gcVals);
+   CGContextFillRect(ctx, fillRect);
 }
 
 //______________________________________________________________________________
@@ -1842,15 +1882,24 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    assert(gc > 0 && gc <= fX11Contexts.size() && "FillRectangle, bad GContext_t");
 
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
-   if (!view.fContext) {
-      if (!view.fIsOverlapped)
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+   
+   if (!drawable.fIsPixmap) {
+      QuartzView *view = drawable.fContentView;
+      if (!view.fIsOverlapped) {
+         if (!view.fContext)
+            fPimpl->fX11CommandBuffer.AddFillRectangle(wid, gcVals, x, y, w, h);
+         else
+            FillRectangleAux(wid, gcVals, x, y, w, h);
+      }
+   } else {
+      if (!IsCocoaDraw())
          fPimpl->fX11CommandBuffer.AddFillRectangle(wid, gcVals, x, y, w, h);
-      return;
+      else
+         FillRectangleAux(wid, gcVals, x, y, w, h);
    }
    
-   FillRectangleAux(wid, gcVals, x, y, w, h);
+   
 }
 
 //______________________________________________________________________________
@@ -1901,21 +1950,23 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
    assert(!fPimpl->IsRootWindow(dst) && "CopyArea, dst parameter is 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "CopyArea, bad GContext_t");
 
-   NSObject<X11Drawable> *dstDrawable = fPimpl->GetDrawable(dst);   
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(dst);
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-   QuartzView *view = nil;
 
-   if ([(NSObject *)dstDrawable respondsToSelector : @selector(fContentView)])
-      view = dstDrawable.fContentView;
-
-   if (view && !view.fContext) {
-      //We can copy into view only if context is not nil - we called from drawRect.
-      if (!view.fIsOverlapped)
+   if (!drawable.fIsPixmap) {
+      QuartzView *view = fPimpl->GetDrawable(dst).fContentView;
+      if (!view.fIsOverlapped) {
+         if (!view.fContext)
+            fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
+         else
+            CopyAreaAux(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
+      }
+   } else {
+      if (!IsCocoaDraw())
          fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
-      return;
-   }
-   
-   CopyAreaAux(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
+      else
+         CopyAreaAux(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
+   }  
 }
 
 //______________________________________________________________________________
@@ -1924,25 +1975,26 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    //Can be called by ROOT directly, or indirectly by AppKit.
    assert(!fPimpl->IsRootWindow(wid) && "DrawStringAux, called for the 'root' window");
 
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;   
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+   CGContextRef ctx = drawable.fContext;
+   assert(ctx != nullptr && "DrawStringAux, ctx is null");
 
-   const CGStateGuard ctxGuard(view.fContext);//Will reset parameters back.
+   const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
 
-   CGContextSetTextMatrix(view.fContext, CGAffineTransformIdentity);
+   CGContextSetTextMatrix(ctx, CGAffineTransformIdentity);
    
    //View is flipped, I have to transform for Core Text to work.
-   CGContextTranslateCTM(view.fContext, 0.f, view.fHeight);
-   CGContextScaleCTM(view.fContext, 1., -1.);   
+   CGContextTranslateCTM(ctx, 0., drawable.fHeight);
+   CGContextScaleCTM(ctx, 1., -1.);   
 
    //Text must be antialiased.
-   CGContextSetAllowsAntialiasing(view.fContext, 1);
+   CGContextSetAllowsAntialiasing(ctx, 1);
       
    assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
 
    if (len < 0)//Negative length can come from caller.
       len = std::strlen(text);
    const std::string substr(text, len);
-      
    //Text can be not black, for example, highlighted label.
    CGFloat textColor[4] = {0., 0., 0., 1.};//black by default.
    //I do not check the results here, it's ok to have a black text.
@@ -1952,8 +2004,8 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    try {
       ROOT::Quartz::TextLine ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
 
-      CGContextSetTextPosition(view.fContext, x, X11::LocalYROOTToCocoa(view, y));
-      ctLine.DrawLine(view.fContext);
+      CGContextSetTextPosition(ctx, x, X11::LocalYROOTToCocoa(drawable, y));
+      ctLine.DrawLine(ctx);
    } catch (const std::exception &) {
       Error("DrawStringAux", "Got exception from TextLine");
    }
@@ -1970,47 +2022,63 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
    assert(!fPimpl->IsRootWindow(wid) && "DrawString, called for the 'root' window");
    assert(gc > 0 && gc <= fX11Contexts.size() && "DrawString, bad GContext_t");
 
-   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
    assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
-   if (!view.fContext) {
-      if (!view.fIsOverlapped)
+
+   if (!drawable.fIsPixmap) {
+      QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
+      if (!view.fIsOverlapped) {
+         if (!view.fContext)
+            fPimpl->fX11CommandBuffer.AddDrawString(wid, gcVals, x, y, text, len);
+         else
+            DrawStringAux(wid, gcVals, x, y, text, len);
+      }
+   } else {
+      if (!IsCocoaDraw())
          fPimpl->fX11CommandBuffer.AddDrawString(wid, gcVals, x, y, text, len);
-      return;
+      else 
+         DrawStringAux(wid, gcVals, x, y, text, len);
    }
-   
-   DrawStringAux(wid, gcVals, x, y, text, len);
 }
 
 //______________________________________________________________________________
-void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
+void TGCocoa::ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
-   //Can be called from drawRect method and also by ROOT's GUI directly.
-
-   assert(!fPimpl->IsRootWindow(wid) && "ClearArea, called for the 'root' window");
+   assert(!fPimpl->IsRootWindow(wid) && "ClearAreaAux, called for the 'root' window");
    
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
-   if (!view.fContext) {
-      if (!view.fIsOverlapped)
-         fPimpl->fX11CommandBuffer.AddClearArea(wid, x, y, w, h);
-      return;
-   }
+   assert(view.fContext != nullptr && "ClearAreaAux, view.fContext is null");
 
-   //TODO: remove this crap and do it right!!!
-   const Pixel_t color = view.fBackgroundPixel;
-   const CGFloat red   = ((color & 0xFF0000) >> 16) / 255.f;
-   const CGFloat green = ((color & 0xFF00) >> 8) / 255.f;
-   const CGFloat blue  = (color & 0xFF) / 255.f;
-   
    //w and h can be 0 (comment from TGX11) - clear the entire window.
    if (!w)
       w = view.fWidth;
    if (!h)
       h = view.fHeight;
    
+   CGFloat rgb[3] = {};
+   PixelToRGB(view.fBackgroundPixel, rgb);
+
    const CGStateGuard ctxGuard(view.fContext);
-   CGContextSetRGBFillColor(view.fContext, red, green, blue, 1.);//alpha can be also used.
+   CGContextSetRGBFillColor(view.fContext, rgb[0], rgb[1], rgb[2], 1.);//alpha can be also used.
    CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
+}
+
+//______________________________________________________________________________
+void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
+{
+   //Can be called from drawRect method and also by ROOT's GUI directly.
+   //Should not be called for pixmap?
+
+   assert(!fPimpl->IsRootWindow(wid) && "ClearArea, called for the 'root' window");
+   
+   QuartzView *view = fPimpl->GetDrawable(wid).fContentView;//If wid is pixmap or image, this will crush.
+   if (!view.fIsOverlapped) {
+      if (!view.fContext)
+         fPimpl->fX11CommandBuffer.AddClearArea(wid, x, y, w, h);
+      else
+         ClearAreaAux(wid, x, y, w, h);
+   }
 }
 
 //
@@ -2954,6 +3022,25 @@ Int_t TGCocoa::SupportsExtension(const char *) const
 ROOT::MacOSX::X11::EventTranslator *TGCocoa::GetEventTranslator()
 {
    return &fPimpl->fX11EventTranslator;
+}
+
+//______________________________________________________________________________
+void TGCocoa::CocoaDrawON()
+{
+   ++fCocoaDraw;
+}
+
+//______________________________________________________________________________
+void TGCocoa::CocoaDrawOFF()
+{
+   assert(fCocoaDraw > 0 && "CocoaDrawOFF, was already off");
+   --fCocoaDraw;
+}
+
+//______________________________________________________________________________
+bool TGCocoa::IsCocoaDraw()const
+{
+   return bool(fCocoaDraw);
 }
 
 //______________________________________________________________________________

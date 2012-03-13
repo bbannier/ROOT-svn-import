@@ -184,7 +184,7 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
    }
    
    assert(fSelectedDrawable != 0 && "no pixmap selected");
-   id<X11Drawable> pixmap = fPimpl->GetDrawable(fSelectedDrawable);
+   NSObject<X11Drawable> *pixmap = fPimpl->GetDrawable(fSelectedDrawable);
    assert(pixmap.fIsPixmap == YES && "selected drawable is not a pixmap");
    
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
