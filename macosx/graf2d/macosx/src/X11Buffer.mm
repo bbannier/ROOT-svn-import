@@ -8,6 +8,7 @@
 #include "CocoaPrivate.h"
 #include "QuartzWindow.h"
 #include "QuartzPixmap.h"
+#include "X11Drawable.h"
 #include "X11Buffer.h"
 #include "TGCocoa.h"
 
@@ -68,7 +69,7 @@ void ClearArea::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
-   vx->ClearArea(fID, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight);   
+   vx->ClearAreaAux(fID, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight);   
 }
 
 //______________________________________________________________________________
@@ -159,6 +160,20 @@ void UpdateWindow::Execute()const
       CGContextDrawImage(fView.fContext, imageRect, image);
       CGImageRelease(image);
    }
+}
+
+//______________________________________________________________________________
+DeletePixmap::DeletePixmap(Pixmap_t pixmap)
+                : Command(pixmap, GCValues_t())
+{
+}
+
+//______________________________________________________________________________
+void DeletePixmap::Execute()const
+{
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->DeletePixmapAux(fID);
 }
 
 //______________________________________________________________________________
@@ -297,6 +312,18 @@ void CommandBuffer::AddUpdateWindow(QuartzView *view)
 }
 
 //______________________________________________________________________________
+void CommandBuffer::AddDeletePixmap(Pixmap_t pixmapID)
+{
+   try {
+      std::auto_ptr<DeletePixmap> cmd(new DeletePixmap(pixmapID));
+      fCommands.push_back(cmd.get());
+      cmd.release();
+   } catch (const std::exception &) {
+      throw;
+   }
+}
+
+//______________________________________________________________________________
 void CommandBuffer::Flush(Details::CocoaPrivate *impl)
 {
    assert(impl != nullptr && "Flush, impl parameter is null");
@@ -309,6 +336,12 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
       //assert(cmd != nullptr && "Flush, command is null");
       if (!cmd)//Command was deleted because of DestroyWindow call.
          continue;
+      
+      NSObject<X11Drawable> *drawable = impl->GetDrawable(cmd->fID);
+      if (drawable.fIsPixmap) {
+         cmd->Execute();
+         continue;
+      }
       
       QuartzView *view = impl->GetDrawable(cmd->fID).fContentView;
       if ([view lockFocusIfCanDraw]) {

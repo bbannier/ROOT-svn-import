@@ -156,7 +156,10 @@ public:
                                      Int_t depth);
    virtual Pixmap_t     CreateBitmap(Drawable_t wid, const char *bitmap,
                                      UInt_t width, UInt_t height);
-   virtual void         DeletePixmap(Pixmap_t pmap);
+
+           void         DeletePixmapAux(Pixmap_t pixmapID);
+   virtual void         DeletePixmap(Pixmap_t pixmapID);
+
    virtual Bool_t       CreatePictureFromFile(Drawable_t wid, const char *filename,
                                               Pixmap_t &pict, Pixmap_t &pict_mask,
                                               PictureAttributes_t &attr);
@@ -194,6 +197,7 @@ public:
            void         DrawStringAux(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *s, Int_t len);//Non-overrider.
    virtual void         DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *s, Int_t len);
 
+           void         ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
    virtual void         ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
    //
    
@@ -289,12 +293,17 @@ public:
    //Non virtual, non-overriding functions.
    ROOT::MacOSX::X11::EventTranslator *GetEventTranslator();
    
+   void CocoaDrawON();
+   void CocoaDrawOFF();
+   bool IsCocoaDraw()const;
+   
 protected:
    void *GetCurrentContext();
 
    Int_t fSelectedDrawable;
 
    std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl; //!
+   Int_t fCocoaDraw;
 
 private:
    Bool_t MakeProcessForeground();

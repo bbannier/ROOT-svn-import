@@ -98,7 +98,7 @@ int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
 
 
 //______________________________________________________________________________
-int LocalYROOTToCocoa(id<X11Drawable> drawable, CGFloat yROOT)
+int LocalYROOTToCocoa(NSObject<X11Drawable> *drawable, CGFloat yROOT)
 {
    //:)
    assert(drawable != nil && "LocalYROOTToCocoa, drawable is nil");
@@ -306,7 +306,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 }
 
 @synthesize fBackBuffer;
-@synthesize fContext;
 
 
 //RootQuartzWindow's life cycle.
@@ -320,8 +319,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    if (self) {
       //ROOT's not able to draw GUI concurrently, thanks to global variables and gVirtualX itself.
       [self setAllowsConcurrentViewDrawing : NO];
-   
-      fContext = nullptr;      
+
       //self.delegate = ...
       //create content view here.
       NSRect contentViewRect = contentRect;
@@ -348,6 +346,19 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
 ///////////////////////////////////////////////////////////
 //X11Drawable's protocol.
+//______________________________________________________________________________
+- (CGContextRef) fContext 
+{
+   assert(fContentView != nil && "fContext, fContentView is nil");
+   return fContentView.fContext;
+}
+
+//______________________________________________________________________________
+- (void) setFContext : (CGContextRef) ctx
+{
+   assert(fContentView != nil && "setFContext, fContentView is nil");
+   fContentView.fContext = ctx;
+}
 
 //______________________________________________________________________________
 - (QuartzWindow *) fQuartzWindow
@@ -1077,12 +1088,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
    //Set clip mask on a context.
-   clipXY.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clipXY.fY + mask.fHeight);
+   clipXY.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
    const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
    CGContextClipToMask(self.fContext, clipRect, mask.fImage);
    
    //Convert from X11 to Cocoa (as soon as we scaled y * -1).
-   dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
+   dstPoint.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
 
@@ -1091,6 +1102,60 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    if (needSubImage)
       CGImageRelease(subImage);
+}
+
+//______________________________________________________________________________
+- (void) copyPixmap : (QuartzPixmap *) srcPixmap area : (Rectangle_t) area withMask : (QuartzImage *) mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+{
+   //Check parameters.
+   assert(srcPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, srcPixmap parameter is nil");
+   
+   if (mask) {
+      assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
+      assert(CGImageIsMask(mask.fImage) == true && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
+   }
+
+   //Check self.
+   assert(self.fContext != nullptr && "copyPixmap:area:withMask:clipOrigin:toPoint:, self.fContext is null");
+   
+   CGImageRef imageFromPixmap = [srcPixmap createImageFromPixmap];
+   assert(imageFromPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, createImageFromPixmap failed");
+   
+   CGImageRef subImage = nullptr;
+   bool needSubImage = false;
+   if (area.fX || area.fY || area.fWidth != srcPixmap.fWidth || area.fHeight != srcPixmap.fHeight) {
+      needSubImage = true;
+      const CGRect subImageRect = CGRectMake(area.fX, area.fY, area.fHeight, area.fWidth);
+      subImage = CGImageCreateWithImageInRect(imageFromPixmap, subImageRect);
+      assert(subImage && "copyPixmap:area:withMask:clipOrigin:toPoint:, subimage creation failed");
+   } else
+      subImage = imageFromPixmap;
+
+   //Save context state.
+   CGContextSaveGState(self.fContext);
+
+   //Scale and translate to undo isFlipped.
+//   CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
+//   CGContextScaleCTM(self.fContext, 1., -1.);
+   //Set clip mask on a context.
+  // clipXY.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clipXY.fY + mask.fHeight);
+   const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+   
+   if (mask)
+      CGContextClipToMask(self.fContext, clipRect, mask.fImage);
+   
+   //Convert from X11 to Cocoa (as soon as we scaled y * -1).
+   //dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   CGContextDrawImage(self.fContext, imageRect, subImage);
+
+   //Restore context state.
+   CGContextRestoreGState(self.fContext);
+   
+   if (needSubImage)
+      CGImageRelease(subImage);
+
+   CGImageRelease(imageFromPixmap);
 }
 
 
@@ -1137,7 +1202,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    NSObject *srcObj = (NSObject *)src;
    if ([srcObj isKindOfClass : [QuartzPixmap class]]) {
       //
-      NSLog(@"QuartzView, copy:area:withMask:clipOrigin:toPoint:, called with pixmap as source");
+//      NSLog(@"QuartzView, copy:area:withMask:clipOrigin:toPoint:, called with pixmap as source");
+      [self copyPixmap : (QuartzPixmap *)src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
    } else if ([srcObj isKindOfClass : [QuartzWindow class]]) {
       //
       NSLog(@"QuartzView, copy:area:withMask:clipOrigin:toPoint:, called with QuartzWindow as source");
@@ -1170,6 +1236,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
          assert(nsContext != nil && "drawRect, currentContext returned nil");
 
+         TGCocoa *vx = (TGCocoa *)gVirtualX;
+         vx->CocoaDrawON();
+
          fContext = (CGContextRef)[nsContext graphicsPort];
          assert(fContext != nullptr && "drawRect, graphicsPort returned null");
          
@@ -1191,6 +1260,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          }
 
          CGContextRestoreGState(fContext);
+         
+         vx->CocoaDrawOFF();
 
          fContext = nullptr;
       } else {
