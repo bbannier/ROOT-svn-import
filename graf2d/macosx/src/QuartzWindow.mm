@@ -1244,6 +1244,9 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          
          CGContextSaveGState(fContext);
 
+         if (window->InheritsFrom("TGContainer"))//It always has an ExposureMask.
+            vx->GetEventTranslator()->GenerateExposeEvent(self);
+
          if (fEventMask & kExposureMask) {
             //Ask ROOT's widget/window to draw itself.
             gClient->NeedRedraw(window, kTRUE);
