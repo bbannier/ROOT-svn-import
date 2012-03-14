@@ -540,6 +540,24 @@ void EventTranslator::GenerateDestroyNotify(unsigned /*winID*/)
 }
 
 //______________________________________________________________________________
+void EventTranslator::GenerateExposeEvent(QuartzView *view)
+{
+   assert(view != nil && "GenerateExposeEvent, view parameter is nil");
+   
+   Event_t exposeEvent = {};
+   exposeEvent.fWindow = view.fID;
+   exposeEvent.fType = kExpose;
+   exposeEvent.fX = view.frame.origin.x;
+   exposeEvent.fY = view.frame.origin.y;
+   exposeEvent.fWidth = view.frame.size.width;
+   exposeEvent.fHeight = view.frame.size.height;
+   
+   TGWindow *window = gClient->GetWindowById(view.fID);
+   assert(window != nullptr && "GenerateExposeEvent, window was not found");
+   window->HandleEvent(&exposeEvent);
+}
+
+//______________________________________________________________________________
 void EventTranslator::GenerateCrossingEvent(QuartzView *view, NSEvent *theEvent)
 {
    //View parameter can be nil (we exit any window).
