@@ -1229,8 +1229,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) drawRect : (NSRect) dirtyRect
 {
-   (void)dirtyRect;//Not used at the moment.
-
    if (fID) {
       if (TGWindow *window = gClient->GetWindowById(fID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
@@ -1245,7 +1243,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          CGContextSaveGState(fContext);
 
          if (window->InheritsFrom("TGContainer"))//It always has an ExposureMask.
-            vx->GetEventTranslator()->GenerateExposeEvent(self);
+            vx->GetEventTranslator()->GenerateExposeEvent(self, dirtyRect);
 
          if (fEventMask & kExposureMask) {
             //Ask ROOT's widget/window to draw itself.
