@@ -2620,7 +2620,7 @@ void TGCocoa::Update(Int_t mode)
    // requests have been processed by X server.
    if (mode == 2) {
       gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
-   } else {
+   } else if (mode > 0) {
       fPimpl->fX11CommandBuffer.Flush(fPimpl.get());
    }
 }

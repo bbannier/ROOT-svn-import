@@ -47,7 +47,7 @@ public:
 
    void GenerateConfigureNotifyEvent(QuartzView *view, const NSRect &newFrame);
    void GenerateDestroyNotify(unsigned winID);
-   void GenerateExposeEvent(QuartzView *view);
+   void GenerateExposeEvent(QuartzView *view, const NSRect &exposedRect);
 
    void GenerateCrossingEvent(QuartzView *viewUnderPointer, NSEvent *theEvent);
    void GeneratePointerMotionEvent(QuartzView *eventView, NSEvent *theEvent);

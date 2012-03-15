@@ -540,18 +540,18 @@ void EventTranslator::GenerateDestroyNotify(unsigned /*winID*/)
 }
 
 //______________________________________________________________________________
-void EventTranslator::GenerateExposeEvent(QuartzView *view)
+void EventTranslator::GenerateExposeEvent(QuartzView *view, const NSRect &exposedRect)
 {
    assert(view != nil && "GenerateExposeEvent, view parameter is nil");
    
    Event_t exposeEvent = {};
    exposeEvent.fWindow = view.fID;
    exposeEvent.fType = kExpose;
-   exposeEvent.fX = view.frame.origin.x;
-   exposeEvent.fY = view.frame.origin.y;
-   exposeEvent.fWidth = view.frame.size.width;
-   exposeEvent.fHeight = view.frame.size.height;
-   
+   exposeEvent.fX = exposedRect.origin.x;
+   exposeEvent.fY = exposedRect.origin.y;
+   exposeEvent.fWidth = exposedRect.size.width;
+   exposeEvent.fHeight = exposedRect.size.height;
+
    TGWindow *window = gClient->GetWindowById(view.fID);
    assert(window != nullptr && "GenerateExposeEvent, window was not found");
    window->HandleEvent(&exposeEvent);
