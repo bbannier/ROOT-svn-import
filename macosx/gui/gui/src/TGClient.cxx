@@ -343,11 +343,17 @@ void TGClient::NeedRedraw(TGWindow *w, Bool_t force)
    if (gVirtualX->NeedRedraw((ULong_t)w,force)) return;
    if (force) {
       w->DoRedraw();
-      w->fNeedRedraw = kFALSE;
+      //w->fNeedRedraw = kFALSE;
       return;
    }
    w->fNeedRedraw = kTRUE;
    fGlobalNeedRedraw = kTRUE;
+}
+
+//______________________________________________________________________________
+void TGClient::CancelRedraw(TGWindow *w)
+{
+   w->fNeedRedraw = kFALSE;
 }
 
 //______________________________________________________________________________

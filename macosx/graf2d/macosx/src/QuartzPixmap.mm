@@ -209,6 +209,17 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    //Check parameters.
    assert(srcImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage parameter is nil");
    assert(srcImage.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage.fImage is nil");
+
+   if (std::abs(dstPoint.fY) > int(fHeight))
+      return;
+   if (dstPoint.fY < 0) {
+   return;
+      if (std::abs(dstPoint.fY) > int(area.fHeight))
+         return;
+      area.fHeight += dstPoint.fY;
+      dstPoint.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, area.fHeight);
+   } else 
+      dstPoint.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
    
    CGImageRef subImage = nullptr;
    bool needSubImage = false;
@@ -237,7 +248,6 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
       CGContextClipToMask(self.fContext, clipRect, mask.fImage);
    }
 
-   dstPoint.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
    //Restore context state.
