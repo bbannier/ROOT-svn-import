@@ -831,6 +831,9 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       QuartzView *dstView = window.fContentView;
       assert(dstView != nil && "UpdateWindow, destination view is nil");
       
+      if (dstView.fIsOverlapped)
+         return;
+      
       if (dstView.fContext) {
          //We can draw directly.
          Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
@@ -1773,10 +1776,11 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
             DrawLineAux(wid, gcVals, x1, y1, x2, y2);
       }
    } else {
-      if (!IsCocoaDraw())
+      if (!IsCocoaDraw()) {
          fPimpl->fX11CommandBuffer.AddDrawLine(wid, gcVals, x1, y1, x2, y2);
-      else
+      } else {
          DrawLineAux(wid, gcVals, x1, y1, x2, y2);
+      }
    }
    
 }
@@ -1908,20 +1912,23 @@ void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gcVa
    //Called directly or when flushing command buffer.
    if (!src || !dst)//Can this happen? From TGX11.
       return;
-      
+   
    assert(!fPimpl->IsRootWindow(src) && "CopyAreaAux, src parameter is 'root' window");
    assert(!fPimpl->IsRootWindow(dst) && "CopyAreaAux, dst parameter is 'root' window");
    
+  //Some copy operations create autoreleased cocoa objects, I do not want them to wait till run loop's iteration end to die.
+   const Util::AutoreleasePool pool;
+   
    NSObject<X11Drawable> *srcDrawable = fPimpl->GetDrawable(src);
    NSObject<X11Drawable> *dstDrawable = fPimpl->GetDrawable(dst);
-   
+
    Point_t dstPoint = {};
    dstPoint.fX = dstX;
    dstPoint.fY = dstY;
 
    Rectangle_t copyArea = {};
    copyArea.fX = srcX;
-   copyArea.fY = srcY;
+   copyArea.fY = srcY; 
    copyArea.fWidth = (UShort_t)width;//TODO: check size?
    copyArea.fHeight = (UShort_t)height;//TODO: check size?
 

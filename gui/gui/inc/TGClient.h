@@ -112,6 +112,7 @@ public:
    void         FreeColor(Pixel_t color) const;
    void         ForceRedraw() { fForceRedraw = kTRUE; }
    void         NeedRedraw(TGWindow *w, Bool_t force = kFALSE);
+   void         CancelRedraw(TGWindow *w);
    void         RegisterWindow(TGWindow *w);
    void         UnregisterWindow(TGWindow *w);
    void         RegisterPopup(TGWindow *w);

@@ -3,6 +3,7 @@
 #define DEBUG_ROOT_COCOA
 
 #ifdef DEBUG_ROOT_COCOA
+#import <iostream>
 #import <fstream>
 #endif
 
@@ -14,6 +15,52 @@
 #import "TGWindow.h"
 #import "TGClient.h"
 #import "TGCocoa.h"
+
+/*
+This class is a stupid work-around to create a snapshot of view's contents.
+I do not use QuartzView's drawRect directly, since I had some strange problems
+I do not have time to investigate and I've got a 99 problems and a bitchin' one.
+
+Apple's documentation about making a snapshot is useless completely,
+you have to try and got all problems before you understand how this crap works.
+*/
+
+@interface SnapshotView : NSView
+@property (nonatomic, assign) QuartzView *fView;
+@end
+
+@implementation SnapshotView
+@synthesize fView;
+
+//______________________________________________________________________________
+- (void) drawRect : (NSRect) dirtyRect
+{
+   assert(fView != nil && "drawRect, fView is nil");
+
+   TGWindow *window = gClient->GetWindowById(fView.fID);
+   assert(window != nullptr && "drawRect, no window was found");
+   
+   CGContextRef ctx = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+   assert(ctx != nullptr && "drawRect, bitmap ctx is null");
+
+   fView.fContext = ctx;
+   
+   TGCocoa *vx = (TGCocoa *)gVirtualX;
+   vx->CocoaDrawON();
+
+   CGContextSaveGState(ctx);
+
+   if (window->InheritsFrom("TGContainer"))//It always has an ExposureMask.
+      vx->GetEventTranslator()->GenerateExposeEvent(fView, dirtyRect);
+
+   gClient->NeedRedraw(window, kTRUE);
+
+   vx->CocoaDrawOFF();
+   CGContextRestoreGState(ctx);
+}
+
+
+@end
 
 namespace ROOT {
 namespace MacOSX {
@@ -1062,9 +1109,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    //Check parameters.
    assert(srcImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage parameter is nil");
    assert(srcImage.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage.fImage is nil");
-   assert(mask != nil && "copyImage:area:withMask:clipOrigin:toPoint:, mask parameter is nil");
-   assert(mask.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
-   assert(CGImageIsMask(mask.fImage) == true && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
 
    //Check self.
    assert(self.fContext != nullptr && "copyImage:area:withMask:clipOrigin:toPoint:, self.fContext is null");
@@ -1088,9 +1132,14 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
    //Set clip mask on a context.
-   clipXY.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
-   const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
-   CGContextClipToMask(self.fContext, clipRect, mask.fImage);
+   
+   if (mask) {
+      assert(mask.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
+      assert(CGImageIsMask(mask.fImage) == true && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
+      clipXY.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
+      const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+      CGContextClipToMask(self.fContext, clipRect, mask.fImage);
+   }
    
    //Convert from X11 to Cocoa (as soon as we scaled y * -1).
    dstPoint.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
@@ -1102,6 +1151,51 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    if (needSubImage)
       CGImageRelease(subImage);
+}
+
+//______________________________________________________________________________
+- (void) copyView : (QuartzView *) srcView area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+{
+   assert(srcView != nil && "copyView:area:toPoint:, srcView parameter is nil");
+
+   const NSRect visRect = [srcView visibleRect];
+   
+   SnapshotView *snapshot = [[SnapshotView alloc] initWithFrame : visRect];
+   
+   NSBitmapImageRep *imageRep = [snapshot bitmapImageRepForCachingDisplayInRect : visRect];
+   if (!imageRep) {
+      NSLog(@"copyView:area:toPoint failed");
+      return;
+   }
+   
+   assert(srcView != nil && "copyView:area:toPoint:, srcView parameter is nil");
+   assert(self.fContext != nullptr && "copyView:area:toPoint, self.fContext is null");
+
+   //It can happen, that src and self are the same.
+   //cacheDisplayInRect calls drawRect with bitmap context 
+   //(and this will reset self.fContext: I have to save/restore it.
+   CGContextRef ctx = srcView.fContext;
+
+   snapshot.fView = srcView;
+   [snapshot cacheDisplayInRect : visRect toBitmapImageRep : imageRep];
+   srcView.fContext = ctx;
+
+   const CGRect subImageRect = CGRectMake(area.fX, area.fY, area.fWidth, area.fHeight);
+   CGImageRef subImage = CGImageCreateWithImageInRect(imageRep.CGImage, subImageRect);
+
+   CGContextSaveGState(self.fContext);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+//   NSLog(@"image rect %d %d %u %u", dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   CGContextDrawImage(self.fContext, imageRect, subImage);
+
+   CGContextFlush(self.fContext);
+   
+   [snapshot release];
+
+   //Restore context state.
+   CGContextRestoreGState(self.fContext);
+   //imageRep in autorelease pool now.
+   CGImageRelease(subImage);
 }
 
 //______________________________________________________________________________
@@ -1133,19 +1227,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    //Save context state.
    CGContextSaveGState(self.fContext);
-
-   //Scale and translate to undo isFlipped.
-//   CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
-//   CGContextScaleCTM(self.fContext, 1., -1.);
-   //Set clip mask on a context.
-  // clipXY.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, clipXY.fY + mask.fHeight);
-   const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
    
-   if (mask)
+   if (mask) {
+      const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
       CGContextClipToMask(self.fContext, clipRect, mask.fImage);
+   }
    
-   //Convert from X11 to Cocoa (as soon as we scaled y * -1).
-   //dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
 
@@ -1196,26 +1283,20 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
 {
-   //In C++ I would use multiple-dispatch (two parameters case), but here ...
    assert(src != nil && "copy:area:withMask:clipOrigin:toPoint:, src parameter is nil");
    
-   NSObject *srcObj = (NSObject *)src;
-   if ([srcObj isKindOfClass : [QuartzPixmap class]]) {
-      //
-//      NSLog(@"QuartzView, copy:area:withMask:clipOrigin:toPoint:, called with pixmap as source");
+   NSObject<X11Drawable> *srcObj = (NSObject<X11Drawable> *)src;
+
+   if ([srcObj isKindOfClass : [QuartzWindow class]]) {
+      //Forget about mask (can I have it???)
+      [self copyView : srcObj.fContentView area : area toPoint : dstPoint];
+   } else if ([srcObj isKindOfClass : [QuartzView class]]) {
+      //Forget about mask (can I have it???)
+      [self copyView : (QuartzView *)srcObj area : area toPoint : dstPoint];
+   } else if ([srcObj isKindOfClass : [QuartzPixmap class]]) {
       [self copyPixmap : (QuartzPixmap *)src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
-   } else if ([srcObj isKindOfClass : [QuartzWindow class]]) {
-      //
-      NSLog(@"QuartzView, copy:area:withMask:clipOrigin:toPoint:, called with QuartzWindow as source");
-      //QuartzWindow *topLevel = (QuartzWindow *)srcObj;
-      //QuartzView *srcView = topLevel.fContentView;
-      //[self copyView : srcView fromPoint : srcPoint size : size toPoint : dstPoint];
    } else if ([srcObj isKindOfClass : [QuartzImage class]]) {
-      QuartzImage *image = (QuartzImage *)src;
-      if (mask)
-         [self copyImage : image area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
-      else
-         [self copyImage : image area : area toPoint : dstPoint];
+      [self copyImage : (QuartzImage *)src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
    } else {
       assert(0 && "copy:area:withMask:clipOrigin:toPoint:, src is of unknown type");
    }
@@ -1229,6 +1310,8 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) drawRect : (NSRect) dirtyRect
 {
+   (void)dirtyRect;
+
    if (fID) {
       if (TGWindow *window = gClient->GetWindowById(fID)) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
@@ -1243,11 +1326,12 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
          CGContextSaveGState(fContext);
 
          if (window->InheritsFrom("TGContainer"))//It always has an ExposureMask.
-            vx->GetEventTranslator()->GenerateExposeEvent(self, dirtyRect);
+            vx->GetEventTranslator()->GenerateExposeEvent(self, [self visibleRect]);
 
          if (fEventMask & kExposureMask) {
             //Ask ROOT's widget/window to draw itself.
             gClient->NeedRedraw(window, kTRUE);
+            gClient->CancelRedraw(window);
          }
 
          if (fBackBuffer) {
@@ -1260,8 +1344,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
             }
          }
 
-         CGContextRestoreGState(fContext);
-         
+         CGContextRestoreGState(fContext);         
          vx->CocoaDrawOFF();
 
          fContext = nullptr;
