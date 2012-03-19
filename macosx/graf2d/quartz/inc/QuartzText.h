@@ -22,6 +22,7 @@ public:
    TextLine(const std::vector<UniChar> &textLine, CTFontRef font);
    
    TextLine(const char *textLine, CTFontRef font, Color_t color);
+   TextLine(const std::vector<UniChar> &textLine, CTFontRef font, Color_t color);
    TextLine(const char *textLine, CTFontRef font, const CGFloat *rgb);
 
    ~TextLine();
@@ -40,11 +41,6 @@ private:
    TextLine(const TextLine &rhs) = delete;
    TextLine &operator = (const TextLine &rhs) = delete;
 };
-
-//By Olivier Couet.
-
-void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t angle, Int_t align, Int_t font, Float_t size, const char *text);
-void GetTextExtent(UInt_t &w, UInt_t &h, Int_t font, Float_t size, const char *text);
 
 }
 }
