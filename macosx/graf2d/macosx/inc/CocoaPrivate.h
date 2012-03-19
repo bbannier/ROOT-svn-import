@@ -20,7 +20,7 @@
 #include "GuiTypes.h"
 #endif
 #ifndef ROOT_GuiFonts
-#include "GuiFonts.h"
+#include "FontCache.h"
 #endif
 
 @protocol X11Drawable;
@@ -66,7 +66,7 @@ private:
    //Command buffer - for "buffered" drawing commands.
    X11::CommandBuffer                          fX11CommandBuffer;
    //Font manager - cache CTFontRef for GUI.
-   FontManager                                 fFontManager;
+   FontCache                                   fFontManager;
 
    //Id for the new registered drawable.
    unsigned                                    fCurrentDrawableID;
