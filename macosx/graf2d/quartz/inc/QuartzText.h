@@ -2,8 +2,10 @@
 #ifndef ROOT_QuartzText
 #define ROOT_QuartzText
 
+#include <vector>
+
 //This must be changed: different header for iOS and MacOSX.
-#import <ApplicationServices/ApplicationServices.h>
+#include <ApplicationServices/ApplicationServices.h>
 #include <Cocoa/Cocoa.h>
 
 #include "CocoaUtils.h"
@@ -17,6 +19,8 @@ namespace Quartz {
 class TextLine {
 public:
    TextLine(const char *textLine, CTFontRef font);
+   TextLine(const std::vector<UniChar> &textLine, CTFontRef font);
+   
    TextLine(const char *textLine, CTFontRef font, Color_t color);
    TextLine(const char *textLine, CTFontRef font, const CGFloat *rgb);
 
@@ -26,11 +30,12 @@ public:
    void GetAscentDescent(Int_t &asc, Int_t &desc)const;
 
    void DrawLine(CGContextRef ctx)const;
-   void DrawText(CGContextRef ctx, Double_t x, Double_t y)const;
+   void DrawLine(CGContextRef ctx, Double_t x, Double_t y)const;
 private:
    CTLineRef fCTLine; //Core Text line, created from Attributed string.
 
    void Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values);
+   void Init(const std::vector<UniChar> &textLine, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values);
 
    TextLine(const TextLine &rhs) = delete;
    TextLine &operator = (const TextLine &rhs) = delete;

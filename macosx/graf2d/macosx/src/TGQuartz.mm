@@ -8,6 +8,9 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
+#include <stdexcept>
+#include <cstring>
+
 #include <Cocoa/Cocoa.h>
 
 #include "QuartzFillArea.h"
@@ -188,8 +191,7 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 
 
 //______________________________________________________________________________
-void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/, 
-                        const char *text, ETextMode /*mode*/)
+void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, const char *text, ETextMode /*mode*/)
 {
    // Draw text
    if (fSelectedDrawable <= 0) {
@@ -206,28 +208,43 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
    NSObject<X11Drawable> *pixmap = fPimpl->GetDrawable(fSelectedDrawable);
    assert(pixmap.fIsPixmap == YES && "DrawText, selected drawable is not a pixmap");
    
-   //
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-   const Quartz::CGStateGuard ctxGuard(ctx);
-
    if (!SetContextFillColor(GetTextColor())) {
       Error("DrawText", "Could not find TColor for index %d", GetTextColor());
       return;
    }
 
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   const Quartz::CGStateGuard ctxGuard(ctx);
+
    //Before any core text drawing operations, reset text matrix.
-   CGContextSetTextMatrix(ctx, CGAffineTransformIdentity); 
-   
+   CGContextSetTextMatrix(ctx, CGAffineTransformIdentity);
    CGContextTranslateCTM(ctx, 0., pixmap.fHeight);
    CGContextScaleCTM(ctx, 1., -1.);
 
-   Quartz::DrawText(ctx, (Double_t)x, 
-                    ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y), 
-                    angle, 
-                    GetTextAlign(),
-                    GetTextFont(),
-                    GetTextSize(),
-                    text);
+   try {
+      if (CTFontRef currentFont = fPimpl->fFontManager.SelectFont(GetTextFont(), GetTextSize())) {
+         std::vector<UniChar> unichars(std::strlen(text));
+         if (GetTextFont() / 10 == 12) {//Greek and math symbols.
+            //This is a hack. Correct way is to extract glyphs from symbol.ttf,
+            //find correct mapping, place this glyphs. This requires manual layout though (?),
+            //and as usually, I have to many things to do, may be, one day I'll fix text rendering also.
+            //This hack work only on MacOSX 10.7.3, does not work on iOS and I'm not sure about future/previous
+            //versions of MacOSX.
+            typedef std::vector<UniChar>::size_type size_type;
+
+            for (size_type i = 0, len = unichars.size(); i < len; ++i)
+               unichars[i] = 0xF000 + (unsigned char)text[i];
+            
+            Quartz::TextLine ctLine(unichars, currentFont);
+            ctLine.DrawLine(ctx, x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y));
+         } else {
+            const Quartz::TextLine ctLine(text, currentFont);
+            ctLine.DrawLine(ctx, x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y));
+         }
+      }
+   } catch (const std::exception &e) {
+      Error("DrawText", "Exception from Quartz::TextLine: %s", e.what());
+   }
 }
 
 //______________________________________________________________________________
@@ -238,7 +255,10 @@ void TGQuartz::GetTextExtent(UInt_t &w, UInt_t &h, char *text)
    // w    - the text width
    // h    - the text height
    // text - the string   
-   Quartz::GetTextExtent(w, h, GetTextFont(), GetTextSize(), text);
+//   Quartz::GetTextExtent(w, h, GetTextFont(), GetTextSize(), text);
+   
+   if (fPimpl->fFontManager.SelectFont(GetTextFont(), GetTextSize()))
+      fPimpl->fFontManager.GetTextBounds(w, h, text);
 }
 
 

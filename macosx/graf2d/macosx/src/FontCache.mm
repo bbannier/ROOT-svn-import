@@ -94,8 +94,12 @@ unsigned FontCache::GetTextWidth(FontStruct_t font, const char *text, int nChars
 
    unsigned w = 0, h = 0;
 
-   Quartz::TextLine quartzTextLine(textLine.c_str(), fontRef);
-   quartzTextLine.GetBounds(w, h);
+   try {
+      const Quartz::TextLine quartzTextLine(textLine.c_str(), fontRef);
+      quartzTextLine.GetBounds(w, h);
+   } catch (const std::exception &) {
+      throw;
+   }
 
    return w;
 }
@@ -109,8 +113,12 @@ void FontCache::GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDes
    assert(fLoadedFonts.find(fontRef) != fLoadedFonts.end() && "Font was not created by font manager");
 
    //Instead of this, use CT funtion to request ascent/descent.
-   Quartz::TextLine textLine("LALALA", fontRef);
-   textLine.GetAscentDescent(maxAscent, maxDescent);
+   try {
+      const Quartz::TextLine textLine("LALALA", fontRef);
+      textLine.GetAscentDescent(maxAscent, maxDescent);
+   } catch (const std::exception &) {
+      throw;
+   }
 }
 
 
@@ -163,6 +171,7 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
       char *fontFileName = gSystem->Which(fontDirectoryPath, "symbol.ttf", kReadPermission);//This must be deleted.
 
       try {
+      NSLog(@"Create symbol.ttf");
          const Util::CFScopeGuard<CFStringRef> path(CFStringCreateWithCString(kCFAllocatorDefault, fontFileName, kCFURLPOSIXPathStyle));
          if (!path.Get()) {
             ::Error("FontCache::SelectSymbolFont", "CFStringCreateWithCString failed");
@@ -200,9 +209,13 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
 void FontCache::GetTextBounds(UInt_t &w, UInt_t &h, const char *text)const
 {
    assert(fSelectedFont != nullptr && "GetTextBounds: no font was selected");
-
-   const Quartz::TextLine ctLine(text, fSelectedFont);
-   ctLine.GetBounds(w, h);
+   
+   try {
+      const Quartz::TextLine ctLine(text, fSelectedFont);
+      ctLine.GetBounds(w, h);
+   } catch (const std::exception &) {
+      throw;
+   }
 }
 
 
