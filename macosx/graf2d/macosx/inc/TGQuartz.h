@@ -1,5 +1,5 @@
 // @(#)root/graf2d:$Id$
-// Author: Olivier Couet, 23/01/2012
+// Author: Olivier Couet and Timur Pocheptsov 23/01/2012
 
 /*************************************************************************
  * Copyright (C) 1995-2011, Rene Brun and Fons Rademakers.               *
