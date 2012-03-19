@@ -9,26 +9,22 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#include <vector>
 
-#include "TStyle.h"
-#include "TString.h"
 #include "TObjString.h"
-#include "TObjArray.h"
-#include "TROOT.h"
 #include "QuartzLine.h"
 #include "RStipples.h"
+#include "TObjArray.h"
+#include "TString.h"
+#include "TStyle.h"
+#include "TROOT.h"
 
 namespace ROOT {
 namespace Quartz {
 
-   
 //______________________________________________________________________________
 void DrawLine(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 {
-   // Draw a line.
-   // x1,y1        : begin of line
-   // x2,y2        : end of line
-   
    CGContextBeginPath(ctx);
    CGContextMoveToPoint(ctx, x1, y1);
    CGContextAddLineToPoint(ctx, x2, y2);
@@ -43,10 +39,10 @@ void DrawPolyLine(CGContextRef ctx, Int_t n, TPoint * xy)
    // n         : number of points
    // xy        : list of points
    
-   CGContextBeginPath (ctx);
+   CGContextBeginPath(ctx);
    CGContextMoveToPoint (ctx, xy[0].fX, xy[0].fY);
-   for (Int_t i=1; i<n; i++)
-      CGContextAddLineToPoint (ctx, xy[i].fX  , xy[i].fY);
+   for (Int_t i = 1; i < n; ++i)
+      CGContextAddLineToPoint(ctx, xy[i].fX, xy[i].fY);
    CGContextStrokePath(ctx);
 }
 
@@ -56,31 +52,30 @@ void SetLineStyle(CGContextRef ctx, Int_t lstyle)
 {
    // Set current line style in the context ctx.
       
-   static Int_t dashed[2] = {3,3};
-   static Int_t dotted[2] = {1,2};
-   static Int_t dasheddotted[4] = {3,4,1,4};
+   static Int_t dashed[2] = {3, 3};
+   static Int_t dotted[2] = {1, 2};
+   static Int_t dasheddotted[4] = {3, 4, 1, 4};
       
    if (lstyle <= 1 ) {
-      SetLineType(ctx, 0,0);
-   } else if (lstyle == 2 ) {
-      SetLineType(ctx, 2,dashed);
-   } else if (lstyle == 3 ) {
+      SetLineType(ctx, 0, 0);
+   } else if (lstyle == 2) {
+      SetLineType(ctx, 2, dashed);
+   } else if (lstyle == 3) {
       SetLineType(ctx, 2,dotted);
-   } else if (lstyle == 4 ) {
-      SetLineType(ctx, 4,dasheddotted);
+   } else if (lstyle == 4) {
+      SetLineType(ctx, 4, dasheddotted);
    } else {
       TString st = (TString)gStyle->GetLineStyleString(lstyle);
       TObjArray *tokens = st.Tokenize(" ");
       Int_t nt;
       nt = tokens->GetEntries();
-      Int_t *linestyle = new Int_t[nt];
+      std::vector<Int_t> linestyle(nt);
       for (Int_t j = 0; j<nt; j++) {
          Int_t it;
          sscanf(((TObjString*)tokens->At(j))->GetName(), "%d", &it);
          linestyle[j] = (Int_t)(it/4);
       }
-      SetLineType(ctx, nt,linestyle);
-      delete [] linestyle;
+      SetLineType(ctx, nt, &linestyle[0]);
       delete tokens;
    }
 }
@@ -115,10 +110,10 @@ void SetLineWidth(CGContextRef ctx, Int_t width)
    //
    // width - the line width in pixels
             
-   if (width<0) return;
-      
-   CGFloat w = (CGFloat) width;
-   CGContextSetLineWidth(ctx, w);
+   if (width < 0)
+      return;
+
+   CGContextSetLineWidth(ctx, width);
 }
 
 

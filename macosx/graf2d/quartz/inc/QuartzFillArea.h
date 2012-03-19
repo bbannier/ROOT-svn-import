@@ -38,8 +38,9 @@
 namespace ROOT {
 namespace Quartz {
    
-void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,
-             Int_t mode);
+void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, Int_t mode);
+void DrawBoxGradient(TAttFill::EFillGradient grad, CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, 
+                     const CGFloat *rgb, Bool_t drawShadow);
 
 void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t shadow);
 

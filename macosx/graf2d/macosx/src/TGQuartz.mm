@@ -49,23 +49,32 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
    // Draw a box
 
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   const Quartz::CGStateGuard ctxGuard(ctx);
 
-   SetContextFillColor(GetFillColor());
+   if (!SetContextFillColor(GetFillColor())) {
+      Error("DrawBox", "Fill color for index %d not found", GetFillColor());
+      return;
+   }
    
-   SetContextStrokeColor(GetLineColor());
+   if (!SetContextStrokeColor(GetLineColor())) {
+      Error("DrawBox", "Line color for index %d not found", GetLineColor());
+      return;
+   }
    
-   TColor *color = gROOT->GetColor(GetFillColor());
-   if (!color) return;
-   
+   const TColor *color = gROOT->GetColor(GetFillColor());
+   if (!color) {
+      //It can not be null (checked already in SetContextFillColor, but
+      //just to avoid warnings from coverity in a future.
+      return;
+   }
+
    Float_t r = 0.f;
    Float_t g = 0.f;
    Float_t b = 0.f;
-   const Float_t a = GetFillAlpha() / 100.f;
-   
+   const Float_t a = GetFillAlpha() / 100.f;   
    color->GetRGB(r, g, b);
-   
-   Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
 
+   Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
    Quartz::DrawBox(ctx, x1, y1, x2, y2, (Int_t)mode);
 }
 
@@ -78,7 +87,6 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    // xy        : list of points
 
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
-   
    const Quartz::CGStateGuard ctxGuard(ctx);
 
    TColor *color = gROOT->GetColor(GetFillColor());
@@ -92,8 +100,11 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    const Float_t a = GetFillAlpha() / 100.f;
 
    if (GetFillGradient() == kNoGradientFill) {
+      //For coverity: I do not check these two calls,
+      //if we are here, TColor exists.
       SetContextStrokeColor(GetFillColor());
       SetContextFillColor(GetFillColor());
+
       Quartz::SetFillStyle(ctx, GetFillStyle(), rgb[0], rgb[1], rgb[2], a);
       Quartz::DrawFillArea(ctx, n, xy, kFALSE);//The last argument - do not draw shadows.
    } else {
@@ -119,14 +130,16 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
    // x1,y1        : begin of line
    // x2,y2        : end of line
       
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-   
-   SetContextStrokeColor(GetLineColor());
-   
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();   
+   const Quartz::CGStateGuard ctxGuard(ctx);
+
+   if (!SetContextStrokeColor(GetLineColor())) {
+      Error("DrawLine", "Could not find TColor for index %d", GetLineColor());
+      return;
+   }
+
    Quartz::SetLineStyle(ctx, GetLineStyle());
-   
    Quartz::SetLineWidth(ctx, GetLineWidth());
-   
    Quartz::DrawLine(ctx, x1, y1, x2, y2);
 }
 
@@ -138,14 +151,16 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
    // n         : number of points
    // xy        : list of points   
    
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();   
+   const Quartz::CGStateGuard ctxGuard(ctx);
    
-   SetContextStrokeColor(GetLineColor());
+   if (!SetContextStrokeColor(GetLineColor())) {
+      Error("DrawPolyLine", "Could not find TColor for index %d", GetLineColor());
+      return;
+   }
    
    Quartz::SetLineStyle(ctx, GetLineStyle());
-   
    Quartz::SetLineWidth(ctx, GetLineWidth());
-
    Quartz::DrawPolyLine(ctx, n, xy);
 }
 
@@ -156,17 +171,18 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
    // Draw PolyMarker
    // n         : number of points
    // xy        : list of points   
-   
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   const Quartz::CGStateGuard ctxGuard(ctx);
 
-   SetContextFillColor(GetMarkerColor());
+   if (!SetContextFillColor(GetMarkerColor())) {
+      Error("DrawPolyMarker", "Could not find TColor for index %d", GetMarkerColor());
+      return;
+   }
    
-   SetContextStrokeColor(GetMarkerColor());
-   
+   SetContextStrokeColor(GetMarkerColor());//Can not fail (for coverity).
+
    Quartz::SetLineStyle(ctx, 1);
-   
    Quartz::SetLineWidth(ctx, 1);
-
    Quartz::DrawPolyMarker(ctx, n, xy, GetMarkerSize(), GetMarkerStyle());
 }
 
@@ -186,21 +202,25 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
       return;
    }
    
-   assert(fSelectedDrawable != 0 && "no pixmap selected");
+   assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "DrawText, no pixmap selected");
    NSObject<X11Drawable> *pixmap = fPimpl->GetDrawable(fSelectedDrawable);
-   assert(pixmap.fIsPixmap == YES && "selected drawable is not a pixmap");
+   assert(pixmap.fIsPixmap == YES && "DrawText, selected drawable is not a pixmap");
    
+   //
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
-   CGContextSaveGState(ctx);
+   const Quartz::CGStateGuard ctxGuard(ctx);
+
+   if (!SetContextFillColor(GetTextColor())) {
+      Error("DrawText", "Could not find TColor for index %d", GetTextColor());
+      return;
+   }
 
    //Before any core text drawing operations, reset text matrix.
    CGContextSetTextMatrix(ctx, CGAffineTransformIdentity); 
-   // Text color
-   SetContextFillColor(GetTextColor());
    
-   CGContextTranslateCTM(ctx, 0.f, pixmap.fHeight);
-   CGContextScaleCTM(ctx, 1.f, -1.f);   
-   
+   CGContextTranslateCTM(ctx, 0., pixmap.fHeight);
+   CGContextScaleCTM(ctx, 1., -1.);
+
    Quartz::DrawText(ctx, (Double_t)x, 
                     ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y), 
                     angle, 
@@ -208,9 +228,6 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t angle, Float_t /*mgn*/,
                     GetTextFont(),
                     GetTextSize(),
                     text);
-   
-   CGContextRestoreGState(ctx);
-
 }
 
 //______________________________________________________________________________
@@ -220,12 +237,8 @@ void TGQuartz::GetTextExtent(UInt_t &w, UInt_t &h, char *text)
    //
    // w    - the text width
    // h    - the text height
-   // text - the string
-   
-   Quartz::GetTextExtent(w, h, 
-                         GetTextFont(),
-                         GetTextSize(),
-                         text);
+   // text - the string   
+   Quartz::GetTextExtent(w, h, GetTextFont(), GetTextSize(), text);
 }
 
 
@@ -235,7 +248,6 @@ Int_t TGQuartz::GetFontAscent() const
    // Returns the ascent of the current font (in pixels).
    // The ascent of a font is the distance from the baseline
    // to the highest position characters extend to
-
    return 0;
 }
 
@@ -246,7 +258,6 @@ Int_t TGQuartz::GetFontDescent() const
    // Returns the descent of the current font (in pixels.
    // The descent is the distance from the base line
    // to the lowest point characters extend to.
-
    return 0;
 }
 
@@ -255,58 +266,13 @@ Int_t TGQuartz::GetFontDescent() const
 Float_t TGQuartz::GetTextMagnitude()
 {
    // Returns the current font magnification factor
-
    return 0;
 }
-
-
-//______________________________________________________________________________
-void TGQuartz::SetContextFillColor(Int_t ci)
-{
-   // Set the current fill color in the current context.
-
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-
-   TColor *color = gROOT->GetColor(ci);
-   if (!color) return;
-
-   const Float_t a = GetFillAlpha() / 100.f;
-   Float_t r = 0.f;
-   Float_t g = 0.f;
-   Float_t b = 0.f;
-
-   color->GetRGB(r, g, b);
-
-   CGContextSetRGBFillColor (ctx, r, g, b, a);
-}
-
-
-//______________________________________________________________________________
-void TGQuartz::SetContextStrokeColor(Int_t ci)
-{
-   // Set the current fill color in the current context.
-
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-
-   TColor *color = gROOT->GetColor(ci);
-   if (!color) return;
-
-   const Float_t a = 1.f;
-   Float_t r = 0.f;
-   Float_t g = 0.f;
-   Float_t b = 0.f;
-
-   color->GetRGB(r, g, b);
-
-   CGContextSetRGBStrokeColor (ctx, r, g, b, a);
-}
-
 
 //______________________________________________________________________________
 void TGQuartz::SetLineColor(Color_t cindex)
 {
    // Set color index "cindex" for drawing lines.
-
    TAttLine::SetLineColor(cindex);
 }
 
@@ -314,8 +280,7 @@ void TGQuartz::SetLineColor(Color_t cindex)
 //______________________________________________________________________________
 void TGQuartz::SetLineStyle(Style_t lstyle)
 {
-   // Set line style.
-   
+   // Set line style.   
    TAttLine::SetLineStyle(lstyle);
 }
 
@@ -341,8 +306,7 @@ void TGQuartz::SetFillColor(Color_t cindex)
 //______________________________________________________________________________
 void TGQuartz::SetFillStyle(Style_t style)
 {
-   // Set fill area style.
-   
+   // Set fill area style.   
    TAttFill::SetFillStyle(style);
 }
 
@@ -351,7 +315,6 @@ void TGQuartz::SetFillStyle(Style_t style)
 void TGQuartz::SetMarkerColor(Color_t cindex)
 {
    // Set color index "cindex" for markers.
-
    TAttMarker::SetMarkerColor(cindex);
 }
 
@@ -362,7 +325,6 @@ void TGQuartz::SetMarkerSize(Float_t markersize)
    // Set marker size index.
    //
    // markersize - the marker scale factor
-
    TAttMarker::SetMarkerSize(markersize);
 }
 
@@ -437,4 +399,49 @@ Int_t TGQuartz::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
    //        mode = 1 search the font and load it if it exists (kLoad)
    
    return 0;
+}
+
+//______________________________________________________________________________
+Bool_t TGQuartz::SetContextFillColor(Int_t ci)
+{
+   // Set the current fill color in the current context.
+
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+
+   const TColor *color = gROOT->GetColor(ci);
+   if (!color)
+      return kFALSE;
+
+   const CGFloat a = GetFillAlpha() / 100.;
+   Float_t r = 0.f;
+   Float_t g = 0.f;
+   Float_t b = 0.f;
+
+   color->GetRGB(r, g, b);
+   CGContextSetRGBFillColor (ctx, r, g, b, a);
+   
+   return kTRUE;
+}
+
+
+//______________________________________________________________________________
+Bool_t TGQuartz::SetContextStrokeColor(Int_t ci)
+{
+   // Set the current fill color in the current context.
+
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+
+   const TColor *color = gROOT->GetColor(ci);
+   if (!color)
+      return kFALSE;
+
+   const CGFloat a = 1.f;
+   Float_t r = 0.f;
+   Float_t g = 0.f;
+   Float_t b = 0.f;
+
+   color->GetRGB(r, g, b);
+   CGContextSetRGBStrokeColor (ctx, r, g, b, a);
+   
+   return kTRUE;
 }
