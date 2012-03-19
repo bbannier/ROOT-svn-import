@@ -5,7 +5,7 @@
 #include <vector>
 
 //This must be changed: different header for iOS and MacOSX.
-#include <ApplicationServices/ApplicationServices.h>
+//#include <ApplicationServices/ApplicationServices.h>
 #include <Cocoa/Cocoa.h>
 
 #include "CocoaUtils.h"
