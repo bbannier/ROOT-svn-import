@@ -9,7 +9,9 @@
 
 #include "QuartzText.h"
 #include "CocoaUtils.h"
+#include "TVirtualX.h"
 #include "TError.h"
+#include "TMath.h"
 
 
 namespace ROOT {
@@ -107,9 +109,55 @@ void TextLine::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CF
 //_________________________________________________________________
 void TextLine::DrawLine(CGContextRef ctx)const
 {
-   assert(ctx != nullptr && "DrawLine, ctx is null");
+   assert(ctx != nullptr && "DrawLine, ctx parameter is null");
 
    CTLineDraw(fCTLine, ctx);
+}
+
+
+//______________________________________________________________________________
+void TextLine::DrawText(CGContextRef ctx, Double_t x, Double_t y)const
+{
+   assert(ctx != nullptr && "DrawLine, ctx parameter is null");
+
+   CGContextSetAllowsAntialiasing(ctx, 1);
+   
+   UInt_t w = 0, h = 0;
+   
+   GetBounds(w, h);
+   
+   Double_t xc = 0., yc = 0.;   
+   const UInt_t hAlign = UInt_t(gVirtualX->GetTextAlign() / 10);   
+   switch (hAlign) {
+   case 1:
+      xc = 0.5 * w;
+      break;
+   case 2:
+      break;
+   case 3:
+      xc = -0.5 * w;
+      break;
+   }
+
+   const UInt_t vAlign = UInt_t(gVirtualX->GetTextAlign() % 10);
+   switch (vAlign) {
+   case 1:
+      yc = 0.5 * h;
+      break;
+   case 2:
+      break;
+   case 3:
+      yc = -0.5 * h;
+      break;
+   }
+   
+   CGContextSetTextPosition(ctx, 0., 0.);
+   CGContextTranslateCTM(ctx, x, y);  
+   CGContextRotateCTM(ctx, gVirtualX->GetTextAngle() * TMath::DegToRad());
+   CGContextTranslateCTM(ctx, xc, yc);
+   CGContextTranslateCTM(ctx, -0.5 * w, -0.5 * h);
+
+   DrawLine(ctx);
 }
 
 //DrawText, GetTextExtent by Olivier Couet.

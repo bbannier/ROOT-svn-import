@@ -26,7 +26,7 @@ public:
    void GetAscentDescent(Int_t &asc, Int_t &desc)const;
 
    void DrawLine(CGContextRef ctx)const;
-
+   void DrawText(CGContextRef ctx, Double_t x, Double_t y)const;
 private:
    CTLineRef fCTLine; //Core Text line, created from Attributed string.
 
