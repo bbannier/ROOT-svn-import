@@ -43,7 +43,43 @@ void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,
    else      CGContextStrokeRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
 }
 
+//______________________________________________________________________________
+void DrawBoxGradient(TAttFill::EFillGradient gradientType, CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const CGFloat *rgb, Bool_t drawShadow)
+{
+   using ROOT::MacOSX::Util::CFScopeGuard;
+   assert(gradientType == TAttFill::kGradientVertical || gradientType == TAttFill::kGradientHorizontal && "DrawBoxGradient, unknown gradient parameter");
+   assert(rgb != nullptr && "DrawBoxGradient, rgb parameter is null");
    
+   CGPoint startPoint = CGPointZero;
+   CGPoint endPoint = CGPointZero;
+   
+   if (gradientType == TAttFill::kGradientHorizontal)
+      endPoint.x = x2;
+   else
+      endPoint.y = y2;
+      
+   if (drawShadow) {
+      //To have shadow and gradient at the same time,
+      //I first have to fill polygon, and after that
+      //draw gradient (since gradient fills the whole area
+      //with clip path and generates no shadow).
+      CGContextSetRGBFillColor(ctx, 1., 1., 1., 0.5);
+      CGContextSetShadow(ctx, shadowOffset, shadowBlur);
+      CGContextFillRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
+   }
+   
+   CGContextBeginPath(ctx);
+   CGContextAddRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
+   CGContextClosePath(ctx);
+   CGContextClip(ctx);
+   //Create a gradient.
+   const CFScopeGuard<CGColorSpaceRef> baseSpace(CGColorSpaceCreateDeviceRGB());
+   const CGFloat colors[] = {rgb[0], rgb[1], rgb[2], 0.4, rgb[0] - 0.65 * rgb[0], rgb[1] - 0.65 * rgb[1], rgb[2] - 0.65 * rgb[2], 1.};
+   const CFScopeGuard<CGGradientRef> gradient(CGGradientCreateWithColorComponents(baseSpace.Get(), colors, nullptr, 2));
+   
+   CGContextDrawLinearGradient(ctx, gradient.Get(), startPoint, endPoint, 0);
+}
+
 //______________________________________________________________________________
 void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t shadow)
 {
@@ -54,8 +90,10 @@ void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t shadow)
    CGContextBeginPath (ctx);
       
    CGContextMoveToPoint (ctx, xy[0].fX, xy[0].fY);
-      
-   for (Int_t i=1; i<n; i++) CGContextAddLineToPoint (ctx, xy[i].fX, xy[i].fY);
+   for (Int_t i = 1; i < n; ++i) 
+      CGContextAddLineToPoint (ctx, xy[i].fX, xy[i].fY);
+
+   CGContextClosePath(ctx);
       
    if (gFillHollow) 
       CGContextStrokePath(ctx);
