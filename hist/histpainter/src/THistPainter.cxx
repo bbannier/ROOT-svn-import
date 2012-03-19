@@ -4200,6 +4200,7 @@ void THistPainter::PaintBar(Option_t *)
    Int_t hstyle = fH->GetFillStyle();
    box.SetFillColor(hcolor);
    box.SetFillStyle(hstyle);
+   box.SetExtendedFill(fH->GetExtendedFill());
    for (Int_t bin=fXaxis->GetFirst();bin<=fXaxis->GetLast();bin++) {
       y    = fH->GetBinContent(bin);
       xmin = gPad->XtoPad(fXaxis->GetBinLowEdge(bin));
@@ -4260,6 +4261,7 @@ void THistPainter::PaintBarH(Option_t *)
    Int_t hstyle = fH->GetFillStyle();
    box.SetFillColor(hcolor);
    box.SetFillStyle(hstyle);
+   box.SetExtendedFill(fH->GetExtendedFill());
    for (Int_t bin=fYaxis->GetFirst();bin<=fYaxis->GetLast();bin++) {
       ymin = gPad->YtoPad(fYaxis->GetBinLowEdge(bin));
       ymax = gPad->YtoPad(fYaxis->GetBinUpEdge(bin));
@@ -4917,6 +4919,7 @@ void THistPainter::PaintContour(Option_t *option)
          if (Hoption.List) {
             graph = new TGraph(iplus-iminus+1,&xp[iminus],&yp[iminus]);
             graph->SetFillColor(icol);
+            graph->SetExtendedFill(fH->GetExtendedFill());
             graph->SetLineWidth(fH->GetLineWidth());
             list->Add(graph);
          }
@@ -5259,6 +5262,7 @@ L30:
       graph.SetLineWidth(fH->GetLineWidth());
       graph.SetFillStyle(fH->GetFillStyle());
       graph.SetFillColor(fH->GetFillColor());
+      graph.SetExtendedFill(fH->GetExtendedFill());
       Int_t logx = gPad->GetLogx();
       Int_t logy = gPad->GetLogy();
       gPad->SetLogx(0);
@@ -5322,6 +5326,7 @@ void THistPainter::Paint2DErrors(Option_t *)
    view->PadRange(backcolor);
    fLego->SetFillStyle(fH->GetFillStyle());
    fLego->SetFillColor(fH->GetFillColor());
+   fLego->SetFillColor(fH->GetExtendedFill());
    fLego->TAttFill::Modify();
 
    // Paint the Back Box if needed
@@ -5632,6 +5637,7 @@ void THistPainter::PaintHist(Option_t *)
    graph.SetLineColor(fH->GetLineColor());
    graph.SetFillStyle(htype);
    graph.SetFillColor(fH->GetFillColor());
+   graph.SetExtendedFill(fH->GetExtendedFill());
    graph.SetMarkerStyle(fH->GetMarkerStyle());
    graph.SetMarkerSize(fH->GetMarkerSize());
    graph.SetMarkerColor(fH->GetMarkerColor());
@@ -6357,6 +6363,7 @@ void THistPainter::PaintLego(Option_t *)
 
    fLego->SetFillStyle(fH->GetFillStyle());
    fLego->SetFillColor(fH->GetFillColor());
+   fLego->SetExtendedFill(fH->GetExtendedFill());
    fLego->TAttFill::Modify();
 
    fLego->DefineGridLevels(fZaxis->GetNdivisions()%100);
@@ -7551,6 +7558,7 @@ void THistPainter::PaintSurface(Option_t *)
    fLego = new TPainter3dAlgorithms(fXbuf, fYbuf, Hoption.System);
    fLego->SetLineColor(fH->GetLineColor());
    fLego->SetFillColor(fH->GetFillColor());
+   fLego->SetExtendedFill(fH->GetExtendedFill());
 
    //          Create axis object
 
@@ -7601,6 +7609,7 @@ void THistPainter::PaintSurface(Option_t *)
 
    fLego->SetFillStyle(fH->GetFillStyle());
    fLego->SetFillColor(fH->GetFillColor());
+   fLego->SetExtendedFill(fH->GetExtendedFill());
    fLego->TAttFill::Modify();
 
    //     Draw the filled contour on top
@@ -7794,6 +7803,7 @@ void THistPainter::PaintTriangles(Option_t *option)
    view->PadRange(backcolor);
    fLego->SetFillStyle(fH->GetFillStyle());
    fLego->SetFillColor(fH->GetFillColor());
+   fLego->SetExtendedFill(fH->GetExtendedFill());
    fLego->TAttFill::Modify();
 
    // Paint the Back Box if needed

@@ -24,6 +24,9 @@
 
 #include <Cocoa/Cocoa.h>
 
+#ifndef ROOT_TAttFill
+#include "TAttFill.h"
+#endif
 #ifndef ROOT_Rtypes
 #include "Rtypes.h"
 #endif
@@ -37,7 +40,12 @@ namespace Quartz {
    
 void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,
              Int_t mode);
-void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy);
+
+void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t shadow);
+
+void DrawFillAreaGradient(TAttFill::EFillGradient grad, CGContextRef ctx, Int_t nPoints, const TPoint *xy,
+                          const Float_t *rgb, Bool_t shadow);
+
 void SetFillStyle(CGContextRef ctx, Int_t style, 
                   Float_t r, Float_t g, Float_t b, Float_t a);
 void SetStencilPattern(CGContextRef ctx, 

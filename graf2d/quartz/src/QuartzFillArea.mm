@@ -8,16 +8,26 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
-
+#include <algorithm>
+#include <cassert>
 
 #include "QuartzFillArea.h"
+#include "CocoaUtils.h"
 #include "RStipples.h"
+#include "TError.h"
 
 static Int_t gFillHollow;  // Flag if fill style is hollow
 static Int_t gFillPattern; // Fill pattern
 
 namespace ROOT {
 namespace Quartz {
+
+namespace {
+
+const CGSize shadowOffset = CGSizeMake(10., 10.);
+const CGFloat shadowBlur = 5.;
+
+}
 
    
 //______________________________________________________________________________
@@ -35,7 +45,7 @@ void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,
 
    
 //______________________________________________________________________________
-void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy)
+void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t shadow)
 {
    // Draw a filled area through all points.
    // n         : number of points
@@ -47,10 +57,85 @@ void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy)
       
    for (Int_t i=1; i<n; i++) CGContextAddLineToPoint (ctx, xy[i].fX, xy[i].fY);
       
-   if (gFillHollow) CGContextStrokePath(ctx);
-   else             CGContextFillPath(ctx);
+   if (gFillHollow) 
+      CGContextStrokePath(ctx);
+   else {
+      if (shadow)
+         CGContextSetShadow(ctx, shadowOffset, shadowBlur);
+      
+      CGContextFillPath(ctx);
+   }
 }
 
+//______________________________________________________________________________
+void DrawFillAreaGradient(TAttFill::EFillGradient gradientType, CGContextRef ctx, Int_t nPoints, const TPoint *xy, const Float_t *rgb, Bool_t shadow)
+{
+   using ROOT::MacOSX::Util::CFScopeGuard;
+
+   assert(gradientType == TAttFill::kGradientVertical || gradientType == TAttFill::kGradientHorizontal && "DrawFillAreaGradient, unknown gradient parameter");
+   assert(ctx != nullptr && "DrawFillAreaGradient, ctx parameter is null");
+   assert(nPoints != 0 && "DrawFillAreaGradient, nPoints parameter is 0");
+   assert(xy != nullptr && "DrawFillAreaGradient, xy parameter is null");
+   assert(rgb != nullptr && "DrawFillAreaGradient, rgb parameter is null");
+
+   const CFScopeGuard<CGMutablePathRef> path(CGPathCreateMutable());
+   if (!path.Get()) {
+      ::Error("DrawFillAreaGradient", "CGPathCreateMutable failed");
+      return;
+   }
+
+   CGPathMoveToPoint(path.Get(), nullptr, xy[0].fX, xy[0].fY);
+   for (Int_t i = 1; i < nPoints; ++i)
+      CGPathAddLineToPoint(path.Get(), nullptr, xy[i].fX, xy[i].fY);
+   
+   CGPathCloseSubpath(path.Get());
+
+   //Calculate gradient's start and end point (either X or Y coordinate,
+   //depending on gradient type). Also, fill CGPath object.
+   CGPoint startPoint = CGPointZero;
+   CGPoint endPoint = CGPointZero;
+   
+   if (gradientType == TAttFill::kGradientHorizontal) {
+      startPoint = CGPointMake(xy[0].fX, 0.);
+      endPoint = CGPointMake(xy[0].fX, 0.);
+   
+      for (Int_t i = 1; i < nPoints; ++i) {
+         startPoint.x = std::min(startPoint.x, CGFloat(xy[i].fX));
+         endPoint.x = std::max(endPoint.x, CGFloat(xy[i].fX));
+      }
+   } else {
+      startPoint = CGPointMake(0., xy[0].fY);
+      endPoint = CGPointMake(0., xy[0].fY);
+   
+      for (Int_t i = 1; i < nPoints; ++i) {
+         startPoint.y = std::min(startPoint.y, CGFloat(xy[i].fY));
+         endPoint.y = std::max(endPoint.y, CGFloat(xy[i].fY));
+      }
+   }
+   
+   if (shadow) {
+      //To have shadow and gradient at the same time,
+      //I first have to fill polygon, and after that
+      //draw gradient (since gradient fills the whole area
+      //with clip path and generates no shadow).
+      CGContextSetRGBFillColor(ctx, 1., 1., 1., 0.5);
+      CGContextBeginPath(ctx);
+      CGContextAddPath(ctx, path.Get());
+      CGContextSetShadow(ctx, shadowOffset, shadowBlur);
+      CGContextFillPath(ctx);
+   }
+
+   CGContextBeginPath(ctx);
+   CGContextAddPath(ctx, path.Get());
+   CGContextClip(ctx);
+
+   //Create a gradient.
+   const CFScopeGuard<CGColorSpaceRef> baseSpace(CGColorSpaceCreateDeviceRGB());
+   const CGFloat colors[] = {rgb[0], rgb[1], rgb[2], 0.4, rgb[0] - 0.65 * rgb[0], rgb[1] - 0.65 * rgb[1], rgb[2] - 0.65 * rgb[2], 1.};
+   const CFScopeGuard<CGGradientRef> gradient(CGGradientCreateWithColorComponents(baseSpace.Get(), colors, nullptr, 2));
+   
+   CGContextDrawLinearGradient(ctx, gradient.Get(), startPoint, endPoint, 0);
+}
    
 //______________________________________________________________________________
 void SetFillStyle(CGContextRef ctx, Int_t style, 
