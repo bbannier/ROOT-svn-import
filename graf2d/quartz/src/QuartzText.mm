@@ -28,6 +28,15 @@ TextLine::TextLine(const char *textLine, CTFontRef font)
    Init(textLine, 1, keys, values);
 }
 
+//_________________________________________________________________
+TextLine::TextLine(const std::vector<UniChar> &unichars, CTFontRef font)
+{
+   //Create attributed string with one attribue: the font.
+   CFStringRef keys[] = {kCTFontAttributeName};
+   CFTypeRef values[] = {font};
+
+   Init(unichars, 1, keys, values);
+}
 
 //_________________________________________________________________
 TextLine::TextLine(const char * /*textLine*/, CTFontRef /*font*/, Color_t /*color*/)
@@ -97,13 +106,35 @@ void TextLine::Init(const char *textLine, UInt_t nAttribs, CFStringRef *keys, CF
 
    const CFScopeGuard<CFStringRef> wrappedCString(CFStringCreateWithCString(kCFAllocatorDefault, textLine, kCFStringEncodingMacRoman));
    if (!wrappedCString.Get())
-      throw std::runtime_error("CTLineGuard: cstr wrapper");
+      throw std::runtime_error("TextLine: cstr wrapper");
 
    CFScopeGuard<CFAttributedStringRef> attributedString(CFAttributedStringCreate(kCFAllocatorDefault, wrappedCString.Get(), stringAttribs.Get()));
    fCTLine = CTLineCreateWithAttributedString(attributedString.Get());
 
    if (!fCTLine)
-      throw std::runtime_error("CTLineGuard: attrib string");
+      throw std::runtime_error("TextLine: attrib string");
+}
+
+//_________________________________________________________________
+void TextLine::Init(const std::vector<UniChar> &unichars, UInt_t nAttribs, CFStringRef *keys, CFTypeRef *values)
+{
+   using MacOSX::Util::CFScopeGuard;
+   
+   const CFScopeGuard<CFStringRef> wrappedUniString(CFStringCreateWithCharacters(kCFAllocatorDefault, &unichars[0], unichars.size()));
+   const CFScopeGuard<CFDictionaryRef> stringAttribs(CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **)values,
+                                                           nAttribs, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+   
+   if (!stringAttribs.Get())
+      throw std::runtime_error("TextLine: null attribs");
+
+   if (!wrappedUniString.Get())
+      throw std::runtime_error("TextLine: cstr wrapper");
+
+   const CFScopeGuard<CFAttributedStringRef> attributedString(CFAttributedStringCreate(kCFAllocatorDefault, wrappedUniString.Get(), stringAttribs.Get()));
+   fCTLine = CTLineCreateWithAttributedString(attributedString.Get());
+
+   if (!fCTLine)
+      throw std::runtime_error("TextLine: attrib string");
 }
 
 //_________________________________________________________________
@@ -116,7 +147,7 @@ void TextLine::DrawLine(CGContextRef ctx)const
 
 
 //______________________________________________________________________________
-void TextLine::DrawText(CGContextRef ctx, Double_t x, Double_t y)const
+void TextLine::DrawLine(CGContextRef ctx, Double_t x, Double_t y)const
 {
    assert(ctx != nullptr && "DrawLine, ctx parameter is null");
 
@@ -228,7 +259,7 @@ void DrawText(CGContextRef ctx, Double_t x, Double_t y, Float_t /*angle*/, Int_t
          unichars[i] = 0xF000 + (unsigned char)text[i];
 
 
-      const CFStringRef wrappedCString = CFStringCreateWithCharacters(kCFAllocatorDefault, &unichars[0], unichars.size() / sizeof unichars[0]);//[4
+      const CFStringRef wrappedCString = CFStringCreateWithCharacters(kCFAllocatorDefault, &unichars[0], unichars.size());//[4
       const CFDictionaryRef stringAttribs = CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **)values,
                                                                1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);//[5
       const CFAttributedStringRef attributedString = CFAttributedStringCreate(kCFAllocatorDefault, wrappedCString, stringAttribs);//[6
