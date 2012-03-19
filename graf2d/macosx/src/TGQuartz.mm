@@ -208,11 +208,6 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
    NSObject<X11Drawable> *pixmap = fPimpl->GetDrawable(fSelectedDrawable);
    assert(pixmap.fIsPixmap == YES && "DrawText, selected drawable is not a pixmap");
    
-   if (!SetContextFillColor(GetTextColor())) {
-      Error("DrawText", "Could not find TColor for index %d", GetTextColor());
-      return;
-   }
-
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
    const Quartz::CGStateGuard ctxGuard(ctx);
 
@@ -235,10 +230,10 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
             for (size_type i = 0, len = unichars.size(); i < len; ++i)
                unichars[i] = 0xF000 + (unsigned char)text[i];
             
-            Quartz::TextLine ctLine(unichars, currentFont);
+            Quartz::TextLine ctLine(unichars, currentFont, GetTextColor());
             ctLine.DrawLine(ctx, x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y));
          } else {
-            const Quartz::TextLine ctLine(text, currentFont);
+            const Quartz::TextLine ctLine(text, currentFont, GetTextColor());
             ctLine.DrawLine(ctx, x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y));
          }
       }
