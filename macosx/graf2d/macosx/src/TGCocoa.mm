@@ -23,31 +23,32 @@
 
 ClassImp(TGCocoa)
 
+namespace ROOT {
+namespace Quartz {
+
+//______________________________________________________________________________
+CGStateGuard::CGStateGuard(void *ctx)
+               : fCtx(ctx)
+{
+   CGContextSaveGState(static_cast<CGContextRef>(ctx));
+}
+
+//______________________________________________________________________________
+CGStateGuard::~CGStateGuard()
+{
+   CGContextRestoreGState(static_cast<CGContextRef>(fCtx));
+}
+
+}//Quartz
+}//ROOT
+
 namespace Details = ROOT::MacOSX::Details;
 namespace Util = ROOT::MacOSX::Util;
 namespace X11 = ROOT::MacOSX::X11;
+namespace Quartz = ROOT::Quartz;
 
 
 namespace {
-
-class CGStateGuard {
-public:
-   CGStateGuard(CGContextRef ctx)
-      : fCtx(ctx)
-   {
-      CGContextSaveGState(ctx);
-   }
-   ~CGStateGuard()
-   {
-      CGContextRestoreGState(fCtx);
-   }
-   
-private:
-   CGContextRef fCtx;
-   
-   CGStateGuard(const CGStateGuard &rhs) = delete;
-   CGStateGuard &operator = (const CGStateGuard &rhs) = delete;
-};
 
 //______________________________________________________________________________
 void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
@@ -321,7 +322,7 @@ void TGCocoa::ClearWindow()
    NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(fSelectedDrawable);
    if (drawable.fIsPixmap) {
       CGContextRef pixmapCtx = drawable.fContext;
-      const CGStateGuard ctxGuard(pixmapCtx);
+      const Quartz::CGStateGuard ctxGuard(pixmapCtx);
       CGContextSetRGBFillColor(pixmapCtx, 1., 1., 1., 1.);
       CGContextFillRect(pixmapCtx, CGRectMake(0, 0, drawable.fWidth, drawable.fHeight));
    } else {
@@ -1728,7 +1729,7 @@ void TGCocoa::DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, In
    CGContextRef ctx = fPimpl->GetDrawable(wid).fContext;
    assert(ctx != nullptr && "DrawLineAux, ctx is null");
 
-   const CGStateGuard ctxGuard(ctx);//Will restore state back.
+   const Quartz::CGStateGuard ctxGuard(ctx);//Will restore state back.
    //Draw a line.
    //This draw line is a special GUI method, it's used not by ROOT's graphics, but
    //widgets. The problem is:
@@ -1793,7 +1794,7 @@ void TGCocoa::DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
 
    CGContextRef ctx = fPimpl->GetDrawable(wid).fContext;
    assert(ctx && "DrawRectangleAux, ctx is null");
-   const CGStateGuard ctxGuard(ctx);//Will restore context state.
+   const Quartz::CGStateGuard ctxGuard(ctx);//Will restore context state.
 
    //Line color from X11 context.
    SetStrokeParametersFromX11Context(ctx, gcVals);
@@ -1857,7 +1858,7 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
       patternPhase.height = origin.y;
    }
 
-   const CGStateGuard ctxGuard(ctx);//Will restore context state.
+   const Quartz::CGStateGuard ctxGuard(ctx);//Will restore context state.
 
    if (gcVals.fMask & kGCStipple) {
       assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
@@ -1986,7 +1987,7 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    CGContextRef ctx = drawable.fContext;
    assert(ctx != nullptr && "DrawStringAux, ctx is null");
 
-   const CGStateGuard ctxGuard(ctx);//Will reset parameters back.
+   const Quartz::CGStateGuard ctxGuard(ctx);//Will reset parameters back.
 
    CGContextSetTextMatrix(ctx, CGAffineTransformIdentity);
    
@@ -2066,7 +2067,7 @@ void TGCocoa::ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    CGFloat rgb[3] = {};
    PixelToRGB(view.fBackgroundPixel, rgb);
 
-   const CGStateGuard ctxGuard(view.fContext);
+   const Quartz::CGStateGuard ctxGuard(view.fContext);
    CGContextSetRGBFillColor(view.fContext, rgb[0], rgb[1], rgb[2], 1.);//alpha can be also used.
    CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
 }

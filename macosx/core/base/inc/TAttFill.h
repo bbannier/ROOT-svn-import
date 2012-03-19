@@ -30,12 +30,22 @@
 
 
 class TAttFill {
+public:
+   enum EFillGradient {
+      kNoGradientFill,//0
+      kGradientVertical,//1
+      kGradientHorizontal//2
+   };
 
 protected:
    Color_t    fFillColor;           //fill area color
    Style_t    fFillStyle;           //fill area style
 
+   //fExtension == gradient * 1000 + alpha (0-100).
+   UInt_t     fExtension;           //transparency + gradient fill
+   
 public:
+
    TAttFill();
    TAttFill(Color_t fcolor,Style_t fstyle);
    virtual ~TAttFill();
@@ -49,8 +59,15 @@ public:
    virtual void     SetFillAttributes(); // *MENU*
    virtual void     SetFillColor(Color_t fcolor) { fFillColor = fcolor; }
    virtual void     SetFillStyle(Style_t fstyle) { fFillStyle = fstyle; }
+   
+   virtual void     SetFillAlpha(UInt_t alpha);
+   virtual UInt_t   GetFillAlpha()const;
+   virtual void     SetFillGradient(EFillGradient direction);
+   virtual EFillGradient GetFillGradient()const;
+   virtual void     SetExtendedFill(UInt_t ext);
+   virtual UInt_t   GetExtendedFill()const;
 
-   ClassDef(TAttFill,1)  //Fill area attributes
+   ClassDef(TAttFill,2)  //Fill area attributes
 };
 
 inline Bool_t TAttFill::IsTransparent() const

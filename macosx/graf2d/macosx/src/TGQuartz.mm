@@ -60,7 +60,7 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
    Float_t r = 0.f;
    Float_t g = 0.f;
    Float_t b = 0.f;
-   Float_t a = 1.f;
+   const Float_t a = GetFillAlpha() / 100.f;
    
    color->GetRGB(r, g, b);
    
@@ -78,24 +78,27 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    // xy        : list of points
 
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
-
-   SetContextStrokeColor(GetFillColor());
-
-   SetContextFillColor(GetFillColor());
+   
+   const Quartz::CGStateGuard ctxGuard(ctx);
 
    TColor *color = gROOT->GetColor(GetFillColor());
-   if (!color) return;
-   
-   Float_t r = 0.f;
-   Float_t g = 0.f;
-   Float_t b = 0.f;
-   Float_t a = 1.f;
+   if (!color) {
+      Error("DrawFillArea", "Could not find TColor for index %d", GetFillColor());
+      return;
+   }
+      
+   Float_t rgb[3] = {};
+   color->GetRGB(rgb[0], rgb[1], rgb[2]);
+   const Float_t a = GetFillAlpha() / 100.f;
 
-   color->GetRGB(r, g, b);
-
-   Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
-
-   Quartz::DrawFillArea(ctx, n, xy);
+   if (GetFillGradient() == kNoGradientFill) {
+      SetContextStrokeColor(GetFillColor());
+      SetContextFillColor(GetFillColor());
+      Quartz::SetFillStyle(ctx, GetFillStyle(), rgb[0], rgb[1], rgb[2], a);
+      Quartz::DrawFillArea(ctx, n, xy, kFALSE);//The last argument - do not draw shadows.
+   } else {
+      Quartz::DrawFillAreaGradient(GetFillGradient(), ctx, n, xy, rgb, kTRUE);//kTRUE == draw shadows.
+   }
 }
 
 
@@ -267,7 +270,7 @@ void TGQuartz::SetContextFillColor(Int_t ci)
    TColor *color = gROOT->GetColor(ci);
    if (!color) return;
 
-   const Float_t a = 1.f;
+   const Float_t a = GetFillAlpha() / 100.f;
    Float_t r = 0.f;
    Float_t g = 0.f;
    Float_t b = 0.f;
