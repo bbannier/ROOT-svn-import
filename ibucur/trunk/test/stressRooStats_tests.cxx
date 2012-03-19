@@ -23,20 +23,20 @@
 #include "RooStats/NumberCountingUtils.h"
 #include "RooStats/RooStatsUtils.h"
 
-using namespace RooFit ;
-using namespace RooStats ;
+using namespace RooFit;
+using namespace RooStats;
 
 
 class TestBasic101 : public RooUnitTest
 {
 public: 
-  TestBasic101(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Zbi and Zgamma",refFile,writeRef,verbose) {} ;
+  TestBasic101(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Zbi and Zgamma", refFile, writeRef, verbose) {};
   Bool_t testCode() {
     
     // Make model for prototype on/off problem
     // Pois(x | s+b) * Pois(y | tau b )
     // for Z_Gamma, use uniform prior on b.
-    RooWorkspace* w = new RooWorkspace("w",true);
+    RooWorkspace* w = new RooWorkspace("w", kTRUE);
     w->factory("Poisson::px(x[150,0,500],sum::splusb(s[0,0,100],b[100,0,300]))");
     w->factory("Poisson::py(y[100,0,500],prod::taub(tau[1.],b))");	     
     w->factory("Uniform::prior_b(b)");
@@ -72,16 +72,36 @@ public:
     regValue(zgamma_signif,"rs101_zgamma_signif") ;
     regValue(Z_Bi,"rs101_Z_Bi") ;
     
+	delete w;
+
     return kTRUE ;
   }
 } ;
 
 
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// 'LIKELIHOOD PROFILE' RooStats Tutorial Macro #102
+//
+// Working with the profile likelihood estimator
+//
+// 03/2012 - Ioan Gabriel Bucur
+//
+///////////////////////////////////////////////////////////////////////////////
+
+#include "RooProfileLL.h"
+
 class TestBasic102 : public RooUnitTest
 {
 public: 
-  TestBasic102(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("DUMMY",refFile,writeRef,verbose) {} ;
+  TestBasic102(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Profile Likelihood Operator", refFile, writeRef, verbose) {} ;
   Bool_t testCode() {    
+
+    // Create model and dataset
+
+
     return kTRUE ;
   }
 } ;

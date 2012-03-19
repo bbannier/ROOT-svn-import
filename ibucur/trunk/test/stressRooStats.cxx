@@ -49,12 +49,11 @@ void StatusPrint(Int_t id,const TString &title,Int_t status)
 {
   // Print test program number and its title
   const Int_t kMAX = 65;
-  Char_t number[4];
-  sprintf(number,"%2d",id);
-  TString header = TString("Test ")+number+" : "+title;
+  TString header = TString("Test ");
+  header += id; header += " : "; header += title;
   const Int_t nch = header.Length();
   for (Int_t i = nch; i < kMAX; i++) header += '.';
-  cout << header << (status>0 ? "OK" : (status<0 ? "SKIPPED" : "FAILED")) << endl;
+  cout << header << (status > 0 ? "OK" : (status < 0 ? "SKIPPED" : "FAILED")) << endl;
 }
 
 #include "stressRooStats_tests.cxx"
@@ -73,12 +72,12 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
   if (!dryRun) {
     if (TString(refFile).Contains("http:")) {
       if (writeRef) {
-	cout << "stressRooStats ERROR: reference file must be local file in writing mode" << endl ;
-	return kFALSE ;
+	    cout << "stressRooStats ERROR: reference file must be local file in writing mode" << endl ;
+	    return kFALSE ;
       }
       fref = new TWebFile(refFile) ;
     } else {
-      fref = new TFile(refFile,writeRef?"RECREATE":"") ;
+      fref = new TFile(refFile, writeRef?"RECREATE":"") ;
     }
     if (fref->IsZombie()) {
       cout << "stressRooStats ERROR: cannot open reference file " << refFile << endl ;
@@ -97,17 +96,17 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
   // Add dedicated logging stream for errors that will remain active in silent mode
   RooMsgService::instance().addStream(RooFit::ERROR) ;
 
-  cout << "******************************************************************" <<endl;
-  cout << "*  RooStats - S T R E S S suite                                   *" <<endl;
-  cout << "******************************************************************" <<endl;
-  cout << "******************************************************************" <<endl;
+  cout << "******************************************************************" << endl;
+  cout << "*  RooStats - S T R E S S suite                                  *" << endl;
+  cout << "******************************************************************" << endl;
+  cout << "******************************************************************" << endl;
   
   TStopwatch timer;
   timer.Start();
 
   list<RooUnitTest*> testList ;
   testList.push_back(new TestBasic101(fref,writeRef,doVerbose)) ;
-//   testList.push_back(new TestBasic102(fref,writeRef,doVerbose)) ;
+  testList.push_back(new TestBasic102(fref,writeRef,doVerbose)) ;
 //   testList.push_back(new TestBasic103(fref,writeRef,doVerbose)) ;
 //   testList.push_back(new TestBasic104(fref,writeRef,doVerbose)) ;
 //   testList.push_back(new TestBasic105(fref,writeRef,doVerbose)) ;
@@ -122,19 +121,19 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
   gBenchmark->Start("StressRooStats");
 
   Int_t i(1) ;
-  for (list<RooUnitTest*>::iterator iter = testList.begin () ; iter != testList.end() ; ++iter) {
-    if (oneTest<0 || oneTest==i) {
+  for (list<RooUnitTest*>::iterator iter = testList.begin() ; iter != testList.end() ; ++iter) {
+    if (oneTest < 0 || oneTest == i) {
       if (doDump) {
-	(*iter)->setDebug(kTRUE) ;
+	    (*iter)->setDebug(kTRUE);
       }
-      StatusPrint( i,(*iter)->GetName(),(*iter)->isTestAvailable()?(*iter)->runTest():-1);
+      StatusPrint(i, (*iter)->GetName(), (*iter)->isTestAvailable()?(*iter)->runTest():-1);
     }
-    delete (*iter) ;
-    i++ ;
+    delete (*iter);
+    i++;
   }
 
   if (dryRun) {
-    RooTrace::dump() ;
+    RooTrace::dump();
   }
 
   gBenchmark->Stop("StressRooStats");
@@ -144,22 +143,22 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
   Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
   printf("******************************************************************\n");
   if (UNIX) {
-     TString sp = gSystem->GetFromPipe("uname -a");
-     sp.Resize(60);
-     printf("*  SYS: %s\n",sp.Data());
-     if (strstr(gSystem->GetBuildNode(),"Linux")) {
-        sp = gSystem->GetFromPipe("lsb_release -d -s");
-        printf("*  SYS: %s\n",sp.Data());
-     }
-     if (strstr(gSystem->GetBuildNode(),"Darwin")) {
-        sp  = gSystem->GetFromPipe("sw_vers -productVersion");
-        sp += " Mac OS X ";
-        printf("*  SYS: %s\n",sp.Data());
-     }
+    TString sp = gSystem->GetFromPipe("uname -a");
+    // sp.Resize(60);
+    printf("*  SYS: %s\n",sp.Data());
+    if (strstr(gSystem->GetBuildNode(),"Linux")) {
+      sp = gSystem->GetFromPipe("lsb_release -d -s");
+      printf("*  SYS: %s\n", sp.Data());
+    }
+    if (strstr(gSystem->GetBuildNode(),"Darwin")) {
+      sp  = gSystem->GetFromPipe("sw_vers -productVersion");
+      sp += " Mac OS X ";
+      printf("*  SYS: %s\n", sp.Data());
+    }
   } else {
     const Char_t *os = gSystem->Getenv("OS");
     if (!os) printf("*  SYS: Windows 95\n");
-    else     printf("*  SYS: %s %s \n",os,gSystem->Getenv("PROCESSOR_IDENTIFIER"));
+    else     printf("*  SYS: %s %s \n", os, gSystem->Getenv("PROCESSOR_IDENTIFIER"));
   }
   
   printf("******************************************************************\n");
@@ -169,14 +168,15 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 #else
   Double_t reftime = 93.59; //pcbrun4 compiled
 #endif
-  const Double_t rootmarks = 860*reftime/gBenchmark->GetCpuTime("StressRooStats");
+  const Double_t rootmarks = 860 * reftime / gBenchmark->GetCpuTime("StressRooStats");
   
   printf("******************************************************************\n");
-  printf("*  ROOTMARKS =%6.1f   *  Root%-8s  %d/%d\n",rootmarks,gROOT->GetVersion(),
-         gROOT->GetVersionDate(),gROOT->GetVersionTime());
+  printf("*  ROOTMARKS = %6.1f   *  Root%-8s  %d/%d\n", rootmarks, gROOT->GetVersion(),
+         gROOT->GetVersionDate(), gROOT->GetVersionTime());
   printf("******************************************************************\n");
   
-  printf("Time at the end of job = %f seconds\n",timer.CpuTime());
+  // NOTE: The function TStopwatch::CpuTime() calls Tstopwatch::Stop(), so you do not need to stop the timer separately.
+  printf("Time at the end of job = %f seconds\n", timer.CpuTime());
 
   if (fref) {
     fref->Close() ;
@@ -213,18 +213,18 @@ int main(int argc,const char *argv[])
     }
 
     if (arg=="-w") {
-      cout << "stressRooStats: running in writing mode to updating reference file" << endl ;
+      cout << "stressRooStats: running in writing mode to update reference file" << endl ;
       doWrite = kTRUE ;
     }
 
     if (arg=="-mc") {
       cout << "stressRooStats: running in memcheck mode, no regression tests are performed" << endl ;
-      dryRun=kTRUE ;
+      dryRun = kTRUE ;
     }
 
     if (arg=="-ts") {
       cout << "stressRooStats: setting tree-based storage for datasets" << endl ;
-      doTreeStore=kTRUE ;
+      doTreeStore = kTRUE ;
     }
 
     if (arg=="-v") {
@@ -249,7 +249,7 @@ int main(int argc,const char *argv[])
     
     if (arg=="-c") {
       cout << "stressRooStats: dumping comparison file for failed tests " << endl ;
-      doDump=kTRUE ;
+      doDump = kTRUE ;
     }
 
     if (arg=="-h") {
@@ -270,19 +270,19 @@ int main(int argc,const char *argv[])
 
    }
 
-  if (doWrite && refFileName.find("http:")==0) {
+  if (doWrite && refFileName.find("http:") == 0) {
 
     // Locate file name part in URL and update refFileName accordingly
-    char* buf = new char[refFileName.size()+1] ;
-    strcpy(buf,refFileName.c_str()) ;
-    char *ptr = strrchr(buf,'/') ;
+    char* buf = new char[refFileName.size() + 1];
+    strcpy(buf, refFileName.c_str());
+    char *ptr = strrchr(buf, '/');
     if (!ptr) {
-      ptr = strrchr(buf,':') ;
+      ptr = strrchr(buf, ':');
     }
-    refFileName = ptr+1 ;
-    delete[] buf ;
+    refFileName = ptr + 1;
+    delete[] buf;
 
-    cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: " << refFileName << endl ;
+    cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: " << refFileName << endl;
   }
 
   // Disable caching of complex error function calculation, as we don't 
@@ -290,7 +290,7 @@ int main(int argc,const char *argv[])
   RooMath::cacheCERF(kFALSE) ;
 
   gBenchmark = new TBenchmark();
-  stressRooStats(refFileName.c_str(),doWrite,doVerbose,oneTest,dryRun,doDump,doTreeStore);  
+  stressRooStats(refFileName.c_str(), doWrite, doVerbose, oneTest, dryRun, doDump, doTreeStore);  
   return 0;
 }
 
