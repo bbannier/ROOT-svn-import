@@ -270,7 +270,5 @@ void SetStencilPattern(CGContextRef ctx,
    CGPatternRelease (pattern);
 }
 
-
-
 }//namespace Quartz
 }//namespace ROOT
