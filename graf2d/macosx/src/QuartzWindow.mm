@@ -1119,7 +1119,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       needSubImage = true;
       subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
       if (!subImage) {
-         NSLog(@"copyImage:area:withMask:clipOrigin:toPoint:, subimage creation failed");
+         NSLog(@"QuartzView: -copyImage:area:withMask:clipOrigin:toPoint:, subimage creation failed");
          return;
       }
    } else
@@ -1156,15 +1156,16 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) copyView : (QuartzView *) srcView area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
+   //To copy one "window" to another "window", I have to ask source QuartzView to draw intself into
+   //bitmap, and copy this bitmap into the destination view.
+
    assert(srcView != nil && "copyView:area:toPoint:, srcView parameter is nil");
 
    const NSRect visRect = [srcView visibleRect];
-   
    SnapshotView *snapshot = [[SnapshotView alloc] initWithFrame : visRect];
-   
    NSBitmapImageRep *imageRep = [snapshot bitmapImageRepForCachingDisplayInRect : visRect];
    if (!imageRep) {
-      NSLog(@"copyView:area:toPoint failed");
+      NSLog(@"QuartzView: -copyView:area:toPoint failed");
       return;
    }
    
@@ -1185,7 +1186,6 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
    CGContextSaveGState(self.fContext);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
-//   NSLog(@"image rect %d %d %u %u", dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
 
    CGContextFlush(self.fContext);
@@ -1201,47 +1201,42 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) copyPixmap : (QuartzPixmap *) srcPixmap area : (Rectangle_t) area withMask : (QuartzImage *) mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
 {
-   //Check parameters.
+   using ROOT::MacOSX::X11::AdjustCropArea;
+ 
+   //Check parameters.  
    assert(srcPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, srcPixmap parameter is nil");
    
-   if (mask) {
-      assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
-      assert(CGImageIsMask(mask.fImage) == true && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
+   //More difficult case: pixmap already contains reflected image.
+   area.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(srcPixmap, area.fY) - area.fHeight;
+   
+   if (!AdjustCropArea(srcPixmap, area)) {
+      NSLog(@"QuartzView: -copyPixmap:area:withMask:clipOrigin:toPoint, pixmap and copy are no intersection between pixmap rectangle and cropArea");
+      return;
    }
 
    //Check self.
    assert(self.fContext != nullptr && "copyPixmap:area:withMask:clipOrigin:toPoint:, self.fContext is null");
    
-   CGImageRef imageFromPixmap = [srcPixmap createImageFromPixmap];
+   CGImageRef imageFromPixmap = [srcPixmap createImageFromPixmap : area];
    assert(imageFromPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, createImageFromPixmap failed");
-   
-   CGImageRef subImage = nullptr;
-   bool needSubImage = false;
-   if (area.fX || area.fY || area.fWidth != srcPixmap.fWidth || area.fHeight != srcPixmap.fHeight) {
-      needSubImage = true;
-      const CGRect subImageRect = CGRectMake(area.fX, area.fY, area.fHeight, area.fWidth);
-      subImage = CGImageCreateWithImageInRect(imageFromPixmap, subImageRect);
-      assert(subImage && "copyPixmap:area:withMask:clipOrigin:toPoint:, subimage creation failed");
-   } else
-      subImage = imageFromPixmap;
 
    //Save context state.
    CGContextSaveGState(self.fContext);
    
    if (mask) {
+      assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
+      assert(CGImageIsMask(mask.fImage) == true && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
+
       const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
       CGContextClipToMask(self.fContext, clipRect, mask.fImage);
    }
    
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
-   CGContextDrawImage(self.fContext, imageRect, subImage);
+   CGContextDrawImage(self.fContext, imageRect, imageFromPixmap);
 
    //Restore context state.
    CGContextRestoreGState(self.fContext);
    
-   if (needSubImage)
-      CGImageRelease(subImage);
-
    CGImageRelease(imageFromPixmap);
 }
 
@@ -1249,9 +1244,16 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
+   using ROOT::MacOSX::X11::AdjustCropArea;
+
    assert(srcImage != nil && "copyImage:area:toPoint:, srcImage parameter is nil");
    assert(srcImage.fImage != nil && "copyImage:area:toPoint:, srcImage.fImage is nil");
    assert(self.fContext != nullptr && "copyImage:area:toPoint:, fContext is null");
+
+   if (!AdjustCropArea(srcImage, area)) {
+      NSLog(@"QuartzView: -copyImage:area:toPoint, image and copy area do not intersect");
+      return;
+   }
 
    CGImageRef subImage = nullptr;
    bool needSubImage = false;
@@ -1259,7 +1261,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       needSubImage = true;
       subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
       if (!subImage) {
-         NSLog(@"copyImage:area:toPoint:, subimage creation failed");
+         NSLog(@"QuartzView: -copyImage:area:toPoint:, subimage creation failed");
          return;
       }
    } else
@@ -1270,7 +1272,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
 
-   dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + srcImage.fHeight);
+   dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
 
@@ -1349,7 +1351,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
          fContext = nullptr;
       } else {
-         NSLog(@"Warning: QuartzView, -drawRect method, no window for id %u was found", fID);
+         NSLog(@"QuartzView: -drawRect method, no window for id %u was found", fID);
       }
    }
 }

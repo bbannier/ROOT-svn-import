@@ -25,6 +25,7 @@
 - (BOOL) resizeW : (unsigned) width H : (unsigned) height;
 
 - (CGImageRef) createImageFromPixmap;
+- (CGImageRef) createImageFromPixmap : (Rectangle_t) cropArea;
 
 - (unsigned) fWidth;
 - (unsigned) fHeight;
@@ -68,6 +69,9 @@ namespace MacOSX {
 namespace X11 {//X11 emulation. But must go into quartz module later.
 
 CGImageRef CreateSubImage(QuartzImage *image, const Rectangle_t &area);
+//
+bool AdjustCropArea(QuartzImage *srcImage, Rectangle_t &cropArea);
+bool AdjustCropArea(QuartzPixmap *srcImage, Rectangle_t &cropArea);
 
 }
 }

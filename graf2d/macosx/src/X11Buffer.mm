@@ -327,7 +327,8 @@ void CommandBuffer::AddDeletePixmap(Pixmap_t pixmapID)
 void CommandBuffer::Flush(Details::CocoaPrivate *impl)
 {
    assert(impl != nullptr && "Flush, impl parameter is null");
-   
+ 
+  // NSLog(@"FLUSH");
    //All magic is here.
    CGContextRef prevContext = nullptr;
    CGContextRef currContext = nullptr;

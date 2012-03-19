@@ -210,6 +210,8 @@ void TGViewPort::SetHPos(Int_t xpos)
    }
 }
 
+bool runRabbit = false;
+
 //______________________________________________________________________________
 void TGViewPort::SetVPos(Int_t ypos)
 {
@@ -240,10 +242,15 @@ void TGViewPort::SetVPos(Int_t ypos)
 
    if (adiff < fHeight) {
       if (diff < 0) {
+         runRabbit = true;
+//         std::cout<<"CopyArea, src y == "<<adiff<<" width == "<<fWidth<<" height == "<<fHeight - adiff<<std::endl;
          gVirtualX->CopyArea(fContainer->GetId(), fContainer->GetId(), GetWhiteGC()(),
                               0, adiff, fWidth, fHeight - adiff, 0, 0);
          adiff += 20;   // draw larger region
+  //       std::cout<<"draw area, y == "<<fHeight - adiff<<" width == "<<fWidth<<" height == "<<adiff<<std::endl;
          ((TGContainer*)fContainer)->DrawRegion(0, fHeight - adiff, fWidth, adiff);
+//                  ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
+         runRabbit = false;
       } else {
          gVirtualX->CopyArea(fContainer->GetId(), fContainer->GetId(), GetWhiteGC()(),
                               0, 0, fWidth, fHeight - adiff, 0, adiff);
