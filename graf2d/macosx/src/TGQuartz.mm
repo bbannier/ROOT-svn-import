@@ -75,7 +75,7 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
    Float_t r = 0.f;
    Float_t g = 0.f;
    Float_t b = 0.f;
-   const Float_t a = GetFillAlpha() / 100.f;   
+   const Float_t a = color->GetAlpha();
    color->GetRGB(r, g, b);
 
    Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
@@ -101,7 +101,7 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
       
    Float_t rgb[3] = {};
    color->GetRGB(rgb[0], rgb[1], rgb[2]);
-   const Float_t a = GetFillAlpha() / 100.f;
+   const Float_t a = color->GetAlpha();
 
    if (GetFillGradient() == kNoGradientFill) {
       //For coverity: I do not check these two calls,
@@ -443,7 +443,7 @@ Bool_t TGQuartz::SetContextFillColor(Int_t ci)
    if (!color)
       return kFALSE;
 
-   const CGFloat a = GetFillAlpha() / 100.;
+   const CGFloat a = color->GetAlpha();
    Float_t rgb[3] = {};
    color->GetRGB(rgb[0], rgb[1], rgb[2]);
    CGContextSetRGBFillColor (ctx, rgb[0], rgb[1], rgb[2], a);
