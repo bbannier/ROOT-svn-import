@@ -60,8 +60,6 @@ public:
    virtual void     SetFillColor(Color_t fcolor) { fFillColor = fcolor; }
    virtual void     SetFillStyle(Style_t fstyle) { fFillStyle = fstyle; }
    
-   virtual void     SetFillAlpha(UInt_t alpha);
-   virtual UInt_t   GetFillAlpha()const;
    virtual void     SetFillGradient(EFillGradient direction);
    virtual EFillGradient GetFillGradient()const;
    virtual void     SetExtendedFill(UInt_t ext);

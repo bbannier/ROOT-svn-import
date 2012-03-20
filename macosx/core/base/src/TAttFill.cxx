@@ -253,23 +253,6 @@ void TAttFill::SetFillAttributes()
 
 
 //______________________________________________________________________________
-void TAttFill::SetFillAlpha(UInt_t alpha)
-{
-   if (alpha > 100)
-      alpha = 100;
-   
-   fExtension = (fExtension / 1000) * 1000 + alpha;
-}
-
-
-//______________________________________________________________________________
-UInt_t TAttFill::GetFillAlpha()const
-{
-   return fExtension % 1000;
-}
-
-
-//______________________________________________________________________________
 void TAttFill::SetFillGradient(EFillGradient direction)
 {
    if (direction > kGradientHorizontal)
