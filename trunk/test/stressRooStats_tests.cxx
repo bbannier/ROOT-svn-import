@@ -100,7 +100,24 @@ public:
   Bool_t testCode() {    
 
     // Create model and dataset
+	RooWorkspace* w = new RooWorkspace("w", kTRUE);
 
+	w->factory("Gaussian::gauss(x[-10,10], mean[0,-10,10], sigma[1,0,10]");
+	
+	RooDataSet *data = w->gauss.generate(w->x,10000);
+	ProfileLikelihhodCalculator pl(*data, *mc);
+	pl.SetConfidenceLevel(0.95);
+	LikelihoodInterval *interval = pl.GetInterval();
+
+	RooRealVar *firstPOI = (Ro  // print out the iterval on the first Parameter of Interest
+    RooRealVar* firstPOI = (RooRealVar*) mc->GetParametersOfInterest()->first();
+    cout << "\n95% interval on " <<firstPOI->GetName()<<" is : ["<<
+    interval->LowerLimit(*firstPOI) << ", "<<
+    interval->UpperLimit(*firstPOI) <<"] "<<endl;
+
+
+
+	delete w;
 
     return kTRUE ;
   }
