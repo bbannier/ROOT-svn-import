@@ -195,6 +195,10 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, const char *text, ETextMode /*mode*/)
 {
    // Draw text
+
+   if (!text || !text[0])//Can this ever happen? TPad::PaintText does not check this.
+      return;
+   
    if (fSelectedDrawable <= 0) {
       Error("DrawText", "internal error, no pixmap was selected");
       return;
@@ -219,7 +223,6 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
 
    try {
       if (CTFontRef currentFont = fPimpl->fFontManager.SelectFont(GetTextFont(), GetTextSize())) {
-         std::vector<UniChar> unichars(std::strlen(text));
          if (GetTextFont() / 10 == 12) {//Greek and math symbols.
             //This is a hack. Correct way is to extract glyphs from symbol.ttf,
             //find correct mapping, place this glyphs. This requires manual layout though (?),
@@ -228,6 +231,7 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
             //versions of MacOSX.
             typedef std::vector<UniChar>::size_type size_type;
 
+            std::vector<UniChar> unichars(std::strlen(text));
             for (size_type i = 0, len = unichars.size(); i < len; ++i)
                unichars[i] = 0xF000 + (unsigned char)text[i];
             
@@ -251,7 +255,12 @@ void TGQuartz::GetTextExtent(UInt_t &w, UInt_t &h, char *text)
    // w    - the text width
    // h    - the text height
    // text - the string   
-//   Quartz::GetTextExtent(w, h, GetTextFont(), GetTextSize(), text);
+
+   if (!text || !text[0]) {
+      w = 0;
+      h = 0;
+      return;
+   }
    
    if (fPimpl->fFontManager.SelectFont(GetTextFont(), GetTextSize()))
       fPimpl->fFontManager.GetTextBounds(w, h, text);
@@ -263,7 +272,10 @@ Int_t TGQuartz::GetFontAscent() const
 {
    // Returns the ascent of the current font (in pixels).
    // The ascent of a font is the distance from the baseline
-   // to the highest position characters extend to
+   // to the highest position characters extend to.
+   if (fPimpl->fFontManager.SelectFont(GetTextFont(), GetTextSize()))
+      return Int_t(fPimpl->fFontManager.GetAscent());
+
    return 0;
 }
 
@@ -274,6 +286,9 @@ Int_t TGQuartz::GetFontDescent() const
    // Returns the descent of the current font (in pixels.
    // The descent is the distance from the base line
    // to the lowest point characters extend to.
+   if (fPimpl->fFontManager.SelectFont(GetTextFont(), GetTextSize()))
+      return Int_t(fPimpl->fFontManager.GetDescent());
+
    return 0;
 }
 
