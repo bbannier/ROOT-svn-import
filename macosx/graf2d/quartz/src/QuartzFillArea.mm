@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "QuartzFillArea.h"
-#include "TColorExtended.h"
+#include "TColorGradient.h"
 #include "CocoaUtils.h"
 #include "RStipples.h"
 #include "TError.h"
@@ -31,11 +31,11 @@ const CGSize shadowOffset = CGSizeMake(10., 10.);
 const CGFloat shadowBlur = 5.;
 
 //______________________________________________________________________________
-void ReadGradientColors(const TColorExtended *extendedColor, std::vector<CGFloat> &colors)
+void ReadGradientColors(const TColorGradient *extendedColor, std::vector<CGFloat> &colors)
 {
    assert(extendedColor != nullptr && "ReadGradientColors, extendedColor parameter is null");
    
-   typedef TColorExtended::SizeType_t size_type;
+   typedef TColorGradient::SizeType_t size_type;
    
    colors.resize(3 * 4);
    const Color_t *colorIndices = extendedColor->GetColors();
@@ -74,7 +74,7 @@ void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,
 }
 
 //______________________________________________________________________________
-void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const TColorExtended *extendedColor)
+void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const TColorGradient *extendedColor)
 {
    using ROOT::MacOSX::Util::CFScopeGuard;
 
@@ -85,7 +85,7 @@ void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, c
    CGPoint startPoint = CGPointZero;
    CGPoint endPoint = CGPointZero;
    
-   if (extendedColor->GetGradientDirection() == TColorExtended::kGDHorizontal)
+   if (extendedColor->GetGradientDirection() == TColorGradient::kGDHorizontal)
       endPoint.x = x2;
    else
       endPoint.y = y2;
@@ -142,7 +142,7 @@ void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t shadow)
 }
 
 //______________________________________________________________________________
-void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, const TColorExtended *extendedColor)
+void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, const TColorGradient *extendedColor)
 {
    using ROOT::MacOSX::Util::CFScopeGuard;
 
@@ -168,7 +168,7 @@ void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, con
    CGPoint startPoint = CGPointZero;
    CGPoint endPoint = CGPointZero;
    
-   if (extendedColor->GetGradientDirection() == TColorExtended::kGDHorizontal) {
+   if (extendedColor->GetGradientDirection() == TColorGradient::kGDHorizontal) {
       startPoint = CGPointMake(xy[0].fX, 0.);
       endPoint = CGPointMake(xy[0].fX, 0.);
    
