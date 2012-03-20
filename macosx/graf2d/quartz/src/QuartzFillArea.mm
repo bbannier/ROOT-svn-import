@@ -107,7 +107,7 @@ void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, c
       //I first have to fill polygon, and after that
       //draw gradient (since gradient fills the whole area
       //with clip path and generates no shadow).
-      CGContextSetRGBFillColor(ctx, 1., 1., 1., 0.5);
+      CGContextSetRGBFillColor(ctx, 1., 1., 1., 0.25);
       CGContextSetShadow(ctx, shadowOffset, shadowBlur);
       CGContextFillRect(ctx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
    }
