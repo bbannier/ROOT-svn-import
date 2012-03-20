@@ -37,7 +37,7 @@ void ReadGradientColors(const TColorGradient *extendedColor, std::vector<CGFloat
    
    typedef TColorGradient::SizeType_t size_type;
    
-   colors.resize(3 * 4);
+   colors.resize(extendedColor->GetNumberOfSteps() * 4);
    const Color_t *colorIndices = extendedColor->GetColors();
    Float_t rgb[3];
    for (size_type i = 0, pos = 0, e = extendedColor->GetNumberOfSteps(); i < e; ++i, pos += 4) {
