@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "TColorGradient.h"
 #include "TObjArray.h"
 #include "TString.h"
@@ -18,20 +16,20 @@ TColorGradient::TColorGradient(Color_t colorIndex, EGradientDirection dir, UInt_
 {
    //I have no way to validate parameters here, so it's up to user
    //to pass correct arguments.
+   fNumber = colorIndex;
+   SetName(TString::Format("Color%d", colorIndex));
+
    if (gROOT) {
       if (gROOT->GetColor(colorIndex)) {
-         Error("TColorGradient", "Color with index %d is already defined", colorIndex);
-         throw std::runtime_error("Such color is already defined");
+         Warning("TColorGradient", "Color with index %d is already defined", colorIndex);
+         return;
       }
       
       if (TObjArray *colors = (TObjArray*)gROOT->GetListOfColors()) {
-         const TString colorName(TString::Format("Color%d", colorIndex));
-         SetName(colorName);
-         fNumber = colorIndex;
          colors->AddAtAndExpand(this, colorIndex);
       } else {
-         Error("TColorGradient", "List of colors is a null pointer in gROOT");
-         throw std::runtime_error("List of colors is a null pointer");
+         Error("TColorGradient", "List of colors is a null pointer in gROOT, color was not registered");
+         return;
       }
    }
 }
