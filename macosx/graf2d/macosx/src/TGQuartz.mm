@@ -444,12 +444,9 @@ Bool_t TGQuartz::SetContextFillColor(Int_t ci)
       return kFALSE;
 
    const CGFloat a = GetFillAlpha() / 100.;
-   Float_t r = 0.f;
-   Float_t g = 0.f;
-   Float_t b = 0.f;
-
-   color->GetRGB(r, g, b);
-   CGContextSetRGBFillColor (ctx, r, g, b, a);
+   Float_t rgb[3] = {};
+   color->GetRGB(rgb[0], rgb[1], rgb[2]);
+   CGContextSetRGBFillColor (ctx, rgb[0], rgb[1], rgb[2], a);
    
    return kTRUE;
 }
@@ -466,13 +463,10 @@ Bool_t TGQuartz::SetContextStrokeColor(Int_t ci)
    if (!color)
       return kFALSE;
 
-   const CGFloat a = 1.f;
-   Float_t r = 0.f;
-   Float_t g = 0.f;
-   Float_t b = 0.f;
-
-   color->GetRGB(r, g, b);
-   CGContextSetRGBStrokeColor (ctx, r, g, b, a);
+   const CGFloat a = 1.;
+   Float_t rgb[3] = {};
+   color->GetRGB(rgb[0], rgb[1], rgb[2]);
+   CGContextSetRGBStrokeColor (ctx, rgb[0], rgb[1], rgb[2], a);
    
    return kTRUE;
 }
