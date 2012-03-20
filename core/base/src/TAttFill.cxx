@@ -157,9 +157,6 @@ TAttFill::TAttFill()
 {
    // AttFill default constructor.
    // Default fill attributes are taking from the current style
-
-   fExtension=100;//By default: no gradient fill, completely opaque.
-
    if (!gStyle) {fFillColor=1; fFillStyle=0; return;}
    fFillColor = gStyle->GetFillColor();
    fFillStyle = gStyle->GetFillStyle();
@@ -175,8 +172,6 @@ TAttFill::TAttFill(Color_t color, Style_t style)
 
    fFillColor = color;
    fFillStyle = style;
-   
-   fExtension=100;//By default: no gradient fill, completely opaque.
 }
 
 
@@ -194,7 +189,6 @@ void TAttFill::Copy(TAttFill &attfill) const
 
    attfill.fFillColor  = fFillColor;
    attfill.fFillStyle  = fFillStyle;
-   attfill.fExtension  = fExtension;
 }
 
 
@@ -207,7 +201,6 @@ void TAttFill::Modify()
    if (!gPad->IsBatch()) {
       gVirtualX->SetFillColor(fFillColor);
       gVirtualX->SetFillStyle(fFillStyle);
-      gVirtualX->SetExtendedFill(fExtension);
    }
 
    gPad->SetAttFillPS(fFillColor,fFillStyle);
@@ -221,7 +214,6 @@ void TAttFill::ResetAttFill(Option_t *)
 
    fFillColor = 1;
    fFillStyle = 0;
-   fExtension = 100;//Opaque, no gradient.
 }
 
 
@@ -249,33 +241,4 @@ void TAttFill::SetFillAttributes()
    // Invoke the DialogCanvas Fill attributes.
 
    TVirtualPadEditor::UpdateFillAttributes(fFillColor,fFillStyle);
-}
-
-
-//______________________________________________________________________________
-void TAttFill::SetFillGradient(EFillGradient direction)
-{
-   if (direction > kGradientHorizontal)
-      direction = kNoGradientFill;
-   fExtension = fExtension % 1000 + UInt_t(direction) * 1000;
-}
-
-
-//______________________________________________________________________________
-TAttFill::EFillGradient TAttFill::GetFillGradient()const
-{
-   return EFillGradient(fExtension / 1000);
-}
-
-
-//______________________________________________________________________________
-void TAttFill::SetExtendedFill(UInt_t ext)
-{
-   fExtension = ext;
-}
-
-//______________________________________________________________________________
-UInt_t TAttFill::GetExtendedFill()const
-{
-   return fExtension;
 }
