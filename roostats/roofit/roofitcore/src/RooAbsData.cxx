@@ -180,9 +180,10 @@ RooAbsData::RooAbsData(const RooAbsData& other, const char* newname) :
       smap[itero->first] = dclone->store() ;
     }
 
-    if (!dynamic_cast<const RooCompositeDataStore*>(other.store())) {
-      cout << "Huh, have owned components, but store is not composite?" << endl ;
-    }
+//     if (!dynamic_cast<const RooCompositeDataStore*>(other.store())) {
+//       cout << "Huh, have owned components, but store is not composite?" << endl ;
+//     }
+
     RooCategory* idx = (RooCategory*) _vars.find(*((RooCompositeDataStore*)other.store())->index()) ;
     _dstore = new RooCompositeDataStore(newname?newname:other.GetName(),other.GetTitle(),_vars,*idx,smap) ;
     
@@ -1439,8 +1440,9 @@ TH1 *RooAbsData::fillHistogram(TH1 *hist, const RooArgList &plotVars, const char
     if (strchr(cutRange,',')==0) {
       cutVec.push_back(cutRange) ;
     } else {
-      char* buf = new char[strlen(cutRange)+1] ;
-      strlcpy(buf,cutRange,strlen(cutRange)+1) ;
+      const size_t bufSize = strlen(cutRange)+1;
+      char* buf = new char[bufSize] ;
+      strlcpy(buf,cutRange,bufSize) ;
       const char* oneRange = strtok(buf,",") ;
       while(oneRange) {
 	cutVec.push_back(oneRange) ;

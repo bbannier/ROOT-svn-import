@@ -371,8 +371,8 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
     // Make import mapping if index category is specified
     map<string,RooDataSet*> hmap ;  
     if (indexCat) {
-      char tmp[1024] ;
-      strlcpy(tmp,impSliceNames,1024) ;
+      char tmp[10000] ;
+      strlcpy(tmp,impSliceNames,10000) ;
       char* token = strtok(tmp,",") ;
       TIterator* hiter = impSliceData.MakeIterator() ;
       while(token) {
@@ -1362,7 +1362,7 @@ TH2F* RooDataSet::createHistogram(const RooAbsRealLValue& var1, const RooAbsReal
     get(i);
     
     if (select && select->eval()==0) continue ;
-    histogram->Fill(plotVarX->getVal(), plotVarY->getVal()) ;
+    histogram->Fill(plotVarX->getVal(), plotVarY->getVal(),weight()) ;
   }
 
   if (ownPlotVarX) delete plotVarX ;
