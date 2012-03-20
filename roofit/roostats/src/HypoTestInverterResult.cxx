@@ -534,7 +534,7 @@ Double_t HypoTestInverterResult::LowerLimitEstimatedError()
   if (fFittedLowerLimit) return fLowerLimitError;
 
    //std::cout << "The HypoTestInverterResult::LowerLimitEstimatedError() function evaluates only a rought error on the upper limit. Be careful when using this estimation\n";
-  if (fInterpolateLowerLimit) std::cout << "The lower limit was an interpolated results... in this case the error is even less reliable (the Y-error bars are currently not used in the interpolation)\n";
+  //if (fInterpolateLowerLimit) std::cout << "The lower limit was an interpolated results... in this case the error is even less reliable (the Y-error bars are currently not used in the interpolation)\n";
 
   return CalculateEstimatedError(1-ConfidenceLevel());
 }
@@ -546,7 +546,7 @@ Double_t HypoTestInverterResult::UpperLimitEstimatedError()
   if (fFittedUpperLimit) return fUpperLimitError;
 
    //std::cout << "The HypoTestInverterResult::UpperLimitEstimatedError() function evaluates only a rought error on the upper limit. Be careful when using this estimation\n";
-  if (fInterpolateUpperLimit) std::cout << "The upper limit was an interpolated results... in this case the error is even less reliable (the Y-error bars are currently not used in the interpolation)\n";
+  //if (fInterpolateUpperLimit) std::cout << "The upper limit was an interpolated results... in this case the error is even less reliable (the Y-error bars are currently not used in the interpolation)\n";
 
   return CalculateEstimatedError((1-ConfidenceLevel()));
 }
@@ -590,8 +590,9 @@ SamplingDistribution *  HypoTestInverterResult::GetExpectedPValueDist(int index)
       HypoTestResult tempResult; 
       tempResult.SetPValueIsRightTail( result->GetPValueIsRightTail() );
       tempResult.SetBackgroundAsAlt( true);
-      tempResult.SetNullDistribution( sbDistribution );
-      tempResult.SetAltDistribution( bDistribution );
+      // ownership of SamplingDistribution is in HypoTestResult class now
+      tempResult.SetNullDistribution( new SamplingDistribution(*sbDistribution) );
+      tempResult.SetAltDistribution( new SamplingDistribution(*bDistribution ) );
       
       std::vector<double> values(bDistribution->GetSize()); 
       for (int i = 0; i < bDistribution->GetSize(); ++i) { 

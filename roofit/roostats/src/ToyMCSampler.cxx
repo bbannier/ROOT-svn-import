@@ -126,13 +126,6 @@ Bool_t ToyMCSampler::fgAlwaysUseMultiGen = kFALSE ;
 
 
 
-
-
-
-
-
-
-
 ToyMCSampler::ToyMCSampler() : fSamplingDistName("temp"), fNToys(1)
 {
    // Proof constructor. Do not use.
@@ -233,12 +226,12 @@ Bool_t ToyMCSampler::CheckConfig(void) {
    if(!fPdf) { ooccoutE((TObject*)NULL,InputArguments) << "Pdf not set." << endl; goodConfig = false; }
 
 
-   ooccoutI((TObject*)NULL,InputArguments) << "ToyMCSampler configuration:" << endl;
-   ooccoutI((TObject*)NULL,InputArguments) << "Pdf from SetPdf: " << fPdf << endl;
-   for( unsigned int i=0; i < fTestStatistics.size(); i++ ) {
-      ooccoutI((TObject*)NULL,InputArguments) << "test statistics["<<i<<"]: " << fTestStatistics[i] << endl;
-   }
-   ooccoutI((TObject*)NULL,InputArguments) << endl;
+   //ooccoutI((TObject*)NULL,InputArguments) << "ToyMCSampler configuration:" << endl;
+   //ooccoutI((TObject*)NULL,InputArguments) << "Pdf from SetPdf: " << fPdf << endl;
+   // for( unsigned int i=0; i < fTestStatistics.size(); i++ ) {
+   //   ooccoutI((TObject*)NULL,InputArguments) << "test statistics["<<i<<"]: " << fTestStatistics[i] << endl;
+   // }
+   //ooccoutI((TObject*)NULL,InputArguments) << endl;
 
    return goodConfig;
 }
