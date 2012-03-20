@@ -343,8 +343,12 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
 	  RooAbsRealLValue* leaflv = dynamic_cast<RooAbsRealLValue*>(leaf) ;
 	  if (leaflv && leaflv->getBinning(rangeName).isParameterized()) {
 	    oocxcoutD(&function,Integration) << function.GetName() << " : Observable " << leaf->GetName() << " has parameterized binning, add value dependence of boundary objects rather than shape of leaf" << endl ;
-	    addServer(*leaflv->getBinning(rangeName).lowBoundFunc(),kTRUE,kFALSE) ;
-	    addServer(*leaflv->getBinning(rangeName).highBoundFunc(),kTRUE,kFALSE) ;
+	    if (leaflv->getBinning(rangeName).lowBoundFunc()) {
+	      addServer(*leaflv->getBinning(rangeName).lowBoundFunc(),kTRUE,kFALSE) ;
+	    }
+	    if(leaflv->getBinning(rangeName).highBoundFunc()) {
+	      addServer(*leaflv->getBinning(rangeName).highBoundFunc(),kTRUE,kFALSE) ;
+	    }
 	  } else {
 	    oocxcoutD(&function,Integration) << function.GetName() << ": Adding observable " << leaf->GetName() << " of server " 
 					     << arg->GetName() << " as shape dependent" << endl ;
@@ -565,31 +569,27 @@ void RooRealIntegral::autoSelectDirtyMode()
   // Set appropriate cache operation mode for integral depending on cache operation
   // mode of server objects
 
-  //cout << "RooRealIntegral::autoSelectDirtyMode(" << GetName() << ")" << endl ;
-
   // If any of our servers are is forcedDirty or a projectedDependent, then we need to be ADirty
   TIterator* siter = serverIterator() ;  
   RooAbsArg* server ;
   while((server=(RooAbsArg*)siter->Next())){
-    RooArgSet leafSet ;
-    server->leafNodeServerList(&leafSet) ;
-    TIterator* liter = leafSet.createIterator() ;
-    RooAbsArg* leaf ;
-    while((leaf=(RooAbsArg*)liter->Next())) {
-      if (leaf->operMode()==ADirty && leaf->isValueServer(*this)) {      
-	//cout << "RooRealIntegral::autoSelectDirtyMode(" << GetName() << ") selecting ADirty mode because value server leaf " 
-	//     << leaf->GetName() << " is also " << endl ;
-	setOperMode(ADirty) ;
-	break ;
+    if (server->isValueServer(*this)) {
+      RooArgSet leafSet ;
+      server->leafNodeServerList(&leafSet) ;
+      TIterator* liter = leafSet.createIterator() ;
+      RooAbsArg* leaf ;
+      while((leaf=(RooAbsArg*)liter->Next())) {
+	if (leaf->operMode()==ADirty && leaf->isValueServer(*this)) {      
+	  setOperMode(ADirty) ;
+	  break ;
+	}
+	if (leaf->getAttribute("projectedDependent")) {
+	  setOperMode(ADirty) ;
+	  break ;
+	}
       }
-      if (leaf->getAttribute("projectedDependent")) {
-	//cout << "RooRealIntegral::autoSelectDirtyMode(" << GetName() << ") selecting ADirty mode because leaf " 
-	//    << leaf->GetName() << " is projectedDependent " << endl ;
-	setOperMode(ADirty) ;
-	break ;
-      }
+      delete liter ;
     }
-    delete liter ;
   }
   delete siter ;
 }
@@ -940,8 +940,7 @@ Double_t RooRealIntegral::evaluate() const
 
     ccxcoutD(Tracing) << "raw*fact = " << retVal << endl ;
   }
-
-  //   cout << "RooRealIntegral::evaluate(" << GetName() << ") value = " << retVal << endl ;
+  
 
   return retVal ;
 }
