@@ -15,7 +15,7 @@
 #include <Cocoa/Cocoa.h>
 
 #include "QuartzFillArea.h"
-#include "TColorExtended.h"
+#include "TColorGradient.h"
 #include "QuartzMarker.h"
 #include "CocoaPrivate.h"
 #include "QuartzWindow.h"
@@ -66,8 +66,9 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
       return;
    }
 
-   if (const TColorExtended *extendedColor = dynamic_cast<const TColorExtended *>(fillColor)) {
+   if (const TColorGradient *extendedColor = dynamic_cast<const TColorGradient *>(fillColor)) {
       //Draw a box with a gradient fill and a shadow.
+      Quartz::DrawBoxGradient(ctx, x1, y1, x2, y2, extendedColor);
    } else {
       SetContextFillColor(GetFillColor());//For coverity: Do not check the result, TColor exists.
       if (!SetContextStrokeColor(GetLineColor())) {
@@ -102,8 +103,8 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
       return;
    }
 
-   if (const TColorExtended *extendedColor = dynamic_cast<const TColorExtended *>(fillColor)) {
-      //Quartz::DrawFillAreaGradient(GetFillGradient(), ctx, n, xy, rgb, kTRUE);//kTRUE == draw shadows.
+   if (const TColorGradient *extendedColor = dynamic_cast<const TColorGradient *>(fillColor)) {
+      Quartz::DrawFillAreaGradient(ctx, n, xy, extendedColor);
    } else {
       SetContextStrokeColor(GetFillColor());
       SetContextFillColor(GetFillColor());

@@ -45,9 +45,11 @@
 
 
 class TColor : public TNamed {
+protected:
+   Int_t          fNumber;        //Color number identifier
 
 private:
-   Int_t          fNumber;        //Color number identifier
+
    Float_t        fRed;           //Fraction of Red
    Float_t        fGreen;         //Fraction of Green
    Float_t        fBlue;          //Fraction of Blue

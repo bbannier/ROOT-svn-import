@@ -1,15 +1,15 @@
 #include <stdexcept>
 
-#include "TColorExtended.h"
+#include "TColorGradient.h"
 #include "TObjArray.h"
 #include "TString.h"
 #include "TError.h"
 #include "TROOT.h"
 
-ClassImp(TColorExtended)
+ClassImp(TColorGradient)
 
 //______________________________________________________________________________
-TColorExtended::TColorExtended(Color_t colorIndex, EGradientDirection dir, UInt_t nPoints, const Double_t *points,
+TColorGradient::TColorGradient(Color_t colorIndex, EGradientDirection dir, UInt_t nPoints, const Double_t *points,
                                const Color_t *indices, Bool_t hasShadow)
                    : fGradientDirection(dir),
                      fColorPositions(points, points + nPoints),
@@ -20,52 +20,52 @@ TColorExtended::TColorExtended(Color_t colorIndex, EGradientDirection dir, UInt_
    //to pass correct arguments.
    if (gROOT) {
       if (gROOT->GetColor(colorIndex)) {
-         Error("TColorExtended", "Color with index %d is already defined", colorIndex);
+         Error("TColorGradient", "Color with index %d is already defined", colorIndex);
          throw std::runtime_error("Such color is already defined");
       }
       
       if (TObjArray *colors = (TObjArray*)gROOT->GetListOfColors()) {
          const TString colorName(TString::Format("Color%d", colorIndex));
-         SetName(colorName.Data());
-
+         SetName(colorName);
+         fNumber = colorIndex;
          colors->AddAtAndExpand(this, colorIndex);
       } else {
-         Error("TColorExtended", "List of colors is a null pointer in gROOT");
+         Error("TColorGradient", "List of colors is a null pointer in gROOT");
          throw std::runtime_error("List of colors is a null pointer");
       }
    }
 }
 
 //______________________________________________________________________________
-TColorExtended::EGradientDirection TColorExtended::GetGradientDirection()const
+TColorGradient::EGradientDirection TColorGradient::GetGradientDirection()const
 {
    //
    return fGradientDirection;
 }
 
 //______________________________________________________________________________
-TColorExtended::SizeType_t TColorExtended::GetNumberOfSteps()const
+TColorGradient::SizeType_t TColorGradient::GetNumberOfSteps()const
 {
    //
    return fColors.size();
 }
 
 //______________________________________________________________________________
-const Double_t *TColorExtended::GetColorPositions()const
+const Double_t *TColorGradient::GetColorPositions()const
 {
    //
    return &fColorPositions[0];
 }
 
 //______________________________________________________________________________
-const Color_t *TColorExtended::GetColors()const
+const Color_t *TColorGradient::GetColors()const
 {
    //
    return &fColors[0];
 }
 
 //______________________________________________________________________________
-Bool_t TColorExtended::HasShadow()const
+Bool_t TColorGradient::HasShadow()const
 {
    //
    return fHasShadow;
