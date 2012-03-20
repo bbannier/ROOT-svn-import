@@ -15,6 +15,7 @@
 #include <Cocoa/Cocoa.h>
 
 #include "QuartzFillArea.h"
+#include "TColorExtended.h"
 #include "QuartzMarker.h"
 #include "CocoaPrivate.h"
 #include "QuartzWindow.h"
@@ -31,6 +32,10 @@
 ClassImp(TGQuartz)
 
 using namespace ROOT;
+
+//TODO: re-arrange all these SetContextXXX in a more logical and consistent
+//way and to check, what we actually have to set
+//and when.
 
 //______________________________________________________________________________
 TGQuartz::TGQuartz()
@@ -55,31 +60,29 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
    const Quartz::CGStateGuard ctxGuard(ctx);
 
-   if (!SetContextFillColor(GetFillColor())) {
+   const TColor *fillColor = gROOT->GetColor(GetFillColor());
+   if (!fillColor) {
       Error("DrawBox", "Fill color for index %d not found", GetFillColor());
       return;
    }
-   
-   if (!SetContextStrokeColor(GetLineColor())) {
-      Error("DrawBox", "Line color for index %d not found", GetLineColor());
-      return;
-   }
-   
-   const TColor *color = gROOT->GetColor(GetFillColor());
-   if (!color) {
-      //It can not be null (checked already in SetContextFillColor, but
-      //just to avoid warnings from coverity in a future.
-      return;
-   }
 
-   Float_t r = 0.f;
-   Float_t g = 0.f;
-   Float_t b = 0.f;
-   const Float_t a = color->GetAlpha();
-   color->GetRGB(r, g, b);
-
-   Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
-   Quartz::DrawBox(ctx, x1, y1, x2, y2, (Int_t)mode);
+   if (const TColorExtended *extendedColor = dynamic_cast<const TColorExtended *>(fillColor)) {
+      //Draw a box with a gradient fill and a shadow.
+   } else {
+      SetContextFillColor(GetFillColor());//For coverity: Do not check the result, TColor exists.
+      if (!SetContextStrokeColor(GetLineColor())) {
+         Error("DrawBox", "Line color for index %d not found", GetLineColor());
+         return;
+      }
+      
+      Float_t r = 0.f;
+      Float_t g = 0.f;
+      Float_t b = 0.f;
+      const Float_t a = fillColor->GetAlpha();
+      fillColor->GetRGB(r, g, b);
+      Quartz::SetFillStyle(ctx, GetFillStyle(), r, g, b, a);
+      Quartz::DrawBox(ctx, x1, y1, x2, y2, (Int_t)mode);
+   }
 }
 
 
@@ -93,26 +96,24 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
    const Quartz::CGStateGuard ctxGuard(ctx);
 
-   TColor *color = gROOT->GetColor(GetFillColor());
-   if (!color) {
+   const TColor *fillColor = gROOT->GetColor(GetFillColor());
+   if (!fillColor) {
       Error("DrawFillArea", "Could not find TColor for index %d", GetFillColor());
       return;
    }
-      
-   Float_t rgb[3] = {};
-   color->GetRGB(rgb[0], rgb[1], rgb[2]);
-   const Float_t a = color->GetAlpha();
 
-   if (GetFillGradient() == kNoGradientFill) {
-      //For coverity: I do not check these two calls,
-      //if we are here, TColor exists.
+   if (const TColorExtended *extendedColor = dynamic_cast<const TColorExtended *>(fillColor)) {
+      //Quartz::DrawFillAreaGradient(GetFillGradient(), ctx, n, xy, rgb, kTRUE);//kTRUE == draw shadows.
+   } else {
       SetContextStrokeColor(GetFillColor());
       SetContextFillColor(GetFillColor());
+      
+      Float_t rgb[3] = {};
+      fillColor->GetRGB(rgb[0], rgb[1], rgb[2]);
+      const Float_t alpha = fillColor->GetAlpha();
 
-      Quartz::SetFillStyle(ctx, GetFillStyle(), rgb[0], rgb[1], rgb[2], a);
+      Quartz::SetFillStyle(ctx, GetFillStyle(), rgb[0], rgb[1], rgb[2], alpha);
       Quartz::DrawFillArea(ctx, n, xy, kFALSE);//The last argument - do not draw shadows.
-   } else {
-      Quartz::DrawFillAreaGradient(GetFillGradient(), ctx, n, xy, rgb, kTRUE);//kTRUE == draw shadows.
    }
 }
 
