@@ -68,7 +68,7 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 
    if (const TColorGradient *extendedColor = dynamic_cast<const TColorGradient *>(fillColor)) {
       //Draw a box with a gradient fill and a shadow.
-      Quartz::DrawBoxGradient(ctx, x1, y1, x2, y2, extendedColor);
+      Quartz::DrawBoxGradient(ctx, x1, y1, x2, y2, extendedColor, kTRUE);//kTRUE == draw shadow.
    } else {
       SetContextFillColor(GetFillColor());//For coverity: Do not check the result, TColor exists.
       if (!SetContextStrokeColor(GetLineColor())) {
@@ -104,7 +104,7 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    }
 
    if (const TColorGradient *extendedColor = dynamic_cast<const TColorGradient *>(fillColor)) {
-      Quartz::DrawFillAreaGradient(ctx, n, xy, extendedColor);
+      Quartz::DrawFillAreaGradient(ctx, n, xy, extendedColor, kTRUE);//kTRUE == draw shadow.
    } else {
       SetContextStrokeColor(GetFillColor());
       SetContextFillColor(GetFillColor());
