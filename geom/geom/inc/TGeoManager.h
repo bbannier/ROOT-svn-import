@@ -47,6 +47,9 @@ class TGeoManager : public TNamed
 protected:
    static Bool_t         fgLock;            //! Lock preventing a second geometry to be loaded
    static Int_t          fgVerboseLevel;    //! Verbosity level for Info messages (no IO).
+   static Int_t          fgMaxLevel;        //! Maximum level in geometry
+   static Int_t          fgMaxDaughters;    //! Maximum number of daughters
+   static Int_t          fgMaxXtruVert;     //! Maximum number of Xtru vertices
 
    TGeoManager(const TGeoManager&); 
    TGeoManager& operator=(const TGeoManager&); 
@@ -103,7 +106,7 @@ private :
    typedef ThreadsMap_t::const_iterator             ThreadsMapIt_t;
    
    NavigatorsMap_t       fNavigators;       //! Map between thread id's and navigator arrays
-   static ThreadsMap_t   fgThreadId;        //! Thread id's map
+   static ThreadsMap_t  *fgThreadId;        //! Thread id's map
    static Int_t          fgNumThreads;      //! Number of registered threads
    static Bool_t         fgLockNavigators;   //! Lock existing navigators
    TGeoNavigator        *fCurrentNavigator; //! current navigator
@@ -127,6 +130,7 @@ private :
    Int_t                 fNPNEId;           // number of PN entries having a unique ID
    Int_t                *fKeyPNEId;         //[fSizePNEId] array of uid values for PN entries
    Int_t                *fValuePNEId;       //[fSizePNEId] array of pointers to PN entries with ID's
+   Int_t                 fMaxThreads;       //! Max number of threads
    Bool_t                fMultiThread;      //! Flag for multi-threading
 //--- private methods
 
@@ -144,22 +148,6 @@ public:
    TGeoManager(const char *name, const char *title);
    // destructor
    virtual ~TGeoManager();
-   struct ThreadData_t
-   {
-      Int_t              fIntSize;          //! int buffer size
-      Int_t              fDblSize;          //! dbl buffer size
-      Int_t             *fIntBuffer;        //! transient int buffer
-      Double_t          *fDblBuffer;        //! transient dbl buffer
-
-      ThreadData_t();
-      ~ThreadData_t();
-   };
-
-   mutable std::vector<ThreadData_t*> fThreadData; //! Thread private data
-   mutable Int_t                      fThreadSize; //! Length of thread data
-
-   ThreadData_t&         GetThreadData()   const;
-   void                  ClearThreadData() const;
    //--- adding geometrical objects
    Int_t                  AddMaterial(const TGeoMaterial *material);
    Int_t                  AddOverlap(const TNamed *ovlp);
@@ -431,21 +419,27 @@ public:
 
    //--- utilities
    Int_t                  CountNodes(const TGeoVolume *vol=0, Int_t nlevels=10000, Int_t option=0);
+   void                   CountLevels();
    virtual void           ExecuteEvent(Int_t event, Int_t px, Int_t py);
    static Int_t           Parse(const char* expr, TString &expr1, TString &expr2, TString &expr3);
    Int_t                  ReplaceVolume(TGeoVolume *vorig, TGeoVolume *vnew);
    Int_t                  TransformVolumeToAssembly(const char *vname);
    UChar_t               *GetBits() {return fBits;}
    virtual Int_t          GetByteCount(Option_t *option=0);
-   Int_t                 *GetIntBuffer(Int_t length);
-   Double_t              *GetDblBuffer(Int_t length);
    void                   SetAllIndex();
+   static Int_t           GetMaxDaughters() {return fgMaxDaughters;}
+   static Int_t           GetMaxLevels()     {return fgMaxLevel;}
+   static Int_t           GetMaxXtruVert()  {return fgMaxXtruVert;}
+   Int_t                  GetMaxThreads() const {return fMaxThreads;}
+   void                   SetMaxThreads(Int_t nthreads);
    void                   SetMultiThread(Bool_t flag=kTRUE) {fMultiThread = flag;}
    Bool_t                 IsMultiThread() const {return fMultiThread;}
    static void            SetNavigatorsLock(Bool_t flag) {fgLockNavigators = flag;}
    static Int_t           ThreadId();
    static Int_t           GetNumThreads() {return fgNumThreads;}
    static void            ClearThreadsMap();
+   void                   ClearThreadData() const;
+   void                   CreateThreadData() const;
 
    //--- I/O
    virtual Int_t          Export(const char *filename, const char *name="", Option_t *option="vg");

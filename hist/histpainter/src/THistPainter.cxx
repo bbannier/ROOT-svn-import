@@ -217,6 +217,10 @@ using <tt>TH1::GetOption</tt>:
 
 <table border=0>
 
+<tr><th valign=top>"E"</th><td>
+Draw error bars.
+</td></tr> 
+
 <tr><th valign=top>"AXIS"</th><td>
 Draw only axis.
 </td></tr>
@@ -304,10 +308,6 @@ Like option "BAR", but bars are drawn horizontally.
 
 <tr><th valign=top>"C"</th><td>
 Draw a smooth Curve through the histogram bins.
-</td></tr>
-
-<tr><th valign=top>"E"</th><td>
-Draw error bars.
 </td></tr>
 
 <tr><th valign=top>"E0"</th><td>
@@ -920,6 +920,24 @@ Begin_Macro(source)
    TH1F *he3 = he4->DrawClone("E3");
    he3->SetTitle("Distribution drawn option E3");
    return ce4;
+}
+End_Macro
+Begin_Html
+ 
+<p>2D histograms can be drawn with error bars as shown is the following example:
+
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *c2e = new TCanvas("c2e","c2e",600,400);
+   TH2F *h2e = new TH2F("h2e","TH2 drawn with option E",40,-4,4,40,-20,20);
+   Float_t px, py;
+   for (Int_t i = 0; i < 25000; i++) {
+      gRandom->Rannor(px,py);
+      h2e->Fill(px,5*py);
+   }
+   h2e->Draw("E");
+   return c2e;
 }
 End_Macro
 Begin_Html
@@ -4354,7 +4372,7 @@ void THistPainter::PaintBoxes(Option_t *)
          break;
       }
    }
-      
+
    if (Hoption.Logz) {
       if (zmin > 0) {
          zmin = TMath::Log10(zmin*0.1);
@@ -4364,7 +4382,7 @@ void THistPainter::PaintBoxes(Option_t *)
       }
    } else {
       zmin = 0;
-      zmax = TMath::Max(TMath::Abs(zmin),TMath::Abs(zmax));      
+      zmax = TMath::Max(TMath::Abs(zmin),TMath::Abs(zmax));
    }
 
    Double_t zratio, dz = zmax - zmin;
@@ -5147,11 +5165,11 @@ void THistPainter::PaintErrors(Option_t *)
          delta = fH->GetBinWidth(k);
          ex1 = xerror*delta;
       }
-      if (fH->GetBinErrorOption() == TH1::kNormal) { 
+      if (fH->GetBinErrorOption() == TH1::kNormal) {
          ey1 = factor*fH->GetBinError(k);
-         ey2 = ey1; 
+         ey2 = ey1;
       }
-      else { 
+      else {
          ey1 = factor*fH->GetBinErrorLow(k);
          ey2 = factor*fH->GetBinErrorUp(k);
       }
@@ -5397,7 +5415,7 @@ void THistPainter::Paint2DErrors(Option_t *)
             ez2 = fH->GetBinErrorUp(bin);
          }
          z1 = z - ez1;
-         z2 = z + ez2; 
+         z2 = z + ez2;
          if (Hoption.Logz) {
             if (z > 0)   z = TMath::Log10(z);
             else         z = Hparam.zmin;
@@ -5816,13 +5834,13 @@ Int_t THistPainter::PaintInit()
          ymin = TMath::Min(ymin,c1);
       }
       if (Hoption.Error) {
-         if (fH->GetBinErrorOption() == TH1::kNormal) 
+         if (fH->GetBinErrorOption() == TH1::kNormal)
             e1 = fH->GetBinError(i);
-         else 
-            e1 = fH->GetBinErrorUp(i); 
+         else
+            e1 = fH->GetBinErrorUp(i);
          if (e1 > 0) nonNullErrors++;
          ymax = TMath::Max(ymax,c1+e1);
-         if (fH->GetBinErrorOption() != TH1::kNormal) 
+         if (fH->GetBinErrorOption() != TH1::kNormal)
             e1 = fH->GetBinErrorLow(i);
 
          if (Hoption.Logy) {
@@ -6650,10 +6668,12 @@ void THistPainter::PaintPalette()
    if (palette) {
       if (view) {
          if (!palette->TestBit(TPaletteAxis::kHasView)) {
+            fFunctions->Remove(palette);
             delete palette; palette = 0;
          }
       } else {
          if (palette->TestBit(TPaletteAxis::kHasView)) {
+            fFunctions->Remove(palette);
             delete palette; palette = 0;
          }
       }
@@ -7093,7 +7113,7 @@ void THistPainter::PaintStat2(Int_t dostat, TF1 *fit)
    if (!gStyle->GetOptFit()) fit = 0;
    Bool_t done = kFALSE;
    if (!dostat && !fit) {
-      if (stats) delete stats;
+      if (stats) { fFunctions->Remove(stats); delete stats;}
       return;
    }
    Double_t  statw  = gStyle->GetStatW();
@@ -7306,7 +7326,7 @@ void THistPainter::PaintStat3(Int_t dostat, TF1 *fit)
    if (!gStyle->GetOptFit()) fit = 0;
    Bool_t done = kFALSE;
    if (!dostat && !fit) {
-      if (stats) delete stats;
+      if (stats) { fFunctions->Remove(stats); delete stats;}
       return;
    }
    Double_t  statw  = gStyle->GetStatW();
@@ -7896,7 +7916,7 @@ void THistPainter::PaintTable(Option_t *option)
    //if palette option not specified, delete a possible existing palette
    if (!Hoption.Zscale) {
       TObject *palette = fFunctions->FindObject("palette");
-      if (palette) delete palette;
+      if (palette) { fFunctions->Remove(palette); delete palette;}
    }
 
    if (fH->InheritsFrom(TH2Poly::Class())) {

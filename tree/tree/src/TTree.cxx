@@ -155,6 +155,7 @@
 //      loops on all defined branches and for each branch invokes the Fill function.
 //
 //         See also the class TNtuple (a simple Tree with branches of floats)
+//         and the class TNtupleD (a simple Tree with branches of doubles)
 //
 //       Adding a Branch to an Existing Tree
 //       ===================================
@@ -1570,7 +1571,7 @@ Int_t TTree::Branch(const char* foldername, Int_t bufsize /* = 32000 */, Int_t s
             strlcat(curname, occur,1000); 
          }
          TBranchElement* br = (TBranchElement*) Bronch(curname, obj->ClassName(), add, bufsize, splitlevel - 1);
-         br->SetBranchFolder();
+         if (br) br->SetBranchFolder();
       }
    }
    delete[] curname;
@@ -2489,7 +2490,11 @@ TFile* TTree::ChangeFile(TFile* file)
    }
    Int_t compress = file->GetCompressionSettings();
    TFile* newfile = TFile::Open(fname, "recreate", "chain files", compress);
-   Printf("Fill: Switching to new file: %s", fname);
+   if (newfile == 0) {
+      Error("Fill","Failed to open new file %s, continuing as a memory tree.",fname); 
+   } else {
+      Printf("Fill: Switching to new file: %s", fname);
+   }
    // The current directory may contain histograms and trees.
    // These objects must be moved to the new file.
    TBranch* branch = 0;
@@ -2520,7 +2525,7 @@ TFile* TTree::ChangeFile(TFile* file)
          continue;
       }
       // Not a TH1 or a TTree, move object to new file.
-      newfile->Append(obj);
+      if (newfile) newfile->Append(obj);
       file->Remove(obj);
    }
    delete file;
@@ -5717,6 +5722,8 @@ TTree* TTree::MergeTrees(TList* li, Option_t* /* option */)
          
          // Once the cloning is done, separate the trees,
          // to avoid as many side-effects as possible
+         // The list of clones is guaranteed to exist since we
+         // just cloned the tree.
          tree->GetListOfClones()->Remove(newtree);
          tree->ResetBranchAddresses();
          newtree->ResetBranchAddresses();
@@ -7393,12 +7400,17 @@ void TTree::SetEventList(TEventList *evlist)
 }
 
 //_______________________________________________________________________
-void TTree::SetEstimate(Long64_t n)
+void TTree::SetEstimate(Long64_t n /* = 10000 */)
 {
    // Set number of entries to estimate variable limits.
+   // If n is -1, the estimate is set to be the current maximum
+   // for the tree (i.e. GetEntries() + 1)
+   // If n is less than -1, the behavior is undefined.
 
-   if (n <= 0) {
+   if (n == 0) {
       n = 10000;
+   } else if (n < 0) {
+      n = fEntries - n;
    }
    fEstimate = n;
    GetPlayer();

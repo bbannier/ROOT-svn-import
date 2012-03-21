@@ -84,6 +84,7 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
 
    fHighlight    (kFALSE),  fHighlightOutline (kFALSE),
    fSelection    (kFALSE),  fSecSelection     (kFALSE),
+   fSelectTransparents (kIfNoOpaques),
    fPickRadius   (0),
    fPickRectangle(0),
    fSelectBuffer (0),
@@ -102,7 +103,6 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fGrabbedImage  (0)
 {
    // Constructor.
-
    
    fColorSetStack = new lpTGLColorSet_t;
    fColorSetStack->push_back(0);

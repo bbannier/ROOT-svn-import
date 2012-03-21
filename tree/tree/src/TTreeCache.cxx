@@ -307,8 +307,8 @@ TTreeCache::~TTreeCache()
 
    // Informe the TFile that we have been deleted (in case
    // we are deleted explicitly by legacy user code).
-   fFile->SetCacheRead(0, fTree);   
-   
+   if (fFile) fFile->SetCacheRead(0, fTree);   
+
    delete fBranches;
    if (fBrNames) {fBrNames->Delete(); delete fBrNames; fBrNames=0;}
 }
@@ -837,7 +837,7 @@ void TTreeCache::Print(Option_t *option) const
    
    TString opt = option;
    opt.ToLower();
-   printf("******TreeCache statistics for file: %s ******\n",fFile->GetName());
+   printf("******TreeCache statistics for file: %s ******\n",fFile ? fFile->GetName() : "no file set");
    if (fNbranches <= 0) return;
    printf("Number of branches in the cache ...: %d\n",fNbranches);
    printf("Cache Efficiency ..................: %f\n",GetEfficiency());
@@ -1023,15 +1023,7 @@ void TTreeCache::UpdateBranches(TTree *tree)
    // Update pointer to current Tree and recompute pointers to the branches in the cache.
 
 
-   if (fFile && fTree) {
-      fFile->SetCacheRead(0,fTree);
-   }
    fTree = tree;
-   TFile *file = tree->GetCurrentFile();
-   if (file) {
-      file->SetCacheRead(this,tree);
-   }
-   SetFile(file);
 
    fEntryMin  = 0;
    fEntryMax  = fTree->GetEntries();

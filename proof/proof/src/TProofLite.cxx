@@ -71,6 +71,14 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
 
    fUrl.SetUrl(url);
 
+   // Default initializations                                                                                                                                          
+   fServSock = 0;
+   fCacheLock = 0;
+   fQueryLock = 0;
+   fQMgr = 0;
+   fDataSetManager = 0;
+   InitMembers();
+
    // This may be needed during init
    fManager = mgr;
 
@@ -1124,7 +1132,11 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
    Long64_t rv = 0;
    if (!(pq->IsDraw())) {
-      rv = fPlayer->Process(dset, selec, option, nentries, first);
+      if (selector && strlen(selector)) {
+         rv = fPlayer->Process(dset, selec, option, nentries, first);
+      } else {
+         rv = fPlayer->Process(dset, fSelector, option, nentries, first);
+      }
    } else {
       rv = fPlayer->DrawSelect(dset, varexp, selection, option, nentries, first);
    }

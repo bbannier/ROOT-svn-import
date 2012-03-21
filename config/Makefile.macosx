@@ -130,6 +130,7 @@ F77ORG        = gfortran
 F77FLAGS      = -m32 -std=legacy
 ifneq ($(F77),)
 F77LIBS      := $(shell $(F77) -m32 -print-file-name=libgfortran.dylib 2>&1 | grep /)
+F77LIBS      += $(shell $(F77) -m32 -print-file-name=libgfortran.a 2>&1 | grep /)
 F77LIBS      += $(shell $(F77) -m32 -print-file-name=libgfortranbegin.a 2>&1 | grep /)
 endif
 
@@ -142,6 +143,13 @@ ifeq ($(NEEDFINK),yes)
 FINK_CXXFLAGS := $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
 FINK_CFLAGS   := $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
 FINK_LDFLAGS  := $(shell [ -d $(FINK_DIR)/lib ] && echo -L$(FINK_DIR)/lib)
+endif
+
+ifeq ($(MACOSX_MINOR),7)
+MACOSX_SSL_DEPRECATED = yes
+endif
+ifeq ($(MACOSX_MINOR),8)
+MACOSX_SSL_DEPRECATED = yes
 endif
 
 ifeq ($(CONFIGURE),yes)

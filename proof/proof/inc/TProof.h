@@ -95,6 +95,7 @@ class TFileCollection;
 class TMap;
 class TDataSetManager;
 class TMacro;
+class TSelector;
 
 // protocol changes:
 // 1 -> 2: new arguments for Process() command, option added
@@ -554,6 +555,7 @@ private:
                                      // variables to pass to proofserv
 
    Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly
+   Bool_t          fMergersByHost;   // Mergers assigned by host name
    Int_t           fMergersCount;
    Int_t           fWorkersToMerge;  // Current total number of workers, which have not been yet assigned to any merger
    Int_t           fLastAssignedMerger;
@@ -591,6 +593,8 @@ protected:
    TProofMgr      *fManager;        // manager to which this session belongs (if any)
    EQueryMode      fQueryMode;      // default query mode
    Bool_t          fDynamicStartup; // are the workers started dynamically?
+
+   TSelector       *fSelector;      // Selector to be processed, if any
 
    static TSemaphore *fgSemaphore;   //semaphore to control no of parallel startup threads
 
@@ -781,6 +785,18 @@ public:
                             Option_t *option = "", Long64_t nentries = -1,
                             Long64_t firstentry = 0, TObject *enl = 0);
    virtual Long64_t Process(const char *selector, Long64_t nentries,
+                            Option_t *option = "");
+   // Process via TSelector
+   virtual Long64_t Process(TDSet *dset, TSelector *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0);
+   virtual Long64_t Process(TFileCollection *fc, TSelector *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0);
+   virtual Long64_t Process(const char *dsetname, TSelector *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0, TObject *enl = 0);
+   virtual Long64_t Process(TSelector *selector, Long64_t nentries,
                             Option_t *option = "");
 
    virtual Long64_t DrawSelect(TDSet *dset, const char *varexp,
