@@ -1536,7 +1536,8 @@ HistFactory::Sample ConfigParser::CreateSampleElement( TXMLNode* node ) {
     }
 
     else if( child->GetNodeName() == TString( "HistoFactor" ) ) {
-      sample.GetHistoFactorList().push_back( MakeHistoFactor( child ) );
+      std::cout << "WARNING: HistoFactor not yet supported" << std::endl;
+      //sample.GetHistoFactorList().push_back( MakeHistoFactor( child ) );
     }
 
     else if( child->GetNodeName() == TString( "ShapeSys" ) ) {
@@ -1630,7 +1631,7 @@ HistFactory::NormFactor ConfigParser::MakeNormFactor( TXMLNode* node ) {
 
 }
 
-HistFactory::HistoFactor ConfigParser::MakeHistoFactor( TXMLNode* node ) {
+HistFactory::HistoFactor ConfigParser::MakeHistoFactor( TXMLNode* /*node*/ ) {
 
   std::cout << "Making HistoFactor" << std::endl;
 
