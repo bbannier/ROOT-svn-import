@@ -63,7 +63,7 @@ void ConvertEventLocationToROOTXY(NSEvent *cocoaEvent, QuartzView *eventView, Ev
 
    WindowAttributes_t attr = {};
    GetRootWindowAttributes(&attr);
-
+   
    rootEvent->fXRoot = screenPoint.x;
    rootEvent->fYRoot = attr.fHeight - screenPoint.y;
 }
@@ -318,6 +318,24 @@ void SendButtonPressEvent(QuartzView *view, NSEvent *theEvent, EMouseButton btn)
    //
    ConvertEventLocationToROOTXY(theEvent, view, &pressEvent);
    //
+   
+   //
+   //ROOT uses "subwindow" parameter for button press event also, for example,
+   //scroll bar has several children windows - "buttons", they are not selecting
+   //button press events (and not grabbing pointer).
+   //This will work wrong, if we have overlapping views - we'll find a wrong subwindow.
+   //
+
+   NSPoint viewPoint = {};
+   viewPoint.x = pressEvent.fX;
+   viewPoint.y = pressEvent.fY;
+   for (QuartzView *child in [view subviews]) {
+      if (!child.fIsOverlapped && [child hitTest : viewPoint]) {//Hit test goes down along the tree.
+         pressEvent.fUser[0] = child.fID;
+         break;
+      }
+   }
+   
    //Dispatch:
    window->HandleEvent(&pressEvent);
 }
