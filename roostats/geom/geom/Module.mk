@@ -23,7 +23,7 @@ GEOMDS       := $(GEOMDS1) $(GEOMDS2)
 GEOMDO       := $(GEOMDO1) $(GEOMDO2)
 GEOMDH       := $(GEOMDS:.cxx=.h)
 
-GEOMH1       := TGeoAtt.h TGeoBoolNode.h \
+GEOMH1       := TGeoAtt.h TGeoStateInfo.h TGeoBoolNode.h \
                 TGeoMedium.h TGeoMaterial.h \
                 TGeoMatrix.h TGeoVolume.h TGeoNode.h \
                 TGeoVoxelFinder.h TGeoShape.h TGeoBBox.h \
@@ -65,7 +65,7 @@ include/%.h:    $(GEOMDIRI)/%.h
 $(GEOMLIB):     $(GEOMO) $(GEOMDO) $(ORDER_) $(MAINLIBS) $(GEOMLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libGeom.$(SOEXT) $@ "$(GEOMO) $(GEOMDO)" \
-		   "$(GEOMLIBEXTRA)"
+		   "$(GEOMLIBEXTRA) $(OSTHREADLIBDIR) $(OSTHREADLIB)"
 
 $(GEOMDS1):     $(GEOMH1) $(GEOML1) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)

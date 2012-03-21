@@ -125,10 +125,12 @@ else
 		fi; \
 		if [ "$(ARCH)" = "solarisCC5" ]; then \
 			ACFLAGS="$$ACFLAGS -erroff=E_WHITE_SPACE_IN_DIRECTIVE"; \
+			MMX="--disable-mmx_optimization"; \
 		fi; \
 		if [ "$(ARCH)" = "solaris64CC5" ]; then \
 			ACC="$$ACC -m64"; \
 			ACFLAGS="$$ACFLAGS -KPIC -erroff=E_WHITE_SPACE_IN_DIRECTIVE"; \
+			MMX="--disable-mmx_optimization"; \
 		fi; \
 		if [ "$(ARCH)" = "sgicc64" ]; then \
 			ACC="$$ACC -mabi=64"; \
@@ -169,9 +171,6 @@ else
 		elif [ "$(ASTIFFINCDIR)" != "" ]; then \
 			TIFFINCDIR="--with-tiff-includes=$(ASTIFFINCDIR)"; \
 		fi; \
-		if [ "$(ASGIFINCDIR)" != "" ]; then \
-			GIFINCDIR="--with-gif-includes=$(ASGIFINCDIR)"; \
-		fi; \
 		if [ "$(FREETYPEDIRI)" != "" ]; then \
 			TTFINCDIR="--with-ttf-includes=-I../../../../$(FREETYPEDIRI)"; \
 		fi; \
@@ -184,7 +183,6 @@ else
 		$$MMX \
 		$(ASTEPDBG) \
 		--with-builtin-ungif \
-		$$GIFINCDIR \
 		--with-jpeg \
 		$$JPEGINCDIR \
 		--with-png \
@@ -301,3 +299,5 @@ $(ASIMAGEO): CXXFLAGS += $(FREETYPEINC) $(ASTEPDIRI)
 
 $(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASIMAGEDO): $(ASTEPDEP)
 $(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASIMAGEDO): CXXFLAGS += $(ASTEPDIRI)
+
+$(ASIMAGEGUIO): CXXFLAGS += $(X11INCDIR:%=-I%)

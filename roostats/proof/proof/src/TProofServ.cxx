@@ -108,6 +108,7 @@
 #include "TMethodArg.h"
 #include "TMethodCall.h"
 #include "TProofOutputFile.h"
+#include "TSelector.h"
 
 // global proofserv handle
 TProofServ *gProofServ = 0;
@@ -1739,29 +1740,36 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
                fnam.ReplaceAll("cache:", TString::Format("%s/", fCacheDir.Data()));
                copytocache = kFALSE;
             }
+
+            Int_t rfrc = 0;
             if (size > 0) {
-               ReceiveFile(fnam, bin ? kTRUE : kFALSE, size);
+               rfrc = ReceiveFile(fnam, bin ? kTRUE : kFALSE, size);
             } else {
                // Take it from the cache
                if (!fnam.BeginsWith(fCacheDir.Data())) {
                   fnam.Insert(0, TString::Format("%s/", fCacheDir.Data()));
                }
             }
-            // copy file to cache if not a PAR file
-            if (copytocache && size > 0 &&
-                strncmp(fPackageDir, name, fPackageDir.Length()))
-               CopyToCache(name, 0);
-            if (IsMaster() && fw == 1) {
-               Int_t opt = TProof::kForward | TProof::kCp;
-               if (bin)
-                  opt |= TProof::kBinary;
-               PDB(kGlobal, 1)
-                  Info("HandleSocketInput","forwarding file: %s", fnam.Data());
-               if (fProof->SendFile(fnam, opt, (copytocache ? "cache" : "")) < 0) {
-                  Error("HandleSocketInput", "forwarding file: %s", fnam.Data());
+            if (rfrc == 0) {
+               // copy file to cache if not a PAR file
+               if (copytocache && size > 0 &&
+                  strncmp(fPackageDir, name, fPackageDir.Length()))
+                  CopyToCache(name, 0);
+               if (IsMaster() && fw == 1) {
+                  Int_t opt = TProof::kForward | TProof::kCp;
+                  if (bin)
+                     opt |= TProof::kBinary;
+                  PDB(kGlobal, 1)
+                     Info("HandleSocketInput","forwarding file: %s", fnam.Data());
+                  if (fProof->SendFile(fnam, opt, (copytocache ? "cache" : "")) < 0) {
+                     Error("HandleSocketInput", "forwarding file: %s", fnam.Data());
+                  }
                }
+               if (fProtocol > 19) fSocket->Send(kPROOF_SENDFILE);
+            } else {
+               // There was an error
+               SendLogFile(1);
             }
-            if (fProtocol > 19) fSocket->Send(kPROOF_SENDFILE);
          }
          break;
 
@@ -3912,6 +3920,19 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
          fPlayer->AddInput(o);
       }
 
+      // Check if a TSelector object is passed via input list
+      TObject *obj = 0;
+      TSelector *selector_obj = 0;
+      TIter nxt(input);
+      while ((obj = nxt())){
+         if (obj->InheritsFrom("TSelector")) {
+            selector_obj = (TSelector *) obj;
+            filename = selector_obj->ClassName();
+            Info("HandleProcess", "selector obj for '%s' found", selector_obj->ClassName());
+            break;
+         }
+      }
+
       // Signal the master that we are starting processing
       fSocket->Send(kPROOF_STARTPROCESS);
 
@@ -3920,7 +3941,15 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 
       // Process
       PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
-      fPlayer->Process(dset, filename, opt, nentries, first);
+       
+      if (selector_obj){
+         Info("HandleProcess", "calling fPlayer->Process() with selector object: %s", selector_obj->ClassName());
+         fPlayer->Process(dset, selector_obj, opt, nentries, first);
+      }
+      else {
+         Info("HandleProcess", "calling fPlayer->Process() with selector name: %s", filename.Data());
+         fPlayer->Process(dset, filename, opt, nentries, first);
+      }
 
       // Return number of events processed
       TMessage m(kPROOF_STOPPROCESS);
@@ -4020,6 +4049,13 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
          // Notify the user
          SendLogFile();
       }
+
+      // Prevent from double-deleting in input
+      TIter nex(input);
+      while ((obj = nex())) {
+         if (obj->InheritsFrom("TSelector")) input->Remove(obj);
+      }
+
       // Make also sure the input list objects are deleted
       fPlayer->GetInputList()->SetOwner(0);
       
@@ -4240,6 +4276,9 @@ void TProofServ::ProcessNext(TString *slb)
    // TObject *elist = 0;
    TProofQueryResult *pq = 0;
 
+   TObject* obj = 0;
+   TSelector* selector_obj = 0;
+
    // Process
 
    // Reset compute stopwatch: we include all what done from now on
@@ -4288,6 +4327,18 @@ void TProofServ::ProcessNext(TString *slb)
          gSystem->Exec(TString::Format("%s %s", kRM, pq->GetSelecHdr()->GetName()));
          pq->GetSelecHdr()->SaveSource(pq->GetSelecHdr()->GetName());
       }
+
+      // Taking out a TSelector object from input list
+      TIter nxt(input);
+      while ((obj = nxt())){
+         if (obj->InheritsFrom("TSelector") &&
+            !strcmp(pq->GetSelecImp()->GetName(), obj->ClassName())) {
+            selector_obj = (TSelector *) obj;
+            Info("ProcessNext", "found object for selector '%s'", obj->ClassName());
+            break;
+         }
+      }
+
    } else {
       // Should never get here
       Error("ProcessNext", "empty waiting queries list!");
@@ -4341,6 +4392,16 @@ void TProofServ::ProcessNext(TString *slb)
       if (smg >= 0) {
          input->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
          PDB(kSubmerger, 2) Info("ProcessNext", "PROOF_UseMergers set to %d", smg);
+         if (gEnv->Lookup("Proof.MergersByHost")) {
+            Int_t mbh = gEnv->GetValue("Proof.MergersByHost", 0);
+            if (mbh != 0) {
+               // Administrator settings have the priority
+               TObject *o = 0;
+               if ((o = input->FindObject("PROOF_MergersByHost"))) { input->Remove(o); delete o; }
+               input->Add(new TParameter<Int_t>("PROOF_MergersByHost", mbh));
+               PDB(kSubmerger, 2) Info("ProcessNext", "submergers setup by host/node");
+            }
+         }
       }
    }
 
@@ -4357,7 +4418,14 @@ void TProofServ::ProcessNext(TString *slb)
 
    // Process
    PDB(kGlobal, 1) Info("ProcessNext", "calling %s::Process()", fPlayer->IsA()->GetName());
-   fPlayer->Process(dset, filename, opt, nentries, first);
+   if (selector_obj){
+      Info("ProcessNext", "calling fPlayer->Process() with selector object: %s", selector_obj->ClassName());
+      fPlayer->Process(dset, selector_obj, opt, nentries, first);
+   }
+   else {
+      Info("ProcessNext", "calling fPlayer->Process() with selector name: %s", filename.Data());
+      fPlayer->Process(dset, filename, opt, nentries, first);
+   }
 
    // Return number of events processed
    if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kFinished) {
@@ -4452,10 +4520,13 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
 {
    // Register TFileCollections in 'out' as datasets according to the rules in 'in'
 
-   PDB(kDataset, 1) Info("RegisterDataSets", "enter");
+   PDB(kDataset, 1)
+      Info("RegisterDataSets", "enter: %d objs in the output list", (out ? out->GetSize() : -1));
 
    if (!in || !out) return 0;
 
+   THashList tags;
+   TList torm;
    TString msg;
    TIter nxo(out);
    TObject *o = 0;
@@ -4467,6 +4538,11 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
          TNamed *fcn = 0;
          TString tag = TString::Format("DATASET_%s", ds->GetName());
          if (!(fcn = (TNamed *) out->FindObject(tag))) continue;
+         // If this tag is in the list of processed tags, flag it for removal
+         if (tags.FindObject(tag)) {
+            torm.Add(o);
+            continue;
+         }
          // Register option
          TString regopt(fcn->GetTitle());
          // Sort according to the internal index, if required
@@ -4501,6 +4577,9 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
                   } else {
                      Info("RegisterDataSets", "dataset '%s' successfully registered", ds->GetName());
                      msg.Form("Registering and verifying dataset '%s' ... OK", ds->GetName());
+                     // Add tag to the list of processed tags to avoid double processing (there may be more objects with
+                     // the same name, created by each worker)
+                     tags.Add(new TObjString(tag));
                   }
                   SendAsynMessage(msg.Data(), kTRUE);
                   // Notify
@@ -4519,13 +4598,13 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
             Error("RegisterDataSets", "dataset manager is undefined!");
             return -1;
          }
-         // Cleanup all temporary stuff (there may be more objects with the same name, created by each worker)
-         do {
-            out->Remove(fcn);
-            SafeDelete(fcn);
-         } while ((fcn = (TNamed *) out->FindObject(tag)));
       }
    }
+   // Cleanup all temporary stuff possibly created by each worker
+   TIter nxrm(&torm);
+   while ((o = nxrm())) out->Remove(o);
+   tags.SetOwner(kTRUE);
+   torm.SetOwner(kTRUE);
 
    PDB(kDataset, 1) Info("RegisterDataSets", "exit");
    // Done

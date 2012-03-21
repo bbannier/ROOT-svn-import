@@ -82,6 +82,7 @@
 #include "TFileCollection.h"
 #include "TDataSetManager.h"
 #include "TMacro.h"
+#include "TSelector.h"
 
 TProof *gProof = 0;
 TVirtualMutex *gProofMutex = 0;
@@ -551,6 +552,7 @@ void TProof::InitMembers()
    fCloseMutex = 0;
 
    fMergersSet = kFALSE;
+   fMergersByHost = kFALSE;
    fMergers = 0;
    fMergersCount = -1;
    fLastAssignedMerger = 0;
@@ -558,6 +560,8 @@ void TProof::InitMembers()
    fFinalizationRunning = kFALSE;
    
    fPerfTree = "";
+
+   fSelector = 0;
 
    // Check if the user defined a list of environment variables to send over:
    // include them into the dedicated list
@@ -2958,6 +2962,8 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
                         // Add the unique query tag as TNamed object to the input list
                         // so that it is available in TSelectors for monitoring
                         TString qid = TString::Format("%s:%s",pq->GetTitle(),pq->GetName());
+                        if (fPlayer->GetInputList()->FindObject("PROOF_QueryTag"))
+                           fPlayer->GetInputList()->Remove(fPlayer->GetInputList()->FindObject("PROOF_QueryTag"));
                         fPlayer->AddInput(new TNamed("PROOF_QueryTag", qid.Data()));
                      } else {
                         Warning("HandleInputMessage","kPROOF_OUTPUTOBJECT: query result missing");
@@ -3660,6 +3666,8 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                   fMergersCount = -1; // No mergers used if not set by user
                   TParameter<Int_t> *mc = dynamic_cast<TParameter<Int_t> *>(GetParameter("PROOF_UseMergers"));
                   if (mc) fMergersCount = mc->GetVal(); // Value set by user
+                  TParameter<Int_t> *mh = dynamic_cast<TParameter<Int_t> *>(GetParameter("PROOF_MergersByHost"));
+                  if (mh) fMergersByHost = (mh->GetVal() != 0) ? kTRUE : kFALSE; // Assign submergers by hostname
 
                   // Mergers count specified by user but not valid
                   if (fMergersCount < 0 || (fMergersCount > (activeWorkers/2) )) {
@@ -3672,7 +3680,7 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                      fMergersCount = 0;
                   }
                   // Mergers count will be set dynamically
-                  if (fMergersCount == 0) {
+                  if ((fMergersCount == 0) && (!fMergersByHost)) {
                      if (activeWorkers > 1) {
                         fMergersCount = TMath::Nint(TMath::Sqrt(activeWorkers));
                         if (activeWorkers / fMergersCount < 2)
@@ -3680,6 +3688,32 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                      }
                      if (fMergersCount > 1)
                         msg.Form("%s: Number of mergers set dynamically to %d (for %d workers)",
+                                 prefix, fMergersCount, activeWorkers);
+                     else {
+                        msg.Form("%s: No mergers will be used for %d workers",
+                                 prefix, activeWorkers);
+                        fMergersCount = -1;
+                     }
+                     if (gProofServ)
+                        gProofServ->SendAsynMessage(msg);
+                     else
+                        Printf("%s",msg.Data());
+                  } else if (fMergersByHost) {
+                     // We force mergers at host level to minimize network traffic
+                     if (activeWorkers > 1) {
+                        fMergersCount = 0;
+                        THashList hosts;
+                        TIter nxwk(fSlaves);
+                        TObject *wrk = 0;
+                        while ((wrk = nxwk())) {
+                           if (!hosts.FindObject(wrk->GetName())) {
+                              hosts.Add(new TObjString(wrk->GetName()));
+                              fMergersCount++;
+                           }
+                        }
+                     }
+                     if (fMergersCount > 1)
+                        msg.Form("%s: Number of mergers set to %d (for %d workers), one for each slave host",
                                  prefix, fMergersCount, activeWorkers);
                      else {
                         msg.Form("%s: No mergers will be used for %d workers",
@@ -3722,11 +3756,22 @@ void TProof::HandleSubmerger(TMessage *mess, TSlave *sl)
                      // No mergers. Workers send their outputs directly to master
                      AskForOutput(sl);
                   } else {
-                     if (fRedirectNext > 0 ) {
+                     if ((fRedirectNext > 0 ) && (!fMergersByHost)) {
                         RedirectWorker(s, sl, output_size);
                         fRedirectNext--;
                      } else {
-                        if (fMergersCount > fMergers->GetSize()) {
+                        Bool_t newMerger = kTRUE;
+                        if (fMergersByHost) {
+                           TIter nxmg(fMergers);
+                           TMergerInfo *mgi = 0;
+                           while ((mgi = (TMergerInfo *) nxmg())) {
+                              if (!strcmp(sl->GetName(), mgi->GetMerger()->GetName())) {
+                                 newMerger = kFALSE;
+                                 break;
+                              }
+                           }
+                        }
+                        if ((fMergersCount > fMergers->GetSize()) && newMerger) {
                            // Still not enough mergers established
                            if (!CreateMerger(sl, merging_port)) {
                               // Cannot establish a merger
@@ -3752,7 +3797,20 @@ void TProof::RedirectWorker(TSocket *s, TSlave * sl, Int_t output_size)
 {
    // Redirect output of worker sl to some merger
 
-   Int_t merger_id = FindNextFreeMerger();
+   Int_t merger_id = -1;
+
+   if (fMergersByHost) {
+      for (Int_t i = 0; i < fMergers->GetSize(); i++) {
+         TMergerInfo *mgi = (TMergerInfo *)fMergers->At(i);
+         if (!strcmp(sl->GetName(), mgi->GetMerger()->GetName())) {
+            merger_id = i;
+            break;
+         }
+      }
+   } else {
+      merger_id  = FindNextFreeMerger();
+   }
+
    if (merger_id == -1) {
       // No free merger (probably it had crashed before)
       AskForOutput(sl);
@@ -3945,20 +4003,35 @@ Bool_t TProof::CreateMerger(TSlave *sl, Int_t port)
          Info("CreateMerger", "cannot create merger on port %d - exit", port);
       return kFALSE;
    }
-   Int_t mergersToCreate = fMergersCount - fMergers->GetSize();
 
-   // Number of pure workers, which are not simply divisible by mergers
-   Int_t rest = fWorkersToMerge % mergersToCreate;
-
-   // We add one more worker for each of the first 'rest' mergers being established
-   if (rest > 0 && fMergers->GetSize() < rest) {
-      rest = 1;
+   Int_t workers = -1;
+   if (!fMergersByHost) {
+      Int_t mergersToCreate = fMergersCount - fMergers->GetSize();
+      // Number of pure workers, which are not simply divisible by mergers
+      Int_t rest = fWorkersToMerge % mergersToCreate;
+      // We add one more worker for each of the first 'rest' mergers being established
+      if (rest > 0 && fMergers->GetSize() < rest) {
+         rest = 1;
+      } else {
+         rest = 0;
+      }
+      workers = (fWorkersToMerge / mergersToCreate) + rest;
    } else {
-      rest = 0;
+      Int_t workersOnHost = 0;
+      for (Int_t i = 0; i < fSlaves->GetSize(); i++) {
+         if(!strcmp(sl->GetName(), fSlaves->At(i)->GetName())) workersOnHost++;
+      }
+      workers = workersOnHost - 1;
    }
 
-   Int_t workers = (fWorkersToMerge / mergersToCreate) + rest;
-
+   TString msg;
+   msg.Form("worker %s on host %s will be merger for %d additional workers", sl->GetOrdinal(), sl->GetName(), workers);
+                     
+   if (gProofServ) {
+      gProofServ->SendAsynMessage(msg);
+   } else {
+      Printf("%s",msg.Data());
+   }
    TMergerInfo * merger = new TMergerInfo(sl, port, workers);
 
    TMessage bemerger(kPROOF_SUBMERGER);
@@ -4359,7 +4432,8 @@ void TProof::Print(Option_t *option) const
 Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
                          Long64_t nentries, Long64_t first)
 {
-   // Process a data set (TDSet) using the specified selector (.C) file.
+   // Process a data set (TDSet) using the specified selector (.C) file or
+   // Tselector object
    // Entry- or event-lists should be set in the data set object using
    // TDSet::SetEntryList.
    // The return value is -1 in case of error and TSelector::GetStatus() in
@@ -4396,7 +4470,15 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
          sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
    }
 
-   Long64_t rv = fPlayer->Process(dset, selector, opt.Data(), nentries, first);
+   Long64_t rv = -1;
+   if (selector && strlen(selector)) {
+      rv = fPlayer->Process(dset, selector, opt.Data(), nentries, first);
+   } else if (fSelector) {
+      rv = fPlayer->Process(dset, fSelector, opt.Data(), nentries, first);
+   } else {
+      Error("Process", "neither a selecrot file nor a selector object have"
+                       " been specified: cannot process!");
+   }
 
    if (fSync) {
       // reactivate the default application interrupt handler
@@ -4417,7 +4499,8 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
 Long64_t TProof::Process(TFileCollection *fc, const char *selector,
                          Option_t *option, Long64_t nentries, Long64_t first)
 {
-   // Process a data set (TFileCollection) using the specified selector (.C) file.
+   // Process a data set (TFileCollection) using the specified selector (.C) file
+   // or TSelector object.
    // The default tree is analyzed (i.e. the first one found). To specify another
    // tree, the default tree can be changed using TFileCollection::SetDefaultMetaData .
    // The return value is -1 in case of error and TSelector::GetStatus() in
@@ -4435,7 +4518,17 @@ Long64_t TProof::Process(TFileCollection *fc, const char *selector,
    // fake TDSet with infor about it
    TDSet *dset = new TDSet(TString::Format("TFileCollection:%s", fc->GetName()), 0, 0, "");
    fPlayer->AddInput(fc);
-   Long64_t retval = Process(dset, selector, option, nentries, first);
+
+   
+   Long64_t retval = -1;
+   if (selector && strlen(selector)) {
+      retval = Process(dset, selector, option, nentries, first);
+   } else if (fSelector) {
+      retval = Process(dset, fSelector, option, nentries, first);
+   } else {
+      Error("Process", "neither a selecrot file nor a selector object have"
+                       " been specified: cannot process!");
+   }
    fPlayer->GetInputList()->Remove(fc); // To avoid problems in future
 
    // Cleanup
@@ -4693,7 +4786,15 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
       dset->SetEntryList(elist);
    }
    // Run
-   Long64_t retval = Process(dset, selector, option, nentries, first);
+   Long64_t retval = -1;
+   if (selector && strlen(selector)) {
+      retval = Process(dset, selector, option, nentries, first);
+   } else if (fSelector) {
+      retval = Process(dset, fSelector, option, nentries, first);
+   } else {
+      Error("Process", "neither a selecrot file nor a selector object have"
+                       " been specified: cannot process!");
+   }
    // Cleanup
    if (IsLite() && !fSync) {
       if (!fRunningDSets) fRunningDSets = new TList;
@@ -4708,7 +4809,7 @@ Long64_t TProof::Process(const char *dsetname, const char *selector,
 Long64_t TProof::Process(const char *selector, Long64_t n, Option_t *option)
 {
    // Generic (non-data based) selector processing: the Process() method of the
-   // specified selector (.C) is called 'n' times.
+   // specified selector (.C) or TSelector object is called 'n' times.
    // The return value is -1 in case of error and TSelector::GetStatus() in
    // in case of success.
 
@@ -4723,7 +4824,15 @@ Long64_t TProof::Process(const char *selector, Long64_t n, Option_t *option)
    TDSet *dset = new TDSet;
    dset->SetBit(TDSet::kEmpty);
 
-   Long64_t retval = Process(dset, selector, option, n);
+   Long64_t retval = -1;
+   if (selector && strlen(selector)) {
+      retval = Process(dset, selector, option, n);
+   } else if (fSelector) {
+      retval = Process(dset, fSelector, option, n);
+   } else {
+      Error("Process", "neither a selecrot file nor a selector object have"
+                       " been specified: cannot process!");
+   }
 
    // Cleanup
    if (IsLite() && !fSync) {
@@ -4733,6 +4842,104 @@ Long64_t TProof::Process(const char *selector, Long64_t n, Option_t *option)
       delete dset;
    }
    return retval;
+}
+
+//______________________________________________________________________________
+Long64_t TProof::Process(TDSet *dset, TSelector *selector, Option_t *option,
+                         Long64_t nentries, Long64_t first)
+{
+   // Process a data set (TDSet) using the specified selector object.
+   // Entry- or event-lists should be set in the data set object using
+   // TDSet::SetEntryList.
+   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (fProtocol < 34) {
+      Error("Process", "server version < 5.33/02:"
+                       "processing by object not supported");
+      return -1;
+   }
+   if (!selector) {
+      Error("Process", "selector object undefined!");
+      return -1;
+   }
+   fSelector = selector;
+   Long64_t rc = Process(dset, (const char*)0, option, nentries, first);
+   fSelector = 0;
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+Long64_t TProof::Process(TFileCollection *fc, TSelector *selector,
+                         Option_t *option, Long64_t nentries, Long64_t first)
+{
+   // Process a data set (TFileCollection) using the specified selector object
+   // The default tree is analyzed (i.e. the first one found). To specify another
+   // tree, the default tree can be changed using TFileCollection::SetDefaultMetaData .
+   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (fProtocol < 34) {
+      Error("Process", "server version < 5.33/02:"
+                       "processing by object not supported");
+      return -1;
+   }
+   if (!selector) {
+      Error("Process", "selector object undefined!");
+      return -1;
+   }
+   fSelector = selector;
+   Long64_t rc = Process(fc, (const char*)0, option, nentries, first);
+   fSelector = 0;
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+Long64_t TProof::Process(const char *dsetname, TSelector *selector,
+                         Option_t *option, Long64_t nentries,
+                         Long64_t first, TObject *elist)
+{
+   // Process with name of dataset and TSelector object
+   if (fProtocol < 34) {
+      Error("Process", "server version < 5.33/02:"
+                       "processing by object not supported");
+      return -1;
+   }
+   if (!selector) {
+      Error("Process", "selector object undefined!");
+      return -1;
+   }
+   fSelector = selector;
+   Long64_t rc = Process(dsetname, (const char*)0, option, nentries, first, elist);
+   fSelector = 0;
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+Long64_t TProof::Process(TSelector *selector, Long64_t n, Option_t *option)
+{
+   // Generic (non-data based) selector processing: the Process() method of the
+   // specified selector is called 'n' times.
+   // The return value is -1 in case of error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (fProtocol < 34) {
+      Error("Process", "server version < 5.33/02:"
+                       "processing by object not supported");
+      return -1;
+   }
+   if (!selector) {
+      Error("Process", "selector object undefined!");
+      return -1;
+   }
+   fSelector = selector;
+   Long64_t rc = Process((const char*)0, n, option);
+   fSelector = 0;
+   // Done
+   return rc;
 }
 
 //______________________________________________________________________________
@@ -5674,6 +5881,7 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
       fnam = gSystem->BaseName(file);
    }
    // List on which we will collect the results
+   fStatus = 0;
    while ((sl = (TSlave *)next())) {
       if (!sl->IsValid())
          continue;
@@ -5737,7 +5945,8 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
    if (slaves != fActiveSlaves && slaves != fUniqueSlaves)
       SafeDelete(slaves);
 
-   return nsl;
+   // We return failure is at least one unique worker failed
+   return (fStatus != 0) ? -1 : nsl;
 }
 
 //______________________________________________________________________________
@@ -10825,7 +11034,7 @@ Int_t TProof::AssertDataSet(TDSet *dset, TList *input,
       input->RecursiveRemove(dataset);
       // Add it to the local list
       datasets->Add(new TPair(dataset, new TObjString("")));
-      // Make sure we lookup everything (unless the client or the administartor
+      // Make sure we lookup everything (unless the client or the administrator
       // required something else)
       if (TProof::GetParameter(input, "PROOF_LookupOpt", lookupopt) != 0) {
          lookupopt = gEnv->GetValue("Proof.LookupOpt", "all");

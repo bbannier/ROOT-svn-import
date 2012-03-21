@@ -638,7 +638,12 @@ ifeq ($$(F77),f2c)
 	f2c -a -A $$<
 	$$(CC) $$(F77OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$(@:.o=.c)
 else
+ifneq ($(findstring gfortran, $(F77)),)
+# Ignore gfortran warnings, our Fortran code is old, won't change and works
+	$$(F77) $$(F77OPT) $$(F77FLAGS) $$(CXXOUT)$$@ -c $$< 2>&1 | sed -e s/arning:/arn-Ignore:/ >&2
+else
 	$$(F77) $$(F77OPT) $$(F77FLAGS) $$(CXXOUT)$$@ -c $$<
+endif
 endif
 endef
 
@@ -659,7 +664,12 @@ ifeq ($(F77),f2c)
 	f2c -a -A $<
 	$(CC) $(F77OPT) $(CFLAGS) $(CXXOUT)$@ -c $*.c
 else
+ifneq ($(findstring gfortran, $(F77)),)
+# Ignore gfortran warnings, our Fortran code is old, won't change and works
+	$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $< 2>&1 | sed -e s/arning:/arn-Ignore:/ >&2
+else
 	$(F77) $(F77OPT) $(F77FLAGS) $(CXXOUT)$@ -c $<
+endif
 endif
 
 ##### TARGETS #####
@@ -763,8 +773,8 @@ Makefile: $(addprefix $(ROOT_SRCDIR)/,configure config/rootrc.in \
 	 ) )
 endif
 
-$(COMPILEDATA): $(ROOT_SRCDIR)/config/Makefile.$(ARCH) config/Makefile.comp \
-                $(MAKECOMPDATA)
+$(COMPILEDATA): $(ROOT_SRCDIR)/config/Makefile.$(ARCH) config/Makefile.comp Makefile \
+                $(MAKECOMPDATA) $(wildcard MyRules.mk) $(wildcard MyConfig.mk) $(wildcard MyModules.mk)
 	@$(MAKECOMPDATA) $(COMPILEDATA) "$(CXX)" "$(OPTFLAGS)" "$(DEBUGFLAGS)" \
 	   "$(CXXFLAGS)" "$(SOFLAGS)" "$(LDFLAGS)" "$(SOEXT)" "$(SYSLIBS)" \
 	   "$(LIBDIR)" "$(BOOTLIBS)" "$(RINTLIBS)" "$(INCDIR)" \
@@ -1327,6 +1337,7 @@ showbuild:
 	@echo "TABLE              = $(TABLE)"
 	@echo "XPMLIBDIR          = $(XPMLIBDIR)"
 	@echo "XPMLIB             = $(XPMLIB)"
+	@echo "X11INCDIR          = $(X11INCDIR)"
 	@echo "TTFFONTDIR         = $(TTFFONTDIR)"
 	@echo "OPENGLLIBDIR       = $(OPENGLLIBDIR)"
 	@echo "OPENGLULIB         = $(OPENGLULIB)"

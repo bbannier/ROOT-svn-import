@@ -285,6 +285,7 @@
 #include "THashList.h"
 #include "TClass.h"
 #include "TThread.h"
+#include "ThreadLocalStorage.h"
 
 #include "TGeoVoxelFinder.h"
 #include "TGeoElement.h"
@@ -326,62 +327,17 @@ ClassImp(TGeoManager)
 Bool_t TGeoManager::fgLock         = kFALSE;
 Bool_t TGeoManager::fgLockNavigators = kFALSE;
 Int_t  TGeoManager::fgVerboseLevel = 1;
+Int_t  TGeoManager::fgMaxLevel = 1;
+Int_t  TGeoManager::fgMaxDaughters = 1;
+Int_t  TGeoManager::fgMaxXtruVert = 1;
 Int_t  TGeoManager::fgNumThreads   = 0;
-TGeoManager::ThreadsMap_t TGeoManager::fgThreadId;
-
-//______________________________________________________________________________
-TGeoManager::ThreadData_t::ThreadData_t() :
-   fIntSize(0), fDblSize(0), fIntBuffer(0), fDblBuffer(0)
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
-TGeoManager::ThreadData_t::~ThreadData_t()
-{
-   // Destructor.
-
-   delete [] fIntBuffer;
-   delete [] fDblBuffer;
-}
-
-//______________________________________________________________________________
-TGeoManager::ThreadData_t& TGeoManager::GetThreadData() const
-{
-   Int_t tid = TGeoManager::ThreadId();
-   TThread::Lock();
-   if (tid >= fThreadSize)
-   {
-      fThreadData.resize(tid + 1);
-      fThreadSize = tid + 1;
-   }
-   if (fThreadData[tid] == 0) fThreadData[tid] = new ThreadData_t;
-   TThread::UnLock();
-   return *fThreadData[tid];
-}
-
-//______________________________________________________________________________
-void TGeoManager::ClearThreadData() const
-{
-   TThread::Lock();
-   std::vector<ThreadData_t*>::iterator i = fThreadData.begin();
-   while (i != fThreadData.end())
-   {
-      delete *i;
-      ++i;
-   }
-   fThreadData.clear();
-   fThreadSize = 0;
-   TIter next(fVolumes);
-   TGeoVolume *vol;
-   while ((vol=(TGeoVolume*)next())) vol->ClearThreadData();
-   TThread::UnLock();
-}
+TGeoManager::ThreadsMap_t *TGeoManager::fgThreadId = 0;
 
 //_____________________________________________________________________________
 TGeoManager::TGeoManager()
 {
 // Default constructor.
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
    if (TClass::IsCallingNew() == TClass::kDummyNew) {
       fTimeCut = kFALSE;
       fTmin = 0.;
@@ -444,8 +400,8 @@ TGeoManager::TGeoManager()
       fKeyPNEId = 0;
       fValuePNEId = 0;
       fMultiThread = kFALSE;
+      fMaxThreads = 0;
       ClearThreadsMap();
-      fThreadSize = 0;
    } else {
       Init();
       gGeoIdentity = 0;
@@ -477,6 +433,7 @@ void TGeoManager::Init()
    }
 
    gGeoManager = this;
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
    fTimeCut = kFALSE;
    fTmin = 0.;
    fTmax = 999.;
@@ -538,8 +495,8 @@ void TGeoManager::Init()
    fKeyPNEId = 0;
    fValuePNEId = 0;
    fMultiThread = kFALSE;
+   fMaxThreads = 0;
    ClearThreadsMap();
-   fThreadSize = 0;
 }
 
 //_____________________________________________________________________________
@@ -605,12 +562,13 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fNPNEId(0),
   fKeyPNEId(0),
   fValuePNEId(0),
-  fMultiThread(kFALSE),
-  fThreadSize(0)
+  fMaxThreads(0),
+  fMultiThread(kFALSE)
 {
    //copy constructor
    for(Int_t i=0; i<256; i++)
       fPdgId[i]=gm.fPdgId[i];
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
    ClearThreadsMap();
 }
 
@@ -618,6 +576,7 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
 TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
 {
    //assignment operator
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
    if(this!=&gm) {
       TNamed::operator=(gm);
       fPhimin=gm.fPhimin;
@@ -683,6 +642,7 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fKeyPNEId = 0;
       fValuePNEId = 0;
       fMultiThread = kFALSE;
+      fMaxThreads = 0;
       ClearThreadsMap();
       ClearThreadData();
    }
@@ -939,33 +899,76 @@ void TGeoManager::RemoveNavigator(const TGeoNavigator *nav)
 }      
 
 //_____________________________________________________________________________
+void TGeoManager::SetMaxThreads(Int_t nthreads)
+{
+// Set maximum number of threads for navigation.
+   if (fMaxThreads) {
+      ClearThreadsMap();
+      ClearThreadData();
+   }
+   fMaxThreads = nthreads;
+   if (fMaxThreads>0) {
+      fMultiThread = kTRUE;
+      CreateThreadData();
+   }   
+}
+
+//______________________________________________________________________________
+void TGeoManager::ClearThreadData() const
+{
+   TThread::Lock();
+   TIter next(fVolumes);
+   TGeoVolume *vol;
+   while ((vol=(TGeoVolume*)next())) vol->ClearThreadData();
+   TThread::UnLock();
+}
+
+//______________________________________________________________________________
+void TGeoManager::CreateThreadData() const
+{
+// Create thread private data for all geometry objects.
+   if (!fMaxThreads) return;
+   TThread::Lock();
+   TIter next(fVolumes);
+   TGeoVolume *vol;
+   while ((vol=(TGeoVolume*)next())) vol->CreateThreadData(fMaxThreads);
+   TThread::UnLock();
+}
+
+//_____________________________________________________________________________
 void TGeoManager::ClearThreadsMap()
 {
 // Clear the current map of threads. This will be filled again by the calling
 // threads via ThreadId calls.
    TThread::Lock();
-//   if (!fgThreadId.empty()) fgThreadId.clear();
+   if (!fgThreadId->empty()) fgThreadId->clear();
    fgNumThreads = 0;
    TThread::UnLock();
 }
+
+TTHREAD_TLS_DECLARE(Int_t, tid);
 
 //_____________________________________________________________________________
 Int_t TGeoManager::ThreadId()
 {
 // Translates the current thread id to an ordinal number. This can be used to
 // manage data which is pspecific for a given thread.
-   Int_t tid = 0;
+//   static __thread Int_t tid = -1;
+//   if (tid > -1) return tid;
+   TTHREAD_TLS_INIT(Int_t,tid,-1);
+   Int_t ttid = TTHREAD_TLS_GET(Int_t,tid);
+   if (ttid > -1) return ttid;
    if (gGeoManager && !gGeoManager->IsMultiThread()) return 0;
-   Long_t selfId = TThread::SelfId();
-   TGeoManager::ThreadsMapIt_t it = fgThreadId.find(selfId);
-   if (it != fgThreadId.end()) return it->second;
+   TGeoManager::ThreadsMapIt_t it = fgThreadId->find(TThread::SelfId());
+   if (it != fgThreadId->end()) return it->second;
    // Map needs to be updated.
    TThread::Lock();
-   fgThreadId[selfId] = fgNumThreads;
-   tid = fgNumThreads++;
+   (*fgThreadId)[TThread::SelfId()] = fgNumThreads;
+   TTHREAD_TLS_SET(Int_t,tid,fgNumThreads);
+   fgNumThreads++;
    TThread::UnLock();
-   return tid;
-}   
+   return fgNumThreads-1;
+}
    
 //_____________________________________________________________________________
 void TGeoManager::Browse(TBrowser *b)
@@ -1403,9 +1406,8 @@ void TGeoManager::CloseGeometry(Option_t *option)
 //   Bool_t dummy = opt.Contains("d");
    Bool_t nodeid = opt.Contains("i");
    // Create a geometry navigator if not present
-   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
    TGeoNavigator *nav = 0;
-   Int_t nnavigators = GetListOfNavigators()->GetEntriesFast();
+   Int_t nnavigators = 0;
    // Check if the geometry is streamed from file
    if (fIsGeomReading) {
       if (fgVerboseLevel>0) Info("CloseGeometry","Geometry loaded from file...");
@@ -1418,22 +1420,18 @@ void TGeoManager::CloseGeometry(Option_t *option)
          }
          SetTopVolume(fMasterVolume);
          if (fStreamVoxels && fgVerboseLevel>0) Info("CloseGeometry","Voxelization retrieved from file");
-         Voxelize("ALL");
-         if (nodeid) {
-            for (Int_t i=0; i<nnavigators; i++) {
-               nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
-               nav->GetCache()->BuildIdArray();
-            }   
-         }
       } else {
-         Warning("CloseGeometry", "top node was streamed!");
-         Voxelize("ALL");
-         if (nodeid) {
-            for (Int_t i=0; i<nnavigators; i++) {
-               nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
-               nav->GetCache()->BuildIdArray();
-            }   
-         }
+         CountLevels();
+      }   
+      // Create a geometry navigator if not present
+      if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
+      nnavigators = GetListOfNavigators()->GetEntriesFast();
+      Voxelize("ALL");
+      if (nodeid) {
+         for (Int_t i=0; i<nnavigators; i++) {
+            nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+            nav->GetCache()->BuildIdArray();
+         }   
       }
       if (!fHashVolumes) {
          Int_t nvol = fVolumes->GetEntriesFast();
@@ -1451,6 +1449,10 @@ void TGeoManager::CloseGeometry(Option_t *option)
       return;
    }
 
+   CountLevels();
+   // Create a geometry navigator if not present
+   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
+   nnavigators = GetListOfNavigators()->GetEntriesFast();
    SelectTrackingMedia();
    CheckGeometry();
    if (fgVerboseLevel>0) Info("CloseGeometry","Counting nodes...");
@@ -1607,6 +1609,36 @@ void TGeoManager::ConvertReflections()
    if (fgVerboseLevel>0) Info("ConvertReflections", "Done");
 }
 
+//_____________________________________________________________________________
+void TGeoManager::CountLevels()
+{
+// Count maximum number of nodes per volume, maximum depth and maximum
+// number of xtru vertices.
+   if (!fTopNode) {
+      Error("CountLevels", "Top node not defined.");
+      return;
+   }
+   TGeoIterator next(fTopVolume);
+   TGeoNode *node;
+   Int_t maxlevel = 1;
+   Int_t maxnodes = fTopVolume->GetNdaughters();
+   Int_t maxvertices = 1;
+   while ((node=next())) {
+      if (node->GetVolume()->GetVoxels()) {
+         if (node->GetNdaughters()>maxnodes) maxnodes = node->GetNdaughters();
+      }   
+      if (next.GetLevel()>maxlevel) maxlevel = next.GetLevel();
+      if (node->GetVolume()->GetShape()->IsA()==TGeoXtru::Class()) {
+         TGeoXtru *xtru = (TGeoXtru*)node->GetVolume()->GetShape();
+         if (xtru->GetNvert()>maxvertices) maxvertices = xtru->GetNvert();
+      }
+   }
+   fgMaxLevel = maxlevel;
+   fgMaxDaughters = maxnodes;
+   fgMaxXtruVert = maxvertices;
+   if (fgVerboseLevel>0) Info("CountLevels", "max level = %d, max placements = %d", fgMaxLevel, fgMaxDaughters);
+}      
+  
 //_____________________________________________________________________________
 Int_t TGeoManager::CountNodes(const TGeoVolume *vol, Int_t nlevels, Int_t option)
 {
@@ -2655,9 +2687,6 @@ void TGeoManager::Voxelize(Option_t *option)
       if (!fIsGeomReading) vol->SortNodes();
       if (!fStreamVoxels) {
          vol->Voxelize(option);
-//      } else {
-//         vox = vol->GetVoxels();
-//         if (vox) vox->CreateCheckList(0);
       }
       if (!fIsGeomReading) vol->FindOverlaps();
    }
@@ -3144,6 +3173,7 @@ void TGeoManager::SetTopVolume(TGeoVolume *vol)
    fTopNode->SetNumber(1);
    fTopNode->SetTitle("Top logical node");
    fNodes->AddAt(fTopNode, 0);
+   CountLevels();
    if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
    Int_t nnavigators = GetListOfNavigators()->GetEntriesFast();
    for (Int_t i=0; i<nnavigators; i++) {
@@ -3597,32 +3627,6 @@ Bool_t TGeoManager::InitArrayPNE() const
      return kTRUE;
    }
    return kFALSE;
-}
-
-//___________________________________________________________________________
-Int_t *TGeoManager::GetIntBuffer(Int_t length)
-{
-// Get a temporary buffer of Int_t*
-   ThreadData_t &td = GetThreadData();
-   if (length>td.fIntSize) {
-      delete [] td.fIntBuffer;
-      td.fIntBuffer = new Int_t[length];
-      td.fIntSize = length;
-   }
-   return td.fIntBuffer;
-}
-
-//______________________________________________________________________________
-Double_t *TGeoManager::GetDblBuffer(Int_t length)
-{
-// Get a temporary buffer of Double_t*
-   ThreadData_t &td = GetThreadData();
-   if (length>td.fDblSize) {
-      delete [] td.fDblBuffer;
-      td.fDblBuffer = new Double_t[length];
-      td.fDblSize = length;
-   }
-   return td.fDblBuffer;
 }
 
 //______________________________________________________________________________

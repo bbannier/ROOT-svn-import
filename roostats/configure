@@ -1705,6 +1705,11 @@ ios*)
    message "Checking for iOS SDK"
    iossdk=`make -s -f ${ac_srcdir}/config/Makefile.$arch CONFIGURE=yes showsdk`
    result "$iossdk"
+   if [ ! -d $iossdk ]; then
+       result "`basename $0`: no iOS SDK found at $iossdk"
+       result "Run "xcode-select" to update the developer directory path"
+       exit 1
+   fi
    enable_cintex="no"
    enable_reflex="no"
    enable_genvector="no"
@@ -1764,13 +1769,16 @@ fi
 if test "x$platform" = "xlinux" ; then
     linuxdist=
     if `$cwhich lsb_release > /dev/null 2>&1` ; then
-       if lsb_release -d | grep 'Ubuntu' > /dev/null 2>& 1; then
-          linuxdist="ubuntu"
+       if lsb_release -d | grep -i 'ubuntu' > /dev/null 2>& 1; then
+          linuxdist="multiarch"
+       fi
+       if lsb_release -d | grep -i 'debian' > /dev/null 2>& 1; then
+          linuxdist="multiarch"
        fi
     fi
 
     debmultiarch=
-    if test "x$linuxdist" = "xubuntu"; then
+    if test "x$linuxdist" = "xmultiarch"; then
         if `$cwhich dpkg-architecture > /dev/null 2>&1` ; then
             if `dpkg-architecture -qDEB_HOST_MULTIARCH > /dev/null 2>&1` ; then
                 logmsg "Checking dpkg-architecture"
@@ -2239,6 +2247,7 @@ if test ! "x$enable_x11" = "xno" ; then
         /usr/include /usr/X11R6/include /usr/include/X11 /usr/openwin/include \
         /usr/local/include /usr/local/include/X11 /usr/local/X11R6/include \
         /usr/X11/include /usr/include/X11R5
+    x11incdir=$found_dir
 
     if test "x$found_dir" = "x" ; then
         result "`basename $0`: X11 headers MUST be installed"
@@ -3183,7 +3192,7 @@ if test ! "x$enable_rfio" = "xno" ; then
         fi
     fi
 
-    check_library "librfio libdpm libshift shiftmd shift" "$enable_shared" \
+    check_library "librfio libdpm libcastorrfio libshift shiftmd shift" "$enable_shared" \
         "$shiftlibdir" \
         $RFIO ${RFIO:+$RFIO/lib} /cern/pro/lib /cern/new/lib /cern/old/lib \
         /opt/shift/lib /usr/local/shift/lib /usr/lib/shift \
@@ -3194,6 +3203,10 @@ if test ! "x$enable_rfio" = "xno" ; then
     if test "x$shiftincdir" = "x" || test "x$shiftlib" = "x"; then
         enable_rfio="no"
     else
+        case $shiftlib in
+            *dpm)        shiftlib="$shiftlib -llcgdm" ;;
+            *castorrfio) shiftlib="$shiftlib -lcastorcommon" ;;
+        esac
         case $platform in
            linux | macosx)
                 for i in "" -ladns ; do
@@ -3203,14 +3216,7 @@ if test ! "x$enable_rfio" = "xno" ; then
                         break ;
                     fi
                 done
-                # Explicit linking: which libraries are needed to satisfy symbols
-                # from libshift?
-                # 2.1.9 has new library layout
-                shiftlibdep="-lcastorrfio -lcastorclient -lcastorcommon"
-                check_link "$shiftlib $shiftlibdep" "$shiftlibdir" rfio_fchmod
-                if test $link_result -eq 1 ; then
-                    shiftlib="$shiftlib $shiftlibdep"
-                else
+                if test $link_result -ne 1 ; then
                     enable_rfio="no"
                 fi
                 ;;
@@ -3280,7 +3286,7 @@ if test ! "x$enable_castor" = "xno" ; then
         fi
     fi
 
-    check_library "libshift shiftmd shift" "$enable_shared" "$castorlibdir" \
+    check_library "libcastorrfio libshift shiftmd shift" "$enable_shared" "$castorlibdir" \
         $CASTOR ${CASTOR:+$CASTOR/lib} /cern/pro/lib /cern/new/lib \
         /cern/old/lib /opt/shift/lib /usr/local/shift/lib /usr/lib/shift \
         /usr/local/lib/shift /usr/lib /usr/local/lib
@@ -3290,6 +3296,9 @@ if test ! "x$enable_castor" = "xno" ; then
     if test "x$castorincdir" = "x" || test "x$castorlib" = "x"; then
         enable_castor="no"
     else
+        case $castorlib in
+            *castorrfio) castorlib="$castorlib -lcastorclient -lcastorns -lcastorcommon" ;;
+        esac
         case $platform in
            linux | macosx)
                 for i in "" -ladns ; do
@@ -3299,14 +3308,7 @@ if test ! "x$enable_castor" = "xno" ; then
                         break ;
                     fi
                 done
-                # Explicit linking: which libraries are needed to satisfy symbols
-                # from libshift?
-                # 2.1.9 has new library layout
-                castorlibdep="-lcastorrfio -lcastorclient -lcastorns -lcastorcommon"
-                check_link "$castorlib $castorlibdep" "$castorlibdir" rfio_fchmod
-                if test $link_result -eq 1 ; then
-                    castorlib="$castorlib $castorlibdep"
-                else
+                if test $link_result -ne 1 ; then
                     enable_castor="no"
                 fi
                 ;;
@@ -3988,11 +3990,6 @@ if test ! "x$enable_asimage" = "xno" ; then
        else
            astiffincdir="--with-tiff=no"
        fi
-       check_header "gif_lib.h" "" \
-          $ASIMAGE ${ASIMAGE:+$ASIMAGE/include} \
-          ${finkdir:+$finkdir/include} \
-          /usr/local/include /usr/include /opt/include
-       asgifincdir=$found_dir
 
        asextralib=""
        asextralibdir=""
@@ -4000,12 +3997,10 @@ if test ! "x$enable_asimage" = "xno" ; then
        found_dirz=""
        # libz must be before libpng, if libz is not found don't
        # add libpng which needs libz
-       # note that failure to find system libungif is not fatal since
-       # libAfterImage contains embedded libungif source if needed
        if test ! "x$enable_astiff" = "xno" ; then
-           aslibs="libjpeg libtiff libungif libz libpng"
+           aslibs="libjpeg libtiff libz libpng"
        else
-           aslibs="libjpeg libungif libz libpng"
+           aslibs="libjpeg libz libpng"
        fi
        for k in $aslibs ; do
            check_library $k "$enable_shared" "" \
@@ -4020,9 +4015,6 @@ if test ! "x$enable_asimage" = "xno" ; then
            if test "x$k" = "xlibpng" && test "x$found_libz" = "x" ; then
                break;
            fi
-           if test "x$k" = "xlibungif" && test "x$found_lib" = "x" ; then
-               asgifincdir=""
-           fi
            if test ! "x$found_lib" = "x" ; then
                asextralib="$asextralib $found_lib"
                asextralibdir="$asextralibdir $found_dir"
@@ -4034,7 +4026,6 @@ if test ! "x$enable_asimage" = "xno" ; then
            asjpegincdir=""
            aspngincdir=""
            astiffincdir=""
-           asgifincdir=""
        else
            asextralib="$asextralib $found_libz"
            asextralibdir="$asextralibdir $found_dirz"
@@ -4171,19 +4162,25 @@ if test ! "x$enable_ruby" = "xno" ; then
     # Check for Ruby include and library
     myruby=`$cwhich ruby 2> /dev/null`
     if test ! "x$myruby" = "x" && test -x "$myruby" ; then
-       rubysysincdir=`ruby -rrbconfig -e 'puts Config::CONFIG["archdir"]'`
-       rubysyslibdir=`ruby -rrbconfig -e 'puts Config::CONFIG["libdir"]'`
+       rubysysincdir=`ruby -rrbconfig -e 'puts RbConfig::CONFIG["includedir"]'`
+       rubysysarchdir=`ruby -rrbconfig -e 'puts RbConfig::CONFIG["archdir"]'`
+       rubysyslibdir=`ruby -rrbconfig -e 'puts RbConfig::CONFIG["libdir"]'`
+       rubysysarch=`ruby -rrbconfig -e 'puts RbConfig::CONFIG["arch"]'`
     fi
-    rubysysincdir2=
+    rubysysarchdir2=
     if test "x$platform" = "xmacosx" ; then
-       rubysysincdir2=`echo $rubysysincdir | sed -e 's/powerpc/universal/'`
+       rubysysarchdir2=`echo $rubysysarchdir | sed -e 's/powerpc/universal/'`
     fi
     check_header "ruby.h" "$rubyincdir" \
         $RUBYDIR ${RUBYDIR:+$RUBYDIR/include} \
-        $rubysysincdir $rubysysincdir2 \
+        $rubysysincdir $rubysysarchdir $rubysysarchdir2 \
         /usr/local/include/ruby /usr/include/ruby
     rubyinc=$found_hdr
     rubyincdir=$found_dir
+    check_header "ruby/config.h" "" $rubysysincdir/$rubysysarch
+    if test "x$found_hdr" != "x" ; then
+        rubyincdir="$rubyincdir $found_dir"
+    fi
 
     if test "x$arch" = "xwin32" || \
        test "x$enable_shared" = "xno" ; then
@@ -6415,7 +6412,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@asjpegincdir@|$asjpegincdir|"        \
     -e "s|@aspngincdir@|$aspngincdir|"          \
     -e "s|@astiffincdir@|$astiffincdir|"        \
-    -e "s|@asgifincdir@|$asgifincdir|"          \
     -e "s|@asimageincdir@|$asimageincdir|"      \
     -e "s|@asimagelib@|$asimagelib|"            \
     -e "s|@asimagelibdir@|$asimagelibdir|"      \
@@ -6613,6 +6609,7 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@xmllib@|$xmllib|"                    \
     -e "s|@xmllibdir@|$xmllibdir|"              \
     -e "s|@buildx11@|$enable_x11|"              \
+    -e "s|@x11incdir@|$x11incdir|"              \
     -e "s|@x11libdir@|$x11libdir|"              \
     -e "s|@xpmlib@|$xpmlib|"                    \
     -e "s|@xpmlibdir@|$xpmlibdir|"              \
@@ -6754,7 +6751,7 @@ rm -f RConfigOptions.tmp
 
 if test ! "x$enable_ruby" = "xno"; then
    echo "" >> RConfigOptions-out.tmp
-   ruby -rrbconfig -e 'puts Config::CONFIG["ruby_version"]' | \
+   ruby -rrbconfig -e 'puts RbConfig::CONFIG["ruby_version"]' | \
    sed 's/^\([0-9]\)\.\([0-9]\).*$/#define R__RUBY_MAJOR \1@#define R__RUBY_MINOR \2/' | \
    tr '@' '\n' >> RConfigOptions-out.tmp
 fi

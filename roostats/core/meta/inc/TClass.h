@@ -106,7 +106,6 @@ private:
    TVirtualCollectionProxy *fCollectionProxy; //Collection interface
    Version_t          fClassVersion;    //Class version Identifier
    ClassInfo_t       *fClassInfo;       //pointer to CINT class info class
-   clang::Decl       *fDecl;            //pointer to clang Decl for class
    TString            fContextMenuTitle;//context menu title
    const type_info   *fTypeInfo;        //pointer to the C++ type information.
    ShowMembersFunc_t  fShowMembers;     //pointer to the class's ShowMembers function
@@ -258,7 +257,6 @@ public:
    Version_t          GetClassVersion() const { fVersionUsed = kTRUE; return fClassVersion; }
    TDataMember       *GetDataMember(const char *datamember) const;
    Long_t              GetDataMemberOffset(const char *membername) const;
-   clang::Decl       *GetDecl() const { return fDecl; }
    const char        *GetDeclFileName() const { return fDeclFileName; }
    Short_t            GetDeclFileLine() const { return fDeclFileLine; }
    ROOT::DelFunc_t    GetDelete() const;
@@ -308,6 +306,7 @@ public:
    ClassStreamerFunc_t GetStreamerFunc() const;
    TObjArray         *GetStreamerInfos() const { return fStreamerInfo; }
    TVirtualStreamerInfo     *GetStreamerInfo(Int_t version=0) const;
+   TVirtualStreamerInfo     *GetStreamerInfoAbstractEmulated(Int_t version=0) const;
    const type_info   *GetTypeInfo() const { return fTypeInfo; };
    void               IgnoreTObjectStreamer(Bool_t ignore=kTRUE);
    Bool_t             InheritsFrom(const char *cl) const;

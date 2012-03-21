@@ -3108,7 +3108,7 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    interpInclude = ROOTETCDIR;
 #endif // ROOTINCDIR
    interpInclude.Prepend("-I");
-   const char* interpArgs[] = {interpInclude.Data(), 0};
+   const char* interpArgs[] = {"cling4root", interpInclude.Data(), 0};
 
    TString llvmDir;
    if (gSystem->Getenv("$(LLVMDIR)")) {
@@ -3120,7 +3120,8 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    }
 #endif // R__LLVMDIR
 
-   fInterpreter = new cling::Interpreter(1, interpArgs, llvmDir); 
+   fInterpreter = new cling::Interpreter(sizeof(interpArgs) / sizeof(char*) - 1,
+                                         interpArgs, llvmDir); 
    fInterpreter->installLazyFunctionCreator(autoloadCallback);
 
    // Add the current path to the include path
@@ -3812,7 +3813,6 @@ void TCintWithCling::SetClassInfo(TClass* cl, Bool_t reload)
    }
    delete (tcling_ClassInfo*) cl->fClassInfo;
    cl->fClassInfo = 0;
-   cl->fDecl = 0;
    std::string name(cl->GetName());
    tcling_ClassInfo* info = new tcling_ClassInfo(name.c_str());
    if (!info->IsValid()) {
@@ -3838,7 +3838,6 @@ void TCintWithCling::SetClassInfo(TClass* cl, Bool_t reload)
       }
    }
    cl->fClassInfo = info; // Note: We are transfering ownership here.
-   cl->fDecl = const_cast<clang::Decl*>(info->GetDecl());
    // In case a class contains an external enum, the enum will be seen as a
    // class. We must detect this special case and make the class a Zombie.
    // Here we assume that a class has at least one method.
@@ -3863,7 +3862,6 @@ void TCintWithCling::SetClassInfo(TClass* cl, Bool_t reload)
       // this happens when no CINT dictionary is available
       delete info;
       cl->fClassInfo = 0;
-      cl->fDecl = 0;
    }
    if (zombieCandidate && !TClassEdit::IsSTLCont(cl->GetName())) {
       cl->MakeZombie();
