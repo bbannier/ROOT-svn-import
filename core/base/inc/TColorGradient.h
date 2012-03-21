@@ -43,27 +43,34 @@ public:
 
 private:
 
-   EGradientDirection    fGradientDirection;//At the moment, we have only linear gradient.
-   //Should be normalized : [0, 1].
-   std::vector<Double_t> fColorPositions;//Positions of color nodes in gradient. 
+   //At the moment, we have only linear gradient, vertical or horizontal.
+   EGradientDirection    fGradientDirection;
+   //Positions of color nodes in gradient. Should be normalized : [0, 1].
+   std::vector<Double_t> fColorPositions;
 
-   //fColors[i] CAN NOT be a TColorGradient object.
-   std::vector<Color_t>  fColors; //Indices in a gROOT's list of colors.
+   std::vector<Double_t> fColors;//RGBA values.
 
-   Bool_t                fHasShadow;
 public:
 
-   TColorGradient(Color_t newColor, EGradientDirection gradType, UInt_t nPoints,
-                  const Double_t *points, const Color_t *indices, Bool_t hasShadow);
+   //TColorGradient();
+
+   TColorGradient(Color_t newColor, EGradientDirection direction, UInt_t nPoints,
+                  const Double_t *points, const Color_t *colorIndices);
+   TColorGradient(Color_t newColor, EGradientDirection direction, UInt_t nPoints,
+                  const Double_t *points, const Double_t *colors);
+
+   void ResetColor(EGradientDirection direction, UInt_t nPoints, const Double_t *points,
+                   const Color_t *colorIndices);
+   void ResetColor(EGradientDirection direction, UInt_t nPoints, const Double_t *points,
+                   const Double_t *colorIndices);
 
    EGradientDirection GetGradientDirection()const;
    SizeType_t GetNumberOfSteps()const;
    const Double_t *GetColorPositions()const;
-   const Color_t *GetColors()const;
+   const Double_t *GetColors()const;
    
-   Bool_t HasShadow()const;
-   //For the moment I do not have setters, let TColorGradient be non-mutable.
-   //Later, if we had a GUI in ged, I'll add setters.
+private:
+   void RegisterColor(Color_t colorIndex);
    
    ClassDef(TColorGradient, 1) //Extended drawing parameters.
 };

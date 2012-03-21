@@ -31,33 +31,6 @@ const CGSize shadowOffset = CGSizeMake(10., 10.);
 const CGFloat shadowBlur = 5.;
 
 //______________________________________________________________________________
-void ReadGradientColors(const TColorGradient *extendedColor, std::vector<CGFloat> &colors)
-{
-   assert(extendedColor != nullptr && "ReadGradientColors, extendedColor parameter is null");
-   
-   typedef TColorGradient::SizeType_t size_type;
-   
-   colors.resize(extendedColor->GetNumberOfSteps() * 4);
-   const Color_t *colorIndices = extendedColor->GetColors();
-   Float_t rgb[3];
-   for (size_type i = 0, pos = 0, e = extendedColor->GetNumberOfSteps(); i < e; ++i, pos += 4) {
-      if (const TColor *clearColor = gROOT->GetColor(colorIndices[i])) {
-         clearColor->GetRGB(rgb[0], rgb[1], rgb[2]);
-         colors[pos] = rgb[0];
-         colors[pos + 1] = rgb[1];
-         colors[pos + 2] = rgb[2];
-         colors[pos + 3] = clearColor->GetAlpha();
-      } else {
-         ::Warning("ReadGradientColors", "No color for index %d was found in gROOT's list of colors", colorIndices[i]);
-         colors[pos] = 0.;
-         colors[pos + 1] = 0.;
-         colors[pos + 2] = 0.;
-         colors[pos + 3] = 1.;
-      }
-   }
-}
-
-//______________________________________________________________________________
 void InvertGradientPositions(std::vector<CGFloat> &positions)
 {
    typedef std::vector<CGFloat>::size_type size_type;
@@ -83,7 +56,7 @@ void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,
 }
 
 //______________________________________________________________________________
-void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const TColorGradient *extendedColor)
+void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const TColorGradient *extendedColor, Bool_t drawShadow)
 {
    using ROOT::MacOSX::Util::CFScopeGuard;
 
@@ -102,7 +75,7 @@ void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, c
       endPoint.y = y2;
    }
       
-   if (extendedColor->HasShadow()) {
+   if (drawShadow) {
       //To have shadow and gradient at the same time,
       //I first have to fill polygon, and after that
       //draw gradient (since gradient fills the whole area
@@ -117,16 +90,13 @@ void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, c
    CGContextClosePath(ctx);
    CGContextClip(ctx);
    
-
    //Create a gradient.
    const CFScopeGuard<CGColorSpaceRef> baseSpace(CGColorSpaceCreateDeviceRGB());
    
-   std::vector<CGFloat> colors;
-   ReadGradientColors(extendedColor, colors);
    std::vector<CGFloat> positions(extendedColor->GetColorPositions(), extendedColor->GetColorPositions() + extendedColor->GetNumberOfSteps());
    InvertGradientPositions(positions);
 
-   const CFScopeGuard<CGGradientRef> gradient(CGGradientCreateWithColorComponents(baseSpace.Get(), &colors[0], &positions[0], extendedColor->GetNumberOfSteps()));
+   const CFScopeGuard<CGGradientRef> gradient(CGGradientCreateWithColorComponents(baseSpace.Get(), extendedColor->GetColors(), &positions[0], extendedColor->GetNumberOfSteps()));
    CGContextDrawLinearGradient(ctx, gradient.Get(), startPoint, endPoint, 0);
 }
 
@@ -156,7 +126,7 @@ void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t shadow)
 }
 
 //______________________________________________________________________________
-void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, const TColorGradient *extendedColor)
+void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, const TColorGradient *extendedColor, Bool_t drawShadow)
 {
    using ROOT::MacOSX::Util::CFScopeGuard;
 
@@ -200,7 +170,7 @@ void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, con
       }
    }
    
-   if (extendedColor->HasShadow()) {
+   if (drawShadow) {
       //To have shadow and gradient at the same time,
       //I first have to fill polygon, and after that
       //draw gradient (since gradient fills the whole area
@@ -218,12 +188,10 @@ void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, con
 
    //Create a gradient.
    const CFScopeGuard<CGColorSpaceRef> baseSpace(CGColorSpaceCreateDeviceRGB());
-   std::vector<CGFloat> colors;
-   ReadGradientColors(extendedColor, colors);
    std::vector<CGFloat> positions(extendedColor->GetColorPositions(), extendedColor->GetColorPositions() + extendedColor->GetNumberOfSteps());
    InvertGradientPositions(positions);
 
-   const CFScopeGuard<CGGradientRef> gradient(CGGradientCreateWithColorComponents(baseSpace.Get(), &colors[0], &positions[0],
+   const CFScopeGuard<CGGradientRef> gradient(CGGradientCreateWithColorComponents(baseSpace.Get(), extendedColor->GetColors(), &positions[0],
                                                                                   extendedColor->GetNumberOfSteps()));
    CGContextDrawLinearGradient(ctx, gradient.Get(), startPoint, endPoint, 0);
 }
