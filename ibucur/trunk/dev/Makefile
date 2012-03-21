@@ -1,6 +1,7 @@
 RC := root-config
 ROOTSYS = ..
 include $(ROOTSYS)/etc/Makefile.arch
+MATHLIBS = -lRooFit -lRooFitCore -lRooStats
 
 #------------------------------------------------------------------------------
 
@@ -13,19 +14,27 @@ STRESSROOSTATSOBJ = stressRooStats.$(ObjSuf)
 STRESSROOSTATSSRC = stressRooStats.$(SrcSuf)
 STRESSROOSTATS    = stressRooStats$(ExeSuf)
 
+MODELOBJ = model.$(ObjSuf)
+MODELSRC = model.$(SrcSuf)
+MODEL    = model$(ExeSuf)
+
 endif
 
 #----------------------------------------------------------------------------
 
-PROGRAMS = $(TEST) $(STRESSROOSTATS)
-OBJS = $(TESTOBJ) $(STRESSROOSTATSOBJ)
+PROGRAMS = $(TEST) $(STRESSROOSTATS) $(MODEL)
+OBJS = $(TESTOBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ)
 
 $(TEST):	$(TESTOBJ)
-	$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore -lRooStats $(OutPutOpt)$@
+	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
+	@echo "$@ done"
+
+$(MODEL):    $(MODELOBJ)
+	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
 $(STRESSROOSTATS):	$(STRESSROOSTATSOBJ)
-	$(LD) $(LDFLAGS) $^ $(LIBS) $(OutPutOpt)$@
+	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
 #----------------------------------------------------------------------------
