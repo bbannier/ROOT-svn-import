@@ -139,7 +139,7 @@ void  ProfileLikelihoodCalculator::DoGlobalFit() const {
                                   Hesse(kFALSE),Save(kTRUE),Minimizer(minimType,minimAlgo));
   
    // for debug 
-   fit->Print();
+   //fit->Print();
 
    delete constrainedParams; 
    // store fit result for further use 
