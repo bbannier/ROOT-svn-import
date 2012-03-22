@@ -92,6 +92,11 @@ TMVA::PDEFoamDensityBase::PDEFoamDensityBase(std::vector<Double_t> box)
      fBst(new TMVA::BinarySearchTree()),
      fLogger(new MsgLogger("PDEFoamDensityBase"))
 {
+   // User constructor
+   //
+   // - box - range-searching box, where box.size() == dimension of
+   //         the PDEFoam == periode of the binary search tree
+
    if (box.empty())
       Log() << kFATAL << "Dimension of PDEFoamDensityBase is zero" << Endl;
 
@@ -102,6 +107,7 @@ TMVA::PDEFoamDensityBase::PDEFoamDensityBase(std::vector<Double_t> box)
 //_____________________________________________________________________
 TMVA::PDEFoamDensityBase::~PDEFoamDensityBase()
 {
+   // destructor
    if (fBst)    delete fBst;
    if (fLogger) delete fLogger;
 }
