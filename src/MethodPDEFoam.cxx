@@ -634,9 +634,9 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
       // since in multi-target regression targets are handled like
       // variables --> remove targets and add them to the event variabels
       std::vector<Float_t> targets(ev->GetTargets());
-      UInt_t NVariables = ev->GetValues().size();
+      const UInt_t nVariables = ev->GetValues().size();
       for (UInt_t i = 0; i < targets.size(); ++i)
-	 ev->SetVal(i+NVariables, targets.at(i));
+	 ev->SetVal(i+nVariables, targets.at(i));
       ev->GetTargets().clear();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillBinarySearchTree(ev);
@@ -655,10 +655,10 @@ void TMVA::MethodPDEFoam::TrainMultiTargetRegression()
       // since in multi-target regression targets are handled like
       // variables --> remove targets and add them to the event variabels
       std::vector<Float_t> targets = ev->GetTargets(); 	 
-      UInt_t NVariables = ev->GetValues().size();
+      const UInt_t nVariables = ev->GetValues().size();
       Float_t weight = fFillFoamWithOrigWeights ? ev->GetOriginalWeight() : ev->GetWeight();
       for (UInt_t i = 0; i < targets.size(); ++i) 	 
-	 ev->SetVal(i+NVariables, targets.at(i)); 	 
+	 ev->SetVal(i+nVariables, targets.at(i)); 	 
       ev->GetTargets().clear();
       if (!(IgnoreEventsWithNegWeightsInTraining() && ev->GetWeight()<=0))
 	 fFoam.back()->FillFoamCells(ev, weight);
@@ -817,17 +817,17 @@ const TMVA::Ranking* TMVA::MethodPDEFoam::CreateRanking()
 
       // fill the importance vector (ignoring the target dimensions in
       // case of a multi-target regression foam)
-      UInt_t SumCuts = 0;
+      UInt_t sumOfCuts = 0;
       std::vector<Float_t> tmp_importance;
       for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
-         SumCuts += nCuts.at(ivar);
+         sumOfCuts += nCuts.at(ivar);
          tmp_importance.push_back( nCuts.at(ivar) );
       }
       // normalization of the variable importances of this foam: the
       // sum of all variable importances equals 1 for this foam
       for (UInt_t ivar = 0; ivar < GetNvar(); ++ivar) {
-	 if (SumCuts > 0)
-	    tmp_importance.at(ivar) /= SumCuts;
+	 if (sumOfCuts > 0)
+	    tmp_importance.at(ivar) /= sumOfCuts;
 	 else
 	    tmp_importance.at(ivar) = 0;
       }
