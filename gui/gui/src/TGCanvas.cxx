@@ -192,7 +192,10 @@ void TGViewPort::SetHPos(Int_t xpos)
    if (!diff) return;
 
    fX0 = xpos;
-
+   
+#if defined(R__MACOSX)
+   ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
+#else
    if (adiff < fWidth) {
       if (diff < 0) {
          gVirtualX->CopyArea(fContainer->GetId(), fContainer->GetId(), GetWhiteGC()(),
@@ -208,9 +211,8 @@ void TGViewPort::SetHPos(Int_t xpos)
    } else {
       ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
    }
+#endif
 }
-
-bool runRabbit = false;
 
 //______________________________________________________________________________
 void TGViewPort::SetVPos(Int_t ypos)
@@ -239,17 +241,21 @@ void TGViewPort::SetVPos(Int_t ypos)
    if (!diff) return;
 
    fY0 = ypos;
-
+   
+#if defined(R__MACOSX)
+   //This is a temporary modification. With Cocoa, it's quite expensive for me (at the moment)
+   //to copy view's pixels - I have to redraw view into bitmap and use this bitmap.
+   //This makes scrolling quite annoying. So I simply skip this nice "optimization"
+   //(BTW it does not effect even X11's speed for me).
+   ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
+#else
    if (adiff < fHeight) {
       if (diff < 0) {
          runRabbit = true;
-//         std::cout<<"CopyArea, src y == "<<adiff<<" width == "<<fWidth<<" height == "<<fHeight - adiff<<std::endl;
          gVirtualX->CopyArea(fContainer->GetId(), fContainer->GetId(), GetWhiteGC()(),
                               0, adiff, fWidth, fHeight - adiff, 0, 0);
          adiff += 20;   // draw larger region
-  //       std::cout<<"draw area, y == "<<fHeight - adiff<<" width == "<<fWidth<<" height == "<<adiff<<std::endl;
          ((TGContainer*)fContainer)->DrawRegion(0, fHeight - adiff, fWidth, adiff);
-//                  ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
          runRabbit = false;
       } else {
          gVirtualX->CopyArea(fContainer->GetId(), fContainer->GetId(), GetWhiteGC()(),
@@ -260,6 +266,7 @@ void TGViewPort::SetVPos(Int_t ypos)
    } else {
       ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
    }
+#endif
 }
 
 //______________________________________________________________________________
