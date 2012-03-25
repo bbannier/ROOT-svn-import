@@ -8,7 +8,7 @@
 
 #include "TMVA/PDEFoam.h"
 
-void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root", 
+void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root",
                 bool useTMVAStyle=kTRUE )
 {
    cout << "read file: " << fin << endl;
@@ -19,28 +19,28 @@ void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.
 
    // create control bar
    TControlBar* cbar = new TControlBar( "vertical", "Choose cell value for plot:", 50, 50 );
-   if ((gDirectory->Get("SignalFoam") && gDirectory->Get("BgFoam")) || 
+   if ((gDirectory->Get("SignalFoam") && gDirectory->Get("BgFoam")) ||
        gDirectory->Get("MultiTargetRegressionFoam")) {
-      TString macro = Form( "Plot(\"%s\", TMVA::kValueDensity, \"Event density\", %s)", 
+      TString macro = Form( "Plot(\"%s\", TMVA::kValueDensity, \"Event density\", %s)",
 			    fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
       cbar->AddButton( "Event density", macro, "Plot event density", "button" );
    } else if (gDirectory->Get("DiscrFoam") || gDirectory->Get("MultiClassFoam0")){
-      TString macro = Form( "Plot(\"%s\", TMVA::kValue, \"Discriminator\", %s)", 
+      TString macro = Form( "Plot(\"%s\", TMVA::kValue, \"Discriminator\", %s)",
 			    fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
       cbar->AddButton( "Discriminator", macro, "Plot discriminator", "button" );
    } else if (gDirectory->Get("MonoTargetRegressionFoam")){
-      TString macro = Form( "Plot(\"%s\", TMVA::kValue, \"Target\", %s)", 
+      TString macro = Form( "Plot(\"%s\", TMVA::kValue, \"Target\", %s)",
 			    fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
       cbar->AddButton( "Target", macro, "Plot target", "button" );
    } else {
       cout << "Error: no foams found in file: " << fin << endl;
       return;
    }
-   
-   TString macro_rms = Form( "Plot(\"%s\", TMVA::kRms, \"Variance\", %s)", 
+
+   TString macro_rms = Form( "Plot(\"%s\", TMVA::kRms, \"Variance\", %s)",
 			     fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
    cbar->AddButton( "Variance", macro_rms, "Plot variance", "button" );
-   TString macro_rms_ov_mean = Form( "Plot(\"%s\", TMVA::kRmsOvMean, \"Variance/Mean\", %s)", 
+   TString macro_rms_ov_mean = Form( "Plot(\"%s\", TMVA::kRmsOvMean, \"Variance/Mean\", %s)",
 				     fin.Data(), (useTMVAStyle ? "kTRUE" : "kFALSE") );
    cbar->AddButton( "Variance/Mean", macro_rms_ov_mean, "Plot variance over mean", "button" );
    TString macro_cell_tree = Form( "PlotCellTree(\"%s\", \"Cell tree\", %s)",
@@ -52,7 +52,7 @@ void PlotFoams( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.
 }
 
 // foam plotting macro
-void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root", 
+void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root",
 	   TMVA::ECellValue cv, TString cv_long, bool useTMVAStyle=kTRUE )
 {
    cout << "read file: " << fin << endl;
@@ -76,10 +76,10 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
 	 cls++;
       }
    } else if (gDirectory->Get("MonoTargetRegressionFoam")){
-      foam_list.Add(new TPair(MonoTargetRegressionFoam, 
+      foam_list.Add(new TPair(MonoTargetRegressionFoam,
 			      new TObjString("MonoTargetRegression Foam")));
    } else if (gDirectory->Get("MultiTargetRegressionFoam")){
-      foam_list.Add(new TPair(MultiTargetRegressionFoam, 
+      foam_list.Add(new TPair(MultiTargetRegressionFoam,
 			      new TObjString("MultiTargetRegression Foam")));
    } else {
       cout << "ERROR: no Foams found in file: " << fin << endl;
@@ -187,7 +187,7 @@ void PlotNDimFoams(TList& foam_list, TMVA::ECellValue cell_value,
 }
 
 
-void PlotCellTree( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root", 
+void PlotCellTree( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root",
 		   TString cv_long, bool useTMVAStyle=kTRUE )
 {
    // Draw the PDEFoam cell tree
@@ -206,8 +206,7 @@ void PlotCellTree( TString fin = "weights/TMVAClassification_PDEFoam.weights_foa
       TString class_name(foam_key->GetClassName());
       if (!class_name.Contains("PDEFoam"))
 	 continue;
-      cout << "PDEFoam found: " << class_name 
-	   << " " << name << endl;
+      cout << "PDEFoam found: " << class_name << " " << name << endl;
 
       // read the foam
       TMVA::PDEFoam *foam = (TMVA::PDEFoam*) foam_key->ReadObj();
