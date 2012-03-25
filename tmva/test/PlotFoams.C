@@ -99,72 +99,91 @@ void Plot( TString fin = "weights/TMVAClassification_PDEFoam.weights_foams.root"
    // kernel to use for the projection
    TMVA::PDEFoamKernelBase *kernel = new TMVA::PDEFoamKernelTrivial();
 
-   // ********** plot foams ********** //
-   if (kDim == 1){
-      // draw histogram
-      TCanvas *canv = NULL; // the canvas
-      TH1D *proj = NULL;    // the foam projection
-
-      // loop over all foams and draw the projection
-      TListIter it(&foam_list); // the iterator
-      TPair *fm_pair = NULL;    // the (foam, caption) pair
-      while (fm_pair = (TPair*) it()) {
-	 TMVA::PDEFoam *foam = (TMVA::PDEFoam*) fm_pair->Key();
-	 TString foam_capt(((TObjString*) fm_pair->Value())->String());
-
-	 canv = new TCanvas(Form("canvas_%u",foam), "1-dimensional PDEFoam", 400, 400);
-
-	 TString var_name = foam->GetVariableName(0)->String();
-	 proj = foam->Draw1Dim(cv, 100, kernel);
-	 proj->SetTitle(cv_long+" of "+foam_capt+";"+var_name);
-	 proj->Draw();
-	 proj->SetDirectory(0);
-
-	 canv->Update();
-      } // loop over foams
-   } else { 
-      // if dimension of foam > 1, draw foam projections
-      TCanvas *canv = NULL; // the canvas
-      TH2D *proj = NULL;    // the foam projection
-
-      // loop over all foams and draw the projection
-      TListIter it(&foam_list); // the iterator
-      TPair *fm_pair = NULL;    // the (foam, caption) pair
-      while (fm_pair = (TPair*) it()) {
-	 TMVA::PDEFoam *foam = (TMVA::PDEFoam*) fm_pair->Key();
-	 TString foam_capt(((TObjString*) fm_pair->Value())->String());
-
-	 // draw all possible projections (kDim*(kDim-1)/2)
-	 for(Int_t i=0; i<kDim; i++){
-	    for (Int_t k=i+1; k<kDim; k++){
-
-	       // create canvas
-	       canv = new TCanvas(Form("canvas_%u_%i:%i",foam,i,k),
-				  Form("Foam projections %i:%i",i,k),
-				  (Int_t)(400/(1.-0.2)), 400);
-	       canv->SetRightMargin(0.2);
-
-	       TString title_proj = Form("%s of %s: Projection %s:%s;%s;%s",
-					 cv_long.Data(),
-					 foam_capt.Data(),
-					 foam->GetVariableName(i)->String().Data(),
-					 foam->GetVariableName(k)->String().Data(),
-					 foam->GetVariableName(i)->String().Data(),
-					 foam->GetVariableName(k)->String().Data() );
-
-	       // do projections
-	       proj = foam->Project2(i, k, cv, kernel);
-	       proj->SetTitle(title_proj);
-	       proj->Draw("COLZ"); // CONT4Z
-	       proj->SetDirectory(0);
-
-	       canv->Update();
-	    } // loop over all possible projections
-	 } // loop over all possible projections
-      } // loop over foams
-   } // if dimension > 1
+   // plot foams
+   if (kDim == 1) {
+      Plot1DimFoams(foam_list, cv, cv_long, kernel);
+   } else {
+      PlotNDimFoams(foam_list, cv, cv_long, kernel);
+   }
 
    file->Close();
+}
+
+
+void Plot1DimFoams(TList& foam_list, TMVA::ECellValue cell_value,
+                   const TString& cell_value_description,
+                   TMVA::PDEFoamKernelBase* kernel)
+{
+   // visualize a 1 dimensional PDEFoam via a histogram
+   TCanvas* canvas = NULL;
+   TH1D* projection = NULL;
+
+   // loop over all foams and draw the histogram
+   TListIter it(&foam_list);
+   TPair* fm_pair = NULL;    // the (foam, caption) pair
+   while (fm_pair = (TPair*) it()) {
+      TMVA::PDEFoam* foam = (TMVA::PDEFoam*) fm_pair->Key();
+      if (!foam) continue;
+      TString foam_caption(((TObjString*) fm_pair->Value())->String());
+      TString variable_name(foam->GetVariableName(0)->String());
+
+      canvas = new TCanvas(Form("canvas_%u",foam),
+                           "1-dimensional PDEFoam", 400, 400);
+
+      projection = foam->Draw1Dim(cell_value, 100, kernel);
+      projection->SetTitle(cell_value_description + " of " + foam_caption
+                           + ";" + variable_name);
+      projection->Draw();
+      projection->SetDirectory(0);
+
+      canvas->Update();
+   }
+}
+
+
+void PlotNDimFoams(TList& foam_list, TMVA::ECellValue cell_value,
+                   const TString& cell_value_description,
+                   TMVA::PDEFoamKernelBase* kernel)
+{
+   // draw 2 dimensional PDEFoam projections
+   TCanvas* canvas = NULL;
+   TH2D* projection = NULL;
+
+   // loop over all foams and draw the projection
+   TListIter it(&foam_list);
+   TPair* fm_pair = NULL;    // the (foam, caption) pair
+   while (fm_pair = (TPair*) it()) {
+      TMVA::PDEFoam* foam = (TMVA::PDEFoam*) fm_pair->Key();
+      if (!foam) continue;
+      TString foam_caption(((TObjString*) fm_pair->Value())->String());
+      const Int_t kDim = ((TMVA::PDEFoam*) fm_pair->Key())->GetTotDim();
+
+      // draw all possible projections (kDim*(kDim-1)/2)
+      for (Int_t i = 0; i < kDim; ++i) {
+         for (Int_t k = i + 1; k < kDim; ++k) {
+
+            canvas = new TCanvas(Form("canvas_%u_%i:%i", foam, i, k),
+                                 Form("Foam projections %i:%i", i, k),
+                                 (Int_t)(400/(1.-0.2)), 400);
+            canvas->SetRightMargin(0.2);
+
+            TString title = Form("%s of %s: Projection %s:%s;%s;%s",
+                                 cell_value_description.Data(),
+                                 foam_caption.Data(),
+                                 foam->GetVariableName(i)->String().Data(),
+                                 foam->GetVariableName(k)->String().Data(),
+                                 foam->GetVariableName(i)->String().Data(),
+                                 foam->GetVariableName(k)->String().Data());
+
+            projection = foam->Project2(i, k, cell_value, kernel);
+            projection->SetTitle(title);
+            projection->Draw("COLZ");
+            projection->SetDirectory(0);
+
+            canvas->Update();
+         }
+      }
+   } // loop over foams
 }
 
 
