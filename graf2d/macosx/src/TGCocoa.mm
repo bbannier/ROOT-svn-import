@@ -1770,7 +1770,7 @@ void TGCocoa::DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t 
    NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
    if (!drawable.fIsPixmap) {
       QuartzView *view = drawable.fContentView;
-      if (!view.fIsOverlapped) {
+      if (!view.fIsOverlapped && view.fMapState == kIsViewable) {
          if (!view.fContext)
             fPimpl->fX11CommandBuffer.AddDrawLine(wid, gcVals, x1, y1, x2, y2);
          else
@@ -1822,7 +1822,7 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 
    if (!drawable.fIsPixmap) {
       QuartzView *view = drawable.fContentView;
-      if (!view.fIsOverlapped) {
+      if (!view.fIsOverlapped && view.fMapState == kIsViewable) {
          if (!view.fContext)
             fPimpl->fX11CommandBuffer.AddDrawRectangle(wid, gcVals, x, y, w, h);
          else
@@ -1891,7 +1891,7 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
    
    if (!drawable.fIsPixmap) {
       QuartzView *view = drawable.fContentView;
-      if (!view.fIsOverlapped) {
+      if (!view.fIsOverlapped && view.fMapState == kIsViewable) {
          if (!view.fContext)
             fPimpl->fX11CommandBuffer.AddFillRectangle(wid, gcVals, x, y, w, h);
          else
@@ -1963,7 +1963,7 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
 
    if (!drawable.fIsPixmap) {
       QuartzView *view = fPimpl->GetDrawable(dst).fContentView;
-      if (!view.fIsOverlapped) {
+      if (!view.fIsOverlapped && view.fMapState == kIsViewable) {
          if (!view.fContext)
             fPimpl->fX11CommandBuffer.AddCopyArea(src, dst, gcVals, srcX, srcY, width, height, dstX, dstY);
          else
@@ -2037,7 +2037,7 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
 
    if (!drawable.fIsPixmap) {
       QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
-      if (!view.fIsOverlapped) {
+      if (!view.fIsOverlapped && view.fMapState == kIsViewable) {
          if (!view.fContext)
             fPimpl->fX11CommandBuffer.AddDrawString(wid, gcVals, x, y, text, len);
          else
@@ -2082,7 +2082,7 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
    assert(!fPimpl->IsRootWindow(wid) && "ClearArea, called for the 'root' window");
    
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;//If wid is pixmap or image, this will crush.
-   if (!view.fIsOverlapped) {
+   if (!view.fIsOverlapped && view.fMapState == kIsViewable) {
       if (!view.fContext)
          fPimpl->fX11CommandBuffer.AddClearArea(wid, x, y, w, h);
       else
