@@ -105,7 +105,7 @@ public:
       const Double_t alpha = 0.05; // significance level
       const Int_t N = 1; // number of observations
 
-      // Create model and dataset: 1. Gaussian; 2. Poisson
+      // Create Gaussian model and dataset
       RooWorkspace* w = new RooWorkspace("w", kTRUE);
       w->factory("Gaussian::gauss(x[-5,5], mean[0,-5,5], sigma[1])");
 //    RooDataSet *data = new RooDataSet("data", "data", *w->var("x"));
@@ -122,19 +122,17 @@ public:
          Double_t upperLimit = estMean + intervalHalfWidth;
 
          
-
          // Compare the limits obtained via ProfileLikelihoodCalculator and LikelihoodInterval with analytically estimated values
          regValue(lowerLimit, "rs102_lower_limit_mean");
          regValue(upperLimit, "rs102_upper_limit_mean");
 
-      //   cout << "gll  " << lowerLimit << " gul  " << upperLimit << endl;
       } else {
               
          // Calculate likelihood interval using the ProfileLikelihoodCalculator and LikelihoodInterval objects
          RooArgSet *params = new RooArgSet();
          params->add(*w->var("mean"));
          ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *w->pdf("gauss"), *params);
-         plc->SetConfidenceLevel(0.95);
+         plc->SetConfidenceLevel(1 - alpha);
 
          LikelihoodInterval *interval = plc->GetInterval();
          LikelihoodIntervalPlot *plot = new LikelihoodIntervalPlot(interval);
@@ -142,7 +140,6 @@ public:
          // Register analytically computed limits in the reference file
          regValue(interval->LowerLimit(*w->var("mean")), "rs102_lower_limit_mean");
          regValue(interval->UpperLimit(*w->var("mean")), "rs102__upper_limit_mean");
-     //    cout << "gil " << interval->LowerLimit(*w->var("mean")) << " giu " << interval->UpperLimit(*w->var("mean")) << endl;
 
          // Cleanup branch objects
          delete params;
@@ -161,8 +158,73 @@ public:
 
 class TestBasic103 : public RooUnitTest {
 public:
-   TestBasic103(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("DUMMY", refFile, writeRef, verbose) {} ;
+   TestBasic103(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Profile Likelihood Interval - Poisson", refFile, writeRef, verbose) {} ;
    Bool_t testCode() {
+
+      const Double_t alpha = 0.05; // significance level
+      const Int_t N = 1; // number of observations
+
+   //   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+
+      // Create Poisson model and dataset
+      RooWorkspace* w = new RooWorkspace("w", kTRUE);
+      w->factory("Poisson::poiss(x[0.1,100], mean[2,1e-150,100])");
+
+      RooRandom::randomGenerator()->SetSeed(0);
+
+
+      RooDataSet *data = w->pdf("poiss")->generate(*w->var("x"), N); 
+
+      cout << data->get(0)->getRealValue("x") << endl;
+
+
+      if (_write == kTRUE) {
+
+         // Calculate likelihood interval from data via analytic methods
+//         Double_t estMean = data->mean(*w->var("x"));
+//         Double_t intervalHalfWidth = ROOT::Math::normal_quantile_c(alpha / 2.0, w->var("sigma")->getValV() / sqrt(N));
+//         Double_t lowerLimit = estMean - intervalHalfWidth;
+//         Double_t upperLimit = estMean + intervalHalfWidth;
+         Double_t lowerLimit = 0.0;
+         Double_t upperLimit = 0.0;
+         
+         // Compare the limits obtained via ProfileLikelihoodCalculator and LikelihoodInterval with analytically estimated values
+         regValue(lowerLimit, "rs103_lower_limit_mean");
+         regValue(upperLimit, "rs103_upper_limit_mean");
+         cout << "gll  " << lowerLimit << " gul  " << upperLimit << endl;
+
+      } else {
+              
+         // Calculate likelihood interval using the ProfileLikelihoodCalculator and LikelihoodInterval objects
+         RooArgSet *params = new RooArgSet();
+         params->add(*w->var("mean"));
+         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *w->pdf("poiss"), *params);
+         plc->SetConfidenceLevel(1 - alpha);
+
+         LikelihoodInterval *interval = plc->GetInterval();
+         LikelihoodIntervalPlot *plot = new LikelihoodIntervalPlot(interval);
+
+        // (*w->var("mean")).Print();
+
+         cout << "[" << interval->LowerLimit(*w->var("mean")) << " " << interval->UpperLimit(*w->var("mean")) << "]" << endl;
+         // Register analytically computed limits in the reference file
+         regValue(interval->LowerLimit(*w->var("mean")), "rs103_lower_limit_mean");
+//         regValue(interval->UpperLimit(*w->var("mean")), "rs103_upper_limit_mean");
+//         cout << "gil " << interval->LowerLimit(*w->var("mean")) << " giu " << interval->UpperLimit(*w->var("mean")) << endl;
+
+         // Cleanup branch objects
+         delete params;
+//         delete plc;
+//         delete interval;
+//         delete plot;
+      }
+
+      // Cleanup function objects
+      delete data;
+      delete w;
+
+
+
       return kTRUE ;
    }
 } ;
