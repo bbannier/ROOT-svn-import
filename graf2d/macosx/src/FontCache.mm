@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <cassert>
+#include <cmath>
 
 #include "CocoaUtils.h"
 #include "QuartzText.h"
@@ -57,7 +58,7 @@ FontStruct_t FontCache::LoadFont(const X11::XLFDName &xlfd)
    //Instead of StrongReference, use ScopeGuard class.
    CFStrongReference<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);//false - no initial retain.
    //TODO: pixelSize + 2 - this is just a temporary hack, because text in GUI is too tiny.
-   CFStrongReference<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize + 2, 0), false);//0 is for CGAffineTransform, false - no initial retain.
+   CFStrongReference<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//0 is for CGAffineTransform, false - no initial retain.
 
    //What if this font was "loaded" already?
    if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
@@ -82,7 +83,8 @@ void FontCache::UnloadFont(FontStruct_t font)
 //______________________________________________________________________________
 unsigned FontCache::GetTextWidth(FontStruct_t font, const char *text, int nChars)
 {
-   //This is a temporary hack!!!
+   typedef std::vector<CGSize>::size_type size_type;
+   //
    CTFontRef fontRef = (CTFontRef)font;
    assert(fLoadedFonts.find(fontRef) != fLoadedFonts.end() && "Font was not created by font manager");
 
@@ -90,18 +92,21 @@ unsigned FontCache::GetTextWidth(FontStruct_t font, const char *text, int nChars
    if (nChars < 0)
       nChars = std::strlen(text);
 
-   std::string textLine(text, nChars);
+   std::vector<UniChar> unichars(text, text + nChars);
 
-   unsigned w = 0, h = 0;
+   //Extract glyphs for a text.
+   std::vector<CGGlyph> glyphs(unichars.size());
+   CTFontGetGlyphsForCharacters(fontRef, &unichars[0], &glyphs[0], unichars.size());
 
-   try {
-      const Quartz::TextLine quartzTextLine(textLine.c_str(), fontRef);
-      quartzTextLine.GetBounds(w, h);
-   } catch (const std::exception &) {
-      throw;
-   }
-
-   return w;
+   //Glyps' advances for a text.
+   std::vector<CGSize> glyphAdvances(glyphs.size());
+   CTFontGetAdvancesForGlyphs(fontRef, kCTFontHorizontalOrientation, &glyphs[0], &glyphAdvances[0], glyphs.size());
+   
+   CGFloat textWidth = 0.;
+   for (size_type i = 0, e = glyphAdvances.size(); i < e; ++i)
+      textWidth += std::ceil(glyphAdvances[i].width);
+      
+   return textWidth;
 }
 
 
