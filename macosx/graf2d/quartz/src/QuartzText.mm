@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <vector>
+#include <cmath>
 
 #include "QuartzText.h"
 #include "CocoaUtils.h"
@@ -236,6 +237,41 @@ void TextLine::DrawLine(CGContextRef ctx, Double_t x, Double_t y)const
    CGContextTranslateCTM(ctx, -0.5 * w, -0.5 * h);
 
    DrawLine(ctx);
+}
+
+//______________________________________________________________________________
+void DrawTextLineNoKerning(CGContextRef ctx, CTFontRef font, const std::vector<UniChar> &text, Int_t x, Int_t y)
+{
+   typedef std::vector<CGSize>::size_type size_type;
+   
+   if (!text.size())//This can happen with ROOT's GUI.
+      return;
+
+   assert(ctx != nullptr && "DrawTextLineNoKerning, ctx parameter is null");
+   assert(font != nullptr && "DrawTextLineNoKerning, font parameter is null");
+   assert(text.size() && "DrawTextLineNoKerning, text parameter is an empty vector");
+
+   std::vector<CGGlyph> glyphs(text.size());
+   if (!CTFontGetGlyphsForCharacters(font, &text[0], &glyphs[0], text.size())) {
+      ::Error("DrawTextLineNoKerning", "Font could not encode all Unicode characters in a text");
+      return;
+   }
+   
+   std::vector<CGSize> glyphAdvances(glyphs.size());
+   CTFontGetAdvancesForGlyphs(font, kCTFontHorizontalOrientation, &glyphs[0], &glyphAdvances[0], glyphs.size());
+
+   CGFloat currentX = x;  
+   std::vector<CGPoint> glyphPositions(glyphs.size());
+   glyphPositions[0].x = currentX;
+   glyphPositions[0].y = y;
+
+   for (size_type i = 1; i < glyphs.size(); ++i) {
+      currentX += std::ceil(glyphAdvances[i - 1].width);
+      glyphPositions[i].x = currentX;
+      glyphPositions[i].y = y;
+   }
+   
+   CTFontDrawGlyphs(font, &glyphs[0], &glyphPositions[0], glyphs.size(), ctx);
 }
 
 }

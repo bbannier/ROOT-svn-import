@@ -42,6 +42,9 @@ private:
    TextLine &operator = (const TextLine &rhs) = delete;
 };
 
+//Aux. function which extracts glyphs and calculates their positions.
+void DrawTextLineNoKerning(CGContextRef ctx, CTFontRef font, const std::vector<UniChar> &text, Int_t x, Int_t y);
+
 }
 }
 

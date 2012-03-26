@@ -1981,6 +1981,10 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
 void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, const char *text, Int_t len)
 {
    //Can be called by ROOT directly, or indirectly by AppKit.
+   
+   //TODO: CoreText works bad for GUI text, probably, 
+   //glyphs must be used (there are problems with incorrect font metrics).
+   
    assert(!fPimpl->IsRootWindow(wid) && "DrawStringAux, called for the 'root' window");
 
    NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
@@ -2009,14 +2013,11 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    if (gcVals.fMask & kGCForeground)
       PixelToRGB(gcVals.fForeground, textColor);
 
-   try {
-      ROOT::Quartz::TextLine ctLine(substr.c_str(), (CTFontRef)gcVals.fFont, textColor);
+   CGContextSetRGBFillColor(ctx, textColor[0], textColor[1], textColor[2], textColor[3]);
 
-      CGContextSetTextPosition(ctx, x, X11::LocalYROOTToCocoa(drawable, y));
-      ctLine.DrawLine(ctx);
-   } catch (const std::exception &) {
-      Error("DrawStringAux", "Got exception from TextLine");
-   }
+   //Do a simple text layout using CGGlyphs.
+   std::vector<UniChar> unichars(text, text + len);
+   Quartz::DrawTextLineNoKerning(ctx, (CTFontRef)gcVals.fFont, unichars, x,  X11::LocalYROOTToCocoa(drawable, y));
 }
 
 //______________________________________________________________________________
@@ -2300,7 +2301,7 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
 Int_t TGCocoa::TextWidth(FontStruct_t font, const char *s, Int_t len)
 {
    // Return lenght of the string "s" in pixels. Size depends on font.
-   return fPimpl->fFontManager.GetTextWidth(font, s, len) + 1;
+   return fPimpl->fFontManager.GetTextWidth(font, s, len);
 }
 
 //______________________________________________________________________________
