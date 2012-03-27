@@ -107,8 +107,8 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
    timer.Start();
 
    list<RooUnitTest*> testList ;
-//   testList.push_back(new TestBasic101(fref, writeRef, doVerbose)) ;
-//   testList.push_back(new TestBasic102(fref, writeRef, doVerbose)) ;
+   testList.push_back(new TestBasic101(fref, writeRef, doVerbose)) ;
+   testList.push_back(new TestBasic102(fref, writeRef, doVerbose)) ;
    testList.push_back(new TestBasic103(fref, writeRef, doVerbose)) ;
 //   testList.push_back(new TestBasic104(fref,writeRef,doVerbose)) ;
 //   testList.push_back(new TestBasic105(fref,writeRef,doVerbose)) ;
