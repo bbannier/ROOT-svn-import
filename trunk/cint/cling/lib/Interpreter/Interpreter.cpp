@@ -37,6 +37,7 @@
 
 using namespace clang;
 
+namespace {
 static bool tryLinker(const std::string& filename,
                       const cling::InvocationOptions& Opts,
                       llvm::Module* module) {
@@ -75,14 +76,14 @@ static bool tryLinker(const std::string& filename,
   } else if (Native) {
     // native shared library, load it!
     llvm::sys::Path SoFile = L.FindLib(filename);
-    assert(!SoFile.isEmpty() && "We know the shared lib exists but can't find it back!");
+    assert(!SoFile.isEmpty() && "The shared lib exists but can't find it!");
     std::string errMsg;
-    bool err =
-      llvm::sys::DynamicLibrary::LoadLibraryPermanently(SoFile.str().c_str(), &errMsg);
-    if (err) {
-      fprintf(stderr,
-              "Interpreter::loadFile: Could not load shared library!\n");
-      fprintf(stderr, "%s\n", errMsg.c_str());
+    bool hasError = llvm::sys::DynamicLibrary
+      ::LoadLibraryPermanently(SoFile.str().c_str(), &errMsg);
+    if (hasError) {
+      llvm::errs() << "Could not load shared library!\n" 
+                   << "\n"
+                   << errMsg.c_str();
       L.releaseModule();
       return false;
     }
@@ -90,6 +91,16 @@ static bool tryLinker(const std::string& filename,
   L.releaseModule();
   return true;
 }
+
+static bool canWrapForCall(const std::string& input_line) {
+   // Whether input_line can be wrapped into a function.
+   // "1" can, "#include <vector>" can't.
+   if (input_line.length() > 1 && input_line[0] == '#') return false;
+   if (input_line.compare(0, strlen("extern "), "extern ") == 0) return false;
+   return true;
+}
+
+} // unnamed namespace
 
 namespace cling {
 
@@ -162,11 +173,8 @@ namespace cling {
   //  Interpreter
   //
   
-  //---------------------------------------------------------------------------
-  // Constructor
-  //---------------------------------------------------------------------------
-   Interpreter::Interpreter(int argc, const char* const *argv, 
-                            const char* llvmdir /*= 0*/):
+  Interpreter::Interpreter(int argc, const char* const *argv, 
+                           const char* llvmdir /*= 0*/):
   m_UniqueCounter(0),
   m_PrintAST(false),
   m_ValuePrinterEnabled(false),
@@ -200,8 +208,9 @@ namespace cling {
     // Warm them up
     m_IncrParser->Initialize();
 
-    m_ExecutionContext->addSymbol("local_cxa_atexit", (void*)(intptr_t)&cling::runtime::internal::local_cxa_atexit);
-    
+    m_ExecutionContext->addSymbol("local_cxa_atexit", 
+                  (void*)(intptr_t)&cling::runtime::internal::local_cxa_atexit);
+
     if (getCI()->getLangOpts().CPlusPlus) {
       // Set up common declarations which are going to be available
       // only at runtime
@@ -212,7 +221,7 @@ namespace cling {
       // Set up the gCling variable
       processLine("#include \"cling/Interpreter/ValuePrinter.h\"\n");
       std::stringstream initializer;
-      initializer << "gCling=(cling::Interpreter*)" << (long)this << ";";
+      initializer << "gCling=(cling::Interpreter*)" << (uintptr_t)this << ";";
       processLine(initializer.str());
     }
     else {
@@ -228,7 +237,7 @@ namespace cling {
       (*AEE.m_Func)(AEE.m_Arg);
     }
   }
-   
+
   const char* Interpreter::getVersion() const {
     return "$Id$";
   }
@@ -345,7 +354,7 @@ namespace cling {
       llvm::errs() << Res[i] <<"\n";
     }
   }
-  
+
   CompilerInstance* Interpreter::getCI() const {
     return m_IncrParser->getCI();
   }
@@ -360,9 +369,7 @@ namespace cling {
                            const Decl** D /*=0*/) {    
     std::string functName;
     std::string wrapped = input_line;
-    if (strncmp(input_line.c_str(),"#",strlen("#")) != 0 &&
-        strncmp(input_line.c_str(),"extern ",strlen("extern ")) != 0 &&
-        !rawInput && !V) {
+    if (!V && !rawInput && canWrapForCall(input_line)) {
       WrapInput(wrapped, functName);
     }
 
@@ -375,7 +382,7 @@ namespace cling {
                               clang::diag::MAP_IGNORE, SourceLocation());
 
     CompilationResult Result = kSuccess; 
-    if (V)
+    if (V && !rawInput && canWrapForCall(input_line))
       *V = Evaluate(input_line.c_str(), /*DeclContext=*/0);
     else
       Result = handleLine(wrapped, functName, rawInput, D);
@@ -430,7 +437,7 @@ namespace cling {
   Interpreter::handleLine(llvm::StringRef input, llvm::StringRef FunctionName,
                           bool rawInput /*=false*/, const Decl** D /*=0*/) {
     // if we are using the preprocessor
-    if (rawInput || input[0] == '#') {
+    if (rawInput || !canWrapForCall(input)) {
       
       if (m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed) {
         if (D)
@@ -463,7 +470,6 @@ namespace cling {
   
   bool
   Interpreter::loadFile(const std::string& filename,
-                        const std::string* trailcode /*=0*/,
                         bool allowSharedLib /*=true*/)
   {
     if (allowSharedLib) {
@@ -483,40 +489,9 @@ namespace cling {
     
     std::string code;
     code += "#include \"" + filename + "\"\n";
-    if (trailcode)
-      code += *trailcode;
     return (m_IncrParser->CompileAsIs(code) != IncrementalParser::kFailed);
   }
   
-  bool
-  Interpreter::executeFile(const std::string& fileWithArgs)
-  {
-    // Look for start of parameters:
-
-    typedef std::pair<llvm::StringRef,llvm::StringRef> StringRefPair;
-
-    StringRefPair pairFileArgs = llvm::StringRef(fileWithArgs).split('(');
-    if (pairFileArgs.second.empty()) {
-      pairFileArgs.second = ")";
-    }
-    StringRefPair pairPathFile = pairFileArgs.first.rsplit('/');
-    if (pairPathFile.second.empty()) {
-       pairPathFile.second = pairPathFile.first;
-    }
-    StringRefPair pairFuncExt = pairPathFile.second.rsplit('.');
-
-    //fprintf(stderr, "funcname: %s\n", pairFuncExt.first.data());
-    
-    std::string func;
-    std::string wrapper = pairFuncExt.first.str()+"("+pairFileArgs.second.str();
-    WrapInput(wrapper, func);
-
-    if (loadFile(pairFileArgs.first, &wrapper)) {
-      return RunFunction(func);
-    }
-    return false;
-  }
-
   Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, 
                                                        const DeclContext* Within) {
     if (!Within)
@@ -568,23 +543,31 @@ namespace cling {
     TheSema.CurContext = TopLevelFD;
     ASTContext& Context(getCI()->getASTContext());
     QualType RetTy;
-    if (Stmt* S = TopLevelFD->getBody())
-      if (CompoundStmt* CS = dyn_cast<CompoundStmt>(S))
-        if (Expr* E = dyn_cast_or_null<Expr>(CS->body_back())) {
-          RetTy = E->getType();
-          if (!RetTy->isVoidType()) {
-            // Change the void function's return type
-            FunctionProtoType::ExtProtoInfo EPI;
-            QualType FuncTy = Context.getFunctionType(RetTy,
-                                                      /*ArgArray*/0,
-                                                      /*NumArgs*/0,
-                                                      EPI);
-            TopLevelFD->setType(FuncTy);
-            // add return stmt
-            Stmt* RetS = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
-            CS->setLastStmt(RetS);
+    if (Stmt* S = TopLevelFD->getBody()) {
+      if (CompoundStmt* CS = dyn_cast<CompoundStmt>(S)) {
+        for (clang::CompoundStmt::const_reverse_body_iterator iStmt = CS->body_rbegin(),
+               eStmt = CS->body_rend(); iStmt != eStmt; ++iStmt) {
+          // find the trailing expression statement (skip e.g. null statements)
+          if (Expr* E = dyn_cast_or_null<Expr>(*iStmt)) {
+            RetTy = E->getType();
+            if (!RetTy->isVoidType()) {
+              // Change the void function's return type
+              FunctionProtoType::ExtProtoInfo EPI;
+              QualType FuncTy = Context.getFunctionType(RetTy,
+                                                        /*ArgArray*/0,
+                                                        /*NumArgs*/0,
+                                                        EPI);
+              TopLevelFD->setType(FuncTy);
+              // add return stmt
+              Stmt* RetS = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
+              CS->setLastStmt(RetS);
+            }
+            // even if void: we found an expression
+            break;
           }
         }
+      }
+    }
     TheSema.CurContext = CurContext;
 
     // FIXME: Finish the transaction in better way
@@ -694,11 +677,11 @@ namespace cling {
   }
 
   bool Interpreter::addSymbol(const char* symbolName,  void* symbolAddress){
-	  // Forward to ExecutionContext;
-	  if (!symbolName || !symbolAddress )
-		  return false;
+    // Forward to ExecutionContext;
+    if (!symbolName || !symbolAddress )
+      return false;
 
-	  return m_ExecutionContext->addSymbol(symbolName,  symbolAddress);
+    return m_ExecutionContext->addSymbol(symbolName,  symbolAddress);
   }
   
 } // namespace cling

@@ -64,9 +64,6 @@ bool MarkerIsFilledPolygon(Style_t markerStyle)
    }
 }
 
-const CGFloat shadowColor[] = {0.1f, 0.1f, 0.1f, 0.2f};
-const CGFloat pinkColor[] = {1.f, 0.f, 0.4f, 0.2f};
-
 }
 
 //_________________________________________________________________
@@ -114,20 +111,11 @@ inline Double_t SpaceConverter::YToView(Double_t y)const
 //_________________________________________________________________
 Painter::Painter()
             : fCtx(0),
-              fRootOpacity(100),
               fPainterMode(kPaintToView),
               fCurrentObjectID(0),
               fEncoder(10, 255) //radix is 10, color channel value is 255.
 {
    //Default ctor.
-}
-
-//_________________________________________________________________
-void Painter::SetOpacity(Int_t percent)
-{
-   //Opacity is strange at the moment - there is no line or polygon opacity,
-   //only one opacity value.
-   percent > 100 || percent < 0 ? fRootOpacity = 100 : fRootOpacity = percent;
 }
 
 //_________________________________________________________________      
@@ -151,18 +139,6 @@ void Painter::SetStrokeParameters()const
       SetLineColorForCurrentObjectID();
       //If line's width is less, it's already very difficult to pick.
       CGContextSetLineWidth(fCtx, 40.f);
-      return;
-   }
-
-   if (fPainterMode == kPaintSelected) {
-      CGContextSetRGBStrokeColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
-      CGContextSetLineWidth(fCtx, 5.f);
-      return;
-   }
-
-   if (fPainterMode == kPaintShadow) {
-      CGContextSetRGBStrokeColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
-      CGContextSetLineWidth(fCtx, 5.f);
       return;
    }
 
@@ -226,18 +202,6 @@ void Painter::SetPolygonParameters()const
       return;
    }
 
-   if (fPainterMode == kPaintSelected) {
-      SetStrokeParameters();
-      CGContextSetRGBFillColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
-      return;
-   }
-
-   if (fPainterMode == kPaintShadow) {
-   //   SetStrokeParameters();
-      CGContextSetRGBFillColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
-      return;
-   }
-
    const Float_t alpha = 1.f;//must be in gVirtualX.
    Float_t red = 1.f, green = 1.f, blue = 1.f;//White by default.
  
@@ -275,8 +239,7 @@ void Painter::FillBoxWithPattern(Double_t x1, Double_t y1, Double_t x2, Double_t
    
    const float alpha = 1.f;
    CGContextSetFillPattern(fCtx, pattern.Get(), &alpha);
-   
-//   CGContextBeginPath(fCtx);
+
    CGContextFillRect(fCtx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
 }
 
@@ -308,13 +271,13 @@ void Painter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, TVirtu
    const Double_t x2p = fConverter.XToView(x2);
    const Double_t y2p = fConverter.YToView(y2);
    
-   if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow)
+   if (fPainterMode == kPaintSelected)
       return DrawBoxOutline(x1p, y1p, x2p, y2p);
       
    if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
       return DrawBoxOutline(x1p, y1p, x2p, y2p);
       
-   if (mode == TVirtualPadPainter::kFilled) 
+   if (mode == TVirtualPadPainter::kFilled)
       PolygonHasStipple() ? FillBoxWithPattern(x1p, y1p, x2p, y2p) : FillBox(x1p, y1p, x2p, y2p);
    else
       DrawBoxOutline(x1p, y1p, x2p, y2p);
@@ -389,10 +352,10 @@ void Painter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
    
    if (!gVirtualX->GetFillStyle())
       return DrawPolyLine(n, x, y);
-      
-   if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow || fPainterMode == kPaintThumbnail)
+
+   if (fPainterMode == kPaintThumbnail)
       return FillArea(n, x, y);
-      
+
    if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
       return DrawPolyLine(n, x, y);
          
@@ -439,23 +402,13 @@ void Painter::DrawPolyLineNDC(Int_t, const Double_t *, const Double_t *)
 void Painter::SetMarkerColor()const
 {
    if (MarkerIsFilledPolygon(gVirtualX->GetMarkerStyle())) {
-      if (fPainterMode == kPaintToView) {
+      if (fPainterMode == kPaintToView || fPainterMode == kPaintSelected) {
          SetMarkerFillColor(fCtx, gVirtualX->GetMarkerColor());
-      } else if (fPainterMode == kPaintShadow) {
-         CGContextSetRGBFillColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);      
-      } else if (fPainterMode == kPaintSelected) {
-         CGContextSetRGBFillColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
       }
    } else {
-      if (fPainterMode == kPaintToView) {
+      if (fPainterMode == kPaintToView || fPainterMode == kPaintSelected) {
          SetMarkerStrokeColor(fCtx, gVirtualX->GetMarkerColor());
-      } else if (fPainterMode == kPaintShadow) {
-         CGContextSetRGBStrokeColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
-         CGContextSetLineWidth(fCtx, 5.f);
-      } else if (fPainterMode == kPaintSelected) {
-         CGContextSetRGBStrokeColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
-         CGContextSetLineWidth(fCtx, 5.f);
-      }   
+      }
    }
 }
 
@@ -546,12 +499,6 @@ void Painter::DrawText(Double_t x, Double_t y, const char *text, TVirtualPadPain
    //TODO: mode parameter.
    const Util::CGStateGuard contextGuard(fCtx);
    
-   /*
-   if (fPainterMode == kPaintThumbnail) {
-      CGContextSetRGBFillColor(fCtx, 0.f, 0.f, 0.f, 1.f);
-      CGContextFillRect(fCtx, CGRectMake(fConverter.XToView(x), fConverter.YToView(y), 5.f, 2.f));
-   } else */
-   
    if (fPainterMode == kPaintToView || fPainterMode == kPaintThumbnail) {   
       CTFontRef currentFont = fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
       if (gVirtualX->GetTextFont() / 10 - 1 == 11) {
@@ -579,6 +526,18 @@ void Painter::SetContext(CGContextRef ctx)
 void Painter::SetTransform(UInt_t w, Double_t xMin, Double_t xMax, UInt_t h, Double_t yMin, Double_t yMax)
 {
    fConverter.SetConverter(w, xMin, xMax, h, yMin, yMax);
+}
+
+//_________________________________________________________________
+void Painter::SetPainterMode(EMode mode)
+{
+   fPainterMode = mode;
+}
+
+//_________________________________________________________________   
+void Painter::SetCurrentObjectID(UInt_t objId)
+{
+   fCurrentObjectID = objId;
 }
 
 //_________________________________________________________________
