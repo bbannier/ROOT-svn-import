@@ -11,6 +11,7 @@
 #include "TClass.h"
 #include "TCanvas.h"
 #include "TH1.h"
+#include "TF1.h"
 #include "TBenchmark.h"
 #include "RooGlobalFunc.h"
 #include "RooNumIntConfig.h"
@@ -45,17 +46,11 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 
 
 //------------------------------------------------------------------------
-void StatusPrint(Int_t id, const TString &title, Int_t status)
+void StatusPrint(const Int_t id, const TString &title, const Int_t status, const Int_t lineWidth)
 {
    // Print test program number and its title
-   const Int_t kMAX = 65;
-   TString header = TString("Test ");
-   header += id;
-   header += " : ";
-   header += title;
-   const Int_t nch = header.Length();
-   for (Int_t i = nch; i < kMAX; i++) header += '.';
-   cout << header << (status > 0 ? "OK" : (status < 0 ? "SKIPPED" : "FAILED")) << endl;
+   TString header = TString::Format("Test %d : %s ", id, title.Data());
+   cout << left << setw(lineWidth) << setfill('.') << header << " " << (status > 0 ? "OK" : (status < 0 ? "SKIPPED" : "FAILED")) << endl;
 }
 
 #include "stressRooStats_tests.cxx"
@@ -63,6 +58,8 @@ void StatusPrint(Int_t id, const TString &title, Int_t status)
 //______________________________________________________________________________
 Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t oneTest, Bool_t dryRun, Bool_t doDump, Bool_t doTreeStore)
 {
+   const Int_t lineWidth = 80;
+
    // Save memory directory location
    RooUnitTest::setMemDir(gDirectory) ;
 
@@ -98,23 +95,32 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
    // Add dedicated logging stream for errors that will remain active in silent mode
    RooMsgService::instance().addStream(RooFit::ERROR) ;
 
-   cout << "******************************************************************" << endl;
-   cout << "*  RooStats - S T R E S S suite                                  *" << endl;
-   cout << "******************************************************************" << endl;
-   cout << "******************************************************************" << endl;
+
+   cout << left << setw(lineWidth) << setfill('*') << "" << endl;
+   cout << "*" << setw(lineWidth - 2) << setfill(' ') << " RooStats S.T.R.E.S.S. suite " << "*" << endl;
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
+
 
    TStopwatch timer;
    timer.Start();
 
    list<RooUnitTest*> testList ;
-   testList.push_back(new TestBasic101(fref, writeRef, doVerbose)) ;
-   testList.push_back(new TestBasic102(fref, writeRef, doVerbose)) ;
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose)) ;
-//   testList.push_back(new TestBasic104(fref,writeRef,doVerbose)) ;
-//   testList.push_back(new TestBasic105(fref,writeRef,doVerbose)) ;
+//   testList.push_back(new TestBasic101(fref, writeRef, doVerbose));
+//   testList.push_back(new TestBasic102(fref, writeRef, doVerbose));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 2));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 10));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 20));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 50));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
+   testList.push_back(new TestBasic104(fref, writeRef, doVerbose));
+//   testList.push_back(new TestBasic105(fref,writeRef,doVerbose));
 
-   cout << "*  Starting  S T R E S S  basic suite                            *" << endl;
-   cout << "******************************************************************" << endl;
+   cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
 
    if (doDump) {
       TFile fdbg("stressRooStats_DEBUG.root", "RECREATE") ;
@@ -128,7 +134,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
          if (doDump) {
             (*iter)->setDebug(kTRUE);
          }
-         StatusPrint(i, (*iter)->GetName(), (*iter)->isTestAvailable() ? (*iter)->runTest() : -1);
+         StatusPrint(i, (*iter)->GetName(), (*iter)->isTestAvailable() ? (*iter)->runTest() : -1, lineWidth);
       }
       delete(*iter);
       i++;
@@ -143,27 +149,26 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 
    //Print table with results
    Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
-   printf("******************************************************************\n");
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
    if (UNIX) {
       TString sp = gSystem->GetFromPipe("uname -a");
-      // sp.Resize(60);
-      printf("*  SYS: %s\n", sp.Data());
+      cout << "* SYS: " << sp << endl;
       if (strstr(gSystem->GetBuildNode(), "Linux")) {
          sp = gSystem->GetFromPipe("lsb_release -d -s");
-         printf("*  SYS: %s\n", sp.Data());
+         cout << "* SYS: " << sp << endl;
       }
       if (strstr(gSystem->GetBuildNode(), "Darwin")) {
          sp  = gSystem->GetFromPipe("sw_vers -productVersion");
          sp += " Mac OS X ";
-         printf("*  SYS: %s\n", sp.Data());
+         cout << "* SYS: " << sp << endl;
       }
    } else {
       const Char_t *os = gSystem->Getenv("OS");
-      if (!os) printf("*  SYS: Windows 95\n");
-      else     printf("*  SYS: %s %s \n", os, gSystem->Getenv("PROCESSOR_IDENTIFIER"));
+      if (!os) cout << "*  SYS: Windows 95" << endl;
+      else     cout << "*  SYS: " << os << " " << gSystem->Getenv("PROCESSOR_IDENTIFIER") << endl;
    }
 
-   printf("******************************************************************\n");
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
    gBenchmark->Print("StressFit");
 #ifdef __CINT__
    Double_t reftime = 186.34; //pcbrun4 interpreted
@@ -172,13 +177,13 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 #endif
    const Double_t rootmarks = 860 * reftime / gBenchmark->GetCpuTime("StressRooStats");
 
-   printf("******************************************************************\n");
-   printf("*  ROOTMARKS = %6.1f   *  Root%-8s  %d/%d\n", rootmarks, gROOT->GetVersion(),
-          gROOT->GetVersionDate(), gROOT->GetVersionTime());
-   printf("******************************************************************\n");
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
+   cout << TString::Format("*  ROOTMARKS = %6.1f   *  Root%-8s  %d/%d", rootmarks, gROOT->GetVersion(),
+                           gROOT->GetVersionDate(), gROOT->GetVersionTime()) << endl;
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
 
    // NOTE: The function TStopwatch::CpuTime() calls Tstopwatch::Stop(), so you do not need to stop the timer separately.
-   printf("Time at the end of job = %f seconds\n", timer.CpuTime());
+   cout << "Time at the end of job = " << timer.CpuTime() << " seconds" << endl;
 
    if (fref) {
       fref->Close() ;

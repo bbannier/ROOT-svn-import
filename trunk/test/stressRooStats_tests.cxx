@@ -112,9 +112,7 @@ public:
       // Create Gaussian model and dataset
       RooWorkspace* w = new RooWorkspace("w", kTRUE);
       w->factory("Gaussian::gauss(x[-5,5], mean[0,-5,5], sigma[1])");
-//    RooDataSet *data = new RooDataSet("data", "data", *w->var("x"));
-//    data->add(*w->var("x"));   
-      RooDataSet *data = w->pdf("gauss")->generate(*w->var("x"), N); 
+      RooDataSet *data = w->pdf("gauss")->generate(*w->var("x"), N);
 
 
       if (_write == kTRUE) {
@@ -125,13 +123,13 @@ public:
          Double_t lowerLimit = estMean - intervalHalfWidth;
          Double_t upperLimit = estMean + intervalHalfWidth;
 
-         
+
          // Compare the limits obtained via ProfileLikelihoodCalculator and LikelihoodInterval with analytically estimated values
          regValue(lowerLimit, "rs102_lower_limit_mean");
          regValue(upperLimit, "rs102_upper_limit_mean");
 
       } else {
-              
+
          // Calculate likelihood interval using the ProfileLikelihoodCalculator and LikelihoodInterval objects
          RooArgSet *params = new RooArgSet();
          params->add(*w->var("mean"));
@@ -158,59 +156,57 @@ public:
    }
 };
 
+
 class TestBasic103 : public RooUnitTest {
 public:
-   TestBasic103(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Profile Likelihood Interval - Poisson", refFile, writeRef, verbose) {} ;
-   
-   Double_t vtol() { return 1e-2; }
+   TestBasic103(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue) : RooUnitTest(TString::Format("Profile Likelihood Calculator - Poisson - Observed value: %d", obsValue), refFile, writeRef, verbose), fObsValue(obsValue) {} ;
 
    Bool_t testCode() {
 
-      const Double_t alpha = 0.32; // significance level
+      TString lowerLimitString = TString::Format("rs103_lower_limit_mean_%d", fObsValue);
+      TString upperLimitString = TString::Format("rs103_upper_limit_mean_%d", fObsValue);
 
-      // RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+      // Put the significance level so that we obtain a 68% confidence interval corresponding to a standard deviation from the mean
+      const Double_t alpha = ROOT::Math::normal_cdf_c(1, 1) * 2; // significance level
 
       // Create Poisson model and dataset
       RooWorkspace* w = new RooWorkspace("w", kTRUE);
       w->factory("Poisson::poiss(x[1e-100,1000], mean[2,1e-100,1000])");
 
-      // We have just one hard-coded value (3)    
-      RooRealVar value("x","x", 3);
-      const RooArgSet argSet(value);
-
-      RooDataSet *data = new RooDataSet("poissData", "Poisson data", argSet);
-      data->add(argSet);
-
-      //cout << "Sum entries: " << data->sumEntries() << " " << datag->sumEntries() << endl;
+      RooRealVar *x = w->var("x");
+      x->setVal(fObsValue);
+      RooArgSet *argSet =  new RooArgSet(*x);
+      RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *argSet);
+      data->add(*argSet);
 
       if (_write == kTRUE) {
 
-         // Solution of equation -2*[ln(LL(u_min)) - ln(LL(u))] = 0.994458
-         // 0.994458 was chosen since a 68% confidence interval corresponds to estimate +/- 0.994458 * sigma
-         // SOURCE: Wolfram Alpha
-         Double_t lowerLimit = 1.58708;
-         Double_t upperLimit = 5.07346;
-         
+         // Solutions of equation -2*[ln(LL(xMin)) - ln(LL(x))] = 1, where xMin = obsValue for special case N = 1
+         TString llRatioExpression = TString::Format("2*(x-%d*log(x)-%d+%d*log(%d))", fObsValue, fObsValue, fObsValue, fObsValue);
+         TF1 *llRatio = new TF1("llRatio", llRatioExpression, 1e-100, fObsValue); // lowerLimit < obsValue
+         Double_t lowerLimit = llRatio->GetX(1);
+         llRatio->SetRange(fObsValue, 1000); // upperLimit > obsValue
+         Double_t upperLimit = llRatio->GetX(1);
+
          // Compare the limits obtained via ProfileLikelihoodCalculator and LikelihoodInterval with Wolfram values
-         regValue(lowerLimit, "rs103_lower_limit_mean");
-         regValue(upperLimit, "rs103_upper_limit_mean");
+         regValue(lowerLimit, lowerLimitString);
+         regValue(upperLimit, upperLimitString);
+
+         // Cleanup branch objects
+         delete llRatio;
 
       } else {
-              
+
          // Calculate likelihood interval using the ProfileLikelihoodCalculator and LikelihoodInterval objects
          RooArgSet *params = new RooArgSet();
          params->add(*w->var("mean"));
          ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *w->pdf("poiss"), *params);
          plc->SetConfidenceLevel(1 - alpha);
-
          LikelihoodInterval *interval = plc->GetInterval();
-                
-         // cout << "[" << interval->LowerLimit(*w->var("mean")) << " " << interval->UpperLimit(*w->var("mean")) << "]" << endl;
 
          // Register externally computed limits in the reference file
-         regValue(interval->LowerLimit(*w->var("mean")), "rs103_lower_limit_mean");
-         regValue(interval->UpperLimit(*w->var("mean")), "rs103_upper_limit_mean");
-         // cout << "gil " << interval->LowerLimit(*w->var("mean")) << " giu " << interval->UpperLimit(*w->var("mean")) << endl;
+         regValue(interval->LowerLimit(*w->var("mean")), lowerLimitString.Data());
+         regValue(interval->UpperLimit(*w->var("mean")), upperLimitString.Data());
 
          // Cleanup branch objects
          delete params;
@@ -219,12 +215,18 @@ public:
       }
 
       // Cleanup function objects
+      delete argSet;
       delete data;
       delete w;
 
       return kTRUE ;
    }
+
+private:
+   Int_t fObsValue;
+
 } ;
+
 
 class TestBasic104 : public RooUnitTest {
 public:
@@ -233,6 +235,7 @@ public:
       return kTRUE ;
    }
 } ;
+
 
 class TestBasic105 : public RooUnitTest {
 public:

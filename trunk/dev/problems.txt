@@ -1,1 +1,5 @@
 1. ProfileLikelihoodCalculator Poisson -> lower limit goes to 0 when minValue for mean is 0 or very small
+2. RooUnitTest -> comparison error message is not suggestive; it tells us which values are different, not the names of the variables which have different values
+3. ProfileLikelihoodCalculator Poisson -> observed Value = 500 gives Minimization failure
+
+
