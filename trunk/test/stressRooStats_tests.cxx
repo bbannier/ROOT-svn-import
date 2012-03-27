@@ -24,6 +24,10 @@
 #include "RooStats/NumberCountingUtils.h"
 #include "RooStats/RooStatsUtils.h"
 
+
+// DEBUG
+#include "Math/MinimizerOptions.h"
+
 using namespace RooFit;
 using namespace RooStats;
 
@@ -135,17 +139,15 @@ public:
          plc->SetConfidenceLevel(1 - alpha);
 
          LikelihoodInterval *interval = plc->GetInterval();
-         LikelihoodIntervalPlot *plot = new LikelihoodIntervalPlot(interval);
 
          // Register analytically computed limits in the reference file
          regValue(interval->LowerLimit(*w->var("mean")), "rs102_lower_limit_mean");
-         regValue(interval->UpperLimit(*w->var("mean")), "rs102__upper_limit_mean");
+         regValue(interval->UpperLimit(*w->var("mean")), "rs102_upper_limit_mean");
 
          // Cleanup branch objects
          delete params;
          delete plc;
          delete interval;
-         delete plot;
       }
 
       // Cleanup function objects
@@ -159,39 +161,39 @@ public:
 class TestBasic103 : public RooUnitTest {
 public:
    TestBasic103(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Profile Likelihood Interval - Poisson", refFile, writeRef, verbose) {} ;
+   
+   Double_t vtol() { return 1e-2; }
+
    Bool_t testCode() {
 
-      const Double_t alpha = 0.05; // significance level
-      const Int_t N = 1; // number of observations
+      const Double_t alpha = 0.32; // significance level
 
-   //   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+      // RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
       // Create Poisson model and dataset
       RooWorkspace* w = new RooWorkspace("w", kTRUE);
-      w->factory("Poisson::poiss(x[0.1,100], mean[2,1e-150,100])");
+      w->factory("Poisson::poiss(x[1e-100,1000], mean[2,1e-100,1000])");
 
-      RooRandom::randomGenerator()->SetSeed(0);
+      // We have just one hard-coded value (3)    
+      RooRealVar value("x","x", 3);
+      const RooArgSet argSet(value);
 
+      RooDataSet *data = new RooDataSet("poissData", "Poisson data", argSet);
+      data->add(argSet);
 
-      RooDataSet *data = w->pdf("poiss")->generate(*w->var("x"), N); 
-
-      cout << data->get(0)->getRealValue("x") << endl;
-
+      //cout << "Sum entries: " << data->sumEntries() << " " << datag->sumEntries() << endl;
 
       if (_write == kTRUE) {
 
-         // Calculate likelihood interval from data via analytic methods
-//         Double_t estMean = data->mean(*w->var("x"));
-//         Double_t intervalHalfWidth = ROOT::Math::normal_quantile_c(alpha / 2.0, w->var("sigma")->getValV() / sqrt(N));
-//         Double_t lowerLimit = estMean - intervalHalfWidth;
-//         Double_t upperLimit = estMean + intervalHalfWidth;
-         Double_t lowerLimit = 0.0;
-         Double_t upperLimit = 0.0;
+         // Solution of equation -2*[ln(LL(u_min)) - ln(LL(u))] = 0.994458
+         // 0.994458 was chosen since a 68% confidence interval corresponds to estimate +/- 0.994458 * sigma
+         // SOURCE: Wolfram Alpha
+         Double_t lowerLimit = 1.58708;
+         Double_t upperLimit = 5.07346;
          
-         // Compare the limits obtained via ProfileLikelihoodCalculator and LikelihoodInterval with analytically estimated values
+         // Compare the limits obtained via ProfileLikelihoodCalculator and LikelihoodInterval with Wolfram values
          regValue(lowerLimit, "rs103_lower_limit_mean");
          regValue(upperLimit, "rs103_upper_limit_mean");
-         cout << "gll  " << lowerLimit << " gul  " << upperLimit << endl;
 
       } else {
               
@@ -202,28 +204,23 @@ public:
          plc->SetConfidenceLevel(1 - alpha);
 
          LikelihoodInterval *interval = plc->GetInterval();
-         LikelihoodIntervalPlot *plot = new LikelihoodIntervalPlot(interval);
+                
+         // cout << "[" << interval->LowerLimit(*w->var("mean")) << " " << interval->UpperLimit(*w->var("mean")) << "]" << endl;
 
-        // (*w->var("mean")).Print();
-
-         cout << "[" << interval->LowerLimit(*w->var("mean")) << " " << interval->UpperLimit(*w->var("mean")) << "]" << endl;
-         // Register analytically computed limits in the reference file
+         // Register externally computed limits in the reference file
          regValue(interval->LowerLimit(*w->var("mean")), "rs103_lower_limit_mean");
-//         regValue(interval->UpperLimit(*w->var("mean")), "rs103_upper_limit_mean");
-//         cout << "gil " << interval->LowerLimit(*w->var("mean")) << " giu " << interval->UpperLimit(*w->var("mean")) << endl;
+         regValue(interval->UpperLimit(*w->var("mean")), "rs103_upper_limit_mean");
+         // cout << "gil " << interval->LowerLimit(*w->var("mean")) << " giu " << interval->UpperLimit(*w->var("mean")) << endl;
 
          // Cleanup branch objects
          delete params;
-//         delete plc;
-//         delete interval;
-//         delete plot;
+         delete plc;
+         delete interval;
       }
 
       // Cleanup function objects
       delete data;
       delete w;
-
-
 
       return kTRUE ;
    }

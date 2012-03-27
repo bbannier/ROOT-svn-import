@@ -1,1 +1,1 @@
-1. ProfileLikelihoodCalculator -> printLevel -> implement in base class
+1. ProfileLikelihoodCalculator Poisson -> lower limit goes to 0 when minValue for mean is 0 or very small
