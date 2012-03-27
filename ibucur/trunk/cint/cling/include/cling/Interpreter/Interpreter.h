@@ -160,10 +160,7 @@ namespace cling {
                                   const clang::Decl** D = 0);
 
     bool loadFile(const std::string& filename,
-                  const std::string* trailcode = 0,
                   bool allowSharedLib = true);
-    
-    bool executeFile(const std::string& fileWithArgs);
     
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled();
@@ -214,7 +211,7 @@ namespace cling {
     bool RunFunction(llvm::StringRef fname, llvm::GenericValue* res = 0);
     friend class runtime::internal::LifetimeHandler;
     
-	bool addSymbol(const char* symbolName,  void* symbolAddress);
+    bool addSymbol(const char* symbolName,  void* symbolAddress);
   public:
     ///\brief Evaluates given expression within given declaration context.
     ///

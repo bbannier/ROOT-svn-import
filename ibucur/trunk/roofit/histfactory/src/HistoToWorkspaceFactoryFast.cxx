@@ -2042,6 +2042,12 @@ void HistoToWorkspaceFactoryFast::FormatFrameForLikelihood(RooPlot* frame, strin
       continue;
     }
   
+    // set reasonable ranges for gamma parameters
+    gamma.setMax( 1 + 5*sigma );
+    //    gamma.setMin( TMath::Max(1. - 5*sigma, 0.) );    
+    gamma.setMin( 0. );         
+    
+
   // Make Constraint Term
   std::string constrName = string(gamma.GetName()) + "_constraint";
 
@@ -2092,6 +2098,7 @@ void HistoToWorkspaceFactoryFast::FormatFrameForLikelihood(RooPlot* frame, strin
 
     // Type 2 : RooPoisson
     RooPoisson pois(constrName.c_str(), constrName.c_str(), constrNom, constrMean);
+    pois.setNoRounding(true);
     proto->import( pois, RecycleConflictNodes() );
 
       

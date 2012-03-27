@@ -156,6 +156,8 @@ enum Mode {
    
 //   navigationScrollView.canCancelContentTouches = NO;
 //   navigationScrollView.delaysContentTouches = NO;
+   NSLog(@"delay %d", navigationScrollView.delaysContentTouches);
+   navigationScrollView.decelerationRate = UIScrollViewDecelerationRateFast;
    navigationScrollView.bounces = NO;
    navigationScrollView.bouncesZoom = NO;
    navigationScrollView.pagingEnabled = YES;
@@ -319,10 +321,15 @@ enum Mode {
 #pragma mark - View lifecycle
 
 //____________________________________________________________________________________________________
-
 - (void)willAnimateRotationToInterfaceOrientation : (UIInterfaceOrientation)interfaceOrientation duration : (NSTimeInterval) duration
 {
    [self correctFramesForOrientation : interfaceOrientation];
+}
+
+//____________________________________________________________________________________________________
+- (void) didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation
+{
+   //Now, after rotation is finished we can show the shadow again.
 }
 
 //____________________________________________________________________________________________________
@@ -423,8 +430,7 @@ enum Mode {
 
       padScrollView.hidden = YES;
       editorView.hidden = YES;
-      
-//      pad->SetViewWH(navScrolls, <#UInt_t h#>)
+
       if (fileContainer->GetNumberOfObjects() > 1)
          [navScrolls[1] setPad : fileContainer->GetPadAttached(currentObject)];
       else
@@ -634,14 +640,29 @@ enum Mode {
 {
    currentObject + 1 < fileContainer->GetNumberOfObjects() ? ++currentObject : currentObject = 0;
    [self adjustPrevNextIndices];
-   //Current is becoming prev, next is becoming current, load new next.
-   UIImage *prevImage = navScrolls[1].padImage;
-   UIImage *currentImage = navScrolls[2].padImage;
-      
-   [navScrolls[0] setPad : fileContainer->GetPadAttached(previousObject) andImage : prevImage];
-   [navScrolls[1] setPad : fileContainer->GetPadAttached(currentObject) andImage : currentImage];
-   [navScrolls[2] setPad : fileContainer->GetPadAttached(nextObject)];
+   //Current is becoming prev, next is becoming current, load new into prev, which is becoming next.
+   PadImageScrollView *prevView = navScrolls[1];
+   PadImageScrollView *currentView = navScrolls[2];
+   PadImageScrollView *nextView = navScrolls[0];
    
+   CGRect prevFrame = prevView.frame;
+   prevFrame.origin = CGPointZero;
+   prevView.frame = prevFrame;
+   [prevView resetToFrame : prevView.frame];
+   
+   CGRect currFrame = currentView.frame;
+   currFrame.origin.x = navigationScrollView.frame.size.width;
+   currentView.frame = currFrame;
+   
+   CGRect nextFrame = nextView.frame;
+   nextFrame.origin.x = 2 * navigationScrollView.frame.size.width;
+   nextView.frame = nextFrame;
+   [nextView setPad:fileContainer->GetPadAttached(nextObject)];
+   
+   navScrolls[0] = prevView;
+   navScrolls[1] = currentView;
+   navScrolls[2] = nextView;
+
    [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];   
    
    self.navigationItem.title = [NSString stringWithFormat : @"%s", fileContainer->GetObject(currentObject)->GetName()];
@@ -653,12 +674,28 @@ enum Mode {
    currentObject ? --currentObject : currentObject = fileContainer->GetNumberOfObjects() - 1;
    [self adjustPrevNextIndices];
    //Current is becoming next, prev - current, prev must be loaded.
-   UIImage *nextImage = navScrolls[1].padImage;
-   UIImage *currImage = navScrolls[0].padImage;
+ 
+   PadImageScrollView *nextView = navScrolls[1];
+   PadImageScrollView *currView = navScrolls[0];
+   PadImageScrollView *prevView = navScrolls[2];
+
+   CGRect currFrame = currView.frame;
+   currFrame.origin.x = navigationScrollView.frame.size.width;
+   currView.frame = currFrame;
    
-   [navScrolls[1] setPad : fileContainer->GetPadAttached(currentObject) andImage : currImage];
-   [navScrolls[2] setPad : fileContainer->GetPadAttached(nextObject) andImage : nextImage];
-   [navScrolls[0] setPad : fileContainer->GetPadAttached(previousObject)];
+   CGRect nextFrame = nextView.frame;
+   nextFrame.origin.x = 2 * navigationScrollView.frame.size.width;
+   nextView.frame = nextFrame;
+   [nextView resetToFrame : nextFrame];
+   
+   CGRect prevFrame = prevView.frame;
+   prevFrame.origin = CGPointZero;
+   prevView.frame = prevFrame;
+   [prevView setPad : fileContainer->GetPadAttached(previousObject)];
+   
+   navScrolls[0] = prevView;
+   navScrolls[1] = currView;
+   navScrolls[2] = nextView;
    
    [navigationScrollView scrollRectToVisible : navScrolls[1].frame animated : NO];
    self.navigationItem.title = [NSString stringWithFormat : @"%s", fileContainer->GetObject(currentObject)->GetName()];

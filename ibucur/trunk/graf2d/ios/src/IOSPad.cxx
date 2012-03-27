@@ -813,25 +813,6 @@ void Pad::PaintForSelection()
    fInSelectionMode = kFALSE;
 }
 
-
-
-//______________________________________________________________________________
-void Pad::PaintShadowForSelected() const
-{
-   fInHighlightMode = kTRUE;
-   
-   fPainter.SetPainterMode(Painter::kPaintShadow);
-
-   if (fParentOfSelected) {
-      fParentOfSelected->Paint(GetSelectedParentDrawOption());
-   } else if (fSelected) {
-      fSelected->Paint(GetSelectedDrawOption());
-   }
-
-   fPainter.SetPainterMode(Painter::kPaintToView);
-   fInHighlightMode = kFALSE;
-}
-
 //______________________________________________________________________________
 void Pad::PaintSelected() const
 {
@@ -2276,7 +2257,10 @@ void Pad::PaintThumbnail()
    cd();
 
    fPainter.SetPainterMode(Painter::kPaintThumbnail);
-   
+
+   gVirtualX->SetFillStyle(1001);
+   gVirtualX->SetFillColor(0);
+
    PaintBox(fX1,fY1,fX2,fY2);
    PaintBorder(GetFillColor(), kTRUE);
 

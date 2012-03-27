@@ -9,205 +9,159 @@
 #include "InputValidator.h"
 #include "cling/Interpreter/Interpreter.h"
 
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/Preprocessor.h"
 
-#include <cstdio>
+#include "llvm/Support/Path.h"
 
-//---------------------------------------------------------------------------
-// Construct an interface for an interpreter
-//---------------------------------------------------------------------------
-cling::MetaProcessor::MetaProcessor(Interpreter& interp):
-      m_Interp(interp)
-{
-  m_InputValidator.reset(new InputValidator());
-}
+using namespace clang;
 
+namespace cling {
 
-//---------------------------------------------------------------------------
-// Destruct the interface
-//---------------------------------------------------------------------------
-cling::MetaProcessor::~MetaProcessor()
-{
-}
+  MetaProcessor::MetaProcessor(Interpreter& interp) : m_Interp(interp) {
+    m_InputValidator.reset(new InputValidator());
+  }
 
-//---------------------------------------------------------------------------
-// Compile and execute some code or process some meta command.
-//
-// Return:
-//
-//            0: success
-// indent level: prompt for more input
-//
-//---------------------------------------------------------------------------
-int
-cling::MetaProcessor::process(const char* input_text)
-{
-   if (!input_text) { // null pointer, nothing to do.
+  MetaProcessor::~MetaProcessor() {}
+
+  int MetaProcessor::process(const char* input_text, Value* result /*=0*/) {
+    if (!input_text) { // null pointer, nothing to do.
       return 0;
-   }
-   if (!input_text[0]) { // empty string, nothing to do.
+    }
+    if (!input_text[0]) { // empty string, nothing to do.
       return m_InputValidator->getExpectedIndent();
-   }
-   std::string input_line(input_text);
-   if (input_line == "\n") { // just a blank line, nothing to do.
+    }
+    std::string input_line(input_text);
+    if (input_line == "\n") { // just a blank line, nothing to do.
       return 0;
-   }
-   //
-   //  Check for and handle any '.' commands.
-   //
-   bool was_meta = false;
-   if ((input_line[0] == '.') && (input_line.size() > 1)) {
-      was_meta = ProcessMeta(input_line);
-   }
-   if (was_meta) {
+    }
+    //  Check for and handle any '.' commands.
+    bool was_meta = false;
+    if ((input_line[0] == '.') && (input_line.size() > 1)) {
+      was_meta = ProcessMeta(input_line, result);
+    }
+    if (was_meta) {
       return 0;
-   }
-   //
-   // Check if the current statement is now complete.
-   // If not, return to prompt for more.
-   //
-   if (m_InputValidator->Validate(input_line, m_Interp.getCI()->getLangOpts()) 
-       == InputValidator::kIncomplete) {
-     return m_InputValidator->getExpectedIndent();
-   }
+    }
 
-   //
-   //  We have a complete statement, compile and execute it.
-   //
-   std::string input = m_InputValidator->TakeInput();
-   m_InputValidator->Reset();
-   m_Interp.processLine(input, m_Options.RawInput);
-   //
-   //  All done.
-   //
+    // Check if the current statement is now complete. If not, return to 
+    // prompt for more.
+    if (m_InputValidator->Validate(input_line, m_Interp.getCI()->getLangOpts()) 
+        == InputValidator::kIncomplete) {
+      return m_InputValidator->getExpectedIndent();
+    }
 
-   return 0;
-}
+    //  We have a complete statement, compile and execute it.
+    std::string input = m_InputValidator->TakeInput();
+    m_InputValidator->Reset();
+    m_Interp.processLine(input, m_Options.RawInput, result);
 
-cling::MetaProcessorOpts& 
-cling::MetaProcessor::getMetaProcessorOpts() {
-  // Take interpreter's state
-  m_Options.PrintingAST = m_Interp.isPrintingAST();
-  return m_Options; 
-}
+    return 0;
+  }
 
+  MetaProcessorOpts& MetaProcessor::getMetaProcessorOpts() {
+    // Take interpreter's state
+    m_Options.PrintingAST = m_Interp.isPrintingAST();
+    return m_Options; 
+  }
 
-//---------------------------------------------------------------------------
-// Process possible meta commands (.L,...)
-//---------------------------------------------------------------------------
-bool
-cling::MetaProcessor::ProcessMeta(const std::string& input_line)
-{
-   // The command is the char right after the initial '.' char.
-   // Return whether the meta command was known and thus handled.
+  bool MetaProcessor::ProcessMeta(const std::string& input_line, Value* result){
 
-   const char cmd_char = input_line[1];
+   llvm::MemoryBuffer* MB = llvm::MemoryBuffer::getMemBuffer(input_line);
+   const LangOptions& LO = m_Interp.getCI()->getLangOpts();
+   Lexer RawLexer(SourceLocation(), LO, MB->getBufferStart(),
+                  MB->getBufferStart(), MB->getBufferEnd());
+   Token Tok;
 
-   //  .q
-   //
-   //  Quit.
-   //
-   if (cmd_char == 'q') {
+   RawLexer.LexFromRawLexer(Tok);
+   if (Tok.isNot(tok::period))
+     return false;
+
+   // Read the command
+   RawLexer.LexFromRawLexer(Tok);
+   if (!Tok.isAnyIdentifier() && Tok.isNot(tok::at))
+     return false;
+
+   const std::string Command = GetRawTokenName(Tok);
+   std::string Param;
+
+   //  .q //Quits
+   if (Command == "q") {
       m_Options.Quitting = true;
       return true;
    }
+   //  .L <filename>   //  Load code fragment.
+   else if (Command == "L") {
+     // TODO: Additional checks on params
+     bool success = m_Interp.loadFile(ReadToEndOfBuffer(RawLexer, MB));
+     if (!success) {
+       llvm::errs() << "Load file failed.\n";
+     }
+     return true;
+   } 
+   //  .(x|X) <filename> //  Execute function from file, function name is 
+   //                    //  filename without extension.
+   else if ((Command == "x") || (Command == "X")) {
+     // TODO: Additional checks on params
+     llvm::sys::Path path(ReadToEndOfBuffer(RawLexer, MB));
+ 
+     if (!path.isValid())
+       return false;
 
-   //
-   //  Extract command and parameter:
-   //    .command parameter
-   //
-   std::string cmd = input_line.substr(1, std::string::npos);
-   std::string param;
-   std::string::size_type endcmd = input_line.find_first_of(" \t\n", 2);
-   if (endcmd != std::string::npos) { // have a blank after command
-      cmd = input_line.substr(1, endcmd - 1);
-
-      std::string::size_type firstparam = input_line.find_first_not_of(" \t\n", endcmd);
-      std::string::size_type lastparam = input_line.find_last_not_of(" \t\n");
-
-      if (firstparam != std::string::npos) { // have a parameter
-         //
-         //  Trim blanks from beginning and ending of parameter.
-         //
-         std::string::size_type len = (lastparam + 1) - firstparam;
-         // Construct our parameter.
-         param = input_line.substr(firstparam, len);
-      }
-   }
-
-   //
-   //  .L <filename>
-   //
-   //  Load code fragment.
-   //
-   if (cmd_char == 'L') {
-      //fprintf(stderr, "Begin load file '%s'.\n", param.c_str());
-      bool success = m_Interp.loadFile(param);
-      //fprintf(stderr, "End load file '%s'.\n", param.c_str());
+     bool success = executeFile(path.c_str(), result);
       if (!success) {
-         //fprintf(stderr, "Load file failed.\n");
+        llvm::errs()<< "Execute file failed.\n";
       }
       return true;
    }
-   //
-   //  .x <filename>
-   //  .X <filename>
-   //
-   //  Execute function from file, function name is filename
-   //  without extension.
-   //
-   if ((cmd_char == 'x') || (cmd_char == 'X')) {
-      bool success = m_Interp.executeFile(param);
-      if (!success) {
-         //fprintf(stderr, "Execute file failed.\n");
-      }
-      return true;
-   }
-   //
-   //  .printAST [0|1]
-   //
-   //  Toggle the printing of the AST or if 1 or 0 is given
-   //  enable or disable it.
-   //
-   if (cmd == "printAST") {
-      if (param.empty()) {
-        // toggle:
-        bool print = !m_Interp.isPrintingAST();
-        m_Interp.enablePrintAST(print);
-        printf("%srinting AST\n", print?"P":"Not p");
-      } else if (param == "1") {
-         m_Interp.enablePrintAST(true);
-      } else if (param == "0") {
+   //  .printAST [0|1]  // Toggle the printing of the AST or if 1 or 0 is given
+   //                   // enable or disable it.
+   else if (Command == "printAST") {
+     // Check for params
+     RawLexer.LexFromRawLexer(Tok);
+     if (Tok.isNot(tok::numeric_constant) && Tok.isNot(tok::eof))
+       return false;
+
+     if (Tok.is(tok::eof)) {
+       // toggle:
+       bool print = !m_Interp.isPrintingAST();
+       m_Interp.enablePrintAST(print);
+       llvm::errs()<< (print?"P":"Not p") << "rinting AST\n";
+     } else { 
+       Param = GetRawTokenName(Tok);
+
+       if (Param == "0") 
          m_Interp.enablePrintAST(false);
-      } else {
-         fprintf(stderr, ".printAST: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
-      }
+       else
+         m_Interp.enablePrintAST(true);
+     }
 
-      m_Options.PrintingAST = m_Interp.isPrintingAST();
-      return true;
+     m_Options.PrintingAST = m_Interp.isPrintingAST();
+     return true;
    }
+   //  .rawInput [0|1]  // Toggle the raw input or if 1 or 0 is given enable 
+   //                   // or disable it.
+   else if (Command == "rawInput") {
+     // Check for params
+     RawLexer.LexFromRawLexer(Tok);
+     if (Tok.isNot(tok::numeric_constant) && Tok.isNot(tok::eof))
+       return false;
 
-   //
-   //  .rawInput [0|1]
-   //
-   //  Toggle the raw input
-   //  or if 1 or 0 is given enable or disable it.
-   //
-   if (cmd == "rawInput") {
-      if (param.empty()) {
-        // toggle:
-        m_Options.RawInput = !m_Options.RawInput;
-        printf("%ssing raw input\n", m_Options.RawInput?"U":"Not u");
-      } else if (param == "1") {
-        m_Options.RawInput = true;
-      } else if (param == "0") {
-        m_Options.RawInput = false;
-      } else {
-         fprintf(stderr, ".rawInput: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
-      }
-      return true;
+     if (Tok.is(tok::eof)) {
+       // toggle:
+       m_Options.RawInput = !m_Options.RawInput;
+       llvm::errs() << (m_Options.RawInput?"U":"Not u") << "sing raw input\n";
+     } else { 
+       Param = GetRawTokenName(Tok);
+
+       if (Param == "0")
+         m_Options.RawInput = false;
+       else 
+         m_Options.RawInput = true;
+     }
+     return true;
    }
-
    //
    //  .U <filename>
    //
@@ -229,38 +183,136 @@ cling::MetaProcessor::ProcessMeta(const std::string& input_line)
    //  Unrecognized command.
    //
    //fprintf(stderr, "Unrecognized command.\n");
-   if (cmd_char == 'I') {
-     if (!param.empty())
-       m_Interp.AddIncludePath(param.c_str());
-     else {
+   else if (Command == "I") {
+     // Check for params
+     RawLexer.LexFromRawLexer(Tok);
+     
+     if (Tok.is(tok::eof))
        m_Interp.DumpIncludePath();
+     else {
+       // TODO: Additional checks on params
+       llvm::sys::Path path(ReadToEndOfBuffer(RawLexer, MB));
+       
+       if (path.isValid())
+         m_Interp.AddIncludePath(path.c_str());
+       else
+         return false;
      }
      return true;
    }
-
-   // Cancel the multiline input that has been requested
-   if (cmd_char == '@') {
+  // Cancel the multiline input that has been requested
+   else if (Command == "@") {
      m_InputValidator->Reset();
      return true;
    }
-
    // Enable/Disable DynamicExprTransformer
-   if (cmd == "dynamicExtensions") {
-     if (param.empty()) {
+   else if (Command == "dynamicExtensions") {
+     // Check for params
+     RawLexer.LexFromRawLexer(Tok);
+     if (Tok.isNot(tok::numeric_constant) && Tok.isNot(tok::eof))
+       return false;
+
+     if (Tok.is(tok::eof)) {
        // toggle:
        bool dynlookup = !m_Interp.isDynamicLookupEnabled();
        m_Interp.enableDynamicLookup(dynlookup);
-       printf("%ssing dynamic lookup extensions\n", dynlookup?"U":"Not u");
-     } else if (param == "1") {
-       m_Interp.enableDynamicLookup(true);
-     } else if (param == "0") {
-       m_Interp.enableDynamicLookup(false);
+       llvm::errs() << (dynlookup?"U":"Not u") <<"sing dynamic extensions\n";
      } else {
-       fprintf(stderr, ".dynamicExtensions: parameter must be '0' or '1' or nothing, not %s.\n", param.c_str());
+       Param = GetRawTokenName(Tok);
+
+       if (Param == "0")
+         m_Interp.enableDynamicLookup(false);
+       else 
+         m_Interp.enableDynamicLookup(true);
      }
+
+     return true;
+   }
+   // Print Help
+   else if (Command == "help") {
+     PrintCommandHelp();
      return true;
    }
 
    return false;
-}
+  }
+
+  std::string MetaProcessor::GetRawTokenName(const Token& Tok) {
+
+    assert(!Tok.needsCleaning() && "Not implemented yet");
+
+    switch (Tok.getKind()) {
+    default:
+      return "";
+    case tok::numeric_constant:
+      return Tok.getLiteralData();
+    case tok::raw_identifier:
+      return StringRef(Tok.getRawIdentifierData(), Tok.getLength()).str(); 
+    case tok::slash:
+      return "/";
+    }
+
+  }
+
+  llvm::StringRef MetaProcessor::ReadToEndOfBuffer(Lexer& RawLexer, 
+                                                   llvm::MemoryBuffer* MB) {
+    const char* CurPtr = RawLexer.getBufferLocation();
+    Token TmpTok;
+    RawLexer.getAndAdvanceChar(CurPtr, TmpTok);
+    return StringRef(CurPtr, MB->getBufferSize()-(CurPtr-MB->getBufferStart()));
+  }
+
+  void MetaProcessor::PrintCommandHelp() {
+    llvm::outs() << "Cling meta commands usage\n";
+    llvm::outs() << "Syntax: .Command [arg0 arg1 ... argN]\n";
+    llvm::outs() << "\n";
+    llvm::outs() << ".q\t\t\t\t - Exit the program\n";
+    llvm::outs() << ".L <filename>\t\t\t - Load file or library\n";
+    llvm::outs() << ".(x|X) <filename>[args]\t\t - Same as .L and runs a ";
+    llvm::outs() << "function with signature ret_type filename(args)\n";
+    llvm::outs() << ".I [path]\t\t\t - Shows the include path. If a path is ";
+    llvm::outs() << "given - adds the path to the list with the include paths\n";
+    llvm::outs() << ".@ \t\t\t\t - Cancels and ignores the multiline input\n";
+    llvm::outs() << ".rawInput [0|1]\t\t\t - Toggles the wrapping and printing ";
+    llvm::outs() << "the execution results of the input\n";
+    llvm::outs() << ".dynamicExtensions [0|1]\t - Toggles the use of the ";
+    llvm::outs() << "dynamic scopes and the late binding\n";
+    llvm::outs() << ".printAST [0|1]\t\t\t - Toggles the printing of input's ";
+    llvm::outs() << "corresponding AST nodes\n";
+    llvm::outs() << ".help\t\t\t\t - Shows this information\n";
+  }
+
+  // Run a file: .x file[(args)]
+  bool MetaProcessor::executeFile(const std::string& fileWithArgs, 
+                                  Value* result) {
+    // Look for start of parameters:
+
+    typedef std::pair<llvm::StringRef,llvm::StringRef> StringRefPair;
+
+    StringRefPair pairFileArgs = llvm::StringRef(fileWithArgs).split('(');
+    if (pairFileArgs.second.empty()) {
+      pairFileArgs.second = ")";
+    }
+    StringRefPair pairPathFile = pairFileArgs.first.rsplit('/');
+    if (pairPathFile.second.empty()) {
+       pairPathFile.second = pairPathFile.first;
+    }
+    StringRefPair pairFuncExt = pairPathFile.second.rsplit('.');
+
+    //fprintf(stderr, "funcname: %s\n", pairFuncExt.first.data());
+
+    Interpreter::CompilationResult interpRes
+       = m_Interp.processLine(std::string("#include \"")
+                              + pairFileArgs.first.str()
+                              + std::string("\""), true /*raw*/);
+    
+    if (interpRes != Interpreter::kFailure) {
+       std::string expression = pairFuncExt.first.str()
+          + "(" + pairFileArgs.second.str();
+       interpRes = m_Interp.processLine(expression, false /*not raw*/, result);
+    }
+    
+    return (interpRes != Interpreter::kFailure);   
+  }
+} // end namespace cling
 
