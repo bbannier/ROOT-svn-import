@@ -16,17 +16,12 @@
 #endif
 #include "RooRealVar.h"
 #include "RooDataSet.h"
-#include "RooGaussian.h"
 #include "TCanvas.h"
 #include "TMath.h"
 #include "RooPlot.h"
 #include "RooUnitTest.h"
 #include "RooStats/NumberCountingUtils.h"
 #include "RooStats/RooStatsUtils.h"
-
-
-// DEBUG
-#include "Math/MinimizerOptions.h"
 
 using namespace RooFit;
 using namespace RooStats;
@@ -161,7 +156,7 @@ class TestBasic103 : public RooUnitTest {
 public:
    TestBasic103(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue) : RooUnitTest(TString::Format("Profile Likelihood Calculator - Poisson - Observed value: %d", obsValue), refFile, writeRef, verbose), fObsValue(obsValue) {} ;
 
-   Bool_t testCode() {
+    Bool_t testCode() {
 
       TString lowerLimitString = TString::Format("rs103_lower_limit_mean_%d", fObsValue);
       TString upperLimitString = TString::Format("rs103_upper_limit_mean_%d", fObsValue);
@@ -171,7 +166,9 @@ public:
 
       // Create Poisson model and dataset
       RooWorkspace* w = new RooWorkspace("w", kTRUE);
-      w->factory("Poisson::poiss(x[1e-100,1000], mean[2,1e-100,1000])");
+      w->factory("Poisson::poiss(x[0,1000], mean[0,1000])"); 
+      // NOTE: true mean of Poisson distribution does not really matter in this case
+      //       LL ratio method result depends solely on the observed value
 
       RooRealVar *x = w->var("x");
       x->setVal(fObsValue);
@@ -183,6 +180,10 @@ public:
 
          // Solutions of equation -2*[ln(LL(xMin)) - ln(LL(x))] = 1, where xMin = obsValue for special case N = 1
          TString llRatioExpression = TString::Format("2*(x-%d*log(x)-%d+%d*log(%d))", fObsValue, fObsValue, fObsValue, fObsValue);
+         // Special case fObsValue = 0 because log(0) not computable, the limit of n * log(n), n->0 must be taken
+         if(fObsValue == 0) llRatioExpression = TString::Format("2*x");       
+
+
          TF1 *llRatio = new TF1("llRatio", llRatioExpression, 1e-100, fObsValue); // lowerLimit < obsValue
          Double_t lowerLimit = llRatio->GetX(1);
          llRatio->SetRange(fObsValue, 1000); // upperLimit > obsValue
@@ -227,13 +228,93 @@ private:
 
 } ;
 
+#include "RooGaussian.h"
+#include "RooPoisson.h" 
+#include "RooStats/BayesianCalculator.h"
 
 class TestBasic104 : public RooUnitTest {
 public:
-   TestBasic104(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("DUMMY", refFile, writeRef, verbose) {} ;
+   TestBasic104(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Bayesian Calculator - Poisson", refFile, writeRef, verbose) {} ;
+   
    Bool_t testCode() {
+
+      TString lowerLimitString = TString::Format("rs104_lower_limit_mean");
+      TString upperLimitString = TString::Format("rs104_upper_limit_mean");
+
+      // Put the significance level so that we obtain a 68% confidence interval corresponding to a standard deviation from the mean
+      const Double_t alpha = ROOT::Math::normal_cdf_c(1, 1) * 2; // significance level
+
+      // Create Poisson model and dataset
+      RooWorkspace* w = new RooWorkspace("w", kTRUE);
+      w->factory("Poisson::poiss(x[0,100], mean[0,100])");
+      w->factory("Uniform::prior(y[0,100])");
+
+      // NOTE: true mean of Poisson distribution does not really matter in this case
+      //       LL ratio method result depends solely on the observed value
+
+      RooPoisson *p = new RooPoisson();
+
+      RooRealVar *x = w->var("x");
+      x->setVal(3);
+      RooArgSet *argSet =  new RooArgSet(*x);
+      RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *argSet);
+      data->add(*argSet);
+
+      if (_write == kTRUE) {
+
+         // Solutions of equation -2*[ln(LL(xMin)) - ln(LL(x))] = 1, where xMin = obsValue for special case N = 1
+         //TString llRatioExpression = TString::Format("2*(x-%d*log(x)-%d+%d*log(%d))", fObsValue, fObsValue, fObsValue, fObsValue);
+         // Special case fObsValue = 0 because log(0) not computable, the limit of n * log(n), n->0 must be taken
+         //if(fObsValue == 0) llRatioExpression = TString::Format("2*x");       
+
+
+         //TF1 *llRatio = new TF1("llRatio", llRatioExpression, 1e-100, fObsValue); // lowerLimit < obsValue
+         Double_t lowerLimit = 0.0;
+         //llRatio->SetRange(fObsValue, 1000); // upperLimit > obsValue
+         Double_t upperLimit = 0.0;
+
+         // Compare the limits obtained via ProfileLikelihoodCalculator and LikelihoodInterval with Wolfram values
+         regValue(lowerLimit, lowerLimitString);
+         regValue(upperLimit, upperLimitString);
+
+         // Cleanup branch objects
+         //delete llRatio;
+
+      } else {
+
+         // Calculate likelihood interval using the ProfileLikelihoodCalculator and LikelihoodInterval objects
+         RooArgSet *params = new RooArgSet();
+         params->add(*w->var("mean"));
+         BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("prior"), NULL);
+         bc->SetConfidenceLevel(1 - alpha);
+         //SimpleInterval *interval = bc->GetInterval();
+         //RooAbsPdf *post = bc->GetPosteriorPdf();
+         //RooPlot *frame = w->var("x")->frame();
+         //w->pdf("poiss")->plotOn(frame);
+         //frame->Draw();
+      
+         delete post;
+
+
+         // Register externally computed limits in the reference file
+         //regValue(interval->LowerLimit(*w->var("mean")), lowerLimitString.Data());
+         //regValue(interval->UpperLimit(*w->var("mean")), upperLimitString.Data());
+
+         // Cleanup branch objects
+         delete params;
+         delete bc;
+         //delete interval;
+      }
+
+      // Cleanup function objects
+      delete argSet;
+      delete data;
+      delete w;
+
       return kTRUE ;
    }
+
+
 } ;
 
 

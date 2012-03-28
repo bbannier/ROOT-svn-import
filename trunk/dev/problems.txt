@@ -1,5 +1,6 @@
 1. ProfileLikelihoodCalculator Poisson -> lower limit goes to 0 when minValue for mean is 0 or very small
+   -> it seems there is a problem with the calculated error matrix -> gives wrong error for estimate
 2. RooUnitTest -> comparison error message is not suggestive; it tells us which values are different, not the names of the variables which have different values
-3. ProfileLikelihoodCalculator Poisson -> observed Value = 500 gives Minimization failure
-
+3. ProfileLikelihoodCalculator Poisson -> observed Value = 500 gives Minimization failure; This only happens when the true mean has small values
+4. BayesianCalculator -> priorPOI argument should be priorPdf IMO
 
