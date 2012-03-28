@@ -418,8 +418,7 @@ void TMVA::MethodBDT::ProcessOptions()
    }
    fAdaBoostR2Loss.ToLower();
    
-   if (fBoostType!="Grad") fBaggedGradBoost=kFALSE;
-   else {
+   if (fBoostType=="Grad") {
       fPruneMethod = DecisionTree::kNoPruning;
       if (fNegWeightTreatment=="InverseBoostNegWeights"){
          Log() << kWARNING << "the option *InverseBoostNegWeights* does not exist for BoostType=Grad --> change to *IgnoreNegWeights*" << Endl;
@@ -634,6 +633,7 @@ void TMVA::MethodBDT::InitEventSample( void )
       // some pre-processing for events with negative weights
       if (fPairNegWeightsGlobal) PreProcessNegativeEventWeights();
    }
+
 }
 
 void TMVA::MethodBDT::PreProcessNegativeEventWeights(){
@@ -949,6 +949,8 @@ void TMVA::MethodBDT::Train()
 
    if(fBoostType=="Grad"){
       InitGradBoost(fEventSample);
+   } else {
+      if (fBaggedGradBoost) GetRandomSubSample();
    }
 
    for (int itree=0; itree<fNTrees; itree++) {
@@ -1016,7 +1018,10 @@ void TMVA::MethodBDT::Train()
          }
          else {
             if(!fPruneBeforeBoost) { // only prune after boosting
-               fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
+               if(fBaggedGradBoost)
+                  fBoostWeights.push_back(this->Boost(fSubSample, fForest.back(), itree));
+               else
+                  fBoostWeights.push_back(this->Boost(fEventSample, fForest.back(), itree));
                // if fAutomatic == true, pruneStrength will be the optimal pruning strength
                // determined by the pruning algorithm; otherwise, it is simply the strength parameter
                // set by the user
@@ -1347,16 +1352,26 @@ void TMVA::MethodBDT::BoostMonitor(Int_t iTree)
    TH1F *tmpB = new TH1F( "tmpB", "",     100 , -1., 1.00001 );
    TH1F *tmp;
 
-   const std::vector<Event*> events=Data()->GetEventCollection(Types::kTesting);
+
    UInt_t signalClassNr = DataInfo().GetClassInfo("Signal")->GetNumber();
  
-   //   fMethod->GetTransformationHandler().CalcTransformations(fMethod->Data()->GetEventCollection(Types::kTesting));
-   for (UInt_t iev=0; iev < events.size() ; iev++){
-      if (events[iev]->GetClass() == signalClassNr) tmp=tmpS;
-      else                                          tmp=tmpB;
-      tmp->Fill(PrivateGetMvaValue(*(events[iev])),events[iev]->GetWeight());
-   }
+   // const std::vector<Event*> events=Data()->GetEventCollection(Types::kTesting);
+   // //   fMethod->GetTransformationHandler().CalcTransformations(fMethod->Data()->GetEventCollection(Types::kTesting));
+   // for (UInt_t iev=0; iev < events.size() ; iev++){
+   //    if (events[iev]->GetClass() == signalClassNr) tmp=tmpS;
+   //    else                                          tmp=tmpB;
+   //    tmp->Fill(PrivateGetMvaValue(*(events[iev])),events[iev]->GetWeight());
+   // }
    
+   UInt_t nevents = Data()->GetNTestEvents();
+   for (UInt_t iev=0; iev < nevents; iev++){
+      Event* event = new Event( *GetTestingEvent(iev) );
+
+      if (event->GetClass() == signalClassNr) tmp=tmpS;
+      else                                    tmp=tmpB;
+      tmp->Fill(PrivateGetMvaValue(*event),event->GetWeight());
+   }
+
    TMVA::PDF *sig = new TMVA::PDF( " PDF Sig", tmpS, TMVA::PDF::kSpline3 );
    TMVA::PDF *bkg = new TMVA::PDF( " PDF Bkg", tmpB, TMVA::PDF::kSpline3 );
    
@@ -1521,6 +1536,10 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
 
    fBoostWeight = boostWeight;
    fErrorFraction = err;
+
+   if (fBaggedGradBoost){
+      GetRandomSubSample();
+   }
 
    return TMath::Log(boostWeight);
 }
@@ -1805,6 +1824,7 @@ Double_t TMVA::MethodBDT::GetMvaValue( Double_t* err, Double_t* errUpper, UInt_t
    return ( norm > std::numeric_limits<double>::epsilon() ) ? myMVA /= norm : 0 ;
 }
 
+
 //_______________________________________________________________________
 const std::vector<Float_t>& TMVA::MethodBDT::GetMulticlassValues()
 {
@@ -1959,7 +1979,7 @@ vector< Double_t > TMVA::MethodBDT::GetVariableImportance()
    for (int itree = 0; itree < fNTrees; itree++) {
       vector<Double_t> relativeImportance(fForest[itree]->GetVariableImportance());
       for (UInt_t i=0; i< relativeImportance.size(); i++) {
-         fVariableImportance[i] += relativeImportance[i];
+         fVariableImportance[i] +=  fBoostWeights[itree] * relativeImportance[i];
       }
    }
    
