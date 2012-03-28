@@ -324,7 +324,7 @@ void TMVA::MethodFisher::GetMean( void )
       (*fMeanMatx)( ivar, 2 ) /= (fSumOfWeightsS + fSumOfWeightsB);
    }
 
-   fMeanMatx->Print();
+   //   fMeanMatx->Print();
    delete [] sumS;
    delete [] sumB;
 }
