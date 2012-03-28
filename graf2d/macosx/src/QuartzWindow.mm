@@ -293,6 +293,33 @@ void GetWindowAttributes(id<X11Drawable> window, WindowAttributes_t *dst)
    dst->fScreen = 0;
 }
 
+//With Apple's poor man's objective C/C++ + "brilliant" Cocoa you never know, what should be 
+//the linkage of callback functions, API + language dialects == MESS. I declare/define this comparators here
+//as having "C++" linkage. If one good day clang will start to complane, I'll have to change this.
+
+//______________________________________________________________________________
+NSComparisonResult CompareViewsToLower(id view1, id view2, void *context)
+{
+    id topView = (id)context;//ARC will require _brigde cast, but NO ARC! :)
+    if (view1 == topView)
+        return NSOrderedAscending;
+    if (view2 == topView)
+        return NSOrderedDescending;
+    return NSOrderedSame;
+}
+
+//______________________________________________________________________________
+NSComparisonResult CompareViewsToRaise(id view1, id view2, void *context)
+{
+   id topView = (id)context;
+   if (view1 == topView)
+      return NSOrderedDescending;
+   if (view2 == topView)
+      return NSOrderedAscending;
+
+   return NSOrderedSame;
+}
+
 }
 }
 }
@@ -301,6 +328,7 @@ void GetWindowAttributes(id<X11Drawable> window, WindowAttributes_t *dst)
 
 namespace {
 
+//______________________________________________________________________________
 void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    //This function is loggin requests, at the moment I can not set all
@@ -1040,43 +1068,40 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 //______________________________________________________________________________
 - (void) raiseWindow
 {
-   QuartzView *topView = (QuartzView *)[self retain];
-   QuartzView *superview = topView.fParentView;
-   
-   [topView removeFromSuperview];
-   
-   for (QuartzView *sibling in [superview subviews]) {
-      if (CGRectEqualToRect(sibling.frame, topView.frame))
+   using namespace ROOT::MacOSX::X11;//Comparators.
+
+   for (QuartzView *sibling in [fParentView subviews]) {
+      if (self == sibling)
+         continue;
+      //TODO: equal test is not good :) I have a baaad feeling about this ;)
+      if (CGRectEqualToRect(sibling.frame, self.frame))
          [sibling setOverlapped : YES];
    }
 
-   [topView setOverlapped : NO];   
-   [superview addSubview : topView positioned : NSWindowAbove relativeTo : nil];
-   [topView release];
-   //
-   [topView setNeedsDisplay : YES];//?
+   [self setOverlapped : NO];
+   [fParentView sortSubviewsUsingFunction : CompareViewsToRaise context : (void *)self];//ARC will complain, but ... NO ARC!!! :)))
+   [self setNeedsDisplay : YES];//?
 }
 
 //______________________________________________________________________________
 - (void) lowerWindow
 {
-   QuartzView *topView = (QuartzView *)[self retain];
-   QuartzView *superview = topView.fParentView;
-   
-   [topView removeFromSuperview];
-   
-   NSEnumerator *reverseEnumerator = [[superview subviews] reverseObjectEnumerator];
+   using namespace ROOT::MacOSX::X11;
+
+   NSEnumerator *reverseEnumerator = [[fParentView subviews] reverseObjectEnumerator];
    for (QuartzView *sibling in reverseEnumerator) {
-      if (CGRectEqualToRect(sibling.frame, topView.frame)) {
+      if (sibling == self)
+         continue;
+      //TODO: equal test is not good :) I have a baaad feeling about this ;)
+      if (CGRectEqualToRect(sibling.frame, self.frame)) {
          [sibling setOverlapped : NO];
          [sibling setNeedsDisplay : YES];
-         [topView setOverlapped : YES];
+         [self setOverlapped : YES];
          break;
       }
    }
    
-   [superview addSubview : topView positioned : NSWindowBelow relativeTo : nil];
-   [topView release];
+   [fParentView sortSubviewsUsingFunction : CompareViewsToLower context : (void*)self];//NO ARC! No __bridge!
 }
 
 //______________________________________________________________________________
