@@ -1796,6 +1796,8 @@ void TGCocoa::DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
    assert(ctx && "DrawRectangleAux, ctx is null");
    const Quartz::CGStateGuard ctxGuard(ctx);//Will restore context state.
 
+   CGContextSetAllowsAntialiasing(ctx, false);
+
    //Line color from X11 context.
    SetStrokeParametersFromX11Context(ctx, gcVals);
       
