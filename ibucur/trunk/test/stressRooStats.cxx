@@ -58,6 +58,7 @@ void StatusPrint(const Int_t id, const TString &title, const Int_t status, const
 //______________________________________________________________________________
 Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t oneTest, Bool_t dryRun, Bool_t doDump, Bool_t doTreeStore)
 {
+   // width of lines when printing test results
    const Int_t lineWidth = 80;
 
    // Save memory directory location
@@ -108,14 +109,16 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
    list<RooUnitTest*> testList ;
 //   testList.push_back(new TestBasic101(fref, writeRef, doVerbose));
 //   testList.push_back(new TestBasic102(fref, writeRef, doVerbose));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 2));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 10));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 20));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 50));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 0));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 1));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 2));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 10));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 20));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 50));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
    testList.push_back(new TestBasic104(fref, writeRef, doVerbose));
 //   testList.push_back(new TestBasic105(fref,writeRef,doVerbose));
 
