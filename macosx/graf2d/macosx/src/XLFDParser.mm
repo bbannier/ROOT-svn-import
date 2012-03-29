@@ -80,7 +80,16 @@ size_type ParseFoundry(const std::string &name, size_type pos, XLFDName &/*dst*/
 //______________________________________________________________________________
 size_type ParseFamilyName(const std::string &name, size_type pos, XLFDName &dst)
 {
-   return GetXLFDNameComponentAsString(name, "family name", pos, dst.fFamilyName);
+   const size_type tokenEnd = GetXLFDNameComponentAsString(name, "family name", pos, dst.fFamilyName);
+   
+   //This is a "special case": ROOT uses it's own symbol.ttf, but
+   //I can not use it to render text in a GUI, and also I can not use
+   //Apple's system symbol font - it can not encode all symbols GUI wants.
+   
+   if (dst.fFamilyName == "symbol") 
+      dst.fFamilyName = "helvetica";
+   
+   return tokenEnd;
 }
 
 
@@ -113,7 +122,7 @@ size_type ParseSlant(const std::string &name, size_type pos, XLFDName &dst)
       return pos;
    }
 
-   if (slant == "i" || slant == "I") {
+   if (slant == "i" || slant == "I" || slant == "o" || slant == "O") {
       dst.fSlant = FontSlant::italic;
       return pos;
    }
