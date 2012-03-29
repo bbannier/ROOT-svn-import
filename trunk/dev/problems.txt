@@ -3,4 +3,7 @@
 2. RooUnitTest -> comparison error message is not suggestive; it tells us which values are different, not the names of the variables which have different values
 3. ProfileLikelihoodCalculator Poisson -> observed Value = 500 gives Minimization failure; This only happens when the true mean has small values
 4. BayesianCalculator -> priorPOI argument should be priorPdf IMO
+5. getAnalyticalIntegrator -> not suggestive at all
+	analyticalIntegrator -> should be private
+
 
