@@ -194,7 +194,6 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
       char *fontFileName = gSystem->Which(fontDirectoryPath, "symbol.ttf", kReadPermission);//This must be deleted.
 
       try {
-      NSLog(@"Create symbol.ttf");
          const Util::CFScopeGuard<CFStringRef> path(CFStringCreateWithCString(kCFAllocatorDefault, fontFileName, kCFURLPOSIXPathStyle));
          if (!path.Get()) {
             ::Error("FontCache::SelectSymbolFont", "CFStringCreateWithCString failed");
