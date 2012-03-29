@@ -901,8 +901,15 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(QuartzView *eventView
    assert(eventView != nil && "GenerateButtonReleaseEventActiveGrab, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonReleaseEventActiveGrab, event parameter is nil");
 
-   if (!fCurrentGrabView)
+   if (!fCurrentGrabView) {
+      if (fPointerGrab == PointerGrab::passiveGrab || fPointerGrab == PointerGrab::implicitGrab) {
+         fCurrentGrabView = nil;
+         fPointerGrab = PointerGrab::noGrab;
+         GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
+      }
+
       return;
+   }
    
    if (fOwnerEvents) {//X11: Either XGrabPointer with owner_events == True or passive grab (owner_events is always true)
       SortTopLevelWindows();
