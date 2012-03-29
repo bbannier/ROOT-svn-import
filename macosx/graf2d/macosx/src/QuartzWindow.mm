@@ -1,10 +1,11 @@
 //Author: Timur Pocheptsov 16/02/2012
-
-#define DEBUG_ROOT_COCOA
+//#define DEBUG_ROOT_COCOA
 
 #ifdef DEBUG_ROOT_COCOA
 #import <iostream>
 #import <fstream>
+
+#import "TClass.h"
 #endif
 
 #import <cassert>
@@ -369,6 +370,25 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
       logfile<<"win "<<winID<<": Colormap\n";
    if (mask & kWACursor)
       logfile<<"win "<<winID<<": Cursor\n";
+}
+
+//______________________________________________________________________________
+void print_mask_info(ULong_t mask)
+{
+   if (mask & kButtonPressMask)
+      NSLog(@"button press mask");
+   if (mask & kButtonReleaseMask)
+      NSLog(@"button release mask");
+   if (mask & kExposureMask)
+      NSLog(@"exposure mask");
+   if (mask & kPointerMotionMask)
+      NSLog(@"pointer motion mask");
+   if (mask & kButtonMotionMask)
+      NSLog(@"button motion mask");
+   if (mask & kEnterWindowMask)
+      NSLog(@"enter notify mask");
+   if (mask & kLeaveWindowMask)
+      NSLog(@"leave notify mask");
 }
 
 }
@@ -1373,7 +1393,10 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 
          CGContextRestoreGState(fContext);         
          vx->CocoaDrawOFF();
-
+#ifdef DEBUG_ROOT_COCOA
+         CGContextSetRGBStrokeColor(fContext, 1., 0., 0., 1.);
+         CGContextStrokeRect(fContext, dirtyRect);
+#endif
          fContext = nullptr;
       } else {
          NSLog(@"QuartzView: -drawRect method, no window for id %u was found", fID);
@@ -1398,7 +1421,7 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    
    if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable) {
       TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-      assert(vx && "setFrameSize:, gVirtualX is either null or has type different from TGCocoa");
+      assert(vx != nullptr && "setFrameSize:, gVirtualX is either null or has type different from TGCocoa");
       vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
    }
 
@@ -1410,12 +1433,44 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
 {
    assert(fID != 0 && "mouseDown, fID is 0");
       
-   TGWindow *window = gClient->GetWindowById(fID);
-   assert(window != nullptr && "mouseDown, window was not found");
-
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx && "mouseDown, gVirtualX is either null or has type different from TGCocoa");
+   assert(vx != nullptr && "mouseDown, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);
+}
+
+#ifdef DEBUG_ROOT_COCOA
+//______________________________________________________________________________
+- (void) printViewInformation
+{
+   assert(fID != 0 && "printWindowInformation, fID is 0");
+   TGWindow *window = gClient->GetWindowById(fID);
+   assert(window != nullptr && "printWindowInformation, window not found");
+
+   NSLog(@"-----------------View %u info:---------------------", fID);
+   NSLog(@"ROOT's window class is %s", window->IsA()->GetName());
+   NSLog(@"event mask is:");
+   print_mask_info(fEventMask);
+   NSLog(@"grab mask is:");
+   print_mask_info(fGrabButtonEventMask);
+   NSLog(@"----------------End of view info------------------");
+}
+#endif
+
+//______________________________________________________________________________
+- (void) rightMouseDown : (NSEvent *) theEvent
+{
+   assert(fID != 0 && "rightMouseDown, fID is 0");
+
+   (void)theEvent;//TODO: delete.
+
+#ifdef DEBUG_ROOT_COCOA
+   [self printViewInformation];
+#endif
+   /*
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "rightMouseDown, gVirtualX is either null or has type different from TGCocoa");
+   vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton2);
+   */
 }
 
 //______________________________________________________________________________
@@ -1426,6 +1481,21 @@ void log_attributes(const SetWindowAttributes_t *attr, unsigned winID)
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx && "mouseUp, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton1);
+}
+
+//______________________________________________________________________________
+- (void) rightMouseUp : (NSEvent *) theEvent
+{
+
+   assert(fID != 0 && "rightMouseUp, fID is 0");
+   
+   (void)theEvent;//TODO: delete.
+
+   /*
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "rightMouseUp, gVirtualX is either null or has type different from TGCocoa");
+   vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton2);
+   */
 }
 
 //______________________________________________________________________________
