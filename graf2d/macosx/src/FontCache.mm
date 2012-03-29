@@ -49,22 +49,40 @@ FontCache::FontCache()
 //______________________________________________________________________________
 FontStruct_t FontCache::LoadFont(const X11::XLFDName &xlfd)
 {
+   using Util::CFScopeGuard;
    using Util::CFStrongReference;
-   //This code is just a sketch. I have to check later,
-   //how to correctly create font with attributes from xlfd,
-   //if matching between name from xlfd and MacOS X font is correct.
+   using X11::FontWeight;
+   using X11::FontSlant;
+   
+   const CFScopeGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman));
+   const CFStrongReference<CTFontRef> baseFont(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//false == do not retain
+   
+   if (!baseFont.Get()) {
+      ::Error("FontCache::LoadFont", "CTFontCreateWithName failed for %s", xlfd.fFamilyName.c_str());
+      return FontStruct_t();//Haha! Die ROOT, die!
+   }
+   
+   CTFontSymbolicTraits symbolicTraits = CTFontSymbolicTraits();
+   
+   if (xlfd.fWeight == FontWeight::bold)
+      symbolicTraits |= kCTFontBoldTrait;
+   if (xlfd.fSlant == FontSlant::italic)
+      symbolicTraits |= kCTFontItalicTrait;
+      
+   if (symbolicTraits) {
+      const CFStrongReference<CTFontRef> font(CTFontCreateCopyWithSymbolicTraits(baseFont.Get(), xlfd.fPixelSize, nullptr, symbolicTraits, symbolicTraits), false);//false == do not retain.
+      if (font.Get()) {
+         if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
+            fLoadedFonts[font.Get()] = font;
+      
+         return reinterpret_cast<FontStruct_t>(font.Get());
+      }
+   }
+      
+   if (fLoadedFonts.find(baseFont.Get()) == fLoadedFonts.end())
+      fLoadedFonts[baseFont.Get()] = baseFont;
 
-   //CF expects CFStringRef, not c-string.
-   //Instead of StrongReference, use ScopeGuard class.
-   CFStrongReference<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman), false);//false - no initial retain.
-   //TODO: pixelSize + 2 - this is just a temporary hack, because text in GUI is too tiny.
-   CFStrongReference<CTFontRef> font(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//0 is for CGAffineTransform, false - no initial retain.
-
-   //What if this font was "loaded" already?
-   if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
-      fLoadedFonts[font.Get()] = font;
-
-   return reinterpret_cast<FontStruct_t>(font.Get());
+   return reinterpret_cast<FontStruct_t>(baseFont.Get());   
 }
 
 

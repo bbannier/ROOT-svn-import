@@ -1360,7 +1360,6 @@ FontStruct_t TGCocoa::LoadQueryFont(const char *fontName)
 {
    //fontName is in XLFD format:
    //-foundry-family- ..... etc., some components can be omitted and replaced by *.
-
    ROOT::MacOSX::X11::XLFDName xlfd = {};
    if (ParseXLFDName(fontName, xlfd))
       return fPimpl->fFontManager.LoadFont(xlfd);
