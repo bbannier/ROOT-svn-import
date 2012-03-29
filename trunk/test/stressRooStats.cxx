@@ -42,7 +42,7 @@ using namespace RooFit ;
 //                                                                           //
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*_*//
 
-Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t oneTest, Bool_t dryRun) ;
+//Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t oneTest, Bool_t dryRun) ;
 
 
 //------------------------------------------------------------------------
@@ -112,14 +112,14 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 0));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 1));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 2));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
+   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 10));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 20));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 50));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
-   testList.push_back(new TestBasic104(fref, writeRef, doVerbose));
+   testList.push_back(new TestBasic104(fref, writeRef, doVerbose, 3));
 //   testList.push_back(new TestBasic105(fref,writeRef,doVerbose));
 
    cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;
@@ -139,7 +139,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
          }
          StatusPrint(i, (*iter)->GetName(), (*iter)->isTestAvailable() ? (*iter)->runTest() : -1, lineWidth);
       }
-      delete(*iter);
+      delete *iter;
       i++;
    }
 
@@ -207,7 +207,7 @@ int main(int argc, const char *argv[])
    Bool_t doWrite     = kFALSE ;
    Int_t doVerbose    = 0 ;
    Int_t oneTest      = -1 ;
-   Int_t dryRun       = kFALSE ;
+   Bool_t dryRun      = kFALSE ;
    Bool_t doDump      = kFALSE ;
    Bool_t doTreeStore = kFALSE ;
 
