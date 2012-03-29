@@ -775,6 +775,23 @@ void EventTranslator::CancelPointerGrab()
 }
 
 //______________________________________________________________________________
+void EventTranslator::CancelPointerGrab(Window_t winID)
+{
+   //In case we have active grab and winID is a grab view or a parent of grab view - 
+   //cancel grab.
+
+   if (!fCurrentGrabView)
+      return;
+      
+   for (QuartzView *view = fCurrentGrabView; view; view = view.fParentView) {
+      if (view.fID == winID) {
+         CancelPointerGrab();
+         break;
+      }
+   }
+}
+
+//______________________________________________________________________________
 void EventTranslator::GeneratePointerMotionEventNoGrab(QuartzView *eventView, NSEvent *theEvent)
 {
    //Without grab, things are simple: find a view which accepts pointer motion event.
