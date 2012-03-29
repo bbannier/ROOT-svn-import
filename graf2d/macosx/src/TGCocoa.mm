@@ -356,7 +356,7 @@ void TGCocoa::CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos)
    NSObject<X11Drawable> *window = fPimpl->GetDrawable(fSelectedDrawable);
    
    if (window.fBackBuffer) {
-      Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
+      const Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
       if (image.Get()) {
          CGContextRef dstCtx = window.fBackBuffer.fContext;
          assert(dstCtx != nullptr && "CopyPixmap, destination context is null");
@@ -642,6 +642,8 @@ void TGCocoa::ResizeWindow(Int_t wid)
    if (!wid)//From TGX11.
       return;
    
+   assert(wid != fPimpl->GetRootWindowID() && "ResizeWindow, called for root window");
+   
    NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
    if (window.fBackBuffer) {
       int currentDrawable = fSelectedDrawable;
@@ -837,7 +839,7 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
       
       if (dstView.fContext) {
          //We can draw directly.
-         Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
+         const Util::CFScopeGuard<CGImageRef> image([pixmap createImageFromPixmap]);
          if (image.Get()) {
             const CGRect imageRect = CGRectMake(0, 0, pixmap.fWidth, pixmap.fHeight);
             CGContextDrawImage(dstView.fContext, imageRect, image.Get());
