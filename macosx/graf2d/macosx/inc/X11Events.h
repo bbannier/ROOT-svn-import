@@ -56,6 +56,9 @@ public:
    
    void SetPointerGrab(QuartzView *grabView, unsigned eventMask, bool ownerEvents);
    void CancelPointerGrab();
+   
+   //Window winID was either deleted or unmapped.
+   void CancelPointerGrab(Window_t winID);
 
 private:
    bool HasPointerGrab()const;

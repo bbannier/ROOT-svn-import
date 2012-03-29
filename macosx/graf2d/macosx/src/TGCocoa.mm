@@ -939,6 +939,9 @@ void TGCocoa::UnmapWindow(Window_t wid)
    
    ROOT::MacOSX::Util::AutoreleasePool pool;//TODO
    
+   //If this window is a grab window or a parent of a grab window.
+   fPimpl->fX11EventTranslator.CancelPointerGrab(wid);
+   
    NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
    [window unmapWindow];
 }
@@ -958,7 +961,9 @@ void TGCocoa::DestroyWindow(Window_t wid)
 
    if (fPimpl->IsRootWindow(wid))
       return;
-      
+   
+   fPimpl->fX11EventTranslator.CancelPointerGrab(wid);
+   
    NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
    assert([drawable isKindOfClass : [QuartzWindow class]] || [drawable isKindOfClass : [QuartzView class]] && 
           "DestroyWindow, can be called only for QuartzWindow or QuartzView object");
