@@ -900,7 +900,6 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(QuartzView *eventView
 {
    assert(eventView != nil && "GenerateButtonReleaseEventActiveGrab, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonReleaseEventActiveGrab, event parameter is nil");
-   assert(fCurrentGrabView != nil && "GenerateButtonReleaseEventActiveGrab, current grab view is nil");//TODO:?
 
    if (!fCurrentGrabView)
       return;
