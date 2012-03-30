@@ -3036,9 +3036,15 @@ Int_t TGCocoa::SupportsExtension(const char *) const
 }
 
 //______________________________________________________________________________
-ROOT::MacOSX::X11::EventTranslator *TGCocoa::GetEventTranslator()
+ROOT::MacOSX::X11::EventTranslator *TGCocoa::GetEventTranslator()const
 {
    return &fPimpl->fX11EventTranslator;
+}
+
+//______________________________________________________________________________
+ROOT::MacOSX::X11::CommandBuffer *TGCocoa::GetCommandBuffer()const
+{
+   return &fPimpl->fX11CommandBuffer;
 }
 
 //______________________________________________________________________________

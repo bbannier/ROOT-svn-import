@@ -44,6 +44,7 @@ namespace MacOSX {
 
 namespace X11 {
 class EventTranslator;
+class CommandBuffer;
 }
 
 namespace Details {
@@ -304,7 +305,8 @@ public:
    virtual Bool_t       IsCmdThread() const { return kTRUE; }
    
    //Non virtual, non-overriding functions.
-   ROOT::MacOSX::X11::EventTranslator *GetEventTranslator();
+   ROOT::MacOSX::X11::EventTranslator *GetEventTranslator()const;
+   ROOT::MacOSX::X11::CommandBuffer *GetCommandBuffer()const;
    
    void CocoaDrawON();
    void CocoaDrawOFF();

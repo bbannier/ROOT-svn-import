@@ -44,8 +44,10 @@ public:
    virtual ~Command();
 
    virtual bool HasOperand(Drawable_t drawable)const;
+   virtual bool IsGraphicsCommand()const;//By-default - false.
 
    virtual void Execute()const = 0;
+
    
    Command(const Command &rhs) = delete;
    Command &operator = (const Command &rhs) = delete;
@@ -59,6 +61,10 @@ private:
 public:
    DrawLine(Drawable_t wid, const GCValues_t &gc, const Point_t &p1, const Point_t &p2);
    void Execute()const;
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
 };
 
 class ClearArea : public Command {
@@ -68,6 +74,10 @@ private:
 public:
    ClearArea(Window_t wid, const Rectangle_t &area);
    void Execute()const;
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
 };
 
 class CopyArea : public Command {
@@ -80,8 +90,13 @@ public:
    CopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc, const Rectangle_t &area, const Point_t &dstPoint);
 
    bool HasOperand(Drawable_t drawable)const;
-
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
+   
    void Execute()const;
+   
 };
 
 class DrawString : public Command {
@@ -91,6 +106,12 @@ private:
 
 public:
    DrawString(Drawable_t wid, const GCValues_t &gc, const Point_t &point, const std::string &text);
+   
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
+   
    void Execute()const;
 };
 
@@ -100,6 +121,12 @@ private:
 
 public:
    FillRectangle(Drawable_t wid, const GCValues_t &gc, const Rectangle_t &rectangle);
+   
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
+   
    void Execute()const;
 };
 
@@ -109,6 +136,12 @@ private:
 
 public:
    DrawRectangle(Drawable_t wid, const GCValues_t &gc, const Rectangle_t &rectangle);
+   
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
+   
    void Execute()const;
 };
 
@@ -118,6 +151,12 @@ private:
 
 public:
    UpdateWindow(QuartzView *view);
+   
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
+   
    void Execute()const;
 };
 
@@ -151,6 +190,7 @@ public:
 
    void Flush(Details::CocoaPrivate *impl);
    void RemoveOperationsForDrawable(Drawable_t wid);
+   void RemoveGraphicsOperationsForWindow(Window_t wid);
    
    size_type BufferSize()const
    {

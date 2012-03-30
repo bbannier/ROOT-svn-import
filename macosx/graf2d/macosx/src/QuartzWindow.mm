@@ -12,6 +12,7 @@
 
 #import "QuartzWindow.h"
 #import "QuartzPixmap.h"
+#import "X11Buffer.h"
 #import "X11Events.h"
 #import "TGWindow.h"
 #import "TGClient.h"
@@ -1379,6 +1380,7 @@ void print_mask_info(ULong_t mask)
             //Ask ROOT's widget/window to draw itself.
             gClient->NeedRedraw(window, kTRUE);
             gClient->CancelRedraw(window);
+            vx->GetCommandBuffer()->RemoveGraphicsOperationsForWindow(fID);
          }
 
          if (fBackBuffer) {
