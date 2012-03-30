@@ -69,9 +69,9 @@ void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVal
 
    const Mask_t mask = gcVals.fMask;
    
-   if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1)
+   if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1) {
       CGContextSetLineWidth(ctx, gcVals.fLineWidth);
-   else
+   } else
       CGContextSetLineWidth(ctx, 1.);
 
    CGFloat rgb[3] = {};
@@ -1749,7 +1749,6 @@ void TGCocoa::DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, In
    CGContextSetAllowsAntialiasing(ctx, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
 
    SetStrokeParametersFromX11Context(ctx, gcVals);
-   CGContextSetLineWidth(ctx, 1.);   
    CGContextBeginPath(ctx);
    CGContextMoveToPoint(ctx, x1, y1);
    CGContextAddLineToPoint(ctx, x2, y2);
