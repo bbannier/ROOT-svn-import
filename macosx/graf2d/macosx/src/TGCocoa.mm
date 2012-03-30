@@ -995,6 +995,10 @@ void TGCocoa::DestroySubwindows(Window_t wid)
 {
    // The DestroySubwindows function destroys all inferior windows of the
    // specified window, in bottom-to-top stacking order.
+   
+   if (!wid)//From TGX11.
+      return;
+   
    if (fPimpl->IsRootWindow(wid))
       return;
    
@@ -1016,6 +1020,10 @@ void TGCocoa::RaiseWindow(Window_t wid)
 {
    // Raises the specified window to the top of the stack so that no
    // sibling window obscures it.
+   
+   if (!wid)//From TGX11.
+      return;
+   
    assert(!fPimpl->IsRootWindow(wid) && "RaiseWindow, called for 'root' window");
    
    if (!fPimpl->GetDrawable(wid).fParentView)
@@ -1029,6 +1037,10 @@ void TGCocoa::LowerWindow(Window_t wid)
 {
    // Lowers the specified window "wid" to the bottom of the stack so
    // that it does not obscure any sibling windows.
+   
+   if (!wid)//From TGX11.
+      return;
+   
    assert(!fPimpl->IsRootWindow(wid) && "LowerWindow, called for 'root' window");
    
    if (!fPimpl->GetDrawable(wid).fParentView)
@@ -1046,6 +1058,10 @@ void TGCocoa::MoveWindow(Window_t wid, Int_t x, Int_t y)
    //
    // x, y - coordinates, which define the new position of the window
    //        relative to its parent.
+   
+   if (!wid)//From TGX11.
+      return;
+   
    assert(!fPimpl->IsRootWindow(wid) && "MoveWindow, called for 'root' window");
    
    [fPimpl->GetDrawable(wid) setX : x Y : y];
@@ -1086,9 +1102,11 @@ void TGCocoa::ResizeWindow(Window_t wid, UInt_t w, UInt_t h)
 }
 
 //______________________________________________________________________________
-void TGCocoa::IconifyWindow(Window_t /*wid*/)
+void TGCocoa::IconifyWindow(Window_t wid)
 {
    // Iconifies the window "wid".
+   if (!wid)
+      return;
 }
 //______________________________________________________________________________
 Bool_t TGCocoa::NeedRedraw(ULong_t /*tgwindow*/, Bool_t /*force*/)
@@ -1180,6 +1198,9 @@ void TGCocoa::ReparentWindow(Window_t wid, Window_t pid, Int_t x, Int_t y)
    // parent. The window is placed in the stacking order on top with respect
    // to sibling windows.
    
+   if (!wid)//From TGX11.
+      return;
+   
    assert(!fPimpl->IsRootWindow(wid) && "ReparentWindow, can not re-parent 'root' window");
 
    QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
@@ -1195,6 +1216,9 @@ void TGCocoa::ReparentWindow(Window_t wid, Window_t pid, Int_t x, Int_t y)
 //______________________________________________________________________________
 void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
 {
+   if (!wid)//From TGX11.
+      return;
+
    assert(!fPimpl->IsRootWindow(wid) && "SetWindowBackground, can not set color for 'root' window");
 
    NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
@@ -1202,10 +1226,12 @@ void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetWindowBackgroundPixmap(Window_t /*wid*/, Pixmap_t /*pxm*/)
+void TGCocoa::SetWindowBackgroundPixmap(Window_t wid, Pixmap_t /*pxm*/)
 {
    // Sets the background pixmap of the window "wid" to the specified
    // pixmap "pxm".
+   if (!wid)//From TGX11.
+      return;
 }
 
 //______________________________________________________________________________

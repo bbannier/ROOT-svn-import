@@ -1,3 +1,9 @@
+#define DEBUG_ROOT_COCOA
+
+#ifdef DEBUG_ROOT_COCOA
+#include <algorithm>
+#endif
+
 #include <stdexcept>
 #include <cassert>
 
@@ -63,6 +69,18 @@ unsigned CocoaPrivate::RegisterDrawable(NSObject *nsObj)
 NSObject<X11Drawable> *CocoaPrivate::GetDrawable(unsigned drawableID)const
 {
    auto drawableIter = fDrawables.find(drawableID);
+#ifdef DEBUG_ROOT_COCOA
+   if (drawableIter == fDrawables.end()) {
+      NSLog(@"Fatal error: requested non-existing drawable %u", drawableID);
+      //We do not care about efficiency, ROOT's gonna die on assert :)
+      auto deletedDrawable = std::find(fFreeDrawableIDs.begin(), fFreeDrawableIDs.end(), drawableID);
+      if (deletedDrawable != fFreeDrawableIDs.end()) {
+         NSLog(@"This drawable was deleted already");
+      } else {
+         NSLog(@"This drawable not found among allocated/deleted drawables");
+      }
+   }
+#endif
    assert(drawableIter != fDrawables.end() && "GetDrawable, non-existing drawable requested");
    return drawableIter->second.Get();
 }
