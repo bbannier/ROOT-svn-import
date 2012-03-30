@@ -958,6 +958,11 @@ void TGCocoa::DestroyWindow(Window_t wid)
    //among siblings and across subhierarchies is not otherwise constrained.  
    //If the window you specified is a root window, no windows are destroyed. Destroying a mapped window 
    //will generate Expose events on other windows that were obscured by the window being destroyed. 
+   
+   //I have NO idea why ROOT's GUI calls DestroyWindow with illegal
+   //window id, but it does.
+   if (!wid)
+      return;
 
    if (fPimpl->IsRootWindow(wid))
       return;
