@@ -9,6 +9,7 @@
 #include "X11Events.h"
 #include "TGClient.h"
 #include "TGWindow.h"
+#include "TList.h"
 
 namespace ROOT {
 namespace MacOSX {
@@ -216,6 +217,89 @@ QuartzView *FindViewToPropagateEvent(QuartzView *viewFrom, Mask_t checkMask, Qua
 //Aux. 'low-level' functions to generate events and call HandleEvent for a root window.
 
 //______________________________________________________________________________
+bool IsMaskedEvent(EGEventType type)
+{
+   return type == kButtonPress || type == kButtonRelease || type == kGKeyPress || type == kKeyRelease ||
+          type == kEnterNotify || type == kLeaveNotify || type == kMotionNotify;
+}
+
+//______________________________________________________________________________
+void SendEventWithFilter(TGWindow *window, Event_t &event)
+{
+   assert(window != nullptr && "SendEventWithFilter, window parameter is null");
+
+   //This code is taken from TGClient class, it's a ROOT's way
+   //to implement modal loop: gClient enters a nested loop and waits
+   //for UnmapNotify or DestroyNotify on a special window to
+   //exist this loop. During modal loop, gClient also "filters"
+   //events - only events for registered pop-ups or "waitforwindow"
+   //are handled.
+
+
+   //Comment from TGClient:
+   //Handle masked events only if window wid is the window for which the
+   //event was reported or if wid is a parent of the event window. The not
+   //masked event are handled directly. The masked events are:
+   //kButtonPress, kButtonRelease, kKeyPress, kKeyRelease, kEnterNotify,
+   //kLeaveNotify, kMotionNotify.
+
+   //From TGClient.
+   //Emit signal for event recorder(s)
+   if (event.fType != kConfigureNotify) {
+      //gClient->ProcessedEvent(&event, window->GetId());
+   }
+
+   //This loop is from TGClient. Why window without parent can not handle event
+   //(and be "waitforwindow" - I do not know).
+   const bool maskedEvent = IsMaskedEvent(event.fType);
+   
+   for (TGWindow *ptr = window; ptr->GetParent() != 0; ptr = (TGWindow *) ptr->GetParent()) {
+      if (ptr->GetId() == gClient->GetWaitForWindow() || !maskedEvent) {
+         window->HandleEvent(&event);
+         //Actually, this can never happen now, but may change in future, so I have this check here.
+         if (event.fType == gClient->GetWaitForEvent() && event.fWindow == gClient->GetWaitForWindow())
+            gClient->SetWaitForWindow(kNone);
+
+         return;
+      }
+   }
+
+   //This is the second loop (with nested loop) from TGClient.
+   //check if this is a popup menu
+   if (TList *lst = gClient->GetListOfPopups()) {
+      TIter next(lst);
+   
+      while (TGWindow *popup = (TGWindow *)next()) {
+         for (TGWindow *ptr = window; ptr->GetParent() != 0; ptr = (TGWindow *) ptr->GetParent()) {
+            if (ptr->GetId() == popup->GetId() && maskedEvent) {
+               window->HandleEvent(&event);
+               
+               //Actually, this can never happen now, but may change in future, so I have this check here.
+               if (event.fType == gClient->GetWaitForEvent() && event.fWindow == gClient->GetWaitForWindow())
+                  gClient->SetWaitForWindow(kNone);
+               
+               return;
+            }
+         }
+      }   
+   }
+}
+
+//______________________________________________________________________________
+void SendEvent(TGWindow *window, Event_t &event)
+{
+   //Event parameter is non-const, it can go to gClient->ProcessedEvent, which
+   //accepts non-const.
+
+   assert(window != nullptr && "SendEvent, window parameter is null");
+
+   if (gClient->GetWaitForWindow() == kNone)
+      window->HandleEvent(&event);
+   else
+      SendEventWithFilter(window, event);
+}
+
+//______________________________________________________________________________
 void SendEnterEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
 {
    //1. Parameters are valid.
@@ -242,7 +326,8 @@ void SendEnterEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
    
 
    //Dispatch:
-   window->HandleEvent(&enterEvent);
+//   window->HandleEvent(&enterEvent);
+   SendEvent(window, enterEvent);
 }
 
 //______________________________________________________________________________
@@ -268,7 +353,8 @@ void SendLeaveEvent(QuartzView *view, NSEvent *theEvent, EXMagic detail)
    //the view.
    ConvertEventLocationToROOTXY(theEvent, view, &leaveEvent);
    //Dispatch:
-   window->HandleEvent(&leaveEvent);
+//   window->HandleEvent(&leaveEvent);
+   SendEvent(window, leaveEvent);
 }
 
 //______________________________________________________________________________
@@ -292,7 +378,8 @@ void SendPointerMotionEvent(QuartzView *view, NSEvent *theEvent)
    
    ConvertEventLocationToROOTXY(theEvent, view, &motionEvent);
    //Dispatch:
-   window->HandleEvent(&motionEvent);
+   //window->HandleEvent(&motionEvent);
+   SendEvent(window, motionEvent);
 }
 
 //______________________________________________________________________________
@@ -337,7 +424,8 @@ void SendButtonPressEvent(QuartzView *view, NSEvent *theEvent, EMouseButton btn)
    }
    
    //Dispatch:
-   window->HandleEvent(&pressEvent);
+//   window->HandleEvent(&pressEvent);
+   SendEvent(window, pressEvent);
 }
 
 //______________________________________________________________________________
@@ -361,8 +449,9 @@ void SendButtonReleaseEvent(QuartzView *view, NSEvent *theEvent, EMouseButton bt
    releaseEvent.fState = GetKeyboardModifiersFromCocoaEvent(theEvent);
    //
    ConvertEventLocationToROOTXY(theEvent, view, &releaseEvent);
-   //
-   window->HandleEvent(&releaseEvent);
+   //Dispatch:
+//   window->HandleEvent(&releaseEvent);
+   SendEvent(window, releaseEvent);
 }
 
 //Aux. functions to send events to view's branch.
@@ -713,10 +802,11 @@ void EventTranslator::GeneratePointerMotionEvent(QuartzView *eventView, NSEvent 
    assert(eventView != nil && "GeneratePointerMotionEvent, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEvent, event parameter is nil");
 
-   if (fPointerGrab == PointerGrab::noGrab)
+   if (fPointerGrab == PointerGrab::noGrab) {
       return GeneratePointerMotionEventNoGrab(eventView, theEvent);
-   else
+   } else {
       return GeneratePointerMotionEventActiveGrab(eventView, theEvent);
+   }
 }
 
 //______________________________________________________________________________
@@ -753,7 +843,7 @@ void EventTranslator::SetPointerGrab(QuartzView *grabView, unsigned eventMask, b
    //Now some magic to receive mouse move events even outside any window.
    if (eventMask & kPointerMotionMask)
       [[grabView window] setAcceptsMouseMovedEvents : YES];
-      
+   
    fCurrentGrabView = grabView;
    fPointerGrab = PointerGrab::activeGrab;
    fGrabEventMask = eventMask;
