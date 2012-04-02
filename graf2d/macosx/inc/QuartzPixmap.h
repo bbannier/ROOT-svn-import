@@ -48,9 +48,10 @@
 
 @property (nonatomic, assign) unsigned fID;
 @property (nonatomic, readonly) BOOL fIsPixmap;//???
+@property (nonatomic, readonly) BOOL fIsBitmap;
 
-- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data;
-- (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *)mask;
+- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *) data fromBitmap : (BOOL) isBitmap;
+- (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *) mask;
 
 - (void) dealloc;
 

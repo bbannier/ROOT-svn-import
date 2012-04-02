@@ -292,21 +292,24 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    
    CGImageRef fImage;
    unsigned char *fImageData;
+   
+   BOOL fIsBitmap;
 }
 
 @synthesize fID;
 
 //______________________________________________________________________________
-- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data
+- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data fromBitmap : (BOOL) isBitmap
 {
    //Two step initialization. If the second step (initWithW:....) fails, user must call release 
    //(after he checked the result of init call).
 
-   assert(width != 0 && "initWithW:H:data:, width parameter is 0");
-   assert(height != 0 && "initWithW:H:data:, height parameter is 0");
-   assert(data != nullptr && "initWithW:H:data:, data parameter is null");
+   assert(width != 0 && "initWithW:H:data:fromBitmap:, width parameter is 0");
+   assert(height != 0 && "initWithW:H:data:fromBitmap:, height parameter is 0");
+   assert(data != nullptr && "initWithW:H:data:fromBitmap:, data parameter is null");
 
    if (self = [super init]) {
+      fIsBitmap = isBitmap;
       const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
                                                                ROOT_QuartzImage_ReleaseBytePointer, 
                                                                ROOT_QuartzImage_GetBytesAtPosition, 0};

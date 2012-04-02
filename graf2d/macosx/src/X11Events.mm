@@ -405,7 +405,6 @@ void SendButtonPressEvent(QuartzView *view, NSEvent *theEvent, EMouseButton btn)
    //
    ConvertEventLocationToROOTXY(theEvent, view, &pressEvent);
    //
-   
    //
    //ROOT uses "subwindow" parameter for button press event also, for example,
    //scroll bar has several children windows - "buttons", they are not selecting

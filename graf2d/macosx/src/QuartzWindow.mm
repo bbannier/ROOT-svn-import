@@ -1463,16 +1463,13 @@ void print_mask_info(ULong_t mask)
 {
    assert(fID != 0 && "rightMouseDown, fID is 0");
 
-   (void)theEvent;//TODO: delete.
-
 #ifdef DEBUG_ROOT_COCOA
    [self printViewInformation];
 #endif
-   /*
+
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "rightMouseDown, gVirtualX is either null or has type different from TGCocoa");
-   vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton2);
-   */
+   vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton3);
 }
 
 //______________________________________________________________________________
@@ -1493,11 +1490,9 @@ void print_mask_info(ULong_t mask)
    
    (void)theEvent;//TODO: delete.
 
-   /*
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "rightMouseUp, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton2);
-   */
 }
 
 //______________________________________________________________________________
