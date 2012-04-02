@@ -944,6 +944,10 @@ void TGCocoa::UnmapWindow(Window_t wid)
    
    NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
    [window unmapWindow];
+   
+   //Interrupt modal loop (TGClient::WaitForUnmap).
+   if (gClient->GetWaitForEvent() == kUnmapNotify && gClient->GetWaitForWindow() == wid)
+      gClient->SetWaitForWindow(kNone);
 }
 
 //______________________________________________________________________________
@@ -986,6 +990,11 @@ void TGCocoa::DestroyWindow(Window_t wid)
    DestroySubwindows(wid);
    if (drawable.fEventMask & kStructureNotifyMask)
       fPimpl->fX11EventTranslator.GenerateDestroyNotify(wid);
+
+   //Interrupt modal loop (TGClient::WaitFor)
+   //TODO: can it be, that WaitFor is nested several times?
+   if (gClient->GetWaitForEvent() == kDestroyNotify && wid == gClient->GetWaitForWindow())
+      gClient->SetWaitForWindow(kNone);
 
    fPimpl->DeleteDrawable(wid);
 }
@@ -2233,6 +2242,7 @@ void TGCocoa::GrabPointer(Window_t wid, UInt_t eventMask, Window_t /*confine*/, 
    //Confine will never be used - no such feature on MacOSX and
    //I'm not going to emulate it..
    //This function also does ungrab.
+
    if (grab) {
       QuartzView *view = fPimpl->GetDrawable(wid).fContentView;
       assert(!fPimpl->IsRootWindow(wid) && "GrabPointer, called for 'root' window");

@@ -128,6 +128,7 @@ public:
    void         ResetWaitFor(TGWindow *w);
    EGEventType  GetWaitForEvent() const  { return fWaitForEvent;}
    Window_t     GetWaitForWindow() const { return fWaitForWindow; }
+   void         SetWaitForWindow(Window_t wid) {fWaitForWindow = wid;}
    Bool_t       ProcessEventsFor(TGWindow *w);
 
    Bool_t       HandleEvent(Event_t *event);
