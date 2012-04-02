@@ -427,7 +427,7 @@ void print_mask_info(ULong_t mask)
 
       [fContentView release];
       
-      if (attr)//TODO: what about deferCreation? at the moment, deferCreation is always 'NO'.
+      if (attr)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
    }
    
