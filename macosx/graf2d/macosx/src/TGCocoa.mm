@@ -58,6 +58,7 @@ void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
    rgb[2] = (pixelColor & 0xff) / 255.;
 }
 
+/*
 //______________________________________________________________________________
 void PixelToRGB(Pixel_t pixelColor, unsigned char *rgb)
 {
@@ -65,6 +66,7 @@ void PixelToRGB(Pixel_t pixelColor, unsigned char *rgb)
    rgb[1] = pixelColor >> 8 & 0xff;
    rgb[2] = pixelColor & 0xff;
 }
+*/
 
 //______________________________________________________________________________
 void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
@@ -204,7 +206,7 @@ QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t 
 
 //______________________________________________________________________________
 QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
-                                UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t *attr, UInt_t /*wtype*/)
+                            UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t *attr, UInt_t /*wtype*/)
 {
    NSRect viewRect = {};
    viewRect.origin.x = x;
@@ -732,7 +734,7 @@ void TGCocoa::SetDoubleBuffer(Int_t wid, Int_t mode)
    assert(wid > fPimpl->GetRootWindowID() && "SetDoubleBuffer called for 'root' window");
    
    if (wid == 999) {
-      NSLog(@"***** SET DOUBLE BUFFER FOR ALL WINDOWS *****");
+      Warning("SetDoubleBuffer", "called with 999 - is it a window or \"All windows\"");
    } else {
       fSelectedDrawable = wid;
       mode ? SetDoubleBufferON() : SetDoubleBufferOFF();
