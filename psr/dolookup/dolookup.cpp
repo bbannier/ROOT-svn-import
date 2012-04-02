@@ -1,3 +1,4 @@
+// vim: ts=2 sw=2 foldmethod=indent
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
@@ -18,6 +19,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/ASTConsumers.h"
@@ -35,7 +37,9 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/ParsedTemplate.h"
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/PrintModulePass.h"
@@ -61,6 +65,15 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace clang {
+clang::ImplicitConversionSequence
+TryCopyInitialization(clang::Sema& S, clang::Expr* From, clang::QualType ToType,
+                      bool SuppressUserConversions,
+                      bool InOverloadResolution,
+                      bool AllowObjCWritebackConversion,
+                      bool AllowExplicit = false);
+}
 
 // Function Table
 void init(const char* llvmdir);
@@ -194,6 +207,40 @@ getCI()
   return m_CI;
 }
 
+bool FuncArgTypesMatch(std::vector<clang::QualType>& GivenArgTypes,
+  const clang::FunctionProtoType* FPT)
+{
+  clang::FunctionProtoType::arg_type_iterator ATI = FPT->arg_type_begin();
+  clang::FunctionProtoType::arg_type_iterator E = FPT->arg_type_end();
+  std::vector<clang::QualType>::iterator GAI = GivenArgTypes.begin();
+  for (; ATI && (ATI != E); ++ATI, ++GAI) {
+    if (!getCI()->getASTContext().hasSameType(*ATI, *GAI)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool IsOverload(std::vector<clang::QualType>& GivenArgTypes,
+  clang::FunctionDecl* FD, bool UseUsingDeclRules)
+{
+  clang::FunctionTemplateDecl* FTD = FD->getDescribedFunctionTemplate();
+  clang::QualType FQT =
+    getCI()->getASTContext().getCanonicalType(FD->getType());
+  if (llvm::isa<clang::FunctionNoProtoType>(FQT.getTypePtr())) {
+    // A K&R-style function (no prototype), is considered to match the args.
+    return false;
+  }
+  const clang::FunctionProtoType* FPT =
+    llvm::cast<clang::FunctionProtoType>(FQT);
+  if (
+    (GivenArgTypes.size() != FPT->getNumArgs()) ||
+    /*(GivenArgsAreEllipsis != FPT->isVariadic()) ||*/
+    !FuncArgTypesMatch(GivenArgTypes, FPT)) {
+    return true;
+  }
+}
+
 int main(int argc, char** argv)
 {
   init(llvm_install_dir);
@@ -202,34 +249,38 @@ int main(int argc, char** argv)
   if (!CI) {
     return 0;
   }
-  CI->createPreprocessor();
-  clang::Preprocessor& PP = CI->getPreprocessor();
-  CI->getDiagnosticClient().BeginSourceFile(CI->getLangOpts(), &PP);
+  clang::Parser* P = 0;
+  // Begin per-file stuff.
+  //
+  //  Setup to parse the argument list.
+  //
+  if (!CI->hasPreprocessor()) {
+    CI->createPreprocessor();
+  }
+  CI->getDiagnosticClient().BeginSourceFile(
+    CI->getLangOpts(), &CI->getPreprocessor());
   CI->createASTContext();
-  //CI->getASTContext().setASTMutationListern(Consumer.GetASTMutationListener();
   CI->setASTConsumer(new clang::ASTConsumer());
-  clang::ASTConsumer& Consumer = CI->getASTConsumer();
-  //PP.getBuiltinInfo().InitializeBuiltins(PP.getIdentifierTable(),
-  //  PP.getLangOptions());
-  CI->createPCHExternalASTSource("test1.pch", true, false, 0);
-  llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(argv[1],
-    "lookup.name.file");
-  const clang::FileEntry* File = CI->getFileManager().getVirtualFile(
-    SB->getBufferIdentifier(), SB->getBufferSize(), 0);
-  CI->getSourceManager().createMainFileID(File);
-  CI->getSourceManager().overrideFileContents(File, SB);
+  CI->createPCHExternalASTSource("it3.h.pch", true, false, false, 0);
+  {
+    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(argv[4],
+                             "lookup.arg.types");
+    const clang::FileEntry* File = CI->getFileManager().getVirtualFile(
+                                     SB->getBufferIdentifier(), SB->getBufferSize(), 0);
+    CI->getSourceManager().createMainFileID(File);
+    CI->getSourceManager().overrideFileContents(File, SB);
+  }
   if (!CI->hasSema()) {
     CI->createSema(clang::TU_Complete, 0);
   }
-  clang::Sema& Sema = CI->getSema();
-  clang::Parser* P = new clang::Parser(PP, Sema);
-  PP.EnterMainSourceFile();
+  P = new clang::Parser(CI->getPreprocessor(), CI->getSema());
+  CI->getPreprocessor().EnterMainSourceFile();
   P->Initialize();
-  Sema.Initialize();
-  clang::Scope* TUScope = Sema.getCurScope();
+  CI->getSema().Initialize();
+  clang::Scope* TUScope = CI->getSema().getCurScope();
   if (clang::ExternalASTSource*
-    External = Sema.getASTContext().getExternalSource()) {
-    External->StartTranslationUnit(&Consumer);
+      External = CI->getSema().getASTContext().getExternalSource()) {
+    External->StartTranslationUnit(&CI->getASTConsumer());
   }
   clang::TranslationUnitDecl* TU =
     CI->getASTContext().getTranslationUnitDecl();
@@ -241,109 +292,309 @@ int main(int argc, char** argv)
     );
     return 0;
   }
-  //TU->dump();
   //
-  //  Do parse of nested-name-specifier.
+  //  Parse the arguments now.
   //
-  clang::CXXScopeSpec SS;
+  std::vector<clang::QualType> GivenArgTypes;
+  std::vector<clang::Expr*> GivenArgs;
   {
-    clang::ParsedType ObjectType;
-    bool EnteringContext = false;
-    bool MayBePseudoDestructor = false;
-    bool IsTypename = false;
-    if (P->ParseOptionalCXXScopeSpecifier(SS, ObjectType, EnteringContext,
-      &MayBePseudoDestructor, IsTypename)) {
+    clang::PrintingPolicy Policy(CI->getASTContext().getPrintingPolicy());
+    Policy.SuppressTagKeyword = true;
+    Policy.SuppressUnwrittenScope = true;
+    Policy.SuppressInitializers = true;
+    Policy.AnonymousTagLocations = false;
+    std::string proto;
+    {
+      bool first_time = true;
+      while (P->getCurToken().isNot(clang::tok::eof)) {
+        clang::TypeResult Res(P->ParseTypeName());
+        if (Res.isUsable()) {
+          clang::QualType QT(Res.get().get());
+          GivenArgTypes.push_back(QT.getCanonicalType());
+          {
+            clang::Expr* val = new(CI->getSema().getASTContext())
+            clang::OpaqueValueExpr(clang::SourceLocation(),
+                                   QT.getCanonicalType(),
+                                   clang::Expr::getValueKindForType(QT));
+            GivenArgs.push_back(val);
+          }
+          if (first_time) {
+            first_time = false;
+          }
+          else {
+            proto += ',';
+          }
+          proto += QT.getCanonicalType().getAsString(Policy);
+          fprintf(stderr, "%s\n", proto.c_str());
+        }
+        if (!P->getCurToken().is(clang::tok::comma)) {
+          break;
+        }
+        P->ConsumeToken();
+      }
+    }
+  }
+  //
+  //  Setup to parse the scope.
+  //
+  {
+    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(argv[1],
+                             "lookup.name.file");
+    clang::FileID FID = CI->getSourceManager().createFileIDForMemBuffer(SB);
+    CI->getPreprocessor().EnterSourceFile(FID, 0, clang::SourceLocation());
+    CI->getPreprocessor().Lex(const_cast<clang::Token&>(P->getCurToken()));
+  }
+  //
+  //  Parse the class name and lookup the decl.
+  clang::Decl* ClassDecl = 0;
+  {
+    //
+    //  Do parse of nested-name-specifier.
+    //
+    clang::CXXScopeSpec SS;
+    {
+      clang::ParsedType ObjectType;
+      bool EnteringContext = false;
+      bool MayBePseudoDestructor = false;
+      if (P->ParseOptionalCXXScopeSpecifier(SS, ObjectType,
+        /*EnteringContext*/false, &MayBePseudoDestructor)) {
+        // error path
+        cleanup();
+        return 0;
+      }
+    }
+    clang::DeclarationName Name(&CI->getPreprocessor().
+      getIdentifierTable().get(argv[2]));
+    clang::LookupResult Result(CI->getSema(), Name, clang::SourceLocation(),
+      clang::Sema::LookupTagName, clang::Sema::ForRedeclaration);
+    Result.setHideTags(false);
+    if (!CI->getSema().LookupParsedName(Result, TUScope, &SS)) {
       // error path
       cleanup();
       return 0;
     }
+    switch (Result.getResultKind()) {
+      case clang::LookupResult::NotFound:
+        // error path
+        cleanup();
+        return 0;
+        break;
+      case clang::LookupResult::NotFoundInCurrentInstantiation:
+        // error path
+        cleanup();
+        return 0;
+        break;
+      case clang::LookupResult::Found:
+        {
+          ClassDecl = Result.getFoundDecl();
+          clang::NamedDecl* ND = Result.getFoundDecl();
+          std::string buf;
+          clang::PrintingPolicy P(ND->getASTContext().getPrintingPolicy());
+          ND->getNameForDiagnostic(buf, P, true);
+          fprintf(stderr, "%s\n", buf.c_str());
+        }
+        break;
+      case clang::LookupResult::FoundOverloaded:
+        // error path
+        cleanup();
+        return 0;
+        break;
+      case clang::LookupResult::FoundUnresolvedValue:
+        // error path
+        cleanup();
+        return 0;
+        break;
+      case clang::LookupResult::Ambiguous:
+        // error path
+        cleanup();
+        return 0;
+        switch (Result.getAmbiguityKind()) {
+          case clang::LookupResult::AmbiguousBaseSubobjectTypes:
+            // error path
+            cleanup();
+            return 0;
+            break;
+          case clang::LookupResult::AmbiguousBaseSubobjects:
+            // error path
+            cleanup();
+            return 0;
+            break;
+          case clang::LookupResult::AmbiguousReference:
+            // error path
+            cleanup();
+            return 0;
+            break;
+          case clang::LookupResult::AmbiguousTagHiding:
+            // error path
+            cleanup();
+            return 0;
+            break;
+        }
+        break;
+    }
   }
-  // Identifier, Namespace, NamespaceAlias, TypeSpec, TypeSpecWithTemplate,
-  // Global
-  if (SS.getScopeRep()->getKind() == clang::NestedNameSpecifier::TypeSpec) {
-    const clang::Type* Ty = SS.getScopeRep()->getAsType();
-  }
-  //
-  //  Do lookup of last id in nest-name-specifier.
-  //
-  //clang::IdentifierTable& IT = PP.getIdentifierTable();
-  //clang::IdentifierInfo& II = IT.get(argv[2]);
-  //clang::DeclarationName Name(&II);
-  clang::DeclarationName Name(&PP.getIdentifierTable().get(argv[2]));
-  //clang::SourceLocation Loc;
-  //clang::Sema::LookupNameKind NameKind(clang::Sema::LookupTagName);
-  //clang::Sema::RedeclarationKind Redecl(clang::Sema::ForRedeclaration);
-  //clang::LookupResult Result(Sema, Name, Loc, NameKind, Redecl);
-  clang::LookupResult Result(Sema, Name, clang::SourceLocation(),
-    clang::Sema::LookupTagName, clang::Sema::ForRedeclaration);
-  Result.setHideTags(false);
-//#if 0
-  if (!Sema.LookupParsedName(Result, TUScope, &SS, false, false)) {
-    // error path
-    cleanup();
-    return 0;
-  }
-//#endif // 0
 #if 0
+  //
+  //  Setup to parse the function name.
+  //
   {
-    clang::DeclContext* DC = 0;
-    if (!SS.isSet()) {
-      DC = llvm::dyn_cast<clang::DeclContext>(TU);
-    }
-    else {
-      DC = Sema.computeDeclContext(SS, false);
-      if (!DC) {
-        // error path
-        // SS refers to an unknown specialization
-        Result.setNotFoundInCurrentInstantiation();
-        Result.setContextRange(SS.getRange());
-        cleanup();
-        return 0;
-      }
-      if (!DC->isDependentContext() &&
-        Sema.RequireCompleteDeclContext(SS, DC)) {
-        // error path
-        cleanup();
-        return 0;
-      }
-      Result.setContextRange(SS.getRange());
-    }
-    Sema.LookupQualifiedName(Result, DC, false);
+    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(argv[3],
+                             "lookup.name.file");
+    clang::FileID FID = CI->getSourceManager().createFileIDForMemBuffer(SB);
+    CI->getPreprocessor().EnterSourceFile(FID, 0, clang::SourceLocation());
+    CI->getPreprocessor().Lex(const_cast<clang::Token&>(P->getCurToken()));
   }
 #endif // 0
   //
-  //  Print result.
+  //  Parse the function name and do overload resolution.
   //
-  switch (Result.getResultKind()) {
-    case clang::LookupResult::NotFound:
-      break;
-    case clang::LookupResult::NotFoundInCurrentInstantiation:
-      break;
-    case clang::LookupResult::Found:
-      {
-        clang::NamedDecl* ND = Result.getFoundDecl();
-        std::string buf;
-        clang::PrintingPolicy P(ND->getASTContext().getPrintingPolicy());
-        ND->getNameForDiagnostic(buf, P, true);
-        fprintf(stderr, "%s\n", buf.c_str());
+  {
+    //clang::CXXScopeSpec SS;
+    clang::DeclContext* DC = llvm::cast<clang::DeclContext>(ClassDecl);
+    if (DC->isDependentContext()) {
+      // error path
+      cleanup();
+      return 0;
+    }
+    //if (CI->getSema().RequireCompleteDeclContext(*SS, DC)) {
+    //  // error path
+    //  cleanup();
+    //  return 0;
+    //}
+    clang::DeclarationName FuncName(&CI->getPreprocessor().
+      getIdentifierTable().get(argv[3]));
+    clang::LookupResult Result(CI->getSema(), FuncName,
+      clang::SourceLocation(), clang::Sema::LookupMemberName,
+      clang::Sema::ForRedeclaration);
+    if (!CI->getSema().LookupQualifiedName(Result, DC)) {
+      // error path
+      cleanup();
+      return 0;
+    }
+    switch (Result.getResultKind()) {
+      case clang::LookupResult::NotFound:
+        // error path
+        cleanup();
+        return 0;
+        break;
+      case clang::LookupResult::NotFoundInCurrentInstantiation:
+        // error path
+        cleanup();
+        return 0;
+        break;
+      case clang::LookupResult::Found:
+        {
+          clang::NamedDecl* ND = Result.getFoundDecl();
+          std::string buf;
+          clang::PrintingPolicy P(ND->getASTContext().getPrintingPolicy());
+          ND->getNameForDiagnostic(buf, P, true);
+          fprintf(stderr, "Found: %s\n", buf.c_str());
+        }
+        break;
+      case clang::LookupResult::FoundOverloaded:
+        {
+          fprintf(stderr, "Found overload set!\n");
+        }
+        break;
+      case clang::LookupResult::FoundUnresolvedValue:
+        // error path
+        cleanup();
+        return 0;
+        break;
+      case clang::LookupResult::Ambiguous:
+        // error path
+        cleanup();
+        return 0;
+        switch (Result.getAmbiguityKind()) {
+          case clang::LookupResult::AmbiguousBaseSubobjectTypes:
+            // error path
+            cleanup();
+            return 0;
+            break;
+          case clang::LookupResult::AmbiguousBaseSubobjects:
+            // error path
+            cleanup();
+            return 0;
+            break;
+          case clang::LookupResult::AmbiguousReference:
+            // error path
+            cleanup();
+            return 0;
+            break;
+          case clang::LookupResult::AmbiguousTagHiding:
+            // error path
+            cleanup();
+            return 0;
+            break;
+        }
+        break;
+    }
+    clang::NamedDecl* Match = 0;
+    for (clang::LookupResult::iterator I = Result.begin(), E = Result.end();
+      I != E; ++I) {
+      clang::NamedDecl* ND = *I;
+      bool IsUsingDecl = false;
+      if (llvm::isa<clang::UsingShadowDecl>(ND)) {
+        IsUsingDecl = true;
+        ND = llvm::cast<clang::UsingShadowDecl>(ND)->getTargetDecl();
       }
-      break;
-    case clang::LookupResult::FoundOverloaded:
-      break;
-    case clang::LookupResult::FoundUnresolvedValue:
-      break;
-    case clang::LookupResult::Ambiguous:
-      switch (Result.getAmbiguityKind()) {
-        case clang::LookupResult::AmbiguousBaseSubobjectTypes:
+      // If found declaration was introduced by a using declaration,
+      // we'll need to use slightly different rules for matching.
+      // Essentially, these rules are the normal rules, except that
+      // function templates hide function templates with different
+      // return types or template parameter lists.
+      bool UseMemberUsingDeclRules = IsUsingDecl && DC->isRecord();
+      if (clang::FunctionTemplateDecl* FTD =
+        llvm::dyn_cast<clang::FunctionTemplateDecl>(ND)) {
+        if (
+          !IsOverload(GivenArgTypes, FTD->getTemplatedDecl(),
+            UseMemberUsingDeclRules)
+        ) {
+          if (UseMemberUsingDeclRules && IsUsingDecl) {
+            continue;
+          }
+          Match = *I;
           break;
-        case clang::LookupResult::AmbiguousBaseSubobjects:
+        }
+      } else if (clang::FunctionDecl* FD =
+        llvm::dyn_cast<clang::FunctionDecl>(ND)) {
+        if (!IsOverload(GivenArgTypes, FD, UseMemberUsingDeclRules)) {
+          if (UseMemberUsingDeclRules && IsUsingDecl) {
+            continue;
+          }
+          Match = *I;
           break;
-        case clang::LookupResult::AmbiguousReference:
-          break;
-        case clang::LookupResult::AmbiguousTagHiding:
-          break;
+        }
+      } else if (llvm::isa<clang::UsingDecl>(ND)) {
+        // We can overload with these, which can show up when doing
+        // redeclaration checks for UsingDecls.
+        //assert(Result.getLookupKind() == clang::LookupUsingDeclName);
+      } else if (llvm::isa<clang::TagDecl>(ND)) {
+        // We can always overload with tags by hiding them.
+      } else if (llvm::isa<clang::UnresolvedUsingValueDecl>(ND)) {
+      // Optimistically assume that an unresolved using decl will
+      // overload; if it doesn't, we'll have to diagnose during
+      // template instantiation.
+      } else {
+        // (C++ 13p1):
+        //   Only function declarations can be overloaded; object and type
+        //   declarations cannot be overloaded.
+        //Match = *I;
+        //return clang::Ovl_NonFunction;
       }
-      break;
+    }
+    if (!Match) {
+      // error path
+      cleanup();
+      return 0;
+    }
+    {
+      std::string buf;
+      clang::PrintingPolicy Policy(CI->getASTContext().getPrintingPolicy());
+      Match->getNameForDiagnostic(buf, Policy, true);
+      fprintf(stderr, "%s\n", buf.c_str());
+      Match->dump();
+    }
   }
   //
   //  All done.
