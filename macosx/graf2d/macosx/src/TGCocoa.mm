@@ -53,10 +53,17 @@ namespace {
 //______________________________________________________________________________
 void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
 {
-   //TODO: something not so lame!
    rgb[0] = (pixelColor >> 16 & 0xff) / 255.;
    rgb[1] = (pixelColor >> 8 & 0xff) / 255.;
    rgb[2] = (pixelColor & 0xff) / 255.;
+}
+
+//______________________________________________________________________________
+void PixelToRGB(Pixel_t pixelColor, unsigned char *rgb)
+{
+   rgb[0] = pixelColor >> 16 & 0xff;
+   rgb[1] = pixelColor >> 8 & 0xff;
+   rgb[2] = pixelColor & 0xff;
 }
 
 //______________________________________________________________________________
@@ -211,8 +218,6 @@ QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w,
    
    return view;
 }
-
-
 
 }
 
@@ -407,6 +412,8 @@ void TGCocoa::GetCharacterUp(Float_t &chupx, Float_t &chupy)
 //______________________________________________________________________________
 void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
 {
+   namespace X11 = ROOT::MacOSX::X11;
+
    if (wid < 0 || fPimpl->IsRootWindow(wid)) {
       //Comment in TVirtualX suggests, that wid can be < 0.
       //This will be screen's geometry.
@@ -422,6 +429,15 @@ void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
       y = window.fY;
       w = window.fWidth;
       h = window.fHeight;
+      
+      if (!window.fIsPixmap) {
+         NSPoint srcPoint = {};
+         srcPoint.x = x;
+         srcPoint.y = y;
+         const NSPoint dstPoint = X11::TranslateToScreen(window.fContentView, srcPoint);
+         x = dstPoint.x;
+         y = dstPoint.y;
+      }
    }
 }
 
@@ -1070,7 +1086,7 @@ void TGCocoa::MoveWindow(Window_t wid, Int_t x, Int_t y)
    
    if (!wid)//From TGX11.
       return;
-   
+      
    assert(!fPimpl->IsRootWindow(wid) && "MoveWindow, called for 'root' window");
    
    [fPimpl->GetDrawable(wid) setX : x Y : y];
@@ -1555,12 +1571,59 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, UInt_t w, UInt_t h)
 
    return OpenPixmap(w, h);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+//Set of functions to create a pixmap from external data source.
+
 //______________________________________________________________________________
-Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/,
-                               UInt_t /*width*/, UInt_t /*height*/,
-                               ULong_t /*forecolor*/, ULong_t /*backcolor*/,
-                               Int_t /*depth*/)
+Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t height)
 {
+   // create pixmap from RGB data. RGB data is in format :
+   // b1, g1, r1, a1,  b2, g2, r2, a2 ... bn, gn, rn, an.
+   
+   assert(bits != nullptr && "CreatePixmapFromData, data parameter is null");
+   assert(width != 0 && "CreatePixmapFromData, width parameter is 0");
+   assert(height != 0 && "CreatePixmapFromData, height parameter is 0");
+
+   try {
+      //I'm not using vector here, since I have to pass this pointer to Obj-C code
+      //(and Obj-C object will own this memory later).
+      unsigned char *imageData = new unsigned char[width * height * 4];
+      std::copy(bits, bits + width * height * 4, imageData);
+      BgraToRgba(imageData, width, height);
+   
+      //Now we can create CGImageRef.
+      Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
+      if (!mem.Get()) {
+         Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
+         delete [] imageData;
+         return Pixmap_t();
+      }
+   
+      QuartzImage *image = [mem.Get() initWithW : width H : height data: imageData fromBitmap : NO];
+      if (!image) {
+         delete [] imageData;
+         Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:fromBitmap] failed");
+         return Pixmap_t();
+      }
+      
+      mem.Reset(image);
+      //Now imageData is owned by image.
+      image.fID = fPimpl->RegisterDrawable(image);//This can throw.
+      
+      return image.fID;      
+   } catch (const std::exception &) {//Bad alloc.
+      throw;
+   }
+
+   return Pixmap_t();
+}
+
+//______________________________________________________________________________
+Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/, UInt_t /*width*/, UInt_t /*height*/,
+                               ULong_t /*foregroundPixel*/, ULong_t /*backgroundPixel*/, Int_t /*depth*/)
+{
+   //Comment from TGX11:
    // Creates a pixmap from bitmap data of the width, height, and depth you
    // specified and returns a pixmap that identifies it. The width and height
    // arguments must be nonzero. The depth argument must be one of the depths
@@ -1572,6 +1635,30 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/,
    // forecolor     - the foreground pixel values to use
    // backcolor     - the background pixel values to use
    // depth         - the depth of the pixmap
+   //End of TGX11 comment.
+
+   //What is exactly "bitmap format" only somebody knows.
+   //If you look into TGResourcePool, for example, it packs
+   //bits into bytes (it requires octets!), but still HELL knows, how and what can be
+   //passed into this function. Funny enough, I did not find "X11 bitmap format", only
+   //references to this format.
+/*
+   assert(bitmap != nullptr && "CreatePixmap, bitmap parameter is null");
+   assert(width > 0 && "CreatePixmap, width parameter is 0");
+   assert(height > 0 && "CreatePixmap, height parameter is 0");
+   
+   unsigned char foregroundColor[4] = {};
+   PixelToRGB(foregroundPixel, foregroundColor);
+   unsigned char backgroundColor[4] = {};
+   PixelToRGB(backgroundPixel, backgroundColor);
+   
+   try {
+      unsigned char *imageData = new unsigned char[width * height * 4]();
+      const unsigned bytesPerLine = width / 8;
+   
+   } catch (const std::exception &) {
+      throw;
+   }*/
 
    return 0;
 }
@@ -1907,7 +1994,7 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
 
    const Quartz::CGStateGuard ctxGuard(ctx);//Will restore context state.
 
-   if (gcVals.fMask & kGCStipple) {
+   if ((gcVals.fMask & kGCStipple) && gcVals.fStipple) {//TODO: Check for fStipple can be omitted as soon as CreatePixmap is implemented.
       assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
       PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, 
                                        (QuartzImage *)fPimpl->GetDrawable(gcVals.fStipple), 
@@ -2125,6 +2212,9 @@ void TGCocoa::ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    //Can be called from drawRect method and also by ROOT's GUI directly.
    //Should not be called for pixmap?
+   
+   if (!wid) //From TGX11.
+      return;
 
    assert(!fPimpl->IsRootWindow(wid) && "ClearArea, called for the 'root' window");
    
@@ -2393,6 +2483,10 @@ void TGCocoa::FreeFontStruct(FontStruct_t /*fs*/)
 void TGCocoa::ClearWindow(Window_t wid)
 {
    // Clears the entire area in the specified window. Comment from TGX11.
+
+   if (!wid)//From TGX11.
+      return;
+
    ClearArea(wid, 0, 0, 0, 0);
 }
 
@@ -2509,7 +2603,6 @@ void TGCocoa::TranslateCoordinates(Window_t srcWin, Window_t dstWin, Int_t srcX,
    // child          - returns the child of "dest" if the coordinates
    //                  are contained in a mapped child of the destination
    //                  window; otherwise, child is set to 0
-
    namespace X11 = ROOT::MacOSX::X11;
 
    child = 0;   
@@ -2915,50 +3008,6 @@ unsigned char *TGCocoa::GetColorBits(Drawable_t wid, Int_t x, Int_t y, UInt_t w,
    }
 
    return 0;
-}
-
-//______________________________________________________________________________
-Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t height)
-{
-   // create pixmap from RGB data. RGB data is in format :
-   // b1, g1, r1, a1,  b2, g2, r2, a2 ... bn, gn, rn, an.
-   
-   assert(bits != nullptr && "CreatePixmapFromData, data parameter is null");
-   assert(width != 0 && "CreatePixmapFromData, width parameter is 0");
-   assert(height != 0 && "CreatePixmapFromData, height parameter is 0");
-
-   try {
-      //I'm not using vector here, since I have to pass this pointer to Obj-C code
-      //(and Obj-C object will own this memory later).
-      unsigned char *imageData = new unsigned char[width * height * 4];
-      std::copy(bits, bits + width * height * 4, imageData);
-      BgraToRgba(imageData, width, height);
-   
-      //Now we can create CGImageRef.
-      Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
-      if (!mem.Get()) {
-         Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
-         delete [] imageData;
-         return Pixmap_t();
-      }
-   
-      QuartzImage *image = [mem.Get() initWithW : width H : height data: imageData];
-      if (!image) {
-         delete [] imageData;
-         Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
-         return Pixmap_t();
-      }
-      
-      mem.Reset(image);
-      //Now imageData is owned by image.
-      image.fID = fPimpl->RegisterDrawable(image);//This can throw.
-      
-      return image.fID;      
-   } catch (const std::exception &) {//Bad alloc.
-      throw;
-   }
-
-   return Pixmap_t();
 }
 
 //______________________________________________________________________________
