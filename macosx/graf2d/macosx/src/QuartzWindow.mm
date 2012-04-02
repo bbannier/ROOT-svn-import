@@ -1553,4 +1553,21 @@ void print_mask_info(ULong_t mask)
    vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
 }
 
+//______________________________________________________________________________
+- (void) rightMouseDragged : (NSEvent *)theEvent
+{
+   assert(fID != 0 && "rightMouseDragged, fID is 0");
+   
+   //mouseMoved and mouseDragged work differently 
+   //(drag events are generated only for one view, where drag started).
+   //if (fParentView)
+   //   return;
+   
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "rightMouseMoved, gVirtualX is null or not of TGCocoa type");
+   
+   vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
+}
+
+
 @end
