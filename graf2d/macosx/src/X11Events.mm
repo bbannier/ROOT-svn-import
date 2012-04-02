@@ -374,7 +374,9 @@ void SendPointerMotionEvent(QuartzView *view, NSEvent *theEvent)
    
    Event_t motionEvent = NewX11EventFromCocoaEvent(view.fID, theEvent);
    motionEvent.fType = kMotionNotify;
-   motionEvent.fState = GetKeyboardModifiersFromCocoaEvent(theEvent);
+   motionEvent.fState = GetModifiersFromCocoaEvent(theEvent);//GetKeyboardModifiersFromCocoaEvent(theEvent);
+   
+   //TODO: motionEvent.fUser[0] = find subwindow.
    
    ConvertEventLocationToROOTXY(theEvent, view, &motionEvent);
    //Dispatch:
