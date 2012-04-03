@@ -47,10 +47,10 @@
 @interface QuartzImage : NSObject<X11Drawable>
 
 @property (nonatomic, assign) unsigned fID;
-@property (nonatomic, readonly) BOOL fIsPixmap;//???
-@property (nonatomic, readonly) BOOL fIsBitmap;
+@property (nonatomic, readonly) BOOL fIsPixmap;
+@property (nonatomic, readonly) BOOL fIsStippleMask;
 
-- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *) data fromBitmap : (BOOL) isBitmap;
+- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *) data;
 - (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *) mask;
 
 - (void) dealloc;

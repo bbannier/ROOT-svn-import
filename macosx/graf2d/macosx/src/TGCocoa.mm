@@ -58,7 +58,7 @@ void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
    rgb[2] = (pixelColor & 0xff) / 255.;
 }
 
-/*
+
 //______________________________________________________________________________
 void PixelToRGB(Pixel_t pixelColor, unsigned char *rgb)
 {
@@ -66,7 +66,59 @@ void PixelToRGB(Pixel_t pixelColor, unsigned char *rgb)
    rgb[1] = pixelColor >> 8 & 0xff;
    rgb[2] = pixelColor & 0xff;
 }
-*/
+
+//______________________________________________________________________________
+bool TestBitmapBit(const unsigned char *bitmap, unsigned w, unsigned h, unsigned i, unsigned j)
+{
+   //Test if a bit (i,j) is set in a bitmap (w, h).
+   
+   //Code in ROOT's GUI suggests, that byte is octet.
+   assert(bitmap != nullptr && "TestBitmapBit, bitmap parameter is null");
+   assert(w != 0 && "TestBitmapBit, w parameter is 0");
+   assert(h != 0 && "TestBitmapBit, h parameter is 0");
+   assert(i < w && "TestBitmapBit, i parameter is >= w");
+   assert(j < h && "TestBitmapBit, j parameter is >= h");
+   
+   const unsigned bytesPerLine = (w + 7) / 8;
+   const unsigned char *line = bitmap + j * bytesPerLine;
+   const unsigned char byteValue = line[i / 8];
+   
+   return byteValue & (1 << (i % 8));
+}
+
+//______________________________________________________________________________
+void FillPixmapBuffer(const unsigned char *bitmap, unsigned width, unsigned height, ULong_t foregroundPixel, ULong_t backgroundPixel, unsigned char *imageData)
+{
+   assert(bitmap != nullptr && "FillPixmap, bitmap parameter is null");
+   assert(width != 0 && "FillPixmap, width parameter is 0");
+   assert(height != 0 && "FillPixmap, height parameter is 0");
+   assert(imageData != nullptr && "FillPixmap, imageData parameter is null");
+   
+   unsigned char foregroundColor[4] = {};
+   PixelToRGB(foregroundPixel, foregroundColor);
+   unsigned char backgroundColor[4] = {};
+   PixelToRGB(backgroundPixel, backgroundColor);
+   
+   for (unsigned j = 0; j < height; ++j) {
+      const unsigned line = j * width * 4;
+      for (unsigned i = 0; i < width; ++i) {
+         const unsigned pixel = line + i * 4;
+         
+         if (TestBitmapBit(bitmap, width, height, i, j)) {
+            //Foreground color.
+            imageData[pixel] = foregroundColor[0];
+            imageData[pixel + 1] = foregroundColor[1];
+            imageData[pixel + 2] = foregroundColor[2];
+         } else {
+            imageData[pixel] = backgroundColor[0];
+            imageData[pixel + 1] = backgroundColor[1];
+            imageData[pixel + 2] = backgroundColor[2];            
+         }
+         
+         imageData[pixel + 3] = 255;
+      }
+   }
+}
 
 //______________________________________________________________________________
 void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
@@ -130,19 +182,23 @@ void DrawPattern(void *info, CGContextRef ctx)
    QuartzImage *stipple = context->fImage;
    const CGRect patternRect = CGRectMake(0, 0, stipple.fWidth, stipple.fHeight);
 
-   if (context->fMask & kGCBackground) {
-      CGFloat rgb[3] = {};
-      PixelToRGB(context->fBackground, rgb);
-      CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
-      CGContextFillRect(ctx, patternRect);
-   }
-   
-   if (context->fMask & kGCForeground) {
-      CGFloat rgb[3] = {};
-      PixelToRGB(context->fForeground, rgb);
-      CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
-      CGContextClipToMask(ctx, patternRect, stipple.fImage);
-      CGContextFillRect(ctx, patternRect);
+   if (stipple.fIsStippleMask) {
+      if (context->fMask & kGCBackground) {
+         CGFloat rgb[3] = {};
+         PixelToRGB(context->fBackground, rgb);
+         CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
+         CGContextFillRect(ctx, patternRect);
+      }
+      
+      if (context->fMask & kGCForeground) {
+         CGFloat rgb[3] = {};
+         PixelToRGB(context->fForeground, rgb);
+         CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
+         CGContextClipToMask(ctx, patternRect, stipple.fImage);
+         CGContextFillRect(ctx, patternRect);
+      }
+   } else {
+      CGContextDrawImage(ctx, patternRect, stipple.fImage);
    }
 }
 
@@ -151,7 +207,7 @@ void SetFilledAreaPattern(CGContextRef ctx, PatternContext *patternContext)
 {
    assert(ctx != nullptr && "SetFilledAreaPattern, ctx parameter is null");
    assert(patternContext != nullptr && "SetFilledAreaPattern, patternContext parameter is null");
-   assert(patternContext != nil && "SetFilledAreaPattern, stipple pixmap is nil");
+   assert(patternContext->fImage != nil && "SetFilledAreaPattern, stipple pixmap is nil");
 
    const Util::CFScopeGuard<CGColorSpaceRef> patternColorSpace(CGColorSpaceCreatePattern(0));
    CGContextSetFillColorSpace(ctx, patternColorSpace.Get());
@@ -1602,10 +1658,10 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
          return Pixmap_t();
       }
    
-      QuartzImage *image = [mem.Get() initWithW : width H : height data: imageData fromBitmap : NO];
+      QuartzImage *image = [mem.Get() initWithW : width H : height data : imageData];
       if (!image) {
          delete [] imageData;
-         Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:fromBitmap] failed");
+         Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
          return Pixmap_t();
       }
       
@@ -1622,8 +1678,8 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
 }
 
 //______________________________________________________________________________
-Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/, UInt_t /*width*/, UInt_t /*height*/,
-                               ULong_t /*foregroundPixel*/, ULong_t /*backgroundPixel*/, Int_t /*depth*/)
+Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char *bitmap, UInt_t width, UInt_t height,
+                               ULong_t foregroundPixel, ULong_t backgroundPixel, Int_t /*depth*/)
 {
    //Comment from TGX11:
    // Creates a pixmap from bitmap data of the width, height, and depth you
@@ -1639,12 +1695,8 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/, UInt
    // depth         - the depth of the pixmap
    //End of TGX11 comment.
 
-   //What is exactly "bitmap format" only somebody knows.
-   //If you look into TGResourcePool, for example, it packs
-   //bits into bytes (it requires octets!), but still HELL knows, how and what can be
-   //passed into this function. Funny enough, I did not find "X11 bitmap format", only
-   //references to this format.
-/*
+   //"X11 bitmap format", whatever it means.
+
    assert(bitmap != nullptr && "CreatePixmap, bitmap parameter is null");
    assert(width > 0 && "CreatePixmap, width parameter is 0");
    assert(height > 0 && "CreatePixmap, height parameter is 0");
@@ -1656,13 +1708,33 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char * /*bitmap*/, UInt
    
    try {
       unsigned char *imageData = new unsigned char[width * height * 4]();
-      const unsigned bytesPerLine = width / 8;
-   
-   } catch (const std::exception &) {
-      throw;
-   }*/
+      FillPixmapBuffer((unsigned char*)bitmap, width, height, foregroundPixel, backgroundPixel, imageData);
 
-   return 0;
+      //Now we can create CGImageRef.
+      Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
+      if (!mem.Get()) {
+         Error("CreatePixmap", "[QuartzImage alloc] failed");
+         delete [] imageData;
+         return Pixmap_t();
+      }
+   
+      QuartzImage *image = [mem.Get() initWithW : width H : height data: imageData];
+      if (!image) {
+         delete [] imageData;
+         Error("CreatePixmap", "[QuartzImage initWithW:H:data:] failed");
+         return Pixmap_t();
+      }
+
+      mem.Reset(image);
+      //Now imageData is owned by image.
+      image.fID = fPimpl->RegisterDrawable(image);//This can throw.
+      return image.fID;      
+   } catch (const std::exception &) {
+      //Memory is owned by QuartzImage.
+      throw;
+   }
+
+   return Pixmap_t();
 }
 
 //______________________________________________________________________________
@@ -1996,7 +2068,8 @@ void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
 
    const Quartz::CGStateGuard ctxGuard(ctx);//Will restore context state.
 
-   if ((gcVals.fMask & kGCStipple) && gcVals.fStipple) {//TODO: Check for fStipple can be omitted as soon as CreatePixmap is implemented.
+//   if ((gcVals.fMask & kGCStipple) && gcVals.fStipple) {//TODO: Check for fStipple can be omitted as soon as CreatePixmap is implemented.
+   if (gcVals.fMask & kGCStipple) {
       assert(fPimpl->GetDrawable(gcVals.fStipple).fIsPixmap == YES && "FillRectangleAux, stipple is not a pixmap");
       PatternContext patternContext = {gcVals.fMask, gcVals.fForeground, gcVals.fBackground, 
                                        (QuartzImage *)fPimpl->GetDrawable(gcVals.fStipple), 
