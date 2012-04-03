@@ -87,36 +87,49 @@ bool TestBitmapBit(const unsigned char *bitmap, unsigned w, unsigned h, unsigned
 }
 
 //______________________________________________________________________________
-void FillPixmapBuffer(const unsigned char *bitmap, unsigned width, unsigned height, ULong_t foregroundPixel, ULong_t backgroundPixel, unsigned char *imageData)
+void FillPixmapBuffer(const unsigned char *bitmap, unsigned width, unsigned height, ULong_t foregroundPixel, ULong_t backgroundPixel, unsigned depth, unsigned char *imageData)
 {
    assert(bitmap != nullptr && "FillPixmap, bitmap parameter is null");
    assert(width != 0 && "FillPixmap, width parameter is 0");
    assert(height != 0 && "FillPixmap, height parameter is 0");
    assert(imageData != nullptr && "FillPixmap, imageData parameter is null");
-   
-   unsigned char foregroundColor[4] = {};
-   PixelToRGB(foregroundPixel, foregroundColor);
-   unsigned char backgroundColor[4] = {};
-   PixelToRGB(backgroundPixel, backgroundColor);
-   
-   for (unsigned j = 0; j < height; ++j) {
-      const unsigned line = j * width * 4;
-      for (unsigned i = 0; i < width; ++i) {
-         const unsigned pixel = line + i * 4;
-         
-         if (TestBitmapBit(bitmap, width, height, i, j)) {
-            //Foreground color.
-            imageData[pixel] = foregroundColor[0];
-            imageData[pixel + 1] = foregroundColor[1];
-            imageData[pixel + 2] = foregroundColor[2];
-         } else {
-            imageData[pixel] = backgroundColor[0];
-            imageData[pixel + 1] = backgroundColor[1];
-            imageData[pixel + 2] = backgroundColor[2];            
+
+   if (depth > 1) {
+      unsigned char foregroundColor[4] = {};
+      PixelToRGB(foregroundPixel, foregroundColor);
+      unsigned char backgroundColor[4] = {};
+      PixelToRGB(backgroundPixel, backgroundColor);
+
+      for (unsigned j = 0; j < height; ++j) {
+         const unsigned line = j * width * 4;
+         for (unsigned i = 0; i < width; ++i) {
+            const unsigned pixel = line + i * 4;
+            
+            if (TestBitmapBit(bitmap, width, height, i, j)) {
+               //Foreground color.
+               imageData[pixel] = foregroundColor[0];
+               imageData[pixel + 1] = foregroundColor[1];
+               imageData[pixel + 2] = foregroundColor[2];
+            } else {
+               imageData[pixel] = backgroundColor[0];
+               imageData[pixel + 1] = backgroundColor[1];
+               imageData[pixel + 2] = backgroundColor[2];            
+            }
+            
+            imageData[pixel + 3] = 255;
          }
-         
-         imageData[pixel + 3] = 255;
       }
+   } else {
+      for (unsigned j = 0; j < height; ++j) {
+         const unsigned line = j * width;
+         for (unsigned i = 0; i < width; ++i) {
+            const unsigned pixel = line + i;
+            if (TestBitmapBit(bitmap, width, height, i, j))
+               imageData[pixel] = 0;
+            else
+               imageData[pixel] = 255;//mask out pixel.
+         }
+      }   
    }
 }
 
@@ -1679,7 +1692,7 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
 
 //______________________________________________________________________________
 Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char *bitmap, UInt_t width, UInt_t height,
-                               ULong_t foregroundPixel, ULong_t backgroundPixel, Int_t /*depth*/)
+                               ULong_t foregroundPixel, ULong_t backgroundPixel, Int_t depth)
 {
    //Comment from TGX11:
    // Creates a pixmap from bitmap data of the width, height, and depth you
@@ -1696,6 +1709,9 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    //End of TGX11 comment.
 
    //"X11 bitmap format", whatever it means.
+   
+   //Depth == 1 is almost the same as CreateBitmap, but ... not the same,
+   //because TASImage has a bug.
 
    assert(bitmap != nullptr && "CreatePixmap, bitmap parameter is null");
    assert(width > 0 && "CreatePixmap, width parameter is 0");
@@ -1707,8 +1723,13 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    PixelToRGB(backgroundPixel, backgroundColor);
    
    try {
-      unsigned char *imageData = new unsigned char[width * height * 4]();
-      FillPixmapBuffer((unsigned char*)bitmap, width, height, foregroundPixel, backgroundPixel, imageData);
+      unsigned char *imageData = nullptr;      
+      if (depth > 1)
+         imageData = new unsigned char[width * height * 4]();
+      else
+         imageData = new unsigned char[width * height];
+
+      FillPixmapBuffer((unsigned char*)bitmap, width, height, foregroundPixel, backgroundPixel, depth, imageData);
 
       //Now we can create CGImageRef.
       Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
@@ -1718,7 +1739,13 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
          return Pixmap_t();
       }
    
-      QuartzImage *image = [mem.Get() initWithW : width H : height data: imageData];
+      QuartzImage *image = nil;
+      
+      if (depth > 1)
+         image = [mem.Get() initWithW : width H : height data: imageData];
+      else
+         image = [mem.Get() initMaskWithW : width H : height bitmapMask : imageData];
+
       if (!image) {
          delete [] imageData;
          Error("CreatePixmap", "[QuartzImage initWithW:H:data:] failed");
