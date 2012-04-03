@@ -50,6 +50,8 @@ namespace Quartz = ROOT::Quartz;
 
 namespace {
 
+//Aux. functions called from GUI-rendering part.
+
 //______________________________________________________________________________
 void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
 {
