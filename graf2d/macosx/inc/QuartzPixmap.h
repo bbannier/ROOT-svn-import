@@ -74,6 +74,10 @@ CGImageRef CreateSubImage(QuartzImage *image, const Rectangle_t &area);
 bool AdjustCropArea(QuartzImage *srcImage, Rectangle_t &cropArea);
 bool AdjustCropArea(QuartzPixmap *srcImage, Rectangle_t &cropArea);
 
+//Aux. function for TGCocoa.
+void FillPixmapBuffer(const unsigned char *bitmap, unsigned width, unsigned height, ULong_t foregroundPixel, 
+                      ULong_t backgroundPixel, unsigned depth, unsigned char *imageData);
+
 }
 }
 }

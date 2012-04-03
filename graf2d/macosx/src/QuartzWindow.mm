@@ -8,6 +8,7 @@
 #import "TClass.h"
 #endif
 
+#import <stdexcept>
 #import <cassert>
 
 #import "QuartzWindow.h"
@@ -67,6 +68,46 @@ you have to try and got all problems before you understand how this crap works.
 namespace ROOT {
 namespace MacOSX {
 namespace X11 {
+
+//______________________________________________________________________________
+QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t depth,
+                                   UInt_t clss, void */*visual*/, SetWindowAttributes_t *attr, UInt_t)
+{
+   NSRect winRect = {};
+   winRect.origin.x = x; 
+   winRect.origin.y = GlobalYROOTToCocoa(y);
+   winRect.size.width = w;
+   winRect.size.height = h;
+
+   //TODO check mask.
+   const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+   //
+   QuartzWindow *newWindow = [[QuartzWindow alloc] initWithContentRect : winRect styleMask : styleMask backing : NSBackingStoreBuffered defer : YES windowAttributes : attr];
+   if (!newWindow)
+      throw std::runtime_error("CreateTopLevelWindow failed");
+   //
+   newWindow.fDepth = depth;
+   newWindow.fClass = clss;
+
+   return newWindow;
+}
+
+//______________________________________________________________________________
+QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t /*border*/, Int_t /*depth*/,
+                            UInt_t /*clss*/, void * /*visual*/, SetWindowAttributes_t *attr, UInt_t /*wtype*/)
+{
+   NSRect viewRect = {};
+   viewRect.origin.x = x;
+   viewRect.origin.y = y;
+   viewRect.size.width = w;
+   viewRect.size.height = h;
+   
+   QuartzView *view = [[QuartzView alloc] initWithFrame : viewRect windowAttributes : attr];
+   if (!view)
+      throw std::runtime_error("CreateChildView failed");
+   
+   return view;
+}
 
 //______________________________________________________________________________
 void GetRootWindowAttributes(WindowAttributes_t *attr)

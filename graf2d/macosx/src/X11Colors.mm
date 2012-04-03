@@ -884,6 +884,22 @@ ColorParser::ColorParser()
    fX11RGB["YellowGreen"] = RGB_t(154, 205, 50);
 }
 
+//______________________________________________________________________________
+void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb)
+{
+   rgb[0] = (pixelColor >> 16 & 0xff) / 255.;
+   rgb[1] = (pixelColor >> 8 & 0xff) / 255.;
+   rgb[2] = (pixelColor & 0xff) / 255.;
+}
+
+
+//______________________________________________________________________________
+void PixelToRGB(Pixel_t pixelColor, unsigned char *rgb)
+{
+   rgb[0] = pixelColor >> 16 & 0xff;
+   rgb[1] = pixelColor >> 8 & 0xff;
+   rgb[2] = pixelColor & 0xff;
+}
 
 }
 }

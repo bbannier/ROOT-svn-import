@@ -185,6 +185,11 @@ namespace ROOT {
 namespace MacOSX {
 namespace X11 {
 
+QuartzWindow *CreateTopLevelWindow(Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t border, Int_t depth,
+                                   UInt_t clss, void *visual, SetWindowAttributes_t *attr, UInt_t);
+QuartzView *CreateChildView(QuartzView *parent, Int_t x, Int_t y, UInt_t w, UInt_t h, UInt_t border, Int_t depth,
+                            UInt_t clss, void *visual, SetWindowAttributes_t *attr, UInt_t wtype);
+
 void GetRootWindowAttributes(WindowAttributes_t *attr);
 
 //Coordinate conversion.

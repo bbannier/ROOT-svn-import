@@ -13,6 +13,8 @@
 
 #include <map>
 
+#include <ApplicationServices/ApplicationServices.h>
+
 #ifndef ROOT_GuiTypes
 #include "GuiTypes.h"
 #endif
@@ -50,6 +52,9 @@ private:
 
    std::map<TString, RGB_t> fX11RGB;//X11's rgb.txt
 };
+
+void PixelToRGB(Pixel_t pixelColor, CGFloat *rgb);
+void PixelToRGB(Pixel_t pixelColor, unsigned char *rgb);
 
 }//X11
 }//MacOSX
