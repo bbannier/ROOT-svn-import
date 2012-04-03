@@ -10,21 +10,20 @@
 #include "TVirtualX.h"
 #endif
 
-#ifndef ROOT_X11Colors
-#include "X11Colors.h"
-#endif
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// This class implements window management part of TVirtualX            //
-// for MacOS X, using Cocoa.                                            //
+// This class implements TVirtualX interface                            //
+// for MacOS X, using Cocoa and Quartz 2D.                              //
+// TVirtualX is a typical fat interface, it's a "C++ wrapper" for       //
+// X11 library. It's a union of several orthogonal interfaces like:     //
+// color management, window management, pixmap management, cursors,     //
+// events, images, drag and drop, font management, gui-rendering,       //
+// non-gui graphics, etc. etc.                                          //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 namespace ROOT {
 namespace Quartz {
-
-class FontManager;
 
 class CGStateGuard {
 public:
@@ -60,12 +59,207 @@ public:
    TGCocoa(const char *name, const char *title);
    
    ~TGCocoa();
-   //TVirtualX final-overriders.
-   virtual Bool_t    Init(void *display);
+   
+   //TVirtualX final overriders.
+   //I split them in a group not to get lost in this fat interface.
+   
+   ///////////////////////////////////////
+   //General.
+   virtual Bool_t      Init(void *display);
+   virtual Int_t       OpenDisplay(const char *dpyName);
+   virtual const char *DisplayName(const char *);
+   virtual void        CloseDisplay();
+   virtual Display_t   GetDisplay()const;
+   virtual Visual_t    GetVisual()const;
+   virtual Int_t       GetScreen()const;
+   virtual Int_t       GetDepth()const;
+   virtual void        Update(Int_t mode);
+   //End of general.
+   ///////////////////////////////////////
+   
+   ///////////////////////////////////////
+   //Window management part:
+   virtual Window_t  GetDefaultRootWindow() const;
+   //-Functions used by TCanvas/TPad (work with window, selected by SelectWindow).
+   virtual Int_t     InitWindow(ULong_t window);
+   virtual Window_t  GetWindowID(Int_t wid);//TGCocoa simply returns wid.
+   virtual void      SelectWindow(Int_t wid);
    virtual void      ClearWindow();
-   virtual void      ClosePixmap();
+   virtual void      GetGeometry(Int_t wid, Int_t &x, Int_t &y, UInt_t &w, UInt_t &h);
+   virtual void      MoveWindow(Int_t wid, Int_t x, Int_t y);
+   virtual void      RescaleWindow(Int_t wid, UInt_t w, UInt_t h);
+   virtual void      ResizeWindow(Int_t wid);
+   virtual void      UpdateWindow(Int_t mode);
+   virtual Window_t  GetCurrentWindow() const;
    virtual void      CloseWindow();
+
+   //-"Qt ROOT".
+   virtual Int_t     AddWindow(ULong_t qwid, UInt_t w, UInt_t h);
+   virtual void      RemoveWindow(ULong_t qwid);
+
+
+   //-Functions used by GUI.
+   virtual Window_t  CreateWindow(Window_t parent, Int_t x, Int_t y,
+                                  UInt_t w, UInt_t h, UInt_t border,
+                                  Int_t depth, UInt_t clss,
+                                  void *visual, SetWindowAttributes_t *attr,
+                                  UInt_t wtype);
+
+   
+   virtual void      DestroyWindow(Window_t wid);
+   virtual void      DestroySubwindows(Window_t wid);
+
+   virtual void      GetWindowAttributes(Window_t wid, WindowAttributes_t &attr);
+   virtual void      ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr);
+   virtual void      SelectInput(Window_t wid, UInt_t evmask);//Can also be in events-related part.
+
+           void      ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y);//Non-overrider.
+           void      ReparentTopLevel(Window_t wid, Window_t pid, Int_t x, Int_t y);//Non-overrider.
+   virtual void      ReparentWindow(Window_t wid, Window_t pid, Int_t x, Int_t y);
+
+   virtual void      MapWindow(Window_t wid);
+   virtual void      MapSubwindows(Window_t wid);
+   virtual void      MapRaised(Window_t wid);
+   virtual void      UnmapWindow(Window_t wid);
+   virtual void      RaiseWindow(Window_t wid);
+   virtual void      LowerWindow(Window_t wid);  
+
+   virtual void      MoveWindow(Window_t wid, Int_t x, Int_t y);
+   virtual void      MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   virtual void      ResizeWindow(Window_t wid, UInt_t w, UInt_t h);
+   virtual void      IconifyWindow(Window_t wid);
+   virtual void      TranslateCoordinates(Window_t src, Window_t dest, Int_t src_x,Int_t src_y,
+                                          Int_t &dest_x, Int_t &dest_y, Window_t &child);
+   virtual void      GetWindowSize(Drawable_t wid, Int_t &x, Int_t &y, UInt_t &w, UInt_t &h);
+
+
+   virtual void      SetWindowBackground(Window_t wid, ULong_t color);
+   virtual void      SetWindowBackgroundPixmap(Window_t wid, Pixmap_t pxm);
+
+   virtual Window_t  GetParent(Window_t wid) const;
+   
+   virtual void      SetWindowName(Window_t wid, char *name);
+   virtual void      SetIconName(Window_t wid, char *name);
+   virtual void      SetIconPixmap(Window_t wid, Pixmap_t pix);
+   virtual void      SetClassHints(Window_t wid, char *className, char *resourceName);
+   //End window-management part.
+   ///////////////////////////////////////
+   
+
+   ///////////////////////////////////////
+   //GUI-rendering part.
+           void      DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, Int_t y1, Int_t x2, Int_t y2);//Non-overrider.
+   virtual void      DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
+           void      DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
+   virtual void      DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+           void      FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
+   virtual void      FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+           void      CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width,
+                                 UInt_t height, Int_t dstX, Int_t dstY);//Non-overrider.
+   virtual void      CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX, Int_t srcY, UInt_t width,
+                              UInt_t height, Int_t dstX, Int_t dstY);
+           void      DrawStringAux(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *s, Int_t len);//Non-overrider.
+   virtual void      DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *s, Int_t len);
+
+           void      ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
+   virtual void      ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   virtual void      ClearWindow(Window_t wid);
+   //End of GUI-rendering part.
+   ///////////////////////////////////////
+
+   
+   ///////////////////////////////////////
+   //Pixmap management.
+   //-Used by TCanvas/TPad classes:
+   virtual Int_t     OpenPixmap(UInt_t w, UInt_t h);
+   virtual Int_t     ResizePixmap(Int_t wid, UInt_t w, UInt_t h);
+   virtual void      SelectPixmap(Int_t qpixid);
    virtual void      CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos);
+   virtual void      ClosePixmap();
+   //Used by GUI.
+   virtual Pixmap_t  CreatePixmap(Drawable_t wid, UInt_t w, UInt_t h);
+   virtual Pixmap_t  CreatePixmap(Drawable_t wid, const char *bitmap, UInt_t width, UInt_t height, 
+                                  ULong_t foregroundColor, ULong_t backgroundColor,
+                                  Int_t depth);
+   virtual Pixmap_t  CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t height);
+   virtual Pixmap_t  CreateBitmap(Drawable_t wid, const char *bitmap,
+                                  UInt_t width, UInt_t height);
+           void      DeletePixmapAux(Pixmap_t pixmapID);//Non-overrider.
+   virtual void      DeletePixmap(Pixmap_t pixmapID);
+   
+   //-"Qt ROOT".
+   virtual Int_t     AddPixmap(ULong_t pixid, UInt_t w, UInt_t h);
+   virtual unsigned char *GetColorBits(Drawable_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   //End of pixmap management.
+   /////////////////////////////
+
+   /////////////////////////////
+   //Mouse (cursor, events, etc.)
+   virtual void      GrabButton(Window_t wid, EMouseButton button, UInt_t modifier,
+                                UInt_t evmask, Window_t confine, Cursor_t cursor,
+                                Bool_t grab = kTRUE);
+   virtual void      GrabPointer(Window_t wid, UInt_t evmask, Window_t confine,
+                                 Cursor_t cursor, Bool_t grab = kTRUE,
+                                 Bool_t owner_events = kTRUE);
+
+   //End of mouse related part.
+   /////////////////////////////
+
+   /////////////////////////////
+   //Font management.
+   virtual FontStruct_t LoadQueryFont(const char *font_name);
+   virtual FontH_t      GetFontHandle(FontStruct_t fs);
+   virtual void         DeleteFont(FontStruct_t fs);
+   virtual Bool_t       HasTTFonts() const;
+   virtual Int_t        TextWidth(FontStruct_t font, const char *s, Int_t len);
+   virtual void         GetFontProperties(FontStruct_t font, Int_t &max_ascent, Int_t &max_descent);
+   virtual FontStruct_t GetFontStruct(FontH_t fh);
+   virtual void         FreeFontStruct(FontStruct_t fs);
+   virtual char       **ListFonts(const char *fontname, Int_t max, Int_t &count);
+   virtual void         FreeFontNames(char **fontlist);
+   //End of font management.
+   /////////////////////////////
+   
+   /////////////////////////////
+   //Color management.
+   virtual Bool_t       ParseColor(Colormap_t cmap, const char *cname, ColorStruct_t &color);
+   virtual Bool_t       AllocColor(Colormap_t cmap, ColorStruct_t &color);
+   virtual void         QueryColor(Colormap_t cmap, ColorStruct_t &color);
+   virtual void         FreeColor(Colormap_t cmap, ULong_t pixel);
+   virtual ULong_t      GetPixel(Color_t cindex);
+   virtual void         GetPlanes(Int_t &nplanes);
+   virtual void         GetRGB(Int_t index, Float_t &r, Float_t &g, Float_t &b);
+   virtual void         SetRGB(Int_t cindex, Float_t r, Float_t g, Float_t b);
+   virtual Colormap_t   GetColormap() const;
+
+   //End of color management.
+   /////////////////////////////
+   
+   /////////////////////////////
+   //Context management.
+   virtual GContext_t   CreateGC(Drawable_t wid, GCValues_t *gval);
+   virtual void         SetForeground(GContext_t gc, ULong_t foreground);
+   virtual void         ChangeGC(GContext_t gc, GCValues_t *gval);
+   virtual void         CopyGC(GContext_t org, GContext_t dest, Mask_t mask);
+   virtual void         GetGCValues(GContext_t gc, GCValues_t &gval);
+   virtual void         DeleteGC(GContext_t gc);
+   //Context management.
+   /////////////////////////////
+
+   //Remaining bunch of functions is not sorted yet (and not imlemented at the moment).
+
+   virtual void      ChangeProperty(Window_t wid, Atom_t property, Atom_t type,
+                                    UChar_t *data, Int_t len);
+
+   //Set of "Window manager hints".
+   virtual void      SetMWMHints(Window_t wid, UInt_t value, UInt_t funcs, UInt_t input);
+   virtual void      SetWMPosition(Window_t wid, Int_t x, Int_t y);
+   virtual void      SetWMSize(Window_t wid, UInt_t w, UInt_t h);
+   virtual void      SetWMSizeHints(Window_t wid, UInt_t wmin, UInt_t hmin,
+                                       UInt_t wmax, UInt_t hmax, UInt_t winc, UInt_t hinc);
+   virtual void      SetWMState(Window_t wid, EInitialState state);
+   virtual void      SetWMTransientHint(Window_t wid, Window_t main_id);
+
    virtual void      CreateOpenGLContext(Int_t wid);
    virtual void      DeleteOpenGLContext(Int_t wid);
 
@@ -73,29 +267,15 @@ public:
    virtual void      GetCharacterUp(Float_t &chupx, Float_t &chupy);
 
    virtual Int_t     GetDoubleBuffer(Int_t wid);
-   virtual void      GetGeometry(Int_t wid, Int_t &x, Int_t &y, UInt_t &w, UInt_t &h);
-   virtual const char *DisplayName(const char *);
    virtual Handle_t  GetNativeEvent() const;
-   virtual ULong_t   GetPixel(Color_t cindex);
-   virtual void      GetPlanes(Int_t &nplanes);
-   virtual void      GetRGB(Int_t index, Float_t &r, Float_t &g, Float_t &b);
-   virtual Window_t  GetWindowID(Int_t wid);
-   virtual Bool_t    HasTTFonts() const;
-   virtual Int_t     InitWindow(ULong_t window);
-   virtual Int_t     AddWindow(ULong_t qwid, UInt_t w, UInt_t h);
-   virtual Int_t     AddPixmap(ULong_t pixid, UInt_t w, UInt_t h);
-   virtual void      RemoveWindow(ULong_t qwid);
-   virtual void      MoveWindow(Int_t wid, Int_t x, Int_t y);
-   virtual Int_t     OpenPixmap(UInt_t w, UInt_t h);
+
+
+
    virtual void      QueryPointer(Int_t &ix, Int_t &iy);
    virtual Pixmap_t  ReadGIF(Int_t x0, Int_t y0, const char *file, Window_t wid);
    virtual Int_t     RequestLocator(Int_t mode, Int_t ctyp, Int_t &x, Int_t &y);
    virtual Int_t     RequestString(Int_t x, Int_t y, char *text);
-   virtual void      RescaleWindow(Int_t wid, UInt_t w, UInt_t h);
-   virtual Int_t     ResizePixmap(Int_t wid, UInt_t w, UInt_t h);
-   virtual void      ResizeWindow(Int_t wid);
-   virtual void      SelectWindow(Int_t wid);
-   virtual void      SelectPixmap(Int_t qpixid);
+
    virtual void      SetCharacterUp(Float_t chupx, Float_t chupy);
    virtual void      SetClipOFF(Int_t wid);
    virtual void      SetClipRegion(Int_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
@@ -105,74 +285,22 @@ public:
    virtual void      SetDoubleBufferON();
    virtual void      SetDrawMode(EDrawMode mode);
 
-   virtual void      SetRGB(Int_t cindex, Float_t r, Float_t g, Float_t b);
    virtual void      SetTextMagnitude(Float_t mgn);
 
    virtual void      Sync(Int_t mode);
-   virtual void      UpdateWindow(Int_t mode);
    virtual void      Warp(Int_t ix, Int_t iy, Window_t wid);
    virtual Int_t     WriteGIF(char *name);
    virtual void      WritePixmap(Int_t wid, UInt_t w, UInt_t h, char *pxname);
-   virtual Window_t  GetCurrentWindow() const;
    virtual Int_t     SupportsExtension(const char *ext) const;
 
-   //---- Methods to draw GUI -----
-   virtual void      GetWindowAttributes(Window_t wid, WindowAttributes_t &attr);
-   virtual void      MapWindow(Window_t wid);
-   virtual void      MapSubwindows(Window_t wid);
-   virtual void      MapRaised(Window_t wid);
-   virtual void      UnmapWindow(Window_t wid);
-   virtual void      DestroyWindow(Window_t wid);
-   virtual void      DestroySubwindows(Window_t wid);
-   virtual void      RaiseWindow(Window_t wid);
-   virtual void      LowerWindow(Window_t wid);
-   virtual void      MoveWindow(Window_t wid, Int_t x, Int_t y);
-   virtual void      MoveResizeWindow(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
-   virtual void      ResizeWindow(Window_t wid, UInt_t w, UInt_t h);
-   virtual void      IconifyWindow(Window_t wid);
-   virtual Bool_t    NeedRedraw(ULong_t tgwindow, Bool_t force);
-   
-           void      ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y);
-           void      ReparentTopLevel(Window_t wid, Window_t pid, Int_t x, Int_t y);
-   virtual void      ReparentWindow(Window_t wid, Window_t pid, Int_t x, Int_t y);
+   virtual Bool_t       NeedRedraw(ULong_t tgwindow, Bool_t force);
 
-   virtual void      SetWindowBackground(Window_t wid, ULong_t color);
-   virtual void      SetWindowBackgroundPixmap(Window_t wid, Pixmap_t pxm);
-   virtual Window_t  CreateWindow(Window_t parent, Int_t x, Int_t y,
-                                  UInt_t w, UInt_t h, UInt_t border,
-                                  Int_t depth, UInt_t clss,
-                                  void *visual, SetWindowAttributes_t *attr,
-                                  UInt_t wtype);
 
-   virtual Int_t        OpenDisplay(const char *dpyName);
-   virtual void         CloseDisplay();
-   virtual Display_t    GetDisplay() const;
-   virtual Visual_t     GetVisual() const;
-   virtual Int_t        GetScreen() const;
-   virtual Int_t        GetDepth() const;
    virtual UInt_t       ScreenWidthMM() const;
-   virtual Colormap_t   GetColormap() const;
    virtual Atom_t       InternAtom(const char *atom_name, Bool_t only_if_exist);
-   virtual Window_t     GetDefaultRootWindow() const;
-   virtual Window_t     GetParent(Window_t wid) const;
-   virtual FontStruct_t LoadQueryFont(const char *font_name);
-   virtual FontH_t      GetFontHandle(FontStruct_t fs);
-   virtual void         DeleteFont(FontStruct_t fs);
-   virtual GContext_t   CreateGC(Drawable_t wid, GCValues_t *gval);
-   virtual void         ChangeGC(GContext_t gc, GCValues_t *gval);
-   virtual void         CopyGC(GContext_t org, GContext_t dest, Mask_t mask);
-   virtual void         DeleteGC(GContext_t gc);
+
    virtual Cursor_t     CreateCursor(ECursor cursor);
    virtual void         SetCursor(Window_t wid, Cursor_t curid);
-   virtual Pixmap_t     CreatePixmap(Drawable_t wid, UInt_t w, UInt_t h);
-   virtual Pixmap_t     CreatePixmap(Drawable_t wid, const char *bitmap, UInt_t width,
-                                     UInt_t height, ULong_t forecolor, ULong_t backcolor,
-                                     Int_t depth);
-   virtual Pixmap_t     CreateBitmap(Drawable_t wid, const char *bitmap,
-                                     UInt_t width, UInt_t height);
-
-           void         DeletePixmapAux(Pixmap_t pixmapID);
-   virtual void         DeletePixmap(Pixmap_t pixmapID);
 
    virtual Bool_t       CreatePictureFromFile(Drawable_t wid, const char *filename,
                                               Pixmap_t &pict, Pixmap_t &pict_mask,
@@ -180,73 +308,20 @@ public:
    virtual Bool_t       CreatePictureFromData(Drawable_t wid, char **data,
                                               Pixmap_t &pict, Pixmap_t &pict_mask,
                                               PictureAttributes_t &attr);
-   virtual Pixmap_t     CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t height);
    virtual Bool_t       ReadPictureDataFromFile(const char *filename, char ***ret_data);
    virtual void         DeletePictureData(void *data);
    virtual void         SetDashes(GContext_t gc, Int_t offset, const char *dash_list, Int_t n);
-   virtual Bool_t       ParseColor(Colormap_t cmap, const char *cname, ColorStruct_t &color);
-   virtual Bool_t       AllocColor(Colormap_t cmap, ColorStruct_t &color);
-   virtual void         QueryColor(Colormap_t cmap, ColorStruct_t &color);
-   virtual void         FreeColor(Colormap_t cmap, ULong_t pixel);
    virtual Int_t        EventsPending();
    virtual void         NextEvent(Event_t &event);
    virtual void         Bell(Int_t percent);
-
-   virtual void         ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr);
-   virtual void         ChangeProperty(Window_t wid, Atom_t property, Atom_t type,
-                                       UChar_t *data, Int_t len);
-   
-   //Special methods to draw GUI elements.
-   //Versions with GCValues_t needed by X11::Command objects.
-           void         DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, Int_t y1, Int_t x2, Int_t y2);//Non-overrider.
-   virtual void         DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
-           void         DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
-   virtual void         DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
-           void         FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
-   virtual void         FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
-           void         CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width,
-                                    UInt_t height, Int_t dstX, Int_t dstY);//Non-overrider.
-   virtual void         CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX, Int_t srcY, UInt_t width,
-                                 UInt_t height, Int_t dstX, Int_t dstY);
-           void         DrawStringAux(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *s, Int_t len);//Non-overrider.
-   virtual void         DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *s, Int_t len);
-
-           void         ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
-   virtual void         ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
-   //
    
    virtual Bool_t       CheckEvent(Window_t wid, EGEventType type, Event_t &ev);
    virtual void         SendEvent(Window_t wid, Event_t *ev);
    virtual void         WMDeleteNotify(Window_t wid);
    virtual void         SetKeyAutoRepeat(Bool_t on = kTRUE);
    virtual void         GrabKey(Window_t wid, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
-   virtual void         GrabButton(Window_t wid, EMouseButton button, UInt_t modifier,
-                                   UInt_t evmask, Window_t confine, Cursor_t cursor,
-                                   Bool_t grab = kTRUE);
-   virtual void         GrabPointer(Window_t wid, UInt_t evmask, Window_t confine,
-                                    Cursor_t cursor, Bool_t grab = kTRUE,
-                                    Bool_t owner_events = kTRUE);
-   virtual void         SetWindowName(Window_t wid, char *name);
-   virtual void         SetIconName(Window_t wid, char *name);
-   virtual void         SetIconPixmap(Window_t wid, Pixmap_t pix);
-   virtual void         SetClassHints(Window_t wid, char *className, char *resourceName);
-   virtual void         SetMWMHints(Window_t wid, UInt_t value, UInt_t funcs, UInt_t input);
-   virtual void         SetWMPosition(Window_t wid, Int_t x, Int_t y);
-   virtual void         SetWMSize(Window_t wid, UInt_t w, UInt_t h);
-   virtual void         SetWMSizeHints(Window_t wid, UInt_t wmin, UInt_t hmin,
-                                       UInt_t wmax, UInt_t hmax, UInt_t winc, UInt_t hinc);
-   virtual void         SetWMState(Window_t wid, EInitialState state);
-   virtual void         SetWMTransientHint(Window_t wid, Window_t main_id);
-
-   virtual Int_t        TextWidth(FontStruct_t font, const char *s, Int_t len);
-   virtual void         GetFontProperties(FontStruct_t font, Int_t &max_ascent, Int_t &max_descent);
-   virtual void         GetGCValues(GContext_t gc, GCValues_t &gval);
-   virtual FontStruct_t GetFontStruct(FontH_t fh);
-   virtual void         FreeFontStruct(FontStruct_t fs);
-   virtual void         ClearWindow(Window_t wid);
    virtual Int_t        KeysymToKeycode(UInt_t keysym);
    virtual void         DrawSegments(Drawable_t wid, GContext_t gc, Segment_t *seg, Int_t nseg);
-   virtual void         SelectInput(Window_t wid, UInt_t evmask);
    virtual Window_t     GetInputFocus();
    virtual void         SetInputFocus(Window_t wid);
    virtual Window_t     GetPrimarySelectionOwner();
@@ -255,16 +330,11 @@ public:
    virtual void         LookupString(Event_t *event, char *buf, Int_t buflen, UInt_t &keysym);
    virtual void         GetPasteBuffer(Window_t wid, Atom_t atom, TString &text, Int_t &nchar,
                                        Bool_t del);
-   virtual void         TranslateCoordinates(Window_t src, Window_t dest, Int_t src_x,Int_t src_y,
-                                             Int_t &dest_x, Int_t &dest_y, Window_t &child);
-   virtual void         GetWindowSize(Drawable_t wid, Int_t &x, Int_t &y, UInt_t &w, UInt_t &h);
    virtual void         FillPolygon(Window_t wid, GContext_t gc, Point_t *points, Int_t npnt);
    virtual void         QueryPointer(Window_t wid, Window_t &rootw, Window_t &childw,
                                      Int_t &root_x, Int_t &root_y, Int_t &win_x,
                                      Int_t &win_y, UInt_t &mask);
-   virtual void         SetForeground(GContext_t gc, ULong_t foreground);
    virtual void         SetClipRectangles(GContext_t gc, Int_t x, Int_t y, Rectangle_t *recs, Int_t n);
-   virtual void         Update(Int_t mode = 0);
    virtual Region_t     CreateRegion();
    virtual void         DestroyRegion(Region_t reg);
    virtual void         UnionRectWithRegion(Rectangle_t *rect, Region_t src, Region_t dest);
@@ -277,15 +347,12 @@ public:
    virtual Bool_t       PointInRegion(Int_t x, Int_t y, Region_t reg);
    virtual Bool_t       EqualRegion(Region_t rega, Region_t regb);
    virtual void         GetRegionBox(Region_t reg, Rectangle_t *rect);
-   virtual char       **ListFonts(const char *fontname, Int_t max, Int_t &count);
-   virtual void         FreeFontNames(char **fontlist);
    virtual Drawable_t   CreateImage(UInt_t width, UInt_t height);
    virtual void         GetImageSize(Drawable_t wid, UInt_t &width, UInt_t &height);
    virtual void         PutPixel(Drawable_t wid, Int_t x, Int_t y, ULong_t pixel);
    virtual void         PutImage(Drawable_t wid, GContext_t gc, Drawable_t img, Int_t dx, Int_t dy,
                                  Int_t x, Int_t y, UInt_t w, UInt_t h);
    virtual void         DeleteImage(Drawable_t img);
-   virtual unsigned char *GetColorBits(Drawable_t wid, Int_t x = 0, Int_t y = 0, UInt_t w = 0, UInt_t h = 0);
    virtual void         ShapeCombineMask(Window_t wid, Int_t x, Int_t y, Pixmap_t mask);
 
    //---- Drag and Drop -----

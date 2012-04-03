@@ -8,6 +8,7 @@
 
 #import "QuartzWindow.h"//TODO: Move conversion functions from QuartzWindow to X11Coords or something like this.
 #import "QuartzPixmap.h"
+#import "X11Colors.h"
 
 //Call backs for data provider.
 extern "C" {
@@ -553,6 +554,72 @@ bool AdjustCropArea(QuartzPixmap *srcPixmap, Rectangle_t &cropArea)
    srcRect.fHeight = srcPixmap.fHeight;
    
    return AdjustCropArea(srcRect, cropArea);
+}
+
+//______________________________________________________________________________
+bool TestBitmapBit(const unsigned char *bitmap, unsigned w, unsigned h, unsigned i, unsigned j)
+{
+   //Test if a bit (i,j) is set in a bitmap (w, h).
+   
+   //Code in ROOT's GUI suggests, that byte is octet.
+   assert(bitmap != nullptr && "TestBitmapBit, bitmap parameter is null");
+   assert(w != 0 && "TestBitmapBit, w parameter is 0");
+   assert(h != 0 && "TestBitmapBit, h parameter is 0");
+   assert(i < w && "TestBitmapBit, i parameter is >= w");
+   assert(j < h && "TestBitmapBit, j parameter is >= h");
+   
+   const unsigned bytesPerLine = (w + 7) / 8;
+   const unsigned char *line = bitmap + j * bytesPerLine;
+   const unsigned char byteValue = line[i / 8];
+   
+   return byteValue & (1 << (i % 8));
+}
+
+//______________________________________________________________________________
+void FillPixmapBuffer(const unsigned char *bitmap, unsigned width, unsigned height, ULong_t foregroundPixel, ULong_t backgroundPixel, unsigned depth, unsigned char *imageData)
+{
+   assert(bitmap != nullptr && "FillPixmapBuffer, bitmap parameter is null");
+   assert(width != 0 && "FillPixmapBuffer, width parameter is 0");
+   assert(height != 0 && "FillPixmapBuffer, height parameter is 0");
+   assert(imageData != nullptr && "FillPixmapBuffer, imageData parameter is null");
+
+   if (depth > 1) {
+      unsigned char foregroundColor[4] = {};
+      X11::PixelToRGB(foregroundPixel, foregroundColor);
+      unsigned char backgroundColor[4] = {};
+      X11::PixelToRGB(backgroundPixel, backgroundColor);
+
+      for (unsigned j = 0; j < height; ++j) {
+         const unsigned line = j * width * 4;
+         for (unsigned i = 0; i < width; ++i) {
+            const unsigned pixel = line + i * 4;
+            
+            if (TestBitmapBit(bitmap, width, height, i, j)) {
+               //Foreground color.
+               imageData[pixel] = foregroundColor[0];
+               imageData[pixel + 1] = foregroundColor[1];
+               imageData[pixel + 2] = foregroundColor[2];
+            } else {
+               imageData[pixel] = backgroundColor[0];
+               imageData[pixel + 1] = backgroundColor[1];
+               imageData[pixel + 2] = backgroundColor[2];            
+            }
+            
+            imageData[pixel + 3] = 255;
+         }
+      }
+   } else {
+      for (unsigned j = 0; j < height; ++j) {
+         const unsigned line = j * width;
+         for (unsigned i = 0; i < width; ++i) {
+            const unsigned pixel = line + i;
+            if (TestBitmapBit(bitmap, width, height, i, j))
+               imageData[pixel] = 0;
+            else
+               imageData[pixel] = 255;//mask out pixel.
+         }
+      }   
+   }
 }
 
 }
