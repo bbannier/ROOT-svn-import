@@ -232,7 +232,7 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    assert(srcImage.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage.fImage is nil");
 
    if (!AdjustCropArea(srcImage, area)) {
-      NSLog(@"QuartzPixmap: -copyImage:srcImage:area:withMask:clipOrigin:toPoint, pixmap and copy are do not intersect");
+      NSLog(@"QuartzPixmap: -copyImage:srcImage:area:withMask:clipOrigin:toPoint, srcRect and copyRect do not intersect");
       return;
    }
    
@@ -249,28 +249,64 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
       subImage = srcImage.fImage;
 
    //Save context state.
-   CGContextSaveGState(self.fContext);
+   CGContextSaveGState(fContext);
 
-   CGContextTranslateCTM(self.fContext, 0., self.fHeight);
-   CGContextScaleCTM(self.fContext, 1., -1.);
+   CGContextTranslateCTM(fContext, 0., fHeight);
+   CGContextScaleCTM(fContext, 1., -1.);
 
 
    if (mask) {
       assert(mask.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint, mask is not nil, but mask.fImage is nil");
-      assert(CGImageIsMask(mask.fImage) && "copyImage:area:withMask:clipOrigin:toPoint, mask,fImage is not a mask");
+      assert(CGImageIsMask(mask.fImage) && "copyImage:area:withMask:clipOrigin:toPoint, mask.fImage is not a mask");
       clipXY.fY = LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
       const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
-      CGContextClipToMask(self.fContext, clipRect, mask.fImage);
+      CGContextClipToMask(fContext, clipRect, mask.fImage);
    }
 
    dstPoint.fY = LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
-   CGContextDrawImage(self.fContext, imageRect, subImage);
+   CGContextDrawImage(fContext, imageRect, subImage);
    //Restore context state.
-   CGContextRestoreGState(self.fContext);
+   CGContextRestoreGState(fContext);
 
    if (needSubImage)
       CGImageRelease(subImage);
+}
+
+//______________________________________________________________________________
+- (void) copyPixmap : (QuartzPixmap *) srcPixmap area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+{
+   using namespace ROOT::MacOSX::X11;
+
+   assert(srcPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint, srcPixmap parameter is nil");
+
+   if (!AdjustCropArea(srcPixmap, area)) {
+      NSLog(@"QuartzPixmap: -copyPixmap:area:withMask:clipOrigin:toPoint, srcRect and copyRect do not intersect");
+      return;
+   }
+   
+   CGImageRef image = [srcPixmap createImageFromPixmap : area];
+   
+   if (!image)
+      return;
+      
+   CGContextSaveGState(fContext);
+   
+   if (mask) {
+      assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint, mask is not nil, but mask.fImage is nil");
+      assert(CGImageIsMask(mask.fImage) && "copyPixmap:area:withMask:clipOrigin:toPoint, mask.fImage is not a mask");
+      clipXY.fY = LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
+      const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+      CGContextClipToMask(fContext, clipRect, mask.fImage);
+   }
+   
+   dstPoint.fY = LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   CGContextDrawImage(fContext, imageRect, image);
+   //Restore context state.
+   CGContextRestoreGState(fContext);
+
+   CGImageRelease(image);
 }
 
 //______________________________________________________________________________
@@ -279,7 +315,7 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    if ([(NSObject *)src isKindOfClass : [QuartzImage class]]) {
       [self copyImage : (QuartzImage *)src area : area withMask : mask clipOrigin : origin toPoint : dstPoint];
    } else if ([(NSObject *)src isKindOfClass : [QuartzPixmap class]]) {
-      NSLog(@"QuartzPixmap: -copy:area:withMask:clipOrigin:toPoint, copy pixmap to pixmap, not implemented yet!");
+      [self copyPixmap : (QuartzPixmap *)src area : area withMask : mask clipOrigin : origin toPoint : dstPoint];
    } else
       assert(0 && "Can copy only from pixmap or image");
 }
