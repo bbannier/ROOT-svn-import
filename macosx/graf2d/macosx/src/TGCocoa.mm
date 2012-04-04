@@ -1268,7 +1268,7 @@ void TGCocoa::CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gcVa
    copyArea.fHeight = (UShort_t)height;//TODO: check size?
 
    QuartzImage *mask = nil;
-   if (gcVals.fMask & kGCClipMask) {
+   if ((gcVals.fMask & kGCClipMask) && gcVals.fClipMask) {
       assert(fPimpl->GetDrawable(gcVals.fClipMask).fIsPixmap == YES && "CopyArea, mask is not a pixmap");
       mask = (QuartzImage *)fPimpl->GetDrawable(gcVals.fClipMask);
    }
@@ -1294,7 +1294,7 @@ void TGCocoa::CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX
 
    NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(dst);
    const GCValues_t &gcVals = fX11Contexts[gc - 1];
-
+   
    if (!drawable.fIsPixmap) {
       QuartzView *view = fPimpl->GetDrawable(dst).fContentView;
       if (!view.fIsOverlapped && view.fMapState == kIsViewable) {
