@@ -414,8 +414,13 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    }
 
    if (recreate) {
-      if (!gSystem->AccessPathName(fname, kFileExists))
-         gSystem->Unlink(fname);
+      if (!gSystem->AccessPathName(fname, kFileExists)) {
+         if (gSystem->Unlink(fname) != 0) {
+            SysError("TFile", "could not delete %s (errno: %d)",
+                     fname, gSystem->GetErrno());
+            goto zombie;
+         }
+      }
       recreate = kFALSE;
       create   = kTRUE;
       fOption  = "CREATE";

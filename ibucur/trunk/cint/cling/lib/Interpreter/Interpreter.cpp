@@ -390,10 +390,29 @@ namespace cling {
     return Result;
   }
 
+  Interpreter::CompilationResult
+  Interpreter::declare(const std::string& input, const Decl** D /* = 0 */) {
+    if (m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed) {
+      if (D)
+        *D = m_IncrParser->getLastTransaction().getFirstDecl();
+      return Interpreter::kSuccess;
+    }
+
+    return Interpreter::kFailure;
+  }
+
   void Interpreter::WrapInput(std::string& input, std::string& fname) {
-    fname = createUniqueName();
+    fname = createUniqueWrapper();
     input.insert(0, "void " + fname + "() {\n ");
     input.append("\n;\n}");
+  }
+
+  llvm::StringRef Interpreter::createUniqueWrapper() {
+    const size_t size = sizeof("__cling_Un1Qu3") + sizeof(m_UniqueCounter);
+    llvm::SmallString<size> out("__cling_Un1Qu3");
+    llvm::raw_svector_ostream(out) << m_UniqueCounter++;
+
+    return (getCI()->getASTContext().Idents.getOwn(out)).getName();
   }
 
   bool Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
@@ -424,12 +443,9 @@ namespace cling {
     return false;
   }
 
-  std::string Interpreter::createUniqueName() {
-    // Create an unique name
-    
-    std::ostringstream swrappername;
-    swrappername << "__cling_Un1Qu3" << m_UniqueCounter++;
-    return swrappername.str();
+  void Interpreter::createUniqueName(std::string& out) {
+    out = "Un1Qu3";
+    llvm::raw_string_ostream(out) << m_UniqueCounter++;
   }
 
   
@@ -438,15 +454,7 @@ namespace cling {
                           bool rawInput /*=false*/, const Decl** D /*=0*/) {
     // if we are using the preprocessor
     if (rawInput || !canWrapForCall(input)) {
-      
-      if (m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed) {
-        if (D)
-          *D = m_IncrParser->getLastTransaction().getFirstDecl();
-
-        return Interpreter::kSuccess;
-      }
-      else
-        return Interpreter::kFailure;
+      return declare(input);
     }
 
     if (m_IncrParser->CompileLineFromPrompt(input) 
@@ -489,7 +497,7 @@ namespace cling {
     
     std::string code;
     code += "#include \"" + filename + "\"\n";
-    return (m_IncrParser->CompileAsIs(code) != IncrementalParser::kFailed);
+    return declare(code);
   }
   
   Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, 

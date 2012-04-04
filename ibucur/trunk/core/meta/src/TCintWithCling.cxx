@@ -794,9 +794,6 @@ void tcling_ClassInfo::Init(const char* name)
 {
    //fprintf(stderr, "tcling_ClassInfo::Init(name): looking up class: %s\n",
    //        name);
-   fClassInfo = 0;
-   fDecl = 0;
-   //fIdx = -1;
    fClassInfo->Init(name);
 #if 0
    if (!fClassInfo->IsValid()) {
@@ -837,9 +834,7 @@ void tcling_ClassInfo::Init(int tagnum)
 {
    //fprintf(stderr, "tcling_ClassInfo::Init(tagnum): looking up tagnum: %d\n",
    //        tagnum);
-   fClassInfo = 0;
-   fDecl = 0;
-   //fIdx = -1;
+
    fClassInfo->Init(tagnum);
 #if 0
    if (!fClassInfo->IsValid()) {
@@ -3494,6 +3489,8 @@ Long_t TCintWithCling::ProcessLine(const char *line, EErrorCode *error /*=0*/)
    TString arguments;
    TString io;
    TString fname;
+   int indent = 0;
+   cling::Value result;
    if (!strncmp(sLine.Data(), ".L", 2)
        || !strncmp(sLine.Data(), ".x", 2)
        || !strncmp(sLine.Data(), ".X", 2)) {
@@ -3503,15 +3500,21 @@ Long_t TCintWithCling::ProcessLine(const char *line, EErrorCode *error /*=0*/)
          TString noACLiC = sLine(0, 2);
          noACLiC += " ";
          noACLiC += fname;
-         ret = fMetaProcessor->process(noACLiC);
+         indent = fMetaProcessor->process(noACLiC, &result);
       } else {
-         ret = fMetaProcessor->process(sLine);
+         indent = fMetaProcessor->process(sLine, &result);
       }
    } else {
-      ret = fMetaProcessor->process(sLine);
+      indent = fMetaProcessor->process(sLine, &result);
    }
 
-   return ret;
+   if (indent) {
+      // incomplete expression, needs something like:
+      /// fMetaProcessor->abortEvaluation();
+      return 0;
+   }
+
+   return result.hasValue() ? result.simplisticCastAs<long>() : 0;
 }
 
 //______________________________________________________________________________
@@ -6117,8 +6120,11 @@ const char* TCintWithCling::MethodInfo_Name(MethodInfo_t* minfo) const
 //______________________________________________________________________________
 const char* TCintWithCling::MethodInfo_TypeName(MethodInfo_t* minfo) const
 {
+   // Cint::MethodInfo::Type[Name] returns the type[name] of the
+   // return value (and not of the function itself).
+
    tcling_MethodInfo* info = (tcling_MethodInfo*) minfo;
-   return info->Name();
+   return info->TypeName();
 }
 
 //______________________________________________________________________________

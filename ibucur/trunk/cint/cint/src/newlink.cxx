@@ -513,7 +513,9 @@ const char* G__fulltypename(int typenum)
   }
   if(-1==G__newtype.parent_tagnum[typenum]) return(G__newtype.name[typenum]);
   else {
-    static G__FastAllocString buf(G__ONELINE);
+    static G__FastAllocString *buf_ptr = new G__FastAllocString(G__LONGLINE);
+    G__FastAllocString &buf(*buf_ptr);
+
     buf = G__fulltagname(G__newtype.parent_tagnum[typenum],0);
     buf += "::";
     buf += G__newtype.name[typenum];
@@ -3168,7 +3170,8 @@ void G__cpplink_header(FILE *fp)
 **************************************************************************/
 char *G__map_cpp_name(const char *in)
 {
-   static G__FastAllocString out(G__MAXNAME*6);
+   static G__FastAllocString *out_ptr = new G__FastAllocString(G__MAXNAME*6);
+   G__FastAllocString &out( *out_ptr );
    unsigned int i=0,j=0,c;
    while((c=in[i])) {
       if (out.Capacity() < (j+3)) {
@@ -3219,7 +3222,9 @@ char *G__map_cpp_name(const char *in)
 **************************************************************************/
 char *G__map_cpp_funcname(int tagnum,const char * /* funcname */,int ifn,int page)
 {
-   static G__FastAllocString mapped_name(G__MAXNAME);
+  static G__FastAllocString *mapped_name_ptr = new G__FastAllocString(G__MAXNAME);
+  G__FastAllocString &mapped_name(*mapped_name_ptr);
+
   const char *dllid;
 
   if(G__DLLID[0]) dllid=G__DLLID;
@@ -3539,7 +3544,9 @@ void* G__get_linked_user_param(int tag_num)
 **************************************************************************/
 char *G__get_link_tagname(int tagnum)
 {
-  static G__FastAllocString mapped_tagname(G__MAXNAME);
+  static G__FastAllocString *mapped_tagname_ptr = new G__FastAllocString(G__MAXNAME);
+  G__FastAllocString &mapped_tagname(*mapped_tagname_ptr);
+
   if(G__struct.hash[tagnum]) {
      mapped_tagname.Format("G__%sLN_%s"  ,G__DLLID
                            ,G__map_cpp_name(G__fulltagname(tagnum,0)));
@@ -5836,7 +5843,9 @@ int ifn;
 short page;
 int k)
 {
-  static G__FastAllocString buf(G__ONELINE);
+  static G__FastAllocString *buf_ptr = new G__FastAllocString(G__ONELINE);
+  G__FastAllocString &buf(*buf_ptr);
+
   buf.Format("G__P2F%d_%d_%d%s",ifn,page,k,G__PROJNAME.data());
   return(buf);
 }
@@ -8402,7 +8411,9 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
 **************************************************************************/
 static char* G__vbo_funcname(int tagnum, int basetagnum, int basen)
 {
-  static G__FastAllocString result(G__LONGLINE);
+  static G__FastAllocString *result_ptr = new G__FastAllocString(G__ONELINE);
+  G__FastAllocString &result(*result_ptr);
+
   G__FastAllocString temp(G__LONGLINE);
   temp = G__map_cpp_name(G__fulltagname(tagnum,1));
   result.Format("G__2vbo_%s_%s_%d",temp()

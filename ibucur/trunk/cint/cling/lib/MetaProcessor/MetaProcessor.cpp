@@ -9,6 +9,7 @@
 #include "InputValidator.h"
 #include "cling/Interpreter/Interpreter.h"
 
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -69,7 +70,10 @@ namespace cling {
   bool MetaProcessor::ProcessMeta(const std::string& input_line, Value* result){
 
    llvm::MemoryBuffer* MB = llvm::MemoryBuffer::getMemBuffer(input_line);
-   const LangOptions& LO = m_Interp.getCI()->getLangOpts();
+   LangOptions LO;
+   LO.C99 = 1;
+   // necessary for the @ symbol
+   LO.ObjC1 = 1;
    Lexer RawLexer(SourceLocation(), LO, MB->getBufferStart(),
                   MB->getBufferStart(), MB->getBufferEnd());
    Token Tok;
@@ -94,7 +98,8 @@ namespace cling {
    //  .L <filename>   //  Load code fragment.
    else if (Command == "L") {
      // TODO: Additional checks on params
-     bool success = m_Interp.loadFile(ReadToEndOfBuffer(RawLexer, MB));
+     bool success 
+       = m_Interp.loadFile(SanitizeArg(ReadToEndOfBuffer(RawLexer, MB)));
      if (!success) {
        llvm::errs() << "Load file failed.\n";
      }
@@ -104,7 +109,7 @@ namespace cling {
    //                    //  filename without extension.
    else if ((Command == "x") || (Command == "X")) {
      // TODO: Additional checks on params
-     llvm::sys::Path path(ReadToEndOfBuffer(RawLexer, MB));
+     llvm::sys::Path path(SanitizeArg(ReadToEndOfBuffer(RawLexer, MB)));
  
      if (!path.isValid())
        return false;
@@ -191,7 +196,7 @@ namespace cling {
        m_Interp.DumpIncludePath();
      else {
        // TODO: Additional checks on params
-       llvm::sys::Path path(ReadToEndOfBuffer(RawLexer, MB));
+       llvm::sys::Path path(SanitizeArg(ReadToEndOfBuffer(RawLexer, MB)));
        
        if (path.isValid())
          m_Interp.AddIncludePath(path.c_str());
@@ -233,6 +238,11 @@ namespace cling {
      PrintCommandHelp();
      return true;
    }
+   // Print the loaded files
+   else if (Command == "file") {
+     PrintFileStats();
+     return true;
+   }
 
    return false;
   }
@@ -243,15 +253,23 @@ namespace cling {
 
     switch (Tok.getKind()) {
     default:
+      assert("Unknown token");
       return "";
-    case tok::numeric_constant:
-      return Tok.getLiteralData();
-    case tok::raw_identifier:
-      return StringRef(Tok.getRawIdentifierData(), Tok.getLength()).str(); 
+    case tok::at:
+      return "@";
+    case tok::l_paren:
+      return "(";
+    case tok::r_paren:
+      return ")";
+    case tok::period:
+      return ".";
     case tok::slash:
       return "/";
+    case tok::numeric_constant:
+      return StringRef(Tok.getLiteralData(), Tok.getLength()).str();
+    case tok::raw_identifier:
+      return StringRef(Tok.getRawIdentifierData(), Tok.getLength()).str(); 
     }
-
   }
 
   llvm::StringRef MetaProcessor::ReadToEndOfBuffer(Lexer& RawLexer, 
@@ -260,6 +278,12 @@ namespace cling {
     Token TmpTok;
     RawLexer.getAndAdvanceChar(CurPtr, TmpTok);
     return StringRef(CurPtr, MB->getBufferSize()-(CurPtr-MB->getBufferStart()));
+  }
+
+  llvm::StringRef MetaProcessor::SanitizeArg(const std::string& Str) {
+    size_t begins = Str.find_first_not_of(" \t\n");
+    size_t ends = Str.find_last_not_of(" \t\n") + 1;
+    return Str.substr(begins, ends - begins);
   }
 
   void MetaProcessor::PrintCommandHelp() {
@@ -280,6 +304,20 @@ namespace cling {
     llvm::outs() << ".printAST [0|1]\t\t\t - Toggles the printing of input's ";
     llvm::outs() << "corresponding AST nodes\n";
     llvm::outs() << ".help\t\t\t\t - Shows this information\n";
+  }
+
+  void MetaProcessor::PrintFileStats() {
+    const SourceManager& SM = m_Interp.getCI()->getSourceManager();
+    SM.getFileManager().PrintStats();
+
+    llvm::outs() << "\n***\n\n";
+
+    for (SourceManager::fileinfo_iterator I = SM.fileinfo_begin(), 
+           E = SM.fileinfo_end(); I != E; ++I) {
+      llvm::outs() << (*I).first->getName();
+      llvm::outs() << "\n";
+    }
+
   }
 
   // Run a file: .x file[(args)]

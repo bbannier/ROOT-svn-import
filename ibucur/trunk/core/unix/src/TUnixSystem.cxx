@@ -453,6 +453,9 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
    TString lib = _dyld_get_image_name(i++);
 
+   TRegexp sovers = "libCore\\.[0-9]+\\.*[0-9]*\\.so";
+   TRegexp dyvers = "libCore\\.[0-9]+\\.*[0-9]*\\.dylib";
+
 #ifndef ROOTPREFIX
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
    // first loaded is the app so set ROOTSYS to app bundle
@@ -467,7 +470,8 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
       }
    }
 #else
-   if (lib.EndsWith("libCore.dylib") || lib.EndsWith("libCore.so")) {
+   if (lib.EndsWith("libCore.dylib") || lib.EndsWith("libCore.so") ||
+       lib.Index(sovers) != kNPOS    || lib.Index(dyvers) != kNPOS) {
       char respath[kMAXPATHLEN];
       if (!realpath(lib, respath)) {
          if (!gSystem->Getenv("ROOTSYS"))
@@ -489,9 +493,23 @@ static void DylibAdded(const struct mach_header *mh, intptr_t /* vmaddr_slide */
 
    // add all libs loaded before libSystem.B.dylib
    if (!gotFirstSo && (lib.EndsWith(".dylib") || lib.EndsWith(".so"))) {
-      if (linkedDylibs.Length())
-         linkedDylibs += " ";
-      linkedDylibs += lib;
+      sovers = "\\.[0-9]+\\.*[0-9]*\\.so";
+      Ssiz_t idx = lib.Index(sovers);
+      if (idx != kNPOS) {
+         lib.Remove(idx);
+         lib += ".so";
+      }
+      dyvers = "\\.[0-9]+\\.*[0-9]*\\.dylib";
+      idx = lib.Index(dyvers);
+      if (idx != kNPOS) {
+         lib.Remove(idx);
+         lib += ".dylib";
+      }
+      if (!gSystem->AccessPathName(lib, kReadPermission)) {
+         if (linkedDylibs.Length())
+            linkedDylibs += " ";
+         linkedDylibs += lib;
+      }
    }
 }
 #endif
@@ -2863,6 +2881,7 @@ const char *TUnixSystem::GetLinkedLibraries()
    const char *cSOEXT=".a";
 #else
    const char *cSOEXT=".so";
+   TRegexp sovers = "\\.so\\.[0-9]+";
 #endif
 #endif
    FILE *p = OpenPipe(TString::Format("%s %s", cLDD, exe), "r");
@@ -2882,10 +2901,15 @@ const char *TUnixSystem::GetLinkedLibraries()
          }
          if (solibName) {
             TString solib = solibName->String();
-            if (solib.EndsWith(cSOEXT)) {
-               if (!linkedLibs.IsNull())
-                  linkedLibs += " ";
-               linkedLibs += solib;
+            Ssiz_t idx = solib.Index(sovers);
+            if (solib.EndsWith(cSOEXT) || idx != kNPOS) {
+               if (idx != kNPOS)
+                  solib.Remove(idx+3);
+               if (!AccessPathName(solib, kReadPermission)) {
+                  if (!linkedLibs.IsNull())
+                     linkedLibs += " ";
+                  linkedLibs += solib;
+               }
             }
          }
          delete tok;
