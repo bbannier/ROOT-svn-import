@@ -866,18 +866,23 @@ void EventTranslator::CancelPointerGrab()
 }
 
 //______________________________________________________________________________
-void EventTranslator::CancelPointerGrab(Window_t winID)
+void EventTranslator::CheckUnmappedView(Window_t winID)
 {
-   //In case we have active grab and winID is a grab view or a parent of grab view - 
-   //cancel grab.
-
-   if (!fCurrentGrabView)
-      return;
-      
-   for (QuartzView *view = fCurrentGrabView; view; view = view.fParentView) {
-      if (view.fID == winID) {
-         CancelPointerGrab();
-         break;
+   if (fCurrentGrabView) {
+      for (QuartzView *view = fCurrentGrabView; view; view = view.fParentView) {
+         if (view.fID == winID) {
+            CancelPointerGrab();
+            break;
+         }
+      }
+   }
+   
+   if (fViewUnderPointer) {
+      for (QuartzView *view = fViewUnderPointer; view; view = view.fParentView) {
+         if (view.fID == winID) {
+            fViewUnderPointer = nil;
+            break;
+         }
       }
    }
 }
