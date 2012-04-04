@@ -20,6 +20,11 @@
 using namespace RooFit;
 using namespace RooStats;
 
+void function(UInt_t number) {
+   cout << "And the number is " << number << endl;
+}
+
+
 int main(int argc, char *argv[]) {
 
    // WARNING: classes are not loaded into ROOT table even if libRooFit is linked via Makefile
@@ -44,6 +49,7 @@ int main(int argc, char *argv[]) {
 // RooRealVar *x = new RooRealVar();
 // RooRealVar *mean = new RooRealVar();
 
+   function(-5);
 
 
    cout << "Some value " << g->getVal(*x) << endl;

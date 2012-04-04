@@ -134,7 +134,8 @@ namespace cling {
     InvocationOptions& getOptions() { return m_Opts; }
 
     const char* getVersion() const;
-    std::string createUniqueName();
+    void createUniqueName(std::string& out);
+
     void AddIncludePath(const char *incpath);
     void DumpIncludePath();
  
@@ -158,6 +159,18 @@ namespace cling {
                                   bool rawInput = false,
                                   Value* V = 0,
                                   const clang::Decl** D = 0);
+
+    ///\brief Compiles input line, which doesn't contain statements.
+    ///
+    /// The interface circumvents the most of the extra work necessary to 
+    /// compile and run statements.
+    ///
+    /// @param[in] input - the input containing only declarations (aka 
+    /// TopLevelDecls)
+    /// @param[out] D - the first compiled declaration from the input
+    ///
+    CompilationResult declare(const std::string& input, 
+                              const clang::Decl** D = 0);
 
     bool loadFile(const std::string& filename,
                   bool allowSharedLib = true);
@@ -209,6 +222,7 @@ namespace cling {
                                  const clang::Decl** D = 0);
     void WrapInput(std::string& input, std::string& fname);
     bool RunFunction(llvm::StringRef fname, llvm::GenericValue* res = 0);
+    llvm::StringRef createUniqueWrapper();
     friend class runtime::internal::LifetimeHandler;
     
     bool addSymbol(const char* symbolName,  void* symbolAddress);

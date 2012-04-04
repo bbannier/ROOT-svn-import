@@ -39,7 +39,7 @@
 #include <algorithm>
 
 //______________________________________________________________________________
-bool TTreeCloner::CompareSeek::operator()(UInt_t i1, UInt_t i2)
+Bool_t TTreeCloner::CompareSeek::operator()(UInt_t i1, UInt_t i2)
 {
    if (fObject->fBasketSeek[i1] ==  fObject->fBasketSeek[i2]) {
       if (fObject->fBasketEntry[i1] ==  fObject->fBasketEntry[i2]) {
@@ -51,7 +51,7 @@ bool TTreeCloner::CompareSeek::operator()(UInt_t i1, UInt_t i2)
 }
 
 //______________________________________________________________________________
-bool TTreeCloner::CompareEntry::operator()(UInt_t i1, UInt_t i2)
+Bool_t TTreeCloner::CompareEntry::operator()(UInt_t i1, UInt_t i2)
 {
    if (fObject->fBasketEntry[i1] ==  fObject->fBasketEntry[i2]) {
       return i1 < i2;
@@ -132,7 +132,7 @@ TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t option
       fCloneMethod = TTreeCloner::kSortBasketsByOffset;
    }
    if (fToTree) fToStartEntries = fToTree->GetEntries();
-   
+
    if (fToTree == 0) {
       fWarningMsg.Form("An output TTree is required (cloning %s).",
                        from->GetName());
@@ -383,7 +383,7 @@ UInt_t TTreeCloner::CollectBranches(TObjArray *from, TObjArray *to)
          numBasket += CollectBranches(fb, tb);
          ++fi;
          if (fi >= fnb) {
-           fi = 0;
+            fi = 0;
          }
       } else {
          if (tb->GetMother()==tb) {
@@ -579,14 +579,14 @@ void TTreeCloner::CopyProcessIds()
 void TTreeCloner::ImportClusterRanges()
 {
    // Set the entries and import the cluster range of the 
-   
+
    // First undo, the external call to SetEntries
    // We could improve the interface to optional tell the TTreeCloner that the
    // SetEntries was not done.
    fToTree->SetEntries(fToTree->GetEntries() - fFromTree->GetTree()->GetEntries());
-   
+
    fToTree->ImportClusterRanges( fFromTree->GetTree() );
-   
+
    fToTree->SetEntries(fToTree->GetEntries() + fFromTree->GetTree()->GetEntries());
 }
 

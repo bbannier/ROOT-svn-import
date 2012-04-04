@@ -814,6 +814,22 @@ void Pad::PaintForSelection()
 }
 
 //______________________________________________________________________________
+void Pad::PaintShadowForSelected() const
+{
+   fInHighlightMode = kTRUE;
+   fPainter.SetPainterMode(Painter::kPaintShadow);
+
+   if (fParentOfSelected) {
+      fParentOfSelected->Paint(GetSelectedParentDrawOption());
+   } else if (fSelected) {
+      fSelected->Paint(GetSelectedDrawOption());
+   }
+
+   fPainter.SetPainterMode(Painter::kPaintToView);
+   fInHighlightMode = kFALSE;
+}
+
+//______________________________________________________________________________
 void Pad::PaintSelected() const
 {
    fInHighlightMode = kTRUE;
@@ -893,7 +909,7 @@ void Pad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
 {
    // Paint fill area in CurrentPad World coordinates.
 
-   if (nn <3) return;
+   if (nn < 3) return;
    Int_t n=0;
    Double_t xmin,xmax,ymin,ymax;
    if (TestBit(TGraph::kClipFrame)) {

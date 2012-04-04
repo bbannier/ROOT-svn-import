@@ -37,12 +37,10 @@ using namespace RooFit ;
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
 //                                                                           //
-// RooFit Examples, Wouter Verkerke                                          //
+// RooStats Examples, Wouter Verkerke, Lorenzo Moneta, Ioan Gabriel Bucur    //
 //                                                                           //
 //                                                                           //
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*_*//
-
-//Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t oneTest, Bool_t dryRun) ;
 
 
 //------------------------------------------------------------------------
@@ -112,15 +110,15 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 0));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 1));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 2));
-   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
+//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 10));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 20));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 50));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
-   testList.push_back(new TestBasic104(fref, writeRef, doVerbose, 3));
-//   testList.push_back(new TestBasic105(fref,writeRef,doVerbose));
+   testList.push_back(new TestBasic104(fref, writeRef, doVerbose));
+//     testList.push_back(new TestBasic105(fref,writeRef,doVerbose, 15));
 
    cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
@@ -269,7 +267,7 @@ int main(int argc, const char *argv[])
          cout << "       -w        : write reference file, instead of reading file and running comparison tests" << endl ;
          cout << " " << endl ;
          cout << "       -n N      : Only run test with sequential number N instead of full suite of tests" << endl ;
-         cout << "       -c        : dump file stressRooFit_DEBUG.root to which results of both current result and reference for each failed test are written" << endl ;
+         cout << "       -c        : dump file stressRooStats_DEBUG.root to which results of both current result and reference for each failed test are written" << endl ;
          cout << "       -mc       : memory check mode, no regression test are performed. Set this flag when running with valgrind" << endl ;
          cout << "       -vs       : Use vector-based storage for all datasets (default is tree-based storage)" << endl ;
          cout << "       -v/-vv    : set verbose mode (show result of each regression test) or very verbose mode (show all roofit output as well)" << endl ;
