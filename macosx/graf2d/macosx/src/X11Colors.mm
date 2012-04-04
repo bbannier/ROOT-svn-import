@@ -108,7 +108,9 @@ bool ColorParser::ParseRGBTriplet(const TString &rgb, ColorStruct_t &color)const
 //______________________________________________________________________________
 bool ColorParser::LookupColorByName(const TString &colorName, ColorStruct_t &color)const
 {
-   auto it = fX11RGB.find(colorName);
+   TString lowerCaseName(colorName);
+   lowerCaseName.ToLower();
+   auto it = fX11RGB.find(lowerCaseName);
 
    if (it != fX11RGB.end()) {
       color.fPixel = 0;
@@ -882,6 +884,16 @@ ColorParser::ColorParser()
    fX11RGB["yellow3"] = RGB_t(205, 205, 0);
    fX11RGB["yellow4"] = RGB_t(139, 139, 0);
    fX11RGB["YellowGreen"] = RGB_t(154, 205, 50);
+   
+   decltype(fX11RGB) tmpMap;
+   TString key;
+   for (auto iter = fX11RGB.begin(), endIter = fX11RGB.end(); iter != endIter; ++iter) {
+      key = iter->first;
+      key.ToLower();
+      tmpMap[key] = iter->second;
+   }
+   
+   fX11RGB.swap(tmpMap);
 }
 
 //______________________________________________________________________________
