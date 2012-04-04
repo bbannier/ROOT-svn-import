@@ -10,6 +10,7 @@
 #include <Cocoa/Cocoa.h>
 
 #include "CocoaPrivate.h"
+#include "QuartzWindow.h"
 #include "CocoaUtils.h"
 
 namespace ROOT {
@@ -95,8 +96,10 @@ void CocoaPrivate::DeleteDrawable(unsigned drawableID)
    //Probably, I'll need some additional cleanup here later. Now just delete NSObject and
    //reuse its id.
    NSObject *base = drawableIter->second.Get();
-   if ([base isKindOfClass : [NSView class]])
-      [(NSView *)base removeFromSuperview];
+   if ([base isKindOfClass : [QuartzView class]])
+      [(QuartzView *)base removeFromSuperview];
+   else if ([base isKindOfClass : [QuartzWindow class]])
+      [((QuartzWindow *)base).fContentView removeFromSuperview];
 
    fFreeDrawableIDs.push_back(drawableID);
    fDrawables.erase(drawableIter);//StrongReference should do work here.

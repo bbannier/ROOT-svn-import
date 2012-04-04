@@ -1475,7 +1475,7 @@ void print_mask_info(ULong_t mask)
 - (void) mouseDown : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseDown, fID is 0");
-      
+   
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "mouseDown, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);

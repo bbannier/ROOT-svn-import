@@ -58,7 +58,9 @@ public:
    void CancelPointerGrab();
    
    //Window winID was either deleted or unmapped.
-   void CancelPointerGrab(Window_t winID);
+   //If it's a grab view or a parent of a grab view - cancel grab.
+   //If it's a "view under pointer" - reset view under pointer.
+   void CheckUnmappedView(Window_t winID);
 
 private:
    bool HasPointerGrab()const;
