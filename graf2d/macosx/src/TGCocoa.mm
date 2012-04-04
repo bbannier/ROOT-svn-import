@@ -2513,9 +2513,9 @@ Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t & /*e
 //______________________________________________________________________________
 void TGCocoa::SendEvent(Window_t wid, Event_t *event)
 {
-   // Specifies the event "ev" is to be sent to the window "wid".
-   // This function requires you to pass an event mask.
-   assert(!fPimpl->IsRootWindow(wid) && "SendEvent, can not send event to a root window");
+   if (fPimpl->IsRootWindow(wid))//TODO: check why this can happen (I've seen once with menus).
+      return;
+
    assert(event != nullptr && "SendEvent, event parameter is null");
    
    NSObject<X11Drawable> *widget = fPimpl->GetDrawable(wid);
