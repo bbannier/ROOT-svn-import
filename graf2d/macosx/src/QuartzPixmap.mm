@@ -291,6 +291,8 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
       return;
       
    CGContextSaveGState(fContext);
+   CGContextTranslateCTM(fContext, 0., fHeight);
+   CGContextScaleCTM(fContext, 1., -1.);
    
    if (mask) {
       assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint, mask is not nil, but mask.fImage is nil");
