@@ -885,12 +885,17 @@ ColorParser::ColorParser()
    fX11RGB["yellow4"] = RGB_t(139, 139, 0);
    fX11RGB["YellowGreen"] = RGB_t(154, 205, 50);
    
+   //These were colors names from X11's rgb.txt.
+   //But X11 also understand lower case names.
+   //And ROOT uses this. Convert all keys into lower case.
+   
    decltype(fX11RGB) tmpMap;
    TString key;
    for (auto iter = fX11RGB.begin(), endIter = fX11RGB.end(); iter != endIter; ++iter) {
       key = iter->first;
       key.ToLower();
-      tmpMap[key] = iter->second;
+      //Insert fails, if we have such case already - we do not care about such a fail.
+      tmpMap.insert(std::make_pair(key, iter->second));
    }
    
    fX11RGB.swap(tmpMap);
