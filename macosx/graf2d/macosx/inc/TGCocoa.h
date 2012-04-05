@@ -3,8 +3,10 @@
 #ifndef ROOT_TGCocoa
 #define ROOT_TGCocoa
 
+#include <utility>
 #include <vector>
 #include <memory>
+#include <map>
 
 #ifndef ROOT_TVirtualX
 #include "TVirtualX.h"
@@ -317,6 +319,7 @@ public:
    
    virtual Bool_t       CheckEvent(Window_t wid, EGEventType type, Event_t &ev);
    virtual void         SendEvent(Window_t wid, Event_t *ev);
+   virtual void         DispatchClientMessage(UInt_t messageID);
    virtual void         WMDeleteNotify(Window_t wid);
    virtual void         SetKeyAutoRepeat(Bool_t on = kTRUE);
    virtual void         GrabKey(Window_t wid, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
@@ -392,6 +395,11 @@ private:
 
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
+
+   typedef std::pair<Window_t, Event_t> ClientMessage_t;
+   std::vector<UInt_t> fFreeMessageIDs;
+   UInt_t fCurrentMessageID;
+   std::map<UInt_t, ClientMessage_t> fClientMessages;
    
    //I'd prefere to use = delete syntax from C++0x11, but this file is processed by CINT.
    TGCocoa(const TGCocoa &rhs);

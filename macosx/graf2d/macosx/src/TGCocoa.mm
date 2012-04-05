@@ -175,7 +175,8 @@ void BgraToRgba(unsigned char *data, unsigned w, unsigned h)
 TGCocoa::TGCocoa()
             : fSelectedDrawable(0),
               fCocoaDraw(0),
-              fForegroundProcess(false)
+              fForegroundProcess(false),
+              fCurrentMessageID(1)
               
 {
    try {
@@ -190,7 +191,8 @@ TGCocoa::TGCocoa(const char *name, const char *title)
             : TVirtualX(name, title),
               fSelectedDrawable(0),
               fCocoaDraw(0),
-              fForegroundProcess(false)              
+              fForegroundProcess(false),
+              fCurrentMessageID(1)
 {
    try {
       fPimpl.reset(new Details::CocoaPrivate);
@@ -2519,12 +2521,48 @@ void TGCocoa::SendEvent(Window_t wid, Event_t *event)
 
    assert(event != nullptr && "SendEvent, event parameter is null");
    
+
+   UInt_t messageID = fCurrentMessageID;
+   if (fFreeMessageIDs.size()) {
+      messageID = fFreeMessageIDs.back();
+      fFreeMessageIDs.pop_back();
+   } else
+      ++fCurrentMessageID;
+      
+   const ClientMessage_t newMessage(wid, *event);
+   assert(fClientMessages.find(messageID) == fClientMessages.end() && "SendEvent, messageID is already busy");
+   fClientMessages[messageID] = newMessage;
+   
+   NSEvent *cocoaEvent = [NSEvent otherEventWithType : NSApplicationDefined location : NSMakePoint(0, 0) modifierFlags : 0
+                          timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : 0 data2 : NSInteger(messageID)];
+   [NSApp postEvent : cocoaEvent atStart : NO];
+
+/*
    NSObject<X11Drawable> *widget = fPimpl->GetDrawable(wid);
    assert(widget.fID != 0 && "SendEvent, widget.fID is 0");
    
    TGWindow *window = gClient->GetWindowById(wid);
    assert(window != nullptr && "SendEvent, no window was found");
    window->HandleEvent(event);
+*/
+}
+
+//______________________________________________________________________________
+void TGCocoa::DispatchClientMessage(UInt_t messageID)
+{
+   assert(messageID != 0 && "DispatchClientMessage, messageID parameter is 0");
+   auto messageIter = fClientMessages.find(messageID);
+   assert(messageIter != fClientMessages.end() && "DispatchClientMessage, message was not found");
+
+   NSObject<X11Drawable> *widget = fPimpl->GetDrawable(messageIter->second.first);//:)
+   assert(widget.fID != 0 && "DispatchClientMessage, widget.fID is 0");
+   
+   TGWindow *window = gClient->GetWindowById(widget.fID);
+   assert(window != nullptr && "DispatchClientMessage, no window was found");
+   window->HandleEvent(&messageIter->second.second);
+   
+   fClientMessages.erase(messageIter);
+   fFreeMessageIDs.push_back(messageID);
 }
 
 //______________________________________________________________________________
