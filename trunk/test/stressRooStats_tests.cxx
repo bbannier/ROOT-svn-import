@@ -261,16 +261,13 @@ class TestBasic104 : public RooUnitTest {
 public:
    TestBasic104(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Bayesian Calculator vs Analytical - Poisson Simple Model", refFile, writeRef, verbose) {}; 
 
-   Double_t vtol() { return 1e-1; } // value test tolerance
-   // WARNING: tolerance maybe is a little big 
-
    Bool_t testCode() {
 
             // Put the significance level so that we obtain a 68% confidence interval
       const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // significance level
       const Int_t obsValue = 3; // observed experiment value
-      const Int_t gammaShape = 2; // shape of the gamma distribution prior (alpha)
-      const Int_t gammaRate = 1; // rate of the gamma distribution prior (beta)
+      const Double_t gammaShape = 2; // shape of the gamma distribution prior (alpha)
+      const Double_t gammaRate = 1; // rate = 1/scale of the gamma distribution prior (beta = 1/theta)
 
       if (_write == kTRUE) {
 
@@ -280,7 +277,7 @@ public:
          Double_t upperLimitInv = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue, 1); // integrate to 84%
          Double_t lowerLimitInvSqrt = ROOT::Math::gamma_quantile(alpha / 2, obsValue + 0.5, 1); // integrate to 16%
          Double_t upperLimitInvSqrt = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue + 0.5, 1); // integrate to 84%
-         Double_t lowerLimitGamma = ROOT::Math::gamma_quantile(alpha / 2, obsValue + gammaShape, 1 + gammaRate); // integrate to 16%
+         Double_t lowerLimitGamma = ROOT::Math::gamma_quantile(alpha / 2, obsValue + gammaShape, 1.0/(1 + gammaRate)); // integrate to 16%
          Double_t upperLimitGamma = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue + gammaShape, 1.0/(1 + gammaRate)); // integrate to 84%
 
          // Compare the limits obtained via BayesianCalculator with quantile values 
@@ -301,10 +298,9 @@ public:
          w->factory("Uniform::prior(mean)");
          w->factory("CEXPR::priorInv('1/mean', mean)");
          w->factory("CEXPR::priorInvSqrt('1/sqrt(mean)', mean)");
-         w->factory(TString::Format("Gamma::priorGamma(mean, %d, %d, 0)", gammaShape, gammaRate));
+         w->factory(TString::Format("Gamma::priorGamma(mean, %lf, %lf, 0)", gammaShape, gammaRate));
 
          RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
-
 
          // NOTE: mean cannot actually be in the interval [0, 100]  due to log evaluation errors in BayesianCalculator
          RooRealVar *x = w->var("x");
@@ -313,7 +309,6 @@ public:
          RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *obsSet);
          data->add(*obsSet);
 
-         // RooMsgService::instance().getStream(2).removeTopic(Eval);
          // Calculate likelihood interval using the BayesianCalculator 
          RooArgSet *params = new RooArgSet();
          params->add(*w->var("mean"));
@@ -324,7 +319,9 @@ public:
          SimpleInterval *interval = bc->GetInterval();         
          regValue(interval->LowerLimit(), "rs104_lower_limit_unif");
          regValue(interval->UpperLimit(), "rs104_upper_limit_unif");
-         
+     
+         cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
+ 
          delete bc;
          delete interval;
 
@@ -334,7 +331,8 @@ public:
          interval = bc->GetInterval();         
          regValue(interval->LowerLimit(), "rs104_lower_limit_inv");
          regValue(interval->UpperLimit(), "rs104_upper_limit_inv");         
-
+cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
+ 
          delete bc;
          delete interval;
 
@@ -344,6 +342,7 @@ public:
          interval = bc->GetInterval();         
          regValue(interval->LowerLimit(), "rs104_lower_limit_inv_sqrt");
          regValue(interval->UpperLimit(), "rs104_upper_limit_inv_sqrt");
+ cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
          delete bc;
          delete interval;
 
@@ -353,10 +352,11 @@ public:
           interval = bc->GetInterval();         
           regValue(interval->LowerLimit(), "rs104_lower_limit_gamma");
           regValue(interval->UpperLimit(), "rs104_upper_limit_gamma");  
-
+cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
+ 
          // Cleanup branch objects
-  //       delete bc;
-    //     delete interval;
+         delete bc;
+         delete interval;
          delete params;   
          delete obsSet;
          delete data;
