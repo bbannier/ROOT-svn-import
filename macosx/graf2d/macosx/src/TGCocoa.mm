@@ -365,17 +365,18 @@ void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
       w = attr.fWidth;
       h = attr.fHeight;
    } else {
-      NSObject<X11Drawable> *window = fPimpl->GetDrawable(wid);
-      x = window.fX;
-      y = window.fY;
-      w = window.fWidth;
-      h = window.fHeight;
-      
-      if (!window.fIsPixmap) {
+      NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+      x = drawable.fX;
+      y = drawable.fY;
+      w = drawable.fWidth;
+      h = drawable.fHeight;
+
+      if (!drawable.fIsPixmap) {
          NSPoint srcPoint = {};
          srcPoint.x = x;
          srcPoint.y = y;
-         const NSPoint dstPoint = X11::TranslateToScreen(window.fContentView, srcPoint);
+         QuartzView *view = drawable.fContentView.fParentView ? drawable.fContentView.fParentView : drawable.fContentView;
+         const NSPoint dstPoint = X11::TranslateToScreen(view, srcPoint);
          x = dstPoint.x;
          y = dstPoint.y;
       }

@@ -199,13 +199,12 @@ int LocalYROOTToCocoa(NSObject<X11Drawable> *drawable, CGFloat yROOT)
 //______________________________________________________________________________
 NSPoint TranslateToScreen(QuartzView *from, NSPoint point)
 {
-   assert(from != nil && "TranslateCoordinates, 'from' parameter is nil");
+   assert(from != nil && "TranslateToScreen, 'from' parameter is nil");
    
-   //I do not know, if I can use convertToBacking ..... - have to check this.   
-   const NSPoint winPoint = [from convertPoint : point toView : nil];
-   NSPoint screenPoint = [[from window] convertBaseToScreen : winPoint];
- 
-   //This is Cocoa's coordinates, but for ROOT I have to convert.
+   //TODO: I do not know, if I can use convertToBacking ..... - have to check this.
+   NSPoint winPoint = [from convertPoint : point toView : nil];
+   NSPoint screenPoint = [[from window] convertBaseToScreen : winPoint];; 
+   //TODO: This is Cocoa's coordinates, but for ROOT I have to convert.
    screenPoint.y = GlobalYCocoaToROOT(screenPoint.y);
 
    return screenPoint;
@@ -214,7 +213,7 @@ NSPoint TranslateToScreen(QuartzView *from, NSPoint point)
 //______________________________________________________________________________
 NSPoint TranslateFromScreen(NSPoint point, QuartzView *to)
 {
-   assert(to != nil && "TranslateCoordinates, 'to' parameter is nil");
+   assert(to != nil && "TranslateFromScreen, 'to' parameter is nil");
    
    point.y = GlobalYROOTToCocoa(point.y);
 
