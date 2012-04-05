@@ -273,8 +273,13 @@ Int_t TGCocoa::GetDepth() const
 {
    // Returns depth of screen (number of bit planes).
    // Equivalent to GetPlanes().
+   NSArray *screens = [NSScreen screens];
+   assert(screens != nil && "screens array is nil");
+   
+   NSScreen *mainScreen = [screens objectAtIndex : 0];
+   assert(mainScreen != nil && "screen with index 0 is nil");
 
-   return 0;
+   return NSBitsPerPixelFromDepth([mainScreen depth]);
 }
 
 //______________________________________________________________________________
@@ -2901,20 +2906,24 @@ void TGCocoa::GetRegionBox(Region_t /*reg*/, Rectangle_t * /*rect*/)
 }
 
 //______________________________________________________________________________
-Drawable_t TGCocoa::CreateImage(UInt_t /*width*/, UInt_t /*height*/)
+Drawable_t TGCocoa::CreateImage(UInt_t width, UInt_t height)
 {
    // Allocates the memory needed for an drawable.
    //
    // width  - the width of the image, in pixels
    // height - the height of the image, in pixels
-
-   return 0;
+   return OpenPixmap(width, height);
 }
 
 //______________________________________________________________________________
-void TGCocoa::GetImageSize(Drawable_t /*wid*/, UInt_t &/*width*/, UInt_t &/*height*/)
+void TGCocoa::GetImageSize(Drawable_t wid, UInt_t &width, UInt_t &height)
 {
    // Returns the width and height of the image wid
+   assert(int(wid) > fPimpl->GetRootWindowID() && "GetImageSize, wid parameter is a bad image id");
+   
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(wid);
+   width = drawable.fWidth;
+   height = drawable.fHeight;
 }
 
 //______________________________________________________________________________
@@ -2971,9 +2980,25 @@ void TGCocoa::ShapeCombineMask(Window_t, Int_t, Int_t, Pixmap_t)
 //______________________________________________________________________________
 UInt_t TGCocoa::ScreenWidthMM() const
 {
-   // Returns the width of the screen in millimeters.
+   //Comment from TVirtualX: Returns the width of the screen in millimeters.
+/*
+   NSArray *screens = [NSScreen screens];
+   assert(screens != nil && "screens array is nil");
+   
+   NSScreen *mainScreen = [screens objectAtIndex : 0];
+   assert(mainScreen != nil && "screen with index 0 is nil");
 
-   return 400;
+   NSDictionary *screenParameters = [mainScreen deviceDescription];
+   assert(screenParameters != nil && "deviceDescription dictionary is nil");
+   
+   //This casts are just terrible and rely on the current documentation only.
+   //But this is ... elegant Objective-C.
+   NSNumber *screenNumber = (NSNumber *)[screenParameters objectForKey : @"NSScreenNumber"];
+   assert(screenNumber != nil && "no screen number in device description");
+   const CGSize screenSize = CGDisplayScreenSize([screenNumber integerValue]);
+  */
+
+   return CGDisplayScreenSize(CGMainDisplayID()).width;
 }
 
 //______________________________________________________________________________
