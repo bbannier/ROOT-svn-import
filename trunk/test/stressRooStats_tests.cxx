@@ -281,7 +281,7 @@ public:
          Double_t lowerLimitInvSqrt = ROOT::Math::gamma_quantile(alpha / 2, obsValue + 0.5, 1); // integrate to 16%
          Double_t upperLimitInvSqrt = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue + 0.5, 1); // integrate to 84%
          Double_t lowerLimitGamma = ROOT::Math::gamma_quantile(alpha / 2, obsValue + gammaShape, 1 + gammaRate); // integrate to 16%
-         Double_t upperLimitGamma = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue + gammaShape, 1 + gammaRate); // integrate to 84%
+         Double_t upperLimitGamma = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue + gammaShape, 1.0/(1 + gammaRate)); // integrate to 84%
 
          // Compare the limits obtained via BayesianCalculator with quantile values 
          regValue(lowerLimit, "rs104_lower_limit_unif");
@@ -297,11 +297,11 @@ public:
          // Create Poisson model and dataset
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
          // NOTE: Solve for boundary intervals
-         w->factory("Poisson::poiss(x[0,100], mean[0.01,100])");
+         w->factory("Poisson::poiss(x[0,100], mean[1e-6,100])");
          w->factory("Uniform::prior(mean)");
-         w->factory("CEXPR::priorInv('1/mean',mean)");
-         w->factory("CEXPR::priorInvSqrt('1/sqrt(mean)',mean)");
-         w->factory(TString::Format("Gamma::priorGamma(x, %d, %d)", gammaShape, gammaRate));
+         w->factory("CEXPR::priorInv('1/mean', mean)");
+         w->factory("CEXPR::priorInvSqrt('1/sqrt(mean)', mean)");
+         w->factory(TString::Format("Gamma::priorGamma(mean, %d, %d, 0)", gammaShape, gammaRate));
 
          RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
 
@@ -328,7 +328,7 @@ public:
          delete bc;
          delete interval;
 
-         // Uniform prior on inverse of mean           
+         // Inverse of mean prior           
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInv"), NULL);
          bc->SetConfidenceLevel(1 - alpha);
          interval = bc->GetInterval();         
@@ -338,26 +338,25 @@ public:
          delete bc;
          delete interval;
 
-         // Uniform prior on inverse of mean           
+         // Square root of inverse of mean prior           
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInvSqrt"), NULL);
          bc->SetConfidenceLevel(1 - alpha);
          interval = bc->GetInterval();         
          regValue(interval->LowerLimit(), "rs104_lower_limit_inv_sqrt");
          regValue(interval->UpperLimit(), "rs104_upper_limit_inv_sqrt");
- 
          delete bc;
          delete interval;
 
-         // Uniform prior on inverse of mean           
-         bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorGamma"), NULL);
-         bc->SetConfidenceLevel(1 - alpha);
-         interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "rs104_lower_limit_gamma");
-         regValue(interval->UpperLimit(), "rs104_upper_limit_gamma");  
+         // Gamma distribution prior           
+          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorGamma"), NULL);
+          bc->SetConfidenceLevel(1 - alpha);
+          interval = bc->GetInterval();         
+          regValue(interval->LowerLimit(), "rs104_lower_limit_gamma");
+          regValue(interval->UpperLimit(), "rs104_upper_limit_gamma");  
 
          // Cleanup branch objects
-         delete bc;
-         delete interval;
+  //       delete bc;
+    //     delete interval;
          delete params;   
          delete obsSet;
          delete data;
