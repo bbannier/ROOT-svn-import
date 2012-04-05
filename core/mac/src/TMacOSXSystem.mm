@@ -261,14 +261,18 @@ void TMacOSXSystem::ProcessApplicationDefinedEvent(void *e)
    assert(event != nil && "AddFileActivityEvent, event parameter is nil");
    assert(event.type == NSApplicationDefined && "AddFileActivityEvent, event parameter has wrong type");
    
-   auto fdIter = fPimpl->fFileDescriptors.find(event.data1);
-   assert(fdIter != fPimpl->fFileDescriptors.end() && "WaitForAllEvents, file descriptor from NSEvent not found");
-   if (fdIter->second == Private::MacOSXSystem::DescriptorType::read)
-      fReadready->Set(event.data1);
-   else
-      fWriteready->Set(event.data1);
-   
-   ++fNfd;
+   if (event.data2) {
+      gVirtualX->DispatchClientMessage(event.data2);
+   } else {   
+      auto fdIter = fPimpl->fFileDescriptors.find(event.data1);
+      assert(fdIter != fPimpl->fFileDescriptors.end() && "WaitForAllEvents, file descriptor from NSEvent not found");
+      if (fdIter->second == Private::MacOSXSystem::DescriptorType::read)
+         fReadready->Set(event.data1);
+      else
+         fWriteready->Set(event.data1);
+      
+      ++fNfd;
+   }
 }
 
 //______________________________________________________________________________
