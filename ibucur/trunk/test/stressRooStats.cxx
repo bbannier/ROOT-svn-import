@@ -106,7 +106,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 
    list<RooUnitTest*> testList ;
 //   testList.push_back(new TestBasic101(fref, writeRef, doVerbose));
-//   testList.push_back(new TestBasic102(fref, writeRef, doVerbose));
+   testList.push_back(new TestBasic102(fref, writeRef, doVerbose));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 0));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 1));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 2));
@@ -117,8 +117,10 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
-   testList.push_back(new TestBasic104(fref, writeRef, doVerbose));
-//     testList.push_back(new TestBasic105(fref,writeRef,doVerbose, 15));
+//   testList.push_back(new TestBasic104(fref, writeRef, doVerbose));
+//   testList.push_back(new TestBasic105(fref, writeRef, doVerbose, 15));
+//   testList.push_back(new TestBasic106(fref, writeRef, doVerbose, 15));
+
 
    cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;

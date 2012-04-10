@@ -6,4 +6,8 @@
 5. getAnalyticalIntegrator -> not suggestive at all
 	analyticalIntegrator -> should be private
 6. createIntegral for discrete Poisson for range [a,b] sums from a to b-1; maybe this should be better documented
+7. the RooIntegrator1D problem
+	- RooRealIntegral:62 Minimum number of steps !?
+
+
 
