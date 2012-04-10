@@ -136,13 +136,13 @@ function ReadFile() {
       // if JSROOTIO is not defined, then dynamically load the required scripts and open the file
       loadScript('http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js', function() {
       loadScript('http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js', function() {
-      loadScript('http://bellenot.web.cern.ch/bellenot/Public/Test/JSRootIO/scripts/dtree.js', function() {
-      loadScript('http://bellenot.web.cern.ch/bellenot/Public/Test/JSRootIO/scripts/rawinflate.js', function() {
-      loadScript('http://bellenot.web.cern.ch/bellenot/Public/Test/JSRootIO/scripts/JSIO.core.js', function() {
-      loadScript('http://bellenot.web.cern.ch/bellenot/Public/Test/JSRootIO/scripts/highcharts.js', function() {
-      loadScript('http://bellenot.web.cern.ch/bellenot/Public/Test/JSRootIO/scripts/modules/exporting.js', function() {
-      loadScript('http://bellenot.web.cern.ch/bellenot/Public/Test/JSRootIO/scripts/JSROOTPainter.js', function() {
-      loadScript('http://bellenot.web.cern.ch/bellenot/Public/Test/JSRootIO/scripts/JSRootIOEvolution.js', function() {
+      loadScript('scripts/dtree.js', function() {
+      loadScript('scripts/rawinflate.js', function() {
+      loadScript('scripts/JSIO.core.js', function() {
+      loadScript('http://code.highcharts.com/2.2.1/highcharts.js', function() {
+      loadScript('http://code.highcharts.com/2.2.1/modules/exporting.js', function() {
+      loadScript('scripts/JSROOTPainter.js', function() {
+      loadScript('scripts/JSRootIOEvolution.js', function() {
          $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
          var url = $("#urlToLoad").val();
          if (url == "" || url == " ") return;
