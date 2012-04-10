@@ -1,11 +1,13 @@
 //Author: Timur Pocheptsov 16/02/2012
 
+#include <algorithm>
 #include <cassert>
 
 #include <Cocoa/Cocoa.h>
 
 #include "QuartzWindow.h"
 #include "CocoaUtils.h"
+#include "KeySymbols.h"
 #include "X11Events.h"
 #include "TGClient.h"
 #include "TGWindow.h"
@@ -14,6 +16,102 @@
 namespace ROOT {
 namespace MacOSX {
 namespace X11 {
+
+namespace {
+
+//Convert unichar (from [NSEvent characters]) into
+//ROOT's key symbol (from KeySymbols.h).
+struct CharKeyPair {
+   unichar fUnichar;
+   EKeySym fRootKeySym;
+   
+   bool operator < (const CharKeyPair &rhs)const
+   {
+      return fUnichar < rhs.fUnichar;
+   }
+};
+
+}
+
+//______________________________________________________________________________
+void MapUnicharToKeySym(unichar key, char *buf, Int_t /*len*/, UInt_t &rootKeySym)
+{
+   assert(buf != nullptr && "MapUnicharToKeySym, buf parameter is null");
+
+   static const CharKeyPair keyMap[] = {
+        {NSEnterCharacter, kKey_Enter},
+        {NSTabCharacter, kKey_Tab},
+        {NSCarriageReturnCharacter, kKey_Return},
+        {NSBackTabCharacter, kKey_Backtab},
+        //WHYWHYWHY apple does not have a constant for escape????
+        {27, kKey_Escape},
+        {NSDeleteCharacter, kKey_Backspace},
+        {NSUpArrowFunctionKey, kKey_Up},
+        {NSDownArrowFunctionKey, kKey_Down},
+        {NSLeftArrowFunctionKey, kKey_Left},
+        {NSRightArrowFunctionKey, kKey_Right},
+        {NSF1FunctionKey, kKey_F1},
+        {NSF2FunctionKey, kKey_F2},
+        {NSF3FunctionKey, kKey_F3},
+        {NSF4FunctionKey, kKey_F4},
+        {NSF5FunctionKey, kKey_F5},
+        {NSF6FunctionKey, kKey_F6},
+        {NSF7FunctionKey, kKey_F7},
+        {NSF8FunctionKey, kKey_F8},
+        {NSF9FunctionKey, kKey_F8},
+        {NSF10FunctionKey, kKey_F10},
+        {NSF11FunctionKey, kKey_F11},
+        {NSF12FunctionKey, kKey_F12},
+        {NSF13FunctionKey, kKey_F13},
+        {NSF14FunctionKey, kKey_F14},
+        {NSF15FunctionKey, kKey_F15},
+        {NSF16FunctionKey, kKey_F16},
+        {NSF17FunctionKey, kKey_F17},
+        {NSF18FunctionKey, kKey_F18},
+        {NSF19FunctionKey, kKey_F19},
+        {NSF20FunctionKey, kKey_F20},
+        {NSF21FunctionKey, kKey_F21},
+        {NSF22FunctionKey, kKey_F22},
+        {NSF23FunctionKey, kKey_F23},
+        {NSF24FunctionKey, kKey_F24},
+        {NSF25FunctionKey, kKey_F25},
+        {NSF26FunctionKey, kKey_F26},
+        {NSF27FunctionKey, kKey_F27},
+        {NSF28FunctionKey, kKey_F28},
+        {NSF29FunctionKey, kKey_F29},
+        {NSF30FunctionKey, kKey_F30},
+        {NSF31FunctionKey, kKey_F31},
+        {NSF32FunctionKey, kKey_F32},
+        {NSF33FunctionKey, kKey_F33},
+        {NSF34FunctionKey, kKey_F34},
+        {NSF35FunctionKey, kKey_F35},
+        {NSInsertFunctionKey, kKey_Insert},
+        {NSDeleteFunctionKey, kKey_Delete},
+        {NSHomeFunctionKey, kKey_Home},
+        {NSEndFunctionKey, kKey_End},
+        {NSPageUpFunctionKey, kKey_PageUp},
+        {NSPageDownFunctionKey, kKey_PageDown},
+        {NSPrintScreenFunctionKey, kKey_Print},
+        {NSScrollLockFunctionKey, kKey_ScrollLock},
+        {NSPauseFunctionKey, kKey_Pause},
+        {NSSysReqFunctionKey, kKey_SysReq}};
+   
+   const unsigned nEntries = sizeof keyMap / sizeof keyMap[0];
+   
+   buf[1] = 0;
+
+   CharKeyPair valueToFind = {};
+   valueToFind.fUnichar = key;
+   auto iter = std::lower_bound(keyMap, keyMap + nEntries, valueToFind);
+   
+   if (iter != keyMap + nEntries && iter->fUnichar == key) {
+      buf[0] = 0;
+      rootKeySym = iter->fRootKeySym;
+   } else {
+      buf[0] = key;//????
+      rootKeySym = key;   
+   }
+}
 
 namespace Detail {
 

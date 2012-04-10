@@ -102,6 +102,8 @@ private:
    std::vector<QuartzWindow *> fWindowStack;
 };
 
+void MapUnicharToKeySym(unichar key, char *buf, Int_t len, UInt_t &rootKeySym);
+
 }//X11
 }//MacOSX
 }//ROOT
