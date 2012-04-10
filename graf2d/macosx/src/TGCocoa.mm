@@ -2851,9 +2851,6 @@ void TGCocoa::LookupString(Event_t *event, char *buf, Int_t buflen, UInt_t &keys
    assert(buflen > 2 && "LookupString, not enough memory to return null-terminated ASCII string");
 
    MapUnicharToKeySym(event->fCode, buf, buflen, keysym);
-/*   buf[0] = event->fCode;
-   buf[1] = 0;
-   keysym = event->fCode;*/
 }
 
 //______________________________________________________________________________
