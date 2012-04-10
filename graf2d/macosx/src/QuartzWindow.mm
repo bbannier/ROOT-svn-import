@@ -1560,7 +1560,8 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (BOOL) acceptsFirstResponder
 {
-   return NO;//YES;
+   //Temporary version, will be more complex (grabs, focus, etc.).
+   return YES;
 }
 
 //______________________________________________________________________________
@@ -1609,5 +1610,20 @@ void print_mask_info(ULong_t mask)
    vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
 }
 
+//______________________________________________________________________________
+- (void) keyDown:(NSEvent *)theEvent
+{
+   assert(fID != 0 && "keyDown, fID is 0");
+  
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "keyDown, gVirtualX is null or not of TGCocoa type");
+   vx->GetEventTranslator()->GenerateKeyPressEvent(self, theEvent);
+}
+
+//______________________________________________________________________________
+- (void) keyUp:(NSEvent *)theEvent
+{
+   (void)theEvent;
+}
 
 @end
