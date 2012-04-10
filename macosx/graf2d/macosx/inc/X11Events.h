@@ -54,6 +54,8 @@ public:
    void GenerateButtonPressEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    void GenerateButtonReleaseEvent(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    
+   void GenerateKeyPressEvent(QuartzView *eventView, NSEvent *theEvent);
+   
    void SetPointerGrab(QuartzView *grabView, unsigned eventMask, bool ownerEvents);
    void CancelPointerGrab();
    
@@ -78,6 +80,8 @@ private:
 
    void GenerateButtonReleaseEventNoGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
    void GenerateButtonReleaseEventActiveGrab(QuartzView *eventView, NSEvent *theEvent, EMouseButton btn);
+   
+   void GenerateKeyPressEventNoGrab(QuartzView *view, NSEvent *theEvent);
 
    void FindGrabView(QuartzView *fromView, NSEvent *theEvent, EMouseButton btn);
    Ancestry FindRelation(QuartzView *view1, QuartzView *view2, QuartzView **lca);

@@ -425,7 +425,6 @@ void SendButtonPressEvent(QuartzView *view, NSEvent *theEvent, EMouseButton btn)
    }
    
    //Dispatch:
-//   window->HandleEvent(&pressEvent);
    SendEvent(window, pressEvent);
 }
 
@@ -451,8 +450,33 @@ void SendButtonReleaseEvent(QuartzView *view, NSEvent *theEvent, EMouseButton bt
    //
    ConvertEventLocationToROOTXY(theEvent, view, &releaseEvent);
    //Dispatch:
-//   window->HandleEvent(&releaseEvent);
    SendEvent(window, releaseEvent);
+}
+
+//______________________________________________________________________________
+void SendKeyPressEvent(QuartzView *view, NSEvent *theEvent)
+{
+   assert(view != nil && "SendKeyPressEvent, view parameter is nil");
+   assert(theEvent != nil && "SendKeyPressEvent, event parameter is nil");
+   assert(view.fID != 0 && "SendKeyPressEvent, view.fID is 0");
+   
+   TGWindow *window = gClient->GetWindowById(view.fID);
+   assert(window != nullptr && "SendKeyPressEvent, window was not found");
+   
+   Event_t keyPressEvent = NewX11EventFromCocoaEvent(view.fID, theEvent);
+   keyPressEvent.fType = kGKeyPress;
+   keyPressEvent.fState = GetKeyboardModifiersFromCocoaEvent(theEvent);
+   
+   NSString *characters = [theEvent characters];
+   assert(characters != nil && "SendKeyPressEvent, [theEvent characters] returned nil");
+   assert([characters length] > 0 && "SendKeyPressEvent, characters is an empty string");
+
+   keyPressEvent.fCode = [characters characterAtIndex : 0];
+   
+   //coords???
+   //fUser[0] = .... - subwindow.
+   
+   SendEvent(window, keyPressEvent);
 }
 
 //Aux. functions to send events to view's branch.
@@ -837,6 +861,15 @@ void EventTranslator::GenerateButtonReleaseEvent(QuartzView *eventView, NSEvent 
 }
 
 //______________________________________________________________________________
+void EventTranslator::GenerateKeyPressEvent(QuartzView *view, NSEvent *theEvent)
+{
+   assert(view != nil && "GenerateKeyPressEvent, view parameter is nil");
+   assert(theEvent != nil && "GenerateKeyPressEvent, theEvent parameter is nil");
+
+   GenerateKeyPressEventNoGrab(view, theEvent);
+}
+
+//______________________________________________________________________________
 void EventTranslator::SetPointerGrab(QuartzView *grabView, unsigned eventMask, bool ownerEvents)
 {
    assert(grabView != nil && "SetPointerGrab, view parameter is nil");
@@ -1056,6 +1089,30 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(QuartzView *eventView
       fPointerGrab = PointerGrab::noGrab;
 
       GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
+   }
+}
+
+//______________________________________________________________________________
+void EventTranslator::GenerateKeyPressEventNoGrab(QuartzView *view, NSEvent *theEvent)
+{
+   assert(view != nil && "GenerateKeyPressEventNoGrab, view parameter is nil");
+   assert(theEvent != nil && "GenerateKeyPressEventNoGrab, theEvent parameter is nil");
+
+   QuartzWindow *window = (QuartzWindow *)[view window];
+   assert(window != nil && "GenerateKeyPressEventNoGrab, view.window is nil");
+
+   const NSPoint windowPoint = [window mouseLocationOutsideOfEventStream];
+   NSPoint viewPoint = {};
+   
+   if (NSView *contentParentView = [[window fContentView] superview])
+      viewPoint = [contentParentView convertPointFromBase : windowPoint];
+   else
+      viewPoint = windowPoint;
+
+   if (QuartzView *candidateView = (QuartzView *)[[window fContentView] hitTest : viewPoint]) {
+      if ((candidateView = Detail::FindViewToPropagateEvent(candidateView, kKeyPressMask))) {
+         Detail::SendKeyPressEvent(candidateView, theEvent);
+      }
    }
 }
 

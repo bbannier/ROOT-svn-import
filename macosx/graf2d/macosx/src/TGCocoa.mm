@@ -2743,7 +2743,7 @@ void TGCocoa::ConvertPrimarySelection(Window_t /*wid*/, Atom_t /*clipboard*/, Ti
 }
 
 //______________________________________________________________________________
-void TGCocoa::LookupString(Event_t * /*event*/, char * /*buf*/, Int_t /*buflen*/, UInt_t &keysym)
+void TGCocoa::LookupString(Event_t *event, char *buf, Int_t buflen, UInt_t &keysym)
 {
    // Converts the keycode from the event structure to a key symbol (according
    // to the modifiers specified in the event structure and the current
@@ -2755,8 +2755,10 @@ void TGCocoa::LookupString(Event_t * /*event*/, char * /*buf*/, Int_t /*buflen*/
    // buflen - the length of the buffer
    // keysym - returns the "keysym" computed from the event
    //          if this argument is not NULL
-
-   keysym = 0;
+   assert(buflen > 2 && "LookupString, not enough memory to return null-terminated ASCII string");
+   buf[0] = event->fCode;
+   buf[1] = 0;
+   keysym = event->fCode;
 }
 
 //______________________________________________________________________________
