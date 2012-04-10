@@ -454,7 +454,7 @@ void SendButtonReleaseEvent(QuartzView *view, NSEvent *theEvent, EMouseButton bt
 }
 
 //______________________________________________________________________________
-void SendKeyPressEvent(QuartzView *view, NSEvent *theEvent)
+void SendKeyPressEvent(QuartzView *view, NSEvent *theEvent, NSPoint windowPoint)
 {
    assert(view != nil && "SendKeyPressEvent, view parameter is nil");
    assert(theEvent != nil && "SendKeyPressEvent, event parameter is nil");
@@ -467,14 +467,26 @@ void SendKeyPressEvent(QuartzView *view, NSEvent *theEvent)
    keyPressEvent.fType = kGKeyPress;
    keyPressEvent.fState = GetKeyboardModifiersFromCocoaEvent(theEvent);
    
-   NSString *characters = [theEvent characters];
+   NSString *characters = [theEvent charactersIgnoringModifiers];
    assert(characters != nil && "SendKeyPressEvent, [theEvent characters] returned nil");
    assert([characters length] > 0 && "SendKeyPressEvent, characters is an empty string");
 
    keyPressEvent.fCode = [characters characterAtIndex : 0];
    
-   //coords???
-   //fUser[0] = .... - subwindow.
+   const NSPoint viewPoint = [view convertPointFromBase : windowPoint];
+   //Coords.
+   keyPressEvent.fX = viewPoint.x;
+   keyPressEvent.fY = viewPoint.y;
+   const NSPoint screenPoint = TranslateToScreen(view, viewPoint);
+   keyPressEvent.fXRoot = screenPoint.x;
+   keyPressEvent.fYRoot = screenPoint.y;
+   //Find subwindow.
+   for (QuartzView *child in [view subviews]) {
+      if (!child.fIsOverlapped && [child hitTest : viewPoint]) {//Hit test goes down along the tree.
+         keyPressEvent.fUser[0] = child.fID;
+         break;
+      }
+   }
    
    SendEvent(window, keyPressEvent);
 }
@@ -865,6 +877,9 @@ void EventTranslator::GenerateKeyPressEvent(QuartzView *view, NSEvent *theEvent)
 {
    assert(view != nil && "GenerateKeyPressEvent, view parameter is nil");
    assert(theEvent != nil && "GenerateKeyPressEvent, theEvent parameter is nil");
+   
+   if (![[theEvent charactersIgnoringModifiers] length])
+      return;
 
    GenerateKeyPressEventNoGrab(view, theEvent);
 }
@@ -1110,9 +1125,8 @@ void EventTranslator::GenerateKeyPressEventNoGrab(QuartzView *view, NSEvent *the
       viewPoint = windowPoint;
 
    if (QuartzView *candidateView = (QuartzView *)[[window fContentView] hitTest : viewPoint]) {
-      if ((candidateView = Detail::FindViewToPropagateEvent(candidateView, kKeyPressMask))) {
-         Detail::SendKeyPressEvent(candidateView, theEvent);
-      }
+      if ((candidateView = Detail::FindViewToPropagateEvent(candidateView, kKeyPressMask)))
+         Detail::SendKeyPressEvent(candidateView, theEvent, windowPoint);
    }
 }
 
