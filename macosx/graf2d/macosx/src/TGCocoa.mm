@@ -600,7 +600,7 @@ void TGCocoa::DestroyWindow(Window_t wid)
    if (fPimpl->IsRootWindow(wid))
       return;
    
-   const Util::AutoreleasePool pool;
+   //const Util::AutoreleasePool pool;//TODO: check.
 
    fPimpl->fX11EventTranslator.CheckUnmappedView(wid);
    
