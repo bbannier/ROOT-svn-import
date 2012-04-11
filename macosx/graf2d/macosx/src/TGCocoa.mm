@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <cstddef>
 #include <limits>
 
 #include  <Cocoa/Cocoa.h>
@@ -62,25 +63,72 @@ namespace {
 //Aux. functions called from GUI-rendering part.
 
 //______________________________________________________________________________
+void SetStrokeForegroundColorFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
+{
+   assert(ctx != nullptr && "SetStrokeForegroundColorFromX11Context, ctx parameter is null");
+   
+   CGFloat rgb[3] = {};
+   if (gcVals.fMask & kGCForeground)
+      X11::PixelToRGB(gcVals.fForeground, rgb);
+   else
+      ::Warning("SetStrokeForegroundColorFromX11Context", "x11 context does not have line color information");
+
+   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
+}
+
+//______________________________________________________________________________
+void SetStrokeDashFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
+{
+   //Set line dash pattern (X11's LineOnOffDash line style).
+   assert(ctx != nullptr && "SetStrokeDashFromX11Context, ctx parameter is null");
+   SetStrokeForegroundColorFromX11Context(ctx, gcVals);
+   
+   static const std::size_t maxLength = sizeof gcVals.fDashes / sizeof gcVals.fDashes[0];
+   
+   assert(maxLength >= std::size_t(gcVals.fDashLen) && "SetStrokeDashFromX11Context, x11 context has bad dash length > sizeof(fDashes)");
+   
+   CGFloat dashes[maxLength] = {};
+   for (Int_t i = 0; i < gcVals.fDashLen; ++i)
+      dashes[i] = gcVals.fDashes[i];
+   
+   CGContextSetLineDash(ctx, gcVals.fDashOffset, dashes, gcVals.fDashLen);
+}
+
+//______________________________________________________________________________
+void SetStrokeDoubleDashFromX11Context(CGContextRef ctx, const GCValues_t & /*gcVals*/)
+{
+   assert(ctx != nullptr && "SetStrokeDoubleDashFromX11Context, ctx parameter is null");
+   ::Warning("SetStrokeDoubleDashFromX11Context", "Not implemented yet, kick tpochep!");
+}
+
+//______________________________________________________________________________
 void SetStrokeParametersFromX11Context(CGContextRef ctx, const GCValues_t &gcVals)
 {
    //Set line width and color from GCValues_t object.
    //(GUI rendering).
-   assert(ctx != nullptr && "SetStrokeParametersFromX11Context, context parameter is null");
+   assert(ctx != nullptr && "SetStrokeParametersFromX11Context, ctx parameter is null");
 
-   const Mask_t mask = gcVals.fMask;   
+   const Mask_t mask = gcVals.fMask;
    if ((mask & kGCLineWidth) && gcVals.fLineWidth > 1)
       CGContextSetLineWidth(ctx, gcVals.fLineWidth);
    else
       CGContextSetLineWidth(ctx, 1.);
 
-   CGFloat rgb[3] = {};
-   if (mask & kGCForeground)
-      X11::PixelToRGB(gcVals.fForeground, rgb);
-   else
-      ::Warning("SetStrokeParametersFromX11Context", "x11 context does not have line color information");
+   CGContextSetLineDash(ctx, 0., nullptr, 0);
 
-   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
+   if (mask & kGCLineStyle) {
+      if (gcVals.fLineStyle == kLineSolid)
+         SetStrokeForegroundColorFromX11Context(ctx, gcVals);
+      else if (gcVals.fLineStyle == kLineOnOffDash)
+         SetStrokeDashFromX11Context(ctx, gcVals);
+      else if (gcVals.fLineStyle == kLineDoubleDash)
+         SetStrokeDoubleDashFromX11Context(ctx ,gcVals);
+      else {
+         ::Warning("SetStrokeParametersFromX11Context", "line style bit is set, but line style is unknown");
+         SetStrokeForegroundColorFromX11Context(ctx, gcVals);
+      }
+   } else 
+      SetStrokeForegroundColorFromX11Context(ctx, gcVals);
 }
 
 //______________________________________________________________________________
