@@ -1451,6 +1451,12 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) setFrame : (NSRect) newFrame
 {
+   //In case of TBrowser, setFrame started infinite recursion:
+   //HandleConfigure for embedded main frame emits signal, slot
+   //calls layout, layout calls setFrame -> HandleConfigure and etc. etc.
+   if (CGRectEqualToRect(newFrame, self.frame))
+      return;
+
    [super setFrame : newFrame];
 }
 
