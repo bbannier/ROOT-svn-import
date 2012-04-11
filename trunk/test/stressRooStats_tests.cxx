@@ -256,35 +256,38 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// 'BAYESIAN CENTRAL INTERVAL - SIMPLE MODEL' RooStats Tutorial Macro #104
-//
-// Test the central interval computed by the Bayesian calculator on a Poisson 
-// distribution, using different priors. The parameter of interest is the mean of
-// the Poisson distribution, and there are no nuisance parameters. The priors used are:
+// BAYESIAN CENTRAL INTERVAL - SIMPLE MODEL 
+// 
+// Test the Bayesian central interval computed by the BayesianCalculator on a 
+// Poisson distribution, using different priors. The parameter of interest is 
+// the mean of the Poisson distribution, and there are no nuisance parameters. 
+// The priors used are:
 //    1. constant / uniform 
 //    2. inverse of the mean
 //    3. square root of the inverse of the mean
 //    4. gamma distribution
+// The posterior distribution are easily obtained analytically for these cases.
+// Therefore, the reference interval limits will be computed analytically.
 //
 // 04/2012 - Ioan Gabriel Bucur
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "RooGaussian.h"
-#include "RooPoisson.h" 
 #include "RooStats/BayesianCalculator.h"
 
-class TestBasic104 : public RooUnitTest {
+class TestBayesianCentralSimple : public RooUnitTest {
 public:
-   TestBasic104(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Bayesian Calculator vs Analytical - Poisson Simple Model Central Interval", refFile, writeRef, verbose) {}; 
+   TestBayesianCentralSimple(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("BayesianCalculator Central Interval - Poisson Simple Model", refFile, writeRef, verbose) {}; 
 
    Bool_t testCode() {
 
-            // Put the significance level so that we obtain a 68% confidence interval
-      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // significance level
+      // Put the significance level so that we obtain a 68% CL central interval
+      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // size of the test
       const Int_t obsValue = 3; // observed experiment value
       const Double_t gammaShape = 2; // shape of the gamma distribution prior (alpha)
       const Double_t gammaRate = 1; // rate = 1/scale of the gamma distribution prior (beta = 1/theta)
+
+      RooMsgService::instance().setGlobalKillBelow(RooFit::INFO);
 
       if (_write == kTRUE) {
 
@@ -298,20 +301,20 @@ public:
          Double_t upperLimitGamma = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue + gammaShape, 1.0/(1 + gammaRate)); // integrate to 84%
 
          // Compare the limits obtained via BayesianCalculator with quantile values 
-         regValue(lowerLimit, "rs104_lower_limit_unif");
-         regValue(upperLimit, "rs104_upper_limit_unif");
-         regValue(lowerLimitInv, "rs104_lower_limit_inv");
-         regValue(upperLimitInv, "rs104_upper_limit_inv");
-         regValue(lowerLimitInvSqrt, "rs104_lower_limit_inv_sqrt");
-         regValue(upperLimitInvSqrt, "rs104_upper_limit_inv_sqrt");
-         regValue(lowerLimitGamma, "rs104_lower_limit_gamma");
-         regValue(upperLimitGamma, "rs104_upper_limit_gamma");         
+         regValue(lowerLimit, "bcs_lower_limit_unif");
+         regValue(upperLimit, "bcs_upper_limit_unif");
+         regValue(lowerLimitInv, "bcs_lower_limit_inv");
+         regValue(upperLimitInv, "bcs_upper_limit_inv");
+         regValue(lowerLimitInvSqrt, "bcs_lower_limit_inv_sqrt");
+         regValue(upperLimitInvSqrt, "bcs_upper_limit_inv_sqrt");
+         regValue(lowerLimitGamma, "bcs_lower_limit_gamma");
+         regValue(upperLimitGamma, "bcs_upper_limit_gamma");         
          
       } else {
          // Create Poisson model and dataset
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
          // NOTE: Solve for boundary intervals
-         w->factory("Poisson::poiss(x[0,100], mean[1e-6,100])");
+         w->factory("Poisson::poiss(x[1,100], mean[1,100])");
          w->factory("Uniform::prior(mean)");
          w->factory("CEXPR::priorInv('1/mean', mean)");
          w->factory("CEXPR::priorInvSqrt('1/sqrt(mean)', mean)");
@@ -332,44 +335,39 @@ public:
 
          // Uniform prior on mean
          BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("prior"), NULL);
-         bc->SetConfidenceLevel(1 - alpha);
+         bc->SetTestSize(alpha);
          SimpleInterval *interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "rs104_lower_limit_unif");
-         regValue(interval->UpperLimit(), "rs104_upper_limit_unif");
-     
-         cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
+         regValue(interval->LowerLimit(), "bcs_lower_limit_unif");
+         regValue(interval->UpperLimit(), "bcs_upper_limit_unif");
  
          delete bc;
          delete interval;
 
          // Inverse of mean prior           
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInv"), NULL);
-         bc->SetConfidenceLevel(1 - alpha);
+         bc->SetTestSize(alpha);
          interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "rs104_lower_limit_inv");
-         regValue(interval->UpperLimit(), "rs104_upper_limit_inv");         
-cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
+         regValue(interval->LowerLimit(), "bcs_lower_limit_inv");
+         regValue(interval->UpperLimit(), "bcs_upper_limit_inv");         
  
          delete bc;
          delete interval;
 
          // Square root of inverse of mean prior           
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInvSqrt"), NULL);
-         bc->SetConfidenceLevel(1 - alpha);
+         bc->SetTestSize(alpha);
          interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "rs104_lower_limit_inv_sqrt");
-         regValue(interval->UpperLimit(), "rs104_upper_limit_inv_sqrt");
- cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
+         regValue(interval->LowerLimit(), "bcs_lower_limit_inv_sqrt");
+         regValue(interval->UpperLimit(), "bcs_upper_limit_inv_sqrt");
          delete bc;
          delete interval;
 
          // Gamma distribution prior           
-          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorGamma"), NULL);
-          bc->SetConfidenceLevel(1 - alpha);
-          interval = bc->GetInterval();         
-          regValue(interval->LowerLimit(), "rs104_lower_limit_gamma");
-          regValue(interval->UpperLimit(), "rs104_upper_limit_gamma");  
-cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
+         bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorGamma"), NULL);
+         bc->SetTestSize(alpha);
+         interval = bc->GetInterval();         
+         regValue(interval->LowerLimit(), "bcs_lower_limit_gamma");
+         regValue(interval->UpperLimit(), "bcs_upper_limit_gamma");  
  
          // Cleanup branch objects
          delete bc;
@@ -389,7 +387,7 @@ cout << interval->LowerLimit() << " " << interval->UpperLimit()<<endl;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// 'BAYESIAN INTERVAL CALCULATOR - COMPLEX MODEL' RooStats Tutorial Macro #105
+// BAYESIAN CENTRAL INTERVAL - COMPLEX POISSON MODEL 
 //
 // Test the confidence interval computed by the Bayesian calculator on a signal +
 // background Poisson model, using 1. constant / uniform prior and 2. square root 
@@ -448,7 +446,7 @@ public:
 
       // Uniform prior on mean
       BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *POISet, *w->pdf("prior"), NPSet);
-      bc->SetConfidenceLevel(1 - alpha);
+      bc->SetTestSize(alpha);
       SimpleInterval *interval = bc->GetInterval();         
       regValue(interval->LowerLimit(), lowerLimitString);
       regValue(interval->UpperLimit(), upperLimitString);
@@ -458,7 +456,7 @@ public:
 
       // Prior is inverse of square root            
       bc = new BayesianCalculator(*data, *w->pdf("poiss"), *POISet, *w->pdf("priorInvSqrt"), NPSet);
-      bc->SetConfidenceLevel(1 - alpha);
+      bc->SetTestSize(alpha);
       interval = bc->GetInterval();         
       regValue(interval->LowerLimit(), lowerLimitInvSqrtString);
       regValue(interval->UpperLimit(), upperLimitInvSqrtString);         
@@ -480,6 +478,101 @@ private:
 
 };
 
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// BAYESIAN SHORTEST INTERVAL - SIMPLE POISSON MODEL 
+//
+// Test the Bayesian shortest interval computed by the BayesianCalculator on a 
+// Poisson distribution, using different priors. The parameter of interest is 
+// the mean of the Poisson distribution, and there are no nuisance parameters. 
+// The priors used are:
+//    1. constant / uniform 
+//    2. inverse of the mean
+// The reference interval limits are taken from the paper: "Why isn't every
+// physicist a Bayesian?" by Robert D. Cousins. 
+//
+// 04/2012 - Ioan Gabriel Bucur
+//
+///////////////////////////////////////////////////////////////////////////////
+
+class TestBayesianShortest : public RooUnitTest {
+public:
+   TestBayesianShortest(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("BayesianCalculator Shortest Interval - Poisson Simple Model", refFile, writeRef, verbose) {}; 
+
+   Double_t vtol() { return 1e-2; } // the references values in the paper have a precision of only two decimal points
+   // in such a situation, it is natural that we increase the value tolerance
+
+   Bool_t testCode() {
+
+      // Put the significance level so that we obtain a 68% confidence interval
+      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // test size
+      const Int_t obsValue = 3; // observed experiment value
+
+      if (_write == kTRUE) {
+
+         // Compare the limits obtained via BayesianCalculator with given reference values
+         regValue(1.55, "bs_lower_limit_unif");
+         regValue(5.15, "bs_upper_limit_unif");
+         regValue(0.86, "bs_lower_limit_inv");
+         regValue(3.85, "bs_upper_limit_inv");
+         
+      } else {
+         // Create Poisson model and dataset
+         RooWorkspace* w = new RooWorkspace("w", kTRUE);
+         // NOTE: Solve for boundary intervals
+         w->factory("Poisson::poiss(x[0,100], mean[1e-6,100])");
+         w->factory("Uniform::prior(mean)");
+         w->factory("CEXPR::priorInv('1/mean', mean)");
+
+         RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
+
+         // NOTE: mean cannot actually be in the interval [0, 100]  due to log evaluation errors in BayesianCalculator
+         RooRealVar *x = w->var("x");
+         x->setVal(obsValue);
+         RooArgSet *obsSet =  new RooArgSet(*x);
+         RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *obsSet);
+         data->add(*obsSet);
+
+         // Calculate likelihood interval using the BayesianCalculator 
+         RooArgSet *params = new RooArgSet();
+         params->add(*w->var("mean"));
+
+         // Uniform prior on mean
+         BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("prior"), NULL);
+         bc->SetTestSize(alpha);
+         bc->SetShortestInterval();
+         bc->SetScanOfPosterior(10000);
+         SimpleInterval *interval = bc->GetInterval();         
+         regValue(interval->LowerLimit(), "bs_lower_limit_unif");
+         regValue(interval->UpperLimit(), "bs_upper_limit_unif");
+     
+         delete bc;
+         delete interval;
+
+         // Inverse of mean prior           
+         bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInv"), NULL);
+         bc->SetTestSize(alpha);
+         bc->SetShortestInterval();
+         bc->SetScanOfPosterior(10000);
+         interval = bc->GetInterval();         
+         regValue(interval->LowerLimit(), "bs_lower_limit_inv");
+         regValue(interval->UpperLimit(), "bs_upper_limit_inv");         
+ 
+         // Cleanup branch objects
+         delete bc;
+         delete interval;
+         delete params;   
+         delete obsSet;
+         delete data;
+         delete w;      
+     }
+      
+      return kTRUE ;
+   }
+
+};
 
 
 ///////////////////////////////////////////////////////////////////////////////
