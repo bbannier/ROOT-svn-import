@@ -2532,11 +2532,10 @@ Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t & /*e
 //______________________________________________________________________________
 void TGCocoa::SendEvent(Window_t wid, Event_t *event)
 {
-   if (fPimpl->IsRootWindow(wid))//TODO: check why this can happen (I've seen once with menus).
+   if (fPimpl->IsRootWindow(wid))
       return;
 
    assert(event != nullptr && "SendEvent, event parameter is null");
-   
 
    UInt_t messageID = fCurrentMessageID;
    if (fFreeMessageIDs.size()) {
@@ -2552,15 +2551,6 @@ void TGCocoa::SendEvent(Window_t wid, Event_t *event)
    NSEvent *cocoaEvent = [NSEvent otherEventWithType : NSApplicationDefined location : NSMakePoint(0, 0) modifierFlags : 0
                           timestamp: 0. windowNumber : 0 context : nil subtype : 0 data1 : 0 data2 : NSInteger(messageID)];
    [NSApp postEvent : cocoaEvent atStart : NO];
-
-/*
-   NSObject<X11Drawable> *widget = fPimpl->GetDrawable(wid);
-   assert(widget.fID != 0 && "SendEvent, widget.fID is 0");
-   
-   TGWindow *window = gClient->GetWindowById(wid);
-   assert(window != nullptr && "SendEvent, no window was found");
-   window->HandleEvent(event);
-*/
 }
 
 //______________________________________________________________________________
