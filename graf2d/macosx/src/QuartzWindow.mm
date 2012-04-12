@@ -880,12 +880,50 @@ void print_mask_info(ULong_t mask)
 
 @end
 
-//
-//
-//
-//
 
-@implementation QuartzView
+//Passive key grab info.
+
+@implementation PassiveKeyGrab {
+   Int_t fKeyCode;
+   UInt_t fModifiers;
+}
+
+//______________________________________________________________________________
+- (id) initWithKey : (Int_t) keyCode modifiers : (UInt_t) modifiers
+{
+   if (self = [super init]) {
+      fKeyCode = keyCode;
+      fModifiers = modifiers;
+   }
+   
+   return self;
+}
+
+//______________________________________________________________________________
+- (BOOL) matchKey : (Int_t) keyCode modifiers : (UInt_t) modifiers
+{
+   return keyCode == fKeyCode && modifiers == fModifiers;
+}
+
+//______________________________________________________________________________
+- (Int_t) fKeyCode 
+{
+   return fKeyCode;
+}
+
+//______________________________________________________________________________
+- (UInt_t) fModifiers
+{
+   return fModifiers;
+}
+
+@end
+
+//QuartzView.
+
+@implementation QuartzView {
+   NSMutableArray *fPassiveKeyGrabs;
+}
 
 @synthesize fBackBuffer;
 @synthesize fParentView;
@@ -924,6 +962,8 @@ void print_mask_info(ULong_t mask)
       fGrabButtonEventMask = 0;
       fOwnerEvents = NO;
       
+      fPassiveKeyGrabs = [[NSMutableArray alloc] init];
+      
       [self setCanDrawConcurrently : NO];
       
       [self setHidden : YES];
@@ -939,6 +979,13 @@ void print_mask_info(ULong_t mask)
    }
    
    return self;
+}
+
+//______________________________________________________________________________
+- (void) dealloc
+{
+   [fPassiveKeyGrabs release];
+   [super dealloc];
 }
 
 //______________________________________________________________________________
@@ -1630,6 +1677,41 @@ void print_mask_info(ULong_t mask)
 - (void) keyUp:(NSEvent *)theEvent
 {
    (void)theEvent;
+}
+
+//Key grabs.
+//______________________________________________________________________________
+- (void) addPassiveKeyGrab : (Int_t) keyCode modifiers : (UInt_t) modifiers
+{
+   //Remove and add (not to traverse twice).
+   [self removePassiveKeyGrab : keyCode modifiers : modifiers];
+   PassiveKeyGrab *newGrab = [[PassiveKeyGrab alloc] initWithKey : keyCode modifiers : modifiers];
+   [fPassiveKeyGrabs addObject : newGrab];
+   [newGrab release];
+}
+
+//______________________________________________________________________________
+- (void) removePassiveKeyGrab : (Int_t) keyCode modifiers : (UInt_t) modifiers
+{
+   NSEnumerator *enumerator = [fPassiveKeyGrabs objectEnumerator];
+   while (PassiveKeyGrab *grab = (PassiveKeyGrab *)[enumerator nextObject]) {
+      if ([grab matchKey : keyCode modifiers : modifiers]) {
+         [fPassiveKeyGrabs removeObject : grab];//very ineffective removal, but I do not think I have to optimize this :)
+         break;
+      }
+   }
+}
+
+//______________________________________________________________________________
+- (PassiveKeyGrab *) findPassiveKeyGrab : (Int_t) keyCode modifiers : (UInt_t) modifiers
+{
+   NSEnumerator *enumerator = [fPassiveKeyGrabs objectEnumerator];
+   while (PassiveKeyGrab *grab = (PassiveKeyGrab *)[enumerator nextObject]) {
+      if ([grab matchKey : keyCode modifiers : modifiers])
+         return grab;
+   }
+
+   return nil;
 }
 
 @end

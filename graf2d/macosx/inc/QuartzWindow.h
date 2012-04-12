@@ -89,6 +89,24 @@
 
 @end
 
+//////////////////////////////////////////////////////////////
+//                                                          //
+// I have to attach passive key grabs to a view.            //
+// Since view can have many of them, I need some container. //
+// In C++ it's easy, in Obj-C it's ugly.                    //
+// Later, I'll also add support for several                 //
+// passive button grabs for a view (at the moment, there is //
+// only one).                                               //
+//                                                          //
+//////////////////////////////////////////////////////////////
+
+@interface PassiveKeyGrab : NSObject
+- (Int_t) fKeyCode;
+- (UInt_t) fModifiers;
+- (id) initWithKey : (Int_t) keyCode modifiers : (UInt_t) modifiers;
+- (BOOL) matchKey : (Int_t) keyCode modifiers : (UInt_t) modifiers;
+@end
+
 ////////////////////////////////////////
 //                                    //
 // QuartzView class - child window.   //
@@ -170,12 +188,18 @@
 - (void)     raiseWindow;
 - (void)     lowerWindow;
 //
-- (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask 
+- (void)     copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *) mask 
              clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint;
 
 //
 - (void)     configureNotifyTree;
 - (void)     updateLevel : (unsigned) newLevel;
+
+//Keyboard:
+- (void)     addPassiveKeyGrab : (Int_t) keyCode modifiers : (UInt_t) modifiers;
+- (void)     removePassiveKeyGrab : (Int_t) keyCode modifiers : (UInt_t) modifiers;
+- (PassiveKeyGrab *) findPassiveKeyGrab : (Int_t) keyCode modifiers : (UInt_t) modifiers;
+
 
 @end
 
