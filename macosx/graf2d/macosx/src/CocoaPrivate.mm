@@ -98,8 +98,11 @@ void CocoaPrivate::DeleteDrawable(unsigned drawableID)
    NSObject *base = drawableIter->second.Get();
    if ([base isKindOfClass : [QuartzView class]])
       [(QuartzView *)base removeFromSuperview];
-   else if ([base isKindOfClass : [QuartzWindow class]])
-      [((QuartzWindow *)base).fContentView removeFromSuperview];
+   else if ([base isKindOfClass : [QuartzWindow class]]) {
+      QuartzWindow *qw = (QuartzWindow *)base;
+      [qw.fContentView removeFromSuperview];
+      qw.contentView = nil;
+   }
 
    fFreeDrawableIDs.push_back(drawableID);
    fDrawables.erase(drawableIter);//StrongReference should do work here.
