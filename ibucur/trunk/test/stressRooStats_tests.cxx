@@ -313,8 +313,8 @@ public:
          // Create Poisson model and dataset
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
          // NOTE: Solve for boundary intervals
-         w->factory("Poisson::poiss(x[0,100], mean[1e-6,20])");
-         // 20 -> 26.6 sec; 100 -> 68.7 sec
+         w->factory("Poisson::poiss(x[0,100], mean[1e-6,30])");
+         // 20 -> 26.6 sec; 33 -> 44 sec; 100 -> 68.7 sec
          w->factory("Uniform::prior(mean)");
          w->factory("CEXPR::priorInv('1/mean', mean)");
          w->factory("CEXPR::priorInvSqrt('1/sqrt(mean)', mean)");
@@ -481,6 +481,42 @@ public:
 };
 
 
+//-----------------------------------------------------------------------------
+// The next tests use the same model returned by createComplexModel
+
+#include "RooPoisson.h"
+void createComplexModel(RooWorkspace *w) {
+  
+   RooPoisson p;
+ 
+   w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig1[1e-6,20], bkg1[0,20]))");
+   w->factory("prod::sig2(2,sig1)");
+   w->factory("Poisson::poiss2(y[0,40], sum::splusb2(sig2, bkg2[0,20]))");
+   w->factory("Gamma::constr1(bkg1, 3, 1, 0)");
+   w->factory("Gamma::constr2(bkg2, 4, 1, 0)");
+   w->factory("PROD::model(poiss1, constr1, poiss2, constr2)");
+   w->factory("Uniform::prior(sig1)");
+
+
+   // build data set and argument sets
+   w->var("x")->setVal(7);
+   w->var("y")->setVal(15);
+   RooArgSet *obsSet =  new RooArgSet(*w->var("x"), *w->var("y"));   
+   RooDataSet *data = new RooDataSet("data", "data", *obsSet); data->add(*obsSet);   
+   RooArgSet *POISet = new RooArgSet(*w->var("sig1"));
+   RooArgSet *NPSet = new RooArgSet(*w->var("bkg1"), *w->var("bkg2"));
+  
+   w->import(*obsSet);
+   w->import(*data);
+   w->import(*POISet);
+   w->import(*NPSet);
+
+   w->Print();
+}
+
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -502,51 +538,25 @@ public:
    Bool_t testCode() {
  
       const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // test size
+      // for the BayesianCalculator we need to change the integration method - default method is too slow
+      RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
       
       // Create model
-      RooWorkspace* w = new RooWorkspace("w", kTRUE); 
-      w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig1[1e-6,20], bkg1[0,20]))");
-      w->factory("Poisson::poiss2(y[0,40], sum::splusb2(sig2[1e-6,20], bkg2[0,20]))");
-      w->factory("Gamma::constr1(bkg1, 3, 1, 0)");
-      w->factory("Gamma::constr2(bkg2, 4, 1, 0)");
-      w->factory("PROD::model(poiss1, constr1, poiss2, constr2)");
-      w->factory("Uniform::prior(sig1)");
-      w->factory("CEXPR::priorInv('1/sig1', sig1)");
-
-      // build data set and argument sets
-      RooRealVar *x = w->var("x");
-      x->setVal(15);
-      RooArgSet *obsSet =  new RooArgSet(*x);
-      RooDataSet *data = new RooDataSet("data", "data", *obsSet);
-      data->add(*obsSet);      
-      RooArgSet *POISet = new RooArgSet();
-      POISet->add(*w->var("sig1"));
-      RooArgSet *NPSet = new RooArgSet();
-      NPSet->add(*w->var("sig2"));
-      NPSet->add(*w->var("bkg1")); 
-      NPSet->add(*w->var("bkg2")); 
-      
-      w->Print();
-
-      // TODO: make RooIntegrator1D work
-      RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
+      RooWorkspace* w = new RooWorkspace("w", kTRUE);
+      createComplexModel(w); 
 
       // Uniform prior on mean
-      BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("model"), *POISet, *w->pdf("prior"), NPSet);
-      bc->SetTestSize(alpha);
+//      BayesianCalculator *bc = new BayesianCalculator(*w->var("data"), *w->pdf("model"), *w->obj("POISet"), *w->pdf("prior"), *w->obj("NPSet"));
+      /*bc->SetTestSize(alpha);
       SimpleInterval *interval = bc->GetInterval();         
       regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_unif");
       regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_unif");
+      
+      bc->SetScanOfPosterior(100);
+      interval = bc->GetInterval();
+      regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_binned");
+      regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_binned");
          
-   //   delete bc;
-   //   delete interval;
-
-      // Prior is inverse of square root            
-      bc = new BayesianCalculator(*data, *w->pdf("model"), *POISet, *w->pdf("priorInv"), NPSet);
-      bc->SetTestSize(alpha);
-      interval = bc->GetInterval();         
-      regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_inv");
-      regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_inv");         
 
       // Cleanup
       delete bc;
@@ -556,7 +566,7 @@ public:
       delete obsSet;
       delete data;
       delete w;      
-  
+  */
       return kTRUE ;
    }
 
@@ -593,7 +603,8 @@ public:
       // Create model
       RooWorkspace* w = new RooWorkspace("w", kTRUE); 
       w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig1[0,20], bkg1[0,20]))");
-      w->factory("Poisson::poiss2(y[0,40], sum::splusb2(sig2[0,20], bkg2[0,20]))");
+      w->factory("prod::sig2(2, sig1)");
+      w->factory("Poisson::poiss2(y[0,40], sum::splusb2(sig2, bkg2[0,20]))");
       w->factory("Gamma::constr1(bkg1, 3, 1, 0)");
       w->factory("Gamma::constr2(bkg2, 4, 1, 0)");
       w->factory("PROD::model(poiss1, constr1, poiss2, constr2)");
@@ -601,21 +612,20 @@ public:
 
       // build data set and argument sets
       RooRealVar *x = w->var("x");
-      x->setVal(25);
+      x->setVal(7);
       RooRealVar *y = w->var("y");
-      y->setVal(6);
+      y->setVal(15);
       RooArgSet *obsSet =  new RooArgSet(*x);
       obsSet->add(*y);
       RooDataSet *data = new RooDataSet("data", "data", *obsSet);
       data->add(*obsSet);      
       RooArgSet *POISet = new RooArgSet();
       POISet->add(*w->var("sig1"));
-      POISet->add(*w->var("sig2"));
+      //POISet->add(*w->var("sig2"));
       RooArgSet *NPSet = new RooArgSet();
       NPSet->add(*w->var("bkg1")); 
       NPSet->add(*w->var("bkg2")); 
       
-      w->Print();
   
       // build confidence interval (MCMCInterval) with MCMC calculator (size 5%)
       SequentialProposal *sp = new SequentialProposal(0.1);
@@ -633,19 +643,10 @@ public:
       MCMCInterval *interval = mcmcc->GetInterval();   
       regValue(interval->LowerLimit(*w->var("sig1")), "mcmcc_lower_limit_sig1");
       regValue(interval->UpperLimit(*w->var("sig1")), "mcmcc_upper_limit_sig1");     
-      regValue(interval->LowerLimit(*w->var("sig2")), "mcmcc_lower_limit_sig2");
-      regValue(interval->UpperLimit(*w->var("sig2")), "mcmcc_upper_limit_sig2");    
-      delete interval;
-
-      // prior is sqrt of inverse
-//      mcmcc->SetPriorPdf(*w->pdf("priorInvSqrt"));
-  //    interval = mcmcc->GetInterval();
-    //  regValue(interval->LowerLimit(*w->var("signal")), lowerLimitInvSqrtString);
-    //  regValue(interval->UpperLimit(*w->var("signal")), upperLimitInvSqrtString);
 
       // cleanup
+      delete interval;
       delete mcmcc;
-  //    delete interval;
       delete obsSet;
       delete POISet;
       delete NPSet;
