@@ -11,6 +11,7 @@
  *************************************************************************/
 #include <stdexcept>
 #include <cstring>
+#include <cassert>
 
 #include <Cocoa/Cocoa.h>
 
