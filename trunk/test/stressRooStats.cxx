@@ -117,10 +117,10 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
 //   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
-   testList.push_back(new TestBayesianCentralSimple(fref, writeRef, doVerbose));
-//   testList.push_back(new TestBayesianShortest(fref, writeRef, doVerbose));
-//   testList.push_back(new TestBasic105(fref, writeRef, doVerbose, 15));
-//   testList.push_back(new TestBasic106(fref, writeRef, doVerbose, 15));
+//   testList.push_back(new TestBayesianCalculator1(fref, writeRef, doVerbose));
+//   testList.push_back(new TestBayesianCalculator2(fref, writeRef, doVerbose));
+   testList.push_back(new TestBayesianCalculator3(fref, writeRef, doVerbose));
+   testList.push_back(new TestMCMCCalculator(fref, writeRef, doVerbose, 15));
 
 
    cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;

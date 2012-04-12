@@ -7,7 +7,8 @@
 	analyticalIntegrator -> should be private
 6. createIntegral for discrete Poisson for range [a,b] sums from a to b-1; maybe this should be better documented
 7. the RooIntegrator1D problem
-	- RooRealIntegral:62 Minimum number of steps !?
+	- RooRealIntegral:62 Minimum number of steps -> solves convergence problem
+	- however the integrator has a very long running time, because of too many function calls (see Mathcore integration tests)
 
 
 
