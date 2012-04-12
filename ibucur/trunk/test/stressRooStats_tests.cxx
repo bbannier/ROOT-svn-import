@@ -196,7 +196,7 @@ public:
       RooRealVar *x = w->var("x");
       x->setVal(fObsValue);
       RooArgSet *obsSet =  new RooArgSet(*x);
-      RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *obsSet);
+      RooDataSet *data = new RooDataSet("data", "data", *obsSet);
       data->add(*obsSet);
 
       if (_write == kTRUE) {
@@ -275,9 +275,9 @@ private:
 
 #include "RooStats/BayesianCalculator.h"
 
-class TestBayesianCentralSimple : public RooUnitTest {
+class TestBayesianCalculator1 : public RooUnitTest {
 public:
-   TestBayesianCentralSimple(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("BayesianCalculator Central Interval - Poisson Simple Model", refFile, writeRef, verbose) {}; 
+   TestBayesianCalculator1(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("BayesianCalculator Central Interval - Poisson Simple Model", refFile, writeRef, verbose) {}; 
 
    Bool_t testCode() {
 
@@ -287,7 +287,6 @@ public:
       const Double_t gammaShape = 2; // shape of the gamma distribution prior (alpha)
       const Double_t gammaRate = 1; // rate = 1/scale of the gamma distribution prior (beta = 1/theta)
 
-      RooMsgService::instance().setGlobalKillBelow(RooFit::INFO);
 
       if (_write == kTRUE) {
 
@@ -301,32 +300,34 @@ public:
          Double_t upperLimitGamma = ROOT::Math::gamma_quantile_c(alpha / 2, obsValue + gammaShape, 1.0/(1 + gammaRate)); // integrate to 84%
 
          // Compare the limits obtained via BayesianCalculator with quantile values 
-         regValue(lowerLimit, "bcs_lower_limit_unif");
-         regValue(upperLimit, "bcs_upper_limit_unif");
-         regValue(lowerLimitInv, "bcs_lower_limit_inv");
-         regValue(upperLimitInv, "bcs_upper_limit_inv");
-         regValue(lowerLimitInvSqrt, "bcs_lower_limit_inv_sqrt");
-         regValue(upperLimitInvSqrt, "bcs_upper_limit_inv_sqrt");
-         regValue(lowerLimitGamma, "bcs_lower_limit_gamma");
-         regValue(upperLimitGamma, "bcs_upper_limit_gamma");         
+         regValue(lowerLimit, "bc1_lower_limit_unif");
+         regValue(upperLimit, "bc1_upper_limit_unif");
+         regValue(lowerLimitInv, "bc1_lower_limit_inv");
+         regValue(upperLimitInv, "bc1_upper_limit_inv");
+         regValue(lowerLimitInvSqrt, "bc1_lower_limit_inv_sqrt");
+         regValue(upperLimitInvSqrt, "bc1_upper_limit_inv_sqrt");
+         regValue(lowerLimitGamma, "bc1_lower_limit_gamma");
+         regValue(upperLimitGamma, "bc1_upper_limit_gamma");         
          
       } else {
          // Create Poisson model and dataset
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
          // NOTE: Solve for boundary intervals
-         w->factory("Poisson::poiss(x[1,100], mean[1,100])");
+         w->factory("Poisson::poiss(x[0,100], mean[1e-6,20])");
+         // 20 -> 26.6 sec; 100 -> 68.7 sec
          w->factory("Uniform::prior(mean)");
          w->factory("CEXPR::priorInv('1/mean', mean)");
          w->factory("CEXPR::priorInvSqrt('1/sqrt(mean)', mean)");
          w->factory(TString::Format("Gamma::priorGamma(mean, %lf, %lf, 0)", gammaShape, gammaRate));
 
+         //RooAbsReal::defaultIntegratorConfig()->getConfigSection("RooIntegrator1D").setRealValue("maxSteps", 30);
          RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
 
          // NOTE: mean cannot actually be in the interval [0, 100]  due to log evaluation errors in BayesianCalculator
          RooRealVar *x = w->var("x");
          x->setVal(obsValue);
          RooArgSet *obsSet =  new RooArgSet(*x);
-         RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *obsSet);
+         RooDataSet *data = new RooDataSet("data", "data", *obsSet);
          data->add(*obsSet);
 
          // Calculate likelihood interval using the BayesianCalculator 
@@ -337,8 +338,8 @@ public:
          BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("prior"), NULL);
          bc->SetTestSize(alpha);
          SimpleInterval *interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "bcs_lower_limit_unif");
-         regValue(interval->UpperLimit(), "bcs_upper_limit_unif");
+         regValue(interval->LowerLimit(), "bc1_lower_limit_unif");
+         regValue(interval->UpperLimit(), "bc1_upper_limit_unif");
  
          delete bc;
          delete interval;
@@ -347,8 +348,8 @@ public:
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInv"), NULL);
          bc->SetTestSize(alpha);
          interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "bcs_lower_limit_inv");
-         regValue(interval->UpperLimit(), "bcs_upper_limit_inv");         
+         regValue(interval->LowerLimit(), "bc1_lower_limit_inv");
+         regValue(interval->UpperLimit(), "bc1_upper_limit_inv");         
  
          delete bc;
          delete interval;
@@ -357,8 +358,8 @@ public:
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInvSqrt"), NULL);
          bc->SetTestSize(alpha);
          interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "bcs_lower_limit_inv_sqrt");
-         regValue(interval->UpperLimit(), "bcs_upper_limit_inv_sqrt");
+         regValue(interval->LowerLimit(), "bc1_lower_limit_inv_sqrt");
+         regValue(interval->UpperLimit(), "bc1_upper_limit_inv_sqrt");
          delete bc;
          delete interval;
 
@@ -366,8 +367,104 @@ public:
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorGamma"), NULL);
          bc->SetTestSize(alpha);
          interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "bcs_lower_limit_gamma");
-         regValue(interval->UpperLimit(), "bcs_upper_limit_gamma");  
+         regValue(interval->LowerLimit(), "bc1_lower_limit_gamma");
+         regValue(interval->UpperLimit(), "bc1_upper_limit_gamma");  
+ 
+         // Cleanup branch objects
+         delete bc;
+         delete interval;
+         delete params;   
+         delete obsSet;
+         delete data;
+         delete w;      
+     }
+      
+      return kTRUE ;
+   }
+
+};
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// BAYESIAN SHORTEST INTERVAL - SIMPLE POISSON MODEL 
+//
+// Test the Bayesian shortest interval computed by the BayesianCalculator on a 
+// Poisson distribution, using different priors. The parameter of interest is 
+// the mean of the Poisson distribution, and there are no nuisance parameters. 
+// The priors used are:
+//    1. constant / uniform 
+//    2. inverse of the mean
+// The reference interval limits are taken from the paper: "Why isn't every
+// physicist a Bayesian?" by Robert D. Cousins. 
+//
+// 04/2012 - Ioan Gabriel Bucur
+//
+///////////////////////////////////////////////////////////////////////////////
+
+class TestBayesianCalculator2 : public RooUnitTest {
+public:
+   TestBayesianCalculator2(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("BayesianCalculator Shortest Interval - Poisson Simple Model", refFile, writeRef, verbose) {}; 
+
+   Double_t vtol() { return 1e-2; } // the references values in the paper have a precision of only two decimal points
+   // in such a situation, it is natural that we increase the value tolerance
+
+   Bool_t testCode() {
+
+      // Put the significance level so that we obtain a 68% confidence interval
+      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // test size
+      const Int_t obsValue = 3; // observed experiment value
+
+      if (_write == kTRUE) {
+
+         // Compare the limits obtained via BayesianCalculator with given reference values
+         regValue(1.55, "bc2_lower_limit_unif");
+         regValue(5.15, "bc2_upper_limit_unif");
+         regValue(0.86, "bc2_lower_limit_inv");
+         regValue(3.85, "bc2_upper_limit_inv");
+         
+      } else {
+         // Create Poisson model and dataset
+         RooWorkspace* w = new RooWorkspace("w", kTRUE);
+         // NOTE: Solve for boundary intervals
+         w->factory("Poisson::poiss(x[0,100], mean[1e-6,100])");
+         w->factory("Uniform::prior(mean)");
+         w->factory("CEXPR::priorInv('1/mean', mean)");
+
+         RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
+
+         // NOTE: mean cannot actually be in the interval [0, 100]  due to log evaluation errors in BayesianCalculator
+         RooRealVar *x = w->var("x");
+         x->setVal(obsValue);
+         RooArgSet *obsSet =  new RooArgSet(*x);
+         RooDataSet *data = new RooDataSet("data", "data", *obsSet);
+         data->add(*obsSet);
+
+         // Calculate likelihood interval using the BayesianCalculator 
+         RooArgSet *params = new RooArgSet();
+         params->add(*w->var("mean"));
+
+         // Uniform prior on mean
+         BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("prior"), NULL);
+         bc->SetTestSize(alpha);
+         bc->SetShortestInterval();
+         bc->SetScanOfPosterior(10000);
+         SimpleInterval *interval = bc->GetInterval();         
+         regValue(interval->LowerLimit(), "bc2_lower_limit_unif");
+         regValue(interval->UpperLimit(), "bc2_upper_limit_unif");
+     
+         delete bc;
+         delete interval;
+
+         // Inverse of mean prior           
+         bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInv"), NULL);
+         bc->SetTestSize(alpha);
+         bc->SetShortestInterval();
+         bc->SetScanOfPosterior(10000);
+         interval = bc->GetInterval();         
+         regValue(interval->LowerLimit(), "bc2_lower_limit_inv");
+         regValue(interval->UpperLimit(), "bc2_upper_limit_inv");         
  
          // Cleanup branch objects
          delete bc;
@@ -397,69 +494,59 @@ public:
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-class TestBasic105 : public RooUnitTest {
+class TestBayesianCalculator3 : public RooUnitTest {
 
 public:
-   TestBasic105(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue = 0) : RooUnitTest(TString::Format("Bayesian Calculator - Poisson with One Nuisance Parameter Central Interval- Observed Value %d", obsValue), refFile, writeRef, verbose), fObsValue(obsValue) {
-      if(obsValue < 0) {
-         fObsValue = 0;
-         Warning( "TestBasic105", "Negative observed value %d has been passed for Poisson distribution.\n   Using default observed value (0) instead.", obsValue); 
-      }
-   }; 
-
+   TestBayesianCalculator3(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest(TString::Format("BayesianCalculator - Poisson Complex Product Model"), refFile, writeRef, verbose) {}; 
 
    Bool_t testCode() {
-
-      // We test two separate cases
-      // In the first case, the prior distribution for the mean is simply a uniform distribution
-      // In the second case, the prior distribution is uniform on the inverse of the mean
-      TString lowerLimitString = TString::Format("rs105_lower_limit_mean_%d", fObsValue);
-      TString upperLimitString = TString::Format("rs105_upper_limit_mean_%d", fObsValue);
-      TString lowerLimitInvSqrtString = TString::Format("rs105_lower_limit_mean_invsqrt_%d", fObsValue);
-      TString upperLimitInvSqrtString = TString::Format("rs105_upper_limit_mean_invsqrt_%d", fObsValue); 
-
-      // Put the significance level so that we obtain a 68% confidence interval
-      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // significance level
-
-  
-      // Create Poisson model and dataset
+ 
+      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // test size
+      
+      // Create model
       RooWorkspace* w = new RooWorkspace("w", kTRUE); 
-      // background is normally distributed with mean 10 and variance 1
-      w->factory("Poisson::poiss(x[0,100], sum::splusb(signal[0,100], Gaussian::bg(y[0,20], 10, 5)))");
-      w->factory("Uniform::prior(splusb)");
-      w->factory("CEXPR::priorInvSqrt('1/sqrt(splusb)', splusb)");
+      w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig1[1e-6,20], bkg1[0,20]))");
+      w->factory("Poisson::poiss2(y[0,40], sum::splusb2(sig2[1e-6,20], bkg2[0,20]))");
+      w->factory("Gamma::constr1(bkg1, 3, 1, 0)");
+      w->factory("Gamma::constr2(bkg2, 4, 1, 0)");
+      w->factory("PROD::model(poiss1, constr1, poiss2, constr2)");
+      w->factory("Uniform::prior(sig1)");
+      w->factory("CEXPR::priorInv('1/sig1', sig1)");
+
+      // build data set and argument sets
+      RooRealVar *x = w->var("x");
+      x->setVal(15);
+      RooArgSet *obsSet =  new RooArgSet(*x);
+      RooDataSet *data = new RooDataSet("data", "data", *obsSet);
+      data->add(*obsSet);      
+      RooArgSet *POISet = new RooArgSet();
+      POISet->add(*w->var("sig1"));
+      RooArgSet *NPSet = new RooArgSet();
+      NPSet->add(*w->var("sig2"));
+      NPSet->add(*w->var("bkg1")); 
+      NPSet->add(*w->var("bkg2")); 
+      
+      w->Print();
 
       // TODO: make RooIntegrator1D work
       RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
 
-      // create data set and argument sets
-      RooRealVar *x = w->var("x");
-      x->setVal(fObsValue);
-      RooArgSet *obsSet =  new RooArgSet(*x);
-      RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *obsSet);
-      data->add(*obsSet);
-      RooArgSet *POISet = new RooArgSet();
-      POISet->add(*w->var("signal"));
-      RooArgSet *NPSet = new RooArgSet();
-      //NPSet->add(*w->var("bg"));
-
-
       // Uniform prior on mean
-      BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *POISet, *w->pdf("prior"), NPSet);
+      BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("model"), *POISet, *w->pdf("prior"), NPSet);
       bc->SetTestSize(alpha);
       SimpleInterval *interval = bc->GetInterval();         
-      regValue(interval->LowerLimit(), lowerLimitString);
-      regValue(interval->UpperLimit(), upperLimitString);
+      regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_unif");
+      regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_unif");
          
-      delete bc;
-      delete interval;
+   //   delete bc;
+   //   delete interval;
 
       // Prior is inverse of square root            
-      bc = new BayesianCalculator(*data, *w->pdf("poiss"), *POISet, *w->pdf("priorInvSqrt"), NPSet);
+      bc = new BayesianCalculator(*data, *w->pdf("model"), *POISet, *w->pdf("priorInv"), NPSet);
       bc->SetTestSize(alpha);
       interval = bc->GetInterval();         
-      regValue(interval->LowerLimit(), lowerLimitInvSqrtString);
-      regValue(interval->UpperLimit(), upperLimitInvSqrtString);         
+      regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_inv");
+      regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_inv");         
 
       // Cleanup
       delete bc;
@@ -469,7 +556,7 @@ public:
       delete obsSet;
       delete data;
       delete w;      
-      
+  
       return kTRUE ;
    }
 
@@ -478,101 +565,6 @@ private:
 
 };
 
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// BAYESIAN SHORTEST INTERVAL - SIMPLE POISSON MODEL 
-//
-// Test the Bayesian shortest interval computed by the BayesianCalculator on a 
-// Poisson distribution, using different priors. The parameter of interest is 
-// the mean of the Poisson distribution, and there are no nuisance parameters. 
-// The priors used are:
-//    1. constant / uniform 
-//    2. inverse of the mean
-// The reference interval limits are taken from the paper: "Why isn't every
-// physicist a Bayesian?" by Robert D. Cousins. 
-//
-// 04/2012 - Ioan Gabriel Bucur
-//
-///////////////////////////////////////////////////////////////////////////////
-
-class TestBayesianShortest : public RooUnitTest {
-public:
-   TestBayesianShortest(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("BayesianCalculator Shortest Interval - Poisson Simple Model", refFile, writeRef, verbose) {}; 
-
-   Double_t vtol() { return 1e-2; } // the references values in the paper have a precision of only two decimal points
-   // in such a situation, it is natural that we increase the value tolerance
-
-   Bool_t testCode() {
-
-      // Put the significance level so that we obtain a 68% confidence interval
-      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // test size
-      const Int_t obsValue = 3; // observed experiment value
-
-      if (_write == kTRUE) {
-
-         // Compare the limits obtained via BayesianCalculator with given reference values
-         regValue(1.55, "bs_lower_limit_unif");
-         regValue(5.15, "bs_upper_limit_unif");
-         regValue(0.86, "bs_lower_limit_inv");
-         regValue(3.85, "bs_upper_limit_inv");
-         
-      } else {
-         // Create Poisson model and dataset
-         RooWorkspace* w = new RooWorkspace("w", kTRUE);
-         // NOTE: Solve for boundary intervals
-         w->factory("Poisson::poiss(x[0,100], mean[1e-6,100])");
-         w->factory("Uniform::prior(mean)");
-         w->factory("CEXPR::priorInv('1/mean', mean)");
-
-         RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
-
-         // NOTE: mean cannot actually be in the interval [0, 100]  due to log evaluation errors in BayesianCalculator
-         RooRealVar *x = w->var("x");
-         x->setVal(obsValue);
-         RooArgSet *obsSet =  new RooArgSet(*x);
-         RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *obsSet);
-         data->add(*obsSet);
-
-         // Calculate likelihood interval using the BayesianCalculator 
-         RooArgSet *params = new RooArgSet();
-         params->add(*w->var("mean"));
-
-         // Uniform prior on mean
-         BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("prior"), NULL);
-         bc->SetTestSize(alpha);
-         bc->SetShortestInterval();
-         bc->SetScanOfPosterior(10000);
-         SimpleInterval *interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "bs_lower_limit_unif");
-         regValue(interval->UpperLimit(), "bs_upper_limit_unif");
-     
-         delete bc;
-         delete interval;
-
-         // Inverse of mean prior           
-         bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInv"), NULL);
-         bc->SetTestSize(alpha);
-         bc->SetShortestInterval();
-         bc->SetScanOfPosterior(10000);
-         interval = bc->GetInterval();         
-         regValue(interval->LowerLimit(), "bs_lower_limit_inv");
-         regValue(interval->UpperLimit(), "bs_upper_limit_inv");         
- 
-         // Cleanup branch objects
-         delete bc;
-         delete interval;
-         delete params;   
-         delete obsSet;
-         delete data;
-         delete w;      
-     }
-      
-      return kTRUE ;
-   }
-
-};
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -590,73 +582,70 @@ public:
 #include "RooStats/MCMCCalculator.h"
 #include "RooStats/SequentialProposal.h"
 
-class TestBasic106 : public RooUnitTest {
+class TestMCMCCalculator : public RooUnitTest {
 public:
-   TestBasic106(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue = 0) : RooUnitTest(TString::Format("MCMC Calculator vs Analytical Integrator - Poisson - Observed value %d", obsValue), refFile, writeRef, verbose), fObsValue(obsValue) {
-      if(obsValue < 0) {
-         fObsValue = 0;
-         Warning( "TestBasic106", "Negative observed value %d has been passed for Poisson distribution.\n   Using default observed value (0) instead.", obsValue); 
-      }
-   }; 
+   TestMCMCCalculator(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue = 0) : RooUnitTest(TString::Format("MCMC Calculator vs Analytical Integrator - Poisson - Observed value %d", obsValue), refFile, writeRef, verbose) {}; 
 
    Bool_t testCode() {
 
-      // We test two separate cases
-      // In the first case, there is now prior distribution for the Poisson mean
-      // In the second case, the prior distribution is the sqrt of the inverse of the mean
+      const Double_t alpha = ROOT::Math::normal_cdf_c(1) * 2; // test size
 
-      TString lowerLimitString = TString::Format("rs106_lower_limit_mean_%d", fObsValue);
-      TString upperLimitString = TString::Format("rs106_upper_limit_mean_%d", fObsValue);
-      TString lowerLimitInvSqrtString = TString::Format("rs106_lower_limit_mean_invsqrt_%d", fObsValue);
-      TString upperLimitInvSqrtString = TString::Format("rs106_upper_limit_mean_invsqrt_%d", fObsValue);
- 
-      // Create Poisson model and dataset
+      // Create model
       RooWorkspace* w = new RooWorkspace("w", kTRUE); 
-      // background is normally distributed with mean 10 and variance 1
-      w->factory("Poisson::poiss(x[0,100], sum::splusb(signal[0,100], Gaussian::bg(y[0,20], 10, 5)))");
-      w->factory("CEXPR::priorInvSqrt('1/sqrt(splusb)', splusb)");
-
-      // TODO: make RooIntegrator1D work
-      // RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
+      w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig1[0,20], bkg1[0,20]))");
+      w->factory("Poisson::poiss2(y[0,40], sum::splusb2(sig2[0,20], bkg2[0,20]))");
+      w->factory("Gamma::constr1(bkg1, 3, 1, 0)");
+      w->factory("Gamma::constr2(bkg2, 4, 1, 0)");
+      w->factory("PROD::model(poiss1, constr1, poiss2, constr2)");
+      //w->factory("CEXPR::priorInvSqrt('1/sqrt(splusb)', splusb)");
 
       // build data set and argument sets
       RooRealVar *x = w->var("x");
-      x->setVal(fObsValue);
+      x->setVal(25);
+      RooRealVar *y = w->var("y");
+      y->setVal(6);
       RooArgSet *obsSet =  new RooArgSet(*x);
-      RooDataSet *data = new RooDataSet("poissData", "Poisson distribution data", *obsSet);
+      obsSet->add(*y);
+      RooDataSet *data = new RooDataSet("data", "data", *obsSet);
       data->add(*obsSet);      
       RooArgSet *POISet = new RooArgSet();
-      POISet->add(*w->var("signal"));
+      POISet->add(*w->var("sig1"));
+      POISet->add(*w->var("sig2"));
       RooArgSet *NPSet = new RooArgSet();
-      //NPSet->add(*w->pdf("bg"));   
-        
+      NPSet->add(*w->var("bkg1")); 
+      NPSet->add(*w->var("bkg2")); 
+      
+      w->Print();
+  
       // build confidence interval (MCMCInterval) with MCMC calculator (size 5%)
       SequentialProposal *sp = new SequentialProposal(0.1);
       MCMCCalculator *mcmcc = new MCMCCalculator();
       mcmcc->SetData(*data);
-      mcmcc->SetPdf(*w->pdf("poiss"));
+      mcmcc->SetPdf(*w->pdf("model"));
       mcmcc->SetParameters(*POISet);
-      //mcmcc->SetNuisanceParameters(*NPSet);
+      mcmcc->SetNuisanceParameters(*NPSet);
       mcmcc->SetProposalFunction(*sp);
       mcmcc->SetNumIters(1000000); // Metropolis-Hastings algorithm iterations
       mcmcc->SetNumBurnInSteps(50); // first 50 steps to be ignored as burn-in
-      mcmcc->SetTestSize(0.05);
+      mcmcc->SetTestSize(alpha);
 
       // no prior
       MCMCInterval *interval = mcmcc->GetInterval();   
-      regValue(interval->LowerLimit(*w->var("signal")), lowerLimitString);
-      regValue(interval->UpperLimit(*w->var("signal")), upperLimitString);         
+      regValue(interval->LowerLimit(*w->var("sig1")), "mcmcc_lower_limit_sig1");
+      regValue(interval->UpperLimit(*w->var("sig1")), "mcmcc_upper_limit_sig1");     
+      regValue(interval->LowerLimit(*w->var("sig2")), "mcmcc_lower_limit_sig2");
+      regValue(interval->UpperLimit(*w->var("sig2")), "mcmcc_upper_limit_sig2");    
       delete interval;
 
       // prior is sqrt of inverse
-      mcmcc->SetPriorPdf(*w->pdf("priorInvSqrt"));
-      interval = mcmcc->GetInterval();
-      regValue(interval->LowerLimit(*w->var("signal")), lowerLimitInvSqrtString);
-      regValue(interval->UpperLimit(*w->var("signal")), upperLimitInvSqrtString);
+//      mcmcc->SetPriorPdf(*w->pdf("priorInvSqrt"));
+  //    interval = mcmcc->GetInterval();
+    //  regValue(interval->LowerLimit(*w->var("signal")), lowerLimitInvSqrtString);
+    //  regValue(interval->UpperLimit(*w->var("signal")), upperLimitInvSqrtString);
 
       // cleanup
       delete mcmcc;
-      delete interval;
+  //    delete interval;
       delete obsSet;
       delete POISet;
       delete NPSet;
