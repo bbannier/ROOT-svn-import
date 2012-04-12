@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <cassert>
 #include <cstddef>
 #include <limits>
 
