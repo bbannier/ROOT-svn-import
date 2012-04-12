@@ -11,4 +11,5 @@
 	- however the integrator has a very long running time, because of too many function calls (see Mathcore integration tests)
 8. TestBayesianCalculator1 is quite lengthy even for small mean intervals
 9. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
+10. HypoTestInverter -> SetModel does nothing in the current version
 
