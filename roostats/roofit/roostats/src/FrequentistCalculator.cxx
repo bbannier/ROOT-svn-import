@@ -15,13 +15,26 @@ MLEs.
 
 #include "RooStats/FrequentistCalculator.h"
 #include "RooStats/ToyMCSampler.h"
+#include "RooMinuit.h"
+#include "RooProfileLL.h"
 
 
 ClassImp(RooStats::FrequentistCalculator)
 
 using namespace RooStats;
 
+void FrequentistCalculator::PreHook() const {
+   if (fFitInfo != NULL) {
+      delete fFitInfo;
+      fFitInfo = NULL;
+   }
+   if (fStoreFitInfo) {
+      fFitInfo = new RooArgSet();
+   }
+}
 
+void FrequentistCalculator::PostHook() const {
+}
 
 int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTestStat) const {
 
@@ -49,8 +62,17 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
    RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
    RooAbsReal* nll = fNullModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
-   RooAbsReal* profile = nll->createProfile(allButNuisance);
+   RooProfileLL* profile = dynamic_cast<RooProfileLL*>(nll->createProfile(allButNuisance));
    profile->getVal(); // this will do fit and set nuisance parameters to profiled values
+   
+   // Hack to extract a RooFitResult
+   if (fStoreFitInfo) {
+	   RooMinuit *minuitUsed = profile->minuit();
+	   RooFitResult *result = minuitUsed->save();
+	   fFitInfo->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fit0_"));
+	   delete result;
+   }
+
    // add nuisance parameters to parameter point
    if(fNullModel->GetNuisanceParameters())
       parameterPoint->add(*fNullModel->GetNuisanceParameters());
@@ -116,8 +138,17 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
    RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
    
    RooAbsReal* nll = fAltModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
-   RooAbsReal* profile = nll->createProfile(allButNuisance);
+   RooProfileLL* profile = dynamic_cast<RooProfileLL*>(nll->createProfile(allButNuisance));
    profile->getVal(); // this will do fit and set nuisance parameters to profiled values
+
+   // Hack to extract a RooFitResult
+   if (fStoreFitInfo) {
+	   RooMinuit *minuitUsed = profile->minuit();
+	   RooFitResult *result = minuitUsed->save();
+	   fFitInfo->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fit1_"));
+	   delete result;
+   }
+
    // add nuisance parameters to parameter point
    if(fAltModel->GetNuisanceParameters())
       parameterPoint->add(*fAltModel->GetNuisanceParameters());

@@ -72,7 +72,7 @@ namespace RooStats {
         fDetailedOutputEnabled = false;
         fDetailedOutput = NULL;
       
-        fUncML = new RooRealVar("uncondML","unconditional ML", 0.0);
+        fMinNLL = new RooRealVar("minNLL","minimum NLL", 0.0);
         fFitStatus = new RooRealVar("fitStatus","fit status", 0.0);
         fCovQual = new RooRealVar("covQual","quality of covariance matrix", 0.0);
         fNumInvalidNLLEval = new RooRealVar("numInvalidNLLEval","number of invalid NLL evaluations", 0.0);
@@ -96,7 +96,7 @@ namespace RooStats {
        fDetailedOutputEnabled = false;
        fDetailedOutput = NULL;
       
-       fUncML = new RooRealVar("uncondML","unconditional ML", 0.0);
+       fMinNLL = new RooRealVar("minNLL","minimum NLL", 0.0);
        fFitStatus = new RooRealVar("fitStatus","fit status", 0.0);
        fCovQual = new RooRealVar("covQual","quality of covariance matrix", 0.0);
        fNumInvalidNLLEval = new RooRealVar("numInvalidNLLEval","number of invalid NLL evaluations", 0.0);
@@ -139,7 +139,15 @@ namespace RooStats {
      virtual Double_t EvaluateProfileLikelihood(int type, RooAbsData &data, RooArgSet & paramsOfInterest);
      
      virtual void EnableDetailedOutput( bool e=true ) { fDetailedOutputEnabled = e; fDetailedOutput = NULL; }
-     virtual const RooArgSet* GetDetailedOutput(void) const { return fDetailedOutput; }
+     virtual const RooArgSet* GetDetailedOutput(void) const {
+	     // Returns detailed output. The value returned by this function is updated after each call to Evaluate().
+	     // The returned RooArgSet contains the following:
+	     // <ul>
+	     // <li> the minimum nll, fitstatus and convergence quality for each fit </li> 
+	     // <li> for each fit and for each non-constant parameter, the value, error and pull of the parameter are stored </li>
+	     // </ul>
+	     return fDetailedOutput;
+     }
     
      virtual void SetVarName(const char* name) { fVarName = name; }
      virtual const TString GetVarName() const {return fVarName;}
@@ -148,7 +156,8 @@ namespace RooStats {
 
   private:
 
-     double GetMinNLL(int& status);
+     RooFitResult* GetMinNLL();
+     void AppendDetailedOutput(RooFitResult *result, int fitNumber);
 
    private:
       RooProfileLL* fProfile; //!
@@ -163,9 +172,9 @@ namespace RooStats {
       // this will store a snapshot of the unconditional nuisance
       // parameter fit.
       bool fDetailedOutputEnabled;
-      const RooArgSet* fDetailedOutput; //!
+      RooArgSet* fDetailedOutput; //!
       
-      RooRealVar* fUncML; //!
+      RooRealVar* fMinNLL; //!
       RooRealVar* fFitStatus; //!
       RooRealVar* fCovQual; //!
       RooRealVar* fNumInvalidNLLEval; //!      
