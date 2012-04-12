@@ -1693,10 +1693,11 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) removePassiveKeyGrab : (Int_t) keyCode modifiers : (UInt_t) modifiers
 {
-   NSEnumerator *enumerator = [fPassiveKeyGrabs objectEnumerator];
-   while (PassiveKeyGrab *grab = (PassiveKeyGrab *)[enumerator nextObject]) {
+   const NSUInteger count = [fPassiveKeyGrabs count];
+   for (NSUInteger i = 0; i < count; ++i) {
+      PassiveKeyGrab *grab = [fPassiveKeyGrabs objectAtIndex : i];
       if ([grab matchKey : keyCode modifiers : modifiers]) {
-         [fPassiveKeyGrabs removeObject : grab];//very ineffective removal, but I do not think I have to optimize this :)
+         [fPassiveKeyGrabs removeObjectAtIndex : i];
          break;
       }
    }

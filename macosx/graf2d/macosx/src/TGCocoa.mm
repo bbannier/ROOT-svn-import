@@ -2712,14 +2712,14 @@ void TGCocoa::SetWMTransientHint(Window_t /*wid*/, Window_t /*main_id*/)
 }
 
 //______________________________________________________________________________
-Int_t TGCocoa::KeysymToKeycode(UInt_t /*keysym*/)
+Int_t TGCocoa::KeysymToKeycode(UInt_t keySym)
 {
+   //Comment from TVirtualX:
    // Converts the "keysym" to the appropriate keycode. For example,
    // keysym is a letter and keycode is the matching keyboard key (which
    // is dependend on the current keyboard mapping). If the specified
    // "keysym" is not defined for any keycode, returns zero.
-
-   return 0;
+   return X11::MapKeySymToKeyCode(keySym);
 }
 
 //______________________________________________________________________________
