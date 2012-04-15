@@ -54,7 +54,7 @@ void StatusPrint(const Int_t id, const TString &title, const Int_t status, const
 #include "stressRooStats_tests.cxx"
 
 //______________________________________________________________________________
-Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t oneTest, Bool_t dryRun, Bool_t doDump, Bool_t doTreeStore)
+Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t oneTest, Bool_t dryRun, Bool_t doDump, Bool_t doTreeStore)
 {
    // width of lines when printing test results
    const Int_t lineWidth = 80;
@@ -105,24 +105,26 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
    timer.Start();
 
    list<RooUnitTest*> testList ;
-//   testList.push_back(new TestBasic101(fref, writeRef, doVerbose));
-//   testList.push_back(new TestBasic102(fref, writeRef, doVerbose));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 0));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 1));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 2));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 5));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 10));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 20));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 50));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 100));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 200));
-//   testList.push_back(new TestBasic103(fref, writeRef, doVerbose, 500));
-//   testList.push_back(new TestBayesianCalculator1(fref, writeRef, doVerbose));
-//   testList.push_back(new TestBayesianCalculator2(fref, writeRef, doVerbose));
-//   testList.push_back(new TestBayesianCalculator3(fref, writeRef, doVerbose));
-//   testList.push_back(new TestMCMCCalculator(fref, writeRef, doVerbose));
-//   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, doVerbose));
-   testList.push_back(new TestHypoTestInverter(fref, writeRef, doVerbose));
+//   testList.push_back(new TestBasic101(fref, writeRef, verbose));
+//   testList.push_back(new TestBasic102(fref, writeRef, verbose));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 0));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 1));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 2));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 5));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 10));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 20));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 50));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 100));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 200));
+//   testList.push_back(new TestBasic103(fref, writeRef, verbose, 500));
+//   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose));
+//   testList.push_back(new TestBayesianCalculator2(fref, writeRef, verbose));
+//   testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose));
+//   testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose));
+//   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose));
+   testList.push_back(new TestHypoTestInverter(fref, writeRef, verbose, HypoTestInverter::kAsymptotic));
+   testList.push_back(new TestHypoTestInverter(fref, writeRef, verbose, HypoTestInverter::kHybrid));
+   testList.push_back(new TestHypoTestInverter(fref, writeRef, verbose, HypoTestInverter::kFrequentist));
 
    cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
@@ -207,7 +209,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_
 int main(int argc, const char *argv[])
 {
    Bool_t doWrite     = kFALSE ;
-   Int_t doVerbose    = 0 ;
+   Int_t verbose    = 0 ;
    Int_t oneTest      = -1 ;
    Bool_t dryRun      = kFALSE ;
    Bool_t doDump      = kFALSE ;
@@ -241,12 +243,12 @@ int main(int argc, const char *argv[])
 
       if (arg == "-v") {
          cout << "stressRooStats: running in verbose mode" << endl ;
-         doVerbose = 1 ;
+         verbose = 1 ;
       }
 
       if (arg == "-vv") {
          cout << "stressRooStats: running in very verbose mode" << endl ;
-         doVerbose = 2 ;
+         verbose = 2 ;
       }
 
       if (arg == "-n") {
@@ -302,7 +304,7 @@ int main(int argc, const char *argv[])
    RooMath::cacheCERF(kFALSE) ;
 
    gBenchmark = new TBenchmark();
-   stressRooStats(refFileName.c_str(), doWrite, doVerbose, oneTest, dryRun, doDump, doTreeStore);
+   stressRooStats(refFileName.c_str(), doWrite, verbose, oneTest, dryRun, doDump, doTreeStore);
    return 0;
 }
 
