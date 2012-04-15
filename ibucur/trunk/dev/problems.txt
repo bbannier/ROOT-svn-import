@@ -12,4 +12,12 @@
 8. TestBayesianCalculator1 is quite lengthy even for small mean intervals
 9. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
 10. HypoTestInverter -> SetModel does nothing in the current version
+11. HypoTestInverter -> if pdf given is not extended should automatically set the number of events per toy in ToyMcSampler using the DataSet size
+12. HypoTestInverter -> auto scan does not work... it gets stuck in an infinite loop at the upper limit
+13. HypoTestInverter -> in fixed scans, sometimes the upper limit of the signal range is scanned twice
+14. HypoTestInverter -> SetFixedScan breaks the HypoTestInverter for certain value (we get wrong interval limits); this is currently caught by TestHypoTestInverter
+15. HypoTestInverter AsymptoticCalculator - the MIGRAD minimization messages cannot be hidden
+16. HypoTestInverter AsymptoticCalculator gives different results compared to the other two calculators
+
+
 
