@@ -122,9 +122,12 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
 //   testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose));
 //   testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose));
 //   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose));
-   testList.push_back(new TestHypoTestInverter(fref, writeRef, verbose, HypoTestInverter::kAsymptotic));
-   testList.push_back(new TestHypoTestInverter(fref, writeRef, verbose, HypoTestInverter::kHybrid));
-   testList.push_back(new TestHypoTestInverter(fref, writeRef, verbose, HypoTestInverter::kFrequentist));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kAsymptotic));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kHybrid));
 
    cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
