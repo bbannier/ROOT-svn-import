@@ -52,6 +52,8 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 #include "RooStats/AsymptoticCalculator.h"
 #include "RooStats/SimpleLikelihoodRatioTestStat.h"
 #include "RooStats/RatioOfProfiledLikelihoodsTestStat.h"
+#include "RooStats/MaxLikelihoodEstimateTestStat.h"
+#include "RooStats/NumEventsTestStat.h"
 #include "RooStats/ProfileLikelihoodTestStat.h"
 #include "RooStats/ToyMCSampler.h"
 #include "RooStats/HypoTestPlot.h"
@@ -64,6 +66,10 @@ ClassImp(RooStats::HypoTestInverter)
 using namespace RooStats;
 
 // static variable definitions
+
+const char *HypoTestInverter::kECalculatorTypeString[] = { "Frequentist", "Hybrid", "Asymptotic" };
+const char *HypoTestInverter::kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
+
 double HypoTestInverter::fgCLAccuracy = 0.005;
 unsigned int HypoTestInverter::fgNToys = 500;
 
@@ -156,7 +162,7 @@ HypoTestInverter::HypoTestInverter( ) :
    fUseCLs(false),
    fSize(0),
    fVerbose(0),
-   fCalcType(kUndefined), 
+   fCalcType(kFrequentist), 
    fNBins(0), fXmin(1), fXmax(1),
    fNumErr(0)
 {
@@ -173,7 +179,7 @@ HypoTestInverter::HypoTestInverter( HypoTestCalculatorGeneric& hc,
    fUseCLs(false),
    fSize(size),
    fVerbose(0),
-   fCalcType(kUndefined), 
+   //fCalcType(kFrequentist),  // don't think it's really necessary
    fNBins(0), fXmin(1), fXmax(1),
    fNumErr(0)
 {
@@ -211,6 +217,7 @@ HypoTestInverter::HypoTestInverter( HypoTestCalculatorGeneric& hc,
       fCalculator0 = asymCalc;
       return;
    }
+
    oocoutE((TObject*)0,InputArguments) << "HypoTestInverter - Type of hypotest calculator is not supported " <<std::endl;    
    fCalculator0 = &hc;
 }
@@ -243,7 +250,6 @@ HypoTestInverter::HypoTestInverter( HybridCalculator& hc,
       oocoutE((TObject*)0,InputArguments) << "HypoTestInverter - Cannot guess the variable to scan " << std::endl;    
    else 
       CheckInputModels(hc,*fScannedVariable);
-
 }
 
 
@@ -311,7 +317,7 @@ HypoTestInverter::HypoTestInverter( AsymptoticCalculator& hc,
 
 //_________________________________________________________________________________________________
 HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &bModel, ModelConfig &sbModel,
-				    RooRealVar * scannedVariable,  ECalculatorType type, double size) :
+				    RooRealVar * scannedVariable,  ECalculatorType calcType, ETestStatType testStatType, double size) :
    fTotalToysRun(0),
    fMaxToys(0),
    fCalculator0(0),
@@ -320,7 +326,8 @@ HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &bModel, Model
    fUseCLs(false),
    fSize(size),
    fVerbose(0),
-   fCalcType(type), 
+   fCalcType(calcType),
+   fTestStatType(testStatType), 
    fNBins(0), fXmin(1), fXmax(1),
    fNumErr(0)
 {
@@ -330,9 +337,11 @@ HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &bModel, Model
    // If no variable to scan are given they are assumed to be the first variable
    // from the parameter of interests of the null model
 
-   if(fCalcType==kFrequentist) fHC = auto_ptr<HypoTestCalculatorGeneric>(new FrequentistCalculator(data, sbModel, bModel)); 
-   if(fCalcType==kHybrid) fHC = auto_ptr<HypoTestCalculatorGeneric>(new HybridCalculator(data, sbModel, bModel)); 
-   if(fCalcType==kAsymptotic) fHC = auto_ptr<HypoTestCalculatorGeneric>(new AsymptoticCalculator(data, sbModel, bModel)); 
+   TestStatSampler *sampler = BuildTestStatSampler(testStatType, bModel, sbModel); // sb and b should be reversed I think
+
+   if(fCalcType==kFrequentist) fHC = auto_ptr<HypoTestCalculatorGeneric>(new FrequentistCalculator(data, sbModel, bModel, sampler)); 
+   if(fCalcType==kHybrid) fHC = auto_ptr<HypoTestCalculatorGeneric>(new HybridCalculator(data, sbModel, bModel, sampler)); 
+   if(fCalcType==kAsymptotic) fHC = auto_ptr<HypoTestCalculatorGeneric>(new AsymptoticCalculator(data, sbModel, bModel, sampler)); 
    fCalculator0 = fHC.get();
    // get scanned variabke
    if (!fScannedVariable) { 
@@ -1128,3 +1137,40 @@ SamplingDistribution * HypoTestInverter::RebuildDistributions(bool isUpper, int 
    const char * disName = (isUpper) ? "upperLimit_dist" : "lowerLimit_dist";
    return new SamplingDistribution(disName, disName, limit_values);
 }
+
+
+TestStatSampler *HypoTestInverter::BuildTestStatSampler(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel) const {
+
+   TestStatistic *testStat = NULL;
+ 
+   if(testStatType == kSimpleLR) {
+      SimpleLikelihoodRatioTestStat *slrts = new SimpleLikelihoodRatioTestStat(*sbModel.GetPdf(), *bModel.GetPdf());
+      slrts->SetReuseNLL(kTRUE);
+      testStat = slrts;
+   } else if(testStatType == kRatioLR)  {
+      RatioOfProfiledLikelihoodsTestStat *roplts = 
+         new RatioOfProfiledLikelihoodsTestStat(*sbModel.GetPdf(), *bModel.GetPdf(), bModel.GetSnapshot());
+      roplts->SetReuseNLL(kTRUE);
+      // roplts->subtractMLE(kTRUE); ??
+      testStat = roplts;
+   } else if(testStatType == kMLE) {
+      MaxLikelihoodEstimateTestStat *mlets = 
+         new MaxLikelihoodEstimateTestStat(*sbModel.GetPdf(), *((RooRealVar *)sbModel.GetParametersOfInterest()->first()));
+      testStat = mlets;
+   } else if(testStatType == kNObs) {
+      NumEventsTestStat *nevtts = new NumEventsTestStat(*sbModel.GetPdf()); // or NumEventsTestStat() ??
+      testStat = nevtts;
+   } else { // kProfileLR, kProfileLROneSided and kProfileLRSigned
+      ProfileLikelihoodTestStat *plts = new ProfileLikelihoodTestStat(*sbModel.GetPdf());
+      plts->SetReuseNLL(kTRUE);
+      if(testStatType == kProfileLROneSided) plts->SetOneSided(kTRUE);
+      if(testStatType == kProfileLRSigned) plts->SetSigned(kTRUE);
+      testStat = plts;
+   }
+
+   assert(testStat != NULL); // sanity check - should never happen
+
+   return new ToyMCSampler(*testStat, fgNToys); // fgNToys seems like a good choice for now
+}
+
+

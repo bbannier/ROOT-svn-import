@@ -705,10 +705,16 @@ public:
 class TestHypoTestInverter1 : public RooUnitTest {
 private:
    HypoTestInverter::ECalculatorType fCalculatorType;
+   HypoTestInverter::ETestStatType fTestStatType;
 
 public:
-   TestHypoTestInverter1(TFile* refFile, Bool_t writeRef, Int_t verbose, HypoTestInverter::ECalculatorType calculatorType) : RooUnitTest(TString::Format("HypoTestInverter Interval - Poisson Complex Model - Calculator Type %d", calculatorType), refFile, writeRef, verbose) {
+   TestHypoTestInverter1(TFile* refFile, Bool_t writeRef, Int_t verbose, HypoTestInverter::ECalculatorType calculatorType, 
+                         HypoTestInverter::ETestStatType testStatType) : 
+      RooUnitTest(TString::Format("HypoTestInverter Interval - Poisson Complex Model - %s %s", 
+                                   HypoTestInverter::kECalculatorTypeString[calculatorType], 
+                                   HypoTestInverter::kETestStatTypeString[testStatType]), refFile, writeRef, verbose) {
       fCalculatorType = calculatorType;  
+      fTestStatType = testStatType;
    };
 
    Bool_t testCode() {
@@ -720,8 +726,8 @@ public:
       pair<ModelConfig *, ModelConfig *> models = createPoissonProductModels(w);
 
       // build confidence interval with HypoTestInverter
-      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, NULL, fCalculatorType, testSize);
-      hti->SetFixedScan(20, 2, 8);
+      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, NULL, fCalculatorType, HypoTestInverter::kSimpleLR, testSize);
+      hti->SetFixedScan(10, 2, 8);
       
       if(fCalculatorType == HypoTestInverter::kHybrid) {
          // force prior nuisance pdf
@@ -731,13 +737,21 @@ public:
          hc->ForcePriorNuisanceAlt(*w->pdf("priorbkg"));
       }
 
-      // needed at this moment, because we have no extended pdf and the ToyMC Sampler evaluation returns an errori
+      if(fCalculatorType == HypoTestInverter::kAsymptotic && _verb == 0) {
+         AsymptoticCalculator::SetPrintLevel(0); // print only minimal output
+      }
+
+      // needed because we have no extended pdf and the ToyMC Sampler evaluation returns an errori
       ToyMCSampler *tmcs = (ToyMCSampler *)hti->GetHypoTestCalculator()->GetTestStatSampler();
-      tmcs->SetMaxToys(300);
+      tmcs->SetMaxToys(100);
       tmcs->SetNEventsPerToy(1);
       HypoTestInverterResult *interval = hti->GetInterval();
-      regValue(interval->LowerLimit(), TString::Format("hti_lower_limit_sig1_calc_%d", fCalculatorType));
-      regValue(interval->UpperLimit(), TString::Format("hti_upper_limit_sig1_calc_%d", fCalculatorType));
+      regValue(interval->LowerLimit(), TString::Format("hti_lower_limit_sig1_calc_%s_%s", 
+                                                       HypoTestInverter::kECalculatorTypeString[fCalculatorType],
+                                                       HypoTestInverter::kETestStatTypeString[fTestStatType] ));
+      regValue(interval->UpperLimit(), TString::Format("hti_upper_limit_sig1_calc_%s_%s",
+                                                       HypoTestInverter::kECalculatorTypeString[fCalculatorType],
+                                                       HypoTestInverter::kETestStatTypeString[fTestStatType] ));
 
       if(_verb >= 1) {
          cout << "[" << interval->LowerLimit() << "," << interval->UpperLimit() << "]" << endl;
@@ -745,7 +759,9 @@ public:
          TCanvas *c1 = new TCanvas("HypoTestInverter1 Scan");
          c1->SetLogy(false);
          plot->Draw("OBS");
-         c1->SaveAs(TString::Format("HypoTestInverterScan%d.pdf", fCalculatorType));
+         c1->SaveAs(TString::Format("HTI1 Scan - %s %s.pdf",
+                                    HypoTestInverter::kECalculatorTypeString[fCalculatorType],
+                                    HypoTestInverter::kETestStatTypeString[fTestStatType] ));
 
          if(_verb == 2) {
             const int n = interval->ArraySize();
@@ -763,7 +779,9 @@ public:
                   pl->SetLogYaxis(kTRUE);
                   pl->Draw();
                }
-               c2->SaveAs(TString::Format("HypoTestInverterTestStatDistributions%d.pdf", fCalculatorType));
+               c2->SaveAs(TString::Format("HTI1 - TestStatDistributions - %s %s.pdf",
+                                          HypoTestInverter::kECalculatorTypeString[fCalculatorType],
+                                          HypoTestInverter::kETestStatTypeString[fTestStatType] ));
             }
          }
       }
@@ -846,8 +864,8 @@ public:
 
 
       // calculate upper limit with HypoTestInverter
-      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *(models.first), *(models.second), (RooRealVar *)models.first->GetParametersOfInterest()->first(), fCalculatorType, testSize);
-      hti->SetFixedScan(20, 0, 20);
+      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, (RooRealVar *)models.first->GetParametersOfInterest()->first(), fCalculatorType, HypoTestInverter::kSimpleLR, testSize);
+      hti->SetFixedScan(10, 0, 20);
       hti->UseCLs(kTRUE);
       
       if(fCalculatorType == HypoTestInverter::kAsymptotic && _verb == 0) {
