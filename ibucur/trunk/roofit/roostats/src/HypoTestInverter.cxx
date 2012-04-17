@@ -1159,7 +1159,7 @@ TestStatSampler *HypoTestInverter::BuildTestStatSampler(const ETestStatType test
          new MaxLikelihoodEstimateTestStat(*sbModel.GetPdf(), *((RooRealVar *)sbModel.GetParametersOfInterest()->first()));
       testStat = mlets;
    } else if(testStatType == kNObs) {
-      NumEventsTestStat *nevtts = new NumEventsTestStat(*sbModel.GetPdf()); // or NumEventsTestStat() ??
+      NumEventsTestStat *nevtts = new NumEventsTestStat(*sbModel.GetPdf());
       testStat = nevtts;
    } else { // kProfileLR, kProfileLROneSided and kProfileLRSigned
       ProfileLikelihoodTestStat *plts = new ProfileLikelihoodTestStat(*sbModel.GetPdf());
