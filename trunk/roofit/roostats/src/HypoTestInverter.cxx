@@ -316,7 +316,7 @@ HypoTestInverter::HypoTestInverter( AsymptoticCalculator& hc,
 
 
 //_________________________________________________________________________________________________
-HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &bModel, ModelConfig &sbModel,
+HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &sbModel, ModelConfig &bModel,
 				    RooRealVar * scannedVariable,  ECalculatorType calcType, ETestStatType testStatType, double size) :
    fTotalToysRun(0),
    fMaxToys(0),
@@ -332,18 +332,19 @@ HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &bModel, Model
    fNumErr(0)
 {
    // Constructor from a model for B model and a model for S+B. 
-   // An HypoTestCalculator (Hybrid of Frequentis) will be created using the 
-   // S+B model as the null and the B model as the alternate
-   // If no variable to scan are given they are assumed to be the first variable
-   // from the parameter of interests of the null model
+   // A HypoTestCalculator will be created using the S+B model as the null and the B model as the alternate
+   // If no variable to scan are given they are assumed to be the first variable from the parameter of interests of the null model
+   // Depending on the type of test statistic given as an argument, an appropriate TestStatSampler is built using the
+   //    private method BuildTestStatSampler. This sampler is then passed to the constructor of the HypoTestCalculator.
 
-   TestStatSampler *sampler = BuildTestStatSampler(testStatType, bModel, sbModel); // sb and b should be reversed I think
+   TestStatSampler *sampler = BuildTestStatSampler(testStatType, sbModel, bModel); 
 
-   if(fCalcType==kFrequentist) fHC = auto_ptr<HypoTestCalculatorGeneric>(new FrequentistCalculator(data, sbModel, bModel, sampler)); 
-   if(fCalcType==kHybrid) fHC = auto_ptr<HypoTestCalculatorGeneric>(new HybridCalculator(data, sbModel, bModel, sampler)); 
-   if(fCalcType==kAsymptotic) fHC = auto_ptr<HypoTestCalculatorGeneric>(new AsymptoticCalculator(data, sbModel, bModel, sampler)); 
+   if(fCalcType==kFrequentist) fHC = auto_ptr<HypoTestCalculatorGeneric>(new FrequentistCalculator(data, bModel, sbModel, sampler)); 
+   if(fCalcType==kHybrid) fHC = auto_ptr<HypoTestCalculatorGeneric>(new HybridCalculator(data, bModel, sbModel, sampler)); 
+   if(fCalcType==kAsymptotic) fHC = auto_ptr<HypoTestCalculatorGeneric>(new AsymptoticCalculator(data, bModel, sbModel, sampler)); 
    fCalculator0 = fHC.get();
-   // get scanned variabke
+
+   // get scanned variable
    if (!fScannedVariable) { 
       fScannedVariable = GetVariableToScan(*fCalculator0);
    }
@@ -1162,15 +1163,15 @@ TestStatSampler *HypoTestInverter::BuildTestStatSampler(const ETestStatType test
       testStat = nevtts;
    } else { // kProfileLR, kProfileLROneSided and kProfileLRSigned
       ProfileLikelihoodTestStat *plts = new ProfileLikelihoodTestStat(*sbModel.GetPdf());
-      plts->SetReuseNLL(kTRUE);
       if(testStatType == kProfileLROneSided) plts->SetOneSided(kTRUE);
-      if(testStatType == kProfileLRSigned) plts->SetSigned(kTRUE);
+      if(testStatType == kProfileLRSigned) plts->SetSigned(kTRUE);      
+      plts->SetReuseNLL(kTRUE);
       testStat = plts;
    }
 
    assert(testStat != NULL); // sanity check - should never happen
 
-   return new ToyMCSampler(*testStat, fgNToys); // fgNToys seems like a good choice for now
+   return new ToyMCSampler(*testStat, 1000); // fgNToys seems like a good choice for now
 }
 
 

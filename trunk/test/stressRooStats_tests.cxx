@@ -726,7 +726,7 @@ public:
       pair<ModelConfig *, ModelConfig *> models = createPoissonProductModels(w);
 
       // build confidence interval with HypoTestInverter
-      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, NULL, fCalculatorType, HypoTestInverter::kSimpleLR, testSize);
+      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, NULL, fCalculatorType, fTestStatType, testSize);
       hti->SetFixedScan(10, 2, 8);
       
       if(fCalculatorType == HypoTestInverter::kHybrid) {
@@ -746,20 +746,20 @@ public:
       tmcs->SetMaxToys(100);
       tmcs->SetNEventsPerToy(1);
       HypoTestInverterResult *interval = hti->GetInterval();
-      regValue(interval->LowerLimit(), TString::Format("hti_lower_limit_sig1_calc_%s_%s", 
+      regValue(interval->LowerLimit(), TString::Format("thti1_lower_limit_sig1_calc_%s_%s", 
                                                        HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                                        HypoTestInverter::kETestStatTypeString[fTestStatType] ));
-      regValue(interval->UpperLimit(), TString::Format("hti_upper_limit_sig1_calc_%s_%s",
+      regValue(interval->UpperLimit(), TString::Format("thti1_upper_limit_sig1_calc_%s_%s",
                                                        HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                                        HypoTestInverter::kETestStatTypeString[fTestStatType] ));
 
       if(_verb >= 1) {
          cout << "[" << interval->LowerLimit() << "," << interval->UpperLimit() << "]" << endl;
-         HypoTestInverterPlot *plot = new HypoTestInverterPlot("HTI_Result_Plot", "Feldman-Cousins Interval", interval);
+         HypoTestInverterPlot *plot = new HypoTestInverterPlot("thti1 Plot", "Feldman-Cousins Interval", interval);
          TCanvas *c1 = new TCanvas("HypoTestInverter1 Scan");
          c1->SetLogy(false);
          plot->Draw("OBS");
-         c1->SaveAs(TString::Format("HTI1 Scan - %s %s.pdf",
+         c1->SaveAs(TString::Format("thti1 Scan - %s %s.pdf",
                                     HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                     HypoTestInverter::kETestStatTypeString[fTestStatType] ));
 
@@ -779,7 +779,7 @@ public:
                   pl->SetLogYaxis(kTRUE);
                   pl->Draw();
                }
-               c2->SaveAs(TString::Format("HTI1 - TestStatDistributions - %s %s.pdf",
+               c2->SaveAs(TString::Format("thti1 TestStatDistributions - %s %s.pdf",
                                           HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                           HypoTestInverter::kETestStatTypeString[fTestStatType] ));
             }
