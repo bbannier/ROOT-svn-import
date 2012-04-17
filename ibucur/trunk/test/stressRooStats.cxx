@@ -131,9 +131,20 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kProfileLRSigned));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kMLE));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kNObs));
-//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kAsymptotic));
-//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist));
-//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kHybrid));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kSimpleLR));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kRatioLR));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kProfileLR));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kProfileLROneSided));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kProfileLRSigned));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kMLE));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kNObs));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kSimpleLR));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kRatioLR));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kProfileLR));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kProfileLROneSided));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kProfileLRSigned));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kMLE));
+//   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kNObs));
 
    cout << "*" << setw(lineWidth - 2) << setfill(' ') << " Starting S.T.R.E.S.S. basic suite " << "*" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
