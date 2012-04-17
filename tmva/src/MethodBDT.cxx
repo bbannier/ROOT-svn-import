@@ -1079,7 +1079,7 @@ void TMVA::MethodBDT::GetRandomSubSample()
    // fills fEventSample with fSampleFraction*NEvents random training events
    UInt_t nevents = fEventSample.size();
    
-   if (fSubSample.size()!=0) fSubSample.clear();
+   if (!fSubSample.empty()) fSubSample.clear();
    TRandom3 *trandom   = new TRandom3(fForest.size()+1);
 
    for (UInt_t ievt=0; ievt<nevents; ievt++) { // recreate new random subsample
@@ -1186,7 +1186,7 @@ Double_t TMVA::MethodBDT::GradBoost( vector<TMVA::Event*> eventSample, DecisionT
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       Double_t weight = (*e)->GetWeight();
       TMVA::DecisionTreeNode* node = dt->GetEventNode(*(*e));
-      if ((leaves[node]).size()==0){
+      if ((leaves[node]).empty()){
          (leaves[node]).push_back((*e)->GetTarget(cls)* weight);
          (leaves[node]).push_back(fabs((*e)->GetTarget(cls))*(1.0-fabs((*e)->GetTarget(cls))) * weight* weight);
       }
