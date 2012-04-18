@@ -1,5 +1,7 @@
 /*
 An example script to modify the interpolation used in HistFactory models.
+Kyle Cranmer <cranmer@cern.ch>
+
 Usage:
 
 make the standard example workspace with histfactory
@@ -52,6 +54,7 @@ root [2] CheckInterpolation(combined)
 #include "TIterator.h"
 #include "RooWorkspace.h"
 #include "RooStats/HistFactory/FlexibleInterpVar.h"
+#include "RooStats/HistFactory/PiecewiseInterpolation.h"
 
 using namespace RooStats;
 using namespace HistFactory;
@@ -60,17 +63,26 @@ using namespace HistFactory;
 void ModifyInterpolationForAll(RooWorkspace* ws, int code=1);
 void ModifyInterpolationForSet(RooArgSet* modifySet, int code = 1);
 void CheckInterpolation(RooWorkspace* ws);
+void ModifyShapeInterpolationForAll(RooWorkspace* ws, int code=1);
+void ModifyShapeInterpolationForSet(RooArgSet* modifySet, int code = 1);
+void CheckShapeInterpolation(RooWorkspace* ws);
 
 // Codes for interpolation
 // code = 0: piece-wise linear
 // code = 1: pice-wise log
 // code = 2: parabolic interp with linear extrap
 // code = 3: parabolic version of log-normal
+// code = 4: polynomial interpolation, log extrapolation
+
+// currently same codes for shape interpolation, but maybe not forever, so we separate them.
 
 void ModifyInterpolation(){
   cout <<"Choose from the following"<<endl;
   cout <<"void ModifyInterpolationForAll(RooWorkspace* ws, int code=1);"<<endl;
   cout <<"void ModifyInterpolationForSet(RooArgSet* modifySet, int code = 1);"<<endl;
+
+  cout <<"void ModifyShapeInterpolationForAll(RooWorkspace* ws, int code=1);"<<endl;
+  cout <<"void ModifyShapeInterpolationForSet(RooArgSet* modifySet, int code = 1);"<<endl;
   cout <<"void CheckInterpolation(RooWorkspace* ws);"<<endl;
 }
 
@@ -105,6 +117,38 @@ void ModifyInterpolationForSet(RooArgSet* modifySet, int code){
   
 }
 
+void ModifyShapeInterpolationForAll(RooWorkspace* ws, int code){
+  RooArgSet funcs = ws->allFunctions();
+  TIterator* it = funcs.createIterator();
+  TObject* tempObj=0;
+  while((tempObj=it->Next())){    
+    PiecewiseInterpolation* piece = dynamic_cast<PiecewiseInterpolation*>(tempObj);
+    if(piece){
+      piece->setAllInterpCodes(code);
+    }
+  }     
+}
+
+void ModifyShapeInterpolationForSet(RooArgSet* modifySet, int code){
+
+  TIterator* it = modifySet->createIterator();
+  RooRealVar* alpha=0;
+  while((alpha=(RooRealVar*)it->Next())){
+    TIterator* serverIt = alpha->clientIterator();
+    TObject* tempObj=0;
+    while((tempObj=serverIt->Next())){
+
+      PiecewiseInterpolation* piece = dynamic_cast<PiecewiseInterpolation*>(tempObj);
+      if(piece){
+	piece->printAllInterpCodes();
+	piece->setInterpCode(*alpha,code);
+	piece->printAllInterpCodes();
+      }
+    }     
+  }
+  
+}
+
 
 void CheckInterpolation(RooWorkspace* ws){
   RooArgSet funcs = ws->allFunctions();
@@ -114,6 +158,18 @@ void CheckInterpolation(RooWorkspace* ws){
     FlexibleInterpVar* flex = dynamic_cast<FlexibleInterpVar*>(tempObj);
     if(flex){
       flex->printAllInterpCodes();
+    }
+  }     
+}
+
+void CheckShapeInterpolation(RooWorkspace* ws){
+  RooArgSet funcs = ws->allFunctions();
+  TIterator* it = funcs.createIterator();
+  TObject* tempObj=0;
+  while((tempObj=it->Next())){    
+    PiecewiseInterpolation* piece = dynamic_cast<PiecewiseInterpolation*>(tempObj);
+    if(piece){
+      piece->printAllInterpCodes();
     }
   }     
 }
