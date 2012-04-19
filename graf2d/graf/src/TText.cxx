@@ -35,7 +35,7 @@ ClassImp(TText)
 
 
 //______________________________________________________________________________
-TText::TText(): TNamed(), TAttText()
+TText::TText(): TNamed(), TAttText(), fWcsTitle(NULL)
 {
    // Text default constructor.
 
@@ -45,12 +45,22 @@ TText::TText(): TNamed(), TAttText()
 
 
 //______________________________________________________________________________
-TText::TText(Double_t x, Double_t y, const char *text) : TNamed("",text), TAttText()
+TText::TText(Double_t x, Double_t y, const char *text) : TNamed("",text), TAttText(), fWcsTitle(NULL)
 {
    // Text normal constructor.
 
    fX = x;
    fY = y;
+}
+
+
+//______________________________________________________________________________
+TText::TText(Double_t x, Double_t y, const wchar_t *text) : TNamed("",text), TAttText()
+{
+   // Text normal constructor.
+
+   fX=x; fY=y;
+   fWcsTitle = new std::wstring(text);
 }
 
 
@@ -133,7 +143,32 @@ TText *TText::DrawText(Double_t x, Double_t y, const char *text)
 
 
 //______________________________________________________________________________
+TText *TText::DrawText(Double_t x, Double_t y, const wchar_t *text)
+{
+   // Draw this text with new coordinates.
+
+   TText *newtext = new TText(x, y, text);
+   TAttText::Copy(*newtext);
+   newtext->SetBit(kCanDelete);
+   if (TestBit(kTextNDC)) newtext->SetNDC();
+   newtext->AppendPad();
+   return newtext;
+}
+
+
+//______________________________________________________________________________
 TText *TText::DrawTextNDC(Double_t x, Double_t y, const char *text)
+{
+   // Draw this text with new coordinates in NDC.
+
+   TText *newtext = DrawText(x, y, text);
+   newtext->SetNDC();
+   return newtext;
+}
+
+
+//______________________________________________________________________________
+TText *TText::DrawTextNDC(Double_t x, Double_t y, const wchar_t *text)
 {
    // Draw this text with new coordinates in NDC.
 
@@ -447,6 +482,36 @@ void TText::GetTextAscentDescent(UInt_t &a, UInt_t &d, const char *text) const
 
 
 //______________________________________________________________________________
+void TText::GetTextAscentDescent(UInt_t &a, UInt_t &d, const wchar_t *text) const
+{
+   // Return text ascent and descent for string text
+   //  in a return total text ascent
+   //  in d return text descent
+
+   Double_t     wh = (Double_t)gPad->XtoPixel(gPad->GetX2());
+   Double_t     hh = (Double_t)gPad->YtoPixel(gPad->GetY1());
+   Double_t tsize;
+   if (wh < hh)  tsize = fTextSize*wh;
+   else          tsize = fTextSize*hh;
+
+   if (gVirtualX->HasTTFonts() || gPad->IsBatch()) {
+      TTF::SetTextFont(fTextFont);
+      TTF::SetTextSize(tsize);
+      a = TTF::GetBox().yMax;
+      d = TMath::Abs(TTF::GetBox().yMin);
+   } else {
+      gVirtualX->SetTextSize((int)tsize);
+      a = gVirtualX->GetFontAscent();
+      if (!a) {
+         UInt_t w;
+         gVirtualX->GetTextExtent(w, a, (wchar_t*)text);
+      }
+      d = gVirtualX->GetFontDescent();
+   }
+}
+
+
+//______________________________________________________________________________
 void TText::GetTextExtent(UInt_t &w, UInt_t &h, const char *text) const
 {
    // Return text extent for string text
@@ -494,6 +559,30 @@ void TText::GetTextAdvance(UInt_t &a, const char *text, const Bool_t kern) const
       UInt_t h;
       gVirtualX->SetTextSize((int)tsize);
       gVirtualX->GetTextExtent(a, h, (char*)text);
+   }
+}
+
+
+//______________________________________________________________________________
+void TText::GetTextExtent(UInt_t &w, UInt_t &h, const wchar_t *text) const
+{
+   // Return text extent for string text
+   //  in w return total text width
+   //  in h return text height
+
+   Double_t     wh = (Double_t)gPad->XtoPixel(gPad->GetX2());
+   Double_t     hh = (Double_t)gPad->YtoPixel(gPad->GetY1());
+   Double_t tsize;
+   if (wh < hh)  tsize = fTextSize*wh;
+   else          tsize = fTextSize*hh;
+
+   if (gVirtualX->HasTTFonts() || gPad->IsBatch()) {
+      TTF::SetTextFont(fTextFont);
+      TTF::SetTextSize(tsize);
+      TTF::GetTextExtent(w, h, (wchar_t*)text);
+   } else {
+      gVirtualX->SetTextSize((int)tsize);
+      gVirtualX->GetTextExtent(w, h, (wchar_t*)text);
    }
 }
 
@@ -585,7 +674,27 @@ void TText::PaintText(Double_t x, Double_t y, const char *text)
 
 
 //______________________________________________________________________________
+void TText::PaintText(Double_t x, Double_t y, const wchar_t *text)
+{
+   // Draw this text with new coordinates.
+
+   TAttText::Modify();  //Change text attributes only if necessary
+   gPad->PaintText(x,y,text);
+}
+
+
+//______________________________________________________________________________
 void TText::PaintTextNDC(Double_t u, Double_t v, const char *text)
+{
+   // Draw this text with new coordinates in NDC.
+
+   TAttText::Modify();  //Change text attributes only if necessary
+   gPad->PaintTextNDC(u,v,text);
+}
+
+
+//______________________________________________________________________________
+void TText::PaintTextNDC(Double_t u, Double_t v, const wchar_t *text)
 {
    // Draw this text with new coordinates in NDC.
 
@@ -623,7 +732,7 @@ void TText::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    out<<"text = new TText("<<fX<<","<<fY<<","<<quote<<s.Data()<<quote<<");"<<endl;
    if (TestBit(kTextNDC)) out<<"   text->SetNDC();"<<endl;
 
-   SaveTextAttributes(out,"text",11,0,1,62,0.05);
+   SaveTextAttributes(out,"text",11,0,1,42,0.05);
 
    out<<"   text->Draw();"<<endl;
 }

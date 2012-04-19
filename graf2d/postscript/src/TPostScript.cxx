@@ -239,6 +239,7 @@ End_Html */
 #include <ctype.h>
 
 #include "Riostream.h"
+#include "Byteswap.h"
 #include "TROOT.h"
 #include "TColor.h"
 #include "TVirtualPad.h"
@@ -248,6 +249,7 @@ End_Html */
 #include "TMath.h"
 #include "TText.h"
 #include "TSystem.h"
+#include "TEnv.h"
 
 // to scale fonts to the same size as the old TT version
 const Float_t kScale = 0.93376068;
@@ -1389,6 +1391,306 @@ void TPostScript::DrawHatch(Float_t, Float_t, Int_t, Double_t *, Double_t *)
    Warning("DrawHatch", "hatch fill style not yet implemented");
 }
 
+//______________________________________________________________________________
+Bool_t TPostScript::FontEmbedType1(const char *filename)
+{
+	struct pfb_segment_header_s {
+		char always_128;
+		char type;
+		unsigned int length;
+	} __attribute__ ((packed));
+	enum {
+		TYPE_ASCII = 1,
+		TYPE_BINARY,
+		TYPE_EOF
+	};
+
+	FILE *fp = fopen(filename, "r");
+
+	if(fp == NULL)
+		return false;
+
+	char magic_number[2];
+
+	if(fread(magic_number, sizeof(char), 2, fp) != 2) {
+		fclose(fp);
+		return false;
+	}
+	if(magic_number[0] == '\200') {
+		// IBM PC format printer font binary
+		fseek(fp, 0, SEEK_SET);
+
+		struct pfb_segment_header_s segment_header;
+
+		while(fread(&segment_header,
+					sizeof(struct pfb_segment_header_s), 1,
+					fp) == 1 &&
+			  segment_header.type != TYPE_EOF) {
+#ifndef R__BYTESWAP
+			segment_header.length = Rbswap_32(segment_header.length);
+#endif // R__BYTESWAP
+			char *buffer = new char[segment_header.length];
+
+			if(fread(buffer, sizeof(char), segment_header.length, fp)
+			   != segment_header.length) {
+				delete [] buffer;
+				fclose(fp);
+				return false;
+			}
+
+			switch(segment_header.type) {
+			case TYPE_ASCII:
+				// Simple CR -> LF conversion
+				for(int i = 0; i < (int)(segment_header.length) - 1; i++)
+					if(buffer[i] == '\r' && buffer[i + 1] != '\n')
+						buffer[i] = '\n';
+				if(buffer[segment_header.length - 1] == '\r')
+					buffer[segment_header.length - 1] = '\n';
+				PrintRaw(segment_header.length, buffer);
+				break;
+			case TYPE_BINARY:
+				WriteASCIIHex(segment_header.length, buffer);
+				PrintRaw(1, "\n");
+				break;
+			default:
+				delete [] buffer;
+				fclose(fp);
+				return false;
+			}
+
+			delete [] buffer;
+		}
+
+		return true;
+	}
+	else if(strncmp(magic_number, "%!", 2) == 0) {
+		// Printer font ASCII
+		return false;
+	}
+
+	// Not implemented
+	return false;
+}
+
+//______________________________________________________________________________
+Bool_t TPostScript::FontEmbedType2(const char *filename)
+{
+	// Embed an OpenType CFF (Type 2) file in ASCII85 encoding with
+	// the PostScript syntax
+
+	FILE *fp = fopen(filename, "r");
+
+	if(fp == NULL)
+		return false;
+
+	TString fontName;
+	UInt_t cffOffset;
+	UInt_t cffLength;
+
+	if(!ReadOTFCFFHeader(fp, fontName, cffOffset, cffLength)) {
+		fclose(fp);
+		return false;
+	}
+
+	Char_t *cff = new Char_t[cffLength + 10];
+
+	strcpy(cff, "StartData\r");
+	fseek(fp, cffOffset, SEEK_SET);
+	if(fread(cff + 10, sizeof(Char_t), cffLength, fp) !=
+	   cffLength) {
+		delete [] cff;
+		fclose(fp);
+		return false;
+	}
+
+	Char_t linebuf[BUFSIZ];
+
+	snprintf(linebuf, BUFSIZ, "%%%%BeginResource: FontSet (%s)@",
+			 fontName.Data());
+	PrintStr(linebuf);
+	PrintStr("%%VMusage: 0 0");
+	PrintStr("/FontSetInit /ProcSet findresource begin@");
+	snprintf(linebuf, BUFSIZ, "%%%%BeginData: %d ASCII Lines@",
+			 ASCII85LineCount(cffLength, cff) + 2);
+	PrintStr(linebuf);
+	snprintf(linebuf, BUFSIZ,
+			 "/%s %d currentfile /ASCII85Decode filter cvx exec@",
+			 fontName.Data(), cffLength);
+	PrintStr(linebuf);
+	WriteASCII85(cffLength + 10, cff);
+
+	delete [] cff;
+
+	PrintStr("%%EndData@");
+	PrintStr("%%EndResource@");
+	fclose(fp);
+
+	return true;
+}
+
+//______________________________________________________________________________
+Bool_t TPostScript::FontEmbedType42(const char *filename)
+{
+	// Embed an TrueType as Type 42 with the PostScript syntax
+
+	FILE *fp = fopen(filename, "r");
+
+	if(fp == NULL)
+		return false;
+
+	TString fontName;
+	Double_t fontBBox[4];
+	UShort_t encoding[65536];
+	UShort_t cMap[65536 * 3];
+	TString charStrings[65536];
+
+	if(!ReadTTFHeader(fp, fontName, fontBBox, encoding,
+					  charStrings, cMap)) {
+		fclose(fp);
+		return false;
+	}
+	fseek(fp, 0, SEEK_SET);
+
+	Char_t linebuf[BUFSIZ];
+
+	snprintf(linebuf, BUFSIZ, "%%%%BeginResource: FontSet (%s)@",
+			 fontName.Data());
+	PrintStr(linebuf);
+	PrintStr("%%VMusage: 0 0@");
+//	PrintStr("11 dict begin@");
+	PrintStr("/FontType 42 def@");
+	snprintf(linebuf, BUFSIZ, "/FontName /%s def@", fontName.Data());
+	PrintStr(linebuf);
+	PrintStr("/Encoding 256 array@");
+	for(Int_t code = 0; code < 256; code++) {
+		snprintf(linebuf, BUFSIZ, "dup %d /%s put@", code,
+				 charStrings[code].Data());
+		PrintStr(linebuf);
+	}
+	PrintStr("readonly def@");
+	PrintStr("/PaintType 0 def@");	// 0 for filled, 2 for stroked
+	PrintStr("/FontMatrix [1 0 0 1 0 0] def@");
+	snprintf(linebuf, BUFSIZ, "/FontBBox [%f %f %f %f] def@",
+			 fontBBox[0], fontBBox[1], fontBBox[2], fontBBox[3]);
+	PrintStr(linebuf);
+	PrintStr("/sfnts [@");
+
+	const Int_t blockSize = 32262;
+	Char_t sfnts[blockSize];
+	Int_t length;
+
+	while((length = fread(sfnts, sizeof(Char_t), blockSize, fp)) >
+		  0) {
+		PrintStr("<@");
+		WriteASCIIHex(length, sfnts);
+		PrintStr(">@");
+	}
+	PrintStr("] def@");
+
+	Int_t count = 0;
+
+	for(Int_t glyph = 0; glyph < 65536; glyph++)
+		if(charStrings[glyph] != ".notdef" && charStrings[glyph] != "")
+			count++;
+	snprintf(linebuf, BUFSIZ, "/CharStrings %d dict dup begin@",
+			 count);
+	PrintStr(linebuf);
+	for(Int_t glyph = 0; glyph < 65536; glyph++)
+		if(charStrings[glyph] != ".notdef" && charStrings[glyph] != "") {
+			snprintf(linebuf, BUFSIZ, "/%s %d def@",
+					 charStrings[glyph].Data(), glyph);
+			PrintStr(linebuf);
+		}
+	PrintStr("end readonly def@");
+	PrintStr("FontName currentdict end definefont pop@");
+	PrintStr("%%EndResource@");
+
+	return false;
+}
+
+//______________________________________________________________________________
+void TPostScript::FontEmbed(void)
+{
+   static const char *fonttable[29][2] = {
+	   { "Root.TTFont.0", "arialbd.ttf" },
+	   { "Root.TTFont.1", "timesi.ttf" },
+	   { "Root.TTFont.2", "timesbd.ttf" },
+	   { "Root.TTFont.3", "timesbi.ttf" },
+	   { "Root.TTFont.4", "arial.ttf" },
+	   { "Root.TTFont.5", "ariali.ttf" },
+	   { "Root.TTFont.6", "arialbd.ttf" },
+	   { "Root.TTFont.7", "arialbi.ttf" },
+	   { "Root.TTFont.8", "cour.ttf" },
+	   { "Root.TTFont.9", "couri.ttf" },
+	   { "Root.TTFont.10", "courbd.ttf" },
+	   { "Root.TTFont.11", "courbi.ttf" },
+	   { "Root.TTFont.12", "symbol.ttf" },
+	   { "Root.TTFont.13", "times.ttf" },
+	   { "Root.TTFont.14", "wingding.ttf" },
+	   { "Root.TTFont.STIXGen", "arial.ttf" },
+	   { "Root.TTFont.STIXGenIt", "ariali.ttf" },
+	   { "Root.TTFont.STIXGenBd", "arialbd.ttf" },
+	   { "Root.TTFont.STIXGenBdIt", "arialbi.ttf" },
+	   { "Root.TTFont.STIXSiz1Sym", "arial.ttf" },
+	   { "Root.TTFont.STIXSiz1SymBd", "arialbd.ttf" },
+	   { "Root.TTFont.STIXSiz2Sym", "arial.ttf" },
+	   { "Root.TTFont.STIXSiz2SymBd", "arialbd.ttf" },
+	   { "Root.TTFont.STIXSiz3Sym", "arial.ttf" },
+	   { "Root.TTFont.STIXSiz3SymBd", "arialbd.ttf" },
+	   { "Root.TTFont.STIXSiz4Sym", "arial.ttf" },
+	   { "Root.TTFont.STIXSiz4SymBd", "arialbd.ttf" },
+	   { "Root.TTFont.STIXSiz5Sym", "arial.ttf" },
+	   { "Root.TTFont.ME", "arial.ttf" }
+   };
+
+	// try to load font (font must be in Root.TTFontPath resource)
+	const char *ttpath = gEnv->GetValue("Root.TTFontPath",
+#ifdef TTFFONTDIR
+										TTFFONTDIR
+#else // TTFFONTDIR
+										"$(ROOTSYS)/fonts"
+#endif // TTFFONTDIR
+										);
+   
+//	for(Int_t fontid = 0; fontid < 29; fontid++) {
+for(Int_t fontid = 0; fontid < 1; fontid++) {
+
+		const char *filename = gEnv->GetValue(
+			fonttable[fontid][0], fonttable[fontid][1]);
+		char *ttfont = gSystem->Which(ttpath, filename,
+									  kReadPermission);
+
+		if(!ttfont) {
+			Error("TPostScript::FontEmbed",
+				  "font %d (filename `%s') not found in path",
+				  fontid, filename);
+		}
+		else {
+			if (FontEmbedType2(ttfont)) {
+				// nothing
+			} else if(FontEmbedType1(ttfont)) {
+				// nothing
+			} else if(FontEmbedType42(ttfont)) {
+				// nothing
+			}
+			delete [] ttfont;
+		}
+	}
+	PrintStr("%%IncludeResource: font Times-Roman@");
+	PrintStr("%%IncludeResource: font Times-Italic@");
+	PrintStr("%%IncludeResource: font Times-Bold@");
+	PrintStr("%%IncludeResource: font Times-BoldItalic@");
+	PrintStr("%%IncludeResource: font Helvetica@");
+	PrintStr("%%IncludeResource: font Helvetica-Oblique@");
+	PrintStr("%%IncludeResource: font Helvetica-Bold@");
+	PrintStr("%%IncludeResource: font Helvetica-BoldOblique@");
+	PrintStr("%%IncludeResource: font Courier@");
+	PrintStr("%%IncludeResource: font Courier-Oblique@");
+	PrintStr("%%IncludeResource: font Courier-Bold@");
+	PrintStr("%%IncludeResource: font Courier-BoldOblique@");
+	PrintStr("%%IncludeResource: font Symbol@");
+	PrintStr("%%IncludeResource: font ZapfDingbats@");
+}
 
 //______________________________________________________________________________
 void TPostScript::FontEncode()
@@ -1417,6 +1719,7 @@ void TPostScript::FontEncode()
    PrintStr(" /Helvetica-Narrow-Oblique /NewCenturySchlbk-Roman /NewCenturySchlbk-Bold");
    PrintStr(" /NewCenturySchlbk-BoldItalic /NewCenturySchlbk-Italic");
    PrintStr(" /Palatino-Bold /Palatino-BoldItalic /Palatino-Italic /Palatino-Roman");
+   PrintStr(" /MyriadPro-Regular /MyriadPro-It /MyriadPro-Bold /MyriadPro-BoldIt");
    PrintStr(" ] {ISOLatin1Encoding reEncode } forall");
 }
 
@@ -1558,6 +1861,7 @@ void TPostScript::Initialize()
    if ( fMode == 1 || fMode == 4) PrintStr("%%Orientation: Portrait@");
    if ( fMode == 2 || fMode == 5) PrintStr("%%Orientation: Landscape@");
 
+   PrintStr("%%DocumentNeedResources: ProcSet (FontSetInit)@");
    PrintStr("%%EndComments@");
    PrintStr("%%BeginProlog@");
 
@@ -1580,6 +1884,8 @@ void TPostScript::Initialize()
    PrintStr("/ita {/ang 15 def gsave [1 0 ang dup sin exch cos div 1 0 0] concat} def @");
 
    DefineMarkers();
+   PrintStr("%%IncludeResource: ProcSet (FontSetInit)@");
+   FontEmbed();
    FontEncode();
 
    // mode=1 for portrait black/white
@@ -2349,12 +2655,39 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
    // This routine writes the string chars into a PostScript file
    // at position xx,yy in world coordinates.
 
-   static const char *psfont[] = {
-    "/Times-Italic"         , "/Times-Bold"         , "/Times-BoldItalic",
-    "/Helvetica"            , "/Helvetica-Oblique"  , "/Helvetica-Bold"  ,
-    "/Helvetica-BoldOblique", "/Courier"            , "/Courier-Oblique" ,
-    "/Courier-Bold"         , "/Courier-BoldOblique", "/Symbol"          ,
-    "/Times-Roman"          , "/ZapfDingbats"       , "/Symbol"};
+   static const char *psfont[31][2] = {
+	   { "Root.PSFont.1", "/Times-Italic" },
+	   { "Root.PSFont.2", "/Times-Bold" },
+	   { "Root.PSFont.3", "/Times-BoldItalic" },
+	   { "Root.PSFont.4", "/Helvetica" },
+	   { "Root.PSFont.5", "/Helvetica-Oblique" },
+	   { "Root.PSFont.6", "/Helvetica-Bold" },
+	   { "Root.PSFont.7", "/Helvetica-BoldOblique" },
+	   { "Root.PSFont.8", "/Courier" },
+	   { "Root.PSFont.9", "/Courier-Oblique" },
+	   { "Root.PSFont.10", "/Courier-Bold" },
+	   { "Root.PSFont.11", "/Courier-BoldOblique" },
+	   { "Root.PSFont.12", "/Symbol" },
+	   { "Root.PSFont.13", "/Times-Roman" },
+	   { "Root.PSFont.14", "/ZapfDingbats" },
+	   { "Root.PSFont.15", "/Symbol" },
+	   { "Root.PSFont.STIXGen", "/Helvetica" },
+	   { "Root.PSFont.STIXGenIt", "/Helvetica-Oblique" },
+	   { "Root.PSFont.STIXGenBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXGenBdIt", "/Helvetica-BoldOblique" },
+	   { "Root.PSFont.STIXSiz1Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz1SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz2Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz2SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz3Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz3SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz4Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz4SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz5Sym", "/Helvetica" },
+	   { "Root.PSFont.ME", "/Helvetica" },
+	   { "Root.PSFont.CJKMing", "/Helvetica-Bold" },
+	   { "Root.PSFont.CJKGothic", "/Times-Roman" }
+   };
 
    const Double_t kDEGRAD = TMath::Pi()/180.;
    Double_t x = xx;
@@ -2384,7 +2717,7 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
    Float_t tsizey = gPad->AbsPixeltoY(0)-gPad->AbsPixeltoY(Int_t(tsize));
 
    Int_t font = abs(fTextFont)/10;
-   if( font > 15 || font < 1) font = 1;
+   if( font > 31 || font < 1) font = 1;
 
    // Text color.
    SetColor(Int_t(fTextColor));
@@ -2467,7 +2800,7 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
    PrintStr(Form(" t %d r ", psangle));
    if(txalh == 2) PrintStr(Form(" %d 0 t ", -psCharsLength/2));
    if(txalh == 3) PrintStr(Form(" %d 0 t ", -psCharsLength));
-   PrintStr(psfont[font-1]);
+   PrintStr(gEnv->GetValue(psfont[font-1][0], psfont[font-1][1]));
    if (font != 15) {
      PrintStr(Form(" findfont %g sf 0 0 m ",fontsize));
    } else {
@@ -2521,7 +2854,183 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
 
 
 //______________________________________________________________________________
+void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
+{
+   // Write a string of characters
+   //
+   // This routine writes the string chars into a PostScript file
+   // at position xx,yy in world coordinates.
+
+   static const char *psfont[29][2] = {
+	   { "Root.PSFont.1", "/Times-Italic" },
+	   { "Root.PSFont.2", "/Times-Bold" },
+	   { "Root.PSFont.3", "/Times-BoldItalic" },
+	   { "Root.PSFont.4", "/Helvetica" },
+	   { "Root.PSFont.5", "/Helvetica-Oblique" },
+	   { "Root.PSFont.6", "/Helvetica-Bold" },
+	   { "Root.PSFont.7", "/Helvetica-BoldOblique" },
+	   { "Root.PSFont.8", "/Courier" },
+	   { "Root.PSFont.9", "/Courier-Oblique" },
+	   { "Root.PSFont.10", "/Courier-Bold" },
+	   { "Root.PSFont.11", "/Courier-BoldOblique" },
+	   { "Root.PSFont.12", "/Symbol" },
+	   { "Root.PSFont.13", "/Times-Roman" },
+	   { "Root.PSFont.14", "/ZapfDingbats" },
+	   { "Root.PSFont.STIXGen", "/Helvetica" },
+	   { "Root.PSFont.STIXGenIt", "/Helvetica-Oblique" },
+	   { "Root.PSFont.STIXGenBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXGenBdIt", "/Helvetica-BoldOblique" },
+	   { "Root.PSFont.STIXSiz1Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz1SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz2Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz2SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz3Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz3SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz4Sym", "/Helvetica" },
+	   { "Root.PSFont.STIXSiz4SymBd", "/Helvetica-Bold" },
+	   { "Root.PSFont.STIXSiz5Sym", "/Helvetica" },
+	   { "Root.PSFont.CJKMing", "/Helvetica-Bold" },
+	   { "Root.PSFont.CJKGothic", "/Times-Roman" }
+   };
+
+   const Double_t kDEGRAD = TMath::Pi()/180.;
+   Double_t x = xx;
+   Double_t y = yy;
+   if (!gPad) return;
+
+   // Compute the font size. Exit if it is 0
+   // The font size is computed from the TTF size to get exactly the same
+   // size on the screen and in the PostScript file.
+   Double_t wh = (Double_t)gPad->XtoPixel(gPad->GetX2());
+   Double_t hh = (Double_t)gPad->YtoPixel(gPad->GetY1());
+   Float_t tsize, ftsize;
+
+   if (wh < hh) {
+      tsize         = fTextSize*wh;
+      Int_t sizeTTF = (Int_t)(tsize*kScale+0.5); // TTF size
+      ftsize        = (sizeTTF*fXsize*gPad->GetAbsWNDC())/wh;
+   } else {
+      tsize         = fTextSize*hh;
+      Int_t sizeTTF = (Int_t)(tsize*kScale+0.5); // TTF size
+      ftsize        = (sizeTTF*fYsize*gPad->GetAbsHNDC())/hh;
+   }
+   Double_t fontsize = 4*(72*(ftsize)/2.54);
+   if( fontsize <= 0) return;
+
+   Float_t tsizex = gPad->AbsPixeltoX(Int_t(tsize))-gPad->AbsPixeltoX(0);
+   Float_t tsizey = gPad->AbsPixeltoY(0)-gPad->AbsPixeltoY(Int_t(tsize));
+
+   Int_t font = abs(fTextFont)/10;
+   if( font > 29 || font < 1) font = 1;
+
+   // Text color.
+   SetColor(Int_t(fTextColor));
+
+   // Text alignment.
+   Int_t txalh = fTextAlign/10;
+   if (txalh <1) txalh = 1; if (txalh > 3) txalh = 3;
+   Int_t txalv = fTextAlign%10;
+   if (txalv <1) txalv = 1; if (txalv > 3) txalv = 3;
+   if (txalv == 3) {
+      y -= 0.8*tsizey*TMath::Cos(kDEGRAD*fTextAngle);
+      x += 0.8*tsizex*TMath::Sin(kDEGRAD*fTextAngle);
+   } else if (txalv == 2) {
+      y -= 0.4*tsizey*TMath::Cos(kDEGRAD*fTextAngle);
+      x += 0.4*tsizex*TMath::Sin(kDEGRAD*fTextAngle);
+   }
+   UInt_t w, h;
+
+   TText t;
+   t.SetTextSize(fTextSize);
+   t.SetTextFont(fTextFont);
+   t.GetTextExtent(w, h, chars);
+   Double_t charsLength = gPad->AbsPixeltoX(w)-gPad->AbsPixeltoX(0);
+   Int_t psCharsLength = XtoPS(charsLength)-XtoPS(0);
+
+   // Text angle.
+   Int_t psangle = Int_t(0.5 + fTextAngle);
+
+   // Save context.
+   PrintStr("@");
+   SaveRestore(1);
+
+   // Clipping
+   Int_t xc1 = XtoPS(gPad->GetX1());
+   Int_t xc2 = XtoPS(gPad->GetX2());
+   Int_t yc1 = YtoPS(gPad->GetY1());
+   Int_t yc2 = YtoPS(gPad->GetY2());
+   WriteInteger(xc2 - xc1);
+   WriteInteger(yc2 - yc1);
+   WriteInteger(xc1);
+   WriteInteger(yc1);
+   PrintStr(" C");
+
+   // Output text position and angle.
+   WriteInteger(XtoPS(x));
+   WriteInteger(YtoPS(y));
+   PrintStr(Form(" t %d r ", psangle));
+   if(txalh == 2) PrintStr(Form(" %d 0 t ", -psCharsLength/2));
+   if(txalh == 3) PrintStr(Form(" %d 0 t ", -psCharsLength));
+   PrintStr(gEnv->GetValue(psfont[font-1][0], psfont[font-1][1]));
+   PrintStr(Form(" findfont %g sf 0 0 m ",fontsize));
+   PrintStr("@");
+
+   // Output text.
+   Int_t len = wcslen(chars);
+   if(len > 1) {
+	   PrintStr(Form("%d ", len));
+   }
+   for(Int_t i = 0; i < len; i++) {
+	   // Adobe Glyph Naming Convention
+	   // http://www.adobe.com/devnet/opentype/archives/glyph.html
+#include "AdobeGlyphList.h"
+	   const wchar_t *lower = std::lower_bound(
+			adobe_glyph_ucs, adobe_glyph_ucs + nadobe_glyph,
+			chars[i]);
+	   if(lower <  adobe_glyph_ucs + nadobe_glyph &&
+		  *lower == chars[i]) {
+		   // Named glyph from AGL 1.2
+		   const unsigned long index =
+			   lower - adobe_glyph_ucs;
+		   PrintStr(Form("/%s ", adobe_glyph_name[index]));
+	   }
+	   else if((unsigned int)chars[i] < 0xffff) {
+		   // Unicode BMP
+		   PrintStr(Form("/uni%04X ",
+						 (unsigned int)chars[i]));
+	   }
+	   else {
+		   // Unicode supplemental planes
+		   PrintStr(Form("/u%04X ",
+						 (unsigned int)chars[i]));
+	   }
+   }
+   if(len > 1) {
+	   PrintStr("{glyphshow} repeat ");
+   }
+   else {
+	   PrintStr("glyphshow ");
+   }
+
+   PrintStr("NC");
+
+   SaveRestore(-1);
+}
+
+
+//______________________________________________________________________________
 void TPostScript::TextNDC(Double_t u, Double_t v, const char *chars)
+{
+   // Write a string of characters in NDC
+
+   Double_t x = gPad->GetX1() + u*(gPad->GetX2() - gPad->GetX1());
+   Double_t y = gPad->GetY1() + v*(gPad->GetY2() - gPad->GetY1());
+   Text(x, y, chars);
+}
+
+
+//______________________________________________________________________________
+void TPostScript::TextNDC(Double_t u, Double_t v, const wchar_t *chars)
 {
    // Write a string of characters in NDC
 

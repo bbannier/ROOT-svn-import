@@ -207,6 +207,8 @@ void TGX11TTF::Align(void)
    FT_Vector_Transform(&fAlign, TTF::fgRotMatrix);
    fAlign.x = fAlign.x >> 6;
    fAlign.y = fAlign.y >> 6;
+   fAlign.x = 0;
+   fAlign.y = 0;
 }
 
 //______________________________________________________________________________
@@ -334,6 +336,25 @@ void TGX11TTF::DrawImage(FT_Bitmap *source, ULong_t fore, ULong_t back,
 //______________________________________________________________________________
 void TGX11TTF::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn,
                         const char *text, ETextMode mode)
+{
+   // Draw text using TrueType fonts. If TrueType fonts are not available the
+   // text is drawn with TGX11::DrawText.
+
+   if (!fHasTTFonts) {
+      TGX11::DrawText(x, y, angle, mgn, text, mode);
+   } else {
+      if (!TTF::fgInit) TTF::Init();
+      TTF::SetRotationMatrix(angle);
+      TTF::PrepareString(text);
+      TTF::LayoutGlyphs();
+      Align();
+      RenderString(x, y, mode);
+   }
+}
+
+//______________________________________________________________________________
+void TGX11TTF::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn,
+                        const wchar_t *text, ETextMode mode)
 {
    // Draw text using TrueType fonts. If TrueType fonts are not available the
    // text is drawn with TGX11::DrawText.
