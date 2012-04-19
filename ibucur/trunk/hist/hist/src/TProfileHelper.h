@@ -31,7 +31,7 @@ class TProfileHelper {
 
 public:
    template <typename T>
-   static void Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2=1);
+   static Bool_t Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2=1);
 
    template <typename T>
    static Double_t GetBinEffectiveEntries(T* p, Int_t bin);
@@ -56,10 +56,13 @@ public:
 
    template <typename T>
    static Double_t GetBinError(T* p, Int_t bin);
+
+   template <typename T>
+   static void SetErrorOption(T* p, Option_t * opt);
 };
 
 template <typename T>
-void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2)
+Bool_t TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2)
 {
    // Performs the operation: this = c1*h1 + c2*h2
 
@@ -78,7 +81,7 @@ void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Doubl
         ny != p1->GetNbinsY() ||  ny != p2->GetNbinsY() ||
         nz != p1->GetNbinsZ() ||  nz != p2->GetNbinsZ() ) {
       Error("TProfileHelper::Add","Attempt to add profiles with different number of bins");
-      return;
+      return kFALSE;
    }
 
 // Add statistics
@@ -114,6 +117,7 @@ void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Doubl
       p->fBinEntries.fArray[bin] = ac1*en1[bin] + ac2*en2[bin];
       if (p->fBinSumw2.fN ) p->fBinSumw2.fArray[bin]  = ac1*ac1*ew1[bin] + ac2*ac2*ew2[bin];
    }
+   return kTRUE;
 }
 
 template <typename T>
@@ -591,49 +595,76 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
 }
 
 template <typename T>
+void TProfileHelper::SetErrorOption(T* p, Option_t * option) { 
+   // set the profile option
+   TString opt = option;
+   opt.ToLower();
+   p->fErrorMode = kERRORMEAN;
+   if (opt.Contains("s")) p->fErrorMode = kERRORSPREAD;
+   if (opt.Contains("i")) p->fErrorMode = kERRORSPREADI;
+   if (opt.Contains("g")) p->fErrorMode = kERRORSPREADG;
+}
+
+template <typename T>
 Double_t TProfileHelper::GetBinError(T* p, Int_t bin)
 {
+   // compute bin error of profile histograms
 
    if (p->fBuffer) p->BufferEmpty();
 
-   if (bin < 0 || bin >= p->fNcells) return 0;
-   Double_t cont = p->fArray[bin];
-   Double_t sum  = p->fBinEntries.fArray[bin];
-   Double_t err2 = p->fSumw2.fArray[bin];
-   Double_t neff = p->GetBinEffectiveEntries(bin);
-   if (sum == 0) return 0;
+   if (bin < 0 || bin >= p->fNcells) return 0; 
+   Double_t cont = p->fArray[bin];                  // sum of bin w *y
+   Double_t sum  = p->fBinEntries.fArray[bin];      // sum of bin weights
+   Double_t err2 = p->fSumw2.fArray[bin];           // sum of bin w * y^2
+   Double_t neff = p->GetBinEffectiveEntries(bin);  // (sum of w)^2 / (sum of w^2)
+   if (sum == 0) return 0;      // for empty bins
+   // case the values y are gaussian distributed y +/- sigma and w = 1/sigma^2
+   if (p->fErrorMode == kERRORSPREADG) {
+      return 1./TMath::Sqrt(sum);
+   }
+   // compute variance in y (eprim2) and standard deviation in y (eprim)
    Double_t contsum = cont/sum;
    Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
    Double_t eprim   = TMath::Sqrt(eprim2);
+
+   if (p->fErrorMode == kERRORSPREADI) {
+      if (eprim != 0) return eprim/TMath::Sqrt(neff);
+      // in case content y is an integer (so each my has an error +/- 1/sqrt(12)
+      // when the std(y) is zero
+      return 1/TMath::Sqrt(12*neff);
+   }
+
+   // if approximate compute the sums (of w, wy and wy2) using all the bins
+   //  when the variance in y is zero 
    Double_t test = 1;
    if (err2 != 0 && neff < 5) test = eprim2*sum/err2;
    //Int_t cellLimit = (p->GetDimension() == 3)?1000404:10404;
-   if (p->fgApproximate && p->fNcells <=1000404 && (test < 1.e-4 || eprim2 < 1e-6)) { //3.04
-      Double_t scont, ssum, serr2;
-      scont = ssum = serr2 = 0;
-      for (Int_t i=1;i<p->fNcells;i++) {
-         if (p->fSumw2.fArray[i] <= 0) continue; //added in 3.10/02
-         scont += p->fArray[i];
-         ssum  += p->fBinEntries.fArray[i];
-         serr2 += p->fSumw2.fArray[i];
-      }
-      Double_t scontsum = scont/ssum;
-      Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);
-      eprim           = 2*TMath::Sqrt(seprim2);
+   if (p->fgApproximate && (test < 1.e-4 || eprim2 < 1e-6)) { //3.04
+      Double_t stats[TH1::kNstat];
+      p->GetStats(stats);
+      Double_t ssum = stats[0];
+      // for 1D profile
+      int index = 4;  // index in the stats array for 1D 
+      if (p->GetDimension() == 2) index = 7;   // for 2D
+      if (p->GetDimension() == 3) index = 11;   // for 3D
+      Double_t scont = stats[index];  
+      Double_t serr2 = stats[index+1];  
+      
+      // compute mean and variance in y 
+      Double_t scontsum = scont/ssum;                                  // global mean
+      Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);  // global variance  
+      eprim           = 2*TMath::Sqrt(seprim2);                        // global std (why factor of 2 ??)
       sum = ssum;
    }
    sum = TMath::Abs(sum);
-   if (p->fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(neff);
-   else if (p->fErrorMode == kERRORSPREAD) return eprim;
-   else if (p->fErrorMode == kERRORSPREADI) {
-      if (eprim != 0) return eprim/TMath::Sqrt(neff);
-      return 1/TMath::Sqrt(12*neff);
-   }
-   else if (p->fErrorMode == kERRORSPREADG) {
-      // it is supposed the values y are gaussian distributed y +/- dy
-      return 1./TMath::Sqrt(sum);
-   }
-   else return eprim;
+
+   // case option "S" return standard deviation in y 
+   if (p->fErrorMode == kERRORSPREAD) return eprim;
+
+   // default case : fErrorMode = kERRORMEAN 
+   // return standard error on the mean of y 
+   return eprim/TMath::Sqrt(neff);
+
 }
 
 #endif

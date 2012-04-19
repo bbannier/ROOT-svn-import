@@ -412,7 +412,7 @@ void ProcessFrame(TGFrame *f, const char *title)
    // Save a capture of frame f in a png file.
 
    gClient->HandleInput();
-   gSystem->Sleep(50);
+   gSystem->Sleep(250);
    gSystem->ProcessEvents();
    gErrorIgnoreLevel = 9999;
 
@@ -1875,6 +1875,7 @@ void testFontDlg()
                                         &prop, "", 0, kFALSE);
    dlg->SetWMPosition(0, 0);
    dlg->MapWindow();
+   gSystem->Sleep(250);
    ProcessFrame((TGMainFrame*)dlg, "Font Dialog");
    delete dlg;
 }
@@ -2170,7 +2171,7 @@ void testSplitFrame()
    // Test TGSplitFrame.
 
    TGMainFrame *mf = new TGMainFrame(gClient->GetDefaultRoot(), 200, 200);
-   //mf->SetCleanup(kDeepCleanup);
+   mf->SetCleanup(kDeepCleanup);
    TGSplitFrame *first = new TGSplitFrame(mf, 200, 200);
    mf->AddFrame(first, new TGLayoutHints(kLHintsExpandX | kLHintsExpandX, 0, 0, 0, 0));
    first->HSplit();
@@ -2292,6 +2293,7 @@ const char *excluded[] = {
    "QtMultiFileDialog",
    "QtPrintDialog",
    "calendar",
+   "customContextMenu.C",
    "customTH1Fmenu",
    "exec_macro",
    "guitest0",

@@ -54,9 +54,10 @@ options="                    \
    enable_cintex             \
    enable_clarens            \
    enable_cling              \
+   enable_cocoa              \
    enable_dcache             \
-   enable_exceptions         \
    enable_explicitlink       \
+   enable_fink               \
    enable_fftw3              \
    enable_fitsio             \
    enable_gviz               \
@@ -137,6 +138,7 @@ done
 for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_cling=no
+enable_cocoa=no
 enable_afs=no
 enable_alloc=no
 enable_gdml=no
@@ -1402,7 +1404,7 @@ FIRST argument one of the architecures given at the end of this message.
    FLAG            DESCRIPTION               DEFAULT
    --aclocaldir    Autoconf macro install dir(<prefix>/share/aclocal)
    --bindir        Binary installation dir   (<prefix>/bin)
-   --build         Build configuration [debug, exceptions, ...],
+   --build         Build configuration [debug, c++11, ...],
                    overrides the ROOTBUILD shell variable
    --cintincdir    CINT interpeted headers   (<libdir>/cint)
    --datadir       Data installation dir     (<prefix>/share/root)
@@ -1446,9 +1448,10 @@ enable/disable options, prefix with either --enable- or --disable-
   cintex             Build the libCintex Reflex interface library
   clarens            Clarens RPC support, optionally used by PROOF
   cling              Use cling as interpreter backend (experimental!), needs --with-llvm-config
+  cocoa              Use native Cocoa/Quartz graphics backend (MacOS X only)
   dcache             dCache support, requires libdcap from DESY
-  exceptions         Turn on compiler exception handling capability
   explicitlink       Explicitly link with all dependent libraries
+  fink               Use libraries from an extra MacOS X package manager (Fink, MacPorts, ...) (default: enabled)
   fftw3              Fast Fourier Transform support, requires libfftw3
   fitsio             Read images and data from FITS files, requires cfitsio
   gviz               Graphs visualization support, requires graphviz
@@ -1527,6 +1530,7 @@ with options, prefix with --with-, enables corresponding support
   dicttype           dictionary type: "cint" (default), "reflex", or "gccxml"
   dnssd-libdir       Bonjour support, location of libdns_sd
   dnssd-incdir       Bonjour support, location of dns_sd.h
+  finkdir            Prefix of extra MacOS X package manager (Fink, MacPorts, ...)
   ftgl-incdir        FTGL support, location of FTGL.h
   ftgl-libdir        FTGL support, location of libftgl
   fftw3-incdir       FFTW3 support, location of fftw3.h
@@ -1740,23 +1744,13 @@ else
    cwhich="which"
 fi
 
-# check for Fink on MacOS X
-# and for sanity of source e.g. pcre-*.tar.gz must exist
+# Check for sanity of source on Mac OS X: e.g. pcre-*.tar.gz must exist
 # which might not be the case if source was unpacked with StuffIt
 if test "x$platform" = "xmacosx" ; then
    if test ! -f ${ac_srcdir}/core/pcre/src/pcre-*.tar.gz ; then
       echo "Source tree does not contain expected files, please unpack"
       echo "using tar and not StuffIt"
       exit 1
-   fi
-   logmsg "Checking Fink directory"
-   finkdir=`$cwhich fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
-   logmsg "$finkdir"
-
-   if test -d /opt/local; then
-      logmsg "Checking MacPorts directory"
-      finkdir=/opt/local
-      logmsg "$finkdir"
    fi
 
    if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 5 ]; then
@@ -1864,6 +1858,7 @@ if test $# -gt 0 ; then
       --with-dnssd-libdir=*)   dnssdlibdir=$optarg   ; enable_bonjour="yes" ;;
       --with-avahi-incdir=*)   avahiincdir=$optarg   ; enable_bonjour="yes" ;;
       --with-avahi-libdir=*)   avahilibdir=$optarg   ; enable_bonjour="yes" ;;
+      --with-finkdir=*)        finkdir=$optarg       ; enable_fink="yes"    ;;
       --with-ftgl-incdir=*)    ftglincdir=$optarg    ; enable_builtin_ftgl=no;;
       --with-ftgl-libdir=*)    ftgllibdir=$optarg    ; enable_builtin_ftgl=no;;
       --with-fftw3-incdir=*)   fftw3incdir=$optarg   ; enable_fftw3="yes"   ;;
@@ -2081,6 +2076,34 @@ fi
 
 ######################################################################
 #
+### echo %%% Check for Fink or MacPorts on Mac OS X
+#
+message "Checking for Fink/MacPorts directory"
+if test "x$platform" = "xmacosx" -a "x$enable_fink" = "xyes"; then
+    if test -d "$finkdir"; then
+        # User specified a directory with --with-finkdir=...
+        logmsg "Using user-specified Fink directory"
+        logmsg "$finkdir"
+    else
+        # Fink has precedence over MacPorts
+        logmsg "Checking Fink directory"
+        finkdir=`$cwhich fink 2>&1 | sed -ne "s/\/bin\/fink//p"`
+        logmsg "$finkdir"
+
+        if test "x$finkdir" = "x"; then
+            logmsg "Checking MacPorts directory"
+            finkdir=`$cwhich port 2>&1 | sed -ne "s/\/bin\/port//p"`
+            logmsg "$finkdir"
+        fi
+    fi
+    result "$finkdir"
+else
+    logmsg "Fink/MacPorts disabled"
+    result "disabled"
+fi
+
+######################################################################
+#
 ### echo %%% On iOS always disable X11
 #
 if test "x$platform" = "xios"; then
@@ -2227,6 +2250,22 @@ fi
 
 ######################################################################
 #
+### echo %%% Check if native MacOS X Cocoa/Quartz backend should be build
+#
+if test ! "x$platform" = "xmacosx"; then
+    enable_cocoa="no"
+fi
+
+hascocoa="undef"
+if test "x$enable_cocoa" = "xyes"; then
+    message "Checking whether to build native MacOS X Cocoa backend"
+    hascocoa="define"
+    enable_x11="no"
+    result "yes"
+fi
+
+######################################################################
+#
 ### echo %%% X11 and XPM Library - Mandatory lib on Unix
 #
 # Mandatory test, must succeed
@@ -2360,18 +2399,6 @@ fi
 hasxft="undef"
 if test "x$enable_xft" = "xyes"; then
    hasxft="define"
-fi
-
-######################################################################
-#
-### echo %%% Exceptions - compiler feature
-#
-if test "x$EXCEPTIONS" = "xno" ; then
-    enable_exceptions=no
-fi
-e=`echo $rootbuild | sed 's/.*exceptions.*/1/'`
-if test "x$e" = "x1" ; then
-    enable_exceptions=no
 fi
 
 ######################################################################
@@ -6491,7 +6518,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildmemstat@|$enable_memstat|"      \
     -e "s|@enable_thread@|$enable_thread|"      \
     -e "s|@etcdir@|$etcdir|"                    \
-    -e "s|@exceptions@|$enable_exceptions|"     \
     -e "s|@explicitlink@|$enable_explicitlink|" \
     -e "s|@gfalincdir@|$gfalincdir|"            \
     -e "s|@gfallib@|$gfallib|"                  \
@@ -6664,6 +6690,7 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@buildafdsmgrd@|$enable_afdsmgrd|"    \
     -e "s|@afdsmgrdapmon@|$afdsmgrdapmon|"      \
     -e "s|@buildglite@|$enable_glite|"          \
+    -e "s|@buildcocoa@|$enable_cocoa|"          \
     < Makefile.tmp > $MAKEOUT
 rm -f Makefile.tmp
 
@@ -6715,6 +6742,7 @@ sed \
     -e "s|@haspthread@|$haspthread|"       \
     -e "s|@hasxft@|$hasxft|"               \
     -e "s|@hascling@|$hascling|"           \
+    -e "s|@hascocoa@|$hascocoa|"           \
     < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
 

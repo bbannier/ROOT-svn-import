@@ -1436,7 +1436,7 @@ Long64_t TH2::Merge(TCollection *list)
    //be a multiple of the bin width.
 
    if (!list) return 0;
-   if (list->IsEmpty()) return (Int_t) GetEntries();
+   if (list->IsEmpty()) return (Long64_t) GetEntries();
 
    TList inlist;
    inlist.AddAll(list);
@@ -1544,7 +1544,7 @@ Long64_t TH2::Merge(TCollection *list)
             inlist.Remove(hclone);
             delete hclone; 
          }
-         return (Int_t) GetEntries();  // all histograms have been processed
+         return (Long64_t) GetEntries();  // all histograms have been processed
       }
       next.Reset();
    }
@@ -2431,10 +2431,10 @@ TH1D *TH2::ProjectionX(const char *name, Int_t firstybin, Int_t lastybin, Option
    //   ranging from firstybin to lastybin included.
    //   By default, all bins including under- and overflow are included.
    //   The number of entries in the projection is estimated from the
-   //   number of effective entries for all the cells included in the projection
+   //   number of effective entries for all the cells included in the projection.
    //
-   //   To exclude the underflow bins in Y, use firstybin=1;
-   //   to exclude the underflow bins in Y, use lastybin=nx.
+   //   To exclude the underflow bins in Y, use firstybin=1.
+   //   To exclude the overflow bins in Y, use lastybin=nx.
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
@@ -2474,8 +2474,8 @@ TH1D *TH2::ProjectionY(const char *name, Int_t firstxbin, Int_t lastxbin, Option
    //   The number of entries in the projection is estimated from the
    //   number of effective entries for all the cells included in the projection
    //
-   //   To exclude the underflow bins in X, use firstxbin=1;
-   //   to exclude the underflow bins in X, use lastxbin=nx.
+   //   To exclude the underflow bins in X, use firstxbin=1.
+   //   To exclude the oveerflow bins in X, use lastxbin=nx.
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.

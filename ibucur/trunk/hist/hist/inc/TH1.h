@@ -174,9 +174,9 @@ public:
    TH1(const TH1&);
    virtual ~TH1();
 
-   virtual void     Add(TF1 *h1, Double_t c1=1, Option_t *option="");
-   virtual void     Add(const TH1 *h1, Double_t c1=1);
-   virtual void     Add(const TH1 *h, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
+   virtual Bool_t   Add(TF1 *h1, Double_t c1=1, Option_t *option="");
+   virtual Bool_t   Add(const TH1 *h1, Double_t c1=1);
+   virtual Bool_t   Add(const TH1 *h, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
    virtual void     AddBinContent(Int_t bin);
    virtual void     AddBinContent(Int_t bin, Double_t w);
    static  void     AddDirectory(Bool_t add=kTRUE);
@@ -188,9 +188,9 @@ public:
    virtual Double_t ComputeIntegral();
    virtual void     DirectoryAutoAdd(TDirectory *);
    virtual Int_t    DistancetoPrimitive(Int_t px, Int_t py);
-   virtual void     Divide(TF1 *f1, Double_t c1=1);
-   virtual void     Divide(const TH1 *h1);
-   virtual void     Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t   Divide(TF1 *f1, Double_t c1=1);
+   virtual Bool_t   Divide(const TH1 *h1);
+   virtual Bool_t   Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    virtual void     Draw(Option_t *option="");
    virtual TH1     *DrawCopy(Option_t *option="") const;
    virtual TH1     *DrawNormalized(Option_t *option="", Double_t norm=1) const;
@@ -311,13 +311,14 @@ public:
    virtual void     LabelsInflate(Option_t *axis="X");
    virtual void     LabelsOption(Option_t *option="h", Option_t *axis="X");
    virtual Long64_t Merge(TCollection *list);
-   virtual void     Multiply(TF1 *h1, Double_t c1=1);
-   virtual void     Multiply(const TH1 *h1);
-   virtual void     Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t   Multiply(TF1 *h1, Double_t c1=1);
+   virtual Bool_t   Multiply(const TH1 *h1);
+   virtual Bool_t   Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    virtual void     Paint(Option_t *option="");
    virtual void     Print(Option_t *option="") const;
    virtual void     PutStats(Double_t *stats);
    virtual TH1     *Rebin(Int_t ngroup=2, const char*newname="", const Double_t *xbins=0);  // *MENU*
+   virtual TH1     *RebinX(Int_t ngroup=2, const char*newname="") { return Rebin(ngroup,newname, (Double_t*) 0); }
    virtual void     RebinAxis(Double_t x, TAxis *axis);
    virtual void     Rebuild(Option_t *option="");
    virtual void     RecursiveRemove(TObject *obj);

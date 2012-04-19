@@ -51,7 +51,8 @@ namespace cling {
                             argc, argv, llvmdir);
     assert(CI && "CompilerInstance is (null)!");
     m_CI.reset(CI);
-    m_SyntaxOnly = (CI->getFrontendOpts().ProgramAction == clang::frontend::ParseSyntaxOnly);
+    m_SyntaxOnly 
+      = CI->getFrontendOpts().ProgramAction == clang::frontend::ParseSyntaxOnly;
 
     CreateSLocOffsetGenerator();
 
@@ -60,16 +61,16 @@ namespace cling {
     // Add consumers to the ChainedConsumer, which owns them
     EvaluateTSynthesizer* ES = new EvaluateTSynthesizer(interp);
     ES->Attach(m_Consumer);
-    addConsumer(ChainedConsumer::kEvaluateTSynthesizer, ES);
+    m_Consumer->Add(ChainedConsumer::kEvaluateTSynthesizer, ES);
 
     DeclExtractor* DE = new DeclExtractor();
     DE->Attach(m_Consumer);
-    addConsumer(ChainedConsumer::kDeclExtractor, DE);
+    m_Consumer->Add(ChainedConsumer::kDeclExtractor, DE);
 
     ValuePrinterSynthesizer* VPS = new ValuePrinterSynthesizer(interp);
     VPS->Attach(m_Consumer);
-    addConsumer(ChainedConsumer::kValuePrinterSynthesizer, VPS);
-    addConsumer(ChainedConsumer::kASTDumper, new ASTDumper());
+    m_Consumer->Add(ChainedConsumer::kValuePrinterSynthesizer, VPS);
+    m_Consumer->Add(ChainedConsumer::kASTDumper, new ASTDumper());
     if (!m_SyntaxOnly) {
       CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(), 
                                             "cling input",
@@ -77,9 +78,10 @@ namespace cling {
                                   /*Owned by codegen*/ * new llvm::LLVMContext()
                                             );
       assert(CG && "No CodeGen?!");
-      addConsumer(ChainedConsumer::kCodeGenerator, CG);
+      m_Consumer->Add(ChainedConsumer::kCodeGenerator, CG);
     }
-    m_Parser.reset(new Parser(CI->getPreprocessor(), CI->getSema()));
+    m_Parser.reset(new Parser(CI->getPreprocessor(), CI->getSema(),
+                              false /*skipFuncBodies*/));
     CI->getPreprocessor().EnterMainSourceFile();
     // Initialize the parser after we have entered the main source file.
     m_Parser->Initialize();
@@ -135,57 +137,32 @@ namespace cling {
   }
   
   void IncrementalParser::Initialize() {
-    CompileAsIs(""); // Consume initialization.
+    CompilationOptions CO;
+    CO.DeclarationExtraction = 0;
+    CO.ValuePrinting = 0;
+    Compile("", CO); // Consume initialization.
   }
 
-  IncrementalParser::EParseResult 
-  IncrementalParser::CompileLineFromPrompt(llvm::StringRef input) {
-    assert(input.str()[0] != '#' 
-           && "Preprocessed line! Call CompilePreprocessed instead");
-    
-    bool p, q;
-    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer,
-                                     isDynamicLookupEnabled());
+  IncrementalParser::EParseResult
+  IncrementalParser::Compile(llvm::StringRef input, 
+                             const CompilationOptions& Opts) {
 
-    p = m_Consumer->EnableConsumer(ChainedConsumer::kDeclExtractor);
-    q = m_Consumer->EnableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
+    m_Consumer->pushCompilationOpts(Opts);
     EParseResult Result = Compile(input);
-    m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
-    m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
-
-    return Result;
-
-  }
-
-  IncrementalParser::EParseResult 
-  IncrementalParser::CompileAsIs(llvm::StringRef input) {
-    bool p, q;
-    m_Consumer->RestorePreviousState(ChainedConsumer::kEvaluateTSynthesizer,
-                                     isDynamicLookupEnabled());
-
-    p = m_Consumer->DisableConsumer(ChainedConsumer::kDeclExtractor);
-    q = m_Consumer->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
-    EParseResult Result = Compile(input);
-    m_Consumer->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
-    m_Consumer->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
+    m_Consumer->popCompilationOpts();
 
     return Result;
   }
 
   void IncrementalParser::Parse(llvm::StringRef input, 
-                                llvm::SmallVector<DeclGroupRef, 4>& DGRs){
-    if (!m_SyntaxOnly)
-      m_Consumer->DisableConsumer(ChainedConsumer::kCodeGenerator);
+                                llvm::SmallVector<DeclGroupRef, 4>& DGRs) {
 
     Parse(input);
     for (llvm::SmallVector<ChainedConsumer::DGRInfo, 64>::iterator 
-           I = m_Consumer->DeclsQueue.begin(), E = m_Consumer->DeclsQueue.end(); 
+           I = m_Consumer->DeclsQueue.begin(), E = m_Consumer->DeclsQueue.end();
          I != E; ++I) {
       DGRs.push_back((*I).D);
     }
-
-    if (!m_SyntaxOnly)
-      m_Consumer->EnableConsumer(ChainedConsumer::kCodeGenerator);
   }
 
   IncrementalParser::EParseResult 
@@ -216,14 +193,9 @@ namespace cling {
     return Result;
   }
 
+  // Add the input to the memory buffer, parse it, and add it to the AST.
   IncrementalParser::EParseResult 
   IncrementalParser::Parse(llvm::StringRef input) {
-
-    // Add src to the memory buffer, parse it, and add it to
-    // the AST. Returns the CompilerInstance (and thus the AST).
-    // Diagnostics are reset for each call of parse: they are only covering
-    // src.
-
     Preprocessor& PP = m_CI->getPreprocessor();
     DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
 
@@ -237,7 +209,9 @@ namespace cling {
     if (input.size()) {
       std::ostringstream source_name;
       source_name << "input_line_" << (m_MemoryBuffer.size() + 1);
-      m_MemoryBuffer.push_back(llvm::MemoryBuffer::getMemBufferCopy(input, source_name.str()));
+      llvm::MemoryBuffer* MB  
+        = llvm::MemoryBuffer::getMemBufferCopy(input, source_name.str());
+      m_MemoryBuffer.push_back(MB);
       SourceManager& SM = getCI()->getSourceManager();
 
       // Create SourceLocation, which will allow clang to order the overload
@@ -250,10 +224,7 @@ namespace cling {
                                                /*LoadedID*/0,
                                                /*LoadedOffset*/0, NewLoc);
       
-      PP.EnterSourceFile(FID, 0, NewLoc);
-      
-      //Token &tok = const_cast<Token&>(m_Parser->getCurToken());
-      //tok.setKind(tok::semi);
+      PP.EnterSourceFile(FID, 0, NewLoc);      
     }
 
     Parser::DeclGroupPtrTy ADecl;
@@ -308,15 +279,6 @@ namespace cling {
       delete S.ExternalSource;
       S.ExternalSource = 0;
     }      
-  }
-
-  void IncrementalParser::addConsumer(ChainedConsumer::EConsumerIndex I, ASTConsumer* consumer) {
-    if (m_Consumer->Exists(I))
-      return;
-
-    m_Consumer->Add(I, consumer);
-    if (I == ChainedConsumer::kCodeGenerator)
-      m_Consumer->EnableConsumer(I);
   }
 
   CodeGenerator* IncrementalParser::GetCodeGenerator() const { 

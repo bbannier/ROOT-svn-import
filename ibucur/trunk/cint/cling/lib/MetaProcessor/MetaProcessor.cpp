@@ -56,7 +56,10 @@ namespace cling {
     //  We have a complete statement, compile and execute it.
     std::string input = m_InputValidator->TakeInput();
     m_InputValidator->Reset();
-    m_Interp.processLine(input, m_Options.RawInput, result);
+    if (m_Options.RawInput)
+      m_Interp.declare(input);
+    else
+      m_Interp.process(input, result);
 
     return 0;
   }
@@ -189,14 +192,14 @@ namespace cling {
    //
    //fprintf(stderr, "Unrecognized command.\n");
    else if (Command == "I") {
+
      // Check for params
-     RawLexer.LexFromRawLexer(Tok);
+     llvm::sys::Path path(SanitizeArg(ReadToEndOfBuffer(RawLexer, MB)));
      
-     if (Tok.is(tok::eof))
+     if (path.isEmpty())
        m_Interp.DumpIncludePath();
      else {
        // TODO: Additional checks on params
-       llvm::sys::Path path(SanitizeArg(ReadToEndOfBuffer(RawLexer, MB)));
        
        if (path.isValid())
          m_Interp.AddIncludePath(path.c_str());
@@ -275,15 +278,26 @@ namespace cling {
   llvm::StringRef MetaProcessor::ReadToEndOfBuffer(Lexer& RawLexer, 
                                                    llvm::MemoryBuffer* MB) {
     const char* CurPtr = RawLexer.getBufferLocation();
+    if (CurPtr == MB->getBufferEnd()) {
+      // Already at end of the buffer, return just the zero byte at the end.
+      return StringRef(CurPtr, 0);
+    }
     Token TmpTok;
     RawLexer.getAndAdvanceChar(CurPtr, TmpTok);
     return StringRef(CurPtr, MB->getBufferSize()-(CurPtr-MB->getBufferStart()));
   }
 
   llvm::StringRef MetaProcessor::SanitizeArg(const std::string& Str) {
+    if(Str.empty())
+      return Str;
+
     size_t begins = Str.find_first_not_of(" \t\n");
     size_t ends = Str.find_last_not_of(" \t\n") + 1;
-    return Str.substr(begins, ends - begins);
+
+    if (begins == std::string::npos)
+      ends = begins + 1;
+
+    return llvm::StringRef(Str.c_str() + begins, ends - begins);
   }
 
   void MetaProcessor::PrintCommandHelp() {
@@ -317,7 +331,6 @@ namespace cling {
       llvm::outs() << (*I).first->getName();
       llvm::outs() << "\n";
     }
-
   }
 
   // Run a file: .x file[(args)]
@@ -337,17 +350,15 @@ namespace cling {
     }
     StringRefPair pairFuncExt = pairPathFile.second.rsplit('.');
 
-    //fprintf(stderr, "funcname: %s\n", pairFuncExt.first.data());
-
     Interpreter::CompilationResult interpRes
-       = m_Interp.processLine(std::string("#include \"")
-                              + pairFileArgs.first.str()
-                              + std::string("\""), true /*raw*/);
+       = m_Interp.declare(std::string("#include \"")
+                          + pairFileArgs.first.str()
+                          + std::string("\""));
     
     if (interpRes != Interpreter::kFailure) {
        std::string expression = pairFuncExt.first.str()
           + "(" + pairFileArgs.second.str();
-       interpRes = m_Interp.processLine(expression, false /*not raw*/, result);
+       interpRes = m_Interp.evaluate(expression, result);
     }
     
     return (interpRes != Interpreter::kFailure);   

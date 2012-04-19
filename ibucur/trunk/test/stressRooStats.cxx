@@ -107,7 +107,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
    list<RooUnitTest*> testList ;
 //   testList.push_back(new TestBasic101(fref, writeRef, verbose));
    testList.push_back(new TestHypoTestCalculator(fref, writeRef, verbose));
-   testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose));
+//   testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose));
 //   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 0));
 //   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 1));
 //   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 2));
@@ -138,7 +138,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
 //   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kProfileLROneSided));
 //   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kProfileLRSigned));
 //   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kMLE));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kNObs));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, HypoTestInverter::kNObs));
 //   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kSimpleLR));
 //   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kRatioLR));
 //   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, HypoTestInverter::kProfileLR));

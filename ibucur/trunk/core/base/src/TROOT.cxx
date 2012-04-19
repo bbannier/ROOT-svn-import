@@ -114,7 +114,12 @@
 namespace std {} using namespace std;
 
 #if defined(R__UNIX)
+#if defined(R__HAS_COCOA)
+#include "TMacOSXSystem.h"
+#include "TUrl.h"
+#else
 #include "TUnixSystem.h"
+#endif
 #elif defined(R__WIN32)
 #include "TWinNTSystem.h"
 #endif
@@ -275,7 +280,6 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    gDirectory = 0;
    SetName(name);
    SetTitle(title);
-   TDirectory::Build();
 
    // will be used by global "operator delete" so make sure it is set
    // before anything is deleted
@@ -293,6 +297,8 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
       exit(1);
    }
 #endif
+
+   TDirectory::Build();
 
    // Initialize interface to CINT C++ interpreter
    fVersionInt      = 0;  // check in TROOT dtor in case TCint fails
@@ -1347,7 +1353,11 @@ void TROOT::InitSystem()
 
    if (gSystem == 0) {
 #if defined(R__UNIX)
+#if defined(R__HAS_COCOA)
+      gSystem = new TMacOSXSystem;
+#else
       gSystem = new TUnixSystem;
+#endif
 #elif defined(R__WIN32)
       gSystem = new TWinNTSystem;
 #else
@@ -1390,6 +1400,13 @@ void TROOT::InitSystem()
 
       fgMemCheck = gEnv->GetValue("Root.MemCheck", 0);
 
+#if defined(R__HAS_COCOA)
+      // create and delete a dummy TUrl so that TObjectStat table does not contain
+      // objects that are deleted after recording is turned-off (in next line),
+      // like the TUrl::fgSpecialProtocols list entries which are created in the
+      // TMacOSXSystem ctor.
+      { TUrl dummy("/dummy"); }
+#endif
       TObject::SetObjectStat(gEnv->GetValue("Root.ObjectStat", 0));
    }
 }

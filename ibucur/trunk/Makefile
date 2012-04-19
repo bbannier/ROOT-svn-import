@@ -106,6 +106,15 @@ endif
 ifeq ($(PLATFORM),ios)
 MODULES      += graf2d/ios
 endif
+ifeq ($(BUILDCOCOA),yes)
+MODULES      += graf2d/quartz
+MODULES      += graf2d/cocoa
+MODULES      += core/macosx
+SYSTEML      += $(MACOSXL)
+SYSTEMO      += $(MACOSXO)
+SYSTEMDO     += $(MACOSXDO)
+CORELIBEXTRA += -framework Cocoa
+endif
 ifeq ($(BUILDX11),yes)
 MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
@@ -292,7 +301,8 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios
+                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios \
+                graf2d/quartz graf2d/cocoa core/macosx
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -555,7 +565,7 @@ INCLUDEFILES :=
 
 ##### RULES #####
 
-.SUFFIXES: .cxx .d
+.SUFFIXES: .cxx .mm .d
 .PRECIOUS: include/%.h
 
 # special rules (need to be defined before generic ones)
@@ -632,6 +642,11 @@ $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.c
 	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CFLAGS) -- $$<
 	$$(CC) $$(OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$<
 
+$(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.mm
+	$$(MAKEDIR)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+	$$(CXX) $$(OPT) $$(CXXFLAGS) -ObjC++ -std=c++11 $$(CXXOUT)$$@ -c $$<
+
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.f
 	$$(MAKEDIR)
 ifeq ($$(F77),f2c)
@@ -658,6 +673,10 @@ $(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 %.o: %.c
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
+
+%.o: %.mm
+	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CXXFLAGS) -ObjC++ -std=c++11 $(CXXOUT)$@ -c $<
 
 %.o: %.f
 ifeq ($(F77),f2c)

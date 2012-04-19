@@ -8,6 +8,7 @@
 #define CLING_INCREMENTAL_PARSER_H
 
 #include "ChainedConsumer.h"
+#include "cling/Interpreter/CompilationOptions.h"
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclGroup.h"
@@ -82,8 +83,11 @@ namespace cling {
     void Initialize();
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
-    EParseResult CompileLineFromPrompt(llvm::StringRef input);
-    EParseResult CompileAsIs(llvm::StringRef input);
+
+    ///\brief Compiles the given input with the given compilation options.
+    ///
+    EParseResult Compile(llvm::StringRef input, const CompilationOptions& Opts);
+
     void Parse(llvm::StringRef input, 
                llvm::SmallVector<clang::DeclGroupRef, 4>& DGRs);
 
@@ -100,7 +104,6 @@ namespace cling {
     clang::Decl* getLastTopLevelDecl() const { return m_LastTopLevelDecl; }
     Transaction& getLastTransaction() { return m_LastTransaction; }
     
-    void addConsumer(ChainedConsumer::EConsumerIndex I, clang::ASTConsumer* consumer);
     clang::CodeGenerator* GetCodeGenerator() const;
 
   private:
