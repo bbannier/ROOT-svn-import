@@ -79,16 +79,16 @@ public:
                                                 ,Int_t nbinsz,const Double_t *zbins,Option_t *option="");
    TProfile3D(const TProfile3D &profile);
    virtual ~TProfile3D();
-   virtual void      Add(TF1 *h1, Double_t c1=1, Option_t *option="");
-   virtual void      Add(const TH1 *h1, Double_t c1=1);
-   virtual void      Add(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
+   virtual Bool_t    Add(TF1 *h1, Double_t c1=1, Option_t *option="");
+   virtual Bool_t    Add(const TH1 *h1, Double_t c1=1);
+   virtual Bool_t    Add(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
    static  void      Approximate(Bool_t approx=kTRUE);
    void              BuildOptions(Double_t tmin, Double_t tmax, Option_t *option);
    virtual Int_t     BufferEmpty(Int_t action=0);
    virtual void      Copy(TObject &hnew) const;
-   virtual void      Divide(TF1 *h1, Double_t c1=1);
-   virtual void      Divide(const TH1 *h1);
-   virtual void      Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t    Divide(TF1 *h1, Double_t c1=1);
+   virtual Bool_t    Divide(const TH1 *h1);
+   virtual Bool_t    Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    virtual TH1      *DrawCopy(Option_t *option="") const;
    Int_t             Fill(Double_t) {return -1;} //MayNotUse
    Int_t             Fill(const char*, Double_t) {return -1;} //MayNotUse
@@ -119,9 +119,9 @@ public:
    virtual Double_t  GetTmin() const {return fTmin;}
    virtual Double_t  GetTmax() const {return fTmax;}
    virtual Long64_t  Merge(TCollection *list);
-   virtual void      Multiply(TF1 *h1, Double_t c1=1);
-   virtual void      Multiply(const TH1 *h1);
-   virtual void      Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t    Multiply(TF1 *h1, Double_t c1=1);
+   virtual Bool_t    Multiply(const TH1 *h1);
+   virtual Bool_t    Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    TH3D             *ProjectionXYZ(const char *name="_pxyz", Option_t *option="e") const;
    virtual void      PutStats(Double_t *stats);
    virtual void      Reset(Option_t *option="");

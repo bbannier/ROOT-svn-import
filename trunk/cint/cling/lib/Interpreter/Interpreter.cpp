@@ -11,6 +11,7 @@
 #include "IncrementalParser.h"
 
 #include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/CompilationOptions.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/Value.h"
 
@@ -22,18 +23,25 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
+#define private public
+#include "clang/Parse/Parser.h"
+#undef private
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/TemplateDeduction.h"
 
 #include "llvm/Linker.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
 
 #include <cstdio>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 using namespace clang;
 
@@ -169,17 +177,9 @@ namespace cling {
     return m_Result.c_str();
   }
 
-  //
-  //  Interpreter
-  //
-  
   Interpreter::Interpreter(int argc, const char* const *argv, 
-                           const char* llvmdir /*= 0*/):
-  m_UniqueCounter(0),
-  m_PrintAST(false),
-  m_ValuePrinterEnabled(false),
-  m_LastDump(0)
-  {
+                           const char* llvmdir /*= 0*/) :
+    m_UniqueCounter(0), m_PrintAST(false), m_ValuePrinterEnabled(false) {
 
     std::vector<unsigned> LeftoverArgsIdx;
     m_Opts = InvocationOptions::CreateFromArgs(argc, argv, LeftoverArgsIdx);
@@ -216,16 +216,17 @@ namespace cling {
       // only at runtime
       // Make sure that the universe won't be included to compile time by using
       // -D __CLING__ as CompilerInstance's arguments
-      processLine("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+
+      declare("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+      declare("#include \"cling/Interpreter/ValuePrinter.h\"\n");
 
       // Set up the gCling variable
-      processLine("#include \"cling/Interpreter/ValuePrinter.h\"\n");
       std::stringstream initializer;
       initializer << "gCling=(cling::Interpreter*)" << (uintptr_t)this << ";";
-      processLine(initializer.str());
+      evaluate(initializer.str());
     }
     else {
-      processLine("#include \"cling/Interpreter/CValuePrinter.h\"\n");
+      declare("#include \"cling/Interpreter/CValuePrinter.h\"\n");
     }
 
     handleFrontendOptions();
@@ -359,20 +360,16 @@ namespace cling {
     return m_IncrParser->getCI();
   }
 
+  Parser* Interpreter::getParser() const {
+    return m_IncrParser->getParser();
+  }
+
   ///\brief Maybe transform the input line to implement cint command line 
   /// semantics (declarations are global) and compile to produce a module.
   ///
   Interpreter::CompilationResult
-  Interpreter::processLine(const std::string& input_line, 
-                           bool rawInput /*=false*/,
-                           Value* V, /*=0*/
-                           const Decl** D /*=0*/) {    
-    std::string functName;
-    std::string wrapped = input_line;
-    if (!V && !rawInput && canWrapForCall(input_line)) {
-      WrapInput(wrapped, functName);
-    }
-
+  Interpreter::process(const std::string& input, Value* V /* = 0 */,
+                       const Decl** D /* = 0 */) {
     DiagnosticsEngine& Diag = getCI()->getDiagnostics();
     // Disable warnings which doesn't make sense when using the prompt
     // This gets reset with the clang::Diagnostics().Reset()
@@ -381,24 +378,71 @@ namespace cling {
     Diag.setDiagnosticMapping(clang::diag::warn_unused_call,
                               clang::diag::MAP_IGNORE, SourceLocation());
 
-    CompilationResult Result = kSuccess; 
-    if (V && !rawInput && canWrapForCall(input_line))
-      *V = Evaluate(input_line.c_str(), /*DeclContext=*/0);
-    else
-      Result = handleLine(wrapped, functName, rawInput, D);
+    CompilationOptions CO;
+    CO.DeclarationExtraction = 1;
+    CO.ValuePrinting = CompilationOptions::VPAuto;
+    CO.DynamicScoping = isDynamicLookupEnabled();
+    CO.Debug = isPrintingAST();
 
-    return Result;
+    if (!canWrapForCall(input))
+      return declare(input, D);
+
+    if (V) {
+      return Evaluate(input, CO, V);
+    }
+    
+    std::string functName;
+    std::string wrapped = input;
+    WrapInput(wrapped, functName);
+
+    if (m_IncrParser->Compile(wrapped, CO) == IncrementalParser::kFailed)
+        return Interpreter::kFailure;
+
+    if (D)
+      *D = m_IncrParser->getLastTransaction().getFirstDecl();
+
+    //
+    //  Run it using the JIT.
+    //
+    // TODO: Handle the case when RunFunction wasn't able to run the function
+    bool RunRes = RunFunction(functName);
+
+    if (RunRes)
+      return Interpreter::kSuccess;
+
+    return Interpreter::kFailure;
   }
 
   Interpreter::CompilationResult
   Interpreter::declare(const std::string& input, const Decl** D /* = 0 */) {
-    if (m_IncrParser->CompileAsIs(input) != IncrementalParser::kFailed) {
-      if (D)
-        *D = m_IncrParser->getLastTransaction().getFirstDecl();
-      return Interpreter::kSuccess;
-    }
+    CompilationOptions CO;
+    CO.DeclarationExtraction = 0;
+    CO.ValuePrinting = 0;
+    CO.DynamicScoping = isDynamicLookupEnabled();
 
-    return Interpreter::kFailure;
+    return Declare(input, CO, D);
+  }
+
+  Interpreter::CompilationResult
+  Interpreter::evaluate(const std::string& input, Value* V /* = 0 */) {
+    // Here we might want to enforce further restrictions like: Only one
+    // ExprStmt can be evaluated and etc. Such enforcement cannot happen in the
+    // worker, because it is used from various places, where there is no such
+    // rule
+    CompilationOptions CO;
+    CO.DeclarationExtraction = 0;
+    CO.ValuePrinting = 0;
+
+    return Evaluate(input, CO, V);
+  }
+
+  Interpreter::CompilationResult
+  Interpreter::echo(const std::string& input, Value* V /* = 0 */) {
+    CompilationOptions CO;
+    CO.DeclarationExtraction = 0;
+    CO.ValuePrinting = 2;
+
+    return Evaluate(input, CO, V);
   }
 
   void Interpreter::WrapInput(std::string& input, std::string& fname) {
@@ -448,58 +492,789 @@ namespace cling {
     llvm::raw_string_ostream(out) << m_UniqueCounter++;
   }
 
-  
   Interpreter::CompilationResult
-  Interpreter::handleLine(llvm::StringRef input, llvm::StringRef FunctionName,
-                          bool rawInput /*=false*/, const Decl** D /*=0*/) {
-    // if we are using the preprocessor
-    if (rawInput || !canWrapForCall(input)) {
-      return declare(input);
-    }
+  Interpreter::Declare(const std::string& input, const CompilationOptions& CO,
+                       const clang::Decl** D /* = 0 */) {
 
-    if (m_IncrParser->CompileLineFromPrompt(input) 
-        == IncrementalParser::kFailed)
-        return Interpreter::kFailure;
-
-    if (D)
-      *D = m_IncrParser->getLastTransaction().getFirstDecl();
-
-    //
-    //  Run it using the JIT.
-    //
-    // TODO: Handle the case when RunFunction wasn't able to run the function
-    bool RunRes = RunFunction(FunctionName);
-
-    if (RunRes)
+    if (m_IncrParser->Compile(input, CO) != IncrementalParser::kFailed) {
+      if (D)
+        *D = m_IncrParser->getLastTransaction().getFirstDecl();
       return Interpreter::kSuccess;
+    }
 
     return Interpreter::kFailure;
   }
-  
-  bool
-  Interpreter::loadFile(const std::string& filename,
-                        bool allowSharedLib /*=true*/)
-  {
+
+  Interpreter::CompilationResult
+  Interpreter::Evaluate(const std::string& input, const CompilationOptions& CO,
+                        Value* V /* = 0 */) {
+
+    Sema& TheSema = getCI()->getSema();
+
+    // Wrap the expression
+    std::string WrapperName;
+    std::string Wrapper = input;
+    WrapInput(Wrapper, WrapperName);
+    QualType RetTy = getCI()->getASTContext().VoidTy;
+
+    if (V) {
+      llvm::SmallVector<clang::DeclGroupRef, 4> DGRs;
+      m_IncrParser->Parse(Wrapper, DGRs);
+      assert(DGRs.size() && "No decls created by Parse!");
+
+      // Find the wrapper function declaration.
+      //
+      // Note: The parse may have created a whole set of decls if a template
+      //       instantiation happened.  Our wrapper function should be the
+      //       last decl in the set.
+      //
+      FunctionDecl* TopLevelFD 
+        = dyn_cast<FunctionDecl>(DGRs.back().getSingleDecl());
+      assert(TopLevelFD && "No Decls Parsed?");
+      DeclContext* CurContext = TheSema.CurContext;
+      TheSema.CurContext = TopLevelFD;
+      ASTContext& Context(getCI()->getASTContext());
+      // We have to be able to mark the expression for printout. There are three
+      // scenarios:
+      // 0: Expression printing disabled - don't do anything just disable the 
+      //    consumer
+      //    is our marker, even if there wasn't missing ';'.
+      // 1: Expression printing enabled - make sure we don't have NullStmt, which
+      //    is used as a marker to suppress the print out.
+      // 2: Expression printing auto - do nothing - rely on the omitted ';' to 
+      //    not produce the suppress marker.
+      if (CompoundStmt* CS = dyn_cast<CompoundStmt>(TopLevelFD->getBody())) {
+        // Collect all Stmts, contained in the CompoundStmt
+        llvm::SmallVector<Stmt *, 4> Stmts;
+        for (CompoundStmt::body_iterator iStmt = CS->body_begin(), 
+               eStmt = CS->body_end(); iStmt != eStmt; ++iStmt)
+          Stmts.push_back(*iStmt);
+
+        size_t indexOfLastExpr = Stmts.size();
+        while(indexOfLastExpr--) {
+          // find the trailing expression statement (skip e.g. null statements)
+          if (Expr* E = dyn_cast_or_null<Expr>(Stmts[indexOfLastExpr])) {
+            RetTy = E->getType();
+            if (!RetTy->isVoidType()) {
+              // Change the void function's return type
+              FunctionProtoType::ExtProtoInfo EPI;
+              QualType FuncTy = Context.getFunctionType(RetTy,/* ArgArray = */0,
+                                                        /* NumArgs = */0, EPI);
+              TopLevelFD->setType(FuncTy);
+              // Strip the parenthesis if any
+              if (ParenExpr* PE = dyn_cast<ParenExpr>(E))
+                E = PE->getSubExpr();
+
+              // Change it with return stmt
+              Stmts[indexOfLastExpr] 
+                = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
+            }
+            // even if void: we found an expression
+            break;
+          }
+        }
+
+        // case 1:
+        if (CO.ValuePrinting == CompilationOptions::VPEnabled) 
+          if (indexOfLastExpr < Stmts.size() - 1 && 
+              isa<NullStmt>(Stmts[indexOfLastExpr + 1]))
+            Stmts.erase(Stmts.begin() + indexOfLastExpr);
+        // Stmts.insert(Stmts.begin() + indexOfLastExpr + 1, 
+        //              TheSema.ActOnNullStmt(SourceLocation()).take());
+
+        // Update the CompoundStmt body
+        CS->setStmts(TheSema.getASTContext(), Stmts.data(), Stmts.size());
+
+      }
+
+      TheSema.CurContext = CurContext;
+
+      // FIXME: Finish the transaction in better way
+      m_IncrParser->Compile("", CO);
+    }
+    else 
+      m_IncrParser->Compile(Wrapper, CO);
+
+    // get the result
+    llvm::GenericValue val;
+    if (RunFunction(WrapperName, &val)) {
+      if (V)
+        *V = Value(val, RetTy);
+
+      return Interpreter::kSuccess;
+    }
+
+    return Interpreter::kFailure;
+  }
+
+  bool Interpreter::loadFile(const std::string& filename,
+                             bool allowSharedLib /*=true*/) {
     if (allowSharedLib) {
       llvm::Module* module = m_IncrParser->GetCodeGenerator()->GetModule();
       if (module) {
         if (tryLinker(filename, getOptions(), module))
-          return 0;
+          return true;
         if (filename.compare(0, 3, "lib") == 0) {
           // starts with "lib", try without (the llvm::Linker forces
           // a "lib" in front, which makes it liblib...
           if (tryLinker(filename.substr(3, std::string::npos),
                         getOptions(), module))
-            return 0;
+            return true;
         }
       }
     }
-    
+
     std::string code;
     code += "#include \"" + filename + "\"\n";
     return declare(code);
   }
   
+  QualType
+  Interpreter::lookupType(const std::string& typeName)
+  {
+    //
+    //  Our return value.
+    //
+    QualType TheQT;
+    //
+    //  Some utilities.
+    //
+    CompilerInstance* CI = getCI();
+    Parser* P = getParser();
+    Preprocessor& PP = CI->getPreprocessor();
+    //
+    //  Tell the diagnostic engine to ignore all diagnostics.
+    //
+    bool OldSuppressAllDiagnostics =
+      PP.getDiagnostics().getSuppressAllDiagnostics();
+    PP.getDiagnostics().setSuppressAllDiagnostics(true);
+    //
+    //  Tell the parser to not attempt spelling correction.
+    //
+    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
+    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
+    //
+    //  Tell the diagnostic consumer we are switching files.
+    //
+    DiagnosticConsumer& DClient = CI->getDiagnosticClient();
+    DClient.BeginSourceFile(CI->getLangOpts(), &PP);
+    //
+    //  Create a fake file to parse the type name.
+    //
+    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
+      std::string(typeName) + "\n", "lookup.type.by.name.file");
+    FileID FID = CI->getSourceManager().createFileIDForMemBuffer(SB);
+    //
+    //  Turn on ignoring of the main file eof token.
+    //
+    //  Note: We need this because token readahead in the following
+    //        routine calls ends up parsing it multiple times.
+    //
+    bool ResetIncrementalProcessing = false;
+    if (!PP.isIncrementalProcessingEnabled()) {
+      ResetIncrementalProcessing = true;
+      PP.enableIncrementalProcessing();
+    }
+    //
+    //  Switch to the new file the way #include does.
+    //
+    //  Note: To switch back to the main file we must consume an eof token.
+    //
+    PP.EnterSourceFile(FID, 0, SourceLocation());
+    PP.Lex(const_cast<Token&>(P->getCurToken()));
+    //
+    //  Try parsing the type name.
+    //
+    TypeResult Res(P->ParseTypeName());
+    if (Res.isUsable()) {
+      // Accept it only if the whole name was parsed.
+      if (P->NextToken().getKind() == clang::tok::eof) {
+        TheQT = Res.get().get();
+      }
+    }
+    //
+    // Advance the parser to the end of the file, and pop the include stack.
+    //
+    // Note: Consuming the EOF token will pop the include stack.
+    //
+    P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
+      /*StopAtCodeCompletion*/false);
+    if (ResetIncrementalProcessing) {
+      PP.enableIncrementalProcessing(false);
+    }
+    DClient.EndSourceFile();
+    CI->getDiagnostics().Reset();
+    PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
+    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
+    return TheQT;
+  }
+
+  Decl*
+  Interpreter::lookupClass(const std::string& className)
+  {
+    //
+    //  Our return value.
+    //
+    Decl* TheDecl = 0;
+    //
+    //  Some utilities.
+    //
+    CompilerInstance* CI = getCI();
+    Parser* P = getParser();
+    Preprocessor& PP = CI->getPreprocessor();
+    //
+    //  Tell the diagnostic engine to ignore all diagnostics.
+    //
+    bool OldSuppressAllDiagnostics =
+      PP.getDiagnostics().getSuppressAllDiagnostics();
+    PP.getDiagnostics().setSuppressAllDiagnostics(true);
+    //
+    //  Tell the parser to not attempt spelling correction.
+    //
+    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
+    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
+    //
+    //  Tell the diagnostic consumer we are switching files.
+    //
+    DiagnosticConsumer& DClient = CI->getDiagnosticClient();
+    DClient.BeginSourceFile(CI->getLangOpts(), &PP);
+    //
+    //  Convert the class name to a nested name specifier for parsing.
+    //
+    std::string classNameAsNNS = className + "::\n";
+    //
+    //  Create a fake file to parse the class name.
+    //
+    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
+      classNameAsNNS, "lookup.class.by.name.file");
+    FileID FID = CI->getSourceManager().createFileIDForMemBuffer(SB);
+    //
+    //  Turn on ignoring of the main file eof token.
+    //
+    //  Note: We need this because token readahead in the following
+    //        routine calls ends up parsing it multiple times.
+    //
+    bool ResetIncrementalProcessing = false;
+    if (!PP.isIncrementalProcessingEnabled()) {
+      ResetIncrementalProcessing = true;
+      PP.enableIncrementalProcessing();
+    }
+    //
+    //  Switch to the new file the way #include does.
+    //
+    //  Note: To switch back to the main file we must consume an eof token.
+    //
+    PP.EnterSourceFile(FID, 0, SourceLocation());
+    PP.Lex(const_cast<Token&>(P->getCurToken()));
+    //
+    //  Try parsing the name as a nested-name-specifier.
+    //
+    CXXScopeSpec SS;
+    if (P->TryAnnotateCXXScopeToken(false)) {
+      // error path
+      goto lookupClassDone;
+    }
+    if (P->getCurToken().getKind() == tok::annot_cxxscope) {
+      CI->getSema().RestoreNestedNameSpecifierAnnotation(
+        P->getCurToken().getAnnotationValue(),
+        P->getCurToken().getAnnotationRange(),
+        SS);
+      if (SS.isValid()) {
+        NestedNameSpecifier* NNS = SS.getScopeRep();
+        NestedNameSpecifier::SpecifierKind Kind = NNS->getKind();
+        // Only accept the parse if we consumed all of the name.
+        if (P->NextToken().getKind() == clang::tok::eof) {
+          //
+          //  Be careful, not all nested name specifiers refer to classes
+          //  and namespaces, and those are the only things we want.
+          //
+          switch (Kind) {
+            case NestedNameSpecifier::Identifier: {
+                // Dependent type.
+                // We do not accept these.
+              }
+              break;
+            case NestedNameSpecifier::Namespace: {
+                // Namespace.
+                NamespaceDecl* NSD = NNS->getAsNamespace();
+                NSD = NSD->getCanonicalDecl();
+                TheDecl = NSD;
+              }
+              break;
+            case NestedNameSpecifier::NamespaceAlias: {
+                // Namespace alias.
+                // Note: In the future, should we return the alias instead? 
+                NamespaceAliasDecl* NSAD = NNS->getAsNamespaceAlias();
+                NamespaceDecl* NSD = NSAD->getNamespace();
+                NSD = NSD->getCanonicalDecl();
+                TheDecl = NSD;
+              }
+              break;
+            case NestedNameSpecifier::TypeSpec:
+                // Type name.
+            case NestedNameSpecifier::TypeSpecWithTemplate: {
+                // Type name qualified with "template".
+                // Note: Do we need to check for a dependent type here?
+                const Type* Ty = NNS->getAsType();
+                const TagType* TagTy = Ty->getAs<TagType>();
+                if (TagTy) {
+                  // It is a class, struct, or union.
+                  TagDecl* TD = TagTy->getDecl();
+                  if (TD) {
+                    // Make sure it is not just forward declared, and
+                    // instantiate any templates.
+                    if (!CI->getSema().RequireCompleteDeclContext(SS, TD)) {
+                      // Success, type is complete, instantiations have
+                      // been done.
+                      TagDecl* Def = TD->getDefinition();
+                      if (Def) {
+                        TheDecl = Def;
+                      }
+                    }
+                  }
+                }
+              }
+              break;
+            case clang::NestedNameSpecifier::Global: {
+                // Name was just "::" and nothing more.
+                // Note: We could return the translation unit decl here.
+                TheDecl = CI->getASTContext().getTranslationUnitDecl();
+              }
+              break;
+          }
+          goto lookupClassDone;
+        }
+      }
+    }
+    //
+    //  Cleanup after failed parse as a nested-name-specifier.
+    //
+    P->SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
+      /*StopAtCodeCompletion*/false);
+    DClient.EndSourceFile();
+    CI->getDiagnostics().Reset();
+    //
+    //  Setup to reparse as a type.
+    //
+    DClient.BeginSourceFile(CI->getLangOpts(), &PP);
+    {
+      llvm::MemoryBuffer* SB =
+        llvm::MemoryBuffer::getMemBufferCopy(className + "\n",
+          "lookup.type.file");
+      clang::FileID FID = CI->getSourceManager().createFileIDForMemBuffer(SB);
+      CI->getPreprocessor().EnterSourceFile(FID, 0, clang::SourceLocation());
+      CI->getPreprocessor().Lex(const_cast<clang::Token&>(P->getCurToken()));
+    }
+    //
+    //  Now try to parse the name as a type.
+    //
+    if (P->TryAnnotateTypeOrScopeToken(false, false)) {
+      // error path
+      goto lookupClassDone;
+    }
+    if (P->getCurToken().getKind() == tok::annot_typename) {
+      ParsedType T = Parser::getTypeAnnotation(
+        const_cast<Token&>(P->getCurToken()));
+      // Only accept the parse if we consumed all of the name.
+      if (P->NextToken().getKind() == clang::tok::eof) {
+        QualType QT = T.get();
+        if (const EnumType* ET = QT->getAs<EnumType>()) {
+           EnumDecl* ED = ET->getDecl();
+           TheDecl = ED->getDefinition();
+        }
+      }
+    }
+  lookupClassDone:
+    //
+    // Advance the parser to the end of the file, and pop the include stack.
+    //
+    // Note: Consuming the EOF token will pop the include stack.
+    //
+    P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
+      /*StopAtCodeCompletion*/false);
+    if (ResetIncrementalProcessing) {
+      PP.enableIncrementalProcessing(false);
+    }
+    DClient.EndSourceFile();
+    CI->getDiagnostics().Reset();
+    PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
+    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
+    return TheDecl;
+  }
+
+  static
+  bool
+  FuncArgTypesMatch(CompilerInstance* CI, std::vector<QualType>& GivenArgTypes,
+    const FunctionProtoType* FPT)
+  {
+    FunctionProtoType::arg_type_iterator ATI = FPT->arg_type_begin();
+    FunctionProtoType::arg_type_iterator E = FPT->arg_type_end();
+    std::vector<QualType>::iterator GAI = GivenArgTypes.begin();
+    for (; ATI && (ATI != E); ++ATI, ++GAI) {
+      if (!CI->getASTContext().hasSameType(*ATI, *GAI)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static
+  bool
+  IsOverload(CompilerInstance* CI,
+    const TemplateArgumentListInfo* FuncTemplateArgs,
+    std::vector<QualType>& GivenArgTypes, FunctionDecl* FD,
+    bool UseUsingDeclRules)
+  {
+    FunctionTemplateDecl* FTD = FD->getDescribedFunctionTemplate();
+    QualType FQT = CI->getASTContext().getCanonicalType(FD->getType());
+    if (llvm::isa<FunctionNoProtoType>(FQT.getTypePtr())) {
+      // A K&R-style function (no prototype), is considered to match the args.
+      return false;
+    }
+    const FunctionProtoType* FPT = llvm::cast<FunctionProtoType>(FQT);
+    if (
+      (GivenArgTypes.size() != FPT->getNumArgs()) ||
+      //(GivenArgsAreEllipsis != FPT->isVariadic()) ||
+      !FuncArgTypesMatch(CI, GivenArgTypes, FPT)) {
+      return true;
+    }
+    return false;
+  }
+
+  Decl*
+  Interpreter::lookupFunctionProto(Decl* classDecl,
+    const std::string& funcName, const std::string& funcProto)
+  {
+    //
+    //  Our return value.
+    //
+    Decl* TheDecl = 0;
+    //
+    //  Some utilities.
+    //
+    CompilerInstance* CI = getCI();
+    Parser* P = getParser();
+    Preprocessor& PP = CI->getPreprocessor();
+    //
+    //  Tell the diagnostic engine to ignore all diagnostics.
+    //
+    bool OldSuppressAllDiagnostics =
+      PP.getDiagnostics().getSuppressAllDiagnostics();
+    PP.getDiagnostics().setSuppressAllDiagnostics(true);
+    //
+    //  Tell the parser to not attempt spelling correction.
+    //
+    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
+    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
+    //
+    //  Get the DeclContext we will search for the function.
+    //
+    DeclContext* foundDC = llvm::dyn_cast<DeclContext>(classDecl);
+    //if (foundDC->isDependentContext()) {
+    //  // error path
+    //  cleanup();
+    //  return 0;
+    //}
+    //if (CI->getSema().RequireCompleteDeclContext(SS, foundDC)) {
+    //  // error path
+    //  cleanup();
+    //  return 0;
+    //}
+    //
+    //  Tell the diagnostic consumer we are switching files.
+    //
+    DiagnosticConsumer& DClient = CI->getDiagnosticClient();
+    DClient.BeginSourceFile(CI->getLangOpts(), &PP);
+    //
+    //  Create a fake file to parse the prototype.
+    //
+    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
+      funcProto + "\n", "func.prototype.file");
+    FileID FID = CI->getSourceManager().createFileIDForMemBuffer(SB);
+    //
+    //  Turn on ignoring of the main file eof token.
+    //
+    //  Note: We need this because token readahead in the following
+    //        routine calls ends up parsing it multiple times.
+    //
+    bool ResetIncrementalProcessing = false;
+    if (!PP.isIncrementalProcessingEnabled()) {
+      ResetIncrementalProcessing = true;
+      PP.enableIncrementalProcessing();
+    }
+    //
+    //  Switch to the new file the way #include does.
+    //
+    //  Note: To switch back to the main file we must consume an eof token.
+    //
+    PP.EnterSourceFile(FID, 0, SourceLocation());
+    PP.Lex(const_cast<Token&>(P->getCurToken()));
+    //
+    //  Parse the prototype now.
+    //
+    std::vector<QualType> GivenArgTypes;
+    std::vector<Expr*> GivenArgs;
+    {
+      PrintingPolicy Policy(CI->getASTContext().getPrintingPolicy());
+      Policy.SuppressTagKeyword = true;
+      Policy.SuppressUnwrittenScope = true;
+      Policy.SuppressInitializers = true;
+      Policy.AnonymousTagLocations = false;
+      std::string proto;
+      {
+        bool first_time = true;
+        while (P->getCurToken().isNot(tok::eof)) {
+          TypeResult Res(P->ParseTypeName());
+          if (!Res.isUsable()) {
+            // Bad parse, done.
+            goto lookupFuncProtoDone;
+          }
+          clang::QualType QT(Res.get().get());
+          GivenArgTypes.push_back(QT.getCanonicalType()); // FIXME: Just QT?
+          {
+            // FIXME: Stop leaking these!
+            Expr* val = new (CI->getSema().getASTContext()) OpaqueValueExpr(
+              SourceLocation(), QT.getCanonicalType(), // FIXME: Just QT?
+              Expr::getValueKindForType(QT));
+            GivenArgs.push_back(val);
+          }
+          if (first_time) {
+            first_time = false;
+          }
+          else {
+            proto += ',';
+          }
+          proto += QT.getCanonicalType().getAsString(Policy);
+          fprintf(stderr, "%s\n", proto.c_str());
+          // Type names should be comma separated.
+          if (!P->getCurToken().is(clang::tok::comma)) {
+            break;
+          }
+          // Eat the comma.
+          P->ConsumeToken();
+        }
+      }
+    }
+    if (P->getCurToken().isNot(tok::eof)) {
+      // We did not consume all of the prototype, bad parse.
+      goto lookupFuncProtoDone;
+    }
+    //
+    //  Cleanup after prototype parse.
+    //
+    P->SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
+      /*StopAtCodeCompletion*/false);
+    DClient.EndSourceFile();
+    CI->getDiagnostics().Reset();
+    //
+    //  Create a fake file to parse the function name.
+    //
+    {
+      llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
+        funcName + "\n", "lookup.funcname.file");
+      clang::FileID FID = CI->getSourceManager().createFileIDForMemBuffer(SB);
+      CI->getPreprocessor().EnterSourceFile(FID, 0, clang::SourceLocation());
+      CI->getPreprocessor().Lex(const_cast<clang::Token&>(P->getCurToken()));
+    }
+    {
+      //
+      //  Parse the function name.
+      //
+      SourceLocation TemplateKWLoc;
+      UnqualifiedId FuncId;
+      CXXScopeSpec SS;
+      if (P->ParseUnqualifiedId(SS, /*EnteringContext*/false,
+          /*AllowDestructName*/false, // FIXME: true!
+          /*AllowConstructorName*/false, // FIXME: true!
+          clang::ParsedType(), TemplateKWLoc, FuncId)) {
+        // Bad parse.
+        goto lookupFuncProtoDone;
+      }
+      //
+      //  Get any template args in the function name.
+      //
+      TemplateArgumentListInfo FuncTemplateArgsBuffer;
+      DeclarationNameInfo FuncNameInfo;
+      const TemplateArgumentListInfo* FuncTemplateArgs;
+      CI->getSema().DecomposeUnqualifiedId(FuncId, FuncTemplateArgsBuffer,
+        FuncNameInfo, FuncTemplateArgs);
+      //
+      //  Lookup the function name in the given class now.
+      //
+      DeclarationName FuncName = FuncNameInfo.getName();
+      SourceLocation FuncNameLoc = FuncNameInfo.getLoc();
+      LookupResult Result(CI->getSema(), FuncName, FuncNameLoc,
+        Sema::LookupMemberName, Sema::ForRedeclaration);
+      if (!CI->getSema().LookupQualifiedName(Result, foundDC)) {
+        // Lookup failed.
+        goto lookupFuncProtoDone;
+      }
+      //
+      //  Check for lookup failure.
+      //
+      switch (Result.getResultKind()) {
+        case LookupResult::NotFound:
+          // Lookup failed.
+          goto lookupFuncProtoDone;
+          break;
+        case LookupResult::NotFoundInCurrentInstantiation:
+          // Lookup failed.
+          goto lookupFuncProtoDone;
+          break;
+        case LookupResult::Found:
+          {
+            NamedDecl* ND = Result.getFoundDecl();
+            std::string buf;
+            PrintingPolicy Policy(ND->getASTContext().getPrintingPolicy());
+            ND->getNameForDiagnostic(buf, Policy, /*Qualified*/true);
+            fprintf(stderr, "Found: %s\n", buf.c_str());
+          }
+          break;
+        case LookupResult::FoundOverloaded:
+          {
+            fprintf(stderr, "Found overload set!\n");
+            Result.print(llvm::outs());
+          }
+          break;
+        case LookupResult::FoundUnresolvedValue:
+          // Lookup failed.
+          goto lookupFuncProtoDone;
+          break;
+        case LookupResult::Ambiguous:
+          // Lookup failed.
+          goto lookupFuncProtoDone;
+          switch (Result.getAmbiguityKind()) {
+            case LookupResult::AmbiguousBaseSubobjectTypes:
+              // Lookup failed.
+              goto lookupFuncProtoDone;
+              break;
+            case LookupResult::AmbiguousBaseSubobjects:
+              // Lookup failed.
+              goto lookupFuncProtoDone;
+              break;
+            case LookupResult::AmbiguousReference:
+              // Lookup failed.
+              goto lookupFuncProtoDone;
+              break;
+            case LookupResult::AmbiguousTagHiding:
+              // Lookup failed.
+              goto lookupFuncProtoDone;
+              break;
+          }
+          break;
+      }
+      //
+      //  Now that we have a set of matching function names
+      //  in the class, we have to choose the one being asked
+      //  for given the passed template args and prototype.
+      //
+      NamedDecl* Match = 0;
+      for (LookupResult::iterator I = Result.begin(), E = Result.end();
+          I != E; ++I) {
+        NamedDecl* ND = *I;
+        //
+        //  Check if this decl is from a using decl, it will not
+        //  be a match in some cases.
+        //
+        bool IsUsingDecl = false;
+        if (llvm::isa<UsingShadowDecl>(ND)) {
+          IsUsingDecl = true;
+          ND = llvm::cast<UsingShadowDecl>(ND)->getTargetDecl();
+        }
+        //
+        //  If found declaration was introduced by a using declaration,
+        //  we'll need to use slightly different rules for matching.
+        //  Essentially, these rules are the normal rules, except that
+        //  function templates hide function templates with different
+        //  return types or template parameter lists.
+        //
+        bool UseMemberUsingDeclRules = IsUsingDecl && foundDC->isRecord();
+        if (FunctionTemplateDecl* FTD =
+            llvm::dyn_cast<FunctionTemplateDecl>(ND)) {
+          // This decl is a function template.
+          {
+            std::string buf;
+            PrintingPolicy P(FTD->getASTContext().getPrintingPolicy());
+            FTD->getNameForDiagnostic(buf, P, true);
+            fprintf(stderr, "Considering func template: %s\n", buf.c_str());
+          }
+          //
+          //  Do template argument deduction and function argument matching.
+          //
+          FunctionDecl* Specialization;
+          sema::TemplateDeductionInfo TDI(CI->getASTContext(),
+            SourceLocation());
+          Sema::TemplateDeductionResult TDR =
+            CI->getSema().DeduceTemplateArguments(
+                FTD
+              , const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs)
+              , llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size())
+              , Specialization
+              , TDI
+            );
+          if (TDR == Sema::TDK_Success) {
+            // We have a template argument match and func arg match.
+            Match = Specialization;
+            break;
+          }
+        } else if (FunctionDecl* FD = llvm::dyn_cast<FunctionDecl>(ND)) {
+          // This decl is a function.
+          {
+            std::string buf;
+            PrintingPolicy P(FD->getASTContext().getPrintingPolicy());
+            FD->getNameForDiagnostic(buf, P, true);
+            fprintf(stderr, "Considering func: %s\n", buf.c_str());
+          }
+          if (!IsOverload(CI, FuncTemplateArgs, GivenArgTypes, FD,
+              UseMemberUsingDeclRules)) {
+            // We have a function argument match.
+            if (UseMemberUsingDeclRules && IsUsingDecl) {
+              // But it came from a using decl and we are
+              // looking up a class member func, ignore it.
+              continue;
+            }
+            Match = *I;
+            break;
+          }
+        }
+      }
+      //
+      //  Handle no match found.
+      //
+      if (!Match) {
+        // No matching function found.
+        goto lookupFuncProtoDone;
+      }
+      //
+      //  Handle success.
+      //
+      TheDecl = Match;
+      {
+        std::string buf;
+        PrintingPolicy Policy(CI->getASTContext().getPrintingPolicy());
+        Match->getNameForDiagnostic(buf, Policy, true);
+        fprintf(stderr, "Match: %s\n", buf.c_str());
+        Match->dump();
+      }
+    }
+  lookupFuncProtoDone:
+    //
+    // Advance the parser to the end of the file, and pop the include stack.
+    //
+    // Note: Consuming the EOF token will pop the include stack.
+    //
+    P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
+      /*StopAtCodeCompletion*/false);
+    if (ResetIncrementalProcessing) {
+      PP.enableIncrementalProcessing(false);
+    }
+    DClient.EndSourceFile();
+    CI->getDiagnostics().Reset();
+    PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
+    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
+    return TheDecl;
+  }
+
   Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl, 
                                                        const DeclContext* Within) {
     if (!Within)
@@ -516,13 +1291,6 @@ namespace cling {
     Sema& TheSema = getCI()->getSema();
     if (!DC)
       DC = TheSema.getASTContext().getTranslationUnitDecl();
-    // Execute and get the result
-    Value Result;
-
-    // Wrap the expression
-    std::string WrapperName;
-    std::string Wrapper = expr;
-    WrapInput(Wrapper, WrapperName);
     
     // Set up the declaration context
     DeclContext* CurContext;
@@ -530,69 +1298,18 @@ namespace cling {
     CurContext = TheSema.CurContext;
     TheSema.CurContext = DC;
 
-    llvm::SmallVector<clang::DeclGroupRef, 4> DGRs;
+    Value Result;
     if (TheSema.ExternalSource) {
       DynamicIDHandler* DIDH = 
         static_cast<DynamicIDHandler*>(TheSema.ExternalSource);
       DIDH->Callbacks->setEnabled();
-      m_IncrParser->Parse(Wrapper, DGRs);
+      (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, &Result);
       DIDH->Callbacks->setEnabled(false);
     }
     else 
-      m_IncrParser->Parse(Wrapper, DGRs);
-    assert((DGRs.size() || DGRs.size() > 2) && "Only FunctionDecl expected!");
+      (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, &Result);
 
-    TheSema.CurContext = CurContext;
-    // get the Type
-    FunctionDecl* TopLevelFD 
-      = dyn_cast<FunctionDecl>(DGRs.front().getSingleDecl());
-    assert(TopLevelFD && "No Decls Parsed?");
-    CurContext = TheSema.CurContext;
-    TheSema.CurContext = TopLevelFD;
-    ASTContext& Context(getCI()->getASTContext());
-    QualType RetTy;
-    if (Stmt* S = TopLevelFD->getBody()) {
-      if (CompoundStmt* CS = dyn_cast<CompoundStmt>(S)) {
-        for (clang::CompoundStmt::const_reverse_body_iterator iStmt = CS->body_rbegin(),
-               eStmt = CS->body_rend(); iStmt != eStmt; ++iStmt) {
-          // find the trailing expression statement (skip e.g. null statements)
-          if (Expr* E = dyn_cast_or_null<Expr>(*iStmt)) {
-            RetTy = E->getType();
-            if (!RetTy->isVoidType()) {
-              // Change the void function's return type
-              FunctionProtoType::ExtProtoInfo EPI;
-              QualType FuncTy = Context.getFunctionType(RetTy,
-                                                        /*ArgArray*/0,
-                                                        /*NumArgs*/0,
-                                                        EPI);
-              TopLevelFD->setType(FuncTy);
-              // add return stmt
-              Stmt* RetS = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
-              CS->setLastStmt(RetS);
-            }
-            // even if void: we found an expression
-            break;
-          }
-        }
-      }
-    }
-    TheSema.CurContext = CurContext;
-
-    // FIXME: Finish the transaction in better way
-    m_IncrParser->CompileAsIs("");
-
-    // Attach the value printer
-    if (ValuePrinterReq) {
-      std::string VPAttached = WrapperName + "()";
-      WrapInput(VPAttached, WrapperName);
-      m_IncrParser->CompileLineFromPrompt(VPAttached);
-    }
-
-    // get the result
-    llvm::GenericValue val;
-    RunFunction(WrapperName, &val);
-
-    return Value(val, RetTy.getTypePtrOrNull());
+    return Result;
   }
 
   void Interpreter::setCallbacks(InterpreterCallbacks* C) {
@@ -600,7 +1317,6 @@ namespace cling {
     assert(S.ExternalSource && "No ExternalSource set!");
     static_cast<DynamicIDHandler*>(S.ExternalSource)->Callbacks = C;
   }
-      
 
   void Interpreter::enableDynamicLookup(bool value /*=true*/) {
     m_IncrParser->enableDynamicLookup(value);
@@ -613,61 +1329,6 @@ namespace cling {
   void Interpreter::enablePrintAST(bool print /*=true*/) {
     m_IncrParser->enablePrintAST(print);
     m_PrintAST = !m_PrintAST;
-  }
-
-  void Interpreter::dumpAST(bool showAST, int last) {
-    Decl* D = m_LastDump;
-    PrintingPolicy Policy = m_IncrParser->getCI()->getASTContext().getPrintingPolicy();
-    
-    if (!D && last == -1 ) {
-      fprintf(stderr, "No last dump found! Assuming ALL \n");
-      last = 0;
-      showAST = false;        
-    }
-    
-    Policy.Dump = showAST;
-    
-    if (last == -1) {
-      while ((D = D->getNextDeclInContext())) {
-        D->print(llvm::errs(), Policy);
-      }
-    }
-    else if (last == 0) {
-      m_IncrParser->getCI()->getASTContext().getTranslationUnitDecl()->print(llvm::errs(), Policy);
-    } else {
-      // First Decl to print
-      Decl *FD = m_IncrParser->getFirstTopLevelDecl();
-      Decl *LD = FD;
-      
-      // FD and LD are first
-      
-      Decl *NextLD = 0;
-      for (int i = 1; i < last; ++i) {
-        NextLD = LD->getNextDeclInContext();
-        if (NextLD) {
-          LD = NextLD;
-        }
-      }
-      
-      // LD is last Decls after FD: [FD x y z LD a b c d]
-      
-      while ((NextLD = LD->getNextDeclInContext())) {
-        // LD not yet at end: move window
-        FD = FD->getNextDeclInContext();
-        LD = NextLD;
-      }
-      
-      // Now LD is == getLastDeclinContext(), and FD is last decls before
-      // LD is last Decls after FD: [x y z a FD b c LD]
-      
-      while (FD) {
-        FD->print(llvm::errs(), Policy);
-        fprintf(stderr, "\n"); // New line for every decl
-        FD = FD->getNextDeclInContext();
-      }        
-    }
-    
-    m_LastDump = m_IncrParser->getLastTopLevelDecl();     
   }
 
   void Interpreter::runStaticInitializersOnce() const {

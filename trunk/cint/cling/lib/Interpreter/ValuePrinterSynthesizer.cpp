@@ -38,22 +38,27 @@ namespace cling {
         if (CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody())) {
           for (CompoundStmt::body_iterator 
                  J = CS->body_begin(), E = CS->body_end(); J != E; ++J) {
-            if (J+1 == E || !isa<NullStmt>(*(J+1))) {
-              if (Expr* To = dyn_cast<Expr>(*J)) {
-                ChainedConsumer* C = dyn_cast<ChainedConsumer>(&m_Sema->Consumer);
-                bool p, q;
-                p = C->DisableConsumer(ChainedConsumer::kDeclExtractor);
-                q = C->DisableConsumer(ChainedConsumer::kValuePrinterSynthesizer);
+            if (J+1 ==  E || !isa<NullStmt>(*(J+1))) {
+              Expr* To = 0;
+              ReturnStmt* RS = dyn_cast<ReturnStmt>(*J);
+              if (RS)
+                To = RS->getRetValue();
+              else
+                To = dyn_cast<Expr>(*J);
+
+              if (To) {
                 Expr* Result = 0;
                 if (m_Sema->getLangOpts().CPlusPlus)
                   Result = SynthesizeCppVP(To);
                 else 
                   Result = SynthesizeVP(To);
 
-                if (Result)
-                  *J = Result;
-                C->RestorePreviousState(ChainedConsumer::kDeclExtractor, p);
-                C->RestorePreviousState(ChainedConsumer::kValuePrinterSynthesizer, q);
+                if (Result) {
+                  if (RS)
+                    RS->setRetValue(Result);
+                  else
+                    *J = Result;
+                }
               }
             }
           }

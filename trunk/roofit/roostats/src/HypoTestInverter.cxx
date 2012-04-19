@@ -1146,13 +1146,14 @@ TestStatSampler *HypoTestInverter::BuildTestStatSampler(const ETestStatType test
  
    if(testStatType == kSimpleLR) {
       SimpleLikelihoodRatioTestStat *slrts = new SimpleLikelihoodRatioTestStat(*sbModel.GetPdf(), *bModel.GetPdf());
+      slrts->SetNullParameters(*sbModel.GetSnapshot());
+      slrts->SetAltParameters(*bModel.GetSnapshot());
       slrts->SetReuseNLL(kTRUE);
       testStat = slrts;
    } else if(testStatType == kRatioLR)  {
       RatioOfProfiledLikelihoodsTestStat *roplts = 
          new RatioOfProfiledLikelihoodsTestStat(*sbModel.GetPdf(), *bModel.GetPdf(), bModel.GetSnapshot());
       roplts->SetReuseNLL(kTRUE);
-      // roplts->subtractMLE(kTRUE); ??
       testStat = roplts;
    } else if(testStatType == kMLE) {
       MaxLikelihoodEstimateTestStat *mlets = 

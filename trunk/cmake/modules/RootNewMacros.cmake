@@ -44,6 +44,12 @@ else()
       IMPORT_PREFIX ${libprefix} )
 endif()
 
+if(APPLE)
+   set(ROOT_LIBRARY_PROPERTIES ${ROOT_LIBRARY_PROPERTIES} 
+       INSTALL_NAME_DIR "@rpath"
+       BUILD_WITH_INSTALL_RPATH ON)
+endif()
+
 #---Modify the behaviour for local and non-local builds--------------------------------------------
 
 if(CMAKE_PROJECT_NAME STREQUAL ROOT)
@@ -68,6 +74,34 @@ set(CMAKE_INCLUDE_CURRENT_DIR OFF)
 
 include(CMakeMacroParseArguments)
 
+
+#---------------------------------------------------------------------------------------------------
+#---ROOT_GLOB_FILES( <variable> [REALTIVE path] [FILTER regexp] <sources> ...)
+#---------------------------------------------------------------------------------------------------
+macro(ROOT_GLOB_FILES variable filter)
+  PARSE_ARGUMENTS(ARG "RELATIVE" "" ${ARGN})  
+  if(ARG_RELATIVE)
+    file(GLOB sources RELATIVE ${ARG_RELATIVE} ${ARG_DEFAULT_ARGS})
+  else()
+    file(GLOB sources ${ARG_DEFAULT_ARGS})
+  endif()
+  foreach(s ${sources})
+    if(s MATCHES ${filter})
+      list(REMOVE_ITEM sources ${s})
+    endif()
+  endforeach()
+  set(${variable} ${sources} PARENT_SCOPE)
+endmacro()
+
+function(ROOT_GLOB_SOURCES variable)
+  ROOT_GLOB_FILES(${variable} "(^|/)G__" ${ARGN})
+endfunction()
+
+function(ROOT_GLOB_HEADERS variable)
+  ROOT_GLOB_FILES(${variable} "LinkDef" ${ARGN})
+endfunction()
+
+
 #---------------------------------------------------------------------------------------------------
 #---ROOT_GET_SOURCES( <variable> cwd <sources> ...)
 #---------------------------------------------------------------------------------------------------
@@ -75,14 +109,19 @@ function(ROOT_GET_SOURCES variable cwd )
   set(sources)
   foreach( fp ${ARGN})  
     if( IS_ABSOLUTE ${fp}) 
-      file(GLOB files ${fp})     
+      file(GLOB files ${fp})
     else()
       file(GLOB files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${cwd}/${fp})
     endif()
     if(files) 
-      set(sources ${sources} ${files})
+      foreach(s ${files})
+        if(fp MATCHES "[*]" AND s MATCHES "(^|/)G__") # Eliminate G__* files only when using wildcards
+        else()
+          set(sources ${sources} ${s})
+        endif()
+      endforeach()
     else()
-      if(fp MATCHES G__)
+      if(fp MATCHES "(^|/)G__")
         set(sources ${fp} ${sources})
       else()
         set(sources ${sources} ${fp})

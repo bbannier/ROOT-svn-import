@@ -97,6 +97,14 @@ public:
 ///////////////////////////////////////////////////////////////////////////////
 
 
+#include "RooStats/ProfileLikelihoodTestStat.h"
+#include "RooStats/SimpleLikelihoodRatioTestStat.h"
+#include "RooStats/HypoTestCalculatorGeneric.h"
+#include "RooStats/FrequentistCalculator.h"
+#include "RooStats/HybridCalculator.h"
+#include "RooStats/AsymptoticCalculator.h"
+#include "RooStats/ProfileLikelihoodCalculator.h"
+
 
 class TestHypoTestCalculator : public RooUnitTest {
 public:
@@ -104,52 +112,113 @@ public:
 
    Bool_t testCode() {
 
-      // Make model for prototype on/off problem
-      // Pois(x | s+b) * Pois(y | tau b )
-      // for Z_Gamma, use uniform prior on b.
-      RooWorkspace* w = new RooWorkspace("w", kTRUE);
-      w->factory("Poisson::on_pdf(x[150,0,500],sum::splusb(sig[0,0,100],bkg[100,0,300]))");
-      w->factory("Poisson::off_pdf(y[100,0,500],prod::taub(tau[1.],bkg))");
-      w->factory("Uniform::prior(bkg)");
+      const Int_t xValue = 150;
+      const Int_t yValue = 100;
+      const Double_t tauValue = 1;
+      
+      if(_write == kTRUE) {
 
-      // construct the Bayesian-averaged model (eg. a projection pdf)
-      // p'(x|s) = \int db p(x|s+b) * [ p(y|b) * prior(b) ]
-      w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
+         // register analytical Z_Bi value
+         Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(xValue, yValue, tauValue);
+         regValue(Z_Bi, "thtc_significance_hybrid");
+ //        regValue(Z_Bi, "thtc_significance_frequentist");
+
+      } else {
+      
+         // Make model for prototype on/off problem
+         // Pois(x | s+b) * Pois(y | tau b )
+         RooWorkspace* w = new RooWorkspace("w", kTRUE);
+         w->factory(TString::Format("Poisson::on_pdf(x[%d,0,500],sum::splusb(sig[0,0,100],bkg[100,0,300]))", xValue));
+         w->factory(TString::Format("Poisson::off_pdf(y[%d,0,500],prod::taub(tau[%lf],bkg))", yValue, tauValue));
+         w->factory("PROD::model(on_pdf, off_pdf)");
+        
+         w->var("x")->setVal(xValue);
+         w->var("y")->setVal(yValue);
+         w->var("tau")->setVal(tauValue); 
+         // construct the Bayesian-averaged model (eg. a projection pdf)
+         // p'(x|s) = \int db p(x|s+b) * [ p(y|b) * prior(b) ]
+         w->factory("Uniform::prior(bkg)");
+         w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
+
+         // define sets of variables obs={x} and poi={sig}
+         // x is the only observable in the main measurement and y is treated as a separate measurement,
+         // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
+         w->defineSet("obs", "x");
+         w->defineSet("poi", "sig");
+
+         // Add observable value to a data set
+         RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
+         data->add(*w->set("obs"));
+
+         // Build S+B and B models
+         ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
+         sb_model->SetPdf(*w->pdf("on_pdf"));
+         sb_model->SetObservables(*w->set("obs"));      
+         sb_model->SetParametersOfInterest(*w->set("poi"));
+         w->var("sig")->setVal(xValue - yValue / tauValue); // important !
+         sb_model->SetSnapshot(*w->set("poi"));
+
+         ModelConfig *b_model = new ModelConfig("B_ModelConfig", w);
+         b_model->SetPdf(*w->pdf("on_pdf"));
+         b_model->SetObservables(*w->set("obs"));
+         b_model->SetParametersOfInterest(*w->set("poi"));
+         w->var("sig")->setVal(0.0); // important !
+         b_model->SetSnapshot(*w->set("poi"));
+
+         // alternate priors
+         w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
+         w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
+
+         // build test statistic
+         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*b_model->GetPdf(), *sb_model->GetPdf());
+         slrts->SetNullParameters(*b_model->GetSnapshot());
+         slrts->SetAltParameters(*sb_model->GetSnapshot());
+         
 
 
-      // define sets of variables obs={x} and poi={sig}
-      // x is the only observable in the main measurement and y is treated as a separate measurement,
-      // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
-      w->defineSet("obs", "x");
-      w->defineSet("poi", "sig");
+         // TODO: doesn't work as it should, neither does the default RatioOfProfiledLikelihoods Test Statistic        
+         // ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*b_model->GetPdf());
 
-      // for an example with x = 150, y = 100
-      ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
-      sb_model->SetPdf(*w->pdf("on_pdf"));
-      sb_model->SetObservables(*w->set("obs"));      
-      sb_model->SetParametersOfInterest(*w->set("poi"));
-      w->var("sig")->setVal(30.0); // important !
-      sb_model->SetSnapshot(*w->set("poi"));
+         // ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sb_model);
+         // plc->SetNullParameters(*b_model->GetSnapshot());
+         // HypoTestResult *htr0 = plc->GetHypoTest();
+         // htr0->Print(); 
 
-      ModelConfig *b_model = new ModelConfig("B_ModelConfig", w);
-      b_model->SetPdf(*w->pdf("off_pdf"));
-      b_model->SetObservables(*w->set("obs"));
-      b_model->SetParametersOfInterest(*w->set("poi"));
-      w->var("sig")->setVal(0.0); // important !
-      b_model->SetSnapshot(*w->set("poi"));
 
-      w->var("y")->setVal(70);
-      w->var("x")->setVal(100);
-      RooAbsReal* cdf = w->pdf("averagedModel")->createCdf(*w->var("x"));
-      cdf->getVal(); // get ugly print messages out of the way
+         /*FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sb_model, *b_model);
+         ToyMCSampler *tmcs2 = (ToyMCSampler *)ftc->GetTestStatSampler();
+         tmcs2->SetNEventsPerToy(1); // because the model is in number counting form     
+         tmcs2->SetTestStatistic(slrts);
+         ftc->SetToys(20000, 1000);
+         HypoTestResult *htr2 = ftc->GetHypoTest();
+         htr2->Print();
+*/
 
-      Double_t hybrid_p_value = cdf->getVal() ;
-      Double_t zgamma_signif = PValueToSignificance(1 - cdf->getVal()) ;
+       //  delete htc; 
+       //  delete tmcs; 
+       //  delete htr;
+
+         HybridCalculator *htc = new HybridCalculator(*data, *sb_model, *b_model);
+         ToyMCSampler *tmcs = (ToyMCSampler *)htc->GetTestStatSampler();
+         tmcs->SetNEventsPerToy(1);
+         tmcs->SetTestStatistic(slrts);
+         htc->SetToys(20000, 1000);
+         htc->ForcePriorNuisanceAlt(*w->pdf("off_pdf"));
+         htc->ForcePriorNuisanceNull(*w->pdf("off_pdf"));
+         HypoTestResult *htr = htc->GetHypoTest();
+         htr->Print();
+
+         regValue(htr->Significance(), "thtc_significance_hybrid");
+   //      regValue(htr2->Significance(), "thtc_significance_frequentist"); 
+      }
+     // tmcs->SetTestStatistic(slrts);
+     // htr = htc->GetHypoTest();
+     // htr->Print();
+//      Double_t hybrid_p_value = cdf->getVal() ;
+//      Double_t zgamma_signif = PValueToSignificance(1 - cdf->getVal()) ;
 
       // analytic Z_Bi
-      Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(150, 100, 1);
-
-  //    HypoTestCalculator *htc = new FrequentistCalculator();
+//      Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(150, 100, 1);
 
       // Register output quantities for regression test
       //regPlot(frame, "rs101_zbi_zgamma") ;
@@ -158,7 +227,11 @@ public:
       //regValue(Z_Bi, "rs101_Z_Bi") ;
 
 //   delete w; // interesting why it doesn't work
-
+      /*delete htc;
+      delete tmcs;
+      delete htr;
+      delete data;
+*/
       return kTRUE ;
    }
 } ;

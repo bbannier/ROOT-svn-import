@@ -90,7 +90,16 @@ TAxis::TAxis(const TAxis &axis) : TNamed(axis), TAttAxis(axis)
 {
    // Copy constructor.
 
-   ((TAxis&)axis).Copy(*this);
+   axis.Copy(*this);
+}
+
+//______________________________________________________________________________
+TAxis& TAxis::operator=(const TAxis &orig)
+{
+   // Assignment operator.
+
+   orig.Copy( *this );
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -225,19 +234,24 @@ void TAxis::Copy(TObject &obj) const
 
    TNamed::Copy(obj);
    TAttAxis::Copy(((TAxis&)obj));
-   ((TAxis&)obj).fNbins  = fNbins;
-   ((TAxis&)obj).fXmin   = fXmin;
-   ((TAxis&)obj).fXmax   = fXmax;
-   ((TAxis&)obj).fFirst  = fFirst;
-   ((TAxis&)obj).fLast   = fLast;
-   ((TAxis&)obj).fBits2  = fBits2;
-   fXbins.Copy(((TAxis&)obj).fXbins);
-   ((TAxis&)obj).fTimeFormat   = fTimeFormat;
-   ((TAxis&)obj).fTimeDisplay  = fTimeDisplay;
-   ((TAxis&)obj).fParent       = fParent;
-   ((TAxis&)obj).fLabels       = 0;
+   TAxis &axis( ((TAxis&)obj) );
+   axis.fNbins  = fNbins;
+   axis.fXmin   = fXmin;
+   axis.fXmax   = fXmax;
+   axis.fFirst  = fFirst;
+   axis.fLast   = fLast;
+   axis.fBits2  = fBits2;
+   fXbins.Copy(axis.fXbins);
+   axis.fTimeFormat   = fTimeFormat;
+   axis.fTimeDisplay  = fTimeDisplay;
+   axis.fParent       = fParent;
+   if (axis.fLabels) {
+      axis.fLabels->Delete();
+      delete axis.fLabels;
+      axis.fLabels = 0;
+   }
    if (fLabels) {
-      for (Int_t i=1;i<=fNbins;i++) ((TAxis&)obj).SetBinLabel(i,this->GetBinLabel(i));
+      for (Int_t i=1;i<=fNbins;i++) axis.SetBinLabel(i,this->GetBinLabel(i));
    }
 }
 
@@ -353,6 +367,9 @@ Int_t TAxis::FindBin(const char *label)
 Int_t TAxis::FindFixBin(Double_t x) const
 {
    // Find bin number corresponding to abscissa x
+   //
+   // Identical to TAxis::FindBin except that if x is an underflow/overflow 
+   // no attempt is made to rebin the histogram if TH1::kCanRebin bit is set
 
    Int_t bin;
    if (x < fXmin) {              //*-* underflow

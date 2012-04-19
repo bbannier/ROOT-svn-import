@@ -188,7 +188,7 @@ namespace cling {
   void EvaluateTSynthesizer::TransformTopLevelDecl(DeclGroupRef DGR) {
     // include the DynamicLookup specific builtins
     if (!m_EvalDecl) {
-      m_Interpreter->processLine("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
+      m_Interpreter->declare("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
       TemplateDecl* D 
         = cast_or_null<TemplateDecl>(m_Interpreter->LookupDecl("cling").
                                      LookupDecl("runtime").
@@ -380,7 +380,7 @@ namespace cling {
           // Prepare the initialization Exprs.
           // We want to call LifetimeHandler(DynamicExprInfo* ExprInfo, 
           //                                 DeclContext DC,
-          //                                 llvm::StringRef type)
+          //                                 const char* type)
           ASTOwningVector<Expr*> Inits(*m_Sema);
           // Add MyClass in LifetimeHandler unique(DynamicExprInfo* ExprInfo
           //                                       DC,
@@ -403,7 +403,7 @@ namespace cling {
           Policy.SuppressTagKeyword = 1;
           std::string Res;
           CuredDeclTy.getAsStringInternal(Res, Policy);
-          Inits.push_back(ConstructllvmStringRefExpr(Res.c_str()));
+          Inits.push_back(ConstructConstCharPtrExpr(Res.c_str()));
 
           // 2.3 Create a variable from LifetimeHandler.
           QualType HandlerTy = m_Context->getTypeDeclType(Handler);
@@ -709,34 +709,12 @@ namespace cling {
     return Result;
   }
 
-  // Construct initializer (llvm::StringRef(Str))
-  Expr* EvaluateTSynthesizer::ConstructllvmStringRefExpr(const char* Val) {
-    // Try to find llvm::StringRef
-    CXXRecordDecl* CXXRD = dyn_cast<CXXRecordDecl>(m_Interpreter->
-                                                   LookupDecl("llvm").
-                                                   LookupDecl("StringRef").
-                                                   getSingleDecl());
-    assert(CXXRD && "llvm::StringRef not found. Are you missing StringRef.h?");
-
-    QualType CXXRDTy = m_Context->getTypeDeclType(CXXRD);
-    TypeSourceInfo* TSI = m_Context->getTrivialTypeSourceInfo(CXXRDTy, m_NoSLoc);
-    ParsedType PT = m_Sema->CreateParsedType(CXXRDTy, TSI);
-
-    Expr* Result = ConstructConstCharPtrExpr(Val);
-    // create the temporary in the expr
-    Result = m_Sema->ActOnCXXTypeConstructExpr(PT,
-                                               m_NoSLoc,
-                                               MultiExprArg(&Result, 1U),
-                                               m_NoELoc
-                                               ).take();
-    return Result;
-  }
-
   Expr* EvaluateTSynthesizer::ConstructConstCharPtrExpr(const char* Val) {
     const QualType CChar = m_Context->CharTy.withConst();
     llvm::StringRef Value(Val);
 
-    llvm::APInt ArraySize(m_Context->getTypeSize(CChar), Value.size() + 1);
+    unsigned bitSize = m_Context->getTypeSize(m_Context->VoidPtrTy);
+    llvm::APInt ArraySize(bitSize, Value.size() + 1);
     const QualType CCArray = m_Context->getConstantArrayType(CChar,
                                                             ArraySize,
                                                             ArrayType::Normal,

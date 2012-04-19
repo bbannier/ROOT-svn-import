@@ -1522,8 +1522,8 @@ Bool_t TEfficiency::CheckEntries(const TH1& pass,const TH1& total,Option_t* opt)
 
    //check for unit weights
    if(!option.Contains("w")) {      
-      Double_t statpass[10];
-      Double_t stattotal[10];
+      Double_t statpass[TH1::kNstat];
+      Double_t stattotal[TH1::kNstat];
 
       pass.GetStats(statpass);
       total.GetStats(stattotal);
@@ -2011,6 +2011,14 @@ void TEfficiency::Draw(Option_t* opt)
 
    if(gPad && !option.Contains("same"))
       gPad->Clear();
+   else { 
+      // add always "a" if not present
+      if (!option.Contains("a") ) option += "a";   
+   }
+
+   // add always p to the option
+   if (!option.Contains("p") ) option += "p";   
+
 
    AppendPad(option.Data());
 }
@@ -2645,6 +2653,9 @@ void TEfficiency::Paint(const Option_t* opt)
    // which will trigger a re-calculation of the axis of the graph
    // TEfficiency::GetPaintedGraph()->Set(0)
    //
+   // Note that in order to access the painted graph via GetPaintedGraph() you need either to call Paint or better 
+   // gPad->Update();
+   //
 
 
    
@@ -2721,6 +2732,7 @@ void TEfficiency::Paint(const Option_t* opt)
       fPaintGraph->GetHistogram();
       
       //paint graph      
+
       fPaintGraph->Paint(option.Data());
 
       //paint all associated functions
@@ -3129,7 +3141,7 @@ Bool_t TEfficiency::SetPassedHistogram(const TH1& rPassed,Option_t* opt)
 	 fFunctions->Delete();
 
       //check whether histogram is filled with weights
-      Double_t statpass[10];
+      Double_t statpass[TH1::kNstat];
       rPassed.GetStats(statpass);
       //require: sum of weights == sum of weights^2
       if(TMath::Abs(statpass[0]-statpass[1]) > 1e-5)
@@ -3236,8 +3248,7 @@ void TEfficiency::SetTitle(const char* title)
    //<div class="clear"></div>
    //End_Html
    
-   TNamed::SetTitle(title);
-   
+    
    //setting the titles (looking for the first semicolon and insert the tokens there)
    TString title_passed = title; 
    TString title_total = title; 
@@ -3252,6 +3263,13 @@ void TEfficiency::SetTitle(const char* title)
    }
    fPassedHistogram->SetTitle(title_passed);
    fTotalHistogram->SetTitle(title_total);
+
+   // strip (total) for the TEfficiency title
+   // HIstogram SetTitle has already stripped the axis 
+   TString teffTitle = fTotalHistogram->GetTitle();
+   teffTitle.ReplaceAll(" (total)","");
+   TNamed::SetTitle(teffTitle);
+   
 }
 
 //______________________________________________________________________________
@@ -3314,7 +3332,7 @@ Bool_t TEfficiency::SetTotalHistogram(const TH1& rTotal,Option_t* opt)
 	 fFunctions->Delete();
 
       //check whether histogram is filled with weights
-      Double_t stattotal[10];
+      Double_t stattotal[TH1::kNstat];
       rTotal.GetStats(stattotal);
       //require: sum of weights == sum of weights^2
       if(TMath::Abs(stattotal[0]-stattotal[1]) > 1e-5)

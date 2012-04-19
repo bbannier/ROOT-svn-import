@@ -6,8 +6,8 @@ ROOT_USE_PACKAGE(io/io)
 ROOT_USE_PACKAGE(math/mathcore)
 
 
-file(GLOB headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/inc inc/*.h)
-file(GLOB sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/src src/*.cxx)
+ROOT_GLOB_HEADERS(headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/inc inc/*.h)
+ROOT_GLOB_SOURCES(sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/src src/*.cxx)
 
 if(NOT ssl)
   list(REMOVE_ITEM headers TSSLSocket.h)
@@ -18,7 +18,7 @@ else()
   add_definitions(-DR__SSL)
 endif()
 
-if(NOT crypto)
+if(NOT ssl AND NOT CRYPTLIBS)
   list(REMOVE_ITEM headers TAS3File.h)
   list(REMOVE_ITEM headers TGSFile.h)
   list(REMOVE_ITEM headers THTTPMessage.h)

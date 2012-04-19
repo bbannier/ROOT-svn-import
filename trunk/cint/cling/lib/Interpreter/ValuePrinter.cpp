@@ -60,19 +60,21 @@ static void StreamObj(llvm::raw_ostream& o, const void* v,
   if (clang::CXXRecordDecl* CXXRD = Ty->getAsCXXRecordDecl())
     if (CXXRD->getQualifiedNameAsString().compare("cling::Value") == 0) {
       cling::Value* V = (cling::Value*)v;
-      if (V->type) {
+      if (V->isValid()) {
         o << "boxes [";
+        const clang::ASTContext& C = *VPI.getASTContext();
         o << 
           "(" << 
-          clang::QualType::getAsString(V->type, clang::Qualifiers()) << 
+          V->type.getAsString(C.getPrintingPolicy()) << 
           ") ";
-        if (V->type->isPointerType())
+        clang::QualType valType = V->type.getDesugaredType(C);
+        if (valType->isPointerType())
           o << V->value.PointerVal;
-        else if (V->type->isFloatingType())
+        else if (valType->isFloatingType())
           o << V->value.DoubleVal;
-        else if (V->type->isIntegerType())
+        else if (valType->isIntegerType())
           o << V->value.IntVal.getSExtValue();
-        else if (V->type->isBooleanType())
+        else if (valType->isBooleanType())
           o << V->value.IntVal.getBoolValue();
         o << "]\n";
 
@@ -87,6 +89,8 @@ static void StreamObj(llvm::raw_ostream& o, const void* v,
 static void StreamValue(llvm::raw_ostream& o, const void* const p, 
                         const cling::ValuePrinterInfo& VPI) {
   clang::QualType Ty = VPI.getExpr()->getType();
+  const clang::ASTContext& C = *VPI.getASTContext();
+  Ty = Ty.getDesugaredType(C);
   if (const clang::BuiltinType *BT
            = llvm::dyn_cast<clang::BuiltinType>(Ty.getCanonicalType())) {
     switch (BT->getKind()) {
@@ -97,7 +101,14 @@ static void StreamValue(llvm::raw_ostream& o, const void* const p,
     case clang::BuiltinType::UChar:
     case clang::BuiltinType::Char_S:
     case clang::BuiltinType::SChar:  StreamChar(o, *(char*)p); break;
+    case clang::BuiltinType::Short:  o << *(short*)p << "\n"; break;
+    case clang::BuiltinType::UShort: o << *(unsigned short*)p << "\n"; break;
     case clang::BuiltinType::Int:    o << *(int*)p << "\n"; break;
+    case clang::BuiltinType::UInt:   o << *(unsigned int*)p << "\n"; break;
+    case clang::BuiltinType::Long:   o << *(long*)p << "\n"; break;
+    case clang::BuiltinType::ULong:  o << *(unsigned long*)p << "\n"; break;
+    case clang::BuiltinType::LongLong:  o << *(long long*)p << "\n"; break;
+    case clang::BuiltinType::ULongLong: o << *(unsigned long long*)p << "\n"; break;
     case clang::BuiltinType::Float:  o << *(float*)p << "\n"; break;
     case clang::BuiltinType::Double: o << *(double*)p << "\n"; break;
     default:
@@ -114,7 +125,6 @@ static void StreamValue(llvm::raw_ostream& o, const void* const p,
     int value = *(int*)p;
     clang::EnumDecl* ED = Ty->getAs<clang::EnumType>()->getDecl();
     bool IsFirst = true;
-    const clang::ASTContext& C = *VPI.getASTContext();
     llvm::APSInt ValAsAPSInt = C.MakeIntValue(value, C.IntTy);
     for (clang::EnumDecl::enumerator_iterator I = ED->enumerator_begin(),
            E = ED->enumerator_end(); I != E; ++I) {

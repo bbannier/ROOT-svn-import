@@ -103,7 +103,7 @@ namespace cling {
         ///
         LifetimeHandler(DynamicExprInfo* ExprInfo,
                         clang::DeclContext* DC,
-                        llvm::StringRef type) {
+                        const char* type) {
           m_Type = type;
           std::string ctor("new ");
           ctor += type;
@@ -125,7 +125,7 @@ namespace cling {
           llvm::raw_string_ostream stream(str);
           stream<<"delete ("<< m_Type << "*) "<< m_Memory << ";";
           stream.flush();
-          gCling->processLine(str);
+          gCling->evaluate(str);
         }
       };
     }

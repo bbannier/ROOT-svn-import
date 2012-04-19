@@ -19,5 +19,5 @@
 15. HypoTestInverter AsymptoticCalculator - the MIGRAD minimization messages cannot be hidden
 16. HypoTestInverter AsymptoticCalculator gives different results compared to the other two calculators
 17. HypoTestInverter - I passed the SBModel argument for the BModel parameter and viceversa and it worked - Why?
-
+18. HypoTestCalculator -> ProfileLikelihoodTestStat and RatioOfProfiledLikelihoodTestStat not working
 

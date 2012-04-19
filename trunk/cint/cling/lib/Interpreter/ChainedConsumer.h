@@ -7,13 +7,13 @@
 #ifndef CLING_CHAINED_CONSUMER_H
 #define CLING_CHAINED_CONSUMER_H
 
+#include "cling/Interpreter/CompilationOptions.h"
+
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "clang/AST/DeclGroup.h"
 #include "clang/Sema/SemaConsumer.h"
-
-#include <bitset>
 
 namespace clang {
   class ASTContext;
@@ -74,36 +74,41 @@ namespace cling {
       return Consumers[I];
     }
 
-    bool EnableConsumer(EConsumerIndex I) {
-      assert(Exists(I) && "Cannot disable. Consumer not set!");
-      bool PrevousState = Enabled[I];
-      Enabled.set(I);
-      return PrevousState;
-    }
-
-    bool DisableConsumer(EConsumerIndex I) {
-      assert(Exists(I) && "Cannot disable. Consumer not set!");
-      bool PrevousState = Enabled[I];
-      Enabled.reset(I);
-      return PrevousState;
-    }
-
     void RestorePreviousState(EConsumerIndex I, bool Previous) {
       assert(Exists(I) && "Cannot disable. Consumer not set!");
-      Enabled.set(I, Previous);
+
+      CompilationOptions CO = getCompilationOpts();
+      switch(I) {
+      case kEvaluateTSynthesizer : CO.DynamicScoping = Previous; break;
+      case kDeclExtractor : CO.DeclarationExtraction = Previous; break;
+      case kValuePrinterSynthesizer : CO.ValuePrinting = Previous; break;
+      case kASTDumper : CO.Debug = Previous; break;
+      case kCodeGenerator : CO.CodeGeneration = Previous; break;
+      case kConsumersCount : break;
+      }
     }
 
-    bool IsConsumerEnabled(EConsumerIndex I) {
-      return Enabled[I];
-    }
-
+    bool IsConsumerEnabled(EConsumerIndex I);
     bool IsQueueing() { return m_Queueing; }
 
     void DumpQueue();
     void Update(VerifyingSemaConsumer* ESSC);
+    void pushCompilationOpts(CompilationOptions CO) {
+      COStack.push_back(CO);
+    }
+
+    void popCompilationOpts() {
+      assert(COStack.size() && "Cannot pop elements back.");
+      COStack.pop_back();
+    }
+
+    const CompilationOptions& getCompilationOpts() {
+      return COStack.back();
+    }
+
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
-    std::bitset<kConsumersCount> Enabled;
+    llvm::SmallVector<CompilationOptions, 2> COStack;
     llvm::OwningPtr<ASTNodeEraser> NodeEraser;
     llvm::OwningPtr<ChainedMutationListener> MutationListener;
     llvm::OwningPtr<ChainedDeserializationListener> DeserializationListener;

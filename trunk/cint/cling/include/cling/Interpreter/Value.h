@@ -10,38 +10,72 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "clang/AST/Type.h"
 
-namespace llvm {
-  struct GenericValue;
-}
 namespace clang {
-  class Type;
+  class ASTContext;
 }
 
 namespace cling {
-  // The class represents a llvm::GenericValue with its corresponding 
-  // clang::Type. There are two use-cases for that:
-  // 1. Expression evaluation: we need to know the type of the GenericValue
-  // that we have gotten from the JIT
-  // 2. Value printer: needs to know the type in order to skip the printing of
-  // void types
+  ///\brief A type, value pair.
+  //
+  /// Type-safe value access and setting. Simple (built-in) casting is
+  /// available, but better extract the value using the template
+  /// parameter that matches the Value's type.
+  ///
+  /// The class represents a llvm::GenericValue with its corresponding 
+  /// clang::QualType. Use-cases:
+  /// 1. Expression evaluation: we need to know the type of the GenericValue
+  /// that we have gotten from the JIT
+  /// 2. Value printer: needs to know the type in order to skip the printing of
+  /// void types
+  /// 3. Parameters for calls given an llvm::Function and a clang::FunctionDecl.
   class Value {
   private:
-  public:
-    llvm::GenericValue value;
-    const clang::Type* type;
+    /// \brief Forward decl for typed access specializations
     template <typename T> struct TypedAccess;
-    Value() : value(0), type(0) {}
-    Value(const llvm::GenericValue& v, const clang::Type* t) :
+
+  public:
+    /// \brief value
+    llvm::GenericValue value;
+    /// \brief the value's type
+    clang::QualType type;
+
+    /// \brief Default constructor, creates a value that IsInvalid().
+    Value() {}
+    /// \brief Construct a valid Value.
+    Value(const llvm::GenericValue& v, clang::QualType t) :
       value(v), type(t){}
-    ~Value() {}
 
-    bool isValid() const { return (type); }
-    bool isInvalid() const { return !type; }
-    bool isVoid() const { return isValid() && type->isVoidType(); }
-    bool hasValue() const { return isValid() && !type->isVoidType(); }
+    /// \brief Determine whether the Value has been set.
+    //
+    /// Determine whether the Value has been set by checking
+    /// whether the type is valid.
+    bool isValid() const { return !type.isNull(); }
 
+    /// \brief Determine whether the Value is unset.
+    //
+    /// Determine whether the Value is unset by checking
+    /// whether the type is invalid.
+    bool isInvalid() const { return !isValid(); }
+
+    /// \brief Determine whether the Value is set but void.
+    bool isVoid(const clang::ASTContext& ASTContext) const {
+      return isValid() && type.getDesugaredType(ASTContext)->isVoidType(); }
+
+    /// \brief Determine whether the Value is set and not void.
+    //
+    /// Determine whether the Value is set and not void.
+    /// Only in this case can getAs() or simplisticCastAs() be called.
+    bool hasValue(const clang::ASTContext& ASTContext) const {
+      return isValid() && !isVoid(ASTContext); }
+
+    /// \brief Get the value without type checking.
     template <typename T>
     T getAs() const;
+
+    /// \brief Get the value.
+    //
+    /// Get the value cast to T. This is similar to reinterpret_cast<T>(value),
+    /// but only works for builtin types and pointers.
     template <typename T>
     T simplisticCastAs() const;
   };
