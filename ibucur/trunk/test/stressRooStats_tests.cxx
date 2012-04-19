@@ -30,6 +30,7 @@ using namespace RooFit;
 using namespace RooStats;
 using namespace ROOT::Math;
 
+
 class TestBasic101 : public RooUnitTest {
 public:
    TestBasic101(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("Zbi and Zgamma", refFile, writeRef, verbose) {};
@@ -85,7 +86,88 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// 'PROFILE LIKELIHOOD INTERVAL - GAUSSIAN' RooStats Tutorial Macro #102
+// 'HYPOTESTCALCULATOR'
+//
+// This test evaluetes the functionality of the HypoTestCalculators.
+//
+// 04/2012 - Ioan Gabriel Bucur
+// Insightful comments courtesy of Kyle Cranmer, Wouter Verkerke, Sven Kreiss
+//    from $ROOTSYS/tutorials/roostats/HybridInstructional.C
+//
+///////////////////////////////////////////////////////////////////////////////
+
+
+
+class TestHypoTestCalculator : public RooUnitTest {
+public:
+   TestHypoTestCalculator(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("HypoTestCalculator - On / Off Problem", refFile, writeRef, verbose) {};
+
+   Bool_t testCode() {
+
+      // Make model for prototype on/off problem
+      // Pois(x | s+b) * Pois(y | tau b )
+      // for Z_Gamma, use uniform prior on b.
+      RooWorkspace* w = new RooWorkspace("w", kTRUE);
+      w->factory("Poisson::on_pdf(x[150,0,500],sum::splusb(sig[0,0,100],bkg[100,0,300]))");
+      w->factory("Poisson::off_pdf(y[100,0,500],prod::taub(tau[1.],bkg))");
+      w->factory("Uniform::prior(bkg)");
+
+      // construct the Bayesian-averaged model (eg. a projection pdf)
+      // p'(x|s) = \int db p(x|s+b) * [ p(y|b) * prior(b) ]
+      w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
+
+
+      // define sets of variables obs={x} and poi={sig}
+      // x is the only observable in the main measurement and y is treated as a separate measurement,
+      // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
+      w->defineSet("obs", "x");
+      w->defineSet("poi", "sig");
+
+      // for an example with x = 150, y = 100
+      ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
+      sb_model->SetPdf(*w->pdf("on_pdf"));
+      sb_model->SetObservables(*w->set("obs"));      
+      sb_model->SetParametersOfInterest(*w->set("poi"));
+      w->var("sig")->setVal(30.0); // important !
+      sb_model->SetSnapshot(*w->set("poi"));
+
+      ModelConfig *b_model = new ModelConfig("B_ModelConfig", w);
+      b_model->SetPdf(*w->pdf("off_pdf"));
+      b_model->SetObservables(*w->set("obs"));
+      b_model->SetParametersOfInterest(*w->set("poi"));
+      w->var("sig")->setVal(0.0); // important !
+      b_model->SetSnapshot(*w->set("poi"));
+
+      w->var("y")->setVal(70);
+      w->var("x")->setVal(100);
+      RooAbsReal* cdf = w->pdf("averagedModel")->createCdf(*w->var("x"));
+      cdf->getVal(); // get ugly print messages out of the way
+
+      Double_t hybrid_p_value = cdf->getVal() ;
+      Double_t zgamma_signif = PValueToSignificance(1 - cdf->getVal()) ;
+
+      // analytic Z_Bi
+      Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(150, 100, 1);
+
+  //    HypoTestCalculator *htc = new FrequentistCalculator();
+
+      // Register output quantities for regression test
+      //regPlot(frame, "rs101_zbi_zgamma") ;
+      //regValue(hybrid_p_value, "htc_hybrid_p_value") ;
+      //regValue(zgamma_signif, "htc_zgamma_signif") ;
+      //regValue(Z_Bi, "rs101_Z_Bi") ;
+
+//   delete w; // interesting why it doesn't work
+
+      return kTRUE ;
+   }
+} ;
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// PROFILE LIKELIHOOD INTERVAL - GAUSSIAN DISTRIBUTION
 //
 // Test the likelihood interval computed by the profile likelihood calculator
 // on a Gaussian distribution. Reference interval limits are computed via
@@ -162,7 +244,7 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// 'PROFILE LIKELIHOOD INTERVAL - POISSON'
+// PROFILE LIKELIHOOD INTERVAL - POISSON DISTRIBUTION
 //
 // Test the 68% likelihood interval computed by the profile likelihood calculator
 // on a Poisson distribution, from only one observed value. Reference values are
@@ -175,7 +257,7 @@ public:
 
 class TestProfileLikelihoodCalculator2 : public RooUnitTest {
 public:
-   TestProfileLikelihoodCalculator2(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue = 0) : RooUnitTest(TString::Format("ProfileLikelihoodCalculatorInterval - Poisson Simple Model - Observed value: %d", obsValue), refFile, writeRef, verbose), fObsValue(obsValue) {
+   TestProfileLikelihoodCalculator2(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue = 0) : RooUnitTest(TString::Format("ProfileLikelihoodCalculator Interval - Poisson Simple Model - Observed value: %d", obsValue), refFile, writeRef, verbose), fObsValue(obsValue) {
       if (obsValue < 0) {
          fObsValue = 0;
          Warning("TestProfileLikelihoodCalculator2", "Negative observed value %d has been passed for Poisson distribution.\n   Using default observed value (0) instead.", obsValue);
@@ -493,16 +575,16 @@ static pair<ModelConfig *, ModelConfig *> createPoissonProductModels(RooWorkspac
 {
 
    // Build models: background and s+b
-   w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig1[0,20], bkg1[0,20]))");
+   w->factory("Poisson::sb_poiss1(x[0,40], sum::splusb1(sig1[0,20], bkg1[0,20]))");
    w->factory("Uniform::prior(sig1)");
    w->factory("prod::sig2(2,sig1)");
-   w->factory("Poisson::poiss2(y[0,40], sum::splusb2(sig2, bkg2[0,20]))");
-   w->factory("Poisson::poiss1bkg(x, bkg1)");
-   w->factory("Poisson::poiss2bkg(y, bkg2)");
+   w->factory("Poisson::sb_poiss2(y[0,40], sum::splusb2(sig2, bkg2[0,20]))");
+   w->factory("Poisson::b_poiss1(x, bkg1)");
+   w->factory("Poisson::b_poiss2(y, bkg2)");
    w->factory("Poisson::constr1(gbkg1[2], bkg1)");
    w->factory("Poisson::constr2(gbkg2[3], bkg2)");
-   w->factory("PROD::model(poiss1, constr1, poiss2, constr2)");
-   w->factory("PROD::modelbkg(poiss1bkg, constr1, poiss2bkg, constr2)");
+   w->factory("PROD::sb_pdf(sb_poiss1, constr1, sb_poiss2, constr2)");
+   w->factory("PROD::b_pdf(b_poiss1, constr1, b_poiss2, constr2)");
 
    // build argument sets
    RooArgSet *obsSet =  new RooArgSet(*w->var("x"), *w->var("y"));
@@ -518,23 +600,23 @@ static pair<ModelConfig *, ModelConfig *> createPoissonProductModels(RooWorkspac
    w->import(*data);
 
    // create model configuration
-   ModelConfig *mc = new ModelConfig("ModelConfig", w);
-   mc->SetObservables(*obsSet);
-   mc->SetParametersOfInterest(*POISet);
-   mc->SetNuisanceParameters(*NPSet);
-   mc->SetPdf("model");
-   mc->SetPriorPdf("prior");
-   mc->SetSnapshot(*POISet);
-   mc->SetGlobalObservables(*globalObsSet);
+   ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
+   sb_model->SetObservables(*obsSet);
+   sb_model->SetParametersOfInterest(*POISet);
+   sb_model->SetNuisanceParameters(*NPSet);
+   sb_model->SetPdf("sb_pdf");
+   sb_model->SetPriorPdf("prior");
+   sb_model->SetSnapshot(*POISet);
+   sb_model->SetGlobalObservables(*globalObsSet);
 
    // Background model -> sее createComplexModel for variable names
-   ModelConfig *mcbkg = new ModelConfig(*mc);
-   mcbkg->SetName("ModelConfigBackground");
-   mcbkg->SetPdf("modelbkg");
-   ((RooRealVar *)mcbkg->GetParametersOfInterest()->first())->setVal(0);
-   mcbkg->SetSnapshot(*mcbkg->GetParametersOfInterest()->first());
+   ModelConfig *b_model = new ModelConfig(*sb_model);
+   b_model->SetName("B_ModelConfig");
+   b_model->SetPdf("b_pdf");
+   w->var("sig1")->setVal(0);
+   b_model->SetSnapshot(*POISet);
    
-   return make_pair(mc, mcbkg);
+   return make_pair(sb_model, b_model);
 }
 
 
@@ -746,20 +828,20 @@ public:
       tmcs->SetMaxToys(100);
       tmcs->SetNEventsPerToy(1);
       HypoTestInverterResult *interval = hti->GetInterval();
-      regValue(interval->LowerLimit(), TString::Format("thti1_lower_limit_sig1_calc_%s_%s", 
+      regValue(interval->LowerLimit(), TString::Format("hti1_lower_limit_sig1_calc_%s_%s", 
                                                        HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                                        HypoTestInverter::kETestStatTypeString[fTestStatType] ));
-      regValue(interval->UpperLimit(), TString::Format("thti1_upper_limit_sig1_calc_%s_%s",
+      regValue(interval->UpperLimit(), TString::Format("hti1_upper_limit_sig1_calc_%s_%s",
                                                        HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                                        HypoTestInverter::kETestStatTypeString[fTestStatType] ));
 
       if(_verb >= 1) {
          cout << "[" << interval->LowerLimit() << "," << interval->UpperLimit() << "]" << endl;
-         HypoTestInverterPlot *plot = new HypoTestInverterPlot("thti1 Plot", "Feldman-Cousins Interval", interval);
+         HypoTestInverterPlot *plot = new HypoTestInverterPlot("hti1 Plot", "Feldman-Cousins Interval", interval);
          TCanvas *c1 = new TCanvas("HypoTestInverter1 Scan");
          c1->SetLogy(false);
          plot->Draw("OBS");
-         c1->SaveAs(TString::Format("thti1 Scan - %s %s.pdf",
+         c1->SaveAs(TString::Format("hti1 Scan - %s %s.pdf",
                                     HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                     HypoTestInverter::kETestStatTypeString[fTestStatType] ));
 
@@ -779,7 +861,7 @@ public:
                   pl->SetLogYaxis(kTRUE);
                   pl->Draw();
                }
-               c2->SaveAs(TString::Format("thti1 TestStatDistributions - %s %s.pdf",
+               c2->SaveAs(TString::Format("hti1 TestStatDistributions - %s %s.pdf",
                                           HypoTestInverter::kECalculatorTypeString[fCalculatorType],
                                           HypoTestInverter::kETestStatTypeString[fTestStatType] ));
             }
@@ -805,10 +887,10 @@ static pair<ModelConfig *, ModelConfig *> createPoissonSBEModels(RooWorkspace *w
    w->factory("cexpr::bkg('5 * pow(1.3, b1)', b1)"); // background model
    w->factory("cexpr::eff('0.5 * pow(1.2, e1)', e1)"); // efficiency model
    w->factory("cexpr::splusb('eff * sig + bkg', eff, bkg, sig[0,20])");
-   w->factory("Poisson::psb(x[0,40], splusb)");
-   w->factory("Poisson::pb(x, bkg)");
-   w->factory("PROD::model(psb, constrb, constre)");
-   w->factory("PROD::modelbkg(pb, constrb)");
+   w->factory("Poisson::sb_poiss(x[0,40], splusb)");
+   w->factory("Poisson::b_poiss(x, bkg)");
+   w->factory("PROD::sb_pdf(sb_poiss, constrb, constre)");
+   w->factory("PROD::b_pdf(b_poiss, constrb)");
 
    w->var("b0")->setConstant(kTRUE);
    w->var("e0")->setConstant(kTRUE);
@@ -826,22 +908,22 @@ static pair<ModelConfig *, ModelConfig *> createPoissonSBEModels(RooWorkspace *w
    w->import(*data);
 
    // create model configuration
-   ModelConfig *mc = new ModelConfig("ModelConfig", w);
-   mc->SetObservables(*obsSet);
-   mc->SetParametersOfInterest(*POISet);
-   mc->SetNuisanceParameters(*NPSet);
-   mc->SetPdf("model");
-   //mc->SetPriorPdf("prior");
-   mc->SetSnapshot(*POISet);
-   mc->SetGlobalObservables(*globalObsSet);
+   ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
+   sb_model->SetObservables(*obsSet);
+   sb_model->SetParametersOfInterest(*POISet);
+   sb_model->SetNuisanceParameters(*NPSet);
+   sb_model->SetPdf("sb_pdf");
+   //sb_model->SetPriorPdf("prior");
+   sb_model->SetSnapshot(*POISet);
+   sb_model->SetGlobalObservables(*globalObsSet);
  
-   ModelConfig *mcbkg = new ModelConfig(*mc);
-   mcbkg->SetName("ModelConfigBackground");
-   mcbkg->SetPdf("modelbkg");
-   ((RooRealVar *)mcbkg->GetParametersOfInterest()->first())->setVal(0);
-   mcbkg->SetSnapshot(*mcbkg->GetParametersOfInterest()->first());
+   ModelConfig *b_model = new ModelConfig(*sb_model);
+   b_model->SetName("B_ModelConfig");
+   b_model->SetPdf("b_pdf");
+   w->var("sig")->setVal(1);
+   b_model->SetSnapshot(*POISet);
       
-   return make_pair(mc, mcbkg);
+   return make_pair(sb_model, b_model);
 }
 
 
@@ -893,10 +975,10 @@ public:
   
       // calculate interval and extract observed upper limit and expected upper limit (+- sigma)
       HypoTestInverterResult *interval = hti->GetInterval();
-      regValue(interval->UpperLimit(), TString::Format("hti_upper_limit_sig1_calc_%d", fCalculatorType));
-      regValue(interval->GetExpectedUpperLimit(0), TString::Format("hti_exp_upper_limit_sig_calc_%d", fCalculatorType));
-      regValue(interval->GetExpectedUpperLimit(-1), TString::Format("hti_exp_upper_limit-sigma_sig_calc_%d", fCalculatorType));
-      regValue(interval->GetExpectedUpperLimit(1), TString::Format("hti_exp_upper_limit+sigma_sig_calc_%d", fCalculatorType));
+      regValue(interval->UpperLimit(), TString::Format("hti2_upper_limit_sig1_calc_%d", fCalculatorType));
+      regValue(interval->GetExpectedUpperLimit(0), TString::Format("hti2_exp_upper_limit_sig_calc_%d", fCalculatorType));
+      regValue(interval->GetExpectedUpperLimit(-1), TString::Format("hti2_exp_upper_limit-sigma_sig_calc_%d", fCalculatorType));
+      regValue(interval->GetExpectedUpperLimit(1), TString::Format("hti2_exp_upper_limit+sigma_sig_calc_%d", fCalculatorType));
 
 
       if(_verb >= 1) {
@@ -905,7 +987,7 @@ public:
          TCanvas *c1 = new TCanvas("HypoTestInverter Scan");
          c1->SetLogy(false);
          plot->Draw("2CL CLb");
-         c1->SaveAs(TString::Format("HTI Upper Limit Scan - Calc %d.pdf", fCalculatorType));
+         c1->SaveAs(TString::Format("hti2 Upper Limit Scan - Calc %d.pdf", fCalculatorType));
 
  
          if(_verb == 2) {
@@ -924,7 +1006,7 @@ public:
                   pl->SetLogYaxis(kTRUE);
                   pl->Draw();
                }
-               c2->SaveAs(TString::Format("HTI Upper Limit TestStat Distributions - Calc %d.pdf", fCalculatorType));
+               c2->SaveAs(TString::Format("hti2 TestStat Distributions - Calc %d.pdf", fCalculatorType));
             }
          }
       }
