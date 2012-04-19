@@ -251,7 +251,8 @@ void RooStats::HistFactory::Measurement::writeToFile( TFile* file ) {
 
     // Get and cache the histograms for this channel:
     //collector.CollectHistograms( channel );
-    channel.CollectHistograms();
+    // Do I need this...?
+    // channel.CollectHistograms();
 
     // Make a directory to store the histograms
     // for this channel

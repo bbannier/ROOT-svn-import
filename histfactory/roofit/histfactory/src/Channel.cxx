@@ -123,6 +123,32 @@ void RooStats::HistFactory::Channel::SetData( std::string DataHistoName, std::st
 
 }
 
+
+
+void RooStats::HistFactory::Channel::SetData( TH1* hData ) { 
+  fData.SetHisto( hData ); 
+}
+
+void RooStats::HistFactory::Channel::SetData( double val ) {
+
+  // For a NumberCounting measurement only
+  // Set the value of data in a particular channel
+  // 
+  // Internally, this simply creates a 1-bin TH1F for you
+
+  std::string DataHistName = fName + "_data";
+  
+  // Histogram has 1-bin (hard-coded)
+  TH1F* hData = new TH1F( DataHistName.c_str(), DataHistName.c_str(), 1, 0, 1 );
+  hData->SetBinContent( 1, val );
+
+  // Set the histogram of the internally held data
+  // node of this channel to this newly created histogram
+  SetData( hData );
+
+}
+
+
 void RooStats::HistFactory::Channel::SetStatErrorConfig( double StatRelErrorThreshold, Constraint::Type StatConstraintType ) {
 
   fStatErrorConfig.SetRelErrorThreshold( StatRelErrorThreshold );

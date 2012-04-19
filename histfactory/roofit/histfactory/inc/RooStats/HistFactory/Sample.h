@@ -26,6 +26,7 @@ public:
   // 
 
   Sample();
+  Sample(std::string Name);
   Sample(std::string Name, std::string HistoName, std::string InputFile, std::string HistoPath="");
 
 
@@ -34,7 +35,8 @@ public:
   void writeToFile( std::string FileName, std::string DirName );
 
   TH1* GetHisto();
-  void SetHisto( TH1* histo ) { fhNominal = histo; }
+  void SetHisto( TH1* histo ) { fhNominal = histo; fHistoName=histo->GetName(); }
+  void SetValue( double Val );
 
   // Some helper functions
 

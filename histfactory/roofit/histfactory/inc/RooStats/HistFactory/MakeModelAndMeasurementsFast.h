@@ -7,7 +7,11 @@ namespace RooStats{
   namespace HistFactory{
 
 
-    void MakeModelAndMeasurementFast( RooStats::HistFactory::Measurement& measurement );
+    RooWorkspace* MakeModelAndMeasurementFast( RooStats::HistFactory::Measurement& measurement );
+    RooWorkspace* MakeModelFast( RooStats::HistFactory::Measurement& measurement );
+
+    std::vector<EstimateSummary> GetChannelEstimateSummaries(RooStats::HistFactory::Measurement& measurement, RooStats::HistFactory::Channel& channel);
+    // void ConfigureWorkspaceForMeasurement( const std::string&, RooWorkspace*, RooStats::HistFactory::Measurement&);
 
   }
 }

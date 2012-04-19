@@ -35,6 +35,8 @@ public:
 
   void SetData( const RooStats::HistFactory::Data& data ) { fData = data; }
   void SetData( std::string HistoName, std::string InputFile, std::string HistoPath="" );
+  void SetData( double Val );
+  void SetData( TH1* hData );
   RooStats::HistFactory::Data& GetData() { return fData; }
 
   void SetStatErrorConfig( double RelErrorThreshold, Constraint::Type ConstraintType );

@@ -99,33 +99,127 @@ namespace HistFactory{
 
   HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast() : 
        fNomLumi(0), fLumiError(0),   
-       fLowBin(0), fHighBin(0),  
-       fOut_f(0), pFile(0)           
+       fLowBin(0), fHighBin(0)  
   {}
 
   HistoToWorkspaceFactoryFast::~HistoToWorkspaceFactoryFast(){
-    if (pFile!=0) { fclose(pFile); }
   }
 
-  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(string filePrefix, string row, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* f):
+  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(string filePrefix, string row, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* /*file*/):
       fFileNamePrefix(filePrefix),
       fRowTitle(row),
       fSystToFix(syst),
       fNomLumi(nomL),
       fLumiError(lumiE),
       fLowBin(low),
-      fHighBin(high),
-      fOut_f(f) {
+      fHighBin(high) {
 
     fResultsPrefixStr<< "_" << fRowTitle;
     while(fRowTitle.find("\\ ")!=string::npos){
       int pos=fRowTitle.find("\\ ");
       fRowTitle.replace(pos, 1, "");
     }
-    pFile = fopen ((filePrefix+"_results.table").c_str(),"a"); 
+
     //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
   }
+
+  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(RooStats::HistFactory::Measurement& measurement ) :
+    fFileNamePrefix( measurement.GetOutputFilePrefix() ),
+    fRowTitle( measurement.GetName() ),
+    fSystToFix( measurement.GetConstantParams() ),
+    fNomLumi( measurement.GetLumi() ),
+    fLumiError( measurement.GetLumi()*measurement.GetLumiRelErr() ),
+    fLowBin( measurement.GetBinLow() ),
+    fHighBin( measurement.GetBinHigh() ) {
+
+
+    // Configure the prefix string
+    fResultsPrefixStr<< "_" << fRowTitle;
+    while(fRowTitle.find("\\ ")!=string::npos){
+      int pos=fRowTitle.find("\\ ");
+      fRowTitle.replace(pos, 1, "");
+    }
+
+    // Set Preprocess functions
+    SetFunctionsToPreprocess( measurement.GetPreprocessFunctions() );
+    
+    
+    //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
+
+  }
+
+  void HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( const std::string& ModelName, RooWorkspace* ws_single, Measurement& measurement ) {
+
+  /*
+  // First, turn the channel into a vector of estimate summaries
+  std::vector<EstimateSummary> channel_estimateSummary = GetChannelEstimateSummaries( measurement, channel );
+
+  // Then, use HistFactory on that vector to create the workspace
+  RooWorkspace* ws_single = factory.MakeSingleChannelModel(channel_estimateSummary, measurement.GetConstantParams());
+  */
+
+  // Create a Model config and do any necessary edits to the workspace
+
+  // Make a ModelConfig and configure it
+  ModelConfig * proto_config = (ModelConfig *) ws_single->obj("ModelConfig");
+  cout << "Setting Parameter of Interest as :" << measurement.GetPOI() << endl;
+  RooRealVar* poi = (RooRealVar*) ws_single->var( (measurement.GetPOI()).c_str() );
+  RooArgSet * params= new RooArgSet;
+  if(poi){
+    params->add(*poi);
+  }
+  proto_config->SetParametersOfInterest(*params);
+
+  // Activate Additional Constraint Terms
+  if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) {
+    //factory.EditSyst( ws_single, ("model_"+ch_name).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
+    HistoToWorkspaceFactoryFast::EditSyst( ws_single, (ModelName).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
+    std::string NewModelName = "newSimPdf"; // <- This name is hard-coded in HistoToWorkspaceFactoryFast::EditSyt.  Probably should be changed to : std::string("new") + ModelName;
+    proto_config->SetPdf( *ws_single->pdf( "newSimPdf" ) );
+  }
+  
+  // Set the ModelConfig's Params of Interest
+  RooAbsData* expData = ws_single->data("asimovData");
+  if(poi){
+    proto_config->GuessObsAndNuisance(*expData);
+  }
+
+  // Cool, we're done
+  return; // ws_single;
+}
+
+
+  RooWorkspace* HistoToWorkspaceFactoryFast::MakeSingleChannelModel( Measurement& measurement, Channel& channel ) {
+
+    // This is a wrapper function that is really a middle-man
+    // Return a workspace for an individual channel
+
+    string ch_name = channel.GetName();
+
+    // First, turn the channel into a vector of estimate summaries
+    std::vector<EstimateSummary> channel_estimateSummary = GetChannelEstimateSummaries( measurement, channel );
+    
+    // Then, use HistFactory on that vector to create the workspace
+    RooWorkspace* ws_single = this->MakeSingleChannelModel(channel_estimateSummary, measurement.GetConstantParams());
+    
+    // Finally, configure that workspace based on
+    // properties of the measurement
+    HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( "model_"+ch_name, ws_single, measurement );
+
+    return ws_single;
+
+  }
+
+  /*
+  RooWorkspace* HistoToWorkspaceFactoryFast::MakeCombinedModel( Measurement& measurement ) {
+
+
+
+  }
+  */
+
+
 
   string HistoToWorkspaceFactoryFast::FilePrefixStr(string prefix){
 
@@ -844,33 +938,34 @@ namespace HistFactory{
   }
 
   void HistoToWorkspaceFactoryFast::PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
-    //    FILE * pFile;
-    pFile = fopen ((filename).c_str(),"w"); 
+    // Change-> Now a static utility
+
+    FILE* covFile = fopen ((filename).c_str(),"w"); 
 
 
     TIter iti = params->createIterator();
     TIter itj = params->createIterator();
     RooRealVar *myargi, *myargj; 
-    fprintf(pFile," ") ;
+    fprintf(covFile," ") ;
     while ((myargi = (RooRealVar *)iti.Next())) { 
       if(myargi->isConstant()) continue;
-      fprintf(pFile," & %s",  myargi->GetName());
+      fprintf(covFile," & %s",  myargi->GetName());
     }
-    fprintf(pFile,"\\\\ \\hline \n" );
+    fprintf(covFile,"\\\\ \\hline \n" );
     iti.Reset();
     while ((myargi = (RooRealVar *)iti.Next())) { 
       if(myargi->isConstant()) continue;
-      fprintf(pFile,"%s", myargi->GetName());
+      fprintf(covFile,"%s", myargi->GetName());
       itj.Reset();
       while ((myargj = (RooRealVar *)itj.Next())) { 
         if(myargj->isConstant()) continue;
         cout << myargi->GetName() << "," << myargj->GetName();
-        fprintf(pFile, " & %.2f", result->correlation(*myargi, *myargj));
+        fprintf(covFile, " & %.2f", result->correlation(*myargi, *myargj));
       }
       cout << endl;
-      fprintf(pFile, " \\\\\n");
+      fprintf(covFile, " \\\\\n");
     }
-    fclose(pFile);
+    fclose(covFile);
     
   }
 
@@ -882,9 +977,6 @@ namespace HistFactory{
     TStopwatch t;
     t.Start();
     string channel=summary[0].channel;
-
-
-
 
     /// MB: reset observable names for each new channel.
     fObsNameVec.clear();
@@ -1619,8 +1711,9 @@ namespace HistFactory{
   }
 
   ///////////////////////////////////////////////
-  void HistoToWorkspaceFactoryFast::FitModel(RooWorkspace * combined, string channel, string /*model_name*/, string data_name, bool /*doParamInspect*/)
+  void HistoToWorkspaceFactoryFast::FitModel(RooWorkspace * combined, string channel, string data_name, TFile* outFile, FILE* tableFile  )
   {
+
     cout << "In Fit Model"<<endl;
     ModelConfig * combined_config = (ModelConfig *) combined->obj("ModelConfig");
     if(!combined_config){
@@ -1654,86 +1747,75 @@ namespace HistFactory{
     model->fitTo(*simData, Minos(kTRUE), PrintLevel(1));
     //    PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
 
-    //
-    // assuming there is only on poi
-    // 
-    RooRealVar* poi = 0; // (RooRealVar*) POIs->first();
-    // for results tables
-    TIterator* params_itr=POIs->createIterator();
-    TObject* params_obj=0;
-    while((params_obj=params_itr->Next())){
-      poi = (RooRealVar*) params_obj;
-      cout << "printing results for " << poi->GetName() << " at " << poi->getVal()<< " high " << poi->getErrorLo() << " low " << poi->getErrorHi()<<endl;
+    if( outFile != NULL ) {
+
+      //
+      // assuming there is only on poi
+      // 
+
+      RooRealVar* poi = 0; // (RooRealVar*) POIs->first();
+      // for results tables
+      TIterator* params_itr=POIs->createIterator();
+      TObject* params_obj=0;
+      while((params_obj=params_itr->Next())){
+	poi = (RooRealVar*) params_obj;
+	cout << "printing results for " << poi->GetName() << " at " << poi->getVal()<< " high " << poi->getErrorLo() << " low " << poi->getErrorHi()<<endl;
+      }
+      fprintf(tableFile, " %.4f / %.4f  ", poi->getErrorLo(), poi->getErrorHi());
+
+      RooAbsReal* nll = model->createNLL(*simData);
+      RooAbsReal* profile = nll->createProfile(*poi);
+      RooPlot* frame = poi->frame();
+      FormatFrameForLikelihood(frame);
+      TCanvas* c1 = new TCanvas( channel.c_str(), "",800,600);
+      nll->plotOn(frame, ShiftToZero(), LineColor(kRed), LineStyle(kDashed));
+      profile->plotOn(frame);
+      frame->SetMinimum(0);
+      frame->SetMaximum(2.);
+      frame->Draw();
+      //    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
+      c1->SaveAs( (fFileNamePrefix+"_"+channel+"_"+fRowTitle+"_profileLR.eps").c_str() );
+
+
+      outFile->mkdir(channel.c_str())->mkdir("Summary")->cd();
+    
+      RooCurve* curve=frame->getCurve();
+      Int_t curve_N=curve->GetN();
+      Double_t* curve_x=curve->GetX();
+      delete frame; delete c1;
+    
+      //
+      // Verbose output from MINUIT
+      //
+      /*
+	RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
+	profile->getVal();
+	RooMinuit* minuit = ((RooProfileLL*) profile)->minuit();
+	minuit->setPrintLevel(5) ; // Print MINUIT messages
+	minuit->setVerbose(5) ; // Print RooMinuit messages with parameter 
+	// changes (corresponds to the Verbose() option of fitTo()
+	*/
+    
+      Double_t * x_arr = new Double_t[curve_N];
+      Double_t * y_arr_nll = new Double_t[curve_N];
+      //     Double_t y_arr_prof_nll[curve_N];
+      //     Double_t y_arr_prof[curve_N];
+      
+      for(int i=0; i<curve_N; i++){
+	double f=curve_x[i];
+	poi->setVal(f);
+	x_arr[i]=f;
+	y_arr_nll[i]=nll->getVal();
+      }
+
+      TGraph * g = new TGraph(curve_N, x_arr, y_arr_nll);
+      g->SetName((FilePrefixStr(channel)+"_nll").c_str());
+      g->Write(); 
+      delete g;
+      delete [] x_arr;
+      delete [] y_arr_nll;
+
     }
-    fprintf(pFile, " %.4f / %.4f  ", poi->getErrorLo(), poi->getErrorHi());
-
-    RooAbsReal* nll = model->createNLL(*simData);
-    RooAbsReal* profile = nll->createProfile(*poi);
-    RooPlot* frame = poi->frame();
-    FormatFrameForLikelihood(frame);
-    TCanvas* c1 = new TCanvas( channel.c_str(), "",800,600);
-    nll->plotOn(frame, ShiftToZero(), LineColor(kRed), LineStyle(kDashed));
-    profile->plotOn(frame);
-    frame->SetMinimum(0);
-    frame->SetMaximum(2.);
-    frame->Draw();
-    //    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
-    c1->SaveAs( (fFileNamePrefix+"_"+channel+"_"+fRowTitle+"_profileLR.eps").c_str() );
-
-    fOut_f->mkdir(channel.c_str())->mkdir("Summary")->cd();
-
-    // an example of calculating profile for a nuisance parameter not poi
-    /*
-    RooRealVar* alpha_isrfsr = (RooRealVar*) combined->var("alpha_isrfsr");
-    RooAbsReal* profile_isrfsr = nll->createProfile(*alpha_isrfsr);
-    poi->setVal(0.55);
-    poi->setConstant();
-
-    RooPlot* frame_isrfsr = alpha_isrfsr->frame();
-    profile_isrfsr->plotOn(frame_isrfsr, Precision(0.1));
-    TCanvas c_isrfsr = new TCanvas( "combined", "",800,600);
-    FormatFrameForLikelihood(frame_isrfsr, "alpha_{isrfsr}");
-    frame_isrfsr->Draw();
-    fOut_f->cd("Summary");
-    c1->Write((FilePrefixStr(channel).str()+"_profileLR_alpha_isrfsr").c_str() );
-    delete frame; delete c1;
-    poi->setConstant(kFALSE);
-    */
-
-    RooCurve* curve=frame->getCurve();
-    Int_t curve_N=curve->GetN();
-    Double_t* curve_x=curve->GetX();
-    delete frame; delete c1;
-
-    //
-    // Verbose output from MINUIT
-    //
-    /*
-    RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-    profile->getVal();
-    RooMinuit* minuit = ((RooProfileLL*) profile)->minuit();
-    minuit->setPrintLevel(5) ; // Print MINUIT messages
-    minuit->setVerbose(5) ; // Print RooMinuit messages with parameter 
-                                // changes (corresponds to the Verbose() option of fitTo()
-    */
-  
-    Double_t * x_arr = new Double_t[curve_N];
-    Double_t * y_arr_nll = new Double_t[curve_N];
-//     Double_t y_arr_prof_nll[curve_N];
-//     Double_t y_arr_prof[curve_N];
-
-    for(int i=0; i<curve_N; i++){
-      double f=curve_x[i];
-      poi->setVal(f);
-      x_arr[i]=f;
-      y_arr_nll[i]=nll->getVal();
-    }
-    TGraph * g = new TGraph(curve_N, x_arr, y_arr_nll);
-    g->SetName((FilePrefixStr(channel)+"_nll").c_str());
-    g->Write(); 
-    delete g;
-    delete [] x_arr;
-    delete [] y_arr_nll;
 
     /** find out what's inside the workspace **/
     //combined->Print();
