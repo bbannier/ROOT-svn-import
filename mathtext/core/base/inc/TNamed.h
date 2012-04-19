@@ -39,6 +39,7 @@ protected:
 public:
    TNamed(): fName(), fTitle() { }
    TNamed(const char *name, const char *title) : fName(name), fTitle(title) { }
+   TNamed(const char *name, const wchar_t *title) : fName(name) { SetMbTitle(title); }
    TNamed(const TString &name, const TString &title) : fName(name), fTitle(title) { }
    TNamed(const TNamed &named);
    TNamed& operator=(const TNamed& rhs);
@@ -55,6 +56,7 @@ public:
    virtual void     SetName(const char *name); // *MENU*
    virtual void     SetNameTitle(const char *name, const char *title);
    virtual void     SetTitle(const char *title=""); // *MENU*
+   virtual void     SetMbTitle(const wchar_t *title=L""); // *MENU*
    virtual void     ls(Option_t *option="") const;
    virtual void     Print(Option_t *option="") const;
    virtual Int_t    Sizeof() const;

@@ -733,6 +733,12 @@ void TGX11::DrawText(int x, int y, float angle, float mgn,
 }
 
 //______________________________________________________________________________
+void TGX11::DrawText(int x, int y, float angle, float mgn,
+                     const wchar_t *text, ETextMode mode)
+{
+}
+
+//______________________________________________________________________________
 void TGX11::FindBestVisual()
 {
    // Find best visual, i.e. the one with the most planes and TrueColor or
