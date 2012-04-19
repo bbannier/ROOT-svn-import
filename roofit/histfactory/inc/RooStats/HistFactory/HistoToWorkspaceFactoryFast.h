@@ -28,6 +28,7 @@
 #include <TDirectory.h>
 
 #include "RooStats/HistFactory/EstimateSummary.h"
+#include "RooStats/HistFactory/Measurement.h"
 
 
 class ParamHistFunc;
@@ -39,9 +40,14 @@ namespace HistFactory{
 
     public:
 
-    HistoToWorkspaceFactoryFast(  string, string , vector<string> , double =200, double =20, int =0, int =6, TFile * =0);
-      HistoToWorkspaceFactoryFast();
+    HistoToWorkspaceFactoryFast(  string, string , vector<string> , double =200, double =20, int =0, int =6, TFile* =NULL);
+    HistoToWorkspaceFactoryFast(  RooStats::HistFactory::Measurement& Meas );
+    static void ConfigureWorkspaceForMeasurement( const std::string& ModelName, RooWorkspace* ws_single, Measurement& measurement );
+
+    HistoToWorkspaceFactoryFast();
       virtual ~HistoToWorkspaceFactoryFast();
+
+    RooWorkspace* MakeSingleChannelModel( Measurement& measurement, Channel& channel );
 
       void SetFunctionsToPreprocess(vector<string> lines){ fPreprocessFunctions = lines;}
 
@@ -64,8 +70,8 @@ namespace HistFactory{
 
       void Customize(RooWorkspace* proto, const char* pdfNameChar, map<string,string> renameMap);
 
-      void EditSyst(RooWorkspace* proto, const char* pdfNameChar, 
-		    map<string,double> gammaSyst, map<string,double> uniformSyst, map<string,double> logNormSyst, map<string,double> noSyst);
+      static void EditSyst(RooWorkspace* proto, const char* pdfNameChar, 
+			   map<string,double> gammaSyst, map<string,double> uniformSyst, map<string,double> logNormSyst, map<string,double> noSyst);
 
       void FormatFrameForLikelihood(RooPlot* frame, string XTitle=string("#sigma / #sigma_{SM}"), string YTitle=string("-log likelihood"));
 
@@ -84,10 +90,10 @@ namespace HistFactory{
 
       TDirectory* Mkdir( TDirectory * file, string name );
 
-      void PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename);
+      static void PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename);
       void ProcessExpectedHisto(TH1* hist,RooWorkspace* proto, string prefix, string productPrefix, string systTerm, double low, double high, int lowBin, int highBin);
       void SetObsToExpected(RooWorkspace* proto, string obsPrefix, string expPrefix, int lowBin, int highBin);
-      void FitModel(RooWorkspace *, string, string, string, bool=false  );
+    void FitModel(RooWorkspace *, string, string, TFile*, FILE*);
       std::string FilePrefixStr(std::string);
     
     TH1* MakeScaledUncertaintyHist( const std::string& Name, std::vector< std::pair<TH1*,TH1*> > HistVec );
@@ -105,8 +111,8 @@ namespace HistFactory{
       double fNomLumi, fLumiError;
       int fLowBin, fHighBin;    
       std::stringstream fResultsPrefixStr;
-      TFile * fOut_f;
-      FILE * pFile;
+    //TFile * fOut_f;
+    // FILE * pFile;
 
   private:
 

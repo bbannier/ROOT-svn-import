@@ -12,6 +12,14 @@
 # Written by George Lewis
 #
 
+#
+# There are several way to use HistFactory to
+# create a model.
+#
+# In this example, we configure the model using PyRoot
+# and load the histograms from an external ROOT file
+#
+
 
 def main():
 
@@ -70,22 +78,26 @@ def main():
 
     # Done with this channel
     # Add it to the measurement:
-
     meas.AddChannel( chan )
 
-    # Collect the histograms from their files,
-    # print some output, 
+    # At this point, all histograms information is stored as
+    # the string name of the root file and histogram
+    # We must now open those files and load the histograms:
     meas.CollectHistograms()
+
+    # Print some output for debugging
     meas.PrintTree();
 
     # One can print XML code to an
-    # output directory:
-    # meas.PrintXML( "xmlFromCCode", meas.GetOutputFilePrefix() );
-
+    # output directory.
+    # Here, the directory is "xmlFromPy"
     meas.PrintXML( "xmlFromPy", meas.GetOutputFilePrefix() );
 
-    # Now, do the measurement
-    ROOT.RooStats.HistFactory.MakeModelAndMeasurementFast( meas );
+    # Now, do the measurement and make output
+    combinedWorkspace = ROOT.RooStats.HistFactory.MakeModelAndMeasurementFast( meas );
+    #combinedWorkspace = ROOT.RooStats.HistFactory.MakeModelFast( meas );
+
+    # combinedWorkspace.Print("V")
 
     pass
 
