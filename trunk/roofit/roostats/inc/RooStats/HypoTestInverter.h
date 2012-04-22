@@ -35,24 +35,12 @@ namespace RooStats {
    class AsymptoticCalculator;
    class HypoTestCalculatorGeneric;
    class TestStatistic;
-   class TestStatSampler;
 
 class HypoTestInverter : public IntervalCalculator {
 
 public:
 
-   enum ECalculatorType { kFrequentist = 0, kHybrid = 1, kAsymptotic = 2};
-   const static char *kECalculatorTypeString[]; // strings associated with the ECalculatorType enum constatns
-
-   // testStatType = 0 Simple Likelihood Ratio (the LEP TestStat)
-   //              = 1 Ratio of Profiled Likelihood Ratios (the Tevatron TestStat)
-   //              = 2 Profile Likelihood Ratio (the LHC TestStat)
-   //              = 3 Profile Likelihood One Sided (pll = 0 if mu < mu_hat)
-   //              = 4 Profile Likelihood Signed (pll = -pll if mu < mu_hat)
-   //              = 5 Max Likelihood Estimate as test statistic
-   //              = 6 Number of Observed Events as test statistic
-   enum ETestStatType { kSimpleLR = 0, kRatioLR = 1, kProfileLR= 2, kProfileLROneSided = 3, kProfileLRSigned = 4, kMLE = 5, kNObs = 6 };
-   const static char *kETestStatTypeString[]; // strings associated with the ETestStatType enum constants
+   enum ECalculatorType { kUndefined = 0, kHybrid = 1, kFrequentist = 2, kAsymptotic = 3};
 
    // default constructor (used only for I/O)
    HypoTestInverter();
@@ -79,8 +67,9 @@ public:
                      double size = 0.05) ;
 
    // constructor from two ModelConfigs
-   HypoTestInverter( RooAbsData& data, ModelConfig &b, ModelConfig &sb, RooRealVar * scannedVariable = 0,  
-                     ECalculatorType calcType = kFrequentist, ETestStatType testStatType = kSimpleLR, double size = 0.05);
+   HypoTestInverter( RooAbsData& data, ModelConfig &b, ModelConfig &sb,
+		      RooRealVar * scannedVariable = 0,  ECalculatorType type = kFrequentist, 
+		     double size = 0.05) ;
 
 
    virtual HypoTestInverterResult* GetInterval() const; 
@@ -197,14 +186,10 @@ private:
    double fSize;
    int fVerbose;
    ECalculatorType fCalcType; 
-   ETestStatType fTestStatType;
    int fNBins;
    double fXmin; 
    double fXmax; 
    double fNumErr;
-
-   // builds corresponding TestStatSampler to pass to HypoTestCalculatorGeneric constructor 
-   TestStatSampler *BuildTestStatSampler(const ETestStatType testStatType, const ModelConfig &bModel, const ModelConfig &sbModel) const;
 
 protected:
 
