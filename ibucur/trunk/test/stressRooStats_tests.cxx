@@ -121,7 +121,6 @@ public:
          // register analytical Z_Bi value
          Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(xValue, yValue, tauValue);
          regValue(Z_Bi, "thtc_significance_hybrid");
- //        regValue(Z_Bi, "thtc_significance_frequentist");
 
       } else {
       
@@ -130,12 +129,14 @@ public:
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
          w->factory(TString::Format("Poisson::on_pdf(x[%d,0,500],sum::splusb(sig[0,0,100],bkg[100,0,300]))", xValue));
          w->factory(TString::Format("Poisson::off_pdf(y[%d,0,500],prod::taub(tau[%lf],bkg))", yValue, tauValue));
-         w->factory("PROD::model(on_pdf, off_pdf)");
-        
+         w->factory("PROD::prod_pdf(on_pdf, off_pdf)");        
+
          w->var("x")->setVal(xValue);
          w->var("y")->setVal(yValue);
+         w->var("y")->setConstant();
          w->var("tau")->setVal(tauValue); 
-         // construct the Bayesian-averaged model (eg. a projection pdf)
+
+        // construct the Bayesian-averaged model (eg. a projection pdf)
          // p'(x|s) = \int db p(x|s+b) * [ p(y|b) * prior(b) ]
          w->factory("Uniform::prior(bkg)");
          w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
@@ -150,16 +151,17 @@ public:
          RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
          data->add(*w->set("obs"));
 
+
          // Build S+B and B models
          ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
-         sb_model->SetPdf(*w->pdf("on_pdf"));
+         sb_model->SetPdf(*w->pdf("prod_pdf"));
          sb_model->SetObservables(*w->set("obs"));      
          sb_model->SetParametersOfInterest(*w->set("poi"));
          w->var("sig")->setVal(xValue - yValue / tauValue); // important !
          sb_model->SetSnapshot(*w->set("poi"));
 
          ModelConfig *b_model = new ModelConfig("B_ModelConfig", w);
-         b_model->SetPdf(*w->pdf("on_pdf"));
+         b_model->SetPdf(*w->pdf("prod_pdf"));
          b_model->SetObservables(*w->set("obs"));
          b_model->SetParametersOfInterest(*w->set("poi"));
          w->var("sig")->setVal(0.0); // important !
@@ -177,7 +179,9 @@ public:
 
 
          // TODO: doesn't work as it should, neither does the default RatioOfProfiledLikelihoods Test Statistic        
-         // ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*b_model->GetPdf());
+         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*b_model->GetPdf());
+         pllts->SetReuseNLL(kTRUE);
+         pllts->SetOneSidedDiscovery(kTRUE);
 
          // ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sb_model);
          // plc->SetNullParameters(*b_model->GetSnapshot());
@@ -185,53 +189,133 @@ public:
          // htr0->Print(); 
 
 
-         /*FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sb_model, *b_model);
-         ToyMCSampler *tmcs2 = (ToyMCSampler *)ftc->GetTestStatSampler();
-         tmcs2->SetNEventsPerToy(1); // because the model is in number counting form     
-         tmcs2->SetTestStatistic(slrts);
-         ftc->SetToys(20000, 1000);
-         HypoTestResult *htr2 = ftc->GetHypoTest();
-         htr2->Print();
-*/
-
-       //  delete htc; 
-       //  delete tmcs; 
-       //  delete htr;
 
          HybridCalculator *htc = new HybridCalculator(*data, *sb_model, *b_model);
          ToyMCSampler *tmcs = (ToyMCSampler *)htc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1);
-         tmcs->SetTestStatistic(slrts);
+        // tmcs->SetTestStatistic(slrts);
          htc->SetToys(20000, 1000);
          htc->ForcePriorNuisanceAlt(*w->pdf("off_pdf"));
          htc->ForcePriorNuisanceNull(*w->pdf("off_pdf"));
          HypoTestResult *htr = htc->GetHypoTest();
          htr->Print();
+         tmcs->SetTestStatistic(slrts);
+         htr = htc->GetHypoTest();
+         htr->Print();
 
          regValue(htr->Significance(), "thtc_significance_hybrid");
-   //      regValue(htr2->Significance(), "thtc_significance_frequentist"); 
+
+         delete htc;
+         delete htr;
+         delete w;
+         delete data;
       }
-     // tmcs->SetTestStatistic(slrts);
-     // htr = htc->GetHypoTest();
-     // htr->Print();
-//      Double_t hybrid_p_value = cdf->getVal() ;
-//      Double_t zgamma_signif = PValueToSignificance(1 - cdf->getVal()) ;
 
-      // analytic Z_Bi
-//      Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(150, 100, 1);
+      return kTRUE ;
+   }
+} ;
 
-      // Register output quantities for regression test
-      //regPlot(frame, "rs101_zbi_zgamma") ;
-      //regValue(hybrid_p_value, "htc_hybrid_p_value") ;
-      //regValue(zgamma_signif, "htc_zgamma_signif") ;
-      //regValue(Z_Bi, "rs101_Z_Bi") ;
 
-//   delete w; // interesting why it doesn't work
-      /*delete htc;
-      delete tmcs;
-      delete htr;
-      delete data;
-*/
+class TestHypoTestCalculator2 : public RooUnitTest {
+public:
+   TestHypoTestCalculator2(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("HypoTestCalculator Frequentist - On / Off Problem", refFile, writeRef, verbose) {};
+
+   Bool_t testCode() {
+
+      const Int_t xValue = 150;
+      const Int_t yValue = 100;
+      const Double_t tauValue = 1;
+      
+      if(_write == kTRUE) {
+
+         // register analytical Z_Bi value
+         Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(xValue, yValue, tauValue);
+         regValue(Z_Bi, "thtc_significance_frequentist");
+
+      } else {
+      
+         // Make model for prototype on/off problem
+         // Pois(x | s+b) * Pois(y | tau b )
+         RooWorkspace* w = new RooWorkspace("w", kTRUE);
+         w->factory("Poisson::on_pdf(x[150,0,500],sum::splusb(sig[0,0,100],bkg[100,0,300]))");
+         w->factory("Poisson::off_pdf(y[100,0,500],prod::taub(tau[1],bkg))");
+         w->factory("PROD::prod_pdf(on_pdf, off_pdf)");
+        
+         w->var("x")->setVal(xValue);
+         w->var("y")->setVal(yValue);
+         w->var("y")->setConstant();
+         w->var("tau")->setVal(tauValue);
+         w->var("tau")->setConstant();
+         // construct the Bayesian-averaged model (eg. a projection pdf)
+         // p'(x|s) = \int db p(x|s+b) * [ p(y|b) * prior(b) ]
+         //w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
+
+         // define sets of variables obs={x} and poi={sig}
+         // x is the only observable in the main measurement and y is treated as a separate measurement,
+         // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
+         w->defineSet("obs", "x");
+         w->defineSet("poi", "sig");
+         w->defineSet("globObs", "y");
+
+         // Add observable value to a data set
+         RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
+         data->add(*w->set("obs"));
+
+         // Build S+B and B models
+         ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
+         sb_model->SetPdf(*w->pdf("prod_pdf"));
+         sb_model->SetObservables(*w->set("obs"));
+         sb_model->SetGlobalObservables(*w->set("globObs"));      
+         sb_model->SetParametersOfInterest(*w->set("poi"));
+         w->var("sig")->setVal(50.0); // important !
+         sb_model->SetSnapshot(*w->set("poi"));
+
+         ModelConfig *b_model = new ModelConfig("B_ModelConfig", w);
+         b_model->SetPdf(*w->pdf("prod_pdf"));
+         b_model->SetObservables(*w->set("obs"));
+         b_model->SetGlobalObservables(*w->set("globObs"));
+         b_model->SetParametersOfInterest(*w->set("poi"));
+         w->var("sig")->setVal(0.0); // important !
+         b_model->SetSnapshot(*w->set("poi"));
+
+         // alternate priors
+         w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
+         w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
+
+         // build test statistic
+         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*b_model->GetPdf(), *sb_model->GetPdf());
+         slrts->SetNullParameters(*b_model->GetSnapshot());
+         slrts->SetAltParameters(*sb_model->GetSnapshot());
+         slrts->SetReuseNLL(kTRUE); 
+
+
+         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*b_model->GetPdf());
+         pllts->SetReuseNLL(kTRUE);
+         pllts->SetOneSidedDiscovery(kTRUE);
+
+         // ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sb_model);
+         // plc->SetNullParameters(*b_model->GetSnapshot());
+         // HypoTestResult *htr0 = plc->GetHypoTest();
+         // htr0->Print(); 
+
+
+         FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sb_model, *b_model);
+         ftc->SetToys(20000, 1000);
+         ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
+         tmcs->SetNEventsPerToy(1); // because the model is in number counting form     
+        // tmcs->SetTestStatistic(slrts);
+         tmcs->SetUseMultiGen(kTRUE);
+         tmcs->SetAlwaysUseMultiGen(kTRUE);
+         HypoTestResult *htr = ftc->GetHypoTest();
+         htr->Print();
+
+         regValue(htr->Significance(), "thtc_significance_frequentist");
+
+         delete ftc;
+         delete htr;
+         delete w; // interesting why it doesn't work
+         delete data;
+      }
       return kTRUE ;
    }
 } ;
@@ -1044,7 +1128,7 @@ public:
       tmcs->SetMaxToys(300);
       tmcs->SetNEventsPerToy(1);
       tmcs->SetTestStatistic(profll);
-      tmcs->SetUseMultiGen(kTRUE); // make ToyMCSampler faster   
+//      tmcs->SetUseMultiGen(kTRUE); // make ToyMCSampler faster   
   
       // calculate interval and extract observed upper limit and expected upper limit (+- sigma)
       HypoTestInverterResult *interval = hti->GetInterval();
@@ -1093,4 +1177,55 @@ public:
    }
 };
 
+static buildTestStatSampler(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel) const {
 
+   TestStatistic *testStat = NULL;
+ 
+   if(testStatType == kSimpleLR) {
+      SimpleLikelihoodRatioTestStat *slrts = new SimpleLikelihoodRatioTestStat(*sbModel.GetPdf(), *bModel.GetPdf());
+      slrts->SetNullParameters(*sbModel.GetSnapshot());
+      slrts->SetAltParameters(*bModel.GetSnapshot());
+      slrts->SetReuseNLL(kTRUE);
+      testStat = slrts;
+   } else if(testStatType == kRatioLR)  {
+      RatioOfProfiledLikelihoodsTestStat *roplts = 
+         new RatioOfProfiledLikelihoodsTestStat(*sbModel.GetPdf(), *bModel.GetPdf(), bModel.GetSnapshot());
+      roplts->SetReuseNLL(kTRUE);
+      testStat = roplts;
+   } else if(testStatType == kMLE) {
+      MaxLikelihoodEstimateTestStat *mlets = 
+         new MaxLikelihoodEstimateTestStat(*sbModel.GetPdf(), *((RooRealVar *)sbModel.GetParametersOfInterest()->first()));
+      testStat = mlets;
+   } else if(testStatType == kNObs) {
+      NumEventsTestStat *nevtts = new NumEventsTestStat(*sbModel.GetPdf());
+      testStat = nevtts;
+   } else { // kProfileLR, kProfileLROneSided and kProfileLRSigned
+      ProfileLikelihoodTestStat *plts = new ProfileLikelihoodTestStat(*sbModel.GetPdf());
+      if(testStatType == kProfileLROneSided) plts->SetOneSided(kTRUE);
+      if(testStatType == kProfileLRSigned) plts->SetSigned(kTRUE);      
+      plts->SetReuseNLL(kTRUE);
+      testStat = plts;
+   }
+
+   assert(testStat != NULL); // sanity check - should never happen
+
+   return new ToyMCSampler(*testStat, 1000); // fgNToys seems like a good choice for now
+}
+
+// static variable definitions
+
+const char *HypoTestInverter::kECalculatorTypeString[] = { "Frequentist", "Hybrid", "Asymptotic" };
+const char *HypoTestInverter::kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
+
+   enum ECalculatorType { kFrequentist = 0, kHybrid = 1, kAsymptotic = 2};
+   const static char *kECalculatorTypeString[]; // strings associated with the ECalculatorType enum constatns
+
+   // testStatType = 0 Simple Likelihood Ratio (the LEP TestStat)
+   //    //              = 1 Ratio of Profiled Likelihood Ratios (the Tevatron TestStat)
+   //       //              = 2 Profile Likelihood Ratio (the LHC TestStat)
+   //          //              = 3 Profile Likelihood One Sided (pll = 0 if mu < mu_hat)
+   //             //              = 4 Profile Likelihood Signed (pll = -pll if mu < mu_hat)
+   //                //              = 5 Max Likelihood Estimate as test statistic
+   //                   //              = 6 Number of Observed Events as test statistic
+   //                      enum ETestStatType { kSimpleLR = 0, kRatioLR = 1, kProfileLR= 2, kProfileLROneSided = 3, kProfileLRSigned = 4, kMLE = 5, kNObs = 6 };
+   //                         const static char *kETestStatTypeString[]; // strings associated with the ETestStatType enum constants
