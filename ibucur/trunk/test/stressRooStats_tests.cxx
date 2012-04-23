@@ -122,6 +122,9 @@ public:
 #include "RooStats/HybridCalculator.h"
 #include "RooStats/AsymptoticCalculator.h"
 #include "RooStats/ProfileLikelihoodCalculator.h"
+#include "RooStats/MaxLikelihoodEstimateTestStat.h"
+#include "RooStats/NumEventsTestStat.h"
+#include "RooStats/RatioOfProfiledLikelihoodsTestStat.h"
 
 
 class TestHypoTestCalculator : public RooUnitTest {
@@ -171,55 +174,73 @@ public:
 
 
          // Build S+B and B models
-         ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
-         sb_model->SetPdf(*w->pdf("prod_pdf"));
-         sb_model->SetObservables(*w->set("obs"));      
-         sb_model->SetParametersOfInterest(*w->set("poi"));
+         ModelConfig *sbModel = new ModelConfig("SB_ModelConfig", w);
+         sbModel->SetPdf(*w->pdf("prod_pdf"));
+         sbModel->SetObservables(*w->set("obs"));      
+         sbModel->SetParametersOfInterest(*w->set("poi"));
          w->var("sig")->setVal(xValue - yValue / tauValue); // important !
-         sb_model->SetSnapshot(*w->set("poi"));
+         sbModel->SetSnapshot(*w->set("poi"));
 
-         ModelConfig *b_model = new ModelConfig("B_ModelConfig", w);
-         b_model->SetPdf(*w->pdf("prod_pdf"));
-         b_model->SetObservables(*w->set("obs"));
-         b_model->SetParametersOfInterest(*w->set("poi"));
+         ModelConfig *bModel = new ModelConfig("B_ModelConfig", w);
+         bModel->SetPdf(*w->pdf("prod_pdf"));
+         bModel->SetObservables(*w->set("obs"));
+         bModel->SetParametersOfInterest(*w->set("poi"));
          w->var("sig")->setVal(0.0); // important !
-         b_model->SetSnapshot(*w->set("poi"));
+         bModel->SetSnapshot(*w->set("poi"));
 
          // alternate priors
          w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
          w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
 
          // build test statistic
-         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*b_model->GetPdf(), *sb_model->GetPdf());
-         slrts->SetNullParameters(*b_model->GetSnapshot());
-         slrts->SetAltParameters(*sb_model->GetSnapshot());
-         
+         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
+         slrts->SetNullParameters(*bModel->GetSnapshot());
+         slrts->SetAltParameters(*sbModel->GetSnapshot());
+         slrts->SetAlwaysReuseNLL(kTRUE);
 
+         RatioOfProfiledLikelihoodsTestStat *roplts = new RatioOfProfiledLikelihoodsTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
+         roplts->SetAlwaysReuseNLL(kTRUE);
 
-         // TODO: doesn't work as it should, neither does the default RatioOfProfiledLikelihoods Test Statistic        
-         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*b_model->GetPdf());
-         pllts->SetReuseNLL(kTRUE);
+         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*bModel->GetPdf());
+         pllts->SetAlwaysReuseNLL(kTRUE);
          pllts->SetOneSidedDiscovery(kTRUE);
+         pllts->SetOneSided(kTRUE);
 
-         // ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sb_model);
-         // plc->SetNullParameters(*b_model->GetSnapshot());
+         MaxLikelihoodEstimateTestStat *mlets = 
+            new MaxLikelihoodEstimateTestStat(*sbModel->GetPdf(), *((RooRealVar *)sbModel->GetParametersOfInterest()->first()));
+      
+         NumEventsTestStat *nevts = new NumEventsTestStat(*sbModel->GetPdf());
+
+         // ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sbModel);
+         // plc->SetNullParameters(*bModel->GetSnapshot());
          // HypoTestResult *htr0 = plc->GetHypoTest();
          // htr0->Print(); 
 
 
 
-         HybridCalculator *htc = new HybridCalculator(*data, *sb_model, *b_model);
+         HybridCalculator *htc = new HybridCalculator(*data, *sbModel, *bModel);
          ToyMCSampler *tmcs = (ToyMCSampler *)htc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1);
-        // tmcs->SetTestStatistic(slrts);
-         htc->SetToys(20000, 1000);
+         htc->SetToys(5000, 1000);
          htc->ForcePriorNuisanceAlt(*w->pdf("off_pdf"));
          htc->ForcePriorNuisanceNull(*w->pdf("off_pdf"));
+
+         tmcs->SetTestStatistic(pllts);
          HypoTestResult *htr = htc->GetHypoTest();
-         htr->Print();
+         cout << "PLLTS " << htr->Significance() << endl;
+         /*tmcs->SetTestStatistic(mlets);
+         htr = htc->GetHypoTest();
+         cout << "MLETS " << htr->Significance() << endl;
+         tmcs->SetTestStatistic(nevts);
+         htr = htc->GetHypoTest();
+         cout << "NEVTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(slrts);
          htr = htc->GetHypoTest();
-         htr->Print();
+         cout << "SLRTS " << htr->Significance() << endl;
+         tmcs->SetTestStatistic(roplts);
+         htr = htc->GetHypoTest();
+         cout << "ROPLTS " << htr->Significance() << endl;*/
+ 
 
          regValue(htr->Significance(), "thtc_significance_hybrid");
 
@@ -280,52 +301,75 @@ public:
          data->add(*w->set("obs"));
 
          // Build S+B and B models
-         ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
-         sb_model->SetPdf(*w->pdf("prod_pdf"));
-         sb_model->SetObservables(*w->set("obs"));
-         sb_model->SetGlobalObservables(*w->set("globObs"));      
-         sb_model->SetParametersOfInterest(*w->set("poi"));
-         w->var("sig")->setVal(50.0); // important !
-         sb_model->SetSnapshot(*w->set("poi"));
+         ModelConfig *sbModel = new ModelConfig("SB_ModelConfig", w);
+         sbModel->SetPdf(*w->pdf("prod_pdf"));
+         sbModel->SetObservables(*w->set("obs"));
+         sbModel->SetGlobalObservables(*w->set("globObs"));      
+         sbModel->SetParametersOfInterest(*w->set("poi"));
+         w->var("sig")->setVal(xValue - yValue / tauValue); // important !
+         sbModel->SetSnapshot(*w->set("poi"));
 
-         ModelConfig *b_model = new ModelConfig("B_ModelConfig", w);
-         b_model->SetPdf(*w->pdf("prod_pdf"));
-         b_model->SetObservables(*w->set("obs"));
-         b_model->SetGlobalObservables(*w->set("globObs"));
-         b_model->SetParametersOfInterest(*w->set("poi"));
+         ModelConfig *bModel = new ModelConfig("B_ModelConfig", w);
+         bModel->SetPdf(*w->pdf("prod_pdf"));
+         bModel->SetObservables(*w->set("obs"));
+         bModel->SetGlobalObservables(*w->set("globObs"));
+         bModel->SetParametersOfInterest(*w->set("poi"));
          w->var("sig")->setVal(0.0); // important !
-         b_model->SetSnapshot(*w->set("poi"));
+         bModel->SetSnapshot(*w->set("poi"));
+
 
          // alternate priors
          w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
          w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
 
          // build test statistic
-         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*b_model->GetPdf(), *sb_model->GetPdf());
-         slrts->SetNullParameters(*b_model->GetSnapshot());
-         slrts->SetAltParameters(*sb_model->GetSnapshot());
-         slrts->SetReuseNLL(kTRUE); 
+         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
+         slrts->SetNullParameters(*bModel->GetSnapshot());
+         slrts->SetAltParameters(*sbModel->GetSnapshot());
+         slrts->SetAlwaysReuseNLL(kTRUE);
 
+         RatioOfProfiledLikelihoodsTestStat *roplts = new RatioOfProfiledLikelihoodsTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
+         roplts->SetAlwaysReuseNLL(kTRUE);
 
-         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*b_model->GetPdf());
-         pllts->SetReuseNLL(kTRUE);
+         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*bModel->GetPdf());
+         pllts->SetAlwaysReuseNLL(kTRUE);
          pllts->SetOneSidedDiscovery(kTRUE);
 
-         // ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sb_model);
-         // plc->SetNullParameters(*b_model->GetSnapshot());
-         // HypoTestResult *htr0 = plc->GetHypoTest();
-         // htr0->Print(); 
+         MaxLikelihoodEstimateTestStat *mlets = 
+            new MaxLikelihoodEstimateTestStat(*sbModel->GetPdf(), *((RooRealVar *)sbModel->GetParametersOfInterest()->first()));
+      
+         NumEventsTestStat *nevts = new NumEventsTestStat(*sbModel->GetPdf());
 
+        /* ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sbModel);
+         plc->SetNullParameters(*bModel->GetSnapshot());
+         plc->SetAlternateParameters(*sbModel->GetSnapshot());
+         HypoTestResult *htr0 = plc->GetHypoTest();
+         cout << "PLC " << htr0->Significance() << endl; 
+*/
 
-         FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sb_model, *b_model);
-         ftc->SetToys(20000, 1000);
+         FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sbModel, *bModel);
+         ftc->SetToys(5000, 1000);
          ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1); // because the model is in number counting form     
-        // tmcs->SetTestStatistic(slrts);
          tmcs->SetUseMultiGen(kTRUE);
          tmcs->SetAlwaysUseMultiGen(kTRUE);
+         
+         tmcs->SetTestStatistic(pllts);
          HypoTestResult *htr = ftc->GetHypoTest();
-         htr->Print();
+         cout << "PLLTS " << htr->Significance() << endl;
+         tmcs->SetTestStatistic(mlets);
+         htr = ftc->GetHypoTest();
+         cout << "MLETS " << htr->Significance() << endl;
+         tmcs->SetTestStatistic(nevts);
+         htr = ftc->GetHypoTest();
+         cout << "NEVTS " << htr->Significance() << endl;
+         tmcs->SetTestStatistic(slrts);
+         htr = ftc->GetHypoTest();
+         cout << "SLRTS " << htr->Significance() << endl;
+         tmcs->SetTestStatistic(roplts);
+         htr = ftc->GetHypoTest();
+         cout << "ROPLTS " << htr->Significance() << endl;
+ 
 
          regValue(htr->Significance(), "thtc_significance_frequentist");
 
@@ -775,23 +819,23 @@ static pair<ModelConfig *, ModelConfig *> createPoissonProductModels(RooWorkspac
    w->import(*data);
 
    // create model configuration
-   ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
-   sb_model->SetObservables(*obsSet);
-   sb_model->SetParametersOfInterest(*POISet);
-   sb_model->SetNuisanceParameters(*NPSet);
-   sb_model->SetPdf("sb_pdf");
-   sb_model->SetPriorPdf("prior");
-   sb_model->SetSnapshot(*POISet);
-   sb_model->SetGlobalObservables(*globalObsSet);
+   ModelConfig *sbModel = new ModelConfig("SB_ModelConfig", w);
+   sbModel->SetObservables(*obsSet);
+   sbModel->SetParametersOfInterest(*POISet);
+   sbModel->SetNuisanceParameters(*NPSet);
+   sbModel->SetPdf("sb_pdf");
+   sbModel->SetPriorPdf("prior");
+   sbModel->SetSnapshot(*POISet);
+   sbModel->SetGlobalObservables(*globalObsSet);
 
    // Background model -> sее createComplexModel for variable names
-   ModelConfig *b_model = new ModelConfig(*sb_model);
-   b_model->SetName("B_ModelConfig");
-   b_model->SetPdf("b_pdf");
+   ModelConfig *bModel = new ModelConfig(*sbModel);
+   bModel->SetName("B_ModelConfig");
+   bModel->SetPdf("b_pdf");
    w->var("sig1")->setVal(0);
-   b_model->SetSnapshot(*POISet);
+   bModel->SetSnapshot(*POISet);
    
-   return make_pair(sb_model, b_model);
+   return make_pair(sbModel, bModel);
 }
 
 
@@ -1085,22 +1129,22 @@ static pair<ModelConfig *, ModelConfig *> createPoissonSBEModels(RooWorkspace *w
    w->import(*data);
 
    // create model configuration
-   ModelConfig *sb_model = new ModelConfig("SB_ModelConfig", w);
-   sb_model->SetObservables(*obsSet);
-   sb_model->SetParametersOfInterest(*POISet);
-   sb_model->SetNuisanceParameters(*NPSet);
-   sb_model->SetPdf("sb_pdf");
-   //sb_model->SetPriorPdf("prior");
-   sb_model->SetSnapshot(*POISet);
-   sb_model->SetGlobalObservables(*globalObsSet);
+   ModelConfig *sbModel = new ModelConfig("SB_ModelConfig", w);
+   sbModel->SetObservables(*obsSet);
+   sbModel->SetParametersOfInterest(*POISet);
+   sbModel->SetNuisanceParameters(*NPSet);
+   sbModel->SetPdf("sb_pdf");
+   //sbModel->SetPriorPdf("prior");
+   sbModel->SetSnapshot(*POISet);
+   sbModel->SetGlobalObservables(*globalObsSet);
  
-   ModelConfig *b_model = new ModelConfig(*sb_model);
-   b_model->SetName("B_ModelConfig");
-   b_model->SetPdf("b_pdf");
+   ModelConfig *bModel = new ModelConfig(*sbModel);
+   bModel->SetName("B_ModelConfig");
+   bModel->SetPdf("b_pdf");
    w->var("sig")->setVal(1);
-   b_model->SetSnapshot(*POISet);
+   bModel->SetSnapshot(*POISet);
       
-   return make_pair(sb_model, b_model);
+   return make_pair(sbModel, bModel);
 }
 
 
