@@ -27,7 +27,7 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 // include other header files
 
 #include "RooAbsData.h"
-#
+
 #include "TMath.h"
 
 #include "RooStats/HybridResult.h"
@@ -324,7 +324,7 @@ HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &sbModel, Mode
    fNumErr(0)
 {
    // Constructor from a model for B model and a model for S+B. 
-   // An HypoTestCalculator (Hybrid of Frequentis) will be created using the 
+   // An HypoTestCalculator (Hybrid of Frequentist) will be created using the 
    // S+B model as the null and the B model as the alternate
    // If no variable to scan are given they are assumed to be the first variable
    // from the parameter of interests of the null model
@@ -334,7 +334,7 @@ HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &sbModel, Mode
    if(fCalcType==kAsymptotic) fHC = auto_ptr<HypoTestCalculatorGeneric>(new AsymptoticCalculator(data, bModel, sbModel)); 
 
    fCalculator0 = fHC.get();
-   // get scanned variabke
+   // get scanned variable
    if (!fScannedVariable) { 
       fScannedVariable = GetVariableToScan(*fCalculator0);
    }

@@ -25,10 +25,28 @@
 #include "RooUnitTest.h"
 #include "RooStats/NumberCountingUtils.h"
 #include "RooStats/RooStatsUtils.h"
+#include "RooStats/TestStatistic.h"
 
 using namespace RooFit;
 using namespace RooStats;
 using namespace ROOT::Math;
+
+
+
+
+// testStatType = 0 Simple Likelihood Ratio (the LEP TestStat)
+//              = 1 Ratio of Profiled Likelihood Ratios (the Tevatron TestStat)
+//              = 2 Profile Likelihood Ratio (the LHC TestStat)
+//              = 3 Profile Likelihood One Sided (pll = 0 if mu < mu_hat)
+//              = 4 Profile Likelihood Signed (pll = -pll if mu < mu_hat)
+//              = 5 Max Likelihood Estimate as test statistic
+//              = 6 Number of Observed Events as test statistic
+enum ETestStatType { kSimpleLR = 0, kRatioLR = 1, kProfileLR= 2, kProfileLROneSided = 3, kProfileLRSigned = 4, kMLE = 5, kNObs = 6 };
+static const char *kECalculatorTypeString[] = { "Undefined", "Frequentist", "Hybrid", "Asymptotic" };
+static const char *kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
+static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel);
+
+
 
 
 class TestBasic101 : public RooUnitTest {
@@ -944,14 +962,13 @@ public:
 class TestHypoTestInverter1 : public RooUnitTest {
 private:
    HypoTestInverter::ECalculatorType fCalculatorType;
-   HypoTestInverter::ETestStatType fTestStatType;
+   ETestStatType fTestStatType;
 
 public:
    TestHypoTestInverter1(TFile* refFile, Bool_t writeRef, Int_t verbose, HypoTestInverter::ECalculatorType calculatorType, 
-                         HypoTestInverter::ETestStatType testStatType) : 
+                         ETestStatType testStatType) : 
       RooUnitTest(TString::Format("HypoTestInverter Interval - Poisson Complex Model - %s %s", 
-                                   HypoTestInverter::kECalculatorTypeString[calculatorType], 
-                                   HypoTestInverter::kETestStatTypeString[testStatType]), refFile, writeRef, verbose) {
+                                   kECalculatorTypeString[calculatorType], kETestStatTypeString[testStatType]), refFile, writeRef, verbose) {
       fCalculatorType = calculatorType;  
       fTestStatType = testStatType;
    };
@@ -964,10 +981,12 @@ public:
       RooWorkspace *w = new RooWorkspace("w", kTRUE);
       pair<ModelConfig *, ModelConfig *> models = createPoissonProductModels(w);
 
-      // build confidence interval with HypoTestInverter
-      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, NULL, fCalculatorType, fTestStatType, testSize);
+      // configure HypoTestInverter
+      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, NULL, fCalculatorType, testSize);
+      hti->SetTestStatistic(*buildTestStatistic(fTestStatType, *models.first, *models.second));
       hti->SetFixedScan(10, 2, 8);
-      
+ 
+      //TODO: check how to eliminate this code, calculator should autoconfigure itself     
       if(fCalculatorType == HypoTestInverter::kHybrid) {
          // force prior nuisance pdf
          HybridCalculator *hc = (HybridCalculator *)hti->GetHypoTestCalculator();
@@ -976,21 +995,22 @@ public:
          hc->ForcePriorNuisanceAlt(*w->pdf("priorbkg"));
       }
 
+      //TODO: check how this code can be eliminated, maybe 0 should be default print level for AsymptoticCalculator
       if(fCalculatorType == HypoTestInverter::kAsymptotic && _verb == 0) {
          AsymptoticCalculator::SetPrintLevel(0); // print only minimal output
       }
 
-      // needed because we have no extended pdf and the ToyMC Sampler evaluation returns an errori
+      // needed because we have no extended pdf and the ToyMC Sampler evaluation returns an error
       ToyMCSampler *tmcs = (ToyMCSampler *)hti->GetHypoTestCalculator()->GetTestStatSampler();
       tmcs->SetMaxToys(100);
       tmcs->SetNEventsPerToy(1);
       HypoTestInverterResult *interval = hti->GetInterval();
       regValue(interval->LowerLimit(), TString::Format("hti1_lower_limit_sig1_calc_%s_%s", 
-                                                       HypoTestInverter::kECalculatorTypeString[fCalculatorType],
-                                                       HypoTestInverter::kETestStatTypeString[fTestStatType] ));
+                                                       kECalculatorTypeString[fCalculatorType],
+                                                       kETestStatTypeString[fTestStatType] ));
       regValue(interval->UpperLimit(), TString::Format("hti1_upper_limit_sig1_calc_%s_%s",
-                                                       HypoTestInverter::kECalculatorTypeString[fCalculatorType],
-                                                       HypoTestInverter::kETestStatTypeString[fTestStatType] ));
+                                                       kECalculatorTypeString[fCalculatorType],
+                                                       kETestStatTypeString[fTestStatType] ));
 
       if(_verb >= 1) {
          cout << "[" << interval->LowerLimit() << "," << interval->UpperLimit() << "]" << endl;
@@ -999,8 +1019,8 @@ public:
          c1->SetLogy(false);
          plot->Draw("OBS");
          c1->SaveAs(TString::Format("hti1 Scan - %s %s.pdf",
-                                    HypoTestInverter::kECalculatorTypeString[fCalculatorType],
-                                    HypoTestInverter::kETestStatTypeString[fTestStatType] ));
+                                    kECalculatorTypeString[fCalculatorType],
+                                    kETestStatTypeString[fTestStatType] ));
 
          if(_verb == 2) {
             const int n = interval->ArraySize();
@@ -1019,8 +1039,8 @@ public:
                   pl->Draw();
                }
                c2->SaveAs(TString::Format("hti1 TestStatDistributions - %s %s.pdf",
-                                          HypoTestInverter::kECalculatorTypeString[fCalculatorType],
-                                          HypoTestInverter::kETestStatTypeString[fTestStatType] ));
+                                          kECalculatorTypeString[fCalculatorType],
+                                          kETestStatTypeString[fTestStatType] ));
             }
          }
       }
@@ -1089,7 +1109,7 @@ private:
    HypoTestInverter::ECalculatorType fCalculatorType;
 
 public:
-   TestHypoTestInverter2(TFile* refFile, Bool_t writeRef, Int_t verbose, HypoTestInverter::ECalculatorType calculatorType) : RooUnitTest(TString::Format("HypoTestInverter Upper Limit - Poisson Model with Signal, Background and Efficiency - Calculator Type %d", calculatorType), refFile, writeRef, verbose) {
+   TestHypoTestInverter2(TFile* refFile, Bool_t writeRef, Int_t verbose, HypoTestInverter::ECalculatorType calculatorType, ETestStatType testStatType) : RooUnitTest(TString::Format("HypoTestInverter Upper Limit - Poisson Model with Signal, Background and Efficiency - Calculator Type %d", calculatorType), refFile, writeRef, verbose) {
       fCalculatorType = calculatorType;  
    };
 
@@ -1103,7 +1123,7 @@ public:
 
 
       // calculate upper limit with HypoTestInverter
-      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, (RooRealVar *)models.first->GetParametersOfInterest()->first(), fCalculatorType, HypoTestInverter::kSimpleLR, testSize);
+      HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, (RooRealVar *)models.first->GetParametersOfInterest()->first(), fCalculatorType, testSize);
       hti->SetFixedScan(10, 0, 20);
       hti->UseCLs(kTRUE);
       
@@ -1177,7 +1197,11 @@ public:
    }
 };
 
-static buildTestStatSampler(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel) const {
+#include "RooStats/RatioOfProfiledLikelihoodsTestStat.h"
+#include "RooStats/MaxLikelihoodEstimateTestStat.h"
+#include "RooStats/NumEventsTestStat.h"
+
+static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel) {
 
    TestStatistic *testStat = NULL;
  
@@ -1209,23 +1233,9 @@ static buildTestStatSampler(const ETestStatType testStatType, const ModelConfig 
 
    assert(testStat != NULL); // sanity check - should never happen
 
-   return new ToyMCSampler(*testStat, 1000); // fgNToys seems like a good choice for now
+   return testStat; // fgNToys seems like a good choice for now
 }
 
-// static variable definitions
 
-const char *HypoTestInverter::kECalculatorTypeString[] = { "Frequentist", "Hybrid", "Asymptotic" };
-const char *HypoTestInverter::kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
 
-   enum ECalculatorType { kFrequentist = 0, kHybrid = 1, kAsymptotic = 2};
-   const static char *kECalculatorTypeString[]; // strings associated with the ECalculatorType enum constatns
 
-   // testStatType = 0 Simple Likelihood Ratio (the LEP TestStat)
-   //    //              = 1 Ratio of Profiled Likelihood Ratios (the Tevatron TestStat)
-   //       //              = 2 Profile Likelihood Ratio (the LHC TestStat)
-   //          //              = 3 Profile Likelihood One Sided (pll = 0 if mu < mu_hat)
-   //             //              = 4 Profile Likelihood Signed (pll = -pll if mu < mu_hat)
-   //                //              = 5 Max Likelihood Estimate as test statistic
-   //                   //              = 6 Number of Observed Events as test statistic
-   //                      enum ETestStatType { kSimpleLR = 0, kRatioLR = 1, kProfileLR= 2, kProfileLROneSided = 3, kProfileLRSigned = 4, kMLE = 5, kNObs = 6 };
-   //                         const static char *kETestStatTypeString[]; // strings associated with the ETestStatType enum constants
