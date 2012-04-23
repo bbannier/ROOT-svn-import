@@ -18,8 +18,6 @@
 14. HypoTestInverter -> SetFixedScan breaks the HypoTestInverter for certain value (we get wrong interval limits); this is currently caught by TestHypoTestInverter
 15. HypoTestInverter AsymptoticCalculator - the MIGRAD minimization messages cannot be hidden
 16. HypoTestInverter AsymptoticCalculator gives different results compared to the other two calculators
-17. HypoTestInverter - I passed the SBModel argument for the BModel parameter and viceversa and it worked - Why?
-18. HypoTestCalculator -> ProfileLikelihoodTestStat and RatioOfProfiledLikelihoodTestStat not working
-19. FrequentistCalculator -> changing value of signal in sig->setVal(value) for the snapshot modifies Hypothesis test result; this should not happen
+17. FrequentistCalculator -> changing value of signal in sig->setVal(value) for the snapshot modifies Hypothesis test result; this should not happen
 
 
