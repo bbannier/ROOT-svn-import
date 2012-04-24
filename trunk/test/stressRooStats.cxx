@@ -106,8 +106,9 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
 
    list<RooUnitTest*> testList ;
 //   testList.push_back(new TestBasic101(fref, writeRef, verbose));
-//   testList.push_back(new TestHypoTestCalculator(fref, writeRef, verbose));
+   testList.push_back(new TestHypoTestCalculator(fref, writeRef, verbose));
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
+   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 //   testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose));
 //   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 0));
 //   testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 1));
