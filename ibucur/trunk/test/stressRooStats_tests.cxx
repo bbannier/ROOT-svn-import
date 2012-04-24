@@ -204,7 +204,6 @@ public:
          ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*bModel->GetPdf());
          pllts->SetAlwaysReuseNLL(kTRUE);
          pllts->SetOneSidedDiscovery(kTRUE);
-         pllts->SetOneSided(kTRUE);
 
          MaxLikelihoodEstimateTestStat *mlets = 
             new MaxLikelihoodEstimateTestStat(*sbModel->GetPdf(), *((RooRealVar *)sbModel->GetParametersOfInterest()->first()));
@@ -228,7 +227,7 @@ public:
          tmcs->SetTestStatistic(pllts);
          HypoTestResult *htr = htc->GetHypoTest();
          cout << "PLLTS " << htr->Significance() << endl;
-         /*tmcs->SetTestStatistic(mlets);
+         tmcs->SetTestStatistic(mlets);
          htr = htc->GetHypoTest();
          cout << "MLETS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(nevts);
@@ -239,7 +238,7 @@ public:
          cout << "SLRTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(roplts);
          htr = htc->GetHypoTest();
-         cout << "ROPLTS " << htr->Significance() << endl;*/
+         cout << "ROPLTS " << htr->Significance() << endl;
  
 
          regValue(htr->Significance(), "thtc_significance_hybrid");
@@ -348,7 +347,7 @@ public:
 */
 
          FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sbModel, *bModel);
-         ftc->SetToys(5000, 1000);
+         ftc->SetToys(4000, 1000);
          ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1); // because the model is in number counting form     
          tmcs->SetUseMultiGen(kTRUE);
@@ -356,6 +355,7 @@ public:
          
          tmcs->SetTestStatistic(pllts);
          HypoTestResult *htr = ftc->GetHypoTest();
+         htr->Print();
          cout << "PLLTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(mlets);
          htr = ftc->GetHypoTest();
@@ -369,11 +369,96 @@ public:
          tmcs->SetTestStatistic(roplts);
          htr = ftc->GetHypoTest();
          cout << "ROPLTS " << htr->Significance() << endl;
- 
 
          regValue(htr->Significance(), "thtc_significance_frequentist");
 
          delete ftc;
+         delete htr;
+         delete w; // interesting why it doesn't work
+         delete data;
+      }
+      return kTRUE ;
+   }
+} ;
+
+
+class TestHypoTestCalculator3 : public RooUnitTest {
+public:
+   TestHypoTestCalculator3(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("HypoTestCalculator Asymptotic - On / Off Problem", refFile, writeRef, verbose) {};
+
+   Double_t vtol() { return 0.2; } // tolerance may be too big
+
+   Bool_t testCode() {
+
+      const Int_t xValue = 24;
+      const Int_t yValue = 12;
+      const Double_t tauValue = 0.5;
+      
+      if(_write == kTRUE) {
+
+         // register analytical Z_Bi value
+         Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(xValue, yValue, tauValue);
+         regValue(Z_Bi, "thtc_significance_asymptotic");
+
+      } else {
+      
+         // Make model for prototype on/off problem
+         // Pois(x | s+b) * Pois(y | tau b )
+         RooWorkspace* w = new RooWorkspace("w", kTRUE);
+         w->factory("Poisson::on_pdf(x[150,0,500],sum::splusb(sig[0,0,100],bkg[100,0,300]))");
+         w->factory("Poisson::off_pdf(y[100,0,500],prod::taub(tau[1],bkg))");
+         w->factory("PROD::prod_pdf(on_pdf, off_pdf)");
+        
+         w->var("x")->setVal(xValue);
+         w->var("y")->setVal(yValue);
+         w->var("y")->setConstant();
+         w->var("tau")->setVal(tauValue);
+         w->var("tau")->setConstant();
+         // construct the Bayesian-averaged model (eg. a projection pdf)
+         // p'(x|s) = \int db p(x|s+b) * [ p(y|b) * prior(b) ]
+         //w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
+
+         // define sets of variables obs={x} and poi={sig}
+         // x is the only observable in the main measurement and y is treated as a separate measurement,
+         // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
+         w->defineSet("obs", "x");
+         w->defineSet("poi", "sig");
+         w->defineSet("globObs", "y");
+
+         // Add observable value to a data set
+         RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
+         data->add(*w->set("obs"));
+
+         // Build S+B and B models
+         ModelConfig *sbModel = new ModelConfig("SB_ModelConfig", w);
+         sbModel->SetPdf(*w->pdf("prod_pdf"));
+         sbModel->SetObservables(*w->set("obs"));
+       //  sbModel->SetGlobalObservables(*w->set("globObs"));      
+         sbModel->SetParametersOfInterest(*w->set("poi"));
+         w->var("sig")->setVal(xValue - yValue / tauValue); // important !
+         sbModel->SetSnapshot(*w->set("poi"));
+
+         ModelConfig *bModel = new ModelConfig("B_ModelConfig", w);
+         bModel->SetPdf(*w->pdf("prod_pdf"));
+         bModel->SetObservables(*w->set("obs"));
+       //  bModel->SetGlobalObservables(*w->set("globObs"));
+         bModel->SetParametersOfInterest(*w->set("poi"));
+         w->var("sig")->setVal(0.0); // important !
+         bModel->SetSnapshot(*w->set("poi"));
+
+
+         // alternate priors
+         w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
+         w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
+
+         AsymptoticCalculator *atc = new AsymptoticCalculator(*data, *sbModel, *bModel, kTRUE);
+         
+         HypoTestResult *htr = atc->GetHypoTest();
+         htr->Print();
+        
+         regValue(htr->Significance(), "thtc_significance_asymptotic");
+
+         delete atc;
          delete htr;
          delete w; // interesting why it doesn't work
          delete data;
