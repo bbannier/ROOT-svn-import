@@ -386,13 +386,13 @@ class TestHypoTestCalculator3 : public RooUnitTest {
 public:
    TestHypoTestCalculator3(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("HypoTestCalculator Asymptotic - On / Off Problem", refFile, writeRef, verbose) {};
 
-   Double_t vtol() { return 0.2; } // tolerance may be too big
+//   Double_t vtol() { return 0.2; } // tolerance may be too big
 
    Bool_t testCode() {
 
-      const Int_t xValue = 24;
-      const Int_t yValue = 12;
-      const Double_t tauValue = 0.5;
+      const Int_t xValue = 150;
+      const Int_t yValue = 100;
+      const Double_t tauValue = 1;
       
       if(_write == kTRUE) {
 
@@ -451,7 +451,7 @@ public:
          w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
          w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
 
-         AsymptoticCalculator *atc = new AsymptoticCalculator(*data, *sbModel, *bModel, kTRUE);
+         AsymptoticCalculator *atc = new AsymptoticCalculator(*data, *sbModel, *bModel);
          
          HypoTestResult *htr = atc->GetHypoTest();
          htr->Print();
