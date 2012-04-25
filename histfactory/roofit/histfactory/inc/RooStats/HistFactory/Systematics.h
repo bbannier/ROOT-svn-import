@@ -310,7 +310,7 @@ namespace HistFactory {
     //friend class Channel;
 
 
-    StatErrorConfig() : fRelErrorThreshold( .05 ) {;}
+    StatErrorConfig() : fRelErrorThreshold( .05 ), fConstraintType( Constraint::Gaussian ) {;}
     void Print(std::ostream& = std::cout);  
 
     void SetRelErrorThreshold( double Threshold ) { fRelErrorThreshold = Threshold; }

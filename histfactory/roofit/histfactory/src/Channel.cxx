@@ -99,6 +99,7 @@ void RooStats::HistFactory::Channel::PrintXML( std::string Directory, std::strin
 
   for( unsigned int i = 0; i < fSamples.size(); ++i ) {
     fSamples.at(i).PrintXML( xml );
+    xml << std::endl << std::endl;
   }
 
   xml << std::endl;
