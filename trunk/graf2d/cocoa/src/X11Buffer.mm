@@ -1,3 +1,14 @@
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov   29/02/2012
+
+/*************************************************************************
+ * Copyright (C) 1995-2012, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 //#define NDEBUG
 
 #include <stdexcept>
@@ -63,6 +74,24 @@ void DrawLine::Execute()const
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->DrawLineAux(fID, fGC, fP1.fX, fP1.fY, fP2.fX, fP2.fY);
+}
+
+//______________________________________________________________________________
+DrawSegments::DrawSegments(Drawable_t wid, const GCValues_t &gc, const Segment_t *segments, Int_t nSegments)
+                 : Command(wid, gc) 
+{
+   assert(segments != nullptr && "DrawSegments, segments parameter is null");
+   assert(nSegments > 0 && "DrawSegments, nSegments <= 0");
+   
+   fSegments.assign(segments, segments + nSegments);
+}
+
+//______________________________________________________________________________
+void DrawSegments::Execute()const
+{
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->DrawSegmentsAux(fID, fGC, &fSegments[0], (Int_t)fSegments.size());
 }
 
 //______________________________________________________________________________
@@ -132,6 +161,24 @@ void FillRectangle::Execute()const
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->FillRectangleAux(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
+}
+
+//______________________________________________________________________________
+FillPolygon::FillPolygon(Drawable_t wid, const GCValues_t &gc, const Point_t *points, Int_t nPoints)
+                : Command(wid, gc)
+{
+   assert(points != nullptr && "FillPolygon, points parameter is null");
+   assert(nPoints > 0 && "FillPolygon, nPoints <= 0");
+   
+   fPolygon.assign(points, points + nPoints);
+}
+
+//______________________________________________________________________________   
+void FillPolygon::Execute()const
+{
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   vx->FillPolygonAux(fID, fGC, &fPolygon[0], (Int_t)fPolygon.size());
 }
 
 //______________________________________________________________________________
@@ -209,6 +256,21 @@ void CommandBuffer::AddDrawLine(Drawable_t wid, const GCValues_t &gc, Int_t x1, 
       p2.fY = y2;
       std::auto_ptr<DrawLine> cmd(new DrawLine(wid, gc, p1, p2));//if this throws, I do not care.
       fCommands.push_back(cmd.get());//this can throw.
+      cmd.release();
+   } catch (const std::exception &) {
+      throw;
+   }
+}
+
+//______________________________________________________________________________
+void CommandBuffer::AddDrawSegments(Drawable_t wid, const GCValues_t &gc, const Segment_t *segments, Int_t nSegments)
+{
+   assert(segments != nullptr && "AddDrawSegments, segments parameter is null");
+   assert(nSegments > 0 && "AddDrawSegments, nSegments <= 0");
+
+   try {
+      std::auto_ptr<DrawSegments> cmd(new DrawSegments(wid, gc, segments, nSegments));
+      fCommands.push_back(cmd.get());
       cmd.release();
    } catch (const std::exception &) {
       throw;
@@ -306,6 +368,21 @@ void CommandBuffer::AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t
 }
 
 //______________________________________________________________________________
+void CommandBuffer::AddFillPolygon(Drawable_t wid, const GCValues_t &gc, const Point_t *polygon, Int_t nPoints)
+{
+   assert(polygon != nullptr && "AddFillPolygon, polygon parameter is null");
+   assert(nPoints > 0 && "AddFillPolygon, nPoints <= 0");
+   
+   try {
+      std::auto_ptr<FillPolygon> cmd(new FillPolygon(wid, gc, polygon, nPoints));
+      fCommands.push_back(cmd.get());
+      cmd.release();
+   } catch (const std::exception &) {
+      throw;
+   }
+}
+
+//______________________________________________________________________________
 void CommandBuffer::AddUpdateWindow(QuartzView *view)
 {
    assert(view != nil && "AddUpdateWindow, view parameter is nil");
@@ -351,7 +428,7 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
          continue;
       }
       
-      QuartzView *view = impl->GetDrawable(cmd->fID).fContentView;
+      QuartzView *view = (QuartzView *)impl->GetWindow(cmd->fID).fContentView;
       if ([view lockFocusIfCanDraw]) {
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
          assert(nsContext != nil && "Flush, currentContext is nil");

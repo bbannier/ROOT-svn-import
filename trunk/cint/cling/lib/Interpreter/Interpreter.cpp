@@ -27,6 +27,7 @@
 #include "clang/Parse/Parser.h"
 #undef private
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -126,6 +127,19 @@ namespace cling {
     }
   }
 
+  // This function isn't referenced outside its translation unit, but it
+  // can't use the "static" keyword because its address is used for
+  // GetMainExecutable (since some platforms don't support taking the
+  // address of main, and some platforms can't implement GetMainExecutable
+  // without being given the address of a function in the main executable).
+  llvm::sys::Path GetExecutablePath(const char *Argv0) {
+    // This just needs to be some symbol in the binary; C++ doesn't
+    // allow taking the address of ::main however.
+    void *MainAddr = (void*) (intptr_t) GetExecutablePath;
+    return llvm::sys::Path::GetMainExecutable(Argv0, MainAddr);
+  }
+
+
   Interpreter::NamedDeclResult::NamedDeclResult(llvm::StringRef Decl, 
                                                 Interpreter* interp, 
                                                 const DeclContext* Within)
@@ -196,14 +210,30 @@ namespace cling {
 
     m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
-    // Allow the interpreter to find itself.
-    // OBJ first: if it exists it should be more up to date
+    // Add path to interpreter's include files
+    // Try to find the headers in the src folder first
 #ifdef CLING_SRCDIR_INCL
-    AddIncludePath(CLING_SRCDIR_INCL);
+    llvm::sys::Path SrcP(CLING_SRCDIR_INCL);
+    if (SrcP.canRead())
+      AddIncludePath(SrcP.str());
 #endif
+
+    llvm::sys::Path P = GetExecutablePath(argv[0]);
+    if (!P.isEmpty()) {
+      P.eraseComponent();  // Remove /cling from foo/bin/clang
+      P.eraseComponent();  // Remove /bin   from foo/bin
+      // Get foo/include
+      P.appendComponent("include");
+      if (P.canRead())
+        AddIncludePath(P.str());
+      else {
 #ifdef CLING_INSTDIR_INCL
-    AddIncludePath(CLING_INSTDIR_INCL);
+        llvm::sys::Path InstP(CLING_INSTDIR_INCL);
+        if (InstP.canRead())
+          AddIncludePath(InstP.str());
 #endif
+      }
+    }
 
     // Warm them up
     m_IncrParser->Initialize();
@@ -252,7 +282,7 @@ namespace cling {
     }
   }
    
-  void Interpreter::AddIncludePath(const char *incpath)
+  void Interpreter::AddIncludePath(llvm::StringRef incpath)
   {
     // Add the given path to the list of directories in which the interpreter
     // looks for include files. Only one path item can be specified at a
@@ -263,7 +293,8 @@ namespace cling {
     const bool IsUserSupplied = false;
     const bool IsFramework = false;
     const bool IsSysRootRelative = true;
-    headerOpts.AddPath (incpath, frontend::Angled, IsUserSupplied, IsFramework, IsSysRootRelative);
+    headerOpts.AddPath(incpath, frontend::Angled, IsUserSupplied, IsFramework, 
+                       IsSysRootRelative);
       
     Preprocessor& PP = CI->getPreprocessor();
     ApplyHeaderSearchOptions(PP.getHeaderSearchInfo(), headerOpts,
@@ -722,6 +753,7 @@ namespace cling {
     CompilerInstance* CI = getCI();
     Parser* P = getParser();
     Preprocessor& PP = CI->getPreprocessor();
+    ASTContext& Context = CI->getASTContext();
     //
     //  Tell the diagnostic engine to ignore all diagnostics.
     //
@@ -837,8 +869,7 @@ namespace cling {
               break;
             case clang::NestedNameSpecifier::Global: {
                 // Name was just "::" and nothing more.
-                // Note: We could return the translation unit decl here.
-                TheDecl = CI->getASTContext().getTranslationUnitDecl();
+                TheDecl = Context.getTranslationUnitDecl();
               }
               break;
           }
@@ -925,7 +956,7 @@ namespace cling {
     std::vector<QualType>& GivenArgTypes, FunctionDecl* FD,
     bool UseUsingDeclRules)
   {
-    FunctionTemplateDecl* FTD = FD->getDescribedFunctionTemplate();
+    //FunctionTemplateDecl* FTD = FD->getDescribedFunctionTemplate();
     QualType FQT = CI->getASTContext().getCanonicalType(FD->getType());
     if (llvm::isa<FunctionNoProtoType>(FQT.getTypePtr())) {
       // A K&R-style function (no prototype), is considered to match the args.
@@ -955,6 +986,27 @@ namespace cling {
     CompilerInstance* CI = getCI();
     Parser* P = getParser();
     Preprocessor& PP = CI->getPreprocessor();
+    ASTContext& Context = CI->getASTContext();
+    //
+    //  Get the DeclContext we will search for the function.
+    //
+    NestedNameSpecifier* classNNS = 0;
+    if (const NamespaceDecl* NSD = llvm::dyn_cast<NamespaceDecl>(classDecl)) {
+      classNNS = NestedNameSpecifier::Create(Context, 0,
+        const_cast<NamespaceDecl*>(NSD));
+    }
+    else if (const RecordDecl* RD = llvm::dyn_cast<RecordDecl>(classDecl)) {
+      const Type* T = Context.getRecordType(RD).getTypePtr();
+      classNNS = NestedNameSpecifier::Create(Context, 0, false, T);
+    }
+    else if (llvm::isa<TranslationUnitDecl>(classDecl)) {
+      classNNS = NestedNameSpecifier::GlobalSpecifier(Context);
+    }
+    else {
+      // Not a namespace or class, we cannot use it.
+      return 0;
+    }
+    DeclContext* foundDC = llvm::dyn_cast<DeclContext>(classDecl);
     //
     //  Tell the diagnostic engine to ignore all diagnostics.
     //
@@ -966,20 +1018,6 @@ namespace cling {
     //
     bool OldSpellChecking = PP.getLangOpts().SpellChecking;
     const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
-    //
-    //  Get the DeclContext we will search for the function.
-    //
-    DeclContext* foundDC = llvm::dyn_cast<DeclContext>(classDecl);
-    //if (foundDC->isDependentContext()) {
-    //  // error path
-    //  cleanup();
-    //  return 0;
-    //}
-    //if (CI->getSema().RequireCompleteDeclContext(SS, foundDC)) {
-    //  // error path
-    //  cleanup();
-    //  return 0;
-    //}
     //
     //  Tell the diagnostic consumer we are switching files.
     //
@@ -1014,46 +1052,28 @@ namespace cling {
     //
     std::vector<QualType> GivenArgTypes;
     std::vector<Expr*> GivenArgs;
-    {
-      PrintingPolicy Policy(CI->getASTContext().getPrintingPolicy());
-      Policy.SuppressTagKeyword = true;
-      Policy.SuppressUnwrittenScope = true;
-      Policy.SuppressInitializers = true;
-      Policy.AnonymousTagLocations = false;
-      std::string proto;
-      {
-        bool first_time = true;
-        while (P->getCurToken().isNot(tok::eof)) {
-          TypeResult Res(P->ParseTypeName());
-          if (!Res.isUsable()) {
-            // Bad parse, done.
-            goto lookupFuncProtoDone;
-          }
-          clang::QualType QT(Res.get().get());
-          GivenArgTypes.push_back(QT.getCanonicalType()); // FIXME: Just QT?
-          {
-            // FIXME: Stop leaking these!
-            Expr* val = new (CI->getSema().getASTContext()) OpaqueValueExpr(
-              SourceLocation(), QT.getCanonicalType(), // FIXME: Just QT?
-              Expr::getValueKindForType(QT));
-            GivenArgs.push_back(val);
-          }
-          if (first_time) {
-            first_time = false;
-          }
-          else {
-            proto += ',';
-          }
-          proto += QT.getCanonicalType().getAsString(Policy);
-          fprintf(stderr, "%s\n", proto.c_str());
-          // Type names should be comma separated.
-          if (!P->getCurToken().is(clang::tok::comma)) {
-            break;
-          }
-          // Eat the comma.
-          P->ConsumeToken();
-        }
+    while (P->getCurToken().isNot(tok::eof)) {
+      TypeResult Res(P->ParseTypeName());
+      if (!Res.isUsable()) {
+        // Bad parse, done.
+        goto lookupFuncProtoDone;
       }
+      clang::QualType QT(Res.get().get());
+      QT = QT.getCanonicalType();
+      GivenArgTypes.push_back(QT);
+      {
+        // FIXME: Make an attempt to release these.
+        clang::QualType NonRefQT(QT.getNonReferenceType());
+        Expr* val = new (Context) OpaqueValueExpr(SourceLocation(), NonRefQT,
+          Expr::getValueKindForType(NonRefQT));
+        GivenArgs.push_back(val);
+      }
+      // Type names should be comma separated.
+      if (!P->getCurToken().is(clang::tok::comma)) {
+        break;
+      }
+      // Eat the comma.
+      P->ConsumeToken();
     }
     if (P->getCurToken().isNot(tok::eof)) {
       // We did not consume all of the prototype, bad parse.
@@ -1083,9 +1103,25 @@ namespace cling {
       SourceLocation TemplateKWLoc;
       UnqualifiedId FuncId;
       CXXScopeSpec SS;
+      SS.MakeTrivial(Context, classNNS, SourceRange());
+      //
+      //  Make the class we are looking up the function
+      //  in the current scope to please the constructor
+      //  name lookup.  We do not need to do this otherwise,
+      //  and may be able to remove it in the future if
+      //  the way constructors are looked up changes.
+      //
+      //  Note:  We cannot use P->EnterScope(Scope::DeclScope)
+      //         and P->ExitScope() because they do things
+      //         we do not want to happen.
+      //
+      Scope* OldScope = CI->getSema().CurScope;
+      CI->getSema().CurScope = new Scope(OldScope, Scope::DeclScope,
+        PP.getDiagnostics());
+      CI->getSema().EnterDeclaratorContext(P->getCurScope(), foundDC);
       if (P->ParseUnqualifiedId(SS, /*EnteringContext*/false,
-          /*AllowDestructName*/false, // FIXME: true!
-          /*AllowConstructorName*/false, // FIXME: true!
+          /*AllowDestructorName*/true,
+          /*AllowConstructorName*/true,
           clang::ParsedType(), TemplateKWLoc, FuncId)) {
         // Bad parse.
         goto lookupFuncProtoDone;
@@ -1107,68 +1143,32 @@ namespace cling {
         Sema::LookupMemberName, Sema::ForRedeclaration);
       if (!CI->getSema().LookupQualifiedName(Result, foundDC)) {
         // Lookup failed.
+        // Destroy the scope we created first, and
+        // restore the original.
+        CI->getSema().ExitDeclaratorContext(P->getCurScope());
+        delete CI->getSema().CurScope;
+        CI->getSema().CurScope = OldScope;
+        // Then cleanup and exit.
         goto lookupFuncProtoDone;
       }
+      // Destroy the scope we created, and
+      // restore the original.
+      CI->getSema().ExitDeclaratorContext(P->getCurScope());
+      delete CI->getSema().CurScope;
+      CI->getSema().CurScope = OldScope;
       //
       //  Check for lookup failure.
       //
-      switch (Result.getResultKind()) {
-        case LookupResult::NotFound:
-          // Lookup failed.
-          goto lookupFuncProtoDone;
-          break;
-        case LookupResult::NotFoundInCurrentInstantiation:
-          // Lookup failed.
-          goto lookupFuncProtoDone;
-          break;
-        case LookupResult::Found:
-          {
-            NamedDecl* ND = Result.getFoundDecl();
-            std::string buf;
-            PrintingPolicy Policy(ND->getASTContext().getPrintingPolicy());
-            ND->getNameForDiagnostic(buf, Policy, /*Qualified*/true);
-            fprintf(stderr, "Found: %s\n", buf.c_str());
-          }
-          break;
-        case LookupResult::FoundOverloaded:
-          {
-            fprintf(stderr, "Found overload set!\n");
-            Result.print(llvm::outs());
-          }
-          break;
-        case LookupResult::FoundUnresolvedValue:
-          // Lookup failed.
-          goto lookupFuncProtoDone;
-          break;
-        case LookupResult::Ambiguous:
-          // Lookup failed.
-          goto lookupFuncProtoDone;
-          switch (Result.getAmbiguityKind()) {
-            case LookupResult::AmbiguousBaseSubobjectTypes:
-              // Lookup failed.
-              goto lookupFuncProtoDone;
-              break;
-            case LookupResult::AmbiguousBaseSubobjects:
-              // Lookup failed.
-              goto lookupFuncProtoDone;
-              break;
-            case LookupResult::AmbiguousReference:
-              // Lookup failed.
-              goto lookupFuncProtoDone;
-              break;
-            case LookupResult::AmbiguousTagHiding:
-              // Lookup failed.
-              goto lookupFuncProtoDone;
-              break;
-          }
-          break;
+      if (!(Result.getResultKind() == LookupResult::Found) &&
+          !(Result.getResultKind() == LookupResult::FoundOverloaded)) {
+        // Lookup failed.
+        goto lookupFuncProtoDone;
       }
       //
       //  Now that we have a set of matching function names
       //  in the class, we have to choose the one being asked
       //  for given the passed template args and prototype.
       //
-      NamedDecl* Match = 0;
       for (LookupResult::iterator I = Result.begin(), E = Result.end();
           I != E; ++I) {
         NamedDecl* ND = *I;
@@ -1192,39 +1192,26 @@ namespace cling {
         if (FunctionTemplateDecl* FTD =
             llvm::dyn_cast<FunctionTemplateDecl>(ND)) {
           // This decl is a function template.
-          {
-            std::string buf;
-            PrintingPolicy P(FTD->getASTContext().getPrintingPolicy());
-            FTD->getNameForDiagnostic(buf, P, true);
-            fprintf(stderr, "Considering func template: %s\n", buf.c_str());
-          }
           //
           //  Do template argument deduction and function argument matching.
           //
           FunctionDecl* Specialization;
-          sema::TemplateDeductionInfo TDI(CI->getASTContext(),
-            SourceLocation());
+          sema::TemplateDeductionInfo TDI(Context, SourceLocation());
           Sema::TemplateDeductionResult TDR =
-            CI->getSema().DeduceTemplateArguments(
-                FTD
-              , const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs)
-              , llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size())
-              , Specialization
-              , TDI
-            );
+            CI->getSema().DeduceTemplateArguments(FTD,
+              const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
+              llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
+              Specialization, TDI);
           if (TDR == Sema::TDK_Success) {
             // We have a template argument match and func arg match.
-            Match = Specialization;
+            TheDecl = Specialization;
             break;
           }
         } else if (FunctionDecl* FD = llvm::dyn_cast<FunctionDecl>(ND)) {
           // This decl is a function.
-          {
-            std::string buf;
-            PrintingPolicy P(FD->getASTContext().getPrintingPolicy());
-            FD->getNameForDiagnostic(buf, P, true);
-            fprintf(stderr, "Considering func: %s\n", buf.c_str());
-          }
+          //
+          //  Do function argument matching.
+          //
           if (!IsOverload(CI, FuncTemplateArgs, GivenArgTypes, FD,
               UseMemberUsingDeclRules)) {
             // We have a function argument match.
@@ -1233,28 +1220,10 @@ namespace cling {
               // looking up a class member func, ignore it.
               continue;
             }
-            Match = *I;
+            TheDecl = *I;
             break;
           }
         }
-      }
-      //
-      //  Handle no match found.
-      //
-      if (!Match) {
-        // No matching function found.
-        goto lookupFuncProtoDone;
-      }
-      //
-      //  Handle success.
-      //
-      TheDecl = Match;
-      {
-        std::string buf;
-        PrintingPolicy Policy(CI->getASTContext().getPrintingPolicy());
-        Match->getNameForDiagnostic(buf, Policy, true);
-        fprintf(stderr, "Match: %s\n", buf.c_str());
-        Match->dump();
       }
     }
   lookupFuncProtoDone:
@@ -1308,6 +1277,8 @@ namespace cling {
     }
     else 
       (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, &Result);
+
+    TheSema.CurContext = CurContext;
 
     return Result;
   }

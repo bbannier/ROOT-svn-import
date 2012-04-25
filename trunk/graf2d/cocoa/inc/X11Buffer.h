@@ -1,4 +1,14 @@
-//Author: Timur Pocheptsov 29/02/2012
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov   29/02/2012
+
+/*************************************************************************
+ * Copyright (C) 1995-2012, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #ifndef ROOT_X11Buffer
 #define ROOT_X11Buffer
 
@@ -60,6 +70,19 @@ private:
 
 public:
    DrawLine(Drawable_t wid, const GCValues_t &gc, const Point_t &p1, const Point_t &p2);
+   void Execute()const;
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
+};
+
+class DrawSegments : public Command {
+private:
+   std::vector<Segment_t> fSegments;
+
+public:
+   DrawSegments(Drawable_t wid, const GCValues_t &gc, const Segment_t *segments, Int_t nSegments);
    void Execute()const;
    bool IsGraphicsCommand()const
    {
@@ -130,6 +153,21 @@ public:
    void Execute()const;
 };
 
+class FillPolygon : public Command {
+private:
+   std::vector<Point_t> fPolygon;
+   
+public:
+   FillPolygon(Drawable_t wid, const GCValues_t &gc, const Point_t *points, Int_t nPoints);
+   
+   bool IsGraphicsCommand()const
+   {
+      return true;
+   }
+   
+   void Execute()const;
+};
+
 class DrawRectangle : public Command {
 private:
    Rectangle_t fRectangle;
@@ -180,10 +218,12 @@ public:
    ~CommandBuffer();
 
    void AddDrawLine(Drawable_t wid, const GCValues_t &gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
+   void AddDrawSegments(Drawable_t wid, const GCValues_t &gc, const Segment_t *segments, Int_t nSegments);
    void AddClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
    void AddCopyArea(Drawable_t src, Drawable_t dst, const GCValues_t &gc,  Int_t srcX, Int_t srcY, UInt_t width, UInt_t height, Int_t dstX, Int_t dstY);
    void AddDrawString(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *text, Int_t len);
    void AddFillRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+   void AddFillPolygon(Drawable_t wid, const GCValues_t &gc, const Point_t *polygon, Int_t nPoints);
    void AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
    void AddUpdateWindow(QuartzView *view);
    void AddDeletePixmap(Pixmap_t pixmap);
