@@ -14,7 +14,8 @@ namespace RooStats{
     // void ConfigureWorkspaceForMeasurement( const std::string&, RooWorkspace*, RooStats::HistFactory::Measurement&);
 
     void FormatFrameForLikelihood(RooPlot* frame, string XTitle=string("#sigma / #sigma_{SM}"), string YTitle=string("-log likelihood"));
-    void FitModel(const std::string& MeasurementName, const std::string& FileNamePrefix, RooWorkspace *, string, string, TFile*, FILE*);
+    void FitModel(RooWorkspace *, string data_name="obsData");
+    void FitModelAndPlot(const std::string& MeasurementName, const std::string& FileNamePrefix, RooWorkspace *, string, string, TFile*, FILE*);
   }
 }
 
