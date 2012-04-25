@@ -13,6 +13,8 @@ namespace RooStats{
     std::vector<EstimateSummary> GetChannelEstimateSummaries(RooStats::HistFactory::Measurement& measurement, RooStats::HistFactory::Channel& channel);
     // void ConfigureWorkspaceForMeasurement( const std::string&, RooWorkspace*, RooStats::HistFactory::Measurement&);
 
+    void FormatFrameForLikelihood(RooPlot* frame, string XTitle=string("#sigma / #sigma_{SM}"), string YTitle=string("-log likelihood"));
+    void FitModel(const std::string& MeasurementName, const std::string& FileNamePrefix, RooWorkspace *, string, string, TFile*, FILE*);
   }
 }
 
