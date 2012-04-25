@@ -1,4 +1,14 @@
-//Author: Timur Pocheptsov 16/02/2012
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov   16/02/2012
+
+/*************************************************************************
+ * Copyright (C) 1995-2012, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 //#define DEBUG_ROOT_COCOA
 
 //#define NDEBUG
@@ -126,7 +136,7 @@ int GlobalYROOTToCocoa(CGFloat yROOT)
 }
 
 //______________________________________________________________________________
-int LocalYCocoaToROOT(QuartzView *parentView, CGFloat yCocoa)
+int LocalYCocoaToROOT(NSView<X11Window> *parentView, CGFloat yCocoa)
 {
    assert(parentView != nil && "LocalYCocoaToROOT, parent view is nil");
    
@@ -134,7 +144,7 @@ int LocalYCocoaToROOT(QuartzView *parentView, CGFloat yCocoa)
 }
 
 //______________________________________________________________________________
-int LocalYROOTToCocoa(QuartzView *parentView, CGFloat yROOT)
+int LocalYROOTToCocoa(NSView<X11Window> *parentView, CGFloat yROOT)
 {
    //:)
    assert(parentView != nil && "LocalYROOTToCocoa, parent view is nil");
@@ -153,7 +163,7 @@ int LocalYROOTToCocoa(NSObject<X11Drawable> *drawable, CGFloat yROOT)
 }
 
 //______________________________________________________________________________
-NSPoint TranslateToScreen(QuartzView *from, NSPoint point)
+NSPoint TranslateToScreen(NSView<X11Window> *from, NSPoint point)
 {
    assert(from != nil && "TranslateToScreen, 'from' parameter is nil");
    
@@ -167,7 +177,7 @@ NSPoint TranslateToScreen(QuartzView *from, NSPoint point)
 }
 
 //______________________________________________________________________________
-NSPoint TranslateFromScreen(NSPoint point, QuartzView *to)
+NSPoint TranslateFromScreen(NSPoint point, NSView<X11Window> *to)
 {
    assert(to != nil && "TranslateFromScreen, 'to' parameter is nil");
    
@@ -179,7 +189,7 @@ NSPoint TranslateFromScreen(NSPoint point, QuartzView *to)
 }
 
 //______________________________________________________________________________
-NSPoint TranslateCoordinates(QuartzView *from, QuartzView *to, NSPoint sourcePoint)
+NSPoint TranslateCoordinates(NSView<X11Window> *from, NSView<X11Window> *to, NSPoint sourcePoint)
 {
    //Both views are valid.
    assert(from != nil && "TranslateCoordinates, 'from' parameter is nil");
@@ -202,8 +212,11 @@ NSPoint TranslateCoordinates(QuartzView *from, QuartzView *to, NSPoint sourcePoi
 }
 
 //______________________________________________________________________________
-void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> window)
+void SetWindowAttributes(const SetWindowAttributes_t *attr, NSObject<X11Window> *window)
 {
+   assert(attr != nullptr && "SetWindowAttributes, attr parameter is null");
+   assert(window != nil && "SetWindowAttributes, window parameter is nil");
+
    const Mask_t mask = attr->fMask;
 
    if (mask & kWABackPixel)
@@ -231,7 +244,7 @@ void SetWindowAttributes(const SetWindowAttributes_t *attr, id<X11Drawable> wind
 }
 
 //______________________________________________________________________________
-void GetWindowGeometry(id<X11Drawable> win, WindowAttributes_t *dst)
+void GetWindowGeometry(NSObject<X11Window> *win, WindowAttributes_t *dst)
 {
    assert(win != nil && "GetWindowGeometry, win parameter is nil");
    assert(dst != nullptr && "GetWindowGeometry, dst paremeter is null");
@@ -244,7 +257,7 @@ void GetWindowGeometry(id<X11Drawable> win, WindowAttributes_t *dst)
 }
 
 //______________________________________________________________________________
-void GetWindowAttributes(id<X11Drawable> window, WindowAttributes_t *dst)
+void GetWindowAttributes(NSObject<X11Window> *window, WindowAttributes_t *dst)
 {
    assert(window != nil && "GetWindowAttributes, window parameter is nil");
    assert(dst != nullptr && "GetWindowAttributes, attr parameter is null");
@@ -397,11 +410,12 @@ void print_mask_info(ULong_t mask)
    QuartzView *fContentView;
 }
 
+
+@synthesize fMainWindow;
 @synthesize fBackBuffer;
 
 
-//RootQuartzWindow's life cycle.
-
+//QuartzWindow's life cycle.
 //______________________________________________________________________________
 - (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle backing : (NSBackingStoreType) bufferingType 
        defer : (BOOL) deferCreation  windowAttributes : (const SetWindowAttributes_t *)attr
@@ -412,11 +426,14 @@ void print_mask_info(ULong_t mask)
       //ROOT's not able to draw GUI concurrently, thanks to global variables and gVirtualX itself.
       [self setAllowsConcurrentViewDrawing : NO];
 
-      //self.delegate = ...
+      self.delegate = self;
       //create content view here.
       NSRect contentViewRect = contentRect;
       contentViewRect.origin.x = 0.f;
       contentViewRect.origin.y = 0.f;
+
+      //TODO: OpenGL view can not be content of our QuartzWindow, check if
+      //this is a problem for ROOT.
       fContentView = [[QuartzView alloc] initWithFrame : contentViewRect windowAttributes : 0];
       
       [self setContentView : fContentView];
@@ -431,6 +448,15 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
+- (void) addTransientWindow : (QuartzWindow *)window
+{
+   assert(window != nil && "addTransientWindow, window parameter is nil");
+
+   window.fMainWindow = self;   
+   [self addChildWindow : window ordered : NSWindowAbove];
+}
+
+//______________________________________________________________________________
 - (void) dealloc
 {
    [super dealloc];
@@ -438,37 +464,6 @@ void print_mask_info(ULong_t mask)
 
 ///////////////////////////////////////////////////////////
 //X11Drawable's protocol.
-//______________________________________________________________________________
-- (CGContextRef) fContext 
-{
-   assert(fContentView != nil && "fContext, fContentView is nil");
-   return fContentView.fContext;
-}
-
-//______________________________________________________________________________
-- (void) setFContext : (CGContextRef) ctx
-{
-   assert(fContentView != nil && "setFContext, fContentView is nil");
-   fContentView.fContext = ctx;
-}
-
-//______________________________________________________________________________
-- (QuartzWindow *) fQuartzWindow
-{
-   return self;
-}
-
-//______________________________________________________________________________
-- (QuartzView *) fParentView
-{
-   return nil;
-}
-
-//______________________________________________________________________________
-- (void) setFParentView : (QuartzView *)parent
-{
-   (void)parent;
-}
 
 //______________________________________________________________________________
 - (unsigned) fID 
@@ -478,8 +473,231 @@ void print_mask_info(ULong_t mask)
    return fContentView.fID;
 }
 
+//______________________________________________________________________________
+- (void) setFID : (unsigned) winID
+{
+   assert(fContentView != nil && "setFID, content view is nil");
+   
+   fContentView.fID = winID;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsPixmap
+{
+   return NO;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsOpenGLWidget
+{
+   return NO;
+}
+
+//______________________________________________________________________________
+- (CGContextRef) fContext 
+{
+   assert(fContentView != nil && "fContext, fContentView is nil");
+
+   return fContentView.fContext;
+}
+
+//______________________________________________________________________________
+- (void) setFContext : (CGContextRef) ctx
+{
+   assert(fContentView != nil && "setFContext, fContentView is nil");
+
+   fContentView.fContext = ctx;
+}
+
+//______________________________________________________________________________
+- (int) fX
+{
+   return self.frame.origin.x;
+}
+
+//______________________________________________________________________________
+- (int) fY
+{
+   return ROOT::MacOSX::X11::GlobalYCocoaToROOT(self.frame.origin.y + self.frame.size.height);
+}
+
+//______________________________________________________________________________
+- (unsigned) fWidth
+{
+   return self.frame.size.width;
+}
+
+//______________________________________________________________________________
+- (unsigned) fHeight
+{
+   //NSWindow's frame (height component) also includes title-bar.
+   //So I have to use content view's height.
+   //Obviously, there is a "hole" == 22 pixels.
+   assert(fContentView != nil && "fHeight, content view is nil");
+   
+   return fContentView.frame.size.height;
+}
+
+//______________________________________________________________________________
+- (void) setDrawableSize : (NSSize) newSize
+{
+   //Can not simply do self.frame.size = newSize.
+   assert(!(newSize.width < 0) && "setDrawableSize, width is negative");
+   assert(!(newSize.height < 0) && "setDrawableSize, height is negative");
+   
+   [self setContentSize : newSize];
+}
+
+//______________________________________________________________________________
+- (void) setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h
+{
+   NSSize newSize = {};
+   newSize.width = w;
+   newSize.height = h;
+   [self setContentSize : newSize];
+   
+   //Check how this is affected by title bar's height.
+   NSPoint topLeft = {};
+   topLeft.x = x;
+   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
+
+   [self setFrameTopLeftPoint : topLeft];
+}
+
+//______________________________________________________________________________
+- (void) setX : (int) x Y : (int) y
+{
+   NSPoint topLeft = {};
+   topLeft.x = x;
+   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
+
+   [self setFrameTopLeftPoint : topLeft];
+}
+
+//______________________________________________________________________________
+- (void) copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+{
+   assert(fContentView != nil && "copy:area:toPoint:, fContentView is nil");
+
+   [fContentView copy : src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
+}
+
+//______________________________________________________________________________
+- (unsigned char *) readColorBits : (Rectangle_t) area
+{
+   assert(fContentView != nil && "readColorBits:, fContentView is nil");
+   
+   return [fContentView readColorBits : area];
+}
+
+//X11Window protocol's implementation.
+
+//______________________________________________________________________________
+- (QuartzView *) fParentView
+{
+   return nil;
+}
+
+//______________________________________________________________________________
+- (void) setFParentView : (QuartzView *) parent
+{
+   (void)parent;
+}
+
+//______________________________________________________________________________
+- (NSView<X11Window> *) fContentView
+{
+   return fContentView;
+}
+
+//______________________________________________________________________________
+- (QuartzWindow *) fQuartzWindow
+{
+   return self;
+}
+
 /////////////////////////////////////////////////////////////
 //SetWindowAttributes_t/WindowAttributes_t.
+
+//______________________________________________________________________________
+- (long) fEventMask
+{
+   assert(fContentView != nil && "fEventMask, content view is nil");
+   
+   return fContentView.fEventMask;
+}
+
+//______________________________________________________________________________
+- (void) setFEventMask : (long)mask 
+{
+   assert(fContentView != nil && "setFEventMask, content view is nil");
+   
+   fContentView.fEventMask = mask;
+}
+
+//______________________________________________________________________________
+- (int) fClass
+{
+   assert(fContentView != nil && "fClass, content view is nil");
+   
+   return fContentView.fClass;
+}
+
+//______________________________________________________________________________
+- (void) setFClass : (int) windowClass
+{
+   assert(fContentView != nil && "setFClass, content view is nil");
+   
+   fContentView.fClass = windowClass;
+}
+
+//______________________________________________________________________________
+- (int) fDepth
+{
+   assert(fContentView != nil && "fDepth, content view is nil");
+   
+   return fContentView.fDepth;
+}
+
+//______________________________________________________________________________
+- (void) setFDepth : (int) depth
+{
+   assert(fContentView != nil && "setFDepth, content view is nil");
+   
+   fContentView.fDepth = depth;
+}
+
+//______________________________________________________________________________
+- (int) fBitGravity
+{
+   assert(fContentView != nil && "fBitGravity, content view is nil");
+   
+   return fContentView.fBitGravity;
+}
+
+//______________________________________________________________________________
+- (void) setFBitGravity : (int) bit
+{
+   assert(fContentView != nil && "setFBitGravity, content view is nil");
+
+   fContentView.fBitGravity = bit;
+}
+
+//______________________________________________________________________________
+- (int) fWinGravity
+{
+   assert(fContentView != nil && "fWinGravity, content view is nil");
+   
+   return fContentView.fWinGravity;
+}
+
+//______________________________________________________________________________
+- (void) setFWinGravity : (int) bit
+{
+   assert(fContentView != nil && "setFWinGravity, content view is nil");
+   
+   fContentView.fWinGravity = bit;
+}
 
 //______________________________________________________________________________
 - (unsigned long) fBackgroundPixel
@@ -498,19 +716,15 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (long) fEventMask
+- (int) fMapState
 {
-   assert(fContentView != nil && "fEventMask, content view is nil");
+   //Top-level window can be only kIsViewable or kIsUnmapped (not unviewable).
+   assert(fContentView != nil && "fMapState, content view is nil");
    
-   return fContentView.fEventMask;
-}
-
-//______________________________________________________________________________
-- (void) setFEventMask : (long)mask 
-{
-   assert(fContentView != nil && "setFEventMask, content view is nil");
-   
-   fContentView.fEventMask = mask;
+   if ([fContentView isHidden])
+      return kIsUnmapped;
+      
+   return kIsViewable;
 }
 
 //______________________________________________________________________________
@@ -577,199 +791,9 @@ void print_mask_info(ULong_t mask)
    fContentView.fOwnerEvents = owner;
 }
 
-//______________________________________________________________________________
-- (int) fClass
-{
-   assert(fContentView != nil && "fClass, content view is nil");
-   
-   return fContentView.fClass;
-}
 
 //______________________________________________________________________________
-- (void) setFClass : (int) windowClass
-{
-   assert(fContentView != nil && "setFClass, content view is nil");
-   
-   fContentView.fClass = windowClass;
-}
-
-//______________________________________________________________________________
-- (void) setFID : (unsigned) winID
-{
-   assert(fContentView != nil && "setFID, content view is nil");
-   
-   fContentView.fID = winID;
-}
-
-//______________________________________________________________________________
-- (int) fDepth
-{
-   assert(fContentView != nil && "fDepth, content view is nil");
-   
-   return fContentView.fDepth;
-}
-
-//______________________________________________________________________________
-- (void) setFDepth : (int) depth
-{
-   assert(fContentView != nil && "setFDepth, content view is nil");
-   
-   fContentView.fDepth = depth;
-}
-
-//______________________________________________________________________________
-- (int) fBitGravity
-{
-   assert(fContentView != nil && "fBitGravity, content view is nil");
-   
-   return fContentView.fBitGravity;
-}
-
-//______________________________________________________________________________
-- (void) setFBitGravity : (int) bit
-{
-   assert(fContentView != nil && "setFBitGravity, content view is nil");
-
-   fContentView.fBitGravity = bit;
-}
-
-//______________________________________________________________________________
-- (int) fWinGravity
-{
-   assert(fContentView != nil && "fWinGravity, content view is nil");
-   
-   return fContentView.fWinGravity;
-}
-
-//______________________________________________________________________________
-- (void) setFWinGravity : (int) bit
-{
-   assert(fContentView != nil && "setFWinGravity, content view is nil");
-   
-   fContentView.fWinGravity = bit;
-}
-
-//______________________________________________________________________________
-- (int) fMapState
-{
-   //Top-level window can be only kIsViewable or kIsUnmapped (not unviewable).
-   assert(fContentView != nil && "fMapState, content view is nil");
-   
-   if ([fContentView isHidden])
-      return kIsUnmapped;
-      
-   return kIsViewable;
-}
-
-//______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
-{
-   assert(fContentView != nil && "copy:area:toPoint:, fContentView is nil");
-
-   [fContentView copy : src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
-}
-
-//______________________________________________________________________________
-- (unsigned char *) readColorBits : (Rectangle_t) area
-{
-   assert(fContentView != nil && "readColorBits:, fContentView is nil");
-   
-   return [fContentView readColorBits : area];
-}
-
-
-//End of SetWindowAttributes_t/WindowAttributes_t.
-/////////////////////////////////////////////////////////////
-
-//______________________________________________________________________________
-- (BOOL) fIsPixmap
-{
-   return NO;
-}
-
-//______________________________________________________________________________
-- (QuartzView *) fContentView
-{
-   return fContentView;
-}
-
-//______________________________________________________________________________
-- (int) fX
-{
-   return self.frame.origin.x;
-}
-
-//______________________________________________________________________________
-- (int) fY
-{
-   return ROOT::MacOSX::X11::GlobalYCocoaToROOT(self.frame.origin.y + self.frame.size.height);
-}
-
-//______________________________________________________________________________
-- (unsigned) fWidth
-{
-   return self.frame.size.width;
-}
-
-//______________________________________________________________________________
-- (unsigned) fHeight
-{
-   //NSWindow's frame (height component) also includes title-bar.
-   //So I have to use content view's height.
-   //Obviously, there is a "hole" == 22 pixels.
-   assert(fContentView != nil && "fHeight, content view is nil");
-   
-   return fContentView.frame.size.height;
-}
-
-//______________________________________________________________________________
-- (NSSize) fSize
-{
-   //NSWindow's frame includes title-bar.
-   //I have to use content view's frame.
-   assert(fContentView != nil && "fSize, content view is nil");
-   
-   return fContentView.frame.size;
-}
-
-//______________________________________________________________________________
-- (void) setDrawableSize : (NSSize) newSize
-{
-   //Can not simply do self.frame.size = newSize.
-   assert(!(newSize.width < 0) && "setDrawableSize, width is negative");
-   assert(!(newSize.height < 0) && "setDrawableSize, height is negative");
-   
-   [self setContentSize : newSize];
-}
-
-//______________________________________________________________________________
-- (void) setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h
-{
-   NSSize newSize = {};
-   newSize.width = w;
-   newSize.height = h;
-   [self setContentSize : newSize];
-   
-   //Check how this is affected by title bar's height.
-   NSPoint topLeft = {};
-   topLeft.x = x;
-   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
-
-   [self setFrameTopLeftPoint : topLeft];
-}
-
-//______________________________________________________________________________
-- (void) setX : (int) x Y : (int) y
-{
-   NSPoint topLeft = {};
-   topLeft.x = x;
-   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
-
-   [self setFrameTopLeftPoint : topLeft];
-}
-
-//______________________________________________________________________________
-- (void) addChild : (QuartzView *) child
+- (void) addChild : (NSView<X11Window> *) child
 {
    assert(fContentView != nil && "addChild, content view is nil");
    assert(child != nil && "addChild, child view is nil");
@@ -803,7 +827,8 @@ void print_mask_info(ULong_t mask)
 {
    assert(fContentView && "mapRaised, content view is nil");
 
-   [self orderFront : self];
+//   [self orderFront : self];
+   [self makeKeyAndOrderFront : self];
    [fContentView setHidden : NO];
    [fContentView configureNotifyTree];
 }
@@ -813,7 +838,8 @@ void print_mask_info(ULong_t mask)
 {
    assert(fContentView != nil && "mapWindow, content view is nil");
 
-   [self orderFront : self];
+//   [self orderFront : self];
+   [self makeKeyAndOrderFront : self];
    [fContentView setHidden : NO];
    [fContentView configureNotifyTree];
 }
@@ -836,11 +862,36 @@ void print_mask_info(ULong_t mask)
    [self orderOut : self];
 }
 
-//End of X11Drawable's protocol.
-///////////////////////////////////////////////////////////
+//NSWindowDelegate's methods.
 
+//______________________________________________________________________________
+- (BOOL) windowShouldClose : (id) sender
+{
+   (void)sender;
 
-//NSWindowDelegate's methods here.
+   assert(fContentView != nil && "windowShouldClose, content view is nil");
+
+   //TODO: check this!!! Children are
+   //transient windows and ROOT does not handle
+   //such a deletion properly, noop then.
+   if ([[self childWindows] count])
+      return NO;
+
+   //Prepare client message for a window.
+   Event_t closeEvent = {};
+   closeEvent.fWindow = fContentView.fID;
+   closeEvent.fType = kClientMessage;
+   closeEvent.fFormat = 32;//Taken from GUI classes.
+   closeEvent.fHandle = TGCocoa::kIA_DELETE_WINDOW;
+   closeEvent.fUser[0] = TGCocoa::kIA_DELETE_WINDOW;
+   //Place it into the queue.
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "windowShouldClose, gVirtualX is either null or has a type different from TGCocoa");
+   vx->SendEvent(fContentView.fID, &closeEvent);
+
+   //Do not let AppKit to close a window.
+   return NO;
+}
 
 @end
 
@@ -894,14 +945,11 @@ void print_mask_info(ULong_t mask)
 
 @implementation QuartzView {
    NSMutableArray *fPassiveKeyGrabs;
+   BOOL            fIsOverlapped;
 }
 
-@synthesize fBackBuffer;
-@synthesize fParentView;
-@synthesize fLevel;
-@synthesize fIsOverlapped;
 @synthesize fID;
-
+@synthesize fContext;
 /////////////////////
 //SetWindowAttributes_t/WindowAttributes_t
 @synthesize fEventMask;
@@ -912,15 +960,14 @@ void print_mask_info(ULong_t mask)
 @synthesize fBackgroundPixel;
 //SetWindowAttributes_t/WindowAttributes_t
 /////////////////////
-
+@synthesize fBackBuffer;
+@synthesize fParentView;
+@synthesize fLevel;
 @synthesize fGrabButton;
 @synthesize fGrabButtonEventMask;
 @synthesize fGrabKeyModifiers;
 @synthesize fOwnerEvents;
-
 @synthesize fSnapshotDraw;
-
-@synthesize fContext;
 
 //______________________________________________________________________________
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
@@ -954,24 +1001,7 @@ void print_mask_info(ULong_t mask)
    return self;
 }
 
-//______________________________________________________________________________
-- (QuartzWindow *) fQuartzWindow
-{
-   return (QuartzWindow *)[self window];
-}
-
-//______________________________________________________________________________
-- (BOOL) isFlipped
-{
-   //Now view's placement, geometry, moving and resizing can be
-   //done with ROOT's (X11) coordinates without conversion.
-   return YES;
-}
-
-
-/////////////////////////////////////////////////////////////
 //X11Drawable protocol.
-
 //______________________________________________________________________________
 - (BOOL) fIsPixmap
 {
@@ -979,9 +1009,9 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (QuartzView *) fContentView
+- (BOOL) fIsOpenGLWidget
 {
-   return self;
+   return NO;
 }
 
 //______________________________________________________________________________
@@ -1006,12 +1036,6 @@ void print_mask_info(ULong_t mask)
 - (unsigned) fHeight
 {
    return self.frame.size.height;
-}
-
-//______________________________________________________________________________
-- (NSSize) fSize
-{
-   return self.frame.size;
 }
 
 //______________________________________________________________________________
@@ -1054,152 +1078,6 @@ void print_mask_info(ULong_t mask)
    newFrame.origin.y = y;
    
    self.frame = newFrame;
-}
-
-//______________________________________________________________________________
-- (void) addChild : (QuartzView *) child
-{
-   assert(child != nil && "addChild, child view is nil");
-
-   [self addSubview : child];
-   child.fParentView = self;
-   [child updateLevel : self.fLevel + 1];
-}
-
-//______________________________________________________________________________
-- (void) getAttributes : (WindowAttributes_t *)attr
-{
-   assert(attr != nullptr && "getAttributes, attr parameter is null");
-   
-   ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
-}
-
-//______________________________________________________________________________
-- (void) setAttributes : (const SetWindowAttributes_t *)attr
-{
-   assert(attr != nullptr && "setAttributes, attr parameter is null");
-
-#ifdef DEBUG_ROOT_COCOA
-   log_attributes(attr, fID);
-#endif
-
-   ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
-}
-
-//______________________________________________________________________________
-- (int) fMapState
-{
-   if ([self isHidden])
-      return kIsUnmapped;
-
-   for (QuartzView *parent = fParentView; parent; parent = parent.fParentView) {
-      if ([parent isHidden])
-         return kIsUnviewable;
-   }
-
-   return kIsViewable;
-}
-
-//______________________________________________________________________________
-- (void) mapRaised
-{
-   //Move view to the top of subviews (in UIKit there is a special method).   
-   QuartzView *parent = fParentView;
-   [self removeFromSuperview];
-   [parent addSubview : self];
-   [self setHidden : NO];
-}
-
-//______________________________________________________________________________
-- (void) mapWindow
-{   
-   [self setHidden : NO];
-}
-
-//______________________________________________________________________________
-- (void) mapSubwindows
-{
-   for (QuartzView * v in [self subviews]) {
-      [v setHidden : NO]; 
-      [v mapSubwindows];
-   }
-}
-
-//______________________________________________________________________________
-- (void) unmapWindow
-{
-   [self setHidden : YES];
-}
-
-//______________________________________________________________________________
-- (void) setOverlapped : (BOOL) overlap
-{
-   fIsOverlapped = overlap;
-   for (QuartzView *child in [self subviews])
-      [child setOverlapped : overlap];
-}
-
-//______________________________________________________________________________
-- (void) raiseWindow
-{
-   using namespace ROOT::MacOSX::X11;//Comparators.
-
-   for (QuartzView *sibling in [fParentView subviews]) {
-      if (self == sibling)
-         continue;
-      //TODO: equal test is not good :) I have a baaad feeling about this ;)
-      if (CGRectEqualToRect(sibling.frame, self.frame))
-         [sibling setOverlapped : YES];
-   }
-
-   [self setOverlapped : NO];
-   [fParentView sortSubviewsUsingFunction : CompareViewsToRaise context : (void *)self];//ARC will complain, but ... NO ARC!!! :)))
-   [self setNeedsDisplay : YES];//?
-}
-
-//______________________________________________________________________________
-- (void) lowerWindow
-{
-   using namespace ROOT::MacOSX::X11;
-
-   NSEnumerator *reverseEnumerator = [[fParentView subviews] reverseObjectEnumerator];
-   for (QuartzView *sibling in reverseEnumerator) {
-      if (sibling == self)
-         continue;
-      //TODO: equal test is not good :) I have a baaad feeling about this ;)
-      if (CGRectEqualToRect(sibling.frame, self.frame)) {
-         [sibling setOverlapped : NO];
-         [sibling setNeedsDisplay : YES];
-         [self setOverlapped : YES];
-         break;
-      }
-   }
-   
-   [fParentView sortSubviewsUsingFunction : CompareViewsToLower context : (void*)self];//NO ARC! No __bridge!
-}
-
-//______________________________________________________________________________
-- (void) configureNotifyTree
-{
-   if (self.fMapState == kIsViewable) {
-      if (fEventMask & kStructureNotifyMask) {
-         TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-         assert(vx && "configureNotifyTree, gVirtualX is either null or has type different from TGCocoa");
-         vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
-      }
-
-      for (QuartzView * v in [self subviews])
-         [v configureNotifyTree];
-   }
-}
-
-//______________________________________________________________________________
-- (void) updateLevel : (unsigned) newLevel
-{
-   fLevel = newLevel;
-   
-   for (QuartzView *child in [self subviews])
-      [child updateLevel : fLevel + 1];
 }
 
 //______________________________________________________________________________
@@ -1383,21 +1261,21 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+- (void) copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
 {
    assert(src != nil && "copy:area:withMask:clipOrigin:toPoint:, src parameter is nil");
    
-   NSObject<X11Drawable> *srcObj = (NSObject<X11Drawable> *)src;
-
-   if ([srcObj isKindOfClass : [QuartzWindow class]]) {
+   if ([src isKindOfClass : [QuartzWindow class]]) {
       //Forget about mask (can I have it???)
-      [self copyView : srcObj.fContentView area : area toPoint : dstPoint];
-   } else if ([srcObj isKindOfClass : [QuartzView class]]) {
+      QuartzWindow *qw = (QuartzWindow *)src;
+      //Will not work with OpenGL.
+      [self copyView : (QuartzView *)qw.fContentView area : area toPoint : dstPoint];
+   } else if ([src isKindOfClass : [QuartzView class]]) {
       //Forget about mask (can I have it???)
-      [self copyView : (QuartzView *)srcObj area : area toPoint : dstPoint];
-   } else if ([srcObj isKindOfClass : [QuartzPixmap class]]) {
+      [self copyView : (QuartzView *)src area : area toPoint : dstPoint];
+   } else if ([src isKindOfClass : [QuartzPixmap class]]) {
       [self copyPixmap : (QuartzPixmap *)src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
-   } else if ([srcObj isKindOfClass : [QuartzImage class]]) {
+   } else if ([src isKindOfClass : [QuartzImage class]]) {
       [self copyImage : (QuartzImage *)src area : area withMask : mask clipOrigin : clipXY toPoint : dstPoint];
    } else {
       assert(0 && "copy:area:withMask:clipOrigin:toPoint:, src is of unknown type");
@@ -1463,8 +1341,226 @@ void print_mask_info(ULong_t mask)
    return data;
 }
 
-//End of X11Drawable protocol.
-/////////////////////////////////////////////////////////////
+//______________________________________________________________________________
+- (int) fMapState
+{
+   if ([self isHidden])
+      return kIsUnmapped;
+
+   for (QuartzView *parent = fParentView; parent; parent = parent.fParentView) {
+      if ([parent isHidden])
+         return kIsUnviewable;
+   }
+
+   return kIsViewable;
+}
+
+//______________________________________________________________________________
+- (NSView<X11Window> *) fContentView
+{
+   return self;
+}
+
+//______________________________________________________________________________
+- (QuartzWindow *) fQuartzWindow
+{
+   return (QuartzWindow *)[self window];
+}
+
+//______________________________________________________________________________
+- (void) addChild : (NSView<X11Window> *) child
+{
+   assert(child != nil && "addChild, child view is nil");
+
+   [self addSubview : child];
+   child.fParentView = self;
+   [child updateLevel : self.fLevel + 1];
+}
+
+//______________________________________________________________________________
+- (void) getAttributes : (WindowAttributes_t *)attr
+{
+   assert(attr != nullptr && "getAttributes, attr parameter is null");
+   
+   ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
+}
+
+//______________________________________________________________________________
+- (void) setAttributes : (const SetWindowAttributes_t *)attr
+{
+   assert(attr != nullptr && "setAttributes, attr parameter is null");
+
+#ifdef DEBUG_ROOT_COCOA
+   log_attributes(attr, fID);
+#endif
+
+   ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+}
+
+//______________________________________________________________________________
+- (void) mapRaised
+{
+   //Move view to the top of subviews (in UIKit there is a special method).   
+   QuartzView *parent = fParentView;
+   [self removeFromSuperview];
+   [parent addSubview : self];
+   [self setHidden : NO];
+}
+
+//______________________________________________________________________________
+- (void) mapWindow
+{   
+   [self setHidden : NO];
+}
+
+//______________________________________________________________________________
+- (void) mapSubwindows
+{
+   for (QuartzView * v in [self subviews]) {
+      [v setHidden : NO]; 
+      [v mapSubwindows];
+   }
+}
+
+//______________________________________________________________________________
+- (void) unmapWindow
+{
+   [self setHidden : YES];
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsOverlapped
+{
+   return fIsOverlapped;
+}
+
+//______________________________________________________________________________
+- (void) setOverlapped : (BOOL) overlap
+{
+   fIsOverlapped = overlap;
+   for (NSView<X11Window> *child in [self subviews])
+      [child setOverlapped : overlap];
+}
+
+//______________________________________________________________________________
+- (void) raiseWindow
+{
+   using namespace ROOT::MacOSX::X11;//Comparators.
+
+   for (QuartzView *sibling in [fParentView subviews]) {
+      if (self == sibling)
+         continue;
+      //TODO: equal test is not good :) I have a baaad feeling about this ;)
+      if (CGRectEqualToRect(sibling.frame, self.frame))
+         [sibling setOverlapped : YES];
+   }
+
+   [self setOverlapped : NO];
+   [fParentView sortSubviewsUsingFunction : CompareViewsToRaise context : (void *)self];
+   [self setNeedsDisplay : YES];//?
+}
+
+//______________________________________________________________________________
+- (void) lowerWindow
+{
+   using namespace ROOT::MacOSX::X11;
+
+   NSEnumerator *reverseEnumerator = [[fParentView subviews] reverseObjectEnumerator];
+   for (QuartzView *sibling in reverseEnumerator) {
+      if (sibling == self)
+         continue;
+      //TODO: equal test is not good :) I have a baaad feeling about this ;)
+      if (CGRectEqualToRect(sibling.frame, self.frame)) {
+         [sibling setOverlapped : NO];
+         [sibling setNeedsDisplay : YES];
+         [self setOverlapped : YES];
+         break;
+      }
+   }
+   
+   [fParentView sortSubviewsUsingFunction : CompareViewsToLower context : (void*)self];//NO ARC! No __bridge!
+}
+
+//______________________________________________________________________________
+- (void) updateLevel : (unsigned) newLevel
+{
+   fLevel = newLevel;
+   
+   for (QuartzView *child in [self subviews])
+      [child updateLevel : fLevel + 1];
+}
+
+//______________________________________________________________________________
+- (BOOL) isFlipped
+{
+   //Now view's placement, geometry, moving and resizing can be
+   //done with ROOT's (X11) coordinates without conversion.
+   return YES;
+}
+
+//______________________________________________________________________________
+- (void) configureNotifyTree
+{
+   if (self.fMapState == kIsViewable) {
+      if (fEventMask & kStructureNotifyMask) {
+         TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+         assert(vx && "configureNotifyTree, gVirtualX is either null or has type different from TGCocoa");
+         vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
+      }
+
+      for (NSView<X11Window> *v in [self subviews])
+         [v configureNotifyTree];
+   }
+}
+
+//Key grabs.
+//______________________________________________________________________________
+- (void) addPassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers
+{
+   //Remove and add (not to traverse twice).
+   [self removePassiveKeyGrab : keyCode modifiers : modifiers];
+   PassiveKeyGrab *newGrab = [[PassiveKeyGrab alloc] initWithKey : keyCode modifiers : modifiers];
+   [fPassiveKeyGrabs addObject : newGrab];
+   [newGrab release];
+}
+
+//______________________________________________________________________________
+- (void) removePassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers
+{
+   const NSUInteger count = [fPassiveKeyGrabs count];
+   for (NSUInteger i = 0; i < count; ++i) {
+      PassiveKeyGrab *grab = [fPassiveKeyGrabs objectAtIndex : i];
+      if ([grab matchKey : keyCode modifiers : modifiers]) {
+         [fPassiveKeyGrabs removeObjectAtIndex : i];
+         break;
+      }
+   }
+}
+
+//______________________________________________________________________________
+- (PassiveKeyGrab *) findPassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers
+{
+   NSEnumerator *enumerator = [fPassiveKeyGrabs objectEnumerator];
+   while (PassiveKeyGrab *grab = (PassiveKeyGrab *)[enumerator nextObject]) {
+      if ([grab matchKey : keyCode modifiers : modifiers])
+         return grab;
+   }
+
+   return nil;
+}
+
+//______________________________________________________________________________
+- (PassiveKeyGrab *) findPassiveKeyGrab : (unichar) keyCode
+{
+   //Do not check modifiers.
+   NSEnumerator *enumerator = [fPassiveKeyGrabs objectEnumerator];
+   while (PassiveKeyGrab *grab = (PassiveKeyGrab *)[enumerator nextObject]) {
+      if ([grab matchKey : keyCode])
+         return grab;
+   }
+
+   return nil;
+}
 
 //Painting mechanics.
 
@@ -1706,56 +1802,14 @@ void print_mask_info(ULong_t mask)
    (void)theEvent;
 }
 
-//Key grabs.
-//______________________________________________________________________________
-- (void) addPassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers
-{
-   //Remove and add (not to traverse twice).
-   [self removePassiveKeyGrab : keyCode modifiers : modifiers];
-   PassiveKeyGrab *newGrab = [[PassiveKeyGrab alloc] initWithKey : keyCode modifiers : modifiers];
-   [fPassiveKeyGrabs addObject : newGrab];
-   [newGrab release];
-}
-
-//______________________________________________________________________________
-- (void) removePassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers
-{
-   const NSUInteger count = [fPassiveKeyGrabs count];
-   for (NSUInteger i = 0; i < count; ++i) {
-      PassiveKeyGrab *grab = [fPassiveKeyGrabs objectAtIndex : i];
-      if ([grab matchKey : keyCode modifiers : modifiers]) {
-         [fPassiveKeyGrabs removeObjectAtIndex : i];
-         break;
-      }
-   }
-}
-
-//______________________________________________________________________________
-- (PassiveKeyGrab *) findPassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers
-{
-   NSEnumerator *enumerator = [fPassiveKeyGrabs objectEnumerator];
-   while (PassiveKeyGrab *grab = (PassiveKeyGrab *)[enumerator nextObject]) {
-      if ([grab matchKey : keyCode modifiers : modifiers])
-         return grab;
-   }
-
-   return nil;
-}
-
-//______________________________________________________________________________
-- (PassiveKeyGrab *) findPassiveKeyGrab : (unichar) keyCode
-{
-   //Do not check modifiers.
-   NSEnumerator *enumerator = [fPassiveKeyGrabs objectEnumerator];
-   while (PassiveKeyGrab *grab = (PassiveKeyGrab *)[enumerator nextObject]) {
-      if ([grab matchKey : keyCode])
-         return grab;
-   }
-
-   return nil;
-}
-
 //First responder staff.
+
+//______________________________________________________________________________
+- (BOOL) acceptsFirstMouse : (NSEvent *)theEvent
+{
+   (void)theEvent;
+   return YES;
+}
 
 //______________________________________________________________________________
 - (BOOL) acceptsFirstResponder
@@ -1767,8 +1821,8 @@ void print_mask_info(ULong_t mask)
 - (BOOL) becomeFirstResponder
 {
    //Change focus.
-   QuartzView *focusView = nil;
-   for (QuartzView *view = self; view; view = view.fParentView) {
+   NSView<X11Window> *focusView = nil;
+   for (NSView<X11Window> *view = self; view; view = view.fParentView) {
       if (view.fEventMask & kFocusChangeMask) {
          focusView = view;
          break;

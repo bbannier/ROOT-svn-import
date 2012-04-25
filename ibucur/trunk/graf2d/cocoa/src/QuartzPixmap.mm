@@ -1,4 +1,13 @@
-//Author: Timur Pocheptsov 16/02/2012
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov   16/02/2012
+
+/*************************************************************************
+ * Copyright (C) 1995-2012, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
 
 //#define NDEBUG
 
@@ -130,51 +139,6 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 }
 
 //______________________________________________________________________________
-- (BOOL) fIsPixmap
-{
-   return YES;
-}
-
-//______________________________________________________________________________
-- (unsigned) fWidth
-{
-   assert(fContext != nullptr && "fWidth, called for bad pixmap");
-
-   return fWidth;
-}
-
-//______________________________________________________________________________
-- (unsigned) fHeight
-{
-   assert(fContext != nullptr && "fHeight, called for bad pixmap");
-
-   return fHeight;
-}
-
-//______________________________________________________________________________
-- (NSSize) fSize
-{
-   NSSize size = {};
-   size.width = fWidth;
-   size.height = fHeight;
-
-   return size;
-}
-
-//______________________________________________________________________________
-- (CGContextRef) fContext
-{
-   assert(fContext != nullptr && "fContext, called for bad pixmap");   
-   return fContext;
-}
-
-//______________________________________________________________________________
-- (unsigned char *) fData
-{
-   return fData;
-}
-
-//______________________________________________________________________________
 - (CGImageRef) createImageFromPixmap
 {
    Rectangle_t imageRect = {};
@@ -222,6 +186,41 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
    CGDataProviderRelease(provider);
    
    return image;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsPixmap
+{
+   return YES;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsOpenGLWidget
+{
+   return NO;
+}
+
+//______________________________________________________________________________
+- (CGContextRef) fContext
+{
+   assert(fContext != nullptr && "fContext, called for bad pixmap");   
+   return fContext;
+}
+
+//______________________________________________________________________________
+- (unsigned) fWidth
+{
+   assert(fContext != nullptr && "fWidth, called for bad pixmap");
+
+   return fWidth;
+}
+
+//______________________________________________________________________________
+- (unsigned) fHeight
+{
+   assert(fContext != nullptr && "fHeight, called for bad pixmap");
+
+   return fHeight;
 }
 
 //______________________________________________________________________________
@@ -314,24 +313,28 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 }
 
 //______________________________________________________________________________
-- (void) copy : (id<X11Drawable>) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint
+- (void) copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint
 {
-   if ([(NSObject *)src isKindOfClass : [QuartzImage class]]) {
+   if ([src isKindOfClass : [QuartzImage class]]) {
       [self copyImage : (QuartzImage *)src area : area withMask : mask clipOrigin : origin toPoint : dstPoint];
-   } else if ([(NSObject *)src isKindOfClass : [QuartzPixmap class]]) {
+   } else if ([src isKindOfClass : [QuartzPixmap class]]) {
       [self copyPixmap : (QuartzPixmap *)src area : area withMask : mask clipOrigin : origin toPoint : dstPoint];
    } else
       assert(0 && "Can copy only from pixmap or image");
 }
 
+//______________________________________________________________________________
+- (unsigned char *) fData
+{
+   return fData;
+}
 
 @end
 
 @implementation QuartzImage {
-   unsigned fWidth;
-   unsigned fHeight;
-   
-   CGImageRef fImage;
+   unsigned       fWidth;
+   unsigned       fHeight;
+   CGImageRef     fImage;
    unsigned char *fImageData;
 }
 
@@ -503,7 +506,13 @@ std::size_t ROOT_QuartzImage_GetBytesAtPosition(void* info, void* buffer, off_t 
 //______________________________________________________________________________
 - (BOOL) fIsPixmap
 {
-   return YES;//??
+   return YES;
+}
+
+//______________________________________________________________________________
+- (BOOL) fIsOpenGLWidget
+{
+   return NO;
 }
 
 //______________________________________________________________________________

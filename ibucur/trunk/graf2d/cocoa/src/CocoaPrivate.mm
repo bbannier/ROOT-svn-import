@@ -1,3 +1,14 @@
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov   29/11/2011
+
+/*************************************************************************
+ * Copyright (C) 1995-2012, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 #define DEBUG_ROOT_COCOA
 
 //#define NDEBUG
@@ -89,6 +100,26 @@ NSObject<X11Drawable> *CocoaPrivate::GetDrawable(unsigned drawableID)const
 }
 
 //______________________________________________________________________________
+NSObject<X11Window> *CocoaPrivate::GetWindow(unsigned windowID)const
+{
+   auto winIter = fDrawables.find(windowID);
+#ifdef DEBUG_ROOT_COCOA
+   if (winIter == fDrawables.end()) {
+      NSLog(@"Fatal error: requested non-existing drawable %u", windowID);
+      //We do not care about efficiency, ROOT's gonna die on assert :)
+      auto deletedDrawable = std::find(fFreeDrawableIDs.begin(), fFreeDrawableIDs.end(), windowID);
+      if (deletedDrawable != fFreeDrawableIDs.end()) {
+         NSLog(@"This window was deleted already");
+      } else {
+         NSLog(@"This window not found among allocated/deleted drawables");
+      }
+   }
+#endif
+   assert(winIter != fDrawables.end() && "GetWindow, non-existing window requested");
+   return (NSObject<X11Window> *)winIter->second.Get();
+}
+
+//______________________________________________________________________________
 void CocoaPrivate::DeleteDrawable(unsigned drawableID)
 {
    auto drawableIter = fDrawables.find(drawableID);
@@ -106,6 +137,20 @@ void CocoaPrivate::DeleteDrawable(unsigned drawableID)
       [qw.fContentView removeFromSuperview];
       qw.fContentView.fParentView = nil;
       qw.contentView = nil;
+
+      //Remove transient windows?
+      /*
+      const Util::NSScopeGuard<NSArray> children([[qw childWindows] copy]);
+      for (QuartzWindow *child in children.Get()) {
+         child.fMainWindow = nil;
+         [qw removeChildWindow : child];
+      }
+      */
+
+      if (qw.fMainWindow) {
+         [qw.fMainWindow removeChildWindow : qw];
+         qw.fMainWindow = nil;
+      }
    }
 
 //   fFreeDrawableIDs.push_back(drawableID);
@@ -120,6 +165,6 @@ void CocoaPrivate::ReplaceDrawable(unsigned drawableID, NSObject *nsObj)
    drawableIter->second.Reset(nsObj);
 }
 
-}
-}
-}
+}//Details
+}//MacOSX
+}//ROOT

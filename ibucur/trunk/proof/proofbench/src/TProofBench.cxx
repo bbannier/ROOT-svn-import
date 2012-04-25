@@ -497,10 +497,11 @@ public:
 };
 
 //______________________________________________________________________________
-void TProofBench::GetPerfSpecs(const char *path)
+void TProofBench::GetPerfSpecs(const char *path, Int_t degfit)
 {
    // Get performance specs. Check file 'path', or files in directory 'path'
-   // (default current directory)
+   // (default current directory).
+   // The degree of the polynomial used for the fit is 'degfit' (default 1). 
    
    // Locate the file (ask if many)
    TString pp(path), fn, oo;
@@ -626,7 +627,7 @@ void TProofBench::GetPerfSpecs(const char *path)
    }
 
    // Now get the specs
-   TProofBench::DrawCPU(fn.Data(), oo.Data(), kFALSE, 1);
+   TProofBench::DrawCPU(fn.Data(), oo.Data(), kFALSE, degfit);
 }
 
 //______________________________________________________________________________
@@ -907,6 +908,7 @@ Int_t TProofBench::MakeDataSet(const char *dset, Long64_t nevt, const char *fnro
 
    // For files, 30000 evst each (about 600 MB total) per worker
    TString fn, fnr("event");
+   Bool_t remote = kFALSE;
    if (fnroot && strlen(fnroot) > 0) {
       TUrl ur(fnroot, kTRUE);
       if (!strcmp(ur.GetProtocol(), "file") &&
@@ -915,9 +917,11 @@ Int_t TProofBench::MakeDataSet(const char *dset, Long64_t nevt, const char *fnro
       } else {
          fnr = gSystem->BaseName(ur.GetFile());
          // We need to set the basedir
-         TString bdir(fnroot);
-         bdir.ReplaceAll(fnr, "<fn>");
+         TString bdir(gSystem->DirName(fnroot));
+         bdir += "/<fn>";
          fProof->SetParameter("PROOF_BenchmarkBaseDir", bdir.Data());
+         // Flag as remote, if so
+         if (strcmp(ur.GetProtocol(), "file")) remote = kTRUE;
       }
    }
    TProofNodes pn(fProof);
@@ -997,6 +1001,7 @@ Int_t TProofBench::MakeDataSet(const char *dset, Long64_t nevt, const char *fnro
       // trusting the existing information
       fc->Update();
       if (fc->GetNFiles() > 0) {
+         if (remote) fc->SetBit(TFileCollection::kRemoteCollection);
          if (!(fProof->RegisterDataSet(fDataSet, fc, "OT")))
             Warning("MakeDataSet", "problems registering '%s'", dset);
       } else {

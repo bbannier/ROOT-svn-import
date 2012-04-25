@@ -226,18 +226,23 @@ public:
 
          tmcs->SetTestStatistic(pllts);
          HypoTestResult *htr = htc->GetHypoTest();
+         htr->Print();
          cout << "PLLTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(mlets);
          htr = htc->GetHypoTest();
+         htr->Print();
          cout << "MLETS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(nevts);
          htr = htc->GetHypoTest();
+         htr->Print();
          cout << "NEVTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(slrts);
          htr = htc->GetHypoTest();
+         htr->Print();
          cout << "SLRTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(roplts);
          htr = htc->GetHypoTest();
+         htr->Print();
          cout << "ROPLTS " << htr->Significance() << endl;
  
 
@@ -312,7 +317,7 @@ public:
          bModel->SetPdf(*w->pdf("prod_pdf"));
          bModel->SetObservables(*w->set("obs"));
          bModel->SetGlobalObservables(*w->set("globObs"));
-         bModel->SetParametersOfInterest(*w->set("poi"));
+         bModel->SetParametersOfInterest(*w->set("poi")); 
          w->var("sig")->setVal(0.0); // important !
          bModel->SetSnapshot(*w->set("poi"));
 
@@ -347,27 +352,31 @@ public:
 */
 
          FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sbModel, *bModel);
-         ftc->SetToys(4000, 1000);
+         ftc->SetToys(5000, 1000);
          ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1); // because the model is in number counting form     
          tmcs->SetUseMultiGen(kTRUE);
          tmcs->SetAlwaysUseMultiGen(kTRUE);
          
-         tmcs->SetTestStatistic(pllts);
+         tmcs->SetTestStatistic(slrts);
          HypoTestResult *htr = ftc->GetHypoTest();
+         htr->Print();
+         cout << "SLRTS " << htr->Significance() << endl;
+         tmcs->SetTestStatistic(pllts);
+         htr = ftc->GetHypoTest();
          htr->Print();
          cout << "PLLTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(mlets);
          htr = ftc->GetHypoTest();
+         htr->Print();
          cout << "MLETS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(nevts);
          htr = ftc->GetHypoTest();
+         htr->Print();
          cout << "NEVTS " << htr->Significance() << endl;
-         tmcs->SetTestStatistic(slrts);
-         htr = ftc->GetHypoTest();
-         cout << "SLRTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(roplts);
          htr = ftc->GetHypoTest();
+         htr->Print();
          cout << "ROPLTS " << htr->Significance() << endl;
 
          regValue(htr->Significance(), "thtc_significance_frequentist");

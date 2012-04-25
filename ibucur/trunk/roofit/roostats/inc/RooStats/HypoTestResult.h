@@ -135,8 +135,11 @@ namespace RooStats {
       /// The error on the ratio CLs+b/CLb
       Double_t CLsError() const;
 
+      // The error on the Null p-value
       Double_t NullPValueError() const;
 
+      // The error on the significance, computed from NullPValueError via error propagation
+      Double_t SignificanceError() const;
 
       void Print(const Option_t* = "") const;
 

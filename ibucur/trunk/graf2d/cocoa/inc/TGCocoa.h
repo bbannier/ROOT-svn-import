@@ -1,4 +1,14 @@
-// Author: Timur Pocheptsov 22/11/2011
+// @(#)root/graf2d:$Id$
+// Author: Timur Pocheptsov   22/11/2011
+
+/*************************************************************************
+ * Copyright (C) 1995-2012, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 
 #ifndef ROOT_TGCocoa
 #define ROOT_TGCocoa
@@ -152,17 +162,20 @@ public:
    //GUI-rendering part.
            void      DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, Int_t y1, Int_t x2, Int_t y2);//Non-overrider.
    virtual void      DrawLine(Drawable_t wid, GContext_t gc, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
+           void      DrawSegmentsAux(Drawable_t wid, const GCValues_t &gcVals, const Segment_t *segments, Int_t nSegments);//Non-overrider.
+   virtual void      DrawSegments(Drawable_t wid, GContext_t gc, Segment_t *segments, Int_t nSegments);
            void      DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
    virtual void      DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
            void      FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
    virtual void      FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UInt_t w, UInt_t h);
+           void      FillPolygonAux(Window_t wid, const GCValues_t &gcVals, const Point_t *polygon, Int_t nPoints) ;//Non-overrider.
+   virtual void      FillPolygon(Window_t wid, GContext_t gc, Point_t *polygon, Int_t nPoints);
            void      CopyAreaAux(Drawable_t src, Drawable_t dst, const GCValues_t &gc, Int_t srcX, Int_t srcY, UInt_t width,
                                  UInt_t height, Int_t dstX, Int_t dstY);//Non-overrider.
    virtual void      CopyArea(Drawable_t src, Drawable_t dst, GContext_t gc, Int_t srcX, Int_t srcY, UInt_t width,
                               UInt_t height, Int_t dstX, Int_t dstY);
            void      DrawStringAux(Drawable_t wid, const GCValues_t &gc, Int_t x, Int_t y, const char *s, Int_t len);//Non-overrider.
    virtual void      DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const char *s, Int_t len);
-
            void      ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);//Non-overrider.
    virtual void      ClearArea(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h);
    virtual void      ClearWindow(Window_t wid);
@@ -325,7 +338,6 @@ public:
    virtual void         SetKeyAutoRepeat(Bool_t on = kTRUE);
    virtual void         GrabKey(Window_t wid, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
    virtual Int_t        KeysymToKeycode(UInt_t keysym);
-   virtual void         DrawSegments(Drawable_t wid, GContext_t gc, Segment_t *seg, Int_t nseg);
    virtual Window_t     GetInputFocus();
    virtual void         SetInputFocus(Window_t wid);
    virtual Window_t     GetPrimarySelectionOwner();
@@ -334,7 +346,6 @@ public:
    virtual void         LookupString(Event_t *event, char *buf, Int_t buflen, UInt_t &keysym);
    virtual void         GetPasteBuffer(Window_t wid, Atom_t atom, TString &text, Int_t &nchar,
                                        Bool_t del);
-   virtual void         FillPolygon(Window_t wid, GContext_t gc, Point_t *points, Int_t npnt);
    virtual void         QueryPointer(Window_t wid, Window_t &rootw, Window_t &childw,
                                      Int_t &root_x, Int_t &root_y, Int_t &win_x,
                                      Int_t &win_y, UInt_t &mask);
@@ -373,6 +384,8 @@ public:
    virtual Window_t     FindRWindow(Window_t win, Window_t dragwin, Window_t input, int x, int y, int maxd);
    virtual Bool_t       IsDNDAware(Window_t win, Atom_t *typelist);
 
+   virtual void         BeginModalSessionFor(Window_t wid);
+
    virtual Bool_t       IsCmdThread() const { return kTRUE; }
    
    //Non virtual, non-overriding functions.
@@ -381,7 +394,7 @@ public:
    
    void CocoaDrawON();
    void CocoaDrawOFF();
-   bool IsCocoaDraw()const;
+   Bool_t IsCocoaDraw()const;
    
 protected:
    void *GetCurrentContext();
@@ -391,8 +404,24 @@ protected:
    std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl; //!
    Int_t fCocoaDraw;
 
+   EDrawMode fDrawMode;
+   bool fDirectDraw;//Primitive in canvas tries to draw into window directly.
+   
+   //TODO:
+   //There is no property support yet,
+   //only this two valus to make GUI work 
+   //(used in client messages). 
+
+public:
+
+   enum EInternAtom {
+      kIA_DELETE_WINDOW = 1,
+      kIA_ROOT_MESSAGE
+   };
+
 private:
-   Bool_t MakeProcessForeground();
+   bool IsDialog(Window_t wid)const;
+   bool MakeProcessForeground();
 
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
@@ -404,7 +433,7 @@ private:
    
    //Quite ugly solution for the moment.
    std::map<Window_t, std::vector<UInt_t> > fClientMessagesToWindow;
-   
+      
    //I'd prefere to use = delete syntax from C++0x11, but this file is processed by CINT.
    TGCocoa(const TGCocoa &rhs);
    TGCocoa &operator = (const TGCocoa &rhs);

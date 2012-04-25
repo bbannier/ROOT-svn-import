@@ -74,20 +74,6 @@ namespace cling {
       return Consumers[I];
     }
 
-    void RestorePreviousState(EConsumerIndex I, bool Previous) {
-      assert(Exists(I) && "Cannot disable. Consumer not set!");
-
-      CompilationOptions CO = getCompilationOpts();
-      switch(I) {
-      case kEvaluateTSynthesizer : CO.DynamicScoping = Previous; break;
-      case kDeclExtractor : CO.DeclarationExtraction = Previous; break;
-      case kValuePrinterSynthesizer : CO.ValuePrinting = Previous; break;
-      case kASTDumper : CO.Debug = Previous; break;
-      case kCodeGenerator : CO.CodeGeneration = Previous; break;
-      case kConsumersCount : break;
-      }
-    }
-
     bool IsConsumerEnabled(EConsumerIndex I);
     bool IsQueueing() { return m_Queueing; }
 
@@ -102,7 +88,11 @@ namespace cling {
       COStack.pop_back();
     }
 
-    const CompilationOptions& getCompilationOpts() {
+    CompilationOptions& getCompilationOpts() {
+      return COStack.back();
+    }
+
+    const CompilationOptions& getCompilationOpts() const{
       return COStack.back();
     }
 

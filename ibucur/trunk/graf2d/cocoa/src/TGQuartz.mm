@@ -9,6 +9,7 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
+
 //#define NDEBUG
 
 #include <stdexcept>
@@ -60,7 +61,15 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 {
    // Draw a box
 
+   if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
+      return;
+
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   if (!ctx) {
+      Error("DrawBox", "Current context is null");
+      return;
+   }
+
    const Quartz::CGStateGuard ctxGuard(ctx);
 
    const TColor *fillColor = gROOT->GetColor(GetFillColor());
@@ -97,7 +106,15 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    // n         : number of points
    // xy        : list of points
 
+   if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
+      return;
+
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   if (!ctx) {
+      Error("DrawFillArea", "Current context is null");
+      return;
+   }
+   
    const Quartz::CGStateGuard ctxGuard(ctx);
 
    const TColor *fillColor = gROOT->GetColor(GetFillColor());
@@ -138,8 +155,16 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
    // Draw a line.
    // x1,y1        : begin of line
    // x2,y2        : end of line
+
+   if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
+      return;
       
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();   
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   if (!ctx) {
+      Error("DrawLine", "Current context is null");
+      return;
+   }
+   
    const Quartz::CGStateGuard ctxGuard(ctx);
 
    if (!SetContextStrokeColor(GetLineColor())) {
@@ -159,8 +184,16 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
    // Draw a line through all points.
    // n         : number of points
    // xy        : list of points   
-   
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();   
+
+   if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
+      return;
+
+   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   if (!ctx) {
+      Error("DrawPolyLine", "Current context is null");
+      return;
+   }
+
    const Quartz::CGStateGuard ctxGuard(ctx);
    
    if (!SetContextStrokeColor(GetLineColor())) {
@@ -179,8 +212,17 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 {
    // Draw PolyMarker
    // n         : number of points
-   // xy        : list of points   
+   // xy        : list of points
+
+   if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
+      return;
+
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   if (!ctx) {
+      Error("DrawPolyMarker", "Current context is null");
+      return;
+   }
+
    const Quartz::CGStateGuard ctxGuard(ctx);
 
    if (!SetContextFillColor(GetMarkerColor())) {
@@ -199,7 +241,8 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 //______________________________________________________________________________
 void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, const char *text, ETextMode /*mode*/)
 {
-   // Draw text
+   if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
+      return;
 
    if (!text || !text[0])//Can this ever happen? TPad::PaintText does not check this.
       return;
@@ -219,6 +262,12 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
    assert(pixmap.fIsPixmap == YES && "DrawText, selected drawable is not a pixmap");
    
    CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   if (!ctx) {
+      Error("DrawText", "Current context is null");
+      
+      return;
+   }
+   
    const Quartz::CGStateGuard ctxGuard(ctx);
 
    //Before any core text drawing operations, reset text matrix.

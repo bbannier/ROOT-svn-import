@@ -26,13 +26,26 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
-#include <vector>
+
+#ifndef ROO_REAL_VAR
+#include "RooRealVar.h"
+#endif
+
+#ifndef ROO_ABS_DATA
+#include "RooAbsData.h"
+#endif
+
+#ifndef ROO_ABS_PDF
+#include "RooAbsPdf.h"
+#endif
+
+#ifndef ROOSTATS_TestStatistic
+#include "RooStats/TestStatistic.h"
+#endif
+
 
 //#include "RooStats/DistributionCreator.h"
-#include "RooStats/SamplingDistribution.h"
-#include "RooStats/TestStatistic.h"
 
-#include "RooRealVar.h"
 
 namespace RooStats {
 
