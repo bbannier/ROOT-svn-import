@@ -77,6 +77,9 @@
 #include "TDOMParser.h"
 #include "TXMLAttr.h"
 #include "TString.h"
+#include "TCanvas.h"
+#include "TStyle.h"
+#include "TLine.h"
 
 // from roofit
 #include "RooStats/ModelConfig.h"
@@ -509,9 +512,9 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 	  cout <<"can't do fit for this channel, no parameter of interest"<<endl;
 	} else{
 	  if(ws_single->data("obsData")){
-	    factory.FitModel(measurement.GetOutputFilePrefix(), ws_single, ch_name, "obsData",    outFile, tableFile);
+	    FitModel(measurement.GetName(), measurement.GetOutputFilePrefix(), ws_single, ch_name, "obsData",    outFile, tableFile);
 	  } else {
-	    factory.FitModel(measurement.GetOutputFilePrefix(), ws_single, ch_name, "asimovData", outFile, tableFile);
+	    FitModel(measurement.GetName(), measurement.GetOutputFilePrefix(), ws_single, ch_name, "asimovData", outFile, tableFile);
 	  }
 	}
       }
@@ -551,9 +554,9 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 	cout <<"can't do fit for this channel, no parameter of interest"<<endl;
       } else{
 	if(ws->data("obsData")){
-	  factory.FitModel(measurement.GetOutputFilePrefix(), ws, "combined", "obsData",    outFile, tableFile);
+	  FitModel(measurement.GetName(), measurement.GetOutputFilePrefix(), ws, "combined", "obsData",    outFile, tableFile);
 	} else {
-	  factory.FitModel(measurement.GetOutputFilePrefix(), ws, "combined", "asimovData", outFile, tableFile);
+	  FitModel(measurement.GetName(), measurement.GetOutputFilePrefix(), ws, "combined", "asimovData", outFile, tableFile);
 	}
       }
     }
@@ -576,6 +579,154 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 
 
 }
+
+
+  ///////////////////////////////////////////////
+void RooStats::HistFactory::FitModel(const std::string& MeasurementName, const std::string& FileNamePrefix, RooWorkspace * combined, string channel, string data_name, TFile* outFile, FILE* tableFile  )
+  {
+
+    cout << "In Fit Model"<<endl;
+    ModelConfig * combined_config = (ModelConfig *) combined->obj("ModelConfig");
+    if(!combined_config){
+      cout << "no model config " << "ModelConfig" << " exiting" << endl;
+      return;
+    }
+    //    RooDataSet * simData = (RooDataSet *) combined->obj(data_name.c_str());
+    RooAbsData* simData = combined->data(data_name.c_str());
+    if(!simData){
+      cout << "no data " << data_name << " exiting" << endl;
+      return;
+    }
+    //    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
+    const RooArgSet * POIs=combined_config->GetParametersOfInterest();
+    if(!POIs){
+      cout << "no poi " << data_name << " exiting" << endl;
+      return;
+    }
+
+    //RooAbsPdf* model=combined->pdf(model_name.c_str()); 
+    RooAbsPdf* model=combined_config->GetPdf();
+    //    RooArgSet* allParams = model->getParameters(*simData);
+
+    ///////////////////////////////////////
+    //Do combined fit
+    //RooMsgService::instance().setGlobalKillBelow(RooMsgService::INFO) ;
+    cout << "\n\n---------------" << endl;
+    cout << "---------------- Doing "<< channel << " Fit" << endl;
+    cout << "---------------\n\n" << endl;
+    //    RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1));
+    model->fitTo(*simData, Minos(kTRUE), PrintLevel(1));
+    //    PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
+
+    if( outFile != NULL ) {
+
+      //
+      // assuming there is only on poi
+      // 
+
+      RooRealVar* poi = 0; // (RooRealVar*) POIs->first();
+      // for results tables
+      TIterator* params_itr=POIs->createIterator();
+      TObject* params_obj=0;
+      while((params_obj=params_itr->Next())){
+	poi = (RooRealVar*) params_obj;
+	cout << "printing results for " << poi->GetName() << " at " << poi->getVal()<< " high " << poi->getErrorLo() << " low " << poi->getErrorHi()<<endl;
+      }
+      fprintf(tableFile, " %.4f / %.4f  ", poi->getErrorLo(), poi->getErrorHi());
+
+      RooAbsReal* nll = model->createNLL(*simData);
+      RooAbsReal* profile = nll->createProfile(*poi);
+      RooPlot* frame = poi->frame();
+      FormatFrameForLikelihood(frame);
+      TCanvas* c1 = new TCanvas( channel.c_str(), "",800,600);
+      nll->plotOn(frame, ShiftToZero(), LineColor(kRed), LineStyle(kDashed));
+      profile->plotOn(frame);
+      frame->SetMinimum(0);
+      frame->SetMaximum(2.);
+      frame->Draw();
+      //    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
+      c1->SaveAs( (FileNamePrefix+"_"+channel+"_"+MeasurementName+"_profileLR.eps").c_str() );
+
+
+      outFile->mkdir(channel.c_str())->mkdir("Summary")->cd();
+    
+      RooCurve* curve=frame->getCurve();
+      Int_t curve_N=curve->GetN();
+      Double_t* curve_x=curve->GetX();
+      delete frame; delete c1;
+    
+      //
+      // Verbose output from MINUIT
+      //
+      /*
+	RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
+	profile->getVal();
+	RooMinuit* minuit = ((RooProfileLL*) profile)->minuit();
+	minuit->setPrintLevel(5) ; // Print MINUIT messages
+	minuit->setVerbose(5) ; // Print RooMinuit messages with parameter 
+	// changes (corresponds to the Verbose() option of fitTo()
+	*/
+    
+      Double_t * x_arr = new Double_t[curve_N];
+      Double_t * y_arr_nll = new Double_t[curve_N];
+      //     Double_t y_arr_prof_nll[curve_N];
+      //     Double_t y_arr_prof[curve_N];
+      
+      for(int i=0; i<curve_N; i++){
+	double f=curve_x[i];
+	poi->setVal(f);
+	x_arr[i]=f;
+	y_arr_nll[i]=nll->getVal();
+      }
+
+      TGraph * g = new TGraph(curve_N, x_arr, y_arr_nll);
+      //g->SetName( (FilePrefixStr(channel) +"_nll").c_str());
+      g->SetName( (FileNamePrefix +"_nll").c_str() );
+      g->Write(); 
+      delete g;
+      delete [] x_arr;
+      delete [] y_arr_nll;
+
+    }
+
+    /** find out what's inside the workspace **/
+    //combined->Print();
+
+  }
+
+
+void RooStats::HistFactory::FormatFrameForLikelihood(RooPlot* frame, string /*XTitle*/, string YTitle){
+
+    gStyle->SetCanvasBorderMode(0);
+    gStyle->SetPadBorderMode(0);
+    gStyle->SetPadColor(0);
+    gStyle->SetCanvasColor(255);
+    gStyle->SetTitleFillColor(255);
+    gStyle->SetFrameFillColor(0);  
+    gStyle->SetStatColor(255);
+    
+    RooAbsRealLValue* var = frame->getPlotVar();
+    double xmin = var->getMin();
+    double xmax = var->getMax();
+    
+    frame->SetTitle("");
+    //      frame->GetXaxis()->SetTitle(XTitle.c_str());
+    frame->GetXaxis()->SetTitle(var->GetTitle());
+    frame->GetYaxis()->SetTitle(YTitle.c_str());
+    frame->SetMaximum(2.);
+    frame->SetMinimum(0.);
+    TLine * line = new TLine(xmin,.5,xmax,.5);
+    line->SetLineColor(kGreen);
+    TLine * line90 = new TLine(xmin,2.71/2.,xmax,2.71/2.);
+    line90->SetLineColor(kGreen);
+    TLine * line95 = new TLine(xmin,3.84/2.,xmax,3.84/2.);
+    line95->SetLineColor(kGreen);
+    frame->addObject(line);
+    frame->addObject(line90);
+    frame->addObject(line95);
+}
+
+
 
 
 /*

@@ -74,7 +74,7 @@ namespace HistFactory{
       static void EditSyst(RooWorkspace* proto, const char* pdfNameChar, 
 			   map<string,double> gammaSyst, map<string,double> uniformSyst, map<string,double> logNormSyst, map<string,double> noSyst);
 
-      void FormatFrameForLikelihood(RooPlot* frame, string XTitle=string("#sigma / #sigma_{SM}"), string YTitle=string("-log likelihood"));
+    //void FormatFrameForLikelihood(RooPlot* frame, string XTitle=string("#sigma / #sigma_{SM}"), string YTitle=string("-log likelihood"));
 
 
       void LinInterpWithConstraint(RooWorkspace* proto, TH1* nominal, vector<TH1*> lowHist, vector<TH1*> highHist,
@@ -94,7 +94,7 @@ namespace HistFactory{
       static void PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename);
       void ProcessExpectedHisto(TH1* hist,RooWorkspace* proto, string prefix, string productPrefix, string systTerm, double low, double high, int lowBin, int highBin);
       void SetObsToExpected(RooWorkspace* proto, string obsPrefix, string expPrefix, int lowBin, int highBin);
-    void FitModel(const std::string& FileNamePrefix, RooWorkspace *, string, string, TFile*, FILE*);
+    //void FitModel(const std::string& FileNamePrefix, RooWorkspace *, string, string, TFile*, FILE*);
       std::string FilePrefixStr(std::string);
     
     TH1* MakeScaledUncertaintyHist( const std::string& Name, std::vector< std::pair<TH1*,TH1*> > HistVec );
