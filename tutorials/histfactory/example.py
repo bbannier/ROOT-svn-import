@@ -94,8 +94,19 @@ def main():
     meas.PrintXML( "xmlFromPy", meas.GetOutputFilePrefix() );
 
     # Now, do the measurement and make output
-    combinedWorkspace = ROOT.RooStats.HistFactory.MakeModelAndMeasurementFast( meas );
-    #combinedWorkspace = ROOT.RooStats.HistFactory.MakeModelFast( meas );
+    # combinedWorkspace = ROOT.RooStats.HistFactory.MakeModelAndMeasurementFast( meas );
+
+    print "Making Measurement"
+    factory = ROOT.RooStats.HistFactory.HistoToWorkspaceFactoryFast()
+    combinedWorkspace = factory.MakeCombinedModel( meas )
+    print "Successfully Made Measurement"
+
+    print "Printing Workspace"
+    combinedWorkspace.Print()
+    print "Successfully printed workspace"
+
+
+    # combinedWorkspace = ROOT.RooStats.HistFactory.HistToWorkspaceFactoryFastMakeModelFast( meas );
 
     # combinedWorkspace.Print("V")
 

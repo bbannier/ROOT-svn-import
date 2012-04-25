@@ -151,50 +151,51 @@ namespace HistFactory{
 
   void HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( const std::string& ModelName, RooWorkspace* ws_single, Measurement& measurement ) {
 
-  /*
-  // First, turn the channel into a vector of estimate summaries
-  std::vector<EstimateSummary> channel_estimateSummary = GetChannelEstimateSummaries( measurement, channel );
+    // Configure a workspace by doing any
+    // necessary post-processing and by
+    // creating a ModelConfig
 
-  // Then, use HistFactory on that vector to create the workspace
-  RooWorkspace* ws_single = factory.MakeSingleChannelModel(channel_estimateSummary, measurement.GetConstantParams());
-  */
+    // Make a ModelConfig and configure it
+    ModelConfig * proto_config = (ModelConfig *) ws_single->obj("ModelConfig");
+    cout << "Setting Parameter of Interest as :" << measurement.GetPOI() << endl;
+    RooRealVar* poi = (RooRealVar*) ws_single->var( (measurement.GetPOI()).c_str() );
+    RooArgSet * params= new RooArgSet;
+    if(poi){
+      params->add(*poi);
+    }
+    proto_config->SetParametersOfInterest(*params);
 
-  // Create a Model config and do any necessary edits to the workspace
-
-  // Make a ModelConfig and configure it
-  ModelConfig * proto_config = (ModelConfig *) ws_single->obj("ModelConfig");
-  cout << "Setting Parameter of Interest as :" << measurement.GetPOI() << endl;
-  RooRealVar* poi = (RooRealVar*) ws_single->var( (measurement.GetPOI()).c_str() );
-  RooArgSet * params= new RooArgSet;
-  if(poi){
-    params->add(*poi);
-  }
-  proto_config->SetParametersOfInterest(*params);
-
-  // Activate Additional Constraint Terms
-  if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) {
-    //factory.EditSyst( ws_single, ("model_"+ch_name).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
-    HistoToWorkspaceFactoryFast::EditSyst( ws_single, (ModelName).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
-    std::string NewModelName = "newSimPdf"; // <- This name is hard-coded in HistoToWorkspaceFactoryFast::EditSyt.  Probably should be changed to : std::string("new") + ModelName;
-    proto_config->SetPdf( *ws_single->pdf( "newSimPdf" ) );
-  }
+    // Activate Additional Constraint Terms
+    if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) {
+      //factory.EditSyst( ws_single, ("model_"+ch_name).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
+      HistoToWorkspaceFactoryFast::EditSyst( ws_single, (ModelName).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
+      std::string NewModelName = "newSimPdf"; // <- This name is hard-coded in HistoToWorkspaceFactoryFast::EditSyt.  Probably should be changed to : std::string("new") + ModelName;
+      proto_config->SetPdf( *ws_single->pdf( "newSimPdf" ) );
+    }
   
-  // Set the ModelConfig's Params of Interest
-  RooAbsData* expData = ws_single->data("asimovData");
-  if(poi){
-    proto_config->GuessObsAndNuisance(*expData);
-  }
+    // Set the ModelConfig's Params of Interest
+    RooAbsData* expData = ws_single->data("asimovData");
+    if(poi){
+      proto_config->GuessObsAndNuisance(*expData);
+    }
 
-  // Cool, we're done
-  return; // ws_single;
-}
+    // Cool, we're done
+    return; // ws_single;
+  }
 
 
   RooWorkspace* HistoToWorkspaceFactoryFast::MakeSingleChannelModel( Measurement& measurement, Channel& channel ) {
 
-    // This is a wrapper function that is really a middle-man
-    // Return a workspace for an individual channel
+    // This is a pretty light-weight wrapper function
+    //
+    // Take a fully configured measurement as well as
+    // one of its channels
+    //
+    // Return a workspace representing that channel
+    // Do this by first creating a vector of EstimateSummary's
+    // and this by configuring the workspace with any post-processing
 
+    // Get the channel's name
     string ch_name = channel.GetName();
 
     // First, turn the channel into a vector of estimate summaries
@@ -211,14 +212,66 @@ namespace HistFactory{
 
   }
 
-  /*
   RooWorkspace* HistoToWorkspaceFactoryFast::MakeCombinedModel( Measurement& measurement ) {
 
+    // This function takes a fully configured measurement
+    // which may contain several channels and returns
+    // a workspace holding the combined model
+    //
+    // This can be used, for example, within a script to produce 
+    // a combined workspace on-the-fly
+    //
+    // This is a static function (for now) to make
+    // it a one-liner
+
+    // First, we create an instance of a HistFactory 
+
+    HistoToWorkspaceFactoryFast factory( measurement );
+    
+
+    // Loop over the channels and create the individual workspaces
+
+    vector<RooWorkspace*> channel_workspaces;
+    vector<string>        channel_names;
+    
+    
+    for( unsigned int chanItr = 0; chanItr < measurement.GetChannels().size(); ++chanItr ) {
+    
+      HistFactory::Channel& channel = measurement.GetChannels().at( chanItr );
+
+      if( ! channel.CheckHistograms() ) {
+	std::cout << "MakeModelAndMeasurementsFast: Channel: " << channel.GetName()
+		  << " has uninitialized histogram pointers" << std::endl;
+	throw bad_hf;
+	exit(-1);
+      }
+
+      string ch_name = channel.GetName();
+      channel_names.push_back(ch_name);
+
+      RooWorkspace* ws_single = factory.MakeSingleChannelModel( measurement, channel );
+      
+      channel_workspaces.push_back(ws_single);
+
+    }
+
+    
+    // Now, combine the individual channel workspaces to
+    // form the combined workspace
+
+    RooWorkspace* ws = factory.MakeCombinedModel( channel_names, channel_workspaces );
+
+
+    // Configure the workspace
+    
+    HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( "simPdf", ws, measurement );
+
+    // Done.  Return the pointer
+
+    return ws;
 
 
   }
-  */
-
 
 
   string HistoToWorkspaceFactoryFast::FilePrefixStr(string prefix){
@@ -1711,7 +1764,7 @@ namespace HistFactory{
   }
 
   ///////////////////////////////////////////////
-  void HistoToWorkspaceFactoryFast::FitModel(RooWorkspace * combined, string channel, string data_name, TFile* outFile, FILE* tableFile  )
+  void HistoToWorkspaceFactoryFast::FitModel(const std::string& FileNamePrefix, RooWorkspace * combined, string channel, string data_name, TFile* outFile, FILE* tableFile  )
   {
 
     cout << "In Fit Model"<<endl;
@@ -1774,7 +1827,7 @@ namespace HistFactory{
       frame->SetMaximum(2.);
       frame->Draw();
       //    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
-      c1->SaveAs( (fFileNamePrefix+"_"+channel+"_"+fRowTitle+"_profileLR.eps").c_str() );
+      c1->SaveAs( (FileNamePrefix+"_"+channel+"_"+fRowTitle+"_profileLR.eps").c_str() );
 
 
       outFile->mkdir(channel.c_str())->mkdir("Summary")->cd();

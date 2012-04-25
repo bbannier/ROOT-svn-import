@@ -395,6 +395,7 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 
   try {
 
+
     std::cout << "Making Model and Measurements (Fast) for measurement: " << measurement.GetName() << std::endl;
 
     double lumiError = measurement.GetLumi()*measurement.GetLumiRelErr();
@@ -406,24 +407,8 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
     for(vector<string>::iterator itr=measurement.GetConstantParams().begin(); itr!=measurement.GetConstantParams().end(); ++itr){
       cout << "   " << *itr << endl;
     }
-  
-    /***
-	Construction of Model. Only requirement is that they return vector<vector<EstimateSummary> >
-	This is where we use the factory.
-    ***/
-    /*  
-	vector<vector<EstimateSummary> > summaries;
-	if(xml_input.empty()){
-	cerr << "no input channels found" << endl;
-	exit(1);
-	}
-    */
-    vector<string> preprocessFunctions;
 
-    //outputFileName=outputFileNamePrefix+"_"+rowTitle+".root";
     std::string rowTitle = measurement.GetName();
-    //std::string outputFileName = measurement.GetOutputFilePrefix() + "_" + measurement.GetName() + "_" + rowTitle + ".root";
-
     
     vector<RooWorkspace*> channel_workspaces;
     vector<string>        channel_names;
@@ -441,12 +426,15 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 
     std::cout << "Creating the HistoToWorkspaceFactoryFast factory" << std::endl;
 
+    HistoToWorkspaceFactoryFast factory( measurement );
+
     // USING OLD VERSION...
+    /*
     TFile* dummyFile = NULL; // TEMPORARY !!!!!
     HistoToWorkspaceFactoryFast factory(measurement.GetOutputFilePrefix(), rowTitle, measurement.GetConstantParams(), 
 					measurement.GetLumi(), lumiError, 
 					measurement.GetBinLow(), measurement.GetBinHigh(), dummyFile );
-    
+    */
 
     std::cout << "Setting preprocess functions" << std::endl;
 
@@ -479,206 +467,7 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 
       std::cout << "Starting to process channel: " << ch_name << std::endl;
 
-      //channel.CollectHistograms();
-
-
-
-
-      // Big Block Comment
-      /* 
-      vector<EstimateSummary> channel_estimateSummary;
-
-      std::cout << "Processing data: " << std::endl;
-
-      // Add the data
-      EstimateSummary data_es;
-      data_es.name = "Data";
-      data_es.channel = channel.GetName();
-      data_es.nominal = (TH1*) channel.GetData().GetHisto()->Clone();
-      channel_estimateSummary.push_back( data_es );
-
-      // Add the samples
-      for( unsigned int sampleItr = 0; sampleItr < channel.GetSamples().size(); ++sampleItr ) {
-
-	EstimateSummary sample_es;
-	RooStats::HistFactory::Sample& sample = channel.GetSamples().at( sampleItr );
-
-	std::cout << "Processing sample: " << sample.GetName() << std::endl;
-
-	// Define the mapping
-	sample_es.name = sample.GetName();
-	sample_es.channel = sample.GetChannelName();
-	sample_es.nominal = (TH1*) sample.GetHisto()->Clone();
-
-	std::cout << "Checking NormalizeByTheory" << std::endl;
-
-	if( sample.GetNormalizeByTheory() ) {
-	  sample_es.normName = "" ; // Really bad, confusion convention
-	}
-	else {
-	  TString lumiStr;
-	  lumiStr += measurement.GetLumi();
-	  lumiStr.ReplaceAll(' ', TString());
-	  sample_es.normName = lumiStr ;
-	}
-
-	std::cout << "Setting the Histo Systs" << std::endl;
-
-	// Set the Histo Systs:
-	for( unsigned int histoItr = 0; histoItr < sample.GetHistoSysList().size(); ++histoItr ) {
-
-	  RooStats::HistFactory::HistoSys& histoSys = sample.GetHistoSysList().at( histoItr );
-
-	  sample_es.systSourceForHist.push_back( histoSys.GetName() );
-	  sample_es.lowHists.push_back( (TH1*) histoSys.GetHistoLow()->Clone()  );
-	  sample_es.highHists.push_back( (TH1*) histoSys.GetHistoHigh()->Clone() );
-
-	}
-
-	std::cout << "Setting the NormFactors" << std::endl;
-
-	for( unsigned int normItr = 0; normItr < sample.GetNormFactorList().size(); ++normItr ) {
-
-	  RooStats::HistFactory::NormFactor& normFactor = sample.GetNormFactorList().at( normItr );
-
-	  EstimateSummary::NormFactor normFactor_es;
-	  normFactor_es.name = normFactor.GetName();
-	  normFactor_es.val  = normFactor.GetVal();
-	  normFactor_es.high = normFactor.GetHigh();
-	  normFactor_es.low  = normFactor.GetLow();
-	  normFactor_es.constant = normFactor.GetConst();
-	  
-
-	  sample_es.normFactor.push_back( normFactor_es );
-
-	}
-
-	std::cout << "Setting the OverallSysList" << std::endl;
-
-	for( unsigned int sysItr = 0; sysItr < sample.GetOverallSysList().size(); ++sysItr ) {
-
-	  RooStats::HistFactory::OverallSys& overallSys = sample.GetOverallSysList().at( sysItr );
-
-	  std::pair<double, double> DownUpPair( overallSys.GetLow(), overallSys.GetHigh() );
-	  sample_es.overallSyst[ overallSys.GetName() ]  = DownUpPair; //
-
-	}
-
-	std::cout << "Checking Stat Errors" << std::endl;
-
-	// Do Stat Error
-	sample_es.IncludeStatError  = sample.GetStatError().GetActivate();
-
-	// Set the error and error threshold
-	sample_es.RelErrorThreshold = channel.GetStatErrorConfig().GetRelErrorThreshold();
-	if( sample.GetStatError().GetErrorHist() ) {
-	  sample_es.relStatError      = (TH1*) sample.GetStatError().GetErrorHist()->Clone();
-	}
-	else {
-	  sample_es.relStatError    = NULL;
-	}
-
-
-	// Set the constraint type;
-	Constraint::Type type = channel.GetStatErrorConfig().GetConstraintType();
-
-	// Set the default
-	sample_es.StatConstraintType = EstimateSummary::Gaussian;
-
-	if( type == Constraint::Gaussian) {
-	  std::cout << "Using Gaussian StatErrors" << std::endl;
-	  sample_es.StatConstraintType = EstimateSummary::Gaussian;
-	}
-	if( type == Constraint::Poisson ) {
-	  std::cout << "Using Poisson StatErrors" << std::endl;
-	  sample_es.StatConstraintType = EstimateSummary::Poisson;
-	}
-
-
-	std::cout << "Getting the shape Factor" << std::endl;
-
-	// Get the shape factor
-	if( sample.GetShapeFactorList().size() > 0 ) {
-	  sample_es.shapeFactorName = sample.GetShapeFactorList().at(0).GetName();
-	}
-	if( sample.GetShapeFactorList().size() > 1 ) {
-	  std::cout << "Error: Only One Shape Factor currently supported" << std::endl;
-	  throw bad_hf;
-	}
-
-
-	std::cout << "Setting the ShapeSysts" << std::endl;
-
-	// Get the shape systs:
-	for( unsigned int shapeItr=0; shapeItr < sample.GetShapeSysList().size(); ++shapeItr ) {
-
-	  RooStats::HistFactory::ShapeSys& shapeSys = sample.GetShapeSysList().at( shapeItr );
-
-	  EstimateSummary::ShapeSys shapeSys_es;
-	  shapeSys_es.name = shapeSys.GetName();
-	  shapeSys_es.hist = shapeSys.GetErrorHist();
-
-	  // Set the constraint type;
-	  Constraint::Type systype = shapeSys.GetConstraintType();
-
-	  // Set the default
-	  shapeSys_es.constraint = EstimateSummary::Gaussian;
-
-	  if( systype == Constraint::Gaussian) {
-	    shapeSys_es.constraint = EstimateSummary::Gaussian;
-	  }
-	  if( systype == Constraint::Poisson ) {
-	    shapeSys_es.constraint = EstimateSummary::Poisson;
-	  }
-
-	  sample_es.shapeSysts.push_back( shapeSys_es );
-
-	}
-
-	std::cout << "Adding this sample" << std::endl;
-
-	// Push back
-	channel_estimateSummary.push_back( sample_es );
-
-      }
-
-
-      */
-
-      /* Second Major comment block
-
-      std::vector<EstimateSummary> channel_estimateSummary = GetChannelEstimateSummaries( measurement, channel );
-      
-      //std::vector< EstimateSummary > dummy;
-      RooWorkspace* ws_single = factory.MakeSingleChannelModel(channel_estimateSummary, measurement.GetConstantParams());
-      channel_workspaces.push_back(ws_single);
-
-      // set poi in ModelConfig
-      ModelConfig * proto_config = (ModelConfig *) ws_single->obj("ModelConfig");
-      cout << "Setting Parameter of Interest as :" << measurement.GetPOI() << endl;
-      RooRealVar* poi = (RooRealVar*) ws_single->var( (measurement.GetPOI()).c_str() );
-      RooArgSet * params= new RooArgSet;
-      if(poi){
-	params->add(*poi);
-      }
-      proto_config->SetParametersOfInterest(*params);
-    
-
-      // Gamma/Uniform Constraints:
-      // turn some Gaussian constraints into Gamma/Uniform/LogNorm constraints, rename model newSimPdf
-      if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) {
-	factory.EditSyst( ws_single, ("model_"+ch_name).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
-	proto_config->SetPdf( *ws_single->pdf("newSimPdf") );
-      }
-    
-      // fill out ModelConfig and export
-      RooAbsData* expData = ws_single->data("asimovData");
-      if(poi){
-	proto_config->GuessObsAndNuisance(*expData);
-      }
-      */
-
-
+      /*
       // First, turn the channel into a vector of estimate summaries
       std::vector<EstimateSummary> channel_estimateSummary = GetChannelEstimateSummaries( measurement, channel );
       
@@ -688,23 +477,14 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
       // Finally, configure that workspace based on
       // properties of the measurement
       HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( "model_"+ch_name, ws_single, measurement );
+      */
+
+      RooWorkspace* ws_single = factory.MakeSingleChannelModel( measurement, channel );
 
       channel_workspaces.push_back(ws_single);
 
       // Get the Paramater of Interest as a RooRealVar
       RooRealVar* poi = (RooRealVar*) ws_single->var( (measurement.GetPOI()).c_str() );
-
-      /*
-      // Activate Additional Constraint Terms
-      if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) {
-	//factory.EditSyst( ws_single, ("model_"+ch_name).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
-	HistoToWorkspaceFactoryFast::EditSyst( ws_single, ("model_"+ch_name).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
-	proto_config->SetPdf( *ws_single->pdf("newSimPdf") );
-      }
-      //if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) 
-      // combined_config->SetPdf(*ws->pdf("newSimPdf"));
-
-      */
 
       
       // Make the output
@@ -729,9 +509,9 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 	  cout <<"can't do fit for this channel, no parameter of interest"<<endl;
 	} else{
 	  if(ws_single->data("obsData")){
-	    factory.FitModel(ws_single, ch_name, "obsData",    outFile, tableFile);
+	    factory.FitModel(measurement.GetOutputFilePrefix(), ws_single, ch_name, "obsData",    outFile, tableFile);
 	  } else {
-	    factory.FitModel(ws_single, ch_name, "asimovData", outFile, tableFile);
+	    factory.FitModel(measurement.GetOutputFilePrefix(), ws_single, ch_name, "asimovData", outFile, tableFile);
 	  }
 	}
       }
@@ -755,35 +535,6 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
     // Get the Parameter of interest as a RooRealVar
     RooRealVar* poi = (RooRealVar*) ws->var( (measurement.GetPOI()).c_str() );
 
-    /*
-    // Gamma/Uniform Constraints:
-    // turn some Gaussian constraints into Gamma/Uniform/logNormal/noConstraint constraints, rename model newSimPdf
-    if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()) 
-      factory.EditSyst(ws, "simPdf", measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
-    //
-    // set parameter of interest according to the configuration
-    //
-    ModelConfig * combined_config = (ModelConfig *) ws->obj("ModelConfig");
-    cout << "Setting Parameter of Interest as :" << measurement.GetPOI() << endl;
-    RooRealVar* poi = (RooRealVar*) ws->var( (measurement.GetPOI()).c_str() );
-    //RooRealVar* poi = (RooRealVar*) ws->var((POI+"_comb").c_str());
-    RooArgSet * params= new RooArgSet;
-    //    cout << poi << endl;
-    if(poi){
-      params->add(*poi);
-    }
-    combined_config->SetParametersOfInterest(*params);
-    ws->Print();
-    
-    // Set new PDF if there are gamma/uniform constraint terms
-    // Check if we want to check for "GetNoSyst"
-    if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) 
-      combined_config->SetPdf(*ws->pdf("newSimPdf"));
-
-    RooAbsData* simData = ws->data("asimovData");
-    combined_config->GuessObsAndNuisance(*simData);
-    */
-
     //	  ws->writeToFile(("results/model_combined_edited.root").c_str());
     //ws->writeToFile((measurement.OutputFilePrefix+"_combined_"+rowTitle+"_model.root").c_str());
     std::string CombinedFileName = measurement.GetOutputFilePrefix()+"_combined_"+rowTitle+"_model.root";
@@ -800,9 +551,9 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 	cout <<"can't do fit for this channel, no parameter of interest"<<endl;
       } else{
 	if(ws->data("obsData")){
-	  factory.FitModel(ws, "combined", "obsData",    outFile, tableFile);
+	  factory.FitModel(measurement.GetOutputFilePrefix(), ws, "combined", "obsData",    outFile, tableFile);
 	} else {
-	  factory.FitModel(ws, "combined", "asimovData", outFile, tableFile);
+	  factory.FitModel(measurement.GetOutputFilePrefix(), ws, "combined", "asimovData", outFile, tableFile);
 	}
       }
     }
@@ -827,7 +578,7 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 }
 
 
-
+/*
 RooWorkspace* RooStats::HistFactory::MakeModelFast( RooStats::HistFactory::Measurement& measurement ) {
   // Take an input measurement object
   // Loop over its channels and create a
@@ -906,7 +657,7 @@ RooWorkspace* RooStats::HistFactory::MakeModelFast( RooStats::HistFactory::Measu
 
 
       // do fit unless exportOnly requested
-      /*
+      / *
       if(! measurement.GetExportOnly()){
 	RooRealVar* poi = (RooRealVar*) ws_single->var( (measurement.GetPOI()).c_str() );
 	if(!poi){
@@ -921,7 +672,7 @@ RooWorkspace* RooStats::HistFactory::MakeModelFast( RooStats::HistFactory::Measu
 	  }
 	}
       }
-      */
+      * /
 
     } // End loop over channels
   
@@ -939,9 +690,9 @@ RooWorkspace* RooStats::HistFactory::MakeModelFast( RooStats::HistFactory::Measu
 	cout <<"can't do fit for this channel, no parameter of interest"<<endl;
       } else{
 	if(ws->data("obsData")){
-	  factory.FitModel(ws, "combined","obsData",     NULL, NULL );
+	  factory.FitModel(measurement.GetOutputFilePrefix(), ws, "combined", "obsData",    NULL, NULL );
 	} else {
-	  factory.FitModel(ws, "combined", "asimovData", NULL, NULL );
+	  factory.FitModel(measurement.GetOutputFilePrefix(), ws, "combined", "asimovData", NULL, NULL );
 	}
       }
     }
@@ -956,7 +707,7 @@ RooWorkspace* RooStats::HistFactory::MakeModelFast( RooStats::HistFactory::Measu
   return ws;
 
 }
-
+*/
 
 //
 

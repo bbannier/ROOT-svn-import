@@ -8,8 +8,8 @@
 
 std::string RooStats::HistFactory::Constraint::Name( Constraint::Type type ) {
 
-  if( type == Gaussian ) return "Gaussian";
-  if( type == Poisson )  return "Poisson";
+  if( type == Constraint::Gaussian ) return "Gaussian";
+  if( type == Constraint::Poisson )  return "Poisson";
   return "";
 }
 
@@ -187,7 +187,7 @@ void RooStats::HistFactory::ShapeFactor::Print( std::ostream& stream ) {
 
 void RooStats::HistFactory::StatErrorConfig::Print( std::ostream& stream ) {
   stream << "\t \t RelErrorThreshold: " << fRelErrorThreshold
-	 << "\t ConstraintType: " << fConstraintType
+	 << "\t ConstraintType: " << Constraint::Name( fConstraintType )
 	 << std::endl;
 }  
 
