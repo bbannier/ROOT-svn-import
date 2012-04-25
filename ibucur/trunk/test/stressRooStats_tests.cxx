@@ -298,11 +298,13 @@ public:
          // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
          w->defineSet("obs", "x");
          w->defineSet("poi", "sig");
+         w->defineSet("nuis", "bkg");
          w->defineSet("globObs", "y");
 
          // Add observable value to a data set
          RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
          data->add(*w->set("obs"));
+
 
          // Build S+B and B models
          ModelConfig *sbModel = new ModelConfig("SB_ModelConfig", w);
@@ -310,6 +312,7 @@ public:
          sbModel->SetObservables(*w->set("obs"));
          sbModel->SetGlobalObservables(*w->set("globObs"));      
          sbModel->SetParametersOfInterest(*w->set("poi"));
+         sbModel->SetNuisanceParameters(*w->set("nuis"));
          w->var("sig")->setVal(xValue - yValue / tauValue); // important !
          sbModel->SetSnapshot(*w->set("poi"));
 
@@ -318,9 +321,16 @@ public:
          bModel->SetObservables(*w->set("obs"));
          bModel->SetGlobalObservables(*w->set("globObs"));
          bModel->SetParametersOfInterest(*w->set("poi")); 
+         bModel->SetNuisanceParameters(*w->set("nuis"));
          w->var("sig")->setVal(0.0); // important !
          bModel->SetSnapshot(*w->set("poi"));
+   
+         w->import(*sbModel);
+         w->import(*bModel);
+         w->import(*data);
 
+
+         w->writeToFile("htc_ws.root");
 
          // alternate priors
          w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
