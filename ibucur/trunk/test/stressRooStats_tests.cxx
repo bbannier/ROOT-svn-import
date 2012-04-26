@@ -23,6 +23,7 @@
 #include "TMath.h"
 #include "RooPlot.h"
 #include "RooUnitTest.h"
+#include "RooStats/RooStatsUnitTest.h"
 #include "RooStats/NumberCountingUtils.h"
 #include "RooStats/RooStatsUtils.h"
 #include "RooStats/TestStatistic.h"
@@ -363,6 +364,8 @@ public:
 
          FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sbModel, *bModel);
          ftc->SetToys(5000, 1000);
+         ftc->SetConditionalMLEsNull(w->set("nuis"));
+         ftc->SetConditionalMLEsAlt(w->set("nuis"));
          ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1); // because the model is in number counting form     
          tmcs->SetUseMultiGen(kTRUE);
@@ -506,9 +509,11 @@ public:
 #include "RooStats/LikelihoodInterval.h"
 #include "RooStats/LikelihoodIntervalPlot.h"
 
-class TestProfileLikelihoodCalculator1 : public RooUnitTest {
+
+
+class TestProfileLikelihoodCalculator1 : public RooStatsUnitTest {
 public:
-   TestProfileLikelihoodCalculator1(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("ProfileLikelihoodCalculator Interval - Gaussian Model", refFile, writeRef, verbose) {} ;
+   TestProfileLikelihoodCalculator1(TFile* refFile, Bool_t writeRef, Int_t verbose, const RooWorkspace *w) : RooStatsUnitTest("ProfileLikelihoodCalculator Interval - Gaussian Model", refFile, writeRef, verbose, (RooWorkspace *)0) {} ;
 
    Bool_t testCode() {
 
