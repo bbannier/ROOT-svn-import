@@ -249,6 +249,14 @@ void RooStats::HistFactory::Measurement::writeToFile( TFile* file ) {
     RooStats::HistFactory::Channel& channel = outMeas.fChannels.at( chanItr );
     std::string chanName = channel.GetName();
 
+    
+    if( ! channel.CheckHistograms() ) {
+      std::cout << "Measurement.writeToFile(): Channel: " << chanName
+		<< " has uninitialized histogram pointers" << std::endl;
+      throw bad_hf;
+      return;
+    }
+    
     // Get and cache the histograms for this channel:
     //collector.CollectHistograms( channel );
     // Do I need this...?

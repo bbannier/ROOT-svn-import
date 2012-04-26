@@ -105,28 +105,29 @@ namespace HistFactory{
   HistoToWorkspaceFactoryFast::~HistoToWorkspaceFactoryFast(){
   }
 
-  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(string filePrefix, string row, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* /*file*/):
-      fFileNamePrefix(filePrefix),
-      fRowTitle(row),
+  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(string /*filePrefix*/, string /*row*/, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* /*file*/):
+    //fFileNamePrefix(filePrefix),
+    //fRowTitle(row),
       fSystToFix(syst),
       fNomLumi(nomL),
       fLumiError(lumiE),
       fLowBin(low),
       fHighBin(high) {
 
+    /*
     fResultsPrefixStr<< "_" << fRowTitle;
     while(fRowTitle.find("\\ ")!=string::npos){
       int pos=fRowTitle.find("\\ ");
       fRowTitle.replace(pos, 1, "");
     }
-
+    */
     //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
   }
 
   HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(RooStats::HistFactory::Measurement& measurement ) :
-    fFileNamePrefix( measurement.GetOutputFilePrefix() ),
-    fRowTitle( measurement.GetName() ),
+    // fFileNamePrefix( measurement.GetOutputFilePrefix() ),
+    // fRowTitle( measurement.GetName() ),
     fSystToFix( measurement.GetConstantParams() ),
     fNomLumi( measurement.GetLumi() ),
     fLumiError( measurement.GetLumi()*measurement.GetLumiRelErr() ),
@@ -135,11 +136,13 @@ namespace HistFactory{
 
 
     // Configure the prefix string
+    /*
     fResultsPrefixStr<< "_" << fRowTitle;
     while(fRowTitle.find("\\ ")!=string::npos){
       int pos=fRowTitle.find("\\ ");
       fRowTitle.replace(pos, 1, "");
     }
+    */
 
     // Set Preprocess functions
     SetFunctionsToPreprocess( measurement.GetPreprocessFunctions() );
@@ -273,7 +276,7 @@ namespace HistFactory{
 
   }
 
-
+  /*
   string HistoToWorkspaceFactoryFast::FilePrefixStr(string prefix){
 
     stringstream ss;
@@ -281,6 +284,7 @@ namespace HistFactory{
 
     return ss.str();
   }
+  */
 
   void HistoToWorkspaceFactoryFast::ProcessExpectedHisto(TH1* hist,RooWorkspace* proto, string prefix, string
 						       productPrefix, string systTerm, double /*low*/ , double
