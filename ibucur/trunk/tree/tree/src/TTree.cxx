@@ -367,6 +367,7 @@
 #include <sstream>
 #include <string>
 #include <stdio.h>
+#include <limits.h>
 
 Int_t    TTree::fgBranchStyle = 1;  // Use new TBranch style with TBranchElement.
 Long64_t TTree::fgMaxTreeSize = 100000000000LL;
@@ -6431,7 +6432,12 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, c
    //loop on all lines in the file
    Long64_t nGoodLines = 0;
    std::string line;
-   const char sDelim[2] = { delimiter, 0 };
+   const char sDelimBuf[2] = { delimiter, 0 };
+   const char* sDelim = sDelimBuf;
+   if (delimiter == ' ') {
+      // ' ' really means whitespace
+      sDelim = "[ \t]";
+   }
    while(in.good()) {
       if (newline == '\r' && in.peek() == '\n') {
          // Windows, skip '\n':
@@ -6550,10 +6556,13 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, c
                  iBranch, nbranches, nlines);
          goodLine = kFALSE;
       } else if (pos != kNPOS) {
-         Warning("ReadStream",
-                 "Ignoring trailing \"%s\" while reading line %lld",
-                 sLine.Data() + pos - 1 /* also print delimiter */,
-                 nlines);
+         sLine = sLine.Strip(TString::kTrailing);
+         if (pos < sLine.Length()) {
+            Warning("ReadStream",
+                    "Ignoring trailing \"%s\" while reading line %lld",
+                    sLine.Data() + pos - 1 /* also print delimiter */,
+                    nlines);
+         }
       }
 
       //we are now ready to fill the tree
@@ -7817,7 +7826,28 @@ void TTree::Streamer(TBuffer& b)
          if (fEstimate <= 10000) {
             fEstimate = 1000000;
          }
-         fCacheSize    = fAutoFlush;
+         if (fAutoFlush < 0) {
+            // If there is no autoflush set, let's keep the cache completely
+            // disable by default for now.
+            fCacheSize = fAutoFlush; 
+         } else if (fAutoFlush != 0) {
+            // Estimate the cluster size.
+            // This will allow TTree::Process to enable the cache.
+            if (fZipBytes != 0) {
+               fCacheSize =  fAutoFlush*(fZipBytes/fEntries);
+            } else if (fTotBytes != 0) {
+               fCacheSize =  fAutoFlush*(fTotBytes/fEntries);                  
+            } else {
+               fCacheSize = 30000000;
+            }
+            if (fCacheSize >= (INT_MAX / 4)) {
+               fCacheSize = INT_MAX / 4;
+            } else if (fCacheSize == 0) {
+               fCacheSize = 30000000;                  
+            }
+         } else {
+            fCacheSize = 0;
+         }
          ResetBit(kMustCleanup);
          return;
       }
