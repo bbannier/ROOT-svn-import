@@ -1,7 +1,20 @@
+CRITICAL
+
+1. HypoTestInverter -> SetModel does nothing in the current version
+2. HypoTestInverter -> if pdf given is not extended should automatically set the number of events per toy in ToyMcSampler using the DataSet size
+3. HypoTestInverter -> auto scan does not work... it gets stuck in an infinite loop at the upper limit
+4. HypoTestInverter -> in fixed scans, sometimes the upper limit of the signal range is scanned twice
+5. HypoTestInverter -> SetFixedScan breaks the HypoTestInverter for certain value (we get wrong interval limits); this is currently caught by TestHypoTestInverter
+6. HypoTestInverter AsymptoticCalculator - the MIGRAD minimization messages cannot be hidden
+7. HypoTestInverter AsymptoticCalculator gives different results compared to the other two calculators
+8. SamplingDistribution.cxx line 547 : if fNuisanceParametersSampler is not set, the weight is set to -1.0. This yields negative error values when using FrequentistCalculator. Should the weight have a different value (e.g. 1.0) or should we force setting nuisance parameters in the models?
+
+
+MINOR
+
 1. ProfileLikelihoodCalculator Poisson -> lower limit goes to 0 when minValue for mean is 0 or very small
    -> it seems there is a problem with the calculated error matrix -> gives wrong error for estimate
 2. RooUnitTest -> comparison error message is not suggestive; it tells us which values are different, not the names of the variables which have different values
-3. ProfileLikelihoodCalculator Poisson -> observed Value = 500 gives Minimization failure; This only happens when the true mean has small values
 4. BayesianCalculator -> priorPOI argument should be priorPdf IMO
 5. getAnalyticalIntegrator -> not suggestive at all
 	analyticalIntegrator -> should be private
@@ -11,13 +24,6 @@
 	- however the integrator has a very long running time, because of too many function calls (see Mathcore integration tests)
 8. TestBayesianCalculator1 is quite lengthy even for small mean intervals
 9. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
-10. HypoTestInverter -> SetModel does nothing in the current version
-11. HypoTestInverter -> if pdf given is not extended should automatically set the number of events per toy in ToyMcSampler using the DataSet size
-12. HypoTestInverter -> auto scan does not work... it gets stuck in an infinite loop at the upper limit
-13. HypoTestInverter -> in fixed scans, sometimes the upper limit of the signal range is scanned twice
-14. HypoTestInverter -> SetFixedScan breaks the HypoTestInverter for certain value (we get wrong interval limits); this is currently caught by TestHypoTestInverter
-15. HypoTestInverter AsymptoticCalculator - the MIGRAD minimization messages cannot be hidden
-16. HypoTestInverter AsymptoticCalculator gives different results compared to the other two calculators
-17. FrequentistCalculator -> changing value of signal in sig->setVal(value) for the snapshot modifies Hypothesis test result; this should not happen
-18. SamplingDistribution.cxx line 547 : if fNuisanceParametersSampler is not set, the weight is set to -1.0. This yields negative error values when using FrequentistCalculator. Should the weight have a different value (e.g. 1.0) or should we force setting nuisance parameters in the models?
+10. Can you automatically delete the RooCFAuto***Func files ? If not, this should be written in the test suite.
+
 

@@ -13,6 +13,8 @@
 
 //#define NDEBUG
 
+#include <stdexcept>
+
 #ifdef DEBUG_ROOT_COCOA
 #import <iostream>
 #import <fstream>
@@ -29,6 +31,7 @@
 #import "X11Events.h"
 #import "TGWindow.h"
 #import "TGClient.h"
+#import "TSystem.h"
 #import "TGCocoa.h"
 
 namespace ROOT {
@@ -329,6 +332,19 @@ NSComparisonResult CompareViewsToRaise(id view1, id view2, void *context)
       return NSOrderedAscending;
 
    return NSOrderedSame;
+}
+
+//______________________________________________________________________________
+NSPoint GetCursorHotStop(NSImage *image, ECursor cursor)
+{
+   assert(image != nil && "CursroHotSpot, image parameter is nil");
+   
+   const NSSize imageSize = image.size;
+
+   if (cursor == kArrowRight) 
+      return CGPointMake(imageSize.width, imageSize.height / 2);
+   
+   return CGPointMake(imageSize.width / 2, imageSize.height / 2);
 }
 
 }
@@ -862,6 +878,52 @@ void print_mask_info(ULong_t mask)
    [self orderOut : self];
 }
 
+//Events.
+
+//______________________________________________________________________________
+- (void) sendEvent : (NSEvent *) theEvent
+{
+   assert(fContentView != nil && "sendEvent, content view is nil");
+
+   if (theEvent.type == NSLeftMouseDown || theEvent.type == NSRightMouseDown) {
+      const NSPoint windowPoint = [theEvent locationInWindow];
+      const NSPoint viewPoint =  [fContentView convertPointFromBase : windowPoint];
+      if (viewPoint.y <= 0 && windowPoint.y >= 0) {
+         //Very special case: mouse is in a title bar. 
+         //There are not NSView<X11Window> object in this area,
+         //this event will never go to any QuartzView, and this
+         //can be a problem: if drop-down menu is open and
+         //you move window using title-bar, ROOT's menu will
+         //"fell through" the main window, which is weird.
+         TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+         assert(vx != nullptr && "sendEvent, gVirtualX is either null or not of TGCocoa type");
+         if (vx->GetEventTranslator()->HasPointerGrab())
+            vx->GetEventTranslator()->GenerateButtonReleaseEvent(fContentView, theEvent, theEvent.type == NSLeftMouseDown ? kButton1 : kButton3);//yes, button release???
+      }
+   }
+
+   //Always call default version.
+   [super sendEvent : theEvent];
+}
+
+//Cursors.
+//______________________________________________________________________________
+- (ECursor) fCurrentCursor
+{
+   assert(fContentView != nil && "fCurrentCursor, content view is nil");
+   
+   return fContentView.fCurrentCursor;
+}
+
+//______________________________________________________________________________
+- (void) setFCurrentCursor : (ECursor) cursor
+{
+   assert(fContentView != nil && "setFCurrentCursor, content view is nil");
+   
+   fContentView.fCurrentCursor = cursor;
+}
+
+
 //NSWindowDelegate's methods.
 
 //______________________________________________________________________________
@@ -968,6 +1030,7 @@ void print_mask_info(ULong_t mask)
 @synthesize fGrabKeyModifiers;
 @synthesize fOwnerEvents;
 @synthesize fSnapshotDraw;
+@synthesize fCurrentCursor;
 
 //______________________________________________________________________________
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *)attr
@@ -996,6 +1059,8 @@ void print_mask_info(ULong_t mask)
       //
       if (attr)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+         
+      fCurrentCursor = kPointer;
    }
    
    return self;
@@ -1646,7 +1711,7 @@ void print_mask_info(ULong_t mask)
    
    if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable) {
       TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-      assert(vx != nullptr && "setFrameSize:, gVirtualX is either null or has type different from TGCocoa");
+      assert(vx != nullptr && "setFrameSize:, gVirtualX is either null or has a type, different from TGCocoa");
       vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
    }
 
@@ -1659,8 +1724,26 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "mouseDown, fID is 0");
    
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "mouseDown, gVirtualX is either null or has type different from TGCocoa");
+   assert(vx != nullptr && "mouseDown, gVirtualX is either null or has a type, different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);
+}
+
+//______________________________________________________________________________
+- (void) scrollWheel : (NSEvent*) theEvent
+{
+   assert(fID != 0 && "scrollWheel, fID is 0");
+
+   TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != nullptr && "scrollWheel, gVirtualX is either null or has a type, different from TGCocoa");
+
+   const CGFloat deltaY = [theEvent deltaY];
+   if (deltaY < 0) {
+      vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton5);
+      vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton5);
+   } else if (deltaY > 0) {
+      vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton4);
+      vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton4);
+   }
 }
 
 #ifdef DEBUG_ROOT_COCOA
@@ -1710,8 +1793,6 @@ void print_mask_info(ULong_t mask)
 {
 
    assert(fID != 0 && "rightMouseUp, fID is 0");
-   
-   (void)theEvent;//TODO: delete.
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "rightMouseUp, gVirtualX is either null or has type different from TGCocoa");
@@ -1759,11 +1840,6 @@ void print_mask_info(ULong_t mask)
 {
    assert(fID != 0 && "mouseDragged, fID is 0");
    
-   //mouseMoved and mouseDragged work differently 
-   //(drag events are generated only for one view, where drag started).
-   //if (fParentView)
-   //   return;
-   
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "mouseMoved, gVirtualX is null or not of TGCocoa type");
    
@@ -1774,12 +1850,7 @@ void print_mask_info(ULong_t mask)
 - (void) rightMouseDragged : (NSEvent *)theEvent
 {
    assert(fID != 0 && "rightMouseDragged, fID is 0");
-   
-   //mouseMoved and mouseDragged work differently 
-   //(drag events are generated only for one view, where drag started).
-   //if (fParentView)
-   //   return;
-   
+
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "rightMouseMoved, gVirtualX is null or not of TGCocoa type");
    
@@ -1846,6 +1917,123 @@ void print_mask_info(ULong_t mask)
    
    //NSResponder returns YES, so do I.
    return YES;
+}
+
+
+//Cursors.
+//______________________________________________________________________________
+- (void) setFCurrentCursor : (ECursor) cursor
+{
+   if (cursor != fCurrentCursor) {
+      fCurrentCursor = cursor;
+      [self.fQuartzWindow invalidateCursorRectsForView : self];
+   }
+}
+
+//______________________________________________________________________________
+- (NSCursor *) createCustomCursor 
+{
+   const char *pngFileName = 0;
+
+   switch (fCurrentCursor) {
+   case kMove:
+      pngFileName = "move_cursor.png";
+      break;
+   case kArrowHor:
+      pngFileName = "hor_arrow_cursor.png";
+      break;
+   case kArrowVer:
+      pngFileName = "ver_arrow_cursor.png";
+      break;
+   case kArrowRight:
+      pngFileName = "right_arrow_cursor.png";
+      break;
+   case kBottomLeft:
+   case kTopRight:
+      pngFileName = "top_right_cursor.png";
+      break;
+   case kTopLeft:
+   case kBottomRight:
+      pngFileName = "top_left_cursor.png";
+      break;
+   default:;
+   }
+   
+   if (pngFileName) {
+      const char *path = gSystem->Which("$ROOTSYS/icons", pngFileName, kReadPermission);//This must be deleted.
+
+      if (!path || path[0] == 0) {
+         //File was not found.
+         delete [] path;
+         return nil;
+      }
+      
+      NSString *nsPath = [NSString stringWithFormat : @"%s", path];//in autorelease pool.
+      delete [] path;
+
+      NSImage *cursorImage = [[NSImage alloc] initWithContentsOfFile : nsPath];//must call release.
+
+      if (!cursorImage)
+         return nil;
+      
+      NSPoint hotSpot = ROOT::MacOSX::X11::GetCursorHotStop(cursorImage, fCurrentCursor);
+      NSCursor *customCursor = [[[NSCursor alloc] initWithImage : cursorImage hotSpot : hotSpot] autorelease];//in autorelease pool.
+      
+      [cursorImage release];
+      
+      return customCursor;
+   }
+
+   return nil;
+}
+
+//______________________________________________________________________________
+- (void) resetCursorRects
+{
+   //Cursors from TVirtaulX:
+   // kBottomLeft, kBottomRight, kTopLeft,  kTopRight,
+   // kBottomSide, kLeftSide,    kTopSide,  kRightSide,
+   // kMove,       kCross,       kArrowHor, kArrowVer,
+   // kHand,       kRotate,      kPointer,  kArrowRight,
+   // kCaret,      kWatch
+   
+   NSCursor *cursor = nil;
+   
+   switch (fCurrentCursor) {
+   case kCross:
+      cursor = [NSCursor crosshairCursor];
+      break;
+   case kPointer:
+      //Use simple arrow (or this special cursor will be even on GUI widgets).
+      break;
+   case kHand:
+      cursor = [NSCursor openHandCursor];
+      break;
+   case kLeftSide:
+      cursor = [NSCursor resizeLeftCursor];
+      break;
+   case kRightSide:
+      cursor = [NSCursor resizeRightCursor];
+      break;
+   case kTopSide:
+      cursor = [NSCursor resizeUpCursor];
+      break;
+   case kBottomSide:
+      cursor = [NSCursor resizeDownCursor];
+      break;
+   case kCaret:
+      cursor = [NSCursor IBeamCursor];
+      break;
+   case kRotate:
+   case kWatch:
+   default:
+      cursor = [self createCustomCursor];
+   }
+   
+   if (cursor)
+      [self addCursorRect : self.visibleRect cursor : cursor];
+   else
+      [super resetCursorRects];
 }
 
 @end
