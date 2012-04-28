@@ -352,13 +352,16 @@ void TMVA::PDEFoam::InitCells()
       for(Int_t i=0; i<fNCells; i++) delete fCells[i];
       delete [] fCells;
    }
-   //
-   fCells = new PDEFoamCell*[fNCells];
+
+   fCells = new(nothrow) PDEFoamCell*[fNCells];
+   if (!fCells) {
+      Log() << kFATAL << "not enough memory to create " << fNCells
+            << " cells" << Endl;
+   }
    for(Int_t i=0; i<fNCells; i++){
       fCells[i]= new PDEFoamCell(fDim); // Allocate BIG list of cells
       fCells[i]->SetSerial(i);
    }
-   if(fCells==0) Log() << kFATAL << "Cannot initialize CELLS" << Endl;
 
    /////////////////////////////////////////////////////////////////////////////
    //              Single Root Hypercube                                      //
