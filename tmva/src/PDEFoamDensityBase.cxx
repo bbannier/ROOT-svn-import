@@ -76,7 +76,7 @@ ClassImp(TMVA::PDEFoamDensityBase)
 //_____________________________________________________________________
 TMVA::PDEFoamDensityBase::PDEFoamDensityBase()
    : TObject(),
-     fBox(std::vector<Double_t>()),
+     fBox(),
      fBoxVolume(1.0),
      fBoxHasChanged(kTRUE),
      fBst(new TMVA::BinarySearchTree()),
