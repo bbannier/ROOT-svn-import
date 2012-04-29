@@ -101,9 +101,9 @@ TMVA::MethodPDEFoam::MethodPDEFoam( const TString& jobName,
    , fDTLogic("None")
    , fDTSeparation(kFoam)
    , fPeekMax(kTRUE)
-   , fXmin(std::vector<Float_t>())
-   , fXmax(std::vector<Float_t>())
-   , fFoam(std::vector<PDEFoam*>())
+   , fXmin()
+   , fXmax()
+   , fFoam()
 {
    // init PDEFoam objects
 }
@@ -137,9 +137,9 @@ TMVA::MethodPDEFoam::MethodPDEFoam( DataSetInfo& dsi,
    , fDTLogic("None")
    , fDTSeparation(kFoam)
    , fPeekMax(kTRUE)
-   , fXmin(std::vector<Float_t>())
-   , fXmax(std::vector<Float_t>())
-   , fFoam(std::vector<PDEFoam*>())
+   , fXmin()
+   , fXmax()
+   , fFoam()
 {
    // constructor from weight file
 }
