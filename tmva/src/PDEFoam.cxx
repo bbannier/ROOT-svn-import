@@ -140,6 +140,10 @@ TMVA::PDEFoam::PDEFoam() :
    fLogger(new MsgLogger("PDEFoam"))
 {
    // Default constructor for streamer, user should not use it.
+
+   // fVariableNames may delete it's heap-based content
+   if (fVariableNames)
+      fVariableNames->SetOwner(kTRUE);
 }
 
 //_____________________________________________________________________
@@ -179,7 +183,8 @@ TMVA::PDEFoam::PDEFoam(const TString& name) :
       Log() << kFATAL << "Name too long " << name.Data() << Endl;
 
    // fVariableNames may delete it's heap-based content
-   fVariableNames->SetOwner(kTRUE);
+   if (fVariableNames)
+      fVariableNames->SetOwner(kTRUE);
 }
 
 //_____________________________________________________________________
@@ -241,6 +246,10 @@ TMVA::PDEFoam::PDEFoam(const PDEFoam &from) :
 {
    // Copy Constructor  NOT IMPLEMENTED (NEVER USED)
    Log() << kFATAL << "COPY CONSTRUCTOR NOT IMPLEMENTED" << Endl;
+
+   // fVariableNames may delete it's heap-based content
+   if (fVariableNames)
+      fVariableNames->SetOwner(kTRUE);
 }
 
 //_____________________________________________________________________
