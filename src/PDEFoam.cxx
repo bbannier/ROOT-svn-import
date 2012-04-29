@@ -177,6 +177,9 @@ TMVA::PDEFoam::PDEFoam(const TString& name) :
    // User constructor, to be employed by the user
    if(strlen(name) > 128)
       Log() << kFATAL << "Name too long " << name.Data() << Endl;
+
+   // fVariableNames may delete it's heap-based content
+   fVariableNames->SetOwner(kTRUE);
 }
 
 //_____________________________________________________________________
@@ -191,6 +194,7 @@ TMVA::PDEFoam::~PDEFoam()
    if (fXmin) delete [] fXmin;  fXmin=0;
    if (fXmax) delete [] fXmax;  fXmax=0;
 
+   ResetCellElements();
    if(fCells!= 0) {
       for(Int_t i=0; i<fNCells; i++) delete fCells[i]; // PDEFoamCell*[]
       delete [] fCells;
@@ -952,11 +956,11 @@ void TMVA::PDEFoam::ResetCellElements()
 
    if (!fCells) return;
 
-   // delete all old cell elements
-   Log() << kVERBOSE << "Delete old cell elements" << Endl;
-   for(Long_t iCell=0; iCell<fNCells; iCell++) {
-      if (fCells[iCell]->GetElement() != NULL){
-         delete dynamic_cast<TVectorD*>(fCells[iCell]->GetElement());
+   Log() << kVERBOSE << "Delete cell elements" << Endl;
+   for (Long_t iCell = 0; iCell < fNCells; ++iCell) {
+      TObject* elements = fCells[iCell]->GetElement();
+      if (elements) {
+         delete elements;
          fCells[iCell]->SetElement(NULL);
       }
    }
