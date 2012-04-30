@@ -66,7 +66,7 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PROFILE LIKELIHOOD INTERVAL - GAUSSIAN DISTRIBUTION
+// PROFILE LIKELIHOOD CALCULATOR - LIKELIHOOD INTERVAL - GAUSSIAN DISTRIBUTION
 //
 // Test the likelihood interval computed by the profile likelihood calculator
 // on a Gaussian distribution. Reference interval limits are computed via
@@ -74,7 +74,7 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
 // normal_quantile_c(testSize/2, 1). In the case of a Gaussian distribution, the
 // interval limits are equal to: mean +- normal_quantile_c(testSize/2, sigma/sqrt(N)).
 //
-// ModelConfig: (implicit)
+// ModelConfig (implicit) :
 //    Observable -> x
 //    Parameter of Interest -> mean
 //    Nuisance parameter (Constant !) -> sigma
@@ -85,7 +85,6 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
 
 class TestProfileLikelihoodCalculator1 : public RooUnitTest {
 private:
-   Double_t fObsValue;
    Double_t fConfidenceLevel;
 
 public:
@@ -93,21 +92,15 @@ public:
          TFile* refFile, 
          Bool_t writeRef, 
          Int_t verbose, 
-         Double_t obsValue = 0.0, 
          Double_t confidenceLevel = 0.95) : 
       RooUnitTest("ProfileLikelihoodCalculator Interval - Gaussian Model", refFile, writeRef, verbose),
-      fObsValue(obsValue),
       fConfidenceLevel(confidenceLevel) 
    {};
 
    // Basic checks for the parameters passed to the test
    // In case of invalid parameters, a warning is printed and the test is skipped
    Bool_t isTestAvailable() {
-      if(fObsValue < -5.0 || fObsValue > 5.0) {
-         Warning("isTestAvailable", "Observed value must be in the range [-5,5]. Skipping test...");
-         return kFALSE;
-      }
-      if(confidenceLevel <= 0.0 || fConfidenceLevel >= 1.0) {
+      if(fConfidenceLevel <= 0.0 || fConfidenceLevel >= 1.0) {
          Warning("isTestAvailable", "Confidence level must be in the range (0,1). Skipping test...");
          return kFALSE;
       }      
@@ -116,12 +109,15 @@ public:
 
    Bool_t testCode() {
 
-      const Int_t N = 100; // number of observations
-
+      const Int_t N = 10; // number of observations
+      // the compared values / objects must have the same name in write / compare modes
+      TString lowerLimitString = TString::Format("tplc2_lower_limit_mean_%lf", fConfidenceLevel);
+      TString upperLimitString = TString::Format("tplc2_upper_limit_mean_%lf", fConfidenceLevel);
+      
       //TODO: see why it fails for a small number of observations
       // Create Gaussian model, generate data set and define 
       RooWorkspace* w = new RooWorkspace("w", kTRUE);
-      w->factory("Gaussian::gauss(x[%lf,-5,5], mean[0,-5,5], sigma[1])"); 
+      w->factory("Gaussian::gauss(x[-5,5], mean[0,-5,5], sigma[1])"); 
       RooDataSet *data = w->pdf("gauss")->generate(*w->var("x"), N);
 
       if (_write == kTRUE) {
@@ -135,8 +131,8 @@ public:
          Double_t upperLimit = estMean + intervalHalfWidth;
 
          // Compare the limits obtained via ProfileLikelihoodCalculator with analytically estimated values
-         regValue(lowerLimit, "tplc1_lower_limit_mean");
-         regValue(upperLimit, "tplc1_upper_limit_mean");
+         regValue(lowerLimit, lowerLimitString);
+         regValue(upperLimit, upperLimitString);
 
       } else {
 
@@ -146,8 +142,8 @@ public:
          LikelihoodInterval *interval = plc->GetInterval();
 
          // Register analytically computed limits in the reference file
-         regValue(interval->LowerLimit(*w->var("mean")), "tplc1_lower_limit_mean");
-         regValue(interval->UpperLimit(*w->var("mean")), "tplc1_upper_limit_mean");
+         regValue(interval->LowerLimit(*w->var("mean")), lowerLimitString);
+         regValue(interval->UpperLimit(*w->var("mean")), upperLimitString);
 
          // Cleanup branch objects
          delete plc;
@@ -165,13 +161,13 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// PROFILE LIKELIHOOD INTERVAL - POISSON DISTRIBUTION
+// PROFILE LIKELIHOOD CALCULATOR - LIKELIHOOD INTERVAL - POISSON DISTRIBUTION
 //
 // Test the 68% likelihood interval computed by the profile likelihood calculator
 // on a Poisson distribution, from only one observed value. Reference values are
 // computed via analytic methods: solve equation 2*[ln(LL(xMax)) - ln(LL(x))] = 1.
 //
-// ModelConfig: (implicit)
+// ModelConfig (implicit) :
 //    Observable -> x
 //    Parameter of Interest -> mean
 //
@@ -184,8 +180,10 @@ private:
    Int_t fObsValue;
 
 public:
-   TestProfileLikelihoodCalculator2(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue = 5) : RooUnitTest("ProfileLikelihoodCalculator Interval - Poisson Simple Model", refFile, writeRef, verbose), fObsValue(obsValue) {
-   };
+   TestProfileLikelihoodCalculator2(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValue = 5) : 
+      RooUnitTest("ProfileLikelihoodCalculator Interval - Poisson Simple Model", refFile, writeRef, verbose), 
+      fObsValue(obsValue) 
+   {};
 
    // Basic checks for the parameters passed to the test
    // In case of invalid parameters, a warning is printed and the test is skipped
@@ -228,7 +226,7 @@ public:
       } else {
 
          // Set a 68% confidence level for the interval
-         const Double_t confidenceLevel = 1.0 - ROOT::Math::normal_cdf_c(1) * 2; 
+         const Double_t confidenceLevel = 2 * ROOT::Math::normal_cdf(1) - 1.0; 
 
          // Create Poisson model and dataset
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
@@ -255,6 +253,140 @@ public:
       return kTRUE ;
    }
 };
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// PROFILE LIKELIHOOD CALCULATOR - LIKELIHOOD INTERVAL - COMPLEX MODEL
+//
+// Test the 68% likelihood interval computed by the ProfileLikelihoodCalculator
+// on a complex model. Reference values and test values are both computed with 
+// the ProfileLikelihoodCalculator. As such, this test can only confirm if the 
+// ProfileLikelihoodCalculator has the same behaviour on a different machine.
+//
+// ModelConfig (explicit) : Poisson Product Model
+//    built in stressRooStats_models.cxx
+//
+// 04/2012 - Ioan Gabriel Bucur
+//
+///////////////////////////////////////////////////////////////////////////////
+
+class TestProfileLikelihoodCalculator3 : public RooUnitTest {
+private:
+   Int_t fObsValueX;
+   Int_t fObsValueY;
+
+public:
+   TestProfileLikelihoodCalculator3(TFile* refFile, Bool_t writeRef, Int_t verbose, Int_t obsValueX = 7, Int_t obsValueY = 15) : 
+      RooUnitTest("ProfileLikelihoodCalculator Interval - Poisson Complex Model", refFile, writeRef, verbose), 
+      fObsValueX(obsValueX), 
+      fObsValueY(obsValueY) 
+   {};
+
+   // Basic checks for the parameters passed to the test
+   // In case of invalid parameters, a warning is printed and the test is skipped
+   Bool_t isTestAvailable() {
+      if(fObsValueX < 0 || fObsValueX > 40) {
+         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,40]. Skipping test...");
+         return kFALSE;
+      }
+      if(fObsValueY < 0 || fObsValueY > 120) {
+         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,120]. Skipping test...");
+         return kFALSE;
+      }         
+      return kTRUE;
+   }
+
+
+   Bool_t testCode() {
+
+      const Double_t testSize = ROOT::Math::normal_cdf_c(1) * 2;
+
+      // Create workspace and model
+      RooWorkspace *w = new RooWorkspace("w", kTRUE);
+      pair<ModelConfig *, ModelConfig *> models = buildPoissonProductModel(w);
+      
+      // add observed values to data set 
+      w->var("x")->setVal(fObsValueX);
+      w->var("y")->setVal(fObsValueY);
+      w->data("data")->add(*w->set("obs"));
+
+      // build likelihood interval with ProfileLikelihoodCalculator
+      ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *models.first, testSize);
+      LikelihoodInterval *interval = plc->GetInterval();
+
+      regValue(w->var("beta")->getValV(), TString::Format("tplc3_beta_nuis_fit_%d_%d", fObsValueX, fObsValueY));    
+      regValue(interval->LowerLimit(*w->var("sig")), TString::Format("tplc3_lower_limit_sig_%d_%d", fObsValueX, fObsValueY));
+      regValue(interval->UpperLimit(*w->var("sig")), TString::Format("tplc3_upper_limit_sig_%d_%d", fObsValueX, fObsValueY));
+
+      // cleanup
+      delete interval;
+      delete plc;
+      delete w;
+
+      return kTRUE ;
+   }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// PROFILE LIKELIHOOD CALCULATOR - HYPOTHESIS TEST
+//
+// Perform a hypothesis test using the ProfileLikelihoodCalculator on the
+// on/off model. Reference values and test values are both computed with the 
+// ProfileLikelihoodCalculator. As such, this test can only confirm if the 
+// ProfileLikelihoodCalculator has the same behaviour on a different machine.
+//
+// ModelConfig (explicit) : Poisson On / Off Model
+//    built in stressRooStats_models.cxx
+// For a detailed description, see the paper: "Evaluation of three methods 
+// for calculating statistical significance when incorporating a systematic 
+// uncertainty into a test of the background-only hypothesis for a Poisson 
+// process" by Robert D. Cousins, James T. Linnemann, Jordan Tucker 
+//
+// 04/2012 - Ioan Gabriel Bucur
+//
+///////////////////////////////////////////////////////////////////////////////
+
+class TestProfileLikelihoodCalculator4 : public RooUnitTest {
+public:
+   TestProfileLikelihoodCalculator4(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("ProfileLikelihoodCalculator HypoTest", refFile, writeRef, verbose) {};
+
+   Bool_t testCode() {
+
+     /* const Int_t xValue = 150;
+      const Int_t yValue = 100;
+      const Double_t tauValue = 1;
+      
+      if(_write == kTRUE) {
+
+         // register analytical Z_Bi value
+         Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(xValue, yValue, tauValue);
+         regValue(Z_Bi, "thtc_significance_hybrid");
+
+      } else {
+      
+         // build workspace and model
+         RooWorkspace *w = new RooWorkspace("w", kTRUE);
+         pair<ModelConfig *, ModelConfig *> models = buildOnOffModels(w);
+
+         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *model.first);
+         plc->SetNullParameters(*model.secondModel->GetSnapshot());
+         HypoTestResult *htr = plc->GetHypoTest();
+         htr->Print(); 
+
+         regValue(htr->Significance(), "tplc4_significance");
+
+         // cleanup
+         delete plc;
+         delete htr;
+         delete w;
+      }
+
+      return kTRUE ;*/
+   }
+} ;
 
 
 
@@ -956,16 +1088,27 @@ public:
       RooWorkspace *w = new RooWorkspace("w", kTRUE);
       pair<ModelConfig *, ModelConfig *> models = buildPoissonProductModel(w);
 
+      // add observed values to data set 
+      w->var("x")->setVal(30);
+      w->var("y")->setVal(5);
+      w->data("data")->add(*w->set("obs"));
+
+     // w->var("sig")->setVal(5);
+     // models.first->SetSnapshot(*w->set("poi"));
+
+      //w->var("beta")->setConstant();
+      //w->var("beta0")->setConstant();
+
       // Create BayesianCalculator and calculate interval
       BayesianCalculator *bc = new BayesianCalculator(*w->data("data"), *models.first);
       bc->SetTestSize(testSize);
-      SimpleInterval *interval = bc->GetInterval();
-      regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_unif");
-      regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_unif");
+      //SimpleInterval *interval = bc->GetInterval();
+      //regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_unif");
+      //regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_unif");
 
       // Obtain CI by scanning the posterior function in the given number of points
       bc->SetScanOfPosterior(100);
-      interval = bc->GetInterval();
+      SimpleInterval *interval = bc->GetInterval();
       regValue(interval->LowerLimit(), "bc3_lower_limit_sig1_binned");
       regValue(interval->UpperLimit(), "bc3_upper_limit_sig1_binned");
 
@@ -1028,45 +1171,6 @@ public:
    }
 };
 
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// PROFILE LIKELIHOOD INTERVAL CALCULATOR - COMPLEX MODEL
-//
-// Test the likelihood interval computed by the ProfileLikelihoodCalculator
-// on a complex model. A uniform prior is used for the POI.
-//
-// 04/2012 - Ioan Gabriel Bucur
-//
-///////////////////////////////////////////////////////////////////////////////
-
-class TestProfileLikelihoodCalculator3 : public RooUnitTest {
-public:
-   TestProfileLikelihoodCalculator3(TFile* refFile, Bool_t writeRef, Int_t verbose) : RooUnitTest("ProfileLikelihoodCalculator Interval - Poisson Complex Model", refFile, writeRef, verbose) {};
-
-   Bool_t testCode() {
-
-      const Double_t testSize = ROOT::Math::normal_cdf_c(1) * 2;
-
-      // Create workspace and model
-      RooWorkspace *w = new RooWorkspace("w", kTRUE);
-      pair<ModelConfig *, ModelConfig *> models = buildPoissonProductModel(w);
-
-      // build likelihood interval with ProfileLikelihoodCalculator
-      ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *models.first, testSize);
-      LikelihoodInterval *interval = plc->GetInterval();
-      regValue(interval->LowerLimit(*w->var("sig1")), "plc3_lower_limit_sig1");
-      regValue(interval->UpperLimit(*w->var("sig1")), "plc3_upper_limit_sig1");
-
-      // cleanup
-      delete interval;
-      delete plc;
-      delete w;
-
-      return kTRUE ;
-   }
-};
 
 
 

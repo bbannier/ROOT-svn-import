@@ -22,8 +22,7 @@ MINOR
 7. the RooIntegrator1D problem
 	- RooRealIntegral:62 Minimum number of steps -> solves convergence problem
 	- however the integrator has a very long running time, because of too many function calls (see Mathcore integration tests)
-8. TestBayesianCalculator1 is quite lengthy even for small mean intervals
-9. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
-10. Can you automatically delete the RooCFAuto***Func files ? If not, this should be written in the test suite.
-
+8. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
+9. Can you automatically delete the RooCFAuto***Func files ? If not, this should be written in the test suite.
+10. Why does beta change its value after call to LowerLimit / UpperLimit ?
 
