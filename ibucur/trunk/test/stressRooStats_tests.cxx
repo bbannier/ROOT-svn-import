@@ -25,6 +25,7 @@
 #include "RooUnitTest.h"
 
 // RooStats headers
+//
 #include "RooStats/NumberCountingUtils.h"
 #include "RooStats/RooStatsUtils.h"
 #include "RooStats/TestStatistic.h"
@@ -63,6 +64,7 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
 #include "RooStats/ProfileLikelihoodCalculator.h"
 #include "RooStats/LikelihoodInterval.h"
 #include "RooStats/LikelihoodIntervalPlot.h"
+#include "RooStats/HypoTestResult.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -355,24 +357,37 @@ public:
 
    Bool_t testCode() {
 
-     /* const Int_t xValue = 150;
+      const Int_t xValue = 150;
       const Int_t yValue = 100;
-      const Double_t tauValue = 1;
+      const Double_t tauValue = 2.0;
       
       if(_write == kTRUE) {
 
          // register analytical Z_Bi value
          Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(xValue, yValue, tauValue);
-         regValue(Z_Bi, "thtc_significance_hybrid");
+         regValue(Z_Bi, "tplc4_significance");
 
       } else {
       
          // build workspace and model
          RooWorkspace *w = new RooWorkspace("w", kTRUE);
-         pair<ModelConfig *, ModelConfig *> models = buildOnOffModels(w);
+         pair<ModelConfig *, ModelConfig *> models = buildOnOffModel(w);
+        
+         // add observable values to data set
+         w->var("x")->setVal(xValue);
+         w->var("y")->setVal(yValue);
+         w->var("tau")->setVal(tauValue);
+         w->data("data")->add(*w->set("obs"));
 
-         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *model.first);
-         plc->SetNullParameters(*model.secondModel->GetSnapshot());
+         // set snapshots
+         w->var("sig")->setVal(xValue - yValue / tauValue);
+         models.first->SetSnapshot(*w->set("poi"));
+         w->var("sig")->setVal(0);
+         models.second->SetSnapshot(*w->set("poi")); 
+
+         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *models.first);
+         plc->SetNullParameters(*models.second->GetSnapshot());
+         plc->SetAlternateParameters(*models.first->GetSnapshot());
          HypoTestResult *htr = plc->GetHypoTest();
          htr->Print(); 
 
@@ -384,7 +399,7 @@ public:
          delete w;
       }
 
-      return kTRUE ;*/
+      return kTRUE ;
    }
 } ;
 
