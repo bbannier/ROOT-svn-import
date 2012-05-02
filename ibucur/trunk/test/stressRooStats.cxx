@@ -110,32 +110,30 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
 //   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
 //   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 
-/*   // TEST PROFILE LIKELIHOOD CALCULATOR 1 : Confidence Level range is (0,1)
+   // TEST PROFILE LIKELIHOOD CALCULATOR 1 : Confidence Level range is (0,1)
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.99999)); // boundary case CL -> 1
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(3) - 1)); // 3 sigma
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(2) - 1)); // 2 sigma
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(1) - 1)); // 1 sigma
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.00001)); // boundary case CL -> 0
 
-   // TEST PROFILE LIKELIHOOD CALCULATOR 2 : Poisson observed value range is [0,1000]
+   // TEST PROFILE LIKELIHOOD CALCULATOR 2 : Observed value range is [0,1000]
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 0)); // boundary Poisson value (0)
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 1));
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 5));
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 100));
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 800)); // boundary Poisson value
-*/
-   // TEST PROFILE LIKELIHOOD CALCULATOR 3 : Poisson observed value range is [0,40] for x=s+b and [0,60] for y=2*s+b
+
+   // TEST PROFILE LIKELIHOOD CALCULATOR 3 : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 0, 0));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 10, 10));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 15, 30));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 30, 5));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 40, 120));
 
-   // TEST PROFILE LIKELIHOOD CALCULATOR 4 :
    testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
 
-
-//   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose));
+   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose));
 //   testList.push_back(new TestBayesianCalculator2(fref, writeRef, verbose));
 //   testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose));
 //   testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose));
