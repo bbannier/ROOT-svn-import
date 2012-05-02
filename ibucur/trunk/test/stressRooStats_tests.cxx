@@ -465,6 +465,7 @@ public:
 //
 
 #include "RooStats/BayesianCalculator.h"
+#include "RooCFunction1Binding.h" // for prior building purposes
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -495,6 +496,8 @@ public:
 class TestBayesianCalculator1 : public RooUnitTest {
 private:
    Int_t fObsValue;
+   static Double_t priorInv(Double_t mean) { return 1.0 / mean; }
+   static Double_t priorInvSqrt(Double_t mean) { return 1.0 / sqrt(mean); }
 
 public:
    TestBayesianCalculator1(
@@ -506,6 +509,8 @@ public:
       RooUnitTest("BayesianCalculator Central Interval - Poisson Simple Model", refFile, writeRef, verbose),
       fObsValue(obsValue)
    {};
+
+   Double_t vtol() { return 0.02; }
 
    Bool_t testCode() {
 
@@ -540,13 +545,12 @@ public:
       } else {
          // Create Poisson model and dataset
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
-         w->factory("Poisson::poiss(x[0,30], mean[0.1,30])");
-         // Example: run times 20 -> 26.6 sec; 33 -> 44 sec; 100 -> 68.7 sec
+         w->factory("Poisson::poiss(x[0,20], mean[0.1,20])");
 
          // create prior pdfs
          w->factory("Uniform::prior(mean)");
-         w->factory("CEXPR::priorInv('1/mean', mean)");
-         w->factory("CEXPR::priorInvSqrt('1/sqrt(mean)', mean)");
+         w->import(*(new RooCFunction1PdfBinding<Double_t, Double_t>("priorInv", "priorInv", &priorInv, *w->var("mean"))));
+         w->factory("EXPR::priorInvSqrt('1.0/sqrt(mean)', mean)");
          w->factory(TString::Format("Gamma::priorGamma(mean, %lf, %lf, 0)", gammaShape, gammaRate));
 
          // NOTE: Roo1DIntegrator is too slow and gives poor results
@@ -572,6 +576,7 @@ public:
          // Inverse of mean prior
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("priorInv"), NULL);
          bc->SetConfidenceLevel(confidenceLevel);
+         bc->SetScanOfPosterior(100);
          interval = bc->GetInterval();
          regValue(interval->LowerLimit(), "tbc1_lower_limit_inv");
          regValue(interval->UpperLimit(), "tbc1_upper_limit_inv");
@@ -582,6 +587,7 @@ public:
          // Square root of inverse of mean prior
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("priorInvSqrt"), NULL);
          bc->SetConfidenceLevel(confidenceLevel);
+         bc->SetScanOfPosterior(100);
          interval = bc->GetInterval();
          regValue(interval->LowerLimit(), "tbc1_lower_limit_inv_sqrt");
          regValue(interval->UpperLimit(), "tbc1_upper_limit_inv_sqrt");
