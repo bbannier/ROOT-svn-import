@@ -32,4 +32,6 @@
 #pragma link C++ defined_in "include/RooStats/HistFactory/MakeModelAndMeasurementsFast.h"; 
 #pragma link C++ defined_in "include/RooStats/HistFactory/Systematics.h"; 
 
+
+
 #endif
