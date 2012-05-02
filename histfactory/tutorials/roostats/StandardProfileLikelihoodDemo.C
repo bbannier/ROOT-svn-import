@@ -37,6 +37,15 @@ and the asymptotic properties of the profile likeihood ratio
 using namespace RooFit;
 using namespace RooStats;
 
+namespace RooStats {
+
+void StandardProfileLikelihoodDemo( RooWorkspace* w,
+				    const char* modelConfigName = "ModelConfig",
+				    const char* dataName = "obsData");
+
+
+}
+
 void StandardProfileLikelihoodDemo(const char* infile = "",
 		      const char* workspaceName = "combined",
 		      const char* modelConfigName = "ModelConfig",
@@ -79,17 +88,24 @@ void StandardProfileLikelihoodDemo(const char* infile = "",
     return;
   }
 
-  
-  /////////////////////////////////////////////////////////////
-  // Tutorial starts here
-  ////////////////////////////////////////////////////////////
-
   // get the workspace out of the file
   RooWorkspace* w = (RooWorkspace*) file->Get(workspaceName);
   if(!w){
     cout <<"workspace not found" << endl;
     return;
   }
+
+  /////////////////////////////////////////////////////////////
+  // Then, we pass this workspace to the standard function
+  ////////////////////////////////////////////////////////////
+
+  StandardProfileLikelihoodDemo( w, modelConfigName, dataName );
+
+}
+
+void RooStats::StandardProfileLikelihoodDemo( RooWorkspace* w,
+				    const char* modelConfigName,
+				    const char* dataName) {
 
   // get the modelConfig out of the file
   ModelConfig* mc = (ModelConfig*) w->obj(modelConfigName);

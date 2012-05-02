@@ -17,6 +17,8 @@
 #pragma link C++ namespace RooStats;
 #pragma link C++ namespace RooStats::NumberCountingUtils;
 
+#pragma link C++ defined_in "include/RooStats/StandardDemonstrations.h"; 
+
 // for auto-loading namespaces
 #ifdef USE_FOR_AUTLOADING
 #pragma link C++ class RooStats::NumberCountingUtils;
@@ -126,7 +128,6 @@
 #pragma link C++ function RooStats::MakeNuisancePdf(RooAbsPdf & , const RooArgSet &, const char * );
 #pragma link C++ function RooStats::MakeNuisancePdf(const RooStats::ModelConfig & , const char * );
 #pragma link C++ function RooStats::GetAsTTree(TString, TString, const RooDataSet&);
-
 
 // need for auto_ptr object in Likelihoodinterval since they are forwd declared
 #pragma extra_include "Math/IFunction.h";

@@ -126,6 +126,12 @@ using namespace RooStats;
 /////////////////////////////////////////////////////////////////////////
 // The actual macro
 
+void OneSidedFrequentistUpperLimitWithBands(RooWorkspace*,
+					    const char* modelConfigName = "ModelConfig",
+					    const char* dataName = "obsData");
+
+
+
 void OneSidedFrequentistUpperLimitWithBands(const char* infile = "",
 					    const char* workspaceName = "combined",
 					    const char* modelConfigName = "ModelConfig",
@@ -138,10 +144,6 @@ void OneSidedFrequentistUpperLimitWithBands(const char* infile = "",
   cout << "with ACLIC" << endl;
   return;
 #endif
-
-  double confidenceLevel=0.95;
-  int nPointsToScan = 30;
-  int nToyMC = 500;
 
   /////////////////////////////////////////////////////////////
   // First part is just to access a user-defined file 
@@ -191,6 +193,20 @@ void OneSidedFrequentistUpperLimitWithBands(const char* infile = "",
     cout <<"workspace not found" << endl;
     return;
   }
+
+  OneSidedFrequentistUpperLimitWithBands(w, modelConfigName, dataName);
+
+}
+
+void OneSidedFrequentistUpperLimitWithBands(RooWorkspace* w,
+					    const char* modelConfigName,
+					    const char* dataName) {
+
+
+
+  double confidenceLevel=0.95;
+  int nPointsToScan = 30;
+  int nToyMC = 500;
 
   // get the modelConfig out of the file
   ModelConfig* mc = (ModelConfig*) w->obj(modelConfigName);

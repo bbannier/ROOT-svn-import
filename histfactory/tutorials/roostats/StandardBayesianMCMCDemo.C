@@ -45,6 +45,12 @@ for simple problems, but it scales to much more complicated cases.
 using namespace RooFit;
 using namespace RooStats;
 
+
+void StandardBayesianMCMCDemo( RooWorkspace* w,
+			       const char* modelConfigName = "ModelConfig",
+			       const char* dataName = "obsData");
+
+
 void StandardBayesianMCMCDemo(const char* infile = "",
 		      const char* workspaceName = "combined",
 		      const char* modelConfigName = "ModelConfig",
@@ -99,9 +105,18 @@ void StandardBayesianMCMCDemo(const char* infile = "",
     return;
   }
 
+  StandardBayesianMCMCDemo( w, modelConfigName, dataName);
+
+
+}
+
+void StandardBayesianMCMCDemo( RooWorkspace* w,
+			       const char* modelConfigName,
+			       const char* dataName) {
+  
   // get the modelConfig out of the file
   ModelConfig* mc = (ModelConfig*) w->obj(modelConfigName);
-
+  
   // get the modelConfig out of the file
   RooAbsData* data = w->data(dataName);
 
