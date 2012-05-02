@@ -37,13 +37,11 @@ and the asymptotic properties of the profile likeihood ratio
 using namespace RooFit;
 using namespace RooStats;
 
-namespace RooStats {
 
+namespace RooStats {
 void StandardProfileLikelihoodDemo( RooWorkspace* w,
 				    const char* modelConfigName = "ModelConfig",
 				    const char* dataName = "obsData");
-
-
 }
 
 void StandardProfileLikelihoodDemo(const char* infile = "",

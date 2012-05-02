@@ -46,10 +46,11 @@ using namespace RooFit;
 using namespace RooStats;
 
 
+namespace RooStats {
 void StandardBayesianMCMCDemo( RooWorkspace* w,
 			       const char* modelConfigName = "ModelConfig",
 			       const char* dataName = "obsData");
-
+}
 
 void StandardBayesianMCMCDemo(const char* infile = "",
 		      const char* workspaceName = "combined",
@@ -110,9 +111,9 @@ void StandardBayesianMCMCDemo(const char* infile = "",
 
 }
 
-void StandardBayesianMCMCDemo( RooWorkspace* w,
-			       const char* modelConfigName,
-			       const char* dataName) {
+void RooStats::StandardBayesianMCMCDemo( RooWorkspace* w,
+					 const char* modelConfigName,
+					 const char* dataName) {
   
   // get the modelConfig out of the file
   ModelConfig* mc = (ModelConfig*) w->obj(modelConfigName);
@@ -171,6 +172,10 @@ void StandardBayesianMCMCDemo( RooWorkspace* w,
 
   TCanvas* c2 = new TCanvas("extraPlots");
   const RooArgSet* list = mc->GetNuisanceParameters();
+  if( list == NULL ) {
+    cout << "Error: No Nuisance Parameters, cannot run MCMC" << endl;
+    return;
+  }
   if(list->getSize()>1){
     double n = list->getSize();
     int ny = TMath::CeilNint( sqrt(n) );
