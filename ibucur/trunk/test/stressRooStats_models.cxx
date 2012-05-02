@@ -49,6 +49,9 @@ static pair<ModelConfig *, ModelConfig *> buildPoissonProductModel(RooWorkspace 
    w->var("sig")->setVal(0);
    bModel->SetSnapshot(*w->set("poi"));
 
+   w->import(*sbModel);
+   w->import(*bModel);
+
    return make_pair(sbModel, bModel);
 }
 
@@ -57,7 +60,7 @@ static pair<ModelConfig *, ModelConfig *> buildOnOffModel(RooWorkspace *w)
 
    // Build model for prototype on/off problem
    // Poiss(x | s+b) * Poiss(y | tau b )
-   w->factory("Poisson::on_pdf(n_on[0,500],sum::splusb(sig[0,0,100],bkg[100,0,300]))");
+   w->factory("Poisson::on_pdf(n_on[0,500],sum::splusb(sig[0,500],bkg[0,500]))");
    w->factory("Poisson::off_pdf(n_off[0,500],prod::taub(tau[0.1,5.0],bkg))");
    w->factory("PROD::prod_pdf(on_pdf, off_pdf)");        
 
@@ -71,6 +74,7 @@ static pair<ModelConfig *, ModelConfig *> buildOnOffModel(RooWorkspace *w)
    // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
    w->defineSet("obs", "n_on,n_off,tau");
    w->defineSet("poi", "sig");
+   w->defineSet("nuis", "bkg");
 
    // define data set and import it into workspace
    RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
@@ -81,6 +85,7 @@ static pair<ModelConfig *, ModelConfig *> buildOnOffModel(RooWorkspace *w)
    sbModel->SetPdf(*w->pdf("prod_pdf"));
    sbModel->SetObservables(*w->set("obs"));      
    sbModel->SetParametersOfInterest(*w->set("poi"));
+   sbModel->SetNuisanceParameters(*w->set("nuis"));
 
    // Create B Model Configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
@@ -89,6 +94,9 @@ static pair<ModelConfig *, ModelConfig *> buildOnOffModel(RooWorkspace *w)
    // alternate priors
    w->factory("Gaussian::gauss_prior(bkg, n_off, expr::sqrty('sqrt(n_off)', n_off))");
    w->factory("Lognormal::lognorm_prior(bkg, n_off, expr::kappa('1+1./sqrt(n_off)',n_off))");
+
+   w->import(*sbModel);
+   w->import(*bModel);
 
    return make_pair(sbModel, bModel);
 }

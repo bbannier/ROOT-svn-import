@@ -105,11 +105,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
    timer.Start();
 
    list<RooUnitTest*> testList ;
-//   testList.push_back(new TestBasic101(fref, writeRef, verbose));
-//   testList.push_back(new TestHypoTestCalculator(fref, writeRef, verbose));
-//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
-//   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
-/*
+
    // TEST PROFILE LIKELIHOOD CALCULATOR 1 : Confidence Level range is (0,1)
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.99999)); // boundary case CL -> 1
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(3) - 1)); // 3 sigma
@@ -133,26 +129,36 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
 
    testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
 
-   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose));*/
-//   testList.push_back(new TestBayesianCalculator2(fref, writeRef, verbose));
-//   testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose));
+   // TEST PROFILE LIKELIHOOD CALCULATOR 1 : Observed value range is [0,100]
+   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose, 1));
+   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose, 3));
+   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose, 10));
+   testList.push_back(new TestBayesianCalculator1(fref, writeRef, verbose, 50));
+
+   testList.push_back(new TestBayesianCalculator2(fref, writeRef, verbose));
+
+///   testList.push_back(new TestBasic101(fref, writeRef, verbose));
+//   testList.push_back(new TestHypoTestCalculator(fref, writeRef, verbose));
+//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
+//   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
+//  testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose));
 //   testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kSimpleLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kSimpleLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kSimpleLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kRatioLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLROneSided));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLRSigned));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kMLE));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kNObs));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kSimpleLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kRatioLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLROneSided));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLRSigned));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kMLE));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kNObs));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kSimpleLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kSimpleLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kSimpleLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kRatioLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLROneSided));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLRSigned));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kMLE));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kNObs));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kSimpleLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kRatioLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLROneSided));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLRSigned));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kMLE));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kNObs));
 //   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kSimpleLR));
 //   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kRatioLR));
 //   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR));
