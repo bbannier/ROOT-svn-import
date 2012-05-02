@@ -394,11 +394,11 @@ public:
       // the Cousins et al. paper mentioned above. The inputs for each of these cases are (using
       // the notations from the paper): n_on, n_off and Z_PL. We provide a certain fixed input set
       // for each case.
-      const Int_t numberTestSets = 4;
-      const Int_t numberOnEvents[numberTestSets] = {4, 50, 67, 200};
-      const Int_t numberOffEvents[numberTestSets] = {5, 55, 15, 10};
-      const Double_t tau[numberTestSets] = {5.0, 2.0, 0.5, 0.1}; 
-      const Double_t significance[numberTestSets] =  {1.95, 3.02, 3.04, 2.38};
+      const Int_t numberTestSets = 3;
+      const Int_t numberOnEvents[numberTestSets] = {4, 50, 67};
+      const Int_t numberOffEvents[numberTestSets] = {5, 55, 15};
+      const Double_t tau[numberTestSets] = {5.0, 2.0, 0.5}; 
+      const Double_t significance[numberTestSets] =  {1.95, 3.02, 3.04};
 
       for(Int_t i = 0; i < numberTestSets; i++) {
 
@@ -418,7 +418,7 @@ public:
             // add observable values to data set
             w->var("n_on")->setVal(numberOnEvents[i]);
             w->var("n_off")->setVal(numberOffEvents[i]);
-            w->var("tau")->setVal(tau[i]);
+            w->var("tau")->setVal(tau[i]); w->var("tau")->setConstant();
             w->data("data")->add(*w->set("obs"));
 
             // set snapshots
@@ -510,47 +510,59 @@ public:
       fObsValue(obsValue)
    {};
 
-   Double_t vtol() { return 0.02; }
+   Double_t vtol() { return 0.01; }
 
    Bool_t testCode() {
 
       // Set the confidence level for a 68.3% CL central interval
-      const Double_t confidenceLevel = 2 * ROOT::Math::normal_cdf_c(1) - 1; 
+      const Double_t confidenceLevel = 2 * ROOT::Math::normal_cdf(1) - 1; 
       const Double_t gammaShape = 2; // shape of the gamma distribution prior (gamma = alpha)
       const Double_t gammaRate = 1; // rate = 1/scale of the gamma distribution prior (beta = 1/theta)
+      const Int_t numberScans = 10000; // tested to be sufficient for the scan of the Bayesian posterior
+
+      const TString lowerLimitString = TString::Format("tbc1_lower_limit_unif_%d", fObsValue);
+      const TString upperLimitString = TString::Format("tbc1_upper_limit_unif_%d", fObsValue);
+      const TString lowerLimitInvString = TString::Format("tbc1_lower_limit_inv_%d", fObsValue);
+      const TString upperLimitInvString = TString::Format("tbc1_upper_limit_inv_%d", fObsValue);
+      const TString lowerLimitInvSqrtString = TString::Format("tbc1_lower_limit_inv_sqrt_%d", fObsValue);
+      const TString upperLimitInvSqrtString = TString::Format("tbc1_upper_limit_inv_sqrt_%d", fObsValue);
+      const TString lowerLimitGammaString = TString::Format("tbc1_lower_limit_gamma_%d", fObsValue);
+      const TString upperLimitGammaString = TString::Format("tbc1_upper_limit_gamma_%d", fObsValue);
 
       if (_write == kTRUE) {
 
+         cout << "CL " << confidenceLevel << (1.0 - confidenceLevel) / 2 << endl;
+
          Double_t lowerLimit = ROOT::Math::gamma_quantile((1.0 - confidenceLevel) / 2, fObsValue + 1, 1); // integrate to 16%
          Double_t upperLimit = ROOT::Math::gamma_quantile_c((1.0 - confidenceLevel) / 2, fObsValue + 1, 1); // integrate to 84%
-         Double_t lowerLimitInv = ROOT::Math::gamma_quantile((1.0 - confidenceLevel) / 2, fObsValue, 1); // integrate to 16%
-         Double_t upperLimitInv = ROOT::Math::gamma_quantile_c((1.0 - confidenceLevel) / 2, fObsValue, 1); // integrate to 84%
-         Double_t lowerLimitInvSqrt = ROOT::Math::gamma_quantile((1.0 - confidenceLevel) / 2, fObsValue + 0.5, 1); // integrate to 16%
-         Double_t upperLimitInvSqrt = ROOT::Math::gamma_quantile_c((1.0 - confidenceLevel) / 2, fObsValue + 0.5, 1); // integrate to 84%
-         Double_t lowerLimitGamma = 
-            ROOT::Math::gamma_quantile((1.0 - confidenceLevel) / 2, fObsValue + gammaShape, 1.0 / (1 + gammaRate)); // integrate to 16%
-         Double_t upperLimitGamma = 
-            ROOT::Math::gamma_quantile_c((1.0 - confidenceLevel) / 2, fObsValue + gammaShape, 1.0 / (1 + gammaRate)); // integrate to 84%
+         Double_t lowerLimitInv = ROOT::Math::gamma_quantile((1.0 - confidenceLevel) / 2, fObsValue, 1);
+         Double_t upperLimitInv = ROOT::Math::gamma_quantile_c((1.0 - confidenceLevel) / 2, fObsValue, 1);
+         Double_t lowerLimitInvSqrt = ROOT::Math::gamma_quantile((1.0 - confidenceLevel) / 2, fObsValue + 0.5, 1);
+         Double_t upperLimitInvSqrt = ROOT::Math::gamma_quantile_c((1.0 - confidenceLevel) / 2, fObsValue + 0.5, 1);
+         Double_t lowerLimitGamma = gamma_quantile((1.0 - confidenceLevel) / 2, fObsValue + gammaShape, 1.0 / (1 + gammaRate));
+         Double_t upperLimitGamma = gamma_quantile_c((1.0 - confidenceLevel) / 2, fObsValue + gammaShape, 1.0 / (1 + gammaRate));
 
          // Compare the limits obtained via BayesianCalculator with quantile values
-         regValue(lowerLimit, "tbc1_lower_limit_unif");
-         regValue(upperLimit, "tbc1_upper_limit_unif");
-         regValue(lowerLimitInv, "tbc1_lower_limit_inv");
-         regValue(upperLimitInv, "tbc1_upper_limit_inv");
-         regValue(lowerLimitInvSqrt, "tbc1_lower_limit_inv_sqrt");
-         regValue(upperLimitInvSqrt, "tbc1_upper_limit_inv_sqrt");
-         regValue(lowerLimitGamma, "tbc1_lower_limit_gamma");
-         regValue(upperLimitGamma, "tbc1_upper_limit_gamma");
+         regValue(lowerLimit, lowerLimitString);
+         regValue(upperLimit, upperLimitString);
+         regValue(lowerLimitInv, lowerLimitInvString);
+         regValue(upperLimitInv, upperLimitInvString);
+         regValue(lowerLimitInvSqrt, lowerLimitInvSqrtString);
+         regValue(upperLimitInvSqrt, upperLimitInvSqrtString);
+         regValue(lowerLimitGamma, lowerLimitGammaString);
+         regValue(upperLimitGamma, upperLimitGammaString);
 
       } else {
-         // Create Poisson model and dataset
+
+         // Create Poisson model
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
-         w->factory("Poisson::poiss(x[0,20], mean[0.1,20])");
+         w->factory("Poisson::poiss(x[0,100], mean[1e-6,100])");
+         // TODO: see why it does not work so well for boundary observed values {0, 100}
 
          // create prior pdfs
          w->factory("Uniform::prior(mean)");
          w->import(*(new RooCFunction1PdfBinding<Double_t, Double_t>("priorInv", "priorInv", &priorInv, *w->var("mean"))));
-         w->factory("EXPR::priorInvSqrt('1.0/sqrt(mean)', mean)");
+         w->import(*(new RooCFunction1PdfBinding<Double_t, Double_t>("priorInvSqrt", "priorInvSqrt", priorInvSqrt, *w->var("mean"))));
          w->factory(TString::Format("Gamma::priorGamma(mean, %lf, %lf, 0)", gammaShape, gammaRate));
 
          // NOTE: Roo1DIntegrator is too slow and gives poor results
@@ -566,9 +578,10 @@ public:
          // Uniform prior on mean
          BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("prior"), NULL);
          bc->SetConfidenceLevel(confidenceLevel);
+         bc->SetScanOfPosterior(numberScans);
          SimpleInterval *interval = bc->GetInterval();
-         regValue(interval->LowerLimit(), "tbc1_lower_limit_unif");
-         regValue(interval->UpperLimit(), "tbc1_upper_limit_unif");
+         regValue(interval->LowerLimit(), lowerLimitString);
+         regValue(interval->UpperLimit(), upperLimitString);
 
          delete bc;
          delete interval;
@@ -576,10 +589,10 @@ public:
          // Inverse of mean prior
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("priorInv"), NULL);
          bc->SetConfidenceLevel(confidenceLevel);
-         bc->SetScanOfPosterior(100);
+         bc->SetScanOfPosterior(numberScans);
          interval = bc->GetInterval();
-         regValue(interval->LowerLimit(), "tbc1_lower_limit_inv");
-         regValue(interval->UpperLimit(), "tbc1_upper_limit_inv");
+         regValue(interval->LowerLimit(), lowerLimitInvString);
+         regValue(interval->UpperLimit(), upperLimitInvString);
 
          delete bc;
          delete interval;
@@ -587,19 +600,21 @@ public:
          // Square root of inverse of mean prior
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("priorInvSqrt"), NULL);
          bc->SetConfidenceLevel(confidenceLevel);
-         bc->SetScanOfPosterior(100);
+         bc->SetScanOfPosterior(numberScans);
          interval = bc->GetInterval();
-         regValue(interval->LowerLimit(), "tbc1_lower_limit_inv_sqrt");
-         regValue(interval->UpperLimit(), "tbc1_upper_limit_inv_sqrt");
+         regValue(interval->LowerLimit(), lowerLimitInvSqrtString);
+         regValue(interval->UpperLimit(), upperLimitInvSqrtString);
+         
          delete bc;
          delete interval;
 
          // Gamma distribution prior
          bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("priorGamma"), NULL);
          bc->SetConfidenceLevel(confidenceLevel);
+         bc->SetScanOfPosterior(numberScans);
          interval = bc->GetInterval();
-         regValue(interval->LowerLimit(), "tbc1_lower_limit_gamma");
-         regValue(interval->UpperLimit(), "tbc1_upper_limit_gamma");
+         regValue(interval->LowerLimit(), lowerLimitGammaString);
+         regValue(interval->UpperLimit(), upperLimitGammaString);
 
          // Cleanup branch objects
          delete bc;
@@ -627,6 +642,10 @@ public:
 // The reference interval limits are taken from the paper: "Why isn't every
 // physicist a Bayesian?" by Robert D. Cousins.
 //
+//ModelConfig (implicit) :
+//    Observable -> x
+//    Parameter of Interest -> mean
+//
 // 04/2012 - Ioan Gabriel Bucur
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -642,9 +661,10 @@ public:
 
    Bool_t testCode() {
 
-      // Put the significance level so that we obtain a 68% confidence interval
-      const Double_t testSize = ROOT::Math::normal_cdf_c(1) * 2; // test size
+      // Put the confidence level so that we obtain a 68% confidence interval
+      const Double_t confidenceLevel = ROOT::Math::normal_cdf(1) * 2 - 1; // test size
       const Int_t obsValue = 3; // observed experiment value
+      const Int_t numberScans = 10000; // sufficient number of scans
 
       if (_write == kTRUE) {
 
@@ -655,31 +675,28 @@ public:
          regValue(3.85, "bc2_upper_limit_inv");
 
       } else {
-         // Create Poisson model and dataset
+
+         // Create Poisson model
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
-         // NOTE: Solve for boundary intervals
          w->factory("Poisson::poiss(x[0,100], mean[1e-6,100])");
          w->factory("Uniform::prior(mean)");
-         w->factory("CEXPR::priorInv('1/mean', mean)");
+         w->factory("EXPR::priorInv('1/mean', mean)");
 
+         // Roo1DIntegrator too slow and imprecise
          RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
 
-         // NOTE: mean cannot actually be in the interval [0, 100]  due to log evaluation errors in BayesianCalculator
-         RooRealVar *x = w->var("x");
-         x->setVal(obsValue);
-         RooArgSet *obsSet =  new RooArgSet(*x);
-         RooDataSet *data = new RooDataSet("data", "data", *obsSet);
-         data->add(*obsSet);
-
-         // Calculate likelihood interval using the BayesianCalculator
-         RooArgSet *params = new RooArgSet();
-         params->add(*w->var("mean"));
+         // build argument sets and data set
+         w->defineSet("poi", "mean");
+         w->defineSet("obs", "x");
+         w->var("x")->setVal(obsValue);
+         RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
+         data->add(*w->set("obs"));
 
          // Uniform prior on mean
-         BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("prior"), NULL);
-         bc->SetTestSize(testSize);
+         BayesianCalculator *bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("prior"), NULL);
+         bc->SetConfidenceLevel(confidenceLevel);
          bc->SetShortestInterval();
-         bc->SetScanOfPosterior(10000);
+         bc->SetScanOfPosterior(numberScans);
          SimpleInterval *interval = bc->GetInterval();
          regValue(interval->LowerLimit(), "bc2_lower_limit_unif");
          regValue(interval->UpperLimit(), "bc2_upper_limit_unif");
@@ -688,10 +705,10 @@ public:
          delete interval;
 
          // Inverse of mean prior
-         bc = new BayesianCalculator(*data, *w->pdf("poiss"), *params, *w->pdf("priorInv"), NULL);
-         bc->SetTestSize(testSize);
+         bc = new BayesianCalculator(*data, *w->pdf("poiss"), *w->set("poi"), *w->pdf("priorInv"), NULL);
+         bc->SetConfidenceLevel(confidenceLevel);
          bc->SetShortestInterval();
-         bc->SetScanOfPosterior(10000);
+         bc->SetScanOfPosterior(numberScans);
          interval = bc->GetInterval();
          regValue(interval->LowerLimit(), "bc2_lower_limit_inv");
          regValue(interval->UpperLimit(), "bc2_upper_limit_inv");
@@ -699,8 +716,6 @@ public:
          // Cleanup branch objects
          delete bc;
          delete interval;
-         delete params;
-         delete obsSet;
          delete data;
          delete w;
       }
@@ -711,7 +726,17 @@ public:
 };
 
 
+//
+// END OF PART TWO
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//_____________________________________________________________________________
 
+
+
+
+// OTHER TESTS FOLLOW
 
 class TestBasic101 : public RooUnitTest {
 public:
@@ -1312,6 +1337,20 @@ public:
       // Create workspace and model
       RooWorkspace *w = new RooWorkspace("w", kTRUE);
       pair<ModelConfig *, ModelConfig *> models = buildPoissonProductModel(w);
+   
+      w->var("x")->setVal(7);
+      w->var("y")->setVal(15);
+      w->data("data")->add(*w->set("obs"));
+      w->var("beta0")->setVal(0.0);
+      w->var("beta0")->setConstant();
+      w->var("sig")->setVal(7);
+      models.first->SetSnapshot(*w->set("poi"));
+      
+
+      w->import(*models.first);
+      w->import(*models.second);
+
+    //  w->writeToFile(TString::Format("thti1_ws_%d_%d.root", fCalculatorType, fTestStatType));
 
       // configure HypoTestInverter
       HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *models.first, *models.second, NULL, fCalculatorType, testSize);
@@ -1376,7 +1415,6 @@ public:
             }
          }
       }
-
 
       // cleanup
       delete interval;
