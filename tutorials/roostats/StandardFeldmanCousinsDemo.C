@@ -42,6 +42,13 @@ builds the sampling distribution of the test statistic via toy Monte Carlo.
 using namespace RooFit;
 using namespace RooStats;
 
+
+namespace RooStats {
+void StandardFeldmanCousinsDemo(RooWorkspace* w,
+				const char* modelConfigName = "ModelConfig",
+				const char* dataName = "obsData");
+}
+
 void StandardFeldmanCousinsDemo(const char* infile = "",
 		      const char* workspaceName = "combined",
 		      const char* modelConfigName = "ModelConfig",
@@ -95,6 +102,14 @@ void StandardFeldmanCousinsDemo(const char* infile = "",
     cout <<"workspace not found" << endl;
     return;
   }
+
+  StandardFeldmanCousinsDemo(w, modelConfigName, dataName);
+  
+}
+
+  void RooStats::StandardFeldmanCousinsDemo(RooWorkspace* w,
+					    const char* modelConfigName,
+					    const char* dataName) {
 
   // get the modelConfig out of the file
   ModelConfig* mc = (ModelConfig*) w->obj(modelConfigName);
@@ -170,7 +185,7 @@ void StandardFeldmanCousinsDemo(const char* infile = "",
   for(Int_t i=0; i<parameterScan->numEntries(); ++i){
     tmpPoint = (RooArgSet*) parameterScan->get(i)->clone("temp");
     double arMax = belt->GetAcceptanceRegionMax(*tmpPoint);
-    double arMin = belt->GetAcceptanceRegionMax(*tmpPoint);
+    //double arMin = belt->GetAcceptanceRegionMax(*tmpPoint);
     double poiVal = tmpPoint->getRealValue(firstPOI->GetName()) ;
     histOfThresholds->Fill(poiVal,arMax);
   }

@@ -126,10 +126,11 @@ using namespace RooStats;
 /////////////////////////////////////////////////////////////////////////
 // The actual macro
 
-void OneSidedFrequentistUpperLimitWithBands(RooWorkspace*,
-					    const char* modelConfigName = "ModelConfig",
-					    const char* dataName = "obsData");
-
+namespace RooStats {
+  void OneSidedFrequentistUpperLimitWithBands(RooWorkspace*,
+					      const char* modelConfigName = "ModelConfig",
+					      const char* dataName = "obsData");
+}
 
 
 void OneSidedFrequentistUpperLimitWithBands(const char* infile = "",
@@ -198,9 +199,9 @@ void OneSidedFrequentistUpperLimitWithBands(const char* infile = "",
 
 }
 
-void OneSidedFrequentistUpperLimitWithBands(RooWorkspace* w,
-					    const char* modelConfigName,
-					    const char* dataName) {
+void RooStats::OneSidedFrequentistUpperLimitWithBands(RooWorkspace* w,
+						      const char* modelConfigName,
+						      const char* dataName) {
 
 
 
@@ -510,7 +511,10 @@ void OneSidedFrequentistUpperLimitWithBands(RooWorkspace* w,
   Double_t* bins = histOfUL->GetIntegral();
   TH1F* cumulative = (TH1F*) histOfUL->Clone("cumulative");
   cumulative->SetContent(bins);
-  double band2sigDown, band1sigDown, bandMedian, band1sigUp,band2sigUp;
+  double band2sigDown=0; double band1sigDown=0; double bandMedian=0; 
+  double band1sigUp=0; double band2sigUp=0;
+
+
   for(int i=1; i<=cumulative->GetNbinsX(); ++i){
     if(bins[i]<RooStats::SignificanceToPValue(2))
       band2sigDown=cumulative->GetBinCenter(i);
