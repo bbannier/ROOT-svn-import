@@ -12,6 +12,11 @@ RooStats::HistFactory::Sample::Sample(std::string SampName, std::string SampHist
   fHistoName( SampHistoName ), fHistoPath( SampHistoPath ),
   fNormalizeByTheory(true), fStatErrorActivate(false)  { ; }
 
+RooStats::HistFactory::Sample::Sample(std::string SampName) : 
+  fName( SampName ),   fInputFile( "" ), 
+  fHistoName( "" ), fHistoPath( "" ),
+  fNormalizeByTheory(true), fStatErrorActivate(false)  { ; }
+
 
 TH1* RooStats::HistFactory::Sample::GetHisto() {
   return (TH1*) fhNominal.GetObject();
@@ -33,6 +38,27 @@ void RooStats::HistFactory::Sample::writeToFile( std::string OutputFileName, std
   return;
 
 }
+
+
+void RooStats::HistFactory::Sample::SetValue( Double_t val ) {
+
+  // For use in a number counting measurement
+  // Create a 1-bin histogram, 
+  // fill it with this input value,
+  // and set this Sample's histogram to that hist
+  
+  std::string SampleHistName = fName + "_hist";
+  
+  // Histogram has 1-bin (hard-coded)
+  TH1F* hSample = new TH1F( SampleHistName.c_str(), SampleHistName.c_str(), 1, 0, 1 );
+  hSample->SetBinContent( 1, val );
+
+  // Set the histogram of the internally held data
+  // node of this channel to this newly created histogram
+  SetHisto( hSample );
+
+}
+
 
 
 void RooStats::HistFactory::Sample::Print( std::ostream& stream ) {
@@ -189,7 +215,7 @@ void RooStats::HistFactory::Sample::ActivateStatError( std::string StatHistoName
 }
 
 
-void RooStats::HistFactory::Sample::AddOverallSys( std::string SysName, double SysLow, double SysHigh ) {
+void RooStats::HistFactory::Sample::AddOverallSys( std::string SysName, Double_t SysLow, Double_t SysHigh ) {
 
   RooStats::HistFactory::OverallSys sys;
   sys.SetName( SysName );
@@ -200,7 +226,7 @@ void RooStats::HistFactory::Sample::AddOverallSys( std::string SysName, double S
 
 }
 
-void RooStats::HistFactory::Sample::AddNormFactor( std::string SysName, double SysVal, double SysLow, double SysHigh, bool SysConst ) {
+void RooStats::HistFactory::Sample::AddNormFactor( std::string SysName, Double_t SysVal, Double_t SysLow, Double_t SysHigh, bool SysConst ) {
 
   RooStats::HistFactory::NormFactor norm;
 

@@ -34,8 +34,7 @@ public:
   void writeToFile( std::string FileName, std::string DirName );
 
   TH1* GetHisto();
-  void SetHisto(TH1* Hist) { fhData = Hist; }
-  
+  void SetHisto(TH1* Hist) { fhData = Hist; fHistoName=Hist->GetName(); }
   
 protected:
   
