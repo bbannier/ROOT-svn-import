@@ -316,28 +316,15 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
    RooArgSet *saveAll = (RooArgSet*) allVars->snapshot();
 
 
-   // bug workaround: evaluate all test statistics once so that they have their detailed
-   // output generated ... but only do that if there is no detailedOutput present already
-   DetailedOutputAggregator detoutgen;
-   /*if( fTestStatistics[0]  &&  !fTestStatistics[0]->GetDetailedOutput() ) {
-      RooAbsData* dummyData = GenerateToyData(*paramPoint);
-      EvaluateAllTestStatistics(*dummyData, *paramPoint);
-   }*/
+   DetailedOutputAggregator detOutAgg;
 
 
-   /*
-   RooDataSet* outputs = new RooDataSet(
-      fSamplingDistName.c_str(),fSamplingDistName.c_str(),
-      RooArgSet( *(new RooRealVar("weight","weight",1.0)), "tmpSet" ),
-      "weight"
-   );
-   */
    vector<TString> namesOfTSColumns;
-   RooArgSet* allVarsToBeSaved = new RooArgSet();
+   RooArgSet* allVarsToBeSaved = new RooArgSet("tsValues");
    for( unsigned int i=0; i < fTestStatistics.size(); i++ ) {
       TString name( TString::Format("%s_TS%d", fSamplingDistName.c_str(), i) );
       namesOfTSColumns.push_back( name );
-      allVarsToBeSaved->addOwned( *new RooRealVar(name, name, -1) );
+      allVarsToBeSaved->addOwned( *new RooRealVar(name, fTestStatistics[i]->GetVarName(), -1) );
    }
       
    // counts the number of toys in the limits set for adaptive sampling
@@ -359,42 +346,45 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
       // TODO: change this treatment to keep track of all values so that the threshold
       // for adaptive sampling is counted for all distributions and not just the
       // first one.
-      Double_t valueFirst = -1.0, weight = -1.0;
+      Double_t valueFirst = -999.0, weight = 1.0;
 
       // set variables to requested parameter point
       *allVars = *saveAll; // important for example for SimpleLikelihoodRatioTestStat
       *allVars = *fParametersForTestStat;
-
+      
       RooAbsData* toydata = GenerateToyData(*paramPoint, weight);
       RooArgSet* saveVarsWithGlobObsSet = (RooArgSet*)allVars->snapshot();
+      detOutAgg.AppendArgSet( fGlobalObservables, "globObs_" );
 
       // evaluate all test statistics
       for( unsigned int tsi = 0; tsi < fTestStatistics.size(); tsi++ ) {
          *allVars = *saveVarsWithGlobObsSet;
          *allVars = *fParametersForTestStat;
-      
+         
          // evaluate test statistic; only depends on null POI
-         Double_t value = fTestStatistics[tsi]->Evaluate(*toydata, *(RooArgSet*)fParametersForTestStat);
+         RooArgSet* parForTS = (RooArgSet*)fParametersForTestStat->snapshot();
+         Double_t value = fTestStatistics[tsi]->Evaluate(*toydata, *parForTS);
+         delete parForTS;
          allVarsToBeSaved->setRealValue( namesOfTSColumns[tsi], value );
          
          // get detailed output, construct name in dataset, store
-	 const RooArgSet *ndetout = fTestStatistics[tsi]->GetDetailedOutput();
-	 if (ndetout != NULL)
-		 detoutgen.AppendArgSet(ndetout, TString::Format("SD_TS%d_", tsi));
+         const RooArgSet *ndetout = fTestStatistics[tsi]->GetDetailedOutput();
+         if (ndetout != NULL)
+            detOutAgg.AppendArgSet(ndetout, TString(namesOfTSColumns[tsi]).Append("_"));
          
          if(valueFirst < 0.0) { valueFirst = value; }
       }
       delete saveVarsWithGlobObsSet;      
       delete toydata;
 
-      detoutgen.AppendArgSet(allVarsToBeSaved);
-      detoutgen.CommitSet(weight);
-
       // check for nan
       if(valueFirst != valueFirst) {
          oocoutW((TObject*)NULL, Generation) << "skip: " << valueFirst << ", " << weight << endl;
          continue;
       }
+
+      detOutAgg.AppendArgSet(allVarsToBeSaved);
+      detOutAgg.CommitSet(weight);
 
       // adaptive sampling checks
       if (valueFirst <= fAdaptiveLowLimit  ||  valueFirst >= fAdaptiveHighLimit) {
@@ -411,7 +401,7 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
    delete allVars;
    delete paramPoint;
 
-   return detoutgen.GetAsDataSet("detailed output", "Detailed output");
+   return detOutAgg.GetAsDataSet(fSamplingDistName, fSamplingDistName);
 }
 
 void ToyMCSampler::GenerateGlobalObservables(RooAbsPdf& pdf) const {
@@ -509,7 +499,7 @@ RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& paramPoint, double& weight,
       // get nuisance parameter point and weight
       fNuisanceParametersSampler->NextPoint(allVarsMinusParamPoint, weight);
    }else{
-      weight = -1.0;
+      weight = 1.0;
    }
 
    RooAbsData *data = Generate(pdf, observables);

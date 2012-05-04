@@ -499,8 +499,8 @@ void HybridInstructional() {
   RooMsgService::instance().setGlobalKillBelow(msglevel);
 
   c->cd(4);
-  c->GetPad(4)->SetLogy();
   HypoTestPlot *p3 = new HypoTestPlot(*r3,50); // 50 bins
+  p3->SetLogYaxis(true);
   p3->Draw();
 
   c->SaveAs("zbi.pdf");
