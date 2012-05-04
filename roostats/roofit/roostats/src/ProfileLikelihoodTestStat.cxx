@@ -108,7 +108,7 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
 
 	  // save this snapshot
 	  if( fDetailedOutputEnabled )
-		  AppendDetailedOutput(result, 0);
+		  fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitUncond_", fDetailedOutputWithErrorsAndPulls));
 	  delete result;
        }
        tsw.Stop();
@@ -156,13 +156,13 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
              condML = fNll->getVal(); 
           }
           else {              
-	     fNll->clearEvalErrorLog();
-	     RooFitResult* result = GetMinNLL();
-	     condML = result->minNll();
-	     statusN = result->status();
-	     if( fDetailedOutputEnabled )
-		AppendDetailedOutput(result, 1);
-	     delete result;
+            fNll->clearEvalErrorLog();
+            RooFitResult* result = GetMinNLL();
+            condML = result->minNll();
+            statusN = result->status();
+            if( fDetailedOutputEnabled )
+               fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitCond_", fDetailedOutputWithErrorsAndPulls));
+            delete result;
           }
 
        }
@@ -219,10 +219,6 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        return pll;
              
      }     
-
-void RooStats::ProfileLikelihoodTestStat::AppendDetailedOutput(RooFitResult *result, int fitNumber) {
-	fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, TString::Format("fit%d_", fitNumber)));
-}
 
 RooFitResult* RooStats::ProfileLikelihoodTestStat::GetMinNLL() {
    //find minimum of NLL using RooMinimizer
