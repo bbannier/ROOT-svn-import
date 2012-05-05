@@ -1,4 +1,6 @@
 
+#include "stdlib.h"
+
 #include "TFile.h"
 
 #include "RooStats/HistFactory/HistFactoryException.h"
