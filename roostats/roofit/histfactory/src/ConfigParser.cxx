@@ -120,7 +120,8 @@ std::vector< RooStats::HistFactory::Measurement > ConfigParser::GetMeasurementsF
     // If no channel xml files are found, exit
     if(xml_channel_files.empty()){
       cerr << "no input channels found" << endl;
-      exit(1);
+      throw bad_hf;
+      return measurement_list;
     }
     else {
       std::cout << "Found Channels: ";
@@ -250,7 +251,7 @@ std::vector< RooStats::HistFactory::Measurement > ConfigParser::GetMeasurementsF
   catch(exception& e)
     {
       std::cout << e.what() << std::endl;
-      exit(-1);
+      throw bad_hf;
     }
 
 
