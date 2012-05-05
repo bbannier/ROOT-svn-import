@@ -50,20 +50,22 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
    // or SetAltModel is called. Simply put, converting them into class variables breaks
    // encapsulation.
 
-   RooArgSet allButNuisance(*allParams);
-   if( fNullModel->GetNuisanceParameters() ) allButNuisance.remove(*fNullModel->GetNuisanceParameters());
    bool doProfile = true;
-   if( fConditionalMLEsNull ) {
-      oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Null." << endl;
-      *allParams = *fConditionalMLEsNull;
-      allButNuisance.add( *fConditionalMLEsNull );
-      if (fNullModel->GetNuisanceParameters()) {
-         RooArgSet remain(*fNullModel->GetNuisanceParameters());
-         remain.remove(*fConditionalMLEsNull,true,true);
-         if( remain.getSize() > 0 ) doProfile = false;
-      } else {
-         doProfile = false;
+   RooArgSet allButNuisance(*allParams);
+   if( fNullModel->GetNuisanceParameters() ) {
+      allButNuisance.remove(*fNullModel->GetNuisanceParameters());
+      if( fConditionalMLEsNull ) {
+         oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Null." << endl;
+         *allParams = *fConditionalMLEsNull;
+         allButNuisance.add( *fConditionalMLEsNull );
+         if (fNullModel->GetNuisanceParameters()) {
+            RooArgSet remain(*fNullModel->GetNuisanceParameters());
+            remain.remove(*fConditionalMLEsNull,true,true);
+            if( remain.getSize() == 0 ) doProfile = false;
+         }
       }
+   }else{
+      doProfile = false;
    }
    if (doProfile) {
       oocoutI((TObject*)0,InputArguments) << "Profiling conditional MLEs for Null." << endl;
@@ -134,20 +136,22 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
    RooArgSet * allParams = fAltModel->GetPdf()->getParameters(*fData);
    RemoveConstantParameters(allParams);
 
-   RooArgSet allButNuisance(*allParams);
-   if( fAltModel->GetNuisanceParameters() ) allButNuisance.remove(*fAltModel->GetNuisanceParameters());
    bool doProfile = true;
-   if( fConditionalMLEsAlt ) {
-      oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Alt." << endl;
-      *allParams = *fConditionalMLEsAlt;
-      allButNuisance.add( *fConditionalMLEsAlt );
-      if (fAltModel->GetNuisanceParameters()) {
-         RooArgSet remain(*fAltModel->GetNuisanceParameters());
-         remain.remove(*fConditionalMLEsAlt,true,true);
-         if( remain.getSize() > 0 ) doProfile = false;
-      } else {
-         doProfile = false;
+   RooArgSet allButNuisance(*allParams);
+   if( fAltModel->GetNuisanceParameters() ) {
+      allButNuisance.remove(*fAltModel->GetNuisanceParameters());
+      if( fConditionalMLEsAlt ) {
+         oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Alt." << endl;
+         *allParams = *fConditionalMLEsAlt;
+         allButNuisance.add( *fConditionalMLEsAlt );
+         if (fAltModel->GetNuisanceParameters()) {
+            RooArgSet remain(*fAltModel->GetNuisanceParameters());
+            remain.remove(*fConditionalMLEsAlt,true,true);
+            if( remain.getSize() == 0 ) doProfile = false;
+         }
       }
+   }else{
+      doProfile = false;
    }
    if (doProfile) {
       oocoutI((TObject*)0,InputArguments) << "Profiling conditional MLEs for Alt." << endl;
