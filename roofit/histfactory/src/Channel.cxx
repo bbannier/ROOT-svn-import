@@ -170,92 +170,83 @@ void RooStats::HistFactory::Channel::SetStatErrorConfig( double StatRelErrorThre
 
 void RooStats::HistFactory::Channel::CollectHistograms() {
 
-  try {
+  // Loop through all Samples and Systematics
+  // and collect all necessary histograms
 
-    // Loop through all Samples and Systematics
-    // and collect all necessary histograms
+  // Get the Data Histogram:
 
-    // Get the Data Histogram:
-
-    fData.SetHisto( GetHistogram(fData.GetInputFile(), 
-				 fData.GetHistoPath(),
-				 fData.GetHistoName()) );
+  fData.SetHisto( GetHistogram(fData.GetInputFile(), 
+			       fData.GetHistoPath(),
+			       fData.GetHistoName()) );
     
 
-    // Get the histograms for the samples:
-    for( unsigned int sampItr = 0; sampItr < fSamples.size(); ++sampItr ) {
+  // Get the histograms for the samples:
+  for( unsigned int sampItr = 0; sampItr < fSamples.size(); ++sampItr ) {
 
-      RooStats::HistFactory::Sample& sample = fSamples.at( sampItr );
-
-
-      // Get the nominal histogram:
-      std::cout << "Collecting Nominal Histogram" << std::endl;
-      TH1* Nominal =  GetHistogram(sample.GetInputFile(),
-				   sample.GetHistoPath(),
-				   sample.GetHistoName());
-
-      sample.SetHisto( Nominal );
+    RooStats::HistFactory::Sample& sample = fSamples.at( sampItr );
 
 
-      // Get the StatError Histogram (if necessary)
+    // Get the nominal histogram:
+    std::cout << "Collecting Nominal Histogram" << std::endl;
+    TH1* Nominal =  GetHistogram(sample.GetInputFile(),
+				 sample.GetHistoPath(),
+				 sample.GetHistoName());
 
-      if( sample.GetStatError().GetUseHisto() ) {
+    sample.SetHisto( Nominal );
 
-	sample.GetStatError().SetErrorHist( GetHistogram(sample.GetStatError().GetInputFile(),
-							 sample.GetStatError().GetHistoPath(),
-							 sample.GetStatError().GetHistoName()) );
-      }
+
+    // Get the StatError Histogram (if necessary)
+
+    if( sample.GetStatError().GetUseHisto() ) {
+
+      sample.GetStatError().SetErrorHist( GetHistogram(sample.GetStatError().GetInputFile(),
+						       sample.GetStatError().GetHistoPath(),
+						       sample.GetStatError().GetHistoName()) );
+    }
 
       
-      // Get the HistoSys Variations:
-      for( unsigned int histoSysItr = 0; histoSysItr < sample.GetHistoSysList().size(); ++histoSysItr ) {
+    // Get the HistoSys Variations:
+    for( unsigned int histoSysItr = 0; histoSysItr < sample.GetHistoSysList().size(); ++histoSysItr ) {
 
-	RooStats::HistFactory::HistoSys& histoSys = sample.GetHistoSysList().at( histoSysItr );
+      RooStats::HistFactory::HistoSys& histoSys = sample.GetHistoSysList().at( histoSysItr );
 	
-	histoSys.SetHistoLow( GetHistogram(histoSys.GetInputFileLow(), 
-					   histoSys.GetHistoPathLow(),
-					   histoSys.GetHistoNameLow()) );
+      histoSys.SetHistoLow( GetHistogram(histoSys.GetInputFileLow(), 
+					 histoSys.GetHistoPathLow(),
+					 histoSys.GetHistoNameLow()) );
 	
-	histoSys.SetHistoHigh( GetHistogram(histoSys.GetInputFileHigh(),
-					    histoSys.GetHistoPathHigh(),
-					    histoSys.GetHistoNameHigh()) );
-      } // End Loop over HistoSys
+      histoSys.SetHistoHigh( GetHistogram(histoSys.GetInputFileHigh(),
+					  histoSys.GetHistoPathHigh(),
+					  histoSys.GetHistoNameHigh()) );
+    } // End Loop over HistoSys
 
 
       // Get the HistoFactor Variations:
-      for( unsigned int histoFactorItr = 0; histoFactorItr < sample.GetHistoFactorList().size(); ++histoFactorItr ) {
+    for( unsigned int histoFactorItr = 0; histoFactorItr < sample.GetHistoFactorList().size(); ++histoFactorItr ) {
 
-	RooStats::HistFactory::HistoFactor& histoFactor = sample.GetHistoFactorList().at( histoFactorItr );
+      RooStats::HistFactory::HistoFactor& histoFactor = sample.GetHistoFactorList().at( histoFactorItr );
 
-	histoFactor.SetHistoLow( GetHistogram(histoFactor.GetInputFileLow(), 
-					      histoFactor.GetHistoPathLow(),
-					      histoFactor.GetHistoNameLow()) );
+      histoFactor.SetHistoLow( GetHistogram(histoFactor.GetInputFileLow(), 
+					    histoFactor.GetHistoPathLow(),
+					    histoFactor.GetHistoNameLow()) );
 	
-	histoFactor.SetHistoHigh( GetHistogram(histoFactor.GetInputFileHigh(),
-					       histoFactor.GetHistoPathHigh(),
-					       histoFactor.GetHistoNameHigh()) );
-      } // End Loop over HistoFactor
+      histoFactor.SetHistoHigh( GetHistogram(histoFactor.GetInputFileHigh(),
+					     histoFactor.GetHistoPathHigh(),
+					     histoFactor.GetHistoNameHigh()) );
+    } // End Loop over HistoFactor
 
 
       // Get the ShapeSys Variations:
-      for( unsigned int shapeSysItr = 0; shapeSysItr < sample.GetShapeSysList().size(); ++shapeSysItr ) {
+    for( unsigned int shapeSysItr = 0; shapeSysItr < sample.GetShapeSysList().size(); ++shapeSysItr ) {
 	
-	RooStats::HistFactory::ShapeSys& shapeSys = sample.GetShapeSysList().at( shapeSysItr );
+      RooStats::HistFactory::ShapeSys& shapeSys = sample.GetShapeSysList().at( shapeSysItr );
 
-	shapeSys.SetErrorHist( GetHistogram(shapeSys.GetInputFile(), 
-					    shapeSys.GetHistoPath(),
-					    shapeSys.GetHistoName()) );
-      } // End Loop over ShapeSys
+      shapeSys.SetErrorHist( GetHistogram(shapeSys.GetInputFile(), 
+					  shapeSys.GetHistoPath(),
+					  shapeSys.GetHistoName()) );
+    } // End Loop over ShapeSys
 
 
-    } // End Loop over Samples
-
-  }
-  catch(exception& e)
-    {
-      std::cout << e.what() << std::endl;
-      exit(-1);
-    }
+  } // End Loop over Samples
 
   return;
   
@@ -392,17 +383,15 @@ TH1* RooStats::HistFactory::Channel::GetHistogram(std::string InputFile, std::st
     }
   }
 
-
-  
-  // TH1* hist = (TH1*) dynamic_cast<TH1*> inFile->Get( HistNameFull.c_str() );
   TH1* hist = NULL;
   try{
     hist = dynamic_cast<TH1*>( inFile->Get( HistNameFull.c_str() ) );
   }
   catch(exception& e)
     {
-      cout << e.what() << endl;
-      exit(-1);
+      std::cout << "Failed to cast object to TH1*" << std::endl;
+      std::cout << e.what() << std::endl;
+      throw bad_hf;
     }
   if( !hist ) {
     std::cout << "Failed to get histogram: " << HistNameFull
