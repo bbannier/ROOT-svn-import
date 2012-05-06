@@ -813,11 +813,13 @@ public:
 
    Bool_t testCode() {
 
+      const Int_t numberScans = 10; // sufficient number of scans
+      
       // Create workspace and model
       RooWorkspace *w = new RooWorkspace("w", kTRUE);
       buildPoissonProductModel(w);
-      ModelConfig *model = (ModelConfig *)w->obj("S+B");
-      
+      ModelConfig *model = (ModelConfig *)w->obj("S+B"); 
+ 
       // add observed values to data set 
       w->var("x")->setVal(fObsValueX);
       w->var("y")->setVal(fObsValueY);
@@ -829,6 +831,7 @@ public:
       // Create BayesianCalculator and
       BayesianCalculator *bc = new BayesianCalculator(*w->data("data"), *model);
       bc->SetConfidenceLevel(fConfidenceLevel);
+      bc->SetScanOfPosterior(numberScans);
 
       // Obtain confidence interval by scanning the posterior function in the given number of points
       SimpleInterval *interval = bc->GetInterval();
@@ -936,6 +939,9 @@ public:
 
    Bool_t testCode() {
 
+      // Make MCMCCalculator results repeatable
+      RooRandom::randomGenerator()->SetSeed(12345);
+
       // Create workspace and model
       RooWorkspace *w = new RooWorkspace("w", kTRUE);
       buildPoissonProductModel(w);
@@ -947,7 +953,7 @@ public:
       w->data("data")->add(*w->set("obs"));
  
       // NOTE: Roo1DIntegrator is too slow and gives poor results
-      RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
+     // RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
     
       // create and configure MCMC calculator
       SequentialProposal *sp = new SequentialProposal(0.1);
@@ -1093,6 +1099,7 @@ public:
       w->data("data")->add(*w->set("obs"));
       
       // set snapshots
+      cout << "SNAPSHOT " << fObsValueX - w->var("bkg1")->getValV() << endl;
       w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
       sbModel->SetSnapshot(*w->set("poi"));
       w->var("sig")->setVal(0);
@@ -1113,7 +1120,8 @@ public:
 
       //TODO: check how this code can be eliminated, maybe 0 should be default print level for AsymptoticCalculator
       if(fCalculatorType == HypoTestInverter::kAsymptotic) {
-         AsymptoticCalculator::SetPrintLevel(0); // print only minimal output
+         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
+         AsymptoticCalculator::SetPrintLevel(-1); // print only minimal output
       }
 
       // needed because we have no extended pdf and the ToyMC Sampler evaluation returns an error
