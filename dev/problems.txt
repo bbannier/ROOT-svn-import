@@ -8,21 +8,27 @@ CRITICAL
 6. HypoTestInverter AsymptoticCalculator - the MIGRAD minimization messages cannot be hidden
 7. HypoTestInverter AsymptoticCalculator gives different results compared to the other two calculators
 8. SamplingDistribution.cxx line 547 : if fNuisanceParametersSampler is not set, the weight is set to -1.0. This yields negative error values when using FrequentistCalculator. Should the weight have a different value (e.g. 1.0) or should we force setting nuisance parameters in the models?
+9. MCMCCalculator does not give same results (PoissonProductModel)
 
+MAJOR
 
-MINOR
+1. RooUnitTest -> comparison error message is not suggestive; it tells us which values are different, not the names of the variables which have different values
+2. BayesianCalculator -> priorPOI argument should be POIpriorPdf IMHO
+3. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
 
-1. ProfileLikelihoodCalculator Poisson -> lower limit goes to 0 when minValue for mean is 0 or very small
-   -> it seems there is a problem with the calculated error matrix -> gives wrong error for estimate
-2. RooUnitTest -> comparison error message is not suggestive; it tells us which values are different, not the names of the variables which have different values
-4. BayesianCalculator -> priorPOI argument should be priorPdf IMO
-5. getAnalyticalIntegrator -> not suggestive at all
+MINOR / WEAKLY RELATED
+
+1. getAnalyticalIntegrator -> not suggestive at all
 	analyticalIntegrator -> should be private
-6. createIntegral for discrete Poisson for range [a,b] sums from a to b-1; maybe this should be better documented
-7. the RooIntegrator1D problem
+2. createIntegral for discrete Poisson for range [a,b] sums from a to b-1; maybe this should be better documented
+3. the RooIntegrator1D problem
 	- RooRealIntegral:62 Minimum number of steps -> solves convergence problem
 	- however the integrator has a very long running time, because of too many function calls (see Mathcore integration tests)
-8. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
-9. Can you automatically delete the RooCFAuto***Func files ? If not, this should be written in the test suite.
-10. Why does beta change its value after call to LowerLimit / UpperLimit ?
+
+
+QUESTIONS / POSSIBLE PROBLEMS
+
+
+
+
 

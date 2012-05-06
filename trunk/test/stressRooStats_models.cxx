@@ -49,8 +49,6 @@ void buildPoissonProductModel(RooWorkspace *w)
    // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
-   w->var("sig")->setVal(0);
-   bModel->SetSnapshot(*w->set("poi"));
 
    w->import(*sbModel);
    w->import(*bModel);
