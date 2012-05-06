@@ -832,7 +832,7 @@ check_link() {
        cat <<EOF > conftest.mk
 include ${ac_srcdir}/config/Makefile.${arch}
 conftest: conftest.c
-	\$(CC) \$(CFLAGS) \$(LDFLAGS) $linkdir $linklib \$< -o \$@
+	\$(CC) \$(CFLAGS) \$(LDFLAGS) \$< -o \$@ $linkdir $linklib
 
 conftest.c:
 	echo "int main() { return 0; }" > \$@
@@ -846,7 +846,7 @@ EOF
        cat <<EOF > conftest.mk
 include ${ac_srcdir}/config/Makefile.${arch}
 conftest:conftest.c
-	\$(CC) \$(CFLAGS) \$(LDFLAGS) $linkdir $linklib \$< -o \$@
+	\$(CC) \$(CFLAGS) \$(LDFLAGS) \$< -o \$@ $linkdir $linklib
 
 conftest.c:
 	echo "extern int $linksymbol (); " > \$@
@@ -2674,7 +2674,7 @@ if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
 
     if test ! "x$macosx105" = "x" && test "x$macosx106" = "x" ; then
 	# Mac OS X 10.5 problem
-	opengllib="-dylib_file /usr/X11R6/lib/libGL.dylib:/usr/X11R6/lib/libGL.dylib"
+	opengllib="-dylib_file /usr/X11R6/lib/libGL.dylib:/usr/X11R6/lib/libGL.dylib -lGL"
     fi
 
     check_library "libGLU libMesaGLU" "$enable_shared" \
@@ -3252,8 +3252,12 @@ if test ! "x$enable_rfio" = "xno" ; then
                         break ;
                     fi
                 done
+                message "Checking for symbol rfio_fchmod"
                 if test $link_result -ne 1 ; then
                     enable_rfio="no"
+                    echo "no, disabling rfio"
+                else
+                    echo "yes"
                 fi
                 ;;
            solaris)    shiftlib="$shiftlib -lposix4" ;;
@@ -3344,8 +3348,12 @@ if test ! "x$enable_castor" = "xno" ; then
                         break ;
                     fi
                 done
+                message "Checking for symbol rfio_fchmod"
                 if test $link_result -ne 1 ; then
                     enable_castor="no"
+                    echo "no, disabling castor"
+                else
+                    echo "yes"
                 fi
                 ;;
            solaris)    castorlib="$castorlib -lposix4" ;;

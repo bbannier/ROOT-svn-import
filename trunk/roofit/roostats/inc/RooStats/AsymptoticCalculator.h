@@ -71,16 +71,27 @@ namespace RooStats {
       static RooAbsData * GenerateAsimovData(const RooAbsPdf & pdf, const RooArgSet & observables ); 
 
       // function given the null and the alt p value - return the expected one given the N - sigma value
-      static double GetExpectedPValues(double pnull, double palt, double nsigma, bool usecls ); 
+      static double GetExpectedPValues(double pnull, double palt, double nsigma, bool usecls, bool oneSided  ); 
 
-      // get expected limit 
-//      static void GetExpectedLimit(double nsigma, double alpha, double &clsblimit, double &clslimit);
-
+      // set test statistic for one sided (upper limits)
       void SetOneSided(bool on) { fOneSided = on; }
+
+      // set the test statistics for one-sided discovery
+      void SetOneSidedDiscovery(bool on) { fOneSidedDiscovery = on; }
+
+      bool IsTwoSided() const { return (!fOneSided && !fOneSidedDiscovery); }
+      bool IsOneSidedDiscovery() const { return fOneSidedDiscovery; }
+
 
       // set using of qtilde, by default is controlled if RoORealVar is limited or not 
       void SetQTilde(bool on) { fUseQTilde = on; }
 
+      // return snapshot of the best fit parameter 
+      const RooArgSet & GetBestFitPoi() const { return fBestFitPoi; }
+      // return best fit parameter (firs of poi)
+      const RooRealVar * GetMuHat() const { return dynamic_cast<RooRealVar*>(fBestFitPoi.first()); }
+      // return best fit value for all parameters
+      const RooArgSet & GetBestFitParams() const { return fBestFitPoi; }
 
       static void SetPrintLevel(int level);
 
@@ -112,7 +123,8 @@ namespace RooStats {
 
    private: 
 
-      bool fOneSided;                // for one sided PL test statistic
+      bool fOneSided;                // for one sided PL test statistic (upper limits)
+      bool fOneSidedDiscovery;                // for one sided PL test statistic (for discovery)
       mutable int fUseQTilde;              // flag to indicate if using qtilde or not (-1 (default based on RooRealVar)), 0 false, 1 (true)
       static int fgPrintLevel;     // control print level  (0 minimal, 1 normal, 2 debug)
       mutable double fNLLObs; 

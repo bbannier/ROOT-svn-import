@@ -538,6 +538,7 @@ extern void H1LeastSquareSeqnd(Int_t n, Double_t *a, Int_t idim, Int_t &ifail, I
 class DifferentNumberOfBins: public std::exception {};
 class DifferentAxisLimits: public std::exception {};
 class DifferentBinLimits: public std::exception {};
+class DifferentLabels: public std::exception {};
 
 ClassImp(TH1)
 
@@ -886,11 +887,10 @@ Bool_t TH1::Add(const TH1 *h1, Double_t c1)
       Warning("Add","Attempt to add histograms with different axis limits");
    } catch(DifferentBinLimits&) {
       Warning("Add","Attempt to add histograms with different bin limits");
+   } catch(DifferentLabels&) {
+      Warning("Add","Attempt to add histograms with different labels");
    }
   
-   if (h1->GetXaxis()->GetLabels()  || fXaxis.GetLabels() )
-      Warning("Add","Attempt to add histograms with labels");
-
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
 
@@ -1018,7 +1018,7 @@ Bool_t TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 //ANOTHER SPECIAL CASE : h1 = h2 and c2 < 0 
 // do a scaling   this = c1 * h1 / (bin Volume)
 //
-// The function return kFALSE if the Add operation failed
+// The function returns kFALSE if the Add operation failed
 
 
    if (!h1 || !h2) {
@@ -1032,25 +1032,24 @@ Bool_t TH1::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
    Bool_t normWidth = kFALSE;
    if (h1 == h2 && c2 < 0) {c2 = 0; normWidth = kTRUE;}
    Int_t nbinsx = GetNbinsX();
-   Int_t nbinsy = GetNbinsY();
+   Int_t nbinsy = GetNbinsY(); 
    Int_t nbinsz = GetNbinsZ();
 
-   try {
-      CheckConsistency(h1,h2);
-      CheckConsistency(this,h1);
-   } catch(DifferentNumberOfBins&) {
-      Error("Add","Attempt to add histograms with different number of bins");
-      return kFALSE;
-   } catch(DifferentAxisLimits&) {
-      Warning("Add","Attempt to add histograms with different axis limits");
-   } catch(DifferentBinLimits&) {
-      Warning("Add","Attempt to add histograms with different bin limits");
+   if (h1 != h2) { 
+      try {
+         CheckConsistency(h1,h2);
+         CheckConsistency(this,h1);
+      } catch(DifferentNumberOfBins&) {
+         Error("Add","Attempt to add histograms with different number of bins");
+         return kFALSE;
+      } catch(DifferentAxisLimits&) {
+         Warning("Add","Attempt to add histograms with different axis limits");
+      } catch(DifferentBinLimits&) {
+         Warning("Add","Attempt to add histograms with different bin limits");
+      } catch(DifferentLabels&) {
+         Warning("Add","Attempt to add histograms with different labels");
+      }
    }
-
-   if (h1->GetXaxis()->GetLabels() || 
-       h2->GetXaxis()->GetLabels()  )
-      Warning("Add","Attempt to add histograms with labels");
-
 
    if (fDimension < 2) nbinsy = -1;
    if (fDimension < 3) nbinsz = -1;
@@ -1353,6 +1352,36 @@ bool TH1::CheckBinLimits(const TAxis* a1, const TAxis * a2)
    return true;
 }
 
+bool TH1::CheckBinLabels(const TAxis* a1, const TAxis * a2)
+{
+   // check that axis have same labels 
+   THashList *l1 = (const_cast<TAxis*>(a1))->GetLabels();
+   THashList *l2 = (const_cast<TAxis*>(a2))->GetLabels();
+
+   if (!l1 && !l2 )
+      return true; 
+   if (!l1 ||  !l2 ) {
+      throw DifferentLabels();
+      return false;
+   } 
+   // check now labels sizes  are the same
+   if (l1->GetSize() != l2->GetSize() ) {
+      throw DifferentLabels();
+      return false;
+   }
+   for (int i = 1; i <= a1->GetNbins(); ++i) {
+      TString label1 = a1->GetBinLabel(i);
+      TString label2 = a2->GetBinLabel(i);
+      if (label1 != label2) {
+         throw DifferentLabels();
+         return false;         
+      }
+   }
+
+   return true;
+}
+
+
 bool TH1::CheckAxisLimits(const TAxis *a1, const TAxis *a2 )
 {
    // Check that the axis limits of the histograms are the same
@@ -1386,6 +1415,15 @@ bool TH1::CheckEqualAxes(const TAxis *a1, const TAxis *a2 )
       ::Info("CheckEqualAxes","Axes have different bin limits");
       return false; 
    }
+
+   // check labels
+   try { 
+      CheckBinLabels(a1,a2);
+   } catch (DifferentLabels&) { 
+      ::Info("CheckEqualAxes","Axes have different labels");
+      return false; 
+   }
+
    return true;
 }
 
@@ -1429,6 +1467,8 @@ bool TH1::CheckConsistentSubAxes(const TAxis *a1, Int_t firstBin1, Int_t lastBin
 bool TH1::CheckConsistency(const TH1* h1, const TH1* h2)
 {
    // Check histogram compatibility
+   if (h1 == h2) return true; 
+
    // returns kTRUE if number of bins and bin limits are identical
    Int_t nbinsx = h1->GetNbinsX();
    Int_t nbinsy = h1->GetNbinsY();
@@ -1451,6 +1491,11 @@ bool TH1::CheckConsistency(const TH1* h1, const TH1* h2)
    ret &= CheckBinLimits(h1->GetXaxis(), h2->GetXaxis());
    ret &= CheckBinLimits(h1->GetYaxis(), h2->GetYaxis());
    ret &= CheckBinLimits(h1->GetZaxis(), h2->GetZaxis());
+
+   // check labels
+   ret &= CheckBinLabels(h1->GetXaxis(), h2->GetXaxis());
+   ret &= CheckBinLabels(h1->GetYaxis(), h2->GetYaxis());
+   ret &= CheckBinLabels(h1->GetZaxis(), h2->GetZaxis());
 
    return ret;
 }
