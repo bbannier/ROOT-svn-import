@@ -354,6 +354,7 @@ HypoTestInverter::HypoTestInverter( RooAbsData& data, ModelConfig &sbModel, Mode
 
 HypoTestInverter::HypoTestInverter(const HypoTestInverter & rhs) :
    IntervalCalculator(),
+   fTotalToysRun(0),
    fCalculator0(0), fScannedVariable(0),  // add these for Coverity
    fResults(0)
 {
@@ -435,6 +436,21 @@ void  HypoTestInverter::CreateResults() const {
    }
    fResults->UseCLs(fUseCLs);
    fResults->SetConfidenceLevel(1.-fSize);
+   // check if one or two sided scan
+   if (fCalculator0) {
+      // if asymptotic calculator
+      AsymptoticCalculator * ac = dynamic_cast<AsymptoticCalculator*>(fCalculator0);
+      if (ac) 
+         fResults->fIsTwoSided = ac->IsTwoSided();
+      else { 
+         // in case of the other calculators 
+         TestStatSampler * sampler = fCalculator0->GetTestStatSampler();
+         if (sampler) {
+            ProfileLikelihoodTestStat * pl = dynamic_cast<ProfileLikelihoodTestStat*>(sampler->GetTestStatistic());
+            if (pl && pl->IsTwoSided() ) fResults->fIsTwoSided = true;
+         }
+      }
+   }
 }
 
 HypoTestInverterResult* HypoTestInverter::GetInterval() const { 
@@ -594,14 +610,16 @@ bool HypoTestInverter::RunFixedScan( int nBins, double xMin, double xMax, bool s
                                           << xMax << std::endl; 
    }         
 
-   double thisX = 0;
+   double thisX = xMin; 
    for (int i=0; i<nBins; i++) {
       
-      if (scanLog)
-         thisX = exp(  log(xMin)+i*(log(xMax)-log(xMin))/(nBins-1)  ); // scan in log x
-      else
-         thisX = xMin+i*(xMax-xMin)/(nBins-1);          // linear scan in x 
-      
+      if (i > 0) { // avoids case of nBins = 1
+         if (scanLog) 
+            thisX = exp(  log(xMin) +  i*(log(xMax)-log(xMin))/(nBins-1)  );  // scan in log x
+         else
+            thisX = xMin + i*(xMax-xMin)/(nBins-1);          // linear scan in x 
+      }
+         
       bool status = RunOnePoint(thisX);
       
       // check if failed status
@@ -661,6 +679,12 @@ bool HypoTestInverter::RunOnePoint( double rVal, bool adaptive, double clTarget)
       oocoutE((TObject*)0,Eval) << "HypoTestInverter - Error running point " << fScannedVariable->GetName() << " = " <<
    fScannedVariable->getVal() << endl;
       return false;
+   }
+   // in case of a dummy result
+   if (TMath::IsNaN(result->NullPValue() ) && TMath::IsNaN(result->AlternatePValue() ) ) {
+      oocoutW((TObject*)0,Eval) << "HypoTestInverter - Skip invalid result for  point " << fScannedVariable->GetName() << " = " <<
+         fScannedVariable->getVal() << endl;
+      return true;  // need to return true to avoid breaking the scan loop
    }
    
    double lastXtested;

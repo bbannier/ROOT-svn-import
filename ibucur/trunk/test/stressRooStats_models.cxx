@@ -1,5 +1,3 @@
-// Standard Library headers
-#include <utility>
 // RooFit headers
 #include "RooWorkspace.h"
 #include "RooRealVar.h"
@@ -9,15 +7,14 @@
 using namespace RooStats;
 
 //__________________________________________________________________________________
-static pair<ModelConfig *, ModelConfig *> buildPoissonProductModel(RooWorkspace *w)
+void buildPoissonProductModel(RooWorkspace *w)
 {
-
    // Build product model
    w->factory("expr::compsig('2*sig*pow(1.2, beta)', sig[0,20], beta[-5,5])");
    w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig, bkg1[0,20]))");
    w->factory("Poisson::poiss2(y[0,120], sum::splusb2(compsig, bkg2[0,20]))");
-   w->factory("Poisson::constr1(gbkg1[3], bkg1)");
-   w->factory("Poisson::constr2(gbkg2[6], bkg2)");
+   w->factory("Poisson::constr1(gbkg1[10,0,20], bkg1)");
+   w->factory("Poisson::constr2(gbkg2[10,0,20], bkg2)");
    w->factory("Gaussian::constr3(beta0[0,-5,5], beta, 1)"); 
    w->factory("PROD::pdf(poiss1, poiss2, constr1, constr2, constr3)");
 
@@ -29,6 +26,11 @@ static pair<ModelConfig *, ModelConfig *> buildPoissonProductModel(RooWorkspace 
    w->defineSet("poi", "sig");
    w->defineSet("nuis", "bkg1,bkg2,beta");
    w->defineSet("globObs", "beta0,gbkg1,gbkg2");
+
+   // set global observables to constant values
+   RooFIter iter = w->set("globObs")->fwdIterator();
+   RooRealVar *var;
+   while((var = (RooRealVar *)iter.next()) != NULL) var->setConstant();
 
    // build data set and import it into the workspace sets
    RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
@@ -51,13 +53,11 @@ static pair<ModelConfig *, ModelConfig *> buildPoissonProductModel(RooWorkspace 
 
    w->import(*sbModel);
    w->import(*bModel);
-
-   return make_pair(sbModel, bModel);
 }
 
-static pair<ModelConfig *, ModelConfig *> buildOnOffModel(RooWorkspace *w)
-{
 
+void buildOnOffModel(RooWorkspace *w)
+{
    // Build model for prototype on/off problem
    // Poiss(x | s+b) * Poiss(y | tau b )
    w->factory("Poisson::on_pdf(n_on[0,500],sum::splusb(sig[0,500],bkg[0,500]))");
@@ -80,14 +80,14 @@ static pair<ModelConfig *, ModelConfig *> buildOnOffModel(RooWorkspace *w)
    RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
    w->import(*data);
 
-   // Create S+B Model Configuration
+   // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
    sbModel->SetPdf(*w->pdf("prod_pdf"));
    sbModel->SetObservables(*w->set("obs"));      
    sbModel->SetParametersOfInterest(*w->set("poi"));
    sbModel->SetNuisanceParameters(*w->set("nuis"));
 
-   // Create B Model Configuration
+   // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
    
@@ -97,7 +97,5 @@ static pair<ModelConfig *, ModelConfig *> buildOnOffModel(RooWorkspace *w)
 
    w->import(*sbModel);
    w->import(*bModel);
-
-   return make_pair(sbModel, bModel);
 }
 
