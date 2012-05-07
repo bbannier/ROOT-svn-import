@@ -236,7 +236,7 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
 	std::cout << "MakeModelAndMeasurementsFast: Channel: " << channel.GetName()
 		  << " has uninitialized histogram pointers" << std::endl;
 	throw bad_hf;
-	exit(-1);
+	return NULL;
       }
 
       string ch_name = channel.GetName();
@@ -334,7 +334,8 @@ RooWorkspace* RooStats::HistFactory::MakeModelAndMeasurementFast( RooStats::Hist
   catch(exception& e)
     {
       std::cout << e.what() << std::endl;
-      exit(-1);
+      throw bad_hf;
+      return NULL;
     }
 
   return ws;
