@@ -12,12 +12,12 @@ using namespace RooStats;
 void buildPoissonProductModel(RooWorkspace *w)
 {
    // Build product model
-   w->factory("expr::compsig('2*sig*pow(1.2, beta)', sig[0,20], beta[-3,3])");
-   w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig, bkg1[0,10]))");
-   w->factory("Poisson::poiss2(y[0,120], sum::splusb2(compsig, bkg2[0,10]))");
-   w->factory("Poisson::constr1(gbkg1[5,0,10], bkg1)");
-   w->factory("Poisson::constr2(gbkg2[5,0,10], bkg2)");
-   w->factory("Gaussian::constr3(beta0[0,-3,3], beta, 1)"); 
+   w->factory("expr::compsig('2*sig*pow(1.2, beta)', sig[0,20], beta[-5,5])");
+   w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig, bkg1[0,20]))");
+   w->factory("Poisson::poiss2(y[0,120], sum::splusb2(compsig, bkg2[0,20]))");
+   w->factory("Poisson::constr1(gbkg1[10,0,20], bkg1)");
+   w->factory("Poisson::constr2(gbkg2[10,0,20], bkg2)");
+   w->factory("Gaussian::constr3(beta0[0,-5,5], beta, 1)"); 
    w->factory("PROD::pdf(poiss1, poiss2, constr1, constr2, constr3)");
 
    // set POI prior Pdf (for BayesianCalculator and other Bayesian methods) 
