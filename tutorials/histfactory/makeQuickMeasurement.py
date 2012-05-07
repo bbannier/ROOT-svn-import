@@ -11,14 +11,15 @@
 # and errors
 
 def main():
-    """   
+    """ Create a simple model and run statistical tests  
+
     This script can be used to make simple statistical measurements.
     It takes values for signal, background, and data as input, and
     can optionally take uncertainties on signal or background.
     It returns a fitted value for the signal strength, which is
     defined as:  FittedSignal = NominalSignal * SignalStrength 
-    """
 
+    """
     
     # Let's parse the input
     # Define the command line options of the script:
@@ -61,11 +62,9 @@ def main():
                        help = """Run a standard statistical test on the newly created model.
                                Options are: 'ProfileLikelihood',  Make output plots, graphs, and save the workspace.""" )
 
-
     # Parse the command line options:
     ( options, unknown ) = parser.parse_args()
     
-
     # Make a log
     # Set the format of the log messages:
     FORMAT = 'Py:%(name)-25s  %(levelname)-8s  %(message)s'
@@ -102,11 +101,11 @@ def main():
             logger.error( test )
         return
 
-    """
-    Okay, if all input is acceptable, we simply pass
-    it to the MakeSimpleMeasurement function, which
-    does the real work
-    """
+    
+    # Okay, if all input is acceptable, we simply pass
+    # it to the MakeSimpleMeasurement function, which
+    # does the real work.
+
     MakeSimpleMeasurement( signal_val=options.signal, background_val=options.background, data_val=options.data,
                            signal_uncertainty=options.signal_uncertainty, background_uncertainty=options.background_uncertainty,
                            Export=options.export, output_prefix=options.output_prefix, test=options.test )
@@ -120,6 +119,7 @@ def MakeSimpleMeasurement( signal_val, background_val, data_val, signal_uncertai
     
     Take in simple values for signal, background data, 
     and potentially uncertainty on signal and background
+
     """
 
     try:
@@ -135,28 +135,23 @@ def MakeSimpleMeasurement( signal_val, background_val, data_val, signal_uncertai
     meas.SetOutputFilePrefix( output_prefix )
     meas.SetPOI( "SigXsecOverSM" )
 
-    """
-    We don't include Lumi here, 
-    but since HistFactory gives it to 
-    us for free, we set it constant
-    The values are just dummies
-    """
+    # We don't include Lumi here, 
+    # but since HistFactory gives it to 
+    # us for free, we set it constant
+    # The values are just dummies
+
     meas.SetLumi( 1.0 )
     meas.SetLumiRelErr( 0.10 )
     meas.AddConstantParam("Lumi")
 
-    """
-    We set ExportOnly to false.  This parameter
-    defines what happens when we run MakeMeasurementAndModelFast
-    If we DO run that function, we also want it to export.
-    """
+    # We set ExportOnly to false.  This parameter
+    # defines what happens when we run MakeMeasurementAndModelFast
+    # If we DO run that function, we also want it to export.
     meas.SetExportOnly( False )
 
-    """
-    Create a channel and set
-    the measured value of data 
-    (no extenal hist necessar for cut-and-count)
-    """
+    # Create a channel and set
+    # the measured value of data 
+    # (no extenal hist necessar for cut-and-count)
     chan = ROOT.RooStats.HistFactory.Channel( "channel" )
     chan.SetData( data_val )
 
@@ -207,15 +202,33 @@ def MakeSimpleMeasurement( signal_val, background_val, data_val, signal_uncertai
         #workspace = ROOT.RooStats.HistFactory.HistoToWorkspaceFactoryFast.MakeCombinedModel( meas )
         ROOT.RooStats.HistFactory.FitModel( workspace )
 
-
-    """ Run a statistical test if requested """
+    # Run a statistical test if requred
     if test != None:
+
+        # First, for this to work from PyROOT,
+        # we have to load some libraries "by hand"
+        ROOT.gSystem.Load("libCint.so")
+        ROOT.gSystem.Load("libRint.so")
+
         if test == "":
             print "Error: You must supply a test"
-        elif test == "ProfileLikelihood": ROOT.RooStats.StandardProfileLikelihoodDemo( workspace )
-        elif test == "BayesianMCMC": ROOT.RooStats.StandardBayesianMCMCDemo( workspace )
-        elif test == "OneSidedFrequentistUpperLimitWithBands": ROOT.RooStats.OneSidedFrequentistUpperLimitWithBands( workspace )
-        elif test == "FeldmanCousins": ROOT.RooStats.StandardFeldmanCousinsDemo( workspace )
+
+        elif test == "ProfileLikelihood": 
+            ROOT.gROOT.LoadMacro("$ROOTSYS/tutorials/roostats/StandardProfileLikelihoodDemo.C+")
+            ROOT.RooStats.StandardProfileLikelihoodDemo( workspace )
+
+        elif test == "BayesianMCMC": 
+            ROOT.gROOT.LoadMacro("$ROOTSYS/tutorials/roostats/StandardBayesianMCMCDemo.C+")
+            ROOT.RooStats.StandardBayesianMCMCDemo( workspace )
+
+        elif test == "OneSidedFrequentistUpperLimitWithBands": 
+            ROOT.gROOT.LoadMacro("$ROOTSYS/tutorials/roostats/OneSidedFrequentistUpperLimitWithBands.C+")
+            ROOT.RooStats.OneSidedFrequentistUpperLimitWithBands( workspace )
+
+        elif test == "FeldmanCousins": 
+            ROOT.gROOT.LoadMacro("$ROOTSYS/tutorials/roostats/StandardFeldmanCousinsDemo.C+")
+            ROOT.RooStats.StandardFeldmanCousinsDemo( workspace )
+
         else:
             print "Error: You must supply a valid test name"
 
