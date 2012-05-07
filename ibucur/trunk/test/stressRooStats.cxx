@@ -1,6 +1,13 @@
 // @(#)root/roofitcore:$name:  $:$id$
 // Authors: Wouter Verkerke  November 2007
 
+// C/C++ headers
+#include <string>
+#include <list>
+#include <iostream>
+#include <cmath>
+
+// ROOT headers
 #include "TWebFile.h"
 #include "TSystem.h"
 #include "TString.h"
@@ -13,6 +20,8 @@
 #include "TH1.h"
 #include "TF1.h"
 #include "TBenchmark.h"
+
+// RooFit headers
 #include "RooGlobalFunc.h"
 #include "RooNumIntConfig.h"
 #include "RooMsgService.h"
@@ -27,10 +36,9 @@
 #include "RooRandom.h"
 #include "RooTrace.h"
 #include "RooMath.h"
-#include <string>
-#include <list>
-#include <iostream>
-#include <math.h>
+
+// Tests file
+#include "stressRooStats_tests.cxx"
 
 using namespace std ;
 using namespace RooFit ;
@@ -50,8 +58,6 @@ void StatusPrint(const Int_t id, const TString &title, const Int_t status, const
    TString header = TString::Format("Test %d : %s ", id, title.Data());
    cout << left << setw(lineWidth) << setfill('.') << header << " " << (status > 0 ? "OK" : (status < 0 ? "SKIPPED" : "FAILED")) << endl;
 }
-
-#include "stressRooStats_tests.cxx"
 
 //______________________________________________________________________________
 Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t oneTest, Bool_t dryRun, Bool_t doDump, Bool_t doTreeStore)
@@ -148,7 +154,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Int_t 
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
 */
    // TEST HYPOTEST INVERTER PRODUCT POISSON :  Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kSimpleLR));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR));
 
 //   testList.push_back(new TestBasic101(fref, writeRef, verbose));
 //   testList.push_back(new TestHypoTestCalculator(fref, writeRef, verbose));
