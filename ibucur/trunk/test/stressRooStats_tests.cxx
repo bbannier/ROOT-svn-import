@@ -30,7 +30,7 @@ using namespace RooStats;
 //              = 5 Max Likelihood Estimate as test statistic
 //              = 6 Number of Observed Events as test statistic
 enum ETestStatType { kSimpleLR = 0, kRatioLR = 1, kProfileLR= 2, kProfileLROneSided = 3, kProfileLRSigned = 4, kMLE = 5, kNObs = 6 };
-static const char *kECalculatorTypeString[] = { "Undefined", "Frequentist", "Hybrid", "Asymptotic" };
+static const char *kECalculatorTypeString[] = { "Undefined", "Hybrid", "Frequentist", "Asymptotic" };
 static const char *kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
 static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel);
 
@@ -1087,7 +1087,6 @@ public:
 
    Bool_t testCode() {
 
-
       // Create workspace and model
       RooWorkspace *w = new RooWorkspace("w", kTRUE);
       buildPoissonProductModel(w);
@@ -1100,16 +1099,20 @@ public:
       w->data("data")->add(*w->set("obs"));
       
       // set snapshots
-      cout << "SNAPSHOT " << fObsValueX - w->var("bkg1")->getValV() << endl;
       w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
       sbModel->SetSnapshot(*w->set("poi"));
       w->var("sig")->setVal(0);
-      bModel->SetSnapshot(*w->set("poi"));     
+      bModel->SetSnapshot(*w->set("poi"));    
+
+      //TODO: check how this code can be eliminated, maybe 0 should be default print level for AsymptoticCalculator
+      if(fCalculatorType == HypoTestInverter::kAsymptotic) {
+         AsymptoticCalculator::SetPrintLevel(0); // print only minimal output
+      }
 
       // configure HypoTestInverter
       HypoTestInverter *hti = new HypoTestInverter(*w->data("data"), *sbModel, *bModel, NULL, fCalculatorType, 1.0 - fConfidenceLevel);
       hti->SetTestStatistic(*buildTestStatistic(fTestStatType, *sbModel, *bModel));
-      hti->SetFixedScan(10, 2, 8);
+      hti->SetFixedScan(10, w->var("sig")->getMin(), w->var("sig")->getMax()); // significant speedup
  
       //TODO: check how to eliminate this code, calculator should autoconfigure itself     
       if(fCalculatorType == HypoTestInverter::kHybrid) {
@@ -1117,35 +1120,32 @@ public:
          HybridCalculator *hc = (HybridCalculator *)hti->GetHypoTestCalculator();
          hc->ForcePriorNuisanceNull(*w->pdf("priorbkg"));
          hc->ForcePriorNuisanceAlt(*w->pdf("priorbkg"));
-      }
+      } 
 
-      //TODO: check how this code can be eliminated, maybe 0 should be default print level for AsymptoticCalculator
-      if(fCalculatorType == HypoTestInverter::kAsymptotic) {
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
-         AsymptoticCalculator::SetPrintLevel(-1); // print only minimal output
-      }
-
-      // needed because we have no extended pdf and the ToyMC Sampler evaluation returns an error
+      // ToyMCSampler configuration
       ToyMCSampler *tmcs = (ToyMCSampler *)hti->GetHypoTestCalculator()->GetTestStatSampler();
-      tmcs->SetMaxToys(100);
-      tmcs->SetNEventsPerToy(1);
+      tmcs->SetMaxToys(100); // speedup
+      tmcs->SetNEventsPerToy(1); // needed because we don't have an extended pdf
+
       HypoTestInverterResult *interval = hti->GetInterval();
-      regValue(interval->LowerLimit(), TString::Format("hti1_lower_limit_sig1_calc_%s_%s", 
+      regValue(interval->LowerLimit(), TString::Format("hti1_lower_limit_sig1_calc_%s_%s_%d_%d_%lf", 
                                                        kECalculatorTypeString[fCalculatorType],
-                                                       kETestStatTypeString[fTestStatType] ));
-      regValue(interval->UpperLimit(), TString::Format("hti1_upper_limit_sig1_calc_%s_%s",
+                                                       kETestStatTypeString[fTestStatType],
+                                                       fObsValueX, fObsValueY, fConfidenceLevel ));
+      regValue(interval->UpperLimit(), TString::Format("hti1_upper_limit_sig1_calc_%s_%s_%d_%d_%lf",
                                                        kECalculatorTypeString[fCalculatorType],
-                                                       kETestStatTypeString[fTestStatType] ));
+                                                       kETestStatTypeString[fTestStatType],
+                                                       fObsValueX, fObsValueY, fConfidenceLevel ));
 
       if(_verb >= 1) {
-         cout << "[" << interval->LowerLimit() << "," << interval->UpperLimit() << "]" << endl;
          HypoTestInverterPlot *plot = new HypoTestInverterPlot("hti1 Plot", "Feldman-Cousins Interval", interval);
          TCanvas *c1 = new TCanvas("HypoTestInverter1 Scan");
          c1->SetLogy(false);
          plot->Draw("OBS");
-         c1->SaveAs(TString::Format("hti1 Scan - %s %s.pdf",
+         c1->SaveAs(TString::Format("hti1_scan_%s_%s_%d_%d_%lf.pdf",
                                     kECalculatorTypeString[fCalculatorType],
-                                    kETestStatTypeString[fTestStatType] ));
+                                    kETestStatTypeString[fTestStatType],
+                                    fObsValueX, fObsValueY, fConfidenceLevel ));
 
          if(_verb == 2) {
             const int n = interval->ArraySize();
@@ -1163,9 +1163,10 @@ public:
                   pl->SetLogYaxis(kTRUE);
                   pl->Draw();
                }
-               c2->SaveAs(TString::Format("hti1 TestStatDistributions - %s %s.pdf",
+               c2->SaveAs(TString::Format("hti1_teststat_distrib_%s_%s_%d_%d_%lf.pdf",
                                           kECalculatorTypeString[fCalculatorType],
-                                          kETestStatTypeString[fTestStatType] ));
+                                          kETestStatTypeString[fTestStatType],
+                                          fObsValueX, fObsValueY, fConfidenceLevel ));
             }
          }
       }
