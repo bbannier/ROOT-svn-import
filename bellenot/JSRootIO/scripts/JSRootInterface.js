@@ -139,8 +139,8 @@ function ReadFile() {
       loadScript('scripts/dtree.js', function() {
       loadScript('scripts/rawinflate.js', function() {
       loadScript('scripts/JSIO.core.js', function() {
-      loadScript('http://code.highcharts.com/2.2.1/highcharts.js', function() {
-      loadScript('http://code.highcharts.com/2.2.1/modules/exporting.js', function() {
+      loadScript('http://code.highcharts.com/highcharts.js', function() {
+      loadScript('http://code.highcharts.com/modules/exporting.js', function() {
       loadScript('scripts/JSROOTPainter.js', function() {
       loadScript('scripts/JSRootIOEvolution.js', function() {
          $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
