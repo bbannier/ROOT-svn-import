@@ -42,7 +42,7 @@ namespace RooStats {
 		public:
 			// Translate the given fit result to a RooArgSet in a generic way.
 			// Prefix is prepended to all variable names.
-			static RooArgSet *GetAsArgSet(RooFitResult *result, TString prefix="") {
+			static RooArgSet *GetAsArgSet(RooFitResult *result, TString prefix="", bool withErrorsAndPulls=false) {
 				RooArgSet *detailedOutput = new RooArgSet;
 				const RooArgSet &detOut = result->floatParsFinal();
 				const RooArgSet &truthSet = result->floatParsInit();
@@ -50,32 +50,35 @@ namespace RooStats {
 				TIterator *it = detOut.createIterator();
 				for(;(var = dynamic_cast<RooRealVar*>(it->Next()));) {
 					RooAbsArg* clone = var->cloneTree(TString().Append(prefix).Append(var->GetName()));
+					clone->SetTitle( TString().Append(prefix).Append(var->GetTitle()) );
 					detailedOutput->addOwned(*clone);
 
-					TString pullname = TString().Append(prefix).Append(TString::Format("%s_pull", var->GetName()));
-					//					TString pulldesc = TString::Format("%s pull for fit %u", var->GetTitle(), fitNumber);
-					RooRealVar* truth = dynamic_cast<RooRealVar*>(truthSet.find(var->GetName()));
-					RooPullVar pulltemp("temppull", "temppull", *var, *truth);
-					RooRealVar* pull = new RooRealVar(pullname, pullname, pulltemp.getVal());
-					detailedOutput->addOwned(*pull);
-
-					TString errloname = TString().Append(prefix).Append(TString::Format("%s_errlo", var->GetName()));
-					//					TString errlodesc = TString::Format("%s low error for fit %u", var->GetTitle(), fitNumber);
-					RooRealVar* errlo = new RooRealVar(errloname, errloname, var->getErrorLo());
-					detailedOutput->addOwned(*errlo);
-
-					TString errhiname = TString().Append(prefix).Append(TString::Format("%s_errhi", var->GetName()));
-					//					TString errhidesc = TString::Format("%s high error for fit %u", var->GetTitle(), fitNumber);
-					RooRealVar* errhi = new RooRealVar(errhiname, errhiname, var->getErrorHi());
-					detailedOutput->addOwned(*errhi);
+               if( withErrorsAndPulls ) {
+                  TString pullname = TString().Append(prefix).Append(TString::Format("%s_pull", var->GetName()));
+                  //					TString pulldesc = TString::Format("%s pull for fit %u", var->GetTitle(), fitNumber);
+                  RooRealVar* truth = dynamic_cast<RooRealVar*>(truthSet.find(var->GetName()));
+                  RooPullVar pulltemp("temppull", "temppull", *var, *truth);
+                  RooRealVar* pull = new RooRealVar(pullname, pullname, pulltemp.getVal());
+                  detailedOutput->addOwned(*pull);
+   
+                  TString errloname = TString().Append(prefix).Append(TString::Format("%s_errlo", var->GetName()));
+                  //					TString errlodesc = TString::Format("%s low error for fit %u", var->GetTitle(), fitNumber);
+                  RooRealVar* errlo = new RooRealVar(errloname, errloname, var->getErrorLo());
+                  detailedOutput->addOwned(*errlo);
+   
+                  TString errhiname = TString().Append(prefix).Append(TString::Format("%s_errhi", var->GetName()));
+                  //					TString errhidesc = TString::Format("%s high error for fit %u", var->GetTitle(), fitNumber);
+                  RooRealVar* errhi = new RooRealVar(errhiname, errhiname, var->getErrorHi());
+                  detailedOutput->addOwned(*errhi);
+               }
 				}
 				delete it;
 
 				// monitor a few more variables
-				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("minNLL"), "", result->minNll() ) );
-				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("fitStatus"), "", result->status() ) );
-				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("covQual"), "", result->covQual() ) );
-				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("numInvalidNLLEval"), "", result->numInvalidNLL() ) );
+				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("minNLL"), TString().Append(prefix).Append("minNLL"), result->minNll() ) );
+				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("fitStatus"), TString().Append(prefix).Append("fitStatus"), result->status() ) );
+				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("covQual"), TString().Append(prefix).Append("covQual"), result->covQual() ) );
+				detailedOutput->addOwned( *new RooRealVar(TString().Append(prefix).Append("numInvalidNLLEval"), TString().Append(prefix).Append("numInvalidNLLEval"), result->numInvalidNLL() ) );
 				return detailedOutput;
 			}
 
@@ -89,7 +92,8 @@ namespace RooStats {
 			// dataset unless CommitSet is called.
 			void AppendArgSet(const RooArgSet *aset, TString prefix="") {
 				if (aset == NULL) {
-					std::cout << "Attempted to append NULL" << endl;
+				   // silently ignore
+					//std::cout << "Attempted to append NULL" << endl;
 					return;
 				}
 				if (builtSet == NULL) {
@@ -104,7 +108,7 @@ namespace RooStats {
 					}
 					else {
 						// we never commited, so by default all columns are expected to not exist
-						RooRealVar *var = new RooRealVar(renamed, renamed, v->getVal());
+						RooRealVar *var = new RooRealVar(renamed, v->GetTitle(), v->getVal());
 						if (!builtSet->addOwned(*var)) {
 							delete var;
 							builtSet->setRealValue(renamed, v->getVal());
@@ -130,25 +134,21 @@ namespace RooStats {
 			}
 
 			RooDataSet *GetAsDataSet(TString name, TString title) {
-				if (result == NULL) {
-					result = new RooDataSet("", "",
+			   RooDataSet* temp = NULL;
+				if( result ) {
+				   temp = new RooDataSet( *result );
+				   temp->SetNameTitle( name.Data(), title.Data() );
+				}else{
+					temp = new RooDataSet(name.Data(), title.Data(),
 							RooArgSet( *(new RooRealVar("weight","weight",1.0)), "tmpSet" ), "weight");
 				}
-				result->SetNameTitle(name.Data(), title.Data());
-				RooDataSet *temp = result;
-
-				result = NULL;
-				delete builtSet;
-				builtSet = NULL;
 
 				return temp;
 			}
 
 			virtual ~DetailedOutputAggregator() {
-				if (result != NULL)
-					delete result;
-				if (builtSet != NULL)
-					delete builtSet;
+				if (result != NULL) delete result;
+				if (builtSet != NULL) delete builtSet;
 			}
 
 		private:
@@ -158,7 +158,7 @@ namespace RooStats {
 			void InitializeColumns(RooDataSet *dset, RooArgSet *aset) {
 				TIterator* iter = aset->createIterator();
 				while(RooAbsArg* v = dynamic_cast<RooAbsArg*>( iter->Next() ) ) {
-					dset->addColumn( *(new RooRealVar(v->GetName(), v->GetName(), -1.0)));
+					dset->addColumn( *(new RooRealVar(v->GetName(), v->GetTitle(), -1.0)));
 				}
 				delete iter;
 			}

@@ -246,7 +246,7 @@ namespace HistFactory{
 	std::cout << "MakeModelAndMeasurementsFast: Channel: " << channel.GetName()
 		  << " has uninitialized histogram pointers" << std::endl;
 	throw bad_hf;
-	exit(-1);
+	return NULL;
       }
 
       string ch_name = channel.GetName();
