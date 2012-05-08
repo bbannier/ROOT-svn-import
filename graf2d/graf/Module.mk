@@ -74,9 +74,9 @@ $(GRAFDO):     OPT = $(NOOPT)
 $(GRAFDO):     CXXFLAGS += $(FREETYPEINC)
 $(GRAFDS):     CINTFLAGS += $(FREETYPEINC)
 
-$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o) $(GRAFDIRS)/TMathText.o: \
+$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o $(GRAFDIRS)/TMathText.o): \
                 $(FREETYPEDEP)
-$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o) $(GRAFDIRS)/TMathText.o: \
+$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o $(GRAFDIRS)/TMathText.o): \
                 CXXFLAGS += $(FREETYPEINC)
 
 #$(GRAFDIRS)/TMathText.o: \
