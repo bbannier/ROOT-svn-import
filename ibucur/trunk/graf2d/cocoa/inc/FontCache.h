@@ -49,8 +49,10 @@ public:
    FontCache();
    
    FontStruct_t LoadFont(const X11::XLFDName &xlfd);
-   char **ListFonts(const X11::XLFDName &xlfd, int maxNames, int &count);
    void UnloadFont(FontStruct_t font);
+   
+   char **ListFonts(const X11::XLFDName &xlfd, int maxNames, int &count);
+   void FreeFontNames(char **fontList);
 
    unsigned GetTextWidth(FontStruct_t font, const char *text, int nChars);
    void GetFontProperties(FontStruct_t font, int &maxAscent, int &maxDescent);
@@ -95,7 +97,8 @@ private:
       std::vector<char> fStringData;
    };
 
-   std::list<FontList> fFontLists;//list of "list" of fonts :)
+   std::list<FontList> fFontLists;//list of "lists" of fonts :)
+   FontList fDummyList;   
 
    FontCache(const FontCache &rhs) = delete;
    FontCache(FontCache &&rhs) = delete;//Make this explicit.

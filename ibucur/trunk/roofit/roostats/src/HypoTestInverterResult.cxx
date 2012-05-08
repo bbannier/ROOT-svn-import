@@ -367,10 +367,18 @@ double HypoTestInverterResult::GetGraphX(const TGraph & graph, double y0, bool l
       return (n>0) ?  y[0] : 0;
    } 
 
+   double varmin = - TMath::Infinity();
+   double varmax = TMath::Infinity();
+   const RooRealVar* var = dynamic_cast<RooRealVar*>( fParameters.first() );
+   if (var) { 
+       varmin = var->getMin();
+       varmax = var->getMax();
+   }
+
    double xmin = axmin; 
    double xmax = axmax;
    // case no range is given check if need to extrapolate to lower/upper values 
-   if (axmin >= axmax) { 
+   if (axmin >= axmax ) { 
       xmin = graph.GetX()[0];
       xmax = graph.GetX()[n-1];
 
@@ -381,15 +389,38 @@ double HypoTestInverterResult::GetGraphX(const TGraph & graph, double y0, bool l
       double ymax = TMath::MaxElement(n,y);
       // do lower extrapolation 
       if ( (ymax < y0 && !lowSearch) || ( ymin > y0 && lowSearch) ) { 
-         const RooRealVar* var = dynamic_cast<RooRealVar*>( fParameters.first() );
-         if (var) xmin = var->getMin();
+         xmin = varmin;
       }
       // do upper extrapolation  
       if ( (ymax < y0 && lowSearch) || ( ymin > y0 && !lowSearch) ) { 
-         const RooRealVar* var = dynamic_cast<RooRealVar*>( fParameters.first() );
-         if (var) xmax = var->getMax();
+         xmax = varmax;
       }
    }
+   else { 
+
+#ifdef ISREALLYNEEDED //??
+      // in case of range given, check if all points are above or below the confidence level line
+      bool isCross = false;
+      bool first = true; 
+      double prod = 1;
+      for (int i = 0; i< n; ++i) { 
+         double xp, yp;
+         graph.GetPoint(i,xp,yp);
+         if (xp >= xmin && xp <= xmax) { 
+            prod *= TMath::Sign(1., (yp - y0) );
+            if (prod < 0 && !first) { 
+               isCross = true; 
+               break;
+            }
+            first = false;
+         }
+      }
+      if (!isCross) { 
+         return (lowSearch) ? varmin : varmax;
+      }
+#endif
+   }
+   
 
 
    brf.SetFunction(wf,xmin,xmax);
@@ -441,13 +472,23 @@ double HypoTestInverterResult::FindInterpolatedLimit(double target, bool lowSear
                        << "Interpolate the upper limit between the 2 results closest to the target confidence level" 
                        << std::endl;
 
+   // variable minimum and maximum
+   double varmin = - TMath::Infinity();
+   double varmax = TMath::Infinity();
+   const RooRealVar* var = dynamic_cast<RooRealVar*>( fParameters.first() );
+   if (var) { 
+       varmin = var->getMin();
+       varmax = var->getMax();
+   }
 
    if (ArraySize()<2) {
       double val =  (lowSearch) ? xmin : xmax;
       oocoutW(this,Eval) << "HypoTestInverterResult::FindInterpolatedLimit" 
                          << " - not enough points to get the inverted interval - return " 
                          <<  val << std::endl;
-      return val;
+      fLowerLimit = varmin;
+      fUpperLimit = varmax; 
+      return (lowSearch) ? fLowerLimit : fUpperLimit;  
    }
 
    // sort the values in x 
@@ -460,32 +501,127 @@ double HypoTestInverterResult::FindInterpolatedLimit(double target, bool lowSear
       graph.SetPoint(i, GetXValue(index[i]), GetYValue(index[i] ) );
 
 
-   if (xmin >= xmax) { 
-      if (lowSearch && !TMath::IsNaN(fUpperLimit) ) {
+   //std::cout << " search for " << lowSearch << std::endl;
+   
+
+   // search first for min/max in the given range
+   if (xmin >= xmax) {
+      
+      // this condition is nor needed: skip it
+      //if ((TMath::IsNaN(fLowerLimit) || fLowerLimit == varmin ) && ( TMath::IsNaN(fUpperLimit) || fUpperLimit == varmax) ) { 
+
+      // search for maximum
+      double ymax = 0; 
+      double xwithymax = varmin;
+      int iymax = 0;
+      for (int i = 0; i < n; ++i) {
+         double xp = 0, yp = 0;
+         graph.GetPoint(i, xp, yp);
+         if (yp > ymax) { 
+            ymax = yp;  
+            xwithymax = xp;
+            iymax = i; 
+         }
+      } 
+      if (ymax > target) {
+         if (lowSearch)  {
+            if ( iymax > 0) { 
+                  // low search
+               xmin = varmin; 
+               xmax = xwithymax;
+               } 
+            else { 
+               // no room for lower limit
+               fLowerLimit = varmin; 
+               lowSearch = false; // search now for upper limits
+            }
+         }
+         if (!lowSearch ) {
+            // up search 
+            if ( iymax < n-1 ) { 
+               xmin = xwithymax; 
+               xmax = varmax;
+            }
+            else { 
+               // no room for upper limit
+               fUpperLimit = varmax; 
+               lowSearch = true; // search now for lower limits
+               xmin = varmin; 
+               xmax = xwithymax;
+               }
+         }
+      }
+      else { 
+         // in case is below the target
+         // find out if is a lower or upper search
+         if (iymax <= (n-1)/2 ) { 
+            lowSearch = false; 
+            fLowerLimit = varmin; 
+         }
+         else { 
+            lowSearch = true; 
+            fUpperLimit = varmax;
+         }
+      }
+#ifdef DO_DEBUG
+      std::cout << " found xmin, xmax  = " << xmin << "  " << xmax << " for search " << lowSearch std::endl;
+#endif
+      // now come here if I have already found a lower/upper limit 
+      // i.e. I am calling routine for the second time
+#ifdef ISNEEDED
+      // should not really come here
+      if (lowSearch &&  fUpperLimit < varmax) {
          xmin = fXValues[ index.front() ];
          // find xmax (is first point before upper limit)
          int upI = FindClosestPointIndex(target, 2, fUpperLimit);
          if (upI < 1) return xmin; 
          xmax = GetXValue(upI);
       }
-      else if (!lowSearch && !TMath::IsNaN(fUpperLimit) ) {
+      else if (!lowSearch && fLowerLimit > varmin ) {
          // find xmin (is first point after lower limit)
          int lowI = FindClosestPointIndex(target, 3, fLowerLimit);
          if (lowI >= n-1) return xmax;
          xmin = GetXValue(lowI);
          xmax = fXValues[ index.back() ];
       }
+#endif
    }
-   
-   //std::cout << "finding " << lowSearch << " limit betweem " << xmin << "  " << xmax << endl;
+
+#ifdef DO_DEBUG   
+   std::cout << "finding " << lowSearch << " limit betweem " << xmin << "  " << xmax << endl;
+#endif
 
    double limit =  GetGraphX(graph, target, lowSearch, xmin, xmax);
    if (lowSearch) fLowerLimit = limit; 
    else fUpperLimit = limit;
    CalculateEstimatedError( target, lowSearch, xmin, xmax);
 
-   //std::cout << "limit is " << limit << std::endl;
-   return limit;
+#ifdef DO_DEBUG
+   std::cout << "limit is " << limit << std::endl;
+#endif
+
+   if (lowSearch && !TMath::IsNaN(fUpperLimit)) return fLowerLimit;
+   if (!lowSearch && !TMath::IsNaN(fLowerLimit)) return fUpperLimit;
+
+   // now perform the opposite search on the complement interval
+   if (lowSearch) { 
+      xmin = xmax;
+      xmax = varmax;         
+   } else { 
+      xmax = xmin;         
+      xmin = varmin;
+   }
+   double limit2 =  GetGraphX(graph, target, !lowSearch, xmin, xmax);
+   CalculateEstimatedError( target, !lowSearch, xmin, xmax);
+
+#ifdef DO_DEBUG
+   std::cout << "other limit is " << limit2 << std::endl;
+#endif
+   if (!lowSearch) fLowerLimit = limit2; 
+   else fUpperLimit = limit2;
+ 
+   return (lowSearch) ? fLowerLimit : fUpperLimit;
+
 }
 
 
@@ -554,8 +690,9 @@ Double_t HypoTestInverterResult::LowerLimit()
 {
   if (fFittedLowerLimit) return fLowerLimit;
   //std::cout << "finding point with cl = " << 1-(1-ConfidenceLevel())/2 << endl;
-  if ( fInterpolateLowerLimit ){
-     fLowerLimit = FindInterpolatedLimit(1-ConfidenceLevel(),true);
+  if ( fInterpolateLowerLimit ) { 
+     // find both lower/upper limit
+     if (TMath::IsNaN(fLowerLimit) )  FindInterpolatedLimit(1-ConfidenceLevel(),true);
   } else {
      //LM: I think this is never called
      fLowerLimit = GetXValue( FindClosestPointIndex((1-ConfidenceLevel())) );
@@ -568,9 +705,7 @@ Double_t HypoTestInverterResult::UpperLimit()
    //std::cout << "finding point with cl = " << (1-ConfidenceLevel())/2 << endl;
   if (fFittedUpperLimit) return fUpperLimit;
   if ( fInterpolateUpperLimit ) {
-     double target = 1.-ConfidenceLevel();
-     fUpperLimit = FindInterpolatedLimit(target,false); 
-     // test now if another point exists 
+     if (TMath::IsNaN(fUpperLimit) )  FindInterpolatedLimit(1-ConfidenceLevel(),false);
   } else {
      //LM: I think this is never called
      fUpperLimit = GetXValue( FindClosestPointIndex((1-ConfidenceLevel())) );

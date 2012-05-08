@@ -1155,13 +1155,15 @@ void TGCocoa::DrawLineAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x1, In
    //I use a small translation, after all, this is ONLY gui method and it
    //will not affect anything except GUI.
    CGContextTranslateCTM(ctx, 0.f, 1.);
-   CGContextSetAllowsAntialiasing(ctx, 0);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
+   CGContextSetAllowsAntialiasing(ctx, false);//Smoothed line is of wrong color and in a wrong position - this is bad for GUI.
 
    SetStrokeParametersFromX11Context(ctx, gcVals);
    CGContextBeginPath(ctx);
    CGContextMoveToPoint(ctx, x1, y1);
    CGContextAddLineToPoint(ctx, x2, y2);
    CGContextStrokePath(ctx);
+   
+   CGContextSetAllowsAntialiasing(ctx, true);//Somehow, it's not saved/restored, this affects ... window's titlebar.
 }
 
 //______________________________________________________________________________
@@ -1282,6 +1284,8 @@ void TGCocoa::DrawRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x
       
    const CGRect rect = CGRectMake(x, y, w, h);
    CGContextStrokeRect(ctx, rect);
+
+   CGContextSetAllowsAntialiasing(ctx, true);
 }
 
 //______________________________________________________________________________
@@ -1446,6 +1450,8 @@ void TGCocoa::FillPolygonAux(Window_t wid, const GCValues_t &gcVals, const Point
    for (Int_t i = 1; i < nPoints; ++i)
       CGContextAddLineToPoint(ctx, polygon[i].fX, polygon[i].fY - 2);
    CGContextFillPath(ctx);
+   
+   CGContextSetAllowsAntialiasing(ctx, true);
 }
 
 //______________________________________________________________________________
@@ -1598,7 +1604,7 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    CGContextScaleCTM(ctx, 1., -1.);   
 
    //Text must be antialiased.
-   CGContextSetAllowsAntialiasing(ctx, 1);
+   CGContextSetAllowsAntialiasing(ctx, true);
       
    assert(gcVals.fMask & kGCFont && "DrawString, font is not set in a context");
 
@@ -2136,23 +2142,27 @@ void TGCocoa::FreeFontStruct(FontStruct_t /*fs*/)
 }
 
 //______________________________________________________________________________
-char **TGCocoa::ListFonts(const char * /*fontName*/, Int_t /*maxNames*/, Int_t &count)
+char **TGCocoa::ListFonts(const char *fontName, Int_t maxNames, Int_t &count)
 {
    count = 0;
-/*
+
    if (fontName && fontName[0]) {
       X11::XLFDName xlfd = {};
       if (X11::ParseXLFDName(fontName, xlfd))
          return fPimpl->fFontManager.ListFonts(xlfd, maxNames, count);
-   }*/
+   }
 
    return 0;
 }
 
 //______________________________________________________________________________
-void TGCocoa::FreeFontNames(char ** /*fontlist*/)
+void TGCocoa::FreeFontNames(char **fontList)
 {
    // Frees the specified the array of strings "fontlist".
+   if (!fontList)
+      return;
+      
+   fPimpl->fFontManager.FreeFontNames(fontList);
 }
 
 //Color management.
