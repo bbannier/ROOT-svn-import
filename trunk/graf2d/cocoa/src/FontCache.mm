@@ -12,7 +12,9 @@
 //#define NDEBUG
 
 #include <stdexcept>
+#include <sstream>
 #include <cassert>
+#include <string>
 #include <cmath>
 
 #include "CocoaUtils.h"
@@ -52,54 +54,6 @@ const CFStringRef fixedFontNames[FontCache::nPadFonts] =
                                      };
 
 
-}
-
-//_________________________________________________________________
-FontCache::FontCache()
-{
-}
-
-//______________________________________________________________________________
-FontStruct_t FontCache::LoadFont(const X11::XLFDName &xlfd)
-{
-   using Util::CFScopeGuard;
-   using Util::CFStrongReference;
-   using X11::FontWeight;
-   using X11::FontSlant;
-   
-   const CFScopeGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman));
-   const CFStrongReference<CTFontRef> baseFont(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//false == do not retain
-   
-   if (!baseFont.Get()) {
-      ::Error("FontCache::LoadFont", "CTFontCreateWithName failed for %s", xlfd.fFamilyName.c_str());
-      return FontStruct_t();//Haha! Die ROOT, die!
-   }
-   
-   CTFontSymbolicTraits symbolicTraits = CTFontSymbolicTraits();
-   
-   if (xlfd.fWeight == FontWeight::bold)
-      symbolicTraits |= kCTFontBoldTrait;
-   if (xlfd.fSlant == FontSlant::italic)
-      symbolicTraits |= kCTFontItalicTrait;
-      
-   if (symbolicTraits) {
-      const CFStrongReference<CTFontRef> font(CTFontCreateCopyWithSymbolicTraits(baseFont.Get(), xlfd.fPixelSize, nullptr, symbolicTraits, symbolicTraits), false);//false == do not retain.
-      if (font.Get()) {
-         if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
-            fLoadedFonts[font.Get()] = font;
-      
-         return reinterpret_cast<FontStruct_t>(font.Get());
-      }
-   }
-      
-   if (fLoadedFonts.find(baseFont.Get()) == fLoadedFonts.end())
-      fLoadedFonts[baseFont.Get()] = baseFont;
-
-   return reinterpret_cast<FontStruct_t>(baseFont.Get());   
-}
-
-namespace {
-
 //______________________________________________________________________________
 CTFontCollectionRef CreateFontCollection(const X11::XLFDName &xlfd)
 {
@@ -113,7 +67,7 @@ CTFontCollectionRef CreateFontCollection(const X11::XLFDName &xlfd)
          ::Error("CreateFontCollection", "CFStringCreateWithCString failed");
          return 0;
       }
-      
+
       const Util::CFScopeGuard<CTFontDescriptorRef> fontDescriptor(CTFontDescriptorCreateWithNameAndSize(fontName.Get(), 0.));
       if (!fontDescriptor.Get()) {
          ::Error("CreateFontCollection", "CTFontDescriptorCreateWithNameAndSize failed");
@@ -125,11 +79,11 @@ CTFontCollectionRef CreateFontCollection(const X11::XLFDName &xlfd)
          ::Error("CreateFontCollection", "CFArrayCreateMutable failed");
          return 0;
       }
-      
-      CFArrayAppendValue(descriptors.Get(), fontDescriptor.Get());      
+
+      CFArrayAppendValue(descriptors.Get(), fontDescriptor.Get());
       ctCollection = CTFontCollectionCreateWithFontDescriptors(descriptors.Get(), 0);//Oh mama, so many code just to do this :(((
    }
-   
+
    if (!ctCollection) {
       ::Error("CreateFontCollection", "No fonts are available for family %s", xlfd.fFamilyName.c_str());//WTF???
       return 0;
@@ -143,12 +97,12 @@ CTFontCollectionRef CreateFontCollection(const X11::XLFDName &xlfd)
 bool GetFamilyName(CTFontDescriptorRef fontDescriptor, std::vector<char> &name)
 {
    assert(fontDescriptor != 0 && "GetFamilyName, fontDescriptor parameter is null");
-   
+
    name.clear();
-   
+
    Util::CFScopeGuard<CFStringRef> cfFamilyName((CFStringRef)CTFontDescriptorCopyAttribute(fontDescriptor, kCTFontFamilyNameAttribute));
    const CFIndex cfLen = CFStringGetLength(cfFamilyName.Get());
-   name.resize(cfLen + 1);//+ 1 for '0'.
+   name.resize(cfLen + 1);//+ 1 for '\0'.
    if (CFStringGetCString(cfFamilyName.Get(), &name[0], name.size(), kCFStringEncodingMacRoman))
       return true;
 
@@ -190,14 +144,98 @@ void GetPixelSize(CTFontDescriptorRef fontDescriptor, X11::XLFDName &newXLFD)
 
       if(pixelSize)
          newXLFD.fPixelSize = pixelSize;
-   }      
+   }
 }
 
+//_________________________________________________________________
+void CreateXLFDString(const X11::XLFDName &xlfd, std::string &xlfdString)
+{
+    xlfdString = "-CoreText-"; //Fake foundry.
+    xlfdString += xlfd.fFamilyName;
+
+    if (xlfd.fWeight == X11::kFWBold)
+        xlfdString += "-bold";
+    else
+        xlfdString += "-*";
+
+    if (xlfd.fSlant == X11::kFSItalic)
+        xlfdString += "-i";
+    else
+        xlfdString += "-r";
+
+    xlfdString += "-*-*"; //width, addstyle
+
+    if (xlfd.fPixelSize) {
+        std::ostringstream out;
+        out<<xlfd.fPixelSize;
+        xlfdString += "-";
+        xlfdString += out.str();
+    } else
+        xlfdString += "-*";
+
+    xlfdString += "-*-*-*-*-*-*-*-";//TODO: something more reasonable?
+}
+
+}
+
+//_________________________________________________________________
+FontCache::FontCache()
+{
+}
+
+//______________________________________________________________________________
+FontStruct_t FontCache::LoadFont(const X11::XLFDName &xlfd)
+{
+   using Util::CFScopeGuard;
+   using Util::CFStrongReference;
+   
+   const CFScopeGuard<CFStringRef> fontName(CFStringCreateWithCString(kCFAllocatorDefault, xlfd.fFamilyName.c_str(), kCFStringEncodingMacRoman));
+   const CFStrongReference<CTFontRef> baseFont(CTFontCreateWithName(fontName.Get(), xlfd.fPixelSize, 0), false);//false == do not retain
+   
+   if (!baseFont.Get()) {
+      ::Error("FontCache::LoadFont", "CTFontCreateWithName failed for %s", xlfd.fFamilyName.c_str());
+      return FontStruct_t();//Haha! Die ROOT, die!
+   }
+   
+   CTFontSymbolicTraits symbolicTraits = CTFontSymbolicTraits();
+   
+   if (xlfd.fWeight == X11::kFWBold)
+      symbolicTraits |= kCTFontBoldTrait;
+   if (xlfd.fSlant == X11::kFSItalic)
+      symbolicTraits |= kCTFontItalicTrait;
+      
+   if (symbolicTraits) {
+      const CFStrongReference<CTFontRef> font(CTFontCreateCopyWithSymbolicTraits(baseFont.Get(), xlfd.fPixelSize, 0, symbolicTraits, symbolicTraits), false);//false == do not retain.
+      if (font.Get()) {
+         if (fLoadedFonts.find(font.Get()) == fLoadedFonts.end())
+            fLoadedFonts[font.Get()] = font;
+      
+         return reinterpret_cast<FontStruct_t>(font.Get());
+      }
+   }
+      
+   if (fLoadedFonts.find(baseFont.Get()) == fLoadedFonts.end())
+      fLoadedFonts[baseFont.Get()] = baseFont;
+
+   return reinterpret_cast<FontStruct_t>(baseFont.Get());   
+}
+
+//______________________________________________________________________________
+void FontCache::UnloadFont(FontStruct_t font)
+{
+   CTFontRef fontRef = (CTFontRef)font;
+   font_iterator fontIter = fLoadedFonts.find(fontRef);
+
+   assert(fontIter != fLoadedFonts.end() && "Attempt to unload font, not created by font manager");
+
+   fLoadedFonts.erase(fontIter);
 }
 
 //______________________________________________________________________________
 char **FontCache::ListFonts(const X11::XLFDName &xlfd, int maxNames, int &count)
 {
+   typedef std::vector<char>::size_type size_type;
+
    count =  0;
 
    //Ugly, ugly code. I should "think different"!!!   
@@ -217,13 +255,13 @@ char **FontCache::ListFonts(const X11::XLFDName &xlfd, int maxNames, int &count)
       return 0;
    }
    
-   int added = 0;
-   FontList newFontList;
+   std::vector<char> xlfdData;
    std::vector<char> familyName;
    X11::XLFDName newXLFD = {};
+   std::string xlfdString;
    
    const CFIndex nFonts = CFArrayGetCount(fonts.Get());
-   for (CFIndex i = 0; i < nFonts && added < maxNames; ++i) {
+   for (CFIndex i = 0; i < nFonts && count < maxNames; ++i) {
       CTFontDescriptorRef font = (CTFontDescriptorRef)CFArrayGetValueAtIndex(fonts.Get(), i);
 
       if (!GetFamilyName(font, familyName))
@@ -238,31 +276,57 @@ char **FontCache::ListFonts(const X11::XLFDName &xlfd, int maxNames, int &count)
          continue;
       if (newXLFD.fSlant != xlfd.fSlant)
          continue;
-      
 
       if (xlfd.fPixelSize) {//Size was requested.
-         GetPixelSize(font, newXLFD);         
-         if (xlfd.fPixelSize != newXLFD.fPixelSize)//??? do I need this check actually?
-            continue;
+         GetPixelSize(font, newXLFD);
+         //I do not think, that font has a pixel size.
+         //But Core Text supports different font sizes.
+         if (!newXLFD.fPixelSize)
+            newXLFD.fPixelSize = xlfd.fPixelSize;
       }
 
       //Ok, now lets create XLFD name, and place into list.
+      CreateXLFDString(newXLFD, xlfdString);
+      //
+      xlfdData.insert(xlfdData.end(), xlfdString.begin(), xlfdString.end());
+      xlfdData.push_back(0);//terminal 0.
+      ++count;
    }
 
-   return 0;
+   //Setup array with string addresses.
+   if (xlfdData.size()) {
+      fFontLists.push_back(fDummyList);
+      fFontLists.back().fStringData.swap(xlfdData);
+      
+      std::vector<char> &data = fFontLists.back().fStringData;
+      std::vector<char *> &list = fFontLists.back().fList;
+      
+      list.push_back(&data[0]);
+      for (size_type i = 1, e = data.size(); i < e; ++i) {
+         if (!data[i] && i + 1 < e)
+            list.push_back(&data[i + 1]);
+      }
+
+      return &list[0];
+   } else
+      return 0;
 }
 
 //______________________________________________________________________________
-void FontCache::UnloadFont(FontStruct_t font)
+void FontCache::FreeFontNames(char **fontList)
 {
-   CTFontRef fontRef = (CTFontRef)font;
-   auto fontIter = fLoadedFonts.find(fontRef);
-
-   assert(fontIter != fLoadedFonts.end() && "Attempt to unload font, not created by font manager");
-
-   fLoadedFonts.erase(fontIter);
+   if (!fontList)
+      return;
+   
+   for (std::list<FontList>::iterator it = fFontLists.begin(), eIt = fFontLists.end(); it != eIt; ++it) {
+      if (fontList == &it->fList[0]) {
+         fFontLists.erase(it);
+         return;
+      }
+   }
+   
+   assert(0 && "FreeFontNames, unknown fontList");
 }
-
 
 //______________________________________________________________________________
 unsigned FontCache::GetTextWidth(FontStruct_t font, const char *text, int nChars)
