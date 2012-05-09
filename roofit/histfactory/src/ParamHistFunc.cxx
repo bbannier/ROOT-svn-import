@@ -44,7 +44,7 @@ ClassImp(ParamHistFunc);
 
 
 //_____________________________________________________________________________
-ParamHistFunc::ParamHistFunc() 
+ParamHistFunc::ParamHistFunc() : _numBins(0)
 {
   ;
 }
