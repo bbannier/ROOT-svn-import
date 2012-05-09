@@ -10,6 +10,11 @@
 # values, and returns a fitted signal value
 # and errors
 
+test_options = [ 'ProfileLikelihood', 'BayesianMCMC', 
+                 'OneSidedFrequentistUpperLimitWithBands', 
+                 'FeldmanCousins', 'FrequentistCLs' ]
+
+
 def main():
     """ Create a simple model and run statistical tests  
 
@@ -43,11 +48,11 @@ def main():
 
     parser.add_option( "--signal-uncertainty", dest = "signal_uncertainty",
                        action = "store", type = "float", default=None,
-                       help = "Uncertainty on the signal rate in percentage. --signal-uncertainty=5 means a 5% uncertainty." )
+                       help = "Uncertainty on the signal rate, as a fraction. --signal-uncertainty=.05 means a 5% uncertainty." )
  
     parser.add_option( "--background-uncertainty", dest = "background_uncertainty",
                        action = "store", type = "float", default=None,
-                       help = "Uncertainty on the background rate in percentage. --background-uncertainty=5 means a 5% uncertainty." )
+                       help = "Uncertainty on the background rate, as a fraction, not a percentage. --background-uncertainty=.05 means a 5% uncertainty." )
 
     parser.add_option( "--output-prefix", dest = "output_prefix",
                        action = "store", type = "string", default="Measurement",
@@ -59,8 +64,7 @@ def main():
 
     parser.add_option( "-t", "--test", dest = "test",
                        action = "store", default=None,
-                       help = """Run a standard statistical test on the newly created model.
-                               Options are: 'ProfileLikelihood',  Make output plots, graphs, and save the workspace.""" )
+                       help = """Run a standard statistical test on the newly created model.  Options are: """ + ', '.join(test_options) )
 
     # Parse the command line options:
     ( options, unknown ) = parser.parse_args()
@@ -94,7 +98,7 @@ def main():
 
 
     # If we are running a test, check that we have acceptable input
-    test_options = [ 'ProfileLikelihood', 'BayesianMCMC', 'OneSidedFrequentistUpperLimitWithBands', 'FeldmanCousins' ]
+
     if options.test != None and options.test not in test_options:
         logger.error("Please supply an acceptable test as an option.  Possible choices are:")
         for test in test_options:
@@ -109,7 +113,6 @@ def main():
     MakeSimpleMeasurement( signal_val=options.signal, background_val=options.background, data_val=options.data,
                            signal_uncertainty=options.signal_uncertainty, background_uncertainty=options.background_uncertainty,
                            Export=options.export, output_prefix=options.output_prefix, test=options.test )
-
     return
 
 
@@ -166,8 +169,8 @@ def MakeSimpleMeasurement( signal_val, background_val, data_val, signal_uncertai
 
     # If we have a signal uncertainty, add it too
     if signal_uncertainty != None:
-        uncertainty_up   = 1.0 + signal_uncertainty/100.0
-        uncertainty_down = 1.0 - signal_uncertainty/100.0
+        uncertainty_up   = 1.0 + signal_uncertainty
+        uncertainty_down = 1.0 - signal_uncertainty
         signal.AddOverallSys( "signal_uncertainty",  uncertainty_down, uncertainty_up )
 
     # Finally, add this sample to the channel
@@ -180,8 +183,8 @@ def MakeSimpleMeasurement( signal_val, background_val, data_val, signal_uncertai
 
     # If we have a background uncertainty, add it too
     if background_uncertainty != None:
-        uncertainty_up   = 1.0 + background_uncertainty/100.0
-        uncertainty_down = 1.0 - background_uncertainty/100.0
+        uncertainty_up   = 1.0 + background_uncertainty
+        uncertainty_down = 1.0 - background_uncertainty
         background.AddOverallSys( "background_uncertainty",  uncertainty_down, uncertainty_up )
 
     # Finally, add this sample to the channel
@@ -212,6 +215,10 @@ def MakeSimpleMeasurement( signal_val, background_val, data_val, signal_uncertai
 
         if test == "":
             print "Error: You must supply a test"
+
+        elif test == "FrequentistCLs": 
+            ROOT.gROOT.LoadMacro("StandardFrequentistCLsDemo.C+")
+            ROOT.RooStats.StandardFrequentistCLsDemo( workspace )
 
         elif test == "ProfileLikelihood": 
             ROOT.gROOT.LoadMacro("$ROOTSYS/tutorials/roostats/StandardProfileLikelihoodDemo.C+")

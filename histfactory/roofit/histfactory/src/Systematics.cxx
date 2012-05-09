@@ -36,7 +36,9 @@ RooStats::HistFactory::Constraint::Type RooStats::HistFactory::Constraint::GetTy
 }
 
 // Norm Factor
-RooStats::HistFactory::NormFactor::NormFactor() {;}
+RooStats::HistFactory::NormFactor::NormFactor() : fName(""), fVal(1.0), 
+						  fLow(1.0), fHigh(1.0), 
+						  fConst(true) {;}
 
 void RooStats::HistFactory::NormFactor::Print( std::ostream& stream ) {
   stream << "\t \t Name: " << fName
@@ -211,6 +213,10 @@ void RooStats::HistFactory::StatError::writeToFile( std::string OutputFileName, 
     std::string statErrorHistName = "statisticalErrors";
     
     TH1* hStatError = GetErrorHist();
+    if( hStatError == NULL ) {
+      std::cout << "Error: Stat Error error hist is NULL" << std::endl;
+      throw bad_hf;
+    }
     hStatError->Write(statErrorHistName.c_str());
     
     fInputFile = OutputFileName;

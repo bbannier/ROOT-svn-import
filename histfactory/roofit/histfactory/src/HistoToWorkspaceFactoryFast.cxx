@@ -395,10 +395,16 @@ namespace HistFactory{
     std::vector<std::string>::iterator itr = fObsNameVec.begin();
     for (int idx=0; itr!=fObsNameVec.end(); ++itr, ++idx ) {
       if ( !proto->var(itr->c_str()) ) {
-	TAxis* axis(0);
+	TAxis* axis(NULL);
 	if (idx==0) { axis = nominal->GetXaxis(); }
-	if (idx==1) { axis = nominal->GetYaxis(); }
-	if (idx==2) { axis = nominal->GetZaxis(); }
+	else if (idx==1) { axis = nominal->GetYaxis(); }
+	else if (idx==2) { axis = nominal->GetZaxis(); }
+	else {
+	  std::cout << "Error: Too many observables.  "
+		    << "HistFactory only accepts up to 3 observables (3d) "
+		    << std::endl;
+	  throw bad_hf;
+	}
 	Int_t nbins = axis->GetNbins();	
 	Double_t xmin = axis->GetXmin();
 	Double_t xmax = axis->GetXmax(); 	
@@ -709,6 +715,9 @@ namespace HistFactory{
      }  
      tree->Fill();
      RooDataSet* data = new RooDataSet("expData","", tree, obsList); // one experiment
+
+     delete tree;
+     delete [] obsForTree;
 
      proto->import(*data);
 

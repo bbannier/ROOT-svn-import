@@ -17,8 +17,6 @@
 #pragma link C++ namespace RooStats;
 #pragma link C++ namespace RooStats::NumberCountingUtils;
 
-#pragma link C++ defined_in "include/RooStats/StandardDemonstrations.h"; 
-
 // for auto-loading namespaces
 #ifdef USE_FOR_AUTLOADING
 #pragma link C++ class RooStats::NumberCountingUtils;

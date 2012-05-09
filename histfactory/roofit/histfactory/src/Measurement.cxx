@@ -62,7 +62,8 @@ RooStats::HistFactory::Channel& RooStats::HistFactory::Measurement::GetChannel( 
 	    << " in measurement: " << GetName() << std::endl;
   throw bad_hf;
 
-  return RooStats::HistFactory::BadChannel;
+  // No Need to return after throwing exception
+  // return RooStats::HistFactory::BadChannel;
 
 
 }
@@ -124,8 +125,12 @@ void RooStats::HistFactory::Measurement::PrintXML( std::string Directory, std::s
 
   // First, check that the directory exists:
 
-  mkdir( Directory.c_str(), 0777 );
-  
+  int success = mkdir( Directory.c_str(), 0777 );
+  if( success != 0 ) {
+    std::cout << "Error: Failed to make directory: " << Directory << std::endl;
+    throw bad_hf;
+  }
+
   // If supplied new Prefix, use that one:
 
   std::cout << "Printing XML Files for measurement: " << GetName() << std::endl;
@@ -300,6 +305,10 @@ void RooStats::HistFactory::Measurement::writeToFile( TFile* file ) {
       file->cd();
       chanDir->cd();
       TDirectory* sampleDir = chanDir->mkdir( sampName.c_str() );
+      if( sampleDir == NULL ) {
+	std::cout << "Error: Directory " << sampName << " not created properly" << std::endl;
+	throw bad_hf;
+      }
       std::string sampleDirPath = GetDirPath( sampleDir );
 
       if( ! sampleDir ) {

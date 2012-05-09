@@ -121,7 +121,7 @@ std::vector< RooStats::HistFactory::Measurement > ConfigParser::GetMeasurementsF
     if(xml_channel_files.empty()){
       cerr << "no input channels found" << endl;
       throw bad_hf;
-      return measurement_list;
+      //return measurement_list;
     }
     else {
       std::cout << "Found Channels: ";
