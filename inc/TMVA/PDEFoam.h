@@ -67,7 +67,7 @@ namespace TMVA {
    class PDEFoam;
 
    // separation types
-   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError, 
+   enum EDTSeparation { kFoam, kGiniIndex, kMisClassificationError,
 			kCrossEntropy, kGiniIndexWithLaplace, kSdivSqrtSplusB };
 
    // foam types
@@ -81,7 +81,7 @@ namespace TMVA {
    // kRms           : rms of sampling distribution (saved in fDriver)
    // kRmsOvMean     : rms/mean of sampling distribution (saved in
    //                  fDriver and fIntegral)
-   enum ECellValue { kValue, kValueError, kValueDensity, kMeanValue, 
+   enum ECellValue { kValue, kValueError, kValueDensity, kMeanValue,
 		     kRms, kRmsOvMean, kCellVolume };
 }
 
@@ -183,7 +183,7 @@ namespace TMVA {
 
       // Square function (fastest implementation)
       template<typename T> T Sqr(T x) const { return x*x; }
-      
+
       PDEFoam(const PDEFoam&);    // Copy Constructor  NOT USED
 
       // ---------- Public functions ----------------------------------
@@ -266,7 +266,7 @@ namespace TMVA {
       // ---------- Foam projection methods
 
       // project foam to two-dimensional histogram
-      virtual TH2D* Project2(Int_t idim1, Int_t idim2, ECellValue cell_value=kValue, 
+      virtual TH2D* Project2(Int_t idim1, Int_t idim2, ECellValue cell_value=kValue,
 			     PDEFoamKernelBase *kernel=NULL, UInt_t nbin=50);
 
       // Project one-dimensional foam to a 1-dim histogram
