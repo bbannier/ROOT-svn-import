@@ -213,7 +213,7 @@ Int_t stressRooFit(const char* refFile, Bool_t writeRef, Int_t doVerbose, Int_t 
   }
   
   printf("******************************************************************\n");
-  gBenchmark->Print("StressFit");
+  gBenchmark->Print("StressRooFit");
 #ifdef __CINT__
   Double_t reftime = 186.34; //pcbrun4 interpreted
 #else
