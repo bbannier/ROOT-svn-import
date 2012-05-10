@@ -52,12 +52,9 @@ void ProofSimpleFile::CreateHistoArrays()
 {
    // Create the histogram arrays
 
-   // Histos array
-   fNhist = 16;
-   if (fInput->FindObject("ProofSimpleFile_NHist")) {
-      TParameter<Long_t> *p =
-         dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("ProofSimpleFile_NHist"));
-      fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
+   if (fNhist <= 0) {
+      Error("CreateHistoArrays", "fNhist must be positive!");
+      return -1;
    }
    fHistTop = new TH1F*[fNhist];
    fHistDir = new TH1F*[fNhist];
@@ -72,8 +69,17 @@ void ProofSimpleFile::Begin(TTree * /*tree*/)
 
    TString option = GetOption();
 
-   // Histos arrays
-   CreateHistoArrays();
+   // Number of histograms (needed in terminate)
+   Ssiz_t iopt = kNPOS;
+   if (fInput->FindObject("ProofSimpleFile_NHist")) {
+      TParameter<Long_t> *p =
+         dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("ProofSimpleFile_NHist"));
+      fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
+   } else if ((iopt = option.Index("nhist=")) != kNPOS) {
+      TString s;
+      Ssiz_t from = iopt + strlen("nhist=");
+      if (option.Tokenize(s, from, ";") && s.IsDigit()) fNhist = s.Atoi();
+   }
 }
 
 //_____________________________________________________________________________
@@ -84,6 +90,18 @@ void ProofSimpleFile::SlaveBegin(TTree * /*tree*/)
    // The tree argument is deprecated (on PROOF 0 is passed).
 
    TString option = GetOption();
+
+   // Number of histograms (needed in terminate)
+   Ssiz_t iopt = kNPOS;
+   if (fInput->FindObject("ProofSimpleFile_NHist")) {
+      TParameter<Long_t> *p =
+         dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("ProofSimpleFile_NHist"));
+      fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
+   } else if ((iopt = option.Index("nhist=")) != kNPOS) {
+      TString s;
+      Ssiz_t from = iopt + strlen("nhist=");
+      if (option.Tokenize(s, from, ";") && s.IsDigit()) fNhist = s.Atoi();
+   }
    
    // The file for merging
    fProofFile = new TProofOutputFile("SimpleFile.root", "M");
@@ -225,6 +243,12 @@ void ProofSimpleFile::Terminate()
 
    } else {
       Error("Terminate", "TProofOutputFile not found");
+      return;
+   }
+
+   // Histos arrays
+   if (CreateHistoArrays() != 0) {
+      Error("Terminate", "could not create histograms");
       return;
    }
 
