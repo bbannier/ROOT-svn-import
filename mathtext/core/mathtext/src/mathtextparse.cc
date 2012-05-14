@@ -356,14 +356,14 @@ namespace mathtext {
 			return ret;
 		}
 
-		int begin = 0;
-		int end = 1;
+		size_t begin = 0;
+		size_t end = 1;
 		bool box = false;
 
-		while(code[begin] == ' ') {
+		while (code[begin] == ' ') {
 			begin++;
 		}
-		while(begin < code.size()) {
+		while (begin < code.size()) {
 			end = begin + 1;
 			if(code[begin] == '\\') {
 				if(isalpha(code[end])) {
@@ -442,12 +442,14 @@ namespace mathtext {
 	std::vector<std::string> math_text_t::
 	tex_replace(const std::vector<std::string> &code)
 	{
+#if 0
 		static const size_t ncontrol_max = 256;
 		static const char *table[][ncontrol_max] = {
 			{ "\\%", "\0", "\\root", "\1", "\\of", "\2", NULL },
 			{ "\\sqrt", "[]", "\1", "\\root", "\1", "\\of", "\2", NULL },
 			{ "\\frac", "\2", "{", "\1", "\\over", "\2", "}", NULL }
 		};
+#endif
 
 		return std::vector<std::string>();
 	}

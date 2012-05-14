@@ -1,3 +1,21 @@
+// mathtext - A TeX/LaTeX compatible rendering library. Copyright (C)
+// 2008-2012 Yue Shi Lai <ylai@users.sourceforge.net>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation; either version 2.1 of
+// the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+// 02110-1301 USA
+
 #include <cmath>
 #include <algorithm>
 #include <sstream>
@@ -89,10 +107,12 @@ namespace mathtext {
 			 (c >= L'\U0002f800' && c <= L'\U0002fa1f'));
 	}
 
+#if 0
 	bool math_text_renderer_t::is_wgl_4(const wchar_t c)
 	{
 		return true;
 	}
+#endif
 
 	// @see http://www.w3.org/International/questions/qa-scripts
 	// @see http://www.unicode.org/reports/tr9/tr9-21.html
@@ -110,6 +130,7 @@ namespace mathtext {
 			 (c >= L'\ufb1d' && c <= L'\ufb4f'));
 	}
 
+#if 0
 	bool math_text_renderer_t::is_cjk_punctuation_open(const wchar_t c)
 	{
 		return false;
@@ -119,6 +140,7 @@ namespace mathtext {
 	{
 		return false;
 	}
+#endif
 
 	bounding_box_t math_text_renderer_t::
 	math_bounding_box(const math_text_t::box_t &box,
@@ -140,6 +162,9 @@ namespace mathtext {
 			  const unsigned int style,
 			  const bool render_structure)
 	{
+		if (render_structure) {
+			// Nothing
+		}
 		set_font_size(style_size(style), FAMILY_REGULAR);
 		text_raw(origin[0], origin[1], box._string, FAMILY_REGULAR);
 		reset_font_size(FAMILY_REGULAR);
@@ -477,7 +502,6 @@ namespace mathtext {
 			token.begin();
 
 		bounding_box_t nucleus_bounding_box;
-		float current_x = x;
 
 		// Rule 11
 		if(atom._type == math_text_t::atom_t::TYPE_RAD) {
