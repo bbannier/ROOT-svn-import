@@ -55,7 +55,7 @@ private:
 				FAMILY_STIX_REGULAR) {
 			const unsigned int offset = family -
 				mathtext::math_text_renderer_t::FAMILY_STIX_REGULAR;
-			return (offset + 15) * 10 + precision;
+			return (offset + 16) * 10 + precision;
 		}
 
 		return precision;
