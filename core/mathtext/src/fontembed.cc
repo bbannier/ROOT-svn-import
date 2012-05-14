@@ -1,3 +1,21 @@
+// mathtext - A TeX/LaTeX compatible rendering library. Copyright (C)
+// 2008-2012 Yue Shi Lai <ylai@users.sourceforge.net>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation; either version 2.1 of
+// the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+// 02110-1301 USA
+
 #include "fontembed.h"
 #include <cstring>
 #include <cstdio>
@@ -115,14 +133,14 @@ namespace mathtext {
 		for(uint16_t segment = 0; segment < seg_count; segment++) {
 			for(uint32_t code = start_code[segment];
 				code <= end_code[segment]; code++) {
-				const uint16_t offset = segment +
+				const uint16_t inner_offset = segment +
 					(id_range_offset[segment] >> 1) +
 					(code - start_code[segment]);
 				const uint16_t glyph_index =
 					id_range_offset[segment] == 0 ?
 					id_delta[segment] + code :
-					offset >= seg_count + variable ?
-					0 : id_range_offset[offset];
+					inner_offset >= seg_count + variable ?
+					0 : id_range_offset[inner_offset];
 
 				cid_map[static_cast<wchar_t>(code)] = glyph_index;
 			}
@@ -134,7 +152,7 @@ namespace mathtext {
 		delete [] id_range_offset;
 	}
 
-
+#if 0
 	// Rename:
 	// name
 	// Subset:
@@ -177,6 +195,7 @@ namespace mathtext {
 		struct table_data_s &table_data, uint8_t *glyph_usage)
 	{
 	}
+#endif
 
 	uint32_t font_embed_t::otf_check_sum(
 		const std::vector<uint8_t> &table_data)
@@ -238,7 +257,7 @@ namespace mathtext {
 			return font_data;
 		}
 		if(fread(&font_data[0], sizeof(uint8_t),
-				 length, fp) != length) {
+				 length, fp) != static_cast<int>(length)) {
 			perror("fread");
 			font_data.clear();
 			return font_data;
@@ -871,6 +890,7 @@ namespace mathtext {
 		return true;
 	}
 
+#if 0
 	std::vector<uint8_t> font_embed_t::subset_otf(
 		const std::vector<uint8_t> &font_data,
 		const std::map<wchar_t, bool> &glyph_usage)
@@ -1006,5 +1026,6 @@ namespace mathtext {
 
 		return retval;
 	}
+#endif
 
 }

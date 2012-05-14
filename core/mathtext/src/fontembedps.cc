@@ -1,3 +1,21 @@
+// mathtext - A TeX/LaTeX compatible rendering library. Copyright (C)
+// 2008-2012 Yue Shi Lai <ylai@users.sourceforge.net>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation; either version 2.1 of
+// the License, or (at your option) any later version.
+//
+// This library is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+// 02110-1301 USA
+
 #include "fontembed.h"
 #include <cstring>
 #include <cstdio>
@@ -45,28 +63,32 @@ namespace mathtext {
 		unsigned int column = 0;
 		unsigned int line = 0;
 
-		for(int i = 0; i < length - 3; i += 4) {
-			unsigned int b = reinterpret_cast<
-				const unsigned int *>(buffer)[i >> 2];
+		if (length >= 4) {
+			for (size_t i = 0; i < length - 3; i += 4) {
+				unsigned int b = reinterpret_cast<
+					const unsigned int *>(buffer)[i >> 2];
 
-			if(b == 0) {
-				column++;
-				if(column == width - 1) {
-					line++;
-					column = 0;
+				if (b == 0) {
+					column++;
+					if (column == width - 1) {
+						line++;
+						column = 0;
+					}
 				}
-			}
-			else {
-				if(column + 5 >= width) {
-					column += 5 - width;
-					line++;
+				else {
+					if (column + 5 >= width) {
+						column += 5 - width;
+						line++;
+					}
+					else {
+						column += 5;
+					}
 				}
-				else
-					column += 5;
 			}
 		}
-		if(column + (length & 3) + 3 >= width)
+		if (column + (length & 3) + 3 >= width) {
 			line++;
+		}
 
 		return line;
 	}
@@ -78,40 +100,42 @@ namespace mathtext {
 		const int width = 64;
 		int column = 0;
 
-		for(int i = 0; i < length - 3; i += 4) {
-			unsigned int dword = reinterpret_cast<
-				const unsigned int *>(buffer)[i >> 2];
+		if (length >= 4) {
+			for (size_t i = 0; i < length - 3; i += 4) {
+				unsigned int dword = reinterpret_cast<
+					const unsigned int *>(buffer)[i >> 2];
 
-			if(dword == 0) {
-				ascii.append(1, 'z');
-				column++;
-				if(column == width - 1) {
-					ascii.append(1, '\n');
-					column = 0;
-				}
-			}
-			else {
-#ifdef LITTLE_ENDIAN
-				dword = bswap_32(dword);
-#endif // LITTLE_ENDIAN
-
-				char str[5];
-
-				str[4] = static_cast<char>(dword % 85 + '!');
-				dword /= 85;
-				str[3] = static_cast<char>(dword % 85 + '!');
-				dword /= 85;
-				str[2] = static_cast<char>(dword % 85 + '!');
-				dword /= 85;
-				str[1] = static_cast<char>(dword % 85 + '!');
-				dword /= 85;
-				str[0] = static_cast<char>(dword % 85 + '!');
-				for(int j = 0; j < 5; j++) {
-					ascii.append(1, str[j]);
+				if (dword == 0) {
+					ascii.append(1, 'z');
 					column++;
-					if(column == width) {
+					if (column == width - 1) {
 						ascii.append(1, '\n');
 						column = 0;
+					}
+				}
+				else {
+#ifdef LITTLE_ENDIAN
+					dword = bswap_32(dword);
+#endif // LITTLE_ENDIAN
+
+					char str[5];
+
+					str[4] = static_cast<char>(dword % 85 + '!');
+					dword /= 85;
+					str[3] = static_cast<char>(dword % 85 + '!');
+					dword /= 85;
+					str[2] = static_cast<char>(dword % 85 + '!');
+					dword /= 85;
+					str[1] = static_cast<char>(dword % 85 + '!');
+					dword /= 85;
+					str[0] = static_cast<char>(dword % 85 + '!');
+					for (size_t j = 0; j < 5; j++) {
+						ascii.append(1, str[j]);
+						column++;
+						if(column == width) {
+							ascii.append(1, '\n');
+							column = 0;
+						}
 					}
 				}
 			}
