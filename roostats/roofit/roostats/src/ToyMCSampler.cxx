@@ -307,6 +307,12 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
    // be used by ToyMCStudy on the workers (ie. when you explicitly want
    // a serial run although ProofConfig is present).
 
+   // Make sure the cache is clear. It is important to clear it hear, because
+   // the cache might be invalid even when just the firstPOI was changed, for which
+   // no accessor has to be called. (Fixes a bug when ToyMCSampler is
+   // used with the Neyman Construction)
+   ClearCache();
+
    CheckConfig();
 
    // important to cache the paramPoint b/c test statistic might 
