@@ -120,7 +120,7 @@ if(allTests) {
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(2) - 1)); // 2 sigma
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(1) - 1)); // 1 sigma
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.00001)); // boundary case CL -> 0
-}
+
    // TEST PLC CONFINT SIMPLE POISSON : Observed value range is [0,1000]
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 0)); // boundary Poisson value (0)
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 1));
@@ -155,7 +155,7 @@ if(allTests) {
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
 
-   // TEST HYPOTEST INVERTER PRODUCT POISSON :  Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST HTI PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 20, 25));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1)); 
@@ -165,13 +165,32 @@ if(allTests) {
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 20, 25));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
- 
+}
+
+   // TEST ZBI SIGNIFICANCE 
+   testList.push_back(new TestZBi(fref, writeRef, verbose));
+
+   // TEST ZBI VS ZGAMMA SIGNIFICANCE: Observed value range for on-source and off-source is [0,500]. Parameter rau has range [0.1,5.0].
+//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 150, 100, 1.0));
+//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 200, 100, 0.5));
+//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 100, 100, 1.0));
+//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 250, 100, 3.0));
+   // testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose));
+//   testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
+   // testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose));
+
+   testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
+    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
+    testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
+
+   // TEST HYPO TEST CALCULATOR
+
 
    TString suiteType = TString::Format(" Starting S.T.R.E.S.S. %s",
       allTests ? "full suite" : (oneTest ? TString::Format("test %d", testNumber).Data() : "basic suite") 
    );
 
-   cout << "*" << setw(lineWidth - 2) << setfill(' ') << suiteType << " *" << endl;
+   cout << "*" << setw(lineWidth - 3) << setfill(' ') << suiteType << " *" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
 
    if (doDump) {

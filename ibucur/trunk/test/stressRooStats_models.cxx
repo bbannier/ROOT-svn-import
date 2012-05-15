@@ -63,7 +63,7 @@ void buildOnOffModel(RooWorkspace *w)
 {
    // Build model for prototype on/off problem
    // Poiss(x | s+b) * Poiss(y | tau b )
-   w->factory("Poisson::on_pdf(n_on[0,500],sum::splusb(sig[0,500],bkg[0,500]))");
+   w->factory("Poisson::on_pdf(n_on[0,300],sum::splusb(sig[0,100],bkg[0,200]))");
    w->factory("Poisson::off_pdf(n_off[0,500],prod::taub(tau[0.1,5.0],bkg))");
    w->factory("PROD::prod_pdf(on_pdf, off_pdf)");
 
@@ -75,7 +75,7 @@ void buildOnOffModel(RooWorkspace *w)
    // define sets of variables obs={x} and poi={sig}
    // x is the only observable in the main measurement and y is treated as a separate measurement,
    // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
-   w->defineSet("obs", "n_on,n_off,tau");
+   w->defineSet("obs", "n_on,n_off");
    w->defineSet("poi", "sig");
    w->defineSet("nuis", "bkg");
 

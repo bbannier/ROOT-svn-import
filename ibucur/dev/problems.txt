@@ -8,7 +8,7 @@ CRITICAL
 6. HypoTestInverter AsymptoticCalculator - the MIGRAD minimization messages cannot be hidden
 7. HypoTestInverter AsymptoticCalculator gives different results compared to the other two calculators
 8. SamplingDistribution.cxx line 547 : if fNuisanceParametersSampler is not set, the weight is set to -1.0. This yields negative error values when using FrequentistCalculator. Should the weight have a different value (e.g. 1.0) or should we force setting nuisance parameters in the models?
-9. MCMCCalculator does not give same results (PoissonProductModel)
+
 
 MAJOR
 
