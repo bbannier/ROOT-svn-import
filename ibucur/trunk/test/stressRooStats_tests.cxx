@@ -1373,7 +1373,6 @@ public:
          // add observable values to the data set
          w->var("n_on")->setVal(xValue);
          w->var("n_off")->setVal(yValue);
-       //  w->var("n_off")->setConstant();
          w->var("tau")->setVal(tauValue);
          w->var("tau")->setConstant();
          w->data("data")->add(*w->set("obs"));         
@@ -1390,11 +1389,13 @@ public:
         // w->defineSet("globObs", "y");
 
 
+         // Set nuisance parameter (bkg) to a good initial value
+         w->var("bkg")->setVal(yValue / tauValue);
 
          // Set snapshots - important !
-         w->var("sig")->setVal(xValue - yValue / tauValue); // important !
+         w->var("sig")->setVal(xValue - yValue / tauValue);
          sbModel->SetSnapshot(*w->set("poi"));
-         w->var("sig")->setVal(0.0); // important !
+         w->var("sig")->setVal(0.0);
          bModel->SetSnapshot(*w->set("poi"));
 
         // w->Print();
@@ -1404,44 +1405,43 @@ public:
          //w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
 
          // build test statistic
-/*         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
+         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
          slrts->SetNullParameters(*bModel->GetSnapshot());
          slrts->SetAltParameters(*sbModel->GetSnapshot());
          slrts->SetAlwaysReuseNLL(kTRUE);
 
          RatioOfProfiledLikelihoodsTestStat *roplts = new RatioOfProfiledLikelihoodsTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
          roplts->SetAlwaysReuseNLL(kTRUE);
-*/
+
          ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*bModel->GetPdf());
          pllts->SetOneSidedDiscovery(kTRUE);
          pllts->SetAlwaysReuseNLL(kTRUE);
-/*
+
          MaxLikelihoodEstimateTestStat *mlets =
             new MaxLikelihoodEstimateTestStat(*sbModel->GetPdf(), *((RooRealVar *)sbModel->GetParametersOfInterest()->first()));
 
          NumEventsTestStat *nevts = new NumEventsTestStat(*sbModel->GetPdf());
-*/
+
 
          FrequentistCalculator *ftc = new FrequentistCalculator(*w->data("data"), *sbModel, *bModel);
-         ftc->SetToys(20000, 2000);
-        // ftc->SetConditionalMLEsNull(w->set("nuis"));
-        // ftc->SetConditionalMLEsAlt(w->set("nuis"));
+         ftc->SetToys(10000, 1000);
+         ftc->SetConditionalMLEsNull(w->set("nuis"));
+         ftc->SetConditionalMLEsAlt(w->set("nuis"));
          ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1); // because the model is in number counting form
-         //tmcs->SetUseMultiGen(kTRUE);
-      //   tmcs->SetAlwaysUseMultiGen(kTRUE);
+         tmcs->SetAlwaysUseMultiGen(kTRUE);
 
          HypoTestResult *htr;
 
-         //tmcs->SetTestStatistic(slrts);
-         //HypoTestResult *htr = ftc->GetHypoTest();
-         //htr->Print();
-        // cout << "SLRTS " << htr->Significance() << endl;
+/*         tmcs->SetTestStatistic(slrts);
+         htr = ftc->GetHypoTest();
+         htr->Print();
+         cout << "SLRTS " << htr->Significance() << endl;
          tmcs->SetTestStatistic(pllts);
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "PLLTS " << htr->Significance() << endl;
-        /* tmcs->SetTestStatistic(mlets);
+         tmcs->SetTestStatistic(mlets);
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "MLETS " << htr->Significance() << endl;
@@ -1449,11 +1449,11 @@ public:
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "NEVTS " << htr->Significance() << endl;
-         tmcs->SetTestStatistic(roplts);
+*/         tmcs->SetTestStatistic(roplts);
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "ROPLTS " << htr->Significance() << endl;
-*/
+
          regValue(htr->Significance(), "thtc_significance_frequentist");
 
          delete ftc;
@@ -1516,6 +1516,7 @@ public:
 
          AsymptoticCalculator::SetPrintLevel(0);
          AsymptoticCalculator *atc = new AsymptoticCalculator(*w->data("data"), *sbModel, *bModel);
+         atc->SetOneSidedDiscovery(kTRUE);
 
          HypoTestResult *htr = atc->GetHypoTest();
          htr->Print();
