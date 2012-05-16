@@ -59,12 +59,15 @@ void buildPoissonProductModel(RooWorkspace *w)
 }
 
 
+//__________________________________________________________________________________
+// Insightful comments on model courtesy of Kyle Cranmer, Wouter Verkerke, Sven Kreiss
+//    from $ROOTSYS/tutorials/roostats/HybridInstructional.C
 void buildOnOffModel(RooWorkspace *w)
 {
    // Build model for prototype on/off problem
    // Poiss(x | s+b) * Poiss(y | tau b )
-   w->factory("Poisson::on_pdf(n_on[0,300],sum::splusb(sig[0,100],bkg[50,0,200]))");
-   w->factory("Poisson::off_pdf(n_off[0,500],prod::taub(tau[0.1,5.0],bkg))");
+   w->factory("Poisson::on_pdf(n_on[0,300],sum::splusb(sig[0,100],bkg[0,200]))");
+   w->factory("Poisson::off_pdf(n_off[0,1100],prod::taub(tau[0.1,5.0],bkg))");
    w->factory("PROD::prod_pdf(on_pdf, off_pdf)");
 
    // construct the Bayesian-averaged model (eg. a projection pdf)

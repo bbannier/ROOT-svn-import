@@ -113,7 +113,6 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
 
    list<RooUnitTest*> testList;
 
-if(allTests) {
    // TEST PLC CONFINT SIMPLE GAUSSIAN : Confidence Level range is (0,1)
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.99999)); // boundary case CL -> 1
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(3) - 1)); // 3 sigma
@@ -155,6 +154,16 @@ if(allTests) {
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
 
+   // TEST ZBI SIGNIFICANCE 
+   testList.push_back(new TestZBi(fref, writeRef, verbose));
+
+   // TEST PLC VS AC SIGNIFICANCE : Observed value range is [0,300] for on source and [0,1100] for off-source; tau has the range [0.1,5.0]   
+   testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 100, 1.0));
+   testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 200, 100, 1.0));
+   testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 105, 100, 1.0));
+   testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 10, 0.1));
+   testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 400, 4.0));
+
    // TEST HTI PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 20, 25));
@@ -165,23 +174,15 @@ if(allTests) {
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 20, 25));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
-}
 
-   // TEST ZBI SIGNIFICANCE 
-   testList.push_back(new TestZBi(fref, writeRef, verbose));
 
-   // TEST ZBI VS ZGAMMA SIGNIFICANCE: Observed value range for on-source and off-source is [0,500]. Parameter rau has range [0.1,5.0].
-//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 150, 100, 1.0));
-//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 200, 100, 0.5));
-//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 100, 100, 1.0));
-//   testList.push_back(new TestZBiZGamma(fref, writeRef, verbose, 250, 100, 3.0));
-   // testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose));
-//   testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
+
+
    // testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose));
 
-   testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
-    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
-    testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
+   //testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
+   // testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
+  //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 
    // TEST HYPO TEST CALCULATOR
 
