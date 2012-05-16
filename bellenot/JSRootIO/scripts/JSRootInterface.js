@@ -26,7 +26,7 @@ function loadScript(url, callback) {
       };
    }
    var rnd = Math.floor(Math.random()*80000); 
-   script.src = url + "?r=" + rnd;
+   script.src = url;//+ "?r=" + rnd;
    document.getElementsByTagName("head")[0].appendChild(script);
 };
 
@@ -131,7 +131,7 @@ function displayObject(obj, cycle, idx) {
    }
 };
 
-function ReadFile() {
+function AssertPrerequisites(andThen) {
    if (typeof JSROOTIO == "undefined") {
       // if JSROOTIO is not defined, then dynamically load the required scripts and open the file
       loadScript('http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js', function() {
@@ -141,8 +141,9 @@ function ReadFile() {
       loadScript('scripts/JSIO.core.js', function() {
       loadScript('http://code.highcharts.com/highcharts.js', function() {
       loadScript('http://code.highcharts.com/modules/exporting.js', function() {
-      loadScript('scripts/JSROOTPainter.js', function() {
+      loadScript('scripts/JSRootPainter.js', function() {
       loadScript('scripts/JSRootIOEvolution.js', function() {
+         if (andThen) { andThen(); }
          $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
          var url = $("#urlToLoad").val();
          if (url == "" || url == " ") return;
@@ -159,6 +160,9 @@ function ReadFile() {
       }) }) }) }) }) }) }) }) });
       return;
    }
+}
+function ReadFile() {
+   AssertPrerequisites();
    // else simply open the file
    $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
    var url = $("#urlToLoad").val();
@@ -181,3 +185,47 @@ function ResetUI() {
    $('#report').get(0).innerHTML = '';
 };
 
+function BuildSimpleGUI() {
+  AssertPrerequisites(function DisplayGUI() {
+  var myDiv = $('#simpleGUI');
+  if (!myDiv) {
+    alert("You have to define a div with id='simpleGUI'!");
+    return;
+  }
+  var files = myDiv.attr("files");
+  if (!files) {
+    alert("div id='simpleGUI' must have a files attribute!");
+    return;
+  }
+  var arrFiles = files.split(';');
+  var guiCode = "<div id='main' class='column'>\n"
+        +"<h1><font face='Verdana' size='4'>Read a ROOT file with Javascript</font></h1>\n"
+        +"<p><b>Select a ROOT file to read, or enter a url (*): </b><br/>\n"
+        +'<small><sub>*: Other URLs might not work because of cross site scripting protection, see e.g. <a href="https://developer.mozilla.org/en/http_access_control">http://developer.mozilla.org/en/http_access_control</a> on how to avoid it.</sub></small></p>'
+      +'<form name="ex">'
+      +'<div style="margin-left:10px;">'
+      +'<input type="text" name="state" value="" size="40" id="urlToLoad"/><br/>'
+      +'<select name="s" size="1" '
+      +'onchange="document.ex.state.value = document.ex.s.options[document.ex.s.selectedIndex].value;document.ex.s.selectedIndex=0;document.ex.s.value=\'\'">'
+      +'<option value = " " selected = "selected">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</option>';
+      for (var i=0; i<arrFiles.length; i++) {
+        guiCode += '<option value = "' + arrFiles[i] + '">' + arrFiles[i] + '</option>';
+      }
+      guiCode += '</select>'
+         +'</div>'
+         +'<input style="padding:2px; margin-left:10px; margin-top:5px;"'
+         +' onclick="ReadFile()" type="button" title="Read the Selected File" value="Load"/>'
+         +'<input style="padding:2px; margin-left:10px;"'
+         +'onclick="ResetUI()" type="button" title="Clear All" value="Reset"/>'
+      +'</form>'
+
+      +'<br/>'
+      +'<div id="status"></div>'
+      +'</div>'
+
+      +'<div id="reportHolder" class="column">'
+      +'<div id="report"> </div>'
+      +'</div>';
+  $('#simpleGUI').append(guiCode);
+});
+}
