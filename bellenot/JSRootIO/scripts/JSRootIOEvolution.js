@@ -2023,6 +2023,9 @@ String.prototype.endsWith = function(str, ignoreCase) {
             };
             file.ReadObjBuffer(key, callback2);
             JSROOTPainter.displayListOfKeys(file.fKeys, '#status');
+            // the next two lines are for debugging/info purpose
+            //$("#status").append("file header: " + file.fLogMsg  + "<br/>");
+            //JSROOTPainter.displayListOfKeyDetails(file.fKeys, '#status');
          };
          this.ReadBuffer(this.fNbytesInfo, callback1);
       };
