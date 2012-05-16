@@ -33,7 +33,7 @@ MATHTEXTLDFLAGS :=
 include/%.h:    $(MATHTEXTDIRI)/%.h
 		cp $< $@
 
-$(MATHTEXTLIB): $(MATHTEXTO) $(FREETYPEDEP) $(ORDER_)
+$(MATHTEXTLIB): $(MATHTEXTO) $(ORDER_)
 		$(AR) cru $@ $(MATHTEXTO)
 
 all-$(MODNAME): $(MATHTEXTLIB)
