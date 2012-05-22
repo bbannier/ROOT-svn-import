@@ -228,8 +228,23 @@ void TGLContext::Release()
 #elif defined(R__HAS_COCOA)
 
 //______________________________________________________________________________
-void TGLContext::SetContext(TGLWidget * /*widget*/, const TGLContext * /*shareList*/)
+void TGLContext::SetContext(TGLWidget *widget, const TGLContext *shareList)
 {
+   //This function is public only for calls via gROOT and called from ctor.
+   if (!fFromCtor) {
+      Error("TGLContext::SetContext", "SetContext must be called only from ctor");
+      return;
+   }
+
+   std::auto_ptr<TGLContextPrivate> safe_ptr(fPimpl = new TGLContextPrivate);
+
+   fPimpl->fGLContext = gVirtualX->CreateOpenGLContext(widget->GetId(), shareList ? shareList->fPimpl->fGLContext : 0);
+
+   fValid = kTRUE;
+   fDevice->AddContext(this);
+   TGLContextPrivate::RegisterContext(this);
+
+   safe_ptr.release();
 }
 
 //______________________________________________________________________________
@@ -237,7 +252,21 @@ Bool_t TGLContext::MakeCurrent()
 {
    //If context is valid (TGLPaintDevice, for which context was created still exists),
    //make it current.
-   return kFALSE;
+
+   if (!fValid) {
+      Error("TGLContext::MakeCurrent", "This context is invalid.");
+      return kFALSE;
+   }
+
+   const Bool_t rez = gVirtualX->MakeOpenGLContextCurrent(fPimpl->fGLContext);
+   if (rez) {
+      if (!fgGlewInitDone)
+         GlewInit();
+      fIdentity->DeleteGLResources();
+      
+   }
+
+   return rez;
 }
 
 //______________________________________________________________________________
@@ -252,6 +281,12 @@ void TGLContext::SwapBuffers()
 {
    //If context is valid (TGLPaintDevice, for which context was created still exists),
    //swap buffers (in case of P-buffer call glFinish()).
+   if (!fValid) {
+      Error("TGLContext::SwapBuffers", "This context is invalid.");
+      return;
+   }
+
+   gVirtualX->FlushOpenGLBuffer(fPimpl->fGLContext);  
 }
 
 //______________________________________________________________________________

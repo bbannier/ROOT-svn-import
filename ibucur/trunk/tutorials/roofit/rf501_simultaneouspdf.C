@@ -25,6 +25,7 @@
 #include "TCanvas.h"
 #include "TAxis.h"
 #include "RooPlot.h"
+#include "RooMsgService.h"
 using namespace RooFit ;
 
 
@@ -32,6 +33,8 @@ void rf501_simultaneouspdf()
 {
   // C r e a t e   m o d e l   f o r   p h y s i c s   s a m p l e
   // -------------------------------------------------------------
+
+   RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
 
   // Create observables
   RooRealVar x("x","x",-8,8) ;
@@ -75,9 +78,11 @@ void rf501_simultaneouspdf()
   // ---------------------------------------------------------------
 
   // Generate 1000 events in x and y from model
-  RooDataSet *data = model.generate(RooArgSet(x),100) ;
-  RooDataSet *data_ctl = model_ctl.generate(RooArgSet(x),2000) ;
+  RooDataSet *data = gx.generate(RooArgSet(x),100) ;
+  RooDataSet *data_ctl = gx_ctl.generate(RooArgSet(x),2000) ;
 
+//  data->Print("vv";
+//  data_ctl->Print("vv");
 
 
   // C r e a t e   i n d e x   c a t e g o r y   a n d   j o i n   s a m p l e s 
@@ -88,10 +93,13 @@ void rf501_simultaneouspdf()
   sample.defineType("physics") ;
   sample.defineType("control") ;
 
+
   // Construct combined dataset in (x,sample)
   RooDataSet combData("combData","combined data",x,Index(sample),Import("physics",*data),Import("control",*data_ctl)) ;
 
-
+   cout << "DEPENDS ON " << sample.dependsOn(*combData.get()) << endl;
+   combData.Print("v");
+   combData.get()->Print("v");
 
   // C o n s t r u c t   a   s i m u l t a n e o u s   p d f   i n   ( x , s a m p l e )
   // -----------------------------------------------------------------------------------
@@ -109,10 +117,10 @@ void rf501_simultaneouspdf()
   // ---------------------------------------------------
 
   // Perform simultaneous fit of model to data and model_ctl to data_ctl
-  simPdf.fitTo(combData) ;
+//  simPdf.fitTo(combData) ;
 
 
-
+/*
   // P l o t   m o d e l   s l i c e s   o n   d a t a    s l i c e s 
   // ----------------------------------------------------------------
 
@@ -141,6 +149,10 @@ void rf501_simultaneouspdf()
   c->Divide(2) ;
   c->cd(1) ; gPad->SetLeftMargin(0.15) ; frame1->GetYaxis()->SetTitleOffset(1.4) ; frame1->Draw() ;
   c->cd(2) ; gPad->SetLeftMargin(0.15) ; frame2->GetYaxis()->SetTitleOffset(1.4) ; frame2->Draw() ;
+*/
 
+}
 
+int main() {
+   rf501_simultaneouspdf();
 }

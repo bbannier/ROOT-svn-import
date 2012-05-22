@@ -25,6 +25,11 @@ void buildPoissonProductModel(RooWorkspace *w)
    // Nuisance parameters Pdf (for HybridCalculator)
    w->factory("PROD::prior_nuis(constr1,constr2,constr3)");
 
+   // extended pdfs and simultaneous pdf
+   w->factory("ExtendPdf::epdf1(PROD::pdf1(poiss1,constr1),n1[0,10])");
+   w->factory("ExtendPdf::epdf2(PROD::pdf2(poiss2,constr2,constr3),n2[0,10])");
+   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=pdf1,cat2=pdf2)");
+
    // build argument sets
    w->defineSet("obs", "x,y");
    w->defineSet("poi", "sig");
@@ -47,12 +52,12 @@ void buildPoissonProductModel(RooWorkspace *w)
    sbModel->SetParametersOfInterest(*w->set("poi"));
    sbModel->SetNuisanceParameters(*w->set("nuis"));
    sbModel->SetPdf("pdf");
- //  sbModel->SetPriorPdf("prior");
+//  sbModel->SetPriorPdf("prior");
 
    // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
- //  bModel->SetPriorPdf("prior_nuis");
+//  bModel->SetPriorPdf("prior_nuis");
 
    w->import(*sbModel);
    w->import(*bModel);

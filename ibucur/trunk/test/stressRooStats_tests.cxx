@@ -30,8 +30,8 @@ using namespace RooStats;
 //              = 5 Max Likelihood Estimate as test statistic
 //              = 6 Number of Observed Events as test statistic
 enum ETestStatType { kSimpleLR = 0, kRatioLR = 1, kProfileLR = 2, kProfileLROneSided = 3, kProfileLRSigned = 4, kMLE = 5, kNObs = 6 };
-static const char *kECalculatorTypeString[] = { "Undefined", "Hybrid", "Frequentist", "Asymptotic" };
-static const char *kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
+static const char * const kECalculatorTypeString[] = { "Undefined", "Hybrid", "Frequentist", "Asymptotic" };
+static const char * const kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
 static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel);
 
 
@@ -1027,13 +1027,13 @@ public:
 //
 // ZBI - ON / OFF MODEL
 //
-// Evaluate the functionality of the top level functions in RooStats 
-// called NumberCountingUtils::BinomialWithTauObsZ. This function 
+// Evaluate the functionality of the top level functions in RooStats
+// called NumberCountingUtils::BinomialWithTauObsZ. This function
 // computes the significance of a hypothesis test via a frequentist
 // solution. This significance, called ZBi, is detailed in the article
-// "Evaluation of three methods for calculating statistical significance 
-// when incorporating a systematic uncertainty into a test of the 
-// background-only hypothesis for a Poisson process" by Robert D. Cousins, 
+// "Evaluation of three methods for calculating statistical significance
+// when incorporating a systematic uncertainty into a test of the
+// background-only hypothesis for a Poisson process" by Robert D. Cousins,
 // James T. Linnemann, Jordan Tucker. The reference values are taken
 // from the paper, as well as the On / Off model on which the test is
 // evaluated.
@@ -1051,11 +1051,11 @@ class TestZBi : public RooUnitTest {
 public:
 
    TestZBi(
-      TFile* refFile, 
-      Bool_t writeRef, 
+      TFile* refFile,
+      Bool_t writeRef,
       Int_t verbose
-   ) : 
-      RooUnitTest("ZBi Significance - On / Off Model", refFile, writeRef, verbose) 
+   ) :
+      RooUnitTest("ZBi Significance - On / Off Model", refFile, writeRef, verbose)
    {};
 
    // Override test value tolerance
@@ -1107,7 +1107,7 @@ public:
 //
 // This test evaluates the functionality of the AsymptoticCalculator by
 // comparing the significance given from a hypothesis test on the on/off model
-// with the significance given by the ProfileLikelihoodCalculator. The validity 
+// with the significance given by the ProfileLikelihoodCalculator. The validity
 // of the PLC hypothesis test is evaluated in TestProfileLikelihoodCalculator4.
 // If working properly, the two methods should yield identical results.
 //
@@ -1115,7 +1115,7 @@ public:
 //    built in stressRooStats_models.cxx
 //
 // Input Parameters:
-//    obsValueOn -> observed value "n_on" of sig + bkg  
+//    obsValueOn -> observed value "n_on" of sig + bkg
 //    obsValueOff -> observed value "n_off" of tau * bkg
 //    tau -> parameter of the model (constant with regard to integration)
 //
@@ -1131,14 +1131,14 @@ private:
 
 public:
    TestHypoTestCalculator1(
-      TFile* refFile, 
-      Bool_t writeRef, 
+      TFile* refFile,
+      Bool_t writeRef,
       Int_t verbose,
       Int_t obsValueOn = 150,
       Int_t obsValueOff = 100,
       Double_t tau = 1.0
-   ) : 
-      RooUnitTest("AsymptoticCalculator vs ProfileLikelihoodCalculator Significance - On / Off Model", refFile, writeRef, verbose), 
+   ) :
+      RooUnitTest("AsymptoticCalculator vs ProfileLikelihoodCalculator Significance - On / Off Model", refFile, writeRef, verbose),
       fObsValueOn(obsValueOn),
       fObsValueOff(obsValueOff),
       fTau(tau)
@@ -1164,7 +1164,7 @@ public:
       w->var("bkg")->setVal(fObsValueOff / fTau);
 
       // Make snapshots
-      w->var("sig")->setVal(fObsValueOn - fObsValueOff / fTau); 
+      w->var("sig")->setVal(fObsValueOn - fObsValueOff / fTau);
       sbModel->SetSnapshot(*w->set("poi"));
       w->var("sig")->setVal(0.0);
       bModel->SetSnapshot(*w->set("poi"));
@@ -1185,7 +1185,7 @@ public:
          AsymptoticCalculator *atc = new AsymptoticCalculator(*w->data("data"), *sbModel, *bModel);
          atc->SetOneSidedDiscovery(kTRUE);
          regValue(atc->GetHypoTest()->Significance(), significanceString);
- 
+
          // cleanup branch
          delete atc;
       }
@@ -1321,21 +1321,21 @@ public:
          new HypoTestInverter(*w->data("data"), *sbModel, *bModel, NULL, fCalculatorType, 1.0 - fConfidenceLevel);
       hti->SetTestStatistic(*buildTestStatistic(fTestStatType, *sbModel, *bModel));
       hti->SetFixedScan(10, w->var("sig")->getMin(), w->var("sig")->getMax()); // significant speedup
-      
+
       //TODO: check how to eliminate this code, calculator should autoconfigure itself
       if (fCalculatorType == HypoTestInverter::kHybrid) {
          // force prior nuisance pdf and set toys for speedup
          HybridCalculator *hc = (HybridCalculator *)hti->GetHypoTestCalculator();
          hc->ForcePriorNuisanceNull(*MakeNuisancePdf(*sbModel, "nuis_prior_null"));
          hc->ForcePriorNuisanceAlt(*MakeNuisancePdf(*bModel, "nuis_prior_alt"));
-         hc->SetToys(100,1);
+         hc->SetToys(100, 1);
       }
 
       //TODO: check how to eliminate this code
       if (fCalculatorType == HypoTestInverter::kFrequentist) {
          // set toys for speedup
          FrequentistCalculator *fc = (FrequentistCalculator *)hti->GetHypoTestCalculator();
-         fc->SetToys(100,1);
+         fc->SetToys(100, 1);
       }
 
       // ToyMCSampler configuration
@@ -1544,60 +1544,83 @@ public:
 } ;
 
 
+#include "RooPoisson.h"
+
 class TestHypoTestCalculator2 : public RooUnitTest {
 public:
    TestHypoTestCalculator2(
-      TFile* refFile, 
-      Bool_t writeRef, 
+      TFile* refFile,
+      Bool_t writeRef,
       Int_t verbose
-   ) : 
-      RooUnitTest("HypoTestCalculator Frequentist - On / Off Problem", refFile, writeRef, verbose) 
+   ) :
+      RooUnitTest("HypoTestCalculator Frequentist - Simultaneous Pdf", refFile, writeRef, verbose)
    {};
 
    Bool_t testCode() {
 
-      const Int_t xValue = 150;
-      const Int_t yValue = 100;
-      const Double_t tauValue = 1.0;
+      const Int_t fObsValueX = 150;
+      const Int_t fObsValueY = 100;
+      const Double_t fTau = 1.0;
 
       if (_write == kTRUE) {
 
          // register analytical Z_Bi value
-         Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(xValue, yValue, tauValue);
+         Double_t Z_Bi = NumberCountingUtils::BinomialWithTauObsZ(fObsValueX, fObsValueY, fTau);
          regValue(Z_Bi, "thtc_significance_frequentist");
 
       } else {
 
          // Build workspace and models
          RooWorkspace* w = new RooWorkspace("w", kTRUE);
-         buildOnOffModel(w);
+         buildPoissonProductModel(w);
          ModelConfig *sbModel = (ModelConfig *)w->obj("S+B");
          ModelConfig *bModel = (ModelConfig *)w->obj("B");
 
-         // add observable values to the data set
-         w->var("n_on")->setVal(xValue);
-         w->var("n_off")->setVal(yValue);
-         w->var("tau")->setVal(tauValue);
-         w->var("tau")->setConstant();
-         w->data("data")->add(*w->set("obs"));         
-// construct the Bayesian-averaged model (eg. a projection pdf)
-         // p'(x|s) = \int db p(x|s+b) * [ p(y|b) * prior(b) ]
-         //w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
 
-         // Set nuisance parameter (bkg) to a good initial value
-         w->var("bkg")->setVal(yValue / tauValue);
+         sbModel->SetPdf(*w->pdf("sim_pdf"));
+         bModel->SetPdf(*w->pdf("sim_pdf"));
 
-         // Set snapshots - important !
-         w->var("sig")->setVal(xValue - yValue / tauValue);
+
+
+         // add observed values to data set
+         w->var("x")->setVal(fObsValueX);
+         w->var("y")->setVal(fObsValueY);
+         w->data("data")->add(*w->set("obs"));
+
+/*
+         RooRealVar x("x","x",0,40);
+         RooRealVar mean("mean", "mean", 2, 0, 10);
+         RooRealVar mc("mc", "mc", 5, 0, 10);
+         RooPoisson p1("p1","p1",x,mean);
+         RooPoisson pc("pc","pc",mc,mean);
+         RooProdPdf pdf("pdf","pdf",RooArgList(p1,pc));
+
+         RooDataSet *data1 = p1.generate(x,100);
+         RooDataSet *data2 = pc.generate(x,50);
+*/
+         RooDataSet *data1 = w->pdf("sim_pdf")->generate(*w->set("obs"),100);
+         RooDataSet *data2 = w->pdf("sim_pdf")->generate(*w->set("obs"),100);
+
+         RooCategory *index = (RooCategory *)w->obj("index");
+
+         RooDataSet *data = new RooDataSet("combData", "combined data", *w->set("obs"), Index(*index), 
+            Import("cat1", *data1), 
+            Import("cat2", *data2));
+
+         cout << "DEPENDS ON " << index->dependsOn(*data->get()) << endl;
+         //data->Print("v");
+         //data->get()->Print("v");
+         for(Int_t i=0; i < 200; i++) {
+            data->get(i)->Print("v");
+         }
+
+      //   w->Print();
+
+         // set snapshots
+         w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
          sbModel->SetSnapshot(*w->set("poi"));
-         w->var("sig")->setVal(0.0);
+         w->var("sig")->setVal(0);
          bModel->SetSnapshot(*w->set("poi"));
-
-        // w->Print();
-
-         // alternate priors
-         //w->factory("Gaussian::gauss_prior(bkg, y, expr::sqrty('sqrt(y)', y))");
-         //w->factory("Lognormal::lognorm_prior(bkg, y, expr::kappa('1+1./sqrt(y)',y))");
 
          // build test statistic
          SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
@@ -1618,22 +1641,22 @@ public:
          NumEventsTestStat *nevts = new NumEventsTestStat(*sbModel->GetPdf());
 
 
-         FrequentistCalculator *ftc = new FrequentistCalculator(*w->data("data"), *sbModel, *bModel);
+         FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sbModel, *bModel);
          ftc->SetToys(50000, 1000);
-      //   ftc->SetConditionalMLEsNull(w->set("nuis"));
-      //   ftc->SetConditionalMLEsAlt(w->set("nuis"));
+         //   ftc->SetConditionalMLEsNull(w->set("nuis"));
+         //   ftc->SetConditionalMLEsAlt(w->set("nuis"));
          ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
          tmcs->SetNEventsPerToy(1); // because the model is in number counting form
          tmcs->SetAlwaysUseMultiGen(kTRUE);
 
          HypoTestResult *htr;
-         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *sbModel);
+         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sbModel);
          plc->SetNullParameters(*bModel->GetSnapshot());
          htr = plc->GetHypoTest();
          htr->Print();
          cout << "PLC " << htr->Significance() << endl;
 
-
+/*
          tmcs->SetTestStatistic(slrts);
          htr = ftc->GetHypoTest();
          htr->Print();
@@ -1659,7 +1682,7 @@ public:
 
          delete ftc;
          delete htr;
-         delete w; // interesting why it doesn't work
+         delete w;*/
       }
       return kTRUE ;
    }
