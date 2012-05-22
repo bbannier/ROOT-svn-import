@@ -113,6 +113,8 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
 
    list<RooUnitTest*> testList;
 
+
+if(allTests) {
    // TEST PLC CONFINT SIMPLE GAUSSIAN : Confidence Level range is (0,1)
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.99999)); // boundary case CL -> 1
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(3) - 1)); // 3 sigma
@@ -154,10 +156,10 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
 
-   // TEST ZBI SIGNIFICANCE 
+   // TEST ZBI SIGNIFICANCE
    testList.push_back(new TestZBi(fref, writeRef, verbose));
 
-   // TEST PLC VS AC SIGNIFICANCE : Observed value range is [0,300] for on source and [0,1100] for off-source; tau has the range [0.1,5.0]   
+   // TEST PLC VS AC SIGNIFICANCE : Observed value range is [0,300] for on source and [0,1100] for off-source; tau has the range [0.1,5.0]
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 100, 1.0));
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 200, 100, 1.0));
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 105, 100, 1.0));
@@ -167,29 +169,28 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    // TEST HTI PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 20, 25));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1)); 
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 20, 25));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 20, 25));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
+}
 
 
 
-
-   // testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose));
 
    //testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
-   // testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
-  //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
+    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
+   //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 
    // TEST HYPO TEST CALCULATOR
 
 
    TString suiteType = TString::Format(" Starting S.T.R.E.S.S. %s",
-      allTests ? "full suite" : (oneTest ? TString::Format("test %d", testNumber).Data() : "basic suite") 
-   );
+                                       allTests ? "full suite" : (oneTest ? TString::Format("test %d", testNumber).Data() : "basic suite")
+                                      );
 
    cout << "*" << setw(lineWidth - 3) << setfill(' ') << suiteType << " *" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
@@ -200,11 +201,11 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
 
    gBenchmark->Start("stressRooStats");
 
-   {  
+   {
       Int_t i;
       list<RooUnitTest*>::iterator iter;
 
-      if(oneTest && (testNumber <= 0 || (UInt_t) testNumber > testList.size())) {
+      if (oneTest && (testNumber <= 0 || (UInt_t) testNumber > testList.size())) {
          cout << "Tests are numbered from 1 to " << testList.size() << endl;
       } else {
          for (iter = testList.begin(), i = 1; iter != testList.end(); iter++, i++) {
@@ -354,7 +355,7 @@ int main(int argc, const char *argv[])
       refFileName = ptr + 1;
       delete[] buf;
 
-      cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: " 
+      cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: "
            << refFileName << endl;
    }
 

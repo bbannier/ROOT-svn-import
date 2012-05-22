@@ -74,6 +74,9 @@ private:
    NSObject<X11Window>   *GetWindow(unsigned windowID)const;
    void                   DeleteDrawable(unsigned drawableID);
    
+   ULong_t                RegisterGLContextForView(unsigned viewID);
+   NSObject<X11Window>   *GetWindowForGLContext(Handle_t glContextID);
+   
    //This function resets strong reference, if you still want NSObject for drawableID to live,
    //you have to retain the pointer (probably) and also drawableID will become id for nsObj (replacement).
    void               ReplaceDrawable(unsigned drawableID, NSObject *nsObj);
@@ -96,6 +99,9 @@ private:
    //Cocoa objects (views, windows, "pixmaps").
    //As soon as NSObject<X11Drawable> is not a C++, even in C++0x11 I need a space :(
    std::map<unsigned, Util::NSStrongReference<NSObject<X11Drawable> >> fDrawables;
+   
+   std::map<ULong_t, unsigned> fGLContextMap;
+   ULong_t fFreeGLContextID;
 };
 
 }//Details

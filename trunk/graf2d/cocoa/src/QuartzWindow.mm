@@ -13,8 +13,6 @@
 
 //#define NDEBUG
 
-#include <stdexcept>
-
 #ifdef DEBUG_ROOT_COCOA
 #import <iostream>
 #import <fstream>
@@ -22,6 +20,7 @@
 #import "TClass.h"
 #endif
 
+#import <algorithm>
 #import <stdexcept>
 #import <cassert>
 
@@ -433,6 +432,105 @@ void UnlockFocus(NSView<X11Window> *view)
    
    [view unlockFocus];
    ((QuartzView *)view).fContext = 0;
+}
+
+//________________________________________________________________________________________
+NSRect FindOverlapRect(QuartzView *sibling1, QuartzView *sibling2)
+{
+   //Find area, where sibling 2 overlaps sibling 1, this
+   //rectangle will be in sibling 1's coordinates.
+
+   assert(sibling1 != nil && "FindOverlapRect, sibling1 parameter is nil");
+   assert(sibling2 != nil && "FindOverlapRect, sibling2 parameter is nil");
+   
+   NSRect frame1 = sibling1.frame;
+   NSRect frame2 = sibling2.frame;
+   
+   //Adjust frames - move to frame1 coordinates.
+   frame2.origin.x -= frame1.origin.x;
+   frame2.origin.y -= frame1.origin.y;
+   frame1.origin = CGPointZero;
+   
+   NSRect overlap = {};
+   
+   if (frame2.origin.x < 0) {
+      overlap.size.width = std::min(frame1.size.width, frame2.size.width - (frame1.origin.x - frame2.origin.x));
+   } else {
+      overlap.origin.x = frame2.origin.x;
+      overlap.size.width = std::min(frame2.size.width, frame1.size.width - frame2.origin.x);
+   }
+   
+   if (frame2.origin.y < 0) {
+      overlap.size.height = std::min(frame1.size.height, frame2.size.height - (frame1.origin.y - frame2.origin.y));
+   } else {
+      overlap.origin.y = frame2.origin.y;
+      overlap.size.height = std::min(frame2.size.height, frame1.size.height - frame2.origin.y);
+   }
+   
+   return overlap;
+}
+
+
+//________________________________________________________________________________________
+bool SiblingsOverlap(QuartzView *sibling1, QuartzView *sibling2)
+{
+   assert(sibling1 != nil && "SiblingsOverlap, sibling1 parameter is nil");
+   assert(sibling2 != nil && "SiblingsOverlap, sibling2 parameter is nil");
+
+   const NSRect frame1 = sibling1.frame;
+   const NSRect frame2 = sibling2.frame;
+   
+   if (frame2.origin.x >= frame1.origin.x + frame1.size.width)
+      return false;
+   if (frame2.origin.x + frame2.size.width <= frame1.origin.x)
+      return false;
+   if (frame2.origin.y >= frame1.origin.y + frame1.size.height)
+      return false;
+   if (frame2.origin.y + frame2.size.height <= frame1.origin.y)
+      return false;
+   
+   return true;
+}
+
+//________________________________________________________________________________________
+bool RectsOverlap(const NSRect &r1, const NSRect &r2)
+{
+   if (r2.origin.x >= r1.origin.x + r1.size.width)
+      return false;
+   if (r2.origin.x + r2.size.width <= r1.origin.x)
+      return false;
+   if (r2.origin.y >= r1.origin.y + r1.size.height)
+      return false;
+   if (r2.origin.y + r2.size.height <= r1.origin.y)
+      return false;
+   
+   return true;
+}
+
+//________________________________________________________________________________________
+void FindSiblingsOverlap(QuartzView *parentView)
+{
+   assert(parentView != nil && "FindSiblingsOverlap, parentView parameter is nil");
+
+   NSArray *subviews = [parentView subviews];
+   const NSUInteger count = [subviews count];
+
+   if (!count)
+      return;
+
+   for (NSUInteger i = 0; i < count - 1; ++i) {
+      QuartzView *sibling1 = (QuartzView *)[subviews objectAtIndex : i];
+      
+      for (NSUInteger j = i + 1; j < count; ++j) {
+         QuartzView *sibling2 = (QuartzView *)[subviews objectAtIndex : j];
+         
+         if (SiblingsOverlap(sibling1, sibling2)) {
+            const NSRect overlap = FindOverlapRect(sibling1, sibling2);
+            //[sibling1 addOverlap : overlap];
+            NSLog(@"got overlap: %g %g %g %g", overlap.origin.x, overlap.origin.y, overlap.size.width, overlap.size.height);
+         }
+      }
+   }
 }
 
 }
@@ -899,10 +997,16 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) addChild : (NSView<X11Window> *) child
 {
-   assert(fContentView != nil && "addChild, content view is nil");
    assert(child != nil && "addChild, child view is nil");
-   
-   [fContentView addChild : child];
+ 
+   if (!fContentView) {
+      //This can happen only in case of re-parent operation.
+      assert([child isKindOfClass : [QuartzView class]] && "addChild: gl view in a top-level window as content view is not supported");
+      fContentView = (QuartzView *)child;
+      [self setContentView : child];
+      fContentView.fParentView = nil;
+   } else
+      [fContentView addChild : child];
 }
 
 //______________________________________________________________________________
@@ -1210,8 +1314,6 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h
 {
-   assert(fParentView != nil && "setX:Y:width:height:, parent view is nil");
-
    NSRect newFrame = {};
    newFrame.origin.x = x;
    newFrame.origin.y = y;
@@ -1224,8 +1326,6 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) setX : (int) x Y : (int) y
 {
-   assert(fParentView != nil && "setX:Y:, parent view is nil");
-   
    NSRect newFrame = self.frame;
    newFrame.origin.x = x;
    newFrame.origin.y = y;
