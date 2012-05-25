@@ -212,7 +212,7 @@ void TVirtualPS::PrintRaw(Int_t len, const char *str)
 }
 
 //______________________________________________________________________________
-void TVirtualPS::WriteASCII(Int_t len, const char *buf)
+void TVirtualPS::WriteASCII(Int_t /*len*/, const char */*buf*/)
 {
 }
 

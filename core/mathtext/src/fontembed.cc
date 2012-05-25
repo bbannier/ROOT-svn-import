@@ -257,7 +257,7 @@ namespace mathtext {
 			return font_data;
 		}
 		if(fread(&font_data[0], sizeof(uint8_t),
-				 length, fp) != static_cast<int>(length)) {
+				 length, fp) != static_cast<unsigned long>(length)) {
 			perror("fread");
 			font_data.clear();
 			return font_data;

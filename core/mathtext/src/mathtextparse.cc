@@ -440,7 +440,7 @@ namespace mathtext {
 	}
 
 	std::vector<std::string> math_text_t::
-	tex_replace(const std::vector<std::string> &code)
+	tex_replace(const std::vector<std::string> &/*code*/)
 	{
 #if 0
 		static const size_t ncontrol_max = 256;
