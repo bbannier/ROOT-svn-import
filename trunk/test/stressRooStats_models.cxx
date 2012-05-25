@@ -6,6 +6,7 @@
 // RooStats headers
 #include "RooStats/ModelConfig.h"
 
+using namespace RooFit;
 using namespace RooStats;
 
 //__________________________________________________________________________________
@@ -28,7 +29,7 @@ void buildPoissonProductModel(RooWorkspace *w)
    // extended pdfs and simultaneous pdf
    w->factory("ExtendPdf::epdf1(PROD::pdf1(poiss1,constr1),n1[0,10])");
    w->factory("ExtendPdf::epdf2(PROD::pdf2(poiss2,constr2,constr3),n2[0,10])");
-   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=pdf1,cat2=pdf2)");
+   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=epdf1,cat2=epdf2)");
 
    // build argument sets
    w->defineSet("obs", "x,y");
@@ -38,8 +39,13 @@ void buildPoissonProductModel(RooWorkspace *w)
 
    // set global observables to constant values
    RooFIter iter = w->set("globObs")->fwdIterator();
-   RooRealVar *var;
-   while ((var = (RooRealVar *)iter.next()) != NULL) var->setConstant();
+   for (
+      RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
+      var != NULL;
+      var = dynamic_cast<RooRealVar *>(iter.next())
+   ) {
+      var->setConstant();
+   }
 
    // build data set and import it into the workspace sets
    RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
@@ -52,12 +58,10 @@ void buildPoissonProductModel(RooWorkspace *w)
    sbModel->SetParametersOfInterest(*w->set("poi"));
    sbModel->SetNuisanceParameters(*w->set("nuis"));
    sbModel->SetPdf("pdf");
-//  sbModel->SetPriorPdf("prior");
 
    // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
-//  bModel->SetPriorPdf("prior_nuis");
 
    w->import(*sbModel);
    w->import(*bModel);
