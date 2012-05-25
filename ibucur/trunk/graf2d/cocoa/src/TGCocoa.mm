@@ -569,6 +569,8 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
       const Window_t result = fPimpl->RegisterDrawable(newWindow);//Can throw.
       newWindow.fID = result;
 
+      [newWindow setAcceptsMouseMovedEvents : YES];
+
       return result;
    } else {
       NSObject<X11Window> *parentWin = fPimpl->GetWindow(parentID);
@@ -2378,6 +2380,8 @@ void TGCocoa::SetCursor(Window_t wid, Cursor_t cursorID)
    // window "wid".
    if (cursorID > 0)
       SetCursor(Int_t(wid), ECursor(cursorID - 1));
+   else
+      SetCursor(Int_t(wid), kPointer);
 }
 
 //______________________________________________________________________________
@@ -3125,6 +3129,10 @@ void TGCocoa::SetWMTransientHint(Window_t wid, Window_t mainWid)
       return;
    
    QuartzWindow *mainWindow = fPimpl->GetWindow(mainWid).fQuartzWindow;
+   
+   if (![mainWindow isVisible])
+      return;
+   
    QuartzWindow *transientWindow = fPimpl->GetWindow(wid).fQuartzWindow;
 
    if (mainWindow != transientWindow) {

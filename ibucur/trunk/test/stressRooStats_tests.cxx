@@ -1558,8 +1558,8 @@ public:
 
    Bool_t testCode() {
 
-      const Int_t fObsValueX = 150;
-      const Int_t fObsValueY = 100;
+      const Int_t fObsValueX = 20;
+      const Int_t fObsValueY = 30;
       const Double_t fTau = 1.0;
 
       if (_write == kTRUE) {
@@ -1576,16 +1576,33 @@ public:
          ModelConfig *sbModel = (ModelConfig *)w->obj("S+B");
          ModelConfig *bModel = (ModelConfig *)w->obj("B");
 
-
          sbModel->SetPdf(*w->pdf("sim_pdf"));
          bModel->SetPdf(*w->pdf("sim_pdf"));
-
-
 
          // add observed values to data set
          w->var("x")->setVal(fObsValueX);
          w->var("y")->setVal(fObsValueY);
          w->data("data")->add(*w->set("obs"));
+
+         // combined dataset for simultaneous pdf
+         RooDataSet *combData = new RooDataSet(
+            "combData",
+            "combined data",
+            *w->set("obs"),
+            Index(*dynamic_cast<RooCategory *>(w->obj("index"))),
+            Import("cat1", *dynamic_cast<RooDataSet *>(w->data("data"))),
+            Import("cat2", *dynamic_cast<RooDataSet *>(w->data("data")))
+         );
+
+   combData->Print("v");
+   for (Int_t i = 0; i < combData->numEntries(); i++) {
+      combData->get(i)->Print("v");
+   }
+
+
+
+         //w->data("combData")->get(0)->Print("v");
+        // w->data("combData")->get(1)->Print("v");
 
 /*
          RooRealVar x("x","x",0,40);
@@ -1598,23 +1615,9 @@ public:
          RooDataSet *data1 = p1.generate(x,100);
          RooDataSet *data2 = pc.generate(x,50);
 */
-         RooDataSet *data1 = w->pdf("sim_pdf")->generate(*w->set("obs"),100);
-         RooDataSet *data2 = w->pdf("sim_pdf")->generate(*w->set("obs"),100);
 
-         RooCategory *index = (RooCategory *)w->obj("index");
 
-         RooDataSet *data = new RooDataSet("combData", "combined data", *w->set("obs"), Index(*index), 
-            Import("cat1", *data1), 
-            Import("cat2", *data2));
-
-         cout << "DEPENDS ON " << index->dependsOn(*data->get()) << endl;
-         //data->Print("v");
-         //data->get()->Print("v");
-         for(Int_t i=0; i < 200; i++) {
-            data->get(i)->Print("v");
-         }
-
-      //   w->Print();
+//         w->Print();
 
          // set snapshots
          w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
@@ -1641,7 +1644,7 @@ public:
          NumEventsTestStat *nevts = new NumEventsTestStat(*sbModel->GetPdf());
 
 
-         FrequentistCalculator *ftc = new FrequentistCalculator(*data, *sbModel, *bModel);
+         FrequentistCalculator *ftc = new FrequentistCalculator(*combData, *sbModel, *bModel);
          ftc->SetToys(50000, 1000);
          //   ftc->SetConditionalMLEsNull(w->set("nuis"));
          //   ftc->SetConditionalMLEsAlt(w->set("nuis"));
@@ -1650,18 +1653,17 @@ public:
          tmcs->SetAlwaysUseMultiGen(kTRUE);
 
          HypoTestResult *htr;
-         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *sbModel);
+         ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*combData, *sbModel);
          plc->SetNullParameters(*bModel->GetSnapshot());
          htr = plc->GetHypoTest();
          htr->Print();
          cout << "PLC " << htr->Significance() << endl;
 
-/*
          tmcs->SetTestStatistic(slrts);
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "SLRTS " << htr->Significance() << endl;
-         tmcs->SetTestStatistic(pllts);
+/*         tmcs->SetTestStatistic(pllts);
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "PLLTS " << htr->Significance() << endl;

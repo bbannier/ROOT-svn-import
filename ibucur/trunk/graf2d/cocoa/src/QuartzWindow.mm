@@ -435,22 +435,16 @@ void UnlockFocus(NSView<X11Window> *view)
 }
 
 //________________________________________________________________________________________
-NSRect FindOverlapRect(QuartzView *sibling1, QuartzView *sibling2)
+NSRect FindOverlapRect(const NSRect &viewRect, const NSRect &siblingViewRect)
 {
-   //Find area, where sibling 2 overlaps sibling 1, this
-   //rectangle will be in sibling 1's coordinates.
+   NSRect frame1 = viewRect;
+   NSRect frame2 = siblingViewRect;
 
-   assert(sibling1 != nil && "FindOverlapRect, sibling1 parameter is nil");
-   assert(sibling2 != nil && "FindOverlapRect, sibling2 parameter is nil");
-   
-   NSRect frame1 = sibling1.frame;
-   NSRect frame2 = sibling2.frame;
-   
-   //Adjust frames - move to frame1 coordinates.
+   //Adjust frames - move to frame1's space.
    frame2.origin.x -= frame1.origin.x;
    frame2.origin.y -= frame1.origin.y;
    frame1.origin = CGPointZero;
-   
+
    NSRect overlap = {};
    
    if (frame2.origin.x < 0) {
@@ -468,28 +462,7 @@ NSRect FindOverlapRect(QuartzView *sibling1, QuartzView *sibling2)
    }
    
    return overlap;
-}
 
-
-//________________________________________________________________________________________
-bool SiblingsOverlap(QuartzView *sibling1, QuartzView *sibling2)
-{
-   assert(sibling1 != nil && "SiblingsOverlap, sibling1 parameter is nil");
-   assert(sibling2 != nil && "SiblingsOverlap, sibling2 parameter is nil");
-
-   const NSRect frame1 = sibling1.frame;
-   const NSRect frame2 = sibling2.frame;
-   
-   if (frame2.origin.x >= frame1.origin.x + frame1.size.width)
-      return false;
-   if (frame2.origin.x + frame2.size.width <= frame1.origin.x)
-      return false;
-   if (frame2.origin.y >= frame1.origin.y + frame1.size.height)
-      return false;
-   if (frame2.origin.y + frame2.size.height <= frame1.origin.y)
-      return false;
-   
-   return true;
 }
 
 //________________________________________________________________________________________
@@ -507,35 +480,9 @@ bool RectsOverlap(const NSRect &r1, const NSRect &r2)
    return true;
 }
 
-//________________________________________________________________________________________
-void FindSiblingsOverlap(QuartzView *parentView)
-{
-   assert(parentView != nil && "FindSiblingsOverlap, parentView parameter is nil");
-
-   NSArray *subviews = [parentView subviews];
-   const NSUInteger count = [subviews count];
-
-   if (!count)
-      return;
-
-   for (NSUInteger i = 0; i < count - 1; ++i) {
-      QuartzView *sibling1 = (QuartzView *)[subviews objectAtIndex : i];
-      
-      for (NSUInteger j = i + 1; j < count; ++j) {
-         QuartzView *sibling2 = (QuartzView *)[subviews objectAtIndex : j];
-         
-         if (SiblingsOverlap(sibling1, sibling2)) {
-            const NSRect overlap = FindOverlapRect(sibling1, sibling2);
-            //[sibling1 addOverlap : overlap];
-            NSLog(@"got overlap: %g %g %g %g", overlap.origin.x, overlap.origin.y, overlap.size.width, overlap.size.height);
-         }
-      }
-   }
-}
-
-}
-}
-}
+}//X11
+}//MacOSX
+}//ROOT
 
 #ifdef DEBUG_ROOT_COCOA
 
@@ -1197,10 +1144,14 @@ void print_mask_info(ULong_t mask)
 
 @end
 
+
 @implementation QuartzView {
    NSMutableArray *fPassiveKeyGrabs;
    BOOL            fIsOverlapped;
+   QuartzImage    *fClipMask;
 }
+
+@synthesize fClipMaskIsValid;
 
 @synthesize fID;
 @synthesize fContext;
@@ -1229,6 +1180,9 @@ void print_mask_info(ULong_t mask)
 {
    if (self = [super initWithFrame : frame]) {
       //Make this explicit (though memory is zero initialized).
+      fClipMaskIsValid = NO;
+      fClipMask = nil;
+
       fID = 0;
       fLevel = 0;
       
@@ -1256,6 +1210,51 @@ void print_mask_info(ULong_t mask)
    }
    
    return self;
+}
+
+//Overlap management.
+//______________________________________________________________________________
+- (BOOL) initClipMask
+{
+   const NSSize size = self.frame.size;
+
+   if (fClipMask) {
+      if ((unsigned)size.width == fClipMask.fWidth && (unsigned)size.height == fClipMask.fHeight) {
+         //All pixels must be visible.
+         [fClipMask clearMask];
+      } else {
+         [fClipMask release];
+         fClipMask = nil;
+      }
+   }
+   
+   if (!fClipMask) {
+      fClipMask = [QuartzImage alloc];
+      if ([fClipMask initMaskWithW : (unsigned)size.width H : (unsigned)size.height]) {
+         return YES;
+      } else {
+         [fClipMask release];
+         fClipMask = nil;
+         return NO;
+      }
+   }
+
+   return YES;
+}
+
+//______________________________________________________________________________
+- (QuartzImage *) fClipMask
+{
+   return fClipMask;
+}
+
+//______________________________________________________________________________
+- (void) addOverlap : (NSRect)overlapRect
+{
+   assert(fClipMask != nil && "addOverlap, fClipMask is nil");
+   assert(fClipMaskIsValid == YES && "addOverlap, fClipMask is invalid");
+   
+   [fClipMask maskOutPixels : overlapRect];
 }
 
 //X11Drawable protocol.
