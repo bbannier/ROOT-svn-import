@@ -32,36 +32,34 @@ void buildPoissonProductModel(RooWorkspace *w)
    w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=epdf1,cat2=epdf2)");
 
    // build argument sets
-   w->defineSet("obs", "x,y");
-   w->defineSet("poi", "sig");
-   w->defineSet("nuis", "bkg1,bkg2,beta");
-   w->defineSet("globObs", "beta0,gbkg1,gbkg2");
-
-   // set global observables to constant values
-   RooFIter iter = w->set("globObs")->fwdIterator();
-   for (
-      RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
-      var != NULL;
-      var = dynamic_cast<RooRealVar *>(iter.next())
-   ) {
-      var->setConstant();
-   }
-
-   // build data set and import it into the workspace sets
-   RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
-   w->import(*data);
+//   w->defineSet("obs", "x,y");
+//   w->defineSet("poi", "sig");
+//   w->defineSet("nuis", "bkg1,bkg2,beta");
+//   w->defineSet("globObs", "beta0,gbkg1,gbkg2");
 
    // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables(*w->set("obs"));
-   sbModel->SetGlobalObservables(*w->set("globObs"));
-   sbModel->SetParametersOfInterest(*w->set("poi"));
-   sbModel->SetNuisanceParameters(*w->set("nuis"));
+   sbModel->SetObservables("x,y");
+   sbModel->SetGlobalObservables("beta0,gbkg1,gbkg2");
+   sbModel->SetParametersOfInterest("sig");
+   sbModel->SetNuisanceParameters("bkg1,bkg2,beta");
    sbModel->SetPdf("pdf");
 
    // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
+
+   // set global observables to constant values
+   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
+   RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
+   while(var != NULL) {
+      var->setConstant(); 
+      var = dynamic_cast<RooRealVar *>(iter.next());
+   }
+
+   // build data set and import it into the workspace sets
+   RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
+   w->import(*data);
 
    w->import(*sbModel);
    w->import(*bModel);
@@ -84,23 +82,12 @@ void buildOnOffModel(RooWorkspace *w)
    w->factory("Uniform::prior(bkg)");
    w->factory("PROJ::averagedModel(PROD::foo(on_pdf|bkg,off_pdf,prior),bkg)") ;
 
-   // define sets of variables obs={x} and poi={sig}
-   // x is the only observable in the main measurement and y is treated as a separate measurement,
-   // which is used to produce the prior that will be used in the calculation to randomize the nuisance parameters
-   w->defineSet("obs", "n_on,n_off");
-   w->defineSet("poi", "sig");
-   w->defineSet("nuis", "bkg");
-
-   // define data set and import it into workspace
-   RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
-   w->import(*data);
-
    // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
-   sbModel->SetPdf(*w->pdf("prod_pdf"));
-   sbModel->SetObservables(*w->set("obs"));
-   sbModel->SetParametersOfInterest(*w->set("poi"));
-   sbModel->SetNuisanceParameters(*w->set("nuis"));
+   sbModel->SetPdf("prod_pdf");
+   sbModel->SetObservables("n_on,n_off");
+   sbModel->SetParametersOfInterest("sig");
+   sbModel->SetNuisanceParameters("bkg");
 
    // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
@@ -109,6 +96,10 @@ void buildOnOffModel(RooWorkspace *w)
    // alternate priors
    w->factory("Gaussian::gauss_prior(bkg, n_off, expr::sqrty('sqrt(n_off)', n_off))");
    w->factory("Lognormal::lognorm_prior(bkg, n_off, expr::kappa('1+1./sqrt(n_off)',n_off))");
+
+   // define data set and import it into workspace
+   RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
+   w->import(*data);
 
    w->import(*sbModel);
    w->import(*bModel);
@@ -145,13 +136,13 @@ void createPoissonEfficiencyModel(RooWorkspace *w)
 
    // create model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables(*w->set("obs"));
-   sbModel->SetParametersOfInterest(*w->set("poi"));
-   sbModel->SetNuisanceParameters(*w->set("nuis"));
+   sbModel->SetObservables("x");
+   sbModel->SetParametersOfInterest("sig");
+   sbModel->SetNuisanceParameters("b1,e1");
+   sbModel->SetGlobalObservables("b0,e0");
    sbModel->SetPdf("sb_pdf");
    //sbModel->SetPriorPdf("prior");
-   sbModel->SetSnapshot(*w->set("poi"));
-   sbModel->SetGlobalObservables(*w->set("globObs"));
+   sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
 
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");

@@ -323,7 +323,7 @@ public:
       // add observed values to data set
       w->var("x")->setVal(fObsValueX);
       w->var("y")->setVal(fObsValueY);
-      w->data("data")->add(*w->set("obs"));
+      w->data("data")->add(*model->GetObservables());
 
       // build likelihood interval with ProfileLikelihoodCalculator
       ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *model);
@@ -421,13 +421,13 @@ public:
             w->var("n_off")->setVal(numberOffEvents[i]);
             w->var("tau")->setVal(tau[i]);
             w->var("tau")->setConstant();
-            w->data("data")->add(*w->set("obs"));
+            w->data("data")->add(*sbModel->GetObservables());
 
             // set snapshots
             w->var("sig")->setVal(numberOnEvents[i] - numberOffEvents[i] / tau[i]);
-            sbModel->SetSnapshot(*w->set("poi"));
+            sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
             w->var("sig")->setVal(0);
-            bModel->SetSnapshot(*w->set("poi"));
+            bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
             // get significance using the ProfileLikelihoodCalculator
             ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *sbModel);
@@ -832,7 +832,7 @@ public:
       // add observed values to data set
       w->var("x")->setVal(fObsValueX);
       w->var("y")->setVal(fObsValueY);
-      w->data("data")->add(*w->set("obs"));
+      w->data("data")->add(*model->GetObservables());
 
       // NOTE: Roo1DIntegrator is too slow and gives poor results
       RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
@@ -956,7 +956,7 @@ public:
       // add observed values to data set
       w->var("x")->setVal(fObsValueX);
       w->var("y")->setVal(fObsValueY);
-      w->data("data")->add(*w->set("obs"));
+      w->data("data")->add(*model->GetObservables());
 
       // NOTE: Roo1DIntegrator is too slow and gives poor results
       RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
@@ -1160,14 +1160,14 @@ public:
       w->var("n_off")->setVal(fObsValueOff);
       w->var("tau")->setVal(fTau);
       w->var("tau")->setConstant();
-      w->data("data")->add(*w->set("obs"));
+      w->data("data")->add(*sbModel->GetObservables());
       w->var("bkg")->setVal(fObsValueOff / fTau);
 
       // Make snapshots
       w->var("sig")->setVal(fObsValueOn - fObsValueOff / fTau);
-      sbModel->SetSnapshot(*w->set("poi"));
+      sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
       w->var("sig")->setVal(0.0);
-      bModel->SetSnapshot(*w->set("poi"));
+      bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
       // Do hypothesis test with ProfileLikelihoodCalculator
       if (_write == kTRUE) {
@@ -1303,13 +1303,13 @@ public:
       // add observed values to data set
       w->var("x")->setVal(fObsValueX);
       w->var("y")->setVal(fObsValueY);
-      w->data("data")->add(*w->set("obs"));
+      w->data("data")->add(*sbModel->GetObservables());
 
       // set snapshots
       w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
-      sbModel->SetSnapshot(*w->set("poi"));
+      sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
       w->var("sig")->setVal(0);
-      bModel->SetSnapshot(*w->set("poi"));
+      bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
       //TODO: check how to eliminate this code, maybe 0 should be default print level for AsymptoticCalculator
       if (fCalculatorType == HypoTestInverter::kAsymptotic) {
@@ -1582,13 +1582,13 @@ public:
          // add observed values to data set
          w->var("x")->setVal(fObsValueX);
          w->var("y")->setVal(fObsValueY);
-         w->data("data")->add(*w->set("obs"));
+         w->data("data")->add(*sbModel->GetObservables());
 
          // combined dataset for simultaneous pdf
          RooDataSet *combData = new RooDataSet(
             "combData",
             "combined data",
-            *w->set("obs"),
+            *sbModel->GetObservables(),
             Index(*dynamic_cast<RooCategory *>(w->obj("index"))),
             Import("cat1", *dynamic_cast<RooDataSet *>(w->data("data"))),
             Import("cat2", *dynamic_cast<RooDataSet *>(w->data("data")))
@@ -1621,9 +1621,9 @@ public:
 
          // set snapshots
          w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
-         sbModel->SetSnapshot(*w->set("poi"));
+         sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
          w->var("sig")->setVal(0);
-         bModel->SetSnapshot(*w->set("poi"));
+         bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
          // build test statistic
          SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
