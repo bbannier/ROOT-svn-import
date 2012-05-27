@@ -322,9 +322,7 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
    RooArgSet *allVars = fPdf->getVariables();
    RooArgSet *saveAll = (RooArgSet*) allVars->snapshot();
 
-
    DetailedOutputAggregator detOutAgg;
-
 
    vector<TString> namesOfTSColumns;
    RooArgSet* allVarsToBeSaved = new RooArgSet("tsValues");
@@ -363,6 +361,8 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
       RooArgSet* saveVarsWithGlobObsSet = (RooArgSet*)allVars->snapshot();
       detOutAgg.AppendArgSet( fGlobalObservables, "globObs_" );
 
+
+
       // evaluate all test statistics
       for( unsigned int tsi = 0; tsi < fTestStatistics.size(); tsi++ ) {
          *allVars = *saveVarsWithGlobObsSet;
@@ -370,10 +370,13 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
          
          // evaluate test statistic; only depends on null POI
          RooArgSet* parForTS = (RooArgSet*)fParametersForTestStat->snapshot();
+
+         cout << "toydata " << *toydata << endl;
+         cout << "fTestStatistics " << fTestStatistics[tsi]->GetVarName() << endl;
          Double_t value = fTestStatistics[tsi]->Evaluate(*toydata, *parForTS);
          delete parForTS;
-         allVarsToBeSaved->setRealValue( namesOfTSColumns[tsi], value );
-         
+         allVarsToBeSaved->setRealValue( namesOfTSColumns[tsi], value ); 
+
          // get detailed output, construct name in dataset, store
          const RooArgSet *ndetout = fTestStatistics[tsi]->GetDetailedOutput();
          if (ndetout != NULL)
@@ -399,6 +402,7 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
          else toysInTails += 1.;
       }
    }
+
 
    delete allVarsToBeSaved;
 

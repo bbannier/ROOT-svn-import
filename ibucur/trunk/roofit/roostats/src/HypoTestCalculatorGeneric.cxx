@@ -148,15 +148,19 @@ HypoTestResult* HypoTestCalculatorGeneric::GetHypoTest() const {
    
 
 
+   cout << "fNull before "; fNullModel->GetParametersOfInterest()->Print();
    // Generate sampling distribution for null
    SetupSampler(*fNullModel);
+   cout << "fNull after "; fNullModel->GetParametersOfInterest()->Print();
    RooArgSet paramPointNull(*fNullModel->GetParametersOfInterest());
+   cout << "paramPointNull before " << paramPointNull.ClassName() << " " << paramPointNull << endl;
    if(PreNullHook(&paramPointNull, obsTestStat) != 0) {
       oocoutE((TObject*)0,Generation) << "PreNullHook did not return 0." << endl;
    }
    SamplingDistribution* samp_null = NULL;
    RooDataSet* detOut_null = NULL;
    if(toymcs) {
+      cout << "paramPointNull " << paramPointNull.ClassName() << " " << paramPointNull << endl;
       detOut_null = toymcs->GetSamplingDistributions(paramPointNull);
       if( detOut_null ) samp_null = new SamplingDistribution( detOut_null->GetName(), detOut_null->GetTitle(), *detOut_null );
    }else samp_null = fTestStatSampler->GetSamplingDistribution(paramPointNull);
