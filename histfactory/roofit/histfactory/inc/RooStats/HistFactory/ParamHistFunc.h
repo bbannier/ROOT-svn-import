@@ -58,6 +58,8 @@ public:
   const RooArgSet* get(Int_t masterIdx) const { return _dataSet.get( masterIdx ) ; } 
   const RooArgSet* get(const RooArgSet& coord) const { return _dataSet.get( coord ) ; } 
 
+  double binVolume() const { return _dataSet.binVolume(); }
+
   virtual Bool_t forceAnalyticalInt(const RooAbsArg&) const { return kTRUE ; }
 
   Int_t getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVars, const RooArgSet* normSet,const char* rangeName=0) const ;
@@ -70,7 +72,6 @@ public:
   virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const ; 
   virtual Bool_t isBinnedDistribution(const RooArgSet& /*obs*/) const {return kTRUE;}
-
 
 protected:
 
