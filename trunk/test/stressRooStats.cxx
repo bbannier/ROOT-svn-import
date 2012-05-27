@@ -113,8 +113,6 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
 
    list<RooUnitTest*> testList;
 
-
-if(allTests) {
    // TEST PLC CONFINT SIMPLE GAUSSIAN : Confidence Level range is (0,1)
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.99999)); // boundary case CL -> 1
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(3) - 1)); // 3 sigma
@@ -176,13 +174,10 @@ if(allTests) {
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 20, 25));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
-}
-
-
 
 
    //testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
-    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
+//    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
    //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 
    // TEST HYPO TEST CALCULATOR
