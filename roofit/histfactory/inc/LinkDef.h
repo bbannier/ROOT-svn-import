@@ -13,6 +13,7 @@
 #pragma link C++ class RooStats::HistFactory::HistoToWorkspaceFactory+ ;
 #pragma link C++ class RooStats::HistFactory::HistoToWorkspaceFactoryFast+ ;
 #pragma link C++ class RooBarlowBeestonLL+ ;  
+#pragma link C++ class HistFactorySimultaneous+ ;  
 //#pragma link C++ class RooStats::HistFactory::HistoToWorkspaceFactoryNew+ ;
 
 #pragma link C++ class RooStats::HistFactory::ConfigParser+ ;
