@@ -22,6 +22,10 @@ PVALUEOBJ = pvalue.$(ObjSuf)
 PVALUESRC = pvalue.$(SrcSuf)
 PVALUE    = pvalue$(ExeSuf)
 
+RFOBJ = rf501.$(ObjSuf)
+RFSRC = rf501.$(SrcSuf)
+RF = rf501$(ExeSuf)
+
 endif
 
 #----------------------------------------------------------------------------
@@ -45,6 +49,9 @@ $(PVALUE): $(PVALUEOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
+$(RF) : $(RFOBJ)
+	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
+	@echo "$@ done"
 
 #----------------------------------------------------------------------------
 
