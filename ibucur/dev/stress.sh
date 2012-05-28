@@ -1,4 +1,4 @@
-cd $ROOSTATSTEST
+cd $ROOTEST
 
 make stressRooStats
 

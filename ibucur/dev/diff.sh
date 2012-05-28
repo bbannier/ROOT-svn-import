@@ -1,4 +1,4 @@
-cp $ROOSTATSTEST/stressRooStats* ~/root/test
+cp $ROOTEST/stressRooStats* ~/root/test
 
 cd ~/root
 svn update
