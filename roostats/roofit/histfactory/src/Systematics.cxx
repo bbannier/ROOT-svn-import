@@ -60,11 +60,13 @@ void RooStats::HistFactory::OverallSys::Print( std::ostream& stream ) {
 // HistoSys
 
 TH1* RooStats::HistFactory::HistoSys::GetHistoLow() {
-  return (TH1*) fhLow.GetObject();
+  TH1* histo_low = (TH1*) fhLow.GetObject();
+  return histo_low;
 }
 
 TH1* RooStats::HistFactory::HistoSys::GetHistoHigh() {
-  return (TH1*) fhHigh.GetObject();
+  TH1* histo_high = (TH1*) fhHigh.GetObject();
+  return histo_high;
 }
 
 void RooStats::HistFactory::HistoSys::Print( std::ostream& stream ) {
@@ -85,12 +87,26 @@ void RooStats::HistFactory::HistoSys::writeToFile( std::string FileName, std::st
   // changes the name of the local file and histograms
   
   TH1* histLow = GetHistoLow();
+  if( histLow==NULL ) {
+    std::cout << "Error: Cannot write " << GetName()
+	      << " to file: " << FileName
+	      << " HistoLow is NULL" 
+	      << std::endl;
+    throw hf_exc();
+  }
   histLow->Write();
   fInputFileLow = FileName;
   fHistoPathLow = DirName;
   fHistoNameLow = histLow->GetName(); 
 
   TH1* histHigh = GetHistoHigh();
+  if( histHigh==NULL ) {
+    std::cout << "Error: Cannot write " << GetName()
+	      << " to file: " << FileName
+	      << " HistoHigh is NULL" 
+	      << std::endl;
+    throw hf_exc();
+  }
   histHigh->Write();
   fInputFileHigh = FileName;
   fHistoPathHigh = DirName;
@@ -106,7 +122,8 @@ void RooStats::HistFactory::HistoSys::writeToFile( std::string FileName, std::st
 // Shape Sys
 
 TH1* RooStats::HistFactory::ShapeSys::GetErrorHist() {
-  return (TH1*) fhError.GetObject();
+  TH1* error_hist = (TH1*) fhError.GetObject();
+  return error_hist;
 }
 
 
@@ -121,6 +138,13 @@ void RooStats::HistFactory::ShapeSys::Print( std::ostream& stream ) {
 void RooStats::HistFactory::ShapeSys::writeToFile( std::string FileName, std::string DirName ) {
 
   TH1* histError = GetErrorHist();
+  if( histError==NULL ) {
+    std::cout << "Error: Cannot write " << GetName()
+	      << " to file: " << FileName
+	      << " ErrorHist is NULL" 
+	      << std::endl;
+    throw hf_exc();
+  }
   histError->Write();
   fInputFile = FileName;
   fHistoPath = DirName;
@@ -146,11 +170,13 @@ void RooStats::HistFactory::HistoFactor::Print( std::ostream& stream ) {
 
 
 TH1* RooStats::HistFactory::HistoFactor::GetHistoLow() {
-  return (TH1*) fhLow.GetObject();
+  TH1* histo_low = (TH1*) fhLow.GetObject();
+  return histo_low;
 }
 
 TH1* RooStats::HistFactory::HistoFactor::GetHistoHigh() {
-  return (TH1*) fhHigh.GetObject();
+  TH1* histo_high = (TH1*) fhHigh.GetObject();
+  return histo_high;
 }
 
 
@@ -161,12 +187,26 @@ void RooStats::HistFactory::HistoFactor::writeToFile( std::string FileName, std:
   // changes the name of the local file and histograms
   
   TH1* histLow = GetHistoLow();
+  if( histLow==NULL ) {
+    std::cout << "Error: Cannot write " << GetName()
+	      << " to file: " << FileName
+	      << " HistoLow is NULL" 
+	      << std::endl;
+    throw hf_exc();
+  }
   histLow->Write();
   fInputFileLow = FileName;
   fHistoPathLow = DirName;
   fHistoNameLow = histLow->GetName(); 
 
   TH1* histHigh = GetHistoHigh();
+  if( histHigh==NULL ) {
+    std::cout << "Error: Cannot write " << GetName()
+	      << " to file: " << FileName
+	      << " HistoHigh is NULL" 
+	      << std::endl;
+    throw hf_exc();
+  }
   histHigh->Write();
   fInputFileHigh = FileName;
   fHistoPathHigh = DirName;

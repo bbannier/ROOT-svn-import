@@ -271,11 +271,20 @@ void RooStats::HistFactory::Measurement::writeToFile( TFile* file ) {
     // for this channel
 
     TDirectory* chanDir = file->mkdir( (chanName + "_hists").c_str() );
+    if( chanDir == NULL ) {
+      std::cout << "Error: Cannot create channel " << (chanName + "_hists")
+		<< std::endl;
+      throw hf_exc();
+    }
     chanDir->cd();
 
     // Save the data:
     
     TDirectory* dataDir = chanDir->mkdir( "data" );
+    if( dataDir == NULL ) {
+      std::cout << "Error: Cannot make directory " << chanDir << std::endl;
+      throw hf_exc();
+    }
     dataDir->cd();
 
     channel.fData.writeToFile( OutputFileName, GetDirPath(dataDir) );

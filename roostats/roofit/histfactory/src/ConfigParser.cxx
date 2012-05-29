@@ -112,6 +112,11 @@ std::vector< RooStats::HistFactory::Measurement > ConfigParser::GetMeasurementsF
     node = rootNode->GetChildren();
     while( node != 0 ) {
       if( node->GetNodeName() == TString( "Input" ) ) {
+	if( node->GetText() == NULL ) {
+	  std::cout << "Error: node: " << node->GetName() 
+		    << " has no text." << std::endl;
+	  throw hf_exc();
+	}
 	xml_channel_files.push_back(node->GetText());
       }
       node = node->GetNextNode();
@@ -669,6 +674,11 @@ HistFactory::Measurement ConfigParser::CreateMeasurementFromDriverNode( TXMLNode
     }
 
     else if( child->GetNodeName() == TString( "POI" ) ) {
+      if( child->GetText() == NULL ) {
+	std::cout << "Error: node: " << child->GetName() 
+		  << " has no text." << std::endl;
+	throw hf_exc();
+      }
       measurement.SetPOI( child->GetText() );
     }
 
@@ -679,6 +689,11 @@ HistFactory::Measurement ConfigParser::CreateMeasurementFromDriverNode( TXMLNode
 	if( curParam->GetName() == TString( "Const" ) ) {
 	  if(curParam->GetValue()==TString("True")){
 	    // Fix here...?
+	    if( child->GetText() == NULL ) {
+	      std::cout << "Error: node: " << child->GetName() 
+			<< " has no text." << std::endl;
+	      throw hf_exc();
+	    }
 	    AddSubStrings( measurement.GetConstantParams(), child->GetText() );
 	  }
 	}
@@ -695,6 +710,11 @@ HistFactory::Measurement ConfigParser::CreateMeasurementFromDriverNode( TXMLNode
       map<string,double> logNormSyst;
 
       // Get the list of parameters in this tag:
+      if( child->GetText() == NULL ) {
+	std::cout << "Error: node: " << child->GetName() 
+		  << " has no text." << std::endl;
+	throw hf_exc();
+      }
       AddSubStrings(syst, child->GetText());
 
       // Now, loop over this tag's attributes

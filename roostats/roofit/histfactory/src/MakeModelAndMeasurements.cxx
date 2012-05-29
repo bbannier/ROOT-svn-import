@@ -221,6 +221,11 @@ void topDriver( string input ) {
 
       std::vector< EstimateSummary > dummy;
       RooWorkspace* ws = factory.MakeSingleChannelModel( dummy, measurement.GetConstantParams() );
+      if( ws==NULL ) {
+	std::cout << "Failed to create SingleChannelModel for channel: " << channel.GetName()
+		  << " and measurement: " << measurement.GetName() << std::endl;
+	throw hf_exc();
+      }
       //RooWorkspace* ws = factory.MakeSingleChannelModel( channel );
       channel_workspaces.push_back(ws);
 
