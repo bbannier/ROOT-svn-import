@@ -276,7 +276,7 @@ void topDriver( string input ) {
     RooWorkspace* ws=factory.MakeCombinedModel(channel_names, channel_workspaces);
     if( ws == NULL ) {
       std::cout << "Error: Failed to create workspace" << std::endl;
-      throw bad_hf;
+      throw hf_exc();
     }
     // Gamma/Uniform Constraints:
     // turn some Gaussian constraints into Gamma/Uniform/logNormal constraints, rename model newSimPdf

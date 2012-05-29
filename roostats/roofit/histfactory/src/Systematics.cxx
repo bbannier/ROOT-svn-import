@@ -17,7 +17,7 @@ RooStats::HistFactory::Constraint::Type RooStats::HistFactory::Constraint::GetTy
 
   if( Name == "" ) {
     std::cout << "Error: Given empty name for ConstraintType" << std::endl;
-    throw bad_hf;
+    throw hf_exc();
   }
   
   else if ( Name == "Gaussian" || Name == "Gauss" ) {
@@ -30,7 +30,7 @@ RooStats::HistFactory::Constraint::Type RooStats::HistFactory::Constraint::GetTy
 
   else {
     std::cout << "Error: Unknown name given for Constraint Type: " << Name << std::endl;
-    throw bad_hf;
+    throw hf_exc();
   }
 
 }
@@ -215,7 +215,7 @@ void RooStats::HistFactory::StatError::writeToFile( std::string OutputFileName, 
     TH1* hStatError = GetErrorHist();
     if( hStatError == NULL ) {
       std::cout << "Error: Stat Error error hist is NULL" << std::endl;
-      throw bad_hf;
+      throw hf_exc();
     }
     hStatError->Write(statErrorHistName.c_str());
     

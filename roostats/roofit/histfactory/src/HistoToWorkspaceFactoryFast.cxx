@@ -245,7 +245,7 @@ namespace HistFactory{
       if( ! channel.CheckHistograms() ) {
 	std::cout << "MakeModelAndMeasurementsFast: Channel: " << channel.GetName()
 		  << " has uninitialized histogram pointers" << std::endl;
-	throw bad_hf;
+	throw hf_exc();
 	return NULL;
       }
 
@@ -403,7 +403,7 @@ namespace HistFactory{
 	  std::cout << "Error: Too many observables.  "
 		    << "HistFactory only accepts up to 3 observables (3d) "
 		    << std::endl;
-	  throw bad_hf;
+	  throw hf_exc();
 	}
 	Int_t nbins = axis->GetNbins();	
 	Double_t xmin = axis->GetXmin();
