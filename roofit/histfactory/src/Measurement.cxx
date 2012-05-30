@@ -2,6 +2,8 @@
 #include <ctime>
 #include <iostream>
 #include <sys/stat.h>
+#include "TSystem.h"
+#include "TTimeStamp.h"
 
 #include "RooStats/HistFactory/Measurement.h"
 #include "RooStats/HistFactory/HistFactoryException.h"
@@ -125,7 +127,9 @@ void RooStats::HistFactory::Measurement::PrintXML( std::string Directory, std::s
 
   // First, check that the directory exists:
 
-  int success = mkdir( Directory.c_str(), 0777 );
+
+  // LM : fixes for Windows 
+  int success = gSystem->MakeDirectory(Directory.c_str() );    
   if( success != 0 ) {
     std::cout << "Error: Failed to make directory: " << Directory << std::endl;
     throw hf_exc();
@@ -149,12 +153,26 @@ void RooStats::HistFactory::Measurement::PrintXML( std::string Directory, std::s
   // Add the time
   xml << "<!--" << std::endl;
   xml << "This xml file created automatically on: " << std::endl;
+/*
   time_t t = time(0);   // get time now
   struct tm * now = localtime( &t );
   xml << (now->tm_year + 1900) << '-'
       << (now->tm_mon + 1) << '-'
       << now->tm_mday
       << std::endl;
+*/
+  // LM: use TTimeStamp 
+  TTimeStamp t; 
+  UInt_t year = 0; 
+  UInt_t month = 0; 
+  UInt_t day = 0; 
+  t.GetDate(true, 0, &year, &month, &day);
+  xml << year << '-'
+      << month << '-'
+      << day
+      << std::endl;
+
+
   xml << "-->" << std::endl;
 
   // Add the doctype
