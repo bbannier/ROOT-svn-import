@@ -69,7 +69,7 @@ function displayStreamerInfos(streamerInfo) {
    if (findElement.length) {
       var ndx = findElement.index() * 0.5;
       ndx = Math.floor(ndx);
-//      $('#report').accordion("activate", ndx);
+      //$('#report').accordion("activate", ndx);
    }
    else {
       var entryInfo = "<h5><a> Streamer Infos </a>&nbsp; </h5><div>\n";
@@ -160,7 +160,8 @@ function AssertPrerequisites(andThen) {
       }) }) }) }) }) }) }) }) });
       return;
    }
-}
+};
+
 function ReadFile() {
    AssertPrerequisites();
    // else simply open the file
@@ -186,22 +187,22 @@ function ResetUI() {
 };
 
 function BuildSimpleGUI() {
-  AssertPrerequisites(function DisplayGUI() {
-  var myDiv = $('#simpleGUI');
-  if (!myDiv) {
-    alert("You have to define a div with id='simpleGUI'!");
-    return;
-  }
-  var files = myDiv.attr("files");
-  if (!files) {
-    alert("div id='simpleGUI' must have a files attribute!");
-    return;
-  }
-  var arrFiles = files.split(';');
-  var guiCode = "<div id='main' class='column'>\n"
-        +"<h1><font face='Verdana' size='4'>Read a ROOT file with Javascript</font></h1>\n"
-        +"<p><b>Select a ROOT file to read, or enter a url (*): </b><br/>\n"
-        +'<small><sub>*: Other URLs might not work because of cross site scripting protection, see e.g. <a href="https://developer.mozilla.org/en/http_access_control">http://developer.mozilla.org/en/http_access_control</a> on how to avoid it.</sub></small></p>'
+   AssertPrerequisites(function DisplayGUI() {
+   var myDiv = $('#simpleGUI');
+   if (!myDiv) {
+      alert("You have to define a div with id='simpleGUI'!");
+      return;
+   }
+   var files = myDiv.attr("files");
+   if (!files) {
+      alert("div id='simpleGUI' must have a files attribute!");
+      return;
+   }
+   var arrFiles = files.split(';');
+   var guiCode = "<div id='main' class='column'>\n"
+      +"<h1><font face='Verdana' size='4'>Read a ROOT file with Javascript</font></h1>\n"
+      +"<p><b>Select a ROOT file to read, or enter a url (*): </b><br/>\n"
+      +'<small><sub>*: Other URLs might not work because of cross site scripting protection, see e.g. <a href="https://developer.mozilla.org/en/http_access_control">http://developer.mozilla.org/en/http_access_control</a> on how to avoid it.</sub></small></p>'
       +'<form name="ex">'
       +'<div style="margin-left:10px;">'
       +'<input type="text" name="state" value="" size="40" id="urlToLoad"/><br/>'
@@ -209,14 +210,14 @@ function BuildSimpleGUI() {
       +'onchange="document.ex.state.value = document.ex.s.options[document.ex.s.selectedIndex].value;document.ex.s.selectedIndex=0;document.ex.s.value=\'\'">'
       +'<option value = " " selected = "selected">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</option>';
       for (var i=0; i<arrFiles.length; i++) {
-        guiCode += '<option value = "' + arrFiles[i] + '">' + arrFiles[i] + '</option>';
+         guiCode += '<option value = "' + arrFiles[i] + '">' + arrFiles[i] + '</option>';
       }
       guiCode += '</select>'
-         +'</div>'
-         +'<input style="padding:2px; margin-left:10px; margin-top:5px;"'
-         +' onclick="ReadFile()" type="button" title="Read the Selected File" value="Load"/>'
-         +'<input style="padding:2px; margin-left:10px;"'
-         +'onclick="ResetUI()" type="button" title="Clear All" value="Reset"/>'
+      +'</div>'
+      +'<input style="padding:2px; margin-left:10px; margin-top:5px;"'
+      +' onclick="ReadFile()" type="button" title="Read the Selected File" value="Load"/>'
+      +'<input style="padding:2px; margin-left:10px;"'
+      +'onclick="ResetUI()" type="button" title="Clear All" value="Reset"/>'
       +'</form>'
 
       +'<br/>'
@@ -226,6 +227,6 @@ function BuildSimpleGUI() {
       +'<div id="reportHolder" class="column">'
       +'<div id="report"> </div>'
       +'</div>';
-  $('#simpleGUI').append(guiCode);
-});
-}
+      $('#simpleGUI').append(guiCode);
+   });
+};
