@@ -1,3 +1,8 @@
+# Module.mk for mathtex module
+# Copyright (c) 2011 Rene Brun and Fons Rademakers
+#
+# Author: 
+
 MODNAME      := mathtext
 MODDIR       := $(ROOT_SRCDIR)/core/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
