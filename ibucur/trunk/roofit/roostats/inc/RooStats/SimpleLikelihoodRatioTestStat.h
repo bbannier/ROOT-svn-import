@@ -165,7 +165,7 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          if (fFirstEval && ParamsAreEqual()) {
             oocoutW(fNullParameters,InputArguments)
                << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1."
-               << endl;
+               << std::endl;
          }
          fFirstEval = false;
 
@@ -177,7 +177,7 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
 	 Bool_t created = kFALSE ;
 	 if (!fNllNull) {
       RooArgSet* allParams = fNullPdf->getParameters(data);
-	   fNllNull = (RooNLLVar*) fNullPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
+	   fNllNull = fNullPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
 	   delete allParams;
 	   created = kTRUE ;
 	 }
@@ -191,7 +191,7 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          *attachedSet = nullPOI;
          double nullNLL = fNllNull->getVal();
          
-         //cout << endl << "SLRTS: null params:" << endl;
+         //cout << std::endl << "SLRTS: null params:" << std::endl;
          //attachedSet->Print("v");
          
 
@@ -203,7 +203,7 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
 	 created = kFALSE ;
 	 if (!fNllAlt) {
       RooArgSet* allParams = fAltPdf->getParameters(data);
-	   fNllAlt = (RooNLLVar*) fAltPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
+	   fNllAlt = fAltPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
 	   delete allParams;
 	   created = kTRUE ;
 	 }
@@ -215,11 +215,11 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          *attachedSet = *fAltParameters;
          double altNLL = fNllAlt->getVal();
 
-         //cout << endl << "SLRTS: alt params:" << endl;
+         //cout << std::endl << "SLRTS: alt params:" << std::endl;
          //attachedSet->Print("v");
 
 
-         //cout << endl << "SLRTS null NLL: " << nullNLL << "    alt NLL: " << altNLL << endl << endl;
+         //cout << std::endl << "SLRTS null NLL: " << nullNLL << "    alt NLL: " << altNLL << std::endl << std::endl;
 
 
          if (!reuse) { 
@@ -238,9 +238,9 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
             fDetailedOutput->setRealValue( "nullNLL", nullNLL );
             fDetailedOutput->setRealValue( "altNLL", altNLL );
 
-//             cout << endl << "STORING THIS AS DETAILED OUTPUT:" << endl;
+//             cout << std::endl << "STORING THIS AS DETAILED OUTPUT:" << std::endl;
 //             fDetailedOutput->Print("v");
-//             cout << endl;
+//             cout << std::endl;
          }
 
 
@@ -266,8 +266,8 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
       bool fDetailedOutputEnabled;
       RooArgSet* fDetailedOutput; //!
 
-      RooNLLVar* fNllNull ;  //! transient copy of the null NLL
-      RooNLLVar* fNllAlt ; //!  transient copy of the alt NLL
+      RooAbsReal* fNllNull ;  //! transient copy of the null NLL
+      RooAbsReal* fNllAlt ; //!  transient copy of the alt NLL
       static Bool_t fAlwaysReuseNll ;
       Bool_t fReuseNll ;
 

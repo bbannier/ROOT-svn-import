@@ -26,6 +26,8 @@ END_HTML
 #include "RooArgSet.h"
 #include "RooRealVar.h"
 
+using namespace std; 
+
 namespace RooStats{
 namespace HistFactory{
   vector<pair<string, string> > get_comb(vector<string> names){
@@ -302,7 +304,7 @@ std::vector<EstimateSummary> GetChannelEstimateSummaries(Measurement& measuremen
     }
     if( sample.GetShapeFactorList().size() > 1 ) {
       std::cout << "Error: Only One Shape Factor currently supported" << std::endl;
-      throw bad_hf;
+      throw hf_exc();
     }
 
 

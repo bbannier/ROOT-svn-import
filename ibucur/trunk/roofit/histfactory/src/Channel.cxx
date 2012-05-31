@@ -7,8 +7,6 @@
 #include "RooStats/HistFactory/HistFactoryException.h"
 #include "RooStats/HistFactory/Channel.h"
 
-
-
 RooStats::HistFactory::Channel::Channel() :
   fName( "" ) { ; }
 
@@ -276,7 +274,7 @@ bool RooStats::HistFactory::Channel::CheckHistograms() {
   
     if( fData.GetHisto() == NULL ) {
       std::cout << "Error: Data Histogram for channel " << GetName() << " is NULL." << std::endl;
-      throw bad_hf;
+      throw hf_exc();
     }
 
     // Get the histograms for the samples:
@@ -287,14 +285,14 @@ bool RooStats::HistFactory::Channel::CheckHistograms() {
       // Get the nominal histogram:
       if( sample.GetHisto() == NULL ) {
 	std::cout << "Error: Nominal Histogram for sample " << sample.GetName() << " is NULL." << std::endl;
-	throw bad_hf;
+	throw hf_exc();
       }
 
       // Get the StatError Histogram (if necessary)
       if( sample.GetStatError().GetUseHisto() ) {
 	if( sample.GetStatError().GetErrorHist() == NULL ) {
 	  std::cout << "Error: Statistical Error Histogram for sample " << sample.GetName() << " is NULL." << std::endl;
-	  throw bad_hf;
+	  throw hf_exc();
 	}
       }
 
@@ -307,12 +305,12 @@ bool RooStats::HistFactory::Channel::CheckHistograms() {
 	if( histoSys.GetHistoLow() == NULL ) {
 	  std::cout << "Error: HistoSyst Low for Systematic " << histoSys.GetName() 
 		    << " in sample " << sample.GetName() << " is NULL." << std::endl;
-	  throw bad_hf;
+	  throw hf_exc();
 	}
 	if( histoSys.GetHistoHigh() == NULL ) {
 	  std::cout << "Error: HistoSyst High for Systematic " << histoSys.GetName() 
 		    << " in sample " << sample.GetName() << " is NULL." << std::endl;
-	  throw bad_hf;
+	  throw hf_exc();
 	}
 	
       } // End Loop over HistoSys
@@ -326,12 +324,12 @@ bool RooStats::HistFactory::Channel::CheckHistograms() {
 	if( histoFactor.GetHistoLow() == NULL ) {
 	  std::cout << "Error: HistoSyst Low for Systematic " << histoFactor.GetName() 
 		    << " in sample " << sample.GetName() << " is NULL." << std::endl;
-	  throw bad_hf;
+	  throw hf_exc();
 	}
 	if( histoFactor.GetHistoHigh() == NULL ) {
 	  std::cout << "Error: HistoSyst High for Systematic " << histoFactor.GetName() 
 		    << " in sample " << sample.GetName() << " is NULL." << std::endl;
-	  throw bad_hf;
+	  throw hf_exc();
 	}
 
       } // End Loop over HistoFactor
@@ -345,7 +343,7 @@ bool RooStats::HistFactory::Channel::CheckHistograms() {
 	if( shapeSys.GetErrorHist() == NULL ) {
 	  std::cout << "Error: HistoSyst High for Systematic " << shapeSys.GetName() 
 		    << " in sample " << sample.GetName() << " is NULL." << std::endl;
-	  throw bad_hf;
+	  throw hf_exc();
 	}
 
       } // End Loop over ShapeSys
@@ -353,7 +351,7 @@ bool RooStats::HistFactory::Channel::CheckHistograms() {
     } // End Loop over Samples
 
   }
-  catch(exception& e)
+  catch(std::exception& e)
     {
       std::cout << e.what() << std::endl;
       return false;
@@ -382,7 +380,7 @@ TH1* RooStats::HistFactory::Channel::GetHistogram(std::string InputFile, std::st
   TFile* inFile = TFile::Open( InputFile.c_str() );
   if( !inFile ) {
     std::cout << "Error: Unable to open input file: " << InputFile << std::endl;
-    throw bad_hf;
+    throw hf_exc();
   }
 
   std::cout << "Opened input file: " << InputFile << ": " << inFile << std::endl;
@@ -401,16 +399,16 @@ TH1* RooStats::HistFactory::Channel::GetHistogram(std::string InputFile, std::st
   try{
     hist = dynamic_cast<TH1*>( inFile->Get( HistNameFull.c_str() ) );
   }
-  catch(exception& e)
+  catch(std::exception& e)
     {
       std::cout << "Failed to cast object to TH1*" << std::endl;
       std::cout << e.what() << std::endl;
-      throw bad_hf;
+      throw hf_exc();
     }
   if( !hist ) {
     std::cout << "Failed to get histogram: " << HistNameFull
 	      << " in file: " << InputFile << std::endl;
-    throw bad_hf;
+    throw hf_exc();
   }
 
 
@@ -421,7 +419,7 @@ TH1* RooStats::HistFactory::Channel::GetHistogram(std::string InputFile, std::st
     std::cerr << "filename: " << InputFile
 	      << "path: " << HistoPath
 	      << "obj: " << HistoName << std::endl;
-    throw bad_hf;
+    throw hf_exc();
   }
   else {
     ptr->SetDirectory(0); //         for the current histogram h

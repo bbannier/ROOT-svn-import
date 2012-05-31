@@ -1670,7 +1670,7 @@ void print_mask_info(ULong_t mask)
 {
    for (QuartzView * v in [self subviews]) {
       [v setHidden : NO]; 
-      [v mapSubwindows];
+      //[v mapSubwindows];
    }
 }
 
@@ -1702,12 +1702,21 @@ void print_mask_info(ULong_t mask)
    for (QuartzView *sibling in [fParentView subviews]) {
       if (self == sibling)
          continue;
+      if ([sibling isHidden])
+         continue;
       //TODO: equal test is not good :) I have a baaad feeling about this ;)
-      if (CGRectEqualToRect(sibling.frame, self.frame))
+      if (CGRectEqualToRect(sibling.frame, self.frame)) {
          [sibling setOverlapped : YES];
+         //
+         [sibling setHidden : YES];
+         //
+      }
    }
 
    [self setOverlapped : NO];
+   //
+   [self setHidden : NO];
+   //
    [fParentView sortSubviewsUsingFunction : CompareViewsToRaise context : (void *)self];
    [self setNeedsDisplay : YES];//?
 }
@@ -1721,11 +1730,18 @@ void print_mask_info(ULong_t mask)
    for (QuartzView *sibling in reverseEnumerator) {
       if (sibling == self)
          continue;
+
       //TODO: equal test is not good :) I have a baaad feeling about this ;)
       if (CGRectEqualToRect(sibling.frame, self.frame)) {
          [sibling setOverlapped : NO];
+         //
+         [sibling setHidden : NO];
+         //
          [sibling setNeedsDisplay : YES];
          [self setOverlapped : YES];
+         //
+         [self setHidden : YES];
+         //
          break;
       }
    }
@@ -1753,7 +1769,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) configureNotifyTree
 {
-   if (self.fMapState == kIsViewable) {
+   if (self.fMapState == kIsViewable || fIsOverlapped == YES) {
       if (fEventMask & kStructureNotifyMask) {
          TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
          assert(vx && "configureNotifyTree, gVirtualX is either null or has type different from TGCocoa");
@@ -1910,7 +1926,7 @@ void print_mask_info(ULong_t mask)
    
    [super setFrameSize : newSize];
    
-   if ((fEventMask & kStructureNotifyMask) && self.fMapState == kIsViewable) {
+   if ((fEventMask & kStructureNotifyMask) && (self.fMapState == kIsViewable || fIsOverlapped == YES)) {
       TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
       assert(vx != nullptr && "setFrameSize:, gVirtualX is either null or has a type, different from TGCocoa");
       vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
