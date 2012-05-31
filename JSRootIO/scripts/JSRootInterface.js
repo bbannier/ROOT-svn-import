@@ -6,6 +6,38 @@
 var gFile;
 var obj_list = new Array();
 var obj_index;
+var last_index = 0;
+
+function addCollapsible(element) {
+   $(element)
+       .addClass("ui-accordion-header ui-helper-reset ui-state-default ui-corner-top ui-corner-bottom")
+       .hover(function() { $(this).toggleClass("ui-state-hover"); })
+       .prepend('<span class="ui-icon ui-icon-triangle-1-e"></span>')
+       .click(function() {
+          $(this)
+             .toggleClass("ui-accordion-header-active ui-state-active ui-state-default ui-corner-bottom")
+             .find("> .ui-icon").toggleClass("ui-icon-triangle-1-e ui-icon-triangle-1-s").end()
+             .next().toggleClass("ui-accordion-content-active").slideToggle();
+          return false;
+       })
+       .next()
+          .addClass("ui-accordion-content  ui-helper-reset ui-widget-content ui-corner-bottom")
+             .hide();
+   $(element)
+      .toggleClass("ui-accordion-header-active ui-state-active ui-state-default ui-corner-bottom")
+      .find("> .ui-icon").toggleClass("ui-icon-triangle-1-e ui-icon-triangle-1-s").end()
+      .next().toggleClass("ui-accordion-content-active").slideToggle();
+
+};
+
+function showElement(element) {
+   if ($(element).next().is(":hidden")) {
+      $(element)
+         .toggleClass("ui-accordion-header-active ui-state-active ui-state-default ui-corner-bottom")
+         .find("> .ui-icon").toggleClass("ui-icon-triangle-1-e ui-icon-triangle-1-s").end()
+         .next().toggleClass("ui-accordion-content-active").slideDown("slow");
+   }
+}
 
 function loadScript(url, callback) {
    // dynamic script loader using callback
@@ -67,17 +99,16 @@ function displayInflatedBuffers(buffers) {
 function displayStreamerInfos(streamerInfo) {
    var findElement = $('#report').find('#treeview');
    if (findElement.length) {
-      var ndx = findElement.index() * 0.5;
-      ndx = Math.floor(ndx);
-      //$('#report').accordion("activate", ndx);
+      var element = findElement[0].parentElement.previousSibling.id;
+      showElement('#'+element);
    }
    else {
-      var entryInfo = "<h5><a> Streamer Infos </a>&nbsp; </h5><div>\n";
+      var uid = "uid_accordion_"+(++last_index);
+      var entryInfo = "<h5 id=\""+uid+"\"><a> Streamer Infos </a>&nbsp; </h5><div>\n";
       entryInfo += "<h6>Streamer Infos</h6><span id='treeview' class='dtree'></span></div>\n";
       $("#report").append(entryInfo);
       JSROOTPainter.displayStreamerInfos(streamerInfo, '#treeview');
-      $('#report').accordion('destroy');
-      $('#report').accordion({collapsible:true, active:false, autoHeight:false});
+      addCollapsible('#'+uid);
    }
 };
 
@@ -86,9 +117,8 @@ function findObject(obj_name) {
       if (obj_list[i] == obj_name) {
          var findElement = $('#report').find('#histogram'+i);
          if (findElement.length) {
-            var ndx = findElement.index() * 0.5;
-            ndx = Math.floor(ndx);
-            $('#report').accordion("activate", ndx);
+            var element = findElement[0].previousElementSibling.id;
+            showElement('#'+element);
          }
          return true;
       }
@@ -117,18 +147,12 @@ function displayObject(obj, cycle, idx) {
        obj['_typename'] != 'JSROOTIO.TGraph') {
       return;
    }
-   var entryInfo = "<h5><a> " + obj['fName'] + ";" + cycle + "</a>&nbsp; </h5>\n";
+   var uid = "uid_accordion_"+(++last_index);
+   var entryInfo = "<h5 id=\""+uid+"\"><a> " + obj['fName'] + ";" + cycle + "</a>&nbsp; </h5>\n";
    entryInfo += "<div id='histogram" + idx + "'>\n";
    $("#report").append(entryInfo);
    JSROOTPainter.displayObject(obj, idx);
-   $('#report').accordion('destroy');
-   $('#report').accordion({collapsible:true, active:false, autoHeight:false});
-   var findElement = $('#report').find('#histogram'+idx);
-   if (findElement.length) {
-      var ndx = findElement.index() * 0.5;
-      ndx = Math.floor(ndx);
-      $('#report').accordion("activate", ndx);
-   }
+   addCollapsible('#'+uid);
 };
 
 function AssertPrerequisites(andThen) {
@@ -148,15 +172,13 @@ function AssertPrerequisites(andThen) {
          var url = $("#urlToLoad").val();
          if (url == "" || url == " ") return;
          $("#status").append("load: " + url + "<br/>");
-         $('#report').accordion('destroy');
          $("#report").get(0).innerHTML = '';
          obj_list = [];
          obj_index = 0;
          delete gFile;
          gFile = new JSROOTIO.RootFile(url);
          $('#report').append("</body></html>");
-         $('#report').accordion('destroy');
-         $('#report').accordion({collapsible:true, active:false, autoHeight:false});
+         $('#report').addClass("ui-accordion ui-accordion-icons ui-widget ui-helper-reset");
       }) }) }) }) }) }) }) }) });
       return;
    }
@@ -169,20 +191,17 @@ function ReadFile() {
    var url = $("#urlToLoad").val();
    if (url == "" || url == " ") return;
    $("#status").append("load: " + url + "<br/>");
-   $('#report').accordion('destroy');
    $("#report").get(0).innerHTML = '';
    obj_list = [];
    obj_index = 0;
+   last_index = 0;
    delete gFile;
    gFile = new JSROOTIO.RootFile(url);
    $('#report').append("</body></html>");
-   $('#report').accordion('destroy');
-   $('#report').accordion({collapsible:true, active:false, autoHeight:false});
 };
 
 function ResetUI() {
    $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
-   $('#report').accordion('destroy');
    $('#report').get(0).innerHTML = '';
 };
 
