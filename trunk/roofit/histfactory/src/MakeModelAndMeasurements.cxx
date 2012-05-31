@@ -86,11 +86,14 @@ END_HTML
 #include "RooStats/HistFactory/ConfigParser.h"
 #include "RooStats/HistFactory/EstimateSummary.h"
 #include "RooStats/HistFactory/HistoToWorkspaceFactory.h"
+#include "RooStats/HistFactory/HistFactoryException.h"
 
 
 using namespace RooFit;
 using namespace RooStats;
 using namespace HistFactory;
+
+using namespace std;
 
 void topDriver(string input);
 void fastDriver(string input); // in MakeModelAndMeasurementsFast
@@ -113,6 +116,9 @@ int main(int argc, char** argv) {
     catch (std::string str) {
       cerr << "caught exception: " << str << endl ;
     }
+    catch( const exception& e ) {
+      cerr << "Caught Exception: " << e.what() << endl;
+    }
   }
 
   if(argc==3){
@@ -125,6 +131,9 @@ int main(int argc, char** argv) {
       catch (std::string str) {
 	cerr << "caught exception: " << str << endl ;
       }
+      catch( const exception& e ) {
+	cerr << "Caught Exception: " << e.what() << endl;
+      }
     else if(flag=="-number_counting_form")
       try {
          topDriver(input);
@@ -132,6 +141,10 @@ int main(int argc, char** argv) {
       catch (std::string str) {
 	cerr << "caught exception: " << str << endl ;
       }
+      catch( const exception& e ) {
+	cerr << "Caught Exception: " << e.what() << endl;
+      }
+
     else
       cerr <<"unrecognized flag.  Options are -standard_form or -number_counting_form"<<endl;
 
@@ -210,6 +223,11 @@ void topDriver( string input ) {
 
       std::vector< EstimateSummary > dummy;
       RooWorkspace* ws = factory.MakeSingleChannelModel( dummy, measurement.GetConstantParams() );
+      if( ws==NULL ) {
+	std::cout << "Failed to create SingleChannelModel for channel: " << channel.GetName()
+		  << " and measurement: " << measurement.GetName() << std::endl;
+	throw hf_exc();
+      }
       //RooWorkspace* ws = factory.MakeSingleChannelModel( channel );
       channel_workspaces.push_back(ws);
 
@@ -263,6 +281,10 @@ void topDriver( string input ) {
 
     // Now, combine the channels
     RooWorkspace* ws=factory.MakeCombinedModel(channel_names, channel_workspaces);
+    if( ws == NULL ) {
+      std::cout << "Error: Failed to create workspace" << std::endl;
+      throw hf_exc();
+    }
     // Gamma/Uniform Constraints:
     // turn some Gaussian constraints into Gamma/Uniform/logNormal constraints, rename model newSimPdf
     if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0) 

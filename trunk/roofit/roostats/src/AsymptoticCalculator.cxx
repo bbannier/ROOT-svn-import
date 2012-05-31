@@ -46,6 +46,7 @@
 #include "TStopwatch.h"
 
 using namespace RooStats;
+using namespace std;
 
 namespace Utils { 
 
@@ -239,7 +240,7 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     // add constraint terms for all non-constant parameters
 
     // need to call constrain for RooSimultaneous until stripDisconnected problem fixed
-    RooAbsReal* nll = (RooNLLVar*) pdf.createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
+    RooAbsReal* nll = pdf.createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
 
     RooArgSet* attachedSet = nll->getVariables();
 
