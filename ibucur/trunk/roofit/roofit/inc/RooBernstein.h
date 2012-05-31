@@ -29,7 +29,7 @@ public:
 
   RooBernstein(const RooBernstein& other, const char* name = 0);
   virtual TObject* clone(const char* newname) const { return new RooBernstein(*this, newname); }
-  inline virtual ~RooBernstein() { }
+  inline virtual ~RooBernstein() { delete [] c; delete [] b; delete [] coefs; }
 
   Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const char* rangeName=0) const ;
   Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const ;
@@ -38,6 +38,10 @@ private:
 
   RooRealProxy _x;
   RooListProxy _coefList ;
+  Int_t degree;
+  Double_t *c;
+  Double_t *b;
+  RooAbsReal **coefs;
 
   Double_t evaluate() const;
 
