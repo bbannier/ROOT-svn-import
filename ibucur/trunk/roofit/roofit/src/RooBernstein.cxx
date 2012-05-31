@@ -50,23 +50,16 @@ RooBernstein::RooBernstein(const char* name, const char* title,
   _coefList("coefficients","List of coefficients",this)
 {
   // Constructor
-  degree = coefList.getSize() - 1; // n + 1 polys of degree n
-  coefs = new RooAbsReal *[degree + 1];
-  TIterator* coefIter = coefList.createIterator();
-
-  for(Int_t i = 0; i <= degree; i++) {
-    if ( (coefs[i] = dynamic_cast<RooAbsReal*>(coefIter->Next())) == NULL) {
-      cout << "RooBernstein::ctor(" << GetName() << ") ERROR: coefficient " << coefs[i]->GetName() 
+  TIterator* coefIter = coefList.createIterator() ;
+  RooAbsArg* coef ;
+  while((coef = (RooAbsArg*)coefIter->Next())) {
+    if (!dynamic_cast<RooAbsReal*>(coef)) {
+      cout << "RooBernstein::ctor(" << GetName() << ") ERROR: coefficient " << coef->GetName() 
 	   << " is not of type RooAbsReal" << endl ;
       assert(0) ;
     }
+    _coefList.add(*coef) ;
   }
-  
-  c = new Double_t[degree + 1];
-  b = new Double_t[degree + 1];
-  
-  for(Int_t i = 0; i <= degree; i++) b[i] = TMath::Binomial(degree,i);
-
   delete coefIter ;
 }
 
@@ -85,74 +78,45 @@ RooBernstein::RooBernstein(const RooBernstein& other, const char* name) :
 Double_t RooBernstein::evaluate() const 
 {
 
-  Double_t xmin = _x.min();  
-  Double_t x = (_x - xmin) / (_x.max() - xmin);
+  Double_t xmin = _x.min();
+  Double_t x = (_x - xmin) / (_x.max() - xmin); // rescale to [0,1]
+  Int_t degree = _coefList.getSize() - 1; // n+1 polys of degree n
+  RooFIter iter = _coefList.fwdIterator();
 
+  if(degree == 0) {
 
-
-/*  if(degree == 0) {
-    return coefs[0]->getVal();
+    return ((RooAbsReal *)iter.next())->getVal();
 
   } else if(degree == 1) {
-    Double_t a0 = coefs[0]->getVal(); // c0
-    Double_t a1 = coefs[1]->getVal() - a0; // c1 - c0 
+
+    Double_t a0 = ((RooAbsReal *)iter.next())->getVal(); // c0
+    Double_t a1 = ((RooAbsReal *)iter.next())->getVal(); // c1 - c0
     return a1 * x + a0;
 
   } else if(degree == 2) {
-    Double_t a0 = coefs[0]->getVal(); // c0
-    Double_t a1 = 2 * (coefs[1]->getVal() - a0); // 2 * (c1 - c0)
-    Double_t a2 = coefs[2]->getVal() - a1 - a0; // c0 - 2 * c1 + c2
-    return (a2 * x + a1) * tempx + a0;
 
-  } else if(degree == 3) { 
-    Double_t a0 = coefs[0]->getVal(); // c0
-    Double_t a1 = 3 * (coefs[1]->getVal() - a0); // 3 * (c1 - c0)
-    Double_t a2 = (coefs[2]->getVal() - a0) * 3 - a1 * 2;
-    Double_t a3 = coefs[3]->getVal() - a2 - a1 - a0;
-    return ((a3 * x + a2) * x + a1) * x + a0;
+    Double_t a0 = ((RooAbsReal *)iter.next())->getVal(); // c0
+    Double_t a1 = 2 * (((RooAbsReal *)iter.next())->getVal() - a0); // 2 * (c1 - c0)
+    Double_t a2 = ((RooAbsReal *)iter.next())->getVal() - a1 - a0; // c0 - 2 * c1 + c2
+    return (a2 * x + a1) * x + a0;
 
-  } else {*/
+  } else if(degree > 2) {
 
-    // MY ALGORITHM
-    
-/*    for(Int_t i = degree; i >= 0; i--) {
-      c[i] = coefs[i]->getVal();
-      for(Int_t j = i; j < degree; j++) {
-        c[j + 1] -= c[j];
-      }
-    }
+    Double_t t = x;
+    Double_t s = 1 - x;
 
-
-    Double_t temp = c[degree];
-
-    for(Int_t i = degree - 1; i >= 1 ; i--) 
-      temp = temp * x + c[i] * b[i];
-    temp = temp * x + c[0];
-*/
-   
-   Double_t t = x;
-   Double_t s = 1 - x;
-   Double_t temp = coefs[0]->getVal() * s;
-
-   for(Int_t i = 1; i < degree; i++) {
-      temp = (temp + t * b[i] * coefs[i]->getVal()) * s; 
+    Double_t result = ((RooAbsReal *)iter.next())->getVal() * s;    
+    for(Int_t i = 1; i < degree; i++) {
+      result = (result + t * TMath::Binomial(degree, i) * ((RooAbsReal *)iter.next())->getVal()) * s;
       t *= x;
-   }
-   temp += t * coefs[degree]->getVal();
-
-/*  }*/
-   
-/*    Double_t temp2 = 0;
-
-    for (int i=0; i <= degree; ++i){
-      temp2 += coefs[i]->getVal() *
-        b[i] * pow(x,i) * pow(1-x,degree-i);
     }
+    result += t * ((RooAbsReal *)iter.next())->getVal(); 
 
-    cout << setprecision(16) << "temp " << temp << " temp2 " << temp2 << endl;
-    assert(temp == temp2);
-*/
-  return temp;
+    return result;
+  }
+
+  // in case list of arguments passed is empty
+  return TMath::SignalingNaN();
 }
 
 
@@ -174,6 +138,7 @@ Double_t RooBernstein::analyticalIntegral(Int_t code, const char* rangeName) con
 {
   assert(code==1) ;
   Double_t xmin = _x.min(rangeName); Double_t xmax = _x.max(rangeName);
+  Int_t degree= _coefList.getSize()-1; // n+1 polys of degree n
   Double_t norm(0) ;
 
   RooFIter iter = _coefList.fwdIterator() ;
@@ -184,7 +149,7 @@ Double_t RooBernstein::analyticalIntegral(Int_t code, const char* rangeName) con
     // where the integral is straight forward.
     temp = 0;
     for (int j=i; j<=degree; ++j){ // power basis≈ß
-      temp += pow(-1.,j-i) * b[j] * TMath::Binomial(j,i) / (j+1);
+      temp += pow(-1.,j-i) * TMath::Binomial(degree, j) * TMath::Binomial(j,i) / (j+1);
     }
     temp *= ((RooAbsReal*)iter.next())->getVal(); // include coeff
     norm += temp; // add this basis's contribution to total
