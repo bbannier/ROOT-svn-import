@@ -98,5 +98,6 @@ void TGLSphere::DirectDraw(TGLRnrCtx & rnrCtx) const
    if (divisions < 4) {
       divisions = 4;
    }
-   gluSphere(rnrCtx.GetGluQuadric(), fRadius, divisions, divisions);
+   if (rnrCtx.GetGluQuadric())
+      gluSphere(rnrCtx.GetGluQuadric(), fRadius, divisions, divisions);
 }
