@@ -1,4 +1,5 @@
 // @(#)root/roostats:$Id$
+// Authors: Sven Kreiss          23/05/2012
 // Authors: Kevin Belasco        17/06/2009
 // Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
@@ -26,6 +27,9 @@
 #endif
 #ifndef ROOT_TH1
 #include "TH1.h"
+#endif
+#ifndef ROOT_TH2
+#include "TH2.h"
 #endif
 #ifndef RooStats_MCMCInterval
 #include "RooStats/MCMCInterval.h"
@@ -61,6 +65,17 @@ namespace RooStats {
       void DrawNLLVsTime();
       void DrawNLLHist(const Option_t* options = NULL);
       void DrawWeightHist(const Option_t* options = NULL);
+
+      TH1* GetMaxNLLHist1D(RooRealVar& xVar);
+      TH1* GetMaxLikelihoodHist1D(RooRealVar& xVar);
+      TH2* GetMaxNLLHist2D(RooRealVar& xVar, RooRealVar& yVar);
+      TH2* GetMaxLikelihoodHist2D(RooRealVar& xVar, RooRealVar& yVar);
+
+
+      TH1* GetHist1D(RooRealVar& var);
+      TH1* GetHist1DSlice(RooRealVar& var, RooRealVar& sliceVar, double sliceMin, double sliceMax);
+      TH1* GetHist1DSliceNormalized(RooRealVar& var, RooRealVar& sliceVar, double sliceMin, double sliceMax);
+      TH2* GetHist2D(RooRealVar& xVar, RooRealVar& yVar, int xbins=100, int ybins=100);
 
    private:
 
