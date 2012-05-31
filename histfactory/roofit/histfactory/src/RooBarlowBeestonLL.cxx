@@ -471,8 +471,8 @@ Double_t RooStats::HistFactory::RooBarlowBeestonLL::evaluate() const
   */
 
   // Loop over the channels (keys to the map)
-  clock_t time_before_setVal, time_after_setVal;
-  time_before_setVal=clock();  
+  //clock_t time_before_setVal, time_after_setVal;
+  //time_before_setVal=clock();  
   std::map< std::string, std::vector< BarlowCache > >::iterator iter_cache;
   for( iter_cache = _barlowCache.begin(); iter_cache != _barlowCache.end(); ++iter_cache ) {
     
@@ -533,15 +533,15 @@ Double_t RooStats::HistFactory::RooBarlowBeestonLL::evaluate() const
       double nu_b_stat = sum_pdf->getVal(*obsSet)*sum_pdf->expectedEvents(*obsSet)*binVolume - nu_b_vec.at(i);
       nu_b_stat_vec.at(i) = nu_b_stat;
     }
-    time_after_setVal=clock();  
+    //time_after_setVal=clock();  
     
     // Done with the first loops.
     // Now evaluating the function
 
-    clock_t time_before_eval, time_after_eval;
+    //clock_t time_before_eval, time_after_eval;
 
     // Loop over the bins in the cache
-    time_before_eval=clock();
+    //time_before_eval=clock();
     for( unsigned int i = 0; i < channel_cache.size(); ++i ) {
       
       BarlowCache& bin_cache = channel_cache.at(i);
@@ -620,10 +620,10 @@ Double_t RooStats::HistFactory::RooBarlowBeestonLL::evaluate() const
 
     }
 
-    time_after_eval=clock();
+    //time_after_eval=clock();
 
-    float time_setVal = ((float) time_after_setVal - (float) time_before_setVal) / ((float) CLOCKS_PER_SEC);
-    float time_eval   = ((float) time_after_eval - (float) time_before_eval) / ((float) CLOCKS_PER_SEC);
+    //float time_setVal = ((float) time_after_setVal - (float) time_before_setVal) / ((float) CLOCKS_PER_SEC);
+    //float time_eval   = ((float) time_after_eval - (float) time_before_eval) / ((float) CLOCKS_PER_SEC);
 
     /*
     std::cout << "Barlow timing for channel: " << channel_name
