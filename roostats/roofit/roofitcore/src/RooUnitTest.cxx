@@ -587,3 +587,9 @@ Bool_t RooUnitTest::runTest()
   return runCompTests() ;
 }
 
+
+//_____________________________________________________________________________
+void RooUnitTest::setMemDir(TDirectory* memDir) {
+   // Set gMemDir to memDir
+   gMemDir = memDir ;
+}
