@@ -48,8 +48,7 @@ $(GLEWLIB):     $(GLEWO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) $(GLEWLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libGLEW.$(SOEXT) $@ \
 		   "$(GLEWO)" \
-		   "$(FREETYPELDFLAGS) $(FREETYPELIB) \
-		    $(GLEWLIBEXTRA) $(XLIBS) $(GLLIBS)"
+         "$(GLEWLIBEXTRA) $(GLLIBS)"
 
 all-$(MODNAME): $(GLEWLIB)
 

@@ -137,7 +137,7 @@
 #pragma link C++ class TGLTH3CompositionPainter;
 
 #ifndef _WIN32
-#pragma link C++ class TX11GLManager;
+//#pragma link C++ class TX11GLManager;
 #endif
 
 #pragma link C++ class TGLObject+;

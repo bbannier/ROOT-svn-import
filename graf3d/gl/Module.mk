@@ -22,10 +22,10 @@ GLH          := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 GLS          := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 
 # Excluded from win32 builds
-ifeq ($(ARCH),win32)
+#ifeq ($(ARCH),win32)
 GLS          := $(filter-out $(MODDIRS)/TX11GL.cxx, $(GLS))
 GLH          := $(filter-out $(MODDIRI)/TX11GL.h, $(GLH))
-endif
+#endif
 
 # Excluded from rootcint
 GLH1         := $(MODDIRI)/gl2ps.h $(MODDIRI)/CsgOps.h \
@@ -39,7 +39,7 @@ GLH2         := $(filter-out $(GLH1), $(GLH))
 
 ifneq ($(OPENGLLIB),)
 GLLIBS       := $(OPENGLLIBDIR) $(OPENGLULIB) $(OPENGLLIB) \
-                $(X11LIBDIR) -lX11 -lm
+                -lm
 endif
 ifeq ($(ARCH),win32)
 GLLIBS       := opengl32.lib glu32.lib

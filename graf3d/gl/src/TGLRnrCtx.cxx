@@ -109,6 +109,8 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
 
    fSelectBuffer = new TGLSelectBuffer;
    fQuadric = gluNewQuadric();
+   if (!fQuadric)
+      return;
    gluQuadricOrientation(fQuadric, (GLenum)GLU_OUTSIDE);
    gluQuadricNormals    (fQuadric, (GLenum)GLU_SMOOTH);
 

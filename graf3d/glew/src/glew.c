@@ -33,8 +33,10 @@
 
 #define GLEW_BUILD
 
+#define __APPLE__ 1
+
 #if defined(__APPLE__)
-#  define GLEW_APPLE_GLX
+//#  define GLEW_APPLE_GLX
 #endif
 
 /* ROOT additions end */
