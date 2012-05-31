@@ -2385,8 +2385,12 @@ void TGCocoa::SetCursor(Window_t wid, Cursor_t cursorID)
 }
 
 //______________________________________________________________________________
-void TGCocoa::NextEvent(Event_t &/*event*/)
+void TGCocoa::NextEvent(Event_t &event)
 {
+   assert(fPimpl->fX11EventTranslator.fEventQueue.size() > 0 && "NextEvent, event queue is empty");
+   
+   event = fPimpl->fX11EventTranslator.fEventQueue.front();
+   fPimpl->fX11EventTranslator.fEventQueue.pop_front();
 }
 
 //______________________________________________________________________________
@@ -2837,7 +2841,7 @@ Int_t TGCocoa::EventsPending()
 {
    // Returns the number of events that have been received from the X server
    // but have not been removed from the event queue.
-   return 0;
+   return (Int_t)fPimpl->fX11EventTranslator.fEventQueue.size();
 }
 
 //______________________________________________________________________________
@@ -2865,9 +2869,22 @@ void TGCocoa::ChangeProperty(Window_t /*wid*/, Atom_t /*property*/,
 }
 
 //______________________________________________________________________________
-Bool_t TGCocoa::CheckEvent(Window_t /*wid*/, EGEventType /*type*/, Event_t & /*ev*/)
+Bool_t TGCocoa::CheckEvent(Window_t wid, EGEventType type, Event_t &event)
 {
-   //No need in this.
+   typedef ROOT::MacOSX::X11::EventQueue_t::iterator iterator_type;
+   
+   iterator_type it = fPimpl->fX11EventTranslator.fEventQueue.begin();
+   iterator_type eIt = fPimpl->fX11EventTranslator.fEventQueue.end();
+   
+   for (; it != eIt; ++it) {
+      const Event_t &queuedEvent = *it;
+      if (queuedEvent.fWindow == wid && queuedEvent.fType == type) {
+         event = queuedEvent;
+         fPimpl->fX11EventTranslator.fEventQueue.erase(it);
+         return kTRUE;
+      }
+   }
+   
    return kFALSE;
 }
 

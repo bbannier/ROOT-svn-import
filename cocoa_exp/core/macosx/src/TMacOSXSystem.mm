@@ -382,6 +382,14 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
 
       //Wait for GUI events and for something else, like read/write from stdin/stdout (?).
       WaitEvents(nextto);
+      
+      if (gXDisplay && gXDisplay->Notify()) {
+         gVirtualX->Update(2);
+         gVirtualX->Update(3);
+         if (!pendingOnly) 
+            return;
+      }
+      
       if (pendingOnly)
          return;
    }
