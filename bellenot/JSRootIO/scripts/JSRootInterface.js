@@ -160,13 +160,13 @@ function AssertPrerequisites(andThen) {
       // if JSROOTIO is not defined, then dynamically load the required scripts and open the file
       loadScript('http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js', function() {
       loadScript('http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js', function() {
-      loadScript('scripts/dtree.js', function() {
-      loadScript('scripts/rawinflate.js', function() {
-      loadScript('scripts/JSIO.core.js', function() {
+      loadScript('http://root.cern.ch/js/scripts/dtree.js', function() {
+      loadScript('http://root.cern.ch/js/scripts/rawinflate.js', function() {
+      loadScript('http://root.cern.ch/js/scripts/JSIO.core.js', function() {
       loadScript('http://code.highcharts.com/highcharts.js', function() {
       loadScript('http://code.highcharts.com/modules/exporting.js', function() {
-      loadScript('scripts/JSRootPainter.js', function() {
-      loadScript('scripts/JSRootIOEvolution.js', function() {
+      loadScript('http://root.cern.ch/js/scripts/JSRootPainter.js', function() {
+      loadScript('http://root.cern.ch/js/scripts/JSRootIOEvolution.js', function() {
          if (andThen) { andThen(); }
          $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
          var url = $("#urlToLoad").val();
