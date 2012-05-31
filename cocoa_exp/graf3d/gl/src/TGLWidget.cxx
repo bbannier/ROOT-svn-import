@@ -384,8 +384,8 @@ void TGLWidget::SetFormat()
 //==============================================================================
 
 //______________________________________________________________________________
-Window_t TGLWidget::CreateWindow(const TGWindow* /*parent*/, const TGLFormat &format,
-                                 UInt_t /*width*/, UInt_t /*height*/,
+Window_t TGLWidget::CreateWindow(const TGWindow* parent, const TGLFormat &format,
+                                 UInt_t width, UInt_t height,
                                  std::pair<void *, void *>& /*internalData*/)
 {
    // CreateWidget - MacOSX/Cocoa version.
@@ -408,10 +408,7 @@ Window_t TGLWidget::CreateWindow(const TGWindow* /*parent*/, const TGLFormat &fo
    if (format.HasMultiSampling())
       formatComponents.push_back(component_type(TGLFormat::kMultiSample, format.GetSamples()));
 
-   //return gVirtualX->CreateOpenGLWindow(parent->GetId(), width, height, formatComponents);
-
-   
-   return Window_t();
+   return gVirtualX->CreateOpenGLWindow(parent->GetId(), width, height, formatComponents);
 }
 
 //______________________________________________________________________________
