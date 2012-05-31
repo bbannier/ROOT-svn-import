@@ -21,6 +21,9 @@
 
 class RooMinuit ;
 
+namespace RooStats{
+  namespace HistFactory{
+
 class RooBarlowBeestonLL : public RooAbsReal {
 public:
 
@@ -75,7 +78,7 @@ public:
   // const RooArgSet& bestFitParams() const ;
   // const RooArgSet& bestFitObs() const ;
 
-  virtual RooAbsReal* createProfile(const RooArgSet& paramsOfInterest) ;
+  //  virtual RooAbsReal* createProfile(const RooArgSet& paramsOfInterest) ;
   
   virtual Bool_t redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) ;
 
@@ -125,7 +128,10 @@ protected:
 
 private:
 
-  ClassDef(RooBarlowBeestonLL,0) // Real-valued function representing a Barlow-Beeston minimized profile likelihood of external (likelihood) function
+  ClassDef(RooStats::HistFactory::RooBarlowBeestonLL,0) // Real-valued function representing a Barlow-Beeston minimized profile likelihood of external (likelihood) function
 };
+
+  }
+}
  
 #endif

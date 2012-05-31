@@ -11,11 +11,14 @@
 #include "RooSimultaneous.h"
 #include "RooCategory.h"
 #include "RooRealVar.h"
+#include "RooProdPdf.h"
 #include "TH1.h"
 
+#include "RooStats/HistFactory/HistFactorySimultaneous.h"
 #include "RooStats/HistFactory/HistFactoryModelUtils.h"
 
 namespace RooStats{
+namespace HistFactory{
 
 
   std::string channelNameFromPdf( RooAbsPdf* channelPdf ) {
@@ -63,14 +66,43 @@ namespace RooStats{
 
   }
 
+
+ void FactorizeHistFactoryPdf(const RooArgSet &observables, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints) {
+   // utility function to factorize constraint terms from a pdf 
+   // (from G. Petrucciani)
+   const std::type_info & id = typeid(pdf);
+   if (id == typeid(RooProdPdf)) {
+      RooProdPdf *prod = dynamic_cast<RooProdPdf *>(&pdf);
+      RooArgList list(prod->pdfList());
+      for (int i = 0, n = list.getSize(); i < n; ++i) {
+         RooAbsPdf *pdfi = (RooAbsPdf *) list.at(i);
+            FactorizeHistFactoryPdf(observables, *pdfi, obsTerms, constraints);
+         }
+      } else if (id == typeid(RooSimultaneous) || id == typeid(HistFactorySimultaneous) ) {    //|| id == typeid(RooSimultaneousOpt)) {
+         RooSimultaneous *sim  = dynamic_cast<RooSimultaneous *>(&pdf);
+         RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone();
+         for (int ic = 0, nc = cat->numBins((const char *)0); ic < nc; ++ic) {
+            cat->setBin(ic);
+            FactorizeHistFactoryPdf(observables, *sim->getPdf(cat->getLabel()), obsTerms, constraints);
+         }
+         delete cat;
+      } else if (pdf.dependsOn(observables)) {
+         if (!obsTerms.contains(pdf)) obsTerms.add(pdf);
+      } else {
+         if (!constraints.contains(pdf)) constraints.add(pdf);
+      }
+   }
+
+
   void getChannelsFromModel( RooAbsPdf* model, RooArgSet* channels, RooArgSet* channelsWithConstraints ) {
 
     // Loop through the model
     // Find all channels
 
     std::string modelClassName = model->ClassName();
-
-    if( modelClassName == std::string("RooSimultaneous") ) {
+    
+    
+    if( modelClassName == std::string("RooSimultaneous") || model->InheritsFrom("RooSimultaneous") ) {
 
       TIterator* simServerItr = model->serverIterator();
 
@@ -125,7 +157,8 @@ namespace RooStats{
 
     }
     else {
-      std::cout << "Not Yet Implemented" << std::endl;
+      std::cout << "Model is not a RooSimultaneous or doesn't derive from one." << std::endl;
+      std::cout << "HistFactoryModelUtils isn't yet implemented for these pdf's" << std::endl;
     }
 
   }
@@ -255,7 +288,7 @@ namespace RooStats{
 
     // To get the constraint term, loop over all constraint terms
     // and look for the gamma_stat name as well as '_constraint'
-    std::string constraintTermName = std::string(gamma_stat->GetName()) + "_constraint";
+    // std::string constraintTermName = std::string(gamma_stat->GetName()) + "_constraint";
     TIterator* iter_list = constraints->createIterator();
     RooAbsArg* term_constr=NULL;
     bool FoundConstraintTerm=false;
@@ -274,7 +307,9 @@ namespace RooStats{
       }
     }
     if( FoundConstraintTerm==false ) {
-      std::cout << "Error: Couldn't find constraint term for parameter: " << gamma_stat->GetName() << std::endl;
+      std::cout << "Error: Couldn't find constraint term for parameter: " << gamma_stat->GetName()
+		<< " among constraints: " << constraints->GetName() <<  std::endl;
+      constraints->Print("V");
       throw std::runtime_error("Failed to find Gamma ConstraintTerm");
       return -1;
     }
@@ -328,7 +363,7 @@ namespace RooStats{
     }
     if( !FoundPoissonMean || !pois_mean_arg ) {
       std::cout << "Error: Did not find PoissonMean parameter in gamma constraint term: "
-		<< constraintTermName << std::endl;
+		<< constraintTerm->GetName() << std::endl;
       throw std::runtime_error("Failed to find PoissonMean");
       return -1;
     }
@@ -364,3 +399,4 @@ namespace RooStats{
 
 
 } // close RooStats namespace
+} // close HistFactory namespace

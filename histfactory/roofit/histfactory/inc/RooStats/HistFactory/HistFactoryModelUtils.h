@@ -8,12 +8,15 @@
 #include "RooStats/HistFactory/ParamHistFunc.h"
 
 namespace RooStats {
+namespace HistFactory {
   
   std::string channelNameFromPdf( RooAbsPdf* channelPdf );
 
   void getChannelsFromModel( RooAbsPdf* model, RooArgSet* channels, 
 			     RooArgSet* channelsWithConstraints );
 
+
+  void FactorizeHistFactoryPdf(const RooArgSet&, RooAbsPdf&, RooArgList&, RooArgList&);
   bool getStatUncertaintyFromChannel( RooAbsPdf* channel, ParamHistFunc*& paramfunc, 
 				      RooArgList* gammaList );
 
@@ -26,6 +29,7 @@ namespace RooStats {
   int getStatUncertaintyConstraintTerm( RooArgList* constraints, RooRealVar* gamma_stat, 
 					RooAbsReal*& pois_mean, RooRealVar*& tau );
 
+}
 }
 
 
