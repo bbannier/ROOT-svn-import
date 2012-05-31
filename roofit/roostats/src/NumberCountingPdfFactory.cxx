@@ -65,6 +65,7 @@ ClassImp(RooStats::NumberCountingPdfFactory) ;
 
 using namespace RooStats;
 using namespace RooFit;
+using namespace std;
 
 
 //_______________________________________________________
@@ -133,8 +134,10 @@ void NumberCountingPdfFactory::AddModel(Double_t* sig,
 
       RooPoisson* sigRegion = 
          new RooPoisson(("sigRegion"+str.str()).c_str(),("sigRegion"+str.str()).c_str(), *x,*splusb);
+
+      //LM:  need to set noRounding since y can take non integer values
       RooPoisson* sideband = 
-         new RooPoisson(("sideband"+str.str()).c_str(),("sideband"+str.str()).c_str(), *y,*bTau);
+         new RooPoisson(("sideband"+str.str()).c_str(),("sideband"+str.str()).c_str(), *y,*bTau,true);
 
       likelihoodFactors.Add(sigRegion);
       likelihoodFactors.Add(sideband);
@@ -163,14 +166,13 @@ void NumberCountingPdfFactory::AddExpData(Double_t* sig,
    // Arguements are an array of expected signal, expected background, and relative 
    // background uncertainty (eg. 0.1 for 10% uncertainty), and the number of channels.
 
-   using std::vector;
-   Double_t* mainMeas = new Double_t[nbins];
+   std::vector<Double_t> mainMeas(nbins);
 
    // loop over channels
    for(Int_t i=0; i<nbins; ++i){
       mainMeas[i] = sig[i] + back[i];
    }
-   return AddData(mainMeas, back, back_syst, nbins, ws, dsName);
+   return AddData(&mainMeas[0], back, back_syst, nbins, ws, dsName);
 }
 
 //_______________________________________________________
@@ -183,13 +185,13 @@ void NumberCountingPdfFactory::AddExpDataWithSideband(Double_t* sigExp,
    // Arguements are an array of expected signal, expected background, and relative 
    // ratio of background expected in the sideband to that expected in signal region, and the number of channels.
 
-   Double_t* mainMeas = new Double_t[nbins];
-   Double_t* sideband = new Double_t[nbins];
+   std::vector<Double_t> mainMeas(nbins);
+   std::vector<Double_t> sideband(nbins);
    for(Int_t i=0; i<nbins; ++i){
       mainMeas[i] = sigExp[i] + backExp[i];
       sideband[i] = backExp[i]*tau[i];
    }
-   return AddDataWithSideband(mainMeas, sideband, tau, nbins, ws, dsName);
+   return AddDataWithSideband(&mainMeas[0], &sideband[0], tau, nbins, ws, dsName);
 
 }
 
@@ -237,15 +239,19 @@ void NumberCountingPdfFactory::AddData(Double_t* mainMeas,
    TList observablesCollection;
 
    TTree* tree = new TTree();
-   Double_t* xForTree = new Double_t[nbins];
-   Double_t* yForTree = new Double_t[nbins];
+   std::vector<Double_t> xForTree(nbins);
+   std::vector<Double_t> yForTree(nbins);
 
    // loop over channels
    for(Int_t i=0; i<nbins; ++i){
       std::stringstream str;
       str<<"_"<<i;
 
-      Double_t _tau = 1./back[i]/back_syst[i]/back_syst[i];
+      //Double_t _tau = 1./back[i]/back_syst[i]/back_syst[i];
+      // LM: compute tau correctly for the Gamma distribution : mode = tau*b  and variance is (tau*b+1)
+      Double_t err = back_syst[i]; 
+      Double_t _tau = (1.0 + sqrt(1 + 4 * err * err))/ (2. * err * err)/ back[i];
+
       RooRealVar*  tau = SafeObservableCreation(ws,  ("tau"+str.str()).c_str(), _tau );
 
       oocoutW(ws,ObjectHandling) << "NumberCountingPdfFactory: changed value of " << tau->GetName() << " to " << tau->getVal() << 
@@ -268,8 +274,8 @@ void NumberCountingPdfFactory::AddData(Double_t* mainMeas,
       xForTree[i] = mainMeas[i];
       yForTree[i] = back[i]*_tau;
 
-      tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
-      tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
+      tree->Branch(("x"+str.str()).c_str(), &xForTree[i] ,("x"+str.str()+"/D").c_str());
+      tree->Branch(("y"+str.str()).c_str(), &yForTree[i] ,("y"+str.str()+"/D").c_str());
 
       ws->var(("b"+str.str()).c_str())->setMax( 1.2*back[i]+MaxSigma*(sqrt(back[i])+back[i]*back_syst[i]) );
       ws->var(("b"+str.str()).c_str())->setVal( back[i] );
@@ -313,8 +319,10 @@ void NumberCountingPdfFactory::AddDataWithSideband(Double_t* mainMeas,
    TList observablesCollection;
 
    TTree* tree = new TTree();
-   Double_t* xForTree = new Double_t[nbins];
-   Double_t* yForTree = new Double_t[nbins];
+
+   std::vector<Double_t> xForTree(nbins);
+   std::vector<Double_t> yForTree(nbins);
+
 
    // loop over channels
    for(Int_t i=0; i<nbins; ++i){
@@ -349,8 +357,8 @@ void NumberCountingPdfFactory::AddDataWithSideband(Double_t* mainMeas,
       xForTree[i] = mainMeas[i];
       yForTree[i] = sideband[i];
 
-      tree->Branch(("x"+str.str()).c_str(), xForTree+i ,("x"+str.str()+"/D").c_str());
-      tree->Branch(("y"+str.str()).c_str(), yForTree+i ,("y"+str.str()+"/D").c_str());
+      tree->Branch(("x"+str.str()).c_str(), &xForTree[i] ,("x"+str.str()+"/D").c_str());
+      tree->Branch(("y"+str.str()).c_str(), &yForTree[i] ,("y"+str.str()+"/D").c_str());
 
       ws->var(("b"+str.str()).c_str())->setMax(  1.2*back+MaxSigma*(sqrt(back)+back*back_syst) );
       ws->var(("b"+str.str()).c_str())->setVal( back );

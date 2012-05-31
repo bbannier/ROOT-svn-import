@@ -41,6 +41,7 @@ The class can scan the CLs+b values or alternativly CLs (if the method HypoTestI
 ClassImp(RooStats::HypoTestInverterOriginal)
 
 using namespace RooStats;
+using namespace std;
 
 
 HypoTestInverterOriginal::HypoTestInverterOriginal( ) :
@@ -195,7 +196,7 @@ bool HypoTestInverterOriginal::RunAutoScan( double xMin, double xMax, double tar
 	x = (log(target) - log(b)) / a;
 
 	// to do: do not allow next iteration outside the xMin,xMax interval
-	if (x<xMin || x>xMax || isnan(x)) {
+	if (x<xMin || x>xMax || TMath::IsNaN(x)) {
 	  std::cout << "Extrapolated value out of range or nan: exits\n";
 	  quitThisLoop = true;
 	}
@@ -206,7 +207,7 @@ bool HypoTestInverterOriginal::RunAutoScan( double xMin, double xMax, double tar
 	double b = leftCL-a*leftX;
 	x = (target-b)/a;
 
-	if (x<xMin || x>xMax || isnan(x)) {
+	if (x<xMin || x>xMax || TMath::IsNaN(x)) {
 	  std::cout << "Extrapolated value out of range or nan: exits\n";
 	  quitThisLoop = true;
 	}

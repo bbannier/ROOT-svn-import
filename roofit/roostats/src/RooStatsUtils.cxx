@@ -28,6 +28,8 @@ NamespaceImp(RooStats)
 #include "RooStats/RooStatsUtils.h"
 #include <typeinfo>
 
+using namespace std;
+
 // this file is only for the documentation of RooStats namespace
 
 namespace RooStats { 
@@ -47,6 +49,7 @@ namespace RooStats {
          }
       } else if (id == typeid(RooSimultaneous) ) {    //|| id == typeid(RooSimultaneousOpt)) {
          RooSimultaneous *sim  = dynamic_cast<RooSimultaneous *>(&pdf);
+         assert(sim != 0);
          RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone();
          for (int ic = 0, nc = cat->numBins((const char *)0); ic < nc; ++ic) {
             cat->setBin(ic);
@@ -64,6 +67,10 @@ namespace RooStats {
    void FactorizePdf(RooStats::ModelConfig &model, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints) {
       // utility function to factorize constraint terms from a pdf 
       // (from G. Petrucciani)
+      if (!model.GetObservables() ) { 
+         oocoutE((TObject*)0,InputArguments) << "MakeNuisancePdf - invalid input model: missing observables  " << endl;
+         return;
+      }
       return FactorizePdf(*model.GetObservables(), pdf, obsTerms, constraints);
    }
 
@@ -76,7 +83,11 @@ namespace RooStats {
    }
 
    RooAbsPdf * MakeNuisancePdf(const RooStats::ModelConfig &model, const char *name) { 
-      // make a nuisance pdf by factorizing out all constraint terms in a common pdf 
+      // make a nuisance pdf by factorizing out all constraint terms in a common pdf
+      if (!model.GetPdf() || !model.GetObservables() ) { 
+         oocoutE((TObject*)0,InputArguments) << "MakeNuisancePdf - invalid input model  " << endl;
+         return 0;
+      }
       return MakeNuisancePdf(*model.GetPdf(), *model.GetObservables(), name);
    }
 
@@ -139,8 +150,8 @@ namespace RooStats {
          bs->ResetValues();
          const RooArgSet* aset = data.get(entry);
          RooAbsArg *arg(0);
-         TIterator *it = aset->createIterator();
-         for(;(arg = dynamic_cast<RooAbsArg*>(it->Next()));) {
+         RooLinkedListIter it = aset->iterator();
+         for(;(arg = dynamic_cast<RooAbsArg*>(it.Next()));) {
             RooRealVar *rvar = dynamic_cast<RooRealVar*>(arg);
             if (rvar == NULL)
                continue;
@@ -153,9 +164,9 @@ namespace RooStats {
                bs->varVals[TString::Format("%s_err", rvar->GetName())] = rvar->getError();
             }
          }
-         delete it;
          myTree.Fill();
       }
+      delete bs;
    }
 
    TTree * GetAsTTree(TString name, TString desc, const RooDataSet& data) {

@@ -88,6 +88,8 @@ END_HTML
 
 ClassImp(RooStats::BayesianCalculator)
 
+using namespace std;
+
 namespace RooStats { 
 
 
@@ -108,6 +110,8 @@ struct  LikelihoodFunction {
       fOffset(offset), fMaxL(0) {
       fFunc.binding().resetNumCall(); 
    }
+
+   void SetPrior(RooFunctor * prior) { fPrior = prior; }
 
    double operator() (const double *x ) const { 
       double nll = fFunc(x) - fOffset;
@@ -160,16 +164,21 @@ class PosteriorCdfFunction : public ROOT::Math::IGenFunction {
 
 public:
 
-   PosteriorCdfFunction(RooAbsReal & nll, RooAbsReal & prior, RooArgList & bindParams, const char * integType = 0, double nllMinimum = 0) : 
-      fFunctor(nll, bindParams, RooArgList() ),  // functor 
-      fPriorFunc(prior, bindParams, RooArgList() ),  // could be skipped in case of uniform priors
-      fLikelihood(fFunctor, &fPriorFunc, nllMinimum),         // integral of exp(-nll) function
+   PosteriorCdfFunction(RooAbsReal & nll,  RooArgList & bindParams, RooAbsReal * prior = 0, const char * integType = 0, double nllMinimum = 0) : 
+      fFunctor(nll, bindParams, RooArgList() ),              // functor 
+      fPriorFunc(std::auto_ptr<RooFunctor>((RooFunctor*)0)),
+      fLikelihood(fFunctor, 0, nllMinimum),         // integral of exp(-nll) function
       fIntegrator(ROOT::Math::IntegratorMultiDim::GetType(integType) ),  // integrator 
       fXmin(bindParams.getSize() ),               // vector of parameters (min values) 
       fXmax(bindParams.getSize() ),               // vector of parameter (max values) 
       fNorm(1.0), fNormErr(0.0), fOffset(0), fMaxPOI(0), 
       fHasNorm(false),  fUseOldValues(true), fError(false) 
    {     
+
+      if (prior) { 
+         fPriorFunc = std::auto_ptr<RooFunctor>(new RooFunctor(*prior, bindParams, RooArgList() ));
+         fLikelihood.SetPrior(fPriorFunc.get() );
+      }
 
       fIntegrator.SetFunction(fLikelihood, bindParams.getSize() );
          
@@ -200,14 +209,14 @@ public:
 
    }
    
-   // copy constructor 
+   // copy constructor (needed for Cloning the object)
    // need special treatment because integrator 
    // has no copy constuctor
    PosteriorCdfFunction(const PosteriorCdfFunction & rhs) : 
       ROOT::Math::IGenFunction(),
       fFunctor(rhs.fFunctor),
-      fPriorFunc(rhs.fPriorFunc),
-      fLikelihood(fFunctor, &fPriorFunc, rhs.fLikelihood.fOffset),  
+      fPriorFunc(std::auto_ptr<RooFunctor>((RooFunctor*)0)),
+      fLikelihood(fFunctor, 0, rhs.fLikelihood.fOffset),  
       fIntegrator(ROOT::Math::IntegratorMultiDim::GetType( rhs.fIntegrator.Name().c_str() ) ),  // integrator 
       fXmin( rhs.fXmin), 
       fXmax( rhs.fXmax), 
@@ -221,6 +230,11 @@ public:
       fNormCdfValues(rhs.fNormCdfValues)
    { 
       fIntegrator.SetFunction(fLikelihood, fXmin.size() );
+      // need special treatment for the auto_ptr
+      if (rhs.fPriorFunc.get() ) { 
+         fPriorFunc = std::auto_ptr<RooFunctor>(new RooFunctor(*(rhs.fPriorFunc) ) );
+         fLikelihood.SetPrior( fPriorFunc.get() );
+      }
    }
                                    
     
@@ -308,9 +322,9 @@ private:
       return normcdf - fOffset;  // apply an offset (for finding the roots) 
    }
 
-   mutable RooFunctor fFunctor;                         // functor binding nll 
-   mutable RooFunctor fPriorFunc;                         // functor binding the prior 
-   LikelihoodFunction fLikelihood;              // likelihood function
+   mutable RooFunctor fFunctor;                   // functor binding nll 
+   mutable std::auto_ptr<RooFunctor> fPriorFunc;  // functor binding the prior 
+   LikelihoodFunction fLikelihood;               // likelihood function
    mutable ROOT::Math::IntegratorMultiDim  fIntegrator; // integrator  (mutable because Integral() is not const
    mutable std::vector<double> fXmin;    // min value of parameters (poi+nuis) - 
    mutable std::vector<double> fXmax;   // max value of parameters (poi+nuis) - max poi changes so it is mutable
@@ -334,17 +348,22 @@ class PosteriorFunction : public ROOT::Math::IGenFunction {
 public: 
 
 
-   PosteriorFunction(RooAbsReal & nll, RooAbsReal & prior, RooRealVar & poi, RooArgList & nuisParams, const char * integType = 0, double
+   PosteriorFunction(RooAbsReal & nll, RooRealVar & poi, RooArgList & nuisParams, RooAbsReal * prior = 0, const char * integType = 0, double
                      norm = 1.0,  double nllOffset = 0, int niter = 0) :
       fFunctor(nll, nuisParams, RooArgList() ),
-      fPriorFunc(prior, nuisParams, RooArgList() ),  // create prior, it could have some dependence on nuisance parameters
-      fLikelihood(fFunctor, &fPriorFunc, nllOffset), 
+      fPriorFunc(std::auto_ptr<RooFunctor>((RooFunctor*)0)),
+      fLikelihood(fFunctor, 0, nllOffset), 
       fPoi(&poi),
       fXmin(nuisParams.getSize() ),
       fXmax(nuisParams.getSize() ), 
       fNorm(norm),
       fError(0)
    { 
+
+      if (prior) { 
+         fPriorFunc = std::auto_ptr<RooFunctor>(new RooFunctor(*prior, nuisParams, RooArgList() ));
+         fLikelihood.SetPrior(fPriorFunc.get() );
+      }
 
       ooccoutD((TObject*)0,NumIntegration) << "PosteriorFunction::Evaluate the posterior function by integrating the nuisances: " << std::endl;
       for (unsigned int i = 0; i < fXmin.size(); ++i) { 
@@ -428,7 +447,7 @@ private:
    }
 
    mutable RooFunctor fFunctor; 
-   mutable RooFunctor fPriorFunc; 
+   mutable std::auto_ptr<RooFunctor> fPriorFunc;  // functor binding the prior 
    LikelihoodFunction fLikelihood; 
    RooRealVar * fPoi;
    std::auto_ptr<ROOT::Math::Integrator>  fIntegratorOneDim; 
@@ -446,11 +465,11 @@ class PosteriorFunctionFromToyMC : public ROOT::Math::IGenFunction {
 public: 
 
 
-   PosteriorFunctionFromToyMC(RooAbsReal & nll, RooAbsReal & prior, RooAbsPdf & pdf, RooRealVar & poi, RooArgList & nuisParams, double
+   PosteriorFunctionFromToyMC(RooAbsReal & nll, RooAbsPdf & pdf, RooRealVar & poi, RooArgList & nuisParams, RooAbsReal * prior = 0, double
                               nllOffset = 0, int niter = 0, bool redoToys = true ) :
       fFunctor(nll, nuisParams, RooArgList() ),
-      fPriorFunc(prior, nuisParams, RooArgList() ), // create prior, it could have some dependence on nuisance parameters
-      fLikelihood(fFunctor, &fPriorFunc, nllOffset), 
+      fPriorFunc(std::auto_ptr<RooFunctor>((RooFunctor*)0)),
+      fLikelihood(fFunctor, 0, nllOffset), 
       fPdf(&pdf),
       fPoi(&poi),
       fNuisParams(nuisParams),
@@ -460,6 +479,11 @@ public:
       fRedoToys(redoToys)
    { 
       if (niter == 0) fNumIterations = 100; // default value 
+
+      if (prior) { 
+         fPriorFunc = std::auto_ptr<RooFunctor>(new RooFunctor(*prior, nuisParams, RooArgList() ));
+         fLikelihood.SetPrior(fPriorFunc.get() );
+      }
 
       ooccoutI((TObject*)0,InputArguments) << "PosteriorFunctionFromToyMC::Evaluate the posterior function by randomizing the nuisances:  niter " << fNumIterations << std::endl;
 
@@ -597,7 +621,7 @@ private:
    }
 
    mutable RooFunctor fFunctor; 
-   mutable RooFunctor fPriorFunc; 
+   mutable std::auto_ptr<RooFunctor> fPriorFunc;  // functor binding the prior 
    LikelihoodFunction fLikelihood; 
    mutable RooAbsPdf * fPdf;
    RooRealVar * fPoi;
@@ -616,7 +640,7 @@ private:
 BayesianCalculator::BayesianCalculator() :
    fData(0),
    fPdf(0),
-   fPriorPOI(0),
+   fPriorPdf(0),
    fNuisancePdf(0),
    fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0), 
    fPosteriorFunction(0), fApproxPosterior(0),
@@ -625,6 +649,7 @@ BayesianCalculator::BayesianCalculator() :
    fSize(0.05), fLeftSideFraction(0.5), 
    fBrfPrecision(0.00005), 
    fNScanBins(-1),
+   fNumIterations(0),
    fValidInterval(false)
 {
    // default constructor
@@ -634,12 +659,12 @@ BayesianCalculator::BayesianCalculator( /* const char* name,  const char* title,
 						    RooAbsData& data,
                                                     RooAbsPdf& pdf,
 						    const RooArgSet& POI,
-						    RooAbsPdf& priorPOI,
+						    RooAbsPdf& priorPdf,
 						    const RooArgSet* nuisanceParameters ) :
    fData(&data),
    fPdf(&pdf),
    fPOI(POI),
-   fPriorPOI(&priorPOI),
+   fPriorPdf(&priorPdf),
    fNuisancePdf(0),
    fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
    fPosteriorFunction(0), fApproxPosterior(0),
@@ -664,7 +689,7 @@ BayesianCalculator::BayesianCalculator( RooAbsData& data,
                        ModelConfig & model) : 
    fData(&data), 
    fPdf(model.GetPdf()),
-   fPriorPOI( model.GetPriorPdf()),
+   fPriorPdf( model.GetPriorPdf()),
    fNuisancePdf(0),
    fProductPdf (0), fLogLike(0), fLikelihood (0), fIntegratedLikelihood (0), fPosteriorPdf(0),
    fPosteriorFunction(0), fApproxPosterior(0),
@@ -715,7 +740,7 @@ void BayesianCalculator::SetModel(const ModelConfig & model) {
    // will be taken according to the model 
 
    fPdf = model.GetPdf();
-   fPriorPOI =  model.GetPriorPdf(); 
+   fPriorPdf =  model.GetPriorPdf(); 
    // assignment operator = does not do a real copy the sets (must use add method) 
    fPOI.removeAll();
    fNuisanceParameters.removeAll();
@@ -748,10 +773,6 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
       coutE(InputArguments) << "BayesianCalculator::GetPosteriorPdf - missing pdf model" << std::endl;
       return 0;
    }
-   if (!fPriorPOI) { 
-      coutE(InputArguments) << "BayesianCalculator::GetPosteriorPdf - missing prior pdf" << std::endl;
-      return 0;
-   }
    if (fPOI.getSize() == 0) {
       coutE(InputArguments) << "BayesianCalculator::GetPosteriorPdf - missing parameter of interest" << std::endl;
       return 0;
@@ -775,8 +796,10 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 
    ccoutD(Eval) <<  "BayesianCalculator::GetPosteriorFunction : " 
                 << " pdf value " <<  fPdf->getVal() 
-                << " neglogLikelihood = " << fLogLike->getVal() 
-                << " priorPOI value " << fPriorPOI->getVal() << std::endl;
+                << " neglogLikelihood = " << fLogLike->getVal() << std::endl;
+                
+   if (fPriorPdf) 
+      ccoutD(Eval)  << "\t\t\t priorPOI value " << fPriorPdf->getVal() << std::endl;
 
    // check that likelihood evaluation is not inifinity 
    double nllVal =  fLogLike->getVal();   
@@ -797,20 +820,24 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
    }
 
 
+
    // need do find minimum of log-likelihood in the range to shift function 
    // to avoid numerical errors when we compute the likelihood (overflows in the exponent)
    // N.B.: this works for only 1 parameter of interest otherwise Minuit should be used for finding the minimum
    RooFunctor * nllFunc = fLogLike->functor(fPOI);
+   assert(nllFunc);
    ROOT::Math::Functor1D wnllFunc(*nllFunc);
    RooRealVar* poi = dynamic_cast<RooRealVar*>( fPOI.first() ); 
    assert(poi);
 
+   // try to reduce some error messages
+   //Bool_t silentMode = (RooMsgService::instance().globalKillBelow() >= RooFit::ERROR || RooMsgService::instance().silentMode()) ;
+   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+
+
    coutI(Eval) <<  "BayesianCalculator::GetPosteriorFunction : " 
                << " nll value " <<  nllVal << " poi value = " << poi->getVal() << std::endl;
 
-   // if pdf evaluates to zero, should be fixed, but this will
-   // stop error messages.
-   fLogLike->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
    ROOT::Math::BrentMinimizer1D minim; 
    minim.SetFunction(wnllFunc,poi->getMin(),poi->getMax() );
@@ -833,32 +860,42 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 
 #ifdef DOLATER // (not clear why this does not work)
       // need to make in this case a likelihood from the nll and make the product with the prior
-      TString likeName = TString("likelihood_times_prior_") + TString(fPriorPOI->GetName());   
+      TString likeName = TString("likelihood_times_prior_") + TString(fPriorPdf->GetName());   
       TString formula; 
       formula.Form("exp(-@0+%f+log(@1))",fNLLMin);
-      fLikelihood = new RooFormulaVar(likeName,formula,RooArgList(*fLogLike,*fPriorPOI));
+      fLikelihood = new RooFormulaVar(likeName,formula,RooArgList(*fLogLike,*fPriorPdf));
 #else
       // here use RooProdPdf (not very nice) but working
 
       if (fLogLike) delete fLogLike; 
+      if (fProductPdf) { 
+         delete fProductPdf;
+         fProductPdf = 0; 
+      }
+
       // // create a unique name for the product pdf 
-      TString prodName = TString("product_") + TString(fPdf->GetName()) + TString("_") + TString(fPriorPOI->GetName() );   
-      fProductPdf = new RooProdPdf(prodName,"",RooArgList(*fPdf,*fPriorPOI));
+      RooAbsPdf *  pdfAndPrior = fPdf; 
+      if (fPriorPdf) { 
+         TString prodName = TString("product_") + TString(fPdf->GetName()) + TString("_") + TString(fPriorPdf->GetName() );   
+         // save this as data member since it needs to be deleted afterwards
+         fProductPdf = new RooProdPdf(prodName,"",RooArgList(*fPdf,*fPriorPdf));
+         pdfAndPrior = fProductPdf;
+      }
 
       RooArgSet* constrParams = fPdf->getParameters(*fData);
       // remove the constant parameters
       RemoveConstantParameters(constrParams);
-      fLogLike = fProductPdf->createNLL(*fData, RooFit::Constrain(*constrParams) );
+      fLogLike = pdfAndPrior->createNLL(*fData, RooFit::Constrain(*constrParams) );
       delete constrParams;
 
-      TString likeName = TString("likelihood_times_prior_") + TString(fProductPdf->GetName());   
+      TString likeName = TString("likelihood_times_prior_") + TString(pdfAndPrior->GetName());   
       TString formula; 
       formula.Form("exp(-@0+%f)",fNLLMin);
       fLikelihood = new RooFormulaVar(likeName,formula,RooArgList(*fLogLike));
 #endif
 
       
-      // if no nuisance parameter we can just return the likelihood funtion
+      // if no nuisance parameter we can just return the likelihood function
       if (fNuisanceParameters.getSize() == 0) { 
          fIntegratedLikelihood = fLikelihood; 
          fLikelihood = 0; 
@@ -867,7 +904,7 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
          // case of using RooFit for the integration
          fIntegratedLikelihood = fLikelihood->createIntegral(fNuisanceParameters);
 
-      return fIntegratedLikelihood;
+
    }
 
    else if ( fIntegrationType.Contains("TOYMC") ) { 
@@ -885,7 +922,7 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
          ccoutI(Eval) << "BayesianCalculator::GetPosteriorFunction : no nuisance pdf is provided, try using global pdf (this will be slower)"
                       << std::endl;         
       }
-      fPosteriorFunction = new PosteriorFunctionFromToyMC(*fLogLike, *fPriorPOI, *samplingPdf, *poi, nuisParams, fNLLMin,
+      fPosteriorFunction = new PosteriorFunctionFromToyMC(*fLogLike, *samplingPdf, *poi, nuisParams, fPriorPdf, fNLLMin,
                                                           fNumIterations, doToysEveryIteration ); 
 
       TString name = "toyposteriorfunction_from_"; 
@@ -902,7 +939,7 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
       // use ROOT integration method if there are nuisance parameters 
 
       RooArgList nuisParams(fNuisanceParameters); 
-      fPosteriorFunction = new PosteriorFunction(*fLogLike, *fPriorPOI, *poi, nuisParams, fIntegrationType, 1.,fNLLMin, fNumIterations ); 
+      fPosteriorFunction = new PosteriorFunction(*fLogLike, *poi, nuisParams, fPriorPdf, fIntegrationType, 1., fNLLMin, fNumIterations ); 
       
       TString name = "posteriorfunction_from_"; 
       name += fLogLike->GetName();  
@@ -910,11 +947,12 @@ RooAbsReal* BayesianCalculator::GetPosteriorFunction() const
 
    }
 
-   //fIntegratedLikelihood->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
-   // ccoutD(Eval) << "BayesianCalculator::GetPosteriorFunction : use ROOT numerical integration algorithm. "; 
-   // ccoutD(Eval) << " Integrated log-likelihood = " << fIntegratedLikelihood->getVal() << std::endl;
-
+   if (RooAbsReal::numEvalErrors() > 0) 
+      coutW(Eval) << "BayesianCalculator::GetPosteriorFunction : " << RooAbsReal::numEvalErrors() << " errors reported in evaluating log-likelihood function "
+                   << std::endl;         
+   RooAbsReal::clearEvalErrorLog();
+   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors);
    
    return fIntegratedLikelihood;  
 
@@ -966,14 +1004,19 @@ RooPlot* BayesianCalculator::GetPosteriorPlot(bool norm, double precision ) cons
 
 
    RooPlot* plot = poi->frame();
+   if (!plot) return 0;
 
    // try to reduce some error messages
-   posterior->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
    plot->SetTitle(TString("Posterior probability of parameter \"")+TString(poi->GetName())+TString("\""));  
    posterior->plotOn(plot,RooFit::Range(fLower,fUpper,kFALSE),RooFit::VLines(),RooFit::DrawOption("F"),RooFit::MoveToBack(),RooFit::FillColor(kGray),RooFit::Precision(precision));
    posterior->plotOn(plot);
    plot->GetYaxis()->SetTitle("posterior function");
+
+   // reset the counts and default mode
+   RooAbsReal::clearEvalErrorLog();
+   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors);
    
    return plot; 
 }
@@ -1039,8 +1082,13 @@ SimpleInterval* BayesianCalculator::GetInterval() const
       return 0; 
    } 
 
+
+
    // get integrated likelihood (posterior function) 
    GetPosteriorFunction();
+
+   //Bool_t silentMode = (RooMsgService::instance().globalKillBelow() >= RooFit::ERROR || RooMsgService::instance().silentMode()) ;
+   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
    if (fLeftSideFraction < 0 ) { 
       // compute short intervals
@@ -1075,6 +1123,15 @@ SimpleInterval* BayesianCalculator::GetInterval() const
          }
       }
    }
+
+
+   // reset the counts and default mode
+   if (RooAbsReal::numEvalErrors() > 0) 
+      coutW(Eval) << "BayesianCalculator::GetInterval : " << RooAbsReal::numEvalErrors() << " errors reported in evaluating log-likelihood function "
+                   << std::endl;         
+   
+   RooAbsReal::clearEvalErrorLog();
+   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors);
 
    if (!fValidInterval) { 
       fLower = 1; fUpper = 0;
@@ -1119,8 +1176,11 @@ void BayesianCalculator::ComputeIntervalUsingRooFit(double lowerCutOff, double u
    if (!fPosteriorPdf) return;
          
    RooAbsReal* cdf = fPosteriorPdf->createCdf(fPOI,RooFit::ScanNoCdf());
+   if (!cdf) return;
          
    RooAbsFunc* cdf_bind = cdf->bindVars(fPOI,&fPOI);
+   if (!cdf_bind) return; 
+
    RooBrentRootFinder brf(*cdf_bind);
    brf.setTol(fBrfPrecision); // set the brf precision
    
@@ -1176,7 +1236,7 @@ void BayesianCalculator::ComputeIntervalFromCdf(double lowerCutOff, double upper
          
    //bindParams.Print("V");
          
-   PosteriorCdfFunction cdf(*fLogLike, *fPriorPOI, bindParams, fIntegrationType, fNLLMin ); 
+   PosteriorCdfFunction cdf(*fLogLike, bindParams, fPriorPdf, fIntegrationType, fNLLMin ); 
    if( cdf.HasError() ) { 
       coutE(Eval) <<  "BayesianCalculator: Numerical error computing CDF integral - try a different method " << std::endl;      
       return;
@@ -1238,11 +1298,10 @@ void BayesianCalculator::ApproximatePosterior() const {
       fApproxPosterior = 0;
    }      
 
+
    RooAbsReal * posterior = GetPosteriorFunction();
    if (!posterior) return; 
 
-   // try to reduce some error messages
-   posterior->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
 
    TF1 * tmp = posterior->asTF(fPOI); 
    assert(tmp != 0);
@@ -1280,7 +1339,7 @@ void BayesianCalculator::ComputeIntervalFromApproxPosterior(double lowerCutOff, 
    if (!fApproxPosterior) return;
 
    double prob[2]; 
-   double limits[2];
+   double limits[2] = {0,0};
    prob[0] = lowerCutOff;
    prob[1] = upperCutOff; 
    fApproxPosterior->GetQuantiles(2,limits,prob);

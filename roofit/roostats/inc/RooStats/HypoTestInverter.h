@@ -66,9 +66,9 @@ public:
                      RooRealVar* scannedVariable, 
                      double size = 0.05) ;
 
-   // constructor from two ModelConfigs
-   HypoTestInverter( RooAbsData& data, ModelConfig &b, ModelConfig &sb,
-		      RooRealVar * scannedVariable = 0,  ECalculatorType type = kFrequentist, 
+   // constructor from two ModelConfigs (first sb (the null model) then b (the alt model)
+   HypoTestInverter( RooAbsData& data, ModelConfig &sb, ModelConfig &b,
+		     RooRealVar * scannedVariable = 0,  ECalculatorType type = kFrequentist, 
 		     double size = 0.05) ;
 
 
@@ -77,15 +77,16 @@ public:
    void Clear();
 
    // set for a fixed scan in nbins
-   void SetFixedScan(int nBins, double xMin = 1, double xMax = -1) {
+   void SetFixedScan(int nBins, double xMin = 1, double xMax = -1, bool scanLog = false ) {
       fNBins = nBins; 
       fXmin = xMin; fXmax = xMax; 
+      fScanLog = scanLog;
    }
      
    // set auto scan (default) 
    void SetAutoScan() { SetFixedScan(0); }
 
-   bool RunFixedScan( int nBins, double xMin, double xMax ) const;
+   bool RunFixedScan( int nBins, double xMin, double xMax, bool scanLog = false ) const;
 
    bool RunOnePoint( double thisX, bool adaptive = false, double clTarget = -1 ) const;
 
@@ -178,11 +179,12 @@ private:
    int fMaxToys;  // maximum number of toys to run 
     
    HypoTestCalculatorGeneric* fCalculator0;   // pointer to the calculator passed in the constructor
-   auto_ptr<HypoTestCalculatorGeneric> fHC;
+   std::auto_ptr<HypoTestCalculatorGeneric> fHC;
    RooRealVar* fScannedVariable;     // pointer to the constrained variable
    mutable HypoTestInverterResult* fResults; // pointer to the result 
      
    bool fUseCLs;
+   bool fScanLog; 
    double fSize;
    int fVerbose;
    ECalculatorType fCalcType; 
@@ -193,7 +195,7 @@ private:
 
 protected:
 
-   ClassDef(HypoTestInverter,2)  // HypoTestInverter class
+   ClassDef(HypoTestInverter,3)  // HypoTestInverter class
 
 };
 

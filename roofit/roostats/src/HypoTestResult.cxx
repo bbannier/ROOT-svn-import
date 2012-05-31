@@ -45,11 +45,12 @@ END_HTML
 
 #include <limits>
 #define NaN numeric_limits<float>::quiet_NaN()
-#define IsNaN(a) isnan(a)
+#define IsNaN(a) TMath::IsNaN(a)
 
 ClassImp(RooStats::HypoTestResult) ;
 
 using namespace RooStats;
+using namespace std;
 
 
 //____________________________________________________________________
@@ -175,7 +176,11 @@ void HypoTestResult::SetTestStatisticData(const Double_t tsd) {
 }
 //____________________________________________________________________
 void HypoTestResult::SetAllTestStatisticsData(const RooArgList* tsd) {
-   fAllTestStatisticsData = (const RooArgList*)tsd->snapshot();
+   if (fAllTestStatisticsData) { 
+      delete fAllTestStatisticsData; 
+      fAllTestStatisticsData = 0; 
+   }
+   if (tsd) fAllTestStatisticsData = (const RooArgList*)tsd->snapshot();
    
    if( fAllTestStatisticsData  &&  fAllTestStatisticsData->getSize() > 0 ) {
       RooRealVar* firstTS = (RooRealVar*)fAllTestStatisticsData->at(0);
