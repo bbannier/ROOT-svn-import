@@ -14,6 +14,18 @@
 #include "RooPullVar.h"
 #include "RooStats/DetailedOutputAggregator.h"
 
+#include "RooProfileLL.h"
+#include "RooNLLVar.h"
+#include "RooMsgService.h"
+#include "RooMinimizer.h"
+#include "RooArgSet.h"
+#include "RooAbsData.h"
+#include "TStopwatch.h"
+
+#include "RooStats/RooStatsUtils.h"
+
+using namespace std;
+
 Bool_t RooStats::ProfileLikelihoodTestStat::fgAlwaysReuseNll = kTRUE ;
 
 Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type, RooAbsData& data, RooArgSet& paramsOfInterest) {
@@ -25,11 +37,11 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
 	 cout << "problem with data" << endl;
 	 return 0 ;
        }
-       if( fDetailedOutputEnabled and fDetailedOutput ) {
+       if( fDetailedOutputEnabled && fDetailedOutput ) {
 	       delete fDetailedOutput;
 	       fDetailedOutput = 0;
        }
-       if( fDetailedOutputEnabled and !fDetailedOutput ) {
+       if( fDetailedOutputEnabled && !fDetailedOutput ) {
 	       fDetailedOutput = new RooArgSet();
        }
 
@@ -59,16 +71,14 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
           RooStats::RemoveConstantParameters(allParams);
 
           // need to call constrain for RooSimultaneous until stripDisconnected problem fixed
-          fNll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
+          fNll = fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
 
-          //	 fNll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE));
-          //	 fProfile = (RooProfileLL*) fNll->createProfile(paramsOfInterest);
           created = kTRUE ;
           delete allParams;
-          if (fPrintLevel > 1) cout << "creating profile LL " << fNll << " " << fProfile << " data = " << &data << endl ;
+          if (fPrintLevel > 1) cout << "creating NLL " << fNll << " with data = " << &data << endl ;
        }
        if (reuse && !created) {
-          if (fPrintLevel > 1) cout << "reusing profile LL " << fNll << " new data = " << &data << endl ;
+          if (fPrintLevel > 1) cout << "reusing NLL " << fNll << " new data = " << &data << endl ;
           fNll->setData(data,kFALSE) ;
        }
 
@@ -100,16 +110,21 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
           // minimize and count eval errors
           fNll->clearEvalErrorLog();
 	  RooFitResult* result = GetMinNLL();
-	  uncondML = result->minNll();
-	  statusD = result->status();
+          if (result) {
+             uncondML = result->minNll();
+             statusD = result->status();
 
-          // get best fit value for one-sided interval 
-	  if (firstPOI) fit_favored_mu = attachedSet->getRealValue(firstPOI->GetName()) ;
+             // get best fit value for one-sided interval 
+             if (firstPOI) fit_favored_mu = attachedSet->getRealValue(firstPOI->GetName()) ;
 
-	  // save this snapshot
-	  if( fDetailedOutputEnabled )
+             // save this snapshot
+             if( fDetailedOutputEnabled )
 		  fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitUncond_", fDetailedOutputWithErrorsAndPulls));
-	  delete result;
+             delete result;
+          }
+          else { 
+             return TMath::SignalingNaN();   // this should not really happen
+          }
        }
        tsw.Stop();
        double fitTime1  = tsw.CpuTime();
@@ -158,11 +173,16 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
           else {              
             fNll->clearEvalErrorLog();
             RooFitResult* result = GetMinNLL();
-            condML = result->minNll();
-            statusN = result->status();
-            if( fDetailedOutputEnabled )
-               fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitCond_", fDetailedOutputWithErrorsAndPulls));
-            delete result;
+            if (result) { 
+               condML = result->minNll();
+               statusN = result->status();
+               if( fDetailedOutputEnabled )
+                  fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitCond_", fDetailedOutputWithErrorsAndPulls));
+               delete result;
+            }
+            else { 
+               return TMath::SignalingNaN();   // this should not really happen
+            }
           }
 
        }
@@ -206,8 +226,6 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        if (!reuse) {
 	 delete fNll;
 	 fNll = 0; 
-	 //	 delete fProfile;
-	 fProfile = 0 ;
        }
 
        RooMsgService::instance().setGlobalKillBelow(msglevel);

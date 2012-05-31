@@ -32,8 +32,10 @@
    */
 //
 
+
 #include "RooFitResult.h"
 #include "RooPullVar.h"
+#include "RooDataSet.h"
 
 namespace RooStats {
 

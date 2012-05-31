@@ -79,6 +79,7 @@ ClassImp(RooStats::BernsteinCorrection) ;
 
 using namespace RooFit;
 using namespace RooStats;
+using namespace std;
 
 //____________________________________
 BernsteinCorrection::BernsteinCorrection(Double_t tolerance):
@@ -97,6 +98,11 @@ Int_t BernsteinCorrection::ImportCorrectedPdf(RooWorkspace* wks,
   RooRealVar* x = wks->var(varName);
   RooAbsPdf* nominal = wks->pdf(nominalName);
   RooAbsData* data = wks->data(dataName);
+
+  if (!x || !nominal || !data) { 
+     cout << "Error:  wrong name for pdf or variable or dataset - return -1 " << std::endl;
+     return -1;
+  }
 
   // initialize alg, by checking how well nominal model fits
   RooFitResult* nominalResult = nominal->fitTo(*data,Save(),Minos(kFALSE), Hesse(kFALSE),PrintLevel(-1));
@@ -191,6 +197,11 @@ void BernsteinCorrection::CreateQSamplingDist(RooWorkspace* wks,
   RooRealVar* x = wks->var(varName);
   RooAbsPdf* nominal = wks->pdf(nominalName);
   RooAbsData* data = wks->data(dataName);
+
+  if (!x || !nominal || !data) { 
+     cout << "Error:  wrong name for pdf or variable or dataset ! " << std::endl;
+     return;
+  }
 
   // setup a log
   std::stringstream log;

@@ -34,7 +34,7 @@ objects.
 #endif
 
 #include <limits>
-#define NaN numeric_limits<float>::quiet_NaN()
+#define NaN std::numeric_limits<float>::quiet_NaN()
 #include "TMath.h"
 #define IsNaN(a) TMath::IsNaN(a)
 
@@ -43,6 +43,7 @@ objects.
 ClassImp(RooStats::SamplingDistPlot);
 
 using namespace RooStats;
+using namespace std;
 
 //_______________________________________________________
 SamplingDistPlot::SamplingDistPlot(Int_t nbins) :
@@ -245,8 +246,8 @@ void SamplingDistPlot::addOtherObject(TObject *obj, Option_t *drawOptions)
   // when its containing plot object is destroyed.
 
   if(0 == obj) {
-    std::cerr << fName << "::addOtherObject: called with a null pointer" << std::endl;
-    return;
+     oocoutE(this,InputArguments) << fName << "::addOtherObject: called with a null pointer" << std::endl;
+     return;
   }
 
   fOtherItems.Add(obj,drawOptions);
@@ -273,9 +274,13 @@ void SamplingDistPlot::Draw(Option_t * /*options */) {
 
    //L.M. by drawing many times we create a memory leak ???
    if (fRooPlot) delete fRooPlot;
-
+   
 
    fRooPlot = xaxis.frame();
+   if (!fRooPlot) { 
+     oocoutE(this,InputArguments) << "invalid variable to plot" << std::endl;
+     return;      
+   }
    fRooPlot->SetTitle("");
    if( !IsNaN(theYMax) ) {
       //coutI(InputArguments) << "Setting maximum to " << theYMax << endl;

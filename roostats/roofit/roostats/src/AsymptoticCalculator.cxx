@@ -40,9 +40,13 @@
 #include <cmath>
 #include <typeinfo>
 
+#include "Math/BrentRootFinder.h"
+#include "Math/WrappedFunction.h"
+
 #include "TStopwatch.h"
 
 using namespace RooStats;
+using namespace std;
 
 namespace Utils { 
 
@@ -82,7 +86,7 @@ AsymptoticCalculator::AsymptoticCalculator(
    const ModelConfig &altModel,
    const ModelConfig &nullModel, bool nominalAsimov) :
       HypoTestCalculatorGeneric(data, altModel, nullModel, 0), 
-      fOneSided(false), fUseQTilde(-1), 
+      fOneSided(false), fOneSidedDiscovery(false), fUseQTilde(-1), 
       fNLLObs(0), fNLLAsimov(0), 
       fAsimovData(0)   
 {
@@ -132,16 +136,16 @@ AsymptoticCalculator::AsymptoticCalculator(
       allParams->snapshot(nominalParams);
    }
 
-   // evaluate the unconditional nll for the full model on the  observed data  
-   oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
+   // evaluate the unconditional nll for the full model on the  observed data 
+   if (verbose >= 0)
+      oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
    fNLLObs = EvaluateNLL( *nullPdf, *obsData);
    // fill also snapshot of best poi
    poi->snapshot(fBestFitPoi);
-   if (verbose > 0) {
-      std::cout << "Best fitted POI\n";
-      fBestFitPoi.Print("v");
-      std::cout << std::endl;
-   }
+   RooRealVar * muBest = dynamic_cast<RooRealVar*>(fBestFitPoi.first());
+   assert(muBest);
+   if (verbose >= 0)  
+      oocoutP((TObject*)0,Eval) << "Best fitted POI value = " << muBest->getVal() << " +/- " << muBest->getError() << std::endl;   
    // keep snapshot of all best fit parameters
    allParams->snapshot(fBestFitParams);
    delete allParams;
@@ -159,14 +163,16 @@ AsymptoticCalculator::AsymptoticCalculator(
 
 
    if (!nominalAsimov) {
-      oocoutI((TObject*)0,InputArguments) << "AsymptoticCalculator: Asimov data will be generated using fitted nuisance parameter values" << endl;
+      if (verbose >= 0) 
+         oocoutI((TObject*)0,InputArguments) << "AsymptoticCalculator: Asimov data will be generated using fitted nuisance parameter values" << endl;
       RooArgSet * tmp = (RooArgSet*) poiAlt.snapshot(); 
       fAsimovData = MakeAsimovData( data, nullModel, poiAlt, fAsimovGlobObs,tmp);
    }
 
    else {
       // assume use current value of nuisance as nominal ones
-      oocoutI((TObject*)0,InputArguments) << "AsymptoticCalculator: Asimovdata set will be generated using nominal (current) nuisance parameter values" << endl;
+      if (verbose >= 0) 
+         oocoutI((TObject*)0,InputArguments) << "AsymptoticCalculator: Asimovdata set will be generated using nominal (current) nuisance parameter values" << endl;
       nominalParams = poiAlt; // set poi to alt value but keep nuisance at the nominal one
       fAsimovData = MakeAsimovData( nullModel, nominalParams, fAsimovGlobObs);
    }
@@ -193,8 +199,9 @@ AsymptoticCalculator::AsymptoticCalculator(
 
    RooRealVar * muAlt = (RooRealVar*) poiAlt.first();
    assert(muAlt);
-   oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best conditional NLL on ASIMOV data set for given alt POI ( " << 
-      muAlt->GetName() << " ) = " << muAlt->getVal() << std::endl;
+   if (verbose>=0)
+      oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best conditional NLL on ASIMOV data set for given alt POI ( " << 
+         muAlt->GetName() << " ) = " << muAlt->getVal() << std::endl;
 
    fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData, &poiAlt );
    // for unconditional fit 
@@ -203,6 +210,17 @@ AsymptoticCalculator::AsymptoticCalculator(
 
    // restore previous value 
    globObs = globObsSnapshot;
+
+   // try to guess default configuration
+   // (this part should be in constructor)
+   RooRealVar * muNull  = dynamic_cast<RooRealVar*>( nullSnapshot->first() );
+   assert (muNull);
+   if (muNull->getVal() == muNull->getMin()) { 
+      fOneSidedDiscovery = true; 
+      if (verbose > 0) 
+         oocoutI((TObject*)0,InputArguments) << "Minimum of POI is " << muNull->getMin() << " corresponds to null  snapshot   - default configuration is  one-sided discovery formulae  " << std::endl;
+   }
+
 
 
 }
@@ -222,7 +240,7 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     // add constraint terms for all non-constant parameters
 
     // need to call constrain for RooSimultaneous until stripDisconnected problem fixed
-    RooAbsReal* nll = (RooNLLVar*) pdf.createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
+    RooAbsReal* nll = pdf.createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
 
     RooArgSet* attachedSet = nll->getVariables();
 
@@ -326,6 +344,8 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
 
        if (status%100 == 0) { // ignore errors in Hesse or in Improve
           result = minim.save();
+       }
+       if (result){ 
           val = result->minNll();
        }
        else { 
@@ -409,8 +429,8 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    // set the one-side condition
    // (this works when we have only one params of interest 
    RooRealVar * muHat =  dynamic_cast<RooRealVar*> (  fBestFitPoi.first() );
-   RooRealVar * muTest = dynamic_cast<RooRealVar*> ( nullSnapshot->find(muHat->GetName() ) );
    assert(muHat && "no best fit parameter defined"); 
+   RooRealVar * muTest = dynamic_cast<RooRealVar*> ( nullSnapshot->find(muHat->GetName() ) );
    assert(muTest && "poi snapshot is not existing"); 
 
 
@@ -433,15 +453,19 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
 
 
 
-   if (qmu < 0) {
+   if (qmu < 0 || TMath::IsNaN(fNLLObs) ) {
 
-      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a negative value of the qmu - retry to do the unconditional fit " 
-                                        << std::endl;         
+      if (qmu < 0) 
+         oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a negative value of the qmu - retry to do the unconditional fit " 
+                                           << std::endl;         
+      else 
+         oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  unconditional fit failed before - retry to do it now " 
+                                           << std::endl;         
       
       
       double nll = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()));
       
-      if (nll < fNLLObs) { 
+      if (nll < fNLLObs || (TMath::IsNaN(fNLLObs) && !TMath::IsNaN(nll) ) ) { 
          oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a better unconditional minimum "
                                            << " old NLL = " << fNLLObs << " old muHat " << muHat->getVal() << std::endl;            
 
@@ -461,35 +485,28 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
 
         qmu = 2.*(condNLL - fNLLObs); 
 
-        std::cout << " New qmu value is " << qmu << std::endl;
+        if (verbose > 0) 
+           oocoutP((TObject*)0,Eval) << "After unconditional refit,  new qmu value is " << qmu << std::endl;
 
       }
    }
 
-   if (qmu < 0) {       
-      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  qmu is still < 0  for mu = " 
-                                        <<  muTest << " resulting p-value will not be meaningful "  
+   if (qmu < 0 ) {       
+      oocoutE((TObject*)0,Minimization) << "AsymptoticCalculator:  qmu is still < 0  for mu = " 
+                                        <<  muTest->getVal() << " return a dummy result "  
                                         << std::endl;         
+      return new HypoTestResult();
+   }
+   if (TMath::IsNaN(qmu) ) {       
+      oocoutE((TObject*)0,Minimization) << "AsymptoticCalculator:  failure in fitting for qmu or qmuA " 
+                                        <<  muTest->getVal() << " return a dummy result "  
+                                        << std::endl;         
+      return new HypoTestResult();
    }
 
-   //check for one side condition (remember this is valid only for one poi)
-   if (fOneSided ) { 
-      if ( muHat->getVal() > muTest->getVal() ) { 
-         oocoutI((TObject*)0,Eval) << "Using one-sided qmu - setting qmu to zero  muHat = " << muHat->getVal() 
-                                   << " muTest = " << muTest->getVal() << std::endl;
-         qmu = 0;
-      }
-   }
 
 
-   // asymptotic formula for pnull (for only one POI) 
-   // From fact that qmu is a chi2 with ndf=1
 
-   double sqrtqmu = (qmu > 0) ? std::sqrt(qmu) : 0; 
-
-   double pnull = ROOT::Math::normal_cdf_c( sqrtqmu, 1.);
- 
-   
 
    // compute conditional ML on Asimov data set
    // (need to const cast because it uses fitTo which is a non const method
@@ -516,15 +533,19 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    if (verbose > 0) 
       oocoutP((TObject*)0,Eval) << "\t ASIMOV data qmu_A = " << qmu_A << " condNLL = " << condNLL_A << " uncond " << fNLLAsimov << std::endl;
 
-   if (qmu_A < 0) {
+   if (qmu_A < 0 || TMath::IsNaN(fNLLAsimov) ) {
 
-      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a negative value of the qmu Asimov- retry to do the unconditional fit " 
-                                        << std::endl;         
+      if (qmu_A < 0) 
+         oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a negative value of the qmu Asimov- retry to do the unconditional fit " 
+                                           << std::endl;         
+      else 
+         oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Fit failed for  unconditional the qmu Asimov- retry  unconditional fit " 
+                                           << std::endl;         
       
       
       double nll = EvaluateNLL( *nullPdf, *fAsimovData );
       
-      if (nll < fNLLAsimov) { 
+      if (nll < fNLLAsimov || (TMath::IsNaN(fNLLAsimov) && !TMath::IsNaN(nll) )) { 
          oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a better unconditional minimum for Asimov data set"
                                            << " old NLL = " << fNLLAsimov << std::endl;            
 
@@ -535,64 +556,134 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
                                            << "    NLL = " << fNLLAsimov << std::endl;            
          qmu_A = 2.*(condNLL_A - fNLLAsimov); 
 
-         std::cout << " New qmu value is " << qmu_A << std::endl;
+        if (verbose > 0) 
+           oocoutP((TObject*)0,Eval) << "After unconditional Asimov refit,  new qmu_A value is " << qmu_A << std::endl;
 
       }
    }
 
    if (qmu_A < 0) {       
-      oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  qmu_A is still < 0  for mu = " 
-                                        <<  muTest << " resulting p-value will not be meaningful "  
+      oocoutE((TObject*)0,Minimization) << "AsymptoticCalculator:  qmu_A is still < 0  for mu = " 
+                                        <<  muTest->getVal() << " return a dummy result "  
                                         << std::endl;         
+      return new HypoTestResult();
+   }
+   if (TMath::IsNaN(qmu) ) {       
+      oocoutE((TObject*)0,Minimization) << "AsymptoticCalculator:  failure in fitting for qmu or qmuA " 
+                                        <<  muTest->getVal() << " return a dummy result "  
+                                        << std::endl;         
+      return new HypoTestResult();
    }
 
 
    // restore previous value of global observables
    globObs = globObsSnapshot;
 
+   // now we compute p-values using the asumptotic formulae 
+   // described in the paper 
+   //  Cowan et al, Eur.Phys.J. C (2011) 71:1554
 
-   // do I need to do something for Asimov on the one-sided case ???
-//    if (fOneSided) { 
-//          if ( muHat->getVal() > muTest->getVal() ) qmu_A = 0;
-//       }
-//    }
-
-
-
-   // asymptotic formula for palt based on Asimov data set 
-   // See Eur.Phys.J C(2011( 71:1554
-   
-   double sqrtqmu_A = (qmu_A > 0) ? std::sqrt(qmu_A) : 0; 
-
-   double palt = ROOT::Math::normal_cdf( sqrtqmu_A - sqrtqmu, 1.);
-
-   // formula for Qtilde (need to distinguish case when qmu > qmuA
+   // first try to guess autoatically if needed to use qtilde (or ttilde in case of two sided) 
+   // if explicitly fUseQTilde this was not set
+   // qtilde is in this case used if poi is bounded at the value of the alt hypothesis
+   //  for Qtilde (need to distinguish case when qmu > qmuA = mu^2/ sigma^2) 
    // (see Cowan et al, Eur.Phys.J. C(2011) 71:1554 paper equations 64 and 65
    // (remember qmu_A = mu^2/sigma^2 )
    bool useQTilde = false; 
    // default case (check if poi is limited or not to a zero value)
-   if (fUseQTilde == -1) {
-      // alternate snapshot is value for which background is zero
-      RooRealVar * muAlt = dynamic_cast<RooRealVar*>( GetAlternateModel()->GetSnapshot()->first() );
-      assert(muAlt != 0);
-      if (muTest->getMin() == muAlt->getVal() ) { 
-         fUseQTilde = 1;  
-         oocoutI((TObject*)0,InputArguments) << "Minimum of POI is " << muTest->getMin() << " corresponds to alt snapshot  " << muAlt->getVal() << " - using qtilde asymptotic formulae  " << std::endl;
-      } else {
-         fUseQTilde = 0;  
-         oocoutI((TObject*)0,InputArguments) << "Minimum of POI is " << muTest->getMin() << " is different to alt snapshot " << muAlt->getVal() << " - using standard q asymptotic formulae  " << std::endl;
-      }         
+   if (!fOneSidedDiscovery) { // qtilde is not a discovery test 
+      if (fUseQTilde == -1 && !fOneSidedDiscovery) { 
+         // alternate snapshot is value for which background is zero (for limits)
+         RooRealVar * muAlt = dynamic_cast<RooRealVar*>( GetAlternateModel()->GetSnapshot()->first() );
+         // null snapshot is value for which background is zero (for discovery)
+         //RooRealVar * muNull = dynamic_cast<RooRealVar*>( GetNullModel()->GetSnapshot()->first() );
+         assert(muAlt != 0 );
+         if (muTest->getMin() == muAlt->getVal()   ) { 
+            fUseQTilde = 1;  
+            oocoutI((TObject*)0,InputArguments) << "Minimum of POI is " << muTest->getMin() << " corresponds to alt  snapshot   - using qtilde asymptotic formulae  " << std::endl;
+         } else {
+            fUseQTilde = 0;  
+            oocoutI((TObject*)0,InputArguments) << "Minimum of POI is " << muTest->getMin() << " is different to alt snapshot " << muAlt->getVal() 
+                                                << " - using standard q asymptotic formulae  " << std::endl;
+         }         
+      }
+      else 
+         useQTilde = fUseQTilde;
    }
-   else 
-      useQTilde = fUseQTilde; 
 
- 
-   if (useQTilde && qmu > qmu_A) { 
-      pnull = ROOT::Math::normal_cdf_c( (qmu + qmu_A)/(2 * sqrtqmu_A), 1.);
-      palt = ROOT::Math::normal_cdf_c( (qmu - qmu_A)/(2 * sqrtqmu_A), 1.);
+
+   //check for one side condition (remember this is valid only for one poi)
+   if (fOneSided ) { 
+      if ( muHat->getVal() > muTest->getVal() ) { 
+         oocoutI((TObject*)0,Eval) << "Using one-sided qmu - setting qmu to zero  muHat = " << muHat->getVal() 
+                                   << " muTest = " << muTest->getVal() << std::endl;
+         qmu = 0;
+      }
    }
+   if (fOneSidedDiscovery ) { 
+      if ( muHat->getVal() < muTest->getVal() ) { 
+         oocoutI((TObject*)0,Eval) << "Using one-sided discovery qmu - setting qmu to zero  muHat = " << muHat->getVal() 
+                                   << " muTest = " << muTest->getVal() << std::endl;
+         qmu = 0;
+      }
+   }
+
+   // asymptotic formula for pnull and from  paper Eur.Phys.J C 2011  71:1554
+   // we have 4 different cases: 
+   //          t(mu), t_tilde(mu) for the 2-sided 
+   //          q(mu) and q_tilde(mu) for the one -sided test statistics
+
+   double pnull = -1, palt = -1;
+
+   // asymptotic formula for pnull (for only one POI) 
+   // From fact that qmu is a chi2 with ndf=1
+
+   double sqrtqmu = (qmu > 0) ? std::sqrt(qmu) : 0; 
+   double sqrtqmu_A = (qmu_A > 0) ? std::sqrt(qmu_A) : 0; 
 
    
+   if (fOneSided || fOneSidedDiscovery) {
+      // for one-sided PL (q_mu : equations 56,57)
+      if (verbose>2) {
+         if (fOneSided) 
+            oocoutI((TObject*)0,Eval) << "Using one-sided limit asymptotic formula (qmu)" << endl;
+         else
+            oocoutI((TObject*)0,Eval) << "Using one-sided discovery asymptotic formula (q0)" << endl;
+      }
+      pnull = ROOT::Math::normal_cdf_c( sqrtqmu, 1.);
+      palt = ROOT::Math::normal_cdf( sqrtqmu_A - sqrtqmu, 1.);
+   }
+   else  {
+      // for 2-sided PL (t_mu : equations 35,36 in asymptotic paper) 
+      if (verbose > 2) oocoutI((TObject*)0,Eval) << "Using two-sided asimptotic  formula (tmu)" << endl;
+      pnull = 2.*ROOT::Math::normal_cdf_c( sqrtqmu, 1.);
+      palt = ROOT::Math::normal_cdf_c( sqrtqmu + sqrtqmu_A, 1.) + 
+         ROOT::Math::normal_cdf_c( sqrtqmu - sqrtqmu_A, 1.); 
+         
+   }
+
+   if (useQTilde ) { 
+      if (fOneSided) { 
+         // for bounded one-sided (q_mu_tilde: equations 64,65)
+         if ( qmu > qmu_A) { 
+            if (verbose > 2) oocoutI((TObject*)0,Eval) << "Using qmu_tilde (qmu is greater than qmu_A)" << endl;
+            pnull = ROOT::Math::normal_cdf_c( (qmu + qmu_A)/(2 * sqrtqmu_A), 1.);
+            palt = ROOT::Math::normal_cdf_c( (qmu - qmu_A)/(2 * sqrtqmu_A), 1.);
+         }
+      }
+      else {  
+         // for 2 sided bounded test statistic  (N.B there is no one sided discovery qtilde)
+         // t_mu_tilde: equations 43,44 in asymptotic paper
+         if ( qmu >  qmu_A) { 
+            if (verbose > 2) oocoutI((TObject*)0,Eval) << "Using tmu_tilde (qmu is greater than qmu_A)" << endl;
+            pnull = ROOT::Math::normal_cdf_c(sqrtqmu,1.) + 
+                    ROOT::Math::normal_cdf_c( (qmu + qmu_A)/(2 * sqrtqmu_A), 1.);
+            palt = ROOT::Math::normal_cdf_c( sqrtqmu_A + sqrtqmu, 1.) + 
+                   ROOT::Math::normal_cdf_c( (qmu - qmu_A)/(2 * sqrtqmu_A), 1.);
+         }
+      }
+   }
+
 
 
    // create an HypoTest result but where the sampling distributions are set to zero
@@ -611,15 +702,58 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
 
 }
 
-double AsymptoticCalculator::GetExpectedPValues(double pnull, double palt, double nsigma, bool useCls ) { 
+struct PaltFunction { 
+   PaltFunction( double offset, double pval, int icase) : 
+      fOffset(offset), fPval(pval), fCase(icase) {}
+   double operator() (double x) const { 
+      return ROOT::Math::normal_cdf_c(x + fOffset) + ROOT::Math::normal_cdf_c(fCase*(x - fOffset)) - fPval;
+   }
+   double fOffset;
+   double fPval;
+   int fCase;
+};
+
+double AsymptoticCalculator::GetExpectedPValues(double pnull, double palt, double nsigma, bool useCls, bool oneSided ) { 
    // function given the null and the alt p value - return the expected one given the N - sigma value
-   double sqrtqmu =  ROOT::Math::normal_quantile_c( pnull,1.);
-   double sqrtqmu_A =  ROOT::Math::normal_quantile( palt,1.) + sqrtqmu;
-   double clsplusb = ROOT::Math::normal_cdf_c( sqrtqmu_A - nsigma, 1.);
-   if (!useCls) return clsplusb; 
-   double clb = ROOT::Math::normal_cdf( nsigma, 1.);
-   return (clb == 0) ? -1 : clsplusb / clb;  
-}   
+   if (oneSided) { 
+      double sqrtqmu =  ROOT::Math::normal_quantile_c( pnull,1.);
+      double sqrtqmu_A =  ROOT::Math::normal_quantile( palt,1.) + sqrtqmu;
+      double clsplusb = ROOT::Math::normal_cdf_c( sqrtqmu_A - nsigma, 1.);
+      if (!useCls) return clsplusb; 
+      double clb = ROOT::Math::normal_cdf( nsigma, 1.);
+      return (clb == 0) ? -1 : clsplusb / clb;  
+   }
+
+   // case of 2 sided test statistic
+   // need to compute numerically
+   double sqrttmu =  ROOT::Math::normal_quantile_c( 0.5*pnull,1.);
+   if (sqrttmu == 0) { 
+      // here cannot invert the function - skip the point
+      return -1; 
+   }      
+   // invert formula for palt to get sqrttmu_A
+   PaltFunction f( sqrttmu, palt, -1);       
+   ROOT::Math::BrentRootFinder brf;
+   ROOT::Math::WrappedFunction<PaltFunction> wf(f);
+   brf.SetFunction( wf, 0, 20);
+   bool ret = brf.Solve();
+   if (!ret) { 
+      oocoutE((TObject*)0,Eval)  << "Error finding expected p-values - return -1" << std::endl;
+      return -1;
+   }
+   double sqrttmu_A = brf.Root();
+
+   // now invert for expected value
+   PaltFunction f2( sqrttmu_A,  ROOT::Math::normal_cdf( nsigma, 1.), 1);
+   ROOT::Math::WrappedFunction<PaltFunction> wf2(f2);
+   brf.SetFunction(wf2,0,20);
+   ret = brf.Solve();
+   if (!ret) { 
+      oocoutE((TObject*)0,Eval)  << "Error finding expected p-values - return -1" << std::endl;
+      return -1;
+   }   
+   return  2*ROOT::Math::normal_cdf_c( brf.Root(),1.);
+}
 
 // void GetExpectedLimit(double nsigma, double alpha, double &clsblimit, double &clslimit) { 
 //    // get expected limit 
@@ -656,10 +790,14 @@ void AsymptoticCalculator::FillBins(const RooAbsPdf & pdf, const RooArgList &obs
          double fval = pdf.getVal(&obstmp)*totBinVolume;
          if (fval*expectedEvents <= 0)
          {
-            cout << "WARNING::Detected bin with zero expected events! Please check your inputs." << endl;
+            if (fval*expectedEvents < 0)
+               cout << "WARNING::Detected a bin with negative expected events! Please check your inputs." << endl;
+            else
+               cout << "WARNING::Detected a bin with zero expected events- skip it" << endl;
          }
          // have a cut off for overflows ??
-         data.add(obs, fval*expectedEvents);
+         else 
+            data.add(obs, fval*expectedEvents);
 
          if (debug) { 
             cout << "bin " << ibin << "\t";
@@ -790,7 +928,7 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovDataSinglePdf(const RooAbsPdf &
    // compute the asimov data set for an observable of a pdf 
    // use the number of bins sets in the observables 
    // to do :  (possibility to change number of bins)
-   // impelment integration over bin content
+   // implement integration over bin content
 
    int printLevel = fgPrintLevel;
 
@@ -885,18 +1023,13 @@ RooAbsData * AsymptoticCalculator::GenerateAsimovData(const RooAbsPdf & pdf, con
     
   //look at category of simpdf 
   RooCategory& channelCat = (RooCategory&)simPdf->indexCat();
-  //    TIterator* iter = simPdf->indexCat().typeIterator() ;
-  TIterator* iter = channelCat.typeIterator() ;
-  RooCatType* tt = NULL;
-  int nrIndices = 0;
-  while((tt=(RooCatType*) iter->Next())) {
-    nrIndices++;
-  }
+  int nrIndices = channelCat.numTypes();
   for (int i=0;i<nrIndices;i++){
     channelCat.setIndex(i);
     //iFrame++;
     // Get pdf associated with state from simpdf
     RooAbsPdf* pdftmp = simPdf->getPdf(channelCat.getLabel()) ;
+    assert(pdftmp != 0);
 	
     if (printLevel > 1)
     {

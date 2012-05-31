@@ -26,7 +26,7 @@ ToyMCSampler as its TestStatSampler.
 ClassImp(RooStats::HypoTestCalculatorGeneric)
 
 using namespace RooStats;
-
+using namespace std;
 
 //___________________________________
 HypoTestCalculatorGeneric::HypoTestCalculatorGeneric(
@@ -105,6 +105,11 @@ HypoTestResult* HypoTestCalculatorGeneric::GetHypoTest() const {
    // CheckHook
    if(CheckHook() != 0) {
       oocoutE((TObject*)0,Generation) << "There was an error in CheckHook(). Stop." << endl;
+      return 0;
+   }
+
+   if (!fTestStatSampler  || !fTestStatSampler->GetTestStatistic() ) { 
+      oocoutE((TObject*)0,InputArguments) << "Test Statistic Sampler or Test Statistics not defined. Stop." << endl;
       return 0;
    }
 

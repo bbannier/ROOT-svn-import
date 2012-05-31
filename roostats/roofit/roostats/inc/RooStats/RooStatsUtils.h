@@ -32,8 +32,6 @@
 #include "RooProdPdf.h"
 #include "RooDataSet.h"
 
-#include <iostream>
-using namespace std ;
 
 namespace RooStats {
 
