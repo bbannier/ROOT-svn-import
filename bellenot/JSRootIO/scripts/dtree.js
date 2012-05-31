@@ -9,6 +9,8 @@
 | Updated: 17.04.2003                               |
 |--------------------------------------------------*/
 
+// The "source_dir" variable is defined in JSRootInterface.js
+
 // Node object
 function Node(id, pid, name, url, title, target, icon, iconOpen, open) {
    this.id = id;
@@ -41,20 +43,20 @@ function dTree(objName) {
       inOrder        : false
    }
    this.icon = {
-      root           : 'http://root.cern.ch/js/img/base.gif',
-      folder         : 'http://root.cern.ch/js/img/folder.gif',
-      folderOpen     : 'http://root.cern.ch/js/img/folderopen.gif',
-      node           : 'http://root.cern.ch/js/img/page.gif',
-      empty          : 'http://root.cern.ch/js/img/empty.gif',
-      line           : 'http://root.cern.ch/js/img/line.gif',
-      join           : 'http://root.cern.ch/js/img/join.gif',
-      joinBottom     : 'http://root.cern.ch/js/img/joinbottom.gif',
-      plus           : 'http://root.cern.ch/js/img/plus.gif',
-      plusBottom     : 'http://root.cern.ch/js/img/plusbottom.gif',
-      minus          : 'http://root.cern.ch/js/img/minus.gif',
-      minusBottom    : 'http://root.cern.ch/js/img/minusbottom.gif',
-      nlPlus         : 'http://root.cern.ch/js/img/nolines_plus.gif',
-      nlMinus        : 'http://root.cern.ch/js/img/nolines_minus.gif'
+      root           : source_dir+'img/base.gif',
+      folder         : source_dir+'img/folder.gif',
+      folderOpen     : source_dir+'img/folderopen.gif',
+      node           : source_dir+'img/page.gif',
+      empty          : source_dir+'img/empty.gif',
+      line           : source_dir+'img/line.gif',
+      join           : source_dir+'img/join.gif',
+      joinBottom     : source_dir+'img/joinbottom.gif',
+      plus           : source_dir+'img/plus.gif',
+      plusBottom     : source_dir+'img/plusbottom.gif',
+      minus          : source_dir+'img/minus.gif',
+      minusBottom    : source_dir+'img/minusbottom.gif',
+      nlPlus         : source_dir+'img/nolines_plus.gif',
+      nlMinus        : source_dir+'img/nolines_minus.gif'
    };
    this.obj = objName;
    this.aNodes = [];
