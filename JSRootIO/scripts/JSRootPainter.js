@@ -573,31 +573,31 @@ var d, key_tree;
       var tree_link = "";
       for (var i=0; i<keys.length; ++i) {
          tree_link = "javascript: //class "+keys[i]['className'];
-         var node_img = 'img/page.gif';
+         var node_img = 'http://root.cern.ch/js/img/page.gif';
          if (keys[i]['className'].match(/\bTH1/)  ||
              keys[i]['className'].match(/\bTH2/)  ||
              keys[i]['className'] == 'TGraph' ||
              keys[i]['className'].match(/\bTProfile/)) {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
-            node_img = 'img/graphical.png';
+            node_img = 'http://root.cern.ch/js/img/graphical.png';
          }
          else if (keys[i]['name'] == "StreamerInfo") {
             tree_link = "javascript: displayStreamerInfos(gFile.fStreamerInfo.fStreamerInfos);";
-            node_img = 'img/question.gif';
+            node_img = 'http://root.cern.ch/js/img/question.gif';
          }
          else if (keys[i]['className'] == "TDirectory") {
             tree_link = "javascript: showDirectory('"+keys[i]['name']+"',"+keys[i]['cycle']+","+(i+1)+");";
-            node_img = 'img/folder.gif';
+            node_img = 'http://root.cern.ch/js/img/folder.gif';
          }
          else if (keys[i]['className'].match('TTree') ||
                   keys[i]['className'].match('TNtuple')) {
 //            tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
-            node_img = 'img/tree_t.png';
+            node_img = 'http://root.cern.ch/js/img/tree_t.png';
          }
          else if (keys[i]['className'].match('TGeoManager') ||
                   keys[i]['className'].match('TGeometry')) {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
-            node_img = 'img/folder.gif';
+            node_img = 'http://root.cern.ch/js/img/folder.gif';
          }
          else if (keys[i]['className'].match('TCanvas')) {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
@@ -605,7 +605,7 @@ var d, key_tree;
          }
          if (keys[i]['name'] != "" && keys[i]['className'] != "TFile")
             if (keys[i]['className'] == "TDirectory")
-               key_tree.add(k, 0, keys[i]['name']+";"+keys[i]['cycle'], tree_link, keys[i]['name'], '', node_img, 'img/folderopen.gif');
+               key_tree.add(k, 0, keys[i]['name']+";"+keys[i]['cycle'], tree_link, keys[i]['name'], '', node_img, 'http://root.cern.ch/js/img/folderopen.gif');
             else
                key_tree.add(k, 0, keys[i]['name']+";"+keys[i]['cycle'], tree_link, keys[i]['name'], '', node_img);
             k++;
@@ -626,29 +626,29 @@ var d, key_tree;
          var disp_name = keys[i]['name'];
          keys[i]['name'] = dir_name + "/" + keys[i]['name'];
          tree_link = "javascript: //class " + keys[i]['className'];
-         var node_img = 'img/page.gif';
+         var node_img = 'http://root.cern.ch/js/img/page.gif';
          var node_title = keys[i]['className'];
          if (keys[i]['className'].match(/\bTH1/) ||
              keys[i]['className'].match(/\bTH2/) ||
              keys[i]['className'] == 'TGraph'    ||
              keys[i]['className'].match(/\bTProfile/)) {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
-            node_img = 'img/graphical.png';
+            node_img = 'http://root.cern.ch/js/img/graphical.png';
             node_title = keys[i]['name'];
          }
          else if (keys[i]['name'] == "StreamerInfo") {
             tree_link = "javascript: displayStreamerInfos(gFile.fStreamerInfo.fStreamerInfos);";
-            node_img = 'img/question.gif';
+            node_img = 'http://root.cern.ch/js/img/question.gif';
             node_title = keys[i]['name'];
          }
          else if (keys[i]['className'] == "TDirectory") {
             tree_link = "javascript: showDirectory('"+keys[i]['name']+"',"+keys[i]['cycle']+","+k+");";
-            node_img = 'img/folder.gif';
+            node_img = 'http://root.cern.ch/js/img/folder.gif';
             node_title = keys[i]['name'];
          }
          else if (keys[i]['className'].match('TTree') ||
                   keys[i]['className'].match('TNtuple')) {
-            node_img = 'img/tree_t.png';
+            node_img = 'http://root.cern.ch/js/img/tree_t.png';
          }
          else if (keys[i]['className'].match('TCanvas')) {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
@@ -656,7 +656,7 @@ var d, key_tree;
          }
          if (keys[i]['name'] != "" && keys[i]['className'] != "TFile") {
             if (keys[i]['className'] == "TDirectory")
-               key_tree.add(k, dir_id, disp_name+";"+keys[i]['cycle'], tree_link, node_title, '', node_img, 'img/folderopen.gif');
+               key_tree.add(k, dir_id, disp_name+";"+keys[i]['cycle'], tree_link, node_title, '', node_img, 'http://root.cern.ch/js/img/folderopen.gif');
             else
                key_tree.add(k, dir_id, disp_name+";"+keys[i]['cycle'], tree_link, node_title, '', node_img);
             k++;
