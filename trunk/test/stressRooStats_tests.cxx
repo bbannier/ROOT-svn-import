@@ -793,8 +793,7 @@ public:
       Int_t verbose,
       Int_t obsValueX = 15,
       Int_t obsValueY = 30,
-      Double_t confidenceLevel = 2 * normal_cdf(1) - 1,
-      Double_t setLeftTailFraction = 0.5
+      Double_t confidenceLevel = 2 * normal_cdf(1) - 1
    ) :
       RooUnitTest("BayesianCalculator Central Interval - Poisson Product Model", refFile, writeRef, verbose),
       fObsValueX(obsValueX),
@@ -1663,7 +1662,7 @@ public:
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "SLRTS " << htr->Significance() << endl;
-/*         tmcs->SetTestStatistic(pllts);
+         tmcs->SetTestStatistic(pllts);
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "PLLTS " << htr->Significance() << endl;
@@ -1684,7 +1683,7 @@ public:
 
          delete ftc;
          delete htr;
-         delete w;*/
+         delete w;
       }
       return kTRUE ;
    }
