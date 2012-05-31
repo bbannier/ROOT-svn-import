@@ -21,8 +21,8 @@
 #include "TROOT.h"
 
 #include "TGLContextPrivate.h"
-//#include "RConfigure.h"
 #include "TGLIncludes.h"
+#include "RConfigure.h"
 #include "TGLContext.h"
 #include "TGLWidget.h"
 #include "TGLFormat.h"
