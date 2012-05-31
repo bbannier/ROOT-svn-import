@@ -295,7 +295,7 @@ void StandardHistFactoryPlotsWithCategories(const char* infile = "",
   ////////////////////////////////////////
 
     // now make plots
-    TCanvas* c1 = new TCanvas("c1","ProfileInspectorDemo",800,200);
+    TCanvas* c1 = new TCanvas("c1","StandardHistFactoryPlotsWithCategories",800,200);
     if(list->GetSize()>4){
       double n = list->GetSize();
       int nx = (int)sqrt(n) ;
