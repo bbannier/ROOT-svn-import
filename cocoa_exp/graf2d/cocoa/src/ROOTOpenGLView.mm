@@ -91,6 +91,7 @@
       [fOpenGLContext setView : self];
    
    [fOpenGLContext makeCurrentContext];
+//   
    fCtxIsCurrent = YES; 
 }
 
@@ -181,6 +182,12 @@
 }
 
 //______________________________________________________________________________
+- (BOOL) isFlipped 
+{
+   return YES;
+}
+
+//______________________________________________________________________________
 - (void) setOverlapped : (BOOL) overlap
 {
    fIsOverlapped = overlap;
@@ -191,6 +198,35 @@
 - (void) updateLevel : (unsigned) newLevel
 {
    fLevel = newLevel;
+}
+
+//______________________________________________________________________________
+- (void) setFrame : (NSRect) newFrame
+{
+   //In case of TBrowser, setFrame started infinite recursion:
+   //HandleConfigure for embedded main frame emits signal, slot
+   //calls layout, layout calls setFrame -> HandleConfigure and etc. etc.
+   if (CGRectEqualToRect(newFrame, self.frame))
+      return;
+
+   [super setFrame : newFrame];
+}
+
+//______________________________________________________________________________
+- (void) setFrameSize : (NSSize) newSize
+{
+   //Check, if setFrameSize calls setFrame.
+   
+   [super setFrameSize : newSize];
+   
+   [fOpenGLContext update];
+   
+   if ((fEventMask & kStructureNotifyMask) && (self.fMapState == kIsViewable || fIsOverlapped == YES)) {
+      TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx != 0 && "setFrameSize:, gVirtualX is either null or has a type, different from TGCocoa");
+      vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
+      vx->GetEventTranslator()->GenerateExposeEvent(self, self.frame);
+   }
 }
 
 ////////
