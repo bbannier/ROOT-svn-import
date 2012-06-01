@@ -472,6 +472,7 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
                }
             }
          }
+         close(cfgFD);
       } else {
          XPDFORM(m, "failure opening config file; errno: %d", errno);
          TRACE(XERR, m);
@@ -503,8 +504,10 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
       // Get the scheduler object
       if (!(sched = (*ep)(cfn, this, fGroupsMgr, cfn, fEDest))) {
          TRACE(XERR, "unable to create scheduler object from " << lib);
+         delete h;
          return (XrdProofSched *)0;
       }
+      delete h;
    }
    // Check result
    if (!(sched->IsValid())) {
