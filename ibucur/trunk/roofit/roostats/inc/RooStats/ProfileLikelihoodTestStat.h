@@ -66,6 +66,7 @@ namespace RooStats {
         fLastData = 0;
 	fLimitType = twoSided;
 	fSigned = false;
+        fDetailedOutputWithErrorsAndPulls = false;
         fDetailedOutputEnabled = false;
         fDetailedOutput = NULL;
       
@@ -84,6 +85,7 @@ namespace RooStats {
        fLastData = 0;
        fLimitType = twoSided;
        fSigned = false;
+       fDetailedOutputWithErrorsAndPulls = false;
        fDetailedOutputEnabled = false;
        fDetailedOutput = NULL;
       
@@ -100,6 +102,8 @@ namespace RooStats {
        if(fCachedBestFitParams) delete fCachedBestFitParams;
        if(fDetailedOutput) delete fDetailedOutput;
      }
+
+     //LM use default copy constructor and assignment copying the pointers. Is this what we want ?
 
      void SetOneSided(Bool_t flag=true) {fLimitType = (flag ? oneSided : twoSided);}
      void SetOneSidedDiscovery(Bool_t flag=true) {fLimitType = (flag ? oneSidedDiscovery : twoSided);}
@@ -140,9 +144,12 @@ namespace RooStats {
 	     // </ul>
 	     return fDetailedOutput;
      }
-    
+         
      virtual void SetVarName(const char* name) { fVarName = name; }
      virtual const TString GetVarName() const {return fVarName;}
+
+     virtual RooAbsPdf * GetPdf() const { return fPdf; }
+
       
       //      const bool PValueIsRightTail(void) { return false; } // overwrites default
 
