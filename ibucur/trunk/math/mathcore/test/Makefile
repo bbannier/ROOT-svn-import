@@ -195,7 +195,7 @@ $(SPECFUNBETAI):    $(SPECFUNBETAIOBJ)
 		    @echo "$@ done"
 
 $(INTEGRATION): $(INTEGRATIONOBJ)
-		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooFit -lRooFitCore $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(LIBS)  $(OutPutOpt)$@
 		@echo "$@ done"
 
 $(INTEGRATIONMULTI): $(INTEGRATIONMULTIOBJ)

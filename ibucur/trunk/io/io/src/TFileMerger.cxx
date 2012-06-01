@@ -25,6 +25,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TFileMerger.h"
+#include "TDirectory.h"
 #include "TUrl.h"
 #include "TFile.h"
 #include "TUUID.h"
@@ -143,7 +144,6 @@ Bool_t TFileMerger::AddFile(const char *url, Bool_t cpProgress)
       urlObj = new TObjString(url);
       urlObj->SetBit(kCpProgress);
       fExcessFiles->Add(urlObj);
-      
       return kTRUE;
    }
    
@@ -850,7 +850,7 @@ Bool_t TFileMerger::OpenExcessFiles()
       } else {
          newfile = TFile::Open(url->GetName(), "READ");
       }
-      
+        
       if (!newfile) {
          if (fLocal)
             Error("OpenExcessFiles", "cannot open local copy %s of URL %s",

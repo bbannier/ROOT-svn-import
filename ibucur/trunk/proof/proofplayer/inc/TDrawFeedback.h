@@ -18,6 +18,9 @@
 // TDrawFeedback                                                        //
 //                                                                      //
 // Utility class to draw objects in the feedback list during queries.   //
+// Draws histograms in separated canvases and user-defined objects via  //
+// Draw(). Users requiring advanced treatment should implement their    //
+// own version following this example. See also TStatsFeedback.         //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -35,6 +38,7 @@ class TSeqCollection;
 
 class TDrawFeedback : public TObject, public TQObject {
 private:
+   TString        fName;   // Identfier for this object
    Bool_t         fAll;    //draw all or selected objects
    THashList     *fNames;  //selected objects
 
@@ -47,6 +51,8 @@ public:
    ~TDrawFeedback();
 
    void Feedback(TList *objs);
+   const char *GetName() const { return fName.Data(); }
+   ULong_t  Hash() const { return fName.Hash(); }
    void SetOption(Option_t *option) { fOption = option; }
 
    ClassDef(TDrawFeedback,0)  // Present PROOF query feedback

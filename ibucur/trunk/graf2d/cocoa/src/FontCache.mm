@@ -55,9 +55,14 @@ const CFStringRef fixedFontNames[FontCache::nPadFonts] =
 
 
 //______________________________________________________________________________
-CTFontCollectionRef CreateFontCollection(const X11::XLFDName &xlfd)
+CTFontCollectionRef CreateFontCollection(const X11::XLFDName &/*xlfd*/)
 {
-   CTFontCollectionRef ctCollection = 0;
+   CTFontCollectionRef ctCollection = CTFontCollectionCreateFromAvailableFonts(0);
+   if (!ctCollection) 
+      ::Error("CreateFontCollection", "CTFontCollectionCreateFromAvailableFonts failed");
+   
+   return ctCollection;
+/*   CTFontCollectionRef ctCollection = 0;
    if (xlfd.fFamilyName == "*")
       ctCollection = CTFontCollectionCreateFromAvailableFonts(0);//Select all available fonts.
    else {
@@ -90,7 +95,7 @@ CTFontCollectionRef CreateFontCollection(const X11::XLFDName &xlfd)
    }
 
 
-   return ctCollection;
+   return ctCollection;*/
 }
 
 //______________________________________________________________________________
@@ -115,6 +120,23 @@ void GetWeightAndSlant(CTFontDescriptorRef fontDescriptor, X11::XLFDName &newXLF
    //Let's ask for a weight and pixel size.
    const Util::CFScopeGuard<CFDictionaryRef> traits((CFDictionaryRef)CTFontDescriptorCopyAttribute(fontDescriptor, kCTFontTraitsAttribute));
    if (traits.Get()) {
+      if (CFNumberRef symbolTraits = (CFNumberRef)CFDictionaryGetValue(traits.Get(), kCTFontSymbolicTrait)) {
+         uint32_t val = 0;
+         CFNumberGetValue(symbolTraits, kCFNumberIntType, &val);
+         if (val & kCTFontItalicTrait)
+            newXLFD.fSlant = X11::kFSItalic;
+         else
+            newXLFD.fSlant = X11::kFSRegular;
+            
+         if (val & kCTFontBoldTrait)
+            newXLFD.fWeight = X11::kFWBold;
+         else
+            newXLFD.fWeight = X11::kFWMedium;
+      }
+   
+      /*
+      //The code below is wrong - using it, I can not identify bold or italic and always have 
+      //only medium/regular.
       if(CFNumberRef weight = (CFNumberRef)CFDictionaryGetValue(traits.Get(), kCTFontWeightTrait)) {
          double val = 0.;
          if (CFNumberGetValue(weight, kCFNumberDoubleType, &val))
@@ -126,6 +148,7 @@ void GetWeightAndSlant(CTFontDescriptorRef fontDescriptor, X11::XLFDName &newXLF
          if (CFNumberGetValue(slant, kCFNumberDoubleType, &val))
             newXLFD.fSlant = val > 0. ? X11::kFSItalic : X11::kFSRegular;
       }
+      */
    }
 }
 
@@ -156,7 +179,7 @@ void CreateXLFDString(const X11::XLFDName &xlfd, std::string &xlfdString)
     if (xlfd.fWeight == X11::kFWBold)
         xlfdString += "-bold";
     else
-        xlfdString += "-*";
+        xlfdString += "-normal";
 
     if (xlfd.fSlant == X11::kFSItalic)
         xlfdString += "-i";
@@ -257,7 +280,7 @@ char **FontCache::ListFonts(const X11::XLFDName &xlfd, int maxNames, int &count)
    
    std::vector<char> xlfdData;
    std::vector<char> familyName;
-   X11::XLFDName newXLFD = {};
+   X11::XLFDName newXLFD;
    std::string xlfdString;
    
    const CFIndex nFonts = CFArrayGetCount(fonts.Get());
@@ -266,21 +289,29 @@ char **FontCache::ListFonts(const X11::XLFDName &xlfd, int maxNames, int &count)
 
       if (!GetFamilyName(font, familyName))
          continue;
-      //I do not check family name: if xlfd.fFamilyName is '*', all font names fit,
-      //if it's a special name - collection is created using this name.
+ 
+      if (xlfd.fFamilyName != "*" && xlfd.fFamilyName != &familyName[0])
+         continue;
+
       newXLFD.fFamilyName = &familyName[0];
+      
+      //If family name has '-', ROOT's GUI can not parse it correctly - 
+      //'-' is a separator in XLFD. Just skip this font (anyway, it wan not requested by GUI, only
+      //listed by FontCache.
+      if (newXLFD.fFamilyName.find('-') != std::string::npos)
+         continue;
 
       GetWeightAndSlant(font, newXLFD);
+
       //Check weight and slant.
-      if (newXLFD.fWeight != xlfd.fWeight)
+      if (xlfd.fWeight != X11::kFWAny && newXLFD.fWeight != xlfd.fWeight)
          continue;
-      if (newXLFD.fSlant != xlfd.fSlant)
+      if (xlfd.fSlant != X11::kFSAny && newXLFD.fSlant != xlfd.fSlant)
          continue;
 
       if (xlfd.fPixelSize) {//Size was requested.
          GetPixelSize(font, newXLFD);
-         //I do not think, that font has a pixel size.
-         //But Core Text supports different font sizes.
+         //Core Text supports different font sizes.
          if (!newXLFD.fPixelSize)
             newXLFD.fPixelSize = xlfd.fPixelSize;
       }
@@ -393,7 +424,7 @@ CTFontRef FontCache::SelectFont(Font_t fontIndex, Float_t fontSize)
       return SelectSymbolFont(fontSize);
    
    const UInt_t fixedSize = UInt_t(fontSize);
-   auto it = fFonts[fontIndex].find(fixedSize);
+   font_map_iterator it = fFonts[fontIndex].find(fixedSize);
    
    if (it == fFonts[fontIndex].end()) {
       //Insert the new font.
@@ -401,13 +432,13 @@ CTFontRef FontCache::SelectFont(Font_t fontIndex, Float_t fontSize)
          const CTFontGuard_t font(CTFontCreateWithName(fixedFontNames[fontIndex], fixedSize, 0), false);
          if (!font.Get()) {//With Apple's lame documentation it's not clear, if function can return 0.
             ::Error("FontCache::SelectFont", "CTFontCreateWithName failed for font %d", fontIndex);
-            return nullptr;
+            return 0;
          }
     
          fFonts[fontIndex][fixedSize] = font;//Insetion can throw.
          return fSelectedFont = font.Get();
       } catch (const std::exception &) {//Bad alloc.
-         return nullptr;
+         return 0;
       }
    }
 
@@ -418,7 +449,7 @@ CTFontRef FontCache::SelectFont(Font_t fontIndex, Float_t fontSize)
 CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
 {
    const UInt_t fixedSize = UInt_t(fontSize);
-   auto it = fFonts[11].find(fixedSize);//In ROOT, 11 is a font from symbol.ttf.
+   font_map_iterator it = fFonts[11].find(fixedSize);//In ROOT, 11 is a font from symbol.ttf.
    
    if (it == fFonts[11].end()) {
       //This GetValue + Which I took from Olivier's code.
@@ -428,7 +459,7 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
       if (!fontFileName || fontFileName[0] == 0) {
          ::Error("FontCache::SelectSymbolFont", "sumbol.ttf file not found");
          delete [] fontFileName;
-         return nullptr;
+         return 0;
       }
 
       try {
@@ -436,14 +467,14 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
          if (!path.Get()) {
             ::Error("FontCache::SelectSymbolFont", "CFStringCreateWithCString failed");
             delete [] fontFileName;
-            return nullptr;
+            return 0;
          }
          
          const Util::CFScopeGuard<CFArrayRef> arr(CTFontManagerCreateFontDescriptorsFromURL(CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path.Get(), kCFURLPOSIXPathStyle, false)));
          if (!arr.Get()) {
             ::Error("FontCache::SelectSymbolFont", "CTFontManagerCreateFontDescriptorsFromURL failed");
             delete [] fontFileName;
-            return nullptr;
+            return 0;
          }
 
          CTFontDescriptorRef fontDesc = (CTFontDescriptorRef)CFArrayGetValueAtIndex(arr.Get(), 0);
@@ -451,7 +482,7 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
          if (!font.Get()) {
             ::Error("FontCache::SelectSymbolFont", "CTFontCreateWithFontDescriptor failed");
             delete [] fontFileName;
-            return nullptr;
+            return 0;
          }
 
          delete [] fontFileName;
@@ -460,7 +491,7 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
          return fSelectedFont = font.Get();
       } catch (const std::exception &) {//Bad alloc.
          //RAII destructors should do their work.
-         return nullptr;
+         return 0;
       }
    }
 
@@ -471,7 +502,7 @@ CTFontRef FontCache::SelectSymbolFont(Float_t fontSize)
 //_________________________________________________________________   
 void FontCache::GetTextBounds(UInt_t &w, UInt_t &h, const char *text)const
 {
-   assert(fSelectedFont != nullptr && "GetTextBounds: no font was selected");
+   assert(fSelectedFont != 0 && "GetTextBounds: no font was selected");
    
    try {
       const Quartz::TextLine ctLine(text, fSelectedFont);
@@ -486,7 +517,7 @@ void FontCache::GetTextBounds(UInt_t &w, UInt_t &h, const char *text)const
 //_________________________________________________________________
 double FontCache::GetAscent()const
 {
-   assert(fSelectedFont != nullptr && "GetAscent, no font was selected");
+   assert(fSelectedFont != 0 && "GetAscent, no font was selected");
    return CTFontGetAscent(fSelectedFont) + 1;
 }
 
@@ -494,14 +525,14 @@ double FontCache::GetAscent()const
 //_________________________________________________________________
 double FontCache::GetDescent()const
 {
-   assert(fSelectedFont != nullptr && "GetDescent, no font was selected");
+   assert(fSelectedFont != 0 && "GetDescent, no font was selected");
    return CTFontGetDescent(fSelectedFont) + 1;
 }
 
 //_________________________________________________________________
 double FontCache::GetLeading()const
 {
-   assert(fSelectedFont != nullptr && "GetLeading, no font was selected");
+   assert(fSelectedFont != 0 && "GetLeading, no font was selected");
    return CTFontGetLeading(fSelectedFont);
 }
 

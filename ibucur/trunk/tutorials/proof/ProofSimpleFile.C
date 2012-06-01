@@ -30,7 +30,7 @@ ProofSimpleFile::ProofSimpleFile()
 {
    // Constructor
 
-   fNhist = -1;
+   fNhist = 16;
    fHistTop = 0;
    fHistDir = 0;
    fRandom = 0;
@@ -48,7 +48,7 @@ ProofSimpleFile::~ProofSimpleFile()
 }
 
 //_____________________________________________________________________________
-void ProofSimpleFile::CreateHistoArrays()
+Int_t ProofSimpleFile::CreateHistoArrays()
 {
    // Create the histogram arrays
 
@@ -56,8 +56,11 @@ void ProofSimpleFile::CreateHistoArrays()
       Error("CreateHistoArrays", "fNhist must be positive!");
       return -1;
    }
+   // Histos array
    fHistTop = new TH1F*[fNhist];
    fHistDir = new TH1F*[fNhist];
+   // Done
+   return 0;
 }
 
 //_____________________________________________________________________________
@@ -114,16 +117,22 @@ void ProofSimpleFile::SlaveBegin(TTree * /*tree*/)
 
    // Cannot continue
    if (!fFile) {
-      Info("SlaveBegin", "could not create '%s': instance is invalid!", fProofFile->GetName());
+      TString amsg = TString::Format("ProofSimpleFile::SlaveBegin: could not create '%s':"
+                                     " instance is invalid!", fProofFile->GetName());
+      Abort(amsg, kAbortProcess);
       return;
    }
 
    // Histos arrays
-   CreateHistoArrays();
+   if (CreateHistoArrays() != 0) {
+      Abort("ProofSimpleFile::SlaveBegin: could not create histograms", kAbortProcess);
+      return;
+   }
 
    // Create directory
    if (!(fFileDir = fFile->mkdir("blue"))) {
-      Info("SlaveBegin", "could not create directory 'blue' in file!");
+      Abort("ProofSimpleFile::SlaveBegin: could not create directory 'blue' in file!",
+            kAbortProcess);
       return;
    }
    
