@@ -2095,10 +2095,8 @@ Double_t TMath::Binomial(Int_t n, Int_t k)
    if ( n < 0 || k < 0 || n < k) return TMath::SignalingNaN();
    if ( k == 0 || n == k) return 1;
 
-   Double_t k1 = TMath::Min(k, n - k);
-   Double_t fact = n;
-   for (Double_t i = 1; i < k1; i++) 
-      fact *= (n - i) / (i + 1);
+   if (n<0 || k<0 || n<k) return TMath::SignalingNaN();
+   if (k==0 || n==k) return 1;
 
    return fact;
 }
