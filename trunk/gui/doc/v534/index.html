@@ -18,6 +18,12 @@
 <li>Use the <tt>ProcessedConfigure</tt> signal to be notified when an embedded frame change its layout, to properly call <tt>Layout()</tt> on its parent frame, to automatically display the change (for example, showing the EventStatusBar of a TCanvas embedded in a TBrowser was only appearing after manually resizing the window)</li>
 </ul>
 
+<h4>TGFileBrowser</h4>
+<ul>
+<li>Fixed memory leak when browsing TList inside a file: don't read the list content each time one click on the list</li>
+<li>A protection for empty directories (e.g. not containing any key) as been added. Solves the <a href="http://savannah.cern.ch/bugs/?94028">bug #94028, TBrowser crash trying to browse sub-root-directories in memory</a></li>
+</ul>
+
 <h4>TGFSComboBox</h4>
 <ul>
 <li>Fix a problem when the current directory is similar to $ROOTSYS, for example with $ROOTSYS being /home/user/root and $PWD being /home/user/rootdev, only "dev" was displayed, stripping off $ROOTSYS</li>

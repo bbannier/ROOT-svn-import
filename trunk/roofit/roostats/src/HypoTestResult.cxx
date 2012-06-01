@@ -219,11 +219,6 @@ Double_t HypoTestResult::CLsplusbError() const {
    return fBackgroundIsAlt ? fNullPValueError : fAlternatePValueError;
 }
 
-Double_t HypoTestResult::SignificanceError() const {
-   // Taylor expansion series approximation for standard deviation (error propagation)
-   return NullPValueError() / ROOT::Math::normal_pdf(Significance());
-}
-
 
 //____________________________________________________________________
 Double_t HypoTestResult::CLsError() const {
@@ -284,9 +279,7 @@ void HypoTestResult::Print(Option_t * ) const
    cout << " - Null p-value = " << NullPValue(); 
    if (fromToys) cout << " +/- " << NullPValueError();
    cout << endl;
-   cout << " - Significance = " << Significance();
-   if (fromToys) cout << " +/- " << SignificanceError() << " sigma";
-   cout << endl;
+   cout << " - Significance = " << Significance() << " sigma" << endl;
    if(fAltDistr)
       cout << " - Number of Alt toys: " << fAltDistr->GetSize() << std::endl;
    if(fNullDistr)

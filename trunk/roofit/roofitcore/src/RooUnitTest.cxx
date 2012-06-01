@@ -384,8 +384,7 @@ Bool_t RooUnitTest::runCompTests()
       }
 
       if (fabs(iter3->first - (Double_t)(*ref))>vtol() ) {
-	cout << "stressRooFit ERROR: comparison of value " << iter3->first <<   " fails comparison with reference " << ref->GetName() 
-        << " for variable " << iter3->second << endl ;
+	cout << "stressRooFit ERROR: comparison of value " << iter3->first <<   " fails comparison with reference " << ref->GetName() << endl ;
 	ret = kFALSE ;
       }
      

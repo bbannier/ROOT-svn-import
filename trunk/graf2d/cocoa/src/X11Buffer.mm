@@ -23,6 +23,8 @@
 #include "QuartzPixmap.h"
 #include "X11Drawable.h"
 #include "X11Buffer.h"
+#include "TGWindow.h"
+#include "TGClient.h"
 #include "TGCocoa.h"
 
 namespace ROOT {
@@ -72,7 +74,7 @@ DrawLine::DrawLine(Drawable_t wid, const GCValues_t &gc, const Point_t &p1, cons
 void DrawLine::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->DrawLineAux(fID, fGC, fP1.fX, fP1.fY, fP2.fX, fP2.fY);
 }
 
@@ -80,7 +82,7 @@ void DrawLine::Execute()const
 DrawSegments::DrawSegments(Drawable_t wid, const GCValues_t &gc, const Segment_t *segments, Int_t nSegments)
                  : Command(wid, gc) 
 {
-   assert(segments != nullptr && "DrawSegments, segments parameter is null");
+   assert(segments != 0 && "DrawSegments, segments parameter is null");
    assert(nSegments > 0 && "DrawSegments, nSegments <= 0");
    
    fSegments.assign(segments, segments + nSegments);
@@ -90,7 +92,7 @@ DrawSegments::DrawSegments(Drawable_t wid, const GCValues_t &gc, const Segment_t
 void DrawSegments::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->DrawSegmentsAux(fID, fGC, &fSegments[0], (Int_t)fSegments.size());
 }
 
@@ -105,7 +107,7 @@ ClearArea::ClearArea(Window_t wid, const Rectangle_t &area)
 void ClearArea::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->ClearAreaAux(fID, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight);   
 }
 
@@ -128,7 +130,7 @@ bool CopyArea::HasOperand(Drawable_t drawable)const
 void CopyArea::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->CopyAreaAux(fSrc, fID, fGC, fArea.fX, fArea.fY, fArea.fWidth, fArea.fHeight, fDstPoint.fX, fDstPoint.fY);
 }
 
@@ -144,7 +146,7 @@ DrawString::DrawString(Drawable_t wid, const GCValues_t &gc, const Point_t &poin
 void DrawString::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->DrawStringAux(fID, fGC, fPoint.fX, fPoint.fY, fText.c_str(), fText.length());
 }
 
@@ -159,7 +161,7 @@ FillRectangle::FillRectangle(Drawable_t wid, const GCValues_t &gc, const Rectang
 void FillRectangle::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->FillRectangleAux(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
 }
 
@@ -167,7 +169,7 @@ void FillRectangle::Execute()const
 FillPolygon::FillPolygon(Drawable_t wid, const GCValues_t &gc, const Point_t *points, Int_t nPoints)
                 : Command(wid, gc)
 {
-   assert(points != nullptr && "FillPolygon, points parameter is null");
+   assert(points != 0 && "FillPolygon, points parameter is null");
    assert(nPoints > 0 && "FillPolygon, nPoints <= 0");
    
    fPolygon.assign(points, points + nPoints);
@@ -177,7 +179,7 @@ FillPolygon::FillPolygon(Drawable_t wid, const GCValues_t &gc, const Point_t *po
 void FillPolygon::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->FillPolygonAux(fID, fGC, &fPolygon[0], (Int_t)fPolygon.size());
 }
 
@@ -192,7 +194,7 @@ DrawRectangle::DrawRectangle(Drawable_t wid, const GCValues_t &gc, const Rectang
 void DrawRectangle::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->DrawRectangleAux(fID, fGC, fRectangle.fX, fRectangle.fY, fRectangle.fWidth, fRectangle.fHeight);
 }
 
@@ -207,7 +209,7 @@ UpdateWindow::UpdateWindow(QuartzView *view)
 //______________________________________________________________________________
 void UpdateWindow::Execute()const
 {
-   assert(fView.fContext != nullptr && "Execute, view.fContext is null");
+   assert(fView.fContext != 0 && "Execute, view.fContext is null");
 
    if (QuartzPixmap *pixmap = fView.fBackBuffer) {
       CGImageRef image = [pixmap createImageFromPixmap];//CGBitmapContextCreateImage(pixmap.fContext);
@@ -227,7 +229,7 @@ DeletePixmap::DeletePixmap(Pixmap_t pixmap)
 void DeletePixmap::Execute()const
 {
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "Execute, gVirtualX is either null or not of TGCocoa type");
+   assert(vx != 0 && "Execute, gVirtualX is either null or not of TGCocoa type");
    vx->DeletePixmapAux(fID);
 }
 
@@ -265,7 +267,7 @@ void CommandBuffer::AddDrawLine(Drawable_t wid, const GCValues_t &gc, Int_t x1, 
 //______________________________________________________________________________
 void CommandBuffer::AddDrawSegments(Drawable_t wid, const GCValues_t &gc, const Segment_t *segments, Int_t nSegments)
 {
-   assert(segments != nullptr && "AddDrawSegments, segments parameter is null");
+   assert(segments != 0 && "AddDrawSegments, segments parameter is null");
    assert(nSegments > 0 && "AddDrawSegments, nSegments <= 0");
 
    try {
@@ -370,7 +372,7 @@ void CommandBuffer::AddDrawRectangle(Drawable_t wid, const GCValues_t &gc, Int_t
 //______________________________________________________________________________
 void CommandBuffer::AddFillPolygon(Drawable_t wid, const GCValues_t &gc, const Point_t *polygon, Int_t nPoints)
 {
-   assert(polygon != nullptr && "AddFillPolygon, polygon parameter is null");
+   assert(polygon != 0 && "AddFillPolygon, polygon parameter is null");
    assert(nPoints > 0 && "AddFillPolygon, nPoints <= 0");
    
    try {
@@ -408,17 +410,59 @@ void CommandBuffer::AddDeletePixmap(Pixmap_t pixmapID)
    }
 }
 
+namespace {
+
+//______________________________________________________________________________
+void RepaintTree(QuartzView *view)
+{
+   //Can be only QuartzView, ROOTOpenGLView should never have children views.
+   assert(view != nil && "RepaintTree, view parameter is nil");
+   
+   TGCocoa *vx = (TGCocoa *)gVirtualX;
+   vx->CocoaDrawON();
+   
+   for (NSView<X11Window> *child in [view subviews]) {
+      if ([child isKindOfClass : [QuartzView class]]) {
+         QuartzView *qv = (QuartzView *)child;
+         if ([qv lockFocusIfCanDraw]) {
+            NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
+            assert(nsContext != nil && "RepaintTree, nsContext is nil");
+            CGContextRef cgContext = (CGContextRef)[nsContext graphicsPort];
+            assert(cgContext != 0 && "RepaintTree, cgContext is null");//remove this assert?
+
+            CGContextRef oldCtx = qv.fContext;
+            qv.fContext = cgContext;
+            
+            TGWindow *window = gClient->GetWindowById(qv.fID);
+            assert(window != 0 && "RepaintTree, window was not found");
+            
+            gClient->NeedRedraw(window, kTRUE);
+            qv.fContext = oldCtx;
+            
+            [qv unlockFocus];
+            if ([[qv subviews] count])
+               RepaintTree(qv);
+         }
+      }
+   }
+   
+   vx->CocoaDrawOFF();
+}
+
+}
+
 //______________________________________________________________________________
 void CommandBuffer::Flush(Details::CocoaPrivate *impl)
 {
-   assert(impl != nullptr && "Flush, impl parameter is null");
+   assert(impl != 0 && "Flush, impl parameter is null");
 
    //All magic is here.
-   CGContextRef prevContext = nullptr;
-   CGContextRef currContext = nullptr;
+   CGContextRef prevContext = 0;
+   CGContextRef currContext = 0;
+   QuartzView *prevView = nil;
 
-   for (auto cmd : fCommands) {
-      //assert(cmd != nullptr && "Flush, command is null");
+   for (size_type i = 0, e = fCommands.size(); i < e; ++i) {
+      const Command *cmd = fCommands[i];
       if (!cmd)//Command was deleted by RemoveOperation/RemoveGraphicsOperation.
          continue;
       
@@ -442,7 +486,7 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
          NSGraphicsContext *nsContext = [NSGraphicsContext currentContext];
          assert(nsContext != nil && "Flush, currentContext is nil");
          currContext = (CGContextRef)[nsContext graphicsPort];
-         assert(currContext != nullptr && "Flush, graphicsPort is null");//remove this assert?
+         assert(currContext != 0 && "Flush, graphicsPort is null");//remove this assert?
          
          view.fContext = currContext;
          if (prevContext && prevContext != currContext)
@@ -470,6 +514,9 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
          view.fContext = 0;
       }
    }
+   
+   if (prevView && [[prevView subviews] count])
+      RepaintTree(prevView);
    
    if (currContext)
       CGContextFlush(currContext);
@@ -553,8 +600,8 @@ void CommandBuffer::RemoveGraphicsOperationsForWindow(Window_t wid)
 //______________________________________________________________________________
 void CommandBuffer::ClearCommands()
 {
-   for (auto cmd : fCommands)
-      delete cmd;
+   for (size_type i = 0, e = fCommands.size(); i < e; ++i)
+      delete fCommands[i];
 
    fCommands.clear();
 }

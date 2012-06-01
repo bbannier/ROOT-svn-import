@@ -81,7 +81,7 @@ QuartzView *CreateChildView(QuartzView * /*parent*/, Int_t x, Int_t y, UInt_t w,
 void GetRootWindowAttributes(WindowAttributes_t *attr)
 {
    //'root' window does not exist, but we can request its attributes.
-   assert(attr != nullptr && "GetRootWindowAttributes, attr parameter is null");
+   assert(attr != 0 && "GetRootWindowAttributes, attr parameter is null");
    
    NSArray *screens = [NSScreen screens];
    assert(screens != nil && "screens array is nil");
@@ -216,7 +216,7 @@ NSPoint TranslateCoordinates(NSView<X11Window> *from, NSView<X11Window> *to, NSP
 //______________________________________________________________________________
 void SetWindowAttributes(const SetWindowAttributes_t *attr, NSObject<X11Window> *window)
 {
-   assert(attr != nullptr && "SetWindowAttributes, attr parameter is null");
+   assert(attr != 0 && "SetWindowAttributes, attr parameter is null");
    assert(window != nil && "SetWindowAttributes, window parameter is nil");
 
    const Mask_t mask = attr->fMask;
@@ -249,7 +249,7 @@ void SetWindowAttributes(const SetWindowAttributes_t *attr, NSObject<X11Window> 
 void GetWindowGeometry(NSObject<X11Window> *win, WindowAttributes_t *dst)
 {
    assert(win != nil && "GetWindowGeometry, win parameter is nil");
-   assert(dst != nullptr && "GetWindowGeometry, dst paremeter is null");
+   assert(dst != 0 && "GetWindowGeometry, dst paremeter is null");
    
    dst->fX = win.fX;
    dst->fY = win.fY;
@@ -262,7 +262,7 @@ void GetWindowGeometry(NSObject<X11Window> *win, WindowAttributes_t *dst)
 void GetWindowAttributes(NSObject<X11Window> *window, WindowAttributes_t *dst)
 {
    assert(window != nil && "GetWindowAttributes, window parameter is nil");
-   assert(dst != nullptr && "GetWindowAttributes, attr parameter is null");
+   assert(dst != 0 && "GetWindowAttributes, attr parameter is null");
    
    *dst = WindowAttributes_t();
    
@@ -959,7 +959,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) getAttributes : (WindowAttributes_t *) attr
 {
-   assert(fContentView != nullptr && "getAttributes, content view is nil");
+   assert(fContentView != 0 && "getAttributes, content view is nil");
    assert(attr && "getAttributes, attr parameter is nil");
 
    ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
@@ -968,7 +968,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) setAttributes : (const SetWindowAttributes_t *)attr
 {
-   assert(attr != nullptr && "setAttributes, attr parameter is null");
+   assert(attr != 0 && "setAttributes, attr parameter is null");
 
 #ifdef DEBUG_ROOT_COCOA
    log_attributes(attr, self.fID);
@@ -1035,7 +1035,7 @@ void print_mask_info(ULong_t mask)
          //you move window using title-bar, ROOT's menu will
          //"fell through" the main window, which is weird.
          TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-         assert(vx != nullptr && "sendEvent, gVirtualX is either null or not of TGCocoa type");
+         assert(vx != 0 && "sendEvent, gVirtualX is either null or not of TGCocoa type");
          if (vx->GetEventTranslator()->HasPointerGrab())
             vx->GetEventTranslator()->GenerateButtonReleaseEvent(fContentView, theEvent, theEvent.type == NSLeftMouseDown ? kButton1 : kButton3);//yes, button release???
       }
@@ -1087,7 +1087,7 @@ void print_mask_info(ULong_t mask)
    closeEvent.fUser[0] = TGCocoa::kIA_DELETE_WINDOW;
    //Place it into the queue.
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "windowShouldClose, gVirtualX is either null or has a type different from TGCocoa");
+   assert(vx != 0 && "windowShouldClose, gVirtualX is either null or has a type different from TGCocoa");
    vx->SendEvent(fContentView.fID, &closeEvent);
 
    //Do not let AppKit to close a window.
@@ -1340,9 +1340,9 @@ void print_mask_info(ULong_t mask)
    assert(srcImage.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, srcImage.fImage is nil");
 
    //Check self.
-   assert(self.fContext != nullptr && "copyImage:area:withMask:clipOrigin:toPoint:, self.fContext is null");
+   assert(self.fContext != 0 && "copyImage:area:withMask:clipOrigin:toPoint:, self.fContext is null");
    
-   CGImageRef subImage = nullptr;
+   CGImageRef subImage = 0;
    bool needSubImage = false;
    if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
       needSubImage = true;
@@ -1398,7 +1398,7 @@ void print_mask_info(ULong_t mask)
    }
    
    assert(srcView != nil && "copyView:area:toPoint:, srcView parameter is nil");
-   assert(self.fContext != nullptr && "copyView:area:toPoint, self.fContext is null");
+   assert(self.fContext != 0 && "copyView:area:toPoint, self.fContext is null");
 
    //It can happen, that src and self are the same.
    //cacheDisplayInRect calls drawRect with bitmap context 
@@ -1445,7 +1445,7 @@ void print_mask_info(ULong_t mask)
    }
 
    //Check self.
-   assert(self.fContext != nullptr && "copyPixmap:area:withMask:clipOrigin:toPoint:, self.fContext is null");
+   assert(self.fContext != 0 && "copyPixmap:area:withMask:clipOrigin:toPoint:, self.fContext is null");
    
    CGImageRef imageFromPixmap = [srcPixmap createImageFromPixmap : area];
    assert(imageFromPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, createImageFromPixmap failed");
@@ -1478,14 +1478,14 @@ void print_mask_info(ULong_t mask)
 
    assert(srcImage != nil && "copyImage:area:toPoint:, srcImage parameter is nil");
    assert(srcImage.fImage != nil && "copyImage:area:toPoint:, srcImage.fImage is nil");
-   assert(self.fContext != nullptr && "copyImage:area:toPoint:, fContext is null");
+   assert(self.fContext != 0 && "copyImage:area:toPoint:, fContext is null");
 
    if (!AdjustCropArea(srcImage, area)) {
       NSLog(@"QuartzView: -copyImage:area:toPoint, image and copy area do not intersect");
       return;
    }
 
-   CGImageRef subImage = nullptr;
+   CGImageRef subImage = 0;
    bool needSubImage = false;
    if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
       needSubImage = true;
@@ -1632,7 +1632,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) getAttributes : (WindowAttributes_t *)attr
 {
-   assert(attr != nullptr && "getAttributes, attr parameter is null");
+   assert(attr != 0 && "getAttributes, attr parameter is null");
    
    ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
 }
@@ -1640,7 +1640,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) setAttributes : (const SetWindowAttributes_t *)attr
 {
-   assert(attr != nullptr && "setAttributes, attr parameter is null");
+   assert(attr != 0 && "setAttributes, attr parameter is null");
 
 #ifdef DEBUG_ROOT_COCOA
    log_attributes(attr, fID);
@@ -1851,7 +1851,7 @@ void print_mask_info(ULong_t mask)
          vx->CocoaDrawON();
 
          fContext = (CGContextRef)[nsContext graphicsPort];
-         assert(fContext != nullptr && "drawRect, graphicsPort returned null");
+         assert(fContext != 0 && "drawRect, graphicsPort returned null");
          
          CGContextSaveGState(fContext);
 
@@ -1894,9 +1894,7 @@ void print_mask_info(ULong_t mask)
          CGContextStrokeRect(fContext, dirtyRect);
 #endif
 
-         fContext = nullptr;
-         
-         
+         fContext = 0;         
       } else {
 #ifdef DEBUG_ROOT_COCOA
          NSLog(@"QuartzView: -drawRect method, no window for id %u was found", fID);
@@ -1928,7 +1926,7 @@ void print_mask_info(ULong_t mask)
    
    if ((fEventMask & kStructureNotifyMask) && (self.fMapState == kIsViewable || fIsOverlapped == YES)) {
       TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-      assert(vx != nullptr && "setFrameSize:, gVirtualX is either null or has a type, different from TGCocoa");
+      assert(vx != 0 && "setFrameSize:, gVirtualX is either null or has a type, different from TGCocoa");
       vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
    }
 
@@ -1941,7 +1939,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "mouseDown, fID is 0");
    
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "mouseDown, gVirtualX is either null or has a type, different from TGCocoa");
+   assert(vx != 0 && "mouseDown, gVirtualX is either null or has a type, different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);
 }
 
@@ -1951,7 +1949,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "scrollWheel, fID is 0");
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "scrollWheel, gVirtualX is either null or has a type, different from TGCocoa");
+   assert(vx != 0 && "scrollWheel, gVirtualX is either null or has a type, different from TGCocoa");
 
    const CGFloat deltaY = [theEvent deltaY];
    if (deltaY < 0) {
@@ -1969,7 +1967,7 @@ void print_mask_info(ULong_t mask)
 {
    assert(fID != 0 && "printWindowInformation, fID is 0");
    TGWindow *window = gClient->GetWindowById(fID);
-   assert(window != nullptr && "printWindowInformation, window not found");
+   assert(window != 0 && "printWindowInformation, window not found");
 
    NSLog(@"-----------------View %u info:---------------------", fID);
    NSLog(@"ROOT's window class is %s", window->IsA()->GetName());
@@ -1991,7 +1989,7 @@ void print_mask_info(ULong_t mask)
 #endif
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "rightMouseDown, gVirtualX is either null or has type different from TGCocoa");
+   assert(vx != 0 && "rightMouseDown, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton3);
 }
 
@@ -2012,7 +2010,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "rightMouseUp, fID is 0");
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "rightMouseUp, gVirtualX is either null or has type different from TGCocoa");
+   assert(vx != 0 && "rightMouseUp, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton2);
 }
 
@@ -2022,7 +2020,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "mouseEntered, fID is 0");
    
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "mouseEntered, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "mouseEntered, gVirtualX is null or not of TGCocoa type");
 
    vx->GetEventTranslator()->GenerateCrossingEvent(self, theEvent);  
 }
@@ -2033,7 +2031,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "mouseExited, fID is 0");
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "mouseExited, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "mouseExited, gVirtualX is null or not of TGCocoa type");
 
    vx->GetEventTranslator()->GenerateCrossingEvent(self, theEvent);
 }
@@ -2047,7 +2045,7 @@ void print_mask_info(ULong_t mask)
       return;      //TODO: check, that it does not create additional problems.
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "mouseMoved, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "mouseMoved, gVirtualX is null or not of TGCocoa type");
    
    vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);
 }
@@ -2058,7 +2056,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "mouseDragged, fID is 0");
    
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "mouseMoved, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "mouseMoved, gVirtualX is null or not of TGCocoa type");
    
    vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
 }
@@ -2069,7 +2067,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "rightMouseDragged, fID is 0");
 
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "rightMouseMoved, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "rightMouseMoved, gVirtualX is null or not of TGCocoa type");
    
    vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
 }
@@ -2080,7 +2078,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "keyDown, fID is 0");
   
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "keyDown, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "keyDown, gVirtualX is null or not of TGCocoa type");
    vx->GetEventTranslator()->GenerateKeyPressEvent(self, theEvent);
 }
 
@@ -2121,7 +2119,7 @@ void print_mask_info(ULong_t mask)
       focusView = ((QuartzWindow *)[self window]).fContentView;
    
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != nullptr && "becomeFirstResponder, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "becomeFirstResponder, gVirtualX is null or not of TGCocoa type");
    vx->GetEventTranslator()->GenerateFocusChangeEvent(focusView);
 
    return YES;

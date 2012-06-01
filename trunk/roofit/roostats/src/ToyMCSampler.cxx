@@ -359,6 +359,7 @@ RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramP
    RooArgSet *allVars = fPdf->getVariables();
    RooArgSet *saveAll = (RooArgSet*) allVars->snapshot();
 
+
    DetailedOutputAggregator detOutAgg;
 
    // counts the number of toys in the limits set for adaptive sampling
