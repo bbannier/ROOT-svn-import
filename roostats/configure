@@ -73,6 +73,7 @@ options="                    \
    enable_memstat            \
    enable_minuit2            \
    enable_monalisa           \
+   enable_multinest          \
    enable_mysql              \
    enable_odbc               \
    enable_opengl             \
@@ -1464,6 +1465,7 @@ enable/disable options, prefix with either --enable- or --disable-
   memstat            A memory statistics utility, helps to detect memory leaks
   minuit2            Build the new libMinuit2 minimizer library
   monalisa           Monalisa monitoring support, requires libapmoncpp
+  multinest          MultiNest support
   mysql              MySQL support, requires libmysqlclient
   odbc               ODBC support, requires libiodbc or libodbc
   opengl             OpenGL support, requires libGL and libGLU
@@ -1556,6 +1558,7 @@ with options, prefix with --with-, enables corresponding support
   llvm-config        LLVM/clang for cling, location of llvm-config script
   monalisa-incdir    Monalisa support, location of ApMon.h
   monalisa-libdir    Monalisa support, location of libapmoncpp
+  multinest-libdir   MultiNest support, location of libnest3.a
   mysql-incdir       MySQL support, location of mysql.h
   mysql-libdir       MySQL support, location of libmysqlclient
   odbc-incdir        ODBC support, location of sqlext.h
@@ -1888,6 +1891,7 @@ if test $# -gt 0 ; then
       --with-ldap-incdir=*)    ldapincdir=$optarg    ; enable_ldap="yes"    ;;
       --with-ldap-libdir=*)    ldaplibdir=$optarg    ; enable_ldap="yes"    ;;
       --with-llvm-config=*)    llvmconfig=$optarg    ;; # require explicit --enable-cling
+      --with-multinest-libdir=*)   multinestlibdir=$optarg   ; enable_multinest="yes"   ;;
       --with-mysql-incdir=*)   mysqlincdir=$optarg   ; enable_mysql="yes"   ;;
       --with-mysql-libdir=*)   mysqllibdir=$optarg   ; enable_mysql="yes"   ;;
       --with-monalisa-incdir=*)monalisaincdir=$optarg; enable_monalisa="yes";;
@@ -2765,6 +2769,22 @@ if test ! "x$enable_alloc" = "xno"; then
 fi
 check_explicit "$enable_alloc" "$enable_alloc_explicit" \
      "Explicitly required allocator dependencies not fulfilled"
+
+
+
+######################################################################
+#
+### echo %%% MultiNest Connector
+#
+message "Checking whether to build libMultiNest"
+if test "x$enable_multinest" = "xyes" || test ! "x$MULTINEST" = "x"; then
+    enable_multinest="yes"
+    result "yes"
+else
+    enable_multinest=""
+    result "no"
+fi
+
 
 ######################################################################
 #
@@ -6042,6 +6062,7 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_monalisa" = "xyes" && pl="$pl root-plugin-net-monalisa"
     test "x$enable_srp"      = "xyes" && pl="$pl root-plugin-net-srp"
     test "x$enable_peac"     = "xyes" && pl="$pl root-plugin-proof-peac"
+    test "x$enable_multinest" = "xyes" && pl="$pl libroot-multinest"
     test "x$enable_mysql"    = "xyes" && pl="$pl root-plugin-sql-mysql"
     test "x$enable_odbc"     = "xyes" && pl="$pl root-plugin-sql-odbc"
     test "x$enable_oracle"   = "xyes" && pl="$pl root-plugin-sql-oracle"
@@ -6536,6 +6557,9 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@dnssdlib@|$dnssdlib|"                \
     -e "s|@dnssdlibdir@|$dnssdlibdir|"          \
     -e "s|@avahilibdir@|$avahilibdir|"          \
+    -e "s|@multinestincdir@|$multinestincdir|"          \
+    -e "s|@multinestlib@|$multinestlib|"                \
+    -e "s|@multinestlibdir@|$multinestlibdir|"          \
     -e "s|@mysqlincdir@|$mysqlincdir|"          \
     -e "s|@mysqllib@|$mysqllib|"                \
     -e "s|@mysqllibdir@|$mysqllibdir|"          \
@@ -6623,6 +6647,7 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@buildfitsio@|$enable_fitsio|"        \
     -e "s|@buildgl@|$enable_opengl|"            \
     -e "s|@buildldap@|$enable_ldap|"            \
+    -e "s|@buildmultinest@|$enable_multinest|"  \
     -e "s|@buildmysql@|$enable_mysql|"          \
     -e "s|@buildpgsql@|$enable_pgsql|"          \
     -e "s|@buildodbc@|$enable_odbc|"            \

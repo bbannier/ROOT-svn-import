@@ -218,6 +218,9 @@ MODULES      += cint/cintex
 endif
 ifeq ($(BUILDROOFIT),yes)
 MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
+ifeq ($(BUILDMULTINEST),yes)
+MODULES      += roofit/MultiNestPlugin 
+endif
 ifeq ($(BUILDXML),yes)
 MODULES      += roofit/histfactory
 endif
