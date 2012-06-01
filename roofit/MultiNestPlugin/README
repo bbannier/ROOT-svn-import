@@ -1,0 +1,16 @@
+Download MultiNest from:
+   http://ccpforge.cse.rl.ac.uk/gf/project/multinest/
+
+You might need to change the Makefile with the following suggestions:
+   FC = $(shell root-config --f77) -fPIC
+   FFLAGS += -O3 -ffree-line-length-none -I/usr/local/include
+   CFLAGS += -O3
+
+Configure ROOT using
+   --with-multinest-libdir=pathToYourMultiNestDirectoryWhereLibNest3Is
+
+
+
+MODNAME is multinest:
+   make multinest
+   make clean-multinest

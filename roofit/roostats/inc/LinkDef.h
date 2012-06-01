@@ -52,6 +52,8 @@
 #pragma link C++ class RooStats::PdfProposal+; 
 #pragma link C++ class RooStats::Heaviside+; 
 #pragma link C++ class RooStats::SequentialProposal+; 
+#pragma link C++ class RooStats::MultiNestInterface+;
+#pragma link C++ class RooStats::MultiNestCalculator+;
 
 #pragma link C++ class RooStats::HypoTestCalculatorGeneric+;
 #pragma link C++ class RooStats::HybridCalculator+;

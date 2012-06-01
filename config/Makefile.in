@@ -90,6 +90,11 @@ LDAPLIBDIR     := @ldaplibdir@
 LDAPCLILIB     := @ldaplib@
 LDAPINCDIR     := $(filter-out /usr/include, @ldapincdir@)
 
+BUILDMULTINEST  := @buildmultinest@
+MULTINESTLIBDIR := @multinestlibdir@
+MULTINESTLIB    := @multinestlib@
+MULTINESTINCDIR := $(filter-out /usr/include, @multinestincdir@)
+
 BUILDMYSQL     := @buildmysql@
 MYSQLLIBDIR    := @mysqllibdir@
 MYSQLCLILIB    := @mysqllib@
