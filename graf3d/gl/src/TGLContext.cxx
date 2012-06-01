@@ -537,8 +537,8 @@ TGLContext* TGLContextIdentity::GetDefaultContextAny()
 TGLFontManager* TGLContextIdentity::GetFontManager()
 {
    //Get the free-type font-manager associated with this context-identity.
-   if(!fFontManager) fFontManager = new TGLFontManager();
-   return fFontManager;
+   //if(!fFontManager) fFontManager = new TGLFontManager();
+   return 0;//fFontManager;
 }
 
 //______________________________________________________________________________
