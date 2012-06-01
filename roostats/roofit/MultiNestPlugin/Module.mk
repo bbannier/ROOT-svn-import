@@ -76,7 +76,6 @@ include/RooStats/MultiNestPlugin/%.h:    $(MULTINESTPLUGINDIRI)/RooStats/MultiNe
 
 $(MULTINESTPLUGINLIB): $(MULTINESTPLUGINO) $(MULTINESTPLUGINDO) $(ORDER_) $(MAINLIBS) \
 	               $(MULTINESTPLUGINLIBDEP) 
-		@echo "Building MultiNest plugin lib."
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libMultiNestPlugin.$(SOEXT) $@ \
 		   "$(MULTINESTPLUGINO) $(MULTINESTPLUGINDO)" \
