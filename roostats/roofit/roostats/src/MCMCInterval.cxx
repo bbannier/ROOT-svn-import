@@ -706,8 +706,7 @@ void MCMCInterval::DetermineTailFractionInterval()
       x = fChain->Get(fVector[i])->getRealValue(name);
       w = fChain->Weight();
 
-      if (TMath::Abs(leftTailSum + w - leftTailCutoff) <
-          TMath::Abs(leftTailSum - leftTailCutoff)) {
+      if( leftTailCutoff-leftTailSum > w ) {
          // moving the lower limit to x would bring us closer to the desired
          // left tail size
          ll = x;
@@ -721,8 +720,7 @@ void MCMCInterval::DetermineTailFractionInterval()
       x = fChain->Get(fVector[i])->getRealValue(name);
       w = fChain->Weight();
 
-      if (TMath::Abs(rightTailSum + w - rightTailCutoff) <
-          TMath::Abs(rightTailSum - rightTailCutoff)) {
+      if( rightTailCutoff-rightTailSum > w ) {
          // moving the lower limit to x would bring us closer to the desired
          // left tail size
          ul = x;
