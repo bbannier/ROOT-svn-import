@@ -148,6 +148,7 @@ enable_qt=no
 enable_qtgsi=no
 enable_roofit=no
 enable_minuit2=no
+enable_multinest=no
 enable_rpath=no
 enable_ruby=no
 enable_shadowpw=
@@ -6557,9 +6558,8 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@dnssdlib@|$dnssdlib|"                \
     -e "s|@dnssdlibdir@|$dnssdlibdir|"          \
     -e "s|@avahilibdir@|$avahilibdir|"          \
-    -e "s|@multinestincdir@|$multinestincdir|"          \
-    -e "s|@multinestlib@|$multinestlib|"                \
-    -e "s|@multinestlibdir@|$multinestlibdir|"          \
+    -e "s|@multinestlib@|$multinestlib|"        \
+    -e "s|@multinestlibdir@|$multinestlibdir|"  \
     -e "s|@mysqlincdir@|$mysqlincdir|"          \
     -e "s|@mysqllib@|$mysqllib|"                \
     -e "s|@mysqllibdir@|$mysqllibdir|"          \
