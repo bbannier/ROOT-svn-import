@@ -897,7 +897,7 @@ void TGCocoa::MoveWindow(Window_t wid, Int_t x, Int_t y)
    
    if (!wid)//From TGX11.
       return;
-      
+
    assert(!fPimpl->IsRootWindow(wid) && "MoveWindow, called for 'root' window");
    
    [fPimpl->GetWindow(wid) setX : x Y : y];
@@ -3139,6 +3139,7 @@ void TGCocoa::SetWMTransientHint(Window_t wid, Window_t mainWid)
    //TGTransientFrame uses this hint to attach a window to some "main" window,
    //so that transient window is alway above the main window. This is used for 
    //dialogs and dockable panels.
+   
    assert(Int_t(wid) > fPimpl->GetRootWindowID() && "SetWMTransientHint, wid parameter is a root window");
 
    if (fPimpl->IsRootWindow(mainWid))
