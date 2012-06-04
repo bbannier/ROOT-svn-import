@@ -16,6 +16,7 @@
 
 #include <Cocoa/Cocoa.h>
 
+#include "ROOTOpenGLView.h"
 #include "QuartzWindow.h"
 #include "CocoaUtils.h"
 #include "KeySymbols.h"
@@ -1029,8 +1030,9 @@ void EventTranslator::GenerateCrossingEvent(NSView<X11Window> *view, NSEvent *th
 
    if (fPointerGrab == kPGNoGrab) {
       NSView *candidateView = [[[view window] contentView] hitTest : [theEvent locationInWindow]];
-      if (candidateView && ![candidateView isKindOfClass : [QuartzView class]]) {//TODO: add a test for OpenGL view.
-         NSLog(@"EventTranslator::GenerateCrossingEvent: error, hit test returned not a QuartzView!");
+      const bool isROOTView = [candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]];
+      if (candidateView && !isROOTView) {//TODO: add a test for OpenGL view.
+         NSLog(@"EventTranslator::GenerateCrossingEvent: error, hit test returned not a QuartzView/ROOTOpenGLView!");
          candidateView = nil;
       }
 
