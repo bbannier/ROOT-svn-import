@@ -206,7 +206,7 @@ function ReadFile() {
           (navigator_version.indexOf("Safari") != -1) &&
           (navigator_version.indexOf("Version/5.1.7") != -1)) {
          alert("There are know issues with Safari 5.1.7 on MacOS X. It may become unresponsive or even hangs. You can use any other web browser (excepted Opera)");
-	 return;
+         return;
       }
    }
    AssertPrerequisites();
