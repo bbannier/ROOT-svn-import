@@ -486,7 +486,7 @@ void TGCocoa::ResizeWindow(Int_t wid)
    
    NSObject<X11Window> *window = fPimpl->GetWindow(wid);
    if (window.fBackBuffer) {
-      int currentDrawable = fSelectedDrawable;
+      const int currentDrawable = fSelectedDrawable;
       fSelectedDrawable = wid;
       SetDoubleBufferON();
       fSelectedDrawable = currentDrawable;
@@ -498,8 +498,12 @@ void TGCocoa::UpdateWindow(Int_t /*mode*/)
 {
    //This function is used by TCanvas/TPad:
    //draw "back buffer" image into the view.
+   
+   //Basic es-guarantee: X11Buffer::AddUpdateWindow modifies vector with commands,
+   //if the following call to TGCocoa::Update will produce an exception dusing X11Buffer::Flush,
+   //initial state of X11Buffer can not be restored, but it still must be in some valid state.
+   
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "UpdateWindow, no window was selected, can not update 'root' window");
-//   assert(fPimpl->GetDrawable(fSelectedDrawable).fIsPixmap == NO && "UpdateWindow, called for a pixmap");
    
    NSObject<X11Window> *window = fPimpl->GetWindow(fSelectedDrawable);
 
@@ -561,6 +565,10 @@ Window_t TGCocoa::CreateWindow(Window_t parentID, Int_t x, Int_t y, UInt_t w, UI
                                UInt_t clss, void *visual, SetWindowAttributes_t *attr, UInt_t wtype)
 {
    //Create new window (top-level == QuartzWindow + QuartzView, or child == QuartzView)
+   
+   //Strong es-guarantee - exception can be only during registration, class state will remain
+   //unchanged, no leaks (scope guards).
+   
    const Util::AutoreleasePool pool;
    
    if (fPimpl->IsRootWindow(parentID)) {//parent == root window.
@@ -601,6 +609,8 @@ void TGCocoa::DestroyWindow(Window_t wid)
    
    //I have NO idea why ROOT's GUI calls DestroyWindow with illegal
    //window id, but it does.
+   
+   //No-throw guarantee???
    
    if (!wid)
       return;
@@ -643,6 +653,8 @@ void TGCocoa::DestroySubwindows(Window_t wid)
    // The DestroySubwindows function destroys all inferior windows of the
    // specified window, in bottom-to-top stacking order.
    
+   //No-throw guarantee??
+   
    if (!wid)//From TGX11.
       return;
    
@@ -667,6 +679,8 @@ void TGCocoa::DestroySubwindows(Window_t wid)
 //______________________________________________________________________________
 void TGCocoa::GetWindowAttributes(Window_t wid, WindowAttributes_t &attr)
 {
+   //No-throw guarantee.
+
    if (!wid)//X11's None?
       return;
 
@@ -681,6 +695,8 @@ void TGCocoa::GetWindowAttributes(Window_t wid, WindowAttributes_t &attr)
 //______________________________________________________________________________
 void TGCocoa::ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr)
 {
+   //No-throw guarantee.
+
    if (!wid)//From TGX11
       return;
 
@@ -693,6 +709,8 @@ void TGCocoa::ChangeWindowAttributes(Window_t wid, SetWindowAttributes_t *attr)
 //______________________________________________________________________________
 void TGCocoa::SelectInput(Window_t wid, UInt_t evmask)
 {
+   //No-throw guarantee.
+
    // Defines which input events the window is interested in. By default
    // events are propageted up the window stack. This mask can also be
    // set at window creation time via the SetWindowAttributes_t::fEventMask

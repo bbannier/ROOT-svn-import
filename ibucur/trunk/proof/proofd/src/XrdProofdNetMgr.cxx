@@ -1391,14 +1391,14 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *path,
       lcmd = strlen(pat) + strlen(file) + 20;
       cmd = new char[lcmd];
       if (opt == 2) {
-         sprintf(cmd, "grep -v %s %s", pat, file);
+         snprintf(cmd, lcmd, "grep -v %s %s", pat, file);
       } else {
-         sprintf(cmd, "grep %s %s", pat, file);
+         snprintf(cmd, lcmd, "grep %s %s", pat, file);
       }
    } else {
       lcmd = strlen(file) + 10;
       cmd = new char[lcmd];
-      sprintf(cmd, "cat %s", file);
+      snprintf(cmd, lcmd, "cat %s", file);
    }
    TRACE(DBG, "cmd: " << cmd);
 
@@ -1559,7 +1559,7 @@ char *XrdProofdNetMgr::ReadLogPaths(const char *url, const char *msg, int isess)
       reqhdr.proof.int1 = kQueryLogPaths;
       reqhdr.proof.int2 = isess;
       reqhdr.proof.sid = -1;
-      reqhdr.header.dlen = strlen(msg);
+      reqhdr.header.dlen = msg ? strlen(msg) : 0;
       const void *btmp = (const void *) msg;
       char **vout = &buf;
       // Send over
