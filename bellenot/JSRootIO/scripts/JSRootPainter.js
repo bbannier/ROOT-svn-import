@@ -574,7 +574,9 @@ var d, key_tree;
       var k = 1;
       var tree_link = "";
       for (var i=0; i<keys.length; ++i) {
-         tree_link = "javascript: //class "+keys[i]['className'];
+//         tree_link = "javascript: //class "+keys[i]['className'];
+         var message = "Coming soon... " + keys[i]["className"]+" is not yet implemented.";
+         tree_link = "javascript:  alert('" + message + "')";
          var node_img = source_dir+'img/page.gif';
          if (keys[i]['className'].match(/\bTH1/)  ||
              keys[i]['className'].match(/\bTH2/)  ||
@@ -628,7 +630,9 @@ var d, key_tree;
       for (var i=0; i<keys.length; ++i) {
          var disp_name = keys[i]['name'];
          keys[i]['name'] = dir_name + "/" + keys[i]['name'];
-         tree_link = "javascript: //class " + keys[i]['className'];
+//         tree_link = "javascript: //class " + keys[i]['className'];
+         var message = "Coming soon... " + keys[i]["className"]+" is not yet implemented.";
+         tree_link = "javascript:  alert('" + message + "')";
          var node_img = source_dir+'img/page.gif';
          var node_title = keys[i]['className'];
          if (keys[i]['className'].match(/\bTH1/) ||
