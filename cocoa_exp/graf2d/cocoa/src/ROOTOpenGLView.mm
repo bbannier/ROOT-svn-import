@@ -192,6 +192,12 @@
 {
    fIsOverlapped = overlap;
    [self setHidden : fIsOverlapped];
+   if (!overlap) {
+      TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx != 0 && "setFrameSize:, gVirtualX is either null or has a type, different from TGCocoa");
+      vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
+      vx->GetEventTranslator()->GenerateExposeEvent(self, self.frame);
+   }
 }
 
 //______________________________________________________________________________

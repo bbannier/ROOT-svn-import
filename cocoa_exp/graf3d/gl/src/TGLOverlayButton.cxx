@@ -54,7 +54,7 @@ TGLOverlayButton::TGLOverlayButton(TGLViewerBase *parent, const char *text,
 void TGLOverlayButton::Render(TGLRnrCtx& rnrCtx)
 {
    // Render the overlay elements.
-
+/*
    Float_t r, g, b;
    glMatrixMode(GL_PROJECTION);
    glPushMatrix();
@@ -134,7 +134,7 @@ void TGLOverlayButton::Render(TGLRnrCtx& rnrCtx)
    glMatrixMode(GL_PROJECTION);
    glPopMatrix();
    glMatrixMode(GL_MODELVIEW);
-   glPopMatrix();
+   glPopMatrix();*/
 }
 
 //______________________________________________________________________________
