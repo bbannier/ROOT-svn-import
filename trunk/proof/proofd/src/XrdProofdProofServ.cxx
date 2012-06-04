@@ -21,13 +21,6 @@
 // Tracing utils
 #include "XrdProofdTrace.h"
 
-#ifndef SafeDelete
-#define SafeDelete(x) { if (x) { delete x; x = 0; } }
-#endif
-#ifndef SafeDelArray
-#define SafeDelArray(x) { if (x) { delete[] x; x = 0; } }
-#endif
-
 //__________________________________________________________________________
 XrdProofdProofServ::XrdProofdProofServ()
 {
@@ -71,8 +64,8 @@ XrdProofdProofServ::~XrdProofdProofServ()
 {
    // Destructor
 
-   SafeDelete(fStartMsg);
-   SafeDelete(fPingSem);
+   SafeDel(fStartMsg);
+   SafeDel(fPingSem);
 
    std::vector<XrdClientID *>::iterator i;
    for (i = fClients.begin(); i != fClients.end(); i++)
@@ -89,7 +82,7 @@ XrdProofdProofServ::~XrdProofdProofServ()
    // Remove the associated UNIX socket path
    unlink(fUNIXSockPath.c_str());
 
-   SafeDelete(fMutex);
+   SafeDel(fMutex);
 }
 
 //__________________________________________________________________________
@@ -183,8 +176,13 @@ int XrdProofdProofServ::Reset(const char *msg, int type)
    XPDFORM(fn, "%s.status", fAdminPath.c_str());
    FILE *fpid = fopen(fn.c_str(), "r");
    if (fpid) {
-      if (fscanf(fpid, "%d", &st) <= 0)
+      char line[64];
+      if (fgets(line, sizeof(line), fpid)) {
+         if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = 0;
+         st = atoi(line);
+      } else {
          TRACE(XERR,"problems reading from file "<<fn);
+      }
       fclose(fpid);
    }
    TRACE(DBG,"file: "<<fn<<", st:"<<st);
@@ -212,8 +210,8 @@ void XrdProofdProofServ::Reset()
    fResponse = 0;
    fProtocol = 0;
    fParent = 0;
-   SafeDelete(fStartMsg);
-   SafeDelete(fPingSem);
+   SafeDel(fStartMsg);
+   SafeDel(fPingSem);
    fSrvPID = -1;
    fID = -1;
    fIsShutdown = false;
@@ -249,7 +247,7 @@ void XrdProofdProofServ::DeleteUNIXSock()
 {
    // Delete the current UNIX socket
 
-   SafeDelete(fUNIXSock);
+   SafeDel(fUNIXSock);
    unlink(fUNIXSockPath.c_str());
    fUNIXSockPath = "";
 }
