@@ -197,8 +197,8 @@ function ReadFile() {
       if ((navigator_version.indexOf("MSIE 8") != -1) ||
           (navigator_version.indexOf("MSIE 7") != -1))  {
          alert("You need at least MS Internet Explorer version 9.0. Note you can also use any other web browser (excepted Opera)");
+         return;
       }
-      return;
    }
    else {
       // Safari 5.1.7 on MacOS X doesn't work properly
@@ -206,8 +206,8 @@ function ReadFile() {
           (navigator_version.indexOf("Safari") != -1) &&
           (navigator_version.indexOf("Version/5.1.7") != -1)) {
          alert("There are know issues with Safari 5.1.7 on MacOS X. It may become unresponsive or even hangs. You can use any other web browser (excepted Opera)");
+	 return;
       }
-      return;
    }
    AssertPrerequisites();
    // else simply open the file
