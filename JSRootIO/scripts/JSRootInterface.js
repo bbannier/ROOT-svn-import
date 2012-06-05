@@ -172,22 +172,27 @@ function AssertPrerequisites(andThen) {
       loadScript('http://code.highcharts.com/modules/exporting.js', function() {
       loadScript(source_dir+'scripts/JSRootPainter.js', function() {
       loadScript(source_dir+'scripts/JSRootIOEvolution.js', function() {
-         if (andThen) { andThen(); }
-         $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
-         var url = $("#urlToLoad").val();
-         if (url == "" || url == " ") return;
-         $("#status").append("load: " + url + "<br/>");
-         $("#report").get(0).innerHTML = '';
-         obj_list.splice(0, obj_list.length);
-         //obj_list = [];
-         obj_index = 0;
-         delete gFile;
-         gFile = new JSROOTIO.RootFile(url);
-         $('#report').append("</body></html>");
-         $('#report').addClass("ui-accordion ui-accordion-icons ui-widget ui-helper-reset");
+         if (andThen) { 
+            andThen(); 
+         }
+         else {
+            $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
+            var url = $("#urlToLoad").val();
+            if (url == "" || url == " ") return;
+            $("#status").append("load: " + url + "<br/>");
+            $("#report").get(0).innerHTML = '';
+            obj_list.splice(0, obj_list.length);
+            //obj_list = [];
+            obj_index = 0;
+            delete gFile;
+            gFile = new JSROOTIO.RootFile(url);
+            $('#report').append("</body></html>");
+            $('#report').addClass("ui-accordion ui-accordion-icons ui-widget ui-helper-reset");
+         }
       }) }) }) }) }) }) }) }) });
-      return;
+      return true;
    }
+   return false;
 };
 
 function ReadFile() {
@@ -209,7 +214,7 @@ function ReadFile() {
          return;
       }
    }
-   AssertPrerequisites();
+   if (AssertPrerequisites()) return;
    // else simply open the file
    $("#status").html("<br/>JSROOTIO.RootFile.js version: " + JSROOTIO.version + "<br/>");
    var url = $("#urlToLoad").val();
