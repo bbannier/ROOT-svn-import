@@ -86,19 +86,31 @@
    fCtxIsCurrent = NO;
    if (!fOpenGLContext)
       return;
+
+   if ([self isHiddenOrHasHiddenAncestor]) {
+      //This will result in "invalid drawable" message
+      //from -setView:.
+      return;
+   }
+
+   const NSRect visibleRect = [self visibleRect];
+   if (visibleRect.size.width < 1. || visibleRect.size.height < 1.) {
+      //Another reason for "invalid drawable" message.
+      return;
+   }
    
    if ([fOpenGLContext view] != self)
       [fOpenGLContext setView : self];
    
    [fOpenGLContext makeCurrentContext];
-//   
    fCtxIsCurrent = YES; 
 }
 
 //______________________________________________________________________________
 - (void) flushGLBuffer 
 {
-   assert(fOpenGLContext == [NSOpenGLContext currentContext] && "flushGLBuffer, view's GL context is not current");
+   if (fOpenGLContext != [NSOpenGLContext currentContext])//???
+      return;
    //
    glFlush();//???
    [fOpenGLContext flushBuffer];
@@ -195,6 +207,7 @@
    if (!overlap) {
       TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
       assert(vx != 0 && "setFrameSize:, gVirtualX is either null or has a type, different from TGCocoa");
+      [fOpenGLContext update];
       vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
       vx->GetEventTranslator()->GenerateExposeEvent(self, self.frame);
    }
