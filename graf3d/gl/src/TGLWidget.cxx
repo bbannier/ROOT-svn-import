@@ -108,6 +108,8 @@ TGLWidget* TGLWidget::Create(const TGLFormat &format,
 
 #ifdef WIN32
    glw->fWindowIndex = (Int_t) innerData.second;
+#elif defined R__HAS_COCOA
+   glw->fWindowIndex = wid;
 #else
    glw->fWindowIndex = gVirtualX->AddWindow(wid, width, height);
    glw->fInnerData   = innerData;
