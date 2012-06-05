@@ -580,10 +580,15 @@ var d, key_tree;
          var node_img = source_dir+'img/page.gif';
          if (keys[i]['className'].match(/\bTH1/)  ||
              keys[i]['className'].match(/\bTH2/)  ||
-             keys[i]['className'] == 'TGraph' ||
-             keys[i]['className'].match(/\bTProfile/)) {
+             keys[i]['className'] == 'TGraph') {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
+            if (keys[i]['className'].match(/\bTProfile/))
+                tree_link = "javascript:  alert('" + message + "')";
             node_img = source_dir+'img/graphical.png';
+         }
+         else if (keys[i]['className'] ==  'TProfile') {
+            node_img = source_dir+'img/graphical.png';
+            node_title = keys[i]['name'];
          }
          else if (keys[i]['name'] == "StreamerInfo") {
             tree_link = "javascript: displayStreamerInfos(gFile.fStreamerInfo.fStreamerInfos);";
@@ -637,9 +642,12 @@ var d, key_tree;
          var node_title = keys[i]['className'];
          if (keys[i]['className'].match(/\bTH1/) ||
              keys[i]['className'].match(/\bTH2/) ||
-             keys[i]['className'] == 'TGraph'    ||
-             keys[i]['className'].match(/\bTProfile/)) {
+             keys[i]['className'] == 'TGraph') {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
+            node_img = source_dir+'img/graphical.png';
+            node_title = keys[i]['name'];
+         }
+         else if (keys[i]['className'] ==  'TProfile') {
             node_img = source_dir+'img/graphical.png';
             node_title = keys[i]['name'];
          }
