@@ -34,10 +34,6 @@
 
 - (void) update;
 
-- (void) makeContextCurrent;
-- (BOOL) isGLContextCurrent;
-- (void) flushGLBuffer;
-
 //X11Drawable protocol
 
 @property (nonatomic, assign) unsigned fID;

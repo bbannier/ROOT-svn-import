@@ -208,17 +208,24 @@ Window_t TVirtualX::CreateOpenGLWindow(Window_t /*parentID*/, UInt_t /*width*/, 
 }
 
 //______________________________________________________________________________
-Handle_t TVirtualX::CreateOpenGLContext(Handle_t /*windowID*/, Handle_t /*shareWith*/)
+Handle_t TVirtualX::CreateOpenGLContext(Window_t /*windowID*/, Handle_t /*shareWith*/)
 {
    // Creates OpenGL context for window "windowID".
    return Handle_t();
 }
 
 //______________________________________________________________________________
-Bool_t TVirtualX::MakeOpenGLContextCurrent(Handle_t /*ctx*/)
+Bool_t TVirtualX::MakeOpenGLContextCurrent(Handle_t /*ctx*/, Window_t /*windowID*/)
 {
    // Makes context ctx current OpenGL context.
    return kFALSE;
+}
+
+//______________________________________________________________________________
+Handle_t TVirtualX::GetCurrentOpenGLContext()
+{
+   // Asks OpenGL subsystem about the current OpenGL context.
+   return Handle_t();
 }
 
 //______________________________________________________________________________
