@@ -294,7 +294,7 @@ std::vector<TString>* TMVA::VariableNormalizeTransform::GetTransformationStrings
 //_______________________________________________________________________
 void TMVA::VariableNormalizeTransform::WriteTransformationToStream( std::ostream& o ) const
 {
-   // write the decorrelation matrix to the stream
+   // write the transformation to the stream
    o << "# min max for all variables for all classes one after the other and as a last entry for all classes together" << std::endl;
 
    Int_t numC = GetNClasses()+1;
@@ -470,6 +470,7 @@ void TMVA::VariableNormalizeTransform::BuildTransformationFromVarInfo( const std
       for(std::vector<TMVA::VariableInfo>::const_iterator v = var.begin(); v!=var.end(); ++v, ++vidx) {
          fMin[cls][vidx] = v->GetMin();
          fMax[cls][vidx] = v->GetMax();
+         fGet.push_back(std::pair<Char_t,UInt_t>('v',vidx));
       }
    }
    SetCreated();
@@ -566,7 +567,7 @@ void TMVA::VariableNormalizeTransform::MakeFunction( std::ostream& fout, const T
       fout << "   // Normalization transformation, initialisation" << std::endl;
       for (UInt_t ivar=0; ivar<nVar; ivar++) {
          for (UInt_t icls = 0; icls < numC; icls++) {
-            Double_t min = TMath::Min( FLT_MAX, fMin.at(icls).at(ivar) );
+	    Double_t min = TMath::Min( FLT_MAX, fMin.at(icls).at(ivar) );
             Double_t max = TMath::Max(-FLT_MAX, fMax.at(icls).at(ivar) );
             fout << "   fMin_"<<trCounter<<"["<<icls<<"]["<<ivar<<"] = " << std::setprecision(12)
                  << min << ";" << std::endl;
