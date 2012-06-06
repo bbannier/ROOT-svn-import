@@ -46,7 +46,7 @@ $(FTGLLIB):     $(FTGLO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) $(FTGLLIBDEP)
 		   "$(SOFLAGS)" libFTGL.$(SOEXT) $@ \
 		   "$(FTGLO)" \
 		   "$(FREETYPELDFLAGS) $(FREETYPELIB) \
-		    $(FTGLLIBEXTRA) $(GLLIBS)"
+		    $(FTGLLIBEXTRA) -framework OpenGL "
 
 all-$(MODNAME): $(FTGLLIB)
 

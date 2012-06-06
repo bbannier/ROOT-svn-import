@@ -447,9 +447,10 @@ void TEveCaloLegoOverlay::RenderLogaritmicScales(TGLRnrCtx& rnrCtx)
    glEnd();
 
    // draw numbers
+
    TGLFont fontB;
    Int_t fsb = TMath::Max(TMath::Nint(vp.Height()*0.03), 12);
-   rnrCtx.RegisterFontNoScale(fsb, "arial", TGLFont::kPixmap, fontB);
+   //rnrCtx.RegisterFontNoScale(fsb, "arial", TGLFont::kPixmap, fontB);
    TGLFont fontE;
    Int_t fsE = TMath::Max(TMath::Nint(vp.Height()*0.01), 8);
    rnrCtx.RegisterFontNoScale(fsE, "arial", TGLFont::kPixmap, fontE);
@@ -486,7 +487,8 @@ void TEveCaloLegoOverlay::RenderLogaritmicScales(TGLRnrCtx& rnrCtx)
    fontE.PostRender();
    if (expOff < 1)  expX += expOff;
    glPopMatrix();
-
+   
+   
    // draw frame
    {
       fScaleW = scaleStepX + expX+ frameOff*2;
