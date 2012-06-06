@@ -208,7 +208,7 @@ void TGLAxisPainter::RnrText(const TString &txt, const TGLVector3 &p, TGLFont::E
 {
    // Render text at the given position. Offset depends of text aligment.
 
- /*  if (fFontMode == TGLFont::kPixmap || fFontMode ==  TGLFont::kBitmap)
+   if (fFontMode == TGLFont::kPixmap || fFontMode ==  TGLFont::kBitmap)
    {
      font.Render(txt, p.X(), p.Y(), p.Z(), aH, aV);
    }
@@ -223,7 +223,7 @@ void TGLAxisPainter::RnrText(const TString &txt, const TGLVector3 &p, TGLFont::E
       glScaled(sc, sc, 1);
       font.Render(txt, 0, 0, 0, aH, aV);
       glPopMatrix();
-   }*/
+   }
 }
 
 //______________________________________________________________________________
@@ -241,7 +241,7 @@ void TGLAxisPainter::RnrLabels() const
 {
    // Render label reading prepared list ov value-pos pairs.
 
-  /* if (fUseAxisColors)
+   if (fUseAxisColors)
       TGLUtil::Color(fAttAxis->GetLabelColor());
 
    glPushMatrix();
@@ -260,7 +260,7 @@ void TGLAxisPainter::RnrLabels() const
    }
 
    fLabelFont.PostRender();
-   glPopMatrix();*/
+   glPopMatrix();
 }
 
 //______________________________________________________________________________

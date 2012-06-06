@@ -364,7 +364,7 @@ void TGLRnrCtx::ReleaseFont(TGLFont& font)
 {
    // Release font in the GL rendering context.
 
-  // fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
+   fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
 }
 
 //______________________________________________________________________
@@ -372,7 +372,7 @@ void TGLRnrCtx::RegisterFontNoScale(Int_t size, Int_t file, Int_t mode, TGLFont&
 {
    // Get font in the GL rendering context.
 
-   //fGLCtxIdentity->GetFontManager()->RegisterFont( size, file, (TGLFont::EMode)mode, out);
+   fGLCtxIdentity->GetFontManager()->RegisterFont( size, file, (TGLFont::EMode)mode, out);
 }
 
 //______________________________________________________________________
@@ -380,7 +380,7 @@ void TGLRnrCtx::RegisterFontNoScale(Int_t size, const char* name, Int_t mode, TG
 {
    // Get font in the GL rendering context.
 
-  // fGLCtxIdentity->GetFontManager()->RegisterFont(size, name, (TGLFont::EMode)mode, out);
+   fGLCtxIdentity->GetFontManager()->RegisterFont(size, name, (TGLFont::EMode)mode, out);
 }
 
 //______________________________________________________________________
