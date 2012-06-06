@@ -1,7 +1,5 @@
 #import <cassert>
 
-#import <OpenGL/gl.h>
-
 #import "ROOTOpenGLView.h"
 #import "QuartzWindow.h"
 #import "X11Events.h"
@@ -13,7 +11,6 @@
    
    NSOpenGLPixelFormat *fPixelFormat;
    NSOpenGLContext *fOpenGLContext;
-   BOOL fCtxIsCurrent;
 }
 
 @synthesize fID;
@@ -39,7 +36,6 @@
       fCurrentCursor = kPointer;
       fIsOverlapped = NO;
       fPixelFormat = [format retain];
-      fCtxIsCurrent = kFALSE;
       //Tracking area?
    }
 
@@ -51,7 +47,7 @@
 {
    [fPassiveKeyGrabs release];
    [fPixelFormat release];
-   [fOpenGLContext release];
+   //View does not own context.
 
    [super dealloc];
 }
@@ -71,49 +67,8 @@
 //______________________________________________________________________________
 - (void) setOpenGLContext : (NSOpenGLContext *) context
 {
-   if (context != fOpenGLContext) {
-      [fOpenGLContext release];
-      //
-      fOpenGLContext = [context retain];
-      if (![self isHidden])
-         [fOpenGLContext setView : self];
-   }
-}
-
-//______________________________________________________________________________
-- (void) makeContextCurrent
-{
-   fCtxIsCurrent = NO;
-   if (!fOpenGLContext)
-      return;
-
-   if ([self isHiddenOrHasHiddenAncestor]) {
-      //This will result in "invalid drawable" message
-      //from -setView:.
-      return;
-   }
-
-   const NSRect visibleRect = [self visibleRect];
-   if (visibleRect.size.width < 1. || visibleRect.size.height < 1.) {
-      //Another reason for "invalid drawable" message.
-      return;
-   }
-   
-   if ([fOpenGLContext view] != self)
-      [fOpenGLContext setView : self];
-   
-   [fOpenGLContext makeCurrentContext];
-   fCtxIsCurrent = YES; 
-}
-
-//______________________________________________________________________________
-- (void) flushGLBuffer 
-{
-   if (fOpenGLContext != [NSOpenGLContext currentContext])//???
-      return;
-   //
-   glFlush();//???
-   [fOpenGLContext flushBuffer];
+   //View does not own context, no changes in any ref counter == weak reference.
+   fOpenGLContext = context;
 }
 
 //______________________________________________________________________________
@@ -132,12 +87,6 @@
 //______________________________________________________________________________
 - (void) update
 {
-}
-
-//______________________________________________________________________________
-- (BOOL) isGLContextCurrent
-{
-   return fCtxIsCurrent;
 }
 
 //X11Drawable protocol.
