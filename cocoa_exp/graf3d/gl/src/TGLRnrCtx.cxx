@@ -108,11 +108,6 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fColorSetStack->push_back(0);
 
    fSelectBuffer = new TGLSelectBuffer;
-   fQuadric = gluNewQuadric();
-   if (!fQuadric)
-      return;
-   gluQuadricOrientation(fQuadric, (GLenum)GLU_OUTSIDE);
-   gluQuadricNormals    (fQuadric, (GLenum)GLU_SMOOTH);
 
    if (fViewer == 0)
    {
@@ -365,6 +360,21 @@ void TGLRnrCtx::ReleaseFont(TGLFont& font)
    // Release font in the GL rendering context.
 
    fGLCtxIdentity->GetFontManager()->ReleaseFont(font);
+}
+
+//______________________________________________________________________
+GLUquadric* TGLRnrCtx::GetGluQuadric()
+{
+   if (!fQuadric) {
+      if (fQuadric = gluNewQuadric()) {
+         gluQuadricOrientation(fQuadric, (GLenum)GLU_OUTSIDE);
+         gluQuadricNormals    (fQuadric, (GLenum)GLU_SMOOTH);
+      } else {
+         ::Error("TGLRnrCtx::GetGluQuadric", "gluNewQuadric failed");
+      }
+   }
+   
+   return fQuadric;
 }
 
 //______________________________________________________________________
