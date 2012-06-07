@@ -178,6 +178,8 @@ if(allTests) {
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
 }
 
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 10, 30));
+//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 20, 25));
     testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
    //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 
