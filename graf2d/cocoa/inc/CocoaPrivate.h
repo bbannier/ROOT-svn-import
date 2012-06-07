@@ -41,6 +41,8 @@
 @class NSOpenGLContext;
 @class NSObject;
 
+@class QuartzWindow;
+
 class TGQuartz;
 class TGCocoa;
 
@@ -79,6 +81,9 @@ private:
    NSOpenGLContext       *GetGLContextForHandle(Handle_t contextID);
    Handle_t               GetHandleForGLContext(NSOpenGLContext *glContext);
    
+   void                   SetFakeGLWindow(QuartzWindow *fakeWin);
+   QuartzWindow          *GetFakeGLWindow();
+   
    //This function resets strong reference, if you still want NSObject for drawableID to live,
    //you have to retain the pointer (probably) and also drawableID will become id for nsObj (replacement).
    void                   ReplaceDrawable(unsigned drawableID, NSObject *nsObj);
@@ -110,6 +115,7 @@ private:
    ctx2handle_map fGLContextToHandle;
 
    Handle_t fFreeGLContextID;
+   Util::NSStrongReference<QuartzWindow> fFakeGLWindow;
 };
 
 }//Details
