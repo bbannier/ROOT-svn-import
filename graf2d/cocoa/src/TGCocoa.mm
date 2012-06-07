@@ -2503,17 +2503,12 @@ Bool_t TGCocoa::MakeOpenGLContextCurrent(Handle_t ctxID, Window_t windowID)
    if ([glView isHiddenOrHasHiddenAncestor]) {
       //This will result in "invalid drawable" message
       //from -setView:.
-      [glContext makeCurrentContext];
-
       return kFALSE;   
    }
 
    const NSRect visibleRect = [glView visibleRect];
    if (visibleRect.size.width < 1. || visibleRect.size.height < 1.) {
       //Another reason for "invalid drawable" message.
-//      NSLog(@"context was not made current")
-      [glContext makeCurrentContext];
-
       return kFALSE;
    }
    
@@ -2532,7 +2527,6 @@ Handle_t TGCocoa::GetCurrentOpenGLContext()
    NSOpenGLContext *currentContext = [NSOpenGLContext currentContext];
    if (!currentContext) {
       Error("GetCurrentOpenGLContext", "The current OpenGL context is null");
-      assert(0);
       return Handle_t();
    }
    
