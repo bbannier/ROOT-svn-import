@@ -13,9 +13,9 @@ using namespace RooStats;
 void buildPoissonProductModel(RooWorkspace *w)
 {
    // Build product model
-   w->factory("expr::compsig('2*sig*pow(1.2, beta)', sig[0,20], beta[-3,3])");
-   w->factory("Poisson::poiss1(x[0,40], sum::splusb1(sig, bkg1[0,10]))");
-   w->factory("Poisson::poiss2(y[0,120], sum::splusb2(compsig, bkg2[0,10]))");
+   w->factory("expr::comp_sig('2*sig*pow(1.2, beta)', sig[0,20], beta[-3,3])");
+   w->factory("Poisson::poiss1(x[0,30], sum::splusb1(sig, bkg1[0,10]))");
+   w->factory("Poisson::poiss2(y[0,80], sum::splusb2(comp_sig, bkg2[0,10]))");
    w->factory("Poisson::constr1(gbkg1[5,0,10], bkg1)");
    w->factory("Poisson::constr2(gbkg2[5,0,10], bkg2)");
    w->factory("Gaussian::constr3(beta0[0,-3,3], beta, 1)");
@@ -27,9 +27,9 @@ void buildPoissonProductModel(RooWorkspace *w)
    w->factory("PROD::prior_nuis(constr1,constr2,constr3)");
 
    // extended pdfs and simultaneous pdf
-   w->factory("ExtendPdf::epdf1(PROD::pdf1(poiss1,constr1),n1[1,0,10])");
-   w->factory("ExtendPdf::epdf2(PROD::pdf2(poiss2,constr2,constr3),n2[1,0,10])");
-   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=epdf1,cat2=epdf2)");
+   w->factory("ExtendPdf::ext_pdf1(PROD::pdf1(poiss1,constr1),n1[1,0,10])");
+   w->factory("ExtendPdf::ext_pdf2(PROD::pdf2(poiss2,constr2,constr3),n2[1,0,10])");
+   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
 
    // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
@@ -38,10 +38,24 @@ void buildPoissonProductModel(RooWorkspace *w)
    sbModel->SetParametersOfInterest("sig");
    sbModel->SetNuisanceParameters("bkg1,bkg2,beta");
    sbModel->SetPdf("pdf");
+   w->import(*sbModel);
 
    // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
+   w->import(*bModel);
+
+   // create combined signal + background model configuration
+   ModelConfig *sbModelCombined = new ModelConfig(*sbModel);
+   sbModelCombined->SetName("Combined_S+B");
+   sbModelCombined->SetObservables("x,y,index");
+   sbModelCombined->SetPdf("sim_pdf");
+   w->import(*sbModelCombined);
+
+   // create combined background model configuration
+   ModelConfig *bModelCombined = new ModelConfig(*sbModelCombined);
+   bModelCombined->SetName("Combined_B");
+   w->import(*bModelCombined);
 
    // set global observables to constant values
    RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
@@ -51,12 +65,11 @@ void buildPoissonProductModel(RooWorkspace *w)
       var = dynamic_cast<RooRealVar *>(iter.next());
    }
 
-   // build data set and import it into the workspace sets
+   // define data sets for simple and combined models
    RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
+   RooDataSet *combinedData = new RooDataSet("combinedData", "combined data", *sbModelCombined->GetObservables());
    w->import(*data);
-
-   w->import(*sbModel);
-   w->import(*bModel);
+   w->import(*combinedData);
 }
 
 
@@ -82,21 +95,20 @@ void buildOnOffModel(RooWorkspace *w)
    sbModel->SetObservables("n_on,n_off");
    sbModel->SetParametersOfInterest("sig");
    sbModel->SetNuisanceParameters("bkg");
+   w->import(*sbModel);
 
    // create background model configuration
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
+   w->import(*bModel);
 
    // alternate priors
    w->factory("Gaussian::gauss_prior(bkg, n_off, expr::sqrty('sqrt(n_off)', n_off))");
    w->factory("Lognormal::lognorm_prior(bkg, n_off, expr::kappa('1+1./sqrt(n_off)',n_off))");
 
-   // define data set and import it into workspace
+   // define data set
    RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
    w->import(*data);
-
-   w->import(*sbModel);
-   w->import(*bModel);
 }
 
 
