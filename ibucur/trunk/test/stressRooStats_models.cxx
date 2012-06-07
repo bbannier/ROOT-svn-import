@@ -27,15 +27,9 @@ void buildPoissonProductModel(RooWorkspace *w)
    w->factory("PROD::prior_nuis(constr1,constr2,constr3)");
 
    // extended pdfs and simultaneous pdf
-   w->factory("ExtendPdf::epdf1(PROD::pdf1(poiss1,constr1),n1[0,10])");
-   w->factory("ExtendPdf::epdf2(PROD::pdf2(poiss2,constr2,constr3),n2[0,10])");
+   w->factory("ExtendPdf::epdf1(PROD::pdf1(poiss1,constr1),n1[1,0,10])");
+   w->factory("ExtendPdf::epdf2(PROD::pdf2(poiss2,constr2,constr3),n2[1,0,10])");
    w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=epdf1,cat2=epdf2)");
-
-   // build argument sets
-//   w->defineSet("obs", "x,y");
-//   w->defineSet("poi", "sig");
-//   w->defineSet("nuis", "bkg1,bkg2,beta");
-//   w->defineSet("globObs", "beta0,gbkg1,gbkg2");
 
    // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);

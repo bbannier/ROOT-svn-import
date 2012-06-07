@@ -1544,7 +1544,6 @@ public:
 } ;
 
 
-#include "RooPoisson.h"
 
 class TestHypoTestCalculator2 : public RooUnitTest {
 public:
@@ -1576,45 +1575,31 @@ public:
          ModelConfig *sbModel = (ModelConfig *)w->obj("S+B");
          ModelConfig *bModel = (ModelConfig *)w->obj("B");
 
-         sbModel->SetPdf(*w->pdf("sim_pdf"));
-         bModel->SetPdf(*w->pdf("sim_pdf"));
+         sbModel->SetPdf("sim_pdf");
+         bModel->SetPdf("sim_pdf");
+         sbModel->SetObservables("x,y,index");
+         bModel->SetObservables("x,y,index");
 
          // add observed values to data set
          w->var("x")->setVal(fObsValueX);
-         w->var("y")->setVal(fObsValueY);
-         w->data("data")->add(*sbModel->GetObservables());
+         w->var("y")->setVal(fObsValueY);         
 
          // combined dataset for simultaneous pdf
          RooDataSet *combData = new RooDataSet(
             "combData",
             "combined data",
-            *sbModel->GetObservables(),
-            Index(*dynamic_cast<RooCategory *>(w->obj("index"))),
-            Import("cat1", *dynamic_cast<RooDataSet *>(w->data("data"))),
-            Import("cat2", *dynamic_cast<RooDataSet *>(w->data("data")))
+            *sbModel->GetObservables()
          );
 
-   combData->Print("v");
-   for (Int_t i = 0; i < combData->numEntries(); i++) {
-      combData->get(i)->Print("v");
-   }
+         w->cat("index")->setLabel("cat1", kTRUE);
+         combData->add(*sbModel->GetObservables());
+         w->cat("index")->setLabel("cat2", kTRUE);
+         combData->add(*sbModel->GetObservables());
 
-
-
-         //w->data("combData")->get(0)->Print("v");
-        // w->data("combData")->get(1)->Print("v");
-
-/*
-         RooRealVar x("x","x",0,40);
-         RooRealVar mean("mean", "mean", 2, 0, 10);
-         RooRealVar mc("mc", "mc", 5, 0, 10);
-         RooPoisson p1("p1","p1",x,mean);
-         RooPoisson pc("pc","pc",mc,mean);
-         RooProdPdf pdf("pdf","pdf",RooArgList(p1,pc));
-
-         RooDataSet *data1 = p1.generate(x,100);
-         RooDataSet *data2 = pc.generate(x,50);
-*/
+         combData->Print("v");
+         for (Int_t i = 0; i < combData->numEntries(); i++) {
+            combData->get(i)->Print("v");
+         }
 
 
 //         w->Print();
@@ -1626,7 +1611,7 @@ public:
          bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
          // build test statistic
-         SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
+         /*SimpleLikelihoodRatioTestStat *slrts =  new SimpleLikelihoodRatioTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
          slrts->SetNullParameters(*bModel->GetSnapshot());
          slrts->SetAltParameters(*sbModel->GetSnapshot());
          slrts->SetAlwaysReuseNLL(kTRUE);
@@ -1634,22 +1619,19 @@ public:
          RatioOfProfiledLikelihoodsTestStat *roplts = new RatioOfProfiledLikelihoodsTestStat(*bModel->GetPdf(), *sbModel->GetPdf());
          roplts->SetAlwaysReuseNLL(kTRUE);
 
-         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*bModel->GetPdf());
-         pllts->SetOneSidedDiscovery(kTRUE);
-         pllts->SetAlwaysReuseNLL(kTRUE);
 
          MaxLikelihoodEstimateTestStat *mlets =
             new MaxLikelihoodEstimateTestStat(*sbModel->GetPdf(), *((RooRealVar *)sbModel->GetParametersOfInterest()->first()));
 
          NumEventsTestStat *nevts = new NumEventsTestStat(*sbModel->GetPdf());
-
+*/
 
          FrequentistCalculator *ftc = new FrequentistCalculator(*combData, *sbModel, *bModel);
-         ftc->SetToys(50000, 1000);
-         //   ftc->SetConditionalMLEsNull(w->set("nuis"));
-         //   ftc->SetConditionalMLEsAlt(w->set("nuis"));
+         ftc->SetToys(5000, 1000);
+        //    ftc->SetConditionalMLEsNull(w->set("nuis"));
+        //    ftc->SetConditionalMLEsAlt(w->set("nuis"));
          ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
-         tmcs->SetNEventsPerToy(1); // because the model is in number counting form
+         //tmcs->SetNEventsPerToy(1); // because the model is in number counting form
          tmcs->SetAlwaysUseMultiGen(kTRUE);
 
          HypoTestResult *htr;
@@ -1659,14 +1641,21 @@ public:
          htr->Print();
          cout << "PLC " << htr->Significance() << endl;
 
-         tmcs->SetTestStatistic(slrts);
-         htr = ftc->GetHypoTest();
-         htr->Print();
-         cout << "SLRTS " << htr->Significance() << endl;
-         tmcs->SetTestStatistic(pllts);
+
+         ProfileLikelihoodTestStat *pllts = new ProfileLikelihoodTestStat(*bModel->GetPdf());
+         pllts->SetOneSidedDiscovery(kTRUE);
+         pllts->SetAlwaysReuseNLL(kTRUE);
+        tmcs->SetTestStatistic(pllts);
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "PLLTS " << htr->Significance() << endl;
+
+/*         tmcs->SetTestStatistic(slrts);
+         htr = ftc->GetHypoTest();
+         htr->Print();
+         cout << "SLRTS " << htr->Significance() << endl;
+ 
+
          tmcs->SetTestStatistic(mlets);
          htr = ftc->GetHypoTest();
          htr->Print();
@@ -1679,7 +1668,7 @@ public:
          htr = ftc->GetHypoTest();
          htr->Print();
          cout << "ROPLTS " << htr->Significance() << endl;
-
+*/
          regValue(htr->Significance(), "thtc_significance_frequentist");
 
          delete ftc;
