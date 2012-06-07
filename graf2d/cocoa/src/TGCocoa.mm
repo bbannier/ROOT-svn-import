@@ -74,6 +74,7 @@ namespace Details = ROOT::MacOSX::Details;
 namespace Util = ROOT::MacOSX::Util;
 namespace X11 = ROOT::MacOSX::X11;
 namespace Quartz = ROOT::Quartz;
+namespace OpenGL = ROOT::MacOSX::OpenGL;
 
 
 namespace {
@@ -243,26 +244,6 @@ bool ParentRendersToChild(NSView<X11Window> *child)
    return X11::ViewIsTextViewFrame(child, true) && !child.fContext && 
           child.fMapState == kIsViewable && child.fParentView.fContext &&
           !child.fIsOverlapped;
-}
-
-//______________________________________________________________________________
-bool GLViewIsValid(ROOTOpenGLView *glView)
-{
-   assert(glView != nil && "GLViewIsValid, glView parameter is nil");
-   
-   if ([glView isHiddenOrHasHiddenAncestor]) {
-      //This will result in "invalid drawable" message
-      //from -setView:.
-      return false;
-   }
-
-   const NSRect visibleRect = [glView visibleRect];
-   if (visibleRect.size.width < 1. || visibleRect.size.height < 1.) {
-      //Another reason for "invalid drawable" message.
-      return false;
-   }
-
-   return true;
 }
 
 }
@@ -2520,7 +2501,7 @@ Bool_t TGCocoa::MakeOpenGLContextCurrent(Handle_t ctxID, Window_t windowID)
    assert([fPimpl->GetWindow(windowID) isKindOfClass : [ROOTOpenGLView class]] && "MakeOpenGLContextCurrent, view is not an OpenGL view");
    ROOTOpenGLView *glView = (ROOTOpenGLView *)fPimpl->GetWindow(windowID);
 
-   if (GLViewIsValid(glView)) {
+   if (OpenGL::GLViewIsValidDrawable(glView)) {
       if ([glContext view] != glView)
          [glContext setView : glView];
 

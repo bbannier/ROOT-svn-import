@@ -32,55 +32,6 @@ namespace ROOT {
 namespace MacOSX {
 namespace Details {
 
-namespace {
-
-//______________________________________________________________________________
-bool AttributeMatch(NSOpenGLPixelFormat *format1, NSOpenGLPixelFormat *format2, NSOpenGLPixelFormatAttribute attrib)
-{
-   assert(format1 && "AttributeMatch, format1 parameter is nil");
-   assert(format2 && "AttributeMatch, format2 parameter is nil");
-   
-   GLint val1 = 0, val2 = 0;
-   
-   //I do not know what the f... the call this "getValues", if it gets ... single value.
-   [format1 getValues : &val1 forAttribute : attrib forVirtualScreen : 0];
-   [format2 getValues : &val2 forAttribute : attrib forVirtualScreen : 0];
-   
-   return val1 == val2;
-}
-
-//______________________________________________________________________________
-bool FormatsMatch(NSOpenGLPixelFormat *format1, NSOpenGLPixelFormat *format2)
-{
-   assert(format1 != nil && "FormatsAreEqual, format1 parameter is nil");
-   assert(format2 != nil && "FormatsAreEqual, format2 parameter is nil");
-   
-   if (!AttributeMatch(format1, format2, NSOpenGLPFADoubleBuffer))
-      return false;
-   
-   if (!AttributeMatch(format1, format2, NSOpenGLPFADepthSize))
-      return false;
-   
-   if (!AttributeMatch(format1, format2, NSOpenGLPFAAccumSize))
-      return false;
-   
-   if (!AttributeMatch(format1, format2, NSOpenGLPFAStencilSize))
-      return false;
-   
-   if (!AttributeMatch(format1, format2, NSOpenGLPFASampleBuffers))
-      return false;
-   
-   if (!AttributeMatch(format1, format2, NSOpenGLPFASamples))
-      return false;
-   
-   if (!AttributeMatch(format1, format2, NSOpenGLPFAAccelerated))
-      return false;
-
-   return true;
-}
-
-}
-
 //______________________________________________________________________________
 CocoaPrivate::CocoaPrivate()
                : fCurrentDrawableID(GetRootWindowID() + 1), //Any real window has id > rootID.
