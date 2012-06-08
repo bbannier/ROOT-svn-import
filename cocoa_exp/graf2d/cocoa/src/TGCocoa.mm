@@ -2471,7 +2471,7 @@ Handle_t TGCocoa::CreateOpenGLContext(Window_t windowID, Handle_t sharedID)
    NSOpenGLContext *sharedContext = fPimpl->GetGLContextForHandle(sharedID);
    ROOTOpenGLView *glView = (ROOTOpenGLView *)fPimpl->GetWindow(windowID);
 
-   Util::NSScopeGuard<NSOpenGLContext> newContext([[NSOpenGLContext alloc] initWithFormat : glView.pixelFormat shareContext : sharedContext]);
+   const Util::NSScopeGuard<NSOpenGLContext> newContext([[NSOpenGLContext alloc] initWithFormat : glView.pixelFormat shareContext : sharedContext]);
    [glView setOpenGLContext : newContext.Get()];
   
    const Handle_t ctxID = fPimpl->RegisterGLContext(newContext.Get());
