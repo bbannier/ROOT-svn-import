@@ -108,7 +108,7 @@ private:
    typedef std::map<unsigned, Util::NSStrongReference<NSObject<X11Drawable> > >::iterator drawable_iterator;
    typedef std::map<unsigned, Util::NSStrongReference<NSObject<X11Drawable> > >::const_iterator const_drawable_iterator;
    
-   typedef std::map<Handle_t, NSOpenGLContext *> handle2ctx_map;
+   typedef std::map<Handle_t, Util::NSStrongReference<NSOpenGLContext> > handle2ctx_map;
    typedef std::map<NSOpenGLContext *, Handle_t> ctx2handle_map;
    
    handle2ctx_map fHandleToGLContext;
