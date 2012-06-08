@@ -17,60 +17,67 @@ else
 VCLIBVC      := $(LPATH)/libVc.a
 endif
 
-VCH1          := $(wildcard $(MODDIRI)/Vc/*.h $(MODDIRI)/Vc/*/*.h)
-VCH2         := $(wildcard $(MODDIRI)/Vc/*.tcc $(MODDIRI)/Vc/*/*.tcc)
-VCH          := $(VCH1) $(VCH2)
+VCH          := $(wildcard $(MODDIRI)/Vc/* $(MODDIRI)/Vc/*/*)
+# VCH1          := $(wildcard $(MODDIRI)/Vc/*.h $(MODDIRI)/Vc/*/*.h)
+# VCH2         := $(wildcard $(MODDIRI)/Vc/*.tcc $(MODDIRI)/Vc/*/*.tcc)
+# VCH          := $(VCH1) $(VCH2)
 
-ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(VCH))
-ALLHDRS      += $(patsubst $(MODDIRI)/%.tcc,include/%.tcc,$(VCH2))
+ALLHDRS      += $(patsubst $(MODDIRI)/%,include/%,$(VCH))
+#ALLHDRS      += $(patsubst $(MODDIRI)/%,include/%.tcc,$(VCH2))
 ALLLIBS      += $(VCLIBVC)
 
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
 
-include/%.h: $(MODDIRI)/%.h
+# include/%.h: $(MODDIRI)/%.h
+# 	@(if [ ! -d "include/Vc" ]; then    \
+# 	   mkdir -p include/Vc;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/avx" ]; then    \
+# 	   mkdir -p include/Vc/avx;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/internal" ]; then    \
+# 	   mkdir -p include/Vc/internal;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/sse" ]; then    \
+# 	   mkdir -p include/Vc/sse;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/common" ]; then    \
+# 	   mkdir -p include/Vc/common;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/scalar" ]; then    \
+# 	   mkdir -p include/Vc/scalar;             \
+# 	fi)
+# 	cp $< $@
+
+# include/%.tcc: $(MODDIRI)/%.tcc
+# 	@(if [ ! -d "include/Vc" ]; then    \
+# 	   mkdir -p include/Vc;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/avx" ]; then    \
+# 	   mkdir -p include/Vc/avx;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/internal" ]; then    \
+# 	   mkdir -p include/Vc/internal;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/sse" ]; then    \
+# 	   mkdir -p include/Vc/sse;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/common" ]; then    \
+# 	   mkdir -p include/Vc/common;             \
+# 	fi)
+# 	@(if [ ! -d "include/Vc/scalar" ]; then    \
+# 	   mkdir -p include/Vc/scalar;             \
+# 	fi)
+# 	cp $< $@
+
+
+include/%: $(MODDIRI)/%
 	@(if [ ! -d "include/Vc" ]; then    \
 	   mkdir -p include/Vc;             \
 	fi)
-	@(if [ ! -d "include/Vc/avx" ]; then    \
-	   mkdir -p include/Vc/avx;             \
-	fi)
-	@(if [ ! -d "include/Vc/internal" ]; then    \
-	   mkdir -p include/Vc/internal;             \
-	fi)
-	@(if [ ! -d "include/Vc/sse" ]; then    \
-	   mkdir -p include/Vc/sse;             \
-	fi)
-	@(if [ ! -d "include/Vc/common" ]; then    \
-	   mkdir -p include/Vc/common;             \
-	fi)
-	@(if [ ! -d "include/Vc/scalar" ]; then    \
-	   mkdir -p include/Vc/scalar;             \
-	fi)
-	cp $< $@
-
-include/%.tcc: $(MODDIRI)/%.tcc
-	@(if [ ! -d "include/Vc" ]; then    \
-	   mkdir -p include/Vc;             \
-	fi)
-	@(if [ ! -d "include/Vc/avx" ]; then    \
-	   mkdir -p include/Vc/avx;             \
-	fi)
-	@(if [ ! -d "include/Vc/internal" ]; then    \
-	   mkdir -p include/Vc/internal;             \
-	fi)
-	@(if [ ! -d "include/Vc/sse" ]; then    \
-	   mkdir -p include/Vc/sse;             \
-	fi)
-	@(if [ ! -d "include/Vc/common" ]; then    \
-	   mkdir -p include/Vc/common;             \
-	fi)
-	@(if [ ! -d "include/Vc/scalar" ]; then    \
-	   mkdir -p include/Vc/scalar;             \
-	fi)
-	cp $< $@
-
+	cp -r $< $@
 
 
 VCFLAGS      := -DVC_COMPILE_LIB $(OPT) $(CXXFLAGS) -Iinclude/Vc

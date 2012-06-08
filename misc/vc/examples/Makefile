@@ -18,7 +18,7 @@ include $(ROOTSYS)/config/Makefile.config
 # endif
 
 
-
+EXTRALIBS += $(ROOTSYS)/lib/libVc.a
 
 
 
@@ -39,7 +39,7 @@ all:            $(PROGRAMS)
 
 
 $(POLARCOORD):   $(POLARCOORDOBJ)
-		    $(LD) $(LDFLAGS) $^  $(LIBM) $(OutPutOpt)$@
+		    $(LD) $(LDFLAGS) $^  $(LIBM) $(EXTRALIBS) $(OutPutOpt)$@
 		    @echo "$@ done"
 
 
