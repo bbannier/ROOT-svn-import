@@ -301,12 +301,12 @@ public:
    // Basic checks for the parameters passed to the test
    // In case of invalid parameters, a warning is printed and the test is skipped
    Bool_t isTestAvailable() {
-      if (fObsValueX < 0 || fObsValueX > 40) {
-         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,40]. Skipping test...");
+      if (fObsValueX < 0 || fObsValueX > 30) {
+         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,30]. Skipping test...");
          return kFALSE;
       }
-      if (fObsValueY < 0 || fObsValueY > 120) {
-         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,120]. Skipping test...");
+      if (fObsValueY < 0 || fObsValueY > 80) {
+         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,80]. Skipping test...");
          return kFALSE;
       }
       if (fConfidenceLevel <= 0.0 || fConfidenceLevel >= 1.0) {
@@ -807,12 +807,12 @@ public:
    // Basic checks for the parameters passed to the test
    // In case of invalid parameters, a warning is printed and the test is skipped
    Bool_t isTestAvailable() {
-      if (fObsValueX < 0 || fObsValueX > 40) {
-         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,40]. Skipping test...");
+      if (fObsValueX < 0 || fObsValueX > 30) {
+         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,30]. Skipping test...");
          return kFALSE;
       }
-      if (fObsValueY < 0 || fObsValueY > 120) {
-         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,120]. Skipping test...");
+      if (fObsValueY < 0 || fObsValueY > 80) {
+         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,80]. Skipping test...");
          return kFALSE;
       }
       if (fConfidenceLevel <= 0.0 || fConfidenceLevel >= 1.0) {
@@ -933,12 +933,12 @@ public:
    // Basic checks for the parameters passed to the test
    // In case of invalid parameters, a warning is printed and the test is skipped
    Bool_t isTestAvailable() {
-      if (fObsValueX < 0 || fObsValueX > 40) {
-         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,40]. Skipping test...");
+      if (fObsValueX < 0 || fObsValueX > 30) {
+         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,30]. Skipping test...");
          return kFALSE;
       }
-      if (fObsValueY < 0 || fObsValueY > 120) {
-         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,120]. Skipping test...");
+      if (fObsValueY < 0 || fObsValueY > 80) {
+         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,80]. Skipping test...");
          return kFALSE;
       }
       if (fConfidenceLevel <= 0.0 || fConfidenceLevel >= 1.0) {
@@ -1742,14 +1742,10 @@ static HypoTestCalculatorGeneric * buildHypoTestCalculator(const ECalculatorType
       calc = fc;
    } else { // kHybrid
       HybridCalculator *hc = new HybridCalculator(data, altModel, nullModel);
-      // force prior nuisance pdf and set toys for speedup
+      // set toys for speedup
       // TODO: check how to eliminate this code, calculator should autoconfigure itself
-  //    MakeNuisancePdf(nullModel,"null")->Print();
-  //    MakeNuisancePdf(altModel,"alt")->Print();
-  //    hc->ForcePriorNuisanceNull(*nullModel.GetPriorPdf());
-  //    hc->ForcePriorNuisanceAlt(*altModel.GetPriorPdf());
-      hc->ForcePriorNuisanceNull(*MakeNuisancePdf(nullModel, "nuis_prior_null"));
-      hc->ForcePriorNuisanceAlt(*MakeNuisancePdf(altModel, "nuis_prior_alt"));
+      // hc->ForcePriorNuisanceNull(*MakeNuisancePdf(nullModel, "nuis_prior_null"));
+      // hc->ForcePriorNuisanceAlt(*MakeNuisancePdf(altModel, "nuis_prior_alt"));
       hc->SetToys(toysNull, toysAlt);
       calc = hc;
    }

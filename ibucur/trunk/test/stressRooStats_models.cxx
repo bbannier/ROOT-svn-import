@@ -38,7 +38,6 @@ void buildPoissonProductModel(RooWorkspace *w)
    sbModel->SetParametersOfInterest("sig");
    sbModel->SetNuisanceParameters("bkg1,bkg2,beta");
    sbModel->SetPdf("pdf");
-   sbModel->SetPriorPdf("prior_nuis");
    w->import(*sbModel);
 
    // create background model configuration
