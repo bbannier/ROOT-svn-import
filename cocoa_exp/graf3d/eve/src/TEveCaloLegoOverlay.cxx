@@ -31,7 +31,7 @@
 #include "TEveRGBAPalette.h"
 
 #include <KeySymbols.h>
-
+#include <iostream>
 
 //______________________________________________________________________________
 //
@@ -382,7 +382,6 @@ void TEveCaloLegoOverlay::RenderPlaneInterface(TGLRnrCtx &rnrCtx)
 void TEveCaloLegoOverlay::RenderLogaritmicScales(TGLRnrCtx& rnrCtx)
 {
    // Draw slider of calo 2D in mode TEveCalo:fValSize.
-
    TGLRect &vp = rnrCtx.GetCamera()->RefViewport();
 
    Double_t maxVal = fCalo->GetMaxVal();
@@ -450,7 +449,7 @@ void TEveCaloLegoOverlay::RenderLogaritmicScales(TGLRnrCtx& rnrCtx)
 
    TGLFont fontB;
    Int_t fsb = TMath::Max(TMath::Nint(vp.Height()*0.03), 12);
-   //rnrCtx.RegisterFontNoScale(fsb, "arial", TGLFont::kPixmap, fontB);
+   rnrCtx.RegisterFontNoScale(fsb, "arial", TGLFont::kPixmap, fontB);
    TGLFont fontE;
    Int_t fsE = TMath::Max(TMath::Nint(vp.Height()*0.01), 8);
    rnrCtx.RegisterFontNoScale(fsE, "arial", TGLFont::kPixmap, fontE);
