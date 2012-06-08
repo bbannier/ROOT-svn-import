@@ -27,6 +27,7 @@ CINTCFLAGS    = -fPIC $(EXTRA_CFLAGS) -restrict \
                 -DG__REGEXP -DG__UNIX -DG__SHAREDLIB \
                 -DG__OSFDLL -DG__ROOT -DG__REDIRECTIO \
                 -DG__STD_EXCEPTION
+AVXFLAGS      = -xAVX
 
 # Linker:
 LD            = icpc
