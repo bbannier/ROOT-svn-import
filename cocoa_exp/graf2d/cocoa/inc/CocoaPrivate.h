@@ -78,6 +78,7 @@ private:
    void                   DeleteDrawable(unsigned drawableID);
    
    Handle_t               RegisterGLContext(NSOpenGLContext *glContext);
+   void                   DeleteGLContext(Handle_t contextID);
    NSOpenGLContext       *GetGLContextForHandle(Handle_t contextID);
    Handle_t               GetHandleForGLContext(NSOpenGLContext *glContext);
    
@@ -90,19 +91,19 @@ private:
 
    //Color "parser": either parse string like "#ddeeaa", or
    //search rgb.txt like table for named color.
-   X11::ColorParser                            fX11ColorParser;
+   X11::ColorParser      fX11ColorParser;
    //Event translator, converts Cocoa events into X11 events
    //and generates X11 events.
-   X11::EventTranslator                        fX11EventTranslator;
+   X11::EventTranslator  fX11EventTranslator;
    //Command buffer - for "buffered" drawing commands.
-   X11::CommandBuffer                          fX11CommandBuffer;
+   X11::CommandBuffer    fX11CommandBuffer;
    //Font manager - cache CTFontRef for GUI.
-   FontCache                                   fFontManager;
+   FontCache             fFontManager;
 
    //Id for the new registered drawable.
-   unsigned                                    fCurrentDrawableID;
+   unsigned              fCurrentDrawableID;
    //Cache of ids.
-   std::vector<unsigned>                       fFreeDrawableIDs;
+   std::vector<unsigned> fFreeDrawableIDs;
    //Cocoa objects (views, windows, "pixmaps").
    std::map<unsigned, Util::NSStrongReference<NSObject<X11Drawable> > > fDrawables;
    typedef std::map<unsigned, Util::NSStrongReference<NSObject<X11Drawable> > >::iterator drawable_iterator;
