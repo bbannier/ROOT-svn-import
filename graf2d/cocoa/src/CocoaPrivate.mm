@@ -165,16 +165,16 @@ Handle_t CocoaPrivate::RegisterGLContext(NSOpenGLContext *glContext)
 {
    assert(fGLContextToHandle.find(glContext) == fGLContextToHandle.end() && "RegisterGLContext, context was registered already");
 
-   //Strong guarantee.
+   //Strong es-guarantee guarantee - if we have an exception, everything is rolled-back.
 
-   handle2ctx_map::iterator it = fHandleToGLContext.end();
+   bool contextInserted = false;
    try {
-      handle2ctx_map::value_type newVal(fFreeGLContextID, glContext);
-      it = fHandleToGLContext.insert(newVal).first;
+      fHandleToGLContext[fFreeGLContextID] = glContext;
+      contextInserted = true;
       fGLContextToHandle[glContext] = fFreeGLContextID;
    } catch (const std::exception &) {//bad alloc in one of two insertions.
-      if (it != fHandleToGLContext.end())
-         fHandleToGLContext.erase(it);
+      if (contextInserted)
+         fHandleToGLContext.erase(fHandleToGLContext.find(fFreeGLContextID));
       throw;
    }
    
@@ -187,7 +187,7 @@ NSOpenGLContext *CocoaPrivate::GetGLContextForHandle(Handle_t ctxID)
    if (fHandleToGLContext.find(ctxID) == fHandleToGLContext.end())
       return nil;
    
-   return fHandleToGLContext[ctxID];
+   return fHandleToGLContext[ctxID].Get();
 }
 
 //______________________________________________________________________________
