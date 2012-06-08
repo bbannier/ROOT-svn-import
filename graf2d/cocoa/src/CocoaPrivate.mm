@@ -182,6 +182,20 @@ Handle_t CocoaPrivate::RegisterGLContext(NSOpenGLContext *glContext)
 }
 
 //______________________________________________________________________________
+void CocoaPrivate::DeleteGLContext(Handle_t contextID)
+{
+   assert(fHandleToGLContext.find(contextID) != fHandleToGLContext.end() && "DeleteGLContext, bad context id");
+   
+   handle2ctx_map::iterator h2cIt = fHandleToGLContext.find(contextID);
+   
+   ctx2handle_map::iterator c2hIt = fGLContextToHandle.find(h2cIt->second.Get());
+   assert(c2hIt != fGLContextToHandle.end() && "DeleteGLContext, inconsistent context map");
+
+   fGLContextToHandle.erase(c2hIt);
+   fHandleToGLContext.erase(h2cIt);//RAII does work here.
+}
+
+//______________________________________________________________________________
 NSOpenGLContext *CocoaPrivate::GetGLContextForHandle(Handle_t ctxID)
 {
    if (fHandleToGLContext.find(ctxID) == fHandleToGLContext.end())

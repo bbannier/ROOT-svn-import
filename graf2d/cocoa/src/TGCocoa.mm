@@ -2587,9 +2587,16 @@ void TGCocoa::FlushOpenGLBuffer(Handle_t ctxID)
 }
 
 //______________________________________________________________________________
-void TGCocoa::DeleteOpenGLContext(Int_t /*wid*/)
+void TGCocoa::DeleteOpenGLContext(Int_t ctxID)
 {
-   // Deletes OpenGL context for window "wid"
+   //Historically, DeleteOpenGLContext was accepting window id,
+   //now it's a context id. DeleteOpenGLContext is not used in ROOT,
+   //only in TGLContext for Cocoa.
+   NSOpenGLContext *glContext = fPimpl->GetGLContextForHandle(ctxID);
+   if (glContext == [NSOpenGLContext currentContext])
+      [NSOpenGLContext clearCurrentContext];
+
+   fPimpl->DeleteGLContext(ctxID);
 }
 
 //______________________________________________________________________________

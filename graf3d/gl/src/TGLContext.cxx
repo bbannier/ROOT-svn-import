@@ -295,6 +295,9 @@ void TGLContext::Release()
 {
    //Make the context invalid and (do thread switch, if needed)
    //free resources.
+   TGLContextPrivate::RemoveContext(this);
+   gVirtualX->DeleteOpenGLContext(fPimpl->fGLContext);
+   fValid = kFALSE;
 }
 
 //==============================================================================
