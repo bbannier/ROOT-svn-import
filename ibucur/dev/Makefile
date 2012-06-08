@@ -26,12 +26,16 @@ RFOBJ = rf501.$(ObjSuf)
 RFSRC = rf501.$(SrcSuf)
 RF = rf501$(ExeSuf)
 
+UNIFORMFOBJ = testUniform.$(ObjSuf)
+UNIFORMSRC = testUniform.$(SrcSuf)
+UNIFORM = testUniform$(ExeSuf)
+
 endif
 
 #----------------------------------------------------------------------------
 
-PROGRAMS = $(TEST) $(STRESSROOSTATS) $(MODEL) $(PVALUE)
-OBJS = $(TESTOBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ)
+PROGRAMS = $(TEST) $(STRESSROOSTATS) $(MODEL) $(PVALUE) $(UNIFORM)
+OBJS = $(TESTOBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ) $(UNIFORMOBJ)
 
 $(TEST):	$(TESTOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
@@ -50,6 +54,10 @@ $(PVALUE): $(PVALUEOBJ)
 	@echo "$@ done"
 
 $(RF) : $(RFOBJ)
+	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
+	@echo "$@ done"
+
+$(UNIFORM) : $(UNIFORMOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 

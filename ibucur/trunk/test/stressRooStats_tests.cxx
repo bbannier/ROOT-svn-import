@@ -15,13 +15,13 @@
 #include "RooStats/NumberCountingUtils.h"
 #include "RooStats/RooStatsUtils.h"
 #include "RooStats/TestStatistic.h"
+#include "RooStats/HypoTestCalculatorGeneric.h"
 
 #include "stressRooStats_models.cxx" // Global functions that build complex RooStats models
 
 using namespace ROOT::Math;
 using namespace RooFit;
 using namespace RooStats;
-using namespace std;
 
 // testStatType = 0 Simple Likelihood Ratio (the LEP TestStat)
 //              = 1 Ratio of Profiled Likelihood Ratios (the Tevatron TestStat)
@@ -30,9 +30,11 @@ using namespace std;
 //              = 4 Profile Likelihood Signed (pll = -pll if mu < mu_hat)
 //              = 5 Max Likelihood Estimate as test statistic
 //              = 6 Number of Observed Events as test statistic
+enum ECalculatorType { kAsymptotic = 0, kFrequentist = 1, kHybrid = 2 };
 enum ETestStatType { kSimpleLR = 0, kRatioLR = 1, kProfileLR = 2, kProfileLROneSided = 3, kProfileLRSigned = 4, kMLE = 5, kNObs = 6 };
-static const char * const kECalculatorTypeString[] = { "Undefined", "Hybrid", "Frequentist", "Asymptotic" };
-static const char * const kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Likelihood Ratio", "Profile Likelihood Ratio", "Profile Likelihood One Sided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number of Observed Events" };
+static const char * const kECalculatorTypeString[] = { "Asymptotic", "Frequentist", "Hybrid" };
+static const char * const kETestStatTypeString[] = { "Simple Likelihood Ratio", "Ratio Of Profiled Likelihoods", "Profile Likelihood Ratio", "Profile Likelihood OneSided", "Profile Likelihood Signed", "Max Likelihood Estimate", "Number Of Observed Events" };
+static HypoTestCalculatorGeneric * buildHypoTestCalculator(const ECalculatorType calculatorType, RooAbsData &data, const ModelConfig &nullModel, const ModelConfig &altModel, const UInt_t toysNull, const UInt_t toysAlt);
 static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel);
 
 
@@ -1222,6 +1224,7 @@ public:
 
 class TestHypoTestCalculator2 : public RooUnitTest {
 private:
+   ECalculatorType fCalculatorType;
    ETestStatType fTestStatType;
    Int_t fObsValueX;
    Int_t fObsValueY;
@@ -1231,11 +1234,13 @@ public:
       TFile* refFile,
       Bool_t writeRef,
       Int_t verbose,
+      ECalculatorType calculatorType = kAsymptotic,
       ETestStatType testStatType = kProfileLR,
       Int_t obsValueX = 5,
       Int_t obsValueY = 10
    ) :
       RooUnitTest("HypoTestCalculator Frequentist - Simultaneous Pdf", refFile, writeRef, verbose),
+      fCalculatorType(calculatorType),
       fTestStatType(testStatType),
       fObsValueX(obsValueX),
       fObsValueY(obsValueY)
@@ -1257,48 +1262,37 @@ public:
       w->cat("index")->setLabel("cat2", kTRUE);
       w->data("combinedData")->add(*sbModel->GetObservables());
 
-      w->c
-
       // set snapshots
       w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
       sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
       w->var("sig")->setVal(0);
       bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
-
-      FrequentistCalculator *ftc = new FrequentistCalculator(*w->data("combinedData"), *sbModel, *bModel);
-      ftc->SetToys(500, 1);
-      ToyMCSampler *tmcs = (ToyMCSampler *)ftc->GetTestStatSampler();
-      tmcs->SetNEventsPerToy(1); // because the model is in number counting form
-      tmcs->SetAlwaysUseMultiGen(kTRUE);
+      HypoTestCalculatorGeneric *calc = buildHypoTestCalculator(fCalculatorType, *w->data("combinedData"), *bModel, *sbModel, 1000, 500);
+      ToyMCSampler *tmcs = (ToyMCSampler *)calc->GetTestStatSampler();
       tmcs->SetTestStatistic(buildTestStatistic(fTestStatType, *sbModel, *bModel));
-      HypoTestResult *htr = ftc->GetHypoTest();
+      tmcs->SetAlwaysUseMultiGen(kTRUE);
+      HypoTestResult *htr = calc->GetHypoTest();
       htr->Print();
-
-//      regValue(htr->Significance(), "whatever");
 
       ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("combinedData"), *sbModel);
       plc->SetNullParameters(*bModel->GetSnapshot());
       htr = plc->GetHypoTest();
       htr->Print();
-      cout << "PLC " << htr->Significance() << endl;
+      std::cout << "PLC " << htr->Significance() << std::endl;
 
-
-     regValue(htr->Significance(), TString::Format("thtc2_significance_%s_%d_%d",
-                                                    //   kECalculatorTypeString[fCalculatorType],
+      regValue(htr->Significance(), TString::Format("thtc2_significance_%s_%s_%d_%d",
+                                                       kECalculatorTypeString[fCalculatorType],
                                                        kETestStatTypeString[fTestStatType],
                                                       fObsValueX, fObsValueY));
 
- /*      delete ftc;
+      delete calc;
       delete htr;
       delete w;
-  */    
+      
       return kTRUE ;
    }
 } ;
-
-
-
 
 
 //
@@ -1351,7 +1345,7 @@ public:
 
 class TestHypoTestInverter1 : public RooUnitTest {
 private:
-   HypoTestInverter::ECalculatorType fCalculatorType;
+   ECalculatorType fCalculatorType;
    ETestStatType fTestStatType;
    Int_t fObsValueX;
    Int_t fObsValueY;
@@ -1362,7 +1356,7 @@ public:
       TFile* refFile,
       Bool_t writeRef,
       Int_t verbose,
-      HypoTestInverter::ECalculatorType calculatorType,
+      ECalculatorType calculatorType = kAsymptotic,
       ETestStatType testStatType = kProfileLR,
       Int_t obsValueX = 15,
       Int_t obsValueY = 30,
@@ -1380,12 +1374,12 @@ public:
    // Basic checks for the parameters passed to the test
    // In case of invalid parameters, a warning is printed and the test is skipped
    Bool_t isTestAvailable() {
-      if (fObsValueX < 0 || fObsValueX > 40) {
-         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,40]. Skipping test...");
+      if (fObsValueX < 0 || fObsValueX > 30) {
+         Warning("isTestAvailable", "Observed value X=s+b must be in the range [0,30]. Skipping test...");
          return kFALSE;
       }
-      if (fObsValueY < 0 || fObsValueY > 120) {
-         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,120]. Skipping test...");
+      if (fObsValueY < 0 || fObsValueY > 80) {
+         Warning("isTestAvailable", "Observed value Y=2*s*1.2^beta+b must be in the range [0,80]. Skipping test...");
          return kFALSE;
       }
       if (fConfidenceLevel <= 0.0 || fConfidenceLevel >= 1.0) {
@@ -1414,32 +1408,13 @@ public:
       w->var("sig")->setVal(0);
       bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
-      //TODO: check how to eliminate this code, maybe 0 should be default print level for AsymptoticCalculator
-      if (fCalculatorType == HypoTestInverter::kAsymptotic) {
-         AsymptoticCalculator::SetPrintLevel(0); // print only minimal output
-      }
 
-      // configure HypoTestInverter
-      HypoTestInverter *hti =
-         new HypoTestInverter(*w->data("data"), *sbModel, *bModel, NULL, fCalculatorType, 1.0 - fConfidenceLevel);
+      // build and configure HypoTestInverter
+      HypoTestCalculatorGeneric *calc = 
+         buildHypoTestCalculator(fCalculatorType, *w->data("data"), *sbModel, *bModel, 100, 1);
+      HypoTestInverter *hti = new HypoTestInverter(*calc, NULL, 1.0 - fConfidenceLevel);
       hti->SetTestStatistic(*buildTestStatistic(fTestStatType, *sbModel, *bModel));
       hti->SetFixedScan(10, w->var("sig")->getMin(), w->var("sig")->getMax()); // significant speedup
-
-      //TODO: check how to eliminate this code, calculator should autoconfigure itself
-      if (fCalculatorType == HypoTestInverter::kHybrid) {
-         // force prior nuisance pdf and set toys for speedup
-         HybridCalculator *hc = (HybridCalculator *)hti->GetHypoTestCalculator();
-         hc->ForcePriorNuisanceNull(*MakeNuisancePdf(*sbModel, "nuis_prior_null"));
-         hc->ForcePriorNuisanceAlt(*MakeNuisancePdf(*bModel, "nuis_prior_alt"));
-         hc->SetToys(200, 1);
-      }
-
-      //TODO: check how to eliminate this code
-      if (fCalculatorType == HypoTestInverter::kFrequentist) {
-         // set toys for speedup
-         FrequentistCalculator *fc = (FrequentistCalculator *)hti->GetHypoTestCalculator();
-         fc->SetToys(200, 1);
-      }
 
       // ToyMCSampler configuration
       ToyMCSampler *tmcs = (ToyMCSampler *)hti->GetHypoTestCalculator()->GetTestStatSampler();
@@ -1447,11 +1422,11 @@ public:
       tmcs->SetAlwaysUseMultiGen(kTRUE); // speedup
 
       HypoTestInverterResult *interval = hti->GetInterval();
-      regValue(interval->LowerLimit(), TString::Format("thti1_lower_limit_sig1_calc_%s_%s_%d_%d_%lf",
+      regValue(interval->LowerLimit(), TString::Format("hti1_lower_limit_sig1_calc_%s_%s_%d_%d_%lf",
                                                        kECalculatorTypeString[fCalculatorType],
                                                        kETestStatTypeString[fTestStatType],
                                                        fObsValueX, fObsValueY, fConfidenceLevel));
-      regValue(interval->UpperLimit(), TString::Format("thti1_upper_limit_sig1_calc_%s_%s_%d_%d_%lf",
+      regValue(interval->UpperLimit(), TString::Format("hti1_upper_limit_sig1_calc_%s_%s_%d_%d_%lf",
                                                        kECalculatorTypeString[fCalculatorType],
                                                        kETestStatTypeString[fTestStatType],
                                                        fObsValueX, fObsValueY, fConfidenceLevel));
@@ -1615,23 +1590,23 @@ public:
          tmcs->SetTestStatistic(pllts);
          HypoTestResult *htr = htc->GetHypoTest();
          htr->Print();
-         cout << "PLLTS " << htr->Significance() << endl;
+         std::cout<< "PLLTS " << htr->Significance() << std::endl;
          tmcs->SetTestStatistic(mlets);
          htr = htc->GetHypoTest();
          htr->Print();
-         cout << "MLETS " << htr->Significance() << endl;
+         std::cout<< "MLETS " << htr->Significance() << std::endl;
          tmcs->SetTestStatistic(nevts);
          htr = htc->GetHypoTest();
          htr->Print();
-         cout << "NEVTS " << htr->Significance() << endl;
+         std::cout<< "NEVTS " << htr->Significance() << std::endl;
          tmcs->SetTestStatistic(slrts);
          htr = htc->GetHypoTest();
          htr->Print();
-         cout << "SLRTS " << htr->Significance() << endl;
+         std::cout<< "SLRTS " << htr->Significance() << std::endl;
          tmcs->SetTestStatistic(roplts);
          htr = htc->GetHypoTest();
          htr->Print();
-         cout << "ROPLTS " << htr->Significance() << endl;
+         std::cout<< "ROPLTS " << htr->Significance() << std::endl;
 
 
          regValue(htr->Significance(), "thtc_significance_hybrid");
@@ -1749,6 +1724,40 @@ public:
 #include "RooStats/RatioOfProfiledLikelihoodsTestStat.h"
 #include "RooStats/MaxLikelihoodEstimateTestStat.h"
 #include "RooStats/NumEventsTestStat.h"
+
+static HypoTestCalculatorGeneric * buildHypoTestCalculator(const ECalculatorType calculatorType, RooAbsData &data, const ModelConfig &nullModel, const ModelConfig &altModel, const UInt_t toysNull, const UInt_t toysAlt)
+{
+   HypoTestCalculatorGeneric *calc = NULL;
+
+   if(calculatorType == kAsymptotic) {
+      AsymptoticCalculator::SetPrintLevel(0); // TODO: set this by default
+      AsymptoticCalculator *ac = new AsymptoticCalculator(data, altModel, nullModel);
+      calc = ac;
+   } else if(calculatorType == kFrequentist) {
+      FrequentistCalculator *fc = 
+         new FrequentistCalculator(data, altModel, nullModel);
+      // set toys for speedup
+      // TODO: check how to eliminate this code, calculator should autoconfigure itself
+      fc->SetToys(toysNull, toysAlt);
+      calc = fc;
+   } else { // kHybrid
+      HybridCalculator *hc = new HybridCalculator(data, altModel, nullModel);
+      // force prior nuisance pdf and set toys for speedup
+      // TODO: check how to eliminate this code, calculator should autoconfigure itself
+  //    MakeNuisancePdf(nullModel,"null")->Print();
+  //    MakeNuisancePdf(altModel,"alt")->Print();
+  //    hc->ForcePriorNuisanceNull(*nullModel.GetPriorPdf());
+  //    hc->ForcePriorNuisanceAlt(*altModel.GetPriorPdf());
+      hc->ForcePriorNuisanceNull(*MakeNuisancePdf(nullModel, "nuis_prior_null"));
+      hc->ForcePriorNuisanceAlt(*MakeNuisancePdf(altModel, "nuis_prior_alt"));
+      hc->SetToys(toysNull, toysAlt);
+      calc = hc;
+   }
+
+   assert(calc != NULL); // sanity check - should never happen
+   
+   return calc;
+}
 
 static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const ModelConfig &sbModel, const ModelConfig &bModel)
 {
