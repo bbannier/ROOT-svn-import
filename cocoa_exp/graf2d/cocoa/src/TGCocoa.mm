@@ -2475,7 +2475,6 @@ Handle_t TGCocoa::CreateOpenGLContext(Window_t windowID, Handle_t sharedID)
    [glView setOpenGLContext : newContext.Get()];
   
    const Handle_t ctxID = fPimpl->RegisterGLContext(newContext.Get());
-   newContext.Release();
 
    return ctxID;
 }
@@ -2593,6 +2592,14 @@ void TGCocoa::DeleteOpenGLContext(Int_t ctxID)
    //now it's a context id. DeleteOpenGLContext is not used in ROOT,
    //only in TGLContext for Cocoa.
    NSOpenGLContext *glContext = fPimpl->GetGLContextForHandle(ctxID);
+   
+   if (NSView *v = [glContext view]) {
+      if ([v isKindOfClass : [ROOTOpenGLView class]])
+         [(ROOTOpenGLView *)v setOpenGLContext : nil];
+   
+      [glContext clearDrawable];
+   }
+   
    if (glContext == [NSOpenGLContext currentContext])
       [NSOpenGLContext clearCurrentContext];
 

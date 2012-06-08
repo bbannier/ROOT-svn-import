@@ -84,6 +84,7 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
 //______________________________________________________________________________
 - (void) dealloc
 {
+   [fOpenGLContext clearDrawable];
    [fPassiveKeyGrabs release];
    [fPixelFormat release];
    //View does not own context.
