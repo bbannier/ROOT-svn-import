@@ -21,6 +21,8 @@
 #include "Fit/UnBinData.h"
 #include "Fit/FcnAdapter.h"
 #include "Math/Error.h"
+#include "Vc/global.h"
+#include "Vc/avx/vector.h"
 
 #include <memory> 
 
@@ -32,6 +34,7 @@
 // for debugging
 //#include "TMatrixD.h"
 // #include <iomanip>
+
 
 namespace ROOT { 
 

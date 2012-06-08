@@ -167,20 +167,21 @@ if(allTests) {
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 400, 4.0));
 
    // TEST HTI PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 10, 30));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 20, 25));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 10, 30));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 20, 25));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 10, 30));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 20, 25));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 10, 30));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 20, 25));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kFrequentist, kProfileLR, 10, 30));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kFrequentist, kProfileLR, 20, 25));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kFrequentist, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kHybrid, kProfileLR, 10, 30));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kHybrid, kProfileLR, 20, 25));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
 }
-
-//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 10, 30));
-//   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 20, 25));
-    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
+    
+//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR));
+//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR, 20, 15));
+//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR, 16, 10));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR));
    //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 
    // TEST HYPO TEST CALCULATOR
