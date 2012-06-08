@@ -47,6 +47,25 @@ XLIBS         = $(XPMLIBDIR) $(XPMLIB) $(X11LIBDIR) -lXext -lX11
 CILIBS        = -lm -ldl -rdynamic
 CRYPTLIBS     = -lcrypt
 
+# Determine Version
+GCC_MAJOR    := $(shell $(CXX) -dumpversion|awk -F. '{ print $$1 }')
+GCC_MINOR    := $(shell $(CXX) -dumpversion|awk -F. '{ print $$2 }')
+GCC_PATCH    := $(shell $(CXX) -dumpversion|awk -F. '{ print $$3 }')
+# SUSE breaks -dumpversion by removing the patchlevel number
+ifeq ($(GCC_PATCH),)
+GCC_PATCH    := $(shell $(CXX) --version|awk -F. '/[0-9]+\.[0-9]+\.[0-9]+/ { print $$3 }')
+endif
+GCC_VERSION  := $(GCC_MAJOR).$(GCC_MINOR).$(GCC_PATCH)
+
+# Support AVX only with GCC >= 4.5.3
+ifeq ($(shell test \( $(GCC_MAJOR) -eq 4 -a \
+                      \( $(GCC_MINOR) -ge 6 -o \
+                         \( $(GCC_MINOR) -eq 5 -a $(GCC_PATCH) -ge 3 \) \
+                      \) \) -o \
+                   $(GCC_MAJOR) -gt 4 && echo avxGood),avxGood)
+AVXFLAGS      = -mavx -fabi-version=4
+endif
+
 # Fortran:
 ifneq ($(findstring gfortran, $(F77)),)
 ifeq ($(F77),)
