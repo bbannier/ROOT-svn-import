@@ -22,6 +22,8 @@
 
 */
 
+#include <cassert>
+
 #include <Vc/Vc>
 #include <cstdlib>
 #include <iostream>
