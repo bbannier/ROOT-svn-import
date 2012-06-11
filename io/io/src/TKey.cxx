@@ -158,7 +158,7 @@ TKey::TKey(TDirectory* motherDir, const TKey &orig, UShort_t pidOffset) : TNamed
          return;
       }
       if (gDebug) {
-         cout << "TKey Reading "<<nsize<< " bytes at address "<<fSeekKey<<endl;
+         std::cout << "TKey Reading "<<nsize<< " bytes at address "<<fSeekKey<<std::endl;
       }
    }
    fBuffer += bufferDecOffset; // Reset the buffer to be appropriate for this key.
@@ -672,7 +672,7 @@ void TKey::ls(Option_t *) const
    // List Key contents.
 
    TROOT::IndentLevel();
-   cout <<"KEY: "<<fClassName<<"\t"<<GetName()<<";"<<GetCycle()<<"\t"<<GetTitle()<<endl;
+   std::cout <<"KEY: "<<fClassName<<"\t"<<GetName()<<";"<<GetCycle()<<"\t"<<GetTitle()<<std::endl;
 }
 
 //______________________________________________________________________________
@@ -697,20 +697,22 @@ TObject *TKey::ReadObj()
    //  object of the class type it describes. This new object now calls its
    //  Streamer function to rebuilt itself.
    //
-   //  see TKey::ReadObjectAny to read any object non-derived from TObject
+   //  Use TKey::ReadObjectAny to read any object non-derived from TObject
+   //  
+   //  Note:
+   //  A C style cast can only be used in the case where the final class 
+   //  of this object derives from TObject as a first inheritance, otherwise
+   //  one must use a dynamic_cast.
    //
-   //  NOTE:
-   //  In case the class of this object derives from TObject but not
-   //  as a first inheritance, one must cast the return value twice.
-   //  Example1: Normal case:
+   //  Example1: simplified case:
    //      class MyClass : public TObject, public AnotherClass
-   //   then on return, one can do:
+   //   then on return, one get away with using:
    //    MyClass *obj = (MyClass*)key->ReadObj();
    //
-   //  Example2: Special case:
-   //      class MyClass : public AnotherClass, public TObject
-   //   then on return, one must do:
+   //  Example2: Usual case (recommended unless performance is critical)
    //    MyClass *obj = dynamic_cast<MyClass*>(key->ReadObj());
+   //  which support also the more complex inheritance like:
+   //    class MyClass : public AnotherClass, public TObject
    //
    //  Of course, dynamic_cast<> can also be used in the example 1.
 
@@ -1256,7 +1258,7 @@ Bool_t TKey::ReadFile()
    }
 #endif
    if (gDebug) {
-      cout << "TKey Reading "<<nsize<< " bytes at address "<<fSeekKey<<endl;
+      std::cout << "TKey Reading "<<nsize<< " bytes at address "<<fSeekKey<<std::endl;
    }
    return kTRUE;
 }
@@ -1439,8 +1441,8 @@ Int_t TKey::WriteFile(Int_t cycle, TFile* f)
    //f->Flush(); Flushing takes too much time.
    //            Let user flush the file when he wants.
    if (gDebug) {
-      cout <<"   TKey Writing "<<nsize<< " bytes at address "<<fSeekKey
-           <<" for ID= " <<GetName()<<" Title= "<<GetTitle()<<endl;
+      std::cout <<"   TKey Writing "<<nsize<< " bytes at address "<<fSeekKey
+           <<" for ID= " <<GetName()<<" Title= "<<GetTitle()<<std::endl;
    }
 
    DeleteBuffer();
@@ -1475,8 +1477,8 @@ Int_t TKey::WriteFileKeepBuffer(TFile *f)
    //f->Flush(); Flushing takes too much time.
    //            Let user flush the file when he wants.
    if (gDebug) {
-      cout <<"   TKey Writing "<<nsize<< " bytes at address "<<fSeekKey
-      <<" for ID= " <<GetName()<<" Title= "<<GetTitle()<<endl;
+      std::cout <<"   TKey Writing "<<nsize<< " bytes at address "<<fSeekKey
+      <<" for ID= " <<GetName()<<" Title= "<<GetTitle()<<std::endl;
    }
    
    return result==kTRUE ? -1 : nsize;

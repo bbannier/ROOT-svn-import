@@ -254,6 +254,13 @@ void TH2::Copy(TObject &obj) const
 }
 
 //______________________________________________________________________________
+Int_t TH2::Fill(Double_t )
+{
+   // Invalid Fill method
+   Error("Fill", "Invalid signature - do nothing"); 
+   return -1;
+}
+//______________________________________________________________________________
 Int_t TH2::Fill(Double_t x,Double_t y)
 {
    //*-*-*-*-*-*-*-*-*-*-*Increment cell defined by x,y by 1*-*-*-*-*-*-*-*-*-*
@@ -1436,7 +1443,7 @@ Long64_t TH2::Merge(TCollection *list)
    //be a multiple of the bin width.
 
    if (!list) return 0;
-   if (list->IsEmpty()) return (Int_t) GetEntries();
+   if (list->IsEmpty()) return (Long64_t) GetEntries();
 
    TList inlist;
    inlist.AddAll(list);
@@ -1446,6 +1453,7 @@ Long64_t TH2::Merge(TCollection *list)
    Bool_t initialLimitsFound = kFALSE;
    Bool_t allSameLimits = kTRUE;
    Bool_t allHaveLimits = kTRUE;
+   Bool_t firstNonEmptyHist = kTRUE;
 
    TIter next(&inlist);
    TH2 * h = this;
@@ -1458,6 +1466,20 @@ Long64_t TH2::Merge(TCollection *list)
 
       if (hasLimits) {
          h->BufferEmpty();
+
+         // this is done in case the first histograms are empty and 
+         // the histogram have different limits
+         if (firstNonEmptyHist ) { 
+            // set axis limits in the case the first histogram was empty
+            if (h != this ) { 
+               if (!SameLimitsAndNBins(fXaxis, *(h->GetXaxis())) ) 
+                  fXaxis.Set(h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),h->GetXaxis()->GetXmax());
+               if (!SameLimitsAndNBins(fYaxis, *(h->GetYaxis())) ) 
+                  fYaxis.Set(h->GetYaxis()->GetNbins(), h->GetYaxis()->GetXmin(),h->GetYaxis()->GetXmax());
+            }
+            firstNonEmptyHist = kFALSE;     
+         }
+
          if (!initialLimitsFound) {
             // this is executed the first time an histogram with limits is found
             // to set some initial values on the new axes
@@ -1544,7 +1566,7 @@ Long64_t TH2::Merge(TCollection *list)
             inlist.Remove(hclone);
             delete hclone; 
          }
-         return (Int_t) GetEntries();  // all histograms have been processed
+         return (Long64_t) GetEntries();  // all histograms have been processed
       }
       next.Reset();
    }
@@ -2431,10 +2453,10 @@ TH1D *TH2::ProjectionX(const char *name, Int_t firstybin, Int_t lastybin, Option
    //   ranging from firstybin to lastybin included.
    //   By default, all bins including under- and overflow are included.
    //   The number of entries in the projection is estimated from the
-   //   number of effective entries for all the cells included in the projection
+   //   number of effective entries for all the cells included in the projection.
    //
-   //   To exclude the underflow bins in Y, use firstybin=1;
-   //   to exclude the underflow bins in Y, use lastybin=nx.
+   //   To exclude the underflow bins in Y, use firstybin=1.
+   //   To exclude the overflow bins in Y, use lastybin=nx.
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.
@@ -2474,8 +2496,8 @@ TH1D *TH2::ProjectionY(const char *name, Int_t firstxbin, Int_t lastxbin, Option
    //   The number of entries in the projection is estimated from the
    //   number of effective entries for all the cells included in the projection
    //
-   //   To exclude the underflow bins in X, use firstxbin=1;
-   //   to exclude the underflow bins in X, use lastxbin=nx.
+   //   To exclude the underflow bins in X, use firstxbin=1.
+   //   To exclude the oveerflow bins in X, use lastxbin=nx.
    //
    //   if option "e" is specified, the errors are computed.
    //   if option "d" is specified, the projection is drawn in the current pad.

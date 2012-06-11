@@ -11,17 +11,13 @@
 #include "textinput/StreamReader.h"
 #include "textinput/TerminalDisplay.h"
 
-#include <iostream>
-#include <sys/stat.h>
-
-namespace llvm {
-  class Module;
-}
+#include "llvm/Support/raw_ostream.h"
 
 //---------------------------------------------------------------------------
 // Construct an interface for an interpreter
 //---------------------------------------------------------------------------
-cling::UserInterface::UserInterface(Interpreter& interp, const char* prompt /*= "[cling] $"*/):
+cling::UserInterface::UserInterface(Interpreter& interp,
+                                    const char* prompt /*= "[cling] $"*/):
 m_MetaProcessor(new MetaProcessor(interp))
 {
 }
@@ -41,11 +37,7 @@ cling::UserInterface::~UserInterface()
 void cling::UserInterface::runInteractively(bool nologo /* = false */)
 {
   if (!nologo) {
-    std::cerr << std::endl;
-    std::cerr << "**** Welcome to the cling prototype! ****" << std::endl;
-    std::cerr << "* Type C code and press enter to run it *" << std::endl;
-    std::cerr << "* Type .q, exit or ctrl+D to quit       *" << std::endl;
-    std::cerr << "*****************************************" << std::endl;
+    PrintLogo();
   }
   static const char* histfile = ".cling_history";
   std::string Prompt("[cling]$ ");
@@ -57,8 +49,9 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
   TI.SetPrompt(Prompt.c_str());
   std::string line;
   MetaProcessorOpts& MPOpts = m_MetaProcessor->getMetaProcessorOpts();
-  
+
   while (!MPOpts.Quitting) {
+    llvm::outs().flush();
     TextInput::EReadResult RR = TI.ReadInput();
     TI.TakeInput(line);
     if (RR == TextInput::kRREOF) {
@@ -80,4 +73,12 @@ void cling::UserInterface::runInteractively(bool nologo /* = false */)
     TI.SetPrompt(Prompt.c_str());
 
   }
+}
+
+void cling::UserInterface::PrintLogo() {
+  llvm::outs() << "\n";
+  llvm::outs() << "****************** CLING ******************" << "\n";
+  llvm::outs() << "* Type C++ code and press enter to run it *" << "\n";
+  llvm::outs() << "*             Type .q to exit             *" << "\n";
+  llvm::outs() << "*******************************************" << "\n";
 }

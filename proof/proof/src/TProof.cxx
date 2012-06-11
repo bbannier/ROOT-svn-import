@@ -221,12 +221,12 @@ void TSlaveInfo::Print(Option_t *opt) const
    } else {
       TString msd  = fMsd.IsNull() ? "<null>" : fMsd.Data();
 
-      cout << "Slave: "          << fOrdinal
+      std::cout << "Slave: "          << fOrdinal
          << "  hostname: "     << fHostName
          << "  msd: "          << msd
          << "  perf index: "   << fPerfIndex
          << "  "               << stat
-         << endl;
+         << std::endl;
    }
 }
 
@@ -4429,6 +4429,83 @@ void TProof::Print(Option_t *option) const
 }
 
 //______________________________________________________________________________
+void TProof::SetFeedback(TString &opt, TString &optfb, Int_t action)
+{
+   // Extract from opt in optfb information about wanted feedback settings.
+   // Feedback are removed from the input string opt.
+   // If action == 0, set up feedback accordingly, if action == 1 clean related
+   // feedback settings (using info in optfb, if available, or reparsing opt).
+   //
+   // Feedback requirements are in the form
+   //
+   //       <previous_option>fb=name1,name2,name3,... <next_option>
+   //       <previous_option>feedback=name1,name2,name3,... <next_option>
+   //
+   // The special name 'stats' triggers feedback about events and packets.
+   // Called interanally by TProof::Process.
+
+   Ssiz_t from = 0;
+   if (action == 0 || (action == 1 && optfb.IsNull())) {
+      TString tag("fb=");
+      Ssiz_t ifb = opt.Index(tag);
+      if (ifb == kNPOS) {
+         tag = "feedback=";
+         ifb = opt.Index(tag);
+      }
+      if (ifb == kNPOS) return;
+      from = ifb + tag.Length();
+      
+      if (!opt.Tokenize(optfb, from, "[; ]") || optfb.IsNull()) {
+         Warning("SetFeedback", "could not extract feedback string! Ignoring ...");
+         return;
+      }
+      // Remove from original options string
+      tag += optfb;
+      opt.ReplaceAll(tag, "");
+   }
+
+   // Parse now
+   TString nm, startdraw, stopdraw;
+   from = 0;
+   while (optfb.Tokenize(nm, from, ",")) {
+      // Special name first
+      if (nm == "stats") {
+         if (action == 0) {
+            startdraw.Form("gDirectory->Add(new TStatsFeedback((TProof *)%p))", this);
+            gROOT->ProcessLine(startdraw.Data());
+            SetParameter("PROOF_StatsHist", "");
+            AddFeedback("PROOF_EventsHist");
+            AddFeedback("PROOF_PacketsHist");
+            AddFeedback("PROOF_ProcPcktHist");
+         } else {
+            stopdraw.Form("TObject *o = gDirectory->FindObject(\"%s\"); "
+                          " if (o && strcmp(o->ClassName(), \"TStatsFeedback\")) "
+                          " { gDirectory->Remove(o); delete o; }", GetSessionTag());
+            gROOT->ProcessLine(stopdraw.Data());
+            DeleteParameters("PROOF_StatsHist");
+            RemoveFeedback("PROOF_EventsHist");
+            RemoveFeedback("PROOF_PacketsHist");
+            RemoveFeedback("PROOF_ProcPcktHist");
+         }
+      } else {
+         if (action == 0) {
+            // Enable or
+            AddFeedback(nm);
+            startdraw.Form("gDirectory->Add(new TDrawFeedback((TProof *)%p))", this);
+            gROOT->ProcessLine(startdraw.Data());
+         } else {
+            // ... or disable
+            RemoveFeedback(nm);
+            stopdraw.Form("TObject *o = gDirectory->FindObject(\"%s\"); "
+                          " if (o && strcmp(o->ClassName(), \"TDrawFeedback\")) "
+                          " { gDirectory->Remove(o); delete o; }", GetSessionTag());
+            gROOT->ProcessLine(stopdraw.Data());
+         }         
+      }      
+   }
+}
+
+//______________________________________________________________________________
 Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
                          Long64_t nentries, Long64_t first)
 {
@@ -4443,11 +4520,14 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
 
    // Set PROOF to running state
    SetRunStatus(TProof::kRunning);
+   
+   TString opt(option), optfb;
+   // Enable feedback, if required
+   if (opt.Contains("fb=") || opt.Contains("feedback=")) SetFeedback(opt, optfb, 0);
 
    // Resolve query mode
-   fSync = (GetQueryMode(option) == kSync);
+   fSync = (GetQueryMode(opt) == kSync);
 
-   TString opt(option);
    if (fSync && (!IsIdle() || IsWaiting())) {
       // Already queued or processing queries: switch to asynchronous mode
       Info("Process", "session is in waiting or processing status: switch to asynchronous mode");
@@ -4479,6 +4559,9 @@ Long64_t TProof::Process(TDSet *dset, const char *selector, Option_t *option,
       Error("Process", "neither a selecrot file nor a selector object have"
                        " been specified: cannot process!");
    }
+
+   // Disable feedback, if required
+   if (!optfb.IsNull()) SetFeedback(opt, optfb, 1);
 
    if (fSync) {
       // reactivate the default application interrupt handler
@@ -4830,7 +4913,7 @@ Long64_t TProof::Process(const char *selector, Long64_t n, Option_t *option)
    } else if (fSelector) {
       retval = Process(dset, fSelector, option, n);
    } else {
-      Error("Process", "neither a selecrot file nor a selector object have"
+      Error("Process", "neither a selector file nor a selector object have"
                        " been specified: cannot process!");
    }
 
@@ -5073,7 +5156,7 @@ Int_t TProof::Retrieve(const char *ref, const char *path)
          if (qr) {
 
             TFile *farc = TFile::Open(path,"UPDATE");
-            if (!(farc->IsOpen())) {
+            if (!farc || (farc && !(farc->IsOpen()))) {
                Info("Retrieve", "archive file cannot be open (%s)", path);
                return 0;
             }
@@ -5851,10 +5934,12 @@ Int_t TProof::SendFile(const char *file, Int_t opt, const char *rfile, TSlave *w
    Long_t id, flags, modtime = 0;
    if (gSystem->GetPathInfo(file, &id, &size, &flags, &modtime) == 1) {
       Error("SendFile", "cannot stat file %s", file);
+      close(fd);
       return -1;
    }
    if (size == 0) {
       Error("SendFile", "empty file %s", file);
+      close(fd);
       return -1;
    }
 
@@ -6299,7 +6384,7 @@ void TProof::ClearData(UInt_t what, const char *dsname)
       ShowData();
       gSystem->RedirectOutput(0, 0, &h);
       // Parse the output file now
-      ifstream in;
+      std::ifstream in;
       in.open(outtmp.Data());
       if (!in.is_open()) {
          Error("ClearData", "could not open temp file for logs: %s", outtmp.Data());
@@ -6316,7 +6401,10 @@ void TProof::ClearData(UInt_t what, const char *dsname)
          if (line.IsNull()) continue;
          while (line.EndsWith("\n")) { line.Strip(TString::kTrailing, '\n'); }
          from = 0;
-         if (line.Tokenize(host, from, "| ")) line.Tokenize(file, from, "| ");
+         host = "";
+         if (!line.Tokenize(host, from, "| ")) continue;
+         file = "";
+         if (!line.Tokenize(file, from, "| ")) continue;
          if (!host.IsNull() && !file.IsNull()) {
             TList *fl = (TList *) afmap->GetValue(host.Data());
             if (!fl) {
@@ -7277,32 +7365,12 @@ Int_t TProof::LoadPackageOnClient(const char *pack, TList *loadopts)
       gSystem->ChangeDirectory(ocwd);
 
       if (status == 0) {
-         // create link to package in working directory
 
-         fPackageLock->Lock();
+         // Add package directory to list of include directories to be searched by ACliC
+         gSystem->AddIncludePath(TString("-I") + pdir);
 
-         FileStat_t stat;
-         Int_t st = gSystem->GetPathInfo(pack, stat);
-         // check if symlink, if so unlink, if not give error
-         // NOTE: GetPathnfo() returns 1 in case of symlink that does not point to
-         // existing file or to a directory, but if fIsLink is true the symlink exists
-         if (stat.fIsLink)
-            gSystem->Unlink(pack);
-         else if (st == 0) {
-            Error("LoadPackageOnClient", "cannot create symlink %s in %s on client, "
-                  "another item with same name already exists", pack, ocwd.Data());
-            fPackageLock->Unlock();
-            return -1;
-         }
-         gSystem->Symlink(pdir, pack);
-
-         fPackageLock->Unlock();
-
-         // add package to list of include directories to be searched by ACliC
-         gSystem->AddIncludePath(TString("-I") + pack);
-
-         // add package to list of include directories to be searched by CINT
-         gROOT->ProcessLine(TString(".include ") + pack);
+         // add package directory to list of include directories to be searched by CINT
+         gROOT->ProcessLine(TString(".include ") + pdir);
 
          fEnabledPackagesOnClient->Add(new TObjString(pack));
          PDB(kPackage, 1)

@@ -50,6 +50,10 @@ public:
    ~Scope();
 
 
+   /** assignment op */
+   Scope& operator=(const Scope &rh);
+
+
    /**
     * inequal operator
     */
@@ -1116,6 +1120,18 @@ inline Reflex::Scope::Scope(const Scope& rh)
 //-------------------------------------------------------------------------------
 inline Reflex::Scope::~Scope() {
 //-------------------------------------------------------------------------------
+}
+
+
+//-------------------------------------------------------------------------------
+inline
+Reflex::Scope&
+Reflex::Scope::operator=(const Scope& rh) {
+//-------------------------------------------------------------------------------
+   if (&rh != this) {
+      fScopeName = rh.fScopeName;
+   }
+   return *this;
 }
 
 

@@ -445,6 +445,9 @@ freebsd* | openbsd* | linux*)
       if test "x$f" = "xrpath" ; then
          auxlibs="-Wl,-rpath,$libdir $auxlibs"
       fi
+      if test "x$f" = "xcxx11" ; then
+         auxcflags="-std=c++11 -Wno-deprecated-declarations $auxcflags"
+      fi
    done
    ;;
 macosx*)
@@ -462,6 +465,9 @@ macosx*)
          if [ $macosx_minor -ge 5 ]; then
             auxlibs="-Wl,-rpath,$libdir $auxlibs"
          fi
+      fi
+      if test "x$f" = "xcxx11" ; then
+         auxcflags="-std=c++11 $auxcflags"
       fi
    done
    ;;

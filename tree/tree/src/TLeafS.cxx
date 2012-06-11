@@ -193,9 +193,9 @@ void TLeafS::ReadBasketExport(TBuffer &b, TClonesArray *list, Int_t n)
 }
 
 //______________________________________________________________________________
-void TLeafS::ReadValue(istream &s)
+void TLeafS::ReadValue(std::istream &s, Char_t /*delim = ' '*/)
 {
-// read a integer integer from istream s and store it into the branch buffer
+// read a integer integer from std::istream s and store it into the branch buffer
    if (fIsUnsigned) {
       UShort_t *uvalue = (UShort_t*)GetValuePointer();
       for (Int_t i=0;i<fLen;i++) s >> uvalue[i];
@@ -223,7 +223,7 @@ void TLeafS::SetAddress(void *add)
              ncountmax > fNdata || *fPointer == 0) {
             if (*fPointer) delete [] *fPointer;
             if (ncountmax > fNdata) fNdata = ncountmax;
-           *fPointer = new Short_t[fNdata];
+            *fPointer = new Short_t[fNdata];
          }
          fValue = *fPointer;
       } else {

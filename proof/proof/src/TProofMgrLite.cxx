@@ -338,6 +338,9 @@ TObjString *TProofMgrLite::ReadBuffer(const char *fin, Long64_t ofs, Int_t len)
 
    } while (len > 0 && left > 0);
 
+   // Close file
+   close(fd);
+
    // Done
    return new TObjString(outbuf.Data());
 }
@@ -374,7 +377,7 @@ TObjString *TProofMgrLite::ReadBuffer(const char *fin, const char *pattern)
    TRegexp re(pat);
 
    // Open file with file info
-   ifstream in;
+   std::ifstream in;
    in.open(fn.Data());
 
    TString outbuf;

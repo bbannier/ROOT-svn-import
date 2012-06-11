@@ -75,14 +75,40 @@ TFormLeafInfo::TFormLeafInfo(TClass* classptr, Long_t offset,
 }
 
 //______________________________________________________________________________
-TFormLeafInfo::TFormLeafInfo(const TFormLeafInfo& orig) : TObject(orig)
+TFormLeafInfo::TFormLeafInfo(const TFormLeafInfo& orig) : TObject(orig),fClass(orig.fClass),fOffset(orig.fOffset),fElement(orig.fElement),fCounter(0),fNext(0),fClassName(orig.fClassName),fElementName(orig.fElementName),fMultiplicity(orig.fMultiplicity)
 {
    //Constructor.
+   
+   // Deep copy the pointers.
+   if (orig.fCounter) fCounter = orig.fCounter->DeepCopy();
+   if (orig.fNext) fNext = orig.fNext->DeepCopy();
+}
 
-   *this = orig; // default copy
-   // change the pointers that need to be deep-copied
-   if (fCounter) fCounter = fCounter->DeepCopy();
-   if (fNext) fNext = fNext->DeepCopy();
+//______________________________________________________________________________
+TFormLeafInfo &TFormLeafInfo::operator=(const TFormLeafInfo &other)
+{
+   // Exception safe assignment operator.
+   TFormLeafInfo tmp(other);
+   Swap(tmp);
+   return *this;
+}
+
+//______________________________________________________________________________
+void TFormLeafInfo::Swap(TFormLeafInfo& other)
+{
+   std::swap(fClass,other.fClass);
+   std::swap(fOffset,other.fOffset);
+   std::swap(fElement,other.fElement);
+   std::swap(fCounter,other.fCounter);
+   std::swap(fNext,other.fNext);
+   TString tmp(fClassName);
+   fClassName = other.fClassName;
+   other.fClassName = tmp;
+
+   tmp = fElementName;
+   fElementName = other.fElementName;
+   other.fElementName = tmp;
+   std::swap(fMultiplicity,other.fMultiplicity);
 }
 
 //______________________________________________________________________________
@@ -894,23 +920,10 @@ TFormLeafInfoDirect::TFormLeafInfoDirect(TBranchElement * from) :
 }
 
 //______________________________________________________________________________
-TFormLeafInfoDirect::TFormLeafInfoDirect(const TFormLeafInfoDirect& orig) :
-   TFormLeafInfo(orig)
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
 TFormLeafInfo* TFormLeafInfoDirect::DeepCopy() const
 {
    // Copy this object and its content.
    return new TFormLeafInfoDirect(*this);
-}
-
-//______________________________________________________________________________
-TFormLeafInfoDirect::~TFormLeafInfoDirect()
-{
-   // Destructor.
 }
 
 //______________________________________________________________________________
@@ -991,6 +1004,25 @@ TFormLeafInfoNumerical::TFormLeafInfoNumerical(const TFormLeafInfoNumerical& ori
 }
 
 //______________________________________________________________________________
+void TFormLeafInfoNumerical::Swap(TFormLeafInfoNumerical& other) 
+{
+   // Exception safe swap.
+
+   TFormLeafInfo::Swap(other);
+   std::swap(fKind,other.fKind);
+   std::swap(fIsBool,other.fIsBool);
+}
+
+//______________________________________________________________________________
+TFormLeafInfoNumerical &TFormLeafInfoNumerical::operator=(const TFormLeafInfoNumerical &other)
+{
+   // Exception safe assignment operator.
+   TFormLeafInfoNumerical tmp(other);
+   Swap(tmp);
+   return *this;
+}
+
+//______________________________________________________________________________
 TFormLeafInfo* TFormLeafInfoNumerical::DeepCopy() const
 {
    // Copy the object and all its content.
@@ -1051,7 +1083,7 @@ TFormLeafInfoClones::TFormLeafInfoClones(TClass* classptr, Long_t offset,
                                          Bool_t top) :
    TFormLeafInfo(classptr,offset,R__GetFakeClonesElem()),fTop(top)
 {
-   // Constructor/
+   // Constructor.
 }
 
 //______________________________________________________________________________
@@ -1061,6 +1093,30 @@ TFormLeafInfoClones::TFormLeafInfoClones(TClass* classptr, Long_t offset,
    TFormLeafInfo(classptr,offset,element),fTop(top)
 {
    // Constructor.
+}
+
+//______________________________________________________________________________
+TFormLeafInfoClones::TFormLeafInfoClones(const TFormLeafInfoClones &orig) :
+   TFormLeafInfo(orig), fTop(orig.fTop)
+{
+   // Deep Copy constructor.
+}
+
+//______________________________________________________________________________
+void TFormLeafInfoClones::Swap(TFormLeafInfoClones &other)
+{
+   // Exception safe swap.
+   TFormLeafInfo::Swap(other);
+   std::swap(fTop,other.fTop);
+}
+
+//______________________________________________________________________________
+TFormLeafInfoClones &TFormLeafInfoClones::operator=(const TFormLeafInfoClones &orig)
+{
+   // Exception safe assignement operator
+   TFormLeafInfoClones tmp(orig);
+   Swap(tmp);
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -1161,6 +1217,7 @@ Double_t TFormLeafInfoClones::GetValue(TLeaf *leaf, Int_t instance)
       sub_instance = 0;
    }
    TClonesArray *clones = (TClonesArray*)GetLocalValuePointer(leaf);
+   if (clones==0) return 0;
 
    // Note we take advantage of having only one physically variable
    // dimension:
@@ -1174,7 +1231,7 @@ void * TFormLeafInfoClones::GetValuePointer(TLeaf *leaf, Int_t instance)
    // Return the pointer to the clonesArray
 
    TClonesArray * clones = (TClonesArray*)GetLocalValuePointer(leaf);
-   if (fNext) {
+   if (fNext && clones) {
       // Same as in TFormLeafInfoClones::GetValue
       Int_t len,index,sub_instance;
       len = (fNext->fElement==0)? 0 : fNext->GetArrayLength();
@@ -1224,6 +1281,30 @@ TFormLeafInfoCollectionObject::TFormLeafInfoCollectionObject(TClass* classptr, B
    TFormLeafInfo(classptr,0,R__GetFakeClonesElem()),fTop(top)
 {
    // Constructor.
+}
+
+//______________________________________________________________________________
+TFormLeafInfoCollectionObject::TFormLeafInfoCollectionObject(const TFormLeafInfoCollectionObject &orig) :
+   TFormLeafInfo(orig),fTop(orig.fTop)
+{
+   // Constructor.
+}
+
+//______________________________________________________________________________
+void TFormLeafInfoCollectionObject::Swap(TFormLeafInfoCollectionObject &other)
+{
+   // Exception safe swap.
+   TFormLeafInfo::Swap(other);
+   std::swap(fTop,other.fTop);
+}
+
+//______________________________________________________________________________
+TFormLeafInfoCollectionObject &TFormLeafInfoCollectionObject::operator=(const TFormLeafInfoCollectionObject &orig)
+{
+   // Exception safe assignement operator
+   TFormLeafInfoCollectionObject tmp(orig);
+   Swap(tmp);
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -1390,9 +1471,30 @@ TFormLeafInfoCollection::TFormLeafInfoCollection(const TFormLeafInfoCollection& 
    fCollClass( orig.fCollClass ),
    fCollClassName( orig.fCollClassName ),
    fCollProxy( orig.fCollProxy ? orig.fCollProxy->Generate() : 0 ),
-   fLocalElement( 0 )
+   fLocalElement( 0 ) // humm why not initialize it?
 {
    // Constructor.
+}
+
+//______________________________________________________________________________
+void TFormLeafInfoCollection::Swap(TFormLeafInfoCollection &other)
+{
+   // Exception safe swap.
+   TFormLeafInfo::Swap(other);
+   std::swap(fTop,other.fTop);
+   std::swap(fClass,other.fClass);
+   std::swap(fCollClassName,other.fCollClassName);
+   std::swap(fCollProxy,other.fCollProxy);
+   std::swap(fLocalElement,other.fLocalElement);
+}
+
+//______________________________________________________________________________
+TFormLeafInfoCollection &TFormLeafInfoCollection::operator=(const TFormLeafInfoCollection &other)
+{
+   // Exception safe assignment operator.
+   TFormLeafInfoCollection tmp(other);
+   Swap(tmp);
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -1687,6 +1789,25 @@ TFormLeafInfoCollectionSize::TFormLeafInfoCollectionSize(
 }
 
 //______________________________________________________________________________
+TFormLeafInfoCollectionSize &TFormLeafInfoCollectionSize::operator=(const TFormLeafInfoCollectionSize &other)
+{
+   // Exception safe assignment operator.
+   TFormLeafInfoCollectionSize tmp(other);
+   Swap(tmp);
+   return *this;
+}
+
+//______________________________________________________________________________
+void TFormLeafInfoCollectionSize::Swap(TFormLeafInfoCollectionSize &other)
+{
+   // Exception safe swap.
+   TFormLeafInfo::Swap(other);
+   std::swap(fCollClass,other.fCollClass);
+   std::swap(fCollClassName,other.fCollClassName);
+   std::swap(fCollProxy,other.fCollProxy);
+}
+
+//______________________________________________________________________________
 TFormLeafInfoCollectionSize::~TFormLeafInfoCollectionSize()
 {
    // Destructor.
@@ -1779,13 +1900,6 @@ TFormLeafInfoPointer::TFormLeafInfoPointer(TClass* classptr,
                                            Long_t offset,
                                            TStreamerElement* element) :
    TFormLeafInfo(classptr,offset,element)
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
-TFormLeafInfoPointer::TFormLeafInfoPointer(const TFormLeafInfoPointer& orig) :
-   TFormLeafInfo(orig)
 {
    // Constructor.
 }
@@ -1933,6 +2047,30 @@ TFormLeafInfoMethod::TFormLeafInfoMethod(const TFormLeafInfoMethod& orig)
    fDeleteFormat = orig.fDeleteFormat;
    fValuePointer = 0;
    fIsByValue = orig.fIsByValue;
+}
+
+//______________________________________________________________________________
+void TFormLeafInfoMethod::Swap(TFormLeafInfoMethod &other)
+{
+   // Exception safe swap.
+   TFormLeafInfo::Swap(other); 
+   std::swap(fMethod,other.fMethod);
+   std::swap(fMethodName,other.fMethodName);
+   std::swap(fParams,other.fParams);
+   std::swap(fResult,other.fResult);
+   std::swap(fCopyFormat,other.fCopyFormat);
+   std::swap(fDeleteFormat,other.fDeleteFormat);
+   std::swap(fValuePointer,other.fValuePointer);
+   std::swap(fIsByValue,other.fIsByValue);
+}
+
+//______________________________________________________________________________
+TFormLeafInfoMethod &TFormLeafInfoMethod::operator=(const TFormLeafInfoMethod &other)
+{
+   // Exception safe assignment operator.
+   TFormLeafInfoMethod tmp(other);
+   Swap(tmp);
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -2088,7 +2226,7 @@ Double_t TFormLeafInfoMethod::ReadValue(char *where, Int_t instance)
    } else if (r == TMethodCall::kString) {
       char *returntext = 0;
       fMethod->Execute(thisobj,&returntext);
-      result = (long) returntext;
+      result = (Long_t) returntext;
 
    } else if (fNext) {
       char * char_result = 0;
@@ -2154,6 +2292,29 @@ TFormLeafInfoMultiVarDim::TFormLeafInfoMultiVarDim(const TFormLeafInfoMultiVarDi
    fVirtDim = orig.fVirtDim;
    fPrimaryIndex = orig.fPrimaryIndex;
    fSecondaryIndex = orig.fSecondaryIndex;
+}
+
+//______________________________________________________________________________
+void TFormLeafInfoMultiVarDim::Swap(TFormLeafInfoMultiVarDim &other)
+{
+   // Exception safe swap.
+   TFormLeafInfo::Swap(other); 
+   std::swap(fNsize,other.fNsize);
+   std::swap(fSizes,other.fSizes);
+   std::swap(fSumOfSizes,other.fSumOfSizes);
+   std::swap(fDim,other.fDim);
+   std::swap(fVirtDim,other.fVirtDim);
+   std::swap(fPrimaryIndex,other.fPrimaryIndex);
+   std::swap(fSecondaryIndex,other.fSecondaryIndex);
+}
+
+//______________________________________________________________________________
+TFormLeafInfoMultiVarDim &TFormLeafInfoMultiVarDim::operator=(const TFormLeafInfoMultiVarDim &other)
+{
+   // Exception safe assignment operator.
+   TFormLeafInfoMultiVarDim tmp(other);
+   Swap(tmp);
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -2315,20 +2476,6 @@ void TFormLeafInfoMultiVarDim::UpdateSizes(TArrayI *garr)
 //______________________________________________________________________________
 
 //______________________________________________________________________________
-TFormLeafInfoMultiVarDimDirect::TFormLeafInfoMultiVarDimDirect() :
-   TFormLeafInfoMultiVarDim()
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
-TFormLeafInfoMultiVarDimDirect::TFormLeafInfoMultiVarDimDirect(const TFormLeafInfoMultiVarDimDirect& orig) :
-   TFormLeafInfoMultiVarDim(orig)
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
 TFormLeafInfo* TFormLeafInfoMultiVarDimDirect::DeepCopy() const
 {
    // Copy the object and all its content.
@@ -2399,21 +2546,6 @@ TFormLeafInfoMultiVarDimCollection::TFormLeafInfoMultiVarDimCollection(
    TFormLeafInfo ** next = &(fCounter2->fNext);
    while(*next != 0) next = &( (*next)->fNext);
    *next = new TFormLeafInfoCollectionSize(motherclassptr,offset,element);
-}
-
-//______________________________________________________________________________
-TFormLeafInfoMultiVarDimCollection::TFormLeafInfoMultiVarDimCollection() :
-   TFormLeafInfoMultiVarDim()
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
-TFormLeafInfoMultiVarDimCollection::TFormLeafInfoMultiVarDimCollection(
-   const TFormLeafInfoMultiVarDimCollection& orig) :
-   TFormLeafInfoMultiVarDim(orig)
-{
-   // Constructor.
 }
 
 //______________________________________________________________________________
@@ -2520,21 +2652,6 @@ TFormLeafInfoMultiVarDimClones::TFormLeafInfoMultiVarDimClones(
 }
 
 //______________________________________________________________________________
-TFormLeafInfoMultiVarDimClones::TFormLeafInfoMultiVarDimClones() :
-   TFormLeafInfoMultiVarDim()
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
-TFormLeafInfoMultiVarDimClones::TFormLeafInfoMultiVarDimClones(
-   const TFormLeafInfoMultiVarDimClones& orig) :
-   TFormLeafInfoMultiVarDim(orig)
-{
-   // Constructor.
-}
-
-//______________________________________________________________________________
 TFormLeafInfo* TFormLeafInfoMultiVarDimClones::DeepCopy() const
 {
    // Copy the object and all its data.
@@ -2564,9 +2681,11 @@ void TFormLeafInfoMultiVarDimClones::LoadSizes(TBranch* branch)
    fSumOfSizes = 0;
    for (Int_t i=0; i<fNsize; i++) {
       TClonesArray *clones = (TClonesArray*)fCounter2->GetValuePointer(leaf,i);
-      Int_t size = clones->GetEntries();
-      fSumOfSizes += size;
-      fSizes.AddAt( size, i );
+      if (clones) {
+         Int_t size = clones->GetEntries();
+         fSumOfSizes += size;
+         fSizes.AddAt( size, i );
+      }
    }
    return;
 }
@@ -2614,6 +2733,26 @@ TFormLeafInfoCast::TFormLeafInfoCast(const TFormLeafInfoCast& orig) :
    fCastedName = orig.fCastedName;
    fGoodCast = orig.fGoodCast;
    fIsTObject = orig.fIsTObject;
+}
+
+//______________________________________________________________________________
+void TFormLeafInfoCast::Swap(TFormLeafInfoCast &other)
+{
+   // Exception safe swap.
+   TFormLeafInfo::Swap(other); 
+   std::swap(fCasted,other.fCasted);
+   std::swap(fCastedName,other.fCastedName);
+   std::swap(fGoodCast,other.fGoodCast);
+   std::swap(fIsTObject,other.fIsTObject);
+}
+
+//______________________________________________________________________________
+TFormLeafInfoCast &TFormLeafInfoCast::operator=(const TFormLeafInfoCast &other)
+{
+   // Exception safe assignment operator.
+   TFormLeafInfoCast tmp(other);
+   Swap(tmp);
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -2698,12 +2837,6 @@ TFormLeafInfoTTree::TFormLeafInfoTTree(const TFormLeafInfoTTree& orig) :
    fTree    = orig.fTree;
    fAlias   = orig.fAlias;
    fCurrent = orig.fCurrent;
-}
-
-TFormLeafInfoTTree::~TFormLeafInfoTTree()
-{
-   // Default destructor.
-
 }
 
 TFormLeafInfo* TFormLeafInfoTTree::DeepCopy() const 

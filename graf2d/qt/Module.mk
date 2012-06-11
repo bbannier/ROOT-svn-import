@@ -94,10 +94,10 @@ $(GQTLIB):      $(GQTO) $(GQTDO) $(GQTMOCO) $(ORDER_) $(MAINLIBS) $(GQTLIBDEP)
 		   "$(GQTO) $(GQTMOCO) $(GQTDO)" \
 		   "$(GQTLIBEXTRA) $(QTLIBDIR) $(QTLIB)"
 
-$(GQTDS):       $(GQTH1) $(GQTL) $(ROOTCINTTMPEXE)
+$(GQTDS):       $(GQTH1) $(GQTL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(GQTH1) $(GQTL)
+		$(ROOTCINTTMP) -f $@ -c $(GQTCXXFLAGS) $(GQTH1) $(GQTL)
 
 $(GQTMAP):      $(RLIBMAP) $(MAKEFILEDEP) $(GQTL)
 		$(RLIBMAP) -o $@ -l $(GQTLIB) \
@@ -119,7 +119,10 @@ distclean::     distclean-$(MODNAME)
 $(sort $(GQTMOCO) $(GQTO)): CXXFLAGS += $(GQTCXXFLAGS)
 $(GQTDO): CXXFLAGS += $(GQTCXXFLAGS)
 ifeq ($(GCC_MAJOR),4)
+ifeq ($(subst $(GCC_MINOR),,0 1),0 1)
+# GCC >= 4.2
 $(GQTO): CXXFLAGS += -Wno-strict-overflow
+endif
 endif
 
 $(GQTMOC) : $(call stripsrc,$(GQTDIRS)/moc_%.cxx): $(GQTDIRI)/%.h

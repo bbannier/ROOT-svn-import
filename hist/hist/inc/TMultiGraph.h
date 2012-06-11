@@ -74,9 +74,10 @@ public:
    TAxis            *GetXaxis() const;
    TAxis            *GetYaxis() const;
    virtual void      Paint(Option_t *chopt="");
+   void              PaintPolyLine3D(Option_t *chopt="");
    virtual void      Print(Option_t *chopt="") const;
    virtual void      RecursiveRemove(TObject *obj);
-   virtual void      SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void      SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void      SetMaximum(Double_t maximum=-1111);
    virtual void      SetMinimum(Double_t minimum=-1111);
   

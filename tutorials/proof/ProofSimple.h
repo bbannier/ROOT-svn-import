@@ -26,6 +26,8 @@ public :
    TH3F           **fHist3;//![fNhist3]
    TRandom3        *fRandom;//!
 
+   TH1F            *fHLab;//!
+
    ProofSimple();
    virtual ~ProofSimple();
    virtual Int_t   Version() const { return 2; }
@@ -38,6 +40,12 @@ public :
    virtual TList  *GetOutputList() const { return fOutput; }
    virtual void    SlaveTerminate();
    virtual void    Terminate();
+   
+   // Setters and getters (for TDataMember)
+   Int_t GetNhist() { return fNhist; }
+   void SetNhist(Int_t nh) { fNhist = nh; }
+   Int_t GetNhist3() { return fNhist3; }
+   void SetNhist3(Int_t nh) { fNhist3 = nh; }
 
    ClassDef(ProofSimple,2);
 };

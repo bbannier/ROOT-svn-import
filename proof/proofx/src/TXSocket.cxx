@@ -231,6 +231,7 @@ TXSocket::TXSocket(const char *url, Char_t m, Int_t psid, Char_t capver,
    }
 }
 
+#if 0
 //______________________________________________________________________________
 TXSocket::TXSocket(const TXSocket &s) : TSocket(s),XrdClientAbsUnsolMsgHandler(s)
 {
@@ -243,6 +244,7 @@ TXSocket& TXSocket::operator=(const TXSocket&)
    // TXSocket assignment operator.
    return *this;
 }
+#endif
 
 //_____________________________________________________________________________
 TXSocket::~TXSocket()
@@ -443,12 +445,6 @@ UnsolRespProcResult TXSocket::ProcessUnsolicitedMsg(XrdClientUnsolMsgSender *,
    }
 
    // Local processing ...
-   if (!m) {
-      Error("ProcessUnsolicitedMsg", "undefined message - disabling");
-      PostMsg(kPROOF_STOP);
-      return rc;
-   }
-
    Int_t len = 0;
    if ((len = m->DataLen()) < (int)sizeof(kXR_int32)) {
       Error("ProcessUnsolicitedMsg", "empty or bad-formed message - disabling");
@@ -998,8 +994,10 @@ Int_t TXSocket::Flush()
          }
 
          // Reset the asynchronous queue
-         while (sz--)
-            fASem.TryWait();
+         while (sz--) {
+            if (fASem.TryWait() == 1)
+               Printf("Warning in TXSocket::Flush: semaphore counter already 0 (sz: %d)", sz);
+         }
          fAQue.clear();
       }
    }
@@ -1086,6 +1084,7 @@ Bool_t TXSocket::Create(Bool_t attach)
          } else {
             Error("Create","session ID is undefined!");
             fSessionID = -1;
+            if (srvresp) free(srvresp);
             return kFALSE;
          }
 
@@ -1132,8 +1131,7 @@ Bool_t TXSocket::Create(Bool_t attach)
 
          // Cleanup
          SafeDelete(xrsp);
-         if (srvresp)
-            free(srvresp);
+         if (srvresp) free(srvresp);
 
          // Notify
          return kTRUE;
@@ -1148,6 +1146,7 @@ Bool_t TXSocket::Create(Bool_t attach)
          if (fConn->GetOpenError() == kXP_TooManySess) {
             // Avoid to contact the server any more
             fSessionID = -1;
+            if (srvresp) free(srvresp);
             return kFALSE;
          } else {
             // Print error msg, if any
@@ -1165,6 +1164,7 @@ Bool_t TXSocket::Create(Bool_t attach)
          Error("Create", "%d creation/attachment attempts failed: no attempts left",
                          gEnv->GetValue("XProof.CreationRetries", 4));
 
+      if (srvresp) free(srvresp);
    } // Creation retries
    
    // The session is invalid: reset the sessionID to invalid state (it was our protocol
@@ -1288,6 +1288,7 @@ Bool_t TXSocket::Ping(const char *ord)
 
       // Cleanup
       SafeDelete(xrsp);
+      if (pans) free(pans);
 
    } else {
       if (XPD::clientMarshall(&Request) == 0) {
@@ -1444,12 +1445,15 @@ Int_t TXSocket::PickUpReady()
       Error("PickUpReady","queue is empty - protocol error ?");
       return -1;
    }
-   fBufCur = fAQue.front();
+   if (!(fBufCur = fAQue.front())) {
+      Error("PickUpReady","got invalid buffer - protocol error ?");
+      return -1;
+   }
    // Remove message from the queue
    fAQue.pop_front();
+
    // Set number of available bytes
-   if (fBufCur)
-      fByteLeft = fBufCur->fLen;
+   fByteLeft = fBufCur->fLen;
 
    if (gDebug > 2)
       Info("PickUpReady", "%p: %s: got message (%d bytes)",
@@ -1509,10 +1513,9 @@ TXSockBuf *TXSocket::PopUpSpare(Int_t size)
    }
 
    // Create a new buffer
-   char *b = (char *)malloc(size);
-   if (b)
-      buf = new TXSockBuf(b, size);
+   buf = new TXSockBuf((char *)malloc(size), size);
    nBuf++;
+
    if (gDebug > 2)
       Info("PopUpSpare","asked: %d, spare: %d/%d, maxsz: %d, NEW buf %p, sz: %d",
                         size, (int) fgSQue.size(), nBuf, maxsz, buf, buf->fSiz);
@@ -2119,9 +2122,13 @@ Int_t TXSocket::Reconnect()
    }
 
    if (gDebug > 0) {
-      Info("Reconnect", "%p (c:%p): attempt %s (logid: %d)", this, fConn,
-                        ((fConn && fConn->IsValid()) ? "succeeded!" : "failed"),
-                        fConn->GetLogConnID() );
+      if (fConn) {
+         Info("Reconnect", "%p (c:%p): attempt %s (logid: %d)", this, fConn,
+                           (fConn->IsValid() ? "succeeded!" : "failed"),
+                           fConn->GetLogConnID() );
+      } else {
+         Info("Reconnect", "%p (c:0x0): attempt failed", this);
+      }
    }
 
    // Done

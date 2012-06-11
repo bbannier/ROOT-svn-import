@@ -123,6 +123,13 @@
 //
 //      root[] runProof("ntuple(inputrndm)")
 //
+//      By default the output will be saved in the local file SimpleNtuple.root;
+//      location and name of the file can be changed via the argument 'outfile',
+//      e.g.
+//
+//      root[] runProof("simplefile(outfile=/data0/testntuple.root)")
+//      root[] runProof("simplefile(outfile=root://aserver//data/testntuple.root)")
+//
 //  7. "dataset"
 //
 //      Selector: ProofNtuple.h.C
@@ -173,6 +180,26 @@
 //
 //      root[] runProof("simplefile(nevt=1000000,nhist=25)")
 //
+//      By default the output will be saved in the local file SimpleFile.root;
+//      location and name of the file can be changed via the argument 'outfile',
+//      e.g.
+//
+//      root[] runProof("simplefile(outfile=/data0/testsimple.root)")
+//      root[] runProof("simplefile(outfile=root://aserver//data/testsimple.root)")
+//
+// 10. "stdvec"
+//
+//      Selector: ProofStdVect.h.C
+//
+//      This is an example of using standard vectors (vector<vector<bool> > and
+//      vector<vector<float> >) in a TSelector. The same selector is run twice:
+//      in 'create' mode it creates a dataset with the tree 'stdvec' containing
+//      3 branches, a vector<vector<bool> > and two vector<vector<float> >. The
+//      tree is saved into a file on each worker and a dataset is created with
+//      these files (the dataset is called 'TestStdVect'); in 'read' mode the
+//      dataset is read and a couple fo histograms filled and displayed.
+//
+//      root[] runProof("stdvec")
 //
 //   General arguments
 //   -----------------
@@ -247,10 +274,22 @@
 //      Generate the perfomance tree and save it to file 'perftreefile.root',
 //      e.g. root[] runProof("eventproc(perftree=perftreefile.root)")
 //
+//   10. feedback=name1[,name2,name3,...]|off
+//
+//      Enable feedback for the specified names or switch it off; by default it is
+//      enabled for the 'stats' histograms (events,packest, packets-being processed).
+//
 //   In all cases, to run on a remote PROOF cluster, the master URL must
 //   be passed as second argument; e.g.
 //
 //      root[] runProof("simple","master.do.main")
+//
+//   A rough parsing of the URL is done to determine the locality of the cluster.
+//   If using a tunnel the URL can start by localhost even for external clusters:
+//   in such cases the default locality determination will be wrong, so one has 
+//   to tell explicity that the cluster is external via the option field, e.g.
+//
+//      root[] runProof("simple","localhost:33002/?external")
 //
 //   In the case of local running it is possible to specify the number of
 //   workers to start as third argument (the default is the number of cores
@@ -276,7 +315,6 @@
 
 #include "TCanvas.h"
 #include "TChain.h"
-#include "TDrawFeedback.h"
 #include "TDSet.h"
 #include "TEnv.h"
 #include "TEntryList.h"
@@ -295,14 +333,12 @@
 void plotNtuple(TProof *p, const char *ds, const char *ntptitle);
 void SavePerfTree(TProof *proof, const char *fn);
 
-TDrawFeedback *fb = 0;
-
 // Variable used to locate the Pythia8 directory for the Pythia8 example
 const char *pythia8dir = 0;
 const char *pythia8data = 0;
 
 void runProof(const char *what = "simple",
-              const char *url = "proof://localhost:40000",
+              const char *masterurl = "proof://localhost:40000",
               Int_t nwrks = -1)
 {
 #ifdef __CINT__
@@ -313,6 +349,24 @@ void runProof(const char *what = "simple",
    return;
 #endif
    gEnv->SetValue("Proof.StatsHist",1);
+
+   TString u(masterurl);
+   // Determine locality of this session
+   Bool_t isProofLocal = kFALSE;
+   if (!u.IsNull() && u != "lite://") {
+      TUrl uu(masterurl);
+      TString uopts(uu.GetOptions());
+      if ((!strcmp(uu.GetHost(), "localhost") && !uopts.Contains("external")) ||
+         !strcmp(uu.GetHostFQDN(), TUrl(gSystem->HostName()).GetHostFQDN())) {
+         isProofLocal = kTRUE;
+      }
+      // Adjust URL
+      if (!u.BeginsWith(uu.GetProtocol())) uu.SetProtocol("proof");
+      uopts.ReplaceAll("external", "");
+      uu.SetOptions(uopts.Data());
+      u = uu.GetUrl();
+   }
+   const char *url = u.Data();
 
    // Temp dir for PROOF tutorials
    // Force "/tmp/<user>" whenever possible to avoid length problems on MacOsX
@@ -378,13 +432,9 @@ void runProof(const char *what = "simple",
       return;
    }
 
-   // Determine locality of this session
-   Bool_t isProofLocal = kFALSE;
-   TUrl uu(url);
-   if (!strcmp(uu.GetHost(), "localhost") || proof->IsLite() ||
-       !strcmp(uu.GetHostFQDN(), TUrl(gSystem->HostName()).GetHostFQDN())) {
-      isProofLocal = kTRUE;
-   }
+   // Refine locality (PROOF-Lite always local)
+   if (proof->IsLite()) isProofLocal = kTRUE;
+
 #ifdef WIN32
    if (isProofLocal && what && !strcmp(what, "ntuple", 6)) {
       // Not support on windows
@@ -424,16 +474,6 @@ void runProof(const char *what = "simple",
    TString tutorials(Form("%s/tutorials", rootsys.Data()));
    delete[] rootbin;
 
-   // Create feedback displayer
-   if (!fb) {
-      new TCanvas("PROOF_EventsHist_canvas", "Events per Worker", 100, 600, 600, 400);
-      fb = new TDrawFeedback(proof);
-   }
-   if (!proof->GetFeedbackList() || !proof->GetFeedbackList()->FindObject("PROOF_EventsHist")) {
-      // Number of events per worker
-      proof->AddFeedback("PROOF_EventsHist");
-   }
-
    // Parse 'what'; it is in the form 'analysis(arg1,arg2,...)'
    TString args(what);
    args.ReplaceAll("("," "); 
@@ -455,9 +495,10 @@ void runProof(const char *what = "simple",
    Printf("runProof: %s: ACLiC mode: '%s'", act.Data(), aMode.Data());
 
    // Parse out number of events and  'asyn' option, used almost by every test
-   TString aNevt, aFirst, aNwrk, opt, sel, punzip("off"), aCache,
+   TString aNevt, aFirst, aNwrk, opt, sel, punzip("off"), aCache, aOutFile,
            aH1Src("http://root.cern.ch/files/h1"),
-           aDebug, aDebugEnum, aRateEst, aPerfTree("perftree.root");
+           aDebug, aDebugEnum, aRateEst, aPerfTree("perftree.root"),
+           aFeedback("fb=stats");
    Long64_t suf = 1;
    Int_t aSubMg = -1;
    Bool_t fillList = kFALSE, useList = kFALSE, makePerfTree = kFALSE;
@@ -559,6 +600,29 @@ void runProof(const char *what = "simple",
             if (!(tok.IsNull())) aPerfTree = tok;
          }
          Printf("runProof: %s: saving performance tree to '%s'", act.Data(), aPerfTree.Data());
+      }
+      // Location of the output file, if any
+      if (tok.BeginsWith("outfile")) {
+         if (tok.BeginsWith("outfile=")) {
+            tok.ReplaceAll("outfile=","");
+            if (!(tok.IsNull())) aOutFile = tok;
+         }
+         Printf("runProof: %s: output file: '%s'", act.Data(), aOutFile.Data());
+      }
+      // Feedback
+      if (tok.BeginsWith("feedback=")) {
+         tok.ReplaceAll("feedback=","");
+         if (tok == "off" || tok == "OFF" || tok == "0") {
+            aFeedback = "";
+         } else if (!(tok.IsNull())) {
+            if (tok.BeginsWith("+")) {
+               tok[0] = ',';
+               aFeedback += tok;
+            } else {
+               aFeedback.Form("fb=%s", tok.Data());
+            }
+         }
+         Printf("runProof: %s: feedback: '%s'", act.Data(), aFeedback.Data());
       }
    }
    Long64_t nevt = (aNevt.IsNull()) ? -1 : aNevt.Atoi();
@@ -678,7 +742,8 @@ void runProof(const char *what = "simple",
       sel.Form("%s/proof/ProofSimple.C%s", tutorials.Data(), aMode.Data());
       //
       // Run it for nevt times
-      proof->Process(sel.Data(), nevt, opt);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      proof->Process(sel.Data(), nevt, xopt);
 
    } else if (act == "h1") {
       // This is the famous 'h1' example analysis run on Proof reading the
@@ -720,7 +785,8 @@ void runProof(const char *what = "simple",
       sel.Form("%s/tree/h1analysis.C%s", tutorials.Data(), aMode.Data());
       // Run it 
       Printf("\nrunProof: running \"h1\"\n");
-      chain->Process(sel.Data(),opt,nevt,first);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      chain->Process(sel.Data(),xopt,nevt,first);
       // Cleanup the input list
       gProof->ClearInputData("elist");
       gProof->ClearInputData("elist.root");
@@ -772,7 +838,8 @@ void runProof(const char *what = "simple",
       // The selector string
       sel.Form("%s/proof/ProofPythia.C%s", tutorials.Data(), aMode.Data());
       // Run it for nevt times
-      proof->Process(sel.Data(), nevt);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      proof->Process(sel.Data(), nevt, xopt);
 
   } else if (act == "event") {
 
@@ -798,7 +865,8 @@ void runProof(const char *what = "simple",
       // The selector string
       sel.Form("%s/proof/ProofEvent.C%s", tutorials.Data(), aMode.Data());
       // Run it for nevt times
-      proof->Process(sel.Data(), nevt);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      proof->Process(sel.Data(), nevt, xopt);
 
   } else if (act == "eventproc") {
 
@@ -926,7 +994,8 @@ void runProof(const char *what = "simple",
       sel.Form("%s/proof/ProofEventProc.C%s", tutorials.Data(), aMode.Data());
       // Run it
       Printf("\nrunProof: running \"eventproc\"\n");
-      c->Process(sel.Data(), opt, nevt, first);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      c->Process(sel.Data(), xopt, nevt, first);
 
    } else if (act == "ntuple") {
 
@@ -953,30 +1022,33 @@ void runProof(const char *what = "simple",
       if (usentprndm) Printf("runProof: taking randoms from input ntuple\n");
 
       // Output file
-      TString fout = TString::Format("%s/ProofNtuple.root", gSystem->WorkingDirectory());
-      // Cleanup any existing instance of the output file
-      gSystem->Unlink(fout);
+      TString fout(aOutFile);
+      if (fout.IsNull()) {
+         fout.Form("%s/ProofNtuple.root", gSystem->WorkingDirectory());
+         // Cleanup any existing instance of the output file
+         gSystem->Unlink(fout);
 
-      if (!isProofLocal) {
-         // Setup a local basic xrootd to receive the file
-         Bool_t xrdok = kFALSE;
-         Int_t port = 9000;
-         while (port < 9010) {
-            if (checkXrootdAt(port) != 1) {
-               if (startXrootdAt(port, gSystem->WorkingDirectory(), kTRUE) == 0) {
-                  xrdok = kTRUE;
-                  break;
+         if (!isProofLocal) {
+            // Setup a local basic xrootd to receive the file
+            Bool_t xrdok = kFALSE;
+            Int_t port = 9000;
+            while (port < 9010) {
+               if (checkXrootdAt(port) != 1) {
+                  if (startXrootdAt(port, gSystem->WorkingDirectory(), kTRUE) == 0) {
+                     xrdok = kTRUE;
+                     break;
+                  }
                }
+               port++;
             }
-            port++;
+            if (!xrdok) {
+               Printf("runProof: could not start basic xrootd on ports 9000-9009 - cannot continue");
+               return;
+            }
+            fout.Insert(0, TString::Format("root://%s:%d/", TUrl(gSystem->HostName()).GetHostFQDN(), port));
+            // Make a copy of the files on the master before merging
+            proof->AddInput(new TNamed("PROOF_OUTPUTFILE_LOCATION", "LOCAL"));
          }
-         if (!xrdok) {
-            Printf("runProof: could not start basic xrootd on ports 9000-9009 - cannot continue");
-            return;
-         }
-         fout.Insert(0, TString::Format("root://%s:%d/", TUrl(gSystem->HostName()).GetHostFQDN(), port));
-         // Make a copy of the files on the master before merging
-         proof->AddInput(new TNamed("PROOF_OUTPUTFILE_LOCATION", "LOCAL"));
       }
       proof->AddInput(new TNamed("PROOF_OUTPUTFILE", fout.Data()));
 
@@ -996,7 +1068,8 @@ void runProof(const char *what = "simple",
       sel.Form("%s/proof/ProofNtuple.C%s", tutorials.Data(), aMode.Data());
 
       // Run it for nevt times
-      proof->Process(sel.Data(), nevt, opt);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      proof->Process(sel.Data(), nevt, xopt);
 
       // Reset input variables
       if (usentprndm) {
@@ -1031,7 +1104,8 @@ void runProof(const char *what = "simple",
       sel.Form("%s/proof/ProofNtuple.C%s", tutorials.Data(), aMode.Data());
       //
       // Run it for nevt times
-      proof->Process(sel.Data(), nevt, opt);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      proof->Process(sel.Data(), nevt, xopt);
 
       // The TFileCollection must be in the output
       if (proof->GetOutputList()->FindObject("testNtuple")) {
@@ -1137,7 +1211,8 @@ void runProof(const char *what = "simple",
       // Process with friends
       dset->AddFriend(dsetf, "friend");
       sel.Form("%s/proof/ProofFriends.C%s", tutorials.Data(), aMode.Data());
-      dset->Process(sel);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      dset->Process(sel, xopt);
       // Clear the files created by this run
       proof->ClearData(TProof::kUnregistered | TProof::kForceClear);
 
@@ -1174,30 +1249,33 @@ void runProof(const char *what = "simple",
       proof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
       
       // Output file
-      TString fout = TString::Format("%s/SimpleFile.root", gSystem->WorkingDirectory());
-      // Cleanup any existing instance of the output file
-      gSystem->Unlink(fout);
+      TString fout(aOutFile);
+      if (fout.IsNull()) {
+         fout.Form("%s/SimpleFile.root", gSystem->WorkingDirectory());
+         // Cleanup any existing instance of the output file
+         gSystem->Unlink(fout);
 
-      if (!isProofLocal) {
-         // Setup a local basic xrootd to receive the file
-         Bool_t xrdok = kFALSE;
-         Int_t port = 9000;
-         while (port < 9010) {
-            if (checkXrootdAt(port) != 1) {
-               if (startXrootdAt(port, gSystem->WorkingDirectory(), kTRUE) == 0) {
-                  xrdok = kTRUE;
-                  break;
+         if (!isProofLocal) {
+            // Setup a local basic xrootd to receive the file
+            Bool_t xrdok = kFALSE;
+            Int_t port = 9000;
+            while (port < 9010) {
+               if (checkXrootdAt(port) != 1) {
+                  if (startXrootdAt(port, gSystem->WorkingDirectory(), kTRUE) == 0) {
+                     xrdok = kTRUE;
+                     break;
+                  }
                }
+               port++;
             }
-            port++;
+            if (!xrdok) {
+               Printf("runProof: could not start basic xrootd on ports 9000-9009 - cannot continue");
+               return;
+            }
+            fout.Insert(0, TString::Format("root://%s:%d/", TUrl(gSystem->HostName()).GetHostFQDN(), port));
+            // Make a copy of the files on the master before merging
+            proof->AddInput(new TNamed("PROOF_OUTPUTFILE_LOCATION", "LOCAL"));
          }
-         if (!xrdok) {
-            Printf("runProof: could not start basic xrootd on ports 9000-9009 - cannot continue");
-            return;
-         }
-         fout.Insert(0, TString::Format("root://%s:%d/", TUrl(gSystem->HostName()).GetHostFQDN(), port));
-         // Make a copy of the files on the master before merging
-         proof->AddInput(new TNamed("PROOF_OUTPUTFILE_LOCATION", "LOCAL"));
       }
       proof->AddInput(new TNamed("PROOF_OUTPUTFILE", fout.Data()));
       
@@ -1205,7 +1283,41 @@ void runProof(const char *what = "simple",
       sel.Form("%s/proof/ProofSimpleFile.C%s", tutorials.Data(), aMode.Data());
       //
       // Run it for nevt times
-      proof->Process(sel.Data(), nevt, opt);
+      TString xopt = TString::Format("%s %s", aFeedback.Data(), opt.Data());
+      proof->Process(sel.Data(), nevt, xopt);
+
+   } else if (act == "stdvec") {
+
+      // This is an example of runnign a TSelector using standard vectors
+      // Selector used: ProofStdVect
+
+      if (first > 0)
+         // Meaningless for this tutorial
+         Printf("runProof: %s: warning concept of 'first' meaningless for this tutorial"
+                " - ignored", act.Data());
+
+      // Set the default number of events, if needed
+      nevt = (nevt < 0) ? 50000 * proof->GetParallel() : nevt;
+      Printf("\nrunProof: running \"stdvec\" with nevt= %lld\n", nevt);
+
+      // The selector string
+      sel.Form("%s/proof/ProofStdVect.C%s", tutorials.Data(), aMode.Data());
+
+      TString xopt;
+      // Create the dataset 'TestStdVect' with 'nevt' events
+      xopt.Form("%s %s create", aFeedback.Data(), opt.Data());
+      proof->Process(sel.Data(), nevt, xopt);
+
+      // The dataset must have been registered
+      if (proof->ExistsDataSet("TestStdVect")) {
+
+         // Use dataset 'TestStdVect'
+         xopt.Form("%s %s", aFeedback.Data(), opt.Data());
+         proof->Process("TestStdVect", sel.Data(), xopt);
+
+      } else {
+         Printf("runProof: dataset 'TestStdVect' not available!");
+      }
 
    } else {
       // Do not know what to run

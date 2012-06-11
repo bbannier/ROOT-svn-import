@@ -574,14 +574,19 @@ void TApplication::LoadGraphicsLibs()
    TString title1 = "ROOT interface to ";
    TString nativex, title;
    TString nativeg = "root";
-#ifndef R__WIN32
-   nativex = "x11";
-   name    = "X11";
-   title   = title1 + "X11";
-#else
+   
+#ifdef R__WIN32
    nativex = "win32gdk";
    name    = "Win32gdk";
    title   = title1 + "Win32gdk";
+#elif defined(R__HAS_COCOA)
+   nativex = "quartz";
+   name    = "quartz";
+   title   = title1 + "Quartz"; 
+#else
+   nativex = "x11";
+   name    = "X11";
+   title   = title1 + "X11";
 #endif
 
    TString guiBackend(gEnv->GetValue("Gui.Backend", "native"));
@@ -922,7 +927,7 @@ Long_t TApplication::ExecuteFile(const char *file, Int_t *error, Bool_t keep)
       return 0;
    }
 
-   ::ifstream macro(exnam, ios::in);
+   ::std::ifstream macro(exnam, std::ios::in);
    if (!macro.good()) {
       ::Error("TApplication::ExecuteFile", "%s no such file", exnam);
       delete [] exnam;
@@ -1084,7 +1089,7 @@ void TApplication::StopIdleing()
 }
 
 //______________________________________________________________________________
-Int_t TApplication::TabCompletionHook(char* /*buf*/, int* /*pLoc*/, ostream& /*out*/)
+Int_t TApplication::TabCompletionHook(char* /*buf*/, int* /*pLoc*/, std::ostream& /*out*/)
 {
    // What to do when tab is pressed. Re-implemented by TRint.
    // See TTabCom::Hook() for meaning of return values.

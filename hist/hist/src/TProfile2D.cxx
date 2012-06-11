@@ -45,9 +45,10 @@ ClassImp(TProfile2D)
 //      e(I,J)  =  s(I,J)/sqrt(L(I,J))
 //
 //  In the special case where s(I,J) is zero (eg, case of 1 entry only in one cell)
-//  e(I,J) is computed from the average of the s(I,J) for all cells.
+//  the bin error e(I,J) is computed from the average of the s(I,J) for all cells 
+//  if the static function TProfile2D::Approximate has been called. 
 //  This simple/crude approximation was suggested in order to keep the cell
-//  during a fit operation.
+//  during a fit operation. But note that this approximation is not the default behaviour.
 //
 //           Example of a profile2D histogram
 //{
@@ -165,44 +166,14 @@ void TProfile2D::BuildOptions(Double_t zmin, Double_t zmax, Option_t *option)
 //*-*-*-*-*-*-*Set Profile2D histogram structure and options*-*-*-*-*-*-*-*-*
 //*-*          =============================================
 //
-//    If a cell has N data points all with the same value Z (especially
-//    possible when dealing with integers), the spread in Z for that cell
-//    is zero, and the uncertainty assigned is also zero, and the cell is
-//    ignored in making subsequent fits. If SQRT(Z) was the correct error
-//    in the case above, then SQRT(Z)/SQRT(N) would be the correct error here.
-//    In fact, any cell with non-zero number of entries N but with zero spread
-//    should have an uncertainty SQRT(Z)/SQRT(N).
+//    zmin:  minimum value allowed for z 
+//    zmax:  maximum value allowed for z 
+//            if (zmin = zmax = 0) there are no limits on the allowed z values (zmin = -inf, zmax = +inf)
 //
-//    Now, is SQRT(Z)/SQRT(N) really the correct uncertainty?
-//    that it is only in the case where the Z variable is some sort
-//    of counting statistics, following a Poisson distribution. This should
-//    probably be set as the default case. However, Z can be any variable
-//    from an original NTUPLE, not necessarily distributed "Poissonly".
-//    The computation of errors is based on the parameter option:
-//    option:
-//     ' '  (Default) Errors are Spread/SQRT(N) for Spread.ne.0. ,
-//                      "     "  SQRT(Z)/SQRT(N) for Spread.eq.0,N.gt.0 ,
-//                      "     "  0.  for N.eq.0
-//     's'            Errors are Spread  for Spread.ne.0. ,
-//                      "     "  SQRT(Z)  for Spread.eq.0,N.gt.0 ,
-//                      "     "  0.  for N.eq.0
-//     'i'            Errors are Spread/SQRT(N) for Spread.ne.0. ,
-//                      "     "  1./SQRT(12.*N) for Spread.eq.0,N.gt.0 ,
-//                      "     "  0.  for N.eq.0
-//
-//    The third case above corresponds to Integer Z values for which the
-//    uncertainty is +-0.5, with the assumption that the probability that Z
-//    takes any value between Z-0.5 and Z+0.5 is uniform (the same argument
-//    goes for Z uniformly distributed between Z and Z+1); this would be
-//    useful if Z is an ADC measurement, for example. Other, fancier options
-//    would be possible, at the cost of adding one more parameter to the PROFILE2D
-//    For example, if all Z variables are distributed according to some
-//    known Gaussian of standard deviation Sigma, then:
-//     'G'            Errors are Spread/SQRT(N) for Spread.ne.0. ,
-//                      "     "  Sigma/SQRT(N) for Spread.eq.0,N.gt.0 ,
-//                      "     "  0.  for N.eq.0
-//    For example, this would be useful when all Z's are experimental quantities
-//    measured with the same instrument with precision Sigma.
+//    option:  this is the option for the computation of the t error of the profile ( TProfile2D::GetBinError )
+//             possible values for the options are documented in TProfile2D::SetErrorOption
+
+//   See TProfile::BuildOptions  for a detailed  deescription
 //
 //
 
@@ -229,34 +200,34 @@ TProfile2D::TProfile2D(const TProfile2D &profile) : TH2D()
 
 
 //______________________________________________________________________________
-void TProfile2D::Add(TF1 *, Double_t , Option_t*)
+Bool_t TProfile2D::Add(TF1 *, Double_t , Option_t*)
 {
    // Performs the operation: this = this + c1*f1
 
    Error("Add","Function not implemented for TProfile2D");
-   return;
+   return kFALSE;
 }
 
 
 //______________________________________________________________________________
-void TProfile2D::Add(const TH1 *h1, Double_t c1)
+Bool_t TProfile2D::Add(const TH1 *h1, Double_t c1)
 {
    // Performs the operation: this = this + c1*h1
 
    if (!h1) {
       Error("Add","Attempt to add a non-existing profile");
-      return;
+      return  kFALSE;
    }
    if (!h1->InheritsFrom(TProfile2D::Class())) {
       Error("Add","Attempt to add a non-profile2D object");
-      return;
+      return  kFALSE;
    }
 
-   TProfileHelper::Add(this, this, h1, 1, c1);
+   return TProfileHelper::Add(this, this, h1, 1, c1);
 }
 
 //______________________________________________________________________________
-void TProfile2D::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
+Bool_t TProfile2D::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 {
 //*-*-*-*-*Replace contents of this profile2D by the addition of h1 and h2*-*-*
 //*-*      ===============================================================
@@ -266,17 +237,17 @@ void TProfile2D::Add(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2)
 
    if (!h1 || !h2) {
       Error("Add","Attempt to add a non-existing profile");
-      return;
+      return kFALSE;
    }
    if (!h1->InheritsFrom(TProfile2D::Class())) {
       Error("Add","Attempt to add a non-profile2D object");
-      return;
+      return kFALSE;
    }
    if (!h2->InheritsFrom(TProfile2D::Class())) {
       Error("Add","Attempt to add a non-profile2D object");
-      return;
+      return kFALSE;
    }
-   TProfileHelper::Add(this, h1, h2, c1, c2);
+   return TProfileHelper::Add(this, h1, h2, c1, c2);
 }
 
 
@@ -416,30 +387,33 @@ void TProfile2D::Copy(TObject &obj) const
 
 
 //______________________________________________________________________________
-void TProfile2D::Divide(TF1 *, Double_t )
+Bool_t TProfile2D::Divide(TF1 *, Double_t )
 {
    // Performs the operation: this = this/(c1*f1)
+   // This function is not implemented
 
    Error("Divide","Function not implemented for TProfile2D");
-   return;
+   return kFALSE;
 }
 
 //______________________________________________________________________________
-void TProfile2D::Divide(const TH1 *h1)
+Bool_t TProfile2D::Divide(const TH1 *h1)
 {
 //*-*-*-*-*-*-*-*-*-*-*Divide this profile2D by h1*-*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                  ===========================
 //
 //   this = this/h1
 //
+//   This function return kFALSE if the divide operation failed
+
 
    if (!h1) {
       Error("Divide","Attempt to divide a non-existing profile2D");
-      return;
+      return kFALSE;
    }
    if (!h1->InheritsFrom(TProfile2D::Class())) {
       Error("Divide","Attempt to divide a non-profile2D object");
-      return;
+      return kFALSE;
    }
    TProfile2D *p1 = (TProfile2D*)h1;
 
@@ -450,12 +424,12 @@ void TProfile2D::Divide(const TH1 *h1)
    Int_t nx = GetNbinsX();
    if (nx != p1->GetNbinsX()) {
       Error("Divide","Attempt to divide profiles with different number of bins");
-      return;
+      return kFALSE;
    }
    Int_t ny = GetNbinsY();
    if (ny != p1->GetNbinsY()) {
       Error("Divide","Attempt to divide profiles with different number of bins");
-      return;
+      return kFALSE;
    }
 
 //*-*- Reset statistics
@@ -503,17 +477,19 @@ void TProfile2D::Divide(const TH1 *h1)
       Warning("Divide","Cannot preserve during the division of profiles the sum of bin weight square");
       fBinSumw2 = TArrayD();
    }
+   return kTRUE;
 }
 
 
 //______________________________________________________________________________
-void TProfile2D::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_t *option)
+Bool_t TProfile2D::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, Option_t *option)
 {
 //*-*-*-*-*Replace contents of this profile2D by the division of h1 by h2*-*-*
 //*-*      ==============================================================
 //
 //   this = c1*h1/(c2*h2)
 //
+//   This function return kFALSE if the divide operation failed
 
    TString opt = option;
    opt.ToLower();
@@ -521,16 +497,16 @@ void TProfile2D::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, 
    if (opt.Contains("b")) binomial = kTRUE;
    if (!h1 || !h2) {
       Error("Divide","Attempt to divide a non-existing profile2D");
-      return;
+      return kFALSE;
    }
    if (!h1->InheritsFrom(TProfile2D::Class())) {
       Error("Divide","Attempt to divide a non-profile2D object");
-      return;
+      return kFALSE;
    }
    TProfile2D *p1 = (TProfile2D*)h1;
    if (!h2->InheritsFrom(TProfile2D::Class())) {
       Error("Divide","Attempt to divide a non-profile2D object");
-      return;
+      return kFALSE;
    }
    TProfile2D *p2 = (TProfile2D*)h2;
 
@@ -541,16 +517,16 @@ void TProfile2D::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, 
    Int_t nx = GetNbinsX();
    if (nx != p1->GetNbinsX() || nx != p2->GetNbinsX()) {
       Error("Divide","Attempt to divide profiles with different number of bins");
-      return;
+      return kFALSE;
    }
    Int_t ny = GetNbinsY();
    if (ny != p1->GetNbinsY() || ny != p2->GetNbinsY()) {
       Error("Divide","Attempt to divide profiles with different number of bins");
-      return;
+      return kFALSE;
    }
    if (!c2) {
       Error("Divide","Coefficient of dividing profile cannot be zero");
-      return;
+      return kFALSE;
    }
 
 //*-*- Reset statistics
@@ -604,6 +580,7 @@ void TProfile2D::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, 
          else           fBinEntries.fArray[bin] = en1[bin]/en2[bin];
       }
    }
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -1166,16 +1143,16 @@ Long64_t TProfile2D::Merge(TCollection *li)
 }
 
 //______________________________________________________________________________
-void TProfile2D::Multiply(TF1 *, Double_t )
+Bool_t TProfile2D::Multiply(TF1 *, Double_t )
 {
    // Performs the operation: this = this*c1*f1
 
    Error("Multiply","Function not implemented for TProfile2D");
-   return;
+   return kFALSE;
 }
 
 //______________________________________________________________________________
-void TProfile2D::Multiply(const TH1 *)
+Bool_t TProfile2D::Multiply(const TH1 *)
 {
 //*-*-*-*-*-*-*-*-*-*-*Multiply this profile2D by h1*-*-*-*-*-*-*-*-*-*-*-*
 //*-*                  =============================
@@ -1183,11 +1160,12 @@ void TProfile2D::Multiply(const TH1 *)
 //   this = this*h1
 //
    Error("Multiply","Multiplication of profile2D histograms not implemented");
+   return kFALSE;
 }
 
 
 //______________________________________________________________________________
-void TProfile2D::Multiply(const TH1 *, const TH1 *, Double_t, Double_t, Option_t *)
+Bool_t TProfile2D::Multiply(const TH1 *, const TH1 *, Double_t, Double_t, Option_t *)
 {
 //*-*-*-*-*Replace contents of this profile2D by multiplication of h1 by h2*-*
 //*-*      ================================================================
@@ -1196,6 +1174,7 @@ void TProfile2D::Multiply(const TH1 *, const TH1 *, Double_t, Double_t, Option_t
 //
 
    Error("Multiply","Multiplication of profile2D histograms not implemented");
+   return kFALSE;
 }
 
 //______________________________________________________________________________
@@ -1670,7 +1649,7 @@ TProfile2D * TProfile2D::RebinY(Int_t ngroup,const char * newname ) {
 }
 
 //______________________________________________________________________________
-void TProfile2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TProfile2D::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
@@ -1680,7 +1659,7 @@ void TProfile2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
 
 
    char quote = '"';
-   out <<"   "<<endl;
+   out <<"   "<<std::endl;
    out <<"   "<<ClassName()<<" *";
 
    out << GetName() << " = new " << ClassName() << "(" << quote
@@ -1693,7 +1672,7 @@ void TProfile2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
        << "," << GetYaxis()->GetXmax();
    out << "," << fZmin
        << "," << fZmax;
-   out << ");" << endl;
+   out << ");" << std::endl;
 
 
    // save bin entries
@@ -1701,14 +1680,14 @@ void TProfile2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    for (bin=0;bin<fNcells;bin++) {
       Double_t bi = GetBinEntries(bin);
       if (bi) {
-         out<<"   "<<GetName()<<"->SetBinEntries("<<bin<<","<<bi<<");"<<endl;
+         out<<"   "<<GetName()<<"->SetBinEntries("<<bin<<","<<bi<<");"<<std::endl;
       }
    }
    //save bin contents
    for (bin=0;bin<fNcells;bin++) {
       Double_t bc = fArray[bin];
       if (bc) {
-         out<<"   "<<GetName()<<"->SetBinContent("<<bin<<","<<bc<<");"<<endl;
+         out<<"   "<<GetName()<<"->SetBinContent("<<bin<<","<<bc<<");"<<std::endl;
       }
    }
    // save bin errors
@@ -1716,7 +1695,7 @@ void TProfile2D::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       for (bin=0;bin<fNcells;bin++) {
          Double_t be = TMath::Sqrt(fSumw2.fArray[bin]);
          if (be) {
-            out<<"   "<<GetName()<<"->SetBinError("<<bin<<","<<be<<");"<<endl;
+            out<<"   "<<GetName()<<"->SetBinError("<<bin<<","<<be<<");"<<std::endl;
          }
       }
    }
@@ -1787,7 +1766,7 @@ void TProfile2D::SetBuffer(Int_t buffersize, Option_t *)
    if (buffersize < 100) buffersize = 100;
    fBufferSize = 1 + 4*buffersize;
    fBuffer = new Double_t[fBufferSize];
-   memset(fBuffer,0,8*fBufferSize);
+   memset(fBuffer,0,sizeof(Double_t)*fBufferSize);
 }
 
 //______________________________________________________________________________
@@ -1795,26 +1774,29 @@ void TProfile2D::SetErrorOption(Option_t *option)
 {
 //*-*-*-*-*-*-*-*-*-*Set option to compute profile2D errors*-*-*-*-*-*-*-*
 //*-*                =======================================
-//
-//    The computation of errors is based on the parameter option:
+//    The computation of the bin errors is based on the parameter option:
 //    option:
-//     ' '  (Default) Errors are Spread/SQRT(N) for Spread.ne.0. ,
-//                      "     "  SQRT(Z)/SQRT(N) for Spread.eq.0,N.gt.0 ,
-//                      "     "  0.  for N.eq.0
-//     's'            Errors are Spread  for Spread.ne.0. ,
-//                      "     "  SQRT(Z)  for Spread.eq.0,N.gt.0 ,
-//                      "     "  0.  for N.eq.0
-//     'i'            Errors are Spread/SQRT(N) for Spread.ne.0. ,
-//                      "     "  1./SQRT(12.*N) for Spread.eq.0,N.gt.0 ,
-//                      "     "  0.  for N.eq.0
-//   See TProfile2D::BuildOptions for explanation of all options
+//     ' '  (Default) The bin errors are the standard error on the mean of the bin profiled values (Z), 
+//                    i.e. the standard error of the bin contents.
+//                    Note that if TProfile::Approximate()  is called, an approximation is used when 
+//                    the spread in Z is 0 and the number of bin entries  is > 0
+//
+//     's'            The bin errors are the standard deviations of the Z bin values 
+//                    Note that if TProfile::Approximate()  is called, an approximation is used when 
+//                    the spread in Z is 0 and the number of bin entries is > 0
+//
+//     'i'            Errors are as in default case (standard errors of the bin contents)
+//                    The only difference is for the case when the spread in Z is zero. 
+//                    In this case for N > 0 the error is  1./SQRT(12.*N) 
+//
+//     'g'            Errors are 1./SQRT(W)  for W not equal to 0 and 0 for W = 0.
+//                    W is the sum in the bin of the weights of the profile. 
+//                    This option is for combining measurements z +/- dz,  
+//                    and  the profile is filled with values y and weights z = 1/dz**2
+//
+//   See TProfile::BuildOptions for a detailed explanation of all options
 
-   TString opt = option;
-   opt.ToLower();
-   fErrorMode = kERRORMEAN;
-   if (opt.Contains("s")) fErrorMode = kERRORSPREAD;
-   if (opt.Contains("i")) fErrorMode = kERRORSPREADI;
-   if (opt.Contains("g")) fErrorMode = kERRORSPREADG;
+   TProfileHelper::SetErrorOption(this, option);
 }
 
 //______________________________________________________________________________

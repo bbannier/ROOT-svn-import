@@ -428,17 +428,19 @@ void TPolyLine::ExecuteEvent(Int_t event, Int_t px, Int_t py)
                      ymax + dyr*gPad->GetTopMargin());
          gPad->RangeAxis(xmin, ymin, xmax, ymax);
 
-      if (middle) {
-         for(i=0;i<np;i++) {
-            fX[i] = gPad->PadtoX(gPad->AbsPixeltoX(x[i]+dpx));
-            fY[i] = gPad->PadtoY(gPad->AbsPixeltoY(y[i]+dpy));
+      if (x && y) {
+         if (middle) {
+            for(i=0;i<np;i++) {
+               fX[i] = gPad->PadtoX(gPad->AbsPixeltoX(x[i]+dpx));
+               fY[i] = gPad->PadtoY(gPad->AbsPixeltoY(y[i]+dpy));
+            }
+         } else {
+            fX[ipoint] = gPad->PadtoX(gPad->AbsPixeltoX(pxold));
+            fY[ipoint] = gPad->PadtoY(gPad->AbsPixeltoY(pyold));
          }
-      } else {
-         fX[ipoint] = gPad->PadtoX(gPad->AbsPixeltoX(pxold));
-         fY[ipoint] = gPad->PadtoY(gPad->AbsPixeltoY(pyold));
+         delete [] x; x = 0;
+         delete [] y; y = 0;
       }
-      delete [] x; x = 0;
-      delete [] y; y = 0;
       gPad->Modified(kTRUE);
       gVirtualX->SetLineColor(-1);
    }
@@ -558,28 +560,28 @@ void TPolyLine::Print(Option_t *) const
 
 
 //______________________________________________________________________________
-void TPolyLine::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TPolyLine::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
    char quote = '"';
-   out<<"   "<<endl;
-   out<<"   Double_t *dum = 0;"<<endl;
+   out<<"   "<<std::endl;
+   out<<"   Double_t *dum = 0;"<<std::endl;
    if (gROOT->ClassSaved(TPolyLine::Class())) {
       out<<"   ";
    } else {
       out<<"   TPolyLine *";
    }
-   out<<"pline = new TPolyLine("<<fN<<",dum,dum,"<<quote<<fOption<<quote<<");"<<endl;
+   out<<"pline = new TPolyLine("<<fN<<",dum,dum,"<<quote<<fOption<<quote<<");"<<std::endl;
 
    SaveFillAttributes(out,"pline",0,1001);
    SaveLineAttributes(out,"pline",1,1,1);
 
    for (Int_t i=0;i<Size();i++) {
-      out<<"   pline->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<endl;
+      out<<"   pline->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<std::endl;
    }
    out<<"   pline->Draw("
-      <<quote<<option<<quote<<");"<<endl;
+      <<quote<<option<<quote<<");"<<std::endl;
 }
 
 

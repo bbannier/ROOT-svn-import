@@ -72,20 +72,24 @@ class TTreeCloner {
       TTreeCloner *fObject;
    public:
       CompareSeek(TTreeCloner *obj) : fObject(obj) {}
-      bool operator()(UInt_t i1, UInt_t i2);
+      Bool_t operator()(UInt_t i1, UInt_t i2);
    };
 
    class CompareEntry {
       TTreeCloner *fObject;
    public:
       CompareEntry(TTreeCloner *obj) : fObject(obj) {}
-      bool operator()(UInt_t i1, UInt_t i2);
+      Bool_t operator()(UInt_t i1, UInt_t i2);
    };
 
    friend class CompareSeek;
    friend class CompareEntry;
    
    void ImportClusterRanges();
+
+private:
+   TTreeCloner(const TTreeCloner&);            // Not implemented.
+   TTreeCloner &operator=(const TTreeCloner&); // Not implemented.
 
 public:
    enum EClonerOptions {

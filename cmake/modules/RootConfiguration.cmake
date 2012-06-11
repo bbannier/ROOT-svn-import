@@ -324,6 +324,8 @@ set(haspthread ${has${CMAKE_USE_PTHREADS_INIT}})
 set(hasxft ${has${xft}})
 set(hascling ${has${cling}})
 set(haslzmacompression ${has${lzma}})
+set(hascocoa ${has${cocoa}})
+set(usec++11 ${has${c++11}})
 
 #---root-config----------------------------------------------------------------------------------------------
 ROOT_SHOW_OPTIONS(features)

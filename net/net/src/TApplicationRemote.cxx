@@ -180,7 +180,11 @@ TApplicationRemote::TApplicationRemote(const char *url, Int_t debug,
    mon->Select();
 
    // Get the connection
-   fSocket = ss->Accept();
+   if (!(fSocket = ss->Accept())) {
+      Error("TApplicationRemote", "failed to open connection");
+      SetBit(kInvalidObject);
+      return;
+   }
 
    // Cleanup the monitor and the server socket
    mon->DeActivateAll();
@@ -696,7 +700,7 @@ Bool_t TApplicationRemote::CheckFile(const char *file, Long_t modtime)
       // file not in the cache
       TMD5 *md5 = TMD5::FileChecksum(file);
       if (md5) {
-         fs = new TARFileStat(fn, *md5, modtime);
+         fs = new TARFileStat(fn, md5, modtime);
          if (!fFileList)
             fFileList = new THashList;
          fFileList->Add(fs);
@@ -772,10 +776,12 @@ Int_t TApplicationRemote::SendFile(const char *file, Int_t opt, const char *rfil
    Long_t id, flags, modtime;
    if (gSystem->GetPathInfo(file, &id, &size, &flags, &modtime) == 1) {
       Error("SendFile", "cannot stat file %s", file);
+      close(fd);
       return -1;
    }
    if (size == 0) {
       Error("SendFile", "empty file %s", file);
+      close(fd);
       return -1;
    }
 

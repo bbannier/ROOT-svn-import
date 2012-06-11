@@ -111,8 +111,8 @@
 #pragma link C++ function operator>(const char*,const TString&);
 #pragma link C++ function operator<=(const char*,const TString&);
 #pragma link C++ function operator>=(const char*,const TString&);
-#pragma link C++ function operator>>(istream&,TString&);
-#pragma link C++ function operator<<(ostream&,const TString&);
+#pragma link C++ function operator>>(std::istream&,TString&);
+#pragma link C++ function operator<<(std::ostream&,const TString&);
 //#pragma link C++ function operator>>(TBuffer&,TString&);
 //#pragma link C++ function operator<<(TBuffer&,const TString&);
 //#pragma link C++ function operator>>(TBuffer&,const TObject*&);
@@ -155,6 +155,7 @@
 #pragma link C++ class TRootIOCtor+;
 #pragma link C++ class TCanvasImp;
 #pragma link C++ class TColor+;
+#pragma link C++ class TColorGradient+;
 #pragma link C++ class TContextMenu+;
 #pragma link C++ class TContextMenuImp+;
 #pragma link C++ class TControlBarImp+;

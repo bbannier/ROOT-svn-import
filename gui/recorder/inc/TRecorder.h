@@ -234,7 +234,7 @@ public:
 
    virtual void ReplayEvent(Bool_t) {
       // Stored command is executed again
-      cout << GetText() << endl;
+      std::cout << GetText() << std::endl;
       gApplication->ProcessLine(GetText());
    }
 
@@ -439,6 +439,9 @@ class TRecorder : public TObject
 {
 private:
    TRecorderState *fRecorderState;   //! Current state of recorder
+
+   TRecorder(const TRecorder&);            // Not implemented.
+   TRecorder &operator=(const TRecorder&); // Not implemented.
 
 protected:
    friend class TRecorderState;

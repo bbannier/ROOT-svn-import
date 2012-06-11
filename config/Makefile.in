@@ -57,7 +57,10 @@ XPMLIBDIR      := @xpmlibdir@
 XPMLIB         := @xpmlib@
 XFTLIB         := @enable_xft@
 
-EXCEPTIONS     := @exceptions@
+BUILDCOCOA     := @buildcocoa@
+
+CXX11          := @c++11@
+
 EXPLICITLINK   := @explicitlink@
 
 ENABLETHREAD   := @enable_thread@

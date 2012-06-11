@@ -148,6 +148,7 @@ void TGedPatternFrame::DoRedraw()
       SetFillStyle(fgGC, fPattern);
       gVirtualX->FillRectangle(fId, fgGC->GetGC(), 0, 0, fWidth, fHeight);
    }
+   DrawBorder();
 }
 
 //______________________________________________________________________________
@@ -308,9 +309,9 @@ void TGedPopup::PlacePopup(Int_t x, Int_t y, UInt_t w, UInt_t h)
    Layout();
    MapRaised();
 
-   gVirtualX->GrabPointer(fId,
-                          kButtonPressMask | kButtonReleaseMask | kPointerMotionMask,
-                          kNone, kNone, fClient->GetResourcePool()->GetGrabCursor());
+   gVirtualX->GrabPointer(fId, kButtonPressMask | kButtonReleaseMask | 
+                          kPointerMotionMask, kNone,
+                          fClient->GetResourcePool()->GetGrabCursor());
    gClient->WaitForUnmap(this);
    EndPopup();
 }
@@ -640,11 +641,11 @@ void TGedPatternSelect::SetPattern(Style_t pattern, Bool_t emit)
 }
 
 //______________________________________________________________________________
-void TGedPatternSelect::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TGedPatternSelect::SavePrimitive(std::ostream &out, Option_t * /*= ""*/)
 {
    // Save the pattern select widget as a C++ statement(s) on output stream out
 
    out <<"   TGedPatternSelect *";
    out << GetName() << " = new TGedPatternSelect(" << fParent->GetName()
-       << "," << fPattern << "," << WidgetId() << ");" << endl;
+       << "," << fPattern << "," << WidgetId() << ");" << std::endl;
 }

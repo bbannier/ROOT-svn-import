@@ -40,6 +40,10 @@ public:
    ~TypeTemplate();
 
 
+   /** assignment op */
+   TypeTemplate& operator=(const TypeTemplate &rh);
+
+
    /**
     * operator bool will return true if the type template is resolved
     * @return true if type template is resolved
@@ -294,6 +298,18 @@ inline Reflex::TypeTemplate::~TypeTemplate() {
 }
 
 //-------------------------------------------------------------------------------
+
+
+//-------------------------------------------------------------------------------
+inline
+Reflex::TypeTemplate&
+Reflex::TypeTemplate::operator=(const TypeTemplate& rh) {
+//-------------------------------------------------------------------------------
+   if (&rh != this) {
+      fTypeTemplateName = rh.fTypeTemplateName;
+   }
+   return *this;
+}
 
 
 //-------------------------------------------------------------------------------

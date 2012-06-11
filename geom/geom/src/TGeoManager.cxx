@@ -272,6 +272,8 @@
 */
 //End_Html
 
+#include <stdlib.h>
+
 #include "Riostream.h"
 
 #include "TROOT.h"
@@ -404,7 +406,8 @@ TGeoManager::TGeoManager()
       ClearThreadsMap();
    } else {
       Init();
-      gGeoIdentity = 0;
+      if (!gGeoIdentity && TClass::IsCallingNew() == TClass::kRealNew) gGeoIdentity = new TGeoIdentity("Identity");
+      BuildDefaultMaterials();
    }
 }
 
@@ -817,6 +820,7 @@ TGeoNavigator *TGeoManager::AddNavigator()
       fNavigators.insert(NavigatorsMap_t::value_type(threadId, array));
    }
    TGeoNavigator *nav = array->AddNavigator();
+   if (fClosed) nav->GetCache()->BuildInfoBranch();
    if (fMultiThread) TThread::UnLock();
    return nav;
 }   
@@ -864,6 +868,13 @@ Bool_t TGeoManager::SetCurrentNavigator(Int_t index)
    return kTRUE;
 }
 
+//_____________________________________________________________________________
+void TGeoManager::SetNavigatorsLock(Bool_t flag)
+{
+// Set the lock for navigators.
+   fgLockNavigators = flag;
+}
+   
 //_____________________________________________________________________________
 void TGeoManager::ClearNavigators()
 {
@@ -1420,18 +1431,16 @@ void TGeoManager::CloseGeometry(Option_t *option)
          }
          SetTopVolume(fMasterVolume);
          if (fStreamVoxels && fgVerboseLevel>0) Info("CloseGeometry","Voxelization retrieved from file");
-      } else {
-         CountLevels();
       }   
       // Create a geometry navigator if not present
       if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
       nnavigators = GetListOfNavigators()->GetEntriesFast();
       Voxelize("ALL");
-      if (nodeid) {
-         for (Int_t i=0; i<nnavigators; i++) {
-            nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
-            nav->GetCache()->BuildIdArray();
-         }   
+      CountLevels();
+      for (Int_t i=0; i<nnavigators; i++) {
+         nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+         nav->GetCache()->BuildInfoBranch();
+         if (nodeid) nav->GetCache()->BuildIdArray();
       }
       if (!fHashVolumes) {
          Int_t nvol = fVolumes->GetEntriesFast();
@@ -1449,7 +1458,6 @@ void TGeoManager::CloseGeometry(Option_t *option)
       return;
    }
 
-   CountLevels();
    // Create a geometry navigator if not present
    if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
    nnavigators = GetListOfNavigators()->GetEntriesFast();
@@ -1463,11 +1471,11 @@ void TGeoManager::CloseGeometry(Option_t *option)
 //   BuildIdArray();
    Voxelize("ALL");
    if (fgVerboseLevel>0) Info("CloseGeometry","Building cache...");
-   if (nodeid) {
-      for (Int_t i=0; i<nnavigators; i++) {
-         nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
-         nav->GetCache()->BuildIdArray();
-      }   
+   CountLevels();
+   for (Int_t i=0; i<nnavigators; i++) {
+      nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+      nav->GetCache()->BuildInfoBranch();
+      if (nodeid) nav->GetCache()->BuildIdArray();
    }
    fClosed = kTRUE;
    if (fgVerboseLevel>0) {
@@ -1738,7 +1746,7 @@ void TGeoManager::DrawTracks(Option_t *option)
    SetAnimateTracks();
    for (Int_t i=0; i<fNtracks; i++) {
       track = GetTrack(i);
-      track->Draw(option);
+      if (track) track->Draw(option);
    }
    SetAnimateTracks(kFALSE);
    ModifiedPad();
@@ -1831,6 +1839,34 @@ void TGeoManager::GetBombFactors(Double_t &bombx, Double_t &bomby, Double_t &bom
    }
    bombx = bomby = bombz = bombr = 1.3;
 }
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetMaxDaughters()
+{
+// Return maximum number of daughters of a volume used in the geometry.
+   return fgMaxDaughters;
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetMaxLevels()
+{
+// Return maximum number of levels used in the geometry.
+   return fgMaxLevel;
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetMaxXtruVert()
+{
+// Return maximum number of vertices for an xtru shape used.
+   return fgMaxXtruVert;
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetNumThreads()
+{
+// Returns number of threads that were set to use geometry.
+   return fgNumThreads;
+}   
 
 //_____________________________________________________________________________
 TGeoHMatrix *TGeoManager::GetHMatrix()
@@ -2124,10 +2160,10 @@ void TGeoManager::OptimizeVoxels(const char *filename)
       Error("OptimizeVoxels","Geometry must be closed first");
       return;
    }
-   ofstream out;
+   std::ofstream out;
    TString fname = filename;
    if (fname.IsNull()) fname = "tgeovox.C";
-   out.open(fname, ios::out);
+   out.open(fname, std::ios::out);
    if (!out.good()) {
       Error("OptimizeVoxels", "cannot open file");
       return;
@@ -2136,27 +2172,27 @@ void TGeoManager::OptimizeVoxels(const char *filename)
    TDatime t;
    TString sname(fname);
    sname.ReplaceAll(".C", "");
-   out << sname.Data()<<"()"<<endl;
-   out << "{" << endl;
-   out << "//=== Macro generated by ROOT version "<< gROOT->GetVersion()<<" : "<<t.AsString()<<endl;
-   out << "//=== Voxel optimization for " << GetTitle() << " geometry"<<endl;
-   out << "//===== <run this macro JUST BEFORE closing the geometry>"<<endl;
-   out << "   TGeoVolume *vol = 0;"<<endl;
-   out << "   // parse all voxelized volumes"<<endl;
+   out << sname.Data()<<"()"<<std::endl;
+   out << "{" << std::endl;
+   out << "//=== Macro generated by ROOT version "<< gROOT->GetVersion()<<" : "<<t.AsString()<<std::endl;
+   out << "//=== Voxel optimization for " << GetTitle() << " geometry"<<std::endl;
+   out << "//===== <run this macro JUST BEFORE closing the geometry>"<<std::endl;
+   out << "   TGeoVolume *vol = 0;"<<std::endl;
+   out << "   // parse all voxelized volumes"<<std::endl;
    TGeoVolume *vol = 0;
    Bool_t cyltype;
    TIter next(fVolumes);
    while ((vol=(TGeoVolume*)next())) {
       if (!vol->GetVoxels()) continue;
-      out<<"   vol = gGeoManager->GetVolume(\""<<vol->GetName()<<"\");"<<endl;
+      out<<"   vol = gGeoManager->GetVolume(\""<<vol->GetName()<<"\");"<<std::endl;
       cyltype = vol->OptimizeVoxels();
       if (cyltype) {
-         out<<"   vol->SetCylVoxels();"<<endl;
+         out<<"   vol->SetCylVoxels();"<<std::endl;
       } else {
-         out<<"   vol->SetCylVoxels(kFALSE);"<<endl;
+         out<<"   vol->SetCylVoxels(kFALSE);"<<std::endl;
       }
    }
-   out << "}" << endl;
+   out << "}" << std::endl;
    out.close();
 }
 //_____________________________________________________________________________
@@ -2289,10 +2325,10 @@ void TGeoManager::SaveAttributes(const char *filename)
       Error("SaveAttributes","geometry must be closed first\n");
       return;
    }
-   ofstream out;
+   std::ofstream out;
    TString fname(filename);
    if (fname.IsNull()) fname = "tgeoatt.C";
-   out.open(fname, ios::out);
+   out.open(fname, std::ios::out);
    if (!out.good()) {
       Error("SaveAttributes", "cannot open file");
       return;
@@ -2301,27 +2337,27 @@ void TGeoManager::SaveAttributes(const char *filename)
    TDatime t;
    TString sname(fname);
    sname.ReplaceAll(".C", "");
-   out << sname.Data()<<"()"<<endl;
-   out << "{" << endl;
-   out << "//=== Macro generated by ROOT version "<< gROOT->GetVersion()<<" : "<<t.AsString()<<endl;
-   out << "//=== Attributes for " << GetTitle() << " geometry"<<endl;
-   out << "//===== <run this macro AFTER loading the geometry in memory>"<<endl;
+   out << sname.Data()<<"()"<<std::endl;
+   out << "{" << std::endl;
+   out << "//=== Macro generated by ROOT version "<< gROOT->GetVersion()<<" : "<<t.AsString()<<std::endl;
+   out << "//=== Attributes for " << GetTitle() << " geometry"<<std::endl;
+   out << "//===== <run this macro AFTER loading the geometry in memory>"<<std::endl;
    // save current top volume
-   out << "   TGeoVolume *top = gGeoManager->GetVolume(\""<<fTopVolume->GetName()<<"\");"<<endl;
-   out << "   TGeoVolume *vol = 0;"<<endl;
-   out << "   TGeoNode *node = 0;"<<endl;
-   out << "   // clear all volume attributes and get painter"<<endl;
-   out << "   gGeoManager->ClearAttributes();"<<endl;
-   out << "   gGeoManager->GetGeomPainter();"<<endl;
-   out << "   // set visualization modes and bomb factors"<<endl;
-   out << "   gGeoManager->SetVisOption("<<GetVisOption()<<");"<<endl;
-   out << "   gGeoManager->SetVisLevel("<<GetVisLevel()<<");"<<endl;
-   out << "   gGeoManager->SetExplodedView("<<GetBombMode()<<");"<<endl;
+   out << "   TGeoVolume *top = gGeoManager->GetVolume(\""<<fTopVolume->GetName()<<"\");"<<std::endl;
+   out << "   TGeoVolume *vol = 0;"<<std::endl;
+   out << "   TGeoNode *node = 0;"<<std::endl;
+   out << "   // clear all volume attributes and get painter"<<std::endl;
+   out << "   gGeoManager->ClearAttributes();"<<std::endl;
+   out << "   gGeoManager->GetGeomPainter();"<<std::endl;
+   out << "   // set visualization modes and bomb factors"<<std::endl;
+   out << "   gGeoManager->SetVisOption("<<GetVisOption()<<");"<<std::endl;
+   out << "   gGeoManager->SetVisLevel("<<GetVisLevel()<<");"<<std::endl;
+   out << "   gGeoManager->SetExplodedView("<<GetBombMode()<<");"<<std::endl;
    Double_t bombx, bomby, bombz, bombr;
    GetBombFactors(bombx, bomby, bombz, bombr);
-   out << "   gGeoManager->SetBombFactors("<<bombx<<","<<bomby<<","<<bombz<<","<<bombr<<");"<<endl;
-   out << "   // iterate volumes coontainer and set new attributes"<<endl;
-//   out << "   TIter next(gGeoManager->GetListOfVolumes());"<<endl;
+   out << "   gGeoManager->SetBombFactors("<<bombx<<","<<bomby<<","<<bombz<<","<<bombr<<");"<<std::endl;
+   out << "   // iterate volumes coontainer and set new attributes"<<std::endl;
+//   out << "   TIter next(gGeoManager->GetListOfVolumes());"<<std::endl;
    TGeoVolume *vol = 0;
    fTopNode->SaveAttributes(out);
 
@@ -2329,10 +2365,10 @@ void TGeoManager::SaveAttributes(const char *filename)
    while ((vol=(TGeoVolume*)next())) {
       vol->SetVisStreamed(kFALSE);
    }
-   out << "   // draw top volume with new settings"<<endl;
-   out << "   top->Draw();"<<endl;
-   out << "   gPad->x3d();"<<endl;
-   out << "}" << endl;
+   out << "   // draw top volume with new settings"<<std::endl;
+   out << "   top->Draw();"<<std::endl;
+   out << "   gPad->x3d();"<<std::endl;
+   out << "}" << std::endl;
    out.close();
 }
 //_____________________________________________________________________________
@@ -3173,12 +3209,15 @@ void TGeoManager::SetTopVolume(TGeoVolume *vol)
    fTopNode->SetNumber(1);
    fTopNode->SetTitle("Top logical node");
    fNodes->AddAt(fTopNode, 0);
-   CountLevels();
-   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
+   if (!GetCurrentNavigator()) {
+      fCurrentNavigator = AddNavigator();
+      return;
+   }      
    Int_t nnavigators = GetListOfNavigators()->GetEntriesFast();
    for (Int_t i=0; i<nnavigators; i++) {
       TGeoNavigator *nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
       nav->ResetAll();
+      if (fClosed) nav->GetCache()->BuildInfoBranch();
    }
 }
 //_____________________________________________________________________________
@@ -3593,6 +3632,7 @@ void TGeoManager::UpdateElements()
          for (i=0; i<nelem; i++) {
             elem = mix->GetElement(i);
             elem_table = fElementTable->GetElement(elem->Z());
+            if (!elem || !elem_table) continue;
             if (elem != elem_table) {
                elem_table->SetDefined(elem->IsDefined());
                elem_table->SetUsed(elem->IsUsed());
@@ -3602,6 +3642,7 @@ void TGeoManager::UpdateElements()
          }
       } else {
          elem = mat->GetElement();
+         if (!elem) continue;
          elem_table = fElementTable->GetElement(elem->Z());
          if (elem != elem_table) {
             elem_table->SetDefined(elem->IsDefined());

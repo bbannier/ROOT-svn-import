@@ -44,6 +44,12 @@ public:
 
 
    /**
+    * operator = will make *this point to rh's member templates
+    */
+   MemberTemplate& operator =(const MemberTemplate& rh);
+
+
+   /**
     * operator bool will return true if the member template is resolved
     * @return true if member template is resolved
     */
@@ -291,6 +297,18 @@ inline Reflex::MemberTemplate::~MemberTemplate() {
 }
 
 //-------------------------------------------------------------------------------
+
+
+//-------------------------------------------------------------------------------
+inline
+Reflex::MemberTemplate&
+Reflex::MemberTemplate::operator=(const MemberTemplate& rh) {
+//-------------------------------------------------------------------------------
+   if (&rh != this) {
+      fMemberTemplateName = rh.fMemberTemplateName;
+   }
+   return *this;
+}
 
 
 //-------------------------------------------------------------------------------

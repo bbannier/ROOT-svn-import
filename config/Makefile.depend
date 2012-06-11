@@ -7,7 +7,7 @@ NETLIBDEPM             = $(IOLIB) $(MATHCORELIB)
 MATRIXLIBDEPM          = $(MATHCORELIB)
 HISTLIBDEPM            = $(MATRIXLIB) $(MATHCORELIB)
 GRAFLIBDEPM            = $(HISTLIB) $(MATRIXLIB) $(MATHCORELIB) $(IOLIB)
-GPADLIBDEPM            = $(GRAFLIB) $(HISTLIB)
+GPADLIBDEPM            = $(GRAFLIB) $(HISTLIB) $(MATHCORELIB)
 G3DLIBDEPM             = $(GRAFLIB) $(HISTLIB) $(GPADLIB) $(MATHCORELIB)
 WIN32GDKLIBDEPM        = $(GRAFLIB)
 ASIMAGELIBDEPM         = $(GRAFLIB) $(MATHCORELIB)
@@ -69,6 +69,7 @@ SPLOTLIBDEPM           = $(MATRIXLIB) $(HISTLIB) $(TREELIB) $(TREEPLAYERLIB) \
 QUADPLIBDEPM           = $(MATRIXLIB)
 GLLIBDEPM              = $(G3DLIB) $(GUILIB) $(GRAFLIB) $(HISTLIB) $(GEDLIB) \
                          $(MATHCORELIB) $(TREELIB) $(TREEPLAYERLIB)
+COCOALIBDEPM           = $(GUILIB) $(QUARTZLIB)
 HBOOKLIBDEPM           = $(HISTLIB) $(MATRIXLIB) $(TREELIB) $(GRAFLIB) \
                          $(TREEPLAYERLIB) $(IOLIB) $(MINICERNLIB)
 GEOMLIBDEPM            = $(IOLIB) $(THREADLIB) $(MATHCORELIB)
@@ -187,6 +188,7 @@ GENETICLIBDEP          = $(GENETICLIBDEPM)
 SPLOTLIBDEP            = $(SPLOTLIBDEPM)
 QUADPLIBDEP            = $(QUADPLIBDEPM)
 GLLIBDEP               = $(GLLIBDEPM)
+COCOALIBDEP            = $(COCOALIBDEPM)
 HBOOKLIBDEP            = $(HBOOKLIBDEPM)
 GEOMLIBDEP             = $(GEOMLIBDEPM)
 GEOMPAINTERLIBDEP      = $(GEOMPAINTERLIBDEPM)
@@ -245,7 +247,7 @@ MATRIXLIBEXTRA          = lib/libMathCore.lib
 HISTLIBEXTRA            = lib/libMatrix.lib lib/libMathCore.lib
 GRAFLIBEXTRA            = lib/libHist.lib lib/libMatrix.lib lib/libRIO.lib \
                           lib/libMathCore.lib
-GPADLIBEXTRA            = lib/libGraf.lib lib/libHist.lib
+GPADLIBEXTRA            = lib/libGraf.lib lib/libHist.lib lib/libMathCore.lib
 G3DLIBEXTRA             = lib/libGraf.lib lib/libHist.lib lib/libGpad.lib \
                           lib/libMathCore.lib
 WIN32GDKLIBEXTRA        = lib/libGraf.lib
@@ -416,7 +418,7 @@ NETLIBEXTRA             = -Llib -lRIO -lMathCore
 MATRIXLIBEXTRA          = -Llib -lMathCore
 HISTLIBEXTRA            = -Llib -lMatrix -lMathCore
 GRAFLIBEXTRA            = -Llib -lHist -lMatrix -lRIO -lMathCore
-GPADLIBEXTRA            = -Llib -lGraf -lHist
+GPADLIBEXTRA            = -Llib -lGraf -lHist -lMathCore
 G3DLIBEXTRA             = -Llib -lGraf -lHist -lGpad -lMathCore
 GEDLIBEXTRA             = -Llib -lHist -lGpad -lGraf -lGui -lTree -lTreePlayer
 GVIZLIBEXTRA            = -Llib -lHist -lGraf
@@ -458,6 +460,7 @@ TABLELIBEXTRA           = -Llib -lTree -lGpad -lGraf3d -lGraf -lHist -lRIO \
                           -lMathCore
 GLLIBEXTRA              = -Llib -lGpad -lGraf3d -lGui -lGraf -lHist -lGed \
                           -lMathCore -lTree -lTreePlayer -lRIO
+COCOALIBEXTRA           = -Llib -lGui -lGQuartz
 HBOOKLIBEXTRA           = -Llib -lHist -lMatrix -lTree -lGraf -lTreePlayer \
                           -lRIO -lminicern
 GEOMLIBEXTRA            = -Llib -lRIO -lThread -lMathCore
@@ -489,16 +492,16 @@ ALIENLIBEXTRA           = -Llib -lXMLIO -lNetx -lTree -lProof -lProofPlayer \
 ROOFITCORELIBEXTRA      = -Llib -lHist -lGraf -lMatrix -lTree -lMinuit -lRIO \
                           -lMathCore -lFoam
 ROOFITLIBEXTRA          = -Llib -lRooFitCore -lTree -lRIO -lMatrix -lMathCore
-ifeq ($(BUILDMATHMORE),yes)
-ROOFITLIBEXTRA         += -lMathMore
-ROOSTATSLIBEXTRA       += -lMathMore
-HISTFACTORYLIBEXTRA    += -lMathMore
-endif
 ROOSTATSLIBEXTRA        = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lHist \
                           -lMatrix -lMathCore -lMinuit -lFoam -lGraf -lGpad
 HISTFACTORYLIBEXTRA     = -Llib -lRooFit -lRooFitCore -lTree -lRIO -lHist \
                           -lMatrix -lMathCore -lMinuit -lFoam -lGraf -lGpad \
                           -lRooStats -lXMLParser
+ifeq ($(BUILDMATHMORE),yes)
+ROOFITLIBEXTRA         += -lMathMore
+ROOSTATSLIBEXTRA       += -lMathMore
+HISTFACTORYLIBEXTRA    += -lMathMore
+endif
 CINTEXLIBEXTRA          = -Llib -lReflex
 REFLEXDICTLIBEXTRA      = -Llib -lReflex
 RAUTHLIBEXTRA           = -Llib -lNet -lRIO

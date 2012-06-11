@@ -120,6 +120,8 @@ public:
    TGeoPatternX(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternX(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternX(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternX(const TGeoPatternX &pf);
+   TGeoPatternX& operator=(const TGeoPatternX&);
 
    // destructor
    virtual ~TGeoPatternX();
@@ -132,7 +134,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternX, 1)              // X division pattern
@@ -152,6 +154,8 @@ public:
    TGeoPatternY(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternY(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternY(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternY(const TGeoPatternY &pf);
+   TGeoPatternY& operator=(const TGeoPatternY&);
    // destructor
    virtual ~TGeoPatternY();
    // methods
@@ -163,7 +167,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternY, 1)              // Y division pattern
@@ -183,6 +187,8 @@ public:
    TGeoPatternZ(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternZ(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternZ(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternZ(const TGeoPatternZ &pf);
+   TGeoPatternZ& operator=(const TGeoPatternZ&);
    // destructor
    virtual ~TGeoPatternZ();
    // methods
@@ -194,7 +200,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternZ, 1)              // Z division pattern
@@ -214,6 +220,8 @@ public:
    TGeoPatternParaX(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternParaX(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternParaX(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternParaX(const TGeoPatternParaX &pf);
+   TGeoPatternParaX& operator=(const TGeoPatternParaX&);
 
    // destructor
    virtual ~TGeoPatternParaX();
@@ -225,7 +233,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternParaX, 1)              // Para X division pattern
@@ -248,6 +256,8 @@ public:
    TGeoPatternParaY(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternParaY(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternParaY(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternParaY(const TGeoPatternParaY &pf);
+   TGeoPatternParaY& operator=(const TGeoPatternParaY&);
 
    // destructor
    virtual ~TGeoPatternParaY();
@@ -259,7 +269,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternParaY, 1)              // Para Y division pattern
@@ -283,6 +293,8 @@ public:
    TGeoPatternParaZ(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternParaZ(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternParaZ(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternParaZ(const TGeoPatternParaZ &pf);
+   TGeoPatternParaZ& operator=(const TGeoPatternParaZ&);
 
    // destructor
    virtual ~TGeoPatternParaZ();
@@ -294,7 +306,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternParaZ, 1)              // Para Z division pattern
@@ -318,6 +330,8 @@ public:
    TGeoPatternTrapZ(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternTrapZ(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternTrapZ(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternTrapZ(const TGeoPatternTrapZ &pf);
+   TGeoPatternTrapZ& operator=(const TGeoPatternTrapZ&);
 
    // destructor
    virtual ~TGeoPatternTrapZ();
@@ -331,7 +345,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternTrapZ, 1)              // Trap od Gtra Z division pattern
@@ -352,6 +366,8 @@ public:
    TGeoPatternCylR(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternCylR(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternCylR(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternCylR(const TGeoPatternCylR &pf);
+   TGeoPatternCylR& operator=(const TGeoPatternCylR&);
    // destructor
    virtual ~TGeoPatternCylR();
    // methods
@@ -362,7 +378,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternCylR, 1)              // Cylindrical R division pattern
@@ -382,9 +398,9 @@ private :
 
 protected:
    TGeoPatternCylPhi(const TGeoPatternCylPhi& pfc) 
-     : TGeoPatternFinder(pfc), fSinCos(pfc.fSinCos) { }
+     : TGeoPatternFinder(pfc), fSinCos(pfc.fSinCos) {CreateThreadData(1);}
    TGeoPatternCylPhi& operator=(const TGeoPatternCylPhi& pfc)
-     {if(this!=&pfc) {TGeoPatternFinder::operator=(pfc); fSinCos=pfc.fSinCos;}
+     {if(this!=&pfc) {TGeoPatternFinder::operator=(pfc); fSinCos=pfc.fSinCos; CreateThreadData(1);}
      return *this;}
 
 public:
@@ -403,7 +419,7 @@ public:
    virtual Bool_t      IsOnBoundary(const Double_t *point) const;
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternCylPhi, 1)              // Cylindrical phi division pattern
@@ -423,6 +439,8 @@ public:
    TGeoPatternSphR(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternSphR(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternSphR(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternSphR(const TGeoPatternSphR &pf);
+   TGeoPatternSphR& operator=(const TGeoPatternSphR&);
    // destructor
    virtual ~TGeoPatternSphR();
    // methods
@@ -432,7 +450,7 @@ public:
    virtual Int_t       GetDivAxis()      {return 1;}
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternSphR, 1)              // spherical R division pattern
@@ -452,6 +470,8 @@ public:
    TGeoPatternSphTheta(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternSphTheta(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternSphTheta(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternSphTheta(const TGeoPatternSphTheta &pf);
+   TGeoPatternSphTheta& operator=(const TGeoPatternSphTheta&);
    // destructor
    virtual ~TGeoPatternSphTheta();
    // methods
@@ -461,7 +481,7 @@ public:
    virtual Int_t       GetDivAxis()      {return 2;}
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternSphTheta, 1)              // spherical theta division pattern
@@ -481,6 +501,8 @@ public:
    TGeoPatternSphPhi(TGeoVolume *vol, Int_t ndivisions);
    TGeoPatternSphPhi(TGeoVolume *vol, Int_t ndivisions, Double_t step);
    TGeoPatternSphPhi(TGeoVolume *vol, Int_t ndivisions, Double_t start, Double_t end);
+   TGeoPatternSphPhi(const TGeoPatternSphPhi &pf);
+   TGeoPatternSphPhi& operator=(const TGeoPatternSphPhi&);
    // destructor
    virtual ~TGeoPatternSphPhi();
    // methods
@@ -490,7 +512,7 @@ public:
    virtual Int_t       GetDivAxis()      {return 3;}
    virtual 
    TGeoPatternFinder  *MakeCopy(Bool_t reflect=kFALSE);
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        UpdateMatrix(Int_t idiv, TGeoHMatrix &matrix) const;
 
    ClassDef(TGeoPatternSphPhi, 1)              // Spherical phi division pattern

@@ -190,20 +190,21 @@ int XrdgetProtocolPort(const char * /*pname*/, char * /*parms*/, XrdProtocol_Con
       // This function is called early on to determine the port we need to use. The
       // The default is ostensibly 1093 but can be overidden; which we allow.
 
-      XrdProofdProtCfg pcfg(pi->ConfigFN, pi->eDest);
-      // Init some relevant quantities for tracing
-      XrdProofdTrace = new XrdOucTrace(pi->eDest);
-      pcfg.Config(0);
-
       // Default XPD_DEF_PORT (1093)
       int port = XPD_DEF_PORT;
 
-      if (pcfg.fPort > 0) {
-         port = pcfg.fPort;
-      } else {
-         port = (pi && pi->Port > 0) ? pi->Port : XPD_DEF_PORT;
-      }
+      if (pi) {
+         XrdProofdProtCfg pcfg(pi->ConfigFN, pi->eDest);
+         // Init some relevant quantities for tracing
+         XrdProofdTrace = new XrdOucTrace(pi->eDest);
+         pcfg.Config(0);
 
+         if (pcfg.fPort > 0) {
+            port = pcfg.fPort;
+         } else {
+            port = (pi && pi->Port > 0) ? pi->Port : XPD_DEF_PORT;
+         }
+      }
       return port;
 }}
 
@@ -352,7 +353,7 @@ XrdProtocol *XrdProofdProtocol::Match(XrdLink *lp)
 
    // Bind the protocol to the link and return the protocol
    xp->fLink = lp;
-   strcpy(xp->fSecEntity.prot, "host");
+   snprintf(xp->fSecEntity.prot, XrdSecPROTOIDSIZE, "host");
    xp->fSecEntity.host = strdup((char *)lp->Host());
 
    // Dummy data used by 'proofd'
@@ -439,7 +440,7 @@ int XrdProofdProtocol::StartRootd(XrdLink *lp, XrdOucString &emsg)
       }
 
       // Accept a connection from the second server
-      int err;
+      int err = 0;
       rpdunix *uconn = fgMgr->RootdUnixSrv()->accept(-1, &err);
       if (!uconn || !uconn->isvalid(0)) {
          XPDFORM(emsg, "failure accepting callback (errno: %d)", -err);

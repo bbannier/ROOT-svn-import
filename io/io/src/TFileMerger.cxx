@@ -25,6 +25,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TFileMerger.h"
+#include "TDirectory.h"
 #include "TUrl.h"
 #include "TFile.h"
 #include "TUUID.h"
@@ -143,9 +144,11 @@ Bool_t TFileMerger::AddFile(const char *url, Bool_t cpProgress)
       urlObj = new TObjString(url);
       urlObj->SetBit(kCpProgress);
       fExcessFiles->Add(urlObj);
-      
       return kTRUE;
    }
+   
+   // We want gDirectory untouched by anything going on here
+   TDirectory::TContext ctx(0);
    
    if (fLocal) {
       TUUID uuid;
@@ -220,6 +223,8 @@ Bool_t TFileMerger::AddFile(TFile *source, Bool_t own, Bool_t cpProgress)
    TFile *newfile = 0;
    TString localcopy;
    
+   // We want gDirectory untouched by anything going on here
+   TDirectory::TContext ctx(0);
    if (fLocal && !source->InheritsFrom(TMemFile::Class())) {
       TUUID uuid;
       localcopy.Form("file:%s/ROOTMERGE-%s.root", gSystem->TempDirectory(), uuid.AsString());
@@ -295,6 +300,8 @@ Bool_t TFileMerger::OutputFile(const char *outputfile, const char *mode, Int_t c
    
    fOutputFilename = outputfile;
    
+   // We want gDirectory untouched by anything going on here
+   TDirectory::TContext ctx(0);
    if (!(fOutputFile = TFile::Open(outputfile, mode, "", compressionLevel)) || fOutputFile->IsZombie()) {
       Error("OutputFile", "cannot open the MERGER output file %s", fOutputFilename.Data());
       return kFALSE;
@@ -448,6 +455,8 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
                continue;
             }
             
+            Bool_t canBeMerged = kTRUE;
+
             if ( obj->IsA()->InheritsFrom( TDirectory::Class() ) ) {
                // it's a subdirectory
                
@@ -465,9 +474,8 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
                // newdir is now the starting point of another round of merging
                // newdir still knows its depth within the target file via
                // GetPath(), so we can still figure out where we are in the recursion
-               status = MergeRecursive(newdir, sourcelist);
+               status = MergeRecursive(newdir, sourcelist, type);
                if (!status) return status;
-               
             } else if (obj->IsA()->GetMerge()) {
                
                TList inputs;
@@ -645,6 +653,7 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
             } else {
                // Object is of no type that we can merge
                Bool_t warned = kFALSE;
+               canBeMerged = kFALSE;
 
                // Loop over all source files and write similar objects directly to the output file
                TFile *nextsource = current_file ? (TFile*)sourcelist->After( current_file ) : (TFile*)sourcelist->First();
@@ -655,7 +664,7 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
                      ndir->cd();
                      TKey *key2 = (TKey*)ndir->GetListOfKeys()->FindObject(key->GetName());
                      if (key2) {
-                        if (warned) {
+                        if (!warned) {
                            Warning("MergeRecursive", "cannot merge object type (n:'%s', t:'%s') - "
                                    "Merge(TCollection *) not implemented",
                                    obj->GetName(), obj->GetTitle());
@@ -691,18 +700,27 @@ Bool_t TFileMerger::MergeRecursive(TDirectory *target, TList *sourcelist, Int_t 
             //!!if the object is a tree, it is stored in globChain...
             if(obj->IsA()->InheritsFrom( TDirectory::Class() )) {
                //printf("cas d'une directory\n");
+               // Do not delete the directory if it is part of the output
+               // and we are in incremental mode (because it will be reuse
+               // and has not been written to disk (for performance reason).
+               // coverity[var_deref_model] the IsA()->InheritsFrom guarantees that the dynamic_cast will succeed. 
+               if (!(type&kIncremental) || dynamic_cast<TDirectory*>(obj)->GetFile() != target) {
+                  delete obj;
+               }
             } else if (obj->IsA()->InheritsFrom( TCollection::Class() )) {
-               if ( obj->Write( oldkeyname, TObject::kSingleKey | TObject::kOverwrite ) <= 0 ) {
+               // Don't overwrite, if the object were not merged.
+               if ( obj->Write( oldkeyname, canBeMerged ? TObject::kSingleKey | TObject::kOverwrite : TObject::kSingleKey) <= 0 ) {
                   status = kFALSE;
                }
                ((TCollection*)obj)->SetOwner();
+               delete obj;
             } else {
-               if ( obj->Write( oldkeyname, TObject::kOverwrite ) <= 0) {
+               // Don't overwrite, if the object were not merged.
+               if ( obj->Write( oldkeyname, canBeMerged ? TObject::kOverwrite : 0) <= 0) {
                   status = kFALSE;
                }
+               delete obj;
             }
-            if (obj->IsA()->InheritsFrom(TCollection::Class())) ((TCollection*)obj)->Delete();
-            delete obj;
             info.Reset();
          } // while ( ( TKey *key = (TKey*)nextkey() ) )
       }
@@ -742,7 +760,7 @@ Bool_t TFileMerger::PartialMerge(Int_t in_type)
       TString outf(fOutputFilename);
       if (outf.IsNull()) {
          outf.Form("file:%s/FileMerger.root", gSystem->TempDirectory());
-         Info("Merge", "will merge the results to the file %s\n"
+         Info("PartialMerge", "will merge the results to the file %s\n"
               "since you didn't specify a merge filename",
               TUrl(outf).GetFile());
       }
@@ -750,7 +768,36 @@ Bool_t TFileMerger::PartialMerge(Int_t in_type)
          return kFALSE;
       }
    }
-   
+
+   // Special treament for the single file case ...
+   if ((fFileList->GetEntries() == 1) && !fExcessFiles->GetEntries() &&
+      !(in_type & kIncremental) && !fCompressionChange && !fExplicitCompLevel) {
+      fOutputFile->Close();
+      SafeDelete(fOutputFile);
+
+      TFile *file = (TFile *) fFileList->First();
+      if (!file || (file && file->IsZombie())) {
+         Error("PartialMerge", "one-file case: problem attaching to file");
+         return kFALSE;
+      }
+      Bool_t result = kTRUE;
+      if (!(result = file->Cp(fOutputFilename))) {
+         Error("PartialMerge", "one-file case: could not copy '%s' to '%s'",
+                               file->GetPath(), fOutputFilename.Data());
+         return kFALSE;
+      }
+      if (file->TestBit(kCanDelete)) file->Close();
+
+      // Remove the temporary file
+      if (fLocal) {
+         TUrl u(file->GetPath(), kTRUE); 
+         if (gSystem->Unlink(u.GetFile()) != 0)
+            Warning("PartialMerge", "problems removing temporary local file '%s'", u.GetFile());
+      }
+      fFileList->Clear();
+      return result;
+   }
+
    fOutputFile->SetBit(kMustCleanup);
 
    TDirectory::TContext ctxt(0);
@@ -817,6 +864,8 @@ Bool_t TFileMerger::OpenExcessFiles()
    TIter next(fExcessFiles);
    TObjString *url = 0;
    TString localcopy;
+   // We want gDirectory untouched by anything going on here
+   TDirectory::TContext ctx(0);
    while( nfiles < (fMaxOpenedFiles-1) && ( url = (TObjString*)next() ) ) {
       TFile *newfile = 0;
       if (fLocal) {
@@ -830,7 +879,7 @@ Bool_t TFileMerger::OpenExcessFiles()
       } else {
          newfile = TFile::Open(url->GetName(), "READ");
       }
-      
+        
       if (!newfile) {
          if (fLocal)
             Error("OpenExcessFiles", "cannot open local copy %s of URL %s",

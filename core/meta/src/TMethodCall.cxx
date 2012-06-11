@@ -491,7 +491,7 @@ TMethodCall::EReturnType TMethodCall::ReturnType()
 
       Bool_t isEnum = kFALSE;
       TypeInfo_t *typed = 0;
-      if (!strcmp("(unknown)",name)) {
+      if (name && !strcmp("(unknown)",name)) {
          typed = gCint->TypeInfo_Factory();         
          gCint->TypeInfo_Init(typed,func->GetReturnTypeName());
          name  = gCint->TypeInfo_TrueName(typed);
@@ -500,7 +500,9 @@ TMethodCall::EReturnType TMethodCall::ReturnType()
          }
       }
 
-      if ((nstar==1) &&
+      if (name == 0) 
+         fRetType = kOther;
+      else if ((nstar==1) &&
           (!strcmp("unsigned char", name)        || !strcmp("char", name)         ||
            !strcmp("UChar_t", name)              || !strcmp("Char_t", name)       ||
            !strcmp("const unsigned char", name)  || !strcmp("const char", name)   ||

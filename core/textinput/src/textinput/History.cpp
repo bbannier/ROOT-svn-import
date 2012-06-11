@@ -15,6 +15,7 @@
 
 #include "textinput/History.h"
 #include <iostream>
+#include <fstream>
 
 #ifdef WIN32
 # include <stdio.h>
@@ -115,7 +116,10 @@ namespace textinput {
 #else
         ::unlink(fHistFileName.c_str());
 #endif
-        ::rename(pruneFileName.c_str(), fHistFileName.c_str());
+        if (::rename(pruneFileName.c_str(), fHistFileName.c_str()) == -1) {
+           std::cerr << "ERROR in textinput::History::AppendToFile(): "
+              "cannot rename " << pruneFileName << " to " << fHistFileName;
+        }
         fNumHistFileLines = nPrune;
       }
     } else {

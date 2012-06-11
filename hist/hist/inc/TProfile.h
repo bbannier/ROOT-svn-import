@@ -80,16 +80,16 @@ public:
    TProfile(const char *name,const char *title,Int_t nbinsx,const Double_t *xbins, Double_t ylow,Double_t yup, Option_t *option="");
    TProfile(const TProfile &profile);
    virtual ~TProfile();
-   virtual void     Add(TF1 *h1, Double_t c1=1, Option_t *option="");
-   virtual void     Add(const TH1 *h1, Double_t c1=1);
-   virtual void     Add(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
+   virtual Bool_t   Add(TF1 *h1, Double_t c1=1, Option_t *option="");
+   virtual Bool_t   Add(const TH1 *h1, Double_t c1=1);
+   virtual Bool_t   Add(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
    static  void     Approximate(Bool_t approx=kTRUE);
    virtual Int_t    BufferEmpty(Int_t action=0);
            void     BuildOptions(Double_t ymin, Double_t ymax, Option_t *option);
    virtual void     Copy(TObject &hnew) const;
-   virtual void     Divide(TF1 *h1, Double_t c1=1);
-   virtual void     Divide(const TH1 *h1);
-   virtual void     Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t   Divide(TF1 *h1, Double_t c1=1);
+   virtual Bool_t   Divide(const TH1 *h1);
+   virtual Bool_t   Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    virtual TH1     *DrawCopy(Option_t *option="") const;
    virtual Int_t    Fill(Double_t x, Double_t y);
    virtual Int_t    Fill(const char *namex, Double_t y);
@@ -115,15 +115,15 @@ public:
    virtual void     LabelsInflate(Option_t *axis="X");
    virtual void     LabelsOption(Option_t *option="h", Option_t *axis="X");
    virtual Long64_t Merge(TCollection *list);
-   virtual void     Multiply(TF1 *h1, Double_t c1=1);
-   virtual void     Multiply(const TH1 *h1);
-   virtual void     Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t   Multiply(TF1 *h1, Double_t c1=1);
+   virtual Bool_t   Multiply(const TH1 *h1);
+   virtual Bool_t   Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
            TH1D    *ProjectionX(const char *name="_px", Option_t *option="e") const;
    virtual void     PutStats(Double_t *stats);
            TH1     *Rebin(Int_t ngroup=2, const char*newname="", const Double_t *xbins=0);
    virtual void     RebinAxis(Double_t x, TAxis *axis);
    virtual void     Reset(Option_t *option="");
-   virtual void     SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void     Scale(Double_t c1=1, Option_t *option="");
    virtual void     SetBinEntries(Int_t bin, Double_t w);
    virtual void     SetBins(Int_t nbins, Double_t xmin, Double_t xmax);

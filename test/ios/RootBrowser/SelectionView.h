@@ -13,7 +13,7 @@ class Pad;
 @property (nonatomic, assign) BOOL panActive;
 @property (nonatomic, assign) CGPoint panStart;
 @property (nonatomic, assign) CGPoint currentPanPoint;
-@property (nonatomic, assign) BOOL verticalDirection;
+@property (nonatomic, assign) BOOL verticalPanDirection;
 
 - (id)initWithFrame : (CGRect)frame withPad : (ROOT::iOS::Pad *)p;
 - (void) setPad : (ROOT::iOS::Pad *)p;

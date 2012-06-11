@@ -420,12 +420,20 @@ TList *TXProofMgr::QuerySessions(Option_t *opt)
          TProofDesc *d = 0;
          TIter nxos(oa);
          TObjString *to = (TObjString *) nxos();
+         if (to && to->GetString().IsDigit() && !strncasecmp(opt,"S",1))
+            Printf("// +++ %s session(s) currently active +++", to->GetName());
          while ((to = (TObjString *) nxos())) {
             // Now parse them ...
-            char al[256];
-            char tg[256];
-            Int_t id = -1, st = -1, nc = 0;
-            sscanf(to->GetName(),"%d %s %s %d %d", &id, tg, al, &st, &nc);
+            Int_t id = -1, st = -1;
+            TString al, tg, tk;
+            Ssiz_t from = 0;
+            while (to->GetString()[from] == ' ') { from++; }
+            if (!to->GetString().Tokenize(tk, from, " ") || !tk.IsDigit()) continue;
+            id = tk.Atoi();
+            if (!to->GetString().Tokenize(tg, from, " ")) continue;
+            if (!to->GetString().Tokenize(al, from, " ")) continue;
+            if (!to->GetString().Tokenize(tk, from, " ") || !tk.IsDigit()) continue;
+            st = tk.Atoi();
             // Add to the list, if not already there
             if (!(d = (TProofDesc *) fSessions->FindObject(tg))) {
                Int_t locid = fSessions->GetSize() + 1;
@@ -764,18 +772,18 @@ Int_t TXProofMgr::SendMsgToUsers(const char *msg, const char *usr)
    const Int_t kMAXBUF = 32768;
    char buf[kMAXBUF] = {0};
    char *p = &buf[0];
-   Int_t space = kMAXBUF - 1;
-   Int_t len = 0;
+   size_t space = kMAXBUF - 1;
    Int_t lusr = 0;
 
    // A specific user?
    if (usr && strlen(usr) > 0 && (strlen(usr) != 1 || usr[0] != '*')) {
       lusr = (strlen(usr) + 3);
-      sprintf(buf, "u:%s ", usr);
+      snprintf(buf, kMAXBUF, "u:%s ", usr);
       p += lusr;
       space -= lusr;
    }
 
+   ssize_t len = 0;
    // Is it from file ?
    if (!gSystem->AccessPathName(msg, kFileExists)) {
       // From file: can we read it ?
@@ -790,14 +798,27 @@ Int_t TXProofMgr::SendMsgToUsers(const char *msg, const char *usr)
          return -1;
       }
       // Determine the number of bytes to be read from the file.
-      Int_t left = (Int_t) lseek(fileno(f), (off_t) 0, SEEK_END);
-      lseek(fileno(f), (off_t) 0, SEEK_SET);
+      size_t left = 0;
+      off_t rcsk = lseek(fileno(f), (off_t) 0, SEEK_END);
+      if ((rcsk != (off_t)(-1))) {
+         left = (size_t) rcsk;
+         if ((lseek(fileno(f), (off_t) 0, SEEK_SET) == (off_t)(-1))) {
+            Error("SendMsgToUsers", "cannot rewind open file (seek to 0)");
+            fclose(f);      
+            return -1;
+         }
+      } else {
+         Error("SendMsgToUsers", "cannot get size of open file (seek to END)");
+         fclose(f);      
+         return -1;
+      }
       // Now readout from file
-      Int_t wanted = left;
+      size_t wanted = left;
       if (wanted > space) {
          wanted = space;
          Warning("SendMsgToUsers",
-                 "requested to send %d bytes: max size is %d bytes: truncating", left, space);
+                 "requested to send %lld bytes: max size is %lld bytes: truncating",
+                 (Long64_t)left, (Long64_t)space);
       }
       do {
          while ((len = read(fileno(f), p, wanted)) < 0 &&
@@ -809,17 +830,20 @@ Int_t TXProofMgr::SendMsgToUsers(const char *msg, const char *usr)
          }
 
          // Update counters
-         left -= len;
+         left = (len >= (ssize_t)left) ? 0 : left - len;
          p += len;
          wanted = (left > kMAXBUF-1) ? kMAXBUF-1 : left;
 
       } while (len > 0 && left > 0);
+      // Close file
+      fclose(f);
    } else {
       // Add the message to the buffer
       len = strlen(msg);
-      if (len > space) {
+      if (len > (ssize_t)space) {
          Warning("SendMsgToUsers",
-                 "requested to send %d bytes: max size is %d bytes: truncating", len, space);
+                 "requested to send %lld bytes: max size is %lld bytes: truncating",
+                 (Long64_t)len, (Long64_t)space);
          len = space;
       }
       memcpy(p, msg, len);
@@ -1093,6 +1117,7 @@ Int_t TXProofMgr::Stat(const char *what, FileStat_t &st, const char *where)
    // Show the result, if any
    if (os) {
       if (gDebug > 1) Printf("%s", os->GetName());
+#if 0
       Int_t    mode, uid, gid, islink;
       Long_t   dev, ino, mtime;
       Long64_t size;
@@ -1113,6 +1138,27 @@ Int_t TXProofMgr::Stat(const char *what, FileStat_t &st, const char *where)
       st.fSize   = size;
       st.fMtime  = mtime;
       st.fIsLink = (islink == 1);
+#else
+      TString tkn;
+      Ssiz_t from = 0;
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fDev = tkn.Atoi();
+      if (st.fDev == -1) return -1;
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fIno = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fMode = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fUid = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fGid = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fSize = tkn.Atoll();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fMtime = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fIsLink = (tkn.Atoi() == 1) ? kTRUE : kFALSE;
+#endif
 
       // Cleanup
       SafeDelete(os);
@@ -1360,8 +1406,14 @@ Int_t TXProofMgr::GetFile(const char *remote, const char *local, const char *opt
 
    if (os) {
       // The message contains the size
-      Long64_t size;
-      sscanf(os->GetName(), "%lld", &size);
+      TString ssz(os->GetName());
+      ssz.ReplaceAll(" ", "");
+      if (!ssz.IsDigit()) {
+         Error("GetFile", "received non-digit size string: '%s' ('%s')", os->GetName(), ssz.Data());
+         close(fdout);
+         return rc;
+      }
+      Long64_t size = ssz.Atoll();
       if (size <= 0) {
          Error("GetFile", "received null or negative size: %lld", size);
          close(fdout);

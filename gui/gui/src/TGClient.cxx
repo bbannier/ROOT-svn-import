@@ -350,6 +350,12 @@ void TGClient::NeedRedraw(TGWindow *w, Bool_t force)
 }
 
 //______________________________________________________________________________
+void TGClient::CancelRedraw(TGWindow *w)
+{
+   w->fNeedRedraw = kFALSE;
+}
+
+//______________________________________________________________________________
 Bool_t TGClient::GetColorByName(const char *name, Pixel_t &pixel) const
 {
    // Get a color by name. If color is found return kTRUE and pixel is
@@ -675,6 +681,12 @@ void TGClient::WaitFor(TGWindow *w)
    fWaitForWindow = w->GetId();
    fWaitForEvent  = kDestroyNotify;
 
+   //Let VirtualX know, that we are
+   //in a nested loop for a window w.
+   //Noop on X11/win32gdk.
+   if (gVirtualX)
+      gVirtualX->BeginModalSessionFor(w->GetId());
+
    while (fWaitForWindow != kNone) {
       if (esave == kUnmapNotify)
          wsave = kNone;
@@ -696,6 +708,12 @@ void TGClient::WaitForUnmap(TGWindow *w)
 
    fWaitForWindow = w->GetId();
    fWaitForEvent  = kUnmapNotify;
+   
+   //Let VirtualX know, that we are
+   //in a nested loop for a window w.
+   //Noop on X11/win32gdk.   
+   if (gVirtualX)
+      gVirtualX->BeginModalSessionFor(w->GetId());
 
    while (fWaitForWindow != kNone) {
       gSystem->ProcessEvents();//gSystem->InnerLoop();

@@ -78,7 +78,7 @@ public:
       return 0;
    }
    // Call to delete/destruct individual item
-   virtual void DeleteItem(bool force, void* ptr) const
+   virtual void DeleteItem(Bool_t force, void* ptr) const
    {
       if ( force && ptr ) {
          if ( fVal->fProperties&kNeedDelete) {
@@ -103,7 +103,7 @@ public:
 //
 //////////////////////////////////////////////////////////////////////////
 class TGenVectorBoolProxy : public TGenCollectionProxy {
-   bool fLastValue;
+   Bool_t fLastValue;
    
 public:
    TGenVectorBoolProxy(const TGenCollectionProxy& c) : TGenCollectionProxy(c), fLastValue(false)
@@ -118,7 +118,7 @@ public:
    {
       // Return the address of the value at index 'idx'
       
-      // However we can 'take' the address of the content of vector<bool>.
+      // However we can 'take' the address of the content of std::vector<bool>.
       if ( fEnv && fEnv->fObject ) {
          switch( idx ) {
             case 0:
@@ -132,7 +132,7 @@ public:
                fEnv->fIdx = idx;
                break;
          }
-         typedef ROOT::TCollectionProxyInfo::Type<std::vector<bool> >::Env_t EnvType_t;
+         typedef ROOT::TCollectionProxyInfo::Type<std::vector<Bool_t> >::Env_t EnvType_t;
          EnvType_t *e = (EnvType_t*)fEnv;
          fLastValue = *(e->iter());
          return &fLastValue;
@@ -141,7 +141,7 @@ public:
       return 0;
    }
    
-   virtual void DeleteItem(bool force, void* ptr) const
+   virtual void DeleteItem(Bool_t force, void* ptr) const
    {
       // Call to delete/destruct individual item
       if ( force && ptr ) {
@@ -176,7 +176,7 @@ public:
    {
       // Return the address of the value at index 'idx'
       
-      // However we can 'take' the address of the content of vector<bool>.
+      // However we can 'take' the address of the content of std::vector<bool>.
       if ( fEnv && fEnv->fObject ) {
          switch( idx ) {
             case 0:
@@ -190,7 +190,7 @@ public:
                fEnv->fIdx = idx;
                break;
          }
-         typedef ROOT::TCollectionProxyInfo::Environ<std::pair<size_t,bool> > EnvType_t;
+         typedef ROOT::TCollectionProxyInfo::Environ<std::pair<size_t,Bool_t> > EnvType_t;
          EnvType_t *e = (EnvType_t*)fEnv;
          return &(e->fIterator.second);
       }
@@ -198,7 +198,7 @@ public:
       return 0;
    }
    
-   virtual void DeleteItem(bool force, void* ptr) const
+   virtual void DeleteItem(Bool_t force, void* ptr) const
    {
       // Call to delete/destruct individual item
       if ( force && ptr ) {
@@ -342,22 +342,6 @@ public:
       }
    }
 };
-
-
-//______________________________________________________________________________
-TGenCollectionProxy::Value::Value(const Value& copy)
-{
-   // Constructor.
-
-   fType   = copy.fType;
-   fCase   = copy.fCase;
-   fProperties = copy.fProperties;
-   fKind   = copy.fKind;
-   fSize   = copy.fSize;
-   fCtor   = copy.fCtor;
-   fDtor   = copy.fDtor;
-   fDelete = copy.fDelete;
-}
 
 //______________________________________________________________________________
 TGenCollectionProxy::Value::Value(const std::string& inside_type, Bool_t silent)

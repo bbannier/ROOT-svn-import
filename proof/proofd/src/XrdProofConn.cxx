@@ -27,6 +27,7 @@
 #include "XpdSysPthread.h"
 
 #include "XrdProofConn.h"
+#include "XrdProofdAux.h"
 #include "XProofProtocol.h"
 
 #include "XrdClient/XrdClientConnMgr.hh"
@@ -85,9 +86,6 @@ int XrdProofConn::fgTimeWait = 2;  // seconds
 XrdSysPlugin *XrdProofConn::fgSecPlugin = 0;       // Sec library plugin
 void         *XrdProofConn::fgSecGetProtocol = 0;  // Sec protocol getter
 
-#ifndef SafeDelete
-#define SafeDelete(x) { if (x) { delete x; x = 0; } }
-#endif
 #define URLTAG "["<<fUrl.Host<<":"<<fUrl.Port<<"]"
 
 //_____________________________________________________________________________
@@ -96,8 +94,8 @@ XrdProofConn::XrdProofConn(const char *url, char m, int psid, char capver,
    : fMode(m), fConnected(0), fLogConnID(-1), fStreamid(0), fRemoteProtocol(-1),
      fServerProto(-1), fServerType(kSTNone), fSessionID(psid),
      fLastErr(kXR_Unsupported), fCapVer(capver), fLoginBuffer(logbuf), fMutex(0),
-     fConnectInterruptMtx(0), fConnectInterrupt(0),
-     fPhyConn(0), fUnsolMsgHandler(uh), fSender(0), fSenderArg(0)
+     fConnectInterruptMtx(0), fConnectInterrupt(0), fPhyConn(0), 
+     fOpenSockFD(-1), fUnsolMsgHandler(uh), fSender(0), fSenderArg(0)
 {
    // Constructor. Open the connection to a remote XrdProofd instance.
    // The mode 'm' indicates the role of this connection:
@@ -297,8 +295,8 @@ XrdProofConn::~XrdProofConn()
    }
 
    // Cleanup mutex
-   SafeDelete(fMutex);
-   SafeDelete(fConnectInterruptMtx);
+   SafeDel(fMutex);
+   SafeDel(fConnectInterruptMtx);
 }
 
 //_____________________________________________________________________________
@@ -553,7 +551,7 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
                   TRACE(XERR, "reallocating "<<dataRecvSize<<" bytes");
                   free((void *) *answData);
                   *answData = 0;
-                  SafeDelete(xmsg);
+                  SafeDel(xmsg);
                   return xmsg;
                }
             }
@@ -581,7 +579,7 @@ XrdClientMessage *XrdProofConn::SendRecv(XPClientRequest *req, const void *reqDa
                XPD::convertRespStatusToChar(xmsg->fHdr.status)<<
                "] (server "<<URLTAG<<") - Abort");
          // We cannot continue
-         SafeDelete(xmsg);
+         SafeDel(xmsg);
          return xmsg;
       }
       // The last message may be empty: not an error
@@ -672,7 +670,7 @@ XrdClientMessage *XrdProofConn::SendReq(XPClientRequest *req, const void *reqDat
       }
       if (abortcmd) {
          // Cleanup if failed
-         SafeDelete(answMex);
+         SafeDel(answMex);
       } else if (!resp) {
          // Sleep a while before retrying
          int sleeptime = 1;
@@ -1055,7 +1053,7 @@ bool XrdProofConn::Login()
    if (ug.length() > 8) {
       // The name must go in the attached buffer because the login structure
       // can accomodate at most 8 chars
-      strcpy( (char *)reqhdr.login.username, "?>buf" );
+      strncpy( (char *)reqhdr.login.username, "?>buf", sizeof(reqhdr.login.username));
       // Add the name to the login buffer, if not already done during
       // a previous login (for example if we are reconnecting ...)
       if (fLoginBuffer.find("|usr:") == STR_NPOS) {
@@ -1066,7 +1064,7 @@ bool XrdProofConn::Login()
       memcpy((void *)reqhdr.login.username, (void *)(ug.c_str()), ug.length());
       if (ug.length() < 8) reqhdr.login.username[ug.length()] = '\0';
    } else {
-      strcpy((char *)reqhdr.login.username, "????" );
+      strncpy((char *)reqhdr.login.username, "????", sizeof(reqhdr.login.username));
    }
 
    // This is the place to send a token for fast authentication
@@ -1183,15 +1181,14 @@ bool XrdProofConn::Login()
                // We failed the aythentication attempt: cannot continue
                notdone = 0;
 
-            if (plist)
-               delete[] plist;
+            delete[] plist;
          } else {
             // We are successfully done
             resp = 1;
             notdone = 0;
          }
          // Cleanup
-         SafeDelete(xrsp);
+         SafeDel(xrsp);
       } else {
          // We failed but we are done with this attempt
          resp = 0;
@@ -1321,7 +1318,7 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
          reqhdr.header.dlen = (credentials) ? credentials->size : 0;
          char *credbuf = (credentials) ? credentials->buffer : 0;
          xrsp = SendReq(&reqhdr, credbuf, &srvans, "XrdProofConn::Authenticate");
-         SafeDelete(credentials);
+         SafeDel(credentials);
          status = (xrsp) ? xrsp->HeaderStatus() : kXR_error;
          dlen = (xrsp) ? xrsp->DataLen() : 0;
          TRACE(HDBG, "server reply: status: "<<status<<" dlen: "<<dlen);
@@ -1335,7 +1332,7 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
             //
             // then get next part of the credentials
             credentials = protocol->getCredentials(secToken, &ei);
-            SafeDelete(secToken); // nb: srvans is released here
+            SafeDel(secToken); // nb: srvans is released here
             srvans = 0;
             if (!credentials) {
                TRACE(XERR, "cannot obtain credentials");
@@ -1349,7 +1346,7 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
                // Server does not implement yet full cycling, so we are
                // allowed to try the handshake only for one protocol; we
                // cleanup the message and fail;
-               SafeDelete(xrsp);
+               SafeDel(xrsp);
                failed = 1;
                break;
             } else {
@@ -1365,7 +1362,7 @@ XrdSecProtocol *XrdProofConn::Authenticate(char *plist, int plsiz)
             }
          }
          // Cleanup message
-         SafeDelete(xrsp);
+         SafeDel(xrsp);
       }
 
       // If we are done

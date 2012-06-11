@@ -813,13 +813,10 @@ void Pad::PaintForSelection()
    fInSelectionMode = kFALSE;
 }
 
-
-
 //______________________________________________________________________________
 void Pad::PaintShadowForSelected() const
 {
    fInHighlightMode = kTRUE;
-   
    fPainter.SetPainterMode(Painter::kPaintShadow);
 
    if (fParentOfSelected) {
@@ -912,7 +909,7 @@ void Pad::PaintFillArea(Int_t nn, Double_t *xx, Double_t *yy, Option_t *)
 {
    // Paint fill area in CurrentPad World coordinates.
 
-   if (nn <3) return;
+   if (nn < 3) return;
    Int_t n=0;
    Double_t xmin,xmax,ymin,ymax;
    if (TestBit(TGraph::kClipFrame)) {
@@ -2276,7 +2273,10 @@ void Pad::PaintThumbnail()
    cd();
 
    fPainter.SetPainterMode(Painter::kPaintThumbnail);
-   
+
+   gVirtualX->SetFillStyle(1001);
+   gVirtualX->SetFillColor(0);
+
    PaintBox(fX1,fY1,fX2,fY2);
    PaintBorder(GetFillColor(), kTRUE);
 

@@ -513,7 +513,9 @@ const char* G__fulltypename(int typenum)
   }
   if(-1==G__newtype.parent_tagnum[typenum]) return(G__newtype.name[typenum]);
   else {
-    static G__FastAllocString buf(G__ONELINE);
+    static G__FastAllocString *buf_ptr = new G__FastAllocString(G__LONGLINE);
+    G__FastAllocString &buf(*buf_ptr);
+
     buf = G__fulltagname(G__newtype.parent_tagnum[typenum],0);
     buf += "::";
     buf += G__newtype.name[typenum];
@@ -3168,7 +3170,8 @@ void G__cpplink_header(FILE *fp)
 **************************************************************************/
 char *G__map_cpp_name(const char *in)
 {
-   static G__FastAllocString out(G__MAXNAME*6);
+   static G__FastAllocString *out_ptr = new G__FastAllocString(G__MAXNAME*6);
+   G__FastAllocString &out( *out_ptr );
    unsigned int i=0,j=0,c;
    while((c=in[i])) {
       if (out.Capacity() < (j+3)) {
@@ -3219,7 +3222,9 @@ char *G__map_cpp_name(const char *in)
 **************************************************************************/
 char *G__map_cpp_funcname(int tagnum,const char * /* funcname */,int ifn,int page)
 {
-   static G__FastAllocString mapped_name(G__MAXNAME);
+  static G__FastAllocString *mapped_name_ptr = new G__FastAllocString(G__MAXNAME);
+  G__FastAllocString &mapped_name(*mapped_name_ptr);
+
   const char *dllid;
 
   if(G__DLLID[0]) dllid=G__DLLID;
@@ -3539,7 +3544,9 @@ void* G__get_linked_user_param(int tag_num)
 **************************************************************************/
 char *G__get_link_tagname(int tagnum)
 {
-  static G__FastAllocString mapped_tagname(G__MAXNAME);
+  static G__FastAllocString *mapped_tagname_ptr = new G__FastAllocString(G__MAXNAME);
+  G__FastAllocString &mapped_tagname(*mapped_tagname_ptr);
+
   if(G__struct.hash[tagnum]) {
      mapped_tagname.Format("G__%sLN_%s"  ,G__DLLID
                            ,G__map_cpp_name(G__fulltagname(tagnum,0)));
@@ -5836,7 +5843,9 @@ int ifn;
 short page;
 int k)
 {
-  static G__FastAllocString buf(G__ONELINE);
+  static G__FastAllocString *buf_ptr = new G__FastAllocString(G__ONELINE);
+  G__FastAllocString &buf(*buf_ptr);
+
   buf.Format("G__P2F%d_%d_%d%s",ifn,page,k,G__PROJNAME.data());
   return(buf);
 }
@@ -8402,7 +8411,9 @@ void G__cpplink_tagtable(FILE *fp, FILE *hfp)
 **************************************************************************/
 static char* G__vbo_funcname(int tagnum, int basetagnum, int basen)
 {
-  static G__FastAllocString result(G__LONGLINE);
+  static G__FastAllocString *result_ptr = new G__FastAllocString(G__ONELINE);
+  G__FastAllocString &result(*result_ptr);
+
   G__FastAllocString temp(G__LONGLINE);
   temp = G__map_cpp_name(G__fulltagname(tagnum,1));
   result.Format("G__2vbo_%s_%s_%d",temp()
@@ -8596,6 +8607,7 @@ void G__cpplink_typetable(FILE *fp, FILE *hfp)
   G__FastAllocString temp(G__ONELINE);
   char *p;
   G__FastAllocString buf(G__ONELINE);
+  G__FastAllocString typedefname(G__ONELINE);
 
 
   fprintf(fp,"\n/*********************************************************\n");
@@ -8620,63 +8632,149 @@ void G__cpplink_typetable(FILE *fp, FILE *hfp)
             )))
         continue;
       if(strncmp("G__p2mf",G__newtype.name[i],7)==0 &&
-         G__CPPLINK==G__globalcomp){
+         G__CPPLINK==G__globalcomp) {
         G__ASSERT(i>0);
         temp = G__newtype.name[i-1];
         p = strstr(temp,"::*");
         *(p+3)='\0';
         fprintf(hfp,"typedef %s%s)%s;\n",temp(),G__newtype.name[i],p+4);
       }
-      if('u'==tolower(G__newtype.type[i]))
-        fprintf(fp,"   G__search_typename2(\"%s\",%d,G__get_linked_tagnum(&%s),%d,"
-                ,G__newtype.name[i]
-                ,G__newtype.type[i]
-                ,G__mark_linked_tagnum(G__newtype.tagnum[i])
+      typedefname = G__newtype.name[i];
+       if('u'==tolower(G__newtype.type[i]))
+          fprintf(fp,"   G__search_typename2(\"%s\",%d,G__get_linked_tagnum(&%s),%d,"
+                  ,typedefname.data()
+                  ,G__newtype.type[i]
+                  ,G__mark_linked_tagnum(G__newtype.tagnum[i])
 #if !defined(G__OLDIMPLEMENTATION1861)
-                ,G__newtype.reftype[i] | (G__newtype.isconst[i]*0x100)
+                  ,G__newtype.reftype[i] | (G__newtype.isconst[i]*0x100)
 #else
-                ,G__newtype.reftype[i] & (G__newtype.isconst[i]*0x100)
+                  ,G__newtype.reftype[i] & (G__newtype.isconst[i]*0x100)
 #endif
-                );
-      else
-        fprintf(fp,"   G__search_typename2(\"%s\",%d,-1,%d,"
-                ,G__newtype.name[i]
-                ,G__newtype.type[i]
+                  );
+       else
+          fprintf(fp,"   G__search_typename2(\"%s\",%d,-1,%d,"
+                  ,typedefname.data()
+                  ,G__newtype.type[i]
 #if !defined(G__OLDIMPLEMENTATION1861)
-                ,G__newtype.reftype[i] | (G__newtype.isconst[i]*0x100)
+                  ,G__newtype.reftype[i] | (G__newtype.isconst[i]*0x100)
 #else
-                ,G__newtype.reftype[i] & (G__newtype.isconst[i]*0x100)
+                  ,G__newtype.reftype[i] & (G__newtype.isconst[i]*0x100)
 #endif
-                );
-      if(G__newtype.parent_tagnum[i] == -1)
-        fprintf(fp,"-1);\n");
-      else
-        fprintf(fp,"G__get_linked_tagnum(&%s));\n"
-               ,G__mark_linked_tagnum(G__newtype.parent_tagnum[i]));
-
-      if(-1!=G__newtype.comment[i].filenum) {
-        G__getcommenttypedef(temp,&G__newtype.comment[i],i);
-        if(temp[0]) G__add_quotation(temp,buf);
-        else buf = "NULL";
-      }
-      else buf = "NULL";
-      if(G__newtype.nindex[i]>G__MAXVARDIM) {
-        /* This is just a work around */
-        G__fprinterr(G__serr,"CINT INTERNAL ERROR? typedef %s[%d] 0x%lx\n"
-                ,G__newtype.name[i],G__newtype.nindex[i]
-                ,(long)G__newtype.index[i]);
-        G__newtype.nindex[i] = 0;
-        if(G__newtype.index[i]) free((void*)G__newtype.index[i]);
-      }
-      fprintf(fp,"   G__setnewtype(%d,%s,%d);\n",G__globalcomp,buf()
-              ,G__newtype.nindex[i]);
-      if(G__newtype.nindex[i]) {
-        for(j=0;j<G__newtype.nindex[i];j++) {
-          fprintf(fp,"   G__setnewtypeindex(%d,%d);\n"
-                  ,j,G__newtype.index[i][j]);
-        }
-      }
-
+                  );
+       if(G__newtype.parent_tagnum[i] == -1)
+          fprintf(fp,"-1);\n");
+       else
+          fprintf(fp,"G__get_linked_tagnum(&%s));\n"
+                  ,G__mark_linked_tagnum(G__newtype.parent_tagnum[i]));
+       
+       if(-1!=G__newtype.comment[i].filenum) {
+          G__getcommenttypedef(temp,&G__newtype.comment[i],i);
+          if(temp[0]) G__add_quotation(temp,buf);
+          else buf = "NULL";
+       }
+       else buf = "NULL";
+       if(G__newtype.nindex[i]>G__MAXVARDIM) {
+          /* This is just a work around */
+          G__fprinterr(G__serr,"CINT INTERNAL ERROR? typedef %s[%d] 0x%lx\n"
+                       ,G__newtype.name[i],G__newtype.nindex[i]
+                       ,(long)G__newtype.index[i]);
+          G__newtype.nindex[i] = 0;
+          if(G__newtype.index[i]) free((void*)G__newtype.index[i]);
+       }
+       fprintf(fp,"   G__setnewtype(%d,%s,%d);\n",G__globalcomp,buf()
+               ,G__newtype.nindex[i]);
+       if(G__newtype.nindex[i]) {
+          for(j=0;j<G__newtype.nindex[i];j++) {
+             fprintf(fp,"   G__setnewtypeindex(%d,%d);\n"
+                     ,j,G__newtype.index[i][j]);
+          }
+       }       
+       if (G__ignore_stdnamespace && strstr(typedefname.data(),"<std::")) {
+          // strip std:: from the inside of the typedef name ....
+          
+          unsigned int nested = 0;
+          unsigned int len = strlen(typedefname.data());
+          bool needrepeat = false;
+          unsigned int offset = 0;
+          for(unsigned int cursor = 0; cursor < len ; ++cursor)
+          {
+             typedefname[cursor-offset] = typedefname[cursor];
+             switch(typedefname[cursor]) {
+                case '<': {
+                   if (strncmp(&(typedefname[cursor]),"<std::",6)==0) {
+                      needrepeat = true;
+                      offset += 5;
+                      cursor += 5;
+                   }
+                   ++nested; 
+                   break;
+                }
+                case '>': {
+                   if (nested > 0) { --nested; }
+                   else {
+                      // humm something is wrong.
+                      cursor = len;
+                      continue;
+                   }
+                   break;
+                }
+             }               
+          }
+          if (offset) {
+             typedefname[len-offset] = '\0';
+          }
+          if (needrepeat) {
+             if('u'==tolower(G__newtype.type[i]))
+                fprintf(fp,"   G__search_typename2(\"%s\",%d,G__get_linked_tagnum(&%s),%d,"
+                        ,typedefname.data()
+                        ,G__newtype.type[i]
+                        ,G__mark_linked_tagnum(G__newtype.tagnum[i])
+#if !defined(G__OLDIMPLEMENTATION1861)
+                        ,G__newtype.reftype[i] | (G__newtype.isconst[i]*0x100)
+#else
+                        ,G__newtype.reftype[i] & (G__newtype.isconst[i]*0x100)
+#endif
+                        );
+             else
+                fprintf(fp,"   G__search_typename2(\"%s\",%d,-1,%d,"
+                        ,typedefname.data()
+                        ,G__newtype.type[i]
+#if !defined(G__OLDIMPLEMENTATION1861)
+                        ,G__newtype.reftype[i] | (G__newtype.isconst[i]*0x100)
+#else
+                        ,G__newtype.reftype[i] & (G__newtype.isconst[i]*0x100)
+#endif
+                        );
+             if(G__newtype.parent_tagnum[i] == -1)
+                fprintf(fp,"-1);\n");
+             else
+                fprintf(fp,"G__get_linked_tagnum(&%s));\n"
+                        ,G__mark_linked_tagnum(G__newtype.parent_tagnum[i]));
+             
+             if(-1!=G__newtype.comment[i].filenum) {
+                G__getcommenttypedef(temp,&G__newtype.comment[i],i);
+                if(temp[0]) G__add_quotation(temp,buf);
+             else buf = "NULL";
+             }
+             else buf = "NULL";
+             if(G__newtype.nindex[i]>G__MAXVARDIM) {
+                /* This is just a work around */
+                G__fprinterr(G__serr,"CINT INTERNAL ERROR? typedef %s[%d] 0x%lx\n"
+                             ,G__newtype.name[i],G__newtype.nindex[i]
+                             ,(long)G__newtype.index[i]);
+                G__newtype.nindex[i] = 0;
+                if(G__newtype.index[i]) free((void*)G__newtype.index[i]);
+             }
+             fprintf(fp,"   G__setnewtype(%d,%s,%d);\n",G__globalcomp,buf()
+                     ,G__newtype.nindex[i]);
+             if(G__newtype.nindex[i]) {
+                for(j=0;j<G__newtype.nindex[i];j++) {
+                   fprintf(fp,"   G__setnewtypeindex(%d,%d);\n"
+                           ,j,G__newtype.index[i][j]);
+                }
+             }
+          } // need repeat for std:: removal
+       } // std:: being ignored.
     }
   }
   fprintf(fp,"}\n");
@@ -12308,20 +12406,21 @@ void G__specify_link(int link_stub)
       }
     }
     if(!done && strchr(buf,'<')!=0) {
-      struct G__param fpara;
+      G__param* fpara = new G__param;
       struct G__funclist *funclist=(struct G__funclist*)NULL;
       int tmp=0;
 
-      fpara.paran=0;
+      fpara->paran=0;
 
       G__hash(buf,hash,tmp);
-      funclist=G__add_templatefunc(buf,&fpara,hash,funclist,x_ifunc,0);
+      funclist=G__add_templatefunc(buf,fpara,hash,funclist,x_ifunc,0);
       if(funclist) {
         funclist->ifunc->globalcomp[funclist->ifn] = globalcomp;
         if(rfUseStubs) funclist->ifunc->funcptr[i]=(void*)-2;
         G__funclist_delete(funclist);
         ++done;
       }
+      delete fpara;
     }
     if(!done && G__NOLINK!=globalcomp) {
 #ifdef G__ROOT
@@ -13533,7 +13632,10 @@ void G__gen_extra_include() {
 
     tempfile = (char*) malloc(strlen(G__CPPLINK_H)+6);
     sprintf(tempfile,"%s.temp", G__CPPLINK_H);
-    rename(G__CPPLINK_H,tempfile);
+    if (rename(G__CPPLINK_H,tempfile) == -1) {
+       G__fprinterr(G__serr,"Error renaming %s to %s\n",
+                    G__CPPLINK_H, tempfile);
+    }
 
     fp = fopen(G__CPPLINK_H,"w");
     if(!fp) G__fileerror(G__CPPLINK_H);

@@ -245,7 +245,6 @@ TCutG::TCutG(const char *name, Int_t n, const Double_t *x, const Double_t *y)
    }
 }
 
-
 //______________________________________________________________________________
 TCutG::~TCutG()
 {
@@ -254,6 +253,21 @@ TCutG::~TCutG()
    delete fObjectX;
    delete fObjectY;
    gROOT->GetListOfSpecials()->Remove(this);
+}
+
+//______________________________________________________________________________
+TCutG &TCutG::operator=(const TCutG &rhs) 
+{
+   // Assignment operator.
+
+   if (this != &rhs) {
+      TGraph::operator=(rhs);
+      delete fObjectX;
+      delete fObjectY;
+      fObjectX = rhs.fObjectX->Clone();
+      fObjectY = rhs.fObjectY->Clone();
+   }
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -343,31 +357,31 @@ Double_t TCutG::IntegralHist(TH2 *h, Option_t *option) const
 
 
 //______________________________________________________________________________
-void TCutG::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TCutG::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out.
 
    char quote = '"';
-   out<<"   "<<endl;
+   out<<"   "<<std::endl;
    if (gROOT->ClassSaved(TCutG::Class())) {
       out<<"   ";
    } else {
       out<<"   TCutG *";
    }
-   out<<"cutg = new TCutG("<<quote<<GetName()<<quote<<","<<fNpoints<<");"<<endl;
-   out<<"   cutg->SetVarX("<<quote<<GetVarX()<<quote<<");"<<endl;
-   out<<"   cutg->SetVarY("<<quote<<GetVarY()<<quote<<");"<<endl;
-   out<<"   cutg->SetTitle("<<quote<<GetTitle()<<quote<<");"<<endl;
+   out<<"cutg = new TCutG("<<quote<<GetName()<<quote<<","<<fNpoints<<");"<<std::endl;
+   out<<"   cutg->SetVarX("<<quote<<GetVarX()<<quote<<");"<<std::endl;
+   out<<"   cutg->SetVarY("<<quote<<GetVarY()<<quote<<");"<<std::endl;
+   out<<"   cutg->SetTitle("<<quote<<GetTitle()<<quote<<");"<<std::endl;
 
    SaveFillAttributes(out,"cutg",0,1001);
    SaveLineAttributes(out,"cutg",1,1,1);
    SaveMarkerAttributes(out,"cutg",1,1,1);
 
    for (Int_t i=0;i<fNpoints;i++) {
-      out<<"   cutg->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<endl;
+      out<<"   cutg->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<std::endl;
    }
    out<<"   cutg->Draw("
-      <<quote<<option<<quote<<");"<<endl;
+      <<quote<<option<<quote<<");"<<std::endl;
 }
 
 //______________________________________________________________________________

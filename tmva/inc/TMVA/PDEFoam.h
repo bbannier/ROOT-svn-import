@@ -267,14 +267,14 @@ namespace TMVA {
 
       // project foam to two-dimensional histogram
       virtual TH2D* Project2(Int_t idim1, Int_t idim2, ECellValue cell_value=kValue, 
-			     PDEFoamKernelBase *kernel=NULL, UInt_t maxbins=50);
+			     PDEFoamKernelBase *kernel=NULL, UInt_t nbin=50);
 
       // Project one-dimensional foam to a 1-dim histogram
       TH1D* Draw1Dim(ECellValue cell_value, Int_t nbin, PDEFoamKernelBase *kernel=NULL);
 
       // Generates C++ code (root macro) for drawing foam with boxes (only 2-dim!)
       void RootPlot2dim( const TString& filename, TString opt,
-                         Bool_t CreateCanvas = kTRUE, Bool_t colors = kTRUE );
+                         Bool_t createCanvas = kTRUE, Bool_t colors = kTRUE );
 
       // ---------- Foam evaluation functions
 

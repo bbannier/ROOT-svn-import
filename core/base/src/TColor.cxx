@@ -26,6 +26,7 @@ Bool_t  TColor::fgGrayscaleMode = kFALSE;
 Bool_t  TColor::fgInitDone = kFALSE;
 TArrayI TColor::fgPalette(0);
 
+using std::floor;
 
 //______________________________________________________________________________
 /* Begin_Html
@@ -38,6 +39,7 @@ TArrayI TColor::fgPalette(0);
 <li><a href="#C03">Bright and dark colors</li></a>
 <li><a href="#C04">Gray scale view of of canvas with colors</li></a>
 <li><a href="#C05">Color palettes</li></a>
+<li><a href="#C06">Color transparency</li></a>
 </ul>
 
 <a name="C00"></a><h3>Introduction</h3>
@@ -236,7 +238,28 @@ The following macro illustrate this feature.
 End_Html
 Begin_Macro(source)
 ../../../tutorials/graphs/multipalette.C
-End_Macro */
+End_Macro 
+Begin_Html
+
+<a name="C06"></a><h3>Color transparency</h3>
+To make a graphics object transparent it is enough to set its color to a 
+transparent one. The color transparency is defined via its alpha component. The 
+alpha value varies from <tt>0.</tt> (fully transparent) to <tt>1.</tt> (fully 
+opaque). To set the alpha value of an existing color it is enough to do:
+<pre>
+   TColor *col26 = gROOT->GetColor(26);
+   col26->SetAlpha(0.01);
+</pre>
+A new color can be created transparent the following way:
+<pre>
+   Int_t ci = 1756;
+   TColor *color = new TColor(ci, 0.1, 0.2, 0.3, 0.5); // alpha = 0.5
+</pre>
+An example of tranparency usage with parallel coordinates can be found
+in <tt>$ROOTSYS/tutorials/tree/parallelcoordtrans.C</tt>. Right now the 
+transparency is implemented only for PDF output, SVG output, and for gif,
+jpg and png outputs.
+*/
 
 
 //______________________________________________________________________________
@@ -1363,7 +1386,7 @@ const char *TColor::PixelAsHexString(ULong_t pixel)
 
 
 //______________________________________________________________________________
-void TColor::SaveColor(ostream &out, Int_t ci)
+void TColor::SaveColor(std::ostream &out, Int_t ci)
 {
    /* Begin_html
    Save a color with index > 228 as a C++ statement(s) on output stream out.
@@ -1384,13 +1407,13 @@ void TColor::SaveColor(ostream &out, Int_t ci)
    cname.Form("#%02x%02x%02x", ri, gi, bi);
 
    if (gROOT->ClassSaved(TColor::Class())) {
-      out << endl;
+      out << std::endl;
    } else {
-      out << endl;
-      out << "   Int_t ci;   // for color index setting" << endl;
+      out << std::endl;
+      out << "   Int_t ci;   // for color index setting" << std::endl;
    }
 
-   out<<"   ci = TColor::GetColor("<<quote<<cname.Data()<<quote<<");"<<endl;
+   out<<"   ci = TColor::GetColor("<<quote<<cname.Data()<<quote<<");"<<std::endl;
 }
 
 

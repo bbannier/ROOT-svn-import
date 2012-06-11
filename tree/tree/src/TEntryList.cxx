@@ -34,7 +34,7 @@ entrylist_figure1.C
 End_Macro
 
 Begin_Html
- 
+
 <li> for a TChain (fLists data member is non-zero)
   It contains a TList of sub-lists (TEntryList objects, corresponding to each TTree)
   Trees and lists are matched by the TTree name and its file name (full path). 
@@ -86,13 +86,40 @@ void loopChain() {
    Long64_t chainEntries = ch->GetEntries();
    Int_t treenum = 0;
    ch->SetEntryList(myelist);
-   for (Long64_t el = 0; el &lt; listEntries; el++) {
-      Long64_t treeEntry = myelist->GetEntryAndTree(el,treenum);
-      Long64_t chainEntry = treeEntry+ch->GetTreeOffset()[treenum];
-      printf("el=%lld, treeEntry=%lld, chainEntry=%lld, treenum=%d\n", el, treeEntry, chainEntry, treenum);
+
+   for (entry=start;entry<end;entry++) {
+      entryNumber = treechain->GetEntryNumber(entry);
+      if (entryNumber < 0) break;
+      localEntry = fTree->LoadTree(entryNumber);
+      if (localEntry < 0) break;
+      // then either call branch->GetEntry(localEntry);
+      // or  entryNumber->GetEntry(entryNumber);
+      // In the later case the LoadTree is then somewhat redudant.
    }
+ }
+</pre>
+
+When using the TEntryList interface directly, you can get the 'tree number' and entry in
+the current tree (i.e. value similar to the return value of LoadTree) from calling
+TEntryList::GetEntryAndTree:
+<pre>
+    Long64_t treeEntry = myelist->GetEntryAndTree(el,treenum);
+</pre>
+to obtain the entry number within the chain you need to add to it the value
+of
+<pre>treeEntry+ch->GetTreeOffset()[treenum]</pre>
+such that the loop in the previous example can also be written as:
+
+<pre>for (Long64_t el = 0; el &lt; listEntries; el++) {
+   Long64_t treeEntry = myelist->GetEntryAndTree(el,treenum);
+   Long64_t chainEntry = treeEntry+ch->GetTreeOffset()[treenum];  
+   printf("el=%lld, treeEntry=%lld, chainEntry=%lld, treenum=%d\n", el, treeEntry, chainEntry, treenum);
+
+   ch->LoadTree(chainEntry); // this also returns treeEntry
+   needed_branch->GetEntry(treeEntry);
 }
 </pre>
+
 
 <h4> TSelectors</h4>
 
@@ -312,7 +339,7 @@ TEntryList::~TEntryList()
       fLists->Delete();
       delete fLists;
    }
-   
+
    fLists = 0;
 
    if (fDirectory) fDirectory->Remove(this);
@@ -528,7 +555,7 @@ Int_t TEntryList::Contains(Long64_t entry, TTree *tree)
 void TEntryList::DirectoryAutoAdd(TDirectory* dir)
 {
    // Called by TKey and others to automatically add us to a directory when we are read from a file.
-   
+
    SetDirectory(dir);
 }
 
@@ -540,7 +567,7 @@ Bool_t TEntryList::Enter(Long64_t entry, TTree *tree)
    //When tree != 0, finds the list, corresponding to this tree
    //When tree is a chain, the entry is assumed to be global index and the local
    //entry is recomputed from the treeoffset information of the chain
-   
+
    if (!tree){
       if (!fLists) {
          if (!fBlocks) fBlocks = new TObjArray();
@@ -692,7 +719,7 @@ Long64_t TEntryList::GetEntry(Int_t index)
                   ntotal += templist->GetN();
             }
             if (ntotal > index)
-              break;
+               break;
          }
          fCurrent = templist;
          if (!fCurrent) return -1;
@@ -763,7 +790,7 @@ TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename,
    if (gDebug > 1)
       Info("GetEntryList","tree: %s, file: %s",
                           (treename ? treename : "-"), (filename ? filename : "-"));
-      
+
    if (!treename || !filename) return 0;
    TString option = opt;
    option.ToUpper();
@@ -836,7 +863,7 @@ TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename,
             Info("GetEntryList", "file: %s (longname: %s), hash: %lu, element hash: %lu",
                                  filename, longname.Data(), newhash, templist->fStringHash);
          if (newhash == templist->fStringHash){
-            if (!strcmp(templist->GetTreeName(), treename) && !strcmp(templist->GetFileName(), longname)){
+            if (templist->fTreeName == treename && templist->fFileName == longname){
                return templist;
             }
          }
@@ -844,7 +871,7 @@ TEntryList *TEntryList::GetEntryList(const char *treename, const char *filename,
    }
    return 0;
 }
-      
+
 //______________________________________________________________________________
 Int_t TEntryList::Merge(TCollection *list)
 {
@@ -1061,7 +1088,7 @@ void TEntryList::SetTree(const char *treename, const char *filename)
 
    TString fn;
    GetFileName(filename, fn);
-   
+
    TString stotal = treename;
    stotal.Append(fn.Data());
    //printf("setting tree %s\n", stotal.Data());
@@ -1082,7 +1109,7 @@ void TEntryList::SetTree(const char *treename, const char *filename)
       TIter next(fLists);
       while ((elist = (TEntryList*)next())){
          if (newhash == elist->fStringHash){
-            if (!strcmp(elist->GetTreeName(), treename) && !strcmp(elist->GetFileName(), fn.Data())){
+            if (elist->fTreeName == treename && elist->fFileName == fn.Data()) {
                //the current entry list was changed. reset the fLastIndexQueried,
                //so that Next() doesn't start with the wrong current list
                //Also, reset those indices in the previously current list
@@ -1148,7 +1175,7 @@ void TEntryList::SetTree(const char *treename, const char *filename)
             //the current entry list was changed. reset the fLastIndexQueried,
             //so that Next() doesn't start with the wrong current list
             fLastIndexQueried = -3;
-            
+
          }
          else {
             //same tree as in the current entry list, don't do anything
@@ -1330,7 +1357,7 @@ Int_t TEntryList::Relocate(const char *fn,
    // location (i.e. on a different cluster, machine or disks).
    // This function can be called as many times as need to reach the desired result.
    // The existing 'locations' can be checked qith TEntryList::Scan .
-   
+
    // Open the file for updating
    TFile *fl = TFile::Open(fn, "UPDATE");
    if (!fl || (fl&& fl->IsZombie())) {
@@ -1442,7 +1469,7 @@ Int_t TEntryList::ScanPaths(TList *roots, Bool_t notify)
       }
    }
    if (newobjs) xrl->Add(new TObjString(path));
-   
+
    // Done
    nrl = xrl->GetSize();
    if (notify) {
@@ -1455,7 +1482,7 @@ Int_t TEntryList::ScanPaths(TList *roots, Bool_t notify)
       }
       Printf(" * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ *");
    }
-   
+
    if (xrl != roots) {
       xrl->SetOwner(kTRUE);
       SafeDelete(xrl);
@@ -1471,7 +1498,7 @@ Int_t TEntryList::Scan(const char *fn, TList *roots)
    // Scan TEntryList in 'fn' to find the common parts of paths.
    // If 'roots' is defined, add the found roots to the list as TObjStrings.
    // Return the number of common root paths found. 
-   
+
    // Open the file for updating
    TFile *fl = TFile::Open(fn);
    if (!fl || (fl&& fl->IsZombie())) {
@@ -1496,7 +1523,7 @@ Int_t TEntryList::Scan(const char *fn, TList *roots)
    // Close the file
    fl->Close();
    delete fl;
-   
+
    // Done
    return nrs;
 }

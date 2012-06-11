@@ -280,6 +280,25 @@ TGeoPatternX::TGeoPatternX(TGeoVolume *vol, Int_t ndivisions, Double_t start, Do
 }
 
 //_____________________________________________________________________________
+TGeoPatternX::TGeoPatternX(const TGeoPatternX& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternX& TGeoPatternX::operator=(const TGeoPatternX& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
+//_____________________________________________________________________________
 TGeoPatternX::~TGeoPatternX()
 {
 // Destructor
@@ -376,7 +395,7 @@ TGeoPatternFinder *TGeoPatternX::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternX::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternX::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -428,6 +447,25 @@ TGeoPatternY::TGeoPatternY(TGeoVolume *vol, Int_t ndivisions, Double_t start, Do
    fEnd        = end;
    fStep       = (end - start)/ndivisions;
    CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternY::TGeoPatternY(const TGeoPatternY& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternY& TGeoPatternY::operator=(const TGeoPatternY& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
 }
 
 //_____________________________________________________________________________
@@ -527,7 +565,7 @@ TGeoPatternFinder *TGeoPatternY::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternY::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternY::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -577,6 +615,26 @@ TGeoPatternZ::TGeoPatternZ(TGeoVolume *vol, Int_t ndivisions, Double_t start, Do
    fStep       = (end - start)/ndivisions;
    CreateThreadData(1);
 }
+
+//_____________________________________________________________________________
+TGeoPatternZ::TGeoPatternZ(const TGeoPatternZ& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternZ& TGeoPatternZ::operator=(const TGeoPatternZ& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
 //_____________________________________________________________________________
 TGeoPatternZ::~TGeoPatternZ()
 {
@@ -673,7 +731,7 @@ TGeoPatternFinder *TGeoPatternZ::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternZ::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;
@@ -722,6 +780,26 @@ TGeoPatternParaX::TGeoPatternParaX(TGeoVolume *vol, Int_t ndivisions, Double_t s
    fStep       = (end - start)/ndivisions;
    CreateThreadData(1);
 }
+
+//_____________________________________________________________________________
+TGeoPatternParaX::TGeoPatternParaX(const TGeoPatternParaX& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternParaX& TGeoPatternParaX::operator=(const TGeoPatternParaX& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
 //_____________________________________________________________________________
 TGeoPatternParaX::~TGeoPatternParaX()
 {
@@ -790,7 +868,7 @@ TGeoPatternFinder *TGeoPatternParaX::MakeCopy(Bool_t reflect)
 }
       
 //______________________________________________________________________________
-void TGeoPatternParaX::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternParaX::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -864,6 +942,25 @@ TGeoPatternParaY::TGeoPatternParaY(TGeoVolume *vol, Int_t ndivisions, Double_t s
    CreateThreadData(1);
 }
 //_____________________________________________________________________________
+TGeoPatternParaY::TGeoPatternParaY(const TGeoPatternParaY& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternParaY& TGeoPatternParaY::operator=(const TGeoPatternParaY& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
+//_____________________________________________________________________________
 TGeoPatternParaY::~TGeoPatternParaY()
 {
 // Destructor
@@ -927,7 +1024,7 @@ TGeoPatternFinder *TGeoPatternParaY::MakeCopy(Bool_t reflect)
 }
          
 //______________________________________________________________________________
-void TGeoPatternParaY::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternParaY::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -1009,6 +1106,25 @@ TGeoPatternParaZ::TGeoPatternParaZ(TGeoVolume *vol, Int_t ndivisions, Double_t s
 }
 
 //_____________________________________________________________________________
+TGeoPatternParaZ::TGeoPatternParaZ(const TGeoPatternParaZ& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternParaZ& TGeoPatternParaZ::operator=(const TGeoPatternParaZ& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
+//_____________________________________________________________________________
 TGeoPatternParaZ::~TGeoPatternParaZ()
 {
 // Destructor
@@ -1068,7 +1184,7 @@ TGeoPatternFinder *TGeoPatternParaZ::MakeCopy(Bool_t reflect)
 }
          
 //______________________________________________________________________________
-void TGeoPatternParaZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternParaZ::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;
@@ -1154,6 +1270,30 @@ TGeoPatternTrapZ::TGeoPatternTrapZ(TGeoVolume *vol, Int_t ndivisions, Double_t s
    fStep       = (end - start)/ndivisions;
    CreateThreadData(1);
 }
+
+//_____________________________________________________________________________
+TGeoPatternTrapZ::TGeoPatternTrapZ(const TGeoPatternTrapZ& pf) :
+  TGeoPatternFinder(pf),
+  fTxz(pf.fTxz),
+  fTyz(pf.fTyz)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternTrapZ& TGeoPatternTrapZ::operator=(const TGeoPatternTrapZ& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      fTxz = pf.fTxz;
+      fTyz = pf.fTyz;
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
 //_____________________________________________________________________________
 TGeoPatternTrapZ::~TGeoPatternTrapZ()
 {
@@ -1213,7 +1353,7 @@ TGeoPatternFinder *TGeoPatternTrapZ::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternTrapZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternTrapZ::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;
@@ -1280,6 +1420,25 @@ TGeoPatternCylR::TGeoPatternCylR(TGeoVolume *vol, Int_t ndivisions, Double_t sta
    CreateThreadData(1);
 }
 //_____________________________________________________________________________
+TGeoPatternCylR::TGeoPatternCylR(const TGeoPatternCylR& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternCylR& TGeoPatternCylR::operator=(const TGeoPatternCylR& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
+//_____________________________________________________________________________
 TGeoPatternCylR::~TGeoPatternCylR()
 {
 // Destructor
@@ -1338,7 +1497,7 @@ TGeoPatternFinder *TGeoPatternCylR::MakeCopy(Bool_t reflect)
 }
       
 //______________________________________________________________________________
-void TGeoPatternCylR::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternCylR::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -1488,7 +1647,7 @@ TGeoPatternFinder *TGeoPatternCylPhi::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternCylPhi::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternCylPhi::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -1571,6 +1730,25 @@ TGeoPatternSphR::TGeoPatternSphR(TGeoVolume *vol, Int_t ndivisions, Double_t sta
    CreateThreadData(1);
 }
 //_____________________________________________________________________________
+TGeoPatternSphR::TGeoPatternSphR(const TGeoPatternSphR& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+
+//_____________________________________________________________________________
+TGeoPatternSphR& TGeoPatternSphR::operator=(const TGeoPatternSphR& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+
+//_____________________________________________________________________________
 TGeoPatternSphR::~TGeoPatternSphR()
 {
 // Destructor
@@ -1598,7 +1776,7 @@ TGeoPatternFinder *TGeoPatternSphR::MakeCopy(Bool_t)
 }
    
 //______________________________________________________________________________
-void TGeoPatternSphR::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternSphR::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -1658,6 +1836,23 @@ TGeoPatternSphTheta::TGeoPatternSphTheta(TGeoVolume *vol, Int_t ndivisions, Doub
    CreateThreadData(1);
 }
 //_____________________________________________________________________________
+TGeoPatternSphTheta::TGeoPatternSphTheta(const TGeoPatternSphTheta& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+//_____________________________________________________________________________
+TGeoPatternSphTheta& TGeoPatternSphTheta::operator=(const TGeoPatternSphTheta& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+//_____________________________________________________________________________
 TGeoPatternSphTheta::~TGeoPatternSphTheta()
 {
 // Destructor
@@ -1685,7 +1880,7 @@ TGeoPatternFinder *TGeoPatternSphTheta::MakeCopy(Bool_t)
 }
    
 //______________________________________________________________________________
-void TGeoPatternSphTheta::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternSphTheta::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -1745,6 +1940,23 @@ TGeoPatternSphPhi::TGeoPatternSphPhi(TGeoVolume *vol, Int_t ndivisions, Double_t
    CreateThreadData(1);
 }
 //_____________________________________________________________________________
+TGeoPatternSphPhi::TGeoPatternSphPhi(const TGeoPatternSphPhi& pf) :
+  TGeoPatternFinder(pf)
+{ 
+   //copy constructor
+   CreateThreadData(1);
+}
+//_____________________________________________________________________________
+TGeoPatternSphPhi& TGeoPatternSphPhi::operator=(const TGeoPatternSphPhi& pf)
+{
+   //assignment operator
+   if(this!=&pf) {
+      TGeoPatternFinder::operator=(pf);
+      CreateThreadData(1);
+   } 
+   return *this;
+}
+//_____________________________________________________________________________
 TGeoPatternSphPhi::~TGeoPatternSphPhi()
 {
 // Destructor
@@ -1772,7 +1984,7 @@ TGeoPatternFinder *TGeoPatternSphPhi::MakeCopy(Bool_t)
 }
    
 //______________________________________________________________________________
-void TGeoPatternSphPhi::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternSphPhi::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;
@@ -1842,6 +2054,7 @@ TGeoPatternHoneycomb& TGeoPatternHoneycomb::operator=(const TGeoPatternHoneycomb
       fAxisOnRows=pfh.fAxisOnRows;
       fNdivisions=pfh.fNdivisions;
       fStart=pfh.fStart;
+      CreateThreadData(1);
    } 
    return *this;
 }

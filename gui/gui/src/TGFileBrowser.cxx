@@ -1026,7 +1026,7 @@ void TGFileBrowser::Clicked(TGListTreeItem *item, Int_t btn, Int_t x, Int_t y)
                // list tree item by RecursiveRemove()
                // it is better to read the object each time anyway, 
                // as it may have changed in the file
-               if (obj->InheritsFrom("TDirectory"))
+               if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TList"))
                   item->SetUserData(obj);
             }
          }
@@ -1227,7 +1227,10 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
    if (obj && !obj->InheritsFrom("TSystemFile")) {
       TString ext = obj->GetName();
       if (obj->InheritsFrom("TDirectory")) {
-         fNKeys = ((TDirectory *)obj)->GetListOfKeys()->GetEntries();
+         if (((TDirectory *)obj)->GetListOfKeys())
+            fNKeys = ((TDirectory *)obj)->GetListOfKeys()->GetEntries();
+         else 
+            fNKeys = 0;
       }
       else if (obj->InheritsFrom("TKey") && (obj->IsA() != TClass::Class())) {
          Chdir(item);
@@ -1244,7 +1247,7 @@ void TGFileBrowser::DoubleClicked(TGListTreeItem *item, Int_t /*btn*/)
                // list tree item by RecursiveRemove()
                // it is better to read the object each time anyway, 
                // as it may have changed in the file
-               if (obj->InheritsFrom("TDirectory"))
+               if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TList"))
                   item->SetUserData(obj);
             }
          }

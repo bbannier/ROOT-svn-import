@@ -125,6 +125,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
    fSockPathDir = "";
    fTMPdir = "/tmp";
    fWorkDir = "";
+   fMUWorkDir = "";
    fSuperMst = 0;
    fNamespace = "/proofpool";
    fMastersAllowed.clear();
@@ -472,6 +473,7 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
                }
             }
          }
+         close(cfgFD);
       } else {
          XPDFORM(m, "failure opening config file; errno: %d", errno);
          TRACE(XERR, m);
@@ -503,12 +505,14 @@ XrdProofSched *XrdProofdManager::LoadScheduler()
       // Get the scheduler object
       if (!(sched = (*ep)(cfn, this, fGroupsMgr, cfn, fEDest))) {
          TRACE(XERR, "unable to create scheduler object from " << lib);
+         delete h;
          return (XrdProofSched *)0;
       }
+      delete h;
    }
    // Check result
    if (!(sched->IsValid())) {
-      TRACE(XERR, " unable to instantiate the " << sched->Name() << " scheduler using " << cfn);
+      TRACE(XERR, " unable to instantiate the " << sched->Name() << " scheduler using " << (cfn ? cfn : "<nul>"));
       delete sched;
       return (XrdProofSched *)0;
    }
@@ -717,15 +721,31 @@ int XrdProofdManager::Config(bool rcf)
    }
 
    // Work directory, if specified
+   XrdOucString wdir;
    if (fWorkDir.length() > 0) {
       // Make sure it exists
       if (XrdProofdAux::AssertDir(fWorkDir.c_str(), ui, fChangeOwn) != 0) {
          XPDERR("unable to assert working dir: " << fWorkDir);
          return -1;
       }
-      TRACE(ALL, "working directories under: " << fWorkDir);
+      if (fMUWorkDir.length() > 0) {
+         fMUWorkDir.replace("<workdir>", fWorkDir);
+         int iph = fMUWorkDir.find("<");
+         if (iph != STR_NPOS) {
+            wdir.assign(fMUWorkDir, 0, iph - 2);
+            if (XrdProofdAux::AssertDir(wdir.c_str(), ui, fChangeOwn) != 0) {
+               XPDERR("unable to assert working dir: " << wdir);
+               return -1;
+            }
+            wdir = "";
+         }
+      }
+   }
+   wdir = (fMultiUser && fMUWorkDir.length() > 0) ? fMUWorkDir : fWorkDir;
+   if (wdir.length() > 0) {
+      TRACE(ALL, "working directories under: " << wdir);
       // Communicate it to the sandbox service
-      XrdProofdSandbox::SetWorkdir(fWorkDir.c_str());
+      XrdProofdSandbox::SetWorkdir(wdir.c_str());
    }
 
    // Data directory, if specified
@@ -1089,12 +1109,13 @@ bool XrdProofdManager::ValidateLocalDataSetSrc(XrdOucString &url, bool &local)
             // Assert the file with lock file path
             if (goodsrc) {
                fnpath.replace("/dataset.list", "/lock.location");
-               if (access(fnpath.c_str(), F_OK) != 0) {
-                  FILE *flck = fopen(fnpath.c_str(), "w");
-                  if (!flck) {
-                     TRACE(XERR, "Cannot open file '" << fnpath << "' with the lock file path; errno: " << errno);
-                  } else {
-                     // Write the default lock file path
+               FILE *flck = fopen(fnpath.c_str(), "a");
+               if (!flck) {
+                  TRACE(XERR, "Cannot open file '" << fnpath << "' with the lock file path; errno: " << errno);
+               } else {
+                  off_t ofs = lseek(fileno(flck), 0, SEEK_CUR);
+                  if (ofs == 0) {
+                     // New file: write the default lock file path
                      XrdOucString fnlock(url);
                      fnlock.replace("/", "%");
                      fnlock.replace(":", "%");
@@ -1105,7 +1126,10 @@ bool XrdProofdManager::ValidateLocalDataSetSrc(XrdOucString &url, bool &local)
                      if (XrdProofdAux::ChangeOwn(fnpath.c_str(), ui) != 0) {
                         TRACE(XERR, "Problems asserting ownership of " << fnpath);
                      }
+                  } else if (ofs != (off_t)(-1)) {
+                     TRACE(XERR, "Problems getting current position on file '" << fnpath << "'; errno: " << errno);
                   }
+                  fclose(flck);
                }
             }
             // Make sure that everybody can modify the file for updates
@@ -1157,6 +1181,7 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
    // Resolve special keywords in 's' for client 'pcl'. Recognized keywords
    //     <workdir>          root for working dirs
    //     <host>             local host name
+   //     <port>             daemon port
    //     <homedir>          user home dir
    //     <user>             user name
    //     <group>            user group
@@ -1180,6 +1205,14 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
       nk++;
 
    TRACE(HDBG, "after <host>: " << s);
+
+   // Parse <port>
+   if (s.find("<port>") != STR_NPOS) {
+      XrdOucString sport;
+      sport += Port();
+      if (s.replace("<port>", sport.c_str()))
+         nk++;
+   }
 
    // Parse <user>
    if (pcl)
@@ -1571,19 +1604,22 @@ int XrdProofdManager::DoDirectivePort(char *val, XrdOucStream *, bool)
 int XrdProofdManager::DoDirectiveMultiUser(char *val, XrdOucStream *cfg, bool)
 {
    // Process 'multiuser' directive
+   XPDLOC(ALL, "Manager::DoDirectiveMultiUser")
 
    if (!val)
       // undefined inputs
       return -1;
 
-   // Check deprecated 'if' directive
-   if (Host() && cfg)
-      if (XrdProofdAux::CheckIf(cfg, Host()) == 0)
-         return 0;
-
    // Multi-user option
    int mu = strtol(val, 0, 10);
    fMultiUser = (mu == 1) ? 1 : fMultiUser;
+
+   // Check if we need to change the working dir template
+   val = cfg->GetWord();
+   if (val) fMUWorkDir = val;
+
+   TRACE(DBG, "fMultiUser: "<< fMultiUser << " work dir template: " << fMUWorkDir);
+   
    return 0;
 }
 
@@ -1605,6 +1641,8 @@ int XrdProofdManager::DoDirectiveDataSetSrc(char *val, XrdOucStream *cfg, bool)
          rw = 1;
       } else if (!strncmp(nxt, "url:", 4)) {
          url = nxt + 4;
+         XrdClientUrlInfo u(url);
+         if (u.Proto == "" && u.HostWPort == "") local = 1;
       } else if (!strncmp(nxt, "opt:", 4)) {
          opts = nxt + 4;
       }

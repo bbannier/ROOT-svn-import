@@ -125,6 +125,8 @@ static void RegisterAddressInRepository(const char * /*where*/, void *location, 
 
 static void UnregisterAddressInRepository(const char * /*where*/, void *location, const TClass *what)
 {
+   // Remove an address from the repository of address/object.
+
    std::multimap<void*, Version_t>::iterator cur = gObjectVersionRepository.find(location);
    for (; cur != gObjectVersionRepository.end();) {
       std::multimap<void*, Version_t>::iterator tmp = cur++;
@@ -141,6 +143,8 @@ static void UnregisterAddressInRepository(const char * /*where*/, void *location
 
 static void MoveAddressInRepository(const char *where, void *oldadd, void *newadd, const TClass *what)
 {
+   // Register in the repository that an object has moved.
+
    UnregisterAddressInRepository(where,oldadd,what);
    RegisterAddressInRepository(where,newadd,what);
 }
@@ -173,16 +177,23 @@ namespace ROOT {
       IdMap_t fMap;
 
    public:
-      void Add(const key_type &key, mapped_type &obj) {
+      void Add(const key_type &key, mapped_type &obj) 
+      {
+         // Add the <key,obj> pair to the map.
          fMap[key] = obj;
       }
-      mapped_type Find(const key_type &key) const {
+      mapped_type Find(const key_type &key) const 
+      {
+         // Find the type corresponding to the key.
          IdMap_t::const_iterator iter = fMap.find(key);
          mapped_type cl = 0;
          if (iter != fMap.end()) cl = iter->second;
          return cl;
       }
-      void Remove(const key_type &key) { fMap.erase(key); }
+      void Remove(const key_type &key) { 
+         // Remove the type corresponding to the key.
+         fMap.erase(key);
+      }
 #else
    private:
       TMap fMap;
@@ -457,6 +468,7 @@ private:
 
 public:
    TBuildRealData(void *obj, TClass *cl) : fBits(0) {
+      // Main constructor.
       fRealDataObject = obj;
       fRealDataClass = cl;
    }
@@ -584,7 +596,9 @@ public:
    Int_t     fCount;
    TBrowser *fBrowser;
 
-   TAutoInspector(TBrowser *b) { fBrowser = b; fCount = 0; }
+   TAutoInspector(TBrowser *b) { 
+      // main constructor.
+      fBrowser = b; fCount = 0; }
    virtual ~TAutoInspector() { }
    virtual void Inspect(TClass *cl, const char *parent, const char *name, const void *addr);
 };
@@ -746,7 +760,7 @@ TClass::TClass() :
    fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
    fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
    fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
-   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(TClass::kDefault),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -770,7 +784,7 @@ TClass::TClass(const char *name, Bool_t silent) :
    fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
    fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
    fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
-   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(TClass::kDefault),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -820,7 +834,7 @@ TClass::TClass(const char *name, Version_t cversion,
    fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
    fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
    fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
-   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(TClass::kDefault),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -849,7 +863,7 @@ TClass::TClass(const char *name, Version_t cversion,
    fMerge(0), fResetAfterMerge(0), fNew(0), fNewArray(0), fDelete(0), fDeleteArray(0),
    fDestructor(0), fDirAutoAdd(0), fStreamerFunc(0), fSizeof(-1),
    fCanSplit(-1), fProperty(0),fVersionUsed(kFALSE), 
-   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(kNone),
+   fIsOffsetStreamerSet(kFALSE), fOffsetStreamer(0), fStreamerType(TClass::kDefault),
    fCurrentInfo(0), fRefStart(0), fRefProxy(0),
    fSchemaRules(0), fStreamerImpl(&TClass::StreamerDefault)
 {
@@ -1820,8 +1834,8 @@ Bool_t TClass::CallShowMembers(void* obj, TMemberInspector &insp,
          } else {
             R__LOCKGUARD2(gCINTMutex);
             gCint->CallFunc_ResetArg(fInterShowMembers);
-            gCint->CallFunc_SetArg(fInterShowMembers,(long) &insp);
-            void* address = (void*) (((long) obj) + fOffsetStreamer);
+            gCint->CallFunc_SetArg(fInterShowMembers,(Long_t) &insp);
+            void* address = (void*) (((Long_t) obj) + fOffsetStreamer);
             gCint->CallFunc_Exec((CallFunc_t*)fInterShowMembers,address);
             return kTRUE;
          }
@@ -2378,7 +2392,10 @@ namespace {
       TVirtualCollectionProxy *fCollectionProxy;
       TClassStreamer          *fStreamer;
 
-      static TClassLocalStorage *GetStorage(const TClass *cl) {
+      static TClassLocalStorage *GetStorage(const TClass *cl) 
+      {
+         // Return the thread storage for the TClass.
+
          void **thread_ptr = (*gThreadTsd)(0,ROOT::kClassThreadSlot);
          if (thread_ptr) {
             if (*thread_ptr==0) *thread_ptr = new TExMap();
@@ -2423,9 +2440,13 @@ TClassStreamer *TClass::GetStreamer() const
       if (local->fStreamer==0) {
          local->fStreamer = fStreamer->Generate();
          const type_info &orig = ( typeid(*fStreamer) );
-         const type_info &copy = ( typeid(*local->fStreamer) );
-         if (strcmp(orig.name(),copy.name())!=0) {
-            Warning("GetStreamer","For %s, the TClassStreamer passed does not properly implement the Generate method (%s vs %s\n",GetName(),orig.name(),copy.name());
+         if (!local->fStreamer) {
+            Warning("GetStreamer","For %s, the TClassStreamer (%s) passed's call to Generate failed!",GetName(),orig.name());
+         } else {
+            const type_info &copy = ( typeid(*local->fStreamer) );
+            if (strcmp(orig.name(),copy.name())!=0) {
+               Warning("GetStreamer","For %s, the TClassStreamer passed does not properly implement the Generate method (%s vs %s)\n",GetName(),orig.name(),copy.name());
+            }
          }
       }
       return local->fStreamer;
@@ -4601,7 +4622,7 @@ Long_t TClass::Property() const
    Long_t dummy;
    TClass *kl = const_cast<TClass*>(this);
 
-   kl->fStreamerType = kNone;
+   kl->fStreamerType = TClass::kDefault;
    kl->fStreamerImpl = &TClass::StreamerDefault;
 
    if (InheritsFrom(TObject::Class())) {
@@ -4626,7 +4647,7 @@ Long_t TClass::Property() const
          kl->fStreamerType  = kForeign;
          kl->fStreamerImpl  = &TClass::StreamerStreamerInfo;
 
-      } else if ( kl->fStreamerType == kNone ) {
+      } else if ( kl->fStreamerType == TClass::kDefault ) {
          if ( gCint->ClassInfo_FileName(fClassInfo) 
              && strcmp( gCint->ClassInfo_FileName(fClassInfo),"{CINTEX dictionary translator}")==0) {
             kl->SetBit(kIsForeign);
@@ -4661,6 +4682,8 @@ Long_t TClass::Property() const
          case kInstrumented|kEmulated: kl->fStreamerImpl = &TClass::StreamerStreamerInfo; break;
          case kExternal|kEmulated:     kl->fStreamerImpl = &TClass::StreamerExternal; break;
          case kTObject|kEmulated:      kl->fStreamerImpl = &TClass::StreamerTObjectEmulated; break;
+         case TClass::kDefault:       kl->fStreamerImpl = &TClass::StreamerDefault; break;
+            
       }  
       return 0;
    }
@@ -5183,7 +5206,7 @@ void TClass::AdoptStreamer(TClassStreamer *str)
       // Case where there was a custom streamer and it is hereby removed,
       // we need to reset fStreamerType
       fStreamer = str;
-      fStreamerType = kNone;
+      fStreamerType = TClass::kDefault;
       if (fProperty != -1) {
          fProperty = -1;
          Property();

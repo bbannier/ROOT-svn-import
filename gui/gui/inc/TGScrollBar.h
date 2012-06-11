@@ -128,6 +128,7 @@ public:
    virtual Bool_t HandleTimer(TTimer *t);
    virtual void   Layout() = 0;
 
+   virtual void  SetDragging(Bool_t drag) { fDragging = drag; }
    virtual void  SetRange(Int_t range, Int_t page_size) = 0;
    virtual void  SetPosition(Int_t pos) = 0;
    virtual Int_t GetPosition() const { return fPos; }
@@ -174,7 +175,7 @@ public:
 
    virtual void SetRange(Int_t range, Int_t page_size);  //*MENU*
    virtual void SetPosition(Int_t pos);                  //*MENU* *GETTER=GetPosition
-   virtual void SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void SavePrimitive(std::ostream &out, Option_t *option = "");
 
    ClassDef(TGHScrollBar,0)  // Horizontal scrollbar widget
 };
@@ -197,7 +198,7 @@ public:
 
    virtual void SetRange(Int_t range, Int_t page_size);  //*MENU*
    virtual void SetPosition(Int_t pos);                  //*MENU*  *GETTER=GetPosition
-   virtual void SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void SavePrimitive(std::ostream &out, Option_t *option = "");
 
    ClassDef(TGVScrollBar,0)  // Vertical scrollbar widget
 };

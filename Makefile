@@ -106,6 +106,15 @@ endif
 ifeq ($(PLATFORM),ios)
 MODULES      += graf2d/ios
 endif
+ifeq ($(BUILDCOCOA),yes)
+MODULES      += graf2d/quartz
+MODULES      += graf2d/cocoa
+MODULES      += core/macosx
+SYSTEML      += $(MACOSXL)
+SYSTEMO      += $(MACOSXO)
+SYSTEMDO     += $(MACOSXDO)
+CORELIBEXTRA += -framework Cocoa
+endif
 ifeq ($(BUILDX11),yes)
 MODULES      += graf2d/x11 graf2d/x11ttf graf3d/x3d rootx
 endif
@@ -295,7 +304,8 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios
+                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios \
+                graf2d/quartz graf2d/cocoa core/macosx
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -558,7 +568,7 @@ INCLUDEFILES :=
 
 ##### RULES #####
 
-.SUFFIXES: .cxx .d
+.SUFFIXES: .cxx .mm .d
 .PRECIOUS: include/%.h
 
 # special rules (need to be defined before generic ones)
@@ -635,6 +645,11 @@ $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.c
 	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CFLAGS) -- $$<
 	$$(CC) $$(OPT) $$(CFLAGS) $$(CXXOUT)$$@ -c $$<
 
+$(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.mm
+	$$(MAKEDIR)
+	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
+	$$(CXX) $$(OPT) $$(CXXFLAGS) -ObjC++ $$(CXXOUT)$$@ -c $$<
+
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.f
 	$$(MAKEDIR)
 ifeq ($$(F77),f2c)
@@ -662,6 +677,10 @@ $(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CFLAGS) -- $<
 	$(CC) $(OPT) $(CFLAGS) $(CXXOUT)$@ -c $<
 
+%.o: %.mm
+	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
+	$(CXX) $(OPT) $(CXXFLAGS) -ObjC++ $(CXXOUT)$@ -c $<
+
 %.o: %.f
 ifeq ($(F77),f2c)
 	f2c -a -A $<
@@ -687,6 +706,15 @@ ifneq ($(findstring map, $(MAKECMDGOALS)),)
 endif
 
 all:            rootexecs postbin
+	@echo " "
+	@echo "   ============================================================"
+	@echo "   ===                ROOT BUILD SUCCESSFUL.                ==="
+ifeq ($(USECONFIG),FALSE)
+	@echo "   === Run 'source bin/thisroot.[c]sh' before starting ROOT ==="
+else
+	@echo "   === Run 'make install' now.                              ==="
+endif
+	@echo "   ============================================================"
 
 fast:           rootexecs
 
@@ -764,12 +792,19 @@ config/Makefile.config config/Makefile.comp include/RConfigure.h \
   etc/root.mimes $(ROOTRC) \
   bin/root-config: Makefile
 
-ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+Makefile: $(ROOT_SRCDIR)/Makefile
+endif
+
 Makefile: $(addprefix $(ROOT_SRCDIR)/,configure config/rootrc.in \
   config/RConfigure.in config/Makefile.in config/Makefile.$(ARCH) \
   config/Makefile-comp.in config/root-config.in config/rootauthrc.in \
   config/rootdaemonrc.in config/mimes.unix.in config/mimes.win32.in \
   config/proofserv.in config/roots.in) config.status
+ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
+	cp $(ROOT_SRCDIR)/Makefile $@
+endif
+ifeq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean debian redhat),)
 	+@( $(RECONFIGURE) "$?" "$(ROOT_SRCDIR)" || ( \
 	   echo ""; echo "Please, run $(ROOT_SRCDIR)/configure again as config option files ($?) have changed."; \
 	   echo ""; exit 1; \
@@ -1057,6 +1092,14 @@ releasenotes:
 	@$(MAKERELNOTES)
 
 html: $(ROOTEXE) changelog releasenotes
+ifneq ($(USECONFIG),FALSE)
+	@if [ "x`which root.exe`" != "x$(DESTDIR)$(BINDIR)/root.exe" ] \
+	  || [ "`which root.exe`" -ot "bin/root.exe" ]; then \
+	  echo 'ERROR: root.exe has not been installed by this build.'; \
+	  echo '       Run "make install" before running "make html".'; \
+	  exit 1; \
+	fi
+endif
 	@$(MAKELOGHTML)
 	@$(MAKEHTML)
 

@@ -69,6 +69,7 @@ class TStreamerElement;
 #include "TFile.h"
 #include "TFriendElement.h"
 #include "TLeaf.h"
+#include "TLeafC.h"
 #include "TTree.h"
 #include "TVirtualStreamerInfo.h"
 #include "TStreamerElement.h"
@@ -255,7 +256,7 @@ namespace ROOT {
    Bool_t TTreeProxyGenerator::NeedToEmulate(TClass *cl, UInt_t /* level */)
    {
       // Return true if we should create a nested class representing this class
-      
+
       return cl!=0 && cl->TestBit(TClass::kIsEmulation);
    }
 
@@ -494,6 +495,74 @@ namespace ROOT {
       }
    }
 
+   void TTreeProxyGenerator::AddMissingClassAsEnum(const char *clname, Bool_t isscope)
+   {
+      // Generate an enum for a given type if it is not known in the list of class
+      // unless the type itself a template.
+      
+      if (!TClassEdit::IsStdClass(clname) && !TClass::GetClass(clname) && gROOT->GetType(clname) == 0) {
+         
+         TObject *obj = fListOfForwards.FindObject(clname);
+         if (obj) return;
+         
+         // The class does not exist, let's create it if ew can.
+         if (clname[strlen(clname)-1]=='>') {
+            // Template instantiation.
+            fListOfForwards.Add(new TNamed(clname,TString::Format("template <> class %s { public: operator int() { return 0; } };\n", clname).Data()));
+         } else if (isscope) {
+            // a scope 
+            
+         } else {
+            // Class or enum we know nothing about, let's assume it is an enum.
+            fListOfForwards.Add(new TNamed(clname,TString::Format("enum %s { kDefault_%s };\n", clname, clname).Data()));
+         }
+      }
+   }
+
+   void TTreeProxyGenerator::CheckForMissingClass(const char *clname)
+   {
+      // Check if the template parameter refers to an enum and/or a missing class (we can't tell those 2 apart unless
+      // the name as template syntax).
+      
+      UInt_t len = strlen(clname);
+      UInt_t nest = 0;
+      UInt_t last = 0;
+      //Bool_t istemplate = kFALSE; // mark whether the current right most entity is a class template.
+      
+      for (UInt_t i = 0; i < len; ++i) {
+         switch (clname[i]) {
+            case ':':
+               if (nest == 0 && clname[i+1] == ':') {
+                  TString incName(clname, i);
+                  AddMissingClassAsEnum(incName.Data(), kTRUE);
+                  //istemplate = kFALSE;
+               }
+               break;
+            case '<':
+               ++nest;
+               if (nest == 1) last = i + 1;
+               break;
+            case '>':
+               if (nest == 0) return; // The name is not well formed, give up.
+               --nest; /* intentional fall throught to the next case */
+            case ',':
+               if ((clname[i] == ',' && nest == 1) || (clname[i] == '>' && nest == 0)) {
+                  TString incName(clname + last, i - last);
+                  incName = TClassEdit::ShortType(incName.Data(), TClassEdit::kDropTrailStar | TClassEdit::kLong64);
+                  if (clname[i] == '>' && nest == 1) incName.Append(">");
+                  
+                  if (isdigit(incName[0])) {
+                     // Not a class name, nothing to do.
+                  } else {
+                     AddMissingClassAsEnum(incName.Data(),kFALSE);
+                  }
+                  last = i + 1;
+               }
+         }
+      }
+      AddMissingClassAsEnum(TClassEdit::ShortType(clname, TClassEdit::kDropTrailStar | TClassEdit::kLong64).c_str(),kFALSE);
+   }
+   
 static TString GetContainedClassName(TBranchElement *branch, TStreamerElement *element, Bool_t ispointer)
 {
    TString cname = branch->GetClonesName();
@@ -555,10 +624,13 @@ static TVirtualStreamerInfo *GetStreamerInfo(TBranch *branch, TIter current, TCl
       }
    }
    if (objInfo == 0 && branch->GetTree()->GetDirectory()->GetFile()) {
-      TVirtualStreamerInfo *i = (TVirtualStreamerInfo *)branch->GetTree()->GetDirectory()->GetFile()->GetStreamerInfoCache()->FindObject(cname);
-      if (i) {
-         // NOTE: Is this correct for Foreigh classes?
-         objInfo = (TVirtualStreamerInfo *)cl->GetStreamerInfo(i->GetClassVersion());
+      const TList *infolist = branch->GetTree()->GetDirectory()->GetFile()->GetStreamerInfoCache();
+      if (infolist) {
+         TVirtualStreamerInfo *i = (TVirtualStreamerInfo *)infolist->FindObject(cname);
+         if (i) {
+            // NOTE: Is this correct for Foreigh classes?
+            objInfo = (TVirtualStreamerInfo *)cl->GetStreamerInfo(i->GetClassVersion());
+         }
       }
    }
    if (objInfo == 0) {
@@ -816,6 +888,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                   TClass *valueClass = cl->GetCollectionProxy()->GetValueClass();
                   if (valueClass) cname = valueClass->GetName();
                   else {
+                     CheckForMissingClass(cname);
                      proxyTypeName = Form("TStlSimpleProxy<%s >", cl->GetName());
 //                   AddPragma(Form("#pragma create TClass %s;\n", cl->GetName()));
                      if (!cl->IsLoaded()) AddPragma(Form("#pragma link C++ class %s;\n", cl->GetName()));
@@ -1083,7 +1156,10 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       //if (leafcount) {
       //   len = leafcount->GetMaximum();
       //}
-
+      if (dim == 0 && leaf->IsA() == TLeafC::Class()) {
+         // For C style strings.
+         dim = 1;
+      }
 
       TString type;
       switch (dim) {
@@ -1253,6 +1329,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                if (cl->GetCollectionProxy()->GetValueClass()) {
                   cl = cl->GetCollectionProxy()->GetValueClass();
                } else {
+                  CheckForMissingClass(cl->GetName());
                   type = Form("TStlSimpleProxy<%s >", cl->GetName());
                   AddHeader(cl);
                   if (!cl->IsLoaded()) AddPragma(Form("#pragma link C++ class %s;\n", cl->GetName()));
@@ -1267,6 +1344,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
                      ? be->GetInfo() : cl->GetStreamerInfo(); // the 2nd hand need to be fixed
                   desc = new TBranchProxyClassDescriptor(cl->GetName(), beinfo, branchname,
                      isclones, branch->GetSplitLevel(),containerName);
+                  info = beinfo;
                } else {
                   type = Form("TObjProxy<%s >",cl->GetName());
                }
@@ -1608,7 +1686,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       // not be needed.
       // (I.e. return kFALSE if a container of this class
       // can not have a "pragma C++ class" 
-      
+
       if (!cl) return kFALSE;
       if (cl->GetCollectionProxy()) {
          TClass *valcl = cl->GetCollectionProxy()->GetValueClass();
@@ -1675,7 +1753,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
 
       fHeaderFileName = fPrefix;
       TString classname = gSystem->BaseName(fPrefix);
-      
+
       // Check if there is already an extension and extract it.
       Ssiz_t pos = classname.Last('.');
       if (pos != kNPOS) {
@@ -1895,7 +1973,7 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       next = &fListOfFriends;
       TFriendProxyDescriptor *fpd;
       while ( (fpd = (TFriendProxyDescriptor*)next()) ) {
-          fprintf(hf,",\n      %-*s(&fDirector,tree,%d)",
+         fprintf(hf,",\n      %-*s(&fDirector,tree,%d)",
                  fMaxDatamemberType, fpd->GetTitle(), fpd->GetIndex());
       }
 

@@ -45,9 +45,9 @@
 
 
 class TColor : public TNamed {
-
-private:
+protected:
    Int_t          fNumber;        //Color number identifier
+private:
    Float_t        fRed;           //Fraction of Red
    Float_t        fGreen;         //Fraction of Green
    Float_t        fBlue;          //Fraction of Blue
@@ -93,6 +93,7 @@ public:
    virtual Float_t GetGrayscale() const { /*ITU*/ return 0.299f*fRed + 0.587f*fGreen + 0.114f*fBlue; }
    virtual void  ls(Option_t *option="") const;
    virtual void  Print(Option_t *option="") const;
+   virtual void  SetAlpha(Float_t a) { fAlpha = a; }
    virtual void  SetRGB(Float_t r, Float_t g, Float_t b);
 
    static void    InitializeColors();
@@ -118,7 +119,7 @@ public:
    static void    Pixel2RGB(ULong_t pixel, Int_t &r, Int_t &g, Int_t &b);
    static void    Pixel2RGB(ULong_t pixel, Float_t &r, Float_t &g, Float_t &b);
    static const char *PixelAsHexString(ULong_t pixel);
-   static void    SaveColor(ostream &out, Int_t ci);
+   static void    SaveColor(std::ostream &out, Int_t ci);
    static Bool_t  IsGrayscale();
    static void    SetGrayscale(Bool_t set = kTRUE);
    static void    SetPalette(Int_t ncolors, Int_t *colors);

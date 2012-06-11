@@ -118,6 +118,8 @@
 #include "TSchemaRuleSet.h"
 #include "TThreadSlots.h"
 
+using std::sqrt;
+
 Long64_t TFile::fgBytesRead  = 0;
 Long64_t TFile::fgBytesWrite = 0;
 Long64_t TFile::fgFileCounter = 0;
@@ -276,7 +278,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    // it is made a Zombie. One can detect this situation with a code like:
    //    TFile f("file.root");
    //    if (f.IsZombie()) {
-   //       cout << "Error opening file" << endl;
+   //       std::cout << "Error opening file" << std::endl;
    //       exit(-1);
    //    }
    //
@@ -414,8 +416,13 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    }
 
    if (recreate) {
-      if (!gSystem->AccessPathName(fname, kFileExists))
-         gSystem->Unlink(fname);
+      if (!gSystem->AccessPathName(fname, kFileExists)) {
+         if (gSystem->Unlink(fname) != 0) {
+            SysError("TFile", "could not delete %s (errno: %d)",
+                     fname, gSystem->GetErrno());
+            goto zombie;
+         }
+      }
       recreate = kFALSE;
       create   = kTRUE;
       fOption  = "CREATE";
@@ -602,8 +609,14 @@ void TFile::Init(Bool_t create)
       char *header = new char[kBEGIN+200];
       Seek(0);
       //ReadBuffer(header, kBEGIN);
-      ReadBuffer(header, kBEGIN+200);
-
+      if (ReadBuffer(header, kBEGIN+200)) {
+         // ReadBuffer returns kTRUE in case of failure.
+         Error("Init","%s failed to read the file type data.",
+               GetName());
+         delete [] header;
+         goto zombie;
+      }
+      
       // make sure this is a ROOT file
       if (strncmp(header, "root", 4)) {
          Error("Init", "%s not a ROOT file", GetName());
@@ -658,7 +671,13 @@ void TFile::Init(Bool_t create)
          header       = new char[nbytes];
          buffer       = header;
          Seek(fBEGIN);
-         ReadBuffer(buffer,nbytes);
+         if (ReadBuffer(buffer,nbytes)) {
+            // ReadBuffer returns kTRUE in case of failure.
+            Error("Init","%s failed to read the file header information at %lld (size=%d)",
+                  GetName(),fBEGIN,nbytes);
+            delete [] header;
+            goto zombie;
+         }
          buffer = header+fNbytesName;
          buffer_keyloc = header;
       } else {
@@ -1043,7 +1062,12 @@ Float_t TFile::GetCompressionFactor()
 
    while (idcur < fEND-100) {
       Seek(idcur);
-      ReadBuffer(header, nwh);
+      if (ReadBuffer(header, nwh)) {
+         // ReadBuffer returns kTRUE in case of failure.
+//         Error("GetCompressionFactor","%s failed to read the key header information at %lld (size=%d).",
+//               GetName(),idcur,nwh);
+         break;
+      }
       buffer=header;
       frombuf(buffer, &nbytes);
       if (nbytes < 0) {
@@ -1136,7 +1160,12 @@ Int_t TFile::GetRecordHeader(char *buf, Long64_t first, Int_t maxbytes, Int_t &n
               GetName(), nread);
       return nread;
    }
-   ReadBuffer(buf,nread);
+   if (ReadBuffer(buf,nread)) {
+      // ReadBuffer return kTRUE in case of failure.
+      Warning("GetRecordHeader","%s: failed to read header data (maxbytes = %d)",
+              GetName(), nread);
+      return nread;
+   }
    Version_t versionkey;
    Short_t  klen;
    UInt_t   datime;
@@ -1207,7 +1236,12 @@ TList *TFile::GetStreamerInfoList()
       char *buffer = new char[fNbytesInfo+1];
       char *buf    = buffer;
       Seek(fSeekInfo);
-      ReadBuffer(buf,fNbytesInfo);
+      if (ReadBuffer(buf,fNbytesInfo)) {
+         // ReadBuffer returns kTRUE in case of failure.
+         Warning("GetRecordHeader","%s: failed to read the StreamerInfo data from disk.",
+                 GetName());
+         return 0;
+      }
       key->ReadKeyBuffer(buf);
       list = (TList*)key->ReadObjWithBuffer(buffer);
       if (list) list->SetOwner();
@@ -1235,7 +1269,7 @@ void TFile::ls(Option_t *option) const
    // then objects on the file.
 
    TROOT::IndentLevel();
-   cout <<ClassName()<<"**\t\t"<<GetName()<<"\t"<<GetTitle()<<endl;
+   std::cout <<ClassName()<<"**\t\t"<<GetName()<<"\t"<<GetTitle()<<std::endl;
    TROOT::IncreaseDirLevel();
    TDirectoryFile::ls(option);
    TROOT::DecreaseDirLevel();
@@ -1332,7 +1366,13 @@ void TFile::Map()
    while (idcur < fEND) {
       Seek(idcur);
       if (idcur+nread >= fEND) nread = fEND-idcur-1;
-      ReadBuffer(header, nread);
+      if (ReadBuffer(header, nread)) {
+         // ReadBuffer returns kTRUE in case of failure.
+         Warning("Map","%s: failed to read the key data from disk at %lld.",
+                 GetName(),idcur);
+         break;
+      }
+      
       buffer=header;
       frombuf(buffer, &nbytes);
       if (!nbytes) {
@@ -1727,7 +1767,12 @@ Int_t TFile::Recover()
    while (idcur < fEND) {
       Seek(idcur);
       if (idcur+nread >= fEND) nread = fEND-idcur-1;
-      ReadBuffer(header, nread);
+      if (ReadBuffer(header, nread)) {
+         // ReadBuffer returns kTRUE in case of failure.
+         Error("Recover","%s: failed to read the key data from disk at %lld.",
+               GetName(),idcur);
+         break;
+      }
       buffer  = header;
       bufread = header;
       frombuf(buffer, &nbytes);
@@ -2297,7 +2342,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    //    dirnameProjectSource.cxx // contains all the constructors and destructors implementation.
    // and one header per class that is not nested inside another class.
    // The header file name is the fully qualified name of the class after all the special characters
-   // "<>,:" are replaced by underscored.  For example for pair<edm::Vertex,int> the file name is
+   // "<>,:" are replaced by underscored.  For example for std::pair<edm::Vertex,int> the file name is
    // pair_edm__Vertex_int_.h
    //
    // In the generated classes, map, multimap when the first template parameter is a class
@@ -2454,7 +2499,8 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
 
    // we are now ready to generate the classes
    // loop on all TStreamerInfo
-   TList *filelist = (TList*)GetStreamerInfoCache()->Clone();
+   TList *filelist = (TList*)GetStreamerInfoCache();
+   if (filelist) filelist = (TList*)filelist->Clone();
    if (filelist == 0) {
       Error("MakeProject","file %s has no StreamerInfo", GetName());
       return;
@@ -2484,6 +2530,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       Error("MakeProject","Unable to create the source file %s.",spath.Data());
       return;
    }
+   fprintf(sfp, "namespace std {}\nusing namespace std;\n");
    fprintf(sfp, "#include \"%sProjectHeaders.h\"\n\n",subdirname.Data() );
    if (!genreflex) fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",subdirname.Data() );
    fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",subdirname.Data() );
@@ -3331,7 +3378,6 @@ void TFile::ShowStreamerInfo()
    // Show the StreamerInfo of all classes written to this file.
 
    TList *list = GetStreamerInfoList();
-
    if (!list) return;
 
    list->ls();
@@ -4016,7 +4062,7 @@ TFile *TFile::Open(TFileOpenHandle *fh)
 
       // Adopt the handle instance in the TFile instance so that it gets
       // automatically cleaned up
-      f->fAsyncHandle = fh;
+      if (f) f->fAsyncHandle = fh;
    }
 
    // We are done
