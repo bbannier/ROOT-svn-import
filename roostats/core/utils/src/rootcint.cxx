@@ -1030,17 +1030,17 @@ bool HasDirectoryAutoAdd(G__ClassInfo &cl)
 bool HasNewMerge(G__ClassInfo &cl)
 {
    // Return true if the class has a method Merge(TCollection*,TFileMergeInfo*)
-   
+
    // Detect if the class has a 'new' Merge function.
-   
+
    // Detect if the class or one of its parent has a DirectoryAutoAdd
    long offset;
    const char *proto = "TCollection*,TFileMergeInfo*";
    const char *name = "Merge";
-   
+
    G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
    bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
-   
+
    return hasMethodWithSignature;
 }
 
@@ -1048,17 +1048,17 @@ bool HasNewMerge(G__ClassInfo &cl)
 bool HasOldMerge(G__ClassInfo &cl)
 {
    // Return true if the class has a method Merge(TCollection*)
-   
+
    // Detect if the class has an old fashion Merge function.
-   
+
    // Detect if the class or one of its parent has a DirectoryAutoAdd
    long offset;
    const char *proto = "TCollection*";
    const char *name = "Merge";
-   
+
    G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset,G__ClassInfo::ExactMatch);
    bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
-   
+
    return hasMethodWithSignature;
 }
 
@@ -1066,18 +1066,18 @@ bool HasOldMerge(G__ClassInfo &cl)
 bool HasResetAfterMerge(G__ClassInfo &cl)
 {
    // Return true if the class has a method ResetAfterMerge(TFileMergeInfo *)
-   
+
    // Detect if the class has a 'new' Merge function.
    // bool hasMethod = cl.HasMethod("DirectoryAutoAdd");
-   
+
    // Detect if the class or one of its parent has a DirectoryAutoAdd
    long offset;
    const char *proto = "TFileMergeInfo*";
    const char *name = "ResetAfterMerge";
-   
+
    G__MethodInfo methodinfo = cl.GetMethod(name,proto,&offset);
    bool hasMethodWithSignature = methodinfo.IsValid() && (methodinfo.Property() & G__BIT_ISPUBLIC);
-   
+
    return hasMethodWithSignature;
 }
 
@@ -1924,7 +1924,7 @@ int ElementStreamer(G__TypeInfo &ti, const char *R__t,int rwmode,const char *tcl
    if (tcl == 0) {
       tcl = " internal error in rootcint ";
    }
-   //    if (strcmp(objType,"string")==0) RStl::inst().GenerateTClassFor( "string"  );
+   //    if (strcmp(objType,"string")==0) RStl::Instance().GenerateTClassFor( "string"  );
 
    if (rwmode == 0) {  //Read mode
 
@@ -2061,7 +2061,7 @@ int STLContainerStreamer(G__DataMemberInfo &m, int rwmode)
    if (stltype!=0) {
       //        fprintf(stderr,"Add %s (%d) which is also %s\n",
       //                m.Type()->Name(), stltype, m.Type()->TrueName() );
-      RStl::inst().GenerateTClassFor( m.Type()->Name() );
+      RStl::Instance().GenerateTClassFor( m.Type()->Name() );
    }
    if (!m.Type()->IsTmplt() || stltype<=0) return 0;
 
@@ -3367,7 +3367,7 @@ void WriteAutoStreamer(G__ClassInfo &cl)
    G__BaseClassInfo base(cl);
    while (base.Next()) {
       if (IsSTLContainer(base)) {
-         RStl::inst().GenerateTClassFor( base.Name() );
+         RStl::Instance().GenerateTClassFor( base.Name() );
       }
    }
 
@@ -3405,33 +3405,6 @@ void WriteAutoStreamer(G__ClassInfo &cl)
 }
 
 //______________________________________________________________________________
-void WriteStreamerBases(G__ClassInfo &cl)
-{
-   // Write Streamer() method for base classes of cl (unused)
-
-   (*dictSrcOut) << "//_______________________________________"
-                 << "_______________________________________" << std::endl
-                 << "void " << cl.Fullname() << "_StreamerBases(TBuffer &R__b, void *pointer)" << std::endl
-                 << "{" << std::endl
-                 << "   // Stream base classes of class " << cl.Fullname() << "." << std::endl << std::endl
-                 << "   " << cl.Fullname() << " *obj = (" << cl.Fullname() << "*)pointer;" << std::endl
-                 << "   if (R__b.IsReading()) {" << std::endl;
-   G__BaseClassInfo br(cl);
-   while (br.Next())
-      if (br.HasMethod("Streamer")) {
-         (*dictSrcOut) << "      obj->" << br.Name() << "::Streamer(R__b);" << std::endl;
-      }
-   (*dictSrcOut) << "   } else {" << std::endl;
-   G__BaseClassInfo bw(cl);
-   while (bw.Next())
-      if (bw.HasMethod("Streamer")) {
-         (*dictSrcOut) << "      obj->" << bw.Name() << "::Streamer(R__b);" << std::endl;
-      }
-   (*dictSrcOut) << "   }" << std::endl
-                 << "}" << std::endl << std::endl;
-}
-
-//______________________________________________________________________________
 void WritePointersSTL(G__ClassInfo &cl)
 {
    // Write interface function for STL members
@@ -3448,7 +3421,7 @@ void WritePointersSTL(G__ClassInfo &cl)
    while (base.Next()) {
       int k = IsSTLContainer(base);
       if (k!=0) {
-         RStl::inst().GenerateTClassFor( base.Name() );
+         RStl::Instance().GenerateTClassFor( base.Name() );
       }
    }
 
@@ -3491,7 +3464,7 @@ void WritePointersSTL(G__ClassInfo &cl)
       if (k!=0) {
          //          fprintf(stderr,"Add %s which is also",m.Type()->Name());
          //          fprintf(stderr," %s\n",m.Type()->TrueName() );
-         RStl::inst().GenerateTClassFor( m.Type()->Name() );
+         RStl::Instance().GenerateTClassFor( m.Type()->Name() );
       }
    }
 }
@@ -3761,12 +3734,11 @@ void WriteClassCode(G__ClassInfo &cl, bool force = false)
 
       if ( TClassEdit::IsSTLCont(cl.Name()) ) {
          // coverity[fun_call_w_exception] - that's just fine.
-         RStl::inst().GenerateTClassFor( cl.Name() );
+         RStl::Instance().GenerateTClassFor( cl.Name() );
          return;
       }
 
       if (cl.HasMethod("Streamer")) {
-         //WriteStreamerBases(cl);
          if (cl.RootFlag()) WritePointersSTL(cl);
          if (!(cl.RootFlag() & G__NOSTREAMER)) {
             if ((cl.RootFlag() & G__USEBYTECOUNT /*G__AUTOSTREAMER*/)) {
@@ -4760,7 +4732,7 @@ int main(int argc, char **argv)
             string argkeep;
             // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             StrcpyArg(argkeep, argv[i]);
-	    int ncha = argkeep.length()+1;
+            int ncha = argkeep.length()+1;
             // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
             argvv[argcc++] = (char*)calloc(ncha,1);
             // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
@@ -5139,7 +5111,7 @@ int main(int argc, char **argv)
             // Write Code for initialization object (except for STL containers)
             if ( TClassEdit::IsSTLCont(clLocal.Name()) ) {
                // coverity[fun_call_w_exception] - that's just fine.
-               RStl::inst().GenerateTClassFor( clLocal.Name() );
+               RStl::Instance().GenerateTClassFor( clLocal.Name() );
             } else {
                WriteClassInit(clLocal);
             }
@@ -5317,9 +5289,9 @@ int main(int argc, char **argv)
          WriteClassCode(clLocal);
       }
 
-      //RStl::inst().WriteStreamer(fp); //replaced by new Markus code
+      //RStl::Instance().WriteStreamer(fp); //replaced by new Markus code
       // coverity[fun_call_w_exception] - that's just fine.
-      RStl::inst().WriteClassInit(0);
+      RStl::Instance().WriteClassInit(0);
 
       fclose(fpld);
 

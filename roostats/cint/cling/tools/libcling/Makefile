@@ -16,9 +16,18 @@ LINK_LIBS_IN_SHARED = 1
 SHARED_LIBRARY = 1
 
 LINK_COMPONENTS := analysis archive asmparser asmprinter bitreader bitwriter codegen core debuginfo engine executionengine instcombine instrumentation interpreter ipa ipo jit linker mc mcdisassembler mcjit mcparser native nativecodegen object runtimedyld scalaropts selectiondag support tablegen target transformutils
-USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingUITextInput.a clangFrontend.a clangSerialization.a clangDriver.a clangCodeGen.a clangParse.a clangSema.a clangAnalysis.a clangRewrite.a clangAST.a clangLex.a clangBasic.a LLVMSupport.a
+USEDLIBS = clingUserInterface.a clingMetaProcessor.a clingInterpreter.a clingUITextInput.a clangFrontend.a clangSerialization.a clangDriver.a clangCodeGen.a clangParse.a clangSema.a clangAnalysis.a clangRewrite.a clangAST.a clangLex.a clangBasic.a clangEdit.a LLVMSupport.a
 LLVMLIBS = LLVMSupport.a
 include $(CLING_LEVEL)/Makefile
+
+# Inform the sources about their location
+CPPFLAGS += -I$(PROJ_SRC_DIR)/../../include -I$(PROJ_SRC_DIR)/../../../clang/include \
+-I$(PROJ_SRC_DIR)/../../../clang/lib -I$(PROJ_OBJ_DIR)/../../include \
+-I$(PROJ_OBJ_DIR)/../../../clang/include \
+'-DCLANG_SYS_HEADERS="-I$(PROJ_SRC_DIR)../../../clang/lib/Headers"' \
+'-DCLING_INSTDIR_INCL="$(DESTDIR)$(PROJ_includedir)"' \
+'-DCLING_SRCDIR_INCL="$(LLVM_SRC_ROOT)/tools/cling/include"'
+
 
 ##===----------------------------------------------------------------------===##
 # FIXME: This is copied from the 'lto' makefile.  Should we share this?

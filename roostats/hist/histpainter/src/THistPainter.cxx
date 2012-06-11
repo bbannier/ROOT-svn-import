@@ -23,6 +23,7 @@
 #include "TH2Poly.h"
 #include "TH3.h"
 #include "TProfile.h"
+#include "TProfile2D.h"
 #include "THStack.h"
 #include "TF2.h"
 #include "TF3.h"
@@ -219,7 +220,7 @@ using <tt>TH1::GetOption</tt>:
 
 <tr><th valign=top>"E"</th><td>
 Draw error bars.
-</td></tr> 
+</td></tr>
 
 <tr><th valign=top>"AXIS"</th><td>
 Draw only axis.
@@ -404,6 +405,10 @@ value. A sunken button is drawn for negative values a raised one for positive.
 A box is drawn for each cell with a color scale varying with contents. All the
 none empty bins are painted. Empty bins are not painted unless some bins have
 a negative content because in that case the null bins might be not empty.
+<tt>TProfile2D</tt> histograms are handled differently because, for this type of 2D
+histograms, it is possible to know if an empty bin has been filled or not. So even
+if all the bins' contents are positive some empty bins might be painted. And vice versa,
+if some bins have a negative content some empty bins might be not painted.
 </td></tr>
 
 <tr><th valign=top>"COLZ"</th><td>
@@ -923,7 +928,7 @@ Begin_Macro(source)
 }
 End_Macro
 Begin_Html
- 
+
 <p>2D histograms can be drawn with error bars as shown is the following example:
 
 End_Html
@@ -1204,6 +1209,11 @@ is the color change between cells.
 <p>All the none empty bins are painted. Empty bins are not painted unless
 some bins have a negative content because in that case the null bins
 might be not empty.
+
+<p><tt>TProfile2D</tt> histograms are handled differently because, for this type of 2D
+histograms, it is possible to know if an empty bin has been filled or not. So even
+if all the bins' contents are positive some empty bins might be painted. And vice versa,
+if some bins have a negative content some empty bins might be not painted.
 
 <p>Combined with the option <tt>"COL"</tt>, the option <tt>"Z"</tt> allows to
 display the color palette defined by <tt>gStyle->SetPalette()</tt>.
@@ -4552,6 +4562,7 @@ void THistPainter::PaintColorLevels(Option_t *)
    Double_t scale = ndivz/dz;
 
    Int_t color;
+   TProfile2D* prof2d = dynamic_cast<TProfile2D*>(fH);
    for (Int_t j=Hparam.yfirst; j<=Hparam.ylast;j++) {
       yk    = fYaxis->GetBinLowEdge(j);
       ystep = fYaxis->GetBinWidth(j);
@@ -4562,7 +4573,17 @@ void THistPainter::PaintColorLevels(Option_t *)
          if (Hoption.System == kPOLAR && xk<0) xk= 2*TMath::Pi()+xk;
          if (!IsInside(xk+0.5*xstep,yk+0.5*ystep)) continue;
          z     = fH->GetBinContent(bin);
-         if (z == 0 && (zmin >= 0 || Hoption.Logz)) continue; // don't draw the empty bins for histograms with positive content
+         // if fH is a profile histogram do not draw empty bins
+         if (prof2d) {
+            const Double_t binEntries = prof2d->GetBinEntries(bin);
+            if (binEntries == 0)
+               continue;
+         } else {
+            // don't draw the empty bins for non-profile histograms
+            // with positive content
+            if (z == 0 && (zmin >= 0 || Hoption.Logz)) continue;
+         }
+
          if (Hoption.Logz) {
             if (z > 0) z = TMath::Log10(z);
             else       z = zmin;
@@ -5516,7 +5537,10 @@ void THistPainter::PaintFunction(Option_t *)
       if (obj->InheritsFrom(TF2::Class())) {
          if (obj->TestBit(TF2::kNotDraw) == 0) {
             if (Hoption.Lego || Hoption.Surf) {
-               obj->Paint("surf same");
+               TF2 *f2 = (TF2*)obj;
+               f2->SetMinimum(fH->GetMinimum());
+               f2->SetMaximum(fH->GetMaximum());
+               f2->Paint("surf same");
             } else {
                obj->Paint("cont3 same");
             }
@@ -8347,6 +8371,7 @@ void THistPainter::PaintText(Option_t *)
          yt = y;
          if (gStyle->GetHistMinimumZero() && y<0) y = 0;
          if (getentries) yt = hp->GetBinEntries(i);
+         if (yt == 0.) continue;
          snprintf(value,50,format,yt);
          if (Hoption.Logx) {
             if (x > 0)  x  = TMath::Log10(x);
@@ -9093,7 +9118,8 @@ void THistPainter::ShowProjectionX(Int_t /*px*/, Int_t py)
    c->SetLogx(padsav->GetLogx());
 
    // Draw slice corresponding to mouse position
-   TH1D *hp = ((TH2*)fH)->ProjectionX("slice_px", biny1, biny2);
+   TString prjName = TString::Format("slice_px_of_%s",fH->GetName());
+   TH1D *hp = ((TH2*)fH)->ProjectionX(prjName, biny1, biny2);
    if (hp) {
       hp->SetFillColor(38);
       if (biny1 == biny2) hp->SetTitle(Form("ProjectionX of biny=%d", biny1));
@@ -9154,7 +9180,8 @@ void THistPainter::ShowProjectionY(Int_t px, Int_t /*py*/)
    c->SetLogx(padsav->GetLogy());
 
    // Draw slice corresponding to mouse position
-   TH1D *hp = ((TH2*)fH)->ProjectionY("slice_py", binx1, binx2);
+   TString prjName = TString::Format("slice_py_of_%s",fH->GetName());
+   TH1D *hp = ((TH2*)fH)->ProjectionY(prjName, binx1, binx2);
    if (hp) {
       hp->SetFillColor(38);
       if (binx1 == binx2) hp->SetTitle(Form("ProjectionY of binx=%d", binx1));

@@ -161,8 +161,10 @@ void start_rootd(int argc, char **argv)
    
    // Force stdin/out to point to the socket FD (this will also bypass the
    // close on exec setting for the socket)
-   dup2(fd, STDIN_FILENO);
-   dup2(fd, STDOUT_FILENO);
+   if (dup2(fd, STDIN_FILENO) != 0)
+      Info("WARNING: failure duplicating STDIN (errno: %d)", errno);
+   if (dup2(fd, STDOUT_FILENO) != 0)
+      Info("WARNING: failure duplicating STDOUT (errno: %d)", errno);
 
    // Prepare execv
    int na = argc - 4;
@@ -182,6 +184,7 @@ void start_rootd(int argc, char **argv)
 
    // We should not be here!!!
    Info("ERROR: returned from execv: bad, bad sign !!!");
+   delete [] argvv;
    return;
 }
 
@@ -281,6 +284,7 @@ void start_ps(int argc, char **argv)
    rpdunix *uconn = new rpdunix(sockpath.c_str());
    if (!uconn || (uconn && !uconn->isvalid(0))) {
       Info("ERROR: failure calling back parent on '%s'", sockpath.c_str());
+      if (uconn) delete uconn;
       return;
    }
 
@@ -288,6 +292,7 @@ void start_ps(int argc, char **argv)
    int rcc = 0;
    if ((rcc = uconn->send((int) getpid())) != 0) {
       Info("ERROR: failure sending pid to parent (errno: %d)", -rcc);
+      delete uconn;
       return;
    }
    
@@ -295,6 +300,7 @@ void start_ps(int argc, char **argv)
    rpdmsg msg;
    if ((rcc = uconn->recv(msg)) != 0) {
       Info("ERROR: failure receiving admin path and executable from parent (errno: %d)", -rcc);
+      delete uconn;
       return;
    }
    int ppid;
@@ -309,6 +315,7 @@ void start_ps(int argc, char **argv)
    msg.reset();
    if ((rcc = uconn->recv(msg)) != 0) {
       Info("ERROR: failure receiving information about dataset and data dir(s) from parent (errno: %d)", -rcc);
+      delete uconn;
       return;
    }
    int euid;
@@ -323,6 +330,7 @@ void start_ps(int argc, char **argv)
    if (setownerships(euid, user, group, creds, datasetsrcs, datadir, ddiropts,
                      ord, stag) != 0) {
       Info("ERROR: problems setting relevant user ownerships");
+      delete uconn;
       return;
    }
 
@@ -330,29 +338,34 @@ void start_ps(int argc, char **argv)
    if (mvfile(tenvfile, envfile, uid, gid, 0644) != 0) {
       Info("ERROR: problems renaming '%s' to '%s' (errno: %d)",
            tenvfile.c_str(), envfile.c_str(), errno);
+      delete uconn;
       return;
    }
    // Move the rootrc file in the session directory
    if (mvfile(trcfile, rcfile, uid, gid, 0644) != 0) {
       Info("ERROR: problems renaming '%s' to '%s' (errno: %d)",
            trcfile.c_str(), rcfile.c_str(), errno);
+      delete uconn;
       return;
    }
 
    // Add missing information to the rc file
    if (completercfile(rcfile, userdir, stag, adminpath) != 0) {
       Info("ERROR: problems completing '%s'", rcfile.c_str());
+      delete uconn;
       return;
    }
    // Set the environment following the content of the env file
    if (setproofservenv(envfile, logfile, rcfile) != 0) {
       Info("ERROR: problems setting environment from '%s'", envfile.c_str());
+      delete uconn;
       return;
    }
 
    // Export the file descriptor
    if (exportsock(uconn) != 0) {
       Info("ERROR: problems exporting file descriptor");
+      delete uconn;
       return;
    }
    delete uconn;
@@ -383,12 +396,12 @@ void start_ps(int argc, char **argv)
    } else {
       // We add our PID to be able to identify processes coming from us
       sxpd = new char[10];
-      sprintf(sxpd, "%d", ppid);
+      snprintf(sxpd, 10, "%d", ppid);
    }
 
    // Log level
    char slog[10] = {0};
-   sprintf(slog, "%d", gDebug);
+   snprintf(slog, 10, "%d", gDebug);
 
    // Fill arguments
    argvv[0] = (char *) pspath.c_str();
@@ -428,14 +441,15 @@ int loginuser(const std::string &home, const std::string &user, uid_t uid, gid_t
    }
 
    // set HOME env
-   char *h = new char[8 + home.length()];
-   sprintf(h, "HOME=%s", home.c_str());
+   size_t len = home.length() + 8;
+   char *h = new char[len];
+   snprintf(h, len, "HOME=%s", home.c_str());
    putenv(h);
    if (gDebug > 0) Info("loginuser: set '%s'", h);
 
    // set USER env
-   char *u = new char[8 + user.length()];
-   sprintf(u, "USER=%s", user.c_str());
+   char *u = new char[len];
+   snprintf(u, len, "USER=%s", user.c_str());
    putenv(u);
    if (gDebug > 0) Info("loginuser: set '%s'", u);
 
@@ -476,32 +490,16 @@ int assertdir(const std::string &path, uid_t u, gid_t g, unsigned int mode)
       Info("assertdir: ERROR: could not get privileges (errno: %d)", errno);
       return -1;
    }
-   
-   struct stat st;
-   if (stat(path.c_str(), &st) != 0) {
-      if (errno == ENOENT) {
-         if (mkdir(path.c_str(), mode) != 0) {
-            Info("assertdir: ERROR: unable to create path: %s (errno: %d)", path.c_str(), errno);
-            return -1;
-         }
-         if (stat(path.c_str(), &st) != 0) {
-            Info("assertdir: ERROR: unable to stat path: %s after creation! (errno: %d)", path.c_str(), errno);
-            return -1;
-         }
-      } else {
-         // Failure: stop
-         Info("assertdir: ERROR: unable to stat path: %s (errno: %d)", path.c_str(), errno);
-         return -1;
-      }
-   }
 
-   // Make sure the ownership is right
-   if (st.st_uid != u || st.st_gid != g) {
-      // Set ownership of the path to the client
-      if (chown(path.c_str(), u, g) == -1) {
-         Info("assertdir: ERROR: unable to set ownership on path: %s (errno: %d)", path.c_str(), errno);
-         return -1;
-      }
+   // Make the directory: ignore failure if already existing ...
+   if (mkdir(path.c_str(), mode) != 0 && (errno != EEXIST)) {
+      Info("assertdir: ERROR: unable to create path: %s (errno: %d)", path.c_str(), errno);
+      return -1;
+   }
+   // Set ownership of the path to the client
+   if (chown(path.c_str(), u, g) == -1) {
+      Info("assertdir: ERROR: unable to set ownership on path: %s (errno: %d)", path.c_str(), errno);
+      return -1;
    }
 
    // We are done
@@ -529,35 +527,16 @@ int mvfile(const std::string &from, const std::string &to, uid_t u, gid_t g, uns
       return -1;
    }
 
-   // Check the final destination
-   struct stat st;
-   if (stat(to.c_str(), &st) != 0) {
-      if (errno == ENOENT) {
-         Info("mvfile: ERROR: operation apparently OK but final path '%s' does not exist(!)", to.c_str());
-         return -1;
-      } else {
-         // Failure: stop
-         Info("mvfile: ERROR: unable to stat final path: %s (errno: %d)", to.c_str(), errno);
-         return -1;
-      }
-   }
-
-   // Make sure the access mode is right
-   if (st.st_mode != mode) {
-      // Set ownership of the path to the client
-      if (chmod(to.c_str(), mode) == -1) {
-         Info("mvfile: ERROR: unable to set mode %o on path: %s (errno: %d)", mode, to.c_str(), errno);
-         return -1;
-      }
+   // Set ownership of the path to the client
+   if (chmod(to.c_str(), mode) == -1) {
+      Info("mvfile: ERROR: unable to set mode %o on path: %s (errno: %d)", mode, to.c_str(), errno);
+      return -1;
    }
 
    // Make sure the ownership is right
-   if (st.st_uid != u || st.st_gid != g) {
-      // Set ownership of the path to the client
-      if (chown(to.c_str(), u, g) == -1) {
-         Info("mvfile: ERROR: unable to set ownership on path: %s (errno: %d)", to.c_str(), errno);
-         return -1;
-      }
+   if (chown(to.c_str(), u, g) == -1) {
+      Info("mvfile: ERROR: unable to set ownership on path: %s (errno: %d)", to.c_str(), errno);
+      return -1;
    }
 
    // We are done
@@ -815,7 +794,6 @@ int setownerships(int euid, const std::string &us, const std::string &gr,
    return 0;
 }
 
-
 //_____________________________________________________________________________
 int changeown(const std::string &path, uid_t u, gid_t g)
 {
@@ -825,23 +803,10 @@ int changeown(const std::string &path, uid_t u, gid_t g)
 
    if (path.length() <= 0) return -1;
 
-   struct stat st;
-   if (stat(path.c_str(), &st) != 0) {
-      // Failure: stop
-      Info("changeown: ERROR: problems stat-ing '%s' (errno: %d)",
-           path.c_str(), (int)errno);
-      return -1;
-   }
-
    // If is a directory apply this on it
-   if (S_ISDIR(st.st_mode)) {
+   DIR *dir = opendir(path.c_str());
+   if (dir) {
       // Loop over the dir
-      DIR *dir = opendir(path.c_str());
-      if (!dir) {
-         Info("changeown: ERROR: problems opening '%s' (errno: %d)",
-              path.c_str(), (int)errno);
-         return -1;
-      }
       std::string proot(path);
       if (!(proot.rfind('/') !=  proot.length() - 1)) proot += "/";
 
@@ -851,39 +816,25 @@ int changeown(const std::string &path, uid_t u, gid_t g)
          std::string fn(proot);
          fn += ent->d_name;
 
-         struct stat xst;
-         if (stat(fn.c_str(), &xst) == 0) {
-            // If is a directory apply this on it
-            if (S_ISDIR(xst.st_mode)) {
-               if (changeown(fn.c_str(), u, g) != 0) {
-                  Info("changeown: ERROR: problems changing recursively ownership of '%s'",
-                       fn.c_str());
-                  return -1;
-               }
-            } else {
-               // Get the privileges, if needed
-               rpdprivguard pguard((uid_t)0, (gid_t)0);
-               if (rpdbadpguard(pguard, u)) {
-                  Info("changeown: ERROR: could not get privileges (errno: %d)", errno);
-                  return -1;
-               }
-               // Set ownership of the path to the client
-               if (chown(fn.c_str(), u, g) == -1) {
-                  Info("changeown: ERROR: cannot set user ownership on path '%s' (errno: %d)",
-                       fn.c_str(), errno);
-                  return -1;
-               }
-            }
-         } else {
-            Info("changeown: ERROR: problems stat-ing '%s' (errno: %d)",
-                  fn.c_str(), (int)errno);
+         // Apply recursively
+         if (changeown(fn.c_str(), u, g) != 0) {
+            Info("changeown: ERROR: problems changing recursively ownership of '%s'",
+                  fn.c_str());
+            closedir(dir);
+            return -1;
          }
+
       }
       // Close the directory
       closedir(dir);
-
-   } else if ((st.st_uid != u) || (st.st_gid != g)) {
-      // Get the privileges, if needed
+   } else {
+      // If it was a directory and opening failed, we fail
+      if (errno != 0 && (errno != ENOTDIR)) {
+         Info("changeown: ERROR: problems opening '%s' (errno: %d)",
+              path.c_str(), (int)errno);
+         return -1;
+      }
+      // Else it may be a file ... get the privileges, if needed
       rpdprivguard pguard((uid_t)0, (gid_t)0);
       if (rpdbadpguard(pguard, u)) {
          Info("changeown: ERROR: could not get privileges (errno: %d)", errno);

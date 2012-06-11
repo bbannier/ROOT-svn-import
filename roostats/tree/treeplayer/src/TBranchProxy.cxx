@@ -118,10 +118,10 @@ void ROOT::TBranchProxy::Print()
 {
    // Display the content of the object
 
-   cout << "fBranchName " << fBranchName << endl;
-   //cout << "fTree " << fDirector->fTree << endl;
-   cout << "fBranch " << fBranch << endl;
-   if (fBranchCount) cout << "fBranchCount " << fBranchCount << endl;
+   std::cout << "fBranchName " << fBranchName << std::endl;
+   //std::cout << "fTree " << fDirector->fTree << std::endl;
+   std::cout << "fBranch " << fBranch << std::endl;
+   if (fBranchCount) std::cout << "fBranchCount " << fBranchCount << std::endl;
 }
 
 Bool_t ROOT::TBranchProxy::Setup()
@@ -135,7 +135,9 @@ Bool_t ROOT::TBranchProxy::Setup()
    }
    if (fParent) {
 
-      fParent->Setup();
+      if (!fParent->Setup()) {
+         return false;
+      }
       
       TClass *pcl = fParent->GetClass();
       R__ASSERT(pcl);
@@ -145,13 +147,14 @@ Bool_t ROOT::TBranchProxy::Setup()
 
          Int_t i = fDirector->GetReadEntry();
          if (i<0)  fDirector->SetReadEntry(0);
-         fParent->Read();
-         if (i<0) fDirector->SetReadEntry(i);
+         if (fParent->Read()) {
+            if (i<0) fDirector->SetReadEntry(i);
 
-         TClonesArray *clones;
-         clones = (TClonesArray*)fParent->GetStart();
+            TClonesArray *clones;
+            clones = (TClonesArray*)fParent->GetStart();
 
-         if (clones) pcl = clones->GetClass();
+            if (clones) pcl = clones->GetClass();
+         }
       } else if (pcl->GetCollectionProxy()) {
          // We always skip the collections.
 

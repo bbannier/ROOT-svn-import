@@ -7,27 +7,21 @@
 #ifndef CLING_CHAINED_CONSUMER_H
 #define CLING_CHAINED_CONSUMER_H
 
+#include "cling/Interpreter/CompilationOptions.h"
+
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 
 #include "clang/AST/DeclGroup.h"
-#include "clang/AST/Redeclarable.h"
 #include "clang/Sema/SemaConsumer.h"
-
-#include <bitset>
 
 namespace clang {
   class ASTContext;
-  class DeclContext;
-  class EnumDecl;
-  class FunctionDecl;
-  class NamedDecl;
-  class NamespaceDecl;
 }
 
 namespace cling {
 
+  class ASTNodeEraser;
   class ChainedMutationListener;
   class ChainedDeserializationListener;
   class VerifyingSemaConsumer;
@@ -51,25 +45,26 @@ namespace cling {
     virtual bool HandleTopLevelDecl(clang::DeclGroupRef D);
     virtual void HandleInterestingDecl(clang::DeclGroupRef D);
     virtual void HandleTagDeclDefinition(clang::TagDecl* D);
-    virtual void HandleVTable(clang::CXXRecordDecl* RD, bool DefinitionRequired);
+    virtual void HandleVTable(clang::CXXRecordDecl* RD,
+                              bool DefinitionRequired);
     virtual void CompleteTentativeDefinition(clang::VarDecl* D);
     virtual void HandleTranslationUnit(clang::ASTContext& Ctx);
 
     virtual clang::ASTMutationListener* GetASTMutationListener();
     virtual clang::ASTDeserializationListener* GetASTDeserializationListener();
     virtual void PrintStats();
-    
+
     // SemaConsumer
     virtual void InitializeSema(clang::Sema& S);
     virtual void ForgetSema();
 
     // Transaction Support
     bool IsInTransaction() { return m_InTransaction; }
-    
+
     void Add(EConsumerIndex I, clang::ASTConsumer* C);
     void RecoverFromError();
-    clang::ASTConsumer** getConsumers() { 
-      return Consumers; 
+    clang::ASTConsumer** getConsumers() {
+      return Consumers;
     }
 
     bool Exists(EConsumerIndex I) {
@@ -80,37 +75,32 @@ namespace cling {
       return Consumers[I];
     }
 
-    bool EnableConsumer(EConsumerIndex I) {
-      assert(Exists(I) && "Cannot disable. Consumer not set!");
-      bool PrevousState = Enabled[I];
-      Enabled.set(I);
-      return PrevousState;
-    }
-
-    bool DisableConsumer(EConsumerIndex I) {
-      assert(Exists(I) && "Cannot disable. Consumer not set!");
-      //assert(I != kCodeGenerator && "You shouldn't disable codegen!");
-      bool PrevousState = Enabled[I];
-      Enabled.reset(I);
-      return PrevousState;
-    }
-
-    void RestorePreviousState(EConsumerIndex I, bool Previous) {
-      assert(Exists(I) && "Cannot disable. Consumer not set!");
-      Enabled.set(I, Previous);
-    }
-
-    bool IsConsumerEnabled(EConsumerIndex I) {
-      return Enabled[I];
-    }
-
+    bool IsConsumerEnabled(EConsumerIndex I);
     bool IsQueueing() { return m_Queueing; }
 
     void DumpQueue();
     void Update(VerifyingSemaConsumer* ESSC);
+    void pushCompilationOpts(CompilationOptions CO) {
+      COStack.push_back(CO);
+    }
+
+    void popCompilationOpts() {
+      assert(COStack.size() && "Cannot pop elements back.");
+      COStack.pop_back();
+    }
+
+    CompilationOptions& getCompilationOpts() {
+      return COStack.back();
+    }
+
+    const CompilationOptions& getCompilationOpts() const{
+      return COStack.back();
+    }
+
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
-    std::bitset<kConsumersCount> Enabled;
+    llvm::SmallVector<CompilationOptions, 2> COStack;
+    llvm::OwningPtr<ASTNodeEraser> NodeEraser;
     llvm::OwningPtr<ChainedMutationListener> MutationListener;
     llvm::OwningPtr<ChainedDeserializationListener> DeserializationListener;
     bool m_InTransaction;
@@ -120,7 +110,7 @@ namespace cling {
       kTopLevelDecl,
       kInterestingDecl,
       kTagDeclDefinition,
-      kVTable,      
+      kVTable,
       kCompleteTentativeDefinition
     };
     struct DGRInfo {
@@ -130,44 +120,6 @@ namespace cling {
     };
     llvm::SmallVector<DGRInfo, 64> DeclsQueue;
     bool m_Queueing;
-
-    bool isOnScopeChains(clang::NamedDecl* D);
-    void RevertNamedDecl(clang::NamedDecl* ND);
-    void RevertVarDecl(clang::VarDecl* VD);
-    void RevertFunctionDecl(clang::FunctionDecl* FD);
-    void RevertEnumDecl(clang::EnumDecl* ED);
-    void RevertNamespaceDecl(clang::NamespaceDecl* NSD);
-
-    ///\brief 
-    /// Removes given declaration from the chain of redeclarations.
-    /// Rebuilds the chain and sets properly first and last redeclaration
-    ///
-    /// Returns the most recent redeclaration in the new chain
-    template <typename T>
-    T* RemoveFromRedeclChain(clang::Redeclarable<T>* R) {
-      llvm::SmallVector<T*, 4> PrevDecls;
-      T* PrevDecl = 0;
-
-      // [0]=>C [1]=>B [2]=>A ...
-      while ((PrevDecl = R->getPreviousDecl())) {
-        PrevDecls.push_back(PrevDecl);
-        R = PrevDecl;
-      }
-
-      if (!PrevDecls.empty()) {
-        // Put 0 in the end of the array so that the loop will reset the 
-        // pointer to latest redeclaration in the chain to itself.
-        //
-        PrevDecls.push_back(0);
-
-        // 0 <- A <- B <- C 
-        for(unsigned i = PrevDecls.size() - 1; i > 0; --i) {
-          PrevDecls[i-1]->setPreviousDeclaration(PrevDecls[i]);
-        }
-      }
-
-      return PrevDecls.empty() ? 0 : PrevDecls[0]->getMostRecentDecl();
-    }
 
     friend class IncrementalParser;
   };

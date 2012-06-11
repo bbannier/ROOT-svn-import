@@ -44,6 +44,8 @@
 #include <exception>
 #include <new>
 
+using namespace std;
+
 #if (defined(__FreeBSD__) && (__FreeBSD__ < 4)) || \
     (defined(__APPLE__) && (!defined(MAC_OS_X_VERSION_10_3) || \
      (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3)))
@@ -127,8 +129,9 @@ FILE *TProofServ::fgErrorHandlerFile = 0;
 // To control allowed actions while processing
 Int_t TProofServ::fgRecursive = 0;
 
-// Last message before exceptions
+// Last message and entry before exceptions
 TString TProofServ::fgLastMsg("<undef>");
+Long64_t TProofServ::fgLastEntry = -1;
 
 // Memory controllers
 Long_t TProofServ::fgVirtMemMax = -1;
@@ -587,7 +590,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    }   
 
    // Wait (loop) to allow debugger to connect
-   Bool_t test = (*argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
+   Bool_t test = (argc && *argc >= 4 && !strcmp(argv[3], "test")) ? kTRUE : kFALSE;
    if ((gEnv->GetValue("Proof.GdbHook",0) == 3 && !test) ||
        (gEnv->GetValue("Proof.GdbHook",0) == 4 && test)) {
       while (gProofServDebug)
@@ -595,12 +598,12 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    }
 
    // Test instance
-   if (*argc >= 4)
+   if (argc && *argc >= 4)
       if (!strcmp(argv[3], "test"))
          fService = "prooftest";
 
    // crude check on number of arguments
-   if (*argc < 2) {
+   if (argc && *argc < 2) {
       Error("TProofServ", "Must have at least 1 arguments (see  proofd).");
       exit(1);
    }
@@ -850,9 +853,9 @@ Int_t TProofServ::CreateServer()
       }
    }
 
-   // Everybody expects iostream to be available, so load it...
+   // Everybody expects std::iostream to be available, so load it...
    ProcessLine("#include <iostream>", kTRUE);
-   ProcessLine("#include <string>",kTRUE); // for std::string iostream.
+   ProcessLine("#include <string>",kTRUE); // for std::string std::iostream.
 
    // The following libs are also useful to have, make sure they are loaded...
    //gROOT->LoadClass("TMinuit",     "Minuit");
@@ -1157,9 +1160,10 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
    if (fProtocol > 18) {
       req << fLatency.RealTime();
       TProofProgressStatus *status = 0;
-      if (fPlayer)
+      if (fPlayer) {
+         fPlayer->UpdateProgressInfo();
          status = fPlayer->GetProgressStatus();
-      else {
+      } else {
          Error("GetNextPacket", "no progress status object");
          return 0;
       }
@@ -1278,7 +1282,7 @@ void TProofServ::GetOptions(Int_t *argc, char **argv)
       exit(0);
    }
 
-   if (*argc <= 1) {
+   if (!argc || (argc && *argc <= 1)) {
       Fatal("GetOptions", "Must be started from proofd with arguments");
       exit(1);
    }
@@ -1383,19 +1387,24 @@ void TProofServ::HandleSocketInput()
    
    } catch (std::bad_alloc &) {
       // Memory allocation problem:
-      exmsg.Form("caught exception 'bad_alloc' (memory leak?) %s", fgLastMsg.Data());
+      exmsg.Form("caught exception 'bad_alloc' (memory leak?) %s %lld",
+                 fgLastMsg.Data(), fgLastEntry);
    } catch (std::exception &exc) {
       // Standard exception caught
-      exmsg.Form("caught standard exception '%s' %s", exc.what(), fgLastMsg.Data());
+      exmsg.Form("caught standard exception '%s' %s %lld",
+                 exc.what(), fgLastMsg.Data(), fgLastEntry);
    } catch (int i) {
       // Other exception caught
-      exmsg.Form("caught exception throwing %d %s", i, fgLastMsg.Data());
+      exmsg.Form("caught exception throwing %d %s %lld",
+                 i, fgLastMsg.Data(), fgLastEntry);
    } catch (const char *str) {
       // Other exception caught
-      exmsg.Form("caught exception throwing '%s' %s", str, fgLastMsg.Data());
+      exmsg.Form("caught exception throwing '%s' %s %lld",
+                 str, fgLastMsg.Data(), fgLastEntry);
    } catch (...) {
       // Caught other exception
-      exmsg.Form("caught exception <unknown> %s", fgLastMsg.Data());
+      exmsg.Form("caught exception <unknown> %s %lld",
+                 fgLastMsg.Data(), fgLastEntry);
    }
 
    // Terminate on exception
@@ -2120,14 +2129,19 @@ Bool_t TProofServ::AcceptResults(Int_t connections, TVirtualProofPlayer *mergerP
       if (s == fMergingSocket) {
          // New incoming connection
          TSocket *sw = fMergingSocket->Accept();
-         fMergingMonitor->Add(sw);
+         if (sw && sw != (TSocket *)(-1)) {
+            fMergingMonitor->Add(sw);
 
-         PDB(kSubmerger, 2)
-            Info("AcceptResults", "connection from a worker accepted on merger %s ",
-                                  fOrdinal.Data());
-         // All assigned workers are connected
-         if (++numworkers >= connections)
-            fMergingMonitor->Remove(fMergingSocket);
+            PDB(kSubmerger, 2)
+               Info("AcceptResults", "connection from a worker accepted on merger %s ",
+                                    fOrdinal.Data());
+            // All assigned workers are connected
+            if (++numworkers >= connections)
+               fMergingMonitor->Remove(fMergingSocket);
+         } else {
+            PDB(kSubmerger, 1)
+               Info("AcceptResults", "spurious signal found of merging socket");
+         }
       } else {
          if (s->Recv(mess) < 0) {
             Error("AcceptResults", "problems receiving message");
@@ -4428,9 +4442,9 @@ void TProofServ::ProcessNext(TString *slb)
    }
 
    // Return number of events processed
+   Bool_t abort =
+      (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
    if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kFinished) {
-      Bool_t abort =
-         (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) ? kTRUE : kFALSE;
       m.Reset(kPROOF_STOPPROCESS);
       // message sent from worker to the master
       if (fProtocol > 18) {
@@ -4460,7 +4474,7 @@ void TProofServ::ProcessNext(TString *slb)
 
    // Complete filling of the TQueryResult instance
    if (fQMgr && !pq->IsDraw()) {
-      fProof->AskStatistics();
+      if (!abort) fProof->AskStatistics();
       if (fQMgr->FinalizeQuery(pq, fProof, fPlayer))
          fQMgr->SaveQuery(pq, fMaxQueries);
    }
@@ -4472,11 +4486,11 @@ void TProofServ::ProcessNext(TString *slb)
    TList rin;
    TDSet *ds = new TDSet(dset->GetName(), dset->GetObjName());
    rin.Add(ds);
-   pqr->SetInputList(&rin, kTRUE);
+   if (pqr) pqr->SetInputList(&rin, kTRUE);
    if (fPlayer->GetExitStatus() != TVirtualProofPlayer::kAborted && fPlayer->GetOutputList()) {
       PDB(kGlobal, 2)
          Info("ProcessNext", "sending results");
-      TQueryResult *xpq = (fProtocol > 10) ? pqr : pq;
+      TQueryResult *xpq = (pqr && fProtocol > 10) ? pqr : pq;
       if (SendResults(fSocket, fPlayer->GetOutputList(), xpq) != 0)
          Warning("ProcessNext", "problems sending output list");
       if (slb) slb->Form("%d %lld %lld %.3f", fPlayer->GetExitStatus(), pq->GetEntries(),
@@ -4491,11 +4505,11 @@ void TProofServ::ProcessNext(TString *slb)
 
    // Remove aborted queries from the list
    if (fPlayer->GetExitStatus() == TVirtualProofPlayer::kAborted) {
-      delete pqr;
+      if (pqr) SafeDelete(pqr);
       if (fQMgr) fQMgr->RemoveQuery(pq);
    } else {
       // Keep in memory only light infor about a query
-      if (!(pq->IsDraw())) {
+      if (!(pq->IsDraw()) && pqr) {
          if (fQMgr && fQMgr->Queries()) {
             fQMgr->Queries()->Add(pqr);
             // Remove from the fQueries list
@@ -4534,6 +4548,8 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
       // Only file collections TFileCollection
       TFileCollection *ds = dynamic_cast<TFileCollection*> (o);
       if (ds) {
+         // Origin of this dataset
+         ds->SetTitle(gSystem->HostName());
          // The tag and register option
          TNamed *fcn = 0;
          TString tag = TString::Format("DATASET_%s", ds->GetName());
@@ -4577,8 +4593,8 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
                   } else {
                      Info("RegisterDataSets", "dataset '%s' successfully registered", ds->GetName());
                      msg.Form("Registering and verifying dataset '%s' ... OK", ds->GetName());
-                     // Add tag to the list of processed tags to avoid double processing (there may be more objects with
-                     // the same name, created by each worker)
+                     // Add tag to the list of processed tags to avoid double processing
+                     // (there may be more objects with the same name, created by each worker)
                      tags.Add(new TObjString(tag));
                   }
                   SendAsynMessage(msg.Data(), kTRUE);
@@ -4603,8 +4619,14 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
    // Cleanup all temporary stuff possibly created by each worker
    TIter nxrm(&torm);
    while ((o = nxrm())) out->Remove(o);
-   tags.SetOwner(kTRUE);
    torm.SetOwner(kTRUE);
+   // Remove tags
+   TIter nxtg(&tags);
+   while((o = nxtg())) {
+      TObject *oo = 0;
+      while ((oo = out->FindObject(o->GetName()))) { out->Remove(oo); }
+   }
+   tags.SetOwner(kTRUE);
 
    PDB(kDataset, 1) Info("RegisterDataSets", "exit");
    // Done
@@ -4652,9 +4674,13 @@ void TProofServ::HandleQueryList(TMessage *mess)
          TQueryResult *pqm = 0;
          while ((pqr = (TProofQueryResult *)nxq())) {
             ntot++;
-            pqm = pqr->CloneInfo();
-            pqm->fSeqNum = ntot;
-            ql->Add(pqm);
+            if ((pqm = pqr->CloneInfo())) {
+               pqm->fSeqNum = ntot;
+               ql->Add(pqm);
+            } else {
+               Warning("HandleQueryList", "unable to clone TProofQueryResult '%s:%s'",
+                       pqr->GetName(), pqr->GetTitle());
+            }
          }
       }
       // Number of draw queries
@@ -5030,7 +5056,10 @@ void TProofServ::HandleCheckFile(TMessage *mess, TString *slb)
       } else if (IsMaster()) {
          // forward to workers
          fPackageLock->Unlock();
-         fProof->UploadPackage(fPackageDir + "/" + filenam, (TProof::EUploadPackageOpt)opt);
+         if (fProof->UploadPackage(fPackageDir + "/" + filenam,
+                                  (TProof::EUploadPackageOpt)opt) != 0)
+            Info("HandleCheckFile",
+                  "problems uploading package %s", filenam.Data());
       } else {
          // Unlock in all cases
          fPackageLock->Unlock();
@@ -5056,7 +5085,7 @@ void TProofServ::HandleCheckFile(TMessage *mess, TString *slb)
          if (IsMaster())
             if (fProof->UploadPackage(fPackageDir + "/" + filenam) != 0)
                Info("HandleCheckFile",
-                    "problems with uploading package %s", filenam.Data());
+                    "problems uploading package %s", filenam.Data());
                
       } else {
          reply << (Int_t)0;
@@ -6497,12 +6526,12 @@ void TProofServ::HandleException(Int_t sig)
 {
    // Exception handler: we do not try to recover here, just exit.
 
-   Error("HandleException", "caugth exception triggered by signal '%d' %s",
-                            sig, fgLastMsg.Data());
+   Error("HandleException", "caugth exception triggered by signal '%d' %s %lld",
+                            sig, fgLastMsg.Data(), fgLastEntry);
    // Description
    TString emsg;
-   emsg.Form("%s: caught exception triggered by signal '%d' %s",
-             GetOrdinal(), sig, fgLastMsg.Data());
+   emsg.Form("%s: caught exception triggered by signal '%d' %s %lld",
+             GetOrdinal(), sig, fgLastMsg.Data(), fgLastEntry);
    // Try to warn the user
    SendAsynMessage(emsg.Data());
 
@@ -6887,8 +6916,11 @@ void TProofServ::HandleSubmerger(TMessage *mess)
                         if ((mergerPlayer->AddOutputObject(o) != 1)) {
                            // Remove the object if it has not been merged: it is owned
                            // now by the merger player (in its output list)
-                           PDB(kSubmerger, 2) Info("HandleSocketInput", "removing merged object (%p)", o);
-                           fPlayer->GetOutputList()->Remove(o);
+                           if (fPlayer->GetOutputList()) {
+                              PDB(kSubmerger, 2)
+                                 Info("HandleSocketInput", "removing merged object (%p)", o);
+                              fPlayer->GetOutputList()->Remove(o);
+                           }
                         }
                      }
                      PDB(kSubmerger, 2) Info("HandleSubmerger","kBeMerger: own outputs added");
@@ -7183,6 +7215,14 @@ void TProofServ::SetLastMsg(const char *lastmsg)
    // Set the message to be sent back in case of exceptions
 
    fgLastMsg = lastmsg;
+}
+
+//______________________________________________________________________________
+void TProofServ::SetLastEntry(Long64_t entry)
+{
+   // Set the last entry before exception
+
+   fgLastEntry = entry;
 }
 
 //______________________________________________________________________________

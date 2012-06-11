@@ -36,6 +36,7 @@
 #include "TGPicture.h"
 #include "TSystem.h"
 #include "Riostream.h"
+#include <stdlib.h>
 
 const TGFont *TGTreeLBEntry::fgDefaultFont = 0;
 TGGC         *TGTreeLBEntry::fgDefaultGC = 0;
@@ -425,7 +426,9 @@ void TGFSComboBox::Update(const char *path)
             if (slen > len) {
                sel = afterID = gLbc[i].fId;
                indent_lvl = gLbc[i].fIndent + 1;
-               tailpath = path + slen;
+               if ((len > 0) && ((path[slen] == '\\') || (path[slen] == '/') ||
+                   (path[slen] == 0)))
+                  tailpath = path + slen;
                strlcpy(mpath, gLbc[i].fPath, 1024);
                len = slen;
             }
@@ -434,11 +437,12 @@ void TGFSComboBox::Update(const char *path)
    }
 
    if (tailpath && *tailpath) {
-      if (*tailpath == '/') ++tailpath;
+      if ((*tailpath == '/') || (*tailpath == '\\')) ++tailpath;
       if (*tailpath)
          while (1) {
             const char *picname;
             const char *semi = strchr(tailpath, '/');
+            if (semi == 0) semi = strchr(tailpath, '\\');
             if (semi == 0) {
                strlcpy(dirname, tailpath, 1024);
                picname = "ofolder_t.xpm";
@@ -446,8 +450,10 @@ void TGFSComboBox::Update(const char *path)
                strlcpy(dirname, tailpath, (semi-tailpath)+1);
                picname = "folder_t.xpm";
             }
-            if (mpath[strlen(mpath)-1] != '/') 
+            if ((mpath[strlen(mpath)-1] != '/') && 
+                (mpath[strlen(mpath)-1] != '\\')) {
                strlcat(mpath, "/", 1024-strlen(mpath));
+            }
             strlcat(mpath, dirname, 1024-strlen(mpath));
             int indent = 4 + (indent_lvl * 10);
             const TGPicture *pic = fClient->GetPicture(picname);
@@ -468,30 +474,30 @@ void TGFSComboBox::Update(const char *path)
 }
 
 //______________________________________________________________________________
-void TGFSComboBox::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGFSComboBox::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save a file system combo box as a C++ statement(s) on output stream out.
 
    if (fBackground != GetWhitePixel()) SaveUserColor(out, option);
 
-   out << endl << "   // file system combo box" << endl;
+   out << std::endl << "   // file system combo box" << std::endl;
    out << "   TGFSComboBox *";
    out << GetName() << " = new TGFSComboBox(" << fParent->GetName()
                                           << "," << fWidgetId;
    if (fBackground == GetWhitePixel()) {
       if (GetOptions() == (kHorizontalFrame | kSunkenFrame | kDoubleBorder)) {
-         out <<");" << endl;
+         out <<");" << std::endl;
       } else {
-         out << "," << GetOptionString() <<");" << endl;
+         out << "," << GetOptionString() <<");" << std::endl;
       }
    } else {
-      out << "," << GetOptionString() << ",ucolor);" << endl;
+      out << "," << GetOptionString() << ",ucolor);" << std::endl;
    }
    if (option && strstr(option, "keep_names"))
-      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << std::endl;
 
    out << "   " << GetName() << "->Resize(" << GetWidth()  << ","
-       << GetHeight() << ");" << endl;
-   out << "   " << GetName() << "->Select(" << GetSelected() << ");" << endl;
+       << GetHeight() << ");" << std::endl;
+   out << "   " << GetName() << "->Select(" << GetSelected() << ");" << std::endl;
 
 }

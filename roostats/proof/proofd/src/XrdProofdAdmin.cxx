@@ -543,6 +543,7 @@ int XrdProofdAdmin::SetGroupProperties(XrdProofdProtocol *p)
       TRACEP(p, XERR, "received group does not match the user's one");
       response->Send(kXR_InvalidRequest,
                      "SetGroupProperties: received group does not match the user's one");
+      SafeDelArray(grp);
       return 0;
    }
 
@@ -558,12 +559,15 @@ int XrdProofdAdmin::SetGroupProperties(XrdProofdProtocol *p)
          TRACEP(p, XERR, "problem sending message on the pipe");
          response->Send(kXR_ServerError,
                              "SetGroupProperties: problem sending message on the pipe");
+         SafeDelArray(grp);
          return 0;
       }
    }
 
    // Notify
    TRACEP(p, REQ, "priority for group '"<< grp<<"' has been set to "<<priority);
+
+   SafeDelArray(grp);
 
    // Acknowledge user
    response->Send();
@@ -1250,7 +1254,7 @@ int XrdProofdAdmin::Exec(XrdProofdProtocol *p)
             }
          }
          // Cleanup answer
-         SafeDelete(xrsp);
+         SafeDel(xrsp);
       }
    }
 
@@ -1497,7 +1501,7 @@ int XrdProofdAdmin::ExecCmd(XrdProofdProtocol *p, XrdProofdResponse *r,
                // Fill the buffer and go
                char msg[256];
                int  islink = S_ISLNK(st.st_mode);
-               sprintf(msg, "%ld %ld %d %d %d %lld %ld %d", (long)st.st_dev,
+               snprintf(msg, 256, "%ld %ld %d %d %d %lld %ld %d", (long)st.st_dev,
                         (long)st.st_ino, st.st_mode, (int)(st.st_uid),
                         (int)(st.st_gid), (kXR_int64)st.st_size, st.st_mtime, islink);
                emsg = msg;
@@ -1582,7 +1586,7 @@ int XrdProofdAdmin::ExecCmd(XrdProofdProtocol *p, XrdProofdResponse *r,
                }
                // Close the pipe
                int rcpc = 0;
-               if (rc == 0 && (rcpc = pclose(fp)) == -1) {
+               if ((rcpc = pclose(fp)) == -1) {
                   emsg = "could not close the command pipe";
                   rc = 1;
                }
@@ -1823,51 +1827,52 @@ int XrdProofdAdmin::GetFile(XrdProofdProtocol *p)
          } else {
             // Send the size as OK message
             char sizmsg[64];
-            sprintf(sizmsg, "%lld", (kXR_int64) st.st_size);
+            snprintf(sizmsg, 64, "%lld", (kXR_int64) st.st_size);
             response->Send((const char *) &sizmsg[0]);
             TRACEP(p, XERR, "size is "<<sizmsg<<" bytes");
-         }
-         // Now we send the content
-         const int kMAXBUF = 16384;
-         char buf[kMAXBUF];
-         off_t pos = 0;
-         lseek(fd, pos, SEEK_SET);
 
-         while (rc == 0 && pos < st.st_size) {
-            off_t left = st.st_size - pos;
-            if (left > kMAXBUF) left = kMAXBUF;
+            // Now we send the content
+            const int kMAXBUF = 16384;
+            char buf[kMAXBUF];
+            off_t pos = 0;
+            lseek(fd, pos, SEEK_SET);
 
-            int siz;
-            while ((siz = read(fd, &buf[0], left)) < 0 && errno == EINTR)
-               errno = 0;
-            if (siz < 0 || siz != left) {
-               emsg = "error reading from file: errno: ";
-               emsg += (int) errno;
-               rc = 1;
-               break;
-            }
+            while (rc == 0 && pos < st.st_size) {
+               off_t left = st.st_size - pos;
+               if (left > kMAXBUF) left = kMAXBUF;
 
-            int src = 0;
-            if ((src = response->Send(kXR_attn, kXPD_msg, (void *)&buf[0], left)) != 0) {
-               emsg = "error reading from file: errno: ";
-               emsg += src;
-               rc = 1;
-               break;
+               int siz;
+               while ((siz = read(fd, &buf[0], left)) < 0 && errno == EINTR)
+                  errno = 0;
+               if (siz < 0 || siz != left) {
+                  emsg = "error reading from file: errno: ";
+                  emsg += (int) errno;
+                  rc = 1;
+                  break;
+               }
+
+               int src = 0;
+               if ((src = response->Send(kXR_attn, kXPD_msg, (void *)&buf[0], left)) != 0) {
+                  emsg = "error reading from file: errno: ";
+                  emsg += src;
+                  rc = 1;
+                  break;
+               }
+               // Re-position
+               pos += left;
+               // Reset the timeout
+               if (pp.Post(0, "") != 0) {
+                  rc = 1;
+                  break;
+               }
             }
-            // Re-position
-            pos += left;
-            // Reset the timeout
-            if (pp.Post(0, "") != 0) {
-               rc = 1;
-               break;
+            // Close the file
+            close(fd);
+            // Send error, if any
+            if (rc != 0) {
+               TRACEP(p, XERR, emsg);
+               response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) emsg.c_str(), emsg.length());
             }
-         }
-         // Close the file
-         close(fd);
-         // Send error, if any
-         if (rc != 0) {
-            TRACEP(p, XERR, emsg);
-            response->Send(kXR_attn, kXPD_srvmsg, 0, (char *) emsg.c_str(), emsg.length());
          }
       }
 
@@ -1983,7 +1988,7 @@ int XrdProofdAdmin::PutFile(XrdProofdProtocol *p)
          return 0;
       }
       // Extract size
-      sscanf(ssiz.c_str(), "%lld", &size);
+      size = atoll(ssiz.c_str());
       if (size < 0) {
          TRACEP(p, XERR, "cannot resolve size!");
          response->Send(kXR_InvalidRequest, "cannot resolve size!");
@@ -2419,7 +2424,7 @@ int XrdProofdAdmin::CpFile(XrdProofdProtocol *p)
             }
             // Close the pipe if not in error state (otherwise we may block here)
             int rcpc = 0;
-            if (rc == 0 && (rcpc = pclose(fp)) == -1) {
+            if ((rcpc = pclose(fp)) == -1) {
                emsg = "error while trying to close the command pipe";
                rc = 1;
             }

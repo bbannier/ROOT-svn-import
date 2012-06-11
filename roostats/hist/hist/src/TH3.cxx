@@ -252,6 +252,13 @@ Int_t TH3::BufferFill(Double_t x, Double_t y, Double_t z, Double_t w)
 }
 
 //______________________________________________________________________________
+Int_t TH3::Fill(Double_t )
+{
+   // Invalid Fill method
+   Error("Fill", "Invalid signature - do nothing"); 
+   return -1;
+}
+//______________________________________________________________________________
 Int_t TH3::Fill(Double_t x, Double_t y, Double_t z)
 {
    //*-*-*-*-*-*-*-*-*-*-*Increment cell defined by x,y,z by 1 *-*-*-*-*
@@ -1469,7 +1476,7 @@ Long64_t TH3::Merge(TCollection *list)
    //be a multiple of the bin width.
 
    if (!list) return 0;
-   if (list->IsEmpty()) return (Int_t) GetEntries();
+   if (list->IsEmpty()) return (Long64_t) GetEntries();
 
    TList inlist;
    inlist.AddAll(list);
@@ -1480,6 +1487,7 @@ Long64_t TH3::Merge(TCollection *list)
    Bool_t initialLimitsFound = kFALSE;
    Bool_t allSameLimits = kTRUE;
    Bool_t allHaveLimits = kTRUE;
+   Bool_t firstNonEmptyHist = kTRUE;
 
    TIter next(&inlist);
    TH3* h = this;
@@ -1492,6 +1500,22 @@ Long64_t TH3::Merge(TCollection *list)
 
       if (hasLimits) {
          h->BufferEmpty();
+
+         // this is done in case the first histograms are empty and 
+         // the histogram have different limits
+         if (firstNonEmptyHist ) { 
+            // set axis limits in the case the first histogram was empty
+            if (h != this ) { 
+               if (!SameLimitsAndNBins(fXaxis, *(h->GetXaxis())) ) 
+                  fXaxis.Set(h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),h->GetXaxis()->GetXmax());
+               if (!SameLimitsAndNBins(fYaxis, *(h->GetYaxis())) ) 
+                  fYaxis.Set(h->GetYaxis()->GetNbins(), h->GetYaxis()->GetXmin(),h->GetYaxis()->GetXmax());
+               if (!SameLimitsAndNBins(fZaxis, *(h->GetZaxis())) ) 
+                  fZaxis.Set(h->GetZaxis()->GetNbins(), h->GetZaxis()->GetXmin(),h->GetZaxis()->GetXmax());
+            }
+            firstNonEmptyHist = kFALSE;     
+         }
+
          if (!initialLimitsFound) {
             // this is executed the first time an histogram with limits is found
             // to set some initial values on the new axes
@@ -1590,7 +1614,7 @@ Long64_t TH3::Merge(TCollection *list)
             inlist.Remove(hclone);
             delete hclone; 
          }
-         return (Int_t) GetEntries();  // all histograms have been processed
+         return (Long64_t) GetEntries();  // all histograms have been processed
       }
       next.Reset();
    }

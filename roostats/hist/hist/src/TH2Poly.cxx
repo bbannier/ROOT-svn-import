@@ -278,7 +278,7 @@ Int_t TH2Poly::AddBin(Double_t x1, Double_t y1, Double_t x2, Double_t  y2)
 
 
 //______________________________________________________________________________
-void TH2Poly::Add(const TH1 *h1, Double_t c1)
+Bool_t TH2Poly::Add(const TH1 *h1, Double_t c1)
 {
    // Performs the operation: this = this + c1*h1.
 
@@ -289,7 +289,7 @@ void TH2Poly::Add(const TH1 *h1, Double_t c1)
    // Check if number of bins is the same.
    if (h1p->GetNumberOfBins() != fNcells) {
       Error("Add","Attempt to add histograms with different number of bins");
-      return;
+      return kFALSE;
    }
 
    // Check if the bins are the same.
@@ -303,7 +303,7 @@ void TH2Poly::Add(const TH1 *h1, Double_t c1)
          thisBin->GetYMin() != h1pBin->GetYMin() ||
          thisBin->GetYMax() != h1pBin->GetYMax()) {
          Error("Add","Attempt to add histograms with different bin limits");
-         return;
+         return kFALSE;
       }
    }
 
@@ -323,24 +323,27 @@ void TH2Poly::Add(const TH1 *h1, Double_t c1)
          fSumw2.fArray[bin] += c1*c1*e1*e1;
       }
    }
+   return kTRUE;
 }
 
 
 //______________________________________________________________________________
-void TH2Poly::Add(TF1 *, Double_t, Option_t *)
+Bool_t TH2Poly::Add(TF1 *, Double_t, Option_t *)
 {
    // Performs the operation: this = this + c1*f1.
 
    Warning("Add","Not implement for TH2Poly");
+   return kFALSE;
 }
 
 
 //______________________________________________________________________________
-void TH2Poly::Add(const TH1 *, const TH1 *, Double_t, Double_t)
+Bool_t TH2Poly::Add(const TH1 *, const TH1 *, Double_t, Double_t)
 {
    // Replace contents of this histogram by the addition of h1 and h2.
 
    Warning("Add","Not implement for TH2Poly");
+   return kFALSE;
 }
 
 
@@ -1131,11 +1134,11 @@ Bool_t TH2Poly::IsIntersectingPolygon(Int_t bn, Double_t *x, Double_t *y,
 
 
 //______________________________________________________________________________
-void TH2Poly::SavePrimitive(ostream &out, Option_t *option)
+void TH2Poly::SavePrimitive(std::ostream &out, Option_t *option)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
-   out <<"   "<<endl;
+   out <<"   "<<std::endl;
    out <<"   "<< ClassName() <<" *";
 
    //histogram pointer has by default the histogram name.
@@ -1155,7 +1158,7 @@ void TH2Poly::SavePrimitive(ostream &out, Option_t *option)
        << GetTitle() << "\", " << fCellX << ", " << fXaxis.GetXmin()
        << ", " << fXaxis.GetXmax()
        << ", " << fCellY << ", " << fYaxis.GetXmin() << ", "
-       << fYaxis.GetXmax() << ");" << endl;
+       << fYaxis.GetXmax() << ");" << std::endl;
 
    // Save Bins
    TIter       next(fBins);
@@ -1169,12 +1172,12 @@ void TH2Poly::SavePrimitive(ostream &out, Option_t *option)
    }
 
    // save bin contents
-   out<<"   "<<endl;
+   out<<"   "<<std::endl;
    Int_t bin;
    for (bin=1;bin<=fNcells;bin++) {
       Double_t bc = GetBinContent(bin);
       if (bc) {
-         out<<"   "<<hname<<"->SetBinContent("<<bin<<","<<bc<<");"<<endl;
+         out<<"   "<<hname<<"->SetBinContent("<<bin<<","<<bc<<");"<<std::endl;
       }
    }
 
@@ -1183,7 +1186,7 @@ void TH2Poly::SavePrimitive(ostream &out, Option_t *option)
       for (bin=1;bin<=fNcells;bin++) {
          Double_t be = GetBinError(bin);
          if (be) {
-            out<<"   "<<hname<<"->SetBinError("<<bin<<","<<be<<");"<<endl;
+            out<<"   "<<hname<<"->SetBinError("<<bin<<","<<be<<");"<<std::endl;
          }
       }
    }

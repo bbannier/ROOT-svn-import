@@ -144,7 +144,7 @@ public:
 
    void    Paint(Option_t *option="");        // to visualize the bits array as an histogram, etc
    void    Print(Option_t *option="") const;  // to show the list of active bits
-   void    Output(ostream &) const;
+   void    Output(std::ostream &) const;
 
    ClassDef(TBits,1)        // Bit container
 };
@@ -152,17 +152,17 @@ public:
 
 inline Bool_t operator&(const TBits::TReference& lhs, const TBits::TReference& rhs)
 {
-   return (bool)lhs & rhs;
+   return (Bool_t)lhs & rhs;
 }
 
 inline Bool_t operator|(const TBits::TReference& lhs, const TBits::TReference& rhs)
 {
-   return (bool)lhs | rhs;
+   return (Bool_t)lhs | rhs;
 }
 
 inline Bool_t operator^(const TBits::TReference& lhs, const TBits::TReference& rhs)
 {
-   return (bool)lhs ^ rhs;
+   return (Bool_t)lhs ^ rhs;
 }
 
 inline TBits operator&(const TBits& lhs, const TBits& rhs)
@@ -186,7 +186,7 @@ inline TBits operator^(const TBits& lhs, const TBits& rhs)
    return result;
 }
 
-inline ostream &operator<<(ostream& os, const TBits& rhs)
+inline std::ostream &operator<<(std::ostream& os, const TBits& rhs)
 {
    rhs.Output(os); return os;
 }

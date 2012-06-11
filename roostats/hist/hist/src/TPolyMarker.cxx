@@ -116,6 +116,9 @@ TPolyMarker& TPolyMarker::operator=(const TPolyMarker& pm)
       TAttMarker::operator=(pm);
       fN=pm.fN;
       fLastPoint=pm.fLastPoint;
+   // delete first previous existing fX and fY
+      if (fX) delete [] fX;
+      if (fY) delete [] fY;
       fX=pm.fX;
       fY=pm.fY;
       fOption=pm.fOption;
@@ -155,6 +158,9 @@ void TPolyMarker::Copy(TObject &obj) const
    TObject::Copy(obj);
    TAttMarker::Copy(((TPolyMarker&)obj));
    ((TPolyMarker&)obj).fN = fN;
+   // delete first previous existing fX and fY
+   if (((TPolyMarker&)obj).fX) delete [] (((TPolyMarker&)obj).fX);
+   if (((TPolyMarker&)obj).fY) delete [] (((TPolyMarker&)obj).fY);
    if (fN > 0) {
       ((TPolyMarker&)obj).fX = new Double_t [fN];
       ((TPolyMarker&)obj).fY = new Double_t [fN];
@@ -315,27 +321,27 @@ void TPolyMarker::Print(Option_t *) const
 
 
 //______________________________________________________________________________
-void TPolyMarker::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TPolyMarker::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out.
 
    char quote = '"';
-   out<<"   "<<endl;
-   out<<"   Double_t *dum = 0;"<<endl;
+   out<<"   "<<std::endl;
+   out<<"   Double_t *dum = 0;"<<std::endl;
    if (gROOT->ClassSaved(TPolyMarker::Class())) {
       out<<"   ";
    } else {
       out<<"   TPolyMarker *";
    }
-   out<<"pmarker = new TPolyMarker("<<fN<<",dum,dum,"<<quote<<fOption<<quote<<");"<<endl;
+   out<<"pmarker = new TPolyMarker("<<fN<<",dum,dum,"<<quote<<fOption<<quote<<");"<<std::endl;
 
    SaveMarkerAttributes(out,"pmarker",1,1,1);
 
    for (Int_t i=0;i<Size();i++) {
-      out<<"   pmarker->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<endl;
+      out<<"   pmarker->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<std::endl;
    }
    out<<"   pmarker->Draw("
-      <<quote<<option<<quote<<");"<<endl;
+      <<quote<<option<<quote<<");"<<std::endl;
 }
 
 

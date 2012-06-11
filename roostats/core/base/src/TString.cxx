@@ -642,7 +642,9 @@ namespace {
 // gcc v4.1.1 can't inline getblock, so don't really force it.
 #define FORCE_INLINE inline
 #else
-#define FORCE_INLINE __attribute__((always_inline))
+// (at least) in gcc v4.7, __attribute__((always_inline))" does not replace "inline" and they
+// need to be used together. 
+#define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
 #define ROTL64(x,y)     rotl64(x,y)
 #define BIG_CONSTANT(x) (x##LLU)
@@ -2062,9 +2064,9 @@ TString TString::Itoa(Int_t value, Int_t base)
    // Thus it is an enhanced version of sprintf (adapted from versions 0.4 of
    // http://www.jb.man.ac.uk/~slowe/cpp/itoa.html).
    // Usage: the following statement produce the same output, namely "1111"
-   //   cout << TString::Itoa(15,2) ;
-   //   cout << TString::Itoa(0xF,2) ; /// 0x prefix to handle hex
-   //   cout << TString::Itoa(017,2) ; /// 0  prefix to handle oct
+   //   std::cout << TString::Itoa(15,2) ;
+   //   std::cout << TString::Itoa(0xF,2) ; /// 0x prefix to handle hex
+   //   std::cout << TString::Itoa(017,2) ; /// 0  prefix to handle oct
    // In case of error returns the "!" string.
 
    std::string buf;

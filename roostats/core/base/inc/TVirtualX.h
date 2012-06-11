@@ -238,6 +238,7 @@ public:
    virtual void         ClearArea(Window_t id, Int_t x, Int_t y, UInt_t w, UInt_t h);
    virtual Bool_t       CheckEvent(Window_t id, EGEventType type, Event_t &ev);
    virtual void         SendEvent(Window_t id, Event_t *ev);
+   virtual void         DispatchClientMessage(UInt_t messageID);
    virtual void         WMDeleteNotify(Window_t id);
    virtual void         SetKeyAutoRepeat(Bool_t on = kTRUE);
    virtual void         GrabKey(Window_t id, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
@@ -327,6 +328,8 @@ public:
    virtual void         SetTypeList(Window_t win, Atom_t prop, Atom_t *typelist);
    virtual Window_t     FindRWindow(Window_t win, Window_t dragwin, Window_t input, int x, int y, int maxd);
    virtual Bool_t       IsDNDAware(Window_t win, Atom_t *typelist);
+   
+   virtual void         BeginModalSessionFor(Window_t window);
 
    virtual Bool_t       IsCmdThread() const { return kTRUE; }
 

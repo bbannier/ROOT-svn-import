@@ -627,7 +627,7 @@ namespace {
 
 
 //____________________________________________________________________________
-   long mp_hash( MethodProxy* pymeth )
+   Long_t mp_hash( MethodProxy* pymeth )
    {
    // Hash of method proxy object for insertion into dictionaries; with actual
    // method (fMethodInfo) shared, its address is best suited.
@@ -812,6 +812,30 @@ void PyROOT::MethodProxy::AddMethod( MethodProxy* meth )
 {
    fMethodInfo->fMethods.insert( fMethodInfo->fMethods.end(),
       meth->fMethodInfo->fMethods.begin(), meth->fMethodInfo->fMethods.end() );
+}
+
+//____________________________________________________________________________
+PyROOT::MethodProxy::MethodInfo_t::MethodInfo_t( const MethodInfo_t& s ) :
+   fName( s.fName ), fDispatchMap( s.fDispatchMap ), fMethods( s.fMethods ), fFlags( s.fFlags ) 
+{
+   *s.fRefCount += 1;
+   fRefCount = s.fRefCount;
+}
+
+//____________________________________________________________________________
+PyROOT::MethodProxy::MethodInfo_t& PyROOT::MethodProxy::MethodInfo_t::operator=( const MethodInfo_t& s )
+{
+   if ( this != &s ) {
+      *s.fRefCount += 1;
+      fRefCount = s.fRefCount;
+
+      fName        = s.fName;
+      fDispatchMap = s.fDispatchMap;
+      fMethods     = s.fMethods;
+      fFlags       = s.fFlags;
+   }
+
+   return *this;
 }
 
 //____________________________________________________________________________

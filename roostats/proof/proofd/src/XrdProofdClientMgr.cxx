@@ -595,7 +595,7 @@ int XrdProofdClientMgr::CheckClient(XrdProofdProtocol *p,
          c->SetROOT(fMgr->ROOTMgr()->DefaultVersion());
       if (c->IsValid()) {
          // Set the group, if any
-         c->SetGroup(g->Name());
+         c->SetGroup(gname.c_str());
       }
    } else {
       emsg = "unable to instantiate object for client ";
@@ -901,8 +901,9 @@ int XrdProofdClientMgr::ParsePreviousClients(XrdOucString &emsg)
                   if (!fd) {
                      TRACE(XERR, "unable to create path: " <<discpath);
                      xrm = 1;
+                  } else {
+                     fclose(fd);
                   }
-                  fclose(fd);
                   if (!xrm)
                      fNDisconnected++;
                }
@@ -1113,8 +1114,9 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
       p->AuthProt()->Entity.tident = p->Link()->ID;
    }
    // Set the wanted login name
-   char *u = new char[strlen("XrdSecLOGINUSER=")+strlen(p->UserIn())+2];
-   sprintf(u, "XrdSecLOGINUSER=%s", p->UserIn());
+   size_t len = strlen("XrdSecLOGINUSER=")+strlen(p->UserIn())+2;
+   char *u = new char[len];
+   snprintf(u, len, "XrdSecLOGINUSER=%s", p->UserIn());
    putenv(u);
 
    // Now try to authenticate the client using the current protocol
@@ -1229,6 +1231,7 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    XrdSecServLoader_t ep = 0;
    if (!(ep = (XrdSecServLoader_t)dlsym(lh, "XrdSecgetService"))) {
       TRACE(XERR, dlerror() <<" finding XrdSecgetService() in "<<seclib);
+      dlclose(lh);
       return 0;
    }
 
@@ -1237,6 +1240,7 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    int nd = 0;
    char *rcfn = FilterSecConfig(nd);
    if (!rcfn) {
+      dlclose(lh);
       if (nd == 0) {
          // No directives to be processed
          TRACE(XERR, "no security directives: strong authentication disabled");
@@ -1251,6 +1255,9 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    XrdSecService *cia = 0;
    if (!(cia = (*ep)((fEDest ? fEDest->logger() : (XrdSysLogger *)0), rcfn))) {
       TRACE(XERR, "Unable to create security service object via " << seclib);
+      dlclose(lh);
+      unlink(rcfn);
+      delete[] rcfn;
       return 0;
    }
    // Notify
@@ -1259,6 +1266,7 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    // Unlink the temporary file and cleanup its path
    unlink(rcfn);
    delete[] rcfn;
+   dlclose(lh);
 
    // All done
    return cia;
@@ -1305,15 +1313,19 @@ char *XrdProofdClientMgr::FilterSecConfig(int &nd)
          nd++;
          // Create the output file, if not yet done
          if (!rcfn) {
-            rcfn = new char[strlen(fMgr->TMPdir()) + strlen("/xpdcfn_XXXXXX") + 2];
-            sprintf(rcfn, "%s/xpdcfn_XXXXXX", fMgr->TMPdir());
+            size_t len = strlen(fMgr->TMPdir()) + strlen("/xpdcfn_XXXXXX") + 2;
+            rcfn = new char[len];
+            snprintf(rcfn, len, "%s/xpdcfn_XXXXXX", fMgr->TMPdir());
+            mode_t oldum = umask(022);
             if ((fd = mkstemp(rcfn)) < 0) {
                delete[] rcfn;
                nd = (errno > 0) ? -errno : -1;
                fclose(fin);
                rcfn = 0;
+               oldum = umask(oldum);
                return rcfn;
             }
+            oldum = umask(oldum);
          }
          XrdOucString slin = lin;
          // Strip the prefix "xpd."
@@ -1327,7 +1339,7 @@ char *XrdProofdClientMgr::FilterSecConfig(int &nd)
 
    // Close files
    fclose(fin);
-   close(fd);
+   if (fd >= 0) close(fd);
 
    return rcfn;
 }
@@ -1392,7 +1404,7 @@ XrdProofdClient *XrdProofdClientMgr::GetClient(const char *usr, const char *grp,
                }
             }
             if (freeclient) {
-               delete c;
+               SafeDelete(c);
             } else if (TRACING(DBG)) {
                XPDFORM(dmsg, "instance for {client, group} = {%s, %s} created"
                              " and added to the list (%p)", usr, grp, c);

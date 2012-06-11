@@ -167,6 +167,11 @@ TParticlePDG* TDatabasePDG::AddAntiParticle(const char* Name, Int_t PdgCode)
    Int_t pdg_code  = abs(PdgCode);
    TParticlePDG* p = GetParticle(pdg_code);
 
+   if (!p) {
+      printf(" *** TDatabasePDG::AddAntiParticle: particle with pdg code %d not known\n", pdg_code);
+      return NULL;
+   }
+
    TParticlePDG* ap = AddParticle(Name,
                                   Name,
                                   p->Mass(),
@@ -225,7 +230,8 @@ void TDatabasePDG::Print(Option_t *option) const
 }
 
 //______________________________________________________________________________
-Int_t TDatabasePDG::ConvertGeant3ToPdg(Int_t Geant3number) {
+Int_t TDatabasePDG::ConvertGeant3ToPdg(Int_t Geant3number) const
+{
   // Converts Geant3 particle codes to PDG convention. (Geant4 uses
   // PDG convention already)
   // Source: BaBar User Guide, Neil I. Geddes,
@@ -297,7 +303,8 @@ Int_t TDatabasePDG::ConvertGeant3ToPdg(Int_t Geant3number) {
 }
 
 //______________________________________________________________________________
-Int_t TDatabasePDG::ConvertPdgToGeant3(Int_t pdgNumber) {
+Int_t TDatabasePDG::ConvertPdgToGeant3(Int_t pdgNumber) const
+{
    // Converts pdg code to geant3 id
 
    switch(pdgNumber) {
@@ -353,7 +360,7 @@ Int_t TDatabasePDG::ConvertPdgToGeant3(Int_t pdgNumber) {
 }
 
 //______________________________________________________________________________
-Int_t TDatabasePDG::ConvertIsajetToPdg(Int_t isaNumber)
+Int_t TDatabasePDG::ConvertIsajetToPdg(Int_t isaNumber) const
 {
 //
 //  Converts the ISAJET Particle number into the PDG MC number
@@ -683,7 +690,7 @@ void TDatabasePDG::ReadPDGTable(const char *FileName)
 
                code[i] = dc->DaughterPdgCode(i);
                daughter = GetParticle(code[i]);
-               if (daughter->AntiParticle()) {
+               if (daughter && daughter->AntiParticle()) {
                   // this particle does have an
                   // antiparticle
                   code[i] = -code[i];

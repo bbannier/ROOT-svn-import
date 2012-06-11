@@ -22,6 +22,7 @@
 #include <TStyle.h>
 #include <TSystem.h>
 #include <TParameter.h>
+#include <TSortedList.h>
 
 //_____________________________________________________________________________
 ProofSimple::ProofSimple()
@@ -33,6 +34,7 @@ ProofSimple::ProofSimple()
    fNhist3 = -1;
    fHist3 = 0;
    fRandom = 0;
+   fHLab = 0;
 }
 
 //_____________________________________________________________________________
@@ -51,27 +53,31 @@ void ProofSimple::Begin(TTree * /*tree*/)
    // The tree argument is deprecated (on PROOF 0 is passed).
 
    TString option = GetOption();
+   Ssiz_t iopt = kNPOS;
 
    // Histos array
    if (fInput->FindObject("ProofSimple_NHist")) {
       TParameter<Long_t> *p =
          dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("ProofSimple_NHist"));
       fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
+   } else if ((iopt = option.Index("nhist=")) != kNPOS) {
+      TString s;
+      Ssiz_t from = iopt + strlen("nhist=");
+      if (option.Tokenize(s, from, ";") && s.IsDigit()) fNhist = s.Atoi();
    }
    if (fNhist < 1) {
       Abort("fNhist must be > 0!", kAbortProcess);
       return;
    }
-   fHist = new TH1F*[fNhist];
 
    if (fInput->FindObject("ProofSimple_NHist3")) {
       TParameter<Long_t> *p =
          dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("ProofSimple_NHist3"));
       fNhist3 = (p) ? (Int_t) p->GetVal() : fNhist3;
-   }
-   if (fNhist3 > 0) {
-      fHist3 = new TH3F*[fNhist3];
-      Info("Begin", "%d 3D histograms requested", fNhist3);
+   } else if ((iopt = option.Index("nhist3=")) != kNPOS) {
+      TString s;
+      Ssiz_t from = iopt + strlen("nhist3=");
+      if (option.Tokenize(s, from, ";") && s.IsDigit()) fNhist3 = s.Atoi();
    }
 }
 
@@ -83,12 +89,17 @@ void ProofSimple::SlaveBegin(TTree * /*tree*/)
    // The tree argument is deprecated (on PROOF 0 is passed).
 
    TString option = GetOption();
+   Ssiz_t iopt = kNPOS;
 
    // Histos array
    if (fInput->FindObject("ProofSimple_NHist")) {
       TParameter<Long_t> *p =
          dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("ProofSimple_NHist"));
       fNhist = (p) ? (Int_t) p->GetVal() : fNhist;
+   } else if ((iopt = option.Index("nhist=")) != kNPOS) {
+      TString s;
+      Ssiz_t from = iopt + strlen("nhist=");
+      if (option.Tokenize(s, from, ";") && s.IsDigit()) fNhist = s.Atoi();
    }
    if (fNhist < 1) {
       Abort("fNhist must be > 0!", kAbortProcess);
@@ -110,6 +121,10 @@ void ProofSimple::SlaveBegin(TTree * /*tree*/)
       TParameter<Long_t> *p =
          dynamic_cast<TParameter<Long_t>*>(fInput->FindObject("ProofSimple_NHist3"));
       fNhist3 = (p) ? (Int_t) p->GetVal() : fNhist3;
+   } else if ((iopt = option.Index("nhist3=")) != kNPOS) {
+      TString s;
+      Ssiz_t from = iopt + strlen("nhist3=");
+      if (option.Tokenize(s, from, ";") && s.IsDigit()) fNhist3 = s.Atoi();
    }
    if (fNhist3 > 0) {
       fHist3 = new TH3F*[fNhist3];
@@ -122,7 +137,12 @@ void ProofSimple::SlaveBegin(TTree * /*tree*/)
          fOutput->Add(fHist3[i]);
       }
    }
-
+   
+   // Histo with labels
+   if (fInput->FindObject("ProofSimple_TestLabelMerging")) {
+      fHLab = new TH1F("hlab", "Test merging of histograms with automatic labels", 10, 0., 10.);
+      fOutput->Add(fHLab);
+   }
    // Set random seed
    fRandom = new TRandom3(0);
 }
@@ -160,6 +180,19 @@ Bool_t ProofSimple::Process(Long64_t)
          fHist3[i]->Fill(x,x,x);
       }
    }
+   if (fHLab && fRandom) {
+      TSortedList sortl;
+      Float_t rr[10];
+      fRandom->RndmArray(10, rr);
+      for (Int_t i=0; i < 10; i++) {
+         sortl.Add(new TParameter<Int_t>(TString::Format("%f",rr[i]), i));
+      }
+      TIter nxe(&sortl);
+      TParameter<Int_t> *pi = 0;
+      while ((pi = (TParameter<Int_t> *) nxe())) {
+         fHLab->Fill(TString::Format("hl%d", pi->GetVal()), pi->GetVal());
+      }
+   }
 
    return kTRUE;
 }
@@ -193,14 +226,31 @@ void ProofSimple::Terminate()
    nside = (nside*nside < fNhist) ? nside+1 : nside;
    c1->Divide(nside,nside,0,0);
 
+   TH1F *h = 0;
    for (Int_t i=0; i < fNhist; i++) {
-      fHist[i] = dynamic_cast<TH1F *>(fOutput->FindObject(Form("h%d",i)));
+      h = dynamic_cast<TH1F *>(fOutput->FindObject(Form("h%d",i)));
       c1->cd(i+1);
-      if (fHist[i])
-         fHist[i]->Draw();
+      if (h) h->DrawCopy();
    }
 
    // Final update
    c1->cd();
    c1->Update();
+
+   // Analyse hlab, if there
+   if (fHLab && !gROOT->IsBatch()) {
+      // Printout
+      Int_t nb = fHLab->GetNbinsX();
+      if (nb > 0) {
+         Double_t entb = fHLab->GetEntries() / nb;
+         if (entb) {
+            for (Int_t i = 0; i < nb; i++) {
+               TString lab = TString::Format("hl%d", i);
+               Int_t ib = fHLab->GetXaxis()->FindBin(lab);
+               Info("Terminate","  %s [%d]:\t%f", lab.Data(), ib, fHLab->GetBinContent(ib)/entb); 
+            }
+         } else
+            Warning("Terminate", "no entries in the hlab histogram!");
+      }
+   }
 }

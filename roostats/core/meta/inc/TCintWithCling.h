@@ -39,6 +39,11 @@ struct G__dictposition;
 #define TWin32SendClass char
 #endif // WIN32
 
+extern "C" {
+   void TCintWithCling__RegisterModule(const char* modulename,
+                                       const char** headers);
+}
+
 namespace Cint {
 class G__ClassInfo;
 }
@@ -101,7 +106,7 @@ public: // Public Interface
    virtual const char* GetSTLIncludePath() const;
    TObjArray*  GetRootMapFiles() const { return fRootmapFiles; }
    Int_t   InitializeDictionaries();
-   void    InspectMembers(TMemberInspector&, void* obj, const char* clname);
+   void    InspectMembers(TMemberInspector&, void* obj, TClass* cl);
    Bool_t  IsLoaded(const char* filename) const;
    Int_t   Load(const char* filenam, Bool_t system = kFALSE);
    void    LoadMacro(const char* filename, EErrorCode* error = 0);
@@ -114,6 +119,7 @@ public: // Public Interface
    Long_t  ProcessLineAsynch(const char* line, EErrorCode* error = 0);
    Long_t  ProcessLineSynch(const char* line, EErrorCode* error = 0);
    void    PrintIntro();
+   void    RegisterModule(const char* modulename, const char** headers);
    void    SetGetline(const char * (*getlineFunc)(const char* prompt),
                       void (*histaddFunc)(const char* line));
    void    Reset();

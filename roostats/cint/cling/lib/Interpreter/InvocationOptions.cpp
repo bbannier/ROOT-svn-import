@@ -10,8 +10,8 @@
 #include "clang/Driver/Arg.h"
 #include "clang/Driver/ArgList.h"
 #include "clang/Driver/Option.h"
+#include "clang/Driver/Options.h"
 #include "clang/Driver/OptTable.h"
-#include "clang/Driver/CC1Options.h"
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,7 +34,8 @@ namespace {
   class ClingOptTable : public OptTable {
   public:
     ClingOptTable()
-      : OptTable(ClingInfoTable, sizeof(ClingInfoTable) / sizeof(ClingInfoTable[0])) {}
+      : OptTable(ClingInfoTable,
+                 sizeof(ClingInfoTable) / sizeof(ClingInfoTable[0])) {}
   };
 
   static OptTable* CreateClingOptTable() {
@@ -89,10 +90,10 @@ cling::InvocationOptions::CreateFromArgs(int argc, const char* const argv[],
 void cling::InvocationOptions::PrintHelp() {
   llvm::OwningPtr<OptTable> Opts(CreateClingOptTable());
   Opts->PrintHelp(llvm::outs(), "cling",
-                  "cling: LLVM/clang C++ Interpreter: http://root.cern.ch/drupal/content/cling");
+                  "cling: LLVM/clang C++ Interpreter: http://cern.ch/cling");
 
-  llvm::OwningPtr<OptTable> OptsC1(createCC1OptTable());
+  llvm::OwningPtr<OptTable> OptsC1(createDriverOptTable());
   OptsC1->PrintHelp(llvm::outs(), "clang -cc1",
                     "LLVM 'Clang' Compiler: http://clang.llvm.org");
-  
+
 }

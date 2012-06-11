@@ -186,6 +186,17 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
 
    // Send large input data objects, if any
    gProof->SendInputDataFile();
+      
+   // Attach to the transient histogram with the assigned packets, if required
+   if (fInput->FindObject("PROOF_StatsHist") != 0) {
+      if (!(fProcPackets = (TH1 *) fOutput->FindObject("PROOF_ProcPcktHist"))) {
+         Warning("Process", "could not attach to histogram 'PROOF_ProcPcktHist'");
+      } else {
+         PDB(kLoop,1)
+            Info("Process", "attached to histogram 'PROOF_ProcPcktHist' to record"
+                            " packets being processed");
+      }
+   }
 
    PDB(kPacketizer,1) Info("Process","Create Proxy TDSet");
    TDSet *set = new TDSetProxy(dset->GetType(), dset->GetObjName(),
@@ -336,13 +347,17 @@ Long64_t TProofPlayerLite::Finalize(Bool_t force, Bool_t sync)
       // Some input parameters may be needed in Terminate
       fSelector->SetInputList(fInput);
 
-      TIter next(fOutput);
       TList *output = fSelector->GetOutputList();
-      while(TObject* obj = next()) {
-         if (fProof->IsParallel() || DrawCanvas(obj) == 1)
-            // Either parallel or not a canvas or not able to display it:
-            // just add to the list
-            output->Add(obj);
+      if (output) {
+         TIter next(fOutput);
+         while(TObject* obj = next()) {
+            if (fProof->IsParallel() || DrawCanvas(obj) == 1)
+               // Either parallel or not a canvas or not able to display it:
+               // just add to the list
+               output->Add(obj);
+         }
+      } else {
+         Warning("Finalize", "undefined output list in the selector! Protocol error?");
       }
 
       SetSelectorDataMembersFromOutputList();
@@ -371,13 +386,13 @@ Long64_t TProofPlayerLite::Finalize(Bool_t force, Bool_t sync)
       if (!fCreateSelObj) {
          fInput->Remove(fSelector);
          fOutput->Remove(fSelector);
-         output->Remove(fSelector);
+         if (output) output->Remove(fSelector);
       }
 
       // We have transferred copy of the output objects in TQueryResult,
       // so now we can cleanup the selector, making sure that we do not
       // touch the output objects
-      output->SetOwner(kFALSE);
+      if (output) output->SetOwner(kFALSE);
       if (fCreateSelObj) SafeDelete(fSelector);
 
       // Delete fOutput (not needed anymore, cannot be finalized twice),

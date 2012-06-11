@@ -161,7 +161,7 @@ protected:
    Int_t    SetBranchAddressImp(TBranch *branch, void* addr, TBranch** ptr);
    virtual TLeaf   *GetLeafImpl(const char* branchname, const char* leafname);
 
-   char             GetNewlineValue(istream &inputStream);
+   char             GetNewlineValue(std::istream &inputStream);
    void             ImportClusterRanges(TTree *fromtree);
 
    class TFriendLock {
@@ -203,7 +203,7 @@ protected:
       kSetBranchStatus   = BIT(12)
    };
    
-   enum SetBranchAddressStatus {
+   enum ESetBranchAddressStatus {
       kMissingBranch = -5,
       kInternalError = -4,
       kMissingCompiledCollectionProxy = -3,
@@ -292,7 +292,7 @@ public:
       // Overload to avoid confusion between this signature and the template instance.
       return Branch(name,(void*)address,leaflist,bufsize);
    }
-   TBranch        *Branch(const char* name, long address, const char* leaflist, Int_t bufsize = 32000) 
+   TBranch        *Branch(const char* name, Long_t address, const char* leaflist, Int_t bufsize = 32000) 
    {
       // Overload to avoid confusion between this signature and the template instance.
       return Branch(name,(void*)address,leaflist,bufsize);
@@ -300,7 +300,7 @@ public:
    TBranch        *Branch(const char* name, int address, const char* leaflist, Int_t bufsize = 32000) 
    {
       // Overload to avoid confusion between this signature and the template instance.
-      return Branch(name,(void*)(long)address,leaflist,bufsize);
+      return Branch(name,(void*)(Long_t)address,leaflist,bufsize);
    }
 #if !defined(__CINT__)
    virtual TBranch        *Branch(const char* name, const char* classname, void* addobj, Int_t bufsize = 32000, Int_t splitlevel = 99);
@@ -472,7 +472,7 @@ public:
    virtual Long64_t        Project(const char* hname, const char* varexp, const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual TSQLResult     *Query(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0);
    virtual Long64_t        ReadFile(const char* filename, const char* branchDescriptor = "", char delimiter = ' ');
-   virtual Long64_t        ReadStream(istream& inputStream, const char* branchDescriptor = "", char delimiter = ' ');
+   virtual Long64_t        ReadStream(std::istream& inputStream, const char* branchDescriptor = "", char delimiter = ' ');
    virtual void            Refresh();
    virtual void            RecursiveRemove(TObject *obj);
    virtual void            RemoveFriend(TTree*);
@@ -483,7 +483,7 @@ public:
    virtual Long64_t        Scan(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
    virtual Bool_t          SetAlias(const char* aliasName, const char* aliasFormula);
    virtual void            SetAutoSave(Long64_t autos = 300000000);
-   virtual void            SetAutoFlush(Long64_t autof = 30000000);
+   virtual void            SetAutoFlush(Long64_t autof = -30000000);
    virtual void            SetBasketSize(const char* bname, Int_t buffsize = 16000);
 #if !defined(__CINT__)
    virtual Int_t           SetBranchAddress(const char *bname,void *add, TBranch **ptr = 0);
@@ -517,7 +517,7 @@ public:
    virtual void            SetDefaultEntryOffsetLen(Int_t newdefault, Bool_t updateExisting = kFALSE);
    virtual void            SetDirectory(TDirectory* dir);
    virtual Long64_t        SetEntries(Long64_t n = -1);
-   virtual void            SetEstimate(Long64_t nentries = 10000);
+   virtual void            SetEstimate(Long64_t nentries = 1000000);
    virtual void            SetFileNumber(Int_t number = 0);
    virtual void            SetEventList(TEventList* list);
    virtual void            SetEntryList(TEntryList* list, Option_t *opt="");
@@ -576,11 +576,11 @@ public:
    Option_t          *GetOption() const;
    TObject           *Next();
    void               Reset() { SafeDelete(fLeafIter); SafeDelete(fTreeIter); }
-   bool operator !=(const TIterator&) const {
+   Bool_t operator !=(const TIterator&) const {
       // TODO: Implement me
       return false;
    }
-   bool operator !=(const TTreeFriendLeafIter&) const {
+   Bool_t operator !=(const TTreeFriendLeafIter&) const {
       // TODO: Implement me
       return false;
    }

@@ -8,6 +8,8 @@
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
+#include <iostream>
+
 #include <CoreText/CTStringAttributes.h>
 #include <CoreText/CTFont.h>
 #include <CoreText/CTLine.h>
@@ -16,6 +18,7 @@
 #include "TMath.h"
 
 #include "IOSResourceManagement.h"
+#include "IOSSelectionMarkers.h"
 #include "IOSTextOperations.h"
 #include "IOSGraphicUtils.h"
 #include "IOSFillPatterns.h"
@@ -44,7 +47,7 @@ void SetMarkerStrokeColor(CGContextRef ctx, Color_t colorIndex)
    CGContextSetRGBStrokeColor(ctx, r, g, b, a);
 }
 
-//_________________________________________________________________
+//______________________________________________________________________________
 bool MarkerIsFilledPolygon(Style_t markerStyle) 
 {
    switch (markerStyle) {
@@ -65,7 +68,6 @@ bool MarkerIsFilledPolygon(Style_t markerStyle)
 }
 
 const CGFloat shadowColor[] = {0.1f, 0.1f, 0.1f, 0.2f};
-const CGFloat pinkColor[] = {1.f, 0.f, 0.4f, 0.2f};
 
 }
 
@@ -98,14 +100,14 @@ void SpaceConverter::SetConverter(UInt_t w, Double_t xMin, Double_t xMax, UInt_t
 }
 
 //_________________________________________________________________
-inline Double_t SpaceConverter::XToView(Double_t x)const
+Double_t SpaceConverter::XToView(Double_t x)const
 {
    //From pad's user space to view's user space.
    return (x - fXMin) * fXConv;
 }
    
 //_________________________________________________________________
-inline Double_t SpaceConverter::YToView(Double_t y)const
+Double_t SpaceConverter::YToView(Double_t y)const
 {
    //From pad's user space to view's user space.
    return (y - fYMin) * fYConv;
@@ -114,20 +116,11 @@ inline Double_t SpaceConverter::YToView(Double_t y)const
 //_________________________________________________________________
 Painter::Painter()
             : fCtx(0),
-              fRootOpacity(100),
               fPainterMode(kPaintToView),
               fCurrentObjectID(0),
               fEncoder(10, 255) //radix is 10, color channel value is 255.
 {
    //Default ctor.
-}
-
-//_________________________________________________________________
-void Painter::SetOpacity(Int_t percent)
-{
-   //Opacity is strange at the moment - there is no line or polygon opacity,
-   //only one opacity value.
-   percent > 100 || percent < 0 ? fRootOpacity = 100 : fRootOpacity = percent;
 }
 
 //_________________________________________________________________      
@@ -151,12 +144,6 @@ void Painter::SetStrokeParameters()const
       SetLineColorForCurrentObjectID();
       //If line's width is less, it's already very difficult to pick.
       CGContextSetLineWidth(fCtx, 40.f);
-      return;
-   }
-
-   if (fPainterMode == kPaintSelected) {
-      CGContextSetRGBStrokeColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
-      CGContextSetLineWidth(fCtx, 5.f);
       return;
    }
 
@@ -226,15 +213,9 @@ void Painter::SetPolygonParameters()const
       return;
    }
 
-   if (fPainterMode == kPaintSelected) {
-      SetStrokeParameters();
-      CGContextSetRGBFillColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
-      return;
-   }
-
    if (fPainterMode == kPaintShadow) {
-   //   SetStrokeParameters();
       CGContextSetRGBFillColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
+      CGContextSetRGBStrokeColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
       return;
    }
 
@@ -275,8 +256,7 @@ void Painter::FillBoxWithPattern(Double_t x1, Double_t y1, Double_t x2, Double_t
    
    const float alpha = 1.f;
    CGContextSetFillPattern(fCtx, pattern.Get(), &alpha);
-   
-//   CGContextBeginPath(fCtx);
+
    CGContextFillRect(fCtx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
 }
 
@@ -296,8 +276,14 @@ void Painter::DrawBoxOutline(Double_t x1, Double_t y1, Double_t x2, Double_t y2)
    //Hollow box.
    const Util::CGStateGuard contextGuard(fCtx);
    
+   const CGRect rect = CGRectMake(x1, y1, x2 - x1, y2 - y1);
+   
    SetStrokeParameters();
-   CGContextStrokeRect(fCtx, CGRectMake(x1, y1, x2 - x1, y2 - y1));
+   CGContextStrokeRect(fCtx, rect);
+   
+   if (fPainterMode == kPaintSelected)
+      GraphicUtils::DrawBoxSelectionMarkers(fCtx, rect);
+      
 }
 
 //_________________________________________________________________
@@ -314,7 +300,7 @@ void Painter::DrawBox(Double_t x1, Double_t y1, Double_t x2, Double_t y2, TVirtu
    if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
       return DrawBoxOutline(x1p, y1p, x2p, y2p);
       
-   if (mode == TVirtualPadPainter::kFilled) 
+   if (mode == TVirtualPadPainter::kFilled)
       PolygonHasStipple() ? FillBoxWithPattern(x1p, y1p, x2p, y2p) : FillBox(x1p, y1p, x2p, y2p);
    else
       DrawBoxOutline(x1p, y1p, x2p, y2p);
@@ -342,7 +328,7 @@ void draw_polygon(CGContextRef ctx, UInt_t n, const PointCoordinate *x, const Po
 
 //_________________________________________________________________
 template<class PointCoordinate>
-void draw_polyline(CGContextRef ctx, UInt_t n, const PointCoordinate *x, const PointCoordinate *y, const SpaceConverter & sc)
+void draw_polyline(CGContextRef ctx, UInt_t n, const PointCoordinate *x, const PointCoordinate *y, const SpaceConverter & sc, Bool_t showSelection = kFALSE)
 {
    CGContextBeginPath(ctx);
    CGContextMoveToPoint(ctx, sc.XToView(x[0]), sc.YToView(y[0]));
@@ -350,6 +336,15 @@ void draw_polyline(CGContextRef ctx, UInt_t n, const PointCoordinate *x, const P
       CGContextAddLineToPoint(ctx, sc.XToView(x[i]), sc.YToView(y[i]));
 
    CGContextStrokePath(ctx);
+   
+   if (showSelection) {
+      GraphicUtils::DrawSelectionMarker(ctx, CGPointMake(sc.XToView(x[0]), sc.YToView(y[0])));
+      GraphicUtils::DrawSelectionMarker(ctx, CGPointMake(sc.XToView(x[n - 1]), sc.YToView(y[n - 1])));
+      
+      const unsigned midPoint = n / 2;
+      if (midPoint)
+         GraphicUtils::DrawSelectionMarker(ctx, CGPointMake(sc.XToView(x[midPoint]), sc.YToView(y[midPoint])));
+   }
 }
 
 }
@@ -389,10 +384,10 @@ void Painter::DrawFillArea(Int_t n, const Double_t *x, const Double_t *y)
    
    if (!gVirtualX->GetFillStyle())
       return DrawPolyLine(n, x, y);
-      
-   if (fPainterMode == kPaintSelected || fPainterMode == kPaintShadow || fPainterMode == kPaintThumbnail)
+
+   if (fPainterMode == kPaintShadow || fPainterMode == kPaintThumbnail)
       return FillArea(n, x, y);
-      
+
    if (fPainterMode == kPaintToSelectionBuffer && PolygonHasStipple())
       return DrawPolyLine(n, x, y);
          
@@ -418,7 +413,7 @@ void Painter::DrawPolyLine(Int_t n, const Double_t *x, const Double_t *y)
    const Util::CGStateGuard contextGuard(fCtx);
    
    SetStrokeParameters();
-   draw_polyline(fCtx, n, x, y, fConverter);
+   draw_polyline(fCtx, n, x, y, fConverter, fPainterMode == kPaintSelected);
 }
 
 //_________________________________________________________________
@@ -427,7 +422,7 @@ void Painter::DrawPolyLine(Int_t n, const Float_t *x, const Float_t *y)
    const Util::CGStateGuard contextGuard(fCtx);
 
    SetStrokeParameters();
-   draw_polyline(fCtx, n, x, y, fConverter);
+   draw_polyline(fCtx, n, x, y, fConverter, fPainterMode == kPaintSelected);
 }
 
 //_________________________________________________________________
@@ -439,23 +434,18 @@ void Painter::DrawPolyLineNDC(Int_t, const Double_t *, const Double_t *)
 void Painter::SetMarkerColor()const
 {
    if (MarkerIsFilledPolygon(gVirtualX->GetMarkerStyle())) {
-      if (fPainterMode == kPaintToView) {
+      if (fPainterMode == kPaintToView || fPainterMode == kPaintSelected) {
          SetMarkerFillColor(fCtx, gVirtualX->GetMarkerColor());
       } else if (fPainterMode == kPaintShadow) {
-         CGContextSetRGBFillColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);      
-      } else if (fPainterMode == kPaintSelected) {
-         CGContextSetRGBFillColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
+         CGContextSetRGBFillColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
       }
    } else {
-      if (fPainterMode == kPaintToView) {
+      if (fPainterMode == kPaintToView || fPainterMode == kPaintSelected) {
          SetMarkerStrokeColor(fCtx, gVirtualX->GetMarkerColor());
       } else if (fPainterMode == kPaintShadow) {
          CGContextSetRGBStrokeColor(fCtx, shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3]);
          CGContextSetLineWidth(fCtx, 5.f);
-      } else if (fPainterMode == kPaintSelected) {
-         CGContextSetRGBStrokeColor(fCtx, pinkColor[0], pinkColor[1], pinkColor[2], pinkColor[3]);
-         CGContextSetLineWidth(fCtx, 5.f);
-      }   
+      }
    }
 }
 
@@ -546,12 +536,6 @@ void Painter::DrawText(Double_t x, Double_t y, const char *text, TVirtualPadPain
    //TODO: mode parameter.
    const Util::CGStateGuard contextGuard(fCtx);
    
-   /*
-   if (fPainterMode == kPaintThumbnail) {
-      CGContextSetRGBFillColor(fCtx, 0.f, 0.f, 0.f, 1.f);
-      CGContextFillRect(fCtx, CGRectMake(fConverter.XToView(x), fConverter.YToView(y), 5.f, 2.f));
-   } else */
-   
    if (fPainterMode == kPaintToView || fPainterMode == kPaintThumbnail) {   
       CTFontRef currentFont = fFontManager.SelectFont(gVirtualX->GetTextFont(), gVirtualX->GetTextSize());
       if (gVirtualX->GetTextFont() / 10 - 1 == 11) {
@@ -579,6 +563,18 @@ void Painter::SetContext(CGContextRef ctx)
 void Painter::SetTransform(UInt_t w, Double_t xMin, Double_t xMax, UInt_t h, Double_t yMin, Double_t yMax)
 {
    fConverter.SetConverter(w, xMin, xMax, h, yMin, yMax);
+}
+
+//_________________________________________________________________
+void Painter::SetPainterMode(EMode mode)
+{
+   fPainterMode = mode;
+}
+
+//_________________________________________________________________   
+void Painter::SetCurrentObjectID(UInt_t objId)
+{
+   fCurrentObjectID = objId;
 }
 
 //_________________________________________________________________

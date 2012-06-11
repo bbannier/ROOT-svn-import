@@ -43,7 +43,7 @@ const CGFloat markerPos = 100.f;
       
       backgroundImage = [UIImage imageNamed : @"picker_bkn.png"];
       frameImage = [UIImage imageNamed : @"picker_frame_bkn.png"];
-      
+
       CAGradientLayer *dropshadowLayer = [CAGradientLayer layer];
       dropshadowLayer.startPoint = CGPointMake(0.0f, 0.0f);
       dropshadowLayer.endPoint = CGPointMake(0.0f, 1.0f);
@@ -137,6 +137,7 @@ const CGFloat markerPos = 100.f;
    [self notify];
 }
 
+//____________________________________________________________________________________________________
 - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
 {
    if (!decelerate) {

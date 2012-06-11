@@ -232,6 +232,7 @@ Int_t TProofBench::RunCPU(Long64_t nevents, Int_t start, Int_t stop, Int_t step)
    TPBHistType htype(TPBHistType::kHist1D);
    fRunCPU = new TProofBenchRunCPU(&htype, fNHist, fOutFile);
    if (!fCPUSel.IsNull()) fRunCPU->SetSelName(fCPUSel);
+   if (!fSelOption.IsNull()) fRunDS->SetSelOption(fSelOption);
    if (!fCPUPar.IsNull()) fRunCPU->SetParList(fCPUPar);
    fRunCPU->Run(nevents, start, stop, step, fNtries, fDebug, -1);
 
@@ -260,6 +261,7 @@ Int_t TProofBench::RunCPUx(Long64_t nevents, Int_t start, Int_t stop)
    TPBHistType htype(TPBHistType::kHist1D);
    fRunCPU = new TProofBenchRunCPU(&htype, fNHist, fOutFile);
    if (!fCPUSel.IsNull()) fRunCPU->SetSelName(fCPUSel);
+   if (!fSelOption.IsNull()) fRunDS->SetSelOption(fSelOption);
    if (!fCPUPar.IsNull()) fRunCPU->SetParList(fCPUPar);
    fRunCPU->Run(nevents, start, stop, -2, fNtries, fDebug, -1);
 
@@ -497,17 +499,18 @@ public:
 };
 
 //______________________________________________________________________________
-void TProofBench::GetPerfSpecs(const char *path)
+void TProofBench::GetPerfSpecs(const char *path, Int_t degfit)
 {
    // Get performance specs. Check file 'path', or files in directory 'path'
-   // (default current directory)
+   // (default current directory).
+   // The degree of the polynomial used for the fit is 'degfit' (default 1). 
    
    // Locate the file (ask if many)
    TString pp(path), fn, oo;
    if (pp.IsNull()) pp = gSystem->WorkingDirectory();
    FileStat_t st;
    if (gSystem->GetPathInfo(pp.Data(), st) != 0) {
-      ::Error("GetPerfSpecs", "path '%s' could not be stat'ed - abort", pp.Data());
+      ::Error("TProofBench::GetPerfSpecs", "path '%s' could not be stat'ed - abort", pp.Data());
       return;
    }
    TSortedList filels;
@@ -515,7 +518,7 @@ void TProofBench::GetPerfSpecs(const char *path)
       // Scan the directory
       void *dirp = gSystem->OpenDirectory(pp.Data());
       if (!dirp) {
-         ::Error("GetPerfSpecs", "directory path '%s' could nto be open - abort", pp.Data());
+         ::Error("TProofBench::GetPerfSpecs", "directory path '%s' could nto be open - abort", pp.Data());
          return;
       }
       const char *ent = 0;
@@ -532,20 +535,23 @@ void TProofBench::GetPerfSpecs(const char *path)
             if (!strncmp(rr, "root", 4)) {
                SafeDelete(f);
                fn.ReplaceAll("?filetype=raw", "");
-               f = TFile::Open(fn);
-               TString desc("<no decription>");
-               TNamed *nmdesc = (TNamed *) f->Get("PB_description");
-               if (nmdesc) desc = nmdesc->GetTitle();
-               if (f->GetListOfKeys()->FindObject("RunCPU"))
-                  filels.Add(new fileDesc(fn, "std:", st.fMtime, desc.Data()));
-               if (f->GetListOfKeys()->FindObject("RunCPUx"))
-                  filels.Add(new fileDesc(fn, "stdx:", st.fMtime, desc.Data()));
+               if ((f = TFile::Open(fn))) {
+                  TString desc("<no decription>");
+                  TNamed *nmdesc = (TNamed *) f->Get("PB_description");
+                  if (nmdesc) desc = nmdesc->GetTitle();
+                  if (f->GetListOfKeys()->FindObject("RunCPU"))
+                     filels.Add(new fileDesc(fn, "std:", st.fMtime, desc.Data()));
+                  if (f->GetListOfKeys()->FindObject("RunCPUx"))
+                     filels.Add(new fileDesc(fn, "stdx:", st.fMtime, desc.Data()));
+               } else {
+                  ::Warning("TProofBench::GetPerfSpecs", "problems opening '%s'", fn.Data());
+               }
             }
          }
          SafeDelete(f);
       }
    } else if (!R_ISREG(st.fMode)) {
-      ::Error("GetPerfSpecs",
+      ::Error("TProofBench::GetPerfSpecs",
               "path '%s' not a regular file nor a directory - abort", pp.Data());
       return;
    } else {
@@ -588,7 +594,7 @@ void TProofBench::GetPerfSpecs(const char *path)
          emsg.Form("path '%s' cannot be stated - abort", fn.Data());
       }
       if (!isOk) {
-         ::Error("GetPerfSpecs", "%s", emsg.Data());
+         ::Error("TProofBench::GetPerfSpecs", "%s", emsg.Data());
          return;
       }
    }
@@ -614,19 +620,19 @@ void TProofBench::GetPerfSpecs(const char *path)
          fn = nm->GetName();
          oo = nm->GetTitle();
       } else {
-         ::Error("GetPerfSpecs", "chosen index '%d' does not exist - abort", idx);
+         ::Error("TProofBench::GetPerfSpecs", "chosen index '%d' does not exist - abort", idx);
          return;
       }
    } else {
       if (fn.IsNull()) {
-         ::Error("GetPerfSpecs",
+         ::Error("TProofBench::GetPerfSpecs",
                  "path '%s' is a directory but no ROOT file found in it - abort", pp.Data());
          return;
       }
    }
 
    // Now get the specs
-   TProofBench::DrawCPU(fn.Data(), oo.Data(), kFALSE, 1);
+   TProofBench::DrawCPU(fn.Data(), oo.Data(), kFALSE, degfit);
 }
 
 //______________________________________________________________________________
@@ -649,6 +655,7 @@ Int_t TProofBench::RunDataSet(const char *dset,
    if (!readType) readType = new TPBReadType(TPBReadType::kReadOpt);
    fRunDS = new TProofBenchRunDataRead(fDS, readType, fOutFile); 
    if (!fDataSel.IsNull()) fRunDS->SetSelName(fDataSel);
+   if (!fSelOption.IsNull()) fRunDS->SetSelOption(fSelOption);
    if (!fDataPar.IsNull()) fRunDS->SetParList(fDataPar);
    fRunDS->Run(dset, start, stop, step, fNtries, fDebug, -1);
    if (!fReadType) SafeDelete(readType);
@@ -681,6 +688,7 @@ Int_t TProofBench::RunDataSetx(const char *dset, Int_t start, Int_t stop)
    if (!readType) readType = new TPBReadType(TPBReadType::kReadOpt);
    fRunDS = new TProofBenchRunDataRead(fDS, readType, fOutFile); 
    if (!fDataSel.IsNull()) fRunDS->SetSelName(fDataSel);
+   if (!fSelOption.IsNull()) fRunDS->SetSelOption(fSelOption);
    if (!fDataPar.IsNull()) fRunDS->SetParList(fDataPar);
    fRunDS->Run(dset, start, stop, -2, fNtries, fDebug, -1);
    if (!fReadType) SafeDelete(readType);
@@ -907,6 +915,7 @@ Int_t TProofBench::MakeDataSet(const char *dset, Long64_t nevt, const char *fnro
 
    // For files, 30000 evst each (about 600 MB total) per worker
    TString fn, fnr("event");
+   Bool_t remote = kFALSE;
    if (fnroot && strlen(fnroot) > 0) {
       TUrl ur(fnroot, kTRUE);
       if (!strcmp(ur.GetProtocol(), "file") &&
@@ -915,9 +924,11 @@ Int_t TProofBench::MakeDataSet(const char *dset, Long64_t nevt, const char *fnro
       } else {
          fnr = gSystem->BaseName(ur.GetFile());
          // We need to set the basedir
-         TString bdir(fnroot);
-         bdir.ReplaceAll(fnr, "<fn>");
+         TString bdir(gSystem->DirName(fnroot));
+         bdir += "/<fn>";
          fProof->SetParameter("PROOF_BenchmarkBaseDir", bdir.Data());
+         // Flag as remote, if so
+         if (strcmp(ur.GetProtocol(), "file")) remote = kTRUE;
       }
    }
    TProofNodes pn(fProof);
@@ -997,6 +1008,7 @@ Int_t TProofBench::MakeDataSet(const char *dset, Long64_t nevt, const char *fnro
       // trusting the existing information
       fc->Update();
       if (fc->GetNFiles() > 0) {
+         if (remote) fc->SetBit(TFileCollection::kRemoteCollection);
          if (!(fProof->RegisterDataSet(fDataSet, fc, "OT")))
             Warning("MakeDataSet", "problems registering '%s'", dset);
       } else {

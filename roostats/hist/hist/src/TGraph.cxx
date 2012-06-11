@@ -203,6 +203,8 @@ TGraph& TGraph::operator=(const TGraph &gr)
       else fHistogram = 0;
       fMinimum = gr.fMinimum;
       fMaximum = gr.fMaximum;
+      if (fX) delete [] fX;
+      if (fY) delete [] fY;
       if (!fMaxSize) {
          fX = fY = 0;
          return *this;
@@ -374,7 +376,7 @@ TGraph::TGraph(const char *filename, const char *format, Option_t *option)
    TString fname = filename;
    gSystem->ExpandPathName(fname);
 
-   ifstream infile(fname.Data());
+   std::ifstream infile(fname.Data());
    if (!infile.good()) {
       MakeZombie();
       Error("TGraph", "Cannot open file: %s, TGraph is Zombie", filename);
@@ -429,6 +431,7 @@ TGraph::TGraph(const char *filename, const char *format, Option_t *option)
       }
       if (ntokens >= 2 && ntokensToBeSaved != 2) { //first condition not to repeat the previous error message
          Error("TGraph", "Incorrect input format! There are %d \"%%lg\" tag(s) in format whereas 2 and only 2 are expected!", ntokensToBeSaved);
+         delete [] isTokenToBeSaved ;
          return;
       }
 
@@ -729,6 +732,8 @@ Bool_t TGraph::CtorAllocate()
 {
    // In constructors set fNpoints than call this method.
    // Return kFALSE if the graph will contain no points.
+   //Note: This function should be called only from the constructor
+   // since it does not delete previously existing arrays
 
    fHistogram = 0;
    fMaximum = -1111;
@@ -1766,9 +1771,15 @@ Int_t TGraph::InsertPoint()
 Double_t TGraph::Integral(Int_t first, Int_t last) const
 {
    // Integrate the TGraph data within a given (index) range
+   // Note that this function computes the area of the polygon enclosed by the points of the TGraph.
+   // The polygon segments, which are defined by the points of the TGraph, do not need to form a closed polygon,
+   // since the last polygon segment, which closes the polygon, is taken as the line connecting the last TGraph point
+   // with the first one. It is clear that the order of the point is essential in defining the polygon. 
+   // Also note that the segments should not intersect. 
+   //   
    // NB: if last=-1 (default) last is set to the last point.
    //     if (first <0) the first point (0) is taken.
-   //   : The graph segments should not intersect.
+   //   
    //Method:
    // There are many ways to calculate the surface of a polygon. It all depends on what kind of data
    // you have to deal with. The most evident solution would be to divide the polygon in triangles and
@@ -2054,30 +2065,30 @@ Int_t TGraph::RemovePoint(Int_t ipoint)
 
 
 //______________________________________________________________________________
-void TGraph::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGraph::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
    char quote = '"';
-   out << "   " << endl;
+   out << "   " << std::endl;
    if (gROOT->ClassSaved(TGraph::Class())) {
       out << "   ";
    } else {
       out << "   TGraph *";
    }
-   out << "graph = new TGraph(" << fNpoints << ");" << endl;
-   out << "   graph->SetName(" << quote << GetName() << quote << ");" << endl;
-   out << "   graph->SetTitle(" << quote << GetTitle() << quote << ");" << endl;
+   out << "graph = new TGraph(" << fNpoints << ");" << std::endl;
+   out << "   graph->SetName(" << quote << GetName() << quote << ");" << std::endl;
+   out << "   graph->SetTitle(" << quote << GetTitle() << quote << ");" << std::endl;
 
    SaveFillAttributes(out, "graph", 0, 1001);
    SaveLineAttributes(out, "graph", 1, 1, 1);
    SaveMarkerAttributes(out, "graph", 1, 1, 1);
 
    if (fNpoints >= 1) {
-      streamsize prec = out.precision();
+      std::streamsize prec = out.precision();
       out.precision(10);
       for (Int_t i = 0; i < fNpoints; i++) {
-         out << "   graph->SetPoint(" << i << "," << fX[i] << "," << fY[i] << ");" << endl;
+         out << "   graph->SetPoint(" << i << "," << fX[i] << "," << fY[i] << ");" << std::endl;
       }
       out.precision(prec);
    }
@@ -2089,8 +2100,8 @@ void TGraph::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       hname += frameNumber;
       fHistogram->SetName(Form("Graph_%s", hname.Data()));
       fHistogram->SavePrimitive(out, "nodraw");
-      out << "   graph->SetHistogram(" << fHistogram->GetName() << ");" << endl;
-      out << "   " << endl;
+      out << "   graph->SetHistogram(" << fHistogram->GetName() << ");" << std::endl;
+      out << "   " << std::endl;
    }
 
    // save list of functions
@@ -2099,25 +2110,25 @@ void TGraph::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    while ((obj = next())) {
       obj->SavePrimitive(out, "nodraw");
       if (obj->InheritsFrom("TPaveStats")) {
-         out << "   graph->GetListOfFunctions()->Add(ptstats);" << endl;
-         out << "   ptstats->SetParent(graph->GetListOfFunctions());" << endl;
+         out << "   graph->GetListOfFunctions()->Add(ptstats);" << std::endl;
+         out << "   ptstats->SetParent(graph->GetListOfFunctions());" << std::endl;
       } else {
-         out << "   graph->GetListOfFunctions()->Add(" << obj->GetName() << ");" << endl;
+         out << "   graph->GetListOfFunctions()->Add(" << obj->GetName() << ");" << std::endl;
       }
    }
 
    const char *l;
    l = strstr(option, "multigraph");
    if (l) {
-      out << "   multigraph->Add(graph," << quote << l + 10 << quote << ");" << endl;
+      out << "   multigraph->Add(graph," << quote << l + 10 << quote << ");" << std::endl;
       return;
    }
    l = strstr(option, "th2poly");
    if (l) {
-      out << "   " << l + 7 << "->AddBin(graph);" << endl;
+      out << "   " << l + 7 << "->AddBin(graph);" << std::endl;
       return;
    }
-   out << "   graph->Draw(" << quote << option << quote << ");" << endl;
+   out << "   graph->Draw(" << quote << option << quote << ");" << std::endl;
 }
 
 

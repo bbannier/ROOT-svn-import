@@ -154,7 +154,7 @@ public :
    virtual void         RotateX(Double_t angle);
    virtual void         RotateY(Double_t angle);
    virtual void         RotateZ(Double_t angle);
-   virtual void         SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void         SavePrimitive(std::ostream &out, Option_t *option = "");
    void                 Subtract(const TGeoTranslation *other);
    void                 SetTranslation(Double_t dx, Double_t dy, Double_t dz);
    void                 SetTranslation(const TGeoMatrix &other);
@@ -216,7 +216,7 @@ public :
    virtual void         RotateX(Double_t angle);
    virtual void         RotateY(Double_t angle);
    virtual void         RotateZ(Double_t angle);
-   virtual void         SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void         SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void         ReflectX(Bool_t leftside, Bool_t rotonly=kFALSE);
    virtual void         ReflectY(Bool_t leftside, Bool_t rotonly=kFALSE);
    virtual void         ReflectZ(Bool_t leftside, Bool_t rotonly=kFALSE);
@@ -252,7 +252,8 @@ public :
    TGeoScale(Double_t sx, Double_t sy, Double_t sz);
    TGeoScale(const char *name, Double_t sx, Double_t sy, Double_t sz);
    virtual ~TGeoScale();
-   
+
+   TGeoScale& operator=(const TGeoScale &other);   
    virtual TGeoMatrix&  Inverse() const;
    void                 SetScale(Double_t sx, Double_t sy, Double_t sz);
    virtual void         LocalToMaster(const Double_t *local, Double_t *master) const;
@@ -309,7 +310,7 @@ public :
    virtual void         ReflectX(Bool_t leftside, Bool_t rotonly=kFALSE);
    virtual void         ReflectY(Bool_t leftside, Bool_t rotonly=kFALSE);
    virtual void         ReflectZ(Bool_t leftside, Bool_t rotonly=kFALSE);
-   virtual void         SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void         SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void         SetDx(Double_t dx) {SetTranslation(dx, fTranslation[1], fTranslation[2]);}
    virtual void         SetDy(Double_t dy) {SetTranslation(fTranslation[0], dy, fTranslation[2]);}
    virtual void         SetDz(Double_t dz) {SetTranslation(fTranslation[0], fTranslation[1], dz);}
@@ -389,7 +390,7 @@ public :
    virtual const Double_t    *GetTranslation() const {return &kNullVector[0];}
    virtual const Double_t    *GetRotationMatrix() const {return &kIdentityMatrix[0];}
    virtual const Double_t    *GetScale()       const {return &kUnitScale[0];}
-   virtual void         SavePrimitive(ostream &, Option_t * = "") {;}
+   virtual void         SavePrimitive(std::ostream &, Option_t * = "") {;}
 
    ClassDef(TGeoIdentity, 1)                 // identity transformation class
 };
@@ -439,7 +440,7 @@ public :
    virtual void         ReflectX(Bool_t leftside, Bool_t rotonly=kFALSE);
    virtual void         ReflectY(Bool_t leftside, Bool_t rotonly=kFALSE);
    virtual void         ReflectZ(Bool_t leftside, Bool_t rotonly=kFALSE);
-   virtual void         SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void         SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void         SetDx(Double_t dx) {fTranslation[0] = dx; SetBit(kGeoTranslation);}
    virtual void         SetDy(Double_t dy) {fTranslation[1] = dy; SetBit(kGeoTranslation);}
    virtual void         SetDz(Double_t dz) {fTranslation[2] = dz; SetBit(kGeoTranslation);}

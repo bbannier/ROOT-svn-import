@@ -141,12 +141,12 @@ TGeoPcon::TGeoPcon(Double_t *param)
 //_____________________________________________________________________________
 TGeoPcon::TGeoPcon(const TGeoPcon& pc) : 
   TGeoBBox(pc),
-  fNz(pc.fNz),
-  fPhi1(pc.fPhi1),
-  fDphi(pc.fDphi),
-  fRmin(pc.fRmin),
-  fRmax(pc.fRmax),
-  fZ(pc.fZ)
+  fNz(0),
+  fPhi1(0.),
+  fDphi(0.),
+  fRmin(0),
+  fRmax(0),
+  fZ(0)
 { 
    //copy constructor
 }
@@ -157,12 +157,12 @@ TGeoPcon& TGeoPcon::operator=(const TGeoPcon& pc)
    //assignment operator
    if(this!=&pc) {
       TGeoBBox::operator=(pc);
-      fNz=pc.fNz;
-      fPhi1=pc.fPhi1;
-      fDphi=pc.fDphi;
-      fRmin=pc.fRmin;
-      fRmax=pc.fRmax;
-      fZ=pc.fZ;
+      fNz=0;
+      fPhi1=0.;
+      fDphi=0.;
+      fRmin=0;
+      fRmax=0;
+      fZ=0;
    } 
    return *this;
 }
@@ -1119,22 +1119,22 @@ Double_t TGeoPcon::Safety(Double_t *point, Bool_t in) const
 }
 
 //_____________________________________________________________________________
-void TGeoPcon::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPcon::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    if (TObject::TestBit(kGeoSavePrimitive)) return;
-   out << "   // Shape: " << GetName() << " type: " << ClassName() << endl;
-   out << "   phi1  = " << fPhi1 << ";" << endl;
-   out << "   dphi  = " << fDphi << ";" << endl;
-   out << "   nz    = " << fNz << ";" << endl;
-   out << "   TGeoPcon *pcon = new TGeoPcon(\"" << GetName() << "\",phi1,dphi,nz);" << endl;
+   out << "   // Shape: " << GetName() << " type: " << ClassName() << std::endl;
+   out << "   phi1  = " << fPhi1 << ";" << std::endl;
+   out << "   dphi  = " << fDphi << ";" << std::endl;
+   out << "   nz    = " << fNz << ";" << std::endl;
+   out << "   TGeoPcon *pcon = new TGeoPcon(\"" << GetName() << "\",phi1,dphi,nz);" << std::endl;
    for (Int_t i=0; i<fNz; i++) {
-      out << "      z     = " << fZ[i] << ";" << endl;
-      out << "      rmin  = " << fRmin[i] << ";" << endl;
-      out << "      rmax  = " << fRmax[i] << ";" << endl;
-      out << "   pcon->DefineSection(" << i << ", z,rmin,rmax);" << endl;
+      out << "      z     = " << fZ[i] << ";" << std::endl;
+      out << "      rmin  = " << fRmin[i] << ";" << std::endl;
+      out << "      rmax  = " << fRmax[i] << ";" << std::endl;
+      out << "   pcon->DefineSection(" << i << ", z,rmin,rmax);" << std::endl;
    }
-   out << "   TGeoShape *" << GetPointerName() << " = pcon;" << endl;
+   out << "   TGeoShape *" << GetPointerName() << " = pcon;" << std::endl;
    TObject::SetBit(TGeoShape::kGeoSavePrimitive);
 }
          

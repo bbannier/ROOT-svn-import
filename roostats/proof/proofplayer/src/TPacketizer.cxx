@@ -182,9 +182,9 @@ public:
 
    void Print(Option_t *) const
    {
-      cout << "OBJ: " << IsA()->GetName() << "\t" << fNodeName
+      std::cout << "OBJ: " << IsA()->GetName() << "\t" << fNodeName
            << "\tMySlaveCount " << fMySlaveCnt
-           << "\tSlaveCount " << fSlaveCnt << endl;
+           << "\tSlaveCount " << fSlaveCnt << std::endl;
    }
 
    void Reset()
@@ -627,7 +627,7 @@ TPacketizer::TFileNode *TPacketizer::NextUnAllocNode()
 
    fUnAllocated->Sort();
    PDB(kPacketizer,2) {
-      cout << "TPacketizer::NextUnAllocNode()" << endl;
+      std::cout << "TPacketizer::NextUnAllocNode()" << std::endl;
       fUnAllocated->Print();
    }
 
@@ -672,7 +672,7 @@ TPacketizer::TFileNode *TPacketizer::NextActiveNode()
 
    fActive->Sort();
    PDB(kPacketizer,2) {
-      cout << "TPacketizer::NextActiveNode()" << endl;
+      std::cout << "TPacketizer::NextActiveNode()" << std::endl;
       fActive->Print();
    }
 
@@ -873,7 +873,7 @@ void TPacketizer::ValidateFiles(TDSet *dset, TList *slaves, Long64_t maxent, Boo
 
       // Check if there is anything to wait for
       if (mon.GetActive() == 0) {
-         if (byfile && maxent > 0) {
+         if (byfile && maxent > 0 && totent > 0) {
             // How many files do we still need ?
             Long64_t nrestf = (maxent - totent) * nopenf / totent ;
             if (nrestf <= 0 && maxent > totent) nrestf = 1;
@@ -1156,13 +1156,15 @@ TDSetElement *TPacketizer::GetNextPacket(TSlave *sl, TMessage *r)
          if (r->BufferSize() > r->Length()) (*r) >> totev;
 
          numev = totev - slstat->GetEntriesProcessed();
-         slstat->GetProgressStatus()->IncEntries(numev);
-         slstat->GetProgressStatus()->IncBytesRead(bytesRead);
+         if (numev > 0)  slstat->GetProgressStatus()->IncEntries(numev);
+         if (bytesRead > 0) slstat->GetProgressStatus()->IncBytesRead(bytesRead);
+         if (numev > 0 || bytesRead > 0) slstat->GetProgressStatus()->SetLastUpdate();
       }
 
       if (fProgressStatus) {
          if (numev > 0)  fProgressStatus->IncEntries(numev);
          if (bytesRead > 0)  fProgressStatus->IncBytesRead(bytesRead);
+         if (numev > 0 || bytesRead > 0) fProgressStatus->SetLastUpdate();
       }
       PDB(kPacketizer,2)
          Info("GetNextPacket","worker-%s (%s): %lld %7.3lf %7.3lf %7.3lf %lld",

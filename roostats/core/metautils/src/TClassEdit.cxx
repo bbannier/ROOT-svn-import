@@ -420,6 +420,17 @@ bool TClassEdit::IsDefComp(const char *compname, const char *classname)
 }
 
 //______________________________________________________________________________
+string TClassEdit::GetLong64_Name(const char* original)
+{
+   // Replace 'long long' and 'unsigned long long' by 'Long64_t' and 'ULong64_t'
+
+   if (original==0)
+      return "";
+   else 
+      return GetLong64_Name(string(original));
+}
+
+//______________________________________________________________________________
 string TClassEdit::GetLong64_Name(const string& original)
 {
    // Replace 'long long' and 'unsigned long long' by 'Long64_t' and 'ULong64_t'
@@ -617,9 +628,11 @@ string TClassEdit::ShortType(const char *typeDesc, int mode)
    string answer;
 
    // get list of all arguments
-   TSplitType arglist(typeDesc, (EModType) mode);
-   arglist.ShortType(answer, mode);
-   
+   if (typeDesc) {
+      TSplitType arglist(typeDesc, (EModType) mode);
+      arglist.ShortType(answer, mode);
+   }
+
    return answer;
 }
 

@@ -324,7 +324,7 @@ Int_t TBtree::IdxAdd(const TObject &obj)
          // Nothing is here now, but later we might give the user
          // the ability to declare a B-tree as `unique elements only',
          // in which case we would handle an exception here.
-         // cerr << "Multiple entry warning\n";
+         // std::cerr << "Multiple entry warning\n";
       } else {
          R__CHECK(loc->fIsLeaf);
       }
@@ -374,7 +374,7 @@ void TBtree::Init(Int_t order)
 }
 
 //______________________________________________________________________________
-//void TBtree::PrintOn(ostream& out) const
+//void TBtree::PrintOn(std::ostream& out) const
 //{
 //   // Print a B-tree.
 //
@@ -667,7 +667,7 @@ TObject *TBtreeIter::Next()
 }
 
 //______________________________________________________________________________
-bool TBtreeIter::operator!=(const TIterator &aIter) const
+Bool_t TBtreeIter::operator!=(const TIterator &aIter) const
 {
    // This operator compares two TIterator objects.
 
@@ -682,7 +682,7 @@ bool TBtreeIter::operator!=(const TIterator &aIter) const
 }
 
 //______________________________________________________________________________
-bool TBtreeIter::operator!=(const TBtreeIter &aIter) const
+Bool_t TBtreeIter::operator!=(const TBtreeIter &aIter) const
 {
    // This operator compares two TBtreeIter objects.
 
@@ -1606,7 +1606,7 @@ Int_t TBtLeafNode::NofKeys() const
 }
 
 //______________________________________________________________________________
-//void TBtLeafNode::PrintOn(ostream& out) const
+//void TBtLeafNode::PrintOn(std::ostream& out) const
 //{
 //    out << " < ";
 //    for (Int_t i = 0; i <= fLast; i++)

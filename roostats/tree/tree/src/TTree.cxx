@@ -367,6 +367,7 @@
 #include <sstream>
 #include <string>
 #include <stdio.h>
+#include <limits.h>
 
 Int_t    TTree::fgBranchStyle = 1;  // Use new TBranch style with TBranchElement.
 Long64_t TTree::fgMaxTreeSize = 100000000000LL;
@@ -661,7 +662,7 @@ TTree::TTree()
 
    fMaxEntryLoop = 1000000000;
    fMaxEntryLoop *= 1000;
-   
+
    fBranches.SetOwner(kTRUE);
 }
 
@@ -867,15 +868,16 @@ TTree::~TTree()
 //______________________________________________________________________________
 TBuffer* TTree::GetTransientBuffer(Int_t size)
 {
-    // Returns the transient buffer currently used by this TTree for reading/writing baskets
-    if (fTransientBuffer) {
-       if (fTransientBuffer->BufferSize() < size) {
-          fTransientBuffer->Expand(size);
-       }
-       return fTransientBuffer;
-    }
-    fTransientBuffer = new TBufferFile(TBuffer::kRead, size);
-    return fTransientBuffer;
+    // Returns the transient buffer currently used by this TTree for reading/writing baskets.
+
+   if (fTransientBuffer) {
+      if (fTransientBuffer->BufferSize() < size) {
+         fTransientBuffer->Expand(size);
+      }
+      return fTransientBuffer;
+   }
+   fTransientBuffer = new TBufferFile(TBuffer::kRead, size);
+   return fTransientBuffer;
 }
 
 //______________________________________________________________________________
@@ -885,7 +887,7 @@ void TTree::AddBranchToCache(const char*bname, Bool_t subbranches)
    // If bname="*" all branches are added to the cache.
    // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
-   
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
@@ -898,7 +900,7 @@ void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
    // Add branch b to the Tree cache.
    // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
-   
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
@@ -912,7 +914,7 @@ void TTree::DropBranchFromCache(const char*bname, Bool_t subbranches)
    // If bname="*" all branches are added to the cache.
    // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
-   
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
@@ -925,7 +927,7 @@ void TTree::DropBranchFromCache(TBranch *b, Bool_t subbranches)
    // Add branch b to the Tree cache.
    // if subbranches is true all the branches of the subbranches are
    // also put to the cache.
-   
+
    TFile *f = GetCurrentFile();
    if (!f) return;
    TTreeCache *tc = (TTreeCache*)f->GetCacheRead(this);
@@ -988,7 +990,7 @@ TFriendElement* TTree::AddFriend(const char* treename, const char* filename)
    //
    // tree.AddFriend("ft1","friendfile1.root");
    // If the friend tree has the same name as the original tree, you can give it
-   // an alias sin the context of the friendship:
+   // an alias in the context of the friendship:
    //
    // tree.AddFriend("tree1 = tree","friendfile1.root");
    // Once the tree has friends, we can use TTree::Draw as if the friend's
@@ -1037,7 +1039,7 @@ TFriendElement* TTree::AddFriend(const char* treename, const char* filename)
       fFriends = new TList();
    }
    TFriendElement* fe = new TFriendElement(this, treename, filename);
-   R__ASSERT(fe); // this assert is for historical reasons. Don't remove it unless you understand all the consequences.
+
    fFriends->Add(fe);
    TTree* t = fe->GetTree();
    if (t) {
@@ -1197,7 +1199,7 @@ Long64_t TTree::AutoSave(Option_t* option)
    TKey *key = (TKey*)fDirectory->GetListOfKeys()->FindObject(GetName());
    Long64_t nbytes;
    if (opt.Contains("overwrite")) {
-      nbytes = fDirectory->WriteTObject(this,"","",TObject::kOverwrite);
+      nbytes = fDirectory->WriteTObject(this,"","overwrite");
    } else {
       nbytes = fDirectory->WriteTObject(this); //nbytes will be 0 if Write failed (disk space exceeded)
       if (nbytes && key) {
@@ -1310,7 +1312,7 @@ TBranch* TTree::BranchImpRef(const char* branchname, const char *classname, TCla
 {
    // Same as TTree::Branch but automatic detection of the class name.
    // See TTree::Branch for other details.
-   
+
    TClass* claim = TClass::GetClass(classname);
    if (!ptrClass) {
       if (claim && claim->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(claim->GetCollectionProxy())) {
@@ -1372,7 +1374,7 @@ TBranch* TTree::BranchImpRef(const char* branchname, TClass* ptrClass, EDataType
 {
    // Same as TTree::Branch but automatic detection of the class name.
    // See TTree::Branch for other details.
-   
+
    if (!ptrClass) {
       if (datatype == kOther_t || datatype == kNoType_t) {
          Error("Branch", "The pointer specified for %s is not of a class or type known to ROOT", branchname);
@@ -2192,6 +2194,10 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
    //
 
    TStreamerInfo* sinfo = BuildStreamerInfo(cl, objptr, splitlevel==0);
+   if (!sinfo) {
+      Error("Bronch", "Cannot build the StreamerInfo for class: %s", cl->GetName());
+      return 0;
+   }
 
    //
    // Do we have a final dot in our name?
@@ -2371,7 +2377,7 @@ TStreamerInfo* TTree::BuildStreamerInfo(TClass* cl, void* pointer /* = 0 */, Boo
    cl->BuildRealData(pointer);
    TStreamerInfo* sinfo = (TStreamerInfo*)cl->GetStreamerInfo(cl->GetClassVersion());
 
-   if (!canOptimize && (!sinfo->IsCompiled() || sinfo->IsOptimized()) ) {
+   if (sinfo && !canOptimize && (!sinfo->IsCompiled() || sinfo->IsOptimized()) ) {
       // Streamer info has not yet been compiled.
       //
       // Optimizing does not work with splitting.
@@ -2389,7 +2395,7 @@ TStreamerInfo* TTree::BuildStreamerInfo(TClass* cl, void* pointer /* = 0 */, Boo
       TClass* clm = TClass::GetClass(base->GetName());
       BuildStreamerInfo(clm, pointer, canOptimize);
    }
-   if (fDirectory) {
+   if (sinfo && fDirectory) {
       sinfo->ForceWriteInfo(fDirectory->GetFile());
    }
    return sinfo;
@@ -2457,7 +2463,7 @@ TFile* TTree::ChangeFile(TFile* file)
       uscore[nus] = '_';
       fname[0] = 0;
       strlcpy(fname, file->GetName(),2000);
-      
+
       if (fFileNumber > 1) {
          char* cunder = strrchr(fname, '_');
          if (cunder) {
@@ -2764,7 +2770,7 @@ TTree* TTree::CloneTree(Long64_t nentries /* = -1 */, Option_t* option /* = "" *
       // also to the TChain's list of clones.
       AddClone(newtree);
    }
-   
+
    newtree->Reset();
 
    TDirectory* ndir = newtree->GetDirectory();
@@ -2891,12 +2897,12 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
          if (!addr) {
             if (branch->IsA() == TBranch::Class()) {
                // If the branch was created using a leaflist, the branch itself may not have 
-               // an address but the leat might already do.
+               // an address but the leaf might already.
                TLeaf *firstleaf = (TLeaf*)branch->GetListOfLeaves()->At(0);
                if (!firstleaf || firstleaf->GetValuePointer()) {
                   // Either there is no leaf (and thus no point in copying the address)
                   // or the leaf has an address but we can not copy it via the branche
-                  // this will be copied via the the next loop (over the leaf).
+                  // this will be copied via the next loop (over the leaf).
                   continue;
                }
             } 
@@ -2937,7 +2943,7 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
          continue;
       }
       if (undo) {
-         // Now we know wether the address has been transfered
+         // Now we know whether the address has been transfered
          tree->ResetBranchAddress(tbranch);
       } else {
          if (!branch->GetAddress() && !leaf->GetValuePointer()) {
@@ -2945,7 +2951,7 @@ void TTree::CopyAddresses(TTree* tree, Bool_t undo)
             // something like:
             //(TBranchElement*)branch->GetMother()->SetAddress(0)
             //plus a few more subtilities (see TBranchElement::GetEntry).
-            //but for now we go the simpliest route:
+            //but for now we go the simplest route:
             //
             // Note: This may result in the allocation of an object.
             branch->SetupAddresses();
@@ -2979,11 +2985,11 @@ namespace {
 
    enum EOnIndexError { kDrop, kKeep, kBuild };
 
-   static bool R__HandleIndex(EOnIndexError onIndexError, TTree *newtree, TTree *oldtree)
+   static Bool_t R__HandleIndex(EOnIndexError onIndexError, TTree *newtree, TTree *oldtree)
    {
       // Return true if we should continue to handle indices, false otherwise.
 
-      bool withIndex = kTRUE;
+      Bool_t withIndex = kTRUE;
 
       if ( newtree->GetTreeIndex() ) {
          if ( oldtree->GetTree()->GetTreeIndex() == 0 ) {
@@ -2998,11 +3004,12 @@ namespace {
                   break;
                case kBuild:
                   // Build the index then copy it
-                  oldtree->GetTree()->BuildIndex(newtree->GetTreeIndex()->GetMajorName(), newtree->GetTreeIndex()->GetMinorName());
-                  newtree->GetTreeIndex()->Append(oldtree->GetTree()->GetTreeIndex(), kTRUE);
-                  // Clean up
-                  delete oldtree->GetTree()->GetTreeIndex();
-                  oldtree->GetTree()->SetTreeIndex(0);
+                  if (oldtree->GetTree()->BuildIndex(newtree->GetTreeIndex()->GetMajorName(), newtree->GetTreeIndex()->GetMinorName())) {
+                     newtree->GetTreeIndex()->Append(oldtree->GetTree()->GetTreeIndex(), kTRUE);
+                     // Clean up
+                     delete oldtree->GetTree()->GetTreeIndex();
+                     oldtree->GetTree()->SetTreeIndex(0);
+                  }
                   break;
             }
          } else {
@@ -3028,8 +3035,9 @@ namespace {
                   newtree->SetTreeIndex(index);
                } else {
                   // Build the index so far.
-                  newtree->BuildIndex(oldtree->GetTree()->GetTreeIndex()->GetMajorName(), oldtree->GetTree()->GetTreeIndex()->GetMinorName());
-                  newtree->GetTreeIndex()->Append(oldtree->GetTree()->GetTreeIndex(), kTRUE);
+                  if (newtree->BuildIndex(oldtree->GetTree()->GetTreeIndex()->GetMajorName(), oldtree->GetTree()->GetTreeIndex()->GetMinorName())) {
+                     newtree->GetTreeIndex()->Append(oldtree->GetTree()->GetTreeIndex(), kTRUE);
+                  }
                }
                break;
          }
@@ -3076,8 +3084,8 @@ Long64_t TTree::CopyEntries(TTree* tree, Long64_t nentries /* = -1 */, Option_t*
    //    DropIndexOnError    : if any of the underlying TTree object do no have a TTreeIndex,
    //                          they are all dropped.
    //    AsIsIndexOnError [default]: In case of missing TTreeIndex, the resulting TTree index has gaps.
-   //    BuildIndexOnError : If any of the underlying TTree object do no have a TTreeIndex,
-   //                          all TTreeIndex are 'ignored' and the mising piece are rebuilt.
+   //    BuildIndexOnError : If any of the underlying TTree objects do not have a TTreeIndex,
+   //                          all TTreeIndex are 'ignored' and the missing piece are rebuilt.
 
    if (!tree) {
       return 0;
@@ -3376,7 +3384,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //                    versus "e2" versus "e3"
    //   - "e1:e2:e3:e4"  produces an unbinned 3-d scatter-plot (TPolyMarker3D) of "e1"
    //                    versus "e2" versus "e3" and "e4" mapped on the color number.
-   //  (to create histograms in the 2, 3, and 4 dimesional case, see section "Saving
+   //  (to create histograms in the 2, 3, and 4 dimensional case, see section "Saving
    //  the result of Draw to an histogram")
    //
    //  Example:
@@ -3420,7 +3428,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  Examples:
    //      selection1 = "x<y && sqrt(z)>3.2"
    //      selection2 = "(x+y)*(sqrt(z)>3.2)"
-   //  selection1 returns a weigth = 0 or 1
+   //  selection1 returns a weight = 0 or 1
    //  selection2 returns a weight = x+y if sqrt(z)>3.2
    //             returns a weight = 0 otherwise.
    //
@@ -3429,7 +3437,9 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    - If option COL is specified when varexp has three fields:
    //            tree.Draw("e1:e2:e3","","col");
    //      a 2D scatter is produced with e1 vs e2, and e3 is mapped on the color
-   //      table.
+   //      table. The colors for e3 are evaluated once in linear scale before
+   //      painting. Therefore changing the pad to log scale along Z as no effect
+   //      on the colors.
    //    - If option contains the string "goff", no graphics is generated.
    //
    //  nentries is the number of entries to process (default is all)
@@ -3488,7 +3498,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //                                             index of fMatrix.
    //
    //
-   // In summary, TTree::Draw loops through all un-specified dimensions.  To
+   // In summary, TTree::Draw loops through all unspecified dimensions.  To
    // figure out the range of each loop, we match each unspecified dimension
    // from left to right (ignoring ALL dimensions for which an index has been
    // specified), in the equivalent loop matched dimensions use the same index
@@ -3538,7 +3548,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    TH1F *htemp = (TH1F*)gPad->GetPrimitive("htemp"); // 1D
    //    TGraph *graph = (TGraph*)gPad->GetPrimitive("Graph"); // 2D
    //
-   //  For a three and four dimensional Draw the TPloyMarker3D is unnamed, and
+   //  For a three and four dimensional Draw the TPolyMarker3D is unnamed, and
    //  cannot be retrieved.
    //
    //  gPad always contains a TH1 derived object called "htemp" which allows to
@@ -3609,7 +3619,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  or postfixed with '@', the next part of the expression will pertain to
    //  the collection object.  For example:
    //     tree->Draw("event.@fTracks.size()");
-   //  will plot the size of the collection refered to by fTracks (i.e the number
+   //  will plot the size of the collection referred to by fTracks (i.e the number
    //  of Track objects).
    //
    //     Drawing 'objects'
@@ -3689,7 +3699,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    tree->Draw("arr3[0]+arr3[1]+arr3[2]");
    //                 will draw the sum arr3 for the index 0 to 2 only if the
    //                 actual_size_of_arr3 is greater or equal to 3.
-   //                 Note that the array in 'primary' is flatened/linearilized thus using
+   //                 Note that the array in 'primary' is flattened/linearized thus using
    //                 Alt$ with multi-dimensional arrays of different dimensions in unlikely
    //                 to yield the expected results.  To visualize a bit more what elements
    //                 would be matched by TTree::Draw, TTree::Scan can be used:
@@ -3698,7 +3708,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //                 matched by
    //    tree->Draw("arr1-Alt$(arr2,0)");
    //
-   //  The ternary operator is not directly support in TTree::Draw however, to plot the
+   //  The ternary operator is not directly supported in TTree::Draw however, to plot the
    //  equivalent of 'var2<20 ? -99 : var1', you can use:
    //     tree->Draw("(var2<20)*99+(var2>=20)*var1","");
    //
@@ -3769,7 +3779,7 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //  arbitrary. Giving more than 4 variables without the option=para or
    //  option=candle or option=goff will produce an error.
    //
-   //     Normalizing the ouput histogram to 1
+   //     Normalizing the output histogram to 1
    //     ====================================
    //  When option contains "norm" the output histogram is normalized to 1.
    //
@@ -3885,11 +3895,12 @@ Long64_t TTree::Draw(const char* varexp, const char* selection, Option_t* option
    //    to the parameter fEstimate.  The content will be the last
    //            GetSelectedRows() % GetEstimate()
    //    values calculated.
-   //    By default fEstimate=10000 and can be modified
-   //    via TTree::SetEstimate. A possible recipee is to do
-   //       tree->SetEstimate(tree->GetEntries());
+   //    By default fEstimate=1000000 and can be modified
+   //    via TTree::SetEstimate. To keep in memory all the results (in case
+   //    where there is only one result per entry), use 
+   //       tree->SetEstimate(tree->GetEntries()+1); // same as tree->SetEstimate(-1);
    //    You must call SetEstimate if the expected number of selected rows
-   //    is greater than 10000.
+   //    you need to look at is greater than 1000000.
    //
    //    You can use the option "goff" to turn off the graphics output
    //    of TTree::Draw in the above example.
@@ -3927,7 +3938,7 @@ void TTree::DropBaskets()
 //______________________________________________________________________________
 void TTree::DropBuffers(Int_t)
 {
-   // Drop branch buffers to accomodate nbytes below MaxVirtualsize.
+   // Drop branch buffers to accommodate nbytes below MaxVirtualsize.
 
    // Be careful not to remove current read/write buffers.
    Int_t ndrop = 0;
@@ -3935,15 +3946,17 @@ void TTree::DropBuffers(Int_t)
    for (Int_t i = 0; i < nleaves; ++i)  {
       TLeaf* leaf = (TLeaf*) fLeaves.UncheckedAt(i);
       TBranch* branch = (TBranch*) leaf->GetBranch();
-      Int_t nbaskets = branch->GetListOfBaskets()->GetEntriesFast();
+      Int_t nbaskets = branch->GetListOfBaskets()->GetEntries();
       for (Int_t j = 0; j < nbaskets - 1; ++j) {
          if ((j == branch->GetReadBasket()) || (j == branch->GetWriteBasket())) {
             continue;
          }
-         TBasket* basket = branch->GetBasket(j);
-         ndrop += basket->DropBuffers();
-         if (fTotalBuffers < fMaxVirtualSize) {
-            return;
+         TBasket* basket = (TBasket*)branch->GetListOfBaskets()->UncheckedAt(j);
+         if (basket) {
+            ndrop += basket->DropBuffers();
+            if (fTotalBuffers < fMaxVirtualSize) {
+               return;
+            }
          }
       }
    }
@@ -3962,7 +3975,7 @@ Int_t TTree::Fill()
    //   This machine independent version of the data is copied into a
    //   basket (each branch has its own basket).  When a basket is full
    //   (32k worth of data by default), it is then optionally compressed
-   //   and written to disk (this operation is also called comitting or
+   //   and written to disk (this operation is also called committing or
    //   'flushing' the basket).  The committed baskets are then
    //   immediately removed from memory.
    //
@@ -4080,7 +4093,7 @@ Int_t TTree::Fill()
             if (fAutoSave!=0 && fEntries >= fAutoSave) AutoSave();    // FlushBaskets not called in AutoSave
             if (gDebug > 0) Info("TTree::Fill","First AutoFlush.  fAutoFlush = %lld, fAutoSave = %lld\n", fAutoFlush, fAutoSave);
          }
-      } else if (fNClusterRange && fAutoFlush && (fEntries-fClusterRangeEnd[fNClusterRange-1]) % fAutoFlush) {
+      } else if (fNClusterRange && fAutoFlush && ( (fEntries-fClusterRangeEnd[fNClusterRange-1]) % fAutoFlush == 0)  ) {
          if (fAutoSave != 0 && fEntries%fAutoSave == 0) {
             //We are at an AutoSave point. AutoSave flushes baskets and saves the Tree header
             AutoSave("flushbaskets");
@@ -4174,7 +4187,7 @@ static TBranch *R__FindBranchHelper(TObjArray *list, const char *branchname) {
 TBranch* TTree::FindBranch(const char* branchname)
 {
    // Return the branch that correspond to the path 'branchname', which can
-   // include the name of the tree or the ommited name of the parent branches.
+   // include the name of the tree or the omitted name of the parent branches.
    // In case of ambiguity, returns the first match.
 
    // We already have been visited while recursively looking
@@ -4401,7 +4414,7 @@ Int_t TTree::Fit(const char* funcname, const char* varexp, const char* selection
    //   =============
    //  The function returns the status of the histogram fit (see TH1::Fit)
    //  If no entries were selected, the function returns -1;
-   //   (ie fitResult is null is the fit is OK)
+   //   (i.e. fitResult is null is the fit is OK)
 
    GetPlayer();
    if (fPlayer) {
@@ -4610,7 +4623,7 @@ TTree::TClusterIterator TTree::GetClusterIterator(Long64_t firstentry)
    // while( (clusterStart = clusterIter()) < tree->GetEntries() ) {
    //    printf("The cluster starts at %lld and ends at %lld (inclusive)\n",clusterStart,clusterIter.GetNextEntry()-1);
    // }
-   
+
    return TClusterIterator(this,firstentry);
 }
 
@@ -4836,7 +4849,7 @@ Long64_t TTree::GetEntryNumberWithBestIndex(Int_t major, Int_t minor) const
    // If it finds a pair that maches val, it returns directly the
    // index in the table.
    // If an entry corresponding to major and minor is not found, the function
-   // returns the index of the major,minor pair immediatly lower than the
+   // returns the index of the major,minor pair immediately lower than the
    // requested value, ie it will return -1 if the pair is lower than
    // the first entry in the index.
    //
@@ -4956,7 +4969,7 @@ TTree* TTree::GetFriend(const char *friendname) const
 //______________________________________________________________________________
 const char* TTree::GetFriendAlias(TTree* tree) const
 {
-   // If the the 'tree' is a friend, this method returns its alias name.
+   // If the 'tree' is a friend, this method returns its alias name.
    //
    // This alias is an alternate name for the tree.
    //
@@ -5035,7 +5048,7 @@ TLeaf* TTree::GetLeafImpl(const char* branchname, const char *leafname)
    // syntax: friend_dir_and_tree.full_leaf_name
    // the friend_dir_and_tree can be of the form
    //    TDirectoryName/TreeName
-   
+
    TLeaf *leaf = 0;
    if (branchname) {
       TBranch *branch = FindBranch(branchname);
@@ -5093,7 +5106,7 @@ TLeaf* TTree::GetLeafImpl(const char* branchname, const char *leafname)
          if (leaf) return leaf;
       }
    }
-   
+
    //second pass in the list of friends when the leaf name
    //is prefixed by the tree name
    TString strippedArg;
@@ -5126,16 +5139,16 @@ TLeaf* TTree::GetLeaf(const char* branchname, const char *leafname)
    //    TDirectoryName/TreeName
 
    if (leafname == 0) return 0;
-   
+
    // We already have been visited while recursively looking
    // through the friends tree, let return
    if (kGetLeaf & fFriendLockStatus) {
       return 0;
    }
-   
+
    return GetLeafImpl(branchname,leafname);
 }
-   
+
 //______________________________________________________________________________
 TLeaf* TTree::GetLeaf(const char* aname)
 {
@@ -5268,7 +5281,7 @@ void TTree::ImportClusterRanges(TTree *fromtree)
    // 
    // This is used when doing a fast cloning (by TTreeCloner).
    // See also fAutoFlush and fAutoSave if needed.
-   
+
    Long64_t autoflush = fromtree->GetAutoFlush();
    if (fNClusterRange || fromtree->fNClusterRange) {
       Int_t newsize = fNClusterRange + 1 + fromtree->fNClusterRange;
@@ -5302,7 +5315,7 @@ void TTree::ImportClusterRanges(TTree *fromtree)
       SetAutoSave( autoflush*(autosave/autoflush) );
    }
 }
-   
+
 //______________________________________________________________________________
 void TTree::KeepCircular()
 {
@@ -5566,7 +5579,7 @@ Int_t TTree::MakeProxy(const char* proxyClassname, const char* macrofilename, co
    //    nohist : indicates that the generated ProcessFill should not
    //             fill the histogram.
    //
-   // 'maxUnrolling' controls how deep in the class hierachy does the
+   // 'maxUnrolling' controls how deep in the class hierarchy does the
    // system 'unroll' classes that are not split.  Unrolling a class
    // allows direct access to its data members (this emulates the behavior
    // of TTreeFormula).
@@ -5719,7 +5732,7 @@ TTree* TTree::MergeTrees(TList* li, Option_t* /* option */)
       if (!newtree) {
          newtree = (TTree*)tree->CloneTree();
          if (!newtree) continue;
-         
+
          // Once the cloning is done, separate the trees,
          // to avoid as many side-effects as possible
          // The list of clones is guaranteed to exist since we
@@ -5755,12 +5768,19 @@ Long64_t TTree::Merge(TCollection* li, Option_t* /* option */)
    //
 
    if (!li) return 0;
+   Long64_t storeAutoSave = fAutoSave;
+   // Disable the autosave as the TFileMerge keeps a list of key and deleting the underlying
+   // key would invalidate its iteration (or require costly measure to not use the deleted keys).
+   // Also since this is part of a merging operation, the output file is not as precious as in
+   // the general case since the input file should still be around.
+   fAutoSave = 0; 
    TIter next(li);
    TTree *tree;
    while ((tree = (TTree*)next())) {
       if (tree==this) continue;
       if (!tree->InheritsFrom(TTree::Class())) {
          Error("Add","Attempt to add object of class: %s to a %s", tree->ClassName(), ClassName());
+         fAutoSave = storeAutoSave;
          return -1;
       }
 
@@ -5780,6 +5800,7 @@ Long64_t TTree::Merge(TCollection* li, Option_t* /* option */)
    if (GetTreeIndex()) {
       GetTreeIndex()->Append(0,kFALSE); // Force the sorting
    }
+   fAutoSave = storeAutoSave;
    return GetEntries();
 }
 
@@ -5794,32 +5815,42 @@ Long64_t TTree::Merge(TCollection* li, TFileMergeInfo *info)
    //
    // Returns the total number of entries in the merged tree.
    //
-   
+
    const char *options = info ? info->fOptions.Data() : "";
    if (info && info->fIsFirst && info->fOutputDirectory && info->fOutputDirectory->GetFile() != GetCurrentFile()) {
       TDirectory::TContext ctxt(gDirectory,info->fOutputDirectory);
       TTree *newtree = CloneTree(-1, options);
-      newtree->Write();
-      delete newtree;
+      if (newtree) {
+         newtree->Write();
+         delete newtree;
+      }
       info->fOutputDirectory->ReadTObject(this,this->GetName());
    }
    if (!li) return 0;
+   Long64_t storeAutoSave = fAutoSave;
+   // Disable the autosave as the TFileMerge keeps a list of key and deleting the underlying
+   // key would invalidate its iteration (or require costly measure to not use the deleted keys).
+   // Also since this is part of a merging operation, the output file is not as precious as in
+   // the general case since the input file should still be around.
+   fAutoSave = 0; 
    TIter next(li);
    TTree *tree;
    while ((tree = (TTree*)next())) {
       if (tree==this) continue;
       if (!tree->InheritsFrom(TTree::Class())) {
          Error("Add","Attempt to add object of class: %s to a %s", tree->ClassName(), ClassName());
+         fAutoSave = storeAutoSave;
          return -1;
       }
       // Copy MakeClass status.
       tree->SetMakeClass(fMakeClass);
-      
+
       // Copy branch addresses.
       CopyAddresses(tree);
-      
+
       CopyEntries(tree,-1,options);
    }
+   fAutoSave = storeAutoSave;
    return GetEntries();
 }
 
@@ -5954,7 +5985,7 @@ TPrincipal* TTree::Principal(const char* varexp, const char* selection, Option_t
    //   If option "p" and "d" print results of analysis
    //   If option "p" and "h" generate standard histograms
    //   If option "p" and "c" generate code of conversion functions
-   //   return a pointer to the TPrincipal object. It is the user responsability
+   //   return a pointer to the TPrincipal object. It is the user responsibility
    //   to delete this object.
    //   The option default value is "np"
    //
@@ -6116,7 +6147,7 @@ Long64_t TTree::Process(const char* filename, Option_t* option, Long64_t nentrie
    // filename must contain a valid class implementation derived from TSelector,
    // where TSelector has the following member functions:
    //
-   //    Begin():        called everytime a loop on the tree starts,
+   //    Begin():        called every time a loop on the tree starts,
    //                    a convenient place to create your histograms.
    //    SlaveBegin():   called after Begin(), when on PROOF called only on the
    //                    slave servers.
@@ -6184,7 +6215,7 @@ Long64_t TTree::Process(TSelector* selector, Option_t* option, Long64_t nentries
    //
    //   The TSelector class has the following member functions:
    //
-   //    Begin():        called everytime a loop on the tree starts,
+   //    Begin():        called every time a loop on the tree starts,
    //                    a convenient place to create your histograms.
    //    SlaveBegin():   called after Begin(), when on PROOF called only on the
    //                    slave servers.
@@ -6253,9 +6284,6 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor, cha
    //      x:y:z      (all variables are assumed of type "F"
    //      x/D:y:z    (all variables are of type "D"
    //      x:y/D:z    (x is type "F", y and z of type "D"
-   //  -If the type is a string of characters. This will read
-   //  subsequent characters until a whitespace is found (whitespace
-   //  characters are considered to be blank, newline and tab).
    //
    //  delimiter allows for the use of another delimiter besides whitespace.
    //    This provides support for direct import of common data file formats
@@ -6267,10 +6295,8 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor, cha
    //    If the filename ends with extensions .csv or .CSV and a delimiter is
    //    not specified (besides ' '), the delimiter is automatically set to ','.
    //
-   // Lines in the input file starting with "#" are ignored.
-   // This function will read and ignore any whitespace characters
-   // (this includes blank spaces and the newline and tab characters).
-   // Handles newlines specified with '\n', '\r', or "\r\n".
+   // Lines in the input file starting with "#" are ignored. Leading whitespace
+   //   for each column data is skipped. Empty lines are skipped.
    //
    // A TBranch object is created for each variable in the expression.
    // The total number of rows read from the file is returned.
@@ -6290,33 +6316,31 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor, cha
    }
    const char* ext = strrchr(filename, '.');
    if(ext != NULL && ((strcmp(ext, ".csv") == 0) || (strcmp(ext, ".CSV") == 0)) && delimiter == ' ') {
-     delimiter = ',';
+      delimiter = ',';
    }
    return ReadStream(in, branchDescriptor, delimiter);
 }
 
 //______________________________________________________________________________
-char TTree::GetNewlineValue(istream &inputStream)
+char TTree::GetNewlineValue(std::istream &inputStream)
 {
    // Determine which newline this file is using.
+   // Return '\r' for Windows '\r\n' as that already terminates.
 
-   long inPos = inputStream.tellg();
+   Long_t inPos = inputStream.tellg();
    char newline = '\n';
    while(1) {
-     char c = 0;
-     inputStream.get(c);
-     if(!inputStream.good()) {
-       Error("ReadStream","Error reading stream: no newline found.");
-       return 0;
-     }
-     if(c == newline) break;
-     if(c == '\r') { 
-       if(inputStream.get() == newline) break;
-       else {
+      char c = 0;
+      inputStream.get(c);
+      if(!inputStream.good()) {
+         Error("ReadStream","Error reading stream: no newline found.");
+         return 0;
+      }
+      if(c == newline) break;
+      if(c == '\r') { 
          newline = '\r';
          break;
-       }
-     }
+      }
    }
    inputStream.clear();
    inputStream.seekg(inPos);
@@ -6324,7 +6348,7 @@ char TTree::GetNewlineValue(istream &inputStream)
 }
 
 //______________________________________________________________________________
-Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, char delimiter)
+Long64_t TTree::ReadStream(std::istream& inputStream, const char *branchDescriptor, char delimiter)
 {
    // Create or simply read branches from an input stream.
    //
@@ -6333,7 +6357,9 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, c
    gTree = this;
    char newline = GetNewlineValue(inputStream);
    std::istream& in = inputStream;
-   TBranch *branch;
+   Long64_t nlines = 0;
+
+   TBranch *branch = 0;
    Int_t nbranches = fBranches.GetEntries();
    if (nbranches == 0) {
       char *bdname = new char[4000];
@@ -6349,6 +6375,7 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, c
             Error("ReadStream","Error reading stream");
             return 0;
          }
+         ++nlines;
          nch = strlen(bd);
       } else {
          strlcpy(bd,branchDescriptor,100000);
@@ -6392,54 +6419,170 @@ Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, c
       delete [] bd;
    }
 
-   //loop on all lines in the file
    nbranches = fBranches.GetEntries();
-   Bool_t status = kTRUE;
-   Long64_t nlines = 0;
-   while(1) {
 
-      while (isspace(in.peek())) {
-         in.get();
+   if (gDebug > 1) {
+      Info("ReadStream", "Will use branches:");
+      for (int i = 0 ; i < nbranches; ++i) {
+         TBranch* br = (TBranch*) fBranches.At(i);
+         Info("ReadStream", "  %s: %s [%s]", br->GetName(),
+              br->GetTitle(), br->GetListOfLeaves()->At(0)->IsA()->GetName());
       }
-      if ( in.peek() != '#' ) {
-         //loop on branches and read the branch values into their buffer
-         for (Int_t i=0;i<nbranches;i++) {
-            branch = (TBranch*)fBranches.At(i);
-            TLeaf *leaf = (TLeaf*)branch->GetListOfLeaves()->At(0);
-            leaf->ReadValue(in);
-            if (in.eof()) {
-              if(i == nbranches-1) {
-                // handle no newline char on last line
-                Fill();
-                nlines++;
-              }
-              return nlines;
-            }
-            status = in.good();
-            if (!status) {
-               if(in.fail() && ! in.bad()) { // just couldn't interpret formatted data
-                 Warning("ReadStream","Couldn't read formatted data for branch %s on line %lld",branch->GetName(),nlines+1);
-                 in.clear();
-                 status = kTRUE;
-               }
-               else {
-                 Warning("ReadStream","Illegal value after line %lld",nlines);
-                 in.clear();
-                 break;
-               }
-            }
-            if(in.peek() == delimiter) in.get();
-         }
-         //we are now ready to fill the tree
-         if (status) {
-            Fill();
-            nlines++;
-         }
+      if (gDebug > 3) {
+         Info("ReadStream", "Dumping read tokens, format:");
+         Info("ReadStream", "LLLLL:BBB:gfbe:GFBE:T");
+         Info("ReadStream", "   L: line number");
+         Info("ReadStream", "   B: branch number");
+         Info("ReadStream", "   gfbe: good / fail / bad / eof of token");
+         Info("ReadStream", "   GFBE: good / fail / bad / eof of file");
+         Info("ReadStream", "   T: Token being read");
       }
-      in.ignore(8192,newline);
    }
 
-   return nlines;
+   //loop on all lines in the file
+   Long64_t nGoodLines = 0;
+   std::string line;
+   const char sDelimBuf[2] = { delimiter, 0 };
+   const char* sDelim = sDelimBuf;
+   if (delimiter == ' ') {
+      // ' ' really means whitespace
+      sDelim = "[ \t]";
+   }
+   while(in.good()) {
+      if (newline == '\r' && in.peek() == '\n') {
+         // Windows, skip '\n':
+         in.get();
+      }
+      std::getline(in, line, newline);
+      ++nlines;
+
+      TString sLine(line);
+      sLine = sLine.Strip(TString::kLeading); // skip leading whitespace
+      if (sLine.IsNull()) {
+         if (gDebug > 2) {
+            Info("ReadStream", "Skipping empty line number %lld", nlines);
+         }
+         continue; // silently skip empty lines
+      }
+      if (sLine[0] == '#') {
+         if (gDebug > 2) {
+            Info("ReadStream", "Skipping comment line number %lld: '%s'",
+                 nlines, line.c_str());
+         }
+         continue;
+      }
+      if (gDebug > 2) {
+         Info("ReadStream", "Parsing line number %lld: '%s'",
+              nlines, line.c_str());
+      }
+
+      // Loop on branches and read the branch values into their buffer
+      branch = 0;
+      TString tok; // one column's data
+      TString leafData; // leaf data, possibly multiple tokens for e.g. /I[2]
+      std::stringstream sToken; // string stream feeding leafData into leaves
+      Ssiz_t pos = 0;
+      Int_t iBranch = 0;
+      Bool_t goodLine = kTRUE; // whether the row can be filled into the tree
+      Int_t remainingLeafLen = 0; // remaining columns for the current leaf
+      while (goodLine && iBranch < nbranches
+             && sLine.Tokenize(tok, pos, sDelim)) {
+         tok = tok.Strip(TString::kLeading); // skip leading whitespace
+         if (tok.IsNull() && delimiter == ' ') {
+            // 1   2 should not be interpreted as 1,,,2 but 1, 2.
+            // Thus continue until we have a non-empty token.
+            continue;
+         }
+
+         if (!remainingLeafLen) {
+            // next branch!
+            branch = (TBranch*)fBranches.At(iBranch);
+         }
+         TLeaf *leaf = (TLeaf*)branch->GetListOfLeaves()->At(0);
+         if (!remainingLeafLen) {
+            remainingLeafLen = leaf->GetLen();
+            if (leaf->GetMaximum() > 0) {
+               // This is a dynamic leaf length, i.e. most likely a TLeafC's
+               // string size. This still translates into one token:
+               remainingLeafLen = 1;
+            }
+
+            leafData = tok;
+         } else {
+            // append token to laf data:
+            leafData += " ";
+            leafData += tok;
+         }
+         --remainingLeafLen;
+         if (remainingLeafLen) {
+            // need more columns for this branch:
+            continue;
+         }
+         ++iBranch;
+
+         // initialize stringstream with token
+         sToken.clear();
+         sToken.seekp(0, std::ios_base::beg);
+         sToken.str(leafData.Data());
+         sToken.seekg(0, std::ios_base::beg);
+         leaf->ReadValue(sToken, 0 /* 0 = "all" */);
+         if (gDebug > 3) {
+            Info("ReadStream", "%5lld:%3d:%d%d%d%d:%d%d%d%d:%s",
+                 nlines, iBranch,
+                 (int)sToken.good(), (int)sToken.fail(),
+                 (int)sToken.bad(), (int)sToken.eof(),
+                 (int)in.good(), (int)in.fail(),
+                 (int)in.bad(), (int)in.eof(),
+                 sToken.str().c_str());
+         }
+
+         // Error handling
+         if (sToken.bad()) {
+            // How could that happen for a stringstream?
+            Warning("ReadStream",
+                    "Buffer error while reading data for branch %s on line %lld",
+                    branch->GetName(), nlines);
+         } else if (!sToken.eof()) {
+            if (sToken.fail()) {
+               Warning("ReadStream",
+                       "Couldn't read formatted data in \"%s\" for branch %s on line %lld; ignoring line",
+                       tok.Data(), branch->GetName(), nlines);
+               goodLine = kFALSE;
+            } else {
+               std::string remainder;
+               std::getline(sToken, remainder, newline);
+               if (!remainder.empty()) {
+                  Warning("ReadStream",
+                          "Ignoring trailing \"%s\" while reading data for branch %s on line %lld",
+                          remainder.c_str(), branch->GetName(), nlines);
+               }
+            }
+         }
+      } // tokenizer loop
+
+      if (iBranch < nbranches) {
+         Warning("ReadStream",
+                 "Read too few columns (%d < %d) in line %lld; ignoring line",
+                 iBranch, nbranches, nlines);
+         goodLine = kFALSE;
+      } else if (pos != kNPOS) {
+         sLine = sLine.Strip(TString::kTrailing);
+         if (pos < sLine.Length()) {
+            Warning("ReadStream",
+                    "Ignoring trailing \"%s\" while reading line %lld",
+                    sLine.Data() + pos - 1 /* also print delimiter */,
+                    nlines);
+         }
+      }
+
+      //we are now ready to fill the tree
+      if (goodLine) {
+         Fill();
+         ++nGoodLines;
+      }
+   }
+
+   return nGoodLines;
 }
 
 //______________________________________________________________________________
@@ -6544,15 +6687,16 @@ void TTree::Reset(Option_t* option)
 {
    // Reset baskets, buffers and entries count in all branches and leaves.
 
-   fNotify = 0;
-   fEntries = 0;
+   fNotify        = 0;
+   fEntries       = 0;
    fNClusterRange = 0;
-   fTotBytes = 0;
-   fZipBytes = 0;
-   fSavedBytes = 0;
-   fTotalBuffers = 0;
-   fChainOffset = 0;
-   fReadEntry = -1;
+   fTotBytes      = 0;
+   fZipBytes      = 0;
+   fFlushedBytes  = 0;
+   fSavedBytes    = 0;
+   fTotalBuffers  = 0;
+   fChainOffset   = 0;
+   fReadEntry     = -1;
 
    delete fTreeIndex;
    fTreeIndex = 0;
@@ -6572,25 +6716,26 @@ void TTree::ResetAfterMerge(TFileMergeInfo *info)
 {
    // Resets the state of this TTree after a merge (keep the customization but
    // forget the data).
-   
+
    fEntries       = 0;
    fNClusterRange = 0;
    fTotBytes      = 0;
    fZipBytes      = 0;
    fSavedBytes    = 0;
+   fFlushedBytes  = 0;
    fTotalBuffers  = 0;
    fChainOffset   = 0;
    fReadEntry     = -1;
-   
+
    delete fTreeIndex;
    fTreeIndex     = 0;
-   
+
    Int_t nb = fBranches.GetEntriesFast();
    for (Int_t i = 0; i < nb; ++i)  {
       TBranch* branch = (TBranch*) fBranches.UncheckedAt(i);
       branch->ResetAfterMerge(info);
    }
-   
+
    if (fBranchRef) {
       fBranchRef->ResetAfterMerge(info);
    }
@@ -6692,7 +6837,7 @@ Bool_t TTree::SetAlias(const char* aliasName, const char* aliasFormula)
 }
 
 //_______________________________________________________________________
-void TTree::SetAutoFlush(Long64_t autof)
+void TTree::SetAutoFlush(Long64_t autof /* = -30000000 */ )
 {
    // This function may be called at the start of a program to change
    // the default value for fAutoFlush.
@@ -6768,7 +6913,7 @@ void TTree::SetAutoFlush(Long64_t autof)
    //   Printf("%-16d %-16lld %-16lld %5lld",
    //          index, prevEntry, fEntries - 1, fAutoFlush);
    //
-   
+
    // Note:  We store the entry number corresponding to the end of the cluster 
    // rather than its start in order to avoid using the array if the cluster 
    // size never varies (If there is only one value of AutoFlush for the whole TTree).
@@ -7400,7 +7545,7 @@ void TTree::SetEventList(TEventList *evlist)
 }
 
 //_______________________________________________________________________
-void TTree::SetEstimate(Long64_t n /* = 10000 */)
+void TTree::SetEstimate(Long64_t n /* = 1000000 */)
 {
    // Set number of entries to estimate variable limits.
    // If n is -1, the estimate is set to be the current maximum
@@ -7442,7 +7587,7 @@ void TTree::SetMakeClass(Int_t make)
 {
    // Set all the branches in this TTree to be in decomposed object mode
    // (also known as MakeClass mode).
-   
+
    fMakeClass = make;
 
    Int_t nb = fBranches.GetEntriesFast();
@@ -7512,15 +7657,14 @@ void TTree::SetObject(const char* name, const char* title)
 //______________________________________________________________________________
 void TTree::SetParallelUnzip(Bool_t opt, Float_t RelSize)
 {
-   //enable or disable parallel unzipping of Tree buffers
+   // Enable or disable parallel unzipping of Tree buffers.
 
    if (opt) TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kEnable);
    else     TTreeCacheUnzip::SetParallelUnzip(TTreeCacheUnzip::kDisable);
 
-   if (RelSize > 0)
-     TTreeCacheUnzip::SetUnzipRelBufferSize(RelSize);
-
-
+   if (RelSize > 0) {
+      TTreeCacheUnzip::SetUnzipRelBufferSize(RelSize);
+   }
 
 }
 
@@ -7694,7 +7838,28 @@ void TTree::Streamer(TBuffer& b)
          if (fEstimate <= 10000) {
             fEstimate = 1000000;
          }
-         fCacheSize    = fAutoFlush;
+         if (fAutoFlush < 0) {
+            // If there is no autoflush set, let's keep the cache completely
+            // disable by default for now.
+            fCacheSize = fAutoFlush; 
+         } else if (fAutoFlush != 0) {
+            // Estimate the cluster size.
+            // This will allow TTree::Process to enable the cache.
+            if (fZipBytes != 0) {
+               fCacheSize =  fAutoFlush*(fZipBytes/fEntries);
+            } else if (fTotBytes != 0) {
+               fCacheSize =  fAutoFlush*(fTotBytes/fEntries);                  
+            } else {
+               fCacheSize = 30000000;
+            }
+            if (fCacheSize >= (INT_MAX / 4)) {
+               fCacheSize = INT_MAX / 4;
+            } else if (fCacheSize == 0) {
+               fCacheSize = 30000000;                  
+            }
+         } else {
+            fCacheSize = 0;
+         }
          ResetBit(kMustCleanup);
          return;
       }
@@ -7917,6 +8082,7 @@ TObject* TTreeFriendLeafIter::Next()
       TObjArray *list = fTree->GetListOfLeaves();
       if (!list) return 0; // Can happen with an empty chain.
       fLeafIter =  list->MakeIterator(fDirection);
+      if (!fLeafIter) return 0;
    }
 
    next = fLeafIter->Next();
@@ -7925,6 +8091,7 @@ TObject* TTreeFriendLeafIter::Next()
          TCollection * list = fTree->GetListOfFriends();
          if (!list) return next;
          fTreeIter = list->MakeIterator(fDirection);
+         if (!fTreeIter) return 0;
       }
       TFriendElement * nextFriend = (TFriendElement*) fTreeIter->Next();
       ///nextTree = (TTree*)fTreeIter->Next();
@@ -7933,6 +8100,7 @@ TObject* TTreeFriendLeafIter::Next()
          if (!nextTree) return Next();
          SafeDelete(fLeafIter);
          fLeafIter = nextTree->GetListOfLeaves()->MakeIterator(fDirection);
+         if (!fLeafIter) return 0;
          next = fLeafIter->Next();
       }
    }

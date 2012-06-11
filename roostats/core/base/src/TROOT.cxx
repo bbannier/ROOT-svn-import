@@ -114,7 +114,12 @@
 namespace std {} using namespace std;
 
 #if defined(R__UNIX)
+#if defined(R__HAS_COCOA)
+#include "TMacOSXSystem.h"
+#include "TUrl.h"
+#else
 #include "TUnixSystem.h"
+#endif
 #elif defined(R__WIN32)
 #include "TWinNTSystem.h"
 #endif
@@ -275,7 +280,6 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    gDirectory = 0;
    SetName(name);
    SetTitle(title);
-   TDirectory::Build();
 
    // will be used by global "operator delete" so make sure it is set
    // before anything is deleted
@@ -293,6 +297,8 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
       exit(1);
    }
 #endif
+
+   TDirectory::Build();
 
    // Initialize interface to CINT C++ interpreter
    fVersionInt      = 0;  // check in TROOT dtor in case TCint fails
@@ -324,7 +330,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fPluginManager->LoadHandlersFromEnv(gEnv);
 #if defined(R__MACOSX) && (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
    if (TARGET_OS_IPHONE | TARGET_IPHONE_SIMULATOR) {
-      TEnv plugins(".plugins-ios");
+      TEnv plugins(".plugins-std::ios");
       fPluginManager->LoadHandlersFromEnv(&plugins);
    }
 #endif
@@ -616,6 +622,9 @@ Bool_t TROOT::ClassSaved(TClass *cl)
 namespace {
    static void R__ListSlowClose(TList *files)
    {
+      // Routine to close a list of files using the 'slow' techniques
+      // that also for the deletion ot update the list itself.
+
       static TObject harmless;
       TObjLink *cursor = files->FirstLink();
       while (cursor) {
@@ -1344,7 +1353,11 @@ void TROOT::InitSystem()
 
    if (gSystem == 0) {
 #if defined(R__UNIX)
+#if defined(R__HAS_COCOA)
+      gSystem = new TMacOSXSystem;
+#else
       gSystem = new TUnixSystem;
+#endif
 #elif defined(R__WIN32)
       gSystem = new TWinNTSystem;
 #else
@@ -1387,6 +1400,13 @@ void TROOT::InitSystem()
 
       fgMemCheck = gEnv->GetValue("Root.MemCheck", 0);
 
+#if defined(R__HAS_COCOA)
+      // create and delete a dummy TUrl so that TObjectStat table does not contain
+      // objects that are deleted after recording is turned-off (in next line),
+      // like the TUrl::fgSpecialProtocols list entries which are created in the
+      // TMacOSXSystem ctor.
+      { TUrl dummy("/dummy"); }
+#endif
       TObject::SetObjectStat(gEnv->GetValue("Root.ObjectStat", 0));
    }
 }
@@ -1994,7 +2014,7 @@ void TROOT::IndentLevel()
 {
    // Functions used by ls() to indent an object hierarchy.
 
-   for (int i = 0; i < fgDirLevel; i++) cout.put(' ');
+   for (int i = 0; i < fgDirLevel; i++) std::cout.put(' ');
 }
 
 //______________________________________________________________________________

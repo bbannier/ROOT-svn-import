@@ -160,7 +160,7 @@ End_Macro
 
 
 //______________________________________________________________________________
-TLegend::TLegend(): TPave(), TAttText(12,0,1,gStyle->GetTextFont(),0)
+TLegend::TLegend(): TPave(), TAttText(12,0,1,gStyle->GetLegendFont(),0)
 {
    /* Begin_Html
    Default constructor.
@@ -174,7 +174,7 @@ TLegend::TLegend(): TPave(), TAttText(12,0,1,gStyle->GetTextFont(),0)
 //______________________________________________________________________________
 TLegend::TLegend( Double_t x1, Double_t y1,Double_t x2, Double_t y2,
                   const char *header, Option_t *option)
-        :TPave(x1,y1,x2,y2,4,option), TAttText(12,0,1,gStyle->GetTextFont(),0)
+        :TPave(x1,y1,x2,y2,4,option), TAttText(12,0,1,gStyle->GetLegendFont(),0)
 {
    /* Begin_Html
    Normal Contructor.
@@ -194,7 +194,7 @@ TLegend::TLegend( Double_t x1, Double_t y1,Double_t x2, Double_t y2,
       headerEntry->SetTextAlign(0);
       headerEntry->SetTextAngle(0);
       headerEntry->SetTextColor(0);
-      headerEntry->SetTextFont(62); // default font is 62 for the header
+      headerEntry->SetTextFont(gStyle->GetLegendFont());
       headerEntry->SetTextSize(0);
       fPrimitives->AddFirst(headerEntry);
    }
@@ -855,14 +855,14 @@ void TLegend::RecursiveRemove(TObject *obj)
 
 
 //______________________________________________________________________________
-void TLegend::SavePrimitive(ostream &out, Option_t* )
+void TLegend::SavePrimitive(std::ostream &out, Option_t* )
 {
    /* Begin_Html
    Save this legend as C++ statements on output stream out
    to be used with the SaveAs .C option.
    End_Html */
 
-   out << "   " << endl;
+   out << "   " << std::endl;
    char quote = '"';
    if ( gROOT->ClassSaved( TLegend::Class() ) ) {
       out << "   ";
@@ -872,9 +872,9 @@ void TLegend::SavePrimitive(ostream &out, Option_t* )
    // note, we can always use NULL header, since its included in primitives
    out << "leg = new TLegend("<<GetX1NDC()<<","<<GetY1NDC()<<","
        <<GetX2NDC()<<","<<GetY2NDC()<<","
-       << "NULL" << "," <<quote<< fOption <<quote<<");" << endl;
+       << "NULL" << "," <<quote<< fOption <<quote<<");" << std::endl;
    if (fBorderSize != 4) {
-      out<<"   leg->SetBorderSize("<<fBorderSize<<");"<<endl;
+      out<<"   leg->SetBorderSize("<<fBorderSize<<");"<<std::endl;
    }
    SaveTextAttributes(out,"leg",12,0,1,42,0);
    SaveLineAttributes(out,"leg",-1,-1,-1);
@@ -884,7 +884,7 @@ void TLegend::SavePrimitive(ostream &out, Option_t* )
       TLegendEntry *entry;
       while (( entry = (TLegendEntry *)next() )) entry->SaveEntry(out,"leg");
    }
-   out << "   leg->Draw();"<<endl;
+   out << "   leg->Draw();"<<std::endl;
 }
 
 

@@ -87,7 +87,7 @@ Bool_t PyROOT::T##name##Converter::SetArg(                                    \
             func->SetArg( para.fLong );                                       \
       } else {                                                                \
          PyErr_Format( PyExc_TypeError,                                       \
-            #type" expected, got string of size "PY_SSIZE_T_FORMAT, PyROOT_PyUnicode_GET_SIZE( pyobject ) );\
+            #type" expected, got string of size " PY_SSIZE_T_FORMAT, PyROOT_PyUnicode_GET_SIZE( pyobject ) );\
          return kFALSE;                                                       \
       }                                                                       \
    } else {                                                                   \
@@ -1196,6 +1196,7 @@ namespace {
       NFp_t( "float*",             &CreateFloatArrayConverter         ),
       NFp_t( "double*",            &CreateDoubleArrayConverter        ),
       NFp_t( "long long*",         &CreateLongLongArrayConverter      ),
+      NFp_t( "unsigned long long*", &CreateLongLongArrayConverter     ),
       NFp_t( "void*",              &CreateVoidArrayConverter          ),
 
    // factories for special cases

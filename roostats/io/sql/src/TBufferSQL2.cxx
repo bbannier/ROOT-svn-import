@@ -185,9 +185,9 @@ TSQLStructure* TBufferSQL2::SqlWriteAny(const void* obj, const TClass* cl, Long6
 
    if (gDebug>3)
       if (fStructure!=0) {
-         cout << "==== Printout of Sql structures ===== " << endl;
+         std::cout << "==== Printout of Sql structures ===== " << std::endl;
          fStructure->Print("*");
-         cout << "=========== End printout ============ " << endl;
+         std::cout << "=========== End printout ============ " << std::endl;
       }
 
    return fStructure;
@@ -336,7 +336,7 @@ Int_t TBufferSQL2::SqlWriteObject(const void* obj, const TClass* cl, TMemberStre
    // Return id of saved object
 
    if (gDebug>1)
-      cout << " SqlWriteObject " << obj << " : cl = " << (cl ? cl->GetName() : "null") << endl;
+      std::cout << " SqlWriteObject " << obj << " : cl = " << (cl ? cl->GetName() : "null") << std::endl;
 
    PushStack();
 
@@ -355,7 +355,7 @@ Int_t TBufferSQL2::SqlWriteObject(const void* obj, const TClass* cl, TMemberStre
    }
 
    if (gDebug>1)
-      cout << "    Find objectid = " << objid << endl;
+      std::cout << "    Find objectid = " << objid << std::endl;
 
    if (objid>=0) {
       Stack()->SetObjectPointer(objid);
@@ -378,7 +378,7 @@ Int_t TBufferSQL2::SqlWriteObject(const void* obj, const TClass* cl, TMemberStre
       ((TClass*)cl)->Streamer((void*)obj, *this);
 
    if (gDebug>1)
-      cout << "Done write of " << cl->GetName() << endl;
+      std::cout << "Done write of " << cl->GetName() << std::endl;
 
    PopStack();
 
@@ -434,8 +434,8 @@ void* TBufferSQL2::SqlReadObject(void* obj, TClass** cl, TMemberStreamer *stream
    }
 
    if ((gDebug>3) && findptr)
-      cout << "    Found pointer " << (obj ? obj : 0)
-           << " class = " << ((cl && *cl) ? (*cl)->GetName() : "null") << endl;
+      std::cout << "    Found pointer " << (obj ? obj : 0)
+           << " class = " << ((cl && *cl) ? (*cl)->GetName() : "null") << std::endl;
 
    if (findptr) {
       fCurrentData->ShiftToNextValue();
@@ -452,7 +452,7 @@ void* TBufferSQL2::SqlReadObject(void* obj, TClass** cl, TMemberStreamer *stream
    fCurrentData->ShiftToNextValue();
 
    if ((gDebug>2) || (objid<0))
-      cout << "Found object reference " << objid << endl;
+      std::cout << "Found object reference " << objid << std::endl;
 
    return SqlReadObjectDirect(obj, cl, objid, streamer, streamer_index, onFileClass);
 }
@@ -531,7 +531,7 @@ void* TBufferSQL2::SqlReadObjectDirect(void* obj, TClass** cl, Long64_t objid, T
    PopStack();
 
    if (gDebug>1)
-      cout << "Read object of class " << objClass->GetName() << " done" << endl << endl;
+      std::cout << "Read object of class " << objClass->GetName() << " done" << std::endl << std::endl;
 
    if (cl!=0) *cl = objClass;
 
@@ -553,7 +553,7 @@ void  TBufferSQL2::IncrementLevel(TVirtualStreamerInfo* info)
    PushStack()->SetStreamerInfo((TStreamerInfo*)info);
 
    if (gDebug>2)
-      cout << " IncrementLevel " << info->GetName() << endl;
+      std::cout << " IncrementLevel " << info->GetName() << std::endl;
 
    WorkWithClass(info->GetName(), info->GetClassVersion());
 }
@@ -574,7 +574,7 @@ void  TBufferSQL2::DecrementLevel(TVirtualStreamerInfo* info)
    fExpectedChain = kFALSE;
 
    if (gDebug>2)
-      cout << " DecrementLevel " << info->GetClass()->GetName() << endl;
+      std::cout << " DecrementLevel " << info->GetClass()->GetName() << std::endl;
 }
 
 //______________________________________________________________________________
@@ -956,14 +956,14 @@ Version_t TBufferSQL2::ReadVersion(UInt_t *start, UInt_t *bcnt, const TClass *)
       res = fReadVersionBuffer;
       fReadVersionBuffer = -1;
       if (gDebug>3)
-         cout << "TBufferSQL2::ReadVersion from buffer = " << res << endl;
+         std::cout << "TBufferSQL2::ReadVersion from buffer = " << res << std::endl;
    } else
    if ((fCurrentData!=0) && fCurrentData->IsBlobData() &&
        fCurrentData->VerifyDataType(sqlio::Version)) {
       TString value = fCurrentData->GetValue();
       res = value.Atoi();
       if (gDebug>3)
-         cout << "TBufferSQL2::ReadVersion from blob " << fCurrentData->GetBlobPrefixName() << " = " << res << endl;
+         std::cout << "TBufferSQL2::ReadVersion from blob " << fCurrentData->GetBlobPrefixName() << " = " << res << std::endl;
       fCurrentData->ShiftToNextValue();
    } else {
       Error("ReadVersion", "No correspondent tags to read version");
@@ -981,7 +981,7 @@ UInt_t TBufferSQL2::WriteVersion(const TClass *cl, Bool_t /* useBcnt */)
    // name, which will include class version
 
    if (gDebug>2)
-      cout << "TBufferSQL2::WriteVersion " << (cl ? cl->GetName() : "null") << "   ver = " << (cl ? cl->GetClassVersion() : 0) << endl;
+      std::cout << "TBufferSQL2::WriteVersion " << (cl ? cl->GetName() : "null") << "   ver = " << (cl ? cl->GetClassVersion() : 0) << std::endl;
 
    if (cl)
       Stack()->AddVersion(cl);
@@ -1011,7 +1011,7 @@ void TBufferSQL2::WriteObjectClass(const void *actualObjStart, const TClass *act
    // Write object to buffer. Only used from TBuffer
 
    if (gDebug>2)
-      cout << "TBufferSQL2::WriteObject of class " << (actualClass ? actualClass->GetName() : " null") << endl;
+      std::cout << "TBufferSQL2::WriteObject of class " << (actualClass ? actualClass->GetName() : " null") << std::endl;
    SqlWriteObject(actualObjStart, actualClass);
 }
 
@@ -1030,7 +1030,7 @@ void TBufferSQL2::WriteObjectClass(const void *actualObjStart, const TClass *act
          if (strstr(name,sqlio::IndexSepar)==0) {                       \
             res = sscanf(name,"[%d", &first); last = first;             \
          } else res = sscanf(name,"[%d..%d", &first, &last);            \
-         if (gDebug>5) cout << name << " first = " << first << " last = " << last << " res = " << res << endl; \
+         if (gDebug>5) std::cout << name << " first = " << first << " last = " << last << " res = " << res << std::endl; \
          if ((first!=indx) || (last<first) || (last>=arrsize)) {        \
             Error("SQLReadArrayCompress","Error reading array content %s", name); \
             fErrorFlag = 1;                                             \
@@ -1046,7 +1046,7 @@ void TBufferSQL2::WriteObjectClass(const void *actualObjStart, const TClass *act
 // macro to read content of array with compression
 #define SQLReadArrayContent(vname, arrsize, withsize)                   \
    {                                                                    \
-      if (gDebug>3) cout << "SQLReadArrayContent  " << (arrsize) << endl; \
+      if (gDebug>3) std::cout << "SQLReadArrayContent  " << (arrsize) << std::endl; \
       PushStack()->SetArray(withsize ? arrsize : -1);                   \
       Int_t indx = 0;                                                   \
       if (fCurrentData->IsBlobData())                                   \
@@ -1054,7 +1054,7 @@ void TBufferSQL2::WriteObjectClass(const void *actualObjStart, const TClass *act
          else                                                           \
             SQLReadArrayUncompress(vname, arrsize)                      \
                PopStack();                                              \
-      if (gDebug>3) cout << "SQLReadArrayContent done " << endl;        \
+      if (gDebug>3) std::cout << "SQLReadArrayContent done " << std::endl;        \
    }
 
 // macro to read array, which include size attribute
@@ -1089,7 +1089,7 @@ void TBufferSQL2::ReadWithFactor(Float_t *ptr, Double_t /* factor */, Double_t /
    // Read a Double32_t from the buffer when the factor and minimun value have been specified
    // see comments about Double32_t encoding at TBufferFile::WriteDouble32().
    // Currently TBufferXML does not optimize space in this case.
-   
+
    SqlReadBasic(*ptr);
 }
 
@@ -1099,7 +1099,7 @@ void TBufferSQL2::ReadWithNbits(Float_t *ptr, Int_t /* nbits */)
    // Read a Float16_t from the buffer when the number of bits is specified (explicitly or not)
    // see comments about Float16_t encoding at TBufferFile::WriteFloat16().
    // Currently TBufferXML does not optimize space in this case.
-   
+
    SqlReadBasic(*ptr);
 }
 
@@ -1109,7 +1109,7 @@ void TBufferSQL2::ReadWithFactor(Double_t *ptr, Double_t /* factor */, Double_t 
    // Read a Double32_t from the buffer when the factor and minimun value have been specified
    // see comments about Double32_t encoding at TBufferFile::WriteDouble32().   
    // Currently TBufferXML does not optimize space in this case.
-   
+
    SqlReadBasic(*ptr);
 }
 
@@ -1119,7 +1119,7 @@ void TBufferSQL2::ReadWithNbits(Double_t *ptr, Int_t /* nbits */)
    // Read a Double32_t from the buffer when the number of bits is specified (explicitly or not)
    // see comments about Double32_t encoding at TBufferFile::WriteDouble32().   
    // Currently TBufferXML does not optimize space in this case.
-   
+
    SqlReadBasic(*ptr);
 }
 
@@ -1442,7 +1442,7 @@ void TBufferSQL2::ReadFastArray(Char_t    *c, Int_t n)
       if (size<n) size = n;
       memcpy(c, buf, size);
    } else {
-      //     cout << "call standard macro TBufferSQL2_ReadFastArray" << endl;
+      //     std::cout << "call standard macro TBufferSQL2_ReadFastArray" << std::endl;
       TBufferSQL2_ReadFastArray(c);
    }
 }
@@ -2012,7 +2012,8 @@ Int_t TBufferSQL2::WriteFastArray(void **start, const TClass *cl, Int_t n, Bool_
          res |= WriteObjectAny(start[j],cl);
       }
 
-   } else {	//case //-> in comment
+   } else {
+      //case //-> in comment
 
       for (Int_t j=0;j<n;j++) {
          if (!start[j]) start[j] = ((TClass*)cl)->New();
@@ -2047,7 +2048,7 @@ void TBufferSQL2::StreamObject(void *obj, const TClass *cl, const TClass *onFile
    // steram object to/from buffer
 
    if (gDebug>1)
-      cout << " TBufferSQL2::StreamObject class = " << (cl ? cl->GetName() : "none") << endl;
+      std::cout << " TBufferSQL2::StreamObject class = " << (cl ? cl->GetName() : "none") << std::endl;
    if (IsReading())
       SqlReadObject(obj, 0, 0, 0, onFileClass);
    else
@@ -2070,7 +2071,7 @@ void TBufferSQL2::StreamObject(void *obj, TMemberStreamer *streamer, const TClas
    if (streamer==0) return;
 
    if (gDebug>1)
-      cout << "Stream object of class = " << cl->GetName() << endl;
+      std::cout << "Stream object of class = " << cl->GetName() << std::endl;
 //   (*streamer)(*this, obj, n);
 
    if (IsReading())
@@ -2195,7 +2196,7 @@ void TBufferSQL2::ReadCharP(Char_t    *c)
    // Reads array of characters from buffer
 
    const char* buf = SqlReadCharStarValue();
-   strcpy(c, buf);
+   if (buf) strcpy(c, buf);
 }
 
 //________________________________________________________________________
@@ -2659,7 +2660,7 @@ const char* TBufferSQL2::SqlReadValue(const char* tname)
    fCurrentData->ShiftToNextValue();
 
    if (gDebug>4)
-      cout << "   SqlReadValue " << tname << " = " << fReadBuffer << endl;
+      std::cout << "   SqlReadValue " << tname << " = " << fReadBuffer << std::endl;
 
    return fReadBuffer.Data();
 }
@@ -2742,10 +2743,10 @@ Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &se
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
-   
+
    TVirtualStreamerInfo *info = sequence.fStreamerInfo;
    IncrementLevel(info);
-   
+
    if (gDebug) {
       //loop on all active members
       TStreamerInfoActions::ActionContainer_t::const_iterator end = sequence.fActions.end();
@@ -2757,7 +2758,7 @@ Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &se
          (*iter).PrintDebug(*this,obj);
          (*iter)(*this,obj);
       }
-      
+
    } else {
       //loop on all active members
       TStreamerInfoActions::ActionContainer_t::const_iterator end = sequence.fActions.end();
@@ -2769,7 +2770,7 @@ Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &se
          (*iter)(*this,obj);
       }
    }
-   
+
    DecrementLevel(info);
    return 0;
 }
@@ -2779,10 +2780,10 @@ Int_t TBufferSQL2::ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequen
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
    // The collection needs to be a split TClonesArray or a split vector of pointers.
-   
+
    TVirtualStreamerInfo *info = sequence.fStreamerInfo;
    IncrementLevel(info);
-   
+
    if (gDebug) {
       //loop on all active members
       TStreamerInfoActions::ActionContainer_t::const_iterator end = sequence.fActions.end();
@@ -2794,7 +2795,7 @@ Int_t TBufferSQL2::ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequen
          (*iter).PrintDebug(*this,*(char**)start_collection);  // Warning: This limits us to TClonesArray and vector of pointers.
          (*iter)(*this,start_collection,end_collection);
       }
-      
+
    } else {
       //loop on all active members
       TStreamerInfoActions::ActionContainer_t::const_iterator end = sequence.fActions.end();
@@ -2806,7 +2807,7 @@ Int_t TBufferSQL2::ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequen
          (*iter)(*this,start_collection,end_collection);
       }
    }
-   
+
    DecrementLevel(info);
    return 0;
 }
@@ -2815,13 +2816,13 @@ Int_t TBufferSQL2::ApplySequenceVecPtr(const TStreamerInfoActions::TActionSequen
 Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &sequence, void *start_collection, void *end_collection) 
 {
    // Read one collection of objects from the buffer using the StreamerInfoLoopAction.
-   
+
    TVirtualStreamerInfo *info = sequence.fStreamerInfo;
    IncrementLevel(info);
-   
+
    TStreamerInfoActions::TLoopConfiguration *loopconfig = sequence.fLoopConfig;
    if (gDebug) {
-      
+
       // Get the address of the first item for the PrintDebug.
       // (Performance is not essential here since we are going to print to
       // the screen anyway).
@@ -2836,7 +2837,7 @@ Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &se
          (*iter).PrintDebug(*this,arr0);
          (*iter)(*this,start_collection,end_collection,loopconfig);
       }
-      
+
    } else {
       //loop on all active members
       TStreamerInfoActions::ActionContainer_t::const_iterator end = sequence.fActions.end();
@@ -2848,7 +2849,7 @@ Int_t TBufferSQL2::ApplySequence(const TStreamerInfoActions::TActionSequence &se
          (*iter)(*this,start_collection,end_collection,loopconfig);
       }
    }
-   
+
    DecrementLevel(info);
    return 0;
 }
