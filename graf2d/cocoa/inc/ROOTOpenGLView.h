@@ -25,17 +25,31 @@
 @interface ROOTOpenGLView : NSView <X11Window>
 
 - (id) initWithFrame : (NSRect) frameRect pixelFormat : (NSOpenGLPixelFormat *) format;
-- (void) clearGLContext;
-- (NSOpenGLContext *) openGLContext;
+
+//GL-view does not own GL-context, different GL contexts can be attached to the same view
+//(though ROOT never does this). View has to know about GL-context only to notify it about
+//geometry changes (calls -update method) and to clear drawable in a -dealloc method.
+
 - (void) setOpenGLContext : (NSOpenGLContext *) context;
+
+//ROOT's GL uses pixel format (TGLFormat class) when TGLWidget is
+//created, after that, pixel format never changed (though I can do 
+//this with ROOTOpenGLView, there is no interface in ROOT's GL code for this).
+//So, pixel format is a property of ROOTOpenGLView. GL-view owns pixel format,
+//it can also be reset externally (again, GL module never does this).
+//Later, when creating GL-context, this pixel format is used (and
+//ROOT creates GL-context per GL-widget, thus using pixel format from a widget.
 
 - (NSOpenGLPixelFormat *) pixelFormat;
 - (void) setPixelFormat : (NSOpenGLPixelFormat *) pixelFormat;
 
+//View's geometry is updated by ROOT's GUI, but view
+//can be hidden at the moment (for example, tab with GL-view is not active
+//at the moment). If so, when view is visible again, context must
+//be notified about changes in a drawable's geometry.
 @property (nonatomic, assign) BOOL fUpdateContext;
 
 //X11Drawable protocol
-
 @property (nonatomic, assign) unsigned fID;
 
 - (BOOL) fIsPixmap;
@@ -81,17 +95,12 @@
 - (void) updateLevel : (unsigned) newLevel;
 
 /*
-
 - (void) setAttributes : (const SetWindowAttributes_t *) attr;
-
 - (void) mapRaised;
-
 - (void) mapSubwindows;
 - (void) unmapWindow;
 - (void) raiseWindow;
 - (void) lowerWindow;
-
-- (void) configureNotifyTree;
 */
 
 - (void) addPassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers;
