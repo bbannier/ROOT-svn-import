@@ -564,12 +564,6 @@ void print_mask_info(ULong_t mask)
 @synthesize fMainWindow;
 @synthesize fBackBuffer;
 
-//______________________________________________________________________________
-- (void) setFDelayedTransient : (BOOL) delay
-{
-   fDelayedTransient = delay;
-}
-
 //QuartzWindow's life cycle.
 //______________________________________________________________________________
 - (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle backing : (NSBackingStoreType) bufferingType 
@@ -594,7 +588,6 @@ void print_mask_info(ULong_t mask)
       [self setContentView : fContentView];
 
       [fContentView release];
-
       fDelayedTransient = NO;
       
       if (attr)
@@ -610,17 +603,25 @@ void print_mask_info(ULong_t mask)
    assert(window != nil && "addTransientWindow, window parameter is nil");
 
    window.fMainWindow = self;
-   if (window.fMapState == kIsViewable) {
+   
+   if (window.fMapState != kIsViewable) {
+      window.fDelayedTransient = YES;
+   } else {
       [self addChildWindow : window ordered : NSWindowAbove];
       window.fDelayedTransient = NO;
-   } else
-      window.fDelayedTransient = YES;
+   }
 }
 
 //______________________________________________________________________________
 - (void) dealloc
 {
    [super dealloc];
+}
+
+//______________________________________________________________________________
+- (void) setFDelayedTransient : (BOOL) d
+{
+   fDelayedTransient = d;
 }
 
 ///////////////////////////////////////////////////////////
@@ -1000,8 +1001,8 @@ void print_mask_info(ULong_t mask)
    [fContentView configureNotifyTree];
 
    if (fDelayedTransient) {
-      [fMainWindow addChildWindow : self ordered : NSWindowAbove];
       fDelayedTransient = NO;
+      [fMainWindow addChildWindow : self ordered : NSWindowAbove];
    }
 }
 
@@ -1016,8 +1017,8 @@ void print_mask_info(ULong_t mask)
    [fContentView configureNotifyTree];
    
    if (fDelayedTransient) {
-      [fMainWindow addChildWindow : self ordered : NSWindowAbove];
       fDelayedTransient = NO;
+      [fMainWindow addChildWindow : self ordered : NSWindowAbove];
    }
 }
 
@@ -1232,6 +1233,14 @@ void print_mask_info(ULong_t mask)
    }
    
    return self;
+}
+
+//______________________________________________________________________________
+- (void) dealloc
+{
+   [fPassiveKeyGrabs release];
+   [fClipMask release];
+   [super dealloc];
 }
 
 //Overlap management.

@@ -27,6 +27,7 @@
 #include "QuartzWindow.h"
 #include "QuartzPixmap.h"
 #include "X11Drawable.h"
+#include "QuartzUtils.h"
 #include "QuartzText.h"
 #include "CocoaUtils.h"
 #include "X11Events.h"
@@ -50,25 +51,6 @@ ClassImp(TGCocoa)
 //I never use const qualifier for pointers to Objective-C objects since they are useless:
 //there are no cv-qualified methods (member-functions in C++) in Objective-C, and I do not use
 //'->' operator to access instance variables (data-members in C++) of Objective-C's object.
-
-namespace ROOT {
-namespace Quartz {
-
-//______________________________________________________________________________
-CGStateGuard::CGStateGuard(void *ctx)
-               : fCtx(ctx)
-{
-   CGContextSaveGState(static_cast<CGContextRef>(ctx));
-}
-
-//______________________________________________________________________________
-CGStateGuard::~CGStateGuard()
-{
-   CGContextRestoreGState(static_cast<CGContextRef>(fCtx));
-}
-
-}//Quartz
-}//ROOT
 
 namespace Details = ROOT::MacOSX::Details;
 namespace Util = ROOT::MacOSX::Util;
