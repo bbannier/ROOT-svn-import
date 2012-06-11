@@ -50,6 +50,8 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
    
    NSOpenGLPixelFormat *fPixelFormat;
    NSOpenGLContext *fOpenGLContext;
+   
+   BOOL fUpdateContext;
 }
 
 @synthesize fID;
@@ -65,6 +67,7 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
 @synthesize fBitGravity;
 @synthesize fWinGravity;
 @synthesize fClass;
+@synthesize fUpdateContext;
 
 //______________________________________________________________________________
 - (id) initWithFrame : (NSRect) frameRect pixelFormat : (NSOpenGLPixelFormat *) format
@@ -227,7 +230,10 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
    
    [super setFrameSize : newSize];
    
-   [fOpenGLContext update];
+   if (![self isHiddenOrHasHiddenAncestor] && !fIsOverlapped)
+      [fOpenGLContext update];
+   else 
+      fUpdateContext = YES;
    
    if ((fEventMask & kStructureNotifyMask) && (self.fMapState == kIsViewable || fIsOverlapped == YES)) {
       TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);

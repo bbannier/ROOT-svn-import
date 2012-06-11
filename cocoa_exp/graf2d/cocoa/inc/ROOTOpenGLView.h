@@ -32,7 +32,7 @@
 - (NSOpenGLPixelFormat *) pixelFormat;
 - (void) setPixelFormat : (NSOpenGLPixelFormat *) pixelFormat;
 
-- (void) update;
+@property (nonatomic, assign) BOOL fUpdateContext;
 
 //X11Drawable protocol
 

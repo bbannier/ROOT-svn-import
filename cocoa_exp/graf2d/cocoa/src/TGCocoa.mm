@@ -2504,6 +2504,11 @@ Bool_t TGCocoa::MakeOpenGLContextCurrent(Handle_t ctxID, Window_t windowID)
       if ([glContext view] != glView)
          [glContext setView : glView];
 
+      if (glView.fUpdateContext) {
+         [glContext update];
+         glView.fUpdateContext = NO;
+      }
+
       [glView setOpenGLContext : glContext];
       [glContext makeCurrentContext];
       
