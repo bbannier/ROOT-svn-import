@@ -22,6 +22,7 @@ NamespaceImp(RooStats)
 
 #include "TTree.h"
 
+#include "RooUniform.h"
 #include "RooProdPdf.h"
 #include "RooExtendPdf.h"
 #include "RooSimultaneous.h"
@@ -87,9 +88,9 @@ namespace RooStats {
       // make a nuisance pdf by factorizing out all constraint terms in a common pdf 
       RooArgList obsTerms, constraints;
       FactorizePdf(observables, pdf, obsTerms, constraints);
-      if(!pdf.dependsOn(constraints)) {
-         oocoutE((TObject *)NULL, Eval) << "RooStatsUtils::MakeNuisancePdf - model pdf does not depend on any parameter in the constructed constraints set" << endl;
-         return NULL;
+      if(constraints.getSize() == 0) {
+         oocoutW((TObject *)0, Eval) << "RooStatsUtils::MakeNuisancePdf - no constraints found on nuisance parameters in the input model" << endl;
+         return 0;
       }
       return new RooProdPdf(name,"", constraints);
    }

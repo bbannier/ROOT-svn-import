@@ -129,7 +129,7 @@ if(allTests) {
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 100));
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 800)); // boundary Poisson value
 
-   // TEST PLC CONFINT PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST PLC CONFINT PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 10, 30));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
@@ -146,12 +146,12 @@ if(allTests) {
    // TEST BC CONFINT SHORTEST SIMPLE POISSON
    testList.push_back(new TestBayesianCalculator2(fref, writeRef, verbose));
 
-   // TEST BC CONFINT CENTRAL PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST BC CONFINT CENTRAL PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
    testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose, 10, 30));
    testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
 
-   // TEST MCMCC CONFINT PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST MCMCC CONFINT PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 10, 30));
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
@@ -166,7 +166,7 @@ if(allTests) {
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 10, 0.1));
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 400, 4.0));
 
-   // TEST HTI PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST HTI PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 10, 30));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 20, 25));
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
@@ -179,9 +179,9 @@ if(allTests) {
 }
     
 //   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR));
-//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR, 20, 15));
-//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR, 16, 10));
-   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR, 8, 10));
+//   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose, kFrequentist, kProfileLR, 8, 10));
+//   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose, kHybrid, kProfileLR, 8, 10));
    //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
 
    // TEST HYPO TEST CALCULATOR
