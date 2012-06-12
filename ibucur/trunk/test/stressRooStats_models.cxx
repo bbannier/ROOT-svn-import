@@ -27,16 +27,20 @@ void buildPoissonProductModel(RooWorkspace *w)
    w->factory("PROD::prior_nuis(constr1,constr2,constr3)");
 
    // extended pdfs and simultaneous pdf
-   w->factory("ExtendPdf::ext_pdf1(PROD::pdf1(poiss1,constr1),n1[1,0,10])");
-   w->factory("ExtendPdf::ext_pdf2(PROD::pdf2(poiss2,constr2,constr3),n2[1,0,10])");
+   w->factory("ExtendPdf::ext_pdf1(Uniform::u1(x),n1[1,0,10])");
+   w->factory("ExtendPdf::ext_pdf2(Uniform::u2(y),n2[1,0,10])");
    w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
+
+   w->var("n1")->setConstant();
+   w->var("n2")->setConstant();
+
 
    // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables("x,y");
+   sbModel->SetObservables("x");
    sbModel->SetGlobalObservables("beta0,gbkg1,gbkg2");
-   sbModel->SetParametersOfInterest("sig");
-   sbModel->SetNuisanceParameters("bkg1,bkg2,beta");
+   sbModel->SetParametersOfInterest("x");
+//   sbModel->SetNuisanceParameters("beta,bkg1,bkg2");
    sbModel->SetPdf("pdf");
    w->import(*sbModel);
 
@@ -50,6 +54,7 @@ void buildPoissonProductModel(RooWorkspace *w)
    sbModelCombined->SetName("Combined_S+B");
    sbModelCombined->SetObservables("x,y,index");
    sbModelCombined->SetPdf("sim_pdf");
+   sbModelCombined->SetPriorPdf("nuis_prior");
    w->import(*sbModelCombined);
 
    // create combined background model configuration
@@ -58,13 +63,13 @@ void buildPoissonProductModel(RooWorkspace *w)
    w->import(*bModelCombined);
 
    // set global observables to constant values
-   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
+/*   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
    RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
    while(var != NULL) {
       var->setConstant(); 
       var = dynamic_cast<RooRealVar *>(iter.next());
    }
-
+*/
    // define data sets for simple and combined models
    RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
    RooDataSet *combinedData = new RooDataSet("combinedData", "combined data", *sbModelCombined->GetObservables());

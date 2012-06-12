@@ -1239,7 +1239,8 @@ public:
       Int_t obsValueX = 5,
       Int_t obsValueY = 10
    ) :
-      RooUnitTest("HypoTestCalculator Frequentist - Simultaneous Pdf", refFile, writeRef, verbose),
+      RooUnitTest(TString::Format("HypoTestCalculator Significance - Simultaneous Pdf - %s - %s",
+                     kECalculatorTypeString[calculatorType], kETestStatTypeString[testStatType]), refFile, writeRef, verbose),
       fCalculatorType(calculatorType),
       fTestStatType(testStatType),
       fObsValueX(obsValueX),
@@ -1489,9 +1490,78 @@ public:
 
 
 
-
-
 // Other tests currently not included in any suite
+
+class TestHypoTestCalculator3 : public RooUnitTest {
+private:
+   ECalculatorType fCalculatorType;
+   ETestStatType fTestStatType;
+   Int_t fObsValueX;
+   Int_t fObsValueY;
+
+public:
+   TestHypoTestCalculator3(
+      TFile* refFile,
+      Bool_t writeRef,
+      Int_t verbose,
+      ECalculatorType calculatorType = kAsymptotic,
+      ETestStatType testStatType = kProfileLR,
+      Int_t obsValueX = 5,
+      Int_t obsValueY = 10
+   ) :
+      RooUnitTest(TString::Format("HypoTestCalculator Significance - Simultaneous Pdf - %s - %s",
+                     kECalculatorTypeString[calculatorType], kETestStatTypeString[testStatType]), refFile, writeRef, verbose),
+      fCalculatorType(calculatorType),
+      fTestStatType(testStatType),
+      fObsValueX(obsValueX),
+      fObsValueY(obsValueY)
+   {};
+
+   Bool_t testCode() {
+
+      // Build workspace and models
+      RooWorkspace* w = new RooWorkspace("w", kTRUE);
+      buildPoissonProductModel(w);
+      ModelConfig *sbModel = (ModelConfig *)w->obj("S+B");
+      ModelConfig *bModel = (ModelConfig *)w->obj("B");
+
+      // add observed values to data set
+      w->var("x")->setVal(fObsValueX);
+      w->var("y")->setVal(fObsValueY);         
+      w->data("data")->add(*sbModel->GetObservables());
+
+      // set snapshots
+      w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
+      sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
+      w->var("sig")->setVal(0);
+      bModel->SetSnapshot(*bModel->GetParametersOfInterest());
+
+      HypoTestCalculatorGeneric *calc = buildHypoTestCalculator(fCalculatorType, *w->data("data"), *bModel, *sbModel, 1000, 500);
+      ToyMCSampler *tmcs = (ToyMCSampler *)calc->GetTestStatSampler();
+      tmcs->SetTestStatistic(buildTestStatistic(fTestStatType, *sbModel, *bModel));
+      tmcs->SetNEventsPerToy(1);
+      tmcs->SetAlwaysUseMultiGen(kTRUE);
+      HypoTestResult *htr = calc->GetHypoTest();
+      htr->Print();
+
+      ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *sbModel);
+      plc->SetNullParameters(*bModel->GetSnapshot());
+      htr = plc->GetHypoTest();
+      htr->Print();
+      std::cout << "PLC " << htr->Significance() << std::endl;
+
+      regValue(htr->Significance(), TString::Format("thtc2_significance_%s_%s_%d_%d",
+                                                       kECalculatorTypeString[fCalculatorType],
+                                                       kETestStatTypeString[fTestStatType],
+                                                      fObsValueX, fObsValueY));
+
+      delete calc;
+      delete htr;
+      delete w;
+      
+      return kTRUE ;
+   }
+} ;
 
 
 class TestHypoTestCalculator : public RooUnitTest {
@@ -1744,7 +1814,7 @@ static HypoTestCalculatorGeneric * buildHypoTestCalculator(const ECalculatorType
       HybridCalculator *hc = new HybridCalculator(data, altModel, nullModel);
       // set toys for speedup
       // TODO: check how to eliminate this code, calculator should autoconfigure itself
-      // hc->ForcePriorNuisanceNull(*MakeNuisancePdf(nullModel, "nuis_prior_null"));
+       hc->ForcePriorNuisanceNull(*nullModel.GetPriorPdf());
       // hc->ForcePriorNuisanceAlt(*MakeNuisancePdf(altModel, "nuis_prior_alt"));
       hc->SetToys(toysNull, toysAlt);
       calc = hc;
