@@ -313,8 +313,11 @@ void TMVA::Factory::AddEvent( const TString& className, Types::ETreeType tt,
 
 
    // set analysistype to "kMulticlass" if more than two classes and analysistype == kNoAnalysisType
-   if( fAnalysisType == Types::kNoAnalysisType && DefaultDataSetInfo().GetNClasses() > 2 )
+   if( fAnalysisType == Types::kNoAnalysisType && DefaultDataSetInfo().GetNClasses() > 2 ){
+      Log() << kINFO << "Found more than 2 different event classes and no further instructions:"
+            << "    and will switch to *MulitClass* node " << Endl;
       fAnalysisType = Types::kMulticlass;
+   }
 
    
    if (clIndex>=fTrainAssignTree.size()) {

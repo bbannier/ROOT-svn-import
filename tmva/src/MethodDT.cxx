@@ -122,7 +122,8 @@ TMVA::MethodDT::MethodDT( const TString& jobName,
                           TDirectory* theTargetDir ) :
    TMVA::MethodBase( jobName, Types::kDT, methodTitle, theData, theOption, theTargetDir )
    , fTree(0)
-   , fNodeMinEvents(0)
+   , fMinNodeEvents(0)
+   , fMinNodeSize(0)
    , fNCuts(0)
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
@@ -146,7 +147,8 @@ TMVA::MethodDT::MethodDT( DataSetInfo& dsi,
                           TDirectory* theTargetDir ) :
    TMVA::MethodBase( Types::kDT, dsi, theWeightFile, theTargetDir )
    , fTree(0)
-   , fNodeMinEvents(0)
+   , fMinNodeEvents(0)
+   , fMinNodeSize(0)
    , fNCuts(0)
    , fUseYesNoLeaf(kFALSE)
    , fNodePurityLimit(0)
@@ -209,7 +211,8 @@ void TMVA::MethodDT::DeclareOptions()
    AddPreDefVal(TString("GiniIndex"));
    AddPreDefVal(TString("CrossEntropy"));
    AddPreDefVal(TString("SDivSqrtSPlusB"));
-   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events in a leaf node (default: max(20, N_train/(Nvar^2)/10) ) ");
+   DeclareOptionRef(fMinNodeEvents=-1, "nEventsMin", "deprecated !!! Minimum number of events required in a leaf node");
+   DeclareOptionRef(fMinNodeSizeS, "MinNodeSize", "Minimum percentage of training events required in a leaf node (default: Classification: 10%, Regression: 1%)");
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
    DeclareOptionRef(fPruneStrength, "PruneStrength", "Pruning strength (negative value == automatic adjustment)");
    DeclareOptionRef(fPruneMethodS, "PruneMethod", "Pruning method: NoPruning (switched off), ExpectedError or CostComplexity");
@@ -261,14 +264,16 @@ void TMVA::MethodDT::ProcessOptions()
 
    if (this->Data()->HasNegativeEventWeights()){
       Log() << kINFO << " You are using a Monte Carlo that has also negative weights. "
-              << "That should in principle be fine as long as on average you end up with "
-              << "something positive. For this you have to make sure that the minimal number "
-              << "of (unweighted) events demanded for a tree node (currently you use: nEventsMin="
-              <<fNodeMinEvents<<", you can set this via the BDT option string when booking the "
-              << "classifier) is large enough to allow for reasonable averaging!!! "
-              << " If this does not help.. maybe you want to try the option: NoNegWeightsInTraining  "
-              << "which ignores events with negative weight in the training. " << Endl
-              << Endl << "Note: You'll get a WARNING message during the training if that should ever happen" << Endl;
+            << "That should in principle be fine as long as on average you end up with "
+            << "something positive. For this you have to make sure that the minimal number "
+            << "of (un-weighted) events demanded for a tree node (currently you use: MinNodeSize="
+            <<fMinNodeSizeS
+            <<", (or the deprecated equivalent nEventsMin) you can set this via the " 
+            <<"MethodDT option string when booking the "
+            << "classifier) is large enough to allow for reasonable averaging!!! "
+            << " If this does not help.. maybe you want to try the option: IgnoreNegWeightsInTraining  "
+            << "which ignores events with negative weight in the training. " << Endl
+            << Endl << "Note: You'll get a WARNING message during the training if that should ever happen" << Endl;
    }
    
    if (fRandomisedTrees){
@@ -277,13 +282,45 @@ void TMVA::MethodDT::ProcessOptions()
       //      fBoostType   = "Bagging";
    }
 
+
+   if (fMinNodeEvents > 0){
+      fMinNodeSize = fMinNodeEvents / Data()->GetNTrainingEvents() * 100;
+      Log() << kWARNING << "You have explicitly set *nEventsMin*, the min ablsolut number \n"
+            << "of events in a leaf node. This is DEPRECATED, please use the option \n"
+            << "*MinNodeSize* giving the relative number as percentage of training \n"
+            << "events instead. \n"
+            << "nEventsMin="<<fMinNodeEvents<< "--> MinNodeSize="<<fMinNodeSize<<"%" 
+            << Endl;
+   }else{
+      SetMinNodeSize(fMinNodeSizeS);
+   }
+}
+
+void TMVA::MethodDT::SetMinNodeSize(Double_t sizeInPercent){
+   if (sizeInPercent > 0 && sizeInPercent < 50){
+      fMinNodeSize=sizeInPercent;
+      
+   } else {
+      Log() << kERROR << "you have demanded a minimal node size of " 
+            << sizeInPercent << "% of the training events.. \n"
+            << " that somehow does not make sense "<<Endl;
+   }
+
+}
+void TMVA::MethodDT::SetMinNodeSize(TString sizeInPercent){
+   sizeInPercent.ReplaceAll("%","");
+   if (sizeInPercent.IsAlnum()) SetMinNodeSize(sizeInPercent.Atof());
+   else {
+      Log() << kERROR << "I had problems reading the option MinNodeEvents, which\n"
+           << "after removing a possible % sign now reads " << sizeInPercent << Endl;
+   }
 }
 
 //_______________________________________________________________________
 void TMVA::MethodDT::Init( void )
 {
    // common initialisation with defaults for the DT-Method
-   fNodeMinEvents  = TMath::Max( 20, int( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
+   fMinNodeEvents  = TMath::Max( 20, int( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    fNCuts          = 20; 
    fPruneMethod    = DecisionTree::kNoPruning;
    fPruneStrength  = 5;     // means automatic determination of the prune strength using a validation sample  
@@ -311,7 +348,7 @@ TMVA::MethodDT::~MethodDT( void )
 void TMVA::MethodDT::Train( void )
 {
    TMVA::DecisionTreeNode::fgIsTraining=true;
-   fTree = new DecisionTree( fSepType, fNodeMinEvents, fNCuts, 0, 
+   fTree = new DecisionTree( fSepType, fMinNodeSize, fNCuts, 0, 
                              fRandomisedTrees, fUseNvars, fNNodesMax, fMaxDepth,0 );
    if (fRandomisedTrees) Log()<<kWARNING<<" randomised Trees do not work yet in this framework," 
                                 << " as I do not know how to give each tree a new random seed, now they"

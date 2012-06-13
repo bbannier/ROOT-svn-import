@@ -101,6 +101,7 @@ TMVA::DecisionTree::DecisionTree():
    fSepType        (NULL),
    fRegType        (NULL),
    fMinSize        (0),
+   fMinNodeSize    (0),
    fMinSepGain (0),
    fUseSearchTree(kFALSE),
    fPruneStrength(0),
@@ -123,7 +124,7 @@ TMVA::DecisionTree::DecisionTree():
 }
 
 //_______________________________________________________________________
-TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType, Int_t minSize, Int_t nCuts, UInt_t cls,
+TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType, Float_t minSize, Int_t nCuts, UInt_t cls,
                                   Bool_t randomisedTree, Int_t useNvars, Bool_t usePoissonNvars, UInt_t nNodesMax,
                                   UInt_t nMaxDepth, Int_t iSeed, Float_t purityLimit, Int_t treeID):
    BinaryTree(),
@@ -134,7 +135,8 @@ TMVA::DecisionTree::DecisionTree( TMVA::SeparationBase *sepType, Int_t minSize, 
    fUseExclusiveVars (kTRUE),
    fSepType        (sepType),
    fRegType        (NULL),
-   fMinSize        (minSize),
+   fMinSize        (0),
+   fMinNodeSize    (minSize),
    fMinSepGain     (0),
    fUseSearchTree  (kFALSE),
    fPruneStrength  (0),
@@ -183,6 +185,7 @@ TMVA::DecisionTree::DecisionTree( const DecisionTree &d ):
    fSepType    (d.fSepType),
    fRegType    (d.fRegType),
    fMinSize    (d.fMinSize),
+   fMinNodeSize(d.fMinNodeSize),
    fMinSepGain (d.fMinSepGain),
    fUseSearchTree  (d.fUseSearchTree),
    fPruneStrength  (d.fPruneStrength),
@@ -281,6 +284,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
       this->GetRoot()->SetPos('s');
       this->GetRoot()->SetDepth(0);
       this->GetRoot()->SetParentTree(this);
+      fMinSize = fMinNodeSize/100. * eventSample.size();
    }
 
    UInt_t nevents = eventSample.size();
@@ -328,9 +332,9 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
       Log() << kWARNING << " One of the Decision Tree nodes has negative total number of signal or background events. "
             << "(Nsig="<<s<<" Nbkg="<<b<<" Probaby you use a Monte Carlo with negative weights. That should in principle "
             << "be fine as long as on average you end up with something positive. For this you have to make sure that the "
-            << "minimul number of (unweighted) events demanded for a tree node (currently you use: nEventsMin="<<fMinSize
-            << ", you can set this via the BDT option string when booking the classifier) is large enough to allow for "
-            << "reasonable averaging!!!" << Endl
+            << "minimul number of (unweighted) events demanded for a tree node (currently you use: MinNodeSize="<<fMinNodeSize
+            << "% of training events, you can set this via the BDT option string when booking the classifier) is large enough "
+            << "to allow for reasonable averaging!!!" << Endl
             << " If this does not help.. maybe you want to try the option: NoNegWeightsInTraining which ignores events "
             << "with negative weight in the training." << Endl;
       double nBkg=0.;
