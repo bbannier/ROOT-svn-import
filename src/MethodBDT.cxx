@@ -306,6 +306,7 @@ void TMVA::MethodBDT::DeclareOptions()
    DeclareOptionRef(fRenormByClass=kFALSE,"RenormByClass","Individually re-normalize each event class to the original size after boosting");
    DeclareOptionRef(fBoostType, "BoostType", "Boosting type for the trees in the forest");
    AddPreDefVal(TString("AdaBoost"));
+   AddPreDefVal(TString("AdaCost"));
    AddPreDefVal(TString("Bagging"));
    AddPreDefVal(TString("RegBoost"));
    AddPreDefVal(TString("AdaBoostR2"));
@@ -1366,6 +1367,7 @@ Double_t TMVA::MethodBDT::Boost( vector<TMVA::Event*> eventSample, DecisionTree 
    Double_t returnVal=-1;
 
    if      (fBoostType=="AdaBoost")    returnVal = this->AdaBoost  (eventSample, dt);
+   else if (fBoostType=="AdaCost")     returnVal = this->AdaCost   (eventSample, dt);
    else if (fBoostType=="Bagging")     returnVal = this->Bagging   (eventSample, iTree);
    else if (fBoostType=="RegBoost")    returnVal = this->RegBoost  (eventSample, dt);
    else if (fBoostType=="AdaBoostR2")  returnVal = this->AdaBoostR2(eventSample, dt);
@@ -1586,6 +1588,141 @@ Double_t TMVA::MethodBDT::AdaBoost( vector<TMVA::Event*> eventSample, DecisionTr
 
    return TMath::Log(boostWeight);
 }
+
+
+//_______________________________________________________________________
+Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTree *dt )
+{
+   // the AdaCost boosting algorithm takes a simple cost Matrix  (currently fixed for
+   // all events... later could be modified to use individual cost matrices for each
+   // events as in the original paper...
+   // 
+   //                   true_signal true_bkg 
+   //     ----------------------------------
+   //     sel_signal |   Css         Ctb_ss    Cxx.. in the range [0,1]
+   //     sel_bkg    |   Cts_sb      Cbb
+   //
+   //    and takes this into account when calculating the misclass. cost (former: error fraction):
+   //    
+   //    err = sum_events ( y_true*y_sel * beta(event)   
+   //
+   //                    ( beta+ = -0.5* Cost(event) + 0.5  if correctly identified 
+   //  with beta(event) =( 
+   //                    ( beta- =  0.5* Cost(event) + 0.5  if identification is wrong
+   //
+   //
+   //
+
+   Double_t Css = 0; 
+   Double_t Cbb = 0; 
+   Double_t Cts_sb = 1; 
+   Double_t Ctb_ss = 0.2; 
+
+   Double_t err=0, sumGlobalWeights=0, sumGlobalCost=0;
+
+   vector<Double_t> sumw;            //for individually re-scaling  each class
+   map<Node*,Int_t> sigEventsInNode; // how many signal events of the training tree
+
+   UInt_t maxCls = sumw.size();
+   Double_t maxDev=0;
+   for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+      Double_t w = (*e)->GetWeight();
+      sumGlobalWeights += w;
+      UInt_t iclass=(*e)->GetClass();
+      if (iclass+1 > maxCls) {
+	 sumw.resize(iclass+1,0);
+	 maxCls = sumw.size();
+      }
+      sumw[iclass] += w;
+
+      if ( DoRegression() ) {
+         Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
+      }else{
+         Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit );
+         Bool_t isTrueSignal  =DataInfo().IsSignal(*e);
+         Double_t cost=0;
+         if       (isTrueSignal  && isSignalType)  cost=Css;
+         else if  (isTrueSignal  && !isSignalType) cost=Cts_sb;
+         else if  (!isTrueSignal  && isSignalType) cost=Ctb_ss;
+         else if  (!isTrueSignal && !isSignalType) cost=Cbb;
+            
+         sumGlobalCost+= w*cost;
+         
+      }
+   }
+
+   if ( DoRegression() ) {
+      Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
+   }
+
+   Log() << kDEBUG << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
+   sumGlobalCost /= sumGlobalWeights;
+
+
+   Double_t newSumGlobalWeights=0;
+   vector<Double_t> newSumClassWeights(sumw.size(),0);
+
+   Double_t boostWeight=1.;
+
+   boostWeight = (1+sumGlobalCost)/(1-sumGlobalCost);
+
+   if (fAdaBoostBeta != 1) { boostWeight=TMath::Power(boostWeight,fAdaBoostBeta);}
+
+   Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
+
+   for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+ 
+      Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit );
+      Bool_t isTrueSignal  =DataInfo().IsSignal(*e);
+      Double_t cost=0;
+      if       (isTrueSignal  && isSignalType)  cost=Css;
+      else if  (isTrueSignal  && !isSignalType) cost=Cts_sb;
+      else if  (!isTrueSignal  && isSignalType) cost=Ctb_ss;
+      else if  (!isTrueSignal && !isSignalType) cost=Cbb;
+
+      Double_t boostfactor = cost;
+      if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<endl; 
+      if ( (*e)->GetWeight() > 0 ){
+         (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostfactor);
+         // Helge change back            (*e)->ScaleBoostWeight(boostfactor);
+         if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
+      } else {
+         if ( fInverseBoostNegWeights )(*e)->ScaleBoostWeight( 1. / boostfactor); // if the original event weight is negative, and you want to "increase" the events "positive" influence, you'd reather make the event weight "smaller" in terms of it's absolute value while still keeping it something "negative"
+      }
+
+      newSumGlobalWeights+=(*e)->GetWeight();
+      newSumClassWeights[(*e)->GetClass()] += (*e)->GetWeight();
+   }
+
+
+   // re-normalise the weights (independent for Signal and Background)
+   Double_t globalNormWeight=sumGlobalWeights/newSumGlobalWeights;
+   vector<Double_t>  normWeightByClass;
+   for (UInt_t i=0; i<sumw.size(); i++) normWeightByClass.push_back(sumw[i]/newSumClassWeights[i]);
+
+   Log() << kDEBUG << "new Nsig="<<newSumClassWeights[0]*globalNormWeight << " new Nbkg="<<newSumClassWeights[1]*globalNormWeight << Endl;
+
+
+   for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
+      if (fRenormByClass) (*e)->ScaleBoostWeight( normWeightByClass[(*e)->GetClass()] );
+      else                (*e)->ScaleBoostWeight( globalNormWeight );
+   }
+
+   if (!(DoRegression()))Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
+
+   results->GetHist("BoostWeightsVsTree")->SetBinContent(fForest.size(),boostWeight);
+   results->GetHist("ErrorFrac")->SetBinContent(fForest.size(),err);
+
+   fBoostWeight = boostWeight;
+   fErrorFraction = err;
+
+   if (fBaggedGradBoost){
+      GetRandomSubSample();
+   }
+
+   return TMath::Log(boostWeight);
+}
+
 
 //_______________________________________________________________________
 Double_t TMVA::MethodBDT::Bagging( vector<TMVA::Event*> eventSample, Int_t iTree )
