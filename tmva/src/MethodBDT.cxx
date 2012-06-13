@@ -1656,7 +1656,9 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
    }
 
    Log() << kDEBUG << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
+   //   Log() << kWARNING << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
    sumGlobalCost /= sumGlobalWeights;
+   //   Log() << kWARNING << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
 
 
    Double_t newSumGlobalWeights=0;
@@ -1664,7 +1666,8 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
 
    Double_t boostWeight=1.;
 
-   boostWeight = (1+sumGlobalCost)/(1-sumGlobalCost);
+   boostWeight = TMath::Log((1+sumGlobalCost)/(1-sumGlobalCost));
+   //   Log() <<kWARNING << "BoostWeight = " << boostWeight << Endl;
 
    if (fAdaBoostBeta != 1) { boostWeight=TMath::Power(boostWeight,fAdaBoostBeta);}
 
@@ -1680,7 +1683,7 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
       else if  (!isTrueSignal  && isSignalType) cost=Ctb_ss;
       else if  (!isTrueSignal && !isSignalType) cost=Cbb;
 
-      Double_t boostfactor = cost;
+      Double_t boostfactor = TMath::Exp(boostWeight*cost);
       if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<endl; 
       if ( (*e)->GetWeight() > 0 ){
          (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostfactor);
@@ -1708,8 +1711,8 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
       else                (*e)->ScaleBoostWeight( globalNormWeight );
    }
 
-   if (!(DoRegression()))Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
 
+   if (!(DoRegression()))results->GetHist("BoostWeights")->Fill(boostWeight);
    results->GetHist("BoostWeightsVsTree")->SetBinContent(fForest.size(),boostWeight);
    results->GetHist("ErrorFrac")->SetBinContent(fForest.size(),err);
 
@@ -1720,7 +1723,7 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
       GetRandomSubSample();
    }
 
-   return TMath::Log(boostWeight);
+   return boostWeight;
 }
 
 
