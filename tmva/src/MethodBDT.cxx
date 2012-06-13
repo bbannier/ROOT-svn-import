@@ -834,10 +834,9 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
 
    // find some reasonable ranges for the optimisation of MinNodeEvents:
 
-   /*   
    tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,5))); //  stepsize 50
    tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(3,10,8)));    // stepsize 1
-   tuneParameters.insert(std::pair<TString,Interval>("MinNodeSize",    Interval(2,30,5)));    // 
+   tuneParameters.insert(std::pair<TString,Interval>("MinNodeSize",    Interval(1,30,10)));    // 
    //tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
 
    // method-specific parameters
@@ -854,8 +853,6 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
      
    }
    
-   */
-   tuneParameters.insert(std::pair<TString,Interval>("MinNodeSize",       Interval(0.1,10,100)));
    
    OptimizeConfigParameters optimize(this, tuneParameters, fomType, fitType);
    tunedParameters=optimize.optimize();
