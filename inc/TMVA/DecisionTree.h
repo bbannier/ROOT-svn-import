@@ -83,7 +83,7 @@ namespace TMVA {
       DecisionTree( void );
 
       // the constructur needed for constructing the decision tree via training with events
-      DecisionTree( SeparationBase *sepType, Int_t minSize,
+      DecisionTree( SeparationBase *sepType, Float_t minSize,
                     Int_t nCuts,
                     UInt_t cls =0,
                     Bool_t randomisedTree=kFALSE, Int_t useNvars=0, Bool_t usePoissonNvars=kFALSE, 
@@ -214,6 +214,7 @@ namespace TMVA {
       RegressionVariance *fRegType;  // the separation crition used in Regression
     
       Double_t  fMinSize;        // min number of events in node
+      Double_t  fMinNodeSize;    // min fraction of training events in node
       Double_t  fMinSepGain;     // min number of separation gain to perform node splitting
     
       Bool_t    fUseSearchTree;  // cut scan done with binary trees or simple event loop.

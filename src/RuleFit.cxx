@@ -197,7 +197,6 @@ void TMVA::RuleFit::MakeForest()
    //
    TRandom3 rndGen;
    //
-   Int_t nminRnd;
    //
    // First save all event weights.
    // Weights are modifed by the boosting.
@@ -218,17 +217,16 @@ void TMVA::RuleFit::MakeForest()
       }
       // fsig = Double_t(nsig)/Double_t(nsig+nbkg);
       // do not implement the above in this release...just set it to default
-      //      nminRnd = fNodeMinEvents;
       DecisionTree *dt;
       Bool_t tryAgain=kTRUE;
       Int_t ntries=0;
       const Int_t ntriesMax=10;
+      Double_t frnd;
       while (tryAgain) {
-         Double_t frnd = rndGen.Uniform( fMethodRuleFit->GetMinFracNEve(), fMethodRuleFit->GetMaxFracNEve() );
-         nminRnd = Int_t(frnd*static_cast<Double_t>(fNTreeSample));
+         frnd = rndGen.Uniform( fMethodRuleFit->GetMinFracNEve(), 0.5*fMethodRuleFit->GetMaxFracNEve() );
          Int_t     iclass = 0; // event class being treated as signal during training
          Bool_t    useRandomisedTree = !useBoost;  
-         dt = new DecisionTree( fMethodRuleFit->GetSeparationBase(), nminRnd, fMethodRuleFit->GetNCuts(), iclass, useRandomisedTree);
+         dt = new DecisionTree( fMethodRuleFit->GetSeparationBase(), frnd, fMethodRuleFit->GetNCuts(), iclass, useRandomisedTree);
 
          BuildTree(dt); // reads fNTreeSample events from fTrainingEventsRndm
          if (dt->GetNNodes()<3) {
@@ -254,7 +252,7 @@ void TMVA::RuleFit::MakeForest()
          Log() << kWARNING << "------------------------------------------------------------------" << Endl;
       }
 
-      Log() << kDEBUG << "Built tree with minimum cut at N = " << nminRnd
+      Log() << kDEBUG << "Built tree with minimum cut at N = " << frnd <<"% events" 
               << " => N(nodes) = " << fForest.back()->GetNNodes()
               << " ; n(tries) = " << ntries
               << Endl;

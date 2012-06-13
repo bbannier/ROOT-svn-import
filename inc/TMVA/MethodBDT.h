@@ -130,7 +130,9 @@ namespace TMVA {
       void DeclareOptions();
       void ProcessOptions();
       void SetMaxDepth(Int_t d){fMaxDepth = d;}
-      void SetNodeMinEvents(Int_t d){fNodeMinEvents = d;}
+      void SetMinNodeSize(Double_t sizeInPercent);
+      void SetMinNodeSize(TString sizeInPercent);
+
       void SetNTrees(Int_t d){fNTrees = d;}
       void SetAdaBoostBeta(Double_t b){fAdaBoostBeta = b;}
       void SetNodePurityLimit(Double_t l){fNodePurityLimit = l;}
@@ -215,7 +217,9 @@ namespace TMVA {
       //options for the decision Tree
       SeparationBase                 *fSepType;         // the separation used in node splitting
       TString                         fSepTypeS;        // the separation (option string) used in node splitting
-      Int_t                           fNodeMinEvents;   // min number of events in node
+      Int_t                           fMinNodeEvents;   // min number of events in node
+      Float_t                         fMinNodeSize;     // min percentage of training events in node
+      TString                         fMinNodeSizeS;    // string containing min percentage of training events in node
 
       Int_t                           fNCuts;           // grid used in cut applied in node splitting
       Bool_t                          fUseFisherCuts;   // use multivariate splits using the Fisher criterium

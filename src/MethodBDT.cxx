@@ -156,7 +156,9 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fBaggedGradBoost(kFALSE)
    , fSampleFraction(0)
    , fSumOfWeights(0)
-   , fNodeMinEvents(0)
+   , fMinNodeEvents(0)
+   , fMinNodeSize(1)
+   , fMinNodeSizeS("1%")
    , fNCuts(0)
    , fUseFisherCuts(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fMinLinCorrForFisher(.8) // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
@@ -204,7 +206,9 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fBaggedGradBoost(kFALSE)
    , fSampleFraction(0)
    , fSumOfWeights(0)
-   , fNodeMinEvents(0)
+   , fMinNodeEvents(0)
+   , fMinNodeSize(1)
+   , fMinNodeSizeS("1%")
    , fNCuts(0)
    , fUseFisherCuts(0)        // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
    , fMinLinCorrForFisher(.8) // don't use this initialisation, only here to make  Coverity happy. Is set in DeclarOptions()
@@ -274,6 +278,7 @@ void TMVA::MethodBDT::DeclareOptions()
    //                         CrossEntropy
    //                         SDivSqrtSPlusB
    // nEventsMin:      the minimum number of events in a node (leaf criteria, stop splitting)
+   // MinNodeSize:     minimum percentage of training events in a leaf node (leaf criteria, stop splitting)
    // nCuts:           the number of steps in the optimisation of the cut for a node (if < 0, then
    //                  step size is determined by the events)
    // UseFisherCuts:   use multivariate splits using the Fisher criterion
@@ -318,11 +323,12 @@ void TMVA::MethodBDT::DeclareOptions()
    DeclareOptionRef(fBaggedGradBoost=kFALSE, "UseBaggedGrad","Use only a random subsample of all events for growing the trees in each iteration. (Only valid for GradBoost)");
    DeclareOptionRef(fSampleFraction=0.6, "GradBaggingFraction","Defines the fraction of events to be used in each iteration when UseBaggedGrad=kTRUE. (Only valid for GradBoost)");
    DeclareOptionRef(fShrinkage=1.0, "Shrinkage", "Learning rate for GradBoost algorithm");
-   DeclareOptionRef(fAdaBoostBeta=1.0, "AdaBoostBeta", "Parameter for AdaBoost algorithm");
+   DeclareOptionRef(fAdaBoostBeta=1.0, "AdaBoostBeta", "Learning rate  for AdaBoost algorithm");
    DeclareOptionRef(fRandomisedTrees,"UseRandomisedTrees","Choose at each node splitting a random set of variables");
    DeclareOptionRef(fUseNvars,"UseNvars","Number of variables used if randomised tree option is chosen");
    DeclareOptionRef(fUsePoissonNvars,"UsePoissonNvars", "Interpret \"UseNvars\" not as fixed number but as mean of a Possion distribution in each split");
    DeclareOptionRef(fUseNTrainEvents,"UseNTrainEvents","Number of randomly picked training events used in randomised (and bagged) trees");
+
 
    DeclareOptionRef(fUseWeightedTrees=kTRUE, "UseWeightedTrees",
                     "Use weighted trees or simple average in classification from the forest");
@@ -346,7 +352,9 @@ void TMVA::MethodBDT::DeclareOptions()
    }else{
       fSepTypeS = "GiniIndex";
    }
-   DeclareOptionRef(fNodeMinEvents, "nEventsMin", "Minimum number of events required in a leaf node (default: Classification: max(40, N_train/(Nvar^2)/10), Regression: 10)");
+   DeclareOptionRef(fMinNodeEvents=-1, "nEventsMin", "deprecated !!! Minimum number of events required in a leaf node");
+   DeclareOptionRef(fMinNodeSizeS="1%", "MinNodeSize", "Minimum percentage of training events required in a leaf node (default: Classification: 10%, Regression: 1%)");
+   // MinNodeSize:     minimum percentage of training events in a leaf node (leaf criteria, stop splitting)
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
    DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "Use multivariate splits using the Fisher criterion");
    DeclareOptionRef(fMinLinCorrForFisher=.8,"MinLinCorrForFisher", "The minimum linear correlation between two variables demanded for use in Fisher criterion in node splitting");
@@ -383,8 +391,6 @@ void TMVA::MethodBDT::DeclareCompatibilityOptions() {
 }
 
 
-
-
 //_______________________________________________________________________
 void TMVA::MethodBDT::ProcessOptions()
 {
@@ -416,6 +422,25 @@ void TMVA::MethodBDT::ProcessOptions()
       Log() << kFATAL 
             <<  "Sorry autmoatic pruning strength determination is not implemented yet for ExpectedErrorPruning" << Endl;
    }
+
+
+   if (fMinNodeEvents > 0){
+      fMinNodeSize = Double_t(fMinNodeEvents*100.) / Data()->GetNTrainingEvents();
+      Log() << kWARNING << "You have explicitly set ** nEventsMin = " << fMinNodeEvents<<" ** the min ablsolut number \n"
+            << "of events in a leaf node. This is DEPRECATED, please use the option \n"
+            << "*MinNodeSize* giving the relative number as percentage of training \n"
+            << "events instead. \n"
+            << "nEventsMin="<<fMinNodeEvents<< "--> MinNodeSize="<<fMinNodeSize<<"%" 
+            << Endl;
+      Log() << kWARNING << "Note also that explicitly setting *nEventsMin* so far OVERWRITES the option recomeded \n" 
+            << " *MinNodeSize* = " << fMinNodeSizeS << " option !!" ;         
+      fMinNodeSizeS = Form("%F3.2%",fMinNodeSize);
+      
+   }else{
+      SetMinNodeSize(fMinNodeSizeS);
+   }
+
+
    fAdaBoostR2Loss.ToLower();
    
    if (fBoostType=="Grad") {
@@ -439,8 +464,10 @@ void TMVA::MethodBDT::ProcessOptions()
       Log() << kINFO << " You are using a Monte Carlo that has also negative weights. "
             << "That should in principle be fine as long as on average you end up with "
             << "something positive. For this you have to make sure that the minimal number "
-            << "of (un-weighted) events demanded for a tree node (currently you use: nEventsMin="
-            <<fNodeMinEvents<<", you can set this via the BDT option string when booking the "
+            << "of (un-weighted) events demanded for a tree node (currently you use: MinNodeSize="
+            << fMinNodeSizeS << "  ("<< fMinNodeSize << "%)" 
+            <<", (or the deprecated equivalent nEventsMin) you can set this via the " 
+            <<"BDT option string when booking the "
             << "classifier) is large enough to allow for reasonable averaging!!! "
             << " If this does not help.. maybe you want to try the option: IgnoreNegWeightsInTraining  "
             << "which ignores events with negative weight in the training. " << Endl
@@ -464,11 +491,6 @@ void TMVA::MethodBDT::ProcessOptions()
       //      fBoostType   = "Bagging";
    }
 
-   //    if (2*fNodeMinEvents >  Data()->GetNTrainingEvents()) {
-   //       Log() << kFATAL << "you've demanded a minimun number of events in a leaf node " 
-   //             << " that is larger than 1/2 the total number of events in the training sample."
-   //             << " Hence I cannot make any split at all... this will not work!" << Endl;
-   //    }
    
    if (fNTrees==0){
      Log() << kERROR << " Zero Decision Trees demanded... that does not work !! "
@@ -494,9 +516,32 @@ void TMVA::MethodBDT::ProcessOptions()
       Log() << kWARNING << " you specified the option NegWeightTreatment=PairNegWeightsInNode : This option is still considered EXPERIMENTAL !! " << Endl;
    if (fNegWeightTreatment == "pairnegweightsginnode" && fNCuts <= 0) 
       Log() << kFATAL << " sorry, the option NegWeightTreatment=PairNegWeightsInNode is not yet implemented for NCuts < 0" << Endl;
+}
 
+
+void TMVA::MethodBDT::SetMinNodeSize(Double_t sizeInPercent){
+   if (sizeInPercent > 0 && sizeInPercent < 50){
+      fMinNodeSize=sizeInPercent;
+      
+   } else {
+      Log() << kFATAL << "you have demanded a minimal node size of " 
+            << sizeInPercent << "% of the training events.. \n"
+            << " that somehow does not make sense "<<Endl;
+   }
 
 }
+void TMVA::MethodBDT::SetMinNodeSize(TString sizeInPercent){
+   sizeInPercent.ReplaceAll("%","");
+   sizeInPercent.ReplaceAll(" ","");
+   if (sizeInPercent.IsFloat()) SetMinNodeSize(sizeInPercent.Atof());
+   else {
+      Log() << kFATAL << "I had problems reading the option MinNodeEvents, which "
+           << "after removing a possible % sign now reads " << sizeInPercent << Endl;
+   }
+}
+
+
+
 //_______________________________________________________________________
 void TMVA::MethodBDT::Init( void )
 {
@@ -507,13 +552,13 @@ void TMVA::MethodBDT::Init( void )
       fMaxDepth        = 3;
       fBoostType      = "AdaBoost";
       if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
-         fNodeMinEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
+         fMinNodeEvents  = TMath::Max( Int_t(40), Int_t( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
    }else {
       fMaxDepth = 50;
       fBoostType      = "AdaBoostR2";
       fAdaBoostR2Loss = "Quadratic";
       if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
-         fNodeMinEvents  = 10;
+         fMinNodeEvents  = 10;
    }
 
    fNCuts          = 20;
@@ -558,7 +603,7 @@ void TMVA::MethodBDT::Reset( void )
    // reset all previously stored/accumulated BOOST weights in the event sample
    //for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
    if (Data()) Data()->DeleteResults(GetMethodName(), Types::kTraining, GetAnalysisType());
-   Log() << kDEBUG << " successfully(?) resetted the method " << Endl;                                      
+   Log() << kDEBUG << " successfully(?) reset the method " << Endl;                                      
 }
 
 
@@ -633,6 +678,8 @@ void TMVA::MethodBDT::InitEventSample( void )
       // some pre-processing for events with negative weights
       if (fPairNegWeightsGlobal) PreProcessNegativeEventWeights();
    }
+
+
 
 }
 
@@ -785,15 +832,12 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
    //       read from the middle of the bins. Hence.. the choice of Intervals e.g. for the
    //       MaxDepth, in order to make nice interger values!!!
 
-   // find some reasonable ranges for the optimisation of NodeMinEvents:
-   
-   Int_t N  = Int_t( Data()->GetNEvtSigTrain()) ;            
-   Int_t min  = TMath::Max( 20,    ( ( N/10000 - (N/10000)%10)  ) );
-   Int_t max  = TMath::Max( min*10, TMath::Min( 10000, ( ( N/10    - (N/10)   %100) ) ) );
+   // find some reasonable ranges for the optimisation of MinNodeEvents:
 
+   /*   
    tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,5))); //  stepsize 50
    tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(3,10,8)));    // stepsize 1
-   tuneParameters.insert(std::pair<TString,Interval>("NodeMinEvents",  Interval(min,max,5))); // 
+   tuneParameters.insert(std::pair<TString,Interval>("MinNodeSize",    Interval(2,30,5)));    // 
    //tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
 
    // method-specific parameters
@@ -810,6 +854,8 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
      
    }
    
+   */
+   tuneParameters.insert(std::pair<TString,Interval>("MinNodeSize",       Interval(0.1,10,100)));
    
    OptimizeConfigParameters optimize(this, tuneParameters, fomType, fitType);
    tunedParameters=optimize.optimize();
@@ -826,7 +872,7 @@ void TMVA::MethodBDT::SetTuneParameters(std::map<TString,Double_t> tuneParameter
    std::map<TString,Double_t>::iterator it;
    for(it=tuneParameters.begin(); it!= tuneParameters.end(); it++){
       if (it->first ==  "MaxDepth"       ) SetMaxDepth        ((Int_t)it->second);
-      if (it->first ==  "NodeMinEvents"  ) SetNodeMinEvents   ((Int_t)it->second);
+      if (it->first ==  "MinNodeSize"    ) SetMinNodeSize     (it->second);
       if (it->first ==  "NTrees"         ) SetNTrees          ((Int_t)it->second);
       if (it->first ==  "NodePurityLimit") SetNodePurityLimit (it->second);
       if (it->first ==  "AdaBoostBeta"   ) SetAdaBoostBeta    (it->second);
@@ -862,7 +908,7 @@ void TMVA::MethodBDT::Train()
    Log() << kINFO << "Training "<< fNTrees << " Decision Trees ... patience please" << Endl;
 
    Log() << kDEBUG << "Training with maximal depth = " <<fMaxDepth 
-         << ", NodeMinEvents=" << fNodeMinEvents
+         << ", MinNodeEvents=" << fMinNodeEvents
          << ", NTrees="<<fNTrees
          << ", NodePurityLimit="<<fNodePurityLimit
          << ", AdaBoostBeta="<<fAdaBoostBeta
@@ -963,7 +1009,7 @@ void TMVA::MethodBDT::Train()
          }
          UInt_t nClasses = DataInfo().GetNClasses();
          for (UInt_t i=0;i<nClasses;i++){
-            fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, i,
+            fForest.push_back( new DecisionTree( fSepType, fMinNodeSize, fNCuts, i,
                                                  fRandomisedTrees, fUseNvars, fUsePoissonNvars, fNNodesMax, fMaxDepth,
                                                  itree*nClasses+i, fNodePurityLimit, itree*nClasses+i));
             if (fPairNegWeightsInNode) fForest.back()->SetPairNegWeightsInNode();
@@ -985,7 +1031,7 @@ void TMVA::MethodBDT::Train()
          }
       }
       else{
-         fForest.push_back( new DecisionTree( fSepType, fNodeMinEvents, fNCuts, fSignalClass,
+         fForest.push_back( new DecisionTree( fSepType, fMinNodeSize, fNCuts, fSignalClass,
                                               fRandomisedTrees, fUseNvars, fUsePoissonNvars, fNNodesMax, fMaxDepth,
                                               itree, fNodePurityLimit, itree));
          if (fPairNegWeightsInNode) fForest.back()->SetPairNegWeightsInNode();

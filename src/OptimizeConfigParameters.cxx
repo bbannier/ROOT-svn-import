@@ -296,6 +296,7 @@ Double_t TMVA::OptimizeConfigParameters::EstimatorFunction( std::vector<Double_t
       std::map<TString, TMVA::Interval>::iterator it;
       for (it=fTuneParameters.begin(); it!=fTuneParameters.end(); it++){
          currentParameters[it->first] = pars[icount++];
+         Log() << kINFO << it->first << " = " << currentParameters[it->first]  << Endl;
       }
       GetMethod()->Reset();
       GetMethod()->SetTuneParameters(currentParameters);
