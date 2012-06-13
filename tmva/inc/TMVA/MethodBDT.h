@@ -175,6 +175,9 @@ namespace TMVA {
       // boosting algorithm (adaptive boosting)
       Double_t AdaBoost( std::vector<TMVA::Event*>, DecisionTree *dt );
 
+      // boosting algorithm (adaptive boosting with cost matrix)
+      Double_t AdaCost( std::vector<TMVA::Event*>, DecisionTree *dt );
+
       // boosting as a random re-weighting
       Double_t Bagging( std::vector<TMVA::Event*>, Int_t iTree );
 
