@@ -15,6 +15,7 @@ MAJOR
 1. RooUnitTest -> comparison error message is not suggestive; it tells us which values are different, not the names of the variables which have different values
 2. BayesianCalculator -> priorPOI argument should be POIpriorPdf IMHO
 3. Problem with importing libraries; sometimes you have to declare something in RooFit (for example, create a RooGaussian) so that libRooFit is imported
+4. need to improve combinedDataSet construction -> added a patch for combining weighted with unweighted data sets in 44690
 
 MINOR / WEAKLY RELATED
 
