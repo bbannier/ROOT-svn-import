@@ -261,6 +261,11 @@ namespace TMVA {
       Double_t                         fBoostWeight;     // ntuple var: boost weight
       Double_t                         fErrorFraction;   // ntuple var: misclassification error fraction
 
+      Double_t                         fCss;             // Cost factor
+      Double_t                         fCts_sb;          // Cost factor
+      Double_t                         fCtb_ss;          // Cost factor
+      Double_t                         fCbb;             // Cost factor
+
       std::vector<Double_t>            fVariableImportance; // the relative importance of the different variables
 
       // debugging flags

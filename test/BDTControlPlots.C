@@ -36,7 +36,7 @@ void bdtcontrolplots( TDirectory *bdtdir ) {
 
    Int_t width  = 900;
    Int_t height = 600;
-   char cn[100];
+   char cn[100], cn2[100];
    const TString titName = bdtdir->GetName();
    sprintf( cn, "cv_%s", titName.Data() );
    TCanvas *c = new TCanvas( cn,  Form( "%s Control Plots", titName.Data() ),
@@ -47,6 +47,8 @@ void bdtcontrolplots( TDirectory *bdtdir ) {
    const TString titName = bdtdir->GetName();
 
    TString hname[nPlots]={"BoostMonitor","BoostWeight","BoostWeightVsTree","ErrFractHist","NodesBeforePruning",titName+"_FOMvsIterFrame"}
+
+   Bool_t BoostMonitorIsDone=kFALSE;
 
    for (Int_t i=0; i<nPlots; i++){
       Int_t color = 4; 
@@ -69,18 +71,76 @@ void bdtcontrolplots( TDirectory *bdtdir ) {
             h2->SetLineColor(2);
             h2->Draw("same");
          }
-         if(hname[i]=="BoostMonitor"){ // a plot only available in case of automatic parameter option tuning
+         if(hname[i]=="BoostMonitor"){ // a plot only available in case DoBoostMontior option has bee set
             TGraph *g = (TGraph*) bdtdir->Get("BoostMonitorGraph");
             g->Draw("LP*");
+            BoostMonitorIsDone = kTRUE;
          }
-         if(hname[i]==titName+"_FOMvsIterFrame"){ // a plot only available in case of automatic parameter option tuning
+         if(hname[i]==titName+"_FOMvsIterFrame"){ // a plot only available in case DoBoostMontior option has bee set
             TGraph *g = (TGraph*) bdtdir->Get(titName+"_FOMvsIter");
             g->Draw();
          }
          c->Update();
       }
    }
-
+   
+   
+   if (BoostMonitorIsDone){
+      sprintf( cn2, "cv2_%s", titName.Data() );
+      TCanvas *c2 = new TCanvas( cn2,  Form( "%s BoostWeights", titName.Data() ),
+                                 1200, 1200 ); 
+      c2->Divide(5,5);
+      Int_t ipad=1;
+      
+      TIter keys( bdtdir->GetListOfKeys() );
+      TKey *key;
+      gDirectory.ls();
+      while ( (key = (TKey*)keys.Next()) && ipad < 26) {
+         cout << "bla " << key->GetName() << endl;
+         TObject *obj=key->ReadObj();
+         cout << "blaa " << obj->GetName() << " " << obj->GetTitle()<< endl;
+         if (obj->IsA()->InheritsFrom(TH1::Class())){   
+            TH1F *h = (TH1F*)obj;
+            TString hname(Form("%s",obj->GetTitle()));
+            cout << "Hname = " << hname << "  "  << obj->GetTitle() << endl;
+            if (hname.Contains("BoostWeightsInTreeB")){
+               c2->cd(ipad++);
+               h->SetLineColor(2);
+               h->Draw();
+               hname.ReplaceAll("TreeB","TreeS");
+               h = (TH1F*) gDirectory->Get(hname.Data());
+               if (h) {
+                  h->SetLineColor(4);
+                  h->Draw("same");
+               }
+            }
+            c2->Update();
+         }
+      }
+      /*
+      while ( (key = (TKey*)keys.Next()) && ipad < 25) {
+         cout << "bla " << key->GetName() << endl;
+         TObject *obj=key->ReadObj();
+         cout << "blaa " << obj->GetName() << " " << obj->GetTitle()<< endl;
+          if (obj->IsA()->InheritsFrom(TH1::Class())){   
+             TH1F *h = (TH1F*)obj;
+             c2->cd(ipad++);
+             h->Draw();
+             TString hname(Form("%s",h->GetName()));
+             cout << "Hname = " << hname << endl;
+             // if (hname.Contains("BoostWeightsInTreeS")){
+              //    c2->cd(ipad++);
+              //    h->Draw();
+              //    hname.ReplaceAll("S","B");
+              //    h = (TH1*) bdtdir->Get(hname.Data());
+              //    if (h) h->Draw("same");
+              // }
+              c2->Update();
+          }
+      }
+      */
+               
+   }
    // write to file
    TString fname = Form( "plots/%s_ControlPlots", titName.Data() );
    TMVAGlob::imgconv( c, fname );

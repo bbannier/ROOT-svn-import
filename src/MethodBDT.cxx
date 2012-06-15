@@ -187,6 +187,10 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fITree(0)
    , fBoostWeight(0)
    , fErrorFraction(0)
+   , fCss(0)
+   , fCts_sb(0)
+   , fCtb_ss(0)
+   , fCbb(0)
 {
    // the standard constructor for the "boosted decision trees"
    fMonitorNtuple = NULL;
@@ -237,6 +241,10 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fITree(0)
    , fBoostWeight(0)
    , fErrorFraction(0)
+   , fCss(0)
+   , fCts_sb(0)
+   , fCtb_ss(0)
+   , fCbb(0)
 {
    fMonitorNtuple = NULL;
    fSepType = NULL;
@@ -338,6 +346,11 @@ void TMVA::MethodBDT::DeclareOptions()
    if (DoRegression()) {
       fUseYesNoLeaf = kFALSE;
    }
+
+   DeclareOptionRef(fCss=0.5,   "Css",   "Cost: true signal selected signal"); 
+   DeclareOptionRef(fCts_sb=1., "Cts_sb","Cost: true signal selected bkg"); 
+   DeclareOptionRef(fCtb_ss=0.5,"Ctb_ss","Cost: true bkg    selected signal"); 
+   DeclareOptionRef(fCbb=0.,    "Cbb",   "Cost: true bkg    selected bkg "); 
 
 
    DeclareOptionRef(fNodePurityLimit=0.5, "NodePurityLimit", "In boosting/pruning, nodes with purity > NodePurityLimit are signal; background otherwise.");
@@ -1412,15 +1425,32 @@ void TMVA::MethodBDT::BoostMonitor(Int_t iTree)
    for (UInt_t iev=0; iev < nevents; iev++){
       Event* event = new Event( *GetTestingEvent(iev) );
 
-      if (event->GetClass() == signalClassNr) tmp=tmpS;
-      else                                    tmp=tmpB;
-      tmp->Fill(PrivateGetMvaValue(*event),event->GetWeight());
+      if (event->GetClass() == signalClassNr) {tmp=tmpS;}
+      else                                    {tmp=tmpB;}
+      tmp->Fill(PrivateGetMvaValue(*event),event->GetWeight()); 
    }
+   Double_t max=1;
+
+   for (UInt_t iev=0; iev < fEventSample.size(); iev++){
+      if (fEventSample[iev]->GetBoostWeight() > max) max = 1.01*fEventSample[iev]->GetBoostWeight();
+   }
+   TH1F *tmpBoostWeightsS = new TH1F(Form("BoostWeightsInTreeS%d",iTree),Form("BoostWeightsInTreeS%d",iTree),100,0.,max); 
+   TH1F *tmpBoostWeightsB = new TH1F(Form("BoostWeightsInTreeB%d",iTree),Form("BoostWeightsInTreeB%d",iTree),100,0.,max); 
+   TH1F *tmpBoostWeights;
+   for (UInt_t iev=0; iev < fEventSample.size(); iev++){
+      if (fEventSample[iev]->GetClass() == signalClassNr) {tmpBoostWeights=tmpBoostWeightsS;}
+      else                                                {tmpBoostWeights=tmpBoostWeightsB;}
+     tmpBoostWeights->Fill(fEventSample[iev]->GetBoostWeight());
+   }
+   
 
    TMVA::PDF *sig = new TMVA::PDF( " PDF Sig", tmpS, TMVA::PDF::kSpline3 );
    TMVA::PDF *bkg = new TMVA::PDF( " PDF Bkg", tmpB, TMVA::PDF::kSpline3 );
    
    Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
+   results->Store(tmpBoostWeightsS,tmpBoostWeightsS->GetTitle());
+   results->Store(tmpBoostWeightsB,tmpBoostWeightsB->GetTitle());
+
    TGraph*  gr=results->GetGraph("BoostMonitorGraph");
    Int_t nPoints = gr->GetN();
    gr->Set(nPoints+1);
@@ -1613,10 +1643,10 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
    //
    //
 
-   Double_t Css = 0; 
-   Double_t Cbb = 0; 
-   Double_t Cts_sb = 1; 
-   Double_t Ctb_ss = 0.2; 
+   Double_t Css = fCss; 
+   Double_t Cbb = fCbb; 
+   Double_t Cts_sb = fCts_sb; 
+   Double_t Ctb_ss = fCtb_ss; 
 
    Double_t err=0, sumGlobalWeights=0, sumGlobalCost=0;
 
@@ -1638,14 +1668,25 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
       if ( DoRegression() ) {
          Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
       }else{
+         /*
          Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit );
          Bool_t isTrueSignal  =DataInfo().IsSignal(*e);
          Double_t cost=0;
          if       (isTrueSignal  && isSignalType)  cost=Css;
-         else if  (isTrueSignal  && !isSignalType) cost=Cts_sb;
-         else if  (!isTrueSignal  && isSignalType) cost=Ctb_ss;
+         else if  (isTrueSignal  && !isSignalType) cost=-Cts_sb;
+         else if  (!isTrueSignal  && isSignalType) cost=-Ctb_ss;
          else if  (!isTrueSignal && !isSignalType) cost=Cbb;
-            
+         */
+  
+         Double_t response = (dt->CheckEvent(*(*e),fUseYesNoLeaf) -0.5)*2;
+         Bool_t isTrueSignal  =DataInfo().IsSignal(*e);
+         Bool_t isSelectedSignal = (response > 0);
+         Double_t cost=0;
+         if       (isTrueSignal  && isSelectedSignal)  cost=response*Css;
+         else if  (isTrueSignal  && !isSelectedSignal) cost=-response*Cts_sb;
+         else if  (!isTrueSignal  && isSelectedSignal) cost=-response*Ctb_ss;
+         else if  (!isTrueSignal && !isSelectedSignal) cost=response*Cbb;
+         
          sumGlobalCost+= w*cost;
          
       }
@@ -1656,9 +1697,9 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
    }
 
    Log() << kDEBUG << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
-   //   Log() << kWARNING << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
+      Log() << kWARNING << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
    sumGlobalCost /= sumGlobalWeights;
-   //   Log() << kWARNING << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
+   Log() << kWARNING << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
 
 
    Double_t newSumGlobalWeights=0;
@@ -1669,21 +1710,33 @@ Double_t TMVA::MethodBDT::AdaCost( vector<TMVA::Event*> eventSample, DecisionTre
    boostWeight = TMath::Log((1+sumGlobalCost)/(1-sumGlobalCost));
    //   Log() <<kWARNING << "BoostWeight = " << boostWeight << Endl;
 
-   if (fAdaBoostBeta != 1) { boostWeight=TMath::Power(boostWeight,fAdaBoostBeta);}
+   //   if (fAdaBoostBeta != 1) { boostWeight=TMath::Power(boostWeight,fAdaBoostBeta);}
+   if (fAdaBoostBeta != 1) { boostWeight*=fAdaBoostBeta;}
 
    Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
 
    for (vector<TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
- 
+      /*
       Bool_t isSignalType = (dt->CheckEvent(*(*e),fUseYesNoLeaf) > fNodePurityLimit );
       Bool_t isTrueSignal  =DataInfo().IsSignal(*e);
       Double_t cost=0;
       if       (isTrueSignal  && isSignalType)  cost=Css;
-      else if  (isTrueSignal  && !isSignalType) cost=Cts_sb;
-      else if  (!isTrueSignal  && isSignalType) cost=Ctb_ss;
+      else if  (isTrueSignal  && !isSignalType) cost=-Cts_sb;
+      else if  (!isTrueSignal  && isSignalType) cost=-Ctb_ss;
       else if  (!isTrueSignal && !isSignalType) cost=Cbb;
+      */
 
-      Double_t boostfactor = TMath::Exp(boostWeight*cost);
+      Double_t response = (dt->CheckEvent(*(*e),fUseYesNoLeaf) -0.5)*2;
+      Bool_t isTrueSignal  =DataInfo().IsSignal(*e);
+      Bool_t isSelectedSignal = (response > 0);
+      Double_t cost=0;
+      if       (isTrueSignal  && isSelectedSignal)  cost=response*Css;
+      else if  (isTrueSignal  && !isSelectedSignal) cost=-response*Cts_sb;
+      else if  (!isTrueSignal  && isSelectedSignal) cost=-response*Ctb_ss;
+      else if  (!isTrueSignal && !isSelectedSignal) cost=response*Cbb;
+
+
+      Double_t boostfactor = TMath::Exp(-boostWeight*cost);
       if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<endl; 
       if ( (*e)->GetWeight() > 0 ){
          (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostfactor);
