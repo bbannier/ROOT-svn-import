@@ -430,12 +430,16 @@ public:
             w->var("sig")->setVal(numberOnEvents[i] - numberOffEvents[i] / tau[i]);
             sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
             w->var("sig")->setVal(0);
-            bModel->SetSnapshot(*bModel->GetParametersOfInterest());
+            bModel->SetSnapshot(*bModel->GetParametersOfInterest());         
+
+            // has as initial value a non-zero value for sig (i.e start  with the S+B value)
+            sbModel->LoadSnapshot();
 
             // get significance using the ProfileLikelihoodCalculator
             ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *sbModel);
             plc->SetNullParameters(*bModel->GetSnapshot());
-            plc->SetAlternateParameters(*sbModel->GetSnapshot());
+            //plc->SetAlternateParameters(*sbModel->GetSnapshot());  // not needed for PLC
+
             regValue(plc->GetHypoTest()->Significance(), stringSignificance);
 
             // cleanup
@@ -1176,6 +1180,7 @@ public:
 
          ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *sbModel);
          plc->SetNullParameters(*bModel->GetSnapshot());
+         plc->SetAlternateParameters(*sbModel->GetSnapshot());
          regValue(plc->GetHypoTest()->Significance(), significanceString);
 
          // cleanup branch
@@ -1278,6 +1283,7 @@ public:
 
       ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("combinedData"), *sbModel);
       plc->SetNullParameters(*bModel->GetSnapshot());
+      plc->SetAlternateParameters(*sbModel->GetSnapshot());
       htr = plc->GetHypoTest();
       htr->Print();
       std::cout << "PLC " << htr->Significance() << std::endl;
@@ -1546,6 +1552,7 @@ public:
 
       ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *sbModel);
       plc->SetNullParameters(*bModel->GetSnapshot());
+      plc->SetAlternateParameters(*sbModel->GetSnapshot());
       htr = plc->GetHypoTest();
       htr->Print();
       std::cout << "PLC " << htr->Significance() << std::endl;
@@ -1832,6 +1839,7 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
 
    if (testStatType == kSimpleLR) {
       SimpleLikelihoodRatioTestStat *slrts = new SimpleLikelihoodRatioTestStat(*sbModel.GetPdf(), *bModel.GetPdf());
+      // TODO - different for HypoTestInverter and HypoTestCalculator
       slrts->SetNullParameters(*sbModel.GetSnapshot());
       slrts->SetAltParameters(*bModel.GetSnapshot());
       slrts->SetAlwaysReuseNLL(kTRUE);
