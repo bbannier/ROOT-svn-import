@@ -1274,10 +1274,11 @@ public:
       w->var("sig")->setVal(0);
       bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
-      HypoTestCalculatorGeneric *calc = buildHypoTestCalculator(fCalculatorType, *w->data("combinedData"), *bModel, *sbModel, 1000, 500);
+      HypoTestCalculatorGeneric *calc = 
+         buildHypoTestCalculator(fCalculatorType, *w->data("combinedData"), *bModel, *sbModel, 2000, 1000);
       ToyMCSampler *tmcs = (ToyMCSampler *)calc->GetTestStatSampler();
       tmcs->SetTestStatistic(buildTestStatistic(fTestStatType, *sbModel, *bModel));
-      //tmcs->SetAlwaysUseMultiGen(kTRUE);
+      tmcs->SetAlwaysUseMultiGen(kTRUE);
       HypoTestResult *htr = calc->GetHypoTest();
       htr->Print();
 
