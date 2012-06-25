@@ -35,7 +35,7 @@ void buildPoissonProductModel(RooWorkspace *w)
    ModelConfig *sbModel = new ModelConfig("S+B", w);
    sbModel->SetObservables("x");
    sbModel->SetGlobalObservables("beta0,gbkg1,gbkg2");
-   sbModel->SetParametersOfInterest("x");
+   sbModel->SetParametersOfInterest("sig");
    sbModel->SetNuisanceParameters("beta,bkg1,bkg2");
    sbModel->SetPdf("pdf");
    w->import(*sbModel);

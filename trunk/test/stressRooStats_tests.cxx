@@ -1277,7 +1277,7 @@ public:
       HypoTestCalculatorGeneric *calc = buildHypoTestCalculator(fCalculatorType, *w->data("combinedData"), *bModel, *sbModel, 1000, 500);
       ToyMCSampler *tmcs = (ToyMCSampler *)calc->GetTestStatSampler();
       tmcs->SetTestStatistic(buildTestStatistic(fTestStatType, *sbModel, *bModel));
-      tmcs->SetAlwaysUseMultiGen(kTRUE);
+      //tmcs->SetAlwaysUseMultiGen(kTRUE);
       HypoTestResult *htr = calc->GetHypoTest();
       htr->Print();
 
