@@ -179,7 +179,8 @@ if(allTests) {
 }
     
 //   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR));
-   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR, 10, 12));
+//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR, 10, 12));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR, 10, 12));
 //   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose, kFrequentist, kProfileLR, 8, 10));
 //   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose, kHybrid, kProfileLR, 8, 10));
    //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));

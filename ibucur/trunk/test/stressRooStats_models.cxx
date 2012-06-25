@@ -33,7 +33,7 @@ void buildPoissonProductModel(RooWorkspace *w)
 
    // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables("x");
+   sbModel->SetObservables("x,y");
    sbModel->SetGlobalObservables("beta0,gbkg1,gbkg2");
    sbModel->SetParametersOfInterest("sig");
    sbModel->SetNuisanceParameters("beta,bkg1,bkg2");
