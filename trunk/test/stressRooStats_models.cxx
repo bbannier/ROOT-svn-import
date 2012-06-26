@@ -27,8 +27,10 @@ void buildPoissonProductModel(RooWorkspace *w)
    w->factory("PROD::prior_nuis(constr1,constr2,constr3)");
 
    // extended pdfs and simultaneous pdf
-   w->factory("ExtendPdf::ext_pdf1(pdf,n1[1,0,10])");
-   w->factory("ExtendPdf::ext_pdf2(pdf,n2[1,0,10])");
+   w->factory("Uniform::u1(x)");
+   w->factory("Uniform::u2(y)");
+   w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
+   w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
    w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
 
    // create signal + background model configuration
