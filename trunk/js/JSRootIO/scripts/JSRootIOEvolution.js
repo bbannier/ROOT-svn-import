@@ -37,6 +37,11 @@ String.prototype.endsWith = function(str, ignoreCase) {
 
    JSROOTIO.version = "1.6 2012/02/24";
 
+   JSROOTIO.BIT = function(bits, index) {
+      var mask = 1 << index;
+      return (bits & mask);
+   };
+
    JSROOTIO.ntou2 = function(b, o) {
       // convert (read) two bytes of buffer b into a UShort_t
       var n  = ((b.charCodeAt(o)   & 0xff) << 8) >>> 0;
@@ -162,23 +167,33 @@ String.prototype.endsWith = function(str, ignoreCase) {
       var array = {}
       array['array'] = new Array();
       var n = JSROOTIO.ntou4(str, o); o += 4;
-      for (var i = 0; i < n; ++i) {
-         if (array_type == 'D') {
+      if (array_type == 'D') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntod(str, o); o += 8;
          }
-         if (array_type == 'F') {
+      }
+      if (array_type == 'F') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntof(str, o); o += 4;
          }
-         if (array_type == 'L') {
+      }
+      if (array_type == 'L') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntoi8(str, o); o += 8;
          }
-         if (array_type == 'I') {
+      }
+      if (array_type == 'I') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntoi4(str, o); o += 4;
          }
-         if (array_type == 'S') {
+      }
+      if (array_type == 'S') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntoi2(str, o); o += 2;
          }
-         if (array_type == 'C') {
+      }
+      if (array_type == 'C') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = str.charCodeAt(o) & 0xff; o++;
          }
       }
@@ -292,18 +307,16 @@ String.prototype.endsWith = function(str, ignoreCase) {
          class_name = clRef['name'];
       }
       else if (!clRef['name'] && clRef['tag']) {
-         class_name = gFile.fStreamerInfo.GetClassMap(clRef['tag']); //kMapOffset
-         if (class_name == -1)
-            class_name = gFile.fStreamerInfo.GetClassMap(clRef['tag'] + 2); //kMapOffset
-         if (class_name == -1)
-            class_name = gFile.fStreamerInfo.GetClassMap(clRef['tag'] - 2);
+         class_name = gFile.fStreamerInfo.GetClassMap(clRef['tag']);
          if (class_name != -1)
             obj['_typename'] = 'JSROOTIO.' + class_name;
          class_name = 0;
       }
       if (class_name && class_name != '' && class_name != -1) {
          if (class_name == 'TObject' || class_name == 'TMethodCall') {
-            o += 10; // skip object bits & unique id
+            o += 2; // skip version
+            o += 4; // skip unique id
+            obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
          }
          else if (class_name == 'TObjArray') {
             var array = JSROOTIO.ReadTObjArray(str, o);
@@ -321,8 +334,9 @@ String.prototype.endsWith = function(str, ignoreCase) {
          //o += 4;
       }
       else {
-         // skip TObject...
-         o += 10;
+         o += 2; // skip version
+         o += 4; // skip unique id
+         obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
       }
       return {
          'cln' : class_name,
@@ -391,9 +405,11 @@ String.prototype.endsWith = function(str, ignoreCase) {
       for (var i = 0; i < nobjects; i++) {
          obj = this.ReadObjectAny(str, o, class_name);
          o = obj['off'];
-         list['array'][i] = obj['obj'];
-         if (obj['cln'] && obj['cln'] != '')
+         list['array'][i] = 0;
+         if (obj['cln'] && obj['cln'] != '' && obj['cln'] != -1) {
             class_name = obj['cln'];
+            list['array'][i] = obj['obj'];
+         }
       }
       list['off'] = o;
       return list;
@@ -479,7 +495,9 @@ String.prototype.endsWith = function(str, ignoreCase) {
       var named = {};
       var ver = JSROOTIO.ReadVersion(str, o);
       o = ver['off'];
-      o += 10; // skipversion
+      o += 2; // skip version
+      o += 4; // skip unique id
+      named['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
       var so = JSROOTIO.ReadTString(str, o); o = so['off'];
       named['name'] = so['str'];
       so = JSROOTIO.ReadTString(str, o); o = so['off'];
@@ -682,6 +700,10 @@ String.prototype.endsWith = function(str, ignoreCase) {
                      o += 4;
                      break;
                   }
+                  if (pval < 1000000) {
+                     o += 4;
+                     break;
+                  }
                }
                if (JSROOTIO.GetStreamer(classname)) {
                   var clRef = gFile.fStreamerInfo.ReadClass(str, o);
@@ -695,7 +717,9 @@ String.prototype.endsWith = function(str, ignoreCase) {
                obj[prop] = so['str'];
                break;
             case kTObject:
-               o += 10; // skip TObject...
+               o += 2; // skip version
+               o += 4; // skip unique id
+               obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
                break;
             case kTNamed:
                var named = JSROOTIO.ReadTNamed(str, o);
@@ -810,8 +834,9 @@ String.prototype.endsWith = function(str, ignoreCase) {
                   o = array['off'];
                }
                else if (this[prop]['class'] === 'TObject') {
-                  // skip TObject
-                  o += 10;
+                  o += 2; // skip version
+                  o += 4; // skip unique id
+                  obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
                }
                else if (this[prop]['class'] === 'TQObject') {
                   // skip TQObject
@@ -930,9 +955,11 @@ String.prototype.endsWith = function(str, ignoreCase) {
                   o = array['off'];
                   break;
                case "TObject":
-                  o += 10; // skip TObject...
+                  o += 2; // skip version
+                  o += 4; // skip unique id
+                  obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
                   break;
-               case "TObject":
+               case "TQObject":
                   // skip TQObject...
                   break;
                default:
@@ -987,6 +1014,7 @@ String.prototype.endsWith = function(str, ignoreCase) {
 
       JSROOTIO.StreamerInfo.prototype.GetClassMap = function(clTag) {
          // find the tag 'clTag' in the list and return the class name
+         clTag |= 0x01;
          for (var i=0; i<gFile['fStreamerInfo'].fClassIndex; ++i) {
             if (gFile['fStreamerInfo'].fClassMap[i]['tag'] == clTag)
                return gFile['fStreamerInfo'].fClassMap[i]['name'];
@@ -1002,8 +1030,8 @@ String.prototype.endsWith = function(str, ignoreCase) {
          classInfo['off'] = o;
          classInfo['tag'] = 0;
          var tag = 0;
-         var startpos = o;
          var bcnt = JSROOTIO.ntou4(str, o); o += 4;
+         var startpos = o;
          if (!(bcnt & kByteCountMask) ||
               (bcnt == kNewClassTag)) {
             tag = bcnt;
@@ -1023,23 +1051,19 @@ String.prototype.endsWith = function(str, ignoreCase) {
             var so = JSROOTIO.ReadString(str, o); // class name
             o = so['off'];
             classInfo['name'] = so['str'];
-            classInfo['tag'] = 68 + startpos + kMapOffset;
+            //if (gFile.fTagOffset == 0) gFile.fTagOffset = 68;
+            classInfo['tag'] = gFile.fTagOffset + startpos + kMapOffset;
          }
          else {
             // got a tag to an already seen class
             var clTag = (tag & ~kClassMask);
             classInfo['name'] = this.GetClassMap(clTag);
-            if (classInfo['name'] == -1)
-               classInfo['name'] = this.GetClassMap(clTag - kMapOffset);
-            if (classInfo['name'] == -1)
-               classInfo['name'] = this.GetClassMap(clTag + 14);
          }
          classInfo['cnt'] = (bcnt & ~kByteCountMask);
          classInfo['off'] = o;
          if (tag == kNewClassTag) {
             // add class to fClassMap for later reference
-            //gFile['fStreamerInfo'].fClassMap[gFile['fStreamerInfo'].fClassIndex] = classInfo;
-            //gFile['fStreamerInfo'].fClassIndex++;
+            classInfo['tag'] |= 0x01;
             this.fClassMap[this.fClassIndex] = classInfo;
             this.fClassIndex++;
          }
@@ -1937,6 +1961,7 @@ String.prototype.endsWith = function(str, ignoreCase) {
       JSROOTIO.RootFile.prototype.ReadObjBuffer = function(key, callback) {
          // read and inflate object buffer described by its key
          this.Seek(key['dataoffset'], this.ERelativeTo.kBeg);
+         this.fTagOffset = key.keyLen;
          var callback1 = function(file, buffer) {
             var noutot = 0;
             var objbuf = 0;
@@ -1978,6 +2003,7 @@ String.prototype.endsWith = function(str, ignoreCase) {
          if (findObject(obj_name+cycle)) return;
          var key = this.GetKey(obj_name, cycle);
          if (key == null) return;
+         this.fTagOffset = key.keyLen;
          var callback = function(file, objbuf) {
             if (objbuf && objbuf['unzipdata']) {
                if (key['className'] == 'TCanvas') {
@@ -2012,6 +2038,7 @@ String.prototype.endsWith = function(str, ignoreCase) {
          this.Seek(this.fSeekInfo, this.ERelativeTo.kBeg);
          var callback1 = function(file, buffer) {
             var key = file.ReadKey(buffer, 0);
+            this.fTagOffset = key.keyLen;
             if (key == 0) return;
             file.fKeys[file.fKeyIndex] = key;
             file.fKeyIndex++;
@@ -2177,6 +2204,7 @@ String.prototype.endsWith = function(str, ignoreCase) {
       this.fHistoIndex = 0;
       this.fSeekInfo = 0;
       this.fNbytesInfo = 0;
+      this.fTagOffset = 0;
 
       this.fStreamers = 0;
       this.fStreamerInfo = new JSROOTIO.StreamerInfo();

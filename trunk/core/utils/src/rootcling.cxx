@@ -703,83 +703,6 @@ bool R__IsInt(const clang::FieldDecl *field)
 
 cling::Interpreter *gInterp = 0;
 
-#if NOTNEEDED
-const clang::NamedDecl *R__SlowSearchImpl(const char *name, const clang::DeclContext *ctxt = 0) 
-{
-   // First find the left most part, search it and proceed with the search inside it.
-
-   int paran = 0;
-   int nest = 0;
-   unsigned int len = strlen(name);
-   for(unsigned int i = 0; i < len; ++i) {
-      switch (name[i]) {
-         case '(' : ++paran; break;
-         case ')' : --paran; break;
-         case '<' : if (paran==0) ++nest; break;
-         case '>' : if (paran==0) --nest; break;
-         case ':' : if (paran==0 && nest==0) {
-            // We got the end of the leftpart.
-            std::string leftpart(name);
-            leftpart[i] = '\0';
-            const clang::NamedDecl *scope = gInterp->LookupDecl(leftpart.c_str(), ctxt).getSingleDecl();
-            if (!scope) {
-               return 0;
-            } else {
-               const clang::DeclContext *scope_ctxt = llvm::dyn_cast<clang::DeclContext>(scope);
-               if (scope_ctxt) {
-                  return R__SlowSearchImpl(name+i+2,scope_ctxt);
-               } else {
-                  return 0;
-               }
-            }
-         }
-      }   
-      if (paran < 0 || nest < 0) {
-         // malformed, we can't find it.
-         return 0;
-      }
-   }
-   // If we get here, we have a decomposed named (unqualified),
-   // if the lookup fails, we may have a request for a template instance
-   // and which case, let's use the 'function template' based lookup
-   const clang::NamedDecl *result = gInterp->LookupDecl(name, ctxt).getSingleDecl();
-   if (!result && strchr(name,'<') != 0)
-   {
-      string fullname = name;
-      fullname[ strchr(fullname.c_str(),'<')-fullname.c_str() ] = '\0';
-      const clang::NamedDecl *templateResult = gInterp->LookupDecl(fullname.c_str(), ctxt);
-      if (templateResult) {
-         // The template exist, let's look for an instance.
-         fullname = "";
-         if (ctxt) {
-            R__GetQualifiedName(fullname,*llvm::dyn_cast<clang::NamedDecl>(ctxt));
-            fullname += "::";
-         }
-         fullname += name;
-         clang::QualType type = TMetaUtils::LookupTypeDecl(*gInterp,fullname.c_str());
-         if (!type.isNull()) {
-            const clang::Type *typeptr = type.getTypePtr();
-            if (typeptr) result = type->getAsCXXRecordDecl();
-         }
-      }
-   }
-   return result;
-}
-
-const clang::NamedDecl *R__SlowSearch(const char *name, const clang::DeclContext *ctxt = 0) 
-{
-   const clang::NamedDecl *result = R__SlowSearchImpl(name,0);
-
-   if (!result) {
-      // For compatiblity with CINT, we also search the 'std' namespace.
-      static const clang::NamespaceDecl *std_decl = llvm::dyn_cast_or_null<clang::NamespaceDecl>(R__SlowSearchImpl("std"));
-      if (std_decl) {
-         result = R__SlowSearchImpl(name,std_decl);
-      }
-   }
-   return result;
-}
-#endif
 
 const clang::CXXRecordDecl *R__ScopeSearch(const char *name) 
 {
@@ -793,28 +716,6 @@ const clang::CXXRecordDecl *R__ScopeSearch(const char *name)
    }
    return result;
 }
-
-#if NOTNEEDED
-const clang::CXXRecordDecl *R__SlowClassSearch(const char *name) 
-{
-   const clang::NamedDecl *result = R__SlowSearch(name,0);
-
-   // Now, let's check with cling's lookupScope 
-   const clang::CXXRecordDecl *result_cxx = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(result);
-   const clang::CXXRecordDecl *result_new = R__ScopeSearch(name);
-   if (result_cxx != result_new) {
-      // Humm ok, we are not the same
-      fprintf(stderr,"Error: lookupScope disagree with R__SlowSearchImpl on %s: lookupScope: %s slowClassSearch: %s\n",
-              name, result_new ? R__GetQualifiedName(*result_new).c_str() : " nothing ", result ? R__GetQualifiedName(*result_cxx).c_str() : " nothing ");
-   }
-
-   if (result) {
-      return llvm::dyn_cast<clang::CXXRecordDecl>(result);
-   } else {
-      return 0;
-   }
-}
-#endif 
 
 const clang::Type *R__GetUnderlyingType(clang::QualType type)
 {
@@ -1650,80 +1551,6 @@ void BeforeParseInit()
 
 }
 
-#if NOTNEEDED
-//______________________________________________________________________________
-bool CheckInputOperator(G__ClassInfo &cl, int dicttype)
-{
-   // Check if the operator>> has been properly declared if the user has
-   // resquested a custom version.
-
-   bool has_input_error = false;
-
-   // Need to find out if the operator>> is actually defined for
-   // this class.
-   G__ClassInfo gcl;
-   long offset;
-
-   int ncha = strlen(cl.Fullname())+13;
-   char *proto = new char[ncha];
-   snprintf(proto,ncha,"TBuffer&,%s*&",cl.Fullname());
-
-   G__MethodInfo methodinfo = gcl.GetMethod("operator>>",proto,&offset);
-
-   Info(0, "Class %s: Do not generate operator>>()\n",
-        cl.Fullname());
-   G__MethodArgInfo args( methodinfo );
-   args.Next(); args.Next();
-   if (!methodinfo.IsValid() ||
-       !args.IsValid() ||
-       args.Type()==0 ||
-       args.Type()->Tagnum() != cl.Tagnum() ||
-       strstr(methodinfo.FileName(),"TBuffer.h")!=0 ||
-       strstr(methodinfo.FileName(),"Rtypes.h" )!=0) {
-
-      if (dicttype==0||dicttype==1){
-         // We don't want to generate duplicated error messages in several dictionaries (when generating temporaries)
-         Error(0,
-               "in this version of ROOT, the option '!' used in a linkdef file\n"
-               "       implies the actual existence of customized operators.\n"
-               "       The following declaration is now required:\n"
-               "   TBuffer &operator>>(TBuffer &,%s *&);\n",cl.Fullname());
-
-      }
-
-      has_input_error = true;
-   } else {
-      // Warning(0, "TBuffer &operator>>(TBuffer &,%s *&); defined at line %s %d \n",cl.Fullname(),methodinfo.FileName(),methodinfo.LineNumber());
-   }
-   // fprintf(stderr, "DEBUG: %s %d\n",methodinfo.FileName(),methodinfo.LineNumber());
-
-   methodinfo = gcl.GetMethod("operator<<",proto,&offset);
-   args.Init(methodinfo);
-   args.Next(); args.Next();
-   if (!methodinfo.IsValid() ||
-       !args.IsValid() ||
-       args.Type()==0 ||
-       args.Type()->Tagnum() != cl.Tagnum() ||
-       strstr(methodinfo.FileName(),"TBuffer.h")!=0 ||
-       strstr(methodinfo.FileName(),"Rtypes.h" )!=0) {
-
-      if (dicttype==0||dicttype==1){
-         Error(0,
-               "in this version of ROOT, the option '!' used in a linkdef file\n"
-               "       implies the actual existence of customized operator.\n"
-               "       The following declaration is now required:\n"
-               "   TBuffer &operator<<(TBuffer &,const %s *);\n",cl.Fullname());
-      }
-
-      has_input_error = true;
-   } else {
-      //fprintf(stderr, "DEBUG: %s %d\n",methodinfo.FileName(),methodinfo.LineNumber());
-   }
-
-   delete [] proto;
-   return has_input_error;
-}
-#endif
 
 //______________________________________________________________________________
 bool CheckInputOperator(const char *what, const char *proto, const string &fullname, const clang::RecordDecl *cl, int dicttype)
@@ -1764,10 +1591,6 @@ bool CheckInputOperator(const clang::RecordDecl *cl, int dicttype)
    // Check if the operator>> has been properly declared if the user has
    // resquested a custom version.
 
-   // G__ClassInfo clinfo(R__GetQualifiedName(*cl).c_str());
-   // return CheckInputOperator(clinfo,dicttype);
-
-
    string fullname;
    R__GetQualifiedName(fullname,*cl);
    int ncha = fullname.length()+13;
@@ -1780,72 +1603,6 @@ bool CheckInputOperator(const clang::RecordDecl *cl, int dicttype)
    // We do want to call both CheckInputOperator all the times.
    bool has_input_error = CheckInputOperator("operator>>",proto,fullname,cl,dicttype);
    has_input_error = CheckInputOperator("operator<<",proto,fullname,cl,dicttype) || has_input_error;
-   return has_input_error;
-
-#if 0
-   // Need to find out if the operator>> is actually defined for
-   // this class.
-   G__ClassInfo gcl;
-   long offset;
-
-   int ncha = strlen(cl.Fullname())+13;
-   char *proto = new char[ncha];
-   snprintf(proto,ncha,"TBuffer&,%s*&",cl.Fullname());
-
-   G__MethodInfo methodinfo = gcl.GetMethod("operator>>",proto,&offset);
-
-   Info(0, "Class %s: Do not generate operator>>()\n",
-        cl.Fullname());
-   G__MethodArgInfo args( methodinfo );
-   args.Next(); args.Next();
-   if (!methodinfo.IsValid() ||
-       !args.IsValid() ||
-       args.Type()==0 ||
-       args.Type()->Tagnum() != cl.Tagnum() ||
-       strstr(methodinfo.FileName(),"TBuffer.h")!=0 ||
-       strstr(methodinfo.FileName(),"Rtypes.h" )!=0) {
-
-      if (dicttype==0||dicttype==1){
-         // We don't want to generate duplicated error messages in several dictionaries (when generating temporaries)
-         Error(0,
-               "in this version of ROOT, the option '!' used in a linkdef file\n"
-               "       implies the actual existence of customized operators.\n"
-               "       The following declaration is now required:\n"
-               "   TBuffer &operator>>(TBuffer &,%s *&);\n",cl.Fullname());
-
-      }
-
-      has_input_error = true;
-   } else {
-      // Warning(0, "TBuffer &operator>>(TBuffer &,%s *&); defined at line %s %d \n",cl.Fullname(),methodinfo.FileName(),methodinfo.LineNumber());
-   }
-   // fprintf(stderr, "DEBUG: %s %d\n",methodinfo.FileName(),methodinfo.LineNumber());
-
-   methodinfo = gcl.GetMethod("operator<<",proto,&offset);
-   args.Init(methodinfo);
-   args.Next(); args.Next();
-   if (!methodinfo.IsValid() ||
-       !args.IsValid() ||
-       args.Type()==0 ||
-       args.Type()->Tagnum() != cl.Tagnum() ||
-       strstr(methodinfo.FileName(),"TBuffer.h")!=0 ||
-       strstr(methodinfo.FileName(),"Rtypes.h" )!=0) {
-
-      if (dicttype==0||dicttype==1){
-         Error(0,
-               "in this version of ROOT, the option '!' used in a linkdef file\n"
-               "       implies the actual existence of customized operator.\n"
-               "       The following declaration is now required:\n"
-               "   TBuffer &operator<<(TBuffer &,const %s *);\n",cl.Fullname());
-      }
-
-      has_input_error = true;
-   } else {
-      //fprintf(stderr, "DEBUG: %s %d\n",methodinfo.FileName(),methodinfo.LineNumber());
-   }
-
-   delete [] proto;
-#endif
    return has_input_error;
 }
 
@@ -2171,42 +1928,6 @@ bool NeedTypedefShadowClass(G__ClassInfo& cl)
    return (cl.HasMethod("Class_Name") && !cl.IsTmplt());
 }
 
-#if NOTNEEDED
-//______________________________________________________________________________
-bool NeedTemplateKeyword(G__ClassInfo &cl)
-{
-   if (cl.IsTmplt()) {
-      char *templatename = StrDup(cl.Fullname());
-      char *loc = strstr(templatename, "<");
-      if (loc) *loc = 0;
-      struct G__Definedtemplateclass *templ = G__defined_templateclass(templatename);
-      if (templ) {
-
-         int current = cl.Tagnum();
-         G__IntList * ilist = templ->instantiatedtagnum;
-         while(ilist) {
-            if (ilist->i == current) {
-               delete [] templatename;
-               // This is an automatically instantiated templated class.
-               return true;
-            }
-            ilist = ilist->next;
-         }
-
-         delete [] templatename;
-         // This is a specialized templated class
-         return false;
-
-      } else {
-
-         delete [] templatename;
-         // It might be a specialization without us seeing the template definition
-         return false;
-      }
-   }
-   return false;
-}
-#endif
 
 //______________________________________________________________________________
 bool NeedTemplateKeyword(const clang::CXXRecordDecl *cl)
@@ -2223,10 +1944,6 @@ bool NeedTemplateKeyword(const clang::CXXRecordDecl *cl)
       return true;
    }  
 }
-
-bool HasCustomOperatorNewPlacement(G__ClassInfo& cl);
-bool HasCustomOperatorNewArrayPlacement(G__ClassInfo& cl);
-bool HasDefaultConstructor(G__ClassInfo& cl,string *args=0);
 
 //______________________________________________________________________________
 bool HasCustomOperatorNewPlacement(const char *which, const clang::RecordDecl &cl)
@@ -2313,108 +2030,6 @@ bool HasCustomOperatorNewArrayPlacement(const clang::RecordDecl &cl)
    // return true if we can find a custom operator new with placement
 
    return HasCustomOperatorNewPlacement("operator new[]",cl);
-}
-
-//______________________________________________________________________________
-bool HasCustomOperatorNewPlacement(G__ClassInfo& cl)
-{
-   // return true if we can find a custom operator new
-
-   // Look for a custom operator new
-   bool custom = false;
-   G__ClassInfo gcl;
-   long offset;
-   const char *name = "operator new";
-   const char *proto = "size_t";
-   const char *protoPlacement = "size_t,void*";
-
-   // first in the global namespace:
-   G__MethodInfo methodinfo = gcl.GetMethod(name,proto,&offset);
-   G__MethodInfo methodinfoPlacement = gcl.GetMethod(name,protoPlacement,&offset);
-   if  (methodinfoPlacement.IsValid()) {
-      // We have a custom new placement in the global namespace
-      custom = true;
-   }
-
-   // in nesting space:
-   gcl = cl.EnclosingSpace();
-   methodinfo = gcl.GetMethod(name,proto,&offset);
-   methodinfoPlacement = gcl.GetMethod(name,protoPlacement,&offset);
-   if  (methodinfoPlacement.IsValid()) {
-      custom = true;
-   }
-
-   // in class
-   methodinfo = cl.GetMethod(name,proto,&offset);
-   methodinfoPlacement = cl.GetMethod(name,protoPlacement,&offset);
-   if  (methodinfoPlacement.IsValid()) {
-      // We have a custom operator new with placement in the class
-      // hierarchy.  We still need to check that it has not been
-      // overloaded by a simple operator new.
-
-      G__ClassInfo clNew(methodinfo.GetDefiningScopeTagnum());
-      G__ClassInfo clPlacement(methodinfoPlacement.GetDefiningScopeTagnum());
-
-      if (clNew.IsBase(clPlacement)) {
-         // the operator new hides the operator new with placement
-         custom = false;
-      } else {
-         custom = true;
-      }
-   }
-
-   return custom;
-}
-
-//______________________________________________________________________________
-bool HasCustomOperatorNewArrayPlacement(G__ClassInfo& cl)
-{
-   // return true if we can find a custom operator new
-
-   // Look for a custom operator new[]
-   bool custom = false;
-   G__ClassInfo gcl;
-   long offset;
-   const char *name = "operator new[]";
-   const char *proto = "size_t";
-   const char *protoPlacement = "size_t,void*";
-
-   // first in the global namespace:
-   G__MethodInfo methodinfo = gcl.GetMethod(name,proto,&offset);
-   G__MethodInfo methodinfoPlacement = gcl.GetMethod(name,protoPlacement,&offset);
-   if  (methodinfoPlacement.IsValid()) {
-      // We have a custom new[] placement in the global namespace
-      custom = true;
-   }
-
-   // in nesting space:
-   gcl = cl.EnclosingSpace();
-   methodinfo = gcl.GetMethod(name,proto,&offset);
-   methodinfoPlacement = gcl.GetMethod(name,protoPlacement,&offset);
-   if  (methodinfoPlacement.IsValid()) {
-      custom = true;
-   }
-
-   // in class
-   methodinfo = cl.GetMethod(name,proto,&offset);
-   methodinfoPlacement = cl.GetMethod(name,protoPlacement,&offset);
-   if  (methodinfoPlacement.IsValid()) {
-      // We have a custom operator new[] with placement in the class
-      // hierarchy.  We still need to check that it has not been
-      // overloaded by a simple operator new.
-
-      G__ClassInfo clNew(methodinfo.GetDefiningScopeTagnum());
-      G__ClassInfo clPlacement(methodinfoPlacement.GetDefiningScopeTagnum());
-
-      if (clNew.IsBase(clPlacement)) {
-         // the operator new[] hides the operator new with placement
-         custom = false;
-      } else {
-         custom = true;
-      }
-   }
-
-   return custom;
 }
 
 bool CheckConstructor(const clang::CXXRecordDecl *cl, const char *arg)
@@ -2594,7 +2209,7 @@ bool IsTemplateFloat16(const RScanner::AnnotatedRecordDecl &cl)
    // been resolved here.
    return StringBasedIsTemplateFloat16Double32("Float16_t",cl.GetRequestedName());
 
-#if NOTNEEDED
+#if KEEP_UNTIL_WE_RESOLVE_THE_TYPEDEF_AND_TEMPLATE_ISSUE
    // Return true if any of the argument is or contains a Float16.
    if (!clinfo.IsTmplt()) return false;
    
@@ -2666,7 +2281,7 @@ bool IsTemplateDouble32(const RScanner::AnnotatedRecordDecl &cl)
    // been resolved here.
    return StringBasedIsTemplateFloat16Double32("Double32_t",cl.GetRequestedName());
 
-#if NOTNEEDED
+#if KEEP_UNTIL_WE_RESOLVE_THE_TYPEDEF_AND_TEMPLATE_ISSUE
    if (!cl.IsTmplt()) return false;
 
    static G__TypeInfo ti;
@@ -2723,31 +2338,6 @@ bool IsTemplateDouble32(const RScanner::AnnotatedRecordDecl &cl)
 #endif
 }
 
-#if NOTNEEDED
-//______________________________________________________________________________
-bool IsSTLBitset(G__DataMemberInfo &m)
-{
-   // Is this a std::bitset
-
-   const char *s = m.Type()->TrueName();
-   if (!s) return false;
-
-   string type(s);
-   return TClassEdit::IsSTLBitset(type.c_str());
-}
-
-//______________________________________________________________________________
-bool IsSTLBitset(G__BaseClassInfo &m)
-{
-   // Is this a std::bitset
-
-   const char *s = m.Name();
-   if (!s) return false;
-
-   string type(s);
-   return TClassEdit::IsSTLBitset(type.c_str());
-}
-#endif
 
 //______________________________________________________________________________
 int IsSTLContainer(G__DataMemberInfo &m)
@@ -2859,37 +2449,6 @@ bool IsStreamableObject(const clang::FieldDecl &m)
 }
 
 //______________________________________________________________________________
-int IsStreamable(G__DataMemberInfo &m)
-{
-   // Is this member a Streamable object?
-
-   const char* mTypeName = ShortTypeName(m.Type()->Name());
-
-
-   if ((m.Property() & G__BIT_ISSTATIC) ||
-       strncmp(m.Title(), "!", 1) == 0        ||
-       strcmp(m.Name(), "G__virtualinfo") == 0) return 0;
-
-   if (((m.Type())->Property() & G__BIT_ISFUNDAMENTAL) ||
-       ((m.Type())->Property() & G__BIT_ISENUM)) return 0;
-
-   if (m.Property() & G__BIT_ISREFERENCE) return 0;
-
-   if (IsSTLContainer(m)) {
-      return 1;
-   }
-
-   if (!strcmp(mTypeName, "string") || !strcmp(mTypeName, "string*")) return 1;
-
-   if ((m.Type())->HasMethod("Streamer")) {
-      if (!(m.Type())->HasMethod("Class_Version")) return 1;
-      int version = GetClassVersion(*m.Type());
-      if (version > 0) return 1;
-   }
-   return 0;
-}
-
-//______________________________________________________________________________
 G__TypeInfo &TemplateArg(G__DataMemberInfo &m, int count = 0)
 {
    // Returns template argument. When count = 0 return first argument,
@@ -2986,7 +2545,6 @@ void WriteAuxFunctions(const RScanner::AnnotatedRecordDecl &cl)
    //    operator delete
    //    operator delete[]
 
-   G__ClassInfo clinfo(cl.GetRequestedName()[0] ? cl.GetRequestedName() : R__GetQualifiedName(cl).c_str());
    const clang::CXXRecordDecl *clxx = llvm::dyn_cast<clang::CXXRecordDecl>(cl.GetRecordDecl());
    if (!clxx) {
       return;
@@ -3836,12 +3394,6 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
       return;
    }
 
-   // We need to to go back to CINT to preserve functionality.
-   G__ClassInfo clinfo( cl_input.GetRequestedName()[0] ? cl_input.GetRequestedName() : R__GetQualifiedName(cl_input).c_str() );
-   if (!clinfo.IsValid() && cl_input.GetRequestedName()[0] ) {
-      clinfo.Init(  R__GetQualifiedName(cl_input).c_str() );
-   }
-
    // coverity[fun_call_w_exception] - that's just fine.
    string classname = GetLong64_Name( RStl::DropDefaultArg( cl_input.GetRequestedName()[0] ? cl_input.GetRequestedName() : R__GetQualifiedName(cl_input).c_str() ) );
    string mappedname = R__map_cpp_name((char*)classname.c_str());
@@ -3973,6 +3525,11 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
 
 
    // Note this is falling back on CINT :(
+   // We need to to go back to CINT to preserve functionality.
+   G__ClassInfo clinfo( cl_input.GetRequestedName()[0] ? cl_input.GetRequestedName() : R__GetQualifiedName(cl_input).c_str() );
+   if (!clinfo.IsValid() && cl_input.GetRequestedName()[0] ) {
+      clinfo.Init(  R__GetQualifiedName(cl_input).c_str() );
+   }
    if (NeedShadowClass(clinfo)) {
       (*dictSrcOut) << "      // Make sure the shadow class has the right sizeof" << std::endl;
       if (G__ShadowMaker::IsStdPair(clinfo)) {
@@ -4010,9 +3567,9 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
       (*dictSrcOut) << "2, "; // bitset 'version number'
    } else if (stl) {
       (*dictSrcOut) << "-2, "; // "::TStreamerInfo::Class_Version(), ";
-   } else if( clinfo.RootFlag() & G__HASVERSION ) {
-      (*dictSrcOut) << clinfo.Version() << ", ";
-   } else { // if (cl.RootFlag() & G__USEBYTECOUNT ) {
+   } else if( cl_input.HasClassVersion() ) {
+      (*dictSrcOut) << cl_input.RequestedVersionNumber() << ", ";
+   } else { // if (cl_input.RequestStreamerInfo()) {
 
       // Need to find out if the operator>> is actually defined for this class.
       G__ClassInfo gcl;
@@ -4050,7 +3607,7 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
    (*dictSrcOut) << "\"" << filename << "\", " << R__GetLineNumber(cl_input) << "," << std::endl
                  << "                  typeid(" << csymbol.c_str() << "), DefineBehavior(ptr, ptr)," << std::endl
                  << "                  ";
-   //   fprintf(fp, "                  (::ROOT::ClassInfo< %s >::ShowMembersFunc_t)&::ROOT::ShowMembers,%d);\n", classname.c_str(),cl.RootFlag());
+   //   fprintf(fp, "                  (::ROOT::ClassInfo< %s >::ShowMembersFunc_t)&::ROOT::ShowMembers,%d);\n", classname.c_str(),cl_input.RootFlag());
    if (!NeedShadowClass(clinfo)) {
       if (!ClassInfo__HasMethod(cl,"ShowMembers")) (*dictSrcOut) << "0, ";
    } else {
@@ -4064,7 +3621,7 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
       (*dictSrcOut) << "&" << mappedname.c_str() << "_Dictionary, ";
    }
 
-   (*dictSrcOut) << "isa_proxy, " << clinfo.RootFlag() << "," << std::endl
+   (*dictSrcOut) << "isa_proxy, " << cl_input.RootFlag() << "," << std::endl
                  << "                  sizeof(" << csymbol.c_str() << ") );" << std::endl;
    if (HasDefaultConstructor(cl,&args)) {
       (*dictSrcOut) << "      instance.SetNew(&new_" << mappedname.c_str() << ");" << std::endl;
@@ -4612,10 +4169,10 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl)
       clsname.erase (0, nsname.size() + 2);
    }
    
-   G__ClassInfo clinfo(R__GetQualifiedName(cl).c_str());
 
    int enclSpaceNesting = 0;
    if (!nsname.empty()) {
+      G__ClassInfo clinfo(R__GetQualifiedName(cl).c_str());
       G__ShadowMaker nestTempShadowMaker(*dictSrcOut, "");
       enclSpaceNesting = nestTempShadowMaker.WriteNamespaceHeader(clinfo);
    }
@@ -5435,13 +4992,8 @@ void WriteClassCode(const RScanner::AnnotatedRecordDecl &cl)
       return;
    }
 
-   G__ClassInfo clinfo(cl.GetRequestedName()[0] ? cl.GetRequestedName() : R__GetQualifiedName(cl).c_str());
-   if (!clinfo.IsValid() && cl.GetRequestedName()[0] ) {
-      clinfo.Init(  R__GetQualifiedName(cl).c_str() );
-   }
-
    if (ClassInfo__HasMethod(cl,"Streamer")) {
-      if (clinfo.RootFlag()) WritePointersSTL(cl); // In particular this detect if the class has a version number.
+      if (cl.RootFlag()) WritePointersSTL(cl); // In particular this detect if the class has a version number.
       if (!(cl.RequestNoStreamer())) {
          if ((cl.RequestStreamerInfo() /*G__AUTOSTREAMER*/)) {
             WriteAutoStreamer(cl);
@@ -5449,15 +5001,19 @@ void WriteClassCode(const RScanner::AnnotatedRecordDecl &cl)
             WriteStreamer(cl);
          }
       } else
-         Info(0, "Class %s: Do not generate Streamer() [*** custom streamer ***]\n", clinfo.Fullname());
+         Info(0, "Class %s: Do not generate Streamer() [*** custom streamer ***]\n",fullname.c_str());
    } else {
-      Info(0, "Class %s: Streamer() not declared\n", clinfo.Fullname());
+      Info(0, "Class %s: Streamer() not declared\n", fullname.c_str());
 
       if (cl.RequestStreamerInfo()) WritePointersSTL(cl);
    }
    if (ClassInfo__HasMethod(cl,"ShowMembers")) {
       WriteShowMembers(cl);
    } else {
+      G__ClassInfo clinfo(cl.GetRequestedName()[0] ? cl.GetRequestedName() : R__GetQualifiedName(cl).c_str());
+      if (!clinfo.IsValid() && cl.GetRequestedName()[0] ) {
+         clinfo.Init(  R__GetQualifiedName(cl).c_str() );
+      }
       if (NeedShadowClass(clinfo)) {
          WriteShowMembers(cl, true);
       }
