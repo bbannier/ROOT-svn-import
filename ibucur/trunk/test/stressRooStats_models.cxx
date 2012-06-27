@@ -9,6 +9,51 @@
 using namespace RooFit;
 using namespace RooStats;
 
+
+//__________________________________________________________________________________
+void buildSimultaneousModel(RooWorkspace *w)
+{
+   // Build model
+   w->factory("sig[6,0,10]");
+   w->factory("Uniform::u1(x1[0,1])");
+   w->factory("Uniform::u2(x2[0,1])");
+   w->factory("Gaussian::constr1(gbkg1[50,0,100], bkg1[50,0,100], 3)");
+   w->factory("Gaussian::constr2(gbkg2[50,0,100], bkg2[50,0,100], 2)");
+
+   w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
+   w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))"); 
+   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
+   
+   // create combined signal + background model configuration
+   ModelConfig *sbModel = new ModelConfig("S+B", w);
+   sbModel->SetObservables("x1,x2,index");
+   sbModel->SetParametersOfInterest("sig");
+   sbModel->SetGlobalObservables("gbkg1,gbkg2");
+   sbModel->SetNuisanceParameters("bkg1,bkg2");
+   sbModel->SetPdf("sim_pdf");
+   w->import(*sbModel);
+
+   // create combined background model configuration
+   ModelConfig *bModel = new ModelConfig(*sbModel);
+   bModel->SetName("B");
+   w->import(*bModel);
+
+   // set global observables to constant values
+   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
+   RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
+   while(var != NULL) {
+      var->setConstant(); 
+      var = dynamic_cast<RooRealVar *>(iter.next());
+   }
+
+   // define data set
+   RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data"));
+   std::cout << "numEntries " << data->numEntries() << std::endl;
+   w->import(*data);
+
+   w->writeToFile("sim_ws.root", kTRUE);
+}
+
 //__________________________________________________________________________________
 void buildPoissonProductModel(RooWorkspace *w)
 {
@@ -26,13 +71,6 @@ void buildPoissonProductModel(RooWorkspace *w)
    // Nuisance parameters Pdf (for HybridCalculator)
    w->factory("PROD::prior_nuis(constr1,constr2,constr3)");
 
-   // extended pdfs and simultaneous pdf
-   w->factory("Uniform::u1(x)");
-   w->factory("Uniform::u2(y)");
-   w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
-   w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
-   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
-
    // create signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
    sbModel->SetObservables("x,y");
@@ -47,18 +85,6 @@ void buildPoissonProductModel(RooWorkspace *w)
    bModel->SetName("B");
    w->import(*bModel);
 
-   // create combined signal + background model configuration
-   ModelConfig *sbModelCombined = new ModelConfig(*sbModel);
-   sbModelCombined->SetName("Combined_S+B");
-   sbModelCombined->SetObservables("x,y,index");
-   sbModelCombined->SetPdf("sim_pdf");
-   w->import(*sbModelCombined);
-
-   // create combined background model configuration
-   ModelConfig *bModelCombined = new ModelConfig(*sbModelCombined);
-   bModelCombined->SetName("Combined_B");
-   w->import(*bModelCombined);
-
    // set global observables to constant values
    RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
    RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
@@ -67,11 +93,9 @@ void buildPoissonProductModel(RooWorkspace *w)
       var = dynamic_cast<RooRealVar *>(iter.next());
    }
 
-   // define data sets for simple and combined models
+   // define data set
    RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
-   RooDataSet *combinedData = new RooDataSet("combinedData", "combined data", *sbModelCombined->GetObservables());
    w->import(*data);
-   w->import(*combinedData);
 }
 
 

@@ -178,12 +178,9 @@ if(allTests) {
    testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
 }
     
-//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR));
-//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLR, 10, 12));
-   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLR, 10, 12));
-//   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose, kFrequentist, kProfileLR, 8, 10));
-//   testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose, kHybrid, kProfileLR, 8, 10));
-   //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
+//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kAsymptotic));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist));
+//   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid));
 
    // TEST HYPO TEST CALCULATOR
 

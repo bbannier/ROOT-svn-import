@@ -26,6 +26,8 @@
 
 #import "QuartzWindow.h"
 #import "QuartzPixmap.h"
+#import "QuartzUtils.h"
+#import "CocoaUtils.h"
 #import "X11Buffer.h"
 #import "X11Events.h"
 #import "TGWindow.h"
@@ -216,6 +218,8 @@ NSPoint TranslateCoordinates(NSView<X11Window> *from, NSView<X11Window> *to, NSP
 //______________________________________________________________________________
 QuartzWindow *FindWindowInPoint(Int_t x, Int_t y)
 {
+   const Util::AutoreleasePool pool;//array's counter is increased, all object in array are also retained.
+
    NSArray *orderedWindows = [NSApp orderedWindows];
    for (NSWindow *window in orderedWindows) {
       if (![window isKindOfClass : [QuartzWindow class]])
@@ -1286,6 +1290,7 @@ void print_mask_info(ULong_t mask)
    
    if (!fClipMask) {
       fClipMask = [QuartzImage alloc];
+      
       if ([fClipMask initMaskWithW : (unsigned)size.width H : (unsigned)size.height]) {
          return YES;
       } else {
@@ -1398,6 +1403,8 @@ void print_mask_info(ULong_t mask)
    //Check self.
    assert(self.fContext != 0 && "copyImage:area:withMask:clipOrigin:toPoint:, self.fContext is null");
    
+   //No RAII for subImage, since it can be really subimage or image itself and
+   //in these cases there is no need to release image.
    CGImageRef subImage = 0;
    bool needSubImage = false;
    if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
@@ -1411,7 +1418,7 @@ void print_mask_info(ULong_t mask)
       subImage = srcImage.fImage;
 
    //Save context state.
-   CGContextSaveGState(self.fContext);
+   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
 
    //Scale and translate to undo isFlipped.
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
@@ -1431,9 +1438,6 @@ void print_mask_info(ULong_t mask)
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
 
-   //Restore context state.
-   CGContextRestoreGState(self.fContext);
-   
    if (needSubImage)
       CGImageRelease(subImage);
 }
@@ -1447,6 +1451,7 @@ void print_mask_info(ULong_t mask)
    assert(srcView != nil && "copyView:area:toPoint:, srcView parameter is nil");
 
    const NSRect frame = [srcView frame];   
+   //imageRep is in autorelease pool now.
    NSBitmapImageRep *imageRep = [srcView bitmapImageRepForCachingDisplayInRect : frame];
    if (!imageRep) {
       NSLog(@"QuartzView: -copyView:area:toPoint failed");
@@ -1466,22 +1471,20 @@ void print_mask_info(ULong_t mask)
    srcView.fContext = ctx;
 
    const CGRect subImageRect = CGRectMake(area.fX, area.fY, area.fWidth, area.fHeight);
-   CGImageRef subImage = CGImageCreateWithImageInRect(imageRep.CGImage, subImageRect);
+   const ROOT::MacOSX::Util::CFScopeGuard<CGImageRef> subImage(CGImageCreateWithImageInRect(imageRep.CGImage, subImageRect));
 
-   CGContextSaveGState(self.fContext);
+   if (!subImage.Get()) {
+      NSLog(@"QuartzView: -copyView:area:toPoint, CGImageCreateWithImageInRect failed");
+      return;
+   }
 
+   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
    const CGRect imageRect = CGRectMake(dstPoint.fX, [self visibleRect].size.height - (dstPoint.fY + area.fHeight), area.fWidth, area.fHeight);
 
    CGContextTranslateCTM(self.fContext, 0., [self visibleRect].size.height); 
    CGContextScaleCTM(self.fContext, 1., -1.);
 
-   CGContextDrawImage(self.fContext, imageRect, subImage);
-
-   //Restore context state.
-   CGContextRestoreGState(self.fContext);
-
-   //imageRep in autorelease pool now.
-   CGImageRelease(subImage);
+   CGContextDrawImage(self.fContext, imageRect, subImage.Get());
 }
 
 //______________________________________________________________________________
@@ -1496,18 +1499,18 @@ void print_mask_info(ULong_t mask)
    area.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(srcPixmap, area.fY) - area.fHeight;
    
    if (!AdjustCropArea(srcPixmap, area)) {
-      NSLog(@"QuartzView: -copyPixmap:area:withMask:clipOrigin:toPoint, pixmap and copy are no intersection between pixmap rectangle and cropArea");
+      NSLog(@"QuartzView: -copyPixmap:area:withMask:clipOrigin:toPoint, no intersection between pixmap rectangle and cropArea");
       return;
    }
 
    //Check self.
    assert(self.fContext != 0 && "copyPixmap:area:withMask:clipOrigin:toPoint:, self.fContext is null");
    
-   CGImageRef imageFromPixmap = [srcPixmap createImageFromPixmap : area];
-   assert(imageFromPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, createImageFromPixmap failed");
+   const ROOT::MacOSX::Util::CFScopeGuard<CGImageRef> imageFromPixmap([srcPixmap createImageFromPixmap : area]);
+   assert(imageFromPixmap.Get() != 0 && "copyPixmap:area:withMask:clipOrigin:toPoint:, createImageFromPixmap failed");
 
    //Save context state.
-   CGContextSaveGState(self.fContext);
+   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
    
    if (mask) {
       assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
@@ -1518,12 +1521,7 @@ void print_mask_info(ULong_t mask)
    }
    
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
-   CGContextDrawImage(self.fContext, imageRect, imageFromPixmap);
-
-   //Restore context state.
-   CGContextRestoreGState(self.fContext);
-   
-   CGImageRelease(imageFromPixmap);
+   CGContextDrawImage(self.fContext, imageRect, imageFromPixmap.Get());
 }
 
 
@@ -1553,7 +1551,7 @@ void print_mask_info(ULong_t mask)
    } else
       subImage = srcImage.fImage;
 
-   CGContextSaveGState(self.fContext);
+   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
 
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
@@ -1561,8 +1559,6 @@ void print_mask_info(ULong_t mask)
    dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
-
-   CGContextRestoreGState(self.fContext);
    
    if (needSubImage)
       CGImageRelease(subImage);
@@ -1610,9 +1606,9 @@ void print_mask_info(ULong_t mask)
       return 0;
    }
 
-   NSBitmapImageRep *imageRep = [self bitmapImageRepForCachingDisplayInRect : visRect];
+   NSBitmapImageRep *imageRep = [self bitmapImageRepForCachingDisplayInRect : visRect];//imageRect is autoreleased.
    if (!imageRep) {
-      NSLog(@"QuartzView: -readColorBits: failed");
+      NSLog(@"QuartzView: -readColorBits:, bitmapImageRepForCachingDisplayInRect failed");
       return 0;
    }
    
@@ -1622,7 +1618,15 @@ void print_mask_info(ULong_t mask)
    //
    const unsigned char *srcData = [imageRep bitmapData];
    //We have a source data now. Let's allocate buffer for ROOT's GUI and convert source data.
-   unsigned char *data = new unsigned char[area.fWidth * area.fHeight * 4];//bgra?
+   unsigned char *data = 0;
+   
+   try {
+      data = new unsigned char[area.fWidth * area.fHeight * 4];//bgra?
+   } catch (const std::bad_alloc &) {
+      NSLog(@"QuartzView: -readColorBits:, memory allocation failed");
+      return 0;
+   }
+   
    const NSInteger bitsPerPixel = [imageRep bitsPerPixel];
    //TODO: ohhh :(((
    assert(bitsPerPixel == 32 && "-readColorBits:, no alpha channel???");
@@ -1908,8 +1912,8 @@ void print_mask_info(ULong_t mask)
 
          fContext = (CGContextRef)[nsContext graphicsPort];
          assert(fContext != 0 && "drawRect, graphicsPort returned null");
-         
-         CGContextSaveGState(fContext);
+
+         const ROOT::Quartz::CGStateGuard ctxGuard(fContext);
 
          if (window->InheritsFrom("TGContainer"))//It always has an ExposureMask.
             vx->GetEventTranslator()->GenerateExposeEvent(self, [self visibleRect]);
@@ -1942,8 +1946,7 @@ void print_mask_info(ULong_t mask)
                CGImageRelease(image);
             }
          }
-
-         CGContextRestoreGState(fContext);         
+     
          vx->CocoaDrawOFF();
 #ifdef DEBUG_ROOT_COCOA
          CGContextSetRGBStrokeColor(fContext, 1., 0., 0., 1.);

@@ -1207,15 +1207,15 @@ public:
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// ASYMPTOTIC CALCULATOR VS PROFILE LIKELIHOOD CALCULATOR HYPOTHESIS TEST
+// HYPOTHESIS TEST CALCULATOR TEST - SIMULTANEOUS PDF MODEL
 //
-// This test evaluates the functionality of the AsymptoticCalculator by
+// This test evaluates the functionality of the HypoTestCalculator by
 // comparing the significance given from a hypothesis test on the on/off model
 // with the significance given by the ProfileLikelihoodCalculator. The validity
 // of the PLC hypothesis test is evaluated in TestProfileLikelihoodCalculator4.
 // If working properly, the two methods should yield identical results.
 //
-// ModelConfig (explicit) : Poisson On / Off Model
+// ModelConfig (explicit) : Simultaneous Model
 //    built in stressRooStats_models.cxx
 //
 // Input Parameters:
@@ -1231,8 +1231,6 @@ class TestHypoTestCalculator2 : public RooUnitTest {
 private:
    ECalculatorType fCalculatorType;
    ETestStatType fTestStatType;
-   Int_t fObsValueX;
-   Int_t fObsValueY;
 
 public:
    TestHypoTestCalculator2(
@@ -1240,59 +1238,49 @@ public:
       Bool_t writeRef,
       Int_t verbose,
       ECalculatorType calculatorType = kAsymptotic,
-      ETestStatType testStatType = kProfileLR,
-      Int_t obsValueX = 5,
-      Int_t obsValueY = 10
+      ETestStatType testStatType = kProfileLR
    ) :
       RooUnitTest(TString::Format("HypoTestCalculator Significance - Simultaneous Pdf - %s - %s",
                      kECalculatorTypeString[calculatorType], kETestStatTypeString[testStatType]), refFile, writeRef, verbose),
       fCalculatorType(calculatorType),
-      fTestStatType(testStatType),
-      fObsValueX(obsValueX),
-      fObsValueY(obsValueY)
+      fTestStatType(testStatType)
    {};
 
    Bool_t testCode() {
 
       // Build workspace and models
       RooWorkspace* w = new RooWorkspace("w", kTRUE);
-      buildPoissonProductModel(w);
-      ModelConfig *sbModel = (ModelConfig *)w->obj("Combined_S+B");
-      ModelConfig *bModel = (ModelConfig *)w->obj("Combined_B");
-
-      // add observed values to data set
-      w->var("x")->setVal(fObsValueX);
-      w->var("y")->setVal(fObsValueY);         
-      w->cat("index")->setLabel("cat1", kTRUE);
-      w->data("combinedData")->add(*sbModel->GetObservables());
-      w->cat("index")->setLabel("cat2", kTRUE);
-      w->data("combinedData")->add(*sbModel->GetObservables());
+      buildSimultaneousModel(w);
+      ModelConfig *sbModel = (ModelConfig *)w->obj("S+B");
+      ModelConfig *bModel = (ModelConfig *)w->obj("B");
 
       // set snapshots
-      w->var("sig")->setVal(fObsValueX - w->var("bkg1")->getValV());
-      sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
+      sbModel->SetSnapshot(*sbModel->GetParametersOfInterest()); // value set in model
       w->var("sig")->setVal(0);
       bModel->SetSnapshot(*bModel->GetParametersOfInterest());
 
+
       HypoTestCalculatorGeneric *calc = 
-         buildHypoTestCalculator(fCalculatorType, *w->data("combinedData"), *bModel, *sbModel, 2000, 1000);
+         buildHypoTestCalculator(fCalculatorType, *w->data("data"), *bModel, *sbModel, 1000, 1);
       ToyMCSampler *tmcs = (ToyMCSampler *)calc->GetTestStatSampler();
+      tmcs->SetAlwaysUseMultiGen(kTRUE);
+      tmcs->SetAlwaysUseMultiGen(kFALSE);
       tmcs->SetTestStatistic(buildTestStatistic(fTestStatType, *sbModel, *bModel));
-//      tmcs->SetAlwaysUseMultiGen(kTRUE);
       HypoTestResult *htr = calc->GetHypoTest();
       htr->Print();
 
-      ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("combinedData"), *sbModel);
+      htr->GetNullDetailedOutput()->write("nullDetailed.txt");
+      htr->GetAltDetailedOutput()->write("altDetailed.txt");
+
+      ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*w->data("data"), *sbModel);
       plc->SetNullParameters(*bModel->GetSnapshot());
       plc->SetAlternateParameters(*sbModel->GetSnapshot());
       htr = plc->GetHypoTest();
       htr->Print();
-      std::cout << "PLC " << htr->Significance() << std::endl;
 
-      regValue(htr->Significance(), TString::Format("thtc2_significance_%s_%s_%d_%d",
+      regValue(htr->Significance(), TString::Format("thtc2_significance_%s_%s",
                                                        kECalculatorTypeString[fCalculatorType],
-                                                       kETestStatTypeString[fTestStatType],
-                                                      fObsValueX, fObsValueY));
+                                                       kETestStatTypeString[fTestStatType]));
 
       delete calc;
       delete htr;
@@ -1809,21 +1797,20 @@ static HypoTestCalculatorGeneric * buildHypoTestCalculator(const ECalculatorType
 
    if(calculatorType == kAsymptotic) {
       AsymptoticCalculator::SetPrintLevel(0); // TODO: set this by default
+      altModel.GetSnapshot()->Print("v");
+      nullModel.GetSnapshot()->Print("v");
       AsymptoticCalculator *ac = new AsymptoticCalculator(data, altModel, nullModel);
+      ac->SetOneSidedDiscovery(kTRUE);
       calc = ac;
    } else if(calculatorType == kFrequentist) {
       FrequentistCalculator *fc = 
          new FrequentistCalculator(data, altModel, nullModel);
       // set toys for speedup
-      // TODO: check how to eliminate this code, calculator should autoconfigure itself
       fc->SetToys(toysNull, toysAlt);
       calc = fc;
    } else { // kHybrid
       HybridCalculator *hc = new HybridCalculator(data, altModel, nullModel);
       // set toys for speedup
-      // TODO: check how to eliminate this code, calculator should autoconfigure itself
-       hc->ForcePriorNuisanceNull(*nullModel.GetPriorPdf());
-      // hc->ForcePriorNuisanceAlt(*MakeNuisancePdf(altModel, "nuis_prior_alt"));
       hc->SetToys(toysNull, toysAlt);
       calc = hc;
    }
@@ -1862,6 +1849,7 @@ static TestStatistic *buildTestStatistic(const ETestStatType testStatType, const
       if (testStatType == kProfileLROneSided) plts->SetOneSided(kTRUE);
       if (testStatType == kProfileLRSigned) plts->SetSigned(kTRUE);
       plts->SetAlwaysReuseNLL(kTRUE);
+      plts->EnableDetailedOutput(kTRUE);
       testStat = plts;
    }
 
