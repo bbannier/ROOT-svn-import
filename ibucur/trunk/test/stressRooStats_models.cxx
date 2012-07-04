@@ -14,16 +14,16 @@ using namespace RooStats;
 void buildSimultaneousModel(RooWorkspace *w)
 {
    // Build model
-   w->factory("sig[6,0,10]");
+   w->factory("sig[2,0,10]");
    w->factory("Uniform::u1(x1[0,1])");
    w->factory("Uniform::u2(x2[0,1])");
    w->factory("Gaussian::constr1(gbkg1[50,0,100], bkg1[50,0,100], 3)");
    w->factory("Gaussian::constr2(gbkg2[50,0,100], bkg2[50,0,100], 2)");
 
    w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
-   w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))"); 
+   w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
    w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
-   
+
    // create combined signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
    sbModel->SetObservables("x1,x2,index");
@@ -41,17 +41,14 @@ void buildSimultaneousModel(RooWorkspace *w)
    // set global observables to constant values
    RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
    RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
-   while(var != NULL) {
-      var->setConstant(); 
+   while (var != NULL) {
+      var->setConstant();
       var = dynamic_cast<RooRealVar *>(iter.next());
    }
 
    // define data set
    RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data"));
-   std::cout << "numEntries " << data->numEntries() << std::endl;
    w->import(*data);
-
-   w->writeToFile("sim_ws.root", kTRUE);
 }
 
 //__________________________________________________________________________________
@@ -88,8 +85,8 @@ void buildPoissonProductModel(RooWorkspace *w)
    // set global observables to constant values
    RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
    RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
-   while(var != NULL) {
-      var->setConstant(); 
+   while (var != NULL) {
+      var->setConstant();
       var = dynamic_cast<RooRealVar *>(iter.next());
    }
 
@@ -138,33 +135,19 @@ void buildOnOffModel(RooWorkspace *w)
 }
 
 
-void createPoissonEfficiencyModel(RooWorkspace *w)
+void buildPoissonEfficiencyModel(RooWorkspace *w)
 {
 
    // build models
    w->factory("Gaussian::constrb(b0[-5,5], b1[-5,5], 1)");
    w->factory("Gaussian::constre(e0[-5,5], e1[-5,5], 1)");
-   w->factory("expr::bkg('5 * pow(1.3, b1)', b1)"); // background model
-   w->factory("expr::eff('0.5 * pow(1.2, e1)', e1)"); // efficiency model
-   w->factory("expr::splusb('eff * sig + bkg', eff, bkg, sig[0,20])");
-   w->factory("Poisson::sb_poiss(x[0,40], splusb)");
-   w->factory("Poisson::b_poiss(x, bkg)");
-   w->factory("PROD::sb_pdf(sb_poiss, constrb, constre)");
-   w->factory("PROD::b_pdf(b_poiss, constrb)");
-   w->factory("PROD::priorbkg(constr1, constr2)");
-
-   w->var("b0")->setConstant(kTRUE);
-   w->var("e0")->setConstant(kTRUE);
-
-   // build argument sets
-   w->defineSet("obs", "x");
-   w->defineSet("poi", "sig");
-   w->defineSet("nuis", "b1,e1");
-   w->defineSet("globObs", "b0,e0");
-
-   // define data set and import it into workspace
-   RooDataSet *data = new RooDataSet("data", "data", *w->set("obs"));
-   w->import(*data);
+   w->factory("expr::bkg('5 * pow(1.3, b1)', b1)"); // background
+   w->factory("expr::eff('0.5 * pow(1.2, e1)', e1)"); // efficiency
+   w->factory("expr::esb('eff * sig + bkg', eff, bkg, sig[0,50])");
+   w->factory("Poisson::poiss(x[0,50], esb)");
+   w->factory("PROD::pdf(poiss, constrb, constre)");
+   w->factory("Poisson::poiss_b(y[0,50], bkg)");
+   w->factory("PROD::pdf_b(poiss_b,constrb)");
 
    // create model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
@@ -172,16 +155,25 @@ void createPoissonEfficiencyModel(RooWorkspace *w)
    sbModel->SetParametersOfInterest("sig");
    sbModel->SetNuisanceParameters("b1,e1");
    sbModel->SetGlobalObservables("b0,e0");
-   sbModel->SetPdf("sb_pdf");
-   //sbModel->SetPriorPdf("prior");
-   sbModel->SetSnapshot(*sbModel->GetParametersOfInterest());
+   sbModel->SetPdf("pdf");
+   w->import(*sbModel);
 
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
-   bModel->SetPdf("b_pdf");
-
-   w->import(*sbModel);
+   bModel->SetPdf("pdf");
    w->import(*bModel);
+
+   // set global observables to constant values
+   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
+   RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
+   while (var != NULL) {
+      var->setConstant();
+      var = dynamic_cast<RooRealVar *>(iter.next());
+   }
+   
+   // define data set and import it into workspace
+   RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
+   w->import(*data);
 }
 
 

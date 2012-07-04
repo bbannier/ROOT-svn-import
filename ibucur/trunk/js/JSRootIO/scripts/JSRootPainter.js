@@ -81,6 +81,9 @@ var d, key_tree;
       'rgb(147,104,112)',
       'rgb(211,89,84)');
 
+   // Initialize colors of the default palette
+   var default_palette = new Array();
+
    var root_markers = new Array(
       'circle', 'circle', 'diamond', 'diamond', 'circle', 'diamond', 'circle',
       'circle', 'circle', 'circle', 'circle', 'circle', 'circle', 'circle',
@@ -92,6 +95,104 @@ var d, key_tree;
    JSROOTPainter = {};
 
    JSROOTPainter.version = "1.4 2012/02/24";
+
+   /**
+    * Converts an HSL color value to RGB. Conversion formula
+    * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+    * Assumes h, s, and l are contained in the set [0, 1] and
+    * returns r, g, and b in the set [0, 255].
+    *
+    * @param   Number  h       The hue
+    * @param   Number  s       The saturation
+    * @param   Number  l       The lightness
+    * @return  Array           The RGB representation
+    */
+   JSROOTPainter.HLStoRGB = function(h, l, s) {
+      var r, g, b;
+      if (s == 0) {
+         r = g = b = l; // achromatic
+      } else {
+         function hue2rgb(p, q, t){
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+         }
+         var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+         var p = 2 * l - q;
+         r = hue2rgb(p, q, h + 1/3);
+         g = hue2rgb(p, q, h);
+         b = hue2rgb(p, q, h - 1/3);
+      }
+      return 'rgb('+Math.round(r * 255)+','+Math.round(g * 255)+','+Math.round(b * 255)+')';
+   };
+
+   JSROOTPainter.GetMinMax = function(hist, what) {
+      if (what == 'max' && hist['fMaximum'] != -1111) return hist['fMaximum'];
+      if (what == 'min' && hist['fMinimum'] != -1111) return hist['fMinimum'];
+      var bin, binx, biny, binz;
+      var xfirst  = 1;;
+      var xlast   = hist['fXaxis']['fNbins'];
+      var yfirst  = 1;
+      var ylast   = hist['fYaxis']['fNbins'];
+      var zfirst  = 1;
+      var zlast   = hist['fZaxis']['fNbins'];
+      var maximum = Number.NEGATIVE_INFINITY;
+      var minimum = Number.POSITIVE_INFINITY;
+      var tmp_value;
+      for (binz=zfirst;binz<=zlast;binz++) {
+         for (biny=yfirst;biny<=ylast;biny++) {
+            for (binx=xfirst;binx<=xlast;binx++) {
+               //bin = hist.GetBin(binx,biny,binz);
+               //tmp_value = hist.GetBinContent(bin);
+               tmp_value = hist.GetBinContent(binx, biny);
+               if (tmp_value > maximum) maximum = tmp_value;
+               if (tmp_value < minimum) minimum = tmp_value;
+            }
+         }
+      }
+      hist['fMaximum'] = maximum;
+      hist['fMinimum'] = minimum;
+      if (what == 'max') return maximum;
+      if (what == 'min') return minimum;
+   }
+
+   JSROOTPainter.GetValueColor = function(hist, zc, options) {
+      var wmin = this.GetMinMax(hist, 'min');
+      var wmax = this.GetMinMax(hist, 'max');
+      var wlmin = wmin;
+      var wlmax = wmax;
+      var ndivz = hist['fContour'].length;
+      var scale = ndivz / (wlmax - wlmin);
+      if (options && options['logz']) {
+         if (wmin <= 0 && wmax > 0) wmin = Math.min(1.0, 0.001 * wmax);
+         wlmin = Math.log(wmin)/Math.log(10);
+         wlmax = Math.log(wmax)/Math.log(10);
+      }
+      if (default_palette.length == 0) {
+         var saturation = 1;
+         var lightness = 0.5;
+         var maxHue = 280;
+         var minHue = 0;
+         var maxPretty = 50;
+         var hue;
+         for (var i=0 ; i<maxPretty ; i++) {
+            hue = (maxHue - (i + 1) * ((maxHue - minHue) / maxPretty))/360.0;
+            var rgbval = this.HLStoRGB(hue, lightness, saturation);
+            default_palette.push(rgbval);
+         }
+      }
+      if (options && options['logz']) zc = Math.log(zc)/Math.log(10);
+      if (zc < wlmin) zc = wlmin;
+      var ncolors = default_palette.length
+      var color = Math.round(0.01 + (zc - wlmin) * scale);
+      var theColor = Math.round((color + 0.99) * ncolors / ndivz);
+      var icol = theColor % ncolors;
+      if (icol < 0) icol = 0;
+      return default_palette[icol];
+   };
 
    JSROOTPainter.displayObject = function(obj, idx, options) {
       if (obj['_typename'].match(/\bTH1/) ||
@@ -109,14 +210,14 @@ var d, key_tree;
 
    JSROOTPainter.displayHistogram = function(histo, idx, options) {
       var i, j;
-      var logx = false, logy = false, logz = false, grix = true, gridy = true;
+      var logx = false, logy = false, logz = false, gridx = true, gridy = true;
       var time_scalex = 1, time_scaley = 1;
-      if (typeof(options) != 'undefined') {
-         logx = options[logx];
-         logy = options[logy];
-         logz = options[logz];
-         gridx = options[gridx];
-         gridx = options[gridy];
+      if (options && typeof(options) != 'undefined') {
+         logx = options['logx'];
+         logy = options['logy'];
+         logz = options['logz'];
+         gridx = options['gridx'];
+         gridx = options['gridy'];
       }
       // check for axis scale format, and convert if required
       // (highcharts time unit is in milliseconds)
@@ -128,6 +229,7 @@ var d, key_tree;
       if (histo['fYaxis']['fTimeDisplay']) {
          time_scaley = 1000; yaxis_type = 'datetime';
       }
+      var zaxis_type = logz ? 'logarithmic' : 'linear';
       if (histo['_typename'].match(/\bTH1/)) {
          var scale = (histo['fXaxis']['fXmax'] - histo['fXaxis']['fXmin']) /
                       histo['fXaxis']['fNbins'];
@@ -154,7 +256,7 @@ var d, key_tree;
             }
          }
          var render_to = 'histogram' + idx;
-         chart = new Highcharts.Chart({
+         var chart = new Highcharts.Chart({
             chart: {
                renderTo:render_to,
                backgroundColor:'#eee',
@@ -169,6 +271,10 @@ var d, key_tree;
                plotBorderColor:'#ccc',
                height:400,
                reflow:true,
+               resetZoomButton: {
+                  position: {align: 'left', x: 80, y: 8},
+                  relativeTo: 'chart'
+               },
                zoomType: "xy"
             },
             credits: { enabled: false },
@@ -256,6 +362,43 @@ var d, key_tree;
                shadow: false,
                stickyTracking: false
             }]
+         }, function(chart) {
+            if (typeof(histo['fFunctions']) != 'undefined') {
+               var scale_x = chart.plotLeft + chart.plotWidth + chart.marginRight;
+               var scale_y = chart.plotTop + chart.plotHeight + chart.marginBottom - 15;
+               for (i=0; i<histo['fFunctions'].length; ++i) {
+                  if (histo['fFunctions'][i]['_typename'] == 'JSROOTIO.TPaveText') {
+                     if (histo['fFunctions'][i]['fX1NDC'] > 1.0 || histo['fFunctions'][i]['fY1NDC'] > 1.0 ||
+                         histo['fFunctions'][i]['fX1NDC'] < 0.0 || histo['fFunctions'][i]['fY1NDC'] < 0.0)
+                        continue;
+                     var pos_x = histo['fFunctions'][i]['fX1NDC'] * scale_x;
+                     var pos_y = (1.0 - histo['fFunctions'][i]['fY1NDC']) * scale_y;
+                     var lines = '';
+                     var nlines = histo['fFunctions'][i]['fLines'].length;
+                     for (j=0; j<nlines; ++j) {
+                        lines = lines + '<br>' + histo['fFunctions'][i]['fLines'][j]['fTitle'];
+                     }
+                     pos_y -= (nlines * 15);
+                     var text = chart.renderer.text(
+                         lines, pos_x, pos_y)
+                     .attr({
+                         zIndex: 5
+                     })
+                     .css({
+                         fontSize: '8pt',
+                         color: 'black'
+                     }).add();
+                     var box = text.getBBox();
+                     chart.renderer.rect(box.x - 5, box.y - 2, box.width + 10, box.height + 4, 0)
+                     .attr({
+                         fill: '#FFFFFF',
+                         stroke: 'gray',
+                         'stroke-width': 1,
+                         zIndex: 4
+                     }).add();
+                  }
+               }
+            }
          });
       }
       else if (histo['_typename'].match(/\bTH2/)) {
@@ -292,20 +435,30 @@ var d, key_tree;
          var scalebin = 20.0 * ((maxbin - minbin) / (maxbin * maxbin));
          var render_to = 'histogram' + idx;
          var bin_data = new Array();
+         var fill_color, line_color, bin_size;
          for (i=0; i<nbinsx; ++i) {
             for (var j=0; j<nbinsy; ++j) {
                var bin_content = histo.GetBinContent(i, j);
                if (bin_content > minbin) {
+                  if (histo['fOption'] == 'colz') {
+                     fill_color = line_color = this.GetValueColor(histo, bin_content, options);
+                     bin_size = 1.8;
+                  }
+                  else {
+                     fill_color = fillcolor;
+                     line_color = linecolor;
+                     bin_size = Math.sqrt(bin_content*scalebin);
+                  }
                   var point = {
                      color:null,
                      events:null,
                      id:null,
                      marker:{
                         enabled:true,
-                        fillColor:fillcolor,
-                        lineColor:linecolor,
+                        fillColor:fill_color,
+                        lineColor:line_color,
                         lineWidth:1,
-                        radius:Math.sqrt(bin_content*scalebin),
+                        radius:bin_size,
                         states:null,
                         symbol:"square" // null
                      },
@@ -318,7 +471,7 @@ var d, key_tree;
                }
             }
          }
-         chart = new Highcharts.Chart({
+         var chart = new Highcharts.Chart({
             chart: {
                renderTo:render_to,
                defaultSeriesType: 'scatter',
@@ -334,6 +487,10 @@ var d, key_tree;
                plotBorderColor:'#ccc',
                height:400,
                reflow:true,
+               resetZoomButton: {
+                  position: {align: 'left', x: 80, y: 8},
+                  relativeTo: 'chart'
+               },
                zoomType: "xy"
             },
             credits: { enabled: false },
@@ -365,23 +522,6 @@ var d, key_tree;
                   return legend_stats;
                }
             },
-/*
-            labels: {
-               items: [{
-                  html: '<table frame="box"><td>Tue May 29 11:21:59 2012, Run 180000</td></table>',
-                  style: {
-                     top: '360px',
-                     left: '-50px'
-                  }
-               }, {
-                  html: '<table frame="box"><td>Object published in db : Tue Apr 17 11:51:40 2012</td></table>',
-                  style: {
-                     top: '360px',
-                     left: '210px'
-                  }
-               }]
-            },
-*/
             xAxis: {
                type: xaxis_type,
                title: {
@@ -435,22 +575,60 @@ var d, key_tree;
                animation: false,
                //color: null, //fillcolor,
                data: bin_data,
+               turboThreshold: 5000,
                //pointStart: histo['fXaxis']['fXmin'],
                stickyTracking: false
             }]
+         }, function(chart) {
+            if (typeof(histo['fFunctions']) != 'undefined') {
+               var scale_x = chart.plotLeft + chart.plotWidth + chart.marginRight;
+               var scale_y = chart.plotTop + chart.plotHeight + chart.marginBottom - 15;
+               for (i=0; i<histo['fFunctions'].length; ++i) {
+                  if (histo['fFunctions'][i]['_typename'] == 'JSROOTIO.TPaveText') {
+                     if (histo['fFunctions'][i]['fX1NDC'] > 1.0 || histo['fFunctions'][i]['fY1NDC'] > 1.0 ||
+                         histo['fFunctions'][i]['fX1NDC'] < 0.0 || histo['fFunctions'][i]['fY1NDC'] < 0.0)
+                        continue;
+                     var pos_x = 10 + (histo['fFunctions'][i]['fX1NDC'] * scale_x);
+                     var pos_y = (1.0 - histo['fFunctions'][i]['fY1NDC']) * scale_y;
+                     var lines = '';
+                     var nlines = histo['fFunctions'][i]['fLines'].length;
+                     for (j=0; j<nlines; ++j) {
+                        lines = lines + '<br>' + histo['fFunctions'][i]['fLines'][j]['fTitle'];
+                     }
+                     pos_y -= (nlines * 15);
+                     var text = chart.renderer.text(
+                         lines, pos_x, pos_y)
+                     .attr({
+                         zIndex: 5
+                     })
+                     .css({
+                         fontSize: '8pt',
+                         color: 'black'
+                     }).add();
+                     var box = text.getBBox();
+                     chart.renderer.rect(box.x - 5, box.y - 2, box.width + 10, box.height + 4, 0)
+                     .attr({
+                         fill: '#FFFFFF',
+                         stroke: 'gray',
+                         'stroke-width': 1,
+                         zIndex: 4
+                     }).add();
+                  }
+               }
+            }
          });
       }
    };
 
    JSROOTPainter.displayGraph = function(graph, idx, options) {
-      var logx = false, logy = false, logz = false, grix = true, gridy = true;
+      var logx = false, logy = false, logz = false, gridx = true, gridy = true;
       var scalex = 1, scaley = 1;
-      if (typeof(options) != 'undefined') {
-         logx = options[logx];
-         logy = options[logy];
-         logz = options[logz];
-         gridx = options[gridx];
-         gridx = options[gridy];
+      if (options && typeof(options) != 'undefined') {
+         logx = options['logx'];
+         logy = options['logy'];
+         logz = options['logz'];
+         gridx = options['gridx'];
+         gridx = options['gridy'];
       }
       // check for axis scale format, and convert if required
       // (highcharts time unit is in milliseconds)
@@ -501,7 +679,7 @@ var d, key_tree;
             graph_data.push(point);
          }
          var render_to = 'histogram' + idx;
-         chart = new Highcharts.Chart({
+         var chart = new Highcharts.Chart({
             chart: {
                renderTo:render_to,
                defaultSeriesType:seriesType,
@@ -517,6 +695,10 @@ var d, key_tree;
                plotBorderColor:'#ccc',
                height:400,
                reflow:true,
+               resetZoomButton: {
+                  position: {align: 'left', x: 80, y: 8},
+                  relativeTo: 'chart'
+               },
                zoomType: "xy"
             },
             credits: { enabled: false },
@@ -591,6 +773,43 @@ var d, key_tree;
                shadow: false,
                stickyTracking: false
             }]
+         }, function(chart) {
+            if (typeof(graph['fHistogram']['fFunctions']) != 'undefined') {
+               var scale_x = chart.plotLeft + chart.plotWidth + chart.marginRight;
+               var scale_y = chart.plotTop + chart.plotHeight + chart.marginBottom - 15;
+               for (i=0; i<graph['fHistogram']['fFunctions'].length; ++i) {
+                  if (graph['fHistogram']['fFunctions'][i]['_typename'] == 'JSROOTIO.TPaveText') {
+                     if (graph['fHistogram']['fFunctions'][i]['fX1NDC'] > 1.0 || graph['fHistogram']['fFunctions'][i]['fY1NDC'] > 1.0 ||
+                         graph['fHistogram']['fFunctions'][i]['fX1NDC'] < 0.0 || graph['fHistogram']['fFunctions'][i]['fY1NDC'] < 0.0)
+                        continue;
+                     var pos_x = graph['fHistogram']['fFunctions'][i]['fX1NDC'] * scale_x;
+                     var pos_y = (1.0 - graph['fHistogram']['fFunctions'][i]['fY1NDC']) * scale_y;
+                     var lines = '';
+                     var nlines = graph['fHistogram']['fFunctions'][i]['fLines'].length;
+                     for (j=0; j<nlines; ++j) {
+                        lines = lines + '<br>' + graph['fHistogram']['fFunctions'][i]['fLines'][j]['fTitle'];
+                     }
+                     pos_y -= (nlines * 15);
+                     var text = chart.renderer.text(
+                         lines, pos_x, pos_y)
+                     .attr({
+                         zIndex: 5
+                     })
+                     .css({
+                         fontSize: '8pt',
+                         color: 'black'
+                     }).add();
+                     var box = text.getBBox();
+                     chart.renderer.rect(box.x - 5, box.y - 2, box.width + 10, box.height + 4, 0)
+                     .attr({
+                         fill: '#FFFFFF',
+                         stroke: 'gray',
+                         'stroke-width': 1,
+                         zIndex: 4
+                     }).add();
+                  }
+               }
+            }
          });
       }
    };
@@ -644,8 +863,7 @@ var d, key_tree;
       var k = 1;
       var tree_link = "";
       for (var i=0; i<keys.length; ++i) {
-//         tree_link = "javascript: //class "+keys[i]['className'];
-         var message = "Coming soon... " + keys[i]["className"]+" is not yet implemented.";
+         var message = keys[i]["className"]+" is not yet implemented.";
          tree_link = "javascript:  alert('" + message + "')";
          var node_img = source_dir+'img/page.gif';
          if (keys[i]['className'].match(/\bTH1/)  ||
@@ -675,7 +893,7 @@ var d, key_tree;
          }
          else if (keys[i]['className'].match('TGeoManager') ||
                   keys[i]['className'].match('TGeometry')) {
-            tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
+//            tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
             node_img = source_dir+'img/folder.gif';
          }
          else if (keys[i]['className'].match('TCanvas')) {
@@ -700,13 +918,11 @@ var d, key_tree;
       var tree_link = "";
       var content = "<p><a href='javascript: key_tree.openAll();'>open all</a> | <a href='javascript: key_tree.closeAll();'>close all</a></p>";
       var k = key_tree.aNodes.length;
-      //var dir_name = key_tree.aNodes[dir_id]['name'];
       var dir_name = key_tree.aNodes[dir_id]['title'];
       for (var i=0; i<keys.length; ++i) {
          var disp_name = keys[i]['name'];
          keys[i]['name'] = dir_name + "/" + keys[i]['name'];
-//         tree_link = "javascript: //class " + keys[i]['className'];
-         var message = "Coming soon... " + keys[i]["className"]+" is not yet implemented.";
+         var message = keys[i]["className"]+" is not yet implemented.";
          tree_link = "javascript:  alert('" + message + "')";
          var node_img = source_dir+'img/page.gif';
          var node_title = keys[i]['className'];
