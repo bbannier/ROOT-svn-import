@@ -226,6 +226,12 @@
 //Cursors.
 @property (nonatomic, assign) ECursor fCurrentCursor;
 
+//DND
+@property (nonatomic, assign) BOOL fIsDNDAware;
+
+- (NSDragOperation) draggingEntered : (id<NSDraggingInfo>) sender;
+- (BOOL) performDragOperation : (id<NSDraggingInfo>) sender;
+
 @end
 
 
@@ -262,7 +268,9 @@ void UnlockFocus(NSView<X11Window> *view);//For symmetry only.
 NSRect FindOverlapRect(const NSRect &viewRect, const NSRect &siblingViewRect);
 bool RectsOverlap(const NSRect &r1, const NSRect &r2);
 
+bool ScreenPointIsInView(NSView<X11Window> *view, Int_t x, Int_t y);
 QuartzWindow *FindWindowInPoint(Int_t x, Int_t y);
+NSView<X11Window> *FindDNDAwareViewInPoint(NSView *parentView, Window_t dragWinID, Window_t inputWinID, Int_t x, Int_t y, Int_t maxDepth);
 
 }//X11
 }//MacOSX

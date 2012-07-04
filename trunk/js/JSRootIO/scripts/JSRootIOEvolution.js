@@ -215,32 +215,46 @@ String.prototype.endsWith = function(str, ignoreCase) {
 
    JSROOTIO.ReadFastArray = function(str, o, n, array_type) {
       // read array of n integers from the I/O buffer
-      var array = {}
+      var array = {};
       array['array'] = new Array();
-      for (var i = 0; i < n; ++i) {
-         if (array_type == 'D') {
+      if (array_type == 'D') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntod(str, o); o += 8;
          }
-         else if (array_type == 'F') {
+      }
+      else if (array_type == 'F') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntof(str, o); o += 4;
          }
-         else if (array_type == 'L') {
+      }
+      else if (array_type == 'L') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntoi8(str, o); o += 8;
          }
-         else if (array_type == 'I') {
+      }
+      else if (array_type == 'I') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntoi4(str, o); o += 4;
          }
-         else if (array_type == 'S') {
+      }
+      else if (array_type == 'S') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntoi2(str, o); o += 2;
          }
-         else if (array_type == 'C') {
+      }
+      else if (array_type == 'C') {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = str.charCodeAt(o) & 0xff; o++;
          }
-         else if (array_type == 'TString') {
+      }
+      else if (array_type == 'TString') {
+         for (var i = 0; i < n; ++i) {
             var so = JSROOTIO.ReadTString(str, o); o = so['off'];
             array['array'][i] = so['str'];
          }
-         else {
+      }
+      else {
+         for (var i = 0; i < n; ++i) {
             array['array'][i] = JSROOTIO.ntou4(str, o); o += 4;
          }
       }
@@ -553,10 +567,21 @@ String.prototype.endsWith = function(str, ignoreCase) {
    };
 
    JSROOTIO.DisplayPrimitives = function(primitives, obj_name, cycle, opt) {
+      primitives['paves_text'] = new Array();
+      for (var i=0; i<primitives.length; ++i) {
+         var classname = primitives[i]['_typename'];
+         if (classname == 'JSROOTIO.TPaveText') {
+            primitives['paves_text'].push(primitives[i]);
+         }
+      }
       for (var i=0; i<primitives.length; ++i) {
          var classname = primitives[i]['_typename'];
          if (classname.match(/\bTH1/) || classname.match(/\bTH2/) ||
              classname == 'JSROOTIO.TGraph') {
+            for (var j=0; j<primitives['paves_text'].length; ++j) {
+               if (primitives[i]['fFunctions'])
+                  primitives[i]['fFunctions'].push(primitives['paves_text'][j]);
+            }
             displayObject(primitives[i], cycle, obj_index, opt);
             obj_list.push(obj_name+cycle);
             obj_index++;
@@ -572,6 +597,7 @@ String.prototype.endsWith = function(str, ignoreCase) {
             JSROOTIO.DisplayPrimitives(primitives[i]['fPrimitives'], obj_name, cycle, options);
          }
       }
+      delete primitives['paves_text'];
    };
 
    JSROOTIO.Print = function(str, what) {
@@ -763,12 +789,47 @@ String.prototype.endsWith = function(str, ignoreCase) {
             case kStreamLoop:
                alert('failed to stream ' + prop + ' (' + this[prop]['typename'] + ')');
                break
+            case kOffsetL+kShort:
+            case kOffsetL+kUShort:
+               var n_el = str.charCodeAt(o) & 0xff;
+               var array = JSROOTIO.ReadFastArray(str, o, n_el, 'S');
+               obj[prop] = array['array'];
+               o = array['off'];
+               break;
+            case kOffsetL+kInt:
+            case kOffsetL+kUInt:
+               var n_el = str.charCodeAt(o) & 0xff;
+               var array = JSROOTIO.ReadFastArray(str, o, n_el, 'I');
+               obj[prop] = array['array'];
+               o = array['off'];
+               break;
+            case kOffsetL+kLong:
+            case kOffsetL+kULong:
+            case kOffsetL+kLong64:
+            case kOffsetL+kULong64:
+               var n_el = str.charCodeAt(o) & 0xff;
+               var array = JSROOTIO.ReadFastArray(str, o, n_el, 'L');
+               obj[prop] = array['array'];
+               o = array['off'];
+               break;
+            case kOffsetL+kFloat:
+            case kOffsetL+kDouble32:
+               var n_el = str.charCodeAt(o) & 0xff;
+               var array = JSROOTIO.ReadFastArray(str, o, n_el, 'F');
+               obj[prop] = array['array'];
+               o = array['off'];
+               break;
+            case kOffsetL+kDouble:
+               var n_el = str.charCodeAt(o) & 0xff;
+               var array = JSROOTIO.ReadFastArray(str, o, n_el, 'D');
+               obj[prop] = array['array'];
+               o = array['off'];
+               break;
             case kOffsetP+kChar:
                var n_el = obj[this[prop]['cntname']];
                var array = JSROOTIO.ReadBasicPointer(str, o, n_el, 'C');
                obj[prop] = array['array'];
                o = array['off'];
-               break;
                break;
             case kOffsetP+kShort:
             case kOffsetP+kUShort:
@@ -1937,6 +1998,11 @@ String.prototype.endsWith = function(str, ignoreCase) {
                obj_buf['unzipdata'] = unzipdata;
                obj_buf['irep'] = unzipdata.length;
             }
+         }
+         /* Old zlib format */
+         else {
+            alert("R__unzip: Old zlib format is not supported!");
+            return null;
          }
          return obj_buf;
       };

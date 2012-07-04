@@ -13,11 +13,17 @@
 //                                                                      //
 // LinkdefReader                                                        //
 //                                                                      //
+// The following #pragma are currently ignored (not needed for cling):  //
+//      #pragma link extra_include                                      //
+//      #pragma link spec typedef                                       //
+//      #pragma link spec nestedtypedef                                 //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #include <iostream>
 #include "LinkdefReader.h"
 #include "SelectionRules.h"
+#include "RConversionRuleParser.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -61,12 +67,16 @@ void LinkdefReader::PopulatePragmaMap(){
    LinkdefReader::fgMapPragmaNames["struct"] = kStruct;
    LinkdefReader::fgMapPragmaNames["all"] = kAll;
    LinkdefReader::fgMapPragmaNames["defined_in"] = kDefinedIn;
+   LinkdefReader::fgMapPragmaNames["nestedclass"] = kNestedclasses;
    LinkdefReader::fgMapPragmaNames["nestedclasses"] = kNestedclasses;
    LinkdefReader::fgMapPragmaNames["nestedclasses;"] = kNestedclasses;
    LinkdefReader::fgMapPragmaNames["operators"] = kOperators;
    LinkdefReader::fgMapPragmaNames["operator"] = kOperators;
+   // The following are listed here so we can officially ignore them
+   LinkdefReader::fgMapPragmaNames["nestedtypedefs"] = kIgnore;
+   LinkdefReader::fgMapPragmaNames["nestedtypedef"] = kIgnore;
+   LinkdefReader::fgMapPragmaNames["typedef"] = kIgnore;
    // NOTE: need to add
-   // namespace
    // typedef
 }
 
@@ -102,7 +112,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
    
    switch (name) {
       case kAll:
-         if(identifier == "globals"){
+         if (identifier == "globals"){
 //            std::cout<<"all enums and variables selection rule to be impl."<<std::endl;
             
             VariableSelectionRule vsr(fCount++);
@@ -160,7 +170,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                }
             }
          }
-         else if (identifier == "classes") {
+         else if (identifier == "classes" || identifier == "namespaces") {
 //            std::cout<<"all classes selection rule to be impl."<<std::endl;
             
             
@@ -194,7 +204,8 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             }
          }
          else {
-            std::cout<<"Warning at line "<<fLine<<" - possibly unimplemented pragma statement"<<std::endl;
+            std::cerr<<"Warning - possibly unimplemented pragma statement: "<<std::endl;
+            return false;
          }
          
          break;
@@ -256,7 +267,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             if (!ProcessFunctionPrototype(identifier, name_or_proto)) {
                return false;
             }
-//            std::cout<<"function selection rule for "<<identifier<<" ("<<(name_or_proto?"name":"proto_name")<<") to be impl."<<std::endl;
+            //std::cout<<"function selection rule for "<<identifier<<" ("<<(name_or_proto?"name":"proto_name")<<") to be impl."<<std::endl;
             FunctionSelectionRule fsr(fCount++);
             if (linkOn) fsr.SetSelected(BaseSelectionRule::BaseSelectionRule::BaseSelectionRule::kYes);
             else fsr.SetSelected(BaseSelectionRule::kNo);
@@ -396,20 +407,23 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                   fSelectionRules->AddEnumSelectionRule(esr);
                   
                }
-               else {
-                  EnumSelectionRule esr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
-                  esr.SetSelected(BaseSelectionRule::kNo);
-                  esr.SetAttributeValue("pattern", identifier+"::*");
-                  fSelectionRules->AddEnumSelectionRule(esr);
+               // Since the rootcling default is 'off' (we need to explicilty annotate to turn it on), the nested type and function
+               // should be off by default.  Note that anyway, this is not yet relevant since the pcm actually ignore the on/off
+               // request and contains everything (for now).
+               // else {
+               //    EnumSelectionRule esr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
+               //    esr.SetSelected(BaseSelectionRule::kNo);
+               //    esr.SetAttributeValue("pattern", identifier+"::*");
+               //    fSelectionRules->AddEnumSelectionRule(esr);
                   
-                  if (fSelectionRules->GetHasFileNameRule()) {
-                     FunctionSelectionRule fsr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
-                     fsr.SetSelected(BaseSelectionRule::kNo);
-                     std::string value = identifier + "::*";
-                     fsr.SetAttributeValue("pattern", value);
-                     fSelectionRules->AddFunctionSelectionRule(fsr);
-                  }
-               }
+               //    if (fSelectionRules->GetHasFileNameRule()) {
+               //       FunctionSelectionRule fsr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
+               //       fsr.SetSelected(BaseSelectionRule::kNo);
+               //       std::string value = identifier + "::*";
+               //       fsr.SetAttributeValue("pattern", value);
+               //       fSelectionRules->AddFunctionSelectionRule(fsr);
+               //    }
+               // }
             }
             if (IsPatternRule(identifier)) {
                csr.SetAttributeValue("pattern", identifier);
@@ -419,6 +433,10 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             fSelectionRules->AddClassSelectionRule(csr);
             //csr.PrintAttributes(3);
          }
+         break;
+      case kIgnore:
+         // All the pragma that were supported in CINT but are currently not relevant for CLING
+         // (mostly because we do not yet filter the dictionary/pcm).
          break;
       case kUnknown:
          std::cerr<<"Warning unimplemented pragma statement - it does nothing: ";
@@ -469,7 +487,7 @@ bool LinkdefReader::ProcessFunctionPrototype(std::string& proto, bool& name)
       // I don't have to escape the *-s because in rootcint there is no pattern recognition
       int pos3=pos1;
       while (true) {
-         pos3 = proto.find(" ", pos3);
+         pos3 = proto.find("  ", pos3);
          if (pos3 > -1) {
             proto.erase(pos3, 1);
          }
@@ -568,11 +586,13 @@ public:
    
    void Error(const char *message, const clang::Token &tok, bool source = true) {
       
-      std::cerr << message << '\n';
+      std::cerr << message << " at ";
       tok.getLocation().dump(fSourceManager);
-      std::cerr << ":";
-      if (source) std::cerr << fSourceManager.getCharacterData(tok.getLocation());
-      
+      if (source) {
+         std::cerr << ":";
+         std::cerr << fSourceManager.getCharacterData(tok.getLocation());
+      }
+      std::cerr << '\n';
    }
 
    bool ProcessOptions(LinkdefReader::Options &options,
@@ -703,7 +723,9 @@ public:
       } else {
          llvm::StringRef include(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
          
-         std::cerr << "Warning: #pragma extra_include not yet handled: " << include.str() << "\n";
+         // With the currrent state of root with cling, there is no neet for the extra include,
+         // the #include in the LinkDef should end up in the pcm list.
+         // std::cerr << "Warning: #pragma extra_include not yet handled: " << include.str() << "\n";
 //         if (!fOwner.AddInclude(include))
 //         {
 //            Error("",tok);
@@ -756,9 +778,10 @@ public:
       if (end.is(clang::tok::unknown)) {
          Error("Error: unknown token",tok);
       } else {
-         llvm::StringRef include(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
+         llvm::StringRef rule_text(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
          
-         std::cerr << "Warning: #pragma read not yet handled: " << include.str() << "\n";
+         ROOT::ProcessReadPragma( rule_text.str().c_str() );
+         //std::cerr << "Warning: #pragma read not yet handled: " << include.str() << "\n";
          //         if (!fOwner.AddInclude(include))
          //         {
          //            Error("",tok);
@@ -811,6 +834,7 @@ public:
             }
          } else {
             Error("Error #pragma link should be followed by off or C",tok);
+            return;
          }
       } else {
          Error("Error bad #pragma format. ",tok);

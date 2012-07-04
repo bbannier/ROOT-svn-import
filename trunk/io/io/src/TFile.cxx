@@ -502,17 +502,18 @@ TFile::TFile(const TFile &) : TDirectoryFile(), fInfoCache(0)
 TFile::~TFile()
 {
    // File destructor.
+
    Close();
 
+   SafeDelete(fAsyncHandle);
+   SafeDelete(fCacheRead);
+   SafeDelete(fCacheReadMap);   
+   SafeDelete(fCacheWrite);
    SafeDelete(fProcessIDs);
    SafeDelete(fFree);
    SafeDelete(fArchive);
    SafeDelete(fInfoCache);
    SafeDelete(fOpenPhases);
-   SafeDelete(fAsyncHandle);
-   SafeDelete(fCacheRead);
-   SafeDelete(fCacheReadMap);
-   SafeDelete(fCacheWrite);
 
    R__LOCKGUARD2(gROOTMutex);
    gROOT->GetListOfClosedObjects()->Remove(this);
@@ -863,6 +864,17 @@ void TFile::Close(Option_t *option)
    delete fClassIndex;
    fClassIndex = 0;
 
+   // Finish any concurrent I/O operations before we close the file handles.
+   if (fCacheRead) fCacheRead->Close();
+   {
+      TIter iter(fCacheReadMap);
+      TObject *key = 0;
+      while ((key = iter()) != 0) {
+         TFileCacheRead *cache = dynamic_cast<TFileCacheRead *>(fCacheReadMap->GetValue(key));
+         cache->Close();
+      }
+   }
+      
    // Delete all supported directories structures from memory
    // If gDirectory points to this object or any of the nested
    // TDirectoryFile, TDirectoryFile::Close will induce the proper cd.
@@ -1308,6 +1320,11 @@ void TFile::MakeFree(Long64_t first, Long64_t last)
    tobuf(buffer, nbytes);
    if (last == fEND-1) fEND = nfirst;
    Seek(nfirst);
+   // We could not update the meta data for this block on the file.
+   // This is not fatal as this only means that we won't get it 'right'
+   // if we ever need to Recover the file before the block is actually
+   // (attempted to be reused.
+   // coverity[unchecked_value] 
    WriteBuffer(psave, nb);
    Flush();
    delete [] psave;

@@ -1088,7 +1088,9 @@ changelog:
 releasenotes:
 	@$(MAKERELNOTES)
 
-html: $(ROOTEXE) changelog releasenotes
+ifeq ($(BUILDX11),yes)
+ifeq ($(BUILDASIMAGE),yes)
+html: rootexecs postbin changelog releasenotes
 ifneq ($(USECONFIG),FALSE)
 	@if [ "x`which root.exe`" != "x$(DESTDIR)$(BINDIR)/root.exe" ] \
 	  || [ "`which root.exe`" -ot "bin/root.exe" ]; then \
@@ -1099,6 +1101,14 @@ ifneq ($(USECONFIG),FALSE)
 endif
 	@$(MAKELOGHTML)
 	@$(MAKEHTML)
+else
+html:
+	@echo "Error: Generating the html doc requires to enable the asimage component when running configure." && exit 1
+endif
+else
+html:
+	@echo "Error: Generating the html doc requires to enable the X11 component when running configure." && exit 1
+endif
 
 # Use DESTDIR to set a sandbox prior to calling "make install", e.g.:
 #   ./configure --prefix=/usr/
