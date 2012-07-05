@@ -38,14 +38,6 @@ void buildSimultaneousModel(RooWorkspace *w)
    bModel->SetName("B");
    w->import(*bModel);
 
-   // set global observables to constant values
-   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
-   RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
-   while (var != NULL) {
-      var->setConstant();
-      var = dynamic_cast<RooRealVar *>(iter.next());
-   }
-
    // define data set
    RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data"));
    w->import(*data);
@@ -81,14 +73,6 @@ void buildPoissonProductModel(RooWorkspace *w)
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
    w->import(*bModel);
-
-   // set global observables to constant values
-   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
-   RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
-   while (var != NULL) {
-      var->setConstant();
-      var = dynamic_cast<RooRealVar *>(iter.next());
-   }
 
    // define data set
    RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
@@ -163,14 +147,6 @@ void buildPoissonEfficiencyModel(RooWorkspace *w)
    bModel->SetPdf("pdf");
    w->import(*bModel);
 
-   // set global observables to constant values
-   RooFIter iter = sbModel->GetGlobalObservables()->fwdIterator();
-   RooRealVar *var = dynamic_cast<RooRealVar *>(iter.next());
-   while (var != NULL) {
-      var->setConstant();
-      var = dynamic_cast<RooRealVar *>(iter.next());
-   }
-   
    // define data set and import it into workspace
    RooDataSet *data = new RooDataSet("data", "data", *sbModel->GetObservables());
    w->import(*data);

@@ -1162,7 +1162,7 @@ public:
          Warning("isTestAvailable", "Observed value off_source=tau*b must be in the range [0,1100]. Skipping test...");
          return kFALSE;
       }
-      if (fTau <= 0.1 || fTau >= 5.0) {
+      if (fTau < 0.1 || fTau > 5.0) {
          Warning("isTestAvailable", "On/Off model parameter 'tau' must be in the range [0.1,5.0]. Skipping test...");
          return kFALSE;
       }
@@ -1468,11 +1468,11 @@ public:
       tmcs->SetAlwaysUseMultiGen(kTRUE); // speedup
 
       HypoTestInverterResult *interval = hti->GetInterval();
-      regValue(interval->LowerLimit(), TString::Format("thti1_lower_limit_sig_%s_%s_%d_%d_%lf",
+      regValue(interval->LowerLimit(), TString::Format("hti1_lower_limit_sig1_calc_%s_%s_%d_%d_%lf",
                                                        kECalculatorTypeString[fCalculatorType],
                                                        kETestStatTypeString[fTestStatType],
                                                        fObsValueX, fObsValueY, fConfidenceLevel));
-      regValue(interval->UpperLimit(), TString::Format("thti1_upper_limit_sig_%s_%s_%d_%d_%lf",
+      regValue(interval->UpperLimit(), TString::Format("hti1_upper_limit_sig1_calc_%s_%s_%d_%d_%lf",
                                                        kECalculatorTypeString[fCalculatorType],
                                                        kETestStatTypeString[fTestStatType],
                                                        fObsValueX, fObsValueY, fConfidenceLevel));
@@ -1612,7 +1612,7 @@ public:
       // needed because we have no extended pdf and the ToyMC Sampler evaluation returns an error
       ToyMCSampler *tmcs = (ToyMCSampler *)hti->GetHypoTestCalculator()->GetTestStatSampler();
       tmcs->SetNEventsPerToy(1);
-      tmcs->SetAlwaysUseMultiGen(kTRUE); // make ToyMCSampler faster
+//      tmcs->SetAlwaysUseMultiGen(kTRUE); // make ToyMCSampler faster
 
       // calculate interval and extract observed upper limit and expected upper limit (+- sigma)
       HypoTestInverterResult *interval = hti->GetInterval();
