@@ -23,7 +23,7 @@
 #include <string.h>
 #include "clang/AST/DeclCXX.h"
 
-const clang::CXXRecordDecl *R__SlowRawTypeSearch(const char *input_name, const clang::DeclContext *ctxt = 0);
+const clang::CXXRecordDecl *R__ScopeSearch(const char *name, const clang::Type** resultType = 0);
 
 BaseSelectionRule::BaseSelectionRule(long index, BaseSelectionRule::ESelect sel, const std::string& attributeName, const std::string& attributeValue)
    : fIndex(index), fIsSelected(sel),fMatchFound(false),fCXXRecordDecl(0)
@@ -151,7 +151,7 @@ bool BaseSelectionRule::IsSelected (const clang::NamedDecl *decl, const std::str
          // Try a real match!
          
          const clang::CXXRecordDecl *D = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
-         const clang::CXXRecordDecl *target = R__SlowRawTypeSearch(name_value.c_str());
+         const clang::CXXRecordDecl *target = R__ScopeSearch(name_value.c_str());
          if ( target ) {
             const_cast<BaseSelectionRule*>(this)->fCXXRecordDecl = target;
          } else {
@@ -476,13 +476,19 @@ bool BaseSelectionRule::GetMatchFound() const
    return fMatchFound;
 }
 
+const clang::Type *BaseSelectionRule::GetRequestedType() const
+{
+   return fRequestedType;
+}
+
 const clang::CXXRecordDecl *BaseSelectionRule::GetCXXRecordDecl() const
 {
    return fCXXRecordDecl;
 }
 
-void BaseSelectionRule::SetCXXRecordDecl(const clang::CXXRecordDecl *decl)
+void BaseSelectionRule::SetCXXRecordDecl(const clang::CXXRecordDecl *decl, const clang::Type *typeptr)
 {
    fCXXRecordDecl = decl;
+   fRequestedType = typeptr;
 }
 

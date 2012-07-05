@@ -14,9 +14,17 @@
 // LinkdefReader                                                        //
 //                                                                      //
 // The following #pragma are currently ignored (not needed for cling):  //
-//      #pragma link extra_include                                      //
 //      #pragma link spec typedef                                       //
 //      #pragma link spec nestedtypedef                                 //
+//                                                                      //
+// Note: some inconsistency in the way CINT parsed the #pragma:         //
+//   "#pragma link C++ class" is terminated by either a ';' or a newline//
+//      which ever come first and does NOT support line continuation.   //
+//   "#pragma read ..." is terminated by newline but support line       //
+//      continuation (i.e. '\' followed by newline means to also use the//
+//      next line.                                                      //
+//   This was change in CINT to consistently ignore the continuation    //
+//                                                                      //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -35,6 +43,7 @@
 #include "clang/Lex/Pragma.h"
 
 #include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/Interpreter.h"
 
 std::map<std::string, LinkdefReader::EPragmaNames> LinkdefReader::fgMapPragmaNames;
 std::map<std::string, LinkdefReader::ECppNames> LinkdefReader::fgMapCppNames;
@@ -95,6 +104,20 @@ LinkdefReader::LinkdefReader() : fLine(1), fCount(0)
    PopulatePragmaMap();
    PopulateCppMap();
 }
+
+/*
+ * The method records that 'include' has been explicitly requested in the linkdef file
+ * to be added to the dictionary and interpreter.
+ */
+bool LinkdefReader::AddInclude(std::string include)
+{
+   fIncludes += "#include ";
+   fIncludes += include;
+   fIncludes += "\n";
+
+   return true;
+}
+
 
 /*
  * The method that processes the pragma statement.
@@ -454,6 +477,15 @@ bool LinkdefReader::IsPatternRule(const std::string& rule_token)
    else return false;
 }
 
+/*
+ * The method records that 'include' has been explicitly requested in the linkdef file
+ * to be added to the dictionary and interpreter.
+ */
+bool LinkdefReader::LoadIncludes(cling::Interpreter &interp)
+{
+   return cling::Interpreter::kSuccess == interp.declare(fIncludes);
+}
+
 bool LinkdefReader::ProcessFunctionPrototype(std::string& proto, bool& name)
 {
    int pos1, pos1_1, pos2, pos2_1;
@@ -723,13 +755,10 @@ public:
       } else {
          llvm::StringRef include(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
          
-         // With the currrent state of root with cling, there is no neet for the extra include,
-         // the #include in the LinkDef should end up in the pcm list.
-         // std::cerr << "Warning: #pragma extra_include not yet handled: " << include.str() << "\n";
-//         if (!fOwner.AddInclude(include))
-//         {
-//            Error("",tok);
-//         }
+         if (!fOwner.AddInclude(include))
+         {
+            Error("",tok);
+         }
       }      
    }
 };
