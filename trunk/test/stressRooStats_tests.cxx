@@ -1261,7 +1261,7 @@ public:
       Bool_t writeRef,
       Int_t verbose,
       ECalculatorType calculatorType = kAsymptotic,
-      ETestStatType testStatType = kProfileLR
+      ETestStatType testStatType = kProfileLROneSidedDiscovery
    ) :
       RooUnitTest(TString::Format("HypoTestCalculator Significance - Simultaneous Pdf - %s - %s",
                      kECalculatorTypeString[calculatorType], kETestStatTypeString[testStatType]), refFile, writeRef, verbose),
@@ -1566,11 +1566,12 @@ public:
       Bool_t writeRef, 
       Int_t verbose, 
       ECalculatorType calculatorType = kAsymptotic, 
-      ETestStatType testStatType = kProfileLR, 
+      ETestStatType testStatType = kProfileLROneSided, 
       Int_t obsValueX = 10,
       Double_t confidenceLevel = 2 * normal_cdf(1) - 1
    ) : 
-      RooUnitTest(TString::Format("HypoTestInverter Upper Limit - Poisson Model with Signal, Background and Efficiency"), refFile, writeRef, verbose),
+      RooUnitTest(TString::Format("HypoTestInverter Upper Limit - Poisson Efficiency Model - %s - %s",
+                                  kECalculatorTypeString[calculatorType], kETestStatTypeString[testStatType]), refFile, writeRef, verbose),
       fCalculatorType(calculatorType),
       fTestStatType(testStatType),
       fObsValueX(obsValueX),
