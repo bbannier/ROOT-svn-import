@@ -639,14 +639,14 @@ void R__GetQualifiedName(std::string &qual_name, const RScanner::AnnotatedRecord
    R__GetQualifiedName(qual_name,*annotated.GetRecordDecl());
 }
 
-std::string  R__GetQualifiedName(const clang::QualType &type, const clang::NamedDecl &forcontext)
+std::string R__GetQualifiedName(const clang::QualType &type, const clang::NamedDecl &forcontext)
 {
    std::string result;
    R__GetQualifiedName(result,type,forcontext);
    return result;
 }
 
-std::string  R__GetQualifiedName(const clang::Type &type, const clang::NamedDecl &forcontext)
+std::string R__GetQualifiedName(const clang::Type &type, const clang::NamedDecl &forcontext)
 {
    std::string result;
    R__GetQualifiedName(result,clang::QualType(&type,0),forcontext);
@@ -704,15 +704,15 @@ bool R__IsInt(const clang::FieldDecl *field)
 cling::Interpreter *gInterp = 0;
 
 
-const clang::CXXRecordDecl *R__ScopeSearch(const char *name) 
+const clang::CXXRecordDecl *R__ScopeSearch(const char *name, const clang::Type** resultType = 0) 
 {
    // Return the scope corresponding to 'name' or std::'name'
   
-   const clang::CXXRecordDecl *result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(gInterp->lookupScope(name));
+   const clang::CXXRecordDecl *result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(gInterp->lookupScope(name,resultType));
    if (!result) {
       std::string std_name("std::");
       std_name += name;
-      result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(gInterp->lookupScope(std_name));
+      result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(gInterp->lookupScope(std_name,resultType));
    }
    return result;
 }
@@ -767,6 +767,7 @@ size_t R__GetFullArrayLength(const clang::ConstantArrayType *arrayType)
    return len.getLimitedValue();
 }
 
+#if 0 
 const clang::CXXRecordDecl *R__SlowRawTypeSearch(const char *input_name, const clang::DeclContext *ctxt = 0) 
 {
    // Strip leading 'const' and '*' and '&'
@@ -825,6 +826,7 @@ const clang::CXXRecordDecl *R__SlowRawTypeSearch(const char *input_name, const c
       return 0;
    }
 }
+#endif
 
 class FDVisitor : public clang::RecursiveASTVisitor<FDVisitor> {
 private:
@@ -876,90 +878,6 @@ const clang::CXXMethodDecl *R__GetMethodWithProto__Old(const clang::CXXRecordDec
       }
    }
    return 0;
-
-#if 0
-#define USE_CLING_LOOKUP
-
-   // First check it exist under some name.
-   const clang::FunctionDecl *decl = gInterp->LookupDecl(method,cinfo).getAs<clang::FunctionDecl>();
-   bool found_at_least_one = false;
-   if (decl) {
-      found_at_least_one = true;
-   } else {
-      bool is_operator_new = (strcmp(method,"operator new")==0);
-      // Do a crawling search :( ...
-      for(clang::CXXRecordDecl::method_iterator iter = cinfo->method_begin(),
-          end = cinfo->method_end();
-          iter != end;
-          ++iter)
-      {
-         std::string methodname;
-         iter->getNameForDiagnostic( methodname, cinfo->getASTContext().getPrintingPolicy(), false );
-         if ( methodname == method ) {
-            found_at_least_one = true;
-            if (is_operator_new) return &*iter;
-            break;
-         }
-      }
-   }
-   if (!found_at_least_one) {
-      for(clang::CXXRecordDecl::base_class_const_iterator iter = cinfo->bases_begin(), end = cinfo->bases_end();
-          iter != end;
-          ++iter)
-      {
-         if (const clang::CXXMethodDecl *res = R__GetFuncWithProto((iter->getType()->getAsCXXRecordDecl ()),method,proto)) {
-            return res;
-         }
-      }
-   }
-#ifndef USE_CLING_LOOKUP
-   if (decl) {
-      // NOTE this is *wrong* we do not check that the routine has the right arguments!!!
-      return llvm::dyn_cast<clang::CXXMethodDecl>(decl);
-   }
-#else
-   if (found_at_least_one) {
-      // Build int (ClassInfo::*f)(arglist) = &ClassInfo::method;
-      // Then we will have the resolved overload of clang::FunctionDecl on the lhs.
-      std::string Str("");
-      gInterp->createUniqueName(Str);
-      Str += "void " + Str + "() {\n";
-      Str += "void (" + cinfo->getNameAsString() + "::*fptr)(" + proto + ") = &" + cinfo->getNameAsString()  + "::" + method + ";;";
-      Str += "\n};;";
-
-      std::string uniquename;
-      gInterp->createUniqueName(uniquename);
-
-      Str = "template<typename CLASS, typename RET> void " + uniquename + "lookup_arg(RET (CLASS::* const arg)(";
-      Str += proto;
-      Str += ") ) { };\n";
-
-      Str = "template<typename CLASS, typename RET> void " + uniquename + "lookup_arg(RET (CLASS::*)(";
-      Str += proto;
-      Str += ") ) { };\n";
-      Str += "void " + uniquename + "_wrapper() {\n";
-      Str += uniquename + "lookup_arg(& " + R__GetQualifiedName(*cinfo)  + "::" + method + ");\n";
-      Str += ";;};;";
-
-      const clang::Decl* D = 0;
-      const clang::FunctionDecl* ResultFD = 0;
-      cling::Value value;
-      if (gInterp->declare(Str, &D)
-          == cling::Interpreter::kSuccess) {
-         if (D) {
-            FDVisitor FDV = FDVisitor();
-            FDV.TraverseDecl(D->getASTContext().getTranslationUnitDecl());
-            ResultFD = FDV.getFD();
-         }
-         if (ResultFD) {
-            const clang::CXXMethodDecl *method = llvm::dyn_cast<clang::CXXMethodDecl>(ResultFD);
-            return method;
-         }
-      }
-   }
-#endif
-   return 0;
-#endif
 }
 
 bool R__CheckPublicFuncWithProto(const clang::CXXRecordDecl *cl, const char *methodname, const char *proto)
@@ -979,8 +897,6 @@ bool ClassInfo__IsBase(const clang::RecordDecl *cl, const char* basename)
    if (!CRD) {
       return false;
    }
-   // This would be better but is to verbose for now.
-   // clang::QualType basetype = TMetaUtils::LookupTypeDecl(*gInterp, basename);
    const clang::NamedDecl *base = R__ScopeSearch(basename);
    if (base) {
       const clang::CXXRecordDecl* baseCRD = llvm::dyn_cast<clang::CXXRecordDecl>( base ); 
@@ -1546,8 +1462,8 @@ void BeforeParseInit()
    //---------------------------------------------------------------------------
    // Add the conversion rule processors
    //---------------------------------------------------------------------------
-   G__addpragma( (char*)"read", ProcessReadPragma );
-   G__addpragma( (char*)"readraw", ProcessReadRawPragma );
+   // G__addpragma( (char*)"read", ProcessReadPragma );
+   // G__addpragma( (char*)"readraw", ProcessReadRawPragma );
 
 }
 
@@ -2998,7 +2914,7 @@ int STLContainerStreamer(const clang::FieldDecl &m, int rwmode)
 
    int stltype = abs(IsSTLContainer(m));
    std::string mTypename;
-   R__GetQualifiedName(mTypename, m.getType(),m);
+   R__GetQualifiedName(mTypename, m.getType(), m);
    
    const clang::CXXRecordDecl* clxx = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(R__GetUnderlyingRecordDecl(m.getType()));
 
@@ -4667,34 +4583,12 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl)
        field_iter != end;
        ++field_iter)
    {
-      const char *comment = R__GetComment( **field_iter );
-
-      int pCounter = 0;
-      clang::QualType type = field_iter->getType();
-      std::string type_name = type.getAsString(clxx->getASTContext().getPrintingPolicy());
-//      type->dump();
-//      fprintf(stderr,"\n");
-      if (type->isPointerType()) {
-         const char *leftb = strchr(comment,'[');
-         if (leftb) {
-            const char *rightb = strchr(leftb,']');
-            if (rightb) {
-               pCounter++;
-               a = type_name;
-               if (strstr(type_name.c_str(),"**")) pCounter++;
-               char *astar = (char*)strchr(a.c_str(),'*');
-               if (!astar) {
-                  Error(0, "Expected '*' in type name '%s' of member '%s'\n", a.c_str(), field_iter->getName().str().c_str());
-               } else {
-                  *astar = 0;
-               }
-            }
-         }
-      }
+      std::string mTypename;
+      R__GetQualifiedName(mTypename, field_iter->getType(), *clxx);
 
       //member is a string
       {
-         const char*shortTypeName = ShortTypeName(type_name.c_str());
+         const char*shortTypeName = ShortTypeName(mTypename.c_str());
          if (!strcmp(shortTypeName, "string")) {
             continue;
          }
@@ -4706,7 +4600,7 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl)
       if (k!=0) {
          //          fprintf(stderr,"Add %s which is also",m.Type()->Name());
          //          fprintf(stderr," %s\n",R__TrueName(**field_iter) );
-         RStl::Instance().GenerateTClassFor( "", R__ScopeSearch(type_name.c_str()) );
+         RStl::Instance().GenerateTClassFor( "", R__ScopeSearch(mTypename.c_str()) );
       }      
    }
 
@@ -6413,6 +6307,76 @@ int main(int argc, char **argv)
 #endif
 
    //---------------------------------------------------------------------------
+   // Parse the linkdef or selection.xml file.
+   //---------------------------------------------------------------------------
+
+   string linkdefFilename;
+   if (il) {
+      linkdefFilename = argv[il];
+   } else {
+      bool found = Which(argv[il], linkdefFilename);
+      if (!found) {
+         Error(0, "%s: cannot open file %s\n", argv[0], argv[il]);
+         CleanupOnExit(1);
+         return 1;
+      }
+   }   
+
+   SelectionRules selectionRules;
+
+   if (requestAllSymbols) {
+      selectionRules.SetDeep(true);
+   } else if (R__IsSelectionXml(linkdefFilename.c_str())) {
+
+      selectionRules.SetSelectionFileType(SelectionRules::kSelectionXMLFile);
+
+      std::ifstream file(linkdefFilename.c_str());
+      if(file.is_open()){
+         Info(0,"Selection XML file\n");
+
+         XMLReader xmlr;
+         if (!xmlr.Parse(file, selectionRules)) {
+            Error(0,"Parsing XML file %s",linkdefFilename.c_str());
+         }
+         else {
+            Info(0,"XML file successfully parsed\n");
+         }            
+         file.close();
+      }
+      else {
+         Error(0,"XML file %s couldn't be opened!",linkdefFilename.c_str());
+      }
+
+   } else if (R__IsLinkdefFile(linkdefFilename.c_str())) {
+
+      std::ifstream file(linkdefFilename.c_str());
+      if(file.is_open()) {
+         Info(0,"Using linkdef file: %s\n",linkdefFilename.c_str());
+         file.close();
+      }
+      else {
+         Error(0,"Linkdef file %s couldn't be opened!",linkdefFilename.c_str());
+      }
+
+      selectionRules.SetSelectionFileType(SelectionRules::kLinkdefFile);
+
+      LinkdefReader ldefr;
+      clingArgs.push_back("-Ietc/cling/cint"); // For multiset and multimap 
+      if (!ldefr.Parse(selectionRules, interpPragmaSource, clingArgs, getenv("LLVMDIR"))) {
+         Error(0,"Parsing Linkdef file %s",linkdefFilename.c_str());
+      }
+      else {
+         Info(0,"Linkdef file successfully parsed.\n");
+      }
+
+      ldefr.LoadIncludes(interp);
+   } else {
+
+      Error(0,"Unrecognized selection file: %s",linkdefFilename.c_str());
+
+   }
+
+   //---------------------------------------------------------------------------
    // Write schema evolution reelated headers and declarations
    //---------------------------------------------------------------------------
    if( !G__ReadRules.empty() || !G__ReadRawRules.empty() ) {
@@ -6438,71 +6402,6 @@ int main(int argc, char **argv)
             (*dictSrcOut) << "#include \"" << argv[i] << "\"" << std::endl;
       }
       (*dictSrcOut) << std::endl;
-   }
-
-   string linkdefFilename;
-   if (il) {
-      linkdefFilename = argv[il];
-   } else {
-      bool found = Which(argv[il], linkdefFilename);
-      if (!found) {
-         Error(0, "%s: cannot open file %s\n", argv[0], argv[il]);
-         CleanupOnExit(1);
-         return 1;
-      }
-   }   
-
-   SelectionRules selectionRules;
-
-   if (requestAllSymbols) {
-      selectionRules.SetDeep(true);
-   } else if (R__IsSelectionXml(linkdefFilename.c_str())) {
-
-      selectionRules.SetSelectionFileType(SelectionRules::kSelectionXMLFile);
-
-      std::ifstream file(linkdefFilename.c_str());
-      if(file.is_open()){
-         Info(0,"Selection XML file");
-
-         XMLReader xmlr;
-         if (!xmlr.Parse(file, selectionRules)) {
-            Error(0,"Parsing XML file %s",linkdefFilename.c_str());
-         }
-         else {
-            Info(0,"XML file successfully parsed");
-         }            
-         file.close();
-      }
-      else {
-         Error(0,"XML file %s couldn't be opened!",linkdefFilename.c_str());
-      }
-
-   } else if (R__IsLinkdefFile(linkdefFilename.c_str())) {
-
-      std::ifstream file(linkdefFilename.c_str());
-      if(file.is_open()){
-         Info(0,"Linkdef file");
-
-         file.close();
-      }
-      else {
-         Error(0,"Linkdef file %s couldn't be opened!",linkdefFilename.c_str());
-      }
-
-      selectionRules.SetSelectionFileType(SelectionRules::kLinkdefFile);
-
-      LinkdefReader ldefr;
-      if (!ldefr.Parse(selectionRules, interpPragmaSource, clingArgs, getenv("LLVMDIR"))) {
-         Error(0,"Parsing Linkdef file %s",linkdefFilename.c_str());
-      }
-      else {
-         Info(0,"Linkdef file successfully parsed");
-      }
-
-   } else {
-
-      Error(0,"Unrecognized selection file: %s",linkdefFilename.c_str());
-
    }
 
    selectionRules.SearchNames(interp);
@@ -6644,7 +6543,7 @@ int main(int argc, char **argv)
          }
          const clang::CXXRecordDecl* CRD = llvm::dyn_cast<clang::CXXRecordDecl>(iter->GetRecordDecl());
          if (CRD) {
-            fprintf(stderr,"rootcling: Generating code for class %s\n",R__GetQualifiedName(* iter->GetRecordDecl()).c_str());
+            Info(0,"Generating code for class %s\n",R__GetQualifiedName(* iter->GetRecordDecl()).c_str());
             std::string qualname( CRD->getQualifiedNameAsString() );
             if (IsStdClass(*CRD) && 0 != TClassEdit::STLKind(CRD->getName().str().c_str() /* unqualified name without template arguement */) ) {
                   // coverity[fun_call_w_exception] - that's just fine.
@@ -6700,7 +6599,7 @@ int main(int argc, char **argv)
             continue;
          }
          G__ClassInfo clinfo( iter->GetRequestedName()[0] ? iter->GetRequestedName() : R__GetQualifiedName(*iter).c_str() );
-         fprintf(stderr,"rootcling: Writing TClass wrapper for class %s %d\n",R__GetQualifiedName(*iter).c_str(),NeedShadowClass(clinfo));
+         // fprintf(stderr,"rootcling: Writing TClass wrapper for class %s needShadowClass=%d\n",R__GetQualifiedName(*iter).c_str(),NeedShadowClass(clinfo));
          if (NeedShadowClass(clinfo)) {
             (*dictSrcOut) << "namespace ROOT {" << std::endl
             << "   namespace Shadow {" << std::endl;
