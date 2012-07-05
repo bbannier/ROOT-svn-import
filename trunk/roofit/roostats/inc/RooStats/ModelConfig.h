@@ -174,6 +174,15 @@ public:
 
    // specify the global observables
    virtual void SetGlobalObservables(const RooArgSet& set) {
+      // make global observables constant
+      RooFIter iter = set.fwdIterator();
+      RooAbsArg *arg = iter.next();
+      while(arg != NULL) {
+         arg->setAttribute("Constant", kTRUE);
+         arg = iter.next();
+      }
+      oocoutI((TObject *)0, InputArguments) << "ModelConfig::SetGlobalObservables - Automatically making global observables constant" << std::endl;
+
       fGlobalObsName=std::string(GetName()) + "_GlobalObservables";
       DefineSetInWS(fGlobalObsName.c_str(), set);
    }
