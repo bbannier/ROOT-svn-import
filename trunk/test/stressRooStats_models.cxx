@@ -130,8 +130,6 @@ void buildPoissonEfficiencyModel(RooWorkspace *w)
    w->factory("expr::esb('eff * sig + bkg', eff, bkg, sig[0,50])");
    w->factory("Poisson::poiss(x[0,50], esb)");
    w->factory("PROD::pdf(poiss, constrb, constre)");
-   w->factory("Poisson::poiss_b(y[0,50], bkg)");
-   w->factory("PROD::pdf_b(poiss_b,constrb)");
 
    // create model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
@@ -144,7 +142,6 @@ void buildPoissonEfficiencyModel(RooWorkspace *w)
 
    ModelConfig *bModel = new ModelConfig(*sbModel);
    bModel->SetName("B");
-   bModel->SetPdf("pdf");
    w->import(*bModel);
 
    // define data set and import it into workspace
