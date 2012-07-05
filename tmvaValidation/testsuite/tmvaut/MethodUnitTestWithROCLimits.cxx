@@ -9,6 +9,8 @@
 #include <fstream>
 #include <sstream>
 
+#define USETESTTREE
+
 using namespace std;
 using namespace UnitTesting;
 using namespace TMVA;
@@ -151,7 +153,11 @@ void MethodUnitTestWithROCLimits::run()
 
   // setup test tree access
   TFile* testFile = new TFile(Form("weights/TMVA_%s.root",_methodTitle.Data()));
+#ifdef USETESTTREE
   TTree* testTree = (TTree*)(testFile->Get("TestTree"));
+#else
+  TTree* testTree = (TTree*)(testFile->Get("TrainTree"));
+#endif
   for (UInt_t i=0;i<_VariableNames->size();i++)
      testTree->SetBranchAddress(_TreeVariableNames->at(i),&testvar[i]);
   testTree->SetBranchAddress(_methodTitle.Data(),&testTreeVal);
@@ -269,6 +275,8 @@ void MethodUnitTestWithROCLimits::run()
         }
         if (_methodType!=Types::kCuts){
            diff = TMath::Abs(readerVal-testTreeVal);
+           //if (diff > 1.e-5) std::cout << "diff in reader test" <<readerVal <<" " <<testTreeVal<<std::endl;
+           //else std::cout<<"diff ok"<<std::endl;
            maxdiff = diff > maxdiff ? diff : maxdiff;
            sumdiff += diff;
         }
