@@ -294,7 +294,8 @@ int main(int argc, const char *argv[])
    Bool_t doDump      = kFALSE;
    Bool_t doTreeStore = kFALSE;
 
-   string refFileName = "http://root.cern.ch/files/stressRooStats_v534_ref.root" ;
+   //string refFileName = "http://root.cern.ch/files/stressRooStats_v534_ref.root" ;
+   string refFileName = "$ROOTSYS/test/stressRooStats_ref.root" ;
 
    // Parse command line arguments
    for (Int_t i = 1 ;  i < argc ; i++) {
@@ -349,19 +350,19 @@ int main(int argc, const char *argv[])
 
    }
 
-   if (doWrite && refFileName.find("http:") == 0) {
+//    if (doWrite && refFileName.find("http:") == 0) {
 
-      // Locate file name part in URL and update refFileName accordingly
-      char* buf = new char[refFileName.size() + 1];
-      strcpy(buf, refFileName.c_str());
-      char *ptr = strrchr(buf, '/');
-      if (!ptr) ptr = strrchr(buf, ':');
-      refFileName = ptr + 1;
-      delete[] buf;
+//       // Locate file name part in URL and update refFileName accordingly
+//       char* buf = new char[refFileName.size() + 1];
+//       strcpy(buf, refFileName.c_str());
+//       char *ptr = strrchr(buf, '/');
+//       if (!ptr) ptr = strrchr(buf, ':');
+//       refFileName = ptr + 1;
+//       delete[] buf;
 
-      cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: "
-           << refFileName << endl;
-   }
+//       cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: "
+//            << refFileName << endl;
+//    }
 
    // Disable caching of complex error function calculation, as we don't
    // want to write out the cache file as part of the validation procedure
