@@ -40,6 +40,8 @@
 #include "TSystem.h"
 #include "TROOT.h"
 
+#include "TMVAGui.C"
+
 #if not defined(__CINT__) || defined(__MAKECINT__)
 // needs to be included when makecint runs (ACLIC)
 #include "TMVA/Factory.h"
