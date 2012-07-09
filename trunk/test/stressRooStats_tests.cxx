@@ -242,6 +242,8 @@ public:
          ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *w->pdf("poiss"), *w->var("mean"));
          plc->SetConfidenceLevel(confidenceLevel);
          LikelihoodInterval *interval = plc->GetInterval();
+         LikelihoodIntervalPlot plot(interval);
+         plot.Draw();
 
          // Register externally computed limits in the reference file
          regValue(interval->LowerLimit(*w->var("mean")), lowerLimitString);
@@ -1651,6 +1653,9 @@ public:
                                                        fObsValueX, fConfidenceLevel));
 
       if (_verb >= 1) {
+         interval->SaveAs("thti2_result.root");
+
+         // draw plot
          HypoTestInverterPlot *plot = new HypoTestInverterPlot("thti2_scan", "HTI Upper Limit Scan", interval);
          TCanvas *c1 = new TCanvas("HypoTestInverter Scan");
          c1->SetLogy(false);
