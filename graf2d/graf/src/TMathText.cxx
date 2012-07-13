@@ -583,7 +583,7 @@ void TMathText::PaintMathText(
 	}
 }
 
-void TMathText::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TMathText::SavePrimitive(std::ostream &out, Option_t * /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
@@ -601,13 +601,13 @@ void TMathText::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    s.ReplaceAll("\\","\\\\");
    s.ReplaceAll("\"","\\\"");
    out << "   tex = new TMathText("<< fX << "," << fY << ","
-	   << quote << s.Data() << quote << ");" << endl;
+	   << quote << s.Data() << quote << ");" << std::endl;
    if(TestBit(kTextNDC)) {
-	   out << "tex->SetNDC();" << endl;
+	   out << "tex->SetNDC();" << std::endl;
    }
 
    SaveTextAttributes(out, "tex", 11, 0, 1, 42, 0.05);
    SaveFillAttributes(out, "tex", 0, 1001);
 
-   out<<"   tex->Draw();"<<endl;
+   out<<"   tex->Draw();" << std::endl;
 }
