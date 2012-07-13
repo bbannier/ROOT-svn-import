@@ -242,8 +242,6 @@ public:
          ProfileLikelihoodCalculator *plc = new ProfileLikelihoodCalculator(*data, *w->pdf("poiss"), *w->var("mean"));
          plc->SetConfidenceLevel(confidenceLevel);
          LikelihoodInterval *interval = plc->GetInterval();
-         LikelihoodIntervalPlot plot(interval);
-         plot.Draw();
 
          // Register externally computed limits in the reference file
          regValue(interval->LowerLimit(*w->var("mean")), lowerLimitString);

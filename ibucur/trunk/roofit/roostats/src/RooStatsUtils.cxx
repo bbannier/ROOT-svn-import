@@ -91,6 +91,8 @@ namespace RooStats {
       if(constraints.getSize() == 0) {
          oocoutW((TObject *)0, Eval) << "RooStatsUtils::MakeNuisancePdf - no constraints found on nuisance parameters in the input model" << endl;
          return 0;
+      } else if(constraints.getSize() == 1) {
+         return dynamic_cast<RooAbsPdf *>(constraints.first());
       }
       return new RooProdPdf(name,"", constraints);
    }
@@ -102,6 +104,28 @@ namespace RooStats {
          return 0;
       }
       return MakeNuisancePdf(*model.GetPdf(), *model.GetObservables(), name);
+   }
+
+   RooAbsPdf * RemoveNuisancePdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name) { 
+      // make a pdf without all constraint terms in a common pdf 
+      RooArgList obsTerms, constraints;
+      FactorizePdf(observables, pdf, obsTerms, constraints);
+      if(obsTerms.getSize() == 0) {
+         oocoutW((TObject *)0, Eval) << "RooStatsUtils::RemoveNuisancePdf - no observable factors found on pdf in the input model" << endl;
+         return 0;
+      } else if(obsTerms.getSize() == 1) {
+         return dynamic_cast<RooAbsPdf *>(obsTerms.first());
+      }
+      return new RooProdPdf(name,"", obsTerms);
+   }
+
+   RooAbsPdf * RemoveNuisancePdf(const RooStats::ModelConfig &model, const char *name) { 
+      // make a pdf without all constraint terms in a common pdf 
+      if(!model.GetPdf() || !model.GetObservables()) {
+         oocoutE((TObject *)0, InputArguments) << "RooStatsUtils::RemoveNuisancePdf - invalid input model: missing pdf and/or observables" << endl;
+         return 0;
+      }
+      return RemoveNuisancePdf(*model.GetPdf(), *model.GetObservables(), name);
    }
 
    // Helper class for GetAsTTree

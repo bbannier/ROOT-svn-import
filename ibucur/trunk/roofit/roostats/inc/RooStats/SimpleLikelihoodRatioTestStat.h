@@ -38,6 +38,8 @@
 #include "RooStats/TestStatistic.h"
 #endif
 
+#include "RooStats/RooStatsUtils.h"
+
 
 namespace RooStats {
 
@@ -167,6 +169,16 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
                << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1."
                << std::endl;
          }
+
+         if(fFirstEval) {
+            fNullPdf = RemoveNuisancePdf(*fNullPdf, *fNullPdf->getObservables(data),
+               TString::Format("reduced_%s", fNullPdf->GetName()));
+            fAltPdf  = RemoveNuisancePdf(*fAltPdf,  *fAltPdf->getObservables(data),
+               TString::Format("reduced_%s", fAltPdf->GetName()));
+            fNullPdf->Print("v");
+            fAltPdf->Print("v");
+         }
+
          fFirstEval = false;
 
          RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
