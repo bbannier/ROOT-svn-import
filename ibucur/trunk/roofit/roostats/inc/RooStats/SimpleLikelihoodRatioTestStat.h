@@ -175,8 +175,6 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
                TString::Format("reduced_%s", fNullPdf->GetName()));
             fAltPdf  = RemoveNuisancePdf(*fAltPdf,  *fAltPdf->getObservables(data),
                TString::Format("reduced_%s", fAltPdf->GetName()));
-            fNullPdf->Print("v");
-            fAltPdf->Print("v");
          }
 
          fFirstEval = false;
