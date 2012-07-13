@@ -61,7 +61,7 @@ public:
 			Double_t x, Double_t y, Double_t angle, Double_t size,
 			const char *text);
 		virtual void SavePrimitive(
-			ostream &out, Option_t *option = "");
+			std::ostream &out, Option_t *option = "");
 		friend class TMathTextRenderer;
 
 		ClassDef(TMathText,1)
