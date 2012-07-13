@@ -9,6 +9,8 @@
  *************************************************************************/
 
 #include "RooStats/SimpleLikelihoodRatioTestStat.h"
+#include "RooStats/RooStatsUtils.h"
+
 
 Bool_t RooStats::SimpleLikelihoodRatioTestStat::fgAlwaysReuseNll = kTRUE ;
 
@@ -21,6 +23,15 @@ Double_t RooStats::SimpleLikelihoodRatioTestStat::Evaluate(RooAbsData& data, Roo
          << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1."
          << std::endl;
    }
+   if (fFirstEval) {
+      fNullPdf = RooStats::RemoveNuisancePdf(*fNullPdf, *fNullPdf->getObservables(data),
+         TString::Format("reduced_null_%s", fNullPdf->GetName()));
+      fAltPdf  = RooStats::RemoveNuisancePdf(*fAltPdf , *fAltPdf->getObservables(data),
+         TString::Format("reduced_alt_%s", fAltPdf->GetName()));
+      fNullPdf->Print();
+      fAltPdf->Print();
+   }
+
    fFirstEval = false;
 
    RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
@@ -73,7 +84,7 @@ Double_t RooStats::SimpleLikelihoodRatioTestStat::Evaluate(RooAbsData& data, Roo
    //attachedSet->Print("v");
 
 
-   //std::cout << std::endl << "SLRTS null NLL: " << nullNLL << "    alt NLL: " << altNLL << std::endl << std::endl;
+//   std::cout << std::endl << "SLRTS null NLL: " << nullNLL << "    alt NLL: " << altNLL << std::endl << std::endl;
 
 
    if (!reuse) { 

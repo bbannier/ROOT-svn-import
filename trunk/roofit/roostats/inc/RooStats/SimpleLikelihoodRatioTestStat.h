@@ -38,8 +38,6 @@
 #include "RooStats/TestStatistic.h"
 #endif
 
-#include "RooStats/RooStatsUtils.h"
-
 
 namespace RooStats {
 
