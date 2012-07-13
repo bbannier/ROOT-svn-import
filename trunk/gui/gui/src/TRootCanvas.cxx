@@ -1809,7 +1809,6 @@ Bool_t TRootCanvas::HandleContainerCrossing(Event_t *event)
 Bool_t TRootCanvas::HandleDNDDrop(TDNDData *data)
 {
    // Handle drop events.
-
    static Atom_t rootObj  = gVirtualX->InternAtom("application/root", kFALSE);
    static Atom_t uriObj  = gVirtualX->InternAtom("text/uri-list", kFALSE);
 

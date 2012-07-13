@@ -842,12 +842,12 @@ Bool_t TGDNDManager::HandleSelectionRequest(Event_t *event)
 Bool_t TGDNDManager::HandleSelection(Event_t *event)
 {
    // Handle selection event.
-
    if ((Atom_t)event->fUser[1] == fgDNDSelection) {
       Atom_t actual = fDropType;
       Int_t format = 8;
       ULong_t count, remaining;
       unsigned char *data = 0;
+
 
       gVirtualX->GetProperty(event->fUser[0], event->fUser[3],
                              0, 0x8000000L, kTRUE, event->fUser[2],
@@ -855,6 +855,7 @@ Bool_t TGDNDManager::HandleSelection(Event_t *event)
 
       if ((actual != fDropType) || (format != 8) || (count == 0) || !data) {
          if (data) delete[] data;
+         
          return kFALSE;
       }
 
