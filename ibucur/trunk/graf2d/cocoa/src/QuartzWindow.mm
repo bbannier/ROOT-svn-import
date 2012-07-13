@@ -1208,6 +1208,38 @@ void print_mask_info(ULong_t mask)
    fContentView.fCurrentCursor = cursor;
 }
 
+//______________________________________________________________________________
+- (void) setProperty : (const char *) propName data : (unsigned char *) propData size : (unsigned) dataSize forType : (Atom_t) dataType format : (unsigned) format
+{
+   assert(fContentView != nil && "setProperty:data:size:forType:, content view is nil");
+   
+   [fContentView setProperty : propName data : propData size : dataSize forType : dataType format : format];
+}
+
+//______________________________________________________________________________
+- (BOOL) hasProperty : (const char *) propName
+{
+   assert(fContentView != nil && "hasProperty:, content view is nil");
+   
+   return [fContentView hasProperty : propName];
+}
+
+//______________________________________________________________________________
+- (unsigned char *) getProperty : (const char *) propName returnType : (Atom_t *) type 
+   returnFormat : (unsigned *) format nElements : (unsigned *) nElements
+{
+   assert(fContentView != nil && "getProperty:returnType:returnFormat:nElements, content view is nil");
+   
+   return [fContentView getProperty : propName returnType : type returnFormat : format nElements : nElements];
+}
+
+//______________________________________________________________________________
+- (void) removeProperty : (const char *) propName
+{
+   assert(fContentView != nil && "removeProperty:, content view is nil");
+   
+   [fContentView removeProperty : propName];
+}
 
 //NSWindowDelegate's methods.
 
@@ -1290,11 +1322,83 @@ void print_mask_info(ULong_t mask)
 
 @end
 
+//
+//
+//X11 "property".
+@interface QuartzWindowProperty : NSObject {
+   NSData *fPropertyData;
+   Atom_t fType;
+   unsigned fFormat;
+}
+
+@property (nonatomic, readonly) Atom_t fType;
+
+@end
+
+@implementation QuartzWindowProperty
+
+@synthesize fType;
+
+//______________________________________________________________________________
+- (id) initWithData : (unsigned char *) data size : (unsigned) dataSize type : (Atom_t) type format : (unsigned) format
+{
+   if (self = [super init]) {
+      //Memory is zero-initialized, but just to make it explicit:
+      fPropertyData = nil;
+      fType = 0;
+      fFormat = 0;
+
+      [self resetPropertyData : data size : dataSize type : type format : format];
+   }
+
+   return self;
+}
+
+//______________________________________________________________________________
+- (void) dealloc
+{
+   [fPropertyData release];
+
+   [super dealloc];
+}
+
+//______________________________________________________________________________
+- (void) resetPropertyData : (unsigned char *) data size : (unsigned) dataSize type : (Atom_t) type format : (unsigned) format
+{
+   [fPropertyData release];
+   
+   fFormat = format;
+   if (format == 16)
+      dataSize *= 2;
+   else if (format == 32)
+      dataSize *= 4;
+
+   fPropertyData = [[NSData dataWithBytes : data length : dataSize] retain];
+   
+   fType = type;
+}
+
+//______________________________________________________________________________
+- (NSData *) fPropertyData
+{
+   return fPropertyData;
+}
+
+//______________________________________________________________________________
+- (unsigned) fFormat
+{
+   return fFormat;
+}
+
+@end
+
 
 @implementation QuartzView {
    NSMutableArray *fPassiveKeyGrabs;
    BOOL            fIsOverlapped;
    QuartzImage    *fClipMask;
+   
+   NSMutableDictionary   *fX11Properties;
 }
 
 @synthesize fClipMaskIsValid;
@@ -1354,6 +1458,7 @@ void print_mask_info(ULong_t mask)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
          
       fCurrentCursor = kPointer;
+      fX11Properties = [[NSMutableDictionary alloc] init];
    }
    
    return self;
@@ -1364,6 +1469,7 @@ void print_mask_info(ULong_t mask)
 {
    [fPassiveKeyGrabs release];
    [fClipMask release];
+   [fX11Properties release];
    [super dealloc];
 }
 
@@ -2414,6 +2520,86 @@ void print_mask_info(ULong_t mask)
       [super resetCursorRects];
 }
 
+//______________________________________________________________________________
+- (void) setProperty : (const char *) propName data : (unsigned char *) propData size : (unsigned) dataSize forType : (Atom_t) dataType format : (unsigned) format
+{
+   assert(propName != 0 && "setProperty:data:size:forType:, propName parameter is null");
+   assert(propData != 0 && "setProperty:data:size:forType:, propData parameter is null");
+   assert(dataSize != 0 && "setProperty:data:size:forType:, dataSize parameter is 0");
+
+   NSString * const key = [NSString stringWithCString : propName encoding : NSASCIIStringEncoding];
+   QuartzWindowProperty * property = (QuartzWindowProperty *)[fX11Properties valueForKey : key];
+   
+   //At the moment (and I think this will never change) TGX11 always calls XChangeProperty with PropModeReplace.
+   if (property)
+      [property resetPropertyData : propData size : dataSize type : dataType format : format];
+   else {
+      //No property found, add a new one.
+      property = [[QuartzWindowProperty alloc] initWithData : propData size : dataSize type : dataType format : format];
+      [fX11Properties setObject : property forKey : key];
+      [property release];
+   }
+}
+
+//______________________________________________________________________________
+- (BOOL) hasProperty : (const char *) propName
+{
+   assert(propName != 0 && "hasProperty, propName parameter is null");
+   
+   NSString * const key = [NSString stringWithCString : propName encoding : NSASCIIStringEncoding];
+   QuartzWindowProperty * const property = (QuartzWindowProperty *)[fX11Properties valueForKey : key];
+
+   return property != nil;
+}
+
+//______________________________________________________________________________
+- (unsigned char *) getProperty : (const char *) propName returnType : (Atom_t *) type 
+   returnFormat : (unsigned *) format nElements : (unsigned *) nElements
+{
+   assert(propName != 0 && "getProperty:returnType:returnFormat:nElements, propName parameter is null");
+   assert(type != 0 && "getProperty:returnType:returnFormat:nElements, type parameter is null");
+   assert(format != 0 && "getProperty:returnType:returnFormat:nElements, format parameter is null");
+   assert(nElements != 0 && "getProperty:returnType:returnFormat:nElements, nElements parameter is null");
+
+   NSString * const key = [NSString stringWithCString : propName encoding : NSASCIIStringEncoding];
+   QuartzWindowProperty * const property = (QuartzWindowProperty *)[fX11Properties valueForKey : key];
+   assert(property != 0 && "getProperty:returnType:returnFormat:nElements, property not found");
+
+   NSData * const propData = property.fPropertyData;
+   
+   const NSUInteger dataSize = [propData length];
+   unsigned char *buff = 0;
+   try {
+      buff = new unsigned char[dataSize]();
+   } catch (const std::bad_alloc &) {
+      NSLog(@"QuartzWindow: -getProperty:returnType:returnFormat:nElements, memory allocation failed");//Hmm, can I log, if new failed? :)
+      return 0;
+   }
+
+   [propData getBytes : buff length : dataSize];
+   *format = property.fFormat;
+   
+   *nElements = dataSize;
+   
+   if (*format == 16)
+      *nElements= dataSize / 2;
+   else if (*format == 32)
+      *nElements = dataSize / 4;
+      
+   *type = property.fType;
+
+   return buff;
+}
+
+//______________________________________________________________________________
+- (void) removeProperty : (const char *) propName
+{
+   assert(propName != 0 && "removeProperty:, propName parameter is null");
+   
+   NSString * const key = [NSString stringWithCString : propName encoding : NSASCIIStringEncoding];
+   [fX11Properties removeObjectForKey : key];
+}
+
 //DND
 //______________________________________________________________________________
 - (NSDragOperation) draggingEntered : (id<NSDraggingInfo>) sender
@@ -2430,19 +2616,54 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (BOOL) performDragOperation : (id<NSDraggingInfo>) sender
 {
+   //We can drag some files (images, pdfs, source code files) from
+   //finder to ROOT's window (mainly TCanvas or text editor).
+   //The logic is totally screwed here :((( - ROOT will try to
+   //read a property of some window (not 'self', unfortunately) -
+   //this works since on Window all data is in a global clipboard
+   //(on X11 it simply does not work at all).
+   //I'm attaching the file name as a property for the top level window,
+   //there is no other way to make this data accessible for ROOT.
+
    NSPasteboard * const pasteBoard = [sender draggingPasteboard];
    const NSDragOperation sourceDragMask = [sender draggingSourceOperationMask];
-   
+
    if ([[pasteBoard types] containsObject : NSFilenamesPboardType] && (sourceDragMask & NSDragOperationCopy)) {
-#if 0
-      //Gdk on windows creates three events on file drop: XdndEnter, XdndPosition, XdndDrop.
+
+      //Here I try to put string ("file://....") into window's property to make
+      //it accesible from ROOT's GUI.
+      const Atom_t textUriAtom = gVirtualX->InternAtom("text/uri-list", kFALSE);
+
+      NSArray * const files = [pasteBoard propertyListForType : NSFilenamesPboardType];
+      for (NSString *path in files) {
+         //ROOT can not process several files, use the first one.
+         NSString * const item = [@"file://" stringByAppendingString : path];
+         //Yes, only ASCII encoding, but after all, ROOT's not able to work with NON-ASCII strings.
+         const NSUInteger len = [item lengthOfBytesUsingEncoding : NSASCIIStringEncoding] + 1;
+         try {
+            std::vector<unsigned char> propertyData(len);
+            [item getCString : (char *)&propertyData[0] maxLength : propertyData.size() encoding : NSASCIIStringEncoding];
+            //There is no any guarantee, that this will ever work, logic in TGDNDManager is totally crazy.
+            NSView<X11Window> * const targetView = self.fQuartzWindow.fContentView;
+            [targetView setProperty : "_XC_DND_DATA" data : &propertyData[0] size : propertyData.size() forType : textUriAtom format : 8];
+         } catch (const std::bad_alloc &) {
+            NSLog(@"QuartzView: -performDragOperation, memory allocation failed");//Hehe, can I log something in case of bad_alloc??? ;)
+            return NO;
+         }
+
+         break;
+      }
+      
+      //Property is attached now.
+
+      //Gdk on windows creates three events on file drop (WM_DROPFILES): XdndEnter, XdndPosition, XdndDrop.
       //1. Dnd enter.
       Event_t event1 = {};
       event1.fType = kClientMessage;
       event1.fWindow = fID;
       event1.fHandle = gVirtualX->InternAtom("XdndEnter", kFALSE);
       event1.fUser[0] = long(fID);
-      event1.fUser[2] = gVirtualX->InternAtom("text/uri-list", kFALSE);
+      event1.fUser[2] = textUriAtom;//gVirtualX->InternAtom("text/uri-list", kFALSE);
       //
       gVirtualX->SendEvent(fID, &event1);
 
@@ -2464,25 +2685,8 @@ void print_mask_info(ULong_t mask)
       event3.fType = kClientMessage;
       event3.fWindow = fID;
       event3.fHandle = gVirtualX->InternAtom("XdndDrop", kFALSE);
-   
-      //Here I have to put string ("file://....") into the ROOT's paste board.
-      NSArray * const files = [pasteBoard propertyListForType : NSFilenamesPboardType];
-      NSPasteboard * const rootPasteboard = [NSPasteboard pasteboardWithName : @"pasteboard_ROOT"];
-      [rootPasteboard clearContents];
 
-      NSMutableArray * const cpData = [[NSMutableArray alloc] init];
-      for (id file in files) {
-         NSString *item = [@"file://" stringByAppendingString : file];
-         [cpData addObject : item];
-      }
-
-      [rootPasteboard writeObjects : cpData];
-      [cpData release];
-      
       gVirtualX->SendEvent(fID, &event3);
-#else
-      NSLog(@"File drop.");
-#endif
    }
 
    return YES;//Always ok, even if file type is not supported - no need in "animation".

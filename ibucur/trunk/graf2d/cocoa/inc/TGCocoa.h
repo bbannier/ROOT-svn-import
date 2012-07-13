@@ -139,6 +139,9 @@ public:
    virtual void      SetIconName(Window_t wid, char *name);
    virtual void      SetIconPixmap(Window_t wid, Pixmap_t pix);
    virtual void      SetClassHints(Window_t wid, char *className, char *resourceName);
+   //Non-rectangular window:
+   virtual void      ShapeCombineMask(Window_t wid, Int_t x, Int_t y, Pixmap_t mask);
+
    //End window-management part.
    ///////////////////////////////////////
    
@@ -204,6 +207,18 @@ public:
    //End of pixmap management.
    /////////////////////////////
 
+
+   /////////////////////////////
+   //"Images" - emulation of XCreateImage/XPutImage etc.
+   virtual Drawable_t   CreateImage(UInt_t width, UInt_t height);
+   virtual void         GetImageSize(Drawable_t wid, UInt_t &width, UInt_t &height);
+   virtual void         PutPixel(Drawable_t wid, Int_t x, Int_t y, ULong_t pixel);
+   virtual void         PutImage(Drawable_t wid, GContext_t gc, Drawable_t img, Int_t dx, Int_t dy,
+                                 Int_t x, Int_t y, UInt_t w, UInt_t h);
+   virtual void         DeleteImage(Drawable_t img);
+   //"Images".
+   /////////////////////////////
+
    /////////////////////////////
    //Mouse (cursor, events, etc.)
    virtual void      GrabButton(Window_t wid, EMouseButton button, UInt_t modifier,
@@ -212,8 +227,19 @@ public:
    virtual void      GrabPointer(Window_t wid, UInt_t evmask, Window_t confine,
                                  Cursor_t cursor, Bool_t grab = kTRUE,
                                  Bool_t owner_events = kTRUE);
-
+   virtual void      ChangeActivePointerGrab(Window_t, UInt_t, Cursor_t);//Noop.
    //End of mouse related part.
+   /////////////////////////////
+   
+   /////////////////////////////
+   //Keyboard management.
+   virtual void      SetKeyAutoRepeat(Bool_t on = kTRUE);
+   virtual void      GrabKey(Window_t wid, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
+   virtual Int_t     KeysymToKeycode(UInt_t keysym);
+   virtual Window_t  GetInputFocus();
+   virtual void      SetInputFocus(Window_t wid);
+   virtual void      LookupString(Event_t *event, char *buf, Int_t buflen, UInt_t &keysym);
+   //End of keyboard management.
    /////////////////////////////
 
    /////////////////////////////
@@ -268,17 +294,6 @@ public:
                                      Int_t &win_y, UInt_t &mask);
    //Cursors.
    /////////////////////////////
-   
-   /////////////////////////////
-   //"Images" - emulation of XCreateImage/XPutImage etc.
-   virtual Drawable_t   CreateImage(UInt_t width, UInt_t height);
-   virtual void         GetImageSize(Drawable_t wid, UInt_t &width, UInt_t &height);
-   virtual void         PutPixel(Drawable_t wid, Int_t x, Int_t y, ULong_t pixel);
-   virtual void         PutImage(Drawable_t wid, GContext_t gc, Drawable_t img, Int_t dx, Int_t dy,
-                                 Int_t x, Int_t y, UInt_t w, UInt_t h);
-   virtual void         DeleteImage(Drawable_t img);
-   //"Images".
-   /////////////////////////////
 
 
    /////////////////////////////
@@ -315,18 +330,44 @@ public:
    //Event management.
    /////////////////////////////
 
-   //The remaining bunch of functions is not sorted yet (and not imlemented at the moment).
+   /////////////////////////////   
+   //"Drag and drop" and "Copy and paste" (quotes are intentional :)).
+   
+   //Names here are total mess, but this comes from TVirtualX interface.
+   virtual Atom_t    InternAtom(const char *atom_name, Bool_t only_if_exist);
+
+   virtual void      SetPrimarySelectionOwner(Window_t wid);
+   virtual Bool_t    SetSelectionOwner(Window_t windowID, Atom_t &selectionID);
+   virtual Window_t  GetPrimarySelectionOwner();
+
+   virtual void      ConvertPrimarySelection(Window_t wid, Atom_t clipboard, Time_t when);
+   virtual void      ConvertSelection(Window_t, Atom_t&, Atom_t&, Atom_t&, Time_t&);
+   virtual Int_t     GetProperty(Window_t, Atom_t, Long_t, Long_t, Bool_t, Atom_t,
+                                    Atom_t*, Int_t*, ULong_t*, ULong_t*, unsigned char**);
+   virtual void      GetPasteBuffer(Window_t wid, Atom_t atom, TString &text, Int_t &nchar,
+                                    Bool_t del);
+
    virtual void      ChangeProperty(Window_t wid, Atom_t property, Atom_t type,
                                     UChar_t *data, Int_t len);
+   virtual void      ChangeProperties(Window_t wid, Atom_t property, Atom_t type,
+                                      Int_t format, UChar_t *data, Int_t len);
+   virtual void      DeleteProperty(Window_t, Atom_t&);
 
+   virtual void      SetDNDAware(Window_t, Atom_t *);
+   virtual Bool_t    IsDNDAware(Window_t win, Atom_t *typelist);
 
+   virtual void      SetTypeList(Window_t win, Atom_t prop, Atom_t *typelist);
+   //FindRWindow is in DND part, since it looks for a DND aware window.
+   virtual Window_t  FindRWindow(Window_t win, Window_t dragwin, Window_t input, int x, int y, int maxd);
+   //"Drag and drop" and "Copy and paste".
+   /////////////////////////////
+
+   //The remaining bunch of functions is not sorted yet (and not imlemented at the moment).
 
    virtual UInt_t    ExecCommand(TGWin32Command *code);
    virtual void      GetCharacterUp(Float_t &chupx, Float_t &chupy);
 
    virtual Int_t     GetDoubleBuffer(Int_t wid);
-
-
 
    virtual Pixmap_t  ReadGIF(Int_t x0, Int_t y0, const char *file, Window_t wid);
    virtual Int_t     RequestLocator(Int_t mode, Int_t ctyp, Int_t &x, Int_t &y);
@@ -345,7 +386,6 @@ public:
 
    virtual Bool_t       NeedRedraw(ULong_t tgwindow, Bool_t force);
 
-   virtual Atom_t       InternAtom(const char *atom_name, Bool_t only_if_exist);
 
    virtual Bool_t       CreatePictureFromFile(Drawable_t wid, const char *filename,
                                               Pixmap_t &pict, Pixmap_t &pict_mask,
@@ -361,17 +401,6 @@ public:
    virtual void         Bell(Int_t percent);
    
    virtual void         WMDeleteNotify(Window_t wid);
-   virtual void         SetKeyAutoRepeat(Bool_t on = kTRUE);
-   virtual void         GrabKey(Window_t wid, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
-   virtual Int_t        KeysymToKeycode(UInt_t keysym);
-   virtual Window_t     GetInputFocus();
-   virtual void         SetInputFocus(Window_t wid);
-   virtual Window_t     GetPrimarySelectionOwner();
-   virtual void         SetPrimarySelectionOwner(Window_t wid);
-   virtual void         ConvertPrimarySelection(Window_t wid, Atom_t clipboard, Time_t when);
-   virtual void         LookupString(Event_t *event, char *buf, Int_t buflen, UInt_t &keysym);
-   virtual void         GetPasteBuffer(Window_t wid, Atom_t atom, TString &text, Int_t &nchar,
-                                       Bool_t del);
 
    virtual void         SetClipRectangles(GContext_t gc, Int_t x, Int_t y, Rectangle_t *recs, Int_t n);
    virtual Region_t     CreateRegion();
@@ -387,21 +416,6 @@ public:
    virtual Bool_t       EqualRegion(Region_t rega, Region_t regb);
    virtual void         GetRegionBox(Region_t reg, Rectangle_t *rect);
    //
-   virtual void         ShapeCombineMask(Window_t wid, Int_t x, Int_t y, Pixmap_t mask);
-
-   //---- Drag and Drop -----
-   virtual void         DeleteProperty(Window_t, Atom_t&);
-   virtual Int_t        GetProperty(Window_t, Atom_t, Long_t, Long_t, Bool_t, Atom_t,
-                                    Atom_t*, Int_t*, ULong_t*, ULong_t*, unsigned char**);
-   virtual void         ChangeActivePointerGrab(Window_t, UInt_t, Cursor_t);
-   virtual void         ConvertSelection(Window_t, Atom_t&, Atom_t&, Atom_t&, Time_t&);
-   virtual Bool_t       SetSelectionOwner(Window_t, Atom_t&);
-   virtual void         ChangeProperties(Window_t wid, Atom_t property, Atom_t type,
-                                         Int_t format, UChar_t *data, Int_t len);
-   virtual void         SetDNDAware(Window_t, Atom_t *);
-   virtual void         SetTypeList(Window_t win, Atom_t prop, Atom_t *typelist);
-   virtual Window_t     FindRWindow(Window_t win, Window_t dragwin, Window_t input, int x, int y, int maxd);
-   virtual Bool_t       IsDNDAware(Window_t win, Atom_t *typelist);
 
    virtual Bool_t       IsCmdThread() const { return kTRUE; }
    
@@ -416,7 +430,7 @@ public:
 protected:
    void *GetCurrentContext();
 
-   Int_t fSelectedDrawable;
+   Drawable_t fSelectedDrawable;
 
    std::auto_ptr<ROOT::MacOSX::Details::CocoaPrivate> fPimpl; //!
    Int_t fCocoaDraw;
@@ -427,6 +441,7 @@ protected:
 private:
    bool MakeProcessForeground();
    Atom_t FindAtom(const std::string &atomName, bool addIfNotFound);
+   void SetApplicationIcon();
 
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
@@ -446,6 +461,12 @@ private:
    std::vector<std::string> fAtomToName;
    
    Atom_t fSelectionNotifyProperty;
+   Atom_t fClipboardAtom;
+   Atom_t fTargetString;
+   
+   Window_t fSelectionOwner;
+   
+   bool fSetIcon;
 
 public:
    static Atom_t fgDeleteWindowAtom;
