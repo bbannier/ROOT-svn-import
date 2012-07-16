@@ -14,7 +14,6 @@
 
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
-//#include "Fit/BinPoint.h"
 
 #include "Math/IParamFunction.h"
 #include "Math/Integrator.h"
@@ -28,8 +27,7 @@
 
 #include <limits>
 #include <cmath>
-#include <cassert> 
-//#include <memory>
+#include <cassert>
 
 //#define DEBUG
 #ifdef DEBUG

@@ -191,13 +191,6 @@ private:
 }; 
 
 
-//       // usefule typedef's of DataVector
-//       class BinPoint;
-      
-//       // declaration for various type of data vectors
-//       typedef DataVector<ROOT::Fit::BinPoint>                    BinData; 
-//       typedef DataVector<ROOT::Fit::BinPoint>::const_iterator    BinDataIterator; 
-
 /**
    class maintaining a pointer to external data
    Using this class avoids copying the data when performing a fit
