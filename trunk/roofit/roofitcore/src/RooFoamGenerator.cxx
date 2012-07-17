@@ -45,7 +45,6 @@
 #include "RooTFoamBinding.h"
 #include "RooNumGenFactory.h"
 #include "RooNumGenConfig.h"
-#include "TRandom2.h"
 
 #include <assert.h>
 
@@ -85,8 +84,7 @@ RooFoamGenerator::RooFoamGenerator(const RooAbsReal &func, const RooArgSet &genV
   _tfoam = new TFoam("TFOAM") ;
   _tfoam->SetkDim(_realVars.getSize()) ;
   _tfoam->SetRho(_binding) ;
-  TRandom2 r2;
-  _tfoam->SetPseRan(&r2);
+  _tfoam->SetPseRan(RooRandom::randomGenerator()) ;
   switch(_realVars.getSize()) {
   case 1:_tfoam->SetnCells((Int_t)config.getConfigSection("RooFoamGenerator").getRealValue("nCell1D")) ; break ;
   case 2:_tfoam->SetnCells((Int_t)config.getConfigSection("RooFoamGenerator").getRealValue("nCell2D")) ; break ;
@@ -94,9 +92,9 @@ RooFoamGenerator::RooFoamGenerator(const RooAbsReal &func, const RooArgSet &genV
   default:_tfoam->SetnCells((Int_t)config.getConfigSection("RooFoamGenerator").getRealValue("nCellND")) ; break ;
   }
   _tfoam->SetnSampl((Int_t)config.getConfigSection("RooFoamGenerator").getRealValue("nSample")) ;
+  _tfoam->SetPseRan(RooRandom::randomGenerator()) ;
   _tfoam->SetChat((Int_t)config.getConfigSection("RooFoamGenerator").getRealValue("chatLevel")) ;
   _tfoam->Initialize() ;
-  _tfoam->SetPseRan(RooRandom::randomGenerator()) ;
 
   _vec = new Double_t[_realVars.getSize()] ;
   _xmin  = new Double_t[_realVars.getSize()] ;
