@@ -45,6 +45,35 @@ namespace cling {
   class Interpreter;
 
   class IncrementalParser {
+  private:
+    // our interpreter context
+    Interpreter* m_Interpreter;
+
+    // compiler instance.
+    llvm::OwningPtr<clang::CompilerInstance> m_CI;
+
+    // parser (incremental)
+    llvm::OwningPtr<clang::Parser> m_Parser;
+
+    // enable/disable dynamic scope
+    bool m_DynamicLookupEnabled;
+
+    // One buffer for each command line, owner by the source file manager
+    std::vector<llvm::MemoryBuffer*> m_MemoryBuffer;
+
+    // file ID of the memory buffer
+    clang::FileID m_VirtualFileID;
+
+    // CI owns it
+    ChainedConsumer* m_Consumer;
+
+    ///\brief Holds information for the all transactions.
+    ///
+    llvm::SmallVector<Transaction*, 64> m_Transactions;
+
+    // whether to run codegen; cannot be flipped during lifetime of *this
+    bool m_SyntaxOnly;
+
   public:
     enum EParseResult {
       kSuccess,
@@ -81,66 +110,57 @@ namespace cling {
     ///
     void commitCurrentTransaction() const;
 
+    ///\brief Reverts the AST into its previous state.
+    ///
+    /// If one of the declarations caused error in clang it is rolled back from
+    /// the AST. This is essential feature for the error recovery subsystem.
+    ///
+    ///\param[in] T - The transaction to be reverted from the AST
+    ///
+    void rollbackTransaction(Transaction* T) const; 
+
+    ///\brief Returns the last transaction the incremental parser saw.
+    ///
+    Transaction* getLastTransaction() { 
+      return m_Transactions.back(); 
+    }
+
+    ///\brief Returns the last transaction the incremental parser saw.
+    ///
+    const Transaction* getLastTransaction() const { 
+      return m_Transactions.back(); 
+    }
+
     /// \}
 
     ///\brief Compiles the given input with the given compilation options.
     ///
     EParseResult Compile(llvm::StringRef input, const CompilationOptions& Opts);
 
-    void Parse(llvm::StringRef input,
-               llvm::SmallVector<clang::DeclGroupRef, 4>& DGRs);
+    ///\brief Parses the given input without calling the custom consumers and 
+    /// code generation.
+    ///
+    /// I.e changes to the decls in the transaction commiting it will cause 
+    /// different executable code.
+    ///
+    ///\param[in] input - The code to parse.
+    ///\returns The transaction coresponding to the input.
+    ///
+    Transaction* Parse(llvm::StringRef input);
 
-    llvm::MemoryBuffer* getCurBuffer() const {
-      return m_MemoryBuffer.back();
-    }
     void enablePrintAST(bool print /*=true*/) {
       m_Consumer->getCompilationOpts().Debug = print;
     }
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled() const { return m_DynamicLookupEnabled; }
     bool isSyntaxOnly() const { return m_SyntaxOnly; }
-    const Transaction* getLastTransaction() const { 
-      return m_Transactions.back(); 
-    }
 
-    Transaction* getLastTransaction() { 
-      return m_Transactions.back(); 
-    }
-
-    clang::CodeGenerator* GetCodeGenerator() const;
+    clang::CodeGenerator* getCodeGenerator() const;
 
   private:
     void CreateSLocOffsetGenerator();
     EParseResult Compile(llvm::StringRef input);
-    EParseResult Parse(llvm::StringRef input);
-
-    // our interpreter context
-    Interpreter* m_Interpreter;
-
-   // compiler instance.
-    llvm::OwningPtr<clang::CompilerInstance> m_CI;
-
-    // parser (incremental)
-    llvm::OwningPtr<clang::Parser> m_Parser;
-
-    // enable/disable dynamic scope
-    bool m_DynamicLookupEnabled;
-
-    // One buffer for each command line, owner by the source file manager
-    std::vector<llvm::MemoryBuffer*> m_MemoryBuffer;
-
-    // file ID of the memory buffer
-    clang::FileID m_VirtualFileID;
-
-    // CI owns it
-    ChainedConsumer* m_Consumer;
-
-    ///\brief Holds information for the all transactions.
-    ///
-    llvm::SmallVector<Transaction*, 64> m_Transactions;
-
-    // whether to run codegen; cannot be flipped during lifetime of *this
-    bool m_SyntaxOnly;
+    EParseResult ParseInternal(llvm::StringRef input);
   };
-}
+} // end namespace cling
 #endif // CLING_INCREMENTAL_PARSER_H
