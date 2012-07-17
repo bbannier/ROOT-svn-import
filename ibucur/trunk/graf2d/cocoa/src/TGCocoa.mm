@@ -377,7 +377,9 @@ Int_t TGCocoa::GetScreen() const
 //______________________________________________________________________________
 UInt_t TGCocoa::ScreenWidthMM() const
 {
-   //Comment from TVirtualX: Returns the width of the screen in millimeters.
+   //Comment from TVirtualX: 
+   // Returns the width of the screen in millimeters.
+   //End of comment.
 
    return CGDisplayScreenSize(CGMainDisplayID()).width;
 }
@@ -385,6 +387,11 @@ UInt_t TGCocoa::ScreenWidthMM() const
 //______________________________________________________________________________
 Int_t TGCocoa::GetDepth() const
 {
+   //Comment from TVirtualX:
+   // Returns depth of screen (number of bit planes).
+   // Equivalent to GetPlanes().
+   //End of comment.
+
    NSArray * const screens = [NSScreen screens];
    assert(screens != nil && "screens array is nil");
    
@@ -397,11 +404,11 @@ Int_t TGCocoa::GetDepth() const
 //______________________________________________________________________________
 void TGCocoa::Update(Int_t mode)
 {
-   //Mode == 2 - force widgets to redraw,
-   //Mode == 3 - execute graphics requests.
    if (mode == 2) {
+      assert(gClient != 0 && "Update, gClient is null");
       gClient->DoRedraw();//Call DoRedraw for all widgets, who need to be updated.
    } else if (mode > 0) {
+      //Execute buffered commands.
       fPimpl->fX11CommandBuffer.Flush(fPimpl.get());
    }
 }
@@ -418,15 +425,19 @@ Window_t TGCocoa::GetDefaultRootWindow() const
 //______________________________________________________________________________
 Int_t TGCocoa::InitWindow(ULong_t parentID)
 {
-   //InitWindow is a strange name, since this function
-   //creates a window, but this name is in TVirtualX interface.
+   //InitWindow is a bad name, since this function
+   //creates a window, but this name comes from the TVirtualX interface.
    //Actually, there is no special need in this function, 
    //it's a kind of simplified CreateWindow (with only
    //one parameter). This function is called by TRootCanvas,
    //to create a special window inside TGCanvas.
-   
+   //TGX11/TGWin32 have internal array of such special windows,
+   //they return index into this array, instead of drawable's ids.
+   //I simply re-use CreateWindow and return drawable's id.
+
    assert(parentID != 0 && "InitWindow, parentID parameter is 0");//0 is an invalid id.
-   
+
+   //Use parent's attributes (as it's done in TGX11).
    WindowAttributes_t attr = {};
 
    if (fPimpl->IsRootWindow(parentID)) {
@@ -459,28 +470,37 @@ void TGCocoa::SelectWindow(Int_t windowID)
 //______________________________________________________________________________
 void TGCocoa::ClearWindow()
 {
-   //Clear the selected drawable (can be window or pixmap, so the name is ambiguous).
+   //Clear the selected drawable OR pixmap (the name - from TVirtualX interface - is bad).
    assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "ClearWindow, fSelectedDrawable is invalid");
 
    NSObject<X11Drawable> * const drawable = fPimpl->GetDrawable(fSelectedDrawable);
    if (drawable.fIsPixmap) {
       //Pixmaps are white by default.
+      //This is bad - we can not have transparent sub-pads (in TCanvas)
+      //because of this. But there is no way how gVirtualX can
+      //obtain real pad's color and check for its transparency.
       CGContextRef pixmapCtx = drawable.fContext;
+      assert(pixmapCtx != 0 && "ClearWindow, pixmap's context is null");
       const Quartz::CGStateGuard ctxGuard(pixmapCtx);
       CGContextSetRGBFillColor(pixmapCtx, 1., 1., 1., 1.);
       CGContextFillRect(pixmapCtx, CGRectMake(0, 0, drawable.fWidth, drawable.fHeight));
    } else {
+      //For a window call ClearArea, 0, 0 for width and height means the whole window.
       ClearArea(fSelectedDrawable, 0, 0, 0, 0);
    }
 }
 
 //______________________________________________________________________________
-void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
+void TGCocoa::GetGeometry(Int_t windowID, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
 {
    //In TGX11, GetGeometry works with special windows, created by InitWindow
-   //(so this function is called from TCanvas/TGCanvas/TRootCanvas).
-   //It also translates x and y from parent's coordinates into screen coordinates.
-   if (wid < 0 || fPimpl->IsRootWindow(wid)) {
+   //(thus this function is called from TCanvas/TGCanvas/TRootCanvas).
+   
+   //IMPORTANT: this function also translates x and y 
+   //from parent's coordinates into screen coordinates - so, again, name "GetGeometry" 
+   //from the TVirtualX interface is bad and misleading.
+
+   if (windowID < 0 || fPimpl->IsRootWindow(windowID)) {
       //Comment in TVirtualX suggests, that wid can be < 0.
       //This will be screen's geometry.
       WindowAttributes_t attr = {};
@@ -490,7 +510,7 @@ void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
       w = attr.fWidth;
       h = attr.fHeight;
    } else {
-      NSObject<X11Drawable> * const drawable = fPimpl->GetDrawable(wid);
+      NSObject<X11Drawable> * const drawable = fPimpl->GetDrawable(windowID);
       x = drawable.fX;
       y = drawable.fY;
       w = drawable.fWidth;
@@ -515,6 +535,9 @@ void TGCocoa::GetGeometry(Int_t wid, Int_t & x, Int_t &y, UInt_t &w, UInt_t &h)
 //______________________________________________________________________________
 void TGCocoa::MoveWindow(Int_t windowID, Int_t x, Int_t y)
 {
+   //windowID is either kNone or a valid window id.
+   //x and y are coordinates of a top-left corner relative to the parent's coordinate system.
+
    assert(!fPimpl->IsRootWindow(windowID) && "MoveWindow, called for 'root' window");
 
    if (!windowID)//From TGX11.
@@ -526,19 +549,21 @@ void TGCocoa::MoveWindow(Int_t windowID, Int_t x, Int_t y)
 //______________________________________________________________________________
 void TGCocoa::RescaleWindow(Int_t /*wid*/, UInt_t /*w*/, UInt_t /*h*/)
 {
-   //
+   //This function is for TRootCanvas and related stuff, never gets
+   //called/used from/by any our GUI class.
+   //Noop.
 }
 
 //______________________________________________________________________________
 void TGCocoa::ResizeWindow(Int_t windowID)
 {
-   //This function does not resize window (it was done already), 
+   //This function does not resize window (it was done already by layout management?), 
    //it resizes "back buffer" if any.
 
    if (!windowID)//From TGX11.
       return;
    
-   assert(windowID > (Int_t)fPimpl->GetRootWindowID() && "ResizeWindow, windowID parameter is not a valid id");
+   assert(!fPimpl->IsRootWindow(windowID) && "ResizeWindow, windowID parameter is a 'root' window");
    
    NSObject<X11Window> * const window = fPimpl->GetWindow(windowID);
    if (window.fBackBuffer) {
@@ -682,13 +707,7 @@ void TGCocoa::DestroyWindow(Window_t wid)
 
    assert(fPimpl->GetDrawable(wid).fIsPixmap == NO &&  "DestroyWindow, can not be called for QuartzPixmap or QuartzImage object");
    
-   NSObject<X11Window> * const window = fPimpl->GetWindow(wid);
-   if (window.fBackBuffer) {
-      if (fPimpl->fX11CommandBuffer.BufferSize())
-         fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(window.fBackBuffer.fID);
-      fPimpl->DeleteDrawable(window.fBackBuffer.fID);
-   }
-   
+   NSObject<X11Window> * const window = fPimpl->GetWindow(wid);   
    if (fPimpl->fX11CommandBuffer.BufferSize())
       fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(wid);
 
@@ -1150,12 +1169,42 @@ void TGCocoa::SetWindowBackground(Window_t wid, ULong_t color)
 }
 
 //______________________________________________________________________________
-void TGCocoa::SetWindowBackgroundPixmap(Window_t wid, Pixmap_t /*pxm*/)
+void TGCocoa::SetWindowBackgroundPixmap(Window_t windowID, Pixmap_t pixmapID)
 {
    // Sets the background pixmap of the window "wid" to the specified
    // pixmap "pxm".
-   if (!wid)//From TGX11.
+
+   if (!windowID)//From TGX11/TGWin32.
       return;
+
+   assert(!fPimpl->IsRootWindow(windowID) && "SetWindowBackgroundPixmap, windowID parameter is a 'root' window");
+   assert(fPimpl->GetDrawable(windowID).fIsPixmap == NO && "SetWindowBackgroundPixmap, windowID parameter is not a window");
+
+   NSObject<X11Window> * const window = fPimpl->GetWindow(windowID);   
+   if (pixmapID == kNone) {
+      window.fBackgroundPixmap = nil;
+      return;
+   }
+   
+   assert(pixmapID > fPimpl->GetRootWindowID() && "SetWindowBackgroundPixmap, pixmapID parameter is not a valid pixmap id");
+   assert(fPimpl->GetDrawable(pixmapID).fIsPixmap == YES && "SetWindowBackgroundPixmap, pixmapID parameter is not a pixmap");
+
+   NSObject<X11Drawable> * const pixmapOrImage = fPimpl->GetDrawable(pixmapID);
+   //X11 doc says, that pixmap can be freed immediately after call XSetWindowBackgroundPixmap, so I have to copy a pixmap.
+   Util::NSScopeGuard<QuartzImage> backgroundImage;
+
+   if ([pixmapOrImage isKindOfClass : [QuartzPixmap class]]) {
+      backgroundImage.Reset([[QuartzImage alloc] initFromPixmap : (QuartzPixmap *)pixmapOrImage]);
+      if (backgroundImage.Get())
+         window.fBackgroundPixmap = backgroundImage.Get();//the window is retaining the image.
+   } else {
+      backgroundImage.Reset([[QuartzImage alloc] initFromImage : (QuartzImage *)pixmapOrImage]);
+      if (backgroundImage.Get())
+         window.fBackgroundPixmap = backgroundImage.Get();//the window is retaining the image.
+   }
+   
+   if (!backgroundImage.Get())
+      Error("SetWindowBackgroundPixmap", "QuartzImage initialization failed");//More concrete message was issued by QuartzImage.
 }
 
 //______________________________________________________________________________
@@ -1608,10 +1657,15 @@ void TGCocoa::FillRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
             FillRectangleAux(wid, gcVals, x, y, w, h);
       }
    } else {
+      /*
       if (!IsCocoaDraw())
          fPimpl->fX11CommandBuffer.AddFillRectangle(wid, gcVals, x, y, w, h);
       else
-         FillRectangleAux(wid, gcVals, x, y, w, h);
+      */
+      //Commented part: looks like it was not good idea: we can draw into 
+      //pixmap just to set the contents of this pixmap, outside of any GUI rendering.
+      //TODO: check, if other functions are also affected.
+      FillRectangleAux(wid, gcVals, x, y, w, h);
    }   
 }
 
@@ -1878,11 +1932,11 @@ void TGCocoa::DrawString(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, const 
 }
 
 //______________________________________________________________________________
-void TGCocoa::ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
+void TGCocoa::ClearAreaAux(Window_t windowID, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
-   assert(!fPimpl->IsRootWindow(wid) && "ClearAreaAux, called for the 'root' window");
+   assert(!fPimpl->IsRootWindow(windowID) && "ClearAreaAux, called for the 'root' window");
    
-   QuartzView * const view = (QuartzView *)fPimpl->GetWindow(wid).fContentView;
+   QuartzView * const view = (QuartzView *)fPimpl->GetWindow(windowID).fContentView;
    assert(view.fContext != 0 && "ClearAreaAux, view.fContext is null");
 
    //w and h can be 0 (comment from TGX11) - clear the entire window.
@@ -1890,13 +1944,28 @@ void TGCocoa::ClearAreaAux(Window_t wid, Int_t x, Int_t y, UInt_t w, UInt_t h)
       w = view.fWidth;
    if (!h)
       h = view.fHeight;
-   
-   CGFloat rgb[3] = {};
-   X11::PixelToRGB(view.fBackgroundPixel, rgb);
+      
+   if (!view.fBackgroundPixmap) {
+      //Simple solid fill.
+      CGFloat rgb[3] = {};
+      X11::PixelToRGB(view.fBackgroundPixel, rgb);
 
-   const Quartz::CGStateGuard ctxGuard(view.fContext);
-   CGContextSetRGBFillColor(view.fContext, rgb[0], rgb[1], rgb[2], 1.);//alpha can be also used.
-   CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
+      const Quartz::CGStateGuard ctxGuard(view.fContext);
+      CGContextSetRGBFillColor(view.fContext, rgb[0], rgb[1], rgb[2], 1.);//alpha can be also used.
+      CGContextFillRect(view.fContext, CGRectMake(x, y, w, h));
+   } else {
+      const CGRect fillRect = CGRectMake(x, y, w, h);
+      CGSize patternPhase = {};
+      const CGPoint origin = [view convertPoint : view.frame.origin toView : nil];
+      patternPhase.width = origin.x;
+      patternPhase.height = origin.y;
+
+      const Quartz::CGStateGuard ctxGuard(view.fContext);//Will restore context state.
+
+      PatternContext patternContext = {0, 0, 0, view.fBackgroundPixmap, patternPhase};
+      SetFillPattern(view.fContext, &patternContext);
+      CGContextFillRect(view.fContext, fillRect);
+   }
 }
 
 //______________________________________________________________________________
@@ -1949,13 +2018,12 @@ Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
    newSize.width = w;
    newSize.height = h;
 
-   Util::NSScopeGuard<QuartzPixmap> obj([QuartzPixmap alloc]);
-   if (QuartzPixmap * const pixmap = [obj.Get() initWithW : w H : h]) {
-      obj.Reset(pixmap);
-      pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
-      return (Int_t)pixmap.fID;
+   Util::NSScopeGuard<QuartzPixmap> pixmap([[QuartzPixmap alloc] initWithW : w H : h]);
+   if (pixmap.Get()) {
+      pixmap.Get().fID = fPimpl->RegisterDrawable(pixmap.Get());//Can throw.
+      return (Int_t)pixmap.Get().fID;
    } else {
-      Error("OpenPixmap", "Pixmap initialization failed");
+      Error("OpenPixmap", "QuartzPixmap initialization failed");//More concrete message was issued by QuartzPixmap.
       return -1;
    }
 }
@@ -2041,39 +2109,25 @@ Pixmap_t TGCocoa::CreatePixmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    assert(width > 0 && "CreatePixmap, width parameter is 0");
    assert(height > 0 && "CreatePixmap, height parameter is 0");
    
-   unsigned char *imageData = 0;
-   if (depth > 1)
-      imageData = new unsigned char[width * height * 4]();
-   else
-      imageData = new unsigned char[width * height];
-   Util::ScopedArray<unsigned char> arrayGuard(imageData);
+   std::vector<unsigned char> imageData (depth > 1 ? width * height * 4 : width * height);
 
-   X11::FillPixmapBuffer((unsigned char*)bitmap, width, height, foregroundPixel, backgroundPixel, depth, imageData);
+   X11::FillPixmapBuffer((unsigned char*)bitmap, width, height, foregroundPixel, backgroundPixel, depth, &imageData[0]);
 
    //Now we can create CGImageRef.
-   Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
-   if (!mem.Get()) {
-      Error("CreatePixmap", "[QuartzImage alloc] failed");
-      return kNone;
-   }
-
-   QuartzImage *image = nil;
+   Util::NSScopeGuard<QuartzImage> image;
    
    if (depth > 1)
-      image = [mem.Get() initWithW : width H : height data: imageData];
+      image.Reset([[QuartzImage alloc] initWithW : width H : height data: &imageData[0]]);
    else
-      image = [mem.Get() initMaskWithW : width H : height bitmapMask : imageData];
+      image.Reset([[QuartzImage alloc] initMaskWithW : width H : height bitmapMask : &imageData[0]]);
 
-   if (!image) {
-      Error("CreatePixmap", "[QuartzImage initWithW:H:data:] failed");
+   if (!image.Get()) {
+      Error("CreatePixmap", "QuartzImage initialization failed");//More concrete message was issued by QuartzImage.
       return kNone;
    }
 
-   mem.Reset(image);
-   arrayGuard.Release();//Now imageData is owned by image.
-   image.fID = fPimpl->RegisterDrawable(image);//This can throw.
-
-   return image.fID;      
+   image.Get().fID = fPimpl->RegisterDrawable(image.Get());//This can throw.
+   return image.Get().fID;
 }
 
 //______________________________________________________________________________
@@ -2086,34 +2140,23 @@ Pixmap_t TGCocoa::CreatePixmapFromData(unsigned char *bits, UInt_t width, UInt_t
 
    //I'm not using vector here, since I have to pass this pointer to Obj-C code
    //(and Obj-C object will own this memory later).
-   unsigned char *imageData = new unsigned char[width * height * 4];
-   Util::ScopedArray<unsigned char> arrayGuard(imageData);
-
-   std::copy(bits, bits + width * height * 4, imageData);
+   std::vector<unsigned char> imageData(bits, bits + width * height * 4);
 
    //Convert bgra to rgba.
-   unsigned char *p = imageData;
+   unsigned char *p = &imageData[0];
    for (unsigned i = 0, e = width * height; i < e; ++i, p += 4)
       std::swap(p[0], p[2]);
 
    //Now we can create CGImageRef.
-   Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
-   if (!mem.Get()) {
-      Error("CreatePixmapFromData", "[QuartzImage alloc] failed");
+   Util::NSScopeGuard<QuartzImage> image([[QuartzImage alloc] initWithW : width H : height data : &imageData[0]]);
+
+   if (!image.Get()) {
+      Error("CreatePixmapFromData", "QuartzImage initialziation failed");//More concrete message was issued by QuartzImage.
       return kNone;
    }
 
-   QuartzImage * const image = [mem.Get() initWithW : width H : height data : imageData];
-   if (!image) {
-      Error("CreatePixmapFromData", "[QuartzImage initWithW:H:data:] failed");
-      return kNone;
-   }
-   
-   mem.Reset(image);
-   arrayGuard.Release();//Now imageData is owned by image.
-   image.fID = fPimpl->RegisterDrawable(image);//This can throw.
-   
-   return image.fID;      
+   image.Get().fID = fPimpl->RegisterDrawable(image.Get());//This can throw.   
+   return image.Get().fID;
 }
 
 //______________________________________________________________________________
@@ -2127,10 +2170,9 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    
    //TASImage has a bug, it calculates size in pixels (making a with to multiple-of eight and 
    //allocates memory as each bit occupies one byte, and later packs bits into bytes.
-   //Posylaiu luchi ponosa avtoru.
-
-   unsigned char * const imageData = new unsigned char[width * height]();
-   Util::ScopedArray<unsigned char> arrayGuard(imageData);
+   
+   std::vector<unsigned char> imageData(width * height);
+   
    for (unsigned i = 0, j = 0, e = width / 8 * height; i < e; ++i) {//TASImage supposes 8-bit bytes and packs mask bits.
       for(unsigned bit = 0; bit < 8; ++bit, ++j) {
          if (bitmap[i] & (1 << bit))
@@ -2141,20 +2183,14 @@ Pixmap_t TGCocoa::CreateBitmap(Drawable_t /*wid*/, const char *bitmap, UInt_t wi
    }
 
    //Now we can create CGImageRef.
-   Util::NSScopeGuard<QuartzImage> mem([QuartzImage alloc]);
-   if (!mem.Get()) {
-      Error("CreateBitmap", "[QuartzImage alloc] failed");
+   Util::NSScopeGuard<QuartzImage> image([[QuartzImage alloc] initMaskWithW : width H : height bitmapMask : &imageData[0]]);
+   if (!image.Get()) {
+      Error("CreateBitmap", "QuartzImage initialization failed");//More concrete message was issued by QuartzImage.
       return kNone;
    }
 
-   QuartzImage * const image = [mem.Get() initMaskWithW : width H : height bitmapMask: imageData];
-   if (!image)//Error is already reported by QuartzImage.
-      return kNone;
-   
-   mem.Reset(image);
-   arrayGuard.Release();//Now, imageData is owned by image.
-   image.fID = fPimpl->RegisterDrawable(image);//This can throw.      
-   return image.fID;      
+   image.Get().fID = fPimpl->RegisterDrawable(image.Get());//This can throw.
+   return image.Get().fID;
 }
 
 //______________________________________________________________________________
@@ -3080,19 +3116,11 @@ void TGCocoa::SetDoubleBufferON()
          return;
    }
 
-   Util::NSScopeGuard<QuartzPixmap> mem([QuartzPixmap alloc]);      
-   if (QuartzPixmap * const pixmap = [mem.Get() initWithW : currW H : currH]) {
-      mem.Reset(pixmap);
-      pixmap.fID = fPimpl->RegisterDrawable(pixmap);//Can throw.
-      if (window.fBackBuffer) {//Now we can delete the old one, since the new was created.
-         if (fPimpl->fX11CommandBuffer.BufferSize())
-            fPimpl->fX11CommandBuffer.RemoveOperationsForDrawable(window.fBackBuffer.fID);
-         fPimpl->DeleteDrawable(window.fBackBuffer.fID);
-      }
-
-      window.fBackBuffer = pixmap;
+   Util::NSScopeGuard<QuartzPixmap> pixmap([[QuartzPixmap alloc] initWithW : currW H : currH]);
+   if (pixmap.Get()) {
+      window.fBackBuffer = pixmap.Get();
    } else {
-      Error("SetDoubleBufferON", "Can't create a pixmap");
+      Error("SetDoubleBufferON", "QuartzPixmap initialization failed");//More concrete message was issued by QuartzPixmap.
    }
 }
 

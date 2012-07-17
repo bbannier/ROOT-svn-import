@@ -79,13 +79,14 @@
 @property (nonatomic, assign) int           fBitGravity;
 @property (nonatomic, assign) int           fWinGravity;
 @property (nonatomic, assign) unsigned long fBackgroundPixel;
+@property (nonatomic, retain) QuartzImage  *fBackgroundPixmap;//Hmm, image, pixmap ...
 @property (nonatomic, readonly) int         fMapState;
 
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////
 
 //"Back buffer" is a bitmap, attached to a window by TCanvas.
-@property (nonatomic, assign) QuartzPixmap          *fBackBuffer;
+@property (nonatomic, retain) QuartzPixmap          *fBackBuffer;
 @property (nonatomic, assign) QuartzView            *fParentView;
 @property (nonatomic, readonly) NSView<X11Window>   *fContentView;
 @property (nonatomic, readonly) QuartzWindow        *fQuartzWindow;
@@ -187,13 +188,14 @@
 @property (nonatomic, assign) int           fBitGravity;
 @property (nonatomic, assign) int           fWinGravity;
 @property (nonatomic, assign) unsigned long fBackgroundPixel;
+@property (nonatomic, retain) QuartzImage  *fBackgroundPixmap;//Hmm, image, pixmap ...
 @property (nonatomic, readonly) int         fMapState;
 
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////
 
 
-@property (nonatomic, assign) QuartzPixmap        *fBackBuffer;
+@property (nonatomic, retain) QuartzPixmap        *fBackBuffer;
 @property (nonatomic, assign) QuartzView          *fParentView;
 @property (nonatomic, assign) unsigned             fLevel;
 @property (nonatomic, readonly) NSView<X11Window> *fContentView;

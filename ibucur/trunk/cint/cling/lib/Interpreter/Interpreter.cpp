@@ -38,6 +38,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 
 #include "llvm/Linker.h"
+#include "llvm/LLVMContext.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -202,6 +203,7 @@ namespace cling {
                            const char* llvmdir /*= 0*/) :
     m_UniqueCounter(0), m_PrintAST(false), m_ValuePrinterEnabled(false) {
 
+    m_LLVMContext.reset(new llvm::LLVMContext);
     std::vector<unsigned> LeftoverArgsIdx;
     m_Opts = InvocationOptions::CreateFromArgs(argc, argv, LeftoverArgsIdx);
     std::vector<const char*> LeftoverArgs;
@@ -406,6 +408,14 @@ namespace cling {
     return m_IncrParser->getParser();
   }
 
+  llvm::Module* Interpreter::getModule() const {
+    return m_IncrParser->GetCodeGenerator()->GetModule();
+  }
+
+  void Interpreter::resetUnresolved() const {
+    m_ExecutionContext->ResetUnresolved();
+  }
+
   ///\brief Maybe transform the input line to implement cint command line
   /// semantics (declarations are global) and compile to produce a module.
   ///
@@ -428,7 +438,7 @@ namespace cling {
     }
 
     if (D)
-      *D = m_IncrParser->getLastTransaction().getFirstDecl();
+      *D = m_IncrParser->getLastTransaction()->getFirstDecl().getSingleDecl();
 
     return Interpreter::kSuccess;
   }
@@ -520,7 +530,7 @@ namespace cling {
 
     if (m_IncrParser->Compile(input, CO) != IncrementalParser::kFailed) {
       if (D)
-        *D = m_IncrParser->getLastTransaction().getFirstDecl();
+        *D = m_IncrParser->getLastTransaction()->getFirstDecl().getSingleDecl();
       return Interpreter::kSuccess;
     }
 
@@ -619,8 +629,7 @@ namespace cling {
 
       TheSema.CurContext = CurContext;
 
-      // FIXME: Finish the transaction in better way
-      m_IncrParser->Compile("", CO);
+      m_IncrParser->commitCurrentTransaction();
     }
     else
       m_IncrParser->Compile(Wrapper, CO);
@@ -809,14 +818,25 @@ namespace cling {
     PP.EnterSourceFile(FID, 0, SourceLocation());
     PP.Lex(const_cast<Token&>(P->getCurToken()));
     //
+    //  Prevent failing on an assert in TryAnnotateCXXScopeToken.
+    //
+    if (!P->getCurToken().is(clang::tok::identifier) && !P->getCurToken().
+          is(clang::tok::coloncolon) && !(P->getCurToken().is(
+          clang::tok::annot_template_id) && P->NextToken().is(
+          clang::tok::coloncolon)) && !P->getCurToken().is(
+          clang::tok::kw_decltype)) {
+      // error path
+      goto lookupClassDone;
+    }
+    //
     //  Try parsing the name as a nested-name-specifier.
     //
-    CXXScopeSpec SS;
     if (P->TryAnnotateCXXScopeToken(false)) {
       // error path
       goto lookupClassDone;
     }
     if (P->getCurToken().getKind() == tok::annot_cxxscope) {
+      CXXScopeSpec SS;
       CI->getSema().RestoreNestedNameSpecifierAnnotation(
         P->getCurToken().getAnnotationValue(),
         P->getCurToken().getAnnotationRange(),
@@ -1518,17 +1538,17 @@ namespace cling {
       //
       //  Dump what was found.
       //
-      if (Result.getResultKind() == LookupResult::Found) {
-        NamedDecl* ND = Result.getFoundDecl();
-        std::string buf;
-        llvm::raw_string_ostream tmp(buf);
-        ND->print(tmp, 0);
-        fprintf(stderr, "Found: %s\n", tmp.str().c_str());
-      } else if (Result.getResultKind() == LookupResult::FoundOverloaded) {
-        fprintf(stderr, "Found overload set!\n");
-        Result.print(llvm::outs());
-        fprintf(stderr, "\n");
-      }
+      //if (Result.getResultKind() == LookupResult::Found) {
+      //  NamedDecl* ND = Result.getFoundDecl();
+      //  std::string buf;
+      //  llvm::raw_string_ostream tmp(buf);
+      //  ND->print(tmp, 0);
+      //  fprintf(stderr, "Found: %s\n", tmp.str().c_str());
+      //} else if (Result.getResultKind() == LookupResult::FoundOverloaded) {
+      //  fprintf(stderr, "Found overload set!\n");
+      //  Result.print(llvm::outs());
+      //  fprintf(stderr, "\n");
+      //}
       {
         //
         //  Construct the overload candidate set.
@@ -1544,16 +1564,16 @@ namespace cling {
               // Class method, not static, not a constructor, so has
               // an implicit object argument.
               CXXMethodDecl* MD = cast<CXXMethodDecl>(FD);
-              {
-                std::string buf;
-                llvm::raw_string_ostream tmp(buf);
-                MD->print(tmp, 0);
-                fprintf(stderr, "Considering method: %s\n",
-                  tmp.str().c_str());
-              }
+              //{
+              //  std::string buf;
+              //  llvm::raw_string_ostream tmp(buf);
+              //  MD->print(tmp, 0);
+              //  fprintf(stderr, "Considering method: %s\n",
+              //    tmp.str().c_str());
+              //}
               if (FuncTemplateArgs && (FuncTemplateArgs->size() != 0)) {
                 // Explicit template args were given, cannot use a plain func.
-                fprintf(stderr, "rejected: template args given\n");
+                //fprintf(stderr, "rejected: template args given\n");
                 continue;
               }
               CI->getSema().AddMethodCandidate(MD, I.getPair(),
@@ -1564,22 +1584,22 @@ namespace cling {
                 Candidates);
             }
             else {
-              {
-                std::string buf;
-                llvm::raw_string_ostream tmp(buf);
-                FD->print(tmp, 0);
-                fprintf(stderr, "Considering func: %s\n", tmp.str().c_str());
-              }
+              //{
+              //  std::string buf;
+              //  llvm::raw_string_ostream tmp(buf);
+              //  FD->print(tmp, 0);
+              //  fprintf(stderr, "Considering func: %s\n", tmp.str().c_str());
+              //}
               const FunctionProtoType* Proto = dyn_cast<FunctionProtoType>(
                 FD->getType()->getAs<clang::FunctionType>());
               if (!Proto) {
                 // Function has no prototype, cannot do overloading.
-                fprintf(stderr, "rejected: no prototype\n");
+                //fprintf(stderr, "rejected: no prototype\n");
                 continue;
               }
               if (FuncTemplateArgs && (FuncTemplateArgs->size() != 0)) {
                 // Explicit template args were given, cannot use a plain func.
-                fprintf(stderr, "rejected: template args given\n");
+                //fprintf(stderr, "rejected: template args given\n");
                 continue;
               }
               CI->getSema().AddOverloadCandidate(FD, I.getPair(),
@@ -1594,13 +1614,13 @@ namespace cling {
                 !isa<CXXConstructorDecl>(FTD->getTemplatedDecl())) {
               // Class method template, not static, not a constructor, so has
               // an implicit object argument.
-              {
-                std::string buf;
-                llvm::raw_string_ostream tmp(buf);
-                FTD->print(tmp, 0);
-                fprintf(stderr, "Considering method template: %s\n",
-                  tmp.str().c_str());
-              }
+              //{
+              //  std::string buf;
+              //  llvm::raw_string_ostream tmp(buf);
+              //  FTD->print(tmp, 0);
+              //  fprintf(stderr, "Considering method template: %s\n",
+              //    tmp.str().c_str());
+              //}
               CI->getSema().AddMethodTemplateCandidate(FTD, I.getPair(),
                 cast<CXXRecordDecl>(FTD->getDeclContext()),
                 const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
@@ -1610,13 +1630,13 @@ namespace cling {
                 Candidates);
             }
             else {
-              {
-                std::string buf;
-                llvm::raw_string_ostream tmp(buf);
-                FTD->print(tmp, 0);
-                fprintf(stderr, "Considering func template: %s\n",
-                  tmp.str().c_str());
-              }
+              //{
+              //  std::string buf;
+              //  llvm::raw_string_ostream tmp(buf);
+              //  FTD->print(tmp, 0);
+              //  fprintf(stderr, "Considering func template: %s\n",
+              //    tmp.str().c_str());
+              //}
               CI->getSema().AddTemplateOverloadCandidate(FTD, I.getPair(),
                 const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
                 llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
@@ -1624,14 +1644,14 @@ namespace cling {
             }
           }
           else {
-            {
-              std::string buf;
-              llvm::raw_string_ostream tmp(buf);
-              FD->print(tmp, 0);
-              fprintf(stderr, "Considering non-func: %s\n",
-                tmp.str().c_str());
-              fprintf(stderr, "rejected: not a function\n");
-            }
+            //{
+            //  std::string buf;
+            //  llvm::raw_string_ostream tmp(buf);
+            //  FD->print(tmp, 0);
+            //  fprintf(stderr, "Considering non-func: %s\n",
+            //    tmp.str().c_str());
+            //  fprintf(stderr, "rejected: not a function\n");
+            //}
           }
         }
         //
@@ -1649,14 +1669,14 @@ namespace cling {
       //
       //  Dump the overloading result.
       //
-      if (TheDecl) {
-        std::string buf;
-        llvm::raw_string_ostream tmp(buf);
-        TheDecl->print(tmp, 0);
-        fprintf(stderr, "Match: %s\n", tmp.str().c_str());
-        TheDecl->dump();
-        fprintf(stderr, "\n");
-      }
+      //if (TheDecl) {
+      //  std::string buf;
+      //  llvm::raw_string_ostream tmp(buf);
+      //  TheDecl->print(tmp, 0);
+      //  fprintf(stderr, "Match: %s\n", tmp.str().c_str());
+      //  TheDecl->dump();
+      //  fprintf(stderr, "\n");
+      //}
     }
   lookupFuncArgsDone:
     //
@@ -1724,6 +1744,8 @@ namespace cling {
   }
 
   void Interpreter::enableDynamicLookup(bool value /*=true*/) {
+    // Load the dynamic lookup specifics.
+    declare("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
     m_IncrParser->enableDynamicLookup(value);
   }
 
@@ -1744,10 +1766,11 @@ namespace cling {
   }
 
   int Interpreter::CXAAtExit(void (*func) (void*), void* arg, void* dso) {
-     // Register a CXAAtExit function
-     Decl* LastTLD = m_IncrParser->getLastTransaction().getLastDeclSlow();
-     m_AtExitFuncs.push_back(CXAAtExitElement(func, arg, dso, LastTLD));
-     return 0; // happiness
+    // Register a CXAAtExit function
+    Decl* LastTLD 
+      = m_IncrParser->getLastTransaction()->getLastDecl().getSingleDecl();
+    m_AtExitFuncs.push_back(CXAAtExitElement(func, arg, dso, LastTLD));
+    return 0; // happiness
   }
 
   bool Interpreter::addSymbol(const char* symbolName,  void* symbolAddress){

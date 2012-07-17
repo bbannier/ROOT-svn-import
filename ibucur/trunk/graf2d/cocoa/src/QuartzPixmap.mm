@@ -12,9 +12,9 @@
 //#define NDEBUG
 
 #import <algorithm>
-#import <stdexcept>
 #import <cassert>
 #import <cstddef>
+#import <new>
 
 #import "QuartzWindow.h"
 #import "QuartzPixmap.h"
@@ -67,16 +67,15 @@ namespace Quartz = ROOT::Quartz;
       fWidth = 0;
       fHeight = 0;
       fData = 0;
+      fContext = 0;
       
-      if ([self resizeW : width H : height])
-         return self;
+      if (![self resizeW : width H : height]) {
+         [self release];
+         return nil;
+      }
    }
 
-   //Two step initialization:
-   //1. p = [QuartzPixmap alloc];
-   //2. p1 = [p initWithW : w H : h];
-   // if (!p1) [p release];
-   return nil;
+   return self;
 }
 
 //______________________________________________________________________________
@@ -96,10 +95,11 @@ namespace Quartz = ROOT::Quartz;
    assert(width > 0 && "resizeW:H:, Pixmap width must be positive");
    assert(height > 0 && "resizeW:H:, Pixmap height must be positive");
 
+   //Part, which does not change anything in a state:
    unsigned char *memory = 0;
    
    try {
-      memory = new unsigned char[width * height * 4];//[0]
+      memory = new unsigned char[width * height * 4]();//[0]
    } catch (const std::bad_alloc &) {
       NSLog(@"QuartzPixmap: -resizeW:H:, memory allocation failed");
       return NO;
@@ -119,6 +119,7 @@ namespace Quartz = ROOT::Quartz;
       return NO;
    }
 
+   //All initializations are OK, now change the state:
    if (fContext) {
       //New context was created OK, we can release now the old one.
       CGContextRelease(fContext);//[2]
@@ -202,7 +203,8 @@ namespace Quartz = ROOT::Quartz;
 //______________________________________________________________________________
 - (CGContextRef) fContext
 {
-   assert(fContext != 0 && "fContext, called for bad pixmap");   
+   assert(fContext != 0 && "fContext, called for bad pixmap");
+
    return fContext;
 }
 
@@ -349,24 +351,35 @@ namespace Quartz = ROOT::Quartz;
 @synthesize fID;
 
 //______________________________________________________________________________
-- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *)data
+- (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *) data
 {
-   //Two step initialization. If the second step (initWithW:....) fails, user must call release 
-   //(after he checked the result of init call).
-
    assert(width != 0 && "initWithW:H:data:, width parameter is 0");
    assert(height != 0 && "initWithW:H:data:, height parameter is 0");
    assert(data != 0 && "initWithW:H:data:, data parameter is null");
 
    if (self = [super init]) {
+      Util::NSScopeGuard<QuartzImage> selfGuard(self);
+
+      //This w * h * 4 is ONLY for TGCocoa::CreatePixmapFromData.
+      //If needed something else, I'll make this code more generic.
+      
+      unsigned char *dataCopy = 0;
+      try {
+         dataCopy = new unsigned char[width * height * 4]();
+      } catch (const std::bad_alloc &) {
+         NSLog(@"QuartzImage: -initWithW:H:data:, memory allocation failed");
+         return nil;
+      }
+      
+      std::copy(data, data + width * height * 4, dataCopy);
+      Util::ScopedArray<unsigned char> arrayGuard(dataCopy);
+   
       fIsStippleMask = NO;
       const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
                                                                ROOT_QuartzImage_ReleaseBytePointer, 
                                                                ROOT_QuartzImage_GetBytesAtPosition, 0};
 
-      //This w * h * 4 is ONLY for TGCocoa::CreatePixmapFromData.
-      //If needed something else, I'll make this code more generic.
-      const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(data, width * height * 4, &providerCallbacks));
+      const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(dataCopy, width * height * 4, &providerCallbacks));
       if (!provider.Get()) {
          NSLog(@"QuartzImage: -initWithW:H:data: CGDataProviderCreateDirect failed");
          return nil;
@@ -388,31 +401,45 @@ namespace Quartz = ROOT::Quartz;
          return nil;
       }
 
+      selfGuard.Release();
+      arrayGuard.Release();
+
       fWidth = width;
       fHeight = height;
-      fImageData = data;
-
-      return self;
+      fImageData = dataCopy;
    }
    
-   return nil;
+   return self;
 }
 
 //______________________________________________________________________________
-- (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *)mask
+- (id) initMaskWithW : (unsigned) width H : (unsigned) height bitmapMask : (unsigned char *) mask
 {
-   assert(width > 0 && "initMaskWithW:H:bitmapMask:, width parameter is zero");
-   assert(height > 0 && "initMaskWithW:H:bitmapMask:, height parameter is zero");
+   assert(width != 0 && "initMaskWithW:H:bitmapMask:, width parameter is zero");
+   assert(height != 0 && "initMaskWithW:H:bitmapMask:, height parameter is zero");
    assert(mask != 0 && "initMaskWithW:H:bitmapMask:, mask parameter is null");
    
    if (self = [super init]) {
+      Util::NSScopeGuard<QuartzImage> selfGuard(self);
+      
+      unsigned char *dataCopy = 0;
+      try {
+         dataCopy = new unsigned char[width * height]();
+      } catch (const std::bad_alloc &) {
+         NSLog(@"QuartzImage: -initMaskWithW:H:bitmapMask:, memory allocation failed");
+         return nil;
+      }
+
+      std::copy(mask, mask + width * height, dataCopy);      
+      Util::ScopedArray<unsigned char> arrayGuard(dataCopy);
+   
       fIsStippleMask = YES;
       const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
                                                                ROOT_QuartzImage_ReleaseBytePointer, 
                                                                ROOT_QuartzImage_GetBytesAtPosition, 0};
                                                                
                                                                
-      const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(mask, width * height, &providerCallbacks));
+      const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(dataCopy, width * height, &providerCallbacks));
       if (!provider.Get()) {
          NSLog(@"QuartzImage: -initMaskWithW:H:bitmapMask: CGDataProviderCreateDirect failed");
          return nil;
@@ -423,15 +450,16 @@ namespace Quartz = ROOT::Quartz;
          NSLog(@"QuartzImage: -initMaskWithW:H:bitmapMask:, CGImageMaskCreate failed");
          return nil;
       }
+      
+      selfGuard.Release();
+      arrayGuard.Release();
 
       fWidth = width;
       fHeight = height;
-      fImageData = mask;
-      
-      return self;
+      fImageData = dataCopy;
    }
    
-   return nil;
+   return self;
 }
 
 //______________________________________________________________________________
@@ -439,18 +467,18 @@ namespace Quartz = ROOT::Quartz;
 {
    //Two-step initialization.
 
-   assert(width > 0 && "initMaskWithW:H:, width parameter is zero");
-   assert(height > 0 && "initMaskWithW:H:, height parameter is zero");
+   assert(width != 0 && "initMaskWithW:H:, width parameter is zero");
+   assert(height != 0 && "initMaskWithW:H:, height parameter is zero");
    
    if (self = [super init]) {
+      Util::NSScopeGuard<QuartzImage> selfGuard(self);
+
       try {
-         fImageData = new unsigned char[width * height];
-      } catch (const std::bad_exception &) {
+         fImageData = new unsigned char[width * height]();
+      } catch (const std::bad_alloc &) {
          NSLog(@"QuartzImage: -initMaskWithW:H:, memory allocation failed");
          return nil;
       }
-      
-      Util::ScopedArray<unsigned char> arrayGuard(fImageData);
 
       fIsStippleMask = YES;
       const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
@@ -460,26 +488,44 @@ namespace Quartz = ROOT::Quartz;
       const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(fImageData, width * height, &providerCallbacks));
       if (!provider.Get()) {
          NSLog(@"QuartzImage: -initMaskWithW:H: CGDataProviderCreateDirect failed");
-         fImageData = 0;
          return nil;
       }
 
       fImage = CGImageMaskCreate(width, height, 8, 8, width, provider.Get(), 0, false);//null -> decode, false -> shouldInterpolate.
       if (!fImage) {
          NSLog(@"QuartzImage: -initMaskWithW:H:, CGImageMaskCreate failed");
-         fImageData = 0;
          return nil;
       }
       
-      arrayGuard.Release();
+      selfGuard.Release();
       
       fWidth = width;
       fHeight = height;
-      
-      return self;
    }
    
-   return nil;
+   return self;
+}
+
+//______________________________________________________________________________
+- (id) initFromPixmap : (QuartzPixmap *) pixmap
+{
+   //Two-step initialization.
+   assert(pixmap != nil && "initFromPixmap:, pixmap parameter is nil");
+   assert(pixmap.fWidth != 0 && "initFromPixmap:, pixmap width is zero");
+   assert(pixmap.fHeight != 0 && "initFromPixmap:, pixmap height is zero");
+
+   return [self initWithW : pixmap.fWidth H : pixmap.fHeight data : pixmap.fData];
+}
+
+//______________________________________________________________________________
+- (id) initFromImage : (QuartzImage *) image
+{
+   assert(image != nil && "initFromImage:, image parameter is nil");
+   assert(image.fWidth != 0 && "initFromImage:, image width is 0");
+   assert(image.fHeight != 0 && "initFromImage:, image height is 0");
+   assert(image.fIsStippleMask == NO && "initFromImage:, image is a stipple mask, not implemented");
+   
+   return [self initWithW : image.fWidth H : image.fHeight data : image->fImageData];
 }
 
 //______________________________________________________________________________

@@ -665,7 +665,6 @@ void print_mask_info(ULong_t mask)
 }
 
 @synthesize fMainWindow;
-@synthesize fBackBuffer;
 
 //QuartzWindow's life cycle.
 //______________________________________________________________________________
@@ -1001,6 +1000,22 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
+- (void) setFBackgroundPixmap : (QuartzImage *) pixmap
+{
+   assert(fContentView != nil && "setFBackgroundPixmap, content view is nil");
+
+   fContentView.fBackgroundPixmap = pixmap;
+}
+
+//______________________________________________________________________________
+- (QuartzImage *) fBackgroundPixmap
+{
+   assert(fContentView != nil && "fBackgroundPixmap, content view is nil");
+   
+   return fContentView.fBackgroundPixmap;
+}
+
+//______________________________________________________________________________
 - (int) fMapState
 {
    //Top-level window can be only kIsViewable or kIsUnmapped (not unviewable).
@@ -1010,6 +1025,22 @@ void print_mask_info(ULong_t mask)
       return kIsUnmapped;
       
    return kIsViewable;
+}
+
+//______________________________________________________________________________
+- (QuartzPixmap *) fBackBuffer
+{
+   assert(fContentView != nil && "fBackBuffer, content view is nil");
+   
+   return fContentView.fBackBuffer;
+}
+
+//______________________________________________________________________________
+- (void) setFBackBuffer : (QuartzPixmap *) backBuffer
+{
+   assert(fContentView != nil && "setFBackBuffer, content view is nil");
+   
+   fContentView.fBackBuffer = backBuffer;
 }
 
 //______________________________________________________________________________
@@ -1394,11 +1425,14 @@ void print_mask_info(ULong_t mask)
 
 
 @implementation QuartzView {
+   QuartzPixmap *fBackBuffer;
    NSMutableArray *fPassiveKeyGrabs;
    BOOL            fIsOverlapped;
    QuartzImage    *fClipMask;
    
    NSMutableDictionary   *fX11Properties;
+   QuartzImage    *fBackgroundPixmap;
+   
 }
 
 @synthesize fClipMaskIsValid;
@@ -1415,7 +1449,6 @@ void print_mask_info(ULong_t mask)
 @synthesize fBackgroundPixel;
 //SetWindowAttributes_t/WindowAttributes_t
 /////////////////////
-@synthesize fBackBuffer;
 @synthesize fParentView;
 @synthesize fLevel;
 @synthesize fGrabButton;
@@ -1431,6 +1464,7 @@ void print_mask_info(ULong_t mask)
 {
    if (self = [super initWithFrame : frame]) {
       //Make this explicit (though memory is zero initialized).
+      fBackBuffer = nil;
       fClipMaskIsValid = NO;
       fClipMask = nil;
 
@@ -1467,9 +1501,11 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) dealloc
 {
+   [fBackBuffer release];
    [fPassiveKeyGrabs release];
    [fClipMask release];
    [fX11Properties release];
+   [fBackgroundPixmap release];
    [super dealloc];
 }
 
@@ -1489,19 +1525,10 @@ void print_mask_info(ULong_t mask)
       }
    }
    
-   if (!fClipMask) {
-      fClipMask = [QuartzImage alloc];
-      
-      if ([fClipMask initMaskWithW : (unsigned)size.width H : (unsigned)size.height]) {
-         return YES;
-      } else {
-         [fClipMask release];
-         fClipMask = nil;
-         return NO;
-      }
-   }
+   if (!fClipMask)
+      fClipMask = [[QuartzImage alloc] initMaskWithW : (unsigned)size.width H : (unsigned)size.height];
 
-   return YES;
+   return fClipMask != nil;//BOOL is char, no pointer conversion.
 }
 
 //______________________________________________________________________________
@@ -1854,6 +1881,28 @@ void print_mask_info(ULong_t mask)
    return data;
 }
 
+
+//______________________________________________________________________________
+- (void) setFBackgroundPixmap : (QuartzImage *) pixmap
+{
+   if (fBackgroundPixmap != pixmap) {
+      [fBackgroundPixmap release];
+      if (pixmap)
+         fBackgroundPixmap = [pixmap retain];
+      else
+         fBackgroundPixmap = nil;
+   }
+}
+
+//______________________________________________________________________________
+- (QuartzImage *) fBackgroundPixmap
+{
+   //I do not autorelease, screw this idiom!
+
+   return fBackgroundPixmap;
+}
+
+
 //______________________________________________________________________________
 - (int) fMapState
 {
@@ -1866,6 +1915,25 @@ void print_mask_info(ULong_t mask)
    }
 
    return kIsViewable;
+}
+
+//______________________________________________________________________________
+- (QuartzPixmap *) fBackBuffer
+{
+   return fBackBuffer;//No autorelease, I know the object's lifetime myself.
+}
+
+//______________________________________________________________________________
+- (void) setFBackBuffer : (QuartzPixmap *) backBuffer
+{
+   if (fBackBuffer != backBuffer) {
+      [fBackBuffer release];
+      
+      if (backBuffer)
+         fBackBuffer = [backBuffer retain];
+      else
+         fBackBuffer = nil;
+   }
 }
 
 //______________________________________________________________________________

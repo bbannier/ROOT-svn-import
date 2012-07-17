@@ -73,7 +73,7 @@ namespace cling {
       CodeGenerator* CG = CreateLLVMCodeGen(CI->getDiagnostics(),
                                             "cling input",
                                             CI->getCodeGenOpts(),
-                                  /*Owned by codegen*/ * new llvm::LLVMContext()
+                                            *m_Interpreter->getLLVMContext()
                                             );
       assert(CG && "No CodeGen?!");
       m_Consumer->Add(ChainedConsumer::kCodeGenerator, CG);
@@ -87,6 +87,45 @@ namespace cling {
     // but before it parses anything. Initializes the consumers too.
     CI->getSema().Initialize();
   }
+
+  void IncrementalParser::beginTransaction() {
+    Transaction* NewCurT = new Transaction();
+    Transaction* OldCurT = m_Consumer->getTransaction();
+    m_Consumer->setTransaction(NewCurT);
+    // If we are in the middle of transaction and we see another begin 
+    // transaction - it must be nested transaction.
+    if (OldCurT && !OldCurT->isCompleted()) {
+      OldCurT->addNestedTransaction(NewCurT);
+      return;
+    }
+
+    m_Transactions.push_back(NewCurT);
+  }
+
+  void IncrementalParser::endTransaction() const {
+    Transaction* CurT = m_Consumer->getTransaction();
+    CurT->setCompleted();
+    if (CurT->isNestedTransaction()) {
+      assert(!CurT->getParent()->isCompleted() 
+             && "Parent transaction completed!?");
+      CurT = m_Consumer->getTransaction()->getParent();
+    }
+  }
+
+  void IncrementalParser::commitTransaction(const Transaction* T) const {
+    assert(T->isCompleted() && "Transaction not ended!?");
+    const Transaction* OldT = m_Consumer->getTransaction();
+    m_Consumer->setTransaction(T);
+    commitCurrentTransaction();
+    m_Consumer->setTransaction(OldT);
+  }
+
+  void IncrementalParser::commitCurrentTransaction() const {
+    assert(m_Consumer->getTransaction()->isCompleted() 
+           && "Transaction not ended!?");
+    m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
+  }
+  
 
   // Each input line is contained in separate memory buffer. The SourceManager
   // assigns sort-of invalid FileID for each buffer, i.e there is no FileEntry
@@ -154,32 +193,34 @@ namespace cling {
   void IncrementalParser::Parse(llvm::StringRef input,
                                 llvm::SmallVector<DeclGroupRef, 4>& DGRs) {
 
+    beginTransaction();
     Parse(input);
-    for (llvm::SmallVector<ChainedConsumer::DGRInfo, 64>::iterator
-           I = m_Consumer->DeclsQueue.begin(), E = m_Consumer->DeclsQueue.end();
-         I != E; ++I) {
-      DGRs.push_back((*I).D);
-    }
+    endTransaction();
+    const Transaction* T = m_Consumer->getTransaction();
+    DGRs.append(T->decls_begin(), T->decls_end());
   }
 
   IncrementalParser::EParseResult
   IncrementalParser::Compile(llvm::StringRef input) {
     // Just in case when Parse is called, we want to complete the transaction
     // coming from parse and then start new one.
-    m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
+    //m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
     // Reset the module builder to clean up global initializers, c'tors, d'tors:
     if (GetCodeGenerator()) {
       GetCodeGenerator()->Initialize(getCI()->getASTContext());
     }
 
+    beginTransaction();
     EParseResult Result = Parse(input);
+    endTransaction();
 
     // Check for errors coming from our custom consumers.
     DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
     DClient.BeginSourceFile(getCI()->getLangOpts(),
                             &getCI()->getPreprocessor());
-    m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
+    commitCurrentTransaction();
+    //m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
     DClient.EndSourceFile();
     m_CI->getDiagnostics().Reset();
@@ -206,8 +247,6 @@ namespace cling {
     PP.enableIncrementalProcessing();
 
     DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
-    // Reset the transaction information
-    getLastTransaction().setBeforeFirstDecl(getCI()->getSema().CurContext);
 
     std::ostringstream source_name;
     source_name << "input_line_" << (m_MemoryBuffer.size() + 1);
