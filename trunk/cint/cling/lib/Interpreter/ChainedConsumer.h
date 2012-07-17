@@ -12,10 +12,10 @@
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include "clang/AST/DeclGroup.h"
 #include "clang/Sema/SemaConsumer.h"
 
 namespace clang {
+  class DeclGroupRef;
   class ASTContext;
 }
 
@@ -24,6 +24,7 @@ namespace cling {
   class ASTNodeEraser;
   class ChainedMutationListener;
   class ChainedDeserializationListener;
+  class Transaction;
   class VerifyingSemaConsumer;
 
   class ChainedConsumer: public clang::SemaConsumer {
@@ -40,7 +41,9 @@ namespace cling {
     ChainedConsumer();
     virtual ~ChainedConsumer();
 
-    // ASTConsumer
+    /// \{
+    /// \name ASTConsumer overrides
+
     virtual void Initialize(clang::ASTContext& Context);
     virtual bool HandleTopLevelDecl(clang::DeclGroupRef D);
     virtual void HandleInterestingDecl(clang::DeclGroupRef D);
@@ -54,12 +57,15 @@ namespace cling {
     virtual clang::ASTDeserializationListener* GetASTDeserializationListener();
     virtual void PrintStats();
 
-    // SemaConsumer
+    /// \}
+
+    /// \{
+    /// \name SemaConsumer overrides
+
     virtual void InitializeSema(clang::Sema& S);
     virtual void ForgetSema();
 
-    // Transaction Support
-    bool IsInTransaction() { return m_InTransaction; }
+    /// \}
 
     void Add(EConsumerIndex I, clang::ASTConsumer* C);
     void RecoverFromError();
@@ -76,9 +82,7 @@ namespace cling {
     }
 
     bool IsConsumerEnabled(EConsumerIndex I);
-    bool IsQueueing() { return m_Queueing; }
 
-    void DumpQueue();
     void Update(VerifyingSemaConsumer* ESSC);
     void pushCompilationOpts(CompilationOptions CO) {
       COStack.push_back(CO);
@@ -97,32 +101,29 @@ namespace cling {
       return COStack.back();
     }
 
+    /// \{
+    /// \name Transaction Support
+
+    Transaction* getTransaction() { return m_CurTransaction; }
+    const Transaction* getTransaction() const { return m_CurTransaction; }
+    void setTransaction(Transaction* curT) { m_CurTransaction = curT; }
+    void setTransaction(const Transaction* curT) { 
+      m_CurTransaction = const_cast<Transaction*>(curT); 
+    }
+
+    /// \}
+
   private:
     clang::ASTConsumer* Consumers[kConsumersCount]; // owns them
     llvm::SmallVector<CompilationOptions, 2> COStack;
     llvm::OwningPtr<ASTNodeEraser> NodeEraser;
     llvm::OwningPtr<ChainedMutationListener> MutationListener;
     llvm::OwningPtr<ChainedDeserializationListener> DeserializationListener;
-    bool m_InTransaction;
     clang::ASTContext* m_Context;
     clang::Sema* m_Sema;
-    enum HandlerIndex {
-      kTopLevelDecl,
-      kInterestingDecl,
-      kTagDeclDefinition,
-      kVTable,
-      kCompleteTentativeDefinition
-    };
-    struct DGRInfo {
-      clang::DeclGroupRef D;
-      HandlerIndex I;
-      DGRInfo(clang::DeclGroupRef d, HandlerIndex i) : D(d), I(i){}
-    };
-    llvm::SmallVector<DGRInfo, 64> DeclsQueue;
-    bool m_Queueing;
 
-    friend class IncrementalParser;
+    Transaction* m_CurTransaction;
   };
 } // namespace cling
 
-#endif
+#endif // CLING_CHAINED_CONSUMER_H

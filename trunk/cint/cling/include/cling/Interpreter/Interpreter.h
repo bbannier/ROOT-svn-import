@@ -19,6 +19,8 @@ namespace llvm {
   class raw_ostream;
   struct GenericValue;
   class ExecutionEngine;
+  class LLVMContext;
+  class Module;
 }
 
 namespace clang {
@@ -115,6 +117,10 @@ namespace cling {
     ///\brief Interpreter invocation options.
     ///
     InvocationOptions m_Opts;
+
+    ///\brief The llvm library state, a per-thread object.
+    ///
+    llvm::OwningPtr<llvm::LLVMContext> m_LLVMContext;
 
     ///\brief Cling's execution engine - a well wrapped llvm execution engine.
     ///
@@ -290,6 +296,12 @@ namespace cling {
     const InvocationOptions& getOptions() const { return m_Opts; }
     InvocationOptions& getOptions() { return m_Opts; }
 
+    const llvm::LLVMContext* getLLVMContext() const {
+      return m_LLVMContext.get();
+    }
+
+    llvm::LLVMContext* getLLVMContext() { return m_LLVMContext.get(); }
+
     ///\brief Shows the current version of the project.
     ///
     ///\returns The current svn revision (svn Id).
@@ -416,6 +428,9 @@ namespace cling {
     clang::CompilerInstance* getCI() const;
     llvm::ExecutionEngine* getExecutionEngine() const;
     clang::Parser* getParser() const;
+
+    llvm::Module* getModule() const;
+    void resetUnresolved() const;
 
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
 
