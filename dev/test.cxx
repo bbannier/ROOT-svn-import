@@ -2,6 +2,8 @@
 #include "RooWorkspace.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
+#include "RooSimultaneous.h"
+#include "RooAbsCategoryLValue.h"
 
 // RooStats headers
 #include "RooStats/ModelConfig.h"
@@ -48,7 +50,23 @@ void test() {
    RooWorkspace *w = new RooWorkspace("w", kTRUE);
    buildSimultaneousModel(w);   
    
-   RemoveNuisancePdf(*w->pdf("ext_pdf1"), RooArgSet(*w->var("x1"), *w->var("bkg1")), "blablabla")->Print("");
+   RooSimultaneous *sim = (RooSimultaneous *) w->pdf("sim_pdf");
+
+   RooSimultaneous *newPdf = 
+      (RooSimultaneous *) RooStats::RemoveNuisancePdf(*w->pdf("sim_pdf"), RooArgSet(*w->var("x1"), *w->var("x2")), "blablabla");
+
+   RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone();
+   cat->setBin(0);
+   RooAbsPdf *pdf1 = newPdf->getPdf(cat->getLabel());
+   pdf1->Print();
+   pdf1 = sim->getPdf(cat->getLabel());
+   pdf1->Print();
+
+   cat->setBin(1);
+   RooAbsPdf *pdf2 = newPdf->getPdf(cat->getLabel());
+   pdf2->Print();
+   pdf2 = sim->getPdf(cat->getLabel());
+   pdf2->Print();
 
 }
 
