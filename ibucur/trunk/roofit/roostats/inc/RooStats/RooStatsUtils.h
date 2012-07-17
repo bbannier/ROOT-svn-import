@@ -106,9 +106,9 @@ namespace RooStats {
    // extract constraint terms from pdf
    RooAbsPdf * MakeNuisancePdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name);
    RooAbsPdf * MakeNuisancePdf(const RooStats::ModelConfig &model, const char *name);
-   // remove constraint terms from pdf
-   RooAbsPdf * RemoveNuisancePdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name);
-   RooAbsPdf * RemoveNuisancePdf(const RooStats::ModelConfig &model, const char *name);
+   // remove constraints from pdf and return the unconstrained pdf
+   RooAbsPdf * MakeUnconstrainedPdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name);
+   RooAbsPdf * MakeUnconstrainedPdf(const RooStats::ModelConfig &model, const char *name);
    
    // Create a TTree with the given name and description. All RooRealVars in the RooDataSet are represented as branches that contain values of type Double_t.
    TTree* GetAsTTree(TString name, TString desc, const RooDataSet& data);

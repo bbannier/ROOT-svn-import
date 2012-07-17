@@ -12,7 +12,6 @@
 using namespace RooFit;
 using namespace RooStats;
 
-
 //__________________________________________________________________________________
 void buildSimultaneousModel(RooWorkspace *w)
 {
@@ -20,19 +19,22 @@ void buildSimultaneousModel(RooWorkspace *w)
    w->factory("sig[2,0,10]");
    w->factory("Uniform::u1(x1[0,1])");
    w->factory("Uniform::u2(x2[0,1])");
+   w->factory("Uniform::u3(x3[0,1])");
    w->factory("Gaussian::constr1(gbkg1[50,0,100], bkg1[50,0,100], 3)");
    w->factory("Gaussian::constr2(gbkg2[50,0,100], bkg2[50,0,100], 2)");
+   w->factory("Gaussian::constr3(gbkg3[50,0,100], bkg3[50,0,100], 1)");
 
    w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
    w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
-   w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
+   w->factory("ExtendPdf::ext_pdf3(PROD::p3(u3,constr3), expr::n3('sig+bkg3', sig, bkg3))");
+   w->factory("SIMUL::sim_pdf(index[cat1,cat2,cat3],cat1=ext_pdf1,cat2=ext_pdf2,cat3=ext_pdf3)");
 
    // create combined signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables("x1,x2,index");
+   sbModel->SetObservables("x1,x2,x3,index");
    sbModel->SetParametersOfInterest("sig");
-   sbModel->SetGlobalObservables("gbkg1,gbkg2");
-   sbModel->SetNuisanceParameters("bkg1,bkg2");
+   sbModel->SetGlobalObservables("gbkg1,gbkg2,gbkg3");
+   sbModel->SetNuisanceParameters("bkg1,bkg2,bkg3");
    sbModel->SetPdf("sim_pdf");
    w->import(*sbModel);
 
@@ -44,6 +46,8 @@ void buildSimultaneousModel(RooWorkspace *w)
    // define data set
    RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data"));
    w->import(*data);
+
+//   w->writeToFile("sim_ws.root");
 }
 
 void test() {
@@ -53,21 +57,13 @@ void test() {
    RooSimultaneous *sim = (RooSimultaneous *) w->pdf("sim_pdf");
 
    RooSimultaneous *newPdf = 
-      (RooSimultaneous *) RooStats::RemoveNuisancePdf(*w->pdf("sim_pdf"), RooArgSet(*w->var("x1"), *w->var("x2")), "blablabla");
+      (RooSimultaneous *) RooStats::MakeUnconstrainedPdf(*w->pdf("sim_pdf"), RooArgSet(*w->var("x1"), *w->var("x2")), NULL);
+   
+   w->import(*newPdf);
 
-   RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone();
-   cat->setBin(0);
-   RooAbsPdf *pdf1 = newPdf->getPdf(cat->getLabel());
-   pdf1->Print();
-   pdf1 = sim->getPdf(cat->getLabel());
-   pdf1->Print();
+   w->Print("v");
 
-   cat->setBin(1);
-   RooAbsPdf *pdf2 = newPdf->getPdf(cat->getLabel());
-   pdf2->Print();
-   pdf2 = sim->getPdf(cat->getLabel());
-   pdf2->Print();
-
+   newPdf->Print("v");
 }
 
 
