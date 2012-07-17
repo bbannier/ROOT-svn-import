@@ -24,10 +24,10 @@ Double_t RooStats::SimpleLikelihoodRatioTestStat::Evaluate(RooAbsData& data, Roo
          << std::endl;
    }
    if (fFirstEval) {
-      fNullPdf = RooStats::RemoveNuisancePdf(*fNullPdf, *fNullPdf->getObservables(data),
-         TString::Format("reduced_null_%s", fNullPdf->GetName()));
-      fAltPdf  = RooStats::RemoveNuisancePdf(*fAltPdf , *fAltPdf->getObservables(data),
-         TString::Format("reduced_alt_%s", fAltPdf->GetName()));
+      fNullPdf = RooStats::MakeUnconstrainedPdf(*fNullPdf, *fNullPdf->getObservables(data),
+         TString::Format("%s_unconstrained", fNullPdf->GetName()));
+      fAltPdf  = RooStats::MakeUnconstrainedPdf(*fAltPdf , *fAltPdf->getObservables(data),
+         TString::Format("%s_unconstrained", fAltPdf->GetName()));
       fNullPdf->Print();
       fAltPdf->Print();
    }

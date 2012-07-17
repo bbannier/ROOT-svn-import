@@ -36,9 +36,6 @@ using namespace std;
 
 namespace RooStats { 
 
-
-   RooAbsPdf * RemoveNuisancePdf(RooAbsPdf &pdf, const RooArgSet &constraints); 
-
    void FactorizePdf(const RooArgSet &observables, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints) {
    // utility function to factorize constraint terms from a pdf 
    // (from G. Petrucciani)
@@ -143,33 +140,37 @@ namespace RooStats {
          for (int ic = 0, nc = cat->numBins((const char *)0); ic < nc; ++ic) {
             cat->setBin(ic);
             RooAbsPdf *newPdf = StripConstraints(*sim->getPdf(cat->getLabel()), observables);
-            if(newPdf != 0) pdfList.add(*newPdf);
+            if(newPdf == 0) { delete cat; return 0; } // all channels must have observables
+            pdfList.add(*newPdf);
          }
-         if(pdfList.getSize() == 0) { delete cat; return 0; } // only constraint terms
-         else return new RooSimultaneous(TString::Format("%s_unconstrained", sim->GetName()).Data(), 
+         return new RooSimultaneous(TString::Format("%s_unconstrained", sim->GetName()).Data(), 
             TString::Format("%s without constraints", sim->GetTitle()).Data(), pdfList, *cat); 
 
       } else if (pdf.dependsOn(observables)) {  
-         return (RooAbsPdf *) pdf.clone(TString::Format("%s_copy", pdf.GetName()).Data());
+         return (RooAbsPdf *) pdf.clone(TString::Format("%s_unconstrained", pdf.GetName()).Data());
       }
 
       return 0; // a constraint term
    }
 
-   RooAbsPdf * RemoveNuisancePdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name) { 
+   RooAbsPdf * MakeUnconstrainedPdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name = 0) { 
       // make a clone pdf without all constraint terms in a common pdf
-      RooAbsPdf * newPdf = StripConstraints(pdf, observables);
-      if(name != 0) newPdf->SetName(name);
-      return newPdf;   
-   }
-
-   RooAbsPdf * RemoveNuisancePdf(const RooStats::ModelConfig &model, const char *name) { 
-      // make a clone pdf without all constraint terms in a common pdf 
-      if(!model.GetPdf() || !model.GetObservables()) {
-         oocoutE((TObject *)0, InputArguments) << "RooStatsUtils::RemoveNuisancePdf - invalid input model: missing pdf and/or observables" << endl;
+      RooAbsPdf * unconstrainedPdf = StripConstraints(pdf, observables);
+      if(!unconstrainedPdf) {
+         oocoutE((TObject *)0, Eval) << "RooStats::MakeUnconstrainedPdf - observables not found in original pdf or certain channels consist only of constraints" << endl;
          return 0;
       }
-      return RemoveNuisancePdf(*model.GetPdf(), *model.GetObservables(), name);
+      if(name != 0) unconstrainedPdf->SetName(name);
+      return unconstrainedPdf;   
+   }
+
+   RooAbsPdf * MakeUnconstrainedPdf(const RooStats::ModelConfig &model, const char *name = 0) { 
+      // make a clone pdf without all constraint terms in a common pdf 
+      if(!model.GetPdf() || !model.GetObservables()) {
+         oocoutE((TObject *)0, InputArguments) << "RooStatsUtils::MakeUnconstrainedPdf - invalid input model: missing pdf and/or observables" << endl;
+         return 0;
+      }
+      return MakeUnconstrainedPdf(*model.GetPdf(), *model.GetObservables(), name);
    }
 
    // Helper class for GetAsTTree
