@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 
 #include "IncrementalParser.h"
+#include "ASTNodeEraser.h"
 
 #include "ASTDumper.h"
 #include "ChainedConsumer.h"
@@ -58,15 +59,12 @@ namespace cling {
     assert(m_Consumer && "Expected ChainedConsumer!");
     // Add consumers to the ChainedConsumer, which owns them
     EvaluateTSynthesizer* ES = new EvaluateTSynthesizer(interp);
-    ES->Attach(m_Consumer);
     m_Consumer->Add(ChainedConsumer::kEvaluateTSynthesizer, ES);
 
     DeclExtractor* DE = new DeclExtractor();
-    DE->Attach(m_Consumer);
     m_Consumer->Add(ChainedConsumer::kDeclExtractor, DE);
 
     ValuePrinterSynthesizer* VPS = new ValuePrinterSynthesizer(interp);
-    VPS->Attach(m_Consumer);
     m_Consumer->Add(ChainedConsumer::kValuePrinterSynthesizer, VPS);
     m_Consumer->Add(ChainedConsumer::kASTDumper, new ASTDumper());
     if (!m_SyntaxOnly) {
@@ -105,6 +103,16 @@ namespace cling {
   void IncrementalParser::endTransaction() const {
     Transaction* CurT = m_Consumer->getTransaction();
     CurT->setCompleted();
+    const DiagnosticsEngine& Diags = getCI()->getSema().getDiagnostics();
+
+    //TODO: Make the enum orable.
+    if (Diags.getNumWarnings() > 0)
+      CurT->setIssuedDiags(Transaction::kWarnings);
+
+    if (Diags.hasErrorOccurred() || Diags.hasFatalErrorOccurred())
+      CurT->setIssuedDiags(Transaction::kErrors);
+
+      
     if (CurT->isNestedTransaction()) {
       assert(!CurT->getParent()->isCompleted() 
              && "Parent transaction completed!?");
@@ -115,15 +123,68 @@ namespace cling {
   void IncrementalParser::commitTransaction(const Transaction* T) const {
     assert(T->isCompleted() && "Transaction not ended!?");
     const Transaction* OldT = m_Consumer->getTransaction();
-    m_Consumer->setTransaction(T);
+    if (OldT != T)
+      m_Consumer->setTransaction(T);
+
     commitCurrentTransaction();
-    m_Consumer->setTransaction(OldT);
+
+    if (OldT != T)
+      m_Consumer->setTransaction(OldT);
   }
 
   void IncrementalParser::commitCurrentTransaction() const {
-    assert(m_Consumer->getTransaction()->isCompleted() 
-           && "Transaction not ended!?");
+    Transaction* CurT = m_Consumer->getTransaction();
+    assert(CurT->isCompleted() && "Transaction not ended!?");
+
+    // Check for errors...
+    if (CurT->getIssuedDiags() == Transaction::kErrors) {
+      rollbackTransaction(CurT);
+      return;
+    }
+
+    // We are sure it's safe to pipe it through
+    for (Transaction::const_iterator I = CurT->decls_begin(), 
+           E = CurT->decls_end(); I != E; ++I) {
+      // FIXME: Here we should keep in mind that the consumer has stopped at the
+      // first occurrence of error, however the consumer might change one some
+      // decls in the transaction. In general it is fine if the address of the
+      // decl is the same, i.e. the consumer doesn't create new declarations.
+
+      // if an error was seen somewhere in the consumer chain rollback 
+      if (!m_Consumer->HandleTopLevelDecl(*I)) {
+        rollbackTransaction(CurT);
+        return;
+      }      
+    }
+
+    // Pull all template instantiations in that came from the consumers.
+    getCI()->getSema().PerformPendingInstantiations();
+
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
+    CurT->setState(Transaction::kCommitted);
+  }
+
+  void IncrementalParser::rollbackTransaction(Transaction* T) const {
+    ASTNodeEraser NodeEraser(&getCI()->getSema());
+
+    for (Transaction::const_reverse_iterator I = T->rdecls_begin(),
+           E = T->rdecls_end(); I != E; ++I) {
+      const DeclGroupRef& DGR = (*I);
+
+      for (DeclGroupRef::const_iterator
+             Di = DGR.end() - 1, E = DGR.begin() - 1; Di != E; --Di) {
+        DeclContext* DC = (*Di)->getDeclContext();
+        assert(DC == (*Di)->getLexicalDeclContext() && \
+               "Cannot handle that yet");
+
+        // Get rid of the declaration. If the declaration has name we should
+        // heal the lookup tables as well
+        bool Successful = NodeEraser.RevertDecl(*Di);
+        assert(Successful && "Cannot handle that yet!");
+      }
+    }
+
+    T->setState(Transaction::kRolledBack);
   }
   
 
@@ -168,9 +229,11 @@ namespace cling {
   }
 
   IncrementalParser::~IncrementalParser() {
-     if (GetCodeGenerator()) {
-       GetCodeGenerator()->ReleaseModule();
+     if (getCodeGenerator()) {
+       getCodeGenerator()->ReleaseModule();
      }
+     for (unsigned i = 0; i < m_Transactions.size(); ++i)
+       delete m_Transactions[i];
   }
 
   void IncrementalParser::Initialize() {
@@ -190,29 +253,26 @@ namespace cling {
     return Result;
   }
 
-  void IncrementalParser::Parse(llvm::StringRef input,
-                                llvm::SmallVector<DeclGroupRef, 4>& DGRs) {
-
+  Transaction* IncrementalParser::Parse(llvm::StringRef input) {
     beginTransaction();
-    Parse(input);
+    ParseInternal(input);
     endTransaction();
-    const Transaction* T = m_Consumer->getTransaction();
-    DGRs.append(T->decls_begin(), T->decls_end());
+
+    return getLastTransaction();
   }
 
   IncrementalParser::EParseResult
   IncrementalParser::Compile(llvm::StringRef input) {
     // Just in case when Parse is called, we want to complete the transaction
     // coming from parse and then start new one.
-    //m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
     // Reset the module builder to clean up global initializers, c'tors, d'tors:
-    if (GetCodeGenerator()) {
-      GetCodeGenerator()->Initialize(getCI()->getASTContext());
+    if (getCodeGenerator()) {
+      getCodeGenerator()->Initialize(getCI()->getASTContext());
     }
 
     beginTransaction();
-    EParseResult Result = Parse(input);
+    EParseResult Result = ParseInternal(input);
     endTransaction();
 
     // Check for errors coming from our custom consumers.
@@ -220,7 +280,6 @@ namespace cling {
     DClient.BeginSourceFile(getCI()->getLangOpts(),
                             &getCI()->getPreprocessor());
     commitCurrentTransaction();
-    //m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
     DClient.EndSourceFile();
     m_CI->getDiagnostics().Reset();
@@ -234,7 +293,7 @@ namespace cling {
 
   // Add the input to the memory buffer, parse it, and add it to the AST.
   IncrementalParser::EParseResult
-  IncrementalParser::Parse(llvm::StringRef input) {
+  IncrementalParser::ParseInternal(llvm::StringRef input) {
     if (input.empty()) return IncrementalParser::kSuccess;
 
     Preprocessor& PP = m_CI->getPreprocessor();
@@ -312,7 +371,7 @@ namespace cling {
     }
   }
 
-  CodeGenerator* IncrementalParser::GetCodeGenerator() const {
+  CodeGenerator* IncrementalParser::getCodeGenerator() const {
     return
       (CodeGenerator*)m_Consumer->getConsumer(ChainedConsumer::kCodeGenerator);
   }
