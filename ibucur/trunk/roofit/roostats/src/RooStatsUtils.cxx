@@ -143,7 +143,7 @@ namespace RooStats {
          RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone(); assert(cat != NULL);
          RooArgList pdfList;
 
-         for (int ic = NULL, nc = cat->numBins((const char *)NULL); ic < nc; ++ic) {
+         for (int ic = 0, nc = cat->numBins((const char *)NULL); ic < nc; ++ic) {
             cat->setBin(ic);
             RooAbsPdf *newPdf = StripConstraints(*sim->getPdf(cat->getLabel()), observables);
             if(newPdf == NULL) { delete cat; return NULL; } // all channels must have observables
