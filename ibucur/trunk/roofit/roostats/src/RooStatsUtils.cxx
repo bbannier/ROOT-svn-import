@@ -108,19 +108,23 @@ namespace RooStats {
       const std::type_info & id = typeid(pdf);
 
       if (id == typeid(RooProdPdf)) {
+
          RooProdPdf *prod = dynamic_cast<RooProdPdf *>(&pdf);
          RooArgList list(prod->pdfList()); RooArgList newList;
+
          for (int i = 0, n = list.getSize(); i < n; ++i) {
             RooAbsPdf *pdfi = (RooAbsPdf *) list.at(i);
             RooAbsPdf *newPdfi = StripConstraints(*pdfi, observables);
             if(newPdfi != 0) newList.add(*newPdfi);
          }
+
          if(newList.getSize() == 0) return 0; // only constraints
          else if(newList.getSize() == 1) return dynamic_cast<RooAbsPdf *>(newList.at(0)); // return single component (no longer a product)
          else return new RooProdPdf(TString::Format("%s_unconstrained", prod->GetName()).Data(),
             TString::Format("%s without constraints", prod->GetTitle()).Data(), newList);
 
       } else if (id == typeid(RooExtendPdf)) {
+
          TIterator *iter = pdf.serverIterator(); 
          // extract underlying pdf which is extended; first server is the pdf; second server is the number of events variable
          RooAbsPdf *uPdf = dynamic_cast<RooAbsPdf *>(iter->Next());
@@ -134,15 +138,18 @@ namespace RooStats {
             TString::Format("%s without constraints", pdf.GetTitle()).Data(), *newUPdf, *extended_term);
          
       } else if (id == typeid(RooSimultaneous)) {    //|| id == typeid(RooSimultaneousOpt)) {
+
          RooSimultaneous *sim  = dynamic_cast<RooSimultaneous *>(&pdf); assert(sim != 0);
          RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone(); assert(cat != 0);
          RooArgList pdfList;
+
          for (int ic = 0, nc = cat->numBins((const char *)0); ic < nc; ++ic) {
             cat->setBin(ic);
             RooAbsPdf *newPdf = StripConstraints(*sim->getPdf(cat->getLabel()), observables);
             if(newPdf == 0) { delete cat; return 0; } // all channels must have observables
             pdfList.add(*newPdf);
          }
+
          return new RooSimultaneous(TString::Format("%s_unconstrained", sim->GetName()).Data(), 
             TString::Format("%s without constraints", sim->GetTitle()).Data(), pdfList, *cat); 
 
@@ -150,14 +157,14 @@ namespace RooStats {
          return (RooAbsPdf *) pdf.clone(TString::Format("%s_unconstrained", pdf.GetName()).Data());
       }
 
-      return 0; // a constraint term
+      return 0; // just  a constraint term
    }
 
    RooAbsPdf * MakeUnconstrainedPdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name = 0) { 
       // make a clone pdf without all constraint terms in a common pdf
       RooAbsPdf * unconstrainedPdf = StripConstraints(pdf, observables);
       if(!unconstrainedPdf) {
-         oocoutE((TObject *)0, Eval) << "RooStats::MakeUnconstrainedPdf - observables not found in original pdf or certain channels consist only of constraints" << endl;
+         oocoutE((TObject *)0, Eval) << "RooStats::MakeUnconstrainedPdf - invalid observable list passed (not found in original pdf) or certain channels consist only of constraints" << endl;
          return 0;
       }
       if(name != 0) unconstrainedPdf->SetName(name);
