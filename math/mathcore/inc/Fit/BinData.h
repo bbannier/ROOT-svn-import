@@ -154,10 +154,12 @@ public :
       return the size of internal data  (number of fit points)
       if data are not copied in but used externally the size is 0
     */
-   unsigned int DataSize() const { 
+    // This doesn't return the number of fit points. Possibly 
+    // there are also errors. These would increase the Datavector size.
+   /*unsigned int DataSize() const { 
       if (fDataVector) return fDataVector->Size(); 
       return 0; 
-   }
+   }*/
 
    /**
       flag to control if data provides error on the coordinates
@@ -456,10 +458,25 @@ private:
    unsigned int fNPoints;   // number of contained points in the data set (can be different than size of vector)
    double fRefVolume;  // reference bin volume - used to normalize the bins in case of variable bins data
 
-   DataVector * fDataVector;  // pointer to the copied in data vector
-   DataWrapper * fDataWrapper;  // pointer to the external data wrapper structure
+   std::vector< std::vector< double > > fCoordErrors;
+   // This vector contains the coordinate errors
+   // in the same way as fCoords.
+   
+   
+   std::vector< double > fData;
+   // This vector contains the bin data
+   
+   std::vector< std::vector< double >  > fDataError;
+   // This vector contains the data error.
+   // Asymmetric errors are stored alternating:
+   // fDataError[0] x err high
+   // fDataError[1] x err low
+   
+    
+   DataWrapper fDataWrapper;  // pointer to the external data wrapper structure
 
-   std::vector<double> fBinEdge;  // vector containing the bin upper edge (coordinate will contain low edge) 
+   std::vector<double> fBinEdge;
+   // vector containing the bin upper edge (coordinate will contain low edge) 
 
 }; 
 
