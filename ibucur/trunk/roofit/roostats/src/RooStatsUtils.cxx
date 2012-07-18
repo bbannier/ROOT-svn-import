@@ -115,10 +115,10 @@ namespace RooStats {
          for (int i = 0, n = list.getSize(); i < n; ++i) {
             RooAbsPdf *pdfi = (RooAbsPdf *) list.at(i);
             RooAbsPdf *newPdfi = StripConstraints(*pdfi, observables);
-            if(newPdfi != 0) newList.add(*newPdfi);
+            if(newPdfi != NULL) newList.add(*newPdfi);
          }
 
-         if(newList.getSize() == 0) return 0; // only constraints in product
+         if(newList.getSize() == 0) return NULL; // only constraints in product
          else if(newList.getSize() == 1) return dynamic_cast<RooAbsPdf *>(newList.at(0)); // return single component (no longer a product)
          else return new RooProdPdf(TString::Format("%s_unconstrained", prod->GetName()).Data(),
             TString::Format("%s without constraints", prod->GetTitle()).Data(), newList);
@@ -129,24 +129,24 @@ namespace RooStats {
          // extract underlying pdf which is extended; first server is the pdf; second server is the number of events variable
          RooAbsPdf *uPdf = dynamic_cast<RooAbsPdf *>(iter->Next());
          RooAbsReal *extended_term = dynamic_cast<RooAbsReal *>(iter->Next());
-         assert(uPdf != 0); assert(extended_term != 0); assert(iter->Next() == 0);
+         assert(uPdf != NULL); assert(extended_term != NULL); assert(iter->Next() == NULL);
          delete iter;
          
          RooAbsPdf *newUPdf = StripConstraints(*uPdf, observables);
-         if(newUPdf == 0) return 0; // only constraints in underlying pdf
+         if(newUPdf == NULL) return NULL; // only constraints in underlying pdf
          else return new RooExtendPdf(TString::Format("%s_unconstrained", pdf.GetName()).Data(),
             TString::Format("%s without constraints", pdf.GetTitle()).Data(), *newUPdf, *extended_term);
          
       } else if (id == typeid(RooSimultaneous)) {    //|| id == typeid(RooSimultaneousOpt)) {
 
-         RooSimultaneous *sim  = dynamic_cast<RooSimultaneous *>(&pdf); assert(sim != 0);
-         RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone(); assert(cat != 0);
+         RooSimultaneous *sim  = dynamic_cast<RooSimultaneous *>(&pdf); assert(sim != NULL);
+         RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().Clone(); assert(cat != NULL);
          RooArgList pdfList;
 
-         for (int ic = 0, nc = cat->numBins((const char *)0); ic < nc; ++ic) {
+         for (int ic = NULL, nc = cat->numBins((const char *)NULL); ic < nc; ++ic) {
             cat->setBin(ic);
             RooAbsPdf *newPdf = StripConstraints(*sim->getPdf(cat->getLabel()), observables);
-            if(newPdf == 0) { delete cat; return 0; } // all channels must have observables
+            if(newPdf == NULL) { delete cat; return NULL; } // all channels must have observables
             pdfList.add(*newPdf);
          }
 
@@ -160,22 +160,22 @@ namespace RooStats {
       return 0; // just  a constraint term
    }
 
-   RooAbsPdf * MakeUnconstrainedPdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name = 0) { 
+   RooAbsPdf * MakeUnconstrainedPdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name) { 
       // make a clone pdf without all constraint terms in a common pdf
       RooAbsPdf * unconstrainedPdf = StripConstraints(pdf, observables);
       if(!unconstrainedPdf) {
-         oocoutE((TObject *)0, InputArguments) << "RooStats::MakeUnconstrainedPdf - invalid observable list passed (observables not found in original pdf) or invalid pdf passed (without observables)" << endl;
-         return 0;
+         oocoutE((TObject *)NULL, InputArguments) << "RooStats::MakeUnconstrainedPdf - invalid observable list passed (observables not found in original pdf) or invalid pdf passed (without observables)" << endl;
+         return NULL;
       }
-      if(name != 0) unconstrainedPdf->SetName(name);
+      if(name != NULL) unconstrainedPdf->SetName(name);
       return unconstrainedPdf;   
    }
 
-   RooAbsPdf * MakeUnconstrainedPdf(const RooStats::ModelConfig &model, const char *name = 0) { 
+   RooAbsPdf * MakeUnconstrainedPdf(const RooStats::ModelConfig &model, const char *name) { 
       // make a clone pdf without all constraint terms in a common pdf 
       if(!model.GetPdf() || !model.GetObservables()) {
-         oocoutE((TObject *)0, InputArguments) << "RooStatsUtils::MakeUnconstrainedPdf - invalid input model: missing pdf and/or observables" << endl;
-         return 0;
+         oocoutE((TObject *)NULL, InputArguments) << "RooStatsUtils::MakeUnconstrainedPdf - invalid input model: missing pdf and/or observables" << endl;
+         return NULL;
       }
       return MakeUnconstrainedPdf(*model.GetPdf(), *model.GetObservables(), name);
    }
