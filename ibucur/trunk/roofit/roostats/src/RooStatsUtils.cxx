@@ -118,7 +118,7 @@ namespace RooStats {
             if(newPdfi != 0) newList.add(*newPdfi);
          }
 
-         if(newList.getSize() == 0) return 0; // only constraints
+         if(newList.getSize() == 0) return 0; // only constraints in product
          else if(newList.getSize() == 1) return dynamic_cast<RooAbsPdf *>(newList.at(0)); // return single component (no longer a product)
          else return new RooProdPdf(TString::Format("%s_unconstrained", prod->GetName()).Data(),
             TString::Format("%s without constraints", prod->GetTitle()).Data(), newList);
@@ -164,7 +164,7 @@ namespace RooStats {
       // make a clone pdf without all constraint terms in a common pdf
       RooAbsPdf * unconstrainedPdf = StripConstraints(pdf, observables);
       if(!unconstrainedPdf) {
-         oocoutE((TObject *)0, Eval) << "RooStats::MakeUnconstrainedPdf - invalid observable list passed (not found in original pdf) or certain channels consist only of constraints" << endl;
+         oocoutE((TObject *)0, InputArguments) << "RooStats::MakeUnconstrainedPdf - invalid observable list passed (observables not found in original pdf) or invalid pdf passed (without observables)" << endl;
          return 0;
       }
       if(name != 0) unconstrainedPdf->SetName(name);
