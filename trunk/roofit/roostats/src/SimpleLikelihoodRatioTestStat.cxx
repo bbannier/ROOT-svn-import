@@ -23,13 +23,13 @@ Double_t RooStats::SimpleLikelihoodRatioTestStat::Evaluate(RooAbsData& data, Roo
          << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1."
          << std::endl;
    }
+   
+   // strip pdfs of constraints (which cancel out in the ratio) to avoid unnecessary computations and computational errors
    if (fFirstEval) {
       fNullPdf = RooStats::MakeUnconstrainedPdf(*fNullPdf, *fNullPdf->getObservables(data),
          TString::Format("%s_unconstrained", fNullPdf->GetName()));
       fAltPdf  = RooStats::MakeUnconstrainedPdf(*fAltPdf , *fAltPdf->getObservables(data),
          TString::Format("%s_unconstrained", fAltPdf->GetName()));
-      fNullPdf->Print();
-      fAltPdf->Print();
    }
 
    fFirstEval = false;
