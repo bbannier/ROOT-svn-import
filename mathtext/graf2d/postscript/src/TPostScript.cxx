@@ -1391,9 +1391,12 @@ void TPostScript::DrawHatch(Float_t, Float_t, Int_t, Double_t *, Double_t *)
    Warning("DrawHatch", "hatch fill style not yet implemented");
 }
 
+
 //______________________________________________________________________________
 Bool_t TPostScript::FontEmbedType1(const char *filename)
 {
+   // Embed font type 1
+
 	struct pfb_segment_header_s {
 		char always_128;
 		char type;
@@ -1472,6 +1475,7 @@ Bool_t TPostScript::FontEmbedType1(const char *filename)
 	return false;
 }
 
+
 //______________________________________________________________________________
 Bool_t TPostScript::FontEmbedType2(const char *filename)
 {
@@ -1527,6 +1531,7 @@ Bool_t TPostScript::FontEmbedType2(const char *filename)
 
 	return true;
 }
+
 
 //______________________________________________________________________________
 Bool_t TPostScript::FontEmbedType42(const char *filename)
@@ -1608,6 +1613,7 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 	return false;
 }
 
+
 //______________________________________________________________________________
 void TPostScript::FontEmbed(void)
 {
@@ -1642,6 +1648,8 @@ void TPostScript::FontEmbed(void)
 	   { "Root.TTFont.STIXSiz5Sym", "arial.ttf" },
 	   { "Root.TTFont.ME", "arial.ttf" }
    };
+
+   PrintStr("%%IncludeResource: ProcSet (FontSetInit)@");
 
 	// try to load font (font must be in Root.TTFontPath resource)
 	const char *ttpath = gEnv->GetValue("Root.TTFontPath",
@@ -1691,6 +1699,7 @@ for(Int_t fontid = 0; fontid < 1; fontid++) {
 	PrintStr("%%IncludeResource: font Symbol@");
 	PrintStr("%%IncludeResource: font ZapfDingbats@");
 }
+
 
 //______________________________________________________________________________
 void TPostScript::FontEncode()
@@ -1884,7 +1893,6 @@ void TPostScript::Initialize()
    PrintStr("/ita {/ang 15 def gsave [1 0 ang dup sin exch cos div 1 0 0] concat} def @");
 
    DefineMarkers();
-   PrintStr("%%IncludeResource: ProcSet (FontSetInit)@");
    FontEmbed();
    FontEncode();
 
