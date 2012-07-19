@@ -1617,6 +1617,8 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 //______________________________________________________________________________
 void TPostScript::FontEmbed(void)
 {
+   // Embed font in PS file.
+   
    static const char *fonttable[29][2] = {
 	   { "Root.TTFont.0", "arialbd.ttf" },
 	   { "Root.TTFont.1", "timesi.ttf" },
@@ -1660,8 +1662,8 @@ void TPostScript::FontEmbed(void)
 #endif // TTFFONTDIR
 										);
    
-//	for(Int_t fontid = 0; fontid < 29; fontid++) {
-for(Int_t fontid = 0; fontid < 1; fontid++) {
+//   for (Int_t fontid = 0; fontid < 29; fontid++) {
+   for (Int_t fontid = 0; fontid < 1; fontid++) {
 
 		const char *filename = gEnv->GetValue(
 			fonttable[fontid][0], fonttable[fontid][1]);
@@ -1672,8 +1674,7 @@ for(Int_t fontid = 0; fontid < 1; fontid++) {
 			Error("TPostScript::FontEmbed",
 				  "font %d (filename `%s') not found in path",
 				  fontid, filename);
-		}
-		else {
+		} else {
 			if (FontEmbedType2(ttfont)) {
 				// nothing
 			} else if(FontEmbedType1(ttfont)) {
