@@ -752,6 +752,7 @@ void SendFocusInEvent(EventQueue_t &queue, NSView<X11Window> *view, EXMagic mode
    }
 
    Event_t focusInEvent = {};
+   focusInEvent.fWindow = view.fID;
    focusInEvent.fType = kFocusIn;
    focusInEvent.fCode = mode;
 //   focusInEvent.fState = ;
@@ -775,6 +776,7 @@ void SendFocusOutEvent(EventQueue_t &queue, NSView<X11Window> *view, EXMagic mod
    }
 
    Event_t focusOutEvent = {};
+   focusOutEvent.fWindow = view.fID;   
    focusOutEvent.fType = kFocusOut;
    focusOutEvent.fCode = mode;//code mode :)
    //focusOutEvent.fState = ;
