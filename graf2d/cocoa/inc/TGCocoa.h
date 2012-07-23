@@ -327,8 +327,6 @@ public:
    
    virtual Bool_t       CheckEvent(Window_t wid, EGEventType type, Event_t &ev);
    virtual void         SendEvent(Window_t wid, Event_t *ev);
-   virtual void         DispatchClientMessage(UInt_t messageID);
-   virtual void         RemoveEventsForWindow(Window_t wid);
    virtual void         WMDeleteNotify(Window_t wid);
    virtual void         SetKeyAutoRepeat(Bool_t on = kTRUE);
    virtual void         GrabKey(Window_t wid, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
@@ -420,16 +418,6 @@ private:
 
    bool fForegroundProcess;
    std::vector<GCValues_t> fX11Contexts;
-
-   typedef std::pair<Window_t, Event_t> ClientMessage_t;
-   std::vector<UInt_t> fFreeMessageIDs;
-   UInt_t fCurrentMessageID;
-   std::map<UInt_t, ClientMessage_t> fClientMessages;
-   typedef std::map<UInt_t, ClientMessage_t>::iterator message_iterator;
-   
-   //Quite ugly solution for the moment.
-   std::map<Window_t, std::vector<UInt_t> > fClientMessagesToWindow;
-   typedef std::map<Window_t, std::vector<UInt_t> >::iterator message_window_iterator;
       
    //I'd prefere to use = delete syntax from C++0x11, but this file is processed by CINT.
    TGCocoa(const TGCocoa &rhs);
