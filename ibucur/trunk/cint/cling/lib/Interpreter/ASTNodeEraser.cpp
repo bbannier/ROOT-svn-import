@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 
 #include "ASTNodeEraser.h"
+#include "Transaction.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclVisitor.h"
@@ -152,8 +153,6 @@ namespace cling {
     // Clean up the pending instantiations
     m_Sema->PendingInstantiations.clear();
     m_Sema->PendingLocalImplicitInstantiations.clear();
-    
-    m_Sema = 0;
   }
 
   void DeclReverter::PreVisitDecl(Decl *D) {
@@ -462,6 +461,27 @@ namespace cling {
 
   bool ASTNodeEraser::RevertDecl(Decl* D) {
     return m_DeclReverter->Visit(D);
+  }
+
+  bool ASTNodeEraser::RevertTransaction(const Transaction* T) {
+    bool Successful = true;
+    for (Transaction::const_reverse_iterator I = T->rdecls_begin(),
+           E = T->rdecls_end(); I != E; ++I) {
+      const DeclGroupRef& DGR = (*I);
+
+      for (DeclGroupRef::const_iterator
+             Di = DGR.end() - 1, E = DGR.begin() - 1; Di != E; --Di) {
+        DeclContext* DC = (*Di)->getDeclContext();
+        assert(DC == (*Di)->getLexicalDeclContext() && "Cannot handle that yet");
+
+        // Get rid of the declaration. If the declaration has name we should
+        // heal the lookup tables as well
+        Successful = RevertDecl(*Di) && Successful;
+        assert(Successful && "Cannot handle that yet!");
+      }
+    }
+
+    return Successful;
   }
 
 } // end namespace cling

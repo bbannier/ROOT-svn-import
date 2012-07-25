@@ -12,9 +12,14 @@ using namespace clang;
 
 namespace cling {
 
+  Transaction::~Transaction() {
+    for (size_t i = 0; i < m_NestedTransactions.size(); ++i)
+      delete m_NestedTransactions[i];
+  }
+
   void Transaction::appendUnique(DeclGroupRef DGR) {
     for (const_iterator I = decls_begin(), E = decls_end(); I != E; ++I) {
-      if (DGR.isNull() || *I == DGR)
+      if (DGR.isNull() || (*I).getAsOpaquePtr() == DGR.getAsOpaquePtr())
         return;
     }
     m_DeclQueue.push_back(DGR);
