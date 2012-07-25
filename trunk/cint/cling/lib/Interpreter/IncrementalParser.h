@@ -44,6 +44,12 @@ namespace cling {
   class ExecutionContext;
   class Interpreter;
 
+  ///\brief Responsible for the incremental parsing and compilation of input.
+  ///
+  /// The class manages the entire process of compilation line-by-line by 
+  /// appending the compiled delta to clang'a AST. It provides basic operations
+  /// on the already compiled code. See cling::Transaction class.
+  ///
   class IncrementalParser {
   private:
     // our interpreter context
@@ -97,13 +103,6 @@ namespace cling {
     ///\brief Finishes a transaction.
     ///
     void endTransaction() const;
-
-    ///\brief Commits a given transaction. I.e pipes it through the consumer
-    /// chain including codegen.
-    ///
-    ///\param[in] T - The transaction to be committed.
-    ///
-    void commitTransaction(const Transaction* T) const;
 
     ///\brief Commits the current transaction if it was compete. I.e pipes it 
     /// through the consumer chain, including codegen.
