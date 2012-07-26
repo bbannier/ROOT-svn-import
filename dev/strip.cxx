@@ -57,7 +57,7 @@ void test() {
    RooSimultaneous *sim = (RooSimultaneous *) w->pdf("sim_pdf");
 
    RooSimultaneous *newPdf = 
-      (RooSimultaneous *) RooStats::MakeUnconstrainedPdf(*w->pdf("sim_pdf"), RooArgSet(*w->var("x1"), *w->var("x2"), *w->var("x3")), NULL);
+      (RooSimultaneous *) RooStats::MakeUnconstrainedPdf(*w->pdf("sim_pdf"), RooArgSet(*w->var("x1"), *w->var("x2")), NULL);
    
    w->import(*newPdf);
 
