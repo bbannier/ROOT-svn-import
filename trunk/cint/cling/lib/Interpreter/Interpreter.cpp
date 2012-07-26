@@ -201,7 +201,7 @@ namespace cling {
 
   Interpreter::Interpreter(int argc, const char* const *argv,
                            const char* llvmdir /*= 0*/) :
-    m_UniqueCounter(0), m_PrintAST(false), m_ValuePrinterEnabled(false) {
+    m_UniqueCounter(0), m_PrintAST(false), m_DynamicLookupEnabled(false) {
 
     m_LLVMContext.reset(new llvm::LLVMContext);
     std::vector<unsigned> LeftoverArgsIdx;
@@ -243,9 +243,6 @@ namespace cling {
 #endif
       }
     }
-
-    // Warm them up
-    m_IncrParser->Initialize();
 
     m_ExecutionContext->addSymbol("local_cxa_atexit",
                   (void*)(intptr_t)&cling::runtime::internal::local_cxa_atexit);
@@ -1743,18 +1740,19 @@ namespace cling {
   }
 
   void Interpreter::enableDynamicLookup(bool value /*=true*/) {
-    // Load the dynamic lookup specifics.
-    declare("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
-    m_IncrParser->enableDynamicLookup(value);
-  }
+    m_DynamicLookupEnabled = value;
 
-  bool Interpreter::isDynamicLookupEnabled() {
-    return m_IncrParser->isDynamicLookupEnabled();
-  }
-
-  void Interpreter::enablePrintAST(bool print /*=true*/) {
-    m_IncrParser->enablePrintAST(print);
-    m_PrintAST = !m_PrintAST;
+    Sema& S = getCI()->getSema();
+    if (isDynamicLookupEnabled()) {
+      assert(!S.ExternalSource && "Already set Sema ExternalSource");
+      // Load the dynamic lookup specifics.
+      declare("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
+      S.ExternalSource = new DynamicIDHandler(&S);
+    }
+    else {
+      delete S.ExternalSource;
+      S.ExternalSource = 0;
+    }
   }
 
   void Interpreter::runStaticInitializersOnce() const {
