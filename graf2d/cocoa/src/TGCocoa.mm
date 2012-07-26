@@ -32,7 +32,7 @@
 #include "CocoaUtils.h"
 #include "X11Events.h"
 #include "X11Buffer.h"
-#include "TGLFormat.h"
+//#include "TGLFormat.h"
 #include "TGClient.h"
 #include "TGWindow.h"
 #include "TSystem.h"
@@ -2875,7 +2875,7 @@ Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t hei
    
 
    std::vector<NSOpenGLPixelFormatAttribute> attribs;
-   for (size_type i = 0, e = formatComponents.size(); i < e; ++i) {
+  /* for (size_type i = 0, e = formatComponents.size(); i < e; ++i) {
       const component_type &comp = formatComponents[i];
       
       if (comp.first == TGLFormat::kDoubleBuffer) {
@@ -2895,7 +2895,7 @@ Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t hei
          attribs.push_back(NSOpenGLPFASamples);
          attribs.push_back(comp.second ? comp.second : 4);
       }
-   }
+   }*/
    
    attribs.push_back(NSOpenGLPFAAccelerated);//??? I think, TGLWidget always wants this.
    attribs.push_back(0);
