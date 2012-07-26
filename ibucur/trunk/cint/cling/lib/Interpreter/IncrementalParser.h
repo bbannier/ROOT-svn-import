@@ -8,8 +8,9 @@
 #define CLING_INCREMENTAL_PARSER_H
 
 #include "ChainedConsumer.h"
+#include "CompilationOptions.h"
 #include "Transaction.h"
-#include "cling/Interpreter/CompilationOptions.h"
+#include "TransactionTransformer.h"
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclGroup.h"
@@ -77,8 +78,13 @@ namespace cling {
     ///
     llvm::SmallVector<Transaction*, 64> m_Transactions;
 
-    // whether to run codegen; cannot be flipped during lifetime of *this
-    bool m_SyntaxOnly;
+    ///\brief Code generator
+    ///
+    llvm::OwningPtr<clang::CodeGenerator> m_CodeGen;
+
+    ///\brief Contains the transaction transformers.
+    ///
+    llvm::SmallVector<TransactionTransformer*, 4> m_TTransformers;
 
   public:
     enum EParseResult {
@@ -89,16 +95,21 @@ namespace cling {
     IncrementalParser(Interpreter* interp, int argc, const char* const *argv,
                       const char* llvmdir);
     ~IncrementalParser();
+
     void Initialize();
+
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
+    clang::CodeGenerator* getCodeGenerator() const { return m_CodeGen.get(); }
+    bool hasCodeGenerator() const { return m_CodeGen.get(); }
+    
 
     /// \{
     /// \name Transaction Support
 
     ///\brief Starts a transaction.
     ///
-    void beginTransaction();
+    void beginTransaction(const CompilationOptions& Opts);
 
     ///\brief Finishes a transaction.
     ///
@@ -107,7 +118,7 @@ namespace cling {
     ///\brief Commits the current transaction if it was compete. I.e pipes it 
     /// through the consumer chain, including codegen.
     ///
-    void commitCurrentTransaction() const;
+    void commitCurrentTransaction();
 
     ///\brief Reverts the AST into its previous state.
     ///
@@ -152,13 +163,9 @@ namespace cling {
     }
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled() const { return m_DynamicLookupEnabled; }
-    bool isSyntaxOnly() const { return m_SyntaxOnly; }
-
-    clang::CodeGenerator* getCodeGenerator() const;
 
   private:
     void CreateSLocOffsetGenerator();
-    EParseResult Compile(llvm::StringRef input);
     EParseResult ParseInternal(llvm::StringRef input);
   };
 } // end namespace cling

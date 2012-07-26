@@ -5,6 +5,8 @@
 //------------------------------------------------------------------------------
 
 #include "DeclExtractor.h"
+#include "ChainedConsumer.h"
+#include "Transaction.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
@@ -17,21 +19,26 @@ using namespace clang;
 
 namespace cling {
 
+  DeclExtractor::DeclExtractor(Sema* S) 
+    : TransactionTransformer(S), m_Context(&S->getASTContext()) 
+  { }
 
-  DeclExtractor::DeclExtractor() {
+  // pin the vtable here
+  DeclExtractor::~DeclExtractor() 
+  { } 
 
-  }
+  Transaction* DeclExtractor::Transform(Transaction* T) {
+    if (!T->getCompilationOpts().DeclarationExtraction)
+      return T;
 
-  DeclExtractor::~DeclExtractor() {
+    for (Transaction::const_iterator I = T->decls_begin(), 
+           E = T->decls_end(); I != E; ++I)
+      for (DeclGroupRef::const_iterator J = (*I).begin(), 
+             JE = (*I).end(); J != JE; ++J)
+        if(!ExtractDecl(*J))
+          return 0;
 
-  }
-
-  bool DeclExtractor::HandleTopLevelDecl(DeclGroupRef DGR) {
-    bool hasNoErrors = true;
-    for (DeclGroupRef::iterator I = DGR.begin(), E = DGR.end(); I != E; ++I)
-      hasNoErrors = hasNoErrors && ExtractDecl(*I);
-
-    return hasNoErrors;
+    return T;
   }
 
   bool DeclExtractor::ExtractDecl(Decl* D) {
@@ -123,7 +130,8 @@ namespace cling {
           }
 
           // Pipe moved decl through the consumers
-          m_Sema->Consumer.HandleTopLevelDecl(DeclGroupRef(TouchedDecls[i]));
+          ChainedConsumer* consumer = (ChainedConsumer*) &m_Sema->getASTConsumer();
+          consumer->getTransaction()->appendUnique(DeclGroupRef(TouchedDecls[i]));
         }
       }
 
