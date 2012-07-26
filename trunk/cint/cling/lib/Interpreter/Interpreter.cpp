@@ -6,12 +6,12 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
+#include "CompilationOptions.h"
 #include "DynamicLookup.h"
 #include "ExecutionContext.h"
 #include "IncrementalParser.h"
 
 #include "cling/Interpreter/CIFactory.h"
-#include "cling/Interpreter/CompilationOptions.h"
 #include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/Value.h"
 
@@ -256,16 +256,16 @@ namespace cling {
       // Make sure that the universe won't be included to compile time by using
       // -D __CLING__ as CompilerInstance's arguments
 
-      declare("#include \"cling/Interpreter/RuntimeUniverse.h\"\n");
-      declare("#include \"cling/Interpreter/ValuePrinter.h\"\n");
+      declare("#include \"cling/Interpreter/RuntimeUniverse.h\"");
+      declare("#include \"cling/Interpreter/ValuePrinter.h\"");
 
       // Set up the gCling variable
       std::stringstream initializer;
-      initializer << "gCling=(cling::Interpreter*)" << (uintptr_t)this << ";\n";
+      initializer << "gCling=(cling::Interpreter*)" << (uintptr_t)this << ";";
       evaluate(initializer.str());
     }
     else {
-      declare("#include \"cling/Interpreter/CValuePrinter.h\"\n");
+      declare("#include \"cling/Interpreter/CValuePrinter.h\"");
     }
 
     handleFrontendOptions();
@@ -495,7 +495,7 @@ namespace cling {
     if (getCI()->getDiagnostics().hasErrorOccurred())
       return false;
 
-    if (m_IncrParser->isSyntaxOnly()) {
+    if (!m_IncrParser->hasCodeGenerator()) {
       return true;
     }
 
@@ -663,7 +663,7 @@ namespace cling {
     }
 
     std::string code;
-    code += "#include \"" + filename + "\"\n";
+    code += "#include \"" + filename + "\"";
     return declare(code) == Interpreter::kSuccess;
   }
 
