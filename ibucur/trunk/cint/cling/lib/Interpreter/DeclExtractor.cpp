@@ -5,7 +5,6 @@
 //------------------------------------------------------------------------------
 
 #include "DeclExtractor.h"
-#include "ChainedConsumer.h"
 #include "Transaction.h"
 
 #include "clang/AST/ASTContext.h"
@@ -31,6 +30,8 @@ namespace cling {
     if (!T->getCompilationOpts().DeclarationExtraction)
       return T;
 
+    CurT = T;
+
     for (Transaction::const_iterator I = T->decls_begin(), 
            E = T->decls_end(); I != E; ++I)
       for (DeclGroupRef::const_iterator J = (*I).begin(), 
@@ -43,12 +44,12 @@ namespace cling {
 
   bool DeclExtractor::ExtractDecl(Decl* D) {
     FunctionDecl* FD = dyn_cast<FunctionDecl>(D);
-    llvm::SmallVector<NamedDecl*, 4> TouchedDecls;
 
     if (FD) {
       if (FD->getNameAsString().find("__cling_Un1Qu3"))
         return true;
 
+      llvm::SmallVector<NamedDecl*, 4> TouchedDecls;
       CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody());
       assert(CS && "Function body not a CompoundStmt?");
       DeclContext* DC = FD->getTranslationUnitDecl();
@@ -56,8 +57,7 @@ namespace cling {
       assert(TUScope == m_Sema->getScopeForContext(DC) && "TU scope from DC?");
       llvm::SmallVector<Stmt*, 4> Stmts;
 
-      for (CompoundStmt::body_iterator I = CS->body_begin(),
-             EI = CS->body_end();
+      for (CompoundStmt::body_iterator I = CS->body_begin(), EI = CS->body_end();
            I != EI; ++I) {
         DeclStmt* DS = dyn_cast<DeclStmt>(*I);
         if (!DS) {
@@ -129,9 +129,8 @@ namespace cling {
             }
           }
 
-          // Pipe moved decl through the consumers
-          ChainedConsumer* consumer = (ChainedConsumer*) &m_Sema->getASTConsumer();
-          consumer->getTransaction()->appendUnique(DeclGroupRef(TouchedDecls[i]));
+          // Append the new top level decl to the current transaction.
+          CurT->appendUnique(DeclGroupRef(TouchedDecls[i]));
         }
       }
 

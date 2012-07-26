@@ -7,10 +7,9 @@
 #ifndef CLING_INCREMENTAL_PARSER_H
 #define CLING_INCREMENTAL_PARSER_H
 
-#include "ChainedConsumer.h"
+#include "DeclCollector.h"
 #include "CompilationOptions.h"
 #include "Transaction.h"
-#include "TransactionTransformer.h"
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclGroup.h"
@@ -40,10 +39,11 @@ namespace clang {
 
 
 namespace cling {
-  class ChainedConsumer;
   class CIFactory;
+  class DeclCollector;
   class ExecutionContext;
   class Interpreter;
+  class TransactionTransformer;
 
   ///\brief Responsible for the incremental parsing and compilation of input.
   ///
@@ -62,9 +62,6 @@ namespace cling {
     // parser (incremental)
     llvm::OwningPtr<clang::Parser> m_Parser;
 
-    // enable/disable dynamic scope
-    bool m_DynamicLookupEnabled;
-
     // One buffer for each command line, owner by the source file manager
     std::vector<llvm::MemoryBuffer*> m_MemoryBuffer;
 
@@ -72,7 +69,7 @@ namespace cling {
     clang::FileID m_VirtualFileID;
 
     // CI owns it
-    ChainedConsumer* m_Consumer;
+    DeclCollector* m_Consumer;
 
     ///\brief Holds information for the all transactions.
     ///
@@ -95,8 +92,6 @@ namespace cling {
     IncrementalParser(Interpreter* interp, int argc, const char* const *argv,
                       const char* llvmdir);
     ~IncrementalParser();
-
-    void Initialize();
 
     clang::CompilerInstance* getCI() const { return m_CI.get(); }
     clang::Parser* getParser() const { return m_Parser.get(); }
@@ -157,12 +152,6 @@ namespace cling {
     ///\returns The transaction coresponding to the input.
     ///
     Transaction* Parse(llvm::StringRef input);
-
-    void enablePrintAST(bool print /*=true*/) {
-      m_Consumer->getCompilationOpts().Debug = print;
-    }
-    void enableDynamicLookup(bool value = true);
-    bool isDynamicLookupEnabled() const { return m_DynamicLookupEnabled; }
 
   private:
     void CreateSLocOffsetGenerator();
