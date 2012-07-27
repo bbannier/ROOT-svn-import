@@ -17,10 +17,8 @@
 #include "Math/IParamFunctionfwd.h"
 #endif
 
-#ifndef ROOT_Fit_DataVectorfwd
-#include "Fit/DataVectorfwd.h"
-#endif
-
+#include "Fit/BinData.h"
+#include "Fit/UnBinData.h"
 
 namespace ROOT { 
 

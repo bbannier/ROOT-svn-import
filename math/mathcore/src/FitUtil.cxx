@@ -10,10 +10,11 @@
 
 // Implementation file for class FitUtil
 
-#include "Fit/FitUtil.h"
 
 #include "Fit/BinData.h"
 #include "Fit/UnBinData.h"
+
+#include "Fit/FitUtil.h"
 
 #include "Math/IParamFunction.h"
 #include "Math/Integrator.h"

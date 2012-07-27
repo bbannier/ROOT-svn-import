@@ -587,7 +587,7 @@ void FitResult::GetConfidenceIntervals(unsigned int n, unsigned int stride1, uns
    }
 }
 
-      void FitResult::GetConfidenceIntervals(const BinData & data, double * ci, double cl, bool norm ) const { 
+void FitResult::GetConfidenceIntervals( const BinData & data, double * ci, double cl, bool norm ) const { 
    // implement confidence intervals from a given bin data sets
    // currently copy the data from Bindata. 
    // could implement otherwise directly

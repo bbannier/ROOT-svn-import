@@ -18,9 +18,6 @@
 #include "Fit/Fitter.h"
 #endif
 
-#ifndef ROOT_Fit_DataVector
-#include "Fit/DataVector.h"
-#endif
 
 #ifndef ROOT_Math_IFunctionfwd
 #include "Math/IFunctionfwd.h"

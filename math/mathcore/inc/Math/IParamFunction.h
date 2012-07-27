@@ -27,6 +27,7 @@
 
 
 #include <cassert> 
+#include <vector> 
 
 /**
    @defgroup ParamFunc Interfaces for parametric functions 
@@ -124,6 +125,11 @@ public:
    double operator() (const double * x, const double *  p ) const { 
       return DoEvalPar(x, p); 
    }
+   
+   void operator() ( int n, double const* const* ppIn, const double * p, double* pOut ) const
+   {
+     DoEvalParVector( n, ppIn, p, pOut ); 
+   }
 
    using BaseFunc::operator();
 
@@ -134,15 +140,45 @@ private:
       Implementation of the evaluation function using the x values and the parameters. 
       Must be implemented by derived classes
    */
-   virtual double DoEvalPar(const double * x, const double * p) const = 0; 
+   virtual double DoEvalPar( const double * x, const double * p ) const = 0; 
+
+   /**
+      Implementation of the evaluation function using the x values and the parameters. 
+      This is the prototype for the vectorizable call. Can be implemented 
+      by the derived class to provide faster function evaluation.
+      By default it maps to the non vectorizable version with 
+      minor overhead.
+   */
+   virtual void DoEvalParVector( int n, double const* const* ppIn, const double * p, double* pOut ) const 
+   {
+     int ndim = NDim();
+     
+     std::vector<double> tmpVec( ndim );
+     
+     for ( int i=0; i < n; i++ )
+     {
+       for ( int j=0; j < ndim; j++ )
+       {
+         tmpVec[i] = ppIn[j][i];
+       }
+       
+       pOut[i] = DoEvalPar( &tmpVec.front(), p );
+     }
+   }
+   
+   /**
+      Implement the ROOT::Math::IBaseFunctionMultiDim interface DoEval(x) using the cached parameter values
+   */
+   virtual double DoEval( const double *x ) const { 
+      return DoEvalPar( x, Parameters() );  
+   }
 
    /**
       Implement the ROOT::Math::IBaseFunctionMultiDim interface DoEval(x) using the cached parameter values
    */
-   virtual double DoEval(const double *x) const { 
-      return DoEvalPar( x, Parameters() );  
+   virtual void DoEvalVector( int n, double const* const* ppIn, double* pOut ) const { 
+      return DoEvalParVector( n, ppIn, Parameters(), pOut );  
    }
-
 }; 
 
 //___________________________________________________________________
@@ -266,8 +302,52 @@ public:
    /**
       Evaluate partial derivative using cached parameter values
    */
-   double ParameterDerivative(const double * x, unsigned int ipar = 0) const { 
-      return DoParameterDerivative(x, Parameters() , ipar); 
+   double ParameterDerivative( const double * x, unsigned int ipar = 0 ) const { 
+      return DoParameterDerivative( x, Parameters(), ipar); 
+   }
+   
+   
+   /////////////////////////////////////////////////////////////////////
+   // Vectorizable code:
+
+   /**
+      Evaluate the all the derivatives (gradient vector) of the function with respect to the parameters at a point x.
+      It is optional to be implemented by the derived classes for better efficiency
+      Vectorizable version
+   */
+   virtual void ParameterGradientVector( int n, double const* const* ppIn, 
+    const double * p, double *const * ppOut ) const { 
+      
+      unsigned int npar = NPar(); 
+      for (unsigned int ipar  = 0; ipar < npar; ++ipar) 
+         DoParameterDerivativeVector( n, ppIn, p, ipar, ppOut[ipar] ); 
+   } 
+
+   /**
+      Evaluate the partial derivative w.r.t a parameter ipar from values and parameters
+      Vectorizable version
+    */
+   void ParameterDerivativeVector( int n, double const* const* ppIn, const double * p, 
+    unsigned int ipar, double* pOut ) const { 
+      DoParameterDerivativeVector( n, ppIn, p, ipar, pOut ); 
+   }  
+
+   /**
+      Evaluate all derivatives using cached parameter values
+      Vectorizable version
+   */
+   void ParameterGradientVector( int n, double const* const* ppIn, double *const * ppOut ) const { 
+      return ParameterGradientVector( n, ppIn, Parameters(), ppOut ); 
+   }
+   
+   /**
+      Evaluate partial derivative using cached parameter values
+      Vectorizable version
+   */
+   void ParameterDerivativeVector( int n, double const* const* ppIn, 
+    unsigned int ipar, double* pOut ) const 
+   { 
+      return DoParameterDerivativeVector( n, ppIn, Parameters(), ipar, pOut );
    }
 
 private: 
@@ -277,8 +357,30 @@ private:
    /**
       Evaluate the partial derivative w.r.t a parameter ipar , to be implemented by the derived classes
     */
-   virtual double DoParameterDerivative(const double * x, const double * p, unsigned int ipar) const = 0;  
+   virtual double DoParameterDerivative(const double * x, const double * p, 
+    unsigned int ipar) const = 0;  
 
+   /**
+      Evaluate the partial derivative w.r.t a parameter ipar , to be implemented by the derived classes
+      Vectorizable version
+    */
+   virtual void DoParameterDerivativeVector( int n, double const* const* ppIn, 
+    const double * p, unsigned int ipar, double* pOut  ) const
+   {
+     int ndim = NDim();
+     
+     std::vector<double> tmpVec( ndim );
+     
+     for ( int i=0; i < n; i++ )
+     {
+       for ( int j=0; j < ndim; j++ )
+       {
+         tmpVec[i] = ppIn[j][i];
+       }
+       
+       pOut[i] = DoParameterDerivative( &tmpVec.front(), p, ipar );
+     }
+   }  
 
 };
 
