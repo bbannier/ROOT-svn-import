@@ -1,0 +1,26 @@
+Leave/Enter notify events without grabs.
+
+test1.gui:
+
+Pointer moves from window A to window B and A is an inferior of B:
+
+-LeaveNotify with detail Ancestor is generated on A
+-LeaveNotify with detail Virtual is generated on each window between A and B exclusive (in that order)
+-EnterNotify with detail Inferior is generated on B
+
+
+GUI: one main window with several nested windows, pointer must go from some of nested windows
+to it's parents:
+
+main window 500, 500, 600, 600
+|
+child window 100, 100, 400, 400
+  |
+child window 50, 50, 350, 300
+   |
+child window 25, 25, 325, 250
+
+Expected output - messages from TestFrame::HandleCrossing, with event types and coordinates (use window geometry
+to visually check, if coordinates are OK).
+
+Compare Cocoa/X11 versions, compare coordinates.
