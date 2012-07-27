@@ -26,14 +26,14 @@ TestFrame::TestFrame(TestFrame *parent, UInt_t width, UInt_t heihght,
 
    if (font_ == kNone) {//Init font.
       assert(textContext_ == kNone);
-#ifdef R__HAS_COCOA      
+#ifdef R__HAS_COCOA
       font_ = gVirtualX->LoadQueryFont("-*-courier-*-*-*-*-14");
 #else
       font_ = gVirtualX->LoadQueryFont("fixed");
 #endif
       GCValues_t gcVals;
       gcVals.fFont = gVirtualX->GetFontHandle(font_);
-      
+
       gcVals.fMask = kGCFont | kGCForeground;
       textContext_ = gVirtualX->CreateGC(GetId(), &gcVals);
    }
@@ -51,7 +51,7 @@ void TestFrame::DoRedraw()
    
    const TString text(TString::Format("id : %u, w : %u, h : %u", unsigned(windowID_), unsigned(GetWidth()), unsigned(GetHeight())));
    
-   gVirtualX->DrawString(windowID_, textContext_, 0, 30, text.Data(), text.Length());
+   gVirtualX->DrawString(GetId(), textContext_, 0, 30, text.Data(), text.Length());
 }
 
 //_____________________________________________________
