@@ -2,12 +2,19 @@ Leave/Enter notify events without grabs.
 
 test1.gui:
 
-Pointer moves from window A to window B and A is an inferior of B:
+The pointer moves from window A to window B and A is an inferior of B:
 
 -LeaveNotify with detail Ancestor is generated on A
 -LeaveNotify with detail Virtual is generated on each window between A and B exclusive (in that order)
 -EnterNotify with detail Inferior is generated on B
 
+The pointer moves from window A to window B and B is an inferior of A:
+-LeaveNotify with detail Inferior is generated on A
+-EnterNotify with detail Virtual is generated on each window between
+ A and B exclusive (in that order) 
+-EnterNotify with detail Ancestor is generated on B.
+
+Note: the second case, the second sentence "(in that order)" is different in TGCocoa - it's in reverse order.
 
 GUI: one main window with several nested windows, pointer must go from some of nested windows
 to it's parents:
