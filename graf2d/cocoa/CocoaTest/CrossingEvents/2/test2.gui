@@ -36,6 +36,21 @@
                   256
                   512
                -input
+               +children
+                  +window
+                     +geometry
+                        x : 40
+                        y : 50
+                        width : 60
+                        height : 100
+                     -geometry
+                     color : fefefe
+                     +input
+                        256
+                        512
+                     -input
+                  -window
+               -children
             -window
             +window
                +geometry
@@ -49,6 +64,21 @@
                   256
                   512
                -input
+               +children
+                  +window
+                     +geometry
+                        x : 0
+                        y : 50
+                        width : 60
+                        height : 100
+                     -geometry
+                     color : efefef
+                     +input
+                        256
+                        512
+                     -input
+                  -window
+               -children
             -window
          -children
       -window
