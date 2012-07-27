@@ -33,7 +33,7 @@
                -geometry
                color : ff
                +input
-                  526
+                  256
                   512
                -input
             -window
