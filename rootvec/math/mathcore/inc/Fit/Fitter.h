@@ -19,9 +19,7 @@
 Classes used for fitting (regression analysis) and estimation of parameter values given a data sample. 
 */
 
-#ifndef ROOT_Fit_DataVectorfwd
-#include "Fit/DataVectorfwd.h"
-#endif
+#include "Fit/UnBinData.h"
 
 #ifndef ROOT_Fit_FitConfig
 #include "Fit/FitConfig.h"

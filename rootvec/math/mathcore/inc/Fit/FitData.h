@@ -1,5 +1,5 @@
-// @(#)root/mathcore:$Id: DataVector.h 45076 2012-07-16 13:45:18Z mborinsk $
-// Author: L. Moneta Wed Aug 30 11:15:23 2006
+// @(#)root/mathcore:$Id: FitData.h 45076 2012-07-16 13:45:18Z mborinsk $
+// Author: M. Borinsky 
 
 /**********************************************************************
  *                                                                    *
@@ -64,50 +64,112 @@ class FitData
 public: 
 
   /// construct with default option and data range 
-  FitData( unsigned int maxpoints = 0, unsigned int dim = 1 ) : 
-    fMaxPoints(maxpoints), 
-    fCoords(dim), 
-    fCoordsPtr(dim)
-  {
-    InitCoordsVector( );
-  }
-
-  /// dummy virtual destructor
-  virtual ~FitData( ) {}
+  explicit FitData( unsigned int maxpoints = 0, unsigned int dim = 1 );
 
   /// construct passing options and default data range 
-  FitData( const DataOptions & opt, unsigned int maxpoints = 0, unsigned int dim = 1 ) : 
-    fOptions(opt), 
-    fMaxPoints(maxpoints), 
-    fCoords(dim), 
-    fCoordsPtr(dim)
-  {
-    InitCoordsVector( );
-  }
+  explicit FitData( const DataOptions & opt, unsigned int maxpoints = 0, unsigned int dim = 1 );
 
 
   /// construct passing range and default options 
-  FitData( const DataRange & range, unsigned int maxpoints = 0, unsigned int dim = 1 ) : 
-    fRange(range), 
-    fMaxPoints(maxpoints), 
-    fCoords(dim), 
-    fCoordsPtr(dim)
-  {
-    InitCoordsVector( );
-  }
+  explicit FitData( const DataRange & range, unsigned int maxpoints = 0, unsigned int dim = 1 );
 
   /// construct passing options and data range 
   FitData ( const DataOptions & opt, const DataRange & range, 
-    unsigned int maxpoints = 0, unsigned int dim = 1 ) : 
-    fOptions(opt), 
-    fRange(range), 
-    fMaxPoints(maxpoints), 
-    fCoords(dim), 
-    fCoordsPtr(dim)
-  {
-    InitCoordsVector( );
-  }
+    unsigned int maxpoints = 0, unsigned int dim = 1 );
+  
+  /// constructor from external data for 1D data
+  FitData ( unsigned int n, const double * dataX );
 
+  /// constructor from external data for 2D data
+  FitData (unsigned int n, const double * dataX, const double * dataY );
+
+  /// constructor from external data for 3D data
+  FitData ( unsigned int n, const double * dataX, const double * dataY, 
+    const double * dataZ );
+  
+  /**
+    constructor for multi-dim external data and a range (data are copied inside according to the range)
+    Uses as argument an iterator of a list (or vector) containing the const double * of the data
+    An example could be the std::vector<const double *>::begin
+  */
+  FitData( const DataRange & range, unsigned int maxpoints, const double* dataX );
+  
+  /**
+    constructor for multi-dim external data and a range (data are copied inside according to the range)
+    Uses as argument an iterator of a list (or vector) containing the const double * of the data
+    An example could be the std::vector<const double *>::begin
+  */
+  FitData( const DataRange & range, unsigned int maxpoints, const double* dataX, const double* dataY );
+  
+  /**
+    constructor for multi-dim external data and a range (data are copied inside according to the range)
+    Uses as argument an iterator of a list (or vector) containing the const double * of the data
+    An example could be the std::vector<const double *>::begin
+  */
+  FitData( const DataRange & range, unsigned int maxpoints, const double* dataX, const double* dataY, 
+    const double* dataZ );
+  
+  /**
+    constructor for multi-dim external data (data are not copied inside)
+    Uses as argument an iterator of a list (or vector) containing the const double * of the data
+    An example could be the std::vector<const double *>::begin
+    In case of weighted data, the external data must have a dim+1 lists of data 
+    The apssed dim refers just to the coordinate size
+  */
+  template<class Iterator> 
+  FitData ( unsigned int n, unsigned int dim, Iterator dataItr ) : 
+    fWrapped( true ), 
+    fMaxPoints( n ), 
+    fNPoints( fMaxPoints ), 
+    fDim( dim ), 
+    fCoordsPtr( fDim ), 
+    fpTmpCoordVector( NULL )
+  {
+    assert( fDim >= 1 );
+    for ( unsigned int i=0; i < fDim; i++ )
+    {
+      fCoordsPtr[i] = *dataItr++;
+    }
+    
+    if ( fpTmpCoordVector )
+    {
+      delete fpTmpCoordVector;
+      fpTmpCoordVector = NULL;
+    }
+    
+    fpTmpCoordVector = new double [fDim]; 
+  }
+  
+  /**
+    constructor for multi-dim external data and a range (data are copied inside according to the range)
+    Uses as argument an iterator of a list (or vector) containing the const double * of the data
+    An example could be the std::vector<const double *>::begin
+  */
+  template<class Iterator> 
+  FitData( const DataRange & range, unsigned int maxpoints, unsigned int dim, Iterator dataItr ) : 
+    fWrapped( false ), 
+    fRange( range ), 
+    fMaxPoints( maxpoints ), 
+    fNPoints( 0 ), 
+    fDim( dim ), 
+    fpTmpCoordVector( NULL )
+  {
+    assert( fDim >= 1 );
+    InitCoordsVector( );
+    
+    InitFromRange( dataItr );
+  }
+  
+  /// dummy virtual destructor
+  virtual ~FitData( );
+
+  FitData ( const FitData & rhs );
+
+  FitData & operator= ( const FitData & rhs );
+  
+  void Append( unsigned int newPoints, unsigned int dim = 1 );
+
+public: 
   /**
     access to options
   */
@@ -119,32 +181,153 @@ public:
   */
   const DataRange & Range() const { return fRange; }
 
-  /** 
-     define a max size to avoid allocating too large arrays 
-  */
-  static unsigned int MaxSize()  { 
-    return (unsigned int) (-1) / sizeof (double);
-  }
-
-
 protected:
-  void InitCoordsVector ( )
+  /** 
+   * initializer routines to set the corresponding pointers right
+   * The vectors must NOT be resized after this initialization 
+   * without setting the corresponding pointers in the 
+   * same moment ( has to be an atomic operation in case 
+   * of multithreading ).
+  */ 
+  void InitCoordsVector ()
   {
-    for( int i=0; i < fCoords.size(); i++ )
+    fCoords.resize( fDim );
+    fCoordsPtr.resize( fDim );
+    for( unsigned int i=0; i < fDim; i++ )
     {
       fCoords[i].resize( fMaxPoints );
       fCoordsPtr[i] = &fCoords[i].front();
     }
+    
+    if ( fpTmpCoordVector )
+    {
+      delete fpTmpCoordVector;
+      fpTmpCoordVector = NULL;
+    }
+    
+    fpTmpCoordVector = new double [fDim]; 
   }
 
-private:
+  template<class Iterator> 
+  void InitFromRange( Iterator dataItr )
+  {
+    for ( unsigned int i = 0; i < fMaxPoints; i++ ) 
+    { 
+      bool isInside = true;
+      Iterator tmpItr = dataItr;
+      
+      for ( unsigned int j = 0; j < fDim; j++ )  
+         isInside &= fRange.IsInside( (*tmpItr++)[i], j );
+      
+      if ( isInside )
+      {
+        tmpItr = dataItr;
+        
+        for ( unsigned int k = 0; k < fDim; k++ )
+          fpTmpCoordVector[k] = (*tmpItr++)[i];
+          
+        Add( fpTmpCoordVector );
+      }
+    }
+  }
+  
 
+public: 
+  /**
+    return a pointer to the coordinates data for the given fit point 
+  */  
+  // not threadsafe, to be replaced with never constructs!
+  // for example: just return std::array or std::vector, there's 
+  // is going to be only minor overhead in c++11.
+  const double * Coords( unsigned int ipoint ) const
+  { 
+    assert( fpTmpCoordVector );
+    assert( ipoint < fMaxPoints );
+    
+    for ( unsigned int i=0; i < fDim; i++ )
+    {
+      assert( fCoordsPtr[i] );
+      assert( fCoords.empty() || &fCoords[i].front() == fCoordsPtr[i] );
+      
+      fpTmpCoordVector[i] = fCoordsPtr[i][ipoint];
+    }
+    
+    return fpTmpCoordVector;
+  }
+  
+  /**
+    add one dim data with only coordinate and values
+  */
+  void Add( double x )
+  {
+    assert( !fWrapped );
+    assert( !fCoordsPtr.empty() && fCoordsPtr.size() == 1 && fCoordsPtr[0] );
+    assert( 1 == fDim );
+    assert( fNPoints < fMaxPoints );
+    
+    fCoords[0][ fNPoints ] = x;
+    
+    fNPoints++;
+  }
+  
+  /**
+    add multi-dim coordinate data with only value 
+  */
+  void Add( const double *x )
+  {
+    assert( !fWrapped );
+    assert( !fCoordsPtr.empty() && fCoordsPtr.size() == fDim );
+    assert( fNPoints < fMaxPoints );
+    
+    for( unsigned int i=0; i < fDim; i++ )
+    {
+      fCoords[i][ fNPoints ] = x[i];
+    }
+    
+    fNPoints++;
+  }
+
+  /**
+    return number of fit points
+  */
+  unsigned int NPoints() const { return fNPoints; } 
+
+  /**
+    return number of fit points 
+  */ 
+  unsigned int Size() const { return fNPoints; }
+
+protected:
+  void UnWrap( )
+  {
+    assert( fWrapped );
+    assert( fCoords.empty() );
+    
+    fCoords.resize( fDim );
+    for( unsigned int i=0; i < fDim; i++ )
+    {
+      assert( fCoordsPtr[i] );
+      fCoords[i].resize( fNPoints );
+      std::copy( fCoordsPtr[i], fCoordsPtr[i] + fNPoints, fCoords[i].begin() );
+      fCoordsPtr[i] = &fCoords[i].front();
+    }
+    
+    fWrapped = false;
+  }
+
+protected:
+  bool          fWrapped;
+
+private:
   DataOptions   fOptions; 
   DataRange     fRange;
   
-  bool          fWrapped;
+protected:
   unsigned int  fMaxPoints;
+  unsigned int  fNPoints;
+  unsigned int  fDim;
   
+private:
   /** 
    * This vector stores the vectorizable data:
    * The inner vectors contain the coordinates data
@@ -160,7 +343,10 @@ private:
    * fCoordsPtr.
   */
   std::vector< std::vector< double > > fCoords; 
-  std::vector< double* > fCoordsPtr;
+  std::vector< const double* > fCoordsPtr;
+  
+  double* fpTmpCoordVector; // non threadsafe stuff!
+  
 };
       
 

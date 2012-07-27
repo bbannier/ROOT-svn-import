@@ -577,7 +577,7 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
    double xmax = 0; 
    range.GetRange(xmin,xmax); 
 
-   dv.Initialize(nPoints,1, type); 
+   dv.Initialize(nPoints, 1, type); 
 
 #ifdef DEBUG
    std::cout << "DoFillData: graph npoints = " << nPoints << " type " << type << std::endl;
@@ -795,15 +795,7 @@ void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {
    // if sata are filled already check if there are consistent - otherwise do nothing
    if (dv.Size() > 0 && dv.NDim() == 1 ) { 
       // check if size is correct otherwise flag an errors 
-      if (dv.PointSize() == 2 && type != BinData::kNoError ) {
-         Error("FillData","Inconsistent TGraph with previous data set- skip all graph data"); 
-         return;
-      }
-      if (dv.PointSize() == 3 && type != BinData::kValueError ) {
-         Error("FillData","Inconsistent TGraph with previous data set- skip all graph data"); 
-         return;
-      }
-      if (dv.PointSize() == 4 && type != BinData::kCoordError ) {
+      if ( dv.GetErrorType() != type ) {
          Error("FillData","Inconsistent TGraph with previous data set- skip all graph data"); 
          return;
       }

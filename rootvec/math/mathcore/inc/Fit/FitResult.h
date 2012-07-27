@@ -260,7 +260,7 @@ public:
       the confidence interval are returned in the array ci
       cl is the desired confidence interval value
     */
-   void GetConfidenceIntervals(const BinData & data, double * ci, double cl=0.95, bool norm = true ) const;
+   void GetConfidenceIntervals( const BinData & data, double * ci, double cl=0.95, bool norm = true ) const;
 
 
    /// get index for parameter name (return -1 if not found)
