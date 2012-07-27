@@ -46,3 +46,5 @@ When the pointer moves from window A to window B and window C is their least com
 test2.gui is an example with one top-level window (and special window structure inside to check how common ancestor found)
 
 test3.gui is an example with two top-level windows.
+
+Again, when sending event to a range of views (branch) order can be different (reverse), since I'm sending UP along the hierarchy branch.
