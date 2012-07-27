@@ -1379,11 +1379,11 @@ void TGCocoa::SetWMTransientHint(Window_t wid, Window_t mainWid)
    
    QuartzWindow * const transientWindow = fPimpl->GetWindow(wid).fQuartzWindow;
 
-   if (mainWindow != transientWindow) {
+   //TODO: add check - one window can not be transient for several windows.
+   if (mainWindow != transientWindow && transientWindow.fMainWindow != mainWindow) {
       [[transientWindow standardWindowButton : NSWindowZoomButton] setEnabled : NO];
       [mainWindow addTransientWindow : transientWindow];
-   } else
-      Warning("SetWMTransientHint", "transient and main windows are the same window");
+   }
 }
 
 /////////////////////////////////////////
