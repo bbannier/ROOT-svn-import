@@ -19,6 +19,7 @@ public:
    Bool_t HandleCrossing(Event_t *crossingEvent);   
 
 private:
+
    void PrintFrameInfo()const;
    void PrintEventCoordinates(const Event_t *event)const;
 
@@ -28,6 +29,9 @@ private:
    TestFrame &operator = (TestFrame &&rhs) = delete;
    
    //To be used by all test frames.
+   Window_t windowID_;
+
+   static Window_t currentWindowID_;
    static FontStruct_t font_;
    static GContext_t textContext_;
 };

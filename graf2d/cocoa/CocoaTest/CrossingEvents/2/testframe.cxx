@@ -9,6 +9,7 @@
 namespace ROOT {
 namespace CocoaTest {
 
+Window_t TestFrame::currentWindowID_ = 4;
 FontStruct_t TestFrame::font_ = kNone;
 GContext_t TestFrame::textContext_ = kNone;
 
@@ -17,6 +18,12 @@ TestFrame::TestFrame(TestFrame *parent, UInt_t width, UInt_t heihght,
                      UInt_t options, Pixel_t background)
                : TGFrame(parent, width, heihght, options, background)
 {
+#ifdef R__HAS_COCOA
+   windowID_ = GetId();
+#else
+   windowID_ = currentWindowID_++;
+#endif
+
    if (font_ == kNone) {//Init font.
       assert(textContext_ == kNone);
 #ifdef R__HAS_COCOA      
@@ -42,9 +49,9 @@ void TestFrame::DoRedraw()
 {
    TGFrame::DoRedraw();
    
-   const TString text(TString::Format("id : %u, w : %u, h : %u", unsigned(GetId()), unsigned(GetWidth()), unsigned(GetHeight())));
+   const TString text(TString::Format("id : %u, w : %u, h : %u", unsigned(windowID_), unsigned(GetWidth()), unsigned(GetHeight())));
    
-   gVirtualX->DrawString(GetId(), textContext_, 0, 30, text.Data(), text.Length());
+   gVirtualX->DrawString(windowID_, textContext_, 0, 30, text.Data(), text.Length());
 }
 
 //_____________________________________________________
@@ -69,7 +76,7 @@ Bool_t TestFrame::HandleCrossing(Event_t *crossingEvent)
 //_____________________________________________________
 void TestFrame::PrintFrameInfo()const
 {
-   std::cout<<"this == "<<this<<" window id == "<<GetId()<<std::endl;
+   std::cout<<"this == "<<this<<" window id == "<<windowID_<<std::endl;
 }
 
 //_____________________________________________________
