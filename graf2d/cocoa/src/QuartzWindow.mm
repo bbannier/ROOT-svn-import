@@ -700,7 +700,7 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) addTransientWindow : (QuartzWindow *)window
+- (void) addTransientWindow : (QuartzWindow *) window
 {
    assert(window != nil && "addTransientWindow, window parameter is nil");
 
@@ -1192,6 +1192,11 @@ void print_mask_info(ULong_t mask)
 
    [fContentView setHidden : YES];
    [self orderOut : self];
+   
+   if (fMainWindow && !fDelayedTransient) {
+      [fMainWindow removeChildWindow : self];
+      fMainWindow = nil;
+   }
 }
 
 //Events.

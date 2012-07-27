@@ -143,7 +143,6 @@ TGedMarkerSelect::TGedMarkerSelect(const TGWindow *p, Style_t markerStyle, Int_t
    fPicture = 0;
    SetPopup(new TGedMarkerPopup(gClient->GetDefaultRoot(), this, markerStyle));
    SetMarkerStyle(markerStyle);
-
 }
 
 //_____________________________________________________________________________
