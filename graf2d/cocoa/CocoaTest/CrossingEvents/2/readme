@@ -31,3 +31,18 @@ Expected output - messages from TestFrame::HandleCrossing, with event types and 
 to visually check, if coordinates are OK).
 
 Compare Cocoa/X11 versions, compare coordinates.
+
+
+test2.gui:
+test3.gui:
+
+When the pointer moves from window A to window B and window C is their least common ancestor:
+
+-LeaveNotify with detail Nonlinear is generated on A
+-LeaveNotify with detail NonlinearVirtual is generated on each window between A and C exclusive (in that order)
+-EnterNotify with detail NonlinearVirtual is generated on each window between C and B exclusive (in that order)
+-EnterNotify with detail Nonlinear is generated on B.
+
+test2.gui is an example with one top-level window (and special window structure inside to check how common ancestor found)
+
+test3.gui is an example with two top-level windows.
