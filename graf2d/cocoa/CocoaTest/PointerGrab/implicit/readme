@@ -1,0 +1,7 @@
+Test implicit grab initialization.
+Test gui has 3 windows, child window 6 has the same size
+as its parent (window with id 5), only window 5 has
+kButtonPressMask/kButtonReleaseMask, so if you press mouse
+button while cursor is inside window 6, window 5 should receive
+button press/release events (even if you move cursor out of
+window 6/5 completely after you press button (before release)).
