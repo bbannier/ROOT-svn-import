@@ -17,10 +17,15 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TASPluginGS.h"
+#include "RConfigure.h"
 #include "TSystem.h"
 
 #ifndef WIN32
+#ifdef R__HAS_COCOA
+#   define X_DISPLAY_MISSING 1
+#else
 #   include <X11/Xlib.h>
+#endif
 #   define popen_flags "r"
 #else
 #   include "Windows4root.h"

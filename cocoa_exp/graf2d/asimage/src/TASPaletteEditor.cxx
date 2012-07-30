@@ -28,6 +28,7 @@
 #include "TGButton.h"
 #include "TGComboBox.h"
 #include "TGFileDialog.h"
+#include "RConfigure.h"
 #include "TLine.h"
 #include "TROOT.h"
 #include "TClass.h"
@@ -35,6 +36,10 @@
 
 #ifdef WIN32
 #include "Windows4root.h"
+#endif
+
+#ifdef R__HAS_COCOA
+#   define X_DISPLAY_MISSING 1
 #endif
 
 extern "C" {

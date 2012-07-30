@@ -436,10 +436,14 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
 #ifdef R__WIN32
    fBatch = kFALSE;
 #else
+#ifdef R__HAS_COCOA
+   fBatch = kFALSE;
+#else
    if (gSystem->Getenv("DISPLAY"))
       fBatch = kFALSE;
    else
       fBatch = kTRUE;
+#endif
 #endif
 
    int i = 0;

@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cassert>
 
+
 //______________________________________________________________________
 //
 // The TGLRnrCtx class aggregates data for a given redering context as
@@ -103,7 +104,6 @@ TGLRnrCtx::TGLRnrCtx(TGLViewerBase* viewer) :
    fGrabbedImage  (0)
 {
    // Constructor.
-   
    fColorSetStack = new lpTGLColorSet_t;
    fColorSetStack->push_back(0);
 
@@ -366,7 +366,7 @@ void TGLRnrCtx::ReleaseFont(TGLFont& font)
 GLUquadric* TGLRnrCtx::GetGluQuadric()
 {
    if (!fQuadric) {
-      if (fQuadric = gluNewQuadric()) {
+      if ((fQuadric = gluNewQuadric())) {
          gluQuadricOrientation(fQuadric, (GLenum)GLU_OUTSIDE);
          gluQuadricNormals    (fQuadric, (GLenum)GLU_SMOOTH);
       } else {
