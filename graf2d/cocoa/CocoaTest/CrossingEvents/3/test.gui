@@ -1,0 +1,13 @@
++window
+   +geometry
+      x : 100
+      y : 100
+      width : 500
+      height : 500
+   -geometry
+   color : f0f0d0
+   +input
+      256
+      512
+   -input
+-window
