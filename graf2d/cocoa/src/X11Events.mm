@@ -1333,6 +1333,7 @@ void EventTranslator::GenerateButtonPressEventNoGrab(NSView<X11Window> *view, NS
    //required (previously entered view and current view are different).
    //If nothing was selected, on linux it looks like 'root' window
    //becomes a grab and all pointer events are discarded until ungrab.
+
    GenerateCrossingEvent(fButtonGrabView, theEvent, kNotifyGrab);
    
    if (fButtonGrabView)
