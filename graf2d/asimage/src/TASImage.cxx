@@ -74,13 +74,18 @@ End_Html */
 #include "Riostream.h"
 #include "THashTable.h"
 #include "TPluginManager.h"
+#include "RConfigure.h"
 #include "TEnv.h"
 #include "TStyle.h"
 #include "TText.h"
 
 
 #ifndef WIN32
+#ifdef R__HAS_COCOA
+#   define X_DISPLAY_MISSING 1
+#else
 #   include <X11/Xlib.h>
+#endif
 #else
 #   include "Windows4root.h"
 #endif
@@ -2139,17 +2144,22 @@ Bool_t TASImage::InitVisual()
    }
 
    disp = (Display*) gVirtualX->GetDisplay();
+#ifndef WIN32
+#ifdef R__HAS_COCOA
+   fgVisual = create_asvisual(0, 0, 0, 0);
+   fgVisual->dpy = (Display*)1; //fake (not used)
+#else
    Int_t screen  = gVirtualX->GetScreen();
    Int_t depth   = gVirtualX->GetDepth();
    Visual *vis   = (Visual*) gVirtualX->GetVisual();
    Colormap cmap = (Colormap) gVirtualX->GetColormap();
-#ifndef WIN32
    if (vis == 0 || cmap == 0) {
       fgVisual = create_asvisual(0, 0, 0, 0);
    } else {
       fgVisual = create_asvisual_for_id(disp, screen, depth,
                                         XVisualIDFromVisual(vis), cmap, 0);
    }
+#endif
 #else
    fgVisual = create_asvisual(0, 0, 0, 0);
    fgVisual->dpy = (Display*)1; //fake (not used)

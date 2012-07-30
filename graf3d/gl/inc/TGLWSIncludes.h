@@ -14,15 +14,18 @@
 
 #ifndef ROOT_TGLWSIncludes
 
+#include "RConfigure.h"
 #include "TGLIncludes.h"
 
 #if defined(WIN32)
 #  include <GL/wglew.h>
 #else
+#ifndef R__HAS_COCOA
 #  if defined(__APPLE__)
 #    define GLEW_APPLE_GLX
 #  endif
 #  include <GL/glxew.h>
+#endif
 #endif
 
 #endif
