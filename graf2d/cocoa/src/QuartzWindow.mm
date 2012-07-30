@@ -26,6 +26,7 @@
 
 #import "QuartzWindow.h"
 #import "QuartzPixmap.h"
+#import "CocoaUtils.h"
 #import "X11Buffer.h"
 #import "X11Events.h"
 #import "TGWindow.h"
@@ -1219,12 +1220,6 @@ void print_mask_info(ULong_t mask)
       [self setCanDrawConcurrently : NO];
       
       [self setHidden : YES];
-      //Actually, check if view need this.
-      const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect;
-      frame.origin = CGPointZero;
-      NSTrackingArea *tracker = [[NSTrackingArea alloc] initWithRect : frame options : trackerOptions owner : self userInfo : nil];
-      [self addTrackingArea : tracker];
-      [tracker release];
       //
       if (attr)
          ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
@@ -1241,6 +1236,37 @@ void print_mask_info(ULong_t mask)
    [fPassiveKeyGrabs release];
    [fClipMask release];
    [super dealloc];
+}
+
+//
+//______________________________________________________________________________
+- (void)updateTrackingAreas
+{
+   if (!fID)
+      return;
+
+   if (NSIsEmptyRect([self visibleRect]))
+      return;
+
+   
+   const ROOT::MacOSX::Util::AutoreleasePool pool;
+
+   if (NSArray *trackingArray = [self trackingAreas]) {
+      const NSUInteger size = [trackingArray count];
+      for (NSUInteger i = 0; i < size; ++i) {
+         NSTrackingArea * const t = [trackingArray objectAtIndex : i];
+         [self removeTrackingArea : t];
+      }
+   }
+   
+   const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect;
+   NSRect frame = {};
+   frame.size.width = self.fWidth;
+   frame.size.height = self.fHeight;
+   
+   NSTrackingArea * const tracker = [[NSTrackingArea alloc] initWithRect : frame options : trackerOptions owner : self userInfo : nil];
+   [self addTrackingArea : tracker];
+   [tracker release];
 }
 
 //Overlap management.
