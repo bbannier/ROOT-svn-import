@@ -19,14 +19,12 @@ int main(int argc, char ** argv)
    gVirtualX->MapSubwindows(mainFrame->GetId());
    gVirtualX->MapRaised(mainFrame->GetId());
 
-   mainFrame->AddInput(kButtonReleaseMask);
-
-//   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kKeyShiftMask, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);//1
-//   childFrame->AddInput(kButtonPressMask | kButtonReleaseMask);//2
-//   childFrame->AddInput(kButtonPressMask);//3
-//   gVirtualX->GrabButton(childFrame->GetId(), kButton3, kKeyMod1Mask, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);//4
-   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kKeyMod2Mask, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);//5
-//   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kKeyLockMask, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);//6
+   //Case 1: window with id 5 is receiving enter/leave notify events.
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childChildFrame->AddInput(kButtonPressMask);//this window initiate implicit grab!
+   mainFrame->AddInput(kButtonReleaseMask | kPointerMotionMask);
+   //Expected: before any button pressed, window 4 receives mouse motion events.
+   //window 5 - enter/exit.
 
    app.Run();
 }

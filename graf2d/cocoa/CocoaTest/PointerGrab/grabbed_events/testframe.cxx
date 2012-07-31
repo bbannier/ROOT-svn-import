@@ -59,11 +59,11 @@ Bool_t TestFrame::HandleCrossing(Event_t *crossingEvent)
 {
    assert(crossingEvent);
 
-/*   if (crossingEvent->fType == kEnterNotify)
+   if (crossingEvent->fType == kEnterNotify)
       std::cout<<"Enter notify event in "<<windowID_<<std::endl;
    else
       std::cout<<"Leave notify event in "<<windowID_<<std::endl;
-  */
+
    return kTRUE;
 }
 
@@ -77,6 +77,16 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
    else
       std::cout<<"Button release event in "<<windowID_<<std::endl;
       
+   return kTRUE;
+}
+
+//_____________________________________________________
+Bool_t TestFrame::HandleMotion(Event_t *motionEvent)
+{
+   assert(motionEvent);
+   
+   std::cout<<"Mouse motion event in "<<windowID_<<std::endl;
+   
    return kTRUE;
 }
 
