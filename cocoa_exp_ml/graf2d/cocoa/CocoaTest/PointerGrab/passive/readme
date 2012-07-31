@@ -12,3 +12,5 @@ even if you release button inside window 4.
 line 4 - button 3 + alt key (kKeyMod1Mask)
 line 5 - button 1 + cmd key (kKeyMod2Mask).
 line 6 - button 1 + kKeyLockMask (???)
+
+Case with mod2 does not work in virtual machine (should it???).
