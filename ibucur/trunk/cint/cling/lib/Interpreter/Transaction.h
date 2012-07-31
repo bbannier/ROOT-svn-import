@@ -17,8 +17,19 @@ namespace clang {
   class Decl;
 }
 
+namespace llvm {
+  class Module;
+}
+
 namespace cling {
   ///\brief Contains information about the consumed input at once.
+  ///
+  /// A transaction could be:
+  /// - transformed - some declarations in the transaction could be modified, 
+  /// deleted or some new declarations could be added.
+  /// - rolled back - the declarations of the transactions could be reverted so
+  /// that they weren't seen at all.
+  /// - committed - code could be produced for the contents of the transaction.
   ///
   class Transaction {
   private:
@@ -52,11 +63,15 @@ namespace cling {
     ///
     CompilationOptions m_Opts;
 
+    ///\brief The llvm Module containing the information that we will revert
+    ///
+    llvm::Module* m_Module;
+
   public:
 
-    Transaction(const CompilationOptions& Opts) 
+    Transaction(const CompilationOptions& Opts, llvm::Module* M)
       : m_Completed(false), m_Parent(0), m_State(kUnknown), m_IssuedDiags(kNone),
-        m_Opts(Opts)
+        m_Opts(Opts), m_Module(M) 
     { }
 
     ~Transaction();
@@ -195,6 +210,8 @@ namespace cling {
       m_DeclQueue.clear(); 
       m_NestedTransactions.clear();
     }
+
+    llvm::Module* getModule() const { return m_Module; }
 
     ///\brief Prints out all the declarations in the transaction.
     ///

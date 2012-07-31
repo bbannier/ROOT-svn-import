@@ -199,6 +199,10 @@ namespace cling {
     return m_Result.c_str();
   }
 
+  void Interpreter::unload() {
+    m_IncrParser->unloadTransaction(0);
+  }
+
   Interpreter::Interpreter(int argc, const char* const *argv,
                            const char* llvmdir /*= 0*/) :
     m_UniqueCounter(0), m_PrintAST(false), m_DynamicLookupEnabled(false) {
@@ -725,10 +729,10 @@ namespace cling {
     if (Res.isUsable()) {
       // Accept it only if the whole name was parsed.
       if (P->NextToken().getKind() == clang::tok::eof) {
-        TypeSourceInfo *TSI = 0;
-        // The QualType returned by the parser is an odd QualType (type + TypeSourceInfo)
-        // and can not be used directly.
-        TheQT = clang::Sema::GetTypeFromParser(Res.get(),&TSI);
+        TypeSourceInfo* TSI = 0;
+        // The QualType returned by the parser is an odd QualType
+        // (type + TypeSourceInfo) and cannot be used directly.
+        TheQT = clang::Sema::GetTypeFromParser(Res.get(), &TSI);
       }
     }
     //
@@ -747,6 +751,45 @@ namespace cling {
     const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
     return TheQT;
   }
+
+  class ParserStateRAII {
+  private:
+    CompilerInstance* CI;
+    Parser* P;
+    Preprocessor& PP;
+    DiagnosticConsumer& DClient;
+    bool ResetIncrementalProcessing;
+    bool OldSuppressAllDiagnostics;
+    bool OldSpellChecking;
+
+  public:
+    ~ParserStateRAII()
+    {
+      //
+      // Advance the parser to the end of the file, and pop the include stack.
+      //
+      // Note: Consuming the EOF token will pop the include stack.
+      //
+      P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
+        /*StopAtCodeCompletion*/false);
+      if (ResetIncrementalProcessing) {
+        PP.enableIncrementalProcessing(false);
+      }
+      DClient.EndSourceFile();
+      CI->getDiagnostics().Reset();
+      PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
+      const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking =
+         OldSpellChecking;
+    }
+
+    ParserStateRAII(CompilerInstance* ci, Parser* p, bool rip, bool sad,
+          bool sc)
+       : CI(ci), P(p), PP(ci->getPreprocessor()),
+       DClient(ci->getDiagnosticClient()), ResetIncrementalProcessing(rip),
+       OldSuppressAllDiagnostics(sad), OldSpellChecking(sc)
+    {
+    }
+  };
 
   const Decl*
   Interpreter::lookupScope(const std::string& className,
@@ -814,6 +857,11 @@ namespace cling {
     PP.EnterSourceFile(FID, 0, SourceLocation());
     PP.Lex(const_cast<Token&>(P->getCurToken()));
     //
+    //  Setup to reset parser state on exit.
+    //
+    ParserStateRAII ResetParserState(CI, P, ResetIncrementalProcessing,
+       OldSuppressAllDiagnostics, OldSpellChecking);
+    //
     //  Prevent failing on an assert in TryAnnotateCXXScopeToken.
     //
     if (!P->getCurToken().is(clang::tok::identifier) && !P->getCurToken().
@@ -822,14 +870,14 @@ namespace cling {
           clang::tok::coloncolon)) && !P->getCurToken().is(
           clang::tok::kw_decltype)) {
       // error path
-      goto lookupClassDone;
+      return TheDecl;
     }
     //
     //  Try parsing the name as a nested-name-specifier.
     //
     if (P->TryAnnotateCXXScopeToken(false)) {
       // error path
-      goto lookupClassDone;
+      return TheDecl;
     }
     if (P->getCurToken().getKind() == tok::annot_cxxscope) {
       CXXScopeSpec SS;
@@ -905,7 +953,7 @@ namespace cling {
               }
               break;
           }
-          goto lookupClassDone;
+          return TheDecl;
         }
       }
     }
@@ -933,7 +981,7 @@ namespace cling {
     //
     if (P->TryAnnotateTypeOrScopeToken(false, false)) {
       // error path
-      goto lookupClassDone;
+      return TheDecl;
     }
     if (P->getCurToken().getKind() == tok::annot_typename) {
       ParsedType T = Parser::getTypeAnnotation(
@@ -948,21 +996,6 @@ namespace cling {
         }
       }
     }
-  lookupClassDone:
-    //
-    // Advance the parser to the end of the file, and pop the include stack.
-    //
-    // Note: Consuming the EOF token will pop the include stack.
-    //
-    P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-      /*StopAtCodeCompletion*/false);
-    if (ResetIncrementalProcessing) {
-      PP.enableIncrementalProcessing(false);
-    }
-    DClient.EndSourceFile();
-    CI->getDiagnostics().Reset();
-    PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
     return TheDecl;
   }
 
@@ -1082,6 +1115,11 @@ namespace cling {
     PP.EnterSourceFile(FID, 0, SourceLocation());
     PP.Lex(const_cast<Token&>(P->getCurToken()));
     //
+    //  Setup to reset parser state on exit.
+    //
+    ParserStateRAII ResetParserState(CI, P, ResetIncrementalProcessing,
+       OldSuppressAllDiagnostics, OldSpellChecking);
+    //
     //  Parse the prototype now.
     //
     std::vector<QualType> GivenArgTypes;
@@ -1090,7 +1128,7 @@ namespace cling {
       TypeResult Res(P->ParseTypeName());
       if (!Res.isUsable()) {
         // Bad parse, done.
-        goto lookupFuncProtoDone;
+        return TheDecl;
       }
       TypeSourceInfo *TSI = 0;
       // The QualType returned by the parser is an odd QualType (type + TypeSourceInfo)
@@ -1114,7 +1152,7 @@ namespace cling {
     }
     if (P->getCurToken().isNot(tok::eof)) {
       // We did not consume all of the prototype, bad parse.
-      goto lookupFuncProtoDone;
+      return TheDecl;
     }
     //
     //  Cleanup after prototype parse.
@@ -1167,7 +1205,7 @@ namespace cling {
         delete CI->getSema().CurScope;
         CI->getSema().CurScope = OldScope;
         // Then cleanup and exit.
-        goto lookupFuncProtoDone;
+        return TheDecl;
       }
       //
       //  Get any template args in the function name.
@@ -1192,7 +1230,7 @@ namespace cling {
         delete CI->getSema().CurScope;
         CI->getSema().CurScope = OldScope;
         // Then cleanup and exit.
-        goto lookupFuncProtoDone;
+        return TheDecl;
       }
       // Destroy the scope we created, and
       // restore the original.
@@ -1205,7 +1243,7 @@ namespace cling {
       if (!(Result.getResultKind() == LookupResult::Found) &&
           !(Result.getResultKind() == LookupResult::FoundOverloaded)) {
         // Lookup failed.
-        goto lookupFuncProtoDone;
+        return TheDecl;
       }
       //
       //  Now that we have a set of matching function names
@@ -1269,21 +1307,6 @@ namespace cling {
         }
       }
     }
-  lookupFuncProtoDone:
-    //
-    // Advance the parser to the end of the file, and pop the include stack.
-    //
-    // Note: Consuming the EOF token will pop the include stack.
-    //
-    P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-      /*StopAtCodeCompletion*/false);
-    if (ResetIncrementalProcessing) {
-      PP.enableIncrementalProcessing(false);
-    }
-    DClient.EndSourceFile();
-    CI->getDiagnostics().Reset();
-    PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
     return TheDecl;
   }
 
@@ -1402,6 +1425,11 @@ namespace cling {
     PP.EnterSourceFile(FID, 0, SourceLocation());
     PP.Lex(const_cast<Token&>(P->getCurToken()));
     //
+    //  Setup to reset parser state on exit.
+    //
+    ParserStateRAII ResetParserState(CI, P, ResetIncrementalProcessing,
+       OldSuppressAllDiagnostics, OldSpellChecking);
+    //
     //  Parse the arguments now.
     //
     {
@@ -1443,7 +1471,7 @@ namespace cling {
     }
     if (P->getCurToken().isNot(tok::eof)) {
       // We did not consume all of the arg list, bad parse.
-      goto lookupFuncArgsDone;
+      return TheDecl;
     }
     {
       //
@@ -1490,7 +1518,7 @@ namespace cling {
         CI->getSema().ExitDeclaratorContext(P->getCurScope());
         delete CI->getSema().CurScope;
         CI->getSema().CurScope = OldScope;
-        goto lookupFuncArgsDone;
+        return TheDecl;
       }
       //
       //  Get any template args in the function name.
@@ -1515,7 +1543,7 @@ namespace cling {
         delete CI->getSema().CurScope;
         CI->getSema().CurScope = OldScope;
         // Then cleanup and exit.
-        goto lookupFuncArgsDone;
+        return TheDecl;
       }
       //
       //  Destroy the scope we created, and restore the original.
@@ -1529,7 +1557,7 @@ namespace cling {
       if (!(Result.getResultKind() == LookupResult::Found) &&
           !(Result.getResultKind() == LookupResult::FoundOverloaded)) {
         // Lookup failed.
-        goto lookupFuncArgsDone;
+        return TheDecl;
       }
       //
       //  Dump what was found.
@@ -1674,21 +1702,6 @@ namespace cling {
       //  fprintf(stderr, "\n");
       //}
     }
-  lookupFuncArgsDone:
-    //
-    // Advance the parser to the end of the file, and pop the include stack.
-    //
-    // Note: Consuming the EOF token will pop the include stack.
-    //
-    P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-      /*StopAtCodeCompletion*/false);
-    if (ResetIncrementalProcessing) {
-      PP.enableIncrementalProcessing(false);
-    }
-    DClient.EndSourceFile();
-    CI->getDiagnostics().Reset();
-    PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
     return TheDecl;
   }
 #endif
