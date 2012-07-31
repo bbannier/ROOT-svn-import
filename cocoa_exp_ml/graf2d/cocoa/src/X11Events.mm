@@ -1101,7 +1101,7 @@ void EventTranslator::GenerateButtonReleaseEvent(NSView<X11Window> *eventView, N
    assert(theEvent != nil && "GenerateButtonReleaseEvent, event parameter is nil");
    
    if (fPointerGrab == kPGNoGrab)
-      return GenerateButtonReleaseEventNoGrab(eventView, theEvent, btn);
+      return GenerateButtonReleaseEventNoGrab(eventView, theEvent, btn);//Actually, is this possible???
    else
       return GenerateButtonReleaseEventActiveGrab(eventView, theEvent, btn);
    
@@ -1434,7 +1434,16 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
    if (fPointerGrab == kPGPassiveGrab || fPointerGrab == kPGImplicitGrab) {
       fButtonGrabView = nil;
       fPointerGrab = kPGNoGrab;
-      GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
+      //eventView can be ... a wrong view, since Cocoa has its own grab.
+      //GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
+      NSView *candidateView = [[[theEvent window] contentView] hitTest : [theEvent locationInWindow]];      
+      const bool isROOTView = [candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]];
+      if (candidateView && !isROOTView) {
+         NSLog(@"EventTranslator::GenerateButtonReleaseEventActiveGrab: error, hit test returned neither a QuartzView nor a ROOTOpenGLView!");
+         candidateView = nil;
+      }
+
+      GenerateCrossingEvent((NSView<X11Window> *)candidateView, theEvent, kNotifyUngrab);
    }
 }
 
