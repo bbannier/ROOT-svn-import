@@ -169,18 +169,6 @@ public:
   
   void Append( unsigned int newPoints, unsigned int dim = 1 );
 
-public: 
-  /**
-    access to options
-  */
-  const DataOptions & Opt() const { return fOptions; }
-  DataOptions & Opt() { return fOptions; }
-
-  /**
-    access to range
-  */
-  const DataRange & Range() const { return fRange; }
-
 protected:
   /** 
    * initializer routines to set the corresponding pointers right
@@ -233,6 +221,24 @@ protected:
   
 
 public: 
+  
+  /**
+    returns a single coordinate component of a point. 
+    This function is threadsafe in contrast to Coords(...)
+    and can easily get vectorized by the compiler in loops 
+    running over the ipoint-index.
+  */  
+  double GetCoordComponent( unsigned int ipoint, unsigned int icoord ) const
+  {
+    assert( ipoint < fMaxPoints );
+    assert( icoord < fDim );
+    assert( fCoordsPtr.size() == fDim );
+    assert( fCoordsPtr[icoord] );
+    assert( fCoords.empty() || &fCoords[icoord].front() == fCoordsPtr[icoord] );
+    
+    return fCoordsPtr[icoord][ipoint];
+  }
+  
   /**
     return a pointer to the coordinates data for the given fit point 
   */  
@@ -296,6 +302,31 @@ public:
     return number of fit points 
   */ 
   unsigned int Size() const { return fNPoints; }
+  
+  /**
+    return coordinate data dimension
+  */
+  unsigned int NDim() const { return fDim; } 
+
+  /**
+    access to options
+  */
+  const DataOptions & Opt() const { return fOptions; }
+  DataOptions & Opt() { return fOptions; }
+
+  /**
+    access to range
+  */
+  const DataRange & Range() const { return fRange; }
+  
+  /**
+    direct access to coord data ptrs
+  */
+  const std::vector< const double* >& GetCoordDataPtrs() const
+  {
+    return fCoordsPtr;
+  }
+
 
 protected:
   void UnWrap( )

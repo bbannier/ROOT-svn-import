@@ -332,8 +332,6 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    // normal chi2 using only error on values (from fitting histogram)
    // optionally the integral of function in the bin is used 
    
-   unsigned int n = data.Size();
-
    double chi2 = 0;
    nPoints = 0; // count the effective non-zero points
    
@@ -344,7 +342,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    // get fit option and check case if using integral of bins
    const DataOptions & fitOpt = data.Opt();
    bool useBinIntegral = fitOpt.fIntegral && data.HasBinEdges(); 
-   bool useBinVolume = (fitOpt.fBinVolume && data.HasBinEdges());
+   bool useBinVolume = fitOpt.fBinVolume && data.HasBinEdges();
 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
@@ -354,85 +352,108 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    std::cout << "use all error=1 " << fitOpt.fErrors1 << std::endl;
 #endif
 
-
    IntegralEvaluator<> igEval( func, p, useBinIntegral); 
 
-   double maxResValue = std::numeric_limits<double>::max() /n;
+   double maxResValue = std::numeric_limits<double>::max() / data.Size();
    double wrefVolume = 1.0; 
-   std::vector<double> xc; 
-   if (useBinVolume) { 
+   if ( useBinVolume ) 
+   {
       wrefVolume /= data.RefVolume();
-      xc.resize(data.NDim() );
    }
-
-   for (unsigned int i = 0; i < n; ++ i) { 
-
-
-      double y, invError; 
-      // in case of no error in y invError=1 is returned
-      const double * x1 = data.GetPoint(i,y, invError);
-
-      double fval = 0;
-
-      double binVolume = 1.0; 
-      if (useBinVolume) { 
-         unsigned int ndim = data.NDim(); 
-         const double * x2 = data.BinUpEdge(i);  
-         for (unsigned int j = 0; j < ndim; ++j) {
-            binVolume *= std::abs( x2[j]-x1[j] );
-            xc[j] = 0.5*(x2[j]+ x1[j]);
-         }
-         // normalize the bin volume using a reference value
-         binVolume *= wrefVolume;
-      }
-
-      const double * x = (useBinVolume) ? &xc.front() : x1;
-
-      if (!useBinIntegral) {
-         fval = func ( x, p );
-      }
-      else {
-         // calculate integral normalized by bin volume
-         // need to set function and parameters here in case loop is parallelized
-         fval = igEval( x1, data.BinUpEdge(i)) ; 
-      }
-      // normalize result if requested according to bin volume
-      if (useBinVolume) fval *= binVolume;
-
-//#define DEBUG
-#ifdef DEBUG      
-      std::cout << x[0] << "  " << y << "  " << 1./invError << " params : "; 
-      for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
-         std::cout << p[ipar] << "\t";
-      std::cout << "\tfval = " << fval << " bin volume " << binVolume << " ref " << wrefVolume << std::endl; 
-#endif
-//#undef DEBUG
-
-      if (invError > 0) { 
-         nPoints++;
-
-         double tmp = ( y -fval )* invError;  	  
-         double resval = tmp * tmp;
+   
+   const unsigned int nMaxBunchSize = 512;
+   
+   std::vector<double> resValues(nMaxBunchSize);
+   std::vector<double> vBinVolume;
+   
+   std::vector< std::vector<double> > correctCoord;
+   std::vector< const double * > correctCoordsPtrs;
+   
+   for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
+   {
+     unsigned int nBunchSize = std::min( nMaxBunchSize, data.Size() - iOffset );
+     
+     if ( data.HasBinEdges() )
+     {
+       vBinVolume.resize( nMaxBunchSize );
+       std::fill( vBinVolume.begin(), vBinVolume.end(), wrefVolume );
+       
+       if ( !fitOpt.fIntegral )
+       {
+         correctCoord.resize( data.NDim() );
+         correctCoordsPtrs.resize( data.NDim() );
          
-
-         // avoid inifinity or nan in chi2 values due to wrong function values 
-         if ( resval < maxResValue )  
-            chi2 += resval; 
-         else {  
-            //nRejected++; 
-            chi2 += maxResValue;
+         for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+         {
+           correctCoord[icoord].resize( nBunchSize );
+           correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
+           
+           for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+           {
+             double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
+             double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
+             
+             vBinVolume[ibunch] *= std::abs( coordVal0 - coordVal1 );
+             correctCoord[icoord][ibunch] = ( coordVal0 + coordVal1 ) / 2.0;
+           }
          }
-      }
-
-      
+         
+         func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
+       }
+       else
+       {
+         for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+         {
+           for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+           {
+             double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
+             double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
+             
+             vBinVolume[ibunch] *= std::abs( coordVal0 - coordVal1 );
+           }
+         }
+         
+         for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+         {
+           // Don't try to parallelize this:
+           // this is not threadsafe e.g. it cannot be parallized. 
+           // The integral evaluator is not threadsafe too, 
+           // this issue needs to be fixed first.
+           const double* coords0 = data.Coords( ibunch + iOffset );
+           const double* coords1 = data.BinUpEdge( ibunch + iOffset );
+           
+           resValues[ibunch] = igEval( coords0, coords1 );
+         }
+       }
+       
+       for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+       {
+         resValues[ibunch] *= vBinVolume[ibunch];
+       }
+     }
+     else
+     {
+       func( nBunchSize, &data.GetCoordDataPtrs().front(), p, &resValues.front() );
+     }
+     
+     for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+     {
+       double invError = data.InvError ( ibunch + iOffset );
+       double value = data.Value( ibunch + iOffset );
+       
+       if ( 0.0 < invError )
+        nPoints++;
+        
+       double d = ( value - resValues[ ibunch ] ) * invError;
+       double resval = d*d;
+       
+       if ( maxResValue > resval )
+        chi2 += resval;
+       else
+        chi2 += maxResValue;
+     }
    }
-   nPoints=n;
-
-#ifdef DEBUG
-   std::cout << "chi2 = " << chi2 << " n = " << nPoints  /*<< " rejected = " << nRejected */ << std::endl;
-#endif
-
-
+        
    return chi2;
 }
 
@@ -444,8 +465,6 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    // the actual number of used points
    // method using the error in the coordinates
    // integral of bin does not make sense in this case
-   
-   unsigned int n = data.Size();
 
 #ifdef DEBUG
    std::cout << "\n\nFit data size = " << n << std::endl;
@@ -455,101 +474,133 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    assert(data.HaveCoordErrors() ); 
 
    double chi2 = 0;
-   //int nRejected = 0; 
+
+   double maxResValue = std::numeric_limits<double>::max() / data.Size();
    
+   const unsigned int nMaxBunchSize = 512;
+   
+   std::vector<double> resValues( nMaxBunchSize );
+   std::vector< double > tmpf1Vals( nMaxBunchSize );
+   std::vector< double > tmpf2Vals( nMaxBunchSize );
+   std::vector< double > tmpg1Vals( nMaxBunchSize );
+   std::vector< double > tmpg2Vals( nMaxBunchSize );
+   std::vector< double > tmph2Vals( nMaxBunchSize );
+   
+   std::vector< double > tmpErrorSqr( nMaxBunchSize );
+   
+   std::vector< const double * > modCoordsPtrs( data.NDim() );
 
-   //func.SetParameters(p); 
+   for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
+   {
+      unsigned int nBunchSize = std::min( nMaxBunchSize, data.Size() - iOffset );
 
-   unsigned int ndim = func.NDim();
+      func( nBunchSize, &data.GetCoordDataPtrs().front(), p, &resValues.front() );
+      
+      if ( data.HaveAsymErrors() )
+      {
+        for( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+        {
+          double value = data.Value( ibunch + iOffset );
+          
+          double low, high;
+          data.GetAsymError( ibunch + iOffset, low, high );
 
-   // use Richardson derivator
-   ROOT::Math::RichardsonDerivator derivator;
+          double error;
+          if ( value < resValues[ ibunch ] )
+            error = high;
+          else
+            error = low;
 
-   double maxResValue = std::numeric_limits<double>::max() /n;
-
-
-
-   for (unsigned int i = 0; i < n; ++ i) { 
-
-
-      double y = 0;
-      const double * x = data.GetPoint(i,y);
-
-      double fval = func( x, p );
-
-      double delta_y_func = y - fval; 
-
-
-      double ey = 0;
-      const double * ex = 0; 
-      if (!data.HaveAsymErrors() )
-         ex = data.GetPointError(i, ey); 
-      else { 
-         double eylow, eyhigh = 0; 
-         ex = data.GetPointError(i, eylow, eyhigh); 
-         if ( delta_y_func < 0) 
-            ey = eyhigh; // function is higher than points 
-         else
-            ey = eylow; 
+          tmpErrorSqr[ibunch] = error * error;
+        }
       }
-      double e2 = ey * ey; 
-      // before calculating the gradient check that all error in x are not zero
-      unsigned int j = 0; 
-      while ( j < ndim && ex[j] == 0.)  { j++; } 
-      // if j is less ndim some elements are not zero
-      if (j < ndim) { 
-         // need an adapter from a multi-dim function to a one-dimensional
-         ROOT::Math::OneDimMultiFunctionAdapter<const IModelFunction &> f1D(func,x,0,p);
-         // select optimal step size  (use 10--2 by default as was done in TF1:
-         double kEps = 0.01;
-         double kPrecision = 1.E-8;
-         for (unsigned int icoord = 0; icoord < ndim; ++icoord) { 
-            // calculate derivative for each coordinate 
-            if (ex[icoord] > 0) {               
-               //gradCalc.Gradient(x, p, fval, &grad[0]);
-               f1D.SetCoord(icoord);
-               // optimal spep size (take ex[] as scale for the points and 1% of it 
-               double x0= x[icoord];
-               double h = std::max( kEps* std::abs(ex[icoord]), 8.0*kPrecision*(std::abs(x0) + kPrecision) );
-               double deriv = derivator.Derivative1(f1D, x[icoord], h);  
-               double edx = ex[icoord] * deriv; 
-               e2 += edx * edx;  
+      else
+      {
+        for( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+        {
+          double error = data.Error( ibunch + iOffset );
+          tmpErrorSqr[ibunch] = error * error;
+        }
+      }
+      
+      // select optimal step size  (use 10--2 by default as was done in TF1:
+      const double kEps = 0.01;
+      const double kPrecision = 1.E-8;
+      
+      for( unsigned int icoord = 0; icoord < data.NDim(); icoord++ ) 
+      {
+        for( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+        {
+            // optimal step size (take coord as scale for the points and 1% of it 
+            double coord= data.GetCoordComponent( ibunch + iOffset, icoord );
+            double coordError = data.GetCoordErrorComponent( ibunch + iOffset, icoord );
+            
+            double h = std::max( kEps * std::abs( coordError ), 8.0*kPrecision * (std::abs(coord) + kPrecision) );
+            
+            tmpf1Vals[ibunch] = coord + h;
+            tmpf2Vals[ibunch] = coord - h;
+            tmpg1Vals[ibunch] = coord + h/2.0;
+            tmpg2Vals[ibunch] = coord - h/2.0;
+            
+            tmph2Vals[ibunch] = 1.0 / ( 2.0*h );
+        }
+        
+        modCoordsPtrs = data.GetCoordDataPtrs();
+        
+        modCoordsPtrs[icoord] = &tmpf1Vals.front();
+        func( nBunchSize, &modCoordsPtrs.front(), p, &tmpf1Vals.front() );
+        
+        modCoordsPtrs[icoord] = &tmpf2Vals.front();
+        func( nBunchSize, &modCoordsPtrs.front(), p, &tmpf2Vals.front() );
+        
+        modCoordsPtrs[icoord] = &tmpg1Vals.front();
+        func( nBunchSize, &modCoordsPtrs.front(), p, &tmpg1Vals.front() );
+        
+        modCoordsPtrs[icoord] = &tmpg2Vals.front();
+        func( nBunchSize, &modCoordsPtrs.front(), p, &tmpg2Vals.front() );
+        
+        for( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+        {
+          double coordError = data.GetCoordErrorComponent( ibunch + iOffset, icoord );
+            
+          double h2    = tmph2Vals[ibunch];
+          
+          //compute the central differences
+          double d0    = tmpf1Vals[ibunch] - tmpf2Vals[ibunch];
+          double d2    = tmpg1Vals[ibunch] - tmpg2Vals[ibunch];
+          
+          double deriv = h2 * ( 8.0 * d2 - d0 ) / 3.0;
+          
+          double edx = coordError * deriv; 
+          tmpErrorSqr[ibunch] += edx * edx;
+          
 #ifdef DEBUG
-               std::cout << "error for coord " << icoord << " = " << ex[icoord] << " deriv " << deriv << std::endl;
+          std::cout << "error for coord " << ibunch + iOffset << " = " << coordError << " deriv " << deriv << std::endl;
 #endif
-            }
-         } 
+        }
       }
-      double w2 = (e2 > 0) ? 1.0/e2 : 0;  
-      double resval = w2 * ( y - fval ) *  ( y - fval); 
-
-#ifdef DEBUG      
-      std::cout << x[0] << "  " << y << " ex " << ex[0] << " ey  " << ey << " params : "; 
-      for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
-         std::cout << p[ipar] << "\t";
-      std::cout << "\tfval = " << fval << "\tresval = " << resval << std::endl; 
-#endif
       
-      // avoid (infinity and nan ) in the chi2 sum 
-      // eventually add possibility of excluding some points (like singularity) 
-      if ( resval < maxResValue )  
-         chi2 += resval; 
-      else 
-         chi2 += maxResValue;
-      //nRejected++; 
-      
+      for( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+      {
+        double errorSqr = tmpErrorSqr[ibunch];
+        double invErrorSqr = (0.0 < errorSqr) ? 1.0 / errorSqr : 0.0;
+        
+        double value = data.Value( ibunch + iOffset );
+        
+        double delta = value - resValues[ ibunch ];
+        
+        double resval = delta * delta * invErrorSqr;
+        
+        if ( maxResValue > resval )
+          chi2 += resval;
+        else
+          chi2 += maxResValue;
+      }
    }
    
-   // reset the number of fitting data points
-   nPoints = n;  // no points are rejected 
-   //if (nRejected != 0)  nPoints = n - nRejected;   
-
-#ifdef DEBUG
-   std::cout << "chi2 = " << chi2 << " n = " << nPoints  << std::endl;
-#endif
-
+   nPoints = data.Size();
+   
    return chi2;
-
 }
 
 
