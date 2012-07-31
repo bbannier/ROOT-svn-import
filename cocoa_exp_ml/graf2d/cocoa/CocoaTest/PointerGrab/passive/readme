@@ -8,3 +8,7 @@ If after that (before releasing button) pointer moves to window 4 and released, 
 (implicit grab has owner_events == false, so release event will go to window with id == 5).
 Now, if 1 and 2 are commented and 3 - uncommented, we'll have a different case - nobody receives button release,
 even if you release button inside window 4.
+
+line 4 - button 3 + alt key (kKeyMod1Mask)
+line 5 - button 1 + cmd key (kKeyMod2Mask).
+line 6 - button 1 + kKeyLockMask (???)
