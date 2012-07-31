@@ -19,6 +19,8 @@ int main(int argc, char ** argv)
    gVirtualX->MapSubwindows(mainFrame->GetId());
    gVirtualX->MapRaised(mainFrame->GetId());
 
+   mainFrame->AddInput(kButtonReleaseMask);
+
    gVirtualX->GrabButton(childFrame->GetId(), kButton1, kKeyShiftMask, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);
 
    app.Run();
