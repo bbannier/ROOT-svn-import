@@ -18,6 +18,7 @@ public:
    //Event handlers:   
    Bool_t HandleCrossing(Event_t *crossingEvent);
    Bool_t HandleButton(Event_t *buttonEvent);
+   Bool_t HandleMotion(Event_t *motionEvent);
 
 private:
 
