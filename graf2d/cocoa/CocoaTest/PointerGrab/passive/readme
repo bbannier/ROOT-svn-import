@@ -1,0 +1,10 @@
+passive grab initialization.
+
+window with id == 5 installs a passive grab (left mouse button press + shift key modifier).
+if user presses button in a window 5 or window 6, while shift is pressed, window 5 becomes a grab window.
+
+If after that (before releasing button) pointer moves to window 4 and released, window 4 receives button release event
+(GrabButton always uses owner_events == true). Now, if we comment line 1 and uncomment line 2, the behavior is different 
+(implicit grab has owner_events == false, so release event will go to window with id == 5).
+Now, if 1 and 2 are commented and 3 - uncommented, we'll have a different case - nobody receives button release,
+even if you release button inside window 4.

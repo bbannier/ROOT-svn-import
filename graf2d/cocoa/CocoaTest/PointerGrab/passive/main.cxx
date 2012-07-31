@@ -21,7 +21,9 @@ int main(int argc, char ** argv)
 
    mainFrame->AddInput(kButtonReleaseMask);
 
-   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kKeyShiftMask, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);
+//   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kKeyShiftMask, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);//1
+//   childFrame->AddInput(kButtonPressMask | kButtonReleaseMask);//2
+   childFrame->AddInput(kButtonPressMask);//3
 
    app.Run();
 }
