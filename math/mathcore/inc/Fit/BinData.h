@@ -256,7 +256,7 @@ public :
       if (fWrapped)
         return eval;
       else
-        return (eval != 0.0) ? 1.0/eval : 0.0; 
+        return (eval != 0.0) ? 1.0/eval : 0.0;
     }
     
     if ( fErrorType == kAsymError ) 
@@ -275,29 +275,70 @@ public :
 
     assert( fErrorType == kCoordError );
     return fDataErrorPtr[ ipoint ];
-  } 
+  }
+  
+  void GetAsymError( unsigned int ipoint, double& lowError, double& highError ) const 
+  {
+    assert( fErrorType == kAsymError );
+    assert( !fDataErrorPtr && fDataErrorHighPtr && fDataErrorLowPtr );
+    assert( fDataError.empty() );
+    assert( fDataErrorHigh.empty() || &fDataErrorHigh.front() == fDataErrorHighPtr );
+    assert( fDataErrorLow.empty() || &fDataErrorLow.front() == fDataErrorLowPtr );
+    assert( fDataErrorLow.empty() == fDataErrorHigh.empty() );
+    
+    lowError = fDataErrorLowPtr[ ipoint ];
+    highError = fDataErrorHighPtr[ ipoint ];
+  }
 
   /**
     Return the inverse of error on the value for the given fit point
     useful when error in the coordinates are not stored and then this is used directly this as the weight in 
     the least square function
   */
-  // Function is not needed -> remove?
-  /*double InvError( unsigned int ipoint ) const
-  {
-    if (fDataVector) { 
-       // error on the value is the last element in the point structure
-       double eval =  (fDataVector->Data())[ (ipoint+1)*fPointSize - 1];
-       return eval; 
-  //          if (!fWithCoordError) return eval; 
-  //          // when error in the coordinate is stored, need to invert it 
-  //          return eval != 0 ? 1.0/eval : 0; 
+  double InvError( unsigned int ipoint ) const 
+  { 
+    assert( ipoint < fMaxPoints );
+    assert( kValueError == fErrorType || kCoordError == fErrorType || 
+      kAsymError == fErrorType || kNoError == fErrorType );
+      
+    if ( fErrorType == kNoError )
+    {
+      assert( !fDataErrorPtr && !fDataErrorHighPtr && !fDataErrorLowPtr );
+      assert( fDataError.empty() && fDataErrorHigh.empty() && fDataErrorLow.empty() );
+      return 1.0;
     }
-    //case data wrapper 
+    
+    if ( fErrorType == kValueError ) // need to invert (inverror is stored) 
+    {
+      assert( fDataErrorPtr && !fDataErrorHighPtr && !fDataErrorLowPtr );
+      assert( fDataErrorHigh.empty() && fDataErrorLow.empty() );
+      assert( fDataError.empty() || &fDataError.front() == fDataErrorPtr );
+      
+      double eval = fDataErrorPtr[ ipoint ];
+      
+      if (fWrapped)
+        return 1.0 / eval;
+      else
+        return (eval != 0.0) ? eval : 0.0;
+    }
+    
+    if ( fErrorType == kAsymError ) 
+    {  // return 1/2(el + eh) 
+      assert( !fDataErrorPtr && fDataErrorHighPtr && fDataErrorLowPtr );
+      assert( fDataError.empty() );
+      assert( fDataErrorHigh.empty() || &fDataErrorHigh.front() == fDataErrorHighPtr );
+      assert( fDataErrorLow.empty() || &fDataErrorLow.front() == fDataErrorLowPtr );
+      assert( fDataErrorLow.empty() == fDataErrorHigh.empty() );
+      
+      double eh = fDataErrorHighPtr[ ipoint ];
+      double el = fDataErrorLowPtr[ ipoint ];
+      
+      return 2.0 / (el+eh);
+    }
 
-    double eval = fDataWrapper->Error(ipoint);
-    return eval != 0 ? 1.0/eval : 0; 
-  }*/
+    assert( fErrorType == kCoordError );
+    return 1.0 / fDataErrorPtr[ ipoint ];
+  }
 
   
    /**
@@ -315,6 +356,23 @@ public :
     return Coords( ipoint );
   }
 
+  /**
+    returns a single coordinate error component of a point. 
+    This function is threadsafe in contrast to Coords(...)
+    and can easily get vectorized by the compiler in loops 
+    running over the ipoint-index.
+  */  
+  double GetCoordErrorComponent( unsigned int ipoint, unsigned int icoord ) const
+  {
+    assert( ipoint < fMaxPoints );
+    assert( icoord < fDim );
+    assert( fCoordErrorsPtr.size() == fDim );
+    assert( fCoordErrorsPtr[icoord] );
+    assert( fCoordErrors.empty() || &fCoordErrors[icoord].front() == fCoordErrorsPtr[icoord] );
+    
+    return fCoordErrorsPtr[icoord][ipoint];
+  }
+  
   /**
     Return a pointer to the errors in the coordinates for the given fit point
   */
@@ -406,10 +464,20 @@ public :
   }
   
   /**
-    return coordinate data dimension
-  */
-  unsigned int NDim() const { return fDim; } 
-
+    returns a single coordinate error component of a point. 
+    This function is threadsafe in contrast to Coords(...)
+    and can easily get vectorized by the compiler in loops 
+    running over the ipoint-index.
+  */  
+  double GetBinUpEdgeComponent( unsigned int ipoint, unsigned int icoord ) const
+  {
+    assert( icoord < fDim );
+    assert( !fBinEdge.empty() );
+    assert( ipoint < fBinEdge.front().size() );
+    
+    return fBinEdge[icoord][ipoint];
+  }
+  
   /** 
      return an array containing the upper edge of the bin for coordinate i
      In case of empty bin they could be merged in a single larger bin
@@ -418,18 +486,18 @@ public :
   // not threadsafe, to be replaced with never constructs!
   // for example: just return std::array or std::vector, there's 
   // is going to be only minor overhead in c++11.
-  const double* BinUpEdge( unsigned int icoord ) const
+  const double* BinUpEdge( unsigned int ipoint ) const
   {
-    if ( fBinEdge.empty() || icoord > fBinEdge.front().size() )
+    if ( fBinEdge.empty() || ipoint > fBinEdge.front().size() )
       return 0;
     
     assert( fpTmpBinEdgeVector );
     assert( !fBinEdge.empty() );
-    assert( icoord < fMaxPoints );
+    assert( ipoint < fMaxPoints );
     
     for ( unsigned int i=0; i < fDim; i++ )
     {
-      fpTmpBinEdgeVector[i] = fBinEdge[i][ icoord ];
+      fpTmpBinEdgeVector[i] = fBinEdge[i][ ipoint ];
     }
     
     return fpTmpBinEdgeVector;

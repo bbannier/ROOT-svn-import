@@ -159,7 +159,7 @@ private:
      {
        for ( int j=0; j < ndim; j++ )
        {
-         tmpVec[i] = ppIn[j][i];
+         tmpVec[j] = ppIn[j][i];
        }
        
        pOut[i] = DoEvalPar( &tmpVec.front(), p );
@@ -375,7 +375,7 @@ private:
      {
        for ( int j=0; j < ndim; j++ )
        {
-         tmpVec[i] = ppIn[j][i];
+         tmpVec[j] = ppIn[j][i];
        }
        
        pOut[i] = DoParameterDerivative( &tmpVec.front(), p, ipar );
