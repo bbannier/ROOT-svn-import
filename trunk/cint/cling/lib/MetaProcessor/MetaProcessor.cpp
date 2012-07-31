@@ -48,14 +48,14 @@ namespace cling {
 
     // Check if the current statement is now complete. If not, return to
     // prompt for more.
-    if (m_InputValidator->Validate(input_line, m_Interp.getCI()->getLangOpts())
+    if (m_InputValidator->validate(input_line, m_Interp.getCI()->getLangOpts())
         == InputValidator::kIncomplete) {
       return m_InputValidator->getExpectedIndent();
     }
 
     //  We have a complete statement, compile and execute it.
-    std::string input = m_InputValidator->TakeInput();
-    m_InputValidator->Reset();
+    std::string input = m_InputValidator->getInput();
+    m_InputValidator->reset();
     if (m_Options.RawInput)
       m_Interp.declare(input);
     else
@@ -175,18 +175,15 @@ namespace cling {
    //
    //  Unload code fragment.
    //
-   //if (cmd_char == 'U') {
-   //   llvm::sys::Path path(param);
-   //   if (path.isDynamicLibrary()) {
-   //      std::cerr << "[i] Failure: cannot unload shared libraries yet!"
-   //                << std::endl;
-   //   }
-   //   bool success = m_Interp.unloadFile(param);
-   //   if (!success) {
-   //      //fprintf(stderr, "Unload file failed.\n");
-   //   }
-   //   return true;
-   //}
+   if (Command == "U") {
+     // llvm::sys::Path path(param);
+     // if (path.isDynamicLibrary()) {
+     //   std::cerr << "[i] Failure: cannot unload shared libraries yet!"
+     //             << std::endl;
+     // }
+     m_Interp.unload();
+     return true;
+   }
    //
    //  Unrecognized command.
    //
@@ -210,7 +207,7 @@ namespace cling {
    }
   // Cancel the multiline input that has been requested
    else if (Command == "@") {
-     m_InputValidator->Reset();
+     m_InputValidator->reset();
      return true;
    }
    // Enable/Disable DynamicExprTransformer

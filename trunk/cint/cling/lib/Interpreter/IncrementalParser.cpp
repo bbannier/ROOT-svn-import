@@ -5,9 +5,8 @@
 //------------------------------------------------------------------------------
 
 #include "IncrementalParser.h"
-#include "ASTNodeEraser.h"
-
 #include "ASTDumper.h"
+#include "ASTNodeEraser.h"
 #include "DeclCollector.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
@@ -26,6 +25,7 @@
 #include "clang/Serialization/ASTWriter.h"
 
 #include "llvm/LLVMContext.h"
+#include "llvm/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_os_ostream.h"
 
@@ -95,7 +95,11 @@ namespace cling {
 
 
   void IncrementalParser::beginTransaction(const CompilationOptions& Opts) {
-    Transaction* NewCurT = new Transaction(Opts);
+    llvm::Module* M = 0;
+    if (hasCodeGenerator())
+      M = getCodeGenerator()->GetModule();
+
+    Transaction* NewCurT = new Transaction(Opts, M);
     Transaction* OldCurT = m_Consumer->getTransaction();
     m_Consumer->setTransaction(NewCurT);
     // If we are in the middle of transaction and we see another begin 
@@ -140,7 +144,7 @@ namespace cling {
 
     // We are sure it's safe to pipe it through the transformers
     for (size_t i = 0; i < m_TTransformers.size(); ++i)
-      if (!m_TTransformers[i]->Transform(CurT)) {
+      if (!m_TTransformers[i]->TransformTransaction(*CurT)) {
         // Roll back on error in a transformer
         rollbackTransaction(CurT);
         return;
@@ -324,4 +328,17 @@ namespace cling {
 
     return IncrementalParser::kSuccess;
   }
+  void IncrementalParser::unloadTransaction(Transaction* T) {
+    if (!T)
+      T = getLastTransaction();
+
+    assert(T->getState() == Transaction::kCommitted && 
+           "Unloading not commited transaction?");
+    assert(T->getModule() && 
+           "Trying to uncodegen transaction taken in syntax only mode. ");
+
+    ASTNodeEraser NodeEraser(&getCI()->getSema());
+    NodeEraser.RevertTransaction(T);
+  }
+
 } // namespace cling

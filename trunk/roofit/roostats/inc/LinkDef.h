@@ -107,6 +107,10 @@
 
 #pragma link C++ class RooStats::UpperLimitMCSModule+;
 
+// ibucur: development in progress
+#pragma link C++ class RooStats::RooStatsSimultaneous+;
+
+
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t , Double_t ,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialObsZ(Double_t,Double_t,Double_t);
@@ -123,6 +127,8 @@
 #pragma link C++ function RooStats::SetAllConstant(const RooAbsCollection & , bool );
 #pragma link C++ function RooStats::MakeNuisancePdf(RooAbsPdf & , const RooArgSet &, const char * );
 #pragma link C++ function RooStats::MakeNuisancePdf(const RooStats::ModelConfig & , const char * );
+#pragma link C++ function RooStats::MakeUnconstrainedPdf(RooAbsPdf &, const RooArgSet &, const char *);
+#pragma link C++ function RooStats::MakeUnconstrainedPdf(const RooStats::ModelConfig &, const char *);
 #pragma link C++ function RooStats::GetAsTTree(TString, TString, const RooDataSet&);
 
 
