@@ -989,7 +989,6 @@ void EventTranslator::GenerateCrossingEvent(NSView<X11Window> *view, NSEvent *th
 {
    //View parameter can be nil (we exit any window).
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
-
    if (fPointerGrab == kPGNoGrab) {
       NSView *candidateView = [[[view window] contentView] hitTest : [theEvent locationInWindow]];
       
