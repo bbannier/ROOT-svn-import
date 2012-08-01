@@ -76,6 +76,17 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
       std::cout<<"Button press event in "<<windowID_<<std::endl;
    else
       std::cout<<"Button release event in "<<windowID_<<std::endl;
+
+#ifdef TEST3
+   if (buttonEvent->fType == kButtonPress) {
+      //Set a pointer grab?
+      std::cout<<"set pointer grab on "<<windowID_<<std::endl;
+      gVirtualX->GrabPointer(GetId(), kButtonPressMask | kButtonReleaseMask, kNone, kNone, true, false);
+   } else {
+      std::cout<<"Cancel grab\n";
+      gVirtualX->GrabPointer(GetId(), kNone, kNone, kNone, false, false);
+   }
+#endif
       
    return kTRUE;
 }
