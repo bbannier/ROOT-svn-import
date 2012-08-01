@@ -60,7 +60,7 @@
 {
    assert(fQuartzWindow != nil && "locationInWindow, fQuartzWindow is nil");
    return fLocationInWindow;
-}:
+}
 
 //______________________________________________________________________________
 - (NSTimeInterval) timestamp
@@ -1245,7 +1245,7 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
       const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [grabView window] location : location]);
       if (!event.Get()) {
          //Hehe, if this happend, is it still possible to log????
-         NSLog(@)"EventTranslator::SetPointerGrab, crossing event initialization failed");
+         NSLog(@"EventTranslator::SetPointerGrab, crossing event initialization failed");
          return;
       }
 
@@ -1281,7 +1281,7 @@ void EventTranslator::CancelPointerGrab()
       const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : topLevel location : location ]);
       if (!event.Get()) {
          //Hehe, if this happend, is it still possible to log????
-         NSLog(@)"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+         NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
          return;
       }
 
@@ -1292,7 +1292,7 @@ void EventTranslator::CancelPointerGrab()
       const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fViewUnderPointer window] location : location ]);
       if (!event.Get()) {
          //Hehe, if this happend, is it still possible to log????
-         NSLog(@)"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+         NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
          return;
       }
 
