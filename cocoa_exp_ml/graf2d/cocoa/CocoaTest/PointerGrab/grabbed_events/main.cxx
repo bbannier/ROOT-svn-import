@@ -20,11 +20,23 @@ int main(int argc, char ** argv)
    gVirtualX->MapRaised(mainFrame->GetId());
 
    //Case 1: window with id 5 is receiving enter/leave notify events.
+   /*
    childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
    childChildFrame->AddInput(kButtonPressMask);//this window initiate implicit grab!
    mainFrame->AddInput(kButtonReleaseMask | kPointerMotionMask);
+   */
    //Expected: before any button pressed, window 4 receives mouse motion events.
    //window 5 - enter/exit.
+   
+   //Case 2: crossing events with grab active and owner == false (implicit grab).
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask);//button press mask will initiate implicit grab on this view.
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   //Expected: while no button is pressed, every window report enter/leave notify, as usually.
+   //If button is pressed in any window except window with id 6, no enter/leave notify events are reported
+   //(pseudo grab with 'root'). If button is pressed in window with id == 6, exit/leave notify are
+   //reported for window 6 only. After button was released, leave/enter notify are generated on ungrab (if needed)
+   //and so on.
 
    app.Run();
 }

@@ -1436,7 +1436,7 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
       fPointerGrab = kPGNoGrab;
       //eventView can be ... a wrong view, since Cocoa has its own grab.
       //GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
-      NSView *candidateView = [[[theEvent window] contentView] hitTest : [theEvent locationInWindow]];      
+      NSView *candidateView = [[[theEvent window] contentView] hitTest : [theEvent locationInWindow]];
       const bool isROOTView = [candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]];
       if (candidateView && !isROOTView) {
          NSLog(@"EventTranslator::GenerateButtonReleaseEventActiveGrab: error, hit test returned neither a QuartzView nor a ROOTOpenGLView!");
