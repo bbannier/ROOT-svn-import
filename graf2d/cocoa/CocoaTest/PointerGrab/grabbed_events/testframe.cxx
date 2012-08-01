@@ -97,8 +97,6 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
       std::cout<<"cancel pointer grab for: "<<GetId()<<std::endl;
       if (windowID_ == 5)
          gVirtualX->GrabPointer(GetId(), kNone, kNone, kNone, false, false);
-      else
-         std::cout<<"WTF????\n";
    }
 #endif
       
