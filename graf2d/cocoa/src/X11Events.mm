@@ -965,7 +965,7 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSView<X11Window> *view, N
 
    if (!fButtonGrabView)//implicit grab with 'root'?
       return;
-      
+
    if (fOwnerEvents) {
       NSView<X11Window> *candidateView = nil;
       SortTopLevelWindows();
@@ -1006,7 +1006,7 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSView<X11Window> *view, N
                Detail::SendLeaveEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
 
             //Who is now under pointer?
-            fViewUnderPointer = nil;//???
+            //fViewUnderPointer = nil;//???
          }
       }
    }
