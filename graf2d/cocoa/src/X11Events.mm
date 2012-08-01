@@ -37,7 +37,8 @@
 //______________________________________________________________________________
 - (id) initWithWindow : (NSWindow *) window location : (NSPoint) location
 {
-   assert(window != nil && "initWithWindow:location:, window parameter is nil");
+   //Window should be always non-nil: we either enter some window, or exit some window.
+   assert(window && "initWithWindow:location:, window parameter is nil");
 
    if (self = [super init]) {
       fQuartzWindow = window;
@@ -50,8 +51,7 @@
 //______________________________________________________________________________
 - (NSWindow *) window
 {
-   //Our fake event can not have nil.
-   assert(fQuartzWindow != nil && "window, fQuartzWindow is nil");
+   assert(fQuartzWindow && "window, fQuartzWindow is nil");
    return fQuartzWindow;
 }
 
@@ -60,7 +60,7 @@
 {
    assert(fQuartzWindow != nil && "locationInWindow, fQuartzWindow is nil");
    return fLocationInWindow;
-}
+}:
 
 //______________________________________________________________________________
 - (NSTimeInterval) timestamp
@@ -1243,7 +1243,13 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
       location = [grabView convertPoint : location toView : nil];
       
       const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [grabView window] location : location]);
-      GenerateCrossingEvent(grabView, event.Get(), kNotifyGrab);//Uffffff.
+      if (!event.Get()) {
+         //Hehe, if this happend, is it still possible to log????
+         NSLog(@)"EventTranslator::SetPointerGrab, crossing event initialization failed");
+         return;
+      }
+
+      GenerateCrossingEvent(grabView, event.Get(), kNotifyGrab);//Uffffff, done!
    }
 }
 
@@ -1259,6 +1265,39 @@ void EventTranslator::CancelPointerGrab()
    fPointerGrab = kPGNoGrab;
    fGrabEventMask = 0;
    fOwnerEvents = true;
+   
+   //Generate crossing event?
+   NSView<X11Window> *candidateView = nil;
+   NSPoint location = {};
+   SortTopLevelWindows();
+   QuartzWindow *topLevel = FindTopLevelWindowForMouseEvent();
+   if (topLevel) {
+      //Cursor is in "our" (ROOT's) window, probably, generate enter event/leave event.
+      location = [topLevel mouseLocationOutsideOfEventStream];
+      candidateView = (NSView<X11Window> *)[[topLevel contentView] hitTest : location];
+   }
+   
+   if (topLevel) {
+      const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : topLevel location : location ]);
+      if (!event.Get()) {
+         //Hehe, if this happend, is it still possible to log????
+         NSLog(@)"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+         return;
+      }
+
+      GenerateCrossingEvent(candidateView, event.Get(), kNotifyUngrab);
+   } else if (fViewUnderPointer) {
+      //Convert location first.
+      location = [[fViewUnderPointer window] convertScreenToBase : [NSEvent mouseLocation]];
+      const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fViewUnderPointer window] location : location ]);
+      if (!event.Get()) {
+         //Hehe, if this happend, is it still possible to log????
+         NSLog(@)"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+         return;
+      }
+
+      GenerateCrossingEvent(nil, event.Get(), kNotifyUngrab);//Ufff, done!!!
+   }
 }
 
 //______________________________________________________________________________
