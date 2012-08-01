@@ -700,7 +700,7 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) addTransientWindow : (QuartzWindow *)window
+- (void) addTransientWindow : (QuartzWindow *) window
 {
    assert(window != nil && "addTransientWindow, window parameter is nil");
 
@@ -712,6 +712,21 @@ void print_mask_info(ULong_t mask)
       [self addChildWindow : window ordered : NSWindowAbove];
       window.fDelayedTransient = NO;
    }
+}
+
+
+//______________________________________________________________________________
+- (void) makeKeyAndOrderFront : (id) sender
+{
+   (void) sender;
+   //The more I know Cocoa, the less I like it.
+   //Window behavior between spaces is a total mess.
+   //Set the window to join all spaces.
+   [self setCollectionBehavior : NSWindowCollectionBehaviorCanJoinAllSpaces];
+   //now bring it to the front, it will appear on the active space.
+   [super makeKeyAndOrderFront : self];
+   //then reset the collection behavior to default, so the window
+   [self setCollectionBehavior : NSWindowCollectionBehaviorDefault];
 }
 
 //______________________________________________________________________________

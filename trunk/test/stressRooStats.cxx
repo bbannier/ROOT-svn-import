@@ -164,7 +164,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 10, 0.1));
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 400, 4.0));
 
-   // TEST HTC SIGNIFICANCE 
+   // TEST HTC SIGNIFICANCE SIMULTANEOUS MODEL 
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kAsymptotic));
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kSimpleLR));
    testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kRatioLR));
