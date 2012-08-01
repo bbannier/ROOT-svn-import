@@ -45,6 +45,14 @@ int main(int argc, char ** argv)
    //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx).
    //On a button release pointer grab is cancelled.
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
+#elif defined(TEST4)
+   //Case 4: pointer grab on window and enter/leave notify events.
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+
+   //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx).
+   //On a button release pointer grab is cancelled.
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
 #endif
 
    app.Run();

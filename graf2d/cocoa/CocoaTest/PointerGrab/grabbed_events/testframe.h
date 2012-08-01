@@ -4,7 +4,7 @@
 #include "GuiTypes.h"
 #include "TGFrame.h"
 
-#define TEST2 1
+#define TEST4 1
 
 namespace ROOT {
 namespace CocoaTest {
