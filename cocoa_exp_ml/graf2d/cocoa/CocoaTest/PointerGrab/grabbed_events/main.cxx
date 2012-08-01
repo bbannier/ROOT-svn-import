@@ -50,7 +50,8 @@ int main(int argc, char ** argv)
    mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
    childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 
-   //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx).
+   //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx)
+   //for a window 5 (parent of window 6).
    //On a button release pointer grab is cancelled.
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
 #endif

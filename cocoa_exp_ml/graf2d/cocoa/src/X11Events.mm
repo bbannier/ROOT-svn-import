@@ -25,6 +25,53 @@
 #include "TGWindow.h"
 #include "TList.h"
 
+@interface FakeCrossingEvent : NSEvent {
+   NSWindow *fQuartzWindow;
+   NSPoint fLocationInWindow;
+}
+
+@end
+
+@implementation FakeCrossingEvent
+
+//______________________________________________________________________________
+- (id) initWithWindow : (NSWindow *) window location : (NSPoint) location
+{
+   assert(window != nil && "initWithWindow:location:, window parameter is nil");
+
+   if (self = [super init]) {
+      fQuartzWindow = window;
+      fLocationInWindow = location;
+   }
+   
+   return self;
+}
+
+//______________________________________________________________________________
+- (NSWindow *) window
+{
+   //Our fake event can not have nil.
+   assert(fQuartzWindow != nil && "window, fQuartzWindow is nil");
+   return fQuartzWindow;
+}
+
+//______________________________________________________________________________
+- (NSPoint) locationInWindow
+{
+   assert(fQuartzWindow != nil && "locationInWindow, fQuartzWindow is nil");
+   return fLocationInWindow;
+}
+
+//______________________________________________________________________________
+- (NSTimeInterval) timestamp
+{
+   //Hehe.
+   return 0.;
+}
+
+@end
+
+
 namespace ROOT {
 namespace MacOSX {
 namespace X11 {
@@ -1187,6 +1234,17 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
    fPointerGrab = kPGActiveGrab;
    fGrabEventMask = eventMask;
    fOwnerEvents = ownerEvents;
+   
+   //Generate crossing event?
+   if (grabView != fViewUnderPointer) {
+      NSPoint location = {};
+      location.x = grabView.fWidth / 2;
+      location.y = grabView.fHeight / 2;
+      location = [grabView convertPoint : location toView : nil];
+      
+      const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [grabView window] location : location]);
+      GenerateCrossingEvent(grabView, event.Get(), kNotifyGrab);//Uffffff.
+   }
 }
 
 //______________________________________________________________________________
