@@ -86,6 +86,13 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
       std::cout<<"Cancel grab\n";
       gVirtualX->GrabPointer(GetId(), kNone, kNone, kNone, false, false);
    }
+#elif TEST4
+   if (buttonEvent->fType == kButtonPress) {
+      //Set a pointer grab on a window with id == 5
+      gVirtualX->GrabPointer(fParent->GetId(), kButtonPressMask | kButtonReleaseMask, kNone, kNone, true, false);
+   } else {
+      gVirtualX->GrabPointer(fParent->GetId(), kNone, kNone, kNone, false, false);
+   }
 #endif
       
    return kTRUE;
