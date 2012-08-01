@@ -1225,11 +1225,7 @@ void EventTranslator::GenerateFocusChangeEvent(NSView<X11Window> *eventView)
 void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned eventMask, bool ownerEvents)
 {
    assert(grabView != nil && "SetPointerGrab, view parameter is nil");
-   
-   //Now some magic to receive mouse move events even outside any window.
-   //if (eventMask & kPointerMotionMask)
-   //   [[grabView window] setAcceptsMouseMovedEvents : YES];
-   
+
    fButtonGrabView = grabView;
    fPointerGrab = kPGActiveGrab;
    fGrabEventMask = eventMask;
@@ -1259,8 +1255,6 @@ void EventTranslator::CancelPointerGrab()
    if (!fButtonGrabView)
       return;
       
-   //[[fButtonGrabView window] setAcceptsMouseMovedEvents : NO];//Do not track mouse move events outside window anymore.
-   
    fButtonGrabView = nil;
    fPointerGrab = kPGNoGrab;
    fGrabEventMask = 0;
