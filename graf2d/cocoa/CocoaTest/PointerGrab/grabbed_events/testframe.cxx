@@ -92,7 +92,7 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
       std::cout<<"set pointer grab for: "<<fParent->GetId()<<std::endl;
       gVirtualX->GrabPointer(fParent->GetId(),
                              kButtonPressMask | kButtonReleaseMask | kEnterWindowMask | kLeaveWindowMask,
-                             kNone, kNone, true, false);
+                             kNone, kNone, true, true);
    } else {
       std::cout<<"cancel pointer grab for: "<<GetId()<<std::endl;
       if (windowID_ == 5)

@@ -1540,7 +1540,8 @@ void print_mask_info(ULong_t mask)
       }
    }
    
-   const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect;
+   const NSUInteger trackerOptions = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingActiveInActiveApp | NSTrackingInVisibleRect
+                                    | NSTrackingEnabledDuringMouseDrag;
    NSRect frame = {};
    frame.size.width = self.fWidth;
    frame.size.height = self.fHeight;
@@ -2398,21 +2399,7 @@ void print_mask_info(ULong_t mask)
 - (void) mouseEntered : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseEntered, fID is 0");
-   
-   //I'm using mouseEntered/mouseExited functions to generate
-   //crossing events. When button is pressed (and before released)
-   //these functions are not enough: mouseExited/mouseEntered are
-   //not called (only mouseExited and only the first time) -
-   //this is already draggingEntered/draggingExited?
-   //I do not want to complicate everything with drag and drop
-   //which is not really drag and drop just to have enter/leave notify
-   //events. I do not think, anybody has GUI which depends on this.
-   //If yes, later I'll have to move completely to synthesized crossing
-   //events (I want to avoid this actually, this is a lot of work during
-   //every possible mouse event).
-   //That's funny: my views are not destinations/sources for drag and drop,
-   //no draggingEntered called, but no mouseEntered :(
-   
+
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "mouseEntered, gVirtualX is null or not of TGCocoa type");
 
@@ -2423,18 +2410,6 @@ void print_mask_info(ULong_t mask)
 - (void) mouseExited : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseExited, fID is 0");
-
-   //I'm using mouseEntered/mouseExited functions to generate
-   //crossing events. When button is pressed (and before released)
-   //these functions are not enough: mouseExited/mouseEntered are
-   //not called (only mouseExited and only the first time) -
-   //this is already draggingEntered/draggingExited events.
-   //I do not want to complicate everything with drag and drop
-   //which is not really drag and drop just to have enter/leave notify
-   //events. I do not think, anybody has GUI which depends on this.
-   //If yes, later I'll have to move completely to synthesized crossing
-   //events (I want to avoid this actually, this is a lot of work during
-   //every possible mouse event).
 
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "mouseExited, gVirtualX is null or not of TGCocoa type");
