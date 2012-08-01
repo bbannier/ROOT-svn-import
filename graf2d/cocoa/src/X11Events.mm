@@ -982,17 +982,31 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSView<X11Window> *view, N
    } else {
       if (view == fButtonGrabView) {//We enter or leave grab view.
          const NSEventType type = [theEvent type];
-         if (type == NSMouseEntered && (fButtonGrabView.fGrabButtonEventMask & kEnterWindowMask)) {
-            if (fViewUnderPointer != fButtonGrabView) {//Can it be false???
+         
+         
+         if (type == NSMouseEntered) {
+            bool acceptsEnterEvent = fButtonGrabView.fGrabButtonEventMask & kEnterWindowMask;
+            
+            if (fPointerGrab == kPGImplicitGrab && (fButtonGrabView.fEventMask & kEnterWindowMask))
+               acceptsEnterEvent = true;
+               
+            if (acceptsEnterEvent && fViewUnderPointer != fButtonGrabView) {
                Detail::SendEnterEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
                fViewUnderPointer = fButtonGrabView;
             }
          } 
          
-         if (type == NSMouseExited && (fButtonGrabView.fGrabButtonEventMask & kEnterWindowMask)) {
-            Detail::SendLeaveEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
+         if (type == NSMouseExited) {
+            bool acceptsLeaveEvent = fButtonGrabView.fGrabButtonEventMask & kLeaveWindowMask;
+            
+            if (fPointerGrab == kPGImplicitGrab && (fButtonGrabView.fEventMask & kLeaveWindowMask))
+               acceptsLeaveEvent = true;
+               
+            if (acceptsLeaveEvent)
+               Detail::SendLeaveEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
+
             //Who is now under pointer?
-            fViewUnderPointer = nil;
+            fViewUnderPointer = nil;//???
          }
       }
    }
