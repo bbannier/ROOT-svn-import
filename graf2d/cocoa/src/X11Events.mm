@@ -1012,47 +1012,26 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSView<X11Window> *view, N
    if (!fButtonGrabView)//implicit grab with 'root'?
       return;
 
+   NSView<X11Window> *candidateView = FindViewUnderPointer();//The view we entered.
+
    if (fOwnerEvents) {
-      NSView<X11Window> *candidateView = nil;
-      SortTopLevelWindows();
-      QuartzWindow *topLevel = FindTopLevelWindowForMouseEvent();
-      if (topLevel) {
-         const NSPoint mousePosition = [topLevel mouseLocationOutsideOfEventStream];
-         candidateView = (NSView<X11Window> *)[[topLevel contentView] hitTest : mousePosition];
-         if (candidateView)
-            //Do propagation.
-            candidateView = Detail::FindViewToPropagateEvent(candidateView, kEnterWindowMask | kLeaveWindowMask, fButtonGrabView, fGrabEventMask);
-      }
-      
+      if (candidateView)//This part I do not understand already. Quite tricky for me :)
+         candidateView = Detail::FindViewToPropagateEvent(candidateView, kEnterWindowMask | kLeaveWindowMask, fButtonGrabView, fGrabEventMask);
       GenerateCrossingEvent(candidateView, theEvent, kNotifyNormal);
    } else {
-      if (view == fButtonGrabView) {//We enter or leave grab view.
-         const NSEventType type = [theEvent type];
-         
-         
-         if (type == NSMouseEntered) {
-            bool acceptsEnterEvent = fButtonGrabView.fGrabButtonEventMask & kEnterWindowMask;
-            
-            if (fPointerGrab == kPGImplicitGrab && (fButtonGrabView.fEventMask & kEnterWindowMask))
-               acceptsEnterEvent = true;
-               
-            if (acceptsEnterEvent && fViewUnderPointer != fButtonGrabView) {
-               Detail::SendEnterEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
-               fViewUnderPointer = fButtonGrabView;
-            }
-         } 
-         
-         if (type == NSMouseExited) {
-            bool acceptsLeaveEvent = fButtonGrabView.fGrabButtonEventMask & kLeaveWindowMask;
-            
-            if (fPointerGrab == kPGImplicitGrab && (fButtonGrabView.fEventMask & kLeaveWindowMask))
-               acceptsLeaveEvent = true;
-               
-            if (acceptsLeaveEvent)
+      //Either implicit grab or GrabPointer with owner_events == false,
+      //only grab view can receive enter/leave notify events, if any.
+      if (candidateView != fButtonGrabView) {
+         if (fButtonGrabView == fViewUnderPointer) {
+            if (fGrabEventMask & kLeaveWindowMask)
                Detail::SendLeaveEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
-
-            //Who is now under pointer?
-            //fViewUnderPointer = nil;//???
+            fViewUnderPointer = nil;
+         }
+      } else {
+         if (fButtonGrabView != fViewUnderPointer) {
+            if (fGrabEventMask & kEnterWindowMask)
+               Detail::SendEnterEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
+            fViewUnderPointer = fButtonGrabView;
          }
       }
    }
@@ -1253,39 +1232,39 @@ void EventTranslator::CancelPointerGrab()
 {
    if (!fButtonGrabView)
       return;
-      
+
+   //That's a set of fake enter/leave notify events,
+   //like we jump from the grab view to a pointer view.
+   
+   fViewUnderPointer = fButtonGrabView;
+
+   //
    fButtonGrabView = nil;
    fPointerGrab = kPGNoGrab;
    fGrabEventMask = 0;
    fOwnerEvents = true;
+   //
    
    //Generate crossing event?
-   NSView<X11Window> *candidateView = nil;
-   NSPoint location = {};
-   SortTopLevelWindows();
-   QuartzWindow *topLevel = FindTopLevelWindowForMouseEvent();
-   if (topLevel) {
-      //Cursor is in "our" (ROOT's) window, probably, generate enter event/leave event.
-      location = [topLevel mouseLocationOutsideOfEventStream];
-      candidateView = (NSView<X11Window> *)[[topLevel contentView] hitTest : location];
-   }
-   
-   if (topLevel) {
-      const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : topLevel location : location ]);
+   if (NSView<X11Window> * const candidateView = FindViewUnderPointer()) {
+      const NSPoint location = [[candidateView window] mouseLocationOutsideOfEventStream];
+      const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [candidateView window] location : location ]);
+      
       if (!event.Get()) {
          //Hehe, if this happend, is it still possible to log????
          NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+         fViewUnderPointer = candidateView;
          return;
       }
 
       GenerateCrossingEvent(candidateView, event.Get(), kNotifyUngrab);
-   } else if (fViewUnderPointer) {
-      //Convert location first.
-      location = [[fViewUnderPointer window] convertScreenToBase : [NSEvent mouseLocation]];
+   } else {
+      const NSPoint location = [[fViewUnderPointer window] convertScreenToBase : [NSEvent mouseLocation]];
       const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fViewUnderPointer window] location : location ]);
       if (!event.Get()) {
          //Hehe, if this happend, is it still possible to log????
          NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+         fViewUnderPointer = nil;
          return;
       }
 
@@ -1485,7 +1464,7 @@ void EventTranslator::GenerateButtonPressEventActiveGrab(NSView<X11Window> * /*v
 //______________________________________________________________________________
 void EventTranslator::GenerateButtonReleaseEventNoGrab(NSView<X11Window> *eventView, NSEvent *theEvent, EMouseButton btn)
 {
-   //Generate button release event when there is no active pointer grab.
+   //Generate button release event when there is no active pointer grab. Can this even happen??
 
    assert(eventView != nil && "GenerateButtonReleaseEventNoGrab, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonReleaseEventNoGrabm event parameter is nil");
@@ -1504,50 +1483,43 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
    
    const Util::NSStrongReference<NSView<X11Window> *> eventViewGuard(eventView);//What if view is deleted in the middle of this function?
 
-   if (!fButtonGrabView) {
-      if (fPointerGrab == kPGPassiveGrab || fPointerGrab == kPGImplicitGrab) {
-         //'root' window was a grab window.
-         fButtonGrabView = nil;
-         fPointerGrab = kPGNoGrab;
-         GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
-      }
-
-      return;
-   }
-   
-   if (fOwnerEvents) {//X11: Either XGrabPointer with owner_events == True or passive grab (owner_events is always true)
-      SortTopLevelWindows();
-      if (QuartzWindow * const topLevel = FindTopLevelWindowForMouseEvent()) {
-         const NSPoint mousePosition = [topLevel mouseLocationOutsideOfEventStream];
-         NSView<X11Window> *candidateView = (NSView<X11Window> *)[[topLevel contentView] hitTest : mousePosition];
-         if (candidateView) {
+   if (fButtonGrabView) {
+      if (fOwnerEvents) {//X11: Either XGrabPointer with owner_events == True or passive grab (owner_events is always true)
+         if (NSView<X11Window> *candidateView = FindViewUnderPointer()) {
             candidateView = Detail::FindViewToPropagateEvent(candidateView, kButtonReleaseMask, fButtonGrabView, fGrabEventMask);
-            if (candidateView)//We have such a view, send event to a corresponding ROOT's window.
+            //candidateView is either some view, or grab view, if its mask is ok.
+            if (candidateView)
                Detail::SendButtonReleaseEvent(fEventQueue, candidateView, theEvent, btn);
          } else if (fGrabEventMask & kButtonReleaseMask)
             Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);
-      } else {//Report to the grab view, if it has a corresponding bit set.
+      } else {//Either implicit grab or GrabPointer with owner_events == False.
          if (fGrabEventMask & kButtonReleaseMask)
-            Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);
+            Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);   
       }
-   } else {//Either implicit grab or XGrabPointer with owner_events == False.
-      if (fGrabEventMask & kButtonReleaseMask)
-         Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);   
    }
+
+   if (fButtonGrabView && fButtonGrabView.fGrabButton != kAnyButton && fButtonGrabView.fGrabButton != btn)
+      return;//Do not cancel the grab - other mouse button was released (funny thing about kAnyButton).
    
+   //When grab is cancelled, enter/leave notify events are sent like a cursor
+   //jumped from the grab view to another view, wich is under cursor now.
    if (fPointerGrab == kPGPassiveGrab || fPointerGrab == kPGImplicitGrab) {
-      fButtonGrabView = nil;
-      fPointerGrab = kPGNoGrab;
       //eventView can be ... a wrong view, since Cocoa has its own grab.
       //GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
-      NSView *candidateView = [[[theEvent window] contentView] hitTest : [theEvent locationInWindow]];
-      const bool isROOTView = [candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]];
-      if (candidateView && !isROOTView) {
-         NSLog(@"EventTranslator::GenerateButtonReleaseEventActiveGrab: error, hit test returned neither a QuartzView nor a ROOTOpenGLView!");
-         candidateView = nil;
+      NSView *candidateView = FindViewUnderPointer();
+      if (candidateView) {
+         if (![candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]]) {
+            NSLog(@"EventTranslator::GenerateButtonReleaseEventActiveGrab: error, hit test returned neither a QuartzView nor a ROOTOpenGLView!");
+            candidateView = nil;
+         }
       }
 
+      //We generate sequence of leave/enter notify events (if any) as if we jumped from the grab view to the pointer view.
+      fViewUnderPointer = fButtonGrabView;
       GenerateCrossingEvent((NSView<X11Window> *)candidateView, theEvent, kNotifyUngrab);
+      fButtonGrabView = nil;
+      fPointerGrab = kPGNoGrab;
+      fGrabEventMask = 0;
    }
 }
 
@@ -1682,7 +1654,7 @@ void EventTranslator::FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *t
       //This is implicit grab.
       fButtonGrabView = buttonPressView;
       fPointerGrab = kPGImplicitGrab;
-      fGrabEventMask = buttonPressView.fEventMask;//?
+      fGrabEventMask = buttonPressView.fEventMask;
       fOwnerEvents = false;
    } else {
       //Implicit grab with 'root' window?
