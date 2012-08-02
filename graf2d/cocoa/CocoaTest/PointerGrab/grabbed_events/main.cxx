@@ -19,53 +19,16 @@ int main(int argc, char ** argv)
    gVirtualX->MapSubwindows(mainFrame->GetId());
    gVirtualX->MapRaised(mainFrame->GetId());
 
-   //Case 1: window with id 5 is receiving enter/leave notify events.
 #ifdef TEST1
-   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childChildFrame->AddInput(kButtonPressMask);//this window initiate implicit grab!
-   mainFrame->AddInput(kButtonReleaseMask | kPointerMotionMask);
-   //Expected: before any button pressed, window 4 receives mouse motion events.
-   //window 5 - enter/exit.
-   
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kButtonPressMask | kButtonReleaseMask | kLeaveWindowMask | kEnterWindowMask);
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #elif defined(TEST2)
-   //Case 2: crossing events with grab active and owner == false (implicit grab).
-   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask);//button press mask will initiate implicit grab on this view.
    mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   //Expected: while no button is pressed, every window report enter/leave notify, as usually.
-   //If button is pressed in any window except window with id 6, no enter/leave notify events are reported
-   //(pseudo grab with 'root'). If button is pressed in window with id == 6, exit/leave notify are
-   //reported for window 6 only. After button was released, leave/enter notify are generated on ungrab (if needed)
-   //and so on.
-#elif defined(TEST3)
-   //Case 3: pointer grab on window and enter/leave notify events.
-   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   
-   //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx).
-   //On a button release pointer grab is cancelled.
-   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
-#elif defined(TEST4)
-   //Case 4: pointer grab on window and enter/leave notify events.
-   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-
-   //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx)
-   //for a window 5 (parent of window 6).
-   //On a button release pointer grab is cancelled.
-   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
-#elif defined(TEST5)
-   //Case 5: implicit grab on window with id 6 (you do a button press).
-   //after the grab is activated, mouse exited/mouse entered are generated only
-   //for grav window. As button is released, sequenve of leave/enter notify events
-   //is (potentially) generated.
-   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-
-   //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx)
-   //for a window 5 (parent of window 6).
-   //On a button release pointer grab is cancelled.
-   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+//   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE);
+   //Passive grab, owner_events == true. even if grab was activated, all windows will continue receiving events correctly.
 #endif
 
    app.Run();

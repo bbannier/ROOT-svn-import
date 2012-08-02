@@ -37,6 +37,7 @@
 #include "TClassTable.h"
 #include "KeySymbols.h"
 #include "TEnv.h"
+#include <iostream>
 
 #include <X11/extensions/shape.h>
 
@@ -1540,11 +1541,23 @@ void TGX11::MapEvent(Event_t &ev, XEvent &xev, Bool_t tox)
       ev.fType = kOtherEvent;
       if (xev.type == KeyPress)         ev.fType = kGKeyPress;
       if (xev.type == KeyRelease)       ev.fType = kKeyRelease;
-      if (xev.type == ButtonPress)      ev.fType = kButtonPress;
-      if (xev.type == ButtonRelease)    ev.fType = kButtonRelease;
+      if (xev.type == ButtonPress)     {
+         // std::cout<<"Button press "<<xev.xany.window<<std::endl;
+          ev.fType = kButtonPress;
+      }
+      if (xev.type == ButtonRelease)    {
+          ev.fType = kButtonRelease;
+         // std::cout<<"Button release "<<xev.xany.window<<std::endl;
+      }
       if (xev.type == MotionNotify)     ev.fType = kMotionNotify;
-      if (xev.type == EnterNotify)      ev.fType = kEnterNotify;
-      if (xev.type == LeaveNotify)      ev.fType = kLeaveNotify;
+      if (xev.type == EnterNotify)      {
+          ev.fType = kEnterNotify;
+         // std::cout<<"Enter notify "<<xev.xany.window<<std::endl;
+      }
+      if (xev.type == LeaveNotify)      {
+            ev.fType = kLeaveNotify;
+         //   std::cout<<"Leave notify "<<xev.xany.window<<std::endl;
+      }
       if (xev.type == FocusIn)          ev.fType = kFocusIn;
       if (xev.type == FocusOut)         ev.fType = kFocusOut;
       if (xev.type == Expose)           ev.fType = kExpose;
