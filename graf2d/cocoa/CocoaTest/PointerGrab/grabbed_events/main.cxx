@@ -54,6 +54,18 @@ int main(int argc, char ** argv)
    //for a window 5 (parent of window 6).
    //On a button release pointer grab is cancelled.
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
+#elif defined(TEST5)
+   //Case 5: implicit grab on window with id 6 (you do a button press).
+   //after the grab is activated, mouse exited/mouse entered are generated only
+   //for grav window. As button is released, sequenve of leave/enter notify events
+   //is (potentially) generated.
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+
+   //On a button press we will setup pointer grab with owner_events == false (see testframe.cxx)
+   //for a window 5 (parent of window 6).
+   //On a button release pointer grab is cancelled.
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
 #endif
 
    app.Run();
