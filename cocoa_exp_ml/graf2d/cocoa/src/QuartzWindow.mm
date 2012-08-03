@@ -697,7 +697,7 @@ void print_mask_info(ULong_t mask)
       fDelayedTransient = NO;
       
       if (attr)
-         ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+         X11::SetWindowAttributes(attr, self);
    }
    
    return self;
@@ -801,7 +801,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (int) fY
 {
-   return ROOT::MacOSX::X11::GlobalYCocoaToROOT(self.frame.origin.y + self.frame.size.height);
+   return X11::GlobalYCocoaToROOT(self.frame.origin.y + self.frame.size.height);
 }
 
 //______________________________________________________________________________
@@ -842,7 +842,7 @@ void print_mask_info(ULong_t mask)
    //Check how this is affected by title bar's height.
    NSPoint topLeft = {};
    topLeft.x = x;
-   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
+   topLeft.y = X11::GlobalYROOTToCocoa(y);
 
    [self setFrameTopLeftPoint : topLeft];
 }
@@ -852,7 +852,7 @@ void print_mask_info(ULong_t mask)
 {
    NSPoint topLeft = {};
    topLeft.x = x;
-   topLeft.y = ROOT::MacOSX::X11::GlobalYROOTToCocoa(y);
+   topLeft.y = X11::GlobalYROOTToCocoa(y);
 
    [self setFrameTopLeftPoint : topLeft];
 }
@@ -1258,7 +1258,7 @@ void print_mask_info(ULong_t mask)
       //Actually, check if view need this.      
       //
       if (attr)
-         ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+         X11::SetWindowAttributes(attr, self);
          
       fCurrentCursor = kPointer;
       fX11Properties = [[NSMutableDictionary alloc] init];
@@ -1288,7 +1288,7 @@ void print_mask_info(ULong_t mask)
       return;
 
    
-   const ROOT::MacOSX::Util::AutoreleasePool pool;
+   const Util::AutoreleasePool pool;
 
    if (NSArray *trackingArray = [self trackingAreas]) {
       const NSUInteger size = [trackingArray count];
@@ -1437,7 +1437,7 @@ void print_mask_info(ULong_t mask)
    bool needSubImage = false;
    if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
       needSubImage = true;
-      subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
+      subImage = X11::CreateSubImage(srcImage, area);
       if (!subImage) {
          NSLog(@"QuartzView: -copyImage:area:withMask:clipOrigin:toPoint:, subimage creation failed");
          return;
@@ -1446,7 +1446,7 @@ void print_mask_info(ULong_t mask)
       subImage = srcImage.fImage;
 
    //Save context state.
-   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
+   const Quartz::CGStateGuard ctxGuard(self.fContext);
 
    //Scale and translate to undo isFlipped.
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
@@ -1456,13 +1456,13 @@ void print_mask_info(ULong_t mask)
    if (mask) {
       assert(mask.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
       assert(CGImageIsMask(mask.fImage) == true && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
-      clipXY.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
+      clipXY.fY = X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
       const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
       CGContextClipToMask(self.fContext, clipRect, mask.fImage);
    }
    
    //Convert from X11 to Cocoa (as soon as we scaled y * -1).
-   dstPoint.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
+   dstPoint.fY = X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
 
@@ -1499,14 +1499,14 @@ void print_mask_info(ULong_t mask)
    srcView.fContext = ctx;
 
    const CGRect subImageRect = CGRectMake(area.fX, area.fY, area.fWidth, area.fHeight);
-   const ROOT::MacOSX::Util::CFScopeGuard<CGImageRef> subImage(CGImageCreateWithImageInRect(imageRep.CGImage, subImageRect));
+   const Util::CFScopeGuard<CGImageRef> subImage(CGImageCreateWithImageInRect(imageRep.CGImage, subImageRect));
 
    if (!subImage.Get()) {
       NSLog(@"QuartzView: -copyView:area:toPoint, CGImageCreateWithImageInRect failed");
       return;
    }
 
-   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
+   const Quartz::CGStateGuard ctxGuard(self.fContext);
    const CGRect imageRect = CGRectMake(dstPoint.fX, [self visibleRect].size.height - (dstPoint.fY + area.fHeight), area.fWidth, area.fHeight);
 
    CGContextTranslateCTM(self.fContext, 0., [self visibleRect].size.height); 
@@ -1518,15 +1518,13 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) copyPixmap : (QuartzPixmap *) srcPixmap area : (Rectangle_t) area withMask : (QuartzImage *) mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
 {
-   using ROOT::MacOSX::X11::AdjustCropArea;
- 
    //Check parameters.  
    assert(srcPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, srcPixmap parameter is nil");
    
    //More difficult case: pixmap already contains reflected image.
-   area.fY = ROOT::MacOSX::X11::LocalYROOTToCocoa(srcPixmap, area.fY) - area.fHeight;
+   area.fY = X11::LocalYROOTToCocoa(srcPixmap, area.fY) - area.fHeight;
    
-   if (!AdjustCropArea(srcPixmap, area)) {
+   if (!X11::AdjustCropArea(srcPixmap, area)) {
       NSLog(@"QuartzView: -copyPixmap:area:withMask:clipOrigin:toPoint, no intersection between pixmap rectangle and cropArea");
       return;
    }
@@ -1534,11 +1532,11 @@ void print_mask_info(ULong_t mask)
    //Check self.
    assert(self.fContext != 0 && "copyPixmap:area:withMask:clipOrigin:toPoint:, self.fContext is null");
    
-   const ROOT::MacOSX::Util::CFScopeGuard<CGImageRef> imageFromPixmap([srcPixmap createImageFromPixmap : area]);
+   const Util::CFScopeGuard<CGImageRef> imageFromPixmap([srcPixmap createImageFromPixmap : area]);
    assert(imageFromPixmap.Get() != 0 && "copyPixmap:area:withMask:clipOrigin:toPoint:, createImageFromPixmap failed");
 
    //Save context state.
-   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
+   const Quartz::CGStateGuard ctxGuard(self.fContext);
    
    if (mask) {
       assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
@@ -1556,13 +1554,11 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area toPoint : (Point_t) dstPoint
 {
-   using ROOT::MacOSX::X11::AdjustCropArea;
-
    assert(srcImage != nil && "copyImage:area:toPoint:, srcImage parameter is nil");
    assert(srcImage.fImage != nil && "copyImage:area:toPoint:, srcImage.fImage is nil");
    assert(self.fContext != 0 && "copyImage:area:toPoint:, fContext is null");
 
-   if (!AdjustCropArea(srcImage, area)) {
+   if (!X11::AdjustCropArea(srcImage, area)) {
       NSLog(@"QuartzView: -copyImage:area:toPoint, image and copy area do not intersect");
       return;
    }
@@ -1571,7 +1567,7 @@ void print_mask_info(ULong_t mask)
    bool needSubImage = false;
    if (area.fX || area.fY || area.fWidth != srcImage.fWidth || area.fHeight != srcImage.fHeight) {
       needSubImage = true;
-      subImage = ROOT::MacOSX::X11::CreateSubImage(srcImage, area);
+      subImage = X11::CreateSubImage(srcImage, area);
       if (!subImage) {
          NSLog(@"QuartzView: -copyImage:area:toPoint:, subimage creation failed");
          return;
@@ -1579,12 +1575,12 @@ void print_mask_info(ULong_t mask)
    } else
       subImage = srcImage.fImage;
 
-   const ROOT::Quartz::CGStateGuard ctxGuard(self.fContext);
+   const Quartz::CGStateGuard ctxGuard(self.fContext);
 
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
 
-   dstPoint.fY = ROOT::MacOSX::X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
+   dstPoint.fY = X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
    
@@ -1619,9 +1615,6 @@ void print_mask_info(ULong_t mask)
 {
    //TODO: make the part, reading pixels
    //from NSBitmapImageRep not so lame.
-
-   using ROOT::MacOSX::X11::AdjustCropArea;
-
    const NSRect visRect = [self visibleRect];
    Rectangle_t srcRect = {};
    srcRect.fX = visRect.origin.x;
@@ -1629,7 +1622,7 @@ void print_mask_info(ULong_t mask)
    srcRect.fWidth = visRect.size.width;
    srcRect.fHeight = visRect.size.height;
    
-   if (!AdjustCropArea(srcRect, area)) {
+   if (!X11::AdjustCropArea(srcRect, area)) {
       NSLog(@"QuartzView: -readColorBits:, visible rect of view and copy area do not intersect");
       return 0;
    }
@@ -1763,7 +1756,7 @@ void print_mask_info(ULong_t mask)
 {
    assert(attr != 0 && "getAttributes, attr parameter is null");
    
-   ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
+   X11::GetWindowAttributes(self, attr);
 }
 
 //______________________________________________________________________________
@@ -1775,7 +1768,7 @@ void print_mask_info(ULong_t mask)
    log_attributes(attr, fID);
 #endif
 
-   ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+   X11::SetWindowAttributes(attr, self);
 }
 
 //______________________________________________________________________________
@@ -1826,7 +1819,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) raiseWindow
 {
-   using namespace ROOT::MacOSX::X11;//Comparators.
+   using namespace X11;//Comparators.
 
    for (QuartzView *sibling in [fParentView subviews]) {
       if (self == sibling)
@@ -1853,7 +1846,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) lowerWindow
 {
-   using namespace ROOT::MacOSX::X11;
+   using namespace X11;
 
    NSEnumerator * const reverseEnumerator = [[fParentView subviews] reverseObjectEnumerator];
    for (QuartzView *sibling in reverseEnumerator) {
@@ -1964,7 +1957,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) drawRect : (NSRect) dirtyRect
 {
-   using namespace ROOT::MacOSX::X11;
+   using namespace X11;
 
    (void)dirtyRect;
 
@@ -1982,9 +1975,9 @@ void print_mask_info(ULong_t mask)
          fContext = (CGContextRef)[nsContext graphicsPort];
          assert(fContext != 0 && "drawRect, graphicsPort returned null");
 
-         const ROOT::Quartz::CGStateGuard ctxGuard(fContext);
+         const Quartz::CGStateGuard ctxGuard(fContext);
 
-         ROOT::MacOSX::Util::CFScopeGuard<CGImageRef> clipImageGuard;
+         Util::CFScopeGuard<CGImageRef> clipImageGuard;
          QuartzWindow * const topLevelParent = self.fQuartzWindow;
          if (topLevelParent.fShapeCombineMask) {
             //Attach clip mask to the context.
@@ -2315,7 +2308,7 @@ void print_mask_info(ULong_t mask)
    
    if (pngFileName) {
       const char * const path = gSystem->Which("$ROOTSYS/icons", pngFileName, kReadPermission);//This must be deleted.
-      const ROOT::MacOSX::Util::ScopedArray<const char> arrayGuard(path);
+      const Util::ScopedArray<const char> arrayGuard(path);
 
       if (!path || path[0] == 0) {
          //File was not found.
@@ -2328,7 +2321,7 @@ void print_mask_info(ULong_t mask)
       if (!cursorImage)
          return nil;
 
-      NSPoint hotSpot = ROOT::MacOSX::X11::GetCursorHotStop(cursorImage, fCurrentCursor);
+      NSPoint hotSpot = X11::GetCursorHotStop(cursorImage, fCurrentCursor);
       NSCursor * const customCursor = [[[NSCursor alloc] initWithImage : cursorImage hotSpot : hotSpot] autorelease];//in autorelease pool.
       
       [cursorImage release];
@@ -2544,7 +2537,7 @@ void print_mask_info(ULong_t mask)
       event2.fUser[2] = 0;//Here I have to pack x and y for drop coordinates, shifting by 16 bits.
       NSPoint dropPoint = [sender draggingLocation];
       dropPoint = [self convertPointFromBase : dropPoint];
-      dropPoint = ROOT::MacOSX::X11::TranslateToScreen(self, dropPoint);
+      dropPoint = X11::TranslateToScreen(self, dropPoint);
       event2.fUser[2] = UShort_t(dropPoint.y) | (UShort_t(dropPoint.x) << 16);
       
       gVirtualX->SendEvent(fID, &event2);
