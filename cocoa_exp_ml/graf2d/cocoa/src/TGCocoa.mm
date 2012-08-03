@@ -2868,7 +2868,7 @@ void TGCocoa::QueryPointer(Window_t winID, Window_t &rootWinID, Window_t &childW
 //OpenGL management.
 
 //______________________________________________________________________________
-Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t height, const std::vector<std::pair<UInt_t, Int_t> > &formatComponents)
+Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t height, const std::vector<std::pair<UInt_t, Int_t> > &/*formatComponents*/)
 {
    //ROOT never creates GL widgets with 'root' as a parent (so not top-level gl-windows).
    //If this change, assert must be deleted.

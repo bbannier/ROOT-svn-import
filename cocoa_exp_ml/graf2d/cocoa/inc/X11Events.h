@@ -94,6 +94,7 @@ public:
 private:
 
    //Used both by grab and non-grab case.
+   void GenerateCrossingEvents(NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail);
    void GenerateCrossingEvent(NSView<X11Window> *viewUnderPointer, NSEvent *theEvent, EXMagic detail);
    void GenerateCrossingEventActiveGrab(NSView<X11Window> *eventView, NSEvent *theEvent);
 

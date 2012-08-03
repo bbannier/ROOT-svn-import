@@ -1044,6 +1044,69 @@ bool EventTranslator::HasPointerGrab()const
 }
 
 //______________________________________________________________________________
+void EventTranslator::GenerateCrossingEvents(NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail)
+{
+   assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
+   
+   if (fromView == toView) {
+      //This can happen: tracking areas for stacked windows call
+      //mouseExited even for overlapped views (so you have a bunch of mouseExited/mouseEntered
+      //for one cursor move). In mouseEntered/mouseExited
+      //I'm looking for the top level view under cursor and try to generate cross event
+      //for this view only.
+      return;
+   }
+   
+   if (!fromView) {
+      //We enter window "from the screen" - do not leave any window.
+      //Send EnterNotify event.
+      if (toView)//Check, if order is OK.
+         Detail::SendEnterEventClosedRange(fEventQueue, toView, (NSView<X11Window> *)[[toView window] contentView], theEvent, detail);
+   } else if (!toView) {
+      //We exit all views. Order must be OK here.
+      Detail::SendLeaveEventClosedRange(fEventQueue, fViewUnderPointer, (NSView<X11Window> *)[[fViewUnderPointer window] contentView], theEvent, detail);
+   } else {
+      NSView<X11Window> *ancestor = 0;
+      Ancestry rel = FindRelation(fromView, toView, &ancestor);
+      if (rel == kAView1IsParent) {
+         //Case 1.
+         //From A to B.
+         //_________________
+         //| A              |
+         //|   |---------|  |
+         //|   |  B      |  |
+         //|   |         |  |
+         //|   |---------|  |
+         //|                |
+         //|________________|
+         Detail::GenerateCrossingEventParentToChild(fEventQueue, fromView, toView, theEvent, detail);
+      } else if (rel == kAView2IsParent) {
+         //Case 2.
+         //From A to B.
+         //_________________
+         //| B              |
+         //|   |---------|  |
+         //|   |  A      |  |
+         //|   |         |  |
+         //|   |---------|  |
+         //|                |
+         //|________________|   
+         Detail::GenerateCrossingEventChildToParent(fEventQueue, toView, fromView, theEvent, detail);
+      } else {
+         //Case 3.
+         //|--------------------------------|
+         //| C   |------|      |-------|    |
+         //|     | A    |      | B     |    |
+         //|     |______|      |_______|    |
+         //|________________________________|
+         //Ancestor is either some view, or 'root' window.
+         //The fourth case (different screens) is not implemented (and I do not know, if I want to implement it).
+         Detail::GenerateCrossingEventFromChild1ToChild2(fEventQueue, fromView, toView, ancestor, theEvent, detail);
+      }   
+   }
+}
+
+//______________________________________________________________________________
 void EventTranslator::GenerateCrossingEvent(NSView<X11Window> *view, NSEvent *theEvent, EXMagic detail)
 {
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
