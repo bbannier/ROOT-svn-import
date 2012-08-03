@@ -4,8 +4,6 @@
 #include "GuiTypes.h"
 #include "TGFrame.h"
 
-#define TEST2 1
-
 namespace ROOT {
 namespace CocoaTest {
 
@@ -27,10 +25,8 @@ private:
    void PrintFrameInfo()const;
    void PrintEventCoordinates(const Event_t *event)const;
 
-   TestFrame(const TestFrame &rhs) = delete;
-   TestFrame(TestFrame &&rhs) = delete;
-   TestFrame &operator = (const TestFrame &rhs) = delete;
-   TestFrame &operator = (TestFrame &&rhs) = delete;
+   TestFrame(const TestFrame &rhs);
+   TestFrame &operator = (const TestFrame &rhs);
    
    //To be used by all test frames.
    Window_t windowID_;
