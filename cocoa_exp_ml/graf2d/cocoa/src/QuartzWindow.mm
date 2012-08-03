@@ -587,6 +587,10 @@ bool RectsOverlap(const NSRect &r1, const NSRect &r2)
 }//MacOSX
 }//ROOT
 
+namespace Quartz = ROOT::Quartz;
+namespace Util = ROOT::MacOSX::Util;
+namespace X11 = ROOT::MacOSX::X11;
+
 #ifdef DEBUG_ROOT_COCOA
 
 namespace {
@@ -700,25 +704,37 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) addTransientWindow : (QuartzWindow *) window
-{
-   assert(window != nil && "addTransientWindow, window parameter is nil");
-
-   window.fMainWindow = self;
-   
-   if (window.fMapState != kIsViewable) {
-      window.fDelayedTransient = YES;
-   } else {
-      [self addChildWindow : window ordered : NSWindowAbove];
-      window.fDelayedTransient = NO;
-   }
-}
-
-//______________________________________________________________________________
 - (void) dealloc
 {
    [fShapeCombineMask release];
    [super dealloc];
+}
+
+//I want to forward a lot of property setters/getters to content view.
+
+//______________________________________________________________________________
+- (void) forwardInvocation : (NSInvocation *) anInvocation
+{
+   assert(fContentView != nil && "forwardInvocation:, fContentView is nil");
+
+   if ([fContentView respondsToSelector : [anInvocation selector]]) {
+      [anInvocation invokeWithTarget : fContentView];
+   } else {
+      [super forwardInvocation : anInvocation];
+   }
+}
+
+//______________________________________________________________________________
+- (NSMethodSignature*) methodSignatureForSelector : (SEL) selector
+{
+   NSMethodSignature *signature = [super methodSignatureForSelector : selector];
+
+   if (!signature) {
+      assert(fContentView != nil && "methodSignatureForSelector:, fContentView is nil");
+      signature = [fContentView methodSignatureForSelector : selector];
+   }
+
+   return signature;
 }
 
 //______________________________________________________________________________
@@ -741,6 +757,21 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
+- (void) addTransientWindow : (QuartzWindow *) window
+{
+   assert(window != nil && "addTransientWindow, window parameter is nil");
+
+   window.fMainWindow = self;
+   
+   if (window.fMapState != kIsViewable) {
+      window.fDelayedTransient = YES;
+   } else {
+      [self addChildWindow : window ordered : NSWindowAbove];
+      window.fDelayedTransient = NO;
+   }
+}
+
+//______________________________________________________________________________
 - (void) setFDelayedTransient : (BOOL) d
 {
    fDelayedTransient = d;
@@ -748,22 +779,6 @@ void print_mask_info(ULong_t mask)
 
 ///////////////////////////////////////////////////////////
 //X11Drawable's protocol.
-
-//______________________________________________________________________________
-- (unsigned) fID 
-{
-   assert(fContentView != nil && "fID, content view is nil");
-
-   return fContentView.fID;
-}
-
-//______________________________________________________________________________
-- (void) setFID : (unsigned) winID
-{
-   assert(fContentView != nil && "setFID, content view is nil");
-   
-   fContentView.fID = winID;
-}
 
 //______________________________________________________________________________
 - (BOOL) fIsPixmap
@@ -775,22 +790,6 @@ void print_mask_info(ULong_t mask)
 - (BOOL) fIsOpenGLWidget
 {
    return NO;
-}
-
-//______________________________________________________________________________
-- (CGContextRef) fContext 
-{
-   assert(fContentView != nil && "fContext, fContentView is nil");
-
-   return fContentView.fContext;
-}
-
-//______________________________________________________________________________
-- (void) setFContext : (CGContextRef) ctx
-{
-   assert(fContentView != nil && "setFContext, fContentView is nil");
-
-   fContentView.fContext = ctx;
 }
 
 //______________________________________________________________________________
@@ -903,117 +902,8 @@ void print_mask_info(ULong_t mask)
 /////////////////////////////////////////////////////////////
 //SetWindowAttributes_t/WindowAttributes_t.
 
-//______________________________________________________________________________
-- (long) fEventMask
-{
-   assert(fContentView != nil && "fEventMask, content view is nil");
-   
-   return fContentView.fEventMask;
-}
+//... forwards to fContentView.
 
-//______________________________________________________________________________
-- (void) setFEventMask : (long)mask 
-{
-   assert(fContentView != nil && "setFEventMask, content view is nil");
-   
-   fContentView.fEventMask = mask;
-}
-
-//______________________________________________________________________________
-- (int) fClass
-{
-   assert(fContentView != nil && "fClass, content view is nil");
-   
-   return fContentView.fClass;
-}
-
-//______________________________________________________________________________
-- (void) setFClass : (int) windowClass
-{
-   assert(fContentView != nil && "setFClass, content view is nil");
-   
-   fContentView.fClass = windowClass;
-}
-
-//______________________________________________________________________________
-- (int) fDepth
-{
-   assert(fContentView != nil && "fDepth, content view is nil");
-   
-   return fContentView.fDepth;
-}
-
-//______________________________________________________________________________
-- (void) setFDepth : (int) depth
-{
-   assert(fContentView != nil && "setFDepth, content view is nil");
-   
-   fContentView.fDepth = depth;
-}
-
-//______________________________________________________________________________
-- (int) fBitGravity
-{
-   assert(fContentView != nil && "fBitGravity, content view is nil");
-   
-   return fContentView.fBitGravity;
-}
-
-//______________________________________________________________________________
-- (void) setFBitGravity : (int) bit
-{
-   assert(fContentView != nil && "setFBitGravity, content view is nil");
-
-   fContentView.fBitGravity = bit;
-}
-
-//______________________________________________________________________________
-- (int) fWinGravity
-{
-   assert(fContentView != nil && "fWinGravity, content view is nil");
-   
-   return fContentView.fWinGravity;
-}
-
-//______________________________________________________________________________
-- (void) setFWinGravity : (int) bit
-{
-   assert(fContentView != nil && "setFWinGravity, content view is nil");
-   
-   fContentView.fWinGravity = bit;
-}
-
-//______________________________________________________________________________
-- (unsigned long) fBackgroundPixel
-{
-   assert(fContentView != nil && "fBackgroundPixel, content view is nil");
-   
-   return fContentView.fBackgroundPixel;
-}
-
-//______________________________________________________________________________
-- (void) setFBackgroundPixel : (unsigned long) pixel
-{
-   assert(fContentView != nil && "SetFBackgroundPixel, content view is nil");
-   
-   fContentView.fBackgroundPixel = pixel;
-}
-
-//______________________________________________________________________________
-- (void) setFBackgroundPixmap : (QuartzImage *) pixmap
-{
-   assert(fContentView != nil && "setFBackgroundPixmap, content view is nil");
-
-   fContentView.fBackgroundPixmap = pixmap;
-}
-
-//______________________________________________________________________________
-- (QuartzImage *) fBackgroundPixmap
-{
-   assert(fContentView != nil && "fBackgroundPixmap, content view is nil");
-   
-   return fContentView.fBackgroundPixmap;
-}
 
 //______________________________________________________________________________
 - (int) fMapState
@@ -1026,87 +916,6 @@ void print_mask_info(ULong_t mask)
       
    return kIsViewable;
 }
-
-//______________________________________________________________________________
-- (QuartzPixmap *) fBackBuffer
-{
-   assert(fContentView != nil && "fBackBuffer, content view is nil");
-   
-   return fContentView.fBackBuffer;
-}
-
-//______________________________________________________________________________
-- (void) setFBackBuffer : (QuartzPixmap *) backBuffer
-{
-   assert(fContentView != nil && "setFBackBuffer, content view is nil");
-   
-   fContentView.fBackBuffer = backBuffer;
-}
-
-//______________________________________________________________________________
-- (int) fGrabButton
-{
-   assert(fContentView != nil && "fGrabButton, content view is nil");
-   
-   return fContentView.fGrabButton;
-}
-
-//______________________________________________________________________________
-- (void) setFGrabButton : (int) btn
-{
-   assert(fContentView != nil && "setFGrabButton, content view is nil");
-   
-   fContentView.fGrabButton = btn;
-}
-
-//______________________________________________________________________________
-- (unsigned) fGrabButtonEventMask
-{
-   assert(fContentView != nil && "fGrabButtonEventMask, content view is nil");
-   
-   return fContentView.fGrabButtonEventMask;
-}
-
-//______________________________________________________________________________
-- (void) setFGrabButtonEventMask : (unsigned) mask
-{
-   assert(fContentView != nil && "setFGrabButtonEventMask, content view is nil");
-   
-   fContentView.fGrabButtonEventMask = mask;
-}
-
-//______________________________________________________________________________
-- (unsigned) fGrabKeyModifiers
-{
-   assert(fContentView != nil && "fGrabKeyModifiers, content view is nil");
-   
-   return fContentView.fGrabKeyModifiers;
-}
-
-//______________________________________________________________________________
-- (void) setFGrabKeyModifiers : (unsigned) mod
-{
-   assert(fContentView != nil && "setFGrabKeyModifiers, content view is nil");
-   
-   fContentView.fGrabKeyModifiers = mod;
-}
-
-//______________________________________________________________________________
-- (BOOL) fOwnerEvents
-{
-   assert(fContentView != nil && "fOwnerEvents, content view is nil");
-
-   return fContentView.fOwnerEvents;
-}
-
-//______________________________________________________________________________
-- (void) setFOwnerEvents : (BOOL) owner
-{
-   assert(fContentView != nil && "setFOwnerEvents, content view is nil");
-
-   fContentView.fOwnerEvents = owner;
-}
-
 
 //______________________________________________________________________________
 - (void) addChild : (NSView<X11Window> *) child
@@ -1129,7 +938,7 @@ void print_mask_info(ULong_t mask)
    assert(fContentView != 0 && "getAttributes, content view is nil");
    assert(attr && "getAttributes, attr parameter is nil");
 
-   ROOT::MacOSX::X11::GetWindowAttributes(self, attr);
+   X11::GetWindowAttributes(self, attr);
 }
 
 //______________________________________________________________________________
@@ -1141,7 +950,7 @@ void print_mask_info(ULong_t mask)
    log_attributes(attr, self.fID);
 #endif
 
-   ROOT::MacOSX::X11::SetWindowAttributes(attr, self);
+   X11::SetWindowAttributes(attr, self);
 }
 
 //______________________________________________________________________________
@@ -1149,7 +958,6 @@ void print_mask_info(ULong_t mask)
 {
    assert(fContentView && "mapRaised, content view is nil");
 
-//   [self orderFront : self];
    [self makeKeyAndOrderFront : self];
    [fContentView setHidden : NO];
    [fContentView configureNotifyTree];
@@ -1236,56 +1044,6 @@ void print_mask_info(ULong_t mask)
 
    //Always call default version.
    [super sendEvent : theEvent];
-}
-
-//Cursors.
-//______________________________________________________________________________
-- (ECursor) fCurrentCursor
-{
-   assert(fContentView != nil && "fCurrentCursor, content view is nil");
-   
-   return fContentView.fCurrentCursor;
-}
-
-//______________________________________________________________________________
-- (void) setFCurrentCursor : (ECursor) cursor
-{
-   assert(fContentView != nil && "setFCurrentCursor, content view is nil");
-   
-   fContentView.fCurrentCursor = cursor;
-}
-
-//______________________________________________________________________________
-- (void) setProperty : (const char *) propName data : (unsigned char *) propData size : (unsigned) dataSize forType : (Atom_t) dataType format : (unsigned) format
-{
-   assert(fContentView != nil && "setProperty:data:size:forType:, content view is nil");
-   
-   [fContentView setProperty : propName data : propData size : dataSize forType : dataType format : format];
-}
-
-//______________________________________________________________________________
-- (BOOL) hasProperty : (const char *) propName
-{
-   assert(fContentView != nil && "hasProperty:, content view is nil");
-   
-   return [fContentView hasProperty : propName];
-}
-
-//______________________________________________________________________________
-- (unsigned char *) getProperty : (const char *) propName returnType : (Atom_t *) type 
-   returnFormat : (unsigned *) format nElements : (unsigned *) nElements
-{
-   assert(fContentView != nil && "getProperty:returnType:returnFormat:nElements, content view is nil");
-   
-   return [fContentView getProperty : propName returnType : type returnFormat : format nElements : nElements];
-}
-
-//______________________________________________________________________________
-- (void) removeProperty : (const char *) propName
-{
-   assert(fContentView != nil && "removeProperty:, content view is nil");
-   
-   [fContentView removeProperty : propName];
 }
 
 //NSWindowDelegate's methods.
@@ -1441,13 +1199,13 @@ void print_mask_info(ULong_t mask)
 
 
 @implementation QuartzView {
-   QuartzPixmap *fBackBuffer;
+   QuartzPixmap   *fBackBuffer;
    NSMutableArray *fPassiveKeyGrabs;
    BOOL            fIsOverlapped;
    QuartzImage    *fClipMask;
    
    NSMutableDictionary   *fX11Properties;
-   QuartzImage    *fBackgroundPixmap;
+   QuartzImage           *fBackgroundPixmap;
    
 }
 
