@@ -19,17 +19,10 @@ int main(int argc, char ** argv)
    gVirtualX->MapSubwindows(mainFrame->GetId());
    gVirtualX->MapRaised(mainFrame->GetId());
 
-#ifdef TEST1
-   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childFrame->AddInput(kButtonPressMask | kButtonReleaseMask | kLeaveWindowMask | kEnterWindowMask);
+   //Test case 1: "middle" window has a grab, and
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-#elif defined(TEST2)
-   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-//   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE);
-   //Passive grab, owner_events == true. even if grab was activated, all windows will continue receiving events correctly.
-#endif
+   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kButtonPressMask | kButtonReleaseMask | kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE);
 
    app.Run();
 }
