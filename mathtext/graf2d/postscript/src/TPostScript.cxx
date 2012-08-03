@@ -1512,7 +1512,7 @@ Bool_t TPostScript::FontEmbedType2(const char *filename)
 	snprintf(linebuf, BUFSIZ, "%%%%BeginResource: FontSet (%s)@",
 			 fontName.Data());
 	PrintStr(linebuf);
-	PrintStr("%%VMusage: 0 0");
+	PrintStr("%%VMusage: 0 0@");
 	PrintStr("/FontSetInit /ProcSet findresource begin@");
 	snprintf(linebuf, BUFSIZ, "%%%%BeginData: %d ASCII Lines@",
 			 ASCII85LineCount(cffLength, cff) + 2);
@@ -1540,8 +1540,9 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 
 	FILE *fp = fopen(filename, "r");
 
-	if(fp == NULL)
+	if (fp == NULL) {
 		return false;
+	}
 
 	TString fontName;
 	Double_t fontBBox[4];
@@ -1549,8 +1550,8 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 	UShort_t cMap[65536 * 3];
 	TString charStrings[65536];
 
-	if(!ReadTTFHeader(fp, fontName, fontBBox, encoding,
-					  charStrings, cMap)) {
+	if (!ReadTTFHeader(fp, fontName, fontBBox, encoding,
+					   charStrings, cMap)) {
 		fclose(fp);
 		return false;
 	}
@@ -1562,15 +1563,20 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 			 fontName.Data());
 	PrintStr(linebuf);
 	PrintStr("%%VMusage: 0 0@");
-//	PrintStr("11 dict begin@");
+	PrintStr("11 dict begin@");
 	PrintStr("/FontType 42 def@");
 	snprintf(linebuf, BUFSIZ, "/FontName /%s def@", fontName.Data());
 	PrintStr(linebuf);
+
 	PrintStr("/Encoding 256 array@");
-	for(Int_t code = 0; code < 256; code++) {
-		snprintf(linebuf, BUFSIZ, "dup %d /%s put@", code,
-				 charStrings[code].Data());
-		PrintStr(linebuf);
+	PrintStr("0 1 255 { 1 index exch /.notdef put } for@");
+	for (Int_t code = 0; code < 256; code++) {
+		if (charStrings[code] != ".notdef" &&
+			charStrings[code] != "") {
+			snprintf(linebuf, BUFSIZ, "dup %d /%s put@", code,
+					 charStrings[code].Data());
+			PrintStr(linebuf);
+		}
 	}
 	PrintStr("readonly def@");
 	PrintStr("/PaintType 0 def@");	// 0 for filled, 2 for stroked
@@ -1584,8 +1590,8 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 	Char_t sfnts[blockSize];
 	Int_t length;
 
-	while((length = fread(sfnts, sizeof(Char_t), blockSize, fp)) >
-		  0) {
+	while ((length = fread(sfnts, sizeof(Char_t), blockSize, fp)) >
+		   0) {
 		PrintStr("<@");
 		WriteASCIIHex(length, sfnts);
 		PrintStr(">@");
@@ -1594,14 +1600,18 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 
 	Int_t count = 0;
 
-	for(Int_t glyph = 0; glyph < 65536; glyph++)
-		if(charStrings[glyph] != ".notdef" && charStrings[glyph] != "")
+	for (Int_t glyph = 0; glyph < 65536; glyph++) {
+		if (charStrings[glyph] != ".notdef" &&
+			charStrings[glyph] != "") {
 			count++;
+		}
+	}
 	snprintf(linebuf, BUFSIZ, "/CharStrings %d dict dup begin@",
 			 count);
 	PrintStr(linebuf);
-	for(Int_t glyph = 0; glyph < 65536; glyph++)
-		if(charStrings[glyph] != ".notdef" && charStrings[glyph] != "") {
+	for (Int_t glyph = 0; glyph < 65536; glyph++)
+		if (charStrings[glyph] != ".notdef" &&
+			charStrings[glyph] != "") {
 			snprintf(linebuf, BUFSIZ, "/%s %d def@",
 					 charStrings[glyph].Data(), glyph);
 			PrintStr(linebuf);
@@ -1635,19 +1645,19 @@ void TPostScript::FontEmbed(void)
 	   { "Root.TTFont.12", "symbol.ttf" },
 	   { "Root.TTFont.13", "times.ttf" },
 	   { "Root.TTFont.14", "wingding.ttf" },
-	   { "Root.TTFont.STIXGen", "arial.ttf" },
-	   { "Root.TTFont.STIXGenIt", "ariali.ttf" },
-	   { "Root.TTFont.STIXGenBd", "arialbd.ttf" },
-	   { "Root.TTFont.STIXGenBdIt", "arialbi.ttf" },
-	   { "Root.TTFont.STIXSiz1Sym", "arial.ttf" },
-	   { "Root.TTFont.STIXSiz1SymBd", "arialbd.ttf" },
-	   { "Root.TTFont.STIXSiz2Sym", "arial.ttf" },
-	   { "Root.TTFont.STIXSiz2SymBd", "arialbd.ttf" },
-	   { "Root.TTFont.STIXSiz3Sym", "arial.ttf" },
-	   { "Root.TTFont.STIXSiz3SymBd", "arialbd.ttf" },
-	   { "Root.TTFont.STIXSiz4Sym", "arial.ttf" },
-	   { "Root.TTFont.STIXSiz4SymBd", "arialbd.ttf" },
-	   { "Root.TTFont.STIXSiz5Sym", "arial.ttf" },
+	   { "Root.TTFont.STIXGen", "STIXGeneral.otf" },
+	   { "Root.TTFont.STIXGenIt", "STIXGeneralItalic.otf" },
+	   { "Root.TTFont.STIXGenBd", "STIXGeneralBol.otf" },
+	   { "Root.TTFont.STIXGenBdIt", "STIXGeneralBolIta.otf" },
+	   { "Root.TTFont.STIXSiz1Sym", "STIXSiz1Sym.otf" },
+	   { "Root.TTFont.STIXSiz1SymBd", "STIXSiz1SymBol.otf" },
+	   { "Root.TTFont.STIXSiz2Sym", "STIXSiz2Sym.otf" },
+	   { "Root.TTFont.STIXSiz2SymBd", "STIXSiz2SymBol.otf" },
+	   { "Root.TTFont.STIXSiz3Sym", "STIXSiz3Sym.otf" },
+	   { "Root.TTFont.STIXSiz3SymBd", "STIXSiz3SymBol.otf" },
+	   { "Root.TTFont.STIXSiz4Sym", "STIXSiz4Sym.otf" },
+	   { "Root.TTFont.STIXSiz4SymBd", "STIXSiz4SymBol.otf" },
+	   { "Root.TTFont.STIXSiz5Sym", "STIXSiz5Sym.otf" },
 	   { "Root.TTFont.ME", "arial.ttf" }
    };
 
@@ -1662,8 +1672,8 @@ void TPostScript::FontEmbed(void)
 #endif // TTFFONTDIR
 										);
    
-//   for (Int_t fontid = 0; fontid < 29; fontid++) {
-   for (Int_t fontid = 0; fontid < 1; fontid++) {
+   for (Int_t fontid = 0; fontid < 29; fontid++) {
+	   //for (Int_t fontid = 0; fontid < 1; fontid++) {
 
 		const char *filename = gEnv->GetValue(
 			fonttable[fontid][0], fonttable[fontid][1]);
@@ -1729,7 +1739,7 @@ void TPostScript::FontEncode()
    PrintStr(" /Helvetica-Narrow-Oblique /NewCenturySchlbk-Roman /NewCenturySchlbk-Bold");
    PrintStr(" /NewCenturySchlbk-BoldItalic /NewCenturySchlbk-Italic");
    PrintStr(" /Palatino-Bold /Palatino-BoldItalic /Palatino-Italic /Palatino-Roman");
-   PrintStr(" /MyriadPro-Regular /MyriadPro-It /MyriadPro-Bold /MyriadPro-BoldIt");
+   //PrintStr(" /MyriadPro-Regular /MyriadPro-It /MyriadPro-Bold /MyriadPro-BoldIt");
    PrintStr(" ] {ISOLatin1Encoding reEncode } forall");
 }
 
@@ -1871,7 +1881,7 @@ void TPostScript::Initialize()
    if ( fMode == 1 || fMode == 4) PrintStr("%%Orientation: Portrait@");
    if ( fMode == 2 || fMode == 5) PrintStr("%%Orientation: Landscape@");
 
-   PrintStr("%%DocumentNeedResources: ProcSet (FontSetInit)@");
+   PrintStr("%%DocumentNeededResources: ProcSet (FontSetInit)@");
    PrintStr("%%EndComments@");
    PrintStr("%%BeginProlog@");
 
@@ -2665,34 +2675,34 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
    // at position xx,yy in world coordinates.
 
    static const char *psfont[31][2] = {
-	   { "Root.PSFont.1", "/Times-Italic" },
-	   { "Root.PSFont.2", "/Times-Bold" },
-	   { "Root.PSFont.3", "/Times-BoldItalic" },
-	   { "Root.PSFont.4", "/Helvetica" },
-	   { "Root.PSFont.5", "/Helvetica-Oblique" },
-	   { "Root.PSFont.6", "/Helvetica-Bold" },
-	   { "Root.PSFont.7", "/Helvetica-BoldOblique" },
-	   { "Root.PSFont.8", "/Courier" },
-	   { "Root.PSFont.9", "/Courier-Oblique" },
-	   { "Root.PSFont.10", "/Courier-Bold" },
-	   { "Root.PSFont.11", "/Courier-BoldOblique" },
-	   { "Root.PSFont.12", "/Symbol" },
-	   { "Root.PSFont.13", "/Times-Roman" },
-	   { "Root.PSFont.14", "/ZapfDingbats" },
-	   { "Root.PSFont.15", "/Symbol" },
-	   { "Root.PSFont.STIXGen", "/Helvetica" },
-	   { "Root.PSFont.STIXGenIt", "/Helvetica-Oblique" },
-	   { "Root.PSFont.STIXGenBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXGenBdIt", "/Helvetica-BoldOblique" },
-	   { "Root.PSFont.STIXSiz1Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz1SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz2Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz2SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz3Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz3SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz4Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz4SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz5Sym", "/Helvetica" },
+	   { "Root.PSFont.1", "/TimesNewRomanPS-ItalicMT" },
+	   { "Root.PSFont.2", "/TimesNewRomanPS-BoldMT" },
+	   { "Root.PSFont.3", "/TimesNewRomanPS-BoldItalicMT" },
+	   { "Root.PSFont.4", "/ArialMT" },
+	   { "Root.PSFont.5", "/Arial-ItalicMT" },
+	   { "Root.PSFont.6", "/Arial-BoldMT" },
+	   { "Root.PSFont.7", "/Arial-BoldItalicMT" },
+	   { "Root.PSFont.8", "/CourierNewPSMT" },
+	   { "Root.PSFont.9", "/CourierNewPS-ItalicMT" },
+	   { "Root.PSFont.10", "/CourierNewPS-BoldMT" },
+	   { "Root.PSFont.11", "/CourierNewPS-BoldItalicMT" },
+	   { "Root.PSFont.12", "/SymbolMT" },
+	   { "Root.PSFont.13", "/TimesNewRomanPSMT" },
+	   { "Root.PSFont.14", "/Wingdings-Regular" },
+	   { "Root.PSFont.15", "/SymbolMT" },
+	   { "Root.PSFont.STIXGen", "/STIXGeneral" },
+	   { "Root.PSFont.STIXGenIt", "/STIXGeneral-Italic" },
+	   { "Root.PSFont.STIXGenBd", "/STIXGeneral-Bold" },
+	   { "Root.PSFont.STIXGenBdIt", "/STIXGeneral-BoldItalic" },
+	   { "Root.PSFont.STIXSiz1Sym", "/STIXSize1Symbols" },
+	   { "Root.PSFont.STIXSiz1SymBd", "/STIXSize1Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz2Sym", "/STIXSize2Symbols" },
+	   { "Root.PSFont.STIXSiz2SymBd", "/STIXSize2Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz3Sym", "/STIXSize3Symbols" },
+	   { "Root.PSFont.STIXSiz3SymBd", "/STIXSize3Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz4Sym", "/STIXSize4Symbols" },
+	   { "Root.PSFont.STIXSiz4SymBd", "/STIXSize4Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz5Sym", "/STIXSize5Symbols" },
 	   { "Root.PSFont.ME", "/Helvetica" },
 	   { "Root.PSFont.CJKMing", "/Helvetica-Bold" },
 	   { "Root.PSFont.CJKGothic", "/Times-Roman" }
@@ -2870,34 +2880,36 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
    // This routine writes the string chars into a PostScript file
    // at position xx,yy in world coordinates.
 
-   static const char *psfont[29][2] = {
-	   { "Root.PSFont.1", "/Times-Italic" },
-	   { "Root.PSFont.2", "/Times-Bold" },
-	   { "Root.PSFont.3", "/Times-BoldItalic" },
-	   { "Root.PSFont.4", "/Helvetica" },
-	   { "Root.PSFont.5", "/Helvetica-Oblique" },
-	   { "Root.PSFont.6", "/Helvetica-Bold" },
-	   { "Root.PSFont.7", "/Helvetica-BoldOblique" },
-	   { "Root.PSFont.8", "/Courier" },
-	   { "Root.PSFont.9", "/Courier-Oblique" },
-	   { "Root.PSFont.10", "/Courier-Bold" },
-	   { "Root.PSFont.11", "/Courier-BoldOblique" },
-	   { "Root.PSFont.12", "/Symbol" },
-	   { "Root.PSFont.13", "/Times-Roman" },
-	   { "Root.PSFont.14", "/ZapfDingbats" },
-	   { "Root.PSFont.STIXGen", "/Helvetica" },
-	   { "Root.PSFont.STIXGenIt", "/Helvetica-Oblique" },
-	   { "Root.PSFont.STIXGenBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXGenBdIt", "/Helvetica-BoldOblique" },
-	   { "Root.PSFont.STIXSiz1Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz1SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz2Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz2SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz3Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz3SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz4Sym", "/Helvetica" },
-	   { "Root.PSFont.STIXSiz4SymBd", "/Helvetica-Bold" },
-	   { "Root.PSFont.STIXSiz5Sym", "/Helvetica" },
+   static const char *psfont[31][2] = {
+	   { "Root.PSFont.1", "/TimesNewRomanPS-ItalicMT" },
+	   { "Root.PSFont.2", "/TimesNewRomanPS-BoldMT" },
+	   { "Root.PSFont.3", "/TimesNewRomanPS-BoldItalicMT" },
+	   { "Root.PSFont.4", "/ArialMT" },
+	   { "Root.PSFont.5", "/Arial-ItalicMT" },
+	   { "Root.PSFont.6", "/Arial-BoldMT" },
+	   { "Root.PSFont.7", "/Arial-BoldItalicMT" },
+	   { "Root.PSFont.8", "/CourierNewPSMT" },
+	   { "Root.PSFont.9", "/CourierNewPS-ItalicMT" },
+	   { "Root.PSFont.10", "/CourierNewPS-BoldMT" },
+	   { "Root.PSFont.11", "/CourierNewPS-BoldItalicMT" },
+	   { "Root.PSFont.12", "/SymbolMT" },
+	   { "Root.PSFont.13", "/TimesNewRomanPSMT" },
+	   { "Root.PSFont.14", "/Wingdings-Regular" },
+	   { "Root.PSFont.15", "/SymbolMT" },
+	   { "Root.PSFont.STIXGen", "/STIXGeneral" },
+	   { "Root.PSFont.STIXGenIt", "/STIXGeneral-Italic" },
+	   { "Root.PSFont.STIXGenBd", "/STIXGeneral-Bold" },
+	   { "Root.PSFont.STIXGenBdIt", "/STIXGeneral-BoldItalic" },
+	   { "Root.PSFont.STIXSiz1Sym", "/STIXSize1Symbols" },
+	   { "Root.PSFont.STIXSiz1SymBd", "/STIXSize1Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz2Sym", "/STIXSize2Symbols" },
+	   { "Root.PSFont.STIXSiz2SymBd", "/STIXSize2Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz3Sym", "/STIXSize3Symbols" },
+	   { "Root.PSFont.STIXSiz3SymBd", "/STIXSize3Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz4Sym", "/STIXSize4Symbols" },
+	   { "Root.PSFont.STIXSiz4SymBd", "/STIXSize4Symbols-Bold" },
+	   { "Root.PSFont.STIXSiz5Sym", "/STIXSize5Symbols" },
+	   { "Root.PSFont.ME", "/Helvetica" },
 	   { "Root.PSFont.CJKMing", "/Helvetica-Bold" },
 	   { "Root.PSFont.CJKGothic", "/Times-Roman" }
    };

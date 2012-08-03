@@ -371,7 +371,7 @@ Bool_t TVirtualPS::ReadTTFHeader(
 
 	if(retval) {
 		fontName = fontNameStl.c_str();
-		for(size_t i = 0; i < 256; i++) {
+		for(size_t i = 0; i < 65536; i++) {
 			std::map<wchar_t, uint16_t>::const_iterator iterator =
 				cMapStl.find(static_cast<wchar_t>(i));
 
