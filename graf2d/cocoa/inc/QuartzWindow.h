@@ -277,6 +277,8 @@ bool RectsOverlap(const NSRect &r1, const NSRect &r2);
 bool ScreenPointIsInView(NSView<X11Window> *view, Int_t x, Int_t y);
 QuartzWindow *FindWindowInPoint(Int_t x, Int_t y);
 NSView<X11Window> *FindDNDAwareViewInPoint(NSView *parentView, Window_t dragWinID, Window_t inputWinID, Int_t x, Int_t y, Int_t maxDepth);
+QuartzWindow *FindWindowUnderPointer();
+NSView<X11Window> *FindViewUnderPointer();
 
 }//X11
 }//MacOSX

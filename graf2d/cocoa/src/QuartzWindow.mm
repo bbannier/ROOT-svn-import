@@ -316,6 +316,43 @@ NSView<X11Window> *FindDNDAwareViewInPoint(NSView *parentView, Window_t dragWinI
 }
 
 //______________________________________________________________________________
+QuartzWindow *FindWindowUnderPointer()
+{
+   const Util::AutoreleasePool pool;
+
+   NSArray * const orderedWindows = [NSApp orderedWindows];
+   for (NSWindow *nsWindow in orderedWindows) {
+      if (![nsWindow isKindOfClass : [QuartzWindow class]])
+         continue;
+
+      QuartzWindow * const qWindow = (QuartzWindow *)nsWindow;
+      if (qWindow.fMapState != kIsViewable)//Can it be false and still in this array???
+         continue;
+      
+      const NSPoint mousePosition = [qWindow mouseLocationOutsideOfEventStream];
+      const NSSize windowSize = qWindow.frame.size;
+      if (mousePosition.x >= 0 && mousePosition.x <= windowSize.width && mousePosition.y >= 0 && mousePosition.y <= windowSize.height)
+         return qWindow;
+   }
+
+   return nil;
+}
+
+//______________________________________________________________________________
+NSView<X11Window> *FindViewUnderPointer()
+{
+   //TODO: call FindViewInPoint using cursor screen coordiantes.
+   const Util::AutoreleasePool pool;
+   
+   if (QuartzWindow *topLevel = FindWindowUnderPointer()) {
+      const NSPoint mousePosition = [topLevel mouseLocationOutsideOfEventStream];
+      return (NSView<X11Window> *)[[topLevel contentView] hitTest : mousePosition];
+   }
+
+   return nil;
+}
+
+//______________________________________________________________________________
 void SetWindowAttributes(const SetWindowAttributes_t *attr, NSObject<X11Window> *window)
 {
    assert(attr != 0 && "SetWindowAttributes, attr parameter is null");

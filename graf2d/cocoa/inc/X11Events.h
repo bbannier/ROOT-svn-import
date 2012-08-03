@@ -114,11 +114,8 @@ private:
 
    void FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *theEvent, EMouseButton btn);
    void FindKeyGrabView(NSView<X11Window> *fromView, NSEvent *theEvent);
-   NSView<X11Window> *FindViewUnderPointer();
    
    Ancestry FindRelation(NSView<X11Window> *view1, NSView<X11Window> *view2, NSView<X11Window> **lca);
-   void SortTopLevelWindows();
-   QuartzWindow *FindTopLevelWindowForMouseEvent();
 
    NSView<X11Window> *fViewUnderPointer;
    std::vector<NSView<X11Window> *> fBranch1;
@@ -132,8 +129,7 @@ private:
    NSView<X11Window> *fButtonGrabView;
    NSView<X11Window> *fKeyGrabView;
    NSView<X11Window> *fFocusView;
-   
-   std::vector<QuartzWindow *> fWindowStack;
+
    EventQueue_t fEventQueue;
 };
 
