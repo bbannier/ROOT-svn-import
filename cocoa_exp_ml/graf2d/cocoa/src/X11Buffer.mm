@@ -18,6 +18,7 @@
 
 #include <Cocoa/Cocoa.h>
 
+#include "ROOTOpenGLView.h"
 #include "CocoaPrivate.h"
 #include "QuartzWindow.h"
 #include "QuartzPixmap.h"
@@ -430,7 +431,7 @@ void RepaintTree(QuartzView *view)
    CGContextRef oldCtx = 0;
    try {   
       for (NSView<X11Window> *child in [view subviews]) {
-         if ([child isKindOfClass : [QuartzView class]]) {
+         if ([child isKindOfClass : [QuartzView class]] && ![child isKindOfClass : [ROOTOpenGLView class]]) {
             qv = (QuartzView *)child;
             if ([qv lockFocusIfCanDraw]) {
                NSGraphicsContext * const nsContext = [NSGraphicsContext currentContext];
