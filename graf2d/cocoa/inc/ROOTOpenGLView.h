@@ -92,7 +92,6 @@
 - (void) configureNotifyTree;
 - (BOOL) fIsOverlapped;
 - (void) setOverlapped : (BOOL) overlap;
-- (void) updateLevel : (unsigned) newLevel;
 
 /*
 - (void) setAttributes : (const SetWindowAttributes_t *) attr;

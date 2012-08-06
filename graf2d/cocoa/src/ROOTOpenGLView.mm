@@ -59,7 +59,6 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
 
 @synthesize fEventMask;
 @synthesize fParentView;
-@synthesize fLevel;
 @synthesize fGrabButton;
 @synthesize fGrabButtonEventMask;
 @synthesize fGrabKeyModifiers;
@@ -207,12 +206,6 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
       vx->GetEventTranslator()->GenerateConfigureNotifyEvent(self, self.frame);
       vx->GetEventTranslator()->GenerateExposeEvent(self, self.frame);
    }
-}
-
-//______________________________________________________________________________
-- (void) updateLevel : (unsigned) newLevel
-{
-   fLevel = newLevel;
 }
 
 //______________________________________________________________________________
