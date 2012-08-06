@@ -441,14 +441,14 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
 // for chi2 functions
 //___________________________________________________________________________________________________________________________
 
-double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, const double * p, unsigned int & nPoints) {  
+double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, const double * p, unsigned int & retnPoints) {  
    // evaluate the chi2 given a  function reference  , the data and returns the value and also in nPoints 
    // the actual number of used points
    // normal chi2 using only error on values (from fitting histogram)
    // optionally the integral of function in the bin is used 
    
    double chi2 = 0;
-   nPoints = 0; // count the effective non-zero points
+   unsigned int nPoints = 0; // count the effective non-zero points
    
    // do not cache parameter values (it is not thread safe)
    //func.SetParameters(p); 
@@ -486,8 +486,6 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    
    for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
    {
-     unsigned int nBunchSize = std::min( nMaxBunchSize, data.Size() - iOffset );
-     
      if ( useBinIntegral || useBinVolume )
      {
        if( useBinVolume )
@@ -605,6 +603,8 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
         chi2 += maxResValue;
      }
    }
+   
+   retnPoints = nPoints;
         
    return chi2;
 }
