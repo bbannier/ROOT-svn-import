@@ -36,6 +36,9 @@
 #include <cassert>
 #include "TCut.h"
 
+Bool_t TMVA::Event::fIsTraining = kFALSE;
+Bool_t TMVA::Event::fIgnoreNegWeightsInTraining = kFALSE;
+
 //____________________________________________________________
 TMVA::Event::Event()
    : fValues(),
@@ -143,15 +146,15 @@ TMVA::Event::Event( const Event& event )
       UInt_t idx=0;
       std::vector<Float_t*>::iterator itDyn=event.fValuesDynamic->begin(), itDynEnd=event.fValuesDynamic->end();
       for (; itDyn!=itDynEnd && idx<nvar; ++itDyn){
-	 Float_t value=*(*itDyn);
-	 fValues.push_back( value );
-	 ++idx;
+         Float_t value=*(*itDyn);
+         fValues.push_back( value );
+         ++idx;
       }
       fSpectators.clear();
       for (; itDyn!=itDynEnd; ++itDyn){
-	 Float_t value=*(*itDyn);
-	 fSpectators.push_back( value );
-	 ++idx;
+         Float_t value=*(*itDyn);
+         fSpectators.push_back( value );
+         ++idx;
       }
 
       fDynamic=kFALSE;
@@ -178,15 +181,15 @@ void TMVA::Event::CopyVarValues( const Event& other )
       UInt_t idx=0;
       std::vector<Float_t*>::iterator itDyn=other.fValuesDynamic->begin(), itDynEnd=other.fValuesDynamic->end();
       for (; itDyn!=itDynEnd && idx<nvar; ++itDyn){
-	 Float_t value=*(*itDyn);
-	 fValues.push_back( value );
-	 ++idx;
+         Float_t value=*(*itDyn);
+         fValues.push_back( value );
+         ++idx;
       }
       fSpectators.clear();
       for (; itDyn!=itDynEnd; ++itDyn){
-	 Float_t value=*(*itDyn);
-	 fSpectators.push_back( value );
-	 ++idx;
+         Float_t value=*(*itDyn);
+         fSpectators.push_back( value );
+         ++idx;
       }
    }
    fDynamic     = kFALSE;
@@ -202,11 +205,13 @@ Float_t TMVA::Event::GetValue( UInt_t ivar ) const
 {
    // return value of i'th variable
    Float_t retval;
-
+   //   std::cout<< fDynamic ; 
    if (fDynamic){
+     //     std::cout<< " " << (*fValuesDynamic).size() << " " << fValues.size() << std::endl;
       retval = *((*fValuesDynamic).at(ivar));
    }
    else{
+     //     std::cout<<  " " << fValues.size() << std::endl;
       retval = fValues.at(ivar);
    }
 
@@ -277,7 +282,7 @@ void TMVA::Event::Print( std::ostream& o ) const
 }
 
 //_____________________________________________________________
-void TMVA::Event::SetTarget( UInt_t itgt, Float_t value ) 
+void TMVA::Event::SetTarget( UInt_t itgt, Float_t value ) const  
 { 
    // set the target value (dimension itgt) to value
 
@@ -295,7 +300,7 @@ void TMVA::Event::SetSpectator( UInt_t ivar, Float_t value )
 }
 
 //_______________________________________________________________________
-ostream& TMVA::operator << ( ostream& os, const TMVA::Event& event )
+std::ostream& TMVA::operator << ( std::ostream& os, const TMVA::Event& event )
 { 
    // Outputs the data of an event
    os << "Variables [" << event.fValues.size() << "]:";

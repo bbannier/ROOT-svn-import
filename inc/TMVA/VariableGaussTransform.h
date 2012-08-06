@@ -91,7 +91,7 @@ namespace TMVA {
       virtual ~VariableGaussTransform( void );
 
       void   Initialize();
-      Bool_t PrepareTransformation( const std::vector<Event*>& );
+      Bool_t PrepareTransformation( const std::vector<const Event*>& );
 
       virtual const Event* Transform(const Event* const, Int_t cls ) const;
       virtual const Event* InverseTransform(const Event* const, Int_t cls ) const;
@@ -102,7 +102,7 @@ namespace TMVA {
       virtual void AttachXMLTo(void* parent);
       virtual void ReadFromXML( void* trfnode );
 
-      virtual void PrintTransformation( ostream & o );
+      virtual void PrintTransformation( std::ostream & o );
 
       // writer of function code
       virtual void MakeFunction( std::ostream& fout, const TString& fncName, Int_t part, UInt_t trCounter, Int_t cls );
@@ -119,7 +119,7 @@ namespace TMVA {
       //std::vector< std::vector< TSpline3* > >  fCumulativeSpline; //! The Cummulative distributions 
       std::vector< std::vector< PDF*> >         fCumulativePDF;    //  The cumulative PDF
 
-      void GetCumulativeDist( const std::vector<Event*>& );
+      void GetCumulativeDist( const std::vector<const Event*>& );
       void CleanUpCumulativeArrays(TString opt = "ALL");
 
       // needed for backward compatibility

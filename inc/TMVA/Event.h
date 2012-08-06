@@ -74,7 +74,10 @@ namespace TMVA {
       // accessors
       Bool_t  IsDynamic()         const {return fDynamic; }
 
-      Double_t GetWeight()         const { return fWeight*fBoostWeight; }
+      //      Double_t GetWeight()         const { return fWeight*fBoostWeight; }
+      Double_t GetWeight()         const {
+        return (fIgnoreNegWeightsInTraining && fIsTraining && fWeight < 0) ? 0. : fWeight*fBoostWeight;
+      }
       Double_t GetOriginalWeight() const { return fWeight; }
       Double_t GetBoostWeight()    const { return TMath::Max(Double_t(0.0001),fBoostWeight); }
       UInt_t   GetClass()          const { return fClass; }  
@@ -92,20 +95,23 @@ namespace TMVA {
       Float_t  GetSpectator( UInt_t ivar) const;
       std::vector<Float_t>& GetSpectators() const { return fSpectators; }
 
-      void     ScaleWeight           ( Double_t s ) { fWeight*=s; }
+      void     ScaleWeight           ( Double_t s ) const { fWeight*=s; }
       void     SetWeight             ( Double_t w ) { fWeight=w; }
-      void     SetBoostWeight        ( Double_t w ) { fDoNotBoost ? fDoNotBoost = kFALSE : fBoostWeight=w; }
-      void     ScaleBoostWeight      ( Double_t s ) { fDoNotBoost ? fDoNotBoost = kFALSE : fBoostWeight *= s; }
+      void     SetBoostWeight        ( Double_t w ) const { fDoNotBoost ? fDoNotBoost = kFALSE : fBoostWeight=w; }
+      void     ScaleBoostWeight      ( Double_t s ) const { fDoNotBoost ? fDoNotBoost = kFALSE : fBoostWeight *= s; }
       void     SetClass              ( UInt_t t )  { fClass=t; }
       void     SetVal                ( UInt_t ivar, Float_t val );
-      void     SetTarget             ( UInt_t itgt, Float_t value );
+      void     SetTarget             ( UInt_t itgt, Float_t value ) const;
       void     SetSpectator          ( UInt_t ivar, Float_t value );
 
-      void     SetDoNotBoost         () { fDoNotBoost = kTRUE; }
+      void     SetDoNotBoost         () const  { fDoNotBoost = kTRUE; }
       static void ClearDynamicVariables() {}
 
       void     CopyVarValues( const Event& other );
       void     Print        ( std::ostream & o ) const;
+
+      static   Bool_t          fIsTraining;    // mark if we are in an actual training or "evaluation/testing" phase --> ignoreNegWeights only in actual training !
+      static   Bool_t          fIgnoreNegWeightsInTraining;
 
    private:
 
@@ -115,10 +121,10 @@ namespace TMVA {
       mutable std::vector<Float_t>   fSpectators;      // "visisting" variables not used in MVAs
 
       UInt_t                         fClass;           // class number
-      Double_t                       fWeight;          // event weight (product of global and individual weights)
-      Double_t                       fBoostWeight;     // internal weight to be set by boosting algorithm
+      mutable Double_t               fWeight;          // event weight (product of global and individual weights)
+      mutable Double_t               fBoostWeight;     // internal weight to be set by boosting algorithm
       Bool_t                         fDynamic;         // is set when the dynamic values are taken
-      Bool_t                         fDoNotBoost;       // mark event as not to be boosted (used to compensate for events with negative event weights
+      mutable Bool_t                 fDoNotBoost;       // mark event as not to be boosted (used to compensate for events with negative event weights
    };
 }
 

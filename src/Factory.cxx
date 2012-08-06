@@ -313,11 +313,8 @@ void TMVA::Factory::AddEvent( const TString& className, Types::ETreeType tt,
 
 
    // set analysistype to "kMulticlass" if more than two classes and analysistype == kNoAnalysisType
-   if( fAnalysisType == Types::kNoAnalysisType && DefaultDataSetInfo().GetNClasses() > 2 ){
-      Log() << kINFO << "Found more than 2 different event classes and no further instructions:"
-            << "    and will switch to *MulitClass* node " << Endl;
+   if( fAnalysisType == Types::kNoAnalysisType && DefaultDataSetInfo().GetNClasses() > 2 )
       fAnalysisType = Types::kMulticlass;
-   }
 
    
    if (clIndex>=fTrainAssignTree.size()) {
@@ -851,7 +848,7 @@ void TMVA::Factory::WriteDataInformation()
       if (trfS.BeginsWith('I')) identityTrHandler = trfs.back();
    }
 
-   const std::vector<Event*>& inputEvents = DefaultDataSetInfo().GetDataSet()->GetEventCollection();
+   const std::vector<const Event*>& inputEvents = DefaultDataSetInfo().GetDataSet()->GetEventCollection();
 
    // apply all transformations
    std::vector<TMVA::TransformationHandler*>::iterator trfIt = trfs.begin();
@@ -880,7 +877,7 @@ void TMVA::Factory::OptimizeAllMethods(TString fomType, TString fitType)
 
    // iterate over methods and optimize
    for( itrMethod = fMethods.begin(); itrMethod != fMethods.end(); ++itrMethod ) {
-
+      Event::fIsTraining = kTRUE;
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
       if (!mva) {
          Log() << kFATAL << "Dynamic cast to MethodBase failed" <<Endl;
@@ -906,7 +903,7 @@ void TMVA::Factory::OptimizeAllMethods(TString fomType, TString fitType)
 
 //_______________________________________________________________________
 void TMVA::Factory::TrainAllMethods() 
-{     
+{  
    // iterates through all booked methods and calls training
 
    if(fDataInputHandler->GetEntries() <=1) { // 0 entries --> 0 events, 1 entry --> dynamical dataset (or one entry)
@@ -940,7 +937,7 @@ void TMVA::Factory::TrainAllMethods()
 
    // iterate over methods and train
    for( itrMethod = fMethods.begin(); itrMethod != fMethods.end(); ++itrMethod ) {
-
+      Event::fIsTraining = kTRUE;
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
       if(mva==0) continue;
 
@@ -1041,6 +1038,7 @@ void TMVA::Factory::TestAllMethods()
    MVector::iterator itrMethod    = fMethods.begin();
    MVector::iterator itrMethodEnd = fMethods.end();
    for (; itrMethod != itrMethodEnd; itrMethod++) {
+      Event::fIsTraining = kFALSE;
       MethodBase* mva = dynamic_cast<MethodBase*>(*itrMethod);
       if(mva==0) continue;
       Types::EAnalysisType analysisType = mva->GetAnalysisType();
@@ -1110,6 +1108,7 @@ void TMVA::Factory::EvaluateAllVariables( TString options )
 {
    // iterates over all MVA input varables and evaluates them
    Log() << kINFO << "Evaluating all variables..." << Endl;
+   Event::fIsTraining = kFALSE;
 
    for (UInt_t i=0; i<DefaultDataSetInfo().GetNVariables(); i++) {
       TString s = DefaultDataSetInfo().GetVariableInfo(i).GetLabel();
@@ -1182,6 +1181,7 @@ void TMVA::Factory::EvaluateAllMethods( void )
    MVector::iterator itrMethod    = fMethods.begin();
    MVector::iterator itrMethodEnd = fMethods.end();
    for (; itrMethod != itrMethodEnd; itrMethod++) {
+      Event::fIsTraining = kFALSE;
       MethodBase* theMethod = dynamic_cast<MethodBase*>(*itrMethod);
       if(theMethod==0) continue;
       if (theMethod->GetMethodType() != Types::kCuts) methodsNoCuts.push_back( *itrMethod );
@@ -1399,7 +1399,7 @@ void TMVA::Factory::EvaluateAllMethods( void )
          DataSet* defDs = DefaultDataSetInfo().GetDataSet();
          defDs->SetCurrentType(Types::kTesting);
          for (Int_t ievt=0; ievt<defDs->GetNEvents(); ievt++) {
-            Event* ev = defDs->GetEvent(ievt);
+            const Event* ev = defDs->GetEvent(ievt);
 
             // for correlations
             TMatrixD* theMat = 0;

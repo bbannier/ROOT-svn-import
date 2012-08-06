@@ -177,7 +177,7 @@ TMVA::DataSet* TMVA::DataSetFactory::BuildDynamicDataSet( TMVA::DataSetInfo& dsi
    for (;it!=spectatorinfos.end();it++) evdyn->push_back( (Float_t*)(*it).GetExternalLink() );
 
    TMVA::Event * ev = new Event((const std::vector<Float_t*>*&)evdyn, varinfos.size());
-   std::vector<Event*>* newEventVector = new std::vector<Event*>;
+   std::vector<const Event*>* newEventVector = new std::vector<const Event*>;
    newEventVector->push_back(ev);
 
    ds->SetEventCollection(newEventVector, Types::kTraining);
@@ -437,7 +437,7 @@ void TMVA::DataSetFactory::CalcMinMax( DataSet* ds, TMVA::DataSetInfo& dsi )
    // perform event loop
 
    for (Int_t i=0; i<ds->GetNEvents(); i++) {
-      Event * ev = ds->GetEvent(i);
+      const Event * ev = ds->GetEvent(i);
       for (UInt_t ivar=0; ivar<nvar; ivar++) {
          Double_t v = ev->GetValue(ivar);
          if (v<min[ivar]) min[ivar] = v;
@@ -536,7 +536,7 @@ TMatrixD* TMVA::DataSetFactory::CalcCovarianceMatrix( DataSet * ds, const UInt_t
    Double_t ic = 0;
    for (Int_t i=0; i<ds->GetNEvents(); i++) {
 
-      Event * ev = ds->GetEvent(i);
+      const Event * ev = ds->GetEvent(i);
       if (ev->GetClass() != classNumber ) continue;
 
       Double_t weight = ev->GetWeight();

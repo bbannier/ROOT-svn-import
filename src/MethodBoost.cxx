@@ -521,7 +521,7 @@ void TMVA::MethodBoost::ResetBoostWeights()
 {
    // resetting back the boosted weights of the events to 1
    for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-      Event *ev = Data()->GetEvent(ievt);
+      const Event *ev = Data()->GetEvent(ievt);
       ev->SetBoostWeight( 1.0 );
    }
 }
@@ -682,9 +682,9 @@ void TMVA::MethodBoost::FindMVACut()
       Double_t bSel=mvaBC->GetBinContent(1);
       Double_t separationGain=sepGain->GetSeparationGain(sSel,bSel,sTot,bTot);
       Double_t mvaCut=mvaSC->GetBinLowEdge(1);
-      //      cout << "minMVA =" << minMVA << " maxMVA = " << maxMVA << " width = " << mvaSC->GetBinWidth(1) <<  endl;
+      //      std::cout << "minMVA =" << minMVA << " maxMVA = " << maxMVA << " width = " << mvaSC->GetBinWidth(1) <<  std::endl;
 
-      //      for (Int_t ibin=1;ibin<=nBins;ibin++) cout << " cutvalues[" << ibin<<"]="<<mvaSC->GetBinLowEdge(ibin) << "  " << mvaSC->GetBinCenter(ibin) << endl;
+      //      for (Int_t ibin=1;ibin<=nBins;ibin++) std::cout << " cutvalues[" << ibin<<"]="<<mvaSC->GetBinLowEdge(ibin) << "  " << mvaSC->GetBinCenter(ibin) << std::endl;
       Double_t mvaCutOrientation=1; // 1 if mva > mvaCut --> Signal and -1 if mva < mvaCut (i.e. mva*-1 > mvaCut*-1) --> Signal
       Double_t SoBRight=1, SoBLeft=1;
       for (Int_t ibin=2;ibin<nBins;ibin++){ 
@@ -716,14 +716,14 @@ void TMVA::MethodBoost::FindMVACut()
       }
       
       
-      // cout << "Min="<<minMVA << " Max=" << maxMVA 
+      // std::cout << "Min="<<minMVA << " Max=" << maxMVA 
       //      << " sTot=" << sTot
       //      << " bTot=" << bTot
       //      << " sepGain="<<separationGain
       //      << " cut=" << mvaCut 
       //      << " cutOrientation="<<mvaCutOrientation
-      //      << endl;
-      // cout << "S/B right="<<SoBRight << " left="<<SoBLeft<<endl;
+      //      << std::endl;
+      // std::cout << "S/B right="<<SoBRight << " left="<<SoBLeft<<std::endl;
       // if (fMethodIndex==0)mvaCut = -1.9616885110735893e-02;
       // if (fMethodIndex==1)mvaCut = -6.8812005221843719e-02;
       lastMethod->SetSignalReferenceCut(mvaCut);
@@ -802,7 +802,7 @@ void TMVA::MethodBoost::SingleBoost()
       // first reweight
       Double_t newSum=0., oldSum=0.;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         Event* ev =  Data()->GetEvent(ievt);
+         const Event* ev =  Data()->GetEvent(ievt);
          oldSum += ev->GetWeight();
          if (WrongDetection[ievt] && fBoostWeight != 0) {
             if (ev->GetWeight() > 0) ev->ScaleBoostWeight(fBoostWeight);
@@ -816,7 +816,7 @@ void TMVA::MethodBoost::SingleBoost()
       // next normalize the weights
       Double_t normSig=0, normBkg=0;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         Event* ev = Data()->GetEvent(ievt);
+         const Event* ev = Data()->GetEvent(ievt);
 	 ev->ScaleBoostWeight(normWeight);
          if (ev->GetClass()) normBkg+=ev->GetWeight();
          else                normSig+=ev->GetWeight();
@@ -826,7 +826,7 @@ void TMVA::MethodBoost::SingleBoost()
       // Bagging or Bootstrap boosting, gives new random weight for every event
       TRandom3*trandom   = new TRandom3(fRandomSeed+fMethods.size());
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         Event* ev = Data()->GetEvent(ievt);
+         const Event* ev = Data()->GetEvent(ievt);
          ev->SetBoostWeight(trandom->Rndm());
          sumAll1+=ev->GetWeight();
       }
@@ -834,7 +834,7 @@ void TMVA::MethodBoost::SingleBoost()
       // weights (changing only the boosted weight of all the events)
       Double_t Factor=sumAll/sumAll1;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         Event* ev = Data()->GetEvent(ievt);
+         const Event* ev = Data()->GetEvent(ievt);
          ev->ScaleBoostWeight(Factor);
       }
    }
@@ -845,7 +845,7 @@ void TMVA::MethodBoost::SingleBoost()
       Double_t MVACutValue = method->GetSignalReferenceCut();
       sumAll1 = 0;
       for (Long64_t ievt=0; ievt<GetNEvents(); ievt++) {
-         Event* ev = Data()->GetEvent(ievt);
+         const Event* ev = Data()->GetEvent(ievt);
 	 if (fBoostType == "HighEdgeGauss")
 	    ev->SetBoostWeight( TMath::Exp( -std::pow(fMVAvalues->at(ievt)-MVACutValue,2)/(0.1*fADABoostBeta) ) );
 	 else if (fBoostType == "HighEdgeCoPara")
@@ -893,15 +893,15 @@ void TMVA::MethodBoost::CalcMethodWeight()
       }
       
       // if (ievt < 10)
-      // cout << " TYpe=" << DataInfo().IsSignal(ev) 
+      // std::cout << " TYpe=" << DataInfo().IsSignal(ev) 
       //      << " mvaValue="<<fMVAvalues->at(ievt)
       //      << " mvaCutVal="<<method->GetSignalReferenceCut()
       //      << " mvaCutValOrien="<<method->GetSignalReferenceCutOrientation()
       //      << " isSignallike="<<method->IsSignalLike(fMVAvalues->at(ievt))
-      //      << endl;
+      //      << std::endl;
    }
 
-   //   cout << "sumWrong="<<sumWrong << " sumAll="<<sumAll<<endl;
+   //   std::cout << "sumWrong="<<sumWrong << " sumAll="<<sumAll<<std::endl;
    fMethodError=sumWrong/sumAll;
 
    // calculating the fMethodError and the fBoostWeight out of it uses
