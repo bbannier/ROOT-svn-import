@@ -414,28 +414,16 @@ bool IsParent(NSView<X11Window>  *testParent, NSView<X11Window>  *testChild)
    return false;
 }
 
-//______________________________________________________________________________
-void BuildAncestryBranch(NSView<X11Window> *view, std::vector<NSView<X11Window> *> &branch)
-{
-   assert(view != nil && "BuildAncestryBranch, view parameter is nil");
-   assert(view.fParentView != nil && "BuildAncestryBranch, view must have a parent");
-   assert(view.fLevel > 0 && "BuildAncestryBranch, view has nested level 0");
-
-   branch.resize(view.fLevel);
-   
-   NSView<X11Window>  *parent = view.fParentView;
-   std::vector<NSView<X11Window> *>::reverse_iterator iter = branch.rbegin(), endIter = branch.rend();
-   for (; iter != endIter; ++iter) {
-      assert(parent != nil && "BuildAncestryBranch, fParentView is nil");
-      *iter = parent;
-      parent = parent.fParentView;
-   }
-}
+//Relation between two views.
+enum Ancestry {
+   kAView1IsParent,
+   kAView2IsParent,
+   kAHaveNonRootAncestor,
+   kAAncestorIsRoot
+};
 
 //______________________________________________________________________________
-Ancestry FindLowestCommonAncestor(NSView<X11Window> *view1, std::vector<NSView<X11Window> *> &branch1, 
-                                  NSView<X11Window> *view2, std::vector<NSView<X11Window> *> &branch2, 
-                                  NSView<X11Window> **lca)
+Ancestry FindLowestCommonAncestor(NSView<X11Window> *view1, NSView<X11Window> *view2, NSView<X11Window> **lca)
 {
    //Search for the lowest common ancestor.
    //View1 can not be parent of view2, view2 can not be parent of view1,
@@ -451,13 +439,7 @@ Ancestry FindLowestCommonAncestor(NSView<X11Window> *view1, std::vector<NSView<X
    if (!view2.fParentView)
       return kAAncestorIsRoot;
    
-   BuildAncestryBranch(view1, branch1);
-   BuildAncestryBranch(view2, branch2);
-   
-   NSView<X11Window> *ancestor = nil;
-   
-   for (unsigned i = 0, j = 0; i < view1.fLevel && j < view2.fLevel && branch1[i] == branch2[j]; ++i, ++j)
-      ancestor = branch1[i];
+   NSView<X11Window> * const ancestor = (NSView<X11Window> *)[view1 ancestorSharedWithView : view2];
 
    if (ancestor) {      
       *lca = ancestor;
@@ -465,6 +447,22 @@ Ancestry FindLowestCommonAncestor(NSView<X11Window> *view1, std::vector<NSView<X
    }
    
    return kAAncestorIsRoot;
+}
+
+//______________________________________________________________________________
+Ancestry FindRelation(NSView<X11Window> *view1, NSView<X11Window> *view2, NSView<X11Window> **lca)
+{
+   assert(view1 != nil && "FindRelation, view1 parameter is nil");
+   assert(view2 != nil && "FindRelation, view2 parameter is nil");
+   assert(lca != 0 && "FindRelation, lca parameter is nil");
+   
+   if (IsParent(view1, view2)) 
+      return kAView1IsParent;
+   
+   if (IsParent(view2, view1))
+      return kAView2IsParent;
+
+   return FindLowestCommonAncestor(view1, view2, lca);
 }
 
 //______________________________________________________________________________
@@ -505,13 +503,6 @@ NSView<X11Window> *FindViewToPropagateEvent(NSView<X11Window> *viewFrom, Mask_t 
 }
 
 //Aux. 'low-level' functions to generate events and call HandleEvent for a root window.
-
-//______________________________________________________________________________
-bool IsMaskedEvent(EGEventType type)
-{
-   return type == kButtonPress || type == kButtonRelease || type == kGKeyPress || type == kKeyRelease ||
-          type == kEnterNotify || type == kLeaveNotify || type == kMotionNotify;
-}
 
 //______________________________________________________________________________
 void SendEnterEvent(EventQueue_t &queue, NSView<X11Window> *view, NSEvent *theEvent, EXMagic detail)
@@ -916,6 +907,74 @@ void GenerateCrossingEventFromChild1ToChild2(EventQueue_t &queue, NSView<X11Wind
       SendEnterEvent(queue, child2, theEvent, detail);
 }
 
+
+//______________________________________________________________________________
+void GenerateCrossingEvents(EventQueue_t &queue, NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail)
+{
+   //Aux. function. TODO: must become non-member (since does not require any state,
+   //except fBranch1/2 vectors, which must go away as soon as I use method from NSView to
+   //find lca.
+
+   assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
+   
+   if (fromView == toView) {
+      //This can happen: tracking areas for stacked windows call
+      //mouseExited even for overlapped views (so you have a bunch of mouseExited/mouseEntered
+      //for one cursor move). In mouseEntered/mouseExited
+      //I'm looking for the top level view under cursor and try to generate cross event
+      //for this view only.
+      return;
+   }
+   
+   if (!fromView) {
+      //We enter window "from the screen" - do not leave any window.
+      //Send EnterNotify event.
+      if (toView)//Check, if order is OK.
+         SendEnterEventClosedRange(queue, toView, (NSView<X11Window> *)[[toView window] contentView], theEvent, detail);
+   } else if (!toView) {
+      //We exit all views. Order must be OK here.
+      SendLeaveEventClosedRange(queue, fromView, (NSView<X11Window> *)[[fromView window] contentView], theEvent, detail);
+   } else {
+      NSView<X11Window> *ancestor = 0;
+      const Ancestry rel = FindRelation(fromView, toView, &ancestor);
+      if (rel == kAView1IsParent) {
+         //Case 1.
+         //From A to B.
+         //_________________
+         //| A              |
+         //|   |---------|  |
+         //|   |  B      |  |
+         //|   |         |  |
+         //|   |---------|  |
+         //|                |
+         //|________________|
+         GenerateCrossingEventParentToChild(queue, fromView, toView, theEvent, detail);
+      } else if (rel == kAView2IsParent) {
+         //Case 2.
+         //From A to B.
+         //_________________
+         //| B              |
+         //|   |---------|  |
+         //|   |  A      |  |
+         //|   |         |  |
+         //|   |---------|  |
+         //|                |
+         //|________________|   
+         GenerateCrossingEventChildToParent(queue, toView, fromView, theEvent, detail);
+      } else {
+         //Case 3.
+         //|--------------------------------|
+         //| C   |------|      |-------|    |
+         //|     | A    |      | B     |    |
+         //|     |______|      |_______|    |
+         //|________________________________|
+         //Ancestor is either some view, or 'root' window.
+         //The fourth case (different screens) is not implemented (and I do not know, if I want to implement it).
+         GenerateCrossingEventFromChild1ToChild2(queue, fromView, toView, ancestor, theEvent, detail);
+      }   
+   }
+}
+
 }//Detail
 
 //______________________________________________________________________________
@@ -1002,7 +1061,7 @@ void EventTranslator::GenerateCrossingEventNoGrab(NSEvent *theEvent)
    assert(theEvent && "GenerateCrossingEventNoGrab, theEvent parameter is nil");
    
    NSView<X11Window> * const candidateView = X11::FindViewUnderPointer();
-   GenerateCrossingEvents(fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
+   Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
    fViewUnderPointer = candidateView;
 }
 
@@ -1017,7 +1076,7 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSEvent *theEvent)
    NSView<X11Window> *candidateView = X11::FindViewUnderPointer();//The view we entered.
 
    if (fOwnerEvents) {
-      GenerateCrossingEvents(fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
+      Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
    } else {
       //Either implicit grab or GrabPointer with owner_events == false,
       //only grab view can receive enter/leave notify events. Only
@@ -1043,73 +1102,6 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSEvent *theEvent)
 bool EventTranslator::HasPointerGrab()const
 {
    return fPointerGrabType != kPGNoGrab;
-}
-
-//______________________________________________________________________________
-void EventTranslator::GenerateCrossingEvents(NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail)
-{
-   //Aux. function. TODO: must become non-member (since does not require any state,
-   //except fBranch1/2 vectors, which must go away as soon as I use method from NSView to
-   //find lca.
-
-   assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
-   
-   if (fromView == toView) {
-      //This can happen: tracking areas for stacked windows call
-      //mouseExited even for overlapped views (so you have a bunch of mouseExited/mouseEntered
-      //for one cursor move). In mouseEntered/mouseExited
-      //I'm looking for the top level view under cursor and try to generate cross event
-      //for this view only.
-      return;
-   }
-   
-   if (!fromView) {
-      //We enter window "from the screen" - do not leave any window.
-      //Send EnterNotify event.
-      if (toView)//Check, if order is OK.
-         Detail::SendEnterEventClosedRange(fEventQueue, toView, (NSView<X11Window> *)[[toView window] contentView], theEvent, detail);
-   } else if (!toView) {
-      //We exit all views. Order must be OK here.
-      Detail::SendLeaveEventClosedRange(fEventQueue, fromView, (NSView<X11Window> *)[[fromView window] contentView], theEvent, detail);
-   } else {
-      NSView<X11Window> *ancestor = 0;
-      Ancestry rel = FindRelation(fromView, toView, &ancestor);
-      if (rel == kAView1IsParent) {
-         //Case 1.
-         //From A to B.
-         //_________________
-         //| A              |
-         //|   |---------|  |
-         //|   |  B      |  |
-         //|   |         |  |
-         //|   |---------|  |
-         //|                |
-         //|________________|
-         Detail::GenerateCrossingEventParentToChild(fEventQueue, fromView, toView, theEvent, detail);
-      } else if (rel == kAView2IsParent) {
-         //Case 2.
-         //From A to B.
-         //_________________
-         //| B              |
-         //|   |---------|  |
-         //|   |  A      |  |
-         //|   |         |  |
-         //|   |---------|  |
-         //|                |
-         //|________________|   
-         Detail::GenerateCrossingEventChildToParent(fEventQueue, toView, fromView, theEvent, detail);
-      } else {
-         //Case 3.
-         //|--------------------------------|
-         //| C   |------|      |-------|    |
-         //|     | A    |      | B     |    |
-         //|     |______|      |_______|    |
-         //|________________________________|
-         //Ancestor is either some view, or 'root' window.
-         //The fourth case (different screens) is not implemented (and I do not know, if I want to implement it).
-         Detail::GenerateCrossingEventFromChild1ToChild2(fEventQueue, fromView, toView, ancestor, theEvent, detail);
-      }   
-   }
 }
 
 //______________________________________________________________________________
@@ -1241,7 +1233,7 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
          return;
       }
 
-      GenerateCrossingEvents(fViewUnderPointer, grabView, event.Get(), kNotifyGrab);//Uffffff, done!
+      Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, grabView, event.Get(), kNotifyGrab);//Uffffff, done!
    }
 
    //Activate the current grab now.
@@ -1266,7 +1258,7 @@ void EventTranslator::CancelPointerGrab()
             return;
          }
 
-         GenerateCrossingEvents(fButtonGrabView, candidateView, event.Get(), kNotifyUngrab);
+         Detail::GenerateCrossingEvents(fEventQueue, fButtonGrabView, candidateView, event.Get(), kNotifyUngrab);
       } else {
          const NSPoint location = [[fButtonGrabView window] convertScreenToBase : [NSEvent mouseLocation]];
          const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fButtonGrabView window] location : location ]);
@@ -1277,7 +1269,7 @@ void EventTranslator::CancelPointerGrab()
             return;
          }
 
-         GenerateCrossingEvents(fButtonGrabView, nil, event.Get(), kNotifyUngrab);//Ufff, done!!!
+         Detail::GenerateCrossingEvents(fEventQueue, fButtonGrabView, nil, event.Get(), kNotifyUngrab);//Ufff, done!!!
       }
    }
 
@@ -1427,7 +1419,7 @@ void EventTranslator::GenerateButtonPressEventNoGrab(NSView<X11Window> *view, NS
    //Now we have to generate a sequence of enter/leave notify events,
    //like we "jump" from the previous view under the pointer to a grab view.
 
-   GenerateCrossingEvents(fViewUnderPointer, fButtonGrabView, theEvent, kNotifyGrab);
+   Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, fButtonGrabView, theEvent, kNotifyGrab);
    
    //"Activate" a grab now, depending on type.
    if (fButtonGrabView) {
@@ -1689,23 +1681,6 @@ void EventTranslator::FindKeyGrabView(NSView<X11Window> *fromView, NSEvent *theE
       if ([v findPassiveKeyGrab : keyCode modifiers : modifiers])
          fKeyGrabView = v;
    }
-}
-
-//______________________________________________________________________________
-Ancestry EventTranslator::FindRelation(NSView<X11Window> *view1, NSView<X11Window> *view2, NSView<X11Window> **lca)
-{
-   assert(view1 != nil && "FindRelation, view1 parameter is nil");
-   assert(view2 != nil && "FindRelation, view2 parameter is nil");
-   assert(lca != 0 && "FindRelation, lca parameter is nil");
-   
-   if (Detail::IsParent(view1, view2)) 
-      return kAView1IsParent;
-   
-   if (Detail::IsParent(view2, view1))
-      return kAView2IsParent;
-   
-   //TODO: check if I can use [view1 ancestorSharedWithView : view2];
-   return Detail::FindLowestCommonAncestor(view1, fBranch1, view2, fBranch2, lca);
 }
 
 }//X11

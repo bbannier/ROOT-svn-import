@@ -12,7 +12,6 @@
 #ifndef ROOT_X11Events
 #define ROOT_X11Events
 
-#include <vector>
 #include <deque>
 
 #ifndef ROOT_GuiTypes
@@ -39,13 +38,6 @@ class TGCocoa;
 namespace ROOT {
 namespace MacOSX {
 namespace X11 {//X11 emulation for Cocoa.
-
-enum Ancestry {
-   kAView1IsParent,
-   kAView2IsParent,
-   kAHaveNonRootAncestor,
-   kAAncestorIsRoot
-};
 
 enum PointerGrab {
    kPGNoGrab,
@@ -96,8 +88,6 @@ private:
    //Used both by grab and non-grab case.
    void GenerateCrossingEventNoGrab(NSEvent *theEvent);
    void GenerateCrossingEventActiveGrab(NSEvent *theEvent);
-   //Aux. function. TODO: make a non class-member standalone function.
-   void GenerateCrossingEvents(NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail);
 
    void GeneratePointerMotionEventNoGrab(NSView<X11Window> *view, NSEvent *theEvent);
    void GeneratePointerMotionEventActiveGrab(NSView<X11Window> *eventView, NSEvent *theEvent);
@@ -116,12 +106,8 @@ private:
 
    void FindButtonGrab(NSView<X11Window> *fromView, NSEvent *theEvent, EMouseButton btn);
    void FindKeyGrabView(NSView<X11Window> *fromView, NSEvent *theEvent);
-   
-   Ancestry FindRelation(NSView<X11Window> *view1, NSView<X11Window> *view2, NSView<X11Window> **lca);
 
    NSView<X11Window> *fViewUnderPointer;
-   std::vector<NSView<X11Window> *> fBranch1;
-   std::vector<NSView<X11Window> *> fBranch2;
    
    PointerGrab fPointerGrabType;
    unsigned fGrabEventMask;
