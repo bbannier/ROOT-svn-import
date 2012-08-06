@@ -1246,6 +1246,7 @@ void print_mask_info(ULong_t mask)
    
    X11::PointerGrab fCurrentGrabType;
    unsigned         fActiveGrabEventMask;
+   BOOL             fActiveGrabOwnerEvents;
 }
 
 @synthesize fClipMaskIsValid;
@@ -1269,7 +1270,7 @@ void print_mask_info(ULong_t mask)
 @synthesize fPassiveGrabEventMask;
 @synthesize fPassiveGrabKeyModifiers;
 @synthesize fActiveGrabEventMask;
-@synthesize fOwnerEvents;
+@synthesize fPassiveGrabOwnerEvents;
 @synthesize fSnapshotDraw;
 @synthesize fCurrentCursor;
 @synthesize fIsDNDAware;
@@ -1289,7 +1290,7 @@ void print_mask_info(ULong_t mask)
       //Passive grab parameters.
       fPassiveGrabButton = -1;//0 is kAnyButton.
       fPassiveGrabEventMask = 0;
-      fOwnerEvents = NO;
+      fPassiveGrabOwnerEvents = NO;
       
       fPassiveKeyGrabs = [[NSMutableArray alloc] init];
       
@@ -1306,6 +1307,7 @@ void print_mask_info(ULong_t mask)
       
       fCurrentGrabType = X11::kPGNoGrab;
       fActiveGrabEventMask = 0;
+      fActiveGrabOwnerEvents = YES;
    }
    
    return self;
@@ -1798,10 +1800,11 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) activateGrab : (unsigned) eventMask
+- (void) activateGrab : (unsigned) eventMask ownerEvents : (BOOL) ownerEvents
 {
    fCurrentGrabType = X11::kPGActiveGrab;
    fActiveGrabEventMask = eventMask;
+   fActiveGrabOwnerEvents = ownerEvents;
 }
 
 //______________________________________________________________________________
@@ -1809,6 +1812,7 @@ void print_mask_info(ULong_t mask)
 {
    fCurrentGrabType = X11::kPGNoGrab;
    fActiveGrabEventMask = 0;
+   fActiveGrabOwnerEvents = YES;
 }
 
 //______________________________________________________________________________
@@ -1817,8 +1821,13 @@ void print_mask_info(ULong_t mask)
    bool accepts = fEventMask & eventMask;
    if (fCurrentGrabType == X11::kPGPassiveGrab)
       accepts = accepts || (fPassiveGrabEventMask & eventMask);
-   if (fCurrentGrabType == X11::kPGActiveGrab)
-      accepts = accepts || (fActiveGrabEventMask & eventMask);
+
+   if (fCurrentGrabType == X11::kPGActiveGrab) {
+      if (fActiveGrabOwnerEvents)
+         accepts = accepts || (fActiveGrabOwnerEvents & eventMask);
+      else
+         accepts =fActiveGrabOwnerEvents & eventMask;
+   }
 
    return accepts;
 }
