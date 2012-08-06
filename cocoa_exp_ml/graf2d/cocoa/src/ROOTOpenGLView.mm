@@ -61,7 +61,7 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
       [self setHidden : YES];//Not sure.
       fIsOverlapped = NO;
       fPixelFormat = [format retain];
-      //Tracking area?
+      self.fCurrentCursor = kPointer;
    }
 
    return self;
