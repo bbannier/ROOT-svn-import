@@ -2324,13 +2324,13 @@ void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t keyModifiers,
    NSObject<X11Window> * const widget = fPimpl->GetWindow(wid);
    
    if (grab) {
-      widget.fOwnerEvents = YES;   //This is how TGX11 works.
+      widget.fPassiveGrabOwnerEvents = YES;   //This is how TGX11 works.
       widget.fPassiveGrabButton = button;
       widget.fPassiveGrabEventMask = eventMask;
       widget.fPassiveGrabKeyModifiers = keyModifiers;
       //Set the cursor.
    } else {
-      widget.fOwnerEvents = NO;
+      widget.fPassiveGrabOwnerEvents = NO;
       widget.fPassiveGrabButton = -1;//0 is kAnyButton.
       widget.fPassiveGrabEventMask = 0;
       widget.fPassiveGrabKeyModifiers = 0;

@@ -188,14 +188,14 @@
 @property (nonatomic, assign) unsigned fPassiveGrabEventMask;
 @property (nonatomic, assign) unsigned fPassiveGrabKeyModifiers;
 
-@property (nonatomic, assign) BOOL     fOwnerEvents;
+@property (nonatomic, assign) BOOL     fPassiveGrabOwnerEvents;
 
 - (void) activatePassiveGrab;
 - (void) activateImplicitGrab;
-- (void) activateGrab : (unsigned) eventMask;
+- (void) activateGrab : (unsigned) eventMask ownerEvents : (BOOL) ownerEvents;
 - (void) cancelGrab;
 
-- (BOOL) acceptsCrossingEvents;
+- (BOOL) acceptsCrossingEvents : (unsigned) eventMask;
 
 //
 

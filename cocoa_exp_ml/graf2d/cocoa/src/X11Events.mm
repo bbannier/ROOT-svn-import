@@ -921,12 +921,13 @@ void GenerateCrossingEventFromChild1ToChild2(EventQueue_t &queue, NSView<X11Wind
 //______________________________________________________________________________
 EventTranslator::EventTranslator()
                      : fViewUnderPointer(nil),
-                       fPointerGrab(kPGNoGrab),
+                       fPointerGrabType(kPGNoGrab),
                        fGrabEventMask(0),
                        fOwnerEvents(true),
                        fButtonGrabView(nil),
                        fKeyGrabView(nil),
-                       fFocusView(nil)
+                       fFocusView(nil),
+                       fImplicitGrabButton(kAnyButton)
                        
 {
 }
@@ -989,7 +990,7 @@ void EventTranslator::GenerateCrossingEvent(NSView<X11Window> *view, NSEvent *th
 {
    //View parameter can be nil (we exit any window).
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
-   if (fPointerGrab == kPGNoGrab) {
+   if (fPointerGrabType == kPGNoGrab) {
       NSView *candidateView = [[[view window] contentView] hitTest : [theEvent locationInWindow]];
       
       const bool isROOTView = [candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]];
@@ -1040,7 +1041,7 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSView<X11Window> *view, N
 //______________________________________________________________________________
 bool EventTranslator::HasPointerGrab()const
 {
-   return fPointerGrab != kPGNoGrab;
+   return fPointerGrabType != kPGNoGrab;
 }
 
 //______________________________________________________________________________
@@ -1177,7 +1178,7 @@ void EventTranslator::GeneratePointerMotionEvent(NSView<X11Window> *eventView, N
    assert(eventView != nil && "GeneratePointerMotionEvent, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEvent, event parameter is nil");
 
-   if (fPointerGrab == kPGNoGrab) {
+   if (fPointerGrabType == kPGNoGrab) {
       return GeneratePointerMotionEventNoGrab(eventView, theEvent);
    } else {
       return GeneratePointerMotionEventActiveGrab(eventView, theEvent);
@@ -1190,7 +1191,7 @@ void EventTranslator::GenerateButtonPressEvent(NSView<X11Window> *eventView, NSE
    assert(eventView != nil && "GenerateButtonPressEvent, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonpressEvent, event parameter is nil");
    
-   if (fPointerGrab == kPGNoGrab)
+   if (fPointerGrabType == kPGNoGrab)
       return GenerateButtonPressEventNoGrab(eventView, theEvent, btn);
    else
       return GenerateButtonPressEventActiveGrab(eventView, theEvent, btn);
@@ -1202,7 +1203,7 @@ void EventTranslator::GenerateButtonReleaseEvent(NSView<X11Window> *eventView, N
    assert(eventView != nil && "GenerateButtonReleaseEvent, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonReleaseEvent, event parameter is nil");
    
-   if (fPointerGrab == kPGNoGrab)
+   if (fPointerGrabType == kPGNoGrab)
       return GenerateButtonReleaseEventNoGrab(eventView, theEvent, btn);//Actually, is this possible???
    else
       return GenerateButtonReleaseEventActiveGrab(eventView, theEvent, btn);
@@ -1268,10 +1269,10 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
    assert(grabView != nil && "SetPointerGrab, view parameter is nil");
 
    fButtonGrabView = grabView;
-   fPointerGrab = kPGActiveGrab;
+   fPointerGrabType = kPGActiveGrab;
    fGrabEventMask = eventMask;
    fOwnerEvents = ownerEvents;
-   [fButtonGrabView activateGrab : eventMask];
+   [fButtonGrabView activateGrab : eventMask ownerEvents : fOwnerEvents];
 
    //Generate crossing event?
    if (grabView != fViewUnderPointer) {
@@ -1305,7 +1306,7 @@ void EventTranslator::CancelPointerGrab()
 
    //
    fButtonGrabView = nil;
-   fPointerGrab = kPGNoGrab;
+   fPointerGrabType = kPGNoGrab;
    fGrabEventMask = 0;
    fOwnerEvents = true;
    //
@@ -1554,13 +1555,12 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
 
 
    //TODO: check which button initiated implicit grab, if it's released???
-
-//   if (fButtonGrabView && fButtonGrabView.fGrabButton != kAnyButton && fButtonGrabView.fGrabButton != btn)
-//      return;//Do not cancel the grab - other mouse button was released (funny thing about kAnyButton).
+   if (fPointerGrabType == kPGImplicitGrab && btn != fImplicitGrabButton)
+      return;
    
    //When grab is cancelled, enter/leave notify events are sent like a cursor
    //jumped from the grab view to another view, wich is under cursor now.
-   if (fPointerGrab == kPGPassiveGrab || fPointerGrab == kPGImplicitGrab) {
+   if (fPointerGrabType == kPGPassiveGrab || fPointerGrabType == kPGImplicitGrab) {
       //eventView can be ... a wrong view, since Cocoa has its own grab.
       //GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
       NSView *candidateView = X11::FindViewUnderPointer();
@@ -1576,7 +1576,7 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
       GenerateCrossingEvent((NSView<X11Window> *)candidateView, theEvent, kNotifyUngrab);
       [fButtonGrabView cancelGrab];
       fButtonGrabView = nil;
-      fPointerGrab = kPGNoGrab;
+      fPointerGrabType = kPGNoGrab;
       fGrabEventMask = 0;
    }
 }
@@ -1704,21 +1704,22 @@ void EventTranslator::FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *t
    
    if (grabView) {
       fButtonGrabView = grabView;
-      fPointerGrab = kPGPassiveGrab;
+      fPointerGrabType = kPGPassiveGrab;
       fGrabEventMask = grabView.fPassiveGrabEventMask;
-      fOwnerEvents = grabView.fOwnerEvents;
+      fOwnerEvents = grabView.fPassiveGrabOwnerEvents;
       [grabView activatePassiveGrab];
    } else if (buttonPressView) {
       //This is implicit grab.
+      fImplicitGrabButton = btn;
       fButtonGrabView = buttonPressView;
-      fPointerGrab = kPGImplicitGrab;
+      fPointerGrabType = kPGImplicitGrab;
       fGrabEventMask = buttonPressView.fEventMask;
       fOwnerEvents = false;
       [grabView activateImplicitGrab];
    } else {
       //Implicit grab with 'root' window?
       fButtonGrabView = nil;
-      fPointerGrab = kPGImplicitGrab;
+      fPointerGrabType = kPGImplicitGrab;
       fGrabEventMask = 0;
       fOwnerEvents = false;
    }

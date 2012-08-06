@@ -122,7 +122,7 @@ private:
    std::vector<NSView<X11Window> *> fBranch1;
    std::vector<NSView<X11Window> *> fBranch2;
    
-   PointerGrab fPointerGrab;
+   PointerGrab fPointerGrabType;
    unsigned fGrabEventMask;
    bool fOwnerEvents;
 
@@ -130,6 +130,7 @@ private:
    NSView<X11Window> *fButtonGrabView;
    NSView<X11Window> *fKeyGrabView;
    NSView<X11Window> *fFocusView;
+   EMouseButton fImplicitGrabButton;
 
    EventQueue_t fEventQueue;
 };
