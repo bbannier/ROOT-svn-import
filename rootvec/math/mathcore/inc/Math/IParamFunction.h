@@ -29,6 +29,10 @@
 #include <cassert> 
 #include <vector> 
 
+#ifdef _OPENMP 
+#include <omp.h>
+#endif
+
 /**
    @defgroup ParamFunc Interfaces for parametric functions 
    @ingroup CppFunctions
@@ -153,16 +157,33 @@ private:
    {
      int ndim = NDim();
      
-     std::vector<double> tmpVec( ndim );
+#ifdef _OPENMP 
+     int nThreads = omp_get_num_threads();
+#else
+     int nThreads = 1;
+#endif
+
+     std::vector < std::vector<double> > tmpVecs( nThreads );
      
-     for ( int i=0; i < n; i++ )
+     #pragma omp parallel
      {
-       for ( int j=0; j < ndim; j++ )
-       {
-         tmpVec[j] = ppIn[j][i];
-       }
-       
-       pOut[i] = DoEvalPar( &tmpVec.front(), p );
+#ifdef _OPENMP 
+        int tid = omp_get_thread_num();
+#else
+        int tid = 0;
+#endif
+
+        tmpVecs[tid].resize( ndim );
+        
+        for ( int i= tid; i < n; i+=nThreads )
+        {
+          for ( int j=0; j < ndim; j++ )
+          {
+            tmpVecs[tid][j] = ppIn[j][i];
+          }
+          
+          pOut[i] = DoEvalPar( &tmpVecs[tid].front(), p );
+        }
      }
    }
    
