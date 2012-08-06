@@ -29,7 +29,6 @@ int main(int argc, char ** argv)
    //With button press, before the same button is released - no crossing events are generated.
    mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
    childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kEnterWindowMask | kLeaveWindowMask, kNone, kNone, true);
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #elif defined(TEST2)
 #endif
