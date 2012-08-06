@@ -23,13 +23,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
-
-#ifndef _WIN32
-#define private public
 #include "clang/Parse/Parser.h"
-#undef private
-#endif
-
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
@@ -413,10 +407,6 @@ namespace cling {
     return m_IncrParser->getCodeGenerator()->GetModule();
   }
 
-  void Interpreter::resetUnresolved() const {
-    m_ExecutionContext->ResetUnresolved();
-  }
-
   ///\brief Maybe transform the input line to implement cint command line
   /// semantics (declarations are global) and compile to produce a module.
   ///
@@ -442,6 +432,18 @@ namespace cling {
       *D = m_IncrParser->getLastTransaction()->getFirstDecl().getSingleDecl();
 
     return Interpreter::kSuccess;
+  }
+
+  Interpreter::CompilationResult
+  Interpreter::parse(const std::string& input) {
+    CompilationOptions CO;
+    CO.CodeGeneration = 0;
+    CO.DeclarationExtraction = 0;
+    CO.ValuePrinting = 0;
+    CO.DynamicScoping = isDynamicLookupEnabled();
+    CO.Debug = isPrintingAST();
+
+    return Declare(input, CO);
   }
 
   Interpreter::CompilationResult
@@ -635,12 +637,15 @@ namespace cling {
       m_IncrParser->Compile(Wrapper, CO);
 
     // get the result
-    llvm::GenericValue val;
-    if (RunFunction(WrapperName, &val)) {
-      if (V)
-        *V = Value(val, RetTy);
-
+    if (!V) {
+      if (RunFunction(WrapperName)) {
+        return Interpreter::kSuccess;
+      }
+    } else if (RunFunction(WrapperName, &V->value)) {
+      V->type = RetTy;
       return Interpreter::kSuccess;
+    } else {
+      *V = Value();
     }
 
     return Interpreter::kFailure;
@@ -668,7 +673,81 @@ namespace cling {
     return declare(code) == Interpreter::kSuccess;
   }
 
-#ifndef _WIN32
+  class ParserExt : public Parser {
+  public:
+    static TypeResult ParseTypeNameFwd(Parser* P, SourceRange *Range = 0,
+                                       Declarator::TheContext Context
+                                       = Declarator::TypeNameContext,
+                                       AccessSpecifier AS = AS_none,
+                                       Decl **OwnedType = 0) {
+      return ((ParserExt*)P)->ParseTypeName(Range, Context, AS, OwnedType);
+    }
+
+    static const Token& NextTokenFwd(Parser* P) {
+      return ((ParserExt*)P)->NextToken();
+    }
+
+    static bool SkipUntilFwd(Parser* P, tok::TokenKind T, bool StopAtSemi = true,
+                             bool DontConsume = false, 
+                             bool StopAtCodeCompletion = false) {
+      
+      return ((ParserExt*)P)->SkipUntil(T, StopAtSemi, DontConsume, 
+                                        StopAtCodeCompletion);
+    }
+
+    static bool TryAnnotateCXXScopeTokenFwd(Parser* P, 
+                                         bool EnteringContext = false) {
+
+      return ((ParserExt*)P)->TryAnnotateCXXScopeToken(EnteringContext);
+    }
+    static  bool TryAnnotateTypeOrScopeTokenFwd(Parser* P, 
+                                             bool EnteringContext = false,
+                                             bool NeedType = false) {
+
+      return ((ParserExt*)P)->TryAnnotateTypeOrScopeToken(EnteringContext);
+    }
+
+    static ParsedType getTypeAnnotationFwd(Token &Tok) {
+      return ParserExt::getTypeAnnotation(Tok);
+    }
+
+    static SourceLocation ConsumeTokenFwd(Parser* P) {
+      return ((ParserExt*)P)->ConsumeToken();
+    }
+
+    static bool ParseUnqualifiedIdFwd(Parser* P,
+                                      CXXScopeSpec &SS, bool EnteringContext,
+                                      bool AllowDestructorName,
+                                      bool AllowConstructorName,
+                                      ParsedType ObjectType,
+                                      SourceLocation& TemplateKWLoc,
+                                      UnqualifiedId &Result) {
+
+      return ((ParserExt*)P)->ParseUnqualifiedId(SS, EnteringContext, 
+                                                 AllowDestructorName,
+                                                 AllowConstructorName,
+                                                 ObjectType,
+                                                 TemplateKWLoc,
+                                                 Result);
+    }
+
+    static ExprResult ParseAssignmentExpressionFwd(Parser* P, 
+                                                   TypeCastState isTypeCast 
+                                                   = NotTypeCast) {
+      return ((ParserExt*)P)->ParseAssignmentExpression(isTypeCast);
+
+    }
+
+
+    static void EnterScopeFwd(Parser* P, unsigned ScopeFlags) {
+      ((ParserExt*)P)->EnterScope(ScopeFlags);
+    }
+
+    static void ExitScopeFwd(Parser* P) {
+      ((ParserExt*)P)->ExitScope();
+    }
+  };
+
   QualType
   Interpreter::lookupType(const std::string& typeName)
   {
@@ -725,10 +804,10 @@ namespace cling {
     //
     //  Try parsing the type name.
     //
-    TypeResult Res(P->ParseTypeName());
+    TypeResult Res(ParserExt::ParseTypeNameFwd(P));
     if (Res.isUsable()) {
       // Accept it only if the whole name was parsed.
-      if (P->NextToken().getKind() == clang::tok::eof) {
+      if (ParserExt::NextTokenFwd(P).getKind() == clang::tok::eof) {
         TypeSourceInfo* TSI = 0;
         // The QualType returned by the parser is an odd QualType
         // (type + TypeSourceInfo) and cannot be used directly.
@@ -740,8 +819,9 @@ namespace cling {
     //
     // Note: Consuming the EOF token will pop the include stack.
     //
-    P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-      /*StopAtCodeCompletion*/false);
+    ParserExt::SkipUntilFwd(P, tok::eof, /*StopAtSemi*/false, 
+                            /*DontConsume*/false,
+                            /*StopAtCodeCompletion*/false);
     if (ResetIncrementalProcessing) {
       PP.enableIncrementalProcessing(false);
     }
@@ -770,8 +850,9 @@ namespace cling {
       //
       // Note: Consuming the EOF token will pop the include stack.
       //
-      P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-        /*StopAtCodeCompletion*/false);
+      ParserExt::SkipUntilFwd(P, tok::eof, /*StopAtSemi*/false, 
+                              /*DontConsume*/false, 
+                              /*StopAtCodeCompletion*/false);
       if (ResetIncrementalProcessing) {
         PP.enableIncrementalProcessing(false);
       }
@@ -866,7 +947,7 @@ namespace cling {
     //
     if (!P->getCurToken().is(clang::tok::identifier) && !P->getCurToken().
           is(clang::tok::coloncolon) && !(P->getCurToken().is(
-          clang::tok::annot_template_id) && P->NextToken().is(
+          clang::tok::annot_template_id) && ParserExt::NextTokenFwd(P).is(
           clang::tok::coloncolon)) && !P->getCurToken().is(
           clang::tok::kw_decltype)) {
       // error path
@@ -875,7 +956,7 @@ namespace cling {
     //
     //  Try parsing the name as a nested-name-specifier.
     //
-    if (P->TryAnnotateCXXScopeToken(false)) {
+    if (ParserExt::TryAnnotateCXXScopeTokenFwd(P, false)) {
       // error path
       return TheDecl;
     }
@@ -889,7 +970,7 @@ namespace cling {
         NestedNameSpecifier* NNS = SS.getScopeRep();
         NestedNameSpecifier::SpecifierKind Kind = NNS->getKind();
         // Only accept the parse if we consumed all of the name.
-        if (P->NextToken().getKind() == clang::tok::eof) {
+        if (ParserExt::NextTokenFwd(P).getKind() == clang::tok::eof) {
           //
           //  Be careful, not all nested name specifiers refer to classes
           //  and namespaces, and those are the only things we want.
@@ -960,8 +1041,8 @@ namespace cling {
     //
     //  Cleanup after failed parse as a nested-name-specifier.
     //
-    P->SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-      /*StopAtCodeCompletion*/false);
+    ParserExt::SkipUntilFwd(P,clang::tok::eof, /*StopAtSemi*/false, 
+                            /*DontConsume*/false, /*StopAtCodeCompletion*/false);
     DClient.EndSourceFile();
     CI->getDiagnostics().Reset();
     //
@@ -979,15 +1060,15 @@ namespace cling {
     //
     //  Now try to parse the name as a type.
     //
-    if (P->TryAnnotateTypeOrScopeToken(false, false)) {
+    if (ParserExt::TryAnnotateTypeOrScopeTokenFwd(P, false, false)) {
       // error path
       return TheDecl;
     }
     if (P->getCurToken().getKind() == tok::annot_typename) {
-      ParsedType T = Parser::getTypeAnnotation(
+      ParsedType T = ParserExt::getTypeAnnotationFwd(
         const_cast<Token&>(P->getCurToken()));
       // Only accept the parse if we consumed all of the name.
-      if (P->NextToken().getKind() == clang::tok::eof) {
+      if (ParserExt::NextTokenFwd(P).getKind() == clang::tok::eof) {
         QualType QT = T.get();
         if (const EnumType* ET = QT->getAs<EnumType>()) {
            EnumDecl* ED = ET->getDecl();
@@ -1001,12 +1082,13 @@ namespace cling {
 
   static
   bool
-  FuncArgTypesMatch(CompilerInstance* CI, std::vector<QualType>& GivenArgTypes,
-    const FunctionProtoType* FPT)
+  FuncArgTypesMatch(CompilerInstance* CI, 
+                    llvm::SmallVector<QualType, 4>& GivenArgTypes,
+                    const FunctionProtoType* FPT)
   {
     FunctionProtoType::arg_type_iterator ATI = FPT->arg_type_begin();
     FunctionProtoType::arg_type_iterator E = FPT->arg_type_end();
-    std::vector<QualType>::iterator GAI = GivenArgTypes.begin();
+    llvm::SmallVector<QualType, 4>::iterator GAI = GivenArgTypes.begin();
     for (; ATI && (ATI != E); ++ATI, ++GAI) {
       if (!CI->getASTContext().hasSameType(*ATI, *GAI)) {
         return false;
@@ -1019,7 +1101,7 @@ namespace cling {
   bool
   IsOverload(CompilerInstance* CI,
     const TemplateArgumentListInfo* FuncTemplateArgs,
-    std::vector<QualType>& GivenArgTypes, FunctionDecl* FD,
+    llvm::SmallVector<QualType, 4>& GivenArgTypes, FunctionDecl* FD,
     bool UseUsingDeclRules)
   {
     //FunctionTemplateDecl* FTD = FD->getDescribedFunctionTemplate();
@@ -1122,10 +1204,10 @@ namespace cling {
     //
     //  Parse the prototype now.
     //
-    std::vector<QualType> GivenArgTypes;
-    std::vector<Expr*> GivenArgs;
+    llvm::SmallVector<QualType, 4> GivenArgTypes;
+    llvm::SmallVector<Expr*, 4> GivenArgs;
     while (P->getCurToken().isNot(tok::eof)) {
-      TypeResult Res(P->ParseTypeName());
+      TypeResult Res(ParserExt::ParseTypeNameFwd(P));
       if (!Res.isUsable()) {
         // Bad parse, done.
         return TheDecl;
@@ -1148,7 +1230,7 @@ namespace cling {
         break;
       }
       // Eat the comma.
-      P->ConsumeToken();
+      ParserExt::ConsumeTokenFwd(P);
     }
     if (P->getCurToken().isNot(tok::eof)) {
       // We did not consume all of the prototype, bad parse.
@@ -1157,8 +1239,8 @@ namespace cling {
     //
     //  Cleanup after prototype parse.
     //
-    P->SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-      /*StopAtCodeCompletion*/false);
+    ParserExt::SkipUntilFwd(P, clang::tok::eof, /*StopAtSemi*/false, 
+                            /*DontConsume*/false, /*StopAtCodeCompletion*/false);
     DClient.EndSourceFile();
     CI->getDiagnostics().Reset();
     //
@@ -1186,24 +1268,19 @@ namespace cling {
       //  and may be able to remove it in the future if
       //  the way constructors are looked up changes.
       //
-      //  Note:  We cannot use P->EnterScope(Scope::DeclScope)
-      //         and P->ExitScope() because they do things
-      //         we do not want to happen.
-      //
-      Scope* OldScope = CI->getSema().CurScope;
-      CI->getSema().CurScope = new Scope(OldScope, Scope::DeclScope,
-        PP.getDiagnostics());
+      ParserExt::EnterScopeFwd(P, Scope::DeclScope);
       CI->getSema().EnterDeclaratorContext(P->getCurScope(), foundDC);
-      if (P->ParseUnqualifiedId(SS, /*EnteringContext*/false,
-          /*AllowDestructorName*/true,
-          /*AllowConstructorName*/true,
-          clang::ParsedType(), TemplateKWLoc, FuncId)) {
+      if (ParserExt::ParseUnqualifiedIdFwd(P, SS, /*EnteringContext*/false,
+                                           /*AllowDestructorName*/true,
+                                           /*AllowConstructorName*/true,
+                                           clang::ParsedType(), TemplateKWLoc,
+                                           FuncId)) {
         // Bad parse.
         // Destroy the scope we created first, and
         // restore the original.
         CI->getSema().ExitDeclaratorContext(P->getCurScope());
-        delete CI->getSema().CurScope;
-        CI->getSema().CurScope = OldScope;
+        ParserExt::ExitScopeFwd(P);
+
         // Then cleanup and exit.
         return TheDecl;
       }
@@ -1227,16 +1304,14 @@ namespace cling {
         // Destroy the scope we created first, and
         // restore the original.
         CI->getSema().ExitDeclaratorContext(P->getCurScope());
-        delete CI->getSema().CurScope;
-        CI->getSema().CurScope = OldScope;
+        ParserExt::ExitScopeFwd(P);
         // Then cleanup and exit.
         return TheDecl;
       }
       // Destroy the scope we created, and
       // restore the original.
       CI->getSema().ExitDeclaratorContext(P->getCurScope());
-      delete CI->getSema().CurScope;
-      CI->getSema().CurScope = OldScope;
+      ParserExt::ExitScopeFwd(P);
       //
       //  Check for lookup failure.
       //
@@ -1371,8 +1446,8 @@ namespace cling {
     //
     //  Get ready for arg list parsing.
     //
-    std::vector<QualType> GivenArgTypes;
-    std::vector<Expr*> GivenArgs;
+    llvm::SmallVector<QualType, 4> GivenArgTypes;
+    llvm::SmallVector<Expr*, 4> GivenArgs;
     //
     //  If we are looking up a member function, construct
     //  the implicit object argument.
@@ -1442,7 +1517,7 @@ namespace cling {
       {
         bool first_time = true;
         while (P->getCurToken().isNot(tok::eof)) {
-          ExprResult Res = P->ParseAssignmentExpression();
+          ExprResult Res = ParserExt::ParseAssignmentExpressionFwd(P);
           if (Res.isUsable()) {
             Expr* expr = Res.release();
             GivenArgs.push_back(expr);
@@ -1460,12 +1535,11 @@ namespace cling {
             expr->printPretty(tmp, Context, /*PrinterHelper=*/0,
               Policy, /*Indentation=*/0);
             proto += tmp.str();
-            fprintf(stderr, "%s\n", proto.c_str());
           }
           if (!P->getCurToken().is(tok::comma)) {
             break;
           }
-          P->ConsumeToken();
+          ParserExt::ConsumeTokenFwd(P);
         }
       }
     }
@@ -1477,8 +1551,9 @@ namespace cling {
       //
       //  Cleanup after the arg list parse.
       //
-      P->SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-        /*StopAtCodeCompletion*/false);
+      ParserExt::SkipUntilFwd(P, clang::tok::eof, /*StopAtSemi*/false,
+                              /*DontConsume*/false,
+                              /*StopAtCodeCompletion*/false);
       DClient.EndSourceFile();
       CI->getDiagnostics().Reset();
       //
@@ -1498,26 +1573,19 @@ namespace cling {
       //  and may be able to remove it in the future if
       //  the way constructors are looked up changes.
       //
-      //  Note:  We cannot use P->EnterScope(Scope::DeclScope)
-      //         and P->ExitScope() because they do things
-      //         we do not want to happen.
-      //
-      Scope* OldScope = CI->getSema().CurScope;
-      CI->getSema().CurScope = new Scope(OldScope, Scope::DeclScope,
-        PP.getDiagnostics());
+      ParserExt::EnterScopeFwd(P, Scope::DeclScope);
       CI->getSema().EnterDeclaratorContext(P->getCurScope(), foundDC);
       //
       //  Parse the function name.
       //
       SourceLocation TemplateKWLoc;
       UnqualifiedId FuncId;
-      if (P->ParseUnqualifiedId(SS, /*EnteringContext*/false,
+      if (ParserExt::ParseUnqualifiedIdFwd(P, SS, /*EnteringContext*/false,
           /*AllowDestructorName*/true, /*AllowConstructorName*/true,
           ParsedType(), TemplateKWLoc, FuncId)) {
         // Failed parse, cleanup.
         CI->getSema().ExitDeclaratorContext(P->getCurScope());
-        delete CI->getSema().CurScope;
-        CI->getSema().CurScope = OldScope;
+        ParserExt::ExitScopeFwd(P);
         return TheDecl;
       }
       //
@@ -1540,8 +1608,7 @@ namespace cling {
         // Destroy the scope we created first, and
         // restore the original.
         CI->getSema().ExitDeclaratorContext(P->getCurScope());
-        delete CI->getSema().CurScope;
-        CI->getSema().CurScope = OldScope;
+        ParserExt::ExitScopeFwd(P);
         // Then cleanup and exit.
         return TheDecl;
       }
@@ -1549,8 +1616,7 @@ namespace cling {
       //  Destroy the scope we created, and restore the original.
       //
       CI->getSema().ExitDeclaratorContext(P->getCurScope());
-      delete CI->getSema().CurScope;
-      CI->getSema().CurScope = OldScope;
+      ParserExt::ExitScopeFwd(P);
       //
       //  Check for lookup failure.
       //
@@ -1704,7 +1770,6 @@ namespace cling {
     }
     return TheDecl;
   }
-#endif
 
   Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl,
                                                     const DeclContext* Within) {
