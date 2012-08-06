@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <vector>
+#include <set>
 
 namespace llvm {
   class Module;
@@ -29,9 +30,6 @@ namespace cling {
   class ExecutionContext {
   public:
     typedef void* (*LazyFunctionCreatorFunc_t)(const std::string&);
-
-  public:
-    static void ResetUnresolved();
 
   public:
 
@@ -70,17 +68,16 @@ namespace cling {
     void printModule(llvm::Module* m);
     void InitializeBuilder(llvm::Module* m);
 
-    static std::vector<std::string> m_vec_unresolved;
-    static std::vector<LazyFunctionCreatorFunc_t> m_vec_lazy_function;
+    static std::set<std::string> m_unresolvedSymbols;
+    static std::vector<LazyFunctionCreatorFunc_t> m_lazyFuncCreator;
 
     llvm::ExecutionEngine* m_engine; // Owned by JIT
 
-    // position (global idx in out module) of next global to be initialized in
-    // m_ASTCI's AST
-    unsigned m_posInitGlobals;
-
-    // prevent the recursive run of the static inits
+    /// \brief prevent the recursive run of the static inits
     bool m_RunningStaticInits;
+
+    /// \brief Whether cxa_at_exit has been rewired to the Interpreter's version
+    bool m_CxaAtExitRemapped;
   };
 } // end cling
 #endif // CLING_EXECUTIONCONTEXT_H

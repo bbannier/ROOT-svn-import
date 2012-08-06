@@ -108,7 +108,7 @@
 #pragma link C++ class RooStats::UpperLimitMCSModule+;
 
 // ibucur: development in progress
-#pragma link C++ class RooStats::RooStatsSimultaneous+;
+#pragma link C++ class RooStats::CombinedPdf+;
 
 
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t , Double_t ,Double_t);

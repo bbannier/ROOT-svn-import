@@ -223,7 +223,9 @@ namespace cling {
     ///
     ///\param [in] input - The input being compiled.
     ///\param [in] CompilationOptions - The option set driving the compilation.
-    ///\param [out] V - The result of the evaluation of the input.
+    ///\param [in/out] V - The result of the evaluation of the input. Must be
+    ///       initialized to point to the return value's location if the 
+    ///       expression result is an aggregate.
     ///
     ///\returns Whether the operation was fully successful.
     ///
@@ -244,7 +246,9 @@ namespace cling {
     ///\brief Runs given function.
     ///
     ///\param [in] fname - The function name.
-    ///\param [out] res - The return result of the run function.
+    ///\param [in/out] res - The return result of the run function. Must be
+    ///       initialized to point to the return value's location if the 
+    ///       expression result is an aggregate.
     ///
     ///\returns true if successful otherwise false.
     ///
@@ -333,14 +337,28 @@ namespace cling {
     /// only header files are going to be processed it is much faster to run the
     /// specific interface for doing that - in the particular case - declare().
     ///
-    ///\param [in] input - The input to be compiled.
-    ///\param [out] V - The result of the evaluation of the input.
-    ///\param [out] D - The first declaration of the compiled input.
+    ///\param[in] input - The input to be compiled.
+    ///\param[in/out] V - The result of the evaluation of the input. Must be
+    ///       initialized to point to the return value's location if the 
+    ///       expression result is an aggregate.
+    ///\param[out] D - The first declaration of the compiled input.
     ///
     ///\returns Whether the operation was fully successful.
     ///
     CompilationResult process(const std::string& input, Value* V = 0,
                               const clang::Decl** D = 0);
+
+    ///\brief Parses input line, which doesn't contain statements. No code 
+    /// generation is done.
+    ///
+    /// Same as declare without codegening. Useful when a library is loaded and
+    /// the header files need to be imported.
+    ///
+    ///\param[in] input - The input containing the declarations.
+    ///
+    ///\returns Whether the operation was fully successful.
+    ///
+    CompilationResult parse(const std::string& input);
 
     ///\brief Compiles input line, which doesn't contain statements.
     ///
@@ -362,7 +380,9 @@ namespace cling {
     /// the declarations from the input.
     ///
     /// @param[in] input - The input containing only expressions
-    /// @param[out] V - The value of the executed input
+    /// @param[in/out] V - The value of the executed input. Must be
+    ///       initialized to point to the return value's location if the 
+    ///       expression result is an aggregate.
     ///
     ///\returns Whether the operation was fully successful.
     ///
@@ -376,7 +396,9 @@ namespace cling {
     /// the declarations from the input.
     ///
     /// @param[in] input - The input containing only expressions.
-    /// @param[out] V - The value of the executed input.
+    /// @param[in/out] V - The value of the executed input. Must be
+    ///       initialized to point to the return value's location if the 
+    ///       expression result is an aggregate.
     ///
     ///\returns Whether the operation was fully successful.
     ///
@@ -392,7 +414,6 @@ namespace cling {
     ///
     bool loadFile(const std::string& filename, bool allowSharedLib = true);
 
-#ifndef _WIN32
     ///\brief Lookup a type by name, starting from the global
     /// namespace.
     ///
@@ -421,7 +442,6 @@ namespace cling {
     const clang::FunctionDecl* lookupFunctionArgs(const clang::Decl* scopeDecl,
                                             const std::string& funcName,
                                             const std::string& funcArgs);
-#endif
 
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled() { return m_DynamicLookupEnabled; }
@@ -434,7 +454,6 @@ namespace cling {
     clang::Parser* getParser() const;
 
     llvm::Module* getModule() const;
-    void resetUnresolved() const;
 
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
 

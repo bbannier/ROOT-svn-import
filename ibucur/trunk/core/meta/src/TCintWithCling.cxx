@@ -313,7 +313,7 @@ class tcling_DataMemberInfo {
 public:
    ~tcling_DataMemberInfo();
    explicit tcling_DataMemberInfo(cling::Interpreter*);
-   explicit tcling_DataMemberInfo(tcling_ClassInfo*);
+   explicit tcling_DataMemberInfo(cling::Interpreter*, tcling_ClassInfo*);
    tcling_DataMemberInfo(const tcling_DataMemberInfo&);
    tcling_DataMemberInfo& operator=(const tcling_DataMemberInfo&);
    G__DataMemberInfo* GetDataMemberInfo() const;
@@ -1992,10 +1992,11 @@ tcling_DataMemberInfo::tcling_DataMemberInfo(cling::Interpreter* interp)
    InternalNextValidMember();
 }
 
-tcling_DataMemberInfo::tcling_DataMemberInfo(tcling_ClassInfo* tcling_class_info)
+tcling_DataMemberInfo::tcling_DataMemberInfo(cling::Interpreter* interp,
+                                             tcling_ClassInfo* tcling_class_info)
    : fDataMemberInfo(0)
    , fClassInfo(0)
-   , fInterp(0)
+   , fInterp(interp)
    , fTClingClassInfo(0)
    , fFirstTime(true)
 {
@@ -2010,7 +2011,6 @@ tcling_DataMemberInfo::tcling_DataMemberInfo(tcling_ClassInfo* tcling_class_info
    }
    fDataMemberInfo = new G__DataMemberInfo(*tcling_class_info->GetClassInfo());
    fClassInfo = new G__ClassInfo(*tcling_class_info->GetClassInfo());
-   fInterp = tcling_class_info->GetInterpreter();
    fTClingClassInfo = new tcling_ClassInfo(*tcling_class_info);
    fIter = llvm::dyn_cast<clang::DeclContext>(tcling_class_info->GetDecl())->
            decls_begin();
@@ -3313,8 +3313,8 @@ void tcling_CallFunc::SetFunc(tcling_MethodInfo* info) const
 void tcling_CallFunc::SetFuncProto(tcling_ClassInfo* info, const char* method, const char* proto, long* offset) const
 {
    fCallFunc->SetFuncProto(info->GetClassInfo(), method, proto, offset);
-   const clang::Decl* decl =
-      fInterp->lookupFunctionProto(info->GetDecl(), method, proto);
+   //const clang::Decl* decl =
+   //   fInterp->lookupFunctionProto(info->GetDecl(), method, proto);
 }
 
 //______________________________________________________________________________
@@ -3647,9 +3647,9 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
 
    // to pull in gPluginManager
 #ifndef R__CINTWITHCLING_MODULES
-   fInterpreter->declare("#include \"TPluginManager.h\"");
-   fInterpreter->declare("#include \"TGenericClassInfo.h\"");
-   fInterpreter->declare("#include \"Rtypes.h\"");
+   fInterpreter->parse("#include \"TPluginManager.h\"");
+   fInterpreter->parse("#include \"TGenericClassInfo.h\"");
+   fInterpreter->parse("#include \"Rtypes.h\"");
 #else
    // Already done through modules
 #endif // R__CINTWITHCLING_MODULES
@@ -3755,63 +3755,69 @@ void TCintWithCling::RegisterModule(const char* modulename, const char** headers
 #endif // ROOTLIBDIR
    gSystem->ExpandPathName(searchPath);
 
+   Bool_t haveModule = kTRUE;
    if (!gSystem->FindFile(searchPath, pcmFileName)) {
       Error("RegisterModule()", "Cannot find dictionary module %s_dict.pcm in %s",
             modulename, searchPath.Data());
-      return;
+      haveModule = kFALSE;
    }
 
    clang::CompilerInstance * CI = fInterpreter->getCI ();
    clang::Preprocessor& PP = CI->getPreprocessor();
    clang::ModuleMap& ModuleMap = PP.getHeaderSearchInfo().getModuleMap();
 
-   TCintWithCling::Info("RegisterModule", "Loading PCM %s", pcmFileName.Data());
-   TString modulename_dict = modulename;
-   modulename_dict += "_dict";
+   std::pair<clang::Module*, bool> modCreation;
+   if (haveModule) {
+      TCintWithCling::Info("RegisterModule", "Loading PCM %s", pcmFileName.Data());
+      TString modulename_dict = modulename;
+      modulename_dict += "_dict";
 
-   std::pair<clang::Module*, bool> modCreation
-      = ModuleMap.findOrCreateModule(modulename_dict.Data(), 0 /*ActiveModule*/,
-                                     false /*Framework*/, false /*Explicit*/);
-   if (!modCreation.second) {
-      Error("RegisterModule()",
-            "Duplicate deficition of dictionary module %s in %s.",
-            /*"\nOriginal module was found in %s.", - if only we could...*/
-            pcmFileName.Data(), searchPath.Data());
-      // Go on, add new headers nonetheless.
+      modCreation
+         = ModuleMap.findOrCreateModule(modulename_dict.Data(), 0 /*ActiveModule*/,
+                                        false /*Framework*/, false /*Explicit*/);
+      if (!modCreation.second) {
+         Error("RegisterModule()",
+               "Duplicate deficition of dictionary module %s in %s.",
+               /*"\nOriginal module was found in %s.", - if only we could...*/
+               pcmFileName.Data(), searchPath.Data());
+         // Go on, add new headers nonetheless.
+      }
    }
 
    clang::HeaderSearch& HdrSearch = PP.getHeaderSearchInfo();
    for (const char** hdr = headers; *hdr; ++hdr) {
-      const clang::DirectoryLookup* CurDir;
-      const clang::FileEntry* hdrFileEntry
-         =  HdrSearch.LookupFile(*hdr, false /*isAngled*/, 0 /*FromDir*/,
-                                 CurDir, 0 /*CurFileEnt*/, 0 /*SearchPath*/,
-                                 0 /*RelativePath*/, 0 /*SuggestedModule*/);
-      if (!hdrFileEntry) {
-         Warning("RegisterModule()",
-                 "Cannot find header file %s included in dictionary module %s"
-                 " in include search path!",
-                 *hdr, modulename);
-         hdrFileEntry = PP.getFileManager().getFile(*hdr, /*OpenFile=*/false,
-                                                    /*CacheFailure=*/false);
-      } else {
-         // Tell HeaderSearch that the header's directory has a module.map
-         llvm::StringRef srHdrDir(hdrFileEntry->getName());
-         srHdrDir = llvm::sys::path::parent_path(srHdrDir);
-         const clang::DirectoryEntry* Dir
-            = PP.getFileManager().getDirectory(srHdrDir);
-         if (Dir) {
+      if (haveModule) {
+         const clang::DirectoryLookup* CurDir;
+         const clang::FileEntry* hdrFileEntry
+            =  HdrSearch.LookupFile(*hdr, false /*isAngled*/, 0 /*FromDir*/,
+                                    CurDir, 0 /*CurFileEnt*/, 0 /*SearchPath*/,
+                                    0 /*RelativePath*/, 0 /*SuggestedModule*/);
+         if (!hdrFileEntry) {
+            Warning("RegisterModule()",
+                    "Cannot find header file %s included in dictionary module %s"
+                    " in include search path!",
+                    *hdr, modulename);
+            hdrFileEntry = PP.getFileManager().getFile(*hdr, /*OpenFile=*/false,
+                                                       /*CacheFailure=*/false);
+         } else {
+            // Tell HeaderSearch that the header's directory has a module.map
+            llvm::StringRef srHdrDir(hdrFileEntry->getName());
+            srHdrDir = llvm::sys::path::parent_path(srHdrDir);
+            const clang::DirectoryEntry* Dir
+               = PP.getFileManager().getDirectory(srHdrDir);
+            if (Dir) {
 #ifdef R__CINTWITHCLING_MODULES
-            HdrSearch.setDirectoryHasModuleMap(Dir);
+               HdrSearch.setDirectoryHasModuleMap(Dir);
 #endif
+            }
          }
-      }
 
 #ifdef R__CINTWITHCLING_MODULES
-      ModuleMap.addHeader(modCreation.first, hdrFileEntry);
-      Info("RegisterModule()", "   #including %s...", *hdr);
+         ModuleMap.addHeader(modCreation.first, hdrFileEntry);
 #endif
-      fInterpreter->declare(TString::Format("#include \"%s\"", *hdr).Data());
+      }
+      Info("RegisterModule()", "   #including %s...", *hdr);
+      fInterpreter->parse(TString::Format("#include \"%s\"", *hdr).Data());
    }   
 }
 
@@ -4757,7 +4763,7 @@ void TCintWithCling::CreateListOfDataMembers(TClass* cl)
       return;
    }
    cl->fData = new TList;
-   tcling_DataMemberInfo t((tcling_ClassInfo*)cl->GetClassInfo());
+   tcling_DataMemberInfo t(fInterpreter, (tcling_ClassInfo*)cl->GetClassInfo());
    while (t.Next()) {
       // if name cannot be obtained no use to put in list
       if (t.IsValid() && t.Name() && strcmp(t.Name(), "G__virtualinfo")) {
@@ -6546,7 +6552,7 @@ void TCintWithCling::DataMemberInfo_Delete(DataMemberInfo_t* dminfo) const
 DataMemberInfo_t* TCintWithCling::DataMemberInfo_Factory(ClassInfo_t* clinfo /*= 0*/) const
 {
    tcling_ClassInfo* tcling_class_info = (tcling_ClassInfo*) clinfo;
-   return (DataMemberInfo_t*) new tcling_DataMemberInfo(tcling_class_info);
+   return (DataMemberInfo_t*) new tcling_DataMemberInfo(fInterpreter, tcling_class_info);
 }
 
 //______________________________________________________________________________
