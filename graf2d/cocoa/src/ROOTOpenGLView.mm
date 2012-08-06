@@ -57,11 +57,10 @@ bool GLViewIsValidDrawable(ROOTOpenGLView *glView)
 //______________________________________________________________________________
 - (id) initWithFrame : (NSRect) frameRect pixelFormat : (NSOpenGLPixelFormat *) format
 {
-   if (self = [super initWithFrame : frameRect]) {
+   if (self = [super initWithFrame : frameRect windowAttributes : 0]) {
       [self setHidden : YES];//Not sure.
       fIsOverlapped = NO;
       fPixelFormat = [format retain];
-      self.fCurrentCursor = kPointer;
    }
 
    return self;
