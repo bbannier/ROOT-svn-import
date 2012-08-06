@@ -22,6 +22,7 @@ int main(int argc, char ** argv)
    //Test case 1: "middle" window has a grab, and
    mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kButtonReleaseMask);
    gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kButtonPressMask | kButtonReleaseMask | kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE);
 
    app.Run();
