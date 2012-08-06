@@ -1244,6 +1244,8 @@ void print_mask_info(ULong_t mask)
    NSMutableDictionary   *fX11Properties;
    QuartzImage           *fBackgroundPixmap;
    
+   X11::PointerGrab fCurrentGrabType;
+   unsigned         fActiveGrabEventMask;
 }
 
 @synthesize fClipMaskIsValid;
@@ -1262,9 +1264,11 @@ void print_mask_info(ULong_t mask)
 /////////////////////
 @synthesize fParentView;
 @synthesize fLevel;
-@synthesize fGrabButton;
-@synthesize fGrabButtonEventMask;
-@synthesize fGrabKeyModifiers;
+
+@synthesize fPassiveGrabButton;
+@synthesize fPassiveGrabEventMask;
+@synthesize fPassiveGrabKeyModifiers;
+@synthesize fActiveGrabEventMask;
 @synthesize fOwnerEvents;
 @synthesize fSnapshotDraw;
 @synthesize fCurrentCursor;
@@ -1283,8 +1287,8 @@ void print_mask_info(ULong_t mask)
       fLevel = 0;
       
       //Passive grab parameters.
-      fGrabButton = -1;//0 is kAnyButton.
-      fGrabButtonEventMask = 0;
+      fPassiveGrabButton = -1;//0 is kAnyButton.
+      fPassiveGrabEventMask = 0;
       fOwnerEvents = NO;
       
       fPassiveKeyGrabs = [[NSMutableArray alloc] init];
@@ -1299,6 +1303,9 @@ void print_mask_info(ULong_t mask)
          
       fCurrentCursor = kPointer;
       fX11Properties = [[NSMutableDictionary alloc] init];
+      
+      fCurrentGrabType = X11::kPGNoGrab;
+      fActiveGrabEventMask = 0;
    }
    
    return self;
@@ -1776,6 +1783,44 @@ void print_mask_info(ULong_t mask)
 - (QuartzWindow *) fQuartzWindow
 {
    return (QuartzWindow *)[self window];
+}
+
+//______________________________________________________________________________
+- (void) activatePassiveGrab
+{
+   fCurrentGrabType = X11::kPGPassiveGrab;
+}
+
+//______________________________________________________________________________
+- (void) activateImplicitGrab
+{
+   fCurrentGrabType = X11::kPGImplicitGrab;
+}
+
+//______________________________________________________________________________
+- (void) activateGrab : (unsigned) eventMask
+{
+   fCurrentGrabType = X11::kPGActiveGrab;
+   fActiveGrabEventMask = eventMask;
+}
+
+//______________________________________________________________________________
+- (void) cancelGrab
+{
+   fCurrentGrabType = X11::kPGNoGrab;
+   fActiveGrabEventMask = 0;
+}
+
+//______________________________________________________________________________
+- (BOOL) acceptsCrossingEvents : (unsigned) eventMask
+{
+   bool accepts = fEventMask & eventMask;
+   if (fCurrentGrabType == X11::kPGPassiveGrab)
+      accepts = accepts || (fPassiveGrabEventMask & eventMask);
+   if (fCurrentGrabType == X11::kPGActiveGrab)
+      accepts = accepts || (fActiveGrabEventMask & eventMask);
+
+   return accepts;
 }
 
 //______________________________________________________________________________

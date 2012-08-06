@@ -1271,7 +1271,8 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
    fPointerGrab = kPGActiveGrab;
    fGrabEventMask = eventMask;
    fOwnerEvents = ownerEvents;
-   
+   [fButtonGrabView activateGrab : eventMask];
+
    //Generate crossing event?
    if (grabView != fViewUnderPointer) {
       NSPoint location = {};
@@ -1300,6 +1301,7 @@ void EventTranslator::CancelPointerGrab()
    //like we jump from the grab view to a pointer view.
    
    fViewUnderPointer = fButtonGrabView;
+   [fButtonGrabView cancelGrab];
 
    //
    fButtonGrabView = nil;
@@ -1550,8 +1552,11 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
       }
    }
 
-   if (fButtonGrabView && fButtonGrabView.fGrabButton != kAnyButton && fButtonGrabView.fGrabButton != btn)
-      return;//Do not cancel the grab - other mouse button was released (funny thing about kAnyButton).
+
+   //TODO: check which button initiated implicit grab, if it's released???
+
+//   if (fButtonGrabView && fButtonGrabView.fGrabButton != kAnyButton && fButtonGrabView.fGrabButton != btn)
+//      return;//Do not cancel the grab - other mouse button was released (funny thing about kAnyButton).
    
    //When grab is cancelled, enter/leave notify events are sent like a cursor
    //jumped from the grab view to another view, wich is under cursor now.
@@ -1569,6 +1574,7 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
       //We generate sequence of leave/enter notify events (if any) as if we jumped from the grab view to the pointer view.
       fViewUnderPointer = fButtonGrabView;
       GenerateCrossingEvent((NSView<X11Window> *)candidateView, theEvent, kNotifyUngrab);
+      [fButtonGrabView cancelGrab];
       fButtonGrabView = nil;
       fPointerGrab = kPGNoGrab;
       fGrabEventMask = 0;
@@ -1689,9 +1695,9 @@ void EventTranslator::FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *t
          buttonPressView = view;
 
       //Bottom-first view with passive grab.
-      if (view.fGrabButton == kAnyButton || view.fGrabButton == btn) {
+      if (view.fPassiveGrabButton == kAnyButton || view.fPassiveGrabButton == btn) {
          //Check modifiers.
-         if (view.fGrabKeyModifiers == kAnyModifier || (view.fGrabKeyModifiers & keyModifiers))
+         if (view.fPassiveGrabKeyModifiers == kAnyModifier || (view.fPassiveGrabKeyModifiers & keyModifiers))
             grabView = view;
       }
    }
@@ -1699,14 +1705,16 @@ void EventTranslator::FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *t
    if (grabView) {
       fButtonGrabView = grabView;
       fPointerGrab = kPGPassiveGrab;
-      fGrabEventMask = grabView.fGrabButtonEventMask;
+      fGrabEventMask = grabView.fPassiveGrabEventMask;
       fOwnerEvents = grabView.fOwnerEvents;
+      [grabView activatePassiveGrab];
    } else if (buttonPressView) {
       //This is implicit grab.
       fButtonGrabView = buttonPressView;
       fPointerGrab = kPGImplicitGrab;
       fGrabEventMask = buttonPressView.fEventMask;
       fOwnerEvents = false;
+      [grabView activateImplicitGrab];
    } else {
       //Implicit grab with 'root' window?
       fButtonGrabView = nil;
