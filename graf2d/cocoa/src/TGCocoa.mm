@@ -2325,15 +2325,15 @@ void TGCocoa::GrabButton(Window_t wid, EMouseButton button, UInt_t keyModifiers,
    
    if (grab) {
       widget.fOwnerEvents = YES;   //This is how TGX11 works.
-      widget.fGrabButton = button;
-      widget.fGrabButtonEventMask = eventMask;
-      widget.fGrabKeyModifiers = keyModifiers;
+      widget.fPassiveGrabButton = button;
+      widget.fPassiveGrabEventMask = eventMask;
+      widget.fPassiveGrabKeyModifiers = keyModifiers;
       //Set the cursor.
    } else {
       widget.fOwnerEvents = NO;
-      widget.fGrabButton = -1;//0 is kAnyButton.
-      widget.fGrabButtonEventMask = 0;
-      widget.fGrabKeyModifiers = 0;
+      widget.fPassiveGrabButton = -1;//0 is kAnyButton.
+      widget.fPassiveGrabEventMask = 0;
+      widget.fPassiveGrabKeyModifiers = 0;
    }
 }
 

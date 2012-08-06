@@ -104,10 +104,20 @@
 //ROOT's GUI does not use several passive button
 //grabs on the same window, so no containers,
 //just one grab.
-@property (nonatomic, assign) int      fGrabButton;
-@property (nonatomic, assign) unsigned fGrabButtonEventMask;
-@property (nonatomic, assign) unsigned fGrabKeyModifiers;
+@property (nonatomic, assign) int      fPassiveGrabButton;
+@property (nonatomic, assign) unsigned fPassiveGrabEventMask;
+@property (nonatomic, assign) unsigned fPassiveGrabKeyModifiers;
+
+@property (nonatomic, assign) unsigned fActiveGrabEventMask;
+
 @property (nonatomic, assign) BOOL     fOwnerEvents;
+
+- (void) activatePassiveGrab;
+- (void) activateImplicitGrab;
+- (void) activateGrab : (unsigned) eventMask;
+- (void) cancelGrab;
+
+- (BOOL) acceptsCrossingEvents : (unsigned) eventMask;
 
 //Nested views ("windows").
 //Child can be any view, inherited

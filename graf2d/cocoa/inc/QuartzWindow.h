@@ -182,10 +182,22 @@
 @property (nonatomic, readonly) NSView<X11Window> *fContentView;
 @property (nonatomic, readonly) QuartzWindow      *fQuartzWindow;
 
-@property (nonatomic, assign) int      fGrabButton;
-@property (nonatomic, assign) unsigned fGrabButtonEventMask;
-@property (nonatomic, assign) unsigned fGrabKeyModifiers;
+//
+
+@property (nonatomic, assign) int      fPassiveGrabButton;
+@property (nonatomic, assign) unsigned fPassiveGrabEventMask;
+@property (nonatomic, assign) unsigned fPassiveGrabKeyModifiers;
+
 @property (nonatomic, assign) BOOL     fOwnerEvents;
+
+- (void) activatePassiveGrab;
+- (void) activateImplicitGrab;
+- (void) activateGrab : (unsigned) eventMask;
+- (void) cancelGrab;
+
+- (BOOL) acceptsCrossingEvents;
+
+//
 
 //Children subviews.
 - (void) addChild : (NSView<X11Window> *)child;
