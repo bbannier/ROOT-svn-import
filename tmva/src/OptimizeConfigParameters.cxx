@@ -201,7 +201,9 @@ void TMVA::OptimizeConfigParameters::optimizeScan()
       GetMethod()->BaseDir()->cd();
       GetMethod()->GetTransformationHandler().CalcTransformations(
                                                                   GetMethod()->Data()->GetEventCollection());
+      Event::fIsTraining = kTRUE;
       GetMethod()->Train();
+      Event::fIsTraining = kFALSE;
       currentFOM = GetFOM(); 
       Log() << kINFO << "FOM was found : " << currentFOM << "; current best is " << bestFOM << Endl;
       
@@ -296,7 +298,6 @@ Double_t TMVA::OptimizeConfigParameters::EstimatorFunction( std::vector<Double_t
       std::map<TString, TMVA::Interval>::iterator it;
       for (it=fTuneParameters.begin(); it!=fTuneParameters.end(); it++){
          currentParameters[it->first] = pars[icount++];
-         Log() << kINFO << it->first << " = " << currentParameters[it->first]  << Endl;
       }
       GetMethod()->Reset();
       GetMethod()->SetTuneParameters(currentParameters);
@@ -304,8 +305,10 @@ Double_t TMVA::OptimizeConfigParameters::EstimatorFunction( std::vector<Double_t
       
       GetMethod()->GetTransformationHandler().CalcTransformations(
                                                                   GetMethod()->Data()->GetEventCollection());
-      
+      Event::fIsTraining = kTRUE;
       GetMethod()->Train();
+      Event::fIsTraining = kFALSE;
+
       
       Double_t currentFOM = GetFOM(); 
       
@@ -363,7 +366,7 @@ void TMVA::OptimizeConfigParameters::GetMVADists()
    fMvaSigFineBin = new TH1D("fMvaSigFineBin","",100000,-1.5,1.5);
    fMvaBkgFineBin = new TH1D("fMvaBkgFineBin","",100000,-1.5,1.5);
 
-   const std::vector<Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
+   const std::vector<const Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
    
    UInt_t signalClassNr = fMethod->DataInfo().GetClassInfo("Signal")->GetNumber();
 

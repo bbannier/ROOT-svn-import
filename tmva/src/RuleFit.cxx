@@ -99,8 +99,17 @@ void TMVA::RuleFit::Initialize(  const MethodBase *rfbase )
    // initialize the parameters of the RuleFit method and make rules
    InitPtrs(rfbase);
 
-   if (fMethodRuleFit) 
-      SetTrainingEvents( fMethodRuleFit->GetTrainingEvents() );
+   if (fMethodRuleFit){ 
+      fMethodRuleFit->Data()->SetCurrentType(Types::kTraining);
+      UInt_t nevents = fMethodRuleFit->Data()->GetNTrainingEvents();
+      std::vector<const TMVA::Event*> tmp;
+      for (Long64_t ievt=0; ievt<nevents; ievt++) {
+        const Event *event = fMethodRuleFit->GetEvent(ievt);
+        tmp.push_back(event);
+      }      
+      SetTrainingEvents( tmp );
+   }
+     //     SetTrainingEvents( fMethodRuleFit->GetTrainingEvents() );
 
    InitNEveEff();
 
@@ -138,7 +147,7 @@ void TMVA::RuleFit::Copy( const RuleFit& other )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::RuleFit::CalcWeightSum( const std::vector<Event *> *events, UInt_t neve )
+Double_t TMVA::RuleFit::CalcWeightSum( const std::vector<const Event *> *events, UInt_t neve )
 {
    // calculate the sum of weights
    if (events==0) return 0.0;
@@ -168,7 +177,7 @@ void TMVA::RuleFit::BuildTree( DecisionTree *dt )
    if (fMethodRuleFit==0) {
       Log() << kFATAL << "RuleFit::BuildTree() - Attempting to build a tree NOT from a MethodRuleFit" << Endl;
    }
-   std::vector<Event *> evevec;
+   std::vector<const Event *> evevec;
    for (UInt_t ie=0; ie<fNTreeSample; ie++) {
       evevec.push_back(fTrainingEventsRndm[ie]);
    }
@@ -217,13 +226,14 @@ void TMVA::RuleFit::MakeForest()
       }
       // fsig = Double_t(nsig)/Double_t(nsig+nbkg);
       // do not implement the above in this release...just set it to default
+
       DecisionTree *dt;
       Bool_t tryAgain=kTRUE;
       Int_t ntries=0;
       const Int_t ntriesMax=10;
       Double_t frnd;
       while (tryAgain) {
-         frnd = rndGen.Uniform( fMethodRuleFit->GetMinFracNEve(), 0.5*fMethodRuleFit->GetMaxFracNEve() );
+         frnd = 100*rndGen.Uniform( fMethodRuleFit->GetMinFracNEve(), 0.5*fMethodRuleFit->GetMaxFracNEve() );
          Int_t     iclass = 0; // event class being treated as signal during training
          Bool_t    useRandomisedTree = !useBoost;  
          dt = new DecisionTree( fMethodRuleFit->GetSeparationBase(), frnd, fMethodRuleFit->GetNCuts(), iclass, useRandomisedTree);
@@ -270,8 +280,8 @@ void TMVA::RuleFit::SaveEventWeights()
 {
    // save event weights - must be done before making the forest
    fEventWeights.clear();
-   for (std::vector<Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
-      Double_t w = (*e)->GetWeight();
+   for (std::vector<const Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
+      Double_t w = (*e)->GetBoostWeight();
       fEventWeights.push_back(w);
    }
 }
@@ -285,8 +295,8 @@ void TMVA::RuleFit::RestoreEventWeights()
       Log() << kERROR << "RuleFit::RestoreEventWeights() called without having called SaveEventWeights() before!" << Endl;
       return;
    }
-   for (std::vector<Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
-      (*e)->SetWeight(fEventWeights[ie]);
+   for (std::vector<const Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
+      (*e)->SetBoostWeight(fEventWeights[ie]);
       ie++;
    }
 }
@@ -302,8 +312,8 @@ void TMVA::RuleFit::Boost( DecisionTree *dt )
    //
    std::vector<Char_t> correctSelected; // <--- boolean stored
    //
-   for (std::vector<Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
-      Bool_t isSignalType = (dt->CheckEvent(*(*e),kTRUE) > 0.5 );
+   for (std::vector<const Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
+      Bool_t isSignalType = (dt->CheckEvent(*e,kTRUE) > 0.5 );
       Double_t w = (*e)->GetWeight();
       sumw += w;
       // 
@@ -324,16 +334,16 @@ void TMVA::RuleFit::Boost( DecisionTree *dt )
    Double_t newSumw=0.0;
    UInt_t ie=0;
    // set new weight to missclassified events
-   for (std::vector<Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
+   for (std::vector<const Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
       if (!correctSelected[ie])
-         (*e)->SetWeight( (*e)->GetWeight() * boostWeight);
+         (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostWeight);
       newSumw+=(*e)->GetWeight();    
       ie++;
    }
    // reweight all events
    Double_t scale = sumw/newSumw;
-   for (std::vector<Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
-      (*e)->SetWeight( (*e)->GetWeight() * scale);
+   for (std::vector<const Event*>::iterator e=fTrainingEvents.begin(); e!=fTrainingEvents.end(); e++) {
+      (*e)->SetBoostWeight( (*e)->GetBoostWeight() * scale);
    }
    Log() << kDEBUG << "boostWeight = " << boostWeight << "    scale = " << scale << Endl;
 }
@@ -392,7 +402,7 @@ Double_t TMVA::RuleFit::EvalEvent( const Event& e )
 }
 
 //_______________________________________________________________________
-void TMVA::RuleFit::SetTrainingEvents( const std::vector<Event *>& el )
+void TMVA::RuleFit::SetTrainingEvents( const std::vector<const Event *>& el )
 {
    // set the training events randomly
    if (fMethodRuleFit==0) Log() << kFATAL << "RuleFit::SetTrainingEvents - MethodRuleFit not initialized" << Endl;
@@ -403,8 +413,8 @@ void TMVA::RuleFit::SetTrainingEvents( const std::vector<Event *>& el )
    fTrainingEvents.clear();
    fTrainingEventsRndm.clear();
    for (UInt_t i=0; i<neve; i++) {
-      fTrainingEvents.push_back(static_cast< Event *>(el[i]));
-      fTrainingEventsRndm.push_back(static_cast< Event *>(el[i]));
+      fTrainingEvents.push_back(static_cast< const Event *>(el[i]));
+      fTrainingEventsRndm.push_back(static_cast< const Event *>(el[i]));
    }
 
    // Re-shuffle the vector, ie, recreate it in a random order

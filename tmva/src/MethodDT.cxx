@@ -264,16 +264,16 @@ void TMVA::MethodDT::ProcessOptions()
 
    if (this->Data()->HasNegativeEventWeights()){
       Log() << kINFO << " You are using a Monte Carlo that has also negative weights. "
-            << "That should in principle be fine as long as on average you end up with "
-            << "something positive. For this you have to make sure that the minimal number "
+              << "That should in principle be fine as long as on average you end up with "
+              << "something positive. For this you have to make sure that the minimal number "
             << "of (un-weighted) events demanded for a tree node (currently you use: MinNodeSize="
             <<fMinNodeSizeS
             <<", (or the deprecated equivalent nEventsMin) you can set this via the " 
             <<"MethodDT option string when booking the "
-            << "classifier) is large enough to allow for reasonable averaging!!! "
+              << "classifier) is large enough to allow for reasonable averaging!!! "
             << " If this does not help.. maybe you want to try the option: IgnoreNegWeightsInTraining  "
-            << "which ignores events with negative weight in the training. " << Endl
-            << Endl << "Note: You'll get a WARNING message during the training if that should ever happen" << Endl;
+              << "which ignores events with negative weight in the training. " << Endl
+              << Endl << "Note: You'll get a WARNING message during the training if that should ever happen" << Endl;
    }
    
    if (fRandomisedTrees){
@@ -281,7 +281,6 @@ void TMVA::MethodDT::ProcessOptions()
       fPruneMethod = DecisionTree::kNoPruning;
       //      fBoostType   = "Bagging";
    }
-
 
    if (fMinNodeEvents > 0){
       fMinNodeSize = fMinNodeEvents / Data()->GetNTrainingEvents() * 100;
@@ -316,14 +315,18 @@ void TMVA::MethodDT::SetMinNodeSize(TString sizeInPercent){
    }
 }
 
+
+
 //_______________________________________________________________________
 void TMVA::MethodDT::Init( void )
 {
    // common initialisation with defaults for the DT-Method
-   fMinNodeEvents  = TMath::Max( 20, int( Data()->GetNTrainingEvents() / (10*GetNvar()*GetNvar())) );
+   fMinNodeEvents  = -1;
+   fMinNodeSize    = 5;
+   fMinNodeSizeS   = "5%";
    fNCuts          = 20; 
    fPruneMethod    = DecisionTree::kNoPruning;
-   fPruneStrength  = 5;     // means automatic determination of the prune strength using a validation sample  
+   fPruneStrength  = 5;     // -1 means automatic determination of the prune strength using a validation sample  
    fDeltaPruneStrength=0.1;
    fRandomisedTrees= kFALSE;
    fUseNvars       = GetNvar();
@@ -355,8 +358,17 @@ void TMVA::MethodDT::Train( void )
                                 << " will be all the same and that is not good " << Endl;
    fTree->SetAnalysisType( GetAnalysisType() );
 
-   fTree->BuildTree(GetEventCollection(Types::kTraining));
-   TMVA::DecisionTreeNode::fgIsTraining=false;
+   //fTree->BuildTree(GetEventCollection(Types::kTraining));
+   Data()->SetCurrentType(Types::kTraining);
+   UInt_t nevents = Data()->GetNTrainingEvents();
+   std::vector<const TMVA::Event*> tmp;
+   for (Long64_t ievt=0; ievt<nevents; ievt++) {
+     const Event *event = GetEvent(ievt);
+     tmp.push_back(event);
+   }
+   fTree->BuildTree(tmp);
+
+    TMVA::DecisionTreeNode::fgIsTraining=false;
 }
 
 //_______________________________________________________________________
@@ -446,7 +458,7 @@ Double_t TMVA::MethodDT::PruneTree(const Int_t /* methodIndex */ )
       Double_t delta = fDeltaPruneStrength;
       
       DecisionTree*  dcopy;
-      vector<Double_t> q;
+      std::vector<Double_t> q;
       multimap<Double_t,Double_t> quality;
       Int_t nnodes=fTree->GetNNodes();
 
@@ -461,7 +473,7 @@ Double_t TMVA::MethodDT::PruneTree(const Int_t /* methodIndex */ )
          dcopy->SetPruneStrength(alpha+=delta);
          dcopy->PruneTree();
          q.push_back(TestTreeQuality(dcopy));
-         quality.insert(pair<const Double_t,Double_t>(q.back(),alpha));
+         quality.insert(std::pair<const Double_t,Double_t>(q.back(),alpha));
          nnodes=dcopy->GetNNodes();
          if (previousNnodes == nnodes) troubleCount++;
          else { 
@@ -530,8 +542,8 @@ Double_t TMVA::MethodDT::TestTreeQuality( DecisionTree *dt )
    Double_t SumCorrect=0,SumWrong=0;
    for (Long64_t ievt=0; ievt<Data()->GetNEvents(); ievt++)
       {
-         Event * ev = Data()->GetEvent(ievt);
-         if ((dt->CheckEvent(*ev) > dt->GetNodePurityLimit() ) == DataInfo().IsSignal(ev)) SumCorrect+=ev->GetWeight();
+         const Event * ev = Data()->GetEvent(ievt);
+         if ((dt->CheckEvent(ev) > dt->GetNodePurityLimit() ) == DataInfo().IsSignal(ev)) SumCorrect+=ev->GetWeight();
          else SumWrong+=ev->GetWeight();
       }
    Data()->SetCurrentType(Types::kTraining);
@@ -555,7 +567,7 @@ void TMVA::MethodDT::ReadWeightsFromXML( void* wghtnode)
 }
 
 //_______________________________________________________________________
-void  TMVA::MethodDT::ReadWeightsFromStream( istream& istr )
+void  TMVA::MethodDT::ReadWeightsFromStream( std::istream& istr )
 {
    delete fTree;
    fTree = new DecisionTree();
@@ -570,7 +582,7 @@ Double_t TMVA::MethodDT::GetMvaValue( Double_t* err, Double_t* errUpper )
    // cannot determine error
    NoErrorCalc(err, errUpper);
 
-   return fTree->CheckEvent(*GetEvent(),fUseYesNoLeaf);
+   return fTree->CheckEvent(GetEvent(),fUseYesNoLeaf);
 }
 
 //_______________________________________________________________________

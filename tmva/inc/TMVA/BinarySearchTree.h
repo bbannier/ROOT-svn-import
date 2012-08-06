@@ -111,11 +111,11 @@ namespace TMVA {
     
       // Create the search tree from the event collection 
       // using ONLY the variables specified in "theVars"
-      Double_t Fill( const std::vector<TMVA::Event*>& events, const std::vector<Int_t>& theVars, Int_t theType = -1 );
+      Double_t Fill( const std::vector<const TMVA::Event*>& events, const std::vector<Int_t>& theVars, Int_t theType = -1 );
     
       // create the search tree from the events in a TTree
       // using ALL the variables specified included in the Event
-      Double_t Fill( const std::vector<TMVA::Event*>& events, Int_t theType = -1 );
+      Double_t Fill( const std::vector<const TMVA::Event*>& events, Int_t theType = -1 );
 
       void NormalizeTree ();      
       

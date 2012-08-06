@@ -77,7 +77,7 @@ namespace TMVA {
 
    public:
 
-      typedef std::vector<TMVA::Event*> EventList;
+      typedef std::vector<const TMVA::Event*> EventList;
 
       // the constructur needed for the "reading" of the decision tree from weight files
       DecisionTree( void );
@@ -122,12 +122,12 @@ namespace TMVA {
 
       // fill the existing the decision tree structure by filling event
       // in from the top node and see where they happen to end up
-      void FillEvent( TMVA::Event & event,
+      void FillEvent( const TMVA::Event & event,
                       TMVA::DecisionTreeNode *node  );
     
       // returns: 1 = Signal (right),  -1 = Bkg (left)
 
-      Double_t CheckEvent( const TMVA::Event & , Bool_t UseYesNoLeaf = kFALSE ) const;     
+      Double_t CheckEvent( const TMVA::Event * , Bool_t UseYesNoLeaf = kFALSE ) const;     
       TMVA::DecisionTreeNode* GetEventNode(const TMVA::Event & e) const;
 
       // return the individual relative variable importance 
@@ -157,7 +157,7 @@ namespace TMVA {
       Double_t TestPrunedTreeQuality( const DecisionTreeNode* dt = NULL, Int_t mode=0 ) const;
     
       // pass a single validation event throught a pruned decision tree
-      void CheckEventWithPrunedTree( const TMVA::Event& ) const;
+      void CheckEventWithPrunedTree( const TMVA::Event* ) const;
 
       // calculate the normalization factor for a pruning validation sample
       Double_t GetSumWeights( const EventList* validationSample ) const;
