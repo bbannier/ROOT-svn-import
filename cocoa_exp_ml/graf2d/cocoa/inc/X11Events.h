@@ -65,7 +65,7 @@ public:
    void GenerateDestroyNotify(unsigned winID);
    void GenerateExposeEvent(NSView<X11Window> *view, const NSRect &exposedRect);
 
-   void GenerateCrossingEvent(NSView<X11Window> *viewUnderPointer, NSEvent *theEvent);
+   void GenerateCrossingEvent(NSEvent *theEvent);
    void GeneratePointerMotionEvent(NSView<X11Window> *eventView, NSEvent *theEvent);
    
    //TODO: instead of passing EMouseButton, use info from NSEvent???
@@ -94,9 +94,10 @@ public:
 private:
 
    //Used both by grab and non-grab case.
+   void GenerateCrossingEventNoGrab(NSEvent *theEvent);
+   void GenerateCrossingEventActiveGrab(NSEvent *theEvent);
+   //Aux. function. TODO: make a non class-member standalone function.
    void GenerateCrossingEvents(NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail);
-   void GenerateCrossingEvent(NSView<X11Window> *viewUnderPointer, NSEvent *theEvent, EXMagic detail);
-   void GenerateCrossingEventActiveGrab(NSView<X11Window> *eventView, NSEvent *theEvent);
 
    void GeneratePointerMotionEventNoGrab(NSView<X11Window> *view, NSEvent *theEvent);
    void GeneratePointerMotionEventActiveGrab(NSView<X11Window> *eventView, NSEvent *theEvent);
@@ -113,7 +114,7 @@ private:
    void GenerateKeyEventActiveGrab(NSEvent *theEvent);//Both press/release events.
    void GenerateKeyEventForView(NSView<X11Window> *view, NSEvent *theEvent);//Both press/release events.
 
-   void FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *theEvent, EMouseButton btn);
+   void FindButtonGrab(NSView<X11Window> *fromView, NSEvent *theEvent, EMouseButton btn);
    void FindKeyGrabView(NSView<X11Window> *fromView, NSEvent *theEvent);
    
    Ancestry FindRelation(NSView<X11Window> *view1, NSView<X11Window> *view2, NSView<X11Window> **lca);

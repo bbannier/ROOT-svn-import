@@ -459,7 +459,7 @@ Ancestry FindLowestCommonAncestor(NSView<X11Window> *view1, std::vector<NSView<X
    for (unsigned i = 0, j = 0; i < view1.fLevel && j < view2.fLevel && branch1[i] == branch2[j]; ++i, ++j)
       ancestor = branch1[i];
 
-   if (ancestor) {
+   if (ancestor) {      
       *lca = ancestor;
       return kAHaveNonRootAncestor;
    }
@@ -783,7 +783,7 @@ void SendEnterEventRange(EventQueue_t &queue, NSView<X11Window> *from, NSView<X1
    assert(theEvent != nil && "SendEnterEventRange, event parameter is nil");
    
    while (from != to) {
-      if (from.fEventMask & kEnterWindowMask)
+      if ([from acceptsCrossingEvents : kEnterWindowMask])
          SendEnterEvent(queue, from, theEvent, mode);
       from = from.fParentView;
    }
@@ -798,7 +798,7 @@ void SendEnterEventClosedRange(EventQueue_t &queue, NSView<X11Window> *from, NSV
    assert(theEvent != nil && "SendEnterEventClosedRange, event parameter is nil");
    
    SendEnterEventRange(queue, from, to, theEvent, mode);
-   if (to.fEventMask & kEnterWindowMask)
+   if ([to acceptsCrossingEvents : kEnterWindowMask])
       SendEnterEvent(queue, to, theEvent, mode);
 }
 
@@ -811,7 +811,7 @@ void SendLeaveEventRange(EventQueue_t &queue, NSView<X11Window> *from, NSView<X1
    assert(theEvent != nil && "SendLeaveEventRange, event parameter is nil");
 
    while (from != to) {
-      if (from.fEventMask & kLeaveWindowMask)
+      if ([from acceptsCrossingEvents : kLeaveWindowMask])
          SendLeaveEvent(queue, from, theEvent, mode);
       from = from.fParentView;
    }
@@ -826,7 +826,7 @@ void SendLeaveEventClosedRange(EventQueue_t &queue, NSView<X11Window> *from, NSV
    assert(theEvent != nil && "SendLeaveEventClosedRange, event parameter is nil");
 
    SendLeaveEventRange(queue, from, to, theEvent, mode);
-   if (to.fEventMask & kLeaveWindowMask)
+   if ([to acceptsCrossingEvents : kLeaveWindowMask])
       SendLeaveEvent(queue, to, theEvent, mode);
 }
 
@@ -847,12 +847,12 @@ void GenerateCrossingEventChildToParent(EventQueue_t &queue, NSView<X11Window> *
    assert(theEvent != nil && "GenerateCrossingEventChildToParent, event parameter is nil");
    assert(child.fParentView != nil && "GenerateCrossingEventChildToParent, child parameter must have QuartzView* parent");
    
-   if (child.fEventMask & kLeaveWindowMask)
+   if ([child acceptsCrossingEvents : kLeaveWindowMask])
       SendLeaveEvent(queue, child, theEvent, detail);
 
    SendLeaveEventRange(queue, child.fParentView, parent, theEvent, detail);
    
-   if (parent.fEventMask & kEnterWindowMask)
+   if ([parent acceptsCrossingEvents : kEnterWindowMask])
       SendEnterEvent(queue, parent, theEvent, detail);
 }
 
@@ -870,15 +870,15 @@ void GenerateCrossingEventParentToChild(EventQueue_t &queue, NSView<X11Window> *
    assert(child != nil && "GenerateCrossingEventParentToChild, child parameter is nil");
    assert(theEvent != nil && "GenerateCrossingEventParentToChild, event parameter is nil");
    assert(child.fParentView != nil && "GenerateCrossingEventParentToChild, child parameter must have QuartzView* parent");
-   
-   if (parent.fEventMask & kLeaveWindowMask)
+
+   if ([parent acceptsCrossingEvents : kLeaveWindowMask])
       SendLeaveEvent(queue, parent, theEvent, detail);
 
    //I do not know, if the order must be reversed, but if yes - it's already FAR TOO
    //expensive to do (but I'll reuse my 'branch' arrays from  FindLowestAncestor).
    SendEnterEventRange(queue, child.fParentView, parent, theEvent, detail);
-   
-   if (child.fEventMask & kEnterWindowMask)
+
+   if ([child acceptsCrossingEvents : kEnterWindowMask])
       SendEnterEvent(queue, child, theEvent, detail);
 }
 
@@ -896,7 +896,7 @@ void GenerateCrossingEventFromChild1ToChild2(EventQueue_t &queue, NSView<X11Wind
    
    //ROOT does not have NotifyNonlinear/NotifyNonlinearVirtual.
    
-   if (child1.fEventMask & kLeaveWindowMask)
+   if ([child1 acceptsCrossingEvents : kLeaveWindowMask])
       SendLeaveEvent(queue, child1, theEvent, detail);
    
    if (!ancestor) {
@@ -912,7 +912,7 @@ void GenerateCrossingEventFromChild1ToChild2(EventQueue_t &queue, NSView<X11Wind
          SendEnterEventRange(queue, child2.fParentView, ancestor, theEvent, detail);
    }
 
-   if (child2.fEventMask & kEnterWindowMask)
+   if ([child2 acceptsCrossingEvents : kEnterWindowMask])
       SendEnterEvent(queue, child2, theEvent, detail);
 }
 
@@ -986,28 +986,29 @@ void EventTranslator::GenerateExposeEvent(NSView<X11Window> *view, const NSRect 
 }
 
 //______________________________________________________________________________
-void EventTranslator::GenerateCrossingEvent(NSView<X11Window> *view, NSEvent *theEvent)
+void EventTranslator::GenerateCrossingEvent(NSEvent *theEvent)
 {
-   //View parameter can be nil (we exit any window).
+   //View parameter can be nil.
+   //TODO: change interface, it looks like I do not need the 'view' parameter.
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
-   if (fPointerGrabType == kPGNoGrab) {
-      NSView *candidateView = [[[view window] contentView] hitTest : [theEvent locationInWindow]];
-      
-      const bool isROOTView = [candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]];
-      if (candidateView && !isROOTView) {
-         NSLog(@"EventTranslator::GenerateCrossingEvent: error, hit test returned neither a QuartzView nor a ROOTOpenGLView!");
-         candidateView = nil;
-      }
 
-      GenerateCrossingEvent((NSView<X11Window> *)candidateView, theEvent, kNotifyNormal);
-   } else
-      GenerateCrossingEventActiveGrab(view, theEvent);
+   fPointerGrabType == kPGNoGrab ? GenerateCrossingEventNoGrab(theEvent) :
+                                   GenerateCrossingEventActiveGrab(theEvent);
 }
 
 //______________________________________________________________________________
-void EventTranslator::GenerateCrossingEventActiveGrab(NSView<X11Window> *view, NSEvent *theEvent)
+void EventTranslator::GenerateCrossingEventNoGrab(NSEvent *theEvent)
 {
-   assert(view != nil && "GenerateCrossingEventActiveGrab, view parameter is nil");
+   assert(theEvent && "GenerateCrossingEventNoGrab, theEvent parameter is nil");
+   
+   NSView<X11Window> * const candidateView = X11::FindViewUnderPointer();
+   GenerateCrossingEvents(fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
+   fViewUnderPointer = candidateView;
+}
+
+//______________________________________________________________________________
+void EventTranslator::GenerateCrossingEventActiveGrab(NSEvent *theEvent)
+{
    assert(theEvent != nil && "GenerateCrossingEventActiveGrab, event parameter is nil");
 
    if (!fButtonGrabView)//implicit grab with 'root'?
@@ -1016,26 +1017,26 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSView<X11Window> *view, N
    NSView<X11Window> *candidateView = X11::FindViewUnderPointer();//The view we entered.
 
    if (fOwnerEvents) {
-      if (candidateView)//This part I do not understand already. Quite tricky for me :)
-         candidateView = Detail::FindViewToPropagateEvent(candidateView, kEnterWindowMask | kLeaveWindowMask, fButtonGrabView, fGrabEventMask);
-      GenerateCrossingEvent(candidateView, theEvent, kNotifyNormal);
+      GenerateCrossingEvents(fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
    } else {
       //Either implicit grab or GrabPointer with owner_events == false,
-      //only grab view can receive enter/leave notify events, if any.
+      //only grab view can receive enter/leave notify events. Only
+      //grab event mask is checked, not view's own event mask.
       if (candidateView != fButtonGrabView) {
          if (fButtonGrabView == fViewUnderPointer) {
             if (fGrabEventMask & kLeaveWindowMask)
                Detail::SendLeaveEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
-            fViewUnderPointer = nil;
          }
       } else {
          if (fButtonGrabView != fViewUnderPointer) {
             if (fGrabEventMask & kEnterWindowMask)
                Detail::SendEnterEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
-            fViewUnderPointer = fButtonGrabView;
+
          }
       }
    }
+   
+   fViewUnderPointer = candidateView;
 }
 
 //______________________________________________________________________________
@@ -1047,6 +1048,10 @@ bool EventTranslator::HasPointerGrab()const
 //______________________________________________________________________________
 void EventTranslator::GenerateCrossingEvents(NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail)
 {
+   //Aux. function. TODO: must become non-member (since does not require any state,
+   //except fBranch1/2 vectors, which must go away as soon as I use method from NSView to
+   //find lca.
+
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
    
    if (fromView == toView) {
@@ -1065,7 +1070,7 @@ void EventTranslator::GenerateCrossingEvents(NSView<X11Window> *fromView, NSView
          Detail::SendEnterEventClosedRange(fEventQueue, toView, (NSView<X11Window> *)[[toView window] contentView], theEvent, detail);
    } else if (!toView) {
       //We exit all views. Order must be OK here.
-      Detail::SendLeaveEventClosedRange(fEventQueue, fViewUnderPointer, (NSView<X11Window> *)[[fViewUnderPointer window] contentView], theEvent, detail);
+      Detail::SendLeaveEventClosedRange(fEventQueue, fromView, (NSView<X11Window> *)[[fromView window] contentView], theEvent, detail);
    } else {
       NSView<X11Window> *ancestor = 0;
       Ancestry rel = FindRelation(fromView, toView, &ancestor);
@@ -1105,71 +1110,6 @@ void EventTranslator::GenerateCrossingEvents(NSView<X11Window> *fromView, NSView
          Detail::GenerateCrossingEventFromChild1ToChild2(fEventQueue, fromView, toView, ancestor, theEvent, detail);
       }   
    }
-}
-
-//______________________________________________________________________________
-void EventTranslator::GenerateCrossingEvent(NSView<X11Window> *view, NSEvent *theEvent, EXMagic detail)
-{
-   assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
-
-   if (view == fViewUnderPointer) {
-      //This can happen: tracking areas for stacked windows call
-      //mouseExited even for overlapped views (so you have a bunch of mouseExited/mouseEntered
-      //for one cursor move). In mouseEntered/mouseExited
-      //I'm looking for the top level view under cursor and try to generate cross event
-      //for this view only.
-      return;
-   }
-
-   if (!fViewUnderPointer) {
-      //We enter window "from the screen" - do not leave any window.
-      //Send EnterNotify event.
-      if (view)//Check, if order is OK.
-         Detail::SendEnterEventClosedRange(fEventQueue, view, (NSView<X11Window> *)[[view window] contentView], theEvent, detail);
-   } else if (!view) {
-      //We exit all views. Order must be OK here.
-      Detail::SendLeaveEventClosedRange(fEventQueue, fViewUnderPointer, (NSView<X11Window> *)[[fViewUnderPointer window] contentView], theEvent, detail);
-   } else {
-      NSView<X11Window> *ancestor = 0;
-      Ancestry rel = FindRelation(fViewUnderPointer, view, &ancestor);
-      if (rel == kAView1IsParent) {
-         //Case 1.
-         //From A to B.
-         //_________________
-         //| A              |
-         //|   |---------|  |
-         //|   |  B      |  |
-         //|   |         |  |
-         //|   |---------|  |
-         //|                |
-         //|________________|
-         Detail::GenerateCrossingEventParentToChild(fEventQueue, fViewUnderPointer, view, theEvent, detail);
-      } else if (rel == kAView2IsParent) {
-         //Case 2.
-         //From A to B.
-         //_________________
-         //| B              |
-         //|   |---------|  |
-         //|   |  A      |  |
-         //|   |         |  |
-         //|   |---------|  |
-         //|                |
-         //|________________|   
-         Detail::GenerateCrossingEventChildToParent(fEventQueue, view, fViewUnderPointer, theEvent, detail);
-      } else {
-         //Case 3.
-         //|--------------------------------|
-         //| C   |------|      |-------|    |
-         //|     | A    |      | B     |    |
-         //|     |______|      |_______|    |
-         //|________________________________|
-         //Ancestor is either some view, or 'root' window.
-         //The fourth case (different screens) is not implemented (and I do not know, if I want to implement it).
-         Detail::GenerateCrossingEventFromChild1ToChild2(fEventQueue, fViewUnderPointer, view, ancestor, theEvent, detail);
-      }
-   }
-   
-   fViewUnderPointer = view;
 }
 
 //______________________________________________________________________________
@@ -1224,7 +1164,7 @@ void EventTranslator::GenerateKeyPressEvent(NSView<X11Window> *view, NSEvent *th
    if (!fKeyGrabView && !fFocusView)
       return;
    
-   !fKeyGrabView ? GenerateKeyPressEventNoGrab(theEvent) : 
+   !fKeyGrabView ? GenerateKeyPressEventNoGrab(theEvent) :
                    GenerateKeyEventActiveGrab(theEvent);
 }
 
@@ -1268,13 +1208,26 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
 {
    assert(grabView != nil && "SetPointerGrab, view parameter is nil");
 
+   if (fButtonGrabView) {
+      //This can happen with X11, does this happen with ROOT's GUI?
+      //Hm, should I send leave notify to the previous grab???
+      //TODO: check this!
+      [fButtonGrabView cancelGrab];
+   }
+
+   //There is no kNoButton, unfortunately (but there is additional check on
+   //grab type).
+   fImplicitGrabButton = kAnyButton;
+   
+   //
    fButtonGrabView = grabView;
    fPointerGrabType = kPGActiveGrab;
    fGrabEventMask = eventMask;
    fOwnerEvents = ownerEvents;
-   [fButtonGrabView activateGrab : eventMask ownerEvents : fOwnerEvents];
 
-   //Generate crossing event?
+   //Generate sequence of crossing events - as if pointer
+   //"jumps" to the grab view.
+
    if (grabView != fViewUnderPointer) {
       NSPoint location = {};
       location.x = grabView.fWidth / 2;
@@ -1288,54 +1241,53 @@ void EventTranslator::SetPointerGrab(NSView<X11Window> *grabView, unsigned event
          return;
       }
 
-      GenerateCrossingEvent(grabView, event.Get(), kNotifyGrab);//Uffffff, done!
+      GenerateCrossingEvents(fViewUnderPointer, grabView, event.Get(), kNotifyGrab);//Uffffff, done!
    }
+
+   //Activate the current grab now.
+   [fButtonGrabView activateGrab : eventMask ownerEvents : fOwnerEvents];
 }
 
 //______________________________________________________________________________
 void EventTranslator::CancelPointerGrab()
 {
-   if (!fButtonGrabView)
-      return;
+   if (fButtonGrabView) {
+      //Cancel grab (active, passive, implicit).
+      [fButtonGrabView cancelGrab];
 
-   //That's a set of fake enter/leave notify events,
-   //like we jump from the grab view to a pointer view.
-   
-   fViewUnderPointer = fButtonGrabView;
-   [fButtonGrabView cancelGrab];
+      //We generate sequence of leave/enter notify events (if any) as if we jumped from the grab view to the pointer view.
+      if (NSView<X11Window> * const candidateView = X11::FindViewUnderPointer()) {
+         const NSPoint location = [[candidateView window] mouseLocationOutsideOfEventStream];
+         const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [candidateView window] location : location ]);
+         
+         if (!event.Get()) {
+            //Hehe, if this happend, is it still possible to log????
+            NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+            return;
+         }
+
+         GenerateCrossingEvents(fButtonGrabView, candidateView, event.Get(), kNotifyUngrab);
+      } else {
+         const NSPoint location = [[fButtonGrabView window] convertScreenToBase : [NSEvent mouseLocation]];
+         const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fButtonGrabView window] location : location ]);
+         if (!event.Get()) {
+            //Hehe, if this happend, is it still possible to log????
+            NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
+            fViewUnderPointer = nil;
+            return;
+         }
+
+         GenerateCrossingEvents(fButtonGrabView, nil, event.Get(), kNotifyUngrab);//Ufff, done!!!
+      }
+   }
 
    //
+
+   fImplicitGrabButton = kAnyButton;
    fButtonGrabView = nil;
    fPointerGrabType = kPGNoGrab;
    fGrabEventMask = 0;
    fOwnerEvents = true;
-   //
-   
-   //Generate crossing event?
-   if (NSView<X11Window> * const candidateView = X11::FindViewUnderPointer()) {
-      const NSPoint location = [[candidateView window] mouseLocationOutsideOfEventStream];
-      const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [candidateView window] location : location ]);
-      
-      if (!event.Get()) {
-         //Hehe, if this happend, is it still possible to log????
-         NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
-         fViewUnderPointer = candidateView;
-         return;
-      }
-
-      GenerateCrossingEvent(candidateView, event.Get(), kNotifyUngrab);
-   } else {
-      const NSPoint location = [[fViewUnderPointer window] convertScreenToBase : [NSEvent mouseLocation]];
-      const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fViewUnderPointer window] location : location ]);
-      if (!event.Get()) {
-         //Hehe, if this happend, is it still possible to log????
-         NSLog(@"EventTranslator::CancelPointerGrab, crossing event initialization failed");
-         fViewUnderPointer = nil;
-         return;
-      }
-
-      GenerateCrossingEvent(nil, event.Get(), kNotifyUngrab);//Ufff, done!!!
-   }
 }
 
 //______________________________________________________________________________
@@ -1468,18 +1420,24 @@ void EventTranslator::GenerateButtonPressEventNoGrab(NSView<X11Window> *view, NS
    assert(view != nil && "GenerateButtonPressEventNoGrab, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonPressEventNoGrab, event parameter is nil");
 
-   FindButtonGrabView(view, theEvent, btn);
-   //And now something badly defined. I tried X11 on mac and on linux, they do different things.
-   //I'll do what was said in a spec and I do not care, if it's right or not, since there
-   //is nothing 'right' in all this crap and mess. Since I'm activating grab,
-   //before I send ButtonPress event, I'll send leave/enter notify events, if this is
-   //required (previously entered view and current view are different).
-   //If nothing was selected, on linux it looks like 'root' window
-   //becomes a grab and all pointer events are discarded until ungrab.
-
-   GenerateCrossingEvent(fButtonGrabView, theEvent, kNotifyGrab);
+   FindButtonGrab(view, theEvent, btn);
    
-   if (fButtonGrabView)
+   fImplicitGrabButton = btn;//This info is useless for any grab type except the implicit one.
+
+   //Now we have to generate a sequence of enter/leave notify events,
+   //like we "jump" from the previous view under the pointer to a grab view.
+
+   GenerateCrossingEvents(fViewUnderPointer, fButtonGrabView, theEvent, kNotifyGrab);
+   
+   //"Activate" a grab now, depending on type.
+   if (fButtonGrabView) {
+      if (fPointerGrabType == kPGPassiveGrab)
+         [fButtonGrabView activatePassiveGrab];
+      else if (fPointerGrabType == kPGImplicitGrab)
+         [fButtonGrabView activateImplicitGrab];
+   }
+
+   if (fButtonGrabView)//Send press event to a grab view (either passive grab or implicit, but it has the required event bitmask).
       Detail::SendButtonPressEvent(fEventQueue, fButtonGrabView, theEvent, btn);
 }
 
@@ -1535,6 +1493,12 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
 
    assert(eventView != nil && "GenerateButtonReleaseEventActiveGrab, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonReleaseEventActiveGrab, event parameter is nil");
+
+   if (!fButtonGrabView) {
+      //Still we have to cancel this grab (it's implicit grab on a 'root' window).
+      CancelPointerGrab();
+      return;
+   }
    
    const Util::NSStrongReference<NSView<X11Window> *> eventViewGuard(eventView);//What if view is deleted in the middle of this function?
 
@@ -1551,34 +1515,16 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
          if (fGrabEventMask & kButtonReleaseMask)
             Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);   
       }
+   } else {
+      CancelPointerGrab();//'root' window had a grab, cancel it now.
    }
 
-
-   //TODO: check which button initiated implicit grab, if it's released???
-   if (fPointerGrabType == kPGImplicitGrab && btn != fImplicitGrabButton)
-      return;
-   
-   //When grab is cancelled, enter/leave notify events are sent like a cursor
-   //jumped from the grab view to another view, wich is under cursor now.
-   if (fPointerGrabType == kPGPassiveGrab || fPointerGrabType == kPGImplicitGrab) {
-      //eventView can be ... a wrong view, since Cocoa has its own grab.
-      //GenerateCrossingEvent(eventView, theEvent, kNotifyUngrab);
-      NSView *candidateView = X11::FindViewUnderPointer();
-      if (candidateView) {
-         if (![candidateView isKindOfClass : [QuartzView class]] || [candidateView isKindOfClass : [ROOTOpenGLView class]]) {
-            NSLog(@"EventTranslator::GenerateButtonReleaseEventActiveGrab: error, hit test returned neither a QuartzView nor a ROOTOpenGLView!");
-            candidateView = nil;
-         }
-      }
-
-      //We generate sequence of leave/enter notify events (if any) as if we jumped from the grab view to the pointer view.
-      fViewUnderPointer = fButtonGrabView;
-      GenerateCrossingEvent((NSView<X11Window> *)candidateView, theEvent, kNotifyUngrab);
-      [fButtonGrabView cancelGrab];
-      fButtonGrabView = nil;
-      fPointerGrabType = kPGNoGrab;
-      fGrabEventMask = 0;
-   }
+   if (fPointerGrabType == kPGPassiveGrab &&
+       (btn == fButtonGrabView.fPassiveGrabButton || fButtonGrabView.fPassiveGrabButton == kAnyButton))
+      CancelPointerGrab();
+      
+   if (fPointerGrabType == kPGImplicitGrab && btn == fImplicitGrabButton)
+      CancelPointerGrab();
 }
 
 //______________________________________________________________________________
@@ -1679,10 +1625,14 @@ void EventTranslator::GenerateKeyEventForView(NSView<X11Window> *view, NSEvent *
 }
 
 //______________________________________________________________________________
-void EventTranslator::FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *theEvent, EMouseButton btn)
+void EventTranslator::FindButtonGrab(NSView<X11Window> *fromView, NSEvent *theEvent, EMouseButton btn)
 {
+   //Find a view to become a grab view - either passive or implicit.
+
    assert(fromView != nil && "FindButtonGrabView, view parameter is nil");
    assert(theEvent != nil && "FindButtonGrabView, event parameter is nil");
+
+   assert(fPointerGrabType == kPGNoGrab && "FindButtonGrabView, grab is already activated");
 
    const unsigned keyModifiers = Detail::GetKeyboardModifiersFromCocoaEvent(theEvent);
    
@@ -1707,15 +1657,12 @@ void EventTranslator::FindButtonGrabView(NSView<X11Window> *fromView, NSEvent *t
       fPointerGrabType = kPGPassiveGrab;
       fGrabEventMask = grabView.fPassiveGrabEventMask;
       fOwnerEvents = grabView.fPassiveGrabOwnerEvents;
-      [grabView activatePassiveGrab];
    } else if (buttonPressView) {
-      //This is implicit grab.
-      fImplicitGrabButton = btn;
+      //This is an implicit grab.
       fButtonGrabView = buttonPressView;
       fPointerGrabType = kPGImplicitGrab;
       fGrabEventMask = buttonPressView.fEventMask;
       fOwnerEvents = false;
-      [grabView activateImplicitGrab];
    } else {
       //Implicit grab with 'root' window?
       fButtonGrabView = nil;

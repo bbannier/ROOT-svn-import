@@ -1819,14 +1819,14 @@ void print_mask_info(ULong_t mask)
 - (BOOL) acceptsCrossingEvents : (unsigned) eventMask
 {
    bool accepts = fEventMask & eventMask;
-   if (fCurrentGrabType == X11::kPGPassiveGrab)
+   if (fCurrentGrabType == X11::kPGPassiveGrab)//In ROOT passive grabs are always owner_events == true.
       accepts = accepts || (fPassiveGrabEventMask & eventMask);
 
    if (fCurrentGrabType == X11::kPGActiveGrab) {
       if (fActiveGrabOwnerEvents)
          accepts = accepts || (fActiveGrabOwnerEvents & eventMask);
       else
-         accepts =fActiveGrabOwnerEvents & eventMask;
+         accepts = fActiveGrabOwnerEvents & eventMask;
    }
 
    return accepts;
@@ -2245,7 +2245,7 @@ void print_mask_info(ULong_t mask)
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "mouseEntered, gVirtualX is null or not of TGCocoa type");
 
-   vx->GetEventTranslator()->GenerateCrossingEvent(self, theEvent);  
+   vx->GetEventTranslator()->GenerateCrossingEvent(theEvent);
 }
 
 //______________________________________________________________________________
@@ -2256,7 +2256,7 @@ void print_mask_info(ULong_t mask)
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "mouseExited, gVirtualX is null or not of TGCocoa type");
 
-   vx->GetEventTranslator()->GenerateCrossingEvent(self, theEvent);
+   vx->GetEventTranslator()->GenerateCrossingEvent(theEvent);
 }
 
 //______________________________________________________________________________
