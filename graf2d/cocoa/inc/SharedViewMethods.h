@@ -190,7 +190,7 @@
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "mouseEntered, gVirtualX is null or not of TGCocoa type");
 
-   vx->GetEventTranslator()->GenerateCrossingEvent(self, theEvent);  
+   vx->GetEventTranslator()->GenerateCrossingEvent(theEvent);  
 }
 
 //______________________________________________________________________________
@@ -201,7 +201,7 @@
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != nullptr && "mouseExited, gVirtualX is null or not of TGCocoa type");
 
-   vx->GetEventTranslator()->GenerateCrossingEvent(self, theEvent);
+   vx->GetEventTranslator()->GenerateCrossingEvent(theEvent);
 }
 
 //______________________________________________________________________________
