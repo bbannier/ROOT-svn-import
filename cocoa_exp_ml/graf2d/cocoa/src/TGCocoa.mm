@@ -810,7 +810,7 @@ void TGCocoa::ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y)
    assert(!fPimpl->IsRootWindow(wid) && "ReparentChild, can not re-parent 'root' window");
    //TODO: does ROOT cares about reparent X11 events?
 
-   const ROOT::MacOSX::Util::AutoreleasePool pool;//TODO: check?
+   const Util::AutoreleasePool pool;//TODO: check?
 
    NSView<X11Window> * const view = fPimpl->GetWindow(wid).fContentView;
    if (fPimpl->IsRootWindow(pid)) {
@@ -827,8 +827,6 @@ void TGCocoa::ReparentChild(Window_t wid, Window_t pid, Int_t x, Int_t y)
       [view setX : x Y : y];
       [newTopLevel addChild : view];
       fPimpl->ReplaceDrawable(wid, newTopLevel);
-
-      [view updateLevel : 0];
 
       [view release];
       [newTopLevel release];
