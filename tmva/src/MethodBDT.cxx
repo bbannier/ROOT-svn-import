@@ -86,7 +86,7 @@
 //
 // Random Trees:
 // Similar to the "Random Forests" from Leo Breiman and Adele Cutler, it
-// uses the bagging algorithm together and bases the determination of the
+// uses the bagging algorithm  and bases the determination of the
 // best node-split during the training on a random subset of variables only
 // which is individually chosen for each split.
 //
