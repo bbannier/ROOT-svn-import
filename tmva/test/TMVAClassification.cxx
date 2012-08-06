@@ -453,7 +453,7 @@ int main( int argc, char** argv )
    // ---- Now you can optimize the setting (configuration) of the MVAs using the set of training events
 
    // factory->OptimizeAllMethods("SigEffAt001","Scan");
-   // factory->OptimizeAllMethods("ROCIntegral","GA");
+   // factory->OptimizeAllMethods("ROCIntegral","FitGA");
 
    // --------------------------------------------------------------------------------------------------
 

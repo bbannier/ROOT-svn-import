@@ -833,7 +833,6 @@ void TMVA::MethodBase::AddClassifierOutput( Types::ETreeType type )
 
    clRes->Resize( nEvents );
    for (Int_t ievt=0; ievt<nEvents; ievt++) {
-     //std::cout << "event = " << ievt<< std::endl;
       Data()->SetCurrentEvent(ievt);
       clRes->SetValue( GetMvaValue(), ievt );
       
@@ -1036,9 +1035,7 @@ void TMVA::MethodBase::TestClassification()
    
    // determine cut orientation
    fCutOrientation = (fMeanS > fMeanB) ? kPositive : kNegative;
-   std::cout << " fMeanS=" << fMeanS 
-             << " fMeanB=" << fMeanB 
-             << std::endl;
+
    // fill 2 types of histograms for the various analyses
    // this one is for actual plotting
    
