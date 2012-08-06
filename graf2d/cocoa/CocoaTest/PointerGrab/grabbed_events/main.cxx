@@ -4,6 +4,8 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
+#define TEST1 1
+
 int main(int argc, char ** argv)
 {
    using namespace ROOT::CocoaTest;
@@ -20,10 +22,17 @@ int main(int argc, char ** argv)
    gVirtualX->MapRaised(mainFrame->GetId());
 
    //Test case 1: "middle" window has a grab, and
-   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
+#ifdef TEST1
+   //"implicit grab on a 'root'":
+   //without any button pressed, you receive leave/enter notify events as
+   //pointer moves from one window to another (as expected).
+   //With button press, before the same button is released - no crossing events are generated.
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kEnterWindowMask | kLeaveWindowMask, kNone, kNone, true);
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childFrame->AddInput(kButtonReleaseMask);
-   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kButtonPressMask | kButtonReleaseMask | kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE);
+#elif defined(TEST2)
+#endif
 
    app.Run();
 }
