@@ -574,7 +574,6 @@ void CommandBuffer::ClipOverlaps(QuartzView *view)
    assert(view != nil && "ClipOverlaps, view parameter is nil");
 
    fViewBranch.clear();
-   fViewBranch.reserve(view.fLevel + 1);//Can throw, ok.
    
    for (QuartzView *v = view; v; v = v.fParentView)
       fViewBranch.push_back(v);//Can throw, ok.

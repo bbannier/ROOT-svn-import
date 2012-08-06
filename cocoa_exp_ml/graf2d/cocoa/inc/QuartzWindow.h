@@ -178,7 +178,6 @@
 
 @property (nonatomic, retain) QuartzPixmap        *fBackBuffer;
 @property (nonatomic, assign) QuartzView          *fParentView;
-@property (nonatomic, assign) unsigned             fLevel;
 @property (nonatomic, readonly) NSView<X11Window> *fContentView;
 @property (nonatomic, readonly) QuartzWindow      *fQuartzWindow;
 
@@ -219,7 +218,6 @@
 
 - (BOOL) fIsOverlapped;
 - (void) setOverlapped : (BOOL) overlap;
-- (void) updateLevel : (unsigned) newLevel;
 - (void) configureNotifyTree;
 
 //Additional methods and properties.

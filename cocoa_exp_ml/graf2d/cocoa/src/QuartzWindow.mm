@@ -1264,7 +1264,6 @@ void print_mask_info(ULong_t mask)
 //SetWindowAttributes_t/WindowAttributes_t
 /////////////////////
 @synthesize fParentView;
-@synthesize fLevel;
 
 @synthesize fPassiveGrabButton;
 @synthesize fPassiveGrabEventMask;
@@ -1285,7 +1284,6 @@ void print_mask_info(ULong_t mask)
       fClipMask = nil;
 
       fID = 0;
-      fLevel = 0;
       
       //Passive grab parameters.
       fPassiveGrabButton = -1;//0 is kAnyButton.
@@ -1839,7 +1837,6 @@ void print_mask_info(ULong_t mask)
 
    [self addSubview : child];
    child.fParentView = self;
-   [child updateLevel : self.fLevel + 1];
 }
 
 //______________________________________________________________________________
@@ -1960,15 +1957,6 @@ void print_mask_info(ULong_t mask)
    }
    
    [fParentView sortSubviewsUsingFunction : CompareViewsToLower context : (void*)self];//NO ARC! No __bridge!
-}
-
-//______________________________________________________________________________
-- (void) updateLevel : (unsigned) newLevel
-{
-   fLevel = newLevel;
-   
-   for (QuartzView *child in [self subviews])
-      [child updateLevel : fLevel + 1];
 }
 
 //______________________________________________________________________________

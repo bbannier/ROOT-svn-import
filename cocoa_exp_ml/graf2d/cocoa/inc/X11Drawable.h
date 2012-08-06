@@ -94,7 +94,6 @@
 @property (nonatomic, retain) QuartzPixmap *fBackBuffer;
 //Parent view can be only QuartzView.
 @property (nonatomic, assign) QuartzView *fParentView;
-@property (nonatomic, assign) unsigned    fLevel;//Window's "level" in a hierarchy.
 //Window has a content view, self is a content view for a view.
 //I NSView is a parent for QuartzView and ROOTOpenGLView.
 @property (nonatomic, readonly) NSView<X11Window> *fContentView;
@@ -138,7 +137,6 @@
 
 - (BOOL) fIsOverlapped;
 - (void) setOverlapped : (BOOL) overlap;
-- (void) updateLevel : (unsigned) newLevel;
 - (void) configureNotifyTree;
 
 - (void) addPassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers;
