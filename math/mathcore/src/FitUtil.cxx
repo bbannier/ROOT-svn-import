@@ -30,6 +30,11 @@
 #include <cmath>
 #include <cassert>
 
+#ifdef _OPENMP 
+#include <omp.h>
+#endif
+
+
 //#define DEBUG
 #ifdef DEBUG
 #define NSAMPLE 10
@@ -477,6 +482,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    
    std::vector< std::vector<double> > correctCoord;
    std::vector< const double * > correctCoordsPtrs;
+   std::vector<double> vBinVolume;
    
    for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
    {
@@ -484,15 +490,41 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
      
      if ( useBinIntegral || useBinVolume )
      {
-       std::vector<double> vBinVolume;
-       
        if( useBinVolume )
        {
          vBinVolume.resize( nMaxBunchSize );
          std::fill( vBinVolume.begin(), vBinVolume.end(), wrefVolume );
+       }
+       
+       if ( !useBinIntegral )
+       {
+         correctCoord.resize( data.NDim() );
+         correctCoordsPtrs.resize( data.NDim() );
          
          for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
          {
+           correctCoord[icoord].resize( nMaxBunchSize );
+           correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
+         }
+       }
+     }
+     else
+     {
+        correctCoordsPtrs.resize( data.NDim() );
+     }
+   }
+ 
+   for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
+   {
+     unsigned int nBunchSize = std::min( nMaxBunchSize, data.Size() - iOffset );
+     
+     if ( useBinIntegral || useBinVolume )
+     {
+       if( useBinVolume )
+       {
+         for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+         {
+           #pragma omp parallel for
            for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
            {
              double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
@@ -505,14 +537,9 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
        
        if ( !useBinIntegral )
        {
-         correctCoord.resize( data.NDim() );
-         correctCoordsPtrs.resize( data.NDim() );
-         
          for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
          {
-           correctCoord[icoord].resize( nMaxBunchSize );
-           correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
-           
+           #pragma omp parallel for
            for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
            {
              double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
@@ -541,6 +568,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
        
        if( useBinVolume )
        {
+         #pragma omp parallel for
          for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
          {
            resValues[ibunch] *= vBinVolume[ibunch];
@@ -549,8 +577,6 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
      }
      else
      {
-        correctCoordsPtrs.resize( data.NDim() );
-       
         for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
         {
           correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
@@ -559,6 +585,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
         func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
      }
      
+     #pragma omp parallel for reduction(+:chi2, nPoints) 
      for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
      {
        double invError = data.InvError ( ibunch + iOffset );
@@ -582,7 +609,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    return chi2;
 }
 
-
+/*
 //___________________________________________________________________________________________________________________________
 
 double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData & data, const double * p, unsigned int & nPoints) {  
@@ -697,8 +724,8 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    return chi2;
 
 }
+*/
 
-/*
 double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData & data, const double * p, unsigned int & nPoints) {  
    // evaluate the chi2 given a  function reference  , the data and returns the value and also in nPoints 
    // the actual number of used points
@@ -716,7 +743,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
 
    double maxResValue = std::numeric_limits<double>::max() / data.Size();
    
-   const unsigned int nMaxBunchSize = 512;
+   const unsigned int nMaxBunchSize = 128;
    
    std::vector<double> resValues( nMaxBunchSize );
    std::vector< double > tmpf1Vals( nMaxBunchSize );
@@ -732,8 +759,13 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
    {
       unsigned int nBunchSize = std::min( nMaxBunchSize, data.Size() - iOffset );
-
-      func( nBunchSize, &data.GetCoordDataPtrs().front(), p, &resValues.front() );
+     
+      for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+      {
+        modCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
+      }
+        
+      func( nBunchSize, &modCoordsPtrs.front(), p, &resValues.front() );
       
       if ( data.HaveAsymErrors() )
       {
@@ -783,8 +815,6 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
             
             tmph2Vals[ibunch] = 1.0 / ( 2.0*h );
         }
-        
-        modCoordsPtrs = data.GetCoordDataPtrs();
         
         modCoordsPtrs[icoord] = &tmpf1Vals.front();
         func( nBunchSize, &modCoordsPtrs.front(), p, &tmpf1Vals.front() );
@@ -841,7 +871,7 @@ double FitUtil::EvaluateChi2Effective(const IModelFunction & func, const BinData
    
    return chi2;
 }
-*/
+
 
 //___________________________________________________________________________________________________________________________
 double FitUtil::EvaluateChi2Residual(const IModelFunction & func, const BinData & data, const double * p, unsigned int i, double * g) {  
