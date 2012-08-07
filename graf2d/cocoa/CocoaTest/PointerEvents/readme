@@ -95,7 +95,7 @@ Press a left/right mouse button (and do not release):
 
 Leave notify 6
 Enter notify 5
-Button press 5
+Button press 5 (Here I see the difference: on Ubuntu button press precedes crossing events - I do not care about all this shit: according to X11 protocol crossing events are generated BEFORE button press event).
 
 Move from 5 (to the right, so leave both 6,5,4 at one move):
 
