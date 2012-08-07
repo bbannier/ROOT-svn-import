@@ -218,7 +218,7 @@ Enter notify 7
 Enter notify 8 (order of enter events is reversed with TGCocoa).
 
 
-TEST5-8 : crossing events with passive grab (owner_events can be true or false).
+TEST5- : crossing events with passive grab (owner_events can be true or false).
 Also, button press/release events are tested.
 
 TEST5:
@@ -287,6 +287,7 @@ Events are the same, except no button press/release (except grab activating butt
 
 TEST7:
 
-the same as test 6, but no leave/enter notify in a grabbing window's event mask, leave/enter notify 
-masks are in grab's event mask. The output is the same as in TEST6.
+the same as test 6, but no leave/enter notify in a grabbing window's event mask (and when grab is not active,
+there are no leave/enter events for window 5, only for 4 and 6), leave/enter notify 
+masks are in grab's event mask (they are reported only after a button was pressed - and grab activated). The rest of output is the same as in TEST6.
 
