@@ -4,6 +4,8 @@
 #include "GuiTypes.h"
 #include "TGFrame.h"
 
+#define TEST9
+
 namespace ROOT {
 namespace CocoaTest {
 
