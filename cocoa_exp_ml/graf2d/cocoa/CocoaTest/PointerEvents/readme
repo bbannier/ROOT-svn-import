@@ -291,3 +291,43 @@ the same as test 6, but no leave/enter notify in a grabbing window's event mask 
 there are no leave/enter events for window 5, only for 4 and 6), leave/enter notify 
 masks are in grab's event mask (they are reported only after a button was pressed - and grab activated). The rest of output is the same as in TEST6.
 
+TEST8:
+
+two windows. 
+
+Description (example)
+
+Move from screen to 4:
+
+Enter notify 4
+
+From 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press any button (and do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5
+
+Move from 6 to 8:
+
+Leave notify 6
+Leave notify 5
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter notify events is reversed with TGCocoa).
+
+Release button:
+
+Leave notify 5
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter notify events is reversed with TGCocoa).
