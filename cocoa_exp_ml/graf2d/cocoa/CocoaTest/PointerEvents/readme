@@ -130,3 +130,40 @@ Leave notify 5
 From 6 to 5
 
 Enter notify 5
+
+
+TEST4:
+
+Setup as in TEST2, window 5 and 7 has additional kButtonPressMask | kButtonReleaseMask, because of kButtonPressMask they can initiate implicit grab.
+
+Description a) (example)
+
+Move from screen to window 8:
+
+Enter notify 7
+Enter notify 8 (order can be reversed with TGCocoa).
+
+Press left or right mouse button and do not release:
+
+Leave notify 8
+Enter notify 7
+Button press 7
+
+Move from window 8 (we still were here) to window 6 (overlapping part):
+
+Leave notify 7
+
+Press another mouse button and release it:
+
+Button press 7
+Button release 7
+
+Release the button, which initiated the grab:
+
+Button release 7
+
+Leave notify 7
+Enter notify 4
+Enter notify 5
+Enter notify 6 (the order of enter notify events is reversed with TGCocoa).
+

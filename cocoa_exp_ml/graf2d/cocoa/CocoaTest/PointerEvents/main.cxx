@@ -4,7 +4,7 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST3
+#define TEST4
 
 int main(int argc, char ** argv)
 {
@@ -52,7 +52,7 @@ int main(int argc, char ** argv)
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #elif defined (TEST4)
    mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);//this window can activate implicit grab.
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 
 
@@ -60,7 +60,7 @@ int main(int argc, char ** argv)
    TestFrame *main2 = new TestFrame(0, 500, 500, kMainFrame, 0xffff00);
    TestFrame *child2 = new TestFrame(main2, 300, 300, kChildFrame, 0xff00);
    
-   main2->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   main2->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);//this window can activate implicit grab.
    child2->AddInput(kEnterWindowMask | kLeaveWindowMask);
    //Place top-level windows side-by-side.
    gVirtualX->MoveWindow(mainFrame->GetId(), 600, 600);
