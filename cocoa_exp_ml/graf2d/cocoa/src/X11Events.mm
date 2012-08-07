@@ -1184,7 +1184,7 @@ void EventTranslator::GenerateButtonReleaseEvent(NSView<X11Window> *eventView, N
    assert(theEvent != nil && "GenerateButtonReleaseEvent, event parameter is nil");
    
    if (fPointerGrabType == kPGNoGrab)
-      return GenerateButtonReleaseEventNoGrab(eventView, theEvent, btn);//Actually, is this possible???
+      return GenerateButtonReleaseEventNoGrab(eventView, theEvent, btn);
    else
       return GenerateButtonReleaseEventActiveGrab(eventView, theEvent, btn);
    
@@ -1521,7 +1521,7 @@ void EventTranslator::GenerateButtonReleaseEventNoGrab(NSView<X11Window> *eventV
    assert(eventView != nil && "GenerateButtonReleaseEventNoGrab, view parameter is nil");
    assert(theEvent != nil && "GenerateButtonReleaseEventNoGrabm event parameter is nil");
    
-   if (NSView<X11Window> *candidateView = Detail::FindViewToPropagateEvent(eventView, kButtonPressMask))
+   if (NSView<X11Window> *candidateView = Detail::FindViewToPropagateEvent(eventView, kButtonReleaseMask))
       Detail::SendButtonReleaseEvent(fEventQueue, candidateView, theEvent, btn);
 }
 
