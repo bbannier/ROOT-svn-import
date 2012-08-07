@@ -1,4 +1,8 @@
 // RUN: cat %s | %cling | FileCheck %s
+// XFAIL: vg_leak 
+// Expected to fail on 32 bit machine because we need to pass the storage object
+// in a proper way for 32 bit machines. And it has invalid mem accesses.
+
 
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/Value.h"
