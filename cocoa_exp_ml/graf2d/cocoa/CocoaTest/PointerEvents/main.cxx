@@ -4,7 +4,7 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST6
+#define TEST7
 
 int main(int argc, char ** argv)
 {
