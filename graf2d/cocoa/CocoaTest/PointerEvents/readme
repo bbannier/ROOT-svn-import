@@ -1,5 +1,16 @@
 Pointer tests.
 
+It's very difficult to test, I think the only way to check this is just to carefully read the code.
+But still - some test cases. They are not covering all possible cases, but at least some basic.
+As I do not have testers for GUI and any testing framework for GUI, I have this primitive tests to catch
+something really stupid (and they, actually, did some work already).
+The idea is to compile the same test with X11/TGCocoa versions and compare event messages.
+They are not identical, there some completely strange things with X11 and its window manager (they can add
+some unexpected events), but in general events should be more or less the same.
+
+
+TEST1-4 : crossing events with and without grab (grab is implicit).
+
 TEST1: crossing events without any grabs (implicit on 'root' only, if button pressed), only one top-level window.
 
 Description (example)
@@ -205,4 +216,66 @@ Leave notify 5
 Leave notify 4
 Enter notify 7
 Enter notify 8 (order of enter events is reversed with TGCocoa).
+
+
+TEST5-8 : crossing events with passive grab (owner_events can be true or false).
+
+TEST5:
+
+Setup as in TEST1.
+
+There is a passive grab on window 5.
+
+Description (example)
+
+Move from screen to 4:
+
+Enter notify 4
+
+From 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press mouse button (left or right, do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5 (grab is initiated) (on Ubuntu order of crossing events and button press - is reversed).
+
+Move from 6 to 5:
+
+Leave notify 6
+Enter notify 5
+
+From 5 to 4:
+
+Leave notify 5
+Enter notify 4
+
+Press and release another button in 4:
+
+Button press 5
+Button release 5
+
+Move from 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Release button, which started the grab
+
+Release button 5
+Leave notify 5
+Enter notify 6
 
