@@ -1,6 +1,6 @@
 Pointer tests.
 
-TEST1: crossing events without any grabs, only one top-level window.
+TEST1: crossing events without any grabs (implicit on 'root' only, if button pressed), only one top-level window.
 
 Move into 4 from screen:
 Enter notify for 4
@@ -31,4 +31,6 @@ Enter notify 4
 Enter notify 5
 Enter notify 6 (we "jumped" from implicitly grabbed 'root') - order can be different with
 TGCocoa
+
+TEST2: crossing events without grabs (implicit on 'root' only, if button pressed), two top-level windows. 
 

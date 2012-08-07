@@ -4,7 +4,7 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST1 1
+#define TEST2
 
 int main(int argc, char ** argv)
 {
@@ -13,9 +13,9 @@ int main(int argc, char ** argv)
    TApplication app("test_app", &argc, argv);
    
    TestFrame *mainFrame = new TestFrame(0, 500, 500, kMainFrame, 0xff0000);
-   TestFrame *childFrame = new TestFrame(mainFrame, 300, 300, kChildFrame, 0xff6600);
+   TestFrame *childFrame = new TestFrame(mainFrame, 400, 300, kChildFrame, 0xff6600);
    gVirtualX->MoveWindow(childFrame->GetId(), 100, 100);
-   TestFrame *childChildFrame = new TestFrame(childFrame, 200, 100, kChildFrame, 0xff9900);
+   TestFrame *childChildFrame = new TestFrame(childFrame, 300, 100, kChildFrame, 0xff9900);
    gVirtualX->MoveWindow(childChildFrame->GetId(), 100, 100);
    gVirtualX->MapSubwindows(childFrame->GetId());
    gVirtualX->MapSubwindows(mainFrame->GetId());
@@ -27,6 +27,26 @@ int main(int argc, char ** argv)
    childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #elif defined(TEST2)
+   //Masks for the first window:
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+
+
+   //Create the second window:
+   TestFrame *main2 = new TestFrame(0, 500, 500, kMainFrame, 0xffff00);
+   TestFrame *child2 = new TestFrame(main2, 300, 300, kChildFrame, 0xff00);
+   
+   main2->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   child2->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   //Place top-level windows side-by-side.
+   gVirtualX->MoveWindow(mainFrame->GetId(), 600, 600);
+   gVirtualX->MoveWindow(main2->GetId(), 1100, 600);
+   
+   gVirtualX->MapSubwindows(main2->GetId());
+   gVirtualX->MapRaised(main2->GetId());
+   
+
 #endif
 
    app.Run();
