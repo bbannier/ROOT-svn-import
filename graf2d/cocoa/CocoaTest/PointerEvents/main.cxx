@@ -4,7 +4,7 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST7
+#define TEST8
 
 int main(int argc, char ** argv)
 {
@@ -85,6 +85,25 @@ int main(int argc, char ** argv)
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 
    gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE);
+#elif defined (TEST8)
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+
+   //Create the second window:
+   TestFrame *main2 = new TestFrame(0, 500, 500, kMainFrame, 0xffff00);
+   TestFrame *child2 = new TestFrame(main2, 300, 300, kChildFrame, 0xff00);
+   
+   main2->AddInput(kEnterWindowMask | kLeaveWindowMask);//this window can activate implicit grab.
+   child2->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   //Place top-level windows side-by-side.
+   gVirtualX->MoveWindow(mainFrame->GetId(), 600, 600);
+   gVirtualX->MoveWindow(main2->GetId(), 1100, 600);
+   
+   gVirtualX->MapSubwindows(main2->GetId());
+   gVirtualX->MapRaised(main2->GetId());   
+
+   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kNone, kNone, kNone, kTRUE);
 #endif
 
    app.Run();
