@@ -135,7 +135,9 @@ namespace TMVA {
 
       void SetNTrees(Int_t d){fNTrees = d;}
       void SetAdaBoostBeta(Double_t b){fAdaBoostBeta = b;}
-      void SetNodePurityLimit(Double_t l){fNodePurityLimit = l;}
+      void SetNodePurityLimit(Double_t l){fNodePurityLimit = l;} 
+      void SetShrinkage(Double_t s){fShrinkage = s;}
+      void SetUseNvars(Int_t n){fUseNvars = n;}
 
 
       // get the forest

@@ -130,6 +130,7 @@
 #include "TMVA/Results.h"
 #include "TMVA/ResultsMulticlass.h"
 #include "TMVA/Interval.h"
+#include "TMVA/LogInterval.h"
 #include "TMVA/PDF.h"
 #include "TMVA/BDTEventWrapper.h"
 
@@ -892,7 +893,7 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
    // are meant to be tuned.
 
    // fill all the tuning parameters that should be optimized into a map:
-   std::map<TString,TMVA::Interval> tuneParameters;
+   std::map<TString,TMVA::Interval*> tuneParameters;
    std::map<TString,Double_t> tunedParameters;
 
    // note: the 3rd paraemter in the inteval is the "number of bins", NOT the stepsize !!
@@ -902,25 +903,32 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
 
    // find some reasonable ranges for the optimisation of MinNodeEvents:
 
-   tuneParameters.insert(std::pair<TString,Interval>("NTrees",         Interval(50,1000,5))); //  stepsize 50
-   tuneParameters.insert(std::pair<TString,Interval>("MaxDepth",       Interval(3,10,8)));    // stepsize 1
-   tuneParameters.insert(std::pair<TString,Interval>("MinNodeSize",    Interval(1,30,10)));    // 
-   //tuneParameters.insert(std::pair<TString,Interval>("NodePurityLimit",Interval(.4,.6,3)));   // stepsize .1
+   tuneParameters.insert(std::pair<TString,Interval*>("NTrees",         new Interval(10,1000,5))); //  stepsize 50
+   tuneParameters.insert(std::pair<TString,Interval*>("MaxDepth",       new Interval(2,5,4)));    // stepsize 1
+   tuneParameters.insert(std::pair<TString,Interval*>("MinNodeSize",    new LogInterval(1,30,10)));    // 
+   //tuneParameters.insert(std::pair<TString,Interval*>("NodePurityLimit",new Interval(.4,.6,3)));   // stepsize .1
 
    // method-specific parameters
    if        (fBoostType=="AdaBoost"){
-      tuneParameters.insert(std::pair<TString,Interval>("AdaBoostBeta",   Interval(.5,1.50,5)));   
+      tuneParameters.insert(std::pair<TString,Interval*>("AdaBoostBeta",   new Interval(.5,1.50,5)));   
   
    }else if (fBoostType=="Grad"){
-      tuneParameters.insert(std::pair<TString,Interval>("Shrinkage",      Interval(0.05,0.50,5)));  
+      tuneParameters.insert(std::pair<TString,Interval*>("Shrinkage",      new Interval(0.05,0.50,5)));  
   
    }else if (fBoostType=="Bagging" && fRandomisedTrees){
       Int_t min_var  = TMath::FloorNint( GetNvar() * .25 );
       Int_t max_var  = TMath::CeilNint(  GetNvar() * .75 ); 
-      tuneParameters.insert(std::pair<TString,Interval>("UseNvars",       Interval(min_var,max_var,4)));
+      tuneParameters.insert(std::pair<TString,Interval*>("UseNvars",       new Interval(min_var,max_var,4)));
      
    }
    
+   Log()<<kINFO << " the following BDT parameters will be tuned on the respective *grid*\n"<<Endl;
+   std::map<TString,TMVA::Interval*>::iterator it;
+   for(it=tuneParameters.begin(); it!= tuneParameters.end(); it++){
+      Log() << kWARNING << it->first << Endl;
+      (it->second)->Print(Log());  
+      Log()<<Endl;
+   }
    
    OptimizeConfigParameters optimize(this, tuneParameters, fomType, fitType);
    tunedParameters=optimize.optimize();
@@ -936,13 +944,18 @@ void TMVA::MethodBDT::SetTuneParameters(std::map<TString,Double_t> tuneParameter
 
    std::map<TString,Double_t>::iterator it;
    for(it=tuneParameters.begin(); it!= tuneParameters.end(); it++){
+      Log() << kWARNING << it->first << " = " << it->second << Endl;  
       if (it->first ==  "MaxDepth"       ) SetMaxDepth        ((Int_t)it->second);
-      if (it->first ==  "MinNodeSize"    ) SetMinNodeSize     (it->second);
-      if (it->first ==  "NTrees"         ) SetNTrees          ((Int_t)it->second);
-      if (it->first ==  "NodePurityLimit") SetNodePurityLimit (it->second);
-      if (it->first ==  "AdaBoostBeta"   ) SetAdaBoostBeta    (it->second);
+      else if (it->first ==  "MinNodeSize"    ) SetMinNodeSize     (it->second);
+      else if (it->first ==  "NTrees"         ) SetNTrees          ((Int_t)it->second);
+      else if (it->first ==  "NodePurityLimit") SetNodePurityLimit (it->second);
+      else if (it->first ==  "AdaBoostBeta"   ) SetAdaBoostBeta    (it->second);
+      else if (it->first ==  "Shrinkage"      ) SetShrinkage       (it->second);
+      else if (it->first ==  "UseNvars"       ) SetUseNvars        ((Int_t)it->second);
+      else Log() << kFATAL << " SetParameter for " << it->first << " not yet implemented " <<Endl;
    }
    
+
 }
 
 //_______________________________________________________________________
@@ -1497,7 +1510,7 @@ void TMVA::MethodBDT::BoostMonitor(Int_t iTree)
    std::vector<TH1F*> hB;
    for (UInt_t ivar=0; ivar<GetNvar(); ivar++){
      hS.push_back(new TH1F(Form("SigVar%dAtTree%d",ivar,iTree),Form("SigVar%dAtTree%d",ivar,iTree),100,DataInfo().GetVariableInfo(ivar).GetMin(),DataInfo().GetVariableInfo(ivar).GetMax()));
-     hS.push_back(new TH1F(Form("BkgVar%dAtTree%d",ivar,iTree),Form("BkgVar%dAtTree%d",ivar,iTree),100,DataInfo().GetVariableInfo(ivar).GetMin(),DataInfo().GetVariableInfo(ivar).GetMax()));
+     hB.push_back(new TH1F(Form("BkgVar%dAtTree%d",ivar,iTree),Form("BkgVar%dAtTree%d",ivar,iTree),100,DataInfo().GetVariableInfo(ivar).GetMin(),DataInfo().GetVariableInfo(ivar).GetMax()));
      results->Store(hS.back(),hS.back()->GetTitle());
      results->Store(hB.back(),hB.back()->GetTitle());
    }
@@ -1562,19 +1575,14 @@ Double_t TMVA::MethodBDT::AdaBoost( std::vector< const TMVA::Event*> eventSample
 
    Double_t err=0, sumGlobalw=0, sumGlobalwfalse=0, sumGlobalwfalse2=0;
 
-   std::vector<Double_t> sumw; //for individually re-scaling  each class
+   std::vector<Double_t> sumw(DataInfo().GetNClasses(),0); //for individually re-scaling  each class
    std::map<Node*,Int_t> sigEventsInNode; // how many signal events of the training tree
 
-   UInt_t maxCls = sumw.size();
    Double_t maxDev=0;
    for (std::vector< const TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       Double_t w = (*e)->GetWeight();
       sumGlobalw += w;
       UInt_t iclass=(*e)->GetClass();
-      if (iclass+1 > maxCls) {
-	 sumw.resize(iclass+1,0);
-	 maxCls = sumw.size();
-      }
       sumw[iclass] += w;
 
       if ( DoRegression() ) {
@@ -1700,7 +1708,7 @@ Double_t TMVA::MethodBDT::AdaBoost( std::vector< const TMVA::Event*> eventSample
 
 
    //   Double_t globalNormWeight=sumGlobalw/newSumGlobalw;
-   Double_t globalNormWeight=Double_t(fEventSample.size())/newSumGlobalw;
+   Double_t globalNormWeight=( (Double_t) fEventSample.size())/newSumGlobalw;
    Log() << kDEBUG << "new Nsig="<<newSumw[0]*globalNormWeight << " new Nbkg="<<newSumw[1]*globalNormWeight << Endl;
 
 
@@ -1751,19 +1759,14 @@ Double_t TMVA::MethodBDT::AdaCost( vector< const TMVA::Event*> eventSample, Deci
 
    Double_t err=0, sumGlobalWeights=0, sumGlobalCost=0;
 
-   vector<Double_t> sumw;            //for individually re-scaling  each class
+   vector<Double_t> sumw(DataInfo().GetNClasses(),0);      //for individually re-scaling  each class
    map<Node*,Int_t> sigEventsInNode; // how many signal events of the training tree
-
-   UInt_t maxCls = sumw.size();
 
    for (vector< const TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       Double_t w = (*e)->GetWeight();
       sumGlobalWeights += w;
       UInt_t iclass=(*e)->GetClass();
-      if (iclass+1 > maxCls) {
-	 sumw.resize(iclass+1,0);
-	 maxCls = sumw.size();
-      }
+
       sumw[iclass] += w;
 
       if ( DoRegression() ) {
