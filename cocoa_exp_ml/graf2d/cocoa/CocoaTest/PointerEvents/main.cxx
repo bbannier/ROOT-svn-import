@@ -4,7 +4,7 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST2
+#define TEST3
 
 int main(int argc, char ** argv)
 {
@@ -45,8 +45,11 @@ int main(int argc, char ** argv)
    
    gVirtualX->MapSubwindows(main2->GetId());
    gVirtualX->MapRaised(main2->GetId());
-   
-
+#elif defined (TEST3)
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask);
+   //   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #endif
 
    app.Run();
