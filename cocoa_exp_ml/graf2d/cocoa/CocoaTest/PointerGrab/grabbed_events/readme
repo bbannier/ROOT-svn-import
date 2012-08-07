@@ -1,8 +1,0 @@
-test event dispatching (pointer events) while grab is active.
-
-pointer events:
-
-1. leave/enter notify (kEnterWindowMask, kLeaveWindowMask)
-2. pointer motion (kPointerMotionMask, kButtonMotionMask)
-3. buttons press/release (kButtonPressMask, kButtonReleaseMask)
-
