@@ -70,3 +70,7 @@ at the beginning of test, window 4 is "behind" window 7 in a window stack, when 
 this I'm NOT GOING to emulate, since this is not a part of any specification.
 
 TEST3:
+
+Setup as in TEST1, but now window 5 has button press mask (to become an implicit grab). 
+Also, button 5 can have button release mask (+-) to test other buttons press/release events while
+still holding the primary button (button which initiated grab).
