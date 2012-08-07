@@ -2,6 +2,8 @@ Pointer tests.
 
 TEST1: crossing events without any grabs (implicit on 'root' only, if button pressed), only one top-level window.
 
+Description (example)
+
 Move into 4 from screen:
 Enter notify for 4
 
@@ -17,7 +19,7 @@ Leave notify 6
 Leave notify 5
 Enter notify 4
 
-Press button in 4:
+Press button in 4 (and do not release):
 
 Leave notify 4
 
@@ -32,5 +34,39 @@ Enter notify 5
 Enter notify 6 (we "jumped" from implicitly grabbed 'root') - order can be different with
 TGCocoa
 
-TEST2: crossing events without grabs (implicit on 'root' only, if button pressed), two top-level windows. 
+TEST2: crossing events without grabs (implicit on 'root' only, if button pressed), two top-level windows.
 
+ 
+Description (example)
+
+Move from screen to window 4:
+
+Enter notify 4
+
+Move from 4 to 8 (another top-level window):
+
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter notify events is reversed with TGCocoa).
+
+Press button (and do not release) on window 8:
+
+Leave notify 8
+Leave notify 7
+
+Move to window 6 (overlapping part):
+
+No events reported (implicit grab on 'root').
+
+Release button in 6:
+
+Enter notify 4
+Enter notify 5
+Enter notify 6 (order is reversed with TGCocoa).
+
+If, instead, we press button while in a window 6, there is a difference between TGCocoa and X11 (on Ubuntu):
+at the beginning of test, window 4 is "behind" window 7 in a window stack, when pressing button - it's raised
+(by WM?) and there is a strange sequence of leave/enter notify events along the window tree forth and back -
+this I'm NOT GOING to emulate, since this is not a part of any specification.
+
+TEST3:
