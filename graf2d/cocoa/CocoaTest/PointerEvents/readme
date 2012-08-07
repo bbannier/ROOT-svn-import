@@ -279,3 +279,6 @@ Release button 5
 Leave notify 5
 Enter notify 6
 
+TEST6:
+
+the same as test 5, but event mask in GrabButton call is kNone.
