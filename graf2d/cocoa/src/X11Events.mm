@@ -414,6 +414,23 @@ bool IsParent(NSView<X11Window>  *testParent, NSView<X11Window>  *testChild)
    return false;
 }
 
+//______________________________________________________________________________
+bool IsInBranch(NSView<X11Window> *parent, NSView<X11Window> *child, NSView<X11Window> *testView)
+{
+   assert(child != nil && "IsInBranch, child parameter is nil");
+   assert(testView != nil && "IsInBranch, testView parameter is nil");
+   
+   if (testView == child || testView == parent)
+      return true;
+      
+   for (NSView<X11Window> *current = child.fParentView; current != parent; current = current.fParentView) {
+      if (current == testView)
+         return true;
+   }
+   
+   return false;
+}
+
 //Relation between two views.
 enum Ancestry {
    kAView1IsParent,
@@ -911,9 +928,7 @@ void GenerateCrossingEventFromChild1ToChild2(EventQueue_t &queue, NSView<X11Wind
 //______________________________________________________________________________
 void GenerateCrossingEvents(EventQueue_t &queue, NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail)
 {
-   //Aux. function. TODO: must become non-member (since does not require any state,
-   //except fBranch1/2 vectors, which must go away as soon as I use method from NSView to
-   //find lca.
+   //Aux. function.
 
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
    
@@ -971,7 +986,53 @@ void GenerateCrossingEvents(EventQueue_t &queue, NSView<X11Window> *fromView, NS
          //Ancestor is either some view, or 'root' window.
          //The fourth case (different screens) is not implemented (and I do not know, if I want to implement it).
          GenerateCrossingEventFromChild1ToChild2(queue, fromView, toView, ancestor, theEvent, detail);
-      }   
+      }
+   }
+}
+
+//______________________________________________________________________________
+void GenerateCrossingEventForGrabView(EventQueue_t &queue, NSView<X11Window> *fromView, NSView<X11Window> *toView,
+                                      NSView<X11Window> *grabView, Mask_t grabEventMask, NSEvent *theEvent)
+{
+   //When owner events == false, only grab view receives enter/leave notify events.
+
+   //Send enter/leave event to a grab view.
+   assert(theEvent != nil && "GenerateCrossingEventForGrabView, event parameter is nil");
+   assert(grabView != nil && "GenerateCrossingEventForGrabView, grabView parameter is nil");
+   assert((fromView != nil || toView != nil) && "GenerateCrossingEventForGrabView, both toView and fromView parameters are nil");
+   
+   if (fromView == toView)//No crossing at all?
+      return;
+
+   const bool wantsEnter = grabEventMask & kEnterWindowMask;
+   const bool wantsLeave = grabEventMask & kLeaveWindowMask;
+
+   if (fromView == grabView && wantsLeave)
+      return SendLeaveEvent(queue, grabView, theEvent, kNotifyNormal);
+   
+   if (toView == grabView && wantsEnter)
+      return SendEnterEvent(queue, grabView, theEvent, kNotifyNormal);
+   
+   if (!fromView) {
+      //We enter window "from the screen" - do not leave any window.
+      //Send EnterNotify event to the grab view, if it's "in the branch".
+      if (wantsEnter && IsParent(grabView, toView))
+         SendEnterEvent(queue, grabView, theEvent, kNotifyNormal);
+   } else if (!toView) {
+      //We exit all views..
+      if (wantsLeave && IsParent(grabView, fromView))
+         SendLeaveEvent(queue, grabView, theEvent, kNotifyNormal);
+   } else {
+      NSView<X11Window> *ancestor = 0;
+      FindRelation(fromView, toView, &ancestor);
+
+      if (IsInBranch(nil, fromView, grabView)) {
+         if (wantsLeave)
+            SendLeaveEvent(queue, grabView, theEvent, kNotifyNormal);
+      } else if (IsInBranch(nil, toView, grabView)) {
+         if (wantsEnter)
+            SendEnterEvent(queue, grabView, theEvent, kNotifyNormal);
+      }
    }
 }
 
@@ -1074,22 +1135,12 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSEvent *theEvent)
 
    if (fOwnerEvents) {
       Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
-   } else if (fButtonGrabView) {
+   } else if (fButtonGrabView && (fViewUnderPointer || candidateView)) {
       //Either implicit grab or GrabPointer with owner_events == false,
       //only grab view can receive enter/leave notify events. Only
       //grab event mask is checked, not view's own event mask.
-      if (candidateView != fButtonGrabView) {
-         if (fButtonGrabView == fViewUnderPointer) {
-            if (fGrabEventMask & kLeaveWindowMask)
-               Detail::SendLeaveEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
-         }
-      } else {
-         if (fButtonGrabView != fViewUnderPointer) {
-            if (fGrabEventMask & kEnterWindowMask)
-               Detail::SendEnterEvent(fEventQueue, fButtonGrabView, theEvent, kNotifyNormal);
-
-         }
-      }
+      
+      Detail::GenerateCrossingEventForGrabView(fEventQueue, fViewUnderPointer, candidateView, fButtonGrabView, fGrabEventMask, theEvent);
    }
    
    fViewUnderPointer = candidateView;
