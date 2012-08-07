@@ -158,13 +158,12 @@ private:
      int ndim = NDim();
      
 #ifdef _OPENMP 
-     int nThreads = omp_get_num_threads();
+     const int nThreads = omp_get_max_threads();
 #else
-     int nThreads = 1;
+     const int nThreads = 1;
 #endif
 
      std::vector < std::vector<double> > tmpVecs( nThreads );
-     
      #pragma omp parallel
      {
 #ifdef _OPENMP 
@@ -175,7 +174,7 @@ private:
 
         tmpVecs[tid].resize( ndim );
         
-        for ( int i= tid; i < n; i+=nThreads )
+        for ( int i= tid; i < n; i += nThreads )
         {
           for ( int j=0; j < ndim; j++ )
           {
