@@ -1,0 +1,34 @@
+Pointer tests.
+
+TEST1: crossing events without any grabs, only one top-level window.
+
+Move into 4 from screen:
+Enter notify for 4
+
+Move from 4 to 5 and 6 (overlapping part):
+
+Leave notify 4
+Enter notify 5
+Enter notify 6 (order of enter notify events is different with TGCocoa)
+
+Move again to 4 (from overlapping part):
+
+Leave notify 6
+Leave notify 5
+Enter notify 4
+
+Press button in 4:
+
+Leave notify 4
+
+Move to 6 (overlapping part):
+
+No events reported (implicit grab on 'root').
+
+Release button:
+
+Enter notify 4
+Enter notify 5
+Enter notify 6 (we "jumped" from implicitly grabbed 'root') - order can be different with
+TGCocoa
+
