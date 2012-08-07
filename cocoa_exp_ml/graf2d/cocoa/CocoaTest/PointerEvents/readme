@@ -74,3 +74,59 @@ TEST3:
 Setup as in TEST1, but now window 5 has button press mask (to become an implicit grab). 
 Also, button 5 can have button release mask (+-) to test other buttons press/release events while
 still holding the primary button (button which initiated grab).
+
+Description (example)
+
+Move from screen to window 4:
+
+Enter notify 4
+
+Move to 5:
+
+Leave notify 4
+Enter notify 5
+
+Move to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press a left/right mouse button (and do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5
+
+Move from 5 (to the right, so leave both 6,5,4 at one move):
+
+Leave notify 5
+
+Move back (into overlapping part):
+
+Enter notify 5
+
+Press/release another mouse button:
+
+Button press 5
+Button release 5 (if you have kButtonReleaseMask, see test's setup)
+
+Release the button, which initialised the grab: 
+
+Button release 5
+Leave notify 5
+Enter notify 6
+
+////
+While in grab, also check what happens when mouse moves for example, from
+
+Move from 4 to 5:
+
+Enter notify 5
+
+From 5 to 6
+
+Leave notify 5
+
+From 6 to 5
+
+Enter notify 5
