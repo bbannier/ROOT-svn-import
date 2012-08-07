@@ -167,3 +167,42 @@ Enter notify 4
 Enter notify 5
 Enter notify 6 (the order of enter notify events is reversed with TGCocoa).
 
+Description b) (example)
+
+Move from screen to window 4:
+
+Enter notify 4
+
+From 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press mouse button (left or right, do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5
+
+Move from 6 (we still were here) to 8:
+
+Leave notify 5
+
+Press/release another mouse button:
+
+Button press 5
+Button release 5
+
+Release button, which started the grab:
+
+Button release 5
+Leave notify 5
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter events is reversed with TGCocoa).
+
