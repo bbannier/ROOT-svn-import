@@ -367,4 +367,5 @@ Press/release button again - now, cancelling the active grab:
 Button press 5
 Leave notify 6
 Enter notify 5
-Button release 5
+
+This case is really different on TGCocoa and Ubuntu (X11) - I'm not going to comment on this, I think, my implementation is correct.
