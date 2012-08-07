@@ -47,8 +47,8 @@ int main(int argc, char ** argv)
    gVirtualX->MapRaised(main2->GetId());
 #elif defined (TEST3)
    mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
-   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask);
-   //   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
+   //childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #endif
 
