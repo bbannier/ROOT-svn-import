@@ -4,7 +4,6 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST8
 
 int main(int argc, char ** argv)
 {
@@ -104,6 +103,10 @@ int main(int argc, char ** argv)
    gVirtualX->MapRaised(main2->GetId());   
 
    gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kNone, kNone, kNone, kTRUE);
+#elif defined (TEST9)
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask); //This will init at first implicit grab, which later will be changed by active grab.
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #endif
 
    app.Run();

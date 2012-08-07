@@ -72,6 +72,19 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
 {
    assert(buttonEvent);
    
+#ifdef TEST9
+   if (buttonEvent->fType == kButtonPress) {
+      static bool setGrab = true;
+      if (setGrab) {
+         gVirtualX->GrabPointer(GetId(), kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE, kTRUE);
+         setGrab = false;
+      } else {
+         gVirtualX->GrabPointer(kNone, kNone, kNone, kNone, kFALSE, kFALSE);
+         setGrab = true;
+      }
+   }
+#endif
+   
    if (buttonEvent->fType == kButtonPress)
       std::cout<<"Button press event in "<<windowID_<<std::endl;
    else

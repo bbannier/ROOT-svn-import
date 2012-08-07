@@ -218,7 +218,7 @@ Enter notify 7
 Enter notify 8 (order of enter events is reversed with TGCocoa).
 
 
-TEST5- : crossing events with passive grab (owner_events can be true or false).
+TEST5-8 : crossing events with passive grab (owner_events is always true in ROOT's passive grabs).
 Also, button press/release events are tested.
 
 TEST5:
@@ -331,3 +331,40 @@ Leave notify 5
 Leave notify 4
 Enter notify 7
 Enter notify 8 (order of enter notify events is reversed with TGCocoa).
+
+TEST9- crossing events with active pointer grab (owner events true and false).
+
+The same window as in TEST1 and several other tests.
+Click on window 5 will initiate an active grab (the second click in the same view will cancel it).
+
+Description (example)
+
+Move from screen to 4:
+
+Enter notify 4
+
+Move from 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+Move from 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press/release button - this is complex, first, we activate implicit grab (sending crossing events) and send button press event,
+HandleButton will activate pointer grab (this will lead to another crossing event sequence): 
+
+Leave notify 6
+Enter notify 5
+Button press 5 
+Leave notify 6
+Enter notify 5
+
+Press/release button again - now, cancelling the active grab:
+
+Button press 5
+Leave notify 6
+Enter notify 5
+Button release 5
