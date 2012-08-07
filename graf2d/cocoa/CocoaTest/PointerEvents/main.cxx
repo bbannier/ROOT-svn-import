@@ -50,6 +50,24 @@ int main(int argc, char ** argv)
    //childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask);
    childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask | kButtonReleaseMask);
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+#elif defined (TEST4)
+   mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+
+
+   //Create the second window:
+   TestFrame *main2 = new TestFrame(0, 500, 500, kMainFrame, 0xffff00);
+   TestFrame *child2 = new TestFrame(main2, 300, 300, kChildFrame, 0xff00);
+   
+   main2->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   child2->AddInput(kEnterWindowMask | kLeaveWindowMask);
+   //Place top-level windows side-by-side.
+   gVirtualX->MoveWindow(mainFrame->GetId(), 600, 600);
+   gVirtualX->MoveWindow(main2->GetId(), 1100, 600);
+   
+   gVirtualX->MapSubwindows(main2->GetId());
+   gVirtualX->MapRaised(main2->GetId());
 #endif
 
    app.Run();
