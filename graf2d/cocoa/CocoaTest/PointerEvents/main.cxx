@@ -109,7 +109,10 @@ int main(int argc, char ** argv)
    childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask); //This will init at first implicit grab, which later will be changed by active grab.
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #elif defined (TEST10)
-   mainFrame->AddInput(kButtonPressMask | kButtonReleaseMask);
+   mainFrame->AddInput(kButtonPressMask | kButtonReleaseMask);//this can be commented or one of options removed.
+//   mainFrame->AddInput(kButtonReleaseMask);//additional option to test.
+//   mainFrame->AddInput(kButtonPressMask);
+   //childFrame->AddInput(kButtonPressMask | kButtonReleaseMask);//additional option to test.
    childChildFrame->AddInput(kButtonPressMask | kButtonReleaseMask);
    gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kButtonPressMask | kButtonReleaseMask, kNone, kNone, kTRUE);
 #endif
