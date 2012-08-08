@@ -4,7 +4,7 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST12
+#define TEST13
 
 int main(int argc, char ** argv)
 {
@@ -126,6 +126,9 @@ int main(int argc, char ** argv)
 //   childFrame->AddInput(kButtonReleaseMask);
    childFrame->AddInput(kButtonReleaseMask | kButtonPressMask);
    childChildFrame->AddInput(kButtonPressMask | kButtonReleaseMask);
+#elif defined (TEST13)
+   mainFrame->AddInput(kPointerMotionMask);
+   childChildFrame->AddInput(kButtonMotionMask | kButtonPressMask);
 #endif
 
    app.Run();

@@ -438,3 +438,6 @@ implicit grab on this window is initiated (with owner_events == false).
 Button released - event is to be dispatched to the grab window (4) and since there is no kButtonPressMask in grab's event mask,
 no event is generated at all.
 
+TEST13:
+
+Pointer motions events.

@@ -109,7 +109,8 @@ Bool_t TestFrame::HandleMotion(Event_t *motionEvent)
 {
    assert(motionEvent);
    
-   std::cout<<"Mouse motion event in "<<windowID_<<std::endl;
+   static int nCall = 0;
+   std::cout<<"Mouse motion event in "<<windowID_<<' '<<nCall++<<std::endl;
    
    return kTRUE;
 }
