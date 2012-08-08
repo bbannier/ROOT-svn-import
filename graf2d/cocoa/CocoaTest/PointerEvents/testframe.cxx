@@ -83,6 +83,17 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
          setGrab = true;
       }
    }
+#elif defined (TEST11)
+   if (buttonEvent->fType == kButtonPress) {
+      static bool setGrab = true;
+      if (setGrab) {
+         gVirtualX->GrabPointer(GetId(), kEnterWindowMask | kLeaveWindowMask, kNone, kNone, kTRUE, kFALSE); //the last parameter - owner_events.
+         setGrab = false;
+      } else {
+         gVirtualX->GrabPointer(kNone, kNone, kNone, kNone, kFALSE, kFALSE);
+         setGrab = true;
+      }
+   }
 #endif
    
    if (buttonEvent->fType == kButtonPress)

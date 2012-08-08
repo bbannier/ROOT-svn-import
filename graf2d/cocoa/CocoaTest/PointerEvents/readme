@@ -407,4 +407,6 @@ while pointer is in window 5 or 4).
 There are additional options to test in TEST10 section - they are commented now, I do not describe the expected results here - to many
 possible combinations, better try and compare X11 and TGCocoa.
 
+TEST11:
 
+Similar to TEST9, but now owner_events == false. TEST11 macro must be defined in testframe.h
