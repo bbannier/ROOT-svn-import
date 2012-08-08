@@ -460,10 +460,19 @@ If you now release button and press button in a window 6 (and do not release)
 
 window 6 will become receiver of pointer motion events (until button is released).
 
-TEST 14:
+TEST14:
 
 Pointer motion and passive grab on window 5.
 
 At the beginning only window 6 has pointer motion mask.
 If you press button (in window 5 or window 6) passive grab is activated (with owner_events == true),
-from now and before you release button 
+from now and before you release button, if you are in window 6 - it receives pointer motion events,
+if you are in window 5 or 4 - window 5 will receive motion events.
+
+TEST15:
+
+Window 6 has pointer motion mask,
+window 5 has passive grab without any masks.
+
+Motion events without grab - only in 6.
+Motion events if button was pressed (and not released yet) in 5 or 6 - motion events in 6.
