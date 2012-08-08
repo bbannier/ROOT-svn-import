@@ -481,3 +481,23 @@ TEST16:
 
 (Macro TEST16 must be defined in test frame.h)
 
+without any grabs - only window 6 receives pointer motion events.
+
+if button is pressed in window 5 or 6 (from 6 a press event is propagated to 5)
+window 5 sets pointer grab (owner_events == true).
+from this point - if button HAS NOT been released yet, if cursor is in window 6 - window 6 receives motion events,
+if in window 5 - window 5.
+If button was released - only window 6 (in window 5 grab event mask requires button motion, not simply pointer motion).
+
+TEST 17:
+
+More complex test on pointer/button motion events - two window setup.
+
+window 4 - pointer motion
+window 5 - button press (on button press, it sets grab with button motion and owner_events == true)
+window 6 - pointer motion
+
+window 7 - pointer motion
+window 8 - button motion
+
+There are quite a lot of possible scenarios, I do not describe them here - you better compare output of X11/and TGCocoa.
