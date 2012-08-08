@@ -137,6 +137,27 @@ int main(int argc, char ** argv)
 #elif defined (TEST16)
    childFrame->AddInput(kButtonPressMask);
    childChildFrame->AddInput(kPointerMotionMask);
+#elif defined (TEST17)
+   mainFrame->AddInput(kPointerMotionMask);
+   childFrame->AddInput(kButtonPressMask);
+   childChildFrame->AddInput(kPointerMotionMask);
+
+   //Create the second window:
+   TestFrame *main2 = new TestFrame(0, 500, 500, kMainFrame, 0xffff00);
+   TestFrame *child2 = new TestFrame(main2, 300, 300, kChildFrame, 0xff00);
+   
+   main2->AddInput(kPointerMotionMask);//this window can activate implicit grab.
+   child2->AddInput(kButtonMotionMask);
+   //Place top-level windows side-by-side.
+   gVirtualX->MoveWindow(mainFrame->GetId(), 600, 600);
+   gVirtualX->MoveWindow(main2->GetId(), 1100, 600);
+   
+   gVirtualX->MapSubwindows(main2->GetId());
+   gVirtualX->MapRaised(main2->GetId());   
+
+
+   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kNone, kNone, kNone, kTRUE);
+
 #endif
 
    app.Run();
