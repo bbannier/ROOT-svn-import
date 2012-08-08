@@ -438,6 +438,32 @@ implicit grab on this window is initiated (with owner_events == false).
 Button released - event is to be dispatched to the grab window (4) and since there is no kButtonPressMask in grab's event mask,
 no event is generated at all.
 
+
+Tests for pointer motion events I can not really describe, since they have
+some undetermined number of events.
+
 TEST13:
 
-Pointer motions events.
+pointer motion mask on window 4,
+button motion (pointer motion while button is pressed) on a window 6,
+nothing on window 5.
+
+While cursor is moving in window 5 or 4:
+
+sequence of pointer motion event in 4.
+
+If button (any) is pressed in window 5 or 4 (and not released):
+
+no motion events (when you move) - implicit grab on a 'root' window suppress any event generation.
+
+If you now release button and press button in a window 6 (and do not release)
+
+window 6 will become receiver of pointer motion events (until button is released).
+
+TEST 14:
+
+Pointer motion and passive grab on window 5.
+
+At the beginning only window 6 has pointer motion mask.
+If you press button (in window 5 or window 6) passive grab is activated (with owner_events == true),
+from now and before you release button 
