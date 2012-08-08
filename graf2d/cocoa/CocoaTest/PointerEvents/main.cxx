@@ -4,8 +4,6 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
-#define TEST15
-
 int main(int argc, char ** argv)
 {
    //All test cases are described in
@@ -135,6 +133,9 @@ int main(int argc, char ** argv)
    gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kButtonMotionMask, kNone, kNone, kTRUE);
 #elif defined (TEST15)
    gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kNone, kNone, kNone, kTRUE);
+   childChildFrame->AddInput(kPointerMotionMask);
+#elif defined (TEST16)
+   childFrame->AddInput(kButtonPressMask);
    childChildFrame->AddInput(kPointerMotionMask);
 #endif
 
