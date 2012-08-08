@@ -417,3 +417,24 @@ TEST12:
 
 Button press/release events, no grabs (only implicit, if any).
 
+This test is quite funny (result seems to be non-obvious):
+
+window 4 has button press mask
+window 5 button release mask
+window 6 both button press and release masks.
+
+Press button in 6:
+
+Button press in 6
+Button release in 6
+
+Press button in 5:
+
+Button press in 4
+
+Though window 5 has kButtonReleaseMask!
+So, when pressing in 5, propagation founds 4 (which has kButtonPressMask), event is dispatched and …
+implicit grab on this window is initiated (with owner_events == false).
+Button released - event is to be dispatched to the grab window (4) and since there is no kButtonPressMask in grab's event mask,
+no event is generated at all.
+
