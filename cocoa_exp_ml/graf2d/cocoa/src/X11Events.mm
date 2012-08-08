@@ -1403,11 +1403,13 @@ void EventTranslator::GeneratePointerMotionEventNoGrab(NSView<X11Window> *eventV
    assert(eventView != nil && "GeneratePointerMotionEventNoGrab, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEventNoGrab, event parameter is nil");
    
+   const Mask_t maskToTest = [NSEvent pressedMouseButtons] ? (kPointerMotionMask | kButtonMotionMask) : kPointerMotionMask;
+   
    //Find a view on the top of stack:
    NSView<X11Window> *candidateView = (NSView<X11Window> *)[[[eventView window] contentView] hitTest : [theEvent locationInWindow]];
    if (candidateView) {
       //Do propagation.
-      candidateView = Detail::FindViewToPropagateEvent(candidateView, kPointerMotionMask);
+      candidateView = Detail::FindViewToPropagateEvent(candidateView, maskToTest);
       if (candidateView)//We have such a view, send event to a corresponding ROOT's window.
          Detail::SendPointerMotionEvent(fEventQueue, candidateView, theEvent);
    }
@@ -1429,22 +1431,24 @@ void EventTranslator::GeneratePointerMotionEventActiveGrab(NSView<X11Window> * /
    //assert(eventView != nil && "GeneratePointerMotionEventActiveGrab, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEventActiveGrab, event parameter is nil");
 
+   const Mask_t maskToTest = [NSEvent pressedMouseButtons] ? (kPointerMotionMask | kButtonMotionMask) : kPointerMotionMask;
+
    if (fOwnerEvents) {
       //Complex case, we have to correctly report event.
       if (NSView<X11Window> *candidateView = FindViewUnderPointer()) {
          //Do propagation.
-         candidateView = Detail::FindViewToPropagateEvent(candidateView, kPointerMotionMask | kButtonMotionMask, fButtonGrabView, fGrabEventMask);
+         candidateView = Detail::FindViewToPropagateEvent(candidateView, maskToTest, fButtonGrabView, fGrabEventMask);
          if (candidateView)//We have such a view, send event to a corresponding ROOT's window.
             Detail::SendPointerMotionEvent(fEventQueue, candidateView, theEvent);
       } else {
          //No such window - dispatch to the grab view.
          //Else: either implicit grab, or user requested grab with owner_grab == False.
-         if ((fGrabEventMask & kPointerMotionMask) || (fGrabEventMask & kButtonMotionMask))
+         if (fGrabEventMask & maskToTest)
             Detail::SendPointerMotionEvent(fEventQueue, fButtonGrabView, theEvent);
       }      
    } else {
       //Else: either implicit grab, or user requested grab with owner_grab == False.
-      if ((fGrabEventMask & kPointerMotionMask) || (fGrabEventMask & kButtonMotionMask))
+      if (fGrabEventMask & maskToTest)
          Detail::SendPointerMotionEvent(fEventQueue, fButtonGrabView, theEvent);
    }   
 }
