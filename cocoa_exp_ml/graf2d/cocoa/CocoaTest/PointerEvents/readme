@@ -334,6 +334,8 @@ Enter notify 8 (order of enter notify events is reversed with TGCocoa).
 
 TEST9- crossing events with active pointer grab (owner events true and false).
 
+NOTE: macro TEST9 must be defined (if you need TEST9) in testframe.h (to enable code modifications in testframe.cxx and in main.cxx).
+
 The same window as in TEST1 and several other tests.
 Click on window 5 will initiate an active grab (the second click in the same view will cancel it).
 
@@ -369,3 +371,34 @@ Leave notify 6
 Enter notify 5
 
 This case is really different on TGCocoa and Ubuntu (X11) - I'm not going to comment on this, I think, my implementation is correct.
+
+TEST10:
+
+No crossing events. Test for passive grab and button press/release events.
+
+Window 5 has passive button grab, it's initiated by left button press (additional variants can have keyboard modifiers also - see the code).
+
+Move from screen to 6 and press left button (and do not release):
+
+Button press 5
+
+Now press right button, while in window 6:
+
+Button press 6 
+Button release 6
+
+NOTE: this is important, it's still 6, not 5 who receives, despite of the fact that 5 has grab
+
+Move to 5 and press right button again:
+
+Button press 4
+Button release 4
+
+NOTE: again, it's not 5!!
+
+Now release the left button (we are still in 5):
+
+Button release 4
+
+NOTE: even now, it's 4 who got the release! (remember, a button press was in 5)
+
