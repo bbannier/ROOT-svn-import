@@ -123,7 +123,8 @@ int main(int argc, char ** argv)
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
 #elif defined (TEST12)
    mainFrame->AddInput(kButtonPressMask);
-   childFrame->AddInput(kButtonReleaseMask);
+//   childFrame->AddInput(kButtonReleaseMask);
+   childFrame->AddInput(kButtonReleaseMask | kButtonPressMask);
    childChildFrame->AddInput(kButtonPressMask | kButtonReleaseMask);
 #endif
 
