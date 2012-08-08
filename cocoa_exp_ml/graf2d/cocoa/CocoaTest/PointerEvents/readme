@@ -476,3 +476,8 @@ window 5 has passive grab without any masks.
 
 Motion events without grab - only in 6.
 Motion events if button was pressed (and not released yet) in 5 or 6 - motion events in 6.
+
+TEST16:
+
+(Macro TEST16 must be defined in test frame.h)
+
