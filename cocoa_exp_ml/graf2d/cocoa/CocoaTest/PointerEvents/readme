@@ -402,3 +402,9 @@ Button release 4
 
 NOTE: even now, it's 4 who got the release! (remember, a button press was in 5)
 
+TEST10 can be modified: remove button press/release mask from mainFrame (in this case grab view will start receiving corresponding events,
+while pointer is in window 5 or 4).
+There are additional options to test in TEST10 section - they are commented now, I do not describe the expected results here - to many
+possible combinations, better try and compare X11 and TGCocoa.
+
+
