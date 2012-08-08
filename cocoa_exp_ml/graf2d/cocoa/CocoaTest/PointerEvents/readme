@@ -410,3 +410,10 @@ possible combinations, better try and compare X11 and TGCocoa.
 TEST11:
 
 Similar to TEST9, but now owner_events == false. TEST11 macro must be defined in testframe.h
+
+
+
+TEST12:
+
+Button press/release events, no grabs (only implicit, if any).
+
