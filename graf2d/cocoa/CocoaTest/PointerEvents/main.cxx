@@ -4,8 +4,12 @@
 #include "TVirtualX.h"
 #include "testframe.h"
 
+#define TEST12
+
 int main(int argc, char ** argv)
 {
+   //All test cases are described in
+
    using namespace ROOT::CocoaTest;
 
    TApplication app("test_app", &argc, argv);
@@ -117,6 +121,10 @@ int main(int argc, char ** argv)
    mainFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
    childFrame->AddInput(kEnterWindowMask | kLeaveWindowMask | kButtonPressMask); //This will init at first implicit grab, which later will be changed by active grab.
    childChildFrame->AddInput(kEnterWindowMask | kLeaveWindowMask);
+#elif defined (TEST12)
+   mainFrame->AddInput(kButtonPressMask);
+   childFrame->AddInput(kButtonReleaseMask);
+   childChildFrame->AddInput(kButtonPressMask | kButtonReleaseMask);
 #endif
 
    app.Run();
