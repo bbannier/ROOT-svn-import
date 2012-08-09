@@ -1759,8 +1759,8 @@ Double_t TMVA::MethodBDT::AdaCost( vector< const TMVA::Event*> eventSample, Deci
 
    Double_t err=0, sumGlobalWeights=0, sumGlobalCost=0;
 
-   vector<Double_t> sumw(DataInfo().GetNClasses(),0);      //for individually re-scaling  each class
-   map<Node*,Int_t> sigEventsInNode; // how many signal events of the training tree
+   std::vector<Double_t> sumw(DataInfo().GetNClasses(),0);      //for individually re-scaling  each class
+   std::map<Node*,Int_t> sigEventsInNode; // how many signal events of the training tree
 
    for (vector< const TMVA::Event*>::iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       Double_t w = (*e)->GetWeight();
@@ -1770,7 +1770,7 @@ Double_t TMVA::MethodBDT::AdaCost( vector< const TMVA::Event*> eventSample, Deci
       sumw[iclass] += w;
 
       if ( DoRegression() ) {
-         Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
+         Log() << kFATAL << " AdaCost not implemented for regression"<<Endl;
       }else{
   
          Double_t dtoutput = (dt->CheckEvent(*e,false) - 0.5)*2.;
@@ -1792,7 +1792,7 @@ Double_t TMVA::MethodBDT::AdaCost( vector< const TMVA::Event*> eventSample, Deci
    }
 
    if ( DoRegression() ) {
-      Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
+      Log() << kFATAL << " AdaCost not implemented for regression"<<Endl;
    }
 
    //   Log() << kDEBUG << "BDT AdaBoos  wrong/all: " << sumGlobalCost << "/" << sumGlobalWeights << Endl;
@@ -1825,11 +1825,11 @@ Double_t TMVA::MethodBDT::AdaCost( vector< const TMVA::Event*> eventSample, Deci
       else if  (!isTrueSignal && !isSelectedSignal) cost=Cbb;
 
       Double_t boostfactor = TMath::Exp(-1*boostWeight*trueType*dtoutput*cost);
-      if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<endl; 
+      if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<Endl; 
       if ( (*e)->GetWeight() > 0 ){
          (*e)->SetBoostWeight( (*e)->GetBoostWeight() * boostfactor);
          // Helge change back            (*e)->ScaleBoostWeight(boostfactor);
-         if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<endl;
+         if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<Endl;
       } else {
          if ( fInverseBoostNegWeights )(*e)->ScaleBoostWeight( 1. / boostfactor); // if the original event weight is negative, and you want to "increase" the events "positive" influence, you'd reather make the event weight "smaller" in terms of it's absolute value while still keeping it something "negative"
       }

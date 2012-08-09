@@ -625,7 +625,7 @@ TH2F* TMVA::Tools::TransposeHist( const TH2F& h )
 
    // sanity check
    if (h.GetNbinsX() != h.GetNbinsY()) {
-      Log() << kFATAL << "<TransposeHist> cannot transpose non-quadratic histogram" << endl;
+      Log() << kFATAL << "<TransposeHist> cannot transpose non-quadratic histogram" << Endl;
    }
    
    TH2F *transposedHisto = new TH2F( h ); 
@@ -820,7 +820,7 @@ const TString& TMVA::Tools::Color( const TString& c )
 
    if (c == "reset") return gClr_reset; 
 
-   cout << "Unknown color " << c << endl;
+   std::cout << "Unknown color " << c << std::endl;
    exit(1);
 
    return gClr_none;
@@ -1222,13 +1222,13 @@ void TMVA::Tools::ReadTMatrixDFromXML( void* node, const char* name, TMatrixD* m
 void TMVA::Tools::TMVAWelcomeMessage()
 {
    // direct output, eg, when starting ROOT session -> no use of Logger here
-   cout << endl;
-   cout << Color("bold") << "TMVA -- Toolkit for Multivariate Data Analysis" << Color("reset") << endl;
-   cout << "        " << "Version " << TMVA_RELEASE << ", " << TMVA_RELEASE_DATE << endl;
-   cout << "        " << "Copyright (C) 2005-2010 CERN, MPI-K Heidelberg, Us of Bonn and Victoria" << endl;
-   cout << "        " << "Home page:     http://tmva.sf.net" << endl;
-   cout << "        " << "Citation info: http://tmva.sf.net/citeTMVA.html" << endl;
-   cout << "        " << "License:       http://tmva.sf.net/LICENSE" << endl << endl;
+   std::cout << std::endl;
+   std::cout << Color("bold") << "TMVA -- Toolkit for Multivariate Data Analysis" << Color("reset") << std::endl;
+   std::cout << "        " << "Version " << TMVA_RELEASE << ", " << TMVA_RELEASE_DATE << std::endl;
+   std::cout << "        " << "Copyright (C) 2005-2010 CERN, MPI-K Heidelberg, Us of Bonn and Victoria" << std::endl;
+   std::cout << "        " << "Home page:     http://tmva.sf.net" << std::endl;
+   std::cout << "        " << "Citation info: http://tmva.sf.net/citeTMVA.html" << std::endl;
+   std::cout << "        " << "License:       http://tmva.sf.net/LICENSE" << std::endl << std::endl;
 }
 
 //_______________________________________________________________________

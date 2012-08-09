@@ -234,6 +234,7 @@ TTree* TMVA::Factory::CreateEventAssignTrees( const TString& name )
 {
    // create the data assignment tree (for event-wise data assignment by user)
    TTree * assignTree = new TTree( name, name );
+   assignTree->SetDirectory(0);
    assignTree->Branch( "type",   &fATreeType,   "ATreeType/I" );
    assignTree->Branch( "weight", &fATreeWeight, "ATreeWeight/F" );
 
