@@ -153,11 +153,7 @@ int main(int argc, char ** argv)
    gVirtualX->MoveWindow(main2->GetId(), 1100, 600);
    
    gVirtualX->MapSubwindows(main2->GetId());
-   gVirtualX->MapRaised(main2->GetId());   
-
-
-   gVirtualX->GrabButton(childFrame->GetId(), kButton1, kAnyModifier, kNone, kNone, kNone, kTRUE);
-
+   gVirtualX->MapRaised(main2->GetId());
 #endif
 
    app.Run();
