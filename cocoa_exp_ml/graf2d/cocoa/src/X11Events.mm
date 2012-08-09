@@ -25,6 +25,9 @@
 #include "TGWindow.h"
 #include "TList.h"
 
+//TODO: check if different GenerateButtonXXXEvent functions can be affected by the fact mouse is pressed (and not released)
+//in some view (Cocoa has "its own grab" - which view is receiving an event and if it's actually a view under cursor?)
+
 @interface FakeCrossingEvent : NSEvent {
    NSWindow *fQuartzWindow;
    NSPoint fLocationInWindow;
