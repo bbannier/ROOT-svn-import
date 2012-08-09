@@ -775,6 +775,41 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
+- (void) addTransientWindow : (QuartzWindow *) window
+{
+   assert(window != nil && "addTransientWindow, window parameter is nil");
+
+   window.fMainWindow = self;
+   
+   if (window.fMapState != kIsViewable) {
+      window.fDelayedTransient = YES;
+   } else {
+      [self addChildWindow : window ordered : NSWindowAbove];
+      window.fDelayedTransient = NO;
+   }
+}
+
+//______________________________________________________________________________
+- (void) makeKeyAndOrderFront:(id)sender
+{
+   (void) sender;
+   //The more I know Cocoa, the less I like it.
+   //Window behavior between spaces is a total mess.
+   //Set the window to join all spaces.
+   [self setCollectionBehavior : NSWindowCollectionBehaviorCanJoinAllSpaces];
+   //now bring it to the front, it will appear on the active space.
+   [super makeKeyAndOrderFront : self];
+   //then reset the collection behavior to default, so the window
+   [self setCollectionBehavior : NSWindowCollectionBehaviorDefault];
+}
+
+//______________________________________________________________________________
+- (void) setFDelayedTransient : (BOOL) d
+{
+   fDelayedTransient = d;
+}
+
+//______________________________________________________________________________
 - (QuartzImage *) fShapeCombineMask
 {
    return fShapeCombineMask;
@@ -791,27 +826,6 @@ void print_mask_info(ULong_t mask)
          //Check window's shadow???
       }
    }
-}
-
-//______________________________________________________________________________
-- (void) addTransientWindow : (QuartzWindow *) window
-{
-   assert(window != nil && "addTransientWindow, window parameter is nil");
-
-   window.fMainWindow = self;
-   
-   if (window.fMapState != kIsViewable) {
-      window.fDelayedTransient = YES;
-   } else {
-      [self addChildWindow : window ordered : NSWindowAbove];
-      window.fDelayedTransient = NO;
-   }
-}
-
-//______________________________________________________________________________
-- (void) setFDelayedTransient : (BOOL) d
-{
-   fDelayedTransient = d;
 }
 
 ///////////////////////////////////////////////////////////
