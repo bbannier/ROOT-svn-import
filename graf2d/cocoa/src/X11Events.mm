@@ -1157,12 +1157,13 @@ void EventTranslator::GeneratePointerMotionEvent(NSView<X11Window> *eventView, N
 {
    assert(eventView != nil && "GeneratePointerMotionEvent, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEvent, event parameter is nil");
+   
+   
 
-   if (fPointerGrabType == kPGNoGrab) {
+   if (fPointerGrabType == kPGNoGrab)
       return GeneratePointerMotionEventNoGrab(eventView, theEvent);
-   } else {
+   else
       return GeneratePointerMotionEventActiveGrab(eventView, theEvent);
-   }
 }
 
 //______________________________________________________________________________
@@ -1404,10 +1405,9 @@ void EventTranslator::GeneratePointerMotionEventNoGrab(NSView<X11Window> *eventV
    assert(theEvent != nil && "GeneratePointerMotionEventNoGrab, event parameter is nil");
    
    const Mask_t maskToTest = [NSEvent pressedMouseButtons] ? (kPointerMotionMask | kButtonMotionMask) : kPointerMotionMask;
-   
-   //Find a view on the top of stack:
-   NSView<X11Window> *candidateView = (NSView<X11Window> *)[[[eventView window] contentView] hitTest : [theEvent locationInWindow]];
-   if (candidateView) {
+
+   //Event without any emulated grab, receiver view can be "wrong" (result of Cocoa's "dragging").
+   if (NSView<X11Window> *candidateView = X11::FindViewUnderPointer()) {
       //Do propagation.
       candidateView = Detail::FindViewToPropagateEvent(candidateView, maskToTest);
       if (candidateView)//We have such a view, send event to a corresponding ROOT's window.

@@ -109,9 +109,11 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
    if (buttonEvent->fType == kButtonPress) {
       static bool setGrab = true;
       if (setGrab) {
+         std::cout<<"Start grab\n";
          gVirtualX->GrabPointer(GetId(), kButtonMotionMask, kNone, kNone, kTRUE, kTRUE); //the last parameter - owner_events.
          setGrab = false;
       } else {
+         std::cout<<"Cancel grab\n";
          gVirtualX->GrabPointer(kNone, kNone, kNone, kNone, kFALSE, kFALSE);
          setGrab = true;
       }
