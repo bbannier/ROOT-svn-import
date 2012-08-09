@@ -2258,7 +2258,7 @@ void print_mask_info(ULong_t mask)
    TGCocoa *vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "mouseMoved, gVirtualX is null or not of TGCocoa type");
    
-   vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);
+   vx->GetEventTranslator()->GeneratePointerMotionEvent(theEvent);
 }
 
 //______________________________________________________________________________
@@ -2269,7 +2269,7 @@ void print_mask_info(ULong_t mask)
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "mouseMoved, gVirtualX is null or not of TGCocoa type");
    
-   vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
+   vx->GetEventTranslator()->GeneratePointerMotionEvent(theEvent);   
 }
 
 //______________________________________________________________________________
@@ -2280,7 +2280,7 @@ void print_mask_info(ULong_t mask)
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "rightMouseMoved, gVirtualX is null or not of TGCocoa type");
    
-   vx->GetEventTranslator()->GeneratePointerMotionEvent(self, theEvent);   
+   vx->GetEventTranslator()->GeneratePointerMotionEvent(theEvent);
 }
 
 //______________________________________________________________________________

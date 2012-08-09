@@ -1153,17 +1153,16 @@ bool EventTranslator::HasPointerGrab()const
 }
 
 //______________________________________________________________________________
-void EventTranslator::GeneratePointerMotionEvent(NSView<X11Window> *eventView, NSEvent *theEvent)
+void EventTranslator::GeneratePointerMotionEvent(NSEvent *theEvent)
 {
-   assert(eventView != nil && "GeneratePointerMotionEvent, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEvent, event parameter is nil");
    
    
 
    if (fPointerGrabType == kPGNoGrab)
-      return GeneratePointerMotionEventNoGrab(eventView, theEvent);
+      return GeneratePointerMotionEventNoGrab(theEvent);
    else
-      return GeneratePointerMotionEventActiveGrab(eventView, theEvent);
+      return GeneratePointerMotionEventActiveGrab(theEvent);
 }
 
 //______________________________________________________________________________
@@ -1397,11 +1396,9 @@ void EventTranslator::CheckUnmappedView(Window_t winID)
 }
 
 //______________________________________________________________________________
-void EventTranslator::GeneratePointerMotionEventNoGrab(NSView<X11Window> *eventView, NSEvent *theEvent)
+void EventTranslator::GeneratePointerMotionEventNoGrab(NSEvent *theEvent)
 {
    //Without grab, things are simple: find a view which accepts pointer motion event.
-
-   assert(eventView != nil && "GeneratePointerMotionEventNoGrab, view parameter is nil");
    assert(theEvent != nil && "GeneratePointerMotionEventNoGrab, event parameter is nil");
    
    const Mask_t maskToTest = [NSEvent pressedMouseButtons] ? (kPointerMotionMask | kButtonMotionMask) : kPointerMotionMask;
@@ -1416,7 +1413,7 @@ void EventTranslator::GeneratePointerMotionEventNoGrab(NSView<X11Window> *eventV
 }
 
 //______________________________________________________________________________
-void EventTranslator::GeneratePointerMotionEventActiveGrab(NSView<X11Window> * /*eventView*/, NSEvent *theEvent)
+void EventTranslator::GeneratePointerMotionEventActiveGrab(NSEvent *theEvent)
 {
    //More complex case. Grab can be result of button press and set by SetPointerGrab.
    //In case of button press (this is either passive->active or implicit grab),
