@@ -1543,7 +1543,7 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
    outfile<<"a->SetFillStyle(0);"<<std::endl;  // big frame
    outfile<<"a->SetLineWidth(4);"<<std::endl;
    outfile<<"TBox *b1=new TBox();"<<std::endl;  // single cell
-   outfile<<"TText*t=new TText();"<<endl;  // text for numbering
+   outfile<<"TText*t=new TText();"<<std::endl;  // text for numbering
    if (fillcells) {
       outfile << (colors ? "gStyle->SetPalette(1, 0);" : "gStyle->SetPalette(0);") 
               << std::endl;
@@ -1622,16 +1622,16 @@ void TMVA::PDEFoam::RootPlot2dim( const TString& filename, TString opt,
 
          //     cell number
          if (plotcellnumber) {
-            outfile<<"t->SetTextColor(4);"<<endl;
+            outfile<<"t->SetTextColor(4);"<<std::endl;
             if(fLastCe<51)
-               outfile<<"t->SetTextSize(0.025);"<<endl;  // text for numbering
+               outfile<<"t->SetTextSize(0.025);"<<std::endl;  // text for numbering
             else if(fLastCe<251)
-               outfile<<"t->SetTextSize(0.015);"<<endl;
+               outfile<<"t->SetTextSize(0.015);"<<std::endl;
             else
-               outfile<<"t->SetTextSize(0.008);"<<endl;
+               outfile<<"t->SetTextSize(0.008);"<<std::endl;
             x = offs+lpag*(cellPosi[0]+0.5*cellSize[0]); 
             y = offs+lpag*(cellPosi[1]+0.5*cellSize[1]);
-            outfile<<"t->DrawText("<<x<<","<<y<<","<<"\""<<iCell<<"\""<<");"<<endl;
+            outfile<<"t->DrawText("<<x<<","<<y<<","<<"\""<<iCell<<"\""<<");"<<std::endl;
          }
       }
    }
