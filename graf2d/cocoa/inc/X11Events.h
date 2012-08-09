@@ -58,7 +58,7 @@ public:
    void GenerateExposeEvent(NSView<X11Window> *view, const NSRect &exposedRect);
 
    void GenerateCrossingEvent(NSEvent *theEvent);
-   void GeneratePointerMotionEvent(NSView<X11Window> *eventView, NSEvent *theEvent);
+   void GeneratePointerMotionEvent(NSEvent *theEvent);
    
    //TODO: instead of passing EMouseButton, use info from NSEvent???
    void GenerateButtonPressEvent(NSView<X11Window> *eventView, NSEvent *theEvent, EMouseButton btn);
@@ -89,8 +89,8 @@ private:
    void GenerateCrossingEventNoGrab(NSEvent *theEvent);
    void GenerateCrossingEventActiveGrab(NSEvent *theEvent);
 
-   void GeneratePointerMotionEventNoGrab(NSView<X11Window> *view, NSEvent *theEvent);
-   void GeneratePointerMotionEventActiveGrab(NSView<X11Window> *eventView, NSEvent *theEvent);
+   void GeneratePointerMotionEventNoGrab(NSEvent *theEvent);
+   void GeneratePointerMotionEventActiveGrab(NSEvent *theEvent);
 
    void GenerateButtonPressEventNoGrab(NSView<X11Window> *view, NSEvent *theEvent, EMouseButton btn);
    void GenerateButtonPressEventActiveGrab(NSView<X11Window> *view, NSEvent *theEvent, EMouseButton btn);
