@@ -58,6 +58,7 @@ protected:
    Double_t    fXmax;        //Upper bounds for the range
    Int_t       fNpx;         //Number of points used for the graphical representation
    Int_t       fType;        //(=0 for standard functions, 1 if pointer to function)
+   Bool_t      fVectorized;  //(true if function pointer is a vectorized function)
    Int_t       fNpfits;      //Number of points used in the fit
    Int_t       fNDF;         //Number of degrees of freedom in the fit
    Int_t       fNsave;       //Number of points used to fill array fSave
@@ -77,6 +78,7 @@ protected:
    TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
    void        *fCintFunc;              //! pointer to interpreted function class
    ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
+   ROOT::Math::ParamFunctorVector fFunctorVector;   //! Functor object to wrap any C++ vectorized callable object 
 
    static Bool_t fgAbsValue;  //use absolute value of function when computing integral
    static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
@@ -98,10 +100,46 @@ public:
 #ifndef __CINT__
    TF1(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0);
    TF1(const char *name, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0);
+   TF1(const char *name, void (*fcn)( int , double const* const* , const double * , double* ), 
+      Double_t xmin=0, Double_t xmax=1, Int_t npar=0 );
 #endif
 
    // Constructors using functors (compiled mode only)
    TF1(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin = 0, Double_t xmax = 1, Int_t npar = 0);
+
+   /*typedef void (* FuncVector ) ( int, double const* const*, const double *, double* );
+   TF1(const char *name, FuncVector f, Double_t xmin, Double_t xmax, Int_t npar, const char * = 0 ) :
+      TFormula(),
+      TAttLine(),
+      TAttFill(),
+      TAttMarker(),
+      fXmin      ( xmin ),
+      fXmax      ( xmax ),
+      fNpx       ( 100 ),
+      fType      ( 1 ),
+      fVectorized( true ), 
+      fNpfits    ( 0 ),
+      fNDF       ( 0 ),
+      fNsave     ( 0 ),
+      fChisquare ( 0 ),
+      fIntegral  ( 0 ),
+      fParErrors ( 0 ),
+      fParMin    ( 0 ),
+      fParMax    ( 0 ),
+      fSave      ( 0 ),
+      fAlpha     ( 0 ),
+      fBeta      ( 0 ),
+      fGamma     ( 0 ),
+      fParent    ( 0 ),
+      fHistogram ( 0 ),
+      fMaximum   ( -1111 ),
+      fMinimum   ( -1111 ),
+      fMethodCall ( 0),
+      fCintFunc  ( 0 ),
+      fFunctorVector( ROOT::Math::ParamFunctorVector(f) )
+   {
+      CreateFromFunctor(name, npar);
+   }*/
 
    // Template constructors from any  C++ callable object,  defining  the operator() (double * , double *)
    // and returning a double.
@@ -121,6 +159,7 @@ public:
       fXmax      ( xmax ),
       fNpx       ( 100 ),
       fType      ( 1 ),
+      fVectorized( false ), 
       fNpfits    ( 0 ),
       fNDF       ( 0 ),
       fNsave     ( 0 ),
@@ -143,6 +182,7 @@ public:
    {
       CreateFromFunctor(name, npar);
    }
+   
 
    // Template constructors from a pointer to any C++ class of type PtrObj with a specific member function of type
    // MemFn.
@@ -162,6 +202,7 @@ public:
       fXmax      ( xmax ),
       fNpx       ( 100 ),
       fType      ( 1 ),
+      fVectorized( false ), 
       fNpfits    ( 0 ),
       fNDF       ( 0 ),
       fNsave     ( 0 ),
@@ -184,7 +225,9 @@ public:
    {
       CreateFromFunctor(name, npar);
    }
+   
 
+   
    // constructor used by CINT
    TF1(const char *name, void *ptr, Double_t xmin, Double_t xmax, Int_t npar, const char *className );
    TF1(const char *name, void *ptr, void *,Double_t xmin, Double_t xmax, Int_t npar, const char *className, const char *methodName = 0);
@@ -206,6 +249,7 @@ public:
    virtual void     DrawF1(const char *formula, Double_t xmin, Double_t xmax, Option_t *option="");
    virtual Double_t Eval(Double_t x, Double_t y=0, Double_t z=0, Double_t t=0) const;
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
+   virtual void EvalParVector( int n, Double_t const* const* ppIn, const Double_t * p, Double_t* pOut );
    // for using TF1 as a callable object (functor)
    virtual Double_t operator()(Double_t x, Double_t y=0, Double_t z = 0, Double_t t = 0) const; 
    virtual Double_t operator()(const Double_t *x, const Double_t *params=0);  

@@ -355,6 +355,7 @@ TF1::TF1(): TFormula(), TAttLine(), TAttFill(), TAttMarker()
    fXmax      = 0;
    fNpx       = 100;
    fType      = 0;
+   fVectorized = false;
    fNpfits    = 0;
    fNDF       = 0;
    fNsave     = 0;
@@ -403,6 +404,7 @@ TF1::TF1(const char *name,const char *formula, Double_t xmin, Double_t xmax)
    }
    fNpx       = 100;
    fType      = 0;
+   fVectorized = false;
    if (fNpar) {
       fParErrors = new Double_t[fNpar];
       fParMin    = new Double_t[fNpar];
@@ -466,6 +468,7 @@ TF1::TF1(const char *name, Double_t xmin, Double_t xmax, Int_t npar)
    fXmax       = xmax;
    fNpx        = 100;
    fType       = 2;
+   fVectorized = false;
    if (npar > 0 ) fNpar = npar;
    if (fNpar) {
       fNames      = new TString[fNpar];
@@ -554,6 +557,7 @@ TF1::TF1(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
    fXmax       = xmax;
    fNpx        = 100;
    fType       = 2;
+   fVectorized = false;
    //fFunction   = 0;
    if (npar > 0 ) fNpar = npar;
    if (fNpar) {
@@ -641,6 +645,7 @@ TF1::TF1(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin
    fNpx        = 100;
 
    fType       = 1;
+   fVectorized = false;
    fMethodCall = 0;
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
@@ -713,6 +718,7 @@ TF1::TF1(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), D
    fNpx        = 100;
 
    fType       = 1;
+   fVectorized = false;
    fMethodCall = 0;
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
@@ -766,6 +772,80 @@ TF1::TF1(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), D
 
 
 //______________________________________________________________________________
+TF1::TF1(const char *name, void (*fcn)( int, double const* const*, const double *, double* ), 
+   Double_t xmin, Double_t xmax, Int_t npar )
+      :TFormula(), TAttLine(), TAttFill(), TAttMarker()
+{
+   // F1 constructor using a pointer to real function.
+   //
+   //   npar is the number of free parameters used by the function
+   //
+   //   This constructor creates a function of type C when invoked
+   //   with the normal C++ compiler.
+   //
+   //   see test program test/stress.cxx (function stress1) for an example.
+   //   note the interface with an intermediate pointer.
+   //
+   // WARNING! A function created with this constructor cannot be Cloned.
+
+   fXmin       = xmin;
+   fXmax       = xmax;
+   fNpx        = 100;
+
+   fType       = 1;
+   fVectorized = true;
+   fMethodCall = 0;
+   fCintFunc   = 0;
+   fFunctorVector = ROOT::Math::ParamFunctorVector(fcn);
+
+   if (npar > 0 ) fNpar = npar;
+   if (fNpar) {
+      fNames      = new TString[fNpar];
+      fParams     = new Double_t[fNpar];
+      fParErrors  = new Double_t[fNpar];
+      fParMin     = new Double_t[fNpar];
+      fParMax     = new Double_t[fNpar];
+      for (int i = 0; i < fNpar; i++) {
+         fParams[i]     = 0;
+         fParErrors[i]  = 0;
+         fParMin[i]     = 0;
+         fParMax[i]     = 0;
+      }
+   } else {
+      fParErrors = 0;
+      fParMin    = 0;
+      fParMax    = 0;
+   }
+   fChisquare  = 0;
+   fIntegral   = 0;
+   fAlpha      = 0;
+   fBeta       = 0;
+   fGamma      = 0;
+   fNsave      = 0;
+   fSave       = 0;
+   fParent     = 0;
+   fNpfits     = 0;
+   fNDF        = 0;
+   fHistogram  = 0;
+   fMinimum    = -1111;
+   fMaximum    = -1111;
+   fNdim       = 1;
+
+   // Store formula in linked list of formula in ROOT
+   TF1 *f1old = (TF1*)gROOT->GetListOfFunctions()->FindObject(name);
+   gROOT->GetListOfFunctions()->Remove(f1old);
+   SetName(name);
+   gROOT->GetListOfFunctions()->Add(this);
+
+   if (!gStyle) return;
+   SetLineColor(gStyle->GetFuncColor());
+   SetLineWidth(gStyle->GetFuncWidth());
+   SetLineStyle(gStyle->GetFuncStyle());
+   SetFillStyle(0);
+
+}
+
+//______________________________________________________________________________
 TF1::TF1(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t xmax, Int_t npar ) :
    TFormula(),
    TAttLine(),
@@ -775,6 +855,7 @@ TF1::TF1(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t x
    fXmax      ( xmax ),
    fNpx       ( 100 ),
    fType      ( 1 ),
+   fVectorized( false ), 
    fNpfits    ( 0 ),
    fNDF       ( 0 ),
    fNsave     ( 0 ),
@@ -909,6 +990,7 @@ void TF1::CreateFromCintClass(const char *name,void *ptr, Double_t xmin, Double_
    fXmax       = xmax;
    fNpx        = 100;
    fType       = 3;
+   fVectorized = false;
    if (npar > 0 ) fNpar = npar;
    if (fNpar) {
       fNames      = new TString[fNpar];
@@ -1032,6 +1114,7 @@ TF1::TF1(const TF1 &f1) : TFormula(), TAttLine(f1), TAttFill(f1), TAttMarker(f1)
    fXmax      = 0;
    fNpx       = 100;
    fType      = 0;
+   fVectorized= false;
    fNpfits    = 0;
    fNDF       = 0;
    fNsave     = 0;
@@ -1104,8 +1187,10 @@ void TF1::Copy(TObject &obj) const
    ((TF1&)obj).fXmax = fXmax;
    ((TF1&)obj).fNpx  = fNpx;
    ((TF1&)obj).fType = fType;
+   ((TF1&)obj).fVectorized = fVectorized;
    ((TF1&)obj).fCintFunc  = fCintFunc;
    ((TF1&)obj).fFunctor   = fFunctor;
+   ((TF1&)obj).fFunctorVector   = fFunctorVector;
    ((TF1&)obj).fChisquare = fChisquare;
    ((TF1&)obj).fNpfits  = fNpfits;
    ((TF1&)obj).fNDF     = fNDF;
@@ -1540,11 +1625,24 @@ Double_t TF1::EvalPar(const Double_t *x, const Double_t *params)
 //       if (fFunction) {
 //          if (params) result = (*fFunction)((Double_t*)x,(Double_t*)params);
 //          else        result = (*fFunction)((Double_t*)x,fParams);
-      if (!fFunctor.Empty()) {
+      if (!fFunctor.Empty() && !fVectorized) 
+      {
          if (params) result = fFunctor((Double_t*)x,(Double_t*)params);
          else        result = fFunctor((Double_t*)x,fParams);
-
-      }else          result = GetSave(x);
+      }
+      else if( !fFunctorVector.Empty() && fVectorized )
+      {
+         std::vector< const Double_t * > tmpCoordPtr(fNdim);
+         
+         for( int i=0;i<fNdim;i++ )
+         {
+            tmpCoordPtr[i] = &x[i];
+         }
+         
+         if (params) fFunctorVector( 1, &tmpCoordPtr.front(), (Double_t*)params, &result );
+         else        fFunctorVector( 1, &tmpCoordPtr.front(), fParams, &result );
+      } 
+      else          result = GetSave(x);
       return result;
    }
    if (fType == 2) {
@@ -1561,6 +1659,35 @@ Double_t TF1::EvalPar(const Double_t *x, const Double_t *params)
    return result;
 }
 
+//______________________________________________________________________________
+void TF1::EvalParVector( int n, Double_t const* const* ppIn, const Double_t * p, Double_t* pOut )
+{
+   // Evaluate function with given coordinates and parameters.
+   //
+   // dedicated vector-version for example for simd optimization
+
+   fgCurrent = this;
+   
+   if( fType == 1 && fVectorized && !fFunctorVector.Empty() )
+   {
+      if (p) fFunctorVector( n, ppIn, (Double_t*)p, pOut );
+      else        fFunctorVector( n, ppIn, fParams, pOut );
+   }
+   else
+   {
+      std::vector< Double_t > tmpCoord(fNdim);
+      
+      for( int i=0; i < n; i++ )
+      {
+         for( int j=0;j<fNdim;j++ )
+         {
+            tmpCoord[j] = ppIn[j][i];
+         }
+         
+         pOut[i] = EvalPar( &tmpCoord.front(), p );
+      }
+   }
+}
 
 //______________________________________________________________________________
 void TF1::ExecuteEvent(Int_t event, Int_t px, Int_t py)

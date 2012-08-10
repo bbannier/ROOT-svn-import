@@ -85,7 +85,7 @@ public:
 //       return fFunc(x,p); 
 //    }  
    inline double operator() (double * x, double *p)  { 
-      return FuncEvaluator<Func>::Eval(fFunc,x,p); 
+      return ParamFunctorHandler::FuncEvaluator<Func>::Eval(fFunc,x,p); 
    }  
 
    // clone (use same pointer)
@@ -217,7 +217,8 @@ public:
    /** 
       Default constructor
    */ 
-   ParamFunctor ()  : fImpl(0) {}  
+   ParamFunctor ()  : fImpl(0) 
+   {}  
 
 
    /** 
@@ -292,6 +293,269 @@ public:
       return (*fImpl)(x,p); 
    }  
 
+
+
+   bool Empty() { return fImpl == 0; }
+
+
+   void SetFunction(Impl * f) { 
+      fImpl = f;
+   }
+
+private :
+
+
+   //std::auto_ptr<Impl> fImpl; 
+   Impl * fImpl; 
+
+
+}; 
+
+
+
+class ParamFunctionVectorBase { 
+  public: 
+   virtual ~ParamFunctionVectorBase() {}
+//   virtual double operator() (const double * x, const double *p) const = 0; 
+   virtual void operator() ( int n, double const* const* ppIn, const double * p, double* pOut ) = 0; 
+   virtual ParamFunctionVectorBase * Clone() const = 0; 
+};
+
+
+
+/** 
+   ParamFunctor Handler class is responsible for wrapping any other functor and pointer to 
+   free C functions.
+   It can be created from any function implementing the correct signature 
+   corresponding to the requested type
+
+   @ingroup  ParamFunctor_int
+
+*/ 
+#ifndef __CINT__
+
+template<class ParentFunctor, class Func >
+class ParamFunctorVectorHandler : public ParentFunctor::Impl { 
+
+   typedef typename ParentFunctor::Impl Base; 
+
+public: 
+
+   // constructor 
+   ParamFunctorVectorHandler(const Func & fun) : fFunc(fun) {}
+
+
+   virtual ~ParamFunctorVectorHandler() {}
+   
+   
+//    inline double operator() (double x, const double *p) const { 
+//       return fFunc(x,p); 
+//    }  
+   // for multi-dimensional functions
+//    inline double operator() (const double * x, const double *p) const { 
+//       return fFunc(x,p); 
+//    }  
+
+   inline void operator() (int n, double const* const* ppIn, const double * p, double* pOut)  { 
+      ParamFunctorVectorHandler::FuncEvaluator<Func>::Eval( fFunc, n, ppIn, p, pOut ); 
+   }  
+   
+   // clone (use same pointer)
+   ParamFunctorVectorHandler  * Clone() const { 
+      return new ParamFunctorVectorHandler(fFunc); 
+   } 
+
+
+private :
+   
+   Func fFunc; 
+
+   // structure to distinguish pointer types
+   template <typename F> struct FuncEvaluator { 
+      inline static void Eval( F & f, int n, double const* const* ppIn, const double * p, double* pOut ) { 
+         f(n, ppIn, p, pOut);
+      }
+   };
+   template <typename F> struct FuncEvaluator<F*> { 
+      inline static void Eval( F * f, int n, double const* const* ppIn, const double * p, double* pOut ) { 
+         (*f)(n, ppIn, p, pOut);
+      }
+   };
+   template <typename F> struct FuncEvaluator<F* const> { 
+      inline static void Eval( const F * f, int n, double const* const* ppIn, const double * p, double* pOut ) { 
+         (*f)(n, ppIn, p, pOut);
+      }
+   };
+   
+   
+};
+
+
+#if defined(__MAKECINT__) || defined(G__DICTIONARY) 
+// needed since CINT initialize it with TRootIOCtor
+//class TRootIOCtor; 
+template<class ParentFunctor> 
+class ParamFunctorVectorHandler<ParentFunctor,TRootIOCtor *> : public ParentFunctor::Impl 
+{
+public:
+
+   ParamFunctorVectorHandler(TRootIOCtor  *) {}
+
+   inline void operator() (int n, double const* const* ppIn, const double * p, double* pOut)  { 
+   }  
+   // clone (use same pointer)
+   ParamFunctorVectorHandler  * Clone() const { 
+      return 0; 
+   } 
+
+}; 
+#endif   
+
+
+/**
+   ParamFunctor Handler to Wrap pointers to member functions 
+
+   @ingroup  ParamFunctor_int
+*/
+template <class ParentFunctor, typename PointerToObj,
+          typename PointerToMemFn>
+class ParamMemFunVectorHandler : public ParentFunctor::Impl
+{
+   typedef typename ParentFunctor::Impl Base;
+
+   
+public:
+   
+   /// constructor from a pointer to the class and a pointer to the function
+   ParamMemFunVectorHandler(const PointerToObj& pObj, PointerToMemFn pMemFn) 
+      : fObj(pObj), fMemFn(pMemFn)
+   {}
+
+   virtual ~ParamMemFunVectorHandler() {}
+        
+//    inline double operator() (double x, const double * p) const { 
+//       return ((*fObj).*fMemFn)(x,p);  
+//    }  
+
+
+   inline void operator() ( int n, double const* const* ppIn, const double * p, double* pOut )  { 
+      ((*fObj).*fMemFn)(n, ppIn, p, pOut);  
+   }  
+   
+   // clone (use same pointer)
+   ParamMemFunVectorHandler  * Clone() const { 
+      return new ParamMemFunVectorHandler(fObj, fMemFn); 
+   } 
+
+
+private :
+   ParamMemFunVectorHandler(const ParamMemFunVectorHandler&); // Not implemented
+   ParamMemFunVectorHandler& operator=(const ParamMemFunVectorHandler&); // Not implemented
+       
+   PointerToObj fObj;
+   PointerToMemFn fMemFn; 
+
+};
+
+#endif  
+
+
+
+/**
+   Param Functor class for Multidimensional functions. 
+   It is used to wrap in a very simple and convenient way 
+   any other C++ callable object (implemention double operator( const double *, const double * ) ) 
+   or a member function with the correct signature, 
+   like Foo::EvalPar(const double *, const double *)
+
+   @ingroup  ParamFunc
+
+ */
+
+
+class ParamFunctorVector   { 
+
+
+public: 
+
+   typedef  ParamFunctionVectorBase Impl;   
+
+
+   /** 
+      Default constructor
+   */ 
+   ParamFunctorVector ()  : fImpl(0) {}  
+
+
+   /** 
+       construct from a pointer to member function (multi-dim type)
+    */ 
+   template <class PtrObj, typename MemFn>
+   ParamFunctorVector(const PtrObj& p, MemFn memFn)
+      : fImpl(new ParamMemFunVectorHandler<ParamFunctorVector, PtrObj, MemFn>(p, memFn))
+   {}
+
+
+
+   /**
+      construct from another generic Functor of multi-dimension 
+    */
+   template <typename Func> 
+   explicit ParamFunctorVector( const Func & f) : 
+      fImpl(new ParamFunctorVectorHandler<ParamFunctorVector,Func>(f) )
+   {}
+
+
+
+   typedef void (* FreeFuncVector ) ( int n, double const* const* ppIn, const double * p, double* pOut );
+   ParamFunctorVector(FreeFuncVector f) : 
+      fImpl(new ParamFunctorVectorHandler<ParamFunctorVector,FreeFuncVector>(f) )
+   {
+   }
+
+   /** 
+      Destructor (no operations)
+   */ 
+   virtual ~ParamFunctorVector ()  {
+      if (fImpl) delete fImpl;
+   }  
+
+   /** 
+      Copy constructor
+   */ 
+   ParamFunctorVector(const ParamFunctorVector & rhs) : 
+      fImpl(0)
+   {
+//       if (rhs.fImpl.get() != 0) 
+//          fImpl = std::auto_ptr<Impl>( (rhs.fImpl)->Clone() ); 
+      if (rhs.fImpl != 0)  fImpl = rhs.fImpl->Clone(); 
+   } 
+
+   /** 
+      Assignment operator
+   */ 
+   ParamFunctorVector & operator = (const ParamFunctorVector & rhs)  {
+//      ParamFunctor copy(rhs); 
+      // swap auto_ptr by hand
+//       Impl * p = fImpl.release(); 
+//       fImpl.reset(copy.fImpl.release());
+//       copy.fImpl.reset(p);
+
+      
+      if (fImpl) delete fImpl;
+      fImpl = 0; 
+      if (rhs.fImpl != 0) 
+         fImpl = rhs.fImpl->Clone();
+
+      return *this;
+   }
+
+   void * GetImpl() { return (void *) fImpl; }
+
+   void operator() ( int n, double const* const* ppIn, const double * p, double* pOut ) const 
+   { 
+      (*fImpl)( n, ppIn, p, pOut ); 
+   }  
 
 
    bool Empty() { return fImpl == 0; }
