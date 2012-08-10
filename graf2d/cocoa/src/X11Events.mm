@@ -1393,26 +1393,29 @@ void EventTranslator::CheckUnmappedView(Window_t winID)
       }
    }
    
-   //ClearPointerIfViewIsRelated(fViewUnderPointer, winID);//TODO: send event to this view first?
    if (fViewUnderPointer) {
-      if (fViewUnderPointer.fID == winID) {
-         NSPoint location = {};
-         location.x = fViewUnderPointer.fWidth / 2;
-         location.y = fViewUnderPointer.fHeight / 2;
-         location = [fViewUnderPointer convertPoint : location toView : nil];
-      
-         const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fViewUnderPointer window] location : location]);
-         if (!event.Get()) {
-            //Hehe, if this happend, is it still possible to log????
-            NSLog(@"EventTranslator::CheckUnmappedView, crossing event initialization failed");
-            return;
-         }
+      for (NSView<X11Window> *view  = fViewUnderPointer; view; view = view.fParentView) {
+         if (view.fID == winID) {
+            NSPoint location = {};
+            location.x = fViewUnderPointer.fWidth / 2;
+            location.y = fViewUnderPointer.fHeight / 2;
+            location = [fViewUnderPointer convertPoint : location toView : nil];
+         
+            const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fViewUnderPointer window] location : location]);
+            if (!event.Get()) {
+               //Hehe, if this happend, is it still possible to log????
+               NSLog(@"EventTranslator::CheckUnmappedView, crossing event initialization failed");
+               return;
+            }
 
-         Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, fViewUnderPointer.fParentView, event.Get(), kNotifyNormal);//Uffffff, done!
-         fViewUnderPointer = fViewUnderPointer.fParentView;
+            Detail::SendLeaveEvent(fEventQueue, fViewUnderPointer, event.Get(), kNotifyNormal);
+            fViewUnderPointer = nil;
+
+            break;
+         }
       }
    }
-   
+
    ClearPointerIfViewIsRelated(fFocusView, winID);//TODO: send event to this view first?
    ClearPointerIfViewIsRelated(fKeyGrabView, winID);//TODO: send event to this view first??
 }
