@@ -123,6 +123,11 @@ private:
       if (fFunc->GetMethodCall() )  fFunc->InitArgs(x,p);  // needed for interpreted functions 
       return fFunc->EvalPar(x,p); 
    }
+   
+   void DoEvalParVector( int n, double const* const* ppIn, const double * p, double* pOut ) const 
+   {
+      fFunc->EvalParVector( n, ppIn, p, pOut );
+   }
 
    /// evaluate the partial derivative with respect to the parameter
    double DoParameterDerivative(const double * x, const double * p, unsigned int ipar) const; 
