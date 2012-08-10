@@ -434,6 +434,33 @@ bool IsInBranch(NSView<X11Window> *parent, NSView<X11Window> *child, NSView<X11W
    return false;
 }
 
+//______________________________________________________________________________
+NSView<X11Window> *FindPointerEventSubwindow(NSView<X11Window> *sourceView, NSView<X11Window> *eventView)
+{
+   //Pointer events has subwindow parameter (quotation):
+   //"The source of the window is the window the pointer is in. The window the event is reported with respect to
+   //is called event the window. The event window is found by starting with the source window and looking up
+   //the hierarchy for the first window on which any client has selected interest in the event. The actual window
+   //used for reporting can be modified by active grabs and, in the case of keyboard events, can be modified
+   //by the focus window.
+   //....
+   //If the source window is an inferior of the event window, then child is set to the child of the event window
+   //that is an ancestor of (or is) the source window. Otherwise, it is set to None."
+
+   assert(sourceView != nil && "FindPointerEventSubwindow, sourceView parameter is nil");
+   assert(eventView != nil && "FindPointerEventSubwindow, eventView parameter is nil");
+
+   if (sourceView == eventView)
+      return nil;
+   
+   NSView<X11Window> *child = nil;
+   NSView<X11Window> *view = sourceView;
+   for (; view && view != eventView; view = view.fParentView)
+      child = view;
+   
+   return view == eventView ? child : nil;
+}
+
 //Relation between two views.
 enum Ancestry {
    kAView1IsParent,
