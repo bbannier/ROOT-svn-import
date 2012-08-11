@@ -78,11 +78,10 @@ MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
                 gui/ged tree/treeviewer math/physics graf2d/postscript \
                 core/rint html montecarlo/eg \
                 geom/geom geom/geompainter montecarlo/vmc \
-                math/fumili math/mlp math/quadp net/auth gui/guibuilder io/xml \
+                math/fumili math/mlp math/quadp net/auth io/xml \
                 math/foam math/splot math/smatrix io/sql \
                 geom/geombuilder hist/spectrum hist/spectrumpainter \
-                gui/fitpanel proof/proof proof/proofplayer \
-                gui/sessionviewer gui/guihtml gui/recorder
+                gui/fitpanel gui/guihtml gui/recorder
 
 ifeq ($(ARCH),win32)
 MODULES      += core/winnt graf2d/win32gdk
