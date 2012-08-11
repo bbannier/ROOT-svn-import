@@ -4550,9 +4550,6 @@ fi
 
 if test "x$enable_xrootd" = "xyes" ; then
 
-   # MT haka
-   decver=300020000
-
    extraxrdflags="-DROOTXRDVERS=$decver"
    vercomm="setting $extraxrdflags"
 
