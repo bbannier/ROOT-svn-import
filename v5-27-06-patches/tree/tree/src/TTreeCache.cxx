@@ -416,7 +416,10 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
       return;
    }
    //if all branches are selected stop the learning phase
-   if (*bname == '*') StopLearningPhase();
+   if (*bname == '*') {
+      fEntryNext = -1; // We are likely to have change the set of branches, so for the [re-]reading of the cluster.
+      StopLearningPhase();
+   }
 }
 
 //_____________________________________________________________________________
@@ -444,21 +447,31 @@ Bool_t TTreeCache::FillBuffer()
    if (autoFlush > 0) {
       //case when the tree autoflush has been set
       Int_t averageEntrySize = tree->GetZipBytes()/tree->GetEntries();
+      if (averageEntrySize < 1) averageEntrySize = 1;
       Int_t nauto = fBufferSizeMin/(averageEntrySize*autoFlush);
       if (nauto < 1) nauto = 1;
+      fEntryCurrent = entry - entry%autoFlush;
       fEntryNext = entry - entry%autoFlush + nauto*autoFlush;
-   } else { 
+   } else {
+      // Below we increment by "autoFlush" events each iteration.
+      // Thus, autoFlush cannot be negative.
+      autoFlush = 0;
+
       //case of old files before November 9 2009
+      fEntryCurrent = entry;
       if (fZipBytes==0) {
-         fEntryNext = entry + tree->GetEntries();;    
+         fEntryNext = entry + tree->GetEntries();
       } else {
-         fEntryNext = entry + tree->GetEntries()*fBufferSizeMin/fZipBytes;
+         Long64_t clusterEstimate = tree->GetEntries()*fBufferSizeMin/fZipBytes;
+         if (clusterEstimate == 0)
+            clusterEstimate = 1;
+         fEntryNext = entry + clusterEstimate;         
       }
    }
+   if (fEntryCurrent < fEntryMin) fEntryCurrent = fEntryMin;
    if (fEntryMax <= 0) fEntryMax = tree->GetEntries();
    if (fEntryNext > fEntryMax) fEntryNext = fEntryMax+1;
 
-   fEntryCurrent = entry;
    
    // Check if owner has a TEventList set. If yes we optimize for this
    // Special case reading only the baskets containing entries in the
@@ -476,38 +489,52 @@ Bool_t TTreeCache::FillBuffer()
    //clear cache buffer
    TFileCacheRead::Prefetch(0,0);
    //store baskets
-   for (Int_t i=0;i<fNbranches;i++) {
-      TBranch *b = (TBranch*)fBranches->UncheckedAt(i);
-      if (b->GetDirectory()==0) continue;
-      if (b->GetDirectory()->GetFile() != fFile) continue;
-      Int_t nb = b->GetMaxBaskets();
-      Int_t *lbaskets   = b->GetBasketBytes();
-      Long64_t *entries = b->GetBasketEntry();
-      if (!lbaskets || !entries) continue;
-      //we have found the branch. We now register all its baskets
-      //from the requested offset to the basket below fEntrymax
-      Int_t blistsize = b->GetListOfBaskets()->GetSize();
-      for (Int_t j=0;j<nb;j++) {
-         // This basket has already been read, skip it
-         if (j<blistsize && b->GetListOfBaskets()->UncheckedAt(j)) continue;
+   Int_t flushIntervals = 0;
+   Long64_t minEntry = fEntryCurrent;
+   Long64_t prevNtot;
+   do {
+      prevNtot = fNtot;
+      for (Int_t i=0;i<fNbranches;i++) {
+         TBranch *b = (TBranch*)fBranches->UncheckedAt(i);
+         if (b->GetDirectory()==0) continue;
+         if (b->GetDirectory()->GetFile() != fFile) continue;
+         Int_t nb = b->GetMaxBaskets();
+         Int_t *lbaskets   = b->GetBasketBytes();
+         Long64_t *entries = b->GetBasketEntry();
+         if (!lbaskets || !entries) continue;
+         //we have found the branch. We now register all its baskets
+         //from the requested offset to the basket below fEntrymax
+         Int_t blistsize = b->GetListOfBaskets()->GetSize();
+         for (Int_t j=0;j<nb;j++) {
+            // This basket has already been read, skip it
+            if (j<blistsize && b->GetListOfBaskets()->UncheckedAt(j)) continue;
 
-         Long64_t pos = b->GetBasketSeek(j);
-         Int_t len = lbaskets[j];
-         if (pos <= 0 || len <= 0) continue;
-         //important: do not try to read fEntryNext, otherwise you jump to the next autoflush
-         if (entries[j] >= fEntryNext) continue;
-         if (entries[j] < entry && (j<nb-1 && entries[j+1] <= entry)) continue;
-         if (elist) {
-            Long64_t emax = fEntryMax;
-            if (j<nb-1) emax = entries[j+1]-1;
-            if (!elist->ContainsRange(entries[j]+chainOffset,emax+chainOffset)) continue;
+            Long64_t pos = b->GetBasketSeek(j);
+            Int_t len = lbaskets[j];
+            if (pos <= 0 || len <= 0) continue;
+            //important: do not try to read fEntryNext, otherwise you jump to the next autoflush
+            if (entries[j] >= fEntryNext) continue;
+            if (entries[j] < minEntry && (j<nb-1 && entries[j+1] <= minEntry)) continue;
+            if (elist) {
+               Long64_t emax = fEntryMax;
+               if (j<nb-1) emax = entries[j+1]-1;
+               if (!elist->ContainsRange(entries[j]+chainOffset,emax+chainOffset)) continue;
+            }
+            fNReadPref++;
+
+            TFileCacheRead::Prefetch(pos,len);
          }
-         fNReadPref++;
-
-         TFileCacheRead::Prefetch(pos,len);
+         if (gDebug > 0) printf("Entry: %lld, registering baskets branch %s, fEntryNext=%lld, fNseek=%d, fNtot=%d\n",minEntry,((TBranch*)fBranches->UncheckedAt(i))->GetName(),fEntryNext,fNseek,fNtot);
       }
-      if (gDebug > 0) printf("Entry: %lld, registering baskets branch %s, fEntryNext=%lld, fNseek=%d, fNtot=%d\n",entry,((TBranch*)fBranches->UncheckedAt(i))->GetName(),fEntryNext,fNseek,fNtot);
-   }
+      flushIntervals++;
+      minEntry += autoFlush;
+
+      if (!((autoFlush > 0) && (fBufferSizeMin > (fNtot*(flushIntervals+1))/flushIntervals) && (prevNtot < fNtot) && (minEntry < fEntryMax)))
+         break;
+
+      fEntryNext += autoFlush;
+      if (fEntryNext > fEntryMax) fEntryNext = fEntryMax+1;
+   } while (kTRUE);
    fIsLearning = kFALSE;
    return kTRUE;
 }
@@ -657,11 +684,7 @@ void TTreeCache::SetEntryRange(Long64_t emin, Long64_t emax)
 
    if (needLearningStart) {
       // Restart learning
-      fIsLearning = kTRUE;
-      fIsManual = kFALSE;
-      fNbranches  = 0;
-      fZipBytes   = 0;
-      if (fBrNames) fBrNames->Delete();
+      StartLearningPhase();
    }
 }
 
@@ -688,6 +711,7 @@ void TTreeCache::StartLearningPhase()
    fZipBytes   = 0;
    if (fBrNames) fBrNames->Delete();
    fIsTransferred = kFALSE;
+   fEntryCurrent = -1;
 }
 
 //_____________________________________________________________________________
