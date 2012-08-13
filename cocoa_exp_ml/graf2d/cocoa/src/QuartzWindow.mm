@@ -1889,7 +1889,7 @@ void print_mask_info(ULong_t mask)
 - (BOOL) acceptsCrossingEvents : (unsigned) eventMask
 {
    bool accepts = fEventMask & eventMask;
-   if (fCurrentGrabType == X11::kPGPassiveGrab)//In ROOT passive grabs are always owner_events == true.
+   if (fCurrentGrabType == X11::kPGPassiveGrab)//In ROOT passive grabs are always with owner_events == true.
       accepts = accepts || (fPassiveGrabEventMask & eventMask);
 
    if (fCurrentGrabType == X11::kPGActiveGrab) {

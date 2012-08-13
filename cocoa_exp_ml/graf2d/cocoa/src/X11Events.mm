@@ -842,6 +842,7 @@ void SendLeaveEventClosedRange(EventQueue_t &queue, NSView<X11Window> *from, NSV
 }
 
 //Top-level crossing event generators.
+//When passing parent and child view, parent view always precedes the child, even if function's name is GenerateCrossingEventChildToParent.
 
 //______________________________________________________________________________
 void GenerateCrossingEventChildToParent(EventQueue_t &queue, NSView<X11Window> *parent, NSView<X11Window> *child, NSEvent *theEvent, EXMagic detail)
@@ -858,11 +859,15 @@ void GenerateCrossingEventChildToParent(EventQueue_t &queue, NSView<X11Window> *
    assert(theEvent != nil && "GenerateCrossingEventChildToParent, event parameter is nil");
    assert(child.fParentView != nil && "GenerateCrossingEventChildToParent, child parameter must have QuartzView* parent");
    
+   //acceptsCrossingEvents will check grab event mask also, if view is a grab and if
+   //owner_events == true.
    if ([child acceptsCrossingEvents : kLeaveWindowMask])
       SendLeaveEvent(queue, child, theEvent, detail);
 
+   //Leave event to a branch [child.fParentView, parent)
    SendLeaveEventRange(queue, child.fParentView, parent, theEvent, detail);
    
+   //Enter event for the parent view.
    if ([parent acceptsCrossingEvents : kEnterWindowMask])
       SendEnterEvent(queue, parent, theEvent, detail);
 }
@@ -882,13 +887,15 @@ void GenerateCrossingEventParentToChild(EventQueue_t &queue, NSView<X11Window> *
    assert(theEvent != nil && "GenerateCrossingEventParentToChild, event parameter is nil");
    assert(child.fParentView != nil && "GenerateCrossingEventParentToChild, child parameter must have QuartzView* parent");
 
+   //If view is a grab and owner_events == true,
+   //acceptsCrossingEvents will check the grab event mask also.
    if ([parent acceptsCrossingEvents : kLeaveWindowMask])
       SendLeaveEvent(queue, parent, theEvent, detail);
 
-   //I do not know, if the order must be reversed, but if yes - it's already FAR TOO
-   //expensive to do (but I'll reuse my 'branch' arrays from  FindLowestAncestor).
+   //Enter event for [child.fParentView, parent) - order is reversed, but it does not really matter.
    SendEnterEventRange(queue, child.fParentView, parent, theEvent, detail);
 
+   //Enter event for the child view.
    if ([child acceptsCrossingEvents : kEnterWindowMask])
       SendEnterEvent(queue, child, theEvent, detail);
 }
@@ -907,19 +914,20 @@ void GenerateCrossingEventFromChild1ToChild2(EventQueue_t &queue, NSView<X11Wind
    
    //ROOT does not have NotifyNonlinear/NotifyNonlinearVirtual.
    
+   //acceptsCrossingEvents also checks grab event mask, if this view has a grab
+   //and owner_events == true.
    if ([child1 acceptsCrossingEvents : kLeaveWindowMask])
       SendLeaveEvent(queue, child1, theEvent, detail);
    
    if (!ancestor) {
-      //From child1 to it's top-level view.
-      if (child1.fParentView)
+      if (child1.fParentView)//Leave [child1.fParentView contentView]
          SendLeaveEventClosedRange(queue, child1.fParentView, (NSView<X11Window> *)[[child1 window] contentView], theEvent, detail);
-      if (child2.fParentView)
+      if (child2.fParentView)//Enter [child2.fParentView contentView] - order is reversed.
          SendEnterEventClosedRange(queue, child2.fParentView, (NSView<X11Window> *)[[child2 window] contentView], theEvent, detail);
    } else {
-      if (child1.fParentView)
+      if (child1.fParentView)//Leave [child1.fParentView ancestor)
          SendLeaveEventRange(queue, child1.fParentView, ancestor, theEvent, detail);
-      if (child2.fParentView)
+      if (child2.fParentView)//Enter [child2.fParentView, ancestor) - order reversed.
          SendEnterEventRange(queue, child2.fParentView, ancestor, theEvent, detail);
    }
 
@@ -931,7 +939,8 @@ void GenerateCrossingEventFromChild1ToChild2(EventQueue_t &queue, NSView<X11Wind
 //______________________________________________________________________________
 void GenerateCrossingEvents(EventQueue_t &queue, NSView<X11Window> *fromView, NSView<X11Window> *toView, NSEvent *theEvent, EXMagic detail)
 {
-   //Aux. function.
+   //Pointer moved from 'fromView' to 'toView'.
+   //Check their relationship and generate leave/enter notify events.
 
    assert(theEvent != nil && "GenerateCrossingEvent, event parameter is nil");
    
@@ -943,14 +952,14 @@ void GenerateCrossingEvents(EventQueue_t &queue, NSView<X11Window> *fromView, NS
       //for this view only.
       return;
    }
-   
+
    if (!fromView) {
       //We enter window "from the screen" - do not leave any window.
       //Send EnterNotify event.
-      if (toView)//Check, if order is OK.
+      if (toView)//Send enter notify event to a branch [toView contentView], order of views is reversed, but no GUI actually depends on this.
          SendEnterEventClosedRange(queue, toView, (NSView<X11Window> *)[[toView window] contentView], theEvent, detail);
    } else if (!toView) {
-      //We exit all views. Order must be OK here.
+      //We exit all views. Order is correct here.
       SendLeaveEventClosedRange(queue, fromView, (NSView<X11Window> *)[[fromView window] contentView], theEvent, detail);
    } else {
       NSView<X11Window> *ancestor = 0;
@@ -1125,6 +1134,7 @@ void EventTranslator::GenerateCrossingEventNoGrab(NSEvent *theEvent)
    assert(theEvent && "GenerateCrossingEventNoGrab, theEvent parameter is nil");
    
    NSView<X11Window> * const candidateView = FindViewForPointerEvent(theEvent);
+   //We moved from fViewUnderPointer (leave event) to candidateView (enter event).
    Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
    fViewUnderPointer = candidateView;
 }
@@ -1138,15 +1148,18 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSEvent *theEvent)
    NSView<X11Window> * const candidateView = FindViewForPointerEvent(theEvent);
 
    if (fOwnerEvents) {
+      //Either passive grab (which was activated) or active grab set by TGCocoa::GrabPointer with
+      //owner_events == true. This works the same way as nograb case, except not only fEventMask
+      //is checked, but for grab view (if it's boundary was crossed) either it's passive grab mask
+      //or active is also checked.
       Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
    } else if (fButtonGrabView && (fViewUnderPointer || candidateView)) {
       //Either implicit grab or GrabPointer with owner_events == false,
       //only grab view can receive enter/leave notify events. Only
       //grab event mask is checked, not view's own event mask.
-      
       Detail::GenerateCrossingEventForGrabView(fEventQueue, fViewUnderPointer, candidateView, fButtonGrabView, fGrabEventMask, theEvent);
    }
-   
+
    fViewUnderPointer = candidateView;
 }
 
