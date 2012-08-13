@@ -1124,7 +1124,7 @@ void EventTranslator::GenerateCrossingEventNoGrab(NSEvent *theEvent)
 {
    assert(theEvent && "GenerateCrossingEventNoGrab, theEvent parameter is nil");
    
-   NSView<X11Window> * const candidateView = X11::FindViewUnderPointer();
+   NSView<X11Window> * const candidateView = X11::FindViewForPointerEvent(theEvent);
    Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
    fViewUnderPointer = candidateView;
 }
@@ -1134,7 +1134,8 @@ void EventTranslator::GenerateCrossingEventActiveGrab(NSEvent *theEvent)
 {
    assert(theEvent != nil && "GenerateCrossingEventActiveGrab, event parameter is nil");
 
-   NSView<X11Window> *candidateView = X11::FindViewUnderPointer();//The view we entered.
+
+   NSView<X11Window> * const candidateView = X11::FindViewForPointerEvent(theEvent);
 
    if (fOwnerEvents) {
       Detail::GenerateCrossingEvents(fEventQueue, fViewUnderPointer, candidateView, theEvent, kNotifyNormal);
@@ -1425,7 +1426,7 @@ void EventTranslator::GeneratePointerMotionEventNoGrab(NSEvent *theEvent)
    const Mask_t maskToTest = [NSEvent pressedMouseButtons] ? (kPointerMotionMask | kButtonMotionMask) : kPointerMotionMask;
 
    //Event without any emulated grab, receiver view can be "wrong" (result of Cocoa's "dragging").
-   if (NSView<X11Window> *candidateView = X11::FindViewUnderPointer()) {
+   if (NSView<X11Window> *candidateView = X11::FindViewForPointerEvent(theEvent)) {
       //Do propagation.
       candidateView = Detail::FindViewToPropagateEvent(candidateView, maskToTest);
       if (candidateView)//We have such a view, send event to a corresponding ROOT's window.
@@ -1453,8 +1454,7 @@ void EventTranslator::GeneratePointerMotionEventActiveGrab(NSEvent *theEvent)
 
    if (fOwnerEvents) {
       //Complex case, we have to correctly report event.
-      if (NSView<X11Window> *candidateView = FindViewUnderPointer()) {
-         //Do propagation.
+      if (NSView<X11Window> *candidateView = X11::FindViewForPointerEvent(theEvent)) {
          candidateView = Detail::FindViewToPropagateEvent(candidateView, maskToTest, fButtonGrabView, fGrabEventMask);
          if (candidateView)//We have such a view, send event to a corresponding ROOT's window.
             Detail::SendPointerMotionEvent(fEventQueue, candidateView, theEvent);
@@ -1520,7 +1520,7 @@ void EventTranslator::GenerateButtonPressEventActiveGrab(NSView<X11Window> * /*v
       return;
       
    if (fOwnerEvents) {
-      if (NSView<X11Window> *candidateView = FindViewUnderPointer()) {
+      if (NSView<X11Window> *candidateView = FindViewForPointerEvent(theEvent)) {
          //Do propagation.
          candidateView = Detail::FindViewToPropagateEvent(candidateView, kButtonPressMask, fButtonGrabView, fGrabEventMask);
          if (candidateView)//We have such a view, send event to a corresponding ROOT's window.
@@ -1565,7 +1565,7 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
 
    if (fButtonGrabView) {
       if (fOwnerEvents) {//X11: Either XGrabPointer with owner_events == True or passive grab (owner_events is always true)
-         if (NSView<X11Window> *candidateView = X11::FindViewUnderPointer()) {
+         if (NSView<X11Window> *candidateView = X11::FindViewForPointerEvent(theEvent)) {
             candidateView = Detail::FindViewToPropagateEvent(candidateView, kButtonReleaseMask, fButtonGrabView, fGrabEventMask);
             //candidateView is either some view, or grab view, if its mask is ok.
             if (candidateView)
@@ -1574,7 +1574,7 @@ void EventTranslator::GenerateButtonReleaseEventActiveGrab(NSView<X11Window> *ev
             Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);
       } else {//Either implicit grab or GrabPointer with owner_events == False.
          if (fGrabEventMask & kButtonReleaseMask)
-            Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);   
+            Detail::SendButtonReleaseEvent(fEventQueue, fButtonGrabView, theEvent, btn);
       }
    } else {
       CancelPointerGrab();//'root' window had a grab, cancel it now.
