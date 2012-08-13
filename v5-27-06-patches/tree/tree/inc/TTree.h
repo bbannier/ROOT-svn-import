@@ -134,6 +134,7 @@ protected:
    TList         *fClones;            //! List of cloned trees which share our addresses
    TBranchRef    *fBranchRef;         //  Branch supporting the TRefTable (if any)
    UInt_t         fFriendLockStatus;  //! Record which method is locking the friend recursion
+   TBuffer       *fTransientBuffer;   //! Pointer to the current transient buffer.
 
    static Int_t     fgBranchStyle;      //  Old/New branch style
    static Long64_t  fgMaxTreeSize;      //  Maximum size of a file containg a Tree
@@ -461,6 +462,7 @@ public:
    void                    UseCurrentStyle();
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0);
    virtual Int_t           Write(const char *name=0, Int_t option=0, Int_t bufsize=0) const;
+   TBuffer*                GetTransientBuffer(Int_t size);
 
    ClassDef(TTree,18)  //Tree descriptor (the main ROOT I/O class)
 };
