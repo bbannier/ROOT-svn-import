@@ -1296,7 +1296,7 @@ void EventTranslator::CancelPointerGrab()
       [fButtonGrabView cancelGrab];
 
    //We generate sequence of leave/enter notify events (if any) as if we jumped from the grab view to the pointer view.
-   if (NSView<X11Window> * const candidateView = X11::FindViewUnderPointer()) {
+   if (NSView<X11Window> * const candidateView = FindViewUnderPointer()) {
       const NSPoint location = [[candidateView window] mouseLocationOutsideOfEventStream];
       const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [candidateView window] location : location ]);
       
@@ -1599,7 +1599,7 @@ void EventTranslator::GenerateKeyPressEventNoGrab(NSEvent *theEvent)
    if (!fKeyGrabView) {
       NSView<X11Window> *candidateView = nil;
 
-      if ((candidateView = X11::FindViewUnderPointer())) {
+      if ((candidateView = FindViewUnderPointer())) {
          if (Detail::IsParent(fFocusView, candidateView)) {
             FindKeyGrabView(candidateView, theEvent);
          }
@@ -1623,7 +1623,7 @@ void EventTranslator::GenerateKeyEventActiveGrab(NSEvent *theEvent)
    assert(theEvent != nil && "GenerateKeyEventActiveGrab, theEvent parameter is nil");
    assert(fKeyGrabView != nil && "GenerateKeyEventActiveGrab, theEvent parameter is nil");
    
-   if (NSView<X11Window> * const candidateView = X11::FindViewUnderPointer()) {
+   if (NSView<X11Window> * const candidateView = FindViewUnderPointer()) {
       //Since owner_events is always true in ROOT ...
       GenerateKeyEventForView(candidateView, theEvent);
    } else {// else part for grab view??
@@ -1646,7 +1646,7 @@ void EventTranslator::GenerateKeyReleaseEventNoGrab(NSEvent *theEvent)
 {
    assert(theEvent != nil && "GenerateKeyReleaseEventNoGrab, theEvent parameter is nil");
    
-   NSView<X11Window> * const candidateView = X11::FindViewUnderPointer();
+   NSView<X11Window> * const candidateView = FindViewUnderPointer();
 
    if (candidateView && Detail::IsParent(fFocusView, candidateView))
       GenerateKeyEventForView(candidateView, theEvent);
