@@ -282,7 +282,7 @@ void TMVA::Event::Print( std::ostream& o ) const
 }
 
 //_____________________________________________________________
-void TMVA::Event::SetTarget( UInt_t itgt, Float_t value ) const  
+void TMVA::Event::SetTarget( UInt_t itgt, Float_t value ) 
 { 
    // set the target value (dimension itgt) to value
 

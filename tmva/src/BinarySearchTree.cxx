@@ -252,7 +252,7 @@ Double_t TMVA::BinarySearchTree::GetSumOfWeights( Int_t theType ) const
 }
 
 //_______________________________________________________________________
-Double_t TMVA::BinarySearchTree::Fill( const std::vector<const Event*>& events, const std::vector<Int_t>& theVars, 
+Double_t TMVA::BinarySearchTree::Fill( const std::vector<Event*>& events, const std::vector<Int_t>& theVars, 
                                        Int_t theType )
 {
    // create the search tree from the event collection 
@@ -262,7 +262,7 @@ Double_t TMVA::BinarySearchTree::Fill( const std::vector<const Event*>& events, 
 }
 
 //_______________________________________________________________________
-Double_t TMVA::BinarySearchTree::Fill( const std::vector<const Event*>& events, Int_t theType )
+Double_t TMVA::BinarySearchTree::Fill( const std::vector<Event*>& events, Int_t theType )
 {
    // create the search tree from the events in a TTree
    // using ALL the variables specified included in the Event

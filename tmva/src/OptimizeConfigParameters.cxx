@@ -370,7 +370,7 @@ void TMVA::OptimizeConfigParameters::GetMVADists()
    fMvaSigFineBin = new TH1D("fMvaSigFineBin","",100000,-1.5,1.5);
    fMvaBkgFineBin = new TH1D("fMvaBkgFineBin","",100000,-1.5,1.5);
 
-   const std::vector<const Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
+   const std::vector< Event*> events=fMethod->Data()->GetEventCollection(Types::kTesting);
    
    UInt_t signalClassNr = fMethod->DataInfo().GetClassInfo("Signal")->GetNumber();
 

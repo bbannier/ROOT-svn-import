@@ -849,7 +849,7 @@ void TMVA::Factory::WriteDataInformation()
       if (trfS.BeginsWith('I')) identityTrHandler = trfs.back();
    }
 
-   const std::vector<const Event*>& inputEvents = DefaultDataSetInfo().GetDataSet()->GetEventCollection();
+   const std::vector<Event*>& inputEvents = DefaultDataSetInfo().GetDataSet()->GetEventCollection();
 
    // apply all transformations
    std::vector<TMVA::TransformationHandler*>::iterator trfIt = trfs.begin();

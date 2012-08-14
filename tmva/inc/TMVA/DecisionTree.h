@@ -77,7 +77,8 @@ namespace TMVA {
 
    public:
 
-      typedef std::vector<const TMVA::Event*> EventList;
+      typedef std::vector<TMVA::Event*> EventList;
+      typedef std::vector<const TMVA::Event*> EventConstList;
 
       // the constructur needed for the "reading" of the decision tree from weight files
       DecisionTree( void );
@@ -105,20 +106,22 @@ namespace TMVA {
 
       // building of a tree by recursivly splitting the nodes
 
-      UInt_t BuildTree( const EventList & eventSample,
+//      UInt_t BuildTree( const EventList & eventSample,
+//                        DecisionTreeNode *node = NULL);
+      UInt_t BuildTree( const EventConstList & eventSample,
                         DecisionTreeNode *node = NULL);
       // determine the way how a node is split (which variable, which cut value)
 
-      Double_t TrainNode( const EventList & eventSample,  DecisionTreeNode *node ) { return TrainNodeFast( eventSample, node ); }
-      Double_t TrainNodeFast( const EventList & eventSample,  DecisionTreeNode *node );
-      Double_t TrainNodeFull( const EventList & eventSample,  DecisionTreeNode *node );
+      Double_t TrainNode( const EventConstList & eventSample,  DecisionTreeNode *node ) { return TrainNodeFast( eventSample, node ); }
+      Double_t TrainNodeFast( const EventConstList & eventSample,  DecisionTreeNode *node );
+      Double_t TrainNodeFull( const EventConstList & eventSample,  DecisionTreeNode *node );
       void    GetRandomisedVariables(Bool_t *useVariable, UInt_t *variableMap, UInt_t & nVars);
-      std::vector<Double_t>  GetFisherCoefficients(const EventList &eventSample, UInt_t nFisherVars, UInt_t *mapVarInFisher);
+      std::vector<Double_t>  GetFisherCoefficients(const EventConstList &eventSample, UInt_t nFisherVars, UInt_t *mapVarInFisher);
     
       // fill at tree with a given structure already (just see how many signa/bkgr
       // events end up in each node
 
-      void FillTree( EventList & eventSample);
+      void FillTree( const EventList & eventSample);
 
       // fill the existing the decision tree structure by filling event
       // in from the top node and see where they happen to end up
@@ -144,14 +147,14 @@ namespace TMVA {
       void SetPruneMethod( EPruneMethod m = kCostComplexityPruning ) { fPruneMethod = m; }
     
       // recursive pruning of the tree, validation sample required for automatic pruning
-      Double_t PruneTree( EventList* validationSample = NULL );
+      Double_t PruneTree( const EventConstList* validationSample = NULL );
     
       // manage the pruning strength parameter (iff < 0 -> automate the pruning process)
       void SetPruneStrength( Double_t p ) { fPruneStrength = p; }
       Double_t GetPruneStrength( ) const { return fPruneStrength; }
 
       // apply pruning validation sample to a decision tree
-      void ApplyValidationSample( const EventList* validationSample ) const;
+      void ApplyValidationSample( const EventConstList* validationSample ) const;
     
       // return the misclassification rate of a pruned tree
       Double_t TestPrunedTreeQuality( const DecisionTreeNode* dt = NULL, Int_t mode=0 ) const;
@@ -160,7 +163,7 @@ namespace TMVA {
       void CheckEventWithPrunedTree( const TMVA::Event* ) const;
 
       // calculate the normalization factor for a pruning validation sample
-      Double_t GetSumWeights( const EventList* validationSample ) const;
+      Double_t GetSumWeights( const EventConstList* validationSample ) const;
     
       void SetNodePurityLimit( Double_t p ) { fNodePurityLimit = p; }
       Double_t GetNodePurityLimit( ) const { return fNodePurityLimit; }

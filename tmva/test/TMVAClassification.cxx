@@ -278,11 +278,11 @@ int main( int argc, char** argv )
    // Cut optimisation
    if (Use["Cuts"])
       factory->BookMethod( TMVA::Types::kCuts, "Cuts",
-                           "!H:!V:FitMethod=MC:EffSel:SampleSize=200000:VarProp=FSmart" );
+                           "!H:!V:FitMethod=MC:EffSel:SampleSize=200:VarProp=FSmart" );
 
    if (Use["CutsD"])
       factory->BookMethod( TMVA::Types::kCuts, "CutsD",
-                           "!H:!V:FitMethod=MC:EffSel:SampleSize=200000:VarProp=FSmart:VarTransform=Decorrelate" );
+                           "!H:!V:FitMethod=MC:EffSel:SampleSize=200:VarProp=FSmart:VarTransform=Decorrelate" );
 
    if (Use["CutsPCA"])
       factory->BookMethod( TMVA::Types::kCuts, "CutsPCA",
@@ -378,7 +378,7 @@ int main( int argc, char** argv )
 
    if (Use["FDA_GA"]) // can also use Simulated Annealing (SA) algorithm (see Cuts_SA options])
       factory->BookMethod( TMVA::Types::kFDA, "FDA_GA",
-                           "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):FitMethod=GA:PopSize=300:Cycles=3:Steps=20:Trim=True:SaveBestGen=1" );
+                           "H:!V:Formula=(0)+(1)*x0+(2)*x1+(3)*x2+(4)*x3:ParRanges=(-1,1);(-10,10);(-10,10);(-10,10);(-10,10):FitMethod=GA:PopSize=300:Cycles=3:Steps=3:Trim=True:SaveBestGen=1" );
 
    if (Use["FDA_SA"]) // can also use Simulated Annealing (SA) algorithm (see Cuts_SA options])
       factory->BookMethod( TMVA::Types::kFDA, "FDA_SA",
@@ -398,13 +398,13 @@ int main( int argc, char** argv )
 
    // TMVA ANN: MLP (recommended ANN) -- all ANNs in TMVA are Multilayer Perceptrons
    if (Use["MLP"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:!UseRegulator" );
+      factory->BookMethod( TMVA::Types::kMLP, "MLP", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=60:HiddenLayers=N+5:TestRate=5:!UseRegulator" );
 
    if (Use["MLPBFGS"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:!UseRegulator" );
+      factory->BookMethod( TMVA::Types::kMLP, "MLPBFGS", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=60:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:!UseRegulator" );
 
    if (Use["MLPBNN"])
-      factory->BookMethod( TMVA::Types::kMLP, "MLPBNN", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=600:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:UseRegulator" ); // BFGS training with bayesian regulators
+      factory->BookMethod( TMVA::Types::kMLP, "MLPBNN", "H:!V:NeuronType=tanh:VarTransform=N:NCycles=60:HiddenLayers=N+5:TestRate=5:TrainingMethod=BFGS:UseRegulator" ); // BFGS training with bayesian regulators
 
    // CF(Clermont-Ferrand)ANN
    if (Use["CFMlpANN"])

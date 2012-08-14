@@ -177,7 +177,7 @@ TMVA::DataSet* TMVA::DataSetFactory::BuildDynamicDataSet( TMVA::DataSetInfo& dsi
    for (;it!=spectatorinfos.end();it++) evdyn->push_back( (Float_t*)(*it).GetExternalLink() );
 
    TMVA::Event * ev = new Event((const std::vector<Float_t*>*&)evdyn, varinfos.size());
-   std::vector<const Event*>* newEventVector = new std::vector<const Event*>;
+   std::vector<Event*>* newEventVector = new std::vector<Event*>;
    newEventVector->push_back(ev);
 
    ds->SetEventCollection(newEventVector, Types::kTraining);
@@ -1446,12 +1446,12 @@ TMVA::DataSetFactory::RenormEvents( TMVA::DataSetInfo& dsi,
    for (UInt_t cls = 0, clsEnd = dsi.GetNClasses(); cls<clsEnd; ++cls) {
       Log() << kINFO << "--> Rescale " << setiosflags(ios::left) << std::setw(maxL)
             << dsi.GetClassInfo(cls)->GetName() << " event weights by factor: " << renormFactor.at(cls) << Endl;
-      std::for_each( tmpEventVector[Types::kTraining].at(cls).begin(),
-                     tmpEventVector[Types::kTraining].at(cls).end(),
-                     std::bind2nd(std::mem_fun(&TMVA::Event::ScaleWeight),renormFactor.at(cls)) );
-      std::for_each( tmpEventVector[Types::kTesting].at(cls).begin(),
-                     tmpEventVector[Types::kTesting].at(cls).end(),
-                     std::bind2nd(std::mem_fun(&TMVA::Event::ScaleWeight),renormFactor.at(cls)) );
+      for (EventVector::iterator it = tmpEventVector[Types::kTraining].at(cls).begin(),
+	       itEnd = tmpEventVector[Types::kTraining].at(cls).end(); it != itEnd; ++it)
+	  (*it)->SetWeight ((*it)->GetWeight() * renormFactor.at(cls));
+      for (EventVector::iterator it = tmpEventVector[Types::kTesting].at(cls).begin(),
+	       itEnd = tmpEventVector[Types::kTesting].at(cls).end(); it != itEnd; ++it)
+	  (*it)->SetWeight ((*it)->GetWeight() * renormFactor.at(cls));
    }
 
 

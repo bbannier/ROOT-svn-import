@@ -76,7 +76,7 @@ namespace TMVA {
       virtual ~VariableTransformBase( void );
 
       virtual void         Initialize() = 0;
-      virtual Bool_t       PrepareTransformation( const std::vector<const Event*>&  ) = 0;
+      virtual Bool_t       PrepareTransformation (const std::vector<Event*>&  ) = 0;
       virtual const Event* Transform       ( const Event* const, Int_t cls ) const = 0;
       virtual const Event* InverseTransform( const Event* const, Int_t cls ) const = 0;
 
