@@ -28,6 +28,7 @@
  **********************************************************************************/
 
 #include <vector>
+#include <limits>
 
 #include "TMVA/ResultsMulticlass.h"
 #include "TMVA/MsgLogger.h"

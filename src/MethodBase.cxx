@@ -266,7 +266,7 @@ TMVA::MethodBase::~MethodBase( void )
 
    for (Int_t i = 0; i < 2; i++ ) {
       if (fEventCollections.at(i)) {
-         for (std::vector<const Event*>::const_iterator it = fEventCollections.at(i)->begin();
+         for (std::vector<Event*>::const_iterator it = fEventCollections.at(i)->begin();
               it != fEventCollections.at(i)->end(); it++) {
             delete (*it);
          }
@@ -1942,7 +1942,7 @@ void TMVA::MethodBase::WriteEvaluationHistosToFile(Types::ETreeType treetype)
             << "/kMaxAnalysisType" << Endl;
    results->GetStorage()->Write();
    if (treetype==Types::kTesting) {
-      GetTransformationHandler().PlotVariables( GetEventCollection( Types::kTesting ), BaseDir() );
+      GetTransformationHandler().PlotVariables (GetEventCollection( Types::kTesting ), BaseDir() );
    }
 }
 
@@ -3078,7 +3078,7 @@ Double_t TMVA::MethodBase::GetEffForRoot( Double_t theCut )
 }
 
 //_______________________________________________________________________
-const std::vector<const TMVA::Event*>& TMVA::MethodBase::GetEventCollection( Types::ETreeType type) 
+const std::vector<TMVA::Event*>& TMVA::MethodBase::GetEventCollection( Types::ETreeType type) 
 {
    if (GetTransformationHandler().GetTransformationList().GetEntries() <= 0) {
       return (Data()->GetEventCollection(type));

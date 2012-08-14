@@ -81,7 +81,7 @@ void TMVA::VariableNormalizeTransform::Initialize()
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::VariableNormalizeTransform::PrepareTransformation( const std::vector<const Event*>& events )
+Bool_t TMVA::VariableNormalizeTransform::PrepareTransformation (const std::vector<Event*>& events)
 {
    // prepare transformation
    if (!IsEnabled() || IsCreated()) return kTRUE;
@@ -198,7 +198,7 @@ const TMVA::Event* TMVA::VariableNormalizeTransform::InverseTransform(const TMVA
 }
 
 //_______________________________________________________________________
-void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vector<const Event*>& events )
+void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vector< Event*>& events )
 {
    // compute offset and scale from min and max
    if (events.size() <= 1) 
@@ -224,7 +224,7 @@ void TMVA::VariableNormalizeTransform::CalcNormalizationParams( const std::vecto
       }
    }
 
-   std::vector<const Event*>::const_iterator evIt = events.begin();
+   std::vector<Event*>::const_iterator evIt = events.begin();
    for (;evIt!=events.end();evIt++) { // loop over all events
       const TMVA::Event* event = (*evIt);   // get the event
 

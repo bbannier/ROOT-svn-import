@@ -83,10 +83,9 @@ namespace TMVA {
       VariableTransformBase* AddTransformation(VariableTransformBase*, Int_t cls );
       const TList& GetTransformationList()   const { return fTransformations; }
       Int_t        GetNumOfTransformations() const { return fTransformations.GetSize(); }
-      //      std::vector<const Event*>* CalcTransformations( const std::vector<const Event*>&, Bool_t createNewVector = kFALSE );
-      std::vector<const Event*>* CalcTransformations( const std::vector<const Event*>&, Bool_t createNewVector = kTRUE );
+      const std::vector<Event*>* CalcTransformations( const std::vector<Event*>&, Bool_t createNewVector = kTRUE );
       
-      void         CalcStats( const std::vector<const Event*>& events );
+      void         CalcStats( const std::vector<Event*>& events );
       void         AddStats ( Int_t k, UInt_t ivar, Double_t mean, Double_t rms, Double_t min, Double_t max );
       Double_t     GetMean  ( Int_t ivar, Int_t cls = -1 ) const;
       Double_t     GetRMS   ( Int_t ivar, Int_t cls = -1 ) const;
@@ -116,13 +115,13 @@ namespace TMVA {
       TDirectory*    GetRootDir() const { return fRootBaseDir; }
       void           SetRootDir( TDirectory *d ) { fRootBaseDir = d; }
 
-      void           PlotVariables( const std::vector<const Event*>& events, TDirectory* theDirectory = 0 );
+      void           PlotVariables( const std::vector<Event*>& events, TDirectory* theDirectory = 0 );
 
    private:
       
-      std::vector<const TMVA::Event*>* TransformCollection( VariableTransformBase* trf,
+      std::vector<TMVA::Event*>* TransformCollection( VariableTransformBase* trf,
                                                       Int_t cls,
-                                                      std::vector<const TMVA::Event*>* events,
+                                                      std::vector<TMVA::Event*>* events,
                                                       Bool_t replace ) const;
       
       const TMVA::VariableInfo& Variable(UInt_t ivar) const { return fDataSetInfo.GetVariableInfos().at(ivar); }

@@ -74,7 +74,7 @@ void TMVA::VariablePCATransform::Initialize()
 }
 
 //_______________________________________________________________________
-Bool_t TMVA::VariablePCATransform::PrepareTransformation( const std::vector<const Event*>& events )
+Bool_t TMVA::VariablePCATransform::PrepareTransformation (const std::vector<Event*>& events)
 {
    // calculate the principal components using the ROOT class TPrincipal
    // and the normalization
@@ -189,7 +189,7 @@ const TMVA::Event* TMVA::VariablePCATransform::InverseTransform( const Event* co
 }
 
 //_______________________________________________________________________
-void TMVA::VariablePCATransform::CalculatePrincipalComponents( const std::vector<const Event*>& events )
+void TMVA::VariablePCATransform::CalculatePrincipalComponents( const std::vector< Event*>& events )
 {
    // calculate the principal components for the signal and the background data
    // it uses the MakePrincipal method of ROOT's TPrincipal class

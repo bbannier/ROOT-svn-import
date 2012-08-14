@@ -196,11 +196,19 @@ const TMVA::Event* TMVA::TransformationHandler::InverseTransform( const Event* e
 }
 
 //_______________________________________________________________________
-std::vector<const TMVA::Event*>* TMVA::TransformationHandler::CalcTransformations( const std::vector<const Event*>& events, 
+const std::vector<TMVA::Event*>* TMVA::TransformationHandler::CalcTransformations( const std::vector<Event*>& events, 
                                                                              Bool_t createNewVector ) 
 {
    // computation of transformation
-   std::vector<const Event*>* tmpEvents = const_cast<std::vector<const Event*>*>(&events);
+    if (fTransformations.GetEntries() <= 0)
+	return &events;
+
+    std::vector<Event*>* tmpEvents = new std::vector<TMVA::Event*>(events.size());
+
+    for ( UInt_t ievt = 0; ievt<events.size(); ievt++)
+	tmpEvents->at(ievt) = new Event(*events.at(ievt));
+	 
+   
 
    Bool_t replaceColl = kFALSE; // first let TransformCollection create a new vector
 
@@ -211,7 +219,7 @@ std::vector<const TMVA::Event*>* TMVA::TransformationHandler::CalcTransformation
          tmpEvents = TransformCollection(trf, (*rClsIt), tmpEvents, replaceColl);
          // we now created a new vector, so the next transformations replace the 
          // events by their transformed versions
-         //         replaceColl = kTRUE;  
+         replaceColl = kTRUE;  
          Log() << kWARNING << " Help... Joerg/Andreas? .. I (Helge) had to disable this replacement of the events due to \"const\" problems, is this o.k. or does it create other problems?"<<Endl;
          rClsIt++;
       }
@@ -230,28 +238,29 @@ std::vector<const TMVA::Event*>* TMVA::TransformationHandler::CalcTransformation
       }
       return 0;
    }
+
    return tmpEvents; // give back the newly created event collection (containing the transformed events)
 }
 
 //_______________________________________________________________________
-std::vector<const TMVA::Event*>* TMVA::TransformationHandler::TransformCollection( VariableTransformBase* trf,
+std::vector<TMVA::Event*>* TMVA::TransformationHandler::TransformCollection( VariableTransformBase* trf,
                                                                              Int_t cls,
-                                                                             std::vector<const TMVA::Event*>* events,
+                                                                             std::vector<TMVA::Event*>* events,
                                                                              Bool_t replace ) const 
 {
    // a collection of transformations
-   std::vector<const TMVA::Event*>* tmpEvents = 0;
+   std::vector<TMVA::Event*>* tmpEvents = 0;
 
    if (replace) {   // the events should be replaced by their transformed versions
-     // tmpEvents = events;   // Helge: Sorry, I had to disable this option due to "const" problems ... shoot me or tell me how to solve it :)
-     Log() << kFATAL << "It's me, Helge: Sorry, I had to disable this option due to \"const\" problems ... shoot me or tell me how to solve it :)" << Endl;
+      tmpEvents = events;   // Helge: Sorry, I had to disable this option due to "const" problems ... shoot me or tell me how to solve it :)
+//     Log() << kFATAL << "It's me, Helge: Sorry, I had to disable this option due to \"const\" problems ... shoot me or tell me how to solve it :)" << Endl;
    } 
    else {           // a new event vector is created
-     tmpEvents = new std::vector<const TMVA::Event*>(events->size());
+     tmpEvents = new std::vector<TMVA::Event*>(events->size());
   }
    for (UInt_t ievt = 0; ievt<events->size(); ievt++) {  // loop through all events
       if (replace) {  // and replace the event by its transformed version
-        //*(*tmpEvents)[ievt] = *trf->Transform((*events)[ievt],cls);
+        *(*tmpEvents)[ievt] = *trf->Transform((*events)[ievt],cls);
       } 
       else {         // and create a new event which is the transformed version of the old event
          (*tmpEvents)[ievt] = new Event(*trf->Transform((*events)[ievt],cls));
@@ -261,7 +270,7 @@ std::vector<const TMVA::Event*>* TMVA::TransformationHandler::TransformCollectio
 }
 
 //_______________________________________________________________________
-void TMVA::TransformationHandler::CalcStats( const std::vector<const Event*>& events )
+void TMVA::TransformationHandler::CalcStats (const std::vector<Event*>& events )
 {
 
    // method to calculate minimum, maximum, mean, and RMS for all
@@ -456,8 +465,9 @@ TString TMVA::TransformationHandler::GetVariableAxisTitle( const VariableInfo& i
    return xtit;
 }
 
+
 //_______________________________________________________________________
-void TMVA::TransformationHandler::PlotVariables( const std::vector<const Event*>& events, TDirectory* theDirectory )
+void TMVA::TransformationHandler::PlotVariables (const std::vector<Event*>& events, TDirectory* theDirectory )
 {
    // create histograms from the input variables
    // - histograms for all input variables

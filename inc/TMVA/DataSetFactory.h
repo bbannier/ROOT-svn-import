@@ -207,7 +207,7 @@ namespace TMVA {
 
    class DataSetFactory {
 
-      typedef std::vector< const Event* >                             EventVector;
+      typedef std::vector<Event* >                             EventVector;
       typedef std::vector< EventVector >                        EventVectorOfClasses;
       typedef std::map<Types::ETreeType, EventVectorOfClasses > EventVectorOfClassesOfTreeType;
       typedef std::map<Types::ETreeType, EventVector >          EventVectorOfTreeType;

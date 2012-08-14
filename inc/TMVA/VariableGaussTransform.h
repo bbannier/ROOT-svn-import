@@ -91,7 +91,7 @@ namespace TMVA {
       virtual ~VariableGaussTransform( void );
 
       void   Initialize();
-      Bool_t PrepareTransformation( const std::vector<const Event*>& );
+      Bool_t PrepareTransformation (const std::vector<Event*>&);
 
       virtual const Event* Transform(const Event* const, Int_t cls ) const;
       virtual const Event* InverseTransform(const Event* const, Int_t cls ) const;
@@ -119,7 +119,7 @@ namespace TMVA {
       //std::vector< std::vector< TSpline3* > >  fCumulativeSpline; //! The Cummulative distributions 
       std::vector< std::vector< PDF*> >         fCumulativePDF;    //  The cumulative PDF
 
-      void GetCumulativeDist( const std::vector<const Event*>& );
+      void GetCumulativeDist( const std::vector<Event*>& );
       void CleanUpCumulativeArrays(TString opt = "ALL");
 
       // needed for backward compatibility

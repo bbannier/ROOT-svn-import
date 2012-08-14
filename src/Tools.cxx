@@ -179,7 +179,7 @@ Double_t TMVA::Tools::GetSeparation( const PDF& pdfS, const PDF& pdfB ) const
 }
 
 //_______________________________________________________________________
-void TMVA::Tools::ComputeStat( const std::vector<const TMVA::Event*>& events, std::vector<Float_t>* valVec,
+void TMVA::Tools::ComputeStat( const std::vector<TMVA::Event*>& events, std::vector<Float_t>* valVec,
                                Double_t& meanS, Double_t& meanB,
                                Double_t& rmsS,  Double_t& rmsB,
                                Double_t& xmin,  Double_t& xmax,
@@ -1409,6 +1409,23 @@ Bool_t TMVA::Tools::HistoHasEquidistantBins(const TH1& h)
 //_______________________________________________________________________
 std::vector<TMatrixDSym*>*
 TMVA::Tools::CalcCovarianceMatrices( const std::vector<const Event*>& events, Int_t maxCls, VariableTransformBase* transformBase )
+{
+    std::vector<Event*> eventVector;
+    for (std::vector<const Event*>::const_iterator it = events.begin(), itEnd = events.end(); it != itEnd; ++it)
+    {
+	eventVector.push_back (new Event(*(*it)));
+    }
+    std::vector<TMatrixDSym*>* returnValue = CalcCovarianceMatrices (eventVector, maxCls, transformBase);
+    for (std::vector<const Event*>::const_iterator it = events.begin(), itEnd = events.end(); it != itEnd; ++it)
+    {
+	delete (*it);
+    }
+    return returnValue;
+}
+
+//_______________________________________________________________________
+std::vector<TMatrixDSym*>*
+TMVA::Tools::CalcCovarianceMatrices( const std::vector<Event*>& events, Int_t maxCls, VariableTransformBase* transformBase )
 {
    // compute covariance matrices
 

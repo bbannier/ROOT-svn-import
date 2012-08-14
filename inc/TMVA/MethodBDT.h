@@ -121,7 +121,7 @@ namespace TMVA {
       const std::vector<Float_t>& GetRegressionValues();
 
       // apply the boost algorithm to a tree in the collection
-      Double_t Boost( std::vector< const TMVA::Event*>, DecisionTree *dt, Int_t iTree, UInt_t cls = 0);
+      Double_t Boost( std::vector<const TMVA::Event*>&, DecisionTree *dt, Int_t iTree, UInt_t cls = 0);
 
       // ranking of input variables
       const Ranking* CreateRanking();
@@ -175,28 +175,28 @@ namespace TMVA {
       void PreProcessNegativeEventWeights();
 
       // boosting algorithm (adaptive boosting)
-      Double_t AdaBoost( std::vector<const TMVA::Event*>, DecisionTree *dt );
+      Double_t AdaBoost( std::vector<const TMVA::Event*>&, DecisionTree *dt );
 
       // boosting algorithm (adaptive boosting with cost matrix)
-      Double_t AdaCost( std::vector<const TMVA::Event*>, DecisionTree *dt );
+      Double_t AdaCost( std::vector<const TMVA::Event*>&, DecisionTree *dt );
 
       // boosting as a random re-weighting
-      Double_t Bagging( std::vector<const TMVA::Event*>, Int_t iTree );
+      Double_t Bagging( std::vector<const TMVA::Event*>&, Int_t iTree );
 
       // boosting special for regression
-      Double_t RegBoost( std::vector<const TMVA::Event*>, DecisionTree *dt );
+      Double_t RegBoost( std::vector<const TMVA::Event*>&, DecisionTree *dt );
 
       // adaboost adapted to regression
-      Double_t AdaBoostR2( std::vector<const TMVA::Event*>, DecisionTree *dt );
+      Double_t AdaBoostR2( std::vector<const TMVA::Event*>&, DecisionTree *dt );
 
       // binomial likelihood gradient boost for classification
       // (see Friedman: "Greedy Function Approximation: a Gradient Boosting Machine"
       // Technical report, Dept. of Statistics, Stanford University)
-      Double_t GradBoost( std::vector<const TMVA::Event*>, DecisionTree *dt, UInt_t cls = 0);
-      Double_t GradBoostRegression(std::vector<const TMVA::Event*>, DecisionTree *dt );
-      void InitGradBoost( std::vector<const TMVA::Event*>);
-      void UpdateTargets( std::vector<const TMVA::Event*>, UInt_t cls = 0);
-      void UpdateTargetsRegression( std::vector<const TMVA::Event*>,Bool_t first=kFALSE);
+      Double_t GradBoost( std::vector<const TMVA::Event*>&, DecisionTree *dt, UInt_t cls = 0);
+      Double_t GradBoostRegression(std::vector<const TMVA::Event*>&, DecisionTree *dt );
+      void InitGradBoost( std::vector<const TMVA::Event*>&);
+      void UpdateTargets( std::vector<const TMVA::Event*>&, UInt_t cls = 0);
+      void UpdateTargetsRegression( std::vector<const TMVA::Event*>&,Bool_t first=kFALSE);
       Double_t GetGradBoostMVA(const TMVA::Event *e, UInt_t nTrees);
       void GetRandomSubSample();
       Double_t GetWeightedQuantile(std::vector<std::pair<Double_t, Double_t> > vec, const Double_t quantile, const Double_t SumOfWeights = 0.0);
@@ -274,7 +274,7 @@ namespace TMVA {
       std::vector<Double_t>            fVariableImportance; // the relative importance of the different variables
 
 
-      void                             DeterminePreselectionCuts(const std::vector< const TMVA::Event*> eventSample);
+      void                             DeterminePreselectionCuts(const std::vector<const TMVA::Event*>& eventSample);
       Double_t                         ApplyPreselectionCuts(const Event* ev);
       
       std::vector<Double_t> fLowSigCut;
@@ -300,7 +300,7 @@ namespace TMVA {
 } // namespace TMVA
 
 const std::vector<TMVA::DecisionTree*>& TMVA::MethodBDT::GetForest()         const { return fForest; }
-const std::vector<const TMVA::Event*>&  TMVA::MethodBDT::GetTrainingEvents() const { return fEventSample; }
+const std::vector<const TMVA::Event*> & TMVA::MethodBDT::GetTrainingEvents() const { return fEventSample; }
 const std::vector<double>&              TMVA::MethodBDT::GetBoostWeights()   const { return fBoostWeights; }
 
 #endif

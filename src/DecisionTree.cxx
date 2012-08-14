@@ -519,7 +519,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const std::vector<const TMVA::Event*> & ev
 }
 
 //_______________________________________________________________________
-void TMVA::DecisionTree::FillTree( std::vector<const TMVA::Event*> & eventSample )
+void TMVA::DecisionTree::FillTree( const std::vector<TMVA::Event*> & eventSample )
   
 {
    // fill the existing the decision tree structure by filling event
@@ -604,7 +604,7 @@ UInt_t TMVA::DecisionTree::CleanTree( DecisionTreeNode *node )
 }
 
 //_______________________________________________________________________
-Double_t TMVA::DecisionTree::PruneTree( std::vector<const Event*>* validationSample )
+Double_t TMVA::DecisionTree::PruneTree( const EventConstList* validationSample )
 {
    // prune (get rid of internal nodes) the Decision tree to avoid overtraining
    // serveral different pruning methods can be applied as selected by the 
@@ -667,7 +667,7 @@ Double_t TMVA::DecisionTree::PruneTree( std::vector<const Event*>* validationSam
 
 
 //_______________________________________________________________________
-void TMVA::DecisionTree::ApplyValidationSample( const EventList* validationSample ) const
+void TMVA::DecisionTree::ApplyValidationSample( const EventConstList* validationSample ) const
 {
    // run the validation sample through the (pruned) tree and fill in the nodes
    // the variables NSValidation and NBValidadtion (i.e. how many of the Signal
@@ -758,11 +758,11 @@ void TMVA::DecisionTree::CheckEventWithPrunedTree( const Event* e ) const
 }
 
 //_______________________________________________________________________
-Double_t TMVA::DecisionTree::GetSumWeights( const EventList* validationSample ) const
+Double_t TMVA::DecisionTree::GetSumWeights( const EventConstList* validationSample ) const
 {
    // calculate the normalization factor for a pruning validation sample
    Double_t sumWeights = 0.0;
-   for( EventList::const_iterator it = validationSample->begin();
+   for( EventConstList::const_iterator it = validationSample->begin();
         it != validationSample->end(); ++it ) {
       sumWeights += (*it)->GetWeight();
    }
@@ -914,7 +914,7 @@ void TMVA::DecisionTree::GetRandomisedVariables(Bool_t *useVariable, UInt_t *map
 }
 
 //_______________________________________________________________________
-Double_t TMVA::DecisionTree::TrainNodeFast( const std::vector<const TMVA::Event*> & eventSample,
+Double_t TMVA::DecisionTree::TrainNodeFast( const EventConstList & eventSample,
                                            TMVA::DecisionTreeNode *node )
 {
    // Decide how to split a node using one of the variables that gives
@@ -1289,7 +1289,7 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const std::vector<const TMVA::Event*
 
 
 //_______________________________________________________________________
-std::vector<Double_t>  TMVA::DecisionTree::GetFisherCoefficients(const EventList &eventSample, UInt_t nFisherVars, UInt_t *mapVarInFisher){ 
+std::vector<Double_t>  TMVA::DecisionTree::GetFisherCoefficients(const EventConstList &eventSample, UInt_t nFisherVars, UInt_t *mapVarInFisher){ 
   // calculate the fisher coefficients for the event sample and the variables used
 
    std::vector<Double_t> fisherCoeff(fNvars+1);
@@ -1477,7 +1477,7 @@ std::vector<Double_t>  TMVA::DecisionTree::GetFisherCoefficients(const EventList
 }
 
 //_______________________________________________________________________
-Double_t TMVA::DecisionTree::TrainNodeFull( const std::vector<const TMVA::Event*> & eventSample,
+Double_t TMVA::DecisionTree::TrainNodeFull( const EventConstList & eventSample,
                                            TMVA::DecisionTreeNode *node )
 {
   
@@ -1655,7 +1655,7 @@ Double_t TMVA::DecisionTree::CheckEvent( const TMVA::Event * e, Bool_t UseYesNoL
 }
 
 //_______________________________________________________________________
-Double_t  TMVA::DecisionTree::SamplePurity( std::vector<const TMVA::Event*> eventSample )
+Double_t  TMVA::DecisionTree::SamplePurity( std::vector<TMVA::Event*> eventSample )
 {
    // calculates the purity S/(S+B) of a given event sample
   
