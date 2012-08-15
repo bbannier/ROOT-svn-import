@@ -467,8 +467,6 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    std::cout << "use all error=1 " << fitOpt.fErrors1 << std::endl;
 #endif
 
-   IntegralEvaluator<> igEval( func, p, useBinIntegral); 
-
    double maxResValue = std::numeric_limits<double>::max() / data.Size();
    double wrefVolume = 1.0; 
    if ( useBinVolume ) 
@@ -476,132 +474,152 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
       wrefVolume /= data.RefVolume();
    }
    
-   const unsigned int nMaxBunchSize = 512;
+   const unsigned int nMaxBunchSize = 32;
    
-   std::vector<double> resValues(nMaxBunchSize);
-   
-   std::vector< std::vector<double> > correctCoord;
-   std::vector< const double * > correctCoordsPtrs;
-   std::vector<double> vBinVolume;
-   
-   for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
+#ifdef _OPENMP 
+   const int nThreads = omp_get_max_threads();
+#else
+   const int nThreads = 1;
+#endif
+      
+   const unsigned int nMaxThreadDataSize = (data.Size()+nThreads-1) / nThreads;
+   const unsigned int nMaxLocalDataSize = std::min( nMaxThreadDataSize, nMaxBunchSize );
+#ifdef _OPENMP 
+   #pragma omp parallel reduction(+:chi2, nPoints) 
    {
-     if ( useBinIntegral || useBinVolume )
-     {
-       if( useBinVolume )
-       {
-         vBinVolume.resize( nMaxBunchSize );
-         std::fill( vBinVolume.begin(), vBinVolume.end(), wrefVolume );
-       }
-       
-       if ( !useBinIntegral )
-       {
-         correctCoord.resize( data.NDim() );
-         correctCoordsPtrs.resize( data.NDim() );
-         
-         for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
-         {
-           correctCoord[icoord].resize( nMaxBunchSize );
-           correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
-         }
-       }
-     }
-     else
-     {
+      int tid = omp_get_thread_num();
+#else
+   {
+      int tid = 0;
+#endif
+
+      IntegralEvaluator<> igEval( func, p, useBinIntegral); 
+      
+      std::vector<double> resValues(nMaxLocalDataSize);
+      
+      std::vector< std::vector<double> > correctCoord;
+      std::vector< const double * > correctCoordsPtrs;
+      std::vector<double> vBinVolume;
+      
+      if ( useBinIntegral || useBinVolume )
+      {
+          if( useBinVolume )
+          {
+            vBinVolume.resize( nMaxLocalDataSize );
+            std::fill( vBinVolume.begin(), vBinVolume.end(), wrefVolume );
+          }
+          
+          if ( !useBinIntegral )
+          {
+            correctCoord.resize( data.NDim() );
+            correctCoordsPtrs.resize( data.NDim() );
+            
+            for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+            {
+              correctCoord[icoord].resize( nMaxLocalDataSize );
+              correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
+            }
+          }
+      }
+      else
+      {
         correctCoordsPtrs.resize( data.NDim() );
-     }
-   }
- 
-   for( unsigned int iOffset=0; iOffset < data.Size(); iOffset += nMaxBunchSize )
-   {
-     unsigned int nBunchSize = std::min( nMaxBunchSize, data.Size() - iOffset );
-     
-     if ( useBinIntegral || useBinVolume )
-     {
-       if( useBinVolume )
-       {
-         for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
-         {
-           #pragma omp parallel for
-           for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-           {
-             double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
-             double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
-             
-             vBinVolume[ibunch] *= std::abs( coordVal0 - coordVal1 );
-           }
-         }
-       }
-       
-       if ( !useBinIntegral )
-       {
-         for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
-         {
-           #pragma omp parallel for
-           for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-           {
-             double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
-             double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
-             
-             correctCoord[icoord][ibunch] = ( coordVal0 + coordVal1 ) / 2.0;
-           }
-         }
-         
-         func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
-       }
-       else
-       {
-         for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-         {
-           // Don't try to parallelize this:
-           // this is not threadsafe e.g. it cannot be parallized. 
-           // The integral evaluator is not threadsafe too, 
-           // this issue needs to be fixed first.
-           const double* coords0 = data.Coords( ibunch + iOffset );
-           const double* coords1 = data.BinUpEdge( ibunch + iOffset );
-           
-           resValues[ibunch] = igEval( coords0, coords1 );
-         }
-       }
-       
-       if( useBinVolume )
-       {
-         #pragma omp parallel for
-         for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-         {
-           resValues[ibunch] *= vBinVolume[ibunch];
-         }
-       }
-     }
-     else
-     {
-        for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+      }
+
+      unsigned int iOffset = tid * nMaxThreadDataSize;
+      unsigned int iMaxOffset = std::min( (tid+1) * nMaxThreadDataSize, data.Size() );
+      
+      for( ; iOffset < iMaxOffset; iOffset += nMaxBunchSize )
+      {
+        unsigned int nBunchSize = std::min( nMaxBunchSize, iMaxOffset - iOffset );
+        
+        if ( useBinIntegral || useBinVolume )
         {
-          correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
+          if( useBinVolume )
+          {
+            for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+            {
+//              #pragma omp parallel for
+              for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+              {
+                double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
+                double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
+                
+                vBinVolume[ibunch] *= std::abs( coordVal0 - coordVal1 );
+              }
+            }
+          }
+          
+          if ( !useBinIntegral )
+          {
+            for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+            {
+ //             #pragma omp parallel for
+              for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+              {
+                double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
+                double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
+                
+                correctCoord[icoord][ibunch] = ( coordVal0 + coordVal1 ) / 2.0;
+              }
+            }
+            
+            func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
+          }
+          else
+          {
+            for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+            {
+              // Don't try to parallelize this:
+              // this is not threadsafe e.g. it cannot be parallized. 
+              // The integral evaluator is not threadsafe too, 
+              // this issue needs to be fixed first.
+              const double* coords0 = data.Coords( ibunch + iOffset );
+              const double* coords1 = data.BinUpEdge( ibunch + iOffset );
+              
+              resValues[ibunch] = igEval( coords0, coords1 );
+            }
+          }
+          
+          if( useBinVolume )
+          {
+//            #pragma omp parallel for
+            for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+            {
+              resValues[ibunch] *= vBinVolume[ibunch];
+            }
+          }
+        }
+        else
+        {
+           for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+           {
+             correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
+           }
+           
+           func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
         }
         
-        func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
-     }
-     
-     #pragma omp parallel for reduction(+:chi2, nPoints) 
-     for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-     {
-       double invError = data.InvError ( ibunch + iOffset );
-       double value = data.Value( ibunch + iOffset );
-       
-       if ( 0.0 < invError )
-        nPoints++;
-       else
-        invError = 0.0;
-        
-       double d = ( value - resValues[ ibunch ] ) * invError;
-       double resval = d*d;
-       
-       if ( maxResValue > resval )
-        chi2 += resval;
-       else
-        chi2 += maxResValue;
-     }
+//        #pragma omp parallel for reduction(+:chi2, nPoints) 
+        for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+        {
+          double invError = data.InvError ( ibunch + iOffset );
+          double value = data.Value( ibunch + iOffset );
+          
+          if ( 0.0 < invError )
+           nPoints++;
+          else
+           invError = 0.0;
+           
+          double d = ( value - resValues[ ibunch ] ) * invError;
+          double resval = d*d;
+          
+          if ( maxResValue > resval )
+           chi2 += resval;
+          else
+           chi2 += maxResValue;
+        }
+      }
    }
    
    retnPoints = nPoints;
