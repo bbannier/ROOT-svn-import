@@ -156,33 +156,32 @@ private:
    virtual void DoEvalParVector( int n, double const* const* ppIn, const double * p, double* pOut ) const 
    {
      int ndim = NDim();
-     
+    /* 
 #ifdef _OPENMP 
      const int nThreads = omp_get_max_threads();
 #else
      const int nThreads = 1;
 #endif
-
-     std::vector < std::vector<double> > tmpVecs( nThreads );
-     #pragma omp parallel
+*/
+     std::vector<double> tmpVecs( ndim );
+/*     #pragma omp parallel
      {
 #ifdef _OPENMP 
         int tid = omp_get_thread_num();
 #else
         int tid = 0;
 #endif
-
-        tmpVecs[tid].resize( ndim );
-        
-        for ( int i= tid; i < n; i += nThreads )
-        {
-          for ( int j=0; j < ndim; j++ )
-          {
-            tmpVecs[tid][j] = ppIn[j][i];
-          }
-          
-          pOut[i] = DoEvalPar( &tmpVecs[tid].front(), p );
-        }
+*/
+//        tmpVecs[tid].resize( ndim );
+     
+     for ( int i= 0; i < n; i++ )
+     {
+       for ( int j=0; j < ndim; j++ )
+       {
+         tmpVecs[j] = ppIn[j][i];
+       }
+       
+       pOut[i] = DoEvalPar( &tmpVecs.front(), p );
      }
    }
    
