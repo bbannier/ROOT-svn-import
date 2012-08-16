@@ -538,6 +538,41 @@ Int_t TGQuartz::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
 }
 
 //______________________________________________________________________________
+bool TGQuartz::FilledAreaIsHollow()const
+{
+   const Style_t style = GetFillStyle() / 1000;
+   if (style == 2 || style != 1 && style != 3)
+      return true;
+
+   return false;
+}
+
+//______________________________________________________________________________
+bool TGQuartz::FilledAreaHasPattern()const
+{
+   return GetFillStyle() / 1000 == 3;
+}
+
+//______________________________________________________________________________
+void TGQuartz::SetFilledAreaParameters(void *p)
+{
+   assert(p != 0 && "SetFilledAreaParameters, parameter p is null");
+   
+   //We can not have CGContextRef in a header, processed by CINT, thus we have
+   //this cast.
+   CGContextRef ctx = (CGContextRef)p;
+   (void) ctx;
+   
+   if (FilledAreaIsHollow()) {
+   
+   } else if (FilledAreaHasPattern()) {
+   
+   } else {
+   
+   }
+}
+
+//______________________________________________________________________________
 void *TGQuartz::GetSelectedDrawableChecked(const char *calledFrom) const
 {
    assert(calledFrom != 0 && "GetSelectedDrawableChecked, calledFrom parameter is null");

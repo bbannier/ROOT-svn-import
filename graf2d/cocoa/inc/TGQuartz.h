@@ -74,6 +74,11 @@ public:
 
 private:
 
+   Bool_t FilledAreaIsHollow()const;
+   Bool_t FilledAreaHasPattern()const;
+   //Ugly void * poiner to hide Quartz details from CINT.
+   void SetFilledAreaParameters(void *ctx);
+
    //Unfortunately, I have to convert from
    //top-left to bottom-left corner system.
    std::vector<TPoint> fConvertedPoints;
