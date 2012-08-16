@@ -156,7 +156,7 @@ void TMVAClassification( TString myMethodList = "" )
    // --- Here the preparation phase begins
 
    // Create a ROOT output file where TMVA will store ntuples, histograms, etc.
-   TString outfileName( "TMVA.root" );
+   TString outfileName( "TMVA2.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
 
    // Create the factory object. Later you can choose the methods
@@ -169,7 +169,7 @@ void TMVAClassification( TString myMethodList = "" )
    // The second argument is the output file for the training results
    // All TMVA output can be suppressed by removing the "!" (not) in
    // front of the "Silent" argument in the option string
-   TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification", outputFile,
+   TMVA::Factory *factory = new TMVA::Factory( "TMVAClassification2", outputFile,
                                                "!V:!Silent:Color:DrawProgressBar:Transformations=I;D;P;G,D:AnalysisType=Classification" );
 
    // If you wish to modify default settings

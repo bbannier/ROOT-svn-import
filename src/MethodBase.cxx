@@ -641,6 +641,8 @@ void TMVA::MethodBase::TrainMethod()
    // all histograms should be created in the method's subdirectory
    BaseDir()->cd();
 
+   // once calculate all the transformation (e.g. the sequence of Decorr:Gauss:Decorr)
+   //    needed for this classifier 
    GetTransformationHandler().CalcTransformations(Data()->GetEventCollection());
 
    // call training of derived MVA
@@ -3080,13 +3082,22 @@ Double_t TMVA::MethodBase::GetEffForRoot( Double_t theCut )
 //_______________________________________________________________________
 const std::vector<TMVA::Event*>& TMVA::MethodBase::GetEventCollection( Types::ETreeType type) 
 {
+   // returns the event collection (i.e. the dataset) TRANSFORMED using the
+   //   classifiers specific Variable Transformation (e.g. Decorr or Decorr:Gauss:Decorr)
+
+   // if there's no variable transformation for this classifier, just hand back the 
+   //  event collection of the data set
    if (GetTransformationHandler().GetTransformationList().GetEntries() <= 0) {
       return (Data()->GetEventCollection(type));
-   }
-   Int_t idx = Data()->TreeIndex(type);
+   } 
+
+   // otherwise, transform ALL the events and hand back the vector of the pointers to the 
+   // transformed events. If the pointer is already != 0, i.e. the whole thing has been
+   // done before, I don't need to do it again, but just "hand over" the pointer to those events.
+   Int_t idx = Data()->TreeIndex(type);  //index indicating Training,Testing,...  events/datasets
    if (fEventCollections.at(idx) == 0) {
       fEventCollections.at(idx) = &(Data()->GetEventCollection(type));
-      fEventCollections.at(idx) = GetTransformationHandler().CalcTransformations(*(fEventCollections.at(idx)),kTRUE);
+      fEventCollections.at(idx) = GetTransformationHandler().CalcTransformations(*(fEventCollections.at(idx)));
    }
    return *(fEventCollections.at(idx));
 }
