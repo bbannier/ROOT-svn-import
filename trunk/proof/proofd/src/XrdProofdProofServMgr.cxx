@@ -1971,8 +1971,6 @@ int XrdProofdProofServMgr::CreateFork(XrdProofdProtocol *p)
       // Close pipes
       fpc.Close();
       fcp.Close();
-
-      TRACE(FORK, (int)getpid()<<": tag:"<<in.fSessionTag<<" top:"<<in.fTopSessionTag<<" xps:"<<xps->Tag());
       
       TRACE(FORK, (int)getpid()<<": user: "<<p->Client()->User()<<
                   ", uid: "<<getuid()<<", euid:"<<geteuid()<<
@@ -3655,7 +3653,7 @@ int XrdProofdProofServMgr::CreateProofServEnvFile(XrdProofdProtocol *p, void *in
       } 
       XPDFORM(locdatasrv, "rootd://%s:%d", uh.c_str(), fMgr->Port());
    }
-   if (fMgr->ResolveKeywords(locdatasrv, p->Client()) != 0) {
+   if (fMgr->ResolveKeywords(locdatasrv, p->Client()) <= 0) {
       TRACE(XERR, "WARNING: problems resolving some placeholders for LOCALDATASERVER: "<< locdatasrv);
    }
    len = strlen("LOCALDATASERVER=") + locdatasrv.length() + 2;

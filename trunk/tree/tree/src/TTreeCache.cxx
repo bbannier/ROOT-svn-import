@@ -613,7 +613,8 @@ Bool_t TTreeCache::FillBuffer()
                   }
                }
                else {
-                  // We are still reading from the oldest buffer, no need to prefetch a new one
+                  // We are still reading from the oldest buffer,
+                  // no need to prefetch a new one
                   return kFALSE;
                }
                fFirstBuffer = !fFirstBuffer;
@@ -639,6 +640,13 @@ Bool_t TTreeCache::FillBuffer()
    if (fEntryCurrent < fEntryMin) fEntryCurrent = fEntryMin;
    if (fEntryMax <= 0) fEntryMax = tree->GetEntries();
    if (fEntryNext > fEntryMax) fEntryNext = fEntryMax;
+
+   if ( fEnablePrefetching ) {
+      if ( entry == fEntryMax ) {
+         // We are at the end, no need to do anything else
+         return kFALSE;
+      }
+   }
 
    // Check if owner has a TEventList set. If yes we optimize for this
    // Special case reading only the baskets containing entries in the
@@ -962,7 +970,7 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
    // even if the cache lookup succeeds, because it will try to prefetch the next block 
    // as soon as we start reading from the current block.
 
-   if (TFileCacheRead::ReadBuffer(buf,pos,len) == 1){
+   if (TFileCacheRead::ReadBuffer(buf, pos, len) == 1){
       //call FillBuffer to prefetch next block if necessary
       //(if we are currently reading from the last block available)
       FillBuffer();
@@ -971,7 +979,7 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
    }
 
    //keep on prefetching until request is satisfied
-   while (1){
+   while (1) {
       if(TFileCacheRead::ReadBuffer(buf, pos, len)) {
          break;
       }
@@ -986,8 +994,8 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
 //_____________________________________________________________________________
 Int_t TTreeCache::ReadBuffer(char *buf, Long64_t pos, Int_t len)
 {
-   // Read buffer at position pos.
-   // If pos is in the list of prefetched blocks read from fBuffer.
+   // Read buffer at position pos if the request is in the list of
+   // prefetched blocks read from fBuffer.
    // Otherwise try to fill the cache from the list of selected branches,
    // and recheck if pos is now in the list.
    // Returns 
@@ -1138,4 +1146,46 @@ void TTreeCache::UpdateBranches(TTree *tree)
       fBranches->AddAt(b, fNbranches);
       fNbranches++;
    }
+}
+
+//_____________________________________________________________________________
+void TTreeCache::LearnPrefill()
+{
+   // Perform an initial prefetch, attempting to read as much of the learning
+   // phase baskets for all branches at once
+
+   // This is meant for the learning phase
+   if (!fIsLearning) return;
+   // This should be called before reading entries, otherwise we'll
+   // always exit here, since TBranch adds itself before reading
+   if (fNbranches > 0) return;
+
+   // Force only the learn entries to be cached by temporarily setting min/max
+   // to the learning phase entry range
+   // But save all the old values, so we can restore everything to how it was
+   Long64_t eminOld = fEntryMin;
+   Long64_t emaxOld = fEntryMax;
+   Long64_t ecurrentOld = fEntryCurrent;
+   Long64_t enextOld = fEntryNext;
+
+   fEntryMin = fEntryCurrent;
+   fEntryMax = fEntryNext;
+
+   // Add all branches to be cached. This also sets fIsManual, stops learning,
+   // and makes fEntryNext = -1 (which forces a cache fill, which is good)
+   AddBranch("*");
+   fIsManual = kFALSE; // AddBranch sets fIsManual, so we reset it
+
+   // Now, fill the buffer with the learning phase entry range
+   FillBuffer();
+
+   // Leave everything the way we found it
+   fIsLearning = kTRUE;
+   DropBranch("*"); // This doesn't work unless we're already learning
+
+   // Restore entry values
+   fEntryMin = eminOld;
+   fEntryMax = emaxOld;
+   fEntryCurrent = ecurrentOld;
+   fEntryNext = enextOld;
 }

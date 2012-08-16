@@ -156,12 +156,14 @@ namespace cling {
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
     if (CurT->getCompilationOpts().CodeGeneration && hasCodeGenerator()) {
+      // Reset the module builder to clean up global initializers, c'tors, d'tors
+      getCodeGenerator()->Initialize(getCI()->getASTContext());
+
       // codegen the transaction
       for (Transaction::const_iterator I = CurT->decls_begin(), 
              E = CurT->decls_end(); I != E; ++I) {
         getCodeGenerator()->HandleTopLevelDecl(*I);
       }
-
       getCodeGenerator()->HandleTranslationUnit(getCI()->getASTContext());
       // run the static initializers that came from codegenning
       m_Interpreter->runStaticInitializersOnce();
@@ -223,11 +225,6 @@ namespace cling {
   IncrementalParser::Compile(llvm::StringRef input,
                              const CompilationOptions& Opts) {
 
-    // Reset the module builder to clean up global initializers, c'tors, d'tors:
-    if (hasCodeGenerator()) {
-      getCodeGenerator()->Initialize(getCI()->getASTContext());
-    }
-
     beginTransaction(Opts);
     EParseResult Result = ParseInternal(input);
     endTransaction();
@@ -279,10 +276,9 @@ namespace cling {
     DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
 
     std::ostringstream source_name;
-    source_name << "input_line_" << (m_MemoryBuffer.size() + 1);
+    source_name << "input_line_" << (m_MemoryBuffers.size() + 1);
 
-    // Create an uninitialized memory buffer,
-    // copy code in and append "\n"
+    // Create an uninitialized memory buffer, copy code in and append "\n"
     size_t InputSize = input.size(); // don't include trailing 0
     // MemBuffer size should *not* include terminating zero
     llvm::MemoryBuffer* MB
@@ -292,20 +288,20 @@ namespace cling {
     memcpy(MBStart, input.data(), InputSize);
     memcpy(MBStart + InputSize, "\n", 2);
 
-    m_MemoryBuffer.push_back(MB);
+    m_MemoryBuffers.push_back(MB);
     SourceManager& SM = getCI()->getSourceManager();
 
     // Create SourceLocation, which will allow clang to order the overload
     // candidates for example
     SourceLocation NewLoc = SM.getLocForStartOfFile(m_VirtualFileID);
-    NewLoc = NewLoc.getLocWithOffset(m_MemoryBuffer.size() + 1);
+    NewLoc = NewLoc.getLocWithOffset(m_MemoryBuffers.size() + 1);
 
     // Create FileID for the current buffer
-    FileID FID = SM.createFileIDForMemBuffer(m_MemoryBuffer.back(),
+    FileID FID = SM.createFileIDForMemBuffer(m_MemoryBuffers.back(),
                                              /*LoadedID*/0,
                                              /*LoadedOffset*/0, NewLoc);
 
-    PP.EnterSourceFile(FID, 0, NewLoc);
+    PP.EnterSourceFile(FID, /*DirLookup*/0, NewLoc);
 
     Parser::DeclGroupPtrTy ADecl;
 
