@@ -214,10 +214,11 @@ void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, con
 }
    
 //______________________________________________________________________________
-void SetFillStyle(CGContextRef ctx, Int_t style, 
-                  Float_t r, Float_t g, Float_t b, Float_t a)
+void SetFillStyle(CGContextRef ctx, Int_t style, Float_t r, Float_t g, Float_t b, Float_t a)
 
 {
+   //TODO: remove all these global variables shit.
+
    // Set fill area style.
    //
    // style - compound fill area interior style
@@ -251,38 +252,33 @@ void SetFillStyle(CGContextRef ctx, Int_t style,
 
    
 //______________________________________________________________________________
-void DrawStencil (void *sti, CGContextRef ctx)
+void DrawStencil (void *data, CGContextRef ctx)
 {
-   // Draw a stencil pattern from gStipples
-      
-   int i,j;
-      
-   int *st = static_cast<int *>(sti);
-      
-   int x , y=0; 
-   for (i=0; i<31; i=i+2) {
-      x = 0;
-      for (j=0; j<8; j++) {
-         if (gStipples[*st][i] & (1<<j)) 
+   //Draw a stencil pattern from gStipples
+   const int stencilIndex = *static_cast<int *>(data);
+
+   for (int i = 30, y = 0; i >= 0; i -= 2, ++y) {
+      int x = 0;
+      for (int j = 0; j < 8; ++j, ++x) {
+         if (gStipples[stencilIndex][i] & (1 << j))
             CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
-         x++;
       }
-      for (j=0; j<8; j++) {
-         if (gStipples[*st][i+1] & (1<<j)) 
+      
+      for (int j = 0; j < 8; ++j, ++x) {
+         if (gStipples[stencilIndex][i + 1] & (1 << j))
             CGContextFillRect(ctx, CGRectMake(x, y, 1, 1));
-         x++;
       }
-      y++;
    }
 }
 
 
 //______________________________________________________________________________
-void SetStencilPattern(CGContextRef ctx, 
-                       Float_t r, Float_t g, Float_t b, Float_t a)
+void SetStencilPattern(CGContextRef ctx, Float_t r, Float_t g, Float_t b, Float_t a)
 {
    // Set the fill pattern
-      
+
+   //TODO: remove all these global variables shit.
+
    CGPatternRef pattern;
    CGColorSpaceRef baseSpace;
    CGColorSpaceRef patternSpace;
