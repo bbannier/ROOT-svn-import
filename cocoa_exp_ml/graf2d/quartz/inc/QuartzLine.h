@@ -34,7 +34,8 @@
 
 namespace ROOT {
 namespace Quartz {
-   
+
+Bool_t SetLineColor(CGContextRef ctx, Color_t colorIndex);
 void DrawLine(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2);
 void DrawPolyLine(CGContextRef ctx, Int_t n, TPoint * xy);
 void SetLineStyle(CGContextRef ctx, Int_t lstyle);

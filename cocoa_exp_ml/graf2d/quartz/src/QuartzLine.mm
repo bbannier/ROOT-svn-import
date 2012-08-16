@@ -9,6 +9,7 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#include <cassert>
 #include <vector>
 
 #include "TObjString.h"
@@ -16,11 +17,29 @@
 #include "RStipples.h"
 #include "TObjArray.h"
 #include "TString.h"
+#include "TColor.h"
 #include "TStyle.h"
 #include "TROOT.h"
 
 namespace ROOT {
 namespace Quartz {
+
+//______________________________________________________________________________
+Bool_t SetLineColor(CGContextRef ctx, Color_t colorIndex)
+{
+   assert(ctx != 0 && "SetLineColor, ctx parameter is null");
+
+   const TColor * const color = gROOT->GetColor(colorIndex);
+   if (!color)
+      return kFALSE;
+
+   const CGFloat alpha = color->GetAlpha();
+   Float_t rgb[3] = {};
+   color->GetRGB(rgb[0], rgb[1], rgb[2]);
+   CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], alpha);
+
+   return kTRUE;
+}
 
 //______________________________________________________________________________
 void DrawLine(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2)
