@@ -39,8 +39,25 @@ void InvertGradientPositions(std::vector<CGFloat> &positions)
       positions[i] = 1. - positions[i];
 }
 
-}
+}//Unnamed namespace.
 
+//______________________________________________________________________________
+Bool_t SetFillColor(CGContextRef ctx, Color_t colorIndex)
+{
+   assert(ctx != 0 && "SetFillColor, ctx parameter is null");
+
+   const TColor * const color = gROOT->GetColor(colorIndex);
+   if (!color)
+      return kFALSE;
+
+   const CGFloat alpha = color->GetAlpha();
+
+   Float_t rgb[3] = {};
+   color->GetRGB(rgb[0], rgb[1], rgb[2]);
+   CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], alpha);
+   
+   return kTRUE;
+}
    
 //______________________________________________________________________________
 void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2,

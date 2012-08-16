@@ -36,16 +36,43 @@
 
 ClassImp(TGQuartz)
 
-using namespace ROOT;
+//TODO:
+//Originally, Olivier Couet suggested to have a separate module quartz with quartz-related graphics,
+//to be used by both iOS and MacOSX code. Also, the separation of non-GUI and gui parts was suggested
+//that's why we have TGQuartz and TGCocoa classes (TGCocoa is never used as it is, TGQuartz is
+//created and initialzed by TROOT.
+//Today it's clear that there is not need in any special quartz classes anymore -
+//in my iOS applications/module I do not need anything from quartz module, also, the
+//amount of code in quartz module is so small, that it can be merged back into cocoa module.
 
-//TODO: re-arrange all these SetContextXXX in a more logical and consistent
-//way and to check, what we actually have to set
-//and when.
+//At some point, I'll merge cocoa and quartz modules and cleanup all this
+//mess and weird code we have in a quartz module.
+
+
+namespace X11 = ROOT::MacOSX::X11;
+namespace Quartz = ROOT::Quartz;
+
+namespace {
+
+void ConvertPointsROOTToCocoa(Int_t nPoints, const TPoint *xy, std::vector<TPoint> &dst, NSObject<X11Drawable> *drawable)
+{
+   assert(nPoints != 0 && "ConvertPointsROOTToCocoa, nPoints parameter is 0");
+   assert(xy != 0 && "ConvertPointsROOTToCocoa, xy parameter is null");
+   assert(drawable != 0 && "ConvertPointsROOTToCocoa, drawable parameter is null");
+   
+   dst.resize(nPoints);
+   for (Int_t i = 0; i < nPoints; ++i) {
+      dst[i].fX = xy[i].fX;
+      dst[i].fY = SCoord_t(X11::LocalYROOTToCocoa(drawable, xy[i].fY));
+   }
+}
+
+}
 
 //______________________________________________________________________________
 TGQuartz::TGQuartz()
 {
-   // TGQuartz default constructor
+   //Default ctor.
 }
 
 
@@ -53,24 +80,27 @@ TGQuartz::TGQuartz()
 TGQuartz::TGQuartz(const char *name, const char *title)
             : TGCocoa(name, title)
 {
-   // TGQuartz normal constructor
+   //Constructor.
 }
 
 
 //______________________________________________________________________________
 void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 {
-   // Draw a box
-
+   //Check some conditions first.
    if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
       return;
 
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   NSObject<X11Drawable> * const drawable = (NSObject<X11Drawable> *)GetSelectedDrawableChecked("DrawBox");
+   if (!drawable)
+      return;
+
+   CGContextRef ctx = drawable.fContext;
    if (!ctx) {
-      Error("DrawBox", "Current context is null");
+      Error("DrawBox", "Context is null");
       return;
    }
-
+   
    const Quartz::CGStateGuard ctxGuard(ctx);
 
    const TColor * const fillColor = gROOT->GetColor(GetFillColor());
@@ -79,12 +109,17 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
       return;
    }
 
+   //Go to low-left-corner system.
+   y1 = Int_t(X11::LocalYROOTToCocoa(drawable, y1));
+   y2 = Int_t(X11::LocalYROOTToCocoa(drawable, y2));
+
    if (const TColorGradient * const extendedColor = dynamic_cast<const TColorGradient *>(fillColor)) {
       //Draw a box with a gradient fill and a shadow.
       Quartz::DrawBoxGradient(ctx, x1, y1, x2, y2, extendedColor, kTRUE);//kTRUE == draw shadow.
    } else {
-      SetContextFillColor(GetFillColor());//For coverity: Do not check the result, TColor exists.
-      if (!SetContextStrokeColor(GetLineColor())) {
+      Quartz::SetFillColor(ctx, GetFillColor());//For coverity: Do not check the result, TColor exists.
+      
+      if (!Quartz::SetLineColor(ctx, GetLineColor())) {
          Error("DrawBox", "Line color for index %d not found", GetLineColor());
          return;
       }
@@ -101,20 +136,29 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
 
 
 //______________________________________________________________________________
-void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
+void TGQuartz::DrawFillArea(Int_t n, TPoint *xy)
 {
+   //Comment from TVirtualX:
+
    // Draw a filled area through all points.
    // n         : number of points
-   // xy        : list of points
+   // xy        : array of points
 
+   //End of comment.
+
+   //Do some checks first.
    if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
       return;
 
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   NSObject<X11Drawable> * const drawable = (NSObject<X11Drawable> *)GetSelectedDrawableChecked("DrawFillArea");
+   CGContextRef ctx = drawable.fContext;
    if (!ctx) {
       Error("DrawFillArea", "Current context is null");
       return;
    }
+
+   //Convert points to bottom-left system:
+   ConvertPointsROOTToCocoa(n, xy, fConvertedPoints, drawable);
    
    const Quartz::CGStateGuard ctxGuard(ctx);
 
@@ -125,17 +169,18 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint * xy)
    }
 
    if (const TColorGradient * const extendedColor = dynamic_cast<const TColorGradient *>(fillColor)) {
-      Quartz::DrawFillAreaGradient(ctx, n, xy, extendedColor, kTRUE);//kTRUE == draw shadow.
+      Quartz::DrawFillAreaGradient(ctx, n, &fConvertedPoints[0], extendedColor, kTRUE);//kTRUE == draw a shadow.
    } else {
-      SetContextStrokeColor(GetFillColor());
-      SetContextFillColor(GetFillColor());
+      //Do not check the result of SetXXXColor - the color exists (checked above).
+      Quartz::SetLineColor(ctx, GetFillColor());
+      Quartz::SetFillColor(ctx, GetFillColor());
       
       Float_t rgb[3] = {};
       fillColor->GetRGB(rgb[0], rgb[1], rgb[2]);
       const Float_t alpha = fillColor->GetAlpha();
 
       Quartz::SetFillStyle(ctx, GetFillStyle(), rgb[0], rgb[1], rgb[2], alpha);
-      Quartz::DrawFillArea(ctx, n, xy, kFALSE);//The last argument - do not draw shadows.
+      Quartz::DrawFillArea(ctx, n, &fConvertedPoints[0], kFALSE);//The last argument - do not draw shadows.
    }
 }
 
@@ -159,8 +204,12 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
 
    if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
       return;
-      
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+
+   //Do some checks first:
+   assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "DrawLine, bad drawable is selected");
+   NSObject<X11Drawable> * const drawable = (NSObject<X11Drawable> *)GetSelectedDrawableChecked("DrawLine");
+   
+   CGContextRef ctx = drawable.fContext;
    if (!ctx) {
       Error("DrawLine", "Current context is null");
       return;
@@ -168,28 +217,33 @@ void TGQuartz::DrawLine(Int_t x1, Int_t y1, Int_t x2, Int_t y2)
    
    const Quartz::CGStateGuard ctxGuard(ctx);
 
-   if (!SetContextStrokeColor(GetLineColor())) {
+   if (!Quartz::SetLineColor(ctx, GetLineColor())) {
       Error("DrawLine", "Could not find TColor for index %d", GetLineColor());
       return;
    }
 
    Quartz::SetLineStyle(ctx, GetLineStyle());
    Quartz::SetLineWidth(ctx, GetLineWidth());
-   Quartz::DrawLine(ctx, x1, y1, x2, y2);
+   Quartz::DrawLine(ctx, x1, X11::LocalYROOTToCocoa(drawable, y1), x2, X11::LocalYROOTToCocoa(drawable, y2));
 }
 
 
 //______________________________________________________________________________
 void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
 {
+   //Comment from TVirtualX:
    // Draw a line through all points.
    // n         : number of points
-   // xy        : list of points   
+   // xy        : list of points
+   //End of comment.
 
+   //Some checks first.
    if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
       return;
 
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   NSObject<X11Drawable> * const drawable = (NSObject<X11Drawable> *)GetSelectedDrawableChecked("DrawPolyLine");
+
+   CGContextRef ctx = drawable.fContext;
    if (!ctx) {
       Error("DrawPolyLine", "Current context is null");
       return;
@@ -197,28 +251,37 @@ void TGQuartz::DrawPolyLine(Int_t n, TPoint *xy)
 
    const Quartz::CGStateGuard ctxGuard(ctx);
    
-   if (!SetContextStrokeColor(GetLineColor())) {
+   if (!Quartz::SetLineColor(ctx, GetLineColor())) {
       Error("DrawPolyLine", "Could not find TColor for index %d", GetLineColor());
       return;
    }
    
    Quartz::SetLineStyle(ctx, GetLineStyle());
    Quartz::SetLineWidth(ctx, GetLineWidth());
-   Quartz::DrawPolyLine(ctx, n, xy);
+   
+   //Convert to bottom-left-corner system.
+   ConvertPointsROOTToCocoa(n, xy, fConvertedPoints, drawable);
+
+   Quartz::DrawPolyLine(ctx, n, &fConvertedPoints[0]);
 }
 
 
 //______________________________________________________________________________
 void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 {
+   //Comment from TVirtualX:
    // Draw PolyMarker
    // n         : number of points
    // xy        : list of points
+   //End of comment.
 
+   //Do some checks first.
    if (fDirectDraw)//To avoid warnings from Quartz - no context at the moment!
       return;
 
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   NSObject<X11Drawable> * const drawable = (NSObject<X11Drawable> *)GetSelectedDrawableChecked("DrawPolyMarker");
+
+   CGContextRef ctx = drawable.fContext;
    if (!ctx) {
       Error("DrawPolyMarker", "Current context is null");
       return;
@@ -226,16 +289,18 @@ void TGQuartz::DrawPolyMarker(Int_t n, TPoint *xy)
 
    const Quartz::CGStateGuard ctxGuard(ctx);
 
-   if (!SetContextFillColor(GetMarkerColor())) {
+   if (!Quartz::SetFillColor(ctx, GetMarkerColor())) {
       Error("DrawPolyMarker", "Could not find TColor for index %d", GetMarkerColor());
       return;
    }
    
-   SetContextStrokeColor(GetMarkerColor());//Can not fail (for coverity).
-
+   Quartz::SetLineColor(ctx, GetMarkerColor());//Can not fail (for coverity).
    Quartz::SetLineStyle(ctx, 1);
    Quartz::SetLineWidth(ctx, 1);
-   Quartz::DrawPolyMarker(ctx, n, xy, GetMarkerSize(), GetMarkerStyle());
+
+   ConvertPointsROOTToCocoa(n, xy, fConvertedPoints, drawable);
+
+   Quartz::DrawPolyMarker(ctx, n, &fConvertedPoints[0], GetMarkerSize(), GetMarkerStyle());
 }
 
 
@@ -248,24 +313,11 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
    if (!text || !text[0])//Can this ever happen? TPad::PaintText does not check this.
       return;
    
-   if (fSelectedDrawable <= 0) {
-      Error("DrawText", "internal error, no pixmap was selected");
-      return;
-   }
-   
-   if (!fPimpl.get()) {
-      Error("DrawText", "internal error, internal data was not initialized correctly");
-      return;
-   }
-   
-   assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "DrawText, no pixmap selected");
-   NSObject<X11Drawable> * const pixmap = fPimpl->GetDrawable(fSelectedDrawable);
-   assert(pixmap.fIsPixmap == YES && "DrawText, selected drawable is not a pixmap");
-   
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
+   NSObject<X11Drawable> * const drawable = (NSObject<X11Drawable> *)GetSelectedDrawableChecked("DrawText");
+      
+   CGContextRef ctx = drawable.fContext;
    if (!ctx) {
       Error("DrawText", "Current context is null");
-      
       return;
    }
    
@@ -273,8 +325,6 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
 
    //Before any core text drawing operations, reset text matrix.
    CGContextSetTextMatrix(ctx, CGAffineTransformIdentity);
-   CGContextTranslateCTM(ctx, 0., pixmap.fHeight);
-   CGContextScaleCTM(ctx, 1., -1.);
 
    try {
       if (CTFontRef currentFont = fPimpl->fFontManager.SelectFont(GetTextFont(), GetTextSize())) {
@@ -291,10 +341,10 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
                unichars[i] = 0xF000 + (unsigned char)text[i];
             
             Quartz::TextLine ctLine(unichars, currentFont, GetTextColor());
-            ctLine.DrawLine(ctx, x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y));
+            ctLine.DrawLine(ctx, x, X11::LocalYROOTToCocoa(drawable, y));
          } else {
             const Quartz::TextLine ctLine(text, currentFont, GetTextColor());
-            ctLine.DrawLine(ctx, x, ROOT::MacOSX::X11::LocalYROOTToCocoa(pixmap, y));
+            ctLine.DrawLine(ctx, x, X11::LocalYROOTToCocoa(drawable, y));
          }
       }
    } catch (const std::exception &e) {
@@ -488,40 +538,17 @@ Int_t TGQuartz::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
 }
 
 //______________________________________________________________________________
-Bool_t TGQuartz::SetContextFillColor(Int_t ci)
+void *TGQuartz::GetSelectedDrawableChecked(const char *calledFrom) const
 {
-   // Set the current fill color in the current context.
-
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-
-   const TColor * const color = gROOT->GetColor(ci);
-   if (!color)
-      return kFALSE;
-
-   const CGFloat a = color->GetAlpha();
-   Float_t rgb[3] = {};
-   color->GetRGB(rgb[0], rgb[1], rgb[2]);
-   CGContextSetRGBFillColor (ctx, rgb[0], rgb[1], rgb[2], a);
+   assert(calledFrom != 0 && "GetSelectedDrawableChecked, calledFrom parameter is null");
+   assert(fSelectedDrawable > fPimpl->GetRootWindowID() && "GetSelectedDrawableChecked, bad drawable is selected");
    
-   return kTRUE;
-}
-
-
-//______________________________________________________________________________
-Bool_t TGQuartz::SetContextStrokeColor(Int_t ci)
-{
-   // Set the current fill color in the current context.
-
-   CGContextRef ctx = (CGContextRef)GetCurrentContext();
-
-   const TColor * const color = gROOT->GetColor(ci);
-   if (!color)
-      return kFALSE;
-
-   const CGFloat a = 1.;
-   Float_t rgb[3] = {};
-   color->GetRGB(rgb[0], rgb[1], rgb[2]);
-   CGContextSetRGBStrokeColor (ctx, rgb[0], rgb[1], rgb[2], a);
+   NSObject<X11Drawable> *drawable = fPimpl->GetDrawable(fSelectedDrawable);
+   if (!drawable.fIsPixmap) {
+      //TPad/TCanvas ALWAYS draw only into a pixmap.
+      Error(calledFrom, "Selected drawable is not a pixmap");
+      return 0;
+   }
    
-   return kTRUE;
+   return drawable;
 }

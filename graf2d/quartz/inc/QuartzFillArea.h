@@ -39,7 +39,8 @@ class TColorGradient;
 
 namespace ROOT {
 namespace Quartz {
-   
+
+Bool_t SetFillColor(CGContextRef ctx, Color_t colorIndex);
 void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, Int_t mode);
 void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const TColorGradient *extendedColor, Bool_t drawShadow);
 

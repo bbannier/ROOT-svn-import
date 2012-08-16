@@ -270,7 +270,7 @@ bool ParseXLFDName(const std::string &xlfdName, XLFDName &dst)
       if (xlfdName == "fixed" || xlfdName == "*") {
          //Is this correct XLFD name???? Who knows. Replace it.
          dst.fFamilyName = "Courier";
-         dst.fPixelSize = 11;
+         dst.fPixelSize = 12;
       } else {
          size_type pos = ParseFoundry(xlfdName, 0, dst);
          if (pos + 1 < nameLength)
