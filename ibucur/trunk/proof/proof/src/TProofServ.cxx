@@ -3106,8 +3106,7 @@ Int_t TProofServ::SetupCommon()
    if (IsMaster()) {
       // Send session tag to client
       TMessage m(kPROOF_SESSIONTAG);
-      m << fTopSessionTag;
-      if (GetProtocol() > 24) m << fGroup;
+      m << fTopSessionTag << fGroup << fUser;
       fSocket->Send(m);
       // Group priority
       fGroupPriority = GetPriority();
@@ -3177,7 +3176,7 @@ Int_t TProofServ::SetupCommon()
    if (quotas.IsNull())
       quotas = gEnv->GetValue("ProofServ.UserQuotas", "");
    if (!quotas.IsNull()) {
-      // Parse it; format ("maxquerykept:10 hwmsz:800m maxsz:1g")
+      // Parse it; format ("maxquerykept=10 hwmsz=800m maxsz=1g")
       TString tok;
       Ssiz_t from = 0;
       while (quotas.Tokenize(tok, from, " ")) {
