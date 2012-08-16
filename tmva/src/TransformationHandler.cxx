@@ -246,7 +246,7 @@ const std::vector<TMVA::Event*>* TMVA::TransformationHandler::CalcTransformation
 std::vector<TMVA::Event*>* TMVA::TransformationHandler::TransformCollection( VariableTransformBase* trf,
                                                                              Int_t cls,
                                                                              std::vector<TMVA::Event*>* events,
-                                                                             Bool_t replace ) const 
+                                                                             Bool_t replace) const 
 {
    // a collection of transformations
    std::vector<TMVA::Event*>* tmpEvents = 0;

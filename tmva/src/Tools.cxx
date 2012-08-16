@@ -1569,7 +1569,7 @@ Double_t TMVA::Tools::Mean(Iterator first, Iterator last, WeightIterator w)
       ++i;
    }
    if (sumw <= 0) {
-      ::Error("TMVA::Tools::Mean","sum of weights <= 0 ?! that's a bit too much of negative event weights :) ");
+      ::Error("TMVA::Tools::Mean","sum of weights <= 0 (i.e. %.4e)?! that's a bit too much of negative event weights :) ",sumw);
       return 0;
    }
 
