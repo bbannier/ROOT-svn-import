@@ -541,7 +541,7 @@ Int_t TGQuartz::SetTextFont(char * /*fontname*/, ETextSetMode /*mode*/)
 bool TGQuartz::FilledAreaIsHollow()const
 {
    const Style_t style = GetFillStyle() / 1000;
-   if (style == 2 || style != 1 && style != 3)
+   if (style == 2 || (style != 1 && style != 3))
       return true;
 
    return false;
@@ -554,22 +554,32 @@ bool TGQuartz::FilledAreaHasPattern()const
 }
 
 //______________________________________________________________________________
-void TGQuartz::SetFilledAreaParameters(void *p)
+bool TGQuartz::SetFilledAreaParameters(void *p)
 {
-   assert(p != 0 && "SetFilledAreaParameters, parameter p is null");
-   
    //We can not have CGContextRef in a header, processed by CINT, thus we have
    //this cast.
    CGContextRef ctx = (CGContextRef)p;
-   (void) ctx;
+   assert(ctx != 0 && "SetFilledAreaParameters, context is null");
+
+   const TColor *color = gROOT->GetColor(GetFillColor());
+   if (!color) {
+      Error("SetFilledAreaParameters", "Color for index %d not found", int(GetFillColor()));
+      return false;
+   }
+   
+   Float_t rgba[4] = {};
+   color->GetRGB(rgba[0], rgba[1], rgba[2]);
+   rgba[3] = color->GetAlpha();
    
    if (FilledAreaIsHollow()) {
-   
+      //Set stroke color.
    } else if (FilledAreaHasPattern()) {
-   
+      //Set fill patern with a color.
    } else {
-   
+      //Solid fill.
    }
+   
+   return true;
 }
 
 //______________________________________________________________________________
