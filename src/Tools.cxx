@@ -227,8 +227,6 @@ void TMVA::Tools::ComputeStat( const std::vector<TMVA::Event*>& events, std::vec
       if (theVar > xmax) xmax = theVar;
       if (theVar < xmin) xmin = theVar;
    }
-   ++nEventsS;
-   ++nEventsB;
 
    // basic statistics
    // !!! TMath::Mean allows for weights, but NOT for negative weights
