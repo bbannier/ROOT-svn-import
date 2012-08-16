@@ -330,7 +330,8 @@ namespace Quartz = ROOT::Quartz;
    assert(x < fWidth && "putPixel:X:Y:, x parameter is >= self.fWidth");
    assert(y < fHeight && "putPixel:X:Y:, y parameter is >= self.fHeight");
    
-   unsigned char *dst = fData + (fHeight - 1 - y) * fWidth * 4 + x * 4;
+   unsigned char *dst = fData + y * fWidth * 4 + x * 4;
+   
    dst[0] = rgb[0];
    dst[1] = rgb[1];
    dst[2] = rgb[2];

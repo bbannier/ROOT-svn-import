@@ -33,7 +33,7 @@ Bool_t SetLineColor(CGContextRef ctx, Color_t colorIndex)
    if (!color)
       return kFALSE;
 
-   const CGFloat alpha = color->GetAlpha();
+   const CGFloat alpha = 1.;//color->GetAlpha();
    Float_t rgb[3] = {};
    color->GetRGB(rgb[0], rgb[1], rgb[2]);
    CGContextSetRGBStrokeColor(ctx, rgb[0], rgb[1], rgb[2], alpha);
