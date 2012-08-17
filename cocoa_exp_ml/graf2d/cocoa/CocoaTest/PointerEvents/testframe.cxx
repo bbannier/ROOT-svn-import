@@ -3,6 +3,7 @@
 
 #include "TVirtualX.h"
 #include "RConfigure.h"
+#include "TGPicture.h"
 
 #include "testframe.h"
 
@@ -52,6 +53,16 @@ void TestFrame::DoRedraw()
    const TString text(TString::Format("id : %u, w : %u, h : %u", unsigned(windowID_), unsigned(GetWidth()), unsigned(GetHeight())));
    
    gVirtualX->DrawString(GetId(), textContext_, 0, 30, text.Data(), text.Length());
+   
+   if (windowID_ == 4) {
+      const TGPicture *pic = gClient->GetPicture("c_src_s.xpm");
+      if (pic) {
+         TGSelectedPicture selPic(gClient, pic);
+         selPic.Draw(GetId(), textContext_, 50, 50);
+      }
+
+      gClient->FreePicture(pic);
+   }
 }
 
 //_____________________________________________________
