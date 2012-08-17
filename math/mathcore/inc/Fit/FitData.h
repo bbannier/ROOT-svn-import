@@ -53,7 +53,10 @@ namespace ROOT {
 /** 
    class holding the fit data points. It is template on the type of point,
    which can be for example a binned or unbinned point. 
-   It is basicaly a wrapper on an std::vector  
+   It structures the coordinate data in a vector< vector<double> > construct. 
+   This way efficient access to the coordinates and data by SIMD 
+   routines is made possible. Though it is not implemented in all 
+   fit routines.
 
    @ingroup FitData
 
@@ -196,6 +199,8 @@ protected:
     fpTmpCoordVector = new double [fDim]; 
   }
 
+  /** template function to initialize the Data from arbitrary iterator.
+   **/
   template<class Iterator> 
   void InitFromRange( Iterator dataItr )
   {
@@ -329,6 +334,10 @@ public:
 
 
 protected:
+  /** 
+      copies the data to the local vector< vector < double > > structure 
+      this is needed, if the data is going to be manipulated for some reason. 
+  */
   void UnWrap( )
   {
     assert( fWrapped );
@@ -347,16 +356,16 @@ protected:
   }
 
 protected:
-  bool          fWrapped;
+  bool          fWrapped; // true if no data is hold by the class and only pointers on the data are set.
 
 private:
   DataOptions   fOptions; 
   DataRange     fRange;
   
 protected:
-  unsigned int  fMaxPoints;
-  unsigned int  fNPoints;
-  unsigned int  fDim;
+  unsigned int  fMaxPoints; // Maximal number of points
+  unsigned int  fNPoints;   // Actual number of points
+  unsigned int  fDim;       // Dimension of the data.
   
 private:
   /** 
@@ -373,11 +382,12 @@ private:
    * the data can only be accessed by using 
    * fCoordsPtr.
   */
-  std::vector< std::vector< double > > fCoords; 
-  std::vector< const double* > fCoordsPtr;
+  std::vector< std::vector< double > > fCoords;   // array for the coordinates ( if they are stored directly in this class )
+  std::vector< const double* > fCoordsPtr; // stores the pointer to the actual data. if fWrapped is false this will be the 
+  //  point to the fCoords array.
   
   double* fpTmpCoordVector; // non threadsafe stuff!
-  
+  // temporary pointer to array for returning coords by value.
 };
       
 
