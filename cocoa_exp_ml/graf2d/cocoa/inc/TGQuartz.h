@@ -74,14 +74,11 @@ public:
 
 private:
 
-   bool FilledAreaIsHollow()const;
-   bool FilledAreaHasPattern()const;
-   //Ugly void * poiner to hide Quartz details from CINT.
-   bool SetFilledAreaParameters(void *ctx);
-
    //Unfortunately, I have to convert from
    //top-left to bottom-left corner system.
    std::vector<TPoint> fConvertedPoints;
+   
+   unsigned fPatternIndex;
 
    void *GetSelectedDrawableChecked(const char *calledFrom) const;
 
