@@ -1657,7 +1657,7 @@ void print_mask_info(ULong_t mask)
    //Save context state.
    const Quartz::CGStateGuard ctxGuard(self.fContext);
    
-   CGContextTranslateCTM(self.fContext, 0., [self visibleRect].size.height);//???
+   CGContextTranslateCTM(self.fContext, 0., self.frame.size.height);//???
    CGContextScaleCTM(self.fContext, 1., -1.);
 
    const Util::CFScopeGuard<CGImageRef> imageFromPixmap([srcPixmap createImageFromPixmap]);
@@ -1681,10 +1681,12 @@ void print_mask_info(ULong_t mask)
       assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
       assert(CGImageIsMask(mask.fImage) == true && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
 
+      clipXY.fY = X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
       const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
       CGContextClipToMask(self.fContext, clipRect, mask.fImage);
    }
    
+   dstPoint.fY = X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
    const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, imageFromPixmap.Get());
    
