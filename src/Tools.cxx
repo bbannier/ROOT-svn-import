@@ -227,6 +227,8 @@ void TMVA::Tools::ComputeStat( const std::vector<TMVA::Event*>& events, std::vec
       if (theVar > xmax) xmax = theVar;
       if (theVar < xmin) xmin = theVar;
    }
+   // ++nEventsS;
+   // ++nEventsB;
 
    // basic statistics
    // !!! TMath::Mean allows for weights, but NOT for negative weights
@@ -1546,7 +1548,7 @@ TMVA::Tools::CalcCovarianceMatrices( const std::vector<Event*>& events, Int_t ma
 }
 
 template <typename Iterator, typename WeightIterator>
-Double_t TMVA::Tools::Mean(Iterator first, Iterator last, WeightIterator w)
+Double_t TMVA::Tools::Mean ( Iterator first,  Iterator last,  WeightIterator w)
 {
    // Return the weighted mean of an array defined by the first and
    // last iterators. The w iterator should point to the first element
@@ -1555,22 +1557,43 @@ Double_t TMVA::Tools::Mean(Iterator first, Iterator last, WeightIterator w)
    Double_t sum = 0;
    Double_t sumw = 0;
    int i = 0;
-   while ( first != last ) {
-      // if ( *w < 0) {
-      //    ::Error("TMVA::Tools::Mean","w[%d] = %.4e < 0 ?!",i,*w);
-      //    return 0;
-      // } // SURE, why wouldn't you allow for negative event weights here ?? :)
-      sum  += (*w) * (*first);
-      sumw += (*w) ;
-      ++w;
-      ++first;
-      ++i;
+   if (w==NULL)
+   {
+       while ( first != last ) 
+       {
+	   // if ( *w < 0) {
+	   //    ::Error("TMVA::Tools::Mean","w[%d] = %.4e < 0 ?!",i,*w);
+	   //    return 0;
+	   // } // SURE, why wouldn't you allow for negative event weights here ?? :)
+	   sum  += (*first);
+	   sumw += 1.0 ;
+	   ++first;
+	   ++i;
+       }
+       if (sumw <= 0) {
+	   ::Error("TMVA::Tools::Mean","sum of weights <= 0 ?! that's a bit too much of negative event weights :) ");
+	   return 0;
+       }
    }
-   if (sumw <= 0) {
-      ::Error("TMVA::Tools::Mean","sum of weights <= 0 (i.e. %.4e)?! that's a bit too much of negative event weights :) ",sumw);
-      return 0;
+   else
+   {
+       while ( first != last ) 
+       {
+	   // if ( *w < 0) {
+	   //    ::Error("TMVA::Tools::Mean","w[%d] = %.4e < 0 ?!",i,*w);
+	   //    return 0;
+	   // } // SURE, why wouldn't you allow for negative event weights here ?? :)
+	   sum  += (*w) * (*first);
+	   sumw += (*w) ;
+	   ++w;
+	   ++first;
+	   ++i;
+       }
+       if (sumw <= 0) {
+	   ::Error("TMVA::Tools::Mean","sum of weights <= 0 ?! that's a bit too much of negative event weights :) ");
+	   return 0;
+       }
    }
-
    return sum/sumw;
 }
 
@@ -1598,13 +1621,26 @@ Double_t TMVA::Tools::RMS(Iterator first, Iterator last, WeightIterator w)
    Double_t sumw = 0;
 
    Double_t adouble;
-   while ( first != last ) {
-      adouble=Double_t(*first);
-      sum  += adouble * (*w); 
-      sum2 += adouble*adouble * (*w);
-      sumw += (*w);
-      ++first;
-      ++w;
+   if (w==NULL)
+   {
+       while ( first != last ) {
+	   adouble=Double_t(*first);
+	   sum  += adouble; 
+	   sum2 += adouble*adouble;
+	   sumw += 1.0;
+	   ++first;
+       }
+   }
+   else
+   {
+       while ( first != last ) {
+	   adouble=Double_t(*first);
+	   sum  += adouble * (*w); 
+	   sum2 += adouble*adouble * (*w);
+	   sumw += (*w);
+	   ++first;
+	   ++w;
+       }
    }
    Double_t norm = 1./sumw;
    Double_t mean = sum*norm;

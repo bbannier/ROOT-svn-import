@@ -102,7 +102,7 @@ namespace TMVA {
 
 
       template <typename T> Double_t Mean(Long64_t n, const T *a, const Double_t *w=0);
-      template <typename Iterator, typename WeightIterator> Double_t Mean(Iterator first, Iterator last, WeightIterator w);
+      template <typename Iterator, typename WeightIterator> Double_t Mean ( Iterator first, Iterator last, WeightIterator w);
       
       template <typename T> Double_t RMS(Long64_t n, const T *a, const Double_t *w=0);
       template <typename Iterator, typename WeightIterator> Double_t RMS(Iterator first, Iterator last, WeightIterator w);
