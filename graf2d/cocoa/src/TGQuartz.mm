@@ -72,7 +72,6 @@ void ConvertPointsROOTToCocoa(Int_t nPoints, const TPoint *xy, std::vector<TPoin
 
 //______________________________________________________________________________
 TGQuartz::TGQuartz()
-            : fPatternIndex(0)
 {
    //Default ctor.
 }
@@ -80,8 +79,7 @@ TGQuartz::TGQuartz()
 
 //______________________________________________________________________________
 TGQuartz::TGQuartz(const char *name, const char *title)
-            : TGCocoa(name, title),
-              fPatternIndex(0)
+            : TGCocoa(name, title)
 {
    //Constructor.
 }
@@ -117,13 +115,14 @@ void TGQuartz::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode)
       Quartz::DrawBoxGradient(ctx, x1, y1, x2, y2, extendedColor, kTRUE);//kTRUE == draw a shadow.
    } else {
       const bool isHollow = mode == kHollow || GetFillStyle() / 1000 == 2;
+      unsigned patternIndex = 0;
       if (isHollow) {
          if (!Quartz::SetLineColor(ctx, GetLineColor())) {
             Error("DrawBox", "Can not find color for index %d", int(GetLineColor()));
             return;
          }
       } else {
-         if (!Quartz::SetFillAreaParameters(ctx, &fPatternIndex)) {
+         if (!Quartz::SetFillAreaParameters(ctx, &patternIndex)) {
             Error("DrawBox", "SetFillAreaParameters failed");
             return;
          }
@@ -169,7 +168,8 @@ void TGQuartz::DrawFillArea(Int_t n, TPoint *xy)
    if (const TColorGradient * const extendedColor = dynamic_cast<const TColorGradient *>(fillColor)) {
       Quartz::DrawFillAreaGradient(ctx, n, &fConvertedPoints[0], extendedColor, kTRUE);//kTRUE == draw a shadow.
    } else {
-      if (!Quartz::SetFillAreaParameters(ctx, &fPatternIndex)) {
+      unsigned patternIndex = 0;
+      if (!Quartz::SetFillAreaParameters(ctx, &patternIndex)) {
          Error("DrawFillArea", "SetFillAreaParameters failed");
          return;
       }

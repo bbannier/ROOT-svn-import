@@ -77,8 +77,6 @@ private:
    //Unfortunately, I have to convert from
    //top-left to bottom-left corner system.
    std::vector<TPoint> fConvertedPoints;
-   
-   unsigned fPatternIndex;
 
    void *GetSelectedDrawableChecked(const char *calledFrom) const;
 
