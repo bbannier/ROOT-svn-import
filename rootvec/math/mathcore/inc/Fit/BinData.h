@@ -40,11 +40,10 @@ namespace ROOT {
               - coordinate, values, error on values and coordinates (for effective least square fits) : kCoordError
               - corrdinate, values, error on coordinates and asymmettric error on valyes : kAsymError
 
-              In addition there is the option to construct Bindata copying the data in (using the DataVector class) 
-              or using pointer to external data (DataWrapper) class. 
-              In general is found to be more efficient to copy the data. 
-              In case of really large data sets for limiting memory consumption then the other option can be used
-              Specialized constructor exists for data up to 3 dimensions. 
+              It structures the coordinate data in a vector< vector<double> > construct. 
+              This way efficient access to the coordinates and data by SIMD 
+              routines is made possible. Though it is not implemented in all 
+              fit routines.
 
               When the data are copying in the number of points can be set later (or re-set) using Initialize and 
               the data are inserted one by one using the Add method. 

@@ -32,10 +32,10 @@ namespace ROOT {
 /** 
    Class describing the unbinned data sets (just x coordinates values) of any dimensions
 
-              There is the option to construct UnBindata copying the data in (using the DataVector class) 
-              or using pointer to external data (DataWrapper) class. 
-              In general is found to be more efficient to copy the data. 
-              In case of really large data sets for limiting memory consumption then the other option can be used
+              There is the option to construct UnBindata copying the data 
+              or using pointer to external data class. 
+              It is not more efficient anymore to copy the data! But the 
+              histogram classes rely on this feature. 
               Specialized constructor exists for using external data up to 3 dimensions. 
 
               When the data are copying in the number of points can be set later (or re-set) using Initialize and 

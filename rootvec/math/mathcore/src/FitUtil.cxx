@@ -446,6 +446,9 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    // the actual number of used points
    // normal chi2 using only error on values (from fitting histogram)
    // optionally the integral of function in the bin is used 
+   // this implentation tries to benifit from newer architechture, by
+   // using vectorization friendly written code. The vectorization it self 
+   // relies on the auto vectorization abilities of the compiler in use. 
    
    double chi2 = 0;
    unsigned int nPoints = 0; // count the effective non-zero points
@@ -474,7 +477,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
       wrefVolume /= data.RefVolume();
    }
    
-   const unsigned int nMaxBunchSize = 32;
+   const unsigned int nMaxBunchSize = 64;
    
 #ifdef _OPENMP 
    const int nThreads = omp_get_max_threads();
