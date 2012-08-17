@@ -364,7 +364,6 @@ Int_t TGQuartz::GetFontAscent() const
    return 0;
 }
 
-
 //______________________________________________________________________________
 Int_t TGQuartz::GetFontDescent() const
 {

@@ -130,7 +130,7 @@ bool SetFillAreaParameters(CGContextRef ctx, unsigned *patternIndex)
    
    //2 is hollow, 1 is solid and 3 is a hatch, !solid and !hatch - this is from O.C.'s code.
    if (fillStyle == 2 || (fillStyle != 1 && fillStyle != 3)) {
-      if (!SetLineColor(ctx, gVirtualX->GetLineColor())) {
+      if (!SetLineColor(ctx, gVirtualX->GetFillColor())) {
          ::Error("SetFillAreaParameters", "Line color for index %d was not found", int(gVirtualX->GetLineColor()));
          return false;
       }
