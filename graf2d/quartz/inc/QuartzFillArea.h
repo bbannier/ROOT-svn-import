@@ -41,16 +41,12 @@ namespace ROOT {
 namespace Quartz {
 
 Bool_t SetFillColor(CGContextRef ctx, Color_t colorIndex);
-void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, Int_t mode);
+Bool_t SetFillAreaParameters(CGContextRef ctx, unsigned *patternIndex);
+void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, bool hollow);
 void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const TColorGradient *extendedColor, Bool_t drawShadow);
 
 void DrawFillArea(CGContextRef ctx, Int_t n, TPoint * xy, Bool_t drawShadow);
 void DrawFillAreaGradient(CGContextRef ctx, Int_t nPoints, const TPoint *xy, const TColorGradient *extendedColor, Bool_t drawShadow);
-
-void SetFillStyle(CGContextRef ctx, Int_t style, 
-                  Float_t r, Float_t g, Float_t b, Float_t a);
-void SetStencilPattern(CGContextRef ctx, 
-                       Float_t r, Float_t g, Float_t b, Float_t a);
 
 }
 }
