@@ -2,9 +2,11 @@
 #include "RooWorkspace.h"
 #include "RooRealVar.h"
 #include "RooDataSet.h"
+#include "RooArgList.h"
 
 // RooStats headers
 #include "RooStats/ModelConfig.h"
+#include "RooStats/CombinedPdf.h"
 
 using namespace RooFit;
 using namespace RooStats;
@@ -23,6 +25,9 @@ void buildSimultaneousModel(RooWorkspace *w)
    w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
    w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
    w->factory("SIMUL::sim_pdf(index[cat1,cat2],cat1=ext_pdf1,cat2=ext_pdf2)");
+
+   RooArgList ext_list(*w->pdf("ext_pdf1"), *w->pdf("ext_pdf2"));
+   CombinedPdf *comb_pdf = new CombinedPdf("comb_pdf", "Combined Pdf", ext_list);
 
    // create combined signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);

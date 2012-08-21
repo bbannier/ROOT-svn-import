@@ -24,7 +24,9 @@ namespace RooStats {
       virtual TObject *clone(const char *newname) const { return new CombinedPdf(*this, newname); }
       virtual ~CombinedPdf();
 
-      RooAbsPdf* GetPdf(const char *catName) const; // considering deleting it
+      RooAbsPdf* GetPdf(const std::string& catName) const; // considering deleting it
+      // returns kTRUE if adding the pdf is succesful, kFALSE otherwise
+      Bool_t AddPdf(RooAbsPdf& pdf, const std::string& catLabel);
       RooDataSet *GenerateGlobalObs(const RooArgSet& vars, Int_t nEvents);
       virtual Double_t evaluate() const;
 
