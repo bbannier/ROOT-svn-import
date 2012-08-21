@@ -60,11 +60,21 @@ CombinedPdf::~CombinedPdf()
 {
 }
 
-RooAbsPdf* CombinedPdf::GetPdf(const char *catName) const
+RooAbsPdf* CombinedPdf::GetPdf(const std::string& catName) const
 {
    std::map<std::string, RooAbsPdf*>::const_iterator cIter = fChannels.find(catName);
    if(cIter != fChannels.end()) return (*cIter).second;
    return NULL;
+}
+
+Bool_t CombinedPdf::AddPdf(RooAbsPdf& pdf, const std::string& catLabel)
+{
+   if(fChannels.find(catLabel) != fChannels.end()) {
+      std::cout << "CombinedPdf::AddPdf - warning: cannot reassign pdf to category " + catLabel << std::endl;
+      return kFALSE;
+   }  
+   fChannels[catLabel] = &pdf;
+   return kTRUE;
 }
 
 
@@ -82,7 +92,6 @@ RooDataSet* CombinedPdf::GenerateGlobalObs(const RooArgSet &vars, Int_t nEvents)
 
    return data;
 }
-
 
 Double_t CombinedPdf::evaluate() const
 {
@@ -103,5 +112,7 @@ Double_t CombinedPdf::evaluate() const
       return 1.0;
    }
   
-   return 2.0;
+   return fCurrentPdf->getVal(); // * catFrac
 }
+
+
