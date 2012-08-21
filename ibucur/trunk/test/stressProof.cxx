@@ -256,7 +256,7 @@ int main(int argc,const char *argv[])
       printf("   -g            enable graphics; default is to run in text mode.\n");
       printf("   -cpu          show CPU times used by each successful test; used for calibration.\n");
       printf("   -clearcache   clear memory cache associated with the files processed when local.\n");
-      printf("   -noprogress   do not show progress whose escaped chars may confuse some wrapper applications.\n");
+      printf("   -noprogress   do not show progress (escaped chars may confuse some wrapper applications)\n");
       printf("   -tut tutdir   specify alternative location for the ROOT tutorials; allows to run multiple\n");
       printf("                 concurrent instances of stressProof, for tests, for example.\n");
       printf("                 Can be also passed via the env STRESSPROOF_TUTORIALDIR.\n");
@@ -1137,7 +1137,7 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
       if (!all && !dryrun) {
          // Notify the enabled tests
          printf("*                                                               **\r");
-         printf("*  Running only tests %s (and related)\n", ten.Data());
+         printf("*  Running only test(s) %s (and related)\n", ten.Data());
          printf("******************************************************************\n");
       }      
    }
@@ -1348,9 +1348,11 @@ Int_t PT_H1AssertFiles(const char *h1src)
             printf("\n >>> Test failure: file %s not found in archive %s\n", src.Data(), h1src);
             return -1;
          }
-         gSystem->RedirectOutput(0, 0, &gRH);
-         printf("%d\b", i);
-         gSystem->RedirectOutput(glogfile, "a", &gRH);
+         if (guseprogress) {
+            gSystem->RedirectOutput(0, 0, &gRH);
+            printf("%d\b", i);
+            gSystem->RedirectOutput(glogfile, "a", &gRH);
+         }
       }
       gh1sep = '#';
    } else {
@@ -1363,9 +1365,11 @@ Int_t PT_H1AssertFiles(const char *h1src)
             printf("\n >>> Test failure: file %s does not exist\n", src.Data());
             return -1;
          }
-         gSystem->RedirectOutput(0, 0, &gRH);
-         printf("%d\b", i);
-         gSystem->RedirectOutput(glogfile, "a", &gRH);
+         if (guseprogress) {
+            gSystem->RedirectOutput(0, 0, &gRH);
+            printf("%d\b", i);
+            gSystem->RedirectOutput(glogfile, "a", &gRH);
+         }
       }
    }
    gh1src = h1src;
@@ -1449,9 +1453,11 @@ Int_t PT_EventAssertFiles(const char *eventsrc, Int_t nf = 10)
             printf("\n >>> Test failure: problems retrieving %s\n", src.Data());
             return -1;
          }
-         gSystem->RedirectOutput(0, 0, &gRH);
-         printf("%d\b", i);
-         gSystem->RedirectOutput(glogfile, "a", &gRH);
+         if (guseprogress) {
+            gSystem->RedirectOutput(0, 0, &gRH);
+            printf("%d\b", i);
+            gSystem->RedirectOutput(glogfile, "a", &gRH);
+         }
       }
       geventlocal = kTRUE;
       // Done
@@ -1467,9 +1473,11 @@ Int_t PT_EventAssertFiles(const char *eventsrc, Int_t nf = 10)
          printf("\n >>> Test failure: file %s does not exist\n", src.Data());
          return -1;
       }
-      gSystem->RedirectOutput(0, 0, &gRH);
-      printf("%d\b", i);
-      gSystem->RedirectOutput(glogfile, "a", &gRH);
+      if (guseprogress) {
+         gSystem->RedirectOutput(0, 0, &gRH);
+         printf("%d\b", i);
+         gSystem->RedirectOutput(glogfile, "a", &gRH);
+      }
    }
    geventsrc = eventsrc;
 
