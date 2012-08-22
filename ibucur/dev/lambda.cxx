@@ -18,6 +18,16 @@ std::function<int(int)> returnLambda()
       return a*x*x + b*x + c == 0; };
 }
 
+std::function<bool(long)> f;
+
+void setLambda()
+{
+   static int divisor = 5; // cannot be local
+   f = [&](long x) { return x % divisor == 0; };
+}
+
+
+
 int main()
 {
    std::vector<int> v {10, 5, 15, 4, 23};
@@ -31,10 +41,11 @@ int main()
    
    std::cout << "factorial = " << factorial(4) << std::endl;
 
+   
 
-   auto f = returnLambda();
+   setLambda();
+   std::cout << f(23L) << " " << f(15L) << " " << f(176L) << std::endl; 
 
-   f(22);
 
 
    return 0;
