@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 
 typedef std::unordered_map<std::string, std::size_t> WordCountMapType;
 
@@ -36,6 +37,20 @@ void showCommonWords(MapIt begin, MapIt end, const std::size_t n)
       std::printf(" %-10s%10zu\n", (*it)->first.c_str(), (*it)->second);
    }
 
+}
+
+template<typename F, typename ... Ts>
+auto logAndInvoke(std::ostream& os, F&& func, Ts&& ... args)->decltype(func(std::forward<Ts>(args)...))
+{
+   os << std::chrono::system_clock::now;
+   return func(std::forward<Ts>(args)...);
+}
+
+template<typename T1, typename T2>
+auto mult(T1&& a, T2&& b)->
+   decltype(std::forward<T1>(a) * std::forward<T2>(b))
+{
+   return std::forward<T1>(a) * std::forward<T2>(b);
 }
 
 int main(int argc, char *argv[])
