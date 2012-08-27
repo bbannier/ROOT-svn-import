@@ -316,9 +316,9 @@ public :
       double eval = fDataErrorPtr[ ipoint ];
       
       if (fWrapped)
-        return 1.0 / eval;
+        return (eval != 0.0) ? 1.0/eval : 0.0;
       else
-        return (eval != 0.0) ? eval : 0.0;
+        return eval;
     }
     
     if ( fErrorType == kAsymError ) 
