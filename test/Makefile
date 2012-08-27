@@ -6,6 +6,8 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
+CXXFLAGS += -g
+LDFLAGS += -g
 RC     := root-config
 ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
 MKARCH := $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
