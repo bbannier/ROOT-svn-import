@@ -573,20 +573,22 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
           {
 #ifdef _OPENMP
             #pragma omp critical
+             {
+#else
+             {
 #endif
-	    {
-		    for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-		    {
-		      // Don't try to parallelize this:
-		      // this is not threadsafe e.g. it cannot be parallized. 
-		      // The integral evaluator is not threadsafe too, 
-		      // this issue needs to be fixed first.
-		      const double* coords0 = data.Coords( ibunch + iOffset );
-		      const double* coords1 = data.BinUpEdge( ibunch + iOffset );
-		      
-		      resValues[ibunch] = igEval( coords0, coords1 );
-		    }
-	    }
+             for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+                {
+                  // Don't try to parallelize this:
+                  // this is not threadsafe e.g. it cannot be parallized. 
+                  // The integral evaluator is not threadsafe too, 
+                  // this issue needs to be fixed first.
+                  const double* coords0 = data.Coords( ibunch + iOffset );
+                  const double* coords1 = data.BinUpEdge( ibunch + iOffset );
+                  
+                  resValues[ibunch] = igEval( coords0, coords1 );
+                }
+             }
           }
           
           if( useBinVolume )
