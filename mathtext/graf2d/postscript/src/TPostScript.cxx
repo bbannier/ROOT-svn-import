@@ -321,6 +321,7 @@ TPostScript::TPostScript() : TVirtualPS()
    fYsize           = 0.;
    fZone            = kFALSE;
    for (Int_t i=0; i<32; i++) fPatterns[i]=0;
+   SetTitle("PS");
 }
 
 
@@ -340,6 +341,7 @@ TPostScript::TPostScript(const char *fname, Int_t wtype)
    //     113 eps
 
    fStream = 0;
+   SetTitle("PS");
    Open(fname, wtype);
 }
 
@@ -389,7 +391,7 @@ void TPostScript::Open(const char *fname, Int_t wtype)
    }
 
    // open OS file
-   fStream = new ofstream(fname,ios::out);
+   fStream = new std::ofstream(fname,std::ios::out);
    if (fStream == 0 || gSystem->AccessPathName(fname,kWritePermission)) {
       printf("ERROR in TPostScript::Open: Cannot open file:%s\n",fname);
       return;
