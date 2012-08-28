@@ -8,7 +8,7 @@ if(CMAKE_PROJECT_NAME STREQUAL ROOT)
   ROOT_USE_PACKAGE(core/cont)  
   ROOT_USE_PACKAGE(cint/cint)
   
-  file(GLOB headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/inc 
+  ROOT_GLOB_HEADERS(headers RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/inc 
                     ${CMAKE_CURRENT_SOURCE_DIR}/inc/Reflex/*.h 
                     ${CMAKE_CURRENT_SOURCE_DIR}/inc/Reflex/Builder/*.h )
   list(REMOVE_ITEM headers Reflex/Builder/ReflexBuilder.h Reflex/Reflex.h 
@@ -18,13 +18,13 @@ if(CMAKE_PROJECT_NAME STREQUAL ROOT)
   ROOT_GENERATE_ROOTMAP(Reflex LINKDEF LinkDef.h DEPENDENCIES )
   ROOT_MODULE_LIBRARY(ReflexDict G__Reflex.cxx LIBRARIES Reflex Cint Core)
   #---Reflex library---------------------------------------------------------
-  ROOT_LINKER_LIBRARY(Reflex *.cxx LIBRARIES )  
+  ROOT_LINKER_LIBRARY(Reflex *.cxx LIBRARIES ${CMAKE_DL_LIBS})  
   #---genreflex files--------------------------------------------------------
   install(CODE "file(WRITE ${CMAKE_INSTALL_PREFIX}/lib/python/genreflex/gccxmlpath.py \"gccxmlpath = '${GCCXML_EXECUTABLE}'\n\")")
   install(DIRECTORY python/genreflex DESTINATION lib/python FILES_MATCHING PATTERN "*.py" PATTERN ".svn" EXCLUDE)
   install(CODE "execute_process(COMMAND python -m compileall  ${CMAKE_INSTALL_PREFIX}/lib/python/genreflex)")
   #---genmap executable------------------------------------------------------
-  ROOT_EXECUTABLE(genmap genmap/genmap.cxx LIBRARIES Reflex)
+  ROOT_EXECUTABLE(genmap genmap/genmap.cxx LIBRARIES Reflex ${CMAKE_DL_LIBS})
   #---install headers--------------------------------------------------------
   ROOT_INSTALL_HEADERS()
     

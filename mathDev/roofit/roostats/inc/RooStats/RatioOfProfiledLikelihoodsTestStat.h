@@ -33,6 +33,10 @@ END_HTML
 #include "RooStats/TestStatistic.h"
 #endif
 
+#ifndef ROOSTATS_ProfileLikelihoodTestStat
+#include "RooStats/ProfileLikelihoodTestStat.h"
+#endif
+
 namespace RooStats {
 
 class RatioOfProfiledLikelihoodsTestStat: public TestStatistic {
@@ -40,17 +44,23 @@ class RatioOfProfiledLikelihoodsTestStat: public TestStatistic {
   public:
 
    RatioOfProfiledLikelihoodsTestStat() :
-      fNullPdf(NULL),
-      fAltPdf(NULL),
+      fNullProfile(),
+      fAltProfile(),
       fAltPOI(NULL),
-      fSubtractMLE(true)
+      fSubtractMLE(true),
+      fDetailedOutputEnabled(false),
+      fDetailedOutput(NULL)
    {
       // Proof constructor. Don't use.
    }
 
   RatioOfProfiledLikelihoodsTestStat(RooAbsPdf& nullPdf, RooAbsPdf& altPdf, 
 				     const RooArgSet* altPOI=0) :
-    fNullPdf(&nullPdf), fAltPdf(&altPdf), fSubtractMLE(true)
+    fNullProfile(nullPdf), 
+    fAltProfile(altPdf), 
+    fSubtractMLE(true),
+    fDetailedOutputEnabled(false),
+    fDetailedOutput(NULL)
       {
 	/*
          Calculates the ratio of profiled likelihoods. 
@@ -88,6 +98,7 @@ class RatioOfProfiledLikelihoodsTestStat: public TestStatistic {
     //__________________________________________
     ~RatioOfProfiledLikelihoodsTestStat(void) {
       if(fAltPOI) delete fAltPOI;
+      if(fDetailedOutput) delete fDetailedOutput;
     }
     
     //__________________________________________
@@ -115,26 +126,38 @@ class RatioOfProfiledLikelihoodsTestStat: public TestStatistic {
     
     //__________________________________________
     virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullParamsOfInterest) {
-      RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-      RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-      
-/*
-      // construct allVars
-      RooArgSet *allVars = fNullPdf->getVariables();
-      RooArgSet *altVars = fAltPdf->getVariables();
-      allVars->add(*altVars);
-      delete altVars;
+       // evaluate the ratio of profile likelihood
+       
 
-      RooArgSet *saveNullPOI = (RooArgSet*)nullParamsOfInterest.snapshot();
-      RooArgSet *saveAll = (RooArgSet*)allVars->snapshot();
-*/
-
-      // null
-      double nullNLL = ProfiledLikelihood(data, nullParamsOfInterest, *fNullPdf);
+       int type = (fSubtractMLE) ? 0 : 2; 
+       
+       // null
+       double nullNLL = fNullProfile.EvaluateProfileLikelihood(type, data, nullParamsOfInterest);
+       const RooArgSet *nullset = fNullProfile.GetDetailedOutput();
       
       // alt 
-      double altNLL = ProfiledLikelihood(data, *fAltPOI, *fAltPdf);
-           
+       double altNLL = fAltProfile.EvaluateProfileLikelihood(type, data, *fAltPOI);
+       const RooArgSet *altset = fAltProfile.GetDetailedOutput();
+
+       if (fDetailedOutput != NULL) {
+	       delete fDetailedOutput;
+	       fDetailedOutput = NULL;
+       }
+       if (fDetailedOutputEnabled) {
+	       fDetailedOutput = new RooArgSet();
+	       RooRealVar* var(0);
+	       for(TIterator *it = nullset->createIterator();(var = dynamic_cast<RooRealVar*>(it->Next()));) {
+		       RooRealVar* cloneVar = new RooRealVar(TString::Format("nullprof_%s", var->GetName()),
+							TString::Format("%s for null", var->GetTitle()), var->getVal());
+		       fDetailedOutput->addOwned(*cloneVar);
+	       }
+	       for(TIterator *it = altset->createIterator();(var = dynamic_cast<RooRealVar*>(it->Next()));) {
+		       RooRealVar* cloneVar = new RooRealVar(TString::Format("altprof_%s", var->GetName()),
+							TString::Format("%s for null", var->GetTitle()), var->getVal());
+		       fDetailedOutput->addOwned(*cloneVar);
+	       }
+       }
+
 /*
       // set variables back to where they were
       nullParamsOfInterest = *saveNullPOI;
@@ -143,26 +166,71 @@ class RatioOfProfiledLikelihoodsTestStat: public TestStatistic {
       delete allVars;
 */
 
-      RooMsgService::instance().setGlobalKillBelow(msglevel);
       return nullNLL -altNLL;
     }
     
+    virtual void EnableDetailedOutput( bool e=true ) { 
+	    fDetailedOutputEnabled = e; 
+	    fNullProfile.EnableDetailedOutput(fDetailedOutputEnabled);
+	    fAltProfile.EnableDetailedOutput(fDetailedOutputEnabled);
+    }
+
+   static void SetAlwaysReuseNLL(Bool_t flag); 
+
+   void SetReuseNLL(Bool_t flag) { 
+      fNullProfile.SetReuseNLL(flag);  
+      fAltProfile.SetReuseNLL(flag);  
+   }
+
+   void SetMinimizer(const char* minimizer){ 
+      fNullProfile.SetMinimizer(minimizer);  
+      fAltProfile.SetMinimizer(minimizer);  
+   }
+   void SetStrategy(Int_t strategy){
+      fNullProfile.SetStrategy(strategy);  
+      fAltProfile.SetStrategy(strategy);  
+   }
+   void SetTolerance(Double_t tol){
+      fNullProfile.SetTolerance(tol);  
+      fAltProfile.SetTolerance(tol);  
+   }
+   void SetPrintLevel(Int_t printLevel){
+      fNullProfile.SetPrintLevel(printLevel);  
+      fAltProfile.SetPrintLevel(printLevel);  
+   }
    
-    virtual const TString GetVarName() const { return "log(L(#mu_{1},#hat{#nu}_{1}) / L(#mu_{0},#hat{#nu}_{0}))"; }
+     virtual const RooArgSet* GetDetailedOutput(void) const {
+	     // Returns detailed output. The value returned by this function is updated after each call to Evaluate().
+	     // The returned RooArgSet contains the following for the alternative and null hypotheses:
+	     // <ul>
+	     // <li> the minimum nll, fitstatus and convergence quality for each fit </li> 
+	     // <li> for each fit and for each non-constant parameter, the value, error and pull of the parameter are stored </li>
+	     // </ul>
+	     return fDetailedOutput;
+     }
+    
+
+   virtual const TString GetVarName() const { return "log(L(#mu_{1},#hat{#nu}_{1}) / L(#mu_{0},#hat{#nu}_{0}))"; }
     
     //    const bool PValueIsRightTail(void) { return false; } // overwrites default
     
     void SetSubtractMLE(bool subtract){fSubtractMLE = subtract;}
     
   private:
-    RooAbsPdf* fNullPdf;
-    RooAbsPdf* fAltPdf;
+    ProfileLikelihoodTestStat fNullProfile;
+    ProfileLikelihoodTestStat fAltProfile;
+
     RooArgSet* fAltPOI;
     Bool_t fSubtractMLE;
+   static Bool_t fgAlwaysReuseNll ;
+
+    bool fDetailedOutputEnabled;
+    RooArgSet* fDetailedOutput;
+
     
   protected:
-    ClassDef(RatioOfProfiledLikelihoodsTestStat,2)
-      };
+    ClassDef(RatioOfProfiledLikelihoodsTestStat,3)
+};
 
 }
 

@@ -71,6 +71,14 @@ TProofLite::TProofLite(const char *url, const char *conffile, const char *confdi
 
    fUrl.SetUrl(url);
 
+   // Default initializations                                                                                                                                          
+   fServSock = 0;
+   fCacheLock = 0;
+   fQueryLock = 0;
+   fQMgr = 0;
+   fDataSetManager = 0;
+   InitMembers();
+
    // This may be needed during init
    fManager = mgr;
 
@@ -218,7 +226,8 @@ Int_t TProofLite::Init(const char *, const char *conffile,
                                    fQueryLock, fLogFileW);
 
    // Apply quotas, if any
-   if (fQMgr && fQMgr->ApplyMaxQueries(10) != 0)
+   Int_t maxq = gEnv->GetValue("ProofLite.MaxQueriesSaved", 10);
+   if (fQMgr && fQMgr->ApplyMaxQueries(maxq) != 0)
       Warning("Init", "problems applying fMaxQueries");
 
    if (InitDataSetManager() != 0)
@@ -544,47 +553,52 @@ Int_t TProofLite::SetupWorkers(Int_t opt, TList *startedWorkers)
       if (s && s->IsValid()) {
          // Receive ordinal
          TMessage *msg = 0;
-         s->Recv(msg);
-         if (msg) {
-            TString ord;
-            *msg >> ord;
-            // Find who is calling back
-            if ((wrk = (TSlave *) started.FindObject(ord))) {
-               // Remove it from the started list
-               started.Remove(wrk);
+         if (s->Recv(msg) < 0) {
+            Warning("SetupWorkers", "problems receiving message from accepted socket!");
+         } else {
+            if (msg) {
+               TString ord;
+               *msg >> ord;
+               // Find who is calling back
+               if ((wrk = (TSlave *) started.FindObject(ord))) {
+                  // Remove it from the started list
+                  started.Remove(wrk);
 
-               // Assign tis socket the selected worker
-               wrk->SetSocket(s);
-               // Remove socket from global TROOT socket list. Only the TProof object,
-               // representing all worker sockets, will be added to this list. This will
-               // ensure the correct termination of all proof servers in case the
-               // root session terminates.
-               {  R__LOCKGUARD2(gROOTMutex);
-                  gROOT->GetListOfSockets()->Remove(s);
-               }
-               if (wrk->IsValid()) {
-                  // Set the input handler
-                  wrk->SetInputHandler(new TProofInputHandler(this, wrk->GetSocket()));
-                  // Set fParallel to 1 for workers since they do not
-                  // report their fParallel with a LOG_DONE message
-                  wrk->fParallel = 1;
-                  // Finalize setup of the server
-                  wrk->SetupServ(TSlave::kSlave, 0);
-               }
+                  // Assign tis socket the selected worker
+                  wrk->SetSocket(s);
+                  // Remove socket from global TROOT socket list. Only the TProof object,
+                  // representing all worker sockets, will be added to this list. This will
+                  // ensure the correct termination of all proof servers in case the
+                  // root session terminates.
+                  {  R__LOCKGUARD2(gROOTMutex);
+                     gROOT->GetListOfSockets()->Remove(s);
+                  }
+                  if (wrk->IsValid()) {
+                     // Set the input handler
+                     wrk->SetInputHandler(new TProofInputHandler(this, wrk->GetSocket()));
+                     // Set fParallel to 1 for workers since they do not
+                     // report their fParallel with a LOG_DONE message
+                     wrk->fParallel = 1;
+                     // Finalize setup of the server
+                     wrk->SetupServ(TSlave::kSlave, 0);
+                  }
 
-               // Monitor good workers
-               if (wrk->IsValid()) {
-                  fSlaves->Add(wrk);
-                  if (opt == 1) fActiveSlaves->Add(wrk);
-                  fAllMonitor->Add(wrk->GetSocket());
-                  // Record also in the list for termination
-                  if (startedWorkers) startedWorkers->Add(wrk);
-                  // Notify startup operations
-                  NotifyStartUp("Setting up worker servers", ++nWrksDone, nWrksTot);
-               } else {
-                  // Flag as bad
-                  fBadSlaves->Add(wrk);
+                  // Monitor good workers
+                  if (wrk->IsValid()) {
+                     fSlaves->Add(wrk);
+                     if (opt == 1) fActiveSlaves->Add(wrk);
+                     fAllMonitor->Add(wrk->GetSocket());
+                     // Record also in the list for termination
+                     if (startedWorkers) startedWorkers->Add(wrk);
+                     // Notify startup operations
+                     NotifyStartUp("Setting up worker servers", ++nWrksDone, nWrksTot);
+                  } else {
+                     // Flag as bad
+                     fBadSlaves->Add(wrk);
+                  }
                }
+            } else {
+               Warning("SetupWorkers", "received empty message from accepted socket!");
             }
          }
       }
@@ -981,9 +995,13 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
    // For the time being cannot accept other queries if not idle, even if in async
    // mode; needs to set up an event handler to manage that
+   
+   TString opt(option), optfb;
+   // Enable feedback, if required
+   if (opt.Contains("fb=") || opt.Contains("feedback=")) SetFeedback(opt, optfb, 0);
 
    // Resolve query mode
-   fSync = (GetQueryMode(option) == kSync);
+   fSync = (GetQueryMode(opt) == kSync);
    if (!fSync) {
       Info("Process","asynchronous mode not yet supported in PROOF-Lite");
       return -1;
@@ -1034,21 +1052,36 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       varexp = fVarExp;
       selection = fSelection;
       // Decode now the expression
-      if (fPlayer->GetDrawArgs(varexp, selection, option, selec, objname) != 0) {
+      if (fPlayer->GetDrawArgs(varexp, selection, opt, selec, objname) != 0) {
          Error("Process", "draw query: error parsing arguments '%s', '%s', '%s'",
-                          varexp.Data(), selection.Data(), option);
+                          varexp.Data(), selection.Data(), opt.Data());
          return -1;
       }
    }
 
    // Create instance of query results (the data set is added after Process)
-   TProofQueryResult *pq = MakeQueryResult(nentries, option, first, 0, selec);
+   TProofQueryResult *pq = MakeQueryResult(nentries, opt, first, 0, selec);
+
+   // Check if queries must be saved into files
+   // Automatic saving is controlled by ProofLite.AutoSaveQueries
+   Bool_t savequeries =
+      (!strcmp(gEnv->GetValue("ProofLite.AutoSaveQueries", "off"), "on")) ? kTRUE : kFALSE;
+
+   // Keep queries in memory and how many (-1 = all, 0 = none, ...)
+   Int_t memqueries = gEnv->GetValue("ProofLite.MaxQueriesMemory", 10);
 
    // If not a draw action add the query to the main list
    if (!(pq->IsDraw())) {
-      if (fQMgr->Queries()) fQMgr->Queries()->Add(pq);
+      if (fQMgr->Queries()) {
+         if (memqueries > 0 && fQMgr->Queries()->GetSize() >= memqueries) {
+            // Remove oldest
+            TObject *qfst = fQMgr->Queries()->First();
+            fQMgr->Queries()->Remove(qfst);
+         }
+         if (memqueries >= 0) fQMgr->Queries()->Add(pq);
+      }
       // Also save it to queries dir
-      fQMgr->SaveQuery(pq);
+      if (savequeries) fQMgr->SaveQuery(pq);
    }
 
    // Set the query number
@@ -1058,10 +1091,11 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    SetQueryRunning(pq);
 
    // Save to queries dir, if not standard draw
-   if (!(pq->IsDraw()))
-      fQMgr->SaveQuery(pq);
-   else
+   if (!(pq->IsDraw())) {
+      if (savequeries) fQMgr->SaveQuery(pq);
+   } else {
       fQMgr->IncrementDrawQueries();
+   }
 
    // Start or reset the progress dialog
    if (!gROOT->IsBatch()) {
@@ -1109,6 +1143,9 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
          sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
    }
 
+   // Make sure we get a fresh result
+   fOutputList.Clear();
+
    // Start the additional workers now if using fork-based startup
    TList *startedWorkers = 0;
    if (fForkStartup) {
@@ -1119,10 +1156,17 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
 
    Long64_t rv = 0;
    if (!(pq->IsDraw())) {
-      rv = fPlayer->Process(dset, selec, option, nentries, first);
+      if (selector && strlen(selector)) {
+         rv = fPlayer->Process(dset, selec, opt, nentries, first);
+      } else {
+         rv = fPlayer->Process(dset, fSelector, opt, nentries, first);
+      }
    } else {
-      rv = fPlayer->DrawSelect(dset, varexp, selection, option, nentries, first);
+      rv = fPlayer->DrawSelect(dset, varexp, selection, opt, nentries, first);
    }
+
+   // Disable feedback, if required
+   if (!optfb.IsNull()) SetFeedback(opt, optfb, 1);
 
    if (fSync) {
 
@@ -1174,9 +1218,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       AskStatistics();
       if (!(pq->IsDraw())) {
          if (fQMgr->FinalizeQuery(pq, this, fPlayer)) {
-            // Automatic saving is controlled by ProofLite.AutoSaveQueries
-            if (!strcmp(gEnv->GetValue("ProofLite.AutoSaveQueries", "off"), "on"))
-               fQMgr->SaveQuery(pq, -1);
+            if (savequeries) fQMgr->SaveQuery(pq, -1);
          }
       }
 
@@ -1188,17 +1230,25 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
          // If the last object, notify the GUI that the result arrived
          QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
          // Keep in memory only light info about a query
-         if (!(pq->IsDraw())) {
-            if (fQMgr && fQMgr->Queries())
+         if (!(pq->IsDraw()) && memqueries >= 0) {
+            if (fQMgr && fQMgr->Queries()) {
+               TQueryResult *pqr = pq->CloneInfo();
+               if (pqr) fQMgr->Queries()->Add(pqr);
                // Remove from the fQueries list
                fQMgr->Queries()->Remove(pq);
+            }
          }
          // To get the prompt back
          TString msg;
          msg.Form("Lite-0: all output objects have been merged                                                         ");
          fprintf(stderr, "%s\n", msg.Data());
       }
-
+      // Save the performance info, if required
+      if (!fPerfTree.IsNull()) {
+         if (SavePerfTree() != 0) Error("Process", "saving performance info ...");
+         // Must be re-enabled each time
+         SetPerfTree(0);
+      }
    }
 
    // Done
@@ -1702,9 +1752,13 @@ TList *TProofLite::GetListOfQueries(Option_t *opt)
          TQueryResult *pqm = 0;
          while ((pqr = (TProofQueryResult *)nxq())) {
             ntot++;
-            pqm = pqr->CloneInfo();
-            pqm->fSeqNum = ntot;
-            ql->Add(pqm);
+            if ((pqm = pqr->CloneInfo())) {
+               pqm->fSeqNum = ntot;
+               ql->Add(pqm);
+            } else {
+               Warning("GetListOfQueries", "unable to clone TProofQueryResult '%s:%s'",
+                       pqr->GetName(), pqr->GetTitle());
+            }
          }
       }
       // Number of draw queries
@@ -1967,7 +2021,9 @@ void TProofLite::SendInputDataFile()
          if (!gSystem->AccessPathName(dst))
             gSystem->Unlink(dst);
          // Copy the file
-         gSystem->CopyFile(dataFile, dst);
+         if (gSystem->CopyFile(dataFile, dst) != 0)
+            Warning("SendInputDataFile", "problems copying '%s' to '%s'",
+                                         dataFile.Data(), dst.Data());
       }
 
       // Set the name in the input list so that the workers can find it

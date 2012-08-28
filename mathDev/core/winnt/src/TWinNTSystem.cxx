@@ -1425,6 +1425,14 @@ void TWinNTSystem::ResetSignal(ESignals sig, Bool_t reset)
 }
 
 //______________________________________________________________________________
+void TWinNTSystem::ResetSignals()
+{
+   // Reset signals handlers to previous behaviour.
+
+   //FIXME!
+}
+
+//______________________________________________________________________________
 void TWinNTSystem::IgnoreSignal(ESignals sig, Bool_t ignore)
 {
    // If ignore is true ignore the specified signal, else restore previous
@@ -3790,7 +3798,7 @@ void TWinNTSystem::Exit(int code, Bool_t mode)
    if (gROOT) {
       gROOT->CloseFiles();
       if (gROOT->GetListOfBrowsers()) {
-         // GetListOfBrowsers()->Delete() creates problems when a browser is 
+         // GetListOfBrowsers()->Delete() creates problems when a browser is
          // created on the stack, calling CloseWindow() solves the problem
          //gROOT->GetListOfBrowsers()->Delete();
          TBrowser *b;
@@ -3943,7 +3951,7 @@ Int_t TWinNTSystem::RedirectOutput(const char *file, const char *mode,
 void TWinNTSystem::AddDynamicPath(const char *dir)
 {
    // Add a new directory to the dynamic path.
-   
+
    if (dir) {
       TString oldpath = DynamicPath(0, kFALSE);
       oldpath.Append(";");
@@ -4993,7 +5001,7 @@ int TWinNTSystem::GetSockOpt(int socket, int opt, int *val)
 
 //______________________________________________________________________________
 int TWinNTSystem::ConnectService(const char *servername, int port,
-                                 int tcpwindowsize)
+                                 int tcpwindowsize, const char *protocol)
 {
    // Connect to service servicename on server servername.
 
@@ -5006,6 +5014,10 @@ int TWinNTSystem::ConnectService(const char *servername, int port,
    else if (!gSystem->AccessPathName(servername) || servername[0] == '/' ||
             (servername[1] == ':' && servername[2] == '/')) {
       return WinNTUnixConnect(servername);
+   }
+
+   if (!strcmp(protocol, "udp")){
+      return WinNTUdpConnect(servername, port);
    }
 
    if ((sp = ::getservbyport(::htons(port), kProtocolName))) {
@@ -5104,9 +5116,54 @@ int TWinNTSystem::WinNTUnixConnect(const char *sockpath)
    return WinNTUnixConnect(port);
 }
 
+//______________________________________________________________________________
+int TWinNTSystem::WinNTUdpConnect(const char *hostname, int port)
+{
+   // Creates a UDP socket connection
+   // Is called via the TSocket constructor. Returns -1 in case of error.
+
+   short  sport;
+   struct servent *sp;
+
+   if ((sp = getservbyport(htons(port), kProtocolName)))
+      sport = sp->s_port;
+   else
+      sport = htons(port);
+
+   TInetAddress addr = gSystem->GetHostByName(hostname);
+   if (!addr.IsValid()) return -1;
+   UInt_t adr = htonl(addr.GetAddress());
+
+   struct sockaddr_in server;
+   memset(&server, 0, sizeof(server));
+   memcpy(&server.sin_addr, &adr, sizeof(adr));
+   server.sin_family = addr.GetFamily();
+   server.sin_port   = sport;
+
+   // Create socket
+   int sock;
+   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+      ::SysError("TWinNTSystem::WinNTUdpConnect", "socket (%s:%d)",
+                 hostname, port);
+      return -1;
+   }
+
+   while (connect(sock, (struct sockaddr*) &server, sizeof(server)) == -1) {
+      if (GetErrno() == EINTR)
+         ResetErrno();
+      else {
+         ::SysError("TWinNTSystem::WinNTUdpConnect", "connect (%s:%d)",
+                    hostname, port);
+         close(sock);
+         return -1;
+      }
+   }
+   return sock;
+}
 
 //______________________________________________________________________________
-int TWinNTSystem::OpenConnection(const char *server, int port, int tcpwindowsize)
+int TWinNTSystem::OpenConnection(const char *server, int port, int tcpwindowsize,
+                                 const char *protocol)
 {
    // Open a connection to a service on a server. Returns -1 in case
    // connection cannot be opened.
@@ -5115,7 +5172,7 @@ int TWinNTSystem::OpenConnection(const char *server, int port, int tcpwindowsize
    // tcpwindowsize > 65KB and for platforms supporting window scaling).
    // Is called via the TSocket constructor.
 
-   return ConnectService(server, port, tcpwindowsize);
+   return ConnectService(server, port, tcpwindowsize, protocol);
 }
 
 //______________________________________________________________________________
@@ -5201,6 +5258,67 @@ int TWinNTSystem::AnnounceTcpService(int port, Bool_t reuse, int backlog,
       return -3;
    }
    return (int)sock;
+}
+
+//______________________________________________________________________________
+int TWinNTSystem::AnnounceUdpService(int port, int backlog)
+{
+   // Announce UDP service.
+
+   // Open a socket, bind to it and start listening for UDP connections
+   // on the port. If reuse is true reuse the address, backlog specifies
+   // how many sockets can be waiting to be accepted. If port is 0 a port
+   // scan will be done to find a free port. This option is mutual exlusive
+   // with the reuse option.
+
+   const short kSOCKET_MINPORT = 5000, kSOCKET_MAXPORT = 15000;
+   short  sport, tryport = kSOCKET_MINPORT;
+   struct servent *sp;
+
+   if ((sp = getservbyport(htons(port), kProtocolName)))
+      sport = sp->s_port;
+   else
+      sport = htons(port);
+
+   // Create udp socket
+   int sock;
+   if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+      ::SysError("TUnixSystem::UnixUdpService", "socket");
+      return -1;
+   }
+
+   struct sockaddr_in inserver;
+   memset(&inserver, 0, sizeof(inserver));
+   inserver.sin_family = AF_INET;
+   inserver.sin_addr.s_addr = htonl(INADDR_ANY);
+   inserver.sin_port = sport;
+
+   // Bind socket
+   if (port > 0) {
+      if (bind(sock, (struct sockaddr*) &inserver, sizeof(inserver))) {
+         ::SysError("TWinNTSystem::AnnounceUdpService", "bind");
+         return -2;
+      }
+   } else {
+      int bret;
+      do {
+         inserver.sin_port = htons(tryport++);
+         bret = bind(sock, (struct sockaddr*) &inserver, sizeof(inserver));
+      } while (bret == SOCKET_ERROR && WSAGetLastError() == WSAEADDRINUSE &&
+               tryport < kSOCKET_MAXPORT);
+      if (bret < 0) {
+         ::SysError("TWinNTSystem::AnnounceUdpService", "bind (port scan)");
+         return -2;
+      }
+   }
+
+   // Start accepting connections
+   if (listen(sock, backlog)) {
+      ::SysError("TWinNTSystem::AnnounceUdpService", "listen");
+      return -3;
+   }
+
+   return sock;
 }
 
 //______________________________________________________________________________

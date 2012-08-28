@@ -23,13 +23,8 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include <list>
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucSemWait.hh"
-#  include "XrdOuc/XrdOucPthread.hh"
-#else
-#  include "XrdSys/XrdSysPthread.hh"
-#endif
+
+#include "XpdSysPthread.h"
 
 #include "XrdProofdConfig.h"
 
@@ -45,8 +40,9 @@ class XrdProofdConfig;
 class XrdProofdManager;
 class XrdProofdProtocol;
 class XrdProtocol_Config;
-class XrdSysError;
 class XrdSecService;
+class XrdSysError;
+class XrdSysPlugin;
 
 
 class XrdProofdClientMgr : public XrdProofdConfig {
@@ -54,7 +50,8 @@ class XrdProofdClientMgr : public XrdProofdConfig {
    XrdSysRecMutex    *fMutex;
    XrdProofdManager  *fMgr;
    XrdOucString       fSecLib;
-   XrdSecService     *fCIA;            // Authentication Server
+   XrdSecService     *fCIA;            // Security framework
+   XrdSysPlugin      *fSecPlugin;      // Security framework plugin
 
    int                fCheckFrequency;
    XrdProofdPipe      fPipe;
@@ -68,6 +65,8 @@ class XrdProofdClientMgr : public XrdProofdConfig {
 
    int                CheckAdminPath(XrdProofdProtocol *p,
                                      XrdOucString &cidpath, XrdOucString &emsg);
+   int                CheckClient(XrdProofdProtocol *p,
+                                    const char *user, XrdOucString &emsg);
    int                CreateAdminPath(XrdProofdProtocol *p,
                                       XrdOucString &path, XrdOucString &e);
    int                RestoreAdminPath(XrdOucString &cpath, XrdOucString &emsg);

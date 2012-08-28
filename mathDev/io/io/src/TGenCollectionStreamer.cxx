@@ -58,7 +58,7 @@ TGenCollectionStreamer::~TGenCollectionStreamer()
 TVirtualCollectionProxy* TGenCollectionStreamer::Generate() const
 {
    // Virtual copy constructor.
-   if (!fClass) Initialize();
+   if (!fClass) Initialize(kFALSE);
    return new TGenCollectionStreamer(*this);
 }
 
@@ -273,8 +273,8 @@ void TGenCollectionStreamer::ReadPairFromMap(int nElements, TBuffer &b)
    int nested = 0;
    std::vector<std::string> inside;
    TClassEdit::GetSplit(pinfo->GetName(), inside, nested);
-   Value first(inside[1]);
-   Value second(inside[2]);
+   Value first(inside[1],kFALSE);
+   Value second(inside[2],kFALSE);
    fValOffset = ((TStreamerElement*)pinfo->GetElements()->At(1))->GetOffset();
 
    fEnv->fSize = nElements;
@@ -902,7 +902,7 @@ void TGenCollectionStreamer::ReadBufferGeneric(TBuffer &b, void *obj)
       switch (fSTL_type)  {
          case TClassEdit::kBitSet:
             if (obj) {
-               if (fPointers)   {
+               if (fProperties & kNeedDelete)   {
                   TGenCollectionProxy::Clear("force");
                }  else {
                   fClear.invoke(fEnv);
@@ -912,7 +912,7 @@ void TGenCollectionStreamer::ReadBufferGeneric(TBuffer &b, void *obj)
             return;
          case TClassEdit::kVector:
             if (obj) {
-               if (fPointers)   {
+               if (fProperties & kNeedDelete)   {
                   TGenCollectionProxy::Clear("force");
                } // a resize will be called in ReadPrimitives/ReadObjects.
                else if (fVal->fKind == EDataType(kBOOL_t)) {
@@ -934,7 +934,7 @@ void TGenCollectionStreamer::ReadBufferGeneric(TBuffer &b, void *obj)
          case TClassEdit::kMultiSet:
          case TClassEdit::kSet:
             if (obj) {
-               if (fPointers)   {
+               if (fProperties & kNeedDelete)   {
                   TGenCollectionProxy::Clear("force");
                }  else {
                   fClear.invoke(fEnv);
@@ -953,7 +953,7 @@ void TGenCollectionStreamer::ReadBufferGeneric(TBuffer &b, void *obj)
          case TClassEdit::kMap:
          case TClassEdit::kMultiMap:
             if (obj) {
-               if (fPointers)   {
+               if (fProperties & kNeedDelete)   {
                   TGenCollectionProxy::Clear("force");
                }  else {
                   fClear.invoke(fEnv);

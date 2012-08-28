@@ -13,6 +13,7 @@
 #include "Minuit2/Minuit2Minimizer.h"
 
 #include "Math/IFunction.h"
+#include "Math/IOptions.h"
 
 #include "Minuit2/FCNAdapter.h"
 #include "Minuit2/FumiliFCNAdapter.h"
@@ -192,6 +193,7 @@ bool Minuit2Minimizer::SetVariable(unsigned int ivar, const std::string & name, 
       ivar = minuit2Index;
       return false;
    }
+   fState.RemoveLimits(ivar);
 
    return true; 
 }
@@ -315,7 +317,7 @@ bool Minuit2Minimizer::Minimize() {
 
    int maxfcn = MaxFunctionCalls(); 
    double tol = Tolerance();
-   int strategy = Strategy(); 
+   int strategyLevel = Strategy(); 
    fMinuitFCN->SetErrorDef(ErrorDef() );
 
    if (PrintLevel() >=1) { 
@@ -327,27 +329,66 @@ bool Minuit2Minimizer::Minimize() {
       }      
       std::cout << "Minuit2Minimizer: Minimize with max-calls " << maxfcn_used 
                 << " convergence for edm < " << tol << " strategy " 
-                << strategy << std::endl; 
+                << strategyLevel << std::endl; 
    }
 
    // internal minuit messages
    MnPrint::SetLevel(PrintLevel() );
 
    // switch off Minuit2 printing
-   int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+   int prev_level = (PrintLevel() <= 0 ) ?   TurnOffPrintInfoLevel() : -2; 
 
    // set the precision if needed
    if (Precision() > 0) fState.SetPrecision(Precision());
+
+   // set strategy and add extra options if needed
+   ROOT::Minuit2::MnStrategy strategy(strategyLevel);
+   ROOT::Math::IOptions * minuit2Opt = ROOT::Math::MinimizerOptions::FindDefault("Minuit2");
+   if (minuit2Opt) { 
+      // set extra strategy options
+      int nGradCycles = strategy.GradientNCycles();
+      int nHessCycles = strategy.HessianNCycles();
+      int nHessGradCycles = strategy.HessianGradientNCycles();
+
+      double gradTol =  strategy.GradientTolerance();
+      double gradStepTol = strategy.GradientStepTolerance();
+      double hessStepTol = strategy.HessianStepTolerance();
+      double hessG2Tol = strategy.HessianG2Tolerance();
+
+      minuit2Opt->GetValue("GradientNCycles",nGradCycles);
+      minuit2Opt->GetValue("HessianNCycles",nHessCycles);
+      minuit2Opt->GetValue("HessianGradientNCycles",nHessGradCycles);
+
+      minuit2Opt->GetValue("GradientTolerance",gradTol);
+      minuit2Opt->GetValue("GradientStepTolerance",gradStepTol);
+      minuit2Opt->GetValue("HessianStepTolerance",hessStepTol);
+      minuit2Opt->GetValue("HessianG2Tolerance",hessG2Tol);
+
+      strategy.SetGradientNCycles(nGradCycles);      
+      strategy.SetHessianNCycles(nHessCycles);
+      strategy.SetHessianGradientNCycles(nHessGradCycles);
+
+      strategy.SetGradientTolerance(gradTol);
+      strategy.SetGradientStepTolerance(gradStepTol);
+      strategy.SetHessianStepTolerance(hessStepTol);
+      strategy.SetHessianG2Tolerance(hessStepTol);
+
+      if (PrintLevel() > 0) { 
+         std::cout << "Minuit2Minimizer::Minuit  - Changing default stratgey options" << std::endl;
+         minuit2Opt->Print();
+      }
+      
+   }
       
    const ROOT::Minuit2::FCNGradientBase * gradFCN = dynamic_cast<const ROOT::Minuit2::FCNGradientBase *>( fMinuitFCN ); 
    if ( gradFCN != 0) {
       // use gradient
       //SetPrintLevel(3);
-      ROOT::Minuit2::FunctionMinimum min =  GetMinimizer()->Minimize(*gradFCN, fState, ROOT::Minuit2::MnStrategy(strategy), maxfcn, tol);
+      ROOT::Minuit2::FunctionMinimum min =  GetMinimizer()->Minimize(*gradFCN, fState, strategy, maxfcn, tol);
       fMinimum = new ROOT::Minuit2::FunctionMinimum (min);    
    }
    else {
-      ROOT::Minuit2::FunctionMinimum min = GetMinimizer()->Minimize(*GetFCN(), fState, ROOT::Minuit2::MnStrategy(strategy), maxfcn, tol);
+      ROOT::Minuit2::FunctionMinimum min = GetMinimizer()->Minimize(*GetFCN(), fState, strategy, maxfcn, tol);
       fMinimum = new ROOT::Minuit2::FunctionMinimum (min);    
    }
 
@@ -462,19 +503,39 @@ void Minuit2Minimizer::PrintResults() {
    }
 }
 
+const double * Minuit2Minimizer::X() const { 
+   // return values at minimum 
+   const std::vector<MinuitParameter> & paramsObj = fState.MinuitParameters();
+   if (paramsObj.size() == 0) return 0;
+   assert(fDim == paramsObj.size());
+   // be careful for multiple calls of this function. I will redo an allocation here
+   // only when size of vectors has changed (e.g. after a new minimization)
+   if (fValues.size() != fDim) fValues.resize(fDim);
+   for (unsigned int i = 0; i < fDim; ++i) { 
+      fValues[i] = paramsObj[i].Value();
+   }
+
+   return  &fValues.front(); 
+}
+
 
 const double * Minuit2Minimizer::Errors() const { 
    // return error at minimum (set to zero for fixed and constant params)
-   fErrors.resize(fState.MinuitParameters().size() );
-   for (unsigned int i = 0; i < fErrors.size(); ++i) { 
-      const MinuitParameter & par = fState.Parameter(i); 
+   const std::vector<MinuitParameter> & paramsObj = fState.MinuitParameters();
+   if (paramsObj.size() == 0) return 0;
+   assert(fDim == paramsObj.size());
+   // be careful for multiple calls of this function. I will redo an allocation here
+   // only when size of vectors has changed (e.g. after a new minimization)
+   if (fErrors.size() != fDim)   fErrors.resize( fDim );
+   for (unsigned int i = 0; i < fDim; ++i) { 
+      const MinuitParameter & par = paramsObj[i]; 
       if (par.IsFixed() || par.IsConst() ) 
          fErrors[i] = 0; 
       else 
          fErrors[i] = par.Error();
    }
 
-   return  (fErrors.size()) ? &fErrors.front() : 0; 
+   return  &fErrors.front(); 
 }
 
 
@@ -496,15 +557,21 @@ bool Minuit2Minimizer::GetCovMatrix(double * cov) const {
       if (fState.Parameter(i).IsFixed() || fState.Parameter(i).IsConst() ) {
          for (unsigned int j = 0; j < fDim; ++j) { cov[i*fDim + j] = 0; }          
       } 
-      unsigned int l = fState.IntOfExt(i); 
-      for (unsigned int j = 0; j < fDim; ++j) { 
-         // could probably speed up this loop (if needed)
-         int k = i*fDim + j;
-         if (fState.Parameter(j).IsFixed() || fState.Parameter(j).IsConst() ) cov[k] = 0; 
-         // need to transform from external to internal indices)
-         // for taking care of the removed fixed row/columns in the Minuit2 representation
-         unsigned int m = fState.IntOfExt(j); 
-         cov[k] =  fState.Covariance()(l,m); 
+      else 
+      {
+         unsigned int l = fState.IntOfExt(i); 
+         for (unsigned int j = 0; j < fDim; ++j) { 
+            // could probably speed up this loop (if needed)
+            int k = i*fDim + j;
+            if (fState.Parameter(j).IsFixed() || fState.Parameter(j).IsConst() ) 
+               cov[k] = 0; 
+            else {
+            // need to transform from external to internal indices)
+            // for taking care of the removed fixed row/columns in the Minuit2 representation
+               unsigned int m = fState.IntOfExt(j); 
+               cov[k] =  fState.Covariance()(l,m); 
+            }
+         }
       }
    }
    return true;
@@ -518,17 +585,23 @@ bool Minuit2Minimizer::GetHessianMatrix(double * hess) const {
       if (fState.Parameter(i).IsFixed() || fState.Parameter(i).IsConst() ) {
          for (unsigned int j = 0; j < fDim; ++j) { hess[i*fDim + j] = 0; }          
       } 
-      unsigned int l = fState.IntOfExt(i); 
-      for (unsigned int j = 0; j < fDim; ++j) { 
-         // could probably speed up this loop (if needed)
-         int k = i*fDim + j;
-         if (fState.Parameter(j).IsFixed() || fState.Parameter(j).IsConst() ) hess[k] = 0; 
-         // need to transform from external to internal indices)
-         // for taking care of the removed fixed row/columns in the Minuit2 representation
-         unsigned int m = fState.IntOfExt(j); 
-         hess[k] =  fState.Hessian()(l,m); 
+      else { 
+         unsigned int l = fState.IntOfExt(i); 
+         for (unsigned int j = 0; j < fDim; ++j) { 
+            // could probably speed up this loop (if needed)
+            int k = i*fDim + j;
+            if (fState.Parameter(j).IsFixed() || fState.Parameter(j).IsConst() ) 
+               hess[k] = 0; 
+            else { 
+               // need to transform from external to internal indices)
+               // for taking care of the removed fixed row/columns in the Minuit2 representation
+               unsigned int m = fState.IntOfExt(j); 
+               hess[k] =  fState.Hessian()(l,m); 
+            }
+         }
       }
    }
+
    return true;
 }
 
@@ -602,7 +675,7 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
       fMinimum->SetErrorDef(ErrorDef() );
 
    // switch off Minuit2 printing
-   int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+   int prev_level = (PrintLevel() <= 0 ) ?   TurnOffPrintInfoLevel() : -2; 
 
    // set the precision if needed
    if (Precision() > 0) fState.SetPrecision(Precision());
@@ -640,7 +713,7 @@ bool Minuit2Minimizer::GetMinosError(unsigned int i, double & errLow, double & e
  
    ROOT::Minuit2::MinosError me(i, fMinimum->UserState().Value(i),low, up);
 
-   if (prev_level >= 0) RestoreGlobalPrintLevel(prev_level);
+   if (prev_level > -2) RestoreGlobalPrintLevel(prev_level);
 
    // debug result of Minos 
    // print error message in Minos
@@ -712,7 +785,7 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    }
 
    // switch off Minuit2 printing
-   int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+   int prev_level = (PrintLevel() <= 0 ) ?   TurnOffPrintInfoLevel() : -2; 
 
    MnPrint::SetLevel( PrintLevel() );
 
@@ -726,7 +799,7 @@ bool Minuit2Minimizer::Scan(unsigned int ipar, unsigned int & nstep, double * x,
    // first value is param value
    std::vector<std::pair<double, double> > result = scan(ipar, nstep-1, xmin, xmax);
 
-   if (prev_level >= 0) RestoreGlobalPrintLevel(prev_level);
+   if (prev_level > -2) RestoreGlobalPrintLevel(prev_level);
 
    if (result.size() != nstep) { 
       MN_ERROR_MSG2("Minuit2Minimizer::Scan"," Invalid result from MnParameterScan");
@@ -773,7 +846,7 @@ bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
       fMinimum->SetErrorDef(ErrorDef() );
 
    // switch off Minuit2 printing (for level of  0,1)
-   int prev_level = (PrintLevel() <= 1 ) ?   TurnOffPrintInfoLevel() : -1; 
+   int prev_level = (PrintLevel() <= 1 ) ?   TurnOffPrintInfoLevel() : -2; 
 
    MnPrint::SetLevel( PrintLevel() );
 
@@ -783,7 +856,7 @@ bool Minuit2Minimizer::Contour(unsigned int ipar, unsigned int jpar, unsigned in
    // eventually one should specify tolerance in contours 
    MnContours contour(*fMinuitFCN, *fMinimum, Strategy() ); 
    
-   if (prev_level >= 0) RestoreGlobalPrintLevel(prev_level);
+   if (prev_level > -2) RestoreGlobalPrintLevel(prev_level);
 
    std::vector<std::pair<double,double> >  result = contour(ipar,jpar, npoints);
    if (result.size() != npoints) { 
@@ -816,7 +889,7 @@ bool Minuit2Minimizer::Hesse( ) {
    int maxfcn = MaxFunctionCalls(); 
 
    // switch off Minuit2 printing
-   int prev_level = (PrintLevel() == 0 ) ?   TurnOffPrintInfoLevel() : -1; 
+   int prev_level = (PrintLevel() <= 0 ) ?   TurnOffPrintInfoLevel() : -2; 
 
    MnPrint::SetLevel( PrintLevel() );
 
@@ -838,7 +911,7 @@ bool Minuit2Minimizer::Hesse( ) {
       fState = hesse( *fMinuitFCN, fState, maxfcn); 
    }
 
-   if (prev_level >= 0) RestoreGlobalPrintLevel(prev_level);
+   if (prev_level > -2) RestoreGlobalPrintLevel(prev_level);
 
    if (PrintLevel() >= 3) { 
       std::cout << "State returned from Hesse " << std::endl;
@@ -865,7 +938,8 @@ bool Minuit2Minimizer::Hesse( ) {
 
 int Minuit2Minimizer::CovMatrixStatus() const { 
    // return status of covariance matrix 
-   // 0 - no covariance available 
+   //-1 - not available (inversion failed or Hesse failed) 
+   // 0 - available but not positive defined
    // 1 - covariance only approximate
    // 2 full matrix but forced pos def 
    // 3 full accurate matrix 
@@ -874,11 +948,13 @@ int Minuit2Minimizer::CovMatrixStatus() const {
       // case a function minimum  is available 
       if (fMinimum->HasAccurateCovar() ) return 3; 
       else if (fMinimum->HasMadePosDefCovar() ) return 2; 
-      else if (fMinimum->HasCovariance() ) return 1; 
+      else if (fMinimum->HasValidCovariance() ) return 1; 
+      else if (fMinimum->HasCovariance() ) return 0; 
+      return -1;
    }
    else { 
-      // case fMinimum is not available 
-      if (fState.HasCovariance()) return 1; 
+      // case fMinimum is not available - use state information
+      return fState.CovarianceStatus();
    }
    return 0; 
 }

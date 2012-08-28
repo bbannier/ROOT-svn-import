@@ -20,18 +20,20 @@
 //////////////////////////////////////////////////////////////////////////
 #include "XrdProofdPlatform.h"
 
-#ifdef OLDXRDOUC
-#  include "XrdOuc/XrdOucError.hh"
+#include "XrdProofdXrdVers.h"
+#if ROOTXRDVERS < ROOT_OldXrdOuc
 #  define XPD_LOG_01 OUC_LOG_01
 #else
-#  include "XrdSys/XrdSysError.hh"
 #  define XPD_LOG_01 SYS_LOG_01
 #endif
+
+#include "XpdSysError.h"
 
 #include "Xrd/XrdBuffer.hh"
 #include "XrdOuc/XrdOucErrInfo.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSec/XrdSecInterface.hh"
+#include "XrdSys/XrdSysPlugin.hh"
 
 #include "XrdProofdClient.h"
 #include "XrdProofdClientMgr.h"
@@ -70,7 +72,7 @@ void *XrdProofdClientCron(void *p)
       return (void *)0;
    }
    XrdProofdProofServMgr *smgr = mc->fSessionMgr;
-   if (!(mgr)) {
+   if (!(smgr)) {
       TRACE(REQ, "undefined session manager: cannot start");
       return (void *)0;
    }
@@ -92,45 +94,10 @@ void *XrdProofdClientCron(void *p)
             continue;
          }
          // Parse type
-         XrdOucString buf;
+         //XrdOucString buf;
          if (msg.Type() == XrdProofdClientMgr::kClientDisconnect) {
-            // Read admin path and pointer to the client instance
-            XrdOucString adminpath;
-            rc = msg.Get(adminpath);
-            void *cp = 0;
-            rc = (rc == 0) ? msg.Get(&cp) : rc;
-            XrdProofdClient *c = (XrdProofdClient *)cp;
-            int cid = -1;
-            rc = (rc == 0) ? msg.Get(cid) : rc;
-            int pid = -1;
-            rc = (rc == 0) ? msg.Get(pid) : rc;
-            if (rc != 0) {
-               TRACE(XERR, "kClientDisconnect: problems parsing message: '"<<
-                           msg.Buf()<<"'; errno: "<<-rc);
-               continue;
-            }
-            TRACE(DBG, "kClientDisconnect: got: '"<<adminpath<<"', "<<c<<", "<<cid);
-            if (c) {
-               // Reset the corresponding client slot in the list of this client
-               c->ResetClientSlot(cid);
-            } else {
-               TRACE(XERR, "kClientDisconnect: problems getting pointer to client instance: "<<c);
-            }
-
-            // Remove the client admin path
-            if (adminpath != "????") {
-               adminpath.erase(adminpath.rfind("/cid"));
-               if ((rc = XrdProofdAux::RmDir(adminpath.c_str())) != 0) {
-                  TRACE(XERR, "kClientDisconnect: problems removing admin path; errno: "<<-rc);
-                  continue;
-               }
-            }
-
-            // Tell the session manager that a client has gone
-            XPDFORM(buf, "%d", pid);
-            smgr->Pipe()->Post(XrdProofdProofServMgr::kClientDisconnect, buf.c_str());
-            TRACE(DBG,"sending to ProofServMgr: "<<buf);
-
+            // obsolete
+	    TRACE(XERR, "obsolete type: XrdProofdClientMgr::kClientDisconnect");
          } else {
             TRACE(XERR, "unknown type: "<<msg.Type());
             continue;
@@ -150,7 +117,7 @@ void *XrdProofdClientCron(void *p)
 //______________________________________________________________________________
 XrdProofdClientMgr::XrdProofdClientMgr(XrdProofdManager *mgr,
                                        XrdProtocol_Config *pi, XrdSysError *e)
-                  : XrdProofdConfig(pi->ConfigFN, e)
+                  : XrdProofdConfig(pi->ConfigFN, e), fSecPlugin(0)
 {
    // Constructor
    XPDLOC(CMGR, "XrdProofdClientMgr")
@@ -347,8 +314,28 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
       }
    }
 
+   // Get user and group names for the entity requiring to login
+   int i, pid;
+   XrdOucString uname, gname, emsg;
+
    // If this is the second call (after authentication) we just need mapping
    if (p->Status() == XPD_NEED_MAP) {
+
+      // Finalize the login, checking the if username is allowed to use the facility.
+      // The username could have been set as part of the authentication process (for
+      // example via a user mapping funtion or a grid-map file), so these checks have
+      // to be done at this level.
+      // (The XrdProofdClient instance is created in here, if everything else goes well)
+      int rccc = 0;
+      if ((rccc = CheckClient(p, 0, emsg)) != 0) {
+         TRACEP(p, XERR, emsg);
+         XErrorCode rcode = (rccc == -2) ? (XErrorCode) kXR_NotAuthorized
+                                         : (XErrorCode) kXR_InvalidRequest;
+         response->Send(rcode, emsg.c_str());
+         response->Send(kXR_InvalidRequest, emsg.c_str());
+         return 0;
+      }
+
       // Acknowledge the client
       response->Send();
       p->SetStatus(XPD_LOGGEDIN);
@@ -416,10 +403,6 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
    }
    response->SetTraceID();
 
-   // Get user and group names for the entity requiring to login
-   int i, pid;
-   XrdOucString uname, gname;
-
    // Unmarshall the data: process ID
    pid = (int)ntohl(p->Request()->login.pid);
    p->SetPid(pid);
@@ -457,75 +440,12 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
       gname.assign(uname, ig+1);
       uname.erase(ig);
       TRACEP(p, DBG, "requested group: "<<gname);
+      // Save the requested group info in the protocol instance
+      p->SetGroupIn(gname.c_str());
    }
 
-   // Here we check if the user is allowed to use the system
-   // If not, we fail.
-   XrdOucString emsg;
-   XrdProofUI ui;
-   bool su;
-   if (fMgr->CheckUser(uname.c_str(), ui, emsg, su) != 0) {
-      XPDFORM(emsg, "username not allowed: %s", uname.c_str());
-      TRACEP(p, XERR, emsg);
-      response->Send(kXR_InvalidRequest, emsg.c_str());
-      return 0;
-   }
-   if (su) {
-      // Update superuser flag
-      p->SetSuperUser(su);
-      TRACEP(p, DBG, "request from entity: "<<uname<<":"<<gname<<" (privileged)");
-   } else {
-      TRACEP(p, DBG, "request from entity: "<<uname<<":"<<gname);
-   }
-
-   // Check if user belongs to a group
-   XrdProofGroup *g = 0;
-   if (fMgr->GroupsMgr() && fMgr->GroupsMgr()->Num() > 0) {
-      if (gname.length() > 0) {
-         g = fMgr->GroupsMgr()->GetGroup(gname.c_str());
-         if (!g) {
-            XPDFORM(emsg, "group unknown: %s", gname.c_str());
-            TRACEP(p, XERR, emsg);
-            response->Send(kXR_InvalidRequest, emsg.c_str());
-            return 0;
-         } else if (strncmp(g->Name(),"default",7) &&
-                   !g->HasMember(uname.c_str())) {
-            XPDFORM(emsg, "user %s is not member of group %s", uname.c_str(), gname.c_str());
-            TRACEP(p, XERR, emsg);
-            response->Send(kXR_InvalidRequest, emsg.c_str());
-            return 0;
-         } else {
-            if (TRACING(DBG)) {
-               TRACEP(p, DBG,"group: "<<gname<<" found");
-               g->Print();
-            }
-         }
-      } else {
-         g = fMgr->GroupsMgr()->GetUserGroup(uname.c_str());
-         gname = g ? g->Name() : "default";
-      }
-   }
-   ui.fGroup = gname;
-
-   // Attach-to / Create the XrdProofdClient instance for this user: if login
-   // fails this will be removed at a later stage
-   XrdProofdClient *c = GetClient(uname.c_str(), gname.c_str());
-   if (c) {
-      if (!c->ROOT())
-         c->SetROOT(fMgr->ROOTMgr()->DefaultVersion());
-      if (c->IsValid()) {
-         // Set the group, if any
-         c->SetGroup(g->Name());
-      }
-   } else {
-      emsg = "unable to instantiate object for client ";
-      emsg += uname;
-      TRACEP(p, XERR, emsg.c_str());
-      response->Send(kXR_InvalidRequest, emsg.c_str());
-      return 0;
-   }
-   // Save into the protocol instance
-   p->SetClient(c);
+   // Save the incoming username setting in the protocol instance
+   p->SetUserIn(uname.c_str());
 
    // Establish IDs for this link
    p->Link()->setID(uname.c_str(), pid);
@@ -549,12 +469,110 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
             p->SetAuthEntity();
       }
    } else {
+      // Check the client at theis point; the XrdProofdClient instance is created
+      // in here, if everything else goes well
+      int rccc = 0;
+      if ((rccc = CheckClient(p, p->UserIn(), emsg)) != 0) {
+         TRACEP(p, XERR, emsg);
+         XErrorCode rcode = (rccc == -2) ? (XErrorCode) kXR_NotAuthorized
+                                         : (XErrorCode) kXR_InvalidRequest;
+         response->Send(rcode, emsg.c_str());
+         return 0;
+      }
       rc = response->SendI((kXR_int32)XPROOFD_VERSBIN);
       p->SetStatus(XPD_LOGGEDIN);
    }
 
    // Map the client
    return MapClient(p, 1);
+}
+
+//______________________________________________________________________________
+int XrdProofdClientMgr::CheckClient(XrdProofdProtocol *p,
+                                    const char *user, XrdOucString &emsg)
+{
+   // Perform checks on the client username. In case authentication is required
+   // this is called afetr authentication.
+   // Return 0 on success; on error, return -1 .
+   XPDLOC(CMGR, "ClientMgr::CheckClient")
+
+   if (!p) {
+      emsg = "protocol object undefined!";
+      return -1;
+   }
+   
+   XrdOucString uname(user), gname(p->GroupIn());
+   if (!user) {
+      if (p && p->AuthProt() && strlen(p->AuthProt()->Entity.name) > 0) {
+         uname = p->AuthProt()->Entity.name;
+      } else {
+         emsg = "username not passed and not available in the protocol security entity - failing";
+         return -1;
+      }
+   }
+
+   // Check if user belongs to a group
+   XrdProofGroup *g = 0;
+   if (fMgr->GroupsMgr() && fMgr->GroupsMgr()->Num() > 0) {
+      if (gname.length() > 0) {
+         g = fMgr->GroupsMgr()->GetGroup(gname.c_str());
+         if (!g) {
+            XPDFORM(emsg, "group unknown: %s", gname.c_str());
+            return -1;
+         } else if (strncmp(g->Name(),"default",7) &&
+                   !g->HasMember(uname.c_str())) {
+            XPDFORM(emsg, "user %s is not member of group %s", uname.c_str(), gname.c_str());
+            return -1;
+         } else {
+            if (TRACING(DBG)) {
+               TRACEP(p, DBG,"group: "<<gname<<" found");
+               g->Print();
+            }
+         }
+      } else {
+         g = fMgr->GroupsMgr()->GetUserGroup(uname.c_str());
+         gname = g ? g->Name() : "default";
+      }
+   }
+
+   // Here we check if the user is allowed to use the system
+   // If not, we fail.
+   XrdProofUI ui;
+   bool su;
+   if (fMgr->CheckUser(uname.c_str(), gname.c_str(), ui, emsg, su) != 0) {
+      if (emsg.length() <= 0)
+         XPDFORM(emsg, "Controlled access: user '%s', group '%s' not allowed to connect",
+                       uname.c_str(), gname.c_str());
+      return -2;
+   }
+   if (su) {
+      // Update superuser flag
+      p->SetSuperUser(su);
+      TRACEP(p, DBG, "request from entity: "<<uname<<":"<<gname<<" (privileged)");
+   } else {
+      TRACEP(p, DBG, "request from entity: "<<uname<<":"<<gname);
+   }
+
+   // Attach-to / Create the XrdProofdClient instance for this user: if login
+   // fails this will be removed at a later stage
+   XrdProofdClient *c = GetClient(uname.c_str(), gname.c_str());
+   if (c) {
+      if (!c->ROOT())
+         c->SetROOT(fMgr->ROOTMgr()->DefaultVersion());
+      if (c->IsValid()) {
+         // Set the group, if any
+         c->SetGroup(gname.c_str());
+      }
+   } else {
+      emsg = "unable to instantiate object for client ";
+      emsg += uname;
+      return -1;
+   }
+   // Save into the protocol instance
+   p->SetClient(c);
+
+   // Done
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -659,7 +677,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
             TRACEP(p, XERR, msg.c_str());
          }
          // Update counters
-         fNDisconnected--;
+         if(fNDisconnected) fNDisconnected--;
 
       } else {
          // The index of the next free slot will be the unique ID
@@ -751,12 +769,16 @@ int XrdProofdClientMgr::CheckAdminPath(XrdProofdProtocol *p,
    // Create the path now
    XPDFORM(cidpath, "%s/%s/cid", p->Client()->AdminPath(), lid.c_str());
 
-   // Check last access time
-   int rc = 0;
+   // Create disconnected path
+   XrdOucString discpath;
+   XPDFORM(discpath, "%s/%s/disconnected", p->Client()->AdminPath(), lid.c_str());
+
+   // Check last access time of disconnected if available, otherwise cid
    bool expired = false;
    struct stat st;
-   if ((rc = stat(cidpath.c_str(), &st)) != 0 ||
-       (expired = ((int)(time(0) - st.st_atime) > fReconnectTimeOut))) {
+   int rc = stat(discpath.c_str(), &st);
+   if (rc != 0) rc = stat(cidpath.c_str(), &st);
+   if (rc != 0 || (expired = ((int)(time(0) - st.st_atime) > fReconnectTimeOut))) {
       if (expired || (rc != 0 && errno != ENOENT)) {
          // Remove the file
          cidpath.replace("/cid", "");
@@ -849,8 +871,9 @@ int XrdProofdClientMgr::ParsePreviousClients(XrdOucString &emsg)
                   if (!fd) {
                      TRACE(XERR, "unable to create path: " <<discpath);
                      xrm = 1;
+                  } else {
+                     fclose(fd);
                   }
-                  fclose(fd);
                   if (!xrm)
                      fNDisconnected++;
                }
@@ -954,27 +977,12 @@ int XrdProofdClientMgr::CheckClients()
                            // during last cycle and it did not do it, so we close
                            // the link
                            xclose = 1;
-                           // This clients looks like disconnected
-                           FILE *fd = fopen(discpath.c_str(), "w");
-                           if (!fd) {
-                              TRACE(XERR, "unable to create path: " <<discpath);
-                           } else {
-                              fclose(fd);
-                           }
                         }
                      }
                   }
                } else {
                   // No id info, clean
                   xrm = 1;
-               }
-               // If too old remove the entry
-               if (xrm) {
-                  discpath.replace("/disconnected", "");
-                  TRACE(DBG, "removing path "<<discpath);
-                  if ((rc = XrdProofdAux::RmDir(discpath.c_str())) != 0) {
-                     TRACE(XERR, "problems removing "<<discpath<<"; error: "<<-rc);
-                  }
                }
                // If inactive since too long, close the associated link
                if (xclose) {
@@ -992,11 +1000,15 @@ int XrdProofdClientMgr::CheckClients()
                         p->Link()->Close();
                      } else {
                         TRACE(XERR, "protocol or link associated with ID "<<cid<<" are invalid");
+                        xrm = 1;
                      }
                   } else {
                      TRACE(XERR, "could not resolve client id from "<<cidpath);
+                     xrm = 1;
                   }
-
+               }
+               // If too old remove the entry
+               if (xrm) {
                   discpath.replace("/disconnected", "");
                   TRACE(DBG, "removing path "<<discpath);
                   if ((rc = XrdProofdAux::RmDir(discpath.c_str())) != 0) {
@@ -1061,8 +1073,9 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
       p->AuthProt()->Entity.tident = p->Link()->ID;
    }
    // Set the wanted login name
-   char *u = new char[strlen("XrdSecLOGINUSER=")+strlen(p->Client()->User())+2];
-   sprintf(u, "XrdSecLOGINUSER=%s", p->Client()->User());
+   size_t len = strlen("XrdSecLOGINUSER=")+strlen(p->UserIn())+2;
+   char *u = new char[len];
+   snprintf(u, len, "XrdSecLOGINUSER=%s", p->UserIn());
    putenv(u);
 
    // Now try to authenticate the client using the current protocol
@@ -1071,24 +1084,31 @@ int XrdProofdClientMgr::Auth(XrdProofdProtocol *p)
 
       // Make sure that the user name that we want is allowed
       if (p->AuthProt()->Entity.name && strlen(p->AuthProt()->Entity.name) > 0) {
-         rc  = -1;
-         if (p->Client() && p->Client()->User() && strlen(p->Client()->User()) > 0) {
+         if (p->UserIn() && strlen(p->UserIn()) > 0) {
             XrdOucString usrs(p->AuthProt()->Entity.name);
+            SafeFree(p->AuthProt()->Entity.name);
             XrdOucString usr;
-            int from = 0;
+            int from = 0, rcmtc = -1;
             while ((from = usrs.tokenize(usr, from, ',')) != STR_NPOS) {
-               if ((usr == p->Client()->User())) {
+               // The first one by default, if no match is found
+               if (!(p->AuthProt()->Entity.name))
+                  p->AuthProt()->Entity.name = strdup(usr.c_str());
+               if ((usr == p->UserIn())) {
                   free(p->AuthProt()->Entity.name);
                   p->AuthProt()->Entity.name = strdup(usr.c_str());
-                  rc = 0;
+                  rcmtc = 0;
                   break;
                }
             }
-            if (rc != 0) {
-               namsg = "user ";
-               namsg += p->Client()->User();
-               namsg += " not authorized to connect";
-               TRACEP(p, XERR, namsg.c_str());
+            if (rcmtc != 0) {
+               namsg = "logging as '";
+               namsg += p->AuthProt()->Entity.name;
+               namsg += "' instead of '";
+               namsg += p->UserIn();
+               namsg += "' following admin settings";
+               TRACEP(p, LOGIN, namsg.c_str());
+               namsg.insert("Warning: ", 0);
+               response->Send(kXR_attn, kXPD_srvmsg, 2, (char *) namsg.c_str(), namsg.length());
             }
          } else {
             TRACEP(p, XERR, "user name is empty: protocol error?");
@@ -1159,18 +1179,17 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
       return 0;
    }
 
-   // Open the security library
-   void *lh = 0;
-   if (!(lh = dlopen(seclib, RTLD_NOW))) {
-      TRACE(XERR, dlerror()<<" opening shared library "<< seclib);
-      return 0;
+   // Create the plug-in instance
+   if (!(fSecPlugin = new XrdSysPlugin((fEDest ? fEDest : (XrdSysError *)0), seclib))) {
+      TRACE(XERR, "could not create plugin instance for "<<seclib);
+      return (XrdSecService *)0;
    }
 
-   // Get the server object creator
-   XrdSecServLoader_t ep = 0;
-   if (!(ep = (XrdSecServLoader_t)dlsym(lh, "XrdSecgetService"))) {
-      TRACE(XERR, dlerror() <<" finding XrdSecgetService() in "<<seclib);
-      return 0;
+   // Get the function
+   XrdSecServLoader_t ep = (XrdSecServLoader_t) fSecPlugin->getPlugin("XrdSecgetService");
+   if (!ep) {
+      TRACE(XERR, "could not find 'XrdSecgetService()' in "<<seclib);
+      return (XrdSecService *)0;
    }
 
    // Extract in a temporary file the directives prefixed "xpd.sec..." (filtering
@@ -1178,6 +1197,7 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    int nd = 0;
    char *rcfn = FilterSecConfig(nd);
    if (!rcfn) {
+      SafeDelete(fSecPlugin);
       if (nd == 0) {
          // No directives to be processed
          TRACE(XERR, "no security directives: strong authentication disabled");
@@ -1192,6 +1212,9 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    XrdSecService *cia = 0;
    if (!(cia = (*ep)((fEDest ? fEDest->logger() : (XrdSysLogger *)0), rcfn))) {
       TRACE(XERR, "Unable to create security service object via " << seclib);
+      SafeDelete(fSecPlugin);
+      unlink(rcfn);
+      delete[] rcfn;
       return 0;
    }
    // Notify
@@ -1246,15 +1269,19 @@ char *XrdProofdClientMgr::FilterSecConfig(int &nd)
          nd++;
          // Create the output file, if not yet done
          if (!rcfn) {
-            rcfn = new char[strlen(fMgr->TMPdir()) + strlen("/xpdcfn_XXXXXX") + 2];
-            sprintf(rcfn, "%s/xpdcfn_XXXXXX", fMgr->TMPdir());
+            size_t len = strlen(fMgr->TMPdir()) + strlen("/xpdcfn_XXXXXX") + 2;
+            rcfn = new char[len];
+            snprintf(rcfn, len, "%s/xpdcfn_XXXXXX", fMgr->TMPdir());
+            mode_t oldum = umask(022);
             if ((fd = mkstemp(rcfn)) < 0) {
                delete[] rcfn;
                nd = (errno > 0) ? -errno : -1;
                fclose(fin);
                rcfn = 0;
+               oldum = umask(oldum);
                return rcfn;
             }
+            oldum = umask(oldum);
          }
          XrdOucString slin = lin;
          // Strip the prefix "xpd."
@@ -1268,7 +1295,7 @@ char *XrdProofdClientMgr::FilterSecConfig(int &nd)
 
    // Close files
    fclose(fin);
-   close(fd);
+   if (fd >= 0) close(fd);
 
    return rcfn;
 }
@@ -1300,13 +1327,13 @@ XrdProofdClient *XrdProofdClientMgr::GetClient(const char *usr, const char *grp,
       // Is this a potential user?
       XrdProofUI ui;
       bool su;
-      if (fMgr->CheckUser(usr, ui, emsg, su) == 0) {
+      if (fMgr->CheckUser(usr, grp, ui, emsg, su) == 0) {
          // Yes: create an (invalid) instance of XrdProofdClient:
          // It would be validated on the first valid login
          ui.fUser = usr;
          ui.fGroup = grp;
          bool full = (fMgr->SrvType() != kXPD_Worker)  ? 1 : 0;
-         c = new XrdProofdClient(ui, full, fMgr->ChangeOwn(), fEDest, fClntAdminPath.c_str());
+         c = new XrdProofdClient(ui, full, fMgr->ChangeOwn(), fEDest, fClntAdminPath.c_str(), fReconnectTimeOut);
          newclient = 1;
          bool freeclient = 1;
          if (c && c->IsValid()) {
@@ -1333,7 +1360,7 @@ XrdProofdClient *XrdProofdClientMgr::GetClient(const char *usr, const char *grp,
                }
             }
             if (freeclient) {
-               delete c;
+               SafeDelete(c);
             } else if (TRACING(DBG)) {
                XPDFORM(dmsg, "instance for {client, group} = {%s, %s} created"
                              " and added to the list (%p)", usr, grp, c);

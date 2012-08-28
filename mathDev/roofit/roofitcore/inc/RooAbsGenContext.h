@@ -28,8 +28,8 @@ public:
   RooAbsGenContext(const RooAbsPdf &model, const RooArgSet &vars, const RooDataSet *prototype= 0, const RooArgSet* auxProto=0,
 		   Bool_t _verbose= kFALSE) ;
   virtual ~RooAbsGenContext();
-
-  RooDataSet *generate(Int_t nEvents= 0);
+  
+  virtual RooDataSet *generate(Double_t nEvents= 0, Bool_t skipInit=kFALSE, Bool_t extendedMode=kFALSE);
 
   Bool_t isValid() const { 
     // If true generator context is in a valid state
@@ -54,14 +54,16 @@ public:
 
   virtual void attach(const RooArgSet& params) ;
 
-  virtual void printName(ostream& os) const ;
-  virtual void printTitle(ostream& os) const ;
-  virtual void printClassName(ostream& os) const ;
-  virtual void printArgs(ostream& os) const ;
-  virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const;
+  virtual void printName(std::ostream& os) const ;
+  virtual void printTitle(std::ostream& os) const ;
+  virtual void printClassName(std::ostream& os) const ;
+  virtual void printArgs(std::ostream& os) const ;
+  virtual void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const;
 
   virtual Int_t defaultPrintContents(Option_t* opt) const ;
   virtual StyleOption defaultPrintStyle(Option_t* opt) const ;
+
+  virtual void setExpectedData(Bool_t) {} ;
 
 protected:
 
@@ -71,6 +73,7 @@ protected:
   friend class RooProdGenContext ;
   friend class RooAddGenContext ;
   friend class RooSimGenContext ;
+  friend class RooSimSplitGenContext ;
   friend class RooEffGenContext ;
 
   virtual void initGenerator(const RooArgSet &theEvent);

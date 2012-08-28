@@ -486,6 +486,7 @@ void TRootCanvas::CreateCanvas(const char *name)
 
    // Create toolbar dock
    fToolDock = new TGDockableFrame(this);
+   fToolDock->SetCleanup();
    fToolDock->EnableHide(kFALSE);
    AddFrame(fToolDock, fDockLayout = new TGLayoutHints(kLHintsExpandX));
 
@@ -816,6 +817,7 @@ Bool_t TRootCanvas::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                      break;
                   case kFileSaveAs:
                      {
+                        TString workdir = gSystem->WorkingDirectory();
                         static TString dir(".");
                         static Int_t typeidx = 0;
                         static Bool_t overwr = kFALSE;
@@ -825,6 +827,7 @@ Bool_t TRootCanvas::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                         fi.fFileTypeIdx = typeidx;
                         fi.fOverwrite = overwr;
                         new TGFileDialog(fClient->GetDefaultRoot(), this, kFDSave, &fi);
+                        gSystem->ChangeDirectory(workdir.Data());
                         if (!fi.fFilename) return kTRUE;
                         Bool_t  appendedType = kFALSE;
                         TString fn = fi.fFilename;
@@ -894,7 +897,7 @@ again:
                      if (!gApplication->ReturnFromRun()) {
                         if ((TVirtualPadEditor::GetPadEditor(kFALSE) != 0))
                            TVirtualPadEditor::Terminate();
-                        delete this;
+                        SendCloseMessage();
                      }
                      if (TVirtualPadEditor::GetPadEditor(kFALSE) != 0)
                         TVirtualPadEditor::Terminate();
@@ -957,7 +960,13 @@ again:
                         //   m->Update();
                         TColorWheel *wheel = new TColorWheel();
                         wheel->Draw();
-                        padsav->cd();
+                        
+                        //tp: with Cocoa, window is visible (and repainted)
+                        //before wheel->Draw() was called and you can see "empty"
+                        //canvas.
+                        gPad->Update();
+                        //
+                        if (padsav) padsav->cd();
                      }
                      break;
                   case kViewFonts:
@@ -969,7 +978,7 @@ again:
                         TCanvas *m = new TCanvas("markers","Marker Types",600,200);
                         TMarker::DisplayMarkerTypes();
                         m->Update();
-                        padsav->cd();
+                        if (padsav) padsav->cd();
                      }
                      break;
                   case kViewIconify:
@@ -1318,7 +1327,7 @@ void TRootCanvas::PrintCanvas()
 
       TString fn = "rootprint";
       FILE *f = gSystem->TempFileName(fn, gEnv->GetValue("Print.Directory", gSystem->TempDirectory()));
-      fclose(f);
+      if (f) fclose(f);
       fn += TString::Format(".%s",gEnv->GetValue("Print.FileType", "pdf"));
       fCanvas->Print(fn);
 
@@ -1448,6 +1457,12 @@ void TRootCanvas::ShowEditor(Bool_t show)
       w = w - e;
    }
    Resize(w, h);
+   if (fParent && fParent != fClient->GetDefaultRoot()) {
+      // if the canvas is embedded (e.g. in the browser), then the layout of
+      // the main frame has to be re-applied when showing/hiding the editor
+      TGMainFrame *main = (TGMainFrame *)fParent->GetMainFrame();
+      if (main) main->Layout();
+   }
 
    if (savedPad) gPad = savedPad;
 }
@@ -1464,7 +1479,7 @@ void TRootCanvas::CreateEditor()
    Int_t show = gEnv->GetValue("Canvas.ShowEditor", 0);
    gEnv->SetValue("Canvas.ShowEditor","true");
    fEditor = TVirtualPadEditor::LoadEditor();
-   fEditor->SetGlobal(kFALSE);
+   if (fEditor) fEditor->SetGlobal(kFALSE);
    fEditorFrame->SetEditable(kEditDisable);
    fEditorFrame->SetEditable(kFALSE);
 

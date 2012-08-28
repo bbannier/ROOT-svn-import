@@ -53,19 +53,20 @@ protected:
    TH2(const char *name,const char *title,Int_t nbinsx,const Float_t  *xbins
                                          ,Int_t nbinsy,const Float_t  *ybins);
 
-   virtual Int_t     BufferFill(Double_t, Double_t) {return -2;} //may not use
    virtual Int_t     BufferFill(Double_t x, Double_t y, Double_t w);
    virtual TH1D     *DoProjection(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
    virtual TProfile *DoProfile(bool onX, const char *name, Int_t firstbin, Int_t lastbin, Option_t *option) const;
    virtual void      DoFitSlices(bool onX, TF1 *f1, Int_t firstbin, Int_t lastbin, Int_t cut, Option_t *option, TObjArray* arr);
+
+   Int_t    BufferFill(Double_t, Double_t) {return -2;} //may not use
+   Int_t    Fill(Double_t); //MayNotUse
+   Int_t    Fill(const char*, Double_t) { return Fill(0);}  //MayNotUse
 
 public:
    TH2(const TH2&);
    virtual ~TH2();
    virtual Int_t    BufferEmpty(Int_t action=0);
    virtual void     Copy(TObject &hnew) const;
-           Int_t    Fill(Double_t) {return -1;} //MayNotUse
-           Int_t    Fill(const char*, Double_t) {return -1;} //MayNotUse
    virtual Int_t    Fill(Double_t x, Double_t y);
    virtual Int_t    Fill(Double_t x, Double_t y, Double_t w);
    virtual Int_t    Fill(Double_t x, const char *namey, Double_t w);
@@ -80,6 +81,10 @@ public:
    virtual void     FitSlicesX(TF1 *f1=0,Int_t firstybin=0, Int_t lastybin=-1, Int_t cut=0, Option_t *option="QNR", TObjArray* arr = 0); // *MENU*
    virtual void     FitSlicesY(TF1 *f1=0,Int_t firstxbin=0, Int_t lastxbin=-1, Int_t cut=0, Option_t *option="QNR", TObjArray* arr = 0); // *MENU*
    virtual Double_t GetBinWithContent2(Double_t c, Int_t &binx, Int_t &biny, Int_t firstxbin=1, Int_t lastxbin=-1,Int_t firstybin=1, Int_t lastybin=-1, Double_t maxdiff=0) const;
+   using TH1::GetBinErrorLow;
+   using TH1::GetBinErrorUp;
+   virtual Double_t GetBinErrorLow(Int_t binx, Int_t biny) { return TH1::GetBinErrorLow( GetBin(binx, biny) ); }
+   virtual Double_t GetBinErrorUp(Int_t binx, Int_t biny) { return TH1::GetBinErrorUp( GetBin(binx, biny) ); }
    virtual Double_t GetCorrelationFactor(Int_t axis1=1,Int_t axis2=2) const;
    virtual Double_t GetCovariance(Int_t axis1=1,Int_t axis2=2) const;
    virtual void     GetRandom2(Double_t &x, Double_t &y);
@@ -105,8 +110,8 @@ public:
          TH1D      *ProjectionY(const char *name="_py", Int_t firstxbin=0, Int_t lastxbin=-1, Option_t *option="") const; // *MENU*
    virtual void     PutStats(Double_t *stats);
    virtual void     Reset(Option_t *option="");
-   virtual void     SetShowProjectionX(Int_t nbins);  // *MENU*
-   virtual void     SetShowProjectionY(Int_t nbins);  // *MENU*
+   virtual void     SetShowProjectionX(Int_t nbins=1);  // *MENU*
+   virtual void     SetShowProjectionY(Int_t nbins=1);  // *MENU*
    virtual TH1     *ShowBackground(Int_t niter=20, Option_t *option="same");
    virtual Int_t    ShowPeaks(Double_t sigma=2, Option_t *option="", Double_t threshold=0.05); // *MENU*
    virtual void     Smooth(Int_t ntimes=1, Option_t *option=""); // *MENU*

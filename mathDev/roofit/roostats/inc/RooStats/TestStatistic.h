@@ -26,6 +26,9 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
+class RooArgSet; 
+class RooAbsData; 
+
 namespace RooStats {
 
 class TestStatistic {
@@ -43,6 +46,9 @@ class TestStatistic {
 
       // Defines the sign convention of the test statistic. Overwrite function if necessary.
       virtual  bool PValueIsRightTail(void) const { return true; }
+
+      // return detailed output: for fits this can be pulls, processing time, ... The returned pointer will not loose validity until another call to Evaluate.
+      virtual const RooArgSet* GetDetailedOutput() const { return NULL; }
 
    protected:
    ClassDef(TestStatistic,1) // Interface for a TestStatistic

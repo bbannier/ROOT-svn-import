@@ -6,7 +6,16 @@
 #
 # Author: Fons Rademakers, 12/2/2003
 
-include ../Makefile.arch
+RC     := root-config
+ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
+MKARCH := $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
+endif
+ifneq ($(MKARCH),)
+include $(MKARCH)
+else
+ROOTSYS = ../..
+include $(ROOTSYS)/etc/Makefile.arch
+endif
 
 #------------------------------------------------------------------------------
 
@@ -37,12 +46,12 @@ endif
 ifeq ($(PLATFORM),win32)
 $(ROOTSHOWER):  $(ROOTSHOWERO) $(ROOTSHOWERRES)
 		$(LD) $(LDFLAGS) /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup \
-		$^ $(GLIBS) '$(ROOTSYS)\lib\libEG.lib' '$(ROOTSYS)\lib\libRGL.lib' \
-		   '$(ROOTSYS)\lib\libHtml.lib' '$(ROOTSYS)\lib\libGeom.lib' $(OutPutOpt)$@
+		$^ $(GLIBS) '$(ROOTSYS)\lib\libEG.lib' '$(ROOTSYS)\lib\libHtml.lib' \
+		'$(ROOTSYS)\lib\libGeom.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
 $(ROOTSHOWER):  $(ROOTSHOWERO)
-		$(LD) $(LDFLAGS) $^ $(GLIBS) -lEG -lRGL -lGed -lHtml -lThread -lGeom $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $^ $(GLIBS) -lEG -lGed -lHtml -lThread -lGeom $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 

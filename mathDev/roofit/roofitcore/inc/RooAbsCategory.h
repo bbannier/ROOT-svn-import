@@ -25,6 +25,7 @@ class TTree ;
 class RooArgSet ;
 class RooDataSet ;
 class Roo1DTable ;
+class RooVectorDataStore ;
 
 class RooAbsCategory : public RooAbsArg {
 public:
@@ -63,11 +64,11 @@ public:
   Roo1DTable *createTable(const char *label) const ;
 
   // I/O streaming interface
-  virtual Bool_t readFromStream(istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
-  virtual void writeToStream(ostream& os, Bool_t compact) const ;
+  virtual Bool_t readFromStream(std::istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
+  virtual void writeToStream(std::ostream& os, Bool_t compact) const ;
 
-  virtual void printValue(ostream& os) const ;
-  virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printValue(std::ostream& os) const ;
+  virtual void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
 
   virtual Bool_t isIntegrationSafeLValue(const RooArgSet* /*set*/) const { 
     // Is this l-value object safe for use as integration observable
@@ -97,9 +98,11 @@ protected:
   virtual Bool_t isValid() const ;
   virtual Bool_t isValid(const RooCatType& value) const ;
 
+  friend class RooVectorDataStore ;
   virtual void syncCache(const RooArgSet* set=0) ;
-  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE, Bool_t setValueDirty=kTRUE) ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) ;
+  virtual void attachToVStore(RooVectorDataStore& vstore) ;
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   virtual void fillTreeBranch(TTree& t) ;
 

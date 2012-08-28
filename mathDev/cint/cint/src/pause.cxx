@@ -61,7 +61,7 @@ static void G__display_keyword(FILE *fout,const char *keyword,FILE *keyfile);
 void G__rewinddictionary(void);
 void G__UnlockCriticalSection(void);
 void G__LockCriticalSection(void); 
-int G__IsBadCommand(char *com);
+int G__IsBadCommand(char *com, const unsigned int comlen);
 static void G__redirectoutput(char *com,FILE **psout,FILE **pserr,FILE **psin,int asemicolumn,char *keyword,char *pipefile);
 void G__cancel_undo_position(void);
 static int G__atevaluate(G__value buf);
@@ -1305,7 +1305,11 @@ static void G__redirectoutput(char *com
          if (isspace(*redirectin)) {
             *psin = G__sin;
 #ifndef G__WIN32
-            if (!strlen(stdinsav)) G__strlcpy(stdinsav, ttyname(STDIN_FILENO),sizeof(stdinsav));
+            if (!strlen(stdinsav) && ttyname(STDIN_FILENO)) {
+               G__strlcpy(stdinsav, ttyname(STDIN_FILENO), sizeof(stdinsav));
+            } else {
+               stdinsav[0] = 0;
+            }
 #endif
             G__sin = freopen(filename, "r", G__sin);
             if (!G__sin) {
@@ -1388,7 +1392,7 @@ static void G__unredirectoutput(FILE **sout, FILE **serr, FILE **sin, const char
 /******************************************************************
 * G__IsBadCommand
 ******************************************************************/
-int G__IsBadCommand(char *com)
+int G__IsBadCommand(char *com, const unsigned int comlen)
 {
    int i = 0;
    int nest = 0;
@@ -1420,7 +1424,9 @@ readagain:
             ++i;
             if (0 == com[i] || '\n' == com[i]) {
                --i;
-               strcpy(com + i, G__input("> ")); // Legacy, we don't known the input buffer size.
+               char * input = G__input("> ");
+               if(strlen(input) + i >= comlen) return -2;
+               strcpy(com + i, input); 
                if (G__return == G__RETURN_IMMEDIATE) return(-1);
             }
             break;
@@ -1451,10 +1457,14 @@ readagain:
             || 0 == strncmp(com, "while(", 6) || 0 == strncmp(com, "while ", 6)
             || 0 == strncmp(com, "do ", 3) || 0 == strncmp(com, "do{", 3)
             || 0 == strncmp(com, "namespace ", 10) || 0 == strncmp(com, "namespace{", 10)) {
-         strcpy(com + i, G__input("end with '}', '@':abort > ")); // Legacy, we don't known the input buffer size.
+         char * input = G__input("end with '}', '@':abort > ");
+         if(strlen(input) + i >= comlen) return -2;
+         G__strlcpy(com + i, input,comlen);
       }
       else {
-         strcpy(com + i, G__input("end with ';', '@':abort > ")); // Legacy, we don't known the input buffer size.
+         char * input = G__input("end with '}', '@':abort > ");
+         if(strlen(input) + i >= comlen) return -2;
+         G__strlcpy(com + i, input,comlen);
       }
       if (G__return == G__RETURN_IMMEDIATE) return(-1);
       if ('@' == com[i]) {
@@ -1471,7 +1481,9 @@ readagain:
          && 0 != strncmp(com, "do ", 3) && 0 != strncmp(com, "do{", 3)
          && 0 != strncmp(com, "namespace ", 10) && 0 != strncmp(com, "namespace{", 10)
       ) {
-      strcpy(com + i, G__input("end with ';', '@':abort > ")); // Legacy, we don't known the input buffer size.
+      char * input = G__input("end with ';', '@':abort > ");
+      if(strlen(input) + i >= comlen) return -2;
+      G__strlcpy(com + i, input,comlen);
       if (G__return == G__RETURN_IMMEDIATE) return(-1);
       if ('@' == com[i]) {
          com[0] = 0;
@@ -1591,6 +1603,7 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
    short double_quote, single_quote;
 #ifdef G__ASM
    G__ALLOC_ASMENV;
+   (void)store_asm_loopcompile; // set but not used
 #endif
    char store_var_type;
    /* pass to parent otherwise not re-entrant */
@@ -1661,13 +1674,16 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
          }
          else if ('\0' != command[0] && command[0] != '{') {
 #ifndef G__OLDIMPLEMENTATION1774
-            switch (G__IsBadCommand(command)) {
+            switch (G__IsBadCommand(command, G__LONGLINE)) {
                case 0:
                   break;
                case 1:
                   com = command;
                   goto multi_line_command;
-               case - 1:
+               case -2:
+                  fprintf(stderr, "!!!command input too long.\n");
+                  // intentional fall-through
+               case -1:
                default:
                   fprintf(stderr, "!!!Bad command input. Ignored!!!\n");
                   G__UnlockCriticalSection();
@@ -1675,7 +1691,7 @@ int G__process_cmd(char* line, char* prompt, int* more, int* err, G__value* rslt
                   break;
             }
 #else /* 1774 */
-            if (G__IsBadCommand(command)) {
+            if (G__IsBadCommand(command), G__LONGLINE) {
                fprintf(stderr, "!!!Bad command input. Ignored!!!\n");
                G__UnlockCriticalSection();
                return(ignore = G__PAUSE_NORMAL);

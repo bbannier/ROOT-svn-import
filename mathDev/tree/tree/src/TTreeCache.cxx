@@ -250,14 +250,12 @@ TTreeCache::TTreeCache() : TFileCacheRead(),
    fEntryMax(1),
    fEntryCurrent(-1),
    fEntryNext(-1),
-   fZipBytes(0),
    fNbranches(0),
    fNReadOk(0),
    fNReadMiss(0),
    fNReadPref(0),
    fBranches(0),
    fBrNames(0),
-   fOwner(0),
    fTree(0),
    fIsLearning(kTRUE),
    fIsManual(kFALSE),
@@ -273,20 +271,18 @@ TTreeCache::TTreeCache() : TFileCacheRead(),
 }
 
 //______________________________________________________________________________
-TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->GetCurrentFile(),buffersize),
+TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->GetCurrentFile(),buffersize,tree),
    fEntryMin(0),
    fEntryMax(tree->GetEntriesFast()),
    fEntryCurrent(-1),
    fEntryNext(0),
-   fZipBytes(0),
    fNbranches(0),
    fNReadOk(0),
    fNReadMiss(0),
    fNReadPref(0),
    fBranches(0),
    fBrNames(new TList),
-   fOwner(tree),
-   fTree(0),
+   fTree(tree),
    fIsLearning(kTRUE),
    fIsManual(kFALSE),
    fFirstBuffer(kTRUE),
@@ -307,7 +303,11 @@ TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->Get
 //______________________________________________________________________________
 TTreeCache::~TTreeCache()
 {
-   // destructor. (in general called by the TFile destructor
+   // destructor. (in general called by the TFile destructor)
+
+   // Informe the TFile that we have been deleted (in case
+   // we are deleted explicitly by legacy user code).
+   if (fFile) fFile->SetCacheRead(0, fTree);   
 
    delete fBranches;
    if (fBrNames) {fBrNames->Delete(); delete fBrNames; fBrNames=0;}
@@ -322,7 +322,7 @@ void TTreeCache::AddBranch(TBranch *b, Bool_t subbranches /*= kFALSE*/)
    if (!fIsLearning) return;
 
    // Reject branch that are not from the cached tree.
-   if (!b || fOwner->GetTree() != b->GetTree()) return;
+   if (!b || fTree->GetTree() != b->GetTree()) return;
 
    //Is branch already in the cache?
    Bool_t isNew = kTRUE;
@@ -333,11 +333,10 @@ void TTreeCache::AddBranch(TBranch *b, Bool_t subbranches /*= kFALSE*/)
       fTree = b->GetTree();
       fBranches->AddAtAndExpand(b, fNbranches);
       fBrNames->Add(new TObjString(b->GetName()));
-      fZipBytes += b->GetZipBytes();
       fNbranches++;
       if (gDebug > 0) printf("Entry: %lld, registering branch: %s\n",b->GetTree()->GetReadEntry(),b->GetName());
    }
-   
+
    // process subbranches
    if (subbranches) {
       TObjArray *lb = b->GetListOfBranches();
@@ -362,12 +361,12 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
    // The branches are taken with respect to the Owner of this TTreeCache
    // (i.e. the original Tree)
    // NB: if bname="*" all branches are put in the cache and the learning phase stopped
-   
+
    TBranch *branch, *bcount;
    TLeaf *leaf, *leafcount;
 
    Int_t i;
-   Int_t nleaves = (fOwner->GetListOfLeaves())->GetEntriesFast();
+   Int_t nleaves = (fTree->GetListOfLeaves())->GetEntriesFast();
    TRegexp re(bname,kTRUE);
    Int_t nb = 0;
 
@@ -376,12 +375,12 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
    Bool_t all = kFALSE;
    if (!strcmp(bname,"*")) all = kTRUE;
    for (i=0;i<nleaves;i++)  {
-      leaf = (TLeaf*)(fOwner->GetListOfLeaves())->UncheckedAt(i);
+      leaf = (TLeaf*)(fTree->GetListOfLeaves())->UncheckedAt(i);
       branch = (TBranch*)leaf->GetBranch();
       TString s = branch->GetName();
       if (!all) { //Regexp gives wrong result for [] in name
          TString longname; 
-         longname.Form("%s.%s",fOwner->GetName(),branch->GetName());
+         longname.Form("%s.%s",fTree->GetName(),branch->GetName());
          if (strcmp(bname,branch->GetName()) 
              && longname != bname
              && s.Index(re) == kNPOS) continue;
@@ -395,7 +394,7 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
       }
    }
    if (nb==0 && strchr(bname,'*')==0) {
-      branch = fOwner->GetBranch(bname);
+      branch = fTree->GetBranch(bname);
       if (branch) {
          AddBranch(branch, subbranches);
          ++nb;
@@ -404,8 +403,8 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
 
    //search in list of friends
    UInt_t foundInFriend = 0;
-   if (fOwner->GetListOfFriends()) {
-      TIter nextf(fOwner->GetListOfFriends());
+   if (fTree->GetListOfFriends()) {
+      TIter nextf(fTree->GetListOfFriends());
       TFriendElement *fe;
       TString name;
       while ((fe = (TFriendElement*)nextf())) {
@@ -438,68 +437,185 @@ void TTreeCache::AddBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
 }
 
 //_____________________________________________________________________________
+void TTreeCache::DropBranch(TBranch *b, Bool_t subbranches /*= kFALSE*/)
+{
+   //Remove a branch to the list of branches to be stored in the cache
+   //this function is called by TBranch::GetBasket
+
+   if (!fIsLearning) return;
+
+   // Reject branch that are not from the cached tree.
+   if (!b || fTree->GetTree() != b->GetTree()) return;
+
+   //Is branch already in the cache?
+   if (fBranches->Remove(b)) {
+      --fNbranches;
+      if (gDebug > 0) printf("Entry: %lld, un-registering branch: %s\n",b->GetTree()->GetReadEntry(),b->GetName());
+   }
+   fBrNames->Remove(fBrNames->FindObject(b->GetName()));
+
+   // process subbranches
+   if (subbranches) {
+      TObjArray *lb = b->GetListOfBranches();
+      Int_t nb = lb->GetEntriesFast();
+      for (Int_t j = 0; j < nb; j++) {
+         TBranch* branch = (TBranch*) lb->UncheckedAt(j);
+         if (!branch) continue;
+         DropBranch(branch, subbranches);
+      }
+   }
+}
+
+
+//_____________________________________________________________________________
+void TTreeCache::DropBranch(const char *bname, Bool_t subbranches /*= kFALSE*/)
+{
+   // Remove a branch to the list of branches to be stored in the cache
+   // this is to be used by user (thats why we pass the name of the branch).
+   // It works in exactly the same way as TTree::SetBranchStatus so you
+   // probably want to look over ther for details about the use of bname
+   // with regular expresions.
+   // The branches are taken with respect to the Owner of this TTreeCache
+   // (i.e. the original Tree)
+   // NB: if bname="*" all branches are put in the cache and the learning phase stopped
+
+   TBranch *branch, *bcount;
+   TLeaf *leaf, *leafcount;
+
+   Int_t i;
+   Int_t nleaves = (fTree->GetListOfLeaves())->GetEntriesFast();
+   TRegexp re(bname,kTRUE);
+   Int_t nb = 0;
+
+   // first pass, loop on all branches
+   // for leafcount branches activate/deactivate in function of status
+   Bool_t all = kFALSE;
+   if (!strcmp(bname,"*")) all = kTRUE;
+   for (i=0;i<nleaves;i++)  {
+      leaf = (TLeaf*)(fTree->GetListOfLeaves())->UncheckedAt(i);
+      branch = (TBranch*)leaf->GetBranch();
+      TString s = branch->GetName();
+      if (!all) { //Regexp gives wrong result for [] in name
+         TString longname; 
+         longname.Form("%s.%s",fTree->GetName(),branch->GetName());
+         if (strcmp(bname,branch->GetName()) 
+             && longname != bname
+             && s.Index(re) == kNPOS) continue;
+      }
+      nb++;
+      DropBranch(branch, subbranches);
+      leafcount = leaf->GetLeafCount();
+      if (leafcount && !all) {
+         bcount = leafcount->GetBranch();
+         DropBranch(bcount, subbranches);
+      }
+   }
+   if (nb==0 && strchr(bname,'*')==0) {
+      branch = fTree->GetBranch(bname);
+      if (branch) {
+         DropBranch(branch, subbranches);
+         ++nb;
+      }
+   }
+
+   //search in list of friends
+   UInt_t foundInFriend = 0;
+   if (fTree->GetListOfFriends()) {
+      TIter nextf(fTree->GetListOfFriends());
+      TFriendElement *fe;
+      TString name;
+      while ((fe = (TFriendElement*)nextf())) {
+         TTree *t = fe->GetTree();
+         if (t==0) continue;
+
+         // If the alias is present replace it with the real name.
+         char *subbranch = (char*)strstr(bname,fe->GetName());
+         if (subbranch!=bname) subbranch = 0;
+         if (subbranch) {
+            subbranch += strlen(fe->GetName());
+            if ( *subbranch != '.' ) subbranch = 0;
+            else subbranch ++;
+         }
+         if (subbranch) {
+            name.Form("%s.%s",t->GetName(),subbranch);
+            DropBranch(name, subbranches);
+         }
+      }
+   }
+   if (!nb && !foundInFriend) {
+      if (gDebug > 0) printf("DropBranch: unknown branch -> %s \n", bname);
+      return;
+   }
+   //if all branches are selected stop the learning phase
+   if (*bname == '*') {
+      fEntryNext = -1; // We are likely to have change the set of branches, so for the [re-]reading of the cluster.
+   }
+}
+
+//_____________________________________________________________________________
 Bool_t TTreeCache::FillBuffer()
 {
    // Fill the cache buffer with the branches in the cache.
-
 
    if (fNbranches <= 0) return kFALSE;
    TTree *tree = ((TBranch*)fBranches->UncheckedAt(0))->GetTree();
    Long64_t entry = tree->GetReadEntry();
    Long64_t fEntryCurrentMax = 0;
-   
+
    if (fEnablePrefetching){ //prefetching mode
-     if (fIsLearning){ //learning mode
-        entry = 0;
-     }
-     if (fFirstTime){
-        //try to detect if it is normal or reverse read
-        fFirstEntry = entry;
-     }
-     else{
-        if (fFirstEntry == entry) return kFALSE;
-        //set the read direction
-        if (!fReadDirectionSet) {
-           if (entry < fFirstEntry){
-              fReverseRead = kTRUE;
-              fReadDirectionSet = kTRUE;
-           }
-           else if (entry > fFirstEntry){
-              fReverseRead =kFALSE;
-              fReadDirectionSet = kTRUE;
-           }
+      if (fIsLearning){ //learning mode
+         entry = 0;
+      }
+      if (fFirstTime){
+         //try to detect if it is normal or reverse read
+         fFirstEntry = entry;
+      }
+      else{
+         if (fFirstEntry == entry) return kFALSE;
+         //set the read direction
+         if (!fReadDirectionSet) {
+            if (entry < fFirstEntry){
+               fReverseRead = kTRUE;
+               fReadDirectionSet = kTRUE;
+            }
+            else if (entry > fFirstEntry){
+               fReverseRead =kFALSE;
+               fReadDirectionSet = kTRUE;
+            }
          }
-        
-         if (fReverseRead){ 
-            //reverse reading with prefetching
-            if (fEntryCurrent >0 && entry < fEntryNext){
-               //we can prefetch the next buffer
-               if (entry > fEntryCurrent)
+
+         if (fReverseRead) { 
+            // Reverse reading with prefetching
+            if (fEntryCurrent >0 && entry < fEntryNext) {
+               // We can prefetch the next buffer
+               if (entry >= fEntryCurrent) {
                   entry = fEntryCurrent - tree->GetAutoFlush() * fFillTimes;
+               }
                if (entry < 0) entry = 0;
             }
             else if (fEntryCurrent >= 0)
                //we are still reading from the oldest buffer, no need to prefetch a new one
                return kFALSE;
-     
+
             if (entry < 0) return kFALSE;
             fFirstBuffer = !fFirstBuffer; 
-        }
-        else {
-           //normal reading with prefetching
-           if (fEnablePrefetching){
-              if (entry < 0 && fEntryNext > 0)
-                 entry = fEntryCurrent;
-              else if (entry > fEntryCurrent){
-                 if (entry < fEntryNext)
-                    entry = fEntryNext;
-              }
-              else {
-                //we are still reading from the oldest buffer, no need to prefetch a new one
-                return kFALSE;
-              }
-              fFirstBuffer = !fFirstBuffer;
-           }
+         }
+         else {
+            //normal reading with prefetching
+            if (fEnablePrefetching){
+               if (entry < 0 && fEntryNext > 0) {
+                  entry = fEntryCurrent;
+               } else if (entry >= fEntryCurrent) {
+                  if (entry < fEntryNext) {
+                     entry = fEntryNext;
+                  }
+               }
+               else {
+                  //we are still reading from the oldest buffer, no need to prefetch a new one
+                  return kFALSE;
+               }
+               fFirstBuffer = !fFirstBuffer;
+            }
          }
       }
    }
@@ -509,7 +625,7 @@ Bool_t TTreeCache::FillBuffer()
    // during the training phase (fEntryNext is then set intentional to 
    // the end of the training phase).
    if (fEntryCurrent <= entry && entry < fEntryNext) return kFALSE;
-   
+
    // Triggered by the user, not the learning phase
    if (entry == -1)  entry = 0;
 
@@ -525,11 +641,11 @@ Bool_t TTreeCache::FillBuffer()
    // Check if owner has a TEventList set. If yes we optimize for this
    // Special case reading only the baskets containing entries in the
    // list.
-   TEventList *elist = fOwner->GetEventList();
+   TEventList *elist = fTree->GetEventList();
    Long64_t chainOffset = 0;
    if (elist) {
-      if (fOwner->IsA() ==TChain::Class()) {
-         TChain *chain = (TChain*)fOwner;
+      if (fTree->IsA() ==TChain::Class()) {
+         TChain *chain = (TChain*)fTree;
          Int_t t = chain->GetTreeNumber();
          chainOffset = chain->GetTreeOffset()[t];
       }
@@ -557,59 +673,128 @@ Bool_t TTreeCache::FillBuffer()
    Long64_t minEntry = fEntryCurrent;
    Int_t prevNtot;
    Int_t minBasket = 0;  // We will use this to avoid re-checking the first baskets in the 2nd (or more) run in the while loop.
+   Long64_t maxReadEntry = minEntry; // If we are stopped before the end of the 2nd pass, this marker will where we need to start next time.
    do {
       prevNtot = fNtotCurrentBuf;
       Int_t nextMinBasket = INT_MAX;
-      for (Int_t i=0;i<fNbranches;i++) {
-         TBranch *b = (TBranch*)fBranches->UncheckedAt(i);
-         if (b->GetDirectory()==0) continue;
-         if (b->GetDirectory()->GetFile() != fFile) continue;
-         Int_t nb = b->GetMaxBaskets();
-         Int_t *lbaskets   = b->GetBasketBytes();
-         Long64_t *entries = b->GetBasketEntry();
-         if (!lbaskets || !entries) continue;
-         //we have found the branch. We now register all its baskets
-         //from the requested offset to the basket below fEntrymax
-         Int_t blistsize = b->GetListOfBaskets()->GetSize();
-         Int_t j=minBasket;  // We need this out of the loop so we can find out how far we went.
-         for (;j<nb;j++) {
-            // This basket has already been read, skip it
-            if (j<blistsize && b->GetListOfBaskets()->UncheckedAt(j)) continue;
-
-            Long64_t pos = b->GetBasketSeek(j);
-            Int_t len = lbaskets[j];
-            if (pos <= 0 || len <= 0) continue;
-            //important: do not try to read fEntryNext, otherwise you jump to the next autoflush
-            if (entries[j] >= fEntryNext) break; // break out of the for each branch loop.
-            if (entries[j] < minEntry && (j<nb-1 && entries[j+1] <= minEntry)) continue;
-            if (elist) {
-               Long64_t emax = fEntryMax;
-               if (j<nb-1) emax = entries[j+1]-1;
-               if (!elist->ContainsRange(entries[j]+chainOffset,emax+chainOffset)) continue;
-            }
-            fNReadPref++;
-
-            if (fEnablePrefetching){
-               if (fFirstBuffer) {
+      UInt_t pass = 0;
+      while (pass < 2) {
+         // The first pass we add one basket per branches.
+         // then in the second pass we add the other baskets of the cluster.
+         // This is to support the case where the cache is too small to hold a full cluster.
+         ++pass;
+         for (Int_t i=0;i<fNbranches;i++) {
+            TBranch *b = (TBranch*)fBranches->UncheckedAt(i);
+            if (b->GetDirectory()==0) continue;
+            if (b->GetDirectory()->GetFile() != fFile) continue;
+            Int_t nb = b->GetMaxBaskets();
+            Int_t *lbaskets   = b->GetBasketBytes();
+            Long64_t *entries = b->GetBasketEntry();
+            if (!lbaskets || !entries) continue;
+            //we have found the branch. We now register all its baskets
+            //from the requested offset to the basket below fEntrymax
+            Int_t blistsize = b->GetListOfBaskets()->GetSize();
+            Int_t j=minBasket;  // We need this out of the loop so we can find out how far we went.
+            Bool_t firstBasketSeen = kFALSE;
+            for (;j<nb;j++) {
+               // This basket has already been read, skip it
+               if (j<blistsize && b->GetListOfBaskets()->UncheckedAt(j)) continue;
+               
+               Long64_t pos = b->GetBasketSeek(j);
+               Int_t len = lbaskets[j];
+               if (pos <= 0 || len <= 0) continue;
+               if (len > fBufferSizeMin) {
+                  // Do not cache a basket if it is bigger than the cache size!
+                  continue;
+               }
+               //important: do not try to read fEntryNext, otherwise you jump to the next autoflush
+               if (entries[j] >= fEntryNext) break; // break out of the for each branch loop.
+               if (entries[j] < minEntry && (j<nb-1 && entries[j+1] <= minEntry)) continue;
+               if (elist) {
+                  Long64_t emax = fEntryMax;
+                  if (j<nb-1) emax = entries[j+1]-1;
+                  if (!elist->ContainsRange(entries[j]+chainOffset,emax+chainOffset)) continue;
+               }
+               if (pass==2 && !firstBasketSeen) {
+                  // Okay, this has already been requested in the first pass.
+                  firstBasketSeen = kTRUE;
+                  continue;
+               }
+               fNReadPref++;
+               
+               if ( (fNtotCurrentBuf+len) > fBufferSizeMin ) {
+                  // Humm ... we are going to go over the requested size.
+                  if (clusterIterations > 0) {
+                     // We already have a full cluster and now we would go over the requested
+                     // size, let's stop caching (and make sure we start next time from the
+                     // end of the previous cluster).
+                     if (gDebug > 5) {
+                        Info("FillBuffer","Breaking early because %d is greater than %d at cluster iteration %d will restart at %lld",(fNtotCurrentBuf+len), fBufferSizeMin, clusterIterations,minEntry);
+                     }
+                     fEntryNext = minEntry;
+                     break;
+                  } else {
+                     if (pass == 1) {
+                        if ( (fNtotCurrentBuf+len) > 4*fBufferSizeMin ) {
+                           // Okay, so we have not even made one pass and we already have
+                           // accumulated request for more than twice the memory size ...
+                           // So stop for now, and will restart at the same point, hoping
+                           // that the basket will still be in memory and not asked again ..
+                           fEntryNext = maxReadEntry;
+                           if (gDebug > 5) {
+                              Info("FillBuffer","Breaking early because %d is greater than 2*%d at cluster iteration %d pass %d will restart at %lld",(fNtotCurrentBuf+len), fBufferSizeMin, clusterIterations,pass,fEntryNext);
+                           }
+                           break;
+                        }
+                     } else {
+                        // We have made one pass through the branches and thus already
+                        // requested one basket per branch, let's stop prefetching
+                        // now.
+                        if ( (fNtotCurrentBuf+len) > 2*fBufferSizeMin ) {
+                           fEntryNext = maxReadEntry;
+                           if (gDebug > 5) {
+                              Info("FillBuffer","Breaking early because %d is greater than 2*%d at cluster iteration %d pass %d will restart at %lld",(fNtotCurrentBuf+len), fBufferSizeMin, clusterIterations,pass,fEntryNext);
+                           }
+                           break;
+                        }
+                     }
+                  }
+               }
+               if (fEnablePrefetching){
+                  if (fFirstBuffer) {
+                     TFileCacheRead::Prefetch(pos,len);
+                     fNtotCurrentBuf = fNtot;
+                  }
+                  else {
+                     TFileCacheRead::SecondPrefetch(pos,len);
+                     fNtotCurrentBuf = fBNtot;
+                  }
+               }
+               else {
                   TFileCacheRead::Prefetch(pos,len);
                   fNtotCurrentBuf = fNtot;
                }
-               else {
-                  TFileCacheRead::SecondPrefetch(pos,len);
-                  fNtotCurrentBuf = fBNtot;
+               if ( ( j < (nb-1) ) && entries[j+1] > maxReadEntry ) {
+                  maxReadEntry = entries[j+1];
+               }
+               if (fNtotCurrentBuf > 4*fBufferSizeMin) {
+                  // Humm something wrong happened.
+                  Warning("FillBuffer","There is more data in this cluster (starting at entry %lld to %lld, current=%lld) than usual ... with %d %.3f%% of the branches we already have %d bytes (instead of %d)",
+                          fEntryCurrent,fEntryNext, entries[j], i, (100.0*i) / ((float)fNbranches), fNtotCurrentBuf,fBufferSizeMin);
+                  
+               }
+               if (pass==1) {
+                  // In the first pass, we record one basket per branch and move on to the next branch.
+                  break;
                }
             }
-            else {
-               TFileCacheRead::Prefetch(pos,len);
-               fNtotCurrentBuf = fNtot;
-            }
+            
+            if (j < nextMinBasket) nextMinBasket = j;
+            if (gDebug > 0) printf("Entry: %lld, registering baskets branch %s, fEntryNext=%lld, fNseek=%d, fNtotCurrentBuf=%d\n",minEntry,((TBranch*)fBranches->UncheckedAt(i))->GetName(),fEntryNext,fNseek,fNtotCurrentBuf);
          }
-         
-         if (j < nextMinBasket) nextMinBasket = j;
-         if (gDebug > 0) printf("Entry: %lld, registering baskets branch %s, fEntryNext=%lld, fNseek=%d, fNtotCurrentBuf=%d\n",minEntry,((TBranch*)fBranches->UncheckedAt(i))->GetName(),fEntryNext,fNseek,fNtotCurrentBuf);
-      }
+      } // loop for the 2 passes. 
       clusterIterations++;
-          
+
       minEntry = clusterIter.Next();
       if (fIsLearning) {
          fFillTimes++;
@@ -621,7 +806,7 @@ Bool_t TTreeCache::FillBuffer()
       // of entries (fBufferSizeMin > ((Long64_t)fNtotCurrentBuf*(clusterIterations+1))/clusterIterations).
       // fNtotCurrentBuf / clusterIterations is the average size we are accumulated so far at each loop.
       // and thus (fNtotCurrentBuf / clusterIterations) * (clusterIterations+1) is a good guess at what the next total size
-      // would be if we run the loop one more time.   fNtotCurrentBuf and clusterIterations are Int_t but can something
+      // would be if we run the loop one more time.   fNtotCurrentBuf and clusterIterations are Int_t but can sometimes
       // be 'large' (i.e. 30Mb * 300 intervals) and can overflow the numercial limit of Int_t (i.e. become
       // artificially negative).   To avoid this issue we promote fNtotCurrentBuf to a long long (64 bits rather than 32 bits) 
       if (!((fBufferSizeMin > ((Long64_t)fNtotCurrentBuf*(clusterIterations+1))/clusterIterations) && (prevNtot < fNtotCurrentBuf) && (minEntry < fEntryMax)))
@@ -639,18 +824,15 @@ Bool_t TTreeCache::FillBuffer()
       if (fEntryNext > fEntryMax) fEntryNext = fEntryMax;
    } while (kTRUE);
 
-   //in learning mode clear cache
-   if (fIsLearning) {
-      fEntryNext = -1;
-      fEntryCurrent = -1;
-      TFileCacheRead::Prefetch(0, 0);
-      TFileCacheRead::SecondPrefetch(0, 0);
-      fFirstBuffer = !fFirstBuffer;
-   }
-   if (!fIsLearning && fFirstTime){
-      // first time we add autoFlush entries , after fFillTimes * autoFlush
-      // only in reverse prefetching mode
-      fFirstTime = kFALSE;
+   if (fEnablePrefetching) {
+      if (fIsLearning) {
+         fFirstBuffer = !fFirstBuffer;
+      }
+      if (!fIsLearning && fFirstTime){
+         // First time we add autoFlush entries , after fFillTimes * autoFlush
+         // only in reverse prefetching mode
+         fFirstTime = kFALSE;
+      }
    }
    fIsLearning = kFALSE;
    return kTRUE;
@@ -694,14 +876,6 @@ Int_t TTreeCache::GetLearnEntries()
 }
 
 //_____________________________________________________________________________
-TTree *TTreeCache::GetOwner() const
-{
-   //return the owner of this cache.
-
-   return fOwner;
-}
-
-//_____________________________________________________________________________
 TTree *TTreeCache::GetTree() const
 {
    //return Tree in the cache
@@ -724,17 +898,29 @@ void TTreeCache::Print(Option_t *option) const
    //   Number of blocks in current cache..: 210, total size: 6280352
    //
    // if option = "a" the list of blocks in the cache is printed
-   // see also class TTreePerfStats
-   
+   // see also class TTreePerfStats.
+   // if option contains 'cachedbranches', the list of branches being
+   // cached is printed.
+
    TString opt = option;
    opt.ToLower();
-   printf("******TreeCache statistics for file: %s ******\n",fFile->GetName());
+   printf("******TreeCache statistics for file: %s ******\n",fFile ? fFile->GetName() : "no file set");
    if (fNbranches <= 0) return;
    printf("Number of branches in the cache ...: %d\n",fNbranches);
    printf("Cache Efficiency ..................: %f\n",GetEfficiency());
    printf("Cache Efficiency Rel...............: %f\n",GetEfficiencyRel());
    printf("Learn entries......................: %d\n",TTreeCache::GetLearnEntries());
-   TFileCacheRead::Print(option);
+   if ( opt.Contains("cachedbranches") ) {
+      opt.ReplaceAll("cachedbranches","");
+      printf("Cached branches....................:\n");
+      const TObjArray *cachedBranches = this->GetCachedBranches();
+      Int_t nbranches = cachedBranches->GetEntriesFast();
+      for (Int_t i = 0; i < nbranches; ++i) {
+         TBranch* branch = (TBranch*) cachedBranches->UncheckedAt(i);
+         printf("Branch name........................: %s\n",branch->GetName());
+      }
+   }
+   TFileCacheRead::Print(opt);
 }
 
 
@@ -773,7 +959,7 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
    // Used to read a chunk from a block previously fetched. It will call FillBuffer 
    // even if the cache lookup succeeds, because it will try to prefetch the next block 
    // as soon as we start reading from the current block.
- 
+
    if (TFileCacheRead::ReadBuffer(buf,pos,len) == 1){
       //call FillBuffer to prefetch next block if necessary
       //(if we are currently reading from the last block available)
@@ -781,13 +967,14 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
       fNReadOk++;
       return 1;
    }
-      
+
    //keep on prefetching until request is satisfied
    while (1){
-     if(TFileCacheRead::ReadBuffer(buf, pos, len))
-       break;
-     FillBuffer();
-         fNReadMiss++;
+      if(TFileCacheRead::ReadBuffer(buf, pos, len)) {
+         break;
+      }
+      FillBuffer();
+      fNReadMiss++;
    }
 
    fNReadOk++;
@@ -819,6 +1006,10 @@ void TTreeCache::ResetCache()
    // This will simply clear the cache
    TFileCacheRead::Prefetch(0,0);
 
+   if (fEnablePrefetching) {
+      fFirstTime = kTRUE;
+      TFileCacheRead::SecondPrefetch(0, 0);
+   }
 }
 
 //_____________________________________________________________________________
@@ -831,7 +1022,7 @@ void TTreeCache::SetEntryRange(Long64_t emin, Long64_t emax)
    // This is called by TTreePlayer::Process in an automatic way...
    // don't restart it if the user has specified the branches.
    Bool_t needLearningStart = (fEntryMin != emin) && fIsLearning && !fIsManual;
-   
+
    fEntryMin  = emin;
    fEntryMax  = emax;
    fEntryNext  = fEntryMin + fgLearnEntries;
@@ -843,6 +1034,22 @@ void TTreeCache::SetEntryRange(Long64_t emin, Long64_t emax)
       // Restart learning
       StartLearningPhase();
    }
+}
+
+//_____________________________________________________________________________
+void TTreeCache::SetFile(TFile *file, TFile::ECacheAction action)
+{
+   // Overload to make sure that the object specific
+
+   // The infinite recursion is 'broken' by the fact that
+   // TFile::SetCacheRead remove the entry from fCacheReadMap _before_
+   // calling SetFile (and also by setting fFile to zero before the calling).
+   if (fFile) {
+      TFile *prevFile = fFile;
+      fFile = 0;
+      prevFile->SetCacheRead(0, fTree, action);
+   }
+   TFileCacheRead::SetFile(file, action);
 }
 
 //_____________________________________________________________________________
@@ -861,11 +1068,10 @@ void TTreeCache::StartLearningPhase()
    // The name should be enough to explain the method.
    // The only additional comments is that the cache is cleaned before
    // the new learning phase.
-   
+
    fIsLearning = kTRUE;
    fIsManual = kFALSE;
    fNbranches  = 0;
-   fZipBytes   = 0;
    if (fBrNames) fBrNames->Delete();
    fIsTransferred = kFALSE;
    fEntryCurrent = -1;
@@ -879,7 +1085,7 @@ void TTreeCache::StopLearningPhase()
    // he is going to use.
    // For the moment it's just a call to FillBuffer() since that method
    // will create the buffer lists from the specified branches.
-   
+
    if (fIsLearning) {
       // This will force FillBuffer to read the buffers.
       fEntryNext = -1;
@@ -896,21 +1102,18 @@ void TTreeCache::StopLearningPhase()
 }
 
 //_____________________________________________________________________________
-void TTreeCache::UpdateBranches(TTree *tree, Bool_t owner)
+void TTreeCache::UpdateBranches(TTree *tree)
 {
    // Update pointer to current Tree and recompute pointers to the branches in the cache.
 
-   if (owner) {
-      fOwner = tree;
-      SetFile(tree->GetCurrentFile());
-   }
+
    fTree = tree;
 
    fEntryMin  = 0;
    fEntryMax  = fTree->GetEntries();
-   
+
    fEntryCurrent = -1;
-   
+
    if (fBrNames->GetEntries() == 0 && fIsLearning) {
       // We still need to learn.
       fEntryNext = fEntryMin + fgLearnEntries;
@@ -919,7 +1122,6 @@ void TTreeCache::UpdateBranches(TTree *tree, Bool_t owner)
       fIsLearning = kFALSE;
       fEntryNext = -1;
    }
-   fZipBytes  = 0;
    fNbranches = 0;
 
    TIter next(fBrNames);
@@ -930,7 +1132,6 @@ void TTreeCache::UpdateBranches(TTree *tree, Bool_t owner)
          continue;
       }
       fBranches->AddAt(b, fNbranches);
-      fZipBytes   += b->GetZipBytes();
       fNbranches++;
    }
 }

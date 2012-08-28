@@ -42,7 +42,7 @@ class TSocket;
 class TVirtualPacketizer;
 class TProofProgressStatus;
 class TProofProgressInfo;
-
+class TSelector;
 
 class TVirtualProofPlayer : public TObject, public TQObject {
 
@@ -56,6 +56,9 @@ public:
 
    virtual Long64_t  Process(TDSet *set,
                              const char *selector, Option_t *option = "",
+                             Long64_t nentries = -1, Long64_t firstentry = 0) = 0;
+   virtual Long64_t  Process(TDSet *set,
+                             TSelector *selector, Option_t *option = "",
                              Long64_t nentries = -1, Long64_t firstentry = 0) = 0;
    virtual Long64_t  Finalize(Bool_t force = kFALSE, Bool_t sync = kFALSE) = 0;
    virtual Long64_t  Finalize(TQueryResult *qr) = 0;
@@ -115,8 +118,9 @@ public:
    virtual Bool_t    IsClient() const = 0;
 
    virtual EExitStatus GetExitStatus() const = 0;
-   virtual Long64_t    GetEventsProcessed() const = 0;
-   virtual void        AddEventsProcessed(Long64_t ev) = 0;
+   virtual void      SetExitStatus(EExitStatus) = 0;
+   virtual Long64_t  GetEventsProcessed() const = 0;
+   virtual void      AddEventsProcessed(Long64_t ev) = 0;
    virtual TProofProgressStatus*  GetProgressStatus() const = 0;
 
    virtual void      SetDispatchTimer(Bool_t on = kTRUE) = 0;
@@ -125,6 +129,8 @@ public:
    virtual void      SetInitTime() = 0;
    virtual Long64_t  GetCacheSize() = 0;
    virtual Int_t     GetLearnEntries() = 0;
+   
+   virtual void      UpdateProgressInfo() = 0;
 
    virtual TVirtualPacketizer *GetPacketizer() const { return 0; }
 

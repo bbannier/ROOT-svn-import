@@ -568,6 +568,9 @@ Long64_t THStack::Merge(TCollection* li, TFileMergeInfo * /* info */)
    // Merge the THStack in the TList into this stack.
    // Returns the total number of histograms in the result or -1 in case of an error.
    
+   if (li==0 || li->GetEntries()==0) {
+      return fHists->GetEntries();
+   }
    TIter next(li);
    TList histLists;
    while (TObject* o = next()) {
@@ -798,8 +801,10 @@ void THStack::Paint(Option_t *option)
             h1->Paint(loption);
             static TClassRef clTFrame = TClass::GetClass("TFrame",kFALSE);
             TAttFill *frameFill = (TAttFill*)clTFrame->DynamicCast(TAttFill::Class(),gPad->GetFrame());
-            h1->SetFillColor(frameFill->GetFillColor());
-            h1->SetFillStyle(frameFill->GetFillStyle());
+            if (frameFill) { 
+               h1->SetFillColor(frameFill->GetFillColor());
+               h1->SetFillStyle(frameFill->GetFillStyle());
+            }
             h1->Paint(loption);
             h1->SetFillColor(h1col);
             h1->SetFillStyle(h1fill);

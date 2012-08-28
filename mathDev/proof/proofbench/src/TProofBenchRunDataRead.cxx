@@ -241,6 +241,10 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
       // Prepare the dataset for this run. possibly a subsample of
       // the total one
       TFileCollection *fc = GetDataSet(dsname, nactive, nx);
+      if (!fc) {
+         Error("Run", "could not retrieve dataset '%s'", dsname.Data());
+         continue;
+      }
       fc->Print("F");
       TString dsn = TString::Format("%s_%d_%d", dsbasename.Data(), nactive, (Int_t)nx);
       fProof->RegisterDataSet(dsn, fc, "OT");
@@ -277,7 +281,8 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
 
          //save perfstats
          TString perfstats_name = "PROOF_PerfStats";
-         TTree* t = dynamic_cast<TTree*>(l->FindObject(perfstats_name.Data()));
+         TTree *t = 0;
+         if (l) t = dynamic_cast<TTree*>(l->FindObject(perfstats_name.Data()));
          if (t) {
             TTree* tnew=(TTree*)t->Clone("tnew");
 
@@ -302,7 +307,10 @@ void TProofBenchRunDataRead::Run(const char *dset, Int_t start, Int_t stop,
                curdir->cd();
             }
          } else {
-            Warning("Run", "%s: tree not found", perfstats_name.Data());
+            if (l)
+               Warning("Run", "%s: tree not found", perfstats_name.Data());
+            else
+               Error("Run", "PROOF output list is empty!");
          }
 
          // Performance measures from TQueryResult
@@ -436,7 +444,9 @@ TFileCollection *TProofBenchRunDataRead::GetDataSet(const char *dset,
       Error("GetDataSet", "dataset '%s' could not be retrieved", dset);
       return fcsub;
    }
-   
+   // Is it remote ?
+   Bool_t remote = (fcref->TestBit(TFileCollection::kRemoteCollection)) ? kTRUE : kFALSE;
+
    // Separate info per server
 #if ROOT_VERSION_CODE >= ROOT_VERSION(5,30,0)
    TMap *mpref = fcref->GetFilesPerServer(fProof->GetMaster(), kTRUE);
@@ -481,7 +491,8 @@ TFileCollection *TProofBenchRunDataRead::GetDataSet(const char *dset,
          TUrl urlsrv(ksrv->GetName());
          if (TString(urlsrv.GetHostFQDN()).IsNull())
             urlsrv.SetHost(TUrl(gProof->GetMaster()).GetHostFQDN());
-         if (!strcmp(urlsrv.GetHostFQDN(), TUrl(key->GetName()).GetHostFQDN())) {
+         if (remote ||
+             !strcmp(urlsrv.GetHostFQDN(), TUrl(key->GetName()).GetHostFQDN())) {
             if ((xfc = dynamic_cast<TFileCollection *>(mpref->GetValue(ksrv)))) {
                if ((lswrks = dynamic_cast<TList *>(mpnodes->GetValue(key)))) {
                   Int_t nfnd = fFilesPerWrk * lswrks->GetSize();
@@ -506,6 +517,12 @@ TFileCollection *TProofBenchRunDataRead::GetDataSet(const char *dset,
    // Update counters
    fcsub->Update();
    fcsub->Print();
+   
+   // Make sure that the tree name is the one of the original dataset
+   if (fcref) {
+      TString dflt(fcref->GetDefaultTreeName());
+      if (!dflt.IsNull()) fcsub->SetDefaultTreeName(dflt);
+   }
 
    // Cleanup
    SafeDelete(fcref);

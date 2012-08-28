@@ -579,7 +579,7 @@ Int_t TVolumeView::GetGlobalRange(const TVolumeView *rootNode,Float_t *globalMin
          }
          // Calculate the range of the outlined cube verteces.
          GetLocalRange(globalMin,globalMax);
-         Float_t offSet[3] = {position->GetX(),position->GetY(),position->GetZ()};
+         Float_t offSet[3] = {Float_t(position->GetX()),Float_t(position->GetY()),Float_t(position->GetZ())};
          for (Int_t i=0;i<3;i++) {
             globalMin[i] += offSet[i];
             globalMax[i] += offSet[i];
@@ -849,11 +849,9 @@ TString TVolumeView::PathP() const
       str += "/";
    }
    str +=  GetName();
-   UInt_t positionId = 0;
    TVolumePosition *p = GetPosition();
    if (p) {
       char buffer[10];
-      positionId = p->GetId();
       snprintf(buffer,10,";%d",p->GetId());
       str +=  buffer;
    }

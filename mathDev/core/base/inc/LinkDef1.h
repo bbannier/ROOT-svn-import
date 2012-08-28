@@ -51,7 +51,6 @@
 #pragma link C++ global gPluginMgr;
 #pragma link C++ global gApplication;
 #pragma link C++ global gBenchmark;
-#pragma link C++ global gDirectory;
 #pragma link C++ global gDebug;
 #pragma link C++ global gErrorIgnoreLevel;
 #pragma link C++ global gErrorAbortLevel;
@@ -156,6 +155,7 @@
 #pragma link C++ class TRootIOCtor+;
 #pragma link C++ class TCanvasImp;
 #pragma link C++ class TColor+;
+#pragma link C++ class TColorGradient+;
 #pragma link C++ class TContextMenu+;
 #pragma link C++ class TContextMenuImp+;
 #pragma link C++ class TControlBarImp+;

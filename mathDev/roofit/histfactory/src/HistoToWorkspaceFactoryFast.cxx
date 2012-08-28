@@ -31,6 +31,7 @@ END_HTML
 #include "RooProdPdf.h"
 #include "RooAddPdf.h"
 #include "RooGaussian.h"
+#include "RooPoisson.h"
 #include "RooExponential.h"
 #include "RooRandom.h"
 #include "RooCategory.h"
@@ -53,12 +54,13 @@ END_HTML
 #include "RooStats/RooStatsUtils.h"
 #include "RooStats/ModelConfig.h"
 #include "RooStats/HistFactory/PiecewiseInterpolation.h"
+#include "RooStats/HistFactory/ParamHistFunc.h"
 
 #include "TH2F.h"
 #include "TH3F.h"
 #include "TFile.h"
 #include "TCanvas.h"
-#include "TH1F.h"
+#include "TH1.h"
 #include "TLine.h"
 #include "TTree.h"
 #include "TMarker.h"
@@ -69,11 +71,13 @@ END_HTML
 #include "TMatrixDSym.h"
 
 // specific to this package
-//#include "RooStats/HistFactory/Helper.h"
-#include "Helper.h"
 #include "RooStats/HistFactory/LinInterpVar.h"
 #include "RooStats/HistFactory/FlexibleInterpVar.h"
 #include "RooStats/HistFactory/HistoToWorkspaceFactoryFast.h"
+#include "Helper.h"
+
+
+#include <algorithm>
 
 #define VERBOSE
 
@@ -93,32 +97,195 @@ ClassImp(RooStats::HistFactory::HistoToWorkspaceFactoryFast)
 namespace RooStats{
 namespace HistFactory{
 
-  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(){}
+  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast() : 
+       fNomLumi(0), fLumiError(0),   
+       fLowBin(0), fHighBin(0)  
+  {}
+
   HistoToWorkspaceFactoryFast::~HistoToWorkspaceFactoryFast(){
-    fclose(pFile);
   }
 
-  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(string filePrefix, string row, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* f):
-      fFileNamePrefix(filePrefix),
-      fRowTitle(row),
+  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(string /*filePrefix*/, string /*row*/, vector<string> syst, double nomL, double lumiE, int low, int high, TFile* /*file*/):
+    //fFileNamePrefix(filePrefix),
+    //fRowTitle(row),
       fSystToFix(syst),
       fNomLumi(nomL),
       fLumiError(lumiE),
       fLowBin(low),
-      fHighBin(high),
-      fOut_f(f) {
+      fHighBin(high) {
 
-    //    fResultsPrefixStr<<"results" << "_" << fNomLumi<< "_" << fLumiError<< "_" << fLowBin<< "_" << fHighBin;
+    /*
     fResultsPrefixStr<< "_" << fRowTitle;
     while(fRowTitle.find("\\ ")!=string::npos){
       int pos=fRowTitle.find("\\ ");
       fRowTitle.replace(pos, 1, "");
     }
-    pFile = fopen ((filePrefix+"_results.table").c_str(),"a"); 
+    */
     //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
 
   }
 
+  HistoToWorkspaceFactoryFast::HistoToWorkspaceFactoryFast(RooStats::HistFactory::Measurement& measurement ) :
+    // fFileNamePrefix( measurement.GetOutputFilePrefix() ),
+    // fRowTitle( measurement.GetName() ),
+    fSystToFix( measurement.GetConstantParams() ),
+    fNomLumi( measurement.GetLumi() ),
+    fLumiError( measurement.GetLumi()*measurement.GetLumiRelErr() ),
+    fLowBin( measurement.GetBinLow() ),
+    fHighBin( measurement.GetBinHigh() ) {
+
+
+    // Configure the prefix string
+    /*
+    fResultsPrefixStr<< "_" << fRowTitle;
+    while(fRowTitle.find("\\ ")!=string::npos){
+      int pos=fRowTitle.find("\\ ");
+      fRowTitle.replace(pos, 1, "");
+    }
+    */
+
+    // Set Preprocess functions
+    SetFunctionsToPreprocess( measurement.GetPreprocessFunctions() );
+    
+    
+    //RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR) ;
+
+  }
+
+  void HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( const std::string& ModelName, RooWorkspace* ws_single, Measurement& measurement ) {
+
+    // Configure a workspace by doing any
+    // necessary post-processing and by
+    // creating a ModelConfig
+
+    // Make a ModelConfig and configure it
+    ModelConfig * proto_config = (ModelConfig *) ws_single->obj("ModelConfig");
+    if( proto_config == NULL ) {
+      std::cout << "Error: Did not find 'ModelConfig' object in file: " << ws_single->GetName() 
+		<< std::endl;
+      throw hf_exc();
+    }
+    cout << "Setting Parameter of Interest as :" << measurement.GetPOI() << endl;
+    RooRealVar* poi = (RooRealVar*) ws_single->var( (measurement.GetPOI()).c_str() );
+    RooArgSet * params= new RooArgSet;
+    if(poi){
+      params->add(*poi);
+    }
+    proto_config->SetParametersOfInterest(*params);
+
+    // Activate Additional Constraint Terms
+    if( measurement.GetGammaSyst().size()>0 || measurement.GetUniformSyst().size()>0 || measurement.GetLogNormSyst().size()>0 || measurement.GetNoSyst().size()>0) {
+      //factory.EditSyst( ws_single, ("model_"+ch_name).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
+      HistoToWorkspaceFactoryFast::EditSyst( ws_single, (ModelName).c_str(), measurement.GetGammaSyst(), measurement.GetUniformSyst(), measurement.GetLogNormSyst(), measurement.GetNoSyst());
+      std::string NewModelName = "newSimPdf"; // <- This name is hard-coded in HistoToWorkspaceFactoryFast::EditSyt.  Probably should be changed to : std::string("new") + ModelName;
+      proto_config->SetPdf( *ws_single->pdf( "newSimPdf" ) );
+    }
+  
+    // Set the ModelConfig's Params of Interest
+    RooAbsData* expData = ws_single->data("asimovData");
+    if(poi){
+      proto_config->GuessObsAndNuisance(*expData);
+    }
+
+    // Cool, we're done
+    return; // ws_single;
+  }
+
+
+  RooWorkspace* HistoToWorkspaceFactoryFast::MakeSingleChannelModel( Measurement& measurement, Channel& channel ) {
+
+    // This is a pretty light-weight wrapper function
+    //
+    // Take a fully configured measurement as well as
+    // one of its channels
+    //
+    // Return a workspace representing that channel
+    // Do this by first creating a vector of EstimateSummary's
+    // and this by configuring the workspace with any post-processing
+
+    // Get the channel's name
+    string ch_name = channel.GetName();
+
+    // First, turn the channel into a vector of estimate summaries
+    std::vector<EstimateSummary> channel_estimateSummary = GetChannelEstimateSummaries( measurement, channel );
+    
+    // Then, use HistFactory on that vector to create the workspace
+    RooWorkspace* ws_single = this->MakeSingleChannelModel(channel_estimateSummary, measurement.GetConstantParams());
+    if( ws_single == NULL ) {
+      std::cout << "Error: Failed to make Single-Channel workspace for channel: " << ch_name
+		<< " and measurement: " << measurement.GetName() << std::endl;
+      throw hf_exc();
+    }
+
+    // Finally, configure that workspace based on
+    // properties of the measurement
+    HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( "model_"+ch_name, ws_single, measurement );
+
+    return ws_single;
+
+  }
+
+  RooWorkspace* HistoToWorkspaceFactoryFast::MakeCombinedModel( Measurement& measurement ) {
+
+    // This function takes a fully configured measurement
+    // which may contain several channels and returns
+    // a workspace holding the combined model
+    //
+    // This can be used, for example, within a script to produce 
+    // a combined workspace on-the-fly
+    //
+    // This is a static function (for now) to make
+    // it a one-liner
+
+    // First, we create an instance of a HistFactory 
+
+    HistoToWorkspaceFactoryFast factory( measurement );
+    
+
+    // Loop over the channels and create the individual workspaces
+
+    vector<RooWorkspace*> channel_workspaces;
+    vector<string>        channel_names;
+    
+    
+    for( unsigned int chanItr = 0; chanItr < measurement.GetChannels().size(); ++chanItr ) {
+    
+      HistFactory::Channel& channel = measurement.GetChannels().at( chanItr );
+
+      if( ! channel.CheckHistograms() ) {
+	std::cout << "MakeModelAndMeasurementsFast: Channel: " << channel.GetName()
+		  << " has uninitialized histogram pointers" << std::endl;
+	throw hf_exc();
+      }
+
+      string ch_name = channel.GetName();
+      channel_names.push_back(ch_name);
+
+      RooWorkspace* ws_single = factory.MakeSingleChannelModel( measurement, channel );
+      
+      channel_workspaces.push_back(ws_single);
+
+    }
+
+    
+    // Now, combine the individual channel workspaces to
+    // form the combined workspace
+
+    RooWorkspace* ws = factory.MakeCombinedModel( channel_names, channel_workspaces );
+
+
+    // Configure the workspace
+    
+    HistoToWorkspaceFactoryFast::ConfigureWorkspaceForMeasurement( "simPdf", ws, measurement );
+
+    // Done.  Return the pointer
+
+    return ws;
+
+
+  }
+
+  /*
   string HistoToWorkspaceFactoryFast::FilePrefixStr(string prefix){
 
     stringstream ss;
@@ -126,33 +293,67 @@ namespace HistFactory{
 
     return ss.str();
   }
+  */
 
-  void HistoToWorkspaceFactoryFast::ProcessExpectedHisto(TH1F* hist,RooWorkspace* proto, string prefix, string
-                                                         productPrefix, string systTerm, double /*low*/ , double
-                                                         /*high*/, int /*lowBin*/, int /*highBin*/ ){
-    if(hist)
+  void HistoToWorkspaceFactoryFast::ProcessExpectedHisto(TH1* hist,RooWorkspace* proto, string prefix, string
+						       productPrefix, string systTerm, double /*low*/ , double
+						       /*high*/, int /*lowBin*/, int /*highBin*/ ){
+    if(hist) {
       cout << "processing hist " << hist->GetName() << endl;
-    else
+    } else {
       cout << "hist is empty" << endl;
-
-
-    if(!proto->var(fObsName.c_str())){
-      proto->factory(Form("%s[%f,%f]",fObsName.c_str(),hist->GetXaxis()->GetXmin(),hist->GetXaxis()->GetXmax()));
-      proto->var(fObsName.c_str())->setBins(hist->GetNbinsX());
+      R__ASSERT(hist != 0); 
+      return;                  
     }
-    RooDataHist* histDHist = new RooDataHist((prefix+"nominalDHist").c_str(),"",*proto->var(fObsName.c_str()),hist);
-    RooHistFunc* histFunc = new RooHistFunc((prefix+"_nominal").c_str(),"",*proto->var(fObsName.c_str()),*histDHist,0) ;
-    proto->import(*histFunc);
 
-    // now create the product of the overall efficiency times the sigma(params) for this estimate
+    /// require dimension >=1 or <=3
+    if (fObsNameVec.empty() && !fObsName.empty()) { fObsNameVec.push_back(fObsName); }    
+    R__ASSERT( fObsNameVec.size()>=1 && fObsNameVec.size()<=3 );
+
+    /// determine histogram dimensionality 
+    unsigned int histndim(1);
+    std::string classname = hist->ClassName();
+    if      (classname.find("TH1")==0) { histndim=1; }
+    else if (classname.find("TH2")==0) { histndim=2; }
+    else if (classname.find("TH3")==0) { histndim=3; }
+    R__ASSERT( histndim==fObsNameVec.size() );
+
+    /// create roorealvar observables
+    RooArgList observables;
+    std::vector<std::string>::iterator itr = fObsNameVec.begin();
+    for (int idx=0; itr!=fObsNameVec.end(); ++itr, ++idx ) {
+      if ( !proto->var(itr->c_str()) ) {
+	TAxis* axis(0);
+	if (idx==0) { axis = hist->GetXaxis(); }
+	if (idx==1) { axis = hist->GetYaxis(); }
+	if (idx==2) { axis = hist->GetZaxis(); }
+	Int_t nbins = axis->GetNbins();	
+	Double_t xmin = axis->GetXmin();
+	Double_t xmax = axis->GetXmax(); 	
+	// create observable
+	proto->factory(Form("%s[%f,%f]",itr->c_str(),xmin,xmax));
+	proto->var(itr->c_str())->setBins(nbins);
+      }
+      observables.add( *proto->var(itr->c_str()) );
+    }
+
+    RooDataHist* histDHist = new RooDataHist((prefix+"nominalDHist").c_str(),"",observables,hist);
+    RooHistFunc* histFunc = new RooHistFunc((prefix+"_nominal").c_str(),"",observables,*histDHist,0) ;
+    //RooHistPdf* histPdf = new RooHistPdf((prefix+"_nominalpdf").c_str(),"",observables,*histDHist,0);
+
+    proto->import(*histFunc);
+    //proto->import(*histPdf);
+
+    /// now create the product of the overall efficiency times the sigma(params) for this estimate
     proto->factory(("prod:"+productPrefix+"("+prefix+"_nominal,"+systTerm+")").c_str() );    
     //    proto->Print();
   }
 
-  void HistoToWorkspaceFactoryFast::AddMultiVarGaussConstraint(RooWorkspace* proto, string prefix,int lowBin, int highBin, vector<string>& likelihoodTermNames){
+  void HistoToWorkspaceFactoryFast::AddMultiVarGaussConstraint(RooWorkspace* proto, string prefix,int lowBin, int highBin, vector<string>& constraintTermNames){
     // these are the nominal predictions: eg. the mean of some space of variations
     // later fill these in a loop over histogram bins
-    TVectorD mean(highBin-lowBin);
+
+    TVectorD mean(highBin); //-lowBin); // MB: fix range
     cout << "a" << endl;
     for(Int_t i=lowBin; i<highBin; ++i){
       std::stringstream str;
@@ -164,10 +365,8 @@ namespace HistFactory{
     TMatrixDSym Cov(highBin-lowBin);
     for(int i=lowBin; i<highBin; ++i){
       for(int j=0; j<highBin-lowBin; ++j){
-        if(i==j) 
-    Cov(i,j) = sqrt(mean(i));
-        else
-    Cov(i,j) = 0;
+        if(i==j) { Cov(i,j) = sqrt(mean(i)); } // MB : this doesn't make sense to me if lowBin!=0 (?)
+	else { Cov(i,j) = 0; } 
       }
     }
     // can't make MultiVarGaussian with factory yet, do it by hand
@@ -177,24 +376,56 @@ namespace HistFactory{
              
     proto->import(constraint);
 
-    likelihoodTermNames.push_back(constraint.GetName());
-
+    constraintTermNames.push_back(constraint.GetName());
   }
 
 
-  void HistoToWorkspaceFactoryFast::LinInterpWithConstraint(RooWorkspace* proto, TH1F* nominal, vector<TH1F*> lowHist, vector<TH1F*> highHist, 
+  void HistoToWorkspaceFactoryFast::LinInterpWithConstraint(RooWorkspace* proto, TH1* nominal, vector<TH1*> lowHist, vector<TH1*> highHist, 
              vector<string> sourceName, string prefix, string productPrefix, string systTerm, 
-                                                            int /*lowBin*/, int /*highBin */, vector<string>& likelihoodTermNames){
+                                                            int /*lowBin*/, int /*highBin */, vector<string>& constraintTermNames){
     // these are the nominal predictions: eg. the mean of some space of variations
     // later fill these in a loop over histogram bins
 
+    // require dimension >=1 or <=3
+    if (fObsNameVec.empty() && !fObsName.empty()) { fObsNameVec.push_back(fObsName); }    
+    R__ASSERT( fObsNameVec.size()>=1 && fObsNameVec.size()<=3 );
 
-    if(!proto->var(fObsName.c_str())){
-      proto->factory(Form("%s[%f,%f]",fObsName.c_str(),nominal->GetXaxis()->GetXmin(),nominal->GetXaxis()->GetXmax()));
-      proto->var(fObsName.c_str())->setBins(nominal->GetNbinsX());
+    // determine histogram dimensionality 
+    unsigned int histndim(1);
+    std::string classname = nominal->ClassName();
+    if      (classname.find("TH1")==0) { histndim=1; }
+    else if (classname.find("TH2")==0) { histndim=2; }
+    else if (classname.find("TH3")==0) { histndim=3; }
+    R__ASSERT( histndim==fObsNameVec.size() );
+    //    cout <<"In LinInterpWithConstriants and histndim = " << histndim <<endl;
+
+    // create roorealvar observables
+    RooArgList observables;
+    std::vector<std::string>::iterator itr = fObsNameVec.begin();
+    for (int idx=0; itr!=fObsNameVec.end(); ++itr, ++idx ) {
+      if ( !proto->var(itr->c_str()) ) {
+	TAxis* axis(NULL);
+	if (idx==0) { axis = nominal->GetXaxis(); }
+	else if (idx==1) { axis = nominal->GetYaxis(); }
+	else if (idx==2) { axis = nominal->GetZaxis(); }
+	else {
+	  std::cout << "Error: Too many observables.  "
+		    << "HistFactory only accepts up to 3 observables (3d) "
+		    << std::endl;
+	  throw hf_exc();
+	}
+	Int_t nbins = axis->GetNbins();	
+	Double_t xmin = axis->GetXmin();
+	Double_t xmax = axis->GetXmax(); 	
+	// create observable
+	proto->factory(Form("%s[%f,%f]",itr->c_str(),xmin,xmax));
+	proto->var(itr->c_str())->setBins(nbins);
+      }
+      observables.add( *proto->var(itr->c_str()) );
     }
-    RooDataHist* nominalDHist = new RooDataHist((prefix+"nominalDHist").c_str(),"",*proto->var(fObsName.c_str()),nominal);
-    RooHistFunc* nominalFunc = new RooHistFunc((prefix+"nominal").c_str(),"",*proto->var(fObsName.c_str()),*nominalDHist,0) ;
+
+    RooDataHist* nominalDHist = new RooDataHist((prefix+"nominalDHist").c_str(),"",observables,nominal);
+    RooHistFunc* nominalFunc = new RooHistFunc((prefix+"nominal").c_str(),"",observables,*nominalDHist,0) ;
 
     // make list of abstract parameters that interpolate in space of variations
     RooArgList params( ("alpha_Hist") );
@@ -211,14 +442,11 @@ namespace HistFactory{
         // now add a constraint term for these parameters
         string command=("Gaussian::alpha_"+sourceName.at(j)+"Constraint(alpha_"+sourceName.at(j)+",nom_alpha_"+sourceName.at(j)+"[0.,-10,10],1.)");
         cout << command << endl;
-        likelihoodTermNames.push_back(  proto->factory( command.c_str() )->GetName() );
+        constraintTermNames.push_back(  proto->factory( command.c_str() )->GetName() );
 	proto->var(("nom_alpha_"+sourceName.at(j)).c_str())->setConstant();
 	const_cast<RooArgSet*>(proto->set("globalObservables"))->add(*proto->var(("nom_alpha_"+sourceName.at(j)).c_str()));
-
       } 
-
       params.add(* temp );
-
     }
 
     // now make function that linearly interpolates expectation between variations
@@ -230,19 +458,23 @@ namespace HistFactory{
       str<<"_"<<j;
       lowHist.at(j);
       highHist.at(j);
-      RooDataHist* lowDHist = new RooDataHist((prefix+str.str()+"lowDHist").c_str(),"",*proto->var(fObsName.c_str()),lowHist.at(j));
-      RooDataHist* highDHist = new RooDataHist((prefix+str.str()+"lowDHist").c_str(),"",*proto->var(fObsName.c_str()),highHist.at(j));
-      RooHistFunc* lowFunc = new RooHistFunc((prefix+str.str()+"low").c_str(),"",*proto->var(fObsName.c_str()),*lowDHist,0) ;
-      RooHistFunc* highFunc = new RooHistFunc((prefix+str.str()+"high").c_str(),"",*proto->var(fObsName.c_str()),*highDHist,0) ;
+      RooDataHist* lowDHist = new RooDataHist((prefix+str.str()+"lowDHist").c_str(),"",observables,lowHist.at(j));
+      RooDataHist* highDHist = new RooDataHist((prefix+str.str()+"highDHist").c_str(),"",observables,highHist.at(j));
+      RooHistFunc* lowFunc = new RooHistFunc((prefix+str.str()+"low").c_str(),"",observables,*lowDHist,0) ;
+      RooHistFunc* highFunc = new RooHistFunc((prefix+str.str()+"high").c_str(),"",observables,*highDHist,0) ;
       lowSet.add(*lowFunc);
       highSet.add(*highFunc);
     }
     
     // this is sigma(params), a piece-wise linear interpolation
-    //    LinInterpVar interp( (prefix+str.str()).c_str(), "", params, nominal->GetBinContent(i+1), low, high);
     PiecewiseInterpolation interp(prefix.c_str(),"",*nominalFunc,lowSet,highSet,params);
     interp.setPositiveDefinite();
-    
+    interp.setAllInterpCodes(0); // MB : change default to 1? = piece-wise log interpolation from pice-wise linear (=0)
+    // KC: interpo codes 1 etc. don't have proper analytic integral.
+    RooArgSet observableSet(observables);
+    interp.setBinIntegrator(observableSet);
+    interp.forceNumInt();
+
     //    cout << "check: " << interp.getVal() << endl;
     proto->import(interp); // individual params have already been imported in first loop of this function
     
@@ -256,13 +488,13 @@ namespace HistFactory{
     string overallNorm_times_sigmaEpsilon ;
     string prodNames;
     vector<EstimateSummary::NormFactor> norm=es.normFactor;
+    vector<string> normFactorNames, rangeNames;
     if(norm.size()){
       for(vector<EstimateSummary::NormFactor>::iterator itr=norm.begin(); itr!=norm.end(); ++itr){
         cout << "making normFactor: " << itr->name << endl;
         // remove "doRatio" and name can be changed when ws gets imported to the combined model.
         std::stringstream range;
         range<<"["<<itr->val<<","<<itr->low<<","<<itr->high<<"]";
-        RooRealVar* var = 0;
 
         string varname;
         if(!prodNames.empty()) prodNames+=",";
@@ -272,11 +504,32 @@ namespace HistFactory{
         else {
           varname=itr->name;
         }
-        var = (RooRealVar*) proto->factory((varname+range.str()).c_str());
+        proto->factory((varname+range.str()).c_str());
+	if(itr->constant){
+	  //	  proto->var(varname.c_str())->setConstant();
+	  //	  cout <<"setting " << varname << " constant"<<endl;
+	  cout <<"WARNING: Const attribute to <NormFactor> tag is deprecated, will ignore."<<
+	    " Instead, add \n\t<ParamSetting Const=\"True\">"<<varname<<"</ParamSetting>\n"<<
+	    " to your top-level XML's <Measurment> entry"<< endl;
+	}
         prodNames+=varname;
+        rangeNames.push_back(range.str());
+	normFactorNames.push_back(varname);
       }
       overallNorm_times_sigmaEpsilon = es.name+"_"+channel+"_overallNorm_x_sigma_epsilon";
       proto->factory(("prod::"+overallNorm_times_sigmaEpsilon+"("+prodNames+","+sigmaEpsilon+")").c_str());
+    }
+
+    unsigned int rangeIndex=0;
+    for( vector<string>::iterator nit = normFactorNames.begin(); nit!=normFactorNames.end(); ++nit){
+        if( count (normFactorNames.begin(), normFactorNames.end(), *nit) > 1 ){
+	  cout <<"WARNING: <NormFactor Name =\""<<*nit<<"\"> is duplicated for <Sample Name=\"" 
+	       << es.name <<"\">, but only one factor will be included.  \n Instead, define something like" 
+	    //       << "\n\t<Function Name=\""<<*nit<<"Squared\" Expresion=\""<<*nit<<"\" Var=\""<<*nit<<range<<"\">"
+	       << "\n\t<Function Name=\""<<*nit<<"Squared\" Expresion=\""<<*nit<<"*"<<*nit<<"\" Var=\""<<*nit<<rangeNames.at(rangeIndex)
+	       << "\"> \nin your top-level XML's <Measurment> entry and use <NormFactor Name=\""<<*nit<<"Squared\" in your channel XML file."<< endl;
+	}
+	++rangeIndex;
     }
 
     if(!overallNorm_times_sigmaEpsilon.empty())
@@ -288,7 +541,7 @@ namespace HistFactory{
 
   void HistoToWorkspaceFactoryFast::AddEfficiencyTerms(RooWorkspace* proto, string prefix, string interpName,
         map<string,pair<double,double> > systMap, 
-        vector<string>& likelihoodTermNames, vector<string>& totSystTermNames){
+        vector<string>& constraintTermNames, vector<string>& totSystTermNames){
     // add variables for all the relative overall uncertainties we expect
     
     // range is set using defined macro (see top of the page)
@@ -306,10 +559,9 @@ namespace HistFactory{
 
         string command=("Gaussian::"+prefix+it->first+"Constraint("+prefix+it->first+",nom_"+prefix+it->first+"[0.,-10,10],1.)");
         cout << command << endl;
-        likelihoodTermNames.push_back(  proto->factory( command.c_str() )->GetName() );
+        constraintTermNames.push_back(  proto->factory( command.c_str() )->GetName() );
 	proto->var(("nom_"+prefix+it->first).c_str())->setConstant();
-	const_cast<RooArgSet*>(proto->set("globalObservables"))->add(*proto->var(("nom_"+prefix+it->first).c_str()));
-	
+	const_cast<RooArgSet*>(proto->set("globalObservables"))->add(*proto->var(("nom_"+prefix+it->first).c_str()));	
       } 
       params.add(*temp);
 
@@ -347,35 +599,73 @@ namespace HistFactory{
     string shapeList="";
     string prepend="";
 
-    /*
-    double binWidth = proto->var(fObsName.c_str())->numBins()/(proto->var(fObsName.c_str())->getMax()- proto->var(fObsName.c_str())->getMin());
-    command=string(Form("binWidth_%s[%f]",fObsName.c_str(),binWidth));
-    cout << "bin width command \n" << command <<endl;
-    proto->factory(command.c_str());
-    proto->var(Form("binWidth_%s",fObsName.c_str()))->setConstant();
-    string binWidthName = Form("binWidth_%s",fObsName.c_str());
-    */
-    vector<string>::iterator it=syst_x_expectedPrefixNames.begin();
+    if (fObsNameVec.empty() && !fObsName.empty()) { fObsNameVec.push_back(fObsName); } 
+
+    double binWidth(1.0);
+    std::string obsNameVecStr;
+    std::vector<std::string>::iterator itr = fObsNameVec.begin();
+    for (; itr!=fObsNameVec.end(); ++itr) {
+      std::string obsName = *itr;
+      binWidth *= proto->var(obsName.c_str())->numBins()/(proto->var(obsName.c_str())->getMax() - proto->var(obsName.c_str())->getMin()) ; // MB: Note: requires fixed bin sizes
+      if (obsNameVecStr.size()>0) { obsNameVecStr += "_"; }
+      obsNameVecStr += obsName;
+    }
+
+    //vector<string>::iterator it=syst_x_expectedPrefixNames.begin();
     for(unsigned int j=0; j<syst_x_expectedPrefixNames.size();++j){
       std::stringstream str;
       str<<"_"<<j;
       // repatative, but we need one coeff for each term in the sum
       // maybe can be avoided if we don't use bin width as coefficient
-      double binWidth = proto->var(fObsName.c_str())->numBins()/(proto->var(fObsName.c_str())->getMax()- proto->var(fObsName.c_str())->getMin());
-      command=string(Form("binWidth_%s_%d[%f]",fObsName.c_str(),j,binWidth));     
+      command=string(Form("binWidth_%s_%d[%f]",obsNameVecStr.c_str(),j,binWidth));     
       proto->factory(command.c_str());
-      proto->var(Form("binWidth_%s_%d",fObsName.c_str(),j))->setConstant();
-      coeffList+=prepend+"binWidth_"+fObsName+str.str();
+      proto->var(Form("binWidth_%s_%d",obsNameVecStr.c_str(),j))->setConstant();
+      coeffList+=prepend+"binWidth_"+obsNameVecStr+str.str();
+
       command="prod::L_x_"+syst_x_expectedPrefixNames.at(j)+"("+normByNames.at(j)+","+syst_x_expectedPrefixNames.at(j)+")";
+      /*RooAbsReal* tempFunc =(RooAbsReal*) */
       proto->factory(command.c_str());
       shapeList+=prepend+"L_x_"+syst_x_expectedPrefixNames.at(j);
       prepend=",";
+
+      
+      // add to num int to product
+      //      tempFunc->specialIntegratorConfig(kTRUE)->method1D().setLabel("RooBinIntegrator")  ;
+      //      tempFunc->forceNumInt();
+      
+
     }    
+
     proto->defineSet("coefList",coeffList.c_str());
     proto->defineSet("shapeList",shapeList.c_str());
-    //    command = "RooRealSumPdf::"+totName+"(shapeList,coefList,1)";
     //    proto->factory(command.c_str());
     RooRealSumPdf tot(totName.c_str(),totName.c_str(),*proto->set("shapeList"),*proto->set("coefList"),kTRUE);
+    tot.specialIntegratorConfig(kTRUE)->method1D().setLabel("RooBinIntegrator")  ;
+    tot.specialIntegratorConfig(kTRUE)->method2D().setLabel("RooBinIntegrator")  ;
+    tot.specialIntegratorConfig(kTRUE)->methodND().setLabel("RooBinIntegrator")  ;
+    tot.forceNumInt();
+
+    // for mixed generation in RooSimultaneous
+    tot.setAttribute("GenerateBinned"); // for use with RooSimultaneous::generate in mixed mode
+    //    tot.setAttribute("GenerateUnbinned"); // we don't want that
+
+    /*
+    // Use binned numeric integration
+    int nbins = 0;
+    if( fObsNameVec.size() == 1 ) {
+      nbins = proto->var(fObsNameVec.at(0).c_str())->numBins();
+
+      cout <<"num bis for RooRealSumPdf = "<<nbins <<endl;
+      //int nbins = ((RooRealVar*) allVars.first())->numBins();
+      tot.specialIntegratorConfig(kTRUE)->getConfigSection("RooBinIntegrator").setRealValue("numBins",nbins);
+      tot.forceNumInt();
+      
+    } else {
+      cout << "Bin Integrator only supports 1-d.  Will be slow." << std::endl;
+    }
+    */
+    
+
     proto->import(tot);
     //    proto->Print();
     
@@ -435,6 +725,9 @@ namespace HistFactory{
      tree->Fill();
      RooDataSet* data = new RooDataSet("expData","", tree, obsList); // one experiment
 
+     delete tree;
+     delete [] obsForTree;
+
      proto->import(*data);
 
   }
@@ -456,11 +749,18 @@ namespace HistFactory{
   }
 
   //_____________________________________________________________
-  void HistoToWorkspaceFactoryFast::EditSyst(RooWorkspace* proto, const char* pdfNameChar, map<string,double> gammaSyst, map<string,double> uniformSyst,map<string,double> logNormSyst) {
-    //    cout << "in edit, gammamap.size = " << gammaSyst.size() << ", unimap.size = " << uniformSyst.size() << endl;
+  void HistoToWorkspaceFactoryFast::EditSyst(RooWorkspace* proto, const char* pdfNameChar, 
+					     map<string,double> gammaSyst, map<string,double> uniformSyst, map<string,double> logNormSyst, map<string,double> noSyst) {
     string pdfName(pdfNameChar);
 
+    //cout << "HistoToWorkspaceFactoryFast::EditSyst() : gamma = " << gammaSyst.size() << ", uniform = " << uniformSyst.size() << ", noconst = " << noSyst.size() << endl;
+
     ModelConfig * combined_config = (ModelConfig *) proto->obj("ModelConfig");
+    if( combined_config==NULL ) {
+      std::cout << "Error: Failed to find object 'ModelConfig' in workspace: " 
+		<< proto->GetName() << std::endl;
+      throw hf_exc();
+    }
     //    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
     //    RooArgSet temp(*constrainedParams);
     string edit="EDIT::newSimPdf("+pdfName+",";
@@ -665,9 +965,42 @@ namespace HistFactory{
       }
     }
 
+    /////////////////////////////////////////
+
+    // MB: remove a systematic constraint
+    for(it=noSyst.begin(); it!=noSyst.end(); ++it) {
+
+      cout << "remove constraint for parameter" << it->first << endl;
+      if(! proto->var(("alpha_"+it->first).c_str()) || ! proto->pdf(("alpha_"+it->first+"Constraint").c_str()) ) {
+	cout << "systematic not there" << endl;
+	nskipped++; 
+	continue;
+      }
+      numReplacements++;      
+
+      // dummy replacement pdf
+      if ( !proto->var("one") ) { proto->factory("one[1.0]"); }
+      proto->var("one")->setConstant();
+
+      // replace constraints
+      cout << "alpha_"+it->first+"Constraint=one" << endl;
+      editList+=preceed + "alpha_"+it->first+"Constraint=one";
+      preceed=",";
+
+      // EDIT seems to die if the list of edits is too long.  So chunck them up.
+      if(numReplacements%10 == 0 && numReplacements+nskipped!=gammaSyst.size()){
+	edit="EDIT::"+lastPdf+"_("+lastPdf+","+editList+")";
+	lastPdf+="_"; // append an underscore for the edit
+	editList=""; // reset edit list
+	preceed="";
+	cout << edit << endl;
+	proto->factory( edit.c_str() );
+	RooAbsPdf* newOne = proto->pdf(lastPdf.c_str());
+	if(!newOne) { cout << "\n\n ---------------------\n WARNING: failed to make EDIT\n\n" << endl; }
+      }
+    }
 
     /////////////////////////////////////////
-    ////////////////////////////////////
 
     // commit last bunch of edits
     edit="EDIT::newSimPdf("+lastPdf+","+editList+")";
@@ -685,33 +1018,34 @@ namespace HistFactory{
   }
 
   void HistoToWorkspaceFactoryFast::PrintCovarianceMatrix(RooFitResult* result, RooArgSet* params, string filename){
-    //    FILE * pFile;
-    pFile = fopen ((filename).c_str(),"w"); 
+    // Change-> Now a static utility
+
+    FILE* covFile = fopen ((filename).c_str(),"w"); 
 
 
     TIter iti = params->createIterator();
     TIter itj = params->createIterator();
     RooRealVar *myargi, *myargj; 
-    fprintf(pFile," ") ;
+    fprintf(covFile," ") ;
     while ((myargi = (RooRealVar *)iti.Next())) { 
       if(myargi->isConstant()) continue;
-      fprintf(pFile," & %s",  myargi->GetName());
+      fprintf(covFile," & %s",  myargi->GetName());
     }
-    fprintf(pFile,"\\\\ \\hline \n" );
+    fprintf(covFile,"\\\\ \\hline \n" );
     iti.Reset();
     while ((myargi = (RooRealVar *)iti.Next())) { 
       if(myargi->isConstant()) continue;
-      fprintf(pFile,"%s", myargi->GetName());
+      fprintf(covFile,"%s", myargi->GetName());
       itj.Reset();
       while ((myargj = (RooRealVar *)itj.Next())) { 
         if(myargj->isConstant()) continue;
         cout << myargi->GetName() << "," << myargj->GetName();
-        fprintf(pFile, " & %.2f", result->correlation(*myargi, *myargj));
+        fprintf(covFile, " & %.2f", result->correlation(*myargi, *myargj));
       }
       cout << endl;
-      fprintf(pFile, " \\\\\n");
+      fprintf(covFile, " \\\\\n");
     }
-    fclose(pFile);
+    fclose(covFile);
     
   }
 
@@ -719,14 +1053,30 @@ namespace HistFactory{
   ///////////////////////////////////////////////
   RooWorkspace* HistoToWorkspaceFactoryFast::MakeSingleChannelModel(vector<EstimateSummary> summary, vector<string> systToFix, bool doRatio)
   {
-    
     // to time the macro
     TStopwatch t;
     t.Start();
     string channel=summary[0].channel;
-    //    fObsName.c_str()=Form("%s_%s",summary.at(0).nominal->GetXaxis()->GetName()],summary[0].channel.c_str()); // set name ov observable
-    fObsName= "obs_"+summary[0].channel; // set name ov observable
-    cout << "\n\n-------------------\nStarting to process " << channel << " channel with obs " << fObsName << endl;
+
+    /// MB: reset observable names for each new channel.
+    fObsNameVec.clear();
+
+    /// MB: label observables x,y,z, depending on histogram dimensionality
+    if (fObsNameVec.empty()) { GuessObsNameVec( summary.at(0).nominal ); }
+
+    for ( unsigned int idx=0; idx<fObsNameVec.size(); ++idx ) {
+      fObsNameVec[idx] = "obs_" + fObsNameVec[idx] + "_" + summary[0].channel ;
+    }
+
+    if (fObsNameVec.empty()) {
+      //    fObsName.c_str()=Form("%s_%s",summary.at(0).nominal->GetXaxis()->GetName()],summary[0].channel.c_str()); // set name ov observable
+      fObsName= "obs_"+summary[0].channel; // set name ov observable
+      fObsNameVec.push_back( fObsName );
+    }
+
+    R__ASSERT( fObsNameVec.size()>=1 && fObsNameVec.size()<=3 );
+
+    cout << "\n\n-------------------\nStarting to process " << channel << " channel with " << fObsNameVec.size() << " observables" << endl;
 
     //
     // our main workspace that we are using to construct the model
@@ -735,8 +1085,24 @@ namespace HistFactory{
     ModelConfig * proto_config = new ModelConfig("ModelConfig", proto);
     proto_config->SetWorkspace(*proto);
 
-    RooArgSet likelihoodTerms("likelihoodTerms");
-    vector<string> likelihoodTermNames, totSystTermNames,syst_x_expectedPrefixNames, normalizationNames;
+    // preprocess functions
+    vector<string>::iterator funcIter = fPreprocessFunctions.begin();
+    for(;funcIter!= fPreprocessFunctions.end(); ++funcIter){
+      cout <<"will preprocess this line: " << *funcIter <<endl;
+      proto->factory(funcIter->c_str());
+      proto->Print();
+    }
+
+
+    RooArgSet likelihoodTerms("likelihoodTerms"), constraintTerms("constraintTerms");
+    vector<string> likelihoodTermNames, constraintTermNames, totSystTermNames,syst_x_expectedPrefixNames, normalizationNames;
+
+    vector< pair<string,string> >   statNamePairs;
+    vector< pair<TH1*,TH1*> >       statHistPairs; // <nominal, error>
+    std::string                     statFuncName; // the name of the ParamHistFunc
+    std::string                     statNodeName; // the name of the McStat Node
+    EstimateSummary::ConstraintType statConstraintType=EstimateSummary::Gaussian;
+    Double_t                        statRelErrorThreshold=0.0;
 
     string prefix, range;
 
@@ -755,7 +1121,8 @@ namespace HistFactory{
     proto->factory(("Gaussian::lumiConstraint(Lumi,"+lumiErrorStr.str()+")").c_str());
     proto->var("nominalLumi")->setConstant();
     proto->defineSet("globalObservables","nominalLumi");
-    likelihoodTermNames.push_back("lumiConstraint");
+    //likelihoodTermNames.push_back("lumiConstraint");
+    constraintTermNames.push_back("lumiConstraint");
     cout << "lumi Error str = " << lumiErrorStr.str() << endl;
     
     //proto->factory((string("SigXsecOverSM[1.,0.5,1..8]").c_str()));
@@ -769,63 +1136,359 @@ namespace HistFactory{
       string overallSystName = it->name+"_"+it->channel+"_epsilon"; 
       string systSourcePrefix = "alpha_";
       AddEfficiencyTerms(proto,systSourcePrefix, overallSystName,
-             it->overallSyst, 
-             likelihoodTermNames, totSystTermNames);    
+			 it->overallSyst, constraintTermNames /*likelihoodTermNames*/, totSystTermNames);    
 
-      overallSystName=AddNormFactor(proto, channel, overallSystName, *it, doRatio); 
+      overallSystName = AddNormFactor(proto, channel, overallSystName, *it, doRatio); 
+
+
+      // Create the string for the object
+      // that is added to the RooRealSumPdf
+      // for this channel
+      string syst_x_expectedPrefix = "";
 
       // get histogram
-      TH1F* nominal = it->nominal;
+      TH1* nominal = it->nominal;
+
+      // MB : HACK no option to have both non-hist variations and hist variations ?
+      // get histogram
       if(it->lowHists.size() == 0){
         cout << it->name+"_"+it->channel+" has no variation histograms " <<endl;
         string expPrefix=it->name+"_"+it->channel;//+"_expN";
-        string syst_x_expectedPrefix=it->name+"_"+it->channel+"_overallSyst_x_Exp";
+        syst_x_expectedPrefix=it->name+"_"+it->channel+"_overallSyst_x_Exp";
         ProcessExpectedHisto(nominal,proto,expPrefix,syst_x_expectedPrefix,overallSystName,atoi(NoHistConst_Low),atoi(NoHistConst_High),fLowBin,fHighBin);
-        syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
+        //syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
       } else if(it->lowHists.size() != it->highHists.size()){
         cout << "problem in "+it->name+"_"+it->channel 
-       << " number of low & high variation histograms don't match" << endl;
+	     << " number of low & high variation histograms don't match" << endl;
         return 0;
       } else {
         string constraintPrefix = it->name+"_"+it->channel+"_Hist_alpha"; // name of source for variation
-        string syst_x_expectedPrefix = it->name+"_"+it->channel+"_overallSyst_x_HistSyst";
+	syst_x_expectedPrefix = it->name+"_"+it->channel+"_overallSyst_x_HistSyst";
         LinInterpWithConstraint(proto, nominal, it->lowHists, it->highHists, it->systSourceForHist,
               constraintPrefix, syst_x_expectedPrefix, overallSystName, 
-              fLowBin, fHighBin, likelihoodTermNames);
-        syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
+				fLowBin, fHighBin, constraintTermNames /*likelihoodTermNames*/);
+        //syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
       }
+      
 
-      //    AddMultiVarGaussConstraint(proto, "exp"+it->first+"N", fLowBin, fHighBin, likelihoodTermNames);
+      ////////////////////////////////////
+      // Add StatErrors to this Channel //
+      ////////////////////////////////////
+
+      if( it->IncludeStatError ) {
+
+	if( fObsNameVec.size() > 3 ) {
+	  std::cout << "Cannot include Stat Error for histograms of more than 3 dimensions." << std::endl; 
+	} else {
+
+	  // If we are using StatUncertainties, we multiply this object
+	  // by the ParamHistFunc and then pass that to the
+	  // RooRealSumPdf by appending it's name to the list
+
+	  std::cout << "Sample: "     << it->name    << " to be included in Stat Error " 
+		    << "for channel " << it->channel
+		    << std::endl;
+
+	  statConstraintType = it->StatConstraintType;
+	  statRelErrorThreshold = it->RelErrorThreshold;
+
+	  // First, get the uncertainty histogram
+	  // and push it back to our vectors
+	
+	  TH1* statErrorHist = it->relStatError;
+	  string UncertName  = syst_x_expectedPrefix + "_StatAbsolUncert";
+	
+	  if( statErrorHist == NULL ) {
+	    // Make the absolute stat error
+	    std::cout << "Making Statistical Uncertainty Hist for "
+		      << " Channel: " << it->channel
+		      << " Sample: "  << it->name
+		      << std::endl;
+	    statErrorHist = MakeAbsolUncertaintyHist( UncertName, nominal );
+	  } else {
+	    // We assume the (relative) error is provided.
+	    // We must turn it into an absolute error
+	    // using the nominal histogram
+	    std::cout << "Using external histogram for Stat Errors for "
+		      << " Channel: " << it->channel
+		      << " Sample: " << it->name
+		      << std::endl;
+	    std::cout << "Error Histogram: " << statErrorHist->GetName() << std::endl;
+	    statErrorHist->Multiply( nominal );
+	    statErrorHist->SetName( UncertName.c_str() );
+	  }
+	
+	  // Save the nominal and error hists
+	  // for the building of constraint terms
+	  statHistPairs.push_back( pair<TH1*,TH1*>(nominal,statErrorHist) );
+
+	  // Next, try to get the flexible ParamHistFunc/
+	  // or create it if it doesn't yet exist:
+	  statFuncName = "mc_stat_" + it->channel;
+	  ParamHistFunc* paramHist = (ParamHistFunc*) proto->function( statFuncName.c_str() );
+	  if( paramHist == NULL ) {
+
+	    // Get a RooArgSet of the observables:
+	    // Names in the lsit fObsNameVec:
+	    RooArgList observables;
+	    std::vector<std::string>::iterator itr = fObsNameVec.begin();
+	    for (int idx=0; itr!=fObsNameVec.end(); ++itr, ++idx ) {
+	      observables.add( *proto->var(itr->c_str()) );
+	    }
+	  
+	    //	    RooRealVar* var = (RooRealVar*) observables.first();
+	  
+	    // Create the list of terms to
+	    // control the bin heights:
+	    std::string ParamSetPrefix  = "gamma_stat_" + it->channel; 
+	    Double_t gammaMin = 0.0;
+	    Double_t gammaMax = 10.0;
+	    RooArgList statFactorParams = ParamHistFunc::createParamSet(*proto, ParamSetPrefix.c_str(), observables, gammaMin, gammaMax);
+
+	    ParamHistFunc statUncertFunc(statFuncName.c_str(), statFuncName.c_str(), 
+				       observables, statFactorParams );
+	  
+	    proto->import( statUncertFunc, RecycleConflictNodes() );
+
+	    paramHist = (ParamHistFunc*) proto->function( statFuncName.c_str() );
+
+	  } // END: If Statement: Create ParamHistFunc
+	
+
+	  // Create the node as a product
+	  // of this function and the 
+	  // expected value from MC
+	  statNodeName = it->name+"_"+it->channel+"_overallSyst_x_StatUncert";
+	
+	  RooAbsReal* expFunc = (RooAbsReal*) proto->function( syst_x_expectedPrefix.c_str() );
+	  RooProduct nodeWithMcStat(statNodeName.c_str(), statNodeName.c_str(),
+				    RooArgSet(*paramHist, *expFunc) );
+	
+	  proto->import( nodeWithMcStat, RecycleConflictNodes() );
+	
+	  // Push back the final name of the node 
+	  // to be used in the RooRealSumPdf 
+	  // (node to be created later)
+	  syst_x_expectedPrefix = nodeWithMcStat.GetName();
+
+	}
+      } // END: if DoMcStat
+      
+
+      ///////////////////////////////////////////
+      // Create a ShapeFactor for this channel //
+      ///////////////////////////////////////////
+
+      if( it->shapeFactorName != "" ) {
+
+	if( fObsNameVec.size() >3 ) {
+	  std::cout << "Cannot include Stat Error for histograms of more than 3 dimensions." << std::endl; 
+	} else {
+
+
+	  std::cout << "Sample: "     << it->name << " in channel: " << it->channel
+		    << " to be include a ShapeFactor."
+		    << std::endl;
+	  
+	  std::string funcName = it->channel + "_" + it->shapeFactorName + "_shapeFactor";
+	  ParamHistFunc* paramHist = (ParamHistFunc*) proto->function( funcName.c_str() );
+	  if( paramHist == NULL ) {
+
+	    RooArgList observables;
+	    std::vector<std::string>::iterator itr = fObsNameVec.begin();
+	    for (int idx=0; itr!=fObsNameVec.end(); ++itr, ++idx ) {
+	      observables.add( *proto->var(itr->c_str()) );
+	    }
+	  
+	    //	    RooRealVar* var = (RooRealVar*) observables.first();
+
+	    // Create the Parameters
+	    std::string funcParams = "gamma_" + it->shapeFactorName;
+	    RooArgList shapeFactorParams = ParamHistFunc::createParamSet(*proto, funcParams.c_str(), observables, 0, 1000);
+
+	    // Create the Function
+	    ParamHistFunc shapeFactorFunc( funcName.c_str(), funcName.c_str(),
+					   observables, shapeFactorParams );
+
+	    proto->import( shapeFactorFunc, RecycleConflictNodes() );
+	    paramHist = (ParamHistFunc*) proto->function( funcName.c_str() );
+	  
+	  } // End: Create ShapeFactor ParamHistFunc
+
+	  // Now that we have the right ShapeFactor, 
+	  // we multiply the expected function
+	
+	  std::string shapeFactorNodeName = syst_x_expectedPrefix + "_x_" + funcName;
+
+	  RooAbsReal* expFunc = (RooAbsReal*) proto->function( syst_x_expectedPrefix.c_str() );
+	  RooProduct nodeWithShapeFactor(shapeFactorNodeName.c_str(), shapeFactorNodeName.c_str(),
+					 RooArgSet(*paramHist, *expFunc) );
+	
+	  proto->import( nodeWithShapeFactor, RecycleConflictNodes() );
+
+	  // Push back the final name of the node 
+	  // to be used in the RooRealSumPdf 
+	  // (node to be created later)
+	  syst_x_expectedPrefix = nodeWithShapeFactor.GetName();
+     
+	}
+      } // End: if ShapeFactorName!=""
+
+
+      ////////////////////////////////////////
+      // Create a ShapeSys for this channel //
+      ////////////////////////////////////////
+
+      if( it->shapeSysts.size() != 0 ) {
+
+	if( fObsNameVec.size() > 3 ) {
+	  std::cout << "Cannot include Stat Error for histograms of more than 3 dimensions." << std::endl; 
+	} else {
+
+	  // List of ShapeSys ParamHistFuncs
+	  std::vector<string> ShapeSysNames;
+
+	  for( unsigned int i = 0; i < it->shapeSysts.size(); ++i) {
+	  	    
+	    // Create the ParamHistFunc's
+	    // Create their constraint terms and add them
+	    // to the list of constraint terms
+
+	    // Create a single RooProduct over all of these
+	    // paramHistFunc's
+	    
+	    // Send the name of that product to the RooRealSumPdf
+
+	    EstimateSummary::ShapeSys Sys = it->shapeSysts.at(i);
+	    
+	    std::cout << "Sample: "     << it->name << " in channel: " << it->channel
+		      << " to include a ShapeSys." << std::endl;
+
+	    std::string funcName = it->channel + "_" + Sys.name + "_ShapeSys";
+	    ShapeSysNames.push_back( funcName );
+	    ParamHistFunc* paramHist = (ParamHistFunc*) proto->function( funcName.c_str() );
+	    if( paramHist == NULL ) {
+
+	      //std::string funcParams = "gamma_" + it->shapeFactorName;
+	      //paramHist = CreateParamHistFunc( proto, fObsNameVec, funcParams, funcName );
+
+	      RooArgList observables;
+	      std::vector<std::string>::iterator itr = fObsNameVec.begin();
+	      for (int idx=0; itr!=fObsNameVec.end(); ++itr, ++idx ) {
+		observables.add( *proto->var(itr->c_str()) );
+	      }
+	  
+	      //	      RooRealVar* var = (RooRealVar*) observables.first();
+
+	      // Create the Parameters
+	      std::string funcParams = "gamma_" + Sys.name;
+	      RooArgList shapeFactorParams = ParamHistFunc::createParamSet(*proto, funcParams.c_str(), observables,0,10);
+
+	      // Create the Function
+	      ParamHistFunc shapeFactorFunc( funcName.c_str(), funcName.c_str(),
+					     observables, shapeFactorParams );
+
+	      proto->import( shapeFactorFunc, RecycleConflictNodes() );
+	      paramHist = (ParamHistFunc*) proto->function( funcName.c_str() );	      
+	      
+	    } // End: Create ShapeFactor ParamHistFunc
+
+	    // Create the constraint terms and add
+	    // them to the workspace (proto)
+	    // as well as the list of constraint terms (constraintTermNames)
+	    
+	    // The syst should be a fractional error
+	    TH1* shapeErrorHist = Sys.hist;
+	    EstimateSummary::ConstraintType shapeConstraintType = Sys.constraint;
+	    Double_t minShapeUncertainty = 0.0;
+	    RooArgList shapeConstraints = createStatConstraintTerms(proto, constraintTermNames, *paramHist, shapeErrorHist, 
+								    shapeConstraintType, minShapeUncertainty);
+
+	  } // End: Loop over ShapeSys vector in this EstimateSummary
+	  
+	    // Now that we have the list of ShapeSys ParamHistFunc names,
+	  // we create the total RooProduct
+	  // we multiply the expected functio
+	  
+	  std::string NodeName = syst_x_expectedPrefix;
+	  RooArgList ShapeSysForNode;
+	  RooAbsReal* expFunc = (RooAbsReal*) proto->function( syst_x_expectedPrefix.c_str() );
+	  ShapeSysForNode.add( *expFunc );
+	  for( unsigned int i = 0; i < ShapeSysNames.size(); ++i ) {
+	    std::string ShapeSysName = ShapeSysNames.at(i);
+	    ShapeSysForNode.add( *proto->function(ShapeSysName.c_str()) );
+	    NodeName = NodeName + "_x_" + ShapeSysName;
+	  }
+
+	  // Create the name for this NEW Node
+	  RooProduct nodeWithShapeFactor(NodeName.c_str(), NodeName.c_str(), ShapeSysForNode );
+	  proto->import( nodeWithShapeFactor, RecycleConflictNodes() );
+
+	  // Push back the final name of the node 
+	  // to be used in the RooRealSumPdf 
+	  // (node to be created later)
+	  syst_x_expectedPrefix = nodeWithShapeFactor.GetName();
+
+	} // End: NumObsVar == 1
+	
+
+      } // End: ShapeSysts Size != 0
+
+
+
+
+
+
+      // Append the name of the "node"
+      // that is to be summed with the
+      // RooRealSumPdf
+      syst_x_expectedPrefixNames.push_back(syst_x_expectedPrefix);
 
       if(it->normName=="")
         normalizationNames.push_back( "Lumi" );
       else
         normalizationNames.push_back( it->normName);
-    }
+    } // END: Loop over EstimateSummaries
     //    proto->Print();
 
+
+    // If a non-zero number of samples call for
+    // Stat Uncertainties, create the statFactor functions
+
+    if( statHistPairs.size() > 0 ) {
+      
+      // Create the histogram of (binwise)
+      // stat uncertainties:
+      TH1* fracStatError = MakeScaledUncertaintyHist( statNodeName + "_RelErr", statHistPairs ); 
+      if( fracStatError == NULL ) {
+	std::cout << "Error: Failed to make ScaledUncertaintyHist for: " << statNodeName << std::endl;
+	throw hf_exc();
+      }
+      
+      // Using this TH1* of fractinal stat errors, 
+      // create a set of constraint terms:
+      ParamHistFunc* chanStatUncertFunc = (ParamHistFunc*) proto->function( statFuncName.c_str() );
+      std::cout << "About to create Constraint Terms from: " 
+		<< chanStatUncertFunc->GetName()
+		<< " params: " << chanStatUncertFunc->paramList()
+		<< std::endl;
+
+      // Get the constraint type and the
+      // rel error threshold from the (last)
+      // EstimateSummary looped over (but all
+      // should be the same)
+
+      RooArgList statConstraints = createStatConstraintTerms(proto, constraintTermNames, *chanStatUncertFunc, fracStatError, 
+							     statConstraintType, statRelErrorThreshold);
+
+    } // END: Loop over stat Hist Pairs
+    
+    
     ///////////////////////////////////
     // for ith bin calculate totN_i =  lumi * sum_j expected_j * syst_j 
     MakeTotalExpected(proto,channel+"_model",channel,"Lumi",fLowBin,fHighBin, 
           syst_x_expectedPrefixNames, normalizationNames);
-
     likelihoodTermNames.push_back(channel+"_model");
-
-    /////////////////////////////////
-    // Relate observables to expected for each bin
-    //    AddPoissonTerms(proto, "Pois_"+channel, "obsN", channel+"_totN", fLowBin, fHighBin, likelihoodTermNames);
-
-    /*
-    /////////////////////////////////
-    // if no data histogram provided, make asimov data
-    if(summary.at(0).name!="Data"){
-      SetObsToExpected(proto, "obsN",channel+"_totN", fLowBin, fHighBin);
-      cout << " using asimov data" << endl;
-    }  else{
-      SetObsToExpected(proto, "obsN","obsN", fLowBin, fHighBin);
-      cout << " using input data histogram" << endl;
-    }
-    */
 
     //////////////////////////////////////
     // fix specified parameters
@@ -855,24 +1518,58 @@ namespace HistFactory{
 
     //////////////////////////////////////
     // final proto model
-    for(unsigned int i=0; i<likelihoodTermNames.size(); ++i){
-      //    cout << likelihoodTermNames[i] << endl;
-      likelihoodTerms.add(* (proto->arg(likelihoodTermNames[i].c_str())) );
+    for(unsigned int i=0; i<constraintTermNames.size(); ++i){
+      RooAbsArg* proto_arg = (proto->arg(constraintTermNames[i].c_str()));
+      if( proto_arg==NULL ) {
+	std::cout << "Error: Cannot find arg set: " << constraintTermNames.at(i)
+		  << " in workspace: " << proto->GetName() << std::endl;
+	throw hf_exc();
+      }
+      constraintTerms.add( *proto_arg );
+      //  constraintTerms.add(* proto_arg(proto->arg(constraintTermNames[i].c_str())) );
     }
-    //  likelihoodTerms.Print();
-
+    for(unsigned int i=0; i<likelihoodTermNames.size(); ++i){
+      RooAbsArg* proto_arg = (proto->arg(likelihoodTermNames[i].c_str())); 
+      if( proto_arg==NULL ) {
+	std::cout << "Error: Cannot find arg set: " << constraintTermNames.at(i)
+		  << " in workspace: " << proto->GetName() << std::endl;
+	throw hf_exc();
+      }
+      likelihoodTerms.add( *proto_arg );
+    }
+    proto->defineSet("constraintTerms",constraintTerms);
     proto->defineSet("likelihoodTerms",likelihoodTerms);
     //  proto->Print();
 
+    // list of observables
+    RooArgList observables;
+    std::string observablesStr;
+    std::vector<std::string>::iterator itr = fObsNameVec.begin();
+    for (int idx=0; itr!=fObsNameVec.end(); ++itr, ++idx ) {
+      observables.add( *proto->var(itr->c_str()) );
+      if (!observablesStr.empty()) { observablesStr += ","; }
+      observablesStr += *itr;
+    }
+    proto->defineSet("observablesSet",Form("%s",observablesStr.c_str()));
+
+
+    // Create the ParamHistFunc
+    // after observables have been made
+
+
+
+
+
     cout <<"-----------------------------------------"<<endl;
     cout <<"import model into workspace" << endl;
-    RooProdPdf* model = new RooProdPdf(("model_"+channel).c_str(),
+
+    RooProdPdf* model = new RooProdPdf(("model_"+channel).c_str(),    // MB : have changed this into conditional pdf. Much faster for toys!
                "product of Poissons accross bins for a single channel",
-               likelihoodTerms);
+	       constraintTerms, Conditional(likelihoodTerms,observables));  //likelihoodTerms);
     proto->import(*model,RecycleConflictNodes());
 
     proto_config->SetPdf(*model);
-    proto_config->SetObservables(*proto->var(fObsName.c_str()));
+    proto_config->SetObservables(observables);
     proto_config->SetGlobalObservables(*proto->set("globalObservables"));
     //    proto->writeToFile(("results/model_"+channel+".root").c_str());
     // fill out nuisance parameters in model config
@@ -883,53 +1580,90 @@ namespace HistFactory{
     ///////////////////////////
     // make data sets
       // THis works and is natural, but the memory size of the simultaneous dataset grows exponentially with channels
-    //    RooAbsData* data = model->generateBinned(*proto->var(fObsName.c_str()),ExpectedData());
-    //    const char* weightName = Form("%s_w",fObsName.c_str());
     const char* weightName="weightVar";
     proto->factory(Form("%s[0,-1e10,1e10]",weightName));
-    proto->defineSet("obsAndWeight",Form("%s,%s",weightName,fObsName.c_str()));
-    RooAbsData* data = model->generateBinned(*proto->var(fObsName.c_str()),ExpectedData());
+    proto->defineSet("obsAndWeight",Form("%s,%s",weightName,observablesStr.c_str()));
+    RooAbsData* data = model->generateBinned(observables,ExpectedData());
+
+    /// Asimov dataset
     RooDataSet* asimovDataUnbinned = new RooDataSet("asimovData","",*proto->set("obsAndWeight"),weightName);
-    for(int i=0; i<data->numEntries(); ++i){
-      data->get(i)->Print("v");
-      cout <<  data->weight() <<endl;
-      asimovDataUnbinned->add(*data->get(i), data->weight() );
-    }    
-    //    proto->import(*data,Rename("asimovData"));
-    proto->import(*asimovDataUnbinned);
-
-    if (summary.at(0).name=="Data") {
-      // THis works and is natural, but the memory size of the simultaneous dataset grows exponentially with channels
-      //      RooDataHist* obsData = new RooDataHist("obsData","",*proto->var(fObsName.c_str()),summary.at(0).nominal);
-      //      proto->import(*obsData);
-
-      RooDataSet* obsDataUnbinned = new RooDataSet("obsData","",*proto->set("obsAndWeight"),weightName);
-      for(int i=1; i<=summary.at(0).nominal->GetNbinsX(); ++i){
-	proto->var(fObsName.c_str())->setVal( summary.at(0).nominal->GetBinCenter(i) );
-	//	proto->var(weightName)->setVal( summary.at(0).nominal->GetBinContent(i) );
-	//	proto->set("obsAndWeight")->Print("v");
-	obsDataUnbinned->add(*	proto->set("obsAndWeight"), summary.at(0).nominal->GetBinContent(i));
-      }    
-      proto->import(*obsDataUnbinned);
-    }
-
-
-    /////////////////////////////
-    // Make observables, set values to observed data if data is specified,
-    // otherwise use expected "Asimov" data
     /*
-    if (summary.at(0).name=="Data") {
-      ProcessExpectedHisto(summary.at(0).nominal,proto,"obsN","","",0,100000,fLowBin,fHighBin);
-    } else {
-      cout << "Will use expected (\"Asimov\") data set" << endl;
-      ProcessExpectedHisto(NULL,proto,"obsN","","",0,100000,fLowBin,fHighBin);
+    double binWidthW(1.0);
+    itr = fObsNameVec.begin();
+    for (; itr!=fObsNameVec.end(); ++itr) {
+      std::string obsName = *itr;
+      binWidthW *= proto->var(obsName.c_str())->numBins()/(proto->var(obsName.c_str())->getMax() - proto->var(obsName.c_str())->getMin()) ; 
     }
     */
+    for(int i=0; i<data->numEntries(); ++i){
+      data->get(i)->Print("v");
+      //cout << "GREPME : " << i << " " << data->weight() <<endl;
+      asimovDataUnbinned->add( *data->get(i), data->weight() );
+    }
+    proto->import(*asimovDataUnbinned);
 
+
+    if (summary.at(0).name=="Data") { 
+
+      // THis works and is natural, but the memory size of the simultaneous dataset grows exponentially with channels
+      RooDataSet* obsDataUnbinned = new RooDataSet("obsData","",*proto->set("obsAndWeight"),weightName);
+
+      TH1* mnominal = summary.at(0).nominal;
+      TAxis* ax = mnominal->GetXaxis(); 
+      TAxis* ay = mnominal->GetYaxis(); 
+      TAxis* az = mnominal->GetZaxis(); 	
+
+      for (int i=1; i<=ax->GetNbins(); ++i) { // 1 or more dimension
+	Double_t xval = ax->GetBinCenter(i);
+	proto->var( fObsNameVec[0].c_str() )->setVal( xval );
+	if        (fObsNameVec.size()==1) {
+	  Double_t fval = mnominal->GetBinContent(i);
+	  obsDataUnbinned->add( *proto->set("obsAndWeight"), fval );
+	} else { // 2 or more dimensions
+	  for (int j=1; j<=ay->GetNbins(); ++j) {
+	    Double_t yval = ay->GetBinCenter(j);
+	    proto->var( fObsNameVec[1].c_str() )->setVal( yval );
+	    if (fObsNameVec.size()==2) { 
+	      Double_t fval = mnominal->GetBinContent(i,j);
+	      obsDataUnbinned->add( *proto->set("obsAndWeight"), fval );
+	    } else { // 3 dimensions 
+	      for (int k=1; k<=az->GetNbins(); ++k) {
+		Double_t zval = az->GetBinCenter(k);
+		proto->var( fObsNameVec[2].c_str() )->setVal( zval );
+		Double_t fval = mnominal->GetBinContent(i,j,k);
+		obsDataUnbinned->add( *proto->set("obsAndWeight"), fval );
+	      }
+	    }
+	  }
+	}
+      }
+      
+      proto->import(*obsDataUnbinned);
+    }
 
     proto->Print();
     return proto;
   }
+
+
+  void HistoToWorkspaceFactoryFast::GuessObsNameVec(TH1* hist)
+  {
+    fObsNameVec.clear();
+
+    // determine histogram dimensionality 
+    unsigned int histndim(1);
+    std::string classname = hist->ClassName();
+    if      (classname.find("TH1")==0) { histndim=1; }
+    else if (classname.find("TH2")==0) { histndim=2; }
+    else if (classname.find("TH3")==0) { histndim=3; }
+
+    for ( unsigned int idx=0; idx<histndim; ++idx ) {
+      if (idx==0) { fObsNameVec.push_back("x"); }
+      if (idx==1) { fObsNameVec.push_back("y"); }
+      if (idx==2) { fObsNameVec.push_back("z"); }
+    }
+  }
+
 
   RooWorkspace* HistoToWorkspaceFactoryFast::MakeCombinedModel(vector<string> ch_names, vector<RooWorkspace*> chs)
   {
@@ -991,58 +1725,6 @@ namespace HistFactory{
     cout << "create toy data for " << ss.str() << endl;
     
 
-    // see tutorials/roofit/rf401_importttreethx.C
-    /*
-    RooDataHist * simData=new RooDataHist("simData","master dataset", *obsN, 
-            Index(*channelCat), Import(ch_names[0].c_str(),*((RooDataHist*)chs[0]->data("asimovData"))));
-    for(unsigned int i = 1; i< ch_names.size(); ++i){
-      RooDataHist * simData_ch=new RooDataHist("simData","master dataset", *obsN, 
-              Index(*channelCat), Import(ch_names[i].c_str(),*((RooDataHist*)chs[i]->data("asimovData"))));
-      //      simData->append(*simData_ch);
-      simData->add(*simData_ch);
-    }
-    */
-
-
-    
-    /*
-      map<string,RooDataSet*> dsmap;
-      // previously using datahists (but this had problems.
-      // For example, when there were 4 channels with 70 bins, the dataset wanted 70^4 bins
-    map<string,RooDataHist*> dsmap;
-    for(unsigned int i = 0; i< ch_names.size(); ++i){
-      dsmap[ch_names[i]] = (RooDataHist*)chs[i]->data("asimovData");
-    }
-    RooDataHist * simData=new RooDataHist("asimovData","", obsList, *channelCat, dsmap);
-
-    if(chs[0]->data("obsData")){
-      for(unsigned int i = 0; i< ch_names.size(); ++i){
-	dsmap[ch_names[i]] = (RooDataHist*)chs[i]->data("obsData");
-      }
-      RooDataHist * obsData=new RooDataHist("obsData","", obsList, *channelCat, dsmap);
-
-      //      for(int i=0; i<obsData->numEntries(); ++i)
-      //	obsData->get(i)->Print("v");
-      
-      combined->import(*obsData);
-    }
-    */
-
-    /*
-    // same as above.  Why no map option for RooDataSet?
-    if(chs[0]->data("obsData")){
-      for(unsigned int i = 0; i< ch_names.size(); ++i){
-	dsmap[ch_names[i]] = (RooDataSet*)chs[i]->data("obsData");
-      }
-      RooDataSet * obsData=new RooDataSet("obsData","", obsList, *channelCat, dsmap);
-
-      //      for(int i=0; i<obsData->numEntries(); ++i)
-      //	obsData->get(i)->Print("v");
-      
-      combined->import(*obsData);
-    }
-    */
-
     // now with weighted datasets
     // First Asimov
     RooDataSet * simData=NULL;
@@ -1061,7 +1743,7 @@ namespace HistFactory{
       }
     }
     
-    combined->import(*simData,Rename("asimovData"));
+    if (simData) combined->import(*simData,Rename("asimovData"));
 
     // now obs
     if(chs[0]->data("obsData")){
@@ -1079,7 +1761,7 @@ namespace HistFactory{
 	}
       }
       
-      combined->import(*simData,Rename("obsData"));
+      if (simData) combined->import(*simData,Rename("obsData"));
     }
     
 
@@ -1125,173 +1807,372 @@ namespace HistFactory{
     return combined;
   }
 
-  ///////////////////////////////////////////////
-   void HistoToWorkspaceFactoryFast::FitModel(RooWorkspace * combined, string channel, string /*model_name*/, string data_name, bool /*doParamInspect*/)
-  {
-    cout << "In Fit Model"<<endl;
-    ModelConfig * combined_config = (ModelConfig *) combined->obj("ModelConfig");
-    if(!combined_config){
-      cout << "no model config " << "ModelConfig" << " exiting" << endl;
-      return;
+
+  TH1* HistoToWorkspaceFactoryFast::MakeAbsolUncertaintyHist( const std::string& Name, const TH1* Nominal ) {
+
+    // Take a nominal TH1* and create
+    // a TH1 representing the binwise
+    // errors (taken from the nominal TH1)
+
+    TH1* ErrorHist = (TH1*) Nominal->Clone( Name.c_str() );
+    ErrorHist->Reset();
+    
+    Int_t numBins   = Nominal->GetNbinsX()*Nominal->GetNbinsY()*Nominal->GetNbinsZ();
+    Int_t binNumber = 0;
+
+    // Loop over bins
+    for( Int_t i_bin = 0; i_bin < numBins; ++i_bin) {
+
+      binNumber++;
+      // Ignore underflow / overflow
+      while( Nominal->IsBinUnderflow(binNumber) || Nominal->IsBinOverflow(binNumber) ){
+	binNumber++;
+      }
+
+      Double_t histError = Nominal->GetBinError( binNumber );
+    
+      // Check that histError != NAN
+      if( histError != histError ) {
+	std::cout << "Warning: In histogram " << Nominal->GetName()
+		  << " bin error for bin " << i_bin
+		  << " is NAN.  Not using Error!!!"
+		  << std::endl;
+	throw hf_exc();
+	//histError = sqrt( histContent );
+	//histError = 0;
+      }
+    
+      // Check that histError ! < 0
+      if( histError < 0  ) {
+	std::cout << "Warning: In histogram " << Nominal->GetName()
+		  << " bin error for bin " << binNumber
+		  << " is < 0.  Setting Error to 0"
+		  << std::endl;
+	//histError = sqrt( histContent );
+	histError = 0;
+      }
+
+      ErrorHist->SetBinContent( binNumber, histError );
+
     }
-    //    RooDataSet * simData = (RooDataSet *) combined->obj(data_name.c_str());
-    RooAbsData* simData = combined->data(data_name.c_str());
-    if(!simData){
-      cout << "no data " << data_name << " exiting" << endl;
-      return;
-    }
-    //    const RooArgSet * constrainedParams=combined_config->GetNuisanceParameters();
-    const RooArgSet * POIs=combined_config->GetParametersOfInterest();
-    if(!POIs){
-      cout << "no poi " << data_name << " exiting" << endl;
-      return;
-    }
 
-    /*
-          RooRealVar* poi = (RooRealVar*) combined->var("SigXsecOverSM");
-          RooArgSet * params= new RooArgSet;
-          params->add(*poi);
-          combined_config->SetParameters(*params);
-
-          RooAbsData* expData = combined->data("expData");
-          RooArgSet* temp =  (RooArgSet*) combined->set("obsN")->Clone("temp");
-          temp->add(*poi);
-          RooAbsPdf* model=combined_config->GetPdf();
-          RooArgSet* constrainedParams = model->getParameters(temp);
-          combined->defineSet("constrainedParams", *constrainedParams);
-    */
-
-    //RooAbsPdf* model=combined->pdf(model_name.c_str()); 
-    RooAbsPdf* model=combined_config->GetPdf();
-    //    RooArgSet* allParams = model->getParameters(*simData);
-
-    ///////////////////////////////////////
-    //Do combined fit
-    //RooMsgService::instance().setGlobalKillBelow(RooMsgService::INFO) ;
-    cout << "\n\n---------------" << endl;
-    cout << "---------------- Doing "<< channel << " Fit" << endl;
-    cout << "---------------\n\n" << endl;
-    //    RooFitResult* result = model->fitTo(*simData, Minos(kTRUE), Save(kTRUE), PrintLevel(1));
-    model->fitTo(*simData, Minos(kTRUE), PrintLevel(1));
-    //    PrintCovarianceMatrix(result, allParams, "results/"+FilePrefixStr(channel)+"_corrMatrix.table" );
-
-    //
-    // assuming there is only on poi
-    // 
-    RooRealVar* poi = 0; // (RooRealVar*) POIs->first();
-    // for results tables
-    TIterator* params_itr=POIs->createIterator();
-    TObject* params_obj=0;
-    while((params_obj=params_itr->Next())){
-      poi = (RooRealVar*) params_obj;
-      cout << "printing results for " << poi->GetName() << " at " << poi->getVal()<< " high " << poi->getErrorLo() << " low " << poi->getErrorHi()<<endl;
-    }
-    fprintf(pFile, " %.4f / %.4f  ", poi->getErrorLo(), poi->getErrorHi());
-
-    RooAbsReal* nll = model->createNLL(*simData);
-    RooAbsReal* profile = nll->createProfile(*poi);
-    RooPlot* frame = poi->frame();
-    FormatFrameForLikelihood(frame);
-    TCanvas* c1 = new TCanvas( channel.c_str(), "",800,600);
-    nll->plotOn(frame, ShiftToZero(), LineColor(kRed), LineStyle(kDashed));
-    profile->plotOn(frame);
-    frame->SetMinimum(0);
-    frame->SetMaximum(2.);
-    frame->Draw();
-    //    c1->SaveAs( ("results/"+FilePrefixStr(channel)+"_profileLR.eps").c_str() );
-    c1->SaveAs( (fFileNamePrefix+"_"+channel+"_"+fRowTitle+"_profileLR.eps").c_str() );
-
-    fOut_f->mkdir(channel.c_str())->mkdir("Summary")->cd();
-
-    // an example of calculating profile for a nuisance parameter not poi
-    /*
-    RooRealVar* alpha_isrfsr = (RooRealVar*) combined->var("alpha_isrfsr");
-    RooAbsReal* profile_isrfsr = nll->createProfile(*alpha_isrfsr);
-    poi->setVal(0.55);
-    poi->setConstant();
-
-    RooPlot* frame_isrfsr = alpha_isrfsr->frame();
-    profile_isrfsr->plotOn(frame_isrfsr, Precision(0.1));
-    TCanvas c_isrfsr = new TCanvas( "combined", "",800,600);
-    FormatFrameForLikelihood(frame_isrfsr, "alpha_{isrfsr}");
-    frame_isrfsr->Draw();
-    fOut_f->cd("Summary");
-    c1->Write((FilePrefixStr(channel).str()+"_profileLR_alpha_isrfsr").c_str() );
-    delete frame; delete c1;
-    poi->setConstant(kFALSE);
-    */
-
-    RooCurve* curve=frame->getCurve();
-    Int_t curve_N=curve->GetN();
-    Double_t* curve_x=curve->GetX();
-    delete frame; delete c1;
-
-    //
-    // Verbose output from MINUIT
-    //
-    /*
-    RooMsgService::instance().setGlobalKillBelow(RooFit::DEBUG) ;
-    profile->getVal();
-    RooMinuit* minuit = ((RooProfileLL*) profile)->minuit();
-    minuit->setPrintLevel(5) ; // Print MINUIT messages
-    minuit->setVerbose(5) ; // Print RooMinuit messages with parameter 
-                                // changes (corresponds to the Verbose() option of fitTo()
-    */
+    return ErrorHist;
   
-    Double_t * x_arr = new Double_t[curve_N];
-    Double_t * y_arr_nll = new Double_t[curve_N];
-//     Double_t y_arr_prof_nll[curve_N];
-//     Double_t y_arr_prof[curve_N];
+  }
+  
+  TH1* HistoToWorkspaceFactoryFast::MakeScaledUncertaintyHist( const std::string& Name, std::vector< std::pair<TH1*, TH1*> > HistVec ) {
 
-    for(int i=0; i<curve_N; i++){
-      double f=curve_x[i];
-      poi->setVal(f);
-      x_arr[i]=f;
-      y_arr_nll[i]=nll->getVal();
+    // Take a list of < nominal, absolError > TH1* pairs
+    // and construct a single histogram representing the 
+    // total fractional error as:
+
+    // UncertInQuad(bin i) = Sum: absolUncert*absolUncert
+    // Total(bin i)        = Sum: Value
+    //
+    // TotalFracError(bin i) = Sqrt( UncertInQuad(i) ) / TotalBin(i)
+    
+
+    unsigned int numHists = HistVec.size();
+    
+    if( numHists == 0 ) {
+      std::cout << "Warning: Empty Hist Vector, cannot create total uncertainty" << std::endl;
+      return NULL;
     }
-    TGraph * g = new TGraph(curve_N, x_arr, y_arr_nll);
-    g->SetName((FilePrefixStr(channel)+"_nll").c_str());
-    g->Write(); 
-    delete g;
-    delete [] x_arr;
-    delete [] y_arr_nll;
+    
+    TH1* HistTemplate = HistVec.at(0).first;
+    Int_t numBins = HistTemplate->GetNbinsX()*HistTemplate->GetNbinsY()*HistTemplate->GetNbinsZ();
 
-    /** find out what's inside the workspace **/
-    //combined->Print();
+  // Check that all histograms
+  // have the same bins
+  for( unsigned int i = 0; i < HistVec.size(); ++i ) {
+    
+    TH1* nominal = HistVec.at(i).first;
+    TH1* error   = HistVec.at(i).second;
+    
+    if( nominal->GetNbinsX()*nominal->GetNbinsY()*nominal->GetNbinsZ() != numBins ) {
+      std::cout << "Error: Provided hists have unequal bins" << std::endl;
+      return NULL;
+    }
+    if( error->GetNbinsX()*error->GetNbinsY()*error->GetNbinsZ() != numBins ) {
+      std::cout << "Error: Provided hists have unequal bins" << std::endl;
+      return NULL;
+    }
+  }
+
+  std::vector<double> TotalBinContent( numBins, 0.0);
+  std::vector<double> HistErrorsSqr( numBins, 0.0);
+
+  Int_t binNumber = 0;
+
+  // Loop over bins
+  for( Int_t i_bins = 0; i_bins < numBins; ++i_bins) {
+    
+    binNumber++;
+    while( HistTemplate->IsBinUnderflow(binNumber) || HistTemplate->IsBinOverflow(binNumber) ){
+      binNumber++;
+    }
+    
+    for( unsigned int i_hist = 0; i_hist < numHists; ++i_hist ) {
+      
+      TH1* nominal = HistVec.at(i_hist).first;
+      TH1* error   = HistVec.at(i_hist).second;
+
+      //Int_t binNumber = i_bins + 1;
+
+      Double_t histValue  = nominal->GetBinContent( binNumber );
+      Double_t histError  = error->GetBinContent( binNumber );
+      /*
+      std::cout << " Getting Bin content for Stat Uncertainty"
+		<< " Nom name: " << nominal->GetName()
+		<< " Err name: " << error->GetName()
+		<< " HistNumber: " << i_hist << " bin: " << binNumber
+		<< " Value: " << histValue << " Error: " << histError
+		<< std::endl;
+      */
+
+      if( histError != histError ) {
+	std::cout << "Warning: In histogram " << error->GetName()
+		  << " bin error for bin " << binNumber
+		  << " is NAN.  Not using error!!"
+		  << std::endl;
+	throw hf_exc();
+	//histError = 0;
+      }
+      
+      TotalBinContent.at(i_bins) += histValue;
+      HistErrorsSqr.at(i_bins)   += histError*histError; // Add in quadrature
+
+    }
+  }
+
+  binNumber = 0;
+
+  // Creat the output histogram
+  TH1* ErrorHist = (TH1*) HistTemplate->Clone( Name.c_str() );
+  ErrorHist->Reset();
+
+  // Fill the output histogram
+  for( Int_t i = 0; i < numBins; ++i) {
+
+    //    Int_t binNumber = i + 1;
+    binNumber++;
+    while( ErrorHist->IsBinUnderflow(binNumber) || ErrorHist->IsBinOverflow(binNumber) ){
+      binNumber++;
+    }
+
+    Double_t ErrorsSqr = HistErrorsSqr.at(i);
+    Double_t TotalVal  = TotalBinContent.at(i);
+
+    if( TotalVal <= 0 ) {
+      std::cout << "Warning: Sum of histograms for bin: " << binNumber
+		<< " is <= 0.  Setting error to 0"
+		<< std::endl;
+
+      ErrorHist->SetBinContent( binNumber, 0.0 );
+      continue;
+    }
+
+    Double_t RelativeError = sqrt(ErrorsSqr) / TotalVal;
+
+    // If we otherwise get a NAN
+    // it's an error
+    if( RelativeError != RelativeError ) {
+      std::cout << "Error: bin " << i << " error is NAN" << std::endl;
+      std::cout << " HistErrorsSqr: " << ErrorsSqr
+		<< " TotalVal: " << TotalVal
+		<< std::endl;
+      throw hf_exc();
+    }
+
+    // 0th entry in vector is
+    // the 1st bin in TH1 
+    // (we ignore underflow)
+
+    ErrorHist->SetBinContent( binNumber, RelativeError );
+    
+    std::cout << "Making Total Uncertainty for bin " << binNumber
+	      << " Error = " << sqrt(ErrorsSqr)
+	      << " Val = " << TotalVal
+	      << " RelativeError = " << RelativeError
+	      << std::endl;
 
   }
 
+  return ErrorHist;
 
-void HistoToWorkspaceFactoryFast::FormatFrameForLikelihood(RooPlot* frame, string /*XTitle*/, string YTitle){
+}
 
-      gStyle->SetCanvasBorderMode(0);
-      gStyle->SetPadBorderMode(0);
-      gStyle->SetPadColor(0);
-      gStyle->SetCanvasColor(255);
-      gStyle->SetTitleFillColor(255);
-      gStyle->SetFrameFillColor(0);  
-      gStyle->SetStatColor(255);
-      
-      RooAbsRealLValue* var = frame->getPlotVar();
-      double xmin = var->getMin();
-      double xmax = var->getMax();
-      
-      frame->SetTitle("");
-      //      frame->GetXaxis()->SetTitle(XTitle.c_str());
-      frame->GetXaxis()->SetTitle(var->GetTitle());
-      frame->GetYaxis()->SetTitle(YTitle.c_str());
-      frame->SetMaximum(2.);
-      frame->SetMinimum(0.);
-      TLine * line = new TLine(xmin,.5,xmax,.5);
-      line->SetLineColor(kGreen);
-      TLine * line90 = new TLine(xmin,2.71/2.,xmax,2.71/2.);
-      line90->SetLineColor(kGreen);
-      TLine * line95 = new TLine(xmin,3.84/2.,xmax,3.84/2.);
-      line95->SetLineColor(kGreen);
-      frame->addObject(line);
-      frame->addObject(line90);
-      frame->addObject(line95);
+
+
+  RooArgList HistoToWorkspaceFactoryFast::createStatConstraintTerms( RooWorkspace* proto, vector<string>& constraintTermNames,
+								     ParamHistFunc& paramHist, TH1* uncertHist, 
+								     EstimateSummary::ConstraintType type, Double_t minSigma ) {
+
+
+  // Take a RooArgList of RooAbsReal's and
+  // create N constraint terms (one for
+  // each gamma) whose relative uncertainty
+  // is the value of the ith RooAbsReal
+  //
+  // The integer "type" controls the type
+  // of constraint term:
+  //
+  // type == 0 : NONE
+  // type == 1 : Gaussian
+  // type == 2 : Poisson
+  // type == 3 : LogNormal
+
+  RooArgList ConstraintTerms;
+
+  RooArgList paramSet = paramHist.paramList();
+
+
+  // Must get the full size of the TH1
+  // (No direct method to do this...)
+  Int_t numBins   = uncertHist->GetNbinsX()*uncertHist->GetNbinsY()*uncertHist->GetNbinsZ();
+  Int_t numParams = paramSet.getSize();
+  //  Int_t numBins   = uncertHist->GetNbinsX()*uncertHist->GetNbinsY()*uncertHist->GetNbinsZ();
+
+
+  // Check that there are N elements
+  // in the RooArgList
+  if( numBins != numParams ) {
+    std::cout << "createStatConstraintTerms: bad number of bins" << std::endl;
+    std::cout << "Given histogram with " << numBins << " bins,"
+	      << " but require exactly " << numParams << std::endl;
+    return ConstraintTerms;
   }
+
+  Int_t TH1BinNumber = 0;
+  for( Int_t i = 0; i < paramSet.getSize(); ++i) {
+
+    TH1BinNumber++;
+
+    while( uncertHist->IsBinUnderflow(TH1BinNumber) || uncertHist->IsBinOverflow(TH1BinNumber) ){
+      TH1BinNumber++;
+    }
+
+
+    RooRealVar& gamma = (RooRealVar&) (paramSet[i]);
+
+    std::cout << "Creating constraint for: " << gamma.GetName() 
+	      << ". Type of constraint: " << type <<  std::endl;
+
+    // Get the sigma from the hist
+    // (the relative uncertainty)
+    Double_t sigma = uncertHist->GetBinContent( TH1BinNumber );
+
+    // If the sigma is <= 0, 
+    // do cont create the term
+    if( sigma <= 0 ){
+      std::cout << "Not creating constraint term for "
+		<< gamma.GetName() 
+		<< " because sigma = " << sigma
+		<< " (sigma<=0)" 
+		<< " (TH1 bin number = " << TH1BinNumber << ")"
+		<< std::endl;
+      gamma.setConstant(kTRUE);
+      continue;
+    }
+  
+    // set reasonable ranges for gamma parameters
+    gamma.setMax( 1 + 5*sigma );
+    //    gamma.setMin( TMath::Max(1. - 5*sigma, 0.) );    
+    gamma.setMin( 0. );         
+    
+
+  // Make Constraint Term
+  std::string constrName = string(gamma.GetName()) + "_constraint";
+
+  std::string nomName = string("nom_") + gamma.GetName();
+  std::string sigmaName = string(gamma.GetName()) + "_sigma";
+  std::string poisMeanName = string(gamma.GetName()) + "_poisMean";
+
+
+  if( type == EstimateSummary::Gaussian ) {
+
+    // Type 1 : RooGaussian
+    
+    // Make sigma
+
+    RooConstVar constrSigma( sigmaName.c_str(), sigmaName.c_str(), sigma );
+    //proto->import( constrSigma, RecycleConflictNodes() );
+    //proto->import( constrSigma );
+    
+    
+    // Make "observed" value
+    RooRealVar constrNom(nomName.c_str(), nomName.c_str(), 1.0,0,10);
+    constrNom.setConstant( true );
+
+    // Make the constraint: 
+    RooGaussian gauss( constrName.c_str(), constrName.c_str(),
+		       constrNom, gamma, constrSigma );
+      
+    proto->import( gauss, RecycleConflictNodes() );
+    //proto->import( gauss );
+      
+  } else if( type == EstimateSummary::Poisson ) {
+    
+    Double_t tau = 1/sigma/sigma; // this is correct Poisson equivalent to a Gaussian with mean 1 and stdev sigma
+
+    // Make nominal "observed" value
+    RooRealVar constrNom(nomName.c_str(), nomName.c_str(), tau);
+    constrNom.setMin(0);
+    constrNom.setConstant( true );
+    
+    // Make the scaling term
+    std::string scalingName = string(gamma.GetName()) + "_tau";
+    RooConstVar poissonScaling( scalingName.c_str(), scalingName.c_str(), tau);
+    
+    // Make mean for scaled Poisson
+    RooProduct constrMean( poisMeanName.c_str(), poisMeanName.c_str(), RooArgSet(gamma, poissonScaling) );
+    //proto->import( constrSigma, RecycleConflictNodes() );
+    //proto->import( constrSigma );
+
+    // Type 2 : RooPoisson
+    RooPoisson pois(constrName.c_str(), constrName.c_str(), constrNom, constrMean);
+    pois.setNoRounding(true);
+    proto->import( pois, RecycleConflictNodes() );
+
+      
+  } else {
+
+    std::cout << "Error: Did not recognize Stat Error constraint term type: "
+	      << type << " for : " << paramHist.GetName() << std::endl;
+  }
+  
+  // If the sigma value is less
+    // than a supplied threshold,
+    // set the variable to constant
+    if( sigma < minSigma ) {
+      std::cout << "Warning:  Bin " << i << " = " << sigma
+		<< " and is < " << minSigma
+		<< ". Setting: " << gamma.GetName() << " to constant"
+		<< std::endl;
+      gamma.setConstant(kTRUE);
+    }
+
+    constraintTermNames.push_back( constrName );    
+    ConstraintTerms.add( *proto->pdf(constrName.c_str()) );
+
+    // Add the "observed" value to the 
+    // list of global observables:
+    RooArgSet* globalSet = const_cast<RooArgSet*>(proto->set("globalObservables"));
+    
+    RooRealVar* nomVarInWorkspace = proto->var(nomName.c_str());
+    if( ! globalSet->contains(*nomVarInWorkspace) ) {
+      globalSet->add( *nomVarInWorkspace );	
+    }
+
+    
+  } // end loop over parameters
+
+
+  return ConstraintTerms;
+  
+}
+
+
 
   TDirectory * HistoToWorkspaceFactoryFast::Makedirs( TDirectory * file, vector<string> names ){
     if(! file) return file;
@@ -1315,5 +2196,6 @@ void HistoToWorkspaceFactoryFast::FormatFrameForLikelihood(RooPlot* frame, strin
   }
 
 }
+
 }
 

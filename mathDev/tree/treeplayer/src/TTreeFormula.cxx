@@ -238,7 +238,7 @@ void TTreeFormula::Init(const char*name, const char* expression)
          //fUsedSizes[fNdimensions[i]-1] = -TMath::Abs(fUsedSizes[fNdimensions[i]-1]);
          //fUsedSizes[0] = - TMath::Abs( fUsedSizes[0]);
 
-         if (fNcodes == 1) {
+         if (fNoper == 1) {
             // If the string is by itself, then it can safely be histogrammed as
             // in a string based axis.  To histogram the number inside the string
             // just make it part of a useless expression (for example: mystring+0)
@@ -251,14 +251,17 @@ void TTreeFormula::Init(const char*name, const char* expression)
          if (IsString(fNoper-1)) SetBit(kIsCharacter);
       }
    }
+   if (fNoper == 1 && GetAction(0)==kStringConst) {
+      SetBit(kIsCharacter);
+   }
    if (fNoper==1 && GetAction(0)==kAliasString) {
       TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
       R__ASSERT(subform);
-      if (subform->TestBit(kIsCharacter)) SetBit(kIsCharacter);
+      if (subform->IsString()) SetBit(kIsCharacter);
    } else if (fNoper==2 && GetAction(0)==kAlternateString) {
       TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
       R__ASSERT(subform);
-      if (subform->TestBit(kIsCharacter)) SetBit(kIsCharacter);
+      if (subform->IsString()) SetBit(kIsCharacter);
    }
 
    fManager->Sync();
@@ -1659,7 +1662,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                TStreamerElement * curelem;
                while ((curelem = (TStreamerElement*)next())) {
                   if (curelem->GetClassPointer() ==  TClonesArray::Class()) {
-                     Int_t clones_offset;
+                     Int_t clones_offset = 0;
                      ((TStreamerInfo*)cl->GetStreamerInfo())->GetStreamerElement(curelem->GetName(),clones_offset);
                      TFormLeafInfo* clonesinfo =
                         new TFormLeafInfo(cl, clones_offset, curelem);
@@ -1693,7 +1696,7 @@ Int_t TTreeFormula::ParseWithLeaf(TLeaf* leaf, const char* subExpression, Bool_t
                      }
                   } else if (curelem->GetClassPointer() && curelem->GetClassPointer()->GetCollectionProxy()) {
 
-                     Int_t coll_offset;
+                     Int_t coll_offset = 0;
                      ((TStreamerInfo*)cl->GetStreamerInfo())->GetStreamerElement(curelem->GetName(),coll_offset);
 
                      TClass *sub_cl =
@@ -3135,7 +3138,7 @@ TLeaf* TTreeFormula::GetLeafWithDatamember(const char* topchoice, const char* ne
                      leafinfo = new TFormLeafInfoClones(mother_cl, 0, bel_element, kTRUE);
                   }
 
-                  Int_t clones_offset;
+                  Int_t clones_offset = 0;
                   ((TStreamerInfo*)cl->GetStreamerInfo())->GetStreamerElement(curelem->GetName(),clones_offset);
                   TFormLeafInfo* sub_clonesinfo = new TFormLeafInfo(cl, clones_offset, curelem);
                   if (leafinfo)
@@ -3275,7 +3278,7 @@ Bool_t TTreeFormula::BranchHasMethod(TLeaf* leafcur, TBranch* branch, const char
          Error("BranchHasMethod","A TClonesArray was stored in a branch type no yet support (i.e. neither TBranchObject nor TBranchElement): %s",branch->IsA()->GetName());
          return kFALSE;
       }
-      cl = clones->GetClass();
+      cl = clones ? clones->GetClass() : 0;
    } else if (cl && cl->GetCollectionProxy()) {
       cl = cl->GetCollectionProxy()->GetValueClass();
    }
@@ -3926,7 +3929,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
    const char *stringStackLocal[kMAXSTRINGFOUND];
    const char **stringStack = stringStackArg?stringStackArg:stringStackLocal;
 
-   const bool willLoad = (instance==0 || fNeedLoading); fNeedLoading = kFALSE;
+   const Bool_t willLoad = (instance==0 || fNeedLoading); fNeedLoading = kFALSE;
    if (willLoad) fDidBooleanOptimization = kFALSE;
 
    Int_t pos  = 0;
@@ -4037,11 +4040,27 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
             case kRightShift: pos--; tab[pos-1]= ((Long64_t) tab[pos-1]) >>((Long64_t) tab[pos]); continue;
 
             case kJump   : i = (oper & kTFOperMask); continue;
-            case kJumpIf : pos--; if (!tab[pos]) i = (oper & kTFOperMask); continue;
+            case kJumpIf : {
+               pos--; 
+               if (!tab[pos]) { 
+                  i = (oper & kTFOperMask);
+                  // If we skip the left (true) side of the if statement we may,
+                  // skip some of the branch loading (since we remove duplicate branch
+                  // request (in TTreeFormula constructor) and so we need to force the
+                  // loading here.
+                  if (willLoad) fDidBooleanOptimization = kTRUE;
+               }
+               continue;
+            }
 
             case kStringConst: {
                // String
                pos2++; stringStack[pos2-1] = (char*)fExpr[i].Data();
+               if (fAxis) {
+                  // See TT_EVAL_INIT
+                  Int_t bin = fAxis->FindBin(stringStack[pos2-1]);                                                        \
+                  return bin;
+               }
                continue;
             }
 
@@ -4075,7 +4094,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
                   int toskip = param / 10;
                   i += toskip;
                   if (willLoad) fDidBooleanOptimization = kTRUE;
-              }
+               }
                continue;
             }
 
@@ -4098,7 +4117,7 @@ Double_t TTreeFormula::EvalInstance(Int_t instance, const char *stringStackArg[]
                   }
                }
                pos++;
-               Double_t ret;
+               Double_t ret = 0;
                method->Execute(ret);
                tab[pos-1] = ret; // check for the correct conversion!
 
@@ -4380,13 +4399,13 @@ Double_t TTreeFormula::GetValueFromMethod(Int_t i, TLeaf* leaf) const
    TMethodCall::EReturnType r = m->ReturnType();
 
    if (r == TMethodCall::kLong) {
-      Long_t l;
+      Long_t l = 0;
       m->Execute(thisobj, l);
       return (Double_t) l;
    }
 
    if (r == TMethodCall::kDouble) {
-      Double_t d;
+      Double_t d = 0.0;
       m->Execute(thisobj, d);
       return d;
    }
@@ -4440,19 +4459,19 @@ void* TTreeFormula::GetValuePointerFromMethod(Int_t i, TLeaf* leaf) const
    TMethodCall::EReturnType r = m->ReturnType();
 
    if (r == TMethodCall::kLong) {
-      Long_t l;
+      Long_t l = 0;
       m->Execute(thisobj, l);
       return 0;
    }
 
    if (r == TMethodCall::kDouble) {
-      Double_t d;
+      Double_t d = 0.0;
       m->Execute(thisobj, d);
       return 0;
    }
 
    if (r == TMethodCall::kOther) {
-      char* c;
+      char* c = 0;
       m->Execute(thisobj, &c);
       return c;
    }
@@ -4533,13 +4552,13 @@ Bool_t TTreeFormula::IsLeafInteger(Int_t code) const
          case kLength:
          case kLengthFunc:
          case kIteration:
-           return kTRUE;
+            return kTRUE;
          case kSum:
          case kMin:
          case kMax:
          case kEntryList:
          default:
-           return kFALSE;
+            return kFALSE;
       }
    }
    if (fAxis) return kTRUE;
@@ -4569,7 +4588,8 @@ Bool_t TTreeFormula::IsString() const
 {
    // return TRUE if the formula is a string
 
-   return TestBit(kIsCharacter) || (fNoper==1 && IsString(0));
+   // See TTreeFormula::Init for the setting of kIsCharacter.
+   return TestBit(kIsCharacter);
 }
 
 //______________________________________________________________________________
@@ -4693,23 +4713,28 @@ char *TTreeFormula::PrintValue(Int_t mode, Int_t instance, const char *decform) 
    } else if (mode == -1) {
       snprintf(value, kMAXLENGTH-1, "%s", GetTitle());
    } else if (mode == 0) {
-      if ( (fNstring && fNval==0 && fNoper==1) ||
-           (TestBit(kIsCharacter)) )
+      if ( (fNstring && fNval==0 && fNoper==1) || IsString() )
       {
          const char * val = 0;
-         if (instance<fNdata[0]) {
-            if (fLookupType[0]==kTreeMember) {
-               val = (char*)GetLeafInfo(0)->GetValuePointer((TLeaf*)0x0,instance);
-            } else {
-               TLeaf *leaf = (TLeaf*)fLeaves.UncheckedAt(0);
-               TBranch *branch = leaf->GetBranch();
-               Long64_t readentry = branch->GetTree()->GetReadEntry();
-               R__LoadBranch(branch,readentry,fQuickLoad);
-               if (fLookupType[0]==kDirect && fNoper==1) {
-                  val = (const char*)leaf->GetValuePointer();
+         if (GetAction(0)==kStringConst) {
+            val = fExpr[0].Data();
+         } else if (instance<fNdata[0]) {
+            if (fNoper == 1) {
+               if (fLookupType[0]==kTreeMember) {
+                  val = (char*)GetLeafInfo(0)->GetValuePointer((TLeaf*)0x0,instance);
                } else {
-                  val = ((TTreeFormula*)this)->EvalStringInstance(instance);
+                  TLeaf *leaf = (TLeaf*)fLeaves.UncheckedAt(0);
+                  TBranch *branch = leaf->GetBranch();
+                  Long64_t readentry = branch->GetTree()->GetReadEntry();
+                  R__LoadBranch(branch,readentry,fQuickLoad);
+                  if (fLookupType[0]==kDirect && fNoper==1) {
+                     val = (const char*)leaf->GetValuePointer();
+                  } else {
+                     val = ((TTreeFormula*)this)->EvalStringInstance(instance);
+                  }
                }
+            } else {
+               val = ((TTreeFormula*)this)->EvalStringInstance(instance);
             }
          }
          if (val) {
@@ -4848,7 +4873,7 @@ void TTreeFormula::SetAxis(TAxis *axis)
    // Set the axis (in particular get the type).
 
    if (!axis) {fAxis = 0; return;}
-   if (TestBit(kIsCharacter)) {
+   if (IsString()) {
       fAxis = axis;
       if (fNoper==1 && GetAction(0)==kAliasString){
          TTreeFormula *subform = static_cast<TTreeFormula*>(fAliases.UncheckedAt(0));
@@ -4859,8 +4884,12 @@ void TTreeFormula::SetAxis(TAxis *axis)
          R__ASSERT(subform);
          subform->SetAxis(axis);
       }
+      // Since the bin are corresponding to 'string', we currently must also set
+      // the axis to align the bins exactly on integer boundaries.
+      axis->SetBit(TAxis::kIsInteger);
+   } else if (IsInteger()) {
+      axis->SetBit(TAxis::kIsInteger);
    }
-   if (IsInteger()) axis->SetBit(TAxis::kIsInteger);
 }
 
 //______________________________________________________________________________
@@ -4931,17 +4960,16 @@ void TTreeFormula::UpdateFormulaLeaves()
    // A safer alternative would be to recompile the whole thing .... However
    // currently compile HAS TO be called from the constructor!
 
-   TString names(kMaxLen);
    Int_t nleaves = fLeafNames.GetEntriesFast();
    ResetBit( kMissingLeaf );
    for (Int_t i=0;i<nleaves;i++) {
       if (!fTree) break;
       if (!fLeafNames[i]) continue;
-      names.Form("%s/%s",fLeafNames[i]->GetTitle(),fLeafNames[i]->GetName());
-      TLeaf *leaf = fTree->GetLeaf(names);
+      
+      TLeaf *leaf = fTree->GetLeaf(fLeafNames[i]->GetTitle(),fLeafNames[i]->GetName());
       fLeaves[i] = leaf;
       if (fBranches[i] && leaf) {
-         fBranches[i]=leaf->GetBranch();
+         fBranches[i] = leaf->GetBranch();
          // Since sometimes we might no read all the branches for all the entries, we 
          // might sometimes only read the branch count and thus reset the colleciton
          // but might not read the data branches, to insure that a subsequent read 
@@ -4961,10 +4989,10 @@ void TTreeFormula::UpdateFormulaLeaves()
       if (j<fNval && fCodes[j]<0) {
          TCutG *gcut = (TCutG*)fExternalCuts.At(j);
          if (gcut) {
-           TTreeFormula *fx = (TTreeFormula *)gcut->GetObjectX();
-           TTreeFormula *fy = (TTreeFormula *)gcut->GetObjectY();
-           if (fx) fx->UpdateFormulaLeaves();
-           if (fy) fy->UpdateFormulaLeaves();
+            TTreeFormula *fx = (TTreeFormula *)gcut->GetObjectX();
+            TTreeFormula *fy = (TTreeFormula *)gcut->GetObjectY();
+            if (fx) fx->UpdateFormulaLeaves();
+            if (fy) fy->UpdateFormulaLeaves();
          }
       }
    }
@@ -5097,7 +5125,7 @@ void TTreeFormula::ResetDimensions() {
          if (!gcut) continue;
          TTreeFormula *fx = (TTreeFormula *)gcut->GetObjectX();
          TTreeFormula *fy = (TTreeFormula *)gcut->GetObjectY();
-
+         
          if (fx) {
             switch(fx->GetMultiplicity()) {
                case 0: break;
@@ -5114,15 +5142,15 @@ void TTreeFormula::ResetDimensions() {
             }
             fManager->Add(fy);
          }
-
+         
          continue;
       }
 
       if (fLookupType[i]==kIteration) {
-          fMultiplicity = 1;
-          continue;
+         fMultiplicity = 1;
+         continue;
       }
-
+      
       TLeaf *leaf = (TLeaf*)fLeaves.UncheckedAt(i);
       if (!leaf) continue;
 

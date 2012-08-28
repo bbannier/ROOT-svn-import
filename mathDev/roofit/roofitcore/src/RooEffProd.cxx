@@ -28,6 +28,8 @@
 #include "RooNameReg.h"
 #include "RooRealVar.h"
 
+using namespace std;
+
 ClassImp(RooEffProd)
   ;
 
@@ -74,12 +76,12 @@ RooEffProd::~RooEffProd()
 
 
 //_____________________________________________________________________________
-Double_t RooEffProd::getVal(const RooArgSet* set) const 
+Double_t RooEffProd::getValV(const RooArgSet* set) const 
 {  
   // Return p.d.f. value normalized over given set of observables
 
   _nset = _fixedNset ? _fixedNset : set ;
-  return RooAbsPdf::getVal(set) ;
+  return RooAbsPdf::getValV(set) ;
 }
 
 
@@ -101,7 +103,7 @@ RooAbsGenContext* RooEffProd::genContext(const RooArgSet &vars, const RooDataSet
 {
   // Return specialized generator context for RooEffProds that implements generation
   // in a more efficient way than can be done for generic correlated products
-
+  
   assert(pdf()!=0);
   assert(eff()!=0);
   return new RooEffGenContext(*this,*pdf(),*eff(),vars,prototype,auxProto,verbose) ;
@@ -159,7 +161,7 @@ Int_t RooEffProd::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVar
   cache->_intObs.addClone(allVars) ;
   cache->_clone = (RooEffProd*) clone(Form("%s_clone",GetName())) ;
   cache->_clone->_fixedNset = &cache->_intObs ;
-  cache->_int = cache->_clone->createIntegral(cache->_intObs) ;
+  cache->_int = cache->_clone->createIntegral(cache->_intObs,rangeName) ;
 
   // Store cache and return index as code
   Int_t code = _cacheMgr.setObj(&allVars,&allVars,(RooAbsCacheElement*)cache,RooNameReg::ptr(rangeName)) ; 

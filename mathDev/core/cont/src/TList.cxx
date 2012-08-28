@@ -635,8 +635,8 @@ TObject *TList::Remove(TObject *obj)
 
    // return object found, which may be (pointer wise) different than the
    // input object (depending on what IsEqual() is doing)
-   TObject *ob = lnk->GetObject();
 
+   TObject *ob = lnk->GetObject();
    if (lnk == fFirst) {
       fFirst = lnk->Next();
       if (lnk == fLast)
@@ -937,7 +937,7 @@ void TListIter::Reset()
 }
 
 //______________________________________________________________________________
-bool TListIter::operator!=(const TIterator &aIter) const
+Bool_t TListIter::operator!=(const TIterator &aIter) const
 {
    // This operator compares two TIterator objects.
 
@@ -952,7 +952,7 @@ bool TListIter::operator!=(const TIterator &aIter) const
 }
 
 //______________________________________________________________________________
-bool TListIter::operator!=(const TListIter &aIter) const
+Bool_t TListIter::operator!=(const TListIter &aIter) const
 {
    // This operator compares two TListIter objects.
 

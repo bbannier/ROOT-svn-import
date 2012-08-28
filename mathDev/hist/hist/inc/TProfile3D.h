@@ -54,6 +54,17 @@ protected:
                                                                     nbins[1], range[2], range[3], 
                                                                     nbins[2], range[4], range[5]); };
    Int_t Fill(const Double_t* v) { return Fill(v[0], v[1], v[2], v[3], v[4]); };
+
+
+   using TH3::Fill;
+   Int_t             Fill(Double_t, Double_t,Double_t) {return TH3::Fill(0); } //MayNotUse
+   Int_t             Fill(const char *, const char *, const char *, Double_t) {return TH3::Fill(0); } //MayNotUse
+   Int_t             Fill(const char *, Double_t , const char *, Double_t) {return TH3::Fill(0); } //MayNotUse
+   Int_t             Fill(const char *, const char *, Double_t, Double_t) {return TH3::Fill(0); } //MayNotUse
+   Int_t             Fill(Double_t, const char *, const char *, Double_t) {return TH3::Fill(0); } //MayNotUse
+   Int_t             Fill(Double_t, const char *, Double_t, Double_t) {return TH3::Fill(0); } //MayNotUse
+   Int_t             Fill(Double_t, Double_t, const char *, Double_t) {return TH3::Fill(0); } //MayNotUse
+
    
 private:
    Double_t *GetB()  {return &fBinEntries.fArray[0];}
@@ -68,8 +79,6 @@ private:
       { MayNotUse("SetBins(Int_t, Double_t, Double_t, Int_t, Double_t, Double_t"); }
    void SetBins(Int_t, const Double_t*, Int_t, const Double_t*)
       { MayNotUse("SetBins(Int_t, const Double_t*, Int_t, const Double_t*"); }
-   void SetBins(Int_t, const Double_t *, Int_t, const Double_t *, Int_t, const Double_t *)
-      { MayNotUse("SetBins(Int_t, const Double_t*, Int_t, const Double_t*, Int_t, const Double_t*"); }
 
 public:
    TProfile3D();
@@ -81,27 +90,17 @@ public:
                                                 ,Int_t nbinsz,const Double_t *zbins,Option_t *option="");
    TProfile3D(const TProfile3D &profile);
    virtual ~TProfile3D();
-   virtual void      Add(TF1 *h1, Double_t c1=1, Option_t *option="");
-   virtual void      Add(const TH1 *h1, Double_t c1=1);
-   virtual void      Add(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
+   virtual Bool_t    Add(TF1 *h1, Double_t c1=1, Option_t *option="");
+   virtual Bool_t    Add(const TH1 *h1, Double_t c1=1);
+   virtual Bool_t    Add(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
    static  void      Approximate(Bool_t approx=kTRUE);
    void              BuildOptions(Double_t tmin, Double_t tmax, Option_t *option);
    virtual Int_t     BufferEmpty(Int_t action=0);
    virtual void      Copy(TObject &hnew) const;
-   virtual void      Divide(TF1 *h1, Double_t c1=1);
-   virtual void      Divide(const TH1 *h1);
-   virtual void      Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t    Divide(TF1 *h1, Double_t c1=1);
+   virtual Bool_t    Divide(const TH1 *h1);
+   virtual Bool_t    Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    virtual TH1      *DrawCopy(Option_t *option="") const;
-   Int_t             Fill(Double_t) {return -1;} //MayNotUse
-   Int_t             Fill(const char*, Double_t) {return -1;} //MayNotUse
-   Int_t             Fill(Double_t, Double_t) {return -1; } //MayNotUse
-   Int_t             Fill(Double_t, Double_t,Double_t) {return -1; } //MayNotUse
-   Int_t             Fill(const char *, const char *, const char *, Double_t) {return -1; } //MayNotUse
-   Int_t             Fill(const char *, Double_t , const char *, Double_t) {return -1; } //MayNotUse
-   Int_t             Fill(const char *, const char *, Double_t, Double_t) {return -1; } //MayNotUse
-   Int_t             Fill(Double_t, const char *, const char *, Double_t) {return -1; } //MayNotUse
-   Int_t             Fill(Double_t, const char *, Double_t, Double_t) {return -1; } //MayNotUse
-   Int_t             Fill(Double_t, Double_t, const char *, Double_t) {return -1; } //MayNotUse
    virtual Int_t     Fill(Double_t x, Double_t y, Double_t z, Double_t t);
    virtual Int_t     Fill(Double_t x, Double_t y, Double_t z, Double_t t, Double_t w);
    virtual Double_t  GetBinContent(Int_t bin) const;
@@ -121,9 +120,9 @@ public:
    virtual Double_t  GetTmin() const {return fTmin;}
    virtual Double_t  GetTmax() const {return fTmax;}
    virtual Long64_t  Merge(TCollection *list);
-   virtual void      Multiply(TF1 *h1, Double_t c1=1);
-   virtual void      Multiply(const TH1 *h1);
-   virtual void      Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t    Multiply(TF1 *h1, Double_t c1=1);
+   virtual Bool_t    Multiply(const TH1 *h1);
+   virtual Bool_t    Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    TH3D             *ProjectionXYZ(const char *name="_pxyz", Option_t *option="e") const;
    virtual void      PutStats(Double_t *stats);
    virtual void      Reset(Option_t *option="");
@@ -134,6 +133,8 @@ public:
    virtual void      SetBins(Int_t nbinsx, Double_t xmin, Double_t xmax, 
                              Int_t nbinsy, Double_t ymin, Double_t ymax, 
                              Int_t nbinsz, Double_t zmin, Double_t zmax);
+   virtual void      SetBins(Int_t nx, const Double_t *xBins, Int_t ny, const Double_t * yBins, Int_t nz,
+			    const Double_t *zBins);
    virtual void      SetBuffer(Int_t buffersize, Option_t *opt="");
    virtual void      SetErrorOption(Option_t *option=""); // *MENU*
    virtual void      Sumw2(); 

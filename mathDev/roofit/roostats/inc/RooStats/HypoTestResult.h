@@ -66,12 +66,18 @@ namespace RooStats {
       
       // default constructor
       explicit HypoTestResult(const char* name = 0);
+      
+      // copy constructo
+      HypoTestResult(const HypoTestResult& other);
 
       // constructor from name, null and alternate p values 
       HypoTestResult(const char* name, Double_t nullp, Double_t altp);
 
       // destructor 
       virtual ~HypoTestResult();
+
+      // assignment operator
+      HypoTestResult & operator=(const HypoTestResult& other);
 
       // add values from another HypoTestResult
       virtual void Append(const HypoTestResult *other);
@@ -104,12 +110,20 @@ namespace RooStats {
 
       SamplingDistribution* GetNullDistribution(void) const { return fNullDistr; }
       SamplingDistribution* GetAltDistribution(void) const { return fAltDistr; }
+      RooDataSet* GetNullDetailedOutput(void) const { return fNullDetailedOutput; }
+      RooDataSet* GetAltDetailedOutput(void) const { return fAltDetailedOutput; }
+      RooDataSet* GetFitInfo(void) const { return fFitInfo; }
       Double_t GetTestStatisticData(void) const { return fTestStatisticData; }
+      const RooArgList* GetAllTestStatisticsData(void) const { return fAllTestStatisticsData; }
       Bool_t HasTestStatisticData(void) const;
 
       void SetAltDistribution(SamplingDistribution *alt);
       void SetNullDistribution(SamplingDistribution *null);
+      void SetAltDetailedOutput(RooDataSet* d) { fAltDetailedOutput = d; }
+      void SetNullDetailedOutput(RooDataSet* d) { fNullDetailedOutput = d; }
+      void SetFitInfo(RooDataSet* d) { fFitInfo = d; }
       void SetTestStatisticData(const Double_t tsd);
+      void SetAllTestStatisticsData(const RooArgList* tsd);
 
       void SetPValueIsRightTail(Bool_t pr);
       Bool_t GetPValueIsRightTail(void) const { return fPValueIsRightTail; }
@@ -126,34 +140,14 @@ namespace RooStats {
       /// The error on the ratio CLs+b/CLb
       Double_t CLsError() const;
 
+      /// The error on the Null p-value
       Double_t NullPValueError() const;
 
+      /// The error on the significance, computed from NullPValueError via error propagation
+      Double_t SignificanceError() const;
 
-      void Print(const Option_t* = "") const {
-         // Print out some information about the results
-         // Note: use Alt/Null labels for the hypotheses here as the Null
-         // might be the s+b hypothesis.
 
-         cout << endl << "Results " << GetName() << ": " << endl;
-         if(HasTestStatisticData()  &&  fNullDistr) {
-            cout << " - Null p-value = " << NullPValue() << " +/- " << NullPValueError() << endl;
-            cout << " - Significance = " << Significance() << " sigma" << endl;
-         }
-         if(fAltDistr)
-            cout << " - Number of Alt toys: " << fAltDistr->GetSize() << std::endl;
-         if(fNullDistr)
-            cout << " - Number of Null toys: " << fNullDistr->GetSize() << std::endl;
-         if(HasTestStatisticData())
-            cout << " - Test statistic evaluated on data: " << fTestStatisticData << std::endl;
-         if(HasTestStatisticData()  &&  fNullDistr)
-            cout << " - CL_b: " << CLb() << " +/- " << CLbError() << std::endl;
-         if(HasTestStatisticData()  &&  fAltDistr)
-            cout << " - CL_s+b: " << CLsplusb() << " +/- " << CLsplusbError() << std::endl;
-         if(HasTestStatisticData()  &&  fAltDistr  &&  fNullDistr)
-            cout << " - CL_s: " << CLs() << " +/- " << CLsError()  << std::endl;
-
-         return;
-      }
+      void Print(const Option_t* = "") const;
 
    private:
       void UpdatePValue(const SamplingDistribution* distr, Double_t &pvalue, Double_t &perror,  Bool_t pIsRightTail);
@@ -166,12 +160,16 @@ namespace RooStats {
       mutable Double_t fNullPValueError; // error of p-value for the null hypothesis (small number means disfavored)
       mutable Double_t fAlternatePValueError; // error of p-value for the alternate hypothesis (small number means disfavored)
       Double_t fTestStatisticData; // result of the test statistic evaluated on data
+      const RooArgList* fAllTestStatisticsData; // for the case of multiple test statistics, holds all the results
       SamplingDistribution *fNullDistr;
       SamplingDistribution *fAltDistr;
+      RooDataSet* fNullDetailedOutput;
+      RooDataSet* fAltDetailedOutput;
+      RooDataSet* fFitInfo;
       Bool_t fPValueIsRightTail;
       Bool_t fBackgroundIsAlt;
 
-      ClassDef(HypoTestResult,2)  // Base class to represent results of a hypothesis test
+      ClassDef(HypoTestResult,3)  // Base class to represent results of a hypothesis test
 
    };
 }

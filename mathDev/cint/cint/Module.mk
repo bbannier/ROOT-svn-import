@@ -92,7 +92,7 @@ ifeq ($(PLATFORM),aix)
 CINTS2       += $(MODDIRSD)/libstrm.cxx
 endif
 ifeq ($(PLATFORM),aix5)
-CINTS2       += $(MODDIRSD)/libstrm.cxx
+CINTS2       += $(MODDIRSD)/stlport4strm.cxx
 endif
 ifeq ($(PLATFORM),sgi)
 CINTS2       += $(MODDIRSD)/libstrm.cxx
@@ -161,6 +161,10 @@ ifeq ($(CLANG_MAJOR),3)
 CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
 CINTS2       += $(MODDIRSD)/gcc4strm.cxx
 endif
+ifeq ($(CLANG_MAJOR),4)
+CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
+CINTS2       += $(MODDIRSD)/gcc4strm.cxx
+endif
 ifeq ($(CXXCMD),xlC)
 ifeq ($(PLATFORM),macosx)
 CINTS2       := $(filter-out $(MODDIRSD)/libstrm.%,$(CINTS2))
@@ -192,6 +196,9 @@ MAKECINT     := bin/makecint$(EXEEXT)
 ##### iosenum.h #####
 IOSENUM      := $(call stripsrc,$(MODDIR)/include/iosenum.h)
 IOSENUMC     := $(CINTDIRIOSEN)/iosenum.cxx
+ifeq ($(CLANG_MAJOR),4)
+IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
+else
 ifeq ($(CLANG_MAJOR),3)
 IOSENUMA     := $(CINTDIRIOSEN)/iosenum.$(ARCH)3
 else
@@ -209,12 +216,25 @@ endif
 endif
 endif
 endif
+endif
 
 # used in the main Makefile
 ALLHDRS     += $(CINTHT)
 
-CINTCXXFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY
-CINTCFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY
+CINTSIZEFLAGS :=
+ifneq ($(CINTMAXSTRUCT),)
+CINTSIZEFLAGS += -DG__MAXSTRUCT=$(CINTMAXSTRUCT)
+endif
+ifneq ($(CINTMAXTYPEDEF),)
+CINTSIZEFLAGS += -DG__MAXTYPEDEF=$(CINTMAXTYPEDEF)
+endif
+ifneq ($(CINTLONGLINE),)
+CINTSIZEFLAGS += -DG__LONGLINE=$(CINTLONGLINE)
+endif
+CXXFLAGS += $(CINTSIZEFLAGS)
+
+CINTCXXFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY $(CINTSIZEFLAGS)
+CINTCFLAGS += -DG__HAVE_CONFIG -DG__NOMAKEINFO -DG__CINTBODY $(CINTSIZEFLAGS)
 ifneq ($(ROOT_OBJDIR),$(ROOT_SRCDIR))
 CINTCXXFLAGS += -I$(call stripsrc,$(CINTDIRI))
 CINTCFLAGS += -I$(call stripsrc,$(CINTDIRI))
@@ -331,6 +351,7 @@ $(MAKECINTO): CXXFLAGS := $(CINTCXXFLAGS)
 $(call stripsrc,$(CINTDIRS)/loadfile_tmp.cxx): $(CINTDIRS)/loadfile.cxx
 	$(MAKEDIR)
 	cp -f $< $@
+$(call stripsrc,$(CINTDIRS)/loadfile_tmp.o): $(CINTCONF) $(ORDER_) $(CINTINCLUDES)
 $(call stripsrc,$(CINTDIRS)/loadfile_tmp.o): CINTCXXFLAGS += -UR__HAVE_CONFIG -DROOTBUILD
 $(call stripsrc,$(CINTDIRS)/loadfile_tmp.o) $(CINTO): OPT := $(filter-out -Wshadow,$(OPT))
 $(call stripsrc,$(CINTDIRS)/loadfile_tmp.o) $(CINTO): CXXFLAGS:=$(filter-out -Wshadow,$(CXXFLAGS))

@@ -4,6 +4,7 @@
 #include "Utility.h"
 
 // ROOT
+#include "TInterpreter.h"
 #include "TBaseClass.h"
 #include "TClass.h"
 #include "TClassEdit.h"
@@ -132,7 +133,7 @@ Bool_t PyROOT::TMemberAdapter::IsStatic() const
 }
 
 //____________________________________________________________________________
-size_t PyROOT::TMemberAdapter::FunctionParameterSize( bool required ) const
+size_t PyROOT::TMemberAdapter::FunctionParameterSize( Bool_t required ) const
 {
 // get the total number of parameters that the adapted function/method takes
    TFunction* func = (TFunction*)fMember;
@@ -236,13 +237,18 @@ PyROOT::TScopeAdapter::TScopeAdapter( const TMemberAdapter& mb ) :
 }
 
 //____________________________________________________________________________
-PyROOT::TScopeAdapter PyROOT::TScopeAdapter::ByName( const std::string & name, bool quiet )
+PyROOT::TScopeAdapter PyROOT::TScopeAdapter::ByName( const std::string& name, Bool_t quiet )
 {
 // lookup a scope (class) by name
    Int_t oldEIL = gErrorIgnoreLevel;
    if ( quiet )
       gErrorIgnoreLevel = 3000;
    TClass* klass = TClass::GetClass( name.c_str() );
+   if (klass && klass->GetListOfAllPublicMethods()->GetSize() == 0) {
+   // sometimes I/O interferes, leading to zero methods: reload from CINT
+      ClassInfo_t* cl = gInterpreter->ClassInfo_Factory( name.c_str() );
+      if ( cl ) gInterpreter->SetClassInfo( klass, kTRUE );
+   }
    gErrorIgnoreLevel = oldEIL;
 
    return klass;
@@ -344,7 +350,7 @@ PyROOT::TMemberAdapter PyROOT::TScopeAdapter::DataMemberAt( size_t nth ) const
 }
 
 //____________________________________________________________________________
-PyROOT::TScopeAdapter::operator bool() const
+PyROOT::TScopeAdapter::operator Bool_t() const
 {
 // check the validity of this scope (class)
    if ( fName.empty() )
@@ -352,7 +358,7 @@ PyROOT::TScopeAdapter::operator bool() const
 
    Int_t oldEIL = gErrorIgnoreLevel;
    gErrorIgnoreLevel = 3000;
-   bool b = G__TypeInfo( Name( ROOT::Reflex::Q | ROOT::Reflex::S ).c_str() ).IsValid();
+   Bool_t b = G__TypeInfo( Name( ROOT::Reflex::Q | ROOT::Reflex::S ).c_str() ).IsValid();
    gErrorIgnoreLevel = oldEIL;
    return b;
 }

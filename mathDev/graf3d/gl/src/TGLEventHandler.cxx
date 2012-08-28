@@ -71,6 +71,7 @@ TGLEventHandler::TGLEventHandler(TGWindow *w, TObject *obj) :
    fInPointerGrab      (kFALSE),
    fMouseTimerRunning  (kFALSE),
    fTooltipShown       (kFALSE),
+   fArcBall            (kFALSE),
    fTooltipPixelTolerance (3),
    fSecSelType(TGLViewer::kOnRequest),
    fDoInternalSelection(kTRUE),
@@ -131,9 +132,8 @@ void TGLEventHandler::SelectForClicked(Event_t *event)
 
    fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
 
-   TGLPhysicalShape *pshp = fGLViewer->fSelRec.GetPhysShape();
-   TGLLogicalShape  *lshp = pshp ? const_cast<TGLLogicalShape*>(pshp->GetLogical()) : 0;
-   TObject          *obj  = lshp ? lshp->GetExternal() : 0;
+   TGLLogicalShape  *lshp = fGLViewer->fSelRec.GetLogShape();
+   TObject          *obj  = fGLViewer->fSelRec.GetObject();
       
    // secondary selection
    if (lshp && (event->fState & kKeyMod1Mask || (fSecSelType == TGLViewer::kOnRequest && lshp->AlwaysSecondarySelect())))
@@ -175,8 +175,8 @@ void TGLEventHandler::SelectForMouseOver()
    fGLViewer->RequestSelect(fLastPos.fX, fLastPos.fY);
 
    TGLPhysicalShape *pshp = fGLViewer->fSelRec.GetPhysShape();
-   TGLLogicalShape  *lshp = pshp ? const_cast<TGLLogicalShape*>(pshp->GetLogical()) : 0;
-   TObject          *obj  = lshp ? lshp->GetExternal() : 0;
+   TGLLogicalShape  *lshp = fGLViewer->fSelRec.GetLogShape();
+   TObject          *obj  = fGLViewer->fSelRec.GetObject();
 
    if (lshp && (fSecSelType == TGLViewer::kOnRequest && lshp->AlwaysSecondarySelect()))
    {
@@ -244,10 +244,13 @@ void TGLEventHandler::ExecuteEvent(Int_t event, Int_t px, Int_t py)
    eventSt.fX = px;
    eventSt.fY = py;
    eventSt.fState = 0;
+   eventSt.fXRoot = eventSt.fYRoot = 0;
 
    if (event != kKeyPress) {
       eventSt.fY -= Int_t((1 - gPad->GetHNDC() - gPad->GetYlowNDC()) * gPad->GetWh());
       eventSt.fX -= Int_t(gPad->GetXlowNDC() * gPad->GetWw());
+      eventSt.fXRoot = eventSt.fX;
+      eventSt.fYRoot = eventSt.fY;
    }
 
    switch (event) {
@@ -798,6 +801,10 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
             break;
 
             // Camera
+         case kKey_A:
+         case kKey_a:
+            fArcBall = ! fArcBall;
+            break;
          case kKey_Plus:
          case kKey_J:
          case kKey_j:
@@ -943,7 +950,9 @@ Bool_t TGLEventHandler::Rotate(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t m
 {
    // Method to handle action TGLViewer::kDragCameraRotate.
 
-   return fGLViewer->CurrentCamera().Rotate(xDelta, -yDelta, mod1, mod2);
+   TGLCamera &cam = fGLViewer->CurrentCamera();
+   if (fArcBall) return cam.RotateArcBall(xDelta, -yDelta, mod1, mod2);
+   else          return cam.Rotate       (xDelta, -yDelta, mod1, mod2);
 }
 
 //______________________________________________________________________________

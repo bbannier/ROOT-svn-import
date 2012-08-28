@@ -34,6 +34,7 @@
 
 #endif
 
+
 #include "Python.h"
 #include "Rtypes.h"
 
@@ -174,6 +175,10 @@ inline Py_ssize_t PyNumber_AsSsize_t( PyObject* obj, PyObject* ) {
 # else
 #  define PY_SSIZE_T_FORMAT "%zd"
 # endif
+#endif
+
+#if PY_VERSION_HEX < 0x02020000
+#define PyBool_FromLong  PyInt_FromLong
 #endif
 
 #if PY_VERSION_HEX < 0x03000000

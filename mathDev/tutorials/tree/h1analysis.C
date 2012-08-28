@@ -165,6 +165,9 @@ void h1analysis::Begin(TTree * /*tree*/)
 //  -it creates histograms
 //  -it sets some initialisation for the entry list
 
+   // This is needed when re-processing the object
+   Reset();
+
    //print the option specified in the Process function.
    TString option = GetOption();
    Info("Begin", "starting h1analysis with process option: %s", option.Data());
@@ -176,11 +179,12 @@ void h1analysis::Begin(TTree * /*tree*/)
    // case when one creates/fills the entry list
    if (option.Contains("fillList")) {
       fillList = kTRUE;
+      elist = new TEntryList("elist", "H1 selection from Cut");
       // Add to the input list for processing in PROOF, if needed
       if (fInput) {
          fInput->Add(new TNamed("fillList",""));
          // We send a clone to avoid double deletes when importing the result
-         fInput->Add(new TEntryList("elist", "H1 selection from Cut"));
+         fInput->Add(elist);
       }
    }
    // case when one uses the entry list generated in a previous call
@@ -229,11 +233,11 @@ void h1analysis::SlaveBegin(TTree *tree)
          if ((elist = (TEntryList *) fInput->FindObject("elist")))
             // Need to clone to avoid problems when destroying the selector
             elist = (TEntryList *) elist->Clone();
+         if (elist)
+            fOutput->Add(elist);
+         else
+            fillList = kFALSE;
       }
-      if (elist)
-         fOutput->Add(elist);
-      else
-         fillList = kFALSE;
    }
 }
 
@@ -243,6 +247,7 @@ Bool_t h1analysis::Process(Long64_t entry)
 // entry is the entry number in the current Tree
 // Selection function to select D* and D0.
 
+   fProcessed++;
    //in case one entry list is given in input, the selection has already been done.
    if (!useList) {
       // Read only the necessary branches to select entries.
@@ -347,12 +352,17 @@ void h1analysis::Terminate()
 
    //save the entry list to a Root file if one was produced
    if (fillList) {
-      elist = dynamic_cast<TEntryList*>(fOutput->FindObject("elist"));
+      if (!elist)
+         elist = dynamic_cast<TEntryList*>(fOutput->FindObject("elist"));
       if (elist) {
+         Printf("Entry list 'elist' created:");
+         elist->Print();
          TFile efile("elist.root","recreate");
          elist->Write();
       } else {
          Error("Terminate", "entry list requested but not found in output");
       }
    }
+   // Notify the amount of processed events
+   if (!fInput) Info("Terminate", "processed %lld events", fProcessed);
 }

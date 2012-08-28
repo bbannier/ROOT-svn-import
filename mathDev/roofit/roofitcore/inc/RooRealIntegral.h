@@ -41,10 +41,12 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooRealIntegral(*this,newname); }
   virtual ~RooRealIntegral();
 
+  virtual Double_t getValV(const RooArgSet* set=0) const ;
+
   Bool_t isValid() const { return _valid; }
 
-  void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
-  void printMetaArgs(ostream& os) const ;
+  void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
+  void printMetaArgs(std::ostream& os) const ;
 
   const RooArgSet& numIntCatVars() const { return _sumList ; }
   const RooArgSet& numIntRealVars() const { return _intList ; }

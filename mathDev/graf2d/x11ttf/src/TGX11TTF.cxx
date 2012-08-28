@@ -404,6 +404,7 @@ void TGX11TTF::RenderString(Int_t x, Int_t y, ETextMode mode)
    // LayoutGlyphs should have been called before.
 
    TTGlyph* glyph = TTF::fgGlyphs;
+   GC *gc;
 
    // compute the size and position of the XImage that will contain the text
    Int_t Xoff = 0; if (TTF::GetBox().xMin < 0) Xoff = -TTF::GetBox().xMin;
@@ -421,6 +422,7 @@ void TGX11TTF::RenderString(Int_t x, Int_t y, ETextMode mode)
    xim = XCreateImage(fDisplay, fVisual,
                       depth, ZPixmap, 0, 0, w, h,
                       depth == 24 ? 32 : (depth==15?16:depth), 0);
+   if (!xim) return;
 
    // use malloc since Xlib will use free() in XDestroyImage
    xim->data = (char *) malloc(xim->bytes_per_line * h);
@@ -428,7 +430,12 @@ void TGX11TTF::RenderString(Int_t x, Int_t y, ETextMode mode)
 
    ULong_t   bg;
    XGCValues values;
-   XGetGCValues(fDisplay, *GetGC(3), GCForeground | GCBackground, &values);
+   gc = GetGC(3);
+   if (!gc) {
+      Error("DrawText", "error getting Graphics Context");
+      return;
+   }
+   XGetGCValues(fDisplay, *gc, GCForeground | GCBackground, &values);
 
    // get the background
    if (mode == kClear) {
@@ -476,8 +483,8 @@ void TGX11TTF::RenderString(Int_t x, Int_t y, ETextMode mode)
 
    // put the Ximage on the screen
    Window_t cws = GetCurrentWindow();
-   GC *gc = GetGC(6);      // gGCpxmp
-   XPutImage(fDisplay, cws, *gc, xim, 0, 0, x1, y1, w, h);
+   gc = GetGC(6);
+   if (gc) XPutImage(fDisplay, cws, *gc, xim, 0, 0, x1, y1, w, h);
    XDestroyImage(xim);
 }
 

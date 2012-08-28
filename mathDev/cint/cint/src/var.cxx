@@ -558,7 +558,7 @@ G__value G__letvariable(G__FastAllocString &item, G__value expression, G__var_ar
    int store_asm_noverflow = 0;
    G__FastAllocString ttt(G__ONELINE);
    G__FastAllocString result7(G__ONELINE);
-   char parameter[G__MAXVARDIM][G__ONELINE];
+   G__FastAllocString parameter[G__MAXVARDIM];
    G__value para[G__MAXVARDIM];
    G__FastAllocString varname(G__BUFLEN);
    //--
@@ -2538,7 +2538,11 @@ void G__letstructp(G__value result, long G__struct_offset, int ig15, int linear_
                ) {
                   *((long*) (G__struct_offset + var->p[ig15] + (linear_index * G__LONGALLOC))) = G__int(result) + baseoffset;
                }
-               else {
+               else if (G__fundamental_conversion_operator(var->type[ig15],var->p_tagtable[ig15],var->p_typetable[ig15],var->reftype[ig15],var->constvar[ig15],&result,0))
+               {
+                  // We were able to convert to the pointer value, we need to assign it ...
+                  *((long*) (G__struct_offset + var->p[ig15] + (linear_index * G__LONGALLOC))) = G__int(result);
+               } else {
                   G__assign_error(item, &result);
                }
             }
@@ -5228,7 +5232,7 @@ G__value G__getvariable(char* item, int* known, G__var_array* varglobal, G__var_
 {
    // -- FIXME: Describe me!
    struct G__var_array* var = 0;
-   char parameter[G__MAXVARDIM][G__ONELINE];
+   G__FastAllocString parameter[G__MAXVARDIM];
    G__value para[G__MAXVARDIM];
    int ig15 = 0;
    int paran = 0;

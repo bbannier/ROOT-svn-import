@@ -112,14 +112,14 @@ G__value G__new_operator(const char* expression)
    basictype = type;
    {
       size_t len = strlen(type);
-      unsigned int nest = 0;
+      int nest = 0;
       for (size_t ind = len - 1; ind > 0; --ind) {
          switch (type[ind]) {
             case '<':
-               --nest;
+               ++nest;
                break;
             case '>':
-               ++nest;
+               --nest;
                break;
             case ':':
                if (!nest && (type[ind-1] == ':')) {
@@ -575,7 +575,7 @@ G__value G__new_operator(const char* expression)
    }
    else if (initializer) {
       // -- construct = "TYPE(ARG)"
-      struct G__param para;
+      G__param* para = new G__param;
       int typenum;
       int hash;
       char *bp = strchr(construct, '(');
@@ -591,7 +591,7 @@ G__value G__new_operator(const char* expression)
       hash = (int)strlen(construct);
       char store_var_type = G__var_type;
       G__var_type = 'p';
-      para.para[0] = G__getexpr(bp); // generates LD or LD_VAR etc...
+      para->para[0] = G__getexpr(bp); // generates LD or LD_VAR etc...
       G__var_type = store_var_type;
       if (!G__no_exec_compile) {
          result.ref = pointer;
@@ -602,11 +602,11 @@ G__value G__new_operator(const char* expression)
       // Following call generates CAST instruction.
       if ((var_type == 'U') && pointer) {
          if (!G__no_exec_compile) {
-            *(long*)pointer = para.para[0].obj.i;
+            *(long*)pointer = para->para[0].obj.i;
          }
       }
       else {
-         G__explicit_fundamental_typeconv(construct, hash, &para, &result);
+         G__explicit_fundamental_typeconv(construct, hash, para, &result);
       }
 #ifdef G__ASM
       if (G__asm_noverflow) {
@@ -634,6 +634,7 @@ G__value G__new_operator(const char* expression)
       }
 #endif // G__ASM
       // --
+      delete para;
    }
    if (isupper(var_type)) {
       G__letint(&result, var_type, pointer);
@@ -726,6 +727,7 @@ int G__getarrayindex(const char* indexlist)
 #endif /* G__ASM */
 #endif /* G__ASM_IFUNC */
    }
+   (void)c; // set but unused;
    G__ASSERT(']' == c);
 
    G__var_type = store_var_type;

@@ -81,6 +81,13 @@ public:
       kSSLEnd
    };
 
+   enum ESelectabilityOfTransparents
+   {
+      kIfNoOpaques = 0,
+      kIfClosest,
+      kNever
+   };
+
 private:
    TGLRnrCtx(const TGLRnrCtx&);            // Not implemented
    TGLRnrCtx& operator=(const TGLRnrCtx&); // Not implemented
@@ -120,8 +127,9 @@ protected:
    // Highlight / Selection stuff
    Bool_t          fHighlight;        // True when in highlight.
    Bool_t          fHighlightOutline; // True when in highlight-outline.
-   Bool_t          fSelection;
-   Bool_t          fSecSelection;
+   Bool_t          fSelection;        // True when in selection.
+   Bool_t          fSecSelection;     // True when in secondary selection.
+   Short_t         fSelectTransparents;
    Int_t           fPickRadius;
    TGLRect        *fPickRectangle;
    TGLSelectBuffer*fSelectBuffer;
@@ -162,7 +170,6 @@ public:
    // void SetViewer   (TGLViewerBase* v) { fViewer = v; }
    void SetCamera   (TGLCamera*     c) { fCamera = c; }
    void SetSceneInfo(TGLSceneInfo* si) { fSceneInfo = si; }
-
 
    // Draw LOD, style, clip, rnr-pass
    Short_t ViewerLOD()   const         { return fViewerLOD; }
@@ -211,23 +218,24 @@ public:
    Bool_t   IsStopwatchRunning() const { return fIsRunning; }
    Bool_t   HasStopwatchTimedOut();
 
-   // Highlight / Selection stuff
+   // Highlight / Selection state during rendering
    Bool_t  Highlight()    const           { return fHighlight;      }
    void    SetHighlight(Bool_t hil)       { fHighlight = hil;       }
    Bool_t  HighlightOutline() const       { return fHighlightOutline; }
    void    SetHighlightOutline(Bool_t ho) { fHighlightOutline = ho;   }
-
    Bool_t  Selection()    const           { return fSelection;      }
    void    SetSelection(Bool_t sel)       { fSelection = sel;       }
    Bool_t  SecSelection() const           { return fSecSelection;   }
    void    SetSecSelection(Bool_t secSel) { fSecSelection = secSel; }
-   // Low-level getters
+   // Highlight / selection parameters
+   Short_t SelectTransparents()        const { return fSelectTransparents; }
+   void    SetSelectTransparents(Short_t st) { fSelectTransparents = st;   }
    TGLRect         * GetPickRectangle();
    Int_t             GetPickRadius();
    TGLSelectBuffer * GetSelectBuffer() const { return fSelectBuffer; }
-   // Composed operations
-   void      BeginSelection(Int_t x, Int_t y, Int_t r=3);
-   void      EndSelection  (Int_t glResult);
+   // Selection setup / end
+   void    BeginSelection(Int_t x, Int_t y, Int_t r=3);
+   void    EndSelection  (Int_t glResult);
 
    void         PushColorSet();
    TGLColorSet& ColorSet();

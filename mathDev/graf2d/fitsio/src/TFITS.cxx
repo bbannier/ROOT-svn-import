@@ -289,7 +289,10 @@ Bool_t TFITSHDU::LoadHDU(TString& filepath_filter)
          //Read image sizes in each dimension
          param_dimsizes = new long[param_ndims];
          fits_get_img_size(fp, param_ndims, param_dimsizes, &status);
-         if (status) goto ERR;
+         if (status) {
+            delete [] param_dimsizes;
+            goto ERR;
+         }
 
          fSizes = new TArrayI(param_ndims);
          fSizes = new TArrayI(param_ndims);
@@ -785,6 +788,7 @@ TImage *TFITSHDU::ReadAsImage(Int_t layer, TImagePalette *pal)
    //Build the image stretching pixels into a range from 0.0 to 255.0
    //TImage *im = new TImage(width, height);
    TImage *im = TImage::Create();
+   if (!im) return 0;
    TArrayD *layer_pixels = new TArrayD(pixels_per_layer);
 
 
@@ -906,8 +910,6 @@ TMatrixD* TFITSHDU::ReadAsMatrix(Int_t layer, Option_t *opt)
          }
       }
       
-      layer_pixels = new double[pixels_per_layer];
-      
       if (maxval == minval) {
          //plain image
          for (i = 0; i < pixels_per_layer; i++) {
@@ -931,8 +933,12 @@ TMatrixD* TFITSHDU::ReadAsMatrix(Int_t layer, Option_t *opt)
       }
    }
 
-   mat->Use(height, width, layer_pixels);
+   if (mat) {
+      // mat->Use(height, width, layer_pixels);
+      memcpy(mat->GetMatrixArray(), layer_pixels, pixels_per_layer*sizeof(double));
+   }
 
+   delete [] layer_pixels;
    return mat;
 }
 

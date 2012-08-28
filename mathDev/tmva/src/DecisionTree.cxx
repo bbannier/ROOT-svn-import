@@ -270,9 +270,9 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
    // building the decision tree by recursively calling the splitting of
    // one (root-) node into two daughter nodes (returns the number of nodes)
 
-   Bool_t IsRootNode=kFALSE;
+   // Bool_t IsRootNode=kFALSE;
    if (node==NULL) {
-      IsRootNode = kTRUE;
+      // IsRootNode = kTRUE;
       //start with the root node
       node = new TMVA::DecisionTreeNode();
       fNNodes = 1;
@@ -409,7 +409,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const vector<TMVA::Event*> & eventSample,
          }
 
          // sanity check
-         if (leftSample.size() == 0 || rightSample.size() == 0) {
+         if (leftSample.empty() || rightSample.empty()) {
             Log() << kFATAL << "<TrainNode> all events went to the same branch" << Endl
                   << "---                       Hence new node == old node ... check" << Endl
                   << "---                         left:" << leftSample.size()

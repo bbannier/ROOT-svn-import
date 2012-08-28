@@ -73,6 +73,32 @@ Int_t TProofPlayerLite::MakeSelector(const char *selfile)
 }
 
 //______________________________________________________________________________
+Long64_t TProofPlayerLite::Process(TDSet *dset, TSelector *selector,
+                                   Option_t *option, Long64_t nentries,
+                                   Long64_t first)
+{
+   // Process specified TDSet on PROOF.
+   // This method is called on client and on the PROOF master.
+   // The return value is -1 in case of an error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (!selector) {
+      Error("Process", "selector object undefined");
+      return -1;
+   }
+
+   // Define fSelector in Client
+   if (selector != fSelector) {
+      if (fCreateSelObj) SafeDelete(fSelector);
+      fSelector = selector;
+   }
+
+   fCreateSelObj = kFALSE;
+
+   return Process(dset, selector->ClassName(), option, nentries, first);
+}
+
+//______________________________________________________________________________
 Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
                                    Option_t *option, Long64_t nentries,
                                    Long64_t first)
@@ -120,21 +146,57 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
       Info("Process","starting new query");
    }
 
-   if (MakeSelector(selector_file) != 0) {
-      if (!sync)
-         gSystem->RedirectOutput(0);
-      return -1;
+   if (fCreateSelObj) {
+      if (MakeSelector(selector_file) != 0) {
+         if (!sync)
+            gSystem->RedirectOutput(0);
+         return -1;
+      }
    }
 
    fSelectorClass = fSelector->IsA();
+   // Add fSelector to inputlist if processing with object
+   TList *inputtmp = 0;  // List of temporary input objects
+   if (!fCreateSelObj) {
+      // In any input list was set into the selector move it to the PROOF
+      // input list, because we do not want to stream the selector one
+      if (fSelector->GetInputList() && fSelector->GetInputList()->GetSize() > 0) {
+         TIter nxi(fSelector->GetInputList());
+         TObject *o = 0;
+         while ((o = nxi())) {
+            if (!fInput->FindObject(o)) {
+               fInput->Add(o);
+               if (!inputtmp) {
+                  inputtmp = new TList;
+                  inputtmp->SetOwner(kFALSE);
+               }
+               inputtmp->Add(o);
+            }
+         }
+      }
+      fInput->Add(fSelector);
+   }
+   // Set the input list for initialization
    fSelector->SetInputList(fInput);
    fSelector->SetOption(option);
+   if (fSelector->GetOutputList()) fSelector->GetOutputList()->Clear();
 
    PDB(kLoop,1) Info("Process","Call Begin(0)");
    fSelector->Begin(0);
 
    // Send large input data objects, if any
    gProof->SendInputDataFile();
+      
+   // Attach to the transient histogram with the assigned packets, if required
+   if (fInput->FindObject("PROOF_StatsHist") != 0) {
+      if (!(fProcPackets = (TH1 *) fOutput->FindObject("PROOF_ProcPcktHist"))) {
+         Warning("Process", "could not attach to histogram 'PROOF_ProcPcktHist'");
+      } else {
+         PDB(kLoop,1)
+            Info("Process", "attached to histogram 'PROOF_ProcPcktHist' to record"
+                            " packets being processed");
+      }
+   }
 
    PDB(kPacketizer,1) Info("Process","Create Proxy TDSet");
    TDSet *set = new TDSetProxy(dset->GetType(), dset->GetObjName(),
@@ -226,10 +288,20 @@ Long64_t TProofPlayerLite::Process(TDSet *dset, const char *selector_file,
       }
       StopFeedback();
 
+      Long64_t rc = -1;
       if (GetExitStatus() != TProofPlayer::kAborted)
-         return Finalize(kFALSE, sync);
-      else
-         return -1;
+         rc = Finalize(kFALSE, sync);
+            
+      // Remove temporary input objects, if any
+      if (inputtmp) {
+         TIter nxi(inputtmp);
+         TObject *o = 0;
+         while ((o = nxi())) fInput->Remove(o);
+         SafeDelete(inputtmp);
+      }
+
+       // Done
+      return rc;
    }
 }
 
@@ -275,13 +347,17 @@ Long64_t TProofPlayerLite::Finalize(Bool_t force, Bool_t sync)
       // Some input parameters may be needed in Terminate
       fSelector->SetInputList(fInput);
 
-      TIter next(fOutput);
       TList *output = fSelector->GetOutputList();
-      while(TObject* obj = next()) {
-         if (fProof->IsParallel() || DrawCanvas(obj) == 1)
-            // Either parallel or not a canvas or not able to display it:
-            // just add to the list
-            output->Add(obj);
+      if (output) {
+         TIter next(fOutput);
+         while(TObject* obj = next()) {
+            if (fProof->IsParallel() || DrawCanvas(obj) == 1)
+               // Either parallel or not a canvas or not able to display it:
+               // just add to the list
+               output->Add(obj);
+         }
+      } else {
+         Warning("Finalize", "undefined output list in the selector! Protocol error?");
       }
 
       SetSelectorDataMembersFromOutputList();
@@ -307,11 +383,17 @@ Long64_t TProofPlayerLite::Finalize(Bool_t force, Bool_t sync)
          Warning("Finalize","current TQueryResult object is undefined!");
       }
 
+      if (!fCreateSelObj) {
+         fInput->Remove(fSelector);
+         fOutput->Remove(fSelector);
+         if (output) output->Remove(fSelector);
+      }
+
       // We have transferred copy of the output objects in TQueryResult,
       // so now we can cleanup the selector, making sure that we do not
       // touch the output objects
-      output->SetOwner(kFALSE);
-      SafeDelete(fSelector);
+      if (output) output->SetOwner(kFALSE);
+      if (fCreateSelObj) SafeDelete(fSelector);
 
       // Delete fOutput (not needed anymore, cannot be finalized twice),
       // making sure that the objects saved in TQueryResult are not deleted

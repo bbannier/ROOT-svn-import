@@ -49,6 +49,8 @@
 
 
 
+using namespace std;
+
 ClassImp(RooGenContext)
   ;
 
@@ -90,6 +92,7 @@ RooGenContext::RooGenContext(const RooAbsPdf &model, const RooArgSet &vars,
 
   // Find the clone in the snapshot list
   _pdfClone = (RooAbsPdf*)_cloneSet->find(model.GetName());
+  _pdfClone->setOperMode(RooAbsArg::ADirty,kTRUE) ;
 
   // Optionally fix RooAddPdf normalizations
   if (prototype&&_pdfClone->dependsOn(*prototype->get())) {
@@ -338,7 +341,13 @@ void RooGenContext::attach(const RooArgSet& args)
 void RooGenContext::initGenerator(const RooArgSet &theEvent) 
 {
   // Perform one-time initialization of the generator context
-  
+
+  RooFIter iter = theEvent.fwdIterator() ;
+  RooAbsArg* arg ;
+  while((arg=iter.next())) {
+    arg->setOperMode(RooAbsArg::ADirty) ;
+  }
+
   attach(theEvent) ;
 
   // Reset the cloned model's error counters.
@@ -384,7 +393,8 @@ void RooGenContext::generateEvent(RooArgSet &theEvent, Int_t remaining)
 	coutE(Generation) << "RooGenContext::generateEvent ERROR accept/reject generator failed" << endl ;
 	return;
       }
-      theEvent= *subEvent;
+      theEvent.assignValueOnly(*subEvent) ;
+      //theEvent= *subEvent;
       
     }
   }

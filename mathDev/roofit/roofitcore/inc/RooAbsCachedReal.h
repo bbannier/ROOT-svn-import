@@ -29,7 +29,7 @@ public:
   RooAbsCachedReal(const RooAbsCachedReal& other, const char* name=0) ;
   virtual ~RooAbsCachedReal() ;
 
-  virtual Double_t getVal(const RooArgSet* set=0) const ;
+  virtual Double_t getValV(const RooArgSet* set=0) const ;
   virtual Bool_t selfNormalized() const { 
     // Declares function self normalized
     return kTRUE ; 
@@ -48,6 +48,11 @@ public:
   
   virtual Int_t getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& analVars, const RooArgSet* normSet, const char* rangeName=0) const ; 
   virtual Double_t analyticalIntegralWN(Int_t code, const RooArgSet* normSet, const char* rangeName=0) const ;
+
+  void disableCache(Bool_t flag) { 
+    // Switch to disable caching mechanism
+    _disableCache = flag ; 
+  }
    
 protected:
 
@@ -87,16 +92,12 @@ protected:
   virtual RooArgSet* actualParameters(const RooArgSet& nset) const = 0 ;
   virtual void fillCacheObject(FuncCacheElem& cache) const = 0 ;
 
-  mutable RooObjCacheManager _cacheMgr ; // The cache manager
+  mutable RooObjCacheManager _cacheMgr ; //! The cache manager
 
   
   Int_t _ipOrder ; // Interpolation order for cache histograms 
  
   TString cacheNameSuffix(const RooArgSet& nset) const ;
-  void disableCache(Bool_t flag) { 
-    // Switch to disable caching mechanism
-    _disableCache = flag ; 
-  }
 
   mutable std::map<Int_t,std::pair<const RooArgSet*,const RooArgSet*> > _anaIntMap ; //! Map for analytical integration codes
   

@@ -44,12 +44,14 @@
 #pragma link C++ class TRandom2+;
 #pragma link C++ class TRandom3-;
 
+#pragma link C++ class TStatistic+;
+
 #pragma link C++ class TVirtualFitter+;
 
 #pragma link C++ class TKDTree<Int_t, Double_t>+;
 #pragma link C++ class TKDTree<Int_t, Float_t>+;
 #pragma link C++ typedef TKDTreeID;
-#pragma link C++ class TKDTreeBinning+;
+#pragma link C++ typedef TKDTreeIF;
 #pragma link C++ class TKDTreeBinning+;
 
 // ROOT::Math namespace
@@ -135,7 +137,10 @@
 #pragma link C++ typedef ROOT::Math::TDataPoint1D;
 #pragma link C++ class  ROOT::Math::TDataPointN<Double_t>+;
 #pragma link C++ class  ROOT::Math::TDataPointN<Float_t>+;
-#pragma link C++ class ROOT::Math::KDTree<ROOT::Math::TDataPoint1F>+;
+//
+//N.B. disable streaming (do not use +) for KDTree class because it will not work on Windows
+// to work one would need to change the internal classes from private to public
+#pragma link C++ class ROOT::Math::KDTree<ROOT::Math::TDataPoint1D>;
 
 #include "LinkDef_Func.h"
 

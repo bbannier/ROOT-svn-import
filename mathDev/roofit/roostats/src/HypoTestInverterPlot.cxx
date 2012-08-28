@@ -33,6 +33,8 @@
 #include "TPad.h"
 #include "Math/DistFuncMathCore.h"
 
+using namespace std;
+
 ClassImp(RooStats::HypoTestInverterPlot)
 
 using namespace RooStats;
@@ -137,21 +139,21 @@ TMultiGraph* HypoTestInverterPlot::MakeExpectedPlot(double nsig1, double nsig2 )
    TMath::SortItr(fResults->fXValues.begin(), fResults->fXValues.end(), index.begin(), false);
 
    // create the graphs 
-   TGraph * g0 = new TGraph(nEntries);
+   TGraph * g0 = new TGraph;
    TString pValueName = "CLs";
    if (!fResults->fUseCLs) pValueName = "CLs+b";
    g0->SetTitle(TString::Format("Expected %s - Median",pValueName.Data()) );
    TGraphAsymmErrors * g1 = 0;
    TGraphAsymmErrors * g2 = 0; 
    if (doFirstBand) {
-      g1 = new TGraphAsymmErrors(nEntries);
+      g1 = new TGraphAsymmErrors;
       if (nsig1 - int(nsig1) < 0.01) 
          g1->SetTitle(TString::Format("Expected %s #pm %d #sigma",pValueName.Data(),int(nsig1)) );
       else
          g1->SetTitle(TString::Format("Expected %s #pm %3.1f #sigma",pValueName.Data(),nsig1) );
    }
    if (doSecondBand) { 
-      g2 = new TGraphAsymmErrors(nEntries);
+      g2 = new TGraphAsymmErrors;
       if (nsig2 - int(nsig2) < 0.01) 
          g2->SetTitle(TString::Format("Expected %s #pm %d #sigma",pValueName.Data(),int(nsig2)) );
       else 
@@ -164,25 +166,48 @@ TMultiGraph* HypoTestInverterPlot::MakeExpectedPlot(double nsig1, double nsig2 )
    p[2] = 0.5;
    p[3] = ROOT::Math::normal_cdf(nsig1);
    p[4] = ROOT::Math::normal_cdf(nsig2);
+
+   bool resultIsAsymptotic = ( !fResults->GetNullTestStatDist(0) && !fResults->GetAltTestStatDist(0) ); 
+   int np = 0;
    for (int j=0; j<nEntries; ++j) {
       int i = index[j]; // i is the order index 
       SamplingDistribution * s = fResults->GetExpectedPValueDist(i);
+      if ( !s)  continue; 
       const std::vector<double> & values = s->GetSamplingDistribution();
-      double * x = const_cast<double *>(&values[0]); // need to change TMath::Quantiles
-      TMath::Quantiles(values.size(), 5, x,q,p,false);
-      g0->SetPoint(j, fResults->GetXValue(i),  q[2]);
+      // special case for asymptotic results (cannot use TMath::quantile in that case)
+      if (resultIsAsymptotic) { 
+         double maxSigma = fResults->fgAsymptoticMaxSigma;
+         double dsig = 2* maxSigma/ (values.size() -1) ;         
+         int  i0 = (int) TMath::Floor ( ( -nsig2 +  maxSigma )/dsig + 0.5);
+         int  i1 = (int) TMath::Floor ( (-nsig1 +  maxSigma )/dsig + 0.5);
+         int  i2 = (int) TMath::Floor ( ( maxSigma)/dsig + 0.5);
+         int  i3 = (int) TMath::Floor ( ( nsig1 + maxSigma)/dsig + 0.5);
+         int  i4 = (int) TMath::Floor ( ( nsig2 + maxSigma)/dsig + 0.5);
+         q[0] = values[i0];
+         q[1] = values[i1];
+         q[2] = values[i2];
+         q[3] = values[i3];
+         q[4] = values[i4];
+      }
+      else { 
+         double * x = const_cast<double *>(&values[0]); // need to change TMath::Quantiles
+         TMath::Quantiles(values.size(), 5, x,q,p,false);
+      }
+
+      g0->SetPoint(np, fResults->GetXValue(i),  q[2]);
       if (g1) { 
-         g1->SetPoint(j, fResults->GetXValue(i),  q[2]);
-         g1->SetPointEYlow(j, q[2] - q[1]); // -1 sigma errorr   
-         g1->SetPointEYhigh(j, q[3] - q[2]);//+1 sigma error
+         g1->SetPoint(np, fResults->GetXValue(i),  q[2]);
+         g1->SetPointEYlow(np, q[2] - q[1]); // -1 sigma errorr   
+         g1->SetPointEYhigh(np, q[3] - q[2]);//+1 sigma error
       }
       if (g2) {
-         g2->SetPoint(j, fResults->GetXValue(i), q[2]);
+         g2->SetPoint(np, fResults->GetXValue(i), q[2]);
 
-         g2->SetPointEYlow(j, q[2]-q[0]);   // -2 -- -1 sigma error
-         g2->SetPointEYhigh(j, q[4]-q[2]);
+         g2->SetPointEYlow(np, q[2]-q[0]);   // -2 -- -1 sigma error
+         g2->SetPointEYhigh(np, q[4]-q[2]);
       }
-      delete s;
+      if (s) delete s;
+      np++;
    }
 
 
@@ -254,7 +279,7 @@ void HypoTestInverterPlot::Draw(Option_t * opt) {
       if (gROOT) gROOT->Add(gexp); 
       if (drawAxis && !drawObs) { 
          gexp->Draw("A");
-         gexp->GetHistogram()->SetTitle( GetTitle() );
+         if (gexp->GetHistogram()) gexp->GetHistogram()->SetTitle( GetTitle() );
          gplot = (TGraph*) gexp->GetListOfGraphs()->First();
       }
       else 

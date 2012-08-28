@@ -31,7 +31,7 @@ class TProfileHelper {
 
 public:
    template <typename T>
-   static void Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2=1);
+   static Bool_t Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2=1);
 
    template <typename T>
    static Double_t GetBinEffectiveEntries(T* p, Int_t bin);
@@ -56,10 +56,13 @@ public:
 
    template <typename T>
    static Double_t GetBinError(T* p, Int_t bin);
+
+   template <typename T>
+   static void SetErrorOption(T* p, Option_t * opt);
 };
 
 template <typename T>
-void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2)
+Bool_t TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Double_t c2)
 {
    // Performs the operation: this = c1*h1 + c2*h2
 
@@ -78,7 +81,7 @@ void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Doubl
         ny != p1->GetNbinsY() ||  ny != p2->GetNbinsY() ||
         nz != p1->GetNbinsZ() ||  nz != p2->GetNbinsZ() ) {
       Error("TProfileHelper::Add","Attempt to add profiles with different number of bins");
-      return;
+      return kFALSE;
    }
 
 // Add statistics
@@ -114,6 +117,7 @@ void TProfileHelper::Add(T* p, const TH1 *h1,  const TH1 *h2, Double_t c1, Doubl
       p->fBinEntries.fArray[bin] = ac1*en1[bin] + ac2*en2[bin];
       if (p->fBinSumw2.fN ) p->fBinSumw2.fArray[bin]  = ac1*ac1*ew1[bin] + ac2*ac2*ew2[bin];
    }
+   return kTRUE;
 }
 
 template <typename T>
@@ -159,34 +163,47 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
    if (li->IsEmpty()) return (Int_t) p->GetEntries();
 
    TList inlist;
-   TH1* hclone = (TH1*)p->Clone("FirstClone");
-   R__ASSERT(hclone);
-   p->BufferEmpty(1);         // To remove buffer.
-   p->Reset();                // BufferEmpty sets limits so we can't use it later.
-   p->SetEntries(0);
-   inlist.Add(hclone);
    inlist.AddAll(li);
 
    TAxis newXAxis;
    TAxis newYAxis;
    TAxis newZAxis;
    Bool_t initialLimitsFound = kFALSE;
-   Bool_t same = kTRUE;
+   Bool_t allSameLimits = kTRUE;
    Bool_t allHaveLimits = kTRUE;
+   Bool_t firstNonEmptyHist = kTRUE;
 
    TIter next(&inlist);
-   while (TObject *o = next()) {
-      T* h = dynamic_cast<T*> (o);
-      if (!h) {
-         Error("TProfileHelper::Merge","Attempt to merge object of class: %s to a %s",
-               o->ClassName(),p->ClassName());
-         return -1;
-      }
+   T* h = p;
+
+   do {
+
+      // skip empty histograms 
+      if (h->fTsumw == 0 && h->GetEntries() == 0) continue;
+
       Bool_t hasLimits = h->GetXaxis()->GetXmin() < h->GetXaxis()->GetXmax();
       allHaveLimits = allHaveLimits && hasLimits;
 
       if (hasLimits) {
          h->BufferEmpty();
+
+         // this is done in case the first histograms are empty and 
+         // the histogram have different limits
+         if (firstNonEmptyHist ) { 
+            // set axis limits in the case the first histogram was empty
+            if (h != p ) { 
+               if (!p->SameLimitsAndNBins(p->fXaxis, *(h->GetXaxis())) ) 
+                  p->fXaxis.Set(h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),h->GetXaxis()->GetXmax());
+               if (!p->SameLimitsAndNBins(p->fYaxis, *(h->GetYaxis())) ) 
+                  p->fYaxis.Set(h->GetYaxis()->GetNbins(), h->GetYaxis()->GetXmin(),h->GetYaxis()->GetXmax());
+               if (!p->SameLimitsAndNBins(p->fZaxis, *(h->GetZaxis())) ) 
+                  p->fZaxis.Set(h->GetZaxis()->GetNbins(), h->GetZaxis()->GetXmin(),h->GetZaxis()->GetXmax());
+            }
+            firstNonEmptyHist = kFALSE;     
+         }
+
+         // this is executed the first time an histogram with limits is found
+         // to set some initial values on the new axis
          if (!initialLimitsFound) {
             initialLimitsFound = kTRUE;
             newXAxis.Set(h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),
@@ -199,38 +216,74 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
                      h->GetZaxis()->GetXmax());
          }
          else {
-            if (!p->RecomputeAxisLimits(newXAxis, *(h->GetXaxis()))) {
-               Error("TProfileHelper::Merge", "Cannot merge profiles %d dim - limits are inconsistent:\n "
+            // check first if histograms have same bins 
+            if (!p->SameLimitsAndNBins(newXAxis, *(h->GetXaxis())) || 
+                !p->SameLimitsAndNBins(newYAxis, *(h->GetYaxis())) || 
+                !p->SameLimitsAndNBins(newZAxis, *(h->GetZaxis())) ) { 
+
+               allSameLimits = kFALSE;
+               // recompute in this case the optimal limits
+               // The condition to works is that the histogram have same bin with 
+               // and one common bin edge
+               
+               if (!p->RecomputeAxisLimits(newXAxis, *(h->GetXaxis()))) {
+                  Error("TProfileHelper::Merge", "Cannot merge profiles %d dim - limits are inconsistent:\n "
                      "first: (%d, %f, %f), second: (%d, %f, %f)",p->GetDimension(),
-                     newXAxis.GetNbins(), newXAxis.GetXmin(), newXAxis.GetXmax(),
-                     h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),
-                     h->GetXaxis()->GetXmax());
-            }
-            if (p->GetDimension() >= 2 && !p->RecomputeAxisLimits(newYAxis, *(h->GetYaxis()))) {
-               Error("TProfileHelper::Merge", "Cannot merge profiles %d dim - limits are inconsistent:\n "
-                     "first: (%d, %f, %f), second: (%d, %f, %f)",p->GetDimension(),
-                     newYAxis.GetNbins(), newYAxis.GetXmin(), newYAxis.GetXmax(),
-                     h->GetYaxis()->GetNbins(), h->GetYaxis()->GetXmin(),
-                     h->GetYaxis()->GetXmax());
-            }
-            if (p->GetDimension() >= 3 && !p->RecomputeAxisLimits(newZAxis, *(h->GetZaxis()))) {
-               Error("TProfileHelper::Merge", "Cannot merge profiles %d dim - limits are inconsistent:\n "
-                     "first: (%d, %f, %f), second: (%d, %f, %f)",p->GetDimension(),
-                     newZAxis.GetNbins(), newZAxis.GetXmin(), newZAxis.GetXmax(),
-                     h->GetZaxis()->GetNbins(), h->GetZaxis()->GetXmin(),
-                     h->GetZaxis()->GetXmax());
+                        newXAxis.GetNbins(), newXAxis.GetXmin(), newXAxis.GetXmax(),
+                        h->GetXaxis()->GetNbins(), h->GetXaxis()->GetXmin(),
+                        h->GetXaxis()->GetXmax());
+                  return -1;
+               }
+               if (p->GetDimension() >= 2 && !p->RecomputeAxisLimits(newYAxis, *(h->GetYaxis()))) {
+                  Error("TProfileHelper::Merge", "Cannot merge profiles %d dim - limits are inconsistent:\n "
+                        "first: (%d, %f, %f), second: (%d, %f, %f)",p->GetDimension(),
+                        newYAxis.GetNbins(), newYAxis.GetXmin(), newYAxis.GetXmax(),
+                        h->GetYaxis()->GetNbins(), h->GetYaxis()->GetXmin(),
+                        h->GetYaxis()->GetXmax());
+                  return -1;
+               }
+               if (p->GetDimension() >= 3 && !p->RecomputeAxisLimits(newZAxis, *(h->GetZaxis()))) {
+                  Error("TProfileHelper::Merge", "Cannot merge profiles %d dim - limits are inconsistent:\n "
+                        "first: (%d, %f, %f), second: (%d, %f, %f)",p->GetDimension(),
+                        newZAxis.GetNbins(), newZAxis.GetXmin(), newZAxis.GetXmax(),
+                        h->GetZaxis()->GetNbins(), h->GetZaxis()->GetXmin(),
+                        h->GetZaxis()->GetXmax());
+                  return -1;
+               }
             }
          }
       }
+   }  while ( ( h = dynamic_cast<T*> ( next() ) ) != NULL );
+   if (!h && (*next) ) {
+      Error("TProfileHelper::Merge","Attempt to merge object of class: %s to a %s",
+            (*next)->ClassName(),p->ClassName());
+      return -1;
    }
+
    next.Reset();
 
-   same = same && p->SameLimitsAndNBins(newXAxis, *(p->GetXaxis()));
-   if ( p->GetDimension() >= 2 )
-      same = same && p->SameLimitsAndNBins(newYAxis, *(p->GetYaxis()));
-   if ( p->GetDimension() >= 3 )
-      same = same && p->SameLimitsAndNBins(newZAxis, *(p->GetZaxis()));
-   if (!same && initialLimitsFound) {
+   // In the case of histogram with different limits
+   // newX(Y)Axis will now have the new found limits
+   // but one needs first to clone this histogram to perform the merge
+   // The clone is not needed when all histograms have the same limits
+   T * hclone = 0;
+   if (!allSameLimits) { 
+      // We don't want to add the clone to gDirectory,
+      // so remove our kMustCleanup bit temporarily
+      Bool_t mustCleanup = p->TestBit(kMustCleanup);
+      if (mustCleanup) p->ResetBit(kMustCleanup);
+      hclone = (T*)p->IsA()->New();
+      R__ASSERT(hclone);
+      hclone->SetDirectory(0);
+      p->Copy(*hclone);
+      if (mustCleanup) p->SetBit(kMustCleanup);
+      p->BufferEmpty(1);         // To remove buffer.
+      p->Reset();                // BufferEmpty sets limits so we can't use it later.
+      p->SetEntries(0);
+      inlist.AddFirst(hclone);
+   }
+
+   if (!allSameLimits && initialLimitsFound) {
       Int_t b[] = { newXAxis.GetNbins(), newYAxis.GetNbins(), newZAxis.GetNbins() };
       Double_t v[] = { newXAxis.GetXmin(), newXAxis.GetXmax(),
                        newYAxis.GetXmin(), newYAxis.GetXmax(),
@@ -240,7 +293,7 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
 
    if (!allHaveLimits) {
       // fill this histogram with all the data from buffers of histograms without limits
-      while (T* h = dynamic_cast<T*> (next())) {
+      while ( (h = dynamic_cast<T*> (next()) ) ) {
          if (h->GetXaxis()->GetXmin() >= h->GetXaxis()->GetXmax() && h->fBuffer) {
              // no limits
             Int_t nbentries = (Int_t)h->fBuffer[0];
@@ -270,8 +323,13 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
                }
          }
       }
-      if (!initialLimitsFound)
+      if (!initialLimitsFound) {
+         if (hclone) { 
+            inlist.Remove(hclone);
+            delete hclone; 
+         }
          return (Int_t) p->GetEntries();  // all histograms have been processed
+      }
       next.Reset();
    }
 
@@ -283,7 +341,7 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
    Bool_t canRebin=p->TestBit(TH1::kCanRebin);
    p->ResetBit(TH1::kCanRebin); // reset, otherwise setting the under/overflow will rebin
 
-   while ( T* h=static_cast<T*>(next()) ) {
+   while ( (h=static_cast<T*>(next())) ) {
       // process only if the histogram has limits; otherwise it was processed before
 
       if (h->GetXaxis()->GetXmin() < h->GetXaxis()->GetXmax()) {
@@ -294,21 +352,26 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
          nentries += h->GetEntries();
 
          for ( Int_t hbin = 0; hbin < h->fN; ++hbin ) {
-            if ((!same) && (h->IsBinUnderflow(hbin) || h->IsBinOverflow(hbin)) ) {
-               if (h->GetW()[hbin] != 0) {
+            Int_t pbin = hbin;
+            if (!allSameLimits) {
+               // histogram have different limits:
+               // find global bin number in p given the x,y,z axis bin numbers in h
+               // in case of nont equal axes
+               // we can use FindBin on p axes because kCanRebin bit of p has been reset before 
+               if ( h->GetW()[hbin] != 0 && (h->IsBinUnderflow(hbin) || h->IsBinOverflow(hbin)) ) {
+                  // reject cases where underflow/overflow are there and bin content is not zero
                   Error("TProfileHelper::Merge", "Cannot merge profiles - they have"
                         " different limits and undeflows/overflows are present."
                         " The initial profile is now broken!");
                   return -1;
                }
+               Int_t hbinx, hbiny, hbinz;
+               h->GetBinXYZ(hbin, hbinx, hbiny, hbinz);
+
+               pbin = p->GetBin( p->fXaxis.FindBin( h->GetXaxis()->GetBinCenter(hbinx) ),
+                                 p->fYaxis.FindBin( h->GetYaxis()->GetBinCenter(hbiny) ),
+                                 p->fZaxis.FindBin( h->GetZaxis()->GetBinCenter(hbinz) ) );
             }
-            Int_t hbinx, hbiny, hbinz;
-            h->GetBinXYZ(hbin, hbinx, hbiny, hbinz);
-            // find global bin number in p given the x,y,z axis bin numbers in h
-            // we can use FindBin on p axes because kCanRebin bit of p has been rreset before 
-            Int_t pbin = p->GetBin( p->fXaxis.FindBin( h->GetXaxis()->GetBinCenter(hbinx) ),
-                                    p->fYaxis.FindBin( h->GetYaxis()->GetBinCenter(hbiny) ),
-                                    p->fZaxis.FindBin( h->GetZaxis()->GetBinCenter(hbinz) ) );
 
 
             p->fArray[pbin]             += h->GetW()[hbin];
@@ -326,8 +389,10 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
    //copy merged stats
    p->PutStats(totstats);
    p->SetEntries(nentries);
-   inlist.Remove(hclone);
-   delete hclone;
+   if (hclone) { 
+      inlist.Remove(hclone);
+      delete hclone;
+   }
    return (Long64_t)nentries;
 }
 
@@ -549,49 +614,76 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
 }
 
 template <typename T>
+void TProfileHelper::SetErrorOption(T* p, Option_t * option) { 
+   // set the profile option
+   TString opt = option;
+   opt.ToLower();
+   p->fErrorMode = kERRORMEAN;
+   if (opt.Contains("s")) p->fErrorMode = kERRORSPREAD;
+   if (opt.Contains("i")) p->fErrorMode = kERRORSPREADI;
+   if (opt.Contains("g")) p->fErrorMode = kERRORSPREADG;
+}
+
+template <typename T>
 Double_t TProfileHelper::GetBinError(T* p, Int_t bin)
 {
+   // compute bin error of profile histograms
 
    if (p->fBuffer) p->BufferEmpty();
 
-   if (bin < 0 || bin >= p->fNcells) return 0;
-   Double_t cont = p->fArray[bin];
-   Double_t sum  = p->fBinEntries.fArray[bin];
-   Double_t err2 = p->fSumw2.fArray[bin];
-   Double_t neff = p->GetBinEffectiveEntries(bin);
-   if (sum == 0) return 0;
+   if (bin < 0 || bin >= p->fNcells) return 0; 
+   Double_t cont = p->fArray[bin];                  // sum of bin w *y
+   Double_t sum  = p->fBinEntries.fArray[bin];      // sum of bin weights
+   Double_t err2 = p->fSumw2.fArray[bin];           // sum of bin w * y^2
+   Double_t neff = p->GetBinEffectiveEntries(bin);  // (sum of w)^2 / (sum of w^2)
+   if (sum == 0) return 0;      // for empty bins
+   // case the values y are gaussian distributed y +/- sigma and w = 1/sigma^2
+   if (p->fErrorMode == kERRORSPREADG) {
+      return 1./TMath::Sqrt(sum);
+   }
+   // compute variance in y (eprim2) and standard deviation in y (eprim)
    Double_t contsum = cont/sum;
    Double_t eprim2  = TMath::Abs(err2/sum - contsum*contsum);
    Double_t eprim   = TMath::Sqrt(eprim2);
+
+   if (p->fErrorMode == kERRORSPREADI) {
+      if (eprim != 0) return eprim/TMath::Sqrt(neff);
+      // in case content y is an integer (so each my has an error +/- 1/sqrt(12)
+      // when the std(y) is zero
+      return 1/TMath::Sqrt(12*neff);
+   }
+
+   // if approximate compute the sums (of w, wy and wy2) using all the bins
+   //  when the variance in y is zero 
    Double_t test = 1;
    if (err2 != 0 && neff < 5) test = eprim2*sum/err2;
    //Int_t cellLimit = (p->GetDimension() == 3)?1000404:10404;
-   if (p->fgApproximate && p->fNcells <=1000404 && (test < 1.e-4 || eprim2 < 1e-6)) { //3.04
-      Double_t scont, ssum, serr2;
-      scont = ssum = serr2 = 0;
-      for (Int_t i=1;i<p->fNcells;i++) {
-         if (p->fSumw2.fArray[i] <= 0) continue; //added in 3.10/02
-         scont += p->fArray[i];
-         ssum  += p->fBinEntries.fArray[i];
-         serr2 += p->fSumw2.fArray[i];
-      }
-      Double_t scontsum = scont/ssum;
-      Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);
-      eprim           = 2*TMath::Sqrt(seprim2);
+   if (p->fgApproximate && (test < 1.e-4 || eprim2 < 1e-6)) { //3.04
+      Double_t stats[TH1::kNstat];
+      p->GetStats(stats);
+      Double_t ssum = stats[0];
+      // for 1D profile
+      int index = 4;  // index in the stats array for 1D 
+      if (p->GetDimension() == 2) index = 7;   // for 2D
+      if (p->GetDimension() == 3) index = 11;   // for 3D
+      Double_t scont = stats[index];  
+      Double_t serr2 = stats[index+1];  
+      
+      // compute mean and variance in y 
+      Double_t scontsum = scont/ssum;                                  // global mean
+      Double_t seprim2  = TMath::Abs(serr2/ssum - scontsum*scontsum);  // global variance  
+      eprim           = 2*TMath::Sqrt(seprim2);                        // global std (why factor of 2 ??)
       sum = ssum;
    }
    sum = TMath::Abs(sum);
-   if (p->fErrorMode == kERRORMEAN) return eprim/TMath::Sqrt(neff);
-   else if (p->fErrorMode == kERRORSPREAD) return eprim;
-   else if (p->fErrorMode == kERRORSPREADI) {
-      if (eprim != 0) return eprim/TMath::Sqrt(neff);
-      return 1/TMath::Sqrt(12*neff);
-   }
-   else if (p->fErrorMode == kERRORSPREADG) {
-      // it is supposed the values y are gaussian distributed y +/- dy
-      return 1./TMath::Sqrt(sum);
-   }
-   else return eprim;
+
+   // case option "S" return standard deviation in y 
+   if (p->fErrorMode == kERRORSPREAD) return eprim;
+
+   // default case : fErrorMode = kERRORMEAN 
+   // return standard error on the mean of y 
+   return eprim/TMath::Sqrt(neff);
+
 }
 
 #endif

@@ -82,6 +82,7 @@ ClassImp(RooStats::MCMCCalculator);
 
 using namespace RooFit;
 using namespace RooStats;
+using namespace std;
 
 // default constructor
 MCMCCalculator::MCMCCalculator() : 
@@ -204,6 +205,7 @@ MCMCInterval* MCMCCalculator::GetInterval() const
    mh.SetType(MetropolisHastings::kLog);
    mh.SetSign(MetropolisHastings::kNegative);
    mh.SetParameters(*params);
+   if (fChainParams.getSize() > 0) mh.SetChainParameters(fChainParams); 
    mh.SetProposalFunction(*fPropFunc);
    mh.SetNumIters(fNumIters);
 

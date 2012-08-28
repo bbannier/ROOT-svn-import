@@ -45,19 +45,23 @@ END_HTML
 
 #include <limits>
 #define NaN numeric_limits<float>::quiet_NaN()
-#define IsNaN(a) isnan(a)
+#define IsNaN(a) TMath::IsNaN(a)
 
 ClassImp(RooStats::HypoTestResult) ;
 
 using namespace RooStats;
+using namespace std;
 
 
 //____________________________________________________________________
 HypoTestResult::HypoTestResult(const char* name) : 
    TNamed(name,name),
    fNullPValue(NaN), fAlternatePValue(NaN),
+   fNullPValueError(0), fAlternatePValueError(0),
    fTestStatisticData(NaN),
+   fAllTestStatisticsData(NULL),
    fNullDistr(NULL), fAltDistr(NULL),
+   fNullDetailedOutput(NULL), fAltDetailedOutput(NULL), fFitInfo(NULL),
    fPValueIsRightTail(kTRUE),
    fBackgroundIsAlt(kFALSE)
 {
@@ -69,12 +73,31 @@ HypoTestResult::HypoTestResult(const char* name) :
 HypoTestResult::HypoTestResult(const char* name, Double_t nullp, Double_t altp) :
    TNamed(name,name),
    fNullPValue(nullp), fAlternatePValue(altp),
+   fNullPValueError(0), fAlternatePValueError(0),
    fTestStatisticData(NaN),
+   fAllTestStatisticsData(NULL),
    fNullDistr(NULL), fAltDistr(NULL),
+   fNullDetailedOutput(NULL), fAltDetailedOutput(NULL), fFitInfo(NULL),
    fPValueIsRightTail(kTRUE),
    fBackgroundIsAlt(kFALSE)
 {
    // Alternate constructor
+}
+
+//____________________________________________________________________
+HypoTestResult::HypoTestResult(const HypoTestResult& other) :
+   TNamed(other),
+   fNullPValue(NaN), fAlternatePValue(NaN),
+   fNullPValueError(0), fAlternatePValueError(0),
+   fTestStatisticData(NaN),
+   fAllTestStatisticsData(NULL),
+   fNullDistr(NULL), fAltDistr(NULL),
+   fNullDetailedOutput(NULL), fAltDetailedOutput(NULL), fFitInfo(NULL),
+   fPValueIsRightTail( other.GetPValueIsRightTail() ),
+   fBackgroundIsAlt( other.GetBackGroundIsAlt() )
+{
+   // copy constructor
+   this->Append( &other );
 }
 
 
@@ -82,7 +105,42 @@ HypoTestResult::HypoTestResult(const char* name, Double_t nullp, Double_t altp) 
 HypoTestResult::~HypoTestResult()
 {
    // Destructor
+   if( fNullDistr ) delete fNullDistr;
+   if( fAltDistr ) delete fAltDistr;
+   
+   if( fNullDetailedOutput ) delete fNullDetailedOutput;
+   if( fAltDetailedOutput ) delete fAltDetailedOutput;
+   
+   if( fAllTestStatisticsData ) delete fAllTestStatisticsData;
+}
 
+//____________________________________________________________________
+HypoTestResult & HypoTestResult::operator=(const HypoTestResult& other) { 
+   // assignment operator
+
+   if (this == &other) return *this;
+   SetName(other.GetName());
+   SetTitle(other.GetTitle());
+   fNullPValue = other.fNullPValue; 
+   fAlternatePValue = other.fAlternatePValue; 
+   fNullPValueError = other.fNullPValueError;
+   fAlternatePValueError = other.fAlternatePValueError;
+   fTestStatisticData = other.fTestStatisticData;
+
+   if( fAllTestStatisticsData ) delete fAllTestStatisticsData;
+   fAllTestStatisticsData = NULL;
+   if( fNullDistr ) delete fNullDistr; fNullDistr = NULL;
+   if( fAltDistr ) delete fAltDistr; fAltDistr = NULL;   
+   if( fNullDetailedOutput ) delete fNullDetailedOutput; fNullDetailedOutput = NULL;
+   if( fAltDetailedOutput ) delete fAltDetailedOutput;  fAltDetailedOutput = NULL;
+   if (fFitInfo) delete fFitInfo; fFitInfo = NULL;
+   
+   fPValueIsRightTail =  other.GetPValueIsRightTail();
+   fBackgroundIsAlt = other.GetBackGroundIsAlt();
+
+   this->Append( &other );
+
+   return *this; 
 }
 
 
@@ -94,12 +152,31 @@ void HypoTestResult::Append(const HypoTestResult* other) {
    if(fNullDistr)
       fNullDistr->Add(other->GetNullDistribution());
    else
-      fNullDistr = other->GetNullDistribution();
+      if(other->GetNullDistribution()) fNullDistr = new SamplingDistribution( *other->GetNullDistribution() );
 
    if(fAltDistr)
       fAltDistr->Add(other->GetAltDistribution());
    else
-      fAltDistr = other->GetAltDistribution();
+      if(other->GetAltDistribution()) fAltDistr = new SamplingDistribution( *other->GetAltDistribution() );
+      
+   
+   if( fNullDetailedOutput ) {
+      if( other->GetNullDetailedOutput() ) fNullDetailedOutput->append( *other->GetNullDetailedOutput() );
+   }else{
+      if( other->GetNullDetailedOutput() ) fNullDetailedOutput = new RooDataSet( *other->GetNullDetailedOutput() );
+   }
+
+   if( fAltDetailedOutput ) {
+      if( other->GetAltDetailedOutput() ) fAltDetailedOutput->append( *other->GetAltDetailedOutput() );
+   }else{
+      if( other->GetAltDetailedOutput() ) fAltDetailedOutput = new RooDataSet( *other->GetAltDetailedOutput() );
+   }
+
+   if( fFitInfo ) {
+      if( other->GetFitInfo() ) fFitInfo->append( *other->GetFitInfo() );
+   }else{
+      if( other->GetFitInfo() ) fFitInfo = new RooDataSet( *other->GetFitInfo() );
+   }
 
    // if no data is present use the other HypoTestResult's data
    if(IsNaN(fTestStatisticData)) fTestStatisticData = other->GetTestStatisticData();
@@ -126,6 +203,20 @@ void HypoTestResult::SetTestStatisticData(const Double_t tsd) {
    UpdatePValue(fNullDistr, fNullPValue, fNullPValueError, kTRUE);
    UpdatePValue(fAltDistr, fAlternatePValue, fAlternatePValueError, kFALSE);
 }
+//____________________________________________________________________
+void HypoTestResult::SetAllTestStatisticsData(const RooArgList* tsd) {
+   if (fAllTestStatisticsData) { 
+      delete fAllTestStatisticsData; 
+      fAllTestStatisticsData = 0; 
+   }
+   if (tsd) fAllTestStatisticsData = (const RooArgList*)tsd->snapshot();
+   
+   if( fAllTestStatisticsData  &&  fAllTestStatisticsData->getSize() > 0 ) {
+      RooRealVar* firstTS = (RooRealVar*)fAllTestStatisticsData->at(0);
+      if( firstTS ) SetTestStatisticData( firstTS->getVal() );
+   }
+}
+
 //____________________________________________________________________
 void HypoTestResult::SetPValueIsRightTail(Bool_t pr) {
    fPValueIsRightTail = pr;
@@ -157,6 +248,11 @@ Double_t HypoTestResult::CLsplusbError() const {
    return fBackgroundIsAlt ? fNullPValueError : fAlternatePValueError;
 }
 
+//____________________________________________________________________
+Double_t HypoTestResult::SignificanceError() const {
+   // Taylor expansion series approximation for standard deviation (error propagation)
+   return NullPValueError() / ROOT::Math::normal_pdf(Significance());
+}
 
 //____________________________________________________________________
 Double_t HypoTestResult::CLsError() const {
@@ -203,5 +299,39 @@ void HypoTestResult::UpdatePValue(const SamplingDistribution* distr, Double_t &p
       pvalue = distr->IntegralAndError(perror, -RooNumber::infinity(), fTestStatisticData, kTRUE,
                                        kTRUE,  kTRUE  ); // // always closed  [ -inf, fTestStatistic ]
    }
+}
+
+void HypoTestResult::Print(Option_t * ) const
+{
+   // Print out some information about the results
+   // Note: use Alt/Null labels for the hypotheses here as the Null
+   // might be the s+b hypothesis.
+   
+   bool fromToys = (fAltDistr || fNullDistr);
+   
+   std::cout << std::endl << "Results " << GetName() << ": " << endl;
+   std::cout << " - Null p-value = " << NullPValue(); 
+   if (fromToys) std::cout << " +/- " << NullPValueError();
+   std::cout << std::endl;
+   std::cout << " - Significance = " << Significance();
+   if (fromToys) std::cout << " +/- " << SignificanceError() << " sigma";
+   std::cout << std::endl;
+   if(fAltDistr)
+      std::cout << " - Number of Alt toys: " << fAltDistr->GetSize() << std::endl;
+   if(fNullDistr)
+      std::cout << " - Number of Null toys: " << fNullDistr->GetSize() << std::endl;
+   
+   if (HasTestStatisticData() ) std::cout << " - Test statistic evaluated on data: " << fTestStatisticData << std::endl;
+   std::cout << " - CL_b: " << CLb();
+   if (fromToys) std::cout << " +/- " << CLbError();
+   std::cout << std::endl;
+   std::cout << " - CL_s+b: " << CLsplusb();
+   if (fromToys) std::cout << " +/- " << CLsplusbError();
+   std::cout << std::endl;
+   std::cout << " - CL_s: " << CLs();
+   if (fromToys) std::cout << " +/- " << CLsError();
+   std::cout << std::endl;
+   
+   return;
 }
 

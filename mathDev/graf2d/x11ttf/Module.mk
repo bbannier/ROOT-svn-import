@@ -32,10 +32,6 @@ ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(X11TTFH))
 ALLLIBS     += $(X11TTFLIB)
 ALLMAPS     += $(X11TTFMAP)
 
-ifeq ($(XFTLIB),yes)
-XLIBS       += $(X11LIBDIR) -lXft
-endif
-
 # include all dependency files
 INCLUDEFILES += $(X11TTFDEP)
 
@@ -80,5 +76,12 @@ $(X11TTFO) $(X11TTFDO): $(FREETYPEDEP)
 ifeq ($(PLATFORM),macosx)
 $(X11TTFO) $(X11TTFDO): CXXFLAGS += -I/usr/X11R6/include $(FREETYPEINC)
 else
+ifeq ($(PLATFORM),aix5)
+$(X11TTFO) $(X11TTFDO): CXXFLAGS += -I$(X11DIRI) $(FREETYPEINC)
+else
 $(X11TTFO) $(X11TTFDO): CXXFLAGS += $(FREETYPEINC)
+endif
+endif
+ifeq ($(XFTLIB),yes)
+$(X11TTFLIB): XLIBS += $(X11LIBDIR) -lXft
 endif

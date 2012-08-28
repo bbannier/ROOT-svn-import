@@ -18,7 +18,7 @@ namespace ROOT
    SchemaRuleClassMap_t G__ReadRules;
    SchemaRuleClassMap_t G__ReadRawRules;
 
-   static bool ValidateRule( const std::map<std::string, std::string>& rule, string &error_string );
+   static Bool_t ValidateRule( const std::map<std::string, std::string>& rule, string &error_string );
    
    static std::string::size_type FindEndSymbol(std::string &command) 
    {
@@ -47,7 +47,8 @@ namespace ROOT
                break;
             }
             case '<': ++level; break;
-            case '>': --level; break;
+            case '>': if (level==0) { return std::string::npos; }
+                      --level; break;
             default: {
                // nothing to do
             }
@@ -142,7 +143,7 @@ namespace ROOT
             return false;
          }
 
-         bool hasquote = command[0] == '"';
+         Bool_t hasquote = command[0] == '"';
 
          //--------------------------------------------------------------------
          // Processing code tag: "{ code }"
@@ -205,7 +206,7 @@ namespace ROOT
    }
 
    //--------------------------------------------------------------------------
-   static bool ValidateRule( const std::map<std::string, std::string>& rule, string &error_string )
+   static Bool_t ValidateRule( const std::map<std::string, std::string>& rule, string &error_string )
    {
       // Validate if the user specified rules are correct
 
@@ -387,7 +388,7 @@ namespace ROOT
    }
 
    //---------------------------------------------------------------------------
-   bool HasValidDataMembers( SchemaRuleMap_t& rule,
+   Bool_t HasValidDataMembers( SchemaRuleMap_t& rule,
                              MembersTypeMap_t& members )
    {
       // Check if given rule contains references to valid data members
@@ -424,14 +425,14 @@ namespace ROOT
       // Write down the sources
       //-----------------------------------------------------------------------
       if (!source.empty()) {
-         bool start = true;
+         Bool_t start = true;
          SourceTypeList_t::const_iterator it;
 
          //--------------------------------------------------------------------
          // Write IDs and check if we should generate the onfile structure
          // this is done if the type was declared
          //--------------------------------------------------------------------
-         bool generateOnFile = false;
+         Bool_t generateOnFile = false;
          output << "#if 0" << std::endl; // this is to be removed later
          for( it = source.begin(); it != source.end(); ++it ) {
             output << "      ";

@@ -324,6 +324,8 @@ set(haspthread ${has${CMAKE_USE_PTHREADS_INIT}})
 set(hasxft ${has${xft}})
 set(hascling ${has${cling}})
 set(haslzmacompression ${has${lzma}})
+set(hascocoa ${has${cocoa}})
+set(usec++11 ${has${c++11}})
 
 #---root-config----------------------------------------------------------------------------------------------
 ROOT_SHOW_OPTIONS(features)
@@ -352,16 +354,61 @@ configure_file(${PROJECT_SOURCE_DIR}/config/RConfigure.in include/RConfigure.h)
 install(FILES ${CMAKE_BINARY_DIR}/include/RConfigure.h DESTINATION include)
 
 #---Configure and install various files----------------------------------------------------------------------
-execute_Process(COMMAND uname -a OUTPUT_VARIABLE BuildNodeInfo OUTPUT_STRIP_TRAILING_WHITESPACE )
+execute_Process(COMMAND hostname OUTPUT_VARIABLE BuildNodeInfo OUTPUT_STRIP_TRAILING_WHITESPACE )
 
 
 configure_file(${CMAKE_SOURCE_DIR}/config/rootrc.in ${CMAKE_BINARY_DIR}/etc/system.rootrc @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/config/RConfigOptions.in include/RConfigOptions.h)
-configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiledata.h)
+if(ruby)
+  file(APPEND ${CMAKE_BINARY_DIR}/include/RConfigOptions.h "\#define R__RUBY_MAJOR ${RUBY_MAJOR_VERSION}\n\#define R__RUBY_MINOR ${RUBY_MINOR_VERSION}\n")
+endif()
+if(WIN32)
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.win32.in include/compiledata.h)
+else()
+  configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/compiledata.in include/compiledata.h)
+endif()
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile-comp.in config/Makefile.comp)
 configure_file(${CMAKE_SOURCE_DIR}/config/Makefile.in config/Makefile.config)
 configure_file(${CMAKE_SOURCE_DIR}/config/mimes.unix.in ${CMAKE_BINARY_DIR}/etc/root.mimes)
-ROOT_WRITE_OPTIONS(${CMAKE_BINARY_DIR}/ROOTConfig.cmake)
+
+#---Generate the ROOTConfig files to be used by CMake projects-----------------------------------------------
+ROOT_SHOW_OPTIONS(ROOT_ENABLED_OPTIONS)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/ROOTConfig-version.cmake.in
+               ${CMAKE_BINARY_DIR}/ROOTConfig-version.cmake @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/RootUseFile.cmake.in
+               ${CMAKE_BINARY_DIR}/ROOTUseFile.cmake @ONLY)
+#---To be used from the binary tree--------------------------------------------------------------------------
+get_property(buildtree_include_dirs GLOBAL PROPERTY ROOT_INCLUDE_DIRS)
+list(REMOVE_DUPLICATES buildtree_include_dirs)
+set(ROOT_INCLUDE_DIR_SETUP "
+# ROOT configured for use from the build tree - absolute paths are used.
+set(ROOT_INCLUDE_DIRS ${buildtree_include_dirs})
+")
+set(ROOT_MODULE_PATH_SETUP "
+# ROOT configured for use CMake modules from source tree
+set(CMAKE_MODULE_PATH \${CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
+")
+get_property(exported_targets GLOBAL PROPERTY ROOT_EXPORTED_TARGETS)
+export(TARGETS ${exported_targets} FILE ${PROJECT_BINARY_DIR}/ROOTConfig-targets.cmake)
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/ROOTConfig.cmake.in
+               ${CMAKE_BINARY_DIR}/ROOTConfig.cmake @ONLY)
+
+#---To be used from the install tree--------------------------------------------------------------------------
+set(ROOT_INCLUDE_DIR_SETUP "
+# ROOT configured for the install with relative paths, so use these
+get_filename_component(ROOT_INCLUDE_DIRS \"\${_thisdir}/../include\" ABSOLUTE)
+")
+set(ROOT_MODULE_PATH_SETUP "
+# ROOT configured for use CMake modules from installation tree
+set(CMAKE_MODULE_PATH \${CMAKE_MODULE_PATH}  \${_thisdir}/modules)
+")
+configure_file(${CMAKE_SOURCE_DIR}/cmake/scripts/ROOTConfig.cmake.in
+               ${CMAKE_BINARY_DIR}/installtree/ROOTConfig.cmake @ONLY)
+install(FILES ${CMAKE_BINARY_DIR}/ROOTConfig-version.cmake
+              ${CMAKE_BINARY_DIR}/ROOTUseFile.cmake
+              ${CMAKE_BINARY_DIR}/installtree/ROOTConfig.cmake DESTINATION cmake)
+install(EXPORT ${CMAKE_PROJECT_NAME}Exports FILE ROOTConfig-targets.cmake DESTINATION cmake)               
+
 
 #---Especial definitions for root-config et al.--------------------------------------------------------------
 set(prefix $ROOTSYS)
@@ -376,6 +423,9 @@ configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.sh ${CMAKE_RUNTIME_OUTPUT_DIR
 configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.csh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.csh @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/config/genreflex.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/config/genreflex-rootcint.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex-rootcint @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/proofserv.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/proofserv @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/config/roots.in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/roots @ONLY)
+
 if(WIN32)
   set(thisrootbat ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/thisroot.bat)
   configure_file(${CMAKE_SOURCE_DIR}/config/thisroot.bat ${thisrootbat} @ONLY)
@@ -389,6 +439,8 @@ install(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/genreflex
 			  ${thisrootbat}
               ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/root-config
               ${CMAKE_SOURCE_DIR}/cmake/scripts/setenvwrap.csh
+              ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/roots
+              ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/proofserv
               PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ 
                           GROUP_EXECUTE GROUP_READ 
                           WORLD_EXECUTE WORLD_READ 
@@ -406,8 +458,6 @@ install(FILES ${CMAKE_BINARY_DIR}/config/Makefile.comp
               ${CMAKE_BINARY_DIR}/config/Makefile.config
               DESTINATION config)
 
-install(FILES ${CMAKE_BINARY_DIR}/ROOTConfig.cmake
-              DESTINATION cmake/modules)
 
 endfunction()
 RootConfigure()

@@ -1010,9 +1010,11 @@ void TGX11::GetTextExtent(unsigned int &w, unsigned int &h, char *mess)
    XPoint *cBox;
    XRotSetMagnification(fTextMagnitude);
    cBox = XRotTextExtents(fDisplay, gTextFont, 0., 0, 0, mess, 0);
-   w    = cBox[2].x;
-   h    = -cBox[2].y;
-   free((char *)cBox);
+   if (cBox) {
+      w    = cBox[2].x;
+      h    = -cBox[2].y;
+      free((char *)cBox);
+   }
 }
 
 //______________________________________________________________________________
@@ -1103,7 +1105,7 @@ Int_t TGX11::OpenDisplay(Display *disp)
          strcpy(gFont[i].name, " ");
       }
       fontlist = XListFonts(fDisplay, "*courier*", 1, &fontcount);
-      if (fontcount != 0) {
+      if (fontlist && fontcount != 0) {
          gFont[gCurrentFontNumber].id = XLoadQueryFont(fDisplay, fontlist[0]);
          gTextFont = gFont[gCurrentFontNumber].id;
          strcpy(gFont[gCurrentFontNumber].name, "*courier*");
@@ -1112,7 +1114,7 @@ Int_t TGX11::OpenDisplay(Display *disp)
       } else {
          // emergency: try fixed font
          fontlist = XListFonts(fDisplay, "fixed", 1, &fontcount);
-         if (fontcount != 0) {
+         if (fontlist && fontcount != 0) {
             gFont[gCurrentFontNumber].id = XLoadQueryFont(fDisplay, fontlist[0]);
             gTextFont = gFont[gCurrentFontNumber].id;
             strcpy(gFont[gCurrentFontNumber].name, "fixed");
@@ -2573,7 +2575,7 @@ void TGX11::SetOpacity(Int_t percent)
    // if 100 percent then just make white
 
    ULong_t *orgcolors = 0, *tmpc = 0;
-   Int_t    maxcolors = 0, ncolors, ntmpc = 0;
+   Int_t    maxcolors = 0, ncolors = 0, ntmpc = 0;
 
    // save previous allocated colors, delete at end when not used anymore
    if (gCws->fNewColors) {
@@ -2584,7 +2586,7 @@ void TGX11::SetOpacity(Int_t percent)
    // get pixmap from server as image
    XImage *image = XGetImage(fDisplay, gCws->fDrawing, 0, 0, gCws->fWidth,
                              gCws->fHeight, AllPlanes, ZPixmap);
-
+   if (!image) return;
    // collect different image colors
    int x, y;
    for (y = 0; y < (int) gCws->fHeight; y++) {
@@ -2851,7 +2853,7 @@ Int_t TGX11::SetTextFont(char *fontname, ETextSetMode mode)
 
    fontlist = XListFonts(fDisplay, fontname, 1, &fontcount);
 
-   if (fontcount != 0) {
+   if (fontlist && fontcount != 0) {
       if (mode == kLoad) {
          if (gFont[gCurrentFontNumber].id)
             XFreeFont(fDisplay, gFont[gCurrentFontNumber].id);
@@ -3008,7 +3010,7 @@ void TGX11::ImgPickPalette(XImage *image, Int_t &ncol, Int_t *&R, Int_t *&G, Int
    // The R G B arrays must be deleted by the caller.
 
    ULong_t *orgcolors = 0;
-   Int_t    maxcolors = 0, ncolors;
+   Int_t    maxcolors = 0, ncolors = 0;
 
    // collect different image colors
    int x, y;

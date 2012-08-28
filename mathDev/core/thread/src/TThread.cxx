@@ -48,6 +48,12 @@ volatile Int_t  TThread::fgXArt = 0;
 static void CINT_alloc_lock()   { gGlobalMutex->Lock(); }
 static void CINT_alloc_unlock() { gGlobalMutex->UnLock(); }
 
+static TMutex  *gMainInternalMutex = 0;
+
+static void ThreadInternalLock() { if (gMainInternalMutex) gMainInternalMutex->Lock(); }
+static void ThreadInternalUnLock() { if (gMainInternalMutex) gMainInternalMutex->UnLock(); }
+
+
 //------------------------------------------------------------------------------
 
 // Set gGlobalMutex to 0 when Thread library gets unloaded
@@ -139,7 +145,13 @@ Int_t TJoinHelper::Join()
       // does not imply anything about the value of this predicate, the
       // predicate should be re-evaluated upon such return.
 
-      if (r == 0 && fJoined) break;
+      if (r == 0 || r == 1) {
+         // If we received the signal or timed out, let's check the value
+         if (fJoined) break;
+      } else {
+         // If any other error occured, there is no point in trying again
+         break;
+      }
 
       gSystem->ProcessEvents();
    }
@@ -248,7 +260,7 @@ void TThread::Initialize()
    // Initialize the Thread package. This initializes the TThread and ROOT
    // global mutexes to make parts of ROOT thread safe/aware. This call is
    // implicit in case a TThread is created.
-   
+
    Init();
 }
 
@@ -271,10 +283,13 @@ void TThread::Init()
    if (fgThreadImp) return;
 
    fgThreadImp = gThreadFactory->CreateThreadImp();
+   gMainInternalMutex = new TMutex(kTRUE);
+
    fgMainId    = fgThreadImp->SelfId();
    fgMainMutex = new TMutex(kTRUE);
    gThreadTsd  = TThread::Tsd;
    gThreadXAR  = TThread::XARequest;
+
 
    // Create the single global mutex
    gGlobalMutex = new TMutex(kTRUE);
@@ -295,17 +310,21 @@ void TThread::Constructor()
    fHandle= 0;
    if (!fgThreadImp) Init();
 
-   SetComment("Constructor: MainMutex Locking");
-   Lock();
-   SetComment("Constructor: MainMutex Locked");
-   memset(fTsd, 0, 20*sizeof(void*));
-   fTsd[0] = gPad;
-   fTsd[1] = 0;    // For TClass
+   SetComment("Constructor: MainInternalMutex Locking");
+   ThreadInternalLock();
+   SetComment("Constructor: MainInternalMutex Locked");
+   memset(fTsd, 0, ROOT::kMaxThreadSlot*sizeof(void*));
+   // In order for the thread 'gDirectory' value to be properly
+   // initialized we need to set it now (otherwise it default
+   // to zero which is 'unexpected')
+   // We initialize it to gROOT rather than gDirectory, since
+   // TFile are currently expected to not be shared by two threads.
+   fTsd[ROOT::kDirectoryThreadSlot] = gROOT;
 
    if (fgMain) fgMain->fPrev = this;
    fNext = fgMain; fPrev = 0; fgMain = this;
 
-   UnLock();
+   ThreadInternalUnLock();
    SetComment();
 
    // thread is set up in initialisation routine or Run().
@@ -321,15 +340,15 @@ TThread::~TThread()
 
    // Disconnect thread instance
 
-   SetComment("Destructor: MainMutex Locking");
-   Lock();
-   SetComment("Destructor: MainMutex Locked");
+   SetComment("Destructor: MainInternalMutex Locking");
+   ThreadInternalLock();
+   SetComment("Destructor: MainInternalMutex Locked");
 
    if (fPrev) fPrev->fNext = fNext;
    if (fNext) fNext->fPrev = fPrev;
    if (fgMain == this) fgMain = fNext;
 
-   UnLock();
+   ThreadInternalUnLock();
    SetComment();
    if (fHolder) *fHolder = 0;
 }
@@ -365,13 +384,13 @@ Int_t TThread::Exists()
    // Static method to check if threads exist.
    // Returns the number of running threads.
 
-   Lock();
+   ThreadInternalLock();
 
    Int_t num = 0;
    for (TThread *l = fgMain; l; l = l->fNext)
       num++; //count threads
 
-   UnLock();
+   ThreadInternalUnLock();
 
    return num;
 }
@@ -391,11 +410,11 @@ TThread *TThread::GetThread(Long_t id)
 
    TThread *myTh;
 
-   Lock();
+   ThreadInternalLock();
 
    for (myTh = fgMain; myTh && (myTh->fId != id); myTh = myTh->fNext) { }
 
-   UnLock();
+   ThreadInternalUnLock();
 
    return myTh;
 }
@@ -407,11 +426,11 @@ TThread *TThread::GetThread(const char *name)
 
    TThread *myTh;
 
-   Lock();
+   ThreadInternalLock();
 
    for (myTh = fgMain; myTh && (strcmp(name, myTh->GetName())); myTh = myTh->fNext) { }
 
-   UnLock();
+   ThreadInternalUnLock();
 
    return myTh;
 }
@@ -484,8 +503,8 @@ Int_t TThread::Run(void *arg)
 
    if (arg) fThreadArg = arg;
 
-   SetComment("Run: MainMutex locking");
-   Lock();
+   SetComment("Run: MainInternalMutex locking");
+   ThreadInternalLock();
    SetComment("Run: MainMutex locked");
 
    int iret = fgThreadImp->Run(this);
@@ -495,7 +514,7 @@ Int_t TThread::Run(void *arg)
    if (gDebug)
       Info("TThread::Run", "thread run requested");
 
-   UnLock();
+   ThreadInternalUnLock();
    SetComment();
    return iret;
 }
@@ -632,6 +651,8 @@ Int_t TThread::CleanUp()
    if (fgXActMutex)
       fgXActMutex->CleanUp();
 
+   gMainInternalMutex->CleanUp();
+
    if (th->fHolder)
       delete th;
 
@@ -765,7 +786,7 @@ void TThread::Ps()
       return;
    }
 
-   Lock();
+   ThreadInternalLock();
 
    int num = 0;
    for (l = fgMain; l; l = l->fNext)
@@ -796,7 +817,7 @@ void TThread::Ps()
       printf("\n");
    }  // end of loop
 
-   UnLock();
+   ThreadInternalUnLock();
 }
 
 //______________________________________________________________________________
@@ -804,6 +825,9 @@ void **TThread::Tsd(void *dflt, Int_t k)
 {
    // Static method returning a pointer to thread specific data container
    // of the calling thread.
+   // k should be between 0 and kMaxUserThreadSlot for user application.
+   // (and between kMaxUserThreadSlot and kMaxThreadSlot for ROOT libraries).
+   // See ROOT::EThreadSlotReservation
 
    TThread *th = TThread::Self();
 

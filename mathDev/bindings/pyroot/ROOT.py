@@ -229,8 +229,11 @@ class _ExpandMacroFunction( object ):
          return 1
       return 0
 
-_root.gPad      = _ExpandMacroFunction( "TVirtualPad", "Pad" )
-_root.gVirtualX = _ExpandMacroFunction( "TVirtualX",   "Instance" )
+_root.gPad         = _ExpandMacroFunction( "TVirtualPad",  "Pad" )
+_root.gVirtualX    = _ExpandMacroFunction( "TVirtualX",    "Instance" )
+_root.gDirectory   = _ExpandMacroFunction( "TDirectory",   "CurrentDirectory" )
+_root.gFile        = _ExpandMacroFunction( "TFile",        "CurrentFile" )
+_root.gInterpreter = _ExpandMacroFunction( "TInterpreter", "Instance" )
 
 
 ### special case pythonization --------------------------------------------------
@@ -478,6 +481,12 @@ class ModuleFacade( types.ModuleType ):
 
       if hasargv and PyConfig.IgnoreCommandLineOptions:
          sys.argv = argv
+
+    # (temporary) fix/workaround for #95188
+      if not 'libCint' in _root.gSystem.GetLibraries():
+         _root.gSystem.SetMakeSharedLib(
+            _root.gSystem.GetMakeSharedLib().replace( '$LinkedLibs',
+               '$LinkedLibs ' + _root.gSystem.DynamicPathName('libCint') ))
 
     # must be called after gApplication creation:
       if '__IPYTHON__' in __builtins__:

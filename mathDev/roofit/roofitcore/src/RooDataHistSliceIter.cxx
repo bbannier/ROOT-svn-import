@@ -36,6 +36,8 @@
 #include "RooAbsLValue.h"
 #include "RooDataHistSliceIter.h"
 
+using namespace std;
+
 ClassImp(RooDataHistSliceIter)
 ;
 
@@ -58,6 +60,10 @@ RooDataHistSliceIter::RooDataHistSliceIter(RooDataHist& hist, RooAbsArg& sliceAr
   }
 
   _nStep = dynamic_cast<RooAbsLValue&>(*sliceArgInt).numBins() ;
+
+//   cout << "RooDataHistSliceIter" << endl ;
+//   hist.Print() ;
+//   cout << "hist._iterator = " << hist._iterator << endl ;
 
   hist._iterator->Reset() ;
   RooAbsArg* arg ;

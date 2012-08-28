@@ -16,12 +16,14 @@
 #include <TMath.h>
 #include <TNtuple.h>
 #include <TRandom3.h>
+#include <TROOT.h>
 #include <TString.h>
 #include <TStyle.h>
 #include <TSystem.h>
 #include <TFile.h>
 #include <TProofOutputFile.h>
 
+//_____________________________________________________________________________
 ProofNtuple::~ProofNtuple()
 {
    // Destructor
@@ -31,6 +33,7 @@ ProofNtuple::~ProofNtuple()
    SafeDelete(fRandom);
 }
 
+//_____________________________________________________________________________
 void ProofNtuple::PlotNtuple(TNtuple *ntp, const char *ntptitle)
 {
    // Make some plots from the ntuple 'ntp'
@@ -80,6 +83,7 @@ void ProofNtuple::PlotNtuple(TNtuple *ntp, const char *ntptitle)
    c1->Update();
 }
 
+//_____________________________________________________________________________
 void ProofNtuple::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
@@ -92,6 +96,7 @@ void ProofNtuple::Begin(TTree * /*tree*/)
    if (out) fPlotNtuple = kFALSE;
 }
 
+//_____________________________________________________________________________
 void ProofNtuple::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
@@ -118,10 +123,8 @@ void ProofNtuple::SlaveBegin(TTree * /*tree*/)
    }
 
    // Open the file
-   TDirectory *savedir = gDirectory;
    fFile = fProofFile->OpenFile("RECREATE");
    if (fFile && fFile->IsZombie()) SafeDelete(fFile);
-   savedir->cd();
 
    // Cannot continue
    if (!fFile) {
@@ -135,10 +138,25 @@ void ProofNtuple::SlaveBegin(TTree * /*tree*/)
    fNtp->SetDirectory(fFile);
    fNtp->AutoSave();
 
-   // Init the random generator
-   fRandom = new TRandom3(0);
+   // Should we generate the random numbers or take them from the ntuple ?
+   TNamed *unr = (TNamed *) fInput->FindObject("PROOF_USE_NTP_RNDM");
+   if (unr) {
+      // Get the ntuple from the input list
+      if (!(fNtpRndm = dynamic_cast<TNtuple *>(fInput->FindObject("NtpRndm")))) {
+         Warning("SlaveBegin",
+                 "asked to use rndm ntuple but 'NtpRndm' not found in the"
+                 " input list! Using the random generator");
+         fInput->Print();
+      } else {
+         Info("SlaveBegin", "taking randoms from input ntuple 'NtpRndm'");
+      }
+   }
+
+   // Init the random generator, if required
+   if (!fNtpRndm) fRandom = new TRandom3(0);
 }
 
+//_____________________________________________________________________________
 Bool_t ProofNtuple::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -162,16 +180,30 @@ Bool_t ProofNtuple::Process(Long64_t entry)
    if (!fNtp) return kTRUE;
 
    // Fill ntuple
-   Float_t px, py;
-   fRandom->Rannor(px,py);
+   Float_t px, py, random;
+   if (fNtpRndm) {
+      // Get the entry
+      Float_t *ar = fNtpRndm->GetArgs();
+      Long64_t ent = entry % fNtpRndm->GetEntries(); 
+      fNtpRndm->GetEntry(ent);
+      random = ar[0];
+      px = (Float_t) TMath::ErfInverse((Double_t)(ar[1]*2 - 1.)) * TMath::Sqrt(2.);
+      py = (Float_t) TMath::ErfInverse((Double_t)(ar[2]*2 - 1.)) * TMath::Sqrt(2.);
+   } else if (fRandom) {
+      fRandom->Rannor(px,py);
+      random = fRandom->Rndm();
+   } else {
+      Abort("no way to get random numbers! Stop processing", kAbortProcess);
+      return kTRUE;
+   }
    Float_t pz = px*px + py*py;
-   Float_t random = fRandom->Rndm();
    Int_t i = (Int_t) entry;
    fNtp->Fill(px,py,pz,random,i);
 
    return kTRUE;
 }
 
+//_____________________________________________________________________________
 void ProofNtuple::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
@@ -180,6 +212,10 @@ void ProofNtuple::SlaveTerminate()
 
    // Write the ntuple to the file
    if (fFile) {
+      if (!fNtp) {
+         Error("SlaveTerminate", "'ntuple' is undefined!");
+         return;
+      }
       Bool_t cleanup = kFALSE;
       TDirectory *savedir = gDirectory;
       if (fNtp->GetEntries() > 0) {
@@ -203,6 +239,7 @@ void ProofNtuple::SlaveTerminate()
    }
 }
 
+//_____________________________________________________________________________
 void ProofNtuple::Terminate()
 {
    // The Terminate() function is the last function to be called during
@@ -212,7 +249,7 @@ void ProofNtuple::Terminate()
    // Do nothing is not requested (dataset creation run)
    if (!fPlotNtuple) return;
 
-   // Get the ntuple form the file
+   // Get the ntuple from the file
    if ((fProofFile =
            dynamic_cast<TProofOutputFile*>(fOutput->FindObject("SimpleNtuple.root")))) {
 
@@ -238,4 +275,5 @@ void ProofNtuple::Terminate()
 
    // Plot ntuples
    if (fNtp) PlotNtuple(fNtp, "proof ntuple");
+
 }

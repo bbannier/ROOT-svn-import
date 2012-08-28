@@ -21,10 +21,10 @@ public :
 
    // Specific members
    Int_t            fNhist;
-   TH1F           **fHist;//[fNhist]
+   TH1F           **fHist;//![fNhist]
    Int_t            fNhist3;
-   TH3F           **fHist3;//[fNhist3]
-   TRandom3        *fRandom;
+   TH3F           **fHist3;//![fNhist3]
+   TRandom3        *fRandom;//!
 
    ProofSimple();
    virtual ~ProofSimple();
@@ -38,8 +38,14 @@ public :
    virtual TList  *GetOutputList() const { return fOutput; }
    virtual void    SlaveTerminate();
    virtual void    Terminate();
+   
+   // Setters and getters (for TDataMember)
+   Int_t GetNhist() { return fNhist; }
+   void SetNhist(Int_t nh) { fNhist = nh; }
+   Int_t GetNhist3() { return fNhist3; }
+   void SetNhist3(Int_t nh) { fNhist3 = nh; }
 
-   ClassDef(ProofSimple,0);
+   ClassDef(ProofSimple,2);
 };
 
 #endif

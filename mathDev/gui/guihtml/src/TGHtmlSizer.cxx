@@ -348,9 +348,9 @@ void TGHtml::AddStyle(TGHtmlElement *p)
                      SetupBackgroundPic(img->GetPicture());
 #else
                      GCValues_t gcv;
-                     unsigned int mask;
+                     // unsigned int mask;
 
-                     mask = kGCTile | kGCFillStyle | kGCGraphicsExposures;
+                     // mask = kGCTile | kGCFillStyle | kGCGraphicsExposures;
                      gcv.fTile = img->GetPixmap();
                      gcv.fFillStyle = kFillTiled;
                      gcv.fGraphicsExposures = kTRUE;
@@ -567,7 +567,7 @@ void TGHtml::AddStyle(TGHtmlElement *p)
             const char *zUrl;
             const char *zMethod;
             TGString cmd("");
-            int result;
+            // int result;
             char zToken[50];
 
             fFormStart = 0;
@@ -587,7 +587,7 @@ void TGHtml::AddStyle(TGHtmlElement *p)
             cmd.Append(" { ");
             AppendArglist(&cmd, (TGHtmlMarkupElement *) p);
             cmd.Append("} ");
-            result = FormCreate(form, zUrl, cmd.GetString());
+            /* result = */ FormCreate(form, zUrl, cmd.GetString());
             delete[] zUrl;
 
             /*if (result)*/ fFormStart = form;
@@ -1127,9 +1127,9 @@ void TGHtml::Sizer()
          case Html_TH: {
             TGHtmlCell *cell = (TGHtmlCell *) p;
             z = p->MarkupArg("rowspan", "1");
-            cell->fRowspan = atoi(z);
+            cell->fRowspan = z ? atoi(z) : 1;
             z = p->MarkupArg("colspan", "1");
-            cell->fColspan = atoi(z);
+            cell->fColspan = z ? atoi(z) : 1;
             p->fFlags |= HTML_Visible;
             break;
          }
@@ -1159,6 +1159,7 @@ void TGHtml::Sizer()
                image->fAscent = fontMetrics.fAscent;
                image->fDescent = fontMetrics.fDescent;
                image->fZAlt = p->MarkupArg("alt", "<image>");
+               if (image->fZAlt == 0) image->fZAlt = "<image>";
                image->fW = font->TextWidth(image->fZAlt, strlen(image->fZAlt));
             } else {
                int w, h;

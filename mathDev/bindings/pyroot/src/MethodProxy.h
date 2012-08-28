@@ -49,6 +49,10 @@ namespace PyROOT {
          UInt_t                      fFlags;
 
          int* fRefCount;
+
+      private:
+         MethodInfo_t( const MethodInfo_t& );
+         MethodInfo_t& operator=( const MethodInfo_t& );
       };
 
    public:
@@ -87,6 +91,7 @@ namespace PyROOT {
    inline MethodProxy* MethodProxy_New(
          const std::string& name, std::vector< PyCallable* >& methods )
    {
+   // Create and initialize a new method proxy from the overloads.
       MethodProxy* pymeth = (MethodProxy*)MethodProxy_Type.tp_new( &MethodProxy_Type, 0, 0 );
       pymeth->Set( name, methods );
       return pymeth;
@@ -94,6 +99,7 @@ namespace PyROOT {
 
    inline MethodProxy* MethodProxy_New( const std::string& name, PyCallable* method )
    {
+   // Create and initialize a new method proxy from the method.
       std::vector< PyCallable* > p;
       p.push_back( method );
       return MethodProxy_New( name, p );

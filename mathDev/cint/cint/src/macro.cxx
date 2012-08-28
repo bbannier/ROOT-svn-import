@@ -22,7 +22,7 @@ static int G__handle_as_typedef(char* oldtype, char* newtype);
 static void G__createmacro(G__FastAllocString &new_name, char* initvalue);
 static int G__createfuncmacro(char* new_name);
 static int G__replacefuncmacro(const char* item, G__Callfuncmacro* callfuncmacro, G__Charlist* callpara, G__Charlist* defpara, FILE* def_fp, fpos_t def_pos, int nobraces, int nosemic);
-static int G__transfuncmacro(const char* item, G__Deffuncmacro* deffuncmacro, G__Callfuncmacro* callfuncmacro, fpos_t call_pos, char* p, int nobraces, int nosemic);
+static int G__transfuncmacro(const char* item, G__Deffuncmacro* deffuncmacro, G__Callfuncmacro* callfuncmacro, const fpos_t &call_pos, char* p, int nobraces, int nosemic);
 static int G__argsubstitute(G__FastAllocString &symbol, G__Charlist* callpara, G__Charlist* defpara);
 static int G__getparameterlist(char* paralist, G__Charlist* charlist);
 
@@ -277,7 +277,6 @@ static int G__createfuncmacro(char* new_name)
    struct G__Deffuncmacro *deffuncmacro;
    int hash, i;
    G__FastAllocString paralist(G__ONELINE);
-   int c;
    if (G__ifile.filenum > G__gettempfilenum()) {
       G__fprinterr(G__serr, "Limitation: Macro function can not be defined in a command line or a tempfile\n");
       G__genericerror("You need to write it in a source file");
@@ -297,7 +296,7 @@ static int G__createfuncmacro(char* new_name)
    G__hash(new_name, hash, i)
    deffuncmacro->hash = hash;
    /* read parameter list */
-   c = G__fgetstream(paralist, 0, ")");
+   G__fgetstream(paralist, 0, ")");
    G__ASSERT(')' == c);
    G__getparameterlist(paralist, &deffuncmacro->def_para);
    /* store file pointer, line number and position */
@@ -439,7 +438,7 @@ static int G__replacefuncmacro(const char* item, G__Callfuncmacro* callfuncmacro
 }
 
 //______________________________________________________________________________
-static int G__transfuncmacro(const char* item, G__Deffuncmacro* deffuncmacro, G__Callfuncmacro* callfuncmacro, fpos_t call_pos, char* p, int nobraces, int nosemic)
+static int G__transfuncmacro(const char* item, G__Deffuncmacro* deffuncmacro, G__Callfuncmacro* callfuncmacro, const fpos_t &call_pos, char* p, int nobraces, int nosemic)
 {
    // -- Translate function macro parameter at the first execution of func macro.
    struct G__Charlist call_para;
@@ -732,6 +731,8 @@ G__value G__execfuncmacro(const char* item, int* done)
    fpos_t call_pos;
    if (G__ifile.fp) {
       fgetpos(G__ifile.fp, &call_pos);
+   } else {
+      memset(&call_pos,0,sizeof(fpos_t));
    }
    //
    //  Search for translated macro function.
@@ -857,6 +858,8 @@ int G__execfuncmacro_noexec(const char* macroname)
    fpos_t call_pos;
    if (G__ifile.fp) {
       fgetpos(G__ifile.fp, &call_pos);
+   } else {
+      memset(&call_pos,0,sizeof(fpos_t));
    }
    //
    //  Search for translated macro function.

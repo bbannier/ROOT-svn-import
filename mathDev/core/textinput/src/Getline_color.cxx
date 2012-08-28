@@ -352,15 +352,13 @@ void ROOT::TextInputColorizer::ProcessCursorChange(size_t Cursor,
 
    size_t lenLine = input.length();
    // direction == -1: Cursor - 1 to front.
-   size_t scanBegin = Cursor - 1;
+   size_t scanBegin = (Cursor > 0) ? Cursor - 1 : 0;
    size_t scanLast = 0;
    if (direction == 1) {
       // direction == 1: Cursor + 1 to end.
       scanBegin = Cursor + 1;
       scanLast = lenLine - 1;
       if (scanBegin > scanLast) return;
-   } else {
-      if (scanBegin < scanLast) return;
    }
    for (size_t i = scanBegin; true /*avoid "unsigned >= 0" condition*/; i += direction) {
       // if current char is equal to another opening bracket, push onto stack

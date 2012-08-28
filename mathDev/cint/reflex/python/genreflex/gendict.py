@@ -1140,6 +1140,20 @@ class genDictionary(object) :
       if attrs['id'] in self.vtables : mod += ' | ::Reflex::VIRTUAL'
     else :  # new in version 0.6.0
       if self.isClassVirtual(attrs) :  mod += ' | ::Reflex::VIRTUAL'
+    # report fields attributes that do not have a member
+    if 'extra' in attrs and 'fields' in attrs['extra'] :
+      for fattrs in attrs['extra']['fields'] :
+        if not fattrs.has_key('name') : continue
+        found = False
+        for mid in members :
+          mattrs = self.xref[mid]['attrs']
+          if 'name' in mattrs and fattrs['name'] == mattrs['name']:
+            found = True
+            break
+        if not found:
+          self.warnings += 1
+          print '--->> genreflex: WARNING: member %s not found in class %s' % (fattrs['name'], cls)
+
     members = filter(self.memberfilter, members)  # Eliminate problematic members
 
     # Fill the different streams sc: constructor, ss: stub functions
@@ -2312,12 +2326,16 @@ class genDictionary(object) :
         if opname == 'new []':
           if len(sems) == 1 and self.genTypeName(sems[0]['type']) in ('size_t',): opnewa = 1
           if len(sems) == 2 and self.genTypeName(sems[0]['type']) in ('size_t',) and self.genTypeName(sems[1]['type']) in ('void*',): plopnewa = 1
-    newc = ''
-    newa = ''
+    newc,newa = '',''
     if opnewc and not plopnewc: newc = '_np'
     elif not opnewc and plopnewc : newc = '_p'
     if opnewa and not plopnewa: newa = '_np'
     elif not opnewa and plopnewa : newa = '_p'
+    # go to base classes eventually
+    if (newc,newa) == ('','') :
+      for b in self.getBases(cid):
+        newc,newa = self.checkOperators(b['type'])
+        if (newc,newa) != ('','') : break
     return (newc, newa)
 #----Constructor/Destructor stuff--------------------------------------------------------
   def genGetNewDelFunctionsDecl( self, attrs, args ) :

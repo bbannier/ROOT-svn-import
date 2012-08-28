@@ -50,6 +50,8 @@
 #include "RooConstVar.h"
 #include "RooDouble.h"
 
+using namespace std;
+
 ClassImp(RooRealIntegral) 
 ;
 
@@ -343,8 +345,12 @@ RooRealIntegral::RooRealIntegral(const char *name, const char *title,
 	  RooAbsRealLValue* leaflv = dynamic_cast<RooAbsRealLValue*>(leaf) ;
 	  if (leaflv && leaflv->getBinning(rangeName).isParameterized()) {
 	    oocxcoutD(&function,Integration) << function.GetName() << " : Observable " << leaf->GetName() << " has parameterized binning, add value dependence of boundary objects rather than shape of leaf" << endl ;
-	    addServer(*leaflv->getBinning(rangeName).lowBoundFunc(),kTRUE,kFALSE) ;
-	    addServer(*leaflv->getBinning(rangeName).highBoundFunc(),kTRUE,kFALSE) ;
+	    if (leaflv->getBinning(rangeName).lowBoundFunc()) {
+	      addServer(*leaflv->getBinning(rangeName).lowBoundFunc(),kTRUE,kFALSE) ;
+	    }
+	    if(leaflv->getBinning(rangeName).highBoundFunc()) {
+	      addServer(*leaflv->getBinning(rangeName).highBoundFunc(),kTRUE,kFALSE) ;
+	    }
 	  } else {
 	    oocxcoutD(&function,Integration) << function.GetName() << ": Adding observable " << leaf->GetName() << " of server " 
 					     << arg->GetName() << " as shape dependent" << endl ;
@@ -565,31 +571,27 @@ void RooRealIntegral::autoSelectDirtyMode()
   // Set appropriate cache operation mode for integral depending on cache operation
   // mode of server objects
 
-  //cout << "RooRealIntegral::autoSelectDirtyMode(" << GetName() << ")" << endl ;
-
   // If any of our servers are is forcedDirty or a projectedDependent, then we need to be ADirty
   TIterator* siter = serverIterator() ;  
   RooAbsArg* server ;
   while((server=(RooAbsArg*)siter->Next())){
-    RooArgSet leafSet ;
-    server->leafNodeServerList(&leafSet) ;
-    TIterator* liter = leafSet.createIterator() ;
-    RooAbsArg* leaf ;
-    while((leaf=(RooAbsArg*)liter->Next())) {
-      if (leaf->operMode()==ADirty && leaf->isValueServer(*this)) {      
-	//cout << "RooRealIntegral::autoSelectDirtyMode(" << GetName() << ") selecting ADirty mode because value server leaf " 
-	//     << leaf->GetName() << " is also " << endl ;
-	setOperMode(ADirty) ;
-	break ;
+    if (server->isValueServer(*this)) {
+      RooArgSet leafSet ;
+      server->leafNodeServerList(&leafSet) ;
+      TIterator* liter = leafSet.createIterator() ;
+      RooAbsArg* leaf ;
+      while((leaf=(RooAbsArg*)liter->Next())) {
+	if (leaf->operMode()==ADirty && leaf->isValueServer(*this)) {      
+	  setOperMode(ADirty) ;
+	  break ;
+	}
+	if (leaf->getAttribute("projectedDependent")) {
+	  setOperMode(ADirty) ;
+	  break ;
+	}
       }
-      if (leaf->getAttribute("projectedDependent")) {
-	//cout << "RooRealIntegral::autoSelectDirtyMode(" << GetName() << ") selecting ADirty mode because leaf " 
-	//    << leaf->GetName() << " is projectedDependent " << endl ;
-	setOperMode(ADirty) ;
-	break ;
-      }
+      delete liter ;
     }
-    delete liter ;
   }
   delete siter ;
 }
@@ -768,6 +770,12 @@ RooRealIntegral::~RooRealIntegral()
 //_____________________________________________________________________________
 RooAbsReal* RooRealIntegral::createIntegral(const RooArgSet& iset, const RooArgSet* nset, const RooNumIntConfig* cfg, const char* rangeName) const 
 {
+
+  // Handle special case of no integration with default algorithm
+  if (iset.getSize()==0) {
+    return RooAbsReal::createIntegral(iset,nset,cfg,rangeName) ;
+  }
+
   // Special handling of integral of integral, return RooRealIntegral that represents integral over all dimensions in one pass
   RooArgSet isetAll(iset) ;
   isetAll.add(_sumList) ;
@@ -798,6 +806,33 @@ RooAbsReal* RooRealIntegral::createIntegral(const RooArgSet& iset, const RooArgS
 
 
 
+//_____________________________________________________________________________
+Double_t RooRealIntegral::getValV(const RooArgSet* nset) const
+{
+  // Return value of object. If the cache is clean, return the
+  // cached value, otherwise recalculate on the fly and refill
+  // the cache
+
+//   // fast-track clean-cache processing
+//   if (_operMode==AClean) {
+//     return _value ;
+//   }
+
+  if (nset && nset!=_lastNSet) {
+    ((RooAbsReal*) this)->setProxyNormSet(nset) ;    
+    _lastNSet = (RooArgSet*) nset ;
+  }
+
+  if (isValueOrShapeDirtyAndClear()) {
+    _value = traceEval(nset) ;
+  } 
+
+  return _value ;
+}
+
+
+
+
 
 //_____________________________________________________________________________
 Double_t RooRealIntegral::evaluate() const 
@@ -817,13 +852,14 @@ Double_t RooRealIntegral::evaluate() const
 
       if (cacheVal) {
 	retVal = *cacheVal ;
-// 	cout << "using cached value of integral" << GetName() << endl ;
+	//	cout << "using cached value of integral" << GetName() << endl ;
       } else {
 
 
 	// Find any function dependents that are AClean 
 	// and switch them temporarily to ADirty
-	setACleanADirty(kTRUE) ;
+	Bool_t origState = inhibitDirty() ;
+	setDirtyInhibit(kTRUE) ;
 	
 	// try to initialize our numerical integration engine
 	if(!(_valid= initNumIntegrator())) {
@@ -835,14 +871,16 @@ Double_t RooRealIntegral::evaluate() const
 	// Save current integral dependent values 
 	_saveInt = _intList ;
 	_saveSum = _sumList ;
-	
+
 	// Evaluate sum/integral
 	retVal = sum() ;
+
+	// This must happen BEFORE restoring dependents, otherwise no dirty state propagation in restore step
+	setDirtyInhibit(origState) ;
 	
 	// Restore integral dependent values
 	_intList=_saveInt ;
 	_sumList=_saveSum ;
-	
 
 	// Cache numeric integrals in >1d expensive object cache
 	if ((_cacheNum && _intList.getSize()>0) || _intList.getSize()>=_cacheAllNDim) {
@@ -851,7 +889,6 @@ Double_t RooRealIntegral::evaluate() const
 //  	  cout << "### caching value of integral" << GetName() << " in " << &expensiveObjectCache() << endl ;
 	}
 	
-	setACleanADirty(kFALSE) ;
       }
       break ;
     }
@@ -905,8 +942,7 @@ Double_t RooRealIntegral::evaluate() const
 
     ccxcoutD(Tracing) << "raw*fact = " << retVal << endl ;
   }
-
-  //   cout << "RooRealIntegral::evaluate(" << GetName() << ") value = " << retVal << endl ;
+  
 
   return retVal ;
 }

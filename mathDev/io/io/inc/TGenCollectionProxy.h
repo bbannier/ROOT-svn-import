@@ -37,11 +37,7 @@
 #include <string>
 #include <map>
 #ifndef __CINT__
-#if defined(__APPLE__)
 #include <stdlib.h>
-#else
-#include <malloc.h>
-#endif
 #endif
 class TObjArray;
 class TCollectionProxyFactory;
@@ -82,15 +78,16 @@ public:
       ROOT::NewFunc_t fCtor;       // Method cache for containee constructor
       ROOT::DesFunc_t fDtor;       // Method cache for containee destructor
       ROOT::DelFunc_t fDelete;     // Method cache for containee delete
-      unsigned int    fCase;       // type of data of Value_type
+      UInt_t          fCase;       // type of data of Value_type
+      UInt_t          fProperties; // Additional properties of the value type (kNeedDelete)
       TClassRef       fType;       // TClass reference of Value_type in collection
       EDataType       fKind;       // kind of ROOT-fundamental type
       size_t          fSize;       // fSize of the contained object
 
-      // Copy constructor
-      Value(const Value& inside);
+      // Default copy constructor has the correct implementation.
+
       // Initializing constructor
-      Value(const std::string& info);
+      Value(const std::string& info, Bool_t silent);
       // Delete individual item from STL container
       void DeleteItem(void* ptr);
       
@@ -217,6 +214,7 @@ public:
       Method() : call(0)                       {      }
       Method(Call_t c) : call(c)               {      }
       Method(const Method& m) : call(m.call)   {      }
+      Method &operator=(const Method& m) { call = m.call; return *this; }
       void* invoke(void* obj) const { return (*call)(obj); }
    };
 
@@ -236,6 +234,7 @@ public:
       Method0() : call(0)                       {      }
       Method0(Call_t c) : call(c)               {      }
       Method0(const Method0& m) : call(m.call)   {      }
+      Method0 &operator=(const Method0& m) { call = m.call; return *this; }
       void* invoke() const { return (*call)(); }
    };
  
@@ -255,6 +254,10 @@ public:
       size_t  fReserved; // Amount of space already reserved.
       size_t  fSize;     // Number of elements
       size_t  fSizeOf;   // size of each elements
+      
+      TStaging(const TStaging&);            // Not implemented.
+      TStaging &operator=(const TStaging&); // Not implemented.
+      
    public:
       TStaging(size_t size, size_t size_of) : fTarget(0), fContent(0), fReserved(0), fSize(size), fSizeOf(size_of)
       {
@@ -338,9 +341,9 @@ protected:
    DeleteTwoIterators_t fFunctionDeleteTwoIterators;
 
    // Late initialization of collection proxy
-   TGenCollectionProxy* Initialize() const;
+   TGenCollectionProxy* Initialize(Bool_t silent) const;
    // Some hack to avoid const-ness.
-   virtual TGenCollectionProxy* InitializeEx();
+   virtual TGenCollectionProxy* InitializeEx(Bool_t silent);
    // Call to delete/destruct individual contained item.
    virtual void DeleteItem(Bool_t force, void* ptr) const;
    // Allow to check function pointers.
@@ -356,6 +359,11 @@ public:
    // Copy constructor.
    TGenCollectionProxy(const TGenCollectionProxy& copy);
 
+private:
+   // Assignment operator
+   TGenCollectionProxy &operator=(const TGenCollectionProxy&); // Not Implemented
+
+public:
    // Initializing constructor
    TGenCollectionProxy(Info_t typ, size_t iter_size);
    TGenCollectionProxy(const ROOT::TCollectionProxyInfo &info, TClass *cl);

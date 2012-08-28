@@ -59,10 +59,13 @@
 #include "RooCategory.h"
 #include "RooMPSentinel.h"
 #include "RooMsgService.h"
+#include "RooNLLVar.h"
 
 #include "TSystem.h"
 
 RooMPSentinel RooRealMPFE::_sentinel ;
+
+using namespace std;
 
 ClassImp(RooRealMPFE)
   ;
@@ -280,12 +283,14 @@ void RooRealMPFE::serverLoop()
 
     case ConstOpt:
       {
-      ConstOpCode code ;      
+      ConstOpCode code ; 
+      Bool_t doTrack ;
       UInt_t tmp1 = read(_pipeToServer[0],&code,sizeof(ConstOpCode)) ;
-      if (tmp1<sizeof(ConstOpCode)) perror("read") ;
+      UInt_t tmp2 = read(_pipeToServer[0],&doTrack,sizeof(Bool_t)) ;
+      if ((tmp1+tmp2)<sizeof(ConstOpCode)) perror("read") ;
       if (_verboseServer) cout << "RooRealMPFE::serverLoop(" << GetName() 
-			       << ") IPC fromClient> ConstOpt " << code << endl ; 
-      ((RooAbsReal&)_arg.arg()).constOptimizeTestStatistic(code) ;      
+			       << ") IPC fromClient> ConstOpt " << code << " doTrack = " << (doTrack?"T":"F") << endl ; 
+      ((RooAbsReal&)_arg.arg()).constOptimizeTestStatistic(code,doTrack) ;      
       break ;
       }
 
@@ -297,6 +302,20 @@ void RooRealMPFE::serverLoop()
       if (_verboseServer) cout << "RooRealMPFE::serverLoop(" << GetName() 
 			       << ") IPC fromClient> Verbose " << (flag?1:0) << endl ; 
       _verboseServer = flag ;
+      }
+      break ;
+
+      
+    case ApplyNLLW2:
+      {
+      Bool_t flag ;
+      UInt_t tmp1 = read(_pipeToServer[0],&flag,sizeof(Bool_t)) ;
+      if (tmp1<sizeof(Bool_t)) perror("read") ;
+      if (_verboseServer) cout << "RooRealMPFE::serverLoop(" << GetName() 
+			       << ") IPC fromClient> ApplyNLLW2 " << (flag?1:0) << endl ; 
+      
+      // Do application of weight-squared here
+      doApplyNLLW2(flag) ;
       }
       break ;
 
@@ -463,7 +482,7 @@ void RooRealMPFE::calculate() const
 
 
 //_____________________________________________________________________________
-Double_t RooRealMPFE::getVal(const RooArgSet* /*nset*/) const 
+Double_t RooRealMPFE::getValV(const RooArgSet* /*nset*/) const 
 {
   // If value needs recalculation and calculation has not beed started
   // with a call to calculate() start it now. This function blocks
@@ -472,15 +491,15 @@ Double_t RooRealMPFE::getVal(const RooArgSet* /*nset*/) const
 
   if (isValueDirty()) {
     // Cache is dirty, no calculation has been started yet
-    //cout << "RooRealMPFE::getVal(" << GetName() << ") cache is dirty, caling calculate and evaluate" << endl ;
+    //cout << "RooRealMPFE::getValF(" << GetName() << ") cache is dirty, caling calculate and evaluate" << endl ;
     calculate() ;
     _value = evaluate() ;
   } else if (_calcInProgress) {
-    //cout << "RooRealMPFE::getVal(" << GetName() << ") calculation in progress, calling evaluate" << endl ;
+    //cout << "RooRealMPFE::getValF(" << GetName() << ") calculation in progress, calling evaluate" << endl ;
     // Cache is clean and calculation is in progress
     _value = evaluate() ;    
   } else {
-    //cout << "RooRealMPFE::getVal(" << GetName() << ") cache is clean, doing nothing" << endl ;
+    //cout << "RooRealMPFE::getValF(" << GetName() << ") cache is clean, doing nothing" << endl ;
     // Cache is clean and calculated value is in cache
   }
 
@@ -627,7 +646,7 @@ void RooRealMPFE::standby()
 
 
 //_____________________________________________________________________________
-void RooRealMPFE::constOptimizeTestStatistic(ConstOpCode opcode) 
+void RooRealMPFE::constOptimizeTestStatistic(ConstOpCode opcode, Bool_t doAlsoTracking) 
 {
   // Intercept call to optimize constant term in test statistics
   // and forward it to object on server side.
@@ -637,7 +656,8 @@ void RooRealMPFE::constOptimizeTestStatistic(ConstOpCode opcode)
     Message msg = ConstOpt ;
     UInt_t tmp1 = write(_pipeToServer[1],&msg,sizeof(msg)) ;
     UInt_t tmp2 = write(_pipeToServer[1],&opcode,sizeof(ConstOpCode)) ;
-    if (tmp1+tmp2<sizeof(Message)+sizeof(ConstOpCode)) perror("write") ;
+    UInt_t tmp3 = write(_pipeToServer[1],&doAlsoTracking,sizeof(Bool_t)) ;
+    if (tmp1+tmp2+tmp3<sizeof(Message)+sizeof(ConstOpCode)+sizeof(Bool_t)) perror("write") ;
     if (_verboseServer) cout << "RooRealMPFE::constOptimize(" << GetName() 
 			     << ") IPC toServer> ConstOpt " << opcode << endl ;  
 
@@ -669,4 +689,35 @@ void RooRealMPFE::setVerbose(Bool_t clientFlag, Bool_t serverFlag)
   }
 #endif // _WIN32
   _verboseClient = clientFlag ; _verboseServer = serverFlag ;
+}
+
+
+//_____________________________________________________________________________
+void RooRealMPFE::applyNLLWeightSquared(Bool_t flag) 
+{
+  // Control verbose messaging related to inter process communication
+  // on both client and server side
+
+#ifndef _WIN32
+  if (_state==Client) {
+    Message msg = ApplyNLLW2 ;
+    UInt_t tmp1 = write(_pipeToServer[1],&msg,sizeof(msg)) ;
+    UInt_t tmp2 = write(_pipeToServer[1],&flag,sizeof(Bool_t)) ;
+    if (tmp1+tmp2<sizeof(Message)+sizeof(Bool_t)) perror("write") ;
+    if (_verboseServer) cout << "RooRealMPFE::setVerbose(" << GetName() 
+			     << ") IPC toServer> ApplyNLLW2 " << (flag?1:0) << endl ;      
+  } 
+#endif // _WIN32
+  doApplyNLLW2(flag) ;
+}
+
+
+
+//_____________________________________________________________________________
+void RooRealMPFE::doApplyNLLW2(Bool_t flag) 
+{
+  RooNLLVar* nll = dynamic_cast<RooNLLVar*>(_arg.absArg()) ;
+  if (nll) {
+    nll->applyWeightSquared(flag) ;
+  }  
 }

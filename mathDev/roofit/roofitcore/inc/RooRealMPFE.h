@@ -33,27 +33,31 @@ public:
   virtual ~RooRealMPFE();
 
   void calculate() const ;
-  virtual Double_t getVal(const RooArgSet* nset=0) const ;
+  virtual Double_t getValV(const RooArgSet* nset=0) const ;
   void standby() ;
 
   void setVerbose(Bool_t clientFlag=kTRUE, Bool_t serverFlag=kTRUE) ;
+
+  void applyNLLWeightSquared(Bool_t flag) ;
 
   protected:
 
   // Function evaluation
   virtual Double_t evaluate() const ;
   friend class RooAbsTestStatistic ;
-  virtual void constOptimizeTestStatistic(ConstOpCode opcode) ;
+  virtual void constOptimizeTestStatistic(ConstOpCode opcode, Bool_t doAlsoTracking=kTRUE) ;
 
   enum State { Initialize,Client,Server,Inline } ;
   State _state ;
 
   enum Message { SendReal=0, SendCat=1, Calculate=2, Retrieve=3, ReturnValue=4, Terminate=5, 
-		 ConstOpt=6, Verbose=7, RetrieveErrors=8, SendError=9, LogEvalError=10 } ;
+		 ConstOpt=6, Verbose=7, RetrieveErrors=8, SendError=9, LogEvalError=10, ApplyNLLW2=11 } ;
   
   void initialize() ; 
   void initVars() ;
   void serverLoop() ;
+
+  void doApplyNLLW2(Bool_t flag) ;
 
   RooRealProxy _arg ; // Function to calculate in parallel process
 

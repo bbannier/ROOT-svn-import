@@ -23,7 +23,7 @@
 #include <cmath>
 
 #include "TH1.h"
-#include "THnSparse.h"
+#include "THnBase.h"
 #include "TF1.h"
 #include "TGraph2D.h"
 #include "TGraph.h" 
@@ -632,9 +632,10 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
 
          // adjust error in y according to option 
          double errorY = std::max(gr->GetErrorY(i), 0.); 
+         // we do not check the return value since we check later if error in X and Y is zero for skipping the point
          HFitInterface::AdjustError(fitOpt, errorY); 
 
-         // skip points with totla error = 0
+         // skip points with total error = 0
          if ( errorX <=0 && errorY <= 0 ) continue; 
          
          if (type == BinData::kAsymError)   { 
@@ -700,7 +701,7 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
    }
 }
 
-void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/) 
+void FillData(SparseData & dv, const THnBase * h1, TF1 * /*func*/) 
 {
    const int dim = h1->GetNdimensions();
    std::vector<double> min(dim);
@@ -743,9 +744,9 @@ void FillData(SparseData & dv, const THnSparse * h1, TF1 * /*func*/)
    }
 }
 
-void FillData(BinData & dv, const THnSparse * s1, TF1 * func) 
+void FillData(BinData & dv, const THnBase * s1, TF1 * func) 
 {
-   // Fill the Range of the THnSparse
+   // Fill the Range of the THnBase
    unsigned int const ndim = s1->GetNdimensions();
    std::vector<double> xmin(ndim);
    std::vector<double> xmax(ndim);
@@ -767,7 +768,7 @@ void FillData(BinData & dv, const THnSparse * s1, TF1 * func)
    ROOT::Fit::SparseData d(ndim, &xmin[0], &xmax[0]);
    ROOT::Fit::FillData(d, s1, func);
 
-//    cout << "FillData(BinData & dv, const THnSparse * s1, TF1 * func) (1)" << endl;
+//    cout << "FillData(BinData & dv, const THnBase * s1, TF1 * func) (1)" << endl;
 
    // Create the bin data from the sparse data
    d.GetBinDataIntegral(dv);

@@ -147,11 +147,8 @@ public:
    virtual double Edm() const { return fState.Edm(); }
 
    /// return  pointer to X values at the minimum 
-   virtual const double *  X() const { 
-      fValues = fState.Params(); 
-      return (fValues.size() ) ? &fValues.front() : 0; 
-   }
-
+   virtual const double *  X() const; 
+ 
    /// return pointer to gradient values at the minimum 
    virtual const double *  MinGradient() const { return 0; } // not available in Minuit2 
 
@@ -204,6 +201,12 @@ public:
 
    /**
       return the status of the covariance matrix 
+       status = -1 :  not available (inversion failed or Hesse failed) 
+       status =  0 : available but not positive defined
+       status =  1 : covariance only approximate
+       status =  2 : full matrix but forced pos def 
+       status =  3 : full accurate matrix 
+
     */
    virtual int CovMatrixStatus() const;
    /**

@@ -30,6 +30,7 @@ class RooArgSet ;
 class RooLinearVar : public RooAbsRealLValue {
 public:
   // Constructors, assignment etc.
+  RooLinearVar() {} ;
   RooLinearVar(const char *name, const char *title, RooAbsRealLValue& variable, const RooAbsReal& slope, const RooAbsReal& offset, const char *unit= "") ;
   RooLinearVar(const RooLinearVar& other, const char* name=0);
   virtual TObject* clone(const char* newname) const { return new RooLinearVar(*this,newname); }
@@ -47,8 +48,8 @@ public:
   virtual Bool_t isJacobianOK(const RooArgSet& depList) const ;
 
   // I/O streaming interface (machine readable)
-  virtual Bool_t readFromStream(istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
-  virtual void writeToStream(ostream& os, Bool_t compact) const ;
+  virtual Bool_t readFromStream(std::istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
+  virtual void writeToStream(std::ostream& os, Bool_t compact) const ;
 
   // Printing interface (human readable)
 

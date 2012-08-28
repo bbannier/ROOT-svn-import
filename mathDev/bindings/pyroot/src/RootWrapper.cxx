@@ -63,6 +63,7 @@ namespace {
 // helper for creating new ROOT python types
    PyObject* CreateNewROOTPythonClass( const std::string& name, PyObject* pybases )
    {
+   // Create a new python shadow class with the required hierarchy and meta-classes.
       Py_XINCREF( pybases );
       if ( ! pybases ) {
          pybases = PyTuple_New( 1 );
@@ -101,6 +102,7 @@ namespace {
 // helper to split between CINT and Reflex
    Long_t GetDataMemberAddress( TClass* klass, TDataMember* mb )
    {
+   // Get the address of a data member (CINT-style).
       Long_t offset = 0;
       G__DataMemberInfo dmi = ((G__ClassInfo*)klass->GetClassInfo())->GetDataMember( mb->GetName(), &offset );
       return dmi.Offset();
@@ -109,6 +111,7 @@ namespace {
 #ifdef PYROOT_USE_REFLEX
    Long_t GetDataMemberAddress( const ROOT::Reflex::Scope&, const ROOT::Reflex::Member& mb )
    {
+   // Get the address of a data member (Reflex-style).
       return (Long_t)mb.Offset();
    }
 #endif
@@ -121,6 +124,8 @@ namespace {
 
    inline void AddToGlobalScope( const char* label, TObject* obj, TClass* klass )
    {
+   // Bind the given object with the given class in the global scope with the
+   // given label for its reference.
       PyModule_AddObject( gRootModule, const_cast< char* >( label ),
          PyROOT::BindRootObject( obj, klass ) );
    }
@@ -129,6 +134,7 @@ namespace {
    struct InitSTLTypes_t {
       InitSTLTypes_t()
       {
+      // Initialize the sets of known STL (container) types.
          std::string nss = "std::";
 
          const char* stlTypes[] = { "complex", "exception",
@@ -155,9 +161,6 @@ namespace {
 
       std::string sub = tname.substr( 0, tname.find( "<" ) );
       if ( gSTLTypes.find( sub ) != gSTLTypes.end() ) {
-      // removal is required or the dictionary can't be updated properly
-         if ( klass != 0 )
-            TClass::RemoveClass( (TClass*)klass );
 
       // strip std:: part as needed to form proper file name
          if ( sub.substr( 0, 5 ) == "std::" )
@@ -383,6 +386,7 @@ int PyROOT::BuildRootClassDict( const T& klass, PyObject* pyclass ) {
 template< class T, class B, class M >
 PyObject* PyROOT::BuildRootClassBases( const T& klass )
 {
+// Build a tuple of python shadow classes of all the bases of the given 'klass'.
    size_t nbases = klass.BaseSize();
 
 // collect bases while removing duplicates
@@ -432,6 +436,7 @@ template PyObject* PyROOT::BuildRootClassBases< \
 //____________________________________________________________________________
 PyObject* PyROOT::MakeRootClass( PyObject*, PyObject* args )
 {
+// Build a python shadow class for the given ROOT class.
    std::string cname = PyROOT_PyUnicode_AsString( PyTuple_GetItem( args, 0 ) );
 
    if ( PyErr_Occurred() )
@@ -443,6 +448,8 @@ PyObject* PyROOT::MakeRootClass( PyObject*, PyObject* args )
 //____________________________________________________________________________
 PyObject* PyROOT::MakeRootClassFromType( TClass* klass )
 {
+// Build a python shadow class for the given ROOT class.
+
 // locate class by full name, if possible to prevent parsing scopes/templates anew
    PyClassMap_t::iterator pci = gPyClasses.find( (void*)klass );
    if ( pci != gPyClasses.end() ) {
@@ -489,7 +496,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
 // retrieve ROOT class (this verifies name)
    const std::string& lookup = scope ? (scName+"::"+name) : name;
    T klass = T::ByName( lookup );
-   if ( ! (bool)klass || klass.FunctionMemberSize() == 0 ) {
+   if ( ! (Bool_t)klass || klass.FunctionMemberSize() == 0 ) {
    // special action for STL classes to enforce loading dict lib
       LoadDictionaryForSTLType( name, klass.Id() );
 
@@ -497,7 +504,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
       klass = T::ByName( lookup );
    }
 
-   if ( ! (bool)klass && G__defined_templateclass( const_cast< char* >( lookup.c_str() ) ) ) {
+   if ( ! (Bool_t)klass && G__defined_templateclass( const_cast< char* >( lookup.c_str() ) ) ) {
    // a "naked" templated class is requested: return callable proxy for instantiations
       PyObject* pytcl = PyObject_GetAttr( gRootModule, PyStrings::gTemplate );
       PyObject* pytemplate = PyObject_CallFunction(
@@ -512,7 +519,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
       return pytemplate;
    }
 
-   if ( ! (bool)klass && G__defined_tagname( lookup.c_str(), 2 ) != -1 ) {
+   if ( ! (Bool_t)klass && G__defined_tagname( lookup.c_str(), 2 ) != -1 ) {
    // an unloaded namespace is requested
       PyObject* pyns = CreateNewROOTPythonClass( lookup, NULL );
 
@@ -524,7 +531,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
       return pyns;
    }
 
-   if ( ! (bool)klass ) {   // if so, all options have been exhausted: it doesn't exist as such
+   if ( ! (Bool_t)klass ) {   // if so, all options have been exhausted: it doesn't exist as such
       if ( ! scope && fullname.find( "ROOT::" ) == std::string::npos ) { // not already in ROOT::
       // final attempt, for convenience, the "ROOT" namespace isn't required, try again ...
          PyObject* rtns = PyObject_GetAttr( gRootModule, PyStrings::gROOTns );
@@ -728,7 +735,7 @@ PyObject* PyROOT::BindRootObjectNoCast( void* address, TClass* klass, Bool_t isR
 }
 
 //____________________________________________________________________________
-inline static Long_t GetObjectOffset( TClass* clCurrent, TClass* clDesired, void* address, bool downcast = true ) {
+inline static Long_t GetObjectOffset( TClass* clCurrent, TClass* clDesired, void* address, Bool_t downcast = true ) {
 // root/meta base class offset fails in the case of virtual inheritance
    Long_t offset = 0;
 
@@ -771,6 +778,9 @@ PyObject* PyROOT::BindRootObject( void* address, TClass* klass, Bool_t isRef )
       return 0;
    }
 
+// get actual class for recycling checking and/or downcasting
+   TClass* clActual = isRef ? 0 : klass->GetActualClass( address );
+
 // obtain pointer to TObject base class (if possible) for memory mgmt; this is
 // done before downcasting, as upcasting from the current class may be easier and
 // downcasting is unnecessary if the python side object gets recycled by the
@@ -780,18 +790,15 @@ PyObject* PyROOT::BindRootObject( void* address, TClass* klass, Bool_t isRef )
       object = (TObject*)((Long_t)address - GetObjectOffset( klass, TObject::Class(), address, false ) );
 
    // use the old reference if the object already exists
-      PyObject* oldPyObject = TMemoryRegulator::RetrieveObject( object );
+      PyObject* oldPyObject = TMemoryRegulator::RetrieveObject( object, clActual ? clActual : klass );
       if ( oldPyObject )
          return oldPyObject;
    }
                        
 // upgrade to real class for object returns
-   if ( ! isRef ) {
-      TClass* clActual = klass->GetActualClass( address );
-      if ( clActual ) {
-         address = (void*)((Long_t)address - GetObjectOffset( klass, clActual, address ) );
-         klass = clActual;
-      }
+   if ( clActual ) {
+      address = (void*)((Long_t)address - GetObjectOffset( klass, clActual, address ) );
+      klass = clActual;
    }
 
 // actual binding

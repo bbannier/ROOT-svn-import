@@ -192,7 +192,7 @@ void TMVA::RuleFit::MakeForest()
    //
    Timer timer( fMethodRuleFit->GetNTrees(), "RuleFit" );
 
-   Double_t fsig;
+   // Double_t fsig;
    Int_t nsig,nbkg;
    //
    TRandom3 rndGen;
@@ -216,7 +216,7 @@ void TMVA::RuleFit::MakeForest()
          if (fMethodBase->DataInfo().IsSignal(fTrainingEventsRndm[ie])) nsig++; // ignore weights here
          else nbkg++;
       }
-      fsig = Double_t(nsig)/Double_t(nsig+nbkg);
+      // fsig = Double_t(nsig)/Double_t(nsig+nbkg);
       // do not implement the above in this release...just set it to default
       //      nminRnd = fNodeMinEvents;
       DecisionTree *dt;
@@ -442,7 +442,7 @@ void TMVA::RuleFit::NormVisHists(std::vector<TH2F *> & hlist)
    // if all weights are positive, the scale will be 1/maxweight
    // if minimum weight < 0, then the scale will be 1/max(maxweight,abs(minweight))
    //
-   if (hlist.size()==0) return;
+   if (hlist.empty()) return;
    //
    Double_t wmin=0;
    Double_t wmax=0;

@@ -37,13 +37,15 @@
 #include "RooUnblindOffset.h"
 
 
+using namespace std;
+
 ClassImp(RooUnblindOffset)
 ;
 
 
 
 //_____________________________________________________________________________
-RooUnblindOffset::RooUnblindOffset() : _blindEngine("") 
+RooUnblindOffset::RooUnblindOffset() 
 {
   // Default constructor
 }

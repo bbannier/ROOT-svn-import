@@ -13,12 +13,9 @@ ROOT_USE_PACKAGE(math/mathcore)
 ROOT_GENERATE_DICTIONARY(G__IO *.h  LINKDEF LinkDef.h)
 ROOT_GENERATE_ROOTMAP(${libname} LINKDEF LinkDef.h )
 
-ROOT_LINKER_LIBRARY(${libname} *.cxx G__IO.cxx LIBRARIES Cint Core Thread)
+ROOT_LINKER_LIBRARY(${libname} *.cxx G__IO.cxx DEPENDENCIES Core Thread)
 ROOT_INSTALL_HEADERS()
 
 #--- Extra rules ----------------------------------------------------------
-if(GCC_MAJOR EQUAL 4 AND GCC_MINOR EQUAL 4)
-  set_source_files_properties(  ${CMAKE_CURRENT_SOURCE_DIR}/src/TStreamerInfoReadBuffer.cxx 
-                                COMPILE_FLAGS -DR__EXPLICIT_FUNCTION_INSTANTIATION)
-endif()
- 
+set_source_files_properties( ${CMAKE_CURRENT_SOURCE_DIR}/src/TStreamerInfoReadBuffer.cxx 
+                             COMPILE_FLAGS -DR__EXPLICIT_FUNCTION_INSTANTIATION)

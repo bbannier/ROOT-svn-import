@@ -58,6 +58,8 @@ set_source_files_properties(loadfile_tmp.cxx  COMPILE_FLAGS "-UR__HAVE_CONFIG -D
 #---Generate and/or copy the iosenum headerfile to the include directory-------------------------------
 if(${CLANG_MAJOR} EQUAL 2)
   set(IOSENUM_H ${PROJECT_SOURCE_DIR}/cint/iosenum/iosenum.${ROOT_ARCHITECTURE}3)
+elseif(${CLANG_MAJOR} EQUAL 3)
+  set(IOSENUM_H ${PROJECT_SOURCE_DIR}/cint/iosenum/iosenum.${ROOT_ARCHITECTURE}3)
 elseif(${GCC_MAJOR} EQUAL 4)
   set(IOSENUM_H ${PROJECT_SOURCE_DIR}/cint/iosenum/iosenum.${ROOT_ARCHITECTURE}3)
 elseif(${GCC_MAJOR} EQUAL 3)
@@ -79,7 +81,7 @@ else()
      COMMAND cint_tmp -I${CMAKE_CURRENT_SOURCE_DIR}/include 
        -I${CMAKE_CURRENT_SOURCE_DIR}/stl -I${CMAKE_CURRENT_SOURCE_DIR}/lib 
        -I${HEADER_OUTPUT_PATH} ${PROJECT_SOURCE_DIR}/cint/iosenum/iosenum.cxx
-     DEPENDS  cint_tmp
+     DEPENDS  ${CINTDEP}
   )
 endif()
 
@@ -129,15 +131,17 @@ add_library(Cint_static STATIC ${CINT_SRCS})
 add_dependencies(Cint_static IOSENUM_H)
 
 #---Create the shared Cint library--------------------------------------------------------------------------
-ROOT_LINKER_LIBRARY(Cint loadfile.cxx LIBRARIES Cint_static ${CMAKE_THREAD_LIBS_INIT})
-set_target_properties(Cint PROPERTIES LINK_INTERFACE_LIBRARIES "" )
+ROOT_LINKER_LIBRARY(Cint loadfile.cxx LIBRARIES Cint_static ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
 #---Create the cint cint executable-------------------------------------------------------------------------
 ROOT_EXECUTABLE(cint.exe ${CMAKE_CURRENT_SOURCE_DIR}/main/cppmain.cxx LIBRARIES Cint)
 
 #---Create the temporary cint_tmp executable----------------------------------------------------------------
 ROOT_EXECUTABLE(cint_tmp ${CMAKE_CURRENT_SOURCE_DIR}/main/cppmain.cxx 
-                         ${CMAKE_CURRENT_BINARY_DIR}/loadfile_tmp.cxx LIBRARIES Cint_static ${CMAKE_THREAD_LIBS_INIT})
+                         ${CMAKE_CURRENT_BINARY_DIR}/loadfile_tmp.cxx LIBRARIES Cint_static ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
+
+#---Trick to avoid building all dictionaties when CINT is changed-------------------------------------------
+add_custom_target(CINTTARGET DEPENDS cint_tmp)
 
 #---Create the makecint executable--------------------------------------------------------------------------
 ROOT_EXECUTABLE(makecint ${CMAKE_SOURCE_DIR}/cint/tool/makecint.cxx LIBRARIES ${CMAKE_THREAD_LIBS_INIT})

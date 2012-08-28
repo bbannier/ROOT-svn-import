@@ -82,7 +82,7 @@ RooAbsCachedPdf::~RooAbsCachedPdf()
 
 
 //_____________________________________________________________________________
-Double_t RooAbsCachedPdf::getVal(const RooArgSet* nset) const 
+Double_t RooAbsCachedPdf::getValV(const RooArgSet* nset) const 
 {
   // Implementation of getVal() overriding default implementation
   // of RooAbsPdf. Return normalized value stored in cache p.d.f
@@ -90,7 +90,7 @@ Double_t RooAbsCachedPdf::getVal(const RooArgSet* nset) const
   // for RooAbsCachedPdf
 
   if (_disableCache) {
-    return RooAbsPdf::getVal(nset) ;
+    return RooAbsPdf::getValV(nset) ;
   }
 
   // Calculate current unnormalized value of object
@@ -154,7 +154,7 @@ RooAbsCachedPdf::PdfCacheElem* RooAbsCachedPdf::getCache(const RooArgSet* nset, 
 
   // Check if this configuration was created becfore
   Int_t sterileIdx(-1) ;
-  PdfCacheElem* cache = (PdfCacheElem*) _cacheMgr.getObj(nset,0,&sterileIdx,0) ;
+  PdfCacheElem* cache = (PdfCacheElem*) _cacheMgr.getObj(nset,0,&sterileIdx) ;
 
   // Check if we have a cache histogram in the global expensive object cache
   if (cache) {
@@ -435,10 +435,10 @@ Int_t RooAbsCachedPdf::getAnalyticalIntegralWN(RooArgSet& allVars, RooArgSet& an
   if (normSet) {
     nrm->addClone(*normSet) ;
   }
-  Int_t codeList[2] ;
+  std::vector<Int_t> codeList(2);
   codeList[0] = code ;
   codeList[1] = cache->pdf()->haveUnitNorm() ? 1 : 0 ;
-  Int_t masterCode = _anaReg.store(codeList,2,all,ana,nrm)+1 ; // takes ownership of all sets
+  Int_t masterCode = _anaReg.store(codeList,all,ana,nrm)+1 ; // takes ownership of all sets
 
   
   // Mark all observables as internally integrated 
@@ -463,9 +463,7 @@ Double_t RooAbsCachedPdf::analyticalIntegralWN(Int_t code, const RooArgSet* norm
   }  
 
   RooArgSet *allVars(0),*anaVars(0),*normSet2(0),*dummy(0) ;
-  const Int_t* codeList = _anaReg.retrieve(code-1,allVars,anaVars,normSet2,dummy) ;
-
-
+  const std::vector<Int_t> codeList = _anaReg.retrieve(code-1,allVars,anaVars,normSet2,dummy) ;
   
   PdfCacheElem* cache = getCache(normSet2?normSet2:anaVars,kFALSE) ;
   Double_t ret = cache->pdf()->analyticalIntegralWN(codeList[0],normSet,rangeName) ;

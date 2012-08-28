@@ -847,7 +847,6 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
 //*-*- If operator found, analyze left and right part of the statement
 //*-*  ===============================================================
 
-      enum { kIsCharacter = BIT(12) };
       actionParam = 0;
       if (tercond && terelse) {
          if (tercond == 1 || terelse == lchain || tercond == (terelse-1) ) {
@@ -1063,7 +1062,6 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                chaine_error = "==";
             } else if (isstring) {
                actionCode = kStringEqual;
-               SetBit(kIsCharacter);
             }
             SetAction(fNoper,actionCode,actionParam);
             fNoper++;
@@ -1089,7 +1087,6 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                chaine_error = "!=";
             } else if (isstring) {
                actionCode = kStringNotEqual;
-               SetBit(kIsCharacter);
             }
             SetAction(fNoper,actionCode,actionParam);
             fNoper++;
@@ -3429,7 +3426,10 @@ void TFormula::Streamer(TBuffer &b)
             Int_t npar = fNpar;
             fParams = 0;
             fNames = 0;
-            Compile();
+            if (Compile()) {
+               Error("Streamer","error compiling formula");
+               return;
+            }
             for (Int_t i = 0; i<npar && i<fNpar; ++i) fParams[i] = param[i];
             delete [] param;
             delete [] fNames;
@@ -3668,9 +3668,9 @@ void  TFormula::MakePrimitive(const char *expr, Int_t pos)
    TString cbase(expr);
    cbase.ReplaceAll("Double_t ","");
    int paran = cbase.First("(");
-   int nargs = 0;
+   // int nargs = 0;
    if (paran>0) {
-      nargs = 1;
+      //nargs = 1;
       cbase[paran]=0;
    }
 

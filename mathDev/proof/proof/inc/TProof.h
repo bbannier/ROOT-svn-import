@@ -33,6 +33,9 @@
 #ifndef ROOT_TString
 #include "TString.h"
 #endif
+#ifndef ROOT_TMacro
+#include "TMacro.h"
+#endif
 #ifndef ROOT_MessageTypes
 #include "MessageTypes.h"
 #endif
@@ -95,6 +98,7 @@ class TFileCollection;
 class TMap;
 class TDataSetManager;
 class TMacro;
+class TSelector;
 
 // protocol changes:
 // 1 -> 2: new arguments for Process() command, option added
@@ -131,9 +135,10 @@ class TMacro;
 // 30 -> 31: Development cycle 5.29
 // 31 -> 32: New log path trasmission
 // 32 -> 33: Development cycle 5.29/04 (fixed worker activation, new startup technology, ...)
+// 33 -> 34: Development cycle 5.33/02 (fix load issue, ...)
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 33;            // protocol version number
+const Int_t       kPROOF_Protocol        = 34;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -396,7 +401,14 @@ public:
       kMergerDown     = 4,         //Merger cannot serve
       kStopMerging    = 5,         //Master tells worker to stop merging (and return output)
       kOutputSent     = 6          //Worker reports sending its output to given worker
-  };
+   };
+   
+   enum EProofClearData {
+      kPurge        = 0x1,
+      kUnregistered = 0x2,
+      kDataset      = 0x4,
+      kForceClear   = 0x8
+   };
 
 private:
    enum EUrgent {
@@ -466,12 +478,6 @@ private:
       kPerGroup = 0x1,
       kPerUser = 0x2
    };
-   enum EProofClearData {
-      kPurge        = 0x1,
-      kUnregistered = 0x2,
-      kDataset      = 0x4,
-      kForceClear   = 0x8
-   };
 
    Bool_t          fValid;           //is this a valid proof object
    TString         fMaster;          //master server ("" if a master); used in the browser
@@ -484,6 +490,8 @@ private:
    TList          *fSlaveInfo;       //!list returned by kPROOF_GETSLAVEINFO
    Bool_t          fSendGroupView;   //if true send new group view
    TList          *fActiveSlaves;    //list of active slaves (subset of all slaves)
+   TString         fActiveSlavesSaved;// comma-separated list of active slaves (before last call to
+                                      // SetParallel or Activate/DeactivateWorkers)
    TList          *fInactiveSlaves;  //list of inactive slaves (good but not used for processing)
    TList          *fUniqueSlaves;    //list of all active slaves with unique file systems
    TList          *fAllUniqueSlaves;  //list of all active slaves with unique file systems, including all submasters
@@ -519,6 +527,9 @@ private:
    FILE           *fLogFileW;        //temp file to redirect logs
    FILE           *fLogFileR;        //temp file to read redirected logs
    Bool_t          fLogToWindowOnly; //send log to window only
+   
+   Bool_t          fSaveLogToMacro;  // Whether to save received logs to TMacro fMacroLog (use with care)
+   TMacro          fMacroLog;        // Macro with the saved (last) log
 
    TProofMergePrg  fMergePrg;        //Merging progress
 
@@ -552,6 +563,7 @@ private:
                                      // variables to pass to proofserv
 
    Bool_t          fMergersSet;      // Indicates, if the following variables have been initialized properly
+   Bool_t          fMergersByHost;   // Mergers assigned by host name
    Int_t           fMergersCount;
    Int_t           fWorkersToMerge;  // Current total number of workers, which have not been yet assigned to any merger
    Int_t           fLastAssignedMerger;
@@ -559,6 +571,8 @@ private:
    Bool_t          fFinalizationRunning;
    Int_t           fRedirectNext;
 
+   TString         fPerfTree;        // If non-null triggers saving of the performance info into fPerfTree
+   
    static TPluginHandler *fgLogViewer;  // Log dialog box plugin
 
 protected:
@@ -587,6 +601,8 @@ protected:
    TProofMgr      *fManager;        // manager to which this session belongs (if any)
    EQueryMode      fQueryMode;      // default query mode
    Bool_t          fDynamicStartup; // are the workers started dynamically?
+
+   TSelector       *fSelector;      // Selector to be processed, if any
 
    static TSemaphore *fgSemaphore;   //semaphore to control no of parallel startup threads
 
@@ -661,7 +677,9 @@ private:
    Int_t    GetNumberOfBadSlaves() const;
 
    Bool_t   IsEndMaster() const { return fEndMaster; }
-   Int_t    ModifyWorkerLists(const char *ord, Bool_t add);
+   Int_t    ModifyWorkerLists(const char *ord, Bool_t add, Bool_t save);
+   void     RestoreActiveList();
+   void     SaveActiveList();
 
    Bool_t   IsSync() const { return fSync; }
    void     InterruptCurrentMonitor();
@@ -739,6 +757,9 @@ protected:
    virtual void  SendInputDataFile();
    Int_t SendFile(const char *file, Int_t opt = (kBinary | kForward | kCp | kCpBin),
                   const char *rfile = 0, TSlave *sl = 0);
+   
+   // Fast enable/disable feedback from Process
+   void SetFeedback(TString &opt, TString &optfb, Int_t action);
 
    static void *SlaveStartupThread(void *arg);
 
@@ -766,6 +787,12 @@ public:
    Int_t       Ping();
    void        Touch();
    Int_t       Exec(const char *cmd, Bool_t plusMaster = kFALSE);
+   Int_t       Exec(const char *cmd, const char *ord, Bool_t logtomacro = kFALSE);
+   
+   TString     Getenv(const char *env, const char *ord = "0");
+   Int_t       GetRC(const char *RCenv, Int_t &env, const char *ord = "0");
+   Int_t       GetRC(const char *RCenv, Double_t &env, const char *ord = "0");
+   Int_t       GetRC(const char *RCenv, TString &env, const char *ord = "0");
 
    virtual Long64_t Process(TDSet *dset, const char *selector,
                             Option_t *option = "", Long64_t nentries = -1,
@@ -777,6 +804,18 @@ public:
                             Option_t *option = "", Long64_t nentries = -1,
                             Long64_t firstentry = 0, TObject *enl = 0);
    virtual Long64_t Process(const char *selector, Long64_t nentries,
+                            Option_t *option = "");
+   // Process via TSelector
+   virtual Long64_t Process(TDSet *dset, TSelector *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0);
+   virtual Long64_t Process(TFileCollection *fc, TSelector *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0);
+   virtual Long64_t Process(const char *dsetname, TSelector *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0, TObject *enl = 0);
+   virtual Long64_t Process(TSelector *selector, Long64_t nentries,
                             Option_t *option = "");
 
    virtual Long64_t DrawSelect(TDSet *dset, const char *varexp,
@@ -833,21 +872,9 @@ public:
    Int_t       RemoveIncludePath(const char *incpath, Bool_t onClient = kFALSE);
 
    //-- dataset management
-   Int_t       UploadDataSet(const char *dataset,
-                             TList *files,
-                             const char *dest = 0,
-                             Int_t opt = kAskUser,
-                             TList *skippedFiles = 0);
-   Int_t       UploadDataSet(const char *dataset,
-                             const char *files,
-                             const char *dest = 0,
-                             Int_t opt = kAskUser,
-                             TList *skippedFiles = 0);
-   Int_t       UploadDataSetFromFile(const char *dataset,
-                                     const char *file,
-                                     const char *dest = 0,
-                                     Int_t opt = kAskUser,
-                                     TList *skippedFiles = 0);
+   Int_t       UploadDataSet(const char *, TList *, const char * = 0, Int_t = 0, TList * = 0);
+   Int_t       UploadDataSet(const char *, const char *, const char * = 0, Int_t = 0, TList * = 0);
+   Int_t       UploadDataSetFromFile(const char *, const char *, const char * = 0, Int_t = 0, TList * = 0);
    virtual Bool_t  RegisterDataSet(const char *name,
                                TFileCollection *dataset, const char* optStr = "");
    virtual TMap *GetDataSets(const char *uri = "", const char* optStr = "");
@@ -1004,15 +1031,19 @@ public:
    TProofMgr  *GetManager() { return fManager; }
    void        SetManager(TProofMgr *mgr);
 
-   Int_t       ActivateWorker(const char *ord);
-   Int_t       DeactivateWorker(const char *ord);
+   Int_t       ActivateWorker(const char *ord, Bool_t save = kTRUE);
+   Int_t       DeactivateWorker(const char *ord, Bool_t save = kTRUE);
 
-   const char *GetDataPoolUrl() const { return fDataPoolUrl; }
-   void        SetDataPoolUrl(const char *url) { fDataPoolUrl = url; }
+   const char *GetDataPoolUrl() const { return fManager ? fManager->GetMssUrl() : 0; }
+   void        SetDataPoolUrl(const char *url) { if (fManager) fManager->SetMssUrl(url); }
 
    void        SetPrintProgress(PrintProgress_t pp) { fPrintProgress = pp; }
 
    void        SetProgressDialog(Bool_t on = kTRUE);
+   
+   // Enable the performance tree
+   Int_t       SavePerfTree(const char *pf = 0, const char *qref = 0);
+   void        SetPerfTree(const char *pf = "perftree.root", Bool_t withWrks = kFALSE);
 
    // Opening and managing PROOF connections
    static TProof       *Open(const char *url = 0, const char *conffile = 0,

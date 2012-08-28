@@ -36,6 +36,7 @@
 #include "TGPicture.h"
 #include "TSystem.h"
 #include "Riostream.h"
+#include <stdlib.h>
 
 const TGFont *TGTreeLBEntry::fgDefaultFont = 0;
 TGGC         *TGTreeLBEntry::fgDefaultGC = 0;
@@ -425,7 +426,9 @@ void TGFSComboBox::Update(const char *path)
             if (slen > len) {
                sel = afterID = gLbc[i].fId;
                indent_lvl = gLbc[i].fIndent + 1;
-               tailpath = path + slen;
+               if ((len > 0) && ((path[slen] == '\\') || (path[slen] == '/') ||
+                   (path[slen] == 0)))
+                  tailpath = path + slen;
                strlcpy(mpath, gLbc[i].fPath, 1024);
                len = slen;
             }
@@ -434,11 +437,12 @@ void TGFSComboBox::Update(const char *path)
    }
 
    if (tailpath && *tailpath) {
-      if (*tailpath == '/') ++tailpath;
+      if ((*tailpath == '/') || (*tailpath == '\\')) ++tailpath;
       if (*tailpath)
          while (1) {
             const char *picname;
             const char *semi = strchr(tailpath, '/');
+            if (semi == 0) semi = strchr(tailpath, '\\');
             if (semi == 0) {
                strlcpy(dirname, tailpath, 1024);
                picname = "ofolder_t.xpm";
@@ -446,8 +450,10 @@ void TGFSComboBox::Update(const char *path)
                strlcpy(dirname, tailpath, (semi-tailpath)+1);
                picname = "folder_t.xpm";
             }
-            if (mpath[strlen(mpath)-1] != '/') 
+            if ((mpath[strlen(mpath)-1] != '/') && 
+                (mpath[strlen(mpath)-1] != '\\')) {
                strlcat(mpath, "/", 1024-strlen(mpath));
+            }
             strlcat(mpath, dirname, 1024-strlen(mpath));
             int indent = 4 + (indent_lvl * 10);
             const TGPicture *pic = fClient->GetPicture(picname);

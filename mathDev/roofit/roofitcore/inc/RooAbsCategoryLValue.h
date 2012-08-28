@@ -66,13 +66,17 @@ public:
   }
 
   // I/O streaming interface (machine readable)
-  virtual Bool_t readFromStream(istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
-  virtual void writeToStream(ostream& os, Bool_t compact) const ;
+  virtual Bool_t readFromStream(std::istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
+  virtual void writeToStream(std::ostream& os, Bool_t compact) const ;
 
 protected:
 
+  friend class RooSimGenContext ;
+  friend class RooSimSplitGenContext ;
+  virtual void setIndexFast(Int_t index) { _value._value = index ; _value._label[0]=0 ; }
+
   Bool_t setOrdinal(UInt_t index, const char* rangeName);
-  void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
+  void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE, Bool_t setValDirty=kTRUE) ;
 
   ClassDef(RooAbsCategoryLValue,1) // Abstract modifiable index variable 
 };

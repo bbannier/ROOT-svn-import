@@ -51,6 +51,10 @@ class TVirtualIsAProxy;
 class TVirtualRefProxy;
 class THashTable;
 
+namespace clang {
+   class Decl;
+}
+
 namespace ROOT {
    class TGenericClassInfo;
    class TCollectionProxyInfo;
@@ -65,6 +69,7 @@ typedef ROOT::TMapTypeToTClass IdMap_t;
 class TClass : public TDictionary {
 
 friend class TCint;
+friend class TCintWithCling;
 friend void ROOT::ResetClassVersion(TClass*, const char*, Short_t);
 friend class ROOT::TGenericClassInfo;
 
@@ -167,7 +172,7 @@ private:
    // Internal status bits
    enum { kLoading = BIT(14) };
    // Internal streamer type.
-   enum {kDefault=0, kEmulated=1, kTObject=2, kInstrumented=4, kForeign=8, kExternal=16};
+   enum EStreamerType {kDefault=0, kEmulated=1, kTObject=2, kInstrumented=4, kForeign=8, kExternal=16};
 
    // When a new class is created, we need to be able to find
    // if there are any existing classes that have the same name
@@ -301,6 +306,7 @@ public:
    ClassStreamerFunc_t GetStreamerFunc() const;
    TObjArray         *GetStreamerInfos() const { return fStreamerInfo; }
    TVirtualStreamerInfo     *GetStreamerInfo(Int_t version=0) const;
+   TVirtualStreamerInfo     *GetStreamerInfoAbstractEmulated(Int_t version=0) const;
    const type_info   *GetTypeInfo() const { return fTypeInfo; };
    void               IgnoreTObjectStreamer(Bool_t ignore=kTRUE);
    Bool_t             InheritsFrom(const char *cl) const;

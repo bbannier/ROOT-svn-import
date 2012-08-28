@@ -285,6 +285,7 @@
 #include "THashList.h"
 #include "TClass.h"
 #include "TThread.h"
+#include "ThreadLocalStorage.h"
 
 #include "TGeoVoxelFinder.h"
 #include "TGeoElement.h"
@@ -323,13 +324,20 @@ TGeoManager *gGeoManager = 0;
 
 ClassImp(TGeoManager)
 
-Bool_t TGeoManager::fgLock = kFALSE;
+Bool_t TGeoManager::fgLock         = kFALSE;
+Bool_t TGeoManager::fgLockNavigators = kFALSE;
 Int_t  TGeoManager::fgVerboseLevel = 1;
+Int_t  TGeoManager::fgMaxLevel = 1;
+Int_t  TGeoManager::fgMaxDaughters = 1;
+Int_t  TGeoManager::fgMaxXtruVert = 1;
+Int_t  TGeoManager::fgNumThreads   = 0;
+TGeoManager::ThreadsMap_t *TGeoManager::fgThreadId = 0;
 
 //_____________________________________________________________________________
 TGeoManager::TGeoManager()
 {
 // Default constructor.
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
    if (TClass::IsCallingNew() == TClass::kDummyNew) {
       fTimeCut = kFALSE;
       fTmin = 0.;
@@ -380,9 +388,6 @@ TGeoManager::TGeoManager()
       fUniqueVolumes = 0;
       fNodeIdArray = 0;
       fClippingShape = 0;
-      fIntSize = fDblSize = 1000;
-      fIntBuffer = 0;
-      fDblBuffer = 0;
       fMatrixTransform = kFALSE;
       fMatrixReflection = kFALSE;
       fGLMatrix = 0;
@@ -395,9 +400,12 @@ TGeoManager::TGeoManager()
       fKeyPNEId = 0;
       fValuePNEId = 0;
       fMultiThread = kFALSE;
+      fMaxThreads = 0;
+      ClearThreadsMap();
    } else {
       Init();
-      gGeoIdentity = 0;
+      if (!gGeoIdentity && TClass::IsCallingNew() == TClass::kRealNew) gGeoIdentity = new TGeoIdentity("Identity");
+      BuildDefaultMaterials();
    }
 }
 
@@ -426,6 +434,7 @@ void TGeoManager::Init()
    }
 
    gGeoManager = this;
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
    fTimeCut = kFALSE;
    fTmin = 0.;
    fTmax = 999.;
@@ -475,9 +484,6 @@ void TGeoManager::Init()
    fUniqueVolumes = new TObjArray(256);
    fNodeIdArray = 0;
    fClippingShape = 0;
-   fIntSize = fDblSize = 1000;
-   fIntBuffer = new Int_t[1000];
-   fDblBuffer = new Double_t[1000];
    fMatrixTransform = kFALSE;
    fMatrixReflection = kFALSE;
    fGLMatrix = new TGeoHMatrix();
@@ -490,6 +496,8 @@ void TGeoManager::Init()
    fKeyPNEId = 0;
    fValuePNEId = 0;
    fMultiThread = kFALSE;
+   fMaxThreads = 0;
+   ClearThreadsMap();
 }
 
 //_____________________________________________________________________________
@@ -545,11 +553,7 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fClippingShape(gm.fClippingShape),
   fElementTable(gm.fElementTable),
   fNodeIdArray(gm.fNodeIdArray),
-  fIntSize(gm.fIntSize),
-  fDblSize(gm.fDblSize),
-  fIntBuffer(gm.fIntBuffer),
   fNLevel(gm.fNLevel),
-  fDblBuffer(gm.fDblBuffer),
   fPaintVolume(gm.fPaintVolume),
   fHashVolumes(gm.fHashVolumes),
   fHashGVolumes(gm.fHashGVolumes),
@@ -559,17 +563,21 @@ TGeoManager::TGeoManager(const TGeoManager& gm) :
   fNPNEId(0),
   fKeyPNEId(0),
   fValuePNEId(0),
+  fMaxThreads(0),
   fMultiThread(kFALSE)
 {
    //copy constructor
    for(Int_t i=0; i<256; i++)
       fPdgId[i]=gm.fPdgId[i];
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
+   ClearThreadsMap();
 }
 
 //_____________________________________________________________________________
 TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
 {
    //assignment operator
+   if (!fgThreadId) fgThreadId = new TGeoManager::ThreadsMap_t;
    if(this!=&gm) {
       TNamed::operator=(gm);
       fPhimin=gm.fPhimin;
@@ -624,11 +632,7 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fClippingShape=gm.fClippingShape;
       fElementTable=gm.fElementTable;
       fNodeIdArray=gm.fNodeIdArray;
-      fIntSize=gm.fIntSize;
-      fDblSize=gm.fDblSize;
-      fIntBuffer=gm.fIntBuffer;
       fNLevel=gm.fNLevel;
-      fDblBuffer=gm.fDblBuffer;
       fPaintVolume=gm.fPaintVolume;
       fHashVolumes=gm.fHashVolumes;
       fHashGVolumes=gm.fHashGVolumes;
@@ -639,6 +643,9 @@ TGeoManager& TGeoManager::operator=(const TGeoManager& gm)
       fKeyPNEId = 0;
       fValuePNEId = 0;
       fMultiThread = kFALSE;
+      fMaxThreads = 0;
+      ClearThreadsMap();
+      ClearThreadData();
    }
    return *this;
 }
@@ -657,6 +664,8 @@ TGeoManager::~TGeoManager()
 //   TIter next(brlist);
 //   TBrowser *browser = 0;
 //   while ((browser=(TBrowser*)next())) browser->RecursiveRemove(this);
+   ClearThreadsMap();
+   ClearThreadData();
    delete TGeoBuilder::Instance(this);
    if (fBits)  delete [] fBits;
    SafeDelete(fNodes);
@@ -676,11 +685,9 @@ TGeoManager::~TGeoManager()
    if (fTracks) {fTracks->Delete(); SafeDelete( fTracks );}
    SafeDelete( fUniqueVolumes );
    if (fPdgNames) {fPdgNames->Delete(); SafeDelete( fPdgNames );}
-//   if (fNavigators) {fNavigators->Delete(); SafeDelete( fNavigators );}
+   ClearNavigators();
    CleanGarbage();
    SafeDelete( fPainter ); 
-   delete [] fDblBuffer;
-   delete [] fIntBuffer;
    SafeDelete( fGLMatrix ); 
    if (fSizePNEId) {
       delete [] fKeyPNEId;
@@ -797,6 +804,11 @@ TGeoNavigator *TGeoManager::AddNavigator()
 {
 // Add a navigator in the list of navigators. If it is the first one make it
 // current navigator.
+   if (fMultiThread) TThread::Lock();
+//   if (fgLockNavigators) {
+//      Error("AddNavigator", "Navigators are locked. Use SetNavigatorsLock(false) first.");
+//      return 0;
+//   }
    Long_t threadId = (fMultiThread)?TThread::SelfId():999;
    NavigatorsMap_t::const_iterator it = fNavigators.find(threadId);
    TGeoNavigatorArray *array = 0;
@@ -805,7 +817,10 @@ TGeoNavigator *TGeoManager::AddNavigator()
       array = new TGeoNavigatorArray(this);
       fNavigators.insert(NavigatorsMap_t::value_type(threadId, array));
    }
-   return array->AddNavigator();   
+   TGeoNavigator *nav = array->AddNavigator();
+   if (fClosed) nav->GetCache()->BuildInfoBranch();
+   if (fMultiThread) TThread::UnLock();
+   return nav;
 }   
 
 //_____________________________________________________________________________
@@ -851,6 +866,119 @@ Bool_t TGeoManager::SetCurrentNavigator(Int_t index)
    return kTRUE;
 }
 
+//_____________________________________________________________________________
+void TGeoManager::SetNavigatorsLock(Bool_t flag)
+{
+// Set the lock for navigators.
+   fgLockNavigators = flag;
+}
+   
+//_____________________________________________________________________________
+void TGeoManager::ClearNavigators()
+{
+// Clear all navigators.
+   if (fMultiThread) TThread::Lock();
+   TGeoNavigatorArray *arr = 0;
+   for (NavigatorsMap_t::iterator it = fNavigators.begin();
+        it != fNavigators.end(); it++) {
+      arr = (*it).second;
+      if (arr) delete arr;
+   }
+   fNavigators.clear();   
+   if (fMultiThread) TThread::UnLock();
+}
+
+//_____________________________________________________________________________
+void TGeoManager::RemoveNavigator(const TGeoNavigator *nav)
+{
+// Clear a single navigator.
+   if (fMultiThread) TThread::Lock();
+   for (NavigatorsMap_t::const_iterator it = fNavigators.begin();
+        it != fNavigators.end(); it++) {
+      TGeoNavigatorArray *arr = (*it).second;
+      if (arr) {
+         if ((TGeoNavigator*)arr->Remove((TObject*)nav)) {
+            delete nav;
+            return;
+         }
+      }   
+   }
+   Error("Remove navigator", "Navigator %p not found", nav);
+   if (fMultiThread) TThread::UnLock();
+}      
+
+//_____________________________________________________________________________
+void TGeoManager::SetMaxThreads(Int_t nthreads)
+{
+// Set maximum number of threads for navigation.
+   if (fMaxThreads) {
+      ClearThreadsMap();
+      ClearThreadData();
+   }
+   fMaxThreads = nthreads;
+   if (fMaxThreads>0) {
+      fMultiThread = kTRUE;
+      CreateThreadData();
+   }   
+}
+
+//______________________________________________________________________________
+void TGeoManager::ClearThreadData() const
+{
+   TThread::Lock();
+   TIter next(fVolumes);
+   TGeoVolume *vol;
+   while ((vol=(TGeoVolume*)next())) vol->ClearThreadData();
+   TThread::UnLock();
+}
+
+//______________________________________________________________________________
+void TGeoManager::CreateThreadData() const
+{
+// Create thread private data for all geometry objects.
+   if (!fMaxThreads) return;
+   TThread::Lock();
+   TIter next(fVolumes);
+   TGeoVolume *vol;
+   while ((vol=(TGeoVolume*)next())) vol->CreateThreadData(fMaxThreads);
+   TThread::UnLock();
+}
+
+//_____________________________________________________________________________
+void TGeoManager::ClearThreadsMap()
+{
+// Clear the current map of threads. This will be filled again by the calling
+// threads via ThreadId calls.
+   TThread::Lock();
+   if (!fgThreadId->empty()) fgThreadId->clear();
+   fgNumThreads = 0;
+   TThread::UnLock();
+}
+
+TTHREAD_TLS_DECLARE(Int_t, tid);
+
+//_____________________________________________________________________________
+Int_t TGeoManager::ThreadId()
+{
+// Translates the current thread id to an ordinal number. This can be used to
+// manage data which is pspecific for a given thread.
+//   static __thread Int_t tid = -1;
+//   if (tid > -1) return tid;
+   TTHREAD_TLS_INIT(Int_t,tid,-1);
+   Int_t ttid = TTHREAD_TLS_GET(Int_t,tid);
+   if (ttid > -1) return ttid;
+   if (gGeoManager && !gGeoManager->IsMultiThread()) return 0;
+   TGeoManager::ThreadsMapIt_t it = fgThreadId->find(TThread::SelfId());
+   if (it != fgThreadId->end()) return it->second;
+   // Map needs to be updated.
+   TThread::Lock();
+   (*fgThreadId)[TThread::SelfId()] = fgNumThreads;
+   TTHREAD_TLS_SET(Int_t,tid,fgNumThreads);
+   fgNumThreads++;
+   TThread::UnLock();
+   return fgNumThreads-1;
+}
+   
 //_____________________________________________________________________________
 void TGeoManager::Browse(TBrowser *b)
 {
@@ -1287,9 +1415,8 @@ void TGeoManager::CloseGeometry(Option_t *option)
 //   Bool_t dummy = opt.Contains("d");
    Bool_t nodeid = opt.Contains("i");
    // Create a geometry navigator if not present
-   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
    TGeoNavigator *nav = 0;
-   Int_t nnavigators = GetListOfNavigators()->GetEntriesFast();
+   Int_t nnavigators = 0;
    // Check if the geometry is streamed from file
    if (fIsGeomReading) {
       if (fgVerboseLevel>0) Info("CloseGeometry","Geometry loaded from file...");
@@ -1302,22 +1429,16 @@ void TGeoManager::CloseGeometry(Option_t *option)
          }
          SetTopVolume(fMasterVolume);
          if (fStreamVoxels && fgVerboseLevel>0) Info("CloseGeometry","Voxelization retrieved from file");
-         Voxelize("ALL");
-         if (nodeid) {
-            for (Int_t i=0; i<nnavigators; i++) {
-               nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
-               nav->GetCache()->BuildIdArray();
-            }   
-         }
-      } else {
-         Warning("CloseGeometry", "top node was streamed!");
-         Voxelize("ALL");
-         if (nodeid) {
-            for (Int_t i=0; i<nnavigators; i++) {
-               nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
-               nav->GetCache()->BuildIdArray();
-            }   
-         }
+      }   
+      // Create a geometry navigator if not present
+      if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
+      nnavigators = GetListOfNavigators()->GetEntriesFast();
+      Voxelize("ALL");
+      CountLevels();
+      for (Int_t i=0; i<nnavigators; i++) {
+         nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+         nav->GetCache()->BuildInfoBranch();
+         if (nodeid) nav->GetCache()->BuildIdArray();
       }
       if (!fHashVolumes) {
          Int_t nvol = fVolumes->GetEntriesFast();
@@ -1335,6 +1456,9 @@ void TGeoManager::CloseGeometry(Option_t *option)
       return;
    }
 
+   // Create a geometry navigator if not present
+   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
+   nnavigators = GetListOfNavigators()->GetEntriesFast();
    SelectTrackingMedia();
    CheckGeometry();
    if (fgVerboseLevel>0) Info("CloseGeometry","Counting nodes...");
@@ -1345,11 +1469,11 @@ void TGeoManager::CloseGeometry(Option_t *option)
 //   BuildIdArray();
    Voxelize("ALL");
    if (fgVerboseLevel>0) Info("CloseGeometry","Building cache...");
-   if (nodeid) {
-      for (Int_t i=0; i<nnavigators; i++) {
-         nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
-         nav->GetCache()->BuildIdArray();
-      }   
+   CountLevels();
+   for (Int_t i=0; i<nnavigators; i++) {
+      nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
+      nav->GetCache()->BuildInfoBranch();
+      if (nodeid) nav->GetCache()->BuildIdArray();
    }
    fClosed = kTRUE;
    if (fgVerboseLevel>0) {
@@ -1491,6 +1615,36 @@ void TGeoManager::ConvertReflections()
    if (fgVerboseLevel>0) Info("ConvertReflections", "Done");
 }
 
+//_____________________________________________________________________________
+void TGeoManager::CountLevels()
+{
+// Count maximum number of nodes per volume, maximum depth and maximum
+// number of xtru vertices.
+   if (!fTopNode) {
+      Error("CountLevels", "Top node not defined.");
+      return;
+   }
+   TGeoIterator next(fTopVolume);
+   TGeoNode *node;
+   Int_t maxlevel = 1;
+   Int_t maxnodes = fTopVolume->GetNdaughters();
+   Int_t maxvertices = 1;
+   while ((node=next())) {
+      if (node->GetVolume()->GetVoxels()) {
+         if (node->GetNdaughters()>maxnodes) maxnodes = node->GetNdaughters();
+      }   
+      if (next.GetLevel()>maxlevel) maxlevel = next.GetLevel();
+      if (node->GetVolume()->GetShape()->IsA()==TGeoXtru::Class()) {
+         TGeoXtru *xtru = (TGeoXtru*)node->GetVolume()->GetShape();
+         if (xtru->GetNvert()>maxvertices) maxvertices = xtru->GetNvert();
+      }
+   }
+   fgMaxLevel = maxlevel;
+   fgMaxDaughters = maxnodes;
+   fgMaxXtruVert = maxvertices;
+   if (fgVerboseLevel>0) Info("CountLevels", "max level = %d, max placements = %d", fgMaxLevel, fgMaxDaughters);
+}      
+  
 //_____________________________________________________________________________
 Int_t TGeoManager::CountNodes(const TGeoVolume *vol, Int_t nlevels, Int_t option)
 {
@@ -1683,6 +1837,34 @@ void TGeoManager::GetBombFactors(Double_t &bombx, Double_t &bomby, Double_t &bom
    }
    bombx = bomby = bombz = bombr = 1.3;
 }
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetMaxDaughters()
+{
+// Return maximum number of daughters of a volume used in the geometry.
+   return fgMaxDaughters;
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetMaxLevels()
+{
+// Return maximum number of levels used in the geometry.
+   return fgMaxLevel;
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetMaxXtruVert()
+{
+// Return maximum number of vertices for an xtru shape used.
+   return fgMaxXtruVert;
+}
+
+//_____________________________________________________________________________
+Int_t TGeoManager::GetNumThreads()
+{
+// Returns number of threads that were set to use geometry.
+   return fgNumThreads;
+}   
 
 //_____________________________________________________________________________
 TGeoHMatrix *TGeoManager::GetHMatrix()
@@ -2531,7 +2713,7 @@ void TGeoManager::Voxelize(Option_t *option)
 {
 // Voxelize all non-divided volumes.
    TGeoVolume *vol;
-   TGeoVoxelFinder *vox = 0;
+//   TGeoVoxelFinder *vox = 0;
    if (!fStreamVoxels && fgVerboseLevel>0) Info("Voxelize","Voxelizing...");
 //   Int_t nentries = fVolumes->GetSize();
    TIter next(fVolumes);
@@ -2539,9 +2721,6 @@ void TGeoManager::Voxelize(Option_t *option)
       if (!fIsGeomReading) vol->SortNodes();
       if (!fStreamVoxels) {
          vol->Voxelize(option);
-      } else {
-         vox = vol->GetVoxels();
-         if (vox) vox->CreateCheckList();
       }
       if (!fIsGeomReading) vol->FindOverlaps();
    }
@@ -3028,11 +3207,15 @@ void TGeoManager::SetTopVolume(TGeoVolume *vol)
    fTopNode->SetNumber(1);
    fTopNode->SetTitle("Top logical node");
    fNodes->AddAt(fTopNode, 0);
-   if (!GetCurrentNavigator()) fCurrentNavigator = AddNavigator();
+   if (!GetCurrentNavigator()) {
+      fCurrentNavigator = AddNavigator();
+      return;
+   }      
    Int_t nnavigators = GetListOfNavigators()->GetEntriesFast();
    for (Int_t i=0; i<nnavigators; i++) {
       TGeoNavigator *nav = (TGeoNavigator*)GetListOfNavigators()->At(i);
       nav->ResetAll();
+      if (fClosed) nav->GetCache()->BuildInfoBranch();
    }
 }
 //_____________________________________________________________________________
@@ -3287,36 +3470,10 @@ Int_t TGeoManager::Export(const char *filename, const char *name, Option_t *opti
    if (sfile.Contains(".gdml")) {
       //Save geometry as a gdml file
       if (fgVerboseLevel>0) Info("Export","Exporting %s %s as gdml code", GetName(), GetTitle());
-      gROOT->ProcessLine("TPython::Exec(\"from math import *\")");
-
-      gROOT->ProcessLine("TPython::Exec(\"import writer\")");
-      gROOT->ProcessLine("TPython::Exec(\"import ROOTwriter\")");
-
-      // get TGeoManager and top volume
-      gROOT->ProcessLine("TPython::Exec(\"geomgr = ROOT.gGeoManager\")");
-      gROOT->ProcessLine("TPython::Exec(\"topV = geomgr.GetTopVolume()\")");
-
-      // instanciate writer
-      TString cmd=TString::Format("TPython::Exec(\"gdmlwriter = writer.writer('%s')\")",filename);
-      gROOT->ProcessLine(cmd);
-      gROOT->ProcessLine("TPython::Exec(\"binding = ROOTwriter.ROOTwriter(gdmlwriter)\")");
-
-      // dump materials
-      gROOT->ProcessLine("TPython::Exec(\"matlist = geomgr.GetListOfMaterials()\")");
-      gROOT->ProcessLine("TPython::Exec(\"binding.dumpMaterials(matlist)\")");
-
-      // dump solids
-      gROOT->ProcessLine("TPython::Exec(\"shapelist = geomgr.GetListOfShapes()\")");
-      gROOT->ProcessLine("TPython::Exec(\"binding.dumpSolids(shapelist)\")");
-
-      // dump geo tree
-      gROOT->ProcessLine("TPython::Exec(\"print 'Info in <TPython::Exec>: Traversing geometry tree'\")");
-      gROOT->ProcessLine("TPython::Exec(\"gdmlwriter.addSetup('default', '1.0', topV.GetName())\")");
-      gROOT->ProcessLine("TPython::Exec(\"binding.examineVol(topV)\")");
-
-      // write file
-      gROOT->ProcessLine("TPython::Exec(\"gdmlwriter.writeFile()\")");
-      if (fgVerboseLevel>0) printf("Info in <TPython::Exec>: GDML Export complete - %s is ready\n", filename);
+	  //C++ version
+      TString cmd ;
+	  cmd = TString::Format("TGDMLWrite::StartGDMLWriting(gGeoManager,\"%s\",\"%s\")", filename, option);
+	  gROOT->ProcessLineFast(cmd);
       return 1;
    }
    if (sfile.Contains(".root") || sfile.Contains(".xml")) {
@@ -3426,14 +3583,13 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
       }
    } else {
       // import from a root file
-      TFile *old = gFile;
+      TDirectory::TContext ctxt(0);
       // in case a web file is specified, use the cacheread option to cache
       // this file in the cache directory
       TFile *f = 0;
       if (strstr(filename,"http")) f = TFile::Open(filename,"CACHEREAD");
       else                         f = TFile::Open(filename);
       if (!f || f->IsZombie()) {
-         if (old) old->cd();
          ::Error("TGeoManager::Import", "Cannot open file");
          return 0;
       }
@@ -3448,7 +3604,6 @@ TGeoManager *TGeoManager::Import(const char *filename, const char *name, Option_
             break;
          }
       }
-      if (old) old->cd();
       delete f;
    }
    if (!gGeoManager) return 0;
@@ -3509,30 +3664,6 @@ Bool_t TGeoManager::InitArrayPNE() const
      return kTRUE;
    }
    return kFALSE;
-}
-
-//___________________________________________________________________________
-Int_t *TGeoManager::GetIntBuffer(Int_t length)
-{
-// Get a temporary buffer of Int_t*
-   if (length>fIntSize) {
-      delete [] fIntBuffer;
-      fIntBuffer = new Int_t[length];
-      fIntSize = length;
-   }
-   return fIntBuffer;
-}
-
-//______________________________________________________________________________
-Double_t *TGeoManager::GetDblBuffer(Int_t length)
-{
-// Get a temporary buffer of Double_t*
-   if (length>fDblSize) {
-      delete [] fDblBuffer;
-      fDblBuffer = new Double_t[length];
-      fDblSize = length;
-   }
-   return fDblBuffer;
 }
 
 //______________________________________________________________________________

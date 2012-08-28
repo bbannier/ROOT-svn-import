@@ -342,12 +342,13 @@ void TGuiBldMenuDialog::Build()
             char val[256];
 
             if (!strncmp(basictype, "char*", 5)) {
-               char *tdefval;
+               char *tdefval = 0;
                m->GetterMethod()->Execute(fObject, "", &tdefval);
-               strlcpy(val, tdefval, sizeof(val));
+               if (tdefval && strlen(tdefval))
+                  strlcpy(val, tdefval, sizeof(val));
             } else if (!strncmp(basictype, "float", 5) ||
                        !strncmp(basictype, "double", 6)) {
-               Double_t ddefval;
+               Double_t ddefval = 0.0;
                m->GetterMethod()->Execute(fObject, "", ddefval);
                snprintf(val, 255, "%g", ddefval);
             } else if (!strncmp(basictype, "char", 4) ||
@@ -355,7 +356,7 @@ void TGuiBldMenuDialog::Build()
                        !strncmp(basictype, "int", 3)  ||
                        !strncmp(basictype, "long", 4) ||
                        !strncmp(basictype, "short", 5)) {
-               Long_t ldefval;
+               Long_t ldefval = 0L;
                m->GetterMethod()->Execute(fObject, "", ldefval);
                snprintf(val, 255, "%li", ldefval);
             }
@@ -3265,11 +3266,12 @@ void TGuiBldDragManager::CloneEditable()
    }
 
    TString tmpfile = gSystem->TempDirectory();
-   tmpfile = gSystem->ConcatFileName(tmpfile.Data(), TString::Format("tmp%d.C",
+   char *s = gSystem->ConcatFileName(tmpfile.Data(), TString::Format("tmp%d.C",
                                      gRandom->Integer(100)));
-   Save(tmpfile.Data());
-   gROOT->Macro(tmpfile.Data());
-   gSystem->Unlink(tmpfile.Data());
+   Save(s);
+   gROOT->Macro(s);
+   gSystem->Unlink(s);
+   delete [] s;
 
    if (fClient->GetRoot()->InheritsFrom(TGFrame::Class())) {
       TGFrame *f = (TGFrame *)fClient->GetRoot();
@@ -5402,7 +5404,7 @@ void TGuiBldDragManager::AddClassMenuMethods(TGPopupMenu *menu, TObject *object)
                               TOptionListItem *it;
 
                               while ((it = (TOptionListItem*) nxt())) {
-                                 char  *name  = it->fOptName;
+                                 const char  *name  = it->fOptName;
                                  Long_t val   = it->fValue;
 
                                  TToggle *t = new TToggle;
@@ -5444,13 +5446,15 @@ void TGuiBldDragManager::AddClassMenuMethods(TGPopupMenu *menu, TObject *object)
                   TMethod* method2 =
                         object->IsA()->GetMethodWithPrototype(menuItem->GetFunctionName(),
                                                               menuItem->GetArgs());
-                  TToggle *t = new TToggle;
-                  t->SetToggledObject(object, method2);
-                  t->SetOnValue(1);
-                  fPimpl->fFrameMenuTrash->Add(t);
+                  if (method2) {
+                     TToggle *t = new TToggle;
+                     t->SetToggledObject(object, method2);
+                     t->SetOnValue(1);
+                     fPimpl->fFrameMenuTrash->Add(t);
 
-                  menu->AddEntry(method2->GetName(), kToggleMenuAct, t);
-                  if (t->GetState()) menu->CheckEntryByData(t);
+                     menu->AddEntry(method2->GetName(), kToggleMenuAct, t);
+                     if (t->GetState()) menu->CheckEntryByData(t);
+                  }
                } else {
                   const char* menuItemTitle = menuItem->GetTitle();
                   if (strlen(menuItemTitle)==0) menuItemTitle = menuItem->GetFunctionName();

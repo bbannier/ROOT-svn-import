@@ -25,12 +25,7 @@
 #include <map>
 #include <stdarg.h>
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucSemWait.hh"
-#else
-#  include "XrdSys/XrdSysSemWait.hh"
-#endif
+#include "XpdSysSemWait.h"
 
 #include "Xrd/XrdProtocol.hh"
 #include "XProofProtocol.h"
@@ -119,7 +114,7 @@ public:
    const char        *fHost; // needed to support old 'if' construct
 
    XrdProofdDirective(const char *n, void *v, XrdFunDirective_t f, bool rcf = 1) :
-                      fVal(v), fName(n), fFun(f), fRcf(rcf) { }
+                      fVal(v), fName(n), fFun(f), fRcf(rcf), fHost(0) { }
 
    int DoDirective(char *val, XrdOucStream *cfg, bool reconfig)
                       { return (*fFun)(this, val, cfg, reconfig); }

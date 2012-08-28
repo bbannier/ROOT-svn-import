@@ -52,18 +52,21 @@ class THTTPMessage : public TObject{
 
 private:
    enum EHTTP_Verb fVerb;  //HTTP Verb
-   TString fPath;          //Given path to be parsed        
-   TString fBucket;        //Bucket associated with the file
-   TString fHost;          //Server name
-   TString fDate;          //Date
-   TString fAuthPrefix;    //Authentication prefix to distinguish between GT and AWS3
-   TString fAccessId;      //User id 
-   TString fAccessIdKey;   //Secret key
-   Bool_t  fHasRange;      //GET request with range
-   Int_t   fInitByte;      //Initial byte if range
-   Int_t   fFinalByte;     //Final byte if range
-
-   TString fSignature;     //Message signature
+   TString   fPath;        //Given path to be parsed        
+   TString   fBucket;      //Bucket associated with the file
+   TString   fHost;        //Server name
+   TString   fDate;        //Date
+   TString   fAuthPrefix;  //Authentication prefix to distinguish between GT and AWS3
+   TString   fAccessId;    //User id 
+   TString   fAccessIdKey; //Secret key
+   Bool_t    fHasRange;    //GET request with range
+   Long64_t  fOffset;      //Offset
+   Long64_t *fInitByte;    //Init positions for the range
+   Int_t    *fLen;         //Range length
+   Int_t     fNumBuf;      //Number of buffers
+   Int_t     fCurrentBuf;  //For requests > 8000 we need to generate several requests
+   Int_t     fLength;      //Request length
+   TString   fSignature;   //Message signature
 
 protected:
    TString Sign();
@@ -72,8 +75,8 @@ public:
    THTTPMessage(EHTTP_Verb mverb, TString mpath, TString mbucket, TString mhost,
                 TString maprefix, TString maid, TString maidkey);
    THTTPMessage(EHTTP_Verb mverb, TString mpath, TString mbucket, TString mhost,
-                TString maprefix, TString maid, TString maidkey, Int_t ibyte, Int_t fbyte);
-   THTTPMessage() { }
+                TString maprefix, TString maid, TString maidkey, Long64_t offset, Long64_t *pos, Int_t *len, Int_t nbuf);
+   THTTPMessage() : fInitByte(0), fLen(0) { }
    virtual ~THTTPMessage() { }
    THTTPMessage &operator=(const THTTPMessage& rhs);
 
@@ -85,8 +88,12 @@ public:
    TString    GetAuthPrefix() const { return fAuthPrefix; }
    TString    GetAccessId() const { return fAccessId; }
    TString    GetAccessIdKey() const { return fAccessIdKey; }
-   Int_t      GetInitByte() const { return fInitByte; }
-   Int_t      GetFinalByte() const { return fFinalByte; }
+   Long64_t   GetOffset() const { return fOffset; }
+   Long64_t*  GetInitByte() const { return fInitByte; }
+   Int_t*     GetRangeLength() const { return fLen; }
+   Int_t      GetCurrentBuffer() const { return fCurrentBuf; }
+   Int_t      GetNumBuffers() const { return fNumBuf; }
+   Int_t      GetLength() const { return fLength; }
    TString    GetSignature() const { return fSignature; }
 
    Bool_t     HasRange() const { return fHasRange; }
@@ -97,10 +104,9 @@ public:
    TString CreateHead() const;
    TString CreateHost() const;
    TString CreateDate() const;
-   TString CreateRange() const;
    TString CreateAuth() const;
 
-   TString GetRequest() const;
+   TString GetRequest();
 
    ClassDef(THTTPMessage, 0)  // Create generic HTTP request for Amazon S3 and Google Storage services
 };

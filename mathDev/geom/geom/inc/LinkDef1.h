@@ -18,6 +18,7 @@
 #pragma link C++ global gGeoIdentity;
 
 #pragma link C++ class TGeoAtt+;
+#pragma link C++ struct TGeoStateInfo+;
 #pragma link C++ class TGeoBoolNode+;
 #pragma link C++ class TGeoUnion+;
 #pragma link C++ class TGeoIntersection+;
@@ -65,7 +66,7 @@
 #pragma link C++ class TGeoTrd2+;
 #pragma link C++ class TGeoCompositeShape+;
 #pragma link C++ class TGeoPolygon+;
-#pragma link C++ class TGeoXtru-;
+#pragma link C++ class TGeoXtru+;
 #pragma link C++ class TGeoShapeAssembly+;
 #pragma link C++ class TGeoScaledShape+;
 #pragma link C++ class TGeoVolume-;
@@ -84,5 +85,7 @@
 #pragma link C++ class TGeoBuilder;
 #pragma link C++ class TGeoNavigator+;
 #pragma link C++ class TGeoNavigatorArray;
+#pragma link C++ struct std::map<Long_t, TGeoNavigatorArray *>;
+#pragma link C++ struct std::pair<Long_t, TGeoNavigatorArray *>;
 
 #endif

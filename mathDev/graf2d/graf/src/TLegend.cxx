@@ -96,7 +96,7 @@ Begin_Macro(source)
 }
 End_Macro
 Begin_Html
-
+<br>
 Note that the <tt>TPad</tt> class has a method to build automatically a legend
 for all objects in the pad. It is called <tt>TPad::BuildLegend()</tt>.
 <p>
@@ -107,7 +107,7 @@ associated to this object and an option which a combination of:
 <li> L: draw line associated with TAttLine if obj inherits from TAttLine
 <li> P: draw polymarker associated with TAttMarker if obj inherits from TAttMarker
 <li> F: draw a box with fill associated wit TAttFill if obj inherits TAttFill
-<li> E: draw vertical error bar if option "L" is also specified
+<li> E: draw vertical error bar
 </ul>
 <p>
 As shown in the following example, passing a NULL pointer as first parameter in
@@ -133,6 +133,7 @@ Begin_Macro(source)
 }
 End_Macro
 Begin_Html
+<br>
 It is possible to draw the legend entries over several columns using
 the method <tt>SetNColumns()</tt> like in the following example.
 
@@ -159,7 +160,7 @@ End_Macro
 
 
 //______________________________________________________________________________
-TLegend::TLegend(): TPave(), TAttText()
+TLegend::TLegend(): TPave(), TAttText(12,0,1,gStyle->GetLegendFont(),0)
 {
    /* Begin_Html
    Default constructor.
@@ -173,7 +174,7 @@ TLegend::TLegend(): TPave(), TAttText()
 //______________________________________________________________________________
 TLegend::TLegend( Double_t x1, Double_t y1,Double_t x2, Double_t y2,
                   const char *header, Option_t *option)
-        :TPave(x1,y1,x2,y2,4,option), TAttText(12,0,1,gStyle->GetTextFont(),0)
+        :TPave(x1,y1,x2,y2,4,option), TAttText(12,0,1,gStyle->GetLegendFont(),0)
 {
    /* Begin_Html
    Normal Contructor.
@@ -193,7 +194,7 @@ TLegend::TLegend( Double_t x1, Double_t y1,Double_t x2, Double_t y2,
       headerEntry->SetTextAlign(0);
       headerEntry->SetTextAngle(0);
       headerEntry->SetTextColor(0);
-      headerEntry->SetTextFont(62); // default font is 62 for the header
+      headerEntry->SetTextFont(gStyle->GetLegendFont());
       headerEntry->SetTextSize(0);
       fPrimitives->AddFirst(headerEntry);
    }
@@ -795,6 +796,16 @@ void TLegend::PaintPrimitives()
                                        xsym, ysym + yspace*0.30);
             }
          }
+      }
+
+      // Draw error only
+
+      if (opt.Contains("e") && !(opt.Contains("l") || opt.Contains("f"))) {
+         TLine entryline(xsym, ysym - yspace*0.30,
+                         xsym, ysym + yspace*0.30);
+         entryline.SetBit(TLine::kLineNDC);
+         entry->TAttLine::Copy(entryline);
+         entryline.Paint();
       }
 
       // Draw Polymarker

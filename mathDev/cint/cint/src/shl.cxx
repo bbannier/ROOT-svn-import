@@ -72,6 +72,40 @@ typedef HINSTANCE G__SHLHANDLE;
 typedef void* G__SHLHANDLE;
 #endif /* !__hpux && !G__OSFDLL */
 
+#ifdef _AIX
+#include "sys/ldr.h"
+
+struct Dl_info {
+  const char* dli_fname;
+};
+int dladdr(void* s, Dl_info* i) {
+   static const size_t bufSize = 4096;
+   G__FastAllocString buf(bufSize);
+   char* pldi = buf;
+   int r = loadquery(L_GETINFO,  pldi,  bufSize);
+   if (r == -1) {
+      i->dli_fname = 0;
+      return 0;
+   }
+   // First is main(), skip.
+   ld_info* ldi = (ld_info*)pldi;
+   while (ldi->ldinfo_next) {
+     pldi += ldi->ldinfo_next;
+     ldi = (ld_info*)pldi;
+     char* textBegin = (char*)ldi->ldinfo_textorg;
+     if (textBegin < s) {
+        char* textEnd = textBegin + ldi->ldinfo_textsize;
+        if (textEnd > s) {
+           i->dli_fname = ldi->ldinfo_filename;
+           return 1;
+        }
+     }
+   }
+   i->dli_fname = 0;
+   return 0;
+}
+#endif
+
 /***************************************************
 * Common settings
 ****************************************************/
@@ -1042,12 +1076,14 @@ char* G__p2f2funcname(void *p2f)
   if(ifunc) return(ifunc->funcname[ig15]);
 
   for(tagnum=0;tagnum<G__struct.alltag;tagnum++) {
-    ifunc=G__p2f2funchandle_internal(p2f,G__struct.memfunc[tagnum],&ig15);
-    if(ifunc) {
-       static G__FastAllocString buf(G__LONGLINE);
-       buf.Format("%s::%s",G__fulltagname(tagnum,1),ifunc->funcname[ig15]);
-      return(buf);
-    }
+     ifunc=G__p2f2funchandle_internal(p2f,G__struct.memfunc[tagnum],&ig15);
+     if(ifunc) {
+        static G__FastAllocString *buf_ptr = new G__FastAllocString(G__LONGLINE);
+        G__FastAllocString &buf(*buf_ptr);
+
+        buf.Format("%s::%s",G__fulltagname(tagnum,1),ifunc->funcname[ig15]);
+        return(buf);
+     }
   }
   return((char*)NULL);
 }
@@ -1891,8 +1927,10 @@ char* G__GccNameMangle(G__FastAllocString &buf,struct G__ifunc_table_internal *i
  **************************************************************************/
 char* G__Vc6TypeMangle(int type,int tagnum,int reftype,int isconst)
 {
-   static G__FastAllocString buf(G__MAXNAME);
-   buf[0] = 0;
+  static G__FastAllocString *buf_ptr = new G__FastAllocString(G__MAXNAME);
+  G__FastAllocString &buf(*buf_ptr);
+
+  buf[0] = 0;
   if(isupper(type)) {
     if((G__CONSTVAR&isconst) && 
        (G__PCONSTVAR&isconst) &&

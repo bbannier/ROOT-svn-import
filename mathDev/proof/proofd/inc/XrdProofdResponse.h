@@ -26,12 +26,8 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucPthread.hh"
-#else
-#  include "XrdSys/XrdSysPthread.hh"
-#endif
+#include "XpdSysPthread.h"
+
 #include "XrdOuc/XrdOucString.hh"
 #include "XProofProtocol.h"
 
@@ -40,7 +36,9 @@ class XrdLink;
 class XrdProofdResponse
 {
  public:
-   XrdProofdResponse() { fLink = 0; *fTrsid = '\0'; fSID = 0; }
+   XrdProofdResponse() { fLink = 0; *fTrsid = '\0'; fSID = 0;
+                         fResp.dlen = 0; fResp.status = 0;
+                         fResp.streamid[0] = 0; fResp.streamid[1] = 0; }
    virtual ~XrdProofdResponse() {}
 
    inline const  char   *STRID() { return (const char *)fTrsid;}

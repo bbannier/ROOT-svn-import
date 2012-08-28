@@ -74,6 +74,7 @@ TGSlider::TGSlider(const TGWindow *p, UInt_t w, UInt_t h, UInt_t type, Int_t id,
    fDragging = kFALSE;
    fPos = fRelPos = 0;
    fVmax = fVmin = 0;
+   fSliderPic = 0;
 }
 
 //______________________________________________________________________________
@@ -84,8 +85,12 @@ void TGSlider::CreateDisabledPicture()
    if (!fSliderPic) return;
 
    TImage *img = TImage::Create();
+   if (!img) return;
    TImage *img2 = TImage::Create();
-
+   if (!img2) {
+      if (img) delete img;
+      return;
+   }
    TString back = gEnv->GetValue("Gui.BackgroundColor", "#c0c0c0");
    img2->FillRectangle(back.Data(), 0, 0, fSliderPic->GetWidth(), 
                        fSliderPic->GetHeight());

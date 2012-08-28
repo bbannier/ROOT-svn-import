@@ -114,8 +114,10 @@ void TSelectorDraw::Begin(TTree *tree)
    fDimension = 0;
    fAction = 0;
 
-   const char *varexp0   = fInput->FindObject("varexp")->GetTitle();
-   const char *selection = fInput->FindObject("selection")->GetTitle();
+   TObject *obj = fInput->FindObject("varexp");
+   const char *varexp0   = obj ? obj->GetTitle() : "";
+   obj = fInput->FindObject("selection");
+   const char *selection = obj ? obj->GetTitle() : "";
    const char *option    = GetOption();
 
    TString  opt;
@@ -365,7 +367,7 @@ void TSelectorDraw::Begin(TTree *tree)
          } // if '(' is found
 
          j = strlen(hname) - 1; // skip ' '  at the end
-         while (j) {
+         while (j > 0) {
             if (hname[j] != ' ') break; // skip ' '  at the end
             hname[j] = 0;
             j--;
@@ -466,8 +468,9 @@ void TSelectorDraw::Begin(TTree *tree)
    } else { // if (hname)
       hname  = hdefault;
       hkeep  = 0;
-      varexp = new char[strlen(varexp0)+1];
-      strlcpy(varexp,varexp0,strlen(varexp0)+1);
+      const size_t varexpLen = strlen(varexp0) + 1;
+      varexp = new char[varexpLen];
+      strlcpy(varexp, varexp0, varexpLen);
       if (gDirectory) {
          fOldHistogram = (TH1*)gDirectory->Get(hname);
          if (fOldHistogram) { fOldHistogram->Delete(); fOldHistogram = 0;}
@@ -1262,16 +1265,18 @@ void TSelectorDraw::ProcessFillObject(Long64_t /*entry*/)
 
             void *obj = fVar[0]->EvalObject(i);
 
-            TBits *bits = (TBits*)obj;
-            Int_t nbits = bits->GetNbits();
+            if (obj) {
+               TBits *bits = (TBits*)obj;
+               Int_t nbits = bits->GetNbits();
 
-            Int_t nextbit = -1;
-            while (1) {
-               nextbit = bits->FirstSetBit(nextbit + 1);
-               if (nextbit >= nbits) break;
-               fVal[0][fNfill] = nextbit;
-               fW[fNfill] =  ww;
-               fNfill++;
+               Int_t nextbit = -1;
+               while (1) {
+                  nextbit = bits->FirstSetBit(nextbit + 1);
+                  if (nextbit >= nbits) break;
+                  fVal[0][fNfill] = nextbit;
+                  fW[fNfill] =  ww;
+                  fNfill++;
+               }
             }
 
          } else {
@@ -1566,7 +1571,7 @@ void TSelectorDraw::TakeEstimate()
             // because h2 will be filled below and we do not want to show
             // the binned scatter-plot, the TGraph being better.
             TH1 *h2c = h2->DrawCopy(fOption.Data());
-            h2c->SetStats(kFALSE);
+            if (h2c) h2c->SetStats(kFALSE);
          } else {
             // case like: T.Draw("y:x")
             // h2 is a temporary histogram (htemp). This histogram
@@ -1656,7 +1661,7 @@ void TSelectorDraw::TakeEstimate()
             // because h3 will be filled below and we do not want to show
             // the binned scatter-plot, the TGraph being better.
             TH1 *h3c = h3->DrawCopy(fOption.Data());
-            h3c->SetStats(kFALSE);
+            if (h3c) h3c->SetStats(kFALSE);
          } else {
             // case like: T.Draw("y:x")
             // h3 is a temporary histogram (htemp). This histogram

@@ -23,7 +23,7 @@ mv -f tutorials/mlp/mlpHiggs.root tutorials/mlp/mlpHiggs.root-
 mv -f tutorials/quadp/stock.root tutorials/quadp/stock.root-
 find tutorials -name "*.root" -exec rm -rf {} \; >/dev/null 2>&1;true
 find tutorials -name "*.ps" -exec rm -rf {} \; >/dev/null 2>&1;true
-find tutorials -name "*.gif" -exec rm -rf {} \; >/dev/null 2>&1;true
+find tutorials -path tutorials/doc -prune -o -name "*.gif" -exec rm -rf {} \; >/dev/null 2>&1;true
 find tutorials -name "so_locations" -exec rm -rf {} \; >/dev/null 2>&1;true
 find tutorials -name "pca.C" -exec rm -rf {} \; >/dev/null 2>&1;true
 find tutorials -name "*.so" -exec rm -rf {} \; >/dev/null 2>&1;true
@@ -36,10 +36,12 @@ mv -f tutorials/quadp/stock.root- tutorials/quadp/stock.root
 
 # mixture of files, wildcards, and directories
 WILDCARDS="LICENSE README bin \
-   include lib man cint/cint/include tutorials \
+   include lib man config/Makefile.comp config/Makefile.config \
+   cint/cint/include tutorials \
    cint/cint/lib cint/cint/stl geom/gdml/*.py \
-   test/*.cxx test/*.h test/Makefile* test/README \
-   test/*.C test/*.sh test/dt_Makefile \
+   test/*.cxx test/*.h test/Makefile* test/*.rootmap \
+   test/*.C test/*.sh test/dt_Makefile test/*.ref \
+   test/README test/*.txt test/*.xml \
    test/RootShower/*.h test/RootShower/*.cxx \
    test/RootShower/*.rc test/RootShower/*.ico \
    test/RootShower/*.png test/RootShower/Makefile* \

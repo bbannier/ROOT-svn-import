@@ -35,6 +35,7 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/TRandom1.h \
                 $(MODDIRI)/TRandom2.h \
                 $(MODDIRI)/TRandom3.h \
+                $(MODDIRI)/TStatistic.h \
                 $(MODDIRI)/TVirtualFitter.h \
                 $(MODDIRI)/TVirtualFitter.h \
                 $(MODDIRI)/TKDTree.h \
@@ -88,7 +89,8 @@ MATHCORELIB  := $(LPATH)/libMathCore.$(SOEXT)
 MATHCOREMAP  := $(MATHCORELIB:.$(SOEXT)=.rootmap)
 
 # used in the main Makefile
-ALLHDRS      += $(patsubst $(MODDIRI)/%.h,include/%.h,$(MATHCOREH))
+ALLHDRS      += $(patsubst $(MODDIRI)/%.icc,include/%.icc,\
+	$(patsubst $(MODDIRI)/%.h,include/%.h,$(MATHCOREH)))
 ALLHDRS      += $(patsubst $(MODDIRI)/%.icc,include/%.icc,$(MATHCOREH))
 ALLLIBS      += $(MATHCORELIB)
 ALLMAPS      += $(MATHCOREMAP)

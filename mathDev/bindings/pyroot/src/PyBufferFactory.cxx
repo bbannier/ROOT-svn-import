@@ -27,10 +27,6 @@ namespace {
       Py_ssize_t fSize;            // b_size in python
    };
 
-// size callback label
-   char* sizeCallback = const_cast< char* >( "_size" );
-   PyObject* sizeCallbackString_ = PyROOT_PyUnicode_FromString( sizeCallback );
-
 // callable cache
    std::map< PyObject*, PyObject* > gSizeCallbacks;
 
@@ -40,6 +36,7 @@ namespace {
    PySequenceMethods Py##name##Buffer_SeqMethods = *(PyBuffer_Type.tp_as_sequence);\
    PyMappingMethods  Py##name##Buffer_MapMethods;
 
+   PYROOT_PREPARE_PYBUFFER_TYPE( Bool )
    PYROOT_PREPARE_PYBUFFER_TYPE( Short )
    PYROOT_PREPARE_PYBUFFER_TYPE( UShort )
    PYROOT_PREPARE_PYBUFFER_TYPE( Int )
@@ -52,6 +49,7 @@ namespace {
 // implement get, str, and length functions
    Py_ssize_t buffer_length( PyObject* self )
    {
+   // Retrieve the (type-strided) size of the the buffer; may be a guess.
 #if PY_VERSION_HEX < 0x03000000
       Py_ssize_t nlen = (*(PyBuffer_Type.tp_as_sequence->sq_length))(self);
 #else
@@ -80,6 +78,7 @@ namespace {
 //____________________________________________________________________________
    const char* buffer_get( PyObject* self, int idx )
    {
+   // Retrieve the buffer as a linear char array.
       if ( idx < 0 || idx >= buffer_length( self ) ) {
          PyErr_SetString( PyExc_IndexError, "buffer index out of range" );
          return 0;
@@ -109,7 +108,7 @@ namespace {
    PyObject* name##_buffer_str( PyObject* self )                             \
    {                                                                         \
       Py_ssize_t l = buffer_length( self );                                  \
-      return PyROOT_PyUnicode_FromFormat( "<"#type" buffer, size "PY_SSIZE_T_FORMAT">", l );\
+      return PyROOT_PyUnicode_FromFormat( "<"#type" buffer, size " PY_SSIZE_T_FORMAT ">", l );\
    }                                                                         \
                                                                              \
    PyObject* name##_buffer_item( PyObject* self, Py_ssize_t idx ) {          \
@@ -142,6 +141,7 @@ namespace {
       return 0;                                                              \
    }
 
+   PYROOT_IMPLEMENT_PYBUFFER_METHODS( Bool,   Bool_t,   Long_t,   PyBool_FromLong, PyInt_AsLong )
    PYROOT_IMPLEMENT_PYBUFFER_METHODS( Short,  Short_t,  Long_t,   PyInt_FromLong, PyInt_AsLong )
    PYROOT_IMPLEMENT_PYBUFFER_METHODS( UShort, UShort_t, Long_t,   PyInt_FromLong, PyInt_AsLong )
    PYROOT_IMPLEMENT_PYBUFFER_METHODS( Int,    Int_t,    Long_t,   PyInt_FromLong, PyInt_AsLong )
@@ -152,6 +152,7 @@ namespace {
    PYROOT_IMPLEMENT_PYBUFFER_METHODS( Double, Double_t, Double_t, PyFloat_FromDouble, PyFloat_AsDouble )
 
    int pyroot_buffer_ass_subscript( PyObject* self, PyObject* idx, PyObject* val ) {
+   // Assign the given value 'val' to the item at index 'idx.'
       if ( PyIndex_Check( idx ) ) {
          Py_ssize_t i = PyNumber_AsSsize_t( idx, PyExc_IndexError );
          if ( i == -1 && PyErr_Occurred() )
@@ -167,6 +168,7 @@ namespace {
 //____________________________________________________________________________
    PyObject* buffer_setsize( PyObject* self, PyObject* pynlen )
    {
+   // Allow the user to fix up the actual (type-strided) size of the buffer.
       Py_ssize_t nlen = PyInt_AsSsize_t( pynlen );
       if ( nlen == -1 && PyErr_Occurred() )
          return 0;
@@ -185,7 +187,9 @@ namespace {
    PyObject* buf_typecode( PyObject* pyobject, void* )
    {
    // return a typecode in the style of module array
-      if ( PyObject_TypeCheck( pyobject, &PyShortBuffer_Type ) )
+      if ( PyObject_TypeCheck( pyobject, &PyBoolBuffer_Type ) )
+         return PyBytes_FromString( (char*)"b" );
+      else if ( PyObject_TypeCheck( pyobject, &PyShortBuffer_Type ) )
          return PyBytes_FromString( (char*)"h" );
       else if ( PyObject_TypeCheck( pyobject, &PyUShortBuffer_Type ) )
          return PyBytes_FromString( (char*)"H" );
@@ -253,6 +257,7 @@ PyROOT::TPyBufferFactory* PyROOT::TPyBufferFactory::Instance()
 PyROOT::TPyBufferFactory::TPyBufferFactory()
 {
 // construct python buffer types
+   PYROOT_INSTALL_PYBUFFER_METHODS( Bool,   Bool_t )
    PYROOT_INSTALL_PYBUFFER_METHODS( Short,  Short_t )
    PYROOT_INSTALL_PYBUFFER_METHODS( UShort, UShort_t )
    PYROOT_INSTALL_PYBUFFER_METHODS( Int,    Int_t )
@@ -292,6 +297,7 @@ PyObject* PyROOT::TPyBufferFactory::PyBuffer_FromMemory( type* address, PyObject
    return buf;                                                                  \
 }
 
+PYROOT_IMPLEMENT_PYBUFFER_FROM_MEMORY( Bool,   Bool_t )
 PYROOT_IMPLEMENT_PYBUFFER_FROM_MEMORY( Short,  Short_t )
 PYROOT_IMPLEMENT_PYBUFFER_FROM_MEMORY( UShort, UShort_t )
 PYROOT_IMPLEMENT_PYBUFFER_FROM_MEMORY( Int,    Int_t )

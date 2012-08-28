@@ -81,7 +81,7 @@ To define a suitable coordinate system and draw the axis the option
 It is separated from the graph classes so that one can have graphs without the
 graphics overhead, for example in a batch program.
 <p>
-When a displayed graph is modified, there is no need to call 
+When a displayed graph is modified, there is no need to call
 <tt>Draw()</tt> again; the image will be refreshed the next time the
 pad will be updated.
 <p>A pad is updated after one of these three actions:
@@ -141,7 +141,7 @@ The Y-axis is drawn on the right side of the plot.
 <p>
 
 Drawing options can be combined. In the following example the graph
-is drawn as a smooth curve (option "C") with markers (option "P") and 
+is drawn as a smooth curve (option "C") with markers (option "P") and
 with axes (option "A").
 
 End_Html
@@ -179,9 +179,9 @@ Begin_Macro(source)
 End_Macro
 Begin_Html
 
-<p>The following macro shows the option "B" usage. It can be combined with the 
+<p>The following macro shows the option "B" usage. It can be combined with the
 option "1".
- 
+
 End_Html
 Begin_Macro(source)
 {
@@ -236,7 +236,7 @@ The following drawing options are specific to graphs with error bars:
 <table border=0>
 
 <tr><th valign=top>"Z"</th><td>
-Do not draw small horizontal and vertical lines the end of the error bars. 
+Do not draw small horizontal and vertical lines the end of the error bars.
 Without "Z", the default is to draw these.
 </td></tr>
 
@@ -251,7 +251,7 @@ The size of the arrow is set to 2/3 of the marker size.
 </td></tr>
 
 <tr><th valign=top>"X"</th><td>
-Do not draw error bars.  By default, graph classes that have errors 
+Do not draw error bars.  By default, graph classes that have errors
 are drawn with the errors (TGraph itself has no errors, and so this option
 has no effect.)
 </td></tr>
@@ -291,7 +291,7 @@ bars.
 <tr><th valign=top>"5"</th><td>
 Error rectangles are drawn like option "2". In addition the contour line
 around the boxes is drawn. This can be useful when boxes' fill colors are very
-light or in gray scale mode. 
+light or in gray scale mode.
 </td></tr>
 </table>
 <p>
@@ -323,7 +323,7 @@ End_Macro
 Begin_Html
 
 <p>The option "0" shows the error bars for data points outside range.
- 
+
 End_Html
 Begin_Macro(source)
 {
@@ -337,10 +337,10 @@ Begin_Macro(source)
    c48->cd(1); gPad->DrawFrame(0,0,4,8); tg.Draw("PC");
    c48->cd(2); gPad->DrawFrame(0,0,4,8); tg.Draw("0PC");
    return c48;
-} 
+}
 End_Macro
 Begin_Html
- 
+
 <p>The option "3" shows the errors as a band.
 
 End_Html
@@ -983,6 +983,8 @@ void TGraphPainter::PaintGraph(TGraph *theGraph, Int_t npoints, const Double_t *
    /* Begin_Html
    <a href="#GP01">Control function to draw a graph.</a>
    End_Html */
+   if (theGraph->InheritsFrom("TGraphPolar"))
+      gPad->PushSelectableObject(theGraph);
 
    Int_t optionLine , optionAxis , optionCurve, optionStar , optionMark;
    Int_t optionBar  , optionR    , optionOne  , optionE;
@@ -1373,110 +1375,109 @@ void TGraphPainter::PaintGrapHist(TGraph *theGraph, Int_t npoints, const Double_
                                   const Double_t *y, Option_t *chopt)
 {
    /* Begin_Html
-   This method is used by
-   <a href="http://root.cern.ch/root/html/THistPainter.html"><tt>THistPainter</tt></a>
-   to paint 1D histograms.
-   <p>
-   Input parameters:
-   <ul>
-   <li> npoints : Number of points in X or in Y.
-   <li> x[npoints] or x[0] : x coordinates or (xmin,xmax).
-   <li> y[npoints] or y[0] : y coordinates or (ymin,ymax).
-   <li> chopt : Options.
-   </ul>
-   <p>
-   The aspect of the graph is done according to the value of the chopt.
-   <p>
-   <table border=0>
-   <tr><th valign=top>"R"</th><td>
-   Graph is drawn horizontally, parallel to X axis. (default is vertically,
-   parallel to Y axis)
-   <br>
-   If option R is selected the user must give:
-   <ul>
-   <li> 2 values for Y (y[0]=YMIN and y[1]=YMAX)
-   <li> N values for X, one for each bin.
-   </ul>
-   Otherwise the user must give:
-   <ul>
-   <li> N values for Y, one for each bin.
-   <li> 2 values for X (x[0]=XMIN and x[1]=XMAX)
-   </ul>
-   </td></tr>
+    This is a service method used by
+    <a href="http://root.cern.ch/root/html/THistPainter.html"><tt>THistPainter</tt></a>
+    to paint 1D histograms. <b>It is not used to paint TGraph</b>.
+    <p>
+    Input parameters:
+    <ul>
+    <li> npoints : Number of points in X or in Y.
+    <li> x[npoints] or x[0] : x coordinates or (xmin,xmax).
+    <li> y[npoints] or y[0] : y coordinates or (ymin,ymax).
+    <li> chopt : Option.
+    </ul>
+    <p>
+    The aspect of the histogram is done according to the value of the chopt.
+    <p>
+    <table border=0>
+    <tr><th valign=top>"R"</th><td>
+    Graph is drawn horizontaly, parallel to X axis. (default is vertically,
+    parallel to Y axis)
+    <br>
+    If option R is selected the user must give:
+    <ul>
+    <li> 2 values for Y (y[0]=YMIN and y[1]=YMAX)
+    <li> N values for X, one for each channel.
+    </ul>
+    Otherwise the user must give:
+    <ul>
+    <li> N values for Y, one for each channel.
+    <li> 2 values for X (x[0]=XMIN and x[1]=XMAX)
+    </ul>
+    </td></tr>
 
-   <tr><th valign=top>"L"</th><td>
-   A simple polyline between the points is drawn
-   </td></tr>
+    <tr><th valign=top>"L"</th><td>
+    A simple polyline beetwen every points is drawn.
+    </td></tr>
 
-   <tr><th valign=top>"H"</th><td>
-   A Histogram with equidistant bins is drawn
-   as a polyline.
-   </td></tr>
+    <tr><th valign=top>"H"</th><td>
+    An Histogram with equidistant bins is drawn as a polyline.
+    </td></tr>
 
-   <tr><th valign=top>"F"</th><td>
-   A histogram with equidistant bins is drawn
-   as a fill area. If "H" is also used, a countour is drawn.
-   </td></tr>
+    <tr><th valign=top>"F"</th><td>
+    An histogram with equidistant bins is drawn as a fill area. Contour is not
+    drawn unless chopt='H' is also selected..
+    </td></tr>
 
-   <tr><th valign=top>"N"</th><td>
-   Non-equidistant bins (default is equidistant)
-   If N is the number of bins, arrays X and Y
-   must be dimensioned as follows:
-   If option R is not selected (default) then
-   the user must give:
-     (N+1) values for X (bin limits).
-      N values for Y, one for each bin.
-   Otherwise the user must give:
-     (N+1) values for Y (bin limits).
-      N values for X, one for each bin.
-   </td></tr>
+    <tr><th valign=top>"N"</th><td>
+    Non equidistant bins (default is equidistant). If N is the number of channels
+    array X and Y must be dimensionned as follow:
+    <ul>
+    <li>>If option R is not selected (default) then the user must give:</li>
+      <ul>
+      <li>(N+1) values for X (limits of channels).</li>
+      <li>N values for Y, one for each channel.</li>
+      <ul>
+    <li>Otherwise the user must give:</li>
+      <ul>
+      <li>(N+1) values for Y (limits of channels).</li>
+      <li>N values for X, one for each channel.</li>
+      </ul>
+    </ul>
+    </td></tr>
 
-   <tr><th valign=top>"F1"</th><td>
-   Same as "F" except that the fill area is no more
-   reparted around axis X=0 or Y=0. See the "Option 1" example in the class
-   description.
-   </td></tr>
+    <tr><th valign=top>"F1"</th><td>
+    Idem as 'F' except that fill area base line is the minimum of the pad instead
+    of Y=0.
+    </td></tr>
 
-   <tr><th valign=top>"F2"</th><td>
-   Draw a Fill area polyline connecting the center of bins
-   </td></tr>
+    <tr><th valign=top>"F2"</th><td>
+    Draw a Fill area polyline connecting the center of bins
+    </td></tr>
 
-   <tr><th valign=top>"C"</th><td>
-   A smooth Curve is drawn.
-   </td></tr>
+    <tr><th valign=top>"C"</th><td>
+    A smooth Curve is drawn.
+    </td></tr>
 
-   <tr><th valign=top>"*"</th><td>
-   A Star is plotted at the center of each bin.
-   </td></tr>
+    <tr><th valign=top>"*"</th><td>
+    A Star is plotted at the center of each bin.
+    </td></tr>
 
-   <tr><th valign=top>"P"</th><td>
-   Draw points with the default marker (not a star as with "*")
-   </td></tr>
+    <tr><th valign=top>"P"</th><td>
+    Idem with the current marker.
+    </td></tr>
 
-   <tr><th valign=top>"P0"</th><td>
-   Same as "P", but empty bins also drawn.
-   </td></tr>
+    <tr><th valign=top>"P0"</th><td>
+    Idem with the current marker. Empty bins also drawn.
+    </td></tr>
 
-   <tr><th valign=top>"B"</th><td>
-   A Bar chart with equidistant bins is drawn as fill
-   areas (Contours are drawn).
-   </td></tr>
+    <tr><th valign=top>"B"</th><td>
+    A Bar chart with equidistant bins is drawn as fill areas (Contours are drawn).
+    </td></tr>
 
-   <tr><th valign=top>"9"</th><td>
-   Force graph to be drawn in high resolution mode.
-   By default, the graph is drawn in low resolution
-   in case the number of points is greater than the number of
-   pixels in the current pad.
-   </td></tr>
+    <tr><th valign=top>"9"</th><td>
+    Force graph to be drawn in high resolution mode. By default, the graph is
+    drawn in low resolution in case the number of points is greater than the
+    number of pixels in the current pad.
+    </td></tr>
 
-   <tr><th valign=top>"]["</th><td>
-   "Cutoff" style. When this option is selected together with
-   H option, the first and last vertical lines of the histogram
-   are not drawn.
-   </td></tr>
+    <tr><th valign=top>"]["</th><td>
+    "Cutoff" style. When this option is selected together with H option, the
+    first and last vertical lines of the histogram are not drawn.
+    </td></tr>
 
-   </table>
-   End_Html */
+    </table>
+    End_Html */
 
    const char *where = "PaintGraphHist";
 
@@ -2294,6 +2295,7 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    Double_t *yline = 0;
    Int_t if1 = 0;
    Int_t if2 = 0;
+   Double_t xb[4], yb[4];
 
    const Int_t kBASEMARKER=8;
    Double_t s2x, s2y, symbolsize, sbase;
@@ -2303,10 +2305,10 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
-   Double_t *theEXlow  = theGraph->GetEXlow();
-   Double_t *theEYlow  = theGraph->GetEYlow();
-   Double_t *theEXhigh = theGraph->GetEXhigh();
-   Double_t *theEYhigh = theGraph->GetEYhigh();
+   Double_t *theEXlow  = theGraph->GetEXlow();  if (!theEXlow) return;
+   Double_t *theEYlow  = theGraph->GetEYlow();  if (!theEYlow) return;
+   Double_t *theEXhigh = theGraph->GetEXhigh(); if (!theEXhigh) return;
+   Double_t *theEYhigh = theGraph->GetEYhigh(); if (!theEYhigh) return;
 
    if (strchr(option,'X') || strchr(option,'x')) {PaintGraphSimple(theGraph, option); return;}
    Bool_t brackets = kFALSE;
@@ -2437,10 +2439,14 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(xl1,y,xl2,y);
             if (endLines) {
-               gPad->PaintLine(xl2,y-ty,xl2,y+ty);
                if (braticks) {
-                  gPad->PaintLine(xl2,y-ty,xl2+tx,y-ty);
-                  gPad->PaintLine(xl2,y+ty,xl2+tx,y+ty);
+                  xb[0] = xl2+tx; yb[0] = y-ty;
+                  xb[1] = xl2;    yb[1] = y-ty;
+                  xb[2] = xl2;    yb[2] = y+ty;
+                  xb[3] = xl2+tx; yb[3] = y+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(xl2,y-ty,xl2,y+ty);
                }
             }
          }
@@ -2453,10 +2459,14 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(xr1,y,xr2,y);
             if (endLines) {
-               gPad->PaintLine(xr2,y-ty,xr2,y+ty);
                if (braticks) {
-                  gPad->PaintLine(xr2,y-ty,xr2-tx,y-ty);
-                  gPad->PaintLine(xr2,y+ty,xr2-tx,y+ty);
+                  xb[0] = xr2-tx; yb[0] = y-ty;
+                  xb[1] = xr2;    yb[1] = y-ty;
+                  xb[2] = xr2;    yb[2] = y+ty;
+                  xb[3] = xr2-tx; yb[3] = y+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(xr2,y-ty,xr2,y+ty);
                }
             }
          }
@@ -2470,10 +2480,14 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(x,yup1,x,yup2);
             if (endLines) {
-               gPad->PaintLine(x-tx,yup2,x+tx,yup2);
                if (braticks) {
-                  gPad->PaintLine(x-tx,yup2,x-tx,yup2-ty);
-                  gPad->PaintLine(x+tx,yup2,x+tx,yup2-ty);
+                  xb[0] = x-tx; yb[0] = yup2-ty;
+                  xb[1] = x-tx; yb[1] = yup2;
+                  xb[2] = x+tx; yb[2] = yup2;
+                  xb[3] = x+tx; yb[3] = yup2-ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(x-tx,yup2,x+tx,yup2);
                }
             }
          }
@@ -2487,10 +2501,14 @@ void TGraphPainter::PaintGraphAsymmErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(x,ylow1,x,ylow2);
             if (endLines) {
-               gPad->PaintLine(x-tx,ylow2,x+tx,ylow2);
                if (braticks) {
-                  gPad->PaintLine(x-tx,ylow2,x-tx,ylow2+ty);
-                  gPad->PaintLine(x+tx,ylow2,x+tx,ylow2+ty);
+                  xb[0] = x-tx; yb[0] = ylow2+ty;
+                  xb[1] = x-tx; yb[1] = ylow2;
+                  xb[2] = x+tx; yb[2] = ylow2;
+                  xb[3] = x+tx; yb[3] = ylow2+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(x-tx,ylow2,x+tx,ylow2);
                }
             }
          }
@@ -2525,6 +2543,7 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    Double_t *yline = 0;
    Int_t if1 = 0;
    Int_t if2 = 0;
+   Double_t xb[4], yb[4];
 
    const Int_t kBASEMARKER=8;
    Double_t s2x, s2y, symbolsize, sbase;
@@ -2535,14 +2554,14 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
-   Double_t *theEXlow  = theGraph->GetEXlow();
-   Double_t *theEYlow  = theGraph->GetEYlow();
-   Double_t *theEXhigh = theGraph->GetEXhigh();
-   Double_t *theEYhigh = theGraph->GetEYhigh();
-   Double_t *theEXlowd  = theGraph->GetEXlowd();
-   Double_t *theEXhighd = theGraph->GetEXhighd();
-   Double_t *theEYlowd  = theGraph->GetEYlowd();
-   Double_t *theEYhighd = theGraph->GetEYhighd();
+   Double_t *theEXlow   = theGraph->GetEXlow();   if (!theEXlow) return;
+   Double_t *theEYlow   = theGraph->GetEYlow();   if (!theEYlow) return;
+   Double_t *theEXhigh  = theGraph->GetEXhigh();  if (!theEXhigh) return;
+   Double_t *theEYhigh  = theGraph->GetEYhigh();  if (!theEYhigh) return;
+   Double_t *theEXlowd  = theGraph->GetEXlowd();  if (!theEXlowd) return;
+   Double_t *theEXhighd = theGraph->GetEXhighd(); if (!theEXhighd) return;
+   Double_t *theEYlowd  = theGraph->GetEYlowd();  if (!theEYlowd) return;
+   Double_t *theEYhighd = theGraph->GetEYhighd(); if (!theEYhighd) return;
 
    if (strchr(option,'X') || strchr(option,'x')) {PaintGraphSimple(theGraph, option); return;}
    Bool_t brackets = kFALSE;
@@ -2677,10 +2696,14 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(xl1,y,xl2,bxl);
             if (endLines) {
-               gPad->PaintLine(xl2,bxl-ty,xl2,bxl+ty);
                if (braticks) {
-                  gPad->PaintLine(xl2,bxl-ty,xl2+tx,bxl-ty);
-                  gPad->PaintLine(xl2,bxl+ty,xl2+tx,bxl+ty);
+                  xb[0] = xl2+tx; yb[0] = bxl-ty;
+                  xb[1] = xl2;    yb[1] = bxl-ty;
+                  xb[2] = xl2;    yb[2] = bxl+ty;
+                  xb[3] = xl2+tx; yb[3] = bxl+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(xl2,bxl-ty,xl2,bxl+ty);
                }
             }
          }
@@ -2693,10 +2716,14 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(xr1,y,xr2,bxh);
             if (endLines) {
-               gPad->PaintLine(xr2,bxh-ty,xr2,bxh+ty);
                if (braticks) {
-                  gPad->PaintLine(xr2,bxh-ty,xr2-tx,bxh-ty);
-                  gPad->PaintLine(xr2,bxh+ty,xr2-tx,bxh+ty);
+                  xb[0] = xr2-tx; yb[0] = bxh-ty;
+                  xb[1] = xr2;    yb[1] = bxh-ty;
+                  xb[2] = xr2;    yb[2] = bxh+ty;
+                  xb[3] = xr2-tx; yb[3] = bxh+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(xr2,bxh-ty,xr2,bxh+ty);
                }
             }
          }
@@ -2710,10 +2737,14 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(x,yup1,byh,yup2);
             if (endLines) {
-               gPad->PaintLine(byh-tx,yup2,byh+tx,yup2);
                if (braticks) {
-                  gPad->PaintLine(byh-tx,yup2,byh-tx,yup2-ty);
-                  gPad->PaintLine(byh+tx,yup2,byh+tx,yup2-ty);
+                  xb[0] = byh-tx; yb[0] = yup2-ty;
+                  xb[1] = byh-tx; yb[1] = yup2;
+                  xb[2] = byh+tx; yb[2] = yup2;
+                  xb[3] = byh+tx; yb[3] = yup2-ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(byh-tx,yup2,byh+tx,yup2);
                }
             }
          }
@@ -2727,10 +2758,14 @@ void TGraphPainter::PaintGraphBentErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(x,ylow1,byl,ylow2);
             if (endLines) {
-               gPad->PaintLine(byl-tx,ylow2,byl+tx,ylow2);
                if (braticks) {
-                  gPad->PaintLine(byl-tx,ylow2,byl-tx,ylow2+ty);
-                  gPad->PaintLine(byl+tx,ylow2,byl+tx,ylow2+ty);
+                  xb[0] = byl-tx; yb[0] = ylow2+ty;
+                  xb[1] = byl-tx; yb[1] = ylow2;
+                  xb[2] = byl+tx; yb[2] = ylow2;
+                  xb[3] = byl+tx; yb[3] = ylow2+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(byl-tx,ylow2,byl+tx,ylow2);
                }
             }
          }
@@ -2765,6 +2800,7 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    Double_t *yline = 0;
    Int_t if1 = 0;
    Int_t if2 = 0;
+   Double_t xb[4], yb[4];
 
    const Int_t kBASEMARKER=8;
    Double_t s2x, s2y, symbolsize, sbase;
@@ -2774,8 +2810,8 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
    Int_t theNpoints = theGraph->GetN();
    Double_t *theX  = theGraph->GetX();
    Double_t *theY  = theGraph->GetY();
-   Double_t *theEX = theGraph->GetEX();
-   Double_t *theEY = theGraph->GetEY();
+   Double_t *theEX = theGraph->GetEX(); if (!theEX) return;
+   Double_t *theEY = theGraph->GetEY(); if (!theEY) return;
 
    if (strchr(option,'X') || strchr(option,'x')) {PaintGraphSimple(theGraph, option); return;}
    Bool_t brackets = kFALSE;
@@ -2908,10 +2944,14 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(xl1,y,xl2,y);
             if (endLines) {
-               gPad->PaintLine(xl2,y-ty,xl2,y+ty);
                if (braticks) {
-                  gPad->PaintLine(xl2,y-ty,xl2+tx,y-ty);
-                  gPad->PaintLine(xl2,y+ty,xl2+tx,y+ty);
+                  xb[0] = xl2+tx; yb[0] = y-ty;
+                  xb[1] = xl2;    yb[1] = y-ty;
+                  xb[2] = xl2;    yb[2] = y+ty;
+                  xb[3] = xl2+tx; yb[3] = y+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(xl2,y-ty,xl2,y+ty);
                }
             }
          }
@@ -2924,10 +2964,14 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(xr1,y,xr2,y);
             if (endLines) {
-               gPad->PaintLine(xr2,y-ty,xr2,y+ty);
                if (braticks) {
-                  gPad->PaintLine(xr2,y-ty,xr2-tx,y-ty);
-                  gPad->PaintLine(xr2,y+ty,xr2-tx,y+ty);
+                  xb[0] = xr2-tx; yb[0] = y-ty;
+                  xb[1] = xr2;    yb[1] = y-ty;
+                  xb[2] = xr2;    yb[2] = y+ty;
+                  xb[3] = xr2-tx; yb[3] = y+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(xr2,y-ty,xr2,y+ty);
                }
             }
          }
@@ -2941,10 +2985,14 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(x,yup1,x,yup2);
             if (endLines) {
-               gPad->PaintLine(x-tx,yup2,x+tx,yup2);
                if (braticks) {
-                  gPad->PaintLine(x-tx,yup2,x-tx,yup2-ty);
-                  gPad->PaintLine(x+tx,yup2,x+tx,yup2-ty);
+                  xb[0] = x-tx; yb[0] = yup2-ty;
+                  xb[1] = x-tx; yb[1] = yup2;
+                  xb[2] = x+tx; yb[2] = yup2;
+                  xb[3] = x+tx; yb[3] = yup2-ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(x-tx,yup2,x+tx,yup2);
                }
             }
          }
@@ -2958,10 +3006,14 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
          } else {
             if (!brackets) gPad->PaintLine(x,ylow1,x,ylow2);
             if (endLines) {
-               gPad->PaintLine(x-tx,ylow2,x+tx,ylow2);
                if (braticks) {
-                  gPad->PaintLine(x-tx,ylow2,x-tx,ylow2+ty);
-                  gPad->PaintLine(x+tx,ylow2,x+tx,ylow2+ty);
+                  xb[0] = x-tx; yb[0] = ylow2+ty;
+                  xb[1] = x-tx; yb[1] = ylow2;
+                  xb[2] = x+tx; yb[2] = ylow2;
+                  xb[3] = x+tx; yb[3] = ylow2+ty;
+                  gPad->PaintPolyLine(4, xb, yb);
+               } else {
+                  gPad->PaintLine(x-tx,ylow2,x+tx,ylow2);
                }
             }
          }
@@ -2975,8 +3027,8 @@ void TGraphPainter::PaintGraphErrors(TGraph *theGraph, Option_t *option)
       Int_t logy = gPad->GetLogy();
       gPad->SetLogx(0);
       gPad->SetLogy(0);
-         if (option4) PaintGraph(theGraph, 2*theNpoints, xline, yline,"FC");
-         else         PaintGraph(theGraph, 2*theNpoints, xline, yline,"F");
+      if (option4) PaintGraph(theGraph, 2*theNpoints, xline, yline,"FC");
+      else         PaintGraph(theGraph, 2*theNpoints, xline, yline,"F");
       gPad->SetLogx(logx);
       gPad->SetLogy(logy);
       delete [] xline;
@@ -3217,7 +3269,8 @@ void TGraphPainter::PaintGraphPolar(TGraph *theGraph, Option_t* options)
    while ((obj = next())) {
       if (!obj->InheritsFrom(TPaveText::Class())) continue;
       title = (TPaveText*)obj;
-      if (strcmp(title->GetName(),"title")) {title = 0; continue;}
+      if (title->GetName())
+         if (strcmp(title->GetName(),"title")) {title = 0; continue;}
       break;
    }
    if (nt == 0 || gStyle->GetOptTitle() <= 0) {
@@ -3429,6 +3482,7 @@ void TGraphPainter::PaintPolyLineHatches(TGraph *theGraph, Int_t n, const Double
       if (x[i]==x[i-1] && y[i]==y[i-1]) continue;
       nf++;
       xf[nf] = rx*(x[i]-rx1)+x1ndc;
+      if (xf[i]==xf[i-1]) xf[i] += 0.000001; // add an epsilon to avoid exact vertical lines.
       yf[nf] = ry*(y[i]-ry1)+y1ndc;
    }
 

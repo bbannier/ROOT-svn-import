@@ -60,15 +60,16 @@ public:
 	     const RooFormulaVar& cutVar, const char* wgtVarName=0) ;  
   
 
-  RooDataSet(RooDataSet const & other, const char* newname=0) ;
+  RooDataSet(RooDataSet const & other, const char* newname=0) ;  
   virtual TObject* Clone(const char* newname=0) const { return new RooDataSet(*this,newname?newname:GetName()) ; }
   virtual ~RooDataSet() ;
 
-  virtual RooAbsData* emptyClone(const char* newName=0, const char* newTitle=0, const RooArgSet* vars=0) const ;
+  virtual RooAbsData* emptyClone(const char* newName=0, const char* newTitle=0, const RooArgSet* vars=0, const char* wgtVarName=0) const ;
 
   RooDataHist* binnedClone(const char* newName=0, const char* newTitle=0) const ;
 
-  virtual Double_t sumEntries(const char* cutSpec=0, const char* cutRange=0) const ;
+  virtual Double_t sumEntries() const ;
+  virtual Double_t sumEntries(const char* cutSpec, const char* cutRange=0) const ;
 
   virtual RooPlot* plotOnXY(RooPlot* frame, 
 			    const RooCmdArg& arg1=RooCmdArg::none(), const RooCmdArg& arg2=RooCmdArg::none(),
@@ -120,14 +121,13 @@ public:
   TH2F* createHistogram(const RooAbsRealLValue& var1, const RooAbsRealLValue& var2, Int_t nx, Int_t ny,
                         const char* cuts="", const char *name="hist") const;
 
-  void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
-  virtual void printArgs(ostream& os) const ;
-  virtual void printValue(ostream& os) const ;
+  void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printArgs(std::ostream& os) const ;
+  virtual void printValue(std::ostream& os) const ;
 
   void SetName(const char *name) ;
   void SetNameTitle(const char *name, const char* title) ;
 
-   static void useFitDataStore(bool on = true); 
 
 protected:
 
@@ -147,7 +147,6 @@ protected:
   
   RooArgSet _varsNoWgt ;   // Vars without weight variable 
   RooRealVar* _wgtVar ;    // Pointer to weight variable (if set) 
-  static bool _gUseFitDataStore;     // use alternative stores based one FitData
 
   static void cleanup() ;
   static char* _poolBegin ; //! Start of memory pool

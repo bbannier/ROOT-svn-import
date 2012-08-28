@@ -117,7 +117,9 @@ void G__IntList_free(G__IntList *body)
 {
   if(!body) return;
   if(body->prev) body->prev->next = (struct G__IntList*)NULL;
-  while(body->next) G__IntList_free(body->next);
+  if (body->next) {
+     G__IntList_free(body->next);
+  }
   free(body);
 }
 
@@ -960,7 +962,6 @@ int G__createtemplateclass(const char *new_name,G__Templatearg *targ
 int G__getobjecttagnum(char *name)
 {
   int result = -1;
-  char *p;
   char *p1;
   char *p2;
   p1 = strrchr(name,'.');
@@ -991,11 +992,9 @@ int G__getobjecttagnum(char *name)
   else {
     if(p1>p2 || !p2) {
       *p1 = 0;
-      p = p1+1;
     }
     else /* if(p2>p1 || !p1) */ {
       *p2 = 0;
-      p = p2+2;
     }
     
     result = G__getobjecttagnum(name);
@@ -1384,7 +1383,6 @@ void G__declare_template()
   struct G__Templatearg *targ;
   int c;
   char *p;
-  int ismemvar=0;
   int isforwarddecl = 0;
   int isfrienddecl = 0;
   int autoload_old = 0;
@@ -1539,7 +1537,6 @@ void G__declare_template()
       return;
     }
 #endif
-    if(';'==c || '='==c) ismemvar=1;
     if('('==c||';'==c
        || '='==c
        ) {
@@ -1571,7 +1568,6 @@ void G__declare_template()
     else if('='==c) {
       /*6'template<class T> A<T> A<T>::v=0;     A<T>::v */
       c = G__fignorestream(";");
-      ismemvar=1;
     }
 #endif
     else { /* if(strncmp(temp,"::",2)==0) { */
@@ -2527,7 +2523,7 @@ int G__instantiate_templateclass(const char *tagnamein, int noerror)
     char *p2 = strchr(G__struct.name[tagnum],'<');
     if(p1 && p2 && (p1-tagname)==(p2-G__struct.name[tagnum]) &&
        0==strncmp(tagname,G__struct.name[tagnum],p1-tagname)) {
-      G__struct.namerange->Remove(G__struct.name[tagnum], tagnum);
+      G__struct.namerange->Remove(G__struct.name[tagnum], tagnum, G__struct.name);
       free((void*)G__struct.name[tagnum]);
       G__struct.name[tagnum] = (char*)malloc(strlen(tagname)+1);
       strcpy(G__struct.name[tagnum],tagname); // Okay we allocated enough space
@@ -3233,7 +3229,6 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
   int fparan,paran;
   int ftype,type;
   int ftagnum,tagnum;
-  int ftypenum,typenum;
   int freftype,reftype,ref;
   /* int fparadefault; */
   int fargtmplt;
@@ -3255,7 +3250,6 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
     /* get template information for simplicity */
     ftype = deftmpfunc->func_para.type[i];
     ftagnum = deftmpfunc->func_para.tagnum[i];
-    ftypenum = deftmpfunc->func_para.typenum[i];
     freftype = deftmpfunc->func_para.reftype[i];
     fargtmplt = deftmpfunc->func_para.argtmplt[i];
     fntarg = deftmpfunc->func_para.ntarg[i];
@@ -3265,7 +3259,6 @@ int G__matchtemplatefunc(G__Definetemplatefunc *deftmpfunc
     /* get parameter information for simplicity */
     type = libp->para[i].type;
     tagnum = libp->para[i].tagnum;
-    typenum = libp->para[i].typenum;
     ref = libp->para[i].ref;
     if(
        'u'==libp->para[i].type ||
@@ -3572,7 +3565,7 @@ int G__templatefunc(G__value *result,const char *funcname,G__param *libp
 
       G__friendtagnum = store_friendtagnum;
 
-      if(pexplicitarg[0]) {
+      if(pexplicitarg != clnull) {
         free((void*)pexplicitarg);
       }
 

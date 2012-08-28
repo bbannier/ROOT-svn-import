@@ -23,11 +23,17 @@ a weighted set of points (eg. for the FFT method).
 The class supports merging.
 */
 
+#ifndef ROO_MSG_SERVICE
+#include "RooMsgService.h"
+#endif
+
 #include "RooStats/SamplingDistribution.h"
 #include "RooNumber.h"
+#include "TMath.h"
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <limits>
 using namespace std ;
 
 /// ClassImp for building the THtml documentation of the class 
@@ -78,6 +84,7 @@ SamplingDistribution::SamplingDistribution(
    const char *name,
    const char *title,
    RooDataSet& dataSet,
+   const char * _columnName,
    const char * varName
 ) : TNamed(name, title) {
    // Creates a SamplingDistribution from a RooDataSet for debugging
@@ -91,14 +98,30 @@ SamplingDistribution::SamplingDistribution(
    // If varName is not given, the first variable will be used.
    // This is useful mostly for RooDataSets with only one observable.
 
-   fVarName = varName;
-   if(fVarName.Length() == 0) {
+   // check there are any meaningful entries in the given dataset
+   if( dataSet.numEntries() == 0  ||  !dataSet.get()->first() ) {
+      if( varName ) fVarName = varName;
+      return;
+   }
+
+   TString columnName( _columnName );
+
+   if( !columnName.Length() ) {
+      columnName.Form( "%s_TS0", name );
+      if( !dataSet.get()->find(columnName) ) {
+         columnName = dataSet.get()->first()->GetName();
+      }
+   }
+   
+   if( !varName ) {
       // no leak. none of these transfers ownership.
-      fVarName = dataSet.get()->first()->GetName();
+      fVarName = (*dataSet.get())[columnName].GetTitle();
+   }else{
+      fVarName = varName;
    }
 
    for(Int_t i=0; i < dataSet.numEntries(); i++) {
-      fSamplingDist.push_back(dataSet.get(i)->getRealValue(fVarName));
+      fSamplingDist.push_back(dataSet.get(i)->getRealValue(columnName));
       fSampleWeights.push_back(dataSet.weight());
    }
 }
@@ -168,6 +191,44 @@ Double_t SamplingDistribution::Integral(Double_t low, Double_t high, Bool_t norm
    return IntegralAndError(error, low,high, normalize, lowClosed, highClosed);
 }
 
+//___________________________________________________________________________
+void SamplingDistribution::SortValues() const { 
+
+   // first need to sort the values and then compute the 
+   // running sum of the weights and of the weight square 
+   // needed later for computing the integral
+
+   unsigned int n = fSamplingDist.size();
+   std::vector<unsigned int> index(n);
+   TMath::SortItr(fSamplingDist.begin(), fSamplingDist.end(), index.begin(), false );
+
+   // compute the empirical CDF and cache in a vector 
+   fSumW = std::vector<double>( n );
+   fSumW2 = std::vector<double>( n );
+
+   std::vector<double> sortedDist( n);
+   std::vector<double> sortedWeights( n);
+
+   for(unsigned int i=0; i <n; i++) {
+      unsigned int j = index[i];
+      if (i > 0) { 
+         fSumW[i] += fSumW[i-1]; 
+         fSumW2[i] += fSumW2[i-1]; 
+      }
+      fSumW[i] += fSampleWeights[j];
+      fSumW2[i] += fSampleWeights[j]*fSampleWeights[j];
+      // sort also the sampling distribution and the weights
+      sortedDist[i] = fSamplingDist[ j] ;
+      sortedWeights[i] = fSampleWeights[ j] ;
+   }
+   
+   // save the sorted distribution
+   fSamplingDist = sortedDist; 
+   fSampleWeights = sortedWeights;
+   
+
+}
+
 //_______________________________________________________
 Double_t SamplingDistribution::IntegralAndError(Double_t & error, Double_t low, Double_t high, Bool_t normalize, Bool_t lowClosed, Bool_t
                                                 highClosed) const
@@ -176,28 +237,58 @@ Double_t SamplingDistribution::IntegralAndError(Double_t & error, Double_t low, 
    // Normalization can be turned off.
    // compute also the error on the integral 
 
-   Double_t sum  = 0;
-   Double_t sum2 = 0; 
-   for(unsigned int i=0; i<fSamplingDist.size(); i++) {
-      double value = fSamplingDist[i];
+   int n = fSamplingDist.size();
+   if( n == 0 ) {
+      error = numeric_limits<Double_t>::infinity();
+      return 0.0;
+   }
 
-      if((lowClosed  ? value >= low  : value > low)  &&
-         (highClosed ? value <= high : value < high))
-      {
-         sum  += fSampleWeights[i];
-         sum2 += fSampleWeights[i] * fSampleWeights[i];
-      }
+   if (int(fSumW.size()) != n) 
+      SortValues();
+
+
+   // use std::upper_bounds returns lower index value
+   int indexLow = -1; 
+   int indexHigh = -1;
+   if (lowClosed)  { 
+      // case of closed intervals want to include lower part 
+      indexLow = std::lower_bound( fSamplingDist.begin(), fSamplingDist.end() , low) - fSamplingDist.begin() -1;
+   } 
+   else { 
+      // case of open intervals
+      indexLow = std::upper_bound( fSamplingDist.begin(), fSamplingDist.end() , low) - fSamplingDist.begin() - 1;
    }
 
 
+   if (highClosed) { 
+      indexHigh = std::upper_bound( fSamplingDist.begin(), fSamplingDist.end() , high) - fSamplingDist.begin() -1;
+   }
+   else { 
+      indexHigh = std::lower_bound( fSamplingDist.begin(), fSamplingDist.end() , high) - fSamplingDist.begin() -1;
+
+   }
+   
+
+   assert(indexLow < n && indexHigh < n);
+
+   double sum = 0; 
+   double sum2 = 0;
+
+   if (indexHigh >= 0) {  
+      sum  = fSumW[indexHigh]; 
+      sum2  = fSumW2[indexHigh]; 
+
+      if (indexLow >= 0) {
+         sum -= fSumW[indexLow];
+         sum2 -= fSumW2[indexLow];
+      }
+   }
 
    if(normalize) {
-      Double_t norm  = 0;
-      Double_t norm2 = 0;
-      for(unsigned int i=0; i<fSamplingDist.size(); i++) {
-         norm += fSampleWeights[i];
-         norm2+= fSampleWeights[i]*fSampleWeights[i];
-      }
+
+      double norm  = fSumW.back();
+      double norm2 = fSumW2.back();
+
       sum /= norm;
 
       // use formula for binomial error in case of weighted events 
@@ -237,9 +328,12 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
 {
    // returns the inverse of the cumulative distribution function, with variations depending on number of samples
 
-  // will need to deal with weights, but for now:
-  std::sort(fSamplingDist.begin(), fSamplingDist.end());
+   if (fSumW.size() != fSamplingDist.size()) 
+      SortValues();
 
+   if (!TMath::AreEqualRel(fSumW.back(), fSumW2.back(), 1.E-6) ) 
+      Warning("InverseCDF","Estimation of Quantiles (InverseCDF) for weighted events is not yet supported");
+      
 
   // Acceptance regions are meant to be inclusive of (1-\alpha) of the probability
   // so the returned values of the CDF should make this easy.
@@ -311,9 +405,11 @@ Double_t SamplingDistribution::InverseCDF(Double_t pvalue,
 Double_t SamplingDistribution::InverseCDFInterpolate(Double_t pvalue)
 {
    // returns the inverse of the cumulative distribution function
+   if (fSumW.size() != fSamplingDist.size()) 
+      SortValues();
 
-  // will need to deal with weights, but for now:
-  std::sort(fSamplingDist.begin(), fSamplingDist.end());
+   if (!TMath::AreEqualRel(fSumW.back(), fSumW2.back(), 1.E-6) ) 
+      Warning("InverseCDFInterpolate","Estimation of Quantiles (InverseCDF) for weighted events is not yet supported.");
 
   // casting will round down, eg. give i
   int nominal = (unsigned int) (pvalue*fSamplingDist.size());

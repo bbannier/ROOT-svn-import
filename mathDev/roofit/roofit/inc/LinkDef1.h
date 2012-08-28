@@ -22,11 +22,13 @@
 #pragma link C++ class RooGamma+ ;
 #pragma link C++ class RooGaussModel+ ;
 #pragma link C++ class RooGExpModel+ ;
+#pragma link C++ class RooHistConstraint+ ;
 #pragma link C++ class RooKeysPdf+ ;
 #pragma link C++ class RooNDKeysPdf+ ;
 #pragma link C++ class RooLandau+ ;
 #pragma link C++ class RooNonCPEigenDecay+ ;
 #pragma link C++ class RooNovosibirsk+ ;
+#pragma link C++ class RooParamHistFunc+ ;
 #pragma link C++ class RooParametricStepFunction+ ;
 #pragma link C++ class RooPolynomial+ ;
 #pragma link C++ class RooUnblindCPAsymVar+ ;
@@ -44,6 +46,8 @@
 #pragma link C++ class RooMomentMorph+ ;
 #pragma link C++ class RooStepFunction+ ;
 #pragma link C++ class RooMultiBinomial+ ;
+#pragma link C++ class Roo1DMomentMorphFunction+ ;
+#pragma link C++ class Roo2DMomentMorphFunction+ ;
 /* #pragma link C++ class std::vector< TVector2 >; */
 /* #pragma link C++ class std::vector< TVector2 >::iterator ; */
 /* #pragma link C++ class RooPolyMorph2D+ ; */

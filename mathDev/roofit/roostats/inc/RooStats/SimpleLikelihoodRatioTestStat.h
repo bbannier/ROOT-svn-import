@@ -30,12 +30,18 @@
 #include "RooNLLVar.h"
 #endif
 
+#ifndef ROO_REAL_VAR
+#include "RooRealVar.h"
+#endif
+
+#ifndef ROOSTATS_TestStatistic
 #include "RooStats/TestStatistic.h"
-#include "RooWorkspace.h"
+#endif
+
 
 namespace RooStats {
 
-class SimpleLikelihoodRatioTestStat : public TestStatistic {
+   class SimpleLikelihoodRatioTestStat : public TestStatistic {
 
    public:
 
@@ -45,6 +51,8 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
       {
          // Constructor for proof. Do not use.
          fFirstEval = true;
+	     fDetailedOutputEnabled = false;
+        fDetailedOutput = NULL;
          fNullParameters = NULL;
          fAltParameters = NULL;
 	 fReuseNll=kFALSE ;
@@ -61,17 +69,20 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
       {
          // Takes null and alternate parameters from PDF. Can be overridden.
 
-         RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
-         w.import(nullPdf, RooFit::RecycleConflictNodes());
-         w.import(altPdf, RooFit::RecycleConflictNodes());
-         RooMsgService::instance().setGlobalKillBelow(msglevel);
+         fNullPdf = &nullPdf;
+         fAltPdf = &altPdf;
 
-         fNullPdf = w.pdf(nullPdf.GetName());
-         fAltPdf = w.pdf(altPdf.GetName());
+         RooArgSet * allNullVars = fNullPdf->getVariables();
+         fNullParameters = (RooArgSet*) allNullVars->snapshot();
+         delete allNullVars; 
 
-         fNullParameters = (RooArgSet*) fNullPdf->getVariables()->snapshot();
-         fAltParameters = (RooArgSet*) fAltPdf->getVariables()->snapshot();
+         RooArgSet * allAltVars = fAltPdf->getVariables();
+         fAltParameters = (RooArgSet*) allAltVars->snapshot();
+         delete allAltVars;
+
+         fDetailedOutputEnabled = false;
+         fDetailedOutput = NULL;
+
 	 fReuseNll=kFALSE ;
 	 fNllNull=NULL ;
 	 fNllAlt=NULL ;
@@ -87,18 +98,15 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
       {
          // Takes null and alternate parameters from values in nullParameters
          // and altParameters. Can be overridden.
-
-         RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-         RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
-         w.import(nullPdf, RooFit::RecycleConflictNodes());
-         w.import(altPdf, RooFit::RecycleConflictNodes());
-         RooMsgService::instance().setGlobalKillBelow(msglevel);
-
-         fNullPdf = w.pdf(nullPdf.GetName());
-         fAltPdf = w.pdf(altPdf.GetName());
+         fNullPdf = &nullPdf;
+         fAltPdf = &altPdf;
 
          fNullParameters = (RooArgSet*) nullParameters.snapshot();
          fAltParameters = (RooArgSet*) altParameters.snapshot();
+
+         fDetailedOutputEnabled = false;
+         fDetailedOutput = NULL;
+
 	 fReuseNll=kFALSE ;
 	 fNllNull=NULL ;
 	 fNllAlt=NULL ;
@@ -110,10 +118,12 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          if (fAltParameters) delete fAltParameters;
 	 if (fNllNull) delete fNllNull ;
 	 if (fNllAlt) delete fNllAlt ;
+	 if (fDetailedOutput) delete fDetailedOutput;
       }
 
-     static void setAlwaysReuseNLL(Bool_t flag) { fAlwaysReuseNll = flag ; }
-     void setReuseNLL(Bool_t flag) { fReuseNll = flag ; }
+      static void SetAlwaysReuseNLL(Bool_t flag);
+
+      void SetReuseNLL(Bool_t flag) { fReuseNll = flag ; }
 
       //_________________________________________
       void SetNullParameters(const RooArgSet& nullParameters) {
@@ -151,57 +161,10 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
       }
 
       //______________________________
-      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI) {
+      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI);
 
-         if (fFirstEval && ParamsAreEqual()) {
-            oocoutW(fNullParameters,InputArguments)
-               << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1."
-               << endl;
-         }
-         fFirstEval = false;
-
-         RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-         RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-
-	 Bool_t reuse = (fReuseNll || fAlwaysReuseNll) ;
-
-	 Bool_t created = kFALSE ;
-	 if (!fNllNull) {
-	   fNllNull = (RooNLLVar*) fNullPdf->createNLL(data, RooFit::CloneData(kFALSE));
-	   created = kTRUE ;
-	 }
-	 if (reuse && !created) {
-	   fNllNull->setData(data, kFALSE) ;
-	 }
-
-         // make sure we set the variables attached to this nll
-         RooArgSet* attachedSet = fNllNull->getVariables();
-         *attachedSet = *fNullParameters;
-         *attachedSet = nullPOI;
-         double nullNLL = fNllNull->getVal();
-
-         delete fNllNull ; fNllNull = NULL ;
-         delete attachedSet;
-
-	 created = kFALSE ;
-	 if (!fNllAlt) {
-	   fNllAlt = (RooNLLVar*) fAltPdf->createNLL(data, RooFit::CloneData(kFALSE));
-	   created = kTRUE ;
-	 }
-	 if (reuse && !created) {
-	   fNllAlt->setData(data, kFALSE) ;
-	 }
-         // make sure we set the variables attached to this nll
-         attachedSet = fNllAlt->getVariables();
-         *attachedSet = *fAltParameters;
-         double altNLL = fNllAlt->getVal();
-
-         delete fNllAlt ; fNllAlt = NULL ;
-         delete attachedSet;
-
-         RooMsgService::instance().setGlobalKillBelow(msglevel);
-         return nullNLL - altNLL;
-      }
+      virtual void EnableDetailedOutput( bool e=true ) { fDetailedOutputEnabled = e; fDetailedOutput = NULL; }
+      virtual const RooArgSet* GetDetailedOutput(void) const { return fDetailedOutput; }
 
       virtual const TString GetVarName() const {
          return "log(L(#mu_{1}) / L(#mu_{0}))";
@@ -209,22 +172,23 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
 
    private:
 
-      RooWorkspace w;
-
       RooAbsPdf* fNullPdf;
       RooAbsPdf* fAltPdf;
       RooArgSet* fNullParameters;
       RooArgSet* fAltParameters;
       bool fFirstEval;
+      
+      bool fDetailedOutputEnabled;
+      RooArgSet* fDetailedOutput; //!
 
-      RooNLLVar* fNllNull ;
-      RooNLLVar* fNllAlt ;
-      static Bool_t fAlwaysReuseNll ;
+      RooAbsReal* fNllNull ;  //! transient copy of the null NLL
+      RooAbsReal* fNllAlt ; //!  transient copy of the alt NLL
+      static Bool_t fgAlwaysReuseNll ;
       Bool_t fReuseNll ;
 
 
    protected:
-   ClassDef(SimpleLikelihoodRatioTestStat,1)
+   ClassDef(SimpleLikelihoodRatioTestStat,2)
 };
 
 }

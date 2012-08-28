@@ -26,6 +26,8 @@
 #include "RooDataHist.h"
 #include "RooHistPdf.h"
 
+using namespace std;
+
 ClassImp(RooCachedReal) 
   ;
 
@@ -51,7 +53,8 @@ RooCachedReal::RooCachedReal(const char *name, const char *title, RooAbsReal& _f
 RooCachedReal::RooCachedReal(const char *name, const char *title, RooAbsReal& _func, const RooArgSet& cacheObs) :
    RooAbsCachedReal(name,title), 
    func("func","func",this,_func),
-   _cacheObs("cacheObs","cacheObs",this,kFALSE,kFALSE)  
+   _cacheObs("cacheObs","cacheObs",this,kFALSE,kFALSE),
+   _useCdfBoundaries(kFALSE)
  { 
    // Constructor taking name, title and function to be cached and
    // fixed choice of variable to cache. To control granularity of the
@@ -103,7 +106,7 @@ void RooCachedReal::fillCacheObject(RooAbsCachedReal::FuncCacheElem& cache) cons
     coutP(Eval) << "RooCachedReal::fillCacheObject(" << GetName() << ") filling multi-dimensional cache (" << cache.hist()->numEntries() << " points)" ;
   }
 
-  func.arg().fillDataHist(cache.hist(),0,1.0,kFALSE,kTRUE) ;
+  func.arg().fillDataHist(cache.hist(),0,1.0,kFALSE,kFALSE) ;
   cache.func()->setCdfBoundaries(_useCdfBoundaries) ;
 
   if (cache.hist()->get()->getSize()>1) {
@@ -147,6 +150,13 @@ RooArgSet* RooCachedReal::actualParameters(const RooArgSet& nset) const
   return func.arg().getParameters(nset) ; 
 }
 
+
+void RooCachedReal::operModeHook() 
+{
+  if (operMode()==ADirty) {
+    ((RooAbsArg*)func.absArg())->setOperMode(ADirty) ;
+  }
+}
 
 
 

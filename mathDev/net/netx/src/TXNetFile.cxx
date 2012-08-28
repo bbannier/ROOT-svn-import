@@ -59,11 +59,9 @@
 #include <XrdClient/XrdClientConst.hh>
 #include <XrdClient/XrdClientEnv.hh>
 #include <XProtocol/XProtocol.hh>
-#ifdef OLDXRDOUC
-#  include "XrdOuc/XrdOucPthread.hh"
-#else
-#  include "XrdSys/XrdSysPthread.hh"
-#endif
+
+#include "XpdSysPthread.h"
+#include "XrdSysToOuc.h"
 
 ClassImp(TXNetFile);
 
@@ -134,7 +132,7 @@ TXNetFile::TXNetFile(const char *url, Option_t *option, const char* ftitle,
    urlnoanchor.SetAnchor("");
 
    // Init mutex used in the asynchronous open machinery
-   fInitMtx = new XrdSysRecMutex();
+   fInitMtx = (void *) new XrdSysRecMutex();
 
    if (gMonitoringWriter) {
       // Init the monitoring system
@@ -159,7 +157,9 @@ TXNetFile::~TXNetFile()
       Close(0);
 
    SafeDelete(fClient);
-   SafeDelete(fInitMtx);
+   XrdSysRecMutex *mtx = (XrdSysRecMutex *)fInitMtx;
+   if (mtx) delete mtx;
+   fInitMtx = 0;
 }
 
 //_____________________________________________________________________________
@@ -922,7 +922,7 @@ void TXNetFile::Init(Bool_t create)
 
    if (fClient) {
       // A mutex serializes this very delicate section
-      XrdSysMutexHelper m(fInitMtx);
+      XrdSysMutexHelper m((XrdSysRecMutex *)fInitMtx);
 
       // To safely perform the Init() we must make sure that
       // the file is successfully open; this call may block

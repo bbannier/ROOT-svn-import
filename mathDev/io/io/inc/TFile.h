@@ -24,6 +24,9 @@
 #ifndef ROOT_TDirectoryFile
 #include "TDirectoryFile.h"
 #endif
+#ifndef ROOT_TMap
+#include "TMap.h"
+#endif
 #ifndef ROOT_TUrl
 #include "TUrl.h"
 #endif
@@ -48,6 +51,9 @@ public:
                            kAOSInProgress = 1, kAOSSuccess = 2 };
    // Open timeout constants
    enum EOpenTimeOut { kInstantTimeout = 0, kEternalTimeout = 999999999 };
+
+   // TTreeCache flushing semantics
+   enum ECacheAction { kDisconnect = 0, kDoNotDisconnect = 1 };
 
 protected:
    Double_t         fSumBuffer;      //Sum of buffer sizes of objects written so far
@@ -76,6 +82,7 @@ protected:
    Long64_t         fOffset;         //!Seek offset cache
    TArchiveFile    *fArchive;        //!Archive file from which we read this file
    TFileCacheRead  *fCacheRead;      //!Pointer to the read cache (if any)
+   TMap            *fCacheReadMap;   //!Pointer to the read cache (if any)
    TFileCacheWrite *fCacheWrite;     //!Pointer to the write cache (if any)
    Long64_t         fArchiveOffset;  //!Offset at which file starts in archive
    Bool_t           fIsArchive;      //!True if this is a pure archive file
@@ -109,6 +116,10 @@ protected:
    Bool_t        FlushWriteCache();
    Int_t         ReadBufferViaCache(char *buf, Int_t len);
    Int_t         WriteBufferViaCache(const char *buf, Int_t len);
+
+   // Creating projects
+   Int_t         MakeProjectParMake(const char *packname, const char *filename);
+   Int_t         MakeProjectParProofInf(const char *packname, const char *proofinfdir);
 
    // Interface to basic system I/O routines
    virtual Int_t    SysOpen(const char *pathname, Int_t flags, UInt_t mode);
@@ -147,7 +158,7 @@ public:
    enum ERelativeTo { kBeg = 0, kCur = 1, kEnd = 2 };
    enum { kStartBigFile  = 2000000000 };
    // File type
-   enum EFileType { kDefault = 0, kLocal = 1, kNet = 2, kWeb = 3, kFile = 4};
+   enum EFileType { kDefault = 0, kLocal = 1, kNet = 2, kWeb = 3, kFile = 4, kMerge = 5};
 
    TFile();
    TFile(const char *fname, Option_t *option="", const char *ftitle="", Int_t compress=1);
@@ -158,15 +169,17 @@ public:
    virtual TKey*       CreateKey(TDirectory* mother, const TObject* obj, const char* name, Int_t bufsize);
    virtual TKey*       CreateKey(TDirectory* mother, const void* obj, const TClass* cl,
                                  const char* name, Int_t bufsize);
+   static TFile      *&CurrentFile(); // Return the current file for this thread.
    virtual void        Delete(const char *namecycle="");
    virtual void        Draw(Option_t *option="");
    virtual void        DrawMap(const char *keys="*",Option_t *option=""); // *MENU*
    virtual void        FillBuffer(char *&buffer);
    virtual void        Flush();
    TArchiveFile       *GetArchive() const { return fArchive; }
+   Long64_t            GetArchiveOffset() const { return fArchiveOffset; }
    Int_t               GetBestBuffer() const;
    virtual Int_t       GetBytesToPrefetch() const;
-   TFileCacheRead     *GetCacheRead() const;
+   TFileCacheRead     *GetCacheRead(TObject* tree = 0) const;
    TFileCacheWrite    *GetCacheWrite() const;
    TArrayC            *GetClassIndex() const { return fClassIndex; }
    Int_t               GetCompressionAlgorithm() const;
@@ -222,7 +235,7 @@ public:
    virtual Int_t       Recover();
    virtual Int_t       ReOpen(Option_t *mode);
    virtual void        Seek(Long64_t offset, ERelativeTo pos = kBeg);
-   virtual void        SetCacheRead(TFileCacheRead *cache);
+   virtual void        SetCacheRead(TFileCacheRead *cache, TObject* tree = 0, ECacheAction action = kDisconnect);
    virtual void        SetCacheWrite(TFileCacheWrite *cache);
    virtual void        SetCompressionAlgorithm(Int_t algorithm=0);
    virtual void        SetCompressionLevel(Int_t level=1);
@@ -287,6 +300,13 @@ public:
    ClassDef(TFile,8)  //ROOT file
 };
 
+#ifndef __CINT__
+#define gFile (TFile::CurrentFile())
+
+#elif defined(__MAKECINT__)
+// To properly handle the use of gFile in header files (in static declarations)
+R__EXTERN TFile   *gFile;
+#endif
 
 //
 // Class holding info about the file being opened
@@ -321,8 +341,6 @@ public:
    Int_t       GetCompress() const { return fCompress; }
    Int_t       GetNetOpt() const { return fNetOpt; }
 };
-
-R__EXTERN TFile   *gFile;
 
 //______________________________________________________________________________
 inline Int_t TFile::GetCompressionAlgorithm() const

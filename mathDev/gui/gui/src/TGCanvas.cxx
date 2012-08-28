@@ -68,6 +68,7 @@
 #include "TKeyMapFile.h"
 #include "TGDNDManager.h"
 #include "Riostream.h"
+#include "RConfigure.h"
 #include <stdlib.h>
 
 
@@ -187,11 +188,17 @@ void TGViewPort::SetHPos(Int_t xpos)
 
    if (-xpos < 0) return;
    else diff = xpos - fX0;
-   UInt_t adiff = TMath::Abs(diff);
 
    if (!diff) return;
 
    fX0 = xpos;
+
+#if defined(R__HAS_COCOA)
+   //In the current version of cocoa back-end, it's very expensive
+   //to read window's pixels, skip "optimization".
+   ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
+#else
+   UInt_t adiff = TMath::Abs(diff);
 
    if (adiff < fWidth) {
       if (diff < 0) {
@@ -208,6 +215,7 @@ void TGViewPort::SetHPos(Int_t xpos)
    } else {
       ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
    }
+#endif
 }
 
 //______________________________________________________________________________
@@ -232,11 +240,17 @@ void TGViewPort::SetVPos(Int_t ypos)
 
    if (-ypos < 0) return;
    else diff = ypos - fY0;
-   UInt_t adiff = TMath::Abs(diff);
 
    if (!diff) return;
 
    fY0 = ypos;
+
+#if defined(R__HAS_COCOA)
+   //In the current version of cocoa back-end, it's very expensive
+   //to read window's pixels, skip "optimization".
+   ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
+#else
+   UInt_t adiff = TMath::Abs(diff);
 
    if (adiff < fHeight) {
       if (diff < 0) {
@@ -253,6 +267,7 @@ void TGViewPort::SetVPos(Int_t ypos)
    } else {
       ((TGContainer*)fContainer)->DrawRegion(0, 0, fWidth, fHeight);
    }
+#endif
 }
 
 //______________________________________________________________________________
@@ -403,7 +418,7 @@ void TGContainer::Layout()
    TGLayoutManager *lm = GetLayoutManager();
 
    // clear content if positions of subframes changed after layout
-   if (lm->IsModified()) ClearViewPort();
+   if (lm && lm->IsModified()) ClearViewPort();
 }
 
 //______________________________________________________________________________
@@ -777,13 +792,16 @@ void TGContainer::SetPageDimension(UInt_t w, UInt_t h)
 void TGContainer::DoRedraw()
 {
    // Redraw content of container in the viewport region.
-
+#ifdef R__HAS_COCOA
+   DrawRegion(0, 0, GetWidth(), GetHeight());
+#else
    if (!fExposedRegion.IsEmpty()) {
       DrawRegion(fExposedRegion.fX, fExposedRegion.fY, 
                  fExposedRegion.fW, fExposedRegion.fH);
       
       fExposedRegion.Empty();
    }
+#endif
 }
 
 //______________________________________________________________________________
@@ -1028,8 +1046,10 @@ const TGPicture *TGContainer::GetObjPicture(TGFrame *f)
          } else {
             cl = obj->IsA();
          }
-         const char *name = obj->GetIconName() ? obj->GetIconName() : cl->GetName();
-         iconname = (strlen(name) > 0) ? name : obj->GetName();
+         const char *name = obj->GetIconName();
+         if (((name == 0) || (strlen(name) == 0)) && (cl != 0))
+            name = cl->GetName();
+         iconname = ((name != 0) && (strlen(name) > 0)) ? name : obj->GetName();
 
          if (obj->IsA()->InheritsFrom("TGeoVolume")) {
             iconname = obj->GetIconName() ? obj->GetIconName() : obj->IsA()->GetName();
@@ -1216,7 +1236,8 @@ Bool_t TGContainer::HandleMotion(Event_t *event)
          if (!gDNDManager->IsDragging()) {
             if (fBdown && ((abs(event->fX - fXDND) > 2) || (abs(event->fY - fYDND) > 2))) {
                if (gDNDManager && over_frame->IsDNDSource()) {
-                  SetDragPixmap(GetObjPicture(over_frame));
+                  const TGPicture *drag_pic = GetObjPicture(over_frame);
+                  if (drag_pic) SetDragPixmap(drag_pic);
                   gDNDManager->StartDrag(over_frame, event->fXRoot, event->fYRoot);
                }
             }

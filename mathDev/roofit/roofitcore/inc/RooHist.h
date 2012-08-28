@@ -53,10 +53,10 @@ public:
   // add a datapoint for the efficiency (n1)/(n1+n2), using a sum-of-weights error
   void addEfficiencyBinWithError(Axis_t binCenter, Double_t n1, Double_t n2, Double_t en1, Double_t en2, Double_t binWidth= 0, Double_t xErrorFrac=1.0, Double_t scaleFactor=1.0);
 
-  virtual void printName(ostream& os) const ;
-  virtual void printTitle(ostream& os) const ;
-  virtual void printClassName(ostream& os) const ;
-  virtual void printMultiline(ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent= "") const;
+  virtual void printName(std::ostream& os) const ;
+  virtual void printTitle(std::ostream& os) const ;
+  virtual void printClassName(std::ostream& os) const ;
+  virtual void printMultiline(std::ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent= "") const;
 
   inline virtual void Print(Option_t *options= 0) const {
     // Printing interface
@@ -71,8 +71,9 @@ public:
 
   Bool_t hasIdenticalBinning(const RooHist& other) const ;
 
-  RooHist* makeResidHist(const RooCurve& curve,bool normalize=false) const;
-  RooHist* makePullHist(const RooCurve& curve) const {return makeResidHist(curve,false); }
+  RooHist* makeResidHist(const RooCurve& curve,bool normalize=false, bool useAverage=false) const;
+  RooHist* makePullHist(const RooCurve& curve, bool useAverage=false) const 
+    {return makeResidHist(curve,true,useAverage); }
 
 
   Bool_t isIdentical(const RooHist& other, Double_t tol=1e-6) const ;

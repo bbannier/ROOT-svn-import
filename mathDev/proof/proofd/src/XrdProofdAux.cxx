@@ -22,14 +22,9 @@
 
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSys/XrdSysPriv.hh"
-#ifdef OLDXRDOUC
-#  include "XrdOuc/XrdOucError.hh"
-#  include "XrdOuc/XrdOucLogger.hh"
-#else
-#  include "XrdSys/XrdSysError.hh"
-#  include "XrdSys/XrdSysLogger.hh"
-#endif
 
+#include "XpdSysError.h"
+#include "XpdSysLogger.h"
 #include "XrdProofdAux.h"
 #include "XrdProofdConfig.h"
 #include "XrdProofdProtocol.h"
@@ -55,7 +50,7 @@ const char *XrdProofdAux::AdminMsgType(int type)
      "QuerySessions", "SessionTag", "SessionAlias", "GetWorkers", "QueryWorkers",
      "CleanupSessions", "QueryLogPaths", "ReadBuffer", "QueryROOTVersions",
      "ROOTVersion", "GroupProperties", "SendMsgToUser", "ReleaseWorker",
-     "Exec", "GetFile", "PutFile", "CpFile"};
+     "Exec", "GetFile", "PutFile", "CpFile", "QueryMssUrl"};
 
    if (type < 1000 || type >= kUndef) {
       return msgtypes[0];
@@ -400,7 +395,7 @@ void XrdProofdAux::LogEmsgToFile(const char *flog, const char *emsg, const char 
    if (flog && strlen(flog)) {
       // Open the file in write-only, append mode
       int logfd = open(flog, O_WRONLY|O_APPEND, 0644);
-      if (logfd > 0) {
+      if (logfd >= 0) {
          fcntl(logfd, F_SETFD, FD_CLOEXEC);
          // Attach a logger to the file
          XrdSysLogger logger(logfd, 0);
@@ -436,43 +431,18 @@ int XrdProofdAux::AssertDir(const char *path, XrdProofUI ui, bool changeown)
 
    if (!path || strlen(path) <= 0)
       return -1;
-
-   struct stat st;
-   if (stat(path,&st) != 0) {
-      if (errno == ENOENT) {
-
-         {  XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
-            if (XpdBadPGuard(pGuard, ui.fUid) && changeown) {
-               TRACE(XERR, "could not get privileges to create dir");
-               return -1;
-            }
-
-            if (mkdir(path, 0755) != 0) {
-               TRACE(XERR, "unable to create dir: "<<path<<" (errno: "<<errno<<")");
-               return -1;
-            }
-         }
-         if (stat(path,&st) != 0) {
-            TRACE(XERR, "unable to stat dir: "<<path<<" (errno: "<<errno<<")");
-            return -1;
-         }
-      } else {
-         // Failure: stop
-         TRACE(XERR, "unable to stat dir: "<<path<<" (errno: "<<errno<<")");
-         return -1;
-      }
+   XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
+   if (XpdBadPGuard(pGuard, ui.fUid) && changeown) {
+      TRACE(XERR, "could not get privileges to change ownership");
+      return -1;
    }
 
-   // Make sure the ownership is right
-   if (changeown &&
-      ((int) st.st_uid != ui.fUid || (int) st.st_gid != ui.fGid)) {
+   if (mkdir(path, 0755) != 0 && (errno != EEXIST)) {
+      TRACE(XERR, "unable to create dir: "<<path<<" (errno: "<<errno<<")");
+      return -1;
+   }
 
-      XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
-      if (XpdBadPGuard(pGuard, ui.fUid)) {
-         TRACE(XERR, "could not get privileges to change ownership");
-         return -1;
-      }
-
+   if (changeown) {
       // Set ownership of the path to the client
       if (chown(path, ui.fUid, ui.fGid) == -1) {
          TRACE(XERR, "cannot set user ownership on path (errno: "<<errno<<")");
@@ -540,22 +510,9 @@ int XrdProofdAux::ChangeOwn(const char *path, XrdProofUI ui)
 
    if (!path || strlen(path) <= 0)
       return -1;
-
-   struct stat st;
-   if (stat(path,&st) != 0) {
-      // Failure: stop
-      TRACE(XERR, "unable to stat path: "<<path<<" (errno: "<<errno<<")");
-      return -1;
-   }
-
-   // If is a directory apply this on it
-   if (S_ISDIR(st.st_mode)) {
+   DIR *dir = opendir(path);
+   if (dir) {
       // Loop over the dir
-      DIR *dir = opendir(path);
-      if (!dir) {
-         TRACE(XERR,"cannot open "<<path<< "- errno: "<< errno);
-         return -1;
-      }
       XrdOucString proot(path);
       if (!proot.endswith('/')) proot += "/";
 
@@ -565,35 +522,22 @@ int XrdProofdAux::ChangeOwn(const char *path, XrdProofUI ui)
          XrdOucString fn(proot);
          fn += ent->d_name;
 
-         struct stat xst;
-         if (stat(fn.c_str(),&xst) == 0) {
-            // If is a directory apply this on it
-            if (S_ISDIR(xst.st_mode)) {
-               if (XrdProofdAux::ChangeOwn(fn.c_str(), ui) != 0) {
-                  TRACE(XERR, "problems changing recursively ownership of: "<<fn);
-                  return -1;
-               }
-            } else {
-               // Get the privileges, if needed
-               XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
-               if (XpdBadPGuard(pGuard, ui.fUid)) {
-                  TRACE(XERR, "could not get privileges to change ownership");
-                  return -1;
-               }
-               // Set ownership of the path to the client
-               if (chown(fn.c_str(), ui.fUid, ui.fGid) == -1) {
-                  TRACE(XERR, "cannot set user ownership on path (errno: "<<errno<<")");
-                  return -1;
-               }
-            }
-         } else {
-            TRACE(XERR, "unable to stat dir: "<<fn<<" (errno: "<<errno<<")");
+         // Apply recursively
+         if (XrdProofdAux::ChangeOwn(fn.c_str(), ui) != 0) {
+            TRACE(XERR, "problems changing recursively ownership of: "<<fn);
+            closedir(dir);
+            return -1;
          }
       }
       // Close the directory
       closedir(dir);
 
-   } else if (((int) st.st_uid != ui.fUid) || ((int) st.st_gid != ui.fGid)) {
+   } else {
+      // If it was a directory and opening failed, we fail
+      if (errno != 0 && (errno != ENOTDIR)) {
+         TRACE(XERR,"cannot open "<<path<< "- errno: "<< errno);
+         return -1;
+      }
       // Get the privileges, if needed
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, ui.fUid)) {
@@ -606,7 +550,6 @@ int XrdProofdAux::ChangeOwn(const char *path, XrdProofUI ui)
          return -1;
       }
    }
-
    // We are done
    return 0;
 }
@@ -669,11 +612,13 @@ int XrdProofdAux::ChangeMod(const char *path, unsigned int mode)
                XrdSysPrivGuard pGuard(xst.st_uid, xst.st_gid);
                if (XpdBadPGuard(pGuard, xst.st_uid)) {
                   TRACE(XERR, "could not get privileges to change ownership");
+                  closedir(dir);
                   return -1;
                }
                // Set the permission mode of the path
                if (chmod(fn.c_str(), mode) == -1) {
                   TRACE(XERR, "cannot change permissions on path (errno: "<<errno<<")");
+                  closedir(dir);
                   return -1;
                }
             }
@@ -681,6 +626,7 @@ int XrdProofdAux::ChangeMod(const char *path, unsigned int mode)
             if (S_ISDIR(xst.st_mode)) {
                if (XrdProofdAux::ChangeMod(fn.c_str(), mode) != 0) {
                   TRACE(XERR, "problems changing recursively permissions of: "<<fn);
+                  closedir(dir);
                   return -1;
                }
             }
@@ -709,17 +655,17 @@ int XrdProofdAux::ChangeToDir(const char *dir, XrdProofUI ui, bool changeown)
    if (!dir || strlen(dir) <= 0)
       return -1;
 
-   if (changeown && (int) geteuid() != ui.fUid) {
+   if (changeown && ((int) geteuid() != ui.fUid || (int) getegid() != ui.fGid)) {
 
       XrdSysPrivGuard pGuard((uid_t)0, (gid_t)0);
       if (XpdBadPGuard(pGuard, ui.fUid)) {
-         TRACE(XERR, changeown << ": could not get privileges; uid req:"<< ui.fUid <<
-                     ", euid: " << geteuid() <<", uid:"<<getuid() << "; errno: "<<errno);
+         TRACE(XERR, changeown << ": could not get privileges; {uid,gid} req: {"<< ui.fUid <<","<<ui.fGid<<
+                     "}, {euid,egid}: {" << geteuid() <<","<<getegid()<<"}, {uid,gid}: {"<<getuid()<<","<<getgid() << "}; errno: "<<errno);
          return -1;
       }
       if (chdir(dir) == -1) {
-         TRACE(XERR, changeown << ": can't change directory to "<< dir << " ui.fUid: " << ui.fUid <<
-                     ", euid: " << geteuid() <<", uid:"<<getuid()<<"; errno: "<<errno);
+         TRACE(XERR, changeown << ": can't change directory to '"<< dir<<"'; {ui.fUid,ui.fGid}: {"<< ui.fUid <<","<<ui.fGid<<
+                     "}, {euid,egid}: {" << geteuid() <<","<<getegid()<<"}, {uid,gid}: {"<<getuid()<<","<<getgid() << "}; errno: "<<errno);
          return -1;
       }
    } else {
@@ -1156,8 +1102,10 @@ int XrdProofdAux::GetIDFromPath(const char *path, XrdOucString &emsg)
    FILE *fid = fopen(path, "r");
    if (fid) {
       char line[64];
-      if (fgets(line, sizeof(line), fid))
-         sscanf(line, "%d", &id);
+      if (fgets(line, sizeof(line), fid)) {
+         if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = 0;
+         id = atoi(line);
+      }
       fclose(fid);
    } else if (errno != ENOENT) {
       XPDFORM(emsg, "GetIDFromPath: error reading id from: %s (errno: %d)",
@@ -1252,6 +1200,7 @@ int XrdProofdAux::VerifyProcessByID(int pid, const char *pname)
       } else {
          XPDFORM(emsg, "cannot open %s; errno: %d", fn.c_str(), errno);
          TRACE(XERR, emsg);
+         close(ffd);
          return -1;
       }
    }
@@ -1460,6 +1409,7 @@ int XrdProofdAux::MvDir(const char *oldpath, const char *newpath)
    if (stat(newpath, &st) != 0 || !S_ISDIR(st.st_mode)) {
       TRACE(XERR, "destination dir "<<newpath<<
                   " does not exist or is not a directory; errno: "<<errno);
+      closedir(dir);
       return -ENOENT;
    }
 
@@ -1482,18 +1432,10 @@ int XrdProofdAux::MvDir(const char *oldpath, const char *newpath)
       if (S_ISDIR(st.st_mode)) {
          mode_t srcmode = st.st_mode;
          // Create dest sub-dir
-         if (stat(dstentry.c_str(), &st) == 0) {
-            if (!S_ISDIR(st.st_mode)) {
-               TRACE(XERR, "destination path already exists and is not a directory: "<<dstentry);
-               rc = -ENOTDIR;
-               break;
-            }
-         } else {
-            if (mkdir(dstentry.c_str(), srcmode) != 0) {
-               TRACE(XERR, "cannot create entry "<<dstentry<<" ; error: "<<errno);
-               rc = -errno;
-               break;
-            }
+         if (mkdir(dstentry.c_str(), srcmode) != 0 && (errno != EEXIST)) {
+            TRACE(XERR, "cannot create entry "<<dstentry<<" ; error: "<<errno);
+            rc = -errno;
+            break;
          }
          if ((rc = XrdProofdAux::MvDir(srcentry.c_str(), dstentry.c_str())) != 0) {
             TRACE(XERR, "problems moving "<<srcentry<<" to "<<dstentry<<"; error: "<<-rc);
@@ -1533,7 +1475,7 @@ int XrdProofdAux::Touch(const char *path, int opt)
       struct stat st;
       if (stat(path, &st) != 0)
          return -errno;
-      struct utimbuf ut;
+      struct utimbuf ut = {0,0};
       if (opt == 1) {
          ut.actime = time(0);
          ut.modtime = st.st_mtime;
@@ -1581,7 +1523,7 @@ int XrdProofdAux::ReadMsg(int fd, XrdOucString &msg)
             msg += buf;
          }
          // Update counters
-         len -= nr;
+         len = (nr >= len) ? 0 : len - nr;
       } while (nr > 0 && len > 0);
 
       TRACE(HDBG,fd<<": buf: "<<buf);
@@ -1637,7 +1579,8 @@ int XrdProofdAux::ParsePidPath(const char *path,
       }
    }
 
-   TRACE(HDBG,"path: "<<path<<" --> before: '"<<before<<"', pid: "<<pid<<", after: '"<<after<<"'");
+   TRACE(HDBG,"path: "<<(path ? path : "<nul>")<<" --> before: '"<<before
+                      <<"', pid: "<<pid<<", after: '"<<after<<"'");
 
    // Done
    return pid;
@@ -2318,19 +2261,19 @@ void XrdProofdAux::Form(XrdOucString &s, const char *fmt,
          }
       } else if (s[k+1] == 'd') {
          if (nii < ni) {
-            sprintf(si,"%d", ii[nii++]);
+            snprintf(si, 32, "%d", ii[nii++]);
             s.replace("%d", si, k, k + 1);
             replaced = 1;
          }
       } else if (s[k+1] == 'u') {
          if (nui < nu) {
-            sprintf(si,"%u", ui);
+            snprintf(si, 32, "%u", ui);
             s.replace("%u", si, k, k + 1);
             replaced = 1;
          }
       } else if (s[k+1] == 'p') {
          if (npp < np) {
-            sprintf(sp,"%p", pp[npp++]);
+            snprintf(sp, 32, "%p", pp[npp++]);
             s.replace("%p", sp, k, k + 1);
             replaced = 1;
          }

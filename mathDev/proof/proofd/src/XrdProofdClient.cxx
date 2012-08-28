@@ -34,7 +34,7 @@
 
 //__________________________________________________________________________
 XrdProofdClient::XrdProofdClient(XrdProofUI ui, bool master, bool changeown,
-                                 XrdSysError *, const char *adminpath)
+                                 XrdSysError *, const char *adminpath, int rtime)
                 : fSandbox(ui, master, changeown)
 {
    // Constructor
@@ -47,6 +47,8 @@ XrdProofdClient::XrdProofdClient(XrdProofUI ui, bool master, bool changeown,
    fIsValid = 0;
    fAskedToTouch = 0;
    fChangeOwn = changeown;
+   fLauncher = 0;
+   fReconnectTimeOut = rtime;
 
    // Make sure the admin path exists
    XPDFORM(fAdminPath, "%s/%s.%s", adminpath, ui.fUser.c_str(), ui.fGroup.c_str());
@@ -63,7 +65,7 @@ XrdProofdClient::XrdProofdClient(XrdProofUI ui, bool master, bool changeown,
    // We must have a valid sandbox
    if (fSandbox.IsValid()) fIsValid = 1;
    
-   // The session launcher (we may have a plugin here, on day ...)
+   // The session launcher (we may have a plugin here, one day ...)
    fLauncher = new XrdProofdLauncher(this);
 }
 
@@ -72,6 +74,7 @@ XrdProofdClient::~XrdProofdClient()
 {
    // Destructor
 
+   SafeDel(fLauncher);
 }
 
 //__________________________________________________________________________
@@ -102,6 +105,11 @@ int XrdProofdClient::GetClientID(XrdProofdProtocol *p)
       // Search for free places in the existing vector
       for (ic = 0; ic < (int)fClients.size() ; ic++) {
          if (fClients[ic] && !fClients[ic]->IsValid()) {
+            int rtime = fClients[ic]->ResetTime();
+            if ((rtime >= 0) && ((time(0) - rtime) < fReconnectTimeOut)) {
+               // The session using this cid disconnected too recently, do not reuse yet
+               continue;
+            }
             cid = fClients[ic];
             cid->Reset();
             break;
@@ -245,7 +253,6 @@ XrdProofdProofServ *XrdProofdClient::GetServObj(int id)
    }
    TRACE(DBG, "size = "<<siz<<"; capacity = "<<cap);
 
-   bool newcap = 0;
    {  XrdSysMutexHelper mh(fMutex);
       if (!fIsValid) return xps;
       if (id < (int)fProofServs.size()) {
@@ -259,7 +266,6 @@ XrdProofdProofServ *XrdProofdClient::GetServObj(int id)
             newsz = (id < newsz) ? newsz : id+1;
             fProofServs.reserve(newsz);
             cap = fProofServs.capacity();
-            newcap = 1;
          }
          int nnew = id - fProofServs.size() + 1;
          while (nnew--)
@@ -267,8 +273,10 @@ XrdProofdProofServ *XrdProofdClient::GetServObj(int id)
          xps = fProofServs[id];
       }
    }
-   xps->SetID(id);
-   xps->SetValid();
+   if (xps) {
+      xps->SetID(id);
+      xps->SetValid();
+   }
    if (TRACING(DBG)) {
       {  XrdSysMutexHelper mh(fMutex);
          if (fIsValid) {
@@ -386,7 +394,7 @@ int XrdProofdClient::ResetClientSlot(int ic)
 //______________________________________________________________________________
 XrdProofdProtocol *XrdProofdClient::GetProtocol(int ic)
 {
-   // Reset slot at 'ic'
+   // Return protocol attached to client slot at 'ic'
    XPDLOC(CMGR, "Client::GetProtocol")
 
    TRACE(DBG, "enter: ic: " << ic);
@@ -622,6 +630,24 @@ XrdOucString XrdProofdClient::ExportSessions(XrdOucString &emsg,
 
    // Over
    return out;
+}
+
+//______________________________________________________________________________
+bool XrdProofdClient::Running()
+{
+   // Check status of attached proofservs
+
+   XrdSysMutexHelper mh(fMutex);
+
+   int is = 0; bool running = false;
+   XrdProofdProofServ *s = 0;
+   for (is = 0; is < (int) fProofServs.size(); is++) {
+      if ((s = fProofServs.at(is)) && s->IsValid()) {
+	 if(!running && (s->Status()!=kXPD_idle)) running = true;
+      }
+   }
+
+   return running;
 }
 
 //______________________________________________________________________________

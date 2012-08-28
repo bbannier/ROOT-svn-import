@@ -39,15 +39,14 @@
 #include "XrdClient/XrdClientEnv.hh"
 #include "XProtocol/XProtocol.hh"
 
+#include "XrdProofdXrdVers.h"
 
 ClassImp(TXNetSystem);
 
 Bool_t TXNetSystem::fgInitDone = kFALSE;
 Bool_t TXNetSystem::fgRootdBC = kTRUE;
-#ifndef OLDXRDLOCATE
 THashList TXNetSystem::fgAddrFQDN;
 THashList TXNetSystem::fgAdminHash;
-#endif
 
 //_____________________________________________________________________________
 TXNetSystem::TXNetSystem(Bool_t owner) : TNetSystem(owner)
@@ -75,10 +74,8 @@ TXNetSystem::TXNetSystem(const char *url, Bool_t owner) : TNetSystem(owner)
    fDirListValid = kFALSE;
    fUrl = url;
 
-#ifndef OLDXRDLOCATE
    fgAddrFQDN.SetOwner();
    fgAdminHash.SetOwner();
-#endif
 
    // Set debug level
    EnvPutInt(NAME_DEBUG, gEnv->GetValue("XNet.Debug", -1));
@@ -108,11 +105,7 @@ XrdClientAdmin *TXNetSystem::Connect(const char *url)
    TString dummy = url;
    dummy += "/dummy";
 
-#ifndef OLDXRDLOCATE
    XrdClientAdmin *cadm = TXNetSystem::GetClientAdmin(dummy);
-#else
-   XrdClientAdmin *cadm = XrdClientAdmin::GetClientAdmin(dummy);
-#endif
 
    if (!cadm) {
       Error("Connect","fatal error: new object creation failed.");
@@ -210,11 +203,6 @@ void TXNetSystem::InitXrdClient()
 
    // Init vars with default debug level -1, so we do not get warnings
    TXNetFile::SetEnv();
-
-#if defined(OLDXRDLOCATE) && !defined(OLDXRDOUC)
-   // Use optimized connections
-   XrdClientAdmin::SetAdminConn();
-#endif
 
    // Only once
    fgInitDone = kTRUE;
@@ -653,7 +641,6 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
       TXNetSystemConnectGuard cg(this, path);
       if (cg.IsValid()) {
 
-#ifndef OLDXRDLOCATE
          // Extract the directory name
          XrdClientLocate_Info li;
          TString edir = TUrl(path).GetFile();
@@ -683,19 +670,6 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
             eurl = u.GetUrl();
             return 0;
          }
-#else
-         // Extract the directory name
-         XrdClientUrlInfo ui;
-         TString edir = TUrl(path).GetFile();
-
-         if (cg.ClientAdmin()->Locate((kXR_char *)edir.Data(), ui, kTRUE)) {
-            TUrl u(path);
-            u.SetHost(ui.Host.c_str());
-            u.SetPort(ui.Port);
-            eurl = u.GetUrl();
-            return 0;
-         }
-#endif
          cg.NotifyLastError();
       }
       return 1;
@@ -706,7 +680,6 @@ Int_t TXNetSystem::Locate(const char *path, TString &eurl)
    return -1;
 }
 
-#ifndef OLDXRDLOCATE
 //_____________________________________________________________________________
 XrdClientAdmin *TXNetSystem::GetClientAdmin(const char *url)
 {
@@ -760,7 +733,6 @@ TXrdClientAdminWrapper::~TXrdClientAdminWrapper()
 
    SafeDelete(fXCA);
 }
-#endif
 
 //
 // Guard methods

@@ -67,6 +67,7 @@ TRootContextMenu::TRootContextMenu(TContextMenu *c, const char *)
    fDialog  = 0;
    fTrash = new TList;
 
+   AddInput(kButtonPressMask | kButtonReleaseMask);
    gROOT->GetListOfCleanups()->Add(this);
    // Context menu handles its own messages
    Associate(this);
@@ -301,7 +302,7 @@ void TRootContextMenu::CreateMenu(TObject *object)
                               TIter nxt(m->GetOptions());
                               TOptionListItem *it;
                               while ((it = (TOptionListItem*) nxt())) {
-                                 char *name = it->fOptName;
+                                 const char *name = it->fOptName;
                                  Long_t val = it->fValue;
 
                                  TToggle *t = new TToggle;
@@ -352,13 +353,15 @@ void TRootContextMenu::CreateMenu(TObject *object)
                if (menuItem->IsToggle()) {
                   TMethod* method =
                         object->IsA()->GetMethodWithPrototype(menuItem->GetFunctionName(),menuItem->GetArgs());
-                  TToggle *t = new TToggle;
-                  t->SetToggledObject(object, method);
-                  t->SetOnValue(1);
-                  fTrash->Add(t);
+                  if (method) {
+                     TToggle *t = new TToggle;
+                     t->SetToggledObject(object, method);
+                     t->SetOnValue(1);
+                     fTrash->Add(t);
 
-                  AddEntry(method->GetName(), toggle++, t);
-                  if (t->GetState()) CheckEntry(toggle-1);
+                     AddEntry(method->GetName(), toggle++, t);
+                     if (t->GetState()) CheckEntry(toggle-1);
+                  }
                } else {
                   const char* menuItemTitle = menuItem->GetTitle();
                   if (strlen(menuItemTitle)==0) menuItemTitle = menuItem->GetFunctionName();
@@ -401,6 +404,8 @@ void TRootContextMenu::Dialog(TObject *object, TFunction *function)
    if (fContextMenu->GetSelectedCanvas()) {
       TCanvas *c = (TCanvas *) fContextMenu->GetSelectedCanvas();
       // Embedded canvas has no canvasimp that is a TGFrame
+      // coverity[returned_null]
+      // coverity[dereference]
       if (c->GetCanvasImp()->IsA()->InheritsFrom(TGFrame::Class())) {
          w = fClient->GetWindowById(gVirtualX->GetWindowID(c->GetCanvasID()));
          if (!w) w = (TRootCanvas *) c->GetCanvasImp();
@@ -552,7 +557,8 @@ Bool_t TRootContextMenu::HandleButton(Event_t *event)
    // Handle button event in the context menu.
 
    int   id;
-   void *ud;
+   void *ud = 0;
+
    if ((event->fType == kButtonRelease) && (event->fX >= (Int_t)(fMenuWidth-15)) &&
        (event->fX <= (Int_t)fMenuWidth)) {
       id = EndMenu(ud);
@@ -637,7 +643,8 @@ void TRootContextMenu::OnlineHelp()
    TString cmd;
    TString url = gEnv->GetValue("Browser.StartUrl", "http://root.cern.ch/root/html/");
    if (url.EndsWith(".html", TString::kIgnoreCase)) {
-      url.Remove(url.Last('/'));
+      if (url.Last('/') != kNPOS)
+         url.Remove(url.Last('/'));
    }
    if (!url.EndsWith("/")) {
       url += '/';

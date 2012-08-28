@@ -22,8 +22,8 @@
 #include "TRegexp.h"
 #include "TSystem.h"
 #include "TVirtualMutex.h"
+#include "TThreadSlots.h"
 
-TDirectory    *gDirectory;      //Pointer to current directory in memory
 Bool_t TDirectory::fgAddDirectory = kTRUE;
 
 const Int_t  kMaxLen = 2048;
@@ -258,7 +258,7 @@ TObject *TDirectory::CloneObject(const TObject *obj, Bool_t autoadd /* = kTRUE *
    //create a buffer where the object will be streamed
    //We are forced to go via the I/O package (ie TBufferFile).
    //Invoking TBufferFile via CINT will automatically load the I/O library
-   TBuffer *buffer = (TBuffer*)gROOT->ProcessLine(Form("new TBufferFile(%d,10000);",TBuffer::kWrite));
+   TBuffer *buffer = (TBuffer*)gROOT->ProcessLine("new TBufferFile(TBuffer::kWrite,10000);");
    if (!buffer) return 0;
    buffer->MapObject(obj);  //register obj in map to handle self reference
    const_cast<TObject*>(obj)->Streamer(*buffer);
@@ -282,6 +282,17 @@ TObject *TDirectory::CloneObject(const TObject *obj, Bool_t autoadd /* = kTRUE *
    return newobj;
 }
 
+//______________________________________________________________________________
+TDirectory *&TDirectory::CurrentDirectory()
+{
+   // Return the current directory for the current thread.
+   
+   static TDirectory *currentDirectory = 0;
+   if (!gThreadTsd)
+      return currentDirectory;
+   else
+      return *(TDirectory**)(*gThreadTsd)(&currentDirectory,ROOT::kDirectoryThreadSlot);
+}
 
 //______________________________________________________________________________
 TDirectory *TDirectory::GetDirectory(const char *apath,
@@ -1017,19 +1028,21 @@ Int_t TDirectory::SaveObjectAs(const TObject *obj, const char *filename, Option_
    // By default a message is printed. Use option "q" to not print the message.
 
    if (!obj) return 0;
-   if (!gDirectory) return 0;
-   TDirectory *dirsav = gDirectory;
+   Int_t nbytes = 0;
    TString fname = filename;
    if (!filename || strlen(filename) == 0) {
-      fname = Form("%s.root",obj->GetName());
+      fname.Form("%s.root",obj->GetName());
    }
-   const char *cmd = Form("TFile::Open(\"%s\",\"recreate\");",fname.Data());
-   TDirectory *local = (TDirectory*)gROOT->ProcessLine(cmd);
-   if (!local) return 0;
-   Int_t nbytes = obj->Write();
-   delete local;
-   if (dirsav) dirsav->cd();
-   TString opt = option;
+   TString cmd;
+   cmd.Form("TFile::Open(\"%s\",\"recreate\");",fname.Data());
+   {
+      TContext ctxt(0); // The TFile::Open will change the current directory.
+      TDirectory *local = (TDirectory*)gROOT->ProcessLine(cmd);
+      if (!local) return 0;
+      nbytes = obj->Write();
+      delete local;
+   }
+   TString opt(option);
    opt.ToLower();
    if (!opt.Contains("q")) {
       if (!gSystem->AccessPathName(fname.Data())) obj->Info("SaveAs", "ROOT file %s has been created", fname.Data());

@@ -51,10 +51,15 @@
 #pragma link C++ class TFileStager;
 #pragma link C++ class TApplicationRemote;
 #pragma link C++ class TApplicationServer;
+#pragma link C++ class TUDPSocket;
 #ifndef R__NO_CRYPTO
 #pragma link C++ class THTTPMessage+;
 #pragma link C++ class TAS3File+;
 #pragma link C++ class TGSFile+;
 #endif
+#ifdef R__SSL
+#pragma link C++ class TSSLSocket;
+#endif
+#pragma link C++ class TParallelMergingFile+;
 
 #endif

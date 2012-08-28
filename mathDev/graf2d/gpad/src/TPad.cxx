@@ -490,7 +490,7 @@ TVirtualPad *TPad::cd(Int_t subpadnumber)
 
    if (!subpadnumber) {
       gPad = this;
-      if (!gPad->IsBatch()) GetPainter()->SelectDrawable(fPixmapID);
+      if (!gPad->IsBatch() && GetPainter()) GetPainter()->SelectDrawable(fPixmapID);
       return gPad;
    }
 
@@ -532,7 +532,11 @@ void TPad::Clear(Option_t *option)
 
    cd();
 
-   if (TestBit(kClearAfterCR)) getchar();
+   if (TestBit(kClearAfterCR)) {
+      // Intentional do not use the return value of getchar,
+      // we just want to get it and forget it
+      getchar();
+   }
 
    if (!gPad->IsBatch()) GetPainter()->ClearDrawable();
    if (gVirtualPS && gPad == gPad->GetCanvas()) gVirtualPS->NewPage();
@@ -1177,6 +1181,28 @@ void TPad::Divide(Int_t nx, Int_t ny, Float_t xmargin, Float_t ymargin, Int_t co
 
 
 //______________________________________________________________________________
+void TPad::DivideSquare(Int_t n, Float_t xmargin, Float_t ymargin, Int_t color)
+{
+   // "n" is the total number of sub-pads. The number of sub-pads along the X
+   // and Y axis are computed according to the square root of n.
+
+   Int_t w = 1, h = 1;
+
+   if (fCanvas->GetWindowWidth() > fCanvas->GetWindowHeight()) {
+      w = TMath::Ceil(TMath::Sqrt(n));
+      h = TMath::Floor(TMath::Sqrt(n));
+      if (w*h < n) w++;
+   } else {
+      h = TMath::Ceil(TMath::Sqrt(n));
+      w = TMath::Floor(TMath::Sqrt(n));
+      if (w*h < n) h++;
+   }
+
+   Divide( w, h, xmargin, ymargin, color);
+}
+
+
+//______________________________________________________________________________
 void TPad::Draw(Option_t *option)
 {
    // Draw Pad in Current pad (re-parent pad if necessary).
@@ -1316,7 +1342,7 @@ void TPad::DrawClassObject(const TObject *classobj, Option_t *option)
          pt->SetTextAlign(12);
          pt->SetTextSize(tsiz);
          TBox *box = pt->AddBox(0,(y1+0.01-v1)/dv,0,(v2-0.01-v1)/dv);
-         box->SetFillColor(17);
+         if (box) box->SetFillColor(17);
          pt->AddLine(0,(y1-v1)/dv,0,(y1-v1)/dv);
          TText *title = pt->AddText(0.5,(0.5*(y1+v2)-v1)/dv,(char*)cl->GetName());
          title->SetTextAlign(22);
@@ -2722,7 +2748,7 @@ void TPad::HighLight(Color_t color, Bool_t set)
 
    // We do not want to have active(executable) buttons, etc highlighted
    // in this manner, unless we want to edit'em
-   if (GetMother()->IsEditable() && !InheritsFrom(TButton::Class())) {
+   if (GetMother() && GetMother()->IsEditable() && !InheritsFrom(TButton::Class())) {
       //When doing a DrawClone from the GUI you would do
       //  - select an empty pad -
       //  - right click on object -
@@ -4118,8 +4144,8 @@ void TPad::Print(const char *filenam, Option_t *option)
    //               "ps"  - Postscript file is produced (see special cases below)
    //          "Portrait" - Postscript file is produced (Portrait)
    //         "Landscape" - Postscript file is produced (Landscape)
-   //            "Title:" - The character strin after "Title:" becomes a table
-   //                       of content entry.
+   //            "Title:" - The character string after "Title:" becomes a table
+   //                       of content entry (for PDF files).
    //               "eps" - an Encapsulated Postscript file is produced
    //           "Preview" - an Encapsulated Postscript file with preview is produced.
    //               "pdf" - a PDF file is produced
@@ -4146,9 +4172,10 @@ void TPad::Print(const char *filenam, Option_t *option)
    //   The physical size of the Postscript page is the one selected in the
    //   current style. This size can be modified via TStyle::SetPaperSize.
    //   Examples:
-   //        gStyle->SetPaperSize(kA4);  //default
-   //        gStyle->SetPaperSize(kUSLetter);
-   //     where kA4 and kUSLetter are defined in the enum EPaperSize in TStyle.h
+   //      gStyle->SetPaperSize(TStyle::kA4);  //default
+   //      gStyle->SetPaperSize(TStyle::kUSLetter);
+   //    where TStyle::kA4 and TStyle::kUSLetter are defined in the enum
+   //    EPaperSize in TStyle.h
    //    An alternative is to call:
    //        gStyle->SetPaperSize(20,26);  same as kA4
    // or     gStyle->SetPaperSize(20,24);  same as kUSLetter
@@ -4292,7 +4319,7 @@ void TPad::Print(const char *filenam, Option_t *option)
 
    Int_t wid = 0;
    if (!GetCanvas()) return;
-   if (!gROOT->IsBatch() && image) {
+   if (!gROOT->IsBatch() && image && GetCanvas()->UseGL()) {
       if ((gtype == TImage::kGif) && !ContainsTImage(fPrimitives)) {
          wid = (this == GetCanvas()) ? GetCanvas()->GetCanvasID() : GetPixmapID();
          Color_t hc = gPad->GetCanvas()->GetHighLightColor();
@@ -4458,8 +4485,7 @@ void TPad::Print(const char *filenam, Option_t *option)
       gVirtualPS->SetName(psname);
       l = (char*)strstr(opt,"Title:");
       if (l) {
-         gVirtualPS->SetTitle(&opt[6]);
-         //Please fix this bug, we may overwrite an input argument
+         gVirtualPS->SetTitle(l+6);
          strcpy(l,"pdf");
       }
       gVirtualPS->Open(psname,pstype);
@@ -4487,9 +4513,10 @@ void TPad::Print(const char *filenam, Option_t *option)
       }
       l = (char*)strstr(opt,"Title:");
       if (l) {
-         gVirtualPS->SetTitle(&opt[6]);
-         //Please fix this bug, we may overwrite an input argument
+         gVirtualPS->SetTitle(l+6);
          strcpy(l,"pdf");
+      } else {
+         gVirtualPS->SetTitle("PDF");
       }
       Info("Print", "Current canvas added to %s file %s", opt, psname.Data());
       if (mustClose) {
@@ -4618,7 +4645,10 @@ void TPad::RedrawAxis(Option_t *option)
       }
       if (obj->InheritsFrom(TMultiGraph::Class())) {
          TMultiGraph *mg = (TMultiGraph*)obj;
-         if (mg) mg->GetHistogram()->DrawCopy("sameaxis");
+         if (mg) {
+            TH1F *h1f = mg->GetHistogram();
+            if (h1f) h1f->DrawCopy("sameaxis");
+         }
          return;
       }
       if (obj->InheritsFrom(TGraph::Class())) {
@@ -4628,7 +4658,10 @@ void TPad::RedrawAxis(Option_t *option)
       }
       if (obj->InheritsFrom(THStack::Class())) {
          THStack *hs = (THStack*)obj;
-         if (hs) hs->GetHistogram()->DrawCopy("sameaxis");
+         if (hs) {
+            TH1 *h1 = hs->GetHistogram();
+            if (h1) h1->DrawCopy("sameaxis");
+         }
          return;
       }
    }

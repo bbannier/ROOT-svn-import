@@ -64,9 +64,11 @@ namespace ROOT {
       void AddFriend(TFriendProxyDescriptor *desc);
       void AddHeader(TClass *cl);
       void AddHeader(const char *classname);
+      void AddMissingClassAsEnum(const char *clname, Bool_t isscope);
       void AddPragma(const char *pragma_text);
+      void CheckForMissingClass(const char *clname);
 
-      bool NeedToEmulate(TClass *cl, UInt_t level);
+      Bool_t NeedToEmulate(TClass *cl, UInt_t level);
 
       void   ParseOptions();
 

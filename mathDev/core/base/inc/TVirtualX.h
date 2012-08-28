@@ -24,6 +24,9 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include <utility>
+#include <vector>
+
 #ifndef ROOT_TNamed
 #include "TNamed.h"
 #endif
@@ -87,6 +90,14 @@ public:
    virtual void      CopyPixmap(Int_t wid, Int_t xpos, Int_t ypos);
    virtual void      CreateOpenGLContext(Int_t wid=0);
    virtual void      DeleteOpenGLContext(Int_t wid=0);
+   
+   //---- OpenGL related stuff, required only with R__HAS_COCOA ----
+   virtual Window_t  CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t height, const std::vector<std::pair<UInt_t, Int_t> > &format);
+   virtual Handle_t  CreateOpenGLContext(Window_t windowID, Handle_t sharedContext);
+   virtual Bool_t    MakeOpenGLContextCurrent(Handle_t ctx, Window_t windowID);
+   virtual Handle_t  GetCurrentOpenGLContext();
+   virtual void      FlushOpenGLBuffer(Handle_t ctx);
+
    virtual void      DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, EBoxMode mode);
    virtual void      DrawCellArray(Int_t x1, Int_t y1, Int_t x2, Int_t y2,
                                    Int_t nx, Int_t ny, Int_t *ic);
@@ -238,6 +249,7 @@ public:
    virtual void         ClearArea(Window_t id, Int_t x, Int_t y, UInt_t w, UInt_t h);
    virtual Bool_t       CheckEvent(Window_t id, EGEventType type, Event_t &ev);
    virtual void         SendEvent(Window_t id, Event_t *ev);
+   virtual void         DispatchClientMessage(UInt_t messageID);
    virtual void         WMDeleteNotify(Window_t id);
    virtual void         SetKeyAutoRepeat(Bool_t on = kTRUE);
    virtual void         GrabKey(Window_t id, Int_t keycode, UInt_t modifier, Bool_t grab = kTRUE);
@@ -327,6 +339,8 @@ public:
    virtual void         SetTypeList(Window_t win, Atom_t prop, Atom_t *typelist);
    virtual Window_t     FindRWindow(Window_t win, Window_t dragwin, Window_t input, int x, int y, int maxd);
    virtual Bool_t       IsDNDAware(Window_t win, Atom_t *typelist);
+   
+   virtual void         BeginModalSessionFor(Window_t window);
 
    virtual Bool_t       IsCmdThread() const { return kTRUE; }
 

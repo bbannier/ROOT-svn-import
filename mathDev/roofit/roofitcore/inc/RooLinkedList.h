@@ -19,8 +19,11 @@
 #include "TNamed.h"
 #include "RooLinkedListElem.h"
 #include "RooHashTable.h"
+#include <list>
 class RooLinkedListIter ;
+class RooFIter ;
 class TIterator ;
+class RooAbsArg ;
 
 class RooLinkedList : public TObject {
 public:
@@ -29,6 +32,10 @@ public:
 
   // Copy constructor
   RooLinkedList(const RooLinkedList& other) ;
+
+  virtual TObject* Clone(const char* =0) const { 
+    return new RooLinkedList(*this) ;
+  }
 
   // Assignment operator
   RooLinkedList& operator=(const RooLinkedList& other) ;
@@ -51,9 +58,12 @@ public:
   Bool_t Replace(const TObject* oldArg, const TObject* newArg) ;
   TIterator* MakeIterator(Bool_t dir=kTRUE) const ;
   RooLinkedListIter iterator(Bool_t dir=kTRUE) const ;
+  RooFIter fwdIterator() const ; 
+
   void Clear(Option_t *o=0) ;
   void Delete(Option_t *o=0) ;
   TObject* find(const char* name) const ;
+  RooAbsArg* findArg(const RooAbsArg*) const ;
   TObject* FindObject(const char* name) const ; 
   TObject* FindObject(const TObject* obj) const ;
   Int_t IndexOf(const char* name) const ;
@@ -68,10 +78,14 @@ public:
   const char* GetName() const { return _name.Data() ; }
   void SetName(const char* name) { _name = name ; }
 
-
 protected:  
 
+  RooLinkedListElem* createElement(TObject* obj, RooLinkedListElem* elem=0) ;
+  void deleteElement(RooLinkedListElem*) ;
+
+
   friend class RooLinkedListIter ;
+  friend class RooFIter ;
 
   virtual void Add(TObject* arg, Int_t refCount) ;
 
@@ -85,6 +99,11 @@ protected:
   RooLinkedListElem*  _last ;  //! Link to last element of list
   RooHashTable*       _htableName ; //! Hash table by name 
   RooHashTable*       _htableLink ; //! Hash table by link pointer
+
+  Int_t _curStoreSize ; //!
+  Int_t _curStoreUsed ; //!
+  std::list<std::pair<Int_t,RooLinkedListElem*> > _storeList ; //!
+  RooLinkedListElem* _curStore ; //!
 
   TString             _name ; 
 

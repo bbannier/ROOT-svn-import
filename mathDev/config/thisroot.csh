@@ -13,33 +13,85 @@ endif
 
 # $_ should be source .../thisroot.csh
 set ARGS=($_)
-set THIS="`dirname ${ARGS[2]}`"
+if ("$ARGS" != "") then
+   set THIS="`dirname ${ARGS[2]}`"
+else
+   # But $_ might not be set if the script is source non-interactively.
+   # In [t]csh the sourced file is inserted 'in place' inside the
+   # outer script, so we need an external source of information
+   # either via the current directory or an extra parameter.
+   if ( -e thisroot.csh ) then
+      set THIS=${PWD}
+   else if ( -e bin/thisroot.csh ) then 
+      set THIS=${PWD}/bin
+   else if ( "$1" != "" ) then
+      if ( -e ${1}/bin/thisroot.csh ) then
+         set THIS=${1}/bin
+      else if ( -e ${1}/thisroot.csh ) then
+         set THIS=${1}
+      else 
+         echo "thisroot.csh: ${1} does not contain a ROOT installation"
+      endif 
+   else
+      echo 'Error: The call to "source where_root_is/bin/thisroot.csh" can not determine the location of the ROOT installation'
+      echo "because it was embedded another script (this is an issue specific to csh)."
+      echo "Use either:"
+      echo "   cd where_root_is; source bin/thisroot.csh"
+      echo "or"
+      echo "   source where_root_is/bin/thisroot.csh where_root_is" 
+   endif
+endif
+
+if ($?THIS) then 
+
 setenv ROOTSYS "`(cd ${THIS}/..;pwd)`"
 
 if ($?OLD_ROOTSYS) then
-   if ( ! -e @bindir@/drop_from_path ) then
-      echo "ERROR: the utility drop_from_path has not been build yet. Do:"
-      echo "make bin/drop_from_path"
-      exit 1
-   endif   
-   setenv PATH `@bindir@/drop_from_path -e "$OLD_ROOTSYS/bin"`
+   setenv PATH `echo $PATH | sed -e "s;:$OLD_ROOTSYS/bin:;:;g" \
+                                 -e "s;:$OLD_ROOTSYS/bin;;g"   \
+                                 -e "s;$OLD_ROOTSYS/bin:;;g"   \
+                                 -e "s;$OLD_ROOTSYS/bin;;g"`
    if ($?LD_LIBRARY_PATH) then
-      setenv LD_LIBRARY_PATH `@bindir@/drop_from_path -D -e -p "$LD_LIBRARY_PATH" "$OLD_ROOTSYS/lib"`
+      setenv LD_LIBRARY_PATH `echo $LD_LIBRARY_PATH | \
+                             sed -e "s;:$OLD_ROOTSYS/lib:;:;g" \
+                                 -e "s;:$OLD_ROOTSYS/lib;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib:;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib;;g"`
    endif
    if ($?DYLD_LIBRARY_PATH) then
-      setenv DYLD_LIBRARY_PATH `@bindir@/drop_from_path -D -e -p "$DYLD_LIBRARY_PATH" "$OLD_ROOTSYS/lib"`
+      setenv DYLD_LIBRARY_PATH `echo $DYLD_LIBRARY_PATH | \
+                             sed -e "s;:$OLD_ROOTSYS/lib:;:;g" \
+                                 -e "s;:$OLD_ROOTSYS/lib;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib:;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib;;g"`
    endif
    if ($?SHLIB_PATH) then
-      setenv SHLIB_PATH `@bindir@/drop_from_path -D -e -p "$SHLIB_PATH" "$OLD_ROOTSYS/lib"`
+      setenv SHLIB_PATH `echo $SHLIB_PATH | \
+                             sed -e "s;:$OLD_ROOTSYS/lib:;:;g" \
+                                 -e "s;:$OLD_ROOTSYS/lib;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib:;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib;;g"`
    endif
    if ($?LIBPATH) then
-      setenv LIBPATH `@bindir@/drop_from_path -D -e -p "$LIBPATH" "$OLD_ROOTSYS/lib"`
+      setenv LIBPATH `echo $LIBPATH | \
+                             sed -e "s;:$OLD_ROOTSYS/lib:;:;g" \
+                                 -e "s;:$OLD_ROOTSYS/lib;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib:;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib;;g"`
    endif
    if ($?PYTHONPATH) then
-      setenv PYTHONPATH `@bindir@/drop_from_path -D -e -p "$PYTHONPATH" "$OLD_ROOTSYS/lib"`
+      setenv PYTHONPATH `echo $PYTHONPATH | \
+                             sed -e "s;:$OLD_ROOTSYS/lib:;:;g" \
+                                 -e "s;:$OLD_ROOTSYS/lib;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib:;;g"   \
+                                 -e "s;$OLD_ROOTSYS/lib;;g"`
    endif
    if ($?MANPATH) then
-      setenv MANPATH `@bindir@/drop_from_path -D -e -p "$MANPATH" "$OLD_ROOTSYS/man"`
+      setenv MANPATH `echo $MANPATH | \
+                             sed -e "s;:$OLD_ROOTSYS/man:;:;g" \
+                                 -e "s;:$OLD_ROOTSYS/man;;g"   \
+                                 -e "s;$OLD_ROOTSYS/man:;;g"   \
+                                 -e "s;$OLD_ROOTSYS/man;;g"`
    endif
 endif
 
@@ -92,3 +144,5 @@ if ($?MANPATH) then
 else
    setenv MANPATH `dirname @mandir@`:$default_manpath
 endif
+
+endif # if ("$THIS" != "")

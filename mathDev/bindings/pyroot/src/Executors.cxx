@@ -32,7 +32,7 @@ PyROOT::ExecFactories_t PyROOT::gExecFactories;
 PyObject* PyROOT::TBoolExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python bool return value
-   PyObject* result = (bool)func->ExecInt( self ) ? Py_True : Py_False;
+   PyObject* result = (Bool_t)func->ExecInt( self ) ? Py_True : Py_False;
    Py_INCREF( result );
    return result;
 }
@@ -47,7 +47,7 @@ PyObject* PyROOT::TLongExecutor::Execute( G__CallFunc* func, void* self )
 PyObject* PyROOT::TCharExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python string return value
-   return PyROOT_PyUnicode_FromFormat( "%c", (int)func->ExecInt( self ) );
+   return PyROOT_PyUnicode_FromFormat( "%c", (Int_t)func->ExecInt( self ) );
 }
 
 //____________________________________________________________________________
@@ -82,7 +82,7 @@ PyObject* PyROOT::TULongLongExecutor::Execute( G__CallFunc* func, void* self )
 PyObject* PyROOT::TDoubleExecutor::Execute( G__CallFunc* func, void* self )
 {
 // execute <func> with argument <self>, construct python float return value
-   return PyFloat_FromDouble( (double)func->ExecDouble( self ) );
+   return PyFloat_FromDouble( (Double_t)func->ExecDouble( self ) );
 }
 
 //____________________________________________________________________________
@@ -129,10 +129,12 @@ PyObject* PyROOT::TSTLStringRefExecutor::Execute( G__CallFunc* func, void* self 
 {
 // execute <func> with argument <self>, return python string return value
    if ( ! fAssignable ) {
-      return PyROOT_PyUnicode_FromString( ((std::string*)func->ExecInt( self ))->c_str() );
+      std::string* result = (std::string*)func->ExecInt( self );
+      return PyROOT_PyUnicode_FromStringAndSize( result->c_str(), result->size() );
    } else {
       std::string* result = (std::string*)func->ExecInt( self );
-      *result = std::string( PyROOT_PyUnicode_AsString( fAssignable ) );
+      *result = std::string(
+         PyROOT_PyUnicode_AsString( fAssignable ), PyROOT_PyUnicode_GET_SIZE( fAssignable ) );
 
       Py_DECREF( fAssignable );
       fAssignable = 0;
@@ -179,6 +181,7 @@ PyObject* PyROOT::T##name##ArrayExecutor::Execute( G__CallFunc* func, void* self
    return BufFac_t::Instance()->PyBuffer_FromMemory( (type*)func->ExecInt( self ) );\
 }
 
+PYROOT_IMPLEMENT_ARRAY_EXECUTOR( Bool,   Bool_t )
 PYROOT_IMPLEMENT_ARRAY_EXECUTOR( Short,  Short_t )
 PYROOT_IMPLEMENT_ARRAY_EXECUTOR( UShort, UShort_t )
 PYROOT_IMPLEMENT_ARRAY_EXECUTOR( Int,    Int_t )
@@ -199,7 +202,8 @@ PyObject* PyROOT::TSTLStringExecutor::Execute( G__CallFunc* func, void* self )
       return PyStrings::gEmptyString;
    }
 
-   PyObject* pyresult = PyROOT_PyUnicode_FromString( result->c_str() );
+   PyObject* pyresult =
+      PyROOT_PyUnicode_FromStringAndSize( result->c_str(), result->size() );
 
 // stop CINT from tracking the object, then force delete
    G__pop_tempobject_nodel();
@@ -249,6 +253,7 @@ PyObject* PyROOT::TRootObjectByValueExecutor::Execute( G__CallFunc* func, void* 
 //____________________________________________________________________________
 PyObject* PyROOT::TRootObjectRefExecutor::Execute( G__CallFunc* func, void* self )
 {
+// executor binds the result to the left-hand side, overwriting if an old object
    PyObject* result = BindRootObject( (void*)func->ExecInt( self ), fClass );
    if ( ! result || ! fAssignable )
       return result;
@@ -376,6 +381,7 @@ namespace {
    PYROOT_EXECUTOR_FACTORY( ULongLong )
    PYROOT_EXECUTOR_FACTORY( CString )
    PYROOT_EXECUTOR_FACTORY( VoidArray )
+   PYROOT_EXECUTOR_FACTORY( BoolArray )
    PYROOT_EXECUTOR_FACTORY( ShortArray )
    PYROOT_EXECUTOR_FACTORY( UShortArray )
    PYROOT_EXECUTOR_FACTORY( IntArray )
@@ -423,6 +429,7 @@ namespace {
 
    // pointer/array factories
       NFp_t( "void*",              &CreateVoidArrayExecutor           ),
+      NFp_t( "bool*",              &CreateBoolArrayExecutor           ),
       NFp_t( "short*",             &CreateShortArrayExecutor          ),
       NFp_t( "unsigned short*",    &CreateUShortArrayExecutor         ),
       NFp_t( "int*",               &CreateIntArrayExecutor            ),
@@ -448,6 +455,7 @@ namespace {
    public:
       InitExecFactories_t()
       {
+      // load all executor factories in the global map 'gExecFactories'
          int nf = sizeof( factories_ ) / sizeof( factories_[ 0 ] );
          for ( int i = 0; i < nf; ++i ) {
             gExecFactories[ factories_[ i ].first ] = factories_[ i ].second;

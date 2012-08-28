@@ -39,6 +39,9 @@ class TFile;
 class TKey : public TNamed {
 
 private:
+   enum EStatusBits {
+      kIsDirectoryFile = BIT(14)
+   };
    TKey(const TKey&);            // TKey objects are not copiable.
    TKey& operator=(const TKey&); // TKey objects are not copiable.
 
@@ -68,6 +71,7 @@ protected:
  public:
    TKey();
    TKey(TDirectory* motherDir);
+   TKey(TDirectory* motherDir, const TKey &orig, UShort_t pidOffset);
    TKey(const char *name, const char *title, const TClass *cl, Int_t nbytes, TDirectory* motherDir = 0);
    TKey(const TString &name, const TString &title, const TClass *cl, Int_t nbytes, TDirectory* motherDir = 0);
    TKey(const TObject *obj, const char *name, Int_t bufsize, TDirectory* motherDir = 0);

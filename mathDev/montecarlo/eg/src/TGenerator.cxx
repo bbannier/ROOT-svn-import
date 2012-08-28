@@ -341,7 +341,8 @@ void TGenerator::Draw(Option_t *option)
    // Create a default canvas if a canvas does not exist
    if (!gPad) {
       gROOT->MakeDefCanvas();
-      gPad->GetVirtCanvas()->SetFillColor(13);
+      if (gPad->GetVirtCanvas())
+         gPad->GetVirtCanvas()->SetFillColor(13);
    }
 
    static Float_t rbox = 1000;
@@ -361,7 +362,7 @@ void TGenerator::Draw(Option_t *option)
       rbox = rmax[2];
    } else {
       view = TView::CreateView(1,0,0);
-      view->SetRange(-rbox,-rbox,-rbox, rbox,rbox,rbox );
+      if (view) view->SetRange(-rbox,-rbox,-rbox, rbox,rbox,rbox );
    }
    const Int_t kColorProton    = 4;
    const Int_t kColorNeutron   = 5;
@@ -461,10 +462,19 @@ void TGenerator::Draw(Option_t *option)
    snprintf(tcount,12,"%d",nKaons);       text->DrawText(-0.55,-0.87,tcount);
    snprintf(tcount,12,"%d",nElectrons);   text->DrawText(-0.55,-0.92,tcount);
 
-   snprintf(tcount,12,"Protons/Pions= %4f",Float_t(nProtons)/Float_t(nPionPlus+nPionMinus));
    text->SetTextAlign(12);
+   if (nPionPlus+nPionMinus) {
+      snprintf(tcount,31,"Protons/Pions= %4f",Float_t(nProtons)/Float_t(nPionPlus+nPionMinus));
+   } else {
+      strlcpy(tcount,"Protons/Pions= inf",31);
+   }
    text->DrawText(-0.45,-0.92,tcount);
-   snprintf(tcount,12,"Kaons/Pions= %4f",Float_t(nKaons)/Float_t(nPionPlus+nPionMinus));
+
+   if (nPionPlus+nPionMinus) {
+      snprintf(tcount,12,"Kaons/Pions= %4f",Float_t(nKaons)/Float_t(nPionPlus+nPionMinus));
+   } else {
+      strlcpy(tcount,"Kaons/Pions= inf",31);
+   }
    text->DrawText(0.30,-0.92,tcount);
 }
 

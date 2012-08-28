@@ -39,6 +39,15 @@ Int_t TPosixThread::Run(TThread *th)
    det = (th->fDetached) ? PTHREAD_CREATE_DETACHED : PTHREAD_CREATE_JOINABLE;
 
    pthread_attr_setdetachstate(attr, det);
+
+   // See e.g. https://developer.apple.com/library/mac/#qa/qa1419/_index.html
+   // MacOS has only 512k of stack per thread; Linux has 2MB.
+   const size_t requiredStackSize = 1024*1024*2;
+   size_t stackSize = 0;
+   if (!pthread_attr_getstacksize(attr, &stackSize)
+       && stackSize < requiredStackSize) {
+      pthread_attr_setstacksize(attr, requiredStackSize);
+   }
    int ierr = pthread_create(&id, attr, &TThread::Function, th);
    if (!ierr) th->fId = (Long_t) id;
 

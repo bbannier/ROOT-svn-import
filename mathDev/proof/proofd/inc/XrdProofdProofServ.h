@@ -23,14 +23,8 @@
 // #include <map>
 #include <vector>
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucPthread.hh"
-#  include "XrdOuc/XrdOucSemWait.hh"
-#else
-#  include "XrdSys/XrdSysPthread.hh"
-#  include "XrdSys/XrdSysSemWait.hh"
-#endif
+#include "XpdSysPthread.h"
+#include "XpdSysSemWait.h"
 
 #include "Xrd/XrdLink.hh"
 #include "XrdOuc/XrdOucHash.hh"
@@ -55,6 +49,7 @@ public:
    char *fBuff;
 
    XrdSrvBuffer(char *bp=0, int sz=0, bool dup=0) {
+      fBuff = 0;
       if (dup && bp && sz > 0) {
          fMembuf = (char *)malloc(sz);
          if (fMembuf) {
@@ -163,7 +158,7 @@ public:
    int                 SendData(int cid, void *buff, int len);
    int                 SendDataN(void *buff, int len);
    void                SendClusterInfo(int nsess, int nacti);
-   int                 SetAdminPath(const char *a, bool assert);
+   int                 SetAdminPath(const char *a, bool assert, bool setown);
    void                SetAlias(const char *a) { XrdSysMutexHelper mhp(fMutex); fAlias = a; }
    void                SetClient(const char *c) { XrdSysMutexHelper mhp(fMutex); fClient = c; }
    inline void         SetConnection(XrdProofdResponse *r) { XrdSysMutexHelper mhp(fMutex); fResponse = r;}

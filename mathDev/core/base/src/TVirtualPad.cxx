@@ -12,6 +12,7 @@
 #include "TVirtualPad.h"
 #include "X3DBuffer.h"
 #include "TClass.h"
+#include "TThreadSlots.h"
 
 //______________________________________________________________________________
 //
@@ -21,7 +22,6 @@
 Size3D gVarSize3D;
 Size3D* gFuncSize3D(){ return &gVarSize3D; }
 
-void **(*gThreadTsd)(void*,Int_t) = 0;
 Int_t (*gThreadXAR)(const char *xact, Int_t nb, void **ar, Int_t *iret) = 0;
 
 //______________________________________________________________________________
@@ -33,9 +33,8 @@ TVirtualPad *&TVirtualPad::Pad()
    if (!gThreadTsd)
       return currentPad;
    else
-      return *(TVirtualPad**)(*gThreadTsd)(&currentPad,0);
+      return *(TVirtualPad**)(*gThreadTsd)(&currentPad,ROOT::kPadThreadSlot);
 }
-
 
 ClassImp(TVirtualPad)
 
@@ -91,3 +90,58 @@ void TVirtualPad::Streamer(TBuffer &R__b)
    }
 }
 
+//______________________________________________________________________________
+Bool_t TVirtualPad::PadInSelectionMode() const
+{
+   // Should always return false unless you have non-standard picking.
+
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Bool_t TVirtualPad::PadInHighlightMode() const
+{
+   // Should always return false, unless you can highlight selected object in pad.
+
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+void TVirtualPad::PushTopLevelSelectable(TObject * /*object*/)
+{
+   // Does nothing, unless you implement your own picking.
+   // When complex object containing sub-objects (which can be picked)
+   // is painted in a pad, this "top-level" object is pushed into 
+   // the selectables stack.
+}
+
+//______________________________________________________________________________
+void TVirtualPad::PushSelectableObject(TObject * /*object*/)
+{
+   // Does nothing, unless you implement your own picking.
+   // "Complete" object, or part of complex object, which
+   // can be picked.
+}
+
+//______________________________________________________________________________
+void TVirtualPad::PopTopLevelSelectable()
+{
+   // Does nothing, unless you implement your own picking.
+   // Remove top level selectable and all its' children.
+}
+
+//______________________________________________________________________________
+TPickerStackGuard::TPickerStackGuard(TObject *obj)
+{
+   // Scope-guards ctor, pushe the object on stack.
+
+   gPad->PushTopLevelSelectable(obj);
+}
+
+//______________________________________________________________________________
+TPickerStackGuard::~TPickerStackGuard()
+{
+   // Guard does out of scope, pop object from stack.
+
+   gPad->PopTopLevelSelectable();
+}

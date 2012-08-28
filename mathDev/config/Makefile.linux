@@ -13,15 +13,18 @@ else
 OPT           = $(OPTFLAGS)
 NOOPT         =
 endif
+ifeq ($(CXX11),yes)
+CXX11FLAGS    = -std=c++11 -Wno-deprecated-declarations
+endif
 
 # Compiler:
 CXX           = g++
 CC            = gcc
 CXXFLAGS      = -pipe -m32 -Wall -W -Woverloaded-virtual \
-                -fPIC $(EXTRA_CXXFLAGS)
+                -fPIC $(EXTRA_CXXFLAGS) $(CXX11FLAGS)
 CFLAGS        = -pipe -m32 -Wall -W -fPIC $(EXTRA_CFLAGS)
 CINTCXXFLAGS  = -pipe -m32 -Wall -W -Woverloaded-virtual \
-                -fPIC $(EXTRA_CXXFLAGS) \
+                -fPIC $(EXTRA_CXXFLAGS) $(CXX11FLAGS) \
                 -DG__REGEXP -DG__UNIX -DG__SHAREDLIB \
                 -DG__OSFDLL -DG__ROOT -DG__REDIRECTIO \
                 -DG__STD_EXCEPTION
@@ -33,7 +36,7 @@ COMPILER      = gnu
 
 # Linker:
 LD            = g++
-LDFLAGS       = -m32 $(OPT) $(EXTRA_LDFLAGS)
+LDFLAGS       = -m32 $(OPT) $(EXTRA_LDFLAGS) -Wl,--no-undefined -Wl,--as-needed
 SOFLAGS       = -shared -Wl,-soname,
 SOEXT         = so
 

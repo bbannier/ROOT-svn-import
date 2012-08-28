@@ -33,6 +33,8 @@
 #include "RooRealProxy.h"
 #include "RooRealVar.h"
 
+using namespace std;
+
 ClassImp(RooRealProxy)
 ;
 
@@ -81,6 +83,9 @@ RooRealProxy::~RooRealProxy()
 RooAbsRealLValue* RooRealProxy::lvptr() const 
 {
   // Return l-value pointer to contents, if contents is in fact an l-value
+
+  // WVE remove check here -- need to put it back in setArg and ctor
+  return (RooAbsRealLValue*) _arg ;
 
   // Assert that the held arg is an LValue
   RooAbsRealLValue* Lvptr = (RooAbsRealLValue*)dynamic_cast<const RooAbsRealLValue*>(_arg) ;

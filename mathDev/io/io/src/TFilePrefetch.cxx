@@ -36,13 +36,15 @@ TFilePrefetch::TFilePrefetch(TFile* file)
 
    fConsumer = 0;
    fFile = file;
-   fPendingBlocks = new TList();
-   fReadBlocks = new TList();
-   fMutexReadList = new TMutex();
+   fPendingBlocks    = new TList();
+   fReadBlocks       = new TList();
+   fMutexReadList    = new TMutex();
    fMutexPendingList = new TMutex();
-   fNewBlockAdded = new TCondition(0);
-   fReadBlockAdded = new TCondition(0);
-   fSem = new TSemaphore(0);
+   fNewBlockAdded    = new TCondition(0);
+   fReadBlockAdded   = new TCondition(0);
+   fCondNextFile     = new TCondition(0);
+   fSemMasterWorker  = new TSemaphore(0);
+   fSemWorkerMaster  = new TSemaphore(0);
 }
 
 //____________________________________________________________________________________________
@@ -51,8 +53,15 @@ TFilePrefetch::~TFilePrefetch()
    // Destructor.
 
    //killing consumer thread
-   fSem->Post();
+   fSemMasterWorker->Post();
+   
+   TMutex *mutexCond = fNewBlockAdded->GetMutex();
+   while (fSemWorkerMaster->Wait(10) != 0) {
+     mutexCond->Lock();
    fNewBlockAdded->Signal();
+     mutexCond->UnLock();
+   }
+
    fConsumer->Join();
   
    SafeDelete(fConsumer);
@@ -62,7 +71,9 @@ TFilePrefetch::~TFilePrefetch()
    SafeDelete(fMutexPendingList);
    SafeDelete(fNewBlockAdded);
    SafeDelete(fReadBlockAdded);
-   SafeDelete(fSem);
+   SafeDelete(fCondNextFile);
+   SafeDelete(fSemMasterWorker);
+   SafeDelete(fSemWorkerMaster);
 }
 
 //____________________________________________________________________________________________
@@ -78,6 +89,10 @@ void TFilePrefetch::ReadAsync(TFPBlock* block, Bool_t &inCache)
    }
    else{
      fFile->ReadBuffers(block->GetBuffer(), block->GetPos(), block->GetLen(), block->GetNoElem());
+     if (fFile->GetArchive()){
+        for (Int_t i = 0; i < block->GetNoElem(); i++)
+           block->SetPos(i, block->GetPos(i) - fFile->GetArchiveOffset());
+     }
      inCache =kFALSE;
    }
    delete[] path;
@@ -165,21 +180,9 @@ Bool_t TFilePrefetch::ReadBuffer(char* buf, Long64_t offset, Int_t len)
    }
 
    if (found){
-      Int_t auxInt = 0;
-      char* ptrInt = 0;
-
-      for(Int_t i=0; i < blockObj->GetNoElem(); i++){
-
-         ptrInt = blockObj->GetBuffer();
-         ptrInt += auxInt;
-
-         if (index == i){
-            ptrInt+= (offset - blockObj->GetPos(i));
-            memcpy(buf, ptrInt, len);
-            break;
-         }
-         auxInt += blockObj->GetLen(i);
-      }
+     char *pBuff = blockObj->GetPtrToPiece(index);
+     pBuff += (offset - blockObj->GetPos(index));
+     memcpy(buf, pBuff, len);
    }
    mutexBlocks->UnLock();
    return found;
@@ -200,11 +203,15 @@ void TFilePrefetch::AddPendingBlock(TFPBlock* block)
    // Safe method to add a block to the pendingList.
 
    TMutex *mutexBlocks = fMutexPendingList;
+   TMutex *mutexCond = fNewBlockAdded->GetMutex();
 
    mutexBlocks->Lock();
    fPendingBlocks->Add(block);
    mutexBlocks->UnLock();
+
+   mutexCond->Lock();
    fNewBlockAdded->Signal();
+   mutexCond->UnLock();
 }
 
 //____________________________________________________________________________________________
@@ -213,14 +220,14 @@ TFPBlock* TFilePrefetch::GetPendingBlock()
    // Safe method to remove a block from the pendingList.
 
    TFPBlock* block = 0;
-   TMutex *mutexBlocks = fMutexPendingList;
-   mutexBlocks->Lock();
+   TMutex *mutex = fMutexPendingList;
+   mutex->Lock();
 
    if (fPendingBlocks->GetSize()){
       block = (TFPBlock*)fPendingBlocks->First();
       block = (TFPBlock*)fPendingBlocks->Remove(block);
    }
-   mutexBlocks->UnLock();
+   mutex->UnLock();
    return block;
 }
 
@@ -229,8 +236,9 @@ void TFilePrefetch::AddReadBlock(TFPBlock* block)
 {
    // Safe method to add a block to the readList.
 
-   TMutex *mutexBlocks = fMutexReadList;
-   mutexBlocks->Lock();
+   TMutex *mutexCond = fReadBlockAdded->GetMutex();
+   TMutex *mutex = fMutexReadList;
+   mutex->Lock();
 
    if (fReadBlocks->GetSize() >= kMAX_READ_SIZE){
       TFPBlock* movedBlock = (TFPBlock*) fReadBlocks->First();
@@ -240,8 +248,12 @@ void TFilePrefetch::AddReadBlock(TFPBlock* block)
    }
 
    fReadBlocks->Add(block);
-   mutexBlocks->UnLock();
+   mutex->UnLock();
+
+   //signal the addition of a new block
+   mutexCond->Lock();
    fReadBlockAdded->Signal();
+   mutexCond->UnLock();
 }
 
 
@@ -251,18 +263,18 @@ TFPBlock* TFilePrefetch::CreateBlockObj(Long64_t* offset, Int_t* len, Int_t nobl
    // Create a new block or recycle an old one.
 
    TFPBlock* blockObj = 0;
-   TMutex *mutexRead = fMutexReadList;
+   TMutex *mutex = fMutexReadList;
 
-   mutexRead->Lock();
+   mutex->Lock();
 
    if (fReadBlocks->GetSize() >= kMAX_READ_SIZE){
       blockObj = static_cast<TFPBlock*>(fReadBlocks->First());
       fReadBlocks->Remove(blockObj);
+      mutex->UnLock();
       blockObj->ReallocBlock(offset, len, noblock);
-      mutexRead->UnLock();
    }
    else{
-      mutexRead->UnLock();
+      mutex->UnLock();
       blockObj = new TFPBlock(offset, len, noblock);
    }
    return blockObj;
@@ -275,6 +287,16 @@ TThread* TFilePrefetch::GetThread() const
 
    return fConsumer;
 }
+
+
+//____________________________________________________________________________________________
+void TFilePrefetch::SetFile(TFile *file) 
+{
+   // Change the file
+  
+   fFile = file;
+}
+
 
 //____________________________________________________________________________________________
 Int_t TFilePrefetch::ThreadStart()
@@ -292,14 +314,25 @@ TThread::VoidRtnFunc_t TFilePrefetch::ThreadProc(void* arg)
 {
    // Execution loop of the consumer thread.
 
-   TFilePrefetch* tmp = (TFilePrefetch*) arg;
+   TFilePrefetch* pClass = (TFilePrefetch*) arg;
+   TMutex *mutex = pClass->fCondNextFile->GetMutex();
 
-   while(tmp->fSem->TryWait() !=0){
-      tmp->ReadListOfBlocks();
-      if (tmp->fSem->TryWait() == 0) break;
-      tmp->fNewBlockAdded->Wait();
+   pClass->fNewBlockAdded->Wait();
+   
+   while( pClass->fSemMasterWorker->TryWait() != 0 ) {
+ 
+      pClass->ReadListOfBlocks();
+   
+      //need to signal TChain that we finished work
+      //in the previous file, before we move on
+      mutex->Lock();
+      pClass->fCondNextFile->Signal();
+      mutex->UnLock();
+
+      pClass->fNewBlockAdded->Wait();
    }
 
+   pClass->fSemWorkerMaster->Post();       
    return (TThread::VoidRtnFunc_t) 1;
 }
 
@@ -438,10 +471,11 @@ void TFilePrefetch::SaveBlockInCache(TFPBlock* block)
       file = TFile::Open(fullPath, "new");
    }
 
-   file->WriteBuffer(block->GetBuffer(), block->GetFullSize());
-   file->Close();
-
-   delete file;
+   if (file) {
+      file->WriteBuffer(block->GetBuffer(), block->GetFullSize());
+      file->Close();
+      delete file;
+   }
    delete md;
 }
 

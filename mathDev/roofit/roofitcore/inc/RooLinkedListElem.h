@@ -25,14 +25,42 @@ class TBuffer ;
 class RooLinkedListElem {
 public:
   // Initial element ctor
+  RooLinkedListElem() :
+    _prev(0), _next(0), _arg(0), _refCount(0), _suc(0) {
+  }
+   
+  void init(TObject* arg, RooLinkedListElem* after=0, Int_t* suc=0) {
+   _arg = arg ;
+   _refCount = 1 ;
+
+   if (after) {
+     _prev = after ;
+     _next = after->_next ;
+     after->_next = this ;
+     if (_next) {
+       _next->_prev = this ;
+     }     
+   }
+   _suc = suc ;
+   (*_suc)++ ;
+ }
+ 
+ void release() {
+   if (_prev) _prev->_next = _next ;
+   if (_next) _next->_prev = _prev ;   
+   _prev = 0 ;
+   _next = 0 ;
+   (*_suc)-- ;
+ }
+
   RooLinkedListElem(TObject* arg) : 
     // Constructor with payload
-    _prev(0), _next(0), _arg(arg), _refCount(1) {
+    _prev(0), _next(0), _arg(arg), _refCount(1), _suc(0) {
   }
 
   RooLinkedListElem(TObject* arg, RooLinkedListElem* after) : 
     // Constructor with payload and next chain element
-    _prev(after), _next(after->_next), _arg(arg), _refCount(1) {
+    _prev(after), _next(after->_next), _arg(arg), _refCount(1), _suc(0) {
 
     // Insert self in link
     after->_next = this ;
@@ -54,10 +82,12 @@ protected:
   friend class RooHashTable ;
   friend class RooLinkedList ;
   friend class RooLinkedListIter ;
+  friend class RooFIter ;
   RooLinkedListElem* _prev ; // Link to previous element in list
   RooLinkedListElem* _next ; // Link to next element in list
   TObject*   _arg ;          // Link to contents
   Int_t      _refCount ;     //! Reference count
+  Int_t*     _suc ; //! Store use count
 
 protected:
 

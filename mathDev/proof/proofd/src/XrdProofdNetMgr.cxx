@@ -22,12 +22,13 @@
 
 #include "XrdProofdNetMgr.h"
 
+#include "XpdSysDNS.h"
+
 #include "Xrd/XrdBuffer.hh"
 #include "XrdClient/XrdClientConst.hh"
 #include "XrdClient/XrdClientEnv.hh"
 #include "XrdClient/XrdClientMessage.hh"
 #include "XrdClient/XrdClientUrlInfo.hh"
-#include "XrdNet/XrdNetDNS.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSys/XrdSysPlatform.hh"
 
@@ -77,7 +78,7 @@ XrdProofdNetMgr::XrdProofdNetMgr(XrdProofdManager *mgr,
    fRequestTO = 30;
    fBonjourEnabled = false;
 #if defined(BUILD_BONJOUR)
-   char *host = XrdNetDNS::getHostName();
+   char *host = XrdSysDNS::getHostName();
    fBonjourName = host ? host : "";
    SafeFree(host);
    fBonjourCores = XrdProofdAux::GetNumCPUs();
@@ -809,13 +810,17 @@ int XrdProofdNetMgr::BroadcastCtrlC(const char *usr)
                     (w->fPort == -1 || w->fPort == fMgr->Port())) ? 1 : 0;
          if (!us) {
             // Create 'url'
-            XrdOucString u = (usr) ? usr : fMgr->EffectiveUser();
+            // We use the enforced username if specified in the config file; this is the case
+            // of user-dedicated daemons with mapped usernames, like PoD@gLite ...
+            XrdOucString u = (w->fUser.length() > 0) ? w->fUser : usr;
+            if (u.length() <= 0) u = fMgr->EffectiveUser();
             u += '@';
             u += w->fHost;
             if (w->fPort != -1) {
                u += ':';
                u += w->fPort;
             }
+            TRACE(HDBG, "sending request to: "<<u);
             // Get a connection to the server
             XrdProofConn *conn = GetProofConn(u.c_str());
             if (conn && conn->IsValid()) {
@@ -873,7 +878,10 @@ int XrdProofdNetMgr::Broadcast(int type, const char *msg, const char *usr,
                     (w->fPort == -1 || w->fPort == fMgr->Port())) ? 1 : 0;
          if (!us) {
             // Create 'url'
-            XrdOucString u = (usr) ? usr : fMgr->EffectiveUser();
+            // We use the enforced username if specified in the config file; this is the case
+            // of user-dedicated daemons with mapped usernames, like PoD@gLite ...
+            XrdOucString u = (w->fUser.length() > 0) ? w->fUser : usr;
+            if (u.length() <= 0) u = fMgr->EffectiveUser();
             u += '@';
             u += w->fHost;
             if (w->fPort != -1) {
@@ -1042,7 +1050,7 @@ bool XrdProofdNetMgr::IsLocal(const char *host, bool checkport)
       XrdClientUrlInfo uu(host);
       if (uu.Port <= 0) uu.Port = 1093;
       // Fully qualified name
-      char *fqn = XrdNetDNS::getHostName(uu.Host.c_str());
+      char *fqn = XrdSysDNS::getHostName(uu.Host.c_str());
       if (fqn && (strstr(fqn, "localhost") || !strcmp(fqn, "127.0.0.1") ||
                   !strcmp(fMgr->Host(), fqn))) {
          if (!checkport || (uu.Port == fMgr->Port()))
@@ -1135,7 +1143,8 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
    } else {
       // Read portion of remote file
       XrdClientUrlInfo u(file);
-      u.User = p->Client()->User() ? p->Client()->User() : fMgr->EffectiveUser();
+      if (u.User.length() <= 0) 
+         u.User = p->Client()->User() ? p->Client()->User() : fMgr->EffectiveUser();
       buf = ReadBufferRemote(u.GetUrl().c_str(), file, ofs, lout, grep);
    }
 
@@ -1147,12 +1156,16 @@ int XrdProofdNetMgr::ReadBuffer(XrdProofdProtocol *p)
                TRACEP(p, DBG, emsg);
             }
             response->Send();
+            SafeDelArray(pattern);
+            SafeFree(filen);
             return 0;
          } else {
             XPDFORM(emsg, "could not read buffer from %s %s",
                     (local) ? "local file " : "remote file ", file);
             TRACEP(p, XERR, emsg);
             response->Send(kXR_InvalidRequest, emsg.c_str());
+            SafeDelArray(pattern);
+            SafeFree(filen);
             return 0;
          }
       } else {
@@ -1378,14 +1391,14 @@ char *XrdProofdNetMgr::ReadBufferLocal(const char *path,
       lcmd = strlen(pat) + strlen(file) + 20;
       cmd = new char[lcmd];
       if (opt == 2) {
-         sprintf(cmd, "grep -v %s %s", pat, file);
+         snprintf(cmd, lcmd, "grep -v %s %s", pat, file);
       } else {
-         sprintf(cmd, "grep %s %s", pat, file);
+         snprintf(cmd, lcmd, "grep %s %s", pat, file);
       }
    } else {
       lcmd = strlen(file) + 10;
       cmd = new char[lcmd];
-      sprintf(cmd, "cat %s", file);
+      snprintf(cmd, lcmd, "cat %s", file);
    }
    TRACE(DBG, "cmd: " << cmd);
 
@@ -1546,7 +1559,7 @@ char *XrdProofdNetMgr::ReadLogPaths(const char *url, const char *msg, int isess)
       reqhdr.proof.int1 = kQueryLogPaths;
       reqhdr.proof.int2 = isess;
       reqhdr.proof.sid = -1;
-      reqhdr.header.dlen = strlen(msg);
+      reqhdr.header.dlen = msg ? strlen(msg) : 0;
       const void *btmp = (const void *) msg;
       char **vout = &buf;
       // Send over

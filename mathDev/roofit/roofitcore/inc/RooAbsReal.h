@@ -39,6 +39,7 @@ class RooMultiGenFunction ;
 class RooFitResult ;
 class RooMoment ;
 class RooDerivative ;
+class RooVectorDataStore ;
 
 class TH1;
 class TH1F;
@@ -48,7 +49,6 @@ class TH3F;
 #include <list>
 #include <string>
 #include <iostream>
-
 
 class RooAbsReal : public RooAbsArg {
 public:
@@ -61,12 +61,17 @@ public:
   virtual ~RooAbsReal();
 
   // Return value and unit accessors
-  virtual Double_t getVal(const RooArgSet* set=0) const ;
-  inline  Double_t getVal(const RooArgSet& set) const { 
-    // Return value with given choice of observables
-    return getVal(&set) ; 
+  inline Double_t getVal(const RooArgSet* set=0) const { 
+/*    if (_fast && !_inhibitDirty) std::cout << "RooAbsReal::getVal(" << GetName() << ") CLEAN value = " << _value << std::endl ;  */
+#ifndef _WIN32
+    return (_fast && !_inhibitDirty) ? _value : getValV(set) ; 
+#else
+    return (_fast && !inhibitDirty()) ? _value : getValV(set) ;     
+#endif
   }
+  inline  Double_t getVal(const RooArgSet& set) const { return _fast ? _value : getValV(&set) ; }
 
+  virtual Double_t getValV(const RooArgSet* set=0) const ;
 
   Double_t getPropagatedError(const RooFitResult& fr) ;
 
@@ -154,6 +159,9 @@ public:
   }
   virtual RooAbsReal* createIntegral(const RooArgSet& iset, const RooArgSet* nset=0, const RooNumIntConfig* cfg=0, const char* rangeName=0) const ;  
 
+
+  void setParameterizeIntegral(const RooArgSet& paramVars) ;
+
   // Create running integrals
   RooAbsReal* createRunningIntegral(const RooArgSet& iset, const RooArgSet& nset=RooArgSet()) ;
   RooAbsReal* createRunningIntegral(const RooArgSet& iset, const RooCmdArg& arg1, const RooCmdArg& arg2=RooCmdArg::none(),
@@ -227,12 +235,12 @@ public:
 			    Bool_t correctForBinVolume=kFALSE, Bool_t showProgress=kFALSE) const ;
 
   // I/O streaming interface (machine readable)
-  virtual Bool_t readFromStream(istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
-  virtual void writeToStream(ostream& os, Bool_t compact) const ;
+  virtual Bool_t readFromStream(std::istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
+  virtual void writeToStream(std::ostream& os, Bool_t compact) const ;
 
   // Printing interface (human readable)
-  virtual void printValue(ostream& os) const ;
-  virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printValue(std::ostream& os) const ;
+  virtual void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
 
   static void setCacheCheck(Bool_t flag) ;
 
@@ -247,12 +255,12 @@ public:
     char _srvval[1024] ;
   } ;
 
-  enum ErrorLoggingMode { PrintErrors, CollectErrors, CountErrors } ;
+  enum ErrorLoggingMode { PrintErrors, CollectErrors, CountErrors, Ignore } ;
   static ErrorLoggingMode evalErrorLoggingMode() ;
   static void setEvalErrorLoggingMode(ErrorLoggingMode m) ;
   void logEvalError(const char* message, const char* serverValueString=0) const ;
   static void logEvalError(const RooAbsReal* originator, const char* origName, const char* message, const char* serverValueString=0) ;
-  static void printEvalErrors(ostream&os=std::cout, Int_t maxPerNode=10000000) ;
+  static void printEvalErrors(std::ostream&os=std::cout, Int_t maxPerNode=10000000) ;
   static Int_t numEvalErrors() ;
   static Int_t numEvalErrorItems() ;
 
@@ -261,7 +269,9 @@ public:
   static EvalErrorIter evalErrorIter() ;
 
   static void clearEvalErrorLog() ;
-
+  
+  virtual Bool_t isBinnedDistribution(const RooArgSet& /*obs*/) const { return kFALSE ; }
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const { return 0 ; }
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const { 
     // Interface for returning an optional hint for initial sampling points when constructing a curve 
     // projected on observable.
@@ -356,10 +366,11 @@ protected:
 
   // Hooks for RooDataSet interface
   friend class RooRealIntegral ;
-  friend class RooUnBinDataStore ;
+  friend class RooVectorDataStore ;
   virtual void syncCache(const RooArgSet* set=0) { getVal(set) ; }
-  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE, Bool_t setValDirty=kTRUE) ;
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) ;
+  virtual void attachToVStore(RooVectorDataStore& vstore) ;
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) ;
   virtual void fillTreeBranch(TTree& t) ;
 

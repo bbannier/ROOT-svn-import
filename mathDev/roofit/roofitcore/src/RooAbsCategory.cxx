@@ -42,6 +42,9 @@
 #include "Roo1DTable.h"
 #include "RooCategory.h"
 #include "RooMsgService.h"
+#include "RooVectorDataStore.h"
+
+using namespace std;
 
 ClassImp(RooAbsCategory) 
 ;
@@ -121,6 +124,11 @@ const char* RooAbsCategory::getLabel() const
     clearShapeDirty() ;
   }
 
+  const char* ret = _value.GetName() ;
+  // If label is not set, do it now on the fly
+  if (ret==0) {
+    _value.SetName(lookupType(_value.getVal())->GetName()) ;    
+  }
   return _value.GetName() ;
 }
 
@@ -402,7 +410,7 @@ void RooAbsCategory::writeToStream(ostream& os, Bool_t compact) const
 void RooAbsCategory::printValue(ostream& os) const
 {
   // Print value (label name)
-  os << getLabel() ;
+  os << getLabel() << "(idx = " << getIndex() << ")" << endl ;
 }
 
 
@@ -432,6 +440,17 @@ void RooAbsCategory::printMultiline(ostream& os, Int_t contents, Bool_t verbose,
     type->printStream(os,kName|kValue,kSingleLine,indent);
   }
 }
+
+
+
+//_____________________________________________________________________________
+void RooAbsCategory::attachToVStore(RooVectorDataStore& vstore)
+{
+  // Attach the category index and label to as branches to the given vector store
+  RooVectorDataStore::CatVector* cv = vstore.addCategory(this) ;
+  cv->setBuffer(&_value) ;  
+}
+
 
 
 
@@ -567,7 +586,7 @@ void RooAbsCategory::syncCache(const RooArgSet*)
 
 
 //_____________________________________________________________________________
-void RooAbsCategory::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/) 
+void RooAbsCategory::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/, Bool_t setValDirty) 
 {
   // Copy the cached value from given source and raise dirty flag.
   // It is the callers responsability to ensure that the sources
@@ -605,7 +624,9 @@ void RooAbsCategory::copyCache(const RooAbsArg* source, Bool_t /*valueOnly*/)
     } 
   }
 
-  setValueDirty() ;
+  if (setValDirty) {
+    setValueDirty() ;
+  }
 }
 
 

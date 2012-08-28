@@ -32,6 +32,7 @@
 #include "TObjArray.h"
 #include "TObjString.h"
 #include "TString.h"
+#include "TRegexp.h"
 #include "THashList.h"
 #include "TOrdCollection.h"
 #include "TVirtualPad.h"
@@ -67,7 +68,10 @@ extern "C" void TCint_UpdateClassInfo(char *c, Long_t l) {
    TCint::UpdateClassInfo(c, l);
 }
 
-extern "C" int TCint_AutoLoadCallback(char *c, char *l) {
+extern "C" int TCint_AutoLoadCallback(char *c, char *l) 
+{
+   // CINT call back to implement the autoloading.
+
    ULong_t varp = G__getgvp();
    G__setgvp((Long_t)G__PVOID);
    string cls(c);
@@ -76,7 +80,10 @@ extern "C" int TCint_AutoLoadCallback(char *c, char *l) {
    return result;
 }
 
-extern "C" void *TCint_FindSpecialObject(char *c, G__ClassInfo *ci, void **p1, void **p2) {
+extern "C" void *TCint_FindSpecialObject(char *c, G__ClassInfo *ci, void **p1, void **p2) 
+{
+   // CINT call back to implement the search for the special objects/items.
+
    return TCint::FindSpecialObject(c, ci, p1, p2);
 }
 
@@ -89,13 +96,13 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
    //classes then executes CompileMacro on it.
    //The name of the file depends on the class name, and it's not generated again
    //if the file exist.
-   
-   
+
+
    if (classes.empty()) {
       return 0;
    }
    // Use the name of the first class as the main name.
-   
+
    const std::string &className = classes[0];
    //(0) prepare file name
    TString fileName = "AutoDict_";
@@ -154,6 +161,12 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
       for (it = unknown.begin(); it != unknown.end(); ++it) {
          TClass* cl = TClass::GetClass(it->c_str());
          if (cl && cl->GetDeclFileName()) {
+#ifdef WIN32
+            TString drive;
+            if (cl->GetDeclFileName()[0] && cl->GetDeclFileName()[1] == ':') {
+               drive.Form("%c:/",cl->GetDeclFileName()[0]);
+            }
+#endif
             TString header(gSystem->BaseName(cl->GetDeclFileName()));
             TString dir(gSystem->DirName(cl->GetDeclFileName()));
             TString dirbase(gSystem->BaseName(dir));
@@ -162,7 +175,13 @@ int TCint_GenerateDictionary(const std::vector<std::string> &classes,
                    && dirbase != "prec_stl") {
                gSystem->PrependPathName(dirbase, header);
                dir = gSystem->DirName(dir);
+               dirbase = dir.Length() ? gSystem->BaseName(dir) : "";
             }
+#ifdef WIN32
+            if (drive.Length()) {
+               gSystem->PrependPathName(drive, header);
+            }
+#endif
             fileContent += TString("#include \"") + header + "\"\n";
          }
       }
@@ -253,7 +272,7 @@ int TCint_GenerateDictionary(const std::string &className,
    //classes then executes CompileMacro on it.
    //The name of the file depends on the class name, and it's not generated again
    //if the file exist.
-   
+
    std::vector<std::string> classes;
    classes.push_back(className);
    return TCint_GenerateDictionary(classes, headers, fwdDecls, unknown);
@@ -389,9 +408,9 @@ void TCint::EnableAutoLoading()
 
    R__LOCKGUARD(gCINTMutex);
 
+   LoadLibraryMap();
    G__set_class_autoloading_callback(&TCint_AutoLoadCallback);
    G__set_class_autoloading(1);
-   LoadLibraryMap();
 }
 
 //______________________________________________________________________________
@@ -666,12 +685,13 @@ void TCint::RecursiveRemove(TObject *obj)
    // CINT objects are always on the heap.
 
    R__LOCKGUARD(gCINTMutex);
+   std::set<TObject*>* setOfSpecials = (std::set<TObject*>*)fgSetOfSpecials;
 
-   if (obj->IsOnHeap() && fgSetOfSpecials && !((std::set<TObject*>*)fgSetOfSpecials)->empty()) {
-      std::set<TObject*>::iterator iSpecial = ((std::set<TObject*>*)fgSetOfSpecials)->find(obj);
-      if (iSpecial != ((std::set<TObject*>*)fgSetOfSpecials)->end()) {
+   if (obj->IsOnHeap() && fgSetOfSpecials && !setOfSpecials->empty()) {
+      std::set<TObject*>::iterator iSpecial = setOfSpecials->find(obj);
+      if (iSpecial != setOfSpecials->end()) {
          DeleteGlobal(obj);
-         ((std::set<TObject*>*)fgSetOfSpecials)->erase(iSpecial);
+         setOfSpecials->erase(iSpecial);
       }
    }
 }
@@ -822,18 +842,32 @@ void TCint::UpdateListOfGlobalFunctions()
          Bool_t needToAdd = kTRUE;
          // first remove if already in list
          TList* listFuncs = ((THashTable*)(gROOT->fGlobalFunctions))->GetListForObject(t.Name());
-         if (listFuncs && (vt = (void*)t.InterfaceMethod())) {
+         if (listFuncs) {
+            vt = (void*)t.InterfaceMethod();
             Long_t prop = -1;
             TIter iFunc(listFuncs);
             TFunction* f = 0;
             Bool_t foundStart = kFALSE;
             while (needToAdd && (f = (TFunction*)iFunc())) {
                if (strcmp(f->GetName(),t.Name())) {
+                  // The function are sorted alphabetically,
+                  // until we get to the first overload, we skip th test
+                  // and then when we get to what is not an overload,
+                  // we can quit.
                   if (foundStart) break;
-                  continue;
+                  else continue;
                }
                foundStart = kTRUE;
-               if (vt == f->InterfaceMethod()) {
+               if (!vt) {
+                  // an interpreted function.
+
+                  // Do not call TFunction::InterfaceMethod in this case
+                  // as it might lead to a spurrious warning message:
+                  //   "Error: non class,struct,union object $bench used with . or ->"
+                  // in case of some user function definition.
+                  needToAdd = (f->Property() & G__BIT_ISCOMPILED)
+                              || !( 0 == strcmp( t.GetMangledName() , f->GetMangledName()) );
+              } else if (vt == f->InterfaceMethod()) {
                   if (prop == -1)
                      prop = t.Property();
                   needToAdd = !((prop & G__BIT_ISCOMPILED)
@@ -1150,9 +1184,10 @@ Int_t TCint::GenerateDictionary(const char *classes, const char *includes /* = 0
    //    gInterpreter->GenerateDictionary("vector<vector<float> >;list<vector<float> >","list;vector");
    // or
    //    gInterpreter->GenerateDictionary("myclass","myclass.h;myhelper.h");
-   
+
    if (classes == 0 || classes[0] == 0) return 0;
-   
+   if (!includes) includes = "";
+
    // Split the input list
    std::vector<std::string> listClasses;
    for(const char *current = classes, *prev = classes; *current != 0; ++current) {
@@ -1174,7 +1209,7 @@ Int_t TCint::GenerateDictionary(const char *classes, const char *includes /* = 0
          prev = current+1;
       }
    }
-   
+
    // Generate the temporary dictionary file
    return TCint_GenerateDictionary(listClasses,listIncludes, std::vector<std::string>(), std::vector<std::string>());
 }
@@ -1470,9 +1505,11 @@ const char *TCint::TypeName(const char *typeDesc)
    // E.g.: typeDesc = "class TNamed**", returns "TNamed".
    // You need to use the result immediately before it is being overwritten.
 
+   if (typeDesc == 0) return "";
+
    static char *t = 0;
    static unsigned int tlen = 0;
-   
+
    R__LOCKGUARD(gCINTMutex); // Because of the static array.
 
    unsigned int dlen = strlen(typeDesc);
@@ -1924,8 +1961,8 @@ Int_t TCint::AutoLoadCallback(const char *cls, const char *lib)
    TString deplibs = gInterpreter->GetClassSharedLibs(cls);
    if (!deplibs.IsNull()) {
      if (gDebug > 0 && gDebug <= 4)
-       ::Info("TCint::AutoLoadCallback", "loaded dependent library %s for class %s",
-	      deplibs.Data(), cls);
+        ::Info("TCint::AutoLoadCallback", "loaded dependent library %s for class %s",
+               deplibs.Data(), cls);
       TString delim(" ");
       TObjArray *tokens = deplibs.Tokenize(delim);
       for (Int_t i = tokens->GetEntriesFast()-1; i > 0; i--) {
@@ -2126,6 +2163,11 @@ const char* TCint::GetSharedLibs()
          for (unsigned int i = 0; !needToSkip && i < excludelistsize; ++i)
             needToSkip = (!strncmp(basename, excludelist[i], excludelen[i]));
       }
+#if defined(R__MACOSX)
+      TRegexp sovers = "\\.[0-9]+\\.*[0-9]*\\.so";
+      TRegexp dyvers = "\\.[0-9]+\\.*[0-9]*\\.dylib";
+      TString fname = filename;
+#endif
       if (!needToSkip &&
            (
 #if defined(R__MACOSX) && defined(MAC_OS_X_VERSION_10_5)
@@ -2137,9 +2179,16 @@ const char* TCint::GetSharedLibs()
                        strcmp(end-3,".so") == 0)) ||
             (len>4 && (strcasecmp(end-4,".dll") == 0)) ||
             (len>6 && (strcasecmp(end-6,".dylib") == 0)))) {
-         if (!fSharedLibs.IsNull())
-            fSharedLibs.Append(" ");
-         fSharedLibs.Append(filename);
+#if defined(R__MACOSX)
+         if ((len>5 && fname.Index(sovers) == kNPOS) &&
+             (len>8 && fname.Index(dyvers) == kNPOS)) {
+#endif               
+            if (!fSharedLibs.IsNull())
+               fSharedLibs.Append(" ");
+            fSharedLibs.Append(filename);
+#if defined(R__MACOSX)
+         }
+#endif
       }
 
       cursor.Next();
@@ -2509,7 +2558,7 @@ void  TCint::CallFunc_Init(CallFunc_t *func) const
    f->Init();
 }
 //______________________________________________________________________________
-bool  TCint::CallFunc_IsValid(CallFunc_t *func) const
+Bool_t  TCint::CallFunc_IsValid(CallFunc_t *func) const
 {
    // Interface to CINT function
 
@@ -2628,7 +2677,7 @@ void  TCint::ClassInfo_Delete(ClassInfo_t *cinfo, void *arena) const
    info->Delete(arena);
 }
 //______________________________________________________________________________
-void  TCint::ClassInfo_DeleteArray(ClassInfo_t *cinfo, void *arena, bool dtorOnly) const
+void  TCint::ClassInfo_DeleteArray(ClassInfo_t *cinfo, void *arena, Bool_t dtorOnly) const
 {
    // Interface to CINT function
 
@@ -2687,7 +2736,7 @@ int TCint::ClassInfo_GetMethodNArg(ClassInfo_t *cinfo, const char *method,const 
    return -1;
 }
 //______________________________________________________________________________
-bool  TCint::ClassInfo_HasDefaultConstructor(ClassInfo_t *cinfo) const
+Bool_t  TCint::ClassInfo_HasDefaultConstructor(ClassInfo_t *cinfo) const
 {
    // Interface to CINT function
 
@@ -2695,7 +2744,7 @@ bool  TCint::ClassInfo_HasDefaultConstructor(ClassInfo_t *cinfo) const
    return info->HasDefaultConstructor();
 }
 //______________________________________________________________________________
-bool  TCint::ClassInfo_HasMethod(ClassInfo_t *cinfo, const char *name) const
+Bool_t  TCint::ClassInfo_HasMethod(ClassInfo_t *cinfo, const char *name) const
 {
    // Interface to CINT function
 
@@ -2719,7 +2768,7 @@ void  TCint::ClassInfo_Init(ClassInfo_t *cinfo, int tagnum) const
 
 }
 //______________________________________________________________________________
-bool  TCint::ClassInfo_IsBase(ClassInfo_t *cinfo, const char*name) const
+Bool_t  TCint::ClassInfo_IsBase(ClassInfo_t *cinfo, const char*name) const
 {
    // Interface to CINT function
 
@@ -2727,7 +2776,7 @@ bool  TCint::ClassInfo_IsBase(ClassInfo_t *cinfo, const char*name) const
    return info->IsBase(name);
 }
 //______________________________________________________________________________
-bool  TCint::ClassInfo_IsEnum(const char*name) const
+Bool_t  TCint::ClassInfo_IsEnum(const char*name) const
 {
    // Interface to CINT function
 
@@ -2736,7 +2785,7 @@ bool  TCint::ClassInfo_IsEnum(const char*name) const
    return kFALSE;
 }
 //______________________________________________________________________________
-bool  TCint::ClassInfo_IsLoaded(ClassInfo_t *cinfo) const
+Bool_t  TCint::ClassInfo_IsLoaded(ClassInfo_t *cinfo) const
 {
    // Interface to CINT function
 
@@ -2744,7 +2793,7 @@ bool  TCint::ClassInfo_IsLoaded(ClassInfo_t *cinfo) const
    return info->IsLoaded();
 }
 //______________________________________________________________________________
-bool  TCint::ClassInfo_IsValid(ClassInfo_t *cinfo) const
+Bool_t  TCint::ClassInfo_IsValid(ClassInfo_t *cinfo) const
 {
    // Interface to CINT function
 
@@ -2752,7 +2801,7 @@ bool  TCint::ClassInfo_IsValid(ClassInfo_t *cinfo) const
    return info->IsValid();
 }
 //______________________________________________________________________________
-bool  TCint::ClassInfo_IsValidMethod(ClassInfo_t *cinfo,  const char *method,const char *proto, Long_t *offset) const
+Bool_t  TCint::ClassInfo_IsValidMethod(ClassInfo_t *cinfo,  const char *method,const char *proto, Long_t *offset) const
 {
    // Interface to CINT function
 
@@ -2993,7 +3042,7 @@ DataMemberInfo_t *TCint::DataMemberInfo_FactoryCopy(DataMemberInfo_t *dminfo) co
    return info;
 }
 //______________________________________________________________________________
-bool   TCint::DataMemberInfo_IsValid(DataMemberInfo_t *dminfo) const
+Bool_t   TCint::DataMemberInfo_IsValid(DataMemberInfo_t *dminfo) const
 {
    // Interface to CINT function
 
@@ -3162,7 +3211,7 @@ void *TCint::MethodInfo_InterfaceMethod(MethodInfo_t *minfo) const
    return (void*)pfunc;
 }
 //______________________________________________________________________________
-bool  TCint::MethodInfo_IsValid(MethodInfo_t *minfo) const
+Bool_t  TCint::MethodInfo_IsValid(MethodInfo_t *minfo) const
 {
    // Interface to CINT function
 
@@ -3277,7 +3326,7 @@ MethodArgInfo_t *TCint::MethodArgInfo_FactoryCopy(MethodArgInfo_t *marginfo) con
    return info;
 }
 //______________________________________________________________________________
-bool  TCint::MethodArgInfo_IsValid(MethodArgInfo_t *marginfo) const
+Bool_t  TCint::MethodArgInfo_IsValid(MethodArgInfo_t *marginfo) const
 {
    // Interface to CINT function
 
@@ -3369,7 +3418,7 @@ void  TCint::TypeInfo_Init(TypeInfo_t *tinfo, const char *funcname) const
    info->Init(funcname);
 }
 //______________________________________________________________________________
-bool  TCint::TypeInfo_IsValid(TypeInfo_t *tinfo) const
+Bool_t  TCint::TypeInfo_IsValid(TypeInfo_t *tinfo) const
 {
    // Interface to CINT function
 
@@ -3453,7 +3502,7 @@ TypedefInfo_t  TCint::TypedefInfo_Init(TypedefInfo_t *tinfo, const char *funcnam
    info->Init(funcname);
 }
 //______________________________________________________________________________
-bool  TCint::TypedefInfo_IsValid(TypedefInfo_t *tinfo) const
+Bool_t  TCint::TypedefInfo_IsValid(TypedefInfo_t *tinfo) const
 {
    // Interface to CINT function
 

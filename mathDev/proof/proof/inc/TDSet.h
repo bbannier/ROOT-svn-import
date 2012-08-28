@@ -58,6 +58,7 @@ class TIter;
 class TList;
 class TProof;
 class TProofChain;
+class TSelector;
 class TTree;
 
 // For backward compatibility (handle correctly requests from old clients)
@@ -154,7 +155,8 @@ public:
       kEmpty           = BIT(17),
       kValidityChecked = BIT(18),  // Set if elements validiy has been checked
       kSomeInvalid     = BIT(19),  // Set if at least one element is invalid
-      kMultiDSet       = BIT(20)   // Set if fElements is a list of datasets
+      kMultiDSet       = BIT(20),   // Set if fElements is a list of datasets
+      kIsLocal         = BIT(21)   // Set if local, non-PROOF, processing
    };
 
 private:
@@ -193,6 +195,10 @@ public:
    virtual Bool_t        Add(TFileInfo *fileinfo, const char *meta = 0);
    virtual void          AddFriend(TDSet *friendset, const char *alias);
 
+   virtual Long64_t      Process(TSelector *selector, Option_t *option = "",
+                                 Long64_t nentries = -1,
+                                 Long64_t firstentry = 0,
+                                 TObject *enl = 0); // *MENU*
    virtual Long64_t      Process(const char *selector, Option_t *option = "",
                                  Long64_t nentries = -1,
                                  Long64_t firstentry = 0,
@@ -249,7 +255,7 @@ public:
 
    void                  SetWriteV3(Bool_t on = kTRUE);
 
-   ClassDef(TDSet,8)  // Data set for remote processing (PROOF)
+   ClassDef(TDSet,9)  // Data set for remote processing (PROOF)
 };
 
 #endif

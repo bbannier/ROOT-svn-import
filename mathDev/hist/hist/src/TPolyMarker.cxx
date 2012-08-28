@@ -116,6 +116,9 @@ TPolyMarker& TPolyMarker::operator=(const TPolyMarker& pm)
       TAttMarker::operator=(pm);
       fN=pm.fN;
       fLastPoint=pm.fLastPoint;
+   // delete first previous existing fX and fY
+      if (fX) delete [] fX;
+      if (fY) delete [] fY;
       fX=pm.fX;
       fY=pm.fY;
       fOption=pm.fOption;
@@ -155,6 +158,9 @@ void TPolyMarker::Copy(TObject &obj) const
    TObject::Copy(obj);
    TAttMarker::Copy(((TPolyMarker&)obj));
    ((TPolyMarker&)obj).fN = fN;
+   // delete first previous existing fX and fY
+   if (((TPolyMarker&)obj).fX) delete [] (((TPolyMarker&)obj).fX);
+   if (((TPolyMarker&)obj).fY) delete [] (((TPolyMarker&)obj).fY);
    if (fN > 0) {
       ((TPolyMarker&)obj).fX = new Double_t [fN];
       ((TPolyMarker&)obj).fY = new Double_t [fN];

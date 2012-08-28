@@ -52,6 +52,8 @@
 #include "RooRealVar.h"
 #include "RooArgList.h"
 
+using namespace std;
+
 ClassImp(RooParametricStepFunction)
 ;
 
@@ -186,8 +188,6 @@ Double_t RooParametricStepFunction::lastBinValue() const
 //_____________________________________________________________________________
 Double_t RooParametricStepFunction::evaluate() const 
 {
-  Double_t xval(0.);
-  xval = _x;
   Double_t value(0.);
   if (_x >= _limits[0] && _x < _limits[_nBins]){
 

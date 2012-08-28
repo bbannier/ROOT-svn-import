@@ -37,15 +37,19 @@ public:
   RooCompositeDataStore(const char* name, const char* title, const RooArgSet& vars, RooCategory& indexCat, std::map<std::string,RooAbsDataStore*> inputData) ;
 
   // Empty ctor
+  virtual RooAbsDataStore* clone(const char* newname=0) const { return new RooCompositeDataStore(*this,newname) ; }
   virtual RooAbsDataStore* clone(const RooArgSet& vars, const char* newname=0) const { return new RooCompositeDataStore(*this,vars,newname) ; }
 
   RooCompositeDataStore(const RooCompositeDataStore& other, const char* newname=0) ;
   RooCompositeDataStore(const RooCompositeDataStore& other, const RooArgSet& vars, const char* newname=0) ;
   virtual ~RooCompositeDataStore() ;
 
+  virtual void dump() ;
 
   // Write current row
   virtual Int_t fill() ;
+
+  virtual Double_t sumEntries() const ;
 
   // Retrieve a row
   using RooAbsDataStore::get ;
@@ -66,6 +70,8 @@ public:
   // Merge column-wise
   RooAbsDataStore* merge(const RooArgSet& allvars, std::list<RooAbsDataStore*> dstoreList) ;
 
+  RooCategory* index() { return _indexCat ; }
+
   // Add rows 
   virtual void append(RooAbsDataStore& other) ;
 
@@ -73,21 +79,30 @@ public:
   virtual Bool_t valid() const ;
   virtual Int_t numEntries() const ;
   virtual void reset() ;
-  
+
+  // Buffer redirection routines used in inside RooAbsOptTestStatistics
+  virtual void attachBuffers(const RooArgSet& extObs) ; 
+  virtual void resetBuffers() ;
+   
   // Constant term  optimizer interface
   virtual void cacheArgs(const RooAbsArg* owner, RooArgSet& varSet, const RooArgSet* nset=0) ;
   virtual const RooAbsArg* cacheOwner() { return 0 ; }
   virtual void setArgStatus(const RooArgSet& set, Bool_t active) ;
   virtual void resetCache() ;
+
+  virtual void recalculateCache(const RooArgSet* /*proj*/, Int_t /*firstEvent*/, Int_t /*lastEvent*/, Int_t /*stepSize*/) ;
+  
+  void loadValues(const RooAbsDataStore *tds, const RooFormulaVar* select=0, const char* rangeName=0, Int_t nStart=0, Int_t nStop=2000000000) ;
   
  protected:
 
   void attachCache(const RooAbsArg* newOwner, const RooArgSet& cachedVars) ;
 
-  std::map<std::string,RooAbsDataStore*> _dataMap ;
+  std::map<Int_t,RooAbsDataStore*> _dataMap ;
   RooCategory* _indexCat ;
   mutable RooAbsDataStore* _curStore ; //! Datastore associated with current event
   mutable Int_t _curIndex ; //! Index associated with current event
+  Bool_t _ownComps ; //! 
 
   ClassDef(RooCompositeDataStore,1) // Composite Data Storage class
 };

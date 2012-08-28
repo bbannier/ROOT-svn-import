@@ -77,6 +77,7 @@ const ULong64_t kPidOffsetMask = 0xffffffffffffUL;
 #endif
 const UChar_t kPidOffsetShift = 48;
 
+static TString gTDirectoryString = "TDirectory";
 UInt_t keyAbsNumber = 0;
 
 ClassImp(TKey)
@@ -103,6 +104,68 @@ TKey::TKey(TDirectory* motherDir) : TNamed(), fDatime((UInt_t)0)
    fKeylen     = Sizeof();
 
    keyAbsNumber++; SetUniqueID(keyAbsNumber);
+}
+
+//______________________________________________________________________________
+TKey::TKey(TDirectory* motherDir, const TKey &orig, UShort_t pidOffset) : TNamed(), fDatime((UInt_t)0)
+{
+   // Copy a TKey from its original directory to the new 'motherDir'
+   
+   fMotherDir  = motherDir;
+   
+   fPidOffset  = orig.fPidOffset + pidOffset;
+   fNbytes     = orig.fNbytes;
+   fObjlen     = orig.fObjlen;
+   fClassName  = orig.fClassName;
+   fName       = orig.fName;
+   fTitle      = orig.fTitle;
+   
+   fCycle      = fMotherDir->AppendKey(this);
+   fSeekPdir   = 0;
+   fSeekKey    = 0;
+   fLeft       = 0;
+
+   fVersion    = TKey::Class_Version();   
+   Long64_t filepos = GetFile()->GetEND();
+   if (filepos > TFile::kStartBigFile || fPidOffset) fVersion += 1000;
+
+   fKeylen     = Sizeof();  // fVersion must be set.
+
+   UInt_t bufferDecOffset = 0;
+   UInt_t bufferIncOffset = 0;
+   UInt_t alloc = fNbytes + sizeof(Int_t);  // The extra Int_t is for any free space information.
+   if (fKeylen < orig.fKeylen) {
+      bufferDecOffset = orig.fKeylen - fKeylen;
+      fNbytes -= bufferDecOffset;
+   } else if (fKeylen > orig.fKeylen) {
+      bufferIncOffset = fKeylen - orig.fKeylen;
+      alloc += bufferIncOffset;
+      fNbytes += bufferIncOffset;
+   }
+      
+   fBufferRef  = new TBufferFile(TBuffer::kWrite, alloc);
+   fBuffer     = fBufferRef->Buffer(); 
+   
+   // Steal the data from the old key.
+   
+   TFile* f = orig.GetFile();
+   if (f) {
+      Int_t nsize = orig.fNbytes;
+      f->Seek(orig.fSeekKey);
+      if( f->ReadBuffer(fBuffer+bufferIncOffset,nsize) )
+      {
+         Error("ReadFile", "Failed to read data.");
+         return;
+      }
+      if (gDebug) {
+         cout << "TKey Reading "<<nsize<< " bytes at address "<<fSeekKey<<endl;
+      }
+   }
+   fBuffer += bufferDecOffset; // Reset the buffer to be appropriate for this key.
+   Int_t nout = fNbytes - fKeylen;
+   Create(nout);
+   fBufferRef->SetBufferOffset(bufferDecOffset);
+   Streamer(*fBufferRef);         //write key itself again
 }
 
 //______________________________________________________________________________
@@ -337,7 +400,7 @@ void TKey::Build(TDirectory* motherDir, const char* classname, Long64_t filepos)
 
    fClassName = classname;
    //the following test required for forward and backward compatibility
-   if (fClassName == "TDirectoryFile") fClassName = "TDirectory";
+   if (fClassName == "TDirectoryFile") SetBit(kIsDirectoryFile);
 
    fVersion = TKey::Class_Version();
 
@@ -537,7 +600,12 @@ void TKey::FillBuffer(char *&buffer)
       tobuf(buffer, (Int_t)fSeekKey);
       tobuf(buffer, (Int_t)fSeekPdir);
    }
-   fClassName.FillBuffer(buffer);
+   if (TestBit(kIsDirectoryFile)) {
+      // We want to record "TDirectory" instead of TDirectoryFile so that the file can be read by ancient version of ROOT.
+      gTDirectoryString.FillBuffer(buffer);
+   } else {
+      fClassName.FillBuffer(buffer);
+   }
    fName.FillBuffer(buffer);
    fTitle.FillBuffer(buffer);
 }
@@ -629,20 +697,22 @@ TObject *TKey::ReadObj()
    //  object of the class type it describes. This new object now calls its
    //  Streamer function to rebuilt itself.
    //
-   //  see TKey::ReadObjectAny to read any object non-derived from TObject
+   //  Use TKey::ReadObjectAny to read any object non-derived from TObject
+   //  
+   //  Note:
+   //  A C style cast can only be used in the case where the final class 
+   //  of this object derives from TObject as a first inheritance, otherwise
+   //  one must use a dynamic_cast.
    //
-   //  NOTE:
-   //  In case the class of this object derives from TObject but not
-   //  as a first inheritance, one must cast the return value twice.
-   //  Example1: Normal case:
+   //  Example1: simplified case:
    //      class MyClass : public TObject, public AnotherClass
-   //   then on return, one can do:
+   //   then on return, one get away with using:
    //    MyClass *obj = (MyClass*)key->ReadObj();
    //
-   //  Example2: Special case:
-   //      class MyClass : public AnotherClass, public TObject
-   //   then on return, one must do:
+   //  Example2: Usual case (recommended unless performance is critical)
    //    MyClass *obj = dynamic_cast<MyClass*>(key->ReadObj());
+   //  which support also the more complex inheritance like:
+   //    class MyClass : public AnotherClass, public TObject
    //
    //  Of course, dynamic_cast<> can also be used in the example 1.
 
@@ -1015,7 +1085,7 @@ void *TKey::ReadObjectAny(const TClass* expectedClass)
       baseOffset = cl->GetBaseClassOffset(TObject::Class());
       if (baseOffset==-1) {
          Fatal("ReadObj","Incorrect detection of the inheritance from TObject for class %s.\n",
-            fClassName.Data());
+               fClassName.Data());
       }
       TObject *tobj = (TObject*)( ((char*)pobj) +baseOffset);
 
@@ -1155,7 +1225,10 @@ void TKey::ReadKeyBuffer(char *&buffer)
    }
    fClassName.ReadBuffer(buffer);
    //the following test required for forward and backward compatibility
-   if (fClassName == "TDirectory") fClassName = "TDirectoryFile";
+   if (fClassName == "TDirectory") {
+      fClassName = "TDirectoryFile";
+      SetBit(kIsDirectoryFile);
+   }
 
    fName.ReadBuffer(buffer);
    fTitle.ReadBuffer(buffer);
@@ -1233,7 +1306,11 @@ Int_t TKey::Sizeof() const
 
    Int_t nbytes = 22; if (fVersion > 1000) nbytes += 8;
    nbytes      += fDatime.Sizeof();
-   nbytes      += fClassName.Sizeof();
+   if (TestBit(kIsDirectoryFile)) {
+      nbytes   += 11; // strlen("TDirectory")+1
+   } else {
+      nbytes   += fClassName.Sizeof();
+   }
    nbytes      += fName.Sizeof();
    nbytes      += fTitle.Sizeof();
    return nbytes;
@@ -1272,6 +1349,11 @@ void TKey::Streamer(TBuffer &b)
          b >> seekdir; fSeekPdir= (Long64_t)seekdir;
       }
       fClassName.Streamer(b);
+      //the following test required for forward and backward compatibility
+      if (fClassName == "TDirectory") {
+         fClassName = "TDirectoryFile";
+         SetBit(kIsDirectoryFile);
+      }
       fName.Streamer(b);
       fTitle.Streamer(b);
       if (fKeylen < 0) {
@@ -1289,8 +1371,7 @@ void TKey::Streamer(TBuffer &b)
          MakeZombie();
          fNbytes = 0;
       }
-      
-         
+
    } else {
       b << fNbytes;
       version = (Version_t)fVersion;
@@ -1316,7 +1397,12 @@ void TKey::Streamer(TBuffer &b)
          b << (Int_t)fSeekKey;
          b << (Int_t)fSeekPdir;
       }
-      fClassName.Streamer(b);
+      if (TestBit(kIsDirectoryFile)) {
+         // We want to record "TDirectory" instead of TDirectoryFile so that the file can be read by ancient version of ROOT.
+         gTDirectoryString.Streamer(b);
+      } else {
+         fClassName.Streamer(b);
+      }
       fName.Streamer(b);
       fTitle.Streamer(b);
    }

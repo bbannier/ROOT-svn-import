@@ -56,7 +56,7 @@ public:
 
   virtual ExtendMode extendMode() const { 
     // Return extended mode capabilities
-    return (_haveLastCoef || _allExtendable) ? MustBeExtended : CanNotBeExtended; 
+    return ((_haveLastCoef&&!_recursive) || _allExtendable) ? MustBeExtended : CanNotBeExtended; 
   }
   virtual Double_t expectedEvents(const RooArgSet* nset) const ;
   virtual Double_t expectedEvents(const RooArgSet& nset) const { 
@@ -83,8 +83,10 @@ public:
   virtual void resetErrorCounters(Int_t resetValue=10) ;
 
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const ; 
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
+  Bool_t isBinnedDistribution(const RooArgSet& obs) const  ;
 
-  void printMetaArgs(ostream& os) const ;
+  void printMetaArgs(std::ostream& os) const ;
 
 protected:
 
@@ -103,6 +105,7 @@ protected:
     virtual ~CacheElem() {} ;
 
     RooArgList _suppNormList ; // Supplemental normalization list
+    Bool_t    _needSupNorm ; // Does the above list contain any non-unit entries?
 
     RooArgList _projList ; // Projection integrals to be multiplied with coefficients
     RooArgList _suppProjList ; // Projection integrals to be multiplied with coefficients for supplemental normalization terms
@@ -132,12 +135,13 @@ protected:
   
   Bool_t _haveLastCoef ;    //  Flag indicating if last PDFs coefficient was supplied in the ctor
   Bool_t _allExtendable ;   //  Flag indicating if all PDF components are extendable
+  Bool_t _recursive ;       //  Flag indicating is fractions are treated recursively
 
   mutable Int_t _coefErrCount ; //! Coefficient error counter
 
 private:
 
-  ClassDef(RooAddPdf,2) // PDF representing a sum of PDFs
+  ClassDef(RooAddPdf,3) // PDF representing a sum of PDFs
 };
 
 #endif

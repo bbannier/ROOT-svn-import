@@ -6,7 +6,29 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-include Makefile.arch
+RC     := root-config
+ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
+MKARCH := $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
+RCONFIG := $(wildcard $(shell $(RC) --incdir)/RConfigure.h)
+endif
+ifneq ($(MKARCH),)
+include $(MKARCH)
+else
+ifeq ($(ROOTSYS),)
+ROOTSYS = ..
+endif
+include $(ROOTSYS)/etc/Makefile.arch
+endif
+# Tutorials dir needed by stressProof
+ifneq ($(RCONFIG),)
+TUTDIR := $(wildcard $(shell grep ROOTDOCDIR $(RCONFIG) | sed "s|.*\"\(.*\)\"|\1|")/tutorials)
+endif
+ifeq ($(TUTDIR),)
+ifeq ($(ROOTSYS),)
+ROOTSYS = ..
+endif
+TUTDIR := $(ROOTSYS)/tutorials
+endif
 -include ../MyConfig.mk
 
 #------------------------------------------------------------------------------
@@ -87,7 +109,7 @@ else
 STRESSGUILIBS = -lASImage -lASImageGui -lRecorder -lGuiHtml
 endif
 
-ifeq ($(shell $(ROOTCONFIG) --has-genvector),yes)
+ifeq ($(shell $(RC) --has-genvector),yes)
 STRESSVECO   = stressVector.$(ObjSuf)
 STRESSVECS   = stressVector.$(SrcSuf)
 STRESSVEC    = stressVector$(ExeSuf)
@@ -124,7 +146,7 @@ STRESSMATH    = stressMathCore$(ExeSuf)
 
 endif
 
-ifeq ($(shell $(ROOTCONFIG) --has-mathmore),yes)
+ifeq ($(shell $(RC) --has-mathmore),yes)
 STRESSMATHMOREO   = stressMathMore.$(ObjSuf) 
 STRESSMATHMORES   = stressMathMore.$(SrcSuf)  
 ifeq ($(PLATFORM),win32)
@@ -135,7 +157,7 @@ endif
 STRESSMATHMORE    = stressMathMore$(ExeSuf)
 endif
 
-ifeq ($(shell $(ROOTCONFIG) --has-tmva),yes)
+ifeq ($(shell $(RC) --has-tmva),yes)
 STRESSTMVAO   = stressTMVA.$(ObjSuf)
 STRESSTMVAS   = stressTMVA.$(SrcSuf)
 ifeq ($(PLATFORM),win32)
@@ -182,18 +204,22 @@ STRESSSHAPESO   = stressShapes.$(ObjSuf)
 STRESSSHAPESS   = stressShapes.$(SrcSuf)
 STRESSSHAPES    = stressShapes$(ExeSuf)
 
-ifeq ($(shell $(ROOTCONFIG) --has-roofit),yes)
+ifeq ($(shell $(RC) --has-roofit),yes)
 STRESSROOFITO  = stressRooFit.$(ObjSuf)
 STRESSROOFITS  = stressRooFit.$(SrcSuf)
 STRESSROOFIT   = stressRooFit$(ExeSuf)
+
+STRESSROOSTATSO  = stressRooStats.$(ObjSuf)
+STRESSROOSTATSS  = stressRooStats.$(SrcSuf)
+STRESSROOSTATS   = stressRooStats$(ExeSuf)
 endif
 
 STRESSFITO    = stressFit.$(ObjSuf)
 STRESSFITS    = stressFit.$(SrcSuf)
 STRESSFIT     = stressFit$(ExeSuf)
 
-ifeq ($(shell $(ROOTCONFIG) --has-unuran),yes)
-ifeq ($(shell $(ROOTCONFIG) --has-minuit2),yes)
+ifeq ($(shell $(RC) --has-unuran),yes)
+ifeq ($(shell $(RC) --has-minuit2),yes)
 STRESSHISTOFITO    = stressHistoFit.$(ObjSuf)
 STRESSHISTOFITS    = stressHistoFit.$(SrcSuf)
 STRESSHISTOFIT     = stressHistoFit$(ExeSuf)
@@ -256,7 +282,7 @@ OBJS          = $(EVENTO) $(MAINEVENTO) $(EVENTMTO) $(HWORLDO) $(HSIMPLEO) $(MIN
                 $(STRESSGO) $(STRESSSPO) $(TESTBITSO)  \
                 $(CTORTUREO) $(QPRANDOMO) $(THREADSO) $(STRESSVECO) \
                 $(STRESSMATHO) $(STRESSFITO) $(STRESSHISTOFITO) $(STRESSHEPIXO) \
-                $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSPROOFO) \
+                $(STRESSENTRYLISTO) $(STRESSROOFITO) $(STRESSROOSTATSO) $(STRESSPROOFO) \
                 $(STRESSMATHMOREO) $(STRESSTMVAO) $(STRESSINTERPO) $(STRESSITERO) \
                 $(STRESSHISTO) $(STRESSGUIO)
 
@@ -266,13 +292,17 @@ PROGRAMS      = $(EVENT) $(EVENTMTSO) $(HWORLD) $(HSIMPLE) $(MINEXAM) $(TSTRING)
                 $(STRESSSHAPES) $(STRESSGEOMETRY) $(STRESSL) $(STRESSG) \
                 $(TESTBITS) $(CTORTURE) $(QPRANDOM) $(THREADS) $(STRESSSP) \
                 $(STRESSVEC) $(STRESSFIT) $(STRESSHISTOFIT) $(STRESSHEPIX) \
-                $(STRESSENTRYLIST) $(STRESSROOFIT) $(STRESSPROOF) $(STRESSMATH) \
+                $(STRESSENTRYLIST) $(STRESSROOFIT) $(STRESSROOSTATS) $(STRESSPROOF) $(STRESSMATH) \
                 $(STRESSMATHMORE) $(STRESSTMVA) $(STRESSINTERP)  $(STRESSITER) \
                 $(STRESSHIST) $(STRESSGUI)
 
 
 OBJS         += $(GUITESTO) $(GUIVIEWERO) $(TETRISO)
 PROGRAMS     += $(GUITEST) $(GUIVIEWER) $(TETRISSO)
+
+ifeq ($(ARCH),aix5)
+MAKESHARED    = /usr/vacpp/bin/makeC++SharedLib
+endif
 
 #------------------------------------------------------------------------------
 
@@ -282,11 +312,8 @@ PROGRAMS     += $(GUITEST) $(GUIVIEWER) $(TETRISSO)
 all:            $(PROGRAMS)
 
 $(EVENTSO):     $(EVENTO)
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
 ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
+		$(MAKESHARED) $(OutPutOpt) $@ $(LIBS) -p 0 $^
 else
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
@@ -309,15 +336,11 @@ else
 endif
 endif
 endif
-endif
 		@echo "$@ done"
 
 $(EVENTMTSO):     $(EVENTMTO)
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
 ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
+		$(MAKESHARED) $(OutPutOpt) $@ $(LIBS) -p 0 $^
 else
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
@@ -337,7 +360,6 @@ ifeq ($(PLATFORM),win32)
 		$(MT_DLL)
 else
 		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(OutPutOpt) $@ $(EXPLLINKLIBS)
-endif
 endif
 endif
 endif
@@ -431,17 +453,9 @@ else
 endif
 		@echo "$@ done"
 
-
-
-
-
-
 $(TRACKMATHLIB):	$(TRACKMATHOBJ)
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
 ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
+		$(MAKESHARED) $(OutPutOpt) $@ $(LIBS) -p 0 $^
 else
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
@@ -454,7 +468,6 @@ endif
 else
 		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(LIBS) $(STRESSMATHLIBS) $(OutPutOpt)$@
 		$(MT_DLL)
-endif
 endif
 endif
 
@@ -572,8 +585,9 @@ $(STRESSHEPIX): $(STRESSHEPIXO) $(STRESSGEOMETRY) $(STRESSFIT) $(STRESSL) \
 		@echo "$@ done"
 
 $(STRESSROOFITO): stressRooFit_tests.cxx
+$(STRESSROOSTATSO): stressRooStats_tests.cxx stressRooStats_models.cxx
 
-ifeq ($(shell $(ROOTCONFIG) --has-mathmore),yes)
+ifeq ($(shell $(RC) --has-mathmore),yes)
 ifeq ($(PLATFORM),win32)
 EXTRAROOFITLIBS = '$(ROOTSYS)/lib/libMathMore.lib'
 else
@@ -590,12 +604,21 @@ else
 endif
 		@echo "$@ done"
 
+$(STRESSROOSTATS): $(STRESSROOSTATSO)
+ifeq ($(PLATFORM),win32)
+		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libRooStats.lib' '$(ROOTSYS)/lib/libRooFit.lib' '$(ROOTSYS)/lib/libRooFitCore.lib' '$(ROOTSYS)/lib/libHtml.lib' '$(ROOTSYS)/lib/libThread.lib' '$(ROOTSYS)/lib/libMinuit.lib' '$(ROOTSYS)/lib/libFoam.lib' '$(ROOTSYS)/lib/libProof.lib' $(EXTRAROOFITLIBS) $(OutPutOpt)$@
+		$(MT_EXE)
+else
+		$(LD) $(LDFLAGS) $^ $(LIBS) -lRooStats -lRooFit -lRooFitCore -lHtml -lThread -lMinuit -lFoam $(EXTRAROOFITLIBS) $(OutPutOpt)$@
+endif
+		@echo "$@ done"
+
 $(STRESSPROOF): $(STRESSPROOFO)
 ifeq ($(PLATFORM),win32)
 		$(LD) $(LDFLAGS) $^ $(LIBS) '$(ROOTSYS)/lib/libProof.lib' '$(ROOTSYS)/lib/libThread.lib' $(OutPutOpt)$@
 		$(MT_EXE)
 else
-		$(LD) $(LDFLAGS) $(STRESSPROOFO) $(LIBS) -lProof -lThread $(OutPutOpt)$@
+		$(LD) $(LDFLAGS) $(STRESSPROOFO) $(LIBS) -lProof -lProofPlayer -lThread $(OutPutOpt)$@
 endif
 		@echo "$@ done"
 
@@ -606,11 +629,8 @@ $(BENCH):       $(BENCHO) $(TBENCHSO)
 
 Hello:          $(HELLOSO)
 $(HELLOSO):     $(HELLOO)
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
 ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
+		$(MAKESHARED) $(OutPutOpt) $@ $(LIBS) -p 0 $^
 else
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
@@ -623,17 +643,13 @@ endif
 else
 		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(EXPLLINKLIBS) $(OutPutOpt)$@
 		$(MT_DLL)
-endif
 endif
 endif
 
 Aclock:         $(ACLOCKSO)
 $(ACLOCKSO):    $(ACLOCKO)
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
 ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
+		$(MAKESHARED) $(OutPutOpt) $@ $(LIBS) -p 0 $^
 else
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
@@ -646,17 +662,13 @@ endif
 else
 		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(EXPLLINKLIBS) $(OutPutOpt)$@
 		$(MT_DLL)
-endif
 endif
 endif
 
 Tetris:         $(TETRISSO)
 $(TETRISSO):    $(TETRISO)
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(GLIBS) -p 0 $^
-else
 ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(GLIBS) -p 0 $^
+		$(MAKESHARED) $(OutPutOpt) $@ $(GLIBS) -p 0 $^
 else
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
@@ -669,16 +681,12 @@ endif
 else
 		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(EXPLLINKLIBS) $(OutPutOpt)$@
 		$(MT_DLL)
-endif
 endif
 endif
 
 $(TBENCHSO):    $(TBENCHO)
-ifeq ($(ARCH),aix)
-		/usr/ibmcxx/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
-else
 ifeq ($(ARCH),aix5)
-		/usr/vacpp/bin/makeC++SharedLib $(OutPutOpt) $@ $(LIBS) -p 0 $^
+		$(MAKESHARED) $(OutPutOpt) $@ $(LIBS) -p 0 $^
 else
 ifeq ($(PLATFORM),macosx)
 # We need to make both the .dylib and the .so
@@ -691,7 +699,6 @@ endif
 else
 		$(LD) $(SOFLAGS) $(LDFLAGS) $^ $(EXPLLINKLIBS) $(OutPutOpt)$@
 		$(MT_DLL)
-endif
 endif
 endif
 
@@ -714,10 +721,12 @@ clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core *Dict.*
 
 distclean:      clean
+		-@(mv -f stressRooStats_ref.root stressRooStats_ref.root- >/dev/null 2>&1;true)
 		@rm -f $(PROGRAMS) $(EVENTSO) $(EVENTLIB) *Dict.* *.def *.exp \
 		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations \
 		   files/*
 		@rm -rf cxx_repository
+		-@(mv -f stressRooStats_ref.root- stressRooStats_ref.root >/dev/null 2>&1;true)
 		-@cd RootShower && $(MAKE) distclean
 		-@cd rhtml && $(MAKE) distclean
 		-@cd RootIDE && $(MAKE) distclean
@@ -770,6 +779,9 @@ stressMathCore.$(ObjSuf): 	TrackMathCore.h
 TrackMathCoreDict.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h
 	@echo "Generating dictionary $@ using rootcint ..."
 	$(ROOTCINT) -f $@ -c $^	
+
+stressProof.$(ObjSuf):	stressProof.$(SrcSuf)
+	$(CXX)  $(CXXFLAGS) -I$(TUTDIR) -c $<
 
 TrackMathCoreRflx.$(SrcSuf): 	TrackMathCore.h TrackMathCoreRflx.xml
 			@echo "Generating dictionary $@ using gccxml ..."

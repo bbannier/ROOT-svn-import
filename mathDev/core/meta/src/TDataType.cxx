@@ -20,11 +20,14 @@
 
 #include "TDataType.h"
 #include "TInterpreter.h"
+#include "TCollection.h"
 #ifdef R__SOLARIS
 #include <typeinfo>
 #endif
 
 ClassImp(TDataType)
+
+TDataType* TDataType::fgBuiltins[kNumDataTypes] = {0};
 
 //______________________________________________________________________________
 TDataType::TDataType(TypedefInfo_t *info) : TDictionary()
@@ -120,11 +123,14 @@ const char *TDataType::GetTypeName(EDataType type)
       case 17: return "ULong64_t";
       case 18: return "Bool_t";
       case 19: return "Float16_t";
+      case kVoid_t: return "void";
+      case kDataTypeAliasUnsigned_t: return "UInt_t";
       case kOther_t:  return "";
       case kNoType_t: return "";
       case kchar:     return "Char_t";
+      default: return "";
    }
-   return "";
+   return ""; // to silence compilers
 }
 
 //______________________________________________________________________________
@@ -165,9 +171,9 @@ EDataType TDataType::GetType(const type_info &typeinfo)
       retType = kUInt_t;
    } else if (!strcmp(typeid(int).name(), typeinfo.name())) {
       retType = kInt_t;
-   } else if (!strcmp(typeid(unsigned long).name(), typeinfo.name())) {
+   } else if (!strcmp(typeid(ULong_t).name(), typeinfo.name())) {
       retType = kULong_t;
-   } else if (!strcmp(typeid(long).name(), typeinfo.name())) {
+   } else if (!strcmp(typeid(Long_t).name(), typeinfo.name())) {
       retType = kLong_t;
    } else if (!strcmp(typeid(ULong64_t).name(), typeinfo.name())) {
       retType = kULong64_t;
@@ -181,7 +187,7 @@ EDataType TDataType::GetType(const type_info &typeinfo)
       retType = kUChar_t;
    } else if (!strcmp(typeid(char).name(), typeinfo.name())) {
       retType = kChar_t;
-   } else if (!strcmp(typeid(bool).name(), typeinfo.name())) {
+   } else if (!strcmp(typeid(Bool_t).name(), typeinfo.name())) {
       retType = kBool_t;
    } else if (!strcmp(typeid(float).name(), typeinfo.name())) {
       retType = kFloat_t;
@@ -221,9 +227,9 @@ const char *TDataType::AsString(void *buf) const
    else if (!strcmp("int", name))
       line.Form( "%d", *(int *)buf);
    else if (!strcmp("unsigned long", name))
-      line.Form( "%lu", *(unsigned long *)buf);
+      line.Form( "%lu", *(ULong_t *)buf);
    else if (!strcmp("long", name))
-      line.Form( "%ld", *(long *)buf);
+      line.Form( "%ld", *(Long_t *)buf);
    else if (!strcmp("unsigned long long", name))
       line.Form( "%llu", *(ULong64_t *)buf);
    else if (!strcmp("long long", name))
@@ -233,7 +239,7 @@ const char *TDataType::AsString(void *buf) const
    else if (!strcmp("short", name))
       line.Form( "%hd", *(short *)buf);
    else if (!strcmp("bool", name))
-      line.Form( "%s", *(bool *)buf ? "true" : "false");
+      line.Form( "%s", *(Bool_t *)buf ? "true" : "false");
    else if (!strcmp("unsigned char", name) || !strcmp("char", name) ) {
       line = (char*)buf;
    } else if (!strcmp("float", name))
@@ -264,7 +270,9 @@ void TDataType::SetType(const char *name)
    fType = kOther_t;
    fSize = 0;
 
-   if (!strcmp("unsigned int", name)) {
+   if (name==0) {
+      return;
+   } else if (!strcmp("unsigned int", name)) {
       fType = kUInt_t;
       fSize = sizeof(UInt_t);
    } else if (!strcmp("unsigned", name)) {
@@ -359,4 +367,43 @@ void TDataType::CheckInfo()
       fProperty = gCint->TypedefInfo_Property(fInfo);
       fSize = gCint->TypedefInfo_Size(fInfo);
    }
+}
+
+//______________________________________________________________________________
+void TDataType::AddBuiltins(TCollection* types)
+{
+   // Create the TDataType objects for builtins.
+
+   if (fgBuiltins[kChar_t] == 0) {
+      // Add also basic types (like a identity typedef "typedef int int")
+      fgBuiltins[kChar_t] = new TDataType("char");
+      fgBuiltins[kUChar_t] = new TDataType("unsigned char");
+      fgBuiltins[kShort_t] = new TDataType("short");
+      fgBuiltins[kUShort_t] = new TDataType("unsigned short");
+      fgBuiltins[kInt_t] = new TDataType("int");
+      fgBuiltins[kUInt_t] = new TDataType("unsigned int");
+      fgBuiltins[kLong_t] = new TDataType("long");
+      fgBuiltins[kULong_t] = new TDataType("unsigned long");
+      fgBuiltins[kLong64_t] = new TDataType("long long");
+      fgBuiltins[kULong64_t] = new TDataType("unsigned long long");
+      fgBuiltins[kFloat_t] = new TDataType("float");
+      fgBuiltins[kDouble_t] = new TDataType("double");
+      fgBuiltins[kVoid_t] = new TDataType("void");
+      fgBuiltins[kBool_t] = new TDataType("bool");
+      fgBuiltins[kCharStar] = new TDataType("char*");
+
+      fgBuiltins[kDataTypeAliasUnsigned_t] = new TDataType("unsigned");
+   }
+
+   for (Int_t i = 0; i < (Int_t)kNumDataTypes; ++i) {
+      if (fgBuiltins[i]) types->Add(fgBuiltins[i]);
+   }
+}
+
+//______________________________________________________________________________
+TDataType* TDataType::GetDataType(EDataType type)
+{
+   // Given a EDataType type, get the TDataType* that represents it.
+   if (type == kOther_t) return 0;
+   return fgBuiltins[(int)type];
 }

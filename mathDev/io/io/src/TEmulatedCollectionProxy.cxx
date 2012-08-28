@@ -48,13 +48,13 @@ TEmulatedCollectionProxy::TEmulatedCollectionProxy(const TEmulatedCollectionProx
    fProperties |= kIsEmulated;
 }
 
-TEmulatedCollectionProxy::TEmulatedCollectionProxy(const char* cl_name)
+TEmulatedCollectionProxy::TEmulatedCollectionProxy(const char* cl_name, Bool_t silent)
    : TGenCollectionProxy(typeid(std::vector<char>), sizeof(std::vector<char>::iterator))
 {
    // Build a Streamer for a collection whose type is described by 'collectionClass'.
 
    fName = cl_name;
-   if ( this->TEmulatedCollectionProxy::InitializeEx() ) {
+   if ( this->TEmulatedCollectionProxy::InitializeEx(silent) ) {
       fCreateEnv = TGenCollectionProxy::Env_t::Create;
    }
    fProperties |= kIsEmulated;
@@ -72,7 +72,7 @@ TVirtualCollectionProxy* TEmulatedCollectionProxy::Generate() const
 {
    // Virtual copy constructor
 
-   if ( !fClass ) Initialize();
+   if ( !fClass ) Initialize(kFALSE);
    return new TEmulatedCollectionProxy(*this);
 }
 
@@ -106,7 +106,7 @@ void TEmulatedCollectionProxy::DeleteArray(void* p, Bool_t dtorOnly)
    }
 }
 
-TGenCollectionProxy *TEmulatedCollectionProxy::InitializeEx()
+TGenCollectionProxy *TEmulatedCollectionProxy::InitializeEx(Bool_t silent)
 {
    // Proxy initializer
    R__LOCKGUARD2(gCollectionMutex);
@@ -144,13 +144,16 @@ TGenCollectionProxy *TEmulatedCollectionProxy::InitializeEx()
                   // We need to emulate the pair
                   R__GenerateTClassForPair(inside[1],inside[2]);
                }
-               fValue = new Value(nam);
-               fKey   = new Value(inside[1]);
-               fVal   = new Value(inside[2]);
+               fValue = new Value(nam,silent);
+               fKey   = new Value(inside[1],silent);
+               fVal   = new Value(inside[2],silent);
                if ( !fValue->IsValid() || !fKey->IsValid() || !fVal->IsValid() ) {
                   return 0;
                }
                fPointers |= 0 != (fKey->fCase&G__BIT_ISPOINTER);
+               if (fPointers || (0 != (fKey->fProperties&kNeedDelete))) {
+                  fProperties |= kNeedDelete;
+               }
                if ( 0 == fValDiff )  {
                   fValDiff = fKey->fSize + fVal->fSize;
                   fValDiff += (slong - fKey->fSize%slong)%slong;
@@ -165,7 +168,7 @@ TGenCollectionProxy *TEmulatedCollectionProxy::InitializeEx()
                inside[1] = "bool";
                // Intentional fall through
             default:
-               fValue = new Value(inside[1]);
+               fValue = new Value(inside[1],silent);
                fVal   = new Value(*fValue);
                if ( !fValue->IsValid() || !fVal->IsValid() ) {
                   return 0;
@@ -179,6 +182,9 @@ TGenCollectionProxy *TEmulatedCollectionProxy::InitializeEx()
                break;
          }
          fPointers |= 0 != (fVal->fCase&G__BIT_ISPOINTER);
+         if (fPointers || (0 != (fVal->fProperties&kNeedDelete))) {
+            fProperties |= kNeedDelete;
+         }
          fClass = cl;
          return this;
       }
@@ -593,7 +599,7 @@ static TStreamerElement* R__CreateEmulatedElement(const char *dmName, const char
 
    TString s1( TClassEdit::ShortType(dmFull,0) );
    TString dmType( TClassEdit::ShortType(dmFull,1) );
-   bool dmIsPtr = (s1 != dmType);
+   Bool_t dmIsPtr = (s1 != dmType);
    const char *dmTitle = "Emulation";
 
    TDataType *dt = gROOT->GetType(dmType);

@@ -332,15 +332,6 @@ void TGLPhysicalShape::SetupGLColors(TGLRnrCtx & rnrCtx, const Float_t* color) c
    }
 }
 
-static const Float_t selColor[] =
-{
-   1,   1,   1,   1,     // base color
-   0,   0,   0,   1,     // ambient
-   0,   0,   0,   1,     // specular
-   0.5, 0,   0,   1,     // emission
-   0                     // shininess
-};
-
 //______________________________________________________________________________
 void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
 {
@@ -373,10 +364,36 @@ void TGLPhysicalShape::Draw(TGLRnrCtx & rnrCtx) const
 
    glPushMatrix();
    glMultMatrixd(fTransform.CArr());
-   if (fInvertedWind)  glFrontFace(GL_CW);
-   if (rnrCtx.Highlight() && !rnrCtx.Selection() && !rnrCtx.IsDrawPassOutlineLine())
+   if (fInvertedWind) glFrontFace(GL_CW);
+   if (rnrCtx.Highlight())
    {
-      fLogicalShape->DrawHighlight(rnrCtx, this);
+      glPushAttrib(GL_LIGHTING_BIT | GL_DEPTH_BUFFER_BIT);
+
+      glDisable(GL_LIGHTING);
+      glDisable(GL_DEPTH_TEST);
+
+      if (rnrCtx.HighlightOutline())
+      {
+         const Int_t offsets[12][2] = { {-1,-1}, { 1,-1}, { 1, 1}, {-1, 1},
+                                        { 1, 0}, { 0, 1}, {-1, 0}, { 0,-1},
+                                        { 0,-2}, { 2, 0}, { 0, 2}, {-2, 0} };
+
+         const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
+
+         for (int i = 0; i < 12; ++i)
+         {
+            glViewport(vp.X() + offsets[i][0], vp.Y() + offsets[i][1], vp.Width(), vp.Height());
+            fLogicalShape->DrawHighlight(rnrCtx, this);
+         }
+
+         glViewport(vp.X(), vp.Y(), vp.Width(), vp.Height());
+      }
+      else
+      {
+         fLogicalShape->DrawHighlight(rnrCtx, this);
+      }
+
+      glPopAttrib();
    }
    else
    {

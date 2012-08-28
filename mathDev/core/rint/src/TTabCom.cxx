@@ -44,7 +44,7 @@
 //     eg, this will work: gROOT->GetListOfG[TAB]                         //
 //     but this will not:  gROOT->GetListOfGlobals()->Conta[TAB]          //
 //                                                                        //
-//  2. nothing is guaranteed to work on windows or VMS                    //
+//  2. nothing is guaranteed to work on windows                           //
 //     (for one thing, /bin/env and /etc/passwd are hardcoded)            //
 //                                                                        //
 //  3. CINT shortcut #2 is deliberately not supported.                    //
@@ -429,6 +429,7 @@ const TSeqCollection *TTabCom::GetListOfClasses()
    if (!fpClasses) {
       // generate a text list of classes on disk
       const char *tmpfilename = tmpnam(0);
+      if (!tmpfilename) return 0;
       FILE *fout = fopen(tmpfilename, "w");
       if (!fout) return 0;
       gCint->DisplayClass(fout, (char*)"", 0, 0);
@@ -550,6 +551,7 @@ const TSeqCollection *TTabCom::GetListOfEnvVars()
 
    if (!fpEnvVars) {
       const char *tmpfilename = tmpnam(0);
+      if (!tmpfilename) return 0;
       TString cmd;
 
 #ifndef WIN32
@@ -766,7 +768,7 @@ Char_t TTabCom::AllAgreeOnChar(int i, const TSeqCollection * pList,
 
    TIter next(pList);
    TObject *pObj;
-   const char *s;
+   const char *s = "";
    char ch0;
    Bool_t isGood;
    Bool_t atLeast1GoodString;
@@ -789,7 +791,7 @@ Char_t TTabCom::AllAgreeOnChar(int i, const TSeqCollection * pList,
          // just use the first one.
          next.Reset();
          pObj = next();
-         s = pObj->GetName();
+         if (pObj) s = pObj->GetName();
          break;
       }
    }
@@ -892,6 +894,8 @@ TString TTabCom::DetermineClass(const char varName[])
    IfDebug(cerr << "DetermineClass(\"" << varName << "\");" << endl);
 
    const char *tmpfile = tmpnam(0);
+   if (!tmpfile) return "";
+
    TString cmd("gROOT->ProcessLine(\"");
    cmd += varName;
    cmd += "\"); > ";
@@ -1040,6 +1044,7 @@ TString TTabCom::GetSysIncludePath()
    // get this part of the include path from the interpreter
    // and stick it in a tmp file.
    const char *tmpfilename = tmpnam(0);
+   if (!tmpfilename) return "";
 
    FILE *fout = fopen(tmpfilename, "w");
    if (!fout) return "";
@@ -1103,8 +1108,10 @@ Bool_t TTabCom::IsDirectory(const char fileName[])
    ///////////////////////////////////////////////////////
 
    FileStat_t stat;
-   gSystem->GetPathInfo(fileName, stat);
-   return R_ISDIR(stat.fMode);
+   if (!gSystem->GetPathInfo(fileName, stat)) 
+      return R_ISDIR(stat.fMode);
+   else 
+      return false;
 }
 
 //______________________________________________________________________________
@@ -1585,7 +1592,11 @@ TString TTabCom::DeterminePath(const TString & fileName,
       IfDebug(cerr << endl);
       IfDebug(cerr << "    fileName: " << fileName << endl);
       IfDebug(cerr << "    pathBase: " << newBase << endl);
-      IfDebug(cerr << " defaultPath: " << defaultPath << endl);
+      if (defaultPath) {
+         IfDebug(cerr << " defaultPath: " << defaultPath << endl);
+      } else {
+         IfDebug(cerr << " defaultPath: " << endl);
+      }         
       IfDebug(cerr << "extendedPath: " << extendedPath << endl);
       IfDebug(cerr << endl);
 
@@ -1607,7 +1618,7 @@ TString TTabCom::ExtendPath(const char originalPath[], TString newBase) const
 #endif
    TString dir;
    TString newPath;
-   str << originalPath;
+   if (originalPath) str << originalPath;
 
    while (str.good())
    {

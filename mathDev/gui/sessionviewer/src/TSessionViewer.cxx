@@ -196,7 +196,8 @@ ToolBarData_t tb_data[] = {
 //______________________________________________________________________________
 TSessionServerFrame::TSessionServerFrame(TGWindow* p, Int_t w, Int_t h) :
    TGCompositeFrame(p, w, h), fFrmNewServer(0), fTxtName(0), fTxtAddress(0),
-      fTxtConfig(0), fTxtUsrName(0), fViewer(0)
+   fNumPort(0), fLogLevel(0), fTxtConfig(0), fTxtUsrName(0), fSync(0),
+   fViewer(0), fBtnAdd(0), fBtnConnect(0)
 {
    // Constructor.
 }
@@ -460,11 +461,19 @@ void TSessionServerFrame::OnBtnConnectClicked()
    TQObject::Connect("TProof", "StartupMessage(char *,Bool_t,Int_t,Int_t)",
          "TSessionViewer", fViewer, "StartupMessage(char *,Bool_t,Int_t,Int_t)");
    // collect and set-up configuration
-   TString url = fTxtUsrName->GetText();
-   url += "@"; url += fTxtAddress->GetText();
-   if (fNumPort->GetIntNumber() > 0) {
-      url += ":";
-      url += fNumPort->GetIntNumber();
+   TString address = fTxtAddress->GetText();
+   TString url;
+   if (address == "lite://") {
+      url = address;
+   }
+   else {
+      // collect and set-up configuration
+      url = fTxtUsrName->GetText();
+      url += "@"; url += address.Data();
+      if (fNumPort->GetIntNumber() > 0) {
+         url += ":";
+         url += fNumPort->GetIntNumber();
+      }
    }
 
    TProofDesc *desc;
@@ -547,7 +556,7 @@ void TSessionServerFrame::OnBtnConnectClicked()
       if (fViewer->GetActDesc()->fLogLevel < 0)
          fViewer->GetActDesc()->fLogLevel = 0;
       if (fViewer->GetActDesc()->fProof->IsLite())
-         fViewer->GetActDesc()->fAddress = "lite";
+         fViewer->GetActDesc()->fAddress = "lite://";
       else
          fViewer->GetActDesc()->fAddress = fViewer->GetActDesc()->fProof->GetMaster();
       fViewer->GetActDesc()->fConnected = kTRUE;
@@ -568,11 +577,13 @@ void TSessionServerFrame::OnBtnConnectClicked()
       // change list tree item picture to connected pixmap
       TGListTreeItem *item = fViewer->GetSessionHierarchy()->FindChildByData(
                               fViewer->GetSessionItem(),fViewer->GetActDesc());
-      item->SetPictures(fViewer->GetProofConPict(), fViewer->GetProofConPict());
-      // update viewer
-      fViewer->OnListTreeClicked(item, 1, 0, 0);
-      fViewer->GetSessionHierarchy()->ClearViewPort();
-      fClient->NeedRedraw(fViewer->GetSessionHierarchy());
+      if (item) {
+         item->SetPictures(fViewer->GetProofConPict(), fViewer->GetProofConPict());
+         // update viewer
+         fViewer->OnListTreeClicked(item, 1, 0, 0);
+         fViewer->GetSessionHierarchy()->ClearViewPort();
+         fClient->NeedRedraw(fViewer->GetSessionHierarchy());
+      }
       // connect to progress related signals
       fViewer->GetActDesc()->fProof->Connect("Progress(Long64_t,Long64_t)",
                  "TSessionQueryFrame", fViewer->GetQueryFrame(),
@@ -833,9 +844,19 @@ Bool_t TSessionServerFrame::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
 
 //______________________________________________________________________________
 TSessionFrame::TSessionFrame(TGWindow* p, Int_t w, Int_t h) :
-   TGCompositeFrame(p, w, h)
+   TGCompositeFrame(p, w, h), fTab(0), fFA(0), fFB(0), fFC(0), fFD(0), fFE(0),
+   fCommandTxt(0), fCommandBuf(0), fInfoTextView(0), fClearCheck(0), 
+   fBtnShowLog(0), fBtnNewQuery(0), fBtnGetQueries(0), fLBPackages(0),
+   fBtnAdd(0), fBtnRemove(0), fBtnUp(0), fBtnDown(0), fBtnShow(0),
+   fBtnShowEnabled(0), fChkMulti(0), fChkEnable(0), fBtnUpload(0),
+   fBtnEnable(0), fBtnClear(0), fBtnDisable(0), fDSetView(0), fDataSetTree(0),
+   fBtnUploadDSet(0), fBtnRemoveDSet(0), fBtnVerifyDSet(0), fBtnRefresh(0),
+   fTxtParallel(0), fLogLevel(0), fApplyLogLevel(0), fApplyParallel(0),
+   fViewer(0)
 {
    // Constructor.
+
+   for (int i=0;i<19;++i) fInfoLine[i] = 0;
 }
 
 //______________________________________________________________________________
@@ -1184,7 +1205,7 @@ void TSessionFrame::ProofInfos()
       fInfoLine[0]->SetText(buf.Data());
       UserGroup_t *userGroup = gSystem->GetUserInfo();
       fInfoLine[1]->SetText("User :");
-      buf.Form("%s", userGroup->fRealName.Data());
+      if (userGroup) buf.Form("%s", userGroup->fRealName.Data());
       fInfoLine[2]->SetText(buf.Data());
       fInfoLine[3]->SetText("Working directory :");
       buf.Form("%s", gSystem->WorkingDirectory());
@@ -1203,7 +1224,7 @@ void TSessionFrame::ProofInfos()
       fInfoLine[16]->SetText(" ");
       fInfoLine[17]->SetText(" ");
       fInfoLine[18]->SetText(" ");
-      delete userGroup;
+      if (userGroup) delete userGroup;
       Layout();
       Resize(GetDefaultSize());
       return;
@@ -1797,9 +1818,10 @@ void TSessionFrame::OnBtnDisconnectClicked()
    // change list tree item picture to disconnected pixmap
    TGListTreeItem *item = fViewer->GetSessionHierarchy()->FindChildByData(
                            fViewer->GetSessionItem(), fViewer->GetActDesc());
-   item->SetPictures(fViewer->GetProofDisconPict(),
-                     fViewer->GetProofDisconPict());
-
+   if (item) {
+      item->SetPictures(fViewer->GetProofDisconPict(),
+                        fViewer->GetProofDisconPict());
+   }
    // update viewer
    fViewer->OnListTreeClicked(fViewer->GetSessionHierarchy()->GetSelected(),
                               1, 0, 0);
@@ -2021,9 +2043,11 @@ void TSessionFrame::ShutdownSession()
    // change list tree item picture to disconnected pixmap
    TGListTreeItem *item = fViewer->GetSessionHierarchy()->FindChildByData(
                           fViewer->GetSessionItem(), fViewer->GetActDesc());
-   item->SetPictures(fViewer->GetProofDisconPict(),
-                     fViewer->GetProofDisconPict());
-    // update viewer
+   if (item) {
+      item->SetPictures(fViewer->GetProofDisconPict(),
+                        fViewer->GetProofDisconPict());
+   }
+   // update viewer
    fViewer->OnListTreeClicked(fViewer->GetSessionHierarchy()->GetSelected(),
                               1, 0, 0);
    fViewer->GetSessionHierarchy()->ClearViewPort();
@@ -2037,7 +2061,10 @@ void TSessionFrame::ShutdownSession()
 
 //______________________________________________________________________________
 TEditQueryFrame::TEditQueryFrame(TGWindow* p, Int_t w, Int_t h) :
-   TGCompositeFrame(p, w, h, kVerticalFrame)
+   TGCompositeFrame(p, w, h, kVerticalFrame), fFrmMore(0), fBtnMore(0),
+   fTxtQueryName(0), fTxtChain(0), fTxtSelector(0), fTxtOptions(0),
+   fNumEntries(0), fNumFirstEntry(0), fTxtParFile(0), fTxtEventList(0),
+   fViewer(0), fQuery(0), fChain(0)
 {
    // Create a new Query dialog, used by the Session Viewer, to Edit a Query if
    // the editmode flag is set, or to create a new one if not set.
@@ -2335,17 +2362,14 @@ void TEditQueryFrame::UpdateFields(TQueryDescription *desc)
 
 //______________________________________________________________________________
 TSessionQueryFrame::TSessionQueryFrame(TGWindow* p, Int_t w, Int_t h) :
-   TGCompositeFrame(p, w, h)
+   TGCompositeFrame(p, w, h), fBtnSubmit(0), fBtnFinalize(0), fBtnStop(0),
+   fBtnAbort(0), fBtnShowLog(0), fBtnRetrieve(0), fBtnSave(0), fInfoTextView(0),
+   fModified(0), fFiles(0), fFirst(0), fEntries(0), fPrevTotal(0),
+   fPrevProcessed(0), fLabInfos(0), fLabStatus(0), fTotal(0), fRate(0),
+   fStatus(kStopped), fTab(0), fFA(0), fFB(0), fFC(0), fFD(0), frmProg(0),
+   fECanvas(0), fStatsCanvas(0), fViewer(0), fDesc(0)
 {
    // Constructor
-
-   fEntries = 0;
-   fFiles = 0;
-   fFirst = 0;
-   fModified = 0;
-   fPrevProcessed = 0;
-   fPrevTotal = 0;
-   fStatus = kStopped;
 }
 
 //______________________________________________________________________________
@@ -2925,7 +2949,7 @@ void TSessionQueryFrame::OnBtnFinalize()
       TGListTreeItem *item = fViewer->GetSessionHierarchy()->GetSelected();
       if (!item) return;
       TObject *obj = (TObject *)item->GetUserData();
-      if (obj->IsA() == TQueryDescription::Class()) {
+      if ((obj) && (obj->IsA() == TQueryDescription::Class())) {
          // as it can take time, set watch cursor
          gVirtualX->SetCursor(GetId(),gVirtualX->CreateCursor(kWatch));
          TQueryDescription *query = (TQueryDescription *)obj;
@@ -2971,7 +2995,7 @@ void TSessionQueryFrame::OnBtnShowLog()
    TGListTreeItem *item = fViewer->GetSessionHierarchy()->GetSelected();
    if (!item) return;
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TQueryDescription::Class())
+   if ((!obj) || (obj->IsA() != TQueryDescription::Class()))
       return;
    TQueryDescription *query = (TQueryDescription *)obj;
    fViewer->ShowLog(query->fReference.Data());
@@ -2989,7 +3013,7 @@ void TSessionQueryFrame::OnBtnRetrieve()
       TGListTreeItem *item = fViewer->GetSessionHierarchy()->GetSelected();
       if (!item) return;
       TObject *obj = (TObject *)item->GetUserData();
-      if (obj->IsA() == TQueryDescription::Class()) {
+      if (obj && obj->IsA() == TQueryDescription::Class()) {
          // as it can take time, set watch cursor
          gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kWatch));
          TQueryDescription *query = (TQueryDescription *)obj;
@@ -3060,7 +3084,7 @@ void TSessionQueryFrame::OnBtnSubmit()
    if (!item) return;
    // retrieve query description attached to list tree item
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TQueryDescription::Class())
+   if (!obj || obj->IsA() != TQueryDescription::Class())
       return;
    TQueryDescription *newquery = (TQueryDescription *)obj;
    // reset progress informations
@@ -3197,7 +3221,7 @@ void TSessionQueryFrame::UpdateButtons(TQueryDescription *desc)
    if (!item) return;
    // retrieve query description attached to list tree item
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TQueryDescription::Class())
+   if (!obj || obj->IsA() != TQueryDescription::Class())
       return;
    TQueryDescription *query = (TQueryDescription *)obj;
    if (desc != query) return;
@@ -3443,7 +3467,7 @@ void TSessionQueryFrame::UpdateInfos()
 
 //______________________________________________________________________________
 TSessionOutputFrame::TSessionOutputFrame(TGWindow* p, Int_t w, Int_t h) :
-   TGCompositeFrame(p, w, h), fLVContainer(0)
+   TGCompositeFrame(p, w, h), fEntryTmp(0), fLVContainer(0), fViewer(0)
 {
    // Constructor.
 }
@@ -3504,6 +3528,7 @@ void TSessionOutputFrame::OnElementDblClicked(TGLVEntry* entry, Int_t , Int_t, I
    char action[512];
    TString act;
    TObject *obj = (TObject *)entry->GetUserData();
+   if (!obj) return;
    TString ext = obj->GetName();
    gPad->SetEditable(kFALSE);
    // check default action from root.mimes
@@ -3538,7 +3563,7 @@ void TSessionOutputFrame::AddObject(TObject *obj)
 
 //______________________________________________________________________________
 TSessionInputFrame::TSessionInputFrame(TGWindow* p, Int_t w, Int_t h) :
-   TGCompositeFrame(p, w, h), fLVContainer(0)
+   TGCompositeFrame(p, w, h), fViewer(0), fLVContainer(0)
 {
    // Constructor.
 }
@@ -3718,7 +3743,7 @@ void TSessionViewer::ReadConfiguration(const char *filename)
       TSessionDescription *litedesc = new TSessionDescription();
       litedesc->fTag = "";
       litedesc->fName = "PROOF Lite";
-      litedesc->fAddress = "lite";
+      litedesc->fAddress = "lite://";
       litedesc->fPort = 0;
       litedesc->fConfigFile = "";
       litedesc->fLogLevel = 0;
@@ -3943,8 +3968,10 @@ void TSessionViewer::UpdateListOfProofs()
                            fSessionMenu->DisableEntry(kSessionConnect);
                            fPopupSrv->EnableEntry(kSessionDisconnect);
                            fSessionMenu->EnableEntry(kSessionDisconnect);
-                           fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonUp);
-                           fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
+                           if (fToolBar->GetButton(kSessionDisconnect))
+                              fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonUp);
+                           if (fToolBar->GetButton(kSessionConnect))
+                              fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
                            fSessionFrame->SetLogLevel(fActDesc->fLogLevel);
                            // update session information frame
                            fSessionFrame->ProofInfos();
@@ -3976,7 +4003,7 @@ void TSessionViewer::UpdateListOfProofs()
                   newdesc->fConnected  = kTRUE;
                   newdesc->fAttached   = kTRUE;
                   if (p->IsLite())
-                     newdesc->fAddress = "lite";
+                     newdesc->fAddress = "lite://";
                   else
                      newdesc->fAddress = p->GetMaster();
                   newdesc->fConfigFile = p->GetConfFile();
@@ -4058,7 +4085,7 @@ void TSessionViewer::UpdateListOfProofs()
          if (newdesc->fLogLevel < 0)
             newdesc->fLogLevel = 0;
          if (proof->IsLite())
-            newdesc->fAddress = "lite";
+            newdesc->fAddress = "lite://";
          else
             newdesc->fAddress = proof->GetMaster();
          newdesc->fQueries    = new TList();
@@ -4124,7 +4151,7 @@ void TSessionViewer::UpdateListOfSessions()
             if (newdesc->fLogLevel < 0)
                newdesc->fLogLevel = 0;
             if (proof->IsLite())
-               newdesc->fAddress = "lite";
+               newdesc->fAddress = "lite://";
             else
                newdesc->fAddress = proof->GetMaster();
             newdesc->fProof      = proof;
@@ -4400,7 +4427,8 @@ void TSessionViewer::Build()
    AddFrame(fToolBar, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 0, 0, 0, 0));
    toolBarSep = new TGHorizontal3DLine(this);
    AddFrame(toolBarSep, new TGLayoutHints(kLHintsTop | kLHintsExpandX));
-   fToolBar->GetButton(kQuerySubmit)->SetState(kButtonDisabled);
+   if (fToolBar->GetButton(kQuerySubmit))
+      fToolBar->GetButton(kQuerySubmit)->SetState(kButtonDisabled);
 
    fPopupSrv = new TGPopupMenu(fClient->GetDefaultRoot());
    fPopupSrv->AddEntry("Connect",kSessionConnect);
@@ -4439,7 +4467,8 @@ void TSessionViewer::Build()
    fSessionMenu->DisableEntry(kSessionShutdown);
    fSessionMenu->DisableEntry(kSessionCleanup);
    fSessionMenu->DisableEntry(kSessionReset);
-   fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonDisabled);
+   if (fToolBar->GetButton(kSessionDisconnect))
+      fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonDisabled);
 
    //--- Horizontal mother frame -----------------------------------------------
    fHf = new TGHorizontalFrame(this, 10, 10);
@@ -4598,7 +4627,8 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
    TString msg;
 
    fSessionMenu->DisableEntry(kSessionAdd);
-   fToolBar->GetButton(kQuerySubmit)->SetState(kButtonDisabled);
+   if (fToolBar->GetButton(kQuerySubmit))
+      fToolBar->GetButton(kQuerySubmit)->SetState(kButtonDisabled);
    if (entry->GetParent() == 0) {  // PROOF
       // switch frames only if actual one doesn't match
       if (fActFrame != fServerFrame) {
@@ -4612,12 +4642,13 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
       fServerFrame->SetConnectEnabled(kFALSE);
       fPopupSrv->DisableEntry(kSessionConnect);
       fSessionMenu->DisableEntry(kSessionConnect);
-      fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
+      if (fToolBar->GetButton(kSessionConnect))
+         fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
    }
    else if (entry->GetParent()->GetParent() == 0) { // Server
       if (entry->GetUserData()) {
          obj = (TObject *)entry->GetUserData();
-         if (obj->IsA() != TSessionDescription::Class())
+         if (!obj || obj->IsA() != TSessionDescription::Class())
             return;
          // update server frame informations
          fServerFrame->Update((TSessionDescription *)obj);
@@ -4636,14 +4667,16 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
       if ((fActDesc->fConnected) && (fActDesc->fAttached)) {
          fPopupSrv->DisableEntry(kSessionConnect);
          fSessionMenu->DisableEntry(kSessionConnect);
-         fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
+         if (fToolBar->GetButton(kSessionConnect))
+            fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
          UpdateListOfPackages();
          fSessionFrame->UpdateListOfDataSets();
       }
       else {
          fPopupSrv->EnableEntry(kSessionConnect);
          fSessionMenu->EnableEntry(kSessionConnect);
-         fToolBar->GetButton(kSessionConnect)->SetState(kButtonUp);
+         if (fToolBar->GetButton(kSessionConnect))
+            fToolBar->GetButton(kSessionConnect)->SetState(kButtonUp);
       }
       // local session
       if (fActDesc->fLocal) {
@@ -4689,11 +4722,11 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
    }
    else if (entry->GetParent()->GetParent()->GetParent() == 0) { // query
       obj = (TObject *)entry->GetParent()->GetUserData();
-      if (obj->IsA() == TSessionDescription::Class()) {
+      if (obj && obj->IsA() == TSessionDescription::Class()) {
          fActDesc = (TSessionDescription *)obj;
       }
       obj = (TObject *)entry->GetUserData();
-      if (obj->IsA() == TQueryDescription::Class()) {
+      if (obj && obj->IsA() == TQueryDescription::Class()) {
          fActDesc->fActQuery = (TQueryDescription *)obj;
       }
       // update query informations and buttons state
@@ -4706,18 +4739,19 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
       }
       if ((fActDesc->fConnected) && (fActDesc->fAttached) &&
           (fActDesc->fActQuery->fStatus != TQueryDescription::kSessionQueryRunning) &&
-          (fActDesc->fActQuery->fStatus != TQueryDescription::kSessionQuerySubmitted) )
+          (fActDesc->fActQuery->fStatus != TQueryDescription::kSessionQuerySubmitted) &&
+          (fToolBar->GetButton(kQuerySubmit)) )
          fToolBar->GetButton(kQuerySubmit)->SetState(kButtonUp);
       // trick to update feedback histos
       OnCascadeMenu();
    }
    else {   // a list (input, output)
       obj = (TObject *)entry->GetParent()->GetParent()->GetUserData();
-      if (obj->IsA() == TSessionDescription::Class()) {
+      if (obj && obj->IsA() == TSessionDescription::Class()) {
          fActDesc = (TSessionDescription *)obj;
       }
       obj = (TObject *)entry->GetParent()->GetUserData();
-      if (obj->IsA() == TQueryDescription::Class()) {
+      if (obj && obj->IsA() == TQueryDescription::Class()) {
          fActDesc->fActQuery = (TQueryDescription *)obj;
       }
       if (fActDesc->fActQuery) {
@@ -4800,7 +4834,8 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
       fSessionMenu->EnableEntry(kSessionShutdown);
       fSessionMenu->EnableEntry(kSessionCleanup);
       fSessionMenu->EnableEntry(kSessionReset);
-      fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonUp);
+      if (fToolBar->GetButton(kSessionDisconnect))
+         fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonUp);
       fQueryMenu->EnableEntry(kQuerySubmit);
       fPopupQry->EnableEntry(kQuerySubmit);
    }
@@ -4820,7 +4855,8 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
       fSessionMenu->DisableEntry(kSessionShutdown);
       fSessionMenu->DisableEntry(kSessionCleanup);
       fSessionMenu->DisableEntry(kSessionReset);
-      fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonDisabled);
+      if (fToolBar->GetButton(kSessionDisconnect))
+         fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonDisabled);
       fQueryMenu->DisableEntry(kQuerySubmit);
       fPopupQry->DisableEntry(kQuerySubmit);
    }
@@ -4831,8 +4867,10 @@ void TSessionViewer::OnListTreeClicked(TGListTreeItem *entry, Int_t btn,
       fSessionMenu->DisableEntry(kSessionShutdown);
       fSessionMenu->DisableEntry(kSessionCleanup);
       fSessionMenu->DisableEntry(kSessionReset);
-      fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonDisabled);
-      fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
+      if (fToolBar->GetButton(kSessionDisconnect))
+         fToolBar->GetButton(kSessionDisconnect)->SetState(kButtonDisabled);
+      if (fToolBar->GetButton(kSessionConnect))
+         fToolBar->GetButton(kSessionConnect)->SetState(kButtonDisabled);
       fQueryMenu->EnableEntry(kQuerySubmit);
       fPopupQry->EnableEntry(kQuerySubmit);
    }
@@ -4848,7 +4886,7 @@ void TSessionViewer::OnListTreeDoubleClicked(TGListTreeItem *entry, Int_t /*btn*
    if (entry->GetParent()->GetParent() == 0) { // Server
       if (entry->GetUserData()) {
          TObject *obj = (TObject *)entry->GetUserData();
-         if (obj->IsA() != TSessionDescription::Class())
+         if ((!obj) || (obj->IsA() != TSessionDescription::Class()))
             return;
          fActDesc = (TSessionDescription*)obj;
          // if Proof valid, update connection infos
@@ -4970,9 +5008,14 @@ Bool_t TSessionViewer::HandleTimer(TTimer *)
    time( &fElapsed );
    time_t elapsed_time = (time_t)difftime( fElapsed, fStart );
    connected = gmtime( &elapsed_time );
-   buf.Form("      %02d:%02d:%02d", connected->tm_hour,
-            connected->tm_min, connected->tm_sec);
-   fStatusBar->SetText(buf.Data(), 2);
+   if (connected) {
+      buf.Form("      %02d:%02d:%02d", connected->tm_hour,
+               connected->tm_min, connected->tm_sec);
+      fStatusBar->SetText(buf.Data(), 2);
+   }
+   else {
+      fStatusBar->SetText("      00:00:00", 2);
+   }
 
    if (fActDesc->fLocal) {
       if ((fActDesc->fActQuery) &&
@@ -5072,7 +5115,7 @@ void TSessionViewer::CleanupSession()
    TGListTreeItem *item = fSessionHierarchy->GetSelected();
    if (!item) return;
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TSessionDescription::Class()) return;
+   if (!obj || obj->IsA() != TSessionDescription::Class()) return;
    if (!fActDesc->fProof || !fActDesc->fProof->IsValid()) return;
    TString m;
    m.Form("Are you sure to cleanup the session \"%s::%s\"",
@@ -5105,7 +5148,7 @@ void TSessionViewer::ResetSession()
    TGListTreeItem *item = fSessionHierarchy->GetSelected();
    if (!item) return;
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TSessionDescription::Class()) return;
+   if (!obj || obj->IsA() != TSessionDescription::Class()) return;
    if (!fActDesc->fProof || !fActDesc->fProof->IsValid()) return;
    TString m;
    m.Form("Do you really want to reset the session \"%s::%s\"",
@@ -5115,7 +5158,10 @@ void TSessionViewer::ResetSession()
          kMBYes | kMBNo | kMBCancel, &result);
    if (result == kMBYes) {
       // reset the session
-      TProof::Mgr(fActDesc->fAddress)->Reset(fActDesc->fUserName);
+      TProofMgr *mgr = TProof::Mgr(fActDesc->fAddress);
+      if (mgr && mgr->IsValid()) {
+         mgr->Reset(fActDesc->fUserName);
+      }
       // reset connected flag
       fActDesc->fAttached = kFALSE;
       fActDesc->fProof = 0;
@@ -5124,7 +5170,7 @@ void TSessionViewer::ResetSession()
       // change list tree item picture to disconnected pixmap
       TGListTreeItem *item2 = fSessionHierarchy->FindChildByData(
                               fSessionItem, fActDesc);
-      item2->SetPictures(fProofDiscon, fProofDiscon);
+      if (item2) item2->SetPictures(fProofDiscon, fProofDiscon);
 
       OnListTreeClicked(fSessionHierarchy->GetSelected(), 1, 0, 0);
       fSessionHierarchy->ClearViewPort();
@@ -5145,7 +5191,7 @@ void TSessionViewer::DeleteQuery()
    TGListTreeItem *item = fSessionHierarchy->GetSelected();
    if (!item) return;
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TQueryDescription::Class()) return;
+   if (!obj || obj->IsA() != TQueryDescription::Class()) return;
    TQueryDescription *query = (TQueryDescription *)obj;
    TString m;
    Int_t result = 0;
@@ -5194,7 +5240,7 @@ void TSessionViewer::EditQuery()
    TGListTreeItem *item = fSessionHierarchy->GetSelected();
    if (!item) return;
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TQueryDescription::Class()) return;
+   if (!obj || obj->IsA() != TQueryDescription::Class()) return;
    TQueryDescription *query = (TQueryDescription *)obj;
    TNewQueryDlg *dlg = new TNewQueryDlg(this, 350, 310, query, kTRUE);
    dlg->Popup();
@@ -5208,7 +5254,7 @@ void TSessionViewer::StartViewer()
    TGListTreeItem *item = fSessionHierarchy->GetSelected();
    if (!item) return;
    TObject *obj = (TObject *)item->GetUserData();
-   if (obj->IsA() != TQueryDescription::Class()) return;
+   if (!obj || obj->IsA() != TQueryDescription::Class()) return;
    TQueryDescription *query = (TQueryDescription *)obj;
    if (!query->fChain && query->fResult &&
       (obj = query->fResult->GetInputObject("TDSet"))) {

@@ -37,13 +37,15 @@
 #include "RooUnblindPrecision.h"
 
 
+using namespace std;
+
 ClassImp(RooUnblindPrecision)
 ;
 
 
 
 //_____________________________________________________________________________
-RooUnblindPrecision::RooUnblindPrecision() : _blindEngine("") 
+RooUnblindPrecision::RooUnblindPrecision() 
 {
   // Default constructor
 }

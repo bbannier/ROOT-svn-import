@@ -49,6 +49,7 @@ VERSION=
 EXPLLNKCORE=
 if [ "x$EXPLICIT" = "xyes" ]; then
    if [ $LIB != "lib/libCint.$soext" ] \
+       && [ $LIB != "lib/libCling.$soext" ] \
        && [ $LIB != "lib/libReflex.$soext" ] \
        && [ $LIB != "lib/libminicern.$soext" ]; then
       NEEDREFLEX=""
@@ -80,7 +81,7 @@ if [ $PLATFORM = "aix" ] || [ $PLATFORM = "aix5" ]; then
    if [ $PLATFORM = "aix5" ]; then
       makeshared="/usr/vacpp/bin/makeC++SharedLib"
    fi
-   if [ $LD = "xlC" ]; then
+   if [ $LD = "xlC" ] || [ $LD = "xlC_r" ]; then
       cmd="$makeshared -o $LIB -p 0 $OBJS $EXTRA $EXPLLNKCORE"
       echo $cmd
       $cmd
@@ -174,6 +175,7 @@ elif [ $PLATFORM = "ios" ]; then
 elif [ $LD = "build/unix/wingcc_ld.sh" ]; then
    EXPLLNKCORE=
    if [ $SONAME != "libCint.dll" ] \
+       && [ $SONAME != "libCling.dll" ] \
        && [ $SONAME != "libReflex.dll" ] \
        && [ $SONAME != "libminicern.dll" ] ; then
       if [ $SONAME = "libCore.dll" ]; then

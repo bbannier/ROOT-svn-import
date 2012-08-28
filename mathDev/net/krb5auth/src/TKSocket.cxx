@@ -5,6 +5,9 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#ifndef WIN32
+#   include <unistd.h>
+#endif
 
 #include "TKSocket.h"
 #include "TSocket.h"
@@ -282,6 +285,7 @@ Int_t TKSocket::BlockRead(char *&buf, EEncoding &type)
    if (rc <= 0) {
       SysError("BlockRead","reading data (%d), %s",
                rc, error_message(rc));
+      delete [] enc.data;
       return -1;
    }
 

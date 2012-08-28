@@ -7,7 +7,7 @@
  * Description:
  *  C/C++ interpreter header file
  ************************************************************************
- * Copyright(c) 1995~2007  Masaharu Goto (cint@pcroot.cern.ch)
+ * Copyright(c) 1995~2007  Masaharu Goto (root-cint@cern.ch)
  *
  * For the licensing terms see the file COPYING
  *
@@ -772,6 +772,12 @@ typedef int (*G__IgnoreInclude)();
 * Other parameters can be changed while keeping DLL binary compatibility.
 *
 **************************************************************************/
+
+#ifdef G__LONGLINE
+#define G__ONELINE     1024  /* Length of subexpression,parameter,argument */
+#define G__ONELINEDICT    8  /* Length of subexpression,parameter,argument */
+#define G__MAXNAME     G__LONGLINE  /* Variable name */
+#else
 #ifdef G__LONGBUF
 #define G__LONGLINE    4096  /* Length of expression */
 #define G__ONELINE     4096  /* Length of subexpression,parameter,argument */
@@ -783,6 +789,8 @@ typedef int (*G__IgnoreInclude)();
 #define G__MAXNAME      512  /* Variable name */
 #define G__ONELINEDICT    8  /* Length of subexpression,parameter,argument */
 #endif
+#endif
+
 #define G__LARGEBUF    6000  /* big temp buffer */
 #define G__MAXFILE     2000  /* Max interpreted source file */
 #define G__MAXFILENAME 1024  /* Max interpreted source file name length */
@@ -794,17 +802,28 @@ typedef int (*G__IgnoreInclude)();
 #define G__MAXBASE       50  /* maximum inheritable class */
 #define G__TAGNEST       20  /* depth of nested class */
 
+#ifndef G__MAXSTRUCT
 #ifdef G__WIN32
 #if defined(_MSC_VER) && (_MSC_VER>1300)
 #define G__MAXSTRUCT  24000  /* struct table */
-#define G__MAXTYPEDEF 24000  /* typedef table */
 #else
 #define G__MAXSTRUCT   4000  /* struct table */
-#define G__MAXTYPEDEF  8000  /* typedef table */
 #endif
 #else
 #define G__MAXSTRUCT  24000  /* struct table */
+#endif
+#endif
+
+#ifndef G__MAXTYPEDEF
+#ifdef G__WIN32
+#if defined(_MSC_VER) && (_MSC_VER>1300)
 #define G__MAXTYPEDEF 24000  /* typedef table */
+#else
+#define G__MAXTYPEDEF  8000  /* typedef table */
+#endif
+#else
+#define G__MAXTYPEDEF 24000  /* typedef table */
+#endif
 #endif
 
 /* G__MAXIFUNC and G__MEMDEPTH are not real limit
@@ -1498,7 +1517,9 @@ typedef struct {
  **********************************************/
 #if !defined(__GNUC__)
 /* Looks like gcc3.3 doesn't use registers. */
-#define G__VAARG_NOSUPPORT
+/*#define G__VAARG_NOSUPPORT*/
+#define G__VAARG_INC_COPY_N 4
+#define G__VAARG_PASS_BY_REFERENCE 8
 #endif
 #define G__VAARG_INC_COPY_N 4
 #define G__VAARG_PASS_BY_REFERENCE 8

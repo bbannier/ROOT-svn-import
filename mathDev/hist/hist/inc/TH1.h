@@ -76,6 +76,15 @@ class TVirtualHistPainter;
 
 class TH1 : public TNamed, public TAttLine, public TAttFill, public TAttMarker {
 
+public: 
+
+   // enumeration specifying type of statistics for bin errors
+   enum  EBinErrorOpt { 
+         kNormal = 0,    // errors with Normal (Wald) approximation: errorUp=errorLow= sqrt(N)
+         kPoisson = 1 ,  // errors from Poisson interval at 68.3% (1 sigma)
+         kPoisson2 = 2   // errors from Poisson interval at 95% CL (~ 2 sigma)            
+   };
+
 protected:
     Int_t         fNcells;          //number of bins(1D), cells (2D) +U/Overflows
     TAxis         fXaxis;           //X axis descriptor
@@ -101,6 +110,7 @@ protected:
     Int_t         fDimension;       //!Histogram dimension (1, 2 or 3 dim)
     Double_t     *fIntegral;        //!Integral of bins used by GetRandom
     TVirtualHistPainter *fPainter;  //!pointer to histogram painter
+    EBinErrorOpt  fBinStatErrOpt;   //option for bin statistical errors 
     static Int_t  fgBufferSize;     //!default buffer size for automatic histograms
     static Bool_t fgAddDirectory;   //!flag to add histograms to the directory
     static Bool_t fgStatOverflows;  //!flag to use under/overflows in statistics
@@ -134,6 +144,7 @@ protected:
 
    static bool CheckAxisLimits(const TAxis* a1, const TAxis* a2);
    static bool CheckBinLimits(const TAxis* a1, const TAxis* a2);
+   static bool CheckBinLabels(const TAxis* a1, const TAxis* a2);
    static bool CheckEqualAxes(const TAxis* a1, const TAxis* a2);
    static bool CheckConsistentSubAxes(const TAxis *a1, Int_t firstBin1, Int_t lastBin1, const TAxis *a2, Int_t firstBin2=0, Int_t lastBin2=0);
    static bool CheckConsistency(const TH1* h1, const TH1* h2);
@@ -159,12 +170,14 @@ public:
       kNstat       = 13  // size of statistics data (up to TProfile3D)
    };
 
+
+
    TH1(const TH1&);
    virtual ~TH1();
 
-   virtual void     Add(TF1 *h1, Double_t c1=1, Option_t *option="");
-   virtual void     Add(const TH1 *h1, Double_t c1=1);
-   virtual void     Add(const TH1 *h, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
+   virtual Bool_t   Add(TF1 *h1, Double_t c1=1, Option_t *option="");
+   virtual Bool_t   Add(const TH1 *h1, Double_t c1=1);
+   virtual Bool_t   Add(const TH1 *h, const TH1 *h2, Double_t c1=1, Double_t c2=1); // *MENU*
    virtual void     AddBinContent(Int_t bin);
    virtual void     AddBinContent(Int_t bin, Double_t w);
    static  void     AddDirectory(Bool_t add=kTRUE);
@@ -176,9 +189,9 @@ public:
    virtual Double_t ComputeIntegral();
    virtual void     DirectoryAutoAdd(TDirectory *);
    virtual Int_t    DistancetoPrimitive(Int_t px, Int_t py);
-   virtual void     Divide(TF1 *f1, Double_t c1=1);
-   virtual void     Divide(const TH1 *h1);
-   virtual void     Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t   Divide(TF1 *f1, Double_t c1=1);
+   virtual Bool_t   Divide(const TH1 *h1);
+   virtual Bool_t   Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    virtual void     Draw(Option_t *option="");
    virtual TH1     *DrawCopy(Option_t *option="") const;
    virtual TH1     *DrawNormalized(Option_t *option="", Double_t norm=1) const;
@@ -237,6 +250,9 @@ public:
    virtual Double_t GetBinError(Int_t bin) const;
    virtual Double_t GetBinError(Int_t binx, Int_t biny) const;
    virtual Double_t GetBinError(Int_t binx, Int_t biny, Int_t binz) const;
+   virtual Double_t GetBinErrorLow(Int_t bin) const;
+   virtual Double_t GetBinErrorUp(Int_t bin) const;
+   virtual EBinErrorOpt  GetBinErrorOption() const { return fBinStatErrOpt; }
    virtual Double_t GetBinLowEdge(Int_t bin) const {return fXaxis.GetBinLowEdge(bin);}
    virtual Double_t GetBinWidth(Int_t bin) const {return fXaxis.GetBinWidth(bin);}
    virtual Double_t GetBinWithContent(Double_t c, Int_t &binx, Int_t firstx=0, Int_t lastx=0,Double_t maxdiff=0) const;
@@ -296,13 +312,14 @@ public:
    virtual void     LabelsInflate(Option_t *axis="X");
    virtual void     LabelsOption(Option_t *option="h", Option_t *axis="X");
    virtual Long64_t Merge(TCollection *list);
-   virtual void     Multiply(TF1 *h1, Double_t c1=1);
-   virtual void     Multiply(const TH1 *h1);
-   virtual void     Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
+   virtual Bool_t   Multiply(TF1 *h1, Double_t c1=1);
+   virtual Bool_t   Multiply(const TH1 *h1);
+   virtual Bool_t   Multiply(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
    virtual void     Paint(Option_t *option="");
    virtual void     Print(Option_t *option="") const;
    virtual void     PutStats(Double_t *stats);
    virtual TH1     *Rebin(Int_t ngroup=2, const char*newname="", const Double_t *xbins=0);  // *MENU*
+   virtual TH1     *RebinX(Int_t ngroup=2, const char*newname="") { return Rebin(ngroup,newname, (Double_t*) 0); }
    virtual void     RebinAxis(Double_t x, TAxis *axis);
    virtual void     Rebuild(Option_t *option="");
    virtual void     RecursiveRemove(TObject *obj);
@@ -329,6 +346,7 @@ public:
    virtual void     SetBins(Int_t nx, const Double_t *xBins, Int_t ny, const Double_t * yBins, Int_t nz,
 			    const Double_t *zBins);
    virtual void     SetBinsLength(Int_t = -1) { } //redefined in derived classes
+   virtual void     SetBinErrorOption(EBinErrorOpt type) { fBinStatErrOpt = type; }
    virtual void     SetBuffer(Int_t buffersize, Option_t *option="");
    virtual void     SetCellContent(Int_t binx, Int_t biny, Double_t content);
    virtual void     SetCellError(Int_t binx, Int_t biny, Double_t content);
@@ -370,7 +388,7 @@ public:
    void             UseCurrentStyle();
    static  TH1     *TransformHisto(TVirtualFFT *fft, TH1* h_output,  Option_t *option);
 
-   ClassDef(TH1,6)  //1-Dim histogram base class
+   ClassDef(TH1,7)  //1-Dim histogram base class
 };
 
 //________________________________________________________________________

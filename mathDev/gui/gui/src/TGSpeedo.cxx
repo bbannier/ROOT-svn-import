@@ -61,6 +61,7 @@ TGSpeedo::TGSpeedo(const TGWindow *p, int id)
    fMeanMark = kFALSE;
    fPeakVal  = 0.0;
    fMeanVal  = 0.0;
+   fTextFS = fCounterFS = kNone;
    fThreshold[0] = fThreshold[1] = fThreshold[2] = 0.0;
    fThresholdColor[0] = kGreen;
    fThresholdColor[1] = kOrange;
@@ -97,6 +98,7 @@ TGSpeedo::TGSpeedo(const TGWindow *p, Float_t smin, Float_t smax,
    fMeanMark = kFALSE;
    fPeakVal  = 0.0;
    fMeanVal  = 0.0;
+   fTextFS = fCounterFS = kNone;
    fThreshold[0] = fThreshold[1] = fThreshold[2] = 0.0;
    fThresholdColor[0] = kGreen;
    fThresholdColor[1] = kOrange;
@@ -122,12 +124,15 @@ void TGSpeedo::Build()
    Int_t i, nexe, offset;
 
    const TGFont *counterFont = fClient->GetFont("-*-helvetica-bold-r-*-*-12-*-*-*-*-*-*-*");
+   if (!counterFont) return;
    fCounterFS = counterFont->GetFontStruct();
 
    const TGFont *textFont = fClient->GetFont("-*-helvetica-bold-r-*-*-8-*-*-*-*-*-*-*");
+   if (!textFont) return;
    fTextFS = textFont->GetFontStruct();
 
    const TGFont *labelFont = fClient->GetFont("-*-helvetica-bold-r-*-*-14-*-*-*-*-*-*-*");
+   if (!labelFont) return;
    FontStruct_t labelFS = labelFont->GetFontStruct();
 
    if (fImage && fImage->IsValid()) {
@@ -485,6 +490,7 @@ void TGSpeedo::DrawNeedle()
    if (fImage2 && fImage2->IsValid()) {
       // First clone original image.
       TImage *img = (TImage*)fImage2->Clone("img");
+      if (!img || !img->IsValid()) return;
       if (fPeakMark) {
          img->DrawLine(xpk0, ypk0, xpk1, ypk1, "#00ff00", 3);
          img->DrawLine(xpk0, ypk0, xpk1, ypk1, "#ffffff", 1);
@@ -521,6 +527,7 @@ void TGSpeedo::DrawText()
       if (fImage2 && fImage2->IsValid())
          delete fImage2;
       fImage2 = (TImage*)fImage->Clone("fImage2");
+      if (!fImage2 || !fImage2->IsValid()) return;
       TString fp = gEnv->GetValue("Root.TTFontPath", "");
       TString ar = fp + "/arialbd.ttf";
       // format counter value
@@ -601,6 +608,7 @@ void TGSpeedo::DoRedraw()
       if (fImage2 && fImage2->IsValid())
          delete fImage2;
       fImage2 = (TImage*)fImage->Clone("fImage2");
+      if (!fImage2 || !fImage2->IsValid()) return;
       TString fp = gEnv->GetValue("Root.TTFontPath", "");
       TString ar = fp + "/arialbd.ttf";
       // format counter value
@@ -635,6 +643,7 @@ void TGSpeedo::DoRedraw()
       strSize = gVirtualX->TextWidth(fTextFS, fDisplay2.Data(), fDisplay2.Length()) - 6;
       fImage2->DrawText((Int_t)xc - (strSize / 2), (Int_t)yc + 38, fDisplay2.Data(), 8, "#ffffff", ar);
       TImage *img = (TImage*)fImage2->Clone("img");
+      if (!img || !img->IsValid()) return;
       if (fPeakMark) {
          img->DrawLine(xpk0, ypk0, xpk1, ypk1, "#00ff00", 3);
          img->DrawLine(xpk0, ypk0, xpk1, ypk1, "#ffffff", 1);

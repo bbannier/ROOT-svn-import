@@ -32,7 +32,7 @@ public:
   virtual Double_t analyticalIntegralWN(Int_t code, const RooArgSet* normSet, const char* rangeName=0) const ;
   virtual Bool_t forceAnalyticalInt(const RooAbsArg& dep) const ;
 
-  virtual Double_t getVal(const RooArgSet* set=0) const ;
+  virtual Double_t getValV(const RooArgSet* set=0) const ;
 
   Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK=kTRUE) const;
   void initGenerator(Int_t /*code*/) {} ; // optional pre-generation initialization
@@ -43,7 +43,7 @@ public:
   // Handle projection of projection explicitly
   virtual RooAbsPdf* createProjection(const RooArgSet& iset) ;  
 
-  void printMetaArgs(ostream& os) const ;
+  void printMetaArgs(std::ostream& os) const ;
 
 
 protected:

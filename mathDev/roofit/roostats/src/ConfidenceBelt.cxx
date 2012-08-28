@@ -44,6 +44,7 @@
 ClassImp(RooStats::ConfidenceBelt) ;
 
 using namespace RooStats;
+using namespace std;
 
 //____________________________________________________________________
 ConfidenceBelt::ConfidenceBelt() : 
@@ -94,13 +95,15 @@ ConfidenceBelt::~ConfidenceBelt()
 Double_t ConfidenceBelt::GetAcceptanceRegionMin(RooArgSet& parameterPoint, Double_t cl, Double_t leftside) {
 
   if(cl>0 || leftside > 0) cout <<"using default cl, leftside for now" <<endl;
-  return GetAcceptanceRegion(parameterPoint, cl,leftside)->GetLowerLimit();
+  AcceptanceRegion * region = GetAcceptanceRegion(parameterPoint, cl,leftside); 
+  return (region) ? region->GetLowerLimit() : TMath::QuietNaN();
 }
 
 //____________________________________________________________________
 Double_t ConfidenceBelt::GetAcceptanceRegionMax(RooArgSet& parameterPoint, Double_t cl, Double_t leftside) {
   if(cl>0 || leftside > 0) cout <<"using default cl, leftside for now" <<endl;
-  return GetAcceptanceRegion(parameterPoint, cl,leftside)->GetUpperLimit();
+  AcceptanceRegion * region = GetAcceptanceRegion(parameterPoint, cl,leftside); 
+  return (region) ? region->GetUpperLimit() : TMath::QuietNaN();
 }
 
 //____________________________________________________________________

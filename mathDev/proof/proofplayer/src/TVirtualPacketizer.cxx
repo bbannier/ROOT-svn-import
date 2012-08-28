@@ -115,6 +115,7 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input, TProofProgressStatus *st)
    fCircN = 5;
    TProof::GetParameter(input, "PROOF_ProgressCircularity", fCircN);
    fCircProg->SetCircular(fCircN);
+   fCircProg->SetDirectory(0);
 
    // Check if we need to start the progress timer (multi-packetizers do not want
    // timers from the packetizers they control ...)
@@ -134,12 +135,13 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input, TProofProgressStatus *st)
    }
 
    // Init ntple to store active workers vs processing time
-   TString saveProgressPerf("no");
-   TProof::GetParameter(input, "PROOF_SaveProgressPerf", saveProgressPerf);
    fProgressPerf = 0;
-   if (fProgress && saveProgressPerf == "yes")
-      fProgressPerf = new TNtuple("PROOF_ProgressPerfNtuple",
-                                  "{Active workers, evt rate, MB read} vs processing time", "tm:aw:er:mb:ns");
+   TString saveProgressPerf("no");
+   if (TProof::GetParameter(input, "PROOF_SaveProgressPerf", saveProgressPerf) == 0) {
+      if (fProgress && saveProgressPerf == "yes")
+         fProgressPerf = new TNtuple("PROOF_ProgressPerfNtuple",
+                                     "{Active workers, evt rate, MB read} vs processing time", "tm:aw:er:mb:ns");
+   }
    fProcTimeLast = -1.;
    fActWrksLast = -1;
    fEvtRateLast = -1.;
@@ -150,8 +152,8 @@ TVirtualPacketizer::TVirtualPacketizer(TList *input, TProofProgressStatus *st)
 
    // Whether to send estimated values for the progress info
    TString estopt;
-   TProof::GetParameter(input, "PROOF_RateEstimation", estopt);
-   if (estopt.IsNull()) {
+   if (TProof::GetParameter(input, "PROOF_RateEstimation", estopt) != 0 || 
+       estopt.IsNull()) {
       // Parse option from the env
       estopt = gEnv->GetValue("Proof.RateEstimation", "");
    }
@@ -183,9 +185,9 @@ Long64_t TVirtualPacketizer::GetEntries(Bool_t tree, TDSetElement *e)
    Long64_t entries;
    TFile *file = TFile::Open(e->GetFileName());
 
-   if ( file->IsZombie() ) {
-      Error("GetEntries","Cannot open file: %s (%s)",
-            e->GetFileName(), strerror(file->GetErrno()) );
+   if (!file || (file && file->IsZombie())) {
+      const char *emsg = (file) ? strerror(file->GetErrno()) : "<undef>";
+      Error("GetEntries","Cannot open file: %s (%s)", e->GetFileName(), emsg);
       return -1;
    }
 
@@ -261,6 +263,9 @@ TDSetElement* TVirtualPacketizer::CreateNewPacket(TDSetElement* base,
       TIter nxf(friends);
       TDSetElement *fe = 0;
       while ((fe = (TDSetElement *) nxf())) {
+         PDB(kLoop,2)
+            Info("CreateNewPacket", "friend: file '%s', obj:'%s'",
+                                     fe->GetFileName(), fe->GetObjName());
          TDSetElement *xfe = new TDSetElement(fe->GetFileName(), fe->GetObjName(),
                                               fe->GetDirectory(), first, num);
          // The alias, if any, is in the element name options ('friend_alias=<alias>|')

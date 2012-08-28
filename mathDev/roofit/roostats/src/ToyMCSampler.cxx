@@ -29,136 +29,193 @@
 
 #include "RooStudyManager.h"
 #include "RooStats/ToyMCStudy.h"
+#include "RooStats/DetailedOutputAggregator.h"
 #include "RooSimultaneous.h"
+#include "RooCategory.h"
 
 #include "TMath.h"
+
+
+using namespace RooFit;
+using namespace std;
 
 
 ClassImp(RooStats::ToyMCSampler)
 
 namespace RooStats {
 
-class NuisanceParametersSampler {
-   // Helper for ToyMCSampler. Handles all of the nuisance parameter related
-   // functions. Once instantiated, it gives a new nuisance parameter point
-   // at each call to nextPoint(...).
+void NuisanceParametersSampler::NextPoint(RooArgSet& nuisPoint, Double_t& weight) {
+   // Assigns new nuisance parameter point to members of nuisPoint.
+   // nuisPoint can be more objects than just the nuisance
+   // parameters.
 
-   public:
-      NuisanceParametersSampler(RooAbsPdf *prior=NULL, const RooArgSet *parameters=NULL, Int_t nToys=1000, Bool_t asimov=kFALSE) :
-         fPrior(prior),
-         fParams(parameters),
-         fNToys(nToys),
-         fExpected(asimov),
-         fPoints(NULL),
-         fIndex(0)
-      {
-         if(prior) Refresh();
+   // check whether to get new set of nuisanceParPoints
+   if (fIndex >= fNToys) {
+      Refresh();
+      fIndex = 0;
+   }
+
+   // get value
+   nuisPoint =  *fPoints->get(fIndex++);
+   weight = fPoints->weight();
+
+   // check whether result will have any influence
+   if(fPoints->weight() == 0.0) {
+      oocoutI((TObject*)NULL,Generation) << "Weight 0 encountered. Skipping." << endl;
+      NextPoint(nuisPoint, weight);
+   }
+}
+void NuisanceParametersSampler::Refresh() {
+   // Creates the initial set of nuisance parameter points. It also refills the
+   // set with new parameter points if called repeatedly. This helps with
+   // adaptive sampling as the required number of nuisance parameter points
+   // might increase during the run.
+
+   if (!fPrior || !fParams) return;
+
+   if (fPoints) delete fPoints;
+
+   if (fExpected) {
+      // UNDER CONSTRUCTION
+      oocoutI((TObject*)NULL,InputArguments) << "Using expected nuisance parameters." << endl;
+
+      int nBins = fNToys;
+
+      // From FeldmanCousins.cxx:
+      // set nbins for the POI
+      TIter it2 = fParams->createIterator();
+      RooRealVar *myarg2;
+      while ((myarg2 = dynamic_cast<RooRealVar*>(it2.Next()))) {
+        myarg2->setBins(nBins);
       }
-      virtual ~NuisanceParametersSampler() {
-         if(fPoints) delete fPoints;
+
+
+      fPoints = fPrior->generate(
+         *fParams,
+         AllBinned(),
+         ExpectedData(),
+         NumEvents(1) // for Asimov set, this is only a scale factor
+      );
+      if(fPoints->numEntries() != fNToys) {
+         fNToys = fPoints->numEntries();
+         oocoutI((TObject*)NULL,InputArguments) <<
+            "Adjusted number of toys to number of bins of nuisance parameters: " << fNToys << endl;
       }
-
-      void NextPoint(RooArgSet& nuisPoint, Double_t& weight) {
-         // Assigns new nuisance parameter point to members of nuisPoint.
-         // nuisPoint can be more objects than just the nuisance
-         // parameters.
-
-         // check whether to get new set of nuisanceParPoints
-         if (fIndex >= fNToys) {
-            Refresh();
-            fIndex = 0;
-         }
-
-         // get value
-         nuisPoint =  *fPoints->get(fIndex++);
-         weight = fPoints->weight();
-
-         // check whether result will have any influence
-         if(fPoints->weight() == 0.0) {
-            oocoutI((TObject*)NULL,Generation) << "Weight 0 encountered. Skipping." << endl;
-            NextPoint(nuisPoint, weight);
-         }
-      }
-
-
-   protected:
-
-      void Refresh() {
-         // Creates the initial set of nuisance parameter points. It also refills the
-         // set with new parameter points if called repeatedly. This helps with
-         // adaptive sampling as the required number of nuisance parameter points
-         // might increase during the run.
-
-         if (!fPrior || !fParams) return;
-
-         if (fPoints) delete fPoints;
-
-         if (fExpected) {
-            // UNDER CONSTRUCTION
-            oocoutI((TObject*)NULL,InputArguments) << "Using expected nuisance parameters." << endl;
-
-            int nBins = fNToys;
-
-            // From FeldmanCousins.cxx:
-            // set nbins for the POI
-            TIter it2 = fParams->createIterator();
-            RooRealVar *myarg2;
-            while ((myarg2 = dynamic_cast<RooRealVar*>(it2.Next()))) {
-              myarg2->setBins(nBins);
-            }
-
-
-            fPoints = fPrior->generateBinned(
-               *fParams,
-               RooFit::ExpectedData(),
-               RooFit::NumEvents(1) // for Asimov set, this is only a scale factor
-            );
-            if(fPoints->numEntries() != fNToys) {
-               fNToys = fPoints->numEntries();
-               oocoutI((TObject*)NULL,InputArguments) <<
-                  "Adjusted number of toys to number of bins of nuisance parameters: " << fNToys << endl;
-            }
 
 /*
-            // check
-            TCanvas *c1 = new TCanvas;
-            RooPlot *p = dynamic_cast<RooRealVar*>(fParams->first())->frame();
-            fPoints->plotOn(p);
-            p->Draw();
-            for(int x=0; x < fPoints->numEntries(); x++) {
-               fPoints->get(x)->Print("v");
-               cout << fPoints->weight() << endl;
-            }
+      // check
+      TCanvas *c1 = new TCanvas;
+      RooPlot *p = dynamic_cast<RooRealVar*>(fParams->first())->frame();
+      fPoints->plotOn(p);
+      p->Draw();
+      for(int x=0; x < fPoints->numEntries(); x++) {
+         fPoints->get(x)->Print("v");
+         cout << fPoints->weight() << endl;
+      }
 */
 
-         }else{
-            oocoutI((TObject*)NULL,InputArguments) << "Using randomized nuisance parameters." << endl;
+   }else{
+      oocoutI((TObject*)NULL,InputArguments) << "Using randomized nuisance parameters." << endl;
 
-            fPoints = fPrior->generate(*fParams, fNToys);
-         }
-      }
-
-
-   private:
-      RooAbsPdf *fPrior;           // prior for nuisance parameters
-      const RooArgSet *fParams;    // nuisance parameters
-      Int_t fNToys;
-      Bool_t fExpected;
-
-      RooAbsData *fPoints;         // generated nuisance parameter points
-      Int_t fIndex;                // current index in fPoints array
-};
-
+      fPoints = fPrior->generate(*fParams, fNToys);
+   }
+}
 
 
 
 Bool_t ToyMCSampler::fgAlwaysUseMultiGen = kFALSE ;
 
 
+void ToyMCSampler::SetAlwaysUseMultiGen(Bool_t flag) { fgAlwaysUseMultiGen = flag ; }
+
+
+
+ToyMCSampler::ToyMCSampler() : fSamplingDistName("SD"), fNToys(1)
+{
+   // Proof constructor. Do not use.
+
+   fPdf = NULL;
+   fParametersForTestStat = NULL;
+   fPriorNuisance = NULL;
+   fNuisancePars = NULL;
+   fObservables = NULL;
+   fGlobalObservables = NULL;
+
+   fSize = 0.05;
+   fNEvents = 0;
+   fGenerateBinned = kFALSE;
+   fGenerateBinnedTag = "";
+   fGenerateAutoBinned = kTRUE;
+   fExpectedNuisancePar = kFALSE;
+
+   fToysInTails = 0.0;
+   fMaxToys = RooNumber::infinity();
+   fAdaptiveLowLimit = -RooNumber::infinity();
+   fAdaptiveHighLimit = RooNumber::infinity();
+
+   fProtoData = NULL;
+
+   fProofConfig = NULL;
+   fNuisanceParametersSampler = NULL;
+
+   _allVars = NULL ;
+   _gs1 = NULL ;
+   _gs2 = NULL ;
+   _gs3 = NULL ;
+   _gs4 = NULL ;
+   
+   //suppress messages for num integration of Roofit
+   RooMsgService::instance().getStream(1).removeTopic(RooFit::NumIntegration);
+   
+   fUseMultiGen = kFALSE ;
+}
+
+ToyMCSampler::ToyMCSampler(TestStatistic &ts, Int_t ntoys) :
+   fSamplingDistName(ts.GetVarName()), fNToys(ntoys)
+{
+   fPdf = NULL;
+   fParametersForTestStat = NULL;
+   fPriorNuisance = NULL;
+   fNuisancePars = NULL;
+   fObservables = NULL;
+   fGlobalObservables = NULL;
+
+   fSize = 0.05;
+   fNEvents = 0;
+   fGenerateBinned = kFALSE;
+   fGenerateBinnedTag = "";
+   fGenerateAutoBinned = kTRUE;
+   fExpectedNuisancePar = kFALSE;
+
+   fToysInTails = 0.0;
+   fMaxToys = RooNumber::infinity();
+   fAdaptiveLowLimit = -RooNumber::infinity();
+   fAdaptiveHighLimit = RooNumber::infinity();
+
+   fProtoData = NULL;
+
+   fProofConfig = NULL;
+   fNuisanceParametersSampler = NULL;
+
+   _allVars = NULL ;
+   _gs1 = NULL ;
+   _gs2 = NULL ;
+   _gs3 = NULL ;
+   _gs4 = NULL ;
+   
+   //suppress messages for num integration of Roofit
+   RooMsgService::instance().getStream(1).removeTopic(RooFit::NumIntegration);
+   
+   fUseMultiGen = kFALSE ;
+
+   AddTestStatistic(&ts);
+}
+
 
 ToyMCSampler::~ToyMCSampler() {
    if(fNuisanceParametersSampler) delete fNuisanceParametersSampler;
-   if (fNullPOI) delete fNullPOI;
+
+   ClearCache();
 }
 
 
@@ -167,22 +224,84 @@ Bool_t ToyMCSampler::CheckConfig(void) {
    // e.g. using ModelConfig::GuessObsAndNuisance(...))
    bool goodConfig = true;
 
-   if(!fTestStat) { ooccoutE((TObject*)NULL,InputArguments) << "Test statistic not set." << endl; goodConfig = false; }
+   if(fTestStatistics.size() == 0 || fTestStatistics[0] == NULL) { ooccoutE((TObject*)NULL,InputArguments) << "Test statistic not set." << endl; goodConfig = false; }
    if(!fObservables) { ooccoutE((TObject*)NULL,InputArguments) << "Observables not set." << endl; goodConfig = false; }
-   if(!fNullPOI) { ooccoutE((TObject*)NULL,InputArguments) << "Parameter values used to evaluate for test statistic  not set." << endl; goodConfig = false; }
+   if(!fParametersForTestStat) { ooccoutE((TObject*)NULL,InputArguments) << "Parameter values used to evaluate the test statistic are not set." << endl; goodConfig = false; }
    if(!fPdf) { ooccoutE((TObject*)NULL,InputArguments) << "Pdf not set." << endl; goodConfig = false; }
+
+
+   //ooccoutI((TObject*)NULL,InputArguments) << "ToyMCSampler configuration:" << endl;
+   //ooccoutI((TObject*)NULL,InputArguments) << "Pdf from SetPdf: " << fPdf << endl;
+   // for( unsigned int i=0; i < fTestStatistics.size(); i++ ) {
+   //   ooccoutI((TObject*)NULL,InputArguments) << "test statistics["<<i<<"]: " << fTestStatistics[i] << endl;
+   // }
+   //ooccoutI((TObject*)NULL,InputArguments) << endl;
 
    return goodConfig;
 }
 
 
+RooArgList* ToyMCSampler::EvaluateAllTestStatistics(RooAbsData& data, const RooArgSet& poi) {
+   // Evaluate all test statistics, returning result and any detailed output.
+   // PDF parameter values are saved in case they are modified by
+   // TestStatistic::Evaluate (eg. SimpleLikelihoodRatioTestStat).
+   DetailedOutputAggregator detOutAgg;
+   const RooArgList* allTS = EvaluateAllTestStatistics(data, poi, detOutAgg);
+   if (!allTS) return 0;
+   return dynamic_cast<RooArgList*>(allTS->snapshot());
+}
+
+
+const RooArgList* ToyMCSampler::EvaluateAllTestStatistics(RooAbsData& data, const RooArgSet& poi, DetailedOutputAggregator& detOutAgg) {
+   RooArgSet *allVars = fPdf ? fPdf->getVariables() : 0;
+   RooArgSet *saveAll = allVars ? dynamic_cast<RooArgSet*>(allVars->snapshot()) : 0;
+   for( unsigned int i = 0; i < fTestStatistics.size(); i++ ) {
+      if( fTestStatistics[i] == NULL ) continue;
+      TString name( TString::Format("%s_TS%u", fSamplingDistName.c_str(), i) );
+      RooArgSet* parForTS = dynamic_cast<RooArgSet*>(poi.snapshot());
+      RooRealVar ts( name, fTestStatistics[i]->GetVarName(), fTestStatistics[i]->Evaluate( data, *parForTS ) );
+      RooArgList tset(ts);
+      detOutAgg.AppendArgSet(&tset);
+      delete parForTS;
+      if (const RooArgSet* detOut = fTestStatistics[i]->GetDetailedOutput()) {
+        name.Append("_");
+        detOutAgg.AppendArgSet(detOut, name);
+      }
+      if (saveAll) *allVars = *saveAll;  // restore values, perhaps modified by fTestStatistics[i]->Evaluate()
+   }
+   delete saveAll;
+   delete allVars;
+   return detOutAgg.GetAsArgList();
+}
+
 
 SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPointIn) {
+   if(fTestStatistics.size() > 1) {
+      oocoutW((TObject*)NULL, InputArguments) << "Multiple test statistics defined, but only one distribution will be returned." << endl;
+      for( unsigned int i=0; i < fTestStatistics.size(); i++ ) {
+         oocoutW((TObject*)NULL, InputArguments) << " \t test statistic: " << fTestStatistics[i] << endl;
+      }
+   }
+   
+   RooDataSet* r = GetSamplingDistributions(paramPointIn);
+   if(r == NULL || r->numEntries() == 0) {
+      oocoutW((TObject*)NULL, Generation) << "no sampling distribution generated" << endl;
+      return NULL;
+   }
+   
+   SamplingDistribution* samp = new SamplingDistribution( r->GetName(), r->GetTitle(), *r );
+   delete r;
+   return samp;
+}
+
+
+RooDataSet* ToyMCSampler::GetSamplingDistributions(RooArgSet& paramPointIn)
+{
    // Use for serial and parallel runs.
 
    // ======= S I N G L E   R U N ? =======
    if(!fProofConfig)
-      return GetSamplingDistributionSingleWorker(paramPointIn);
+      return GetSamplingDistributionsSingleWorker(paramPointIn);
 
 
    // ======= P A R A L L E L   R U N =======
@@ -210,47 +329,47 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistribution(RooArgSet& paramPoin
    RooStudyManager studymanager(w, *toymcstudy);
    studymanager.runProof(fProofConfig->GetNExperiments(), fProofConfig->GetHost(), fProofConfig->GetShowGui());
 
-   SamplingDistribution *result = new SamplingDistribution(GetSamplingDistName().c_str(), GetSamplingDistName().c_str());
-   toymcstudy->merge(*result);
+   RooDataSet* output = toymcstudy->merge();
 
    // reset the number of toys
    fNToys = totToys;
 
-   delete toymcstudy ;
-
-   return result;
+   delete toymcstudy;
+   return output;
 }
 
-SamplingDistribution* ToyMCSampler::GetSamplingDistributionSingleWorker(RooArgSet& paramPointIn) {
+RooDataSet* ToyMCSampler::GetSamplingDistributionsSingleWorker(RooArgSet& paramPointIn)
+{
    // This is the main function for serial runs. It is called automatically
    // from inside GetSamplingDistribution when no ProofConfig is given.
    // You should not call this function yourself. This function should
    // be used by ToyMCStudy on the workers (ie. when you explicitly want
    // a serial run although ProofConfig is present).
 
-   CheckConfig();
+   // Make sure the cache is clear. It is important to clear it hear, because
+   // the cache might be invalid even when just the firstPOI was changed, for which
+   // no accessor has to be called. (Fixes a bug when ToyMCSampler is
+   // used with the Neyman Construction)
+   ClearCache();
 
-   std::vector<Double_t> testStatVec;
-   std::vector<Double_t> testStatWeights;
+   CheckConfig();
 
    // important to cache the paramPoint b/c test statistic might 
    // modify it from event to event
    RooArgSet *paramPoint = (RooArgSet*) paramPointIn.snapshot();
    RooArgSet *allVars = fPdf->getVariables();
-   if (fImportanceDensity) { 
-      // in case of importance sampling include in allVars 
-      // also any extra variables defined for the importance sampling
-      RooArgSet *allVarsImpDens = fImportanceDensity->getVariables();
-      allVars->add(*allVarsImpDens);
-      delete allVarsImpDens;
-   }
    RooArgSet *saveAll = (RooArgSet*) allVars->snapshot();
 
+
+   DetailedOutputAggregator detOutAgg;
+
    // counts the number of toys in the limits set for adaptive sampling
-   // (taking weights into account)
+   // (taking weights into account; always on first test statistic)
    Double_t toysInTails = 0.0;
 
    for (Int_t i = 0; i < fMaxToys; ++i) {
+      // need to check at the beginning for case that zero toys are requested
+      if (toysInTails >= fToysInTails  &&  i+1 > fNToys) break;
 
       // status update
       if ( i% 500 == 0 && i>0 ) {
@@ -259,46 +378,40 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistributionSingleWorker(RooArgSe
          else ooccoutP((TObject*)0,Generation) << endl;
       }
 
+
+      // TODO: change this treatment to keep track of all values so that the threshold
+      // for adaptive sampling is counted for all distributions and not just the
+      // first one.
+      Double_t valueFirst = -999.0, weight = 1.0;
+
       // set variables to requested parameter point
-      *allVars = *saveAll;
-      *allVars = *paramPoint;
+      *allVars = *saveAll; // important for example for SimpleLikelihoodRatioTestStat
+      *allVars = *fParametersForTestStat;
+      
+      RooAbsData* toydata = GenerateToyData(*paramPoint, weight);
 
-      Double_t value, weight;
-      if(!fImportanceDensity) {
-         // generate toy data for this parameter point
-         RooAbsData* toydata = GenerateToyData(*paramPoint, weight);
-         // evaluate test statistic, that only depends on null POI
-         value = fTestStat->Evaluate(*toydata, *fNullPOI);
+      const RooArgList* allTS = EvaluateAllTestStatistics(*toydata, *fParametersForTestStat, detOutAgg);
+      if (allTS->getSize() > Int_t(fTestStatistics.size()))
+        detOutAgg.AppendArgSet( fGlobalObservables, "globObs_" );
+      if (RooRealVar* firstTS = dynamic_cast<RooRealVar*>(allTS->first()))
+         valueFirst = firstTS->getVal();
 
-         delete toydata;
-      }else{
-         // generate toy data for this parameter point
-         RooAbsData* toydata = GenerateToyDataImportanceSampling(*paramPoint, weight);
-         // evaluate test statistic, that only depends on null POI
-         value = fTestStat->Evaluate(*toydata, *fNullPOI);
-
-         delete toydata;
-      }
-
+      delete toydata;
 
       // check for nan
-      if(value != value) {
-         oocoutW((TObject*)NULL, Generation) << "skip: " << value << ", " << weight << endl;
+      if(valueFirst != valueFirst) {
+         oocoutW((TObject*)NULL, Generation) << "skip: " << valueFirst << ", " << weight << endl;
          continue;
       }
 
-      // add results
-      testStatVec.push_back(value);
-      if(weight >= 0.) testStatWeights.push_back(weight);
+      detOutAgg.CommitSet(weight);
 
       // adaptive sampling checks
-      if (value <= fAdaptiveLowLimit  ||  value >= fAdaptiveHighLimit) {
+      if (valueFirst <= fAdaptiveLowLimit  ||  valueFirst >= fAdaptiveHighLimit) {
          if(weight >= 0.) toysInTails += weight;
          else toysInTails += 1.;
       }
-      if (toysInTails >= fToysInTails  &&  i+1 >= fNToys) break;
    }
-
 
    // clean up
    *allVars = *saveAll;
@@ -306,73 +419,74 @@ SamplingDistribution* ToyMCSampler::GetSamplingDistributionSingleWorker(RooArgSe
    delete allVars;
    delete paramPoint;
 
-   // return
-   if (testStatWeights.size()) {
-      return new SamplingDistribution(
-         fSamplingDistName.c_str(),
-         fSamplingDistName.c_str(),
-         testStatVec,
-         testStatWeights,
-         fTestStat->GetVarName()
-      );
-
-   }
-   return new SamplingDistribution(
-      fSamplingDistName.c_str(),
-      fSamplingDistName.c_str(),
-      testStatVec,
-      fTestStat->GetVarName()
-   );
+   return detOutAgg.GetAsDataSet(fSamplingDistName, fSamplingDistName);
 }
 
-void ToyMCSampler::GenerateGlobalObservables() const {
+void ToyMCSampler::GenerateGlobalObservables(RooAbsPdf& pdf) const {
 
    if(!fGlobalObservables  ||  fGlobalObservables->getSize()==0) {
       ooccoutE((TObject*)NULL,InputArguments) << "Global Observables not set." << endl;
       return;
    }
+   
+   
+   if (fUseMultiGen || fgAlwaysUseMultiGen) {
 
-
-   // generate one set of global observables and assign it
-   // has problem for sim pdfs
-   RooSimultaneous* simPdf = dynamic_cast<RooSimultaneous*> (fPdf);
-   if (!simPdf) {
-      RooDataSet *one = fPdf->generate(*fGlobalObservables, 1);
-
-      const RooArgSet *values = one->get();
-      if (!_allVars) {
-         _allVars = fPdf->getVariables();
-      }
-      *_allVars = *values;
-      delete one;
-
-   } else {
-
-      if (_pdfList.size() == 0) {
-         TIterator* citer = simPdf->indexCat().typeIterator();
-         RooCatType* tt = NULL;
-         while ((tt = (RooCatType*) citer->Next())) {
-            RooAbsPdf* pdftmp = simPdf->getPdf(tt->GetName());
-            RooArgSet* globtmp = pdftmp->getObservables(*fGlobalObservables);
-            RooAbsPdf::GenSpec* gs = pdftmp->prepareMultiGen(*globtmp, RooFit::NumEvents(1));
-            _pdfList.push_back(pdftmp);
-            _obsList.push_back(globtmp);
-            _gsList.push_back(gs);
+      // generate one set of global observables and assign it
+      // has problem for sim pdfs
+      RooSimultaneous* simPdf = dynamic_cast<RooSimultaneous*>( &pdf );
+      if (!simPdf) {
+         RooDataSet *one = pdf.generate(*fGlobalObservables, 1);
+   
+         const RooArgSet *values = one->get(0);
+         if (!_allVars) {
+            _allVars = pdf.getVariables();
+         }
+         *_allVars = *values;
+         delete one;
+   
+      } else {
+   
+         if (_pdfList.size() == 0) {
+            RooCategory& channelCat = (RooCategory&)simPdf->indexCat();
+            int nCat = channelCat.numTypes();
+            for (int i=0; i < nCat; ++i){
+               channelCat.setIndex(i);
+               RooAbsPdf* pdftmp = simPdf->getPdf(channelCat.getLabel());
+               assert(pdftmp);
+               RooArgSet* globtmp = pdftmp->getObservables(*fGlobalObservables);
+               RooAbsPdf::GenSpec* gs = pdftmp->prepareMultiGen(*globtmp, NumEvents(1));
+               _pdfList.push_back(pdftmp);
+               _obsList.push_back(globtmp);
+               _gsList.push_back(gs);
+            }
+         }
+   
+         list<RooArgSet*>::iterator oiter = _obsList.begin();
+         list<RooAbsPdf::GenSpec*>::iterator giter = _gsList.begin();
+         for (list<RooAbsPdf*>::iterator iter = _pdfList.begin(); iter != _pdfList.end(); ++iter, ++giter, ++oiter) {
+            //RooDataSet* tmp = (*iter)->generate(**oiter,1) ;
+            RooDataSet* tmp = (*iter)->generate(**giter);
+            **oiter = *tmp->get(0);
+            delete tmp;
          }
       }
 
-      list<RooArgSet*>::iterator oiter = _obsList.begin();
-      list<RooAbsPdf::GenSpec*>::iterator giter = _gsList.begin();
-      for (list<RooAbsPdf*>::iterator iter = _pdfList.begin(); iter != _pdfList.end(); ++iter, ++giter, ++oiter) {
-         //RooDataSet* tmp = (*iter)->generate(**oiter,1) ;
-         RooDataSet* tmp = (*iter)->generate(**giter);
-         **oiter = *tmp->get(0);
-         delete tmp;
-      }
+
+   } else {
+   
+      // not using multigen for global observables
+      RooDataSet* one = pdf.generateSimGlobal( *fGlobalObservables, 1 );
+      const RooArgSet *values = one->get(0);
+      RooArgSet* allVars = pdf.getVariables();
+      *allVars = *values;
+      delete allVars;
+      delete one;
+
    }
 }
 
-RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& paramPoint, double& weight) const {
+RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& paramPoint, double& weight, RooAbsPdf& pdf) const {
    // This method generates a toy data set for the given parameter point taking
    // global observables into account.
    // The values of the generated global observables remain in the pdf's variables.
@@ -384,25 +498,23 @@ RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& paramPoint, double& weight)
       return NULL;
    }
 
-   if(fImportanceDensity) {
-      oocoutW((TObject*)NULL,InputArguments) << "ToyMCSampler: importance density given but ignored for generating toys." << endl;
-   }
-
    // assign input paramPoint
    RooArgSet* allVars = fPdf->getVariables();
    *allVars = paramPoint;
 
 
    // create nuisance parameter points
-   if(!fNuisanceParametersSampler && fPriorNuisance && fNuisancePars)
+   if(!fNuisanceParametersSampler && fPriorNuisance && fNuisancePars) {
       fNuisanceParametersSampler = new NuisanceParametersSampler(fPriorNuisance, fNuisancePars, fNToys, fExpectedNuisancePar);
-
+      if ((fUseMultiGen || fgAlwaysUseMultiGen) &&  fNuisanceParametersSampler )
+         oocoutI((TObject*)NULL,InputArguments) << "Cannot use multigen when nuisance parameters vary for every toy" << endl;
+   }
 
    // generate global observables
    RooArgSet observables(*fObservables);
    if(fGlobalObservables  &&  fGlobalObservables->getSize()) {
       observables.remove(*fGlobalObservables);
-      GenerateGlobalObservables();
+      GenerateGlobalObservables(pdf);
    }
 
    // save values to restore later.
@@ -423,131 +535,16 @@ RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& paramPoint, double& weight)
 
       // get nuisance parameter point and weight
       fNuisanceParametersSampler->NextPoint(allVarsMinusParamPoint, weight);
+
+
    }else{
-      weight = -1.0;
+      weight = 1.0;
    }
 
-   RooAbsData *data = Generate(*fPdf, observables);
+   RooAbsData *data = Generate(pdf, observables);
 
    // We generated the data with the randomized nuisance parameter (if hybrid)
    // but now we are setting the nuisance parameters back to where they were.
-   *allVars = *saveVars;
-   delete allVars;
-   delete saveVars;
-
-   return data;
-}
-
-RooAbsData* ToyMCSampler::GenerateToyDataImportanceSampling(RooArgSet& paramPoint, double& weight) const {
-   // This method generates a toy data set for importance sampling for the given parameter point taking
-   // global observables into account.
-   // The values of the generated global observables remain in the pdf's variables.
-   // They have to have those values for the subsequent evaluation of the
-   // test statistics.
-
-
-   if(!fObservables) {
-      ooccoutE((TObject*)NULL,InputArguments) << "Observables not set." << endl;
-      return NULL;
-   }
-
-   if(!fImportanceDensity) {
-      // no Importance Sampling
-      oocoutE((TObject*)NULL,InputArguments) << "ToyMCSampler: no importance density given." << endl;
-      return NULL;
-   }
-
-   // assign input paramPoint
-   RooArgSet* allVars = fPdf->getVariables();
-   *allVars = paramPoint;
-
-
-   // create nuisance parameter points
-   if(!fNuisanceParametersSampler && fPriorNuisance && fNuisancePars)
-      fNuisanceParametersSampler = new NuisanceParametersSampler(fPriorNuisance, fNuisancePars, fNToys, fExpectedNuisancePar);
-
-   // generate global observables
-   RooArgSet observables(*fObservables);
-   if(fGlobalObservables  &&  fGlobalObservables->getSize()) {
-      observables.remove(*fGlobalObservables);
-      GenerateGlobalObservables();
-   }
-
-   // save values to restore later.
-   // but this must remain after(!) generating global observables
-   RooArgSet* allVarsImpDens = fImportanceDensity->getVariables();
-   allVars->add(*allVarsImpDens);
-   delete allVarsImpDens;
-   const RooArgSet* saveVars = (const RooArgSet*)allVars->snapshot();
-
-   if(fNuisanceParametersSampler) { // use nuisance parameters?
-      // Construct a set of nuisance parameters that has the parameters
-      // in the input paramPoint removed. Therefore, no parameter in
-      // paramPoint is randomized.
-      // Therefore when a parameter is given (should be held fixed),
-      // but is also in the list of nuisance parameters, the parameter
-      // will be held fixed. This is useful for debugging to hold single
-      // parameters fixed although under "normal" circumstances it is
-      // randomized.
-      RooArgSet allVarsMinusParamPoint(*allVars);
-      allVarsMinusParamPoint.remove(paramPoint, kFALSE, kTRUE); // match by name
-
-      // get nuisance parameter point and weight
-      fNuisanceParametersSampler->NextPoint(allVarsMinusParamPoint, weight);
-   }else{
-      weight = -1.0;
-   }
-
-   // the number of events generated is either the given fNEvents or
-   // in case this is not given, the expected number of events of
-   // the pdf with a Poisson fluctuation
-   int forceEvents = 0;
-   if(fNEvents == 0) {
-      forceEvents = (int)fPdf->expectedEvents(observables);
-      forceEvents = RooRandom::randomGenerator()->Poisson(forceEvents);
-   }
-
-   // need to be careful here not to overwrite the current state of the
-   // nuisance parameters, ie they must not be part of the snapshot
-   if(fImportanceSnapshot) *allVars = *fImportanceSnapshot;
-
-   // generate with the parameters configured in this class
-   //   NULL => no protoData
-   //   overwriteEvents => replaces fNEvents it would usually take
-   RooAbsData* data = Generate(*fImportanceDensity, observables, NULL, forceEvents);
-
-
-
-
-
-   // Importance Sampling: adjust weight
-   // Source: presentation by Michael Woodroofe
-
-   // NOTE that importance density is used only when sampling also the
-   // nuisance parameters
-   // One has to be careful not to have nuisance parameter in the snapshot
-   // otherwise they will be not smeared in GenerateToyData
-
-
-   // get the NLLs of the importance density and the pdf to sample
-   if (fImportanceSnapshot)   *allVars = *fImportanceSnapshot;
-
-   RooAbsReal *impNLL = fImportanceDensity->createNLL(*data, RooFit::Extended(kFALSE), RooFit::CloneData(kFALSE));
-   double impNLLVal = impNLL->getVal();
-   delete impNLL;
-
-
-   *allVars = paramPoint;
-   RooAbsReal *pdfNLL = fPdf->createNLL(*data, RooFit::Extended(kFALSE), RooFit::CloneData(kFALSE));
-   double pdfNLLVal = pdfNLL->getVal();
-   delete pdfNLL;
-
-   // L(pdf) / L(imp)  =  exp( NLL(imp) - NLL(pdf) )
-   weight *= exp(impNLLVal - pdfNLLVal);
-
-
-
-
    *allVars = *saveVars;
    delete allVars;
    delete saveVars;
@@ -573,26 +570,29 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
    int events = forceEvents;
    if(events == 0) events = fNEvents;
 
+   // cannot use multigen when the nuisance parameters change for every toy
+   bool useMultiGen = (fUseMultiGen || fgAlwaysUseMultiGen) && !fNuisanceParametersSampler; 
+
    if(events == 0) {
       if( pdf.canBeExtended() && pdf.expectedEvents(observables) > 0) {
          if(fGenerateBinned) {
-            if(protoData) data = pdf.generateBinned(observables, RooFit::Extended(), RooFit::ProtoData(*protoData, true, true));
-            else          data = pdf.generateBinned(observables, RooFit::Extended());
+            if(protoData) data = pdf.generate(observables, AllBinned(), Extended(), ProtoData(*protoData, true, true));
+            else          data = pdf.generate(observables, AllBinned(), Extended());
          }else{
 	   if(protoData) {
-	     if (fUseMultiGen || fgAlwaysUseMultiGen) {
-	       if (!_gs2) { _gs2 = pdf.prepareMultiGen(observables, RooFit::Extended(), RooFit::ProtoData(*protoData, true, true)) ; }
+	     if (useMultiGen) {
+	       if (!_gs2) { _gs2 = pdf.prepareMultiGen(observables, Extended(), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag), ProtoData(*protoData, true, true)) ; }
 	       data = pdf.generate(*_gs2) ;
 	     } else {
-	       data = pdf.generate      (observables, RooFit::Extended(), RooFit::ProtoData(*protoData, true, true));
+	       data = pdf.generate                    (observables, Extended(), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag), ProtoData(*protoData, true, true));
 	     }
 	   }
             else  {
-	      if (fUseMultiGen || fgAlwaysUseMultiGen) {
-		if (!_gs1) { _gs1 = pdf.prepareMultiGen(observables,RooFit::Extended()) ; }
+	      if (useMultiGen) {
+		if (!_gs1) { _gs1 = pdf.prepareMultiGen(observables, Extended(), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag) ) ; }
 		data = pdf.generate(*_gs1) ;
 	      } else {
-		data = pdf.generate      (observables, RooFit::Extended());
+		data = pdf.generate                    (observables, Extended(), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag) );
 	      }
 
 	    }
@@ -604,22 +604,22 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
       }
    }else{
       if(fGenerateBinned) {
-         if(protoData) data = pdf.generateBinned(observables, events, RooFit::ProtoData(*protoData, true, true));
-         else          data = pdf.generateBinned(observables, events);
+         if(protoData) data = pdf.generate(observables, events, AllBinned(), ProtoData(*protoData, true, true));
+         else          data = pdf.generate(observables, events, AllBinned());
       }else{
 	if(protoData) {
-	  if (fUseMultiGen || fgAlwaysUseMultiGen) {
-	    if (!_gs3) { _gs3 = pdf.prepareMultiGen(observables, RooFit::NumEvents(events), RooFit::ProtoData(*protoData, true, true)); }
+	  if (useMultiGen) {
+	    if (!_gs3) { _gs3 = pdf.prepareMultiGen(observables, NumEvents(events), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag), ProtoData(*protoData, true, true)); }
 	    data = pdf.generate(*_gs3) ;
 	  } else {
-	    data = pdf.generate      (observables, events, RooFit::ProtoData(*protoData, true, true));
+	    data = pdf.generate                    (observables, NumEvents(events), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag), ProtoData(*protoData, true, true));
 	  }
 	} else {
-	  if (fUseMultiGen || fgAlwaysUseMultiGen) {	    
-	    if (!_gs4) { _gs4 = pdf.prepareMultiGen(observables, RooFit::NumEvents(events)); }
+	  if (useMultiGen) {	    
+	    if (!_gs4) { _gs4 = pdf.prepareMultiGen(observables, NumEvents(events), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag)); }
 	    data = pdf.generate(*_gs4) ;
 	  } else {
-	    data = pdf.generate      (observables, events);
+	    data = pdf.generate                    (observables, NumEvents(events), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag));
 	  }
 	}
       }
@@ -631,5 +631,60 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
 
 
 
+
+// Extended interface to append to sampling distribution more samples
+SamplingDistribution* ToyMCSampler::AppendSamplingDistribution(
+   RooArgSet& allParameters, 
+   SamplingDistribution* last, 
+   Int_t additionalMC)
+{
+   Int_t tmp = fNToys;
+   fNToys = additionalMC;
+   SamplingDistribution* newSamples = GetSamplingDistribution(allParameters);
+   fNToys = tmp;
+   
+   if(last){
+     last->Add(newSamples);
+     delete newSamples;
+     return last;
+   }
+   
+   return newSamples;
+}
+
+
+
+
+void ToyMCSampler::ClearCache() { 
+   // clear the cache obtained from the pdf used for speeding the toy and global observables generation
+   // needs to be called every time the model pdf (fPdf) changes
+
+
+   if (_gs1) delete _gs1; 
+   _gs1 = 0;
+   if (_gs2) delete _gs2; 
+   _gs2 = 0;
+   if (_gs3) delete _gs3; 
+   _gs3 = 0;
+   if (_gs4) delete _gs4; 
+   _gs4 = 0;
+
+   // no need to delete the _pdfList since it is managed by the RooSimultaneous object
+   if (_pdfList.size() > 0) { 
+      std::list<RooArgSet*>::iterator oiter = _obsList.begin();
+      for (std::list<RooAbsPdf::GenSpec*>::iterator giter  = _gsList.begin(); giter != _gsList.end(); ++giter, ++oiter) {
+         delete *oiter; 
+         delete *giter; 
+      }
+      _pdfList.clear();
+      _obsList.clear();
+      _gsList.clear();
+   }
+
+   //LM: is this set really needed ??
+   if (_allVars) delete _allVars; 
+   _allVars = 0;
+
+}
 
 } // end namespace RooStats

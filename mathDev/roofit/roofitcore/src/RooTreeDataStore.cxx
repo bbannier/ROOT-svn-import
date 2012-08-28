@@ -76,6 +76,9 @@ RooTreeDataStore::RooTreeDataStore(TTree* t, const RooArgSet& vars, const char* 
   _varsww(vars),
   _wgtVar(weightVar(vars,wgtVarName)),
   _extWgtArray(0),
+  _extWgtErrLoArray(0),
+  _extWgtErrHiArray(0),
+  _extSumW2Array(0),
   _curWgt(1)
 {
   // Constructor to facilitate reading of legacy RooDataSets
@@ -494,15 +497,7 @@ void RooTreeDataStore::loadValues(const TTree *t, const RooFormulaVar* select, c
   if (select) {
     selectClone = (RooFormulaVar*) select->cloneTree() ;
     selectClone->recursiveRedirectServers(*sourceArgSet) ;
-
-    RooArgSet branchList ;
-    selectClone->branchNodeServerList(&branchList) ;
-    TIterator* iter = branchList.createIterator() ;
-    RooAbsArg* arg ;
-    while((arg=(RooAbsArg*)iter->Next())) {
-      arg->setOperMode(RooAbsArg::ADirty) ;
-    }
-    delete iter ;
+    selectClone->setOperMode(RooAbsArg::ADirty,kTRUE) ;
   }
 
   // Loop over events in source tree   
@@ -569,15 +564,7 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
   if (select) {
     selectClone = (RooFormulaVar*) select->cloneTree() ;
     selectClone->recursiveRedirectServers(*ads->get()) ;
-
-    RooArgSet branchList ;
-    selectClone->branchNodeServerList(&branchList) ;
-    TIterator* iter = branchList.createIterator() ;
-    RooAbsArg* arg ;
-    while((arg=(RooAbsArg*)iter->Next())) {
-      arg->setOperMode(RooAbsArg::ADirty) ;
-    }
-    delete iter ;
+    selectClone->setOperMode(RooAbsArg::ADirty,kTRUE) ;
   }
 
   // Force RDS internal initialization
@@ -590,6 +577,9 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
   Bool_t allValid ;
 
   Bool_t isTDS = dynamic_cast<const RooTreeDataStore*>(ads) ;
+  if (isTDS) {
+    ((RooTreeDataStore*)(ads))->resetBuffers() ;
+  }
   for(Int_t i=nStart; i < nevent ; ++i) {
     ads->get(i) ;
 
@@ -625,6 +615,9 @@ void RooTreeDataStore::loadValues(const RooAbsDataStore *ads, const RooFormulaVa
     fill() ;
    }
   delete destIter ;
+  if (isTDS) {
+    ((RooTreeDataStore*)(ads))->restoreAlternateBuffers() ;
+  }
   
   delete selectClone ;
   SetTitle(ads->GetTitle());
@@ -820,11 +813,6 @@ void RooTreeDataStore::weightError(Double_t& lo, Double_t& hi, RooAbsData::Error
 }
 
 
-
-
-
-
-
 //_____________________________________________________________________________
 Bool_t RooTreeDataStore::changeObservableName(const char* from, const char* to) 
 {
@@ -911,6 +899,9 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
     return 0;
   }
 
+  // WVE need to reset TTRee buffers to original datamembers here
+  resetBuffers() ;
+
   // Clone variable and attach to cloned tree 
   RooAbsArg* newVarClone = newVar.cloneTree() ;
   newVarClone->recursiveRedirectServers(_vars,kFALSE) ;
@@ -919,6 +910,7 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
   ((RooAbsArg*)valHolder)->attachToTree(*_tree,_defTreeBufSize) ;
   _vars.add(*valHolder) ;
   _varsww.add(*valHolder) ;
+
 
   // Fill values of of placeholder
   for (int i=0 ; i<GetEntries() ; i++) {
@@ -929,6 +921,8 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
     valHolder->fillTreeBranch(*_tree) ;
   }
 
+  // WVE need to restore TTRee buffers to previous values here
+  restoreAlternateBuffers() ;
 
   if (adjustRange) {
 //     // Set range of valHolder to (just) bracket all values stored in the dataset
@@ -939,6 +933,8 @@ RooAbsArg* RooTreeDataStore::addColumn(RooAbsArg& newVar, Bool_t adjustRange)
 //       rrvVal->setRange(vlo,vhi) ;  
 //     }
   }
+
+
 
   delete newVarClone ;  
   return valHolder ;
@@ -960,6 +956,10 @@ RooArgSet* RooTreeDataStore::addColumns(const RooArgList& varList)
   TList cloneSetList ;
   RooArgSet cloneSet ;
   RooArgSet* holderSet = new RooArgSet ;
+
+  // WVE need to reset TTRee buffers to original datamembers here
+  resetBuffers() ;
+
 
   while((var=(RooAbsArg*)vIter->Next())) {
     // Create a fundamental object of the right type to hold newVar values
@@ -1011,6 +1011,9 @@ RooArgSet* RooTreeDataStore::addColumns(const RooArgList& varList)
       holder->fillTreeBranch(*_tree) ;
     }
   }
+
+  // WVE need to restore TTRee buffers to previous values here
+  restoreAlternateBuffers() ;
   
   delete cIter ;
   delete hIter ;
@@ -1068,6 +1071,37 @@ void RooTreeDataStore::append(RooAbsDataStore& other)
 }
 
 
+//_____________________________________________________________________________
+Double_t RooTreeDataStore::sumEntries() const 
+{
+  if (_wgtVar) {
+
+    Double_t sum(0) ;
+    Int_t nevt = numEntries() ;
+    for (int i=0 ; i<nevt ; i++) {  
+      get(i) ;
+      sum += _wgtVar->getVal() ;
+    }    
+    return sum ;
+
+  } else if (_extWgtArray) {
+    
+    Double_t sum(0) ;
+    Int_t nevt = numEntries() ;
+    for (int i=0 ; i<nevt ; i++) {  
+      sum += _extWgtArray[i] ;
+    }    
+    return sum ;
+    
+  } else {
+
+    return numEntries() ;
+
+  }
+}
+
+
+
 
 //_____________________________________________________________________________
 Int_t RooTreeDataStore::numEntries() const 
@@ -1099,18 +1133,22 @@ void RooTreeDataStore::cacheArgs(const RooAbsArg* owner, RooArgSet& newVarSet, c
 
   _cacheOwner = owner ;
 
-  TIterator *iter = newVarSet.createIterator() ;
+  RooArgSet* constExprVarSet = (RooArgSet*) newVarSet.selectByAttrib("ConstantExpression",kTRUE) ;
+  TIterator *iter = constExprVarSet->createIterator() ;
   RooAbsArg *arg ;
 
   Bool_t doTreeFill = (_cachedVars.getSize()==0) ;
-    
+
   while ((arg=(RooAbsArg*)iter->Next())) {
     // Attach original newVar to this tree
     arg->attachToTree(*_cacheTree,_defTreeBufSize) ;
-    arg->redirectServers(_vars) ;
+    //arg->recursiveRedirectServers(_vars) ;
     _cachedVars.add(*arg) ;
   }
-  
+
+  // WVE need to reset TTRee buffers to original datamembers here
+  //resetBuffers() ;
+
   // Refill regular and cached variables of current tree from clone
   for (int i=0 ; i<GetEntries() ; i++) {
     get(i) ;
@@ -1130,7 +1168,11 @@ void RooTreeDataStore::cacheArgs(const RooAbsArg* owner, RooArgSet& newVarSet, c
     }
   }
 
+  // WVE need to restore TTRee buffers to previous values here
+  //restoreAlternateBuffers() ;
+
   delete iter ;
+  delete constExprVarSet ;
 }
 
 
@@ -1174,6 +1216,55 @@ void RooTreeDataStore::resetCache()
 
   return ;
 }
+
+
+
+
+//_____________________________________________________________________________
+void RooTreeDataStore::attachBuffers(const RooArgSet& extObs) 
+{
+  _attachedBuffers.removeAll() ;
+  RooFIter iter = _varsww.fwdIterator() ;
+  RooAbsArg* arg ;
+  while((arg=iter.next())) {
+    RooAbsArg* extArg = extObs.find(arg->GetName()) ;
+    if (extArg) {
+      if (arg->getAttribute("StoreError")) {
+	extArg->setAttribute("StoreError") ;
+      }
+      if (arg->getAttribute("StoreAsymError")) {
+	extArg->setAttribute("StoreAsymError") ;
+      }
+      extArg->attachToTree(*_tree) ;
+      _attachedBuffers.add(*extArg) ;
+    }
+  }
+}
+
+
+
+//_____________________________________________________________________________
+void RooTreeDataStore::resetBuffers() 
+{ 
+  RooFIter iter = _varsww.fwdIterator() ;
+  RooAbsArg* arg ;
+  while((arg=iter.next())) {
+    arg->attachToTree(*_tree) ;
+  }
+}  
+
+
+
+//_____________________________________________________________________________
+void RooTreeDataStore::restoreAlternateBuffers() 
+{ 
+  RooFIter iter = _attachedBuffers.fwdIterator() ;
+  RooAbsArg* arg ;
+  while((arg=iter.next())) {
+    arg->attachToTree(*_tree) ;
+  }
+}  
+
 
 
 //_____________________________________________________________________________

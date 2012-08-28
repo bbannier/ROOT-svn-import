@@ -195,10 +195,11 @@ THashList *TProofPlayer::fgDrawInputPars = 0;
 
 //______________________________________________________________________________
 TProofPlayer::TProofPlayer(TProof *)
-   : fAutoBins(0), fOutput(0), fSelector(0), fSelectorClass(0),
+   : fAutoBins(0), fOutput(0), fSelector(0), fCreateSelObj(kTRUE), fSelectorClass(0),
      fFeedbackTimer(0), fFeedbackPeriod(2000),
      fEvIter(0), fSelStatus(0),
-     fTotalEvents(0), fQueryResults(0), fQuery(0), fDrawQueries(0),
+     fTotalEvents(0), fReadBytesRun(0), fReadCallsRun(0), fProcessedRun(0),
+     fQueryResults(0), fQuery(0), fDrawQueries(0),
      fMaxDrawQueries(1), fStopTimer(0), fStopTimerMtx(0), fDispatchTimer(0)
 {
    // Default ctor.
@@ -206,7 +207,7 @@ TProofPlayer::TProofPlayer(TProof *)
    fInput         = new TList;
    fExitStatus    = kFinished;
    fProgressStatus = new TProofProgressStatus();
-   SetProcessing(kFALSE);
+   ResetBit(TProofPlayer::kIsProcessing);
 
    static Bool_t initLimitsFinder = kFALSE;
    if (!initLimitsFinder && gProofServ && !gProofServ->IsMaster()) {
@@ -717,6 +718,58 @@ void TProofPlayer::DeleteDrawFeedback(TDrawFeedback *f)
 }
 
 //______________________________________________________________________________
+Int_t TProofPlayer::AssertSelector(const char *selector_file)
+{
+   // Make sure that a valid selector object
+   // Return -1 in case of problems, 0 otherwise
+
+   if (selector_file && strlen(selector_file)) {
+      if (fCreateSelObj) SafeDelete(fSelector);
+      // Get selector files from cache
+      if (gProofServ) {
+         gProofServ->GetCacheLock()->Lock();
+         gProofServ->CopyFromCache(selector_file, 1);
+      }
+
+      if (!(fSelector = TSelector::GetSelector(selector_file))) {
+         Error("AssertSelector", "cannot load: %s", selector_file );
+         gProofServ->GetCacheLock()->Unlock();
+         return -1;
+      }
+
+      // Save binaries to cache, if any
+      if (gProofServ) {
+         gProofServ->CopyToCache(selector_file, 1);
+         gProofServ->GetCacheLock()->Unlock();
+      }
+      fCreateSelObj = kTRUE;
+      Info("AssertSelector", "Processing via filename");
+   } else if (!fSelector) {
+      Error("AssertSelector", "no TSelector object define : cannot continue!");
+      return -1;
+   } else {
+      Info("AssertSelector", "Processing via TSelector object");
+   }
+   // Done
+   return 0;
+}  
+//_____________________________________________________________________________
+void TProofPlayer::UpdateProgressInfo()
+{
+   // Update fProgressStatus
+ 
+   if (fProgressStatus) {
+      fProgressStatus->IncEntries(fProcessedRun);
+      fProgressStatus->SetBytesRead(TFile::GetFileBytesRead()-fReadBytesRun);
+      fProgressStatus->SetReadCalls(TFile::GetFileReadCalls()-fReadCallsRun);
+      if (gMonitoringWriter)
+         gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
+                                                   fReadBytesRun, kFALSE);
+      fProcessedRun = 0;
+   }
+}
+
+//______________________________________________________________________________
 Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
                                Option_t *option, Long64_t nentries,
                                Long64_t first)
@@ -732,31 +785,19 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
    TCleanup clean(this);
 
-   SafeDelete(fSelector);
    fSelectorClass = 0;
    Int_t version = -1;
+   TString wmsg;
    TRY {
-      // Get selector files from cache
-      if (gProofServ) {
-         gProofServ->GetCacheLock()->Lock();
-         gProofServ->CopyFromCache(selector_file, 1);
-      }
-
-      if (!(fSelector = TSelector::GetSelector(selector_file))) {
-         Error("Process", "cannot load: %s", selector_file );
-         gProofServ->GetCacheLock()->Unlock();
+      if (AssertSelector(selector_file) != 0 || !fSelector) {
+         Error("Process", "cannot assert the selector object");
          return -1;
-      }
-
-      // Save binaries to cache, if any
-      if (gProofServ) {
-         gProofServ->CopyToCache(selector_file, 1);
-         gProofServ->GetCacheLock()->Unlock();
       }
 
       fSelectorClass = fSelector->IsA();
       version = fSelector->Version();
-
+      if (version == 0 && IsClient()) fSelector->GetOutputList()->Clear();
+ 
       fOutput = fSelector->GetOutputList();
 
       if (gProofServ)
@@ -817,7 +858,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             PDB(kLoop,1) Info("Process","Call Begin(0)");
             fSelector->Begin(0);
          }
-         if (fSelStatus->IsOk()) {
+         if (!fSelStatus->TestBit(TStatus::kNotOk)) {
             PDB(kLoop,1) Info("Process","Call SlaveBegin(0)");
             fSelector->SlaveBegin(0);  // Init is called explicitly
                                        // from GetNextEvent()
@@ -825,7 +866,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       }
 
    } CATCH(excode) {
-      SetProcessing(kFALSE);
+      ResetBit(TProofPlayer::kIsProcessing);
       Error("Process","exception %d caught", excode);
       gProofServ->GetCacheLock()->Unlock();
       return -1;
@@ -841,8 +882,9 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
       Info("Process","Looping over Process()");
 
    // get the byte read counter at the beginning of processing
-   Long64_t readbytesatstart = TFile::GetFileBytesRead();
-   Long64_t readcallsatstart = TFile::GetFileReadCalls();
+   fReadBytesRun = TFile::GetFileBytesRead();
+   fReadCallsRun = TFile::GetFileReadCalls();
+   fProcessedRun = 0;
    // force the first monitoring info
    if (gMonitoringWriter)
       gMonitoringWriter->SendProcessingProgress(0,0,kTRUE);
@@ -860,9 +902,9 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
       // Get the frequency for checking memory consumption and logging information
       TParameter<Long64_t> *par = (TParameter<Long64_t>*)fInput->FindObject("PROOF_MemLogFreq");
-      Long64_t singleshot = 1, memlogfreq = (par) ? par->GetVal() : 100;
+      Long64_t singleshot = 1, memlogfreq = (par) ? par->GetVal() : 1000000;
       Bool_t warnHWMres = kTRUE, warnHWMvir = kTRUE;
-      TString lastMsg, wmsg;
+      TString lastMsg("(unfortunately no detailed info is available about current packet)");
 
       // Initial memory footprint
       if (!CheckMemUsage(singleshot, warnHWMres, warnHWMvir, wmsg)) {
@@ -874,23 +916,26 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
             gProofServ->SetBit(TProofServ::kHighMemory);
          }
          fExitStatus = kStopped;
-         SetProcessing(kFALSE);
+         ResetBit(TProofPlayer::kIsProcessing);
       } else if (!wmsg.IsNull()) {
          Warning("Process", "%s", wmsg.Data());
       }
 
       TPair *currentElem = 0;
       // The event loop on the worker
-      while ((entry = fEvIter->GetNextEvent()) >= 0 && fSelStatus->IsOk() &&
+      Long64_t fst = -1, num;
+      TEntryList *enl = 0;
+      TEventList *evl = 0;
+      while ((fEvIter->GetNextPacket(fst, num, &enl, &evl) != -1) &&
+              !fSelStatus->TestBit(TStatus::kNotOk) &&
               fSelector->GetAbort() == TSelector::kContinue) {
 
          // This is needed by the inflate infrastructure to calculate
          // sleeping times
-         SetProcessing(kTRUE);
+         SetBit(TProofPlayer::kIsProcessing);
 
          // Give the possibility to the selector to access additional info in the
          // incoming packet
-         lastMsg = "(unfortunately no detailed info is available about current packet)";
          if (dset->Current()) {
             if (!currentElem) {
                currentElem = new TPair(new TObjString("PROOF_CurrentElement"), dset->Current());
@@ -902,80 +947,102 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
                   dset->Current()->ResetBit(TDSetElement::kNewRun);
                }
             }
-            if (dset->TestBit(TDSet::kEmpty)) {
-               lastMsg.Form("while processing cycle:%lld - check logs for possible stacktrace", entry);
+            if (dset->Current()->TestBit(TDSetElement::kNewPacket)) {
+               if (dset->TestBit(TDSet::kEmpty)) {
+                  lastMsg = "check logs for possible stacktrace - last cycle:";
+               } else {
+                  TDSetElement *elem = dynamic_cast<TDSetElement *>(currentElem->Value());
+                  TString fn = (elem) ? elem->GetFileName() : "<undef>";
+                  lastMsg.Form("while processing dset:'%s', file:'%s'"
+                              " - check logs for possible stacktrace - last event:", dset->GetName(), fn.Data());
+               }
+               TProofServ::SetLastMsg(lastMsg);
+            }
+         }
+
+         while (num--) {
+            
+            if (!(!fSelStatus->TestBit(TStatus::kNotOk) &&
+                   fSelector->GetAbort() == TSelector::kContinue)) break;
+
+            // Set entry number; if data iteration we may need to test the entry or event lists
+            if (fEvIter->TestBit(TEventIter::kData)) {
+               if (enl){
+                  entry = enl->GetEntry(fst);
+               } else if (evl) {
+                  entry = evl->GetEntry(fst);
+               } else {
+                  entry = fst;
+               }
+               fst++;
             } else {
-               TDSetElement *elem = dynamic_cast<TDSetElement *>(currentElem->Value());
-               TString fn = (elem) ? elem->GetFileName() : "<undef>";
-               lastMsg.Form("while processing dset:'%s', file:'%s', event:%lld"
-                            " - check logs for possible stacktrace", dset->GetName(), fn.Data(), entry);
+               entry = fst++;
             }
-         }
-         // This will be sent to clients in case of exceptions ...
-         TProofServ::SetLastMsg(lastMsg);
+            // Pre-event processing
+            fEvIter->PreProcessEvent(entry);
 
-         if (version == 0) {
-            PDB(kLoop,3)
-               Info("Process","Call ProcessCut(%lld)", entry);
-            if (fSelector->ProcessCut(entry)) {
+            // Set the last entry
+            TProofServ::SetLastEntry(entry);
+
+            if (version == 0) {
                PDB(kLoop,3)
-                  Info("Process","Call ProcessFill(%lld)", entry);
-               fSelector->ProcessFill(entry);
-            }
-         } else {
-            PDB(kLoop,3)
-               Info("Process","Call Process(%lld)", entry);
-            fSelector->Process(entry);
-            if (fSelector->GetAbort() == TSelector::kAbortProcess) {
-               SetProcessing(kFALSE);
-               break;
-            } else if (fSelector->GetAbort() == TSelector::kAbortFile) {
-               Info("Process", "packet processing aborted following the selector settings:\n%s",
-                               lastMsg.Data());
-               fEvIter->InvalidatePacket();
-               fProgressStatus->SetBit(TProofProgressStatus::kFileCorrupted);
-            }
-         }
-
-         if (fSelStatus->IsOk()) {
-            fProgressStatus->IncEntries();
-            fProgressStatus->SetBytesRead(TFile::GetFileBytesRead()-readbytesatstart);
-            fProgressStatus->SetReadCalls(TFile::GetFileReadCalls()-readcallsatstart);
-            if (gMonitoringWriter)
-               gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
-                       TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
-         }
-         // Check the memory footprint, if required
-         if (!CheckMemUsage(memlogfreq, warnHWMres, warnHWMvir, wmsg)) {
-            Error("Process", "%s", wmsg.Data());
-            if (gProofServ) {
-               wmsg.Insert(0, TString::Format("ERROR:%s, entry:%lld, ", gProofServ->GetOrdinal(), entry));
-               gProofServ->SendAsynMessage(wmsg.Data());
-            }
-            fExitStatus = kStopped;
-            SetProcessing(kFALSE);
-            if (gProofServ) gProofServ->SetBit(TProofServ::kHighMemory);
-            break;
-         } else {
-            if (!wmsg.IsNull()) {
-               Warning("Process", "%s", wmsg.Data());
-               if (gProofServ) {
-                  wmsg.Insert(0, TString::Format("WARNING:%s, entry:%lld, ", gProofServ->GetOrdinal(), entry));
-                  gProofServ->SendAsynMessage(wmsg.Data());
+                  Info("Process","Call ProcessCut(%lld)", entry);
+               if (fSelector->ProcessCut(entry)) {
+                  PDB(kLoop,3)
+                     Info("Process","Call ProcessFill(%lld)", entry);
+                  fSelector->ProcessFill(entry);
+               }
+            } else {
+               PDB(kLoop,3)
+                  Info("Process","Call Process(%lld)", entry);
+               fSelector->Process(entry);
+               if (fSelector->GetAbort() == TSelector::kAbortProcess) {
+                  ResetBit(TProofPlayer::kIsProcessing);
+                  break;
+               } else if (fSelector->GetAbort() == TSelector::kAbortFile) {
+                  Info("Process", "packet processing aborted following the"
+                                  " selector settings:\n%s", lastMsg.Data());
+                  fEvIter->InvalidatePacket();
+                  fProgressStatus->SetBit(TProofProgressStatus::kFileCorrupted);
                }
             }
-         }
+            if (!fSelStatus->TestBit(TStatus::kNotOk)) fProcessedRun++;
 
-         if (TestBit(TProofPlayer::kDispatchOneEvent)) {
-            gSystem->DispatchOneEvent(kTRUE);
-            ResetBit(TProofPlayer::kDispatchOneEvent);
-         }
-         SetProcessing(kFALSE);
-         if (!fSelStatus->IsOk() || gROOT->IsInterrupted()) break;
+            // Check the memory footprint, if required
+            if (memlogfreq > 0 && (GetEventsProcessed() + fProcessedRun)%memlogfreq == 0) {
+               if (!CheckMemUsage(memlogfreq, warnHWMres, warnHWMvir, wmsg)) {
+                  Error("Process", "%s", wmsg.Data());
+                  if (gProofServ) {
+                     wmsg.Insert(0, TString::Format("ERROR:%s, entry:%lld, ",
+                                                   gProofServ->GetOrdinal(), entry));
+                     gProofServ->SendAsynMessage(wmsg.Data());
+                  }
+                  fExitStatus = kStopped;
+                  ResetBit(TProofPlayer::kIsProcessing);
+                  if (gProofServ) gProofServ->SetBit(TProofServ::kHighMemory);
+                  break;
+               } else {
+                  if (!wmsg.IsNull()) {
+                     Warning("Process", "%s", wmsg.Data());
+                     if (gProofServ) {
+                        wmsg.Insert(0, TString::Format("WARNING:%s, entry:%lld, ",
+                                                      gProofServ->GetOrdinal(), entry));
+                        gProofServ->SendAsynMessage(wmsg.Data());
+                     }
+                  }
+               }
+            }
+            if (TestBit(TProofPlayer::kDispatchOneEvent)) {
+               gSystem->DispatchOneEvent(kTRUE);
+               ResetBit(TProofPlayer::kDispatchOneEvent);
+            }
+            ResetBit(TProofPlayer::kIsProcessing);
+            if (fSelStatus->TestBit(TStatus::kNotOk) || gROOT->IsInterrupted()) break;
 
-         // Make sure that the selector abort status is reset
-         if (fSelector->GetAbort() == TSelector::kAbortFile)
-            fSelector->Abort("status reset", TSelector::kContinue);
+            // Make sure that the selector abort status is reset
+            if (fSelector->GetAbort() == TSelector::kAbortFile)
+               fSelector->Abort("status reset", TSelector::kContinue);
+         }
       }
 
    } CATCH(excode) {
@@ -992,7 +1059,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
          gAbort = kTRUE;
          fExitStatus = kAborted;
       }
-      SetProcessing(kFALSE);
+      ResetBit(TProofPlayer::kIsProcessing);
    } ENDTRY;
 
    // Clean-up the envelop for the current element
@@ -1006,7 +1073,6 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
    // Final memory footprint
    Long64_t singleshot = 1;
    Bool_t warnHWMres = kTRUE, warnHWMvir = kTRUE;
-   TString wmsg;
    Bool_t shrc = CheckMemUsage(singleshot, warnHWMres, warnHWMvir, wmsg);
    if (!wmsg.IsNull()) Warning("Process", "%s (%s)", wmsg.Data(), shrc ? "warn" : "hwm");
 
@@ -1015,7 +1081,7 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
    if (gMonitoringWriter) {
       gMonitoringWriter->SendProcessingProgress(fProgressStatus->GetEntries(),
-                                                TFile::GetFileBytesRead()-readbytesatstart, kFALSE);
+                                                TFile::GetFileBytesRead()-fReadBytesRun, kFALSE);
       gMonitoringWriter->SendProcessingStatus("DONE");
    }
 
@@ -1047,14 +1113,14 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 
       MapOutputListToDataMembers();
 
-      if (fSelStatus->IsOk()) {
+      if (!fSelStatus->TestBit(TStatus::kNotOk)) {
          if (version == 0) {
             PDB(kLoop,1) Info("Process","Call Terminate()");
             fSelector->Terminate();
          } else {
             PDB(kLoop,1) Info("Process","Call SlaveTerminate()");
             fSelector->SlaveTerminate();
-            if (IsClient() && fSelStatus->IsOk()) {
+            if (IsClient() && !fSelStatus->TestBit(TStatus::kNotOk)) {
                PDB(kLoop,1) Info("Process","Call Terminate()");
                fSelector->Terminate();
             }
@@ -1074,6 +1140,26 @@ Long64_t TProofPlayer::Process(TDSet *dset, const char *selector_file,
 }
 
 //______________________________________________________________________________
+Long64_t TProofPlayer::Process(TDSet *dset, TSelector *selector,
+                               Option_t *option, Long64_t nentries,
+                               Long64_t first)
+{
+   // Process specified TDSet on PROOF worker with TSelector object
+   // The return value is -1 in case of error and TSelector::GetStatus()
+   // in case of success.
+
+   if (!selector) {
+      Error("Process", "selector object undefiend!");
+      return -1;
+   }
+
+   if (fCreateSelObj) SafeDelete(fSelector);
+   fSelector = selector;
+   fCreateSelObj = kFALSE;
+   return Process(dset, (const char *)0, option, nentries, first);
+}
+
+//______________________________________________________________________________
 Bool_t TProofPlayer::CheckMemUsage(Long64_t &mfreq, Bool_t &w80r,
                                    Bool_t &w80v, TString &wmsg)
 {
@@ -1081,13 +1167,15 @@ Bool_t TProofPlayer::CheckMemUsage(Long64_t &mfreq, Bool_t &w80r,
    // Return kTRUE if OK, kFALSE if above 95% of at least one between virtual or
    // resident limits are depassed.
 
-   if (mfreq > 0 && GetEventsProcessed()%mfreq == 0) {
+   Long64_t processed = GetEventsProcessed() + fProcessedRun;
+   if (mfreq > 0 && processed%mfreq == 0) {
       // Record the memory information
       ProcInfo_t pi;
       if (!gSystem->GetProcInfo(&pi)){
          wmsg = "";
-         Info("CheckMemUsage|Svc", "Memory %ld virtual %ld resident event %lld",
-                                   pi.fMemVirtual, pi.fMemResident, GetEventsProcessed());
+         if (gProofServ)
+            Info("CheckMemUsage|Svc", "Memory %ld virtual %ld resident event %lld",
+                                      pi.fMemVirtual, pi.fMemResident, processed);
          // Save info in TStatus
          fSelStatus->SetMemValues(pi.fMemVirtual, pi.fMemResident);
          // Apply limit on virtual memory, if any: warn if above 80%, stop if above 95% of max
@@ -1375,6 +1463,52 @@ Int_t TProofPlayer::GetLearnEntries()
 
 ClassImp(TProofPlayerLocal)
 
+//______________________________________________________________________________
+Long64_t TProofPlayerLocal::Process(TSelector *selector,
+                                    Long64_t nentries, Option_t *option)
+{
+   // Process the specified TSelector object 'nentries' times.
+   // Used to test the PROOF interator mechanism for cycle-driven selectors in a
+   // local session.
+   // The return value is -1 in case of error and TSelector::GetStatus()
+   // in case of success.
+
+   if (!selector) {
+      Error("Process", "selector object undefiend!");
+      return -1;
+   }
+   
+   TDSetProxy *set = new TDSetProxy("", "", "");
+   set->SetBit(TDSet::kEmpty);
+   set->SetBit(TDSet::kIsLocal);
+   Long64_t rc = Process(set, selector, option, nentries);
+   SafeDelete(set);
+   
+   // Done
+   return rc;
+}
+
+//______________________________________________________________________________
+Long64_t TProofPlayerLocal::Process(const char *selector,
+                                    Long64_t nentries, Option_t *option)
+{
+   // Process the specified TSelector file 'nentries' times.
+   // Used to test the PROOF interator mechanism for cycle-driven selectors in a
+   // local session.
+   // Process specified TDSet on PROOF worker with TSelector object
+   // The return value is -1 in case of error and TSelector::GetStatus()
+   // in case of success.
+
+   TDSetProxy *set = new TDSetProxy("", "", "");
+   set->SetBit(TDSet::kEmpty);
+   set->SetBit(TDSet::kIsLocal);
+   Long64_t rc = Process(set, selector, option, nentries);
+   SafeDelete(set);
+   
+   // Done
+   return rc;
+}
+
 
 //------------------------------------------------------------------------------
 
@@ -1407,10 +1541,10 @@ Int_t TProofPlayerRemote::InitPacketizer(TDSet *dset, Long64_t nentries,
    fExitStatus = kFinished;
 
    // This is done here to pickup on the fly changes
-   Int_t usemerge = 0;
-   if (TProof::GetParameter(fInput, "PROOF_UseTH1Merge", usemerge) != 0)
-      usemerge = gEnv->GetValue("ProofPlayer.UseTH1Merge", 0);
-   fUseTH1Merge = (usemerge == 1) ? kTRUE : kFALSE;
+   Int_t honebyone = 1;
+   if (TProof::GetParameter(fInput, "PROOF_MergeTH1OneByOne", honebyone) != 0)
+      honebyone = gEnv->GetValue("ProofPlayer.MergeTH1OneByOne", 1);
+   fMergeTH1OneByOne = (honebyone == 1) ? kTRUE : kFALSE;
 
    Bool_t noData = dset->TestBit(TDSet::kEmpty) ? kTRUE : kFALSE;
 
@@ -1686,14 +1820,22 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       TPerfStats::Setup(fInput);
    }
 
-   if(!SendSelector(selector_file)) return -1;
+   // Define filename
+   TString fn;
+
+   if (fCreateSelObj) {
+      if(!SendSelector(selector_file)) return -1;
+      fn = gSystem->BaseName(selector_file);
+   } else {
+      fn = selector_file;
+   }
 
    TMessage mesg(kPROOF_PROCESS);
-   TString fn(gSystem->BaseName(selector_file));
 
    // Parse option
    Bool_t sync = (fProof->GetQueryMode(option) == TProof::kSync);
 
+   TList *inputtmp = 0;  // List of temporary input objects
    TDSet *set = dset;
    if (fProof->IsMaster()) {
 
@@ -1723,13 +1865,35 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
       TString emsg;
       if (TProof::SendInputData(fQuery, fProof, emsg) != 0)
          Warning("Process", "could not forward input data: %s", emsg.Data());
+      
+      // Attach to the transient histogram with the assigned packets, if required
+      if (fInput->FindObject("PROOF_StatsHist") != 0) {
+         if (!(fProcPackets = (TH1I *) fOutput->FindObject("PROOF_ProcPcktHist"))) {
+            Warning("Process", "could not attach to histogram 'PROOF_ProcPcktHist'");
+         } else {
+            PDB(kLoop,1)
+               Info("Process", "attached to histogram 'PROOF_ProcPcktHist' to record"
+                               " packets being processed");
+         }
+      }
 
    } else {
 
       // Check whether we have to enforce the use of submergers
       if (gEnv->Lookup("Proof.UseMergers") && !fInput->FindObject("PROOF_UseMergers")) {
          Int_t smg = gEnv->GetValue("Proof.UseMergers",-1);
-         if (smg >= 0) fInput->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
+         if (smg >= 0) {
+            fInput->Add(new TParameter<Int_t>("PROOF_UseMergers", smg));
+            if (gEnv->Lookup("Proof.MergersByHost")) {
+               Int_t mbh = gEnv->GetValue("Proof.MergersByHost",0);
+               if (mbh != 0) {
+                  // Administrator settings have the priority
+                  TObject *o = 0;
+                  if ((o = fInput->FindObject("PROOF_MergersByHost"))) { fInput->Remove(o); delete o; }
+                  fInput->Add(new TParameter<Int_t>("PROOF_MergersByHost", mbh));
+               }
+            }
+         }
       }
 
       // For a new query clients should make sure that the temporary
@@ -1746,19 +1910,50 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
          Info("Process","starting new query");
       }
 
-      SafeDelete(fSelector);
-      fSelectorClass = 0;
-      if (!(fSelector = TSelector::GetSelector(selector_file))) {
-         if (!sync)
-            gSystem->RedirectOutput(0);
-         return -1;
+      // Define fSelector in Client if processing with filename
+      if (fCreateSelObj) {
+         SafeDelete(fSelector);
+         if (!(fSelector = TSelector::GetSelector(selector_file))) {
+            if (!sync)
+               gSystem->RedirectOutput(0);
+            return -1;
+         }
       }
+
+      fSelectorClass = 0;
       fSelectorClass = fSelector->IsA();
+
+      // Add fSelector to inputlist if processing with object
+      if (!fCreateSelObj) {
+         // In any input list was set into the selector move it to the PROOF
+         // input list, because we do not want to stream the selector one
+         if (fSelector->GetInputList() && fSelector->GetInputList()->GetSize() > 0) {
+            TIter nxi(fSelector->GetInputList());
+            TObject *o = 0;
+            while ((o = nxi())) {
+               if (!fInput->FindObject(o)) {
+                  fInput->Add(o);
+                  if (!inputtmp) {
+                     inputtmp = new TList;
+                     inputtmp->SetOwner(kFALSE);
+                  }
+                  inputtmp->Add(o);
+               }
+            }
+         }
+         fInput->Add(fSelector);
+      }
+      // Set the input list for initialization
       fSelector->SetInputList(fInput);
       fSelector->SetOption(option);
+      if (fSelector->GetOutputList()) fSelector->GetOutputList()->Clear();
 
       PDB(kLoop,1) Info("Process","Call Begin(0)");
       fSelector->Begin(0);
+
+      // Reset the input list to avoid double streaming and related problems (saving
+      // the TQueryResult)
+      if (!fCreateSelObj) fSelector->SetInputList(0);
 
       // Send large input data objects, if any
       fProof->SendInputDataFile();
@@ -1881,23 +2076,61 @@ Long64_t TProofPlayerRemote::Process(TDSet *dset, const char *selector_file,
                                              fPacketizer->GetInitTime(),
                                              fPacketizer->GetProcTime());
          }
+      } else {
+         // Set the input list: maybe required at termination
+         if (!fCreateSelObj) fSelector->SetInputList(fInput);
       }
       StopFeedback();
 
+      Long64_t rc = -1;
       if (!IsClient() || GetExitStatus() != TProofPlayer::kAborted)
-         return Finalize(kFALSE,sync);
-      else
-         return -1;
+         rc = Finalize(kFALSE,sync);
+            
+      // Remove temporary input objects, if any
+      if (inputtmp) {
+         TIter nxi(inputtmp);
+         TObject *o = 0;
+         while ((o = nxi())) fInput->Remove(o);
+         SafeDelete(inputtmp);
+      }
+
+      // Done
+      return rc;
    }
 }
 
+//______________________________________________________________________________
+Long64_t TProofPlayerRemote::Process(TDSet *dset, TSelector *selector,
+                                     Option_t *option, Long64_t nentries,
+                                     Long64_t first)
+{
+   // Process specified TDSet on PROOF.
+   // This method is called on client and on the PROOF master.
+   // The return value is -1 in case of an error and TSelector::GetStatus() in
+   // in case of success.
+
+   if (!selector) {
+      Error("Process", "selector object undefined");
+      return -1;
+   }
+
+   // Define fSelector in Client
+   if (IsClient() && (selector != fSelector)) {
+      if (fCreateSelObj) SafeDelete(fSelector);
+      fSelector = selector;
+   }
+
+   fCreateSelObj = kFALSE;
+
+   return Process(dset, selector->ClassName(), option, nentries, first);
+}
 //______________________________________________________________________________
 Bool_t TProofPlayerRemote::MergeOutputFiles()
 {
    // Merge output in files
 
-   PDB(kSubmerger,1) Info("MergeOutputFiles", "enter: fOutput size: %d", fOutput->GetSize());
-   PDB(kSubmerger,1) fOutput->ls();
+   PDB(kOutput,1) Info("MergeOutputFiles", "enter: fOutput size: %d", fOutput->GetSize());
+   PDB(kOutput,2) fOutput->ls();
 
    TList *rmList = 0;
    if (fMergeFiles) {
@@ -1907,26 +2140,28 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
       while ((o = nxo())) {
          if ((pf = dynamic_cast<TProofOutputFile*>(o))) {
 
-            PDB(kSubmerger,2) pf->Print();
+            PDB(kOutput,2) pf->Print();
 
             if (pf->IsMerge()) {
 
                // Point to the merger
-               TFileMerger *filemerger = pf->GetFileMerger();
+               Bool_t localMerge = (pf->GetTypeOpt() == TProofOutputFile::kLocal) ? kTRUE : kFALSE;
+               TFileMerger *filemerger = pf->GetFileMerger(localMerge);
                if (!filemerger) {
                   Error("MergeOutputFiles", "file merger is null in TProofOutputFile! Protocol error?");
                   pf->Print();
                   continue;
                }
+               // If only one instance the list in the merger is not yet created: do it now
+               if (!pf->IsMerged()) {
+                  pf->Print();
+                  TString fileLoc = TString::Format("%s/%s", pf->GetDir(), pf->GetFileName());
+                  filemerger->AddFile(fileLoc);
+               }
                // Set the output file
                if (!filemerger->OutputFile(pf->GetOutputFileName())) {
                   Error("MergeOutputFiles", "cannot open the output file");
                   continue;
-               }
-               // If only one instance the list in the merger is not yet created: do it now
-               if (!pf->IsMerged()) {
-                  TString fileLoc = TString::Format("%s/%s", pf->GetDir(), pf->GetFileName());
-                  filemerger->AddFile(fileLoc);
                }
                // Merge
                PDB(kSubmerger,2) filemerger->PrintFiles("");
@@ -1948,6 +2183,14 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
 
             } else {
 
+               // If not yet merged (for example when having only 1 active worker,
+               // we need to create the dataset by calling Merge on an effectively empty list
+               if (!pf->IsMerged()) {
+                  TList dumlist;
+                  dumlist.Add(new TNamed("dum", "dum"));
+                  dumlist.SetOwner(kTRUE);
+                  pf->Merge(&dumlist);
+               }
                // Point to the dataset
                TFileCollection *fc = pf->GetFileCollection();
                if (!fc) {
@@ -1974,6 +2217,7 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
                fOutput->Remove(pf);
                if (!rmList) rmList = new TList;
                rmList->Add(pf);
+                  fOutput->Print();
             }
          }
       }
@@ -1990,7 +2234,7 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
       delete rmList;
    }
    
-   PDB(kSubmerger,1) Info("MergeOutputFiles", "done!");
+   PDB(kOutput,1) Info("MergeOutputFiles", "done!");
 
    // Done
    return kTRUE;
@@ -2006,7 +2250,8 @@ void TProofPlayerRemote::SetSelectorDataMembersFromOutputList()
    TOutputListSelectorDataMap* olsdm
       = TOutputListSelectorDataMap::FindInList(fOutput);
    if (!olsdm) {
-      PDB(kOutput,1) Warning("SetSelectorDataMembersFromOutputList","Failed to find map object in output list!");
+      PDB(kOutput,1) Warning("SetSelectorDataMembersFromOutputList",
+                             "failed to find map object in output list!");
       return;
    }
 
@@ -2089,6 +2334,7 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
       status->SetMemValues(vmaxmst, rmaxmst, kTRUE);
 
       SafeDelete(fSelector);
+
    } else {
       if (fExitStatus != kAborted) {
 
@@ -2122,13 +2368,17 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
          // Some input parameters may be needed in Terminate
          fSelector->SetInputList(fInput);
 
-         TIter next(fOutput);
          TList *output = fSelector->GetOutputList();
-         while(TObject* obj = next()) {
-            if (fProof->IsParallel() || DrawCanvas(obj) == 1)
-               // Either parallel or not a canvas or not able to display it:
-               // just add to the list
-               output->Add(obj);
+         if (output) {
+            TIter next(fOutput);
+            while(TObject* obj = next()) {
+               if (fProof->IsParallel() || DrawCanvas(obj) == 1)
+                  // Either parallel or not a canvas or not able to display it:
+                  // just add to the list
+                  output->Add(obj);
+            }
+         } else {
+            Warning("Finalize", "undefined output list in the selector! Protocol error?");
          }
 
          SetSelectorDataMembersFromOutputList();
@@ -2154,11 +2404,17 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
             Warning("Finalize","current TQueryResult object is undefined!");
          }
 
+         if (!fCreateSelObj) {
+            fInput->Remove(fSelector);
+            fOutput->Remove(fSelector);
+            if (output) output->Remove(fSelector);
+         }
+
          // We have transferred copy of the output objects in TQueryResult,
          // so now we can cleanup the selector, making sure that we do not
          // touch the output objects
-         output->SetOwner(kFALSE);
-         SafeDelete(fSelector);
+         if (output) output->SetOwner(kFALSE);
+         if (fCreateSelObj) SafeDelete(fSelector);
 
          // Delete fOutput (not needed anymore, cannot be finalized twice),
          // making sure that the objects saved in TQueryResult are not deleted
@@ -2944,70 +3200,38 @@ TObject *TProofPlayerRemote::HandleHistogram(TObject *obj, Bool_t &merged)
          return (TObject *)0;
 
       } else {
-
-         if (!fUseTH1Merge) {
-            // Check if we can 'Add' the histogram to an existing one; this is more efficient
-            // then using Merge
-            TH1 *hout = (TH1*) fOutput->FindObject(h->GetName());
-            if (hout) {
-               // Do they have the same binning and ranges?
-               Bool_t samebin = HistoSameAxis(hout, h);
-               if (samebin) {
-                  hout->Add(h);
-                  PDB(kOutput,2)
-                     Info("HandleHistogram", "histogram '%s' just added", h->GetName());
-                  merged = kTRUE; // So it will be deleted
-                  return (TObject *)0;
-               } else {
-                  // Remove the existing histo from the output list ...
-                  fOutput->Remove(hout);
-                  // ... and create either the list to merge in one-go at the end
-                  // (more efficient than merging one by one) or, if too big, merge
-                  // these two and start the 'one-by-one' technology
-                  Int_t hsz = h->GetNbinsX() * h->GetNbinsY() * h->GetNbinsZ();
-                  if (gProofServ && hsz > gProofServ->GetMsgSizeHWM()) {
-                     list = new TList;
-                     list->Add(hout);
-                     h->Merge(list);
-                     list->SetOwner();
-                     delete list;
-                     return h;
-                  } else {
-                     list = new TList;
-                     list->SetName(h->GetName());
-                     list->SetOwner();
-                     fOutputLists->Add(list);
-                     // Add the existing and the incoming histos
-                     list->Add(hout);
-                     list->Add(h);
-                     // Done
-                     return (TObject *)0;
-                  }
-               }
-            } else {
-               // This is the first one; add it to the output list
-               fOutput->Add(h);
-               return (TObject *)0;
-            }
-
-         } else {
-
-            // Histogram has already been projected
+         // Check if we can 'Add' the histogram to an existing one; this is more efficient
+         // then using Merge
+         TH1 *hout = (TH1*) fOutput->FindObject(h->GetName());
+         if (hout) {
+            // Remove the existing histo from the output list ...
+            fOutput->Remove(hout);
+            // ... and create either the list to merge in one-go at the end
+            // (more efficient than merging one by one) or, if too big, merge
+            // these two and start the 'one-by-one' technology
             Int_t hsz = h->GetNbinsX() * h->GetNbinsY() * h->GetNbinsZ();
-            if (gProofServ && hsz > gProofServ->GetMsgSizeHWM()) {
-               // Large histo: merge one-by-one
-               return obj;
+            if (fMergeTH1OneByOne || (gProofServ && hsz > gProofServ->GetMsgSizeHWM())) {
+               list = new TList;
+               list->Add(hout);
+               h->Merge(list);
+               list->SetOwner();
+               delete list;
+               return h;
             } else {
-               // Create the list to merge in one-go at the end (more efficient
-               // than merging one by one)
                list = new TList;
                list->SetName(h->GetName());
                list->SetOwner();
                fOutputLists->Add(list);
+               // Add the existing and the incoming histos
+               list->Add(hout);
                list->Add(h);
                // Done
                return (TObject *)0;
             }
+         } else {
+            // This is the first one; add it to the output list
+            fOutput->Add(h);
+            return (TObject *)0;
          }
       }
    }
@@ -3400,6 +3624,14 @@ TDSetElement *TProofPlayerRemote::GetNextPacket(TSlave *slave, TMessage *r)
    // The first call to this determines the end of initialization
    SetInitTime();
 
+   if (fProcPackets) {
+      Int_t bin = fProcPackets->GetXaxis()->FindBin(slave->GetOrdinal());
+      if (bin >= 0) {
+         if (fProcPackets->GetBinContent(bin) > 0)
+            fProcPackets->Fill(slave->GetOrdinal(), -1);
+      }
+   }
+
    TDSetElement *e = fPacketizer->GetNextPacket( slave, r );
 
    if (e == 0) {
@@ -3411,6 +3643,7 @@ TDSetElement *TProofPlayerRemote::GetNextPacket(TSlave *slave, TMessage *r)
          Info("GetNextPacket","%s (%s): '%s' '%s' '%s' %lld %lld",
               slave->GetOrdinal(), slave->GetName(), e->GetFileName(),
               e->GetDirectory(), e->GetObjName(), e->GetFirst(), e->GetNum());
+      if (fProcPackets) fProcPackets->Fill(slave->GetOrdinal(), 1);
    }
 
    return e;
