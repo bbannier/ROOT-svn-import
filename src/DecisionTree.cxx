@@ -297,6 +297,7 @@ UInt_t TMVA::DecisionTree::BuildTree( const std::vector<const TMVA::Event*> & ev
 
    Double_t s=0, b=0;
    Double_t suw=0, buw=0;
+   Double_t sub=0, bub=0; // unboosted!
    Double_t target=0, target2=0;
    Float_t *xmin = new Float_t[fNvars];
    Float_t *xmax = new Float_t[fNvars];
@@ -306,13 +307,16 @@ UInt_t TMVA::DecisionTree::BuildTree( const std::vector<const TMVA::Event*> & ev
    for (UInt_t iev=0; iev<eventSample.size(); iev++) {
       const TMVA::Event* evt = eventSample[iev];
       const Double_t weight = evt->GetWeight();
+      const Double_t orgWeight = evt->GetOriginalWeight(); // unboosted!
       if (evt->GetClass() == fSigClass) {
          s += weight;
          suw += 1;
+         sub += orgWeight; 
       }
       else {
          b += weight;
          buw += 1;
+         bub += orgWeight;
       }
       if ( DoRegression() ) {
          const Double_t tgt = evt->GetTarget(0);
@@ -352,10 +356,13 @@ UInt_t TMVA::DecisionTree::BuildTree( const std::vector<const TMVA::Event*> & ev
    node->SetNBkgEvents(b);
    node->SetNSigEvents_unweighted(suw);
    node->SetNBkgEvents_unweighted(buw);
+   node->SetNSigEvents_unboosted(sub);
+   node->SetNBkgEvents_unboosted(bub);
    node->SetPurity();
    if (node == this->GetRoot()) {
       node->SetNEvents(s+b);
       node->SetNEvents_unweighted(suw+buw);
+      node->SetNEvents_unboosted(sub+bub);
    }
    for (UInt_t ivar=0; ivar<fNvars; ivar++) {
       node->SetSampleMin(ivar,xmin[ivar]);
@@ -371,7 +378,8 @@ UInt_t TMVA::DecisionTree::BuildTree( const std::vector<const TMVA::Event*> & ev
    // ask here for actuall "events" independent of their weight.. OR the weighted events
    // to execeed the min requested number of events per dauther node
    // (NOTE: make sure that at the eventSample at the ROOT node has sum_of_weights == sample.size() !
-   if ((eventSample.size() >= 2*fMinSize ||s+b >= 2*fMinSize) && fNNodes < fNNodesMax && node->GetDepth() < fMaxDepth 
+   //   if ((eventSample.size() >= 2*fMinSize ||s+b >= 2*fMinSize) && fNNodes < fNNodesMax && node->GetDepth() < fMaxDepth 
+   if ((eventSample.size() >= 2*fMinSize  && s+b >= 2*fMinSize) && fNNodes < fNNodesMax && node->GetDepth() < fMaxDepth 
        && ( ( s!=0 && b !=0 && !DoRegression()) || ( (s+b)!=0 && DoRegression()) ) ) {
       Double_t separationGain;
       if (fNCuts > 0){
@@ -401,15 +409,18 @@ UInt_t TMVA::DecisionTree::BuildTree( const std::vector<const TMVA::Event*> & ev
          std::vector<const TMVA::Event*> rightSample; rightSample.reserve(nevents);
 
          Double_t nRight=0, nLeft=0;
+         Double_t nRightUnBoosted=0, nLeftUnBoosted=0;
 
          for (UInt_t ie=0; ie< nevents ; ie++) {
             if (node->GoesRight(*eventSample[ie])) {
                rightSample.push_back(eventSample[ie]);
                nRight += eventSample[ie]->GetWeight();
+               nRightUnBoosted += eventSample[ie]->GetOriginalWeight();
             }
             else {
                leftSample.push_back(eventSample[ie]);
                nLeft += eventSample[ie]->GetWeight();
+               nLeftUnBoosted += eventSample[ie]->GetOriginalWeight();
             }
          }
 
@@ -427,12 +438,14 @@ UInt_t TMVA::DecisionTree::BuildTree( const std::vector<const TMVA::Event*> & ev
          TMVA::DecisionTreeNode *rightNode = new TMVA::DecisionTreeNode(node,'r');
          fNNodes++;
          rightNode->SetNEvents(nRight);
+         rightNode->SetNEvents_unboosted(nRightUnBoosted);
          rightNode->SetNEvents_unweighted(rightSample.size());
 
          TMVA::DecisionTreeNode *leftNode = new TMVA::DecisionTreeNode(node,'l');
 
          fNNodes++;
          leftNode->SetNEvents(nLeft);
+         leftNode->SetNEvents_unboosted(nLeftUnBoosted);
          leftNode->SetNEvents_unweighted(leftSample.size());
 
          node->SetNodeType(0);
@@ -1192,7 +1205,7 @@ Double_t TMVA::DecisionTree::TrainNodeFast( const EventConstList & eventSample,
             Double_t srW = sW-slW;
             Double_t brW = bW-blW;
             if ( ((sl+bl)>=fMinSize && (sr+br)>=fMinSize)
-                 || ((slW+blW)>=fMinSize && (srW+brW)>=fMinSize) 
+                 && ((slW+blW)>=fMinSize && (srW+brW)>=fMinSize) 
               ) {
 
                if (DoRegression()) {

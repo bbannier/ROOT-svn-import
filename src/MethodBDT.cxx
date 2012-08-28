@@ -338,7 +338,7 @@ void TMVA::MethodBDT::DeclareOptions()
    DeclareOptionRef(fBaggedGradBoost=kFALSE, "UseBaggedGrad","Use only a random subsample of all events for growing the trees in each iteration. (Only valid for GradBoost)");
    DeclareOptionRef(fSampleFraction=0.6, "GradBaggingFraction","Defines the fraction of events to be used in each iteration when UseBaggedGrad=kTRUE. (Only valid for GradBoost)");
    DeclareOptionRef(fShrinkage=1.0, "Shrinkage", "Learning rate for GradBoost algorithm");
-   DeclareOptionRef(fAdaBoostBeta=1.0, "AdaBoostBeta", "Learning rate  for AdaBoost algorithm");
+   DeclareOptionRef(fAdaBoostBeta=.5, "AdaBoostBeta", "Learning rate  for AdaBoost algorithm");
    DeclareOptionRef(fRandomisedTrees,"UseRandomisedTrees","Choose at each node splitting a random set of variables");
    DeclareOptionRef(fUseNvars,"UseNvars","Number of variables used if randomised tree option is chosen");
    DeclareOptionRef(fUsePoissonNvars,"UsePoissonNvars", "Interpret \"UseNvars\" not as fixed number but as mean of a Possion distribution in each split");
@@ -1539,7 +1539,7 @@ void TMVA::MethodBDT::BoostMonitor(Int_t iTree)
       }
       tmpBoostWeights->Fill(fEventSample[iev]->GetBoostWeight());
       for (UInt_t ivar=0; ivar<GetNvar(); ivar++){
-         (*h)[ivar]->Fill(fEventSample[iev]->GetValue(ivar));
+         (*h)[ivar]->Fill(fEventSample[iev]->GetValue(ivar),fEventSample[iev]->GetWeight());
       }
    }
    
@@ -1787,7 +1787,8 @@ Double_t TMVA::MethodBDT::AdaCost( vector<const TMVA::Event*>& eventSample, Deci
          else if  (isTrueSignal  && !isSelectedSignal) cost=Cts_sb;
          else if  (!isTrueSignal  && isSelectedSignal) cost=Ctb_ss;
          else if  (!isTrueSignal && !isSelectedSignal) cost=Cbb;
-        
+         else Log() << kERROR << "something went wrong in AdaCost" << Endl;
+
          sumGlobalCost+= w*trueType*dtoutput*cost;
 
       }
@@ -1806,9 +1807,7 @@ Double_t TMVA::MethodBDT::AdaCost( vector<const TMVA::Event*>& eventSample, Deci
    Double_t newSumGlobalWeights=0;
    vector<Double_t> newSumClassWeights(sumw.size(),0);
 
-   Double_t boostWeight = TMath::Log((1+sumGlobalCost)/(1-sumGlobalCost));
-
-   if (fAdaBoostBeta != 1) { boostWeight*=fAdaBoostBeta;}
+   Double_t boostWeight = TMath::Log((1+sumGlobalCost)/(1-sumGlobalCost)) * fAdaBoostBeta;
 
    Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);
 
@@ -1825,6 +1824,7 @@ Double_t TMVA::MethodBDT::AdaCost( vector<const TMVA::Event*>& eventSample, Deci
       else if  (isTrueSignal  && !isSelectedSignal) cost=Cts_sb;
       else if  (!isTrueSignal  && isSelectedSignal) cost=Ctb_ss;
       else if  (!isTrueSignal && !isSelectedSignal) cost=Cbb;
+      else Log() << kERROR << "something went wrong in AdaCost" << Endl;
 
       Double_t boostfactor = TMath::Exp(-1*boostWeight*trueType*dtoutput*cost);
       if (DoRegression())Log() << kFATAL << " AdaCost not implemented for regression"<<Endl; 
