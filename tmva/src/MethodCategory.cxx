@@ -160,6 +160,7 @@ TMVA::IMethod* TMVA::MethodCategory::AddMethod( const TCut& theCut,
    MethodBase *method = (dynamic_cast<MethodBase*>(addedMethod));
    if(method==0) return 0;
 
+   method->SetAnalysisType( fAnalysisType );
    method->SetupMethod();
    method->ParseOptions();
    method->GetTransformationHandler().AddTransformation( rearrangeTransformation, -1 );
@@ -368,7 +369,7 @@ void TMVA::MethodCategory::Train()
          << (analysisType == Types::kRegression ? "Regression" : "Classification") << " ..." << Endl;
 
    // don't do anything if no sub-classifier booked
-   if (fMethods.size() == 0) {
+   if (fMethods.empty()) {
       Log() << kINFO << "...nothing found to train" << Endl;
       return;
    }
@@ -580,7 +581,7 @@ Double_t TMVA::MethodCategory::GetMvaValue( Double_t* err, Double_t* errUpper )
 {
    // returns the mva value of the right sub-classifier
 
-   if (fMethods.size()==0) return 0;
+   if (fMethods.empty()) return 0;
 
    UInt_t methodToUse = 0;
    const Event* ev = GetEvent();
@@ -618,7 +619,7 @@ const std::vector<Float_t> &TMVA::MethodCategory::GetRegressionValues()
 {
    // returns the mva value of the right sub-classifier
 
-   if (fMethods.size()==0) return MethodBase::GetRegressionValues();
+   if (fMethods.empty()) return MethodBase::GetRegressionValues();
 
    UInt_t methodToUse = 0;
    const Event* ev = GetEvent();
@@ -648,6 +649,6 @@ const std::vector<Float_t> &TMVA::MethodCategory::GetRegressionValues()
       return MethodBase::GetRegressionValues();
    }
    // get mva value from the suitable sub-classifier
-   return meth->GetRegressionValues();
+   return meth->GetRegressionValues(ev);
 }
 

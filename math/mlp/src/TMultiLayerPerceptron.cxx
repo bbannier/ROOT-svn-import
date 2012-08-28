@@ -774,8 +774,8 @@ void TMultiLayerPerceptron::Train(Int_t nEpoch, Option_t * option, Double_t minE
       residual_plot->Add(train_residual_plot);
       residual_plot->Add(test_residual_plot);
       residual_plot->Draw("LA");
-      residual_plot->GetXaxis()->SetTitle("Epoch");
-      residual_plot->GetYaxis()->SetTitle("Error");
+      if (residual_plot->GetXaxis())  residual_plot->GetXaxis()->SetTitle("Epoch");
+      if (residual_plot->GetYaxis())  residual_plot->GetYaxis()->SetTitle("Error");
    }
    // If the option "+" is not set, one has to randomize the weights first
    if (!opt.Contains("+"))
@@ -906,7 +906,7 @@ void TMultiLayerPerceptron::Train(Int_t nEpoch, Option_t * option, Double_t minE
       }
       // Security: would the learning lead to non real numbers,
       // the learning should stop now.
-      if (isnan(GetError(TMultiLayerPerceptron::kTraining))) {
+      if (TMath::IsNaN(GetError(TMultiLayerPerceptron::kTraining))) {
          Error("TMultiLayerPerceptron::Train()","Stop.");
          iepoch = nEpoch;
       }
@@ -934,9 +934,11 @@ void TMultiLayerPerceptron::Train(Int_t nEpoch, Option_t * option, Double_t minE
             }
          }
          if ((!(iepoch % displayStepping)) || (iepoch == nEpoch - 1)) {
-            residual_plot->GetYaxis()->UnZoom();
-            residual_plot->GetYaxis()->SetTitleOffset(1.4);
-            residual_plot->GetYaxis()->SetDecimals();
+            if (residual_plot->GetYaxis()) {
+               residual_plot->GetYaxis()->UnZoom();
+               residual_plot->GetYaxis()->SetTitleOffset(1.4);
+               residual_plot->GetYaxis()->SetDecimals();
+            }
             canvas->Modified();
             canvas->Update();
          }
@@ -1512,14 +1514,16 @@ void TMultiLayerPerceptron::DrawResult(Int_t index, Option_t * option) const
 }
 
 //______________________________________________________________________________
-void TMultiLayerPerceptron::DumpWeights(Option_t * filename) const
+Bool_t TMultiLayerPerceptron::DumpWeights(Option_t * filename) const
 {
    // Dumps the weights to a text file.
    // Set filename to "-" (default) to dump to the standard output
    TString filen = filename;
    ostream * output;
-   if (filen == "")
-      return;
+   if (filen == "") {   
+      Error("TMultiLayerPerceptron::DumpWeights()","Invalid file name");
+      return kFALSE;
+   }
    if (filen == "-")
       output = &cout;
    else
@@ -1555,17 +1559,20 @@ void TMultiLayerPerceptron::DumpWeights(Option_t * filename) const
       ((ofstream *) output)->close();
       delete output;
    }
+   return kTRUE;
 }
 
 //______________________________________________________________________________
-void TMultiLayerPerceptron::LoadWeights(Option_t * filename)
+Bool_t TMultiLayerPerceptron::LoadWeights(Option_t * filename)
 {
    // Loads the weights from a text file conforming to the format
    // defined by DumpWeights.
    TString filen = filename;
    Double_t w;
-   if (filen == "")
-      return;
+   if (filen == "") {
+      Error("TMultiLayerPerceptron::LoadWeights()","Invalid file name");
+      return kFALSE;
+   }
    char *buff = new char[100];
    ifstream input(filen.Data());
    // input normalzation
@@ -1607,6 +1614,7 @@ void TMultiLayerPerceptron::LoadWeights(Option_t * filename)
    }
    delete it;
    delete[] buff;
+   return kTRUE;
 }
 
 //______________________________________________________________________________

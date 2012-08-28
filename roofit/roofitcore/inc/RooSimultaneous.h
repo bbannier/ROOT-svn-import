@@ -78,8 +78,12 @@ public:
   RooAbsPdf* getPdf(const char* catName) const ;
   const RooAbsCategoryLValue& indexCat() const { return (RooAbsCategoryLValue&) _indexCat.arg() ; }
 
+
   virtual RooDataSet* generateSimGlobal(const RooArgSet& whatVars, Int_t nEvents) ;
 
+  virtual RooDataHist* fillDataHist(RooDataHist *hist, const RooArgSet* nset, Double_t scaleFactor,
+				    Bool_t correctForBinVolume=kFALSE, Bool_t showProgress=kFALSE) const ;
+  
 protected:
 
   void initialize(RooAbsCategoryLValue& inIndexCat, std::map<std::string,RooAbsPdf*> pdfMap) ;
@@ -100,6 +104,9 @@ protected:
 
 
   friend class RooSimGenContext ;
+  friend class RooSimSplitGenContext ;
+  virtual RooAbsGenContext* autoGenContext(const RooArgSet &vars, const RooDataSet* prototype=0, const RooArgSet* auxProto=0, 
+					   Bool_t verbose=kFALSE, Bool_t autoBinned=kTRUE, const char* binnedTag="") const ;
   virtual RooAbsGenContext* genContext(const RooArgSet &vars, const RooDataSet *prototype=0, 
 	                               const RooArgSet* auxProto=0, Bool_t verbose= kFALSE) const ;
  

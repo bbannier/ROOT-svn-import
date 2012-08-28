@@ -71,15 +71,8 @@ RooObjCacheManager::RooObjCacheManager(const RooObjCacheManager& other, RooAbsAr
 RooObjCacheManager::~RooObjCacheManager()
 {
   // Destructor
-
   if (_optCacheObservables) {
-
-    list<RooArgSet*>::iterator iter = _optCacheObsList.begin() ;
-    for (; iter!=_optCacheObsList.end() ; ++iter) {
-      delete *iter ;
-    }
-
-    _optCacheObservables=0 ;
+    delete _optCacheObservables ;
   }
 }
 
@@ -98,7 +91,7 @@ Bool_t RooObjCacheManager::redirectServersHook(const RooAbsCollection& newServer
     
   } else {
 
-    for (Int_t i=0 ; i<_size ; i++) {
+    for (Int_t i=0 ; i<cacheSize() ; i++) {
       _object[i]->redirectServersHook(newServerList,mustReplaceAll,nameChange,isRecursive) ;
     }
 
@@ -118,7 +111,7 @@ void RooObjCacheManager::operModeHook()
     return ;
   }
 
-  for (Int_t i=0 ; i<_size ; i++) {
+  for (Int_t i=0 ; i<cacheSize() ; i++) {
     if (_object[i]) {
       _object[i]->operModeHook(_owner->operMode()) ;
     }
@@ -139,13 +132,14 @@ void RooObjCacheManager::optimizeCacheMode(const RooArgSet& obs, RooArgSet& optN
 
   _optCacheModeSeen = kTRUE ;
 
-  _optCacheObservables = (RooArgSet*) obs.snapshot() ;
-  _optCacheObsList.push_back(_optCacheObservables) ;
-//   if (_optCacheObsList.size()>200) {
-//     cout << "RooObjCacheManager::optimizeCacheMode(" << this << ") list size = " << _optCacheObsList.size() << endl ;
-//   }
-
-  for (Int_t i=0 ; i<_size ; i++) {
+  if (_optCacheObservables) {
+    _optCacheObservables->removeAll() ;
+    _optCacheObservables->add(obs) ;
+  } else {
+    _optCacheObservables = (RooArgSet*) new RooArgSet(obs) ;
+  }
+  
+  for (Int_t i=0 ; i<cacheSize() ; i++) {
     if (_object[i]) {
       _object[i]->optimizeCacheMode(obs,optNodes,processedNodes) ;
     }
@@ -163,13 +157,8 @@ void RooObjCacheManager::sterilize()
   // called specially from RooAbsObsTestStatistic::setData()
 
   if (_optCacheObservables && _clearObsList) {
-
-    list<RooArgSet*>::iterator iter = _optCacheObsList.begin() ;
-    for (; iter!=_optCacheObsList.end() ; ++iter) {
-      delete *iter ;
-    }
-    _optCacheObsList.clear() ;    
-    _optCacheObservables=0 ;
+    delete _optCacheObservables ;
+    _optCacheObservables = 0 ;
     _optCacheModeSeen = kFALSE ;
   }
   
@@ -203,9 +192,9 @@ void RooObjCacheManager::printCompactTreeHook(std::ostream& os, const char *inde
 {
   // Add details on cache contents when printing in tree mode
 
-  for (Int_t i=0 ; i<_size ; i++) {
+  for (Int_t i=0 ; i<cacheSize() ; i++) {
     if (_object[i]) {
-      _object[i]->printCompactTreeHook(os,indent,i,_size-1) ;
+      _object[i]->printCompactTreeHook(os,indent,i,cacheSize()-1) ;
     }
   }  
 }
@@ -222,11 +211,11 @@ void RooObjCacheManager::findConstantNodes(const RooArgSet& obs, RooArgSet& cach
     return ;
   }
   
-  for (Int_t i=0 ; i<_size ; i++) {
-      if (_object[i]) {
-	_object[i]->findConstantNodes(obs,cacheList, processedNodes) ;
-      }
-  }    
+  for (Int_t i=0 ; i<cacheSize() ; i++) {
+    if (_object[i]) {
+      _object[i]->findConstantNodes(obs,cacheList, processedNodes) ;
+    }
+  }
 }
 
 

@@ -82,6 +82,9 @@ AUTHLIBS      := $(SHADOWLIBS) $(AFSLIBS) \
                  $(SRPLIBS) $(KRB5LIBS) $(GLBSLIBS) \
                  $(COMERRLIBDIR) $(COMERRLIB) $(RESOLVLIB) \
                  $(CRYPTOLIBDIR) $(CRYPTOLIB)
+ifeq ($(ARCH),win32gcc)
+AUTHLIBS      += -lz
+endif
 
 # used in the main Makefile
 ALLHDRS       += $(patsubst $(MODDIRI)/%.h,include/%.h,$(RPDUTILH))
@@ -101,7 +104,7 @@ include/%.h:    $(RPDUTILDIRI)/%.h
 $(SRVAUTHLIB):  $(SRVAUTHO) $(RSAO) $(DAEMONUTILSO) $(STRLCPYO) $(ORDER_) $(MAINLIBS) $(SRVAUTHLIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libSrvAuth.$(SOEXT) $@ "$(SRVAUTHO) $(RSAO)" \
-		   "$(SRVAUTHLIBEXTRA) $(DAEMONUTILSO) $(STRLCPYO) $(CRYPTLIBS) $(AUTHLIBS)"
+		   "$(DAEMONUTILSO) $(SRVAUTHLIBEXTRA) $(STRLCPYO) $(CRYPTLIBS) $(AUTHLIBS)"
 
 all-$(MODNAME): $(RPDUTILO) $(RPDCONNO) $(RPDPRIVO) $(SRVAUTHLIB)
 
@@ -117,6 +120,6 @@ distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(RPDUTILO): CXXFLAGS += $(AUTHFLAGS)
-ifeq ($(MACOSX_MINOR),7)
+ifeq ($(MACOSX_SSL_DEPRECATED),yes)
 $(call stripsrc,$(RPDUTILDIRS)/rpdutils.o): CXXFLAGS += -Wno-deprecated-declarations
 endif

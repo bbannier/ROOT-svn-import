@@ -21,13 +21,6 @@
 // Tracing utils
 #include "XrdProofdTrace.h"
 
-#ifndef SafeDelete
-#define SafeDelete(x) { if (x) { delete x; x = 0; } }
-#endif
-#ifndef SafeDelArray
-#define SafeDelArray(x) { if (x) { delete[] x; x = 0; } }
-#endif
-
 //__________________________________________________________________________
 XrdProofdProofServ::XrdProofdProofServ()
 {
@@ -71,8 +64,8 @@ XrdProofdProofServ::~XrdProofdProofServ()
 {
    // Destructor
 
-   SafeDelete(fStartMsg);
-   SafeDelete(fPingSem);
+   SafeDel(fStartMsg);
+   SafeDel(fPingSem);
 
    std::vector<XrdClientID *>::iterator i;
    for (i = fClients.begin(); i != fClients.end(); i++)
@@ -89,7 +82,7 @@ XrdProofdProofServ::~XrdProofdProofServ()
    // Remove the associated UNIX socket path
    unlink(fUNIXSockPath.c_str());
 
-   SafeDelete(fMutex);
+   SafeDel(fMutex);
 }
 
 //__________________________________________________________________________
@@ -183,8 +176,13 @@ int XrdProofdProofServ::Reset(const char *msg, int type)
    XPDFORM(fn, "%s.status", fAdminPath.c_str());
    FILE *fpid = fopen(fn.c_str(), "r");
    if (fpid) {
-      if (fscanf(fpid, "%d", &st) <= 0)
+      char line[64];
+      if (fgets(line, sizeof(line), fpid)) {
+         if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = 0;
+         st = atoi(line);
+      } else {
          TRACE(XERR,"problems reading from file "<<fn);
+      }
       fclose(fpid);
    }
    TRACE(DBG,"file: "<<fn<<", st:"<<st);
@@ -212,8 +210,8 @@ void XrdProofdProofServ::Reset()
    fResponse = 0;
    fProtocol = 0;
    fParent = 0;
-   SafeDelete(fStartMsg);
-   SafeDelete(fPingSem);
+   SafeDel(fStartMsg);
+   SafeDel(fPingSem);
    fSrvPID = -1;
    fID = -1;
    fIsShutdown = false;
@@ -249,7 +247,7 @@ void XrdProofdProofServ::DeleteUNIXSock()
 {
    // Delete the current UNIX socket
 
-   SafeDelete(fUNIXSock);
+   SafeDel(fUNIXSock);
    unlink(fUNIXSockPath.c_str());
    fUNIXSockPath = "";
 }
@@ -341,7 +339,12 @@ int XrdProofdProofServ::FreeClientID(int pid)
       for (i = fClients.begin(); i != fClients.end(); ++i) {
          if ((*i) && (*i)->P()) {
             if ((*i)->P()->Pid() == pid || (*i)->P()->Pid() == -1) {
+               if (fProtocol == (*i)->P()) {
+                  SetProtocol(0);
+                  SetConnection(0);
+               }
                (*i)->Reset();
+               if (fParent == (*i)) SetParent(0);
                fNClients--;
                // Record time of last disconnection
                if (fNClients <= 0)
@@ -565,8 +568,10 @@ int XrdProofdProofServ::BroadcastPriority(int priority)
    if (!fResponse || fResponse->Send(kXR_attn, kXPD_priority, buf, len) != 0) {
       // Failure
       TRACE(XERR,"problems telling proofserv");
+      SafeDelArray(buf);
       return -1;
    }
+   SafeDelArray(buf);
    TRACE(DBG, "priority "<<priority<<" sent over");
    // Done
    return 0;
@@ -682,25 +687,22 @@ int XrdProofdProofServ::CreateUNIXSock(XrdSysError *edest)
    fUNIXSock = new XrdNet(edest);
 
    // Make sure the admin path exists
-   struct stat st;
-   if (fAdminPath.length() > 0 &&
-       stat(fAdminPath.c_str(), &st) != 0 && (errno == ENOENT)) {;
-      FILE *fadm = fopen(fAdminPath.c_str(), "w");
-      fclose(fadm);
+   if (fAdminPath.length() > 0) {
+      FILE *fadm = fopen(fAdminPath.c_str(), "a");
+      if (fadm) {
+         fclose(fadm);
+      } else {
+         TRACE(XERR, "unable to open / create admin path "<< fAdminPath << "; errno = "<<errno);
+         return -1;
+      }
    }
 
    // Check the path
-   bool rm = 0, ok = 0;
-   if (stat(fUNIXSockPath.c_str(), &st) == 0 || (errno != ENOENT)) rm = 1;
-   if (rm  && unlink(fUNIXSockPath.c_str()) != 0) {
-      if (!S_ISSOCK(st.st_mode)) {
-         TRACE(XERR, "non-socket path exists: unable to delete it: " <<fUNIXSockPath);
-         return -1;
-      } else {
-         XPDPRT("WARNING: socket path exists: unable to delete it:"
-                " try to use it anyway " <<fUNIXSockPath);
-         ok = 1;
-      }
+   bool ok = 0;
+   if (unlink(fUNIXSockPath.c_str()) != 0 && (errno != ENOENT)) {
+      XPDPRT("WARNING: path exists: unable to delete it:"
+               " try to use it anyway " <<fUNIXSockPath);
+      ok = 1;
    }
 
    // Create the path
@@ -739,7 +741,7 @@ int XrdProofdProofServ::CreateUNIXSock(XrdSysError *edest)
 }
 
 //__________________________________________________________________________
-int XrdProofdProofServ::SetAdminPath(const char *a, bool assert)
+int XrdProofdProofServ::SetAdminPath(const char *a, bool assert, bool setown)
 {
    // Set the admin path and make sure the file exists
 
@@ -752,49 +754,37 @@ int XrdProofdProofServ::SetAdminPath(const char *a, bool assert)
    // If we are not asked to assert the file we are done
    if (!assert) return 0;
 
-   // The session file
-   struct stat st;
-   if (stat(a, &st) != 0 && errno == ENOENT) {
-      // Create the file
-      FILE *fpid = fopen(a, "w");
-      if (fpid) {
-         fclose(fpid);
-      } else {
-         TRACE(XERR, "unable to open / create admin path "<< fAdminPath << "; errno = "<<errno);
-         return -1;
-      }
+   // Check if the session file exists
+   FILE *fpid = fopen(a, "a");
+   if (fpid) {
+      fclose(fpid);
+   } else {
+      TRACE(XERR, "unable to open / create admin path "<< fAdminPath << "; errno = "<<errno);
+      return -1;
    }
 
-   // The status file
+   // Check if the status file exists
    XrdOucString fn;
    XPDFORM(fn, "%s.status", a);
-   if (stat(fn.c_str(), &st) != 0 && errno == ENOENT) {
-      // Create the file
-      FILE *fpid = fopen(fn.c_str(), "w");
-      if (fpid) {
-         fprintf(fpid, "%d", fStatus);
-         fclose(fpid);
-      } else {
-         TRACE(XERR, "unable to open / create status path "<< fn << "; errno = "<<errno);
+   if ((fpid = fopen(fn.c_str(), "a"))) {
+      fprintf(fpid, "%d", fStatus);
+      fclose(fpid);
+   } else {
+      TRACE(XERR, "unable to open / create status path "<< fn << "; errno = "<<errno);
+      return -1;
+   }
+   
+   if (setown) {
+      // Set the ownership of the status file to the user
+      XrdProofUI ui;
+      if (XrdProofdAux::GetUserInfo(fClient.c_str(), ui) != 0) {
+         TRACE(XERR, "unable to get info for user "<<fClient<<"; errno = "<<errno);
          return -1;
       }
-   }
-   // Set the ownership of the status file to the user
-   XrdProofUI ui;
-   if (XrdProofdAux::GetUserInfo(fClient.c_str(), ui) != 0) {
-      TRACE(XERR, "unable to get info for user "<<fClient<<"; errno = "<<errno);
-      return -1;
-   }
-   if (XrdProofdAux::ChangeOwn(fn.c_str(), ui) != 0) {
-      TRACE(XERR, "unable to give ownership of the status file "<< fn << " to user; errno = "<<errno);
-      return -1;
-   }
-   // Check
-   if (stat(fn.c_str(), &st) != 0) {
-      TRACE(XERR, "creation/assertion of the status path "<< fn << " failed; errno = "<<errno);
-      return -1;
-   } else {
-      TRACE(ALL, "creation/assertion of the status path "<< fn << " was successful!");
+      if (XrdProofdAux::ChangeOwn(fn.c_str(), ui) != 0) {
+         TRACE(XERR, "unable to give ownership of the status file "<< fn << " to user; errno = "<<errno);
+         return -1;
+      }
    }
 
    // Done
@@ -992,7 +982,7 @@ void XrdProofdProofServ::SendClusterInfo(int nsess, int nacti)
       // Failure
       TRACE(XERR,"problems sending proofserv");
    }
-
+   SafeDelArray(buf);
 }
 
 //__________________________________________________________________________

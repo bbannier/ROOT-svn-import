@@ -215,10 +215,11 @@ TGedTabInfo* TGedEditor::GetEditorTabInfo(const char* name)
 
    // create a title frame for each tab
    TGedFrame* nf = CreateNameFrame(tc, name);
-   nf->SetGedEditor(this);
-   nf->SetModelClass(0);
-   tc->AddFrame(nf, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
-
+   if (nf) {
+      nf->SetGedEditor(this);
+      nf->SetModelClass(0);
+      tc->AddFrame(nf, new TGLayoutHints(kLHintsTop | kLHintsExpandX, 2, 2, 2, 2));
+   }
    // add to list of created tabs
    TGedTabInfo* ti = new TGedTabInfo(te, tc);
    fCreatedTabs.Add(ti);
@@ -300,7 +301,7 @@ void TGedEditor::GlobalSetModel(TVirtualPad *pad, TObject * obj, Int_t ev)
    TCanvas* can = pad->GetCanvas();
    // Do nothing if canvas is the same as before or
    // local editor of the canvas is active.
-   if (can == fCanvas || can->GetShowEditor())
+   if (!can || (can == fCanvas || can->GetShowEditor()))
       return;
 
    Show();
@@ -348,7 +349,7 @@ void TGedEditor::SetModel(TVirtualPad* pad, TObject* obj, Int_t event)
    if ((event != kButton1Down) || (obj && obj->InheritsFrom("TColorWheel")))
       return;
 
-   if (gPad) gPad->GetVirtCanvas()->SetCursor(kWatch);
+   if (gPad && gPad->GetVirtCanvas()) gPad->GetVirtCanvas()->SetCursor(kWatch);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kWatch));
 
    fPad = pad;
@@ -411,7 +412,7 @@ void TGedEditor::SetModel(TVirtualPad* pad, TObject* obj, Int_t event)
    else
       ((TGMainFrame*)GetMainFrame())->Layout();
 
-   if (gPad) gPad->GetVirtCanvas()->SetCursor(kPointer);
+   if (gPad && gPad->GetVirtCanvas()) gPad->GetVirtCanvas()->SetCursor(kPointer);
    gVirtualX->SetCursor(GetId(), gVirtualX->CreateCursor(kPointer));
 }
 

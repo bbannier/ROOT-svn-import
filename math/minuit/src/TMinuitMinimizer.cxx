@@ -52,7 +52,6 @@ TMinuitMinimizer::TMinuitMinimizer(ROOT::Minuit::EMinimizerType type, unsigned i
    fUsed(false),
    fMinosRun(false),
    fDim(ndim),
-   fStrategy(1),
    fType(type), 
    fMinuit(0)
 {
@@ -69,7 +68,6 @@ TMinuitMinimizer::TMinuitMinimizer(const char *  type, unsigned int ndim ) :
    fUsed(false),
    fMinosRun(false),
    fDim(ndim),
-   fStrategy(1),
    fMinuit(0)
 {
    // constructor from a char * for the algorithm type, used by the plug-in manager
@@ -194,7 +192,7 @@ void TMinuitMinimizer::InitTMinuit(int dim) {
    // TMinuit level is shift by 1 -1 means 0;
    arglist[0] = PrintLevel() - 1;
    fMinuit->mnexcm("SET PRINT",arglist,1,ierr);
-   if (PrintLevel() == 0) SuppressMinuitWarnings();
+   if (PrintLevel() <= 0) SuppressMinuitWarnings();
 }
 
 
@@ -418,6 +416,13 @@ bool TMinuitMinimizer::Minimize() {
       fMinuit->mnexcm("SET EPS",arglist,1,ierr);
    }
 
+   // set strategy 
+   int strategy = Strategy(); 
+   if (strategy >=0 && strategy <=2 ) {
+      arglist[0] = strategy;
+      fMinuit->mnexcm("SET STR",arglist,1,ierr);
+   }
+
    arglist[0] = MaxFunctionCalls(); 
    arglist[1] = Tolerance(); 
    
@@ -471,7 +476,9 @@ bool TMinuitMinimizer::Minimize() {
 
 
    // check if Hesse needs to be run 
-   if (ierr == 0 && IsValidError() ) { 
+   // Migrad runs inside it automatically for strategy >=1. Do also 
+   // in case improve or other minimizers are used 
+   if (minErrStatus == 0  && (IsValidError() || ( strategy >=1 && CovMatrixStatus() < 3) ) ) { 
       fMinuit->mnexcm("HESSE",arglist,1,ierr);
       fStatus += 100*ierr; 
       if (printlevel>2) Info("Minimize","Finished to run HESSE - status %d",ierr);

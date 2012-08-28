@@ -19,6 +19,7 @@
 #include "TObject.h"
 #include "Riosfwd.h"
 #include "RooAbsProxy.h"
+#include "RooLinkedListIter.h"
 #include "RooAbsArg.h"
 #include "RooArgList.h"
 
@@ -46,7 +47,7 @@ public:
 
   RooListProxy& operator=(const RooArgList& other) ;
 
-  virtual void print(ostream& os, Bool_t addContents=kFALSE) const ;
+  virtual void print(std::ostream& os, Bool_t addContents=kFALSE) const ;
   
 protected:
     

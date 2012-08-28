@@ -255,7 +255,7 @@ TAuthenticate::TAuthenticate(TSocket *sock, const char *remote,
    // Type of RSA key
    if (fgRSAKey < 0) {
       fgRSAKey  = 0;                // Default key
-#if R__SSL
+#ifdef R__SSL
       // Another choice possible: check user preferences
       if (gEnv->GetValue("RSA.KeyType",0) == 1)
          fgRSAKey = 1;
@@ -502,8 +502,11 @@ negotia:
       if (user != "")
          CheckNetrc(user, passwd, pwhash, kTRUE);
       if (passwd == "") {
-         if (fgPromptUser)
-            user = PromptUser(fRemote);
+         if (fgPromptUser) {
+            char *p = PromptUser(fRemote);
+            user = p;
+            delete [] p;
+         }
          rc = GetUserPasswd(user, passwd, pwhash, kTRUE);
       }
       fUser = user;
@@ -3448,9 +3451,10 @@ Int_t TAuthenticate::GenRSAKeys()
    // works as expected
    Bool_t notOk = 1;
    rsa_NUMBER p1, p2, rsa_n, rsa_e, rsa_d;
-   Int_t l_n = 0, l_e = 0, l_d = 0;
+   Int_t l_n = 0, l_d = 0;
    char buf_n[rsa_STRLEN], buf_e[rsa_STRLEN], buf_d[rsa_STRLEN];
-#if R__RSADEB
+#if R__RSADE
+   Int_t l_e;
    char buf[rsa_STRLEN];
 #endif
 
@@ -3499,7 +3503,9 @@ Int_t TAuthenticate::GenRSAKeys()
       TRSA_fun::RSA_num_sput()(&rsa_n, buf_n, rsa_STRLEN);
       l_n = strlen(buf_n);
       TRSA_fun::RSA_num_sput()(&rsa_e, buf_e, rsa_STRLEN);
+#if R__RSADEB
       l_e = strlen(buf_e);
+#endif
       TRSA_fun::RSA_num_sput()(&rsa_d, buf_d, rsa_STRLEN);
       l_d = strlen(buf_d);
 
@@ -3619,7 +3625,7 @@ char *TAuthenticate::GetRandString(Int_t opt, Int_t len)
    //       1      letters and numbers  (upper and lower case)
    //       2      hex characters       (upper and lower case)
 
-   int iimx[4][4] = {
+   unsigned int iimx[4][4] = {
       {0x0, 0xffffff08, 0xafffffff, 0x2ffffffe}, // opt = 0
       {0x0, 0x3ff0000, 0x7fffffe, 0x7fffffe},    // opt = 1
       {0x0, 0x3ff0000, 0x7e, 0x7e},              // opt = 2
@@ -3772,8 +3778,9 @@ Int_t TAuthenticate::SecureRecv(TSocket *sock, Int_t dec, Int_t key, char **str)
          return -1;
 
       // Prepare output
-      *str = new char[strlen(buftmp) + 1];
-      strlcpy(*str, buftmp,strlen(buftmp) + 1);
+      const size_t strSize = strlen(buftmp) + 1;
+      *str = new char[strSize];
+      strlcpy(*str, buftmp, strSize);
 
    } else if (key == 1) {
 #ifdef R__SSL
@@ -4189,13 +4196,14 @@ Int_t TAuthenticate::ReadRootAuthrc()
          continue;
 
       // Now scan
-      char *tmp = new char[strlen(line)+1];
+      const size_t tmpSize = strlen(line) + 1;
+      char *tmp = new char[tmpSize];
       if (!tmp) {
          ::Error("TAuthenticate::ReadRootAuthrc",
                  "could not allocate temporary buffer");
          return 0;
       }
-      strlcpy(tmp,line,strlen(line)+1);
+      strlcpy(tmp, line, tmpSize);
       char *nxt = strtok(tmp," ");
 
       if (!strcmp(nxt, "proofserv") || cont) {

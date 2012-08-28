@@ -40,6 +40,8 @@
 
 
 
+using namespace std;
+
 ClassImp(RooIntegrator1D)
 ;
 
@@ -268,7 +270,7 @@ Bool_t RooIntegrator1D::checkLimits() const
 Double_t RooIntegrator1D::integral(const Double_t *yvec) 
 {
   // Calculate numeric integral at given set of function binding parameters
-  
+
   assert(isValid());
 
   // Copy yvec to xvec if provided
@@ -333,7 +335,9 @@ Double_t RooIntegrator1D::integral(const Double_t *yvec)
   for(j= 1; j <= _maxSteps; j++) {
     ooccoutW((TObject*)0,Integration) << "   [" << j << "] h = " << _h[j] << " , s = " << _s[j] << endl;
   }
+
   return _s[_maxSteps] ;
+
 }
 
 

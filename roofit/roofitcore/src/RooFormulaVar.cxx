@@ -49,6 +49,8 @@
 
 
 
+using namespace std;
+
 ClassImp(RooFormulaVar)
 
 
@@ -118,21 +120,10 @@ RooFormula& RooFormulaVar::formula() const
 
 
 //_____________________________________________________________________________
-Double_t RooFormulaVar::getVal(const RooArgSet* set) const 
-{
-  // Overload RooAbsReal::getVal() to intercept nset pointer.
-
-  _nset = (RooArgSet*) set ;
-  return RooAbsReal::getVal(set) ;
-}
-
-
-
-//_____________________________________________________________________________
 Double_t RooFormulaVar::evaluate() const
 {
   // Calculate current value of object from internal formula
-  return formula().eval(_nset) ;
+  return formula().eval(_lastNSet) ;
 }
 
 

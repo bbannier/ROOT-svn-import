@@ -27,17 +27,18 @@ namespace HistFactory{
     FlexibleInterpVar() ;
     FlexibleInterpVar(const char *name, const char *title,
 		      const RooArgList& _paramList, 
-		      double nominal, vector<double> low, vector<double> high);
+		      double nominal, std::vector<double> low, std::vector<double> high);
 
     FlexibleInterpVar(const char *name, const char *title,
-		      const RooArgList& _paramList, double nominal, vector<double> low, 
-		      vector<double> high,vector<int> code);
+		      const RooArgList& _paramList, double nominal, std::vector<double> low, 
+		      std::vector<double> high,std::vector<int> code);
 
     FlexibleInterpVar(const char *name, const char *title);
     FlexibleInterpVar(const FlexibleInterpVar&, const char*);
 
     void setInterpCode(RooAbsReal& param, int code);
     void setAllInterpCodes(int code);
+    void setGlobalBoundary(double boundary) {_interpBoundary = boundary;}
 
     void printAllInterpCodes();
 
@@ -48,16 +49,17 @@ namespace HistFactory{
   protected:
 
     RooListProxy _paramList ;
-    double _nominal;
-    vector<double> _low;
-    vector<double> _high;
-    vector<int> _interpCode;
-    
+    Double_t _nominal;
+    std::vector<double> _low;
+    std::vector<double> _high;
+    std::vector<int> _interpCode;
+    Double_t _interpBoundary;
+
     TIterator* _paramIter ;  //! do not persist
 
     Double_t evaluate() const;
 
-    ClassDef(RooStats::HistFactory::FlexibleInterpVar,1) // flexible interpolation
+    ClassDef(RooStats::HistFactory::FlexibleInterpVar,2) // flexible interpolation
   };
 }
 }

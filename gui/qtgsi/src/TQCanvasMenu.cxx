@@ -217,13 +217,14 @@ void TQCanvasMenu::Dialog(TObject* object, TMethod* method)
          // Get the current value and form it as a text:
          char val[256];
          if (!strncmp(basictype, "char*", 5)) {
-            char *tdefval;
+            char *tdefval = 0;
             m->GetterMethod()->Execute(object, "", &tdefval);
-            strlcpy(val, tdefval, 256);
+            if (tdefval && strlen(tdefval))
+               strlcpy(val, tdefval, 256);
          }
          else if (!strncmp(basictype, "float", 5) ||
             !strncmp(basictype, "double", 6)) {
-            Double_t ddefval;
+            Double_t ddefval = 0.0;
             m->GetterMethod()->Execute(object, "", ddefval);
             snprintf(val, 255, "%g", ddefval);
          }
@@ -231,7 +232,7 @@ void TQCanvasMenu::Dialog(TObject* object, TMethod* method)
              !strncmp(basictype, "int", 3)  ||
              !strncmp(basictype, "long", 4) ||
              !strncmp(basictype, "short", 5)) {
-            Long_t ldefval;
+            Long_t ldefval = 0L;
             m->GetterMethod()->Execute(object, "", ldefval);
             snprintf(val, 255, "%li", ldefval);
          }

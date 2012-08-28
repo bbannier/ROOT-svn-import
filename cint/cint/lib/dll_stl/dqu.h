@@ -1,6 +1,6 @@
 /* -*- C++ -*- */
 /*************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ * Copyright(c) 1995~2005  Masaharu Goto (root-cint@cern.ch)
  *
  * For the licensing terms see the file COPYING
  *
@@ -15,7 +15,7 @@
 using namespace std;
 #endif
 
-#if (__SUNPRO_CC>=1280)
+#if (__SUNPRO_CC>=1280) && !defined(G__AIX)
 #include "suncc5_deque.h"
 #endif
 

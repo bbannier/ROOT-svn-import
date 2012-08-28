@@ -23,15 +23,22 @@
 #include "RooPrintable.h"
 #include "RooRefCountList.h"
 #include "RooAbsCache.h"
+#include "RooLinkedListIter.h"
+#include "RooNameReg.h"
 #include <map>
 #include <set>
 #include <deque>
+
+#include <iostream>
+
+#include "TClass.h"
 
 class TTree ;
 class RooArgSet ;
 class RooAbsCollection ;
 class RooTreeData ;
 class RooTreeDataStore ;
+class RooVectorDataStore ;
 class RooAbsData ;
 class RooAbsDataStore ;
 class RooAbsProxy ;
@@ -40,6 +47,7 @@ class RooSetProxy ;
 class RooListProxy ;
 class RooExpensiveObjectCache ;
 class RooWorkspace ;
+class RooRealProxy ;
 /* class TGraphStruct ; */
 
 class RooAbsArg : public TNamed, public RooPrintable {
@@ -59,7 +67,9 @@ public:
   // Accessors to client-server relation information 
   virtual Bool_t isDerived() const { 
     // Does value or shape of this arg depend on any other arg?
-    return (_serverList.GetSize()>0 || _proxyList.GetSize()>0)?kTRUE:kFALSE; 
+    return kTRUE ;
+    //std::cout << IsA()->GetName() << "::isDerived(" << GetName() << ") = " << (_serverList.GetSize()>0 || _proxyList.GetSize()>0) << std::endl ;
+    //return (_serverList.GetSize()>0 || _proxyList.GetSize()>0)?kTRUE:kFALSE; 
   }
   Bool_t isCloneOf(const RooAbsArg& other) const ; 
   Bool_t dependsOnValue(const RooAbsCollection& serverList, const RooAbsArg* ignoreArg=0) const { 
@@ -91,13 +101,18 @@ public:
     return _serverList.MakeIterator() ; 
   }
 
+  inline RooFIter valueClientMIterator() const { return _clientListValue.fwdIterator() ; }
+  inline RooFIter shapeClientMIterator() const { return _clientListShape.fwdIterator() ; }
+  inline RooFIter serverMIterator() const { return _serverList.fwdIterator() ; }
+
+
   inline RooAbsArg* findServer(const char *name) const { 
     // Return server of this arg with given name. Returns null if not found
     return (RooAbsArg*)_serverList.FindObject(name); 
   }
   inline RooAbsArg* findServer(const RooAbsArg& arg) const { 
     // Return server of this arg with name of given input arg. Returns null if not found
-    return (RooAbsArg*)_serverList.FindObject(&arg); 
+    return (RooAbsArg*)_serverList.findArg(&arg); 
   }
   inline RooAbsArg* findServer(Int_t index) const { 
     // Return i-th server from server list
@@ -105,7 +120,7 @@ public:
   }
   inline Bool_t isValueServer(const RooAbsArg& arg) const { 
     // If true, arg is a value server of self
-    return _clientListValue.FindObject(&arg)?kTRUE:kFALSE ; 
+    return _clientListValue.findArg(&arg)?kTRUE:kFALSE ; 
   }
   inline Bool_t isValueServer(const char* name) const { 
     // If true, we have a server with given name
@@ -113,7 +128,7 @@ public:
   }
   inline Bool_t isShapeServer(const RooAbsArg& arg) const { 
     // If true arg is a shape server of self
-    return _clientListShape.FindObject(&arg)?kTRUE:kFALSE ; 
+    return _clientListShape.findArg(&arg)?kTRUE:kFALSE ; 
   }
   inline Bool_t isShapeServer(const char* name) const { 
     // If true, we have a shape server with given name
@@ -152,7 +167,6 @@ public:
   friend class RooProdPdf ;
   friend class RooAddPdf ;
   friend class RooAddPdfOrig ;
-   friend class RooUnBinDataStore ;
    
   RooArgSet* getVariables(Bool_t stripDisconnected=kTRUE) const ;
   RooArgSet* getParameters(const RooAbsData* data, Bool_t stripDisconnected=kTRUE) const ;
@@ -195,22 +209,22 @@ public:
   void attachDataStore(const RooAbsDataStore &set);
 
   // I/O streaming interface (machine readable)
-  virtual Bool_t readFromStream(istream& is, Bool_t compact, Bool_t verbose=kFALSE) = 0 ;
-  virtual void writeToStream(ostream& os, Bool_t compact) const = 0 ;
+  virtual Bool_t readFromStream(std::istream& is, Bool_t compact, Bool_t verbose=kFALSE) = 0 ;
+  virtual void writeToStream(std::ostream& os, Bool_t compact) const = 0 ;
 
   inline virtual void Print(Option_t *options= 0) const {
     // Printing interface (human readable)
     printStream(defaultPrintStream(),defaultPrintContents(options),defaultPrintStyle(options));
   }
 
-  virtual void printName(ostream& os) const ;
-  virtual void printTitle(ostream& os) const ;
-  virtual void printClassName(ostream& os) const ;
-  virtual void printAddress(ostream& os) const ;
-  virtual void printArgs(ostream& os) const ;
-  virtual void printMetaArgs(ostream& /*os*/) const {} ;
-  virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const;
-  virtual void printTree(ostream& os, TString indent="") const ;
+  virtual void printName(std::ostream& os) const ;
+  virtual void printTitle(std::ostream& os) const ;
+  virtual void printClassName(std::ostream& os) const ;
+  virtual void printAddress(std::ostream& os) const ;
+  virtual void printArgs(std::ostream& os) const ;
+  virtual void printMetaArgs(std::ostream& /*os*/) const {} ;
+  virtual void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const;
+  virtual void printTree(std::ostream& os, TString indent="") const ;
 
   virtual Int_t defaultPrintContents(Option_t* opt) const ;
 
@@ -225,7 +239,7 @@ public:
   void setStringAttribute(const Text_t* key, const Text_t* value) ;
   const Text_t* getStringAttribute(const Text_t* key) const ;
   inline const std::map<std::string,std::string>& stringAttributes() const { 
-    // Returns map<string,string> with all string attributes defined
+    // Returns std::map<string,string> with all string attributes defined
     return _stringAttrib ; 
   }
 
@@ -252,11 +266,9 @@ public:
 
   //Debug hooks
   static void verboseDirty(Bool_t flag) ;
-  static void copyList(TList& dest, const TList& source) ;
   void printDirty(Bool_t depth=kTRUE) const ;
 
   static void setDirtyInhibit(Bool_t flag) ;
-  static void setACleanADirty(Bool_t flag) ;
 
   virtual Bool_t operator==(const RooAbsArg& other) = 0 ;
 
@@ -287,32 +299,78 @@ public:
 
 
   // constant term optimization
-  virtual void constOptimizeTestStatistic(ConstOpCode opcode) ;
-
+  virtual void constOptimizeTestStatistic(ConstOpCode opcode, Bool_t doAlsoTrackingOpt=kTRUE) ;
+  
   void graphVizTree(const char* fileName, const char* delimiter="\n", bool useTitle=false, bool useLatex=false) ;
-  void graphVizTree(ostream& os, const char* delimiter="\n", bool useTitle=false, bool useLatex=false) ;
+  void graphVizTree(std::ostream& os, const char* delimiter="\n", bool useTitle=false, bool useLatex=false) ;
 
 /*   TGraphStruct* graph(Bool_t useFactoryTag=kFALSE, Double_t textSize=0.03) ; */
 
   void printComponentTree(const char* indent="",const char* namePat=0, Int_t nLevel=999) ;
   void printCompactTree(const char* indent="",const char* fileName=0, const char* namePat=0, RooAbsArg* client=0) ;
-  void printCompactTree(ostream& os, const char* indent="", const char* namePat=0, RooAbsArg* client=0) ;
-  virtual void printCompactTreeHook(ostream& os, const char *ind="") ;
+  void printCompactTree(std::ostream& os, const char* indent="", const char* namePat=0, RooAbsArg* client=0) ;
+  virtual void printCompactTreeHook(std::ostream& os, const char *ind="") ;
 
   // Dirty state accessor
   inline Bool_t isShapeDirty() const { 
     // Return true is shape has been invalidated by server value change
     return isDerived()?_shapeDirty:kFALSE ; 
   } 
+
   inline Bool_t isValueDirty() const { 
     // Returns true of value has been invalidated by server value change
     if (inhibitDirty()) return kTRUE ;
     switch(_operMode) {
-    case AClean: return flipAClean() ;
-    case ADirty: return kTRUE ;
-    case Auto: return (isDerived()?_valueDirty:kFALSE) ;
+    case AClean: 
+      return kFALSE ;
+    case ADirty: 
+      return kTRUE ;
+    case Auto: 
+      if (_valueDirty) return isDerived() ;
+      return kFALSE ;
     }
     return kTRUE ; // we should never get here
+  }
+
+  inline Bool_t isValueDirtyAndClear() const { 
+    // Returns true of value has been invalidated by server value change
+    if (inhibitDirty()) return kTRUE ;
+    switch(_operMode) {
+    case AClean: 
+      return kFALSE ;
+    case ADirty: 
+      return kTRUE ;
+    case Auto: 
+      if (_valueDirty) {
+	_valueDirty = kFALSE ;
+	return isDerived();
+      }
+      return kFALSE ;
+    }
+    return kTRUE ; // But we should never get here
+  }
+
+
+  inline Bool_t isValueOrShapeDirtyAndClear() const { 
+    // Returns true of value has been invalidated by server value change
+
+    if (inhibitDirty()) return kTRUE ;
+    switch(_operMode) {
+    case AClean: 
+      return kFALSE ;
+    case ADirty: 
+      return kTRUE ;
+    case Auto: 
+      if (_valueDirty || _shapeDirty) {
+	_shapeDirty = kFALSE ;
+	_valueDirty = kFALSE ;
+	return isDerived();
+      }
+      _shapeDirty = kFALSE ;
+      _valueDirty = kFALSE ;
+      return kFALSE ;
+    }
+    return kTRUE ; // But we should never get here
   }
 
   // Cache management
@@ -322,7 +380,7 @@ public:
   RooAbsCache* getCache(Int_t index) const ;
 
   enum OperMode { Auto=0, AClean=1, ADirty=2 } ;
-  inline OperMode operMode() const { return _operMode==AClean ? (flipAClean() ? ADirty : AClean ) : _operMode  ; }
+  inline OperMode operMode() const { return _operMode  ; }
   void setOperMode(OperMode mode, Bool_t recurseADirty=kTRUE) ; 
 
   static UInt_t crc32(const char* data) ;
@@ -353,8 +411,14 @@ public:
 
   // Dirty state modifiers
  public:
-  inline void setValueDirty() const { setValueDirty(0) ; }
+  inline void setValueDirty() const {   if (_operMode==Auto && !inhibitDirty()) setValueDirty(0) ; }
   inline void setShapeDirty() const { setShapeDirty(0) ; } 
+
+  inline void clearValueAndShapeDirty() const {
+    _valueDirty=kFALSE ;  
+    _shapeDirty=kFALSE ; 
+  }
+
   inline void clearValueDirty() const { 
     _valueDirty=kFALSE ; 
   }
@@ -364,6 +428,15 @@ public:
   
   const char* aggregateCacheUniqueSuffix() const ;
   virtual const char* cacheUniqueSuffix() const { return 0 ; }
+
+  void wireAllCaches() ;
+  
+  inline const TNamed* namePtr() const {
+    return _namePtr ;
+  }
+
+  void SetName(const char* name) ;
+  void SetNameTitle(const char *name, const char *title) ;
 
  protected:
 
@@ -376,7 +449,7 @@ public:
   RooRefCountList _clientList       ; // list of client objects
   RooRefCountList _clientListShape  ; // subset of clients that requested shape dirty flag propagation
   RooRefCountList _clientListValue  ; // subset of clients that requested value dirty flag propagation
-  TList _proxyList        ; // list of proxies
+  TRefArray _proxyList        ; // list of proxies
   std::deque<RooAbsCache*> _cacheList ; // list of caches
   TIterator* _clientShapeIter ; //! Iterator over _clientListShape 
   TIterator* _clientValueIter ; //! Iterator over _clientListValue 
@@ -425,31 +498,34 @@ public:
   std::map<std::string,std::string> _stringAttrib ; // String attributes
   std::set<std::string> _boolAttribTransient ; //! Transient boolean attributes (not copied in ctor)
 
-  void printAttribList(ostream& os) const;
+  void printAttribList(std::ostream& os) const;
 
   // Hooks for RooTreeData interface
   friend class RooCompositeDataStore ;
   friend class RooTreeDataStore ;
+  friend class RooVectorDataStore ;
   friend class RooTreeData ;
   friend class RooDataSet ;
   friend class RooRealMPFE ;
   virtual void syncCache(const RooArgSet* nset=0) = 0 ;
-  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE) = 0 ;
+  virtual void copyCache(const RooAbsArg* source, Bool_t valueOnly=kFALSE, Bool_t setValDirty=kTRUE) = 0 ;
+
   virtual void attachToTree(TTree& t, Int_t bufSize=32000) = 0 ;
+  virtual void attachToVStore(RooVectorDataStore& vstore) = 0 ;
+  void attachToStore(RooAbsDataStore& store) ;
+
   virtual void setTreeBranchStatus(TTree& t, Bool_t active) = 0 ;
   virtual void fillTreeBranch(TTree& t) = 0 ;
   TString cleanBranchName() const ;
 
   // Global   
-  friend ostream& operator<<(ostream& os, const RooAbsArg &arg);  
-  friend istream& operator>>(istream& is, RooAbsArg &arg) ;
+  friend std::ostream& operator<<(std::ostream& os, const RooAbsArg &arg);  
+  friend std::istream& operator>>(std::istream& is, RooAbsArg &arg) ;
 
   // Debug stuff
   static Bool_t _verboseDirty ; // Static flag controlling verbose messaging for dirty state changes
   static Bool_t _inhibitDirty ; // Static flag controlling global inhibit of dirty state propagation
-  static Bool_t _flipAClean ; // Static flag controlling flipping status of all AClean nodes to ADirty ;
   Bool_t _deleteWatch ; //! Delete watch flag 
-  static Bool_t flipAClean() ;
 
   static Bool_t inhibitDirty() ;
   
@@ -459,7 +535,9 @@ public:
   mutable Bool_t _valueDirty ;  // Flag set if value needs recalculating because input values modified
   mutable Bool_t _shapeDirty ;  // Flag set if value needs recalculating because input shapes modified
 
+  friend class RooRealProxy ;
   mutable OperMode _operMode ; // Dirty state propagation mode
+  mutable Bool_t _fast ; // Allow fast access mode in getVal() and proxies
 
   // Owned components
   RooArgSet* _ownedComponents ; //! Set of owned component
@@ -467,11 +545,13 @@ public:
   mutable Bool_t _prohibitServerRedirect ; //! Prohibit server redirects -- Debugging tool
 
   mutable RooExpensiveObjectCache* _eocache ; // Pointer to global cache manager for any expensive components created by this object
+
+  mutable TNamed* _namePtr ; //! Do not persist. Pointer to global instance of string that matches object named
   
-  ClassDef(RooAbsArg,4) // Abstract variable
+  ClassDef(RooAbsArg,5) // Abstract variable
 };
 
-ostream& operator<<(ostream& os, const RooAbsArg &arg);  
-istream& operator>>(istream& is, RooAbsArg &arg) ;
+std::ostream& operator<<(std::ostream& os, const RooAbsArg &arg);  
+std::istream& operator>>(std::istream& is, RooAbsArg &arg) ;
 
 #endif

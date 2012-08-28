@@ -38,20 +38,23 @@ endif
 ifeq ($(subst $(APPLE_CLANG),,12),12)
 CXX           = clang++
 CC            = clang
+ifeq ($(CXX11),yes)
+CXX11FLAGS    = -std=c++11
+endif
 else
 CXX           = g++
 CC            = gcc
 endif
 CXXFLAGS      = -m64 -pipe -Wshadow -W -Wall -Woverloaded-virtual \
                 -fsigned-char -fno-common $(EXTRA_CXXFLAGS) $(FINK_CXXFLAGS) \
-                $(TARGETFLAGS)
+                $(TARGETFLAGS) $(CXX11FLAGS)
 CFLAGS        = -m64 -pipe -Wshadow -W -Wall -fsigned-char -fno-common \
                 $(EXTRA_CFLAGS) $(FINK_CFLAGS) $(TARGETFLAGS)
 CINTCXXFLAGS  = -m64 -pipe -W -Wall -Woverloaded-virtual \
                 -fsigned-char -fno-common $(EXTRA_CXXFLAGS) $(FINK_CXXFLAGS) \
                 -DG__REGEXP -DG__UNIX -DG__SHAREDLIB \
                 -DG__ROOT -DG__REDIRECTIO -DG__OSFDLL \
-                -DG__STD_EXCEPTION $(TARGETFLAGS)
+                -DG__STD_EXCEPTION $(TARGETFLAGS) $(CXX11FLAGS)
 CINTCFLAGS    = -m64 -pipe -W -Wall -fsigned-char -fno-common \
                 $(EXTRA_CFLAGS) $(FINK_CFLAGS) \
                 -DG__REGEXP -DG__UNIX -DG__SHAREDLIB \
@@ -115,6 +118,7 @@ F77ORG        = gfortran
 F77FLAGS      = -m64 -std=legacy
 ifneq ($(F77),)
 F77LIBS      := $(shell $(F77) -m64 -print-file-name=libgfortran.dylib 2>&1 | grep /)
+F77LIBS      += $(shell $(F77) -m64 -print-file-name=libgfortran.a 2>&1 | grep /)
 F77LIBS      += $(shell $(F77) -m64 -print-file-name=libgfortranbegin.a 2>&1 | grep /)
 endif
 
@@ -127,6 +131,13 @@ ifeq ($(NEEDFINK),yes)
 FINK_CXXFLAGS := $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
 FINK_CFLAGS   := $(shell [ -d $(FINK_DIR)/include ] && echo -I$(FINK_DIR)/include)
 FINK_LDFLAGS  := $(shell [ -d $(FINK_DIR)/lib ] && echo -L$(FINK_DIR)/lib)
+endif
+
+ifeq ($(MACOSX_MINOR),7)
+MACOSX_SSL_DEPRECATED = yes
+endif
+ifeq ($(MACOSX_MINOR),8)
+MACOSX_SSL_DEPRECATED = yes
 endif
 
 ifeq ($(CONFIGURE),yes)

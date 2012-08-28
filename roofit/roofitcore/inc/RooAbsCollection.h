@@ -43,7 +43,7 @@ public:
   RooAbsCollection(const RooAbsCollection& other, const char *name="");
   RooAbsCollection& operator=(const RooAbsCollection& other);
   RooAbsCollection& assignValueOnly(const RooAbsCollection& other, Bool_t oneSafe=kFALSE) ;
-  RooAbsCollection& assignFast(const RooAbsCollection& other) ;
+  void assignFast(const RooAbsCollection& other, Bool_t setValDirty=kTRUE) ;
 
   // Copy list and contents (and optionally 'deep' servers)
   RooAbsCollection *snapshot(Bool_t deepCopy=kTRUE) const ;
@@ -78,9 +78,11 @@ public:
 
   // List search methods
   RooAbsArg *find(const char *name) const ;
+  RooAbsArg *find(const RooAbsArg&) const ;
+
   Bool_t contains(const RooAbsArg& var) const { 
     // Returns true if object with same name as var is contained in this collection
-    return (0 == find(var.GetName())) ? kFALSE:kTRUE; 
+    return (0 == find(var)) ? kFALSE:kTRUE; 
   }
   Bool_t containsInstance(const RooAbsArg& var) const { 
     // Returns true if var is contained in this collection
@@ -99,6 +101,7 @@ public:
   }
 
   RooLinkedListIter iterator(Bool_t dir = kIterForward) const ;
+  RooFIter fwdIterator() const { return RooFIter(&_list); }
 
   inline Int_t getSize() const { 
     // Return the number of elements in the collection
@@ -116,11 +119,11 @@ public:
   std::string contentsString() const ;
 
 
-  virtual void printName(ostream& os) const ;
-  virtual void printTitle(ostream& os) const ;
-  virtual void printClassName(ostream& os) const ;
-  virtual void printValue(ostream& os) const ;
-  virtual void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printName(std::ostream& os) const ;
+  virtual void printTitle(std::ostream& os) const ;
+  virtual void printClassName(std::ostream& os) const ;
+  virtual void printValue(std::ostream& os) const ;
+  virtual void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
 
   virtual Int_t defaultPrintContents(Option_t* opt) const ;
 
@@ -129,7 +132,7 @@ public:
 		  const RooCmdArg& arg3=RooCmdArg(), const RooCmdArg& arg4=RooCmdArg(),	
 		  const RooCmdArg& arg5=RooCmdArg(), const RooCmdArg& arg6=RooCmdArg(),	
 		  const RooCmdArg& arg7=RooCmdArg(), const RooCmdArg& arg8=RooCmdArg()) const ;
-  void printLatex(ostream& ofs, Int_t ncol, const char* option="NEYU", Int_t sigDigit=1, 
+  void printLatex(std::ostream& ofs, Int_t ncol, const char* option="NEYU", Int_t sigDigit=1, 
                   const RooLinkedList& siblingLists=RooLinkedList(), const RooCmdArg* formatCmd=0) const ;
 
   void setName(const char *name) {
@@ -162,15 +165,27 @@ protected:
 
   Bool_t _ownCont;  // Flag to identify a list that owns its contents.
   TString _name;    // Our name.
+  Bool_t _allRRV ; // All contents are RRV
 
   void safeDeleteList() ;
 
   // Support for snapshot method 
   Bool_t addServerClonesToList(const RooAbsArg& var) ;
 
+  inline TNamed* structureTag() { if (_structureTag==0) makeStructureTag() ; return _structureTag ; }
+  inline TNamed* typedStructureTag() { if (_typedStructureTag==0) makeTypedStructureTag() ; return _typedStructureTag ; }
+
+  mutable TNamed* _structureTag ; //! Structure tag
+  mutable TNamed* _typedStructureTag ; //! Typed structure tag
+  
+  inline void clearStructureTags() { _structureTag=0 ; _typedStructureTag = 0 ; }
+
+  void makeStructureTag() ;
+  void makeTypedStructureTag() ;
+  
 private:
 
-  ClassDef(RooAbsCollection,1) // Collection of RooAbsArg objects
+  ClassDef(RooAbsCollection,2) // Collection of RooAbsArg objects
 };
 
 #endif

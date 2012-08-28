@@ -545,8 +545,8 @@ void TClonesArray::ExpandCreateFast(Int_t n)
       }
       fCont[i] = fKeep->fCont[i];
    }
-   if (fLast > n) {
-      memset(fCont+fLast,0,(fSize-fLast)*sizeof(TObject*));
+   if (fLast >= n) {
+      memset(fCont + n, 0, (fLast - n + 1) * sizeof(TObject*));
    }
    fLast = n - 1;
    Changed();
@@ -995,7 +995,7 @@ void TClonesArray::AbsorbObjects(TClonesArray *tc)
       Expand(newSize);
 
    // move
-   for (Int_t i = 0; i <= tc->GetEntriesFast(); i++) {
+   for (Int_t i = 0; i < tc->GetEntriesFast(); ++i) {
       fCont[oldSize+i] = tc->fCont[i];
       (*fKeep)[oldSize+i] = (*(tc->fKeep))[i];
       tc->fCont[i] = 0;

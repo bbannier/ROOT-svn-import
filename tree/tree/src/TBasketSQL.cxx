@@ -36,7 +36,7 @@ ClassImp(TBasketSQL)
 namespace std {} using namespace std;
 
 //_________________________________________________________________________
-TBasketSQL::TBasketSQL() : TBasket()
+TBasketSQL::TBasketSQL() : TBasket(), fResultPtr(0), fRowPtr(0), fInsertQuery(0)
 {
    // Default constructor.
 
@@ -60,7 +60,7 @@ TBasketSQL::TBasketSQL(const char *name, const char *title, TBranch *branch,
    fDisplacement= 0;  //Must be set to 0 before calling Sizeof
    fBuffer      = 0;  //Must be set to 0 before calling Sizeof
    fInsertQuery = insert_query;
-   
+
    if (vc==0) {
       fBufferRef = 0;
    } else {
@@ -73,7 +73,7 @@ TBasketSQL::TBasketSQL(const char *name, const char *title, TBranch *branch,
    fBranch      = branch;
    fHeaderOnly  = kFALSE;
    branch->GetTree()->IncrementTotalBuffers(fBufferSize);
-   
+
 }
 
 //_________________________________________________________________________

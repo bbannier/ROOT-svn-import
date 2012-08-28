@@ -18,7 +18,6 @@
 
 #include "Rtypes.h"
 
-#include "Riostream.h"
 #include "RooMsgService.h"
 #include "RooNormSetCache.h"
 #include "RooAbsReal.h"
@@ -26,6 +25,7 @@
 #include "RooArgList.h"
 #include "RooAbsCache.h"
 #include "RooAbsCacheElement.h"
+#include "RooNameReg.h"
 #include <vector>
 
 class RooNameSet ;
@@ -49,6 +49,11 @@ public:
   Int_t setObj(const RooArgSet* nset, T* obj, const TNamed* isetRangeName=0) {
     // Setter function without integration set 
     return setObj(nset,0,obj,isetRangeName) ;
+  }
+
+  inline T* getObj(const RooArgSet* nset, const RooArgSet* iset, Int_t* sterileIdx, const char* isetRangeName)  {
+    if (_wired) return _object[0] ;
+    return getObj(nset,iset,sterileIdx,RooNameReg::ptr(isetRangeName)) ;
   }
 
   T* getObj(const RooArgSet* nset, const RooArgSet* iset, Int_t* sterileIndex=0, const TNamed* isetRangeName=0) ;
@@ -85,6 +90,17 @@ public:
   virtual void insertObjectHook(T&) {
     // Interface function to perform post-insert operations on cached object
   } 
+
+  void wireCache() {
+    if (_size==0) {
+      oocoutI(_owner,Optimization) << "RooCacheManager::wireCache(" << _owner->GetName() << ") no cached elements!" << std::endl ;
+    } else if (_size==1) {
+      oocoutI(_owner,Optimization) << "RooCacheManager::wireCache(" << _owner->GetName() << ") now wiring cache" << std::endl ;
+      _wired=kTRUE ;
+    } else if (_size>1) {
+      oocoutI(_owner,Optimization) << "RooCacheManager::wireCache(" << _owner->GetName() << ") cache cannot be wired because it contains more than one element" << std::endl ; 
+    }
+  }
  
 protected:
 
@@ -92,8 +108,9 @@ protected:
   Int_t _size ;       // Actual use
   Int_t _lastIndex ;  // Last slot accessed
 
-  RooNormSetCache* _nsetCache ; //! Normalization/Integration set manager
-  T** _object ;                 //! Payload
+  std::vector<RooNormSetCache> _nsetCache ; //! Normalization/Integration set manager
+  std::vector<T*> _object ;                 //! Payload
+  Bool_t _wired ;               //! In wired mode, there is a single payload which is returned always
 
   ClassDef(RooCacheManager,1) // Cache Manager class generic objects
 } ;
@@ -108,8 +125,9 @@ RooCacheManager<T>::RooCacheManager(Int_t maxSize) : RooAbsCache(0)
   // cache operation mode changes
 
   _maxSize = maxSize ;
-  _nsetCache = new RooNormSetCache[maxSize] ;
-  _object = new T*[maxSize] ;
+  _nsetCache.resize(_maxSize) ; // = new RooNormSetCache[maxSize] ;
+  _object.resize(_maxSize,0) ; // = new T*[maxSize] ;
+  _wired = kFALSE ;
 }
 
 template<class T>
@@ -123,8 +141,9 @@ RooCacheManager<T>::RooCacheManager(RooAbsArg* owner, Int_t maxSize) : RooAbsCac
   _maxSize = maxSize ;
   _size = 0 ;
 
-  _nsetCache = new RooNormSetCache[maxSize] ;
-  _object = new T*[maxSize] ;
+  _nsetCache.resize(_maxSize) ; // = new RooNormSetCache[maxSize] ;
+  _object.resize(_maxSize,0) ; // = new T*[maxSize] ;
+  _wired = kFALSE ;
   _lastIndex = -1 ;
 
   Int_t i ;
@@ -143,11 +162,12 @@ RooCacheManager<T>::RooCacheManager(const RooCacheManager& other, RooAbsArg* own
   _maxSize = other._maxSize ;
   _size = other._size ;
   
-  _nsetCache = new RooNormSetCache[_maxSize] ;
-  _object = new T*[_maxSize] ;
+  _nsetCache.resize(_maxSize) ; // = new RooNormSetCache[_maxSize] ;
+  _object.resize(_maxSize,0) ; // = new T*[_maxSize] ;
+  _wired = kFALSE ;
   _lastIndex = -1 ;
 
-//   cout << "RooCacheManager:cctor(" << this << ")" << endl ;
+//   std::cout << "RooCacheManager:cctor(" << this << ")" << std::endl ;
 
   Int_t i ;
   for (i=0 ; i<other._size ; i++) {    
@@ -166,12 +186,12 @@ RooCacheManager<T>::~RooCacheManager()
 {
   // Destructor
 
-  delete[] _nsetCache ;  
+  //delete[] _nsetCache ;  
   Int_t i ;
   for (i=0 ; i<_size ; i++) {
     delete _object[i] ;
   }
-  delete[] _object ;
+  //delete[] _object ;
 }
 
 
@@ -230,7 +250,9 @@ Int_t RooCacheManager<T>::setObj(const RooArgSet* nset, const RooArgSet* iset, T
   }
 
   if (_size==_maxSize) {
-    return -1 ;
+    _maxSize *=2 ;
+    _object.resize(_maxSize,0) ;
+    _nsetCache.resize(_maxSize) ;
   }
 
   _nsetCache[_size].autoCache(_owner,nset,iset,isetRangeName,kTRUE) ;
@@ -244,8 +266,12 @@ Int_t RooCacheManager<T>::setObj(const RooArgSet* nset, const RooArgSet* iset, T
   // Allow optional post-processing of object inserted in cache
   insertObjectHook(*obj) ;
 
+  // Unwire cache in case it was wired
+  _wired = kFALSE ;
+
   return _size-1 ;
 }
+
 
 
 template<class T>
@@ -255,6 +281,12 @@ T* RooCacheManager<T>::getObj(const RooArgSet* nset, const RooArgSet* iset, Int_
   // If sterileIdx is not null, it is set to the index of the sterile
   // slot in cacse such a slot is recycled
 
+  // Fast-track for wired mode
+  if (_wired) {
+    if(_object[0]==0 && sterileIdx) *sterileIdx=0 ;
+    return _object[0] ;
+  }
+  
   Int_t i ;
   for (i=0 ; i<_size ; i++) {
     if (_nsetCache[i].contains(nset,iset,isetRangeName)==kTRUE) {      
@@ -271,6 +303,7 @@ T* RooCacheManager<T>::getObj(const RooArgSet* nset, const RooArgSet* iset, Int_
       return _object[i] ;
     }
   }
+
   return 0 ;
 }
 
@@ -283,7 +316,7 @@ T* RooCacheManager<T>::getObjByIndex(Int_t index) const
 
   if (index<0||index>=_size) {
     oocoutE(_owner,ObjectHandling) << "RooCacheManager::getNormListByIndex: ERROR index (" 
-				   << index << ") out of range [0," << _size-1 << "]" << endl ;
+				   << index << ") out of range [0," << _size-1 << "]" << std::endl ;
     return 0 ;
   }
   return _object[index] ;
@@ -296,7 +329,7 @@ const RooNameSet* RooCacheManager<T>::nameSet1ByIndex(Int_t index) const
 
   if (index<0||index>=_size) {
     oocoutE(_owner,ObjectHandling) << "RooCacheManager::getNormListByIndex: ERROR index (" 
-				   << index << ") out of range [0," << _size-1 << "]" << endl ;
+				   << index << ") out of range [0," << _size-1 << "]" << std::endl ;
     return 0 ;
   }
   return &_nsetCache[index].nameSet1() ;
@@ -309,7 +342,7 @@ const RooNameSet* RooCacheManager<T>::nameSet2ByIndex(Int_t index) const
 
   if (index<0||index>=_size) {
     oocoutE(_owner,ObjectHandling) << "RooCacheManager::getNormListByIndex: ERROR index (" 
-				   << index << ") out of range [0," << _size-1 << "]" << endl ;
+				   << index << ") out of range [0," << _size-1 << "]" << std::endl ;
     return 0 ;
   }
   return &_nsetCache[index].nameSet2() ;

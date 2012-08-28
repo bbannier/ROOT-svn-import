@@ -507,6 +507,25 @@ void TGLViewer::PreRender()
 }
 
 //______________________________________________________________________________
+void TGLViewer::Render()
+{
+   // Normal rendering, used by mono and stereo rendering.
+
+   TGLViewerBase::Render();
+
+   DrawGuides();
+   RenderOverlay(TGLOverlayElement::kAllVisible, kFALSE);
+
+   if ( ! fRnrCtx->Selection())
+   {
+      RenderSelectedForHighlight();
+   }
+
+   glClear(GL_DEPTH_BUFFER_BIT);
+   DrawDebugInfo();
+}
+
+//______________________________________________________________________________
 void TGLViewer::PostRender()
 {
    // Restore state set in PreRender().
@@ -607,17 +626,7 @@ void TGLViewer::DoDrawMono(Bool_t swap_buffers)
    fRnrCtx->StartStopwatch();
    if (fFader < 1)
    {
-      RenderNonSelected();
-      RenderSelected();
-      DrawGuides();
-      RenderOverlay(TGLOverlayElement::kAllVisible, kFALSE);
-
-      glClear(GL_DEPTH_BUFFER_BIT);
-      fRnrCtx->SetHighlight(kTRUE);
-      RenderSelected();
-      fRnrCtx->SetHighlight(kFALSE);
-      glClear(GL_DEPTH_BUFFER_BIT);
-      DrawDebugInfo();
+      Render();
    }
    fRnrCtx->StopStopwatch();
 
@@ -683,17 +692,7 @@ void TGLViewer::DoDrawStereo(Bool_t swap_buffers)
    fRnrCtx->StartStopwatch();
    if (fFader < 1)
    {
-      RenderNonSelected();
-      RenderSelected();
-      DrawGuides();
-      RenderOverlay(TGLOverlayElement::kAllVisible, kFALSE);
-
-      glClear(GL_DEPTH_BUFFER_BIT);
-      fRnrCtx->SetHighlight(kTRUE);
-      RenderSelected();
-      fRnrCtx->SetHighlight(kFALSE);
-      glClear(GL_DEPTH_BUFFER_BIT);
-      DrawDebugInfo();
+      Render();
    }
    fRnrCtx->StopStopwatch();
 
@@ -721,17 +720,7 @@ void TGLViewer::DoDrawStereo(Bool_t swap_buffers)
    fRnrCtx->StartStopwatch();
    if (fFader < 1)
    {
-      RenderNonSelected();
-      RenderSelected();
-      DrawGuides();
-      RenderOverlay(TGLOverlayElement::kAllVisible, kFALSE);
-
-      glClear(GL_DEPTH_BUFFER_BIT);
-      fRnrCtx->SetHighlight(kTRUE);
-      RenderSelected();
-      fRnrCtx->SetHighlight(kFALSE);
-      glClear(GL_DEPTH_BUFFER_BIT);
-      DrawDebugInfo();
+      Render();
    }
    fRnrCtx->StopStopwatch();
 
@@ -894,7 +883,14 @@ Bool_t TGLViewer::SavePictureUsingFBO(const TString &fileName, Int_t w, Int_t h,
    catch (std::runtime_error& exc)
    {
       Error(eh, "%s",exc.what());
-      return kFALSE;
+      if (gEnv->GetValue("OpenGL.SavePictureFallbackToBB", 1)) {
+         Info(eh, "Falling back to saving image via back-buffer. Window must be fully visible.");
+         if (w != fViewport.Width() || h != fViewport.Height())
+            Warning(eh, "Back-buffer does not support image scaling, window size will be used.");
+         return SavePictureUsingBB(fileName);
+      } else {
+         return kFALSE;
+      }
    }
 
    TGLRect old_vp(fViewport);
@@ -1176,7 +1172,7 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y)
    glRenderMode(GL_SELECT);
 
    PreRender();
-   Render();
+   TGLViewerBase::Render();
    PostRender();
 
    Int_t nHits = glRenderMode(GL_RENDER);
@@ -1190,11 +1186,13 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y)
       Int_t idx = 0;
       if (FindClosestRecord(fSelRec, idx))
       {
-         if (fSelRec.GetTransparent())
+         if (fSelRec.GetTransparent() && fRnrCtx->SelectTransparents() != TGLRnrCtx::kIfClosest)
          {
             TGLSelectRecord opaque;
             if (FindClosestOpaqueRecord(opaque, ++idx))
                fSelRec = opaque;
+            else if (fRnrCtx->SelectTransparents() == TGLRnrCtx::kNever)
+               fSelRec.Reset();
          }
          if (gDebug > 1) fSelRec.Print();
       }
@@ -1234,7 +1232,7 @@ Bool_t TGLViewer::DoSecondarySelect(Int_t x, Int_t y)
    TUnlocker ulck(this);
 
    if (! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
-       ! fSelRec.GetPhysShape()->GetLogical()->SupportsSecondarySelect())
+       ! fSelRec.GetLogShape()->SupportsSecondarySelect())
    {
       if (gDebug > 0)
          Info("TGLViewer::SecondarySelect", "Skipping secondary selection "
@@ -1778,6 +1776,20 @@ void TGLViewer::SetPerspectiveCamera(ECameraType camera,
          break;
       }
    }
+}
+
+//______________________________________________________________________________
+void TGLViewer::ReinitializeCurrentCamera(const TGLVector3& hAxis, const TGLVector3& vAxis, Bool_t redraw)
+{
+   // Change base-vectors defining the camera-base transformation of current
+   // camera. hAxis and vAxis are the default directions for forward
+   // (inverted) and upwards.
+
+   TGLMatrix& cb = fCurrentCamera->RefCamBase();
+   cb.Set(cb.GetTranslation(), vAxis, hAxis);
+   fCurrentCamera->Setup(fOverallBoundingBox, kTRUE);
+   if (redraw)
+      RequestDraw();
 }
 
 //______________________________________________________________________________

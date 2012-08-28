@@ -41,6 +41,8 @@
 #include "RooChi2Var.h"
 #include "RooMsgService.h"
 
+using namespace std;
+
 ClassImp(RooConstraintSum)
 ;
 
@@ -55,12 +57,13 @@ RooConstraintSum::RooConstraintSum()
 
 
 //_____________________________________________________________________________
-RooConstraintSum::RooConstraintSum(const char* name, const char* title, const RooArgSet& constraintSet, const RooArgSet& paramSet) :
+RooConstraintSum::RooConstraintSum(const char* name, const char* title, const RooArgSet& constraintSet, const RooArgSet& normSet) :
   RooAbsReal(name, title),
   _set1("set1","First set of components",this),
   _paramSet("paramSet","Set of parameters",this)
 {
   // Constructor with set of constraint p.d.f.s. All elements in constraintSet must inherit from RooAbsPdf
+
 
   _setIter1 = _set1.createIterator() ;
 
@@ -75,7 +78,7 @@ RooConstraintSum::RooConstraintSum(const char* name, const char* title, const Ro
     _set1.add(*comp) ;
   }
 
-  _paramSet.add(paramSet) ;
+  _paramSet.add(normSet) ;
 
   delete inputIter ;
 }
@@ -114,9 +117,9 @@ Double_t RooConstraintSum::evaluate() const
 
   Double_t sum(0);
   RooAbsReal* comp ;
-  _setIter1->Reset() ;
+  RooFIter setIter1 = _set1.fwdIterator() ;
 
-  while((comp=(RooAbsReal*)_setIter1->Next())) {
+  while((comp=(RooAbsReal*)setIter1.next())) {
     sum -= ((RooAbsPdf*)comp)->getLogVal(&_paramSet) ;
   }
   

@@ -9,6 +9,7 @@ ROOT_USE_PACKAGE(core/meta)
 ROOT_USE_PACKAGE(core/textinput)
 ROOT_USE_PACKAGE(core/unix)
 ROOT_USE_PACKAGE(core/winnt)
+ROOT_USE_PACKAGE(core/macosx)
 ROOT_USE_PACKAGE(core/zip)
 ROOT_USE_PACKAGE(core/lzma)
 ROOT_USE_PACKAGE(cint/cint)
@@ -30,6 +31,9 @@ endif()
 if(WIN32)
   add_subdirectory(winnt)
 endif()
+if(cocoa)
+  add_subdirectory(macosx)
+endif()
 add_subdirectory(zip)
 add_subdirectory(lzma)
 add_subdirectory(base)
@@ -44,6 +48,7 @@ set(CORE_DICTIONARIES
     ${META_DICTIONARY} 
     ${UNIX_DICTIONARY} 
     ${WINNT_DICTIONARY} 
+    ${MACOSX_DICTIONARY} 
     ${BASE1_DICTIONARY} 
     ${BASE2_DICTIONARY} 
     ${BASE3_DICTIONARY} 
@@ -60,6 +65,9 @@ if(UNIX)
 endif()
 if(WIN32)
   set_source_files_properties(${WINNT_DICTIONARY} GENERATED)
+endif()
+if(cocoa)
+  set_source_files_properties(${MACOSX_DICTIONARY} GENERATED)
 endif()
 set_source_files_properties(${BASE1_DICTIONARY} GENERATED)
 set_source_files_properties(${BASE2_DICTIONARY} GENERATED)
@@ -106,18 +114,31 @@ ROOT_GENERATE_ROOTMAP(Core LINKDEF ${LibCore_LINKDEF})
 include_directories( ${INCLUDE_DIRECTORIES})
 
 if(WIN32)
-   set(corelinklibs Cint shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
+   set(corelinklibs shell32.lib WSock32.lib Oleaut32.lib Iphlpapi.lib)
+elseif(cocoa)
+   set(corelinklibs "-framework Cocoa")
 endif()
 
+#---Add flags to compile ObjC++
+foreach(src ${LibCore_SRCS})
+  if(${src} MATCHES "\\.mm$")
+    set_source_files_properties(${src} COMPILE_FLAGS "-ObjC++ -std=c++11")
+  endif()
+endforeach()
+
+
 ROOT_LINKER_LIBRARY(Core ${LibCore_SRCS} ${CORE_DICTIONARIES} 
-                    LIBRARIES ${PCRE_LIBRARIES} ${LZMA_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs})
- 
+                    LIBRARIES ${PCRE_LIBRARIES} ${LZMA_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT} ${corelinklibs}
+                    DEPENDENCIES Cint)
 add_Dependencies(Core CLIB_DICTIONARY CONT_DICTIONARY  META_DICTIONARY METAUTILS_DICTIONARY BASE_DICTIONARY)
 if(UNIX)
   add_dependencies(Core UNIX_DICTIONARY)
 endif()
 if(WIN32)
   add_dependencies(Core WINNT_DICTIONARY)
+endif()
+if(cocoa)
+  add_dependencies(Core MACOSX_DICTIONARY)
 endif()
 add_dependencies(Core TEXTINPUT_DICTIONARY)
 if(builtin_pcre)

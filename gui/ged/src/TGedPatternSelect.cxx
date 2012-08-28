@@ -148,6 +148,7 @@ void TGedPatternFrame::DoRedraw()
       SetFillStyle(fgGC, fPattern);
       gVirtualX->FillRectangle(fId, fgGC->GetGC(), 0, 0, fWidth, fHeight);
    }
+   DrawBorder();
 }
 
 //______________________________________________________________________________
@@ -308,9 +309,9 @@ void TGedPopup::PlacePopup(Int_t x, Int_t y, UInt_t w, UInt_t h)
    Layout();
    MapRaised();
 
-   gVirtualX->GrabPointer(fId,
-                          kButtonPressMask | kButtonReleaseMask | kPointerMotionMask,
-                          kNone, kNone, fClient->GetResourcePool()->GetGrabCursor());
+   gVirtualX->GrabPointer(fId, kButtonPressMask | kButtonReleaseMask | 
+                          kPointerMotionMask, kNone,
+                          fClient->GetResourcePool()->GetGrabCursor());
    gClient->WaitForUnmap(this);
    EndPopup();
 }
@@ -519,7 +520,7 @@ void TGedSelect::DoRedraw()
 
       if (fState == kButtonDown) { ++x; ++y; }
 
-      DrawTriangle(GetShadowGC()(), x, y);
+      DrawTriangle(GetBlackGC()(), x, y);
 
    } else {
 

@@ -101,6 +101,11 @@ private:
    static void       ThreadStub(void *Parameter) {((TWinNTSystem *)Parameter)->TimerThread();}
    void              TimerThread();
 
+protected:
+   static int        WinNTUnixConnect(int port);
+   static int        WinNTUnixConnect(const char *path);
+   static int        WinNTUdpConnect(const char *hostname, int port);
+
 public:
    TWinNTSystem();
    virtual ~TWinNTSystem();
@@ -133,6 +138,7 @@ public:
    void              AddSignalHandler(TSignalHandler *sh);
    TSignalHandler   *RemoveSignalHandler(TSignalHandler *sh);
    void              ResetSignal(ESignals sig, Bool_t reset = kTRUE);
+   void              ResetSignals();
    void              IgnoreSignal(ESignals sig, Bool_t ignore = kTRUE);
    void              AddFileHandler(TFileHandler *fh);
    TFileHandler     *RemoveFileHandler(TFileHandler *fh);
@@ -224,14 +230,15 @@ public:
    Double_t          GetCPUTime();
 
    //---- RPC --------------------------------------------------
-   int               ConnectService(const char *servername, int port, int tcpwindowsize);
+   int               ConnectService(const char *servername, int port, int tcpwindowsize, const char *protocol = "tcp");
    TInetAddress      GetHostByName(const char *server);
    TInetAddress      GetPeerName(int sock);
    TInetAddress      GetSockName(int sock);
    int               GetServiceByName(const char *service);
    char              *GetServiceByPort(int port);
-   int               OpenConnection(const char *server, int port, int tcpwindowsize = -1);
+   int               OpenConnection(const char *server, int port, int tcpwindowsize = -1, const char *protocol = "tcp");
    int               AnnounceTcpService(int port, Bool_t reuse, int backlog, int tcpwindowsize = -1);
+   int               AnnounceUdpService(int port, int backlog);
    int               AnnounceUnixService(int port, int backlog);
    int               AnnounceUnixService(const char *sockpath, int backlog);
    int               AcceptConnection(int sock);
@@ -242,9 +249,6 @@ public:
    int               SendBuf(int sock, const void *buffer, int length);
    int               SetSockOpt(int sock, int opt, int val);
    int               GetSockOpt(int sock, int opt, int *val);
-
-   static int        WinNTUnixConnect(int port);
-   static int        WinNTUnixConnect(const char *path);
 
    //---- System, CPU and Memory info
    Int_t             GetSysInfo(SysInfo_t *info) const;

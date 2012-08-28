@@ -109,13 +109,17 @@ TDirectoryFile::TDirectoryFile(const char *name, const char *title, Option_t *cl
       Error("TDirectoryFile","An object with name %s exists already", name);
       return;
    }
-   TClass *cl = IsA();
-   if (strlen(classname) != 0) cl = TClass::GetClass(classname);
-
-   if (!cl) {
-      Error("TDirectoryFile","Invalid class name: %s",classname);
-      return;
+   TClass *cl = 0;
+   if (strlen(classname) != 0) {
+      cl = TClass::GetClass(classname);
+      if (!cl) {
+         Error("TDirectoryFile","Invalid class name: %s",classname);
+         return;
+      }
+   } else { 
+      cl = IsA();
    }
+
    fBufferSize  = 0;
    fWritable    = kTRUE;
 
@@ -147,7 +151,7 @@ void TDirectoryFile::Init(TClass *cl)
       if (fSeekDir == 0) return;
       char *buffer = key->GetBuffer();
       TDirectoryFile::FillBuffer(buffer);
-      Int_t cycle = motherdir->AppendKey(key);
+      Int_t cycle = motherdir ? motherdir->AppendKey(key) : 0;
       key->WriteFile(cycle);
    } else {
       fSeekParent  = 0;
@@ -196,7 +200,7 @@ void TDirectoryFile::Append(TObject *obj, Bool_t replace /* = kFALSE */)
    if (obj == 0 || fList == 0) return;
 
    TDirectory::Append(obj,replace);
-   
+
    if (!fMother) return;
    if (fMother->IsA() == TMapFile::Class()) {
       TMapFile *mfile = (TMapFile*)fMother;
@@ -303,7 +307,7 @@ void TDirectoryFile::Build(TFile* motherFile, TDirectory* motherDir)
    fList       = new THashList(100,50);
    fKeys       = new THashList(100,50);
    fMother     = motherDir;
-   fFile       = motherFile ? motherFile : gFile;
+   fFile       = motherFile ? motherFile : TFile::CurrentFile();
    SetBit(kCanDelete);
 }
 
@@ -318,7 +322,7 @@ Bool_t TDirectoryFile::cd(const char *path)
    // ../aa. Returns kTRUE in case of success.
 
    Bool_t ok = TDirectory::cd(path);
-   if (ok) gFile = fFile;
+   if (ok) TFile::CurrentFile() = fFile;
    return ok;
 }
 
@@ -327,13 +331,13 @@ void TDirectoryFile::CleanTargets()
 {
    // Clean the pointers to this object (gDirectory, TContext, etc.)
 
-   TDirectory::CleanTargets();
 
    // After CleanTargets either gFile was changed appropriately
    // by a cd() or needs to be set to zero.
    if (gFile == this) {
       gFile = 0;
    }
+   TDirectory::CleanTargets();
 }
 
 //______________________________________________________________________________
@@ -352,7 +356,7 @@ TObject *TDirectoryFile::CloneObject(const TObject *obj, Bool_t autoadd /* = kTR
    // if no default ctor return immediately (error issued by New())
    char *pobj = (char*)obj->IsA()->New();
    if (!pobj) return 0;
-   
+
    Int_t baseOffset = obj->IsA()->GetBaseClassOffset(TObject::Class());
    if (baseOffset==-1) {
       // cl does not inherit from TObject.
@@ -364,31 +368,34 @@ TObject *TDirectoryFile::CloneObject(const TObject *obj, Bool_t autoadd /* = kTR
    TObject *newobj = (TObject*)(pobj+baseOffset);
 
    //create a buffer where the object will be streamed
-   TFile *filsav = gFile;
-   gFile = 0;
-   const Int_t bufsize = 10000;
-   TBuffer *buffer = new TBufferFile(TBuffer::kWrite,bufsize);
-   buffer->MapObject(obj);  //register obj in map to handle self reference
    {
-      Bool_t isRef = obj->TestBit(kIsReferenced); 
-      ((TObject*)obj)->ResetBit(kIsReferenced);	
-      
-      ((TObject*)obj)->Streamer(*buffer);
-      
-      if (isRef) ((TObject*)obj)->SetBit(kIsReferenced);
+      // NOTE: do we still need to make this change to gFile?
+      // NOTE: This can not be 'gDirectory=0' as at least roofit expect gDirectory to not be null
+      // during the streaming ....
+      TFile *filsav = gFile;
+      gFile = 0;
+      const Int_t bufsize = 10000;
+      TBufferFile buffer(TBuffer::kWrite,bufsize);
+      buffer.MapObject(obj);  //register obj in map to handle self reference
+      {
+         Bool_t isRef = obj->TestBit(kIsReferenced); 
+         ((TObject*)obj)->ResetBit(kIsReferenced);	
+
+         ((TObject*)obj)->Streamer(buffer);
+
+         if (isRef) ((TObject*)obj)->SetBit(kIsReferenced);
+      }
+
+      // read new object from buffer
+      buffer.SetReadMode();
+      buffer.ResetMap();
+      buffer.SetBufferOffset(0);
+      buffer.MapObject(newobj);  //register obj in map to handle self reference
+      newobj->Streamer(buffer);
+      newobj->ResetBit(kIsReferenced);
+      newobj->ResetBit(kCanDelete);
+      gFile = filsav;
    }
-
-   // read new object from buffer
-   buffer->SetReadMode();
-   buffer->ResetMap();
-   buffer->SetBufferOffset(0);
-   buffer->MapObject(newobj);  //register obj in map to handle self reference
-   newobj->Streamer(*buffer);
-   newobj->ResetBit(kIsReferenced);
-   newobj->ResetBit(kCanDelete);
-   gFile = filsav;
-
-   delete buffer;
 
    if (autoadd) {
       ROOT::DirAutoAdd_t func = obj->IsA()->GetDirectoryAutoAdd();
@@ -841,17 +848,17 @@ TObject *TDirectoryFile::Get(const char *namecycle)
    char     name[kMaxLen];
 
    DecodeNameCycle(namecycle, name, cycle);
-   char *namobj = name;
    Int_t nch = strlen(name);
    for (Int_t i = nch-1; i > 0; i--) {
       if (name[i] == '/') {
          name[i] = 0;
          TDirectory* dirToSearch=GetDirectory(name);
-         namobj = name + i + 1;
+         const char *subnamecycle = namecycle + i + 1;
          name[i] = '/';
-         return dirToSearch?dirToSearch->Get(namobj):0;
+         return dirToSearch?dirToSearch->Get(subnamecycle):0;
       }
    }
+   const char *namobj = name;
 
 //*-*---------------------Case of Object in memory---------------------
 //                        ========================
@@ -941,21 +948,21 @@ void *TDirectoryFile::GetObjectChecked(const char *namecycle, const TClass* expe
    char     name[kMaxLen];
 
    DecodeNameCycle(namecycle, name, cycle);
-   char *namobj = name;
    Int_t nch = strlen(name);
    for (Int_t i = nch-1; i > 0; i--) {
       if (name[i] == '/') {
          name[i] = 0;
          TDirectory* dirToSearch=GetDirectory(name);
-         namobj = name + i + 1;
+         const char *subnamecycle = namecycle + i + 1;
          name[i] = '/';
          if (dirToSearch) {
-            return dirToSearch->GetObjectChecked(namobj, expectedClass);
+            return dirToSearch->GetObjectChecked(subnamecycle, expectedClass);
          } else {
             return 0;
          }
       }
    }
+   const char *namobj = name;
 
 //*-*---------------------Case of Object in memory---------------------
 //                        ========================
@@ -1240,7 +1247,11 @@ Int_t TDirectoryFile::ReadKeys(Bool_t forceRead)
       char *header = new char[nbytes];
       buffer       = header;
       fFile->Seek(fSeekDir);
-      fFile->ReadBuffer(buffer,nbytes);
+      if ( fFile->ReadBuffer(buffer,nbytes) ) {
+         // ReadBuffer return kTRUE in case of failure.
+         delete [] header;
+         return 0;
+      }
       buffer += fNbytesName;
       Version_t versiondir;
       frombuf(buffer,&versiondir);
@@ -1260,7 +1271,7 @@ Int_t TDirectoryFile::ReadKeys(Bool_t forceRead)
       }
       delete [] header;
    }
-   
+
    Int_t nkeys = 0;
    Long64_t fsize = fFile->GetSize();
    if ( fSeekKeys >  0) {
@@ -1306,9 +1317,15 @@ Int_t TDirectoryFile::ReadTObject(TObject *obj, const char *keyname)
    // See TObject::Write().
 
    if (!fFile) { Error("Read","No file open"); return 0; }
-   TKey *key = (TKey*)fKeys->FindObject(keyname);
-   if (!key)   { Error("Read","Key not found"); return 0; }
-   return key->Read(obj);
+   TKey *key = 0;
+   TIter nextkey(GetListOfKeys());
+   while ((key = (TKey *) nextkey())) {
+      if (strcmp(keyname,key->GetName()) == 0) {
+         return key->Read(obj);
+      }
+   }
+   Error("Read","Key not found"); 
+   return 0;
 }
 
 //______________________________________________________________________________
@@ -1318,7 +1335,7 @@ void TDirectoryFile::ResetAfterMerge(TFileMergeInfo *info)
    // Directory.  This returns the TDirectoryFile object back to its state
    // before any data has been written to the file.
    // The object in the in-memory list are assumed to also have been reset.
-   
+
    // There is nothing to reset in the base class (TDirectory) since
    // we do want to key the list of in-memory object as is.
    fModified = kFALSE;
@@ -1342,7 +1359,7 @@ void TDirectoryFile::ResetAfterMerge(TFileMergeInfo *info)
    if (fKeys) {
       fKeys->Delete("slow");
    }
-   
+
    Init(cl);
 
    // Do the same with the sub-directories.
@@ -1353,7 +1370,7 @@ void TDirectoryFile::ResetAfterMerge(TFileMergeInfo *info)
          ((TDirectoryFile*)idcur)->ResetAfterMerge(info);
       }
    }
-   
+
 }
 
 //______________________________________________________________________________
@@ -1728,7 +1745,7 @@ Int_t TDirectoryFile::WriteTObject(const TObject *obj, const char *name, Option_
    //
    //  WARNING: in name avoid special characters like '^','$','.' that are used 
    //  by the regular expression parser (see TRegexp).
-    
+
    TDirectory::TContext ctxt(this);
 
    if (fFile==0) {
@@ -1835,7 +1852,7 @@ Int_t TDirectoryFile::WriteObjectAny(const void *obj, const char *classname, con
    //      directory->WriteObject(top,"name of object")
    //
    //   see laso remarks in TDirectoryFile::WriteTObject
-   
+
    TClass *cl = TClass::GetClass(classname);
    if (cl == 0) {
       TObject *info_obj = *(TObject**)obj;

@@ -155,9 +155,11 @@ void TInspectCanvas::InspectObject(TObject *obj)
    Int_t nh = nrows*15;
    Int_t nw = 700;
    TVirtualPad *canvas = GetVirtCanvas();
-   canvas->Clear();                // remove primitives from canvas
-   canvas->SetCanvasSize(nw, nh);  // set new size of drawing area
-   canvas->Range(0,-3,20,nreal+4);
+   if (canvas) {
+      canvas->Clear();                // remove primitives from canvas
+      canvas->SetCanvasSize(nw, nh);  // set new size of drawing area
+      canvas->Range(0,-3,20,nreal+4);
+   }
 
    Float_t xvalue = 5;
    Float_t xtitle = 8;
@@ -361,6 +363,7 @@ void TInspectCanvas::GoBackward()
    // static function , inspect previous object
 
    TInspectCanvas *inspect = (TInspectCanvas*)(gROOT->GetListOfCanvases())->FindObject("inspect");
+   if (!inspect) return;
    TObject *cur = inspect->GetCurObject();
    TObject *obj = inspect->GetObjects()->Before(cur);
    if (obj)       inspect->InspectObject(obj);
@@ -373,6 +376,7 @@ void TInspectCanvas::GoForward()
    // static function , inspect next object
 
    TInspectCanvas *inspect = (TInspectCanvas*)(gROOT->GetListOfCanvases())->FindObject("inspect");
+   if (!inspect) return;
    TObject *cur = inspect->GetCurObject();
    TObject *obj = inspect->GetObjects()->After(cur);
    if (obj)       inspect->InspectObject(obj);

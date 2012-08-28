@@ -617,7 +617,11 @@ Bool_t TDocOutput::CopyHtmlFile(const char *sourceName, const char *destName)
    if (gSystem->GetPathInfo(sourceFile, &id, &size, &flags, &sModtime)
       || gSystem->GetPathInfo(destFile, &id, &size, &flags, &dModtime)
       || sModtime > dModtime)
-      gSystem->CopyFile(sourceFile, destFile, kTRUE);
+      if (gSystem->CopyFile(sourceFile, destFile, kTRUE) < 0) {
+         Error("Copy", "Can't copy file '%s' to '%s'!",
+               sourceFile.Data(), destFile.Data());
+         return kFALSE;
+      }
 
    return kTRUE;
 }
@@ -1512,21 +1516,33 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
 
    switch (type) {
    case kSource:
-      if (classPtr->GetImplFileLine()) {
-         fHtml->GetImplFileName(classPtr, kTRUE, sourceFile);
-      } else {
-         fHtml->GetDeclFileName(classPtr, kTRUE, sourceFile);
+      {
+         TString declFile;
+         if (classPtr->GetImplFileLine()) {
+            fHtml->GetImplFileName(classPtr, kTRUE, sourceFile);
+         }
+         fHtml->GetDeclFileName(classPtr, kTRUE, declFile);
+         Long64_t size;
+         Long_t id, flags, iModtime, dModtime;
+         if (!(gSystem->GetPathInfo(sourceFile, &id, &size, &flags, &iModtime))) {
+            if (!(gSystem->GetPathInfo(declFile, &id, &size, &flags, &dModtime))) {
+               if (iModtime < dModtime) {
+                  // decl is newer than impl
+                  sourceFile = declFile;
+               }
+            }
+         }
+         dir = "src";
+         gSystem->PrependPathName(fHtml->GetOutputDir(), dir);
+         filename = classname;
+         NameSpace2FileName(filename);
+         gSystem->PrependPathName(dir, filename);
+         if (classPtr->GetImplFileLine())
+            filename += ".cxx.html";
+         else
+            filename += ".h.html";
+         break;
       }
-      dir = "src";
-      gSystem->PrependPathName(fHtml->GetOutputDir(), dir);
-      filename = classname;
-      NameSpace2FileName(filename);
-      gSystem->PrependPathName(dir, filename);
-      if (classPtr->GetImplFileLine())
-         filename += ".cxx.html";
-      else
-         filename += ".h.html";
-      break;
 
    case kInclude:
       fHtml->GetDeclFileName(classPtr, kFALSE, filename);
@@ -1544,16 +1560,28 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
       break;
 
    case kDoc:
-      if (classPtr->GetImplFileLine()) {
-         fHtml->GetImplFileName(classPtr, kTRUE, sourceFile);
-      } else {
-         fHtml->GetDeclFileName(classPtr, kTRUE, sourceFile);
+      {
+         TString declFile;
+         if (classPtr->GetImplFileLine()) {
+            fHtml->GetImplFileName(classPtr, kTRUE, sourceFile);
+         }
+         fHtml->GetDeclFileName(classPtr, kTRUE, declFile);
+         Long64_t size;
+         Long_t id, flags, iModtime, dModtime;
+         if (!(gSystem->GetPathInfo(sourceFile, &id, &size, &flags, &iModtime))) {
+            if (!(gSystem->GetPathInfo(declFile, &id, &size, &flags, &dModtime))) {
+               if (iModtime < dModtime) {
+                  // decl is newer than impl
+                  sourceFile = declFile;
+               }
+            }
+         }
+         filename = classname;
+         NameSpace2FileName(filename);
+         gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
+         filename += ".html";
+         break;
       }
-      filename = classname;
-      NameSpace2FileName(filename);
-      gSystem->PrependPathName(fHtml->GetOutputDir(), filename);
-      filename += ".html";
-      break;
 
    default:
       Error("IsModified", "Unknown file type !");
@@ -1565,9 +1593,11 @@ Bool_t TDocOutput::IsModified(TClass * classPtr, EFileType type)
    Long64_t size;
    Long_t id, flags, sModtime, dModtime;
 
-   if (!(gSystem->GetPathInfo(sourceFile, &id, &size, &flags, &sModtime)))
-      if (!(gSystem->GetPathInfo(filename, &id, &size, &flags, &dModtime)))
+   if (!(gSystem->GetPathInfo(sourceFile, &id, &size, &flags, &sModtime))) {
+      if (!(gSystem->GetPathInfo(filename, &id, &size, &flags, &dModtime))) {
          return (sModtime > dModtime);
+      }
+   }
 
    return kTRUE;
 }

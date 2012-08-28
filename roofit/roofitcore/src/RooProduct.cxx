@@ -33,6 +33,7 @@
 #include <vector>
 #include <utility>
 #include <memory>
+#include <algorithm>
 
 #include "RooProduct.h"
 #include "RooNameReg.h"
@@ -328,8 +329,8 @@ Double_t RooProduct::calculate(const RooArgList& partIntList) const
 
   RooAbsReal *term(0);
   Double_t val=1;
-  std::auto_ptr<TIterator> i( partIntList.createIterator() );
-  while((term=(RooAbsReal*)i->Next())) {
+  RooFIter i = partIntList.fwdIterator() ;
+  while((term=(RooAbsReal*)i.next())) {
     double x = term->getVal();
     val*= x;
   }
@@ -364,21 +365,75 @@ Double_t RooProduct::evaluate() const
 
   Double_t prod(1) ;
 
-  _compRIter->Reset() ;
+  RooFIter compRIter = _compRSet.fwdIterator() ;
   RooAbsReal* rcomp ;
   const RooArgSet* nset = _compRSet.nset() ;
-  while((rcomp=(RooAbsReal*)_compRIter->Next())) {
+  while((rcomp=(RooAbsReal*)compRIter.next())) {
     prod *= rcomp->getVal(nset) ;
   }
   
-  _compCIter->Reset() ;
+  RooFIter compCIter = _compCSet.fwdIterator() ;
   RooAbsCategory* ccomp ;
-  while((ccomp=(RooAbsCategory*)_compCIter->Next())) {
+  while((ccomp=(RooAbsCategory*)compCIter.next())) {
     prod *= ccomp->getIndex() ;
   }
   
   return prod ;
 }
+
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* RooProduct::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const
+{
+  // Forward the plot sampling hint from the p.d.f. that defines the observable obs  
+  RooFIter iter = _compRSet.fwdIterator() ;
+  RooAbsReal* func ;
+  while((func=(RooAbsReal*)iter.next())) {
+    list<Double_t>* binb = func->binBoundaries(obs,xlo,xhi) ;      
+    if (binb) {
+      return binb ;
+    }
+  }
+  
+  return 0 ;  
+}
+
+
+//_____________________________________________________________________________B
+Bool_t RooProduct::isBinnedDistribution(const RooArgSet& obs) const 
+{
+  // If all components that depend on obs are binned that so is the product
+  
+  RooFIter iter = _compRSet.fwdIterator() ;
+  RooAbsReal* func ;
+  while((func=(RooAbsReal*)iter.next())) {
+    if (func->dependsOn(obs) && !func->isBinnedDistribution(obs)) {
+      return kFALSE ;
+    }
+  }
+  
+  return kTRUE  ;  
+}
+
+
+
+//_____________________________________________________________________________
+std::list<Double_t>* RooProduct::plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const
+{
+  // Forward the plot sampling hint from the p.d.f. that defines the observable obs  
+  RooFIter iter = _compRSet.fwdIterator() ;
+  RooAbsReal* func ;
+  while((func=(RooAbsReal*)iter.next())) {
+    list<Double_t>* hint = func->plotSamplingHint(obs,xlo,xhi) ;      
+    if (hint) {
+      return hint ;
+    }
+  }
+  
+  return 0 ;
+}
+
 
 
 //_____________________________________________________________________________

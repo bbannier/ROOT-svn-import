@@ -77,7 +77,7 @@ RooAbsCachedReal::~RooAbsCachedReal()
 
 
 //_____________________________________________________________________________
-Double_t RooAbsCachedReal::getVal(const RooArgSet* nset) const 
+Double_t RooAbsCachedReal::getValV(const RooArgSet* nset) const 
 {
   // Implementation of getVal() overriding default implementation
   // of RooAbsReal. Return value stored in cache p.d.f
@@ -85,13 +85,14 @@ Double_t RooAbsCachedReal::getVal(const RooArgSet* nset) const
   // for RooAbsCachedReal
 
   if (_disableCache) {
-    return RooAbsReal::getVal(nset) ;
+    return RooAbsReal::getValV(nset) ;
   }
 
   // Cannot call cached p.d.f w.o nset
   // if (!nset) return evaluate() ;
 
   // Calculate current unnormalized value of object
+  // coverity[NULL_RETURNS]
   FuncCacheElem* cache = getCache(nset) ;
  
   _value = cache->func()->getVal() ;
@@ -131,10 +132,10 @@ RooAbsCachedReal::FuncCacheElem* RooAbsCachedReal::getCache(const RooArgSet* nse
  
   // Check if this configuration was created becfore
   Int_t sterileIdx(-1) ;
-  FuncCacheElem* cache = (FuncCacheElem*) _cacheMgr.getObj(nset,0,&sterileIdx,0) ;
+  FuncCacheElem* cache = (FuncCacheElem*) _cacheMgr.getObj(nset,0,&sterileIdx) ;
   if (cache) {
     if (cache->paramTracker()->hasChanged(kTRUE)) {
-      coutI(Eval) << "RooAbsCachedReal::getCache(" << GetName() << ") cache " << cache << " function " 
+      ccoutD(Eval) << "RooAbsCachedReal::getCache(" << GetName() << ") cached function " 
 		  << cache->func()->GetName() << " requires recalculation as parameters changed" << endl ;
       fillCacheObject(*cache) ;  
       cache->func()->setValueDirty() ;
@@ -163,7 +164,7 @@ RooAbsCachedReal::FuncCacheElem* RooAbsCachedReal::getCache(const RooArgSet* nse
 
   // Store this cache configuration
   Int_t code = _cacheMgr.setObj(nset,0,((RooAbsCacheElement*)cache),0) ;
-  coutI(Caching) << "RooAbsCachedReal::getCache(" << GetName() << ") creating new cache " << cache->func()->GetName() << " for nset " << (nset?*nset:RooArgSet()) << " with code " << code << endl ;
+  ccoutD(Caching) << "RooAbsCachedReal("<<this<<")::getCache(" << GetName() << ") creating new cache " << cache->func()->GetName() << " for nset " << (nset?*nset:RooArgSet()) << " with code " << code << endl ;
   
   return cache ;
 }
@@ -200,6 +201,7 @@ RooAbsCachedReal::FuncCacheElem::FuncCacheElem(const RooAbsCachedReal& self, con
   funcname.Append("_CACHE") ;
   funcname.Append(self.cacheNameSuffix(*nset2)) ;
   _func = new RooHistFunc(funcname,funcname,*observables,*_hist,self.getInterpolationOrder()) ;
+  if (self.operMode()==ADirty) _func->setOperMode(ADirty) ;
 
   // Set initial state of cache to dirty
   _func->setValueDirty() ;
@@ -260,8 +262,7 @@ void RooAbsCachedReal::setInterpolationOrder(Int_t order)
 
   _ipOrder = order ;
 
-  Int_t i ;
-  for (i=0 ; i<_cacheMgr.cacheSize() ; i++) {
+  for (Int_t i=0 ; i<_cacheMgr.cacheSize() ; i++) {
     FuncCacheElem* cache = (FuncCacheElem*) _cacheMgr.getObjByIndex(i) ;
     if (cache) {
       cache->func()->setInterpolationOrder(order) ;

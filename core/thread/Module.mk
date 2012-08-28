@@ -22,7 +22,8 @@ THREADH      := $(MODDIRI)/TCondition.h $(MODDIRI)/TConditionImp.h \
                 $(MODDIRI)/TMutex.h $(MODDIRI)/TMutexImp.h \
                 $(MODDIRI)/TRWLock.h $(MODDIRI)/TSemaphore.h \
                 $(MODDIRI)/TThread.h $(MODDIRI)/TThreadFactory.h \
-                $(MODDIRI)/TThreadImp.h $(MODDIRI)/TAtomicCount.h
+                $(MODDIRI)/TThreadImp.h $(MODDIRI)/TAtomicCount.h \
+                $(MODDIRI)/TThreadPool.h $(MODDIRI)/ThreadLocalStorage.h
 ifneq ($(ARCH),win32)
 THREADH      += $(MODDIRI)/TPosixCondition.h $(MODDIRI)/TPosixMutex.h \
                 $(MODDIRI)/TPosixThread.h $(MODDIRI)/TPosixThreadFactory.h \
@@ -107,6 +108,7 @@ $(CINTDIRDLLS)/pthread.dll: cint/cint/lib/pthread/pthd.h $(ROOTCINTTMPDEP) $(CIN
 	@$(MAKECINTDLL) $(PLATFORM) C pthread pthread pthd.h \
            "$(CINTTMP)" "$(ROOTCINTTMP)" \
 	   "$(MAKELIB)" "$(CXX)" "$(CC)" "$(LD)" "$(OPT)" "$(CINTCXXFLAGS)" \
-	   "$(CINTCFLAGS)" "$(LDFLAGS)" "$(SOFLAGS)" "$(SOEXT)" "$(COMPILER)" \
-	   "$(CXXOUT)"
+	   "$(CINTCFLAGS)" "$(LDFLAGS)" "$(THREADLIBEXTRA) $(OSTHREADLIBDIR) $(OSTHREADLIB) $(CINTDLLLIBLINK)" \
+	   "$(SOFLAGS)" "$(SOEXT)" "$(COMPILER)" \
+	   "$(CXXOUT)" 
 endif

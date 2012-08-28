@@ -173,6 +173,7 @@ public:
    virtual void      CopyPixmaps();
    virtual void      DeleteExec(const char *name);
    virtual void      Divide(Int_t nx=1, Int_t ny=1, Float_t xmargin=0.01, Float_t ymargin=0.01, Int_t color=0); // *MENU*
+   virtual void      DivideSquare(Int_t n, Float_t xmargin=0.01, Float_t ymargin=0.01, Int_t color=0);
    virtual void      Draw(Option_t *option="");
    virtual void      DrawClassObject(const TObject *obj, Option_t *option="");
    static  void      DrawColorTable();
@@ -288,7 +289,7 @@ public:
    Double_t          PixeltoX(Int_t px);
    Double_t          PixeltoY(Int_t py);
    virtual void      PixeltoXY(Int_t xpixel, Int_t ypixel, Double_t &x, Double_t &y);
-   virtual void      Pop();
+   virtual void      Pop();  // *MENU*
    virtual void      Print(const char *filename="") const;
    virtual void      Print(const char *filename, Option_t *option);
    virtual void      Range(Double_t x1, Double_t y1, Double_t x2, Double_t y2); // *MENU* *ARGS={x1=>fX1,y1=>fY1,x2=>fX2,y2=>fY2}
@@ -373,7 +374,7 @@ public:
    virtual TVirtualViewer3D *GetViewer3D(Option_t * type = "");
    virtual Bool_t            HasViewer3D() const { return (fViewer3D); }
    virtual void              ReleaseViewer3D(Option_t * type = "");
-   
+
    virtual void      RecordPave(const TObject *obj);              // *SIGNAL*
    virtual void      RecordLatex(const TObject *obj);             // *SIGNAL*
    virtual void      EventPave() { Emit("EventPave()"); }         // *SIGNAL*

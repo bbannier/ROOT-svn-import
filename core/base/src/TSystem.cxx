@@ -127,8 +127,10 @@ TSystem::TSystem(const char *name, const char *title) : TNamed(name, title), fAc
    fNfd                 = 0;
    fSigcnt              = 0;
 
-   gLibraryVersion = new Int_t [gLibraryVersionMax];
-   memset(gLibraryVersion, 0, gLibraryVersionMax*sizeof(Int_t));
+   if (!gLibraryVersion) {
+      gLibraryVersion = new Int_t [gLibraryVersionMax];
+      memset(gLibraryVersion, 0, gLibraryVersionMax*sizeof(Int_t));
+   }
 }
 
 //______________________________________________________________________________
@@ -414,7 +416,7 @@ Bool_t TSystem::ProcessEvents()
    // interrupt flag.
 
    gROOT->SetInterrupt(kFALSE);
-   
+
    if (!gROOT->TestBit(TObject::kInvalidObject))
       DispatchOneEvent(kTRUE);
 
@@ -574,6 +576,14 @@ void TSystem::ResetSignal(ESignals /*sig*/, Bool_t /*reset*/)
    // to the default handler, else restore previous behaviour.
 
    AbstractMethod("ResetSignal");
+}
+
+//______________________________________________________________________________
+void TSystem::ResetSignals()
+{
+   // Reset signals handlers to previous behaviour.
+
+   AbstractMethod("ResetSignals");
 }
 
 //______________________________________________________________________________
@@ -1055,11 +1065,11 @@ again:
 
    p = 0; e = 0;
    if (c[0] == '~' && c[1] == '/') { // ~/ case
-      p = HomeDirectory(); 
-      e = c + 1; 
+      p = HomeDirectory();
+      e = c + 1;
       if (p) {                         // we have smth to copy
-         strlcpy(x, p, kBufSize); 
-         x += strlen(p); 
+         strlcpy(x, p, kBufSize);
+         x += strlen(p);
          c = e;
       } else {
          ++ier;
@@ -1067,13 +1077,13 @@ again:
       }
    } else if (c[0] == '~' && c[1] != '/') { // ~user case
       n = strcspn(c+1, "/ ");
-      buff[0] = 0; 
+      buff[0] = 0;
       strncat(buff, c+1, n);
-      p = HomeDirectory(buff); 
-      e = c+1+n; 
+      p = HomeDirectory(buff);
+      e = c+1+n;
       if (p) {                          // we have smth to copy
-         strlcpy(x, p, kBufSize); 
-         x += strlen(p); 
+         strlcpy(x, p, kBufSize);
+         x += strlen(p);
          c = e;
       } else {
          ++ier;
@@ -1670,7 +1680,7 @@ void TSystem::ShowOutput(RedirectHandle_t *h)
 void TSystem::AddDynamicPath(const char *)
 {
    // Add a new directory to the dynamic path.
-   
+
    AbstractMethod("AddDynamicPath");
 }
 
@@ -2038,8 +2048,7 @@ const char *TSystem::GetLibraries(const char *regexp, const char *options,
    }
 
    if (opt.IsNull() || opt.First('S') != kNPOS) {
-      // We are done, the statically linked library
-      // are already included.
+      // We are done, the statically linked libraries are already included.
       if (libs.Length() == 0) {
          libs = slinked;
       } else {
@@ -2202,7 +2211,7 @@ char *TSystem::GetServiceByPort(int)
 }
 
 //______________________________________________________________________________
-int TSystem::OpenConnection(const char*, int, int)
+int TSystem::OpenConnection(const char*, int, int, const char*)
 {
    // Open a connection to another host.
 
@@ -2216,6 +2225,15 @@ int TSystem::AnnounceTcpService(int, Bool_t, int, int)
    // Announce TCP/IP service.
 
    AbstractMethod("AnnounceTcpService");
+   return -1;
+}
+
+//______________________________________________________________________________
+int TSystem::AnnounceUdpService(int, int)
+{
+   // Announce UDP service.
+
+   AbstractMethod("AnnounceUdpService");
    return -1;
 }
 
@@ -2356,7 +2374,10 @@ int TSystem::GetProcInfo(ProcInfo_t *) const
 
 //---- Script Compiler ---------------------------------------------------------
 
-void AssignAndDelete(TString& target, char *tobedeleted) {
+void AssignAndDelete(TString& target, char *tobedeleted)
+{
+   // Assign the char* value to the TString and then delete it.
+
    target = tobedeleted;
    delete [] tobedeleted;
 }
@@ -2427,11 +2448,12 @@ static void R__AddPath(TString &target, const TString &path) {
 
 #ifndef WIN32
 static void R__WriteDependencyFile(const TString & build_loc, const TString &depfilename, const TString &filename, const TString &library, const TString &libname,
-                                   const TString &extension, const char *version_var_prefix, const TString &includes, const TString &defines, const TString &incPath) {
+                                   const TString &extension, const char *version_var_prefix, const TString &includes, const TString &defines, const TString &incPath)
 #else
 static void R__WriteDependencyFile(const TString &build_loc, const TString &depfilename, const TString &filename, const TString &library, const TString &libname,
-                                   const TString &extension, const char *version_var_prefix, const TString &includes, const TString &defines, const TString &incPath) {
+                                   const TString &extension, const char *version_var_prefix, const TString &includes, const TString &defines, const TString &incPath)
 #endif
+{
    // Generate the dependency via standard output, not searching the
    // standard include directories,
 
@@ -2897,6 +2919,11 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
    includes += " -I\"" + build_loc;
    includes += "\" -I\"";
    includes += WorkingDirectory();
+   if (includes[includes.Length()-1] == '\\') {
+      // The current directory is (most likely) the root of a windows drive and
+      // has a trailing \ which would espace the quote if left by itself.
+      includes += '\\';
+   }
    includes += "\"";
    if (gEnv) {
       TString fromConfig = gEnv->GetValue("ACLiC.IncludePaths","");

@@ -55,7 +55,7 @@ public:
   virtual TObject* Clone(const char* newname=0) const { return new RooDataHist(*this,newname?newname:GetName()) ; }
   virtual ~RooDataHist() ;
 
-  virtual RooAbsData* emptyClone(const char* newName=0, const char* newTitle=0, const RooArgSet*vars=0) const {
+  virtual RooAbsData* emptyClone(const char* newName=0, const char* newTitle=0, const RooArgSet*vars=0, const char* /*wgtVarName*/=0) const {
     // Return empty clone of this RooDataHist
     return new RooDataHist(newName?newName:GetName(),newTitle?newTitle:GetTitle(),vars?*vars:*get()) ; 
   }
@@ -80,15 +80,16 @@ public:
   virtual const RooArgSet* get(Int_t masterIdx) const ;
   virtual const RooArgSet* get(const RooArgSet& coord) const ;
   virtual Int_t numEntries() const ; 
-  virtual Double_t sumEntries(const char* cutSpec=0, const char* cutRange=0) const ;
+  virtual Double_t sumEntries() const  ;
+  virtual Double_t sumEntries(const char* cutSpec, const char* cutRange=0) const ;
   virtual Bool_t isWeighted() const { 
     // Return true as all histograms have in principle events weight != 1
     return kTRUE ;     
   }
   virtual Bool_t isNonPoissonWeighted() const ;
 
-  Double_t sum(Bool_t correctForBinSize) const ;
-  Double_t sum(const RooArgSet& sumSet, const RooArgSet& sliceSet, Bool_t correctForBinSize) ;
+  Double_t sum(Bool_t correctForBinSize, Bool_t inverseCorr=kFALSE) const ;
+  Double_t sum(const RooArgSet& sumSet, const RooArgSet& sliceSet, Bool_t correctForBinSize, Bool_t inverseCorr=kFALSE) ;
 
   virtual Double_t weight() const { 
     // Return weight of current bin
@@ -115,14 +116,14 @@ public:
   virtual void reset() ;
   void dump2() ;
 
-  virtual void printMultiline(ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent="") const ;
-  virtual void printArgs(ostream& os) const ;
-  virtual void printValue(ostream& os) const ;
+  virtual void printMultiline(std::ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printArgs(std::ostream& os) const ;
+  virtual void printValue(std::ostream& os) const ;
 
   void SetName(const char *name) ;
   void SetNameTitle(const char *name, const char* title) ;
 
-  Int_t getIndex(const RooArgSet& coord) ;
+  Int_t getIndex(const RooArgSet& coord, Bool_t fast=kFALSE) ;
 
   void removeSelfFromDir() { removeFromDir(this) ; }
   

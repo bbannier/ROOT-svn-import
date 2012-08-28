@@ -33,279 +33,159 @@ END_HTML
 #include "Rtypes.h"
 #endif
 
-#include <vector>
-
-#include "RooStats/RooStatsUtils.h"
-
-//#include "RooStats/DistributionCreator.h"
-#include "RooStats/SamplingDistribution.h"
+#ifndef ROOSTATS_TestStatistic
 #include "RooStats/TestStatistic.h"
+#endif
 
-#include "RooStats/RooStatsUtils.h"
 
+#ifndef ROO_REAL_VAR
 #include "RooRealVar.h"
-#include "RooProfileLL.h"
-#include "RooNLLVar.h"
+#endif
 
-#include "RooMinuit.h"
-#include "RooMinimizer.h"
+#ifndef ROO_NLL_VAR
+#include "RooNLLVar.h"
+#endif
+
+#ifndef ROOTT_Math_MinimizerOptions
 #include "Math/MinimizerOptions.h"
+#endif
+
 
 namespace RooStats {
 
   class ProfileLikelihoodTestStat : public TestStatistic{
 
+     enum LimitType {twoSided, oneSided, oneSidedDiscovery};
+
    public:
      ProfileLikelihoodTestStat() {
         // Proof constructor. Do not use.
         fPdf = 0;
-        fProfile = 0;
         fNll = 0;
         fCachedBestFitParams = 0;
         fLastData = 0;
-	fOneSided = false;
+	fLimitType = twoSided;
+	fSigned = false;
+        fDetailedOutputWithErrorsAndPulls = false;
+        fDetailedOutputEnabled = false;
+        fDetailedOutput = NULL;
+      
+        fVarName = "Profile Likelihood Ratio";
         fReuseNll = false;
-	fMinimizer=ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
-	fStrategy=ROOT::Math::MinimizerOptions::DefaultStrategy();
-	fPrintLevel=ROOT::Math::MinimizerOptions::DefaultPrintLevel();
+	fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
+	fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
+        fTolerance=TMath::Max(1.,::ROOT::Math::MinimizerOptions::DefaultTolerance());
+	fPrintLevel=::ROOT::Math::MinimizerOptions::DefaultPrintLevel();
 
      }
      ProfileLikelihoodTestStat(RooAbsPdf& pdf) {
        fPdf = &pdf;
-       fProfile = 0;
        fNll = 0;
        fCachedBestFitParams = 0;
        fLastData = 0;
-       fOneSided = false;
+       fLimitType = twoSided;
+       fSigned = false;
+       fDetailedOutputWithErrorsAndPulls = false;
+       fDetailedOutputEnabled = false;
+       fDetailedOutput = NULL;
+      
+       fVarName = "Profile Likelihood Ratio";
        fReuseNll = false;
-       fMinimizer=ROOT::Math::MinimizerOptions::DefaultMinimizerType();
-       fStrategy=ROOT::Math::MinimizerOptions::DefaultStrategy();
-       fPrintLevel=ROOT::Math::MinimizerOptions::DefaultPrintLevel();
+       fMinimizer=::ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
+       fStrategy=::ROOT::Math::MinimizerOptions::DefaultStrategy();
+       // avoid default tolerance to be too small (1. is default in RooMinimizer)
+       fTolerance=TMath::Max(1.,::ROOT::Math::MinimizerOptions::DefaultTolerance());
+       fPrintLevel=::ROOT::Math::MinimizerOptions::DefaultPrintLevel();
      }
      virtual ~ProfileLikelihoodTestStat() {
-       //       delete fRand;
-       //       delete fTestStatistic;
-       if(fProfile) delete fProfile;
        if(fNll) delete fNll;
        if(fCachedBestFitParams) delete fCachedBestFitParams;
+       if(fDetailedOutput) delete fDetailedOutput;
      }
-     void SetOneSided(Bool_t flag=true) {fOneSided = flag;}
 
-     static void SetAlwaysReuseNLL(Bool_t flag) { fgAlwaysReuseNll = flag ; }
+     //LM use default copy constructor and assignment copying the pointers. Is this what we want ?
+
+     void SetOneSided(Bool_t flag=true) {fLimitType = (flag ? oneSided : twoSided);}
+     void SetOneSidedDiscovery(Bool_t flag=true) {fLimitType = (flag ? oneSidedDiscovery : twoSided);}
+     void SetSigned(Bool_t flag=true) {fSigned = flag;}  // +/- t_mu instead of t_mu>0 with one-sided settings
+     //void SetOneSidedDiscovery(Bool_t flag=true) {fOneSidedDiscovery = flag;}
+
+     bool IsTwoSided() const { return fLimitType == twoSided; }
+     bool IsOneSidedDiscovery() const { return fLimitType == oneSidedDiscovery; }
+
+     static void SetAlwaysReuseNLL(Bool_t flag);
+
      void SetReuseNLL(Bool_t flag) { fReuseNll = flag ; }
 
      void SetMinimizer(const char* minimizer){ fMinimizer=minimizer;}
      void SetStrategy(Int_t strategy){fStrategy=strategy;}
+     void SetTolerance(double tol){fTolerance=tol;}
      void SetPrintLevel(Int_t printlevel){fPrintLevel=printlevel;}
     
      // Main interface to evaluate the test statistic on a dataset
      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& paramsOfInterest) {
-       if (!&data) {
-	 cout << "problem with data" << endl;
-	 return 0 ;
-       }
-       
-       RooRealVar* firstPOI = (RooRealVar*) paramsOfInterest.first();
-       double initial_mu_value  = firstPOI->getVal();
-       //paramsOfInterest.getRealValue(firstPOI->GetName());
+        return EvaluateProfileLikelihood(0, data, paramsOfInterest);
+     }
 
-       RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-       RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+     // evaluate  the profile likelihood ratio (type = 0) or the minimum of likelihood (type=1) or the conditional LL (type = 2) 
+     virtual Double_t EvaluateProfileLikelihood(int type, RooAbsData &data, RooArgSet & paramsOfInterest);
+     
+     virtual void EnableDetailedOutput( bool e=true, bool withErrorsAndPulls=false ) {
+        fDetailedOutputEnabled = e;
+        fDetailedOutputWithErrorsAndPulls = withErrorsAndPulls;
+        delete fDetailedOutput;
+        fDetailedOutput = NULL;
+     }
+     virtual const RooArgSet* GetDetailedOutput(void) const {
+	     // Returns detailed output. The value returned by this function is updated after each call to Evaluate().
+	     // The returned RooArgSet contains the following:
+	     // <ul>
+	     // <li> the minimum nll, fitstatus and convergence quality for each fit </li> 
+	     // <li> for each fit and for each non-constant parameter, the value, error and pull of the parameter are stored </li>
+	     // </ul>
+	     return fDetailedOutput;
+     }
+         
+     virtual void SetVarName(const char* name) { fVarName = name; }
+     virtual const TString GetVarName() const {return fVarName;}
 
-       // simple
-       Bool_t reuse=(fReuseNll || fgAlwaysReuseNll) ;
-       
-       Bool_t created(kFALSE) ;
-       if (!reuse || fNll==0) {
-	 RooArgSet* allParams = fPdf->getParameters(data);
-	 RooStats::RemoveConstantParameters(allParams);
+     virtual RooAbsPdf * GetPdf() const { return fPdf; }
 
-	 // need to call constrain for RooSimultaneous until stripDisconnected problem fixed
-	 fNll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
-
-	 //	 fNll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE));
-	 //	 fProfile = (RooProfileLL*) fNll->createProfile(paramsOfInterest);
-	 created = kTRUE ;
-	 //cout << "creating profile LL " << fNll << " " << fProfile << " data = " << &data << endl ;
-       }
-       if (reuse && !created) {
-	 //cout << "reusing profile LL " << fNll << " new data = " << &data << endl ;
-	 fNll->setData(data,kFALSE) ;
-	 // 	 if (fProfile) delete fProfile ; 
-	 // 	 fProfile = (RooProfileLL*) fNll->createProfile(paramsOfInterest) ; 
-	 //fProfile->clearAbsMin() ;
-       }
-
-
-       // make sure we set the variables attached to this nll
-       RooArgSet* attachedSet = fNll->getVariables();
-
-       *attachedSet = paramsOfInterest;
-       RooArgSet* origAttachedSet = (RooArgSet*) attachedSet->snapshot();
-
-       ///////////////////////////////////////////////////////////////////////
-       // Main profiling version as of 5.30
-       //       fPdf->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
-       //       profile->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
-       //       ((RooProfileLL*)profile)->nll().setEvalErrorLoggingMode(RooAbsReal::CountErrors);
-       //       nll->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
-       //cout << "evaluating profile LL" << endl ;
-
-       //      double ret = fProfile->getVal();  // previous main evaluation
-
-       //       cout << "profile value = " << ret << endl ;
-       //       cout <<"eval errors pdf = "<<fPdf->numEvalErrors() << endl;
-       //       cout <<"eval errors profile = "<<profile->numEvalErrors() << endl;
-       //       cout <<"eval errors profile->nll = "<<((RooProfileLL*)profile)->nll().numEvalErrors() << endl;
-       //       cout <<"eval errors nll = "<<nll->numEvalErrors() << endl;
-       //       if(profile->numEvalErrors()>0)
-       //       	 cout <<"eval errors = "<<profile->numEvalErrors() << endl;
-       //       paramsOfInterest.Print("v");
-       //       cout << "ret = " << ret << endl;
-       ///////////////////////////////////////////////////////////////////////
-
-
-       ///////////////////////////////////////////////////////////////////////
-       // New profiling based on RooMinimizer (allows for Minuit2)
-       // based on major speed increases seen by CMS for complex problems
-
-       /*
-       // set the parameters of interest to be fixed for the conditional MLE
-       TIterator* it = paramsOfInterest.createIterator();
-       RooRealVar* tmpPar = NULL, *tmpParA=NULL;
-       while((tmpPar = (RooRealVar*)it->Next())){
-	 tmpParA =  ((RooRealVar*)attachedSet->find(tmpPar->GetName()));
-	 tmpParA->setConstant();
-       }
-       
-       //       cout <<"using Minimizer: "<< fMinimizer<< " with strategy = " << fStrategy << endl;
-
-       // get the numerator
-       int statusN;
-       double condML = GetMinNLL(statusN);
-
-
-       // set the parameters of interest back to floating
-       it->Reset();
-       while((tmpPar = (RooRealVar*)it->Next())){
-	 tmpParA =  ((RooRealVar*)attachedSet->find(tmpPar->GetName()));
-	 tmpParA->setConstant(false);
-       }
-       delete it;
-
-       // get the denominator
-       int statusD;
-       double uncondML = GetMinNLL(statusD);
-       */
-
-
-       // other order
-       // get the numerator
-       RooArgSet* snap =  (RooArgSet*)paramsOfInterest.snapshot();
-       // get the denominator
-       int statusD;
-       double uncondML = GetMinNLL(statusD);
-
-       // get best fit value for one-sided interval 
-       double fit_favored_mu = attachedSet->getRealValue(firstPOI->GetName()) ;
-
-       double ret = 0; 
-       int statusN = 0;
-
-       // do the conditional ML (the numerator) only when fit value is smaller than test value
-       if (!fOneSided || fit_favored_mu <= initial_mu_value) {  
-
-          //       cout <<" reestablish snapshot"<<endl;
-          *attachedSet = *snap;
-
-          // set the POI to constant
-          RooLinkedListIter it = paramsOfInterest.iterator();
-          RooRealVar* tmpPar = NULL, *tmpParA=NULL;
-          while((tmpPar = (RooRealVar*)it.Next())){
-             tmpParA =  ((RooRealVar*)attachedSet->find(tmpPar->GetName()));
-             tmpParA->setConstant();
-          }
-
-          double condML = GetMinNLL(statusN);
-
-          ret=condML-uncondML;
-       }
-
-       // need to restore the values ?
-       *attachedSet = *origAttachedSet;
-
-       delete attachedSet;
-       delete origAttachedSet;
-       delete snap;
-
-       if (!reuse) {
-	 delete fNll;
-	 fNll = 0; 
-	 //	 delete fProfile;
-	 fProfile = 0 ;
-       }
-
-       RooMsgService::instance().setGlobalKillBelow(msglevel);
-
-       if(statusN!=0 || statusD!=0)
-	 ret= -1; // indicate failed fit
-
-       return ret;
-             
-     }     
-
-
-
-    
-      virtual const TString GetVarName() const {return "Profile Likelihood Ratio";}
       
       //      const bool PValueIsRightTail(void) { return false; } // overwrites default
 
   private:
-      double GetMinNLL(int& status) {
 
-	RooMinimizer minim(*fNll);
-	minim.setStrategy(fStrategy);
-        //LM: RooMinimizer.setPrintLevel has +1 offset - so subtruct  here -1
-	minim.setPrintLevel(fPrintLevel-1);
-	//	minim.optimizeConst(true);
-	for (int tries = 0, maxtries = 4; tries <= maxtries; ++tries) {
-	  //	 status = minim.minimize(fMinimizer, ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str());
-	  status = minim.minimize(fMinimizer, "Minimize");
-	  if (status == 0) {  
-            break;
-	  } else {
-	    if (tries > 1) {
-	      printf("    ----> Doing a re-scan first\n");
-	      minim.minimize(fMinimizer,"Scan");
-	    }
-	    if (tries > 2) {
-	      printf("    ----> trying with strategy = 1\n");
-	     minim.setStrategy(1);
-	    }
-	  }
-	}
-	//	cout <<"fNll = " <<  fNll->getVal()<<endl;
-	return fNll->getVal();
-      }
+     RooFitResult* GetMinNLL();
 
    private:
-      RooProfileLL* fProfile; //!
+
       RooAbsPdf* fPdf;
       RooNLLVar* fNll; //!
       const RooArgSet* fCachedBestFitParams;
       RooAbsData* fLastData;
       //      Double_t fLastMLE;
-      Bool_t fOneSided;
+      LimitType fLimitType;
+      Bool_t fSigned;
+      
+      // this will store a snapshot of the unconditional nuisance
+      // parameter fit.
+      bool fDetailedOutputEnabled;
+      bool fDetailedOutputWithErrorsAndPulls;
+      RooArgSet* fDetailedOutput; //!
+      
+      TString fVarName;
 
       static Bool_t fgAlwaysReuseNll ;
       Bool_t fReuseNll ;
       TString fMinimizer;
       Int_t fStrategy;
+      Double_t fTolerance; 
       Int_t fPrintLevel;
 
    protected:
-      ClassDef(ProfileLikelihoodTestStat,5)   // implements the profile likelihood ratio as a test statistic to be used with several tools
+
+      ClassDef(ProfileLikelihoodTestStat,8)   // implements the profile likelihood ratio as a test statistic to be used with several tools
    };
 }
 

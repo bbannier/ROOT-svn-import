@@ -24,6 +24,7 @@
 #include "RooAbsReal.h"
 #include "RooRealVar.h"
 #include "RooRealProxy.h"
+class RooVectorDataStore ;
 
 class RooErrorVar : public RooAbsRealLValue {
 public:
@@ -36,7 +37,7 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooErrorVar(*this,newname); }
   virtual ~RooErrorVar() ;
 
-  virtual Double_t getVal(const RooArgSet* set=0) const ; 
+  virtual Double_t getValV(const RooArgSet* set=0) const ; 
 
   virtual Double_t evaluate() const { 
     // return error of input RooRealVar
@@ -54,8 +55,8 @@ public:
   }
 
   // I/O streaming interface (machine readable)
-  virtual Bool_t readFromStream(istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
-  virtual void writeToStream(ostream& os, Bool_t compact) const ;
+  virtual Bool_t readFromStream(std::istream& is, Bool_t compact, Bool_t verbose=kFALSE) ;
+  virtual void writeToStream(std::ostream& os, Bool_t compact) const ;
 
   // Set/get finite fit range limits
   inline void setMin(Double_t value) { 

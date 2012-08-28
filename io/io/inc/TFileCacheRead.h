@@ -25,7 +25,10 @@
 #include "TObject.h"
 #endif
 
-class TFile;
+#ifndef ROOT_TFile
+#include "TFile.h"
+#endif
+
 class TBranch;
 class TFilePrefetch;
 
@@ -36,6 +39,12 @@ protected:
    Int_t         fBufferSizeMin;  //Original size of fBuffer
    Int_t         fBufferSize;     //Allocated size of fBuffer (at a given time)
    Int_t         fBufferLen;      //Current buffer length (<= fBufferSize)
+
+   Long64_t      fBytesRead;      //Number of bytes read for this cache
+   Long64_t      fBytesReadExtra; //Number of extra bytes (overhead) read by the readahead buffer
+   Int_t         fReadCalls;      //Number of read calls for this cache
+   Long64_t      fNoCacheBytesRead; //Number of bytes read by basket to fill cached tree
+   Int_t         fNoCacheReadCalls; //Number of read calls by basket to fill cached tree
 
    Bool_t        fAsyncReading;
    Bool_t        fEnablePrefetching; //reading by prefetching asynchronously 
@@ -74,21 +83,34 @@ protected:
    Bool_t        fBIsSorted;
    Bool_t        fBIsTransferred;
 
+   void SetEnablePrefetchingImpl(Bool_t setPrefetching = kFALSE); // Can not be virtual as it is called from the constructor.
+   
 private:
    TFileCacheRead(const TFileCacheRead &);            //cannot be copied
    TFileCacheRead& operator=(const TFileCacheRead &);
 
 public:
    TFileCacheRead();
-   TFileCacheRead(TFile *file, Int_t buffersize);
+   TFileCacheRead(TFile *file, Int_t buffersize, TObject *tree = 0);
    virtual ~TFileCacheRead();
    virtual void        AddBranch(TBranch * /*b*/, Bool_t /*subbranches*/ = kFALSE) {}
    virtual void        AddBranch(const char * /*branch*/, Bool_t /*subbranches*/ = kFALSE) {}
+   virtual void        AddNoCacheBytesRead(Long64_t len) { fNoCacheBytesRead += len; }
+   virtual void        AddNoCacheReadCalls(Int_t reads) { fNoCacheReadCalls += reads; }
+   virtual void        Close(Option_t *option="");
    virtual Int_t       GetBufferSize() const { return fBufferSize; };
+   virtual Long64_t    GetBytesRead() const { return fBytesRead; }
+   virtual Long64_t    GetNoCacheBytesRead() const { return fNoCacheBytesRead; }
+   virtual Long64_t    GetBytesReadExtra() const { return fBytesReadExtra; }
+           TFile      *GetFile() const { return fFile; }   // Return the TFile being cached.
+           Int_t       GetNseek() const { return fNseek; } // Return the number of blocks in the current cache.
+           Int_t       GetNtot() const { return fNtot; }   // Return the total size of the prefetched blocks.
+   virtual Int_t       GetReadCalls() const { return fReadCalls; }
+   virtual Int_t       GetNoCacheReadCalls() const { return fNoCacheReadCalls; }
    virtual Int_t       GetUnzipBuffer(char ** /*buf*/, Long64_t /*pos*/, Int_t /*len*/, Bool_t * /*free*/) { return -1; }
            Long64_t    GetPrefetchedBlocks() const { return fPrefetchedBlocks; }
    virtual Bool_t      IsAsyncReading() const { return fAsyncReading; };
-   virtual void        SetEnablePrefetching(Bool_t setPrefetching = kFALSE) { fEnablePrefetching = setPrefetching; }
+   virtual void        SetEnablePrefetching(Bool_t setPrefetching = kFALSE);
    virtual Bool_t      IsEnablePrefetching() const { return fEnablePrefetching; };
    virtual Bool_t      IsLearning() const {return kFALSE;}
    virtual void        Prefetch(Long64_t pos, Int_t len);
@@ -97,14 +119,14 @@ public:
    virtual Int_t       ReadBufferExtNormal(char *buf, Long64_t pos, Int_t len, Int_t &loc);
    virtual Int_t       ReadBufferExtPrefetch(char *buf, Long64_t pos, Int_t len, Int_t &loc);
    virtual Int_t       ReadBuffer(char *buf, Long64_t pos, Int_t len);
-   virtual void        SetFile(TFile *file);
+   virtual void        SetFile(TFile *file, TFile::ECacheAction action = TFile::kDisconnect);
    virtual void        SetSkipZip(Bool_t /*skip*/ = kTRUE) {} // This function is only used by TTreeCacheUnzip (ignore it)
    virtual void        Sort();
    virtual void        SecondSort();                          //Method used to sort and merge the chunks in the second block
    virtual void        SecondPrefetch(Long64_t, Int_t);       //Used to add chunks to the second block
    virtual TFilePrefetch* GetPrefetchObj();
 
-   ClassDef(TFileCacheRead,1)  //TFile cache when reading
+   ClassDef(TFileCacheRead,2)  //TFile cache when reading
 };
 
 #endif

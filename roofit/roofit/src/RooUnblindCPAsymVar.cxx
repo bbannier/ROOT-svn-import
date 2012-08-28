@@ -37,13 +37,15 @@
 #include "RooUnblindCPAsymVar.h"
 
 
+using namespace std;
+
 ClassImp(RooUnblindCPAsymVar)
 ;
 
 
 
 //_____________________________________________________________________________
-RooUnblindCPAsymVar::RooUnblindCPAsymVar() : _blindEngine("") 
+RooUnblindCPAsymVar::RooUnblindCPAsymVar()
 {
   // Default constructor
 }

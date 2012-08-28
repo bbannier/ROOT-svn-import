@@ -68,6 +68,8 @@
 #include "RooMsgService.h"
 #include "RooSentinel.h"
 
+using namespace std;
+
 ClassImp(RooResolutionModel) 
 ;
 
@@ -266,13 +268,13 @@ RooRealVar& RooResolutionModel::convVar() const
 
 
 //_____________________________________________________________________________
-Double_t RooResolutionModel::getVal(const RooArgSet* nset) const
+Double_t RooResolutionModel::getValV(const RooArgSet* nset) const
 {
-  // Modified version of RooAbsPdf::getVal(). If used as regular PDF, 
-  // call RooAbsPdf::getVal(), otherwise return unnormalized value
+  // Modified version of RooAbsPdf::getValF(). If used as regular PDF, 
+  // call RooAbsPdf::getValF(), otherwise return unnormalized value
   // regardless of specified normalization set
 
-  if (!_basis) return RooAbsPdf::getVal(nset) ;
+  if (!_basis) return RooAbsPdf::getValV(nset) ;
 
   // Return value of object. Calculated if dirty, otherwise cached value is returned.
   if (isValueDirty()) {
@@ -325,7 +327,7 @@ Bool_t RooResolutionModel::traceEvalHook(Double_t value) const
   // Floating point error checking and tracing for given float value
 
   // check for a math error or negative value
-  return isnan(value) ;
+   return TMath::IsNaN(value) ;
 }
 
 

@@ -26,13 +26,20 @@
 #include "TSystem.h"
 #include "TBase64.h"
 #include "TVirtualPerfStats.h"
+#ifdef R__SSL
+#include "TSSLSocket.h"
+#endif
 
 #include <errno.h>
 #include <stdlib.h>
 
 #ifdef WIN32
-#define EADDRINUSE  10048
-#define EISCONN     10056
+# ifndef EADDRINUSE
+#  define EADDRINUSE  10048
+# endif
+# ifndef EISCONN
+#  define EISCONN     10056
+# endif
 #endif
 
 static const char *gUserAgent = "User-Agent: ROOT-TWebFile/1.1";
@@ -87,8 +94,17 @@ void TWebSocket::ReOpen()
       connurl = fWebFile->fUrl;
 
    for (Int_t i = 0; i < 5; i++) {
-      fWebFile->fSocket = new TSocket(connurl.GetHost(), connurl.GetPort());
-      if (!fWebFile->fSocket->IsValid()) {
+      if (strcmp(connurl.GetProtocol(), "https") == 0) {
+#ifdef R__SSL
+         fWebFile->fSocket = new TSSLSocket(connurl.GetHost(), connurl.GetPort());
+#else
+         ::Error("TWebSocket::ReOpen", "library compiled without SSL, https not supported");
+         return;
+#endif
+      } else
+         fWebFile->fSocket = new TSocket(connurl.GetHost(), connurl.GetPort());
+
+      if (!fWebFile->fSocket || !fWebFile->fSocket->IsValid()) {
          delete fWebFile->fSocket;
          fWebFile->fSocket = 0;
          if (gSystem->GetErrno() == EADDRINUSE || gSystem->GetErrno() == EISCONN) {
@@ -261,6 +277,12 @@ void TWebFile::SetMsgReadBuffer10(const char *redirectLocation, Bool_t tempRedir
       fBasicUrl += fUrl.GetPort();
       fBasicUrl += "/";
       fBasicUrl += fUrl.GetFile();
+      // add query string again
+      TString rdl(redirectLocation); 
+      if (rdl.Index("?") >= 0) { 
+         rdl = rdl(rdl.Index("?"), rdl.Length()); 
+         fBasicUrl += rdl; 
+      }
    }
 
    if (fMsgReadBuffer10 != "") {
@@ -542,6 +564,8 @@ Int_t TWebFile::GetFromWeb(char *buf, Int_t len, const TString &msg)
    // Read request from web server. Returns -1 in case of error,
    // 0 in case of success.
 
+   TSocket *s;
+
    if (!len) return 0;
 
    Double_t start = 0;
@@ -553,19 +577,31 @@ Int_t TWebFile::GetFromWeb(char *buf, Int_t len, const TString &msg)
    else
       connurl = fUrl;
 
-   TSocket s(connurl.GetHost(), connurl.GetPort());
-   if (!s.IsValid()) {
+   if (strcmp(connurl.GetProtocol(), "https") == 0) {
+#ifdef R__SSL
+      s = new TSSLSocket(connurl.GetHost(), connurl.GetPort());
+#else
+      Error("GetFromWeb", "library compiled without SSL, https not supported");
+      return -1;
+#endif
+   } else
+      s = new TSocket(connurl.GetHost(), connurl.GetPort());
+     
+   if (!s->IsValid()) {
       Error("GetFromWeb", "cannot connect to host %s", fUrl.GetHost());
+      delete s;
       return -1;
    }
 
-   if (s.SendRaw(msg.Data(), msg.Length()) == -1) {
+   if (s->SendRaw(msg.Data(), msg.Length()) == -1) {
       Error("GetFromWeb", "error sending command to host %s", fUrl.GetHost());
+      delete s;
       return -1;
    }
 
-   if (s.RecvRaw(buf, len) == -1) {
+   if (s->RecvRaw(buf, len) == -1) {
       Error("GetFromWeb", "error receiving data from host %s", fUrl.GetHost());
+      delete s;
       return -1;
    }
 
@@ -583,6 +619,7 @@ Int_t TWebFile::GetFromWeb(char *buf, Int_t len, const TString &msg)
    if (gPerfStats)
       gPerfStats->FileReadEvent(this, len, start);
 
+   delete s;
    return 0;
 }
 
@@ -623,13 +660,24 @@ Int_t TWebFile::GetFromWeb10(char *buf, Int_t len, const TString &msg)
             return ret;
          if (redirect) {
             ws.ReOpen();
-            return GetFromWeb10(buf, len, msg);
+            // set message to reflect the redirectLocation and add bytes field
+            TString msg_1 = fMsgReadBuffer10; 
+            msg_1 += fOffset; 
+            msg_1 += "-"; 
+            msg_1 += fOffset+len-1; 
+            msg_1 += "\r\n\r\n"; 
+            return GetFromWeb10(buf, len, msg_1);
          }
 
          if (first >= 0) {
             Int_t ll = Int_t(last - first) + 1;
-            if (fSocket->RecvRaw(&buf[ltot], ll) == -1) {
+            Int_t rsize;
+            if ((rsize = fSocket->RecvRaw(&buf[ltot], ll)) == -1) {
                Error("GetFromWeb10", "error receiving data from host %s", fUrl.GetHost());
+               return -1;
+            }
+            else if (ll != rsize) {
+               Error("GetFromWeb10", "expected %d bytes, got %d", ll, rsize);
                return -1;
             }
             ltot += ll;
@@ -680,11 +728,13 @@ Int_t TWebFile::GetFromWeb10(char *buf, Int_t len, const TString &msg)
                Error("GetFromWeb10", "%s: %s (%d)", fBasicUrl.Data(), mess.Data(), code);
             }
          } else if (code >= 300) {
-            if (code == 301 || code == 303)
+            if (code == 301 || code == 303) {
                redirect = 1;   // permanent redirect
-            else if (code == 302 || code == 307)
-               redirect = 2;   // temp redirect
-            else {
+            } else if (code == 302 || code == 307) {
+               // treat 302 as 303: permanent redirect 
+               redirect = 1; 
+               //redirect = 2; // temp redirect
+            } else {
                ret = -1;
                TString mess = res(13, 1000);
                Error("GetFromWeb10", "%s: %s (%d)", fBasicUrl.Data(), mess.Data(), code);
@@ -699,10 +749,10 @@ Int_t TWebFile::GetFromWeb10(char *buf, Int_t len, const TString &msg)
       } else if (res.BeginsWith("Content-Type: multipart")) {
          boundary = res(res.Index("boundary=")+9, 1000);
          if (boundary[0]=='"' && boundary[boundary.Length()-1]=='"') {
-            boundaryEnd = "--" + boundary(1,boundary.Length()-2) + "--";            
-         } else {
-            boundaryEnd = "--" + boundary + "--";
+            boundary = boundary(1,boundary.Length()-2);
          }
+         boundary = "--" + boundary;
+         boundaryEnd = boundary + "--";
       } else if (res.BeginsWith("Content-range:")) {
 #ifdef R__WIN32
          sscanf(res.Data(), "Content-range: bytes %I64d-%I64d/%I64d", &first, &last, &tot);
@@ -849,7 +899,16 @@ Int_t TWebFile::GetHead()
 
    TSocket *s = 0;
    for (Int_t i = 0; i < 5; i++) {
-      s = new TSocket(connurl.GetHost(), connurl.GetPort());
+      if (strcmp(connurl.GetProtocol(), "https") == 0) {
+#ifdef R__SSL
+         s = new TSSLSocket(connurl.GetHost(), connurl.GetPort());
+#else
+         Error("GetHead", "library compiled without SSL, https not supported");
+         return -1;
+#endif
+      } else
+         s = new TSocket(connurl.GetHost(), connurl.GetPort());
+
       if (!s->IsValid()) {
          delete s;
          if (gSystem->GetErrno() == EADDRINUSE || gSystem->GetErrno() == EISCONN) {

@@ -24,6 +24,8 @@
 #include "RooAbsArg.h"
 #include "RooSetPair.h"
 
+using namespace std;
+
 ClassImp(RooHashTable)
 ;
 
@@ -168,6 +170,18 @@ TObject* RooHashTable::find(const char* name) const
 
   Int_t slot = TMath::Hash(name) % _size ;
   if (_arr[slot]) return _arr[slot]->find(name) ;
+  return 0;  
+}
+
+
+
+//_____________________________________________________________________________
+RooAbsArg* RooHashTable::findArg(const RooAbsArg* arg) const 
+{
+  if (_hashMethod != Name) assert(0) ;
+  
+  Int_t slot = TMath::Hash(arg->GetName()) % _size ;
+  if (_arr[slot]) return _arr[slot]->findArg(arg) ;
   return 0;  
 }
 

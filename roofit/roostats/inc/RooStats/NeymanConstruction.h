@@ -66,7 +66,7 @@ namespace RooStats {
       //      void SetNumSteps(Int_t);
       // This class can make regularly spaced scans based on range stored in RooRealVars.
       // Choose number of steps for a rastor scan (specific for each dimension)
-      //      void SetNumSteps(map<RooAbsArg, Int_t>)
+      //      void SetNumSteps(std::map<RooAbsArg, Int_t>)
 
       // Get the size of the test (eg. rate of Type I error)
       virtual Double_t Size() const {return fSize;}
@@ -82,17 +82,17 @@ namespace RooStats {
 
       // Set the Pdf, add to the the workspace if not already there
       virtual void SetPdf(RooAbsPdf& /*pdf*/) { 
-	cout << "DEPRECATED, use ModelConfig"<<endl;
+        std::cout << "DEPRECATED, use ModelConfig"<<std::endl;
       }  
 
       // specify the parameters of interest in the interval
       virtual void SetParameters(const RooArgSet& /*set*/) {
-	cout << "DEPRECATED, use ModelConfig"<<endl;
+        std::cout << "DEPRECATED, use ModelConfig"<<std::endl;
       }
 
       // specify the nuisance parameters (eg. the rest of the parameters)
       virtual void SetNuisanceParameters(const RooArgSet& /*set*/) {
-	cout << "DEPRECATED, use ModelConfig"<<endl;
+        std::cout << "DEPRECATED, use ModelConfig"<<std::endl;
       }
 
       // set the size of the test (rate of Type I error) ( Eg. 0.05 for a 95% Confidence Interval)

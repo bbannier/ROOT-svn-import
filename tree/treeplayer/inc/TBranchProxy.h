@@ -223,7 +223,7 @@ namespace ROOT {
             TClonesArray *tca;
             tca = (TClonesArray*)GetStart();
 
-            if (tca->GetLast()<(Int_t)i) return 0;
+            if (!tca || tca->GetLast()<(Int_t)i) return 0;
 
             location = (char*)tca->At(i);
 
@@ -340,11 +340,21 @@ namespace ROOT {
          return At(i);
       }
 
+      operator const char*() {
+         if (!Read()) return "";
+         return (const char*)GetStart();
+      }
+      
+      const char* Data() {
+         if (!Read()) return "";
+         return (const char*)GetStart();
+      }
+      
       const char* c_str() {
          if (!Read()) return "";
          return (const char*)GetStart();
       }
-
+      
       operator std::string() {
          if (!Read()) return "";
          return std::string((const char*)GetStart());

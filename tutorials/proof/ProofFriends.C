@@ -42,8 +42,10 @@ ProofFriends::ProofFriends()
    fZ = 0;
    fR = 0;
    fRZ = 0;
+   fPlot = kTRUE;
 }
 
+//_____________________________________________________________________________
 void ProofFriends::Begin(TTree * /*tree*/)
 {
    // The Begin() function is called at the start of the query.
@@ -52,8 +54,11 @@ void ProofFriends::Begin(TTree * /*tree*/)
 
    TString option = GetOption();
 
+   TNamed *out = (TNamed *) fInput->FindObject("PROOF_DONT_PLOT");
+   if (out) fPlot = kFALSE;
 }
 
+//_____________________________________________________________________________
 void ProofFriends::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
@@ -76,6 +81,7 @@ void ProofFriends::SlaveBegin(TTree * /*tree*/)
 
 }
 
+//_____________________________________________________________________________
 Bool_t ProofFriends::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -118,6 +124,7 @@ Bool_t ProofFriends::Process(Long64_t entry)
    return kTRUE;
 }
 
+//_____________________________________________________________________________
 void ProofFriends::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
@@ -126,11 +133,14 @@ void ProofFriends::SlaveTerminate()
 
 }
 
+//_____________________________________________________________________________
 void ProofFriends::Terminate()
 {
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
+
+   if (!fPlot) return;
 
    gStyle->SetOptStat(1110);
    // Create canvas
@@ -189,5 +199,4 @@ void ProofFriends::Terminate()
    // Final update
    c1->cd();
    c1->Update();
-
 }

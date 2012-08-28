@@ -51,6 +51,7 @@ private:
    TChain& operator=(const TChain&); // not implemented
 
 protected:
+   void InvalidateCurrentTree();
    void ReleaseChainProof();
 
 public:
@@ -96,6 +97,7 @@ public:
    virtual Long64_t  GetEntryNumber(Long64_t entry) const;
    virtual Int_t     GetEntryWithIndex(Int_t major, Int_t minor=0);
    TFile            *GetFile() const;
+   virtual TLeaf    *GetLeaf(const char* branchname, const char* leafname);
    virtual TLeaf    *GetLeaf(const char* name);
    virtual TObjArray *GetListOfBranches();
    //                Warning, GetListOfFiles returns the list of TChainElements (not the list of files)
@@ -143,6 +145,7 @@ public:
    virtual Int_t     SetBranchAddress(const char *bname,void *add, TClass *realClass, EDataType datatype, Bool_t isptr);
 
    virtual void      SetBranchStatus(const char *bname, Bool_t status=1, UInt_t *found=0);
+   virtual void      SetCacheSize(Long64_t cacheSize);
    virtual void      SetDirectory(TDirectory *dir);
    virtual void      SetEntryList(TEntryList *elist, Option_t *opt="");
    virtual void      SetEntryListFile(const char *filename="", Option_t *opt="");

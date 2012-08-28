@@ -5459,7 +5459,6 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
    struct G__inheritance* baseclass = 0;
 #endif
    int local_tagnum = 0;
-   struct G__ifunc_table_internal* store_p_ifunc = p_ifunc;
    int specialflag = 0;
    long store_memberfunc_struct_offset;
    int store_memberfunc_tagnum;
@@ -5585,7 +5584,6 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
 #endif
                   G__tagnum = baseclass->herit[basen]->basetagnum;
                   ++basen;
-                  store_p_ifunc = p_ifunc;
                   goto next_base; /* I know this is a bad manner */
                }
             }
@@ -5618,7 +5616,6 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
 #endif
                   G__tagnum = baseclass->herit[basen]->basetagnum;
                   ++basen;
-                  store_p_ifunc = p_ifunc;
                   goto next_base; /* I know this is a bad manner */
                }
             }
@@ -5636,7 +5633,6 @@ int G__interpret_func(G__value* result7, const char* funcname, G__param* libp, i
          switch (G__struct.type[p_ifunc->tagnum]) {
             case 's':
             case 'c':
-               store_p_ifunc = p_ifunc;
                specialflag = 1;
                goto next_base;
          }
@@ -8088,6 +8084,7 @@ struct G__ifunc_table* G__get_ifunc_ref(struct G__ifunc_table_internal* ifunc)
    G__ifunc_table iref;
    iref.tagnum = ifunc->tagnum;
    iref.page = ifunc->page;
+   iref.ifunc_cached = 0;
    std::set<G__ifunc_table>::const_iterator irefIter = G__ifunc_refs()[iref.tagnum].insert(iref).first;
    G__ifunc_table& irefInSet = const_cast<G__ifunc_table&>(*irefIter);
    irefInSet.ifunc_cached = ifunc;

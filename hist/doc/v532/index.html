@@ -3,6 +3,28 @@
 <a name="hist"></a> 
 <h3>Histogram Libraries</h3>
 
+<h4>TH1</h4>
+<ul>
+  <li>Improve performances of TH1::Merge in case of histograms with same bin limits. Now an copy of the
+  initial histogram is not done. These improvements have been applied also in the TH2, TH3 and TProfile's classes.
+  </li>
+</ul>
+
+<h4>TH2</h4>
+<ul>
+  <li>
+ Add a new option "S" in FitSlice which performs a  sliding merge: merge n consecutive bins along Y accordingly to what value in option Gn is given.
+  </li>
+</ul>
+
+<h4>TProfile2D and TProfile3D</h4>
+<ul>
+  <li>
+Implement SetBins for variable bin sizes
+  </li>
+  <li>Add support for variable bins in TProjectionXY</li>
+</ul>
+
 <h4>TH2Poly</h4>
 <ul>
 <li>The values set by <tt>SetMaximum()</tt> and <tt>SetMinimum()</tt> were not
@@ -25,7 +47,28 @@ approximation are supported) </li>
 <h4>TGraphAsymmErrors</h4>
 <ul>
 <li>add option to <tt>TGraphAsymmErrors::Divide</tt> for interpreting the given
-histograms as ratio of Poisson means<li>
+histograms as ratio of Poisson means</li>
+</ul>
+
+<h4>TMultiGraph</h4>
+<ul>
+<li>The following macro did not show the x-axis in TimeDisplay mode. The 
+<tt>mg->GetYaxis()->UnZoom();</tt> command erased the TimeDisplay attribute of 
+the axis. (fix from beischer@physik.rwth-aachen.de).
+<pre>
+{ 
+   TMultiGraph* mg = new TMultiGraph; 
+   TGraph* g = new TGraph; 
+   for (int i = 0; i &lt; 100; i++) g->SetPoint(i, 1289420808+i, i+2); 
+   mg->Add(g, "P"); 
+   mg->Draw("AP"); 
+   mg->GetXaxis()->SetTimeDisplay(1); 
+   mg->GetYaxis()->UnZoom(); 
+   gPad->Modified(); 
+   gPad->Update(); 
+} 
+</pre>
+</li>
 </ul>
 
 <h4>TPaletteAxis</h4>
@@ -33,12 +76,39 @@ histograms as ratio of Poisson means<li>
 <li>In <tt>TPaletteAxis::Paint()</tt> now makes sure the min and max of the
    palette are not 0 when the histogram content is 0.
 </li>
+<li> on Ubuntu the following macro crashed. A char variable was too small.
+<pre>
+   { 
+      TCanvas *tmp = new TCanvas(); 
+      TH2F *h1 = new TH2F("h1","h1",40,0.,10.,40,1.e-2,1.e2); 
+      h1->Fill(5,10); 
+      h1->Draw("COLZ"); 
+      tmp->SetLogz(); 
+      h1->GetZaxis()->SetNdivisions(110,kFALSE); 
+   } 
+</pre>
+</li>
 </ul>
 
 <h4>THistPainter</h4>
 <ul>
 <li>The option E0 forces the error bars drawing even if the data point are
 outside the plot frame. This option did not clip the error bars correctly.
+</li>
+<li>
+Make sure  the unique canvas name generated in <tt>SetShowProjection</tt>
+starts with a letter, and not with a number, to avoid to generate wrong macro
+when the canvas is saved as a .C file.
+</li>
+</ul>
+
+<h4>TGraphPainter</h4>
+<ul>
+<li>In <tt>TGraphPainter::PaintGraphErrors</tt> and related functions, the caps
+that are drawn when option "[]" is specified are drawn as a sequence of three
+separate lines. This results in an ugly concave jag at each corner. The caps are
+now drawn using TPad::PaintPolyLine, the default miter line joins makes those
+jags go away.
 </li>
 </ul>
 
@@ -65,7 +135,7 @@ X and Y vectors. The following macro generated a wrong output (tmp.C).
       double offset=55.0;
       TCanvas* myC = new TCanvas("myC","myC",600,400);
       TGraph* gr=new TGraph();
-      for(int i=0;i<1000;i++){
+      for (int i=0; i &lt; 1000; i++) {
          double point_x = 3.0+((double) i)*1e-7;
          double point_y = offset+((double) i)*1e-8;
          gr->SetPoint(i,point_x,point_y);
@@ -75,4 +145,24 @@ X and Y vectors. The following macro generated a wrong output (tmp.C).
    }
 </pre>
 </li>
+<li>
+The constructor from a file is now able to handle delimiters. Like in the .csv files.
+(Implementation done by Mathieu Trocme)
+</li>
+</ul>
+
+<h4>TGraphErrors</h4>
+<ul>
+<li>
+   The constructor from a file is now able to handle delimiters. Like in the .csv files.
+   (Implementation done by Mathieu Trocme)
+</li>
+</ul>
+
+<h4>TGraph2D</h4>
+<ul>
+   <li>
+      The constructor from a file is now able to handle delimiters. Like in the .csv files.
+      (Implementation done by Mathieu Trocme)
+   </li>
 </ul>

@@ -235,7 +235,7 @@ void TTable::AsString(void *buf, EColumnType type, Int_t width,ostream &out) con
          out << dec  <<  setw(width) << *(int *)buf;
          break;
       case kLong:
-         out << dec  << setw(width) << *(long *)buf;
+         out << dec  << setw(width) << *(Long_t *)buf;
          break;
       case kShort:
          out << dec  << setw(width) << *(short *)buf;
@@ -247,7 +247,7 @@ void TTable::AsString(void *buf, EColumnType type, Int_t width,ostream &out) con
          out << dec  << setw(width) << *(unsigned int *)buf;
          break;
       case kULong:
-         out << dec  << setw(width) << *(unsigned long *)buf;
+         out << dec  << setw(width) << *(ULong_t *)buf;
          break;
       case kUShort:
          out  << setw(width) << "0x" << hex << *(unsigned short *)buf;
@@ -259,7 +259,7 @@ void TTable::AsString(void *buf, EColumnType type, Int_t width,ostream &out) con
          out << setw(width) << *(char *)buf;
          break;
       case kBool:
-         out << setw(width) << *(bool *)buf;
+         out << setw(width) << *(Bool_t *)buf;
          break;
       case kPtr:
          out << "->" << setw(width) << *(void **)buf;
@@ -821,10 +821,10 @@ Bool_t TTable::EntryLoop(const Char_t *exprFileName,Int_t &action, TObject *obj
    G__CallFunc callfunc;
    callfunc.SetBytecode(pbc);
 
-   callfunc.SetArg((long)(&results[0]));   // give 'Float_t *results[5]'     as 1st argument
-   callfunc.SetArg((long)(addressArray));  // give 'void    *addressArray[]' as 2nd argument
-   callfunc.SetArg((long)(&i));            // give 'int& i$'                 as 3nd argument
-   callfunc.SetArg((long)(&nRows));        // give 'int& n$= nRows           as 4th argument
+   callfunc.SetArg((Long_t)(&results[0]));   // give 'Float_t *results[5]'     as 1st argument
+   callfunc.SetArg((Long_t)(addressArray));  // give 'void    *addressArray[]' as 2nd argument
+   callfunc.SetArg((Long_t)(&i));            // give 'int& i$'                 as 3nd argument
+   callfunc.SetArg((Long_t)(&nRows));        // give 'int& n$= nRows           as 4th argument
 #else
    char buf[200];
    sprintf(buf,"%s((Float_t*)(%ld),(void**)(%ld),*(int*)(%ld),*(int*)(%ld))"
@@ -1175,13 +1175,11 @@ Long_t TTable::AppendRows(const void *row, UInt_t nRows)
    // return
    //    - the new table size (# of table rows)
    //    - 0 if the object doesn't own the internal array and can not expand it
-   Long_t size = 0;
    if (!TestBit(kIsNotOwn) && row && nRows ) {
       Int_t indx = GetNRows();
       ReAllocate(nRows);
       // Copy (insert) the extra staff in
       ::memmove(fTable+indx*fSize,row,fSize*nRows);
-      size = GetSize();
    }
    return TestBit(kIsNotOwn) ? 0 : GetSize();
 }
@@ -2160,31 +2158,41 @@ Int_t TTable::SetfN(Long_t len)
 #undef StreamElelement
 #endif
 
-#define StreamElementIn(type)  case TTableDescriptor::_NAME2_(k,type):        \
- if (evolutionOn) {                                  \
-     if (nextCol->fDimensions)  {                    \
-       if (nextCol->fOffset != UInt_t(-1)) {         \
-          R__b.ReadFastArray((_NAME2_(type,_t) *)(row+nextCol->fOffset),nextCol->fSize/sizeof(_NAME2_(type,_t)));   \
-       } else {                                        \
-           _NAME2_(type,_t) *readPtrV = new _NAME2_(type,_t)[nextCol->fSize/sizeof(_NAME2_(type,_t))];              \
-           R__b.ReadFastArray((_NAME2_(type,_t) *)(row+nextCol->fOffset),nextCol->fSize/sizeof(_NAME2_(type,_t)));  \
-           delete [] readPtrV;                       \
-           readPtrV = 0;                             \
-       }                                             \
-     }                                               \
-     else  {                                         \
-       _NAME2_(type,_t) skipBuffer;                  \
-       _NAME2_(type,_t) *readPtr =  (_NAME2_(type,_t) *)(row+nextCol->fOffset); \
-       if (nextCol->fOffset == UInt_t(-1)) readPtr = &skipBuffer;               \
-       R__b >> *readPtr;                             \
-     }                                               \
- } else {                                            \
-   if (nextCol->fDimensions)  {                      \
-     R__b.ReadFastArray  ((_NAME2_(type,_t) *)(row+nextCol->fOffset),nextCol->fSize/sizeof(_NAME2_(type,_t)));  \
-   } else                                                       \
-     R__b >> *(_NAME2_(type,_t) *)(row+nextCol->fOffset);       \
- }                                                              \
- break
+#define StreamElementIn(type)  case TTableDescriptor::_NAME2_(k,type): \
+   if (evolutionOn) {							\
+   if (nextCol->fDimensions) {					\
+     _NAME2_(type,_t) *readPtrV = new _NAME2_(type,_t)[nextCol->fSize/sizeof(_NAME2_(type,_t))]; \
+     R__b.ReadFastArray(readPtrV,nextCol->fSize/sizeof(_NAME2_(type,_t))); \
+     if (nextCol->fOffset != UInt_t(-1)) {				\
+       UInt_t x[3];							\
+       _NAME2_(type,_t) *writePtrV = (_NAME2_(type,_t) *)(row+currentDescriptor->Offset(colCounter)); \
+       memset(writePtrV, 0, currentDescriptor->ColumnSize(colCounter)); \
+       for (UInt_t i = 0; i < nextCol->fSize/sizeof(_NAME2_(type,_t)); i++) { \
+         UInt_t ii = i;						\
+         for (Int_t d = nextCol->fDimensions-1; d >=0; d--) {	\
+           x[d] = ii% nextCol->fIndexArray[d]; ii /= nextCol->fIndexArray[d]; \
+         }								\
+         Int_t j = -1;						\
+         for (UInt_t d = 0; d < currentDescriptor->Dimensions(colCounter); d++) { \
+           if (x[d] >= currentDescriptor->IndexArray(colCounter)[d]) {j = -1; break;} \
+           if (d == 0) j = x[d];					\
+           else        j = currentDescriptor->IndexArray(colCounter)[d]*j + x[d]; \
+         }								\
+         if (j >= 0) writePtrV[j] = readPtrV[i];			\
+       }								\
+     }								\
+     delete [] readPtrV;						\
+     readPtrV = 0;							\
+   } else {								\
+     _NAME2_(type,_t) skipBuffer;					\
+     _NAME2_(type,_t) *readPtr = (_NAME2_(type,_t) *)(row+nextCol->fOffset);	\
+     if (nextCol->fOffset == UInt_t(-1)) readPtr = &skipBuffer; R__b >> *readPtr; \
+   }									\
+ } else { if (nextCol->fDimensions) {				\
+     R__b.ReadFastArray ((_NAME2_(type,_t) *)(row+nextCol->fOffset),nextCol->fSize/sizeof(_NAME2_(type,_t))); \
+   } else R__b >> *(_NAME2_(type,_t) *)(row+nextCol->fOffset);	\
+ }									\
+ break;
 
 #define StreamElementOut(type) case TTableDescriptor::_NAME2_(k,type):    \
  if (nextCol->fDimensions)                                    \

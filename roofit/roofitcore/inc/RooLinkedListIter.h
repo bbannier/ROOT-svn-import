@@ -18,7 +18,6 @@
 
 #include "Rtypes.h"
 #include "TIterator.h"
-#include "RooAbsArg.h"
 #include "RooLinkedList.h"
 
 #if ROOT_VERSION_CODE <= 332546
@@ -26,6 +25,25 @@
 #define nullptr 0
 #endif
 #endif
+
+class RooFIter
+{
+  public:
+  inline RooFIter() : _ptr (0) {}
+  inline RooFIter(const RooLinkedList* list) : _ptr (list->_first) {}
+    
+  inline RooAbsArg *next() { 
+    // Return next element in collection
+    if (!_ptr) return 0 ;
+    TObject* arg = _ptr->_arg ;      
+    _ptr = _ptr->_next;
+    return (RooAbsArg*) arg ;
+  }
+    
+ private:
+    const RooLinkedListElem* _ptr ;  //! Next link element
+};
+
 
 
 class RooLinkedListIter : public TIterator {
@@ -85,6 +103,16 @@ public:
     return arg ;
   }
 
+  TObject *NextNV() { 
+    // Return next element in collection
+    if (!_ptr) return 0 ;
+    _cptr = _ptr;
+    TObject* arg = _ptr->_arg ;      
+    _ptr = _forward ? _ptr->_next : _ptr->_prev ;
+    return arg ;
+  }
+  
+
   virtual void Reset() { 
     // Return iterator to first element in collection
     _ptr = _forward ? _list->_first : _list->_last ;
@@ -121,6 +149,8 @@ protected:
 
   ClassDef(RooLinkedListIter,1) // Iterator for RooLinkedList container class
 } ;
+
+
 
 
 #endif

@@ -146,28 +146,31 @@ TGListBox* TProofProgressMemoryPlot::BuildLogList(TGFrame *parent)
    c->AddEntry("average", 0);
 
    SafeDelete(fProofLog);
+   fProofLog = 0;
 
-   fProofLog = TProof::Mgr(fDialog->fSessionUrl.Data())->GetSessionLogs(0, 0, "Svc.*Memory");
+   TProofMgr *mgr = TProof::Mgr(fDialog->fSessionUrl.Data());
+   if (mgr) fProofLog = mgr->GetSessionLogs(0, 0, "Svc.*Memory");
    if (fDialog->fStatus==TProofProgressDialog::kRunning) {
       fFullLogs = kFALSE;
    } else {
       fFullLogs = kTRUE;
    }
 
-   TList *elem = fProofLog->GetListOfLogs();
-   TIter next(elem);
-   TProofLogElem *pe = 0;
+   if (fProofLog) {
+      TList *elem = fProofLog->GetListOfLogs();
+      TIter next(elem);
+      TProofLogElem *pe = 0;
 
-   TString buf;
-   Int_t is = 1;
-   while ((pe=(TProofLogElem*)next())){
-      TUrl url(pe->GetTitle());
-      buf = TString::Format("%s %s", pe->GetName(), url.GetHost());
-      c->AddEntry(buf.Data(), is);
-      is++;
+      TString buf;
+      Int_t is = 1;
+      while ((pe=(TProofLogElem*)next())){
+         TUrl url(pe->GetTitle());
+         buf = TString::Format("%s %s", pe->GetName(), url.GetHost());
+         c->AddEntry(buf.Data(), is);
+         is++;
+      }
    }
    return c;
-
 }
 
 //______________________________________________________________________________
@@ -193,7 +196,8 @@ void TProofProgressMemoryPlot::DoPlot()
 
       SafeDelete(fProofLog);
       if (fDialog) {
-         fProofLog = TProof::Mgr(fDialog->fSessionUrl.Data())->GetSessionLogs(0, 0, "Svc.*Memory");
+         TProofMgr *mgr = TProof::Mgr(fDialog->fSessionUrl.Data());
+         if (mgr) fProofLog = mgr->GetSessionLogs(0, 0, "Svc.*Memory");
          if (fDialog->fStatus==TProofProgressDialog::kRunning) {
             fFullLogs = kFALSE;
          } else {
@@ -247,7 +251,7 @@ void TProofProgressMemoryPlot::DoPlot()
       snprintf(name, sizeof(name)-1, "%s", selworker->GetText()->GetString());
       char *token;
       token = strtok(name, " ");
-      if (!strcmp(token, "average")) { //change that to id comparison later
+      if (token && !strcmp(token, "average")) { //change that to id comparison later
          gr = DoAveragePlot(max, min);
          if (gr && gr->GetN()>0){
             if (!fWPlot) {
@@ -347,16 +351,20 @@ void TProofProgressMemoryPlot::DoPlot()
    if (fWPlot){
       fWorkersPlot->GetCanvas()->cd();
       fWPlot->Draw("a");
-      fWPlot->GetXaxis()->SetTitle("Events Processed");
-      fWPlot->GetYaxis()->SetTitle("MBytes");
+      if (fWPlot->GetXaxis())
+         fWPlot->GetXaxis()->SetTitle("Events Processed");
+      if (fWPlot->GetYaxis())
+         fWPlot->GetYaxis()->SetTitle("MBytes");
       if (legw) legw->Draw();
 
    }
    if (fMPlot) {
       fMasterPlot->GetCanvas()->cd();
       fMPlot->Draw("a");
-      fMPlot->GetXaxis()->SetTitle("Objects Merged");
-      fMPlot->GetYaxis()->SetTitle("MBytes");
+      if (fMPlot->GetXaxis())
+         fMPlot->GetXaxis()->SetTitle("Objects Merged");
+      if (fMPlot->GetYaxis())
+         fMPlot->GetYaxis()->SetTitle("MBytes");
       if (legm) legm->Draw();
    }
    fWorkersPlot->GetCanvas()->Update();
@@ -439,16 +447,12 @@ TGraph *TProofProgressMemoryPlot::DoAveragePlot(Int_t &max_el, Int_t &min_el)
    ielem=0;
    Int_t iline=0;
    Double_t cur_av;
-   Long64_t nev;
-   Long64_t nextevent = Long64_t(10E16);
    while ((ple = (TProofLogElem*)next())){
       const char *role = ple->GetRole();
       if (role[0]!='w') continue;
       TList *lines = ple->GetMacro()->GetListOfLines();
       if (!lines || lines->GetSize() <= 0) continue;
       TIter prev(lines, kIterBackward);
-      nev = 0;
-      nextevent = Long64_t(10E16);
       iline=0;
       cur_av = 0;
       while ((curline = (TObjString*)prev()) && iline<last[ielem]){

@@ -407,15 +407,25 @@ const char *TASImage::TypeFromMagicNumber(const char *file)
    switch (magic) {
       case 0x00:
       {
-         if (!fread(&magic, 1, 1, fp)) return 0;
-         if (!fread(&magic, 1, 1, fp)) return 0;
+         if (!fread(&magic, 1, 1, fp)) {
+            fclose(fp);
+            return 0;
+         }
+         if (!fread(&magic, 1, 1, fp)) {
+            fclose(fp);
+            return 0;
+         }
 
          ret = (magic == 1) ? "ico" : "cur";
          break;
       }
       case 0x25:
       {
-         if (!fread(&magic, 1, 1, fp)) return 0;
+         if (!fread(&magic, 1, 1, fp)) {
+            fclose(fp);
+            return 0;
+         }
+
          if (magic == 0x21) ret = "ps";
          else if (magic == 0x50) ret = "pdf";
          break;
@@ -1136,10 +1146,12 @@ void TASImage::Draw(Option_t *option)
    }
 
    TFrame *frame = gPad->GetFrame();
-   frame->SetBorderMode(0);
-   frame->SetFillColor(gPad->GetFillColor());
-   frame->SetLineColor(gPad->GetFillColor());
-   frame->Draw();
+   if (frame) {
+      frame->SetBorderMode(0);
+      frame->SetFillColor(gPad->GetFillColor());
+      frame->SetLineColor(gPad->GetFillColor());
+      frame->Draw();
+   }
 
    TObject::Draw(option);
 }
@@ -1225,6 +1237,7 @@ void TASImage::Image2Drawable(ASImage *im, Drawable_t wid, Int_t x, Int_t y,
       if (!bits) {
          img = tile_asimage(fgVisual, im, xsrc, ysrc, wsrc, hsrc,
                             0, ASA_ARGB32, 0, ASIMAGE_QUALITY_DEFAULT);
+         if (!img) return;
          bits = (unsigned char *)img->alt.argb32;
       }
 
@@ -1391,6 +1404,7 @@ void TASImage::Paint(Option_t *option)
    if (tile) {
       delete fScaledImage;
       fScaledImage = (TASImage*)TImage::Create();
+      if (!fScaledImage) return;
       fScaledImage->fImage = tile_asimage(fgVisual, fImage, tile_x, tile_y,
                                           to_w, to_h, tile_tint, ASA_ASImage,
                                           GetImageCompression(), GetImageQuality());
@@ -1414,6 +1428,7 @@ void TASImage::Paint(Option_t *option)
 
          if (!fScaledImage) {
             fScaledImage = (TASImage*)TImage::Create();
+            if (!fScaledImage) return;
 
             if (fZoomWidth && fZoomHeight &&
                 ((fImage->width != fZoomWidth) || (fImage->height != fZoomHeight))) {
@@ -1482,6 +1497,7 @@ void TASImage::Paint(Option_t *option)
    if (gVirtualPS) {
       if (gVirtualPS->InheritsFrom("TImageDump")) { // PostScript is asimage
          TImage *dump = (TImage *)gVirtualPS->GetStream();
+         if (!dump) return;
          dump->Merge(fScaledImage ? fScaledImage : this, "alphablend",
                      gPad->XtoAbsPixel(0), gPad->YtoAbsPixel(1));
 
@@ -1540,6 +1556,7 @@ void TASImage::Paint(Option_t *option)
 
       ASImageDecoder *imdec = start_image_decoding(fgVisual, image, SCL_DO_ALL,
                                                    0, 0, image->width, image->height, 0);
+      if (!imdec) return;
       for (Int_t yt = 0; yt < (Int_t)image->height; yt++) {
          imdec->decode_image_scanline(imdec);
          for (Int_t xt = 0; xt < (Int_t)image->width; xt++)
@@ -1563,12 +1580,14 @@ void TASImage::Paint(Option_t *option)
 
          imdec = start_image_decoding(fgVisual, grad_im, SCL_DO_ALL,
                                       0, 0, grad_im->width, grad_im->height, 0);
-         for (Int_t yt = 0; yt < (Int_t)grad_im->height; yt++) {
-            imdec->decode_image_scanline(imdec);
-            for (Int_t xt = 0; xt < (Int_t)grad_im->width; xt++)
-               gVirtualPS->CellArrayFill(imdec->buffer.red[xt],
-                                         imdec->buffer.green[xt],
-                                         imdec->buffer.blue[xt]);
+         if (imdec) {
+            for (Int_t yt = 0; yt < (Int_t)grad_im->height; yt++) {
+               imdec->decode_image_scanline(imdec);
+               for (Int_t xt = 0; xt < (Int_t)grad_im->width; xt++)
+                  gVirtualPS->CellArrayFill(imdec->buffer.red[xt],
+                                            imdec->buffer.green[xt],
+                                            imdec->buffer.blue[xt]);
+            }
          }
          stop_image_decoding(&imdec);
          gVirtualPS->CellArrayEnd();
@@ -2473,7 +2492,7 @@ void TASImage::DrawText(Int_t x, Int_t y, const char *text, Int_t size,
    //     7 - ouline above, 8 - ouline below, 9 - full ouline.
    //  fore_file specifies foreground texture of text.
 
-   UInt_t width, height;
+   UInt_t width=0, height=0;
    ARGB32 text_color = ARGB32_Black;
    ASImage *fore_im = 0;
    ASImage *text_im = 0;
@@ -2742,7 +2761,7 @@ Double_t *TASImage::Vectorize(UInt_t max_colors, UInt_t dither, Int_t opaque_thr
 
    ASColormap cmap;
    int *res;
-   UInt_t r, g, b;
+   UInt_t r=0, g=0, b=0;
 
    dither = dither > 7 ? 7 : dither;
 
@@ -2757,9 +2776,11 @@ Double_t *TASImage::Vectorize(UInt_t max_colors, UInt_t dither, Int_t opaque_thr
    for (UInt_t y = 0; y < fImage->height; y++) {
       for (UInt_t x = 0; x < fImage->width; x++) {
          int i = y*fImage->width + x;
-         g = INDEX_SHIFT_GREEN(cmap.entries[res[i]].green);
-         b = INDEX_SHIFT_BLUE(cmap.entries[res[i]].blue);
-         r = INDEX_SHIFT_RED(cmap.entries[res[i]].red);
+         if (res) {
+            g = INDEX_SHIFT_GREEN(cmap.entries[res[i]].green);
+            b = INDEX_SHIFT_BLUE(cmap.entries[res[i]].blue);
+            r = INDEX_SHIFT_RED(cmap.entries[res[i]].red);
+         }
          v = MAKE_INDEXED_COLOR24(r,g,b);
          v = (v>>12)&0x0FFF;
          tmp = Double_t(v)/0x0FFF;
@@ -3151,7 +3172,7 @@ void TASImage::Bevel(Int_t x, Int_t y, UInt_t width, UInt_t height,
    ASImageBevel bevel;
    bevel.type = 0;
 
-   ARGB32 hi, lo;
+   ARGB32 hi=ARGB32_White, lo=ARGB32_White;
    parse_argb_color(hi_color, &hi);
    parse_argb_color(lo_color, &lo);
 
@@ -3278,7 +3299,7 @@ void TASImage::Pad(const char *col, UInt_t l, UInt_t r, UInt_t t, UInt_t b)
       fill_asimage(fgVisual, fImage, 0, 0, fImage->width, fImage->height, ARGB32_White);
    }
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    x = l;
@@ -3791,7 +3812,7 @@ void TASImage::DrawLine(UInt_t x1,  UInt_t y1, UInt_t x2, UInt_t y2,
 {
    // Draw a line.
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
    DrawLineInternal(x1, y1, x2, y2, (UInt_t)color, thick);
 }
@@ -3807,7 +3828,7 @@ void TASImage::DrawLineInternal(UInt_t x1, UInt_t y1, UInt_t x2, UInt_t y2,
    int i1, i2;
    int x, y, xend, yend;
    int xdir, ydir;
-   int wid, q;
+   int q;
    int idx;
    int yy;
 
@@ -3851,8 +3872,6 @@ void TASImage::DrawLineInternal(UInt_t x1, UInt_t y1, UInt_t x2, UInt_t y2,
       DrawWideLine(x1, y1, x2, y2, color, thick);
       return;
    }
-
-   wid = 1;
 
    if (dy <= dx) {
       UInt_t ddy = dy << 1;
@@ -3988,7 +4007,7 @@ void TASImage::DrawRectangle(UInt_t x, UInt_t y, UInt_t w, UInt_t h,
       return;
    }
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    DrawHLine(y, x, x + w, (UInt_t)color, thick);
@@ -4010,7 +4029,7 @@ void TASImage::DrawBox(Int_t x1, Int_t y1, Int_t x2, Int_t y2, const char *col,
    Int_t w = TMath::Abs(x2 - x1);
    Int_t h = TMath::Abs(y2 - y1);
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
 
    if (!fImage) {
       w = w ? x+w : x+20;
@@ -4536,7 +4555,7 @@ void TASImage::DrawDashLine(UInt_t x1,  UInt_t y1, UInt_t x2, UInt_t y2, UInt_t 
       return;
    }
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    if (x1 == x2) {
@@ -4556,7 +4575,7 @@ void TASImage::DrawPolyLine(UInt_t nn, TPoint *xy, const char *col, UInt_t thick
 {
    // Draw a polyline.
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    Int_t x0 = xy[0].GetX();
@@ -4791,6 +4810,7 @@ void TASImage::FillSpans(UInt_t npt, TPoint *ppt, UInt_t *widths, TImage *tile)
    Int_t ii = 0;
    UInt_t x = 0;
    UInt_t *arr = tile->GetArgbArray();
+   if (!arr) return;
    UInt_t xx = 0;
    UInt_t yy = 0;
    UInt_t yyy = 0;
@@ -5253,7 +5273,7 @@ void TASImage::FillPolygon(UInt_t npt, TPoint *ppt, const char *col,
    UInt_t *firstWidth = 0;   // output buffer
 
    Bool_t del = GetPolygonSpans(npt, ppt, &nspans, &firstPoint, &firstWidth);
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    if (nspans) {
@@ -5362,7 +5382,7 @@ void TASImage::DrawFillArea(UInt_t count, TPoint *ptsIn, const char *col,
       return;
    }
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    EdgeTableEntry *pAET;  // the Active Edge Table
@@ -5726,8 +5746,9 @@ void TASImage::DrawText(TText *text, Int_t x, Int_t y)
    TColor *col = gROOT->GetColor(text->GetTextColor());
    if (!col) { // no color, make it black
       col = gROOT->GetColor(1);
+      if (!col) return;
    }
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col->AsHexString(), &color);
 
    // Align()
@@ -5835,7 +5856,7 @@ void TASImage::DrawTextTTF(Int_t x, Int_t y, const char *text, Int_t size,
    TTGlyph *glyph = TTF::GetGlyphs();
 
    // compute the size and position  that will contain the text
-   Int_t Xoff = 0; if (TTF::GetBox().xMin < 0) Xoff = -TTF::GetBox().xMin;
+   // Int_t Xoff = 0; if (TTF::GetBox().xMin < 0) Xoff = -TTF::GetBox().xMin;
    Int_t Yoff = 0; if (TTF::GetBox().yMin < 0) Yoff = -TTF::GetBox().yMin;
    Int_t h    = TTF::GetBox().yMax + Yoff;
 
@@ -6197,7 +6218,7 @@ void TASImage::DrawCubeBezier(Int_t x1, Int_t y1, Int_t x2, Int_t y2,
    CARD32 *matrix;
    Bool_t use_cache = thick < kBrushCacheSize;
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    if (use_cache) {
@@ -6240,7 +6261,7 @@ void TASImage::DrawStraightEllips(Int_t x, Int_t y, Int_t rx, Int_t ry,
    CARD32 *matrix;
    Bool_t use_cache = (thick > 0) && ((UInt_t)thick < kBrushCacheSize);
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    if (use_cache) {
@@ -6280,7 +6301,7 @@ void TASImage::DrawCircle(Int_t x, Int_t y, Int_t r, const char *col, Int_t thic
    CARD32 *matrix;
    Bool_t use_cache = (thick > 0) && ((UInt_t)thick < kBrushCacheSize);
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
 ///matrix = new CARD32[sz];
@@ -6322,7 +6343,7 @@ void TASImage::DrawEllips(Int_t x, Int_t y, Int_t rx, Int_t ry, Int_t angle,
    CARD32 *matrix;
    Bool_t use_cache = (thick > 0) && ((UInt_t)thick < kBrushCacheSize);
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    if (use_cache) {
@@ -6363,7 +6384,7 @@ void TASImage::DrawEllips2(Int_t x, Int_t y, Int_t rx, Int_t ry, Int_t angle,
    CARD32 *matrix;
    Bool_t use_cache = (thick > 0) && ((UInt_t)thick < kBrushCacheSize);
 
-   ARGB32 color;
+   ARGB32 color = ARGB32_White;
    parse_argb_color(col, &color);
 
    if (use_cache) {
@@ -6625,7 +6646,7 @@ void TASImage::SavePrimitive(ostream &out, Option_t * /*= ""*/)
 {
     // Save a primitive as a C++ statement(s) on output stream "out".
 
-   char *buf;
+   char *buf = 0;
    int sz;
 
    UInt_t w = GetWidth();

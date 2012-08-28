@@ -36,6 +36,8 @@
 
 
 
+using namespace std;
+
 ClassImp(RooHistPdf)
 ;
 
@@ -239,6 +241,14 @@ Double_t RooHistPdf::totVolume() const
   return _totVolume ;
 }
 
+namespace {
+    bool fullRange(const RooAbsArg& x ,const char* range)  {
+      if (range == 0 || strlen(range) == 0 ) return true;
+      const RooAbsRealLValue *_x = dynamic_cast<const RooAbsRealLValue*>(&x);
+      if (!_x) return false;
+      return ( _x->getMin(range) == _x->getMin() && _x->getMax(range) == _x->getMax() ) ; 
+    }
+}
 
 
 //_____________________________________________________________________________
@@ -250,12 +260,9 @@ Int_t RooHistPdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars,
   // histogram. If interpolation is used on the integral over
   // all histogram observables is supported
 
-  // Only analytical integrals over the full range are defined
-  if (rangeName!=0) {
-    return 0 ;
-  }
 
   // First make list of pdf observables to histogram observables
+  // and select only those for which the integral is over the full range
   RooArgList hobsl(_histObsList),pobsl(_pdfObsList) ;
   RooArgSet allVarsHist ;
   TIterator* iter = allVars.createIterator() ;
@@ -264,7 +271,7 @@ Int_t RooHistPdf::getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars,
     Int_t idx = pobsl.index(pdfobs) ;
     if (idx>=0) {
       RooAbsArg* hobs = hobsl.at(idx) ;
-      if (hobs) {
+      if (hobs && fullRange( *hobs, rangeName ) ) {
 	allVarsHist.add(*hobs) ;
       }
     }
@@ -354,11 +361,13 @@ Double_t RooHistPdf::analyticalIntegral(Int_t code, const char* /*rangeName*/) c
   }  
 
 
-  Double_t ret =  _dataHist->sum(intSet,_histObsList,kTRUE) ;
-//   cout << "RooHistPdf::ai(" << GetName() << ") code = " << code << " ret = " << ret << endl ;
+  Double_t ret =  _dataHist->sum(intSet,_histObsList,kTRUE,kTRUE) ;
+
 //   cout << "intSet = " << intSet << endl ;
 //   cout << "slice position = " << endl ;
 //   _histObsList.Print("v") ;
+//   cout << "RooHistPdf::ai(" << GetName() << ") code = " << code << " ret = " << ret << endl ;
+
   return ret ;
 }
 
@@ -405,6 +414,44 @@ list<Double_t>* RooHistPdf::plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo
 
   return hint ;
 }
+
+
+
+//______________________________________________________________________________
+std::list<Double_t>* RooHistPdf::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const 
+{
+  // Return sampling hint for making curves of (projections) of this function
+  // as the recursive division strategy of RooCurve cannot deal efficiently
+  // with the vertical lines that occur in a non-interpolated histogram
+
+  // No hints are required when interpolation is used
+  if (_intOrder>0) {
+    return 0 ;
+  }
+
+  // Check that observable is in dataset, if not no hint is generated
+  RooAbsLValue* lvarg = dynamic_cast<RooAbsLValue*>(_dataHist->get()->find(obs.GetName())) ;
+  if (!lvarg) {
+    return 0 ;
+  }
+
+  // Retrieve position of all bin boundaries
+  const RooAbsBinning* binning = lvarg->getBinningPtr(0) ;
+  Double_t* boundaries = binning->array() ;
+
+  list<Double_t>* hint = new list<Double_t> ;
+
+  // Construct array with pairs of points positioned epsilon to the left and
+  // right of the bin boundaries
+  for (Int_t i=0 ; i<binning->numBoundaries() ; i++) {
+    if (boundaries[i]>=xlo && boundaries[i]<=xhi) {
+      hint->push_back(boundaries[i]) ;
+    }
+  }
+
+  return hint ;
+}
+
 
 
 
@@ -486,8 +533,8 @@ void RooHistPdf::Streamer(TBuffer &R__b)
    if (R__b.IsReading()) {
       R__b.ReadClassBuffer(RooHistPdf::Class(),this);
       // WVE - interim solution - fix proxies here
-      _proxyList.Clear() ;
-      registerProxy(_pdfObsList) ;
+      //_proxyList.Clear() ;
+      //registerProxy(_pdfObsList) ;
    } else {
       R__b.WriteClassBuffer(RooHistPdf::Class(),this);
    }

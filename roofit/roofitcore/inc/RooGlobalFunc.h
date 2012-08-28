@@ -166,7 +166,7 @@ RooCmdArg EventRange(Int_t nStart, Int_t nStop) ;
 
 // RooAbsPdf::fitTo arguments
 RooCmdArg FitOptions(const char* opts) ;
-RooCmdArg Optimize(Bool_t flag=kTRUE) ;
+RooCmdArg Optimize(Int_t flag=2) ;
 RooCmdArg ProjectedObservables(const RooArgSet& set) ; // obsolete, for backward compatibility
 RooCmdArg ConditionalObservables(const RooArgSet& set) ;
 RooCmdArg Verbose(Bool_t flag=kTRUE) ;
@@ -182,6 +182,8 @@ RooCmdArg Minos(const RooArgSet& minosArgs) ;
 RooCmdArg SplitRange(Bool_t flag=kTRUE) ;
 RooCmdArg SumCoefRange(const char* rangeName) ;
 RooCmdArg Constrain(const RooArgSet& params) ;
+RooCmdArg GlobalObservables(const RooArgSet& globs) ;
+RooCmdArg GlobalObservablesTag(const char* tagName) ;
 RooCmdArg Constrained() ;
 RooCmdArg ExternalConstraints(const RooArgSet& constraintPdfs) ;
 RooCmdArg PrintEvalErrors(Int_t numErrors) ;
@@ -207,6 +209,9 @@ RooCmdArg Conditional(const RooArgSet& pdfSet, const RooArgSet& depSet, Bool_t d
 RooCmdArg ProtoData(const RooDataSet& protoData, Bool_t randomizeOrder=kFALSE, Bool_t resample=kFALSE) ;
 RooCmdArg NumEvents(Int_t numEvents) ;
 RooCmdArg NumEvents(Double_t numEvents) ;
+RooCmdArg AutoBinned(Bool_t flag=kTRUE) ;
+RooCmdArg GenBinned(const char* tag) ;
+RooCmdArg AllBinned() ;
 RooCmdArg ExpectedData(Bool_t flag=kTRUE) ; 
 RooCmdArg Asimov(Bool_t flag=kTRUE) ; 
 
@@ -250,7 +255,7 @@ RooCmdArg ObjectName(const char* name) ;
 RooCmdArg ClassName(const char* name) ;
 RooCmdArg BaseClassName(const char* name) ;
 RooCmdArg TagName(const char* name) ;
-RooCmdArg OutputStream(ostream& os) ;
+RooCmdArg OutputStream(std::ostream& os) ;
 RooCmdArg Prefix(Bool_t flag) ;
 RooCmdArg Color(Color_t color) ;
 

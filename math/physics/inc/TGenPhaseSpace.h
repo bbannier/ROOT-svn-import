@@ -24,9 +24,10 @@ private:
    Double_t PDK(Double_t a, Double_t b, Double_t c);  
 
 public:
-   TGenPhaseSpace() {}
+   TGenPhaseSpace(): fNt(0), fMass(), fBeta(), fTeCmTm(0.), fWtMax(0.) {}
    TGenPhaseSpace(const TGenPhaseSpace &gen);
    virtual ~TGenPhaseSpace() {}
+   TGenPhaseSpace& operator=(const TGenPhaseSpace &gen);
 
    Bool_t          SetDecay(TLorentzVector &P, Int_t nt, const Double_t *mass, Option_t *opt="");
    Double_t        Generate();

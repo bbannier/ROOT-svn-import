@@ -21,19 +21,14 @@
 
 #include "XrdProofdPlatform.h"
 
-#ifdef OLDXRDOUC
-#  include "XrdOuc/XrdOucError.hh"
-#  include "XrdOuc/XrdOucLogger.hh"
-#else
-#  include "XrdSys/XrdSysError.hh"
-#  include "XrdSys/XrdSysLogger.hh"
-#endif
+#include "XpdSysError.h"
+#include "XpdSysLogger.h"
+
 #include "XrdSys/XrdSysPriv.hh"
 #include "XrdOuc/XrdOucStream.hh"
 
 #include "XrdVersion.hh"
 #include "Xrd/XrdBuffer.hh"
-#include "XrdNet/XrdNetDNS.hh"
 
 #include "XrdProofdClient.h"
 #include "XrdProofdClientMgr.h"
@@ -195,20 +190,21 @@ int XrdgetProtocolPort(const char * /*pname*/, char * /*parms*/, XrdProtocol_Con
       // This function is called early on to determine the port we need to use. The
       // The default is ostensibly 1093 but can be overidden; which we allow.
 
-      XrdProofdProtCfg pcfg(pi->ConfigFN, pi->eDest);
-      // Init some relevant quantities for tracing
-      XrdProofdTrace = new XrdOucTrace(pi->eDest);
-      pcfg.Config(0);
-
       // Default XPD_DEF_PORT (1093)
       int port = XPD_DEF_PORT;
 
-      if (pcfg.fPort > 0) {
-         port = pcfg.fPort;
-      } else {
-         port = (pi && pi->Port > 0) ? pi->Port : XPD_DEF_PORT;
-      }
+      if (pi) {
+         XrdProofdProtCfg pcfg(pi->ConfigFN, pi->eDest);
+         // Init some relevant quantities for tracing
+         XrdProofdTrace = new XrdOucTrace(pi->eDest);
+         pcfg.Config(0);
 
+         if (pcfg.fPort > 0) {
+            port = pcfg.fPort;
+         } else {
+            port = (pi && pi->Port > 0) ? pi->Port : XPD_DEF_PORT;
+         }
+      }
       return port;
 }}
 
@@ -291,7 +287,7 @@ XrdProtocol *XrdProofdProtocol::Match(XrdLink *lp)
    struct ClientInitHandShake hsdata;
    char  *hsbuff = (char *)&hsdata;
 
-   static hs_response_t hsresp = {0, 0, htonl(XPROOFD_VERSBIN), 0};
+   static hs_response_t hsresp = {0, 0, kXR_int32(htonl(XPROOFD_VERSBIN)), 0};
 
    XrdProofdProtocol *xp;
    int dlen;
@@ -357,7 +353,7 @@ XrdProtocol *XrdProofdProtocol::Match(XrdLink *lp)
 
    // Bind the protocol to the link and return the protocol
    xp->fLink = lp;
-   strcpy(xp->fSecEntity.prot, "host");
+   snprintf(xp->fSecEntity.prot, XrdSecPROTOIDSIZE, "host");
    xp->fSecEntity.host = strdup((char *)lp->Host());
 
    // Dummy data used by 'proofd'
@@ -444,7 +440,7 @@ int XrdProofdProtocol::StartRootd(XrdLink *lp, XrdOucString &emsg)
       }
 
       // Accept a connection from the second server
-      int err;
+      int err = 0;
       rpdunix *uconn = fgMgr->RootdUnixSrv()->accept(-1, &err);
       if (!uconn || !uconn->isvalid(0)) {
          XPDFORM(emsg, "failure accepting callback (errno: %d)", -err);
@@ -499,6 +495,8 @@ void XrdProofdProtocol::Reset()
    fConnType  = kXPD_ClientMaster;
    fSuperUser = 0;
    fPClient   = 0;
+   fUserIn    = "";
+   fGroupIn   = "";
    fCID       = -1;
    fTraceID   = "";
    fAdminPath = "";
@@ -738,15 +736,35 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
 
    if (pmgr) {
 
-
       if (!Internal()) {
 
-         // Signal the client manager that a client has just gone
-         if (fgMgr && fgMgr->ClientMgr()) {
-            TRACE(HDBG, "fAdminPath: "<<fAdminPath);
-            XPDFORM(buf, "%s %p %d %d", fAdminPath.c_str(), pmgr, fCID, fPid);
-            TRACE(DBG, "sending to ClientMgr: "<<buf);
-            fgMgr->ClientMgr()->Pipe()->Post(XrdProofdClientMgr::kClientDisconnect, buf.c_str());
+         TRACE(REQ,"External disconnection of protocol associated with pid "<<fPid);
+
+         // Write disconnection file
+         XrdOucString discpath(fAdminPath, 0, fAdminPath.rfind("/cid"));
+         discpath += "/disconnected";
+         FILE *fd = fopen(discpath.c_str(), "w");
+            if (!fd) {
+            TRACE(XERR, "unable to create path: " <<discpath);
+         } else {
+            fclose(fd);  
+         } 
+
+         // Remove protocol and response from attached client/proofserv instances
+	 // Set reconnect flag if proofserv instances attached to this client are still running
+         pmgr->ResetClientSlot(fCID);
+         if(fgMgr && fgMgr->SessionMgr()) {
+            XrdSysMutexHelper mhp(fgMgr->SessionMgr()->Mutex());
+
+            fgMgr->SessionMgr()->DisconnectFromProofServ(fPid);
+            if(pmgr->Running()) {
+	       TRACE(REQ,"Non-idle proofserv processes attached to this client, setting reconnect time");
+	       fgMgr->SessionMgr()->SetReconnectTime(true);
+            }
+            fgMgr->SessionMgr()->CheckActiveSessions(0);
+	 }
+         else {
+	    TRACE(XERR,"No XrdProofdMgr ("<<fgMgr<<") or SessionMgr ("<<fgMgr->SessionMgr()<<")")
          }
 
       } else {
@@ -755,10 +773,15 @@ void XrdProofdProtocol::Recycle(XrdLink *, int, const char *)
          // of proxy servers and to notify the attached clients.
          // Tell the session manager that this session has gone
          if (fgMgr && fgMgr->SessionMgr()) {
+            XrdSysMutexHelper mhp(fgMgr->SessionMgr()->Mutex());
             TRACE(HDBG, "fAdminPath: "<<fAdminPath);
             buf.assign(fAdminPath, fAdminPath.rfind('/') + 1, -1);
-            TRACE(DBG, "sending to ProofServMgr: "<<buf);
-            fgMgr->SessionMgr()->Pipe()->Post(XrdProofdProofServMgr::kSessionRemoval, buf.c_str());
+            fgMgr->SessionMgr()->DeleteFromSessions(buf.c_str());
+            // Move the entry to the terminated sessions area
+            fgMgr->SessionMgr()->MvSession(buf.c_str());
+         }
+         else {
+	    TRACE(XERR,"No XrdProofdMgr ("<<fgMgr<<") or SessionMgr ("<<fgMgr->SessionMgr()<<")")
          }
       }
    }

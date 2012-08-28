@@ -31,13 +31,15 @@
 using std::cout ;
 using std::endl ;
 
+using namespace std;
+
 ClassImp(RooSharedProperties)
 ;
 
 
 
 //_____________________________________________________________________________
-RooSharedProperties::RooSharedProperties() 
+RooSharedProperties::RooSharedProperties() : _refCount(0), _inSharedList(kFALSE)
 {
   // Default constructor
   RooTrace::create(this) ;
@@ -45,7 +47,7 @@ RooSharedProperties::RooSharedProperties()
 
 
 //_____________________________________________________________________________
-RooSharedProperties::RooSharedProperties(const char* uuidstr) : _uuid(uuidstr) 
+RooSharedProperties::RooSharedProperties(const char* uuidstr) : _uuid(uuidstr), _refCount(0), _inSharedList(kFALSE)
 {
   // Constructor with unique-id string
   RooTrace::create(this) ;

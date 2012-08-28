@@ -36,14 +36,14 @@ RooAbsPdf*  bindPdf(const char* name, const ROOT::Math::IBaseFunctionMultiDim& f
 
 class RooFunctorBinding : public RooAbsReal {
 public:
-  RooFunctorBinding() : x(0) {
+  RooFunctorBinding() : func(0), x(0) {
     // Default constructor
   } ; 
   RooFunctorBinding(const char *name, const char *title, const ROOT::Math::IBaseFunctionMultiDim& ftor, const RooArgList& vars);
   RooFunctorBinding(const RooFunctorBinding& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const { return new RooFunctorBinding(*this,newname); }
   inline virtual ~RooFunctorBinding() { delete[] x ; }
-  void printArgs(ostream& os) const ;
+  void printArgs(std::ostream& os) const ;
 
 protected:
 
@@ -63,14 +63,14 @@ private:
 
 class RooFunctorPdfBinding : public RooAbsPdf {
 public:
-  RooFunctorPdfBinding() : x(0) {
+  RooFunctorPdfBinding() : func(0), x(0) {
     // Default constructor
   } ; 
   RooFunctorPdfBinding(const char *name, const char *title, const ROOT::Math::IBaseFunctionMultiDim& ftor, const RooArgList& vars);
   RooFunctorPdfBinding(const RooFunctorPdfBinding& other, const char* name=0) ;
   virtual TObject* clone(const char* newname) const { return new RooFunctorPdfBinding(*this,newname); }
   inline virtual ~RooFunctorPdfBinding() { delete[] x ; }
-  void printArgs(ostream& os) const ;
+  void printArgs(std::ostream& os) const ;
 
 protected:
 

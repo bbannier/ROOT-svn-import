@@ -252,9 +252,6 @@ End_Html */
 // to scale fonts to the same size as the old TT version
 const Float_t kScale = 0.93376068;
 
-const char   kBackslash = '\\';
-const Int_t  kLatex = BIT(10);
-
 Int_t TPostScript::fgLineJoin = 0;
 
 ClassImp(TPostScript)
@@ -1702,6 +1699,8 @@ void TPostScript::Initialize()
       PrintFast(8," iy sub ");
       WriteInteger(npy);
       PrintStr(" mul t} def@");
+   } else {
+      PrintStr("@");
    }
 
    PrintStr("%%EndProlog@");
@@ -2403,7 +2402,7 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
       x += 0.4*tsizex*TMath::Sin(kDEGRAD*fTextAngle);
    }
 
-   UInt_t w,w0;
+   UInt_t w = 0, w0 = 0;
    Bool_t kerning;
    // In order to measure the precise character positions we need to trick
    // FreeType into rendering high-resolution characters otherwise it will
@@ -2427,7 +2426,7 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
       // Calculate the individual character placements.
       charWidthsCumul = new Int_t[len];
       for (Int_t i = len - 1;i >= 0;i--) {
-         UInt_t ww;
+         UInt_t ww = 0;
          t.GetTextAdvance(ww, chars + i);
          Double_t wwl = (gPad->AbsPixeltoX(ww)-gPad->AbsPixeltoX(0));
          charWidthsCumul[i] = (Int_t)((XtoPS(wwl) - XtoPS(0)) / scale);

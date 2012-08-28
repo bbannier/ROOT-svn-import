@@ -159,6 +159,7 @@ protected:
    virtual TBranch *BronchExec(const char* name, const char* classname, void* addobj, Bool_t isptrptr, Int_t bufsize, Int_t splitlevel);
    friend  TBranch *TTreeBranchImpRef(TTree *tree, const char* branchname, TClass* ptrClass, EDataType datatype, void* addobj, Int_t bufsize, Int_t splitlevel);
    Int_t    SetBranchAddressImp(TBranch *branch, void* addr, TBranch** ptr);
+   virtual TLeaf   *GetLeafImpl(const char* branchname, const char* leafname);
 
    char             GetNewlineValue(istream &inputStream);
    void             ImportClusterRanges(TTree *fromtree);
@@ -202,7 +203,7 @@ protected:
       kSetBranchStatus   = BIT(12)
    };
    
-   enum SetBranchAddressStatus {
+   enum ESetBranchAddressStatus {
       kMissingBranch = -5,
       kInternalError = -4,
       kMissingCompiledCollectionProxy = -3,
@@ -274,6 +275,8 @@ public:
 
    virtual void            AddBranchToCache(const char *bname, Bool_t subbranches = kFALSE);
    virtual void            AddBranchToCache(TBranch *branch,   Bool_t subbranches = kFALSE);
+   virtual void            DropBranchFromCache(const char *bname, Bool_t subbranches = kFALSE);
+   virtual void            DropBranchFromCache(TBranch *branch,   Bool_t subbranches = kFALSE);
    virtual TFriendElement *AddFriend(const char* treename, const char* filename = "");
    virtual TFriendElement *AddFriend(const char* treename, TFile* file);
    virtual TFriendElement *AddFriend(TTree* tree, const char* alias = "", Bool_t warn = kFALSE);
@@ -289,7 +292,7 @@ public:
       // Overload to avoid confusion between this signature and the template instance.
       return Branch(name,(void*)address,leaflist,bufsize);
    }
-   TBranch        *Branch(const char* name, long address, const char* leaflist, Int_t bufsize = 32000) 
+   TBranch        *Branch(const char* name, Long_t address, const char* leaflist, Int_t bufsize = 32000) 
    {
       // Overload to avoid confusion between this signature and the template instance.
       return Branch(name,(void*)address,leaflist,bufsize);
@@ -297,7 +300,7 @@ public:
    TBranch        *Branch(const char* name, int address, const char* leaflist, Int_t bufsize = 32000) 
    {
       // Overload to avoid confusion between this signature and the template instance.
-      return Branch(name,(void*)(long)address,leaflist,bufsize);
+      return Branch(name,(void*)(Long_t)address,leaflist,bufsize);
    }
 #if !defined(__CINT__)
    virtual TBranch        *Branch(const char* name, const char* classname, void* addobj, Int_t bufsize = 32000, Int_t splitlevel = 99);
@@ -383,6 +386,7 @@ public:
    virtual Int_t          *GetIndex() { return &fIndex.fArray[0]; }
    virtual Double_t       *GetIndexValues() { return &fIndexValues.fArray[0]; }
    virtual TIterator      *GetIteratorOnAllLeaves(Bool_t dir = kIterForward);
+   virtual TLeaf          *GetLeaf(const char* branchname, const char* leafname);
    virtual TLeaf          *GetLeaf(const char* name);
    virtual TList          *GetListOfClones() { return fClones; }
    virtual TObjArray      *GetListOfBranches() { return &fBranches; }
@@ -479,7 +483,7 @@ public:
    virtual Long64_t        Scan(const char* varexp = "", const char* selection = "", Option_t* option = "", Long64_t nentries = 1000000000, Long64_t firstentry = 0); // *MENU*
    virtual Bool_t          SetAlias(const char* aliasName, const char* aliasFormula);
    virtual void            SetAutoSave(Long64_t autos = 300000000);
-   virtual void            SetAutoFlush(Long64_t autof = 30000000);
+   virtual void            SetAutoFlush(Long64_t autof = -30000000);
    virtual void            SetBasketSize(const char* bname, Int_t buffsize = 16000);
 #if !defined(__CINT__)
    virtual Int_t           SetBranchAddress(const char *bname,void *add, TBranch **ptr = 0);
@@ -513,7 +517,7 @@ public:
    virtual void            SetDefaultEntryOffsetLen(Int_t newdefault, Bool_t updateExisting = kFALSE);
    virtual void            SetDirectory(TDirectory* dir);
    virtual Long64_t        SetEntries(Long64_t n = -1);
-   virtual void            SetEstimate(Long64_t nentries = 10000);
+   virtual void            SetEstimate(Long64_t nentries = 1000000);
    virtual void            SetFileNumber(Int_t number = 0);
    virtual void            SetEventList(TEventList* list);
    virtual void            SetEntryList(TEntryList* list, Option_t *opt="");
@@ -572,11 +576,11 @@ public:
    Option_t          *GetOption() const;
    TObject           *Next();
    void               Reset() { SafeDelete(fLeafIter); SafeDelete(fTreeIter); }
-   bool operator !=(const TIterator&) const {
+   Bool_t operator !=(const TIterator&) const {
       // TODO: Implement me
       return false;
    }
-   bool operator !=(const TTreeFriendLeafIter&) const {
+   Bool_t operator !=(const TTreeFriendLeafIter&) const {
       // TODO: Implement me
       return false;
    }

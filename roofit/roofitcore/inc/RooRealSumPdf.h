@@ -52,7 +52,13 @@ public:
     return expectedEvents(&nset) ; 
   }
 
-  void printMetaArgs(ostream& os) const ;
+  void printMetaArgs(std::ostream& os) const ;
+
+
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
+  virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
+  Bool_t isBinnedDistribution(const RooArgSet& obs) const  ;
+
 
 protected:
   

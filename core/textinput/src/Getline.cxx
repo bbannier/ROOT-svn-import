@@ -33,6 +33,9 @@ using namespace textinput;
 namespace {
    // TTabCom adapter.
    class ROOTTabCompletion: public TabCompletion {
+   private:
+      ROOTTabCompletion(const ROOTTabCompletion&); // not implemented
+      ROOTTabCompletion& operator=(const ROOTTabCompletion&); // not implemented
    public:
       ROOTTabCompletion(): fLineBuf(new char[fgLineBufSize]) {}
       virtual ~ROOTTabCompletion() { delete []fLineBuf; }
@@ -203,9 +206,9 @@ Getlinem(EGetLineMode mode, const char* prompt) {
       if (prompt) {
          TextInputHolder::get().SetPrompt(prompt);
       }
+      // Trigger attach:
+      TextInputHolder::get().Redraw();
       if (mode == kInit) {
-         // Trigger attach:
-         TextInputHolder::get().Redraw();
          return 0;
       }
       TextInputHolder::get().SetBlockingUntilEOL();

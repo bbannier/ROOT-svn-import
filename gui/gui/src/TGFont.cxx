@@ -1582,6 +1582,8 @@ TGFont *TGFontPool::GetFont(const char *font, Bool_t fixedDefault)
       }
    }
 
+   if (!f) return 0;
+
    fList->Add(f);
 
    f->SetRefCount(1);
@@ -1822,8 +1824,9 @@ char **TGFontPool::GetAttributeInfo(const FontAttributes_t *fa)
       }
 
       if (str) {
-         result[i] = new char[strlen(str)+1];
-         strlcpy(result[i], str, strlen(str)+1);
+         int len = strlen(str)+1;
+         result[i] = new char[len];
+         strlcpy(result[i], str, len);
       } else {
          result[i] = new char[20];
          snprintf(result[i], 20, "%d", num);
@@ -1945,8 +1948,9 @@ Bool_t TGFontPool::ParseFontName(const char *string, FontAttributes_t *fa)
 
    XLFDAttributes_t xa;
 
-   char *str = new char[strlen(string)+1];
-   strlcpy(str, string, strlen(string)+1);
+   int len = strlen(string)+1;
+   char *str = new char[len];
+   strlcpy(str, string, len);
 
    if (*str == '-' || *str == '*') {
 
@@ -2259,6 +2263,8 @@ char **TGFontPool::GetFontFamilies()
    char **nameList;
    char **dst;
 
+   // coverity[returned_null]
+   // coverity[dereference]
    nameList = gVirtualX->ListFonts("*", 10000, numNames);
 
    for (i = 0; i < numNames; i++) {
@@ -2368,6 +2374,8 @@ TGFont *TGFontPool::GetFontFromAttributes(FontAttributes_t *fa, TGFont *fontPtr)
       // Try getting some system font.
 
       buf = TString::Format(fmt, "fixed");
+      // coverity[returned_null]
+      // coverity[dereference]
       nameList = gVirtualX->ListFonts(buf.Data(), 32768, numNames);
 
       if (!numNames) {
@@ -2406,7 +2414,7 @@ getsystem:
       // some applications looks may change slightly if another foundry
       // is chosen.
 
-      if (strcasecmp(xa.fFoundry, "adobe") != 0) {
+      if (xa.fFoundry && (strcasecmp(xa.fFoundry, "adobe") != 0)) {
          score += 3000;
       }
       if (!xa.fFA.fPointsize) {

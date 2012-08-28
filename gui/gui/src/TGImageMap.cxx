@@ -58,10 +58,11 @@ TGRegionData &TGRegionData::operator=(const TGRegionData &r)
 {
    // Assignemnt of region data object.
 
-   fRefs   = r.fRefs;
-   fRgn    = r.fRgn;
-   fIsNull = r.fIsNull;
-
+   if (this != &r) {
+      fRefs   = r.fRefs;
+      fRgn    = r.fRgn;
+      fIsNull = r.fIsNull;
+   }
    return *this;
 }
 
@@ -189,6 +190,7 @@ TGRegion &TGRegion::operator=(const TGRegion &r)
    // Region assignment operator.
 
    if (this != &r) {
+      TObject::operator=(r);
       r.fData->AddReference();
 
       if (fData->RemoveReference() <= 0) {

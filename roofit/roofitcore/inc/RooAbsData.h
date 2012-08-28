@@ -42,7 +42,7 @@ public:
   RooAbsData(const char *name, const char *title, const RooArgSet& vars, RooAbsDataStore* store=0) ;
   RooAbsData(const RooAbsData& other, const char* newname = 0) ;
   virtual ~RooAbsData() ;
-  virtual RooAbsData* emptyClone(const char* newName=0, const char* newTitle=0, const RooArgSet* vars=0) const = 0 ;
+  virtual RooAbsData* emptyClone(const char* newName=0, const char* newTitle=0, const RooArgSet* vars=0, const char* wgtVarName=0) const = 0 ;
 
   // Reduction methods
   RooAbsData* reduce(const RooCmdArg& arg1,const RooCmdArg& arg2=RooCmdArg(),const RooCmdArg& arg3=RooCmdArg(),const RooCmdArg& arg4=RooCmdArg(),
@@ -55,6 +55,12 @@ public:
   RooAbsDataStore* store() { return _dstore ; }
   const RooAbsDataStore* store() const { return _dstore ; }
   const TTree* tree() const ;
+   
+  void convertToVectorStore() ;
+
+  void attachBuffers(const RooArgSet& extObs) ;
+  void resetBuffers() ;
+ 
   
   virtual void Draw(Option_t* option = "") ;
 
@@ -80,7 +86,8 @@ public:
   virtual const RooArgSet* get(Int_t index) const ;
 
   virtual Int_t numEntries() const ;
-  virtual Double_t sumEntries(const char* cutSpec=0, const char* cutRange=0) const = 0 ; // DERIVED
+  virtual Double_t sumEntries() const = 0 ;
+  virtual Double_t sumEntries(const char* cutSpec, const char* cutRange=0) const = 0 ; // DERIVED
   virtual Bool_t isWeighted() const { 
     // Do events in dataset have weights?
     return kFALSE ; 
@@ -151,10 +158,10 @@ public:
     printStream(defaultPrintStream(),defaultPrintContents(options),defaultPrintStyle(options));
   }
 
-  virtual void printName(ostream& os) const ;
-  virtual void printTitle(ostream& os) const ;
-  virtual void printClassName(ostream& os) const ;
-  void printMultiline(ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printName(std::ostream& os) const ;
+  virtual void printTitle(std::ostream& os) const ;
+  virtual void printClassName(std::ostream& os) const ;
+  void printMultiline(std::ostream& os, Int_t contents, Bool_t verbose=kFALSE, TString indent="") const ;
 
   virtual Int_t defaultPrintContents(Option_t* opt) const ;
 
@@ -200,6 +207,13 @@ public:
   void addOwnedComponent(const char* idxlabel, RooAbsData& data) ;
   static void claimVars(RooAbsData*) ;
   static Bool_t releaseVars(RooAbsData*) ;
+
+  enum StorageType { Tree, Vector} ;
+  static StorageType defaultStorageType ;
+
+  static void setDefaultStorageType(StorageType s) ;
+
+  static StorageType getDefaultStorageType();
 
 protected:
 

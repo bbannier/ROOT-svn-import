@@ -13,6 +13,8 @@
 #include "TMultiGraph.h"
 #include "TGraph.h"
 #include "TH1.h"
+#include "TH2.h"
+#include "TPolyLine3D.h"
 #include "TVirtualPad.h"
 #include "Riostream.h"
 #include "TVirtualFitter.h"
@@ -60,6 +62,42 @@ Example:
      mg->Add(gr2,"cp");
      mg->Draw("a");
 </pre>
+A special option <tt>3D</tt> allows to draw the graphs in a 3D space. See the 
+following example:
+End_Html
+Begin_Macro(source)
+{
+   c0 = new TCanvas("c1","multigraph L3",200,10,700,500);
+   c0->SetFrameFillColor(30);
+ 
+   TMultiGraph *mg = new TMultiGraph();
+ 
+   TGraph *gr1 = new TGraph(); gr1->SetLineColor(kBlue);
+   TGraph *gr2 = new TGraph(); gr2->SetLineColor(kRed);
+   TGraph *gr3 = new TGraph(); gr3->SetLineColor(kGreen);
+   TGraph *gr4 = new TGraph(); gr4->SetLineColor(kOrange);
+ 
+   Double_t dx = 6.28/100;
+   Double_t x  = -3.14;
+ 
+   for (int i=0; i<=100; i++) {
+      x = x+dx;
+      gr1->SetPoint(i,x,2.*TMath::Sin(x));
+      gr2->SetPoint(i,x,TMath::Cos(x));
+      gr3->SetPoint(i,x,TMath::Cos(x*x));
+      gr4->SetPoint(i,x,TMath::Cos(x*x*x));
+   }
+ 
+   mg->Add(gr4); gr4->SetTitle("Cos(x*x*x)"); gr4->SetLineWidth(3);
+   mg->Add(gr3); gr3->SetTitle("Cos(x*x)")  ; gr3->SetLineWidth(3);
+   mg->Add(gr2); gr2->SetTitle("Cos(x)")    ; gr2->SetLineWidth(3);
+   mg->Add(gr1); gr1->SetTitle("2*Sin(x)")  ; gr1->SetLineWidth(3);
+ 
+   mg->Draw("a fb l3d");
+   return c0;
+}
+End_Macro
+Begin_Html
 <p>
 The number of graphs in a multigraph can be retrieve with:
 <pre>
@@ -252,7 +290,7 @@ TMultiGraph::TMultiGraph(): TNamed()
 TMultiGraph::TMultiGraph(const char *name, const char *title)
        : TNamed(name,title)
 {
-   // constructor with name and title
+   // Constructor with name and title
 
    fGraphs    = 0;
    fFunctions = 0;
@@ -271,14 +309,15 @@ TMultiGraph::TMultiGraph(const TMultiGraph& mg) :
   fMaximum(mg.fMaximum),
   fMinimum(mg.fMinimum)
 {
-   //copy constructor
+   // Copy constructor
 }
 
 
 //______________________________________________________________________________
 TMultiGraph& TMultiGraph::operator=(const TMultiGraph& mg)
 {
-   //assignement operator
+   // Assignement operator
+   
    if(this!=&mg) {
       TNamed::operator=(mg);
       fGraphs=mg.fGraphs;
@@ -326,8 +365,8 @@ TMultiGraph::~TMultiGraph()
 //______________________________________________________________________________
 void TMultiGraph::Add(TGraph *graph, Option_t *chopt)
 {
-   // add a new graph to the list of graphs
-   // note that the graph is now owned by the TMultigraph.
+   // Add a new graph to the list of graphs.
+   // Note that the graph is now owned by the TMultigraph.
    // Deleting the TMultiGraph object will automatically delete the graphs.
    // You should not delete the graphs when the TMultigraph is still active.
 
@@ -340,7 +379,7 @@ void TMultiGraph::Add(TGraph *graph, Option_t *chopt)
 //______________________________________________________________________________
 void TMultiGraph::Add(TMultiGraph *multigraph, Option_t *chopt)
 {
-   // add all the graphs in "multigraph" to the list of graphs.
+   // Add all the graphs in "multigraph" to the list of graphs.
 
    TList *graphlist = multigraph->GetListOfGraphs();
    if (!graphlist) return;
@@ -588,10 +627,8 @@ TFitResultPtr TMultiGraph::Fit(TF1 *f1, Option_t *option, Option_t *goption, Axi
 //______________________________________________________________________________
 void TMultiGraph::FitPanel()
 {
-//   -*-*-*-*-*Display a panel with all histogram fit options*-*-*-*-*-*
-//             ==============================================
-//
-//      See class TFitPanel for example
+   // Display a panel with all histogram fit options
+   // See class TFitPanel for example
 
    if (!gPad)
       gROOT->MakeDefCanvas();
@@ -944,7 +981,9 @@ TAxis *TMultiGraph::GetYaxis() const
 //______________________________________________________________________________
 void TMultiGraph::Paint(Option_t *option)
 {
-   // paint all the graphs of this multigraph
+   // Paint all the graphs of this multigraph
+   
+   const TPickerStackGuard pushGuard(this);
 
    if (!fGraphs) return;
    if (fGraphs->GetSize() == 0) return;
@@ -955,9 +994,17 @@ void TMultiGraph::Paint(Option_t *option)
    Int_t i;
    for (i=0;i<nch;i++) chopt[i] = toupper(option[i]);
    chopt[nch] = 0;
+
+   l = (char*)strstr(chopt,"3D");
+   if (l) {
+      l = (char*)strstr(chopt,"L");
+      if (l) PaintPolyLine3D(chopt);
+      return;
+   }
+
    TGraph *g;
 
-   l = strstr(chopt,"A");
+   l = (char*)strstr(chopt,"A");
    if (l) {
       *l = ' ';
       TIter   next(fGraphs);
@@ -971,6 +1018,8 @@ void TMultiGraph::Paint(Option_t *option)
       char *ytitle = 0;
       Int_t firstx = 0;
       Int_t lastx  = 0;
+      Bool_t timedisplay = kFALSE;
+      char *timeformat = 0;
 
       if (fHistogram) {
          //cleanup in case of a previous unzoom
@@ -978,6 +1027,7 @@ void TMultiGraph::Paint(Option_t *option)
             nch = strlen(fHistogram->GetXaxis()->GetTitle());
             firstx = fHistogram->GetXaxis()->GetFirst();
             lastx  = fHistogram->GetXaxis()->GetLast();
+            timedisplay = fHistogram->GetXaxis()->GetTimeDisplay();
             if (nch) {
                xtitle = new char[nch+1];
                strlcpy(xtitle,fHistogram->GetXaxis()->GetTitle(),nch+1);
@@ -986,6 +1036,11 @@ void TMultiGraph::Paint(Option_t *option)
             if (nch) {
                ytitle = new char[nch+1];
                strlcpy(ytitle,fHistogram->GetYaxis()->GetTitle(),nch+1);
+            }
+            nch = strlen(fHistogram->GetXaxis()->GetTimeFormat());
+            if (nch) {
+              timeformat = new char[nch+1];
+              strlcpy(timeformat,fHistogram->GetXaxis()->GetTimeFormat(),nch+1);
             }
             delete fHistogram;
             fHistogram = 0;
@@ -1071,6 +1126,8 @@ void TMultiGraph::Paint(Option_t *option)
          if (xtitle) {fHistogram->GetXaxis()->SetTitle(xtitle); delete [] xtitle;}
          if (ytitle) {fHistogram->GetYaxis()->SetTitle(ytitle); delete [] ytitle;}
          if (firstx != lastx) fHistogram->GetXaxis()->SetRange(firstx,lastx);
+         if (timedisplay) {fHistogram->GetXaxis()->SetTimeDisplay(timedisplay);}
+         if (timeformat) {fHistogram->GetXaxis()->SetTimeFormat(timeformat); delete [] timeformat;}
       }
       fHistogram->Paint("0");
    }
@@ -1081,11 +1138,21 @@ void TMultiGraph::Paint(Option_t *option)
       TObject *obj = 0;
 
       while (lnk) {
+      
          obj = lnk->GetObject();
-         if (strlen(lnk->GetOption())) obj->Paint(lnk->GetOption());
-         else                          obj->Paint(chopt);
+         
+         gPad->PushSelectableObject(obj);
+         
+         if (!gPad->PadInHighlightMode() || (gPad->PadInHighlightMode() && obj == gPad->GetSelected())) {
+            if (strlen(lnk->GetOption()))
+               obj->Paint(lnk->GetOption());
+            else
+               obj->Paint(chopt);
+         }
+
          lnk = (TObjOptLink*)lnk->Next();
       }
+
       gfit = (TGraph*)obj; // pick one TGraph in the list to paint the fit parameters.
    }
 
@@ -1104,6 +1171,85 @@ void TMultiGraph::Paint(Option_t *option)
    }
 
    if (fit) gfit->PaintStats(fit);
+}
+
+
+//______________________________________________________________________________
+void TMultiGraph::PaintPolyLine3D(Option_t *option)
+{
+   // Paint all the graphs of this multigraph as 3D lines
+
+   Int_t i, npt=0;
+   char *l;
+   Double_t rwxmin=0., rwxmax=0., rwymin=0., rwymax=0.;
+   TIter next(fGraphs);
+   TGraph *g;
+
+   g = (TGraph*) next();
+   if (g) {
+      g->ComputeRange(rwxmin, rwymin, rwxmax, rwymax);
+      npt = g->GetN();
+   }
+
+   while ((g = (TGraph*) next())) {
+      Double_t rx1,ry1,rx2,ry2;
+      g->ComputeRange(rx1, ry1, rx2, ry2);
+      if (rx1 < rwxmin) rwxmin = rx1;
+      if (ry1 < rwymin) rwymin = ry1;
+      if (rx2 > rwxmax) rwxmax = rx2;
+      if (ry2 > rwymax) rwymax = ry2;
+      if (g->GetN() > npt) npt = g->GetN();
+   }
+
+   Int_t ndiv = fGraphs->GetSize();
+   TH2F* frame = new TH2F("frame","", ndiv, 0., (Double_t)(ndiv), 
+                                      10, rwxmin, rwxmax);
+
+   TAxis *Xaxis = frame->GetXaxis();
+   Xaxis->SetNdivisions(-ndiv);
+   next.Reset();
+   for (i=ndiv; i>=1; i--) {
+      g = (TGraph*) next();
+      Xaxis->SetBinLabel(i, g->GetTitle());
+   }
+
+   frame->SetStats(kFALSE);
+   frame->SetMinimum(rwymin);
+   frame->SetMaximum(rwymax);
+   
+   l = (char*)strstr(option,"A");
+   if (l) frame->Paint("lego0,fb,bb");
+   l = (char*)strstr(option,"BB");
+   if (!l) frame->Paint("lego0,fb,a,same");
+   
+   Double_t *x, *y;
+   Double_t xyz1[3], xyz2[3];
+   
+   next.Reset();
+   Int_t j = ndiv;
+   while ((g = (TGraph*) next())) {
+      npt = g->GetN();
+      x   = g->GetX();
+      y   = g->GetY();
+      gPad->SetLineColor(g->GetLineColor());
+      gPad->SetLineWidth(g->GetLineWidth());
+      gPad->SetLineStyle(g->GetLineStyle());
+      gPad->TAttLine::Modify();
+      for (i=0; i<npt-1; i++) {
+         xyz1[0] = j-0.5;
+         xyz1[1] = x[i];
+         xyz1[2] = y[i];
+         xyz2[0] = j-0.5;
+         xyz2[1] = x[i+1];
+         xyz2[2] = y[i+1];
+         gPad->PaintLine3D(xyz1, xyz2);
+      }
+      j--;
+   }
+   
+   l = (char*)strstr(option,"FB");
+   if (!l) frame->Paint("lego0,bb,a,same");
+   delete frame;
 }
 
 

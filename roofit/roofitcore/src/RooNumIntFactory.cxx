@@ -39,6 +39,7 @@
 #include "RooNumber.h"
 
 #include "RooIntegrator1D.h"
+#include "RooBinIntegrator.h"
 #include "RooIntegrator2D.h"
 #include "RooSegmentedIntegrator1D.h"
 #include "RooSegmentedIntegrator2D.h"
@@ -68,6 +69,7 @@ RooNumIntFactory::RooNumIntFactory()
 
   _instance = this ;
 
+  RooBinIntegrator::registerIntegrator(*this) ;
   RooIntegrator1D::registerIntegrator(*this) ;
   RooIntegrator2D::registerIntegrator(*this) ;
   RooSegmentedIntegrator1D::registerIntegrator(*this) ;
@@ -149,7 +151,7 @@ Bool_t RooNumIntFactory::storeProtoIntegrator(RooAbsIntegrator* proto, const Roo
   }
 
   // Add to factory 
-  _map[name.Data()] = make_pair<RooAbsIntegrator*,std::string>(proto,depName) ;
+  _map[name.Data()] = std::pair<RooAbsIntegrator*,std::string>(proto,depName) ;
 
   // Add default config to master config
   RooNumIntConfig::defaultConfig().addConfigSection(proto,defConfig) ;

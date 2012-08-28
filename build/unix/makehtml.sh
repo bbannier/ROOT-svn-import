@@ -1,8 +1,7 @@
 #! /bin/sh
 
-ROOT=bin/root.exe
-
 dir=`pwd`
+ROOT=$dir/bin/root
 cd tutorials
 # we need tutorials/hsimple.root
 if [ ! -f hsimple.root ]; then
@@ -19,6 +18,8 @@ echo ""
 echo "Generating doc in directory htmldoc/..."
 echo ""
 
+# To generate the full documentation, we do need to
+# use the graphics engine, so do not use '-b'.
 $ROOT -l <<makedoc
     THtml h;
     h.LoadAllLibs();

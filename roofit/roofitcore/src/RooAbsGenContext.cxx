@@ -32,7 +32,7 @@
 #include "TClass.h"
 
 #include "RooAbsGenContext.h"
-#include "RooAbsGenContext.h"
+#include "RooRandom.h"
 #include "RooAbsPdf.h"
 #include "RooDataSet.h"
 #include "RooMsgService.h"
@@ -40,6 +40,8 @@
 
 #include "Riostream.h"
 
+
+using namespace std;
 
 ClassImp(RooAbsGenContext)
 ;
@@ -128,12 +130,14 @@ void RooAbsGenContext::attach(const RooArgSet& /*params*/)
 RooDataSet* RooAbsGenContext::createDataSet(const char* name, const char* title, const RooArgSet& obs)
 {
   // Create an empty dataset to hold the events that will be generated
-  return new RooDataSet(name, title, obs);
+  RooDataSet* ret = new RooDataSet(name, title, obs);
+  ret->setDirtyProp(kFALSE) ;
+  return ret ;
 }
 
 
 //_____________________________________________________________________________
-RooDataSet *RooAbsGenContext::generate(Int_t nEvents) 
+RooDataSet *RooAbsGenContext::generate(Double_t nEvents, Bool_t skipInit, Bool_t extendedMode) 
 {
   // Generate the specified number of events with nEvents>0 and
   // and return a dataset containing the generated events. With nEvents<=0,
@@ -171,6 +175,10 @@ RooDataSet *RooAbsGenContext::generate(Int_t nEvents)
 		      << nEvents << " events" << endl;
   }
 
+  if (extendedMode) {
+    nEvents = RooRandom::randomGenerator()->Poisson(nEvents) ;
+  }
+
   // check that any prototype dataset still defines the variables we need
   // (this is necessary since we never make a private clone, for efficiency)
   if(_prototype) {
@@ -202,7 +210,10 @@ RooDataSet *RooAbsGenContext::generate(Int_t nEvents)
   _genData = createDataSet(name.Data(),title.Data(),*_theEvent) ; 
 
   // Perform any subclass implementation-specific initialization
-  initGenerator(*_theEvent);
+  // Can be skipped if this is a rerun with an identical configuration
+  if (!skipInit) {
+    initGenerator(*_theEvent);
+  }
   
   // Loop over the events to generate
   Int_t evt(0) ;
@@ -241,6 +252,7 @@ RooDataSet *RooAbsGenContext::generate(Int_t nEvents)
 
   RooDataSet* output = _genData ;
   _genData = 0 ;
+  output->setDirtyProp(kTRUE) ;
 
   return output;
 }

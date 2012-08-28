@@ -38,6 +38,8 @@
 
 
 
+using namespace std;
+
 ClassImp(RooErrorVar)
 ;
 
@@ -85,7 +87,7 @@ RooErrorVar::~RooErrorVar()
 
 
 //_____________________________________________________________________________
-Double_t RooErrorVar::getVal(const RooArgSet*) const 
+Double_t RooErrorVar::getValV(const RooArgSet*) const 
 { 
   // Return value, i.e. error on input variable
 
@@ -310,3 +312,6 @@ void RooErrorVar::syncCache(const RooArgSet*)
 
   _value = evaluate() ; 
 }
+
+
+

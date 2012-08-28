@@ -40,6 +40,8 @@
 #include "RooDataSet.h"
 #include "RooDataHist.h"
 
+using namespace std;
+
 ClassImp(RooStats::PointSetInterval) ;
 
 using namespace RooStats;
@@ -143,7 +145,7 @@ Bool_t PointSetInterval::CheckParameters(const RooArgSet &parameterPoint) const
 Double_t PointSetInterval::UpperLimit(RooRealVar& param ) 
 {  
   RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPointsInInterval );
-  Double_t low, high;
+  Double_t low = 0, high = 0;
   if( tree ){
     tree->getRange(param, low, high);
     return high;
@@ -155,7 +157,7 @@ Double_t PointSetInterval::UpperLimit(RooRealVar& param )
 Double_t PointSetInterval::LowerLimit(RooRealVar& param ) 
 {  
   RooDataSet*  tree = dynamic_cast<RooDataSet*>(  fParameterPointsInInterval );
-  Double_t low, high;
+  Double_t low = 0, high = 0;
   if( tree ){
     tree->getRange(param, low, high);
     return low;

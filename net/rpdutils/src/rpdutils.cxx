@@ -235,8 +235,6 @@ extern "C" {
 #if defined(__sun)
 #if defined(R__SUNGCC3)
 extern "C" int gethostname(char *, unsigned int);
-#else
-extern "C" int gethostname(char *, int);
 #endif
 #endif
 
@@ -946,7 +944,7 @@ int RpdUpdateAuthTab(int opt, const char *line, char **token, int ilck)
    }
 
    goingout:
-   if (ilck == 0) {
+   if (itab != ilck) {
       // unlock the file
       lseek(itab, 0, SEEK_SET);
       if (lockf(itab, F_ULOCK, (off_t) 1) == -1) {
@@ -1552,13 +1550,15 @@ int RpdCheckOffSet(int Sec, const char *User, const char *Host, int RemId,
       *OffSet = ofs;
       // return token if requested
       if (Token) {
-         *Token = new char[strlen(tkn)+1];
-         strlcpy(*Token,tkn,strlen(tkn)+1);
+         const size_t tokenSize = strlen(tkn)+1;
+         *Token = new char[tokenSize];
+         strlcpy(*Token,tkn,tokenSize);
       }
       if (Sec == 3) {
          if (GlbsUser) {
-            *GlbsUser = new char[strlen(usr)+1];
-            strlcpy(*GlbsUser,usr,strlen(usr)+1);
+            const size_t glbsUserSize = strlen(usr)+1;
+            *GlbsUser = new char[glbsUserSize];
+            strlcpy(*GlbsUser,usr,glbsUserSize);
          }
          if (ShmId)
             *ShmId = shmid;
@@ -2155,8 +2155,9 @@ int RpdCheckHost(const char *Host, const char *host)
       if (gDebug > 2)
          ErrorInfo("RpdCheckHost: Checking Host IP: %s", hh);
    } else {
-      hh = new char[strlen(Host)+1];
-      strlcpy(hh,Host,strlen(Host)+1);
+      const size_t hhSize = strlen(Host)+1;
+      hh = new char[hhSize];
+      strlcpy(hh,Host,hhSize);
       if (gDebug > 2)
          ErrorInfo("RpdCheckHost: Checking Host name: %s", hh);
    }
@@ -2176,8 +2177,9 @@ int RpdCheckHost(const char *Host, const char *host)
    int first= 1;
    int ends= 0;
    int starts= 0;
-   char *h = new char[strlen(host)+1];
-   strlcpy(h,host,strlen(host)+1);
+   const size_t hSize = strlen(host)+1;
+   char *h = new char[hSize];
+   strlcpy(h,host,hSize);
    char *tk = strtok(h,"*");
    while (tk) {
 
@@ -2286,7 +2288,7 @@ int RpdSshAuth(const char *sstr)
    
    user[lenU] = '\0';
    gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
    if (gRSASSLKey) {
       // Determine type of RSA key required
       gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -2448,6 +2450,7 @@ int RpdSshAuth(const char *sstr)
          NetSend(kErrNoPipeInfo, kROOTD_ERR);
          delete[] uniquePipe;
          delete[] pipeFile;
+         close(unixFd);
          return auth;
       } else {
          // File open: fill it
@@ -2808,7 +2811,7 @@ int RpdKrb5Auth(const char *sstr)
       // Decode subject string
       sscanf(sstr, "%d %d %d %d %255s", &gRemPid, &ofs, &opt, &lenU, dumm);
       gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
       if (gRSASSLKey) {
          // Determine type of RSA key required
          gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -3207,10 +3210,10 @@ int RpdSRPUser(const char *sstr)
       int lenU, ofs, opt;
       char dumm[20];
       sscanf(sstr, "%d %d %d %d %127s %19s", &gRemPid, &ofs, &opt, &lenU, user, dumm);
-      lenU = (lenU > kMAXUSERLEN) ? kMAXUSERLEN-1 : lenU;
+      lenU = (lenU > kMAXUSERLEN-1) ? kMAXUSERLEN-1 : lenU;
       user[lenU] = '\0';
       gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
       if (gRSASSLKey) {
          // Determine type of RSA key required
          gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -3296,11 +3299,6 @@ int RpdSRPUser(const char *sstr)
 #else
    struct t_server *ts = t_serveropenfromfiles(gUser, tpw, tcnf);
 #endif
-   if (!ts) {
-      NetSend(kErrNoUser, kROOTD_ERR);
-      ErrorInfo("RpdSRPUser: user %s not found SRP password file", gUser);
-      return auth;
-   }
 
    if (tcnf)
       t_closeconf(tcnf);
@@ -3310,6 +3308,12 @@ int RpdSRPUser(const char *sstr)
       fclose(fp2);
    if (fp1)
       fclose(fp1);
+
+   if (!ts) {
+      NetSend(kErrNoUser, kROOTD_ERR);
+      ErrorInfo("RpdSRPUser: user %s not found SRP password file", gUser);
+      return auth;
+   }
 
    char hexbuf[MAXHEXPARAMLEN];
 
@@ -3951,7 +3955,7 @@ int RpdGlobusAuth(const char *sstr)
 
    Subj[lSubj] = '\0';
    gReUseRequired = (opt & kAUTH_REUSE_MSK);
-#if R__SSL
+#ifdef R__SSL
    if (gRSASSLKey) {
       // Determine type of RSA key required
       gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -4513,14 +4517,17 @@ int RpdCheckSshd(int opt)
       localAddr.sin_port = htons(0);
       if (bind(sd, (struct sockaddr *) &localAddr, sizeof(localAddr)) < 0) {
          ErrorInfo("RpdCheckSshd: cannot bind to local port %u", gSshdPort);
+         close(sd);
          return 0;
       }
       // connect to server
       if (connect(sd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
          ErrorInfo("RpdCheckSshd: cannot connect to local port %u",
                    gSshdPort);
+         close(sd);
          return 0;
       }
+      close(sd);
       // Sshd successfully contacted
       if (gDebug > 2)
          ErrorInfo("RpdCheckSshd: success!");
@@ -4567,7 +4574,7 @@ int RpdUser(const char *sstr)
       gCryptRequired = (opt & kAUTH_CRYPT_MSK);
       gSaltRequired  = (opt & kAUTH_SSALT_MSK);
       gOffSet = ofs;
-#if R__SSL
+#ifdef R__SSL
       if (gRSASSLKey) {
          // Determine type of RSA key required
          gRSAKey = (opt & kAUTH_RSATY_MSK) ? 2 : 1;
@@ -4929,10 +4936,11 @@ char *RpdGetRandString(int Opt, int Len)
    //       2      hex characters       (upper and lower case)
    //       3      crypt like           [a-zA-Z0-9./]
 
-   int iimx[4][4] = { { 0x0, 0xffffff08, 0xafffffff, 0x2ffffffe }, // Opt = 0
-                      { 0x0, 0x3ff0000,  0x7fffffe,  0x7fffffe },  // Opt = 1
-                      { 0x0, 0x3ff0000,  0x7e,       0x7e },       // Opt = 2
-                      { 0x0, 0x3ffc000,  0x7fffffe,  0x7fffffe }   // Opt = 3
+   unsigned int iimx[4][4] = {
+      { 0x0, 0xffffff08, 0xafffffff, 0x2ffffffe }, // Opt = 0
+      { 0x0, 0x3ff0000,  0x7fffffe,  0x7fffffe },  // Opt = 1
+      { 0x0, 0x3ff0000,  0x7e,       0x7e },       // Opt = 2
+      { 0x0, 0x3ffc000,  0x7fffffe,  0x7fffffe }   // Opt = 3
    };
 
    const char *cOpt[4] = { "Any", "LetNum", "Hex", "Crypt" };
@@ -5261,8 +5269,9 @@ int RpdSecureRecv(char **str)
                    strlen(buftmp));
 
       // Prepare output
-      *str = new char[strlen(buftmp) + 1];
-      strlcpy(*str, buftmp, strlen(buftmp)+1);
+      const size_t strSize = strlen(buftmp) + 1;
+      *str = new char[strSize];
+      strlcpy(*str, buftmp, strSize);
    } else if (gRSAKey == 2) {
 #ifdef R__SSL
       unsigned char iv[8];
@@ -5371,8 +5380,9 @@ int RpdGenRSAKeys(int setrndinit)
    // works as expected
    bool notOK = 1;
    rsa_NUMBER p1, p2, rsa_n, rsa_e, rsa_d;
-   int l_n = 0, l_e = 0, l_d = 0;
+   int l_n = 0, l_d = 0;
 #if R__RSADEB
+   Int_t l_e = 0;
    char buf[rsa_STRLEN];
 #endif
    char buf_n[rsa_STRLEN], buf_e[rsa_STRLEN], buf_d[rsa_STRLEN];
@@ -5424,7 +5434,9 @@ int RpdGenRSAKeys(int setrndinit)
       rsa_num_sput(&rsa_n, buf_n, rsa_STRLEN);
       l_n = strlen(buf_n);
       rsa_num_sput(&rsa_e, buf_e, rsa_STRLEN);
+#if R__RSADEB
       l_e = strlen(buf_e);
+#endif
       rsa_num_sput(&rsa_d, buf_d, rsa_STRLEN);
       l_d = strlen(buf_d);
 
@@ -6626,6 +6638,7 @@ int RpdRetrieveSpecialPass(const char *usr, const char *fpw, char *pass, int lpw
    if (fstat(fid, &st) == -1) {
       ErrorInfo("RpdRetrieveSpecialPass: cannot stat descriptor %d"
                   " %s (errno: %d)", fid, GetErrno());
+      close(fid);
       rc = -1;
       goto back;
    }
@@ -6635,6 +6648,7 @@ int RpdRetrieveSpecialPass(const char *usr, const char *fpw, char *pass, int lpw
                 " 0%o (should be 0600)", rootdpass, (st.st_mode & 0777));
       ErrorInfo("RpdRetrieveSpecialPass: %d %d",
                 S_ISREG(st.st_mode),S_ISDIR(st.st_mode));
+      close(fid);
       rc = -2;
       goto back;
    }

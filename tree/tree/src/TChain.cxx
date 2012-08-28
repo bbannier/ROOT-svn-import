@@ -54,6 +54,7 @@
 #include "TEntryList.h"
 #include "TEntryListFromFile.h"
 #include "TFileStager.h"
+#include "TFilePrefetch.h"
 
 const Long64_t theBigNumber = Long64_t(1234567890)<<28;
 
@@ -171,7 +172,7 @@ TChain::~TChain()
 {
    // -- Destructor.
    gROOT->GetListOfCleanups()->Remove(this);
-
+   
    SafeDelete(fProofChain);
    fStatus->Delete();
    delete fStatus;
@@ -179,6 +180,13 @@ TChain::~TChain()
    fFiles->Delete();
    delete fFiles;
    fFiles = 0;
+
+   //first delete cache if exists
+   if (fFile && fFile->GetCacheRead(fTree)) {
+      delete fFile->GetCacheRead(fTree);
+      fFile->SetCacheRead(0, fTree);
+   }
+
    delete fFile;
    fFile = 0;
    // Note: We do *not* own the tree.
@@ -641,7 +649,7 @@ TFriendElement* TChain::AddFriend(const char* chain, const char* dummy /* = "" *
 
    // We need to invalidate the loading of the current tree because its list
    // of real friends is now obsolete.  It is repairable only from LoadTree.
-   fTreeNumber = -1;
+   InvalidateCurrentTree();
 
    TTree* tree = fe->GetTree();
    if (!tree) {
@@ -668,7 +676,7 @@ TFriendElement* TChain::AddFriend(const char* chain, TFile* dummy)
 
    // We need to invalidate the loading of the current tree because its list
    // of real friend is now obsolete.  It is repairable only from LoadTree
-   fTreeNumber = -1;
+   InvalidateCurrentTree();
 
    TTree *t = fe->GetTree();
    if (!t) {
@@ -694,7 +702,7 @@ TFriendElement* TChain::AddFriend(TTree* chain, const char* alias, Bool_t /* war
 
    // We need to invalidate the loading of the current tree because its list
    // of real friend is now obsolete.  It is repairable only from LoadTree
-   fTreeNumber = -1;
+   InvalidateCurrentTree();
 
    TTree *t = fe->GetTree();
    if (!t) {
@@ -1014,6 +1022,27 @@ TFile* TChain::GetFile() const
 }
 
 //______________________________________________________________________________
+TLeaf* TChain::GetLeaf(const char* branchname, const char *leafname)
+{
+   // -- Return a pointer to the leaf name in the current tree.
+   
+   if (fProofChain && !(fProofChain->TestBit(kProofLite))) {
+      // Make sure the element list is uptodate
+      if (!TestBit(kProofUptodate))
+         SetProof(kTRUE, kTRUE);
+      return fProofChain->GetLeaf(branchname, leafname);
+   }
+   if (fTree) {
+      return fTree->GetLeaf(branchname, leafname);
+   }
+   LoadTree(0);
+   if (fTree) {
+      return fTree->GetLeaf(branchname, leafname);
+   }
+   return 0;
+}
+
+//______________________________________________________________________________
 TLeaf* TChain::GetLeaf(const char* name)
 {
    // -- Return a pointer to the leaf name in the current tree.
@@ -1177,6 +1206,31 @@ Double_t TChain::GetWeight() const
    }
 }
 
+
+//______________________________________________________________________________
+void TChain::InvalidateCurrentTree()
+{
+   // Set the TTree to be reloaded as soon as possible.  In particular this
+   // is needed when adding a Friend.
+
+   // If the tree has clones, copy them into the chain
+   // clone list so we can change their branch addresses
+   // when necessary.
+   //
+   // This is to support the syntax:
+   //
+   //      TTree* clone = chain->GetTree()->CloneTree(0);
+   //
+   if (fTree && fTree->GetListOfClones()) {
+      for (TObjLink* lnk = fTree->GetListOfClones()->FirstLink(); lnk; lnk = lnk->Next()) {
+         TTree* clone = (TTree*) lnk->GetObject();
+         AddClone(clone);
+      }
+   }
+   fTreeNumber = -1;
+   fTree = 0;
+}
+
 //______________________________________________________________________________
 Int_t TChain::LoadBaskets(Long64_t /*maxmemory*/)
 {
@@ -1198,6 +1252,14 @@ Long64_t TChain::LoadTree(Long64_t entry)
    //
    // The input argument entry is the entry serial number in the whole chain.
    //
+   // In case of error, LoadTree returns a negative number:
+   //   -1: The chain is empty.
+   //   -2: The requested entry number of less than zero or too large for the chain.
+   //       or too large for the large TTree.
+   //   -3: The file corresponding to the entry could not be correctly open
+   //   -4: The TChainElement corresponding to the entry is missing or 
+   //       the TTree is missing from the file.
+   //
    // Note: This is the only routine which sets the value of fTree to
    //       a non-zero pointer.
    //
@@ -1210,7 +1272,7 @@ Long64_t TChain::LoadTree(Long64_t entry)
 
    if (!fNtrees) {
       // -- The chain is empty.
-      return 1;
+      return -1;
    }
 
    if ((entry < 0) || ((entry > 0) && (entry >= fEntries && entry!=(theBigNumber-1) ))) {
@@ -1337,38 +1399,59 @@ Long64_t TChain::LoadTree(Long64_t entry)
       return treeReadEntry;
    }
 
-   // If the tree has clones, copy them into the chain
-   // clone list so we can change their branch addresses
-   // when necessary.
-   //
-   // This is to support the syntax:
-   //
-   //      TTree* clone = chain->GetTree()->CloneTree(0);
-   //
-   if (fTree && fTree->GetListOfClones()) {
-      for (TObjLink* lnk = fTree->GetListOfClones()->FirstLink(); lnk; lnk = lnk->Next()) {
-         TTree* clone = (TTree*) lnk->GetObject();
-         AddClone(clone);
-      }
-   }
-
    // Delete the current tree and open the new tree.
-   TTreeCache* tpf = 0;
 
+   TTreeCache* tpf = 0;
    // Delete file unless the file owns this chain!
    // FIXME: The "unless" case here causes us to leak memory.
    if (fFile) {
       if (!fDirectory->GetList()->FindObject(this)) {
-         tpf = (TTreeCache*) fFile->GetCacheRead();
-         if (tpf) tpf->ResetCache();
-         fFile->SetCacheRead(0);
+         if (fTree) {
+            // (fFile != 0 && fTree == 0) can happen when 
+            // InvalidateCurrentTree is called (for example from
+            // AddFriend).  Having fTree === 0 is necessary in that
+            // case because in some cases GetTree is used as a check
+            // to see if a TTree is already loaded.
+            // However, this prevent using the following to reuse
+            // the TTreeCache object.
+            tpf = (TTreeCache*) fFile->GetCacheRead(fTree);
+            if (tpf) {
+               tpf->ResetCache();
+               if (tpf->IsEnablePrefetching()){
+                  //wait for thread to finish current work
+                  tpf->GetPrefetchObj()->GetCondNextFile()->Wait();
+               }
+            }
+            fFile->SetCacheRead(0, fTree);
+            // If the tree has clones, copy them into the chain
+            // clone list so we can change their branch addresses
+            // when necessary.
+            //
+            // This is to support the syntax:
+            //
+            //      TTree* clone = chain->GetTree()->CloneTree(0);
+            //
+            // We need to call the invalidate exactly here, since
+            // we no longer need the value of fTree and it is 
+            // about to be deleted.
+            InvalidateCurrentTree();
+         }
+
          if (fCanDeleteRefs) {
             fFile->Close("R");
          }
          delete fFile;
          fFile = 0;
-         // Note: We do *not* own fTree.
-         fTree = 0;
+      } else {
+         // If the tree has clones, copy them into the chain
+         // clone list so we can change their branch addresses
+         // when necessary.
+         //
+         // This is to support the syntax:
+         //
+         //      TTree* clone = chain->GetTree()->CloneTree(0);
+         //
+         if (fTree) InvalidateCurrentTree();
       }
    }
 
@@ -1425,8 +1508,7 @@ Long64_t TChain::LoadTree(Long64_t entry)
    if (tpf) {
       if (fFile) {
          tpf->ResetCache();
-         fFile->SetCacheRead(tpf);
-         tpf->SetFile(fFile);
+         fFile->SetCacheRead(tpf, fTree);
          // FIXME: fTree may be zero here.
          tpf->UpdateBranches(fTree);
       } else {
@@ -2089,6 +2171,20 @@ void TChain::SetAutoDelete(Bool_t autodelete)
       SetBit(kAutoDelete, 1);
    } else {
       SetBit(kAutoDelete, 0);
+   }
+}
+
+void TChain::SetCacheSize(Long64_t cacheSize)
+{
+   TTree::SetCacheSize(cacheSize);
+   TFile* file = GetCurrentFile();
+   if (!file) {
+      return;
+   }
+   TFileCacheRead* pf = file->GetCacheRead(this);
+   if (pf) {
+      file->SetCacheRead(0, this);
+      file->SetCacheRead(pf, fTree);
    }
 }
 

@@ -36,13 +36,15 @@
 #include "RooUnblindUniform.h"
 
 
+using namespace std;
+
 ClassImp(RooUnblindUniform)
 ;
 
 
 
 //_____________________________________________________________________________
-RooUnblindUniform::RooUnblindUniform() : _blindEngine("") 
+RooUnblindUniform::RooUnblindUniform()
 {
   // Default constructor
 }

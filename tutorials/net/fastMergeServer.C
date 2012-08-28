@@ -5,6 +5,7 @@
 #include "TTree.h"
 #include "TMemFile.h"
 #include "TRandom.h"
+#include "TError.h"
 #include "TFileMerger.h"
 
 #include "TServerSocket.h"
@@ -14,11 +15,15 @@
 
 #include "TFileCacheWrite.h"
 
-char scratch[32*1024*1024];
-
 void fastMergeServer(bool cache = false) {
    // This script shows how to make a simple iterative server that
-   // can accept connections while handling currently open connections.
+   // can receive TMemFile from multiple clients and merge them into 
+   // a single file without block.
+   //
+   // Note: This server assumes that the client will reset the histogram
+   // after each upload to simplify the merging.
+   // 
+   // This server can accept connections while handling currently open connections.
    // Compare this script to hserv.C that blocks on accept.
    // In this script a server socket is created and added to a monitor.
    // A monitor object is used to monitor connection requests on
@@ -31,8 +36,8 @@ void fastMergeServer(bool cache = false) {
    // To run this demo do the following:
    //   - Open three windows
    //   - Start ROOT in all three windows
-   //   - Execute in the first window: .x hserv2.C
-   //   - Execute in the second and third windows: .x hclient.C
+   //   - Execute in the first window: .x fastMergerServer.C
+   //   - Execute in the second and third windows: .x treeClient.C
    //Author: Fons Rademakers
    
    // Open a server socket looking for connections on a named service or
@@ -51,7 +56,14 @@ void fastMergeServer(bool cache = false) {
    TMemFile *transient = 0;
    
    TFileMerger merger(kFALSE,kFALSE);
-   merger.OutputFile("hserv-output1.root",kTRUE);   
+   merger.SetPrintLevel(0);
+
+   enum StatusKind {
+      kStartConnection = 0,
+      kProtocol = 1,
+      
+      kProtocolVersion = 1
+   };
    if (cache) new TFileCacheWrite(merger.GetOutputFile(),32*1024*1024);
    while (1) {
       TMessage *mess;
@@ -66,7 +78,8 @@ void fastMergeServer(bool cache = false) {
             ss->Close();         
          } else {
             TSocket *client = ((TServerSocket *)s)->Accept();
-            client->Send(TString::Format("go %d",clientCount));
+            client->Send(clientCount, kStartConnection);
+            client->Send(kProtocolVersion, kProtocol);
             ++clientCount;
             mon->Add(client);
             printf("Accept %d connections\n",clientCount);
@@ -76,7 +89,9 @@ void fastMergeServer(bool cache = false) {
       
       s->Recv(mess);
 
-      if (mess->What() == kMESS_STRING) {
+      if (mess==0) {
+         Error("fastMergeServer","The client did not send a message\n");
+      } else if (mess->What() == kMESS_STRING) {
          char str[64];
          mess->ReadString(str, 64);
          printf("Client %d: %s\n", clientCount, str);
@@ -90,31 +105,23 @@ void fastMergeServer(bool cache = false) {
             break;
          }
       } else if (mess->What() == kMESS_ANY) {
+
          Long64_t length;
+         TString filename;
+         Int_t clientId;
+         mess->ReadInt(clientId);
+         mess->ReadTString(filename);
          mess->ReadLong64(length); // '*mess >> length;' is broken in CINT for Long64_t.
-         // fprintf(stderr,"Seeing %lld bytes\n",length);
 
+         Info("fastMergeServer","Receive input from client %d for %s",clientId,filename.Data());
+         
          delete transient;
-         mess->ReadFastArray(scratch,length);
-         transient = new TMemFile("hsimple.memroot",scratch,length);
-//         mess->ReadFastArray(transient->GetBuffer(),end);
-//         transient->SetOffset(0);
-//         transient->SetEND(end);
-//         transient->ReadKeys();
-
+         transient = new TMemFile(filename,mess->Buffer() + mess->Length(),length);
+         mess->SetBufferOffset(mess->Length()+length);
+         merger.OutputFile(filename);
          merger.AddAdoptFile(transient);
 
-         TH1 *h; transient->GetObject("hpx",h);
-         if (h==0) transient->GetObject("hpxpy",h);
-         TTree *in; transient->GetObject("tree",in);
-
-         if (h) {
-            h->Print();
-         }
-         if (in) {
-            printf("Received %s with %lld\n",in->GetName(),in->GetEntries());
-         }
-         merger.IncrementalMerge();
+         merger.PartialMerge(TFileMerger::kAllIncremental);
          transient = 0;
       } else if (mess->What() == kMESS_OBJECT) {
          printf("got object of class: %s\n", mess->GetClass()->GetName());

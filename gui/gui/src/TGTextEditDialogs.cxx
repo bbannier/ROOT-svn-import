@@ -63,6 +63,7 @@ TGSearchDialog::TGSearchDialog(const TGWindow *p, const TGWindow *main,
 
    if (!p && !main) {
       MakeZombie();
+      // coverity [uninit_ctor]
       return;
    }
    fRetCode = ret_code;
@@ -314,6 +315,7 @@ TGPrintDialog::TGPrintDialog(const TGWindow *p, const TGWindow *main,
 
    if (!p && !main) {
       MakeZombie();
+      // coverity [uninit_ctor]
       return;
    }
    fPrinter      = printerName;
@@ -353,7 +355,8 @@ TGPrintDialog::TGPrintDialog(const TGWindow *p, const TGWindow *main,
 
    fLPrintCommand = new TGLabel(fF3, new TGHotString("Print command:"));
    fBPrintCommand = new TGTextBuffer(50);
-   fBPrintCommand->AddText(0, *printProg);
+   if ((printProg) && (*printProg)) 
+      fBPrintCommand->AddText(0, *printProg);
    fPrintCommandEntry = new TGTextEntry(fF3, fBPrintCommand);
    fPrintCommandEntry->Associate(this);
    fPrintCommandEntry->Resize(150, fPrintCommandEntry->GetDefaultHeight());
@@ -362,7 +365,8 @@ TGPrintDialog::TGPrintDialog(const TGWindow *p, const TGWindow *main,
    fF3->AddFrame(fPrintCommandEntry, fL6);
 
    fLPrinter = new TGLabel(fF4, new TGHotString("Printer:"));
-   fPrinterEntry = new TGComboBox(fF4, *printerName);
+   if ((printerName) && (*printerName)) 
+      fPrinterEntry = new TGComboBox(fF4, *printerName);
    fBPrinter = fPrinterEntry->GetTextEntry()->GetBuffer();
    fPrinterEntry->Resize(150, fPrinterEntry->GetTextEntry()->GetDefaultHeight());
    fF4->AddFrame(fLPrinter, fL5);
@@ -493,15 +497,20 @@ Bool_t TGPrintDialog::ProcessMessage(Long_t msg, Long_t parm1, Long_t)
                switch (parm1) {
                   case 1:
                      *fRetCode = kTRUE;
-                     string = fBPrinter->GetString();
-                     delete [] *fPrinter;
-                     *fPrinter = new char[strlen(string)+1];
-                     strlcpy(*fPrinter, string, strlen(string)+1);
-
-                     string = fBPrintCommand->GetString();
-                     delete [] *fPrintCommand;
-                     *fPrintCommand = new char[strlen(string)+1];
-                     strlcpy(*fPrintCommand, string, strlen(string)+1);
+                     {
+                        string = fBPrinter->GetString();
+                        delete [] *fPrinter;
+                        const size_t prSize = strlen(string) + 1;
+                        *fPrinter = new char[prSize];
+                        strlcpy(*fPrinter, string, prSize);
+                     }
+                     {
+                        string = fBPrintCommand->GetString();
+                        delete [] *fPrintCommand;
+                        const size_t cmdSize = strlen(string) + 1;
+                        *fPrintCommand = new char[cmdSize];
+                        strlcpy(*fPrintCommand, string, cmdSize);
+                     }
 
                      if (fBPrintCommand->GetTextLength() == 0) {
                         txt = "Please provide print command or use \"Cancel\"";
@@ -541,6 +550,7 @@ TGGotoDialog::TGGotoDialog(const TGWindow *p, const TGWindow *main,
 
    if (!p && !main) {
       MakeZombie();
+      // coverity [uninit_ctor]
       return;
    }
    fRetCode = ret_code;

@@ -198,6 +198,10 @@ std::pair<TVirtualIndex*, Int_t> TChainIndex::GetSubTreeIndex(Int_t major, Int_t
          break;
       }
    }
+   // Double check we found the right range.
+   if (indexValue > fEntries[treeNo].fMaxIndexValue) {
+      return make_pair(static_cast<TVirtualIndex*>(0), 0);
+   }
    TChain* chain = dynamic_cast<TChain*> (fTree);
    R__ASSERT(chain);
    chain->LoadTree(chain->GetTreeOffset()[treeNo]);
@@ -270,7 +274,7 @@ Long64_t TChainIndex::GetEntryNumberWithBestIndex(Int_t major, Int_t minor) cons
 
    std::pair<TVirtualIndex*, Int_t> indexAndNumber = GetSubTreeIndex(major, minor);
    if (!indexAndNumber.first) {
-      Error("GetEntryNumberWithBestIndex","no index found");
+      // Error("GetEntryNumberWithBestIndex","no index found");
       return -1;
    }
    else {
@@ -290,7 +294,7 @@ Long64_t TChainIndex::GetEntryNumberWithIndex(Int_t major, Int_t minor) const
 
    std::pair<TVirtualIndex*, Int_t> indexAndNumber = GetSubTreeIndex(major, minor);
    if (!indexAndNumber.first) {
-      Error("GetEntryNumberWithIndex","no index found");
+      // Error("GetEntryNumberWithIndex","no index found");
       return -1;
    }
    else {
@@ -298,7 +302,11 @@ Long64_t TChainIndex::GetEntryNumberWithIndex(Int_t major, Int_t minor) const
       ReleaseSubTreeIndex(indexAndNumber.first, indexAndNumber.second);
       TChain* chain = dynamic_cast<TChain*> (fTree);
       R__ASSERT(chain);
-      return rv + chain->GetTreeOffset()[indexAndNumber.second];
+      if (rv >= 0) {
+         return rv + chain->GetTreeOffset()[indexAndNumber.second];
+      } else {
+         return rv;
+      }
    }
 }
 

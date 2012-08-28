@@ -59,4 +59,10 @@
 #pragma link C++ class std::vector<std::pair<Int_t, Int_t> >+;
 #pragma link C++ class TFileMergeInfo;
 
+#ifdef R__WITH_CLING
+#pragma link C++ class TCintWithCling;
+#else
+#pragma link C++ class TCint;
+#endif
+
 #endif

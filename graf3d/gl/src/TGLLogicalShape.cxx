@@ -422,40 +422,12 @@ void TGLLogicalShape::DrawHighlight(TGLRnrCtx& rnrCtx, const TGLPhysicalShape* p
    // If lvl argument is less than 0 (-1 by default), the index into color-set
    // is taken from the physical shape itself.
 
-   const TGLRect& vp = rnrCtx.RefCamera().RefViewport();
-   Int_t inner[4][2] = { { 0,-1}, { 1, 0}, { 0, 1}, {-1, 0} };
-   Int_t outer[8][2] = { {-1,-1}, { 1,-1}, { 1, 1}, {-1, 1},
-                         { 0,-2}, { 2, 0}, { 0, 2}, {-2, 0} };
-
    if (lvl < 0) lvl = pshp->GetSelected();
 
-   rnrCtx.SetHighlightOutline(kTRUE);
+   glColor4ubv(rnrCtx.ColorSet().Selection(lvl).CArr());
    TGLUtil::LockColor();
-   Int_t first_outer = (rnrCtx.CombiLOD() == TGLRnrCtx::kLODHigh) ? 0 : 4;
-   for (int i = first_outer; i < 8; ++i)
-   {
-      glViewport(vp.X() + outer[i][0], vp.Y() + outer[i][1], vp.Width(), vp.Height());
-      glColor4ubv(rnrCtx.ColorSet().Selection(lvl).CArr());
-      Draw(rnrCtx);
-   }
-   TGLUtil::UnlockColor();
-   rnrCtx.SetHighlightOutline(kFALSE);
-
-   pshp->SetupGLColors(rnrCtx);
-   for (int i = 0; i < 4; ++i)
-   {
-      glViewport(vp.X() + inner[i][0], vp.Y() + inner[i][1], vp.Width(), vp.Height());
-      glColor4fv(pshp->Color());
-      Draw(rnrCtx);
-   }
-   glViewport(vp.X(), vp.Y(), vp.Width(), vp.Height());
-
-   pshp->SetupGLColors(rnrCtx);
-   Float_t dr[2];
-   glGetFloatv(GL_DEPTH_RANGE,dr);
-   glDepthRange(dr[0], 0.5*dr[1]);
    Draw(rnrCtx);
-   glDepthRange(dr[0], dr[1]);
+   TGLUtil::UnlockColor();
 }
 
 //______________________________________________________________________________

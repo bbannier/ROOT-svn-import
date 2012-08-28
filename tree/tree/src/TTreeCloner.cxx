@@ -39,7 +39,7 @@
 #include <algorithm>
 
 //______________________________________________________________________________
-bool TTreeCloner::CompareSeek::operator()(UInt_t i1, UInt_t i2)
+Bool_t TTreeCloner::CompareSeek::operator()(UInt_t i1, UInt_t i2)
 {
    if (fObject->fBasketSeek[i1] ==  fObject->fBasketSeek[i2]) {
       if (fObject->fBasketEntry[i1] ==  fObject->fBasketEntry[i2]) {
@@ -51,7 +51,7 @@ bool TTreeCloner::CompareSeek::operator()(UInt_t i1, UInt_t i2)
 }
 
 //______________________________________________________________________________
-bool TTreeCloner::CompareEntry::operator()(UInt_t i1, UInt_t i2)
+Bool_t TTreeCloner::CompareEntry::operator()(UInt_t i1, UInt_t i2)
 {
    if (fObject->fBasketEntry[i1] ==  fObject->fBasketEntry[i2]) {
       return i1 < i2;
@@ -76,6 +76,7 @@ TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t option
    fBasketSeek(new Long64_t[fMaxBaskets]),
    fBasketEntry(new Long64_t[fMaxBaskets]),
    fBasketIndex(new UInt_t[fMaxBaskets]),
+   fPidOffset(0),
    fCloneMethod(TTreeCloner::kDefault),
    fToStartEntries(0)
 {
@@ -131,7 +132,7 @@ TTreeCloner::TTreeCloner(TTree *from, TTree *to, Option_t *method, UInt_t option
       fCloneMethod = TTreeCloner::kSortBasketsByOffset;
    }
    if (fToTree) fToStartEntries = fToTree->GetEntries();
-   
+
    if (fToTree == 0) {
       fWarningMsg.Form("An output TTree is required (cloning %s).",
                        from->GetName());
@@ -382,7 +383,7 @@ UInt_t TTreeCloner::CollectBranches(TObjArray *from, TObjArray *to)
          numBasket += CollectBranches(fb, tb);
          ++fi;
          if (fi >= fnb) {
-           fi = 0;
+            fi = 0;
          }
       } else {
          if (tb->GetMother()==tb) {
@@ -539,6 +540,7 @@ void TTreeCloner::CopyProcessIds()
    while ((key = (TKey*)next())) {
       if (!strcmp(key->GetClassName(),"TProcessID")) {
          TProcessID *pid = (TProcessID*)key->ReadObjectAny(0);
+         if (!pid) continue;
 
          //UShort_t out = TProcessID::WriteProcessID(id,tofile);
          UShort_t out = 0;
@@ -577,14 +579,14 @@ void TTreeCloner::CopyProcessIds()
 void TTreeCloner::ImportClusterRanges()
 {
    // Set the entries and import the cluster range of the 
-   
+
    // First undo, the external call to SetEntries
    // We could improve the interface to optional tell the TTreeCloner that the
    // SetEntries was not done.
    fToTree->SetEntries(fToTree->GetEntries() - fFromTree->GetTree()->GetEntries());
-   
+
    fToTree->ImportClusterRanges( fFromTree->GetTree() );
-   
+
    fToTree->SetEntries(fToTree->GetEntries() + fFromTree->GetTree()->GetEntries());
 }
 
@@ -636,13 +638,13 @@ void TTreeCloner::WriteBaskets()
          }
          Int_t len = from->GetBasketBytes()[index];
 
-         basket->LoadBasketBuffers(pos,len,fromfile);
+         basket->LoadBasketBuffers(pos,len,fromfile,fFromTree);
          basket->IncrementPidOffset(fPidOffset);
          basket->CopyTo(tofile);
          to->AddBasket(*basket,kTRUE,fToStartEntries + from->GetBasketEntry()[index]);
       } else {
          TBasket *frombasket = from->GetBasket( index );
-         if (frombasket->GetNevBuf()>0) {
+         if (frombasket && frombasket->GetNevBuf()>0) {
             TBasket *tobasket = (TBasket*)frombasket->Clone();
             tobasket->SetBranch(to);
             to->AddBasket(*tobasket, kFALSE, fToStartEntries+from->GetBasketEntry()[index]);

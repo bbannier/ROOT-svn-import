@@ -179,7 +179,7 @@ void TRooFitPanel::DoGenerateRooFit()
    try {
       CreateRooFitPdf(fExpRoo->GetText());
    } catch (WrongRooFitExpression& exp) {
-      cerr << "Error(:S): " << exp.what() << endl;
+      std::cerr << "Error(:S): " << exp.what() << std::endl;
       return;
    }
 

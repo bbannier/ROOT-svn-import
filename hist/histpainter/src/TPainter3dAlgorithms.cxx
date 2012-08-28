@@ -224,8 +224,10 @@ TPainter3dAlgorithms::TPainter3dAlgorithms(Double_t *rmin, Double_t *rmax, Int_t
    TView *view = 0;
    if (gPad) view = gPad->GetView();
    if (!view) view = TView::CreateView(fSystem, rmin, rmax);
-   view->SetView(gPad->GetPhi(), gPad->GetTheta(), psi, i);
-   view->SetRange(rmin,rmax);
+   if (view) {
+      view->SetView(gPad->GetPhi(), gPad->GetTheta(), psi, i);
+      view->SetRange(rmin,rmax);
+   }
 }
 
 
@@ -381,6 +383,7 @@ void TPainter3dAlgorithms::DefineGridLevels(Int_t ndivz)
    // Find the main tick marks positions.
    Double_t *rmin = view->GetRmin();
    Double_t *rmax = view->GetRmax();
+   if (!rmin || !rmax) return;
    if (ndivz > 0) {
       THLimitsFinder::Optimize(rmin[2], rmax[2], ndivz,
                                binLow, binHigh, nbins, binWidth, " ");
@@ -1573,12 +1576,17 @@ void TPainter3dAlgorithms::FindVisibleDraw(Double_t *r1, Double_t *r2)
    if (gPad) view = gPad->GetView();
    if (view) {
       tn = view->GetTN();
-      x1 = tn[0]*r1[1] + tn[1]*r1[2] + tn[2]*r1[3]  + tn[3];
-      x2 = tn[0]*r2[1] + tn[1]*r2[2] + tn[2]*r2[3]  + tn[3];
-      y1 = tn[4]*r1[1] + tn[5]*r1[2] + tn[6]*r1[3]  + tn[7];
-      y2 = tn[4]*r2[1] + tn[5]*r2[2] + tn[6]*r2[3]  + tn[7];
-      z1 = tn[8]*r1[1] + tn[9]*r1[2] + tn[10]*r1[3] + tn[11];
-      z2 = tn[8]*r2[1] + tn[9]*r2[2] + tn[10]*r2[3] + tn[11];
+      if (tn) {
+         x1 = tn[0]*r1[1] + tn[1]*r1[2] + tn[2]*r1[3]  + tn[3];
+         x2 = tn[0]*r2[1] + tn[1]*r2[2] + tn[2]*r2[3]  + tn[3];
+         y1 = tn[4]*r1[1] + tn[5]*r1[2] + tn[6]*r1[3]  + tn[7];
+         y2 = tn[4]*r2[1] + tn[5]*r2[2] + tn[6]*r2[3]  + tn[7];
+         z1 = tn[8]*r1[1] + tn[9]*r1[2] + tn[10]*r1[3] + tn[11];
+         z2 = tn[8]*r2[1] + tn[9]*r2[2] + tn[10]*r2[3] + tn[11];
+      } else {
+         Error("FindVisibleDraw", "invalid TView in current pad");
+         return;
+      }
    } else {
       Error("FindVisibleDraw", "no TView in current pad");
       return;
@@ -2125,7 +2133,7 @@ void TPainter3dAlgorithms::LegoFunction(Int_t ia, Int_t ib, Int_t &nv, Double_t 
    // Service function for Legos
 
    Int_t i, j, ixt, iyt;
-   Double_t xval1l, xval2l, yval1l,  yval2l;
+   Double_t yval1l,  yval2l;
    Double_t xlab1l, xlab2l, ylab1l, ylab2l;
    Double_t rinrad = gStyle->GetLegoInnerR();
    Double_t dangle = 10; //Delta angle for Rapidity option
@@ -2153,8 +2161,8 @@ void TPainter3dAlgorithms::LegoFunction(Int_t ia, Int_t ib, Int_t &nv, Double_t 
       if (ab[5] > 0) ab[5]  = TMath::Log10(ab[5]);
       else           ab[5]  = Hparam.xmin;
    }
-   xval1l = Hparam.xmin;
-   xval2l = Hparam.xmax;
+   // xval1l = Hparam.xmin;
+   // xval2l = Hparam.xmax;
    if (Hoption.Logy) {
       if (ab[4] > 0) ab[4]  = TMath::Log10(ab[4]);
       else           ab[4]  = Hparam.ymin;
@@ -2346,8 +2354,10 @@ void TPainter3dAlgorithms::LegoCartesian(Double_t ang, Int_t nx, Int_t ny, const
    tn = view->GetTN();
 
    i1 = 1;
-   if (tn[0] < 0) i1 = 2;
-   if (tn[0]*cosa + tn[1]*sina < 0) i1 = 5 - i1;
+   if (tn) {
+      if (tn[0] < 0) i1 = 2;
+      if (tn[0]*cosa + tn[1]*sina < 0) i1 = 5 - i1;
+   }
 
    // Allocate v and tt arrays
    Double_t *v, *tt;
@@ -3365,10 +3375,15 @@ void TPainter3dAlgorithms::ModifyScreen(Double_t *r1, Double_t *r2)
 
    if (view) {
       tn = view->GetTN();
-      x1 = tn[0]*r1[1] + tn[1]*r1[2] + tn[2]*r1[3] + tn[3];
-      x2 = tn[0]*r2[1] + tn[1]*r2[2] + tn[2]*r2[3] + tn[3];
-      y1 = tn[4]*r1[1] + tn[5]*r1[2] + tn[6]*r1[3] + tn[7];
-      y2 = tn[4]*r2[1] + tn[5]*r2[2] + tn[6]*r2[3] + tn[7];
+      if (tn) {
+         x1 = tn[0]*r1[1] + tn[1]*r1[2] + tn[2]*r1[3] + tn[3];
+         x2 = tn[0]*r2[1] + tn[1]*r2[2] + tn[2]*r2[3] + tn[3];
+         y1 = tn[4]*r1[1] + tn[5]*r1[2] + tn[6]*r1[3] + tn[7];
+         y2 = tn[4]*r2[1] + tn[5]*r2[2] + tn[6]*r2[3] + tn[7];
+      } else {
+         Error("ModifyScreen", "invalid TView in current pad");
+         return;
+      }
    } else {
       Error("ModifyScreen", "no TView in current pad");
       return;
@@ -3669,8 +3684,10 @@ void TPainter3dAlgorithms::SurfaceCartesian(Double_t ang, Int_t nx, Int_t ny, co
    tn = view->GetTN();
 
    i1 = 1;
-   if (tn[0] < 0) i1 = 2;
-   if (tn[0]*cosa + tn[1]*sina < 0) i1 = 5 - i1;
+   if (tn) {
+      if (tn[0] < 0) i1 = 2;
+      if (tn[0]*cosa + tn[1]*sina < 0) i1 = 5 - i1;
+   }
 
    //          D E F I N E   O R D E R   O F   D R A W I N G
    if (*chopt == 'B' || *chopt == 'b') {incrx = -1; incry = -1;}
@@ -3731,7 +3748,7 @@ void TPainter3dAlgorithms::SurfaceFunction(Int_t ia, Int_t ib, Double_t *f, Doub
 
    Double_t rinrad = gStyle->GetLegoInnerR();
    Double_t dangle = 10; //Delta angle for Rapidity option
-   Double_t xval1l, xval2l, yval1l, yval2l;
+   Double_t yval1l, yval2l;
    Double_t xlab1l, xlab2l, ylab1l, ylab2l;
    Int_t i, ixa, iya, icx, ixt, iyt;
 
@@ -3742,8 +3759,8 @@ void TPainter3dAlgorithms::SurfaceFunction(Int_t ia, Int_t ib, Double_t *f, Doub
    ixt = ia + Hparam.xfirst - 1;
    iyt = ib + Hparam.yfirst - 1;
 
-   xval1l = Hparam.xmin;
-   xval2l = Hparam.xmax;
+   // xval1l = Hparam.xmin;
+   // xval2l = Hparam.xmax;
    yval1l = Hparam.ymin;
    yval2l = Hparam.ymax;
 
@@ -4367,6 +4384,7 @@ void TPainter3dAlgorithms::ImplicitFunction(Double_t *rmin, Double_t *rmax,
       return;
    }
    Double_t *tnorm = view->GetTnorm();
+   if (!tnorm) return;
 
    //       D E F I N E   O R D E R   O F   D R A W I N G
    if (*chopt == 'B' || *chopt == 'b') {
@@ -4395,13 +4413,13 @@ void TPainter3dAlgorithms::ImplicitFunction(Double_t *rmin, Double_t *rmax,
    dz  = (rmax[2]-rmin[2]) / nz;
 
    // Define the colors used to draw the function
-   Float_t r, g, b, hue, light, satur, light2;
+   Float_t r=0., g=0., b=0., hue, light, satur, light2;
    TColor *colref = gROOT->GetColor(fgCurrentF3->GetFillColor());
-   colref->GetRGB(r, g, b);
+   if (colref) colref->GetRGB(r, g, b);
    TColor::RGBtoHLS(r, g, b, hue, light, satur);
    TColor *acol;
    acol = gROOT->GetColor(kF3FillColor1);
-   acol->SetRGB(r, g, b);
+   if (acol) acol->SetRGB(r, g, b);
    if (light >= 0.5) {
       light2 = .5*light;
    } else {
@@ -4409,11 +4427,11 @@ void TPainter3dAlgorithms::ImplicitFunction(Double_t *rmin, Double_t *rmax,
    }
    TColor::HLStoRGB(hue, light2, satur, r, g, b);
    acol = gROOT->GetColor(kF3FillColor2);
-   acol->SetRGB(r, g, b);
+   if (acol) acol->SetRGB(r, g, b);
    colref = gROOT->GetColor(fgCurrentF3->GetLineColor());
-   colref->GetRGB(r, g, b);
+   if (colref) colref->GetRGB(r, g, b);
    acol = gROOT->GetColor(kF3LineColor);
-   acol->SetRGB(r, g, b);
+   if (acol) acol->SetRGB(r, g, b);
 
    //       D R A W   F U N C T I O N
    for (iz = iz1; incrz < 0 ? iz >= iz2 : iz <= iz2; iz += incrz) {

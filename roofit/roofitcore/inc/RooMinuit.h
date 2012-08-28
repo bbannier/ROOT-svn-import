@@ -20,12 +20,16 @@
 #include "TStopwatch.h"
 #include <fstream>
 #include "TMatrixDSymfwd.h"
+#include <vector>
+#include <string>
+#include <map>
 
 class RooAbsReal ;
 class RooFitResult ;
 class RooArgList ;
 class RooRealVar ;
 class RooArgSet ;
+class RooAbsArg ;
 class TVirtualFitter ;
 class TH2F ;
 class RooPlot ;
@@ -43,7 +47,7 @@ public:
   void setStrategy(Int_t strat) ;
   void setErrorLevel(Double_t level) ;
   void setEps(Double_t eps) ;
-  void optimizeConst(Bool_t flag) ;
+  void optimizeConst(Int_t flag) ;
   void setEvalErrorWall(Bool_t flag) { _doEvalErrorWall = flag ; }
 
   RooFitResult* fit(const char* options) ;
@@ -89,7 +93,7 @@ protected:
   void backProp() ;
 
   inline Int_t getNPar() const { return _nPar ; }
-  inline ofstream* logfile() const { return _logfile ; }
+  inline std::ofstream* logfile() const { return _logfile ; }
   inline Double_t& maxFCN() { return _maxFCN ; }
 
   Double_t getPdfParamVal(Int_t index) ;
@@ -99,13 +103,17 @@ protected:
   void setPdfParamErr(Int_t index, Double_t loVal, Double_t hiVal) ;
   void clearPdfParamAsymErr(Int_t index) ;
 
+  void saveStatus(const char* label, Int_t status) { _statusHistory.push_back(std::pair<std::string,int>(label,status)) ; }
+
+  void updateFloatVec() ;
+
 private:
 
   Int_t       _evalCounter ;
   Int_t       _printLevel ;
   Int_t       _warnLevel ;
   Int_t       _status ;
-  Bool_t      _optConst ;
+  Int_t       _optConst ;
   Bool_t      _profile ;
   Bool_t      _handleLocalErrors ;
   Int_t       _numBadNLL ;
@@ -114,13 +122,14 @@ private:
   Bool_t      _doEvalErrorWall ;
   Int_t       _maxEvalMult ;
   RooArgList* _floatParamList ;
+  std::vector<RooAbsArg*> _floatParamVec ;
   RooArgList* _initFloatParamList ;
   RooArgList* _constParamList ;
   RooArgList* _initConstParamList ;
   RooAbsReal* _func ;
 
   Double_t    _maxFCN ;  
-  ofstream*   _logfile ;
+  std::ofstream*   _logfile ;
   Bool_t      _verbose ;
   TStopwatch  _timer ;
   TStopwatch  _cumulTimer ;
@@ -128,6 +137,8 @@ private:
   TMatrixDSym* _extV ;
 
   static TVirtualFitter *_theFitter ; 
+
+  std::vector<std::pair<std::string,int> > _statusHistory ;
 
   RooMinuit(const RooMinuit&) ;
 	

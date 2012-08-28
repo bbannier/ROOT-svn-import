@@ -30,16 +30,13 @@
 //  1002 (0x3EA) -> 1003 (0x3EB) : many new features
 //  1003 (0x3EB) -> 1004 (0x3EC) : restructuring
 //  1004 (0x3EC) -> 1005 (0x3ED) : deeper restructuring
-//  1005 (0x3EC) -> 1006 (0x3EE) : support for ls,rm,stat,md5sum, getfile, ...
-#define XPROOFD_VERSBIN 0x000003EE
-#define XPROOFD_VERSION "0.6"
+//  1005 (0x3ED) -> 1006 (0x3EE) : support for ls,rm,stat,md5sum, getfile, ...
+//  1006 (0x3EE) -> 1007 (0x3EF) : introduce kQueryMssUrl
+#define XPROOFD_VERSBIN 0x000003EF
+#define XPROOFD_VERSION "0.7"
 
-#ifdef OLDXRDOUC
-#  include "XrdSysToOuc.h"
-#  include "XrdOuc/XrdOucPthread.hh"
-#else
-#  include "XrdSys/XrdSysPthread.hh"
-#endif
+#include "XpdSysPthread.h"
+
 #include "Xrd/XrdLink.hh"
 #include "Xrd/XrdObject.hh"
 #include "Xrd/XrdProtocol.hh"
@@ -77,6 +74,8 @@ public:
    // Getters
    inline kXR_int32 CID() const { return fCID; }
    inline XrdProofdClient *Client() const { return fPClient; }
+   inline const char *GroupIn() const { return fGroupIn.c_str(); }
+   inline const char *UserIn() const { return fUserIn.c_str(); }
    inline int    ConnType() const { return fConnType; }
    inline const char *TraceID() const { return fTraceID.c_str(); }
    inline bool   Internal() { return (fConnType == kXPD_Internal) ? 1 : 0; }
@@ -103,11 +102,13 @@ public:
    inline void   SetClntCapVer(unsigned char c) { fClntCapVer = c; }
    inline void   SetCID(kXR_int32 cid) { fCID = cid; }
    inline void   SetConnType(int ct) { fConnType = ct; }
+   inline void   SetGroupIn(const char *gin) { fGroupIn = gin; }
    inline void   SetTraceID() { if (fLink) XPDFORM(fTraceID, "%s: ", fLink->ID); }
    inline void   SetPid(int pid) { fPid = pid; }
    inline void   SetProofProtocol(short int pp) { fProofProtocol = pp; }
    inline void   SetStatus(char s) { fStatus = s; }
    inline void   SetSuperUser(bool su = 1) { fSuperUser = su; }
+   inline void   SetUserIn(const char *uin) { fUserIn = uin; }
 
    static XrdProofdManager *Mgr() { return fgMgr; }
    static int    EUidAtStartup() { return fgEUidAtStartup; }
@@ -143,6 +144,8 @@ public:
 
    bool                          fSuperUser;       // TRUE for privileged clients (admins)
 
+   XrdOucString                  fUserIn;          // Incoming user name (can be different from the fPClient one) 
+   XrdOucString                  fGroupIn;         // Explicit group request from incoming user
    XrdProofdClient              *fPClient;         // Our reference XrdProofdClient
    XrdOucString                  fAdminPath;       // Admin path for this client
 

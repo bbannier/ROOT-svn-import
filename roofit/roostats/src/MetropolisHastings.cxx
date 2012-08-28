@@ -98,12 +98,12 @@ ClassImp(RooStats::MetropolisHastings);
 
 using namespace RooFit;
 using namespace RooStats;
+using namespace std;
 
 MetropolisHastings::MetropolisHastings()
 {
    // default constructor
    fFunction = NULL;
-   fParameters = NULL;
    fPropFunc = NULL;
    fNumIters = 0;
    fNumBurnInSteps = 0;
@@ -111,7 +111,7 @@ MetropolisHastings::MetropolisHastings()
    fType = kTypeUnset;
 }
 
-MetropolisHastings::MetropolisHastings(RooAbsReal& function, RooArgSet& paramsOfInterest,
+MetropolisHastings::MetropolisHastings(RooAbsReal& function, const RooArgSet& paramsOfInterest,
       ProposalFunction& proposalFunction, Int_t numIters)
 {
    fFunction = &function;
@@ -125,7 +125,7 @@ MetropolisHastings::MetropolisHastings(RooAbsReal& function, RooArgSet& paramsOf
 
 MarkovChain* MetropolisHastings::ConstructChain()
 {
-   if (!fParameters || !fPropFunc || !fFunction) {
+   if (fParameters.getSize() == 0 || !fPropFunc || !fFunction) {
       coutE(Eval) << "Critical members unintialized: parameters, proposal " <<
                      " function, or (log) likelihood function" << endl;
          return NULL;
@@ -137,27 +137,36 @@ MarkovChain* MetropolisHastings::ConstructChain()
       return NULL;
    }
 
+   if (fChainParams.getSize() == 0) fChainParams.add(fParameters);
+
    RooArgSet x;
    RooArgSet xPrime;
-   x.addClone(*fParameters);
+   x.addClone(fParameters);
    RandomizeCollection(x);
-   xPrime.addClone(*fParameters);
+   xPrime.addClone(fParameters);
    RandomizeCollection(xPrime);
 
    MarkovChain* chain = new MarkovChain();
-   chain->SetParameters(*fParameters);
+   // only the POI will be added to the chain
+   chain->SetParameters(fChainParams);
 
    Int_t weight = 0;
    Double_t xL = 0.0, xPrimeL = 0.0, a = 0.0;
 
+   // ibucur: i think the user should have the possiblity to display all the message
+   //    levels should he/she want to; maybe a setPrintLevel would be appropriate
+   //    (maybe for the other classes that use this approach as well)?
    RooFit::MsgLevel oldMsgLevel = RooMsgService::instance().globalKillBelow();
-   RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
-
+   RooMsgService::instance().setGlobalKillBelow(RooFit::PROGRESS);
 
    // We will need to check if log-likelihood evaluation left an error status.
    // Now using faster eval error logging with CountErrors.
-   if (fType == kLog)
-     fFunction->setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+   if (fType == kLog) {
+     RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::CountErrors);
+     //N.B: need to clear the count in case of previous errors !
+     // the clear needs also to be done after calling setEvalErrorLoggingMode 
+     RooAbsReal::clearEvalErrorLog();
+   }
 
    bool hadEvalError = true;
 
@@ -171,12 +180,12 @@ MarkovChain* MetropolisHastings::ConstructChain()
    // steps we should have to take for any reasonable (log) likelihood function
    while (i < 1000 && hadEvalError) {
       RandomizeCollection(x);
-      RooStats::SetParameters(&x, fParameters);
+      RooStats::SetParameters(&x, &fParameters);
       xL = fFunction->getVal();
 
       if (fType == kLog) {
-         if (fFunction->numEvalErrors() > 0) {
-            fFunction->clearEvalErrorLog();
+         if (RooAbsReal::numEvalErrors() > 0) {
+            RooAbsReal::clearEvalErrorLog();
             hadEvalError = true;
          } else
             hadEvalError = false;
@@ -195,20 +204,20 @@ MarkovChain* MetropolisHastings::ConstructChain()
                      "MetropolisHastings::ConstructChain() " << endl;
    }
 
+
+   ooccoutP((TObject *)0, Generation) << "Metropolis-Hastings progress: ";
+
    // do main loop
    for (i = 0; i < fNumIters; i++) {
       // reset error handling flag
       hadEvalError = false;
 
-      if (i % (fNumIters / 100) == 0) {
-         // print a dot every 1% of the chain construction
-         fprintf(stdout, ".");
-         fflush(NULL);
-      }
+      // print a dot every 1% of the chain construction
+      if (i % (fNumIters / 100) == 0) ooccoutP((TObject*)0, Generation) << ".";
 
       fPropFunc->Propose(xPrime, x);
 
-      RooStats::SetParameters(&xPrime, fParameters);
+      RooStats::SetParameters(&xPrime, &fParameters);
       xPrimeL = fFunction->getVal();
 
       // check if log-likelihood for xprime had an error status
@@ -220,7 +229,7 @@ MarkovChain* MetropolisHastings::ConstructChain()
 
       // why evaluate the last point again, can't we cache it?
       // kbelasco: commenting out lines below to add/test caching support
-      //RooStats::SetParameters(&x, fParameters);
+      //RooStats::SetParameters(&x, &fParameters);
       //xL = fFunction->getVal();
 
       if (fType == kLog) {
@@ -262,7 +271,7 @@ MarkovChain* MetropolisHastings::ConstructChain()
    // make sure to add the last point
    if (weight != 0.0)
       chain->Add(x, CalcNLL(xL), (Double_t)weight);
-   printf("\n");
+   ooccoutP((TObject *)0, Generation) << endl;
 
    RooMsgService::instance().setGlobalKillBelow(oldMsgLevel);
 

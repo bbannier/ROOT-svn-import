@@ -79,24 +79,32 @@ TGTextLine::TGTextLine(const char *string)
 }
 
 //______________________________________________________________________________
-TGTextLine::TGTextLine(const TGTextLine& tl) :
-  fString(tl.fString),
-  fLength(tl.fLength),
-  fPrev(tl.fPrev),
-  fNext(tl.fNext)
+TGTextLine::TGTextLine(const TGTextLine& tl) : fLength(tl.fLength), 
+   fPrev(tl.fPrev), fNext(tl.fNext)
 { 
    //copy constructor
+
+   fString = 0;
+   if (tl.fString) {
+      fString = new char[fLength+1];
+      strncpy(fString, tl.fString, fLength);
+      fString[fLength] = 0;
+   }
 }
 
 //______________________________________________________________________________
 TGTextLine& TGTextLine::operator=(const TGTextLine& tl)
 {
    //assignment operator
-   if(this!=&tl) {
-      fString=tl.fString;
-      fLength=tl.fLength;
-      fPrev=tl.fPrev;
-      fNext=tl.fNext;
+
+   if (this != &tl) {
+      fLength = tl.fLength;
+      if (fString) delete [] fString;
+      fString = new char[fLength+1];
+      strncpy(fString, tl.fString, fLength);
+      fString[fLength] = 0;
+      fPrev = tl.fPrev;
+      fNext = tl.fNext;
    } 
    return *this;
 }
@@ -460,8 +468,9 @@ Bool_t TGText::Load(const char *fn, Long_t startpos, Long_t length)
       }
       *dst = '\0';
       temp = new TGTextLine;
-      buffer = new char[strlen(buf2)+1];
-      strlcpy(buffer, buf2, strlen(buf2)+1);
+      const size_t bufferSize = strlen(buf2)+1;
+      buffer = new char[bufferSize];
+      strlcpy(buffer, buf2, bufferSize);
       temp->fLength = strlen(buf2);
       temp->fString = buffer;
       temp->fNext = temp->fPrev = 0;
@@ -551,8 +560,9 @@ next:
    }
    *dst = '\0';
    temp = new TGTextLine;
-   buffer = new char[strlen(buf2)+1];
-   strlcpy(buffer, buf2, strlen(buf2)+1);
+   const size_t bufferSize = strlen(buf2) + 1;
+   buffer = new char[bufferSize];
+   strlcpy(buffer, buf2, bufferSize);
    temp->fLength = strlen(buf2);
    temp->fString = buffer;
    temp->fNext = temp->fPrev = 0;

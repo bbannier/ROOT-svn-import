@@ -47,6 +47,9 @@ class TGeoManager : public TNamed
 protected:
    static Bool_t         fgLock;            //! Lock preventing a second geometry to be loaded
    static Int_t          fgVerboseLevel;    //! Verbosity level for Info messages (no IO).
+   static Int_t          fgMaxLevel;        //! Maximum level in geometry
+   static Int_t          fgMaxDaughters;    //! Maximum number of daughters
+   static Int_t          fgMaxXtruVert;     //! Maximum number of Xtru vertices
 
    TGeoManager(const TGeoManager&); 
    TGeoManager& operator=(const TGeoManager&); 
@@ -99,7 +102,13 @@ private :
    // Map of navigatorr arrays per thread
    typedef std::map<Long_t, TGeoNavigatorArray *>   NavigatorsMap_t;
    typedef NavigatorsMap_t::iterator                NavigatorsMapIt_t;
-   NavigatorsMap_t       fNavigators;       // Map between thread id's and navigator arrays
+   typedef std::map<Long_t, Int_t>                  ThreadsMap_t;
+   typedef ThreadsMap_t::const_iterator             ThreadsMapIt_t;
+   
+   NavigatorsMap_t       fNavigators;       //! Map between thread id's and navigator arrays
+   static ThreadsMap_t  *fgThreadId;        //! Thread id's map
+   static Int_t          fgNumThreads;      //! Number of registered threads
+   static Bool_t         fgLockNavigators;   //! Lock existing navigators
    TGeoNavigator        *fCurrentNavigator; //! current navigator
    TGeoVolume           *fCurrentVolume;    //! current volume
    TGeoVolume           *fTopVolume;        //! top level volume in geometry
@@ -111,11 +120,7 @@ private :
    TGeoElementTable     *fElementTable;     //! table of elements
 
    Int_t                *fNodeIdArray;      //! array of node id's
-   Int_t                 fIntSize;          //! int buffer size
-   Int_t                 fDblSize;          //! dbl buffer size
-   Int_t                *fIntBuffer;        //! transient int buffer
    Int_t                 fNLevel;           // maximum accepted level in geometry
-   Double_t             *fDblBuffer;        //! transient dbl buffer
    TGeoVolume           *fPaintVolume;      //! volume currently painted
    THashList            *fHashVolumes;      //! hash list of volumes providing fast search
    THashList            *fHashGVolumes;     //! hash list of group volumes providing fast search
@@ -125,6 +130,7 @@ private :
    Int_t                 fNPNEId;           // number of PN entries having a unique ID
    Int_t                *fKeyPNEId;         //[fSizePNEId] array of uid values for PN entries
    Int_t                *fValuePNEId;       //[fSizePNEId] array of pointers to PN entries with ID's
+   Int_t                 fMaxThreads;       //! Max number of threads
    Bool_t                fMultiThread;      //! Flag for multi-threading
 //--- private methods
 
@@ -405,25 +411,38 @@ public:
    void                   CleanGarbage();
    void                   ClearShape(const TGeoShape *shape);
    void                   ClearTracks() {fTracks->Delete(); fNtracks=0;}
+   void                   ClearNavigators();
    void                   RemoveMaterial(Int_t index);
+   void                   RemoveNavigator(const TGeoNavigator *nav);
    void                   ResetUserData();
 
 
    //--- utilities
    Int_t                  CountNodes(const TGeoVolume *vol=0, Int_t nlevels=10000, Int_t option=0);
+   void                   CountLevels();
    virtual void           ExecuteEvent(Int_t event, Int_t px, Int_t py);
    static Int_t           Parse(const char* expr, TString &expr1, TString &expr2, TString &expr3);
    Int_t                  ReplaceVolume(TGeoVolume *vorig, TGeoVolume *vnew);
    Int_t                  TransformVolumeToAssembly(const char *vname);
    UChar_t               *GetBits() {return fBits;}
    virtual Int_t          GetByteCount(Option_t *option=0);
-   Int_t                 *GetIntBuffer(Int_t length);
-   Double_t              *GetDblBuffer(Int_t length);
    void                   SetAllIndex();
+   static Int_t           GetMaxDaughters();
+   static Int_t           GetMaxLevels();
+   static Int_t           GetMaxXtruVert();
+   Int_t                  GetMaxThreads() const {return fMaxThreads;}
+   void                   SetMaxThreads(Int_t nthreads);
    void                   SetMultiThread(Bool_t flag=kTRUE) {fMultiThread = flag;}
+   Bool_t                 IsMultiThread() const {return fMultiThread;}
+   static void            SetNavigatorsLock(Bool_t flag);
+   static Int_t           ThreadId();
+   static Int_t           GetNumThreads();
+   static void            ClearThreadsMap();
+   void                   ClearThreadData() const;
+   void                   CreateThreadData() const;
 
    //--- I/O
-   virtual Int_t          Export(const char *filename, const char *name="", Option_t *option="v");
+   virtual Int_t          Export(const char *filename, const char *name="", Option_t *option="vg");
    static  void           LockGeometry();
    static  void           UnlockGeometry();
    static  Int_t          GetVerboseLevel();

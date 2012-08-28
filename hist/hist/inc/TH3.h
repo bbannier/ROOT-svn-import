@@ -53,23 +53,24 @@ protected:
    TH3(const char *name,const char *title,Int_t nbinsx,const Double_t *xbins
                                          ,Int_t nbinsy,const Double_t *ybins
                                          ,Int_t nbinsz,const Double_t *zbins);
-   virtual Int_t    BufferFill(Double_t, Double_t) {return -2;} //may not use
-   virtual Int_t    BufferFill(Double_t, Double_t, Double_t) {return -2;} //may not use
    virtual Int_t    BufferFill(Double_t x, Double_t y, Double_t z, Double_t w);
 
    void DoFillProfileProjection(TProfile2D * p2, const TAxis & a1, const TAxis & a2, const TAxis & a3, Int_t bin1, Int_t bin2, Int_t bin3, Int_t inBin, Bool_t useWeights) const;
+
+   virtual Int_t    BufferFill(Double_t, Double_t) {return -2;} //may not use
+   virtual Int_t    BufferFill(Double_t, Double_t, Double_t) {return -2;} //may not use
+   Int_t    Fill(Double_t);        //MayNotUse
+   Int_t    Fill(Double_t,Double_t) {return Fill(0.);} //MayNotUse
+   Int_t    Fill(const char*, Double_t) {return Fill(0);} //MayNotUse
+   Int_t    Fill(Double_t,const char*,Double_t) {return Fill(0);} //MayNotUse
+   Int_t    Fill(const char*,Double_t,Double_t) {return Fill(0);} //MayNotUse
+   Int_t    Fill(const char*,const char*,Double_t) {return Fill(0);} //MayNotUse
 
 public:
    TH3(const TH3&);
    virtual ~TH3();
    virtual Int_t    BufferEmpty(Int_t action=0);
    virtual void     Copy(TObject &hnew) const;
-           Int_t    Fill(Double_t) {return -1;}        //MayNotUse
-           Int_t    Fill(Double_t,Double_t) {return -1;} //MayNotUse
-           Int_t    Fill(const char*, Double_t) {return -1;} //MayNotUse
-           Int_t    Fill(Double_t,const char*,Double_t) {return -1;} //MayNotUse
-           Int_t    Fill(const char*,Double_t,Double_t) {return -1;} //MayNotUse
-           Int_t    Fill(const char*,const char*,Double_t) {return -1;} //MayNotUse
    virtual Int_t    Fill(Double_t x, Double_t y, Double_t z);
    virtual Int_t    Fill(Double_t x, Double_t y, Double_t z, Double_t w);
 
@@ -86,6 +87,10 @@ public:
    virtual Int_t    FindLastBinAbove (Double_t threshold=0, Int_t axis=1) const;
    virtual void     FitSlicesZ(TF1 *f1=0,Int_t binminx=1, Int_t binmaxx=0,Int_t binminy=1, Int_t binmaxy=0,
                                         Int_t cut=0 ,Option_t *option="QNR"); // *MENU*
+   using TH1::GetBinErrorLow;
+   using TH1::GetBinErrorUp;
+   virtual Double_t GetBinErrorLow(Int_t binx, Int_t biny, Int_t binz) { return TH1::GetBinErrorLow( GetBin(binx, biny, binz) ); }
+   virtual Double_t GetBinErrorUp(Int_t binx, Int_t biny, Int_t binz)  { return TH1::GetBinErrorUp( GetBin(binx, biny, binz) ); }
    virtual Double_t GetBinWithContent3(Double_t c, Int_t &binx, Int_t &biny, Int_t &binz, Int_t firstx=0, Int_t lastx=0,Int_t firsty=0, Int_t lasty=0, Int_t firstz=0, Int_t lastz=0, Double_t maxdiff=0) const;
    virtual Double_t GetCorrelationFactor(Int_t axis1=1,Int_t axis2=2) const;
    virtual Double_t GetCovariance(Int_t axis1=1,Int_t axis2=2) const;
@@ -110,10 +115,10 @@ public:
          TH1       *Project3D(Option_t *option="x") const; // *MENU*
    TProfile2D      *Project3DProfile(Option_t *option="xy") const; // *MENU*
    virtual void     PutStats(Double_t *stats);
-   virtual TH3     *RebinX(Int_t ngroup, const char *newname);
-   virtual TH3     *RebinY(Int_t ngroup, const char *newname);
-   virtual TH3     *RebinZ(Int_t ngroup, const char *newname);
-   virtual TH3     *Rebin3D(Int_t nxgroup, Int_t nygroup, Int_t nzgroup, const char *newname);
+   virtual TH3     *RebinX(Int_t ngroup = 2, const char *newname = "");
+   virtual TH3     *RebinY(Int_t ngroup = 2, const char *newname = "");
+   virtual TH3     *RebinZ(Int_t ngroup = 2, const char *newname = "");
+   virtual TH3     *Rebin3D(Int_t nxgroup = 2, Int_t nygroup = 2, Int_t nzgroup = 2, const char *newname = "");
    virtual void     Reset(Option_t *option="");
    virtual void     SetShowProjection(const char *option="xy",Int_t nbins=1);   // *MENU*
 

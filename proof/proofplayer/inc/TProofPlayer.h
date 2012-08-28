@@ -82,6 +82,7 @@ protected:
    TList        *fInput;           //-> list with input objects
    TList        *fOutput;          //   list with output objects
    TSelector    *fSelector;        //!  the latest selector
+   Bool_t        fCreateSelObj;    //!  kTRUE when fSelector has been created locally
    TClass       *fSelectorClass;   //!  class of the latest selector
    TTimer       *fFeedbackTimer;   //!  timer for sending intermediate results
    Long_t        fFeedbackPeriod;  //!  period (ms) for sending intermediate results
@@ -90,6 +91,10 @@ protected:
    EExitStatus   fExitStatus;      //   exit status
    Long64_t      fTotalEvents;     //   number of events requested
    TProofProgressStatus *fProgressStatus; // the progress status object;
+
+   Long64_t      fReadBytesRun;   //! Bytes read in this run
+   Long64_t      fReadCallsRun;   //! Read calls in this run
+   Long64_t      fProcessedRun;   //! Events processed in this run
 
    TList        *fQueryResults;    //List of TQueryResult
    TQueryResult *fQuery;           //Instance of TQueryResult currently processed
@@ -124,6 +129,7 @@ protected:
       ~TCleanup() { fPlayer->StopFeedback(); }
    };
 
+   Int_t  AssertSelector(const char *selector_file);
    Bool_t CheckMemUsage(Long64_t &mfreq, Bool_t &w80r, Bool_t &w80v, TString &wmsg);
 
    void MapOutputListToDataMembers() const;
@@ -136,6 +142,9 @@ public:
 
    Long64_t  Process(TDSet *set,
                      const char *selector, Option_t *option = "",
+                     Long64_t nentries = -1, Long64_t firstentry = 0);
+   Long64_t  Process(TDSet *set,
+                     TSelector *selector, Option_t *option = "",
                      Long64_t nentries = -1, Long64_t firstentry = 0);
    TVirtualPacketizer *GetPacketizer() const { return 0; }
    Long64_t  Finalize(Bool_t force = kFALSE, Bool_t sync = kFALSE);
@@ -197,6 +206,7 @@ public:
 
    Bool_t    IsClient() const { return kFALSE; }
 
+   void      SetExitStatus(EExitStatus st) { fExitStatus = st; }
    EExitStatus GetExitStatus() const { return fExitStatus; }
    Long64_t    GetEventsProcessed() const { return fProgressStatus->GetEntries(); }
    void        AddEventsProcessed(Long64_t ev) { fProgressStatus->IncEntries(ev); }
@@ -211,6 +221,8 @@ public:
 
    void              SetProcessing(Bool_t on = kTRUE);
    TProofProgressStatus  *GetProgressStatus() const { return fProgressStatus; }
+
+   void      UpdateProgressInfo();
 
    ClassDef(TProofPlayer,0)  // Basic PROOF player
 };
@@ -232,7 +244,16 @@ public:
    virtual ~TProofPlayerLocal() { }
 
    Bool_t         IsClient() const { return fIsClient; }
-
+   Long64_t  Process(const char *selector, Long64_t nentries = -1, Option_t *option = "");
+   Long64_t  Process(TSelector *selector, Long64_t nentries = -1, Option_t *option = "");
+   Long64_t  Process(TDSet *set,
+                     const char *selector, Option_t *option = "",
+                     Long64_t nentries = -1, Long64_t firstentry = 0) {
+             return TProofPlayer::Process(set, selector, option, nentries, firstentry); }
+   Long64_t  Process(TDSet *set,
+                     TSelector *selector, Option_t *option = "",
+                     Long64_t nentries = -1, Long64_t firstentry = 0) {
+             return TProofPlayer::Process(set, selector, option, nentries, firstentry); }
    ClassDef(TProofPlayerLocal,0)  // PROOF player running on client
 };
 
@@ -265,7 +286,8 @@ protected:
    Bool_t              fMergeFiles;    // is True when merging output files centrally is needed
    TDSet              *fDSet;          //!tdset for current processing
    ErrorHandlerFunc_t  fErrorHandler;  // Store previous handler when redirecting output
-   Bool_t              fUseTH1Merge;   // If kTRUE forces use of TH1::Merge [kFALSE]
+   Bool_t              fMergeTH1OneByOne;  // If kTRUE forces TH1 merge one-by-one [kTRUE]
+   TH1                *fProcPackets;    //!Histogram with packets being processed (owned by TPerfStats)
 
    virtual Bool_t  HandleTimer(TTimer *timer);
    Int_t           InitPacketizer(TDSet *dset, Long64_t nentries,
@@ -285,10 +307,13 @@ public:
    TProofPlayerRemote(TProof *proof = 0) : fProof(proof), fOutputLists(0), fFeedback(0),
                                            fFeedbackLists(0), fPacketizer(0),
                                            fMergeFiles(kFALSE), fDSet(0), fErrorHandler(0),
-                                           fUseTH1Merge(kFALSE)
+                                           fMergeTH1OneByOne(kTRUE), fProcPackets(0)
                                            { fProgressStatus = new TProofProgressStatus(); }
    virtual ~TProofPlayerRemote();   // Owns the fOutput list
    virtual Long64_t Process(TDSet *set, const char *selector,
+                            Option_t *option = "", Long64_t nentries = -1,
+                            Long64_t firstentry = 0);
+   virtual Long64_t Process(TDSet *set, TSelector *selector,
                             Option_t *option = "", Long64_t nentries = -1,
                             Long64_t firstentry = 0);
    virtual Long64_t Finalize(Bool_t force = kFALSE, Bool_t sync = kFALSE);
@@ -385,6 +410,11 @@ public:
    Long64_t Process(TDSet *set, const char *selector,
                     Option_t *option = "", Long64_t nentries = -1,
                     Long64_t firstentry = 0);
+   Long64_t Process(TDSet *set, TSelector *selector,
+                    Option_t *option = "", Long64_t nentries = -1,
+                    Long64_t firstentry = 0)
+                    { return TProofPlayerRemote::Process(set, selector, option,
+                                                         nentries, firstentry); }
    void  Progress(Long64_t total, Long64_t processed)
                     { TProofPlayerRemote::Progress(total, processed); }
    void  Progress(Long64_t total, Long64_t processed, Long64_t bytesread,

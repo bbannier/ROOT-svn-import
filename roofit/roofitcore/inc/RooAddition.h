@@ -36,7 +36,7 @@ public:
 
   virtual Double_t defaultErrorLevel() const ;
 
-  void printMetaArgs(ostream& os) const ;
+  void printMetaArgs(std::ostream& os) const ;
 
   const RooArgList& list1() const { return _set ; }
   const RooArgList& list() const { return _set ; }
@@ -49,7 +49,10 @@ public:
   Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const ;
 
   Bool_t setData(RooAbsData& data, Bool_t cloneData=kTRUE) ;
-     
+
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
+  virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;     
+  Bool_t isBinnedDistribution(const RooArgSet& obs) const  ;
 
 protected:
 

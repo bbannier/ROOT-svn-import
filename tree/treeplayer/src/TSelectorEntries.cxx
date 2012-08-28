@@ -57,7 +57,7 @@ TSelectorEntries::TSelectorEntries(TTree *tree, const char *selection) :
 
 //______________________________________________________________________________
 TSelectorEntries::TSelectorEntries(const char *selection) : 
-   fSelect(0), fSelectedRows(0), fSelectMultiple(kFALSE) 
+   fChain(0), fSelect(0), fSelectedRows(0), fSelectMultiple(kFALSE) 
 { 
    // Constructor.
 
@@ -95,7 +95,8 @@ void TSelectorEntries::SlaveBegin(TTree *tree)
 
    SetStatus(0);
    fSelectedRows   = 0;
-   const char *selection = fInput->FindObject("selection")->GetTitle();
+   TObject *selectObj = fInput->FindObject("selection");
+   const char *selection = selectObj ? selectObj->GetTitle() : "";
 
    if (strlen(selection)) {
       fSelect = new TTreeFormula("Selection",selection,fChain);

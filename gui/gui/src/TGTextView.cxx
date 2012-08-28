@@ -406,6 +406,7 @@ Long_t TGTextView::ToObjXCoord(Long_t xCoord, Long_t line)
 
    Long_t viscoord =  xCoord;
    buffer = fText->GetLine(pos, len);
+   if (!buffer) return 0;
    travelBuffer = buffer;
    charBuffer = *travelBuffer++;
    int cw = gVirtualX->TextWidth(fFont, &charBuffer, 1);
@@ -571,6 +572,8 @@ void TGTextView::DrawRegion(Int_t x, Int_t y, UInt_t w, UInt_t h)
          }
          if (pos.fY >= ToObjYCoord(fVisible.fY)) {
             buffer = fText->GetLine(pos, len);
+            if (!buffer) // skip next lines and continue the while() loop
+               continue;
             Int_t i = 0;
             while (buffer[i] != '\0') {
                if (buffer[i] == '\t') {
@@ -1054,8 +1057,7 @@ static Bool_t IsTextFile(const char *candidate)
    FILE *infile;
    FileStat_t buf;
 
-   gSystem->GetPathInfo(candidate, buf);
-   if (!(buf.fMode & kS_IFREG))
+   if (gSystem->GetPathInfo(candidate, buf) || !(buf.fMode & kS_IFREG))
       return kFALSE;
 
    infile = fopen(candidate, "r");
@@ -1100,7 +1102,7 @@ Bool_t TGTextView::HandleDNDDrop(TDNDData *data)
       TBufferFile buf(TBuffer::kRead, data->fDataLength, (void *)data->fData);
       buf.SetReadMode();
       TObject *obj = (TObject *)buf.ReadObjectAny(TObject::Class());
-      if (obj->InheritsFrom("TMacro")) {
+      if (obj && obj->InheritsFrom("TMacro")) {
          TMacro *macro = (TMacro *)obj;
          TIter next(macro->GetListOfLines());
          TObjString *objs;
@@ -1108,7 +1110,7 @@ Bool_t TGTextView::HandleDNDDrop(TDNDData *data)
             AddLine(objs->GetName());
          }
       }
-      else if (obj->InheritsFrom("TSystemFile")) {
+      else if (obj && obj->InheritsFrom("TSystemFile")) {
          TSystemFile *sfile = (TSystemFile *)obj;
          LoadFile(sfile->GetName());
          DataDropped(sfile->GetName());

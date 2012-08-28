@@ -30,6 +30,8 @@ protected:
 
    // Map output streamer
    void WriteMap(int nElements, TBuffer &b);
+private:
+   TEmulatedMapProxy &operator=(const TEmulatedMapProxy &rhs); // Not implemented.
 
 public:
    // Virtual copy constructor
@@ -39,7 +41,7 @@ public:
    TEmulatedMapProxy(const TEmulatedMapProxy& copy);
 
    // Initializing constructor
-   TEmulatedMapProxy(const char* cl_name);
+   TEmulatedMapProxy(const char* cl_name, Bool_t silent);
 
    // Standard destructor
    virtual ~TEmulatedMapProxy();

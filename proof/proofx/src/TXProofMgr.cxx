@@ -355,6 +355,42 @@ void TXProofMgr::ShowWorkers()
 }
 
 //______________________________________________________________________________
+const char *TXProofMgr::GetMssUrl(Bool_t retrieve)
+{
+   // Gets the URL to be prepended to paths when accessing the MSS associated
+   // with the connected cluster, if any. The information is retrieved from
+   // the cluster the first time or if retrieve is true.
+
+   if (fMssUrl.IsNull() || retrieve) {
+      // Nothing to do if not in contact with proofserv
+      if (!IsValid()) {
+         Error("GetMssUrl", "invalid TXProofMgr - do nothing");
+         return 0;
+      }
+      // Server may not support it
+      if (fSocket->GetXrdProofdVersion() < 1007) {
+         Error("GetMssUrl", "functionality not supported by server");
+         return 0;
+      }
+      TObjString *os = fSocket->SendCoordinator(kQueryMssUrl);
+      if (os) {
+         Printf("os: '%s'", os->GetName());
+         fMssUrl = os->GetName();
+         SafeDelete(os);
+      } else {
+         Error("GetMssUrl", "problems retrieving the required information");
+         return 0;
+      }
+   } else if (!IsValid()) {
+      Warning("GetMssUrl", "TXProofMgr is now invalid: information may not be valid");
+      return 0;
+   }
+
+   // Done
+   return fMssUrl.Data();
+}
+
+//______________________________________________________________________________
 TList *TXProofMgr::QuerySessions(Option_t *opt)
 {
    // Get list of sessions accessible to this manager
@@ -384,12 +420,20 @@ TList *TXProofMgr::QuerySessions(Option_t *opt)
          TProofDesc *d = 0;
          TIter nxos(oa);
          TObjString *to = (TObjString *) nxos();
+         if (to && to->GetString().IsDigit() && !strncasecmp(opt,"S",1))
+            Printf("// +++ %s session(s) currently active +++", to->GetName());
          while ((to = (TObjString *) nxos())) {
             // Now parse them ...
-            char al[256];
-            char tg[256];
-            Int_t id = -1, st = -1, nc = 0;
-            sscanf(to->GetName(),"%d %s %s %d %d", &id, tg, al, &st, &nc);
+            Int_t id = -1, st = -1;
+            TString al, tg, tk;
+            Ssiz_t from = 0;
+            while ((to->GetString()[from] == ' ')) { from++; }
+            if (!to->GetString().Tokenize(tk, from, " ") || !tk.IsDigit()) continue;
+            id = tk.Atoi();
+            if (!to->GetString().Tokenize(tg, from, " ")) continue;
+            if (!to->GetString().Tokenize(al, from, " ")) continue;
+            if (!to->GetString().Tokenize(tk, from, " ") || !tk.IsDigit()) continue;
+            st = tk.Atoi();
             // Add to the list, if not already there
             if (!(d = (TProofDesc *) fSessions->FindObject(tg))) {
                Int_t locid = fSessions->GetSize() + 1;
@@ -728,18 +772,18 @@ Int_t TXProofMgr::SendMsgToUsers(const char *msg, const char *usr)
    const Int_t kMAXBUF = 32768;
    char buf[kMAXBUF] = {0};
    char *p = &buf[0];
-   Int_t space = kMAXBUF - 1;
-   Int_t len = 0;
+   size_t space = kMAXBUF - 1;
    Int_t lusr = 0;
 
    // A specific user?
    if (usr && strlen(usr) > 0 && (strlen(usr) != 1 || usr[0] != '*')) {
       lusr = (strlen(usr) + 3);
-      sprintf(buf, "u:%s ", usr);
+      snprintf(buf, kMAXBUF, "u:%s ", usr);
       p += lusr;
       space -= lusr;
    }
 
+   ssize_t len = 0;
    // Is it from file ?
    if (!gSystem->AccessPathName(msg, kFileExists)) {
       // From file: can we read it ?
@@ -754,14 +798,27 @@ Int_t TXProofMgr::SendMsgToUsers(const char *msg, const char *usr)
          return -1;
       }
       // Determine the number of bytes to be read from the file.
-      Int_t left = (Int_t) lseek(fileno(f), (off_t) 0, SEEK_END);
-      lseek(fileno(f), (off_t) 0, SEEK_SET);
+      size_t left = 0;
+      off_t rcsk = lseek(fileno(f), (off_t) 0, SEEK_END);
+      if ((rcsk != (off_t)(-1))) {
+         left = (size_t) rcsk;
+         if ((lseek(fileno(f), (off_t) 0, SEEK_SET) == (off_t)(-1))) {
+            Error("SendMsgToUsers", "cannot rewind open file (seek to 0)");
+            fclose(f);      
+            return -1;
+         }
+      } else {
+         Error("SendMsgToUsers", "cannot get size of open file (seek to END)");
+         fclose(f);      
+         return -1;
+      }
       // Now readout from file
-      Int_t wanted = left;
+      size_t wanted = left;
       if (wanted > space) {
          wanted = space;
          Warning("SendMsgToUsers",
-                 "requested to send %d bytes: max size is %d bytes: truncating", left, space);
+                 "requested to send %lld bytes: max size is %lld bytes: truncating",
+                 (Long64_t)left, (Long64_t)space);
       }
       do {
          while ((len = read(fileno(f), p, wanted)) < 0 &&
@@ -773,17 +830,20 @@ Int_t TXProofMgr::SendMsgToUsers(const char *msg, const char *usr)
          }
 
          // Update counters
-         left -= len;
+         left = (len >= (ssize_t)left) ? 0 : left - len;
          p += len;
          wanted = (left > kMAXBUF-1) ? kMAXBUF-1 : left;
 
       } while (len > 0 && left > 0);
+      // Close file
+      fclose(f);
    } else {
       // Add the message to the buffer
       len = strlen(msg);
-      if (len > space) {
+      if (len > (ssize_t)space) {
          Warning("SendMsgToUsers",
-                 "requested to send %d bytes: max size is %d bytes: truncating", len, space);
+                 "requested to send %lld bytes: max size is %lld bytes: truncating",
+                 (Long64_t)len, (Long64_t)space);
          len = space;
       }
       memcpy(p, msg, len);
@@ -805,12 +865,12 @@ void TXProofMgr::Grep(const char *what, const char *how, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Grep","invalid TXProofMgr - do nothing");
+      Error("Grep","invalid TXProofMgr - do nothing");
       return;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Grep", "functionality not supported by server");
+      Error("Grep", "functionality not supported by server");
       return;
    }
 
@@ -831,13 +891,13 @@ void TXProofMgr::Find(const char *what, const char *how, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Find","invalid TXProofMgr - do nothing");
+      Error("Find","invalid TXProofMgr - do nothing");
       return;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Find", "functionality not supported by server (XrdProofd version: %d)",
-                      fSocket->GetXrdProofdVersion());
+      Error("Find", "functionality not supported by server (XrdProofd version: %d)",
+                     fSocket->GetXrdProofdVersion());
       return;
    }
 
@@ -858,12 +918,12 @@ void TXProofMgr::Ls(const char *what, const char *how, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Ls","invalid TXProofMgr - do nothing");
+      Error("Ls","invalid TXProofMgr - do nothing");
       return;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Ls", "functionality not supported by server");
+      Error("Ls", "functionality not supported by server");
       return;
    }
 
@@ -884,12 +944,12 @@ void TXProofMgr::More(const char *what, const char *how, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("More","invalid TXProofMgr - do nothing");
+      Error("More","invalid TXProofMgr - do nothing");
       return;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("More", "functionality not supported by server");
+      Error("More", "functionality not supported by server");
       return;
    }
 
@@ -912,12 +972,12 @@ Int_t TXProofMgr::Rm(const char *what, const char *how, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Rm","invalid TXProofMgr - do nothing");
+      Error("Rm","invalid TXProofMgr - do nothing");
       return -1;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Rm", "functionality not supported by server");
+      Error("Rm", "functionality not supported by server");
       return -1;
    }
 
@@ -974,12 +1034,12 @@ void TXProofMgr::Tail(const char *what, const char *how, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Tail","invalid TXProofMgr - do nothing");
+      Error("Tail","invalid TXProofMgr - do nothing");
       return;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Tail", "functionality not supported by server");
+      Error("Tail", "functionality not supported by server");
       return;
    }
 
@@ -1000,17 +1060,17 @@ Int_t TXProofMgr::Md5sum(const char *what, TString &sum, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Md5sum","invalid TXProofMgr - do nothing");
+      Error("Md5sum","invalid TXProofMgr - do nothing");
       return -1;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Md5sum", "functionality not supported by server");
+      Error("Md5sum", "functionality not supported by server");
       return -1;
    }
 
    if (where && !strcmp(where, "all")) {
-      Warning("Md5sum","cannot run on all nodes at once: please specify one");
+      Error("Md5sum","cannot run on all nodes at once: please specify one");
       return -1;
    }
 
@@ -1037,17 +1097,17 @@ Int_t TXProofMgr::Stat(const char *what, FileStat_t &st, const char *where)
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Stat","invalid TXProofMgr - do nothing");
+      Error("Stat","invalid TXProofMgr - do nothing");
       return -1;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Stat", "functionality not supported by server");
+      Error("Stat", "functionality not supported by server");
       return -1;
    }
 
    if (where && !strcmp(where, "all")) {
-      Warning("Stat","cannot run on all nodes at once: please specify one");
+      Error("Stat","cannot run on all nodes at once: please specify one");
       return -1;
    }
 
@@ -1057,6 +1117,7 @@ Int_t TXProofMgr::Stat(const char *what, FileStat_t &st, const char *where)
    // Show the result, if any
    if (os) {
       if (gDebug > 1) Printf("%s", os->GetName());
+#if 0
       Int_t    mode, uid, gid, islink;
       Long_t   dev, ino, mtime;
       Long64_t size;
@@ -1077,6 +1138,27 @@ Int_t TXProofMgr::Stat(const char *what, FileStat_t &st, const char *where)
       st.fSize   = size;
       st.fMtime  = mtime;
       st.fIsLink = (islink == 1);
+#else
+      TString tkn;
+      Ssiz_t from = 0;
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fDev = tkn.Atoi();
+      if (st.fDev == -1) return -1;
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fIno = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fMode = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fUid = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fGid = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fSize = tkn.Atoll();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fMtime = tkn.Atoi();
+      if (!os->GetString().Tokenize(tkn, from, "[ ]+") || !tkn.IsDigit()) return -1;
+      st.fIsLink = (tkn.Atoi() == 1) ? kTRUE : kFALSE;
+#endif
 
       // Cleanup
       SafeDelete(os);
@@ -1104,12 +1186,12 @@ TObjString *TXProofMgr::Exec(Int_t action,
 
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Exec","invalid TXProofMgr - do nothing");
+      Error("Exec","invalid TXProofMgr - do nothing");
       return (TObjString *)0;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Exec", "functionality not supported by server");
+      Error("Exec", "functionality not supported by server");
       return (TObjString *)0;
    }
    // Check 'what'
@@ -1182,12 +1264,12 @@ Int_t TXProofMgr::GetFile(const char *remote, const char *local, const char *opt
    Int_t rc = -1;
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("GetFile", "invalid TXProofMgr - do nothing");
+      Error("GetFile", "invalid TXProofMgr - do nothing");
       return rc;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("GetFile", "functionality not supported by server");
+      Error("GetFile", "functionality not supported by server");
       return rc;
    }
 
@@ -1324,8 +1406,14 @@ Int_t TXProofMgr::GetFile(const char *remote, const char *local, const char *opt
 
    if (os) {
       // The message contains the size
-      Long64_t size;
-      sscanf(os->GetName(), "%lld", &size);
+      TString ssz(os->GetName());
+      ssz.ReplaceAll(" ", "");
+      if (!ssz.IsDigit()) {
+         Error("GetFile", "received non-digit size string: '%s' ('%s')", os->GetName(), ssz.Data());
+         close(fdout);
+         return rc;
+      }
+      Long64_t size = ssz.Atoll();
       if (size <= 0) {
          Error("GetFile", "received null or negative size: %lld", size);
          close(fdout);
@@ -1411,12 +1499,12 @@ Int_t TXProofMgr::PutFile(const char *local, const char *remote, const char *opt
    Int_t rc = -1;
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("PutFile", "invalid TXProofMgr - do nothing");
+      Error("PutFile", "invalid TXProofMgr - do nothing");
       return rc;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("PutFile", "functionality not supported by server");
+      Error("PutFile", "functionality not supported by server");
       return rc;
    }
 
@@ -1646,12 +1734,12 @@ Int_t TXProofMgr::Cp(const char *src, const char *dst, const char *fmt)
    Int_t rc = -1;
    // Nothing to do if not in contact with proofserv
    if (!IsValid()) {
-      Warning("Cp", "invalid TXProofMgr - do nothing");
+      Error("Cp", "invalid TXProofMgr - do nothing");
       return rc;
    }
    // Server may not support it
    if (fSocket->GetXrdProofdVersion() < 1006) {
-      Warning("Cp", "functionality not supported by server");
+      Error("Cp", "functionality not supported by server");
       return rc;
    }
 

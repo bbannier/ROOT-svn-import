@@ -49,6 +49,8 @@ Int_t ProofAux::GetAction(TList *input)
    if (ntype) {
       if (!strcmp(ntype->GetTitle(), "GenerateTrees")) {
          action = 0;
+      } else if (!strcmp(ntype->GetTitle(), "GenerateTreesSameFile")) {
+         action = 1;
       } else {
          Warning("GetAction", "unknown action: '%s'", ntype->GetTitle());
       }
@@ -64,11 +66,6 @@ void ProofAux::Begin(TTree * /*tree*/)
    // The Begin() function is called at the start of the query.
    // When running with PROOF Begin() is only called on the client.
    // The tree argument is deprecated (on PROOF 0 is passed).
-
-   TString option = GetOption();
-
-   // Determine the action type
-   fAction = GetAction(fInput);
 }
 
 //_____________________________________________________________________________
@@ -135,6 +132,34 @@ Bool_t ProofAux::Process(Long64_t entry)
 
    // Act now
    if (fAction == 0) {
+      TString fnt;
+      // Generate the TTree and save it in the specified file
+      if (GenerateTree(fCurrent->GetName(), fNEvents, fnt) != 0) {
+         Error("Process", "problems generating tree (%lld, %s, %lld)",
+                          entry, fCurrent->GetName(), fNEvents);
+         return kFALSE;
+      }
+      // The output filename
+      TString fnf(fnt);
+      TString xf = gSystem->BaseName(fnf);
+      fnf = gSystem->DirName(fnf);
+      if (xf.Contains("tree")) {
+         xf.ReplaceAll("tree", "friend");
+      } else {
+         if (xf.EndsWith(".root")) {
+            xf.ReplaceAll(".root", "_friend.root");
+         } else {
+            xf += "_friend";
+         }
+      }
+      fnf += TString::Format("/%s", xf.Data());
+      // Generate the TTree friend and save it in the specified file
+      if (GenerateFriend(fnt, fnf) != 0) {
+         Error("Process", "problems generating friend tree for %s (%s)",
+                          fCurrent->GetName(), fnt.Data());
+         return kFALSE;
+      }
+   } else if (fAction == 1) {
       TString fnt;
       // Generate the TTree and save it in the specified file
       if (GenerateTree(fCurrent->GetName(), fNEvents, fnt) != 0) {
@@ -256,8 +281,14 @@ Int_t ProofAux::GenerateTree(const char *fnt, Long64_t ent, TString &fn)
 
    // Add to the list
    TString fds(fn);
-   if (!strcmp(uu.GetProtocol(), "file"))
-      fds.Insert(0, TString::Format("root://%s/", gSystem->HostName()));
+   if (!strcmp(uu.GetProtocol(), "file")) {
+      if (gSystem->Getenv("LOCALDATASERVER")) {
+         if (strcmp(TUrl(gSystem->Getenv("LOCALDATASERVER"), kTRUE).GetProtocol(), "file"))
+            fds.Insert(0, TString::Format("%s/", gSystem->Getenv("LOCALDATASERVER")));
+      } else {
+         fds.Insert(0, TString::Format("root://%s/", gSystem->HostName()));
+      }
+   }
    fMainList->Add(new TObjString(fds));
 
    // Done
@@ -287,34 +318,31 @@ Int_t ProofAux::GenerateFriend(const char *fnt, const char *fnf)
       Error("GenerateFriend", "input file does not exist or cannot be read: %s", fin.Data());
       return rc;
    }
+
+   // File handlers
+   Bool_t sameFile = kTRUE;
+   const char *openMain = "UPDATE";
+
    // The output filename
    TString fout(fnf);
-   if (fout.IsNull()) {
-      fout = fin;
-      TString xf = gSystem->BaseName(fout);
-      fout = gSystem->DirName(fout);
-      if (xf.Contains("tree")) {
-         xf.ReplaceAll("tree", "friend");
-      } else {
-         if (xf.EndsWith(".root")) {
-            xf.ReplaceAll(".root", "_friend.root");
-         } else {
-            xf += "_friend";
+   if (!fout.IsNull()) {
+      sameFile = kFALSE;
+      openMain = "READ";
+      // Make sure the directory exists
+      TString dir = gSystem->DirName(fout);
+      if (gSystem->AccessPathName(dir, kWritePermission)) {
+         if (gSystem->mkdir(dir, kTRUE) != 0) {
+            Error("GenerateFriend", "problems creating directory %s to store the file", dir.Data());
+            return rc;
          }
       }
-      fout += TString::Format("/%s", xf.Data());
-   }
-   // Make sure the directory exists
-   TString dir = gSystem->DirName(fout);
-   if (gSystem->AccessPathName(dir, kWritePermission)) {
-      if (gSystem->mkdir(dir, kTRUE) != 0) {
-         Error("GenerateFriend", "problems creating directory %s to store the file", dir.Data());
-         return rc;
-      }
+   } else {
+      // We set the same name
+      fout = fin;
    }
 
    // Get main tree
-   TFile *fi = TFile::Open(fin);
+   TFile *fi = TFile::Open(fin, openMain);
    if (!fi || fi->IsZombie()) {
       Error("GenerateFriend", "problems opening input file %s", fin.Data());
       return rc;
@@ -336,20 +364,26 @@ Int_t ProofAux::GenerateFriend(const char *fnt, const char *fnf)
 
    TDirectory* savedir = gDirectory;
    // Create output file
-   TFile *fo = new TFile(fout, "RECREATE");
-   if (!fo || fo->IsZombie()) {
-      Error("GenerateFriend", "problems opening file %s", fout.Data());
-      delete fi;
-      return rc;
+   TFile *fo = 0;
+   if (!sameFile) {
+      fo = new TFile(fout, "RECREATE");
+      if (!fo || fo->IsZombie()) {
+         Error("GenerateFriend", "problems opening file %s", fout.Data());
+         delete fi;
+         return rc;
+      }
+      savedir->cd();
+   } else {
+      // Same file
+      fo = fi;
    }
-   savedir->cd();
    rc = 0;
 
    // Create the tree
    TTree *Tfrnd = new TTree("Tfrnd", "Friend tree for tutorial 'friends'");
    Tfrnd->SetDirectory(fo);
    Float_t r = 0;
-   Tfrnd->Branch("r",&x,"r/F");
+   Tfrnd->Branch("r",&r,"r/F");
    Long64_t ent = Tin->GetEntries();
    for (Long64_t i = 0; i < ent; i++) {
       b_x->GetEntry(i);
@@ -358,8 +392,10 @@ Int_t ProofAux::GenerateFriend(const char *fnt, const char *fnf)
       r = TMath::Sqrt(x*x + y*y + z*z);
       Tfrnd->Fill();
    }
-   fi->Close();
-   delete fi;
+   if (!sameFile) {
+      fi->Close();
+      delete fi;
+   }
    Tfrnd->Print();
    fo->cd();
    Tfrnd->Write();
@@ -373,8 +409,14 @@ Int_t ProofAux::GenerateFriend(const char *fnt, const char *fnf)
 
    // Add to the list
    TUrl uu(fout);
-   if (!strcmp(uu.GetProtocol(), "file"))
-      fout.Insert(0, TString::Format("root://%s/", gSystem->HostName()));
+   if (!strcmp(uu.GetProtocol(), "file")) {
+      if (gSystem->Getenv("LOCALDATASERVER")) {
+         if (strcmp(TUrl(gSystem->Getenv("LOCALDATASERVER"), kTRUE).GetProtocol(), "file"))
+            fout.Insert(0, TString::Format("%s/", gSystem->Getenv("LOCALDATASERVER")));
+      } else {
+         fout.Insert(0, TString::Format("root://%s/", gSystem->HostName()));
+      }
+   }
    fFriendList->Add(new TObjString(fout));
 
    // Done

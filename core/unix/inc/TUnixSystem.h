@@ -60,10 +60,12 @@ protected:
    static int          UnixFSstat(const char *path, Long_t *id, Long_t *bsize,
                                   Long_t *blocks, Long_t *bfree);
    static int          UnixTcpConnect(const char *hostname, int port, int tcpwindowsize);
+   static int          UnixUdpConnect(const char *hostname, int port);
    static int          UnixUnixConnect(int port);
    static int          UnixUnixConnect(const char *path);
    static int          UnixTcpService(int port, Bool_t reuse, int backlog,
                                       int tcpwindowsize);
+   static int          UnixUdpService(int port, int backlog);
    static int          UnixUnixService(int port, int backlog);
    static int          UnixUnixService(const char *sockpath, int backlog);
    static int          UnixRecv(int sock, void *buf, int len, int flag);
@@ -103,6 +105,7 @@ public:
    void              AddSignalHandler(TSignalHandler *sh);
    TSignalHandler   *RemoveSignalHandler(TSignalHandler *sh);
    void              ResetSignal(ESignals sig, Bool_t reset = kTRUE);
+   void              ResetSignals();
    void              IgnoreSignal(ESignals sig, Bool_t ignore = kTRUE);
    void              SigAlarmInterruptsSyscalls(Bool_t set);
    void              AddFileHandler(TFileHandler *fh);
@@ -172,6 +175,7 @@ public:
    //---- Environment Manipulation -----------------------------
    const char       *Getenv(const char *name);
    void              Setenv(const char *name, const char *value);
+   void              Unsetenv(const char *name);
 
    //---- System Logging ---------------------------------------
    void              Openlog(const char *name, Int_t options, ELogFacility facility);
@@ -198,9 +202,10 @@ public:
    TInetAddress      GetSockName(int sock);
    int               GetServiceByName(const char *service);
    char             *GetServiceByPort(int port);
-   int               ConnectService(const char *server, int port, int tcpwindowsize);
-   int               OpenConnection(const char *server, int port, int tcpwindowsize = -1);
+   int               ConnectService(const char *server, int port, int tcpwindowsize, const char *protocol = "tcp");
+   int               OpenConnection(const char *server, int port, int tcpwindowsize = -1, const char *protocol = "tcp");
    int               AnnounceTcpService(int port, Bool_t reuse, int backlog, int tcpwindowsize = -1);
+   int               AnnounceUdpService(int port, int backlog);
    int               AnnounceUnixService(int port, int backlog);
    int               AnnounceUnixService(const char *sockpath, int backlog);
    int               AcceptConnection(int sock);

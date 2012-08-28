@@ -85,8 +85,9 @@ const Int_t kObjFont             =  7; // First Font object (14 in total)
 const Int_t kObjColorSpace       = 22; // ColorSpace object
 const Int_t kObjPatternResourses = 23; // Pattern Resources object
 const Int_t kObjPatternList      = 24; // Pattern list object
-const Int_t kObjPattern          = 25; // Pattern object
-const Int_t kObjFirstPage        = 50; // First page object
+const Int_t kObjTransList        = 25; // List of transparencies
+const Int_t kObjPattern          = 26; // First pattern object (25 in total)
+const Int_t kObjFirstPage        = 51; // First page object
 
 // Number of fonts
 const Int_t kNumberOfFonts = 15;
@@ -112,6 +113,7 @@ TPDF::TPDF() : TVirtualPS()
    fRed             = 0.;
    fGreen           = 0.;
    fBlue            = 0.;
+   fAlpha           = 1.;
    fXsize           = 0.;
    fYsize           = 0.;
    fType            = 0;
@@ -120,6 +122,7 @@ TPDF::TPDF() : TVirtualPS()
    fStartStream     = 0;
    fLineScale       = 0.;
    fObjPosSize      = 0;
+   fObjPos          = 0;
    fNbObj           = 0;
    fNbPage          = 0;
    fRange           = kFALSE;
@@ -144,6 +147,7 @@ TPDF::TPDF(const char *fname, Int_t wtype) : TVirtualPS(fname, wtype)
    fRed             = 0.;
    fGreen           = 0.;
    fBlue            = 0.;
+   fAlpha           = 1.;
    fXsize           = 0.;
    fYsize           = 0.;
    fType            = 0;
@@ -298,6 +302,17 @@ void TPDF::Close(Option_t *)
    PrintStr("@");
    PrintStr(">>@");
    PrintStr("endobj@");
+
+   NewObject(kObjTransList);
+   PrintStr("<<@");
+   for (i=0; i<(int)fAlphas.size(); i++) {
+      PrintStr(
+      Form("/ca%3.2f << /Type /ExtGState /ca %3.2f >> /CA%3.2f << /Type /ExtGState /CA %3.2f >>@",
+      fAlphas[i],fAlphas[i],fAlphas[i],fAlphas[i]));
+   }
+   PrintStr(">>@");
+   PrintStr("endobj@");
+   if (fAlphas.size()) fAlphas.clear();
 
    // Cross-Reference Table
    Int_t refInd = fNByte;
@@ -585,9 +600,9 @@ void TPDF::DrawPolyMarker(Int_t n, Float_t *xw, Float_t *yw)
    if (fMarkerStyle == 1) {
      msize = 1.;
    } else if (fMarkerStyle == 6) {
-     msize = 1.5;
+     msize = 1.;
    } else if (fMarkerStyle == 7) {
-     msize = 3.;
+     msize = 1.5;
    } else {
       const Int_t kBASEMARKER = 8;
       Float_t sbase = msize*kBASEMARKER;
@@ -919,6 +934,7 @@ void TPDF::DrawPS(Int_t nn, Float_t *xw, Float_t *yw)
             fRed   = -1;
             fGreen = -1;
             fBlue  = -1;
+            fAlpha = -1.;
          }
          SetLineStyle(linestylesav);
          SetLineWidth(linewidthsav);
@@ -1004,6 +1020,7 @@ void TPDF::DrawPS(Int_t nn, Double_t *xw, Double_t *yw)
             fRed   = -1;
             fGreen = -1;
             fBlue  = -1;
+            fAlpha = -1.;
          }
          SetLineStyle(linestylesav);
          SetLineWidth(linewidthsav);
@@ -1252,6 +1269,7 @@ void TPDF::NewPage()
    fRed   = -1;
    fGreen = -1;
    fBlue  = -1;
+   fAlpha = -1.;
 
    PrintStr("1 0 0 1");
    if (fPageOrientation == 2) {
@@ -1307,6 +1325,7 @@ void TPDF::Open(const char *fname, Int_t wtype)
    fRed       = -1;
    fGreen     = -1;
    fBlue      = -1;
+   fAlpha     = -1.;
    fType      = abs(wtype);
    SetLineScale(gStyle->GetLineScalePS()/4.);
    gStyle->GetPaperSize(fXsize, fYsize);
@@ -1332,9 +1351,9 @@ void TPDF::Open(const char *fname, Int_t wtype)
 #else
       fStream->open(fname, ofstream::out);
 #endif
-   if (fStream == 0) {
+   if (fStream == 0 || !fStream->good()) {
       printf("ERROR in TPDF::Open: Cannot open file:%s\n",fname);
-      return;
+      if (fStream == 0) return;
    }
 
    gVirtualPS = this;
@@ -1423,6 +1442,11 @@ void TPDF::Open(const char *fname, Int_t wtype)
    }
    PrintStr("@");
    PrintStr(">>@");
+
+   PrintStr("/ExtGState");
+   WriteInteger(kObjTransList);
+   PrintStr(" 0 R @");
+   if (fAlphas.size()) fAlphas.clear();
 
    PrintStr("/ColorSpace << /Cs8");
    WriteInteger(kObjColorSpace);
@@ -1941,16 +1965,40 @@ void TPDF::Range(Float_t xsize, Float_t ysize)
 
 
 //______________________________________________________________________________
+void TPDF::SetAlpha(Float_t a)
+{
+   // Set the alpha channel value.
+
+   if (a == fAlpha) return;
+   fAlpha = a;
+   if (fAlpha  <= 0.000001) fAlpha  = 0;
+
+   Bool_t known = kFALSE;
+   for (int i=0; i<(int)fAlphas.size(); i++) {
+      if (fAlpha == fAlphas[i]) {
+         known = kTRUE;
+         break;
+      }
+   }
+   if (!known) fAlphas.push_back(fAlpha);
+   PrintStr(Form(" /ca%3.2f gs /CA%3.2f gs",fAlpha,fAlpha));
+}
+
+
+//______________________________________________________________________________
 void TPDF::SetColor(Int_t color)
 {
-   // Set color with its color index
+   // Set color with its color index.
 
    if (color < 0) color = 0;
    TColor *col = gROOT->GetColor(color);
+
    if (col) {
       SetColor(col->GetRed(), col->GetGreen(), col->GetBlue());
+      SetAlpha(col->GetAlpha());
    } else {
       SetColor(1., 1., 1.);
+      SetAlpha(1.);
    }
 }
 
@@ -1958,7 +2006,7 @@ void TPDF::SetColor(Int_t color)
 //______________________________________________________________________________
 void TPDF::SetColor(Float_t r, Float_t g, Float_t b)
 {
-   // Set color with its R G B components
+   // Set color with its R G B components:
    //
    //  r: % of red in [0,1]
    //  g: % of green in [0,1]
@@ -2028,8 +2076,9 @@ void TPDF::SetFillPatterns(Int_t ipat, Int_t color)
    // Set the fill patterns (1 to 25) for fill areas
 
    char cpat[10];
-   PrintStr(" /Cs8 cs");
    TColor *col = gROOT->GetColor(color);
+   if (!col) return;
+   PrintStr(" /Cs8 cs");
    Double_t colRed   = col->GetRed();
    Double_t colGreen = col->GetGreen();
    Double_t colBlue  = col->GetBlue();
@@ -2193,7 +2242,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
 
    if (txalh > 1) {
       TText t;
-      UInt_t w, h;
+      UInt_t w=0, h;
       t.SetTextSize(fTextSize);
       t.SetTextFont(fTextFont);
       t.GetTextExtent(w, h, chars);
@@ -2267,7 +2316,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
    TText t;
    t.SetTextSize(fTextSize * scale);
    t.SetTextFont(fTextFont);
-   UInt_t wa1, wa0;
+   UInt_t wa1=0, wa0=0;
    t.GetTextAdvance(wa0, chars, kFALSE);
    t.GetTextAdvance(wa1, chars);
    t.TAttText::Modify();
@@ -2278,7 +2327,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
    if (kerning) {
         charDeltas = new Int_t[len];
         for (Int_t i = 0;i < len;i++) {
-            UInt_t ww;
+            UInt_t ww=0;
             t.GetTextAdvance(ww, chars + i);
             charDeltas[i] = wa1 - ww;
         }
@@ -2289,7 +2338,7 @@ void TPDF::Text(Double_t xx, Double_t yy, const char *chars)
         tmp[1] = 0;
         for (Int_t i = 1;i < len;i++) {
             tmp[0] = chars[i-1];
-            UInt_t width;
+            UInt_t width=0;
             t.GetTextAdvance(width, &tmp[0], kFALSE);
             Double_t wwl = gPad->AbsPixeltoX(width - charDeltas[i]) - gPad->AbsPixeltoX(0);
             wwl -= 0.5*(gPad->AbsPixeltoX(1) - gPad->AbsPixeltoX(0)); // half a pixel ~ rounding error

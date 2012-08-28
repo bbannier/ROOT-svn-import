@@ -7,11 +7,21 @@
  * Description:
  *  C/C++ interpreter header file for API function prototypes
  ************************************************************************
- * Copyright(c) 1995~2005  Masaharu Goto (cint@pcroot.cern.ch)
+ * Copyright(c) 1995~2005  Masaharu Goto (root-cint@cern.ch)
  *
  * For the licensing terms see the file COPYING
  *
  ************************************************************************/
+#ifndef G__CI_FPROTO_INCLUDE
+#define G__CI_FPROTO_INCLUDE
+
+#if defined(__clang__)
+# if __has_warning("-Wreturn-type-c-linkage")
+// 'G__getfunction' has C-linkage specified, but returns
+// user-defined type 'G__value' which is incompatible with C
+#  pragma clang diagnostic ignored "-Wreturn-type-c-linkage"
+# endif
+#endif
 
 G__DECL_API(0, unsigned long, G__uint, (G__value buf))
 G__DECL_API(1, int, G__fgetline, (char *string))
@@ -407,3 +417,5 @@ G__DECL_API(268, struct G__ifunc_table_internal*, G__get_ifunc_internal, (struct
 
 #define G__NUMBER_OF_API_FUNCTIONS 270
 G__DUMMYTOCHECKFORDUPLICATES(G__NUMBER_OF_API_FUNCTIONS)
+
+#endif /* G__CI_FPROTO_INCLUDE */

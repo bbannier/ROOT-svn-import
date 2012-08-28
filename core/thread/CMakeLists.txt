@@ -5,7 +5,7 @@ ROOT_USE_PACKAGE(core)
 
 set(headers TCondition.h TConditionImp.h TMutex.h TMutexImp.h
             TRWLock.h TSemaphore.h TThread.h TThreadFactory.h
-            TThreadImp.h TAtomicCount.h)
+            TThreadImp.h TAtomicCount.h TThreadPool.h ThreadLocalStorage.h)
 if(NOT WIN32)
   set(headers ${headers} TPosixCondition.h TPosixMutex.h
                          TPosixThread.h TPosixThreadFactory.h PosixThreadInc.h)
@@ -27,5 +27,5 @@ endif()
 
 ROOT_GENERATE_DICTIONARY(G__Thread ${headers} LINKDEF LinkDef.h)
 ROOT_GENERATE_ROOTMAP(Thread LINKDEF LinkDef.h DEPENDENCIES)
-ROOT_LINKER_LIBRARY(Thread ${sources} G__Thread.cxx DEPENDENCIES Core Cint)
+ROOT_LINKER_LIBRARY(Thread ${sources} G__Thread.cxx LIBRARIES  ${CMAKE_THREAD_LIBS_INIT} DEPENDENCIES Core)
 ROOT_INSTALL_HEADERS()

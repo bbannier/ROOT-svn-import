@@ -54,7 +54,7 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooProdPdf(*this,newname) ; }
   virtual ~RooProdPdf() ;
 
-  virtual Double_t getVal(const RooArgSet* set=0) const ;
+  virtual Double_t getValV(const RooArgSet* set=0) const ;
   Double_t evaluate() const ;
   virtual Bool_t checkObservables(const RooArgSet* nset) const ;	
 
@@ -78,8 +78,10 @@ public:
   virtual RooArgSet* getConstraints(const RooArgSet& observables, RooArgSet& constrainedParams, Bool_t stripDisconnected) const ;
 
   virtual std::list<Double_t>* plotSamplingHint(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const ; 
+  virtual std::list<Double_t>* binBoundaries(RooAbsRealLValue& /*obs*/, Double_t /*xlo*/, Double_t /*xhi*/) const ;
+  Bool_t isBinnedDistribution(const RooArgSet& obs) const  ;
 
-  void printMetaArgs(ostream& os) const ;
+  void printMetaArgs(std::ostream& os) const ;
 
   virtual void selectNormalizationRange(const char* rangeName=0, Bool_t force=kFALSE) ;
   void fixRefRange(const char* rangeName) ;
@@ -89,6 +91,8 @@ public:
 
 
   Bool_t redirectServersHook(const RooAbsCollection& /*newServerList*/, Bool_t /*mustReplaceAll*/, Bool_t /*nameChange*/, Bool_t /*isRecursive*/) ;
+
+  RooArgSet* getConnectedParameters(const RooArgSet& observables) const ;
   
 protected:
 

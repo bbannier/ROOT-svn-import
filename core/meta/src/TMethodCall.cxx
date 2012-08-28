@@ -30,6 +30,7 @@
 #include "TROOT.h"
 #include "Strlen.h"
 #include "TVirtualMutex.h"
+#include "TError.h"
 
 ClassImp(TMethodCall)
 
@@ -146,8 +147,9 @@ static TClass *R__FindScope(const char *function, UInt_t &pos, ClassInfo_t *cinf
       UInt_t nested = 0;
       for(int i=strlen(function); i>=0; --i) {
          switch(function[i]) {
-            case '<': --nested; break;
-            case '>': ++nested; break;
+            case '<': ++nested; break;
+            case '>': if (nested==0) { Error("TMethodCall R__FindScope","%s is not well formed function name",function); return 0; }
+                      --nested; break;
             case ':':
                if (nested==0) {
                   if (i>2 && function[i-1]==':') {
@@ -489,7 +491,7 @@ TMethodCall::EReturnType TMethodCall::ReturnType()
 
       Bool_t isEnum = kFALSE;
       TypeInfo_t *typed = 0;
-      if (!strcmp("(unknown)",name)) {
+      if (name && !strcmp("(unknown)",name)) {
          typed = gCint->TypeInfo_Factory();         
          gCint->TypeInfo_Init(typed,func->GetReturnTypeName());
          name  = gCint->TypeInfo_TrueName(typed);
@@ -498,7 +500,9 @@ TMethodCall::EReturnType TMethodCall::ReturnType()
          }
       }
 
-      if ((nstar==1) &&
+      if (name == 0) 
+         fRetType = kOther;
+      else if ((nstar==1) &&
           (!strcmp("unsigned char", name)        || !strcmp("char", name)         ||
            !strcmp("UChar_t", name)              || !strcmp("Char_t", name)       ||
            !strcmp("const unsigned char", name)  || !strcmp("const char", name)   ||

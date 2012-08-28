@@ -373,7 +373,7 @@ TGIconLBEntry::TGIconLBEntry(const TGWindow *p, Int_t id, const char *str,
    fPicture = pic;
    if (fPicture) {
       fTWidth += fPicture->GetWidth() + 4;
-      ((TGPicture *)pic)->AddReference();
+      ((TGPicture *)fPicture)->AddReference();
    }
    else
       fTWidth += 20;
@@ -432,7 +432,7 @@ void TGIconLBEntry::SetPicture(const TGPicture *pic)
 
    fClient->FreePicture(fPicture);
 
-   ((TGPicture *)pic)->AddReference();
+   if (pic) ((TGPicture *)pic)->AddReference();
 
    fPicture   = pic;
 }
@@ -1035,14 +1035,14 @@ void TGLBContainer::OnAutoScroll()
    // Where's the cursor?
    gVirtualX->QueryPointer(fId,dum1,dum2,ev.fXRoot,ev.fYRoot,x,y,ev.fState);
    TGVScrollBar *vb = GetVScrollbar();
-   if (y > 0 && y < 10) {
+   if (vb && y > 0 && y < 10) {
       // scroll 1 line up
       Int_t newpos = vb->GetPosition() - 1;
       if (newpos < 0) newpos = 0;
       vb->SetPosition(newpos);
       changed = kTRUE;
    }
-   else if (y > (Int_t)dim.fHeight - 10 && y < (Int_t)dim.fHeight) {
+   else if (vb && y > (Int_t)dim.fHeight - 10 && y < (Int_t)dim.fHeight) {
       // scroll 1 line down
       Int_t newpos = vb->GetPosition() + 1;
       vb->SetPosition(newpos);

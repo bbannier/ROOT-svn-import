@@ -73,6 +73,8 @@
 char* operator+( streampos&, char* );
 #endif
 
+using namespace std;
+
 ClassImp(RooMinuit)
 ;
 
@@ -153,6 +155,8 @@ RooMinuit::RooMinuit(RooAbsReal& function)
   }
   _nPar      = _floatParamList->getSize() ;
   delete pIter ;
+
+  updateFloatVec() ;
 
   // Save snapshot of initial lists
   _initFloatParamList = (RooArgList*) _floatParamList->snapshot(kFALSE) ;
@@ -312,6 +316,9 @@ Int_t RooMinuit::migrad()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("MIGRAD",_status) ;
+
   return _status ;
 }
 
@@ -342,6 +349,9 @@ Int_t RooMinuit::hesse()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("HESSE",_status) ;
+
   return _status ;
 }
 
@@ -372,6 +382,11 @@ Int_t RooMinuit::minos()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  cout << "MINOS: status = " << _status << endl ;
+  
+  saveStatus("MINOS",_status) ;
+
   return _status ;
 }
 
@@ -420,6 +435,9 @@ Int_t RooMinuit::minos(const RooArgSet& minosParamList)
   backProp() ;
 
   delete[] arglist ;
+  
+  saveStatus("MINOS",_status) ;
+
   return _status ;
 }
 
@@ -450,6 +468,9 @@ Int_t RooMinuit::seek()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("SEEK",_status) ;
+  
   return _status ;
 }
 
@@ -481,6 +502,9 @@ Int_t RooMinuit::simplex()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("SIMPLEX",_status) ;
+  
   return _status ;
 }
 
@@ -511,6 +535,9 @@ Int_t RooMinuit::improve()
   RooAbsReal::setEvalErrorLoggingMode(RooAbsReal::PrintErrors) ;
   profileStop() ;
   backProp() ;
+
+  saveStatus("IMPROVE",_status) ;
+  
   return _status ;
 }
 
@@ -782,6 +809,8 @@ Bool_t RooMinuit::synchronize(Bool_t verbose)
 
   }
 
+  updateFloatVec() ;
+
   return 0 ;
 }
 
@@ -789,7 +818,7 @@ Bool_t RooMinuit::synchronize(Bool_t verbose)
 
 
 //_____________________________________________________________________________
-void RooMinuit::optimizeConst(Bool_t flag)
+void RooMinuit::optimizeConst(Int_t flag)
 {
   // If flag is true, perform constant term optimization on
   // function being minimized.
@@ -798,11 +827,11 @@ void RooMinuit::optimizeConst(Bool_t flag)
 
   if (_optConst && !flag){
     if (_printLevel>-1) coutI(Minimization) << "RooMinuit::optimizeConst: deactivating const optimization" << endl ;
-    _func->constOptimizeTestStatistic(RooAbsArg::DeActivate) ;
+    _func->constOptimizeTestStatistic(RooAbsArg::DeActivate,flag>1) ;
     _optConst = flag ;
   } else if (!_optConst && flag) {
     if (_printLevel>-1) coutI(Minimization) << "RooMinuit::optimizeConst: activating const optimization" << endl ;
-    _func->constOptimizeTestStatistic(RooAbsArg::Activate) ;
+    _func->constOptimizeTestStatistic(RooAbsArg::Activate,flag>1) ;
     _optConst = flag ;
   } else if (_optConst && flag) {
     if (_printLevel>-1) coutI(Minimization) << "RooMinuit::optimizeConst: const optimization already active" << endl ;
@@ -877,6 +906,8 @@ RooFitResult* RooMinuit::save(const char* userName, const char* userTitle)
   } else {
     fitRes->setCovarianceMatrix(*_extV) ;
   }
+
+  fitRes->setStatusHistory(_statusHistory) ;
 
   return fitRes ;
 }
@@ -1005,7 +1036,8 @@ Bool_t RooMinuit::setPdfParamVal(Int_t index, Double_t value, Bool_t verbose)
 {
   // Modify PDF parameter value by ordinal index (needed by MINUIT)
 
-  RooRealVar* par = (RooRealVar*)_floatParamList->at(index) ;
+  //RooRealVar* par = (RooRealVar*)_floatParamList->at(index) ;
+  RooRealVar* par = (RooRealVar*)_floatParamVec[index] ;
 
   if (par->getVal()!=value) {
     if (verbose) cout << par->GetName() << "=" << value << ", " ;
@@ -1102,6 +1134,19 @@ void RooMinuit::backProp()
   }
 }
 
+
+//_____________________________________________________________________________
+void RooMinuit::updateFloatVec() 
+{
+  _floatParamVec.clear() ;
+  RooFIter iter = _floatParamList->fwdIterator() ;
+  RooAbsArg* arg ;
+  _floatParamVec.reserve(_floatParamList->getSize()) ;
+  Int_t i(0) ;
+  while((arg=iter.next())) {
+    _floatParamVec[i++] = arg ;
+  }
+}
 
 
 

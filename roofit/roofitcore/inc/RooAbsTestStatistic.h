@@ -47,7 +47,7 @@ public:
 				      const RooArgSet& projDeps, const char* rangeName=0, const char* addCoefRangeName=0, 
 				      Int_t nCPU=1, Bool_t interleave=kFALSE, Bool_t verbose=kTRUE, Bool_t splitCutRange=kFALSE) = 0 ;
 
-  virtual void constOptimizeTestStatistic(ConstOpCode opcode) ;
+  virtual void constOptimizeTestStatistic(ConstOpCode opcode, Bool_t doAlsoTrackingOpt=kTRUE) ;
 
   virtual Double_t combinedValue(RooAbsReal** gofArray, Int_t nVal) const = 0 ;
   virtual Double_t globalNormalization() const { 
@@ -59,7 +59,7 @@ public:
 
 protected:
 
-  virtual void printCompactTreeHook(ostream& os, const char* indent="") ;
+  virtual void printCompactTreeHook(std::ostream& os, const char* indent="") ;
 
   virtual Bool_t redirectServersHook(const RooAbsCollection& newServerList, Bool_t mustReplaceAll, Bool_t nameChange, Bool_t isRecursive) ;
   virtual Double_t evaluate() const ;
@@ -104,9 +104,9 @@ protected:
   Int_t _simCount ;                // Total number of component p.d.f.s in RooSimultaneous (if any)
   Bool_t _verbose ;                // Verbose messaging if true
 
-  virtual Bool_t setDataSlave(RooAbsData& /*data*/, Bool_t /*cloneData*/=kTRUE) { return kTRUE ; }
+  virtual Bool_t setDataSlave(RooAbsData& /*data*/, Bool_t /*cloneData*/=kTRUE, Bool_t /*ownNewDataAnyway*/=kFALSE) { return kTRUE ; }
 
-private:  
+  //private:  
 
 
   virtual Bool_t processEmptyDataSets() const { return kTRUE ; }

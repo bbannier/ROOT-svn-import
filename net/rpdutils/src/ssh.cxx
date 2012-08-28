@@ -39,7 +39,8 @@
 #elif defined(R__GLIBC) || defined(R__FBSD) || \
       (defined(R__SUNGCC3) && defined(__arch64__)) || \
       defined(R__OBSD) || defined(MAC_OS_X_VERSION_10_4) || \
-      (defined(R__AIX) && defined(_AIX43))
+      (defined(R__AIX) && defined(_AIX43)) || \
+      (defined(R__SOLARIS) && defined(_SOCKLEN_T))
 #   define USE_SOCKLEN_T
 #endif
 
@@ -226,6 +227,7 @@ int SshToolNotifyFailure(const char *Pipe)
         connect(sd, (struct sockaddr *) &servAddr,
                 sizeof(servAddr))) < 0) {
       ErrorInfo("SshToolNotifyFailure: cannot connect socket: exiting ");
+      close(sd);
       return 1;
    }
    // Sending "KO" ...
@@ -236,6 +238,7 @@ int SshToolNotifyFailure(const char *Pipe)
           ("SshToolNotifyFailure: sending might have been unsuccessful (bytes send: %d)",
            rc);
    }
+   close(sd);
 
    return 0;
 }

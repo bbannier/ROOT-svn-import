@@ -56,16 +56,20 @@
 #pragma link C++ class RooStats::HypoTestCalculatorGeneric+;
 #pragma link C++ class RooStats::HybridCalculator+;
 #pragma link C++ class RooStats::FrequentistCalculator+;
+#pragma link C++ class RooStats::AsymptoticCalculator+;
 #pragma link C++ class RooStats::HybridCalculatorOriginal+;
 #pragma link C++ class RooStats::HybridPlot+;
 #pragma link C++ class RooStats::HybridResult+;				 
 
+#pragma link C++ class RooStats::DetailedOutputAggregator+;				 
+
 #pragma link C++ class RooStats::TestStatSampler+; // interface, not concrete
 #pragma link C++ class RooStats::DebuggingSampler+;
 #pragma link C++ class RooStats::ToyMCSampler+;
-#pragma link C++ class RooStats::ToyMCSamplerOld+;
 #pragma link C++ class RooStats::ToyMCStudy+;
 #pragma link C++ class RooStats::ProofConfig+;
+#pragma link C++ class RooStats::ToyMCImportanceSampler+;
+#pragma link C++ class RooStats::ToyMCPayload+;
 
 #pragma link C++ class RooStats::TestStatistic+; // interface
 #pragma link C++ class RooStats::DebuggingTestStat+;
@@ -74,6 +78,7 @@
 #pragma link C++ class RooStats::NumEventsTestStat+;
 #pragma link C++ class RooStats::SimpleLikelihoodRatioTestStat+;
 #pragma link C++ class RooStats::MaxLikelihoodEstimateTestStat+;
+#pragma link C++ class RooStats::MinNLLTestStat+;
 
 #pragma link C++ class RooStats::SamplingDistribution+;
 #pragma link C++ class RooStats::NeymanConstruction+;
@@ -115,6 +120,11 @@
 #pragma link C++ function RooStats::SignificanceToPValue(Double_t);
 #pragma link C++ function RooStats::RemoveConstantParameters(RooArgSet* set);
 #pragma link C++ function RooStats::SetParameters(const RooArgSet* , RooArgSet* );
+#pragma link C++ function RooStats::SetAllConstant(const RooAbsCollection & , bool );
+#pragma link C++ function RooStats::MakeNuisancePdf(RooAbsPdf & , const RooArgSet &, const char * );
+#pragma link C++ function RooStats::MakeNuisancePdf(const RooStats::ModelConfig & , const char * );
+#pragma link C++ function RooStats::GetAsTTree(TString, TString, const RooDataSet&);
+
 
 // need for auto_ptr object in Likelihoodinterval since they are forwd declared
 #pragma extra_include "Math/IFunction.h";

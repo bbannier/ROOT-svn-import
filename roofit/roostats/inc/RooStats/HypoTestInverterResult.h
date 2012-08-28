@@ -43,6 +43,8 @@ public:
    // merge with the content of another HypoTestInverterResult object
    bool Add( const HypoTestInverterResult& otherResult );
 
+   //add the result of a single point (an HypoTestRsult) 
+   bool Add( Double_t x, const HypoTestResult & result ); 
 
    // function to return the value of the parameter of interest for the i^th entry in the results
    double GetXValue( int index ) const ;
@@ -96,6 +98,11 @@ public:
    // flag to switch between using CLsb (default) or CLs as confidence level
    void UseCLs( bool on = true ) { fUseCLs = on; }  
 
+   // query if one sided result
+   bool IsOneSided() const { return !fIsTwoSided; }
+   // query if two sided result
+   bool IsTwoSided() const { return fIsTwoSided; }
+
    // lower and upper bound of the confidence interval (to get upper/lower limits, multiply the size( = 1-confidence level ) by 2
    Double_t LowerLimit();
    Double_t UpperLimit();
@@ -126,18 +133,19 @@ public:
    }
 
    // get expected lower limit distributions
-   // implemented using interpolation
-   SamplingDistribution* GetLowerLimitDistribution( ) const { return GetLimitDistribution(true); }
+   // implemented using interpolation 
+   //  The size for the sampling distribution is given (by default is given by the average number of toy/point)
+   SamplingDistribution* GetLowerLimitDistribution() const { return GetLimitDistribution(true); }
 
    // get expected upper limit distributions
    // implemented using interpolation
-   SamplingDistribution* GetUpperLimitDistribution( ) const { return GetLimitDistribution(false); }
+   SamplingDistribution* GetUpperLimitDistribution() const { return GetLimitDistribution(false); }
 
    // get Limit value correspnding at the desired nsigma level (0) is median -1 sigma is 1 sigma
-   double GetExpectedLowerLimit(double nsig = 0) const ; 
+   double GetExpectedLowerLimit(double nsig = 0, const char * opt = "" ) const ; 
 
    // get Limit value correspnding at the desired nsigma level (0) is median -1 sigma is 1 sigma
-   double GetExpectedUpperLimit(double nsig = 0) const ; 
+   double GetExpectedUpperLimit(double nsig = 0, const char * opt = "") const ; 
 
 
    double FindInterpolatedLimit(double target, bool lowSearch = false, double xmin=1, double xmax=0);
@@ -152,20 +160,25 @@ public:
 private:
 
 
-   double CalculateEstimatedError(double target);
-   int FindClosestPointIndex(double target);
+   double CalculateEstimatedError(double target, bool lower = true, double xmin = 1, double xmax = 0);
+
+   int FindClosestPointIndex(double target, int mode = 0, double xtarget = 0);
 
    SamplingDistribution* GetLimitDistribution(bool lower ) const;
 
-   double GetExpectedLimit(double nsig, bool lower ) const ; 
+   double GetExpectedLimit(double nsig, bool lower, const char * opt = "" ) const ; 
 
-   double GetGraphX(const TGraph & g, double y0, bool lowSearch = false, double xmin=1, double xmax=0) const;
+   double GetGraphX(const TGraph & g, double y0, bool lowSearch, double &xmin, double &xmax) const;
+   double GetGraphX(const TGraph & g, double y0, bool lowSearch = true) const { 
+      double xmin=1; double xmax = 0;
+      return GetGraphX(g,y0,lowSearch,xmin,xmax);
+   }
 
  
 protected:
 
-   
    bool fUseCLs; 
+   bool fIsTwoSided;                  // two sided scan (look for lower/upper limit) 
    bool fInterpolateLowerLimit;
    bool fInterpolateUpperLimit;
    bool fFittedLowerLimit;
@@ -174,6 +187,8 @@ protected:
 
    double fLowerLimitError;
    double fUpperLimitError;
+
+   static double fgAsymptoticMaxSigma;  // max sigma value used to scan asymptotic expected p values 
 
    std::vector<double> fXValues;
 
@@ -184,7 +199,7 @@ protected:
    friend class HypoTestInverterPlot;
    friend class HypoTestInverterOriginal;
 
-   ClassDef(HypoTestInverterResult,3)  // HypoTestInverterResult class      
+   ClassDef(HypoTestInverterResult,5)  // HypoTestInverterResult class      
 };
 }
 

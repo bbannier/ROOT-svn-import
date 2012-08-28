@@ -270,7 +270,8 @@ TGTextEditor::TGTextEditor(TMacro *macro, const TGWindow *p, UInt_t w, UInt_t h)
       // remove the command line combo box and its associated label
       fComboCmd->UnmapWindow();
       fLabel->UnmapWindow();
-      fToolBar->GetButton(kM_FILE_EXIT)->SetState(kButtonDisabled);
+      if (fToolBar->GetButton(kM_FILE_EXIT))
+         fToolBar->GetButton(kM_FILE_EXIT)->SetState(kButtonDisabled);
       fToolBar->Layout();
    }
    if (macro) {
@@ -296,6 +297,7 @@ TGTextEditor::~TGTextEditor()
 {
    // TGTextEditor destructor.
 
+   gApplication->Disconnect("Terminate(Int_t)");
    if (fTimer) delete fTimer;
    if (fMenuFile) delete fMenuFile;
    if (fMenuEdit) delete fMenuEdit;
@@ -309,6 +311,7 @@ void TGTextEditor::DeleteWindow()
 {
    // Delete TGTextEditor Window.
 
+   gApplication->Disconnect("Terminate(Int_t)");
    delete fTimer; fTimer = 0;
    delete fMenuFile; fMenuFile = 0;
    delete fMenuEdit; fMenuEdit = 0;
@@ -565,6 +568,7 @@ Bool_t TGTextEditor::SaveFileAs()
    // Save the edited text in a file selected with TGFileDialog.
    // Shouldn't we create a backup file?
 
+   TString workdir = gSystem->WorkingDirectory();
    static TString dir(".");
    static Bool_t overwr = kFALSE;
    TGFileInfo fi;
@@ -572,6 +576,7 @@ Bool_t TGTextEditor::SaveFileAs()
    fi.fIniDir    = StrDup(dir);
    fi.fOverwrite = overwr;
    new TGFileDialog(fClient->GetDefaultRoot(), this, kFDSave, &fi);
+   gSystem->ChangeDirectory(workdir.Data());
    overwr = fi.fOverwrite;
    if (fi.fFilename && strlen(fi.fFilename)) {
       SaveFile(fi.fFilename);
@@ -656,12 +661,10 @@ Bool_t TGTextEditor::HandleKey(Event_t *event)
    // Keyboard event handler.
 
    char   input[10];
-   Int_t  n;
    UInt_t keysym;
 
    if (event->fType == kGKeyPress) {
       gVirtualX->LookupString(event, input, sizeof(input), keysym);
-      n = strlen(input);
 
       switch ((EKeySym)keysym) {   // ignore these keys
          case kKey_Shift:

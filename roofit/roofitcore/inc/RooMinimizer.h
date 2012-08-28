@@ -46,7 +46,7 @@ public:
   void setStrategy(Int_t strat) ;
   void setErrorLevel(Double_t level) ;
   void setEps(Double_t eps) ;
-  void optimizeConst(Bool_t flag) ;
+  void optimizeConst(Int_t flag) ;
   void setEvalErrorWall(Bool_t flag) { _fcn->SetEvalErrorWall(flag); }
 
   RooFitResult* fit(const char* options) ;
@@ -76,6 +76,8 @@ public:
 
   static void cleanup() ;
   static RooFitResult* lastMinuitFit(const RooArgList& varList=RooArgList()) ;
+
+  void saveStatus(const char* label, Int_t status) { _statusHistory.push_back(std::pair<std::string,int>(label,status)) ; }
   
 protected:
 
@@ -86,7 +88,7 @@ protected:
   void profileStop() ;
 
   inline Int_t getNPar() const { return _fcn->NDim() ; }
-  inline ofstream* logfile() const { return _fcn->GetLogFile(); }
+  inline std::ofstream* logfile() const { return _fcn->GetLogFile(); }
   inline Double_t& maxFCN() { return _fcn->GetMaxFCN() ; }
 
 private:
@@ -107,6 +109,8 @@ private:
   std::string _minimizerType;
 
   static ROOT::Fit::Fitter *_theFitter ;
+
+  std::vector<std::pair<std::string,int> > _statusHistory ;
 
   RooMinimizer(const RooMinimizer&) ;
 	

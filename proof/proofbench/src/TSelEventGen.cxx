@@ -111,28 +111,34 @@ void TSelEventGen::SlaveBegin(TTree *tree)
       //Info("SlaveBegin", "Input list: %s", sinput.Data());
 
       if (sinput.Contains("PROOF_BenchmarkBaseDir")){
-         TNamed* a=dynamic_cast<TNamed*>(obj);
+         TNamed* a = dynamic_cast<TNamed*>(obj);
          if (a){
-            TString proof_benchmarkbasedir=a->GetTitle();
-            if (!proof_benchmarkbasedir.IsNull()){
-               TUrl u(proof_benchmarkbasedir, kTRUE);
+            TString bdir = a->GetTitle();
+            if (!bdir.IsNull()){
+               TUrl u(bdir, kTRUE);
                Bool_t isLocal = !strcmp(u.GetProtocol(), "file") ? kTRUE : kFALSE;
                if (isLocal && !gSystem->IsAbsoluteFileName(u.GetFile()))
-                  u.SetFile(TString::Format("%s/%s", fBaseDir.Data(), u.GetFile())); 
-               if ((gSystem->AccessPathName(u.GetFile()) &&
-                    gSystem->mkdir(u.GetFile(), kTRUE) == 0) ||
-                    !gSystem->AccessPathName(u.GetFile(), kWritePermission)) {
-                    // Directory is writable
-                    fBaseDir = u.GetFile();
-                    Info("SlaveBegin", "Using directory \"%s\"", fBaseDir.Data());
-               } else{
-                  // Directory is not writable or not available, use default directory
-                  Warning("BeginSlave", "\"%s\" directory is not writable or not existing,"
-                          " using default directory: %s",
-                          proof_benchmarkbasedir.Data(), fBaseDir.Data());
+                  u.SetFile(TString::Format("%s/%s", fBaseDir.Data(), u.GetFile()));
+               if (isLocal) {
+                  if ((gSystem->AccessPathName(u.GetFile()) &&
+                     gSystem->mkdir(u.GetFile(), kTRUE) == 0) ||
+                     !gSystem->AccessPathName(u.GetFile(), kWritePermission)) {
+                     // Directory is writable
+                     fBaseDir = u.GetFile();
+                     Info("SlaveBegin", "using base directory \"%s\"", fBaseDir.Data());
+                  } else{
+                     // Directory is not writable or not available, use default directory
+                     Warning("SlaveBegin", "\"%s\" directory is not writable or not existing,"
+                           " using default directory: %s",
+                           bdir.Data(), fBaseDir.Data());
+                  }
+               } else {
+                  // We assume the user knows what it does
+                  fBaseDir = bdir;
+                  Info("SlaveBegin", "using non local base directory \"%s\"", fBaseDir.Data());
                }
             } else{
-               Info("BeginSlave", "Using default directory: %s",
+               Info("SlaveBegin", "using default directory: %s",
                                    fBaseDir.Data());
             }
             found_basedir=kTRUE; 
@@ -339,25 +345,35 @@ Bool_t TSelEventGen::Process(Long64_t entry)
    }
 
    // Generate
-   TString filename =
-      TString::Format("%s/%s", fBaseDir.Data(), fCurrent->GetName());
+   TString filename(fCurrent->GetName());
+   if (!fBaseDir.IsNull()) {
+      if (fBaseDir.Contains("<fn>")) {
+         filename = fBaseDir;
+         filename.ReplaceAll("<fn>", fCurrent->GetName());
+      } else {
+         filename.Form("%s/%s", fBaseDir.Data(), fCurrent->GetName());
+      }
+   }
+   TString fndset(filename);
       
    // Set the Url for remote access
    TString dsrv, seed;
    seed = TString::Format("%s/%s", gSystem->HostName(), filename.Data());
-   if (gSystem->Getenv("LOCALDATASERVER")) {
-      dsrv = gSystem->Getenv("LOCALDATASERVER");
-      if (!dsrv.EndsWith("/")) dsrv += "/";
-   } else {
-      dsrv.Form("root://%s/", TUrl(gSystem->HostName()).GetHostFQDN());
+   TUrl basedirurl(filename, kTRUE);
+   if (!strcmp(basedirurl.GetProtocol(), "file")) {
+      if (gSystem->Getenv("LOCALDATASERVER")) {
+         dsrv = gSystem->Getenv("LOCALDATASERVER");
+         if (!dsrv.EndsWith("/")) dsrv += "/";
+      } else {
+         dsrv.Form("root://%s/", TUrl(gSystem->HostName()).GetHostFQDN());
+      }
+      TString srvProto = TUrl(dsrv).GetProtocol();
+         
+      // Remove prefix, if any, if included and if Xrootd
+      TString pfx  = gEnv->GetValue("Path.Localroot","");
+      if (!pfx.IsNull() && fndset.BeginsWith(pfx) &&
+         (srvProto == "root" || srvProto == "xrd")) fndset.Remove(0, pfx.Length());
    }
-   TString srvProto = TUrl(dsrv).GetProtocol();
-      
-   // Remove prefix, if any, if included and if Xrootd
-   TString fndset(filename);
-   TString pfx  = gEnv->GetValue("Path.Localroot","");
-   if (!pfx.IsNull() && fndset.BeginsWith(pfx) &&
-      (srvProto == "root" || srvProto == "xrd")) fndset.Remove(0, pfx.Length());
    
 
    //generate files
@@ -389,9 +405,11 @@ Bool_t TSelEventGen::Process(Long64_t entry)
    } 
 
    // Make sure there is enough space left of the device, if local
-   if (!gSystem->AccessPathName(fBaseDir)) {
+   TString bdir(fBaseDir);
+   bdir.ReplaceAll("<fn>", "");
+   if (!gSystem->AccessPathName(bdir)) {
       Long_t devid, devbsz, devbtot, devbfree;
-      gSystem->GetFsInfo(fBaseDir, &devid, &devbsz, &devbtot, &devbfree);
+      gSystem->GetFsInfo(bdir, &devid, &devbsz, &devbtot, &devbfree);
       // Must be more than 10% of space and at least 1 GB
       Long_t szneed = 1024 * 1024 * 1024, tomb = 1024 * 1024;
       if (devbfree * devbsz < szneed || devbfree < 0.1 * devbtot) {
@@ -429,7 +447,9 @@ Bool_t TSelEventGen::Process(Long64_t entry)
 
    // Add meta data to the file info
    TFileInfoMeta* fimeta = new TFileInfoMeta("/EventTree", "TTree", entries_file);
-   TMD5* md5 = TMD5::FileChecksum(filename);
+   TMD5* md5 = 0;
+   if (!strcmp(TUrl(filename,kTRUE).GetProtocol(), "file"))
+      md5 = TMD5::FileChecksum(filename);
    TString md5s = (md5) ? md5->AsString() : "";
    TFileInfo *fi = new TFileInfo(TString::Format("%s%s", dsrv.Data(), fndset.Data()),
                                  filesize, uuid.AsString(), md5s.Data(), fimeta);

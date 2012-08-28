@@ -51,6 +51,7 @@ class TCanvas;
 class TCanvasImp;
 class TH1F;
 class TFrame;
+class TLegend;
 class TBox;
 class TVirtualViewer3D;
 
@@ -72,6 +73,7 @@ public:
    virtual Double_t AbsPixeltoX(Int_t px) = 0;
    virtual Double_t AbsPixeltoY(Int_t py) = 0;
    virtual void     AddExec(const char *name, const char *command) = 0;
+   virtual TLegend *BuildLegend(Double_t x1=0.5, Double_t y1=0.67, Double_t x2=0.88, Double_t y2=0.88, const char *title="") = 0;
    virtual TVirtualPad* cd(Int_t subpadnumber=0) = 0;
    virtual void     Clear(Option_t *option="") = 0;
    virtual void     Close(Option_t *option="") = 0;
@@ -248,16 +250,37 @@ public:
 
    virtual Int_t    GetGLDevice() = 0;
    virtual void     SetCopyGLDevice(Bool_t copy) = 0;
+   
+   virtual Bool_t PadInSelectionMode() const;
+   virtual Bool_t PadInHighlightMode() const;
+   
+   virtual void PushTopLevelSelectable(TObject *top);
+   virtual void PushSelectableObject(TObject *obj);
+   virtual void PopTopLevelSelectable();
 
    static TVirtualPad *&Pad();
 
    ClassDef(TVirtualPad,2)  //Abstract base class for Pads and Canvases
 };
 
+//
+//Small scope-guard class to add/remove object's into pad's stack of selectable objects.
+//Does nothing, unless you implement non-standard picking.
+//
+
+class TPickerStackGuard {
+public:
+   TPickerStackGuard(TObject *obj);
+   ~TPickerStackGuard();
+   
+private:
+   TPickerStackGuard(const TPickerStackGuard &rhs);
+   TPickerStackGuard &operator = (const TPickerStackGuard &rhs);
+};
+
+
 #ifndef __CINT__
 #define gPad (TVirtualPad::Pad())
-
-R__EXTERN void **(*gThreadTsd)(void*,Int_t);
 #endif
 R__EXTERN Int_t (*gThreadXAR)(const char *xact, Int_t nb, void **ar, Int_t *iret);
 

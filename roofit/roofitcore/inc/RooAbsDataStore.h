@@ -35,6 +35,7 @@ public:
   RooAbsDataStore(const char* name, const char* title, const RooArgSet& vars) ; 
   RooAbsDataStore(const RooAbsDataStore& other, const char* newname=0) ; 
   RooAbsDataStore(const RooAbsDataStore& other, const RooArgSet& vars, const char* newname=0) ; 
+  virtual RooAbsDataStore* clone(const char* newname=0) const = 0 ;
   virtual RooAbsDataStore* clone(const RooArgSet& vars, const char* newname=0) const = 0 ;
   virtual ~RooAbsDataStore() ;
 
@@ -69,8 +70,14 @@ public:
   // General & bookkeeping methods
   virtual Bool_t valid() const = 0 ;
   virtual Int_t numEntries() const = 0 ;
+  virtual Double_t sumEntries() const { return 0 ; } ;
   virtual void reset() = 0 ;
 
+  // Buffer redirection routines used in inside RooAbsOptTestStatistics
+  virtual void attachBuffers(const RooArgSet& extObs) = 0 ; 
+  virtual void resetBuffers() = 0 ;
+
+  virtual void setExternalWeightArray(Double_t* /*arrayWgt*/, Double_t* /*arrayWgtErrLo*/, Double_t* /*arrayWgtErrHi*/, Double_t* /*arraySumW2*/) {} ;
 
   // Printing interface (human readable)
   inline virtual void Print(Option_t *options= 0) const {
@@ -78,12 +85,12 @@ public:
     printStream(defaultPrintStream(),defaultPrintContents(options),defaultPrintStyle(options));
   }
 
-  virtual void printName(ostream& os) const ;
-  virtual void printTitle(ostream& os) const ;
-  virtual void printClassName(ostream& os) const ;
-  virtual void printArgs(ostream& os) const ;
-  virtual void printValue(ostream& os) const ;
-  void printMultiline(ostream& os, Int_t content, Bool_t verbose, TString indent) const ;
+  virtual void printName(std::ostream& os) const ;
+  virtual void printTitle(std::ostream& os) const ;
+  virtual void printClassName(std::ostream& os) const ;
+  virtual void printArgs(std::ostream& os) const ;
+  virtual void printValue(std::ostream& os) const ;
+  void printMultiline(std::ostream& os, Int_t content, Bool_t verbose, TString indent) const ;
 
   virtual Int_t defaultPrintContents(Option_t* opt) const ;
    
@@ -95,14 +102,19 @@ public:
   virtual void setArgStatus(const RooArgSet& set, Bool_t active) = 0 ;
   const RooArgSet& cachedVars() const { return _cachedVars ; }
   virtual void resetCache() = 0 ;
+  virtual void recalculateCache(const RooArgSet* /*proj*/, Int_t /*firstEvent*/, Int_t /*lastEvent*/, Int_t /*stepSize*/) {} ;
 
   virtual void setDirtyProp(Bool_t flag) { _doDirtyProp = flag ; }
+  Bool_t dirtyProp() const { return _doDirtyProp ; }
 
   virtual void checkInit() const {} ;
   
   Bool_t hasFilledCache() const { return _cachedVars.getSize()>0 ; }
 
   virtual const TTree* tree() const { return 0 ; }
+  virtual void dump() {} 
+
+  virtual void loadValues(const RooAbsDataStore *tds, const RooFormulaVar* select=0, const char* rangeName=0, Int_t nStart=0, Int_t nStop=2000000000) = 0 ;
 
  protected:
 

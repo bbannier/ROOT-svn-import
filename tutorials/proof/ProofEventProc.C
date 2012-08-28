@@ -18,8 +18,12 @@
 #include "TH2F.h"
 #include "TParameter.h"
 #include "TRandom.h"
+#include "TNamed.h"
+#include "TROOT.h"
+#include "EmptyInclude.h"
 
 
+//_____________________________________________________________________________
 void ProofEventProc::Begin(TTree *)
 {
    // The Begin() function is called at the start of the query.
@@ -27,27 +31,31 @@ void ProofEventProc::Begin(TTree *)
    // The tree argument is deprecated (on PROOF 0 is passed).
 
    TString option = GetOption();
-
+   Info("Begin", "starting a simple exercise with process option: %s", option.Data());
 }
 
-void ProofEventProc::SlaveBegin(TTree *tree)
+//_____________________________________________________________________________
+void ProofEventProc::SlaveBegin(TTree * /*tree*/)
 {
    // The SlaveBegin() function is called after the Begin() function.
    // When running with PROOF SlaveBegin() is called on each slave server.
    // The tree argument is deprecated (on PROOF 0 is passed).
 
-   Init(tree);
+   TString option = GetOption();
 
    // How much to read
    fFullRead = kFALSE;
    TNamed *nm = 0;
-   if (fInput) 
-      nm = dynamic_cast<TNamed *>(fInput->FindObject("ProofEventProc_Read"));
-   if (nm && !strcmp(nm->GetTitle(), "readall"))
-      fFullRead = kTRUE;
+   if (fInput) {
+      if ((nm = dynamic_cast<TNamed *>(fInput->FindObject("ProofEventProc_Read")))) {
+         if (!strcmp(nm->GetTitle(), "readall")) fFullRead = kTRUE;
+      }
+   }
+   if (!nm) {
+      // Check option
+      if (option == "readall") fFullRead = kTRUE;
+   }
    Info("SlaveBegin", "'%s' reading", (fFullRead ? "full" : "optimized"));
-
-   TString option = GetOption();
 
    fPtHist = new TH1F("pt_dist","p_{T} Distribution",100,0,5);
    fPtHist->SetDirectory(0);
@@ -86,6 +94,7 @@ void ProofEventProc::SlaveBegin(TTree *tree)
       Abort("Test abortion during init", kAbortProcess);
 }
 
+//_____________________________________________________________________________
 Bool_t ProofEventProc::Process(Long64_t entry)
 {
    // The Process() function is called for each entry in the tree (or possibly
@@ -105,6 +114,9 @@ Bool_t ProofEventProc::Process(Long64_t entry)
    //  The entry is always the local entry number in the current tree.
    //  Assuming that fChain is the pointer to the TChain being processed,
    //  use fChain->GetTree()->GetEntry(entry).
+
+   if (fEntMin == -1 || entry < fEntMin) fEntMin = entry;
+   if (fEntMax == -1 || entry > fEntMax) fEntMax = entry;
 
    if (fTestAbort == 1) {
       Double_t rr = gRandom->Rndm();
@@ -139,20 +151,39 @@ Bool_t ProofEventProc::Process(Long64_t entry)
    return kTRUE;
 }
 
+//_____________________________________________________________________________
 void ProofEventProc::SlaveTerminate()
 {
    // The SlaveTerminate() function is called after all entries or objects
    // have been processed. When running with PROOF SlaveTerminate() is called
    // on each slave server.
 
+   // Save information about previous element, if any
+   if (fProcElem) fProcElem->Add(fEntMin, fEntMax);
+
+   if (!fProcElems) {
+      Warning("SlaveTerminate", "no proc elements list found!");
+      return;
+   }
+      
+   // Add proc elements to the output list
+   TIter nxpe(fProcElems);
+   TObject *o = 0;
+   while ((o = nxpe())) { fOutput->Add(o); };
 }
 
+//_____________________________________________________________________________
 void ProofEventProc::Terminate()
 {
    // The Terminate() function is the last function to be called during
    // a query. It always runs on the client, it can be used to present
    // the results graphically or save the results to file.
 
+   // Check ranges
+   CheckRanges();
+
+   if (gROOT->IsBatch()) return;
+   
    TCanvas* canvas = new TCanvas("event","event",800,10,700,780);
    canvas->Divide(2,2);
    TPad *pad1 = (TPad *) canvas->GetPad(1);
@@ -198,4 +229,102 @@ void ProofEventProc::Terminate()
    // Final update
    canvas->cd();
    canvas->Update();
+}
+
+//_____________________________________________________________________________
+void ProofEventProc::CheckRanges()
+{
+   // Check the processed event ranges when there is enough information
+   // The result is added to the output list
+
+   // Must be something in output
+   if (!fOutput || (fOutput && fOutput->GetSize() <= 0)) return;
+
+   // Create the result object and add it to the list
+   TNamed *nout = new TNamed("Range_Check", "OK");
+   fOutput->Add(nout);
+   
+   // Get info to check from the input list
+   if (!fInput || (fInput && fInput->GetSize() <= 0)) {
+      nout->SetTitle("No input list");
+      return;
+   }
+   TNamed *ffst = dynamic_cast<TNamed *>(fInput->FindObject("Range_First_File"));
+   if (!ffst) {
+      nout->SetTitle("No first file");
+      return;
+   }
+   TNamed *flst = dynamic_cast<TNamed *>(fInput->FindObject("Range_Last_File"));
+   if (!flst) {
+      nout->SetTitle("No last file");
+      return;
+   }
+   TParameter<Int_t> *fnum =
+      dynamic_cast<TParameter<Int_t> *>(fInput->FindObject("Range_Num_Files"));
+   if (!fnum) {
+      nout->SetTitle("No number of files");
+      return;
+   }
+
+   // Check first file
+   TString fn(ffst->GetTitle()), sfst(ffst->GetTitle());
+   Ssiz_t ifst = fn.Index("?fst=");
+   if (ifst == kNPOS) {
+      nout->SetTitle("No first entry information in first file name");
+      return;
+   }
+   fn.Remove(ifst);
+   sfst.Remove(0, ifst + sizeof("?fst=") - 1);
+   if (!sfst.IsDigit()) {
+      nout->SetTitle("Badly formatted first entry information in first file name");
+      return;
+   }
+   Long64_t fst = (Long64_t) sfst.Atoi();
+   ProcFileElements *pfef = dynamic_cast<ProcFileElements *>(fOutput->FindObject(fn));
+   if (!pfef) {
+      nout->SetTitle("ProcFileElements for first file not found in the output list");
+      return;
+   }
+   if (pfef->fFirst != fst) {
+      TString t = TString::Format("First entry differs {found: %lld, expected: %lld}", pfef->fFirst, fst);
+      nout->SetTitle(t.Data());
+      return;
+   }
+
+   // Check last file
+   fn = flst->GetTitle();
+   TString slst(flst->GetTitle());
+   Ssiz_t ilst = fn.Index("?lst=");
+   if (ilst == kNPOS) {
+      nout->SetTitle("No last entry information in last file name");
+      return;
+   }
+   fn.Remove(ilst);
+   slst.Remove(0, ilst + sizeof("?lst=") - 1);
+   if (!slst.IsDigit()) {
+      nout->SetTitle("Badly formatted last entry information in last file name");
+      return;
+   }
+   Long64_t lst = (Long64_t) slst.Atoi();
+   ProcFileElements *pfel = dynamic_cast<ProcFileElements *>(fOutput->FindObject(fn));
+   if (!pfel) {
+      nout->SetTitle("ProcFileElements for last file not found in the output list");
+      return;
+   }
+   if (pfel->fLast != lst) {
+      nout->SetTitle("Last entry differs");
+      return;
+   }
+
+   // Check Number of files
+   Int_t nproc = 0;
+   TIter nxo(fOutput);
+   TObject *o = 0;
+   while ((o = nxo())) {
+      if (dynamic_cast<ProcFileElements *>(o)) nproc++;
+   }
+   if (fnum->GetVal() != nproc) {
+      nout->SetTitle("Number of processed files differs");
+      return;
+   }
 }

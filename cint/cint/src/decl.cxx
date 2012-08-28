@@ -813,7 +813,9 @@ static int G__initary(G__FastAllocString& new_name)
    // -- Parse and execute an array initialization.
    //
    //printf("Begin G__initary for '%s'...\n", new_name);
-   static G__FastAllocString expr(G__ONELINE);
+   static G__FastAllocString *expr_ptr = new G__FastAllocString(G__LONGLINE);
+   G__FastAllocString &expr(*expr_ptr);
+
    // Separate the array name from the index specification.
    G__FastAllocString name(new_name);
    {
@@ -2612,6 +2614,9 @@ void G__define_var(int tagnum, int typenum)
                }
                else {
                   reg = G__null;
+               }
+               if (var_type == 'u' && (new_name[0] == '*') && (reg.type == 'u')) {                  
+                  G__fundamental_conversion_operator('U' /* 'u'+'*' */,tagnum,typenum,G__reftype,G__constvar,&reg,0);
                }
                G__prerun = store_prerun;
                G__decl = store_decl;

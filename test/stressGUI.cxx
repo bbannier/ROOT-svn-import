@@ -411,8 +411,8 @@ void ProcessFrame(TGFrame *f, const char *title)
 {
    // Save a capture of frame f in a png file.
 
-   gClient->HandleInput();
-   gSystem->Sleep(50);
+   gSystem->ProcessEvents();
+   gSystem->Sleep(250);
    gSystem->ProcessEvents();
    gErrorIgnoreLevel = 9999;
 
@@ -1875,6 +1875,7 @@ void testFontDlg()
                                         &prop, "", 0, kFALSE);
    dlg->SetWMPosition(0, 0);
    dlg->MapWindow();
+   gSystem->Sleep(250);
    ProcessFrame((TGMainFrame*)dlg, "Font Dialog");
    delete dlg;
 }
@@ -2292,6 +2293,7 @@ const char *excluded[] = {
    "QtMultiFileDialog",
    "QtPrintDialog",
    "calendar",
+   "customContextMenu.C",
    "customTH1Fmenu",
    "exec_macro",
    "guitest0",
@@ -2323,6 +2325,7 @@ void run_tutorials()
    TSystemDirectory sysdir(dir.Data(), dir.Data());
    TList *files = sysdir.GetListOfFiles();
 
+   gSystem->ChangeDirectory(dir.Data());
    dir = gRootSys + "/tutorials";
    TString reqfile = dir + "/hsimple.root";
    if (gSystem->AccessPathName(reqfile, kFileExists)) {

@@ -31,7 +31,7 @@ public:
   virtual TObject* clone(const char* newname) const = 0 ;
   virtual ~RooResolutionModel();
 
-  Double_t getVal(const RooArgSet* nset=0) const ;
+  Double_t getValV(const RooArgSet* nset=0) const ;
   virtual RooResolutionModel* convolution(RooFormulaVar* basis, RooAbsArg* owner) const ;
   RooRealVar& convVar() const ;
   const RooRealVar& basisConvVar() const ;
@@ -45,7 +45,7 @@ public:
   inline const RooFormulaVar& basis() const { return _basis?*_basis:*identity() ; }
   Bool_t isConvolved() { return _basis ? kTRUE : kFALSE ; }
 
-  virtual void printMultiline(ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printMultiline(std::ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent="") const ;
 
   static void cleanup() ;
 
