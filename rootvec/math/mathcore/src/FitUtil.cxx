@@ -486,8 +486,11 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    const int nThreads = 1;
 #endif
       
-   const unsigned int nMaxThreadDataSize = (data.Size()+nThreads-1) / nThreads;
+   const unsigned int nMaxThreadDataSize = 4 * ( (data.Size()+nThreads-1+3) / nThreads / 4 );
    const unsigned int nMaxLocalDataSize = std::min( nMaxThreadDataSize, nMaxBunchSize );
+
+   IntegralEvaluator<> igEval( func, p, useBinIntegral); 
+
 #ifdef _OPENMP 
    #pragma omp parallel reduction(+:chi2, nPoints) 
    {
@@ -496,8 +499,6 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
    {
       int tid = 0;
 #endif
-
-      IntegralEvaluator<> igEval( func, p, useBinIntegral); 
       
       std::vector<double> resValues(nMaxLocalDataSize);
       
