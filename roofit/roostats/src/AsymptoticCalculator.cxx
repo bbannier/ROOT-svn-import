@@ -48,6 +48,7 @@
 using namespace RooStats;
 using namespace std;
 
+namespace RooStats { 
 namespace Utils { 
 
     bool SetAllConstant(const RooAbsCollection &coll, bool constant) {
@@ -68,7 +69,7 @@ namespace Utils {
 
 
 }
-
+}
 
 
 ClassImp(RooStats::AsymptoticCalculator);
