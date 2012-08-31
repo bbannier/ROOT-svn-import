@@ -1,8 +1,4 @@
 #import "ROOTApplicationDelegate.h"
-#import "QuartzWindow.h"
-#import "CocoaUtils.h"
-#import "TGWindow.h"
-#import "TGClient.h"
 
 @implementation ROOTApplicationDelegate
 
@@ -36,8 +32,8 @@
    //alt-tab back and ... popup or menu is now behind the main window.
    //I have to save/restore this z-stack order here.
 
+   //Popups were fixed using transient hint, noop now.
    (void) aNotification;
-   /////
 }
 
 //______________________________________________________________________________
@@ -50,8 +46,8 @@
    //alt-tab back and ... popup or menu is now behind the main window.
    //I have to save/restore this z-stack order here.
 
+   //Popups were fixed using transient hint, noop now.
    (void) aNotification;
-   //
 }
 
 @end
