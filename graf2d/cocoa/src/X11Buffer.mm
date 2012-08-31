@@ -410,62 +410,6 @@ void CommandBuffer::AddDeletePixmap(Pixmap_t pixmapID)
    }
 }
 
-namespace {
-
-//______________________________________________________________________________
-void RepaintTree(QuartzView *view)
-{
-   //Can be only QuartzView, ROOTOpenGLView should never have children views.
-   
-   //Repaint operations can throw, thus I need a try block to have
-   //a basic guarantee - no locked views.
-   
-   assert(view != nil && "RepaintTree, view parameter is nil");
-   
-   TGCocoa * const vx = (TGCocoa *)gVirtualX;
-   vx->CocoaDrawON();
-   
-   QuartzView *qv = nil;//View, on winch we lock focus before redraw.
-   CGContextRef oldCtx = 0;
-   try {   
-      for (NSView<X11Window> *child in [view subviews]) {
-         if ([child isKindOfClass : [QuartzView class]] && ![child isKindOfClass : [ROOTOpenGLView class]]) {
-            qv = (QuartzView *)child;
-            if ([qv lockFocusIfCanDraw]) {
-               NSGraphicsContext * const nsContext = [NSGraphicsContext currentContext];
-               assert(nsContext != nil && "RepaintTree, nsContext is nil");
-               CGContextRef cgContext = (CGContextRef)[nsContext graphicsPort];
-               assert(cgContext != 0 && "RepaintTree, cgContext is null");//remove this assert?
-
-               oldCtx = qv.fContext;
-               qv.fContext = cgContext;
-               
-               TGWindow *window = gClient->GetWindowById(qv.fID);
-               assert(window != 0 && "RepaintTree, window was not found");
-               
-               gClient->NeedRedraw(window, kTRUE);//This can throw.
-               qv.fContext = oldCtx;
-               
-               [qv unlockFocus];
-               if ([[qv subviews] count])
-                  RepaintTree(qv);
-            }
-         }
-      }
-   } catch (const std::exception &) {
-      //Roll-back all mods we still can roll-back.
-      [qv unlockFocus];
-      qv.fContext = oldCtx;
-      vx->CocoaDrawOFF();
-      //Now re-throw.
-      throw;
-   }
-   
-   vx->CocoaDrawOFF();
-}
-
-}
-
 //______________________________________________________________________________
 void CommandBuffer::Flush(Details::CocoaPrivate *impl)
 {
@@ -494,9 +438,6 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
       
       if (prevView != view)
          ClipOverlaps(view);//Can throw, ok.
-      
-      if (prevView && prevView != view && [[prevView subviews] count])
-         RepaintTree(prevView);//Can throw, ok.
       
       prevView = view;
       
@@ -550,10 +491,7 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
          throw;
       }
    }
-   
-   if (prevView && [[prevView subviews] count])
-      RepaintTree(prevView);//This can throw, ok.
-   
+
    if (currContext)
       CGContextFlush(currContext);
 
@@ -609,6 +547,28 @@ void CommandBuffer::ClipOverlaps(QuartzView *view)
             //Update view's clip mask - mask out hidden pixels.
             [view addOverlap : FindOverlapRect(frame2, frame1)];
          }
+      }
+   }
+   
+   //Now clip all children.
+   frame2 = view.frame;//Should it be visible rect instead?
+   
+   for (QuartzView *child in [view subviews]) {
+      if (child.fMapState != kIsViewable)
+         continue;
+      
+      frame1 = child.frame;
+      if (view.fParentView)
+         frame1.origin = [view.fParentView convertPoint : frame1.origin fromView : view];
+      
+      if (RectsOverlap(frame2, frame1)) {
+         if (!view.fClipMaskIsValid) {
+            if (![view initClipMask])
+               return;
+            view.fClipMaskIsValid = YES;
+         }
+         
+         [view addOverlap : FindOverlapRect(frame2, frame1)];
       }
    }
 }
