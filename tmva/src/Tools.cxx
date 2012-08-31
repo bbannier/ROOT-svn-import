@@ -103,7 +103,7 @@ Double_t TMVA::Tools::NormVariable( Double_t x, Double_t xmin, Double_t xmax )
 Double_t TMVA::Tools::GetSeparation( TH1* S, TH1* B ) const
 {
    // compute "separation" defined as
-   // <s2> = (1/2) Int_-oo..+oo { (S^2(x) - B^2(x))/(S(x) + B(x)) dx }
+   // <s2> = (1/2) Int_-oo..+oo { (S(x) - B(x))^2/(S(x) + B(x)) dx }
    Double_t separation = 0;
 
    // sanity checks
@@ -132,8 +132,8 @@ Double_t TMVA::Tools::GetSeparation( TH1* S, TH1* B ) const
 
    if (nS > 0 && nB > 0) {
       for (Int_t bin=0; bin<nstep; bin++) {
-         Double_t s = S->GetBinContent( bin )/Double_t(nS);
-         Double_t b = B->GetBinContent( bin )/Double_t(nB);
+         Double_t s = S->GetBinContent( bin+1 )/Double_t(nS);
+         Double_t b = B->GetBinContent( bin+1 )/Double_t(nB);
          // separation
          if (s + b > 0) separation += 0.5*(s - b)*(s - b)/(s + b);
       }
@@ -153,7 +153,7 @@ Double_t TMVA::Tools::GetSeparation( TH1* S, TH1* B ) const
 Double_t TMVA::Tools::GetSeparation( const PDF& pdfS, const PDF& pdfB ) const
 {
    // compute "separation" defined as
-   // <s2> = (1/2) Int_-oo..+oo { (S(x)2 - B(x)2)/(S(x) + B(x)) dx }
+   // <s2> = (1/2) Int_-oo..+oo { (S(x) - B(x))2/(S(x) + B(x)) dx }
 
    Double_t xmin = pdfS.GetXmin();
    Double_t xmax = pdfS.GetXmax();
