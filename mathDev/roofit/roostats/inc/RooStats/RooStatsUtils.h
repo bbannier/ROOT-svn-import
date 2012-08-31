@@ -99,6 +99,8 @@ namespace RooStats {
 
   }
 
+  
+
    void FactorizePdf(const RooArgSet &observables, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints);
 
    void FactorizePdf(RooStats::ModelConfig &model, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints);
@@ -109,6 +111,27 @@ namespace RooStats {
    
    // Create a TTree with the given name and description. All RooRealVars in the RooDataSet are represented as branches that contain values of type Double_t.
    TTree* GetAsTTree(TString name, TString desc, const RooDataSet& data);
+
+   // others functions from Giovanni's code
+
+   namespace Utils { 
+
+    // Clone a pdf and all it's branch nodes. on request, clone also leaf nodes (i.e. RooRealVars)                                        
+    RooAbsPdf *FullClonePdf(const RooAbsPdf *pdf, RooArgSet &holder, bool cloneLeafNodes=false) ;
+    // Clone a function and all it's branch nodes. on request, clone also leaf nodes (i.e. RooRealVars)                                   
+    RooAbsReal *FullCloneFunc(const RooAbsReal *pdf, RooArgSet &holder, bool cloneLeafNodes=false) ;
+
+    /// factorize a RooAbsReal                                                                                                            
+    void FactorizeFunc(const RooArgSet &observables, RooAbsReal &pdf, RooArgList &obsTerms, RooArgList &otherTerms, bool debug=false);
+
+    /// Create a pdf which depends only on observables, and collect the other constraint terms                                            
+    /// Will return 0 if it's all constraints, &pdf if it's all observables, or a new pdf if it's something mixed                         
+    /// In the last case, you're the owner of the returned pdf.                                                                           
+    RooAbsPdf *FactorizePdf(const RooArgSet &observables, RooAbsPdf &pdf, RooArgList &constraints);
+
+      void copyAttributes(const RooAbsArg & from, RooAbsArg & to);
+
+   }
 
 }
 

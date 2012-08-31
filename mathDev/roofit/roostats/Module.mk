@@ -21,6 +21,7 @@ ROOSTATSDO   := $(ROOSTATSDS:.cxx=.o)
 ROOSTATSDH   := $(ROOSTATSDS:.cxx=.h)
 
 ROOSTATSH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/RooStats/*.h))
+ROOSTATSH2   := $(filter-out $(MODDIRI)/RooStats/CachingNLL%,$(ROOSTATSH))
 ROOSTATSS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 ROOSTATSO    := $(call stripsrc,$(ROOSTATSS:.cxx=.o))
 
@@ -59,7 +60,7 @@ $(ROOSTATSLIB): $(ROOSTATSO) $(ROOSTATSDO) $(ORDER_) $(MAINLIBS) \
 $(ROOSTATSDS):  $(ROOSTATSH) $(ROOSTATSL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(ROOSTATSH) $(ROOSTATSL)
+		$(ROOTCINTTMP) -f $@ -c $(ROOSTATSH2) $(ROOSTATSL)
 
 $(ROOSTATSMAP): $(RLIBMAP) $(MAKEFILEDEP) $(ROOSTATSL)
 		$(RLIBMAP) -o $@ -l $(ROOSTATSLIB) \
