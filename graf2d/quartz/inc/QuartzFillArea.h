@@ -42,6 +42,7 @@ namespace Quartz {
 
 Bool_t SetFillColor(CGContextRef ctx, Color_t colorIndex);
 Bool_t SetFillAreaParameters(CGContextRef ctx, unsigned *patternIndex);
+
 void DrawBox(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, bool hollow);
 void DrawBoxGradient(CGContextRef ctx, Int_t x1, Int_t y1, Int_t x2, Int_t y2, const TColorGradient *extendedColor, Bool_t drawShadow);
 
