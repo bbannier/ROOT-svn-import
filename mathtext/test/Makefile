@@ -9,12 +9,25 @@
 RC     := root-config
 ifeq ($(shell which $(RC) 2>&1 | sed -ne "s@.*/$(RC)@$(RC)@p"),$(RC))
 MKARCH := $(wildcard $(shell $(RC) --etcdir)/Makefile.arch)
+RCONFIG := $(wildcard $(shell $(RC) --incdir)/RConfigure.h)
 endif
 ifneq ($(MKARCH),)
 include $(MKARCH)
 else
+ifeq ($(ROOTSYS),)
 ROOTSYS = ..
+endif
 include $(ROOTSYS)/etc/Makefile.arch
+endif
+# Tutorials dir needed by stressProof
+ifneq ($(RCONFIG),)
+TUTDIR := $(wildcard $(shell grep ROOTDOCDIR $(RCONFIG) | sed "s|.*\"\(.*\)\"|\1|")/tutorials)
+endif
+ifeq ($(TUTDIR),)
+ifeq ($(ROOTSYS),)
+ROOTSYS = ..
+endif
+TUTDIR := $(ROOTSYS)/tutorials
 endif
 -include ../MyConfig.mk
 
@@ -572,7 +585,7 @@ $(STRESSHEPIX): $(STRESSHEPIXO) $(STRESSGEOMETRY) $(STRESSFIT) $(STRESSL) \
 		@echo "$@ done"
 
 $(STRESSROOFITO): stressRooFit_tests.cxx
-$(STRESSROOSTATSO): stressRooStats_tests.cxx
+$(STRESSROOSTATSO): stressRooStats_tests.cxx stressRooStats_models.cxx
 
 ifeq ($(shell $(RC) --has-mathmore),yes)
 ifeq ($(PLATFORM),win32)
@@ -708,10 +721,12 @@ clean:
 		@rm -f $(OBJS) $(TRACKMATHSRC) core *Dict.*
 
 distclean:      clean
+		-@(mv -f stressRooStats_ref.root stressRooStats_ref.root- >/dev/null 2>&1;true)
 		@rm -f $(PROGRAMS) $(EVENTSO) $(EVENTLIB) *Dict.* *.def *.exp \
 		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations \
 		   files/*
 		@rm -rf cxx_repository
+		-@(mv -f stressRooStats_ref.root- stressRooStats_ref.root >/dev/null 2>&1;true)
 		-@cd RootShower && $(MAKE) distclean
 		-@cd rhtml && $(MAKE) distclean
 		-@cd RootIDE && $(MAKE) distclean
@@ -764,6 +779,9 @@ stressMathCore.$(ObjSuf): 	TrackMathCore.h
 TrackMathCoreDict.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h
 	@echo "Generating dictionary $@ using rootcint ..."
 	$(ROOTCINT) -f $@ -c $^	
+
+stressProof.$(ObjSuf):	stressProof.$(SrcSuf)
+	$(CXX)  $(CXXFLAGS) -I$(TUTDIR) -c $<
 
 TrackMathCoreRflx.$(SrcSuf): 	TrackMathCore.h TrackMathCoreRflx.xml
 			@echo "Generating dictionary $@ using gccxml ..."

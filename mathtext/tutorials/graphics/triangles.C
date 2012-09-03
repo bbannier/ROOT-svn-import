@@ -22,6 +22,10 @@ void triangles(Int_t ntriangles=50) {
      pl->Draw("f");
   }
   c1->AddExec("ex","TriangleClicked()");
+c1->Print("triangles.ps") ;
+c1->Print("triangles.pdf") ;
+c1->Print("triangles.svg") ;
+c1->Print("triangles.png") ;
 }
 
 void TriangleClicked() {
