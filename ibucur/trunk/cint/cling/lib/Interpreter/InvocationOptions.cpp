@@ -44,10 +44,18 @@ namespace {
 
   static void ParseStartupOpts(cling::InvocationOptions& Opts,
                                InputArgList& Args /* , Diags */) {
-    Opts.NoLogo = Args.hasArg(OPT_nologo);
+    Opts.NoLogo = Args.hasArg(OPT__nologo);
     Opts.ShowVersion = Args.hasArg(OPT_version);
     Opts.Verbose = Args.hasArg(OPT_v);
     Opts.Help = Args.hasArg(OPT_help);
+    if (Args.hasArg(OPT__metastr, OPT__metastr_EQ)) {
+      Arg* MetaStringArg = Args.getLastArg(OPT__metastr, OPT__metastr_EQ);
+      Opts.MetaString = MetaStringArg->getValue(Args);
+      if (Opts.MetaString.length() == 0) {
+        llvm::errs() << "ERROR: meta string must be non-empty! Defaulting to '.'.\n";
+        Opts.MetaString = ".";
+      }
+    }
   }
 
   static void ParseLinkerOpts(cling::InvocationOptions& Opts,

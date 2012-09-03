@@ -166,18 +166,18 @@
 #include "Rtypes.h"
 #include <iostream>
 #include <memory>
+#include <vector>
 #include "Shadow.h"
 #include "cintdictversion.h"
 #include "FastAllocString.h"
 #include "cling/Interpreter/Interpreter.h"
-#include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/LookupHelper.h"
 #include "cling/Interpreter/Value.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/AST/CXXInheritance.h"
-
 
 #include "cling/Utils/AST.h"
 
@@ -204,7 +204,17 @@
 #  undef system
 #endif
 
-#include <vector>
+#ifdef ROOTBUILD
+# define ROOTBUILDVAL true
+#else
+# define ROOTBUILDVAL false
+#endif
+
+#ifdef R__EXTERN_LLVMDIR
+# define R__LLVMDIR R__EXTERN_LLVMDIR
+#else
+# define R__LLVMDIR "./interpreter/llvm/inst" // only works for rootbuild for now!
+#endif
 
 template <typename T> struct R__IsPointer { enum { kVal = 0 }; };
 
@@ -633,17 +643,20 @@ const char *R__GetComment(const clang::Decl &decl)
 }
 
 cling::Interpreter *gInterp = 0;
+std::string gResourceDir;
+
 void R__GetQualifiedName(std::string &qual_name, const clang::NamedDecl &cl);
 
 void R__GetNormalizedName(std::string &norm_name, const clang::QualType &type, const clang::ASTContext &ctxt) 
 {
    static llvm::SmallSet<const clang::Type*, 4> typeToSkip;
    if (typeToSkip.empty()) {
-      clang::QualType toSkip = gInterp->lookupType("Double32_t");
+      const cling::LookupHelper& lh = gInterp->getLookupHelper();
+      clang::QualType toSkip = lh.findType("Double32_t");
       if (!toSkip.isNull()) typeToSkip.insert(toSkip.getTypePtr());
-      toSkip = gInterp->lookupType("Float16_t");
+      toSkip = lh.findType("Float16_t");
       if (!toSkip.isNull()) typeToSkip.insert(toSkip.getTypePtr());
-      toSkip = gInterp->lookupType("string");
+      toSkip = lh.findType("string");
       if (!toSkip.isNull()) typeToSkip.insert(toSkip.getTypePtr());
    }
 
@@ -746,12 +759,12 @@ bool R__IsInt(const clang::FieldDecl *field)
 const clang::CXXRecordDecl *R__ScopeSearch(const char *name, const clang::Type** resultType = 0) 
 {
    // Return the scope corresponding to 'name' or std::'name'
-
-   const clang::CXXRecordDecl *result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(gInterp->lookupScope(name,resultType));
+   const cling::LookupHelper& lh = gInterp->getLookupHelper();
+   const clang::CXXRecordDecl *result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(lh.findScope(name,resultType));
    if (!result) {
       std::string std_name("std::");
       std_name += name;
-      result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(gInterp->lookupScope(std_name,resultType));
+      result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(lh.findScope(std_name,resultType));
    }
    return result;
 }
@@ -884,14 +897,15 @@ public:
 const clang::FunctionDecl *R__GetFuncWithProto(const clang::Decl* cinfo, 
                                                const char *method, const char *proto)
 {
-   return gInterp->lookupFunctionProto(cinfo, method, proto);
+   return gInterp->getLookupHelper().findFunctionProto(cinfo, method, proto);
 }
 
 //______________________________________________________________________________
 const clang::CXXMethodDecl *R__GetMethodWithProto(const clang::Decl* cinfo, 
                                                   const char *method, const char *proto)
 {
-   const clang::FunctionDecl* funcD = gInterp->lookupFunctionProto(cinfo, method, proto);
+   const clang::FunctionDecl* funcD 
+      = gInterp->getLookupHelper().findFunctionProto(cinfo, method, proto);
    if (funcD) {
       return llvm::dyn_cast<const clang::CXXMethodDecl>(funcD);
    }
@@ -902,7 +916,8 @@ const clang::CXXMethodDecl *R__GetMethodWithProto(const clang::Decl* cinfo,
 const clang::CXXMethodDecl *R__GetMethodWithProto__Old(const clang::CXXRecordDecl* cinfo, 
                                                 const char *method, const char *proto)
 {
-   const clang::FunctionDecl* funcD = gInterp->lookupFunctionProto(cinfo, method, proto);
+   const clang::FunctionDecl* funcD 
+      = gInterp->getLookupHelper().findFunctionProto(cinfo, method, proto);
    if (funcD) {
       return llvm::dyn_cast<const clang::CXXMethodDecl>(funcD);
    }
@@ -5453,7 +5468,7 @@ static int GenerateModule(const char* dictname, const std::vector<std::string>& 
 {
    // Generate the clang module given the arguments.
    // Returns != 0 on error.
-   std::string clangInvocation(R__CLANG);
+   std::string clangInvocation(R__LLVMDIR "/bin/clang");
    std::string dictNameStem(dictname);
    size_t posDotPcmFile = dictNameStem.find('.');
    if (posDotPcmFile != std::string::npos) {
@@ -5785,23 +5800,10 @@ int main(int argc, char **argv)
       clingArgs.push_back("-DG__VECTOR_HAS_CLASS_ITERATOR");
    }
 
-#ifndef ROOTBUILD
-# ifndef ROOTINCDIR
+#if !defined(ROOTBUILD) && defined(ROOTINCDIR)
    SetRootSys();
-   if (getenv("ROOTSYS")) {
-      std::string incl_rootsys = std::string("-I") + getenv("ROOTSYS");
-      path.push_back(incl_rootsys + "/include");
-      path.push_back(incl_rootsys + "/src");
-   } else {
-      Error(0, "%s: environment variable ROOTSYS not defined\n", argv[0]);
-      return 1;
-   }
-# else
-   path.push_back(std::string("-I") + ROOTINCDIR);
-# endif
-#else
-   path.push_back("-Iinclude");
 #endif
+   path.push_back(std::string("-I") + TMetaUtils::GetROOTIncludeDir(ROOTBUILDVAL));
 
    argvv[0] = argv[0];
    argcc = 1;
@@ -5976,26 +5978,19 @@ int main(int argc, char **argv)
 
    // cling-only arguments
    clingArgs.push_back("-fsyntax-only");
-   std::string interpInclude("-I");
-#ifndef ROOTBUILD
-# ifndef ROOTINCDIR
-   std::string rootsys = getenv("ROOTSYS");
-   interpInclude += rootsys + "/etc";
-# else
-   interpInclude += ROOTETCDIR;
-# endif
-#else
-   interpInclude += "etc";
-#endif
-   clingArgs.push_back(interpInclude.c_str());
+   std::string interpInclude
+      = TMetaUtils::GetInterpreterExtraIncludePath(ROOTBUILDVAL);
+   clingArgs.push_back(interpInclude);
 
    std::vector<const char*> clingArgsC;
    for (size_t iclingArgs = 0, nclingArgs = clingArgs.size();
         iclingArgs < nclingArgs; ++iclingArgs) {
       clingArgsC.push_back(clingArgs[iclingArgs].c_str());
    }
+
+   gResourceDir = TMetaUtils::GetLLVMResourceDir(ROOTBUILDVAL);
    cling::Interpreter interp(clingArgsC.size(), &clingArgsC[0],
-                             getenv("LLVMDIR"));
+                             gResourceDir.c_str());
    interp.declare("namespace std {} using namespace std;");
 #ifdef ROOTBUILD
    interp.declare("#include \"include/Rtypes.h\"");
@@ -6411,7 +6406,8 @@ int main(int argc, char **argv)
 
       LinkdefReader ldefr;
       clingArgs.push_back("-Ietc/cling/cint"); // For multiset and multimap 
-      if (!ldefr.Parse(selectionRules, interpPragmaSource, clingArgs, getenv("LLVMDIR"))) {
+      if (!ldefr.Parse(selectionRules, interpPragmaSource, clingArgs,
+                       gResourceDir.c_str())) {
          Error(0,"Parsing Linkdef file %s",linkdefFilename.c_str());
       }
       else {
