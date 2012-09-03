@@ -26,16 +26,16 @@ RFOBJ = rf501.$(ObjSuf)
 RFSRC = rf501.$(SrcSuf)
 RF = rf501$(ExeSuf)
 
-UNIFORMFOBJ = testUniform.$(ObjSuf)
-UNIFORMSRC = testUniform.$(SrcSuf)
-UNIFORM = testUniform$(ExeSuf)
+COMBINEDOBJ = combined.$(ObjSuf)
+COMBINEDSRC = combined.$(SrcSuf)
+COMBINED = combined$(ExeSuf)
 
 endif
 
 #----------------------------------------------------------------------------
 
-PROGRAMS = $(TEST) $(STRESSROOSTATS) $(MODEL) $(PVALUE) $(UNIFORM)
-OBJS = $(TESTOBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ) $(UNIFORMOBJ)
+PROGRAMS = $(TEST) $(STRESSROOSTATS) $(MODEL) $(PVALUE) $(COMBINED)
+OBJS = $(TESTOBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ) $(COMBINEDOBJ)
 
 $(TEST):	$(TESTOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
@@ -57,7 +57,7 @@ $(RF) : $(RFOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
-$(UNIFORM) : $(UNIFORMOBJ)
+$(COMBINED) : $(COMBINEDOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
