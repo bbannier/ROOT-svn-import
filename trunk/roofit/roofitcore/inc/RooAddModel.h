@@ -56,11 +56,6 @@ public:
     return (_haveLastCoef || _allExtendable) ? MustBeExtended : CanNotBeExtended; 
   }
   virtual Double_t expectedEvents(const RooArgSet* nset) const ;
-  virtual Double_t expectedEvents(const RooArgSet& nset) const { 
-    // Return expected number of events for extended likelihood calculation
-    // which is the sum of all coefficients
-    return expectedEvents(&nset) ; 
-  }
 
   const RooArgList& pdfList() const { 
     // Return list of component p.d.fs
