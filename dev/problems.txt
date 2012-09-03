@@ -29,7 +29,9 @@ MINOR / WEAKLY RELATED
 
 QUESTIONS / POSSIBLE PROBLEMS
 
-
+ROOFIT
+1. expectedEvents issue (one virtual method may be unnecessary)
+2. RooRealProxy checking for _fast and _inhibitDirty may be redundant
 
 
 
