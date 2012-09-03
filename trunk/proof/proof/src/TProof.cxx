@@ -10921,7 +10921,19 @@ Int_t TProof::VerifyDataSet(const char *uri, const char *optStr)
       return nmissingfiles;
    }
 
-   //Let PROOF master prepare node-files map
+   // Do parallel verification
+   return VerifyDataSetParallel(uri, optStr);
+}
+
+//______________________________________________________________________________
+Int_t TProof::VerifyDataSetParallel(const char *uri, const char *optStr)
+{
+   // Internal function for parallel dataset verification used TProof::VerifyDataSet and
+   // TProofLite::VerifyDataSet
+
+   Int_t nmissingfiles = 0;
+   
+   // Let PROOF master prepare node-files map
    SetParameter("PROOF_FilesToProcess", Form("dataset:%s", uri));
 
    // Use TPacketizerFile
@@ -10933,6 +10945,7 @@ Int_t TProof::VerifyDataSet(const char *uri, const char *optStr)
    SetParameter("PROOF_VerifyDataSet", uri);
    // Add options
    SetParameter("PROOF_VerifyDataSetOption", optStr);
+   SetParameter("PROOF_SavePartialResults", (Int_t)0);
    Int_t oldifiip = -1;
    if (TProof::GetParameter(GetInputList(), "PROOF_IncludeFileInfoInPacket", oldifiip) != 0) oldifiip = -1;
    SetParameter("PROOF_IncludeFileInfoInPacket", (Int_t)1);
@@ -10942,8 +10955,6 @@ Int_t TProof::VerifyDataSet(const char *uri, const char *optStr)
    SetParameter("PROOF_MSS", mss);
    const char* stageoption="";
    SetParameter("PROOF_StageOption", stageoption);
-
-   GetInputList()->Print();
 
    // Process verification in parallel
    Process("TSelVerifyDataSet", (Long64_t) 1);
@@ -10965,6 +10976,7 @@ Int_t TProof::VerifyDataSet(const char *uri, const char *optStr)
    } else {
       DeleteParameters("PROOF_IncludeFileInfoInPacket");
    }
+   DeleteParameters("PROOF_SavePartialResults");
 
    // Merge outputs
    Int_t nopened = 0;
@@ -11002,10 +11014,10 @@ Int_t TProof::VerifyDataSet(const char *uri, const char *optStr)
       }
    }
 
-   Info("VerifyDataset", "%s: changed? %d (# files opened = %d, # files touched = %d,"
-                         " # missing files = %d)",
-                         uri, changed_ds, nopened, ntouched, nmissingfiles);
-
+   Info("VerifyDataSetParallel", "%s: changed? %d (# files opened = %d, # files touched = %d,"
+                                 " # missing files = %d)",
+                                 uri, changed_ds, nopened, ntouched, nmissingfiles);
+   // Done
    return nmissingfiles;
 }
 

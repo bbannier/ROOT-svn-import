@@ -26,16 +26,32 @@ LLVMDIRS     := $(MODDIRS)
 
 ##### libllvm #####
 LLVMLIB      := $(LLVMDIRI)/lib/libclang.a
-LLVMCONFIG   := $(LLVMDIRI)/bin/llvm-config
-LLVMDEP      := $(LLVMLIB)
+ifeq ($(strip $(LLVMCONFIG)),)
+LLVMCONFIG   := interpreter/llvm/inst/bin/llvm-config
+endif
+LLVMVERSION  := $(shell echo $(subst rc,,$(subst svn,,$(subst PACKAGE_VERSION=,,\
+	$(shell grep 'PACKAGE_VERSION=' $(LLVMDIRS)/configure)))))
+LLVMRES      := etc/cling/lib/clang/$(LLVMVERSION)/include/stddef.h
+LLVMDEP      := $(LLVMLIB) $(LLVMRES)
+
+ifneq ($(FORCELLVM),)
+FORCELLVMTARGET=FORCELLVMTARGET
+endif
 
 ##### local rules #####
-.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
+.PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) FORCELLVMTARGET
 
-$(LLVMLIB): $(LLVMDIRO)
+# clang resource directory gets copied to lib/clang/
+# clang version extraction as in tools/clang/lib/Headers/Makefile
+$(LLVMRES): $(LLVMLIB)
+		mkdir -p $(dir $(LLVMRES))
+		cp $(LLVMDIRI)/lib/clang/$(LLVMVERSION)/include/* $(dir $(LLVMRES))
+
+$(LLVMLIB): $(LLVMDIRO) $(FORCELLVMTARGET)
 		@(echo "*** Building $@..."; \
 		cd $(LLVMDIRO); \
 		$(MAKE) ENABLE_OPTIMIZED=1; \
+		@rm -rf $(LLVMDIRI)/lib/clang; \
 		$(MAKE) ENABLE_OPTIMIZED=1 install)
 
 $(LLVMDIRO): $(LLVMDIRS)
@@ -45,6 +61,7 @@ $(LLVMDIRO): $(LLVMDIRS)
 		echo "*** Configuring LLVM in $@..."; \
 		cd $(notdir $@); \
 		LLVMCC="$(CC)"; \
+		LLVMCXX="$(CXX)"; \
 		if [ $(ARCH) = "aix5" ]; then \
 			LLVM_CFLAGS="-DBOOL=int"; \
 		fi; \
@@ -82,11 +99,12 @@ $(LLVMDIRO): $(LLVMDIRS)
 		fi; \
 		if [ $(ARCH) = "hpuxia64acc" ]; then \
 			LLVMCC="cc"; \
+			LLVMCXX="aCC"; \
 			LLVM_CFLAGS="+DD64 -Ae"; \
 		fi; \
 		GNUMAKE=$(MAKE) $(LLVMDIRS)/configure $$LLVM_HOST \
 		--prefix=$(ROOT_OBJDIR)/$(LLVMDIRI) \
-		--enable-targets=host-only CC=$$LLVMCC CFLAGS="$$LLVM_CFLAGS")
+		--enable-targets=host CC=$$LLVMCC CXX=$$LLVMCXX CFLAGS="$$LLVM_CFLAGS" CXXFLAGS="$$LLVM_CFLAGS")
 
 all-$(MODNAME): $(LLVMLIB)
 

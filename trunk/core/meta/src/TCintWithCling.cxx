@@ -67,6 +67,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/LookupHelper.h"
 #include "cling/Interpreter/Value.h"
 #include "cling/MetaProcessor/MetaProcessor.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -471,29 +472,13 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    , fMetaProcessor(0)
 {
    // Initialize the CINT+cling interpreter interface.
-
-   TString interpInclude;
-#ifndef ROOTINCDIR
-   TString rootsys = gSystem->Getenv("ROOTSYS");
-   interpInclude = rootsys + "/etc";
-#else // ROOTINCDIR
-   interpInclude = ROOTETCDIR;
-#endif // ROOTINCDIR
-   interpInclude.Prepend("-I");
-   const char* interpArgs[] = {"cling4root", interpInclude.Data(), "-Xclang", "-fmodules"};
-
-   TString llvmDir;
-   if (gSystem->Getenv("$(LLVMDIR)")) {
-      llvmDir = gSystem->ExpandPathName("$(LLVMDIR)");
-   }
-#ifdef R__LLVMDIR
-   if (llvmDir.IsNull()) {
-      llvmDir = R__LLVMDIR;
-   }
-#endif // R__LLVMDIR
+   std::string interpInclude = ROOT::TMetaUtils::GetInterpreterExtraIncludePath(false);
+   const char* interpArgs[]
+      = {"cling4root", interpInclude.c_str(), "-Xclang", "-fmodules"};
 
    fInterpreter = new cling::Interpreter(sizeof(interpArgs) / sizeof(char*),
-                                         interpArgs, llvmDir); 
+                                         interpArgs,
+                                         ROOT::TMetaUtils::GetLLVMResourceDir(false).c_str());
    fInterpreter->installLazyFunctionCreator(autoloadCallback);
 
    // Add the current path to the include path
@@ -501,14 +486,14 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
 
    // Add the root include directory and etc/ to list searched by default.
    // Use explicit TCintWithCling::AddIncludePath() to avoid vtable: we're in the c'tor!
+   TCintWithCling::AddIncludePath(ROOT::TMetaUtils::GetROOTIncludeDir(false).c_str());
+
 #ifndef ROOTINCDIR
-   TCintWithCling::AddIncludePath(rootsys + "/include");
-   TString dictDir = rootsys + "/lib";
+   TString dictDir = getenv("ROOTSYS");
+   dictDir += "/lib";
 #else // ROOTINCDIR
-   TCintWithCling::AddIncludePath(ROOTINCDIR);
    TString dictDir = ROOTLIBDIR;
 #endif // ROOTINCDIR
-
    clang::HeaderSearch& HS = fInterpreter->getCI()->getPreprocessor().getHeaderSearchInfo();
    HS.setModuleCachePath(dictDir.Data());
 
@@ -922,8 +907,9 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
    Printf("Inspecting class %s\n", clname);
 
    const clang::ASTContext& astContext = fInterpreter->getCI()->getASTContext();
+   const cling::LookupHelper& lh = fInterpreter->getLookupHelper();
    const clang::CXXRecordDecl* recordDecl 
-     = llvm::dyn_cast<const clang::CXXRecordDecl>(fInterpreter->lookupScope(clname));
+     = llvm::dyn_cast<const clang::CXXRecordDecl>(lh.findScope(clname));
    if (!recordDecl) {
       Error("InspectMembers", "Cannot find RecordDecl for class %s", clname);
       return;
