@@ -78,12 +78,6 @@ public:
    virtual void  WriteInteger(Int_t i, Bool_t space=kTRUE);
    virtual void  WriteReal(Float_t r);
    virtual void  PrintRaw(Int_t len, const char *str);
-   virtual Bool_t ReadOTFCFFHeader(
-		FILE *fp, TString &fontName, UInt_t &cffOffset,
-		UInt_t &cffLength);
-   virtual Bool_t ReadTTFHeader(
-		FILE *fp, TString &fontName, Double_t *fontBBox,
-		UShort_t *encoding, TString *charStrings, UShort_t *cMap);
    virtual void *GetStream() const {  return (void*)fStream; }
    virtual void  SetStream(ofstream *os) {  fStream = os; }
 
