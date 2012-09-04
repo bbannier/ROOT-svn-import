@@ -740,7 +740,7 @@ namespace mathtext {
 			delete [] buffer;
 		}
 
-		char_strings.resize(num_glyphs);
+		char_strings.resize(num_glyphs);//xxx
 #include "table/macintoshordering.h"
 		for (uint16_t glyph = 0; glyph < num_glyphs; glyph++) {
 			char_strings[glyph] = glyph_name_index[glyph] >= 258 ?

@@ -78,10 +78,6 @@ public:
    virtual void  WriteInteger(Int_t i, Bool_t space=kTRUE);
    virtual void  WriteReal(Float_t r);
    virtual void  PrintRaw(Int_t len, const char *str);
-   virtual void  WriteASCII(Int_t len, const char *buf);
-   virtual void  WriteASCIIHex(Int_t len, const char *buf);
-   virtual Int_t ASCII85LineCount(Int_t len, const char *buf) const;
-   virtual void  WriteASCII85(Int_t len, const char *buf);
    virtual Bool_t ReadOTFCFFHeader(
 		FILE *fp, TString &fontName, UInt_t &cffOffset,
 		UInt_t &cffLength);

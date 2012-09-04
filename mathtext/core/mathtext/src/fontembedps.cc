@@ -57,7 +57,7 @@
 namespace mathtext {
 
 	void font_embed_postscript_t::append_asciihex(
-		std::string &ascii, const char *buffer,
+		std::string &ascii, const unsigned char *buffer,
 		const size_t length)
 	{
 		const int width = 64;
@@ -220,6 +220,11 @@ namespace mathtext {
 		memcpy(magic_number, &font_data[0], 2);
 		if(magic_number[0] == '\200') {
 			// IBM PC format printer font binary
+
+			// FIXME: Maybe the real name can be parsed out of the
+			// file
+			font_name = "";
+
 			struct pfb_segment_header_s segment_header;
 			size_t offset = 2;
 
@@ -228,11 +233,13 @@ namespace mathtext {
 			offset += sizeof(pfb_segment_header_s);
 			while (segment_header.type != TYPE_EOF) {
 #ifndef R__BYTESWAP
-				segment_header.length = Rbswap_32(segment_header.length);
+				segment_header.length =
+					Rbswap_32(segment_header.length);
 #endif // R__BYTESWAP
 				char *buffer = new char[segment_header.length];
 
-				memcpy(buffer, &font_data[offset], segment_header.length);
+				memcpy(buffer, &font_data[offset],
+					   segment_header.length);
 				offset += segment_header.length;
 
 				switch(segment_header.type) {
@@ -251,7 +258,9 @@ namespace mathtext {
 					ret.append(buffer, segment_header.length);
 					break;
 				case TYPE_BINARY:
-					append_asciihex(ret, buffer, segment_header.length);
+					append_asciihex(
+						ret, reinterpret_cast<uint8_t *>(buffer),
+						segment_header.length);
 					break;
 				default:
 					{}
@@ -264,12 +273,11 @@ namespace mathtext {
 		}
 		else if(strncmp(magic_number, "%!", 2) == 0) {
 			// Printer font ASCII
-			fprintf(stderr, "%s:%d: Printer font ASCII is not implemented\n", __FILE__, __LINE__);
+			fprintf(stderr, "%s:%d: Printer font ASCII is not "
+					"implemented\n", __FILE__, __LINE__);
 			return std::string();
 		}
-		
-		// Not implemented
-		fprintf(stderr, "%s:%d: not implemented\n", __FILE__, __LINE__);
+
 		return std::string();
 	}
 
@@ -284,9 +292,9 @@ namespace mathtext {
 		unsigned int cff_offset;
 		unsigned int cff_length;
 
-		if(!parse_otf_cff_header(font_name, cid_encoding_id,
-								 cff_offset, cff_length,
-								 font_data)) {
+		if (!parse_otf_cff_header(font_name, cid_encoding_id,
+								  cff_offset, cff_length,
+								  font_data)) {
 			return std::string();
 		}
 
@@ -319,4 +327,97 @@ namespace mathtext {
 		return ret;
 	}
 
+	std::string font_embed_postscript_t::font_embed_type_42(
+		std::string &font_name,
+		const std::vector<unsigned char> &font_data)
+	{
+		// Embed an TrueType as Type 42 with the PostScript syntax
+
+		double font_bbox[4];
+		std::map<wchar_t, uint16_t> cid_map;
+		std::vector<std::string> char_strings;
+
+		if (!parse_ttf_header(font_name, font_bbox, cid_map,
+							  char_strings, font_data)) {
+			return std::string();
+		}
+
+		char linebuf[BUFSIZ];
+		std::string ret;
+
+		snprintf(linebuf, BUFSIZ, "%%%%BeginResource: FontSet (%s)\n",
+				 font_name.c_str());
+		ret.append(linebuf);
+		ret.append("%%VMusage: 0 0\n");
+		ret.append("11 dict begin\n");
+		ret.append("/FontType 42 def\n");
+		snprintf(linebuf, BUFSIZ, "/FontName /%s def\n", font_name.c_str());
+		ret.append(linebuf);
+
+		ret.append("/Encoding 256 array\n");
+		ret.append("0 1 255 { 1 index exch /.notdef put } for\n");
+		for (unsigned int code_point = 0; code_point < 256;
+			 code_point++) {
+			unsigned int glyph_index = cid_map[code_point];
+
+			if (char_strings[glyph_index] != ".notdef" &&
+				char_strings[glyph_index] != "") {
+				snprintf(linebuf, BUFSIZ, "dup %u /%s put\n",
+						 code_point,
+						 char_strings[glyph_index].c_str());
+				ret.append(linebuf);
+			}
+		}
+		ret.append("readonly def\n");
+		ret.append("/PaintType 0 def\n");	// 0 for filled, 2 for stroked
+		ret.append("/FontMatrix [1 0 0 1 0 0] def\n");
+		snprintf(linebuf, BUFSIZ, "/FontBBox [%f %f %f %f] def\n",
+				 font_bbox[0], font_bbox[1], font_bbox[2], font_bbox[3]);
+		ret.append(linebuf);
+		ret.append("/FontType 42 def\n");
+		// FIXME: XUID generation using the font data's MD5
+		ret.append("/sfnts [\n");
+
+		const size_t block_size = 32262;
+		size_t offset = 0;
+
+		while (offset < font_data.size()) {
+			const size_t output_length =
+				std::min(block_size, font_data.size() - offset);
+
+			ret.append("<\n");
+			append_asciihex(ret, &font_data[offset], output_length);
+			ret.append(">\n");
+			offset += output_length;
+		}
+		ret.append("] def\n");
+
+		unsigned int count = 0;
+
+		for (std::vector<std::string>::const_iterator iterator =
+				 char_strings.begin();
+			 iterator != char_strings.end(); iterator++) {
+			if (*iterator != ".notdef" && *iterator != "") {
+				count++;
+			}
+		}
+		snprintf(linebuf, BUFSIZ, "/CharStrings %u dict dup begin\n",
+				 count);
+		ret.append(linebuf);
+		for (unsigned int glyph_index = 0;
+			 glyph_index < char_strings.size(); glyph_index++) {
+			if (char_strings[glyph_index] != ".notdef" &&
+				char_strings[glyph_index] != "") {
+				snprintf(linebuf, BUFSIZ, "/%s %u def\n",
+						 char_strings[glyph_index].c_str(),
+						 glyph_index);
+				ret.append(linebuf);
+			}
+		}
+		ret.append("end readonly def\n");
+		ret.append("FontName currentdict end definefont pop\n");
+		ret.append("%%EndResource\n");
+
+		return ret;
+	}
 }

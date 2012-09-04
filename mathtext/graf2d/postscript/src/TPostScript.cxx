@@ -1457,155 +1457,36 @@ Bool_t TPostScript::FontEmbedType2(const char *filename)
 	}
 
 	return false;
-#if 0
-	// Embed an OpenType CFF (Type 2) file in ASCII85 encoding with
-	// the PostScript syntax
-
-	FILE *fp = fopen(filename, "r");
-
-	if(fp == NULL)
-		return false;
-
-	TString fontName;
-	UInt_t cffOffset;
-	UInt_t cffLength;
-
-	if(!ReadOTFCFFHeader(fp, fontName, cffOffset, cffLength)) {
-		fclose(fp);
-		return false;
-	}
-
-	Char_t *cff = new Char_t[cffLength + 10];
-
-	strcpy(cff, "StartData\r");
-	fseek(fp, cffOffset, SEEK_SET);
-	if(fread(cff + 10, sizeof(Char_t), cffLength, fp) !=
-	   cffLength) {
-		delete [] cff;
-		fclose(fp);
-		return false;
-	}
-
-	Char_t linebuf[BUFSIZ];
-
-	snprintf(linebuf, BUFSIZ, "%%%%BeginResource: FontSet (%s)@",
-			 fontName.Data());
-	PrintStr(linebuf);
-	PrintStr("%%VMusage: 0 0@");
-	PrintStr("/FontSetInit /ProcSet findresource begin@");
-	snprintf(linebuf, BUFSIZ, "%%%%BeginData: %d ASCII Lines@",
-			 ASCII85LineCount(cffLength, cff) + 2);
-	PrintStr(linebuf);
-	snprintf(linebuf, BUFSIZ,
-			 "/%s %d currentfile /ASCII85Decode filter cvx exec@",
-			 fontName.Data(), cffLength);
-	PrintStr(linebuf);
-	WriteASCII85(cffLength + 10, cff);
-
-	delete [] cff;
-
-	PrintStr("@%%EndData@");
-	PrintStr("%%EndResource@");
-	fclose(fp);
-
-	return true;
-#endif
-
 }
 
 
 //______________________________________________________________________________
 Bool_t TPostScript::FontEmbedType42(const char *filename)
 {
-	// Embed an TrueType as Type 42 with the PostScript syntax
+	std::ifstream font_file(filename, std::ios::binary);
 
-	FILE *fp = fopen(filename, "r");
+	font_file.seekg(0, std::ios::end);
 
-	if (fp == NULL) {
-		return false;
+	const size_t font_file_length = font_file.tellg();
+
+	font_file.seekg(0, std::ios::beg);
+
+	std::vector<unsigned char> font_data(font_file_length, '\0');
+
+	font_file.read(reinterpret_cast<char *>(&font_data[0]),
+				   font_file_length);
+
+	std::string font_name;
+	std::string postscript_string =
+		mathtext::font_embed_postscript_t::font_embed_type_42(
+			font_name, font_data);
+
+	if (!postscript_string.empty()) {
+		PrintRaw(postscript_string.size(), postscript_string.data());
+		PrintStr("@");
+
+		return true;
 	}
-
-	TString fontName;
-	Double_t fontBBox[4];
-	UShort_t encoding[65536];
-	UShort_t cMap[65536 * 3];
-	TString charStrings[65536];
-
-	if (!ReadTTFHeader(fp, fontName, fontBBox, encoding,
-					   charStrings, cMap)) {
-		fclose(fp);
-		return false;
-	}
-	fseek(fp, 0, SEEK_SET);
-
-	Char_t linebuf[BUFSIZ];
-
-	snprintf(linebuf, BUFSIZ, "%%%%BeginResource: FontSet (%s)@",
-			 fontName.Data());
-	PrintStr(linebuf);
-	PrintStr("%%VMusage: 0 0@");
-	PrintStr("11 dict begin@");
-	PrintStr("/FontType 42 def@");
-	snprintf(linebuf, BUFSIZ, "/FontName /%s def@", fontName.Data());
-	PrintStr(linebuf);
-
-	PrintStr("/Encoding 256 array@");
-	//PrintStr("0 1 255 { 1 index exch /.notdef put } for@");
-	for (Int_t code = 0; code < 256; code++) {
-		if (charStrings[code] != ".notdef" &&
-			charStrings[code] != "") {
-			snprintf(linebuf, BUFSIZ, "dup %d /%s put@", code,
-					 charStrings[code].Data());
-			PrintStr(linebuf);
-		}
-		else {
-			snprintf(linebuf, BUFSIZ, "dup %d /.notdef put@", code);
-			PrintStr(linebuf);
-		}
-	}
-	PrintStr("readonly def@");
-	PrintStr("/PaintType 0 def@");	// 0 for filled, 2 for stroked
-	PrintStr("/FontMatrix [1 0 0 1 0 0] def@");
-	snprintf(linebuf, BUFSIZ, "/FontBBox [%f %f %f %f] def@",
-			 fontBBox[0], fontBBox[1], fontBBox[2], fontBBox[3]);
-	PrintStr(linebuf);
-	PrintStr("/FontType 42 def@");
-	// FIXME: XUID generation using the font data's MD5
-	PrintStr("/sfnts [@");
-
-	const Int_t blockSize = 32262;
-	Char_t sfnts[blockSize];
-	Int_t length;
-
-	while ((length = fread(sfnts, sizeof(Char_t), blockSize, fp)) >
-		   0) {
-		PrintStr("<@");
-		WriteASCIIHex(length, sfnts);
-		PrintStr(">@");
-	}
-	PrintStr("] def@");
-
-	Int_t count = 0;
-
-	for (Int_t glyph = 0; glyph < 65536; glyph++) {
-		if (charStrings[glyph] != ".notdef" &&
-			charStrings[glyph] != "") {
-			count++;
-		}
-	}
-	snprintf(linebuf, BUFSIZ, "/CharStrings %d dict dup begin@",
-			 count);
-	PrintStr(linebuf);
-	for (Int_t glyph = 0; glyph < 65536; glyph++)
-		if (charStrings[glyph] != ".notdef" &&
-			charStrings[glyph] != "") {
-			snprintf(linebuf, BUFSIZ, "/%s %d def@",
-					 charStrings[glyph].Data(), encoding[glyph]);
-			PrintStr(linebuf);
-		}
-	PrintStr("end readonly def@");
-	PrintStr("FontName currentdict end definefont pop@");
-	PrintStr("%%EndResource@");
 
 	return false;
 }
