@@ -83,7 +83,7 @@ namespace mathtext {
 			   seg_count * sizeof(uint16_t));
 		offset_current += seg_count * sizeof(uint16_t);
 #ifdef LITTLE_ENDIAN
-		for(uint16_t segment = 0; segment < seg_count; segment++) {
+		for (uint16_t segment = 0; segment < seg_count; segment++) {
 			end_code[segment] = bswap_16(end_code[segment]);
 		}
 #endif // LITTLE_ENDIAN
@@ -100,7 +100,7 @@ namespace mathtext {
 			   seg_count * sizeof(uint16_t));
 		offset_current += seg_count * sizeof(uint16_t);
 #ifdef LITTLE_ENDIAN
-		for(uint16_t segment = 0; segment < seg_count; segment++) {
+		for (uint16_t segment = 0; segment < seg_count; segment++) {
 			start_code[segment] = bswap_16(start_code[segment]);
 		}
 #endif // LITTLE_ENDIAN
@@ -111,7 +111,7 @@ namespace mathtext {
 			   seg_count * sizeof(uint16_t));
 		offset_current += seg_count * sizeof(uint16_t);
 #ifdef LITTLE_ENDIAN
-		for(uint16_t segment = 0; segment < seg_count; segment++) {
+		for (uint16_t segment = 0; segment < seg_count; segment++) {
 			id_delta[segment] = bswap_16(id_delta[segment]);
 		}
 #endif // LITTLE_ENDIAN
@@ -125,14 +125,14 @@ namespace mathtext {
 			   (seg_count + variable) * sizeof(uint16_t));
 		offset_current += (seg_count + variable) * sizeof(uint16_t);
 #ifdef LITTLE_ENDIAN
-		for(uint16_t j = 0; j < seg_count + variable; j++) {
+		for (uint16_t j = 0; j < seg_count + variable; j++) {
 			id_range_offset[j] = bswap_16(id_range_offset[j]);
 		}
 #endif // LITTLE_ENDIAN
 
-		for(uint16_t segment = 0; segment < seg_count; segment++) {
-			for(uint32_t code = start_code[segment];
-				code <= end_code[segment]; code++) {
+		for (uint16_t segment = 0; segment < seg_count; segment++) {
+			for (uint32_t code = start_code[segment];
+				 code <= end_code[segment]; code++) {
 				const uint16_t inner_offset = segment +
 					(id_range_offset[segment] >> 1) +
 					(code - start_code[segment]);
@@ -151,6 +151,10 @@ namespace mathtext {
 		delete [] id_delta;
 		delete [] id_range_offset;
 	}
+
+/////////////////////////////////////////////////////////////////////
+// Currently unfinished font subsetting code below
+/////////////////////////////////////////////////////////////////////
 
 #if 0
 	// Rename:
@@ -205,7 +209,7 @@ namespace mathtext {
 		const uint32_t nword = table_data.size() >> 2;
 		uint32_t sum = 0;
 
-		for(size_t i = 0; i < nword; i++) {
+		for (size_t i = 0; i < nword; i++) {
 #ifdef LITTLE_ENDIAN
 			sum += bswap_32(table[i]);
 #else // LITTLE_ENDIAN
@@ -232,31 +236,31 @@ namespace mathtext {
 	{
 		std::vector<uint8_t> font_data;
 
-		if(fp == NULL) {
+		if (fp == NULL) {
 			return font_data;
 		}
-		if(fseek(fp, 0L, SEEK_SET) == -1) {
+		if (fseek(fp, 0L, SEEK_SET) == -1) {
 			perror("fseek");
 			return font_data;
 		}
-		if(fseek(fp, 0L, SEEK_END) == -1) {
+		if (fseek(fp, 0L, SEEK_END) == -1) {
 			perror("fseek");
 			return font_data;
 		}
 
 		const long length = ftell(fp);
 
-		if(length == -1) {
+		if (length == -1) {
 			perror("ftell");
 			return font_data;
 		}
 		font_data.resize(length);
-		if(fseek(fp, 0L, SEEK_SET) == -1) {
+		if (fseek(fp, 0L, SEEK_SET) == -1) {
 			perror("fseek");
 			font_data.clear();
 			return font_data;
 		}
-		if(fread(&font_data[0], sizeof(uint8_t),
+		if (fread(&font_data[0], sizeof(uint8_t),
 				 length, fp) != static_cast<unsigned long>(length)) {
 			perror("fread");
 			font_data.clear();
@@ -273,7 +277,7 @@ namespace mathtext {
 		FILE *fp = fopen(filename.c_str(), "r");
 		std::vector<uint8_t> font_data;
 
-		if(fp == NULL) {
+		if (fp == NULL) {
 			perror("fopen");
 			return font_data;
 		}
@@ -299,7 +303,7 @@ namespace mathtext {
 
 		memcpy(&offset_table, &font_data[0],
 			   sizeof(struct otf_offset_table_s));
-		if(strncmp(offset_table.sfnt_version, "OTTO", 4) != 0) {
+		if (strncmp(offset_table.sfnt_version, "OTTO", 4) != 0) {
 			// Not a OpenType CFF/Type 2 font
 			return false;
 		}
@@ -311,7 +315,7 @@ namespace mathtext {
 		bool cff_table_exists = false;
 		uint32_t name_offset = 0;
 
-		for(uint16_t i = 0; i < offset_table.num_tables; i++) {
+		for (uint16_t i = 0; i < offset_table.num_tables; i++) {
 			struct otf_table_directory_s {
 				char tag[4];
 				uint32_t check_sum;
@@ -329,18 +333,18 @@ namespace mathtext {
 			table_directory.length =
 				bswap_32(table_directory.length);
 #endif // LITTLE_ENDIAN
-			if(strncmp(table_directory.tag, "name", 4) == 0) {
+			if (strncmp(table_directory.tag, "name", 4) == 0) {
 				name_offset = table_directory.offset;
 				name_table_exists = true;
 			}
-			else if(strncmp(table_directory.tag, "CFF ", 4) == 0) {
+			else if (strncmp(table_directory.tag, "CFF ", 4) == 0) {
 				cff_offset = table_directory.offset;
 				cff_length = table_directory.length;
 				cff_table_exists = true;
 			}
 		}
 
-		if(!(name_table_exists && cff_table_exists)) {
+		if (!(name_table_exists && cff_table_exists)) {
 			return false;
 		}
 
@@ -365,7 +369,7 @@ namespace mathtext {
 
 		cid_encoding_id = 0xffffU;
 
-		for(uint16_t i = 0; i < naming_table_header.count; i++) {
+		for (uint16_t i = 0; i < naming_table_header.count; i++) {
 			struct otf_name_record_s {
 				uint16_t platform_id;
 				uint16_t encoding_id;
@@ -388,9 +392,9 @@ namespace mathtext {
 				bswap_16(name_record.encoding_id);
 			name_record.name_id = bswap_16(name_record.name_id);
 #endif // LITTLE_ENDIAN
-			if(name_record.platform_id == 1 &&
-			   name_record.encoding_id == 0 &&
-			   name_record.name_id == 6) {
+			if (name_record.platform_id == 1 &&
+				name_record.encoding_id == 0 &&
+				name_record.name_id == 6) {
 				// Postscript name in Mac OS Roman
 				//
 				// The font name in Mac OS Roman encoding is
@@ -415,8 +419,8 @@ namespace mathtext {
 
 				delete [] buffer;
 			}
-			if(name_record.platform_id == 1 &&
-			   name_record.name_id == 20) {
+			if (name_record.platform_id == 1 &&
+				name_record.name_id == 20) {
 				// PostScript CID findfont name
 				//
 				// encoding_id	Macintosh CMap
@@ -459,7 +463,7 @@ namespace mathtext {
 			bswap_32(offset_table.sfnt_version);
 		offset_table.num_tables = bswap_16(offset_table.num_tables);
 #endif // LITTLE_ENDIAN
-		if(offset_table.sfnt_version != 0x00010000) {
+		if (offset_table.sfnt_version != 0x00010000) {
 			return false;
 		}
 
@@ -472,7 +476,7 @@ namespace mathtext {
 		size_t post_offset = 0;
 		size_t post_length = 0;
 
-		for(uint16_t i = 0; i < offset_table.num_tables; i++) {
+		for (uint16_t i = 0; i < offset_table.num_tables; i++) {
 			struct ttf_table_directory_s {
 				char tag[4];
 				uint32_t check_sum;
@@ -497,19 +501,19 @@ namespace mathtext {
 					table_directory.tag[2], table_directory.tag[3],
 					table_directory.offset, table_directory.length);
 #endif
-			if(strncmp(table_directory.tag, "name", 4) == 0) {
+			if (strncmp(table_directory.tag, "name", 4) == 0) {
 				name_offset = table_directory.offset;
 				name_length = table_directory.length;
 			}
-			else if(strncmp(table_directory.tag, "head", 4) == 0) {
+			else if (strncmp(table_directory.tag, "head", 4) == 0) {
 				head_offset = table_directory.offset;
 				head_length = table_directory.length;
 			}
-			else if(strncmp(table_directory.tag, "cmap", 4) == 0) {
+			else if (strncmp(table_directory.tag, "cmap", 4) == 0) {
 				cmap_offset = table_directory.offset;
 				cmap_length = table_directory.length;
 			}
-			else if(strncmp(table_directory.tag, "post", 4) == 0) {
+			else if (strncmp(table_directory.tag, "post", 4) == 0) {
 				post_offset = table_directory.offset;
 				post_length = table_directory.length;
 			}
@@ -535,7 +539,7 @@ namespace mathtext {
 			bswap_16(naming_table_header.string_offset);
 #endif // LITTLE_ENDIAN
 
-		for(uint16_t i = 0; i < naming_table_header.count; i++) {
+		for (uint16_t i = 0; i < naming_table_header.count; i++) {
 			struct ttf_name_record_s {
 				uint16_t platform_id;
 				uint16_t encoding_id;
@@ -562,9 +566,9 @@ namespace mathtext {
 			// to obtain an ASCII post_script name, while the windows
 			// platform uses a utF-16 string that would require
 			// conversion.
-			if(name_record.platform_id == 1 &&
-			   name_record.encoding_id == 0 &&
-			   name_record.name_id == 6) {
+			if (name_record.platform_id == 1 &&
+				name_record.encoding_id == 0 &&
+				name_record.name_id == 6) {
 #ifdef LITTLE_ENDIAN
 				name_record.length = bswap_16(name_record.length);
 				name_record.offset = bswap_16(name_record.offset);
@@ -652,12 +656,12 @@ namespace mathtext {
 			bswap_32(post_script_table.max_mem_type42);
 #endif // LITTLE_ENDIAN
 #if 0
-		if(post_script_table.format_type == 0x00010000) {
+		if (post_script_table.format_type == 0x00010000) {
 			// Exactly the 258 glyphs in the standard Macintosh glyph
 			// set
 		}
 #endif
-		if(post_script_table.format_type != 0x00020000) {
+		if (post_script_table.format_type != 0x00020000) {
 			// Version required by TrueType-based fonts to be used on
 			// Windows
 			//
@@ -666,14 +670,14 @@ namespace mathtext {
 			return false;
 		}
 #if 0
-		if(post_script_table.format_type == 0x00025000) {
+		if (post_script_table.format_type == 0x00025000) {
 			// Pure subset/simple reordering of the standard Macintosh
 			// glyph set. Deprecated as of OpenType Specification v1.3
 			//
 			// numberOfGlyphs, offset[numGlyphs]
 			return false;
 		}
-		if(post_script_table.format_type == 0x00030000) {
+		if (post_script_table.format_type == 0x00030000) {
 			// No PostScript name information is provided for the
 			// glyphs
 			//
@@ -699,14 +703,14 @@ namespace mathtext {
 						  sizeof(uint16_t)],
 			   num_glyphs * sizeof(uint16_t));
 #ifdef LITTLE_ENDIAN
-		for(uint16_t i = 0; i < num_glyphs; i++) {
+		for (uint16_t i = 0; i < num_glyphs; i++) {
 			glyph_name_index[i] = bswap_16(glyph_name_index[i]);
 		}
 #endif // LITTLE_ENDIAN
 
 		uint16_t max_glyph_name_index = 0;
-		for(int i = num_glyphs - 1; i >= 0; i--) {
-			if(glyph_name_index[i] > max_glyph_name_index) {
+		for (int i = num_glyphs - 1; i >= 0; i--) {
+			if (glyph_name_index[i] > max_glyph_name_index) {
 				max_glyph_name_index = glyph_name_index[i];
 			}
 		}
@@ -718,7 +722,7 @@ namespace mathtext {
 		offset_current = post_offset +
 			sizeof(struct ttf_post_script_table_s) +
 			(num_glyphs + 1) * sizeof(uint16_t);
-		for(uint16_t i = 0; i <= max_glyph_name_index - 258; i++) {
+		for (uint16_t i = 0; i <= max_glyph_name_index - 258; i++) {
 			uint8_t length;
 
 			memcpy(&length, &font_data[offset_current],
@@ -738,7 +742,7 @@ namespace mathtext {
 
 		char_strings.resize(num_glyphs);
 #include "table/macintoshordering.h"
-		for(uint16_t glyph = 0; glyph < num_glyphs; glyph++) {
+		for (uint16_t glyph = 0; glyph < num_glyphs; glyph++) {
 			char_strings[glyph] = glyph_name_index[glyph] >= 258 ?
 				glyph_name[glyph_name_index[glyph] - 258].c_str() :
 				macintosh_ordering[glyph_name_index[glyph]];
@@ -764,7 +768,7 @@ namespace mathtext {
 		uint32_t *subtable_offset =
 			new uint32_t[mapping_table.num_encoding_tables];
 
-		for(uint16_t i = 0;
+		for (uint16_t i = 0;
 			i < mapping_table.num_encoding_tables; i++) {
 			struct ttf_encoding_table_s {
 				uint16_t platform_id;
@@ -790,7 +794,7 @@ namespace mathtext {
 
 		int priority_max = 0;
 
-		for(uint16_t i = 0;
+		for (uint16_t i = 0;
 			i < mapping_table.num_encoding_tables; i++) {
 			struct ttf_encoding_subtable_common_s {
 				uint16_t format;
@@ -846,7 +850,7 @@ namespace mathtext {
 						"= %d\n", __FILE__, __LINE__, priority,
 						priority_max);
 #endif
-				if(priority_max <= priority) {
+				if (priority_max <= priority) {
 					parse_ttf_encoding_subtable_format4(
 						cid_map, font_data, offset_current,
 						encoding_subtable_common.length);
@@ -906,8 +910,8 @@ namespace mathtext {
 
 		memcpy(&offset_table, &font_data[0],
 			   sizeof(struct otf_offset_table_s));
-		if(strncmp(offset_table.sfnt_version, "OTTO", 4) != 0 ||
-		   strncmp(offset_table.sfnt_version, "\0\1\0\0", 4) != 0) {
+		if (strncmp(offset_table.sfnt_version, "OTTO", 4) != 0 ||
+			strncmp(offset_table.sfnt_version, "\0\1\0\0", 4) != 0) {
 			// Neither a OpenType, nor TrueType font
 #if 0
 			fprintf(stderr, "%s:%d: error: unknown sfnt_version = "
@@ -932,7 +936,7 @@ namespace mathtext {
 		struct table_data_s *table_data =
 			new struct table_data_s[offset_table.num_tables];
 
-		for(uint16_t i = 0; i < offset_table.num_tables; i++) {
+		for (uint16_t i = 0; i < offset_table.num_tables; i++) {
 			struct otf_table_directory_s table_directory;
 
 			memcpy(&table_directory,
@@ -965,7 +969,7 @@ namespace mathtext {
 		size_count = sizeof(struct otf_offset_table_s) +
 			offset_table.num_tables *
 			sizeof(struct otf_table_directory_s);
-		for(size_t i = 0; i < offset_table.num_tables; i++) {
+		for (size_t i = 0; i < offset_table.num_tables; i++) {
 			size_count += table_data[i].data.size();
 		}
 
@@ -976,14 +980,14 @@ namespace mathtext {
 		retval.resize(size_count);
 		memcpy(&retval[0], &font_data[0],
 			   sizeof(struct otf_offset_table_s));
-		for(size_t i = 0; i < offset_table.num_tables; i++) {
+		for (size_t i = 0; i < offset_table.num_tables; i++) {
 			struct otf_table_directory_s table_directory;
 			const bool head_table =
 				strncmp(table_directory.tag, "head", 4) == 0;
 
 			memcpy(table_directory.tag, table_data[i].tag,
 				   4 * sizeof(char));
-			if(head_table) {
+			if (head_table) {
 				// Reset checkSumAdjustment in order to calculate the
 				// check sum of the head table
 				offset_check_sum_adjustment = 2 * sizeof(fixed_t);
@@ -1005,7 +1009,7 @@ namespace mathtext {
 			offset_current += sizeof(struct otf_table_directory_s);
 		}
 
-		for(size_t i = 0; i < offset_table.num_tables; i++) {
+		for (size_t i = 0; i < offset_table.num_tables; i++) {
 			memcpy(&retval[offset_current], &(table_data[i].data[0]),
 				   table_data[i].data.size());
 			offset_current += table_data[i].data.size();
@@ -1017,7 +1021,7 @@ namespace mathtext {
 			offset_current += padding_size;
 		}
 
-		if(head_table_exists) {
+		if (head_table_exists) {
 			// Set checkSumAdjustment in the head table
 			*reinterpret_cast<uint32_t *>(&(retval[
 				offset_check_sum_adjustment])) =

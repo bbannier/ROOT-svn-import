@@ -41,10 +41,10 @@ namespace mathtext {
 			_x[0] = point._x[0];
 			_x[1] = point._x[1];
 		}
-		inline point_t(const float x, const float y)
+		inline point_t(const float x0, const float y0)
 		{
-			_x[0] = x;
-			_x[1] = y;
+			_x[0] = x0;
+			_x[1] = y0;
 		}
 		inline const float *x(void) const
 		{
@@ -179,10 +179,10 @@ namespace mathtext {
 		scale(const float sx, const float sy);
 		static affine_transform_t rotate(const float angle);
 		inline affine_transform_t(
-			const float a, const float b, const float c,
+			const float a0, const float b, const float c,
 			const float d, const float tx, const float ty)
 		{
-			_a[0] = a;
+			_a[0] = a0;
 			_a[1] = b;
 			_a[2] = c;
 			_a[3] = d;
@@ -292,24 +292,24 @@ namespace mathtext {
 		{
 		}
 		inline bounding_box_t(
-			const point_t lower_left, const point_t upper_right,
-			const float advance, const float italic_correction)
-			: _lower_left(lower_left), _upper_right(upper_right),
-			  _advance(advance),
-			  _italic_correction(italic_correction)
+			const point_t lower_left_0, const point_t upper_right_0,
+			const float advance_0, const float italic_correction_0)
+			: _lower_left(lower_left_0), _upper_right(upper_right_0),
+			  _advance(advance_0),
+			  _italic_correction(italic_correction_0)
 		{
 		}
 		inline bounding_box_t(
-			const float left, const float bottom, const float right,
-			const float top, const float advance,
-			const float italic_correction)
-			: _advance(advance),
-			  _italic_correction(italic_correction)
+			const float left_0, const float bottom_0, const float right_0,
+			const float top_0, const float advance_0,
+			const float italic_correction_0)
+			: _advance(advance_0),
+			  _italic_correction(italic_correction_0)
 		{
-			_lower_left[0] = left;
-			_lower_left[1] = bottom;
-			_upper_right[0] = right;
-			_upper_right[1] = top;
+			_lower_left[0] = left_0;
+			_lower_left[1] = bottom_0;
+			_upper_right[0] = right_0;
+			_upper_right[1] = top_0;
 		}
 		inline point_t lower_left(void) const
 		{

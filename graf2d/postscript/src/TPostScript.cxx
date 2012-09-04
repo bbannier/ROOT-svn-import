@@ -251,6 +251,8 @@ End_Html */
 #include "TSystem.h"
 #include "TEnv.h"
 
+#include "fontembed.h"
+
 // to scale fonts to the same size as the old TT version
 const Float_t kScale = 0.93376068;
 
@@ -1397,83 +1399,31 @@ void TPostScript::DrawHatch(Float_t, Float_t, Int_t, Double_t *, Double_t *)
 //______________________________________________________________________________
 Bool_t TPostScript::FontEmbedType1(const char *filename)
 {
-   // Embed font type 1
+	std::ifstream font_file(filename, std::ios::binary);
 
-	struct pfb_segment_header_s {
-		char always_128;
-		char type;
-		unsigned int length;
-	} __attribute__ ((packed));
-	enum {
-		TYPE_ASCII = 1,
-		TYPE_BINARY,
-		TYPE_EOF
-	};
+	font_file.seekg(0, std::ios::end);
 
-	FILE *fp = fopen(filename, "r");
+	const size_t font_file_length = font_file.tellg();
 
-	if(fp == NULL)
-		return false;
+	font_file.seekg(0, std::ios::beg);
 
-	char magic_number[2];
+	std::vector<unsigned char> font_data(font_file_length, '\0');
 
-	if(fread(magic_number, sizeof(char), 2, fp) != 2) {
-		fclose(fp);
-		return false;
-	}
-	if(magic_number[0] == '\200') {
-		// IBM PC format printer font binary
-		fseek(fp, 0, SEEK_SET);
+	font_file.read(reinterpret_cast<char *>(&font_data[0]),
+				   font_file_length);
 
-		struct pfb_segment_header_s segment_header;
+	std::string font_name;
+	std::string postscript_string =
+		mathtext::font_embed_postscript_t::font_embed_type_1(
+			font_name, font_data);
 
-		while(fread(&segment_header,
-					sizeof(struct pfb_segment_header_s), 1,
-					fp) == 1 &&
-			  segment_header.type != TYPE_EOF) {
-#ifndef R__BYTESWAP
-			segment_header.length = Rbswap_32(segment_header.length);
-#endif // R__BYTESWAP
-			char *buffer = new char[segment_header.length];
-
-			if(fread(buffer, sizeof(char), segment_header.length, fp)
-			   != segment_header.length) {
-				delete [] buffer;
-				fclose(fp);
-				return false;
-			}
-
-			switch(segment_header.type) {
-			case TYPE_ASCII:
-				// Simple CR -> LF conversion
-				for(int i = 0; i < (int)(segment_header.length) - 1; i++)
-					if(buffer[i] == '\r' && buffer[i + 1] != '\n')
-						buffer[i] = '\n';
-				if(buffer[segment_header.length - 1] == '\r')
-					buffer[segment_header.length - 1] = '\n';
-				PrintRaw(segment_header.length, buffer);
-				break;
-			case TYPE_BINARY:
-				WriteASCIIHex(segment_header.length, buffer);
-				PrintRaw(1, "\n");
-				break;
-			default:
-				delete [] buffer;
-				fclose(fp);
-				return false;
-			}
-
-			delete [] buffer;
-		}
+	if (!postscript_string.empty()) {
+		PrintRaw(postscript_string.size(), postscript_string.data());
+		PrintStr("@");
 
 		return true;
 	}
-	else if(strncmp(magic_number, "%!", 2) == 0) {
-		// Printer font ASCII
-		return false;
-	}
 
-	// Not implemented
 	return false;
 }
 
@@ -1481,6 +1431,33 @@ Bool_t TPostScript::FontEmbedType1(const char *filename)
 //______________________________________________________________________________
 Bool_t TPostScript::FontEmbedType2(const char *filename)
 {
+	std::ifstream font_file(filename, std::ios::binary);
+
+	font_file.seekg(0, std::ios::end);
+
+	const size_t font_file_length = font_file.tellg();
+
+	font_file.seekg(0, std::ios::beg);
+
+	std::vector<unsigned char> font_data(font_file_length, '\0');
+
+	font_file.read(reinterpret_cast<char *>(&font_data[0]),
+				   font_file_length);
+
+	std::string font_name;
+	std::string postscript_string =
+		mathtext::font_embed_postscript_t::font_embed_type_2(
+			font_name, font_data);
+
+	if (!postscript_string.empty()) {
+		PrintRaw(postscript_string.size(), postscript_string.data());
+		PrintStr("@");
+
+		return true;
+	}
+
+	return false;
+#if 0
 	// Embed an OpenType CFF (Type 2) file in ASCII85 encoding with
 	// the PostScript syntax
 
@@ -1527,11 +1504,13 @@ Bool_t TPostScript::FontEmbedType2(const char *filename)
 
 	delete [] cff;
 
-	PrintStr("%%EndData@");
+	PrintStr("@%%EndData@");
 	PrintStr("%%EndResource@");
 	fclose(fp);
 
 	return true;
+#endif
+
 }
 
 
@@ -1571,12 +1550,16 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 	PrintStr(linebuf);
 
 	PrintStr("/Encoding 256 array@");
-	PrintStr("0 1 255 { 1 index exch /.notdef put } for@");
+	//PrintStr("0 1 255 { 1 index exch /.notdef put } for@");
 	for (Int_t code = 0; code < 256; code++) {
 		if (charStrings[code] != ".notdef" &&
 			charStrings[code] != "") {
 			snprintf(linebuf, BUFSIZ, "dup %d /%s put@", code,
 					 charStrings[code].Data());
+			PrintStr(linebuf);
+		}
+		else {
+			snprintf(linebuf, BUFSIZ, "dup %d /.notdef put@", code);
 			PrintStr(linebuf);
 		}
 	}
@@ -1586,6 +1569,8 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 	snprintf(linebuf, BUFSIZ, "/FontBBox [%f %f %f %f] def@",
 			 fontBBox[0], fontBBox[1], fontBBox[2], fontBBox[3]);
 	PrintStr(linebuf);
+	PrintStr("/FontType 42 def@");
+	// FIXME: XUID generation using the font data's MD5
 	PrintStr("/sfnts [@");
 
 	const Int_t blockSize = 32262;
@@ -1615,7 +1600,7 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 		if (charStrings[glyph] != ".notdef" &&
 			charStrings[glyph] != "") {
 			snprintf(linebuf, BUFSIZ, "/%s %d def@",
-					 charStrings[glyph].Data(), glyph);
+					 charStrings[glyph].Data(), encoding[glyph]);
 			PrintStr(linebuf);
 		}
 	PrintStr("end readonly def@");
