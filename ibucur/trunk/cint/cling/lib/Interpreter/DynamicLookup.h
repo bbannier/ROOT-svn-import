@@ -166,6 +166,19 @@ namespace cling {
     /// \brief Stores the declaration of the EvaluateT function.
     clang::FunctionDecl* m_EvalDecl;
 
+    /// \brief Stores helper structure dealing with static initializers.
+    clang::CXXRecordDecl* m_LifetimeHandlerDecl;
+
+    /// \brief Stores member function defined in the LifetimeHanlder.
+    clang::CXXMethodDecl* m_LHgetMemoryDecl;
+
+    /// \brief Stores helper class used in EvaluateT call.
+    clang::CXXRecordDecl* m_DynamicExprInfoDecl;
+
+    /// \brief Stores the clang::DeclContext declaration, used in as an parameter
+    /// in EvaluateT call.
+    clang::CXXRecordDecl* m_DeclContextDecl;
+
     /// \brief Sema's external source, which provides last resort lookup.
     llvm::OwningPtr<DynamicIDHandler> m_DynIDHandler;
 
@@ -253,6 +266,13 @@ namespace cling {
     }
 
   protected:
+
+    ///\brief On first use it finds commonly used declarations.
+    ///
+    /// For example: EvaluateT, clang::DeclContext and so on.
+    ///
+    void Initialize();
+
     /// @{
     /// @name Helpers, which simplify node replacement
 
