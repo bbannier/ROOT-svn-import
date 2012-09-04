@@ -42,7 +42,7 @@ include/%.h:    $(GRAFDIRI)/%.h
 		cp $< $@
 
 $(GRAFLIB):     $(GRAFO) $(GRAFDO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) \
-		$(GRAFLIBDEP) $(MATHTEXTLIB)
+		$(GRAFLIBDEP) $(MATHTEXTDEP) $(MATHTEXTLIB)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libGraf.$(SOEXT) $@ \
 		   "$(GRAFO) $(GRAFDO)" \

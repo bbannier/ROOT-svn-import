@@ -70,7 +70,7 @@ namespace mathtext {
 	class font_embed_postscript_t : public font_embed_t {
 	public:
 		static void append_asciihex(
-			std::string &ascii, const char *buffer,
+			std::string &ascii, const uint8_t *buffer,
 			const size_t length);
 		static unsigned int ascii85_line_count(
 			const uint8_t *buffer, const size_t length);
