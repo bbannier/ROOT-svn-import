@@ -11,6 +11,7 @@
 
 //#define NDEBUG
 
+#include <algorithm>
 #include <stdexcept>
 #include <cstring>
 #include <cassert>
@@ -499,6 +500,37 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
 }
 
 //______________________________________________________________________________
+void CommandBuffer::RemoveOperationsForDrawable(Drawable_t drawable)
+{
+   for (size_type i = 0; i < fCommands.size(); ++i) {
+      if (fCommands[i] && fCommands[i]->HasOperand(drawable)) {
+         delete fCommands[i];
+         fCommands[i] = 0;
+      }
+   }
+}
+
+//______________________________________________________________________________
+void CommandBuffer::RemoveGraphicsOperationsForWindow(Window_t wid)
+{
+   for (size_type i = 0; i < fCommands.size(); ++i) {
+      if (fCommands[i] && fCommands[i]->HasOperand(wid) && fCommands[i]->IsGraphicsCommand()) {
+         delete fCommands[i];
+         fCommands[i] = 0;
+      }
+   }
+}
+
+//______________________________________________________________________________
+void CommandBuffer::ClearCommands()
+{
+   for (size_type i = 0, e = fCommands.size(); i < e; ++i)
+      delete fCommands[i];
+
+   fCommands.clear();
+}
+
+//______________________________________________________________________________
 void CommandBuffer::ClipOverlaps(QuartzView *view)
 {
    //Basic es-guarantee, also, if initClipMask fails,
@@ -571,37 +603,223 @@ void CommandBuffer::ClipOverlaps(QuartzView *view)
          [view addOverlap : FindOverlapRect(frame2, frame1)];
       }
    }
-}
 
-//______________________________________________________________________________
-void CommandBuffer::RemoveOperationsForDrawable(Drawable_t drawable)
-{
-   for (size_type i = 0; i < fCommands.size(); ++i) {
-      if (fCommands[i] && fCommands[i]->HasOperand(drawable)) {
-         delete fCommands[i];
-         fCommands[i] = 0;
+   //NEW.
+   /*
+   //TODO: test if it should be visibleRect?
+
+   typedef std::vector<QuartzView *>::reverse_iterator reverse_iterator;
+
+   assert(view != nil && "ClipOverlaps, view parameter is nil");
+
+   fViewBranch.clear();
+   
+   for (QuartzView *v = view; v; v = v.fParentView)
+      fViewBranch.push_back(v);//Can throw, ok.
+   
+   if (fViewBranch.size())
+      fViewBranch.pop_back();//we do not need content view, it does not have any sibling.
+
+   fRectsToClip.clear();
+   fClippedRegion.clear();
+
+   WidgetRect clipRect;
+   NSRect frame1 = {};
+   //Operate always in window's coordinate system.
+   const NSRect frame2 = view.fParentView ? [view.fParentView convertRect : view.frame toView : nil] : view.frame;
+
+   for (reverse_iterator it = fViewBranch.rbegin(), eIt = fViewBranch.rend(); it != eIt; ++it) {
+      QuartzView *ancestorView = *it;//Actually, it's either one of ancestors, or a view itself.
+      bool doCheck = false;
+      for (QuartzView *sibling in [ancestorView.fParentView subviews]) {
+         if (ancestorView == sibling) {
+            doCheck = true;//all views after this must be checked.
+            continue;
+         } else if (!doCheck || sibling.fMapState != kIsViewable) {
+            continue;
+         }
+         
+         //Real check is here.
+         frame1 = [view.fParentView convertRect : sibling.frame toView : nil];
+         
+         //Check if two rects intersect.
+         if (RectsOverlap(frame2, frame1)) {
+            //Update view's clip mask - mask out hidden pixels.
+            clipRect.x1 = frame1.origin.x;
+            clipRect.x2 = clipRect.x1 + frame1.size.width;
+            clipRect.y1 = frame1.origin.y;
+            clipRect.y2 = clipRect.y1 + frame1.size.height;
+            fRectsToClip.push_back(clipRect);
+         }
       }
    }
-}
-
-//______________________________________________________________________________
-void CommandBuffer::RemoveGraphicsOperationsForWindow(Window_t wid)
-{
-   for (size_type i = 0; i < fCommands.size(); ++i) {
-      if (fCommands[i] && fCommands[i]->HasOperand(wid) && fCommands[i]->IsGraphicsCommand()) {
-         delete fCommands[i];
-         fCommands[i] = 0;
+   
+   //Now clip all children.
+   
+   for (QuartzView *child in [view subviews]) {
+      if (child.fMapState != kIsViewable)
+         continue;
+      
+      frame1 = child.frame;
+      if (view.fParentView)
+         frame1 = [view.fParentView convertRect : frame1 toView : nil];
+      
+      if (RectsOverlap(frame2, frame1)) {
+         clipRect.x1 = frame1.origin.x;
+         clipRect.x2 = clipRect.x1 + frame1.size.width;
+         clipRect.y1 = frame1.origin.y;
+         clipRect.y2 = clipRect.y1 + frame1.size.height;
+         fRectsToClip.push_back(clipRect);
       }
    }
+   
+   */
 }
 
-//______________________________________________________________________________
-void CommandBuffer::ClearCommands()
-{
-   for (size_type i = 0, e = fCommands.size(); i < e; ++i)
-      delete fCommands[i];
+namespace {
 
-   fCommands.clear();
+//Authors of C++ standard library sure are very smart people.
+//The only thing I do not understand, why I do not have NORMAL
+//binary_search and have this sh..it which returns bool
+//and why I have to use ugly lower_bounds/upper_bounds, which
+//does not make my code better.
+//The next three functions are used by clipping machinery.
+
+typedef std::vector<int>::iterator int_iterator;
+
+//_____________________________________________________________________________________________________
+int_iterator BinarySearchLeft(int_iterator first, int_iterator last, int value)
+{
+   const int_iterator it = std::lower_bound(first, last, value);
+   assert(it != last && (it == first || *it == value) && "internal logic error");
+
+   //If value < *first, return last (not found).
+   return it == first && *it != value ? last : it;
+}
+
+//_____________________________________________________________________________________________________
+int_iterator BinarySearchRight(int_iterator first, int_iterator last, int value)
+{
+   const int_iterator it = std::lower_bound(first, last, value);
+   assert((it == last || *it == value) && "internal logic error");
+
+   return it;
+}
+
+}//unnamed namespace.
+
+//_____________________________________________________________________________________________________
+void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
+{
+   //Input requirements:
+   // 1) all rects are valid (non-empty and x1 < x2, y1 < y2);
+   // 2) all rects intersect with widget's rect.
+   //I do not check these conditions here, this is done when filling rectsToClip.
+   
+   //I did not find any reasonable algorithm (have to search better?),
+   //code in gdk and pixman has to many dependencies and is lib-specific +
+   //they require input to be quite special:
+   // a) no overlaps (in my case I have overlaps)
+   // b) sorted in a special way.
+   //To convert my input into such a format
+   //means to implement everything myself (for example, to work out overlaps).
+
+   //Also, my case is more simple: gdk and pixman substract region (== set of rectangles)
+   //from another region, I have to substract region from _one_ rectangle.
+
+   //This is quite stupid implementation - I'm calculation rectangles, which form
+   //the 'rect' - 'rectsToClip'.
+   //Still, I think it's more optimal than my first version, which was _masking_ _pixels_,
+   //and at the end was terribly expensive despite of my initial hopes (big masks, millions pixels
+   //to set :) ).
+   //TODO: benchmark this "cauchemar" and find something not so lame :)
+   
+   assert(fRectsToClip.size() != 0 && "BuildClipRegion, nothing to clip");
+
+   typedef std::vector<WidgetRect>::const_iterator rect_const_iterator;
+   typedef std::vector<bool>::size_type size_type;
+
+   fClippedRegion.clear();
+   fXBounds.clear();
+   fYBounds.clear();
+
+   //[First, we "cut" the original rect into stripes.
+   for (rect_const_iterator recIt = fRectsToClip.begin(), endIt = fRectsToClip.end(); recIt != endIt; ++recIt) {
+      if (recIt->x1 > rect.x1)//upper limit is tested already (input validation).
+         fXBounds.push_back(recIt->x1);
+
+      if (recIt->x2 < rect.x2)//lower limit is tested already (input validation).
+         fXBounds.push_back(recIt->x2);
+
+      if (recIt->y1 > rect.y1)
+         fYBounds.push_back(recIt->y1);
+
+      if (recIt->y2 < rect.y2)
+         fYBounds.push_back(recIt->y2);
+   }
+
+   assert(fXBounds.size() && fYBounds.size() && "BuildClippedRegion, invalid input, not intersections found");
+
+   std::sort(fXBounds.begin(), fXBounds.end());
+   std::sort(fYBounds.begin(), fYBounds.end());
+
+   //We do not need duplicates.
+   const int_iterator xBoundsEnd = std::unique(fXBounds.begin(), fXBounds.end());
+   const int_iterator yBoundsEnd = std::unique(fYBounds.begin(), fYBounds.end());
+   //Rectangle is now "cut into pieces"].
+
+   //["Mark the grid" - find intersections.
+   const size_type nXBands = size_type(xBoundsEnd - fXBounds.begin()) + 1;
+   const size_type nYBands = size_type(yBoundsEnd - fYBounds.begin()) + 1;
+
+   fGrid.assign(nXBands * nYBands, false);
+
+   //Uff, the first quite horrible part :))
+   //Do not even want to think about big-O :)
+   //And yes, C++'s lower_bound/binary_search sucks endlessly.
+   //I need a normal binary_search, which returns an iterator (with *iterator == value or iterator == last), not a bool :(
+   for (rect_const_iterator recIt = fRectsToClip.begin(), endIt = fRectsToClip.end(); recIt != endIt; ++recIt) {
+
+      const int_iterator left = BinarySearchLeft(fXBounds.begin(), xBoundsEnd, recIt->x1);
+      const size_type firstXBand = left == xBoundsEnd ? 0 : left - fXBounds.begin() + 1;
+      
+      const int_iterator right = BinarySearchRight(fXBounds.begin(), xBoundsEnd, recIt->x2);
+      const size_type lastXBand = right - fXBounds.begin() + 1;
+      
+      const int_iterator bottom = BinarySearchLeft(fYBounds.begin(), yBoundsEnd, recIt->y1);
+      const size_type firstYBand = bottom == yBoundsEnd ? 0 : bottom - fYBounds.begin() + 1;
+
+      const int_iterator top = BinarySearchRight(fYBounds.begin(), yBoundsEnd, recIt->y2);
+      const size_type lastYBand = top - fYBounds.begin() + 1;
+
+      for (size_type i = firstYBand; i < lastYBand; ++i) {
+         const size_type baseIndex = i * nXBands;
+         for (size_type j = firstXBand; j < lastXBand; ++j)
+            fGrid[baseIndex + j] = true;
+      }
+   }
+   //Grid is ready].
+   
+   //[Create rectangles - check the grid.
+   //Event more nightmarish part :))) And I do not merge rectangles.
+   //Help me God!
+   WidgetRect newRect;
+
+   for (size_type i = 0; i < nYBands; ++i) {
+      const size_type baseIndex = i * nXBands;
+      for (size_type j = 0; j < nXBands; ++j) {
+         if (!fGrid[baseIndex + j]) {
+            newRect.x1 = j ? fXBounds[j - 1] : rect.x1;
+            newRect.x2 = j == nXBands - 1 ? rect.x2 : fXBounds[j];
+            
+            newRect.y1 = i ? fYBounds[i - 1] : rect.y1;
+            newRect.y2 = i == nYBands - 1 ? rect.y2 : fYBounds[i];
+            
+            fClippedRegion.push_back(newRect);
+         }
+      }
+   }
+   //The end].
 }
 
 }//X11
