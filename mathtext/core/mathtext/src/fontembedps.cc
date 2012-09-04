@@ -56,6 +56,26 @@
 
 namespace mathtext {
 
+	void font_embed_postscript_t::append_asciihex(
+		std::string &ascii, const char *buffer,
+		const size_t length)
+	{
+		const int width = 64;
+		int column = 0;
+
+		for(size_t i = 0; i < length; i++) {
+			char str[3];
+
+			snprintf(str, 3, "%02hhX", buffer[i]);
+			ascii.append(str, 2);
+			column += 2;
+			if(column >= width) {
+				ascii.append(1, '\n');
+				column = 0;
+			}
+		}
+	}
+
 	unsigned int font_embed_postscript_t::ascii85_line_count(
 		const uint8_t *buffer, const size_t length)
 	{
@@ -177,6 +197,82 @@ namespace mathtext {
 		ascii.append("~>");
 	}
 
+	std::string font_embed_postscript_t::font_embed_type_1(
+		std::string &font_name,
+		const std::vector<unsigned char> &font_data)
+	{
+		// Embed font type 1
+
+		struct pfb_segment_header_s {
+			char always_128;
+			char type;
+			unsigned int length;
+		} __attribute__ ((packed));
+		enum {
+			TYPE_ASCII = 1,
+			TYPE_BINARY,
+			TYPE_EOF
+		};
+
+		char magic_number[2];
+		std::string ret;
+
+		memcpy(magic_number, &font_data[0], 2);
+		if(magic_number[0] == '\200') {
+			// IBM PC format printer font binary
+			struct pfb_segment_header_s segment_header;
+			size_t offset = 2;
+
+			memcpy(&segment_header, &font_data[offset],
+				   sizeof(pfb_segment_header_s));
+			offset += sizeof(pfb_segment_header_s);
+			while (segment_header.type != TYPE_EOF) {
+#ifndef R__BYTESWAP
+				segment_header.length = Rbswap_32(segment_header.length);
+#endif // R__BYTESWAP
+				char *buffer = new char[segment_header.length];
+
+				memcpy(buffer, &font_data[offset], segment_header.length);
+				offset += segment_header.length;
+
+				switch(segment_header.type) {
+				case TYPE_ASCII:
+					// Simple CR -> LF conversion
+					for (int i = 0;
+						 i < (int)(segment_header.length) - 1; i++) {
+						if(buffer[i] == '\r' &&
+						   buffer[i + 1] != '\n') {
+							buffer[i] = '\n';
+						}
+					}
+					if (buffer[segment_header.length - 1] == '\r') {
+						buffer[segment_header.length - 1] = '\n';
+					}
+					ret.append(buffer, segment_header.length);
+					break;
+				case TYPE_BINARY:
+					append_asciihex(ret, buffer, segment_header.length);
+					break;
+				default:
+					{}
+				}
+
+				delete [] buffer;
+			}
+
+			return ret;
+		}
+		else if(strncmp(magic_number, "%!", 2) == 0) {
+			// Printer font ASCII
+			fprintf(stderr, "%s:%d: Printer font ASCII is not implemented\n", __FILE__, __LINE__);
+			return std::string();
+		}
+		
+		// Not implemented
+		fprintf(stderr, "%s:%d: not implemented\n", __FILE__, __LINE__);
+		return std::string();
+	}
+
 	std::string font_embed_postscript_t::font_embed_type_2(
 		std::string &font_name,
 		const std::vector<unsigned char> &font_data)
@@ -190,8 +286,9 @@ namespace mathtext {
 
 		if(!parse_otf_cff_header(font_name, cid_encoding_id,
 								 cff_offset, cff_length,
-								 font_data))
+								 font_data)) {
 			return std::string();
+		}
 
 		std::vector<unsigned char> cff;
 

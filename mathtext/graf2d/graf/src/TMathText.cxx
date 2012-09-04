@@ -174,7 +174,7 @@ public:
 			y * _pad_pixel_transform[4] + _pad_pixel_transform[5]));
 	}
 	inline void
-	filled_rectangle(const mathtext::bounding_box_t &bounding_box)
+	filled_rectangle(const mathtext::bounding_box_t &bounding_box_0)
 	{
 		SetFillColor(_parent->fTextColor);
 		SetFillStyle(1001);
@@ -184,17 +184,17 @@ public:
 		double yt[4];
 
 		transform_pad(xt[0], yt[0],
-					  bounding_box.left(),
-					  bounding_box.bottom());
+					  bounding_box_0.left(),
+					  bounding_box_0.bottom());
 		transform_pad(xt[1], yt[1],
-					  bounding_box.right(),
-					  bounding_box.bottom());
+					  bounding_box_0.right(),
+					  bounding_box_0.bottom());
 		transform_pad(xt[2], yt[2],
-					  bounding_box.right(),
-					  bounding_box.top());
+					  bounding_box_0.right(),
+					  bounding_box_0.top());
 		transform_pad(xt[3], yt[3],
-					  bounding_box.left(),
-					  bounding_box.top());
+					  bounding_box_0.left(),
+					  bounding_box_0.top());
 		gPad->PaintFillArea(4, xt, yt);
 	}
 	inline void
@@ -206,9 +206,9 @@ public:
 				 const unsigned int family)
 	{
 		const size_t old_font_index = TTF::fgCurFontIdx;
-		const bool is_cjk = iscjk(character);
+		const bool character_is_cjk = iscjk(character);
 
-		if(is_cjk) {
+		if(character_is_cjk) {
 			TTF::SetTextFont(root_cjk_face_number());
 		}
 		else {
@@ -287,9 +287,9 @@ public:
 		for(std::wstring::const_iterator iterator = string.begin();
 			iterator != string.end(); iterator++) {
 			buf[0] = *iterator;
-			const bool is_cjk = iscjk(buf[0]);
+			const bool character_is_cjk = iscjk(buf[0]);
 
-			if(is_cjk) {
+			if(character_is_cjk) {
 				SetTextFont(root_cjk_face_number());
 				TAttText::Modify();
 			}
@@ -302,7 +302,7 @@ public:
 			transform_pad(xt, yt, x + advance, y);
 			gPad->PaintText(xt, yt, buf);
 			advance += b.advance();
-			if(is_cjk) {
+			if(character_is_cjk) {
 				SetTextFont(root_face_number(family));
 				TAttText::Modify();
 			}
