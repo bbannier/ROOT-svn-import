@@ -1,0 +1,46 @@
+Index: math/mathcore/inc/TMath.h
+===================================================================
+--- math/mathcore/inc/TMath.h	(revision 45825)
++++ math/mathcore/inc/TMath.h	(working copy)
+@@ -41,14 +41,18 @@
+    /* * Fundamental constants * */
+    /* ************************* */
+ 
+-   inline Double_t Pi()       { return 3.14159265358979323846; }
+-   inline Double_t TwoPi()    { return 2.0 * Pi(); }
+-   inline Double_t PiOver2()  { return Pi() / 2.0; }
+-   inline Double_t PiOver4()  { return Pi() / 4.0; }
+-   inline Double_t InvPi()    { return 1.0 / Pi(); }
+-   inline Double_t RadToDeg() { return 180.0 / Pi(); }
+-   inline Double_t DegToRad() { return Pi() / 180.0; }
+-   inline Double_t Sqrt2()    { return 1.4142135623730950488016887242097; }
++   inline Double_t Pi()           { return 3.14159265358979323846; } // pi
++   inline Double_t TwoPi()        { return 6.28318530717958647693; } // 2*pi
++   inline Double_t PiOver2()      { return 1.57079632679489661923; } // pi/2
++   inline Double_t PiOver4()      { return 0.78539816339744830962; } // pi/4
++   inline Double_t InvPi()        { return 0.31830988618379067154; } // 1/pi
++   inline Double_t TwoInvPi()     { return 0.63661977236758134308; } // 2/pi
++   inline Double_t InvSqrtPi()    { return 0.56418958354775628695; } // 1/sqrt(pi)
++   inline Double_t TwoInvSqrtPi() { return 1.12837916709551257390; } // 2/sqrt(pi)
++   inline Double_t Sqrt2()        { return 1.41421356237309504880; } // sqrt(2)
++   inline Double_t InvSqrt2()     { return 0.70710678118654752440; } // 1/sqrt(2)  
++   inline Double_t RadToDeg()     { return 180.0 / Pi(); }
++   inline Double_t DegToRad()     { return Pi() / 180.0; }
+ 
+    // e (base of natural log)
+    inline Double_t E()        { return 2.71828182845904523536; }
+@@ -59,7 +63,13 @@
+    // base-10 log of e  (to convert ln to log)
+    inline Double_t LogE()     { return 0.43429448190325182765; }
+ 
+-   // velocity of light
++   // natural log of 2  (to convert log2 to ln)
++   inline Double_t Ln2()      { return 0.69314718055994530942; }
++
++   // base-2 log of e   (to convert ln to log2)
++   inline Double_t Log2E()    { return 1.4426950408889634074;  }
++
++  // velocity of light
+    inline Double_t C()        { return 2.99792458e8; }        // m s^-1
+    inline Double_t Ccgs()     { return 100.0 * C(); }         // cm s^-1
+    inline Double_t CUncertainty() { return 0.0; }             // exact
