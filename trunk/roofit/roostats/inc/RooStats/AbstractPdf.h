@@ -19,6 +19,7 @@ namespace RooStats {
       virtual RooAbsPdf* createRooAbsPdf() const = 0;
       virtual RooFitResult* FitTo() const = 0; 
       virtual Bool_t IsNormalized() const = 0;
+      virtual Double_t GenerateEvent() = 0;
 
       ClassDef(AbstractPdf, 1)
 
