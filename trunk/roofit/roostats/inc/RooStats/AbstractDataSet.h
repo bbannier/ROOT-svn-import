@@ -5,8 +5,6 @@ namespace RooStats {
    class AbstractDataSet {
    public:
       virtual ~AbstractDataSet() {};
-   private:
-      ClassDef(AbstractDataSet,1)
    };
 }
 

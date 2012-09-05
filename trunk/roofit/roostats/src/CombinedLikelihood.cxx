@@ -13,20 +13,18 @@ CombinedLikelihood::CombinedLikelihood(
    const char *title,
    RooArgList& pdfList
 ) :
-   RooAbsPdf(name,title)
+   RooAbsPdf(name,title),
+   fNumberOfChannels(pdfList.getSize())
 {
-   fNumberOfChannels = pdfList.getSize();
-
    if(fNumberOfChannels == 0) {
       fCurrentPdf = NULL;
    }  else {
       TIterator *iter = pdfList.createIterator();
       
-      RooAbsPdf *pdf; Int_t i = 0;
+      RooAbsPdf *pdf; Int_t i = 0; 
       while((pdf = (RooAbsPdf *)iter->Next()) != NULL) { 
-         fChannels[i] = pdf;
-         fChannelNames[i] = TString::Format("cat%d", i).Data(); 
-         i++;
+         fChannels.push_back(pdf);
+         fChannelNames.push_back(TString::Format("cat%d", ++i).Data()); 
       }
 
       delete iter;
@@ -46,13 +44,26 @@ CombinedLikelihood::CombinedLikelihood(
    fNumberOfChannels = index->numBins((const char *)NULL);
    for(Int_t i = 0; i < fNumberOfChannels; ++i) {
       index->setBin(i); const char* crtLabel = index->getLabel();
-      fChannels[i] = simPdf->getPdf(crtLabel);
-      fChannelNames[i] = crtLabel;
+      fChannels.push_back(simPdf->getPdf(crtLabel));
+      fChannelNames.push_back(std::string(crtLabel));
    } 
    delete index;
 }
 
 
+//_____________________________________________________________________________
+CombinedLikelihood::CombinedLikelihood(const CombinedLikelihood& rhs, const char* newName) :
+   RooAbsPdf(rhs, newName),
+   fNumberOfChannels(rhs.fNumberOfChannels),
+   fChannels(rhs.fChannels),
+   fChannelNames(rhs.fChannelNames),
+   fCurrentPdf(rhs.fCurrentPdf) 
+{
+   // TODO: see how to remove, not a real copy constructor
+}
+
+
+//_____________________________________________________________________________
 CombinedLikelihood::~CombinedLikelihood()
 {
 }
