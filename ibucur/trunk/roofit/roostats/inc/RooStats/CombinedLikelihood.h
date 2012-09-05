@@ -21,8 +21,9 @@ namespace RooStats {
    public:
       // Constructors, destructors, assignment
       CombinedLikelihood(const char* name, const char* title, RooArgList& pdfList);
-      CombinedLikelihood(const char* name, const char* title, const std::map<std::string, RooAbsPdf*> &pdfMap);
+      CombinedLikelihood(const CombinedLikelihood& rhs, const char *newName = NULL);
       CombinedLikelihood(RooSimultaneous* simPdf, RooAbsData* data, const RooArgSet* nuis = NULL);
+      virtual TObject *clone(const char *newName) const { return new CombinedLikelihood(*this, newName); }
       virtual ~CombinedLikelihood();
 
       RooAbsPdf* GetPdf(const std::string& catName) const; // considering deleting it
@@ -32,8 +33,7 @@ namespace RooStats {
       virtual Double_t evaluate() const;
       virtual Double_t expectedEvents(const RooArgSet* nset) const; // TODO: remove dependence on nset parameter
    private:
-      CombinedLikelihood(const CombinedLikelihood& rhs); // disallow copy constructor
-      CombinedLikelihood& operator=(const CombinedLikelihood& rhs); // disallow assignment operator
+      CombinedLikelihood& operator=(const CombinedLikelihood& rhs); // disallow default assignment operator
 
       Int_t fNumberOfChannels;
       std::vector<RooAbsPdf*> fChannels;

@@ -1,14 +1,24 @@
 #ifndef ROOSTATS_CombinedDataSet
 #define ROOSTATS_CombinedDataSet
 
+#include "RooStats/AbstractDataSet.h"
 #include "RooDataSet.h"
+#include <vector>
 
 namespace RooStats {
-   class CombinedDataSet : public RooDataSet, public AbstractDataSet {
+   class CombinedDataSet : public TObject, public AbstractDataSet {
    public:
       virtual ~CombinedDataSet() {}
+      CombinedDataSet(std::vector<RooDataSet*> dataSets);
+      
    private:
-      CombinedDataSet() {}
+      CombinedDataSet() {} // hide default constructor (needed for I/O)
+      CombinedDataSet(const CombinedDataSet& rhs); // disallow copy constructor
+      CombinedDataSet& operator=(const CombinedDataSet& rhs); // disallow assignment operator
+
+      Int_t fNumberOfDataSets;
+      std::vector<RooDataSet *> fDataSets;
+
       ClassDef(CombinedDataSet, 1)
    };
 }
