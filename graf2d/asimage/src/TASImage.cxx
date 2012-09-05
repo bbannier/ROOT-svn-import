@@ -77,15 +77,20 @@ End_Html */
 #include "TEnv.h"
 #include "TStyle.h"
 #include "TText.h"
-
+#include "RConfigure.h"
 
 #ifndef WIN32
+#ifndef R__HAS_COCOA
 #   include <X11/Xlib.h>
+#endif
 #else
 #   include "Windows4root.h"
 #endif
 extern "C" {
 #ifndef WIN32
+#ifdef R__HAS_COCOA
+#   define X_DISPLAY_MISSING 1
+#endif
 #   include <afterbase.h>
 #else
 #   include <win32/config.h>
@@ -2138,18 +2143,24 @@ Bool_t TASImage::InitVisual()
       return kTRUE;
    }
 
+#ifndef WIN32
+#ifdef R__HAS_COCOA
+   fgVisual = create_asvisual(0, 0, 0, 0);
+   fgVisual->dpy = (Display*)1; //fake (not used)
+#else
    disp = (Display*) gVirtualX->GetDisplay();
    Int_t screen  = gVirtualX->GetScreen();
    Int_t depth   = gVirtualX->GetDepth();
    Visual *vis   = (Visual*) gVirtualX->GetVisual();
    Colormap cmap = (Colormap) gVirtualX->GetColormap();
-#ifndef WIN32
+
    if (vis == 0 || cmap == 0) {
       fgVisual = create_asvisual(0, 0, 0, 0);
    } else {
       fgVisual = create_asvisual_for_id(disp, screen, depth,
                                         XVisualIDFromVisual(vis), cmap, 0);
    }
+#endif
 #else
    fgVisual = create_asvisual(0, 0, 0, 0);
    fgVisual->dpy = (Display*)1; //fake (not used)
@@ -4478,6 +4489,7 @@ void TASImage::DrawDashZTLine(UInt_t x1, UInt_t y1, UInt_t x2, UInt_t y2,
       x0 = x;
       y0 = y;
       iDash = 0;
+      xend = x + q;
 
       if (q > 0) {
          while ((x < xend) && (y < yend)) {
@@ -6642,7 +6654,7 @@ void TASImage::SetPaletteEnabled(Bool_t on)
 
 
 //______________________________________________________________________________
-void TASImage::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TASImage::SavePrimitive(std::ostream &out, Option_t * /*= ""*/)
 {
     // Save a primitive as a C++ statement(s) on output stream "out".
 
@@ -6672,11 +6684,11 @@ void TASImage::SavePrimitive(ostream &out, Option_t * /*= ""*/)
    xpm += name;
    xpm += ii;
    str.ReplaceAll("asxpm", xpm.Data());
-   out << endl << str << endl << endl;
+   out << std::endl << str << std::endl << std::endl;
    out << "   TImage *";
-   out << name << " = TImage::Create();" << endl;
-   out << "   " << name << "->SetImageBuffer(" << xpm << ", TImage::kXpm);" << endl;
-   out << "   " << name << "->Draw();" << endl;
+   out << name << " = TImage::Create();" << std::endl;
+   out << "   " << name << "->SetImageBuffer(" << xpm << ", TImage::kXpm);" << std::endl;
+   out << "   " << name << "->Draw();" << std::endl;
 }
 
 

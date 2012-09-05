@@ -30,6 +30,7 @@
 #include "TNamed.h"
 #endif
 
+
 class TText : public TNamed, public TAttText {
 
 protected:
