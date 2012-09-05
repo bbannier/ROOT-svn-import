@@ -207,8 +207,6 @@ void TGX11TTF::Align(void)
    FT_Vector_Transform(&fAlign, TTF::fgRotMatrix);
    fAlign.x = fAlign.x >> 6;
    fAlign.y = fAlign.y >> 6;
-   fAlign.x = 0;
-   fAlign.y = 0;
 }
 
 //______________________________________________________________________________
