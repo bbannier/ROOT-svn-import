@@ -1,15 +1,11 @@
 #set( LLVM_LINK_COMPONENTS
-#  ${LLVM_TARGETS_TO_BUILD}
-#  bitreader
-#  bitwriter
-#  codegen
-#  instrumentation
-#  ipo
-#  linker
-#  selectiondag
+# jit
+# linker
+# native
 #  )
 
 add_cling_executable(cling
+  RequiredSymbols.cpp
   cling.cpp)
 
 target_link_libraries(cling
@@ -24,7 +20,6 @@ target_link_libraries(cling
   clangParse
   clangSema
   clangAnalysis
-  clangRewrite
   clangAST
   clangLex
   clangBasic
