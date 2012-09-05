@@ -1,7 +1,7 @@
 #include "RooStats/CombinedLikelihood.h"
 #include "TIterator.h"
 #include "TString.h"
-
+#include <algorithm>
 
 using namespace RooStats;
 
@@ -15,15 +15,17 @@ CombinedLikelihood::CombinedLikelihood(
 ) :
    RooAbsPdf(name,title)
 {
-   if(pdfList.getSize() == 0) {
+   fNumberOfChannels = pdfList.getSize();
+
+   if(fNumberOfChannels == 0) {
       fCurrentPdf = NULL;
    }  else {
       TIterator *iter = pdfList.createIterator();
+      
       RooAbsPdf *pdf; Int_t i = 0;
-
       while((pdf = (RooAbsPdf *)iter->Next()) != NULL) { 
-         fChannels[TString::Format("cat%d", i).Data()] = pdf;
-         if(i == 0) fCurrentPdf = pdf; 
+         fChannels[i] = pdf;
+         fChannelNames[i] = TString::Format("cat%d", i).Data(); 
          i++;
       }
 
@@ -31,22 +33,6 @@ CombinedLikelihood::CombinedLikelihood(
    }
 }
 
-//_____________________________________________________________________________
-CombinedLikelihood::CombinedLikelihood(
-   const char *name,
-   const char *title,
-   const std::map<std::string, RooAbsPdf*> &pdfMap
-) :
-   RooAbsPdf(name, title)
-{
-   fChannels = pdfMap;
-   if(fChannels.empty()) {
-      fCurrentPdf = NULL;
-   } else {
-      std::map<std::string, RooAbsPdf*>::const_iterator cIter = fChannels.begin();
-      fCurrentPdf = (*cIter).second;
-   }      
-}
 
 //_____________________________________________________________________________
 CombinedLikelihood::CombinedLikelihood(
@@ -56,14 +42,14 @@ CombinedLikelihood::CombinedLikelihood(
 ) :
    RooAbsPdf(*simPdf)
 {
-}
-
-CombinedLikelihood::CombinedLikelihood(
-   const CombinedLikelihood& other,
-   const char *name
-) :
-   RooAbsPdf(other, name)
-{
+   RooAbsCategoryLValue* index = (RooAbsCategoryLValue *)simPdf->indexCat().Clone();
+   fNumberOfChannels = index->numBins((const char *)NULL);
+   for(Int_t i = 0; i < fNumberOfChannels; ++i) {
+      index->setBin(i); const char* crtLabel = index->getLabel();
+      fChannels[i] = simPdf->getPdf(crtLabel);
+      fChannelNames[i] = crtLabel;
+   } 
+   delete index;
 }
 
 
@@ -71,20 +57,24 @@ CombinedLikelihood::~CombinedLikelihood()
 {
 }
 
-RooAbsPdf* CombinedLikelihood::GetPdf(const std::string& catName) const
+RooAbsPdf* CombinedLikelihood::GetPdf(const std::string& catLabel) const
 {
-   std::map<std::string, RooAbsPdf*>::const_iterator cIter = fChannels.find(catName);
-   if(cIter != fChannels.end()) return (*cIter).second;
-   return NULL;
+   std::vector<std::string>::const_iterator cIter = fChannelNames.begin();
+   // we need the index too, that is why we don't use std::find
+   for(Int_t i = 0; i < fNumberOfChannels; ++i, ++cIter) {
+      if(*cIter == catLabel) return fChannels[i]; 
+   }
+   return NULL; // no pdf found for that category name
 }
 
 Bool_t CombinedLikelihood::AddPdf(RooAbsPdf& pdf, const std::string& catLabel)
 {
-   if(fChannels.find(catLabel) != fChannels.end()) {
+   if(std::find(fChannelNames.begin(), fChannelNames.end(), catLabel) == fChannelNames.end()) {
       std::cout << "CombinedLikelihood::AddPdf - warning: cannot reassign pdf to category " + catLabel << std::endl;
       return kFALSE;
    }  
-   fChannels[catLabel] = &pdf;
+   fChannels.push_back(&pdf);
+   fChannelNames.push_back(catLabel);
    return kTRUE;
 }
 
@@ -92,9 +82,9 @@ Bool_t CombinedLikelihood::AddPdf(RooAbsPdf& pdf, const std::string& catLabel)
 RooDataSet* CombinedLikelihood::GenerateGlobalObs(const RooArgSet &vars, Int_t nEvents) {
    RooDataSet *data = new RooDataSet("gensimglobal", "gensimglobal", vars);
 
-   std::map<std::string, RooAbsPdf*>::const_iterator cIter;
+   std::vector<RooAbsPdf*>::const_iterator cIter;
    for(cIter = fChannels.begin(); cIter != fChannels.end(); cIter++) {
-      RooAbsPdf *pdf = (*cIter).second;
+      RooAbsPdf *pdf = *cIter;
       RooArgSet *globObs = pdf->getObservables(vars);
 
       // NOTE: now generating all data for one channel at a time

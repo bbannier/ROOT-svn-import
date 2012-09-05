@@ -109,8 +109,9 @@
 
 // ibucur: development in progress
 #pragma link C++ class RooStats::AbstractPdf+; // abstract class
+#pragma link C++ class RooStats::AbstractDataSet+; // abstract class
 #pragma link C++ class RooStats::CombinedLikelihood+;
-#pragma link C++ class RooStats::DataSet+;
+#pragma link C++ class RooStats::CombinedDataSet+;
 #pragma link C++ class RooStats::GaussianPdf+;
 
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t , Double_t ,Double_t);
