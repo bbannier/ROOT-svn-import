@@ -10,8 +10,10 @@
 #include "RooArgList.h"
 #include "RooDataSet.h"
 #include "RooSimultaneous.h"
-#include <map>
+#include "RooAbsCategoryLValue.h"
+#include <vector>
 #include <string>
+#include <memory>
 
 namespace RooStats {
 
@@ -21,8 +23,6 @@ namespace RooStats {
       CombinedLikelihood(const char* name, const char* title, RooArgList& pdfList);
       CombinedLikelihood(const char* name, const char* title, const std::map<std::string, RooAbsPdf*> &pdfMap);
       CombinedLikelihood(RooSimultaneous* simPdf, RooAbsData* data, const RooArgSet* nuis = NULL);
-      CombinedLikelihood(const CombinedLikelihood& other, const char* name = NULL);
-      virtual TObject *clone(const char *newname) const { return new CombinedLikelihood(*this, newname); }
       virtual ~CombinedLikelihood();
 
       RooAbsPdf* GetPdf(const std::string& catName) const; // considering deleting it
@@ -32,7 +32,12 @@ namespace RooStats {
       virtual Double_t evaluate() const;
       virtual Double_t expectedEvents(const RooArgSet* nset) const; // TODO: remove dependence on nset parameter
    private:
-      std::map<std::string, RooAbsPdf*> fChannels;
+      CombinedLikelihood(const CombinedLikelihood& rhs); // disallow copy constructor
+      CombinedLikelihood& operator=(const CombinedLikelihood& rhs); // disallow assignment operator
+
+      Int_t fNumberOfChannels;
+      std::vector<RooAbsPdf*> fChannels;
+      std::vector<std::string> fChannelNames;
       RooAbsPdf *fCurrentPdf;
    protected:
       ClassDef(CombinedLikelihood,1)
