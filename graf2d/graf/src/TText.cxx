@@ -73,6 +73,9 @@ TText::TText(Double_t x, Double_t y, const wchar_t *text) : TAttText()
 TText::~TText()
 {
    // Text default destructor.
+   if (fWcsTitle != NULL) {
+	  delete reinterpret_cast<std::wstring *>(fWcsTitle);
+   }
 }
 
 
@@ -96,6 +99,15 @@ void TText::Copy(TObject &obj) const
    ((TText&)obj).fY = fY;
    TNamed::Copy(obj);
    TAttText::Copy(((TText&)obj));
+   if (fWcsTitle != NULL) {
+	   *reinterpret_cast<std::wstring *>(fWcsTitle) =
+		   *reinterpret_cast<std::wstring *>(((TText&)obj).fWcsTitle);
+   }
+   else {
+	   dynamic_cast<TText &>(obj).fWcsTitle =
+		   new std::wstring(*reinterpret_cast<std::wstring *>(
+				dynamic_cast<TText &>(obj).fWcsTitle));
+   }
 }
 
 
