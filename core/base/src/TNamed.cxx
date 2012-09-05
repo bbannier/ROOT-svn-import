@@ -27,8 +27,6 @@
 #include "TROOT.h"
 #include "TVirtualPad.h"
 #include "TClass.h"
-#include <wchar.h>
-#include <cstdlib>
 
 ClassImp(TNamed)
 
@@ -150,25 +148,6 @@ void TNamed::SetTitle(const char *title)
    // Change (i.e. set) the title of the TNamed.
 
    fTitle = title;
-   if (gPad && TestBit(kMustCleanup)) gPad->Modified();
-}
-
-//______________________________________________________________________________
-void TNamed::SetMbTitle(const wchar_t *title)
-{
-   // Change (i.e. set) the title of the TNamed.
-
-   char *mb_title = new char[MB_CUR_MAX * wcslen(title) + 1];
-   char *p = mb_title;
-   size_t length = wcslen(title);
-   for(size_t i = 0; i < length; i++) {
-	   const int n = wctomb(p, title[i]);
-	   if(n >= 0) {
-		   p += n;
-	   }
-   }
-   fTitle = mb_title;
-   delete [] mb_title;
    if (gPad && TestBit(kMustCleanup)) gPad->Modified();
 }
 

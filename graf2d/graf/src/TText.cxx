@@ -18,6 +18,8 @@
 #include "TMath.h"
 #include "TPoint.h"
 #include "TClass.h"
+#include <wchar.h>
+#include <cstdlib>
 
 ClassImp(TText)
 
@@ -55,12 +57,15 @@ TText::TText(Double_t x, Double_t y, const char *text) : TNamed("",text), TAttTe
 
 
 //______________________________________________________________________________
-TText::TText(Double_t x, Double_t y, const wchar_t *text) : TNamed("",text), TAttText()
+TText::TText(Double_t x, Double_t y, const wchar_t *text) : TAttText()
 {
    // Text normal constructor.
 
-   fX=x; fY=y;
+   fX = x;
+   fY = y;
    fWcsTitle = new std::wstring(text);
+   SetName("");
+   SetMbTitle(text);
 }
 
 
@@ -747,6 +752,24 @@ void TText::SetNDC(Bool_t isNDC)
    if (isNDC) SetBit(kTextNDC);
 }
 
+//______________________________________________________________________________
+void TText::SetMbTitle(const wchar_t *title)
+{
+   // Change (i.e. set) the title of the TNamed.
+
+   char *mb_title = new char[MB_CUR_MAX * wcslen(title) + 1];
+   char *p = mb_title;
+   size_t length = wcslen(title);
+   for(size_t i = 0; i < length; i++) {
+	   const int n = wctomb(p, title[i]);
+	   if(n >= 0) {
+		   p += n;
+	   }
+   }
+   fTitle = mb_title;
+   delete [] mb_title;
+   if (gPad && TestBit(kMustCleanup)) gPad->Modified();
+}
 
 //______________________________________________________________________________
 void TText::Streamer(TBuffer &R__b)
