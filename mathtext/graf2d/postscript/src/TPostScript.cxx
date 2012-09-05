@@ -1607,7 +1607,6 @@ void TPostScript::FontEncode()
    PrintStr(" /Helvetica-Narrow-Oblique /NewCenturySchlbk-Roman /NewCenturySchlbk-Bold");
    PrintStr(" /NewCenturySchlbk-BoldItalic /NewCenturySchlbk-Italic");
    PrintStr(" /Palatino-Bold /Palatino-BoldItalic /Palatino-Italic /Palatino-Roman");
-   //PrintStr(" /MyriadPro-Regular /MyriadPro-It /MyriadPro-Bold /MyriadPro-BoldIt");
    PrintStr(" ] {ISOLatin1Encoding reEncode } forall");
 }
 
