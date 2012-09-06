@@ -84,7 +84,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
                 gui/fitpanel proof/proof proof/proofplayer \
                 gui/sessionviewer gui/guihtml gui/recorder
 
-MODULES      += core/mathtext
+MODULES      += graf2d/mathtext
 ifeq ($(ARCH),win32)
 MODULES      += core/winnt graf2d/win32gdk
 MODULES      := $(filter-out core/newdelete,$(MODULES))
