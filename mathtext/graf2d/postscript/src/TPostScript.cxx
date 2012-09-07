@@ -1401,6 +1401,8 @@ Bool_t TPostScript::FontEmbedType1(const char *filename)
 {
 	std::ifstream font_file(filename, std::ios::binary);
 
+	// We cannot read directly using iostream iterators due to
+	// signedness
 	font_file.seekg(0, std::ios::end);
 
 	const size_t font_file_length = font_file.tellg();
@@ -1433,6 +1435,8 @@ Bool_t TPostScript::FontEmbedType2(const char *filename)
 {
 	std::ifstream font_file(filename, std::ios::binary);
 
+	// We cannot read directly using iostream iterators due to
+	// signedness
 	font_file.seekg(0, std::ios::end);
 
 	const size_t font_file_length = font_file.tellg();
@@ -1465,6 +1469,8 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 {
 	std::ifstream font_file(filename, std::ios::binary);
 
+	// We cannot read directly using iostream iterators due to
+	// signedness
 	font_file.seekg(0, std::ios::end);
 
 	const size_t font_file_length = font_file.tellg();
@@ -1540,7 +1546,9 @@ void TPostScript::FontEmbed(void)
 #endif // TTFFONTDIR
 										);
    
-   for (Int_t fontid = 0; fontid < 29; fontid++) {
+	// FIXME: First do not try to embed any non-Latin scripts,
+	// therefore fontid < 28.
+   for (Int_t fontid = 0; fontid < 28; fontid++) {
 	   //for (Int_t fontid = 0; fontid < 1; fontid++) {
 
 		const char *filename = gEnv->GetValue(
