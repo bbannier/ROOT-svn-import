@@ -167,7 +167,8 @@ namespace mathtext {
 	// DSIG, BASE, GDEF, GPOS, GSUB, JSTF, EBDT, EBLC, EBSC
 
 	void font_embed_t::subset_rename_otf_name_table(
-		struct table_data_s &table_data, uint8_t *glyph_usage)
+		struct table_data_s &table_data,
+		std::map<wchar_t, bool> glyph_usage)
 	{
 		// Prefix name IDs 1, 4, 6, 16, 19, 20, 21
 
@@ -181,22 +182,99 @@ namespace mathtext {
 	}
 
 	void font_embed_t::subset_ttf_glyf_table(
-		struct table_data_s &table_data, uint8_t *glyph_usage)
+		struct table_data_s &table_data,
+		std::map<wchar_t, bool> glyph_usage)
 	{
 	}
 
 	void font_embed_t::subset_ttf_loca_table(
-		struct table_data_s &table_data, uint8_t *glyph_usage)
+		struct table_data_s &table_data,
+		std::map<wchar_t, bool> glyph_usage)
 	{
 	}
 
 	void font_embed_t::subset_ttf_post_table(
-		struct table_data_s &table_data, uint8_t *glyph_usage)
+		struct table_data_s &table_data,
+		std::map<wchar_t, bool> glyph_usage)
 	{
 	}
 
+	class cff_index_t {
+	public:
+		uint16_t count;
+		uint8_t off_size;
+		std::vector<uint32_t> offset;
+		std::vector<uint8_t> data;
+		cff_index_t(const uint8_t *input_data)
+		{
+			memcpy(&count, input_data, sizeof(uint16_t));
+#ifdef LITTLE_ENDIAN
+			count = bswap_16(count);
+#endif // LITTLE_ENDIAN
+			memcpy(&off_size, input_data + sizeof(uint16_t),
+				   sizeof(uint8_t));
+
+			if (!(off_size >= 1 && off_size < 5)) {
+				return;
+			}
+
+			const uint8_t *input_data_offset =
+				input_data + sizeof(uint16_t) + sizeof(uint8_t);
+
+			// The off by one or indexing from one convention in CFF
+			// is corrected here, i.e. the resulting offset table is
+			// zero-based, and not the CFF one.
+
+			offset.reserve(count + 1);
+			switch (off_size) {
+			case 1:
+				for (size_t i = 0; i < count + 1; i++) {
+					offset.push_back(input_data_offset[i]);
+				}
+				break;
+			case 2:
+				for (size_t i = 0; i < count + 1; i++) {
+					offset.push_back(reinterpret_cast<uint16_t *>(
+						input_data_offset)[i]);
+#ifdef LITTLE_ENDIAN
+					offset.back() = bswap_16(offset.back());
+#endif // LITTLE_ENDIAN
+				}
+				break;
+			case 3:
+				for (size_t i = 0; i < 3 * (count + 1); i += 3) {
+					const uint32_t value =
+						input_data_offset[3 * i] << 16 |
+						input_data_offset[3 * i + 1] << 8 |
+						input_data_offset[3 * i + 2];
+
+					offset.push_back(value);
+				}
+				break;
+			case 4:
+				for (size_t i = 0; i < count + 1; i++) {
+					offset.push_back(reinterpret_cast<uint32_t *>(
+						input_data_offset)[i]);
+#ifdef LITTLE_ENDIAN
+					offset.back() = bswap_32(offset.back());
+#endif // LITTLE_ENDIAN
+				}
+				break;
+			}
+
+			const uint8_t *input_data_data =
+				input_data_offset + off_size * (count + 1);
+
+			data = std::vector<uint8_t>(input_data_data, input_data_data
+		}
+		~cff_index_t(void)
+		{
+		}
+	};
+
 	void font_embed_t::subset_otf_cff_table(
-		struct table_data_s &table_data, uint8_t *glyph_usage)
+		struct table_data_s &table_data,
+		std::map<wchar_t, bool> glyph_usage)
 	{
 	}
 #endif
