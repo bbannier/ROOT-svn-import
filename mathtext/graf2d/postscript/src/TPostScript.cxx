@@ -1547,8 +1547,9 @@ void TPostScript::FontEmbed(void)
 										);
    
 	// FIXME: First do not try to embed any non-Latin scripts,
-	// therefore fontid < 28.
-   for (Int_t fontid = 0; fontid < 28; fontid++) {
+	// therefore fontid < 28. The first Arial-BoldMT is also
+	// a duplicate.
+   for (Int_t fontid = 1; fontid < 28; fontid++) {
 	   //for (Int_t fontid = 0; fontid < 1; fontid++) {
 
 		const char *filename = gEnv->GetValue(
