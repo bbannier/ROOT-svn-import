@@ -350,12 +350,14 @@ namespace mathtext {
 		ret.append(linebuf);
 		ret.append("%%VMusage: 0 0\n");
 		ret.append("11 dict begin\n");
-		ret.append("/FontType 42 def\n");
-		snprintf(linebuf, BUFSIZ, "/FontName /%s def\n", font_name.c_str());
+		snprintf(linebuf, BUFSIZ, "/FontName /%s def\n",
+				 font_name.c_str());
 		ret.append(linebuf);
-
 		ret.append("/Encoding 256 array\n");
-		ret.append("0 1 255 { 1 index exch /.notdef put } for\n");
+		snprintf(linebuf, BUFSIZ,
+				 "0 1 255 { 1 index exch /%s put } for\n",
+				 char_strings[0].c_str());
+		ret.append(linebuf);
 		for (unsigned int code_point = 0; code_point < 256;
 			 code_point++) {
 			unsigned int glyph_index = cid_map[code_point];
@@ -392,27 +394,14 @@ namespace mathtext {
 		}
 		ret.append("] def\n");
 
-		unsigned int count = 0;
-
-		for (std::vector<std::string>::const_iterator iterator =
-				 char_strings.begin();
-			 iterator != char_strings.end(); iterator++) {
-			if (*iterator != ".notdef" && *iterator != "") {
-				count++;
-			}
-		}
 		snprintf(linebuf, BUFSIZ, "/CharStrings %u dict dup begin\n",
-				 count);
+				 static_cast<unsigned int>(char_strings.size()));
 		ret.append(linebuf);
 		for (unsigned int glyph_index = 0;
 			 glyph_index < char_strings.size(); glyph_index++) {
-			if (char_strings[glyph_index] != ".notdef" &&
-				char_strings[glyph_index] != "") {
-				snprintf(linebuf, BUFSIZ, "/%s %u def\n",
-						 char_strings[glyph_index].c_str(),
-						 glyph_index);
-				ret.append(linebuf);
-			}
+			snprintf(linebuf, BUFSIZ, "/%s %u def\n",
+					 char_strings[glyph_index].c_str(), glyph_index);
+			ret.append(linebuf);
 		}
 		ret.append("end readonly def\n");
 		ret.append("FontName currentdict end definefont pop\n");

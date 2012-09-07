@@ -73,7 +73,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
                 core/textinput core/base core/cont core/meta core/thread \
                 io/io math/mathcore net/net core/zip core/lzma math/matrix \
                 core/newdelete hist/hist tree/tree graf2d/freetype \
-                graf2d/graf graf2d/gpad graf3d/g3d \
+		graf2d/mathtext graf2d/graf graf2d/gpad graf3d/g3d \
                 gui/gui math/minuit hist/histpainter tree/treeplayer \
                 gui/ged tree/treeviewer math/physics graf2d/postscript \
                 core/rint html montecarlo/eg \
@@ -84,7 +84,6 @@ MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
                 gui/fitpanel proof/proof proof/proofplayer \
                 gui/sessionviewer gui/guihtml gui/recorder
 
-MODULES      += graf2d/mathtext
 ifeq ($(ARCH),win32)
 MODULES      += core/winnt graf2d/win32gdk
 MODULES      := $(filter-out core/newdelete,$(MODULES))
@@ -528,9 +527,6 @@ COREDO        = $(BASEDO) $(CONTDO) $(METADO) $(METACDO) $(SYSTEMDO) $(ZIPDO) \
 
 CORELIB      := $(LPATH)/libCore.$(SOEXT)
 COREMAP      := $(CORELIB:.$(SOEXT)=.rootmap)
-
-CORELIBEXTRA    += $(MATHTEXTLIB)
-STATICEXTRALIBS += $(MATHTEXTLIB)
 
 ifneq ($(BUILTINZLIB),yes)
 CORELIBEXTRA    += $(ZLIBLIBDIR) $(ZLIBCLILIB)
