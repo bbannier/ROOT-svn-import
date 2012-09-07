@@ -15,6 +15,8 @@
 #include <vector>
 #include <string>
 
+#include <Cocoa/Cocoa.h>
+
 #ifndef ROOT_GuiTypes
 #include "GuiTypes.h"
 #endif
@@ -265,7 +267,7 @@ private:
    void BuildClipRegion(const WidgetRect &rect);
    
    std::vector<WidgetRect> fRectsToClip;
-   std::vector<WidgetRect> fClippedRegion;//Should be <CGRect>
+   std::vector<CGRect> fClippedRegion;//Should be <CGRect>
    std::vector<int> fXBounds;
    std::vector<int> fYBounds;
    std::vector<bool> fGrid;
