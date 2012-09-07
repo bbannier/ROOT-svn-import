@@ -4,7 +4,7 @@
 # Author: 
 
 MODNAME      := mathtext
-MODDIR       := $(ROOT_SRCDIR)/core/$(MODNAME)
+MODDIR       := $(ROOT_SRCDIR)/graf2d/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/inc
 

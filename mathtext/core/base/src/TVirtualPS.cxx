@@ -19,7 +19,6 @@
 #include "TError.h"
 #include "TClonesArray.h"
 #include "TVirtualPS.h"
-#include "fontembed.h"
 
 TVirtualPS *gVirtualPS = 0;
 
