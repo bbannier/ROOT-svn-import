@@ -64,6 +64,17 @@ Bool_t TestFrame::HandleButton(Event_t *buttonEvent)
       //(test for a clip - other windows should not
       //be affected).
       std::cout<<"Requesting redraw!\n";
+
+      static const ULong_t pixels[] = {0xff0000, 0xff00, 0xff, 0xffff00, 0xff00ff, 0xffff};
+      static const unsigned nPixels = sizeof pixels / sizeof pixels[0];
+      static unsigned index = 0;
+      
+      if (index + 1 == nPixels)
+         index = 0;
+      else
+         ++index;
+         
+      gVirtualX->SetWindowBackground(GetId(), pixels[index]);
       gClient->NeedRedraw(this);
    }
 
