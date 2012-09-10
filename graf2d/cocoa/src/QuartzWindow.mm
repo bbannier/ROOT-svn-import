@@ -632,52 +632,6 @@ void UnlockFocus(NSView<X11Window> *view)
    ((QuartzView *)view).fContext = 0;
 }
 
-//________________________________________________________________________________________
-NSRect FindOverlapRect(const NSRect &viewRect, const NSRect &siblingViewRect)
-{
-   NSRect frame1 = viewRect;
-   NSRect frame2 = siblingViewRect;
-
-   //Adjust frames - move to frame1's space.
-   frame2.origin.x -= frame1.origin.x;
-   frame2.origin.y -= frame1.origin.y;
-   frame1.origin = CGPointZero;
-
-   NSRect overlap = {};
-   
-   if (frame2.origin.x < 0) {
-      overlap.size.width = std::min(frame1.size.width, frame2.size.width - (frame1.origin.x - frame2.origin.x));
-   } else {
-      overlap.origin.x = frame2.origin.x;
-      overlap.size.width = std::min(frame2.size.width, frame1.size.width - frame2.origin.x);
-   }
-   
-   if (frame2.origin.y < 0) {
-      overlap.size.height = std::min(frame1.size.height, frame2.size.height - (frame1.origin.y - frame2.origin.y));
-   } else {
-      overlap.origin.y = frame2.origin.y;
-      overlap.size.height = std::min(frame2.size.height, frame1.size.height - frame2.origin.y);
-   }
-   
-   return overlap;
-
-}
-
-//________________________________________________________________________________________
-bool RectsOverlap(const NSRect &r1, const NSRect &r2)
-{
-   if (r2.origin.x >= r1.origin.x + r1.size.width)
-      return false;
-   if (r2.origin.x + r2.size.width <= r1.origin.x)
-      return false;
-   if (r2.origin.y >= r1.origin.y + r1.size.height)
-      return false;
-   if (r2.origin.y + r2.size.height <= r1.origin.y)
-      return false;
-   
-   return true;
-}
-
 }//X11
 }//MacOSX
 }//ROOT

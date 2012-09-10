@@ -465,8 +465,7 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
                clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
                //TODO: this geometry looks suspicious, check!
                //CGContextClipToMask(currContext, CGRectMake(0, 0, clipRect.size.width, clipRect.size.height), clipImageGuard.Get());
-            } else if (fClippedRegion.size()) {//(view.fClipMaskIsValid)
-             //  CGContextClipToMask(currContext, CGRectMake(0, 0, view.fClipMask.fWidth, view.fClipMask.fHeight), view.fClipMask.fImage);
+            } else if (fClippedRegion.size()) {
                CGContextClipToRects(currContext, &fClippedRegion[0], fClippedRegion.size());
             }
 
@@ -529,49 +528,92 @@ void CommandBuffer::ClearCommands()
    fCommands.clear();
 }
 
+namespace {
+
+//________________________________________________________________________________________
+bool RectsOverlap(const NSRect &r1, const NSRect &r2)
+{
+   if (r2.origin.x >= r1.origin.x + r1.size.width)
+      return false;
+   if (r2.origin.x + r2.size.width <= r1.origin.x)
+      return false;
+   if (r2.origin.y >= r1.origin.y + r1.size.height)
+      return false;
+   if (r2.origin.y + r2.size.height <= r1.origin.y)
+      return false;
+   
+   return true;
+}
+
+}
+
 //______________________________________________________________________________
 void CommandBuffer::ClipOverlaps(QuartzView *view)
 {
-   //
+   //QuartzViews do not have backing store.
+   //But ROOT calls gClient->NeedRedraw ignoring
+   //children or overlapping siblings. This leads
+   //to obvious problems, for example, parent
+   //erasing every child inside while repainting itself.
+   //To fix this and emulate window with backing store
+   //without real backing store, I'm calculating the
+   //area of a view this is visible and not overlapped.
+   
+   //Who can overlap our view?
+   //1. Its own siblings and, probably, siblings of its ancestors.
+   //2. Children views.
+
+   assert(view != nil && "ClipOverlaps, view parameter is nil");
 
    typedef std::vector<QuartzView *>::reverse_iterator reverse_iterator;
    typedef std::vector<CGRect>::iterator rect_iterator;
 
-   assert(view != nil && "ClipOverlaps, view parameter is nil");
-
    fRectsToClip.clear();
    fClippedRegion.clear();
 
+   //Check siblings and ancestors' siblings:
+
+   //1. Remember the whole branch starting from our view
+   //up to a top-level window.
    fViewBranch.clear();
    for (QuartzView *v = view; v; v = v.fParentView)
-      fViewBranch.push_back(v);//Can throw, ok.
+      fViewBranch.push_back(v);
 
+   //We do not need content view, since it does not have any siblings.
    if (fViewBranch.size())
-      fViewBranch.pop_back();//we do not need content view, it does not have any sibling.
+      fViewBranch.pop_back();
 
+   //For every fViewBranch[i] in our branch, we're looking for overlapping siblings.
+   //Calculations are in view.fParentView's coordinate system.
+   
    WidgetRect clipRect;
    NSRect frame1 = {};
 
-   //At the beginning we operate in a view parent's coordinate system.
    const NSRect frame2 = view.frame;
 
    for (reverse_iterator it = fViewBranch.rbegin(), eIt = fViewBranch.rend(); it != eIt; ++it) {
-      QuartzView *ancestorView = *it;//Actually, it's either one of ancestors, or a view itself.
+      QuartzView *ancestorView = *it;//This is either one of ancestors, or a view itself.
       bool doCheck = false;
       for (QuartzView *sibling in [ancestorView.fParentView subviews]) {
          if (ancestorView == sibling) {
+            //View has its children in an array, and for every subviews[i] in this array,
+            //only views with index > i can overlap subviews[i].
             doCheck = true;//all views after this must be checked.
             continue;
          } else if (!doCheck || sibling.fMapState != kIsViewable) {
             continue;
          }
          
-         frame1 = sibling.frame;//
+         frame1 = sibling.frame;
+         
+         if (!frame1.size.width || !frame1.size.height)
+            continue;
+
          frame1.origin = [sibling.fParentView convertPoint : frame1.origin toView : view.fParentView];
 
          //Check if two rects intersect.
          if (RectsOverlap(frame2, frame1)) {
-            //Update view's clip mask - mask out hidden pixels.
+            //Substruct frame1 from our view's rect.
             clipRect.x1 = frame1.origin.x;
             clipRect.x2 = clipRect.x1 + frame1.size.width;
             clipRect.y1 = frame1.origin.y;
@@ -581,14 +623,18 @@ void CommandBuffer::ClipOverlaps(QuartzView *view)
       }
    }
    
-   //Now clip all children.
+   //Substruct children.
    
    for (QuartzView *child in [view subviews]) {
       if (child.fMapState != kIsViewable)
          continue;
       
       frame1 = child.frame;
-      if (view.fParentView)
+
+      if (!frame1.size.width || !frame1.size.height)
+         continue;
+
+      if (view.fParentView)//view can also be a content view.
          frame1.origin = [view convertPoint : frame1.origin toView : view.fParentView];
       
       if (RectsOverlap(frame2, frame1)) {
@@ -601,15 +647,21 @@ void CommandBuffer::ClipOverlaps(QuartzView *view)
    }
    
    if (fRectsToClip.size()) {
+      //Now, if we have any rectanges to substruct them from our view's frame,
+      //we are building a set of rectangles, which represents visible part of view.
+   
       WidgetRect rect(frame2.origin.x, frame2.origin.y, frame2.origin.x + frame2.size.width, frame2.origin.y + frame2.size.height);
 
       BuildClipRegion(rect);
       
       if (view.fParentView) {
-         //Now convert all rects into view's coordinate system.
+         //To able to use this set of rectangles with CGContextClipToRects,
+         //convert them (if needed) into view's own coordinate system.
          for (rect_iterator recIt = fClippedRegion.begin(), eIt = fClippedRegion.end(); recIt != eIt; ++recIt) {
-            if (!recIt->size.width && !recIt->size.height)
-               continue;
+            if (!recIt->size.width && !recIt->size.height) {//This is a special 'empty' rectangle, which means our
+               assert(fClippedRegion.size() == 1 && "ClipOverlaps, internal logic error");
+               break;                                       //view is completely hidden.
+            }
             recIt->origin = [view.fParentView convertPoint : recIt->origin toView : view];
          }
       }
@@ -617,13 +669,6 @@ void CommandBuffer::ClipOverlaps(QuartzView *view)
 }
 
 namespace {
-
-//Authors of C++ standard library sure are very smart people.
-//The only thing I do not understand, why I do not have NORMAL
-//binary_search and have this sh..it which returns bool
-//and why I have to use ugly lower_bounds/upper_bounds, which
-//does not make my code better.
-//The next three functions are used by clipping machinery.
 
 typedef std::vector<int>::iterator int_iterator;
 
@@ -690,6 +735,12 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
 
    //[First, we "cut" the original rect into stripes.
    for (rect_const_iterator recIt = fRectsToClip.begin(), endIt = fRectsToClip.end(); recIt != endIt; ++recIt) {
+      if (recIt->x1 <= rect.x1 && recIt->x2 >= rect.x2 && recIt->y1 <= rect.y1 && recIt->y2 >= rect.y2) {
+         //this rect completely overlaps our view, not need to calculate anything at all.
+         fClippedRegion.push_back(CGRectMake(0., 0., 0., 0.));
+         return;
+      }
+   
       if (recIt->x1 > rect.x1)//upper limit is tested already (input validation).
          fXBounds.push_back(recIt->x1);
 
@@ -701,11 +752,6 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
 
       if (recIt->y2 < rect.y2)
          fYBounds.push_back(recIt->y2);
-   }
-
-   if (!fXBounds.size() && !fYBounds.size()) {//Completely hidden.
-      fClippedRegion.push_back(CGRectMake(0, 0, 0, 0));
-      return;
    }
 
    std::sort(fXBounds.begin(), fXBounds.end());
@@ -749,7 +795,7 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
    //Grid is ready].
    
    //[Create rectangles - check the grid.
-   //Event more nightmarish part :))) And I do not merge rectangles.
+   //Even more nightmarish part :))) And I do not merge rectangles.
    //Help me God!
    CGRect newRect = {};
 
@@ -767,6 +813,9 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
          }
       }
    }
+   
+   if (!fClippedRegion.size())//Completely hidden
+      fClippedRegion.push_back(CGRectMake(0., 0., 0., 0.));
    //The end].
 }
 
