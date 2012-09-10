@@ -873,6 +873,17 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     break;
   }
 
+  case ISD::LIFETIME_START:
+  case ISD::LIFETIME_END: {
+    unsigned TarOp = (Node->getOpcode() == ISD::LIFETIME_START) ?
+    TargetOpcode::LIFETIME_START : TargetOpcode::LIFETIME_END;
+
+    FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Node->getOperand(1));
+    BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TarOp))
+    .addFrameIndex(FI->getIndex());
+    break;
+  }
+
   case ISD::INLINEASM: {
     unsigned NumOps = Node->getNumOperands();
     if (Node->getOperand(NumOps-1).getValueType() == MVT::Glue)
@@ -895,7 +906,6 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     // Remember to operand index of the group flags.
     SmallVector<unsigned, 8> GroupIdx;
-    unsigned PrevDefGroup = 0;
 
     // Add all of the operand registers to the instruction.
     for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
@@ -944,23 +954,10 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
         if (InlineAsm::getKind(Flags) == InlineAsm::Kind_RegUse) {
           unsigned DefGroup = 0;
           if (InlineAsm::isUseOperandTiedToDef(Flags, DefGroup)) {
-            // Check that the def groups are monotonically increasing.
-            // Otherwise, the tied uses and defs won't line up, and
-            // MI::findTiedOperandIdx() will find the wrong operand. This
-            // should be automatically enforced by the front ends when
-            // translating "+" constraints into tied def+use pairs.
-            assert(DefGroup >= PrevDefGroup &&
-                   "Tied inline asm operands must be in increasing order.");
-            PrevDefGroup = DefGroup;
-
             unsigned DefIdx = GroupIdx[DefGroup] + 1;
             unsigned UseIdx = GroupIdx.back() + 1;
-            for (unsigned j = 0; j != NumVals; ++j) {
-              assert(!MI->getOperand(DefIdx + j).isTied() &&
-                     "Def is already tied to another use");
-              MI->getOperand(DefIdx + j).setIsTied();
-              MI->getOperand(UseIdx + j).setIsTied();
-            }
+            for (unsigned j = 0; j != NumVals; ++j)
+              MI->tieOperands(DefIdx + j, UseIdx + j);
           }
         }
         break;

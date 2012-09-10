@@ -282,6 +282,26 @@ void Sema::AddAnyMethodToGlobalPool(Decl *D) {
     AddFactoryMethodToGlobalPool(MDecl, true);
 }
 
+/// StrongPointerToObjCPointer - returns true when pointer to ObjC pointer
+/// is __strong, or when it is any other type. It returns false when
+/// pointer to ObjC pointer is not __strong.
+static bool
+StrongPointerToObjCPointer(Sema &S, ParmVarDecl *Param) {
+  QualType T = Param->getType();
+  if (!T->isObjCIndirectLifetimeType())
+    return true;
+  if (!T->isPointerType() && !T->isReferenceType())
+    return true;
+  T = T->isPointerType() 
+        ? T->getAs<PointerType>()->getPointeeType() 
+        : T->getAs<ReferenceType>()->getPointeeType();
+  if (T->isObjCLifetimeType()) {
+    Qualifiers::ObjCLifetime lifetime = T.getObjCLifetime();
+    return lifetime == Qualifiers::OCL_Strong;
+  }
+  return true;
+}
+
 /// ActOnStartOfObjCMethodDef - This routine sets up parameters; invisible
 /// and user declared, in the method definition's AST.
 void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
@@ -313,6 +333,12 @@ void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
         RequireCompleteType(Param->getLocation(), Param->getType(),
                             diag::err_typecheck_decl_incomplete_type))
           Param->setInvalidDecl();
+    if (!Param->isInvalidDecl() &&
+        getLangOpts().ObjCAutoRefCount &&
+        !StrongPointerToObjCPointer(*this, Param))
+      Diag(Param->getLocation(), diag::warn_arc_strong_pointer_objc_pointer) <<
+            Param->getType();
+    
     if ((*PI)->getIdentifier())
       PushOnScopeChains(*PI, FnBodyScope);
   }
@@ -510,7 +536,7 @@ ActOnStartClassInterface(SourceLocation AtInterfaceLoc,
 
   // Check then save referenced protocols.
   if (NumProtoRefs) {
-    IDecl->setProtocolList((ObjCProtocolDecl**)ProtoRefs, NumProtoRefs,
+    IDecl->setProtocolList((ObjCProtocolDecl*const*)ProtoRefs, NumProtoRefs,
                            ProtoLocs, Context);
     IDecl->setEndOfDefinitionLoc(EndProtoLoc);
   }
@@ -652,7 +678,7 @@ Sema::ActOnStartProtocolInterface(SourceLocation AtProtoInterfaceLoc,
 
   if (!err && NumProtoRefs ) {
     /// Check then save referenced protocols.
-    PDecl->setProtocolList((ObjCProtocolDecl**)ProtoRefs, NumProtoRefs,
+    PDecl->setProtocolList((ObjCProtocolDecl*const*)ProtoRefs, NumProtoRefs,
                            ProtoLocs, Context);
   }
 
@@ -819,11 +845,11 @@ ActOnStartCategoryInterface(SourceLocation AtInterfaceLoc,
   CurContext->addDecl(CDecl);
 
   if (NumProtoRefs) {
-    CDecl->setProtocolList((ObjCProtocolDecl**)ProtoRefs, NumProtoRefs, 
+    CDecl->setProtocolList((ObjCProtocolDecl*const*)ProtoRefs, NumProtoRefs, 
                            ProtoLocs, Context);
     // Protocols in the class extension belong to the class.
     if (CDecl->IsClassExtension())
-     IDecl->mergeClassExtensionProtocolList((ObjCProtocolDecl**)ProtoRefs, 
+     IDecl->mergeClassExtensionProtocolList((ObjCProtocolDecl*const*)ProtoRefs, 
                                             NumProtoRefs, Context); 
   }
 

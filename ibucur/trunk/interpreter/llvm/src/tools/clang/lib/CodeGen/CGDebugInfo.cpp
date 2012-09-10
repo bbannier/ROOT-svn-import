@@ -157,7 +157,7 @@ StringRef CGDebugInfo::getObjCMethodName(const ObjCMethodDecl *OMD) {
       OS << OID->getName();
   } else if (const ObjCCategoryImplDecl *OCD = 
              dyn_cast<const ObjCCategoryImplDecl>(DC)){
-      OS << ((NamedDecl *)OCD)->getIdentifier()->getNameStart() << '(' <<
+      OS << ((const NamedDecl *)OCD)->getIdentifier()->getNameStart() << '(' <<
           OCD->getIdentifier()->getNameStart() << ')';
   }
   OS << ' ' << OMD->getSelector().getAsString() << ']';
@@ -523,7 +523,7 @@ llvm::DIType CGDebugInfo::createRecordFwdDecl(const RecordDecl *RD,
     RDName = getClassName(RD);
     Tag = llvm::dwarf::DW_TAG_class_type;
   }
-  else if (RD->isStruct())
+  else if (RD->isStruct() || RD->isInterface())
     Tag = llvm::dwarf::DW_TAG_structure_type;
   else if (RD->isUnion())
     Tag = llvm::dwarf::DW_TAG_union_type;

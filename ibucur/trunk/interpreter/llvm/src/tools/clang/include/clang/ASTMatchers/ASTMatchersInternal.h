@@ -40,6 +40,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/ASTMatchers/ASTTypeTraits.h"
 #include "llvm/ADT/VariadicFunction.h"
 #include "llvm/Support/type_traits.h"
 #include <map>
@@ -59,85 +60,6 @@ class BoundNodes;
 namespace internal {
 
 class BoundNodesTreeBuilder;
-
-/// \brief Indicates the base type of a bound AST node.
-///
-/// Used for storing nodes as void*.
-/// If you are adding an element to this enum, you must also update
-/// get_base_type and the list of NodeBaseTypeUtil specializations.
-enum NodeBaseType {
-  NT_Decl,
-  NT_Stmt,
-  NT_QualType,
-  NT_Unknown
-};
-
-/// \brief Macro for adding a base type to get_base_type.
-#define GET_BASE_TYPE(BaseType, NextBaseType) \
-  typename llvm::conditional<llvm::is_base_of<BaseType, T>::value, BaseType, \
-                             NextBaseType>::type
-
-/// \brief Meta-template to get base class of a node.
-template <typename T>
-struct get_base_type {
-  typedef GET_BASE_TYPE(Decl,
-          GET_BASE_TYPE(Stmt,
-          GET_BASE_TYPE(QualType,
-          void))) type;
-};
-
-/// \brief Utility to manipulate nodes of a given base type.
-///
-/// We use template specialization on the node base type to enable us to
-/// get at the appopriate NodeBaseType objects and do approrpiate static_casts.
-template <typename BaseType>
-struct NodeBaseTypeUtil {
-  /// \brief Returns the NodeBaseType corresponding to \c BaseType.
-  static NodeBaseType getNodeBaseType() {
-    return NT_Unknown;
-  }
-
-  /// \brief Casts \c Node to \c T if \c ActualBaseType matches \c BaseType.
-  /// Otherwise, NULL is returned.
-  template <typename T>
-  static const T* castNode(const NodeBaseType &ActualBaseType,
-                           const void *Node) {
-    return NULL;
-  }
-};
-
-/// \brief Macro for adding a template specialization of NodeBaseTypeUtil.
-#define NODE_BASE_TYPE_UTIL(BaseType) \
-template <>                                                           \
-struct NodeBaseTypeUtil<BaseType> {                                   \
-  static NodeBaseType getNodeBaseType() {                             \
-    return NT_##BaseType;                                             \
-  }                                                                   \
-                                                                      \
-  template <typename T>                                               \
-  static const T *castNode(const NodeBaseType &ActualBaseType,        \
-                           const void *Node) {                        \
-    if (ActualBaseType == NT_##BaseType) {                            \
-      return llvm::dyn_cast<T>(static_cast<const BaseType*>(Node));   \
-    } else {                                                          \
-      return NULL;                                                    \
-    }                                                                 \
-  }                                                                   \
-}
-
-/// \brief Template specialization of NodeBaseTypeUtil. See main definition.
-/// @{
-NODE_BASE_TYPE_UTIL(Decl);
-NODE_BASE_TYPE_UTIL(Stmt);
-NODE_BASE_TYPE_UTIL(QualType);
-/// @}
-
-/// \brief Gets the NodeBaseType of a node with type \c T.
-template <typename T>
-static NodeBaseType getBaseType(const T*) {
-  return NodeBaseTypeUtil<typename get_base_type<T>::type>::getNodeBaseType();
-}
-
 /// \brief Internal version of BoundNodes. Holds all the bound nodes.
 class BoundNodesMap {
 public:
@@ -146,7 +68,10 @@ public:
   /// The node's base type should be in NodeBaseType or it will be unaccessible.
   template <typename T>
   void addNode(StringRef ID, const T* Node) {
-    NodeMap[ID] = std::make_pair(getBaseType(Node), Node);
+    NodeMap[ID] = ast_type_traits::DynTypedNode::create(*Node);
+  }
+  void addNode(StringRef ID, ast_type_traits::DynTypedNode Node) {
+    NodeMap[ID] = Node;
   }
 
   /// \brief Returns the AST node bound to \c ID.
@@ -159,9 +84,7 @@ public:
     if (It == NodeMap.end()) {
       return NULL;
     }
-
-    return NodeBaseTypeUtil<typename get_base_type<T>::type>::
-        template castNode<T>(It->second.first, It->second.second);
+    return It->second.get<T>();
   }
 
   /// \brief Copies all ID/Node pairs to BoundNodesTreeBuilder \c Builder.
@@ -171,11 +94,8 @@ public:
   void copyTo(BoundNodesMap *Other) const;
 
 private:
-  /// \brief A node and its base type.
-  typedef std::pair<NodeBaseType, const void*> NodeTypePair;
-
-  /// \brief A map from IDs to node/type pairs.
-  typedef std::map<std::string, NodeTypePair> IDToNodeMap;
+  /// \brief A map from IDs to the bound nodes.
+  typedef std::map<std::string, ast_type_traits::DynTypedNode> IDToNodeMap;
 
   IDToNodeMap NodeMap;
 };
@@ -243,6 +163,9 @@ public:
   void setBinding(const std::string &Id, const T *Node) {
     Bindings.addNode(Id, Node);
   }
+  void setBinding(const std::string &Id, ast_type_traits::DynTypedNode Node) {
+    Bindings.addNode(Id, Node);
+  }
 
   /// \brief Adds a branch in the tree.
   void addMatch(const BoundNodesTree& Bindings);
@@ -282,7 +205,8 @@ public:
                        BoundNodesTreeBuilder *Builder) const = 0;
 };
 
-/// \brief Interface for matchers that only evaluate properties on a single node.
+/// \brief Interface for matchers that only evaluate properties on a single
+/// node.
 template <typename T>
 class SingleNodeMatcherInterface : public MatcherInterface<T> {
 public:
@@ -300,6 +224,24 @@ private:
   }
 };
 
+/// \brief Base class for all matchers that works on a \c DynTypedNode.
+///
+/// Matcher implementations will check whether the \c DynTypedNode is
+/// convertible into the respecitve types and then do the actual match
+/// on the actual node, or return false if it is not convertible.
+class DynTypedMatcher {
+public:
+  virtual ~DynTypedMatcher() {}
+
+  /// \brief Returns true if the matcher matches the given \c DynNode.
+  virtual bool matches(const ast_type_traits::DynTypedNode DynNode,
+                       ASTMatchFinder *Finder,
+                       BoundNodesTreeBuilder *Builder) const = 0;
+
+  /// \brief Returns a unique ID for the matcher.
+  virtual uint64_t getID() const = 0;
+};
+
 /// \brief Wrapper of a MatcherInterface<T> *that allows copying.
 ///
 /// A Matcher<Base> can be used anywhere a Matcher<Derived> is
@@ -309,7 +251,7 @@ private:
 /// operator rather than a type hierarchy to be able to templatize the
 /// type hierarchy instead of spelling it out.
 template <typename T>
-class Matcher {
+class Matcher : public DynTypedMatcher {
 public:
   /// \brief Takes ownership of the provided implementation pointer.
   explicit Matcher(MatcherInterface<T> *Implementation)
@@ -335,6 +277,15 @@ public:
     /// FIXME: Document the requirements this imposes on matcher
     /// implementations (no new() implementation_ during a Matches()).
     return reinterpret_cast<uint64_t>(Implementation.getPtr());
+  }
+
+  /// \brief Returns whether the matcher matches on the given \c DynNode.
+  virtual bool matches(const ast_type_traits::DynTypedNode DynNode,
+                       ASTMatchFinder *Finder,
+                       BoundNodesTreeBuilder *Builder) const {
+    const T *Node = DynNode.get<T>();
+    if (!Node) return false;
+    return matches(*Node, Finder, Builder);
   }
 
 private:
@@ -421,7 +372,8 @@ private:
 };
 
 /// \brief IsBaseType<T>::value is true if T is a "base" type in the AST
-/// node class hierarchies (i.e. if T is Decl, Stmt, or QualType).
+/// node class hierarchies (i.e. if T is Decl, Stmt, QualType, or
+/// CXXCtorInitializer).
 template <typename T>
 struct IsBaseType {
   static const bool value =
@@ -432,65 +384,6 @@ struct IsBaseType {
 };
 template <typename T>
 const bool IsBaseType<T>::value;
-
-/// \brief Interface that can match any AST base node type and contains default
-/// implementations returning false.
-class UntypedBaseMatcher : public llvm::RefCountedBaseVPTR {
-public:
-  virtual ~UntypedBaseMatcher() {}
-
-  virtual bool matches(const Decl &DeclNode, ASTMatchFinder *Finder,
-                       BoundNodesTreeBuilder *Builder) const {
-    return false;
-  }
-  virtual bool matches(const QualType &TypeNode, ASTMatchFinder *Finder,
-                       BoundNodesTreeBuilder *Builder) const {
-    return false;
-  }
-  virtual bool matches(const Stmt &StmtNode, ASTMatchFinder *Finder,
-                       BoundNodesTreeBuilder *Builder) const {
-    return false;
-  }
-  virtual bool matches(const CXXCtorInitializer &CtorInitNode,
-                       ASTMatchFinder *Finder,
-                       BoundNodesTreeBuilder *Builder) const {
-    return false;
-  }
-
-  /// \brief Returns a unique ID for the matcher.
-  virtual uint64_t getID() const = 0;
-};
-
-/// \brief An UntypedBaseMatcher that overwrites the Matches(...) method for
-/// node type T. T must be an AST base type.
-template <typename T>
-class TypedBaseMatcher : public UntypedBaseMatcher {
-  TOOLING_COMPILE_ASSERT(IsBaseType<T>::value,
-                         typed_base_matcher_can_only_be_used_with_base_type);
-public:
-  explicit TypedBaseMatcher(const Matcher<T> &InnerMatcher)
-      : InnerMatcher(InnerMatcher) {}
-
-  using UntypedBaseMatcher::matches;
-  /// \brief Implements UntypedBaseMatcher::Matches.
-  ///
-  /// Since T is guaranteed to be a "base" AST node type, this method is
-  /// guaranteed to override one of the matches() methods from
-  /// UntypedBaseMatcher.
-  virtual bool matches(const T &Node,
-                       ASTMatchFinder *Finder,
-                       BoundNodesTreeBuilder *Builder) const {
-    return InnerMatcher.matches(Node, Finder, Builder);
-  }
-
-  /// \brief Implements UntypedBaseMatcher::getID.
-  virtual uint64_t getID() const {
-    return InnerMatcher.getID();
-  }
-
-private:
-  Matcher<T> InnerMatcher;
-};
 
 /// \brief Interface that allows matchers to traverse the AST.
 /// FIXME: Find a better name.
@@ -531,24 +424,41 @@ public:
                                   const Matcher<NamedDecl> &Base,
                                   BoundNodesTreeBuilder *Builder) = 0;
 
+  template <typename T>
+  bool matchesChildOf(const T &Node,
+                      const DynTypedMatcher &Matcher,
+                      BoundNodesTreeBuilder *Builder,
+                      TraversalKind Traverse,
+                      BindKind Bind) {
+    TOOLING_COMPILE_ASSERT((llvm::is_base_of<Decl, T>::value ||
+                            llvm::is_base_of<Stmt, T>::value),
+                           only_Decl_or_Stmt_allowed_for_recursive_matching);
+    return matchesChildOf(ast_type_traits::DynTypedNode::create(Node),
+                          Matcher, Builder, Traverse, Bind);
+  }
+
+  template <typename T>
+  bool matchesDescendantOf(const T &Node,
+                           const DynTypedMatcher &Matcher,
+                           BoundNodesTreeBuilder *Builder,
+                           BindKind Bind) {
+    TOOLING_COMPILE_ASSERT((llvm::is_base_of<Decl, T>::value ||
+                            llvm::is_base_of<Stmt, T>::value),
+                           only_Decl_or_Stmt_allowed_for_recursive_matching);
+    return matchesDescendantOf(ast_type_traits::DynTypedNode::create(Node),
+                               Matcher, Builder, Bind);
+  }
+
+protected:
   // FIXME: Implement for other base nodes.
-  virtual bool matchesChildOf(const Decl &DeclNode,
-                              const UntypedBaseMatcher &BaseMatcher,
-                              BoundNodesTreeBuilder *Builder,
-                              TraversalKind Traverse,
-                              BindKind Bind) = 0;
-  virtual bool matchesChildOf(const Stmt &StmtNode,
-                              const UntypedBaseMatcher &BaseMatcher,
+  virtual bool matchesChildOf(const ast_type_traits::DynTypedNode &Node,
+                              const DynTypedMatcher &Matcher,
                               BoundNodesTreeBuilder *Builder,
                               TraversalKind Traverse,
                               BindKind Bind) = 0;
 
-  virtual bool matchesDescendantOf(const Decl &DeclNode,
-                                   const UntypedBaseMatcher &BaseMatcher,
-                                   BoundNodesTreeBuilder *Builder,
-                                   BindKind Bind) = 0;
-  virtual bool matchesDescendantOf(const Stmt &StmtNode,
-                                   const UntypedBaseMatcher &BaseMatcher,
+  virtual bool matchesDescendantOf(const ast_type_traits::DynTypedNode &Node,
+                                   const DynTypedMatcher &Matcher,
                                    BoundNodesTreeBuilder *Builder,
                                    BindKind Bind) = 0;
 };
@@ -748,7 +658,7 @@ public:
   }
 
  private:
-  const TypedBaseMatcher<ChildT> ChildMatcher;
+  const Matcher<ChildT> ChildMatcher;
 };
 
 /// \brief Matches nodes of type T that have child nodes of type ChildT for
@@ -774,7 +684,7 @@ class ForEachMatcher : public MatcherInterface<T> {
   }
 
 private:
-  const TypedBaseMatcher<ChildT> ChildMatcher;
+  const Matcher<ChildT> ChildMatcher;
 };
 
 /// \brief Matches nodes of type T if the given Matcher<T> does not match.
@@ -888,7 +798,7 @@ public:
   }
 
  private:
-  const TypedBaseMatcher<DescendantT> DescendantMatcher;
+  const Matcher<DescendantT> DescendantMatcher;
 };
 
 /// \brief Matches nodes of type T that have at least one descendant node of
@@ -914,7 +824,7 @@ class ForEachDescendantMatcher : public MatcherInterface<T> {
   }
 
 private:
-  const TypedBaseMatcher<DescendantT> DescendantMatcher;
+  const Matcher<DescendantT> DescendantMatcher;
 };
 
 /// \brief Matches on nodes that have a getValue() method if getValue() equals
