@@ -718,12 +718,9 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
    //Also, my case is more simple: gdk and pixman substract region (== set of rectangles)
    //from another region, I have to substract region from _one_ rectangle.
 
-   //This is quite stupid implementation - I'm calculation rectangles, which form
-   //the 'rect' - 'rectsToClip'.
-   //Still, I think it's more optimal than my first version, which was _masking_ _pixels_,
-   //and at the end was terribly expensive despite of my initial hopes (big masks, millions pixels
-   //to set :) ).
-   //TODO: benchmark this "cauchemar" and find something not so lame :)
+   //This is quite straightforward implementation - I'm calculation rectangles, which are part of
+   //a widget's rect, not hidden by any of fRectsToClip.
+   //TODO: find a better algorithm.
    typedef std::vector<WidgetRect>::const_iterator rect_const_iterator;
    typedef std::vector<bool>::size_type size_type;
 
@@ -741,10 +738,10 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
          return;
       }
    
-      if (recIt->x1 > rect.x1)//upper limit is tested already (input validation).
+      if (recIt->x1 > rect.x1)//recIt->x1 is always < rect.x2 (input validation).
          fXBounds.push_back(recIt->x1);
 
-      if (recIt->x2 < rect.x2)//lower limit is tested already (input validation).
+      if (recIt->x2 < rect.x2)//recIt->x2 is always > rect.x1 (input validation).
          fXBounds.push_back(recIt->x2);
 
       if (recIt->y1 > rect.y1)
@@ -762,18 +759,13 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
    const int_iterator yBoundsEnd = std::unique(fYBounds.begin(), fYBounds.end());
    //Rectangle is now "cut into pieces"].
 
-   //["Mark the grid" - find intersections.
    const size_type nXBands = size_type(xBoundsEnd - fXBounds.begin()) + 1;
    const size_type nYBands = size_type(yBoundsEnd - fYBounds.begin()) + 1;
 
    fGrid.assign(nXBands * nYBands, false);
 
-   //Uff, the first quite horrible part :))
-   //Do not even want to think about big-O :)
-   //And yes, C++'s lower_bound/binary_search sucks endlessly.
-   //I need a normal binary_search, which returns an iterator (with *iterator == value or iterator == last), not a bool :(
+   //Mark the overlapped parts.
    for (rect_const_iterator recIt = fRectsToClip.begin(), endIt = fRectsToClip.end(); recIt != endIt; ++recIt) {
-
       const int_iterator left = BinarySearchLeft(fXBounds.begin(), xBoundsEnd, recIt->x1);
       const size_type firstXBand = left == xBoundsEnd ? 0 : left - fXBounds.begin() + 1;
       
@@ -792,11 +784,9 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
             fGrid[baseIndex + j] = true;
       }
    }
-   //Grid is ready].
    
-   //[Create rectangles - check the grid.
-   //Even more nightmarish part :))) And I do not merge rectangles.
-   //Help me God!
+   //I do not merge rectangles.
+   //Search for non-overlapped parts and create rectangles for them.
    CGRect newRect = {};
 
    for (size_type i = 0; i < nYBands; ++i) {
@@ -816,7 +806,6 @@ void CommandBuffer::BuildClipRegion(const WidgetRect &rect)
    
    if (!fClippedRegion.size())//Completely hidden
       fClippedRegion.push_back(CGRectMake(0., 0., 0., 0.));
-   //The end].
 }
 
 }//X11
