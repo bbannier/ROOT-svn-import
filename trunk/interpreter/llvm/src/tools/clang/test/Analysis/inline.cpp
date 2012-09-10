@@ -268,19 +268,34 @@ namespace OperatorNew {
   }
 }
 
-namespace TemporaryConstructor {
-  class BoolWrapper {
-  public:
-    BoolWrapper() {
-      clang_analyzer_checkInlined(true); // expected-warning{{TRUE}}
-      value = true;
-    }
-    bool value;
+
+namespace VirtualWithSisterCasts {
+  struct Parent {
+    virtual int foo();
   };
 
-  void test() {
-    // PR13717 - Don't crash when a CXXTemporaryObjectExpr is inlined.
-    if (BoolWrapper().value)
-      return;
+  struct A : Parent {
+    virtual int foo() { return 42; }
+  };
+
+  struct B : Parent {
+    virtual int foo();
+  };
+
+  struct Unrelated {};
+
+  void testDowncast(Parent *b) {
+    A *a = (A *)(void *)b;
+    clang_analyzer_eval(a->foo() == 42); // expected-warning{{UNKNOWN}}
+  }
+
+  void testRelated(B *b) {
+    A *a = (A *)(void *)b;
+    clang_analyzer_eval(a->foo() == 42); // expected-warning{{UNKNOWN}}
+  }
+
+  void testUnrelated(Unrelated *b) {
+    A *a = (A *)(void *)b;
+    clang_analyzer_eval(a->foo() == 42); // expected-warning{{UNKNOWN}}
   }
 }

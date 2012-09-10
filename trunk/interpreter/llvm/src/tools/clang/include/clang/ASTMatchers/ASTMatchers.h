@@ -65,6 +65,7 @@ namespace ast_matchers {
 class BoundNodes {
 public:
   /// \brief Returns the AST node bound to \c ID.
+  ///
   /// Returns NULL if there was no node bound to \c ID or if there is a node but
   /// it cannot be converted to the specified type.
   template <typename T>

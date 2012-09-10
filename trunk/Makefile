@@ -513,11 +513,6 @@ endif
 
 ##### libCore #####
 
-ifeq ($(BUILDCLING),yes)
-CORELIBEXTRA    += $(CLINGLIBEXTRA)
-STATICEXTRALIBS += $(CLINGLIBEXTRA)
-endif
-
 COREL         = $(BASEL1) $(BASEL2) $(BASEL3) $(CONTL) $(METAL) $(ZIPL) \
                 $(SYSTEML) $(CLIBL) $(METAUTILSL) $(TEXTINPUTL)
 COREO         = $(BASEO) $(CONTO) $(METAO) $(SYSTEMO) $(ZIPO) $(LZMAO) \
@@ -825,11 +820,11 @@ endif
 $(CORELIB): $(CLINGO) $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(CLINGO) $(CLINGLIBEXTRA) $(COREO) $(COREDO)" \
+	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREDO) $(COREO) $(CLINGO) $(CLINGLIBEXTRA) " \
 	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 else
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(CLINGO) $(CLINGLIBEXTRA) $(COREO) $(COREDO)" \
+	   "$(SOFLAGS)" libCore.$(SOEXT) $@ " $(COREDO) $(COREO) $(CLINGO) $(CLINGLIBEXTRA) " \
 	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
