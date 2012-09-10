@@ -4,7 +4,7 @@ As I do not have per-view backing store (only per-top-level-window), I have to e
 standard window behaviour: if some overlapped window is repainted, overlapped parts
 should not be touched.
 
-TEST1-TEST5 - only children are tested.
+TEST1-TEST8 - only children are tested.
 
 TEST1:
 
@@ -34,3 +34,20 @@ Window 5 and 6 (children of 4) overlaps completely two bands in a window 4 (maki
 TEST6:
 
 Window id==4 has 4 children.
+
+TEST7:
+
+Visible are of window 4 is a more complex shape (3 children are subtracted making one complex "hole").
+
+TEST8:
+
+5 children are making cross-like "hole in a parent window".
+
+Tests with siblings (and siblings of ancestors).
+
+TEST9:
+
+Window 4 has to children: 5 and 8, 8 overlaps 5. 5 can be repainted on a button click,
+its area is clipped by sibling 8 and child 6. Child 6 can also be repainted on a click,
+it's area is also clipped by: child 7 and by sibling of its parent - 8.
+
