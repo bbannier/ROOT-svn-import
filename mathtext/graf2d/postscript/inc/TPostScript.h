@@ -86,6 +86,8 @@ protected:
    Int_t   fLastCellGreen;   //Last green value
    Int_t   fLastCellBlue;    //Last blue value
    Int_t   fNBSameColorCell; //Number of boxes with the same color
+   TString fFileName;        //PS file name
+   Bool_t  fFontEmbed;       //True is FontEmbed has been called
 
    static Int_t fgLineJoin;  //Appearance of joining lines
 

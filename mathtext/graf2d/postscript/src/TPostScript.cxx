@@ -322,6 +322,8 @@ TPostScript::TPostScript() : TVirtualPS()
    fYVS2            = 0.;
    fYsize           = 0.;
    fZone            = kFALSE;
+   fFileName        = "";
+   fFontEmbed       = kFALSE;
    for (Int_t i=0; i<32; i++) fPatterns[i]=0;
    SetTitle("PS");
 }
@@ -368,6 +370,7 @@ void TPostScript::Open(const char *fname, Int_t wtype)
    fClear         = kTRUE;
    fZone          = kFALSE;
    fSave          = 0;
+   fFontEmbed     = kFALSE;
    SetLineScale(gStyle->GetLineScalePS());
    gStyle->GetPaperSize(fXsize, fYsize);
    fMode          = fType%10;
@@ -393,9 +396,10 @@ void TPostScript::Open(const char *fname, Int_t wtype)
    }
 
    // open OS file
-   fStream = new std::ofstream(fname,std::ios::out);
-   if (fStream == 0 || gSystem->AccessPathName(fname,kWritePermission)) {
-      printf("ERROR in TPostScript::Open: Cannot open file:%s\n",fname);
+   fFileName = fname;
+   fStream = new std::ofstream(fFileName.Data(),std::ios::out);
+   if (fStream == 0 || gSystem->AccessPathName(fFileName.Data(),kWritePermission)) {
+      printf("ERROR in TPostScript::Open: Cannot open file:%s\n",fFileName.Data());
       return;
    }
    gVirtualPS = this;
@@ -455,6 +459,8 @@ void TPostScript::Close(Option_t *)
    }
    PrintStr("@");
    PrintStr("%%EOF@");
+   
+   fFontEmbed = kFALSE;
 
    // Close file stream
 
@@ -1572,20 +1578,22 @@ void TPostScript::FontEmbed(void)
 			delete [] ttfont;
 		}
 	}
-	PrintStr("%%IncludeResource: font Times-Roman@");
-	PrintStr("%%IncludeResource: font Times-Italic@");
-	PrintStr("%%IncludeResource: font Times-Bold@");
-	PrintStr("%%IncludeResource: font Times-BoldItalic@");
-	PrintStr("%%IncludeResource: font Helvetica@");
-	PrintStr("%%IncludeResource: font Helvetica-Oblique@");
-	PrintStr("%%IncludeResource: font Helvetica-Bold@");
-	PrintStr("%%IncludeResource: font Helvetica-BoldOblique@");
-	PrintStr("%%IncludeResource: font Courier@");
-	PrintStr("%%IncludeResource: font Courier-Oblique@");
-	PrintStr("%%IncludeResource: font Courier-Bold@");
-	PrintStr("%%IncludeResource: font Courier-BoldOblique@");
-	PrintStr("%%IncludeResource: font Symbol@");
-	PrintStr("%%IncludeResource: font ZapfDingbats@");
+   PrintStr("%%IncludeResource: font Times-Roman@");
+   PrintStr("%%IncludeResource: font Times-Italic@");
+   PrintStr("%%IncludeResource: font Times-Bold@");
+   PrintStr("%%IncludeResource: font Times-BoldItalic@");
+   PrintStr("%%IncludeResource: font Helvetica@");
+   PrintStr("%%IncludeResource: font Helvetica-Oblique@");
+   PrintStr("%%IncludeResource: font Helvetica-Bold@");
+   PrintStr("%%IncludeResource: font Helvetica-BoldOblique@");
+   PrintStr("%%IncludeResource: font Courier@");
+   PrintStr("%%IncludeResource: font Courier-Oblique@");
+   PrintStr("%%IncludeResource: font Courier-Bold@");
+   PrintStr("%%IncludeResource: font Courier-BoldOblique@");
+   PrintStr("%%IncludeResource: font Symbol@");
+   PrintStr("%%IncludeResource: font ZapfDingbats@");
+	
+   fFontEmbed = kTRUE;
 }
 
 
@@ -1780,7 +1788,7 @@ void TPostScript::Initialize()
    PrintStr("/ita {/ang 15 def gsave [1 0 ang dup sin exch cos div 1 0 0] concat} def @");
 
    DefineMarkers();
-   FontEmbed();
+
    FontEncode();
 
    // mode=1 for portrait black/white
@@ -2794,6 +2802,38 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
    Double_t x = xx;
    Double_t y = yy;
    if (!gPad) return;
+   
+   if (!fFontEmbed) {      
+      // Close the the file fFileName
+      if (fStream) {
+         PrintStr("@"); 
+         fStream->close(); delete fStream; fStream = 0;
+      }
+      
+      // Rename the file fFileName
+      TString tmpname = Form("tmp_%d_%s",gSystem->GetPid(),fFileName.Data());
+      if (gSystem->Rename( fFileName.Data() , tmpname.Data())) return;
+
+      // Reopen the file fFileName
+      fStream = new std::ofstream(fFileName.Data(),std::ios::out);
+      if (fStream == 0 || gSystem->AccessPathName(fFileName.Data(),kWritePermission)) {
+         printf("ERROR in TPostScript::Open: Cannot open file:%s\n",fFileName.Data());
+         return;
+      }
+      
+      // Embed the fonts at the right place
+      FILE *sg = fopen(tmpname.Data(),"r");
+      char line[255];
+      while (fgets(line,255,sg)) {
+         fStream->write(line,strlen(line));
+         if (!fFontEmbed && strstr(line,"m5")) {
+            FontEmbed();
+            PrintStr("@"); 
+         }
+      }
+      fclose(sg);
+      if (gSystem->Unlink(tmpname.Data())) return; 
+   }
 
    // Compute the font size. Exit if it is 0
    // The font size is computed from the TTF size to get exactly the same
