@@ -129,12 +129,6 @@
 //Life-cycle.
 - (id) initWithFrame : (NSRect) frame windowAttributes : (const SetWindowAttributes_t *) attr;
 
-//Clip mask - to deal with overlaps.
-@property (nonatomic, assign) BOOL fClipMaskIsValid;
-- (BOOL) initClipMask;
-- (QuartzImage *) fClipMask;
-- (void) addOverlap : (NSRect)overlapRect;
-
 //X11Drawable protocol.
 
 @property (nonatomic, assign) unsigned fID;
