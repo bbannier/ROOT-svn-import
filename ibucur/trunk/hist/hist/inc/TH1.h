@@ -388,10 +388,10 @@ public:
    void             UseCurrentStyle();
    static  TH1     *TransformHisto(TVirtualFFT *fft, TH1* h_output,  Option_t *option);
 
-   ClassDef(TH1,7)  //1-Dim histogram base class
-
 protected: 
    virtual void     UpdateBinContent(Int_t bin, Double_t content);
+
+   ClassDef(TH1,7)  //1-Dim histogram base class
 };
 
 //________________________________________________________________________
@@ -404,6 +404,7 @@ public:
    TH1C(const char *name,const char *title,Int_t nbinsx,const Float_t  *xbins);
    TH1C(const char *name,const char *title,Int_t nbinsx,const Double_t *xbins);
    TH1C(const TH1C &h1c);
+   TH1C& operator=(const TH1C &h1);
    virtual ~TH1C();
 
    virtual void     AddBinContent(Int_t bin);
@@ -415,28 +416,19 @@ public:
    virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
-           TH1C&    operator=(const TH1C &h1);
-
-   ClassDef(TH1C,1)  //1-Dim histograms (one char per channel)
-
-   friend  TH1C     operator*(Double_t c1, const TH1C &h1);
-   friend  TH1C     operator*(const TH1C &h1, Double_t c1);
-   friend  TH1C     operator+(const TH1C &h1, const TH1C &h2);
-   friend  TH1C     operator-(const TH1C &h1, const TH1C &h2);
-   friend  TH1C     operator*(const TH1C &h1, const TH1C &h2);
-   friend  TH1C     operator/(const TH1C &h1, const TH1C &h2);
+           TH1C     operator*(Double_t c) const;
+           TH1C     operator+(const TH1C &h) const;
+           TH1C     operator-(const TH1C &h) const;
+           TH1C     operator*(const TH1C &h) const;
+           TH1C     operator/(const TH1C &h) const;
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Char_t (content); }
+   
+   ClassDef(TH1C,1)  //1-Dim histograms (one char per channel)
 };
 
-TH1C operator*(Double_t c1, const TH1C &h1);
-inline
-TH1C operator*(const TH1C &h1, Double_t c1) {return operator*(c1,h1);}
-TH1C operator+(const TH1C &h1, const TH1C &h2);
-TH1C operator-(const TH1C &h1, const TH1C &h2);
-TH1C operator*(const TH1C &h1, const TH1C &h2);
-TH1C operator/(const TH1C &h1, const TH1C &h2);
+inline TH1C operator*(Double_t c, const TH1C &h) {return h.operator*(c);}
 
 //________________________________________________________________________
 
@@ -448,6 +440,7 @@ public:
    TH1S(const char *name,const char *title,Int_t nbinsx,const Float_t  *xbins);
    TH1S(const char *name,const char *title,Int_t nbinsx,const Double_t *xbins);
    TH1S(const TH1S &h1s);
+   TH1S& operator=(const TH1S &h1);
    virtual ~TH1S();
 
    virtual void     AddBinContent(Int_t bin);
@@ -459,28 +452,19 @@ public:
    virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
-           TH1S&    operator=(const TH1S &h1);
-
-   ClassDef(TH1S,1)  //1-Dim histograms (one short per channel)
-
-   friend  TH1S     operator*(Double_t c1, const TH1S &h1);
-   friend  TH1S     operator*(const TH1S &h1, Double_t c1);
-   friend  TH1S     operator+(const TH1S &h1, const TH1S &h2);
-   friend  TH1S     operator-(const TH1S &h1, const TH1S &h2);
-   friend  TH1S     operator*(const TH1S &h1, const TH1S &h2);
-   friend  TH1S     operator/(const TH1S &h1, const TH1S &h2);
+           TH1S     operator*(Double_t c) const;
+           TH1S     operator+(const TH1S &h) const;
+           TH1S     operator-(const TH1S &h) const;
+           TH1S     operator*(const TH1S &h) const;
+           TH1S     operator/(const TH1S &h) const;
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Short_t (content); } 
+
+   ClassDef(TH1S,1)  //1-Dim histograms (one short per channel)
 };
 
-TH1S operator*(Double_t c1, const TH1S &h1);
-inline
-TH1S operator*(const TH1S &h1, Double_t c1) {return operator*(c1,h1);}
-TH1S operator+(const TH1S &h1, const TH1S &h2);
-TH1S operator-(const TH1S &h1, const TH1S &h2);
-TH1S operator*(const TH1S &h1, const TH1S &h2);
-TH1S operator/(const TH1S &h1, const TH1S &h2);
+inline TH1S operator*(Double_t c, const TH1S &h) {return h.operator*(c);}
 
 //________________________________________________________________________
 
@@ -492,6 +476,7 @@ public:
    TH1I(const char *name,const char *title,Int_t nbinsx,const Float_t  *xbins);
    TH1I(const char *name,const char *title,Int_t nbinsx,const Double_t *xbins);
    TH1I(const TH1I &h1i);
+   TH1I& operator=(const TH1I &h1);
    virtual ~TH1I();
 
    virtual void     AddBinContent(Int_t bin);
@@ -503,28 +488,19 @@ public:
    virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
-           TH1I&    operator=(const TH1I &h1);
-
-   ClassDef(TH1I,1)  //1-Dim histograms (one 32 bits integer per channel)
-
-   friend  TH1I     operator*(Double_t c1, const TH1I &h1);
-   friend  TH1I     operator*(const TH1I &h1, Double_t c1);
-   friend  TH1I     operator+(const TH1I &h1, const TH1I &h2);
-   friend  TH1I     operator-(const TH1I &h1, const TH1I &h2);
-   friend  TH1I     operator*(const TH1I &h1, const TH1I &h2);
-   friend  TH1I     operator/(const TH1I &h1, const TH1I &h2);
+           TH1I     operator*(Double_t c) const;
+           TH1I     operator+(const TH1I &h) const;
+           TH1I     operator-(const TH1I &h) const;
+           TH1I     operator*(const TH1I &h) const;
+           TH1I     operator/(const TH1I &h) const;
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Int_t (content); }
+
+   ClassDef(TH1I,1)  //1-Dim histograms (one 32 bits integer per channel)
 };
 
-TH1I operator*(Double_t c1, const TH1I &h1);
-inline
-TH1I operator*(const TH1I &h1, Double_t c1) {return operator*(c1,h1);}
-TH1I operator+(const TH1I &h1, const TH1I &h2);
-TH1I operator-(const TH1I &h1, const TH1I &h2);
-TH1I operator*(const TH1I &h1, const TH1I &h2);
-TH1I operator/(const TH1I &h1, const TH1I &h2);
+inline TH1I operator*(Double_t c, const TH1I &h) {return h.operator*(c);}
 
 //________________________________________________________________________
 
@@ -537,6 +513,7 @@ public:
    TH1F(const char *name,const char *title,Int_t nbinsx,const Double_t *xbins);
    TH1F(const TVectorF &v);
    TH1F(const TH1F &h1f);
+   TH1F& operator=(const TH1F &h1);
    virtual ~TH1F();
 
    virtual void     AddBinContent(Int_t bin) {++fArray[bin];}
@@ -549,28 +526,19 @@ public:
    virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
-           TH1F&    operator=(const TH1F &h1);
-
-   ClassDef(TH1F,1)  //1-Dim histograms (one float per channel)
-
-   friend  TH1F     operator*(Double_t c1, const TH1F &h1);
-   friend  TH1F     operator*(const TH1F &h1, Double_t c1);
-   friend  TH1F     operator+(const TH1F &h1, const TH1F &h2);
-   friend  TH1F     operator-(const TH1F &h1, const TH1F &h2);
-   friend  TH1F     operator*(const TH1F &h1, const TH1F &h2);
-   friend  TH1F     operator/(const TH1F &h1, const TH1F &h2);
+           TH1F     operator*(Double_t c) const;
+           TH1F     operator+(const TH1F &h) const;
+           TH1F     operator-(const TH1F &h) const;
+           TH1F     operator*(const TH1F &h) const;
+           TH1F     operator/(const TH1F &h) const;
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Float_t (content); }
+
+   ClassDef(TH1F,1)  //1-Dim histograms (one float per channel)
 };
 
-TH1F operator*(Double_t c1, const TH1F &h1);
-inline
-TH1F operator*(const TH1F &h1, Double_t c1) {return operator*(c1,h1);}
-TH1F operator+(const TH1F &h1, const TH1F &h2);
-TH1F operator-(const TH1F &h1, const TH1F &h2);
-TH1F operator*(const TH1F &h1, const TH1F &h2);
-TH1F operator/(const TH1F &h1, const TH1F &h2);
+inline TH1F operator*(Double_t c, const TH1F &h) {return h.operator*(c);}
 
 //________________________________________________________________________
 
@@ -583,6 +551,7 @@ public:
    TH1D(const char *name,const char *title,Int_t nbinsx,const Double_t *xbins);
    TH1D(const TVectorD &v);
    TH1D(const TH1D &h1d);
+   TH1D& operator=(const TH1D &h1);
    virtual ~TH1D();
 
    virtual void     AddBinContent(Int_t bin) {++fArray[bin];}
@@ -595,28 +564,19 @@ public:
    virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
-           TH1D&    operator=(const TH1D &h1);
-
-   ClassDef(TH1D,1)  //1-Dim histograms (one double per channel)
-
-   friend  TH1D     operator*(Double_t c1, const TH1D &h1);
-   friend  TH1D     operator*(const TH1D &h1, Double_t c1);
-   friend  TH1D     operator+(const TH1D &h1, const TH1D &h2);
-   friend  TH1D     operator-(const TH1D &h1, const TH1D &h2);
-   friend  TH1D     operator*(const TH1D &h1, const TH1D &h2);
-   friend  TH1D     operator/(const TH1D &h1, const TH1D &h2);
+           TH1D     operator*(Double_t c) const;
+           TH1D     operator+(const TH1D &h) const;
+           TH1D     operator-(const TH1D &h) const;
+           TH1D     operator*(const TH1D &h) const;
+           TH1D     operator/(const TH1D &h) const;
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = content; }
+
+   ClassDef(TH1D,1)  //1-Dim histograms (one double per channel)
 };
 
-TH1D operator*(Double_t c1, const TH1D &h1);
-inline
-TH1D operator*(const TH1D &h1, Double_t c1) {return operator*(c1,h1);}
-TH1D operator+(const TH1D &h1, const TH1D &h2);
-TH1D operator-(const TH1D &h1, const TH1D &h2);
-TH1D operator*(const TH1D &h1, const TH1D &h2);
-TH1D operator/(const TH1D &h1, const TH1D &h2);
+inline TH1D operator*(Double_t c, const TH1D &h) {return h.operator*(c);}
 
    extern TH1 *R__H(Int_t hid);
    extern TH1 *R__H(const char *hname);

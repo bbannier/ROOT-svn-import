@@ -8747,56 +8747,56 @@ TH1C& TH1C::operator=(const TH1C &h1)
 
 
 //______________________________________________________________________________
-TH1C operator*(Double_t c1, const TH1C &h1)
+TH1C TH1C::operator*(Double_t c) const
 {
    // Operator *
 
-   TH1C hnew = h1;
-   hnew.Scale(c1);
+   TH1C hnew = *this;
+   hnew.Scale(c);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1C operator+(const TH1C &h1, const TH1C &h2)
+TH1C TH1C::operator+(const TH1C &h) const
 {
    // Operator +
 
-   TH1C hnew = h1;
-   hnew.Add(&h2,1);
+   TH1C hnew = *this;
+   hnew.Add(&h,1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1C operator-(const TH1C &h1, const TH1C &h2)
+TH1C TH1C::operator-(const TH1C &h) const
 {
    // Operator -
 
-   TH1C hnew = h1;
-   hnew.Add(&h2,-1);
+   TH1C hnew = *this;
+   hnew.Add(&h,-1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1C operator*(const TH1C &h1, const TH1C &h2)
+TH1C TH1C::operator*(const TH1C &h) const
 {
    // Operator *
 
-   TH1C hnew = h1;
-   hnew.Multiply(&h2);
+   TH1C hnew = *this;
+   hnew.Multiply(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1C operator/(const TH1C &h1, const TH1C &h2)
+TH1C TH1C::operator/(const TH1C &h) const
 {
    // Operator /
 
-   TH1C hnew = h1;
-   hnew.Divide(&h2);
+   TH1C hnew = *this;
+   hnew.Divide(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
@@ -8962,57 +8962,58 @@ TH1S& TH1S::operator=(const TH1S &h1)
    return *this;
 }
 
+
 //______________________________________________________________________________
-TH1S operator*(Double_t c1, const TH1S &h1)
+TH1S TH1S::operator*(Double_t c) const
 {
    // Operator *
 
-   TH1S hnew = h1;
-   hnew.Scale(c1);
+   TH1S hnew = *this;
+   hnew.Scale(c);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1S operator+(const TH1S &h1, const TH1S &h2)
+TH1S TH1S::operator+(const TH1S &h) const
 {
    // Operator +
 
-   TH1S hnew = h1;
-   hnew.Add(&h2,1);
+   TH1S hnew = *this;
+   hnew.Add(&h,1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1S operator-(const TH1S &h1, const TH1S &h2)
+TH1S TH1S::operator-(const TH1S &h) const
 {
    // Operator -
 
-   TH1S hnew = h1;
-   hnew.Add(&h2,-1);
+   TH1S hnew = *this;
+   hnew.Add(&h,-1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1S operator*(const TH1S &h1, const TH1S &h2)
+TH1S TH1S::operator*(const TH1S &h) const
 {
    // Operator *
 
-   TH1S hnew = h1;
-   hnew.Multiply(&h2);
+   TH1S hnew = *this;
+   hnew.Multiply(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1S operator/(const TH1S &h1, const TH1S &h2)
+TH1S TH1S::operator/(const TH1S &h) const
 {
    // Operator /
 
-   TH1S hnew = h1;
-   hnew.Divide(&h2);
+   TH1S hnew = *this;
+   hnew.Divide(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
@@ -9179,56 +9180,56 @@ TH1I& TH1I::operator=(const TH1I &h1)
 
 
 //______________________________________________________________________________
-TH1I operator*(Double_t c1, const TH1I &h1)
+TH1I TH1I::operator*(Double_t c) const
 {
    // Operator *
 
-   TH1I hnew = h1;
-   hnew.Scale(c1);
+   TH1I hnew = *this;
+   hnew.Scale(c);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1I operator+(const TH1I &h1, const TH1I &h2)
+TH1I TH1I::operator+(const TH1I &h) const
 {
    // Operator +
 
-   TH1I hnew = h1;
-   hnew.Add(&h2,1);
+   TH1I hnew = *this;
+   hnew.Add(&h,1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1I operator-(const TH1I &h1, const TH1I &h2)
+TH1I TH1I::operator-(const TH1I &h) const
 {
    // Operator -
 
-   TH1I hnew = h1;
-   hnew.Add(&h2,-1);
+   TH1I hnew = *this;
+   hnew.Add(&h,-1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1I operator*(const TH1I &h1, const TH1I &h2)
+TH1I TH1I::operator*(const TH1I &h) const
 {
    // Operator *
 
-   TH1I hnew = h1;
-   hnew.Multiply(&h2);
+   TH1I hnew = *this;
+   hnew.Multiply(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1I operator/(const TH1I &h1, const TH1I &h2)
+TH1I TH1I::operator/(const TH1I &h) const
 {
    // Operator /
 
-   TH1I hnew = h1;
-   hnew.Divide(&h2);
+   TH1I hnew = *this;
+   hnew.Divide(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
@@ -9391,56 +9392,56 @@ TH1F& TH1F::operator=(const TH1F &h1)
 
 
 //______________________________________________________________________________
-TH1F operator*(Double_t c1, const TH1F &h1)
+TH1F TH1F::operator*(Double_t c) const
 {
    // Operator *
 
-   TH1F hnew = h1;
-   hnew.Scale(c1);
+   TH1F hnew = *this;
+   hnew.Scale(c);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1F operator+(const TH1F &h1, const TH1F &h2)
+TH1F TH1F::operator+(const TH1F &h) const
 {
    // Operator +
 
-   TH1F hnew = h1;
-   hnew.Add(&h2,1);
+   TH1F hnew = *this;
+   hnew.Add(&h,1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1F operator-(const TH1F &h1, const TH1F &h2)
+TH1F TH1F::operator-(const TH1F &h) const
 {
    // Operator -
 
-   TH1F hnew = h1;
-   hnew.Add(&h2,-1);
+   TH1F hnew = *this;
+   hnew.Add(&h,-1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1F operator*(const TH1F &h1, const TH1F &h2)
+TH1F TH1F::operator*(const TH1F &h) const
 {
    // Operator *
 
-   TH1F hnew = h1;
-   hnew.Multiply(&h2);
+   TH1F hnew = *this;
+   hnew.Multiply(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1F operator/(const TH1F &h1, const TH1F &h2)
+TH1F TH1F::operator/(const TH1F &h) const
 {
    // Operator /
 
-   TH1F hnew = h1;
-   hnew.Divide(&h2);
+   TH1F hnew = *this;
+   hnew.Divide(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
@@ -9602,57 +9603,58 @@ TH1D& TH1D::operator=(const TH1D &h1)
    return *this;
 }
 
+
 //______________________________________________________________________________
-TH1D operator*(Double_t c1, const TH1D &h1)
+TH1D TH1D::operator*(Double_t c) const
 {
    // Operator *
 
-   TH1D hnew = h1;
-   hnew.Scale(c1);
+   TH1D hnew = *this;
+   hnew.Scale(c);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1D operator+(const TH1D &h1, const TH1D &h2)
+TH1D TH1D::operator+(const TH1D &h) const
 {
    // Operator +
 
-   TH1D hnew = h1;
-   hnew.Add(&h2,1);
+   TH1D hnew = *this;
+   hnew.Add(&h,1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1D operator-(const TH1D &h1, const TH1D &h2)
+TH1D TH1D::operator-(const TH1D &h) const
 {
    // Operator -
 
-   TH1D hnew = h1;
-   hnew.Add(&h2,-1);
+   TH1D hnew = *this;
+   hnew.Add(&h,-1);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1D operator*(const TH1D &h1, const TH1D &h2)
+TH1D TH1D::operator*(const TH1D &h) const
 {
    // Operator *
 
-   TH1D hnew = h1;
-   hnew.Multiply(&h2);
+   TH1D hnew = *this;
+   hnew.Multiply(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
 
 //______________________________________________________________________________
-TH1D operator/(const TH1D &h1, const TH1D &h2)
+TH1D TH1D::operator/(const TH1D &h) const
 {
    // Operator /
 
-   TH1D hnew = h1;
-   hnew.Divide(&h2);
+   TH1D hnew = *this;
+   hnew.Divide(&h);
    hnew.SetDirectory(0);
    return hnew;
 }
