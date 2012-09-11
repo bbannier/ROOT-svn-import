@@ -390,6 +390,7 @@ public:
 
 protected: 
    virtual void     UpdateBinContent(Int_t bin, Double_t content);
+   virtual Double_t RetrieveBinContent(Int_t bin) const;
 
    ClassDef(TH1,7)  //1-Dim histogram base class
 };
@@ -411,9 +412,6 @@ public:
    virtual void     AddBinContent(Int_t bin, Double_t w);
    virtual void     Copy(TObject &hnew) const;
    virtual TH1     *DrawCopy(Option_t *option="") const;
-   virtual Double_t GetBinContent(Int_t bin) const;
-   virtual Double_t GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
            TH1C     operator*(Double_t c) const;
@@ -424,6 +422,7 @@ public:
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Char_t (content); }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
    
    ClassDef(TH1C,1)  //1-Dim histograms (one char per channel)
 };
@@ -447,9 +446,6 @@ public:
    virtual void     AddBinContent(Int_t bin, Double_t w);
    virtual void     Copy(TObject &hnew) const;
    virtual TH1     *DrawCopy(Option_t *option="") const;
-   virtual Double_t GetBinContent(Int_t bin) const;
-   virtual Double_t GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
            TH1S     operator*(Double_t c) const;
@@ -460,6 +456,7 @@ public:
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Short_t (content); } 
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
 
    ClassDef(TH1S,1)  //1-Dim histograms (one short per channel)
 };
@@ -483,9 +480,6 @@ public:
    virtual void     AddBinContent(Int_t bin, Double_t w);
    virtual void     Copy(TObject &hnew) const;
    virtual TH1     *DrawCopy(Option_t *option="") const;
-   virtual Double_t GetBinContent(Int_t bin) const;
-   virtual Double_t GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
            TH1I     operator*(Double_t c) const;
@@ -496,6 +490,7 @@ public:
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Int_t (content); }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
 
    ClassDef(TH1I,1)  //1-Dim histograms (one 32 bits integer per channel)
 };
@@ -521,9 +516,6 @@ public:
                                  {fArray[bin] += Float_t (w);}
    virtual void     Copy(TObject &hnew) const;
    virtual TH1     *DrawCopy(Option_t *option="") const;
-   virtual Double_t GetBinContent(Int_t bin) const;
-   virtual Double_t GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
            TH1F     operator*(Double_t c) const;
@@ -534,6 +526,7 @@ public:
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Float_t (content); }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
 
    ClassDef(TH1F,1)  //1-Dim histograms (one float per channel)
 };
@@ -559,9 +552,6 @@ public:
                                  {fArray[bin] += Double_t (w);}
    virtual void     Copy(TObject &hnew) const;
    virtual TH1     *DrawCopy(Option_t *option="") const;
-   virtual Double_t GetBinContent(Int_t bin) const;
-   virtual Double_t GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const {return GetBinContent(bin);}
    virtual void     Reset(Option_t *option="");
    virtual void     SetBinsLength(Int_t n=-1);
            TH1D     operator*(Double_t c) const;
@@ -572,6 +562,7 @@ public:
 
 protected:
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = content; }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
 
    ClassDef(TH1D,1)  //1-Dim histograms (one double per channel)
 };
