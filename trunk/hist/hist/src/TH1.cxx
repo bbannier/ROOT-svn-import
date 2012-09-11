@@ -4496,7 +4496,7 @@ Double_t TH1::GetRandom() const
 }
 
 //______________________________________________________________________________
-Double_t TH1::GetBinContent(Int_t) const
+Double_t TH1::GetBinContent(Int_t bin) const
 {
    //   -*-*-*-*-*Return content of bin number bin
    //             ================================
@@ -4514,9 +4514,12 @@ Double_t TH1::GetBinContent(Int_t) const
    //        Int_t bin = h->GetBin(binx,biny,binz);
    //      returns a global/linearized bin number. This global bin is useful
    //      to access the bin information independently of the dimension.
+ 
+   if (fBuffer) const_cast<TH1*>(this)->BufferEmpty();
+   if (bin < 0) bin = 0;
+   if (bin >= fNcells) bin = fNcells-1;
 
-   AbstractMethod("GetBinContent");
-   return 0;
+   return RetrieveBinContent(bin);
 }
 
 //______________________________________________________________________________
@@ -8577,12 +8580,21 @@ TH1* TH1::TransformHisto(TVirtualFFT *fft, TH1* h_output,  Option_t *option)
 }
 
 //______________________________________________________________________________
+Double_t TH1::RetrieveBinContent(Int_t) const
+{
+   // raw retrieval of bin content on internal data structure
+   // see convention for numbering bins in TH1::GetBin
+   AbstractMethod("RetrieveBinContent");
+   return 0;
+}
+
+//______________________________________________________________________________
 void TH1::UpdateBinContent(Int_t, Double_t)
 {
    // raw update of bin content on internal data structure
+   // see convention for numbering bins in TH1::GetBin
    AbstractMethod("UpdateBinContent");
 }
-
 
 
 //______________________________________________________________________________
@@ -8702,18 +8714,6 @@ TH1 *TH1C::DrawCopy(Option_t *option) const
    newth1->SetBit(kCanDelete);
    newth1->AppendPad(option);
    return newth1;
-}
-
-//______________________________________________________________________________
-Double_t TH1C::GetBinContent(Int_t bin) const
-{
-   // see convention for numbering bins in TH1::GetBin
-
-   if (fBuffer) ((TH1C*)this)->BufferEmpty();
-   if (bin < 0) bin = 0;
-   if (bin >= fNcells) bin = fNcells-1;
-   if (!fArray) return 0;
-   return Double_t (fArray[bin]);
 }
 
 //______________________________________________________________________________
@@ -8923,17 +8923,6 @@ TH1 *TH1S::DrawCopy(Option_t *option) const
 }
 
 //______________________________________________________________________________
-Double_t TH1S::GetBinContent(Int_t bin) const
-{
-   // see convention for numbering bins in TH1::GetBin
-   if (fBuffer) ((TH1S*)this)->BufferEmpty();
-   if (bin < 0) bin = 0;
-   if (bin >= fNcells) bin = fNcells-1;
-   if (!fArray) return 0;
-   return Double_t (fArray[bin]);
-}
-
-//______________________________________________________________________________
 void TH1S::Reset(Option_t *option)
 {
    // Reset.
@@ -9139,17 +9128,6 @@ TH1 *TH1I::DrawCopy(Option_t *option) const
 }
 
 //______________________________________________________________________________
-Double_t TH1I::GetBinContent(Int_t bin) const
-{
-   // see convention for numbering bins in TH1::GetBin
-   if (fBuffer) ((TH1I*)this)->BufferEmpty();
-   if (bin < 0) bin = 0;
-   if (bin >= fNcells) bin = fNcells-1;
-   if (!fArray) return 0;
-   return Double_t (fArray[bin]);
-}
-
-//______________________________________________________________________________
 void TH1I::Reset(Option_t *option)
 {
    // Reset.
@@ -9348,17 +9326,6 @@ TH1 *TH1F::DrawCopy(Option_t *option) const
    newth1->SetBit(kCanDelete);
    newth1->AppendPad(option);
    return newth1;
-}
-
-//______________________________________________________________________________
-Double_t TH1F::GetBinContent(Int_t bin) const
-{
-   // see convention for numbering bins in TH1::GetBin
-   if (fBuffer) ((TH1F*)this)->BufferEmpty();
-   if (bin < 0) bin = 0;
-   if (bin >= fNcells) bin = fNcells-1;
-   if (!fArray) return 0;
-   return Double_t (fArray[bin]);
 }
 
 //______________________________________________________________________________
@@ -9561,17 +9528,6 @@ TH1 *TH1D::DrawCopy(Option_t *option) const
    newth1->SetBit(kCanDelete);
    newth1->AppendPad(option);
    return newth1;
-}
-
-//______________________________________________________________________________
-Double_t TH1D::GetBinContent(Int_t bin) const
-{
-   // see convention for numbering bins in TH1::GetBin
-   if (fBuffer) ((TH1D*)this)->BufferEmpty();
-   if (bin < 0) bin = 0;
-   if (bin >= fNcells) bin = fNcells-1;
-   if (!fArray) return 0;
-   return Double_t (fArray[bin]);
 }
 
 //______________________________________________________________________________
