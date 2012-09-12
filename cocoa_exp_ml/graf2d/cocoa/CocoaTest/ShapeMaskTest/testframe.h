@@ -9,13 +9,12 @@ namespace CocoaTest {
 
 class TestFrame : public TGFrame {
 public:
-   TestFrame(TestFrame *parent, UInt_t width, UInt_t height,
-             UInt_t options, Pixel_t background);
+   TestFrame(TestFrame *parent, UInt_t width, UInt_t height, UInt_t options, Pixel_t background);
    ~TestFrame();
 
    void DoRedraw();
 
-   //Event handlers:   
+   //Event handlers:
    Bool_t HandleButton(Event_t *buttonEvent);
 
 private:
