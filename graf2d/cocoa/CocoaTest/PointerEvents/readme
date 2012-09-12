@@ -1,0 +1,503 @@
+Pointer tests.
+
+It's very difficult to test, I think the only way to check this is just to carefully read the code.
+But still - some test cases. They are not covering all possible cases, but at least some basic.
+As I do not have testers for GUI and any testing framework for GUI, I have this primitive tests to catch
+something really stupid (and they, actually, did some work already).
+The idea is to compile the same test with X11/TGCocoa versions and compare event messages.
+They are not identical, there some completely strange things with X11 and its window manager (they can add
+some unexpected events), but in general events should be more or less the same.
+
+
+TEST1-4 : crossing events with and without grab (grab is implicit).
+
+TEST1: crossing events without any grabs (implicit on 'root' only, if button pressed), only one top-level window.
+
+Description (example)
+
+Move into 4 from screen:
+Enter notify for 4
+
+Move from 4 to 5 and 6 (overlapping part):
+
+Leave notify 4
+Enter notify 5
+Enter notify 6 (order of enter notify events is different with TGCocoa)
+
+Move again to 4 (from overlapping part):
+
+Leave notify 6
+Leave notify 5
+Enter notify 4
+
+Press button in 4 (and do not release):
+
+Leave notify 4
+
+Move to 6 (overlapping part):
+
+No events reported (implicit grab on 'root').
+
+Release button:
+
+Enter notify 4
+Enter notify 5
+Enter notify 6 (we "jumped" from implicitly grabbed 'root') - order can be different with
+TGCocoa
+
+TEST2: crossing events without grabs (implicit on 'root' only, if button pressed), two top-level windows.
+
+ 
+Description (example)
+
+Move from screen to window 4:
+
+Enter notify 4
+
+Move from 4 to 8 (another top-level window):
+
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter notify events is reversed with TGCocoa).
+
+Press button (and do not release) on window 8:
+
+Leave notify 8
+Leave notify 7
+
+Move to window 6 (overlapping part):
+
+No events reported (implicit grab on 'root').
+
+Release button in 6:
+
+Enter notify 4
+Enter notify 5
+Enter notify 6 (order is reversed with TGCocoa).
+
+If, instead, we press button while in a window 6, there is a difference between TGCocoa and X11 (on Ubuntu):
+at the beginning of test, window 4 is "behind" window 7 in a window stack, when pressing button - it's raised
+(by WM?) and there is a strange sequence of leave/enter notify events along the window tree forth and back -
+this I'm NOT GOING to emulate, since this is not a part of any specification.
+
+TEST3:
+
+Setup as in TEST1, but now window 5 has button press mask (to become an implicit grab). 
+Also, button 5 can have button release mask (+-) to test other buttons press/release events while
+still holding the primary button (button which initiated grab).
+
+Description (example)
+
+Move from screen to window 4:
+
+Enter notify 4
+
+Move to 5:
+
+Leave notify 4
+Enter notify 5
+
+Move to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press a left/right mouse button (and do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5 (Here I see the difference: on Ubuntu button press precedes crossing events - I do not care about all this shit: according to X11 protocol crossing events are generated BEFORE button press event).
+
+Move from 5 (to the right, so leave both 6,5,4 at one move):
+
+Leave notify 5
+
+Move back (into overlapping part):
+
+Enter notify 5
+
+Press/release another mouse button:
+
+Button press 5
+Button release 5 (if you have kButtonReleaseMask, see test's setup)
+
+Release the button, which initialised the grab: 
+
+Button release 5
+Leave notify 5
+Enter notify 6
+
+////
+While in grab, also check what happens when mouse moves for example, from
+
+Move from 4 to 5:
+
+Enter notify 5
+
+From 5 to 6
+
+Leave notify 5
+
+From 6 to 5
+
+Enter notify 5
+
+
+TEST4:
+
+Setup as in TEST2, window 5 and 7 has additional kButtonPressMask | kButtonReleaseMask, because of kButtonPressMask they can initiate implicit grab.
+
+Description a) (example)
+
+Move from screen to window 8:
+
+Enter notify 7
+Enter notify 8 (order can be reversed with TGCocoa).
+
+Press left or right mouse button and do not release:
+
+Leave notify 8
+Enter notify 7
+Button press 7
+
+Move from window 8 (we still were here) to window 6 (overlapping part):
+
+Leave notify 7
+
+Press another mouse button and release it:
+
+Button press 7
+Button release 7
+
+Release the button, which initiated the grab:
+
+Button release 7
+
+Leave notify 7
+Enter notify 4
+Enter notify 5
+Enter notify 6 (the order of enter notify events is reversed with TGCocoa).
+
+Description b) (example)
+
+Move from screen to window 4:
+
+Enter notify 4
+
+From 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press mouse button (left or right, do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5
+
+Move from 6 (we still were here) to 8:
+
+Leave notify 5
+
+Press/release another mouse button:
+
+Button press 5
+Button release 5
+
+Release button, which started the grab:
+
+Button release 5
+Leave notify 5
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter events is reversed with TGCocoa).
+
+
+TEST5-8 : crossing events with passive grab (owner_events is always true in ROOT's passive grabs).
+Also, button press/release events are tested.
+
+TEST5:
+
+Setup as in TEST1.
+
+There is a passive grab on window 5.
+
+Description (example)
+
+Move from screen to 4:
+
+Enter notify 4
+
+From 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press mouse button (left or right, do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5 (grab is initiated) (funny enough, here X11 on Ubuntu generates crossing events in a correct order).
+
+Move from 6 to 5:
+
+Leave notify 6
+Enter notify 5
+
+From 5 to 4:
+
+Leave notify 5
+Enter notify 4
+
+Press and release another button in 4:
+
+Button press 5
+Button release 5
+
+Move from 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Release button, which started the grab
+
+Release button 5
+Leave notify 5
+Enter notify 6
+
+TEST6:
+
+the same as test 5, but event mask in GrabButton call is kNone.
+Events are the same, except no button press/release (except grab activating button press) are generated.
+
+TEST7:
+
+the same as test 6, but no leave/enter notify in a grabbing window's event mask (and when grab is not active,
+there are no leave/enter events for window 5, only for 4 and 6), leave/enter notify 
+masks are in grab's event mask (they are reported only after a button was pressed - and grab activated). The rest of output is the same as in TEST6.
+
+TEST8:
+
+two windows. 
+
+Description (example)
+
+Move from screen to 4:
+
+Enter notify 4
+
+From 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+From 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press any button (and do not release):
+
+Leave notify 6
+Enter notify 5
+Button press 5
+
+Move from 6 to 8:
+
+Leave notify 6
+Leave notify 5
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter notify events is reversed with TGCocoa).
+
+Release button:
+
+Leave notify 5
+Leave notify 4
+Enter notify 7
+Enter notify 8 (order of enter notify events is reversed with TGCocoa).
+
+TEST9- crossing events with active pointer grab (owner events true and false).
+
+NOTE: macro TEST9 must be defined (if you need TEST9) in testframe.h (to enable code modifications in testframe.cxx and in main.cxx).
+
+The same window as in TEST1 and several other tests.
+Click on window 5 will initiate an active grab (the second click in the same view will cancel it).
+
+Description (example)
+
+Move from screen to 4:
+
+Enter notify 4
+
+Move from 4 to 5:
+
+Leave notify 4
+Enter notify 5
+
+Move from 5 to 6:
+
+Leave notify 5
+Enter notify 6
+
+Press/release button - this is complex, first, we activate implicit grab (sending crossing events) and send button press event,
+HandleButton will activate pointer grab (this will lead to another crossing event sequence): 
+
+Leave notify 6
+Enter notify 5
+Button press 5 
+Leave notify 6
+Enter notify 5
+
+Press/release button again - now, cancelling the active grab:
+
+Button press 5
+Leave notify 6
+Enter notify 5
+
+This case is really different on TGCocoa and Ubuntu (X11) - I'm not going to comment on this, I think, my implementation is correct.
+
+TEST10:
+
+No crossing events. Test for passive grab and button press/release events.
+
+Window 5 has passive button grab, it's initiated by left button press (additional variants can have keyboard modifiers also - see the code).
+
+Move from screen to 6 and press left button (and do not release):
+
+Button press 5
+
+Now press right button, while in window 6:
+
+Button press 6 
+Button release 6
+
+NOTE: this is important, it's still 6, not 5 who receives, despite of the fact that 5 has grab
+
+Move to 5 and press right button again:
+
+Button press 4
+Button release 4
+
+NOTE: again, it's not 5!!
+
+Now release the left button (we are still in 5):
+
+Button release 4
+
+NOTE: even now, it's 4 who got the release! (remember, a button press was in 5)
+
+TEST10 can be modified: remove button press/release mask from mainFrame (in this case grab view will start receiving corresponding events,
+while pointer is in window 5 or 4).
+There are additional options to test in TEST10 section - they are commented now, I do not describe the expected results here - to many
+possible combinations, better try and compare X11 and TGCocoa.
+
+TEST11:
+
+Similar to TEST9, but now owner_events == false. TEST11 macro must be defined in testframe.h
+
+
+
+TEST12:
+
+Button press/release events, no grabs (only implicit, if any).
+
+This test is quite funny (result seems to be non-obvious):
+
+window 4 has button press mask
+window 5 button release mask
+window 6 both button press and release masks.
+
+Press button in 6:
+
+Button press in 6
+Button release in 6
+
+Press button in 5:
+
+Button press in 4
+
+Though window 5 has kButtonReleaseMask!
+So, when pressing in 5, propagation founds 4 (which has kButtonPressMask), event is dispatched and …
+implicit grab on this window is initiated (with owner_events == false).
+Button released - event is to be dispatched to the grab window (4) and since there is no kButtonPressMask in grab's event mask,
+no event is generated at all.
+
+
+Tests for pointer motion events I can not really describe, since they have
+some undetermined number of events.
+
+TEST13:
+
+pointer motion mask on window 4,
+button motion (pointer motion while button is pressed) on a window 6,
+nothing on window 5.
+
+While cursor is moving in window 5 or 4:
+
+sequence of pointer motion event in 4.
+
+If button (any) is pressed in window 5 or 4 (and not released):
+
+no motion events (when you move) - implicit grab on a 'root' window suppress any event generation.
+
+If you now release button and press button in a window 6 (and do not release)
+
+window 6 will become receiver of pointer motion events (until button is released).
+
+TEST14:
+
+Pointer motion and passive grab on window 5.
+
+At the beginning only window 6 has pointer motion mask.
+If you press button (in window 5 or window 6) passive grab is activated (with owner_events == true),
+from now and before you release button, if you are in window 6 - it receives pointer motion events,
+if you are in window 5 or 4 - window 5 will receive motion events.
+
+TEST15:
+
+Window 6 has pointer motion mask,
+window 5 has passive grab without any masks.
+
+Motion events without grab - only in 6.
+Motion events if button was pressed (and not released yet) in 5 or 6 - motion events in 6.
+
+TEST16:
+
+(Macro TEST16 must be defined in test frame.h)
+
+without any grabs - only window 6 receives pointer motion events.
+
+if button is pressed in window 5 or 6 (from 6 a press event is propagated to 5)
+window 5 sets pointer grab (owner_events == true).
+from this point - if button HAS NOT been released yet, if cursor is in window 6 - window 6 receives motion events,
+if in window 5 - window 5.
+If button was released - only window 6 (in window 5 grab event mask requires button motion, not simply pointer motion).
+
+TEST 17:
+
+More complex test on pointer/button motion events - two window setup.
+
+window 4 - pointer motion
+window 5 - button press (on button press, it sets grab with button motion and owner_events == true)
+window 6 - pointer motion
+
+window 7 - pointer motion
+window 8 - button motion
+
+There are quite a lot of possible scenarios, I do not describe them here - you better compare output of X11/and TGCocoa.
