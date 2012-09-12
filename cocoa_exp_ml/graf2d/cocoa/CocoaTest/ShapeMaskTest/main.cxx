@@ -19,20 +19,26 @@ int main(int argc, char ** argv)
 
    TApplication app("test_app", &argc, argv);
 
-   TImage *image = TImage::Open("speedo.gif");
+   TImage *image = TImage::Open("Duke.gif");
    if (!image || !image->IsValid()) {
-      std::cout<<"'speedo.gif' was not found\n";
+      std::cout<<"'Duke.gif' was not found\n";
       return 0;
    }
    
-   const TGPicture * pic = gClient->GetPicturePool()->GetPicture(gSystem->BaseName("speedo.gif"), image->GetPixmap(), image->GetMask());
+   const TGPicture * pic = gClient->GetPicturePool()->GetPicture(gSystem->BaseName("Duke.gif"), image->GetPixmap(), image->GetMask());
    if (!pic) {
-      std::cout<<"Could not create TGPicture from speedo.gif\n";
+      std::cout<<"Could not create TGPicture from Duke.gif\n";
       return 0;
    }
 
    TestFrame * mainFrame = new TestFrame(0, pic->GetWidth(), pic->GetHeight(), kMainFrame, 0xff0000);
+   mainFrame->AddInput(kButtonPressMask);
    gVirtualX->ShapeCombineMask(mainFrame->GetId(), 0, 0, pic->GetMask());
+   
+   TestFrame *child = new TestFrame(mainFrame, 100, 100, kChildFrame, 0xff00ff);
+   gVirtualX->MoveWindow(child->GetId(), pic->GetWidth() / 2 + 30, pic->GetHeight() / 2 + 30);
+   child->AddInput(kButtonPressMask);
+   
    gVirtualX->MapSubwindows(mainFrame->GetId());
    gVirtualX->MapRaised(mainFrame->GetId());
 
