@@ -2081,6 +2081,9 @@ void print_mask_info(ULong_t mask)
                CGContextClipToMask(fContext, clipRect, topLevelParent.fShapeCombineMask.fImage);
             } else {
                //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
+               
+               //TODO: clipRect must be adjusted - it should never exceed a mask rect.
+               
                clipRect.origin = [fParentView convertPoint : clipRect.origin toView : [self window].contentView];
                clipRect.origin.y = X11::LocalYROOTToCocoa((NSView<X11Window> *)[self window].contentView, clipRect.origin.y + clipRect.size.height);
                clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
