@@ -350,6 +350,9 @@ namespace Quartz = ROOT::Quartz;
 @synthesize fIsStippleMask;
 @synthesize fID;
 
+//TODO: all these "ctors" were added at different times, not from the beginnning.
+//Refactor them to reduce code duplication, where possible.
+
 //______________________________________________________________________________
 - (id) initWithW : (unsigned) width H : (unsigned) height data : (unsigned char *) data
 {

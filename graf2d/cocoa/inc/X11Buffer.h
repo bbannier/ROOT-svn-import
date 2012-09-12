@@ -267,7 +267,7 @@ private:
    void BuildClipRegion(const WidgetRect &rect);
    
    std::vector<WidgetRect> fRectsToClip;
-   std::vector<CGRect> fClippedRegion;//Should be <CGRect>
+   std::vector<CGRect> fClippedRegion;
    std::vector<int> fXBounds;
    std::vector<int> fYBounds;
    std::vector<bool> fGrid;

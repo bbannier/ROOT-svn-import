@@ -1,1 +1,0 @@
-clang++  -g -pthread -m64 -I$ROOTSYS/include *.cxx -o root_test -L$ROOTSYS/lib -lGui -lCore -lCint -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lpthread -Wl,-rpath,$ROOTSYS/lib -lm -ldl

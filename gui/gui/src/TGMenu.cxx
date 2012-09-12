@@ -800,7 +800,6 @@ Bool_t TGMenuBar::HandleKey(Event_t *event)
 #ifdef R__HAS_COCOA
                         gVirtualX->SetWMTransientHint(submenu->GetId(), GetId());
 #endif
-
                         submenu->PlaceMenu(ax-5, ay-1, kFALSE, kFALSE);
                      }
                      break;

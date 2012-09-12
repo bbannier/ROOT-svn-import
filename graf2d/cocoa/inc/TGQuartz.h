@@ -9,7 +9,6 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
-
 #ifndef ROOT_TGQuartz
 #define ROOT_TGQuartz
 
@@ -48,7 +47,7 @@ public:
    virtual void      DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn, 
                               const char *text, ETextMode mode);
    
-   //I have to override these setters, since they overriden
+   //I have to override these setters, since they are alredy overriden
    //in TVirtualX (originally, they are declared in TAttXXX classes)
    //and do nothing in TVirtualX (though, they are implemented
    //correctly in TAttXXX classes).

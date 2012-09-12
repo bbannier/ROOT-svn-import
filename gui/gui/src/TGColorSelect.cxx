@@ -453,6 +453,7 @@ Bool_t TGColorSelect::HandleButton(Event_t *event)
 
          gVirtualX->TranslateCoordinates(fId, gClient->GetDefaultRoot()->GetId(),
                                          0, fHeight, ax, ay, wdummy);
+
 #ifdef R__HAS_COCOA
          gVirtualX->SetWMTransientHint(fColorPopup->GetId(), GetId());
 #endif

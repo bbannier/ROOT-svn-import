@@ -258,6 +258,11 @@ Draw a lego plot with hidden surface removal.
 Draw a lego plot using colors to show the cell contents When the option "0" is
 used with any LEGO option, the empty bins are not drawn.
 </td></tr>
+ 
+<tr><th valign=top>"LEGO3"</th><td>
+Draw a lego plot with hidden surface removal, like LEGO1 but the border lines
+of each lego-bar are not drawn.
+</td></tr>
 
 <tr><th valign=top>"TEXT"</th><td>
 Draw bin contents as text (format set via <tt>gStyle->SetPaintTextFormat</tt>).
@@ -1583,6 +1588,11 @@ Draw a lego plot using the hidden surface removal technique.
 Draw a lego plot using colors to show the cell contents.
 </td></tr>
 
+<tr><th valign=top>"LEGO3"</th><td>
+Draw a lego plot with hidden surface removal, like LEGO1 but the border lines
+of each lego-bar are not drawn.
+</td></tr>
+
 <tr><th valign=top>"0"</th><td>
 When used with any LEGO option, the empty bins are not drawn.
 </td></tr>
@@ -1627,11 +1637,34 @@ Begin_Macro(source)
       hlego1->Fill(px-1,5*py);
       hlego1->Fill(2+0.5*px,2*py-10.,0.1);
    }
-   gStyle->SetPalette(1);
    hlego1->SetFillColor(kYellow);
    hlego1->Draw("LEGO1 0");
    return c2;
 }
+End_Macro
+Begin_Html
+ 
+<p>The following example shows a 2D histogram plotted with the option
+<tt>"LEGO3"</tt>. Like the option <tt>"LEGO1"</tt>, the option <tt>"LEGO3"</tt> 
+draws a lego plot using the hidden surface removal technique but doesn't draw
+the border lines of each individual lego-bar. This is very useful for histograms
+having many bins. With such histograms the option <tt>"LEGO1"</tt> gives a black
+image because of the border lines. This option also works with stacked legos.
+End_Html
+Begin_Macro(source)
+{
+   TCanvas *c2 = new TCanvas("c2","c2",600,400);
+   TH2F *hlego3 = new TH2F("hlego3","Option LEGO3 example",40,-4,4,40,-20,20);
+   Float_t px, py;
+   for (Int_t i = 0; i < 25000; i++) {
+      gRandom->Rannor(px,py);
+      hlego3->Fill(px-1,5*py);
+      hlego3->Fill(2+0.5*px,2*py-10.,0.1);
+   }
+   hlego3->SetFillColor(kRed);
+   hlego3->Draw("LEGO3");
+   return c2;
+ }
 End_Macro
 Begin_Html
 
@@ -3174,7 +3207,7 @@ char *THistPainter::GetObjectInfo(Int_t px, Int_t py) const
    End_html */
 
    if (!gPad) return (char*)"";
-   static char info[100];
+   static char info[200];
    Double_t x  = gPad->PadtoX(gPad->AbsPixeltoX(px));
    Double_t y  = gPad->PadtoY(gPad->AbsPixeltoY(py));
    Double_t x1 = gPad->PadtoX(gPad->AbsPixeltoX(px+1));
@@ -3234,18 +3267,34 @@ char *THistPainter::GetObjectInfo(Int_t px, Int_t py) const
       }
    }
    if (fH->GetDimension() == 1) {
-      Double_t integ = 0;
-      for (Int_t bin=binmin;bin<=binx;bin++) {integ += fH->GetBinContent(bin);}
-      snprintf(info,100,"(x=%g, y=%g, binx=%d, binc=%g, Sum=%g)",x,y,binx,fH->GetBinContent(binx),integ);
-   } else {
+      if (fH->InheritsFrom(TProfile::Class())) {
+         TProfile *tp = (TProfile*)fH;
+         snprintf(info,200,"(x=%g, y=%g, binx=%d, binc=%g, bine=%g, binn=%d)", x, y, binx, fH->GetBinContent(binx), fH->GetBinError(binx), (Int_t) tp->GetBinEntries(binx));
+      }
+      else {
+         Double_t integ = 0;
+         for (Int_t bin=binmin;bin<=binx;bin++) {integ += fH->GetBinContent(bin);}
+         snprintf(info,200,"(x=%g, y=%g, binx=%d, binc=%g, Sum=%g)",x,y,binx,fH->GetBinContent(binx),integ);
+      }
+   } else if (fH->GetDimension() == 2){
       if (fH->InheritsFrom(TH2Poly::Class())) {
          TH2Poly *th2 = (TH2Poly*)fH;
          biny = th2->FindBin(x,y);
-         snprintf(info,100,"%s (x=%g, y=%g, bin=%d, binc=%g)",th2->GetBinTitle(biny),x,y,biny,th2->GetBinContent(biny));
+         snprintf(info,200,"%s (x=%g, y=%g, bin=%d, binc=%g)",th2->GetBinTitle(biny),x,y,biny,th2->GetBinContent(biny));
+      } 
+      else if (fH->InheritsFrom(TProfile2D::Class())) {
+         TProfile2D *tp = (TProfile2D*)fH;
+         biny = fYaxis->FindFixBin(y);
+         Int_t bin = fH->GetBin(binx,biny);
+         snprintf(info,200,"(x=%g, y=%g, binx=%d, biny=%d, binc=%g, bine=%g, binn=%d)", x, y, binx, biny, fH->GetBinContent(bin), fH->GetBinError(bin), (Int_t) tp->GetBinEntries(bin));
       } else {
          biny = fYaxis->FindFixBin(y);
-         snprintf(info,100,"(x=%g, y=%g, binx=%d, biny=%d, binc=%g)",x,y,binx,biny,fH->GetCellContent(binx,biny));
+         snprintf(info,200,"(x=%g, y=%g, binx=%d, biny=%d, binc=%g)",x,y,binx,biny,fH->GetCellContent(binx,biny));
       }
+   } else { 
+      // 3d case: retrieving the x,y,z bin is not yet implemented 
+      // print just the x,y info
+      snprintf(info,200,"(x=%g, y=%g)",x,y);
    }
    return info;
 }
@@ -3393,6 +3442,7 @@ Int_t THistPainter::MakeChopt(Option_t *choptin)
       Hoption.Lego = 1; strncpy(l,"    ",4);
       if (l[4] == '1') { Hoption.Lego = 11; l[4] = ' '; }
       if (l[4] == '2') { Hoption.Lego = 12; l[4] = ' '; }
+      if (l[4] == '3') { Hoption.Lego = 13; l[4] = ' '; }
       l = strstr(chopt,"FB"); if (l) { Hoption.FrontBox = 0; strncpy(l,"  ",2); }
       l = strstr(chopt,"BB"); if (l) { Hoption.BackBox = 0;  strncpy(l,"  ",2); }
       l = strstr(chopt,"0");  if (l) { Hoption.Zero = 1;  strncpy(l," ",1); }
@@ -6400,6 +6450,12 @@ void THistPainter::PaintLego(Option_t *)
    }
 
    fLego = new TPainter3dAlgorithms(fXbuf, fYbuf, Hoption.System);
+   
+   // LEGO3 is like LEGO1 except that the black lines around each lego are not drawn.
+   if (Hoption.Lego == 13) {
+      Hoption.Lego = 11;
+      fLego->SetMesh(0);
+   }
 
    //          Create axis object
 

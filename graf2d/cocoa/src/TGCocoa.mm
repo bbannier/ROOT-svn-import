@@ -32,7 +32,7 @@
 #include "CocoaUtils.h"
 #include "X11Events.h"
 #include "X11Buffer.h"
-//#include "TGLFormat.h"
+#include "TGLFormat.h"
 #include "TGClient.h"
 #include "TGWindow.h"
 #include "TSystem.h"
@@ -252,7 +252,7 @@ void DrawPattern(void *info, CGContextRef ctx)
 
       if (HasFillOpaqueStippledStyle(mask,fillStyle)) {
          //Fill background first.
-         assert((mask & kGCBackground) && "DrawPattern, fill style is FillOpaqueStippled, but background color is not set in context");
+         assert((mask & kGCBackground) && "DrawPattern, fill style is FillOpaqueStippled, but background color is not set in a context");
          X11::PixelToRGB(patternContext->fBackground, rgb);
          CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
          CGContextFillRect(ctx, patternRect);
@@ -1325,10 +1325,11 @@ void TGCocoa::ShapeCombineMask(Window_t windowID, Int_t /*x*/, Int_t /*y*/, Pixm
    // The Nonrectangular Window Shape Extension adds nonrectangular
    // windows to the System.
    // This allows for making shaped (partially transparent) windows
+   
    assert(!fPimpl->IsRootWindow(windowID) && "ShapeCombineMask, windowID parameter is a 'root' window");
    assert(fPimpl->GetDrawable(windowID).fIsPixmap == NO && "ShapeCombineMask, windowID parameter is a bad window id");
    assert([fPimpl->GetDrawable(pixmapID) isKindOfClass : [QuartzImage class]] && "ShapeCombineMask, pixmapID parameter must point to QuartzImage object");
-
+   
    //TODO: nonrectangular window can be only NSWindow object,
    //not NSView (and mask is attached to a window).
    //This means, if some nonrectangular window is created as a child
@@ -1336,7 +1337,7 @@ void TGCocoa::ShapeCombineMask(Window_t windowID, Int_t /*x*/, Int_t /*y*/, Pixm
    //Find a better way to fix it.
    if (fPimpl->GetWindow(windowID).fContentView.fParentView)
       return;
-
+   
    QuartzImage * const srcImage = (QuartzImage *)fPimpl->GetDrawable(pixmapID);
    assert(srcImage.fIsStippleMask == YES && "ShapeCombineMask, source image is not a stipple mask");
 
@@ -1682,6 +1683,7 @@ void TGCocoa::DrawRectangle(Drawable_t wid, GContext_t gc, Int_t x, Int_t y, UIn
 void TGCocoa::FillRectangleAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    //Can be called directly or when flushing command buffer.
+  //Can be called directly or when flushing command buffer.
    if (!wid)//From TGX11.
       return;
 
@@ -2223,8 +2225,15 @@ void TGCocoa::CopyPixmap(Int_t pixmapID, Int_t x, Int_t y)
       }
    }
 
-   Rectangle_t copyArea = {0, 0, pixmap.fWidth, pixmap.fHeight};
-   Point_t dstPoint = {x, y};
+   //TODO ugly initialization with casts, fix by declaring my own Rectangle_t with correct types.
+   Rectangle_t copyArea = {};
+   copyArea.fWidth = UShort_t(pixmap.fWidth);
+   copyArea.fHeight = UShort_t(pixmap.fHeight);
+
+   Point_t dstPoint = {};
+   dstPoint.fX = Short_t(x);
+   dstPoint.fY = Short_t(y);
+
    [destination copy : pixmap area : copyArea withMask : nil clipOrigin : Point_t() toPoint : dstPoint];
 }
 
@@ -2997,7 +3006,7 @@ void TGCocoa::QueryPointer(Window_t winID, Window_t &rootWinID, Window_t &childW
 //OpenGL management.
 
 //______________________________________________________________________________
-Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t height, const std::vector<std::pair<UInt_t, Int_t> > &/*formatComponents*/)
+Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t height, const std::vector<std::pair<UInt_t, Int_t> > &formatComponents)
 {
    //ROOT never creates GL widgets with 'root' as a parent (so not top-level gl-windows).
    //If this change, assert must be deleted.
@@ -3009,7 +3018,7 @@ Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t hei
    
 
    std::vector<NSOpenGLPixelFormatAttribute> attribs;
-  /* for (size_type i = 0, e = formatComponents.size(); i < e; ++i) {
+   for (size_type i = 0, e = formatComponents.size(); i < e; ++i) {
       const component_type &comp = formatComponents[i];
       
       if (comp.first == TGLFormat::kDoubleBuffer) {
@@ -3029,7 +3038,7 @@ Window_t TGCocoa::CreateOpenGLWindow(Window_t parentID, UInt_t width, UInt_t hei
          attribs.push_back(NSOpenGLPFASamples);
          attribs.push_back(comp.second ? comp.second : 4);
       }
-   }*/
+   }
    
    attribs.push_back(NSOpenGLPFAAccelerated);//??? I think, TGLWidget always wants this.
    attribs.push_back(0);

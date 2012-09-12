@@ -380,11 +380,6 @@ public:
       kOverwriteIfExists   = 1,
       kMergeIfExists       = 2
    };
-   enum EUploadDataSetAnswer {
-      kError               = -1,
-      kDataSetExists       = -2,
-      kFail                = -3
-   };
    enum EUploadPackageOpt {
       kUntar               = 0x0,  //Untar over existing dir [default]
       kRemoveOld           = 0x1   //Remove existing dir with same name
@@ -748,6 +743,8 @@ protected:
 
    void         SetDSet(TDSet *dset) { fDSet = dset; }
    virtual void ValidateDSet(TDSet *dset);
+   
+   Int_t   VerifyDataSetParallel(const char *uri, const char *optStr);
 
    TPluginHandler *GetProgressDialog() const { return fProgressDialog; }
 
@@ -761,6 +758,8 @@ protected:
    
    // Fast enable/disable feedback from Process
    void SetFeedback(TString &opt, TString &optfb, Int_t action);
+   // Output file handling during Process
+   Int_t HandleOutputOptions(TString &opt, TString &target, Int_t action);
 
    static void *SlaveStartupThread(void *arg);
 
@@ -788,7 +787,7 @@ public:
    Int_t       Ping();
    void        Touch();
    Int_t       Exec(const char *cmd, Bool_t plusMaster = kFALSE);
-   Int_t       Exec(const char *cmd, const char *ord);
+   Int_t       Exec(const char *cmd, const char *ord, Bool_t logtomacro = kFALSE);
    
    TString     Getenv(const char *env, const char *ord = "0");
    Int_t       GetRC(const char *RCenv, Int_t &env, const char *ord = "0");
@@ -956,6 +955,7 @@ public:
    TList      *GetInputList();
    TObject    *GetOutput(const char *name);
    TList      *GetOutputList();
+   static TObject *GetOutput(const char *name, TList *out);
 
    void        ShowMissingFiles(TQueryResult *qr = 0);
    TFileCollection *GetMissingFiles(TQueryResult *qr = 0);
@@ -1012,6 +1012,8 @@ public:
    void        ShowLog(const char *queryref);
    Bool_t      SendingLogToWindow() const { return fLogToWindowOnly; }
    void        SendLogToWindow(Bool_t mode) { fLogToWindowOnly = mode; }
+   
+   TMacro     *GetMacroLog() { return &fMacroLog; }
 
    void        ResetProgressDialogStatus() { fProgressDialogStarted = kFALSE; }
 

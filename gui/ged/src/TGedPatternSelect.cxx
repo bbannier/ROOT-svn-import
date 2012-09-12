@@ -46,7 +46,6 @@
 #include "Riostream.h"
 #include "RStipples.h"
 
-
 ClassImp(TGedPopup)
 ClassImp(TGedSelect)
 ClassImp(TGedPatternFrame)
@@ -469,7 +468,6 @@ Bool_t TGedSelect::HandleButton(Event_t *event)
 #ifdef R__HAS_COCOA
             gVirtualX->SetWMTransientHint(fPopup->GetId(), GetId());
 #endif
-
             fPopup->PlacePopup(ax, ay, fPopup->GetDefaultWidth(),
                                fPopup->GetDefaultHeight());
          }

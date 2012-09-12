@@ -3067,6 +3067,7 @@ Int_t TH1::Fill(Double_t x)
 //    via the function Sumw2, then the sum of the squares of weights is incremented
 //    by 1 in the bin corresponding to x.
 //
+//    The function returns the corresponding bin number which has its content incremented by 1
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    if (fBuffer) return BufferFill(x,1);
@@ -3100,6 +3101,7 @@ Int_t TH1::Fill(Double_t x, Double_t w)
 //    via the function Sumw2, then the sum of the squares of weights is incremented
 //    by w^2 in the bin corresponding to x.
 //
+//    The function returns the corresponding bin number which has its content incremented by w
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    if (fBuffer) return BufferFill(x,w);
@@ -3134,6 +3136,9 @@ Int_t TH1::Fill(const char *namex, Double_t w)
 // via the function Sumw2, then the sum of the squares of weights is incremented
 // by w^2 in the bin corresponding to x.
 //
+// The function returns the corresponding bin number which has its content 
+// incremented by w
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
    Int_t bin;
    fEntries++;
@@ -3353,10 +3358,10 @@ Int_t TH1::FindBin(Double_t x, Double_t y, Double_t z)
 //   ===============================================
 //
 //      2-D and 3-D histograms are represented with a one dimensional
-//      structure. This function tries to rebin the axis if the given point
-//      belongs to an under-/overflow bin.
-//      This has the advantage that all existing functions, such as
-//        GetBinContent, GetBinError, GetBinFunction work for all dimensions.
+//      structure. This has the advantage that all existing functions, such as
+//      GetBinContent, GetBinError, GetBinFunction work for all dimensions.
+//      This function tries to rebin the axis if the given point belongs to an
+//       under-/overflow bin AND if the TH1::kCanRebin bit is sei
 //     See also TH1::GetBin, TAxis::FindBin and TAxis::FindFixBin
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
@@ -3387,10 +3392,10 @@ Int_t TH1::FindFixBin(Double_t x, Double_t y, Double_t z) const
 //   ===============================================
 //
 //      2-D and 3-D histograms are represented with a one dimensional
-//      structure. This function DOES not try to rebin the axis if the given
-//      point belongs to an under-/overflow bin.
-//      This has the advantage that all existing functions, such as
-//        GetBinContent, GetBinError, GetBinFunction work for all dimensions.
+//      structure. This has the advantage that all existing functions, such as
+//      GetBinContent, GetBinError, GetBinFunction work for all dimensions.
+//      This function DOES NOT try to rebin the axis if the given point belongs
+//      to an under-/overflow bin.
 //     See also TH1::GetBin, TAxis::FindBin and TAxis::FindFixBin
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
@@ -3797,6 +3802,7 @@ TH1 *TH1::GetAsymmetry(TH1* h2, Double_t c2, Double_t dc2)
    //  h1 and h2 are left intact.
    //
    //  Note that it is the user's responsibility to manage the created histogram.
+   //  The name of the returned histogram will be Asymmetry_nameOfh1-nameOfh2
    //
    //  code proposed by Jason Seely (seely@mit.edu) and adapted by R.Brun
    //
@@ -3804,16 +3810,23 @@ TH1 *TH1::GetAsymmetry(TH1* h2, Double_t c2, Double_t dc2)
    // correct dimensions:
    // Sumw2 just makes sure the errors will be computed properly
    // when we form sums and ratios below.
+
+   TH1 *h1 = this;
+   TString name =  TString::Format("Asymmetry_%s-%s",h1->GetName(),h2->GetName() ); 
+   TH1 *asym   = (TH1*)Clone(name);
+
+   // set also the title
+   TString title = TString::Format("(%s - %s)/(%s+%s)",h1->GetName(),h2->GetName(),h1->GetName(),h2->GetName() );
+   asym->SetTitle(title);
+
+   asym->Sumw2();
    Bool_t addStatus = TH1::AddDirectoryStatus();
    TH1::AddDirectory(kFALSE);
-   TH1 *asym   = (TH1*)Clone();
-   asym->Sumw2();
    TH1 *top    = (TH1*)asym->Clone();
    TH1 *bottom = (TH1*)asym->Clone();
    TH1::AddDirectory(addStatus);
 
    // form the top and bottom of the asymmetry, and then divide:
-   TH1 *h1 = this;
    top->Add(h1,h2,1,-c2);
    bottom->Add(h1,h2,1,c2);
    asym->Divide(top,bottom);
@@ -3851,6 +3864,7 @@ TH1 *TH1::GetAsymmetry(TH1* h2, Double_t c2, Double_t dc2)
    }
    delete top;
    delete bottom;
+
    return asym;
 }
 

@@ -110,6 +110,7 @@ ifeq ($(BUILDCOCOA),yes)
 MODULES      += graf2d/quartz
 MODULES      += graf2d/cocoa
 MODULES      += core/macosx
+MODULES      += rootx
 SYSTEML      += $(MACOSXL)
 SYSTEMO      += $(MACOSXO)
 SYSTEMDO     += $(MACOSXDO)
@@ -220,7 +221,7 @@ MODULES      += math/unuran
 endif
 ifeq ($(BUILDCLING),yes)
 # put cling right behind of CINT; e.g. UTILS need it
-MODULES      := $(subst cint/cint,cint/cint cint/cling,$(MODULES))
+MODULES      := $(subst cint/cint,cint/cint interpreter/llvm interpreter/cling,$(MODULES))
 endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
@@ -298,8 +299,8 @@ MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
                 geom/geocad geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios \
-                graf2d/quartz graf2d/cocoa core/macosx
+                proof/proofbench proof/afdsmgrd interpreter/cling graf2d/ios \
+                graf2d/quartz graf2d/cocoa core/macosx interpreter/llvm
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -322,9 +323,6 @@ BOOTLIBS     := -lCore -lCint
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += -lCintex -lReflex
 endif
-ifeq ($(BUILDCLING),yes)
-BOOTLIBS     += -lCling
-endif
 ROOTLIBS     := -lRIO -lHist -lGraf -lGraf3d -lGpad -lTree \
                 -lMatrix -lNet -lThread -lMathCore $(BOOTLIBS)
 RINTLIBS     := -lRint
@@ -334,9 +332,6 @@ NEWLIBS      := $(LPATH)/libNew.lib
 BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
-endif
-ifeq ($(BUILDCLING),yes)
-BOOTLIBS     += $(LPATH)/libCling.lib
 endif
 ROOTLIBS     := $(LPATH)/libRIO.lib $(LPATH)/libHist.lib \
                 $(LPATH)/libGraf.lib $(LPATH)/libGraf3d.lib \
@@ -512,6 +507,9 @@ endif
 ifeq ($(XFTLIB),yes)
 STATICEXTRALIBS += -lXft
 endif
+ifeq ($(BUILDCOCOA),yes)
+STATICEXTRALIBS += -framework Cocoa
+endif
 
 ##### libCore #####
 
@@ -544,9 +542,6 @@ ifeq ($(EXPLICITLINK),yes)
 MAINLIBS     := $(CORELIB) $(CINTLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 MAINLIBS     += $(CINTEXLIB) $(REFLEXLIB)
-endif
-ifeq ($(BUILDCLING),yes)
-MAINLIBS     += $(CLINGLIB)
 endif
 else
 MAINLIBS      =
@@ -822,15 +817,15 @@ endif
 	   touch $@; \
 	fi)
 
-$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(CLINGLIB) $(PCREDEP) $(CORELIBDEP)
+$(CORELIB): $(CLINGO) $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
 ifneq ($(ARCH),alphacxx6)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREDO) $(COREO) $(CLINGO) $(CLINGLIBEXTRA) " \
+	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 else
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
+	   "$(SOFLAGS)" libCore.$(SOEXT) $@ " $(COREDO) $(COREO) $(CLINGO) $(CLINGLIBEXTRA) " \
+	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 endif
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
@@ -1049,7 +1044,7 @@ endif
 	@rm -rf README/ReleaseNotes
 	@rm -f etc/svninfo.txt
 	@(find . -path '*/daemons' -prune -o -name *.d -exec rm -rf {} \; >/dev/null 2>&1;true)
-	@(find . -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
+	@(find . -path '*/interpreter/llvm/src' -prune -o -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
 	-@([ -d test ] && (cd test && $(MAKE) distclean); true)
 
 maintainer-clean:: distclean

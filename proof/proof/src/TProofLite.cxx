@@ -231,7 +231,8 @@ Int_t TProofLite::Init(const char *, const char *conffile,
                                    fQueryLock, fLogFileW);
 
    // Apply quotas, if any
-   if (fQMgr && fQMgr->ApplyMaxQueries(10) != 0)
+   Int_t maxq = gEnv->GetValue("ProofLite.MaxQueriesSaved", 10);
+   if (fQMgr && fQMgr->ApplyMaxQueries(maxq) != 0)
       Warning("Init", "problems applying fMaxQueries");
 
    if (InitDataSetManager() != 0)
@@ -424,6 +425,7 @@ Int_t TProofLite::GetNumberOfWorkers(const char *url)
 
    TString nw;
    Int_t nWorkers = -1;
+   Bool_t urlSetting = kFALSE;
    if (url && strlen(url)) {
       nw = url;
       Int_t in = nw.Index("workers=");
@@ -436,10 +438,13 @@ Int_t TProofLite::GetNumberOfWorkers(const char *url)
                ::Warning("TProofLite::GetNumberOfWorkers",
                          "number of workers specified by 'workers='"
                          " is non-positive: using default");
+            } else {
+               urlSetting = kFALSE;
             }
          }
       }
-   } else if (fgProofEnvList) {
+   }
+   if (!urlSetting && fgProofEnvList) {
       // Check PROOF_NWORKERS
       TNamed *nm = (TNamed *) fgProofEnvList->FindObject("PROOF_NWORKERS");
       if (nm) {
@@ -1041,9 +1046,11 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    // For the time being cannot accept other queries if not idle, even if in async
    // mode; needs to set up an event handler to manage that
    
-   TString opt(option), optfb;
+   TString opt(option), optfb, outfile;
    // Enable feedback, if required
    if (opt.Contains("fb=") || opt.Contains("feedback=")) SetFeedback(opt, optfb, 0);
+   // Define output file, either from 'opt' or the default one
+   if (HandleOutputOptions(opt, outfile, 0) != 0) return -1;
 
    // Resolve query mode
    fSync = (GetQueryMode(opt) == kSync);
@@ -1079,8 +1086,8 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    // If just a name was given to identify the dataset, retrieve it from the
    // local files
    // Make sure the dataset contains the information needed
+   TString emsg;
    if ((!hasNoData) && dset->GetListOfElements()->GetSize() == 0) {
-      TString emsg;
       if (TProof::AssertDataSet(dset, fPlayer->GetInputList(), fDataSetManager, emsg) != 0) {
          Error("Process", "from AssertDataSet: %s", emsg.Data());
          return -1;
@@ -1088,6 +1095,38 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       if (dset->GetListOfElements()->GetSize() == 0) {
          Error("Process", "no files to process!");
          return -1;
+      }
+   } else if (hasNoData) {
+      // Check if we are required to process with TPacketizerFile a registered dataset
+      TNamed *ftp = dynamic_cast<TNamed *>(fPlayer->GetInputList()->FindObject("PROOF_FilesToProcess"));
+      if (ftp) {
+         TString dsn(ftp->GetTitle());
+         if (!dsn.Contains(":") || dsn.BeginsWith("dataset:")) {
+            dsn.ReplaceAll("dataset:", "");
+            // Make sure we have something in input and a dataset manager
+            if (!fDataSetManager) {
+               emsg.Form("dataset manager not initialized!");
+            } else {
+               TFileCollection *fc = 0;
+               // Get the dataset
+               if (!(fc = fDataSetManager->GetDataSet(dsn))) {
+                  emsg.Form("requested dataset '%s' does not exists", dsn.Data());
+               } else {
+                  TMap *fcmap = TProofServ::GetDataSetNodeMap(fc, emsg);
+                  if (fcmap) {
+                     fPlayer->GetInputList()->Remove(ftp);
+                     delete ftp;
+                     fcmap->SetOwner(kTRUE);
+                     fcmap->SetName("PROOF_FilesToProcess");
+                     fPlayer->GetInputList()->Add(fcmap);
+                  }
+               }
+            }
+            if (!emsg.IsNull()) {
+               Error("HandleProcess", "%s", emsg.Data());
+               return -1;
+            }
+         }
       }
    }
 
@@ -1107,11 +1146,26 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    // Create instance of query results (the data set is added after Process)
    TProofQueryResult *pq = MakeQueryResult(nentries, opt, first, 0, selec);
 
+   // Check if queries must be saved into files
+   // Automatic saving is controlled by ProofLite.AutoSaveQueries
+   Bool_t savequeries =
+      (!strcmp(gEnv->GetValue("ProofLite.AutoSaveQueries", "off"), "on")) ? kTRUE : kFALSE;
+
+   // Keep queries in memory and how many (-1 = all, 0 = none, ...)
+   Int_t memqueries = gEnv->GetValue("ProofLite.MaxQueriesMemory", 10);
+
    // If not a draw action add the query to the main list
    if (!(pq->IsDraw())) {
-      if (fQMgr->Queries()) fQMgr->Queries()->Add(pq);
+      if (fQMgr->Queries()) {
+         if (memqueries > 0 && fQMgr->Queries()->GetSize() >= memqueries) {
+            // Remove oldest
+            TObject *qfst = fQMgr->Queries()->First();
+            fQMgr->Queries()->Remove(qfst);
+         }
+         if (memqueries >= 0) fQMgr->Queries()->Add(pq);
+      }
       // Also save it to queries dir
-      fQMgr->SaveQuery(pq);
+      if (savequeries) fQMgr->SaveQuery(pq);
    }
 
    // Set the query number
@@ -1121,10 +1175,11 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
    SetQueryRunning(pq);
 
    // Save to queries dir, if not standard draw
-   if (!(pq->IsDraw()))
-      fQMgr->SaveQuery(pq);
-   else
+   if (!(pq->IsDraw())) {
+      if (savequeries) fQMgr->SaveQuery(pq);
+   } else {
       fQMgr->IncrementDrawQueries();
+   }
 
    // Start or reset the progress dialog
    if (!gROOT->IsBatch()) {
@@ -1171,6 +1226,9 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       if (gApplication)
          sh = gSystem->RemoveSignalHandler(gApplication->GetSignalHandler());
    }
+
+   // Make sure we get a fresh result
+   fOutputList.Clear();
 
    // Start the additional workers now if using fork-based startup
    TList *startedWorkers = 0;
@@ -1233,8 +1291,10 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       if (fDataSetManager && fPlayer->GetOutputList()) {
          TNamed *psr = (TNamed *) fPlayer->GetOutputList()->FindObject("PROOFSERV_RegisterDataSet");
          if (psr) {
-            if (RegisterDataSets(fPlayer->GetInputList(), fPlayer->GetOutputList()) != 0)
-               Warning("ProcessNext", "problems registering produced datasets");
+            TString err;
+            if (TProofServ::RegisterDataSets(fPlayer->GetInputList(),
+                                             fPlayer->GetOutputList(), fDataSetManager, err) != 0)
+               Warning("ProcessNext", "problems registering produced datasets: %s", err.Data());
             fPlayer->GetOutputList()->Remove(psr);
             delete psr;
          }
@@ -1244,9 +1304,7 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
       AskStatistics();
       if (!(pq->IsDraw())) {
          if (fQMgr->FinalizeQuery(pq, this, fPlayer)) {
-            // Automatic saving is controlled by ProofLite.AutoSaveQueries
-            if (!strcmp(gEnv->GetValue("ProofLite.AutoSaveQueries", "off"), "on"))
-               fQMgr->SaveQuery(pq, -1);
+            if (savequeries) fQMgr->SaveQuery(pq, -1);
          }
       }
 
@@ -1258,10 +1316,13 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
          // If the last object, notify the GUI that the result arrived
          QueryResultReady(Form("%s:%s", pq->GetTitle(), pq->GetName()));
          // Keep in memory only light info about a query
-         if (!(pq->IsDraw())) {
-            if (fQMgr && fQMgr->Queries())
+         if (!(pq->IsDraw()) && memqueries >= 0) {
+            if (fQMgr && fQMgr->Queries()) {
+               TQueryResult *pqr = pq->CloneInfo();
+               if (pqr) fQMgr->Queries()->Add(pqr);
                // Remove from the fQueries list
                fQMgr->Queries()->Remove(pq);
+            }
          }
          // To get the prompt back
          TString msg;
@@ -1275,6 +1336,8 @@ Long64_t TProofLite::Process(TDSet *dset, const char *selector, Option_t *option
          SetPerfTree(0);
       }
    }
+   // Finalise output file settings (opt is ignored in here)
+   if (HandleOutputOptions(opt, outfile, 1) != 0) return -1;
 
    // Done
    return rv;
@@ -1825,6 +1888,16 @@ Bool_t TProofLite::RegisterDataSet(const char *uri,
       return kFALSE;
    }
 
+   Bool_t parallelverify = kFALSE;
+   TString sopt(optStr);
+   if (sopt.Contains("V") && !sopt.Contains("S")) {
+      // We do verification in parallel later on; just register for now
+      parallelverify = kTRUE;
+      sopt.ReplaceAll("V", "");
+   }
+   // This would screw up things remotely, make sure is not there
+   sopt.ReplaceAll("S", "");
+
    Bool_t result = kTRUE;
    if (fDataSetManager->TestBit(TDataSetManager::kAllowRegister)) {
       // Check the list
@@ -1833,18 +1906,28 @@ Bool_t TProofLite::RegisterDataSet(const char *uri,
          result = kFALSE;
       }
       // Register the dataset (quota checks are done inside here)
-      result = (fDataSetManager->RegisterDataSet(uri, dataSet, optStr) == 0)
+      result = (fDataSetManager->RegisterDataSet(uri, dataSet, sopt) == 0)
              ? kTRUE : kFALSE;
    } else {
-      Info("RegisterDataSets", "dataset registration not allowed");
+      Info("RegisterDataSet", "dataset registration not allowed");
       result = kFALSE;
    }
 
    if (!result)
       Error("RegisterDataSet", "dataset was not saved");
 
+   // If old server or not verifying in parallel we are done
+   if (!parallelverify) return result;
+   
+   // If we are here it means that we will verify in parallel
+   sopt += "V";
+   if (VerifyDataSet(uri, sopt) < 0){
+      Error("RegisterDataSet", "problems verifying dataset '%s'", uri);
+      return kFALSE;
+   }
+
    // Done
-   return result;
+   return kTRUE;
 }
 
 //______________________________________________________________________________
@@ -1976,7 +2059,7 @@ Int_t TProofLite::RemoveDataSet(const char *uri, const char *)
 }
 
 //______________________________________________________________________________
-Int_t TProofLite::VerifyDataSet(const char *uri, const char *)
+Int_t TProofLite::VerifyDataSet(const char *uri, const char *optStr)
 {
    // Verify if all files in the specified dataset are available.
    // Print a list and return the number of missing files.
@@ -1987,15 +2070,20 @@ Int_t TProofLite::VerifyDataSet(const char *uri, const char *)
    }
 
    Int_t rc = -1;
-   if (fDataSetManager->TestBit(TDataSetManager::kAllowVerify)) {
-      rc = fDataSetManager->ScanDataSet(uri);
-   } else {
-      Info("VerifyDataSet", "dataset verification not allowed");
-      return -1;
-   }
+   TString sopt(optStr);
+   if (sopt.Contains("S")) {
 
+      if (fDataSetManager->TestBit(TDataSetManager::kAllowVerify)) {
+         rc = fDataSetManager->ScanDataSet(uri);
+      } else {
+         Info("VerifyDataSet", "dataset verification not allowed");
+         rc = -1;
+      }
+      return rc;
+   }
+   
    // Done
-   return rc;
+   return VerifyDataSetParallel(uri, optStr);
 }
 
 //______________________________________________________________________________
@@ -2192,78 +2280,4 @@ void TProofLite::FindUniqueSlaves()
    // will be actiavted in Collect()
    fUniqueMonitor->DeActivateAll();
    fAllUniqueMonitor->DeActivateAll();
-}
-
-//______________________________________________________________________________
-Int_t TProofLite::RegisterDataSets(TList *in, TList *out)
-{
-   // Register TFileCollections in 'out' as datasets according to the rules in 'in'
-
-   PDB(kDataset, 1) Info("RegisterDataSets", "enter");
-
-   if (!in || !out) return 0;
-
-   TString msg;
-   TIter nxo(out);
-   TObject *o = 0;
-   while ((o = nxo())) {
-      // Only file collections TFileCollection
-      TFileCollection *ds = dynamic_cast<TFileCollection*> (o);
-      if (ds) {
-         // The tag and register option
-         TNamed *fcn = 0;
-         TString tag = TString::Format("DATASET_%s", ds->GetName());
-         if (!(fcn = (TNamed *) out->FindObject(tag))) continue;
-         // Register option
-         TString regopt(fcn->GetTitle());
-         // Register this dataset
-         if (fDataSetManager) {
-            if (fDataSetManager->TestBit(TDataSetManager::kAllowRegister)) {
-               // Extract the list
-               if (ds->GetList()->GetSize() > 0) {
-                  // Register the dataset (quota checks are done inside here)
-                  msg.Form("Registering and verifying dataset '%s' ... ", ds->GetName());
-                  Info("RegisterDataSets", "%s", msg.Data());
-                  // Always allow verification for this action
-                  Bool_t allowVerify = fDataSetManager->TestBit(TDataSetManager::kAllowVerify) ? kTRUE : kFALSE;
-                  if (regopt.Contains("V") && !allowVerify)
-                     fDataSetManager->SetBit(TDataSetManager::kAllowVerify);
-                  Int_t rc = fDataSetManager->RegisterDataSet(ds->GetName(), ds, regopt);
-                  // Reset to the previous state if needed
-                  if (regopt.Contains("V") && !allowVerify)
-                     fDataSetManager->ResetBit(TDataSetManager::kAllowVerify);
-                  if (rc != 0) {
-                     Warning("RegisterDataSets",
-                              "failure registering dataset '%s'", ds->GetName());
-                     msg.Form("Registering and verifying dataset '%s' ... failed! See log for more details", ds->GetName());
-                  } else {
-                     Info("RegisterDataSets", "dataset '%s' successfully registered", ds->GetName());
-                     msg.Form("Registering and verifying dataset '%s' ... OK", ds->GetName());
-                  }
-                  Info("RegisterDataSets", "%s", msg.Data());
-                  // Notify
-                  PDB(kDataset, 2) {
-                     Info("RegisterDataSets","printing collection");
-                     ds->Print("F");
-                  }
-               } else {
-                  Warning("RegisterDataSets", "collection '%s' is empty", o->GetName());
-               }
-            } else {
-               Info("RegisterDataSets", "dataset registration not allowed");
-               return -1;
-            }
-         } else {
-            Error("RegisterDataSets", "dataset manager is undefined!");
-            return -1;
-         }
-         // Cleanup temporary stuff
-         out->Remove(fcn);
-         SafeDelete(fcn);
-      }
-   }
-
-   PDB(kDataset, 1) Info("RegisterDataSets", "exit");
-   // Done
-   return 0;
 }

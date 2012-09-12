@@ -148,7 +148,7 @@ endif()
 ROOT_EXECUTABLE(stressFit stressFit.cxx LIBRARIES MathCore Matrix)
 ROOT_ADD_TEST(test-stressfit COMMAND stressFit FAILREGEX "FAILED")
 
-#--stressHitoFit-----------------------------------------------------------------------------
+#--stressHistoFit-----------------------------------------------------------------------------
 if(ROOT_unuran_FOUND)
   ROOT_EXECUTABLE(stressHistoFit stressHistoFit.cxx LIBRARIES MathCore Matrix Unuran Tree Gpad)
   ROOT_ADD_TEST(test-stresshistofit COMMAND stressHistoFit FAILREGEX "FAILED")
@@ -179,8 +179,12 @@ ROOT_ADD_TEST(test-stressinterpreter COMMAND stressInterpreter
 
 #--stressProof-------------------------------------------------------------------------------
 if(NOT WIN32)
+  add_custom_target(TestData ALL COMMAND ${CMAKE_COMMAND} -DDST=${CMAKE_SOURCE_DIR}/files -P ${CMAKE_CURRENT_SOURCE_DIR}/rootDownloadData.cmake)  
   ROOT_EXECUTABLE(stressProof stressProof.cxx LIBRARIES Proof ProofPlayer Hist)
-  ROOT_ADD_TEST(test-stressproof COMMAND stressProof lite:// FAILREGEX "FAILED")  
+  ROOT_ADD_TEST(test-stressproof COMMAND stressProof lite:// 
+                                         -h1 ${CMAKE_SOURCE_DIR}/files/h1 -event ${CMAKE_SOURCE_DIR}/files/event
+                                         -l /tmp/stressProof-%d.log -cleanlog -noprogress
+                                         FAILREGEX "FAILED")  
 endif()
 
 #--testbits----------------------------------------------------------------------------------

@@ -50,6 +50,7 @@ options="                    \
    enable_builtin_pcre       \
    enable_builtin_zlib       \
    enable_builtin_lzma       \
+   enable_builtin_llvm       \
    enable_cxx11              \
    enable_castor             \
    enable_chirp              \
@@ -140,7 +141,7 @@ for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_cxx11=no
 enable_cling=no
-enable_cocoa=no
+enable_cocoa=
 enable_afs=no
 enable_alloc=no
 enable_gdml=no
@@ -166,6 +167,7 @@ enable_builtin_glew=no
 enable_builtin_pcre=no
 enable_builtin_zlib=no
 enable_builtin_lzma=no
+enable_builtin_llvm=yes
 enable_afdsmgrd=no
 
 if test "x$ENABLEALL" = "xyes"; then
@@ -1486,6 +1488,17 @@ If any of the flags --cintincdir, --datadir, --docdir, --etcdir, --iconpath
 ROOT will be compiled with static directory names, and you should not set
 the ROOTSYS environment variable.
 
+To reduce the output of configure by removing the trailing howto message, use:
+
+   --nohowto
+
+Use the flag:
+
+  --fail-on-missing 
+
+to force configure to fail if a component that has been explicitly enabled
+is missing some dependencies and can not be built.
+
 enable/disable options, prefix with either --enable- or --disable-
 
   afdsmgrd           Dataset manager for PROOF-based analysis facilities
@@ -1494,18 +1507,19 @@ enable/disable options, prefix with either --enable- or --disable-
   asimage            Image processing support, requires libAfterImage
   astiff             Include tiff support in image processing
   bonjour            Bonjour support, requires libdns_sd and/or Avahi
-  builtin-afterimage Built included libAfterImage, or use system libAfterImage
-  builtin-ftgl       Built included libFTGL, or use system libftgl
-  builtin-freetype   Built included libfreetype, or use system libfreetype
-  builtin-glew       Built included libGLEW, or use system libGLEW
-  builtin-pcre       Built included libpcre, or use system libpcre
-  builtin-zlib       Built included libz, or use system libz
-  builtin-lzma       Built included liblzma, or use system liblzma
+  builtin-afterimage Build included libAfterImage, or use system libAfterImage
+  builtin-ftgl       Build included libFTGL, or use system libftgl
+  builtin-freetype   Build included libfreetype, or use system libfreetype
+  builtin-glew       Build included libGLEW, or use system libGLEW
+  builtin-pcre       Build included libpcre, or use system libpcre
+  builtin-zlib       Build included libz, or use system libz
+  builtin-lzma       Build included liblzma, or use system liblzma
+  builtin-llvm       Build included libclang, or use system libclang
   c++11              Build using C++11 compatible mode, requires gcc > 4.7.x or clang
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
   chirp              Chirp filesystem support, requires cctools >= 3.2.2
   cintex             Build the libCintex Reflex interface library
-  cling              Use cling as interpreter backend (experimental!), needs --with-llvm-config
+  cling              Use cling as interpreter backend (experimental!)
   cocoa              Use native Cocoa/Quartz graphics backend (MacOS X only)
   dcache             dCache support, requires libdcap from DESY
   explicitlink       Explicitly link with all dependent libraries
@@ -1862,8 +1876,8 @@ trapcmd="rm -rf Makefile.tmp RConfigure.tmp RConfigure-out.tmp \
          RConfigOptions.tmp RConfigOptions-out.tmp \
          Makefile-comp.tmp root-config.tmp rootrc.tmp \
          rootauthrc.tmp rootdaemonrc.tmp memprobe.tmp rootd.tmp \
-         proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp conftest.mk \
-         conftest.c conftest conftest.dSYM"
+         proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp proofserv.tmp \
+         roots.tmp conftest.mk conftest.c conftest conftest.dSYM"
 trap "$trapcmd; exit 1" 1 2 3 15
 trap "$trapcmd" 0
 
@@ -1952,7 +1966,7 @@ if test $# -gt 0 ; then
       --with-krb5-libdir=*)    krb5libdir=$optarg    ; enable_krb5="yes"    ;;
       --with-ldap-incdir=*)    ldapincdir=$optarg    ; enable_ldap="yes"    ;;
       --with-ldap-libdir=*)    ldaplibdir=$optarg    ; enable_ldap="yes"    ;;
-      --with-llvm-config=*)    llvmconfig=$optarg    ;; # require explicit --enable-cling
+      --with-llvm-config=*)    llvmconfig=$optarg    ; enable_builtin_llvm=no;; # require explicit --enable-cling
       --with-mysql-incdir=*)   mysqlincdir=$optarg   ; enable_mysql="yes"   ;;
       --with-mysql-libdir=*)   mysqllibdir=$optarg   ; enable_mysql="yes"   ;;
       --with-monalisa-incdir=*)monalisaincdir=$optarg; enable_monalisa="yes";;
@@ -2338,10 +2352,66 @@ fi
 
 ######################################################################
 #
+### echo %%% Cling - LLVM/clang based interpreter prototype
+#
+hascling="undef"
+hasllvm="undef"
+llvmdir="/**/"
+clingextrares=""
+if test ! "x$enable_cling" = "xno"; then
+    message "Checking for llvm-config"
+    if test "x$enable_builtin_llvm" = "x" || \
+       test "x$enable_builtin_llvm" = "xno" ; then
+	
+        # allow LLVMDIR instead of --with-llvm-config
+        if test "x$llvmconfig" = "x" ; then
+            if test ! "x$LLVMDIR" = "x" ; then
+                llvmconfig="$LLVMDIR/bin"
+            else
+                result "no"
+                clingextrares="(needs --with-llvm-config or \$LLVMDIR)"
+            fi
+        fi
+        if test ! "x$llvmconfig" = "x"; then
+            if test -d "$llvmconfig"; then
+                llvmconfig=$llvmconfig/llvm-config
+            fi
+            if test -f $llvmconfig && test -x $llvmconfig; then
+                hascling="define"
+                hasllvm="define"
+                llvmdir="`dirname $llvmconfig`"
+                llvmdir='"'"`dirname $llvmdir`"'"'
+            fi
+        fi
+    else
+        hascling="define"
+    fi
+else
+    enable_builtin_llvm="no"
+fi
+if test "x$hascling" = "xundef"; then
+    enable_cling="no"
+    message "Checking whether to integrate experimental cling"
+    result "no $clingextrares"
+else
+    result "$llvmconfig" # have llvm
+    enable_cling="yes"
+    message "Checking whether to integrate experimental cling"
+    result "yes"
+fi
+
+######################################################################
+#
 ### echo %%% Check if native MacOS X Cocoa/Quartz backend should be build
 #
 if test ! "x$platform" = "xmacosx"; then
     enable_cocoa="no"
+fi
+if test "x$macosx108" = "xyes" && test "x$enable_cocoa" = "x"; then
+   enable_cocoa="yes"
+fi
+if test "x$enable_cocoa" = "x"; then
+   enable_cocoa="no"
 fi
 
 hascocoa="undef"
@@ -2350,6 +2420,17 @@ if test "x$enable_cocoa" = "xyes"; then
     hascocoa="define"
     enable_x11="no"
     result "yes"
+    message "Checking for OSX SDK"
+    osxsdk=`make -s -f ${ac_srcdir}/config/Makefile.$arch CONFIGURE=yes showsdk`
+    result "$osxsdk"
+    if [ ! -d $osxsdk ]; then
+        result "`basename $0`: no OSX SDK found at $osxsdk"
+        result "Run "xcode-select" to update the developer directory path"
+        exit 1
+    else
+	openglincdir=${osxsdk}/System/Library/Frameworks/OpenGL.framework/Headers
+	opengllibdir=${osxsdk}/System/Library/Frameworks/OpenGL.framework/Libraries
+    fi
 fi
 
 ######################################################################
@@ -2594,9 +2675,13 @@ if test "x$enable_builtin_freetype" = "x" || \
 
    checking_msg "freetype-config"
    if `$cwhich freetype-config > /dev/null 2>&1` && test "x$host" = "x" ; then
-      if test "x$macosx108" = "xyes" && file -h `$cwhich freetype-config` | grep 'xstub' > /dev/null 2>&1 ; then
+      if test "x$macosx108" = "xyes" && (file -h `$cwhich freetype-config` | grep 'xstub' > /dev/null 2>&1 || test "x$enable_cocoa" = "xyes"); then
          enable_builtin_freetype="yes"
-         result "XQuartz not installed"
+         if file -h `$cwhich freetype-config` | grep 'xstub' > /dev/null 2>&1 ; then
+            result "XQuartz not installed"
+         else
+            result "using builtin freetype"
+         fi
       else
          $cwhich freetype-config
 
@@ -2752,7 +2837,7 @@ if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
         /usr/include/Mesa /usr/local/include/Mesa /usr/Mesa/include \
         /usr/local/Mesa/include /usr/Mesa /usr/local/Mesa /opt/Mesa \
         /opt/Mesa/include /opt/graphics/OpenGL/include"
-    check_header "GL/gl.h" "$openglincdir" $openglincdirs
+    check_header "GL/gl.h gl.h" "$openglincdir" $openglincdirs
     openglinc=$found_hdr
     openglincdir=$found_dir
 
@@ -4110,7 +4195,9 @@ if test ! "x$enable_asimage" = "xno" ; then
     fi
     # If we didn't find the system libAfterImage, or the user didn't ask
     # for a system library, then see if we have various headers needed.
-    if test "x$enable_builtin_afterimage" = "xyes" ; then
+    # For Cocoa backend force libAfterImage builtin jpeg and png libs
+    # to avoid system versions based on X11. 
+    if test "x$enable_builtin_afterimage" = "xyes" && test ! "x$enable_cocoa" = "xyes"; then
        check_header "jpeglib.h" "" \
           $ASIMAGE ${ASIMAGE:+$ASIMAGE/include} \
           ${finkdir:+$finkdir/include} \
@@ -4270,6 +4357,14 @@ check_explicit "$enable_ldap" "$enable_ldap_explicit" \
 #
 # (See http://www.python.org)
 #
+if test ! "x$enable_python" = "xno" ; then
+    # PyROOT depends on cling
+    message "Checking for PyROOT prerequisites"
+    if test ! "x$enable_cling" = "xyes"; then
+        enable_python="no"
+        result "no (cling disabled)"
+    fi
+fi
 if test ! "x$enable_python" = "xno" ; then
     # Check for Python include and library
     mypython=`$cwhich python 2> /dev/null`
@@ -6030,50 +6125,16 @@ if test "x$enable_afdsmgrd" = "xyes" ; then
     fi
 
     if test ! "x$afdsmgrdapmondir" = "x" ; then
-        afdsmgrdapmon="--with-apmon=$afdsmgrdapmondir"
+        afdsmgrdapmon="$afdsmgrdapmondir"
         afdsmgrdapmonmsg=", using ApMon at $afdsmgrdapmondir"
     else
-        afdsmgrdapmon="--disable-apmon"
+        afdsmgrdapmon=""
         afdsmgrdapmonmsg=", ApMon support disabled"
     fi
 else
     enable_afdsmgrd="no"
 fi
 result "$enable_afdsmgrd$afdsmgrdapmonmsg"
-
-######################################################################
-#
-### echo %%% Cling - LLVM/clang based interpreter prototype
-#
-message "Checking whether to integrate experimental cling"
-hascling="undef"
-clingextrares=""
-if test ! "x$enable_cling" = "xno"; then
-    # allow LLVMDIR instead of --with-llvm-config
-    if test "x$llvmconfig" = "x" ; then
-        if test ! "x$LLVMDIR" = "x" ; then
-            llvmconfig="$LLVMDIR/bin"
-        else
-            clingextrares="(needs --with-llvm-config or \$LLVMDIR)"
-        fi
-        result "no"
-    fi
-    if test ! "x$llvmconfig" = "x"; then
-        if test -d "$llvmconfig"; then
-            llvmconfig=$llvmconfig/llvm-config
-        fi
-        if test -f $llvmconfig && test -x $llvmconfig; then
-            hascling="define"
-        fi
-    fi
-fi
-if test "x$hascling" = "xundef"; then
-    enable_cling="no"
-    result "no $clingextrares"
-else
-    enable_cling="yes"
-    result "yes"
-fi
 
 ######################################################################
 #
@@ -6536,6 +6597,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildglew@|$enable_builtin_glew|"    \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
+    -e "s|@builtinllvm@|$enable_builtin_llvm|"  \
     -e "s|@hasxrd@|$enable_xrootd|"             \
     -e "s|@castorincdir@|$castorincdir|"        \
     -e "s|@castorlib@|$castorlib|"              \
@@ -6822,6 +6884,8 @@ sed \
     -e "s|@hascling@|$hascling|"           \
     -e "s|@hascocoa@|$hascocoa|"           \
     -e "s|@usec++11@|$usecxx11|"           \
+    -e "s|@hasllvm@|$hasllvm|"           \
+    -e "s|@llvmdir@|$llvmdir|"           \
     < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
 
