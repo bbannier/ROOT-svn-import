@@ -2066,18 +2066,30 @@ void print_mask_info(ULong_t mask)
 
          const Quartz::CGStateGuard ctxGuard(fContext);
 
+         //Non-rectangular windows.
          Util::CFScopeGuard<CGImageRef> clipImageGuard;
          QuartzWindow * const topLevelParent = self.fQuartzWindow;
          if (topLevelParent.fShapeCombineMask) {
+            //Important: shape mask should have the same width and height as
+            //a top-level window. In ROOT it does not :( Say hello to visual artifacts.
+            
             //Attach clip mask to the context.
-            //TODO: this is correct only for contentView?
-            NSRect clipRect = [self visibleRect];
-            if (fParentView && fParentView != [[self window] contentView])
-               clipRect.origin = [self.fParentView convertPoint : clipRect.origin toView : [[self window] contentView]];
-            clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
-            CGContextClipToMask(fContext, CGRectMake(0, 0, clipRect.size.width, clipRect.size.height), clipImageGuard.Get());
+            NSRect clipRect = [self visibleRect]; //self.frame instead?
+            if (!fParentView) {
+               //'self' is a top-level view (and actually, shape mask MUST have the same sizes as our view).
+               clipRect = CGRectMake(0, 0, topLevelParent.fShapeCombineMask.fWidth, topLevelParent.fShapeCombineMask.fHeight);
+               CGContextClipToMask(fContext, clipRect, topLevelParent.fShapeCombineMask.fImage);
+            } else {
+               //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
+               if (fParentView != [self window].contentView)//otherwise, rect is OK already - correct coords.
+                  clipRect.origin = [fParentView convertPoint : clipRect.origin toView : [self window].contentView];
+               
+               clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
+               clipRect.origin = CGPointZero;
+               CGContextClipToMask(fContext, clipRect, clipImageGuard.Get());
+            }
          }
-
+         //
 
          if (window->InheritsFrom("TGContainer"))//It always has an ExposureMask.
             vx->GetEventTranslator()->GenerateExposeEvent(self, [self visibleRect]);
