@@ -2074,16 +2074,15 @@ void print_mask_info(ULong_t mask)
             //a top-level window. In ROOT it does not :( Say hello to visual artifacts.
             
             //Attach clip mask to the context.
-            NSRect clipRect = [self visibleRect]; //self.frame instead?
+            NSRect clipRect = self.frame; //self.frame instead?
             if (!fParentView) {
                //'self' is a top-level view (and actually, shape mask MUST have the same sizes as our view).
                clipRect = CGRectMake(0, 0, topLevelParent.fShapeCombineMask.fWidth, topLevelParent.fShapeCombineMask.fHeight);
                CGContextClipToMask(fContext, clipRect, topLevelParent.fShapeCombineMask.fImage);
             } else {
                //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
-               if (fParentView != [self window].contentView)//otherwise, rect is OK already - correct coords.
-                  clipRect.origin = [fParentView convertPoint : clipRect.origin toView : [self window].contentView];
-               
+               clipRect.origin = [fParentView convertPoint : clipRect.origin toView : [self window].contentView];
+               clipRect.origin.y = X11::LocalYROOTToCocoa((NSView<X11Window> *)[self window].contentView, clipRect.origin.y + clipRect.size.height);
                clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
                clipRect.origin = CGPointZero;
                CGContextClipToMask(fContext, clipRect, clipImageGuard.Get());

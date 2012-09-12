@@ -471,15 +471,15 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
                //a top-level window. In ROOT it's not. Say hello to visual artifacts!
              
                //Attach clip mask to the context.
-               NSRect clipRect = [view visibleRect]; //view.frame instead?
+               NSRect clipRect = view.frame; //view.frame instead?
                if (!view.fParentView) {
                   //'self' is a top-level view (and actually, shape mask MUST have the same sizes as our view).
                   clipRect = CGRectMake(0, 0, topLevelParent.fShapeCombineMask.fWidth, topLevelParent.fShapeCombineMask.fHeight);
                   CGContextClipToMask(currContext, clipRect, topLevelParent.fShapeCombineMask.fImage);
                } else {
                   //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
-                  if (view.fParentView != [view window].contentView)//otherwise, rect is OK already - correct coords.
-                     clipRect.origin = [view.fParentView convertPoint : clipRect.origin toView : [view window].contentView];
+                  clipRect.origin = [view.fParentView convertPoint : clipRect.origin toView : [view window].contentView];
+                  clipRect.origin.y = X11::LocalYROOTToCocoa((NSView<X11Window> *)[view window].contentView, clipRect.origin.y + clipRect.size.height);
                   
                   clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
                   clipRect.origin = CGPointZero;
