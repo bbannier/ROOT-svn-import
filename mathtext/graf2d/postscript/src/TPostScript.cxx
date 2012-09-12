@@ -1765,7 +1765,6 @@ void TPostScript::Initialize()
    if ( fMode == 1 || fMode == 4) PrintStr("%%Orientation: Portrait@");
    if ( fMode == 2 || fMode == 5) PrintStr("%%Orientation: Landscape@");
 
-   PrintStr("%%DocumentNeededResources: ProcSet (FontSetInit)@");
    PrintStr("%%EndComments@");
    PrintStr("%%BeginProlog@");
 
@@ -2825,6 +2824,7 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
       FILE *sg = fopen(tmpname.Data(),"r");
       char line[255];
       while (fgets(line,255,sg)) {
+         if (strstr(line,"EndComments")) PrintStr("%%DocumentNeededResources: ProcSet (FontSetInit)@");
          fStream->write(line,strlen(line));
          if (!fFontEmbed && strstr(line,"m5")) {
             FontEmbed();
