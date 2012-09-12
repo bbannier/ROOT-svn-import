@@ -459,17 +459,32 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
             const Quartz::CGStateGuard ctxGuard(currContext);
             
             //Either use shape combine mask, or clip mask.
-            //TODO: find a way to combine both?
+            if (fClippedRegion.size())
+               CGContextClipToRects(currContext, &fClippedRegion[0], fClippedRegion.size());
+   
+            //Now add also shape combine mask.
             ROOT::MacOSX::Util::CFScopeGuard<CGImageRef> clipImageGuard;
             QuartzWindow * const topLevelParent = view.fQuartzWindow;
             if (topLevelParent.fShapeCombineMask) {
+               //Non-rectangular windows.
+               //Important: shape mask should have the same width and height as
+               //a top-level window. In ROOT it's not. Say hello to visual artifacts!
+             
                //Attach clip mask to the context.
-               const NSRect clipRect  = [view convertRect : view.frame toView : nil];
-               clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
-               //TODO: this geometry looks suspicious, check!
-               //CGContextClipToMask(currContext, CGRectMake(0, 0, clipRect.size.width, clipRect.size.height), clipImageGuard.Get());
-            } else if (fClippedRegion.size()) {
-               CGContextClipToRects(currContext, &fClippedRegion[0], fClippedRegion.size());
+               NSRect clipRect = [view visibleRect]; //view.frame instead?
+               if (!view.fParentView) {
+                  //'self' is a top-level view (and actually, shape mask MUST have the same sizes as our view).
+                  clipRect = CGRectMake(0, 0, topLevelParent.fShapeCombineMask.fWidth, topLevelParent.fShapeCombineMask.fHeight);
+                  CGContextClipToMask(currContext, clipRect, topLevelParent.fShapeCombineMask.fImage);
+               } else {
+                  //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
+                  if (view.fParentView != [view window].contentView)//otherwise, rect is OK already - correct coords.
+                     clipRect.origin = [view.fParentView convertPoint : clipRect.origin toView : [view window].contentView];
+                  
+                  clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
+                  clipRect.origin = CGPointZero;
+                  CGContextClipToMask(currContext, clipRect, clipImageGuard.Get());
+               }
             }
 
             cmd->Execute();//This can throw, we should restore as much as we can here.
