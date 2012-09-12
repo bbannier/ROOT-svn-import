@@ -529,6 +529,65 @@ namespace Quartz = ROOT::Quartz;
 }
 
 //______________________________________________________________________________
+- (id) initFromImageFlipped : (QuartzImage *) image
+{
+   assert(image != nil && "initFromImageFlipped:, image parameter is nil");
+   assert(image.fWidth != 0 && "initFromImageFlipped:, image width is 0");
+   assert(image.fHeight != 0 && "initFromImageFlipped:, image height is 0");
+   assert(image.fIsStippleMask == YES && "initFromImageFlipped:, image is not a stipple mask, not implemented");
+   
+   if (self = [super init]) {
+      const unsigned width = image.fWidth;
+      const unsigned height = image.fHeight;
+
+      Util::NSScopeGuard<QuartzImage> selfGuard(self);
+
+      unsigned char *dataCopy = 0;
+      try {
+         dataCopy = new unsigned char[width * height]();
+      } catch (const std::bad_alloc &) {
+         NSLog(@"QuartzImage: -initFromImageFlipped:, memory allocation failed");
+         return nil;
+      }
+
+      for (unsigned i = 0; i < height; ++i) {
+         const unsigned char *sourceLine = image->fImageData + width * (height - 1 - i);
+         unsigned char *dstLine = dataCopy + i * width;
+         std::copy(sourceLine, sourceLine + width, dstLine);
+      }
+      
+      Util::ScopedArray<unsigned char> arrayGuard(dataCopy);
+   
+      fIsStippleMask = YES;
+      const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
+                                                               ROOT_QuartzImage_ReleaseBytePointer, 
+                                                               ROOT_QuartzImage_GetBytesAtPosition, 0};
+                                                               
+                                                               
+      const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(dataCopy, width * height, &providerCallbacks));
+      if (!provider.Get()) {
+         NSLog(@"QuartzImage: -initMaskWithW:H:bitmapMask: CGDataProviderCreateDirect failed");
+         return nil;
+      }
+
+      fImage = CGImageMaskCreate(width, height, 8, 8, width, provider.Get(), 0, false);//null -> decode, false -> shouldInterpolate.
+      if (!fImage) {
+         NSLog(@"QuartzImage: -initMaskWithW:H:bitmapMask:, CGImageMaskCreate failed");
+         return nil;
+      }
+      
+      selfGuard.Release();
+      arrayGuard.Release();
+
+      fWidth = width;
+      fHeight = height;
+      fImageData = dataCopy;
+   }
+   
+   return self;
+}
+
+//______________________________________________________________________________
 - (void) dealloc
 {
    if (fImage) {

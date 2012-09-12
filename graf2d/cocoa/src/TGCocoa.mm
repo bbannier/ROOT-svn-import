@@ -264,7 +264,6 @@ void DrawPattern(void *info, CGContextRef ctx)
       CGContextSetRGBFillColor(ctx, rgb[0], rgb[1], rgb[2], 1.);
       CGContextClipToMask(ctx, patternRect, image.fImage);
       CGContextFillRect(ctx, patternRect);
-
    } else {
       //This can be a window background pixmap
       DrawTile(patternImage, ctx);
@@ -1326,19 +1325,22 @@ void TGCocoa::ShapeCombineMask(Window_t windowID, Int_t /*x*/, Int_t /*y*/, Pixm
    // The Nonrectangular Window Shape Extension adds nonrectangular
    // windows to the System.
    // This allows for making shaped (partially transparent) windows
-   
    assert(!fPimpl->IsRootWindow(windowID) && "ShapeCombineMask, windowID parameter is a 'root' window");
    assert(fPimpl->GetDrawable(windowID).fIsPixmap == NO && "ShapeCombineMask, windowID parameter is a bad window id");
    assert([fPimpl->GetDrawable(pixmapID) isKindOfClass : [QuartzImage class]] && "ShapeCombineMask, pixmapID parameter must point to QuartzImage object");
-   
-   QuartzWindow * const qw = fPimpl->GetWindow(windowID).fQuartzWindow;
 
-   QuartzImage * const image = (QuartzImage *)fPimpl->GetDrawable(pixmapID);
-   assert(image.fIsStippleMask == YES && "ShapeCombineMask, QuartzImage must be a stipple mask");
+   QuartzImage * const srcImage = (QuartzImage *)fPimpl->GetDrawable(pixmapID);
+   assert(srcImage.fIsStippleMask == YES && "ShapeCombineMask, source image is not a stipple mask");
 
-   qw.fShapeCombineMask = image;   
-   [qw setOpaque : NO];
-   [qw setBackgroundColor : [NSColor clearColor]];
+   //TODO: there is some kind of problems with shape masks and
+   //flipped views, I have to do an image flip here - check this!
+   const Util::NSScopeGuard<QuartzImage> image([[QuartzImage alloc] initFromImageFlipped : srcImage]);
+   if (image.Get()) {
+      QuartzWindow * const qw = fPimpl->GetWindow(windowID).fQuartzWindow;
+      qw.fShapeCombineMask = image.Get();
+      [qw setOpaque : NO];
+      [qw setBackgroundColor : [NSColor clearColor]];
+   }
 }
 
 //"Window manager hints" set of functions.
