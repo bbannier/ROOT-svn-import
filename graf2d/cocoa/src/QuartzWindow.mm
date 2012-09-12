@@ -2071,9 +2071,8 @@ void print_mask_info(ULong_t mask)
          if (topLevelParent.fShapeCombineMask) {
             //Attach clip mask to the context.
             NSRect clipRect = [self visibleRect];
-            if (fParentView)
-               clipRect.origin = [self convertPoint : clipRect.origin toView : nil];
-
+            if (fParentView && fParentView != [[self window] contentView])
+               clipRect.origin = [self.fParentView convertPoint : clipRect.origin toView : [[self window] contentView]];
             clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
             CGContextClipToMask(fContext, CGRectMake(0, 0, clipRect.size.width, clipRect.size.height), clipImageGuard.Get());
          }
