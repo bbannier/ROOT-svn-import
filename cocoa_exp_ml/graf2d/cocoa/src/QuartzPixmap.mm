@@ -534,7 +534,8 @@ namespace Quartz = ROOT::Quartz;
    assert(image != nil && "initFromImageFlipped:, image parameter is nil");
    assert(image.fWidth != 0 && "initFromImageFlipped:, image width is 0");
    assert(image.fHeight != 0 && "initFromImageFlipped:, image height is 0");
-   assert(image.fIsStippleMask == YES && "initFromImageFlipped:, image is not a stipple mask, not implemented");
+   
+   const unsigned bpp = image.fIsStippleMask ? 1 : 4;
    
    if (self = [super init]) {
       const unsigned width = image.fWidth;
@@ -544,36 +545,61 @@ namespace Quartz = ROOT::Quartz;
 
       unsigned char *dataCopy = 0;
       try {
-         dataCopy = new unsigned char[width * height]();
+         dataCopy = new unsigned char[width * height * bpp]();
       } catch (const std::bad_alloc &) {
          NSLog(@"QuartzImage: -initFromImageFlipped:, memory allocation failed");
          return nil;
       }
 
+      const unsigned lineSize = bpp * width;
       for (unsigned i = 0; i < height; ++i) {
-         const unsigned char *sourceLine = image->fImageData + width * (height - 1 - i);
-         unsigned char *dstLine = dataCopy + i * width;
-         std::copy(sourceLine, sourceLine + width, dstLine);
+         const unsigned char *sourceLine = image->fImageData + lineSize * (height - 1 - i);
+         unsigned char *dstLine = dataCopy + i * lineSize;
+         std::copy(sourceLine, sourceLine + lineSize, dstLine);
       }
       
       Util::ScopedArray<unsigned char> arrayGuard(dataCopy);
-   
-      fIsStippleMask = YES;
-      const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
-                                                               ROOT_QuartzImage_ReleaseBytePointer, 
-                                                               ROOT_QuartzImage_GetBytesAtPosition, 0};
-                                                               
-                                                               
-      const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(dataCopy, width * height, &providerCallbacks));
-      if (!provider.Get()) {
-         NSLog(@"QuartzImage: -initMaskWithW:H:bitmapMask: CGDataProviderCreateDirect failed");
-         return nil;
-      }
 
-      fImage = CGImageMaskCreate(width, height, 8, 8, width, provider.Get(), 0, false);//null -> decode, false -> shouldInterpolate.
-      if (!fImage) {
-         NSLog(@"QuartzImage: -initMaskWithW:H:bitmapMask:, CGImageMaskCreate failed");
-         return nil;
+      const CGDataProviderDirectCallbacks providerCallbacks = {0, ROOT_QuartzImage_GetBytePointer, 
+                                                               ROOT_QuartzImage_ReleaseBytePointer,
+                                                               ROOT_QuartzImage_GetBytesAtPosition, 0};
+   
+      if (bpp == 1) {
+         fIsStippleMask = YES;
+
+         const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(dataCopy, width * height, &providerCallbacks));
+         if (!provider.Get()) {
+            NSLog(@"QuartzImage: -initFromImageFlipped:, CGDataProviderCreateDirect failed");
+            return nil;
+         }
+
+         fImage = CGImageMaskCreate(width, height, 8, 8, width, provider.Get(), 0, false);//null -> decode, false -> shouldInterpolate.
+         if (!fImage) {
+            NSLog(@"QuartzImage: -initFromImageFlipped:, CGImageMaskCreate failed");
+            return nil;
+         }
+      } else {
+         fIsStippleMask = NO;
+      
+         const Util::CFScopeGuard<CGDataProviderRef> provider(CGDataProviderCreateDirect(dataCopy, width * height * 4, &providerCallbacks));
+         if (!provider.Get()) {
+            NSLog(@"QuartzImage: -initFromImageFlipped:, CGDataProviderCreateDirect failed");
+            return nil;
+         }
+      
+         const Util::CFScopeGuard<CGColorSpaceRef> colorSpace(CGColorSpaceCreateDeviceRGB());
+         if (!colorSpace.Get()) {
+            NSLog(@"QuartzImage: -initFromImageFlipped:, CGColorSpaceCreateDeviceRGB failed");
+            return nil;
+         }
+
+         //8 bits per component, 32 bits per pixel, 4 bytes per pixel, kCGImageAlphaLast:
+         //all values hardcoded for TGCocoa::CreatePixmapFromData.
+         fImage = CGImageCreate(width, height, 8, 32, width * 4, colorSpace.Get(), kCGImageAlphaLast, provider.Get(), 0, false, kCGRenderingIntentDefault);
+         if (!fImage) {
+            NSLog(@"QuartzImage: -initFromImageFlipped:, CGImageCreate failed");
+            return nil;
+         }
       }
       
       selfGuard.Release();
