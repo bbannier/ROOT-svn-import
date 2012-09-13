@@ -120,6 +120,10 @@ else
 			LZMACC="$$LZMACC -m64"; \
 			LZMA_CFLAGS="-m64"; \
 		fi; \
+		if [ $(ARCH) = "linuxx32gcc" ]; then \
+			LZMACC="$$LZMACC -mx32"; \
+			LZMA_CFLAGS="-mx32"; \
+		fi; \
 		if [ $(ARCH) = "linuxicc" ]; then \
 			LZMACC="$$LZMACC -m32"; \
 			LZMA_CFLAGS="-m32"; \

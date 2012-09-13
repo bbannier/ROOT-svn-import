@@ -210,13 +210,32 @@ TFormula::TFormula(const char *name,const char *expression) :
       // special case for normalized gaus
       if (chaine.Contains("gausn")) {
          gausNorm = kTRUE;
-         chaine.ReplaceAll("gausn","gaus");
+         TString tmp = chaine;         
+         tmp.ReplaceAll("gausn","");
+         tmp.ReplaceAll("landaun","");
+         if ( tmp.Contains("gaus")  )
+            Warning("TFormula","Cannot use both gaus and gausn - gaus will be treated as gausn");
+         if ( tmp.Contains("landau")  ) 
+            Warning("TFormula","Cannot use both gausn and landau - landau will be treated as landaun");
       }
       // special case for normalized landau
       if (chaine.Contains("landaun")) {
          landauNorm = kTRUE;
-         chaine.ReplaceAll("landaun","landau");
+         TString tmp = chaine;         
+         tmp.ReplaceAll("landaun","");
+         tmp.ReplaceAll("gausn","");
+         if ( tmp.Contains("gaus")  ) {
+            Warning("TFormula","Cannot use both gaus and landaun - gaus will be treated as gausn");
+         }
+         if ( tmp.Contains("landau") ) 
+            Warning("TFormula","Cannot use both landau and landaun - landau will be treated as landaun");
       }
+      // need to to the replacement here for the error message before
+      if (gausNorm)
+         chaine.ReplaceAll("gausn","gaus");
+      if (landauNorm)
+         chaine.ReplaceAll("landaun","landau");
+
       SetTitle(chaine.Data());
    }
    delete [] expr;
@@ -1314,7 +1333,8 @@ void TFormula::Analyze(const char *schain, Int_t &err, Int_t offset)
                      if (oldformula && strcmp(schain,oldformula->GetTitle())) {
                         Int_t nprior = fNpar;
                         Analyze(oldformula->GetExpFormula(),err,fNpar);
-
+                        // if the oldformula was using a normalized function (gausn or landaun) set also in this one
+                        if (oldformula->IsNormalized()) SetBit(kNormalized);
                         if (err) return; // changes fNpar
                         fNpar = nprior;
                         find=1;

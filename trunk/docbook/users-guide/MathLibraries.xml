@@ -36,13 +36,33 @@ shown in the following picture.</para>
 <sect2>
 <title>TRandom</title>
 <para>Pseudo-random numbers are generated using a linear congruential random generator. The multipliers used are the same of the BSD <code>rand()</code> random generator. Its sequence is: </para>
-<para> <inlinemediaobject><imageobject><imagedata fileref="pictures/0600010A.png" width="104.9pt" depth="14.3pt"/></imageobject></inlinemediaobject> with <inlinemediaobject><imageobject><imagedata fileref="pictures/0600010B.png" width="9.95pt" depth="11.15pt"/></imageobject></inlinemediaobject><code>=1103515245</code>, <inlinemediaobject><imageobject><imagedata fileref="pictures/0600010C.png" width="9.3pt" depth="11.15pt"/></imageobject></inlinemediaobject>= 12345 and <inlinemediaobject><imageobject><imagedata fileref="pictures/0600010D.png" width="13.05pt" depth="11.15pt"/></imageobject></inlinemediaobject>=231. </para>
-<para>This type of generator uses a state of only a 32 bit integer and it has a very short period, 231,about 109, which can be exhausted in just few seconds. The quality of this generator is therefore BAD and it is strongly recommended to NOT use for any statistical study. </para>
+<para>
+<inlinemediaobject>
+<imageobject>
+<imagedata fileref="pictures/0600010A.png" width="104.9pt" depth="14.3pt"/>
+</imageobject>
+</inlinemediaobject> with <inlinemediaobject>
+<imageobject>
+<imagedata fileref="pictures/0600010B.png" width="9.95pt" depth="11.15pt"/>
+</imageobject>
+</inlinemediaobject><code>=1103515245</code>, <inlinemediaobject>
+<imageobject>
+<imagedata fileref="pictures/0600010C.png" width="9.3pt" depth="11.15pt"/>
+</imageobject>
+</inlinemediaobject>= 12345 and <inlinemediaobject>
+<imageobject>
+<imagedata fileref="pictures/0600010D.png" width="13.05pt" depth="11.15pt"/>
+</imageobject>
+</inlinemediaobject>=2<superscript>31</superscript>. </para>
+<para>This type of generator uses a state of only a 32 bit integer and it has a very short period,
+2<superscript>31</superscript>,about 10<superscript>9</superscript>, which can be
+exhausted in just few seconds. The quality of this generator is therefore BAD and it is strongly
+recommended to NOT use for any statistical study. </para>
 </sect2>
 
 <sect2>
 <title>TRandom1</title>
-<para>This random number generator is based on the Ranlux engine, developed by M. Lüsher and implemented in Fortran by F. James. This engine has mathematically proven random proprieties and a long period of about 10171. Various luxury levels are provided <code>(1,2,3,4)</code> and can be specified by the user in the constructor. Higher the level, better random properties are obtained at a price of longer CPU time for generating a random number. The level 3 is the default, where any theoretical possible correlation has very small chance of being detected. This generator uses a state of 24 32-bits words. Its main disadvantage is that is much slower than the others (see timing table). For more information on the generator see the following article: </para>
+<para>This random number generator is based on the Ranlux engine, developed by M. Lüsher and implemented in Fortran by F. James. This engine has mathematically proven random proprieties and a long period of about 10<superscript>171</superscript>. Various luxury levels are provided <code>(1,2,3,4)</code> and can be specified by the user in the constructor. Higher the level, better random properties are obtained at a price of longer CPU time for generating a random number. The level 3 is the default, where any theoretical possible correlation has very small chance of being detected. This generator uses a state of 24 32-bits words. Its main disadvantage is that is much slower than the others (see timing table). For more information on the generator see the following article: </para>
 <itemizedlist>
 <listitem><para>F. James, “RANLUX: A Fortran implementation of the high quality pseudo-random number generator of Lüscher”, Computer Physics Communication, 79 (1994) 111. </para></listitem>
 </itemizedlist>
@@ -50,7 +70,7 @@ shown in the following picture.</para>
 
 <sect2>
 <title>TRandom2</title>
-<para>This generator is based on the maximally equidistributed combined Tausworthe generator by L'Ecuyer. It uses only 3 32-bits words for the state and it has a period of about 1026. It is fast and given its small states, it is recommended for applications, which require a very small random number size. For more information on the generator see the following article: </para>
+<para>This generator is based on the maximally equidistributed combined Tausworthe generator by L'Ecuyer. It uses only 3 32-bits words for the state and it has a period of about 10<superscript>26</superscript>. It is fast and given its small states, it is recommended for applications, which require a very small random number size. For more information on the generator see the following article: </para>
 <itemizedlist>
 <listitem><para>P. L’Ecuyer, “Maximally Equidistributed Combined Tausworthe Generators”, Mathematics of Computation, 65, 213 (1996), 203-213. </para></listitem>
 </itemizedlist>
@@ -58,7 +78,7 @@ shown in the following picture.</para>
 
 <sect2>
 <title>TRandom3</title>
-<para>This is based on the Mersenne and Twister pseudo-random number generator, developed in 1997 by Makoto Matsumoto and Takuji Nishimura.  The newer implementation is used, referred in the literature as MT19937. It is a very fast and very high quality generator with a very long period of 106000. The disadvantage of this generator is that it uses a state of 624 words. For more information on the generator see the following article: </para>
+<para>This is based on the Mersenne and Twister pseudo-random number generator, developed in 1997 by Makoto Matsumoto and Takuji Nishimura.  The newer implementation is used, referred in the literature as MT19937. It is a very fast and very high quality generator with a very long period of 10<superscript>6000</superscript>. The disadvantage of this generator is that it uses a state of 624 words. For more information on the generator see the following article: </para>
 <itemizedlist>
 <listitem><para>M. M. Matsumoto and T. Nishimura, “Mersenne twister: A 623-dimensionally equidistributed uniform pseudorandom number generator”, ACM Trans. on Modeling and Computer Simulations, 8, 1, (1998), 3-20.</para></listitem>
 </itemizedlist>
