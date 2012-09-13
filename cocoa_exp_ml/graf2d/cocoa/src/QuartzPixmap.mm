@@ -775,7 +775,7 @@ bool AdjustCropArea(const Rectangle_t &srcRect, Rectangle_t &cropArea)
 bool AdjustCropArea(QuartzImage *srcImage, Rectangle_t &cropArea)
 {
    assert(srcImage != nil && "AdjustCropArea, srcImage parameter is nil");
-   assert(srcImage.fImage != nil && "AdjustCropArea, srcImage.fImage is nil");
+   assert(srcImage.fImage != 0 && "AdjustCropArea, srcImage.fImage is null");
    
    Rectangle_t srcRect = {};
    srcRect.fX = 0, srcRect.fY = 0;
@@ -783,6 +783,34 @@ bool AdjustCropArea(QuartzImage *srcImage, Rectangle_t &cropArea)
    srcRect.fHeight = srcImage.fHeight;
    
    return AdjustCropArea(srcRect, cropArea);
+}
+
+//______________________________________________________________________________
+bool AdjustCropArea(QuartzImage *srcImage, NSRect &cropArea)
+{
+   assert(srcImage != nil && "AdjustCropArea, srcImage parameter is nil");
+   assert(srcImage.fImage != 0 && "AdjustCropArea, srcImage.fImage is null");
+   
+   Rectangle_t srcRect = {};
+   srcRect.fWidth = srcImage.fWidth;
+   srcRect.fHeight = srcImage.fHeight;
+   
+   Rectangle_t dstRect = {};
+   dstRect.fX = Short_t(cropArea.origin.x);
+   dstRect.fY = Short_t(cropArea.origin.y);
+   dstRect.fWidth = UShort_t(cropArea.size.width);
+   dstRect.fHeight = UShort_t(cropArea.size.height);
+   
+   if (AdjustCropArea(srcRect, dstRect)) {
+      cropArea.origin.x = dstRect.fX;
+      cropArea.origin.y = dstRect.fY;
+      cropArea.size.width = dstRect.fWidth;
+      cropArea.size.height = dstRect.fHeight;
+
+      return true;
+   }
+   
+   return false;
 }
 
 //______________________________________________________________________________

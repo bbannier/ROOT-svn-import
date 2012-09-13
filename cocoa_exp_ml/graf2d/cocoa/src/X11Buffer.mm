@@ -455,7 +455,6 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
                CGContextFlush(prevContext);
             prevContext = currContext;
 
-
             const Quartz::CGStateGuard ctxGuard(currContext);
             
             //Either use shape combine mask, or clip mask.
@@ -463,32 +462,8 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
                CGContextClipToRects(currContext, &fClippedRegion[0], fClippedRegion.size());
    
             //Now add also shape combine mask.
-            ROOT::MacOSX::Util::CFScopeGuard<CGImageRef> clipImageGuard;
-            QuartzWindow * const topLevelParent = view.fQuartzWindow;
-            if (topLevelParent.fShapeCombineMask) {
-               //Non-rectangular windows.
-               //Important: shape mask should have the same width and height as
-               //a top-level window. In ROOT it's not. Say hello to visual artifacts!
-             
-               //Attach clip mask to the context.
-               NSRect clipRect = view.frame; //view.frame instead?
-               if (!view.fParentView) {
-                  //'self' is a top-level view (and actually, shape mask MUST have the same sizes as our view).
-                  clipRect = CGRectMake(0, 0, topLevelParent.fShapeCombineMask.fWidth, topLevelParent.fShapeCombineMask.fHeight);
-                  CGContextClipToMask(currContext, clipRect, topLevelParent.fShapeCombineMask.fImage);
-               } else {
-                  //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
-                  
-                  //TODO: clipRect must be adjusted - it should never exceed a mask rect.
-                  
-                  clipRect.origin = [view.fParentView convertPoint : clipRect.origin toView : [view window].contentView];
-                  clipRect.origin.y = X11::LocalYROOTToCocoa((NSView<X11Window> *)[view window].contentView, clipRect.origin.y + clipRect.size.height);
-                  
-                  clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
-                  clipRect.origin = CGPointZero;
-                  CGContextClipToMask(currContext, clipRect, clipImageGuard.Get());
-               }
-            }
+            if (view.fQuartzWindow.fShapeCombineMask)
+               ClipToShapeMask(view, currContext);
 
             cmd->Execute();//This can throw, we should restore as much as we can here.
             

@@ -289,6 +289,9 @@ NSView<X11Window> *FindViewUnderPointer();
 QuartzWindow *FindWindowForPointerEvent(NSEvent *pointerEvent);
 NSView<X11Window> *FindViewForPointerEvent(NSEvent *pointerEvent);
 
+//
+void ClipToShapeMask(NSView<X11Window> *view, CGContextRef ctx);
+
 }//X11
 }//MacOSX
 }//ROOT
