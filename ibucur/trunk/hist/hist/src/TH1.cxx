@@ -2828,7 +2828,7 @@ void TH1::Draw(Option_t *option)
 }
 
 //______________________________________________________________________________
-TH1 *TH1::DrawCopy(Option_t *) const
+TH1 *TH1::DrawCopy(Option_t *option) const
 {
 //   -*-*-*-*-*Copy this histogram and Draw in the current pad*-*-*-*-*-*-*-*
 //             ===============================================
@@ -2840,8 +2840,14 @@ TH1 *TH1::DrawCopy(Option_t *) const
 //     See Draw for the list of options
 //
 //   -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-   AbstractMethod("DrawCopy");
-   return 0;
+   TString opt = option;
+   opt.ToLower();
+   if (gPad && !opt.Contains("same")) gPad->Clear();
+   TH1 *newth1 = (TH1 *)Clone();
+   newth1->SetDirectory(0);
+   newth1->SetBit(kCanDelete);
+   newth1->AppendPad(option);
+   return newth1;
 }
 
 //______________________________________________________________________________
@@ -8702,21 +8708,6 @@ void TH1C::Copy(TObject &newth1) const
 }
 
 //______________________________________________________________________________
-TH1 *TH1C::DrawCopy(Option_t *option) const
-{
-   // Draw copy.
-
-   TString opt = option;
-   opt.ToLower();
-   if (gPad && !opt.Contains("same")) gPad->Clear();
-   TH1C *newth1 = (TH1C*)Clone();
-   newth1->SetDirectory(0);
-   newth1->SetBit(kCanDelete);
-   newth1->AppendPad(option);
-   return newth1;
-}
-
-//______________________________________________________________________________
 void TH1C::Reset(Option_t *option)
 {
    // Reset.
@@ -8905,21 +8896,6 @@ void TH1S::Copy(TObject &newth1) const
    // Copy this to newth1
 
    TH1::Copy(newth1);
-}
-
-//______________________________________________________________________________
-TH1 *TH1S::DrawCopy(Option_t *option) const
-{
-   // Draw copy.
-
-   TString opt = option;
-   opt.ToLower();
-   if (gPad && !opt.Contains("same")) gPad->Clear();
-   TH1S *newth1 = (TH1S*)Clone();
-   newth1->SetDirectory(0);
-   newth1->SetBit(kCanDelete);
-   newth1->AppendPad(option);
-   return newth1;
 }
 
 //______________________________________________________________________________
@@ -9113,21 +9089,6 @@ void TH1I::Copy(TObject &newth1) const
 }
 
 //______________________________________________________________________________
-TH1 *TH1I::DrawCopy(Option_t *option) const
-{
-   // Draw copy.
-
-   TString opt = option;
-   opt.ToLower();
-   if (gPad && !opt.Contains("same")) gPad->Clear();
-   TH1I *newth1 = (TH1I*)Clone();
-   newth1->SetDirectory(0);
-   newth1->SetBit(kCanDelete);
-   newth1->AppendPad(option);
-   return newth1;
-}
-
-//______________________________________________________________________________
 void TH1I::Reset(Option_t *option)
 {
    // Reset.
@@ -9311,21 +9272,6 @@ void TH1F::Copy(TObject &newth1) const
    // Copy this to newth1.
 
    TH1::Copy(newth1);
-}
-
-//______________________________________________________________________________
-TH1 *TH1F::DrawCopy(Option_t *option) const
-{
-   // Draw copy.
-
-   TString opt = option;
-   opt.ToLower();
-   if (gPad && !opt.Contains("same")) gPad->Clear();
-   TH1F *newth1 = (TH1F*)Clone();
-   newth1->SetDirectory(0);
-   newth1->SetBit(kCanDelete);
-   newth1->AppendPad(option);
-   return newth1;
 }
 
 //______________________________________________________________________________
@@ -9513,21 +9459,6 @@ void TH1D::Copy(TObject &newth1) const
    // Copy this to newth1
 
    TH1::Copy(newth1);
-}
-
-//______________________________________________________________________________
-TH1 *TH1D::DrawCopy(Option_t *option) const
-{
-   // Draw copy.
-
-   TString opt = option;
-   opt.ToLower();
-   if (gPad && !opt.Contains("same")) gPad->Clear();
-   TH1D *newth1 = (TH1D*)Clone();
-   newth1->SetDirectory(0);
-   newth1->SetBit(kCanDelete);
-   newth1->AppendPad(option);
-   return newth1;
 }
 
 //______________________________________________________________________________
