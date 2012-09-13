@@ -457,7 +457,7 @@ void CommandBuffer::Flush(Details::CocoaPrivate *impl)
 
             const Quartz::CGStateGuard ctxGuard(currContext);
             
-            //Either use shape combine mask, or clip mask.
+            //Clip regions first.
             if (fClippedRegion.size())
                CGContextClipToRects(currContext, &fClippedRegion[0], fClippedRegion.size());
    
