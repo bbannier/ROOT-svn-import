@@ -33,7 +33,7 @@ int main(int argc, char ** argv)
    mainFrame->AddInput(kButtonPressMask);
    gVirtualX->ShapeCombineMask(mainFrame->GetId(), 0, 0, pic->GetMask());
    
-   TestFrame *child = new TestFrame(mainFrame, 150, 110, kChildFrame, 0xff00ff);
+   TestFrame *child = new TestFrame(mainFrame, 250, 250, kChildFrame, 0xff00ff);
    gVirtualX->MoveWindow(child->GetId(), pic->GetWidth() / 2 + 30, pic->GetHeight() / 2 + 30);
    child->AddInput(kButtonPressMask);
 

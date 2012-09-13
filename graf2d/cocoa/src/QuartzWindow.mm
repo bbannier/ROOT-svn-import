@@ -410,6 +410,42 @@ NSView<X11Window> *FindViewForPointerEvent(NSEvent *pointerEvent)
 }
 
 //______________________________________________________________________________
+void ClipToShapeMask(NSView<X11Window> *view, CGContextRef ctx)
+{
+   assert(view != nil && "ClipToShapeMask, view parameter is nil");
+   assert(ctx != 0 && "ClipToShapeMask, ctx parameter is null");
+   
+   QuartzWindow * const topLevelParent = view.fQuartzWindow;
+   assert(topLevelParent.fShapeCombineMask != nil && "ClipToShapeMask, fShapeCombineMask is nil on a top-level window");
+   assert(topLevelParent.fShapeCombineMask.fImage != 0 && "ClipToShapeMask, shape mask is null");
+   
+   //Important: shape mask should have the same width and height as
+   //a top-level window. In ROOT it does not :( Say hello to visual artifacts.
+   
+   //Attach clip mask to the context.
+   NSRect clipRect = view.frame;
+   if (!view.fParentView) {
+      //'view' is a top-level view.
+      clipRect = CGRectMake(0, 0, topLevelParent.fShapeCombineMask.fWidth, topLevelParent.fShapeCombineMask.fHeight);
+      CGContextClipToMask(ctx, clipRect, topLevelParent.fShapeCombineMask.fImage);
+   } else {
+      //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
+      clipRect.origin = [view.fParentView convertPoint : clipRect.origin toView : [view window].contentView];
+      clipRect.origin.y = X11::LocalYROOTToCocoa((NSView<X11Window> *)[view window].contentView, clipRect.origin.y + clipRect.size.height);
+      
+      if (AdjustCropArea(topLevelParent.fShapeCombineMask, clipRect)) {
+         const Util::CFScopeGuard<CGImageRef> clipImageGuard(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
+         clipRect.origin = CGPointZero;
+         CGContextClipToMask(ctx, clipRect, clipImageGuard.Get());
+      } else {
+         //View is invisible.
+         CGRect rect = {};
+         CGContextClipToRect(ctx, rect);
+      }
+   }
+}
+
+//______________________________________________________________________________
 void SetWindowAttributes(const SetWindowAttributes_t *attr, NSObject<X11Window> *window)
 {
    assert(attr != 0 && "SetWindowAttributes, attr parameter is null");
@@ -2067,31 +2103,8 @@ void print_mask_info(ULong_t mask)
          const Quartz::CGStateGuard ctxGuard(fContext);
 
          //Non-rectangular windows.
-         Util::CFScopeGuard<CGImageRef> clipImageGuard;
-         QuartzWindow * const topLevelParent = self.fQuartzWindow;
-         if (topLevelParent.fShapeCombineMask) {
-            //Important: shape mask should have the same width and height as
-            //a top-level window. In ROOT it does not :( Say hello to visual artifacts.
-            
-            //Attach clip mask to the context.
-            NSRect clipRect = self.frame; //self.frame instead?
-            if (!fParentView) {
-               //'self' is a top-level view (and actually, shape mask MUST have the same sizes as our view).
-               clipRect = CGRectMake(0, 0, topLevelParent.fShapeCombineMask.fWidth, topLevelParent.fShapeCombineMask.fHeight);
-               CGContextClipToMask(fContext, clipRect, topLevelParent.fShapeCombineMask.fImage);
-            } else {
-               //More complex case: 'self' is a child view, we have to create a subimage from shape mask.
-               
-               //TODO: clipRect must be adjusted - it should never exceed a mask rect.
-               
-               clipRect.origin = [fParentView convertPoint : clipRect.origin toView : [self window].contentView];
-               clipRect.origin.y = X11::LocalYROOTToCocoa((NSView<X11Window> *)[self window].contentView, clipRect.origin.y + clipRect.size.height);
-               clipImageGuard.Reset(CGImageCreateWithImageInRect(topLevelParent.fShapeCombineMask.fImage, clipRect));
-               clipRect.origin = CGPointZero;
-               CGContextClipToMask(fContext, clipRect, clipImageGuard.Get());
-            }
-         }
-         //
+         if (self.fQuartzWindow.fShapeCombineMask)
+            X11::ClipToShapeMask(self, fContext);
 
          if (window->InheritsFrom("TGContainer"))//It always has an ExposureMask.
             vx->GetEventTranslator()->GenerateExposeEvent(self, [self visibleRect]);
