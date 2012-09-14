@@ -245,8 +245,8 @@ public:
    virtual void     GetBinXYZ(Int_t binglobal, Int_t &binx, Int_t &biny, Int_t &binz) const;
    virtual Double_t GetBinCenter(Int_t bin) const {return fXaxis.GetBinCenter(bin);}
    virtual Double_t GetBinContent(Int_t bin) const;
-   virtual Double_t GetBinContent(Int_t binx, Int_t biny) const;
-   virtual Double_t GetBinContent(Int_t binx, Int_t biny, Int_t binz) const;
+   virtual Double_t GetBinContent(Int_t bin, Int_t) const { return GetBinContent(bin); }
+   virtual Double_t GetBinContent(Int_t bin, Int_t, Int_t) const { return GetBinContent(bin); }
    virtual Double_t GetBinError(Int_t bin) const;
    virtual Double_t GetBinError(Int_t binx, Int_t biny) const;
    virtual Double_t GetBinError(Int_t binx, Int_t biny, Int_t binz) const;
@@ -420,7 +420,7 @@ public:
            TH1C     operator/(const TH1C &h) const;
 
 protected:
-   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Char_t (content); }
    
    ClassDef(TH1C,1)  //1-Dim histograms (one char per channel)
@@ -453,7 +453,7 @@ public:
            TH1S     operator/(const TH1S &h) const;
 
 protected:
-   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Short_t (content); } 
 
    ClassDef(TH1S,1)  //1-Dim histograms (one short per channel)
@@ -486,7 +486,7 @@ public:
            TH1I     operator/(const TH1I &h) const;
 
 protected:
-   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Int_t (content); }
 
    ClassDef(TH1I,1)  //1-Dim histograms (one 32 bits integer per channel)
@@ -521,7 +521,7 @@ public:
            TH1F     operator/(const TH1F &h) const;
 
 protected:
-   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Float_t (content); }
 
    ClassDef(TH1F,1)  //1-Dim histograms (one float per channel)
@@ -556,7 +556,7 @@ public:
            TH1D     operator/(const TH1D &h) const;
 
 protected:
-   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray ? Double_t (fArray[bin]) : 0; }
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray[bin]; }
    virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = content; }
 
    ClassDef(TH1D,1)  //1-Dim histograms (one double per channel)
