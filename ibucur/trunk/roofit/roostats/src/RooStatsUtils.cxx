@@ -21,6 +21,7 @@ NamespaceImp(RooStats)
 #endif
 
 #include "TTree.h"
+#include "TString.h"
 
 #include "RooUniform.h"
 #include "RooProdPdf.h"
@@ -28,6 +29,7 @@ NamespaceImp(RooStats)
 #include "RooSimultaneous.h"
 #include "RooStats/ModelConfig.h"
 #include "RooStats/RooStatsUtils.h"
+#include "RooStats/CombinedLikelihood.h"
 #include <typeinfo>
 
 using namespace std;
@@ -35,6 +37,16 @@ using namespace std;
 // this file is only for the documentation of RooStats namespace
 
 namespace RooStats { 
+
+   RooAbsReal* CreateNLL(RooAbsPdf& pdf, RooAbsData& data, const RooLinkedList& cmdList) {
+   // utility function to accommodate new CombinedLikelihood for RooSimultaneous
+      const std::type_info& pdfType = typeid(pdf);
+      if(pdfType == typeid(RooSimultaneous)) {
+         return new CombinedLikelihood(*((RooSimultaneous *)&pdf), data, cmdList);
+      } else {
+         return pdf.createNLL(data, cmdList);
+      }
+   }
 
    void FactorizePdf(const RooArgSet &observables, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints) {
    // utility function to factorize constraint terms from a pdf 
