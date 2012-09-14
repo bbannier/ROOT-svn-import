@@ -41,11 +41,12 @@ INCLUDEFILES += $(GRAFDEP)
 include/%.h:    $(GRAFDIRI)/%.h
 		cp $< $@
 
-$(GRAFLIB):     $(GRAFO) $(GRAFDO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) $(GRAFLIBDEP)
+$(GRAFLIB):     $(GRAFO) $(GRAFDO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) \
+		$(GRAFLIBDEP) $(MATHTEXTDEP) $(MATHTEXTLIB)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libGraf.$(SOEXT) $@ \
 		   "$(GRAFO) $(GRAFDO)" \
-		   "$(FREETYPELDFLAGS) $(FREETYPELIB) $(GRAFLIBEXTRA)"
+		   "$(GRAFLIBEXTRA) $(FREETYPELDFLAGS) $(FREETYPELIB) $(MATHTEXTLIB)"
 
 $(GRAFDS):      $(GRAFH) $(GRAFL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
@@ -74,10 +75,15 @@ $(GRAFDO):     OPT = $(NOOPT)
 $(GRAFDO):     CXXFLAGS += $(FREETYPEINC)
 $(GRAFDS):     CINTFLAGS += $(FREETYPEINC)
 
-$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o): \
+$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o $(GRAFDIRS)/TMathText.o): \
                 $(FREETYPEDEP)
-$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o): \
+$(call stripsrc,$(GRAFDIRS)/TTF.o $(GRAFDIRS)/TText.o $(GRAFDIRS)/TLatex.o $(GRAFDIRS)/TMathText.o): \
                 CXXFLAGS += $(FREETYPEINC)
+
+#$(GRAFDIRS)/TMathText.o: \
+#		$(FREETYPEDEP) $(MATHTEXTDEP)
+#$(GRAFDIRS)/TMathText.o: \
+#                CXXFLAGS += $(FREETYPEINC) $(MATHTEXTINC)
 
 ifeq ($(PLATFORM),win32)
 ifeq (,$(findstring $(VC_MAJOR),14 15))
