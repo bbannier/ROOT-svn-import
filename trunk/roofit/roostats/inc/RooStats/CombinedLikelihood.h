@@ -17,12 +17,12 @@
 
 namespace RooStats {
 
-   class CombinedLikelihood : public RooAbsPdf {
+   class CombinedLikelihood : public RooAbsReal {
    public:
       // Constructors, destructors, assignment
       CombinedLikelihood(const char* name, const char* title, RooArgList& pdfList);
       CombinedLikelihood(const CombinedLikelihood& rhs, const char *newName = NULL);
-      CombinedLikelihood(RooSimultaneous* simPdf, RooAbsData* data, const RooArgSet* nuis = NULL);
+      CombinedLikelihood(const RooSimultaneous& simPdf, const RooAbsData& data, const RooLinkedList& cmdList);
       virtual TObject *clone(const char *newName) const { return new CombinedLikelihood(*this, newName); }
       virtual ~CombinedLikelihood();
 

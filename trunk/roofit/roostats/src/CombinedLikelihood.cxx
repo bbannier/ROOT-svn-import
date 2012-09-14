@@ -7,13 +7,12 @@ using namespace RooStats;
 
 ClassImp(RooStats::CombinedLikelihood);
 
-
 CombinedLikelihood::CombinedLikelihood(
    const char *name, 
    const char *title,
    RooArgList& pdfList
 ) :
-   RooAbsPdf(name,title),
+   RooAbsReal(name, title),
    fNumberOfChannels(pdfList.getSize())
 {
    if(fNumberOfChannels == 0) {
@@ -34,17 +33,20 @@ CombinedLikelihood::CombinedLikelihood(
 
 //_____________________________________________________________________________
 CombinedLikelihood::CombinedLikelihood(
-   RooSimultaneous* simPdf,
-   RooAbsData* data,
-   const RooArgSet* nuis
+   const RooSimultaneous& simPdf,
+   const RooAbsData& data,
+   const RooLinkedList& cmdList
 ) :
-   RooAbsPdf(*simPdf)
+   RooAbsReal(
+      TString::Format("comb_nll_%s_%s", simPdf.GetName(), data.GetName()).Data(),
+      "combined -log(likelihood)"
+   )
 {
-   RooAbsCategoryLValue* index = (RooAbsCategoryLValue *)simPdf->indexCat().Clone();
+   RooAbsCategoryLValue* index = (RooAbsCategoryLValue *)simPdf.indexCat().Clone();
    fNumberOfChannels = index->numBins((const char *)NULL);
    for(Int_t i = 0; i < fNumberOfChannels; ++i) {
       index->setBin(i); const char* crtLabel = index->getLabel();
-      fChannels.push_back(simPdf->getPdf(crtLabel));
+      fChannels.push_back(simPdf.getPdf(crtLabel));
       fChannelNames.push_back(std::string(crtLabel));
    } 
    delete index;
@@ -53,7 +55,7 @@ CombinedLikelihood::CombinedLikelihood(
 
 //_____________________________________________________________________________
 CombinedLikelihood::CombinedLikelihood(const CombinedLikelihood& rhs, const char* newName) :
-   RooAbsPdf(rhs, newName),
+   RooAbsReal(rhs, newName),
    fNumberOfChannels(rhs.fNumberOfChannels),
    fChannels(rhs.fChannels),
    fChannelNames(rhs.fChannelNames),

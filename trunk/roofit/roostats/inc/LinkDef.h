@@ -123,6 +123,7 @@
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialObsP(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauObsP(Double_t,Double_t,Double_t);
 
+#pragma link C++ function RooStats::CreateNLL(RooAbsPdf&, RooAbsData&, const RooLinkedList&);
 #pragma link C++ function RooStats::PValueToSignificance(Double_t);
 #pragma link C++ function RooStats::SignificanceToPValue(Double_t);
 #pragma link C++ function RooStats::RemoveConstantParameters(RooArgSet* set);
