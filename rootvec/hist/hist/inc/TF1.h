@@ -51,6 +51,8 @@ namespace ROOT {
    }
 }
 
+#define ROOT_VECTORIZED_TF1
+// define if fVectorized and fFunctorVector is present.
 class TF1 : public TFormula, public TAttLine, public TAttFill, public TAttMarker {
 
 protected:
