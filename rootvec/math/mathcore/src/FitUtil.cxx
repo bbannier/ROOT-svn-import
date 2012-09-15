@@ -478,64 +478,45 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
       wrefVolume /= data.RefVolume();
    }
    
-   const unsigned int nMaxBunchSize = 256;
+   const int nMaxBunchSize = 128;
    
-#ifdef _OPENMP 
-   const int nThreads = omp_get_max_threads();
-#else
-   const int nThreads = 1;
-#endif
-      
-   const unsigned int nMaxThreadDataSize = 4 * ( (data.Size()+nThreads-1+3) / nThreads / 4 );
-   const unsigned int nMaxLocalDataSize = std::min( nMaxThreadDataSize, nMaxBunchSize );
-
    IntegralEvaluator<> igEval( func, p, useBinIntegral); 
 
 #ifdef _OPENMP 
-   #pragma omp parallel reduction(+:chi2, nPoints) 
-   {
-      int tid = omp_get_thread_num();
-#else
-   {
-      int tid = 0;
+   #pragma omp parallel 
 #endif
-      
-      std::vector<double> resValues(nMaxLocalDataSize);
-      
+   {   
+      double resValues[nMaxBunchSize];
+     
       std::vector< std::vector<double> > correctCoord;
-      std::vector< const double * > correctCoordsPtrs;
+      std::vector<const double*> correctCoordsPtrs(data.NDim());
       std::vector<double> vBinVolume;
       
       if ( useBinIntegral || useBinVolume )
       {
           if( useBinVolume )
           {
-            vBinVolume.resize( nMaxLocalDataSize );
+            vBinVolume.resize( nMaxBunchSize );
           }
           
           if ( !useBinIntegral )
           {
             correctCoord.resize( data.NDim() );
-            correctCoordsPtrs.resize( data.NDim() );
             
-            for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+            for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
             {
-              correctCoord[icoord].resize( nMaxLocalDataSize );
+              correctCoord[icoord].resize( nMaxBunchSize );
               correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
             }
           }
       }
-      else
-      {
-        correctCoordsPtrs.resize( data.NDim() );
-      }
 
-      unsigned int iOffset = tid * nMaxThreadDataSize;
-      unsigned int iMaxOffset = std::min( (tid+1) * nMaxThreadDataSize, data.Size() );
-      
-      for( ; iOffset < iMaxOffset; iOffset += nMaxBunchSize )
+#ifdef _OPENMP 
+      #pragma omp for reduction(+:chi2, nPoints) 
+#endif
+      for( int iOffset=0; iOffset < (int)data.Size(); iOffset += nMaxBunchSize )
       {
-        unsigned int nBunchSize = std::min( nMaxBunchSize, iMaxOffset - iOffset );
+        int nBunchSize = std::min( nMaxBunchSize, int (data.Size() - iOffset) );
         
         if ( useBinIntegral || useBinVolume )
         {
@@ -543,9 +524,9 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
           {
             std::fill( vBinVolume.begin(), vBinVolume.end(), wrefVolume );
             
-            for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+            for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
             {
-              for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+              for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
               {
                 double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
                 double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
@@ -557,9 +538,9 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
           
           if ( !useBinIntegral )
           {
-            for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+            for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
             {
-              for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+              for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
               {
                 double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
                 double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
@@ -568,17 +549,15 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
               }
             }
             
-            func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
+            func( nBunchSize, &correctCoordsPtrs.front(), p, resValues);
           }
           else
           {
 #ifdef _OPENMP
-            #pragma omp critical
-             {
-#else
-             {
+             #pragma omp critical
 #endif
-             for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+             {
+                for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
                 {
                   // Don't try to parallelize this:
                   // this is not threadsafe e.g. it cannot be parallized. 
@@ -594,7 +573,7 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
           
           if( useBinVolume )
           {
-            for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+            for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
             {
               resValues[ibunch] *= vBinVolume[ibunch];
             }
@@ -602,15 +581,15 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
         }
         else
         {
-           for ( unsigned int icoord = 0; icoord < data.NDim(); icoord++ )
+           for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
            {
              correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
            }
            
-           func( nBunchSize, &correctCoordsPtrs.front(), p, &resValues.front() );
+           func( nBunchSize, &correctCoordsPtrs.front(), p, resValues );
         }
         
-        for ( unsigned int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+        for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
         {
           double invError = data.InvError ( ibunch + iOffset );
           double value = data.Value( ibunch + iOffset );
