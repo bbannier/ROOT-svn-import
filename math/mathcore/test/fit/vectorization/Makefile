@@ -6,7 +6,7 @@
 #
 # Author: Fons Rademakers, 29/2/2000
 
-ROOTSYS = ../../../..
+ROOTSYS = ../../../../..
 include $(ROOTSYS)/etc/Makefile.arch
 
 #------------------------------------------------------------------------------
