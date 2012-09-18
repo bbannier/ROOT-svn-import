@@ -36,7 +36,7 @@ class TText : public TNamed, public TAttText {
 protected:
    Double_t     fX;           // X position of text (left,center,etc..)
    Double_t     fY;           // Y position of text (left,center,etc..)
-   void         *fWcsTitle;
+   void         *fWcsTitle;   //!Used by TMathText
 
 public:
    // TText status bits
