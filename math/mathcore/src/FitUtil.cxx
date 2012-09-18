@@ -1186,74 +1186,74 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
    double logl = 0;
    //unsigned int nRejected = 0; 
 
-	// needed to compue effective global weight in case of extended likelihood 
-	double sumW = 0;
-	double sumW2 = 0;
+   // needed to compue effective global weight in case of extended likelihood 
+   double sumW = 0;
+   double sumW2 = 0;
 
 #ifdef _OPENMP 
 #pragma omp parallel 
 #endif
-	{   
-		double resValues[nMaxBunchSize];
+   {   
+      double resValues[nMaxBunchSize];
 
-		std::vector<const double*> correctCoordsPtrs(data.NDim()); 
+      std::vector<const double*> correctCoordsPtrs(data.NDim()); 
 
 #ifdef _OPENMP 
 #pragma omp for reduction(+:logl,sumW,sumW2) 
 #endif
-		for( int iOffset=0; iOffset < (int)data.Size(); iOffset += nMaxBunchSize )
-		{
-			int nBunchSize = std::min( nMaxBunchSize, int (data.Size() - iOffset) );
+      for( int iOffset=0; iOffset < (int)data.Size(); iOffset += nMaxBunchSize )
+      {
+         int nBunchSize = std::min( nMaxBunchSize, int (data.Size() - iOffset) );
 
-			for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
-			{
-				correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
-			}
+         for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
+         {
+            correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
+         }
 
-			func( nBunchSize, &correctCoordsPtrs.front(), p, resValues );
+         func( nBunchSize, &correctCoordsPtrs.front(), p, resValues );
 
-			for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-			{
-				resValues[ibunch] = ROOT::Math::Util::EvalLog( resValues[ibunch] );       
-			}
+         for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+         {
+            resValues[ibunch] = ROOT::Math::Util::EvalLog( resValues[ibunch] );       
+         }
 
 
-			if (iWeight > 0) 
-			{ 
-				if (iWeight == 2)
-				{ 
-					if (extended) 
-					{ 
-						for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-						{
-							// needed sum of weights and sum of weight square if likelkihood is extended
-							double weight = data.Weight(ibunch + iOffset);
-							double wSqr = weight*weight;
+         if (iWeight > 0) 
+         { 
+            if (iWeight == 2)
+            { 
+               if (extended) 
+               { 
+                  for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+                  {
+                     // needed sum of weights and sum of weight square if likelkihood is extended
+                     double weight = data.Weight(ibunch + iOffset);
+                     double wSqr = weight*weight;
 
-							logl += wSqr*resValues[ibunch];
-							sumW += weight; 
-							sumW2 += wSqr; 
-						}
-					}
-					else
-					{
-						for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-						{
-							double weight = data.Weight(ibunch + iOffset);
-							double wSqr = weight*weight;
-							logl += wSqr*resValues[ibunch];
-						}
-					}
-				}
-				else
-				{
-					for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-					{
-						double weight = data.Weight(ibunch + iOffset); 
-						logl += resValues[ibunch]*weight;
-					}
-				}
-			}
+                     logl += wSqr*resValues[ibunch];
+                     sumW += weight; 
+                     sumW2 += wSqr; 
+                  }
+               }
+               else
+               {
+                  for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+                  {
+                     double weight = data.Weight(ibunch + iOffset);
+                     double wSqr = weight*weight;
+                     logl += wSqr*resValues[ibunch];
+                  }
+               }
+            }
+            else
+            {
+               for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+               {
+                  double weight = data.Weight(ibunch + iOffset); 
+                  logl += resValues[ibunch]*weight;
+               }
+            }
+         }
          else
          {
             for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
@@ -1261,31 +1261,31 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
                logl += resValues[ibunch];
             }
          }
-		}
-	}
+      }
+   }
 
    if (extended) 
-	{ 
+   { 
       // add Poisson extended term
       double extendedTerm = 0; // extended term in likelihood  
       double nuTot = 0;
       // nuTot is integral of function in the range
       // if function has been normalized integral has been already computed 
-		IntegralEvaluator<> igEval( func, p, true); 
-		std::vector<double> xmin(data.NDim());
-		std::vector<double> xmax(data.NDim());
-		data.Range().GetRange(&xmin[0],&xmax[0]);
-		nuTot = igEval.Integral( &xmin[0], &xmax[0]);
-		// force to be last parameter value
-		//nutot = p[func.NDim()-1];
-		if (iWeight != 2)  
-			extendedTerm = - nuTot;  // no need to add in this case n log(nu) since is already computed before
-		else {            
-			// case use weight square in likelihood : compute total effective weight = sw2/sw
-			// ignore for the moment case when sumW is zero 
-			extendedTerm = - (sumW2 / sumW) * nuTot;
-		}
-            
+      IntegralEvaluator<> igEval( func, p, true); 
+      std::vector<double> xmin(data.NDim());
+      std::vector<double> xmax(data.NDim());
+      data.Range().GetRange(&xmin[0],&xmax[0]);
+      nuTot = igEval.Integral( &xmin[0], &xmax[0]);
+      // force to be last parameter value
+      //nutot = p[func.NDim()-1];
+      if (iWeight != 2)  
+         extendedTerm = - nuTot;  // no need to add in this case n log(nu) since is already computed before
+      else {            
+         // case use weight square in likelihood : compute total effective weight = sw2/sw
+         // ignore for the moment case when sumW is zero 
+         extendedTerm = - (sumW2 / sumW) * nuTot;
+      }
+
       logl += extendedTerm;
 
 #ifdef DEBUG
@@ -1293,30 +1293,30 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
       //    std::cout << p[ipar] << "\t";
       // std::cout << std::endl;
       std::cout << "fit is extended n = " << n << " nutot " << nuTot << " extended LL term = " <<  extendedTerm << " logl = " << logl
-                << std::endl;
+         << std::endl;
 #endif
    }
-   
+
    // reset the number of fitting data points
    nPoints = n; 
 
 #ifdef DEBUG
    std::cout << "Logl = " << logl << " np = " << nPoints << std::endl;
 #endif
-   
+
    return -logl;
 }
 
 /*
-double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data, const double * p,
-                                   int iWeight,  bool extended, unsigned int &nPoints) {  
-   // evaluate the LogLikelihood 
+   double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data, const double * p,
+   int iWeight,  bool extended, unsigned int &nPoints) {  
+// evaluate the LogLikelihood 
 
-   unsigned int n = data.Size();
+unsigned int n = data.Size();
 
 #ifdef DEBUG
-   std::cout << "\n\nFit data size = " << n << std::endl;
-   std::cout << "func pointer is " << typeid(func).name() << std::endl;
+std::cout << "\n\nFit data size = " << n << std::endl;
+std::cout << "func pointer is " << typeid(func).name() << std::endl;
 #endif
 
    double logl = 0;
