@@ -724,7 +724,8 @@ void TGQuartz::RenderTTFString(Int_t x, Int_t y, ETextMode mode)
       const Int_t bx = bitmap->left + xOff;
       const Int_t by = h - bitmap->top - yOff;
 
-      DrawFTGlyphIntoPixmap(pixmap.Get(), source, 0, ULong_t(-1), bx, by);
+      DrawFTGlyphIntoPixmap(pixmap.Get(), source, TGCocoa::GetPixel(GetTextColor()),
+                            mode == kClear ? ULong_t(-1) : 0xffffff, bx, by);
    }
 
    Rectangle_t copyArea = {0, 0, UShort_t(w), UShort_t(h)};
