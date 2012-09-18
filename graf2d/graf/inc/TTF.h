@@ -62,6 +62,7 @@ class TTF {
 friend class TGX11TTF;
 friend class TGWin32;
 friend class TMathTextRenderer;
+friend class TGQuartz;
 
 protected:
    enum { kTTMaxFonts = 32, kMaxGlyphs = 1024 };

@@ -71,3 +71,5 @@ distclean-$(MODNAME): clean-$(MODNAME)
 		@rm -f $(COCOADEP) $(COCOADS) $(COCOADH) $(COCOALIB) $(COCOAMAP)
 
 distclean::     distclean-$(MODNAME)
+
+CXXFLAGS += $(FREETYPEINC)

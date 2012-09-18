@@ -48,10 +48,13 @@
 - (void) copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *) mask 
          clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint;
 
+- (unsigned char *) readColorBits : (Rectangle_t) area;
+
 //
 - (unsigned char *) fData;
 
 - (void) putPixel : (const unsigned char *) data X : (unsigned) x Y : (unsigned) y;
+- (void) addPixel : (const unsigned char *) rgb;
 
 @end
 
