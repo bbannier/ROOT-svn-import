@@ -11,7 +11,7 @@ include $(ROOTSYS)/etc/Makefile.arch
 
 #------------------------------------------------------------------------------
 
-CXXFLAGS += -std=c++11 -march=native -DNDEBUG -ffast-math -ftree-vectorize
+CXXFLAGS += -std=c++11 -march=native -DNDEBUG -ffast-math -ftree-vectorize -fassociative-math -ftree-vectorizer-verbose=3
 LDFLAGS += -lrt
 
 

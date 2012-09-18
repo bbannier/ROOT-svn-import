@@ -7,7 +7,7 @@
  *                                                                    *
  *                                                                    *
  **********************************************************************/
-
+ 
 // Implementation file for class FitUtil
 
 
@@ -443,176 +443,176 @@ double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, 
 // for chi2 functions
 //___________________________________________________________________________________________________________________________
 double FitUtil::EvaluateChi2(const IModelFunction & func, const BinData & data, const double * p, unsigned int & retnPoints) {  
-   // evaluate the chi2 given a  function reference  , the data and returns the value and also in nPoints 
-   // the actual number of used points
-   // normal chi2 using only error on values (from fitting histogram)
-   // optionally the integral of function in the bin is used 
-   // this implentation tries to benifit from newer architechture, by
-   // using vectorization friendly written code. The vectorization it self 
-   // relies on the auto vectorization abilities of the compiler in use. 
-   
-   double chi2 = 0;
-   unsigned int nPoints = 0; // count the effective non-zero points
-   
-   // do not cache parameter values (it is not thread safe)
-   //func.SetParameters(p); 
+	// evaluate the chi2 given a  function reference  , the data and returns the value and also in nPoints 
+	// the actual number of used points
+	// normal chi2 using only error on values (from fitting histogram)
+	// optionally the integral of function in the bin is used 
+	// this implentation tries to benifit from newer architechture, by
+	// using vectorization friendly written code. The vectorization it self 
+	// relies on the auto vectorization abilities of the compiler in use. 
 
-   
-   // get fit option and check case if using integral of bins
-   const DataOptions & fitOpt = data.Opt();
-   bool useBinIntegral = fitOpt.fIntegral && data.HasBinEdges(); 
-   bool useBinVolume = fitOpt.fBinVolume && data.HasBinEdges();
+	double chi2 = 0;
+	unsigned int nPoints = 0; // count the effective non-zero points
+
+	// do not cache parameter values (it is not thread safe)
+	//func.SetParameters(p); 
+
+
+	// get fit option and check case if using integral of bins
+	const DataOptions & fitOpt = data.Opt();
+	bool useBinIntegral = fitOpt.fIntegral && data.HasBinEdges(); 
+	bool useBinVolume = fitOpt.fBinVolume && data.HasBinEdges();
 
 #ifdef DEBUG
-   std::cout << "\n\nFit data size = " << n << std::endl;
-   std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
-   std::cout << "use empty bins  " << fitOpt.fUseEmpty << std::endl;
-   std::cout << "use integral    " << fitOpt.fIntegral << std::endl;
-   std::cout << "use all error=1 " << fitOpt.fErrors1 << std::endl;
+	std::cout << "\n\nFit data size = " << n << std::endl;
+	std::cout << "evaluate chi2 using function " << &func << "  " << p << std::endl; 
+	std::cout << "use empty bins  " << fitOpt.fUseEmpty << std::endl;
+	std::cout << "use integral    " << fitOpt.fIntegral << std::endl;
+	std::cout << "use all error=1 " << fitOpt.fErrors1 << std::endl;
 #endif
 
-   double maxResValue = std::numeric_limits<double>::max() / data.Size();
-   double wrefVolume = 1.0; 
-   if ( useBinVolume ) 
-   {
-      wrefVolume /= data.RefVolume();
-   }
-   
-   const int nMaxBunchSize = 128;
-   
-   IntegralEvaluator<> igEval( func, p, useBinIntegral); 
+	double maxResValue = std::numeric_limits<double>::max() / data.Size();
+	double wrefVolume = 1.0; 
+	if ( useBinVolume ) 
+	{
+		wrefVolume /= data.RefVolume();
+	}
 
-#ifdef _OPENMP 
-   #pragma omp parallel 
-#endif
-   {   
-      double resValues[nMaxBunchSize];
-     
-      std::vector< std::vector<double> > correctCoord;
-      std::vector<const double*> correctCoordsPtrs(data.NDim());
-      std::vector<double> vBinVolume;
-      
-      if ( useBinIntegral || useBinVolume )
-      {
-          if( useBinVolume )
-          {
-            vBinVolume.resize( nMaxBunchSize );
-          }
-          
-          if ( !useBinIntegral )
-          {
-            correctCoord.resize( data.NDim() );
-            
-            for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
-            {
-              correctCoord[icoord].resize( nMaxBunchSize );
-              correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
-            }
-          }
-      }
+	const int nMaxBunchSize = 128;
+
+	IntegralEvaluator<> igEval( func, p, useBinIntegral); 
 
 #ifdef _OPENMP 
-      #pragma omp for reduction(+:chi2, nPoints) 
+#pragma omp parallel 
 #endif
-      for( int iOffset=0; iOffset < (int)data.Size(); iOffset += nMaxBunchSize )
-      {
-        int nBunchSize = std::min( nMaxBunchSize, int (data.Size() - iOffset) );
-        
-        if ( useBinIntegral || useBinVolume )
-        {
-          if( useBinVolume )
-          {
-            std::fill( vBinVolume.begin(), vBinVolume.end(), wrefVolume );
-            
-            for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
-            {
-              for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-              {
-                double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
-                double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
-                
-                vBinVolume[ibunch] *= std::abs( coordVal0 - coordVal1 );
-              }
-            }
-          }
-          
-          if ( !useBinIntegral )
-          {
-            for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
-            {
-              for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-              {
-                double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
-                double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
-                
-                correctCoord[icoord][ibunch] = ( coordVal0 + coordVal1 ) / 2.0;
-              }
-            }
-            
-            func( nBunchSize, &correctCoordsPtrs.front(), p, resValues);
-          }
-          else
-          {
+	{   
+		double resValues[nMaxBunchSize];
+
+		std::vector< std::vector<double> > correctCoord;
+		std::vector<const double*> correctCoordsPtrs(data.NDim());
+		std::vector<double> vBinVolume;
+
+		if ( useBinIntegral || useBinVolume )
+		{
+			if( useBinVolume )
+			{
+				vBinVolume.resize( nMaxBunchSize );
+			}
+
+			if ( !useBinIntegral )
+			{
+				correctCoord.resize( data.NDim() );
+
+				for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
+				{
+					correctCoord[icoord].resize( nMaxBunchSize );
+					correctCoordsPtrs[icoord] = &correctCoord[icoord].front();
+				}
+			}
+		}
+
+#ifdef _OPENMP 
+#pragma omp for reduction(+:chi2, nPoints) 
+#endif
+		for( int iOffset=0; iOffset < (int)data.Size(); iOffset += nMaxBunchSize )
+		{
+			int nBunchSize = std::min( nMaxBunchSize, int (data.Size() - iOffset) );
+
+			if ( useBinIntegral || useBinVolume )
+			{
+				if( useBinVolume )
+				{
+					std::fill( vBinVolume.begin(), vBinVolume.end(), wrefVolume );
+
+					for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
+					{
+						for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+						{
+							double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
+							double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
+
+							vBinVolume[ibunch] *= std::abs( coordVal0 - coordVal1 );
+						}
+					}
+				}
+
+				if ( !useBinIntegral )
+				{
+					for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
+					{
+						for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+						{
+							double coordVal0 = data.GetCoordComponent( ibunch + iOffset, icoord );
+							double coordVal1 = data.GetBinUpEdgeComponent( ibunch + iOffset, icoord );
+
+							correctCoord[icoord][ibunch] = ( coordVal0 + coordVal1 ) / 2.0;
+						}
+					}
+
+					func( nBunchSize, &correctCoordsPtrs.front(), p, resValues);
+				}
+				else
+				{
 #ifdef _OPENMP
-             #pragma omp critical
+#pragma omp critical
 #endif
-             {
-                for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-                {
-                  // Don't try to parallelize this:
-                  // this is not threadsafe e.g. it cannot be parallized. 
-                  // The integral evaluator is not threadsafe too, 
-                  // this issue needs to be fixed first.
-                  const double* coords0 = data.Coords( ibunch + iOffset );
-                  const double* coords1 = data.BinUpEdge( ibunch + iOffset );
-                  
-                  resValues[ibunch] = igEval( coords0, coords1 );
-                }
-             }
-          }
-          
-          if( useBinVolume )
-          {
-            for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-            {
-              resValues[ibunch] *= vBinVolume[ibunch];
-            }
-          }
-        }
-        else
-        {
-           for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
-           {
-             correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
-           }
-           
-           func( nBunchSize, &correctCoordsPtrs.front(), p, resValues );
-        }
-        
-        for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
-        {
-          double invError = data.InvError ( ibunch + iOffset );
-          double value = data.Value( ibunch + iOffset );
-          
-          if ( 0.0 < invError )
-           nPoints++;
-          else
-           invError = 0.0;
-           
-          double d = ( value - resValues[ ibunch ] ) * invError;
-          double resval = d*d;
-          
-          if ( maxResValue > resval )
-           chi2 += resval;
-          else
-           chi2 += maxResValue;
-        }
-      }
-   }
-   
-   retnPoints = nPoints;
-        
-   return chi2;
+					{
+						for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+						{
+							// Don't try to parallelize this:
+							// this is not threadsafe e.g. it cannot be parallized. 
+							// The integral evaluator is not threadsafe too, 
+							// this issue needs to be fixed first.
+							const double* coords0 = data.Coords( ibunch + iOffset );
+							const double* coords1 = data.BinUpEdge( ibunch + iOffset );
+
+							resValues[ibunch] = igEval( coords0, coords1 );
+						}
+					}
+				}
+
+				if( useBinVolume )
+				{
+					for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+					{
+						resValues[ibunch] *= vBinVolume[ibunch];
+					}
+				}
+			}
+			else
+			{
+				for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
+				{
+					correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
+				}
+
+				func( nBunchSize, &correctCoordsPtrs.front(), p, resValues );
+			}
+
+			for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+			{
+				double invError = data.InvError ( ibunch + iOffset );
+				double value = data.Value( ibunch + iOffset );
+
+				double d = ( value - resValues[ ibunch ] ) * invError;
+				double resval = d*d;
+
+				if ( 0.0 < invError )
+					nPoints++;
+				else
+					invError = 0.0;           
+
+				if ( maxResValue > resval )
+					chi2 += resval;
+				else
+					chi2 += maxResValue;
+			}
+		}
+	}
+
+	retnPoints = nPoints;
+
+	return chi2;
 }
 
 //___________________________________________________________________________________________________________________________
@@ -1169,6 +1169,145 @@ double FitUtil::EvaluatePdf(const IModelFunction & func, const UnBinData & data,
    return logPdf;
 }
 
+
+double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data, const double * p,
+                                   int iWeight,  bool extended, unsigned int &nPoints) {  
+   // evaluate the LogLikelihood 
+
+   unsigned int n = data.Size();
+	
+   const int nMaxBunchSize = 128;
+
+#ifdef DEBUG
+   std::cout << "\n\nFit data size = " << n << std::endl;
+   std::cout << "func pointer is " << typeid(func).name() << std::endl;
+#endif
+
+   double logl = 0;
+   //unsigned int nRejected = 0; 
+
+	// needed to compue effective global weight in case of extended likelihood 
+	double sumW = 0;
+	double sumW2 = 0;
+
+#ifdef _OPENMP 
+#pragma omp parallel 
+#endif
+	{   
+		double resValues[nMaxBunchSize];
+
+		std::vector<const double*> correctCoordsPtrs(data.NDim()); 
+
+#ifdef _OPENMP 
+#pragma omp for reduction(+:logl,sumW,sumW2) 
+#endif
+		for( int iOffset=0; iOffset < (int)data.Size(); iOffset += nMaxBunchSize )
+		{
+			int nBunchSize = std::min( nMaxBunchSize, int (data.Size() - iOffset) );
+
+			for ( int icoord = 0; icoord < (int)data.NDim(); icoord++ )
+			{
+				correctCoordsPtrs[icoord] = &data.GetCoordDataPtrs()[icoord][iOffset];
+			}
+
+			func( nBunchSize, &correctCoordsPtrs.front(), p, resValues );
+
+			for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+			{
+				resValues[ibunch] = ROOT::Math::Util::EvalLog( resValues[ibunch] );       
+			}
+
+
+			if (iWeight > 0) 
+			{ 
+				if (iWeight == 2)
+				{ 
+					if (extended) 
+					{ 
+						for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+						{
+							// needed sum of weights and sum of weight square if likelkihood is extended
+							double weight = data.Weight(ibunch + iOffset);
+							double wSqr = weight*weight;
+
+							logl += wSqr*resValues[ibunch];
+							sumW += weight; 
+							sumW2 += wSqr; 
+						}
+					}
+					else
+					{
+						for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+						{
+							double weight = data.Weight(ibunch + iOffset);
+							double wSqr = weight*weight;
+							logl += wSqr*resValues[ibunch];
+						}
+					}
+				}
+				else
+				{
+					for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+					{
+						double weight = data.Weight(ibunch + iOffset); 
+						logl += resValues[ibunch]*weight;
+					}
+				}
+			}
+         else
+         {
+            for ( int ibunch = 0; ibunch < nBunchSize; ibunch++ )
+            {
+               logl += resValues[ibunch];
+            }
+         }
+		}
+	}
+
+   if (extended) 
+	{ 
+      // add Poisson extended term
+      double extendedTerm = 0; // extended term in likelihood  
+      double nuTot = 0;
+      // nuTot is integral of function in the range
+      // if function has been normalized integral has been already computed 
+		IntegralEvaluator<> igEval( func, p, true); 
+		std::vector<double> xmin(data.NDim());
+		std::vector<double> xmax(data.NDim());
+		data.Range().GetRange(&xmin[0],&xmax[0]);
+		nuTot = igEval.Integral( &xmin[0], &xmax[0]);
+		// force to be last parameter value
+		//nutot = p[func.NDim()-1];
+		if (iWeight != 2)  
+			extendedTerm = - nuTot;  // no need to add in this case n log(nu) since is already computed before
+		else {            
+			// case use weight square in likelihood : compute total effective weight = sw2/sw
+			// ignore for the moment case when sumW is zero 
+			extendedTerm = - (sumW2 / sumW) * nuTot;
+		}
+            
+      logl += extendedTerm;
+
+#ifdef DEBUG
+      // for (unsigned int ipar = 0; ipar < func.NPar(); ++ipar) 
+      //    std::cout << p[ipar] << "\t";
+      // std::cout << std::endl;
+      std::cout << "fit is extended n = " << n << " nutot " << nuTot << " extended LL term = " <<  extendedTerm << " logl = " << logl
+                << std::endl;
+#endif
+   }
+   
+   // reset the number of fitting data points
+   nPoints = n; 
+
+#ifdef DEBUG
+   std::cout << "Logl = " << logl << " np = " << nPoints << std::endl;
+#endif
+   
+   return -logl;
+}
+
+/*
 double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data, const double * p,
                                    int iWeight,  bool extended, unsigned int &nPoints) {  
    // evaluate the LogLikelihood 
@@ -1284,7 +1423,7 @@ double FitUtil::EvaluateLogL(const IModelFunction & func, const UnBinData & data
    
    return -logl;
 }
-
+*/
 void FitUtil::EvaluateLogLGradient(const IModelFunction & f, const UnBinData & data, const double * p, double * grad, unsigned int & ) { 
    // evaluate the gradient of the log likelihood function
 

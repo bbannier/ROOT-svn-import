@@ -686,7 +686,7 @@ namespace ROOT {
         fDataErrorLow.clear();
         fDataErrorLowPtr = NULL;
       }
-      else if ( kValueError == kAsymError )
+      else if ( kAsymError == fErrorType )
       {
         fDataErrorHigh.resize( fMaxPoints );
         fDataErrorHighPtr = &fDataErrorHigh.front();

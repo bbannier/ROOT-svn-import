@@ -264,14 +264,16 @@ public:
     assert( ipoint < fNPoints );
     
     if ( !fWeighted ) return 1.0; 
-    return Coords(ipoint)[fDim-1];
+    return GetCoordComponent( ipoint, fDim-1 );
   }
 
   /**
     return coordinate data dimension
   */ 
   unsigned int NDim() const 
-  { return fWeighted ? fDim : fDim - 1; } 
+  { 
+	return fWeighted ? fDim-1 : fDim; 
+  } 
 
   bool IsWeighted() const
   { 

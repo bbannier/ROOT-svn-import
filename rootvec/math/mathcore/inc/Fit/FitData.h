@@ -311,7 +311,8 @@ public:
   /**
     return coordinate data dimension
   */
-  unsigned int NDim() const { return fDim; } 
+  unsigned int NDim() const { 
+	return fDim; } 
 
   /**
     access to options
