@@ -11,9 +11,6 @@
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-
-#include <string>
 
 namespace llvm {
   class raw_ostream;
@@ -97,13 +94,6 @@ namespace cling {
     ///
     bool m_DynamicLookupEnabled;
 
-    ///\brief Stream to dump values into.
-    ///
-    /// TODO: Since it is only used by the ValuePrinterSynthesizer it should be
-    /// somewhere else.
-    ///
-    llvm::OwningPtr<llvm::raw_ostream> m_ValuePrintStream;
-
     ///\breif Helper that manages when the destructor of an object to be called.
     ///
     /// The object is registered first as an CXAAtExitElement and then cling
@@ -169,9 +159,9 @@ namespace cling {
     ///
     ///\returns Whether the operation was fully successful.
     ///
-    CompilationResult Declare(const std::string& input,
-                              const CompilationOptions& CO,
-                              const clang::Decl** D = 0);
+    CompilationResult DeclareInternal(const std::string& input,
+                                      const CompilationOptions& CO,
+                                      const clang::Decl** D = 0);
 
     ///\brief Worker function, building block for interpreter's public
     /// interfaces.
@@ -184,9 +174,9 @@ namespace cling {
     ///
     ///\returns Whether the operation was fully successful.
     ///
-    CompilationResult Evaluate(const std::string& input,
-                               const CompilationOptions& CO,
-                               Value* V = 0);
+    CompilationResult EvaluateInternal(const std::string& input,
+                                       const CompilationOptions& CO,
+                                       Value* V = 0);
 
     ///\brief Wraps a given input.
     ///
@@ -225,33 +215,6 @@ namespace cling {
   public:
 
     void unload();
-
-    ///\brief Implements named parameter idiom - allows the idiom
-    /// LookupDecl().LookupDecl()...
-    ///
-    class NamedDeclResult {
-    private:
-      Interpreter* m_Interpreter;
-      clang::ASTContext& m_Context;
-      const clang::DeclContext* m_CurDeclContext;
-      clang::NamedDecl* m_Result;
-      NamedDeclResult(llvm::StringRef Decl, Interpreter* interp,
-                      const clang::DeclContext* Within = 0);
-    public:
-      NamedDeclResult& LookupDecl(llvm::StringRef);
-      operator clang::NamedDecl* () const { return getSingleDecl(); }
-      clang::NamedDecl* getSingleDecl() const;
-      template<class T> T* getAs(){
-        clang::NamedDecl *result = getSingleDecl();
-        if (result) {
-           return llvm::dyn_cast<T>(result);
-        } else {
-           return 0;
-        }
-      }
-
-      friend class Interpreter;
-    };
 
     Interpreter(int argc, const char* const *argv, const char* llvmdir = 0);
     virtual ~Interpreter();
@@ -385,9 +348,6 @@ namespace cling {
 
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
 
-    llvm::raw_ostream& getValuePrinterStream() const {
-       return *m_ValuePrintStream; }
-
     void runStaticInitializersOnce() const;
 
     int CXAAtExit(void (*func) (void*), void* arg, void* dso);
@@ -403,15 +363,6 @@ namespace cling {
     ///
     Value Evaluate(const char* expr, clang::DeclContext* DC,
                    bool ValuePrinterReq = false);
-
-    ///\brief Looks up declaration within given declaration context. Does top
-    /// down lookup.
-    ///
-    ///@param[in] Decl Declaration name.
-    ///@param[in] Within Starting declaration context.
-    ///
-    NamedDeclResult LookupDecl(llvm::StringRef Decl,
-                               const clang::DeclContext* Within = 0);
 
     ///\brief Sets callbacks needed for the dynamic lookup.
     ///
