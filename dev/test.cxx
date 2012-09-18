@@ -47,6 +47,13 @@ void buildSimultaneousModel(RooWorkspace *w)
    RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data"));
    w->import(*data);
 
+   RooArgList constraints;
+   RooAbsPdf *simplePdf = RooStats::StripConstraints(*w->pdf("sim_pdf"), *sbModel->GetObservables(), constraints);
+
+   simplePdf->Print("");
+   constraints.Print("");
+   
+
 //   w->writeToFile("sim_ws.root");
 }
 
@@ -56,14 +63,6 @@ void test() {
    
    RooSimultaneous *sim = (RooSimultaneous *) w->pdf("sim_pdf");
 
-   RooSimultaneous *newPdf = 
-      (RooSimultaneous *) RooStats::MakeUnconstrainedPdf(*w->pdf("sim_pdf"), RooArgSet(*w->var("x1"), *w->var("x2"), *w->var("x3")), NULL);
-   
-   w->import(*newPdf);
-
-   w->Print("v");
-
-   newPdf->Print("v");
 }
 
 
