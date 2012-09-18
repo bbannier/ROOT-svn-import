@@ -7,6 +7,7 @@
 #include "cling/Interpreter/Interpreter.h"
 
 #include "cling/Interpreter/LookupHelper.h"
+#include "cling/Utils/AST.h"
 
 #include "CompilationOptions.h"
 #include "DynamicLookup.h"
@@ -39,10 +40,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/raw_os_ostream.h"
 
-#include <cstdio>
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -143,43 +141,6 @@ namespace cling {
     return llvm::sys::Path::GetMainExecutable(Argv0, MainAddr);
   }
 
-
-  Interpreter::NamedDeclResult::NamedDeclResult(llvm::StringRef Decl,
-                                                Interpreter* interp,
-                                                const DeclContext* Within)
-    : m_Interpreter(interp),
-      m_Context(m_Interpreter->getCI()->getASTContext()),
-      m_CurDeclContext(Within),
-      m_Result(0)
-  {
-    LookupDecl(Decl);
-  }
-
-  Interpreter::NamedDeclResult&
-  Interpreter::NamedDeclResult::LookupDecl(llvm::StringRef Decl) {
-    DeclarationName Name(&m_Context.Idents.get(Decl));
-    DeclContext::lookup_const_result Lookup = m_CurDeclContext->lookup(Name);
-    // If more than one found return 0. Cannot handle ambiguities.
-    if (Lookup.second - Lookup.first == 1) {
-      if (DeclContext* DC = dyn_cast<DeclContext>(*Lookup.first))
-        m_CurDeclContext = DC;
-      else
-        m_CurDeclContext = (*Lookup.first)->getDeclContext();
-
-      m_Result = (*Lookup.first);
-    }
-    else {
-      m_Result = 0;
-    }
-
-    return *this;
-  }
-
-  NamedDecl* Interpreter::NamedDeclResult::getSingleDecl() const {
-    // TODO: Check whether it is only one decl if (end-begin == 1 )
-    return dyn_cast<NamedDecl>(m_Result);
-  }
-
   void Interpreter::unload() {
     m_IncrParser->unloadTransaction(0);
   }
@@ -203,8 +164,6 @@ namespace cling {
     m_LookupHelper.reset(new LookupHelper(m_IncrParser->getParser()));
 
     m_ExecutionContext.reset(new ExecutionContext());
-
-    m_ValuePrintStream.reset(new llvm::raw_os_ostream(std::cout));
 
     // Add path to interpreter's include files
     // Try to find the headers in the src folder first
@@ -411,7 +370,7 @@ namespace cling {
     if (!canWrapForCall(input))
       return declare(input, D);
 
-    if (Evaluate(input, CO, V) == Interpreter::kFailure) {
+    if (EvaluateInternal(input, CO, V) == Interpreter::kFailure) {
       if (D)
         *D = 0;
       return Interpreter::kFailure;
@@ -432,7 +391,7 @@ namespace cling {
     CO.DynamicScoping = isDynamicLookupEnabled();
     CO.Debug = isPrintingAST();
 
-    return Declare(input, CO);
+    return DeclareInternal(input, CO);
   }
 
   Interpreter::CompilationResult
@@ -443,7 +402,7 @@ namespace cling {
     CO.DynamicScoping = isDynamicLookupEnabled();
     CO.Debug = isPrintingAST();
 
-    return Declare(input, CO, D);
+    return DeclareInternal(input, CO, D);
   }
 
   Interpreter::CompilationResult
@@ -456,7 +415,7 @@ namespace cling {
     CO.DeclarationExtraction = 0;
     CO.ValuePrinting = 0;
 
-    return Evaluate(input, CO, V);
+    return EvaluateInternal(input, CO, V);
   }
 
   Interpreter::CompilationResult
@@ -465,7 +424,7 @@ namespace cling {
     CO.DeclarationExtraction = 0;
     CO.ValuePrinting = CompilationOptions::VPEnabled;
 
-    return Evaluate(input, CO, V);
+    return EvaluateInternal(input, CO, V);
   }
 
   void Interpreter::WrapInput(std::string& input, std::string& fname) {
@@ -482,8 +441,7 @@ namespace cling {
     return (getCI()->getASTContext().Idents.getOwn(out)).getName();
   }
 
-  bool Interpreter::RunFunction(llvm::StringRef fname,
-                                llvm::GenericValue* res) {
+  bool Interpreter::RunFunction(llvm::StringRef fname, llvm::GenericValue* res) {
     if (getCI()->getDiagnostics().hasErrorOccurred())
       return false;
 
@@ -492,14 +450,16 @@ namespace cling {
     }
 
     std::string mangledNameIfNeeded;
-    FunctionDecl* FD = cast_or_null<FunctionDecl>(LookupDecl(fname).
-                                                  getSingleDecl()
-                                                  );
+
+    Sema& S = getCI()->getSema();
+    FunctionDecl* FD 
+      = cast_or_null<FunctionDecl>(utils::Lookup::Named(&S, fname.data()));
+    
     if (FD) {
       if (!FD->isExternC()) {
         llvm::raw_string_ostream RawStr(mangledNameIfNeeded);
         llvm::OwningPtr<MangleContext>
-          Mangle(getCI()->getASTContext().createMangleContext());
+          Mangle(S.getASTContext().createMangleContext());
         Mangle->mangleName(FD, RawStr);
         RawStr.flush();
         fname = mangledNameIfNeeded;
@@ -517,8 +477,9 @@ namespace cling {
   }
 
   Interpreter::CompilationResult
-  Interpreter::Declare(const std::string& input, const CompilationOptions& CO,
-                       const clang::Decl** D /* = 0 */) {
+  Interpreter::DeclareInternal(const std::string& input, 
+                               const CompilationOptions& CO,
+                               const clang::Decl** D /* = 0 */) {
 
     if (m_IncrParser->Compile(input, CO) != IncrementalParser::kFailed) {
       if (D)
@@ -530,8 +491,9 @@ namespace cling {
   }
 
   Interpreter::CompilationResult
-  Interpreter::Evaluate(const std::string& input, const CompilationOptions& CO,
-                        Value* V /* = 0 */) {
+  Interpreter::EvaluateInternal(const std::string& input, 
+                                const CompilationOptions& CO,
+                                Value* V /* = 0 */) {
 
     Sema& TheSema = getCI()->getSema();
 
@@ -736,13 +698,6 @@ namespace cling {
       ((ParserExt*)P)->ExitScope();
     }
   };
-
-  Interpreter::NamedDeclResult Interpreter::LookupDecl(llvm::StringRef Decl,
-                                                    const DeclContext* Within) {
-    if (!Within)
-      Within = getCI()->getASTContext().getTranslationUnitDecl();
-    return Interpreter::NamedDeclResult(Decl, this, Within);
-  }
 
   void Interpreter::installLazyFunctionCreator(
                                               void* (*fp)(const std::string&)) {
