@@ -104,6 +104,50 @@ public:
    TF1(const char *name, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0);
    TF1(const char *name, void (*fcn)( int , double const* const* , const double * , double* ), 
       Double_t xmin=0, Double_t xmax=1, Int_t npar=0 );
+/* New vectorizable function interface. 
+ * The callback function acts on a whole array of coordinates 
+ * opposed to only one single coordinate. 
+ * This enables the cpu to run the code in a highly 
+ * efficient manner.
+ *
+ *
+ * Interface:
+ *
+ * void func ( int N, double const* const* ppIn, const double* params, double* pOut )
+ *
+ * Description of the passed parameters:
+ *
+ * N: 
+ * Number of elements in the coordinate arrays and number of 
+ * result values that need to be written to pOut.
+ *
+ * ppIn: 
+ * Is an array of arrays of the coordinates i.e. 
+ * the coordinates can be accessed with: ppIn[ direction ][ arrayindex ]
+ * .
+ *
+ * params:
+ * Carries the parameters as usual.
+ *
+ * pOut:
+ * Pointer to the array in which the return values need to be written:
+ * pOut[ arrayindex ] = ...
+ *
+ *
+ * Example:
+ *
+ * void func ( int N, double const* const* ppIn, const double* params, double* pOut )
+ * {
+ * 	for( int i=0; i < N; i++ )
+ * 	{
+ * 		double x = ppIn[0][i];
+ * 		double y = ppIn[1][i];
+ *
+ * 		pOut[i] = exp( - params[0] * ( x*x + y*y ) ); 
+ * 	}
+ * }
+
+**/
 #endif
 
    // Constructors using functors (compiled mode only)
