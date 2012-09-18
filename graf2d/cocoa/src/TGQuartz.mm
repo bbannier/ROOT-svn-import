@@ -13,6 +13,7 @@
 //#define NDEBUG
 
 #include <stdexcept>
+#include <iostream>
 #include <cstring>
 #include <cassert>
 
@@ -762,9 +763,9 @@ void TGQuartz::DrawFTGlyphIntoPixmap(void *pHack, FT_Bitmap *source, ULong_t for
             for (int x = 0; x < int(source->width); x++) {
                if (x + bx < int(pixmap.fWidth) && y + by < int(pixmap.fHeight)) {
                   const unsigned char * const pixels = pixmap.fData + (y + by) * pixmap.fWidth * 4 + (x + bx) * 4;
-                  r += pixels[0];
-                  g += pixels[1];
-                  b += pixels[2];
+                  r += UShort_t(pixels[0] / 255. * 0xffff);
+                  g += UShort_t(pixels[1] / 255. * 0xffff);
+                  b += UShort_t(pixels[2] / 255. * 0xffff);
                }
 
                if (++dotCnt >= maxDots)
@@ -777,10 +778,10 @@ void TGQuartz::DrawFTGlyphIntoPixmap(void *pHack, FT_Bitmap *source, ULong_t for
             g /= dots;
             b /= dots;
          }
-         
-         if (col[0].fRed == r && col[0].fGreen == g && col[0].fBlue == b)
+
+         if (col[0].fRed == r && col[0].fGreen == g && col[0].fBlue == b) {
             col[0].fPixel = back;
-         else {
+         } else {
             col[0].fPixel = ~back;//???
             col[0].fRed = (UShort_t) r;
             col[0].fGreen = (UShort_t) g;
@@ -807,7 +808,7 @@ void TGQuartz::DrawFTGlyphIntoPixmap(void *pHack, FT_Bitmap *source, ULong_t for
             TGCocoa::AllocColor(kNone, col[x]);//Calculate fPixel from fRed/fGreen/fBlue triplet.
          }
       }
-
+      
       // put smoothed character, character pixmap values are an index
       // into the 5 colors used for aliasing (4 = foreground, 0 = background)
       const unsigned char *s = source->buffer;
@@ -818,7 +819,9 @@ void TGQuartz::DrawFTGlyphIntoPixmap(void *pHack, FT_Bitmap *source, ULong_t for
             if (d > 4)
                d = 4;
             if (d && x < (int) source->width) {
-               unsigned char pixel[] = {col[d].fRed, col[d].fGreen, col[d].fBlue, 255};
+               const UChar_t pixel[] = {UChar_t(double(col[d].fRed) / 0xffff * 255),
+                                        UChar_t(double(col[d].fGreen) / 0xffff * 255),
+                                        UChar_t(double(col[d].fBlue) / 0xffff * 255), 255};
                [pixmap putPixel : pixel X : bx + x Y : by + y];
             }
          }
