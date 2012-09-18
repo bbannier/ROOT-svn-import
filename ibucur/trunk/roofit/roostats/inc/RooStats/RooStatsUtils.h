@@ -103,6 +103,9 @@ namespace RooStats {
 
    void FactorizePdf(RooStats::ModelConfig &model, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints);
 
+   // strips constraints from a pdf (and saves them in a list)
+   RooAbsPdf * StripConstraints(RooAbsPdf& pdf, const RooArgSet& observables, RooArgList& constraints);
+
    // extract constraint terms from pdf
    RooAbsPdf * MakeNuisancePdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name);
    RooAbsPdf * MakeNuisancePdf(const RooStats::ModelConfig &model, const char *name);

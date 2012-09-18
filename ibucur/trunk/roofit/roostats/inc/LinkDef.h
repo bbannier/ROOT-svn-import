@@ -133,6 +133,7 @@
 #pragma link C++ function RooStats::MakeNuisancePdf(const RooStats::ModelConfig & , const char * );
 #pragma link C++ function RooStats::MakeUnconstrainedPdf(RooAbsPdf &, const RooArgSet &, const char *);
 #pragma link C++ function RooStats::MakeUnconstrainedPdf(const RooStats::ModelConfig &, const char *);
+#pragma link C++ function RooStats::StripConstraints(RooAbsPdf&, const RooArgSet&, RooArgList&);
 #pragma link C++ function RooStats::GetAsTTree(TString, TString, const RooDataSet&);
 
 

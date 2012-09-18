@@ -38,7 +38,6 @@ namespace RooStats {
       Int_t fNumberOfChannels;
       std::vector<RooAbsPdf*> fChannels;
       std::vector<std::string> fChannelNames;
-      RooAbsPdf *fCurrentPdf;
    protected:
       ClassDef(CombinedLikelihood,1)
    };
