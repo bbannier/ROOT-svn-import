@@ -212,7 +212,7 @@ void stressVector( std::ostream& out, int NBins, bool vectorized )
    double averageCallsError = sqrt( (averageCallsSqr - sqr(averageCalls))/((double)statRuns-1.0) );  	  
 
    std::cout << std::scientific; 
-   std::cout << "StatError: " << fitTimeRealError << std::endl;
+
    std::cout << "FitTime: " << fitTimeReal << " +- " << fitTimeRealError << " seconds" << std::endl;
 
    std::cout << "FitTimePerBin: " << fitTimeReal/(double)NBins << " seconds" << std::endl;
