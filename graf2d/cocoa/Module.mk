@@ -44,12 +44,13 @@ INCLUDEFILES += $(COCOADEP)
 include/%.h:    $(COCOADIRI)/%.h
 		cp $< $@
 
-$(COCOALIB):    $(COCOAO) $(COCOAOBJCPPO) $(COCOADO) $(ORDER_) $(MAINLIBS) \
+$(COCOALIB):    $(COCOAO) $(COCOAOBJCPPO) $(COCOADO) $(FREETYPEDEP) $(ORDER_) $(MAINLIBS) \
                 $(COCOALIBDEP)
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)"  \
 		   "$(SOFLAGS)" libGCocoa.$(SOEXT) $@ \
 		   "$(COCOAO) $(COCOAOBJCPPO) $(COCOADO)" \
-		   "$(COCOALIBEXTRA) -framework Cocoa -framework OpenGL"
+         "$(FREETYPELDFLAGS) $(FREETYPELIB) \
+		    $(COCOALIBEXTRA) -framework Cocoa -framework OpenGL"
 
 $(COCOADS):     $(COCOAH1) $(COCOAL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
