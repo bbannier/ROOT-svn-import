@@ -233,7 +233,7 @@ public:
     and can easily get vectorized by the compiler in loops 
     running over the ipoint-index.
   */  
-  double GetCoordComponent( unsigned int ipoint, unsigned int icoord ) const
+  double GetCoordComponent( unsigned int ipoint, unsigned int icoord ) const  __attribute__ ((pure))
   {
     assert( ipoint < fMaxPoints );
     assert( icoord < fDim );
@@ -384,6 +384,7 @@ private:
    * fCoordsPtr.
   */
   std::vector< std::vector< double > > fCoords;   // array for the coordinates ( if they are stored directly in this class )
+
   std::vector< const double* > fCoordsPtr; // stores the pointer to the actual data. if fWrapped is false this will be the 
   //  point to the fCoords array.
   

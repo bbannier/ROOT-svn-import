@@ -115,8 +115,6 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
    // get fit option 
    const DataOptions & fitOpt = dv.Opt();
    
-   bool isVectorizedFunc = func != 0 && func->IsVectorized();
-
 
    // store instead of bin center the bin edges 
    bool useBinEdges = fitOpt.fIntegral || fitOpt.fBinVolume;
@@ -218,7 +216,7 @@ void FillData(BinData & dv, const TH1 * hfit, TF1 * func)
 
             // need to evaluate function to know about rejected points
             // hugly but no other solutions
-            if (func != 0 && !isVectorizedFunc) { 
+            if (func != 0) { 
                func->RejectPoint(false);
                (*func)( &x[0] );  // evaluate using stored function parameters
                if (func->RejectedPoint() ) continue; 
