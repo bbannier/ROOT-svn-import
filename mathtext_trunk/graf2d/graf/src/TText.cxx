@@ -73,9 +73,8 @@ TText::TText(Double_t x, Double_t y, const wchar_t *text) : TAttText()
 TText::~TText()
 {
    // Text default destructor.
-   if (fWcsTitle != NULL) {
-	  delete reinterpret_cast<std::wstring *>(fWcsTitle);
-   }
+
+   if (fWcsTitle != NULL) delete reinterpret_cast<std::wstring *>(fWcsTitle);
 }
 
 
@@ -100,13 +99,12 @@ void TText::Copy(TObject &obj) const
    TNamed::Copy(obj);
    TAttText::Copy(((TText&)obj));
    if (fWcsTitle != NULL) {
-	   *reinterpret_cast<std::wstring *>(fWcsTitle) =
-		   *reinterpret_cast<std::wstring *>(((TText&)obj).fWcsTitle);
-   }
-   else {
-	   dynamic_cast<TText &>(obj).fWcsTitle =
-		   new std::wstring(*reinterpret_cast<std::wstring *>(
-				dynamic_cast<TText &>(obj).fWcsTitle));
+      *reinterpret_cast<std::wstring *>(fWcsTitle) =
+         *reinterpret_cast<std::wstring *>(((TText&)obj).fWcsTitle);
+   } else {
+      dynamic_cast<TText &>(obj).fWcsTitle =
+         new std::wstring(*reinterpret_cast<std::wstring *>(
+         dynamic_cast<TText &>(obj).fWcsTitle));
    }
 }
 
@@ -765,6 +763,7 @@ void TText::SetNDC(Bool_t isNDC)
    if (isNDC) SetBit(kTextNDC);
 }
 
+
 //______________________________________________________________________________
 void TText::SetMbTitle(const wchar_t *title)
 {
@@ -773,16 +772,15 @@ void TText::SetMbTitle(const wchar_t *title)
    char *mb_title = new char[MB_CUR_MAX * wcslen(title) + 1];
    char *p = mb_title;
    size_t length = wcslen(title);
-   for(size_t i = 0; i < length; i++) {
-	   const int n = wctomb(p, title[i]);
-	   if(n >= 0) {
-		   p += n;
-	   }
+   for (size_t i = 0; i < length; i++) {
+      const int n = wctomb(p, title[i]);
+      if (n >= 0) p += n;
    }
    fTitle = mb_title;
    delete [] mb_title;
    if (gPad && TestBit(kMustCleanup)) gPad->Modified();
 }
+
 
 //______________________________________________________________________________
 void TText::Streamer(TBuffer &R__b)
