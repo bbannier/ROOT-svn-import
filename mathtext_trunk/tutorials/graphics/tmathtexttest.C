@@ -10,8 +10,8 @@ void tmathtexttest(void)
 	l.DrawMathText(0.5, 0.6, "d\\Gamma = {1\\over 2m_A} \\left( \\prod_f {d^3p_f\\over (2\\pi)^3} {1\\over 2E_f} \\right) \\left| \\mathscr{M} \\left(m_A - \\left\\{p_f\\right\\} \\right) \\right|^2 (2\\pi)^4 \\delta^{(4)} \\left(p_A - \\sum p_f \\right)");
 	l.DrawMathText(0.5, 0.425, "4\\mathrm{Re}\\left\\{{2\\over 1-\\Delta\\alpha} \\chi(s) \\left[ \\^{g}_\\nu^e \\^{g}_\\nu^f (1 + \\cos^2\\theta) + \\^{g}_a^e \\^{g}_a^f \\cos\\theta \\right] \\right\\}");
 	l.DrawMathText(0.5, 0.33, "p(n) = {1\\over\\pi\\sqrt{2}} \\sum_{k = 1}^\\infty \\sqrt{k} A_k(n) {d\\over dn} {\\sinh \\left\\{ {\\pi\\over k} \\sqrt{2\\over 3} \\sqrt{n - {1\\over 24}} \\right\\} \\over \\sqrt{n - {1\\over 24}}}");
-	//l.DrawMathText(0.5, 0.15, "{(\\ell+1)C_{\\ell}^{TE} \\over 2\\pi} \\space \\space \\hbox{RHIC スピン物理}");
-   l.DrawMathText(0.5, 0.15, "\\hbox{RHIC スピン物理}");
+	l.DrawMathText(0.3, 0.15, "{(\\ell+1)C_{\\ell}^{TE} \\over 2\\pi}");
+   l.DrawMathText(0.6, 0.15, "\\hbox{RHIC スピン物理}");
 
 #else
 	TLatex l;
