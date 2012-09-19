@@ -275,11 +275,13 @@ namespace mathtext {
 	unsigned int math_text_renderer_t::
 	math_family(const math_text_t::math_symbol_t &math_symbol) const
 	{
-		// Use the text font for Latin, Greek and the minus sign, and
-		// STIX for everything else.
+		// Use the text font for Latin, Greek, Cyrillic and the minus
+		// sign, and STIX for everything else.
 		if(math_symbol._glyph <= L'\u017e' ||
 		   (math_symbol._glyph >= L'\u0384' &&
 			math_symbol._glyph <= L'\u03ce') ||
+		   (math_symbol._glyph >= L'\u0400' &&
+			math_symbol._glyph <= L'\u052f') ||
 		   math_symbol._glyph == L'\u2212') {
 			return math_symbol._family;
 		}

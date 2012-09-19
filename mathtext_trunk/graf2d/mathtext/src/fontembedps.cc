@@ -339,6 +339,7 @@ namespace mathtext {
 
 		if (!parse_ttf_header(font_name, font_bbox, cid_map,
 							  char_strings, font_data)) {
+			fprintf(stderr, "%s:%d:\n", __FILE__, __LINE__);
 			return std::string();
 		}
 

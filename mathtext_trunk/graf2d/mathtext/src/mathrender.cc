@@ -79,6 +79,11 @@ namespace mathtext {
 #pragma warning(disable: 869)
 #endif // __INTEL_COMPILER
 
+	bool math_text_renderer_t::is_cyrillic(const wchar_t c)
+	{
+		return c >= L'\u0400' && c <= L'\u052f';
+	}
+
 	bool math_text_renderer_t::is_cjk(const wchar_t c)
 	{
 		return
