@@ -22,7 +22,7 @@ void tmathtexttest(void)
 	l.DrawLatex(0.5, 0.425, "4 Re #left{ #frac{2}{1 - #Delta#alpha} #chi(s) #[]{#hat{g}_{#nu}^{e}#hat{g}_{#nu}^{f} (1 + cos^{2}#theta) + 2 #hat{g}_{a}^{e}#hat{g}_{a}^{f} cos#theta) } #right}");
 	l.DrawLatex(0.5, 0.3, "p(n) = #frac{1}{#pi#sqrt{2}} #sum_{k = 1}^{#infty} #sqrt{k} A_{k}(n) #frac{d}{dn} #frac{sinh #left{ #frac{#pi}{k} #sqrt{#frac{2}{3}} #sqrt{n - #frac{1}{24}} #right}}{#sqrt{n - #frac{1}{24}}}");
 #endif
-	//c1->Print("c1.png");
+	c1->Print("c1.png");
 	c1->Print("c1.ps");
 	c1->Print("c1.eps");
 }
