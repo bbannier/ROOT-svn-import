@@ -17,6 +17,7 @@
 // 02110-1301 USA
 
 #include "fontembed.h"
+#include <algorithm>
 #include <cstring>
 #include <cstdio>
 
@@ -664,6 +665,31 @@ namespace mathtext {
 
 				delete [] buffer;
 			}
+			else if (name_record.platform_id == 3 &&
+					 name_record.encoding_id == 1 &&
+					 name_record.name_id == 6) {
+#ifdef LITTLE_ENDIAN
+				name_record.length = bswap_16(name_record.length);
+				name_record.offset = bswap_16(name_record.offset);
+#endif // LITTLE_ENDIAN
+
+				// Very ugly UCS-2 to ASCII conversion, but should
+				// work for most font names
+				char *buffer =
+					new char[(name_record.length >> 1) + 1];
+
+				for (uint16_t i = 0; i < (name_record.length >> 1);
+					 i++) {
+					buffer[i] =
+						font_data[name_offset +
+								  naming_table_header.string_offset +
+								  name_record.offset + i * 2 + 1];
+				}
+				buffer[name_record.length >> 1] = '\0';
+				font_name = buffer;
+
+				delete [] buffer;
+			}
 		}
 
 		// head
@@ -733,18 +759,99 @@ namespace mathtext {
 		post_script_table.max_mem_type42 =
 			bswap_32(post_script_table.max_mem_type42);
 #endif // LITTLE_ENDIAN
+
+		size_t offset_current = post_offset;
+
 #if 0
 		if (post_script_table.format_type == 0x00010000) {
 			// Exactly the 258 glyphs in the standard Macintosh glyph
 			// set
 		}
 #endif
-		if (post_script_table.format_type != 0x00020000) {
+		if (post_script_table.format_type == 0x00020000) {
 			// Version required by TrueType-based fonts to be used on
 			// Windows
 			//
 			// numberOfGlyphs, glyphNameIndex[numGlyphs],
 			// names[numberNewGlyphs] table
+
+			uint16_t num_glyphs;
+
+			memcpy(&num_glyphs,
+				   &font_data[post_offset +
+							  sizeof(struct ttf_post_script_table_s)],
+				   sizeof(uint16_t));
+#ifdef LITTLE_ENDIAN
+			num_glyphs = bswap_16(num_glyphs);
+#endif // LITTLE_ENDIAN
+
+			uint16_t *glyph_name_index = new uint16_t[num_glyphs];
+
+			memcpy(glyph_name_index,
+				   &font_data[post_offset +
+							  sizeof(struct ttf_post_script_table_s) +
+							  sizeof(uint16_t)],
+				   num_glyphs * sizeof(uint16_t));
+#ifdef LITTLE_ENDIAN
+			for (uint16_t i = 0; i < num_glyphs; i++) {
+				glyph_name_index[i] = bswap_16(glyph_name_index[i]);
+			}
+#endif // LITTLE_ENDIAN
+
+			uint16_t max_glyph_name_index = 0;
+			for (int i = num_glyphs - 1; i >= 0; i--) {
+				if (glyph_name_index[i] > max_glyph_name_index) {
+					max_glyph_name_index = glyph_name_index[i];
+				}
+			}
+
+			std::string *glyph_name =
+				new std::string[max_glyph_name_index - 258 + 1];
+
+			offset_current +=
+				sizeof(struct ttf_post_script_table_s) +
+				(num_glyphs + 1) * sizeof(uint16_t);
+			for (uint16_t i = 0; i <= max_glyph_name_index - 258; i++) {
+				uint8_t length;
+
+				memcpy(&length, &font_data[offset_current],
+					   sizeof(uint8_t));
+				offset_current += sizeof(uint8_t);
+
+				char *buffer = new char[length + 1UL];
+
+				memcpy(buffer, &font_data[offset_current],
+					   length * sizeof(uint8_t));
+				offset_current += length * sizeof(uint8_t);
+				buffer[length] = '\0';
+				glyph_name[i] = buffer;
+
+				delete [] buffer;
+			}
+
+			char_strings.resize(num_glyphs);
+#include "table/macintoshordering.h"
+			for (uint16_t glyph = 0; glyph < num_glyphs; glyph++) {
+				char_strings[glyph] = glyph_name_index[glyph] >= 258 ?
+					glyph_name[glyph_name_index[glyph] - 258].c_str() :
+					macintosh_ordering[glyph_name_index[glyph]];
+			}
+
+			delete [] glyph_name_index;
+			delete [] glyph_name;
+		}
+		else if (post_script_table.format_type == 0x00030000) {
+			// No PostScript name information is provided for the
+			// glyphs
+
+			// Do nothing, cid_map will be initialized with standard
+			// Adobe glyph names once cmap is read
+		}
+		else {
+			fprintf(stderr, "%s:%d: unsupported post table format "
+					"0x%08x\n", __FILE__, __LINE__,
+					post_script_table.format_type);
+
 			return false;
 		}
 #if 0
@@ -755,79 +862,7 @@ namespace mathtext {
 			// numberOfGlyphs, offset[numGlyphs]
 			return false;
 		}
-		if (post_script_table.format_type == 0x00030000) {
-			// No PostScript name information is provided for the
-			// glyphs
-			//
-			return false;
-		}
 #endif
-
-		uint16_t num_glyphs;
-
-		memcpy(&num_glyphs,
-			   &font_data[post_offset +
-						  sizeof(struct ttf_post_script_table_s)],
-			   sizeof(uint16_t));
-#ifdef LITTLE_ENDIAN
-		num_glyphs = bswap_16(num_glyphs);
-#endif // LITTLE_ENDIAN
-
-		uint16_t *glyph_name_index = new uint16_t[num_glyphs];
-
-		memcpy(glyph_name_index,
-			   &font_data[post_offset +
-						  sizeof(struct ttf_post_script_table_s) +
-						  sizeof(uint16_t)],
-			   num_glyphs * sizeof(uint16_t));
-#ifdef LITTLE_ENDIAN
-		for (uint16_t i = 0; i < num_glyphs; i++) {
-			glyph_name_index[i] = bswap_16(glyph_name_index[i]);
-		}
-#endif // LITTLE_ENDIAN
-
-		uint16_t max_glyph_name_index = 0;
-		for (int i = num_glyphs - 1; i >= 0; i--) {
-			if (glyph_name_index[i] > max_glyph_name_index) {
-				max_glyph_name_index = glyph_name_index[i];
-			}
-		}
-
-		std::string *glyph_name =
-			new std::string[max_glyph_name_index - 258 + 1];
-		size_t offset_current;
-
-		offset_current = post_offset +
-			sizeof(struct ttf_post_script_table_s) +
-			(num_glyphs + 1) * sizeof(uint16_t);
-		for (uint16_t i = 0; i <= max_glyph_name_index - 258; i++) {
-			uint8_t length;
-
-			memcpy(&length, &font_data[offset_current],
-				   sizeof(uint8_t));
-			offset_current += sizeof(uint8_t);
-
-			char *buffer = new char[length + 1UL];
-
-			memcpy(buffer, &font_data[offset_current],
-				   length * sizeof(uint8_t));
-			offset_current += length * sizeof(uint8_t);
-			buffer[length] = '\0';
-			glyph_name[i] = buffer;
-
-			delete [] buffer;
-		}
-
-		char_strings.resize(num_glyphs);//xxx
-#include "table/macintoshordering.h"
-		for (uint16_t glyph = 0; glyph < num_glyphs; glyph++) {
-			char_strings[glyph] = glyph_name_index[glyph] >= 258 ?
-				glyph_name[glyph_name_index[glyph] - 258].c_str() :
-				macintosh_ordering[glyph_name_index[glyph]];
-		}
-
-		delete [] glyph_name_index;
-		delete [] glyph_name;
 
 		// cmap
 
@@ -968,6 +1003,40 @@ namespace mathtext {
 		}
 
 		delete [] subtable_offset;
+
+		// Regenerate cid_map from the Adobe glyph list
+
+		if (char_strings.empty() && !cid_map.empty()) {
+			char_strings.resize(cid_map.size());
+			for (std::map<wchar_t, uint16_t>::const_iterator iterator =
+					 cid_map.begin();
+				 iterator != cid_map.end(); iterator++) {
+				if (iterator->second < char_strings.size()) {
+#include "table/adobeglyphlist.h"
+
+					const wchar_t *lower =
+						std::lower_bound(
+							adobe_glyph_ucs,
+							adobe_glyph_ucs + nadobe_glyph,
+							iterator->first);
+					// The longest Adobe glyph name is 20 characters
+					// long (0x03b0 = upsilondieresistonos)
+					char buf[21];
+
+					if(lower < adobe_glyph_ucs + nadobe_glyph &&
+					   *lower == iterator->first) {
+						const size_t index =
+							lower - adobe_glyph_ucs;
+
+						snprintf(buf, 21, "%s", adobe_glyph_name[index]);
+					}
+					else {
+						snprintf(buf, 21, "uni%04X", iterator->first);
+					}
+					char_strings[iterator->second] = buf;
+				}
+			}
+		}
 
 		return true;
 	}

@@ -1499,6 +1499,7 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 
 		return true;
 	}
+	fprintf(stderr, "%s:%d:\n", __FILE__, __LINE__);
 
 	return false;
 }
@@ -1509,22 +1510,23 @@ void TPostScript::FontEmbed(void)
 {
    // Embed font in PS file.
    
-   static const char *fonttable[29][2] = {
-	   { "Root.TTFont.0", "arialbd.ttf" },
-	   { "Root.TTFont.1", "timesi.ttf" },
-	   { "Root.TTFont.2", "timesbd.ttf" },
-	   { "Root.TTFont.3", "timesbi.ttf" },
-	   { "Root.TTFont.4", "arial.ttf" },
-	   { "Root.TTFont.5", "ariali.ttf" },
-	   { "Root.TTFont.6", "arialbd.ttf" },
-	   { "Root.TTFont.7", "arialbi.ttf" },
-	   { "Root.TTFont.8", "cour.ttf" },
-	   { "Root.TTFont.9", "couri.ttf" },
-	   { "Root.TTFont.10", "courbd.ttf" },
-	   { "Root.TTFont.11", "courbi.ttf" },
+   static const char *fonttable[32][2] = {
+	   { "Root.TTFont.0", "FreeSansBold.otf" },
+	   { "Root.TTFont.1", "FreeSerifItalic.otf" },
+	   { "Root.TTFont.2", "FreeSerifBold.otf" },
+	   { "Root.TTFont.3", "FreeSerifBoldItalic.otf" },
+	   { "Root.TTFont.4", "FreeSans.otf" },
+	   { "Root.TTFont.5", "FreeSansOblique.otf" },
+	   { "Root.TTFont.6", "FreeSansBold.otf" },
+	   { "Root.TTFont.7", "FreeSansBoldOblique.otf" },
+	   { "Root.TTFont.8", "FreeMono.otf" },
+	   { "Root.TTFont.9", "FreeMonoOblique.otf" },
+	   { "Root.TTFont.10", "FreeMonoBold.otf" },
+	   { "Root.TTFont.11", "FreeMonoBoldOblique.otf" },
 	   { "Root.TTFont.12", "symbol.ttf" },
-	   { "Root.TTFont.13", "times.ttf" },
+	   { "Root.TTFont.13", "FreeSerif.otf" },
 	   { "Root.TTFont.14", "wingding.ttf" },
+	   { "Root.TTFont.15", "symbol.ttf" },
 	   { "Root.TTFont.STIXGen", "STIXGeneral.otf" },
 	   { "Root.TTFont.STIXGenIt", "STIXGeneralItalic.otf" },
 	   { "Root.TTFont.STIXGenBd", "STIXGeneralBol.otf" },
@@ -1538,46 +1540,49 @@ void TPostScript::FontEmbed(void)
 	   { "Root.TTFont.STIXSiz4Sym", "STIXSiz4Sym.otf" },
 	   { "Root.TTFont.STIXSiz4SymBd", "STIXSiz4SymBol.otf" },
 	   { "Root.TTFont.STIXSiz5Sym", "STIXSiz5Sym.otf" },
-	   { "Root.TTFont.ME", "arial.ttf" }
+	   { "Root.TTFont.ME", "DroidSansFallback.ttf" },
+	   { "Root.TTFont.CJKMing", "DroidSansFallback.ttf" },
+	   { "Root.TTFont.CJKCothic", "DroidSansFallback.ttf" }
    };
 
    PrintStr("%%IncludeResource: ProcSet (FontSetInit)@");
 
-	// try to load font (font must be in Root.TTFontPath resource)
-	const char *ttpath = gEnv->GetValue("Root.TTFontPath",
+   // try to load font (font must be in Root.TTFontPath resource)
+   const char *ttpath = gEnv->GetValue("Root.TTFontPath",
 #ifdef TTFFONTDIR
-										TTFFONTDIR
+									   TTFFONTDIR
 #else // TTFFONTDIR
-										"$(ROOTSYS)/fonts"
+									   "$(ROOTSYS)/fonts"
 #endif // TTFFONTDIR
-										);
+									   );
    
-	// FIXME: First do not try to embed any non-Latin scripts,
-	// therefore fontid < 28. The first Arial-BoldMT is also
-	// a duplicate.
-   for (Int_t fontid = 1; fontid < 28; fontid++) {
-	   //for (Int_t fontid = 0; fontid < 1; fontid++) {
+   for (Int_t fontid = 1; fontid < 30; fontid++) {
+		if (fontid != 15) {
+			const char *filename = gEnv->GetValue(
+				fonttable[fontid][0], fonttable[fontid][1]);
+			char *ttfont = gSystem->Which(ttpath, filename,
+										  kReadPermission);
 
-		const char *filename = gEnv->GetValue(
-			fonttable[fontid][0], fonttable[fontid][1]);
-		char *ttfont = gSystem->Which(ttpath, filename,
-									  kReadPermission);
-
-		if(!ttfont) {
-			Error("TPostScript::FontEmbed",
-				  "font %d (filename `%s') not found in path",
-				  fontid, filename);
-		} else {
-			if (FontEmbedType2(ttfont)) {
-				// nothing
-			} else if(FontEmbedType1(ttfont)) {
-				// nothing
-			} else if(FontEmbedType42(ttfont)) {
-				// nothing
+			if(!ttfont) {
+				Error("TPostScript::FontEmbed",
+					  "font %d (filename `%s') not found in path",
+					  fontid, filename);
+			} else {
+				if (FontEmbedType2(ttfont)) {
+					// nothing
+				} else if(FontEmbedType1(ttfont)) {
+					// nothing
+				} else if(FontEmbedType42(ttfont)) {
+					// nothing
+				} else {
+					Error("TPostScript::FontEmbed",
+						  "failed to embed font %d (filename `%s')",
+						  fontid, filename);
+				}
+				delete [] ttfont;
 			}
-			delete [] ttfont;
 		}
-	}
+   }
    PrintStr("%%IncludeResource: font Times-Roman@");
    PrintStr("%%IncludeResource: font Times-Italic@");
    PrintStr("%%IncludeResource: font Times-Bold@");
@@ -2558,19 +2563,19 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
    // at position xx,yy in world coordinates.
 
    static const char *psfont[31][2] = {
-	   { "Root.PSFont.1", "/TimesNewRomanPS-ItalicMT" },
-	   { "Root.PSFont.2", "/TimesNewRomanPS-BoldMT" },
-	   { "Root.PSFont.3", "/TimesNewRomanPS-BoldItalicMT" },
-	   { "Root.PSFont.4", "/ArialMT" },
-	   { "Root.PSFont.5", "/Arial-ItalicMT" },
-	   { "Root.PSFont.6", "/Arial-BoldMT" },
-	   { "Root.PSFont.7", "/Arial-BoldItalicMT" },
-	   { "Root.PSFont.8", "/CourierNewPSMT" },
-	   { "Root.PSFont.9", "/CourierNewPS-ItalicMT" },
-	   { "Root.PSFont.10", "/CourierNewPS-BoldMT" },
-	   { "Root.PSFont.11", "/CourierNewPS-BoldItalicMT" },
+	   { "Root.PSFont.1", "/FreeSerifItalic" },
+	   { "Root.PSFont.2", "/FreeSerifBold" },
+	   { "Root.PSFont.3", "/FreeSerifBoldItalic" },
+	   { "Root.PSFont.4", "/FreeSans" },
+	   { "Root.PSFont.5", "/FreeSansOblique" },
+	   { "Root.PSFont.6", "/FreeSansBold" },
+	   { "Root.PSFont.7", "/FreeSansBoldOblique" },
+	   { "Root.PSFont.8", "/FreeMono" },
+	   { "Root.PSFont.9", "/FreeMonoOblique" },
+	   { "Root.PSFont.10", "/FreeMonoBold" },
+	   { "Root.PSFont.11", "/FreeMonoBoldOblique" },
 	   { "Root.PSFont.12", "/SymbolMT" },
-	   { "Root.PSFont.13", "/TimesNewRomanPSMT" },
+	   { "Root.PSFont.13", "/FreeSerif" },
 	   { "Root.PSFont.14", "/Wingdings-Regular" },
 	   { "Root.PSFont.15", "/SymbolMT" },
 	   { "Root.PSFont.STIXGen", "/STIXGeneral" },
@@ -2586,9 +2591,9 @@ void TPostScript::Text(Double_t xx, Double_t yy, const char *chars)
 	   { "Root.PSFont.STIXSiz4Sym", "/STIXSize4Symbols" },
 	   { "Root.PSFont.STIXSiz4SymBd", "/STIXSize4Symbols-Bold" },
 	   { "Root.PSFont.STIXSiz5Sym", "/STIXSize5Symbols" },
-	   { "Root.PSFont.ME", "/Helvetica" },
-	   { "Root.PSFont.CJKMing", "/Helvetica-Bold" },
-	   { "Root.PSFont.CJKGothic", "/Times-Roman" }
+	   { "Root.PSFont.ME", "/DroidSansFallback" },
+	   { "Root.PSFont.CJKMing", "/DroidSansFallback" },
+	   { "Root.PSFont.CJKGothic", "/DroidSansFallback" }
    };
 
    const Double_t kDEGRAD = TMath::Pi()/180.;
@@ -2764,19 +2769,19 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
    // at position xx,yy in world coordinates.
 
    static const char *psfont[31][2] = {
-	   { "Root.PSFont.1", "/TimesNewRomanPS-ItalicMT" },
-	   { "Root.PSFont.2", "/TimesNewRomanPS-BoldMT" },
-	   { "Root.PSFont.3", "/TimesNewRomanPS-BoldItalicMT" },
-	   { "Root.PSFont.4", "/ArialMT" },
-	   { "Root.PSFont.5", "/Arial-ItalicMT" },
-	   { "Root.PSFont.6", "/Arial-BoldMT" },
-	   { "Root.PSFont.7", "/Arial-BoldItalicMT" },
-	   { "Root.PSFont.8", "/CourierNewPSMT" },
-	   { "Root.PSFont.9", "/CourierNewPS-ItalicMT" },
-	   { "Root.PSFont.10", "/CourierNewPS-BoldMT" },
-	   { "Root.PSFont.11", "/CourierNewPS-BoldItalicMT" },
+	   { "Root.PSFont.1", "/FreeSerifItalic" },
+	   { "Root.PSFont.2", "/FreeSerifBold" },
+	   { "Root.PSFont.3", "/FreeSerifBoldItalic" },
+	   { "Root.PSFont.4", "/FreeSans" },
+	   { "Root.PSFont.5", "/FreeSansOblique" },
+	   { "Root.PSFont.6", "/FreeSansBold" },
+	   { "Root.PSFont.7", "/FreeSansBoldOblique" },
+	   { "Root.PSFont.8", "/FreeMono" },
+	   { "Root.PSFont.9", "/FreeMonoOblique" },
+	   { "Root.PSFont.10", "/FreeMonoBold" },
+	   { "Root.PSFont.11", "/FreeMonoBoldOblique" },
 	   { "Root.PSFont.12", "/SymbolMT" },
-	   { "Root.PSFont.13", "/TimesNewRomanPSMT" },
+	   { "Root.PSFont.13", "/FreeSerif" },
 	   { "Root.PSFont.14", "/Wingdings-Regular" },
 	   { "Root.PSFont.15", "/SymbolMT" },
 	   { "Root.PSFont.STIXGen", "/STIXGeneral" },
@@ -2792,9 +2797,9 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
 	   { "Root.PSFont.STIXSiz4Sym", "/STIXSize4Symbols" },
 	   { "Root.PSFont.STIXSiz4SymBd", "/STIXSize4Symbols-Bold" },
 	   { "Root.PSFont.STIXSiz5Sym", "/STIXSize5Symbols" },
-	   { "Root.PSFont.ME", "/Helvetica" },
-	   { "Root.PSFont.CJKMing", "/Helvetica-Bold" },
-	   { "Root.PSFont.CJKGothic", "/Times-Roman" }
+	   { "Root.PSFont.ME", "/DroidSansFallback" },
+	   { "Root.PSFont.CJKMing", "/DroidSansFallback" },
+	   { "Root.PSFont.CJKGothic", "/DroidSansFallback" }
    };
 
    const Double_t kDEGRAD = TMath::Pi()/180.;

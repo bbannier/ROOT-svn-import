@@ -60,30 +60,10 @@ private:
 
 		return precision;
 	}
-	inline bool iscjk(
-		const wchar_t c) const
+	inline bool is_cyrillic_or_cjk(const wchar_t c) const
 	{
-		return c >= L'\u2e80' &&
-			(// CJK Radicals Supplement to Yi Radicals
-			 (c >= L'\u2e80' && c <= L'\ua4cf') ||
-			 // Modifier Tone Letters
-			 (c >= L'\ua700' && c <= L'\ua71f') ||
-			 // Hangul Syllables
-			 (c >= L'\uac00' && c <= L'\ud7af') ||
-			 // CJK Compatibility Ideographs
-			 (c >= L'\uf900' && c <= L'\ufaff') ||
-			 // Vertical Forms
-			 (c >= L'\ufe10' && c <= L'\ufe1f') ||
-			 // CJK Compatibility Forms
-			 (c >= L'\ufe30' && c <= L'\ufe4f') ||
-			 // Halfwidth and Fullwidth Forms
-			 (c >= L'\uff00' && c <= L'\uffef') ||
-			 // CJK Unified Ideographs, Extension B
-			 (c >= L'\U00020000' && c <= L'\U0002a6df') ||
-			 // CJK Unified Ideographs, Extension C
-			 (c >= L'\U0002a700' && c <= L'\U0002b73f') ||
-			 // CJK Compatibility Ideographs
-			 (c >= L'\U0002f800' && c <= L'\U0002fa1f'));
+		return mathtext::math_text_renderer_t::is_cyrillic(c) ||
+			mathtext::math_text_renderer_t::is_cjk(c);
 	}
 	inline size_t root_cjk_face_number(
 		const bool serif = false) const
@@ -206,9 +186,9 @@ public:
 				 const unsigned int family)
 	{
 		const size_t old_font_index = TTF::fgCurFontIdx;
-		const bool character_is_cjk = iscjk(character);
+		const bool cyrillic_or_cjk = is_cyrillic_or_cjk(character);
 
-		if(character_is_cjk) {
+		if(cyrillic_or_cjk) {
 			TTF::SetTextFont(root_cjk_face_number());
 		}
 		else {
@@ -287,9 +267,9 @@ public:
 		for(std::wstring::const_iterator iterator = string.begin();
 			iterator != string.end(); iterator++) {
 			buf[0] = *iterator;
-			const bool character_is_cjk = iscjk(buf[0]);
+			const bool cyrillic_or_cjk = is_cyrillic_or_cjk(buf[0]);
 
-			if(character_is_cjk) {
+			if(cyrillic_or_cjk) {
 				SetTextFont(root_cjk_face_number());
 				TAttText::Modify();
 			}
@@ -302,7 +282,7 @@ public:
 			transform_pad(xt, yt, x + advance, y);
 			gPad->PaintText(xt, yt, buf);
 			advance += b.advance();
-			if(character_is_cjk) {
+			if(cyrillic_or_cjk) {
 				SetTextFont(root_face_number(family));
 				TAttText::Modify();
 			}

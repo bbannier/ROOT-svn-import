@@ -499,20 +499,20 @@ void TTF::SetTextFont(Font_t fontnumber)
    // Table of Microsoft and (for non-MSFT operating systems) backup
    // FreeFont TTF fonts.
    static const char *fonttable[][2] = {
-	  { "Root.TTFont.0", "arialbd.ttf" },
-	  { "Root.TTFont.1", "timesi.ttf" },
-	  { "Root.TTFont.2", "timesbd.ttf" },
-	  { "Root.TTFont.3", "timesbi.ttf" },
-	  { "Root.TTFont.4", "arial.ttf" },
-	  { "Root.TTFont.5", "ariali.ttf" },
-	  { "Root.TTFont.6", "arialbd.ttf" },
-	  { "Root.TTFont.7", "arialbi.ttf" },
-	  { "Root.TTFont.8", "cour.ttf" },
-	  { "Root.TTFont.9", "couri.ttf" },
-	  { "Root.TTFont.10", "courbd.ttf" },
-	  { "Root.TTFont.11", "courbi.ttf" },
+	  { "Root.TTFont.0", "FreeSansBold.otf" },
+	  { "Root.TTFont.1", "FreeSerifItalic.otf" },
+	  { "Root.TTFont.2", "FreeSerifBold.otf" },
+	  { "Root.TTFont.3", "FreeSerifBoldItalic.otf" },
+	  { "Root.TTFont.4", "FreeSans.otf" },
+	  { "Root.TTFont.5", "FreeSansOblique.otf" },
+	  { "Root.TTFont.6", "FreeSansBold.otf" },
+	  { "Root.TTFont.7", "FreeSansBoldOblique.otf" },
+	  { "Root.TTFont.8", "FreeMono.otf" },
+	  { "Root.TTFont.9", "FreeMonoOblique.otf" },
+	  { "Root.TTFont.10", "FreeMonoBold.otf" },
+	  { "Root.TTFont.11", "FreeMonoBoldOblique.otf" },
 	  { "Root.TTFont.12", "symbol.ttf" },
-	  { "Root.TTFont.13", "times.ttf" },
+	  { "Root.TTFont.13", "FreeSerif.otf" },
 	  { "Root.TTFont.14", "wingding.ttf" },
 	  { "Root.TTFont.15", "symbol.ttf" },
 	  { "Root.TTFont.STIXGen", "STIXGeneral.otf" },
@@ -528,9 +528,9 @@ void TTF::SetTextFont(Font_t fontnumber)
 	  { "Root.TTFont.STIXSiz4Sym", "STIXSiz4Sym.otf" },
 	  { "Root.TTFont.STIXSiz4SymBd", "STIXSiz4SymBol.otf" },
 	  { "Root.TTFont.STIXSiz5Sym", "STIXSiz5Sym.otf" },
-	  { "Root.TTFont.ME", "arial.ttf" },
-	  { "Root.TTFont.CJKMing", "arial.ttf" },
-	  { "Root.TTFont.CJKGothic", "times.ttf" }
+	  { "Root.TTFont.ME", "DroidSansFallback.ttf" },
+	  { "Root.TTFont.CJKMing", "DroidSansFallback.ttf" },
+	  { "Root.TTFont.CJKGothic", "DroidSansFallback.ttf" }
    };
 
    static int fontset = -1;

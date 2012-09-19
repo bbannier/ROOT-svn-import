@@ -737,6 +737,7 @@ namespace mathtext {
 		static bool is_left_to_right(const wchar_t c);
 		static bool is_right_to_left(const wchar_t c);
 		static bool is_top_to_bottom(const wchar_t c);
+		static bool is_cyrillic(const wchar_t c);
 		static bool is_cjk(const wchar_t c);
 		static bool is_cjk_punctuation_open(const wchar_t c);
 		static bool is_cjk_punctuation_closed(const wchar_t c);
