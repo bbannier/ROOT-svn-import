@@ -233,7 +233,7 @@ public:
     and can easily get vectorized by the compiler in loops 
     running over the ipoint-index.
   */  
-  double GetCoordComponent( unsigned int ipoint, unsigned int icoord ) const  __attribute__ ((pure))
+  double GetCoordComponent( unsigned int ipoint, unsigned int icoord ) const
   {
     assert( ipoint < fMaxPoints );
     assert( icoord < fDim );
