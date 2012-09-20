@@ -48,6 +48,7 @@ public:
    TText(const TText &text);
    virtual ~TText();
    void             Copy(TObject &text) const;
+   const void *     GetWcsTitle(void) const;
    virtual Int_t    DistancetoPrimitive(Int_t px, Int_t py);
    virtual TText   *DrawText(Double_t x, Double_t y, const char *text);
    virtual TText   *DrawText(Double_t x, Double_t y, const wchar_t *text);

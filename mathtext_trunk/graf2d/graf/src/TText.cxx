@@ -110,6 +110,18 @@ void TText::Copy(TObject &obj) const
 
 
 //______________________________________________________________________________
+const void *TText::GetWcsTitle(void) const
+{
+	if (fWcsTitle != NULL) {
+		return reinterpret_cast<std::wstring *>(fWcsTitle)->c_str();
+	}
+	else {
+		return NULL;
+	}
+}
+
+
+//______________________________________________________________________________
 Int_t TText::DistancetoPrimitive(Int_t px, Int_t py)
 {
    // Compute distance from point px,py to a string.
