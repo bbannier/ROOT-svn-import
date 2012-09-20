@@ -678,12 +678,12 @@ namespace mathtext {
 				char *buffer =
 					new char[(name_record.length >> 1) + 1];
 
-				for (uint16_t i = 0; i < (name_record.length >> 1);
-					 i++) {
-					buffer[i] =
+				for (uint16_t j = 0; j < (name_record.length >> 1);
+					 j++) {
+					buffer[j] =
 						font_data[name_offset +
 								  naming_table_header.string_offset +
-								  name_record.offset + i * 2 + 1];
+								  name_record.offset + j * 2 + 1];
 				}
 				buffer[name_record.length >> 1] = '\0';
 				font_name = buffer;
@@ -1023,8 +1023,11 @@ namespace mathtext {
 					// long (0x03b0 = upsilondieresistonos)
 					char buf[21];
 
-					if(lower < adobe_glyph_ucs + nadobe_glyph &&
-					   *lower == iterator->first) {
+					if (iterator->first == L'\uffff') {
+						strncpy(buf, ".notdef", 8);
+					}
+					else if (lower < adobe_glyph_ucs + nadobe_glyph &&
+							 *lower == iterator->first) {
 						const size_t index =
 							lower - adobe_glyph_ucs;
 
