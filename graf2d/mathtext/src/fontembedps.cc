@@ -395,14 +395,27 @@ namespace mathtext {
 		}
 		ret.append("] def\n");
 
+		unsigned int char_strings_count = 0;
+
+		for (std::vector<std::string>::const_iterator iterator =
+				 char_strings.begin();
+			 iterator < char_strings.end(); iterator++) {
+			if (!iterator->empty()) {
+				char_strings_count++;
+			}
+		}
+
 		snprintf(linebuf, BUFSIZ, "/CharStrings %u dict dup begin\n",
-				 static_cast<unsigned int>(char_strings.size()));
+				 char_strings_count);
 		ret.append(linebuf);
 		for (unsigned int glyph_index = 0;
 			 glyph_index < char_strings.size(); glyph_index++) {
-			snprintf(linebuf, BUFSIZ, "/%s %u def\n",
-					 char_strings[glyph_index].c_str(), glyph_index);
-			ret.append(linebuf);
+			if (!char_strings[glyph_index].empty()) {
+				snprintf(linebuf, BUFSIZ, "/%s %u def\n",
+						 char_strings[glyph_index].c_str(),
+						 glyph_index);
+				ret.append(linebuf);
+			}
 		}
 		ret.append("end readonly def\n");
 		ret.append("FontName currentdict end definefont pop\n");
