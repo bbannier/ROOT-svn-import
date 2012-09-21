@@ -41,8 +41,8 @@
 #include "TGFileDialog.h"
 #include "TGScrollBar.h"
 #include "KeySymbols.h"
+#include "RConfigure.h"
 #include "Riostream.h"
-
 
 static const char *gFiletypes[] = { "All files",     "*",
                                     "Text files",    "*.txt",
@@ -1766,6 +1766,23 @@ void TGTextEdit::InsChar(char character)
                                Int_t(ToScrYCoord(fCurrent.fY+1) - fMaxDescent),
                                charstring, strlen(charstring));
    } else {
+#ifdef R__HAS_COCOA
+      //I would use const, but some members of TGTextLine are non-const.
+      if (TGTextLine *currentLine = fText->GetCurrentLine()) {
+         const ULong_t lineStart = ToObjXCoord(fVisible.fX, fCurrent.fY);
+         if (lineStart < currentLine->GetLineLength()) {
+            const char *textToRender = currentLine->GetText(lineStart, currentLine->GetLineLength() - lineStart);
+            //The next two lines can throw and textToRender will leak, but ROOT does not care about such things. :(
+            gVirtualX->ClearArea(fCanvas->GetId(), Int_t(ToScrXCoord(0, fCurrent.fY)),
+                                 Int_t(ToScrYCoord(fCurrent.fY)), UInt_t(ToScrXCoord(currentLine->GetLineLength(), fCurrent.fY)),
+                                 UInt_t(ToScrYCoord(fCurrent.fY+1)-ToScrYCoord(fCurrent.fY)));
+            gVirtualX->DrawString(fCanvas->GetId(), fNormGC(), Int_t(ToScrXCoord(0, fCurrent.fY)),
+                                  Int_t(ToScrYCoord(fCurrent.fY + 1) - fMaxDescent),
+                                  textToRender, -1);
+            delete [] textToRender;
+         }
+      }
+#else
       gVirtualX->CopyArea(fCanvas->GetId(), fCanvas->GetId(), fNormGC(),
                           (Int_t)ToScrXCoord(fCurrent.fX, fCurrent.fY),
                           (Int_t)ToScrYCoord(fCurrent.fY), fCanvas->GetWidth(),
@@ -1783,6 +1800,7 @@ void TGTextEdit::InsChar(char character)
                             Int_t(ToScrYCoord(fCurrent.fY+1) - fMaxDescent),
                             charstring, strlen(charstring));
       fCursorState = 2;  // the ClearArea effectively turned off the cursor
+#endif
    }
    delete [] charstring;
    SetCurrent(pos);
