@@ -48,7 +48,6 @@ public:
    TText(const TText &text);
    virtual ~TText();
    void             Copy(TObject &text) const;
-   const void *     GetWcsTitle(void) const;
    virtual Int_t    DistancetoPrimitive(Int_t px, Int_t py);
    virtual TText   *DrawText(Double_t x, Double_t y, const char *text);
    virtual TText   *DrawText(Double_t x, Double_t y, const wchar_t *text);
@@ -65,6 +64,7 @@ public:
    virtual void     GetTextExtent(UInt_t &w, UInt_t &h, const char *text) const;
    virtual void     GetTextExtent(UInt_t &w, UInt_t &h, const wchar_t *text) const;
    virtual void     GetTextAdvance(UInt_t &a, const char *text, const Bool_t kern=kTRUE) const;
+   const void *     GetWcsTitle(void) const;
    Double_t         GetY() const  { return fY; }
 
    virtual void     ls(Option_t *option="") const;
