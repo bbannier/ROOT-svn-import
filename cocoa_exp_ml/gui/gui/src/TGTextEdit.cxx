@@ -1829,7 +1829,6 @@ void TGTextEdit::DelChar()
       if (!y) h = h << 1;
 
       pos.fX--;
-
       if (fText->GetChar(pos) == 16) {
          do {
             pos.fX++;
@@ -1875,14 +1874,17 @@ void TGTextEdit::DelChar()
             SetHsbPosition((ToScrXCoord(pos.fX, pos.fY)+fVisible.fX-fCanvas->GetWidth()/2)/fScrollVal.fX);
          }
 
+#ifdef R__HAS_COCOA
+         UpdateRegion(0, 0, fCanvas->GetWidth(), fCanvas->GetHeight());
+#else
          h = UInt_t(fCanvas->GetHeight() - ToScrYCoord(fCurrent.fY));
-
          gVirtualX->CopyArea(fCanvas->GetId(), fCanvas->GetId(), fNormGC(), 0,
                              Int_t(pos2.fY), fWidth, h, 0, (Int_t)ToScrYCoord(fCurrent.fY));
          if (ToScrYCoord(pos.fY) < 0) {
             SetVsbPosition(fVisible.fY/fScrollVal.fY-1);
          }
          UpdateRegion(0, (Int_t)ToScrYCoord(pos.fY), fCanvas->GetWidth(), h);
+#endif
          SetSBRange(kVertical);
          SetSBRange(kHorizontal);
       }
@@ -1900,6 +1902,9 @@ void TGTextEdit::BreakLine()
    TGLongPosition pos;
    fText->BreakLine(fCurrent);
    if (ToScrYCoord(fCurrent.fY+2) <= (Int_t)fCanvas->GetHeight()) {
+#ifdef R__HAS_COCOA
+      UpdateRegion(0, (Int_t)ToScrYCoord(fCurrent.fY + 1), fCanvas->GetWidth(), fCanvas->GetHeight());
+#else
       gVirtualX->CopyArea(fCanvas->GetId(), fCanvas->GetId(), fNormGC(), 0,
                           (Int_t)ToScrYCoord(fCurrent.fY+1), fCanvas->GetWidth(),
                           UInt_t(fCanvas->GetHeight()-(ToScrYCoord(fCurrent.fY+2)-
@@ -1907,7 +1912,7 @@ void TGTextEdit::BreakLine()
                           0, (Int_t)ToScrYCoord(fCurrent.fY+2));
       UpdateRegion(0, (Int_t)ToScrYCoord(fCurrent.fY), fCanvas->GetWidth(),
                   UInt_t(ToScrYCoord(fCurrent.fY+2) - ToScrYCoord(fCurrent.fY)));
-
+#endif
       if (fVisible.fX != 0) {
          SetHsbPosition(0);
       }
