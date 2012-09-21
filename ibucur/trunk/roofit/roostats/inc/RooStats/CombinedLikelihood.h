@@ -117,8 +117,23 @@ public:
       Init();
    }
 
-   // TODO: implement
-   virtual TObject* clone(const char* name) const { return NULL; }
+   
+   SumLikelihood(const SumLikelihood& rhs, const char* newName) :
+      RooAbsReal(rhs, newName),
+      fPdf(rhs.fPdf),
+      fData(rhs.fData),
+      fWeights(rhs.fWeights),
+      fCachedPdfs(rhs.fCachedPdfs),
+      fIntegrals(rhs.fIntegrals),
+      fPartialSums(rhs.fPartialSums),
+      fCoefficients(rhs.fCoefficients),
+      fZeroPoint(rhs.fZeroPoint),
+      fSumWeights(rhs.fSumWeights),
+      fIsRooAddPdf(rhs.fIsRooAddPdf)
+   {
+   } 
+
+   virtual TObject* clone(const char* name) const { return new SumLikelihood(*this, name); }
 
    virtual Double_t evaluate() const {
       std::fill( fPartialSums.begin(), fPartialSums.end(), 0.0);
@@ -180,6 +195,7 @@ public:
    void SetZeroPoint() { fZeroPoint = -this->getVal(); setValueDirty(); }
    void ClearZeroPoint() { fZeroPoint = 0.0; setValueDirty(); } 
 
+   // TODO: implement getObservables and getParameters
 
 private:
    void Init() {
@@ -249,6 +265,15 @@ private:
          itPdf != endPdf; ++itPdf) (*itPdf).SetDataDirty();
       
    }
+
+   // TODO: implement properly (just a stub)
+//   virtual RooArgSet* getParameters(const RooArgSet* depList, Bool_t stripDisconnected = kTRUE) const {
+ //     return new RooArgSet();
+ //  }
+   // TODO: implement properly 
+ //  virtual RooArgSet* getObservables(const RooArgSet* depList, Bool_t valueOnly = kTRUE) const {
+  //    return new RooArgSet();
+ //  }
    
    RooAbsPdf* fPdf;
    const RooAbsData *fData;
@@ -283,9 +308,16 @@ namespace RooStats {
       virtual Double_t expectedEvents(const RooArgSet* nset) const; // TODO: remove dependence on nset parameter
 
       void SetData(const RooAbsData& data);
+      
+      // TODO: implement properly
+//      virtual RooArgSet* getParameters(const RooArgSet* depList, Bool_t stripDisconnected = kTRUE) const {
+  //       return new RooArgSet(fConstraintParameters);
+    //  }
 
    private:
       CombinedLikelihood& operator=(const CombinedLikelihood& rhs); // disallow default assignment operator
+
+      const RooArgSet* fNuisanceParameters;
 
       Int_t fNumberOfChannels;
       Int_t fNumberOfConstraints;

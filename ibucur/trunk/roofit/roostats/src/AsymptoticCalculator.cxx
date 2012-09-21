@@ -218,9 +218,17 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     // add constraint terms for all non-constant parameters
 
     // need to call constrain for RooSimultaneous until stripDisconnected problem fixed
-    RooAbsReal* nll = pdf.createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
+    RooLinkedList commands;
+    RooCmdArg arg1(RooFit::CloneData(kFALSE));
+    RooCmdArg arg2(RooFit::Constrain(*allParams));
+    commands.Add(&arg1);
+    commands.Add(&arg2);
+
+    RooAbsReal* nll = RooStats::CreateNLL(pdf, data, commands);
 
     RooArgSet* attachedSet = nll->getVariables();
+
+    attachedSet->Print("v");
 
     // if poi are specified - do a conditional fit 
     RooArgSet paramsSetConstant;

@@ -41,7 +41,8 @@ CombinedLikelihood::CombinedLikelihood(
    RooAbsReal(
       TString::Format("comb_nll_%s_%s", simPdf.GetName(), data.GetName()).Data(),
       "combined -log(likelihood)"
-   )
+   ),
+   fConstraintParameters("constr_params", "constraint parameters", this)
 {
    // check that pdf and data have the same category and save a pointer to it
    RooCategory* pdfCatClone = dynamic_cast<RooCategory*>(simPdf.indexCat().Clone());
@@ -110,6 +111,7 @@ CombinedLikelihood::CombinedLikelihood(
          fConstraints.push_back(constr);
          fConstraintZeroPoints.push_back(0.0); // TODO: analyse the necessity of this
 
+         assert(constr->getParameters(data) != NULL);
          fConstraintParameters.add(*constr->getParameters(data));
       }
    } else {
@@ -129,10 +131,15 @@ CombinedLikelihood::CombinedLikelihood(
 CombinedLikelihood::CombinedLikelihood(const CombinedLikelihood& rhs, const char* newName) :
    RooAbsReal(rhs, newName),
    fNumberOfChannels(rhs.fNumberOfChannels),
+   fNumberOfConstraints(rhs.fNumberOfConstraints),
    fChannels(rhs.fChannels),
-   fChannelNames(rhs.fChannelNames)
+   fDataSets(rhs.fDataSets),
+   fConstraints(rhs.fConstraints),
+   fConstraintParameters(rhs.fConstraintParameters),
+   fConstraintZeroPoints(rhs.fConstraintZeroPoints),
+   fChannelNames(rhs.fChannelNames),
+   fChannelLikelihoods(rhs.fChannelLikelihoods)
 {
-   // TODO: see how to remove, not a real copy constructor
 }
 
 
