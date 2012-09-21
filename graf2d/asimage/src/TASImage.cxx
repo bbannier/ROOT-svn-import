@@ -5751,13 +5751,11 @@ void TASImage::DrawText(TText *text, Int_t x, Int_t y)
    TTF::SetRotationMatrix(text->GetTextAngle());
 
    // set text
-   const wchar_t *wcsTitle =
-	   reinterpret_cast<const wchar_t *>(text->GetWcsTitle());
+   const wchar_t *wcsTitle = reinterpret_cast<const wchar_t *>(text->GetWcsTitle());
    if (wcsTitle != NULL) {
-	   TTF::PrepareString(wcsTitle);
-   }
-   else {
-	   TTF::PrepareString(text->GetTitle());
+      TTF::PrepareString(wcsTitle);
+   } else {
+      TTF::PrepareString(text->GetTitle());
    }
    TTF::LayoutGlyphs();
 
