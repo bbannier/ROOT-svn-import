@@ -24,9 +24,9 @@ namespace RooStats {
       virtual Double_t EvaluatePDF() const { return evaluate(); } // TODO: eventually replace evaluate with this function
       virtual RooAbsData& EvaluatePDF(RooAbsData& data) const { return data; }
       virtual Double_t EvaluateCDF() const { return analyticalIntegral(0); }
-      virtual std::vector<Double_t> EvaluateCDF(RooAbsData& data) const { return *(new std::vector<Double_t>()); }
+      virtual std::vector<Double_t> EvaluateCDF(RooAbsData&) const { return *(new std::vector<Double_t>()); }
       virtual Double_t Integrate() const { return 0.0; }
-      virtual Double_t EvaluateNLL(RooAbsData& data) const { return 0.0; }
+      virtual Double_t EvaluateNLL(RooAbsData&) const { return 0.0; }
       virtual RooAbsPdf* createRooAbsPdf() const { return new GaussianPdf(*this); }
       virtual RooFitResult* FitTo() const { return NULL; }
       virtual Bool_t IsNormalized() const { return kFALSE; }

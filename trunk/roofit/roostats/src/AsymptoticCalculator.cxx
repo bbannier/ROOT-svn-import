@@ -224,11 +224,17 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     commands.Add(&arg1);
     commands.Add(&arg2);
 
-    RooAbsReal* nll = RooStats::CreateNLL(pdf, data, commands);
+//   std::cout << "AsymptoticCalculator::EvaluateNLL " << std::endl;
+//   std::cout << "AsymptoticCalculator::pdf         "; pdf.Print("");
+//   std::cout << "AsymptoticCalculator::data        "; data.Print(""); 
+//   std::cout << "AsymptoticCalculator::poiSet      "; if(poiSet) poiSet->Print(""); else std::cout << std::endl;
+     RooAbsReal* nll = RooStats::CreateNLL(pdf, data, commands);
+//     RooAbsReal *nll = pdf.createNLL( data, commands);
+//   std::cout << "AsymptoticCalculator::EvaluateNLL - END" << std::endl;
 
     RooArgSet* attachedSet = nll->getVariables();
+ //    std::cout << "attachedSet "; attachedSet->Print();
 
-    attachedSet->Print("v");
 
     // if poi are specified - do a conditional fit 
     RooArgSet paramsSetConstant;
@@ -262,6 +268,8 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
        // check if there are non-const parameters so it is worth to do the minimization
 
     }
+
+//    paramsSetConstant.Print("v");
 
     TStopwatch tw; 
     tw.Start();

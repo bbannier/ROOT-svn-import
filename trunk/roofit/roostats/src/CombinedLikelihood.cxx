@@ -36,12 +36,14 @@ CombinedLikelihood::CombinedLikelihood(
 CombinedLikelihood::CombinedLikelihood(
    const RooSimultaneous& simPdf,
    const RooAbsData& data,
-   const RooLinkedList& cmdList
+   const RooArgSet *nuis
 ) :
    RooAbsReal(
       TString::Format("comb_nll_%s_%s", simPdf.GetName(), data.GetName()).Data(),
       "combined -log(likelihood)"
    ),
+   fPdf(&simPdf),
+   fNuisanceParameters(nuis),
    fConstraintParameters("constr_params", "constraint parameters", this)
 {
    // check that pdf and data have the same category and save a pointer to it
@@ -96,9 +98,13 @@ CombinedLikelihood::CombinedLikelihood(
  
    // Constraint Setup part
    RooArgList constraints;
-   RooSimultaneous *unconstrainedPdf = (RooSimultaneous *)RooStats::StripConstraints(*((RooAbsPdf*)&simPdf), *data.get(), constraints);
+   RooStats::StripConstraints(*((RooAbsPdf*)&simPdf), *data.get(), constraints);
    fNumberOfConstraints = constraints.getSize();
 
+//   std::cout << "--START--simPdf" << std::endl;
+//   simPdf.getParameters(data)->Print("v");
+//   std::cout << "---END---simPdf" << std::endl;
+   
    if(fNumberOfConstraints > 0) {
 
       fConstraints.reserve(fNumberOfConstraints);
@@ -130,16 +136,11 @@ CombinedLikelihood::CombinedLikelihood(
 //_____________________________________________________________________________
 CombinedLikelihood::CombinedLikelihood(const CombinedLikelihood& rhs, const char* newName) :
    RooAbsReal(rhs, newName),
-   fNumberOfChannels(rhs.fNumberOfChannels),
-   fNumberOfConstraints(rhs.fNumberOfConstraints),
-   fChannels(rhs.fChannels),
-   fDataSets(rhs.fDataSets),
-   fConstraints(rhs.fConstraints),
-   fConstraintParameters(rhs.fConstraintParameters),
-   fConstraintZeroPoints(rhs.fConstraintZeroPoints),
-   fChannelNames(rhs.fChannelNames),
-   fChannelLikelihoods(rhs.fChannelLikelihoods)
+   fPdf(rhs.fPdf),
+   fNuisanceParameters(rhs.fNuisanceParameters),
+   fConstraintParameters("constr_params", "constraint parameters", this)
 {
+   assert(0); // should not be called yet
 }
 
 
@@ -186,11 +187,6 @@ RooDataSet* CombinedLikelihood::GenerateGlobalObs(const RooArgSet &vars, Int_t n
 }
 
 
-void CombinedLikelihood::SetData(const RooAbsData& data) 
-{
-      
-}
-
 
 Double_t CombinedLikelihood::evaluate() const
 {
@@ -207,7 +203,7 @@ Double_t CombinedLikelihood::evaluate() const
       std::vector<RooAbsPdf*>::const_iterator citPdf = fConstraints.begin(), cendPdf = fConstraints.end(); 
       std::vector<Double_t>::const_iterator citZP  = fConstraintZeroPoints.begin();
       for ( ; citPdf != cendPdf; ++citPdf, ++citZP) {
-         Double_t logPdfValue = (*citPdf)->getLogVal(NULL); // TODO: nuisance parameters here
+         Double_t logPdfValue = (*citPdf)->getLogVal(fNuisanceParameters); 
          // XXX: are Log Eval errors checked in getLogVal
          result -= (logPdfValue + *citZP); // XXX FastConstraints implemented in new RooGaussian
       }
@@ -215,12 +211,6 @@ Double_t CombinedLikelihood::evaluate() const
    }
 
    return result;
-}
-
-
-Double_t CombinedLikelihood::expectedEvents(const RooArgSet *nset) const
-{
-   return 0.0;
 }
 
 

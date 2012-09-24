@@ -110,6 +110,7 @@ public:
    SumLikelihood(RooAbsPdf* pdf, RooAbsData* data) :
       RooAbsReal("SumLikelihood", "Cached version of normal log likelihood sum"),
       fPdf(pdf),
+      fParameters("params", "parameters", this),
       fZeroPoint(0)   
    {
       if(!pdf) throw std::invalid_argument("Pdf passed is null");
@@ -121,16 +122,11 @@ public:
    SumLikelihood(const SumLikelihood& rhs, const char* newName) :
       RooAbsReal(rhs, newName),
       fPdf(rhs.fPdf),
-      fData(rhs.fData),
-      fWeights(rhs.fWeights),
-      fCachedPdfs(rhs.fCachedPdfs),
-      fIntegrals(rhs.fIntegrals),
-      fPartialSums(rhs.fPartialSums),
-      fCoefficients(rhs.fCoefficients),
-      fZeroPoint(rhs.fZeroPoint),
-      fSumWeights(rhs.fSumWeights),
-      fIsRooAddPdf(rhs.fIsRooAddPdf)
+      fParameters("params", "parameters", this),
+      fZeroPoint(rhs.fZeroPoint) // XXX: or 0?
    {
+      SetData(*rhs.fData);
+      Init();
    } 
 
    virtual TObject* clone(const char* name) const { return new SumLikelihood(*this, name); }
@@ -242,6 +238,19 @@ private:
       } else {
          throw std::invalid_argument("ERROR: SumLikelihood");
       }
+/*
+      TIterator *itPar = fPdf->getParameters(*fData)->createIterator();
+      for(TObject *obj = itPar->Next(); obj != NULL; obj = itPar->Next()) {
+         RooRealVar *var = dynamic_cast<RooRealVar*>(obj);
+         if(var != NULL) fParameters.add(*var);
+      }
+      delete itPar;
+
+      // For DEBUG purposes
+      std::cout << "--START--SumLikelihood::fParameters--" << std::endl;
+         fParameters.Print("v");      
+      std::cout << "---END---SumLikelihood::fParameters--" << std::endl;
+*/
    }
  
 
@@ -277,6 +286,8 @@ private:
    
    RooAbsPdf* fPdf;
    const RooAbsData *fData;
+   
+   RooSetProxy fParameters;
 
    std::vector<Double_t> fWeights;
    mutable std::vector<CachedPdf> fCachedPdfs;
@@ -296,7 +307,7 @@ namespace RooStats {
       // Constructors, destructors, assignment
       CombinedLikelihood(const char* name, const char* title, RooArgList& pdfList);
       CombinedLikelihood(const CombinedLikelihood& rhs, const char *newName = NULL);
-      CombinedLikelihood(const RooSimultaneous& simPdf, const RooAbsData& data, const RooLinkedList& cmdList);
+      CombinedLikelihood(const RooSimultaneous& simPdf, const RooAbsData& data, const RooArgSet* nuis);
       virtual TObject *clone(const char *newName) const { return new CombinedLikelihood(*this, newName); }
       virtual ~CombinedLikelihood();
 
@@ -305,18 +316,26 @@ namespace RooStats {
       Bool_t AddPdf(RooAbsPdf& pdf, const std::string& catLabel);
       RooDataSet *GenerateGlobalObs(const RooArgSet& vars, Int_t nEvents);
       virtual Double_t evaluate() const;
-      virtual Double_t expectedEvents(const RooArgSet* nset) const; // TODO: remove dependence on nset parameter
 
-      void SetData(const RooAbsData& data);
+      //void SetData(const RooAbsData& data) {}
       
       // TODO: implement properly
-//      virtual RooArgSet* getParameters(const RooArgSet* depList, Bool_t stripDisconnected = kTRUE) const {
-  //       return new RooArgSet(fConstraintParameters);
-    //  }
+      virtual RooArgSet* getParameters(const RooArgSet*, Bool_t) const {
+//         std::cout << "CombinedLikelihood::getParameters         ";
+         RooArgSet *result = new RooArgSet(*fNuisanceParameters, fConstraintParameters);
+//         result->Print("");
+//         fPdf->getParameters(depList, stripDisconnected)->Print("");
+//         std::cout << "CombinedLikelihood::getVariables          ";
+//         fPdf->getVariables(stripDisconnected)->Print("");
+//         std::cout << "CombinedLikelihood::constrainedParameters ";
+//         fConstraintParameters.Print(""); 
+         return result;
+      }
 
    private:
       CombinedLikelihood& operator=(const CombinedLikelihood& rhs); // disallow default assignment operator
 
+      const RooSimultaneous* fPdf;
       const RooArgSet* fNuisanceParameters;
 
       Int_t fNumberOfChannels;

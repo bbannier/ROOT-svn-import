@@ -57,20 +57,20 @@ GaussianPdf::GaussianPdf(const GaussianPdf& other, const char *name) :
 Double_t GaussianPdf::evaluate() const
 {
    Double_t arg = (fObs - fMean) / fSigma; // TODO: verify numerical accuracy
-   return exp(-0.5 * arg * arg); // TODO: normalize
+   return exp(-0.5 * arg * arg);
 }
 
 
 //_____________________________________________________________________________
-Double_t GaussianPdf::getLogVal(const RooArgSet* nset) const
-{  // TODO: use nset, normalize
+Double_t GaussianPdf::getLogVal(const RooArgSet*) const
+{  // TODO: use nset
    Double_t arg = (fObs - fMean) / fSigma;
    return -0.5 * arg * arg;
 }
 
 
 //_____________________________________________________________________________
-void GaussianPdf::generateEvent(Int_t code)
+void GaussianPdf::generateEvent(Int_t)
 {
    Double_t obsGenerated;
    Double_t obsMin = fObs.min(); // TODO: maybe cache at class level
@@ -85,7 +85,7 @@ void GaussianPdf::generateEvent(Int_t code)
 
 
 //_____________________________________________________________________________
-Double_t GaussianPdf::analyticalIntegral(Int_t code, const char* rangeName) const
+Double_t GaussianPdf::analyticalIntegral(Int_t, const char* rangeName) const
 {
    static const Double_t rootPiBy2 = sqrt(M_PI_2); // defined in Math.h
    // XXX rootPiBy2 could be used in evaluate()
