@@ -45,12 +45,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 
-#define private public
-#define protected public
-#include "clang/Parse/Parser.h"
-#undef protected
-#undef private
-
 #include "llvm/ADT/APInt.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
@@ -69,9 +63,10 @@ void TClingCallFunc::Exec(void *address) const
       return;
    }
    const clang::Decl *D = fMethod->GetMethodDecl();
+   const clang::CXXMethodDecl *MD = llvm::dyn_cast<clang::CXXMethodDecl>(D);
    const clang::DeclContext *DC = D->getDeclContext();
-   if (DC->isTranslationUnit() || DC->isNamespace()) {
-      // Free function.
+   if (DC->isTranslationUnit() || DC->isNamespace() || (MD && MD->isStatic())) {
+      // Free function or static member function.
       Invoke(fArgs);
    }
    else {
@@ -95,7 +90,10 @@ void TClingCallFunc::Exec(void *address) const
          }
       }
       std::vector<llvm::GenericValue> args;
-      args.push_back(llvm::PTOGV(address));
+      llvm::GenericValue this_ptr;
+      this_ptr.IntVal = llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
+                                    reinterpret_cast<unsigned long>(address));
+      args.push_back(this_ptr);
       args.insert(args.end(), fArgs.begin(), fArgs.end());
       Invoke(args);
    }
@@ -103,14 +101,17 @@ void TClingCallFunc::Exec(void *address) const
 
 long TClingCallFunc::ExecInt(void *address) const
 {
+   // Yes, the function name has Int in it, but it
+   // returns a long.  This is a matter of CINT history.
    if (!IsValid()) {
       return 0L;
    }
    llvm::GenericValue val;
    const clang::Decl *D = fMethod->GetMethodDecl();
+   const clang::CXXMethodDecl *MD = llvm::dyn_cast<clang::CXXMethodDecl>(D);
    const clang::DeclContext *DC = D->getDeclContext();
-   if (DC->isTranslationUnit() || DC->isNamespace()) {
-      // Free function.
+   if (DC->isTranslationUnit() || DC->isNamespace() || (MD && MD->isStatic())) {
+      // Free function or static member function.
       val = Invoke(fArgs);
    }
    else {
@@ -135,8 +136,8 @@ long TClingCallFunc::ExecInt(void *address) const
       }
       std::vector<llvm::GenericValue> args;
       llvm::GenericValue this_ptr;
-      this_ptr.IntVal = llvm::APInt(sizeof(long) * CHAR_BIT,
-                                    reinterpret_cast<long>(address));
+      this_ptr.IntVal = llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
+                                    reinterpret_cast<unsigned long>(address));
       args.push_back(this_ptr);
       args.insert(args.end(), fArgs.begin(), fArgs.end());
       val  = Invoke(args);
@@ -151,9 +152,10 @@ long long TClingCallFunc::ExecInt64(void *address) const
    }
    llvm::GenericValue val;
    const clang::Decl *D = fMethod->GetMethodDecl();
+   const clang::CXXMethodDecl *MD = llvm::dyn_cast<clang::CXXMethodDecl>(D);
    const clang::DeclContext *DC = D->getDeclContext();
-   if (DC->isTranslationUnit() || DC->isNamespace()) {
-      // Free function.
+   if (DC->isTranslationUnit() || DC->isNamespace() || (MD && MD->isStatic())) {
+      // Free function or static member function.
       val = Invoke(fArgs);
    }
    else {
@@ -177,7 +179,10 @@ long long TClingCallFunc::ExecInt64(void *address) const
          }
       }
       std::vector<llvm::GenericValue> args;
-      args.push_back(llvm::PTOGV(address));
+      llvm::GenericValue this_ptr;
+      this_ptr.IntVal = llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
+                                    reinterpret_cast<unsigned long>(address));
+      args.push_back(this_ptr);
       args.insert(args.end(), fArgs.begin(), fArgs.end());
       val = Invoke(args);
    }
@@ -191,9 +196,10 @@ double TClingCallFunc::ExecDouble(void *address) const
    }
    llvm::GenericValue val;
    const clang::Decl *D = fMethod->GetMethodDecl();
+   const clang::CXXMethodDecl *MD = llvm::dyn_cast<clang::CXXMethodDecl>(D);
    const clang::DeclContext *DC = D->getDeclContext();
-   if (DC->isTranslationUnit() || DC->isNamespace()) {
-      // Free function.
+   if (DC->isTranslationUnit() || DC->isNamespace() || (MD && MD->isStatic())) {
+      // Free function or static member function.
       val = Invoke(fArgs);
    }
    else {
@@ -217,7 +223,10 @@ double TClingCallFunc::ExecDouble(void *address) const
          }
       }
       std::vector<llvm::GenericValue> args;
-      args.push_back(llvm::PTOGV(address));
+      llvm::GenericValue this_ptr;
+      this_ptr.IntVal = llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
+                                    reinterpret_cast<unsigned long>(address));
+      args.push_back(this_ptr);
       args.insert(args.end(), fArgs.begin(), fArgs.end());
       val = Invoke(args);
    }
@@ -259,7 +268,7 @@ void TClingCallFunc::ResetArg()
 void TClingCallFunc::SetArg(long param)
 {
    llvm::GenericValue gv;
-   gv.IntVal = llvm::APInt(sizeof(long) * 8, param);
+   gv.IntVal = llvm::APInt(sizeof(long) * CHAR_BIT, param);
    fArgs.push_back(gv);
 }
 
@@ -273,14 +282,14 @@ void TClingCallFunc::SetArg(double param)
 void TClingCallFunc::SetArg(long long param)
 {
    llvm::GenericValue gv;
-   gv.IntVal = llvm::APInt(sizeof(long long) * 8, param);
+   gv.IntVal = llvm::APInt(sizeof(long long) * CHAR_BIT, param);
    fArgs.push_back(gv);
 }
 
 void TClingCallFunc::SetArg(unsigned long long param)
 {
    llvm::GenericValue gv;
-   gv.IntVal = llvm::APInt(sizeof(unsigned long long) * 8, param);
+   gv.IntVal = llvm::APInt(sizeof(unsigned long long) * CHAR_BIT, param);
    fArgs.push_back(gv);
 }
 
@@ -288,7 +297,7 @@ void TClingCallFunc::SetArgArray(long *paramArr, int nparam)
 {
    for (int i = 0; i < nparam; ++i) {
       llvm::GenericValue gv;
-      gv.IntVal = llvm::APInt(sizeof(long) * 8, paramArr[i]);
+      gv.IntVal = llvm::APInt(sizeof(long) * CHAR_BIT, paramArr[i]);
       fArgs.push_back(gv);
    }
 }
@@ -297,7 +306,8 @@ static void evaluateArgList(cling::Interpreter *interp,
                             const std::string &ArgList,
                             std::vector<cling::Value> &EvaluatedArgs)
 {
-   clang::PrintingPolicy Policy(interp->getCI()->getSema().getPrintingPolicy());
+   clang::PrintingPolicy Policy(interp->getCI()->
+      getASTContext().getPrintingPolicy());
    Policy.SuppressTagKeyword = true;
    Policy.SuppressUnwrittenScope = true;
    Policy.SuppressInitializers = true;
@@ -305,8 +315,8 @@ static void evaluateArgList(cling::Interpreter *interp,
 
    llvm::SmallVector<clang::Expr*, 4> exprs;
    interp->getLookupHelper().findArgList(ArgList, exprs);
-   for(llvm::SmallVector<clang::Expr*, 4>::const_iterator I = exprs.begin(),
-          E = exprs.end(); I != E; ++I) {
+   for (llvm::SmallVector<clang::Expr*, 4>::const_iterator I = exprs.begin(),
+         E = exprs.end(); I != E; ++I) {
       std::string empty;
       llvm::raw_string_ostream tmp(empty);
       (*I)->printPretty(tmp, /*PrinterHelper=*/0, Policy, /*Indentation=*/0);
@@ -418,6 +428,7 @@ static llvm::Type *getLLVMTypeFromBuiltinKind(llvm::LLVMContext &Context,
       case clang::BuiltinType::BoundMember:
       case clang::BuiltinType::PseudoObject:
       case clang::BuiltinType::UnknownAny:
+      case clang::BuiltinType::BuiltinFn:
       case clang::BuiltinType::ARCUnbridgedCast:
       case clang::BuiltinType::Char16:
       case clang::BuiltinType::Char32:
@@ -566,10 +577,12 @@ void TClingCallFunc::Init(const clang::FunctionDecl *FD)
 {
    fEEFunc = 0;
    fEEAddr = 0;
-   bool isMemberFunc = false;
+   bool isMemberFunc = true;
+   const clang::CXXMethodDecl *MD = llvm::dyn_cast<clang::CXXMethodDecl>(FD);
    const clang::DeclContext *DC = FD->getDeclContext();
-   if (!DC->isTranslationUnit() && !DC->isNamespace()) {
-      isMemberFunc = true;
+   if (DC->isTranslationUnit() || DC->isNamespace() || (MD && MD->isStatic())) {
+      // Free function or static member function.
+      isMemberFunc = false;
    }
    //
    //  Mangle the function name, if necessary.
@@ -693,6 +706,15 @@ llvm::GenericValue TClingCallFunc::Invoke(const std::vector<llvm::GenericValue> 
          Args.push_back(ArgValues[I]);
       }
    }
-   return fInterp->getExecutionEngine()->runFunction(fEEFunc, Args);
+   llvm::GenericValue val;
+   val = fInterp->getExecutionEngine()->runFunction(fEEFunc, Args);
+   if (FT->getReturnType()->getTypeID() == llvm::Type::PointerTyID) {
+      //The cint interface requires pointers to be return as unsigned long.
+      llvm::GenericValue gv;
+      gv.IntVal = llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
+                              reinterpret_cast<unsigned long>(GVTOP(val)));
+      return gv;
+   }
+   return val;
 }
 

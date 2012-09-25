@@ -48,6 +48,17 @@ namespace ROOT {
       // Add default template parameters.
       clang::QualType AddDefaultParameters(clang::QualType instanceType, const cling::Interpreter &interpret, const TNormalizedCtxt &normCtxt);
 
+      // Return the ROOT include directory
+      std::string GetROOTIncludeDir(bool rootbuild);
+
+      // Return the dictionary file name for a module
+      std::string GetModuleFileName(const char* moduleName);
+
+      // Declare a virtual module.map to clang. Returns Module on success.
+      clang::Module* declareModuleMap(clang::CompilerInstance* CI,
+                                      const char* moduleFileName,
+                                      const char* headers[]);
+                                
       // Return the -I needed to find RuntimeUniverse.h
       std::string GetInterpreterExtraIncludePath(bool rootbuild);
 

@@ -41,7 +41,10 @@ struct G__dictposition;
 
 extern "C" {
    void TCintWithCling__RegisterModule(const char* modulename,
-                                       const char** headers);
+                                       const char** headers,
+                                       const char** includePaths,
+                                       const char** macroDefines,
+                                       const char** macroUndefines);
 }
 
 namespace Cint {
@@ -119,7 +122,11 @@ public: // Public Interface
    Long_t  ProcessLineAsynch(const char* line, EErrorCode* error = 0);
    Long_t  ProcessLineSynch(const char* line, EErrorCode* error = 0);
    void    PrintIntro();
-   void    RegisterModule(const char* modulename, const char** headers);
+   void    RegisterModule(const char* modulename,
+                          const char** headers,
+                          const char** includePaths,
+                          const char** macroDefines,
+                          const char** macroUndefines);
    void    SetGetline(const char * (*getlineFunc)(const char* prompt),
                       void (*histaddFunc)(const char* line));
    void    Reset();
@@ -241,7 +248,6 @@ public: // Public Interface
    virtual void*  ClassInfo_New(ClassInfo_t* info, int n, void* arena) const;
    virtual void*  ClassInfo_New(ClassInfo_t* info, void* arena) const;
    virtual Long_t ClassInfo_Property(ClassInfo_t* info) const;
-   virtual int    ClassInfo_RootFlag(ClassInfo_t* info) const;
    virtual int    ClassInfo_Size(ClassInfo_t* info) const;
    virtual Long_t ClassInfo_Tagnum(ClassInfo_t* info) const;
    virtual const char* ClassInfo_FileName(ClassInfo_t* info) const;

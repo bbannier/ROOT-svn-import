@@ -173,12 +173,18 @@
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/LookupHelper.h"
 #include "cling/Interpreter/Value.h"
+#include "clang/AST/CXXInheritance.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "cling/Utils/AST.h"
+
+#include "llvm/Bitcode/BitstreamWriter.h"
 
 #ifdef __APPLE__
 #include <libgen.h> // Needed for basename
@@ -421,54 +427,6 @@ using namespace ROOT;
          nameType[basename] = TSchemaType(basename.c_str(),"");
       }         
    }
-
-/**************************************************************************
-* R__map_cpp_name()
-**************************************************************************/
-char *R__map_cpp_name(const char *in)
-{
-   static G__FastAllocString *out_ptr = new G__FastAllocString(G__MAXNAME*6);
-   G__FastAllocString &out( *out_ptr );
-   unsigned int i=0,j=0,c;
-   while((c=in[i])) {
-      if (out.Capacity() < (j+3)) {
-         out.Resize(2*j);
-      }
-      switch(c) {
-         case '+': strcpy(out+j,"pL"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '-': strcpy(out+j,"mI"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '*': strcpy(out+j,"mU"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '/': strcpy(out+j,"dI"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '&': strcpy(out+j,"aN"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '%': strcpy(out+j,"pE"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '|': strcpy(out+j,"oR"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '^': strcpy(out+j,"hA"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '>': strcpy(out+j,"gR"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '<': strcpy(out+j,"lE"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '=': strcpy(out+j,"eQ"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '~': strcpy(out+j,"wA"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '.': strcpy(out+j,"dO"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '(': strcpy(out+j,"oP"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case ')': strcpy(out+j,"cP"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '[': strcpy(out+j,"oB"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case ']': strcpy(out+j,"cB"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '!': strcpy(out+j,"nO"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case ',': strcpy(out+j,"cO"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '$': strcpy(out+j,"dA"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case ' ': strcpy(out+j,"sP"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case ':': strcpy(out+j,"cL"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '"': strcpy(out+j,"dQ"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '@': strcpy(out+j,"aT"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '\'': strcpy(out+j,"sQ"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         case '\\': strcpy(out+j,"fI"); j+=2; break; // Okay: we resized the underlying buffer if needed
-         default: out[j++]=c; break;
-      }
-      ++i;
-   }
-   out[j]='\0';
-   return(out);
-}
-
 
 using namespace ROOT;
 
@@ -761,42 +719,6 @@ void R__AnnotateDecl(clang::CXXRecordDecl &CXXRD)
 }
 
 std::string gResourceDir;
-
-void R__GetQualifiedName(std::string &qual_name, const clang::NamedDecl &cl);
-
-void R__GetNormalizedName(std::string &norm_name, const clang::QualType &type, const clang::ASTContext &ctxt) 
-{
-   static llvm::SmallSet<const clang::Type*, 4> typeToSkip;
-   if (typeToSkip.empty()) {
-      const cling::LookupHelper& lh = gInterp->getLookupHelper();
-      clang::QualType toSkip = lh.findType("Double32_t");
-      if (!toSkip.isNull()) typeToSkip.insert(toSkip.getTypePtr());
-      toSkip = lh.findType("Float16_t");
-      if (!toSkip.isNull()) typeToSkip.insert(toSkip.getTypePtr());
-      toSkip = lh.findType("string");
-      if (!toSkip.isNull()) typeToSkip.insert(toSkip.getTypePtr());
-   }
-
-   clang::QualType normalizedType = cling::utils::Transform::GetPartiallyDesugaredType(ctxt, type, typeToSkip); 
-   // Readd missing default template parameter.
-   normalizedType = ROOT::TMetaUtils::AddDefaultParameters(ctxt, normalizedType);
-   
-   std::string normalizedNameStep1;
-   normalizedType.getAsStringInternal(normalizedNameStep1,ctxt.getPrintingPolicy());
-   
-   // Still remove the std:: and default template argument and insert the Long64_t
-   TClassEdit::TSplitType splitname(normalizedNameStep1.c_str(),(TClassEdit::EModType)(TClassEdit::kDropAllDefault |TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault));
-   splitname.ShortType(norm_name, TClassEdit::kDropAllDefault | TClassEdit::kDropStd | TClassEdit::kDropStlDefault );
-
-   // And replace basic_string<char>.  NOTE: we should probably do this at the same time as the GetPartiallyDesugaredType ... but were do we stop ?
-   static const char* basic_string_s = "basic_string<char>";
-   static const unsigned int basic_string_len = strlen(basic_string_s);
-   int pos = 0;
-   while( (pos = norm_name.find( basic_string_s,pos) ) >=0 ) {
-      norm_name.replace(pos,basic_string_len, "string");
-   }
-
-}
 
 void R__GetQualifiedName(std::string &qual_name, const clang::QualType &type, const clang::NamedDecl &forcontext)
 {
@@ -2645,7 +2567,8 @@ void WriteAuxFunctions(const RScanner::AnnotatedRecordDecl &cl)
    }
 
    string classname( GetLong64_Name(cl.GetNormalizedName()) );
-   string mappedname = R__map_cpp_name((char*)classname.c_str());
+   string mappedname; 
+   TMetaUtils::GetCppName(mappedname,classname.c_str());
 
    if ( ! TClassEdit::IsStdClass( classname.c_str() ) ) {
 
@@ -3490,7 +3413,8 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
 
    // coverity[fun_call_w_exception] - that's just fine.
    string classname = GetLong64_Name( cl_input.GetNormalizedName() );
-   string mappedname = R__map_cpp_name((char*)classname.c_str());
+   string mappedname;
+   TMetaUtils::GetCppName(mappedname,classname.c_str());
    string csymbol = classname;
    string args;
 
@@ -3715,7 +3639,11 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
       (*dictSrcOut) << "&" << mappedname.c_str() << "_Dictionary, ";
    }
 
-   (*dictSrcOut) << "isa_proxy, " << cl_input.RootFlag() << "," << std::endl
+   Int_t rootflag = cl_input.RootFlag();
+   if (HasCustomStreamerMemberFunction(cl_input)) {
+      rootflag = rootflag | G__HASCUSTOM_STREAMERMEMBER;
+   }
+   (*dictSrcOut) << "isa_proxy, " << rootflag << "," << std::endl
                  << "                  sizeof(" << csymbol.c_str() << ") );" << std::endl;
    if (HasDefaultConstructor(cl,&args)) {
       (*dictSrcOut) << "      instance.SetNew(&new_" << mappedname.c_str() << ");" << std::endl;
@@ -3833,7 +3761,8 @@ void WriteNamespaceInit(const clang::NamespaceDecl *cl)
 
    // coverity[fun_call_w_exception] - that's just fine.
    string classname = R__GetQualifiedName(*cl).c_str();
-   string mappedname = R__map_cpp_name((char*)classname.c_str());
+   string mappedname;
+   TMetaUtils::GetCppName(mappedname,classname.c_str());
 
    int nesting = 0;
    // We should probably unwind the namespace to properly nest it.
@@ -4722,7 +4651,8 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Inte
    // Write interface function for STL members
 
    string a;
-   string clName(R__map_cpp_name(R__GetFileName(cl.GetRecordDecl()).str().c_str()));
+   string clName;
+   TMetaUtils::GetCppName(clName, R__GetFileName(cl.GetRecordDecl()).str().c_str());
    int version = GetClassVersion(cl.GetRecordDecl());
    if (version == 0) return;
    if (version < 0 && !(cl.RequestStreamerInfo()) ) return;
@@ -4846,7 +4776,8 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
    G__DataMemberInfo m(cl);
    char cdim[1024];
    string cvar;
-   string clName(R__map_cpp_name((char *)cl.Fullname()));
+   string clName;
+   TMetaUtils::GetCppName(clName,cl.Fullname());
    string fun;
    // int version = GetClassVersion(cl);
    // int clflag = 1;
@@ -5021,7 +4952,8 @@ void WriteShowMembers(const RScanner::AnnotatedRecordDecl &cl, bool outside = fa
    (*dictSrcOut) << "_______________________________________" << std::endl;
 
    string classname = GetLong64_Name( cl.GetNormalizedName() );
-   string mappedname = R__map_cpp_name((char*)classname.c_str());
+   string mappedname;
+   TMetaUtils::GetCppName(mappedname, classname.c_str());
 
    if (outside || clinfo.IsTmplt()) {
       (*dictSrcOut) << "namespace ROOT {" << std::endl
@@ -5054,7 +4986,8 @@ void WriteShowMembers(const RScanner::AnnotatedRecordDecl &cl, bool outside = fa
          WriteBodyShowMembers(clinfo, outside);
       } else {
          string clnameNoDefArg = GetLong64_Name( cl.GetNormalizedName() );
-         string mappednameNoDefArg = R__map_cpp_name((char*)clnameNoDefArg.c_str());
+         string mappednameNoDefArg;
+         TMetaUtils::GetCppName(mappednameNoDefArg, clnameNoDefArg.c_str());
 
          (*dictSrcOut) <<  "   ::ROOT::" << mappednameNoDefArg.c_str() << "_ShowMembers(this, R__insp);" << std::endl;
       }
@@ -5583,42 +5516,40 @@ static ESourceFileKind GetSourceFileKind(const char* filename)
 
 
 //______________________________________________________________________________
-static int GenerateModule(const char* dictname, const std::vector<std::string>& args)
+static int GenerateModule(const char* dictSrcFile, const std::vector<std::string>& args)
 {
    // Generate the clang module given the arguments.
    // Returns != 0 on error.
-   std::string clangInvocation(R__LLVMDIR "/bin/clang");
-   std::string dictNameStem(dictname);
-   size_t posDotPcmFile = dictNameStem.find('.');
-   if (posDotPcmFile != std::string::npos) {
-      // remove extension.
-      dictNameStem.erase(posDotPcmFile, dictNameStem.length() - posDotPcmFile);
-   }
-   std::string moduleMapName = std::string("lib/") + dictNameStem + "_dict.map";
 
-   clangInvocation += " -Xclang -emit-module -Xclang -fmodules -Xclang -fmodule-cache-path -Xclang lib -Xclang -fmodule-name=" + dictNameStem + "_dict -o lib/";
-   clangInvocation += dictNameStem + "_dict.pcm -x c++ -c " + moduleMapName;
+   std::string dictname = llvm::sys::path::stem(dictSrcFile);
 
-   // Parse arguments
+   // Parse Arguments
    vector<std::string> headers;
+   std::vector<const char*> compI;
+   std::vector<const char*> compD;
+   std::vector<const char*> compU;
    for (size_t iPcmArg = 1 /*skip argv0*/, nPcmArg = args.size();
         iPcmArg < nPcmArg; ++iPcmArg) {
       ESourceFileKind sfk = GetSourceFileKind(args[iPcmArg].c_str());
       if (sfk == kSFKHeader || sfk == kSFKSource) {
          headers.push_back(args[iPcmArg]);
-      } else if (sfk == kSFKNotC) {
-         clangInvocation += std::string(" ") + args[iPcmArg];
+      } else if (sfk == kSFKNotC && args[iPcmArg][0] == '-') {
+         switch (args[iPcmArg][1]) {
+         case 'I':
+            if (args[iPcmArg] != "-I." &&  args[iPcmArg] != "-Iinclude") {
+               compI.push_back(args[iPcmArg].c_str() + 2);
+            }
+            break;
+         case 'D':
+            if (args[iPcmArg] != "-DTRUE=1" && args[iPcmArg] != "-DFALSE=0"
+                && args[iPcmArg] != "-DG__NOCINTDLL") {
+               // keep -DROOT_Math_VectorUtil_Cint -DG__VECTOR_HAS_CLASS_ITERATOR?
+               compD.push_back(args[iPcmArg].c_str() + 2);
+            }
+            break;
+         case 'U': compU.push_back(args[iPcmArg].c_str() + 2); break;
+         }
       }
-   }
-
-   // Generate module map
-   {
-      std::ofstream moduleMap(moduleMapName.c_str());
-      moduleMap << "module " << dictNameStem << "_dict { " << std::endl;
-      for (size_t iH = 0, eH = headers.size(); iH < eH; ++iH) {
-         moduleMap << "header \"" << headers[iH] << "\"" << std::endl;
-      }
-      moduleMap << "}" << std::endl;
    }
 
    // Dictionary initialization code for loading the module
@@ -5658,7 +5589,29 @@ static int GenerateModule(const char* dictname, const std::vector<std::string>& 
    }
    (*dictSrcOut) << 
       "      0 };\n"
-      "      TCintWithCling__RegisterModule(\"" << dictNameStem << "\", headers);\n"
+      "      static const char* includePaths[] = {\n";
+   for (std::vector<const char*>::const_iterator
+           iI = compI.begin(), iE = compI.end(); iI != iE; ++iI) {
+      (*dictSrcOut) << "             \"" << *iI << "\"," << std::endl;
+   }
+   (*dictSrcOut) << 
+      "      0 };\n"
+      "      static const char* macroDefines[] = {\n";
+   for (std::vector<const char*>::const_iterator
+           iD = compD.begin(), iDE = compD.end(); iD != iDE; ++iD) {
+      (*dictSrcOut) << "             \"" << *iD << "\"," << std::endl;
+   }
+   (*dictSrcOut) << 
+      "      0 };\n"
+      "      static const char* macroUndefines[] = {\n";
+   for (std::vector<const char*>::const_iterator
+           iU = compU.begin(), iUE = compU.end(); iU != iUE; ++iU) {
+      (*dictSrcOut) << "             \"" << *iU << "\"," << std::endl;
+   }
+   (*dictSrcOut) << 
+      "      0 };\n"
+      "      TCintWithCling__RegisterModule(\"" << dictname << "\",\n"
+      "         headers, includePaths, macroDefines, macroUndefines);\n"
       "    }\n"
       "  } __TheInitializer;\n"
       "}" << std::endl;
@@ -6470,7 +6423,8 @@ int main(int argc, char **argv)
       main_dictname.erase(dh);
    }
    // Need to replace all the characters not allowed in a symbol ...
-   main_dictname = R__map_cpp_name((char*)main_dictname.c_str());
+   std::string main_dictname_copy(main_dictname);
+   TMetaUtils::GetCppName(main_dictname, main_dictname_copy.c_str());
 
    time_t t = time(0);
    (*dictSrcOut) << "//"  << std::endl
