@@ -296,6 +296,9 @@ void TGQuartz::DrawText(Int_t x, Int_t y, Float_t /*angle*/, Float_t /*mgn*/, co
    if (!text || !text[0])//Can this ever happen? TPad::PaintText does not check this.
       return;
    
+   if (!GetTextSize())//Can be used by "sameaxis" option and TPad::RedrawAxis, this will produce duplicated labels
+      return;         //of a small (but not 0) size.
+   
    NSObject<X11Drawable> * const drawable = (NSObject<X11Drawable> *)GetSelectedDrawableChecked("DrawText");
    if (!drawable)
       return;
