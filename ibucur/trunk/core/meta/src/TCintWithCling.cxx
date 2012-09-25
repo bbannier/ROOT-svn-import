@@ -63,9 +63,8 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Frontend/HeaderSearchOptions.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Serialization/ASTReader.h"
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/LookupHelper.h"
 #include "cling/Interpreter/Value.h"
@@ -87,8 +86,6 @@
 #include <dlfcn.h>
 #endif // __APPLE__
 
-#define R__CINTWITHCLING_MODULES
-
 using namespace std;
 
 R__EXTERN int optind;
@@ -100,10 +97,19 @@ namespace {
    // long lived by definition because they get passed in
    // before initialization of TCintWithCling.
    struct ModuleHeaderInfo_t {
-      ModuleHeaderInfo_t(const char* moduleName, const char** headers):
-         fModuleName(moduleName), fHeaders(headers) {}
+      ModuleHeaderInfo_t(const char* moduleName,
+                         const char** headers,
+                         const char** includePaths,
+                         const char** macroDefines,
+                         const char** macroUndefines):
+         fModuleName(moduleName), fHeaders(headers),
+         fIncludePaths(includePaths), fMacroDefines(macroDefines),
+         fMacroUndefines(macroUndefines) {}
       const char* fModuleName; // module name
       const char** fHeaders; // 0-terminated array of header files
+      const char** fIncludePaths; // 0-terminated array of header files
+      const char** fMacroDefines; // 0-terminated array of header files
+      const char** fMacroUndefines; // 0-terminated array of header files
    };
 
    llvm::SmallVector<ModuleHeaderInfo_t, 10> gModuleHeaderInfoBuffer;
@@ -112,7 +118,10 @@ namespace {
 //______________________________________________________________________________
 extern "C"
 void TCintWithCling__RegisterModule(const char* modulename,
-                                    const char** headers)
+                                    const char** headers,
+                                    const char** includePaths,
+                                    const char** macroDefines,
+                                    const char** macroUndefines)
 {
    // Called by static dictionary initialization to register clang modules
    // for headers. Calls TCintWithCling::RegisterModule() unless gCling
@@ -120,9 +129,17 @@ void TCintWithCling__RegisterModule(const char* modulename,
    // the global gModuleHeaderInfoBuffer.
 
    if (gCint) {
-      ((TCintWithCling*)gCint)->RegisterModule(modulename, headers);
+      ((TCintWithCling*)gCint)->RegisterModule(modulename,
+                                               headers,
+                                               includePaths,
+                                               macroDefines,
+                                               macroUndefines);
    } else {
-      gModuleHeaderInfoBuffer.push_back(ModuleHeaderInfo_t(modulename, headers));
+      gModuleHeaderInfoBuffer.push_back(ModuleHeaderInfo_t(modulename,
+                                                           headers,
+                                                           includePaths,
+                                                           macroDefines,
+                                                           macroUndefines));
    }
 }
 
@@ -504,21 +521,16 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    for (size_t i = 0, e = gModuleHeaderInfoBuffer.size(); i < e ; ++i) {
       // process buffered module registrations
       ((TCintWithCling*)gCint)->RegisterModule(gModuleHeaderInfoBuffer[i].fModuleName,
-                                               gModuleHeaderInfoBuffer[i].fHeaders);
+                                               gModuleHeaderInfoBuffer[i].fHeaders,
+                                               gModuleHeaderInfoBuffer[i].fIncludePaths,
+                                               gModuleHeaderInfoBuffer[i].fMacroDefines,
+                                               gModuleHeaderInfoBuffer[i].fMacroUndefines);
    }
    gModuleHeaderInfoBuffer.clear();
 
    fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
 
    fInterpreter->declare("namespace std {} using namespace std;");
-   // to pull in gPluginManager
-#ifndef R__CINTWITHCLING_MODULES
-   fInterpreter->parse("#include \"TPluginManager.h\"");
-   fInterpreter->parse("#include \"TGenericClassInfo.h\"");
-   fInterpreter->parse("#include \"Rtypes.h\"");
-#else
-   // Already done through modules
-#endif // R__CINTWITHCLING_MODULES
 
    // For the list to also include string, we have to include it now.
    //fInterpreter->declare("#include <string>");
@@ -594,7 +606,11 @@ TCintWithCling::~TCintWithCling()
 }
 
 //______________________________________________________________________________
-void TCintWithCling::RegisterModule(const char* modulename, const char** headers)
+void TCintWithCling::RegisterModule(const char* modulename,
+                                    const char** headers,
+                                    const char** includePaths,
+                                    const char** macroDefines,
+                                    const char** macroUndefines)
 {
    // Inject the module named "modulename" into cling; load all headers.
    // headers is a 0-terminated array of header files to #include after
@@ -603,11 +619,33 @@ void TCintWithCling::RegisterModule(const char* modulename, const char** headers
    // This function gets called by the static initialization of dictionary
    // libraries.
 
-   TString pcmFileName(modulename);
-   pcmFileName += "_dict.pcm";
+   TString pcmFileName(ROOT::TMetaUtils::GetModuleFileName(modulename).c_str());
 
-   // Assemble search path:
-   
+   for (const char** inclPath = includePaths; *inclPath; ++inclPath) {
+      TCintWithCling::AddIncludePath(*inclPath);
+   }
+   for (const char** macroD = macroDefines; *macroD; ++macroD) {
+      TString macroPP("#define ");
+      macroPP += *macroD;
+      // comes in as "A=B" from "-DA=B", need "#define A B":
+      Ssiz_t posAssign = macroPP.Index('=');
+      if (posAssign != kNPOS) {
+         macroPP[posAssign] = ' ';
+      }
+      fInterpreter->declare(macroPP.Data());
+   }
+   for (const char** macroU = macroUndefines; *macroU; ++macroU) {
+      TString macroPP("#undef ");
+      macroPP += *macroU;
+      // comes in as "A=B" from "-DA=B", need "#define A B":
+      Ssiz_t posAssign = macroPP.Index('=');
+      if (posAssign != kNPOS) {
+         macroPP[posAssign] = ' ';
+      }
+      fInterpreter->declare(macroPP.Data());
+   }
+
+   // Assemble search path:   
 #ifdef R__WIN32
    TString searchPath = "$(PATH);";
 #else
@@ -629,70 +667,19 @@ void TCintWithCling::RegisterModule(const char* modulename, const char** headers
 #endif // ROOTLIBDIR
    gSystem->ExpandPathName(searchPath);
 
-   Bool_t haveModule = kTRUE;
    if (!gSystem->FindFile(searchPath, pcmFileName)) {
-      Error("RegisterModule()", "Cannot find dictionary module %s_dict.pcm in %s",
-            modulename, searchPath.Data());
-      haveModule = kFALSE;
-   }
-
-   clang::CompilerInstance * CI = fInterpreter->getCI ();
-   clang::Preprocessor& PP = CI->getPreprocessor();
-   clang::ModuleMap& ModuleMap = PP.getHeaderSearchInfo().getModuleMap();
-
-   std::pair<clang::Module*, bool> modCreation;
-   if (haveModule) {
+      Error("RegisterModule()", "Cannot find dictionary module %s in %s",
+            pcmFileName.Data(), searchPath.Data());
+   } else {
       TCintWithCling::Info("RegisterModule", "Loading PCM %s", pcmFileName.Data());
-      TString modulename_dict = modulename;
-      modulename_dict += "_dict";
-
-      modCreation
-         = ModuleMap.findOrCreateModule(modulename_dict.Data(), 0 /*ActiveModule*/,
-                                        false /*Framework*/, false /*Explicit*/);
-      if (!modCreation.second) {
-         Error("RegisterModule()",
-               "Duplicate deficition of dictionary module %s in %s.",
-               /*"\nOriginal module was found in %s.", - if only we could...*/
-               pcmFileName.Data(), searchPath.Data());
-         // Go on, add new headers nonetheless.
-      }
+      clang::CompilerInstance* CI = fInterpreter->getCI();
+      ROOT::TMetaUtils::declareModuleMap(CI, pcmFileName, headers);
    }
 
-   clang::HeaderSearch& HdrSearch = PP.getHeaderSearchInfo();
    for (const char** hdr = headers; *hdr; ++hdr) {
-      if (haveModule) {
-         const clang::DirectoryLookup* CurDir;
-         const clang::FileEntry* hdrFileEntry
-            =  HdrSearch.LookupFile(*hdr, false /*isAngled*/, 0 /*FromDir*/,
-                                    CurDir, 0 /*CurFileEnt*/, 0 /*SearchPath*/,
-                                    0 /*RelativePath*/, 0 /*SuggestedModule*/);
-         if (!hdrFileEntry) {
-            Warning("RegisterModule()",
-                    "Cannot find header file %s included in dictionary module %s"
-                    " in include search path!",
-                    *hdr, modulename);
-            hdrFileEntry = PP.getFileManager().getFile(*hdr, /*OpenFile=*/false,
-                                                       /*CacheFailure=*/false);
-         } else {
-            // Tell HeaderSearch that the header's directory has a module.map
-            llvm::StringRef srHdrDir(hdrFileEntry->getName());
-            srHdrDir = llvm::sys::path::parent_path(srHdrDir);
-            const clang::DirectoryEntry* Dir
-               = PP.getFileManager().getDirectory(srHdrDir);
-            if (Dir) {
-#ifdef R__CINTWITHCLING_MODULES
-               HdrSearch.setDirectoryHasModuleMap(Dir);
-#endif
-            }
-         }
-
-#ifdef R__CINTWITHCLING_MODULES
-         ModuleMap.addHeader(modCreation.first, hdrFileEntry);
-#endif
-      }
       Info("RegisterModule()", "   #including %s...", *hdr);
       fInterpreter->parse(TString::Format("#include \"%s\"", *hdr).Data());
-   }   
+   }
 }
 
 //______________________________________________________________________________
@@ -2892,7 +2879,9 @@ void TCintWithCling::LoadText(const char* text) const
 const char* TCintWithCling::MapCppName(const char* name) const
 {
    // Interface to CINT function
-   return G__map_cpp_name(name);
+   static std::string buffer;
+   ROOT::TMetaUtils::GetCppName(buffer,name);
+   return buffer.c_str();
 }
 
 //______________________________________________________________________________
@@ -3272,13 +3261,6 @@ Long_t TCintWithCling::ClassInfo_Property(ClassInfo_t* cinfo) const
 {
    TClingClassInfo* TClinginfo = (TClingClassInfo*) cinfo;
    return TClinginfo->Property();
-}
-
-//______________________________________________________________________________
-int TCintWithCling::ClassInfo_RootFlag(ClassInfo_t* cinfo) const
-{
-   TClingClassInfo* TClinginfo = (TClingClassInfo*) cinfo;
-   return TClinginfo->RootFlag();
 }
 
 //______________________________________________________________________________

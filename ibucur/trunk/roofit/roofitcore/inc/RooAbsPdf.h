@@ -226,7 +226,7 @@ public:
     return (extendMode() == MustBeExtended) ; 
   }
   virtual Double_t expectedEvents(const RooArgSet* nset) const ; 
-  Double_t expectedEvents(const RooArgSet& nset) const { 
+  virtual Double_t expectedEvents(const RooArgSet& nset) const { 
     // Return expecteded number of p.d.fs to be used in calculated of extended likelihood
     return expectedEvents(&nset) ; 
   }

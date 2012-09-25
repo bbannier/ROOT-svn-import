@@ -32,6 +32,10 @@ public:
 
   virtual ExtendMode extendMode() const { return CanBeExtended ; }
   virtual Double_t expectedEvents(const RooArgSet* nset) const ;
+  virtual Double_t expectedEvents(const RooArgSet& nset) const { 
+    // Return number of expected events, i.e. the value of the associated n parameter
+    return expectedEvents(&nset) ; 
+  }
 
 protected:
 

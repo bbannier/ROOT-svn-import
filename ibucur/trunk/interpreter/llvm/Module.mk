@@ -46,13 +46,6 @@ endif
 ifneq ($(FORCELLVM),)
 FORCELLVMTARGET := FORCELLVMTARGET
 endif
-ifneq ($(wildcard $(LLVMGOODO)),)
-# we have a previous build
-ifneq ($(shell cat $(LLVMGOODS)),$(shell cat $(LLVMGOODO)))
-# source and obj llvm-last-known-good differ, rebuild.
-FORCELLVMTARGET := FORCELLVMTARGET
-endif
-endif
 
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME) FORCELLVMTARGET
@@ -73,6 +66,8 @@ $(LLVMLIB): $(LLVMDEPO) $(FORCELLVMTARGET)
 		$(MAKE) && \
 		rm -rf $(LLVMDIRI)/lib/clang && \
 		$(MAKE) install)
+
+$(LLVMGOODO): $(LLVMGOODS) $(LLVMLIB)
 		@cp $(LLVMGOODS) $(LLVMGOODO)
 
 $(LLVMDEPO): $(LLVMDEPS)
