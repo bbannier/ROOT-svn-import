@@ -21,13 +21,16 @@ NamespaceImp(RooStats)
 #endif
 
 #include "TTree.h"
+#include "TString.h"
 
+#include "RooCmdConfig.h"
 #include "RooUniform.h"
 #include "RooProdPdf.h"
 #include "RooExtendPdf.h"
 #include "RooSimultaneous.h"
 #include "RooStats/ModelConfig.h"
 #include "RooStats/RooStatsUtils.h"
+#include "RooStats/CombinedLikelihood.h"
 #include <typeinfo>
 
 using namespace std;
@@ -35,6 +38,27 @@ using namespace std;
 // this file is only for the documentation of RooStats namespace
 
 namespace RooStats { 
+
+   RooAbsReal* CreateNLL(RooAbsPdf& pdf, RooAbsData& data, const RooLinkedList& cmdList) {
+   // utility function to accommodate new CombinedLikelihood for RooSimultaneous
+      RooCmdConfig pc(Form("RooStatsUtils::CreateNLL(%s)", pdf.GetName()));
+      pc.defineSet("cPars", "Constrain", 0, 0);
+      pc.defineSet("cloneData", "CloneData", 2, 0);
+      pc.process(cmdList);
+      if (!pc.ok(kTRUE)) { std::cout << "RooCmdConfig::process ERROR" << std::endl; return NULL; } 
+      RooArgSet *cPars = pc.getSet("cPars");
+//      if(cPars) cPars->Print("");
+      
+      const std::type_info& pdfType = typeid(pdf);
+      if(pdfType == typeid(RooSimultaneous)) {
+         return new CombinedLikelihood(*((RooSimultaneous *)&pdf), data, cPars);
+      } else if(pdfType == typeid(RooRealSumPdf) || pdfType == typeid(RooAddPdf)) {
+         std::cout << "THERE SHOULD BE NO RooRealSumPdf OR RooAddPdf !!! " << std::endl;
+         return new SumLikelihood(&pdf, &data); // TODO: add Cmd list
+      } else {
+         return pdf.createNLL(data, cmdList);
+      }
+   }
 
    void FactorizePdf(const RooArgSet &observables, RooAbsPdf &pdf, RooArgList &obsTerms, RooArgList &constraints) {
    // utility function to factorize constraint terms from a pdf 
@@ -104,8 +128,8 @@ namespace RooStats {
       return MakeNuisancePdf(*model.GetPdf(), *model.GetObservables(), name);
    }
 
-   RooAbsPdf * StripConstraints(RooAbsPdf &pdf, const RooArgSet &observables) { 
-      const std::type_info & id = typeid(pdf);
+   RooAbsPdf * StripConstraints(RooAbsPdf& pdf, const RooArgSet& observables, RooArgList& constraints) { 
+      const std::type_info& id = typeid(pdf);
 
       if (id == typeid(RooProdPdf)) {
 
@@ -114,12 +138,12 @@ namespace RooStats {
 
          for (int i = 0, n = list.getSize(); i < n; ++i) {
             RooAbsPdf *pdfi = (RooAbsPdf *) list.at(i);
-            RooAbsPdf *newPdfi = StripConstraints(*pdfi, observables);
+            RooAbsPdf *newPdfi = StripConstraints(*pdfi, observables, constraints);
             if(newPdfi != NULL) newList.add(*newPdfi);
          }
 
          if(newList.getSize() == 0) return NULL; // only constraints in product
-         else if(newList.getSize() == 1) return dynamic_cast<RooAbsPdf *>(newList.at(0)); // return single component (no longer a product)
+         else if(newList.getSize() == 1) return dynamic_cast<RooAbsPdf *>(newList.at(0)); // return single component (no product)
          else return new RooProdPdf(TString::Format("%s_unconstrained", prod->GetName()).Data(),
             TString::Format("%s without constraints", prod->GetTitle()).Data(), newList);
 
@@ -132,7 +156,7 @@ namespace RooStats {
          assert(uPdf != NULL); assert(extended_term != NULL); assert(iter->Next() == NULL);
          delete iter;
          
-         RooAbsPdf *newUPdf = StripConstraints(*uPdf, observables);
+         RooAbsPdf *newUPdf = StripConstraints(*uPdf, observables, constraints);
          if(newUPdf == NULL) return NULL; // only constraints in underlying pdf
          else return new RooExtendPdf(TString::Format("%s_unconstrained", pdf.GetName()).Data(),
             TString::Format("%s without constraints", pdf.GetTitle()).Data(), *newUPdf, *extended_term);
@@ -145,7 +169,7 @@ namespace RooStats {
 
          for (int ic = 0, nc = cat->numBins((const char *)NULL); ic < nc; ++ic) {
             cat->setBin(ic);
-            RooAbsPdf *newPdf = StripConstraints(*sim->getPdf(cat->getLabel()), observables);
+            RooAbsPdf *newPdf = StripConstraints(*sim->getPdf(cat->getLabel()), observables, constraints);
             if(newPdf == NULL) { delete cat; return NULL; } // all channels must have observables
             pdfList.add(*newPdf);
          }
@@ -155,14 +179,16 @@ namespace RooStats {
 
       } else if (pdf.dependsOn(observables)) {  
          return (RooAbsPdf *) pdf.clone(TString::Format("%s_unconstrained", pdf.GetName()).Data());
+      } else {
+         if (!constraints.contains(pdf)) constraints.add(pdf);
+         return NULL; // just a constraint term
       }
-
-      return 0; // just  a constraint term
    }
 
    RooAbsPdf * MakeUnconstrainedPdf(RooAbsPdf &pdf, const RooArgSet &observables, const char *name) { 
       // make a clone pdf without all constraint terms in a common pdf
-      RooAbsPdf * unconstrainedPdf = StripConstraints(pdf, observables);
+      RooArgList constraints;
+      RooAbsPdf * unconstrainedPdf = StripConstraints(pdf, observables, constraints);
       if(!unconstrainedPdf) {
          oocoutE((TObject *)NULL, InputArguments) << "RooStats::MakeUnconstrainedPdf - invalid observable list passed (observables not found in original pdf) or invalid pdf passed (without observables)" << endl;
          return NULL;
