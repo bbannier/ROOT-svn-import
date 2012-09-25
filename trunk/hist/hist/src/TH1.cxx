@@ -3633,7 +3633,6 @@ TFitResultPtr TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xx
 //     S. Baker and R. D. Cousins, “Clarification of the use of chi-square and likelihood functions in fits to histograms,”
 //     Nucl. Instrum. Meth. 221 (1984) 437.
 //     This method can then be used only when the bin content represents counts (i.e. errors are sqrt(N) ).
-<<<<<<< .working
 //     The likelihood method has the advantage of treating correctly bins with low statistics. In case of high 
 //     statistics/bin the distribution of the bin content becomes a normal distribution and the likelihood and chi2 fit 
 //     give the same result. 
@@ -3644,7 +3643,6 @@ TFitResultPtr TH1::Fit(TF1 *f1 ,Option_t *option ,Option_t *goption, Double_t xx
 //     option "WL". Note a weighted histogram is an histogram which has been filled with weights and it   
 //     contains the sum of the weight square ( TH1::Sumw2() has been called). The bin error for a weighted
 //     histogram is the square root of the sum of the weight square. 
->>>>>>> .merge-right.r46105
 //
 //     Treatment of Empty Bins
 //     ========================
