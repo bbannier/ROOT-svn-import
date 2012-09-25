@@ -1,14 +1,14 @@
-#ifndef ROOSTATS_AbstractPdf
-#define ROOSTATS_AbstractPdf
+#ifndef ROOSTATS_AbstractPDF
+#define ROOSTATS_AbstractPDF
 
 #include "RooAbsPdf.h"
 #include "RooAbsData.h"
 
 namespace RooStats {
 
-   class AbstractPdf {
+   class AbstractPDF {
    public:
-      virtual ~AbstractPdf() = 0;
+      virtual ~AbstractPDF() {};
 
       virtual Double_t EvaluatePDF() const = 0;
       virtual RooAbsData& EvaluatePDF(RooAbsData& data) const = 0;
@@ -21,13 +21,13 @@ namespace RooStats {
       virtual Bool_t IsNormalized() const = 0;
       virtual Double_t GenerateEvent() = 0;
 
-      ClassDef(AbstractPdf, 1)
+      ClassDef(AbstractPDF, 1)
 
    };
 
 }
 
 
-#endif // ROOSTATS_AbstractPdf
+#endif // ROOSTATS_AbstractPDF
 
 
