@@ -107,6 +107,14 @@
 
 #pragma link C++ class RooStats::UpperLimitMCSModule+;
 
+// ibucur: development in progress
+#pragma link C++ class RooStats::AbstractPDF+; // abstract class
+#pragma link C++ class RooStats::AbstractDataSet+; // abstract class
+#pragma link C++ class RooStats::CombinedLikelihood+;
+#pragma link C++ class RooStats::CombinedDataSet+;
+#pragma link C++ class RooStats::GaussianPDF+;
+#pragma link C++ class RooStats::PoissonPDF+;
+
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t , Double_t ,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialObsZ(Double_t,Double_t,Double_t);
@@ -116,6 +124,7 @@
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialObsP(Double_t,Double_t,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauObsP(Double_t,Double_t,Double_t);
 
+#pragma link C++ function RooStats::CreateNLL(RooAbsPdf&, RooAbsData&, const RooLinkedList&);
 #pragma link C++ function RooStats::PValueToSignificance(Double_t);
 #pragma link C++ function RooStats::SignificanceToPValue(Double_t);
 #pragma link C++ function RooStats::RemoveConstantParameters(RooArgSet* set);
@@ -123,6 +132,9 @@
 #pragma link C++ function RooStats::SetAllConstant(const RooAbsCollection & , bool );
 #pragma link C++ function RooStats::MakeNuisancePdf(RooAbsPdf & , const RooArgSet &, const char * );
 #pragma link C++ function RooStats::MakeNuisancePdf(const RooStats::ModelConfig & , const char * );
+#pragma link C++ function RooStats::MakeUnconstrainedPdf(RooAbsPdf &, const RooArgSet &, const char *);
+#pragma link C++ function RooStats::MakeUnconstrainedPdf(const RooStats::ModelConfig &, const char *);
+#pragma link C++ function RooStats::StripConstraints(RooAbsPdf&, const RooArgSet&, RooArgList&);
 #pragma link C++ function RooStats::GetAsTTree(TString, TString, const RooDataSet&);
 
 
