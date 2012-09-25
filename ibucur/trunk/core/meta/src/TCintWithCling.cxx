@@ -488,6 +488,10 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    // Use explicit TCintWithCling::AddIncludePath() to avoid vtable: we're in the c'tor!
    TCintWithCling::AddIncludePath(ROOT::TMetaUtils::GetROOTIncludeDir(false).c_str());
 
+   // Don't check whether modules' files exist.
+   fInterpreter->getCI()->getPreprocessorOpts().DisablePCHValidation = true;
+
+   // Set the patch for searching for modules
 #ifndef ROOTINCDIR
    TString dictDir = getenv("ROOTSYS");
    dictDir += "/lib";
@@ -515,6 +519,12 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
 #else
    // Already done through modules
 #endif // R__CINTWITHCLING_MODULES
+
+   // For the list to also include string, we have to include it now.
+   //fInterpreter->declare("#include <string>");
+  
+   // We are now ready (enough is loaded) to init the list of opaque typedefs.
+   //ROOT::TMetaUtils::TNormalizedContext fNormalizedCtxt(fInterpreter->getLookupHelper());
 
    // Initialize the CINT interpreter interface.
    fMore      = 0;

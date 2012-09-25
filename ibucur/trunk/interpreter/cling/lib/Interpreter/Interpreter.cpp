@@ -453,18 +453,11 @@ namespace cling {
 
     Sema& S = getCI()->getSema();
     FunctionDecl* FD 
-      = cast_or_null<FunctionDecl>(utils::Lookup::Named(&S, fname.data()));
+      = cast_or_null<FunctionDecl>(utils::Lookup::Named(&S, fname.str().c_str()));
     
     if (FD) {
-      if (!FD->isExternC()) {
-        llvm::raw_string_ostream RawStr(mangledNameIfNeeded);
-        llvm::OwningPtr<MangleContext>
-          Mangle(S.getASTContext().createMangleContext());
-        Mangle->mangleName(FD, RawStr);
-        RawStr.flush();
-        fname = mangledNameIfNeeded;
-      }
-      m_ExecutionContext->executeFunction(fname, res);
+      mangleName(FD, mangledNameIfNeeded);
+      m_ExecutionContext->executeFunction(mangledNameIfNeeded.c_str(), res);
       return true;
     }
 
@@ -503,6 +496,8 @@ namespace cling {
     Diag.setDiagnosticMapping(clang::diag::warn_unused_expr,
                               clang::diag::MAP_IGNORE, SourceLocation());
     Diag.setDiagnosticMapping(clang::diag::warn_unused_call,
+                              clang::diag::MAP_IGNORE, SourceLocation());
+    Diag.setDiagnosticMapping(clang::diag::warn_unused_comparison,
                               clang::diag::MAP_IGNORE, SourceLocation());
 
     // Wrap the expression
@@ -769,12 +764,42 @@ namespace cling {
     return 0; // happiness
   }
 
-  bool Interpreter::addSymbol(const char* symbolName,  void* symbolAddress){
+  void Interpreter::mangleName(const clang::NamedDecl* D,
+                               std::string& mangledName) const {
+    ///Get the mangled name of a NamedDecl.
+    ///
+    ///D - mangle this decl's name
+    ///mangledName - put the mangled name in here
+    if (!m_MangleCtx) {
+      m_MangleCtx.reset(getCI()->getASTContext().createMangleContext());
+    }
+    if (m_MangleCtx->shouldMangleDeclName(D)) {
+      llvm::raw_string_ostream RawStr(mangledName);
+      m_MangleCtx->mangleName(D, RawStr);
+      RawStr.flush();
+    } else {
+      mangledName = D->getNameAsString();
+    }
+  }
+
+  bool Interpreter::addSymbol(const char* symbolName,  void* symbolAddress) {
     // Forward to ExecutionContext;
     if (!symbolName || !symbolAddress )
       return false;
 
     return m_ExecutionContext->addSymbol(symbolName,  symbolAddress);
+  }
+
+
+  void* Interpreter::getAddressOfGlobal(const clang::NamedDecl* D,
+                                        bool* fromJIT /*=0*/) const {
+    // Return a symbol's address, and whether it was jitted.
+    std::string mangledName;
+    mangleName(D, mangledName);
+    llvm::Module* module = m_IncrParser->getCodeGenerator()->GetModule();
+    return m_ExecutionContext->getAddressOfGlobal(module,
+                                                  mangledName.c_str(),
+                                                  fromJIT);
   }
 
 } // namespace cling

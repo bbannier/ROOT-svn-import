@@ -26,6 +26,8 @@ LLVMDIRS     := $(MODDIRS)
 
 ##### libllvm #####
 LLVMLIB      := $(LLVMDIRI)/lib/libclang.a
+LLVMDEPO     := $(LLVMDIRO)/Makefile.config
+LLVMDEPS     := $(LLVMDIRS)/Makefile
 ifeq ($(strip $(LLVMCONFIG)),)
 LLVMCONFIG   := interpreter/llvm/inst/bin/llvm-config
 endif
@@ -65,7 +67,7 @@ $(LLVMRES): $(LLVMLIB)
 		mkdir -p $(dir $(LLVMRES))
 		cp $(LLVMDIRI)/lib/clang/$(LLVMVERSION)/include/* $(dir $(LLVMRES))
 
-$(LLVMLIB): $(LLVMDIRO) $(FORCELLVMTARGET)
+$(LLVMLIB): $(LLVMDEPO) $(FORCELLVMTARGET)
 		@(echo "*** Building $@..."; \
 		cd $(LLVMDIRO) && \
 		$(MAKE) && \
@@ -73,7 +75,7 @@ $(LLVMLIB): $(LLVMDIRO) $(FORCELLVMTARGET)
 		$(MAKE) install)
 		@cp $(LLVMGOODS) $(LLVMGOODO)
 
-$(LLVMDIRO): $(LLVMDIRS)
+$(LLVMDEPO): $(LLVMDEPS)
 		$(MAKEDIR)
 		@(LLVMCC="$(CC)" && \
 		LLVMCXX="$(CXX)" && \
@@ -119,8 +121,6 @@ $(LLVMDIRO): $(LLVMDIRS)
 		fi; \
 		echo "*** Configuring LLVM in $@..."; \
 		cd $(dir $@) && \
-		mkdir -p $(notdir $@) && \
-		cd $(notdir $@) && \
 		GNUMAKE=$(MAKE) $(LLVMDIRS)/configure \
 		$$LLVM_HOST \
 		--prefix=$(ROOT_OBJDIR)/$(LLVMDIRI) \

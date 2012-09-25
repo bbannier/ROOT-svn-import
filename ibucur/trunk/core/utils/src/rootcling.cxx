@@ -176,9 +176,8 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Pragma.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/AST/CXXInheritance.h"
-
+#include "clang/Sema/Sema.h"
+#include "clang/Serialization/ASTWriter.h"
 #include "cling/Utils/AST.h"
 
 #ifdef __APPLE__
@@ -547,29 +546,33 @@ bool Namespace__HasMethod(const clang::NamespaceDecl *cl, const char* name)
 
 llvm::StringRef R__GetFileName(const clang::Decl *decl)
 {
-   const clang::CXXRecordDecl* clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
-   if (clxx) {
-      switch(clxx->getTemplateSpecializationKind()) {
-         case clang::TSK_Undeclared:
-            // We want the default behavior
-            break;
-         case clang::TSK_ExplicitInstantiationDeclaration:
-         case clang::TSK_ExplicitInstantiationDefinition:
-         case clang::TSK_ImplicitInstantiation: {
-            // We want the location of the template declaration:
-            const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (clxx);
-            if (tmplt_specialization) {
-               return R__GetFileName(const_cast< clang::ClassTemplateSpecializationDecl *>(tmplt_specialization)->getSpecializedTemplate());
-            }
-            break;
-         }
-         case clang::TSK_ExplicitSpecialization:
-            // We want the default behavior
-            break;
-         default:
-            break;
-      } 
-   }      
+   // It looks like the template specialization decl actually contains _less_ information
+   // on the location of the code than the decl (in case where there is forward declaration,
+   // that is what the specialization points to.
+   //
+   // const clang::CXXRecordDecl* clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+   // if (clxx) {
+   //    switch(clxx->getTemplateSpecializationKind()) {
+   //       case clang::TSK_Undeclared:
+   //          // We want the default behavior
+   //          break;
+   //       case clang::TSK_ExplicitInstantiationDeclaration:
+   //       case clang::TSK_ExplicitInstantiationDefinition:
+   //       case clang::TSK_ImplicitInstantiation: {
+   //          // We want the location of the template declaration:
+   //          const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (clxx);
+   //          if (tmplt_specialization) {
+   //             // return R__GetFileName(const_cast< clang::ClassTemplateSpecializationDecl *>(tmplt_specialization)->getSpecializedTemplate());
+   //          }
+   //          break;
+   //       }
+   //       case clang::TSK_ExplicitSpecialization:
+   //          // We want the default behavior
+   //          break;
+   //       default:
+   //          break;
+   //    } 
+   // }   
    clang::SourceLocation sourceLocation = decl->getLocation();
    clang::SourceManager& sourceManager = decl->getASTContext().getSourceManager();
 
@@ -579,34 +582,38 @@ llvm::StringRef R__GetFileName(const clang::Decl *decl)
    }
    else {
       return "invalid";
-   }   
+   }
 }
 
 long R__GetLineNumber(const clang::Decl *decl)
 {
-   const clang::CXXRecordDecl* clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
-   if (clxx) {
-      switch(clxx->getTemplateSpecializationKind()) {
-         case clang::TSK_Undeclared:
-            // We want the default behavior
-            break;
-         case clang::TSK_ExplicitInstantiationDeclaration:
-         case clang::TSK_ExplicitInstantiationDefinition:
-         case clang::TSK_ImplicitInstantiation: {
-            // We want the location of the template declaration:
-            const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (clxx);
-            if (tmplt_specialization) {
-               return R__GetLineNumber(const_cast< clang::ClassTemplateSpecializationDecl *>(tmplt_specialization)->getSpecializedTemplate());
-            }
-            break;
-         }
-         case clang::TSK_ExplicitSpecialization:
-            // We want the default behavior
-            break;
-         default:
-            break;
-      } 
-   }      
+   // It looks like the template specialization decl actually contains _less_ information
+   // on the location of the code than the decl (in case where there is forward declaration,
+   // that is what the specialization points to.
+   //
+   // const clang::CXXRecordDecl* clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+   // if (clxx) {
+   //    switch(clxx->getTemplateSpecializationKind()) {
+   //       case clang::TSK_Undeclared:
+   //          // We want the default behavior
+   //          break;
+   //       case clang::TSK_ExplicitInstantiationDeclaration:
+   //       case clang::TSK_ExplicitInstantiationDefinition:
+   //       case clang::TSK_ImplicitInstantiation: {
+   //          // We want the location of the template declaration:
+   //          const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (clxx);
+   //          if (tmplt_specialization) {
+   //             return R__GetLineNumber(const_cast< clang::ClassTemplateSpecializationDecl *>(tmplt_specialization)->getSpecializedTemplate());
+   //          }
+   //          break;
+   //       }
+   //       case clang::TSK_ExplicitSpecialization:
+   //          // We want the default behavior
+   //          break;
+   //       default:
+   //          break;
+   //    } 
+   // }      
    clang::SourceLocation sourceLocation = decl->getLocation();
    clang::SourceManager& sourceManager = decl->getASTContext().getSourceManager();
 
@@ -618,31 +625,141 @@ long R__GetLineNumber(const clang::Decl *decl)
    }   
 }
 
-const char *R__GetComment(const clang::Decl &decl)
+// Returns the comment (// striped away), annotating declaration in a meaningful
+// for ROOT IO way.
+// Takes optional out parameter clang::SourceLocation returning the source 
+// location of the comment.
+//
+// CXXMethodDecls, FieldDecls and TagDecls are annotated.
+// CXXMethodDecls declarations and FieldDecls are annotated as follows:
+// Eg. void f(); // comment1
+//     int member; // comment2
+// Inline definitions of CXXMethodDecls - after the closing ) and before {. Eg:
+// void f() // comment3
+// {...}
+// TagDecls are annotated in the end of the ClassDef macro. Eg.
+// class MyClass {
+// ...
+// ClassDef(MyClass, 1) // comment4
+//
+llvm::StringRef R__GetComment(const clang::Decl &decl, clang::SourceLocation *loc = 0)
 {
    clang::SourceManager& sourceManager = decl.getASTContext().getSourceManager();
-   clang::SourceLocation sourceLocation = decl.getLocation();
+   clang::SourceLocation sourceLocation;
+   // Guess where the comment start.
+   // if (const clang::TagDecl *TD = llvm::dyn_cast<clang::TagDecl>(&decl)) {
+   //    if (TD->isThisDeclarationADefinition())
+   //       sourceLocation = TD->getBodyRBrace();
+   // }
+   //else 
+   if (const clang::FunctionDecl *FD = llvm::dyn_cast<clang::FunctionDecl>(&decl)) {
+      if (FD->isThisDeclarationADefinition()) {
+         // We have to consider the argument list, because the end of decl is end of its name
+         // Maybe this will be better when we have { in the arg list (eg. lambdas)
+         if (FD->getNumParams())
+            sourceLocation = FD->getParamDecl(FD->getNumParams() - 1)->getLocEnd();
+         else
+            sourceLocation = FD->getLocEnd();
 
-   // Guess where the comment start.   
-   const char *comment = sourceManager.getCharacterData(sourceLocation);
+         // Skip the last )
+         sourceLocation = sourceLocation.getLocWithOffset(1);
+
+         //sourceLocation = FD->getBodyLBrace();
+      }
+      else {
+         //SkipUntil(commentStart, ';');
+      }
+   }
+
+   if (sourceLocation.isInvalid())
+      sourceLocation = decl.getLocEnd();
+
+   // If the location is a macro get the expansion location.
+   sourceLocation = sourceManager.getExpansionRange(sourceLocation).second;
+
+   assert(sourceLocation.isValid() && "Invalid source location!");
+   const char *commentStart = sourceManager.getCharacterData(sourceLocation);
+
+   // The decl end of FieldDecl is the end of the type, sometimes excluding the declared name
+   if (llvm::isa<clang::FieldDecl>(&decl)) {
+      // Find the semicolon.
+      while(*commentStart != ';')
+         ++commentStart; 
+   }
+
    // Find the end of declaration:
-   while (comment[0]!=';' && comment[0]!='\n' && comment[0]!='\r') {
-      ++comment;
-   }
-   ++comment;
-   // Now skip the spaces and beginning of comments.
-   while ( (isspace(comment[0]) || comment[0]=='/') && comment[0]!='\n' && comment[0]!='\r') {
-      ++comment;
-   }
-   
-//   while (comment[0]!='\n' && comment[0]!='\r') {
-//      ++comment;
-//   }
+   // When there is definition Comments must be between ) { when there is definition. 
+   // Eg. void f() //comment 
+   //     {}
+   if (!decl.hasBody())
+      while (*commentStart !=';' && *commentStart != '\n' && *commentStart != '\r')
+         ++commentStart;
 
-   return comment;
+   // Eat up the last char of the declaration if wasn't newline or comment terminator
+   if (*commentStart != '\n' && *commentStart != '\r' && *commentStart != '{')
+      ++commentStart;
+
+   // Now skip the spaces and beginning of comments.
+   while ( (isspace(*commentStart) || *commentStart == '/') 
+           && *commentStart != '\n' && *commentStart != '\r') {
+      ++commentStart;
+   }
+
+   const char* commentEnd = commentStart;
+   while (*commentEnd != '\n' && *commentEnd != '\r' && *commentEnd != '{') {
+      ++commentEnd;
+   }
+
+   if (loc) {
+      // Find the true beginning of a comment.
+      unsigned offset = commentStart - sourceManager.getCharacterData(sourceLocation);
+      *loc = sourceLocation.getLocWithOffset(offset - 1);
+   }
+
+   return llvm::StringRef(commentStart, commentEnd - commentStart);
 }
 
 cling::Interpreter *gInterp = 0;
+
+// In order to store the meaningful for the IO comments we have to transform 
+// the comment into annotation of the given decl.
+void R__AnnotateDecl(clang::CXXRecordDecl &CXXRD) 
+{
+   using namespace clang;
+   SourceLocation commentSLoc;
+   llvm::StringRef comment;
+
+   ASTContext &C = CXXRD.getASTContext();
+   Sema& S = gInterp->getCI()->getSema();
+
+   SourceRange commentRange;
+
+   for(CXXRecordDecl::decl_iterator I = CXXRD.decls_begin(), 
+          E = CXXRD.decls_end(); I != E; ++I) {
+      if (!(*I)->isImplicit() && (isa<CXXMethodDecl>(*I) || isa<FieldDecl>(*I))) {
+         // For now we allow only a special macro (ClassDef) to have meaningful comments
+         SourceLocation maybeMacroLoc = (*I)->getLocation();
+         bool isClassDefMacro = maybeMacroLoc.isMacroID() && S.findMacroSpelling(maybeMacroLoc, "ClassDef");
+         if (isClassDefMacro) {
+            while (isa<NamedDecl>(*I) && cast<NamedDecl>(*I)->getName() != "DeclFileLine")
+               ++I;
+         }
+
+         comment = R__GetComment(**I, &commentSLoc);
+         if (comment.size()) {
+            // Keep info for the source range of the comment in case we want to issue
+            // nice warnings, eg. empty comment and so on.
+            commentRange = SourceRange(commentSLoc, commentSLoc.getLocWithOffset(comment.size()));
+            // The ClassDef annotation is for the class itself
+            if (isClassDefMacro)
+               CXXRD.addAttr(new (C) AnnotateAttr(commentRange, C, comment.str()));
+            else
+               (*I)->addAttr(new (C) AnnotateAttr(commentRange, C, comment.str()));
+         }
+      }
+   }
+}
+
 std::string gResourceDir;
 
 void R__GetQualifiedName(std::string &qual_name, const clang::NamedDecl &cl);
@@ -2376,7 +2493,7 @@ int IsSTLContainer(const clang::CXXBaseSpecifier &base)
 //______________________________________________________________________________
 bool IsStreamableObject(const clang::FieldDecl &m)
 {
-   const char *comment = R__GetComment( m );
+   const char *comment = R__GetComment( m ).data();
 
    // Transient
    if (comment[0] == '!') return false;
@@ -2673,7 +2790,7 @@ int ElementStreamer(G__TypeInfo &ti, const char *R__t,int rwmode,const char *tcl
    if (tcl == 0) {
       tcl = " internal error in rootcint ";
    }
-   //    if (strcmp(objType,"string")==0) RStl::Instance().GenerateTClassFor( "string"  );
+   //    if (strcmp(objType,"string")==0) RStl::Instance().GenerateTClassFor( "string", interp, normCtxt  );
    
    if (rwmode == 0) {  //Read mode
       
@@ -2840,7 +2957,7 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
    if (tcl == 0) {
       tcl = " internal error in rootcint ";
    }
-   //    if (strcmp(objType,"string")==0) RStl::Instance().GenerateTClassFor( "string"  );
+   //    if (strcmp(objType,"string")==0) RStl::Instance().GenerateTClassFor( "string", interp, normCtxt  );
 
    if (rwmode == 0) {  //Read mode
 
@@ -2968,7 +3085,7 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
 }
 
 //______________________________________________________________________________
-int STLContainerStreamer(const clang::FieldDecl &m, int rwmode)
+int STLContainerStreamer(const clang::FieldDecl &m, int rwmode, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    // Create Streamer code for an STL container. Returns 1 if data member
    // was an STL container and if Streamer code has been created, 0 otherwise.
@@ -2982,7 +3099,7 @@ int STLContainerStreamer(const clang::FieldDecl &m, int rwmode)
    if (stltype!=0) {
       //        fprintf(stderr,"Add %s (%d) which is also %s\n",
       //                m.Type()->Name(), stltype, m.Type()->TrueName() );
-      RStl::Instance().GenerateTClassFor(m.getType());
+      RStl::Instance().GenerateTClassFor(m.getType(),interp,normCtxt);
    }
    if (stltype<=0) return 0;
    if (clxx->getTemplateSpecializationKind() == clang::TSK_Undeclared) return 0;
@@ -3949,7 +4066,7 @@ const clang::FieldDecl *R__GetDataMemberFromAllParents(const clang::CXXRecordDec
 enum R__DataMemberInfo__ValidArrayIndex_error_code { VALID, NOT_INT, NOT_DEF, IS_PRIVATE, UNKNOWN };
 const char* R__DataMemberInfo__ValidArrayIndex(const clang::FieldDecl &m, int *errnum, char **errstr) 
 {
-   const char* title = R__GetComment( m );
+   const char* title = R__GetComment( m ).data();
    
    // Let's see if the user provided us with some information
    // with the format: //[dimension] this is the dim of the array
@@ -4127,7 +4244,7 @@ const char *GrabIndex(const clang::FieldDecl &member, int printError)
 }
 
 //______________________________________________________________________________
-void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl)
+void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    const clang::CXXRecordDecl *clxx = llvm::dyn_cast<clang::CXXRecordDecl>(cl.GetRecordDecl());
    if (clxx == 0) return;
@@ -4249,7 +4366,7 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl)
           field_iter != end;
           ++field_iter)
       {
-         const char *comment = R__GetComment( **field_iter );
+         const char *comment = R__GetComment( **field_iter ).data();
 
          clang::QualType type = field_iter->getType();
          std::string type_name = type.getAsString(clxx->getASTContext().getPrintingPolicy());
@@ -4430,7 +4547,7 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl)
                   continue;
 
                // check if object is an STL container
-               if (STLContainerStreamer(**field_iter, i))
+               if (STLContainerStreamer(**field_iter, i, interp, normCtxt))
                   continue;
 
                // handle any other type of objects
@@ -4540,7 +4657,7 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl)
 }
 
 //______________________________________________________________________________
-void WriteAutoStreamer(const RScanner::AnnotatedRecordDecl &cl)
+void WriteAutoStreamer(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
 
    // Write Streamer() method suitable for automatic schema evolution.
@@ -4557,7 +4674,7 @@ void WriteAutoStreamer(const RScanner::AnnotatedRecordDecl &cl)
    {
       int k = IsSTLContainer(*iter);
       if (k!=0) {
-         RStl::Instance().GenerateTClassFor( iter->getType() );
+         RStl::Instance().GenerateTClassFor( iter->getType(), interp, normCtxt );
       }
    }
    
@@ -4600,7 +4717,7 @@ void WriteAutoStreamer(const RScanner::AnnotatedRecordDecl &cl)
 }
 
 //______________________________________________________________________________
-void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl)
+void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    // Write interface function for STL members
 
@@ -4635,7 +4752,7 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl)
          while( offset<=len && ( (baseAsWritten.data()+offset)[0] == ':' || isspace((baseAsWritten.data()+offset)[0]) ) ) {
             ++offset;
          }
-         RStl::Instance().GenerateTClassFor( baseAsWritten.str().c_str()+offset, iter->getType()->getAsCXXRecordDecl () );
+         RStl::Instance().GenerateTClassFor( baseAsWritten.str().c_str()+offset, iter->getType()->getAsCXXRecordDecl (), interp, normCtxt);
       }
    }
 
@@ -4661,7 +4778,7 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl)
       if (k!=0) {
          //          fprintf(stderr,"Add %s which is also",m.Type()->Name());
          //          fprintf(stderr," %s\n",R__TrueName(**field_iter) );
-         RStl::Instance().GenerateTClassFor(field_iter->getType());
+         RStl::Instance().GenerateTClassFor(field_iter->getType(), interp, normCtxt);
       }      
    }
 
@@ -4731,10 +4848,10 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
    string cvar;
    string clName(R__map_cpp_name((char *)cl.Fullname()));
    string fun;
-   int version = GetClassVersion(cl);
-   int clflag = 1;
-   if (version == 0 || cl.RootFlag() == 0) clflag = 0;
-   if (version < 0 && !(cl.RootFlag() & G__USEBYTECOUNT) ) clflag = 0;
+   // int version = GetClassVersion(cl);
+   // int clflag = 1;
+   // if (version == 0 || cl.RootFlag() == 0) clflag = 0;
+   // if (version < 0 && !(cl.RootFlag() & G__USEBYTECOUNT) ) clflag = 0;
 
    while (m.Next()) {
 
@@ -4951,30 +5068,30 @@ void WriteShowMembers(const RScanner::AnnotatedRecordDecl &cl, bool outside = fa
 }
 
 //______________________________________________________________________________
-void WriteClassCode(const RScanner::AnnotatedRecordDecl &cl)
+void WriteClassCode(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    std::string fullname;
    R__GetQualifiedName(fullname,cl);
    if (TClassEdit::IsSTLCont(fullname.c_str()) ) {
       // coverity[fun_call_w_exception] - that's just fine.
-      RStl::Instance().GenerateTClassFor(cl.GetNormalizedName(), llvm::dyn_cast<clang::CXXRecordDecl>(cl.GetRecordDecl()));
+      RStl::Instance().GenerateTClassFor(cl.GetNormalizedName(), llvm::dyn_cast<clang::CXXRecordDecl>(cl.GetRecordDecl()), interp, normCtxt);
       return;
    }
 
    if (ClassInfo__HasMethod(cl,"Streamer")) {
-      if (cl.RootFlag()) WritePointersSTL(cl); // In particular this detect if the class has a version number.
+      if (cl.RootFlag()) WritePointersSTL(cl, interp, normCtxt); // In particular this detect if the class has a version number.
       if (!(cl.RequestNoStreamer())) {
          if ((cl.RequestStreamerInfo() /*G__AUTOSTREAMER*/)) {
-            WriteAutoStreamer(cl);
+            WriteAutoStreamer(cl, interp, normCtxt);
          } else {
-            WriteStreamer(cl);
+            WriteStreamer(cl, interp, normCtxt);
          }
       } else
          Info(0, "Class %s: Do not generate Streamer() [*** custom streamer ***]\n",fullname.c_str());
    } else {
       Info(0, "Class %s: Streamer() not declared\n", fullname.c_str());
 
-      if (cl.RequestStreamerInfo()) WritePointersSTL(cl);
+      if (cl.RequestStreamerInfo()) WritePointersSTL(cl, interp, normCtxt);
    }
    if (ClassInfo__HasMethod(cl,"ShowMembers")) {
       WriteShowMembers(cl);
@@ -5546,10 +5663,46 @@ static int GenerateModule(const char* dictname, const std::vector<std::string>& 
       "  } __TheInitializer;\n"
       "}" << std::endl;
 
-   printf("Would like to generate PCM: %s\n",clangInvocation.c_str());
-   int ret = system(clangInvocation.c_str());
-   //unlink(moduleMapName.c_str());
-   return ret;
+   clang::CompilerInstance* CI = gInterp->getCI();
+   std::string dictDir = "lib/";
+   CI->getPreprocessor().getHeaderSearchInfo().setModuleCachePath(dictDir.c_str());
+   std::string moduleFile = dictDir + ROOT::TMetaUtils::GetModuleFileName(dictname.c_str());
+   clang::Module* module = 0;
+   {
+      std::vector<const char*> headersCStr;
+      for (std::vector<std::string>::const_iterator
+              iH = headers.begin(), eH = headers.end();
+           iH != eH; ++iH) {
+         headersCStr.push_back(iH->c_str());
+      }
+      headersCStr.push_back(0);
+      module = ROOT::TMetaUtils::declareModuleMap(CI, moduleFile.c_str(), &headersCStr[0]);
+   }
+
+   // From PCHGenerator and friends:
+   llvm::SmallVector<char, 128> Buffer;
+   llvm::BitstreamWriter Stream(Buffer);
+   clang::ASTWriter Writer(Stream);
+   llvm::raw_ostream *OS
+      = CI->createOutputFile(moduleFile, /*Binary=*/true,
+                             /*RemoveFileOnSignal=*/false, /*InFile*/"",
+                             /*Extension=*/"", /*useTemporary=*/false,
+                             /*CreateMissingDirectories*/false);
+   // Emit the PCH file
+   CI->getFrontendOpts().RelocatablePCH = true;
+   Writer.WriteAST(CI->getSema(), 0, moduleFile, module, "/DUMMY_ROOTSYS/include/" /*SysRoot*/);
+
+   // Write the generated bitstream to "Out".
+   OS->write((char *)&Buffer.front(), Buffer.size());
+
+   // Make sure it hits disk now.
+   OS->flush();
+   delete OS;
+
+   // Free up some memory, in case the process is kept alive.
+   Buffer.clear();
+
+   return 0;
 }
 
 
@@ -6005,6 +6158,12 @@ int main(int argc, char **argv)
 #endif
    gInterp = &interp;
 
+   // For the list to also include string, we have to include it now.
+   interp.declare("#include <string>");
+  
+   // We are now ready (enough is loaded) to init the list of opaque typedefs.
+   ROOT::TMetaUtils::TNormalizedCtxt normCtxt(interp.getLookupHelper());
+
    // flags used only for the pragma parser:
    clingArgs.push_back("-D__CINT__");
    clingArgs.push_back("-D__MAKECINT__");
@@ -6453,7 +6612,7 @@ int main(int argc, char **argv)
 
    selectionRules.SearchNames(interp);
 
-   RScanner scan(selectionRules);
+   RScanner scan(selectionRules,interp,normCtxt);
    clang::CompilerInstance* CI = interp.getCI();
    scan.Scan(CI->getASTContext());
 
@@ -6594,7 +6753,7 @@ int main(int argc, char **argv)
             std::string qualname( CRD->getQualifiedNameAsString() );
             if (IsStdClass(*CRD) && 0 != TClassEdit::STLKind(CRD->getName().str().c_str() /* unqualified name without template arguement */) ) {
                   // coverity[fun_call_w_exception] - that's just fine.
-               RStl::Instance().GenerateTClassFor( iter->GetNormalizedName(), CRD );
+               RStl::Instance().GenerateTClassFor( iter->GetNormalizedName(), CRD, interp, normCtxt);
             } else {
                WriteClassInit(*iter);
             }               
@@ -6611,6 +6770,10 @@ int main(int argc, char **argv)
       end = scan.fSelectedClasses.end();
       for( ; iter != end; ++iter) 
       {
+         // Testing purpose only!
+         if (clang::CXXRecordDecl* CXXRD = llvm::dyn_cast<clang::CXXRecordDecl>(const_cast<clang::RecordDecl*>(iter->GetRecordDecl())))
+            R__AnnotateDecl(*CXXRD);
+         // end
          if (!iter->GetRecordDecl()->isCompleteDefinition()) {
             continue;
          }                       
@@ -6667,7 +6830,7 @@ int main(int argc, char **argv)
          if (!iter->GetRecordDecl()->isCompleteDefinition()) {
             continue;
          }
-         WriteClassCode(*iter);
+         WriteClassCode(*iter, interp, normCtxt);
       }
 
       //RStl::Instance().WriteStreamer(fp); //replaced by new Markus code
