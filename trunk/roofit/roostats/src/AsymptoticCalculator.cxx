@@ -114,10 +114,11 @@ AsymptoticCalculator::AsymptoticCalculator(
       allParams->snapshot(nominalParams);
    }
 
+
    // evaluate the unconditional nll for the full model on the  observed data 
    if (verbose >= 0)
       oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best unconditional NLL on observed data" << endl;
-   fNLLObs = EvaluateNLL( *nullPdf, *obsData);
+   fNLLObs = EvaluateNLL( *nullPdf, *obsData, GetNullModel()->GetConditionalObservables());
    // fill also snapshot of best poi
    poi->snapshot(fBestFitPoi);
    RooRealVar * muBest = dynamic_cast<RooRealVar*>(fBestFitPoi.first());
@@ -181,7 +182,7 @@ AsymptoticCalculator::AsymptoticCalculator(
       oocoutP((TObject*)0,Eval) << "AsymptoticCalculator: Find  best conditional NLL on ASIMOV data set for given alt POI ( " << 
          muAlt->GetName() << " ) = " << muAlt->getVal() << std::endl;
 
-   fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData, &poiAlt );
+   fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData, GetNullModel()->GetConditionalObservables(), &poiAlt );
    // for unconditional fit 
    //fNLLAsimov =  EvaluateNLL( *nullPdf, *fAsimovData);
    //poi->Print("v");
@@ -204,7 +205,7 @@ AsymptoticCalculator::AsymptoticCalculator(
 }
 
 //_________________________________________________________________
-Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   const RooArgSet *poiSet) {
+Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   const RooArgSet * condObs, const RooArgSet *poiSet) {
 
     int verbose = fgPrintLevel;
       
@@ -216,6 +217,9 @@ Double_t AsymptoticCalculator::EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data,   
     RooArgSet* allParams = pdf.getParameters(data);
     RooStats::RemoveConstantParameters(allParams);
     // add constraint terms for all non-constant parameters
+
+    RooArgSet conditionalObs;
+    if (condObs) conditionalObs.add(*condObs);
 
     // need to call constrain for RooSimultaneous until stripDisconnected problem fixed
     RooLinkedList commands;
@@ -436,7 +440,7 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
    }
 
    // evaluate the conditional NLL on the observed data for the snapshot value
-   double condNLL = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()), &poiTest);
+   double condNLL = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()), GetNullModel()->GetConditionalObservables(), &poiTest);
 
    double qmu = 2.*(condNLL - fNLLObs); 
    
@@ -458,7 +462,7 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
                                            << std::endl;         
       
       
-      double nll = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()));
+      double nll = EvaluateNLL( *nullPdf, const_cast<RooAbsData&>(*GetData()),GetNullModel()->GetConditionalObservables());
       
       if (nll < fNLLObs || (TMath::IsNaN(fNLLObs) && !TMath::IsNaN(nll) ) ) { 
          oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a better unconditional minimum "
@@ -520,7 +524,7 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
 
    if (verbose > 0) oocoutP((TObject*)0,Eval) << "AsymptoticCalculator::GetHypoTest -- Find  best conditional NLL on ASIMOV data set .... " << std::endl;
 
-   double condNLL_A = EvaluateNLL( *nullPdf, *fAsimovData, &poiTest);
+   double condNLL_A = EvaluateNLL( *nullPdf, *fAsimovData, GetNullModel()->GetConditionalObservables(), &poiTest);
 
 
    double qmu_A = 2.*(condNLL_A - fNLLAsimov  );
@@ -538,7 +542,7 @@ HypoTestResult* AsymptoticCalculator::GetHypoTest() const {
                                            << std::endl;         
       
       
-      double nll = EvaluateNLL( *nullPdf, *fAsimovData );
+      double nll = EvaluateNLL( *nullPdf, *fAsimovData,  GetNullModel()->GetConditionalObservables() );
       
       if (nll < fNLLAsimov || (TMath::IsNaN(fNLLAsimov) && !TMath::IsNaN(nll) )) { 
          oocoutW((TObject*)0,Minimization) << "AsymptoticCalculator:  Found a better unconditional minimum for Asimov data set"
@@ -814,28 +818,31 @@ void AsymptoticCalculator::FillBins(const RooAbsPdf & pdf, const RooArgList &obs
 
 bool AsymptoticCalculator::SetObsToExpected(RooProdPdf &prod, const RooArgSet &obs) 
 {
-   // iterate a Prod pdf to find the Poisson or Gaussian part to set the observed value to expected one
+   // iterate a Prod pdf to find all the Poisson or Gaussian part to set the observed value to expected one
     std::auto_ptr<TIterator> iter(prod.pdfList().createIterator());
+    bool ret = false;
     for (RooAbsArg *a = (RooAbsArg *) iter->Next(); a != 0; a = (RooAbsArg *) iter->Next()) {
         if (!a->dependsOn(obs)) continue;
         RooPoisson *pois = 0;
         RooGaussian * gaus = 0;
         if ((pois = dynamic_cast<RooPoisson *>(a)) != 0) {
-            return SetObsToExpected(*pois, obs);
+            SetObsToExpected(*pois, obs);
         } else if ((gaus = dynamic_cast<RooGaussian *>(a)) != 0) {
-            return SetObsToExpected(*gaus, obs);
+            SetObsToExpected(*gaus, obs);
         } else {
            // should try to add also lognormal case ? 
             RooProdPdf *subprod = dynamic_cast<RooProdPdf *>(a);
             if (subprod) 
                return SetObsToExpected(*subprod, obs);
             else {
-               oocoutE((TObject*)0,InputArguments) << "Illegal term in counting model: depends on observables, but not Poisson or Product" << endl;
+               oocoutE((TObject*)0,InputArguments) << "Illegal term in counting model: depends on observables, but not Poisson or Gaussian or Product" 
+                                                   << endl;
                return false;
             }
         }
+        ret = (pois != 0 || gaus != 0 ); 
     }
-    return false;
+    return ret;
 }
 
 bool AsymptoticCalculator::SetObsToExpected(RooAbsPdf &pdf, const RooArgSet &obs) 
@@ -883,19 +890,29 @@ bool AsymptoticCalculator::SetObsToExpected(RooAbsPdf &pdf, const RooArgSet &obs
       oocoutF((TObject*)0,Generation) << "AsymptoticCalculator::SetObsExpected( " << pdfName << " ) : No observable?" << endl;
       return false;
    }
+
    myobs->setVal(myexp->getVal());
+
+   if (fgPrintLevel > 2) { 
+      std::cout << "SetObsToExpected : setting " << myobs->GetName() << " to expected value " << myexp->getVal() << " of " << myexp->GetName() << std::endl;
+   }
+
    return true;
 }
 
 
 RooAbsData * AsymptoticCalculator::GenerateCountingAsimovData(RooAbsPdf & pdf, const RooArgSet & observables,  const RooRealVar & , RooCategory * channelCat) { 
-   // generate countuing Asimov data for the case when the pdf cannot be extended
+   // generate counting Asimov data for the case when the pdf cannot be extended
    // assume pdf is a RooPoisson or can be decomposed in a product of RooPoisson, 
    // otherwise we cannot know how to make the Asimov data sets in the other cases
     RooArgSet obs(observables);
     RooProdPdf *prod = dynamic_cast<RooProdPdf *>(&pdf);
     RooPoisson *pois = 0;
     RooGaussian *gaus = 0;
+
+    if (fgPrintLevel > 1) 
+       std::cout << "generate counting Asimov data for pdf of type " << pdf.IsA()->GetName() << std::endl;
+
     bool r = false;
     if (prod != 0) {
         r = SetObsToExpected(*prod, observables);
@@ -904,7 +921,7 @@ RooAbsData * AsymptoticCalculator::GenerateCountingAsimovData(RooAbsPdf & pdf, c
     } else if ((gaus = dynamic_cast<RooGaussian *>(&pdf)) != 0) {
         r = SetObsToExpected(*gaus, observables);
     } else {
-       oocoutE((TObject*)0,InputArguments) << "A counting model pdf must be either a RooProdPdf or a RooPoisson" << endl;
+       oocoutE((TObject*)0,InputArguments) << "A counting model pdf must be either a RooProdPdf or a RooPoisson or a RooGaussian" << endl;
     }
     if (!r) return 0;
     int icat = 0;
@@ -1117,14 +1134,15 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(RooAbsData & realData, const M
       RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
       if (verbose < 2) RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
 
-
+      RooArgSet conditionalObs;
+      if (model.GetConditionalObservables()) conditionalObs.add(*model.GetConditionalObservables());
 
       std::string minimizerType = ROOT::Math::MinimizerOptions::DefaultMinimizerType();
       std::string minimizerAlgo = ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo();
       model.GetPdf()->fitTo(realData, RooFit::Minimizer(minimizerType.c_str(),minimizerAlgo.c_str()), 
                  RooFit::Strategy(ROOT::Math::MinimizerOptions::DefaultStrategy()),
                  RooFit::PrintLevel(minimPrintLevel-1), RooFit::Hesse(false),
-                 RooFit::Constrain(constrainParams));
+                            RooFit::Constrain(constrainParams),RooFit::ConditionalObservables(conditionalObs));
       if (verbose>0) { std::cout << "fit time "; tw2.Print();}
       if (verbose > 1) { 
          // after the fit the nuisance parameters will have their best fit value
@@ -1183,7 +1201,8 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const ModelConfig & model, con
    RooAbsData * asimov = GenerateAsimovData(*model.GetPdf() , *model.GetObservables() );
    
    if (verbose>0) {
-      std::cout << "Generated Asimov data for observables with time : ";  tw.Print(); 
+      std::cout << "Generated Asimov data for observables "; (model.GetObservables() )->Print(); 
+      if (verbose>1) std::cout << "\t\t\ttime for generating : ";  tw.Print(); 
    }
 
 
@@ -1321,13 +1340,14 @@ RooAbsData * AsymptoticCalculator::MakeAsimovData(const ModelConfig & model, con
       gobs = snapGlobalObsData;
 
       if (verbose>0) {
-         std::cout << "Generated Asimov data for global observables " << std::endl; 
+         std::cout << "Generated Asimov data for global observables ";
+         if (verbose == 1) gobs.Print();  
       }
 
       if (verbose > 1) {
-         std::cout << "Global observables for data: " << std::endl;
+         std::cout << "\nGlobal observables for data: " << std::endl;
          gobs.Print("V");
-         std::cout << "Global observables for asimov: " << std::endl;
+         std::cout << "\nGlobal observables for asimov: " << std::endl;
          asimovGlobObs.Print("V");
       }
 

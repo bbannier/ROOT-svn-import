@@ -28,12 +28,36 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/NestedNameSpecifier.h"
 
+#include "clang/Sema/Sema.h"
+
 #include "cling/Utils/AST.h"
+
+#include "cling/Interpreter/Interpreter.h"
+
+//////////////////////////////////////////////////////////////////////////
+ROOT::TMetaUtils::TNormalizedCtxt::TNormalizedCtxt(const cling::LookupHelper &lh)
+{   
+   // Initialize the list of typedef to keep (i.e. make them opaque for normalization).
+   // This might be specific to an interpreter.
+
+   if (fTypeToSkip.empty()) {
+      clang::QualType toSkip = lh.findType("Double32_t");
+      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+      toSkip = lh.findType("Float16_t");
+      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+      toSkip = lh.findType("string");
+      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+      toSkip = lh.findType("std::string");
+      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+   }
+}
 
 //////////////////////////////////////////////////////////////////////////
 static
-clang::NestedNameSpecifier* AddDefaultParametersNNS(const clang::ASTContext& Ctx, 
-                                                    clang::NestedNameSpecifier* scope) {
+clang::NestedNameSpecifier* AddDefaultParametersNNS(const clang::ASTContext& Ctx,
+                                                    clang::NestedNameSpecifier* scope,
+                                                    const cling::Interpreter &interpreter,
+                                                    const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) {
     // Add default parameter to the scope if needed.
 
    const clang::Type* scope_type = scope->getAsType();
@@ -41,12 +65,11 @@ clang::NestedNameSpecifier* AddDefaultParametersNNS(const clang::ASTContext& Ctx
       // this is not a namespace, so we might need to desugar
      clang::NestedNameSpecifier* outer_scope = scope->getPrefix();
       if (outer_scope) {
-         outer_scope = AddDefaultParametersNNS(Ctx, outer_scope);
+         outer_scope = AddDefaultParametersNNS(Ctx, outer_scope, interpreter, normCtxt);
       }
 
       clang::QualType addDefault = 
-         ROOT::TMetaUtils::AddDefaultParameters(Ctx,
-                                                clang::QualType(scope_type,0) );
+         ROOT::TMetaUtils::AddDefaultParameters(clang::QualType(scope_type,0), interpreter, normCtxt );
       // NOTE: Should check whether the type has changed or not.
       return clang::NestedNameSpecifier::Create(Ctx,outer_scope,
                                                 false /* template keyword wanted */,
@@ -57,7 +80,9 @@ clang::NestedNameSpecifier* AddDefaultParametersNNS(const clang::ASTContext& Ctx
 
 
 //////////////////////////////////////////////////////////////////////////
-clang::QualType ROOT::TMetaUtils::AddDefaultParameters(const clang::ASTContext& Ctx, clang::QualType instanceType)
+clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceType,
+                                                       const cling::Interpreter &interpreter,
+                                                       const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    // Add any unspecified template parameters to the class template instance,
    // mentioned anywhere in the type.
@@ -69,12 +94,14 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(const clang::ASTContext& 
    // Whether it is or not depend on the I/O on whether the default template argument might change or not
    // and whether they (should) affect the on disk layout (for STL containers, we do know they do not).
 
+   const clang::ASTContext& Ctx = interpreter.getCI()->getASTContext();
+
    // In case of Int_t* we need to strip the pointer first, desugar and attach
    // the pointer once again.
    if (instanceType->isPointerType()) {
       // Get the qualifiers.
       clang::Qualifiers quals = instanceType.getQualifiers();      
-      instanceType = AddDefaultParameters(Ctx, instanceType->getPointeeType());
+      instanceType = AddDefaultParameters(instanceType->getPointeeType(), interpreter, normCtxt);
       instanceType = Ctx.getPointerType(instanceType);
       // Add back the qualifiers.
       instanceType = Ctx.getQualifiedType(instanceType, quals);
@@ -86,7 +113,7 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(const clang::ASTContext& 
       // Get the qualifiers.
       bool isLValueRefTy = llvm::isa<clang::LValueReferenceType>(instanceType.getTypePtr());
       clang::Qualifiers quals = instanceType.getQualifiers();
-      instanceType = AddDefaultParameters(Ctx, instanceType->getPointeeType());
+      instanceType = AddDefaultParameters(instanceType->getPointeeType(), interpreter, normCtxt);
 
       // Add the r- or l- value reference type back to the desugared one
       if (isLValueRefTy)
@@ -104,7 +131,7 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(const clang::ASTContext& 
    if (etype) {
       // We have to also handle the prefix.
  
-      prefix = AddDefaultParametersNNS(Ctx, etype->getQualifier());
+      prefix = AddDefaultParametersNNS(Ctx, etype->getQualifier(), interpreter, normCtxt);
       instanceType = clang::QualType(etype->getNamedType().getTypePtr(),instanceType.getLocalFastQualifiers());
    }
 
@@ -121,13 +148,22 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(const clang::ASTContext& 
 
       bool wantDefault = !TClassEdit::IsStdClass(TSTdecl->getName().str().c_str()) && 0 == TClassEdit::STLKind(TSTdecl->getName().str().c_str());
 
+#if R__HAS_PATCH_TO_MAKE_EXPANSION_WORK_WITH_NON_CANONICAL_TYPE
+      clang::Sema& S = interpreter.getCI()->getSema();
+#endif
+      clang::TemplateDecl *Template = TSTdecl->getSpecializedTemplate()->getMostRecentDecl();
+      clang::TemplateParameterList *Params = Template->getTemplateParameters();
+      clang::TemplateParameterList::iterator Param = Params->begin(); // , ParamEnd = Params->end();
+      //llvm::SmallVectorImpl<TemplateArgument> Converted; // Need to contains the other arguments.
+      // Converted seems to be the same as our 'desArgs'
+
       bool mightHaveChanged = false;   
       llvm::SmallVector<clang::TemplateArgument, 4> desArgs;
       unsigned int Idecl = 0, Edecl = TSTdecl->getTemplateArgs().size();
       for(clang::TemplateSpecializationType::iterator 
              I = TST->begin(), E = TST->end();
           Idecl != Edecl; 
-          ++I, ++Idecl) {
+          ++I, ++Idecl, ++Param) {
 
          if (I != E) {
             clang::QualType SubTy = I->getAsType();
@@ -140,27 +176,43 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(const clang::ASTContext& 
             // Check if the type needs more desugaring and recurse.
             if (llvm::isa<clang::TemplateSpecializationType>(SubTy)) {
                mightHaveChanged = true;
-               desArgs.push_back(clang::TemplateArgument(AddDefaultParameters(Ctx,
-                                                                              SubTy)));
-            } else 
+               desArgs.push_back(clang::TemplateArgument(AddDefaultParameters(SubTy,
+                                                                              interpreter,
+                                                                              normCtxt)));
+            } else {
                desArgs.push_back(*I);
+            }
+            // Converted.push_back(TemplateArgument(ArgTypeForTemplate));
          } else if (wantDefault) {
 
             mightHaveChanged = true;
             
             clang::QualType SubTy = TSTdecl->getTemplateArgs().get(Idecl).getAsType();
-         
+
             if (SubTy.isNull()) {
                desArgs.push_back(*I);
                continue;
             }
             
-            static llvm::SmallSet<const clang::Type*, 4> typeToSkip;
-            SubTy = cling::utils::Transform::GetPartiallyDesugaredType(Ctx,SubTy,typeToSkip,/*fullyQualified=*/ true);
-            SubTy = AddDefaultParameters(Ctx,SubTy);
-            desArgs.push_back(clang::TemplateArgument(AddDefaultParameters(Ctx,
-                                                                           SubTy)));
+#if R__HAS_PATCH_TO_MAKE_EXPANSION_WORK_WITH_NON_CANONICAL_TYPE
+            clang::SourceLocation TemplateLoc = Template->getSourceRange ().getBegin(); //NOTE: not sure that this is the 'right' location.
+            clang::SourceLocation RAngleLoc = TSTdecl->getSourceRange().getBegin(); // NOTE: most likely wrong, I think this is expecting the location of right angle
+ 
+            clang::TemplateTypeParmDecl *TTP = llvm::dyn_cast<clang::TemplateTypeParmDecl>(*Param);
+            clang::TemplateArgumentLoc ArgType = S.SubstDefaultTemplateArgumentIfAvailable(
+                                                             Template,
+                                                             TemplateLoc,
+                                                             RAngleLoc,
+                                                             TTP,
+                                                             desArgs);
+            clang::QualType BetterSubTy = ArgType.getArgument().getAsType();
 
+            SubTy = cling::utils::Transform::GetPartiallyDesugaredType(Ctx,BetterSubTy,normCtxt.GetTypeToSkip(),/*fullyQualified=*/ true);
+#else
+            SubTy = cling::utils::Transform::GetPartiallyDesugaredType(Ctx,SubTy,normCtxt.GetTypeToSkip(),/*fullyQualified=*/ true);
+#endif
+            SubTy = AddDefaultParameters(SubTy,interpreter,normCtxt);
+            desArgs.push_back(clang::TemplateArgument(SubTy));
          }
       }
 
@@ -209,6 +261,40 @@ std::string ROOT::TMetaUtils::GetLLVMResourceDir(bool rootbuild)
 #endif
 }
 
+//////////////////////////////////////////////////////////////////////////
+void ROOT::TMetaUtils::GetNormalizedName(std::string &norm_name, const clang::QualType &type, const cling::Interpreter &interpreter, const TNormalizedCtxt &normCtxt) 
+{
+   // Return the type name normalized for ROOT,
+   // keeping only the ROOT opaque typedef (Double32_t, etc.) and
+   // adding default template argument for all types except the STL collections
+   // where we remove the default template argument if any.
+   //
+   // This routine might actually belongs in the interpreter because
+   // cache the clang::Type might be intepreter specific.
+
+   clang::ASTContext &ctxt = interpreter.getCI()->getASTContext();
+
+   clang::QualType normalizedType = cling::utils::Transform::GetPartiallyDesugaredType(ctxt, type, normCtxt.GetTypeToSkip(), true /* fully qualify */); 
+   // Readd missing default template parameter.
+   normalizedType = ROOT::TMetaUtils::AddDefaultParameters(normalizedType, interpreter, normCtxt);
+   
+   std::string normalizedNameStep1;
+   normalizedType.getAsStringInternal(normalizedNameStep1,ctxt.getPrintingPolicy());
+   
+   // Still remove the std:: and default template argument and insert the Long64_t
+   TClassEdit::TSplitType splitname(normalizedNameStep1.c_str(),(TClassEdit::EModType)(TClassEdit::kDropAllDefault |TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault));
+   splitname.ShortType(norm_name, TClassEdit::kDropAllDefault | TClassEdit::kDropStd | TClassEdit::kDropStlDefault );
+
+   // And replace basic_string<char>.  NOTE: we should probably do this at the same time as the GetPartiallyDesugaredType ... but were do we stop ?
+   static const char* basic_string_s = "basic_string<char>";
+   static const unsigned int basic_string_len = strlen(basic_string_s);
+   int pos = 0;
+   while( (pos = norm_name.find( basic_string_s,pos) ) >=0 ) {
+      norm_name.replace(pos,basic_string_len, "string");
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////
 std::string ROOT::TMetaUtils::GetROOTIncludeDir(bool rootbuild)
 {
    if (!rootbuild) {
@@ -227,4 +313,74 @@ std::string ROOT::TMetaUtils::GetROOTIncludeDir(bool rootbuild)
    }
    // else
    return "include";
+}
+
+//////////////////////////////////////////////////////////////////////////
+std::string ROOT::TMetaUtils::GetModuleFileName(const char* moduleName)
+{
+   // Return the dictionary file name for a module
+   std::string dictFileName(moduleName);
+   dictFileName += "_rdict.pcm";
+   return dictFileName;
+}
+
+//////////////////////////////////////////////////////////////////////////
+clang::Module* ROOT::TMetaUtils::declareModuleMap(clang::CompilerInstance* CI,
+                                                  const char* moduleFileName,
+                                                  const char* headers[])
+{
+   // Declare a virtual module.map to clang. Returns Module on success.
+   clang::Preprocessor& PP = CI->getPreprocessor();
+   clang::ModuleMap& ModuleMap = PP.getHeaderSearchInfo().getModuleMap();
+
+   llvm::StringRef moduleName = llvm::sys::path::filename(moduleFileName);
+   moduleName = llvm::sys::path::stem(moduleName);
+
+   std::pair<clang::Module*, bool> modCreation;
+
+   modCreation
+      = ModuleMap.findOrCreateModule(moduleName.str().c_str(),
+                                     0 /*ActiveModule*/,
+                                     false /*Framework*/, false /*Explicit*/);
+   if (!modCreation.second) {
+      std::cerr << "TMetaUtils::declareModuleMap: "
+         "Duplicate definition of dictionary module "
+                << moduleFileName << std::endl;
+            /*"\nOriginal module was found in %s.", - if only we could...*/
+      // Go on, add new headers nonetheless.
+   }
+
+   clang::HeaderSearch& HdrSearch = PP.getHeaderSearchInfo();
+   for (const char** hdr = headers; *hdr; ++hdr) {
+      const clang::DirectoryLookup* CurDir;
+      const clang::FileEntry* hdrFileEntry
+         =  HdrSearch.LookupFile(*hdr, false /*isAngled*/, 0 /*FromDir*/,
+                                 CurDir, 0 /*CurFileEnt*/, 0 /*SearchPath*/,
+                                 0 /*RelativePath*/, 0 /*SuggestedModule*/);
+      if (!hdrFileEntry) {
+         std::cerr << "TMetaUtils::declareModuleMap: "
+            "Cannot find header file " << *hdr
+                   << " included in dictionary module "
+                   << moduleName.data()
+                   << " in include search path!";
+         hdrFileEntry = PP.getFileManager().getFile(*hdr, /*OpenFile=*/false,
+                                                    /*CacheFailure=*/false);
+      } else {
+         // Tell HeaderSearch that the header's directory has a module.map
+         llvm::StringRef srHdrDir(hdrFileEntry->getName());
+         srHdrDir = llvm::sys::path::parent_path(srHdrDir);
+         const clang::DirectoryEntry* Dir
+            = PP.getFileManager().getDirectory(srHdrDir);
+         if (Dir) {
+#ifdef R__CINTWITHCLING_MODULES
+            HdrSearch.setDirectoryHasModuleMap(Dir);
+#endif
+         }
+      }
+
+#ifdef R__CINTWITHCLING_MODULES
+      ModuleMap.addHeader(modCreation.first, hdrFileEntry);
+#endif
+   } // for headers
+   return modCreation.first;
 }

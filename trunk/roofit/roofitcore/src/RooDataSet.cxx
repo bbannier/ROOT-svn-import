@@ -392,6 +392,13 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
         _vars.addOwned(*(new RooRealVar(wgtVarName, wgtVarName, wgtMin, wgtMax))); 
       }
     }
+    
+    // Clone weight variable of imported dataset if we are not weighted
+    if (!wgtVar && impData && impData->_wgtVar) {
+      _wgtVar = (RooRealVar*) impData->_wgtVar->createFundamental() ;
+      _vars.addOwned(*_wgtVar) ;
+      wgtVarName = _wgtVar->GetName() ;
+    }
 
     // Create empty datastore 
     RooTreeDataStore* tstore(0) ;
@@ -460,6 +467,7 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
       initialize(wgtVarName) ;    
     } else {
       if (impData && impData->_wgtVar && vars.find(impData->_wgtVar->GetName())) {
+
 	// Use the weight column of the source data set
 	initialize(impData->_wgtVar->GetName()) ;
 

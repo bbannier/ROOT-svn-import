@@ -262,13 +262,30 @@ ExecutionContext::installLazyFunctionCreator(LazyFunctionCreatorFunc_t fp)
   m_lazyFuncCreator.push_back(fp);
 }
 
-bool ExecutionContext::addSymbol(const char* symbolName,  void* symbolAddress){
+bool ExecutionContext::addSymbol(const char* symbolName,  void* symbolAddress) {
 
-  void* actualAdress
+  void* actualAddress
     = llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(symbolName);
-  if (actualAdress)
+  if (actualAddress)
     return false;
 
   llvm::sys::DynamicLibrary::AddSymbol(symbolName, symbolAddress);
   return true;
 }
+
+void* ExecutionContext::getAddressOfGlobal(llvm::Module* m,
+                                           const char* symbolName,
+                                           bool* fromJIT /*=0*/) const {
+    // Return a symbol's address, and whether it was jitted.
+    void* address
+      = llvm::sys::DynamicLibrary::SearchForAddressOfSymbol(symbolName);
+    if (address) {
+      if (fromJIT) *fromJIT = false;
+    } else {
+      if (fromJIT) *fromJIT = true;
+      llvm::GlobalVariable* gvar
+        = m->getGlobalVariable(symbolName, true);
+      address = m_engine->getPointerToGlobal(gvar);
+    }
+    return address;
+  }
