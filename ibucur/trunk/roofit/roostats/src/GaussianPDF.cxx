@@ -17,17 +17,16 @@
 #include <cmath>
 #include "Math/Math.h"
 #include "Math/SpecFunc.h"
-#include "RooStats/GaussianPdf.h"
-#include "RooAbsPdf.h"
+#include "RooStats/GaussianPDF.h"
 #include "RooRandom.h"
 
 using namespace std;
 using namespace RooStats;
 
-ClassImp(GaussianPdf);
+ClassImp(GaussianPDF);
 
 //_____________________________________________________________________________
-GaussianPdf::GaussianPdf(
+GaussianPDF::GaussianPDF(
    const char* name, 
    const char* title, 
    RooAbsReal& obs, 
@@ -39,30 +38,32 @@ GaussianPdf::GaussianPdf(
    fMean("mean", "Mean", this, mu),
    fSigma("sigma", "Standard Deviation", this, sig)
 {
+   // Constructor
 }
 
 
  
 //_____________________________________________________________________________
-GaussianPdf::GaussianPdf(const GaussianPdf& other, const char *name) :
-   RooAbsPdf(other, name),
+GaussianPDF::GaussianPDF(const GaussianPDF& other, const char* newName) :
+   RooAbsPdf(other, newName),
    fObs("obs", this, other.fObs),
    fMean("mean", this, other.fMean),
    fSigma("sigma", this, other.fSigma)
 {
+   // Copy constructor
 }
 
 
 //_____________________________________________________________________________
-Double_t GaussianPdf::evaluate() const
-{
+Double_t GaussianPDF::evaluate() const
+{  // TODO: also make use of 1 / sigma
    Double_t arg = (fObs - fMean) / fSigma; // TODO: verify numerical accuracy
    return exp(-0.5 * arg * arg);
 }
 
 
 //_____________________________________________________________________________
-Double_t GaussianPdf::getLogVal(const RooArgSet*) const
+Double_t GaussianPDF::getLogVal(const RooArgSet*) const
 {  // TODO: use nset
    Double_t arg = (fObs - fMean) / fSigma;
    return -0.5 * arg * arg;
@@ -70,7 +71,7 @@ Double_t GaussianPdf::getLogVal(const RooArgSet*) const
 
 
 //_____________________________________________________________________________
-void GaussianPdf::generateEvent(Int_t)
+void GaussianPDF::generateEvent(Int_t)
 {
    Double_t obsGenerated;
    Double_t obsMin = fObs.min(); // TODO: maybe cache at class level
@@ -81,11 +82,12 @@ void GaussianPdf::generateEvent(Int_t)
    }
    while(obsGenerated > obsMax && obsGenerated < obsMin);
    // FIXME: in RooFit it would be >= obsMax && <= obsMin - see if particular cases cause any trouble
+   
 }
 
 
 //_____________________________________________________________________________
-Double_t GaussianPdf::analyticalIntegral(Int_t, const char* rangeName) const
+Double_t GaussianPDF::analyticalIntegral(Int_t, const char* rangeName) const
 {
    static const Double_t rootPiBy2 = sqrt(M_PI_2); // defined in Math.h
    // XXX rootPiBy2 could be used in evaluate()
