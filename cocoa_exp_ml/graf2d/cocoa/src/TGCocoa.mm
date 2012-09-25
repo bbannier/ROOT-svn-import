@@ -1999,8 +1999,8 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
 
    //Do a simple text layout using CGGlyphs.
    std::vector<UniChar> unichars(text, text + len);
-   //Remove ^P (it can be introduced by TGText::ReTab, for example).
-   unichars.erase(std::remove(unichars.begin(), unichars.end(), 16), unichars.end());
+   //Replace ^P with ' ' (it can be introduced by TGText::ReTab, for example).
+   std::replace(unichars.begin(), unichars.end(), UniChar(16), UniChar(' '));
    Quartz::DrawTextLineNoKerning(ctx, (CTFontRef)gcVals.fFont, unichars, x,  X11::LocalYROOTToCocoa(drawable, y));
 }
 
