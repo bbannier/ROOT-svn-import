@@ -1998,7 +1998,11 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    CGContextSetRGBFillColor(ctx, textColor[0], textColor[1], textColor[2], textColor[3]);
 
    //Do a simple text layout using CGGlyphs.
-   std::vector<UniChar> unichars(text, text + len);
+
+   //GUI uses non-ascii symbols, and does not care about signed/unsigned - just dump everything
+   //into a char and be happy. I'm not.
+   std::vector<UniChar> unichars((unsigned char *)text, (unsigned char *)text + len);
+
    //Replace ^P with ' ' (it can be introduced by TGText::ReTab, for example).
    std::replace(unichars.begin(), unichars.end(), UniChar(16), UniChar(' '));
    Quartz::DrawTextLineNoKerning(ctx, (CTFontRef)gcVals.fFont, unichars, x,  X11::LocalYROOTToCocoa(drawable, y));
