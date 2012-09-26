@@ -301,7 +301,7 @@ bool ParentRendersToChild(NSView<X11Window> *child)
    assert(child != nil && "ParentRendersToChild, child parameter is nil");
 
    //Adovo poluchaetsia, tashhem-ta! ;)
-   return X11::ViewIsTextViewFrame(child, true) && !child.fContext && 
+   return (X11::ViewIsTextViewFrame(child, true) || X11::ViewIsHtmlViewFrame(child, true)) && !child.fContext &&
           child.fMapState == kIsViewable && child.fParentView.fContext &&
           !child.fIsOverlapped;
 }
