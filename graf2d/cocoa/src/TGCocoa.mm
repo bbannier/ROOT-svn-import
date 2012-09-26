@@ -1140,8 +1140,8 @@ void TGCocoa::TranslateCoordinates(Window_t srcWin, Window_t dstWin, Int_t srcX,
          //hitTest requires a point in a view's superview coordinate system.
          //Even contentView of QuartzWindow has a superview (NSThemeFrame),
          //so this should always work.
-         dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
-         if (NSView<X11Window> * const view = (NSView<X11Window> *)[dstView hitTest : dstPoint]) {
+         const NSPoint pt = [[dstView superview] convertPoint : dstPoint fromView : dstView];
+         if (NSView<X11Window> * const view = (NSView<X11Window> *)[dstView hitTest : pt]) {
             if (view != dstView && view.fMapState == kIsViewable)
                child = view.fID;
          }
