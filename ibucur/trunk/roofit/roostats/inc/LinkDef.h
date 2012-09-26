@@ -110,6 +110,7 @@
 // ibucur: development in progress
 #pragma link C++ class RooStats::AbstractPDF+; // abstract class
 #pragma link C++ class RooStats::AbstractDataSet+; // abstract class
+#pragma link C++ class RooStats::CombinedDataSet+;
 #pragma link C++ class RooStats::CombinedLikelihood+;
 #pragma link C++ class RooStats::CombinedDataSet+;
 #pragma link C++ class RooStats::GaussianPDF+;
