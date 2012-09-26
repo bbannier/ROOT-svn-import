@@ -8,6 +8,7 @@
 // RooStats headers
 #include "RooStats/ModelConfig.h"
 #include "RooStats/RooStatsUtils.h"
+#include "RooStats/ProfileLikelihoodTestStat.h"
 
 using namespace RooFit;
 using namespace RooStats;
@@ -48,7 +49,7 @@ void buildSimultaneousModel(RooWorkspace *w)
    w->import(*data);
 
    RooArgList constraints;
-   RooAbsPdf *simplePdf = RooStats::StripConstraints(*w->pdf("sim_pdf"), *sbModel->GetObservables(), constraints);
+   RooAbsPdf *simplePdf = StripConstraints(*w->pdf("sim_pdf"), *sbModel->GetObservables(), constraints);
 
    simplePdf->Print("");
    constraints.Print("");
@@ -62,6 +63,9 @@ void test() {
    buildSimultaneousModel(w);   
    
    RooSimultaneous *sim = (RooSimultaneous *) w->pdf("sim_pdf");
+
+   ProfileLikelihoodTestStat plts(*sim);
+   w->data("data")->Print("v");
 
 }
 
