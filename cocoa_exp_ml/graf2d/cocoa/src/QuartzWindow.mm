@@ -2288,7 +2288,7 @@ void print_mask_info(ULong_t mask)
    NSLog(@"event mask is:");
    print_mask_info(fEventMask);
    NSLog(@"grab mask is:");
-   print_mask_info(fGrabButtonEventMask);
+   print_mask_info(fPassiveGrabEventMask);
    NSLog(@"----------------End of view info------------------");
 }
 #endif
