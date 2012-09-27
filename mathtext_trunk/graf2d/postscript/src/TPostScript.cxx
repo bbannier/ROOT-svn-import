@@ -2816,12 +2816,15 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
 
       // Rename the file fFileName
       TString tmpname = Form("%s_tmp_%d",fFileName.Data(),gSystem->GetPid());
-      if (gSystem->Rename( fFileName.Data() , tmpname.Data())) return;
+      if (gSystem->Rename( fFileName.Data() , tmpname.Data())) {
+         Error("Text", "Cannot open temporary file: %s\n", tmpname.Data());
+         return;
+      }
 
       // Reopen the file fFileName
       fStream = new std::ofstream(fFileName.Data(),std::ios::out);
       if (fStream == 0 || gSystem->AccessPathName(fFileName.Data(),kWritePermission)) {
-         printf("ERROR in TPostScript::Open: Cannot open file:%s\n",fFileName.Data());
+         Error("Text", "Cannot open file: %s\n", fFileName.Data());
          return;
       }
 
