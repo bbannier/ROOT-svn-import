@@ -10,11 +10,18 @@ namespace RooStats {
    class CombinedDataSet : public TObject, public AbstractDataSet {
    public:
       virtual ~CombinedDataSet() {}
-      CombinedDataSet(std::vector<RooDataSet*> dataSets);
-      
+      CombinedDataSet(std::vector<RooDataSet*> dataSets);      
 
    private:
-      CombinedDataSet() {} // hide default constructor (needed for I/O)
+       struct DataSetInfo {
+         Int_t firstIdx;
+         Int_t lastIdx;
+         Int_t numRows;
+         Int_t numColumns;
+         Bool_t rowMajor;
+      };
+
+     CombinedDataSet() {} // hide default constructor (needed for I/O)
       CombinedDataSet(const CombinedDataSet& rhs); // disallow copy constructor
       CombinedDataSet& operator=(const CombinedDataSet& rhs); // disallow assignment operator
 
@@ -23,17 +30,10 @@ namespace RooStats {
       std::vector<T> fRawData;
       std::vector<DataSetInfo> fDetails;
 
-      struct DataSetInfo {
-         Int_t firstIdx;
-         Int_t lastIdx;
-         Int_t numRows;
-         Int_t numColumns;
-         Bool_t rowMajor;
-      }
-
 
       ClassDef(CombinedDataSet, 1)
    };
+
 }
 
 #endif // ROOSTATS_CombinedDataSet

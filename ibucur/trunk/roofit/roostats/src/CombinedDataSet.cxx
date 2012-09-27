@@ -1,13 +1,15 @@
 #include "RooStats/CombinedDataSet.h"
 
-template class CombinedDataSet<Double_t>;
-
 using namespace RooStats;
 
-CombinedDataSet::CombinedDataSet(std::vector<RooDataSet*> dataSets) :
+ClassImp(CombinedDataSet<Double_t>);
+
+template<typename T>
+CombinedDataSet<T>::CombinedDataSet(std::vector<RooDataSet*> dataSets) :
    fNumberOfDataSets(dataSets.size()),
    fDataSets(dataSets)
 {
 }
 
+template class CombinedDataSet<Double_t>;
 
