@@ -1,5 +1,5 @@
 // @(#)root/postscript:$Id$
-// Author: Rene Brun, Olivier Couet, Pierre Juillot, Oleksandr Grebenyuk
+// Author: Rene Brun, Olivier Couet, Pierre Juillot, Oleksandr Grebenyuk, Yue Shi Lai
 
 /*************************************************************************
  * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
@@ -459,7 +459,7 @@ void TPostScript::Close(Option_t *)
    }
    PrintStr("@");
    PrintStr("%%EOF@");
-   
+
    fFontEmbed = kFALSE;
 
    // Close file stream
@@ -1509,7 +1509,7 @@ Bool_t TPostScript::FontEmbedType42(const char *filename)
 void TPostScript::FontEmbed(void)
 {
    // Embed font in PS file.
-   
+
    static const char *fonttable[32][2] = {
 	   { "Root.TTFont.0", "FreeSansBold.otf" },
 	   { "Root.TTFont.1", "FreeSerifItalic.otf" },
@@ -1555,7 +1555,7 @@ void TPostScript::FontEmbed(void)
 									   "$(ROOTSYS)/fonts"
 #endif // TTFFONTDIR
 									   );
-   
+
    for (Int_t fontid = 1; fontid < 30; fontid++) {
 		if (fontid != 15) {
 			const char *filename = gEnv->GetValue(
@@ -2806,16 +2806,16 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
    Double_t x = xx;
    Double_t y = yy;
    if (!gPad) return;
-   
-   if (!fFontEmbed) {      
+
+   if (!fFontEmbed) {
       // Close the the file fFileName
       if (fStream) {
-         PrintStr("@"); 
+         PrintStr("@");
          fStream->close(); delete fStream; fStream = 0;
       }
-      
+
       // Rename the file fFileName
-      TString tmpname = Form("tmp_%d_%s",gSystem->GetPid(),fFileName.Data());
+      TString tmpname = Form("%s_tmp_%d",fFileName.Data(),gSystem->GetPid());
       if (gSystem->Rename( fFileName.Data() , tmpname.Data())) return;
 
       // Reopen the file fFileName
@@ -2824,7 +2824,7 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
          printf("ERROR in TPostScript::Open: Cannot open file:%s\n",fFileName.Data());
          return;
       }
-      
+
       // Embed the fonts at the right place
       FILE *sg = fopen(tmpname.Data(),"r");
       char line[255];
@@ -2833,11 +2833,11 @@ void TPostScript::Text(Double_t xx, Double_t yy, const wchar_t *chars)
          fStream->write(line,strlen(line));
          if (!fFontEmbed && strstr(line,"m5")) {
             FontEmbed();
-            PrintStr("@"); 
+            PrintStr("@");
          }
       }
       fclose(sg);
-      if (gSystem->Unlink(tmpname.Data())) return; 
+      if (gSystem->Unlink(tmpname.Data())) return;
    }
 
    // Compute the font size. Exit if it is 0
