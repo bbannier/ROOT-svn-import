@@ -19,7 +19,11 @@ MATHTEXTO    := $(MATHTEXTS:.cc=.o)
 
 MATHTEXTDEP  := $(MATHTEXTO:.o=.d) $(MATHTEXTDO:.o=.d)
 
+ifeq ($(PLATFORM),win32)
+MATHTEXTLIB  := $(LPATH)/libmathtext.lib
+else
 MATHTEXTLIB  := $(LPATH)/libmathtext.a
+endif
 
 # used in the main Makefile
 ALLHDRS     += $(patsubst $(MODDIRI)/%.h,include/%.h,$(MATHTEXTH))
