@@ -64,10 +64,18 @@ void buildSimultaneousModel(RooWorkspace *w)
    w->factory("Gaussian::constr2(gbkg2[50,0,100], bkg2[50,0,100], 2)");
    w->factory("Gaussian::constr3(gbkg3[50,0,100], bkg3[50,0,100], 1)");
 
-   w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
-   w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
-   w->factory("ExtendPdf::ext_pdf3(PROD::p3(u3,constr3), expr::n3('sig+bkg3', sig, bkg3))");
+   // w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
+   // w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
+   // w->factory("ExtendPdf::ext_pdf3(PROD::p3(u3,constr3), expr::n3('sig+bkg3', sig, bkg3))");
+   w->factory("ExtendPdf::ext_0pdf1(u1, expr::n1('sig+bkg1', sig, bkg1))");
+   w->factory("ExtendPdf::ext_0pdf2(u2, expr::n2('sig+bkg2', sig, bkg2))");
+   w->factory("ExtendPdf::ext_0pdf3(u3, expr::n3('sig+bkg3', sig, bkg3))");
+   w->factory("PROD:ext_pdf1(ext_0pdf1,constr1)");
+   w->factory("PROD:ext_pdf2(ext_0pdf2,constr2)");
+   w->factory("PROD:ext_pdf3(ext_0pdf3,constr3)");
+
    w->factory("SIMUL::sim_pdf(index[cat1,cat2,cat3],cat1=ext_pdf1,cat2=ext_pdf2,cat3=ext_pdf3)");
+
 
    // create combined signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
@@ -111,6 +119,14 @@ void test() {
 
    //RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data"), commands);
    RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data"), commands);
+
+   double val = nll->getVal(); 
+   std::cout << val << "changing sig " << std::endl;
+   w->var("sig")->setVal(10); 
+   val = nll->getVal(); 
+   std::cout << val << std::endl;
+   return;
+
 
    RooMinuit m(*nll);
 
