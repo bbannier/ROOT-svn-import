@@ -90,8 +90,12 @@ CombinedLikelihood::CombinedLikelihood(
 
       // Set Channels
       fChannels.push_back(simPdf.getPdf(crtLabel)); 
-      fChannelLikelihoods.push_back(RooStats::CreateNLL(*simPdf.getPdf(crtLabel), *fDataSets[i], RooLinkedList()));
       fChannelNames.push_back(std::string(crtLabel));
+      
+      RooAbsReal* logL = RooStats::CreateNLL(*simPdf.getPdf(crtLabel), *fDataSets[i], RooLinkedList());
+      // XXX: Important, disable cache for NLLs
+//      logL->setOperMode(RooAbsArg::ADirty);
+      fChannelLikelihoods.push_back(logL);
    } 
 
 
