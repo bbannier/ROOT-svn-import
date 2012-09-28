@@ -28,6 +28,7 @@
 #include "Property.h"
 #include "TClingProperty.h"
 #include "TError.h"
+#include "TMetaUtils.h"
 #include "Rtypes.h" // for gDebug
 
 #include "cling/Interpreter/LookupHelper.h"
@@ -300,9 +301,13 @@ const char *TClingTypedefInfo::Title() const
 {
    // Get the source code comment attached to the current typedef.
    if (!IsValid()) {
-      return "";
+      return 0;
    }
-   // FIXME: Implement when rootcling can provide it.
-   return "";
+
+   if (clang::AnnotateAttr *A = GetDecl()->getAttr<clang::AnnotateAttr>())
+      return A->getAnnotation().data();
+
+   // Try to get the comment from the header file if present
+   return ROOT::TMetaUtils::GetComment(*GetDecl()).data();
 }
 

@@ -72,41 +72,6 @@
 #   endif
 #endif
 
-#if defined(__alpha) && !defined(linux)
-#   include <standards.h>
-#   ifndef __USE_STD_IOSTREAM
-#   define __USE_STD_IOSTREAM
-#   endif
-#   define R__TMPLTSTREAM
-#   ifdef _XOPEN_SOURCE
-#      if _XOPEN_SOURCE+0 > 0
-#         define R__TRUE64
-#      endif
-#   endif
-#   define R__ALPHA
-#   define ANSICPP
-#   ifndef R__TRUE64
-#      define NEED_SNPRINTF
-#   endif
-#   ifndef __VMS
-#      define R__UNIX
-#      define R__B64
-#      define R__BYTESWAP
-#      if __DECCXX_VER >= 60060002
-#         define R__VECNEWDELETE /* supports overloading of new[] and delete[] */
-#         define R__PLACEMENTDELETE /* supports overloading placement delete */
-#         define R__PLACEMENTINLINE /* placement new/delete is inline in <new> */
-#         define R__THROWNEWDELETE  /* new/delete throw exceptions */
-#      endif
-#      if defined __GNUC__
-#         define R__NAMESPACE_TEMPLATE_IMP_BUG
-#         define R__PLACEMENTINLINE /* placement new/delete is inline in <new> */
-#      else
-#         define R__TEMPLATE_OVERLOAD_BUG
-#      endif
-#   endif
-#endif
-
 #if defined(__sun) && !(defined(linux) || defined(__FCC_VERSION))
 #   ifdef __SVR4
 #      define R__SOLARIS
@@ -148,26 +113,6 @@
 #   define R__UNIX
 #   define NEED_STRING
 #   define NEED_SIGJMP
-#endif
-
-#if defined(__sgi) && !defined(linux)
-#   define R__SGI
-#   define R__UNIX
-#   define ANSICPP
-#   define NEED_STRING
-#   define NEED_SIGJMP
-#   define R__SEEK64
-#   if !defined(__KCC)
-#      define R__THROWNEWDELETE  /* new/delete throw exceptions */
-#   endif
-#   define R__PLACEMENTINLINE /* placement new/delete is inline in <new> */
-#   ifdef IRIX64
-#      define R__SGI64
-#   endif
-#   if defined(__mips64) || defined(_ABI64)
-#      define R__B64
-#      undef R__SEEK64
-#   endif
 #endif
 
 #if defined(linux)
@@ -213,14 +158,6 @@
 #   define NEED_SIGJMP
 #endif
 
-#if defined(linux) && defined(__alpha__)
-#   define R__LINUX
-#   define R__UNIX
-#   define R__BYTESWAP
-#   define R__B64
-#   define NEED_SIGJMP
-#endif
-
 #if defined(linux) && defined(__arm__)
 #   define R__LINUX
 #   define R__UNIX
@@ -233,68 +170,6 @@
 #   define R__UNIX
 #   define NEED_SIGJMP
 /*#   define R__B64 */     /* enable when 64 bit machine */
-#endif
-
-#if defined(linux) && defined(__sgi)
-#   define R__LINUX
-#   define R__UNIX
-#   define NEED_SIGJMP
-#   if defined(__mips64) || defined(_ABI64)
-#      define R__B64      /* enable when 64 bit machine */
-#   endif
-#endif
-
-/*
-    Note, that there are really 3 APIs:
-
-    mips, mipsel:
-      O32 ABI, ILP32, "long long" in a "aligned" even-odd register
-      pair, 4 argument registers
-
-    mipsn32, mipsn32el
-      N32 ABI, ILP32, but with 64 bit wide registers, and "long long"
-      in a single register, 8 argument registers
-
-    mips64, mips64el
-      N64 ABI, LP64, 8 argument registers
-
-    where O32, N32, and N64 are the ABI names.  ILP32 means that
-    (I)int, (L)long, (P)pointer are 32bit long. LP64 means that
-    long and pointer are 64bit long.  "el" denotes if the ABI is
-    little endian.
-
-    N32 is different from 032, in the calling convention.  Arguments
-    passed as 64bit (long long) reference, and there are 8 of those.
-    O32 is the one closest to "normal" GNU/Linux on i386.
-
-    It's a bit more complex. MIPS spans probably the largest
-    performance range of any CPU family, from a 32bit 20 MHz
-    Microcontroller (made by Microchip) up to a 64bit monster with
-    over 5000 CPUs (made by SiCortex).  Obviously, only the 64bit
-    CPUs can run 64bit code, but 32bit code runs on all of them.
-
-    The use cases for the different ABIs are:
-    - O32: Most compatible, runs everywhere
-    - N32: Best performance on 64 bit if a large address space isn't
-           needed.  It is faster than O32 due to improved calling
-           conventions, and it is faster than N64 due to reduced
-           pointer size.
-    - N64: Huge address space.
-
-    Currently (end 2007) Debian GNU/Linux only supports O32
-
-    Thanks to Thiemo Seufer <ths@networkno.de> of Debian
-*/
-#if defined(__linux) && defined(__mips__)
-#   define R__LINUX
-#   define R__UNIX
-#   define NEED_SIGJMP
-#   if _MIPS_SIM == _ABI64
-#      define R__B64      /* enable when 64 bit machine */
-#   endif
-#   if defined(__MIPSEL__) /* Little endian */
-#      define R__BYTESWAP
-#   endif
 #endif
 
 #if defined(linux) && defined(__hppa)

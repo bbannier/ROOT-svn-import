@@ -135,13 +135,14 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
    
    // Treat the Scope.
    clang::NestedNameSpecifier* prefix = 0;
+   clang::Qualifiers prefix_qualifiers = instanceType.getLocalQualifiers();
    const clang::ElaboratedType* etype 
       = llvm::dyn_cast<clang::ElaboratedType>(instanceType.getTypePtr());
    if (etype) {
       // We have to also handle the prefix.
  
       prefix = AddDefaultParametersNNS(Ctx, etype->getQualifier(), interpreter, normCtxt);
-      instanceType = clang::QualType(etype->getNamedType().getTypePtr(),instanceType.getLocalFastQualifiers());
+      instanceType = clang::QualType(etype->getNamedType().getTypePtr(),0);
    }
 
    // In case of template specializations iterate over the arguments and 
@@ -151,13 +152,13 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
       = llvm::dyn_cast<const clang::TemplateSpecializationType>(instanceType.getTypePtr());
 
    const clang::ClassTemplateSpecializationDecl* TSTdecl
-      = llvm::dyn_cast<const clang::ClassTemplateSpecializationDecl>(instanceType.getTypePtr()->getAsCXXRecordDecl());
+      = llvm::dyn_cast_or_null<const clang::ClassTemplateSpecializationDecl>(instanceType.getTypePtr()->getAsCXXRecordDecl());
 
    if (TST && TSTdecl) {
 
       bool wantDefault = !TClassEdit::IsStdClass(TSTdecl->getName().str().c_str()) && 0 == TClassEdit::STLKind(TSTdecl->getName().str().c_str());
 
-#if R__HAS_PATCH_TO_MAKE_EXPANSION_WORK_WITH_NON_CANONICAL_TYPE
+#ifdef R__HAS_PATCH_TO_MAKE_EXPANSION_WORK_WITH_NON_CANONICAL_TYPE
       clang::Sema& S = interpreter.getCI()->getSema();
 #endif
       clang::TemplateDecl *Template = TSTdecl->getSpecializedTemplate()->getMostRecentDecl();
@@ -172,7 +173,7 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
       for(clang::TemplateSpecializationType::iterator 
              I = TST->begin(), E = TST->end();
           Idecl != Edecl; 
-          ++I, ++Idecl, ++Param) {
+          I!=E ? ++I : 0, ++Idecl, ++Param) {
 
          if (I != E) {
             if (I->getKind() != clang::TemplateArgument::Type) {
@@ -183,7 +184,8 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
             clang::QualType SubTy = I->getAsType();
          
             // Check if the type needs more desugaring and recurse.
-            if (llvm::isa<clang::TemplateSpecializationType>(SubTy)) {
+            if (llvm::isa<clang::TemplateSpecializationType>(SubTy)
+                || llvm::isa<clang::ElaboratedType>(SubTy) ) {
                mightHaveChanged = true;
                desArgs.push_back(clang::TemplateArgument(AddDefaultParameters(SubTy,
                                                                               interpreter,
@@ -204,7 +206,7 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
             }
             clang::QualType SubTy = templateArg.getAsType();
 
-#if R__HAS_PATCH_TO_MAKE_EXPANSION_WORK_WITH_NON_CANONICAL_TYPE
+#ifdef R__HAS_PATCH_TO_MAKE_EXPANSION_WORK_WITH_NON_CANONICAL_TYPE
             clang::SourceLocation TemplateLoc = Template->getSourceRange ().getBegin(); //NOTE: not sure that this is the 'right' location.
             clang::SourceLocation RAngleLoc = TSTdecl->getSourceRange().getBegin(); // NOTE: most likely wrong, I think this is expecting the location of right angle
  
@@ -223,6 +225,10 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
 #endif
             SubTy = AddDefaultParameters(SubTy,interpreter,normCtxt);
             desArgs.push_back(clang::TemplateArgument(SubTy));
+         } else {
+            // We are past the end of the list of specified arguements and we
+            // do not want to add the default, no need to continue.
+            break;
          }
       }
 
@@ -237,6 +243,7 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
    
    if (prefix) {
       instanceType = Ctx.getElaboratedType(clang::ETK_None,prefix,instanceType);
+      instanceType = Ctx.getQualifiedType(instanceType,prefix_qualifiers);
    }
    return instanceType;
 }
@@ -343,8 +350,8 @@ void ROOT::TMetaUtils::GetNormalizedName(std::string &norm_name, const clang::Qu
    normalizedType.getAsStringInternal(normalizedNameStep1,ctxt.getPrintingPolicy());
    
    // Still remove the std:: and default template argument and insert the Long64_t
-   TClassEdit::TSplitType splitname(normalizedNameStep1.c_str(),(TClassEdit::EModType)(TClassEdit::kDropAllDefault |TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault));
-   splitname.ShortType(norm_name, TClassEdit::kDropAllDefault | TClassEdit::kDropStd | TClassEdit::kDropStlDefault );
+   TClassEdit::TSplitType splitname(normalizedNameStep1.c_str(),(TClassEdit::EModType)(TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault));
+   splitname.ShortType(norm_name,TClassEdit::kDropStd | TClassEdit::kDropStlDefault );
 
    // And replace basic_string<char>.  NOTE: we should probably do this at the same time as the GetPartiallyDesugaredType ... but were do we stop ?
    static const char* basic_string_s = "basic_string<char>";
@@ -440,4 +447,83 @@ clang::Module* ROOT::TMetaUtils::declareModuleMap(clang::CompilerInstance* CI,
       ModuleMap.addHeader(modCreation.first, hdrFileEntry);
    } // for headers
    return modCreation.first;
+}
+
+llvm::StringRef ROOT::TMetaUtils::GetComment(const clang::Decl &decl, clang::SourceLocation *loc)
+{
+   clang::SourceManager& sourceManager = decl.getASTContext().getSourceManager();
+   clang::SourceLocation sourceLocation;
+   // Guess where the comment start.
+   // if (const clang::TagDecl *TD = llvm::dyn_cast<clang::TagDecl>(&decl)) {
+   //    if (TD->isThisDeclarationADefinition())
+   //       sourceLocation = TD->getBodyRBrace();
+   // }
+   //else 
+   if (const clang::FunctionDecl *FD = llvm::dyn_cast<clang::FunctionDecl>(&decl)) {
+      if (FD->isThisDeclarationADefinition()) {
+         // We have to consider the argument list, because the end of decl is end of its name
+         // Maybe this will be better when we have { in the arg list (eg. lambdas)
+         if (FD->getNumParams())
+            sourceLocation = FD->getParamDecl(FD->getNumParams() - 1)->getLocEnd();
+         else
+            sourceLocation = FD->getLocEnd();
+
+         // Skip the last )
+         sourceLocation = sourceLocation.getLocWithOffset(1);
+
+         //sourceLocation = FD->getBodyLBrace();
+      }
+      else {
+         //SkipUntil(commentStart, ';');
+      }
+   }
+
+   if (sourceLocation.isInvalid())
+      sourceLocation = decl.getLocEnd();
+
+   // If the location is a macro get the expansion location.
+   sourceLocation = sourceManager.getExpansionRange(sourceLocation).second;
+
+   bool invalid;
+   const char *commentStart = sourceManager.getCharacterData(sourceLocation, &invalid);
+   if (invalid)
+      return "";
+
+   // The decl end of FieldDecl is the end of the type, sometimes excluding the declared name
+   if (llvm::isa<clang::FieldDecl>(&decl)) {
+      // Find the semicolon.
+      while(*commentStart != ';')
+         ++commentStart; 
+   }
+
+   // Find the end of declaration:
+   // When there is definition Comments must be between ) { when there is definition. 
+   // Eg. void f() //comment 
+   //     {}
+   if (!decl.hasBody())
+      while (*commentStart !=';' && *commentStart != '\n' && *commentStart != '\r')
+         ++commentStart;
+
+   // Eat up the last char of the declaration if wasn't newline or comment terminator
+   if (*commentStart != '\n' && *commentStart != '\r' && *commentStart != '{')
+      ++commentStart;
+
+   // Now skip the spaces and beginning of comments.
+   while ( (isspace(*commentStart) || *commentStart == '/') 
+           && *commentStart != '\n' && *commentStart != '\r') {
+      ++commentStart;
+   }
+
+   const char* commentEnd = commentStart;
+   while (*commentEnd != '\n' && *commentEnd != '\r' && *commentEnd != '{') {
+      ++commentEnd;
+   }
+
+   if (loc) {
+      // Find the true beginning of a comment.
+      unsigned offset = commentStart - sourceManager.getCharacterData(sourceLocation);
+      *loc = sourceLocation.getLocWithOffset(offset - 1);
+   }
+
+   return llvm::StringRef(commentStart, commentEnd - commentStart);
 }

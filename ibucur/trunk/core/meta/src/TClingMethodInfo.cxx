@@ -31,6 +31,7 @@
 #include "Property.h"
 #include "TClingProperty.h"
 #include "TClingTypeInfo.h"
+#include "TMetaUtils.h"
 
 #include "cling/Interpreter/Interpreter.h"
 
@@ -403,10 +404,14 @@ const char *TClingMethodInfo::TypeName() const
 
 const char *TClingMethodInfo::Title() const
 {
-   // FIXME: Implement this when we have comment parsing!
    if (!IsValid()) {
       return 0;
    }
-   return "";
+
+   if (clang::AnnotateAttr *A = GetMethodDecl()->getAttr<clang::AnnotateAttr>())
+      return A->getAnnotation().data();
+
+   // Try to get the comment from the header file if present
+   return ROOT::TMetaUtils::GetComment(*GetMethodDecl()).data();
 }
 
