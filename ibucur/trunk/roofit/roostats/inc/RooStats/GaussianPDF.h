@@ -7,7 +7,7 @@
 #include "RooRealProxy.h"
 
 namespace RooStats {
-   class GaussianPDF : public RooAbsPdf, public AbstractPDF {
+   class GaussianPDF : public RooAbsPdf, virtual public AbstractPDF {
    public:
       // RooAbsPdf interface
       GaussianPDF() {}

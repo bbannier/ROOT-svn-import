@@ -53,8 +53,7 @@ namespace RooStats {
       if(pdfType == typeid(RooSimultaneous)) {
          return new CombinedLikelihood(*((RooSimultaneous *)&pdf), data, cPars);
       } else if(pdfType == typeid(RooRealSumPdf) || pdfType == typeid(RooAddPdf)) {
-         std::cout << "THERE SHOULD BE NO RooRealSumPdf OR RooAddPdf !!! " << std::endl;
-         return new SumLikelihood(&pdf, &data); // TODO: add Cmd list
+         return new SumLikelihood(&pdf, &data); // TODO: add Cmd list ??? not needed maybe
       } else {
          return pdf.createNLL(data, cmdList);
       }

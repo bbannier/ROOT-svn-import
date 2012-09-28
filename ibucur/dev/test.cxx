@@ -4,6 +4,12 @@
 #include "RooDataSet.h"
 #include "RooSimultaneous.h"
 #include "RooAbsCategoryLValue.h"
+#include "RooMinuit.h"
+#include "RooFitResult.h"
+#include "RooAbsReal.h"
+#include "RooArgSet.h"
+#include "RooCmdArg.h"
+#include "RooLinkedList.h"
 
 // RooStats headers
 #include "RooStats/ModelConfig.h"
@@ -12,6 +18,39 @@
 
 using namespace RooFit;
 using namespace RooStats;
+
+void buildAddModel(RooWorkspace *w)
+{
+   // Build model
+   w->factory("Gaussian::s1(obs1[10,0,20], sig[10,0,20], bkg1[1,0,10])");
+   w->factory("Gaussian::s2(obs2[10,0,100], 40, sig)");
+   w->factory("Poisson::s3(obs3[20,0,30], sig)"); 
+   w->factory("SUM::sum_pdf(0.2*s1,0.3*s2,0.5*s3)");
+
+   // create combined signal + background model configuration
+   ModelConfig *sbModel = new ModelConfig("S+B", w);
+   sbModel->SetObservables("obs1,obs2,obs3");
+   sbModel->SetParametersOfInterest("sig");
+//   sbModel->SetGlobalObservables("gbkg1,gbkg2,gbkg3");
+   sbModel->SetNuisanceParameters("bkg1");
+   sbModel->SetPdf("sum_pdf");
+   w->import(*sbModel);
+
+   // create combined background model configuration
+   ModelConfig *bModel = new ModelConfig(*sbModel);
+   bModel->SetName("B");
+   w->import(*bModel);
+
+   // define data set
+   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 1000);
+   data->SetName("data");
+   w->import(*data);
+
+}
+
+
+
+
 
 //__________________________________________________________________________________
 void buildSimultaneousModel(RooWorkspace *w)
@@ -48,25 +87,51 @@ void buildSimultaneousModel(RooWorkspace *w)
    RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data"));
    w->import(*data);
 
-   RooArgList constraints;
-   RooAbsPdf *simplePdf = StripConstraints(*w->pdf("sim_pdf"), *sbModel->GetObservables(), constraints);
-
-   simplePdf->Print("");
-   constraints.Print("");
-   
-
-//   w->writeToFile("sim_ws.root");
+//   RooArgList constraints;
+//   RooAbsPdf *simplePdf = StripConstraints(*w->pdf("sim_pdf"), *sbModel->GetObservables(), constraints);
 }
+
 
 void test() {
    RooWorkspace *w = new RooWorkspace("w", kTRUE);
    buildSimultaneousModel(w);   
+//   buildAddModel(w);
+
+   ModelConfig* model = (ModelConfig*)w->obj("S+B");
    
-   RooSimultaneous *sim = (RooSimultaneous *) w->pdf("sim_pdf");
+   RooArgSet *params = model->GetPdf()->getParameters(w->data("data"));
 
-   ProfileLikelihoodTestStat plts(*sim);
-   w->data("data")->Print("v");
+   params->Print("v");
 
+   RooLinkedList commands;
+   RooCmdArg arg1(RooFit::CloneData(kFALSE));
+   RooCmdArg arg2(RooFit::Constrain(*model->GetNuisanceParameters()));
+   commands.Add(&arg1);
+   commands.Add(&arg2);
+
+   //RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data"), commands);
+   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data"), commands);
+
+   RooMinuit m(*nll);
+
+   // call MIGRAD to minimize the likelihood
+//   m.setVerbose(kTRUE);
+   m.migrad();
+   
+   model->GetPdf()->getParameters(w->data("data"))->Print("s");
+//   m.setVerbose(kFALSE);
+
+   // Run HESSE to calculate errors from d2L/dp2
+   // m.hesse();
+   
+   // Run MINOS on only one parameter (but which one?)
+   // m.minos(/* param */);
+
+
+   RooFitResult *r = m.save();
+   r->Print("v");
+   // RooPlot* frame = m.contour(/* */);
+   // frame->SetTitle("RooMinuit contour plot");
 }
 
 

@@ -7,7 +7,7 @@
 #include "RooRealProxy.h"
 
 namespace RooStats {
-   class PoissonPDF : public RooAbsPdf, public AbstractPDF {
+   class PoissonPDF : public RooAbsPdf, virtual public AbstractPDF {
    public:
       // RooAbsPdf interface
       PoissonPDF() {}
