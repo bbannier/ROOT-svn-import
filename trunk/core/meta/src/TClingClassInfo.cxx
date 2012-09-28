@@ -30,6 +30,7 @@
 #include "TClingProperty.h"
 #include "TClingTypeInfo.h"
 #include "TError.h"
+#include "TMetaUtils.h"
 
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/LookupHelper.h"
@@ -821,8 +822,12 @@ const char *TClingClassInfo::Title() const
    if (!IsValid()) {
       return 0;
    }
-   // FIXME: Implement this when rootcling provides the info.
-   return 0;
+
+   if (clang::AnnotateAttr *A = GetDecl()->getAttr<clang::AnnotateAttr>())
+      return A->getAnnotation().data();
+
+   // Try to get the comment from the header file if present
+   return ROOT::TMetaUtils::GetComment(*GetDecl()).data();
 }
 
 const char *TClingClassInfo::TmpltName() const
