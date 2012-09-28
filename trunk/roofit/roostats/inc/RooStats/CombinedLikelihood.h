@@ -210,6 +210,9 @@ private:
          TIterator *itPdf  = addPdf->pdfList().createIterator();
          TIterator *itCoef = addPdf->coefList().createIterator();
          
+         std::cout << addPdf->pdfList().getSize() << " " << addPdf->coefList().getSize() << std::endl;
+         
+         // TODO TODO : last coefficient problem
          for(Int_t i = 0; i < numPdfs; ++i) {
             RooAbsReal* coef = dynamic_cast<RooAbsReal*>(itCoef->Next());
             RooAbsPdf*  pdf  = dynamic_cast<RooAbsPdf* >(itPdf->Next() );
@@ -322,7 +325,12 @@ namespace RooStats {
       // TODO: implement properly
       virtual RooArgSet* getParameters(const RooArgSet*, Bool_t) const {
 //         std::cout << "CombinedLikelihood::getParameters         ";
-         RooArgSet *result = new RooArgSet(*fNuisanceParameters, fConstraintParameters);
+         RooArgSet *result;
+         if(fNuisanceParameters) {
+            result = new RooArgSet(*fNuisanceParameters, fConstraintParameters);
+         } else {
+            result = fPdf->getParameters(fData);
+         }
 //         result->Print("");
 //         fPdf->getParameters(depList, stripDisconnected)->Print("");
 //         std::cout << "CombinedLikelihood::getVariables          ";
@@ -336,6 +344,7 @@ namespace RooStats {
       CombinedLikelihood& operator=(const CombinedLikelihood& rhs); // disallow default assignment operator
 
       const RooSimultaneous* fPdf;
+      const RooAbsData* fData;
       const RooArgSet* fNuisanceParameters;
 
       Int_t fNumberOfChannels;

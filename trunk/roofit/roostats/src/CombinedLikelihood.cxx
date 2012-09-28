@@ -43,6 +43,7 @@ CombinedLikelihood::CombinedLikelihood(
       "combined -log(likelihood)"
    ),
    fPdf(&simPdf),
+   fData(&data),
    fNuisanceParameters(nuis),
    fConstraintParameters("constr_params", "constraint parameters", this)
 {
