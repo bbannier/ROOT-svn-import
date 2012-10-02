@@ -7,7 +7,7 @@
 #ifndef CLING_TRANSACTION_H
 #define CLING_TRANSACTION_H
 
-#include "CompilationOptions.h"
+#include "cling/Interpreter/CompilationOptions.h"
 
 #include "clang/AST/DeclGroup.h"
 
@@ -15,9 +15,11 @@
 
 namespace clang {
   class Decl;
+  struct PrintingPolicy;
 }
 
 namespace llvm {
+  class raw_ostream;
   class Module;
 }
 
@@ -216,6 +218,16 @@ namespace cling {
     ///\brief Prints out all the declarations in the transaction.
     ///
     void dump() const;
+
+    ///\brief Pretty prints out all the declarations in the transaction.
+    ///
+    void dumpPretty() const;
+
+    ///\brief Customizable printout of all the declarations in the transaction.
+    ///
+    void print(llvm::raw_ostream& Out, const clang::PrintingPolicy& Policy,
+               unsigned Indent = 0, bool PrintInstantiation = false) const;
+
   };
 } // end namespace cling
 
