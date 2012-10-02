@@ -13,6 +13,8 @@
 #include "ValuePrinterSynthesizer.h"
 #include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/InterpreterCallbacks.h"
+#include "cling/Interpreter/Transaction.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -170,6 +172,9 @@ namespace cling {
     }
 
     CurT->setState(Transaction::kCommitted);
+    InterpreterCallbacks* callbacks = m_Interpreter->getCallbacks();
+    if (callbacks && callbacks->isEnabled())
+      callbacks->TransactionCommitted(*CurT);
   }
 
   void IncrementalParser::rollbackTransaction(Transaction* T) const {
@@ -345,6 +350,10 @@ namespace cling {
 
     ASTNodeEraser NodeEraser(&getCI()->getSema());
     NodeEraser.RevertTransaction(T);
+
+    InterpreterCallbacks* callbacks = m_Interpreter->getCallbacks();
+    if (callbacks && callbacks->isEnabled())
+      callbacks->TransactionUnloaded(*T);
   }
 
 } // namespace cling
