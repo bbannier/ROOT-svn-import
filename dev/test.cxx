@@ -117,11 +117,13 @@ void test() {
    commands.Add(&arg1);
    commands.Add(&arg2);
 
+
+
    //RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data"), commands);
    RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data"), commands);
 
    double val = nll->getVal(); 
-   std::cout << val << "changing sig " << std::endl;
+   std::cout << val << " changing sig " << std::endl;
    w->var("sig")->setVal(10); 
    val = nll->getVal(); 
    std::cout << val << std::endl;
