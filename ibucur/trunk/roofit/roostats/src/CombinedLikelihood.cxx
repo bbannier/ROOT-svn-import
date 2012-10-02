@@ -47,6 +47,8 @@ CombinedLikelihood::CombinedLikelihood(
    fNuisanceParameters(nuis),
    fConstraintParameters("constr_params", "constraint parameters", this)
 {
+   setOperMode(RooAbsArg::ADirty);
+
    // check that pdf and data have the same category and save a pointer to it
    RooCategory* pdfCatClone = dynamic_cast<RooCategory*>(simPdf.indexCat().Clone());
    assert(pdfCatClone != NULL);

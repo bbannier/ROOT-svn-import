@@ -112,7 +112,7 @@ enum compareOptions {
    cmpOptStats=8
 };
 
-int defaultEqualOptions = 0; //cmpOptPrint;
+int defaultEqualOptions = cmpOptPrint; //cmpOptPrint;
 //int defaultEqualOptions = cmpOptDebug;
 
 const double defaultErrorLimit = 1.E-10;
