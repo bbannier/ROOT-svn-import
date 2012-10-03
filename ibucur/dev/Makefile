@@ -10,6 +10,10 @@ TESTOBJ = test.$(ObjSuf)
 TESTSRC = test.$(SrcSuf)
 TEST    = test$(ExeSuf)
 
+TEST2OBJ = test2.$(ObjSuf)
+TEST2SRC = test2.$(SrcSuf)
+TEST2    = test2$(ExeSuf)
+
 STRESSROOSTATSOBJ = stressRooStats.$(ObjSuf)
 STRESSROOSTATSSRC = stressRooStats.$(SrcSuf)
 STRESSROOSTATS    = stressRooStats$(ExeSuf)
@@ -34,10 +38,15 @@ endif
 
 #----------------------------------------------------------------------------
 
-PROGRAMS = $(TEST) $(STRESSROOSTATS) $(MODEL) $(PVALUE) $(COMBINED)
-OBJS = $(TESTOBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ) $(COMBINEDOBJ)
+PROGRAMS = $(TEST) $(TEST2) $(STRESSROOSTATS) $(MODEL) $(PVALUE) $(COMBINED)
+OBJS = $(TESTOBJ) $(TEST2OBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ) $(COMBINEDOBJ)
+TESTS = $(TEST) $(TEST2)
 
 $(TEST):	$(TESTOBJ)
+	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
+	@echo "$@ done"
+
+$(TEST2): $(TEST2OBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
@@ -67,6 +76,8 @@ all:	$(PROGRAMS)
 
 print:
 	@echo "$(OBJS)"   
+  
+tests:	$(TESTS)
 
 clean:
 	@rm -f $(OBJS) core TrackDict.$(SrcSuf) TrackDict.h
