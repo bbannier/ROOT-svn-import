@@ -324,20 +324,9 @@ namespace RooStats {
       
       // TODO: implement properly
       virtual RooArgSet* getParameters(const RooArgSet*, Bool_t) const {
-//         std::cout << "CombinedLikelihood::getParameters         ";
-         RooArgSet *result;
-         if(fNuisanceParameters) {
-            result = new RooArgSet(*fNuisanceParameters, fConstraintParameters);
-         } else {
-            result = fPdf->getParameters(fData);
-         }
-//         result->Print("");
-//         fPdf->getParameters(depList, stripDisconnected)->Print("");
-//         std::cout << "CombinedLikelihood::getVariables          ";
-//         fPdf->getVariables(stripDisconnected)->Print("");
-//         std::cout << "CombinedLikelihood::constrainedParameters ";
-//         fConstraintParameters.Print(""); 
-         return result;
+         std::cout << "CombinedLikelihood::getParameters" << std::endl;
+         fPdf->getParameters(fData)->Print("v");
+         return fPdf->getParameters(fData);
       }
 
    private:
