@@ -52,6 +52,7 @@ void test() {
 */
 
    RooMinuit m(*nll);
+   m.setErrorLevel(0.5);
 
    // call MIGRAD to minimize the likelihood
 //   m.setPrintLevel(3);

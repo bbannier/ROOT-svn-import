@@ -36,7 +36,7 @@ CombinedLikelihood::CombinedLikelihood(
 CombinedLikelihood::CombinedLikelihood(
    const RooSimultaneous& simPdf,
    const RooAbsData& data,
-   const RooArgSet *nuis
+   const RooLinkedList& cmdList
 ) :
    RooAbsReal(
       TString::Format("comb_nll_%s_%s", simPdf.GetName(), data.GetName()).Data(),
@@ -44,7 +44,7 @@ CombinedLikelihood::CombinedLikelihood(
    ),
    fPdf(&simPdf),
    fData(&data),
-   fNuisanceParameters(nuis),
+   fNuisanceParameters(NULL),
    fConstraintParameters("constr_params", "constraint parameters", this)
 {
    // XXX: maybe need Init method ?
@@ -95,7 +95,7 @@ CombinedLikelihood::CombinedLikelihood(
       fChannelNames.push_back(std::string(crtLabel));
      
       // TODO: eliminate logL variable if not needed in the end 
-      RooAbsReal* logL = RooStats::CreateNLL(*simPdf.getPdf(crtLabel), *fDataSets[i], RooLinkedList());
+      RooAbsReal* logL = RooStats::CreateNLL(*simPdf.getPdf(crtLabel), *fDataSets[i], cmdList);
       fChannelLikelihoods.push_back(logL);
    } 
 
@@ -204,7 +204,7 @@ Double_t CombinedLikelihood::evaluate() const
       // FIXME: need *citCLL != 0 ?
       result += (*citCLL)->getVal();
    }
-
+/*
    if (fNumberOfConstraints > 0) {
       std::vector<RooAbsPdf*>::const_iterator citPdf = fConstraints.begin(), cendPdf = fConstraints.end(); 
       std::vector<Double_t>::const_iterator citZP  = fConstraintZeroPoints.begin();
@@ -215,7 +215,7 @@ Double_t CombinedLikelihood::evaluate() const
       }
           
    }
-
+*/
    return result;
 }
 

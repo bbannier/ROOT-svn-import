@@ -41,17 +41,9 @@ namespace RooStats {
 
    RooAbsReal* CreateNLL(RooAbsPdf& pdf, RooAbsData& data, const RooLinkedList& cmdList) {
    // utility function to accommodate new CombinedLikelihood for RooSimultaneous
-      RooCmdConfig pc(Form("RooStatsUtils::CreateNLL(%s)", pdf.GetName()));
-      pc.defineSet("cPars", "Constrain", 0, 0);
-      pc.defineSet("cloneData", "CloneData", 2, 0);
-      pc.process(cmdList);
-      if (!pc.ok(kTRUE)) { std::cout << "RooCmdConfig::process ERROR" << std::endl; return NULL; } 
-      RooArgSet *cPars = pc.getSet("cPars");
-//      if(cPars) cPars->Print("");
-      
       const std::type_info& pdfType = typeid(pdf);
       if(pdfType == typeid(RooSimultaneous)) {
-         return new CombinedLikelihood(*((RooSimultaneous *)&pdf), data, cPars);
+         return new CombinedLikelihood(*((RooSimultaneous *)&pdf), data, cmdList);
       } else if(pdfType == typeid(RooRealSumPdf) || pdfType == typeid(RooAddPdf)) {
          return new SumLikelihood(&pdf, &data); // TODO: add Cmd list ??? not needed maybe
       } else {
