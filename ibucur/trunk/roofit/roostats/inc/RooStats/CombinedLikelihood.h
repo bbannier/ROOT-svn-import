@@ -310,7 +310,7 @@ namespace RooStats {
       // Constructors, destructors, assignment
       CombinedLikelihood(const char* name, const char* title, RooArgList& pdfList);
       CombinedLikelihood(const CombinedLikelihood& rhs, const char *newName = NULL);
-      CombinedLikelihood(const RooSimultaneous& simPdf, const RooAbsData& data, const RooArgSet* nuis);
+      CombinedLikelihood(const RooSimultaneous& simPdf, const RooAbsData& data, const RooLinkedList& cmdList);
       virtual TObject *clone(const char *newName) const { return new CombinedLikelihood(*this, newName); }
       virtual ~CombinedLikelihood();
 
