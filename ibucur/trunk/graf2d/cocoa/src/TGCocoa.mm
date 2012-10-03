@@ -301,7 +301,7 @@ bool ParentRendersToChild(NSView<X11Window> *child)
    assert(child != nil && "ParentRendersToChild, child parameter is nil");
 
    //Adovo poluchaetsia, tashhem-ta! ;)
-   return X11::ViewIsTextViewFrame(child, true) && !child.fContext && 
+   return (X11::ViewIsTextViewFrame(child, true) || X11::ViewIsHtmlViewFrame(child, true)) && !child.fContext &&
           child.fMapState == kIsViewable && child.fParentView.fContext &&
           !child.fIsOverlapped;
 }
@@ -1138,8 +1138,8 @@ void TGCocoa::TranslateCoordinates(Window_t srcWin, Window_t dstWin, Int_t srcX,
          //hitTest requires a point in a view's superview coordinate system.
          //Even contentView of QuartzWindow has a superview (NSThemeFrame),
          //so this should always work.
-         dstPoint = [[dstView superview] convertPoint : dstPoint fromView : dstView];
-         if (NSView<X11Window> * const view = (NSView<X11Window> *)[dstView hitTest : dstPoint]) {
+         const NSPoint pt = [[dstView superview] convertPoint : dstPoint fromView : dstView];
+         if (NSView<X11Window> * const view = (NSView<X11Window> *)[dstView hitTest : pt]) {
             if (view != dstView && view.fMapState == kIsViewable)
                child = view.fID;
          }
@@ -1996,7 +1996,10 @@ void TGCocoa::DrawStringAux(Drawable_t wid, const GCValues_t &gcVals, Int_t x, I
    CGContextSetRGBFillColor(ctx, textColor[0], textColor[1], textColor[2], textColor[3]);
 
    //Do a simple text layout using CGGlyphs.
-   std::vector<UniChar> unichars(text, text + len);
+   //GUI uses non-ascii symbols, and does not care about signed/unsigned - just dump everything
+   //into a char and be happy. I'm not.
+   std::vector<UniChar> unichars((unsigned char *)text, (unsigned char *)text + len);
+
    //Replace remaining ^P symbols with whitespaces, I have not idea why
    //TGTextView replaces only part of them and not all of them (but I know the name for such a behavior - BUG).
    std::replace(unichars.begin(), unichars.end(), UniChar(16), UniChar(' '));

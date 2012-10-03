@@ -97,9 +97,6 @@ else
 		if [ "$(CC)" = "icc" ]; then \
 			FREECC="icc -wd188 -wd181"; \
 		fi; \
-		if [ $(ARCH) = "alphacxx6" ]; then \
-			FREECC="cc"; \
-		fi; \
 		if [ $(ARCH) = "linux" ]; then \
 			FREECC="$$FREECC -m32"; \
 			FREE_CFLAGS="-m32"; \
@@ -141,10 +138,6 @@ else
 		if [ $(ARCH) = "solaris64CC5" ]; then \
 			FREECC="$$FREECC -m64"; \
 			FREE_CFLAGS="-m64"; \
-		fi; \
-		if [ $(ARCH) = "sgicc64" ]; then \
-			FREECC="cc"; \
-			FREE_CFLAGS="-64"; \
 		fi; \
 		if [ $(ARCH) = "linuxppc64gcc" ]; then \
 			FREECC="$$FREECC -m64"; \
