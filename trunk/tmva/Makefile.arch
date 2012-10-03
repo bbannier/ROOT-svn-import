@@ -135,78 +135,6 @@ LDFLAGS       = -O4
 SOFLAGS       = -G
 endif
 
-ifeq ($(ARCH),sgicc)
-# SGI
-CXX           = CC -n32  -I/usr/include/CC.sgi
-CXXFLAGS      = -O2
-LD            = CC -n32 -LANG:std  -I/usr/include/CC.sgi
-LDFLAGS       = -O2
-SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),sgicc64)
-# SGI
-CXX           = CC -64  -I/usr/include/CC.sgi
-CXXFLAGS      = -O2
-LD            = CC -64 -LANG:std -I/usr/include/CC.sgi
-LDFLAGS       = -O2
-SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),sgiegcs)
-# SGI 6.x with EGCS
-CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC
-LD            = g++
-LDFLAGS       = -O2 -Wl,-u,__builtin_new -Wl,-u,__builtin_delete -Wl,-u,__nw__FUiPv
-SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),sgin32egcs)
-# SGI 6.x with EGCS for n32 ABI
-CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC
-LD            = g++
-LDFLAGS       = -O2 -L/usr/lib32 -Wl,-woff,134
-SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),sgikcc)
-# SGI with KCC
-CXX           = KCC -n32 --one_instantiation_per_object
-CXXFLAGS      = -O2
-LD            = KCC -n32
-LDFLAGS       = -O2
-SOFLAGS       =
-endif
-
-ifeq ($(ARCH),alphaegcs)
-# Alpha/OSF with egcs
-CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC
-LD            = g++
-LDFLAGS       = -O2
-SOFLAGS       = -Wl,-expect_unresolved,* -shared
-endif
-
-ifeq ($(ARCH),alphakcc)
-# Alpha/OSF with kai compiler (not yet valid)
-CXX           = KCC --one_instantiation_per_object
-CXXFLAGS      = -O2 -fPIC
-LD            = KCC
-LDFLAGS       = -O2
-SOFLAGS       = -Wl,-expect_unresolved,* -shared
-endif
-
-ifeq ($(ARCH),alphacxx6)
-# Alpha/OSF with cxx6
-CXX           = cxx
-CXXFLAGS      = -O2
-LD            = cxx
-LDFLAGS       = -O2
-SOFLAGS       = -shared -nocxxstd -Wl,-expect_unresolved,*,-msym
-endif
-
 ifeq ($(ARCH),linuxrh51)
 # Linux with gcc 2.7.2.x
 CXX           = g++
@@ -315,15 +243,6 @@ LDFLAGS       = -O2
 SOFLAGS       = -shared
 endif
 
-ifeq ($(ARCH),linuxia64sgi)
-# Itanium Linux with sgiCC
-CXX           = sgiCC
-CXXFLAGS      = -O -Wall -fPIC -Wshadow -Woverloaded-virtual
-LD            = gsgiCC
-LDFLAGS       = -O
-SOFLAGS       = -shared
-endif
-
 ifeq ($(ARCH),linuxia64ecc)
 # Itanium Linux with Intel icc (was ecc)
 ICC_MAJOR    := $(shell icc -v 2>&1 | awk '{ if (NR==1) print $$2 }' | \
@@ -367,15 +286,6 @@ ifeq ($(ARCH),linuxx8664icc)
 CXX           = icc
 CXXFLAGS      = -O2 -fPIC -Wshadow -wd1476 -wd1572
 LD            = icpc
-LDFLAGS       = -O2
-SOFLAGS       = -shared
-endif
-
-ifeq ($(ARCH),linuxalphaegcs)
-# Alpha Linux with egcs
-CXX           = g++
-CXXFLAGS      = -O2 -Wall -fPIC -Wshadow -Woverloaded-virtual
-LD            = g++
 LDFLAGS       = -O2
 SOFLAGS       = -shared
 endif
