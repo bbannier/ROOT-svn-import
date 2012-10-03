@@ -47,6 +47,7 @@ CombinedLikelihood::CombinedLikelihood(
    fNuisanceParameters(nuis),
    fConstraintParameters("constr_params", "constraint parameters", this)
 {
+   // XXX: maybe need Init method ?
    setOperMode(RooAbsArg::ADirty);
 
    // check that pdf and data have the same category and save a pointer to it
@@ -57,7 +58,6 @@ CombinedLikelihood::CombinedLikelihood(
    assert(dataCat != NULL);
 
    fNumberOfChannels = pdfCatClone->numBins(NULL); 
-
 
    // Data splitting part
    // TODO: explore SetData necessity
@@ -93,10 +93,9 @@ CombinedLikelihood::CombinedLikelihood(
       // Set Channels
       fChannels.push_back(simPdf.getPdf(crtLabel)); 
       fChannelNames.push_back(std::string(crtLabel));
-      
+     
+      // TODO: eliminate logL variable if not needed in the end 
       RooAbsReal* logL = RooStats::CreateNLL(*simPdf.getPdf(crtLabel), *fDataSets[i], RooLinkedList());
-      // XXX: Important, disable cache for NLLs
-//      logL->setOperMode(RooAbsArg::ADirty);
       fChannelLikelihoods.push_back(logL);
    } 
 
