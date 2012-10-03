@@ -183,7 +183,7 @@ Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t s
   
   RooAbsPdf* pdfClone = (RooAbsPdf*) _funcClone ;
 
-  // cout << "RooNLLVar::evaluatePartition(" << GetName() << ") projDeps = " << (_projDeps?*_projDeps:RooArgSet()) << endl ;
+   cout << "RooNLLVar::evaluatePartition(" << GetName() << ") projDeps = " << (_projDeps?*_projDeps:RooArgSet()) << endl ;
 
   _dataClone->store()->recalculateCache( _projDeps, firstEvent, lastEvent, stepSize ) ;
 
@@ -249,7 +249,8 @@ Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t s
     _first = kFALSE ;
     _funcClone->wireAllCaches() ;
   }
-      
+     
+  std::cout << "RooNLLVar::evaluatePartition result " << result << std::endl; 
 
   return result ;
 }
