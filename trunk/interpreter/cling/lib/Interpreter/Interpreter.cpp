@@ -347,6 +347,14 @@ namespace cling {
     return m_IncrParser->getCI();
   }
 
+  const Sema& Interpreter::getSema() const {
+    return getCI()->getSema();
+  }
+
+  Sema& Interpreter::getSema() {
+    return getCI()->getSema();
+  }
+
    llvm::ExecutionEngine* Interpreter::getExecutionEngine() const {
     return m_ExecutionContext->getExecutionEngine();
   }
@@ -637,11 +645,9 @@ namespace cling {
 
     Value Result;
     if (TheSema.ExternalSource) {
-      DynamicIDHandler* DIDH =
-        static_cast<DynamicIDHandler*>(TheSema.ExternalSource);
-      DIDH->Callbacks->setEnabled();
+      getCallbacks()->setEnabled();
       (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, &Result);
-      DIDH->Callbacks->setEnabled(false);
+      getCallbacks()->setEnabled(false);
     }
     else
       (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, &Result);
@@ -653,11 +659,6 @@ namespace cling {
 
   void Interpreter::setCallbacks(InterpreterCallbacks* C) {
     m_Callbacks.reset(C);
-    // FIXME: Terrible hack breaking the encapsulation.
-    Sema& S = getCI()->getSema();
-
-    if (S.ExternalSource)
-      static_cast<DynamicIDHandler*>(S.ExternalSource)->Callbacks = C;
   }
 
   void Interpreter::enableDynamicLookup(bool value /*=true*/) {
@@ -668,7 +669,7 @@ namespace cling {
       assert(!S.ExternalSource && "Already set Sema ExternalSource");
       // Load the dynamic lookup specifics.
       declare("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
-      S.ExternalSource = new DynamicIDHandler(&S);
+      S.ExternalSource = new DynamicIDHandler(this);
     }
     else {
       delete S.ExternalSource;
