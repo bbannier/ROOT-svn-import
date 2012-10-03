@@ -42,18 +42,20 @@ void test() {
    RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data"), commands);
 //   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data"), commands);
 
+/*
    double val = nll->getVal(); 
    std::cout << val << " changing sig " << std::endl;
    w->var("sig")->setVal(10); 
    val = nll->getVal(); 
    std::cout << val << std::endl;
    return;
-
+*/
 
    RooMinuit m(*nll);
 
    // call MIGRAD to minimize the likelihood
-//   m.setVerbose(kTRUE);
+//   m.setPrintLevel(3);
+//   m.setVerbose(true);
    m.migrad();
    
    model->GetPdf()->getParameters(w->data("data"))->Print("s");
