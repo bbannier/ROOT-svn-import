@@ -86,8 +86,52 @@ inline Bool_t TArray::BoundsOk(const char *where, Int_t at) const
 
 template<typename T>
 class TArrayT : public TArray {
+public:
+   T* fArray;
+   TArrayT() : fArray(NULL) {}
+   TArrayT(Int_t n) : fArray(NULL) { if(n > 0) Set(n); }
+   TArrayT(Int_t n, const T* array) : fArray(NULL) { Set(n, array); }
+   TArrayT(const TArrayT<T>& rhs) : TArray(rhs), fArray(NULL) { Set(rhs.fN, rhs.fArray); }
+   TArrayT& operator=(const TArrayT<T>& rhs) { if(this != &rhs) Set(rhs.fN, rhs.fArray); return *this; }
+   virtual ~TArrayT() { delete [] fArray; }
+
+   void   AddAt(T value, Int_t i) { 
+      if (!BoundsOk("TArrayT::AddAt", i)) return;
+      fArray[i] = value;
+   }
+   T       At(Int_t i) const {
+      if (!BoundsOk("TArrayT::At", i)) return T();
+      return fArray[i];
+   }
+   void    Adopt(Int_t n, T* array) {
+      if (fArray) delete [] fArray;
+      fN = n; fArray = array;
+   }
+
+   void     Copy(TArrayT<T> &array) const { array.Set(fN, fArray); }
+   const T* GetArray() const { return fArray; }
+   T*       GetArray() { return fArray; }
+   Double_t GetAt(Int_t i) const { return At(i); }
+   Stat_t   GetSum() const { Stat_t sum = 0; for(Int_t i = 0; i < fN; ++i) sum += fArray[i]; return sum; }
+   void     Reset(T value = T()) { memset(fArray, value, fN * sizeof(T)); }
+   void     Set(Int_t n);
+   void     Set(Int_t n, const T* array);
+   void     SetAt(Double_t value, Int_t i) { AddAt(T(value), i); }
+
+   T&       operator[](Int_t i) { 
+      if (!BoundsOk("TArrayT::operator[]", i)) i = 0; 
+      return fArray[i]; 
+   }
+   T        operator[](Int_t i) const {
+      if (!BoundsOk("TArrayT::operator[]", i)) return T(); 
+      return fArray[i]; 
+   }
+
+
    ClassDef(TArrayT,1)
 };
 
 
 #endif
+
+
