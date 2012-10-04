@@ -35,15 +35,15 @@ class TArray {
 protected:
    Bool_t        BoundsOk(const char *where, Int_t at) const;
    Bool_t        OutOfBoundsError(const char *where, Int_t i) const;
+   TArray(const TArray &a): fN(a.fN) { }
+   TArray         &operator=(const TArray &rhs) 
+     {if(this!=&rhs) fN = rhs.fN; return *this; }
 
 public:
    Int_t     fN;            //Number of array elements
 
    TArray(): fN(0) { }
    TArray(Int_t n): fN(n) { }
-   TArray(const TArray &a): fN(a.fN) { }
-   TArray         &operator=(const TArray &rhs) 
-     {if(this!=&rhs) fN = rhs.fN; return *this; }
    virtual        ~TArray() { fN = 0; }
 
    Int_t          GetSize() const { return fN; }
@@ -82,5 +82,12 @@ inline Bool_t TArray::BoundsOk(const char *where, Int_t at) const
                   ? OutOfBoundsError(where, at)
                   : kTRUE;
 }
+
+
+template<typename T>
+class TArrayT : public TArray {
+   ClassDef(TArrayT,1)
+};
+
 
 #endif
