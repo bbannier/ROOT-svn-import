@@ -18,6 +18,12 @@
 #pragma link C++ typedef TAssoc;
 
 #pragma link C++ class TArray!;
+#pragma link C++ class TArrayT<Char_t>;
+#pragma link C++ class TArrayT<Double_t>;
+#pragma link C++ class TArrayT<Float_t>;
+#pragma link C++ class TArrayT<Int_t>;
+#pragma link C++ class TArrayT<Long_t>;
+#pragma link C++ class TArrayT<Long64_t>;
 #pragma link C++ class TArrayC-!;
 #pragma link C++ class TArrayD-!;
 #pragma link C++ class TArrayF-!;
