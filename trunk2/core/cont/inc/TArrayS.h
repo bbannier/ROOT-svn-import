@@ -26,36 +26,25 @@
 #endif
 
 
-class TArrayS : public TArray {
+class TArrayS : public TArrayT<Short_t> {
 
 public:
-   Short_t    *fArray;       //[fN] Array of fN shorts
 
-   TArrayS();
-   TArrayS(Int_t n);
-   TArrayS(Int_t n, const Short_t *array);
-   TArrayS(const TArrayS &array);
-   TArrayS    &operator=(const TArrayS &rhs);
-   virtual    ~TArrayS();
+   TArrayS() : TArrayT<Short_t>() {}
+   TArrayS(Int_t n) : TArrayT<Short_t>(n) { }
+   TArrayS(Int_t n, const Short_t *array) : TArrayT<Short_t>(n, array) { }
+   TArrayS(const TArrayS &rhs) : TArrayT<Short_t>(rhs) { }
+   TArrayS    &operator=(const TArrayS &rhs) { TArrayT<Short_t>::operator=(rhs); return *this; }
+   virtual    ~TArrayS() { }
 
-   void           Adopt(Int_t n, Short_t *array);
-   void           AddAt(Short_t c, Int_t i);
-   Short_t        At(Int_t i) const ;
-   void           Copy(TArrayS &array) const {array.Set(fN,fArray);}
-   const Short_t *GetArray() const { return fArray; }
-   Short_t       *GetArray() { return fArray; }
-   Double_t       GetAt(Int_t i) const { return At(i); }
-   Stat_t         GetSum() const {Stat_t sum=0; for (Int_t i=0;i<fN;i++) sum+=fArray[i]; return sum;}
-   void           Reset()             {memset(fArray, 0,fN*sizeof(Short_t));}
-   void           Reset(Short_t val)  {for (Int_t i=0;i<fN;i++) fArray[i] = val;}
-   void           Set(Int_t n);
-   void           Set(Int_t n, const Short_t *array);
-   void           SetAt(Double_t v, Int_t i) { AddAt((Short_t)v, i); }
-   Short_t       &operator[](Int_t i);
-   Short_t        operator[](Int_t i) const;
-
-   ClassDef(TArrayS,1)  //Array of shorts
+   ClassDef(TArrayS,1) 
 };
+
+inline void TArrayS::Streamer(TBuffer &b) 
+{ 
+   // Stream a TArrayS object
+   TArrayT<Short_t>::Streamer(b);
+}
 
 #if defined R__TEMPLATE_OVERLOAD_BUG
 template <>
@@ -77,23 +66,5 @@ inline TBuffer &operator<<(TBuffer &buf, const TArrayS *obj)
    return buf << (TArray*)obj;
 }
 
-inline Short_t TArrayS::At(Int_t i) const
-{
-   if (!BoundsOk("TArrayS::At", i)) return 0;
-   return fArray[i];
-}
-
-inline Short_t &TArrayS::operator[](Int_t i)
-{
-   if (!BoundsOk("TArrayS::operator[]", i))
-      i = 0;
-   return fArray[i];
-}
-
-inline Short_t TArrayS::operator[](Int_t i) const
-{
-   if (!BoundsOk("TArrayS::operator[]", i)) return 0;
-   return fArray[i];
-}
 
 #endif

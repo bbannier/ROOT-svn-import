@@ -37,9 +37,14 @@ public:
    TArrayC    &operator=(const TArrayC &rhs) { TArrayT<Char_t>::operator=(rhs); return *this; }
    virtual    ~TArrayC() { }
 
-   ClassDef(TArrayC,1)  //Array of chars
+   ClassDef(TArrayC,1)
 };
 
+inline void TArrayC::Streamer(TBuffer &b) 
+{ 
+   // Stream a TArrayC object
+   TArrayT<Char_t>::Streamer(b);
+}
 
 #if defined R__TEMPLATE_OVERLOAD_BUG
 template <>
