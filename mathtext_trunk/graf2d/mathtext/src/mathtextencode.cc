@@ -132,7 +132,7 @@ namespace mathtext {
 							 _code);
 
 		if(lower < glyph_control_sequence + nglyph &&
-		   *lower == _code) {
+		   std::string(*lower) == _code) {
 			const unsigned long index =
 				lower - glyph_control_sequence;
 
