@@ -185,3 +185,20 @@ void TArrayT<T>::Set(Int_t n, const T* array)
 }
 
 
+//_______________________________________________________________________
+template <typename T>
+void TArrayT<T>::Streamer(TBuffer &b)
+{
+   // Stream a TArrayT object
+   if (b.IsReading()) {
+      Int_t n;
+      b >> n;
+      Set(n);
+      b.ReadFastArray(fArray,n);
+   } else {
+      b << fN;
+      b.WriteFastArray(fArray, fN);
+   }
+}
+
+

@@ -26,37 +26,25 @@
 #endif
 
 
-class TArrayD : public TArray {
+class TArrayD : public TArrayT<Double_t> {
 
 public:
-   Double_t    *fArray;       //[fN] Array of fN doubles
 
-   TArrayD();
-   TArrayD(Int_t n);
-   TArrayD(Int_t n, const Double_t *array);
-   TArrayD(const TArrayD &array);
-   TArrayD    &operator=(const TArrayD &rhs);
-   virtual    ~TArrayD();
+   TArrayD() : TArrayT<Double_t>() {}
+   TArrayD(Int_t n) : TArrayT<Double_t>(n) { }
+   TArrayD(Int_t n, const Double_t *array) : TArrayT<Double_t>(n, array) { }
+   TArrayD(const TArrayD &rhs) : TArrayT<Double_t>(rhs) { }
+   TArrayD    &operator=(const TArrayD &rhs) { TArrayT<Double_t>::operator=(rhs); return *this; }
+   virtual    ~TArrayD() { }
 
-   void            Adopt(Int_t n, Double_t *array);
-   void            AddAt(Double_t c, Int_t i);
-   Double_t        At(Int_t i) const ;
-   void            Copy(TArrayD &array) const {array.Set(fN,fArray);}
-   const Double_t *GetArray() const { return fArray; }
-   Double_t       *GetArray() { return fArray; }
-   Double_t        GetAt(Int_t i) const { return At(i); }
-   Stat_t          GetSum() const {Stat_t sum=0; for (Int_t i=0;i<fN;i++) sum+=fArray[i]; return sum;}
-   void            Reset()             {memset(fArray, 0, fN*sizeof(Double_t));}
-   void            Reset(Double_t val) {for (Int_t i=0;i<fN;i++) fArray[i] = val;}
-   void            Set(Int_t n);
-   void            Set(Int_t n, const Double_t *array);
-   void            SetAt(Double_t v, Int_t i) { AddAt(v, i); }
-   Double_t       &operator[](Int_t i);
-   Double_t        operator[](Int_t i) const;
-
-   ClassDef(TArrayD,1)  //Array of doubles
+   ClassDef(TArrayD,1)
 };
 
+inline void TArrayD::Streamer(TBuffer &b) 
+{ 
+   // Stream a TArrayD object
+   TArrayT<Double_t>::Streamer(b);
+}
 
 #if defined R__TEMPLATE_OVERLOAD_BUG
 template <>
@@ -78,23 +66,5 @@ inline TBuffer &operator<<(TBuffer &buf, const TArrayD *obj)
    return buf << (TArray*)obj;
 }
 
-inline Double_t TArrayD::At(Int_t i) const
-{
-   if (!BoundsOk("TArrayD::At", i)) return 0;
-   return fArray[i];
-}
-
-inline Double_t &TArrayD::operator[](Int_t i)
-{
-   if (!BoundsOk("TArrayD::operator[]", i))
-      i = 0;
-   return fArray[i];
-}
-
-inline Double_t TArrayD::operator[](Int_t i) const
-{
-   if (!BoundsOk("TArrayD::operator[]", i)) return 0;
-   return fArray[i];
-}
 
 #endif

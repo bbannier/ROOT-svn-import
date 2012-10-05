@@ -87,7 +87,7 @@ inline Bool_t TArray::BoundsOk(const char *where, Int_t at) const
 template<typename T>
 class TArrayT : public TArray {
 public:
-   T* fArray;
+   T* fArray;  //[fN] Array of fN values
    TArrayT() : fArray(NULL) {}
    TArrayT(Int_t n) : fArray(NULL) { if(n > 0) Set(n); }
    TArrayT(Int_t n, const T* array) : fArray(NULL) { Set(n, array); }
@@ -131,7 +131,40 @@ public:
    ClassDef(TArrayT,1)
 };
 
+#ifndef __CINT__
+template <typename T>
+TBuffer& operator>>(TBuffer& buf, TArrayT<T>*& obj)
+{
+   // Read TArrayT object from buffer
+   obj = (TArrayT<T> *) TArray::ReadArray(buf, TArrayT<T>::Class());
+   return buf;
+}
 
-#endif
+template <typename T>
+inline TBuffer& operator<<(TBuffer& buf, const TArrayT<T>* obj)
+{
+   // Write a TArrayT object into buffer
+   return buf << (TArray*)obj;
+}
+#else
+template TBuffer& operator>>(TBuffer& buf, TArrayT<Char_t>*& obj);
+template TBuffer& operator>>(TBuffer& buf, TArrayT<Short_t>*& obj);
+template TBuffer& operator>>(TBuffer& buf, TArrayT<Int_t>*& obj);
+template TBuffer& operator>>(TBuffer& buf, TArrayT<Long_t>*& obj);
+template TBuffer& operator>>(TBuffer& buf, TArrayT<Long64_t>*& obj);
+template TBuffer& operator>>(TBuffer& buf, TArrayT<Float_t>*& obj);
+template TBuffer& operator>>(TBuffer& buf, TArrayT<Double_t>*& obj);
 
+template TBuffer& operator<<(TBuffer& buf, const TArrayT<Char_t>* obj);
+template TBuffer& operator<<(TBuffer& buf, const TArrayT<Short_t>* obj);
+template TBuffer& operator<<(TBuffer& buf, const TArrayT<Int_t>* obj);
+template TBuffer& operator<<(TBuffer& buf, const TArrayT<Long_t>* obj);
+template TBuffer& operator<<(TBuffer& buf, const TArrayT<Long64_t>* obj);
+template TBuffer& operator<<(TBuffer& buf, const TArrayT<Float_t>* obj);
+template TBuffer& operator<<(TBuffer& buf, const TArrayT<Double_t>* obj);
+#endif // __CINT__
+
+
+
+#endif // ROOT_TArray
 
