@@ -337,6 +337,7 @@ namespace mathtext {
 		return true;
 	}
 
+#if 0
 	std::string tex_form(const double x)
 	{
 		std::string retval;
@@ -346,5 +347,6 @@ namespace mathtext {
 			return retval;
 		}
 	}
+#endif
 
 }
