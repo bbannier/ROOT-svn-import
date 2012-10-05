@@ -250,7 +250,7 @@ Double_t RooNLLVar::evaluatePartition(Int_t firstEvent, Int_t lastEvent, Int_t s
     _funcClone->wireAllCaches() ;
   }
      
-  std::cout << "RooNLLVar::evaluatePartition result " << result << std::endl; 
+//  std::cout << "RooNLLVar::evaluatePartition result " << result << std::endl; 
 
   return result ;
 }

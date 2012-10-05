@@ -82,9 +82,11 @@ public:
    virtual TObject *DrawDerivative(Option_t * ="al") {return 0;}
    virtual TObject *DrawIntegral(Option_t * ="al")   {return 0;}
    virtual void     ExecuteEvent(Int_t event, Int_t px, Int_t py);
-   virtual void     GetMinimumXYZ(Double_t &x, Double_t &y, Double_t &z);
+   virtual Double_t GetMinimumXYZ(Double_t &x, Double_t &y, Double_t &z);
+   virtual Double_t GetMaximumXYZ(Double_t &x, Double_t &y, Double_t &z);
           Int_t     GetNpz() const {return fNpz;}
    virtual void     GetRandom3(Double_t &xrandom, Double_t &yrandom, Double_t &zrandom);
+   using TF1::GetRange; 
    virtual void     GetRange(Double_t &xmin, Double_t &xmax) const;
    virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax) const ;
    virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &zmin, Double_t &xmax, Double_t &ymax, Double_t &zmax) const;
@@ -121,6 +123,10 @@ public:
    virtual Double_t Covariance3XY(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=0.000001) {return CentralMoment3(1,ax,bx,1,ay,by,0,az,bz,epsilon);}
    virtual Double_t Covariance3XZ(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=0.000001) {return CentralMoment3(1,ax,bx,0,ay,by,1,az,bz,epsilon);}
    virtual Double_t Covariance3YZ(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=0.000001) {return CentralMoment3(0,ax,bx,1,ay,by,1,az,bz,epsilon);}
+
+protected: 
+   
+   virtual Double_t FindMinMax(Double_t* x, bool findmax) const; 
    
    ClassDef(TF3,3)  //The Parametric 3-D function
 };

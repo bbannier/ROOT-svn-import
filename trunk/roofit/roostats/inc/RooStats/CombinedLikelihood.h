@@ -210,7 +210,7 @@ private:
          TIterator *itPdf  = addPdf->pdfList().createIterator();
          TIterator *itCoef = addPdf->coefList().createIterator();
          
-         std::cout << addPdf->pdfList().getSize() << " " << addPdf->coefList().getSize() << std::endl;
+        // std::cout << addPdf->pdfList().getSize() << " " << addPdf->coefList().getSize() << std::endl;
          
          // TODO TODO : last coefficient problem
          for(Int_t i = 0; i < numPdfs; ++i) {
@@ -324,8 +324,8 @@ namespace RooStats {
       
       // TODO: implement properly
       virtual RooArgSet* getParameters(const RooArgSet*, Bool_t) const {
-         std::cout << "CombinedLikelihood::getParameters" << std::endl;
-         fPdf->getParameters(fData)->Print("v");
+        // std::cout << "CombinedLikelihood::getParameters" << std::endl;
+       //  fPdf->getParameters(fData)->Print("v");
          return fPdf->getParameters(fData);
       }
 

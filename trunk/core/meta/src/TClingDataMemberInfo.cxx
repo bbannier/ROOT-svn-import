@@ -44,26 +44,39 @@
 using namespace clang;
 
 TClingDataMemberInfo::TClingDataMemberInfo(cling::Interpreter *interp,
-      TClingClassInfo *ci)
-   : fInterp(interp), fClassInfo(0), fFirstTime(true), fTitle("")
+                                           TClingClassInfo *ci)
+   : fInterp(interp), fClassInfo(0), fFirstTime(true), fTitle(""), fSingleDecl(0)
 {
-   if (!ci || !ci->IsValid()) {
-      fClassInfo = new TClingClassInfo(fInterp);
-      fIter = fInterp->getCI()->getASTContext().getTranslationUnitDecl()->
-              decls_begin();
-      // Move to first global variable.
-      InternalNext();
-      fFirstTime = true;
-      return;
+   if (!ci) {
+      // We are meant to iterate over the global namespace (well at least CINT did).
+      fClassInfo = new TClingClassInfo(interp);      
+   } else {
+      fClassInfo = new TClingClassInfo(*ci);
    }
-   fClassInfo = new TClingClassInfo(*ci);
-   if (ci->IsValid()) {
-      fIter = llvm::cast<clang::DeclContext>(ci->GetDecl())->decls_begin();
+   if (fClassInfo->IsValid()) {
+      const Decl *D = fClassInfo->GetDecl();
+      fIter = llvm::cast<clang::DeclContext>(D)->decls_begin();
+      const TagDecl *TD = ROOT::TMetaUtils::GetAnnotatedRedeclarable(llvm::dyn_cast<TagDecl>(D));
+      if (TD)
+         fIter = TD->decls_begin();
+      
       // Move to first data member.
       InternalNext();
       fFirstTime = true;
    }
 }
+TClingDataMemberInfo::TClingDataMemberInfo(cling::Interpreter *interp,
+                                           const clang::ValueDecl *ValD)
+   : fInterp(interp), fClassInfo(0), fFirstTime(true), fTitle(""), 
+     fSingleDecl(ValD) {
+   using namespace llvm;
+   assert(isa<TranslationUnitDecl>(ValD->getDeclContext()) && "Not TU?");
+   assert((isa<VarDecl>(ValD) || 
+           isa<FieldDecl>(ValD) || 
+           isa<EnumConstantDecl>(ValD)) &&
+          "The decl should be either VarDecl or FieldDecl or EnumConstDecl");
+}
+
 
 int TClingDataMemberInfo::ArrayDim() const
 {
@@ -181,6 +194,8 @@ int TClingDataMemberInfo::MaxIndex(int dim) const
 
 int TClingDataMemberInfo::InternalNext()
 {
+   assert(!fSingleDecl && "This is not an iterator!");
+
    // Move to next acceptable data member.
    while (*fIter) {
       // Move to next decl in context.
