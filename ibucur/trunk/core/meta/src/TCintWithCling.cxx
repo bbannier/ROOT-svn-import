@@ -69,7 +69,7 @@
 #include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/LookupHelper.h"
 #include "cling/Interpreter/Transaction.h"
-#include "cling/Interpreter/Value.h"
+#include "cling/Interpreter/StoredValueRef.h"
 #include "cling/MetaProcessor/MetaProcessor.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
@@ -481,7 +481,7 @@ void* TCintWithCling::fgSetOfSpecials = 0;
 //
 class TClingCallbacks : public cling::InterpreterCallbacks {
 private:
-   const clang::Decl *fLastDeclSeen;
+   clang::Decl *fLastDeclSeen;
 public:
    TClingCallbacks(cling::Interpreter* interp, bool isEnabled = false) 
       : InterpreterCallbacks(interp, isEnabled), fLastDeclSeen(0) { }
@@ -500,21 +500,21 @@ public:
       }
 
       TClingDataMemberInfo *globalMemInfo = 0;
-      TClingClassInfo *classInfo =0;
-      Decl *classInfoDecl = 0;
       while(fLastDeclSeen->getNextDeclInContext()) {
          fLastDeclSeen = fLastDeclSeen->getNextDeclInContext();
-         if (!isa<VarDecl>(fLastDeclSeen))
-            continue;
-         // FIXME: How does ROOT understand globals?
-         //assert(!cast<VarDecl>(fLastDeclSeen)->hasGlobalStorage() && "Not a global!?");
+         if (ValueDecl *ValD = dyn_cast<ValueDecl>(fLastDeclSeen)) {
+            if (!isa<TranslationUnitDecl>(ValD->getDeclContext()))
+                continue;
 
-         // FIXME: Here we have to pass in the actual type/decl of the global
-         // so that we don't break the meta info stream.
-         //classInfoDecl = fPreviousGlobalVD->getType()->getAs<clang::Decl>();
-         classInfo = new TClingClassInfo(m_Interpreter, classInfoDecl);
-         globalMemInfo = new TClingDataMemberInfo(m_Interpreter, classInfo);
-         gROOT->GetListOfGlobals()->Add(new TGlobal(globalMemInfo));         
+            if (!(isa<EnumConstantDecl>(ValD) || 
+                  isa<VarDecl>(ValD) || isa<FieldDecl>(ValD)))
+               continue;
+
+            // FIXME: How does ROOT understand globals?
+            //assert(!cast<VarDecl>(fLastDeclSeen)->hasGlobalStorage() && "Not a global!?");
+            globalMemInfo = new TClingDataMemberInfo(m_Interpreter, ValD);
+            gROOT->GetListOfGlobals()->Add(new TGlobal(globalMemInfo));
+         }
       }
    }
 
@@ -556,6 +556,8 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    , fMetaProcessor(0)
 {
    // Initialize the CINT+cling interpreter interface.
+
+   fTemporaries = new std::vector<cling::StoredValueRef>();
    std::string interpInclude = ROOT::TMetaUtils::GetInterpreterExtraIncludePath(false);
    const char* interpArgs[]
       = {"cling4root", interpInclude.c_str(), "-Xclang", "-fmodules"};
@@ -667,6 +669,7 @@ TCintWithCling::~TCintWithCling()
    delete fMapfile;
    delete fRootmapFiles;
    delete fMetaProcessor;
+   delete fTemporaries;
    delete fInterpreter;
    gCint = 0;
 #ifdef R__COMPLETE_MEM_TERMINATION
@@ -885,7 +888,7 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
    // not a complete statement.
    int indent = 0;
    // This will hold the resulting value of the evaluation the given line.
-   cling::Value result;
+   cling::StoredValueRef result;
    if (!strncmp(sLine.Data(), ".L", 2) || !strncmp(sLine.Data(), ".x", 2) ||
        !strncmp(sLine.Data(), ".X", 2)) {
       // If there was a trailing "+", then CINT compiled the code above,
@@ -905,6 +908,8 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
    else {
       indent = fMetaProcessor->process(sLine, &result);
    }
+   if (result.isValid() && result.needsManagedAllocation())
+      fTemporaries->push_back(result);
    if ((sLine[0] == '#') || (sLine[0] == '.')) {
       // Let CINT see preprocessor and meta commands, but only
       // after cling has seen them first, otherwise any dictionary
@@ -922,10 +927,9 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
       /// fMetaProcessor->abortEvaluation();
       return 0;
    }
-   Bool_t resultHasValue = result.hasValue(
-      fInterpreter->getCI()->getASTContext());
-   if (resultHasValue) {
-      return result.simplisticCastAs<long>();
+   if (result.isValid()
+       && !result.get().isVoid(fInterpreter->getCI()->getASTContext())) {
+      return result.get().simplisticCastAs<long>();
    }
    return 0;
 }
@@ -1408,34 +1412,7 @@ void TCintWithCling::SaveGlobalsContext()
 //______________________________________________________________________________
 void TCintWithCling::UpdateListOfGlobals()
 {
-   // Update the list of pointers to global variables. This function
-   // is called by TROOT::GetListOfGlobals().
-   if (!gROOT->fGlobals) {
-      // No globals registered yet, trigger it:
-      gROOT->GetListOfGlobals();
-      // It already called us again.
-      return;
-   }
-   if (fGlobalsListSerial == G__DataMemberInfo::SerialNumber()) {
-      return;
-   }
-   fGlobalsListSerial = G__DataMemberInfo::SerialNumber();
-   R__LOCKGUARD2(gCINTMutex);
-   TClingDataMemberInfo* t = (TClingDataMemberInfo*) DataMemberInfo_Factory();
-   // Loop over all global vars known to cint.
-   while (t->Next()) {
-      if (t->IsValid() && t->Name()) {
-         // Remove any old version in the list.
-         {
-            TGlobal* g = (TGlobal*) gROOT->fGlobals->FindObject(t->Name());
-            if (g) {
-               gROOT->fGlobals->Remove(g);
-               delete g;
-            }
-         }
-         gROOT->fGlobals->Add(new TGlobal((DataMemberInfo_t*) new TClingDataMemberInfo(*t)));
-      }
-   }
+ // No op: see TClingCallbacks (used to update the list of globals)
 }
 
 //______________________________________________________________________________
