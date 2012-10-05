@@ -208,7 +208,7 @@ namespace mathtext {
 			char always_128;
 			char type;
 			unsigned int length;
-		} __attribute__ ((packed));
+		};
 		enum {
 			TYPE_ASCII = 1,
 			TYPE_BINARY,
@@ -229,9 +229,14 @@ namespace mathtext {
 			struct pfb_segment_header_s segment_header;
 			size_t offset = 2;
 
-			memcpy(&segment_header, &font_data[offset],
-				   sizeof(pfb_segment_header_s));
-			offset += sizeof(pfb_segment_header_s);
+			// The two char elements of struct pfb_segment_header_s
+			// are most likely aligned to larger than 1 byte
+			// boundaries, so copy all the elements individually
+			segment_header.always_128 = font_data[offset];
+			segment_header.type = font_data[offset + 1];
+			memcpy(&segment_header.length, &font_data[offset + 2],
+				   sizeof(unsigned int));
+			offset += sizeof(unsigned int) + 2;
 			while (segment_header.type != TYPE_EOF) {
 #ifndef R__BYTESWAP
 				segment_header.length =
