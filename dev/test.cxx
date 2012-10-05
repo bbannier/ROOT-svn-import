@@ -77,50 +77,17 @@ void test() {
 
 
 
-void buildAddModel(RooWorkspace *w)
-{
-   // Build model
-   w->factory("Gaussian::s1(obs1[10,0,20], sig[10,0,20], bkg1[1,0,10])");
-   w->factory("Gaussian::s2(obs2[10,0,100], 40, sig)");
-   w->factory("Poisson::s3(obs3[20,0,30], sig)"); 
-   w->factory("SUM::sum_pdf(0.2*s1,0.3*s2,0.5*s3)");
-
-   // create combined signal + background model configuration
-   ModelConfig *sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables("obs1,obs2,obs3");
-   sbModel->SetParametersOfInterest("sig");
-//   sbModel->SetGlobalObservables("gbkg1,gbkg2,gbkg3");
-   sbModel->SetNuisanceParameters("bkg1");
-   sbModel->SetPdf("sum_pdf");
-   w->import(*sbModel);
-
-   // create combined background model configuration
-   ModelConfig *bModel = new ModelConfig(*sbModel);
-   bModel->SetName("B");
-   w->import(*bModel);
-
-   // define data set
-   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 1000);
-   data->SetName("data");
-   w->import(*data);
-
-}
-
-
-
-
-
 //__________________________________________________________________________________
 void buildSimultaneousModel(RooWorkspace *w)
 {
    // Build model
    w->factory("sig[2,0,10]");
-   w->factory("Uniform::u1(x1[0,1])");
-   w->factory("Uniform::u2(x2[0,1])");
-   w->factory("Uniform::u3(x3[0,1])");
-   w->factory("Gaussian::constr1(gbkg1[50,0,100], bkg1[50,0,100], 3)");
-   w->factory("Gaussian::constr2(gbkg2[50,0,100], bkg2[50,0,100], 2)");
-   w->factory("Gaussian::constr3(gbkg3[50,0,100], bkg3[50,0,100], 1)");
+   w->factory("Poisson::u1(x1[15,0,100], bkg1[30,0,100])");
+   w->factory("Exponential::u2(x2[25,0,100], bkg2[-0.1,-10,0])");
+   w->factory("Gamma::u3(x3[10,0,100], bkg3[4, 1, 15], 5, bkg1)");
+   w->factory("Gaussian::constr1(gbkg1[50,0,100], bkg1, 3)");
+   w->factory("Gaussian::constr2(gbkg2[-10,0], bkg2, 2)");
+   w->factory("Gaussian::constr3(gbkg3[3, 1, 15], bkg3, 1)");
 
    w->factory("ExtendPdf::ext_pdf1(PROD::p1(u1,constr1), expr::n1('sig+bkg1', sig, bkg1))");
    w->factory("ExtendPdf::ext_pdf2(PROD::p2(u2,constr2), expr::n2('sig+bkg2', sig, bkg2))");
@@ -156,6 +123,41 @@ void buildSimultaneousModel(RooWorkspace *w)
 //   RooArgList constraints;
 //   RooAbsPdf *simplePdf = StripConstraints(*w->pdf("sim_pdf"), *sbModel->GetObservables(), constraints);
 }
+
+
+
+
+
+void buildAddModel(RooWorkspace *w)
+{
+   // Build model
+   w->factory("Gaussian::s1(obs1[10,0,20], sig[10,0,20], bkg1[1,0,10])");
+   w->factory("Gaussian::s2(obs2[10,0,100], 40, sig)");
+   w->factory("Poisson::s3(obs3[20,0,30], sig)"); 
+   w->factory("SUM::sum_pdf(0.2*s1,0.3*s2,0.5*s3)");
+
+   // create combined signal + background model configuration
+   ModelConfig *sbModel = new ModelConfig("S+B", w);
+   sbModel->SetObservables("obs1,obs2,obs3");
+   sbModel->SetParametersOfInterest("sig");
+//   sbModel->SetGlobalObservables("gbkg1,gbkg2,gbkg3");
+   sbModel->SetNuisanceParameters("bkg1");
+   sbModel->SetPdf("sum_pdf");
+   w->import(*sbModel);
+
+   // create combined background model configuration
+   ModelConfig *bModel = new ModelConfig(*sbModel);
+   bModel->SetName("B");
+   w->import(*bModel);
+
+   // define data set
+   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 1000);
+   data->SetName("data");
+   w->import(*data);
+
+}
+
+
 
 
 
