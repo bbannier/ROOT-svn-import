@@ -1,3 +1,7 @@
+// ROOT headers
+#include "TBenchmark.h"
+#include "TFile.h"
+
 // RooFit headers
 #include "RooWorkspace.h"
 #include "RooRealVar.h"
@@ -16,6 +20,8 @@
 #include "RooStats/RooStatsUtils.h"
 #include "RooStats/ProfileLikelihoodTestStat.h"
 
+const int RUNS = 1;
+
 using namespace RooFit;
 using namespace RooStats;
 
@@ -23,15 +29,19 @@ void buildAddModel(RooWorkspace *w);
 void buildSimultaneousModel(RooWorkspace *w);
 
 void test() {
-   RooWorkspace *w = new RooWorkspace("w", kTRUE);
-   buildSimultaneousModel(w);   
-//   buildAddModel(w);
-
-   ModelConfig* model = (ModelConfig*)w->obj("S+B");
    
-//   RooArgSet *params = model->GetPdf()->getParameters(w->data("data"));
+   TBenchmark gBenchmark;
 
-//   params->Print("v");
+   // Build Higgs model
+   TFile f("comb_hgg_125.root");
+   RooWorkspace* w = (RooWorkspace *)f.Get("w");
+   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
+
+//   RooWorkspace *w = new RooWorkspace("w", kTRUE);
+//   buildSimultaneousModel(w);   
+//   buildAddModel(w);
+//   ModelConfig* model = (ModelConfig*)w->obj("S+B");
+   
 
    RooLinkedList commands;
    RooCmdArg arg1(RooFit::CloneData(kFALSE));
@@ -39,8 +49,9 @@ void test() {
    commands.Add(&arg1);
    commands.Add(&arg2);
 
-   //RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data"), commands);
-   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data"), commands);
+   // XXX never forget data set name
+//   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data_obs"), commands);
+   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data_obs"), commands);
 
 /*
    double val = nll->getVal(); 
@@ -53,13 +64,24 @@ void test() {
 
    RooMinuit m(*nll);
    m.setErrorLevel(0.5);
+//   m.setPrintLevel(-2);
+//   m.setVerbose(false);
+
+   gBenchmark.Start("CombinedLikelihood");
+
+   for(Int_t i = 0; i < RUNS; i++) {
+      m.migrad();
+   }
+
+   gBenchmark.Stop("CombinedLikelihood");
+
+   gBenchmark.Print("CombinedLikelihood");
 
    // call MIGRAD to minimize the likelihood
 //   m.setPrintLevel(3);
 //   m.setVerbose(true);
-   m.migrad();
    
-   model->GetPdf()->getParameters(w->data("data"))->Print("s");
+//   model->GetPdf()->getParameters(w->data("data"))->Print("s");
 //   m.setVerbose(kFALSE);
 
    // Run HESSE to calculate errors from d2L/dp2
@@ -69,13 +91,11 @@ void test() {
    // m.minos(/* param */);
 
 
-   RooFitResult *r = m.save();
-   r->Print("v");
+//   RooFitResult *r = m.save();
+//   r->Print("v");
    // RooPlot* frame = m.contour(/* */);
    // frame->SetTitle("RooMinuit contour plot");
 }
-
-
 
 //__________________________________________________________________________________
 void buildSimultaneousModel(RooWorkspace *w)
@@ -84,7 +104,7 @@ void buildSimultaneousModel(RooWorkspace *w)
    w->factory("sig[2,0,10]");
    w->factory("Poisson::u1(x1[15,0,100], bkg1[30,0,100])");
    w->factory("Exponential::u2(x2[25,0,100], bkg2[-0.1,-10,0])");
-   w->factory("Gamma::u3(x3[10,0,100], bkg3[4, 1, 15], 5, bkg1)");
+   w->factory("Landau::u3(x3[10,0,100], 15, bkg3[4, 0, 10])");
    w->factory("Gaussian::constr1(gbkg1[50,0,100], bkg1, 3)");
    w->factory("Gaussian::constr2(gbkg2[-10,0], bkg2, 2)");
    w->factory("Gaussian::constr3(gbkg3[3, 1, 15], bkg3, 1)");
