@@ -27,6 +27,7 @@
 #pragma link C++ class TF12+;
 #pragma link C++ class TF2-;
 #pragma link C++ class TF3-;
+#pragma link C++ class TFn-;
 #pragma link C++ class Foption_t+;
 #pragma link C++ class TGraph-;
 #pragma link C++ class TGraphErrors-;
