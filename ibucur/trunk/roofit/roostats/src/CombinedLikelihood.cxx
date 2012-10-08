@@ -42,7 +42,6 @@ CombinedLikelihood::CombinedLikelihood(
       TString::Format("comb_nll_%s_%s", simPdf.GetName(), data.GetName()).Data(),
       "combined -log(likelihood)"
    ),
-   fPdf(&simPdf),
    fData(&data),
    fNuisanceParameters(NULL),
    fConstraintParameters("constr_params", "constraint parameters", this)
@@ -50,14 +49,20 @@ CombinedLikelihood::CombinedLikelihood(
    // XXX: maybe need Init method ?
    setOperMode(RooAbsArg::ADirty);
 
+   // Constraint Setup part
+   RooArgList constraints;
+   fPdf = (RooSimultaneous *) RooStats::StripConstraints(*((RooAbsPdf*)&simPdf), *data.get(), constraints);
+   fNumberOfConstraints = constraints.getSize();
+
    // check that pdf and data have the same category and save a pointer to it
-   RooCategory* pdfCatClone = dynamic_cast<RooCategory*>(simPdf.indexCat().Clone());
+   RooCategory* pdfCatClone = dynamic_cast<RooCategory*>(fPdf->indexCat().Clone());
    assert(pdfCatClone != NULL);
    // TODO: see if it is possible to avoid second call to indexCat()
-   RooCategory* dataCat = dynamic_cast<RooCategory*>(data.get()->find(simPdf.indexCat().GetName()));
+   RooCategory* dataCat = dynamic_cast<RooCategory*>(data.get()->find(fPdf->indexCat().GetName()));
    assert(dataCat != NULL);
 
    fNumberOfChannels = pdfCatClone->numBins(NULL); 
+
 
    // Data splitting part
    // TODO: explore SetData necessity
@@ -84,29 +89,21 @@ CombinedLikelihood::CombinedLikelihood(
       else throw std::logic_error("CombinedLikelihood::CombinedLikelihood - negative weights in input data set");
    }
    
-
-
-
+ 
    for(Int_t i = 0; i < fNumberOfChannels; ++i) {
       pdfCatClone->setBin(i); const char* crtLabel = pdfCatClone->getLabel();
 
       // Set Channels
-      fChannels.push_back(simPdf.getPdf(crtLabel)); 
+      fChannels.push_back(fPdf->getPdf(crtLabel)); 
       fChannelNames.push_back(std::string(crtLabel));
      
       // TODO: eliminate logL variable if not needed in the end 
-      RooAbsReal* logL = RooStats::CreateNLL(*simPdf.getPdf(crtLabel), *fDataSets[i], cmdList);
+      RooAbsReal* logL = RooStats::CreateNLL(*fPdf->getPdf(crtLabel), *fDataSets[i], cmdList);
       fChannelLikelihoods.push_back(logL);
    } 
 
 
    // TODO: decide on LEE (logEvalErrors)
- 
-   // Constraint Setup part
-   RooArgList constraints;
-   RooStats::StripConstraints(*((RooAbsPdf*)&simPdf), *data.get(), constraints);
-   fNumberOfConstraints = constraints.getSize();
-
 //   std::cout << "--START--simPdf" << std::endl;
 //   simPdf.getParameters(data)->Print("v");
 //   std::cout << "---END---simPdf" << std::endl;
@@ -204,7 +201,7 @@ Double_t CombinedLikelihood::evaluate() const
       // FIXME: need *citCLL != 0 ?
       result += (*citCLL)->getVal();
    }
-/*
+
    if (fNumberOfConstraints > 0) {
       std::vector<RooAbsPdf*>::const_iterator citPdf = fConstraints.begin(), cendPdf = fConstraints.end(); 
       std::vector<Double_t>::const_iterator citZP  = fConstraintZeroPoints.begin();
@@ -215,7 +212,7 @@ Double_t CombinedLikelihood::evaluate() const
       }
           
    }
-*/
+
    return result;
 }
 

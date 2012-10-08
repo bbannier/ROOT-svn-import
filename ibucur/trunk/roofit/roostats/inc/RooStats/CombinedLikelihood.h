@@ -192,6 +192,10 @@ public:
    void ClearZeroPoint() { fZeroPoint = 0.0; setValueDirty(); } 
 
    // TODO: implement getObservables and getParameters
+   virtual RooArgSet* getParameters(const RooArgSet*, Bool_t) const {
+      return fPdf->getParameters(fData);
+   }
+   
 
 private:
    void Init() {
@@ -278,11 +282,7 @@ private:
       
    }
 
-   // TODO: implement properly (just a stub)
-//   virtual RooArgSet* getParameters(const RooArgSet* depList, Bool_t stripDisconnected = kTRUE) const {
- //     return new RooArgSet();
- //  }
-   // TODO: implement properly 
+  // TODO: implement properly 
  //  virtual RooArgSet* getObservables(const RooArgSet* depList, Bool_t valueOnly = kTRUE) const {
   //    return new RooArgSet();
  //  }
