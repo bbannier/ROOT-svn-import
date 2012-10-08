@@ -12,12 +12,12 @@
 #ifndef ROOT_TArrayF
 #define ROOT_TArrayF
 
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TArrayF                                                              //
 //                                                                      //
-// Array of floats (32 bits per element).                               //
+// Array of chars or bytes (8 bits per element).                        //
+// Class kept for backward compatibility.                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -40,6 +40,11 @@ public:
    ClassDef(TArrayF,1)
 };
 
+inline void TArrayF::Streamer(TBuffer &b) 
+{ 
+   // Stream a TArrayF object
+   TArrayT<Float_t>::Streamer(b);
+}
 
 #if defined R__TEMPLATE_OVERLOAD_BUG
 template <>
@@ -47,6 +52,7 @@ template <>
 inline TBuffer &operator>>(TBuffer &buf, TArrayF *&obj)
 {
    // Read TArrayF object from buffer.
+
    obj = (TArrayF *) TArray::ReadArray(buf, TArrayF::Class());
    return buf;
 }

@@ -12,12 +12,12 @@
 #ifndef ROOT_TArrayC
 #define ROOT_TArrayC
 
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TArrayC                                                              //
 //                                                                      //
 // Array of chars or bytes (8 bits per element).                        //
+// Class kept for backward compatibility.                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 

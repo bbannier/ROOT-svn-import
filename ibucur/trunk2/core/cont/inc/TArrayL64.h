@@ -1,8 +1,8 @@
 // @(#)root/cont:$Id$
-// Author: Fons Rademakers   20/11/06
+// Author: Rene Brun   06/03/95
 
 /*************************************************************************
- * Copyright (C) 1995-2006, Rene Brun and Fons Rademakers.               *
+ * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
  *                                                                       *
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
@@ -12,12 +12,12 @@
 #ifndef ROOT_TArrayL64
 #define ROOT_TArrayL64
 
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// TArrayL64                                                            //
+// TArrayL64                                                              //
 //                                                                      //
-// Array of long64s (64 bits per element)    .                          //
+// Array of chars or bytes (8 bits per element).                        //
+// Class kept for backward compatibility.                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -26,38 +26,25 @@
 #endif
 
 
-class TArrayL64 : public TArray {
+class TArrayL64 : public TArrayT<Long64_t> {
 
 public:
-   Long64_t   *fArray;       //[fN] Array of fN long64s
 
-   TArrayL64();
-   TArrayL64(Int_t n);
-   TArrayL64(Int_t n, const Long64_t *array);
-   TArrayL64(const TArrayL64 &array);
-   TArrayL64  &operator=(const TArrayL64 &rhs);
-   virtual    ~TArrayL64();
+   TArrayL64() : TArrayT<Long64_t>() {}
+   TArrayL64(Int_t n) : TArrayT<Long64_t>(n) { }
+   TArrayL64(Int_t n, const Long64_t *array) : TArrayT<Long64_t>(n, array) { }
+   TArrayL64(const TArrayL64 &rhs) : TArrayT<Long64_t>(rhs) { }
+   TArrayL64    &operator=(const TArrayL64 &rhs) { TArrayT<Long64_t>::operator=(rhs); return *this; }
+   virtual    ~TArrayL64() { }
 
-   void            Adopt(Int_t n, Long64_t *array);
-   void            AddAt(Long64_t c, Int_t i);
-   Long64_t        At(Int_t i) const;
-   void            Copy(TArrayL64 &array) const {array.Set(fN,fArray);}
-   const Long64_t *GetArray() const { return fArray; }
-   Long64_t       *GetArray() { return fArray; }
-   Double_t        GetAt(Int_t i) const { return At(i); }
-   Stat_t          GetSum() const {Stat_t sum=0; for (Int_t i=0;i<fN;i++) sum+=fArray[i]; return sum;}
-   void            Reset()           {memset(fArray,  0, fN*sizeof(Long64_t));}
-   void            Reset(Long64_t val) {for (Int_t i=0;i<fN;i++) fArray[i] = val;}
-   void            Set(Int_t n);
-   void            Set(Int_t n, const Long64_t *array);
-   void            SetAt(Double_t v, Int_t i) { AddAt((Long64_t)v, i); }
-   Long64_t       &operator[](Int_t i);
-   Long64_t        operator[](Int_t i) const;
-
-   ClassDef(TArrayL64,1)  //Array of long64s
+   ClassDef(TArrayL64,1)
 };
 
-
+inline void TArrayL64::Streamer(TBuffer &b) 
+{ 
+   // Stream a TArrayL64 object
+   TArrayT<Long64_t>::Streamer(b);
+}
 
 #if defined R__TEMPLATE_OVERLOAD_BUG
 template <>
@@ -75,28 +62,9 @@ template <>
 #endif
 inline TBuffer &operator<<(TBuffer &buf, const TArrayL64 *obj)
 {
-   // Write a TArrayL64 object into buffer.
-
+   // Write a TArrayL64 object into buffer
    return buf << (TArray*)obj;
 }
 
-inline Long64_t TArrayL64::At(Int_t i) const
-{
-   if (!BoundsOk("TArrayL64::At", i)) return 0;
-   return fArray[i];
-}
-
-inline Long64_t &TArrayL64::operator[](Int_t i)
-{
-   if (!BoundsOk("TArrayL64::operator[]", i))
-      i = 0;
-   return fArray[i];
-}
-
-inline Long64_t TArrayL64::operator[](Int_t i) const
-{
-   if (!BoundsOk("TArrayL64::operator[]", i)) return 0;
-   return fArray[i];
-}
 
 #endif

@@ -133,7 +133,7 @@ public:
 
 #ifndef __CINT__
 template <typename T>
-TBuffer& operator>>(TBuffer& buf, TArrayT<T>*& obj)
+inline TBuffer& operator>>(TBuffer& buf, TArrayT<T>*& obj)
 {
    // Read TArrayT object from buffer
    obj = (TArrayT<T> *) TArray::ReadArray(buf, TArrayT<T>::Class());
