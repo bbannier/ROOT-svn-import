@@ -37,7 +37,7 @@ public:
    TArrayD    &operator=(const TArrayD &rhs) { TArrayT<Double_t>::operator=(rhs); return *this; }
    virtual    ~TArrayD() { }
 
-   ClassDef(TArrayD,1)
+   ClassDef(TArrayD,2)  //Array of doubles
 };
 
 inline void TArrayD::Streamer(TBuffer &b) 

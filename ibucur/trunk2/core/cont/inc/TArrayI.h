@@ -37,7 +37,7 @@ public:
    TArrayI    &operator=(const TArrayI &rhs) { TArrayT<Int_t>::operator=(rhs); return *this; }
    virtual    ~TArrayI() { }
 
-   ClassDef(TArrayI,1)
+   ClassDef(TArrayI,2)  //Array of ints
 };
 
 inline void TArrayI::Streamer(TBuffer &b) 

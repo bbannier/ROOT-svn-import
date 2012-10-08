@@ -37,7 +37,7 @@ public:
    TArrayS    &operator=(const TArrayS &rhs) { TArrayT<Short_t>::operator=(rhs); return *this; }
    virtual    ~TArrayS() { }
 
-   ClassDef(TArrayS,1) 
+   ClassDef(TArrayS,2)  //Array of shorts
 };
 
 inline void TArrayS::Streamer(TBuffer &b) 
