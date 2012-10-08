@@ -15,7 +15,7 @@ MATHTEXTDIRI := $(MATHTEXTDIR)/inc
 ##### libmathtext #####
 MATHTEXTH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/*.h))
 MATHTEXTS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cc))
-MATHTEXTO    := $(MATHTEXTS:.cc=.o)
+MATHTEXTO    := $(call stripsrc,$(MATHTEXTS:.cc=.o))
 
 MATHTEXTDEP  := $(MATHTEXTO:.o=.d) $(MATHTEXTDO:.o=.d)
 
