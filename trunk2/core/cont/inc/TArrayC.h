@@ -37,7 +37,7 @@ public:
    TArrayC    &operator=(const TArrayC &rhs) { TArrayT<Char_t>::operator=(rhs); return *this; }
    virtual    ~TArrayC() { }
 
-   ClassDef(TArrayC,1)
+   ClassDef(TArrayC,2)  //Array of chars
 };
 
 inline void TArrayC::Streamer(TBuffer &b) 

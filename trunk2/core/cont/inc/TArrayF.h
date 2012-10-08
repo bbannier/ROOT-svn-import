@@ -37,7 +37,7 @@ public:
    TArrayF    &operator=(const TArrayF &rhs) { TArrayT<Float_t>::operator=(rhs); return *this; }
    virtual    ~TArrayF() { }
 
-   ClassDef(TArrayF,1)
+   ClassDef(TArrayF,2)  //Array of floats
 };
 
 inline void TArrayF::Streamer(TBuffer &b) 

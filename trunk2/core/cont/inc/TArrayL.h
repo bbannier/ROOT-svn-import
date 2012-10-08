@@ -37,7 +37,7 @@ public:
    TArrayL    &operator=(const TArrayL &rhs) { TArrayT<Long_t>::operator=(rhs); return *this; }
    virtual    ~TArrayL() { }
 
-   ClassDef(TArrayL,1)
+   ClassDef(TArrayL,2)  //Array of longs
 };
 
 inline void TArrayL::Streamer(TBuffer &b) 

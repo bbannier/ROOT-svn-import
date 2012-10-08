@@ -37,7 +37,7 @@ public:
    TArrayL64    &operator=(const TArrayL64 &rhs) { TArrayT<Long64_t>::operator=(rhs); return *this; }
    virtual    ~TArrayL64() { }
 
-   ClassDef(TArrayL64,1)
+   ClassDef(TArrayL64,2)  //Array of long64s
 };
 
 inline void TArrayL64::Streamer(TBuffer &b) 
