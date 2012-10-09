@@ -52,7 +52,6 @@ template <>
 inline TBuffer &operator>>(TBuffer &buf, TArrayC *&obj)
 {
    // Read TArrayC object from buffer.
-
    obj = (TArrayC *) TArray::ReadArray(buf, TArrayC::Class());
    return buf;
 }

@@ -12,12 +12,12 @@
 #ifndef ROOT_TArrayD
 #define ROOT_TArrayD
 
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TArrayD                                                              //
 //                                                                      //
 // Array of doubles (64 bits per element).                              //
+// Class kept for backward compatibility.                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -52,7 +52,6 @@ template <>
 inline TBuffer &operator>>(TBuffer &buf, TArrayD *&obj)
 {
    // Read TArrayD object from buffer.
-
    obj = (TArrayD *) TArray::ReadArray(buf, TArrayD::Class());
    return buf;
 }

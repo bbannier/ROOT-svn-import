@@ -12,12 +12,12 @@
 #ifndef ROOT_TArrayI
 #define ROOT_TArrayI
 
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TArrayI                                                              //
 //                                                                      //
 // Array of integers (32 bits per element).                             //
+// Class kept for backward compatibility.                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -52,7 +52,6 @@ template <>
 inline TBuffer &operator>>(TBuffer &buf, TArrayI *&obj)
 {
    // Read TArrayI object from buffer.
-
    obj = (TArrayI *) TArray::ReadArray(buf, TArrayI::Class());
    return buf;
 }
@@ -68,3 +67,4 @@ inline TBuffer &operator<<(TBuffer &buf, const TArrayI *obj)
 
 
 #endif
+

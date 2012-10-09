@@ -13,8 +13,7 @@
 //                                                                      //
 // TArray                                                               //
 //                                                                      //
-// Abstract array base class. Used by TArrayC, TArrayS, TArrayI,        //
-// TArrayL, TArrayF and TArrayD.                                        //
+// Abstract array base class.                                           //
 // Data member is public for historical reasons.                        //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
@@ -120,6 +119,16 @@ TBuffer &operator<<(TBuffer &buf, const TArray *obj)
 
 
 
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TArrayT                                                              //
+//                                                                      //
+// Templated implementation of TArray.                                  //
+// Used by TArray(C|S|I|L|L64|F|D).                                     //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 template class TArrayT<Char_t>;
 template class TArrayT<Double_t>;
 template class TArrayT<Float_t>;
@@ -127,17 +136,6 @@ template class TArrayT<Int_t>;
 template class TArrayT<Long_t>;
 template class TArrayT<Short_t>;
 template class TArrayT<Long64_t>;
-
-
-templateClassImp(TArrayT);
-ClassImp(TArrayT<Char_t>);
-ClassImp(TArrayT<Short_t>);
-ClassImp(TArrayT<Int_t>);
-ClassImp(TArrayT<Long_t>);
-ClassImp(TArrayT<Long64_t>);
-ClassImp(TArrayT<Float_t>);
-ClassImp(TArrayT<Double_t>);
-
 
 //_______________________________________________________________________
 template <typename T>
