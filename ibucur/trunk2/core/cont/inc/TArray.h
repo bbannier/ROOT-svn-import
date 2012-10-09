@@ -84,6 +84,17 @@ inline Bool_t TArray::BoundsOk(const char *where, Int_t at) const
 }
 
 
+
+//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// TArrayT                                                              //
+//                                                                      //
+// Templated implementation of TArray.                                  //
+// Used by legacy concrete classes TArray(C|S|I|L|L64|F|D).             //
+// Data member is public for historical reasons.                        //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
 template<typename T>
 class TArrayT : public TArray {
 public:
@@ -158,7 +169,6 @@ void TArrayT<T>::Set(Int_t n)
    }
 }
 
-
 //______________________________________________________________________________
 template <typename T>
 void TArrayT<T>::Set(Int_t n, const T* array)
@@ -176,8 +186,6 @@ void TArrayT<T>::Set(Int_t n, const T* array)
    if (!fArray) fArray = new T[fN];
    memmove(fArray, array, n * sizeof(T));
 }
-
-
 
 #ifndef __CINT__
 template <typename T>

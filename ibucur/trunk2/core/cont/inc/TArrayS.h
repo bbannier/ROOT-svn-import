@@ -12,12 +12,12 @@
 #ifndef ROOT_TArrayS
 #define ROOT_TArrayS
 
-
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
 // TArrayS                                                              //
 //                                                                      //
 // Array of shorts (16 bits per element).                               //
+// Class kept for backward compatibility.                               //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -52,7 +52,6 @@ template <>
 inline TBuffer &operator>>(TBuffer &buf, TArrayS *&obj)
 {
    // Read TArrayS object from buffer.
-
    obj = (TArrayS *) TArray::ReadArray(buf, TArrayS::Class());
    return buf;
 }
