@@ -1,7 +1,9 @@
 // ROOT headers
 #include "TBenchmark.h"
+#include "TCanvas.h"
 #include "TFile.h"
 #include "TSystem.h"
+#include "TGraph.h"
 
 // RooFit headers
 #include "RooWorkspace.h"
@@ -10,6 +12,7 @@
 #include "RooSimultaneous.h"
 #include "RooAbsCategoryLValue.h"
 #include "RooMinuit.h"
+#include "RooMinimizer.h"
 #include "RooFitResult.h"
 #include "RooAbsReal.h"
 #include "RooArgSet.h"
@@ -30,17 +33,17 @@ using namespace RooStats;
 void buildAddModel(RooWorkspace *w);
 void buildSimultaneousModel(RooWorkspace *w);
 
-void test() {
+void test2() {
 
    RooStats::HistFactory::FlexibleInterpVar fiv;
 //   gSystem->Load("libHistFactory");   
-   TBenchmark gBenchmark;
+   TBenchmark myBenchmark;
 
+   // XXX never forget workspace name
    // Build Higgs model
-//   TFile f("comb_hgg_125.root");
-   TFile f("150.root");
-   // XXX never forget the workspace name
-   RooWorkspace* w = (RooWorkspace *)f.Get("combWS");
+   TFile f("comb_hgg_125.root");
+//   TFile f("150.root");
+   RooWorkspace* w = (RooWorkspace *)f.Get("w");
    ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
 //   RooWorkspace *w = new RooWorkspace("w", kTRUE);
@@ -48,7 +51,6 @@ void test() {
 //   buildAddModel(w);
 //   ModelConfig* model = (ModelConfig*)w->obj("S+B");
    
-
    RooLinkedList commands;
    RooCmdArg arg1(RooFit::CloneData(kFALSE));
    RooCmdArg arg2(RooFit::Constrain(*model->GetNuisanceParameters()));
@@ -56,37 +58,44 @@ void test() {
    commands.Add(&arg2);
 
    // XXX never forget data set name
-   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("combData"), commands);
-//   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("combData"), commands);
+   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data_obs"), commands);
+//   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data_obs"), commands);
 
-/*
-   double val = nll->getVal(); 
-   std::cout << val << " changing sig " << std::endl;
-   w->var("sig")->setVal(10); 
-   val = nll->getVal(); 
-   std::cout << val << std::endl;
+
+   double *values = new double[11];
+   double *x = new double[11];
+   int j = 0;
+   for(double d = 0.0; j <= 10; d += 0.2, j++) {
+      w->var("r")->setVal(d);
+      values[j] = nll->getVal(); x[j] = d;
+      std::cout << "nll value " << d << " " << values[j] << std::endl;
+   }
+   TCanvas *c = new TCanvas("test2"); c->SetGrid();
+   TGraph *g = new TGraph(11, x, values); 
+   g->SetLineColor(2); g->SetLineWidth(4); g->SetMarkerColor(4); g->SetMarkerStyle(21);
+   g->Draw("ACP");
+   delete values; delete x;
    return;
-*/
 
-   RooMinuit m(*nll);
+
+   RooMinimizer m(*nll);
+   m.setMinimizerType("Minuit2");
+   m.optimizeConst(2);
    m.setErrorLevel(0.5);
-   m.setPrintLevel(-2);
-   m.setVerbose(false);
+   m.setPrintLevel(1);
+//   m.setVerbose(false);
    m.setStrategy(0);
 
-   gBenchmark.Start("CombinedLikelihood");
+   myBenchmark.Start("CombinedLikelihood");
 
    for(Int_t i = 0; i < RUNS; i++) {
       m.migrad();
    }
 
-   gBenchmark.Stop("CombinedLikelihood");
+   myBenchmark.Stop("CombinedLikelihood");
 
-   gBenchmark.Print("CombinedLikelihood");
+   myBenchmark.Print("CombinedLikelihood");
 
-   // call MIGRAD to minimize the likelihood
-//   m.setPrintLevel(3);
-//   m.setVerbose(true);
    
 //   model->GetPdf()->getParameters(w->data("data"))->Print("s");
 //   m.setVerbose(kFALSE);
@@ -296,7 +305,7 @@ void buildPoissonEfficiencyModel(RooWorkspace *w)
 }
 
 int main() {
-   test();
+   test2();
    return 0;
 }
 
