@@ -34,8 +34,7 @@ public:
    TArrayS(Int_t n) : TArrayT<Short_t>(n) { }
    TArrayS(Int_t n, const Short_t *array) : TArrayT<Short_t>(n, array) { }
    TArrayS(const TArrayS &rhs) : TArrayT<Short_t>(rhs) { }
-   TArrayS    &operator=(const TArrayS &rhs) { TArrayT<Short_t>::operator=(rhs); return *this; }
-   virtual    ~TArrayS() { }
+   virtual ~TArrayS();
 
    ClassDef(TArrayS,2)  //Array of shorts
 };

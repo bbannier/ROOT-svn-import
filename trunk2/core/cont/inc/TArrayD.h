@@ -34,8 +34,7 @@ public:
    TArrayD(Int_t n) : TArrayT<Double_t>(n) { }
    TArrayD(Int_t n, const Double_t *array) : TArrayT<Double_t>(n, array) { }
    TArrayD(const TArrayD &rhs) : TArrayT<Double_t>(rhs) { }
-   TArrayD    &operator=(const TArrayD &rhs) { TArrayT<Double_t>::operator=(rhs); return *this; }
-   virtual    ~TArrayD() { }
+   virtual ~TArrayD();
 
    ClassDef(TArrayD,2)  //Array of doubles
 };
