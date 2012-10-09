@@ -29,12 +29,10 @@
 class TArrayI : public TArrayT<Int_t> {
 
 public:
-
    TArrayI() : TArrayT<Int_t>() {}
    TArrayI(Int_t n) : TArrayT<Int_t>(n) { }
    TArrayI(Int_t n, const Int_t *array) : TArrayT<Int_t>(n, array) { }
    TArrayI(const TArrayI &rhs) : TArrayT<Int_t>(rhs) { }
-   virtual ~TArrayI();
 
    ClassDef(TArrayI,2)  //Array of ints
 };

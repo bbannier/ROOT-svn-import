@@ -29,12 +29,10 @@
 class TArrayL64 : public TArrayT<Long64_t> {
 
 public:
-
    TArrayL64() : TArrayT<Long64_t>() {}
    TArrayL64(Int_t n) : TArrayT<Long64_t>(n) { }
    TArrayL64(Int_t n, const Long64_t *array) : TArrayT<Long64_t>(n, array) { }
    TArrayL64(const TArrayL64 &rhs) : TArrayT<Long64_t>(rhs) { }
-   virtual ~TArrayL64();
 
    ClassDef(TArrayL64,2)  //Array of long64s
 };
