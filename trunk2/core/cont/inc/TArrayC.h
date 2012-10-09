@@ -29,12 +29,10 @@
 class TArrayC : public TArrayT<Char_t> {
 
 public:
-
    TArrayC() : TArrayT<Char_t>() {}
    TArrayC(Int_t n) : TArrayT<Char_t>(n) { }
    TArrayC(Int_t n, const Char_t *array) : TArrayT<Char_t>(n, array) { }
    TArrayC(const TArrayC &rhs) : TArrayT<Char_t>(rhs) { }
-   virtual ~TArrayC();
 
    ClassDef(TArrayC,2)  //Array of chars
 };

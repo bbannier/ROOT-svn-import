@@ -29,12 +29,10 @@
 class TArrayD : public TArrayT<Double_t> {
 
 public:
-
    TArrayD() : TArrayT<Double_t>() {}
    TArrayD(Int_t n) : TArrayT<Double_t>(n) { }
    TArrayD(Int_t n, const Double_t *array) : TArrayT<Double_t>(n, array) { }
    TArrayD(const TArrayD &rhs) : TArrayT<Double_t>(rhs) { }
-   virtual ~TArrayD();
 
    ClassDef(TArrayD,2)  //Array of doubles
 };
