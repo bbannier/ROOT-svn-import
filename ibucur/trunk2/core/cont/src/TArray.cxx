@@ -138,52 +138,6 @@ ClassImp(TArrayT<Long64_t>);
 ClassImp(TArrayT<Float_t>);
 ClassImp(TArrayT<Double_t>);
 
-//______________________________________________________________________________
-template <typename T>
-void TArrayT<T>::Set(Int_t n)
-{
-   // Set size of this array to n T values.
-   // A new array is created, the old contents copied to the new array,
-   // then the old array is deleted.
-   // This function should not be called if the array was declared via Adopt.
-
-   if (n < 0) return;
-   if (n != fN) {
-      T* temp = fArray;
-      if (n != 0) {
-         fArray = new T[n];
-         if (n < fN) memcpy(fArray, temp, n * sizeof(T));
-         else {
-            memcpy(fArray, temp, fN * sizeof(T));
-            memset(&fArray[fN], 0, (n-fN) * sizeof(T));
-         }
-      } else {
-         fArray = 0;
-      }
-      if (fN) delete [] temp;
-      fN = n;
-   }
-}
-
-
-//______________________________________________________________________________
-template <typename T>
-void TArrayT<T>::Set(Int_t n, const T* array)
-{
-   // Set size of this array to n values and set the contents
-   // This function should not be called if the array was declared via Adopt.
-
-   if (fArray && fN != n) {
-      delete [] fArray;
-      fArray = 0;
-   }
-   fN = n;
-   if (fN == 0) return;
-   if (array == 0) return;
-   if (!fArray) fArray = new T[fN];
-   memmove(fArray, array, n * sizeof(T));
-}
-
 
 //_______________________________________________________________________
 template <typename T>
