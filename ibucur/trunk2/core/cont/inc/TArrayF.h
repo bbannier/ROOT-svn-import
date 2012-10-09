@@ -34,8 +34,7 @@ public:
    TArrayF(Int_t n) : TArrayT<Float_t>(n) { }
    TArrayF(Int_t n, const Float_t *array) : TArrayT<Float_t>(n, array) { }
    TArrayF(const TArrayF &rhs) : TArrayT<Float_t>(rhs) { }
-   TArrayF    &operator=(const TArrayF &rhs) { TArrayT<Float_t>::operator=(rhs); return *this; }
-   virtual    ~TArrayF() { }
+   virtual ~TArrayF();
 
    ClassDef(TArrayF,2)  //Array of floats
 };

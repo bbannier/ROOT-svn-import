@@ -34,8 +34,7 @@ public:
    TArrayC(Int_t n) : TArrayT<Char_t>(n) { }
    TArrayC(Int_t n, const Char_t *array) : TArrayT<Char_t>(n, array) { }
    TArrayC(const TArrayC &rhs) : TArrayT<Char_t>(rhs) { }
-   TArrayC    &operator=(const TArrayC &rhs) { TArrayT<Char_t>::operator=(rhs); return *this; }
-   virtual    ~TArrayC() { }
+   virtual ~TArrayC();
 
    ClassDef(TArrayC,2)  //Array of chars
 };

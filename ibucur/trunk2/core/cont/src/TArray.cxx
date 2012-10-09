@@ -19,6 +19,13 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "TArray.h"
+#include "TArrayC.h"
+#include "TArrayS.h"
+#include "TArrayI.h"
+#include "TArrayL.h"
+#include "TArrayL64.h"
+#include "TArrayF.h"
+#include "TArrayD.h"
 #include "TError.h"
 #include "TClass.h"
 #include "TBuffer.h"
@@ -152,5 +159,15 @@ void TArrayT<T>::Streamer(TBuffer &b)
       b.WriteFastArray(fArray, fN);
    }
 }
+
+
+// TArray(C|S|I|L|L64|F|D) destructor implementations
+TArrayC::~TArrayC() { }
+TArrayS::~TArrayS() { }
+TArrayI::~TArrayI() { }
+TArrayL::~TArrayL() { }
+TArrayL64::~TArrayL64() { }
+TArrayF::~TArrayF() { }
+TArrayD::~TArrayD() { }
 
 

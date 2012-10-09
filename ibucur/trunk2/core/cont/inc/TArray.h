@@ -106,17 +106,18 @@ public:
    TArrayT& operator=(const TArrayT<T>& rhs) { if(this != &rhs) Set(rhs.fN, rhs.fArray); return *this; }
    virtual ~TArrayT() { delete [] fArray; }
 
-   void   AddAt(T value, Int_t i) { 
+   void     Adopt(Int_t n, T* array) {
+      if (fArray) delete [] fArray;
+      fN = n; fArray = array;
+   }
+   // NOTE: AddAt sets the value of the array at index i, it does not add to the value
+   void     AddAt(T value, Int_t i) { 
       if (!BoundsOk("TArrayT::AddAt", i)) return;
       fArray[i] = value;
    }
-   T       At(Int_t i) const {
+   T        At(Int_t i) const {
       if (!BoundsOk("TArrayT::At", i)) return T();
       return fArray[i];
-   }
-   void    Adopt(Int_t n, T* array) {
-      if (fArray) delete [] fArray;
-      fN = n; fArray = array;
    }
 
    void     Copy(TArrayT<T> &array) const { array.Set(fN, fArray); }
@@ -124,7 +125,8 @@ public:
    T*       GetArray() { return fArray; }
    Double_t GetAt(Int_t i) const { return At(i); }
    Stat_t   GetSum() const { Stat_t sum = 0; for(Int_t i = 0; i < fN; ++i) sum += fArray[i]; return sum; }
-   void     Reset(T value = T()) { memset(fArray, value, fN * sizeof(T)); }
+   void     Reset() { memset(fArray, 0, fN * sizeof(T)); }
+   void     Reset(T value) { for(Int_t i = 0; i < fN; ++i) fArray[i] = value; }
    void     Set(Int_t n);
    void     Set(Int_t n, const T* array);
    void     SetAt(Double_t value, Int_t i) { AddAt(T(value), i); }
@@ -184,7 +186,7 @@ void TArrayT<T>::Set(Int_t n, const T* array)
    if (fN == 0) return;
    if (array == 0) return;
    if (!fArray) fArray = new T[fN];
-   memmove(fArray, array, n * sizeof(T));
+   memcpy(fArray, array, n * sizeof(T));
 }
 
 #ifndef __CINT__

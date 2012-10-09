@@ -34,8 +34,7 @@ public:
    TArrayL(Int_t n) : TArrayT<Long_t>(n) { }
    TArrayL(Int_t n, const Long_t *array) : TArrayT<Long_t>(n, array) { }
    TArrayL(const TArrayL &rhs) : TArrayT<Long_t>(rhs) { }
-   TArrayL    &operator=(const TArrayL &rhs) { TArrayT<Long_t>::operator=(rhs); return *this; }
-   virtual    ~TArrayL() { }
+   virtual ~TArrayL();
 
    ClassDef(TArrayL,2)  //Array of longs
 };

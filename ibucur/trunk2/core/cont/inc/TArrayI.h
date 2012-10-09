@@ -34,8 +34,7 @@ public:
    TArrayI(Int_t n) : TArrayT<Int_t>(n) { }
    TArrayI(Int_t n, const Int_t *array) : TArrayT<Int_t>(n, array) { }
    TArrayI(const TArrayI &rhs) : TArrayT<Int_t>(rhs) { }
-   TArrayI    &operator=(const TArrayI &rhs) { TArrayT<Int_t>::operator=(rhs); return *this; }
-   virtual    ~TArrayI() { }
+   virtual ~TArrayI();
 
    ClassDef(TArrayI,2)  //Array of ints
 };
