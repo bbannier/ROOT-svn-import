@@ -19,6 +19,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <string>
 #include "mathtext.h"
 
 /////////////////////////////////////////////////////////////////////
