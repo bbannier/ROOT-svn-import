@@ -1,7 +1,8 @@
 RC := root-config
 ROOTSYS = ../trunk
 include $(ROOTSYS)/etc/Makefile.arch
-MATHLIBS = -lRooFit -lRooFitCore -lRooStats
+MATHLIBS = -lRooFit -lRooFitCore -lRooStats -lHistFactory -lXMLParser -Llib -lRIO -lMatrix -lMinuit -lFoam
+
 
 #------------------------------------------------------------------------------
 

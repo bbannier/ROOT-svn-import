@@ -1,6 +1,7 @@
 // ROOT headers
 #include "TBenchmark.h"
 #include "TFile.h"
+#include "TSystem.h"
 
 // RooFit headers
 #include "RooWorkspace.h"
@@ -19,6 +20,7 @@
 #include "RooStats/ModelConfig.h"
 #include "RooStats/RooStatsUtils.h"
 #include "RooStats/ProfileLikelihoodTestStat.h"
+#include "RooStats/HistFactory/FlexibleInterpVar.h"
 
 const int RUNS = 1;
 
@@ -29,12 +31,15 @@ void buildAddModel(RooWorkspace *w);
 void buildSimultaneousModel(RooWorkspace *w);
 
 void test() {
-   
+
+   RooStats::HistFactory::FlexibleInterpVar fiv;
+//   gSystem->Load("libHistFactory");   
    TBenchmark gBenchmark;
 
    // Build Higgs model
-   TFile f("comb_hgg_125.root");
-   RooWorkspace* w = (RooWorkspace *)f.Get("w");
+//   TFile f("comb_hgg_125.root");
+   TFile f("150.root");
+   RooWorkspace* w = (RooWorkspace *)f.Get("combWS");
    ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
 //   RooWorkspace *w = new RooWorkspace("w", kTRUE);
@@ -51,7 +56,7 @@ void test() {
 
    // XXX never forget data set name
 //   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data_obs"), commands);
-   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data_obs"), commands);
+   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("combData"), commands);
 
 /*
    double val = nll->getVal(); 
@@ -64,8 +69,9 @@ void test() {
 
    RooMinuit m(*nll);
    m.setErrorLevel(0.5);
-//   m.setPrintLevel(-2);
-//   m.setVerbose(false);
+   m.setPrintLevel(-2);
+   m.setVerbose(false);
+   m.setStrategy(0);
 
    gBenchmark.Start("CombinedLikelihood");
 
@@ -137,7 +143,7 @@ void buildSimultaneousModel(RooWorkspace *w)
    w->import(*bModel);
 
    // define data set
-   RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data"));
+   RooDataSet *data = w->pdf("sim_pdf")->generate(*sbModel->GetObservables(), Extended(), Name("data_obs"));
    w->import(*data);
 
 //   RooArgList constraints;
@@ -172,9 +178,10 @@ void buildAddModel(RooWorkspace *w)
 
    // define data set
    RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 1000);
-   data->SetName("data");
+   data->SetName("data_obs");
    w->import(*data);
 
+   w->pdf("sum_pdf")->Print("");
 }
 
 
