@@ -33,7 +33,7 @@ using namespace RooStats;
 void buildAddModel(RooWorkspace *w);
 void buildSimultaneousModel(RooWorkspace *w);
 
-void test() {
+void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const char* data = "data_obs") {
 
    RooStats::HistFactory::FlexibleInterpVar fiv;
 //   gSystem->Load("libHistFactory");   
@@ -41,9 +41,9 @@ void test() {
 
    // XXX never forget workspace name
    // Build Higgs model
-   TFile f("comb_hgg_125.root");
-//   TFile f("150.root");
-   RooWorkspace* w = (RooWorkspace *)f.Get("w");
+//   TFile f("comb_hgg_125.root");
+   TFile f(file);
+   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
    ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
 //   RooWorkspace *w = new RooWorkspace("w", kTRUE);
@@ -58,10 +58,10 @@ void test() {
    commands.Add(&arg2);
 
    // XXX never forget data set name
-//   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data("data_obs"), commands);
-   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data("data_obs"), commands);
+//   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
+   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
 
-
+/*
    double *values = new double[11];
    double *x = new double[11];
    int j = 0;
@@ -70,20 +70,19 @@ void test() {
       values[j] = nll->getVal(); x[j] = d;
       std::cout << "nll value " << d << " " << values[j] << std::endl;
    }
-   TCanvas *c = new TCanvas("test"); c->SetGrid();
+   TCanvas *c = new TCanvas("test2"); c->SetGrid();
    TGraph *g = new TGraph(11, x, values); 
    g->SetLineColor(2); g->SetLineWidth(4); g->SetMarkerColor(4); g->SetMarkerStyle(21);
    g->Draw("ACP");
    delete values; delete x;
    return;
-
+*/
 
    RooMinimizer m(*nll);
    m.setMinimizerType("Minuit2");
    m.optimizeConst(2);
    m.setErrorLevel(0.5);
-   m.setPrintLevel(1);
-//   m.setVerbose(false);
+   m.setPrintLevel(0);
    m.setStrategy(0);
 
    myBenchmark.Start("CombinedLikelihood");
@@ -304,8 +303,14 @@ void buildPoissonEfficiencyModel(RooWorkspace *w)
    w->import(*data);
 }
 
-int main() {
-   test();
+int main(int argc, char* argv[]) {
+   if(argc == 4) {
+      std::cout << "Using command line args" << std::endl;
+      test2(argv[1], argv[2], argv[3]);
+   } else {
+      std::cout << "Using default args" << std::endl;
+      test2();
+   }
    return 0;
 }
 
