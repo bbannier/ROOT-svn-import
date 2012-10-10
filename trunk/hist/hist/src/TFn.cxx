@@ -119,8 +119,8 @@ public:
 
 //______________________________________________________________________________
 /* Begin_Html
-<center><h2>TFn: 1-Dim function class</h2></center>
-A TFn object is a 1-Dim function defined between a lower and upper limit.
+<center><h2>TFn: n-Dim function class</h2></center>
+A TFn object is a n-Dim function defined between a lower and upper limit.
 <br>The function may be a simple function (see <tt>TFormula</tt>) or a
 precompiled user function.
 <br>The function may have associated parameters.
@@ -1026,121 +1026,6 @@ Int_t TFn::DistancetoPrimitive(Int_t px, Int_t py)
 
 
 //______________________________________________________________________________
-void TFn::Draw(Option_t *option)
-{
-   // Draw this function with its current attributes.
-   //
-   // Possible option values are:
-   //   "SAME"  superimpose on top of existing picture
-   //   "L"     connect all computed points with a straight line
-   //   "C"     connect all computed points with a smooth curve
-   //   "FC"    draw a fill area below a smooth curve
-   //
-   // Note that the default value is "L". Therefore to draw on top
-   // of an existing picture, specify option "LSAME"
-   //
-   // NB. You must use DrawCopy if you want to draw several times the same
-   //     function in the current canvas.
-
-   TString opt = option;
-   opt.ToLower();
-   if (gPad && !opt.Contains("same")) gPad->Clear();
-
-   AppendPad(option);
-}
-
-
-//______________________________________________________________________________
-TFn *TFn::DrawCopy(Option_t *option) const
-{
-   // Draw a copy of this function with its current attributes.
-   //
-   //  This function MUST be used instead of Draw when you want to draw
-   //  the same function with different parameters settings in the same canvas.
-   //
-   // Possible option values are:
-   //   "SAME"  superimpose on top of existing picture
-   //   "L"     connect all computed points with a straight line
-   //   "C"     connect all computed points with a smooth curve
-   //   "FC"    draw a fill area below a smooth curve
-   //
-   // Note that the default value is "L". Therefore to draw on top
-   // of an existing picture, specify option "LSAME"
-
-   TFn *newf1 = (TFn*)this->IsA()->New();
-   Copy(*newf1);
-   newf1->AppendPad(option);
-   newf1->SetBit(kCanDelete);
-   return newf1;
-}
-
-
-//______________________________________________________________________________
-TObject *TFn::DrawDerivative(Option_t *option)
-{
-   // Draw derivative of this function
-   //
-   // An intermediate TGraph object is built and drawn with option.
-   // The function returns a pointer to the TGraph object. Do:
-   //    TGraph *g = (TGraph*)myfunc.DrawDerivative(option);
-   //
-   // The resulting graph will be drawn into the current pad.
-   // If this function is used via the context menu, it recommended
-   // to create a new canvas/pad before invoking this function.
-
-   TVirtualPad *pad = gROOT->GetSelectedPad();
-   TVirtualPad *padsav = gPad;
-   if (pad) pad->cd();
-
-   // FIXME
-   //TGraph *gr = new TGraph(this,"d");
-   //gr->Draw(option);
-   //if (padsav) padsav->cd();
-   //return gr;
-   return NULL;
-}
-
-
-//______________________________________________________________________________
-TObject *TFn::DrawIntegral(Option_t *option)
-{
-   // Draw integral of this function
-   //
-   // An intermediate TGraph object is built and drawn with option.
-   // The function returns a pointer to the TGraph object. Do:
-   //    TGraph *g = (TGraph*)myfunc.DrawIntegral(option);
-   //
-   // The resulting graph will be drawn into the current pad.
-   // If this function is used via the context menu, it recommended
-   // to create a new canvas/pad before invoking this function.
-
-   TVirtualPad *pad = gROOT->GetSelectedPad();
-   TVirtualPad *padsav = gPad;
-   if (pad) pad->cd();
-
-   // FIXME
-   //TGraph *gr = new TGraph(this,"i");
-  // gr->Draw(option);
-  // if (padsav) padsav->cd();
-   //return gr;
-   return NULL;
-}
-
-
-//______________________________________________________________________________
-void TFn::DrawF1(const char *formula, Double_t xmin, Double_t xmax, Option_t *option)
-{
-   // Draw formula between xmin and xmax.
-
-   if (Compile(formula)) return;
-
-   SetRange(xmin, xmax);
-
-   Draw(option);
-}
-
-
-//______________________________________________________________________________
 Double_t TFn::Eval(Double_t x, Double_t y, Double_t z, Double_t t) const
 {
    // Evaluate this formula.
@@ -1211,21 +1096,6 @@ Double_t TFn::EvalPar(const Double_t *x, const Double_t *params)
       return result;
    }
    return result;
-}
-
-
-//______________________________________________________________________________
-void TFn::ExecuteEvent(Int_t event, Int_t px, Int_t py)
-{
-   // Execute action corresponding to one event.
-   //
-   //  This member function is called when a F1 is clicked with the locator
-
-   if (fHistogram) fHistogram->ExecuteEvent(event,px,py);
-
-   if (!gPad->GetView()) {
-      if (event == kMouseMotion)  gPad->SetCursor(kHand);
-   }
 }
 
 
@@ -1519,115 +1389,6 @@ Double_t TFn::GetProb() const
    return TMath::Prob(fChisquare,fNDF);
 }
 
-
-//______________________________________________________________________________
-Int_t TFn::GetQuantiles(Int_t nprobSum, Double_t *q, const Double_t *probSum)
-{
-   //  Compute Quantiles for density distribution of this function
-   //     Quantile x_q of a probability distribution Function F is defined as
-   //Begin_Latex
-   //        F(x_{q}) = #int_{xmin}^{x_{q}} f dx = q with 0 <= q <= 1.
-   //End_Latex
-   //     For instance the median Begin_Latex x_{#frac{1}{2}} End_Latex of a distribution is defined as that value
-   //     of the random variable for which the distribution function equals 0.5:
-   //Begin_Latex
-   //        F(x_{#frac{1}{2}}) = #prod(x < x_{#frac{1}{2}}) = #frac{1}{2}
-   //End_Latex
-   //  code from Eddy Offermann, Renaissance
-   //
-   // input parameters
-   //   - this TFn function
-   //   - nprobSum maximum size of array q and size of array probSum
-   //   - probSum array of positions where quantiles will be computed.
-   //     It is assumed to contain at least nprobSum values.
-   //  output
-   //   - return value nq (<=nprobSum) with the number of quantiles computed
-   //   - array q filled with nq quantiles
-   //
-   //  Getting quantiles from two histograms and storing results in a TGraph,
-   //   a so-called QQ-plot
-   //
-   //     TGraph *gr = new TGraph(nprob);
-   //     f1->GetQuantiles(nprob,gr->GetX());
-   //     f2->GetQuantiles(nprob,gr->GetY());
-   //     gr->Draw("alp");
-
-   // LM: change to use fNpx 
-   // should we change code to use a root finder ? 
-   // It should be more precise and more efficient
-   const Int_t npx     = TMath::Max(fNpx, 2*nprobSum);
-   const Double_t xMin = GetXmin();
-   const Double_t xMax = GetXmax();
-   const Double_t dx   = (xMax-xMin)/npx;
-
-   TArrayD integral(npx+1);
-   TArrayD alpha(npx);
-   TArrayD beta(npx);
-   TArrayD gamma(npx);
-
-   integral[0] = 0;
-   Int_t intNegative = 0;
-   Int_t i;
-   for (i = 0; i < npx; i++) {
-      const Double_t *params = 0;
-      Double_t integ = Integral(Double_t(xMin+i*dx),Double_t(xMin+i*dx+dx),params);
-      if (integ < 0) {intNegative++; integ = -integ;}
-      integral[i+1] = integral[i] + integ;
-   }
-
-   if (intNegative > 0)
-      Warning("GetQuantiles","function:%s has %d negative values: abs assumed",
-      GetName(),intNegative);
-   if (integral[npx] == 0) {
-      Error("GetQuantiles","Integral of function is zero");
-      return 0;
-   }
-
-   const Double_t total = integral[npx];
-   for (i = 1; i <= npx; i++) integral[i] /= total;
-   //the integral r for each bin is approximated by a parabola
-   //  x = alpha + beta*r +gamma*r**2
-   // compute the coefficients alpha, beta, gamma for each bin
-   for (i = 0; i < npx; i++) {
-      const Double_t x0 = xMin+dx*i;
-      const Double_t r2 = integral[i+1]-integral[i];
-      const Double_t r1 = Integral(x0,x0+0.5*dx)/total;
-      gamma[i] = (2*r2-4*r1)/(dx*dx);
-      beta[i]  = r2/dx-gamma[i]*dx;
-      alpha[i] = x0;
-      gamma[i] *= 2;
-   }
-
-   // Be careful because of finite precision in the integral; Use the fact that the integral
-   // is monotone increasing
-   for (i = 0; i < nprobSum; i++) {
-      const Double_t r = probSum[i];
-      Int_t bin  = TMath::Max(TMath::BinarySearch(npx+1,integral.GetArray(),r),(Long64_t)0);
-      // LM use a tolerance 1.E-12 (integral precision)
-      while (bin < npx-1 && TMath::AreEqualRel(integral[bin+1], r, 1E-12) ) {
-         if (TMath::AreEqualRel(integral[bin+2], r, 1E-12) ) bin++;
-         else break;
-      }
-
-      const Double_t rr = r-integral[bin];
-      if (rr != 0.0) {
-         Double_t xx = 0.0;
-         const Double_t fac = -2.*gamma[bin]*rr/beta[bin]/beta[bin];
-         if (fac != 0 && fac <= 1)
-            xx = (-beta[bin]+TMath::Sqrt(beta[bin]*beta[bin]+2*gamma[bin]*rr))/gamma[bin];
-         else if (beta[bin] != 0.)
-            xx = rr/beta[bin];
-         q[i] = alpha[bin]+xx;
-      } else {
-         q[i] = alpha[bin];
-         if (integral[bin+1] == r) q[i] += dx;
-      }
-   }
-
-   return nprobSum;
-}
-
-
 //______________________________________________________________________________
 Double_t TFn::GetRandom()
 {
@@ -1648,7 +1409,7 @@ Double_t TFn::GetRandom()
    //   of bins is greater than 50.
 
    //  Check if integral array must be build
-   if (fIntegral == 0) {
+/*   if (fIntegral == 0) {
       fIntegral = new Double_t[fNpx+1];
       fAlpha    = new Double_t[fNpx+1];
       fBeta     = new Double_t[fNpx];
@@ -1727,101 +1488,10 @@ Double_t TFn::GetRandom()
       yy = rr/fBeta[bin];
    Double_t x = fAlpha[bin] + yy;
    if (fAlpha[fNpx] > 0) return TMath::Power(10,x);
-   return x;
+   return x;*/
+   return 0.0;
 }
 
-
-//______________________________________________________________________________
-Double_t TFn::GetRandom(Double_t xmin, Double_t xmax)
-{
-   // Return a random number following this function shape in [xmin,xmax]
-   //
-   //   The distribution contained in the function fname (TFn) is integrated
-   //   over the channel contents.
-   //   It is normalized to 1.
-   //   For each bin the integral is approximated by a parabola.
-   //   The parabola coefficients are stored as non persistent data members
-   //   Getting one random number implies:
-   //     - Generating a random number between 0 and 1 (say r1)
-   //     - Look in which bin in the normalized integral r1 corresponds to
-   //     - Evaluate the parabolic curve in the selected bin to find
-   //       the corresponding X value.
-   //   The parabolic approximation is very good as soon as the number
-   //   of bins is greater than 50.
-   //
-   //  IMPORTANT NOTE
-   //  The integral of the function is computed at fNpx points. If the function
-   //  has sharp peaks, you should increase the number of points (SetNpx)
-   //  such that the peak is correctly tabulated at several points.
-
-   //  Check if integral array must be build
-   if (fIntegral == 0) {
-      Double_t dx = (fXmax-fXmin)/fNpx;
-      fIntegral = new Double_t[fNpx+1];
-      fAlpha    = new Double_t[fNpx];
-      fBeta     = new Double_t[fNpx];
-      fGamma    = new Double_t[fNpx];
-      fIntegral[0] = 0;
-      Double_t integ;
-      Int_t intNegative = 0;
-      Int_t i;
-      for (i=0;i<fNpx;i++) {
-         integ = Integral(Double_t(fXmin+i*dx), Double_t(fXmin+i*dx+dx));
-         if (integ < 0) {intNegative++; integ = -integ;}
-         fIntegral[i+1] = fIntegral[i] + integ;
-      }
-      if (intNegative > 0) {
-         Warning("GetRandom","function:%s has %d negative values: abs assumed",GetName(),intNegative);
-      }
-      if (fIntegral[fNpx] == 0) {
-         Error("GetRandom","Integral of function is zero");
-         return 0;
-      }
-      Double_t total = fIntegral[fNpx];
-      for (i=1;i<=fNpx;i++) {  // normalize integral to 1
-         fIntegral[i] /= total;
-      }
-      //the integral r for each bin is approximated by a parabola
-      //  x = alpha + beta*r +gamma*r**2
-      // compute the coefficients alpha, beta, gamma for each bin
-      Double_t x0,r1,r2,r3;
-      for (i=0;i<fNpx;i++) {
-         x0 = fXmin+i*dx;
-         r2 = fIntegral[i+1] - fIntegral[i];
-         r1 = Integral(x0,x0+0.5*dx)/total;
-         r3 = 2*r2 - 4*r1;
-         if (TMath::Abs(r3) > 1e-8) fGamma[i] = r3/(dx*dx);
-         else           fGamma[i] = 0;
-         fBeta[i]  = r2/dx - fGamma[i]*dx;
-         fAlpha[i] = x0;
-         fGamma[i] *= 2;
-      }
-   }
-
-   // return random number
-   Double_t dx   = (fXmax-fXmin)/fNpx;
-   Int_t nbinmin = (Int_t)((xmin-fXmin)/dx);
-   Int_t nbinmax = (Int_t)((xmax-fXmin)/dx)+2;
-   if(nbinmax>fNpx) nbinmax=fNpx;
-
-   Double_t pmin=fIntegral[nbinmin];
-   Double_t pmax=fIntegral[nbinmax];
-
-   Double_t r,x,xx,rr;
-   do {
-      r  = gRandom->Uniform(pmin,pmax);
-
-      Int_t bin  = TMath::BinarySearch(fNpx,fIntegral,r);
-      rr = r - fIntegral[bin];
-
-      if(fGamma[bin] != 0)
-         xx = (-fBeta[bin] + TMath::Sqrt(fBeta[bin]*fBeta[bin]+2*fGamma[bin]*rr))/fGamma[bin];
-      else
-         xx = rr/fBeta[bin];
-      x = fAlpha[bin] + xx;
-   } while(x<xmin || x>xmax);
-   return x;
-}
 
 /**
 //______________________________________________________________________________
@@ -2053,157 +1723,6 @@ void TFn::InitArgs(const Double_t *x, const Double_t *params)
 }
 
 //______________________________________________________________________________
-Double_t TFn::Integral(Double_t a, Double_t b, const Double_t *params, Double_t epsilon)
-{
-   // Return Integral of function between a and b.
-   //
-   //   based on original CERNLIB routine DGAUSS by Sigfried Kolbig
-   //   converted to C++ by Rene Brun
-   //
-   // This function computes, to an attempted specified accuracy, the value
-   // of the integral.
-   //Begin_Latex
-   //   I = #int^{B}_{A} f(x)dx
-   //End_Latex
-   // Usage:
-   //   In any arithmetic expression, this function has the approximate value
-   //   of the integral I.
-   //   - A, B: End-points of integration interval. Note that B may be less
-   //           than A.
-   //   - params: Array of function parameters. If 0, use current parameters.
-   //   - epsilon: Accuracy parameter (see Accuracy).
-   //
-   //Method:
-   //   For any interval [a,b] we define g8(a,b) and g16(a,b) to be the 8-point
-   //   and 16-point Gaussian quadrature approximations to
-   //Begin_Latex
-   //   I = #int^{b}_{a} f(x)dx
-   //End_Latex
-   //   and define
-   //Begin_Latex
-   //   r(a,b) = #frac{#||{g_{16}(a,b)-g_{8}(a,b)}}{1+#||{g_{16}(a,b)}}
-   //End_Latex
-   //   Then,
-   //Begin_Latex
-   //   G = #sum_{i=1}^{k}g_{16}(x_{i-1},x_{i})
-   //End_Latex
-   //   where, starting with x0 = A and finishing with xk = B,
-   //   the subdivision points xi(i=1,2,...) are given by
-   //Begin_Latex
-   //   x_{i} = x_{i-1} + #lambda(B-x_{i-1})
-   //End_Latex
-   //   Begin_Latex #lambdaEnd_Latex is equal to the first member of the
-   //   sequence 1,1/2,1/4,... for which r(xi-1, xi) < EPS.
-   //   If, at any stage in the process of subdivision, the ratio
-   //Begin_Latex
-   //   q = #||{#frac{x_{i}-x_{i-1}}{B-A}}
-   //End_Latex
-   //   is so small that 1+0.005q is indistinguishable from 1 to
-   //   machine accuracy, an error exit occurs with the function value
-   //   set equal to zero.
-   //
-   // Accuracy:
-   //   Unless there is severe cancellation of positive and negative values of
-   //   f(x) over the interval [A,B], the argument EPS may be considered as
-   //   specifying a bound on the <I>relative</I> error of I in the case
-   //   |I|&gt;1, and a bound on the absolute error in the case |I|&lt;1. More
-   //   precisely, if k is the number of sub-intervals contributing to the
-   //   approximation (see Method), and if
-   //Begin_Latex
-   //   I_{abs} = #int^{B}_{A} #||{f(x)}dx
-   //End_Latex
-   //   then the relation
-   //Begin_Latex
-   //   #frac{#||{G-I}}{I_{abs}+k} < EPS
-   //End_Latex
-   //   will nearly always be true, provided the routine terminates without
-   //   printing an error message. For functions f having no singularities in
-   //   the closed interval [A,B] the accuracy will usually be much higher than
-   //   this.
-   //
-   // Error handling:
-   //   The requested accuracy cannot be obtained (see Method).
-   //   The function value is set equal to zero.
-   //
-   // Note 1:
-   //   Values of the function f(x) at the interval end-points A and B are not
-   //   required. The subprogram may therefore be used when these values are
-   //   undefined.
-   //
-   // Note 2:
-   //   Instead of TFn::Integral, you may want to use the combination of
-   //   TFn::CalcGaussLegendreSamplingPoints and TFn::IntegralFast.
-   //   See an example with the following script:
-   //
-   //   void gint() {
-   //      TFn *g = new TFn("g","gaus",-5,5);
-   //      g->SetParameters(1,0,1);
-   //      //default gaus integration method uses 6 points
-   //      //not suitable to integrate on a large domain
-   //      double r1 = g->Integral(0,5);
-   //      double r2 = g->Integral(0,1000);
-   //
-   //      //try with user directives computing more points
-   //      Int_t np = 1000;
-   //      double *x=new double[np];
-   //      double *w=new double[np];
-   //      g->CalcGaussLegendreSamplingPoints(np,x,w,1e-15);
-   //      double r3 = g->IntegralFast(np,x,w,0,5);
-   //      double r4 = g->IntegralFast(np,x,w,0,1000);
-   //      double r5 = g->IntegralFast(np,x,w,0,10000);
-   //      double r6 = g->IntegralFast(np,x,w,0,100000);
-   //      printf("g->Integral(0,5)               = %g\n",r1);
-   //      printf("g->Integral(0,1000)            = %g\n",r2);
-   //      printf("g->IntegralFast(n,x,w,0,5)     = %g\n",r3);
-   //      printf("g->IntegralFast(n,x,w,0,1000)  = %g\n",r4);
-   //      printf("g->IntegralFast(n,x,w,0,10000) = %g\n",r5);
-   //      printf("g->IntegralFast(n,x,w,0,100000)= %g\n",r6);
-   //      delete [] x;
-   //      delete [] w;
-   //   }
-   //
-   //   This example produces the following results:
-   //
-   //      g->Integral(0,5)               = 1.25331
-   //      g->Integral(0,1000)            = 1.25319
-   //      g->IntegralFast(n,x,w,0,5)     = 1.25331
-   //      g->IntegralFast(n,x,w,0,1000)  = 1.25331
-   //      g->IntegralFast(n,x,w,0,10000) = 1.25331
-   //      g->IntegralFast(n,x,w,0,100000)= 1.253
-
-
-   TFn_EvalWrapper wf1( this, params, fgAbsValue ); 
-
-   ROOT::Math::GaussIntegrator giod;
-   //ROOT::Math::Integrator giod;
-   giod.SetFunction(wf1);
-   giod.SetRelTolerance(epsilon);
-   //giod.SetAbsTolerance(epsilon);
-
-   return giod.Integral(a, b);
-}
-
-
-//______________________________________________________________________________
-Double_t TFn::Integral(Double_t, Double_t, Double_t, Double_t, Double_t)
-{
-   // Return Integral of a 2d function in range [ax,bx],[ay,by]
-
-   Error("Integral","Must be called with a TF2 only");
-   return 0;
-}
-
-
-//______________________________________________________________________________
-Double_t TFn::Integral(Double_t, Double_t, Double_t, Double_t, Double_t, Double_t, Double_t)
-{
-   // Return Integral of a 3d function in range [ax,bx],[ay,by],[az,bz]
-
-   Error("Integral","Must be called with a TF3 only");
-   return 0;
-}
-
-//______________________________________________________________________________
 Double_t TFn::IntegralError(Double_t a, Double_t b, const Double_t * params, const Double_t * covmat, Double_t epsilon )
 {
    // Return Error on Integral of a parameteric function between a and b 
@@ -2268,35 +1787,6 @@ Double_t TFn::IntegralError(Int_t n, const Double_t * a, const Double_t * b, con
    return 0.0;
    //return ROOT::TFnHelper::IntegralError(this,n,a,b,params,covmat,epsilon);
 }
-
-#ifdef INTHEFUTURE
-//______________________________________________________________________________
-Double_t TFn::IntegralFast(const TGraph *g, Double_t a, Double_t b, Double_t *params)
-{
-   // Gauss-Legendre integral, see CalcGaussLegendreSamplingPoints
-
-   if (!g) return 0;
-   return IntegralFast(g->GetN(), g->GetX(), g->GetY(), a, b, params);
-}
-#endif
-
-
-//______________________________________________________________________________
-Double_t TFn::IntegralFast(Int_t num, Double_t * /* x */, Double_t * /* w */, Double_t a, Double_t b, Double_t *params, Double_t epsilon)
-{
-   // Gauss-Legendre integral, see CalcGaussLegendreSamplingPoints
-   // FIXME
-   // Now x and w are not used!
-
-   //ROOT::Math::WrappedTF1 wf1(*this);
-//   if ( params )
-  //    wf1.SetParameters( params );
-   ROOT::Math::GaussLegendreIntegrator gli(num,epsilon);
-//   gli.SetFunction( wf1 );
-   return gli.Integral(a, b);
-
-}
-
 
 //______________________________________________________________________________
 Double_t TFn::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t eps, Double_t &relerr)
