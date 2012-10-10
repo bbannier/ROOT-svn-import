@@ -198,7 +198,6 @@ Double_t CombinedLikelihood::evaluate() const
 
    std::vector<RooAbsReal*>::const_iterator citCLL = fChannelLikelihoods.begin(), cendCLL = fChannelLikelihoods.end();
    for ( ; citCLL != cendCLL; ++citCLL) {
-      // FIXME: need *citCLL != 0 ?
       result += (*citCLL)->getVal();
    }
 
