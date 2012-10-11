@@ -33,7 +33,7 @@ GaussianPDF::GaussianPDF(
    RooAbsReal& mu,  
    RooAbsReal& sig 
 ) :
-   RooAbsPdf(name, title),
+   RooGaussian(name, title, obs, mu, sig),
    fObs("obs", "Observable", this, obs),
    fMean("mean", "Mean", this, mu),
    fSigma("sigma", "Standard Deviation", this, sig)
@@ -42,10 +42,9 @@ GaussianPDF::GaussianPDF(
 }
 
 
- 
 //_____________________________________________________________________________
-GaussianPDF::GaussianPDF(const GaussianPDF& other, const char* newName) :
-   RooAbsPdf(other, newName),
+GaussianPDF::GaussianPDF(const GaussianPDF& other, const char* name) :
+   RooGaussian(other, name),
    fObs("obs", this, other.fObs),
    fMean("mean", this, other.fMean),
    fSigma("sigma", this, other.fSigma)
@@ -53,6 +52,17 @@ GaussianPDF::GaussianPDF(const GaussianPDF& other, const char* newName) :
    // Copy constructor
 }
 
+
+//_____________________________________________________________________________
+GaussianPDF::GaussianPDF(const RooGaussian& gauss, const char* name) :
+   RooGaussian(gauss, name),
+   fObs(x),
+   fMean(mean),
+   fSigma(sigma)
+{
+   // Conversion constructor from RooGaussian
+}
+ 
 
 //_____________________________________________________________________________
 Double_t GaussianPDF::evaluate() const
@@ -82,7 +92,9 @@ void GaussianPDF::generateEvent(Int_t)
    }
    while(obsGenerated > obsMax && obsGenerated < obsMin);
    // FIXME: in RooFit it would be >= obsMax && <= obsMin - see if particular cases cause any trouble
-   
+
+   RooGaussian x;
+   ((GaussianPDF *)&x)->_proxyList;
 }
 
 

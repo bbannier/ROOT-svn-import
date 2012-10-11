@@ -1,11 +1,14 @@
-#include "RooStats/CombinedLikelihood.h"
-#include "RooStats/RooStatsUtils.h"
+#include <algorithm>
+#include <memory>
 #include "TIterator.h"
 #include "TString.h"
 #include "RooAbsData.h"
-#include <algorithm>
 #include "RooCategory.h"
-#include <memory>
+#include "RooGaussian.h"
+#include "RooStats/CombinedLikelihood.h"
+#include "RooStats/GaussianPDF.h"
+#include "RooStats/RooStatsUtils.h"
+
 
 using namespace RooStats;
 
@@ -102,7 +105,6 @@ CombinedLikelihood::CombinedLikelihood(
       fChannelLikelihoods.push_back(logL);
    } 
 
-
    // TODO: decide on LEE (logEvalErrors)
 //   std::cout << "--START--simPdf" << std::endl;
 //   simPdf.getParameters(data)->Print("v");
@@ -117,6 +119,12 @@ CombinedLikelihood::CombinedLikelihood(
       TIterator *itConstr = constraints.createIterator();
       for(Int_t i = 0; i < fNumberOfConstraints; i++) {
          RooAbsPdf *constr = dynamic_cast<RooAbsPdf*>(itConstr->Next()); assert(constr != NULL);
+         
+         if(typeid(*constr) == typeid(RooGaussian)) {
+            constr = new GaussianPDF(*((RooGaussian *)constr));
+            std::cout << "Converting RooGaussian to " << constr->ClassName() << std::endl;
+         }
+
          fConstraints.push_back(constr);
          fConstraintZeroPoints.push_back(0.0); // TODO: analyse the necessity of this
 
