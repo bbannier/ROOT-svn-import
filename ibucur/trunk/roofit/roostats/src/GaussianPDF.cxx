@@ -92,9 +92,6 @@ void GaussianPDF::generateEvent(Int_t)
    }
    while(obsGenerated > obsMax && obsGenerated < obsMin);
    // FIXME: in RooFit it would be >= obsMax && <= obsMin - see if particular cases cause any trouble
-
-   RooGaussian x;
-   ((GaussianPDF *)&x)->_proxyList;
 }
 
 
