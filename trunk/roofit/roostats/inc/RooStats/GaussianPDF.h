@@ -3,16 +3,17 @@
 
 #include "RooStats/AbstractPDF.h"
 #include "RooAbsReal.h"
-#include "RooAbsPdf.h"
 #include "RooRealProxy.h"
+#include "RooGaussian.h"
 
 namespace RooStats {
-   class GaussianPDF : public RooAbsPdf, virtual public AbstractPDF {
+   class GaussianPDF : public RooGaussian, virtual public AbstractPDF {
    public:
       // RooAbsPdf interface
       GaussianPDF() {}
       GaussianPDF(const char* name, const char* title, RooAbsReal& obs, RooAbsReal& mean, RooAbsReal& sigma);
       GaussianPDF(const GaussianPDF& other, const char* name = NULL);
+      GaussianPDF(const RooGaussian& gauss, const char* name = NULL);
       virtual TObject* clone(const char* newName) const { return new GaussianPDF(*this, newName); }
       virtual ~GaussianPDF() {}
 
@@ -37,7 +38,8 @@ namespace RooStats {
       virtual Double_t evaluate() const;
 
    private:
-      // TODO: eventually replace data structures      
+      // TODO: The goal is to eventually replace data structures and sever all ties between
+         // GaussianPDF and RooGaussian; as such, the RooRealProxies in RooGaussian will become redundant
       RooRealProxy fObs;
       RooRealProxy fMean;
       RooRealProxy fSigma;
