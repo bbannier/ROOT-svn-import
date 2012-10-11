@@ -71,11 +71,11 @@ public:
          fPdf->optimizeCacheMode(*data.get()); 
          fPdf->attachDataSet(data); // TODO: is it necessary?
          const_cast<RooAbsData*>(fLastData)->setDirtyProp(kFALSE);
+         Fill(data);
       }
-
       // TODO: see if it is worth to have multiple caches
       // if observables have changed value, the cache is renewed
-      if (fCacheObs.IsDirty(kTRUE)) {
+      else if (fCacheObs.IsDirty(kTRUE)) {
          Fill(data);
       }
 
@@ -94,10 +94,9 @@ private:
       Int_t numEntries = data.numEntries();
       fValues.reserve(numEntries);
 
-      std::vector<Double_t>::iterator iter = fValues.begin();
-      for(Int_t i = 0; i < numEntries; ++i, ++iter) {
+      for(Int_t i = 0; i < numEntries; ++i) {
          data.get(i);
-         *iter = fPdf->getVal(fObs);
+         fValues.push_back(fPdf->getVal(fObs));
       }
    }
 };
@@ -139,6 +138,11 @@ public:
       std::vector<Double_t>::const_iterator itWgt, begWgt = fWeights.begin();
       std::vector<Double_t>::iterator itSum, begSum = fPartialSums.begin(), endSum = fPartialSums.end();
 
+
+      std::cout << "SumLikelihood::evaluate " << fCoefficients.size() << " "
+                << fCachedPdfs.size() << " " << fWeights.size() << " "
+                << fPartialSums.size() << std::endl;
+
       Double_t sumCoef = 0.0;
       for(itCoef = begCoef ; itCoef != endCoef; ++itPdf, ++itCoef) {
          Double_t coef = (*itCoef)->getVal();
@@ -155,6 +159,7 @@ public:
             *itSum += coef * (*itVal);
          }
       }
+
 
       // get final NLL
       Double_t result = 0.0;
@@ -270,12 +275,15 @@ private:
       fWeights.reserve(numEntries);
       fPartialSums.reserve(numEntries);
       
-      std::vector<Double_t>::iterator itWgt = fWeights.begin();
-      for(Int_t i = 0, n = numEntries; i < n; ++i, ++itWgt) {
+      for(Int_t i = 0, n = numEntries; i < n; ++i) {
          data.get(i);
-         *itWgt = data.weight();
-         fSumWeights += *itWgt;
+         // TODO: check if double call to weight is costly
+         fWeights.push_back(data.weight());
+         fPartialSums.push_back(0.0);
+         fSumWeights += data.weight();
       }
+
+      std::cout << "SumLikelihood::SetData numEntries " << numEntries << " fWeights " << fWeights.size() << std::endl; 
 
       for(std::vector<CachedPdf>::iterator itPdf = fCachedPdfs.begin(), endPdf = fCachedPdfs.end();
          itPdf != endPdf; ++itPdf) (*itPdf).SetDataDirty();
