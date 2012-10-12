@@ -20,9 +20,11 @@ MATHTEXTO    := $(call stripsrc,$(MATHTEXTS:.cxx=.o))
 MATHTEXTDEP  := $(MATHTEXTO:.o=.d) $(MATHTEXTDO:.o=.d)
 
 ifeq ($(PLATFORM),win32)
-MATHTEXTLIB  := $(LPATH)/libmathtext.lib
+MATHTEXTLIB  := $(LPATH)\libmathtext.lib
+ARCHIVE      := link.exe -lib /out:
 else
 MATHTEXTLIB  := $(LPATH)/libmathtext.a
+ARCHIVE      := $(AR) cru 
 endif
 
 # used in the main Makefile
@@ -43,7 +45,7 @@ include/%.h:    $(MATHTEXTDIRI)/%.h
 		cp $< $@
 
 $(MATHTEXTLIB): $(MATHTEXTO) $(ORDER_)
-		$(AR) cru $@ $(MATHTEXTO)
+		$(ARCHIVE)$@ $(MATHTEXTO)
 
 all-$(MODNAME): $(MATHTEXTLIB)
 
