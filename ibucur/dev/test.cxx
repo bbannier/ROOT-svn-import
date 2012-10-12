@@ -18,6 +18,7 @@
 #include "RooArgSet.h"
 #include "RooCmdArg.h"
 #include "RooLinkedList.h"
+#include "RooAddPdf.h"
 
 // RooStats headers
 #include "RooStats/ModelConfig.h"
@@ -42,14 +43,15 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    // XXX never forget workspace name
    // Build Higgs model
 //   TFile f("comb_hgg_125.root");
-   TFile f(file);
-   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
-   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
+//   TFile f(file);
+//   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
+//   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
-//   RooWorkspace *w = new RooWorkspace("w", kTRUE);
+   RooWorkspace *w = new RooWorkspace("w", kTRUE);
 //   buildSimultaneousModel(w);   
-//   buildAddModel(w);
-//   ModelConfig* model = (ModelConfig*)w->obj("S+B");
+   buildAddModel(w);
+   RooAddPdf *add = (RooAddPdf *)w->pdf("sum_pdf");
+   ModelConfig* model = (ModelConfig*)w->obj("S+B");
    
    RooLinkedList commands;
    RooCmdArg arg1(RooFit::CloneData(kFALSE));
@@ -61,34 +63,49 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 //   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
    RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
 
-/*
-   double *values = new double[11];
-   double *x = new double[11];
+   w->var("sig")->setVal(0.1);
+   double lastVal = nll->getVal();
+//   double *values = new double[10];
+//   double *x = new double[10];
    int j = 0;
-   for(double d = 0.0; j <= 10; d += 0.2, j++) {
-      w->var("r")->setVal(d);
-      values[j] = nll->getVal(); x[j] = d;
-      std::cout << "nll value " << d << " " << values[j] << std::endl;
-   }
-   TCanvas *c = new TCanvas("test2"); c->SetGrid();
-   TGraph *g = new TGraph(11, x, values); 
-   g->SetLineColor(2); g->SetLineWidth(4); g->SetMarkerColor(4); g->SetMarkerStyle(21);
-   g->Draw("ACP");
-   delete values; delete x;
-   return;
-*/
+   Int_t numPdfs = add->pdfList().getSize();
+   const RooArgSet* obs = model->GetObservables();
+   for(double d = 0.3; j < 10; d += 0.2, j++) {
+      TIterator *itPdf = add->pdfList().createIterator();
+      TIterator *itCoef = add->coefList().createIterator();
 
-   RooMinimizer m(*nll);
-   m.setMinimizerType("Minuit2");
-   m.optimizeConst(2);
-   m.setErrorLevel(0.5);
-   m.setPrintLevel(0);
-   m.setStrategy(0);
+      w->var("sig")->setVal(d);
+    //  values[j] = nll->getVal() - lastVal; 
+  //    x[j] = d; lastVal = nll->getVal();
+    //  std::cout << "nll diff " << d << " " << values[j] << std::endl;
+      std::cout << "obs " << obs->getRealValue("obs1") << " "
+                << obs->getRealValue("obs2") << " " 
+                << obs->getRealValue("obs3") << std::endl;
+
+      for(Int_t i = 0; i < numPdfs; ++i) {
+         RooAbsReal *coef = (RooAbsReal *)(itCoef->Next());
+         RooAbsPdf  *pdf  = (RooAbsPdf * )(itPdf->Next() );
+         pdf->getVariables()->Print("v");
+         std::cout << "pdf " << i << pdf->ClassName() << " value " << pdf->getVal(obs) << std::endl;
+         std::cout << "coef " << i << " value " << coef->getVal() << std::endl;
+      }
+   }
+//   delete values; delete x;
+   return;
+
+
+  // RooMinimizer m(*nll);
+  // m.setMinimizerType("Minuit2");
+//   m.optimizeConst(2);
+  // m.setErrorLevel(0.5);
+  // m.setEps(1);
+  // m.setPrintLevel(2);
+  // m.setStrategy(0);
 
    myBenchmark.Start("CombinedLikelihood");
 
    for(Int_t i = 0; i < RUNS; i++) {
-      m.migrad();
+  //    m.migrad();
    }
 
    myBenchmark.Stop("CombinedLikelihood");
@@ -106,8 +123,8 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    // m.minos(/* param */);
 
 
-//   RooFitResult *r = m.save();
-//   r->Print("v");
+  // RooFitResult *r = m.save();
+  // r->Print("v");
    // RooPlot* frame = m.contour(/* */);
    // frame->SetTitle("RooMinuit contour plot");
 }
@@ -166,9 +183,9 @@ void buildSimultaneousModel(RooWorkspace *w)
 void buildAddModel(RooWorkspace *w)
 {
    // Build model
-   w->factory("Gaussian::s1(obs1[10,0,20], sig[10,0,20], bkg1[1,0,10])");
-   w->factory("Gaussian::s2(obs2[10,0,100], 40, sig)");
-   w->factory("Poisson::s3(obs3[20,0,30], sig)"); 
+   w->factory("Gaussian::s1(obs1[10,-1000,1000], sig[10,-1000,1000], bkg1[1,0,1000])");
+   w->factory("Gaussian::s2(obs2[10,-1000,1000], 40, sig)");
+   w->factory("Gaussian::s3(obs3[20,0,1000], sig, 1)"); 
    w->factory("SUM::sum_pdf(0.2*s1,0.3*s2,0.5*s3)");
 
    // create combined signal + background model configuration
@@ -186,7 +203,7 @@ void buildAddModel(RooWorkspace *w)
    w->import(*bModel);
 
    // define data set
-   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 1000);
+   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 10);
    data->SetName("data_obs");
    w->import(*data);
 

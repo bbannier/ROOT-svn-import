@@ -71,7 +71,7 @@ public:
          fLastData = &data;
          fPdf->optimizeCacheMode(*data.get()); 
          fPdf->attachDataSet(data); // TODO: is it necessary?
-//         const_cast<RooAbsData*>(fLastData)->setDirtyProp(kFALSE);
+         const_cast<RooAbsData*>(fLastData)->setDirtyProp(kFALSE);
          Fill(data);
       }
       // TODO: see if it is worth to have multiple caches
