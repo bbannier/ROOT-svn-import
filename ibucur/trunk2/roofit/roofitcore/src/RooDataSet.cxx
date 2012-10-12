@@ -351,46 +351,8 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
         
   } else {
 
-    Bool_t commonWgtVar = false;     
     if (wgtVar) {
       wgtVarName = wgtVar->GetName() ;
-    } else if(indexCat) {
-      TIterator *dataSetIter = impSliceData.MakeIterator(); RooDataSet *dataSet; 
-      Double_t wgtMin, wgtMax; const char *commonWgtVarName = NULL;
-
-      /**
-       *   We check if all imported RooDataSets that have a weight variable use a
-       * common name for the weight variable. If so, a weight variable with that 
-       * name is created for the combined data set, which will load all the 
-       * weights from the weight variables in the imported RooDataSets.
-       *
-       *   RooDataSets without a weight variable are disregarded. The weights for
-       * their rows are automatically set to 1.0 .
-      **/
-     
-      // find the first data set with a weight variable
-      while((dataSet = (RooDataSet *)dataSetIter->Next()) && !dataSet->_wgtVar);   
-      if(dataSet) {
-        commonWgtVar = true;
-        commonWgtVarName = dataSet->_wgtVar->GetName();
-        wgtMin = dataSet->_wgtVar->getMin();
-        wgtMax = dataSet->_wgtVar->getMax();
-      }
-      // see if there are other data sets with weight variables and compare the names
-      while((dataSet = (RooDataSet *)dataSetIter->Next())) {
-        if(dataSet->_wgtVar) {
-          if(strcmp(dataSet->_wgtVar->GetName(), commonWgtVarName) != 0) {
-            commonWgtVar = false;
-          } else {
-            if(dataSet->_wgtVar->getMin() < wgtMin) wgtMin = dataSet->_wgtVar->getMin();
-            if(dataSet->_wgtVar->getMax() > wgtMax) wgtMax = dataSet->_wgtVar->getMax();
-          }
-        }
-      }
-      if(commonWgtVar) {
-        wgtVarName = commonWgtVarName; // add weight var    
-        _vars.addOwned(*(new RooRealVar(wgtVarName, wgtVarName, wgtMin, wgtMax))); 
-      }
     }
     
     // Clone weight variable of imported dataset if we are not weighted
@@ -502,9 +464,7 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
 	    icat->defineType(hiter->first.c_str()) ;
 	  }
 	  icat->setLabel(hiter->first.c_str()) ;
-	 
-     // if we have combined weighted with unweighted data sets, the unweighted data rows will have weight 1
-     if(commonWgtVar && !hiter->second->_wgtVar) _wgtVar->setVal(1.0); 
+	  
 	  RooFormulaVar cutVarTmp(cutSpec,cutSpec,hiter->second->_vars) ;
 	  _dstore->loadValues(hiter->second->store(),&cutVarTmp,cutRange) ;
 	}
@@ -568,8 +528,6 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
 	    icat->defineType(hiter->first.c_str()) ;
 	  }
 	  icat->setLabel(hiter->first.c_str()) ;
-     // if we have combined weighted with unweighted data sets, the unweighted data rows will have weight 1
-     if(commonWgtVar && !hiter->second->_wgtVar) _wgtVar->setVal(1.0); 
 	  _dstore->loadValues(hiter->second->store(),cutVar,cutRange) ;
 	}
 	
@@ -625,8 +583,6 @@ RooDataSet::RooDataSet(const char* name, const char* title, const RooArgSet& var
 	    icat->defineType(hiter->first.c_str()) ;
 	  }
 	  icat->setLabel(hiter->first.c_str()) ;
-     // if we have combined weighted with unweighted data sets, the unweighted data rows will have weight 1
-     if(commonWgtVar && !hiter->second->_wgtVar) _wgtVar->setVal(1.0); 
 	  // Case 2c --- Import multiple RooDataSets as slices
 	  _dstore->loadValues(hiter->second->store(),0,cutRange) ;
 	}
