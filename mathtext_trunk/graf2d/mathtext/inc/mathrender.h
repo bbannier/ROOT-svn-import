@@ -722,7 +722,7 @@ namespace mathtext {
 	protected:
 		inline virtual affine_transform_t
 		transform_logical_to_pixel(void) const = 0;
-		inline virtual affine_transform_t
+		       virtual affine_transform_t
 		transform_pixel_to_logical(void) const = 0;
 		/////////////////////////////////////////////////////////////
 		// Box rendering
@@ -826,25 +826,25 @@ namespace mathtext {
 		}
 		/////////////////////////////////////////////////////////////
 		// Virtual functions
-		inline virtual float font_size(
+		       virtual float font_size(
 			const unsigned int family = FAMILY_PLAIN) const = 0;
-		inline virtual void set_font_size(
+		       virtual void set_font_size(
 			const float size, const unsigned int family) = 0;
 		inline virtual void set_font_size(const float size) = 0;
-		inline virtual void reset_font_size(
+		       virtual void reset_font_size(
 			const unsigned int family) = 0;
-		inline virtual void point(const float x, const float y) = 0;
-		inline virtual void filled_rectangle(
+		       virtual void point(const float x, const float y) = 0;
+		       virtual void filled_rectangle(
 			const bounding_box_t &bounding_box) = 0;
-		inline virtual void rectangle(
+		       virtual void rectangle(
 			const bounding_box_t &bounding_box) = 0;
-		inline virtual bounding_box_t bounding_box(
+		       virtual bounding_box_t bounding_box(
 			const std::wstring string,
 			const unsigned int family = FAMILY_PLAIN) = 0;
-		inline virtual void text_raw(
+		       virtual void text_raw(
 			const float x, const float y, const std::wstring string,
 			const unsigned int family = FAMILY_PLAIN) = 0;
-		inline virtual void text_with_bounding_box(
+		       virtual void text_with_bounding_box(
 			const float x, const float y, const std::wstring string,
 			const unsigned int family = FAMILY_PLAIN) = 0;
 		/////////////////////////////////////////////////////////////
