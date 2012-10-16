@@ -45,6 +45,12 @@ namespace RooStats {
       // Get the total channel histogram for this channel
       TH1* GetChannelHist(const std::string& channel, const std::string& name="");
 
+      // Get the constraint term for a given systematic (alpha or gamma)
+      RooAbsReal* GetConstraintTerm(const std::string& parameter);
+
+      // Get the uncertainty based on the constraint term for a given systematic
+      double GetConstraintUncertainty(const std::string& parameter);
+
       // Should pretty print all channels and the current values 
       void PrintState();
       // Should pretty print this and the current values
@@ -105,6 +111,11 @@ namespace RooStats {
       // Map of Map of Channel, Sample names to Function Nodes
       // Used by doing: fChannelSampleFunctionMap["MyChannel"]["MySample"]
       std::map< std::string, std::map< std::string, RooAbsReal*> > fChannelSampleFunctionMap;
+
+      // Internal method implementation of finding a daughter node
+      // from a parent node (looping over all generations)
+      RooAbsReal* findChild(const std::string& name, RooAbsReal* parent);
+      
 
     protected:
       ClassDef(RooStats::HistFactory::HistFactoryNavigation,2)
