@@ -550,13 +550,13 @@ namespace mathtext {
 		}
 
 		size_t name_offset = 0;
-		size_t name_length = 0;
+		//size_t name_length = 0;
 		size_t head_offset = 0;
-		size_t head_length = 0;
+		//size_t head_length = 0;
 		size_t cmap_offset = 0;
-		size_t cmap_length = 0;
+		//size_t cmap_length = 0;
 		size_t post_offset = 0;
-		size_t post_length = 0;
+		//size_t post_length = 0;
 
 		for (uint16_t i = 0; i < offset_table.num_tables; i++) {
 			struct ttf_table_directory_s {
@@ -585,19 +585,19 @@ namespace mathtext {
 #endif
 			if (strncmp(table_directory.tag, "name", 4) == 0) {
 				name_offset = table_directory.offset;
-				name_length = table_directory.length;
+				//name_length = table_directory.length;
 			}
 			else if (strncmp(table_directory.tag, "head", 4) == 0) {
 				head_offset = table_directory.offset;
-				head_length = table_directory.length;
+				//head_length = table_directory.length;
 			}
 			else if (strncmp(table_directory.tag, "cmap", 4) == 0) {
 				cmap_offset = table_directory.offset;
-				cmap_length = table_directory.length;
+				//cmap_length = table_directory.length;
 			}
 			else if (strncmp(table_directory.tag, "post", 4) == 0) {
 				post_offset = table_directory.offset;
-				post_length = table_directory.length;
+				//post_length = table_directory.length;
 			}
 		}
 
