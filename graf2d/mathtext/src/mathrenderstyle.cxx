@@ -252,11 +252,11 @@ namespace mathtext {
 				 unsigned int style) const
 	{
 		const unsigned int left_type_modified =
-			left_type <= math_text_t::atom_t::TYPE_INNER ?
-			left_type : math_text_t::atom_t::TYPE_ORD;
+			left_type <= (unsigned int) math_text_t::atom_t::TYPE_INNER ?
+			left_type : (unsigned int) math_text_t::atom_t::TYPE_ORD;
 		const unsigned int right_type_modified =
-			right_type <= math_text_t::atom_t::TYPE_INNER ?
-			right_type : math_text_t::atom_t::TYPE_ORD;
+			right_type <= (unsigned int) math_text_t::atom_t::TYPE_INNER ?
+			right_type : (unsigned int) math_text_t::atom_t::TYPE_ORD;
 		const unsigned int space = math_text_t::atom_t::
 			spacing(left_type_modified, right_type_modified,
 					is_script_style(style));
