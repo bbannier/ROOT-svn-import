@@ -50,8 +50,8 @@ namespace HistFactory{
 
     RooListProxy _paramList ;
     Double_t _nominal;
-    mutable std::vector<double> _low;
-    mutable std::vector<double> _high;
+    std::vector<double> _low;
+    std::vector<double> _high;
     std::vector<int> _interpCode;
     Double_t _interpBoundary;
 
