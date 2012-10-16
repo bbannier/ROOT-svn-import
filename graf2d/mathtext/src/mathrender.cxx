@@ -589,38 +589,38 @@ namespace mathtext {
 	}
 
 	bounding_box_t math_text_renderer_t::
-	bounding_box(const math_text_t &text, const bool display_style)
+	bounding_box(const math_text_t &textbb, const bool display_style)
 	{
-		if(!text.well_formed())
-			bounding_box(L"*** invalid: " + text.code());
+		if(!textbb.well_formed())
+			bounding_box(L"*** invalid: " + textbb.code());
 
 		const unsigned int initial_style = display_style ?
 			math_text_t::item_t::STYLE_DISPLAY :
 			math_text_t::item_t::STYLE_TEXT;
 
-		return math_bounding_box(text._math_list._math_list,
+		return math_bounding_box(textbb._math_list._math_list,
 								 initial_style);
 	}
 
 	void math_text_renderer_t::
-	text(const float x, const float y, const math_text_t &text,
+	text(const float x, const float y, const math_text_t &texti,
 		 const bool display_style)
 	{
-		if(!text.well_formed()) {
-			text_raw(x, y, L"*** invalid: " + text.code());
+		if(!texti.well_formed()) {
+			text_raw(x, y, L"*** invalid: " + texti.code());
 		}
 
 		const unsigned int initial_style = display_style ?
 			math_text_t::item_t::STYLE_DISPLAY :
 			math_text_t::item_t::STYLE_TEXT;
 
-		if(text._render_structure) {
+		if(texti._render_structure) {
 			point(x, y);
 			rectangle(point_t(x, y) + math_bounding_box(
-				text._math_list._math_list, initial_style));
+				texti._math_list._math_list, initial_style));
 		}
-		math_text(point_t(x, y), text._math_list._math_list,
-				  initial_style, text._render_structure);
+		math_text(point_t(x, y), texti._math_list._math_list,
+				  initial_style, texti._render_structure);
 	}
 
 }
