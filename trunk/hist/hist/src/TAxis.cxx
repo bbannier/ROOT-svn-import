@@ -856,6 +856,9 @@ void TAxis::SetRange(Int_t first, Int_t last)
 {
    //  Set the viewing range for the axis from bin first to last
    //  To set a range using the axis coordinates, use TAxis::SetRangeUser.
+   //  NOTE: for historical reasons, SetRange(0,0) resets the range even though Bin 0 is 
+   //       technically reserved for the underflow; in order to set the range of the axis
+   //       so that it only includes the underflow, use SetRange(a,0), where a < 0
 
    //  If first == last == 0 or if last < first or if the range specified does
    //  not intersect at all with the maximum available range [0, fNbins + 1],
