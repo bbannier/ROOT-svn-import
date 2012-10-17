@@ -33,19 +33,26 @@ The following example demonstate how to use TMathText:
 End_Html
 Begin_Macro(source)
 ../../../tutorials/graphics/tmathtext.C
-End_Macro */
+End_Macro
+Begin_Html
+<p>
+The list of all available symbol is givern in the following example:
+End_Html
+Begin_Macro(source)
+../../../tutorials/graphics/tmathtext2.C
+End_Macro
+Begin_Html
+<p>
+End_Html
+*/
 
 
-#ifdef R__SUNCCBUG
-const Double_t kPI = 3.14159265358979323846;
-#else
-const Double_t kPI = TMath::Pi();
-#endif
+const Double_t kPI      = TMath::Pi();
 const Int_t kLatex      = BIT(10);
 const Int_t kPrintingPS = BIT(11); //set in TPad.h
 
 class TMathTextRenderer : public TText, public TAttFill,
-                    public mathtext::math_text_renderer_t {
+                          public mathtext::math_text_renderer_t {
 private:
    TMathText *_parent;
    float _font_size;
@@ -365,8 +372,8 @@ TMathText &TMathText::operator=(const TMathText &rhs)
    // Assignemnt operator.
 
    if (this != &rhs) {
-      TText::operator=(rhs);
-      TAttFill::operator=(rhs);
+      TText::operator    = (rhs);
+      TAttFill::operator = (rhs);
    }
    return *this;
 }
@@ -455,16 +462,16 @@ GetAlignPoint(Double_t &x0, Double_t &y0,
    Short_t valign = align - 10 * halign;
 
    switch(halign) {
-   case 0:   x = bounding_box.left();            break;
-   case 1:   x = 0;                           break;
-   case 2:   x = bounding_box.horizontal_center();   break;
-   case 3:   x = bounding_box.right();            break;
+      case 0:   x = bounding_box.left();              break;
+      case 1:   x = 0;                                break;
+      case 2:   x = bounding_box.horizontal_center(); break;
+      case 3:   x = bounding_box.right();             break;
    }
    switch(valign) {
-   case 0:   y = bounding_box.bottom();            break;
-   case 1:   y = 0;                           break;
-   case 2:   y = bounding_box.vertical_center();      break;
-   case 3:   y = bounding_box.top();               break;
+      case 0:   y = bounding_box.bottom();            break;
+      case 1:   y = 0;                                break;
+      case 2:   y = bounding_box.vertical_center();   break;
+      case 3:   y = bounding_box.top();               break;
    }
    renderer->transform_pad(x0, y0, x, y);
 }
@@ -545,9 +552,7 @@ TMathText *TMathText::DrawMathText(Double_t x, Double_t y, const char *text)
    TAttText::Copy(*newtext);
 
    newtext->SetBit(kCanDelete);
-   if (TestBit(kTextNDC)) {
-      newtext->SetNDC();
-   }
+   if (TestBit(kTextNDC)) newtext->SetNDC();
    newtext->AppendPad();
 
    return newtext;
@@ -576,14 +581,13 @@ void TMathText::Paint(Option_t *)
 
 
 //______________________________________________________________________________
-void TMathText::PaintMathText(
-   Double_t x, Double_t y, Double_t angle, Double_t size,
-   const Char_t *text1)
+void TMathText::PaintMathText(Double_t x, Double_t y, Double_t angle,
+                              Double_t size, const Char_t *text1)
 {
    // Paint text (used by Paint()).
 
    Double_t saveSize = size;
-   Int_t saveFont = fTextFont;
+   Int_t saveFont    = fTextFont;
    Short_t saveAlign = fTextAlign;
 
    TAttText::Modify();
@@ -608,15 +612,11 @@ void TMathText::PaintMathText(
       size = size / std::min(w, h);
       SetTextFont(10 * (saveFont / 10) + 2);
    }
-   if (gVirtualPS) {
-      gVirtualPS->SetBit(kLatex);
-   }
+   if (gVirtualPS) gVirtualPS->SetBit(kLatex);
 
    const TString newText = text1;
 
-   if (newText.Length() == 0) {
-      return;
-   }
+   if (newText.Length() == 0) return;
 
    const Int_t length = newText.Length();
    const Char_t *text = newText.Data();
@@ -630,9 +630,7 @@ void TMathText::PaintMathText(
    SetTextFont(saveFont);
    SetTextAlign(saveAlign);
 
-   if (gVirtualPS) {
-      gVirtualPS->ResetBit(kLatex);
-   }
+   if (gVirtualPS) gVirtualPS->ResetBit(kLatex);
 }
 
 
