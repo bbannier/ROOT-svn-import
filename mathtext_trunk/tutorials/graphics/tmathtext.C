@@ -1,4 +1,4 @@
-// This macro various formula in a canvas and prints the canvas
+// This macro drawvarious formula in a canvas and prints the canvas
 // as a Postscript file using TMathText.
 //Author: Yue Shi Lai
 
