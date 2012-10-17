@@ -1,4 +1,13 @@
-// Copyright (C) 2007-2009, Yue Shi Lai. All rights reserved.
+// @(#)root/graf:$Id: TMathText.cxx  $
+// Author: Yue Shi Lai  16/10/12
+
+/*************************************************************************
+ * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
 
 #include "Riostream.h"
 #include "TROOT.h"
@@ -12,6 +21,20 @@
 
 #include "mathtext.h"
 #include "mathrender.h"
+
+//______________________________________________________________________________
+/* Begin_Html
+<center><h2>TMathText : to draw LaTex Mathematical Formula</h2></center>
+ 
+TMathText's purpose is to write mathematical equations, exactly as LaTex would
+do it. The syntax is the same as LaTex's.
+<p>
+The following example demonstate how to use TMathText:
+End_Html
+Begin_Macro(source)
+../../../tutorials/graphics/tmathtext.C
+End_Macro */
+
 
 #ifdef R__SUNCCBUG
 const Double_t kPI = 3.14159265358979323846;
@@ -299,27 +322,30 @@ public:
 
 ClassImp(TMathText)
 
+
+//______________________________________________________________________________
 TMathText::TMathText(void)
 	: TAttFill(0, 1001)
 {
 	fRenderer = new TMathTextRenderer(this);
 }
 
+
+//______________________________________________________________________________
 TMathText::TMathText(Double_t x, Double_t y, const char *text)
 	: TText(x, y, text), TAttFill(0, 1001)
 {
 	fRenderer = new TMathTextRenderer(this);
 }
 
+
+//______________________________________________________________________________
 TMathText::~TMathText(void)
 {
-   /*
-	if(fRenderer != NULL) {
-		delete fRenderer;
-	}
-    */
 }
 
+
+//______________________________________________________________________________
 TMathText::TMathText(const TMathText &text)
 	: TText(text), TAttFill(text)
 {
@@ -327,6 +353,8 @@ TMathText::TMathText(const TMathText &text)
 	fRenderer = new TMathTextRenderer(this);
 }
 
+
+//______________________________________________________________________________
 TMathText &TMathText::operator=(const TMathText &rhs)
 {
    if(this != &rhs) {
@@ -336,6 +364,8 @@ TMathText &TMathText::operator=(const TMathText &rhs)
    return *this;
 }
 
+
+//______________________________________________________________________________
 void TMathText::Copy(TObject &obj) const
 {
    ((TMathText &)obj).fRenderer = fRenderer;
@@ -343,6 +373,8 @@ void TMathText::Copy(TObject &obj) const
    TAttFill::Copy((TAttFill &)obj);
 }
 
+
+//______________________________________________________________________________
 void TMathText::
 Render(const Double_t x, const Double_t y, const Double_t size,
 	   const Double_t angle, const Char_t *t, const Int_t /*length*/)
@@ -354,6 +386,8 @@ Render(const Double_t x, const Double_t y, const Double_t size,
 	renderer->text(0, 0, math_text);
 }
 
+
+//______________________________________________________________________________
 void TMathText::
 GetSize(Double_t &x0, Double_t &y0, Double_t &x1, Double_t &y1,
 		const Double_t size, const Double_t angle, const Char_t *t,
@@ -384,6 +418,8 @@ GetSize(Double_t &x0, Double_t &y0, Double_t &x1, Double_t &y1,
 	y1 = std::max(std::max(y[0], y[1]), std::max(y[2], y[3]));
 }
 
+
+//______________________________________________________________________________
 void TMathText::
 GetAlignPoint(Double_t &x0, Double_t &y0,
 			  const Double_t size, const Double_t angle,
@@ -418,6 +454,8 @@ GetAlignPoint(Double_t &x0, Double_t &y0,
 	renderer->transform_pad(x0, y0, x, y);
 }
 
+
+//______________________________________________________________________________
 void TMathText::GetBoundingBox(UInt_t &w, UInt_t &h, Bool_t /*angle*/)
 {
 	const TString newText = GetTitle();
@@ -435,6 +473,8 @@ void TMathText::GetBoundingBox(UInt_t &w, UInt_t &h, Bool_t /*angle*/)
 	h = (UInt_t)(TMath::Abs(gPad->YtoAbsPixel(y0) - gPad->YtoAbsPixel(y1)));
 }
 
+
+//______________________________________________________________________________
 Double_t TMathText::GetXsize(void)
 {
 	const TString newText = GetTitle();
@@ -453,6 +493,8 @@ Double_t TMathText::GetXsize(void)
 	return TMath::Abs(x1 - x0);
 }
 
+
+//______________________________________________________________________________
 Double_t TMathText::GetYsize(void)
 {
 	const TString newText = GetTitle();
@@ -471,6 +513,8 @@ Double_t TMathText::GetYsize(void)
 	return TMath::Abs(y0 - y1);
 }
 
+
+//______________________________________________________________________________
 TMathText *TMathText::DrawMathText(Double_t x, Double_t y, const char *text)
 {
 	// Make a copy of this object with the new parameters
@@ -488,6 +532,8 @@ TMathText *TMathText::DrawMathText(Double_t x, Double_t y, const char *text)
 	return newtext;
 }
 
+
+//______________________________________________________________________________
 void TMathText::Paint(Option_t *)
 {
 	Double_t xsave = fX;
@@ -506,6 +552,8 @@ void TMathText::Paint(Option_t *)
 	fY = ysave;
 }
 
+
+//______________________________________________________________________________
 void TMathText::PaintMathText(
 	Double_t x, Double_t y, Double_t angle, Double_t size,
 	const Char_t *text1)
@@ -563,6 +611,8 @@ void TMathText::PaintMathText(
 	}
 }
 
+
+//______________________________________________________________________________
 void TMathText::SavePrimitive(std::ostream &out, Option_t * /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
