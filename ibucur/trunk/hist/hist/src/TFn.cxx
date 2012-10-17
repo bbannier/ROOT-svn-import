@@ -2521,19 +2521,16 @@ Bool_t TFn::RejectedPoint()
 Double_t TFn::Moment(Double_t n, Double_t* a, Double_t* b, const Double_t *params, Double_t epsilon)
 {
    // Return nth moment of function between a and b
-   //
    // See TFn::Integral() for parameter definitions
 
    // wrapped function in interface for integral calculation
    // using abs value of integral 
 
 //   TFn_EvalWrapper func(this, params, kTRUE, n); 
-
-//   ROOT::Math::GaussIntegrator giod;
    ROOT::Math::AdaptiveIntegratorMultiDim aimd;
 
-//   aimd.SetFunction(func);
-//   giod.SetRelTolerance(epsilon);
+   aimd.SetFunction(*this);
+   aimd.SetRelTolerance(epsilon);
 
    Double_t norm =  aimd.Integral(a, b);
    if (norm == 0) {
