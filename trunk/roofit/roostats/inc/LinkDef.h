@@ -115,8 +115,6 @@
 #pragma link C++ class RooStats::GaussianPDF+;
 #pragma link C++ class RooStats::PoissonPDF+;
 
-#pragma link C++ class AsymPow+;
-
 
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialExpZ(Double_t , Double_t ,Double_t);
 #pragma link C++ function RooStats::NumberCountingUtils::BinomialWithTauExpZ(Double_t,Double_t,Double_t);
