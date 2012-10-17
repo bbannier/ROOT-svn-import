@@ -2518,7 +2518,7 @@ Bool_t TFn::RejectedPoint()
 }
 
 //______________________________________________________________________________
-Double_t TFn::Moment(Double_t n, Double_t a, Double_t b, const Double_t *params, Double_t epsilon)
+Double_t TFn::Moment(Double_t n, Double_t* a, Double_t* b, const Double_t *params, Double_t epsilon)
 {
    // Return nth moment of function between a and b
    //
@@ -2527,14 +2527,15 @@ Double_t TFn::Moment(Double_t n, Double_t a, Double_t b, const Double_t *params,
    // wrapped function in interface for integral calculation
    // using abs value of integral 
 
-   TFn_EvalWrapper func(this, params, kTRUE, n); 
+//   TFn_EvalWrapper func(this, params, kTRUE, n); 
 
-   ROOT::Math::GaussIntegrator giod;
+//   ROOT::Math::GaussIntegrator giod;
+   ROOT::Math::AdaptiveIntegratorMultiDim aimd;
 
-   giod.SetFunction(func);
-   giod.SetRelTolerance(epsilon);
+//   aimd.SetFunction(func);
+//   giod.SetRelTolerance(epsilon);
 
-   Double_t norm =  giod.Integral(a, b);
+   Double_t norm =  aimd.Integral(a, b);
    if (norm == 0) {
       Error("Moment", "Integral zero over range");
       return 0;
@@ -2542,12 +2543,13 @@ Double_t TFn::Moment(Double_t n, Double_t a, Double_t b, const Double_t *params,
 
    // calculate now integral of x^n f(x)
    // wrapped the member function EvalNum in  interface required by integrator using the functor class 
-   ROOT::Math::Functor1D xnfunc( &func, &TFn_EvalWrapper::EvalNMom);
-   giod.SetFunction(xnfunc);
+//   ROOT::Math::Functor1D xnfunc( &func, &TFn_EvalWrapper::EvalNMom);
+//   giod.SetFunction(xnfunc);
 
-   Double_t res = giod.Integral(a,b)/norm;
-
-   return res;
+//   Double_t res = giod.Integral(a,b)/norm;
+   
+   //return res;
+   return 0.0;
 }
 
 

@@ -39,6 +39,9 @@
 #ifndef ROOT_Math_ParamFunctor
 #include "Math/ParamFunctor.h"
 #endif
+#ifndef ROOT_Math_IParamFunction
+#include "Math/IParamFunction.h"
+#endif
 
 class TFn;
 class TH1;
@@ -51,7 +54,9 @@ namespace ROOT {
    }
 }
 
-class TFn : public TFormula, public TAttLine, public TAttFill, public TAttMarker {
+// TODO: check abstract methods that need implementing in new base classes
+class TFn : public TFormula, public TAttLine, public TAttFill, public TAttMarker,
+   public ROOT::Math::IParamMultiGradFunction, public ROOT::Math::IGradientMultiDim {
 
 protected:
    Double_t    fXmin;        //Lower bounds for the range
@@ -269,10 +274,11 @@ public:
    static  Bool_t   RejectedPoint();
    static  void     SetCurrent(TFn *f1);
 
+   // TODO: write a multi-dim version
    //Moments
-   virtual Double_t Moment(Double_t n, Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=0.000001);
+   virtual Double_t Moment(Double_t n, Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001);
    virtual Double_t CentralMoment(Double_t n, Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=0.000001);
-   virtual Double_t Mean(Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=0.000001) {return Moment(1,a,b,params,epsilon);}
+   virtual Double_t Mean(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return Moment(1,a,b,params,epsilon);}
    virtual Double_t Variance(Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=0.000001) {return CentralMoment(2,a,b,params,epsilon);}
 
    //some useful static utility functions to compute sampling points for Integral
