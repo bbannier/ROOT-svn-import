@@ -1268,7 +1268,7 @@ Double_t TFn::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    return x;
 }
 
-
+/*
 //______________________________________________________________________________
 Double_t TFn::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter, Bool_t logx) const
 {
@@ -1304,6 +1304,7 @@ Double_t TFn::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, 
    return brf.Root();
 
 }
+*/
 
 //______________________________________________________________________________
 Int_t TFn::GetNDF() const

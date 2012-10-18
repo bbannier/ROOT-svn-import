@@ -198,7 +198,7 @@ public:
    virtual void     Browse(TBrowser *b);
    virtual void     Copy(TObject &f1) const;
    // TODO: see versus parametrised
-   virtual Double_t DoEval(Double_t *x) const {
+   virtual Double_t DoEval(Double_t *) const {
       //return EvalPar(x, fParams); //TODO: check how parameters can be modified
       // TODO: see how to return absolute value
       // TODO: solve constness issue - Why is EvalPar not constant?
@@ -234,9 +234,10 @@ public:
 //   virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &zmin, Double_t &xmax, Double_t &ymax, Double_t &zmax) const;
    virtual Double_t GetSave(const Double_t *x);
    // TODO: GetAxis (maybe)
-   virtual Double_t GetX(Double_t y, Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
-   virtual Double_t GetXmin() const {return fXmin;}
-   virtual Double_t GetXmax() const {return fXmax;}
+   // TODO: GetPoint instead of GetX -> should be possible
+//virtual Double_t GetX(Double_t y, Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
+//   virtual Double_t GetXmin() const {return fXmin;}
+//   virtual Double_t GetXmax() const {return fXmax;}
    virtual Double_t GradientPar(Int_t ipar, const Double_t *x, Double_t eps=0.01);
    virtual void     GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
    virtual void     InitArgs(const Double_t *x, const Double_t *params);
