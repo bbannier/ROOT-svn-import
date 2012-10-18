@@ -68,11 +68,14 @@ public:
    }
 };
 
-// class wrapping function evaluation directly in 1D interface (used for integration) 
+// class wrapping function evaluation directly in n-Dim interface (used for integration) 
 // and implementing the methods for the momentum calculations
 
-class  TFn_EvalWrapper : public ROOT::Math::IGenFunction { 
+class  TFn_EvalWrapper : public ROOT::Math::IParametricGradFunctionMultiDim { 
 public: 
+   // TODO: remove from here
+   //   TFn_EvalWrapper func(this, params, kTRUE, n); Moments and CentralMoments norm
+   //
    TFn_EvalWrapper(TFn * f, const Double_t * par, bool useAbsVal, Double_t n = 1, Double_t x0 = 0) : 
       fFunc(f), 
       fPar( ( (par) ? par : f->GetParameters() ) ),
@@ -82,19 +85,17 @@ public:
    {
       fFunc->InitArgs(fX, fPar); 
    }
-
+/*
    ROOT::Math::IGenFunction * Clone()  const { 
       // use default copy constructor
       TFn_EvalWrapper * f =  new TFn_EvalWrapper( *this);
       f->fFunc->InitArgs(f->fX, f->fPar); 
       return f;
-   }
+   }*/
    // evaluate |f(x)|
-   Double_t DoEval( Double_t x) const { 
-      fX[0] = x; 
-      Double_t fval = fFunc->EvalPar( fX, fPar);
-      if (fAbsVal && fval < 0)  return -fval;
-      return fval; 
+   Double_t DoEval( Double_t* x) const {  
+      Double_t fval = fFunc->EvalPar( x, fPar);
+      return (fAbsVal && fval < 0) ? -fval : fval;
    } 
    // evaluate x * |f(x)|
    Double_t EvalFirstMom( Double_t x) { 
@@ -115,7 +116,7 @@ public:
    Double_t fX0;
 };
 
-
+class Test: public ROOT::Math::IGenFunction { };
 
 //______________________________________________________________________________
 /* Begin_Html
@@ -343,7 +344,6 @@ See also the tutorial math/exampleFunctor.C for a running example.
 
 End_Html */
 
-TFn *TFn::fgCurrent = 0;
 
 
 //______________________________________________________________________________
@@ -1069,7 +1069,6 @@ Double_t TFn::EvalPar(const Double_t *x, const Double_t *params)
    // of the arguments x and params.
    // InitArgs should be called everytime these addresses change.
 
-   fgCurrent = this;
 
    if (fType == 0) return TFormula::EvalPar(x,params);
    Double_t result = 0;
@@ -1113,15 +1112,6 @@ void TFn::FixParameter(Int_t ipar, Double_t value)
 
 
 //______________________________________________________________________________
-TFn *TFn::GetCurrent()
-{
-   // Static function returning the current function being processed
-
-   return fgCurrent;
-}
-
-
-//______________________________________________________________________________
 TH1 *TFn::GetHistogram() const
 {
    // Return a pointer to the histogram used to vusualize the function
@@ -1129,7 +1119,7 @@ TH1 *TFn::GetHistogram() const
    if (fHistogram) return fHistogram;
 
    // May be function has not yet be painted. force a pad update
-   ((TFn*)this)->Paint();
+//   ((TFn*)this)->Paint();
    return fHistogram;
 }
 
@@ -1585,39 +1575,6 @@ Double_t TFn::GetSave(const Double_t *xx)
 }
 
 
-//______________________________________________________________________________
-TAxis *TFn::GetXaxis() const
-{
-   // Get x axis of the function.
-
-   TH1 *h = GetHistogram();
-   if (!h) return 0;
-   return h->GetXaxis();
-}
-
-
-//______________________________________________________________________________
-TAxis *TFn::GetYaxis() const
-{
-   // Get y axis of the function.
-
-   TH1 *h = GetHistogram();
-   if (!h) return 0;
-   return h->GetYaxis();
-}
-
-
-//______________________________________________________________________________
-TAxis *TFn::GetZaxis() const
-{
-   // Get z axis of the function. (In case this object is a TF2 or TF3)
-
-   TH1 *h = GetHistogram();
-   if (!h) return 0;
-   return h->GetZaxis();
-}
-
-
 
 //______________________________________________________________________________
 Double_t TFn::GradientPar(Int_t ipar, const Double_t *x, Double_t eps)
@@ -1895,148 +1852,6 @@ Bool_t TFn::IsInside(const Double_t *x) const
 
 
 //______________________________________________________________________________
-void TFn::Paint(Option_t *option)
-{
-   // Paint this function with its current attributes.
-
-   Int_t i;
-   Double_t xv[1];
-
-   fgCurrent = this;
-
-   TString opt = option;
-   opt.ToLower();
-   Bool_t optSAME = kFALSE;
-   if (opt.Contains("same")) optSAME = kTRUE;
-
-   Double_t xmin=fXmin, xmax=fXmax, pmin=fXmin, pmax=fXmax;
-   if (gPad) {
-      pmin = gPad->PadtoX(gPad->GetUxmin());
-      pmax = gPad->PadtoX(gPad->GetUxmax());
-   }
-   if (optSAME) {
-      if (xmax < pmin) return;  // Completely outside.
-      if (xmin > pmax) return;
-      if (xmin < pmin) xmin = pmin;
-      if (xmax > pmax) xmax = pmax;
-   }
-
-   //  Create a temporary histogram and fill each channel with the function value
-   //  Preserve axis titles
-   TString xtitle = "";
-   TString ytitle = "";
-   char *semicol = (char*)strstr(GetTitle(),";");
-   if (semicol) {
-      Int_t nxt = strlen(semicol);
-      char *ctemp = new char[nxt];
-      strlcpy(ctemp,semicol+1,nxt);
-      semicol = (char*)strstr(ctemp,";");
-      if (semicol) {
-         *semicol = 0;
-         ytitle = semicol+1;
-      }
-      xtitle = ctemp;
-      delete [] ctemp;
-   }
-   if (fHistogram) {
-      xtitle = fHistogram->GetXaxis()->GetTitle();
-      ytitle = fHistogram->GetYaxis()->GetTitle();
-      if (!gPad->GetLogx()  &&  fHistogram->TestBit(TH1::kLogX)) { delete fHistogram; fHistogram = 0;}
-      if ( gPad->GetLogx()  && !fHistogram->TestBit(TH1::kLogX)) { delete fHistogram; fHistogram = 0;}
-   }
-
-   if (fHistogram) {
-      fHistogram->GetXaxis()->SetLimits(xmin,xmax);
-   } else {
-      // If logx, we must bin in logx and not in x
-      // otherwise in case of several decades, one gets wrong results.
-      if (xmin > 0 && gPad && gPad->GetLogx()) {
-         Double_t *xbins    = new Double_t[fNpx+1];
-         Double_t xlogmin = TMath::Log10(xmin);
-         Double_t xlogmax = TMath::Log10(xmax);
-         Double_t dlogx   = (xlogmax-xlogmin)/((Double_t)fNpx);
-         for (i=0;i<=fNpx;i++) {
-            xbins[i] = gPad->PadtoX(xlogmin+ i*dlogx);
-         }
-         fHistogram = new TH1D("Func",GetTitle(),fNpx,xbins);
-         fHistogram->SetBit(TH1::kLogX);
-         delete [] xbins;
-      } else {
-         fHistogram = new TH1D("Func",GetTitle(),fNpx,xmin,xmax);
-      }
-      if (!fHistogram) return;
-      if (fMinimum != -1111) fHistogram->SetMinimum(fMinimum);
-      if (fMaximum != -1111) fHistogram->SetMaximum(fMaximum);
-      fHistogram->SetDirectory(0);
-   }
-   // Restore axis titles.
-   fHistogram->GetXaxis()->SetTitle(xtitle.Data());
-   fHistogram->GetYaxis()->SetTitle(ytitle.Data());
-
-   InitArgs(xv,fParams);
-   for (i=1;i<=fNpx;i++) {
-      xv[0] = fHistogram->GetBinCenter(i);
-      fHistogram->SetBinContent(i,EvalPar(xv,fParams));
-   }
-
-   // Copy Function attributes to histogram attributes.
-   Double_t minimum   = fHistogram->GetMinimumStored();
-   Double_t maximum   = fHistogram->GetMaximumStored();
-   if (minimum <= 0 && gPad && gPad->GetLogy()) minimum = -1111; // This can happen when switching from lin to log scale.
-   if (gPad && gPad->GetUymin() < fHistogram->GetMinimum() &&
-       !fHistogram->TestBit(TH1::kIsZoomed)) minimum = -1111; // This can happen after unzooming a fit.
-   if (minimum == -1111) { // This can happen after unzooming.
-      if (fHistogram->TestBit(TH1::kIsZoomed)) {
-         minimum = fHistogram->GetYaxis()->GetXmin();
-      } else {
-         minimum = fMinimum;
-         // Optimize the computation of the scale in Y in case the min/max of the 
-         // function oscillate around a constant value
-         if (minimum == -1111) {
-            Double_t hmin;
-            if (optSAME) hmin = gPad->GetUymin();
-            else         hmin = fHistogram->GetMinimum();
-            if (hmin > 0) {
-               Double_t hmax;
-               Double_t hminpos = hmin;
-               if (optSAME) hmax = gPad->GetUymax();
-               else         hmax = fHistogram->GetMaximum();
-               hmin -= 0.05*(hmax-hmin);
-               if (hmin < 0) hmin = 0;
-               if (hmin <= 0 && gPad && gPad->GetLogy()) hmin = hminpos;
-               minimum = hmin;
-            }
-         }
-      }
-      fHistogram->SetMinimum(minimum);
-   }
-   if (maximum == -1111) {
-      if (fHistogram->TestBit(TH1::kIsZoomed)) {
-         maximum = fHistogram->GetYaxis()->GetXmax();
-      } else {
-         maximum = fMaximum;
-      }
-      fHistogram->SetMaximum(maximum);
-   }
-   fHistogram->SetBit(TH1::kNoStats);
-   fHistogram->SetLineColor(GetLineColor());
-   fHistogram->SetLineStyle(GetLineStyle());
-   fHistogram->SetLineWidth(GetLineWidth());
-   fHistogram->SetFillColor(GetFillColor());
-   fHistogram->SetFillStyle(GetFillStyle());
-   fHistogram->SetMarkerColor(GetMarkerColor());
-   fHistogram->SetMarkerStyle(GetMarkerStyle());
-   fHistogram->SetMarkerSize(GetMarkerSize());
-
-   // Draw the histogram.
-   if (!gPad) return;
-   if (opt.Length() == 0) fHistogram->Paint("lf");
-   else if (optSAME)      fHistogram->Paint("lfsame");
-   else                   fHistogram->Paint(option);
-}
-
-
-//______________________________________________________________________________
 void TFn::Print(Option_t *option) const
 {
    // Dump this function with its attributes.
@@ -2184,8 +1999,8 @@ void TFn::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
       out<<"   "<<GetName()<<"->SetNDF("<<GetNDF()<<");"<<std::endl;
    }
 
-   if (GetXaxis()) GetXaxis()->SaveAttributes(out,GetName(),"->GetXaxis()");
-   if (GetYaxis()) GetYaxis()->SaveAttributes(out,GetName(),"->GetYaxis()");
+   //if (GetXaxis()) GetXaxis()->SaveAttributes(out,GetName(),"->GetXaxis()");
+   //if (GetYaxis()) GetYaxis()->SaveAttributes(out,GetName(),"->GetYaxis()");
 
    Double_t parmin, parmax;
    for (i=0;i<fNpar;i++) {
@@ -2198,17 +2013,6 @@ void TFn::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
       out<<"   "<<GetName()<<"->Draw("
          <<quote<<option<<quote<<");"<<std::endl;
    }
-}
-
-
-//______________________________________________________________________________
-void TFn::SetCurrent(TFn *f1)
-{
-   // Static function setting the current function.
-   // the current function may be accessed in static C-like functions
-   // when fitting or painting a function.
-
-   fgCurrent = f1;
 }
 
 //______________________________________________________________________________
@@ -2248,32 +2052,6 @@ void TFn::SetFitResult(const ROOT::Fit::FitResult & result, const Int_t* indpar 
    //invalidate cached integral since parameters have changed
    Update();   
          
-}
-
-
-//______________________________________________________________________________
-void TFn::SetMaximum(Double_t maximum)
-{
-   // Set the maximum value along Y for this function
-   // In case the function is already drawn, set also the maximum in the
-   // helper histogram
-
-   fMaximum = maximum;
-   if (fHistogram) fHistogram->SetMaximum(maximum);
-   if (gPad) gPad->Modified();
-}
-
-
-//______________________________________________________________________________
-void TFn::SetMinimum(Double_t minimum)
-{
-   // Set the minimum value along Y for this function
-   // In case the function is already drawn, set also the minimum in the
-   // helper histogram
-
-   fMinimum = minimum;
-   if (fHistogram) fHistogram->SetMinimum(minimum);
-   if (gPad) gPad->Modified();
 }
 
 
@@ -2551,7 +2329,7 @@ Double_t TFn::Moment(Double_t n, Double_t* a, Double_t* b, const Double_t *param
 
 
 //______________________________________________________________________________
-Double_t TFn::CentralMoment(Double_t n, Double_t a, Double_t b, const Double_t *params, Double_t epsilon)
+Double_t TFn::CentralMoment(Double_t n, Double_t* a, Double_t* b, const Double_t *params, Double_t epsilon)
 {
    // Return nth central moment of function between a and b
    // (i.e the n-th moment around the mean value)   
@@ -2559,14 +2337,14 @@ Double_t TFn::CentralMoment(Double_t n, Double_t a, Double_t b, const Double_t *
    // See TFn::Integral() for parameter definitions
    //   Author: Gene Van Buren <gene@bnl.gov>
   
-   TFn_EvalWrapper func(this, params, kTRUE, n); 
+   //TFn_EvalWrapper func(this, params, kTRUE, n); 
 
-   ROOT::Math::GaussIntegrator giod;
+   ROOT::Math::AdaptiveIntegratorMultiDim aimd;
 
-   giod.SetFunction(func);
-   giod.SetRelTolerance(epsilon);
+   aimd.SetFunction(*this);
+   aimd.SetRelTolerance(epsilon);
 
-   Double_t norm =  giod.Integral(a, b);
+   Double_t norm =  aimd.Integral(a, b);
    if (norm == 0) {
       Error("Moment", "Integral zero over range");
       return 0;
@@ -2574,19 +2352,19 @@ Double_t TFn::CentralMoment(Double_t n, Double_t a, Double_t b, const Double_t *
 
    // calculate now integral of xf(x)
    // wrapped the member function EvalFirstMom in  interface required by integrator using the functor class 
-   ROOT::Math::Functor1D xfunc( &func, &TFn_EvalWrapper::EvalFirstMom);
-   giod.SetFunction(xfunc);
+   //ROOT::Math::Functor1D xfunc( &func, &TFn_EvalWrapper::EvalFirstMom);
+   //giod.SetFunction(xfunc);
 
    // estimate of mean value
-   Double_t xbar = giod.Integral(a,b)/norm;
+   //Double_t xbar = giod.Integral(a,b)/norm;
 
    // use different mean value in function wrapper 
-   func.fX0 = xbar; 
-   ROOT::Math::Functor1D xnfunc( &func, &TFn_EvalWrapper::EvalNMom);
-   giod.SetFunction(xnfunc);
+   //func.fX0 = xbar; 
+   //ROOT::Math::Functor1D xnfunc( &func, &TFn_EvalWrapper::EvalNMom);
+   //giod.SetFunction(xnfunc);
 
-   Double_t res = giod.Integral(a,b)/norm;
-   return res;
+   //Double_t res = giod.Integral(a,b)/norm;
+   return 0.0;
 }
 
 
