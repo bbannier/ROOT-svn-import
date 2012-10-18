@@ -66,6 +66,7 @@ protected:
    Int_t       fNpfits;      //Number of points used in the fit
    Int_t       fNDF;         //Number of degrees of freedom in the fit
    Int_t       fNsave;       //Number of points used to fill array fSave
+   Int_t       fNdimensions; //Number of function dimensions
    Double_t    fChisquare;   //Function fit chisquare
    Double_t    *fIntegral;   //![fNpx] Integral of function binned on fNpx bins
    Double_t    *fParErrors;  //[fNpar] Array of errors of the fNpar parameters
@@ -85,7 +86,6 @@ protected:
 
    static Bool_t fgAbsValue;  //use absolute value of function when computing integral
    static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
-   static TFn   *fgCurrent;   //pointer to current function being processed
 
    void CreateFromFunctor(const char *name, Int_t npar);
    void CreateFromCintClass(const char *name, void * ptr, Double_t xmin, Double_t xmax, Int_t npar, const char * cname, const char * fname);
@@ -197,6 +197,13 @@ public:
    virtual   ~TFn();
    virtual void     Browse(TBrowser *b);
    virtual void     Copy(TObject &f1) const;
+   // TODO: see versus parametrised
+   virtual Double_t DoEval(Double_t *x) const {
+      //return EvalPar(x, fParams); //TODO: check how parameters can be modified
+      // TODO: see how to return absolute value
+      // TODO: solve constness issue - Why is EvalPar not constant?
+      return 0.0;
+   }
    virtual Int_t    DistancetoPrimitive(Int_t px, Int_t py);
    virtual Double_t Eval(Double_t x, Double_t y=0, Double_t z=0, Double_t t=0) const;
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
@@ -226,12 +233,10 @@ public:
 //   virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax) const;
 //   virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &zmin, Double_t &xmax, Double_t &ymax, Double_t &zmax) const;
    virtual Double_t GetSave(const Double_t *x);
+   // TODO: GetAxis (maybe)
    virtual Double_t GetX(Double_t y, Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
    virtual Double_t GetXmin() const {return fXmin;}
    virtual Double_t GetXmax() const {return fXmax;}
-   TAxis           *GetXaxis() const ;
-   TAxis           *GetYaxis() const ;
-   TAxis           *GetZaxis() const ;
    virtual Double_t GradientPar(Int_t ipar, const Double_t *x, Double_t eps=0.01);
    virtual void     GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
    virtual void     InitArgs(const Double_t *x, const Double_t *params);
@@ -241,7 +246,6 @@ public:
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t epsilon, Double_t &relerr,Int_t &nfnevl, Int_t &ifail);
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t epsilon, Double_t &relerr);
    virtual Bool_t   IsInside(const Double_t *x) const;
-   virtual void     Paint(Option_t *option="");
    virtual void     Print(Option_t *option="") const;
    virtual void     ReleaseParameter(Int_t ipar);
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
@@ -252,8 +256,6 @@ public:
    void SetFunction( PtrObj& p, MemFn memFn );
    template <typename Func> 
    void SetFunction( Func f );
-   virtual void     SetMaximum(Double_t maximum=-1111); // *MENU*
-   virtual void     SetMinimum(Double_t minimum=-1111); // *MENU*
    virtual void     SetNDF(Int_t ndf);
    virtual void     SetNumberFitPoints(Int_t npfits) {fNpfits = npfits;}
    virtual void     SetNpx(Int_t npx=100); // *MENU*
@@ -268,18 +270,16 @@ public:
    virtual void     SetTitle(const char *title=""); // *MENU*
    virtual void     Update();
 
-   static  TFn     *GetCurrent();
    static  void     AbsValue(Bool_t reject=kTRUE);
    static  void     RejectPoint(Bool_t reject=kTRUE);
    static  Bool_t   RejectedPoint();
-   static  void     SetCurrent(TFn *f1);
 
    // TODO: write a multi-dim version
    //Moments
    virtual Double_t Moment(Double_t n, Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001);
-   virtual Double_t CentralMoment(Double_t n, Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=0.000001);
+   virtual Double_t CentralMoment(Double_t n, Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001);
    virtual Double_t Mean(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return Moment(1,a,b,params,epsilon);}
-   virtual Double_t Variance(Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=0.000001) {return CentralMoment(2,a,b,params,epsilon);}
+   virtual Double_t Variance(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return CentralMoment(2,a,b,params,epsilon);}
 
    //some useful static utility functions to compute sampling points for Integral
    //static  void     CalcGaussLegendreSamplingPoints(TGraph *g, Double_t eps=3.0e-11);
