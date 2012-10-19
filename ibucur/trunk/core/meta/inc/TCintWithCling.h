@@ -40,11 +40,22 @@ struct G__dictposition;
 #endif // WIN32
 
 extern "C" {
+   namespace clang {
+      class Decl;
+   }
+   namespace cling {
+      class Transaction;
+   }
    void TCintWithCling__RegisterModule(const char* modulename,
                                        const char** headers,
                                        const char** includePaths,
                                        const char** macroDefines,
                                        const char** macroUndefines);
+   void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction&);
+   void TCintWithCling__UpdateListsOnUnloaded(const cling::Transaction&);
+   TObject* TCintWithCling__GetObjectAddress(const char *Name, void *&LookupCtx);
+   const clang::Decl* TCintWithCling__GetObjectDecl(TObject *obj);
+
 }
 
 namespace Cint {
@@ -60,8 +71,13 @@ class TEnv;
 namespace cling {
 class Interpreter;
 class MetaProcessor;
-class Transaction;
 class StoredValueRef;
+}
+
+namespace ROOT {
+   namespace TMetaUtils {
+      class TNormalizedCtxt;
+   }
 }
 
 class TCintWithCling : public TInterpreter {
@@ -71,27 +87,32 @@ private: // Static Data Members
 
 private: // Data Members
 
-   Int_t fMore; // The brace indent level for the cint command line processor.
-   Int_t fExitCode; // Value passed to exit() in interpreter.
-   char fPrompt[64]; // Command line prompt string.
-   G__dictposition fDictPos; // CINT dictionary context after initialization is complete.
-   G__dictposition fDictPosGlobals; // CINT dict context after ResetGlobals().
-   TString fSharedLibs; // Shared libraries loaded by G__loadfile().
-   Int_t fSharedLibsSerial; // Last time we set fSharedLibs.
-   Int_t fGlobalsListSerial; // Last time we refreshed the ROOT list of globals.
-   TString fIncludePath; // Interpreter include path.
-   TString fRootmapLoadPath; // Dynamic load path for rootmap files.
-   TEnv* fMapfile; // Association of classes to libraries.
-   TObjArray* fRootmapFiles; // Loaded rootmap files.
-   Bool_t fLockProcessLine;  // True if ProcessLine should lock gCINTMutex.
-   cling::Interpreter* fInterpreter; // The interpreter.
+   Int_t           fMore;             // The brace indent level for the cint command line processor.
+   Int_t           fExitCode;         // Value passed to exit() in interpreter.
+   char            fPrompt[64];       // Command line prompt string.
+   G__dictposition fDictPos;          // CINT dictionary context after initialization is complete.
+   G__dictposition fDictPosGlobals;   // CINT dict context after ResetGlobals().
+   TString         fSharedLibs;       // Shared libraries loaded by G__loadfile().
+   Int_t           fSharedLibsSerial; // Last time we set fSharedLibs.
+   Int_t           fGlobalsListSerial;// Last time we refreshed the ROOT list of globals.
+   TString         fIncludePath;      // Interpreter include path.
+   TString         fRootmapLoadPath;  // Dynamic load path for rootmap files.
+   TEnv*           fMapfile;          // Association of classes to libraries.
+   TObjArray*      fRootmapFiles;     // Loaded rootmap files.
+   Bool_t          fLockProcessLine;  // True if ProcessLine should lock gCINTMutex.
+
+   cling::Interpreter*   fInterpreter;   // The interpreter.
    cling::MetaProcessor* fMetaProcessor; // The metaprocessor.
-   std::vector<cling::StoredValueRef>* fTemporaries; // Stack of temporaries
+
+   std::vector<cling::StoredValueRef> *fTemporaries;    // Stack of temporaries
+   ROOT::TMetaUtils::TNormalizedCtxt  *fNormalizedCtxt; // Which typedef to avoid striping.
 
 public: // Public Interface
 
    virtual ~TCintWithCling();
    TCintWithCling(const char* name, const char* title);
+
+   cling::Interpreter *GetInterpreter() { return fInterpreter; }
 
    void    AddIncludePath(const char* path);
    Int_t   AutoLoad(const char* classname);

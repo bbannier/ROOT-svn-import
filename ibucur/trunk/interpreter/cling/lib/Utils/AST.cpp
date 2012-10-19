@@ -11,10 +11,45 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Lookup.h"
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+
 using namespace clang;
 
 namespace cling {
 namespace utils {
+
+  bool Analyze::IsWrapper(const NamedDecl* ND) {
+    if (!ND)
+      return false;
+
+    return llvm::StringRef(ND->getNameAsString())
+      .startswith(Synthesize::UniquePrefix);
+  }
+
+  Expr* Analyze::GetLastExpr(FunctionDecl* FD, int* FoundAt /* =0 */) {
+    if (FoundAt)
+      *FoundAt = -1;
+
+    if (CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody())) {
+      llvm::ArrayRef<Stmt*> Stmts 
+        = llvm::makeArrayRef(CS->body_begin(), CS->size());
+          
+      int indexOfLastExpr = Stmts.size();
+      while(indexOfLastExpr--) 
+        if (isa<Expr>(Stmts[indexOfLastExpr]))
+          break;
+      if (FoundAt)
+        *FoundAt = indexOfLastExpr;
+      if (indexOfLastExpr < 0)
+        return 0;
+      return cast<Expr>(Stmts[indexOfLastExpr]);
+    }
+    return 0;
+  }
+
+  const char* Synthesize::UniquePrefix = "__cling_Un1Qu3";
+
   Expr* Synthesize::CStyleCastPtrExpr(Sema* S, QualType Ty, uint64_t Ptr) {
     ASTContext& Ctx = S->getASTContext();
     if (!Ty->isPointerType())
@@ -389,8 +424,12 @@ namespace utils {
 
   NamedDecl* Lookup::Named(Sema* S, const char* Name, DeclContext* Within) {
     DeclarationName DName = &S->Context.Idents.get(Name);
+    return Lookup::Named(S, DName, Within);
+  }
 
-    LookupResult R(*S, DName, SourceLocation(), Sema::LookupOrdinaryName,
+  NamedDecl* Lookup::Named(Sema* S, const DeclarationName& Name, 
+                           DeclContext* Within) {
+    LookupResult R(*S, Name, SourceLocation(), Sema::LookupOrdinaryName,
                    Sema::ForRedeclaration);
     if (!Within)
       S->LookupName(R, S->TUScope);

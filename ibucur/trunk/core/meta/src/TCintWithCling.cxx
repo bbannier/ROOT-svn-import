@@ -26,6 +26,7 @@
 #include "TClingMethodInfo.h"
 #include "TClingTypedefInfo.h"
 #include "TClingTypeInfo.h"
+#include "TClingDisplayClass.h"
 
 #include "TROOT.h"
 #include "TApplication.h"
@@ -34,6 +35,7 @@
 #include "TClass.h"
 #include "TClassEdit.h"
 #include "TClassTable.h"
+#include "TClingCallbacks.h"
 #include "TBaseClass.h"
 #include "TDataMember.h"
 #include "TMemberInspector.h"
@@ -56,6 +58,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
@@ -65,12 +68,14 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Sema.h"
+
 #include "cling/Interpreter/Interpreter.h"
-#include "cling/Interpreter/InterpreterCallbacks.h"
 #include "cling/Interpreter/LookupHelper.h"
-#include "cling/Interpreter/Transaction.h"
 #include "cling/Interpreter/StoredValueRef.h"
+#include "cling/Interpreter/Transaction.h"
 #include "cling/MetaProcessor/MetaProcessor.h"
+
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -89,6 +94,7 @@
 #endif // __APPLE__
 
 using namespace std;
+using namespace clang;
 
 R__EXTERN int optind;
 
@@ -114,7 +120,7 @@ namespace {
       const char** fMacroUndefines; // 0-terminated array of header files
    };
 
-   llvm::SmallVector<ModuleHeaderInfo_t, 10> gModuleHeaderInfoBuffer;
+   llvm::SmallVector<ModuleHeaderInfo_t, 10> *gModuleHeaderInfoBuffer;
 }
 
 //______________________________________________________________________________
@@ -128,7 +134,15 @@ void TCintWithCling__RegisterModule(const char* modulename,
    // Called by static dictionary initialization to register clang modules
    // for headers. Calls TCintWithCling::RegisterModule() unless gCling
    // is NULL, i.e. during startup, where the information is buffered in
-   // the global gModuleHeaderInfoBuffer.
+   // the static moduleHeaderInfoBuffer which then later can be accessed
+   // via the global *gModuleHeaderInfoBuffer after a call to this function
+   // with modulename=0.
+
+   static llvm::SmallVector<ModuleHeaderInfo_t, 10> moduleHeaderInfoBuffer;
+   if (!modulename) {
+      gModuleHeaderInfoBuffer = &moduleHeaderInfoBuffer;
+      return;
+   }
 
    if (gCint) {
       ((TCintWithCling*)gCint)->RegisterModule(modulename,
@@ -137,14 +151,79 @@ void TCintWithCling__RegisterModule(const char* modulename,
                                                macroDefines,
                                                macroUndefines);
    } else {
-      gModuleHeaderInfoBuffer.push_back(ModuleHeaderInfo_t(modulename,
-                                                           headers,
-                                                           includePaths,
-                                                           macroDefines,
-                                                           macroUndefines));
+      moduleHeaderInfoBuffer.push_back(ModuleHeaderInfo_t(modulename,
+                                                          headers,
+                                                          includePaths,
+                                                          macroDefines,
+                                                          macroUndefines));
    }
 }
 
+// The functions are used to bridge cling/clang/llvm compiled with no-rtti and
+// ROOT (which uses rtti)
+
+extern "C" 
+void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
+   TCollection *listOfSmth = 0;
+   cling::Interpreter* interp = ((TCintWithCling*)gCint)->GetInterpreter();
+   for(cling::Transaction::const_iterator I = T.decls_begin(), E = T.decls_end();
+       I != E; ++I)
+      for (DeclGroupRef::const_iterator DI = I->begin(), DE = I->end(); 
+           DI != DE; ++DI) {
+         // We care about declarations on the global scope.
+         if (!isa<TranslationUnitDecl>((*DI)->getDeclContext()))
+               continue;
+
+         if (const TypedefDecl* TdefD = dyn_cast<TypedefDecl>(*DI)) {
+            listOfSmth = gROOT->GetListOfTypes();
+            if (!listOfSmth->FindObject(TdefD->getNameAsString().c_str())) {
+               listOfSmth->Add(new TDataType(new TClingTypedefInfo(interp, TdefD)));
+            }
+         }
+         else if (const ValueDecl *ValD = dyn_cast<ValueDecl>(*DI)) {
+            // ROOT says that global is enum/var/field declared on the global
+            // scope.
+            if (!(isa<EnumConstantDecl>(ValD) || 
+                  isa<VarDecl>(ValD) || isa<FieldDecl>(ValD)))
+               continue;
+
+            // FIXME: Review needed: How does ROOT understand globals?
+            listOfSmth = gROOT->GetListOfGlobals();
+            if (!listOfSmth->FindObject(ValD->getNameAsString().c_str())) {  
+               listOfSmth->Add(new TGlobal(new TClingDataMemberInfo(interp, ValD)));
+            }
+         }
+      }
+}
+
+extern "C" 
+void TCintWithCling__UpdateListsOnUnloaded(const cling::Transaction &T) {
+   TGlobal *global = 0;
+   TCollection* globals = gROOT->GetListOfGlobals();
+   for(cling::Transaction::const_iterator I = T.decls_begin(), E = T.decls_end();
+       I != E; ++I)
+      for (DeclGroupRef::const_iterator
+              DI = I->begin(), DE = I->end(); DI != DE; ++DI) {
+
+         if (const VarDecl* VD = dyn_cast<VarDecl>(*DI)) {
+            global = (TGlobal*)globals->FindObject(VD->getNameAsString().c_str());
+            if (global) {
+               globals->Remove(global);
+               if (!globals->IsOwner())
+                  delete global;
+            }
+         }
+      }
+}
+
+extern "C"  
+TObject* TCintWithCling__GetObjectAddress(const char *Name, void *&LookupCtx) {
+   return gROOT->FindSpecialObject(Name, LookupCtx);
+}
+
+extern "C" const Decl* TCintWithCling__GetObjectDecl(TObject *obj) {
+   return ((TClingClassInfo*)obj->IsA()->GetClassInfo())->GetDecl();
+}
 //______________________________________________________________________________
 //
 //
@@ -477,73 +556,6 @@ void* TCintWithCling::fgSetOfSpecials = 0;
 //
 //
 
-// The callbacks are used to update the list of globals in ROOT.
-//
-class TClingCallbacks : public cling::InterpreterCallbacks {
-private:
-   clang::Decl *fLastDeclSeen;
-public:
-   TClingCallbacks(cling::Interpreter* interp, bool isEnabled = false) 
-      : InterpreterCallbacks(interp, isEnabled), fLastDeclSeen(0) { }
-
-   // The callback is used to update the list of globals in ROOT.
-   //
-   virtual void TransactionCommitted(const cling::Transaction &T) {
-      if (!T.size())
-         return;
-
-      using namespace clang;
-      using namespace cling;
-      if (!fLastDeclSeen) {
-         const ASTContext &C = m_Interpreter->getCI()->getASTContext();
-         fLastDeclSeen = *C.getTranslationUnitDecl()->decls_begin();
-      }
-
-      TClingDataMemberInfo *globalMemInfo = 0;
-      while(fLastDeclSeen->getNextDeclInContext()) {
-         fLastDeclSeen = fLastDeclSeen->getNextDeclInContext();
-         if (ValueDecl *ValD = dyn_cast<ValueDecl>(fLastDeclSeen)) {
-            if (!isa<TranslationUnitDecl>(ValD->getDeclContext()))
-                continue;
-
-            if (!(isa<EnumConstantDecl>(ValD) || 
-                  isa<VarDecl>(ValD) || isa<FieldDecl>(ValD)))
-               continue;
-
-            // FIXME: How does ROOT understand globals?
-            //assert(!cast<VarDecl>(fLastDeclSeen)->hasGlobalStorage() && "Not a global!?");
-            globalMemInfo = new TClingDataMemberInfo(m_Interpreter, ValD);
-            gROOT->GetListOfGlobals()->Add(new TGlobal(globalMemInfo));
-         }
-      }
-   }
-
-   // The callback is used to update the list of globals in ROOT.
-   //
-   virtual void TransactionUnloaded(const cling::Transaction &T) {
-      if (!T.size())
-         return;
-
-      using namespace clang;
-      using namespace cling;
-      TGlobal *global = 0;
-      const char* name = 0;
-      TCollection* globals = gROOT->GetListOfGlobals();
-      for(Transaction::const_iterator I = T.decls_begin(), E = T.decls_end();
-          I != E; ++I) {
-         if (const VarDecl* VD = dyn_cast<VarDecl>(I->getSingleDecl())) {
-            name = VD->getNameAsString().c_str();
-            global = (TGlobal*)globals->FindObject(name);
-            if (global) {
-               globals->Remove(global);
-               if (!globals->IsOwner())
-                  delete global;
-            }
-         }
-      }
-   }
-};
-
 ClassImp(TCintWithCling)
 
 //______________________________________________________________________________
@@ -554,6 +566,8 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    , fGlobalsListSerial(-1)
    , fInterpreter(0)
    , fMetaProcessor(0)
+   , fNormalizedCtxt(0)
+   //   , fDeMux(0)
 {
    // Initialize the CINT+cling interpreter interface.
 
@@ -566,7 +580,6 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
                                          interpArgs,
                                          ROOT::TMetaUtils::GetLLVMResourceDir(false).c_str());
    fInterpreter->installLazyFunctionCreator(autoloadCallback);
-   fInterpreter->setCallbacks(new TClingCallbacks(fInterpreter, /*isEnabled*/true));
 
    // Add the current path to the include path
    TCintWithCling::AddIncludePath(".");
@@ -588,28 +601,39 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    clang::HeaderSearch& HS = fInterpreter->getCI()->getPreprocessor().getHeaderSearchInfo();
    HS.setModuleCachePath(dictDir.Data());
 
-   for (size_t i = 0, e = gModuleHeaderInfoBuffer.size(); i < e ; ++i) {
-      // process buffered module registrations
-      ((TCintWithCling*)gCint)->RegisterModule(gModuleHeaderInfoBuffer[i].fModuleName,
-                                               gModuleHeaderInfoBuffer[i].fHeaders,
-                                               gModuleHeaderInfoBuffer[i].fIncludePaths,
-                                               gModuleHeaderInfoBuffer[i].fMacroDefines,
-                                               gModuleHeaderInfoBuffer[i].fMacroUndefines);
-   }
-   gModuleHeaderInfoBuffer.clear();
-
    fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
 
    fInterpreter->declare("namespace std {} using namespace std;");
 
    // For the list to also include string, we have to include it now.
-   //fInterpreter->declare("#include <string>");
+   fInterpreter->declare("#include \"Rtypes.h\"\n#include <string>");
+   
+   // During the loading of the first modules, RegisterModule which can calls Info
+   // which needs the TClass for TCintWithCling, which in turns need the 'dictionary'
+   // information to be loaded:
+   fInterpreter->declare("#include \"TCintWithCling.h\"");
   
    // We are now ready (enough is loaded) to init the list of opaque typedefs.
-   //ROOT::TMetaUtils::TNormalizedContext fNormalizedCtxt(fInterpreter->getLookupHelper());
+   fNormalizedCtxt = new ROOT::TMetaUtils::TNormalizedCtxt(fInterpreter->getLookupHelper());
 
    TClassEdit::Init(*fInterpreter);
 
+   // set the gModuleHeaderInfoBuffer pointer
+   TCintWithCling__RegisterModule(0, 0, 0, 0, 0);
+
+   SmallVectorImpl<ModuleHeaderInfo_t>::iterator
+      li = gModuleHeaderInfoBuffer->begin(),
+      le = gModuleHeaderInfoBuffer->end();
+   for (; li != le; ++li) {
+      // process buffered module registrations
+      ((TCintWithCling*)gCint)->RegisterModule(li->fModuleName,
+                                               li->fHeaders,
+                                               li->fIncludePaths,
+                                               li->fMacroDefines,
+                                               li->fMacroUndefines);
+   }
+   gModuleHeaderInfoBuffer->clear();
+   
    // Initialize the CINT interpreter interface.
    fMore      = 0;
    fPrompt[0] = 0;
@@ -655,6 +679,9 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
       ProcessLineCintOnly("#include <RtypesCint.h>");
       delete[] whichTypesCint;
    }
+
+   // Attach cling callbacks
+   fInterpreter->setCallbacks(new TClingCallbacks(fInterpreter));
 }
 
 //______________________________________________________________________________
@@ -670,7 +697,9 @@ TCintWithCling::~TCintWithCling()
    delete fRootmapFiles;
    delete fMetaProcessor;
    delete fTemporaries;
+   delete fNormalizedCtxt;
    delete fInterpreter;
+   //   delete fDeMux;
    gCint = 0;
 #ifdef R__COMPLETE_MEM_TERMINATION
    G__scratch_all();
@@ -977,7 +1006,7 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
    }
    
    const char* clname = cl->GetName();
-   Printf("Inspecting class %s\n", clname);
+   // Printf("Inspecting class %s\n", clname);
 
    const clang::ASTContext& astContext = fInterpreter->getCI()->getASTContext();
    const cling::LookupHelper& lh = fInterpreter->getLookupHelper();
@@ -991,6 +1020,10 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
    const clang::ASTRecordLayout& recLayout
       = astContext.getASTRecordLayout(recordDecl);
 
+   if (cl->Size() != recLayout.getSize().getQuantity()) {
+      Error("InspectMembers","TClass and cling disagree on the size of the class %s, respectively %d %ld\n",
+            cl->GetName(),cl->Size(),recLayout.getSize().getQuantity());
+   }
    unsigned iNField = 0;
    // iterate over fields
    // FieldDecls are non-static, else it would be a VarDecl.
@@ -1018,7 +1051,9 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
       }
       
       const clang::Type* memNonPtrType = memType;
+      Bool_t ispointer = false;
       if (memNonPtrType->isPointerType()) {
+         ispointer = true;
          clang::QualType ptrQT
             = memNonPtrType->getAs<clang::PointerType>()->getPointeeType();
          ptrQT = ptrQT.getDesugaredType(astContext);
@@ -1073,7 +1108,10 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
       fieldName += arraySize;
       
       // get member offset
-      ptrdiff_t fieldOffset = recLayout.getFieldOffset(iNField);
+      // NOTE currently we do not support bitfield and do not support
+      // member that are not aligned on 'bit' boundaries.
+      clang::CharUnits offset(astContext.toCharUnitsFromBits(recLayout.getFieldOffset(iNField)));
+      ptrdiff_t fieldOffset = offset.getQuantity();
 
       // R__insp.Inspect(R__cl, R__insp.GetParent(), "fBits[2]", fBits);
       // R__insp.Inspect(R__cl, R__insp.GetParent(), "fName", &fName);
@@ -1081,16 +1119,21 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
       // R__insp.Inspect(R__cl, R__insp.GetParent(), "*fClass", &fClass);
       insp.Inspect(cl, insp.GetParent(), fieldName.c_str(), cobj + fieldOffset);
 
-      const clang::CXXRecordDecl* fieldRecDecl = memNonPtrType->getAsCXXRecordDecl();
-      if (fieldRecDecl) {
-         // nested objects get an extra call to InspectMember
-         // R__insp.InspectMember("FileStat_t", (void*)&fFileStat, "fFileStat.", false);
-         std::string sFieldRecName;
-         fieldRecDecl->getNameForDiagnostic(sFieldRecName,
-                                            printPol, true /*fqi*/);
-         bool transient = false;
-         insp.InspectMember(sFieldRecName.c_str(), cobj + fieldOffset,
-                            (fieldName + '.').c_str(), transient);
+      if (!ispointer) {
+         const clang::CXXRecordDecl* fieldRecDecl = memNonPtrType->getAsCXXRecordDecl();
+         if (fieldRecDecl) {
+            // nested objects get an extra call to InspectMember
+            // R__insp.InspectMember("FileStat_t", (void*)&fFileStat, "fFileStat.", false);
+            std::string sFieldRecName;
+            fieldRecDecl->getNameForDiagnostic(sFieldRecName,
+                                               printPol, true /*fqi*/);
+            llvm::StringRef comment = ROOT::TMetaUtils::GetComment(*recordDecl, 0);
+            // NOTE, we have to change this to support selection XML!
+            bool transient = !comment.empty() && comment[0] == '!';
+            
+            insp.InspectMember(sFieldRecName.c_str(), cobj + fieldOffset,
+                               (fieldName + '.').c_str(), transient);
+         }
       }
    } // loop over fields
    
@@ -1125,8 +1168,15 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
          continue;
       }
       int64_t baseOffset = recLayout.getBaseClassOffset(baseDecl).getQuantity();      
-      baseCl->CallShowMembers(cobj + baseOffset,
-                              insp, -1 /*don't know whether TObject*/);
+      if (baseCl->IsLoaded()) {
+         // For loaded class, CallShowMember will (especially for TObject)
+         // call the virtual ShowMember rather than the class specific version
+         // resulting in an infinite recursion.
+         InspectMembers(insp, cobj + baseOffset, baseCl);
+      } else {
+         baseCl->CallShowMembers(cobj + baseOffset,
+                                 insp, 0);
+      }
    } // loop over bases
 }
 
@@ -1142,9 +1192,9 @@ void TCintWithCling::ClearFileBusy()
 //______________________________________________________________________________
 void TCintWithCling::ClearStack()
 {
-   // Delete existing temporary values
-   R__LOCKGUARD(gCINTMutex);
-   G__clearstack();
+   // Delete existing temporary values.
+
+   // No-op for cling due to StoredValueRef.
 }
 
 //______________________________________________________________________________
@@ -1624,15 +1674,16 @@ Bool_t TCintWithCling::CheckClassInfo(const char* name, Bool_t autoload /*= kTRU
    Int_t tagnum = G__defined_tagname(classname, flag); // This function might modify the name (to add space between >>).
    if (tagnum >= 0) {
       TClingClassInfo tci(fInterpreter, classname);
-      if (!tci.IsValid()) {
-         Warning("CheckClassInfo", "class '%s' exists in CINT, but not in the AST!\n", classname);
-         delete[] classname;
-         return kFALSE;
-      }
       G__ClassInfo info(tagnum);
       // If autoloading is off then Property() == 0 for autoload entries.
       if (!autoload && !info.Property()) {
          return kTRUE;
+      }
+      if (!tci.IsValid()) {
+         if (!(info.Property() & (G__BIT_ISENUM)) && info.Size()) // Size()==0 is an approximation of IsForwardDeclaredOrSetForAutoloading() 
+             Warning("CheckClassInfo", "class '%s' exists in CINT, but not in the AST!\n", classname);
+         delete[] classname;
+         return kFALSE;
       }
       if (info.Property() & (G__BIT_ISENUM | G__BIT_ISCLASS | G__BIT_ISSTRUCT | G__BIT_ISUNION | G__BIT_ISNAMESPACE)) {
          // We are now sure that the entry is not in fact an autoload entry.
@@ -1918,7 +1969,7 @@ const char* TCintWithCling::GetInterpreterTypeName(const char* name, Bool_t full
       return 0;
    }
    if (full) {
-      return cl.FullName();
+      return cl.FullName(*fNormalizedCtxt);
    }
    // Well well well, for backward compatibility we need to act a bit too
    // much like CINT.
@@ -2885,6 +2936,15 @@ const char* TCintWithCling::GetSTLIncludePath() const
 int TCintWithCling::DisplayClass(FILE* fout, char* name, int base, int start) const
 {
    // Interface to CINT function
+   if (!name || !name[0]) {
+      //That's how G__display_class works: if name is "", when,
+      //if base != 0 we have a verbose output for every class,
+      //otherwise it's a short info for all classes. Start
+      //parameter is ignored in cling version (TODO?)
+      TClingDisplayClass::DisplayAllClasses(fout, fInterpreter, base);
+   } else
+      TClingDisplayClass::DisplayClass(fout, fInterpreter, name, true);//for the single class, info is always verbose.
+
    return G__display_class(fout, name, base, start);
 }
 
@@ -3012,8 +3072,8 @@ void TCintWithCling::SetRTLD_LAZY() const
 //______________________________________________________________________________
 void TCintWithCling::SetTempLevel(int val) const
 {
-   // Interface to CINT function
-   G__settemplevel(val);
+   // Create / close a scope for temporaries. No-op for cling; use
+   // StoredValueRef instead.
 }
 
 //______________________________________________________________________________
@@ -3364,7 +3424,7 @@ const char* TCintWithCling::ClassInfo_FileName(ClassInfo_t* cinfo) const
 const char* TCintWithCling::ClassInfo_FullName(ClassInfo_t* cinfo) const
 {
    TClingClassInfo* TClinginfo = (TClingClassInfo*) cinfo;
-   return TClinginfo->FullName();
+   return TClinginfo->FullName(*fNormalizedCtxt);
 }
 
 //______________________________________________________________________________
@@ -3447,7 +3507,7 @@ Long_t TCintWithCling::BaseClassInfo_Tagnum(BaseClassInfo_t* bcinfo) const
 const char* TCintWithCling::BaseClassInfo_FullName(BaseClassInfo_t* bcinfo) const
 {
    TClingBaseClassInfo* TClinginfo = (TClingBaseClassInfo*) bcinfo;
-   return TClinginfo->FullName();
+   return TClinginfo->FullName(*fNormalizedCtxt);
 }
 
 //______________________________________________________________________________
@@ -3556,7 +3616,7 @@ const char* TCintWithCling::DataMemberInfo_TypeName(DataMemberInfo_t* dminfo) co
 const char* TCintWithCling::DataMemberInfo_TypeTrueName(DataMemberInfo_t* dminfo) const
 {
    TClingDataMemberInfo* TClinginfo = (TClingDataMemberInfo*) dminfo;
-   return TClinginfo->TypeTrueName();
+   return TClinginfo->TypeTrueName(*fNormalizedCtxt);
 }
 
 //______________________________________________________________________________

@@ -38,16 +38,22 @@
 #include <string>
 
 namespace clang {
-class Decl;
-class ValueDecl;
+   class Decl;
+   class ValueDecl;
+}
+
+namespace ROOT {
+   namespace TMetaUtils {
+      class TNormalizedCtxt;
+   }
 }
 
 class TClingClassInfo;
 
 class TClingDataMemberInfo {
-
+   
 private:
-
+   
    cling::Interpreter    *fInterp; // Cling interpreter, we do *not* own.
    TClingClassInfo       *fClassInfo; // Class we are iterating over, we own.
    bool                   fFirstTime; // We need to skip the first increment to support the cint Next() semantics.
@@ -56,24 +62,24 @@ private:
    std::string            fTitle; // The meta info for the member.
    const clang::ValueDecl *fSingleDecl; // The single member
 public:
-
+   
    ~TClingDataMemberInfo() { delete fClassInfo; }
-
+   
    explicit TClingDataMemberInfo(cling::Interpreter *interp)
-      : fInterp(interp), fClassInfo(0), fFirstTime(true), fSingleDecl(0)
+   : fInterp(interp), fClassInfo(0), fFirstTime(true), fSingleDecl(0)
    {
       fClassInfo = new TClingClassInfo(fInterp);
       fIter = fInterp->getCI()->getASTContext().getTranslationUnitDecl()->decls_begin();
       // Move to first global variable.
       InternalNext();
    }
-
+   
    TClingDataMemberInfo(cling::Interpreter *, TClingClassInfo *);
-
+   
    // Takes concrete decl and disables the iterator. 
    // ValueDecl is the common base between enum constant, var decl and field decl
    TClingDataMemberInfo(cling::Interpreter *, const clang::ValueDecl *);
-
+   
    TClingDataMemberInfo(const TClingDataMemberInfo &rhs)
    {
       fInterp = rhs.fInterp;
@@ -81,8 +87,9 @@ public:
       fFirstTime = rhs.fFirstTime;
       fIter = rhs.fIter;
       fIterStack = rhs.fIterStack;
+      fSingleDecl = rhs.fSingleDecl;
    }
-
+   
    TClingDataMemberInfo &operator=(const TClingDataMemberInfo &rhs)
    {
       if (this != &rhs) {
@@ -95,12 +102,12 @@ public:
       }
       return *this;
    }
-
-
+   
+   
    int                ArrayDim() const;
    TClingClassInfo   *GetClassInfo() const { return fClassInfo; }
-   clang::Decl       *GetDecl() const { return *fIter; }
-   bool               IsValid() const { return *fIter; }
+   const clang::Decl *GetDecl() const { return fSingleDecl ? fSingleDecl : *fIter; }
+   bool               IsValid() const { return GetDecl(); }
    int                MaxIndex(int dim) const;
    int                InternalNext();
    bool               Next() { return InternalNext(); }
@@ -109,11 +116,11 @@ public:
    long               TypeProperty() const;
    int                TypeSize() const;
    const char        *TypeName() const;
-   const char        *TypeTrueName() const;
+   const char        *TypeTrueName(const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) const;
    const char        *Name() const;
    const char        *Title();
    const char        *ValidArrayIndex() const;
-
+   
 };
 
 #endif // ROOT_TClingDataMemberInfo

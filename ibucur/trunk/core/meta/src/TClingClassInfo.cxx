@@ -25,6 +25,7 @@
 #include "TClingClassInfo.h"
 
 #include "TClassEdit.h"
+#include "TClingBaseClassInfo.h"
 #include "TClingMethodInfo.h"
 #include "Property.h"
 #include "TClingProperty.h"
@@ -54,7 +55,7 @@
 using namespace clang;
 
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp)
-   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0)
+   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0)
 {
    clang::TranslationUnitDecl *TU =
       interp->getCI()->getASTContext().getTranslationUnitDecl();
@@ -62,23 +63,26 @@ TClingClassInfo::TClingClassInfo(cling::Interpreter *interp)
    InternalNext();
    fFirstTime = true;
    fDecl = 0;
+   fType = 0;
 }
 
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp, const char *name)
-   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fTitle("")
+   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0),
+     fTitle("")
 {
    if (gDebug > 0) {
       Info("TClingClassInfo(name)", "looking up class name: %s\n", name);
    }
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
-   const clang::Decl *decl = lh.findScope(name);
+   const clang::Type *type = 0;
+   const clang::Decl *decl = lh.findScope(name,&type);
    if (!decl) {
       if (gDebug > 0) {
          Info("TClingClassInfo(name)", "cling class not found name: %s\n",
               name);
       }
       std::string buf = TClassEdit::InsertStd(name);
-      decl = lh.findScope(buf);
+      decl = lh.findScope(buf,&type);
       if (!decl) {
          if (gDebug > 0) {
             Info("TClingClassInfo(name)", "cling class not found name: %s\n",
@@ -98,38 +102,16 @@ TClingClassInfo::TClingClassInfo(cling::Interpreter *interp, const char *name)
               "decl: 0x%lx\n", name, (long) decl);
       }
    }
-   if (decl) {
-      // Position our iterator on the found decl.
-      AdvanceToDecl(decl);
-      //fFirstTime = false;
-      //fDescend = false;
-      //fIter = clang::DeclContext::decl_iterator();
-      //fTemplateDecl = 0;
-      //fSpecIter = clang::ClassTemplateDecl::spec_iterator(0);
-      //fDecl = const_cast<clang::Decl*>(decl);
-      //fIterStack.clear();
-   }
+   fDecl = decl;
+   if (type) 
+      fType = type->getAs<clang::RecordType>(); // NOTE: getAs removes some typedefs.
 }
 
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp,
-                                 const clang::Decl *decl)
-   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fTitle("")
+                                 const clang::RecordType &type)
+   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(&type), fTitle("")
 {
-   if (decl) {
-      // Position our iterator on the given decl.
-      AdvanceToDecl(decl);
-      //fFirstTime = true;
-      //fDescend = false;
-      //fIter = clang::DeclContext::decl_iterator();
-      //fTemplateDecl = 0;
-      //fSpecIter = clang::ClassTemplateDecl::spec_iterator(0);
-      //fDecl = const_cast<clang::Decl*>(decl);
-      //fIterStack.clear();
-   }
-   else {
-      // FIXME: Maybe initialize iterator to global namespace?
-      fDecl = 0;
-   }
+   fDecl = fType->getDecl();
 }
 
 long TClingClassInfo::ClassProperty() const
@@ -196,7 +178,7 @@ void TClingClassInfo::Delete(void *arena) const
    os << "delete (" << Name() << "*)"
       << reinterpret_cast<unsigned long>(arena) << ";";
    cling::Interpreter::CompilationResult err =
-      fInterp->evaluate(os.str());
+      fInterp->execute(os.str());
    if (err != cling::Interpreter::kSuccess) {
       return;
    }
@@ -221,7 +203,7 @@ void TClingClassInfo::DeleteArray(void *arena, bool dtorOnly) const
       os << "delete[] (" << Name() << "*)"
          << reinterpret_cast<unsigned long>(arena) << ";";
       cling::Interpreter::CompilationResult err =
-         fInterp->evaluate(os.str());
+         fInterp->execute(os.str());
       if (err != cling::Interpreter::kSuccess) {
          return;
       }
@@ -241,7 +223,7 @@ void TClingClassInfo::Destruct(void *arena) const
    os << "((" << name << "*)" << reinterpret_cast<unsigned long>(arena)
       << ")->" << name << "::~" << name << "();";
    cling::Interpreter::CompilationResult err =
-      fInterp->evaluate(os.str());
+      fInterp->execute(os.str());
    if (err != cling::Interpreter::kSuccess) {
       return;
    }
@@ -249,7 +231,7 @@ void TClingClassInfo::Destruct(void *arena) const
 }
 
 TClingMethodInfo TClingClassInfo::GetMethod(const char *fname,
-      const char *arg, long *poffset, MatchMode mode /*= ConversionMatch*/,
+      const char *proto, long *poffset, MatchMode mode /*= ConversionMatch*/,
       InheritanceMode imode /*= WithInheritance*/) const
 {
    if (!IsValid()) {
@@ -257,9 +239,29 @@ TClingMethodInfo TClingClassInfo::GetMethod(const char *fname,
       return tmi;
    }
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
-   const clang::FunctionDecl *FD = lh.findFunctionArgs(fDecl, fname, arg);
+   const clang::FunctionDecl *FD = lh.findFunctionProto(fDecl, fname, proto);
    if (poffset) {
-      *poffset = 0L;
+     *poffset = 0L;
+     if (const clang::CXXMethodDecl *MD =
+           llvm::dyn_cast<clang::CXXMethodDecl>(FD)) {
+        const clang::CXXRecordDecl *definer = MD->getParent();
+        const clang::CXXRecordDecl *accessor =
+           llvm::cast<clang::CXXRecordDecl>(fDecl);
+        if (definer != accessor) {
+           // This function may not be accessible using a pointer
+           // to the declaring class, get the adjustment necessary
+           // to convert that to a pointer to the defining class.
+           TClingBaseClassInfo bi(fInterp, const_cast<TClingClassInfo*>(this));
+           while (bi.Next()) {
+              TClingClassInfo *bci = bi.GetBase();
+              if (bci->GetDecl() == definer) {
+                 // We have found the right base class, now get the
+                 // necessary adjustment.
+                 *poffset = bi.Offset();
+              }
+           }
+        }
+     }
    }
    TClingMethodInfo tmi(fInterp);
    tmi.Init(FD);
@@ -302,7 +304,7 @@ bool TClingClassInfo::HasMethod(const char *name) const
    std::string given_name(name);
    if (!llvm::isa<clang::EnumDecl>(fDecl)) {
       // We are a class, struct, union, namespace, or translation unit.
-      clang::DeclContext *DC = llvm::cast<clang::DeclContext>(fDecl);
+      clang::DeclContext *DC = const_cast<clang::DeclContext*>(llvm::cast<clang::DeclContext>(fDecl));
       llvm::SmallVector<clang::DeclContext *, 2> fContexts;
       DC->collectAllContexts(fContexts);
       for (unsigned I = 0; !found && (I < fContexts.size()); ++I) {
@@ -331,6 +333,7 @@ void TClingClassInfo::Init(const char *name)
    fDescend = false;
    fIter = clang::DeclContext::decl_iterator();
    fDecl = 0;
+   fType = 0;
    fIterStack.clear();
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
    const clang::Decl *decl = lh.findScope(name);
@@ -360,101 +363,17 @@ void TClingClassInfo::Init(const char *name)
               "name: %s  decl: 0x%lx\n", name, (long) decl);
       }
    }
+   fDecl = decl;
    if (decl) {
-      // Position our iterator on the given decl.
-      AdvanceToDecl(decl);
-      //fFirstTime = true;
-      //fDescend = false;
-      //fIter = clang::DeclContext::decl_iterator();
-      //fTemplateDecl = 0;
-      //fSpecIter = clang::ClassTemplateDecl::spec_iterator(0);
-      //fDecl = const_cast<clang::Decl*>(decl);
-      //fIterStack.clear();
-   }
+      const clang::RecordDecl *rdecl = llvm::dyn_cast<clang::RecordDecl>(decl);
+      if (rdecl) fType = rdecl->getASTContext().getRecordType(rdecl)->getAs<clang::RecordType>();
+   } 
 }
 
 void TClingClassInfo::Init(int tagnum)
 {
+   Warning("TCintWithCling::Init(tagnum)","Not yet implemented\n");
    return;
-#if 0
-   if (gDebug > 0) {
-      Info("TClingClassInfo::Init(tagnum)", "looking up tagnum: %d\n", tagnum);
-   }
-   if (!gAllowCint) {
-      delete fClassInfo;
-      fClassInfo = new G__ClassInfo;
-      fDecl = 0;
-      return;
-   }
-   fFirstTime = true;
-   fDescend = false;
-   fIter = clang::DeclContext::decl_iterator();
-   fDecl = 0;
-   fIterStack.clear();
-   fClassInfo->Init(tagnum);
-   if (!fClassInfo->IsValid()) {
-      if (gDebug > 0) {
-         fprintf(stderr, "TClingClassInfo::Init(tagnum): could not find cint "
-                 "class for tagnum: %d\n", tagnum);
-      }
-      return;
-   }
-   if (gAllowClang) {
-      const char *name = fClassInfo->Fullname();
-      if (gDebug > 0) {
-         fprintf(stderr, "TClingClassInfo::Init(tagnum): found cint class "
-                 "name: %s  tagnum: %d\n", name, tagnum);
-      }
-      if (!name || (name[0] == '\0')) {
-         // No name, or name is blank, could be anonymous
-         // class/struct/union or enum.  Cint does not give
-         // us enough information to find the same decl in clang.
-         return;
-      }
-      const clang::Decl *decl = fInterp->lookupScope(name);
-      if (!decl) {
-         if (gDebug > 0) {
-            fprintf(stderr,
-                    "TClingClassInfo::Init(tagnum): cling class not found "
-                    "name: %s  tagnum: %d\n", name, tagnum);
-         }
-         std::string buf = TClassEdit::InsertStd(name);
-         decl = const_cast<clang::Decl *>(fInterp->lookupScope(buf));
-         if (!decl) {
-            if (gDebug > 0) {
-               fprintf(stderr,
-                       "TClingClassInfo::Init(tagnum): cling class not found "
-                       "name: %s  tagnum: %d\n", buf.c_str(), tagnum);
-            }
-         }
-         else {
-            if (gDebug > 0) {
-               fprintf(stderr, "TClingClassInfo::Init(tagnum): "
-                       "found cling class name: %s  decl: 0x%lx\n",
-                       buf.c_str(), (long) decl);
-            }
-         }
-      }
-      else {
-         if (gDebug > 0) {
-            fprintf(stderr, "TClingClassInfo::Init(tagnum): found cling class "
-                    "name: %s  decl: 0x%lx\n", name, (long) decl);
-         }
-      }
-      if (decl) {
-         // Position our iterator on the given decl.
-         AdvanceToDecl(decl);
-         //fFirstTime = true;
-         //fDescend = false;
-         //fIter = clang::DeclContext::decl_iterator();
-         //fTemplateDecl = 0;
-         //fSpecIter = clang::ClassTemplateDecl::spec_iterator(0);
-         //fDecl = const_cast<clang::Decl*>(decl);
-         //fIterStack.clear();
-      }
-   }
-#endif // 0
-   //--
 }
 
 bool TClingClassInfo::IsBase(const char *name) const
@@ -505,33 +424,28 @@ bool TClingClassInfo::IsValid() const
 bool TClingClassInfo::IsValidMethod(const char *method, const char *proto,
                                     long *offset) const
 {
+   // Check if the method with the given prototype exist.
    if (!IsValid()) {
       return false;
    }
-   return GetMethod(method, proto, offset).IsValid();
-}
-
-int TClingClassInfo::AdvanceToDecl(const clang::Decl *target_decl)
-{
-   const clang::TranslationUnitDecl *TU = target_decl->getTranslationUnitDecl();
-   const clang::DeclContext *DC = llvm::cast<clang::DeclContext>(TU);
-   fFirstTime = true;
-   fDescend = false;
-   fIter = DC->decls_begin();
-   fDecl = 0;
-   fIterStack.clear();
-   while (InternalNext()) {
-      if (fDecl == target_decl) {
-         return 1;
-      }
+   if (offset) {
+      *offset = 0L; // humm suspicious.
    }
-   return 0;
+   const clang::FunctionDecl *decl =
+      fInterp->getLookupHelper().findFunctionProto(fDecl, method, proto);
+   return (decl != 0);
 }
 
 int TClingClassInfo::InternalNext()
 {
    if (!*fIter) {
       // Iterator is already invalid.
+      if (fFirstTime && fDecl) {
+         std::string buf;
+         clang::PrintingPolicy Policy(fDecl->getASTContext().getPrintingPolicy());
+         llvm::dyn_cast<clang::NamedDecl>(fDecl)->getNameForDiagnostic(buf, Policy, /*Qualified=*/false);         
+         Error("TClingClassInfo::InternalNext","Next called but iteration not prepared for %s!",buf.c_str());
+      }
       return 0;
    }
    while (true) {
@@ -571,6 +485,7 @@ int TClingClassInfo::InternalNext()
          if (!*fIter) {
             // We have reached the end of the translation unit, all done.
             fDecl = 0;
+            fType = 0;
             return 0;
          }
       }
@@ -603,6 +518,11 @@ int TClingClassInfo::InternalNext()
          }
          // Iterator is now valid.
          fDecl = *fIter;
+         fType = 0;
+         if (fDecl) {
+            const clang::RecordDecl *rdecl = llvm::dyn_cast<clang::RecordDecl>(fDecl);
+            if (rdecl) fType = rdecl->getASTContext().getRecordType(rdecl)->getAs<clang::RecordType>();
+         }
          return 1;
       }
    }
@@ -624,7 +544,7 @@ void *TClingClassInfo::New() const
    os << "new " << Name() << ";";
    cling::StoredValueRef val;
    cling::Interpreter::CompilationResult err =
-      fInterp->evaluate(os.str(), &val);
+      fInterp->evaluate(os.str(), val);
    if (err != cling::Interpreter::kSuccess) {
       return 0;
    }
@@ -645,7 +565,7 @@ void *TClingClassInfo::New(int n) const
    os << "new " << Name() << "[" << n << "];";
    cling::StoredValueRef val;
    cling::Interpreter::CompilationResult err =
-      fInterp->evaluate(os.str(), &val);
+      fInterp->evaluate(os.str(), val);
    if (err != cling::Interpreter::kSuccess) {
       return 0;
    }
@@ -668,7 +588,7 @@ void *TClingClassInfo::New(int n, void *arena) const
       << Name() << "[" << n << "];";
    cling::StoredValueRef val;
    cling::Interpreter::CompilationResult err =
-      fInterp->evaluate(os.str(), &val);
+      fInterp->evaluate(os.str(), val);
    if (err != cling::Interpreter::kSuccess) {
       return 0;
    }
@@ -690,7 +610,7 @@ void *TClingClassInfo::New(void *arena) const
       << Name() << ";";
    cling::StoredValueRef val;
    cling::Interpreter::CompilationResult err =
-      fInterp->evaluate(os.str(), &val);
+      fInterp->evaluate(os.str(), val);
    if (err != cling::Interpreter::kSuccess) {
       return 0;
    }
@@ -795,22 +715,30 @@ const char *TClingClassInfo::FileName() const
    return 0;
 }
 
-const char *TClingClassInfo::FullName() const
+const char *TClingClassInfo::FullName(const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) const
 {
+   // Return QualifiedName.
+   
    if (!IsValid()) {
       return 0;
    }
    // Note: This *must* be static because we are returning a pointer inside it!
    static std::string buf;
    buf.clear();
-   clang::PrintingPolicy Policy(fDecl->getASTContext().getPrintingPolicy());
-   llvm::dyn_cast<clang::NamedDecl>(fDecl)->
-   getNameForDiagnostic(buf, Policy, /*Qualified=*/true);
+   if (fType) {
+      clang::QualType type(fType,0);
+      ROOT::TMetaUtils::GetNormalizedName(buf, type, *fInterp, normCtxt);
+   } else {
+      clang::PrintingPolicy Policy(fDecl->getASTContext().getPrintingPolicy());
+      llvm::dyn_cast<clang::NamedDecl>(fDecl)->getNameForDiagnostic(buf, Policy, /*Qualified=*/true);
+   }
    return buf.c_str();
 }
 
 const char *TClingClassInfo::Name() const
 {
+   // Return unqualified name.
+
    if (!IsValid()) {
       return 0;
    }
@@ -818,8 +746,7 @@ const char *TClingClassInfo::Name() const
    static std::string buf;
    buf.clear();
    clang::PrintingPolicy Policy(fDecl->getASTContext().getPrintingPolicy());
-   llvm::dyn_cast<clang::NamedDecl>(fDecl)->
-   getNameForDiagnostic(buf, Policy, /*Qualified=*/false);
+   llvm::dyn_cast<clang::NamedDecl>(fDecl)->getNameForDiagnostic(buf, Policy, /*Qualified=*/false);
    return buf.c_str();
 }
 
@@ -838,13 +765,19 @@ const char *TClingClassInfo::Title()
    // Iterate over the redeclarations, we can have muliple definitions in the 
    // redecl chain (came from merging of pcms).
    if (const TagDecl *TD = llvm::dyn_cast<TagDecl>(GetDecl())) {
-      if ( (TD = ROOT::TMetaUtils::GetAnnotatedRedeclarable(TD)) ) 
-         if (AnnotateAttr *A = TD->getAttr<AnnotateAttr>())
+      if ( (TD = ROOT::TMetaUtils::GetAnnotatedRedeclarable(TD)) ) {
+         if (AnnotateAttr *A = TD->getAttr<AnnotateAttr>()) {
             fTitle = A->getAnnotation().str();
+            return fTitle.c_str();
+         }
+      }
    }
-   else
-      // Try to get the comment from the header file if present
-      fTitle = ROOT::TMetaUtils::GetComment(*GetDecl()).str();
+
+   // Try to get the comment from the header file if present
+   const clang::CXXRecordDecl *CRD =
+      llvm::dyn_cast<clang::CXXRecordDecl>(GetDecl());
+   if (CRD) 
+      fTitle = ROOT::TMetaUtils::GetClassComment(*CRD,0,*fInterp).str();
 
    return fTitle.c_str();
 }
@@ -861,4 +794,3 @@ const char *TClingClassInfo::TmpltName() const
    buf = llvm::dyn_cast<clang::NamedDecl>(fDecl)->getNameAsString();
    return buf.c_str();
 }
-

@@ -434,7 +434,6 @@ const char *autoldtmpl = "G__auto%dLinkDef.h";
 char autold[64];
 
 std::ostream* dictSrcOut=&std::cout;
-G__ShadowMaker *shadowMaker=0;
 
 bool gNeedCollectionProxy = false;
 
@@ -687,21 +686,6 @@ std::string R__TrueName(const clang::FieldDecl &m)
    std::string result;
    R__GetQualifiedName(result, clang::QualType(rawtype,0), m);
    return result;
-}
-
-bool R__IsInt(const clang::Type *type) 
-{
-   const clang::BuiltinType * builtin = llvm::dyn_cast<clang::BuiltinType>(type->getCanonicalTypeInternal().getTypePtr());
-   if (builtin) {
-      return builtin->isInteger(); // builtin->getKind() == clang::BuiltinType::Int;
-   } else {
-      return false;
-   }
-}
-
-bool R__IsInt(const clang::FieldDecl *field) 
-{
-   return R__IsInt(field->getType().getTypePtr());
 }
 
 const clang::CXXRecordDecl *R__ScopeSearch(const char *name, const clang::Type** resultType = 0) 
@@ -1773,24 +1757,6 @@ int GetClassVersion(const clang::RecordDecl *cl)
    return 0;   
 }
 
-string GetNonConstMemberName(G__DataMemberInfo &m, const string &prefix = "")
-{
-   // Return the name of the data member so that it can be used
-   // by non-const operation (so it includes a const_cast if necessary).
-   
-   if (m.Property() & (G__BIT_ISCONSTANT|G__BIT_ISPCONSTANT)) {
-      string ret = "const_cast< ";
-      ret += G__ShadowMaker::GetNonConstTypeName(m);
-      ret += " &>( ";
-      ret += prefix;
-      ret += m.Name();
-      ret += " )";
-      return ret;
-   } else {
-      return prefix+m.Name();
-   }
-}
-
 //______________________________________________________________________________
 string GetNonConstMemberName(const clang::FieldDecl &m, const string &prefix = "")
 {
@@ -2257,6 +2223,17 @@ bool IsTemplateDouble32(const RScanner::AnnotatedRecordDecl &cl)
 #endif
 }
 
+//______________________________________________________________________________
+int IsSTLContainer(const RScanner::AnnotatedRecordDecl &annotated)
+{
+   // Is this an STL container.
+   
+   const char *name = annotated.GetRequestedName()[0] ? annotated.GetRequestedName() : annotated.GetNormalizedName();
+   
+   int k = TClassEdit::IsSTLCont(name,1);
+   
+   return k;   
+}
 
 //______________________________________________________________________________
 int IsSTLContainer(G__DataMemberInfo &m)
@@ -3455,21 +3432,6 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
    if (!clinfo.IsValid() && cl_input.GetRequestedName()[0] ) {
       clinfo.Init(  R__GetQualifiedName(cl_input).c_str() );
    }
-   if (NeedShadowClass(clinfo)) {
-      (*dictSrcOut) << "      // Make sure the shadow class has the right sizeof" << std::endl;
-      if (G__ShadowMaker::IsStdPair(clinfo)) {
-         // Some compilers don't recognize ::pair even after a 'using namespace std;'
-         // and there is no risk of confusion since it is a template.
-         //fprintf(fp, "      R__ASSERT(sizeof(%s)", classname.c_str() );
-      } else {
-         std::string clfullname;
-         shadowMaker->GetFullShadowName(clinfo, clfullname);
-         (*dictSrcOut) << "      R__ASSERT(sizeof(" << csymbol.c_str() << ")"
-         << " == sizeof(" << clfullname.c_str() << "));" << std::endl;
-      }
-   }
-
-
 
    (*dictSrcOut) << "      " << csymbol.c_str() << " *ptr = 0;" << std::endl;
 
@@ -3843,199 +3805,6 @@ std::string ShortTypeName(const clang::FieldDecl &m)
    R__GetQualifiedName(result, clang::QualType(rawtype,0), m);
    return result;
 }
-
-const clang::FieldDecl *R__GetDataMemberFromAll(const clang::CXXRecordDecl &cl, const char *what)
-{
-   // Return a data member name 'what' in the class described by 'cl' if any.
-
-   for(clang::RecordDecl::field_iterator field_iter = cl.field_begin(), end = cl.field_end();
-       field_iter != end;
-       ++field_iter)
-   {
-      if (field_iter->getNameAsString() == what) {
-         return *field_iter;
-      }
-   }
-   return 0;
-   
-}
-
-bool CXXRecordDecl__FindOrdinaryMember 	( const clang::CXXBaseSpecifier *  	Specifier,
-                                           clang::CXXBasePath &  	Path,
-                                           void *  	Name 
-                                           ) 	
-{
-   clang::RecordDecl *BaseRecord = Specifier->getType()->getAs<clang::RecordType>()->getDecl();
-   const clang::CXXRecordDecl *clxx = llvm::dyn_cast<clang::CXXRecordDecl>(BaseRecord);
-   if (clxx == 0) return false;
-   
-   return 0 != R__GetDataMemberFromAll(*clxx,(const char*)Name);
-}
-
-
-const clang::FieldDecl *R__GetDataMemberFromAllParents(const clang::CXXRecordDecl &cl, const char *what)
-{
-   // Return a data member name 'what' in any of the base classes of the class described by 'cl' if any.
-
-   clang::CXXBasePaths Paths;
-   Paths.setOrigin(const_cast<clang::CXXRecordDecl*>(&cl));
-   cl.lookupInBases(&CXXRecordDecl__FindOrdinaryMember,
-                    (void*) what,
-                    Paths);
-   return 0;
-}
-
-// ValidArrayIndex return a static string (so use it or copy it immediatly, do not
-// call GrabIndex twice in the same expression) containing the size of the
-// array data member.
-// In case of error, or if the size is not specified, GrabIndex returns 0.
-// If errnum is not null, *errnum updated with the error number:
-//   Cint::G__DataMemberInfo::G__VALID     : valid array index
-//   Cint::G__DataMemberInfo::G__NOT_INT   : array index is not an int
-//   Cint::G__DataMemberInfo::G__NOT_DEF   : index not defined before array 
-//                                          (this IS an error for streaming to disk)
-//   Cint::G__DataMemberInfo::G__IS_PRIVATE: index exist in a parent class but is private
-//   Cint::G__DataMemberInfo::G__UNKNOWN   : index is not known
-// If errstr is not null, *errstr is updated with the address of a static
-//   string containing the part of the index with is invalid.
-
-enum R__DataMemberInfo__ValidArrayIndex_error_code { VALID, NOT_INT, NOT_DEF, IS_PRIVATE, UNKNOWN };
-const char* R__DataMemberInfo__ValidArrayIndex(const clang::FieldDecl &m, int *errnum, char **errstr) 
-{
-   const char* title = ROOT::TMetaUtils::GetComment( m ).data();
-   
-   // Let's see if the user provided us with some information
-   // with the format: //[dimension] this is the dim of the array
-   // dimension can be an arithmetical expression containing, literal integer,
-   // the operator *,+ and - and data member of integral type.  In addition the
-   // data members used for the size of the array need to be defined prior to
-   // the array.
-   
-   if (errnum) *errnum = VALID;
-   
-   if ((strncmp(title, "[", 1)!=0) ||
-       (strstr(title,"]")     ==0)  ) return 0;
-   
-   G__FastAllocString working(G__INFO_TITLELEN);
-   static char indexvar[G__INFO_TITLELEN];
-   strncpy(indexvar, title + 1, sizeof(indexvar) - 1);
-   strstr(indexvar,"]")[0] = '\0';
-   
-   // now we should have indexvar=dimension
-   // Let's see if this is legal.
-   // which means a combination of data member and digit separated by '*','+','-'
-   // First we remove white spaces.
-   unsigned int i,j;
-   size_t indexvarlen = strlen(indexvar);
-   for ( i=0,j=0; i<=indexvarlen; i++) {
-      if (!isspace(indexvar[i])) {
-         working.Set(j++, indexvar[i]);
-      }
-   };
-   
-   // Now we go through all indentifiers
-   const char * tokenlist = "*+-";
-   char *current = working;
-   current = strtok(current,tokenlist);
-   
-   while (current!=0) {
-      // Check the token
-      if (isdigit(current[0])) {
-         for(i=0;i<strlen(current);i++) {
-            if (!isdigit(current[0])) {
-               // Error we only access integer.
-               //NOTE: *** Need to print an error;
-               //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not an interger\n",
-               //        member.MemberOf()->Name(), member.Name(), current);
-               if (errstr) *errstr = current;
-               if (errnum) *errnum = NOT_INT;
-               return 0;
-            }
-         }
-      } else { // current token is not a digit
-         // first let's see if it is a data member:
-         int found = 0;
-         const clang::CXXRecordDecl *parent_clxx = llvm::dyn_cast<clang::CXXRecordDecl>(m.getParent());
-         const clang::FieldDecl *index1 = R__GetDataMemberFromAll(*parent_clxx, current );
-         if ( index1 ) {
-            if ( R__IsInt(index1) ) {
-               found = 1;
-               // Let's see if it has already been written down in the
-               // Streamer.
-               // Let's see if we already wrote it down in the
-               // streamer.
-               for(clang::RecordDecl::field_iterator field_iter = parent_clxx->field_begin(), end = parent_clxx->field_end();
-                   field_iter != end;
-                   ++field_iter)
-               {
-                  if ( field_iter->getNameAsString() == m.getNameAsString() ) {
-                     // we reached the current data member before
-                     // reaching the index so we have not written it yet!
-                     //NOTE: *** Need to print an error;
-                     //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) has not been defined before the array \n",
-                     //        member.MemberOf()->Name(), member.Name(), current);
-                     if (errstr) *errstr = current;
-                     if (errnum) *errnum = NOT_DEF;
-                     return 0;
-                  }
-                  if ( field_iter->getNameAsString() == index1->getNameAsString() ) {
-                     break;
-                  }
-               } // end of while (m_local.Next())
-            } else {
-               //NOTE: *** Need to print an error;
-               //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
-               //        member.MemberOf()->Name(), member.Name(), current);
-               if (errstr) *errstr = current;
-               if (errnum) *errnum = NOT_INT;
-               return 0;
-            }
-         } else {
-            // There is no variable by this name in this class, let see
-            // the base classes!:
-            index1 = R__GetDataMemberFromAllParents( *parent_clxx, current );
-            if ( index1 ) {
-               if ( R__IsInt(index1) ) {
-                  found = 1;
-               } else {
-                  // We found a data member but it is the wrong type
-                  //NOTE: *** Need to print an error;
-                  //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
-                  //  member.MemberOf()->Name(), member.Name(), current);
-                  if (errnum) *errnum = NOT_INT;
-                  if (errstr) *errstr = current;
-                  //NOTE: *** Need to print an error;
-                  //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
-                  //  member.MemberOf()->Name(), member.Name(), current);
-                  if (errnum) *errnum = NOT_INT;
-                  if (errstr) *errstr = current;
-                  return 0;
-               }
-               if ( found && (index1->getAccess() == clang::AS_private) ) {
-                  //NOTE: *** Need to print an error;
-                  //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is a private member of %s \n",
-                  if (errstr) *errstr = current;
-                  if (errnum) *errnum = IS_PRIVATE;
-                  return 0;
-               }
-            }
-            if (!found) {
-               //NOTE: *** Need to print an error;
-               //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not known \n",
-               //        member.MemberOf()->Name(), member.Name(), indexvar);
-               if (errstr) *errstr = indexvar;
-               if (errnum) *errnum = UNKNOWN;
-               return 0;
-            } // end of if not found
-         } // end of if is a data member of the class
-      } // end of if isdigit
-      
-      current = strtok(0,tokenlist);
-   } // end of while loop on tokens      
-   
-   return indexvar;
-   
-}
    
 //______________________________________________________________________________
 const char *GrabIndex(const clang::FieldDecl &member, int printError)
@@ -4046,9 +3815,9 @@ const char *GrabIndex(const clang::FieldDecl &member, int printError)
    // In case of error, or if the size is not specified, GrabIndex returns 0.
 
    int error;
-   char *where = 0;
+   const char *where = 0;
 
-   const char *index = R__DataMemberInfo__ValidArrayIndex(member,&error, &where);
+   const char *index = ROOT::TMetaUtils::DataMemberInfo__ValidArrayIndex(member,&error, &where);
    if (index==0 && printError) {
       const char *errorstring;
       switch (error) {
@@ -4621,22 +4390,9 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Inte
 
 }
 
-
 //______________________________________________________________________________
 void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
 {
-   //#define R__SHOWMEMBERS_IN_TCLING
-#ifdef R__SHOWMEMBERS_IN_TCLING
-   std::string getClass;
-   if (cl.HasMethod("IsA") && !outside) {
-      getClass = csymbol + "::IsA()";
-   } else {
-      getClass = "::ROOT::GenerateInitInstanceLocal((const ";
-      getClass += csymbol + "*)0x0)->GetClass()";
-   }
-   (*dictSrcOut) << "      ((TCintWithCling*)gInterpreter)->InspectMembers(R__insp, obj, "
-      << getClass << ");" << std::endl;
-#else
    string csymbol = cl.Fullname();
    if ( ! TClassEdit::IsStdClass( csymbol.c_str() ) ) {
 
@@ -4646,203 +4402,20 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
       csymbol.insert(0,"::");
    }
 
-   const char *prefix = "";
-
-   (*dictSrcOut) << "      // Inspect the data members of an object of class " << cl.Fullname() << "." << std::endl;
-
-   std::string clfullname;
-   shadowMaker->GetFullShadowName(cl, clfullname);
-   if (outside) {
-      (*dictSrcOut) << "      typedef " << clfullname.c_str() << " ShadowClass;" << std::endl
-                    << "      ShadowClass *sobj = (ShadowClass*)obj;" << std::endl
-                    << "      if (sobj) { } // Dummy usage just in case there is no datamember." << std::endl << std::endl;
-      prefix = "sobj->";
-   }
-
+   std::string getClass;
    if (cl.HasMethod("IsA") && !outside) {
-#ifdef  WIN32
-      // This is to work around a bad msvc C++ bug.
-      // This code would work in the general case, but why bother....and
-      // we want to remember to eventually remove it ...
-
-      if (strstr(csymbol.c_str(),"::")) {
-         // there is a namespace involved, trigger MS VC bug workaround
-         (*dictSrcOut) << "      typedef " << csymbol.c_str() << " msvc_bug_workaround;" << std::endl
-                       << "      TClass *R__cl = msvc_bug_workaround::IsA();" << std::endl;
-      } else
-         (*dictSrcOut) << "      TClass *R__cl = " << csymbol.c_str() << "::IsA();" << std::endl;
-#else
-      (*dictSrcOut) << "      TClass *R__cl = " << csymbol.c_str() << "::IsA();" << std::endl;
-#endif
+      getClass = csymbol + "::IsA()";
    } else {
-      (*dictSrcOut) << "      TClass *R__cl  = ::ROOT::GenerateInitInstanceLocal((const " << csymbol.c_str() << "*)0x0)->GetClass();" << std::endl;
+      getClass = "::ROOT::GenerateInitInstanceLocal((const ";
+      getClass += csymbol + "*)0x0)->GetClass()";
    }
-   (*dictSrcOut) << "      if (R__cl || R__insp.IsA()) { }" << std::endl;
-
-   // Inspect data members
-   G__DataMemberInfo m(cl);
-   char cdim[1024];
-   string cvar;
-   string clName;
-   TMetaUtils::GetCppName(clName,cl.Fullname());
-   string fun;
-   // int version = GetClassVersion(cl);
-   // int clflag = 1;
-   // if (version == 0 || cl.RootFlag() == 0) clflag = 0;
-   // if (version < 0 && !(cl.RootFlag() & G__USEBYTECOUNT) ) clflag = 0;
-
-   while (m.Next()) {
-
-      // we skip:
-      //  - static members
-      //  - the member G__virtualinfo inserted by the CINT RTTI system
-
-      fun = string("R__") + clName + "_" + m.Name(); // sprintf(fun,"R__%s_%s",clName,m.Name());
-      if (!(m.Property() & G__BIT_ISSTATIC) &&
-          strcmp(m.Name(), "G__virtualinfo")) {
-
-         // fundamental type: short, int, long, etc....
-         if (((m.Type())->Property() & G__BIT_ISFUNDAMENTAL) ||
-             ((m.Type())->Property() & G__BIT_ISENUM)) {
-            if (m.Property() & G__BIT_ISARRAY &&
-                m.Property() & G__BIT_ISPOINTER) {
-               cvar = '*';
-               cvar += m.Name();
-               for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
-                  cvar += cdim;
-               }
-               (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
-                             << prefix << m.Name() << ");" << std::endl;
-            } else if (m.Property() & G__BIT_ISPOINTER) {
-               (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"*" << m.Name() << "\", &"
-                             << prefix << m.Name() << ");" << std::endl;
-            } else if (m.Property() & G__BIT_ISARRAY) {
-               cvar = m.Name();
-               bool vardim = false;
-               for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  int maxInd = m.MaxIndex(dim);
-                  if (maxInd < 0) {
-                     strlcpy(cdim,"[]",1024);
-                     vardim = true;
-                  } else {
-                     snprintf(cdim, 1024,"[%d]", maxInd);
-                  }
-                  cvar += cdim;
-               }
-               if (vardim) {
-                  (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
-                                << prefix << m.Name() << ");" << std::endl;
-               } else {
-                  (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", "
-                                << prefix << m.Name() << ");" << std::endl;
-               }
-
-            } else {
-               (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << m.Name() << "\", &"
-                             << prefix << m.Name() << ");" << std::endl;
-            }
-         } else {
-            // we have an object
-
-            if (m.Property() & G__BIT_ISARRAY &&
-                m.Property() & G__BIT_ISPOINTER) {
-               cvar = '*';
-               cvar += m.Name();
-               for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
-                  cvar += cdim;
-               }
-               (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", &"
-                             << prefix << m.Name() << ");" << std::endl;
-            } else if (m.Property() & G__BIT_ISPOINTER) {
-               (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"*" << m.Name() << "\", &" << prefix << m.Name() << ");" << std::endl;
-            } else if (m.Property() & G__BIT_ISARRAY) {
-               cvar = m.Name();
-               for (int dim = 0; dim < m.ArrayDim(); dim++) {
-                  snprintf(cdim,1024, "[%ld]", m.MaxIndex(dim));
-                  cvar += cdim;
-               }
-               (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << cvar << "\", "
-                             << prefix << m.Name() << ");" << std::endl;
-            } else if (m.Property() & G__BIT_ISREFERENCE) {
-               // For reference we do not know what do not ... let's do nothing (hopefully the referenced objects is saved somewhere else!
-
-            } else {
-               if ((m.Type())->HasMethod("ShowMembers")) {
-                  (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << m.Name() << "\", &"
-                                << prefix << m.Name() << ");" << std::endl;
-                  (*dictSrcOut) << "      R__insp.InspectMember(" << GetNonConstMemberName(m,prefix)
-                                << ", \"" << m.Name() << ".\");"  << std::endl;
-               } else {
-                  // NOTE: something to be added here!
-                  (*dictSrcOut) << "      R__insp.Inspect(R__cl, R__insp.GetParent(), \"" << m.Name()
-                                << "\", (void*)&" << prefix << m.Name() << ");" << std::endl;
-                  /* if (can call ShowStreamer) */
-
-                  string compareName(clName);
-                  compareName += "::";
-
-                  if (strlen(m.Type()->Name()) &&
-                      compareName != m.Type()->Name() ) {
-                     // Filter out the unamed type from with a the class.
-
-                     string typeWithDefaultStlName( RStl::DropDefaultArg(m.Type()->Name()) );
-                     //TClassEdit::ShortType(m.Type()->Name(),TClassEdit::kRemoveDefaultAlloc) );
-                     string typeName( GetLong64_Name( m.Type()->Name() ) );
-
-                     (*dictSrcOut) << "      R__insp.InspectMember(\"" << typeName << "\", (void*)&"
-                                   << prefix << m.Name() << ", \""<< m.Name() << ".\", "
-                                   << (!strncmp(m.Title(), "!", 1)?"true":"false")
-                                   <<  ");" << std::endl;
-                  }
-               }
-            }
-         }
-      }
+   if (outside) {
+      (*dictSrcOut) << "   ((TCintWithCling*)gInterpreter)->InspectMembers(R__insp, obj, "
+                    << getClass << ");" << std::endl;
+   } else {
+      (*dictSrcOut) << "   ((TCintWithCling*)gInterpreter)->InspectMembers(R__insp, this, "
+                    << getClass << ");" << std::endl;
    }
-
-   // Write ShowMembers for base class(es) when they have the ShowMember() method
-   G__BaseClassInfo b(cl);
-
-   int base = 0;
-   while (b.Next()) {
-      base++;
-      if (b.HasMethod("ShowMembers")) {
-         if (outside) {
-            (*dictSrcOut) << "      sobj->" << b.Fullname() << "::ShowMembers(R__insp);" << std::endl;
-         } else {
-            if (strstr(b.Fullname(),"::")) {
-               // there is a namespace involved, trigger MS VC bug workaround
-               (*dictSrcOut) << "      //This works around a msvc bug and should be harmless on other platforms" << std::endl
-                             << "      typedef " << b.Fullname() << " baseClass" << base << ";" << std::endl
-                             << "      baseClass" << base << "::ShowMembers(R__insp);" << std::endl;
-            } else {
-               (*dictSrcOut) << "      " << b.Fullname() << "::ShowMembers(R__insp);" << std::endl;
-            }
-         }
-      } else {
-         string baseclass = FixSTLName(b.Fullname());
-         // We used to use a dynamic_cast for cast to the parent class.  This
-         // was not necessary and actually crippling.  In this situations
-         // (casting from child to parent) the C-style cast is returning the
-         // same result as the dynamic_cast but has the advantage (for us) of
-         // being able to apply the case even if the parent is inherited from
-         // privately.
-
-         //string baseclassWithDefaultStlName( m.Type()->Name()); //  RStl::DropDefaultArg(m.Type()->Name()) );
-         //string baseclassWithDefaultStlName( TClassEdit::ShortType(baseclass.c_str(),
-         //                                                          TClassEdit::kRemoveDefaultAlloc) );
-         if (outside) {
-            (*dictSrcOut) << "      R__insp.GenericShowMembers(\"" << baseclass.c_str() << "\", ( ::" << baseclass.c_str()
-                          << " * )( (::" << cl.Fullname() << "*) obj ), false);" << std::endl;
-         } else {
-            (*dictSrcOut) << "      R__insp.GenericShowMembers(\"" << baseclass.c_str() << "\", ( ::" << baseclass.c_str()
-                          << " *) (this ), false);" << std::endl;
-         }
-      }
-   }
-#endif // R__SHOWMEMBERS_IN_TCLING
 }
 
 //______________________________________________________________________________
@@ -5524,7 +5097,25 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
       "}" << std::endl;
 
    clang::CompilerInstance* CI = gInterp->getCI();
+
+// Note: need to resolve _where_ to create the pcm
    std::string dictDir = "lib/";
+#ifdef WIN32
+   struct _stati64 finfo;
+   
+   if (_stati64(dictDir.c_str(), &finfo) < 0 ||
+       !(finfo.st_mode & S_IFDIR)) {
+      dictDir = "./";
+   }
+#else
+   struct stat finfo;
+   if (stat(dictDir.c_str(), &finfo) < 0 ||
+       !S_ISDIR(finfo.st_mode)) {
+      dictDir = "./";
+   }
+   
+#endif
+   
    CI->getPreprocessor().getHeaderSearchInfo().setModuleCachePath(dictDir.c_str());
    std::string moduleFile = dictDir + ROOT::TMetaUtils::GetModuleFileName(dictname.c_str());
    clang::Module* module = 0;
@@ -6214,7 +5805,6 @@ int main(int argc, char **argv)
       argvv[argcc++] = autold;
    }
 
-   G__ShadowMaker::VetoShadow(); // we create them ourselves
    G__setothermain(2);
    G__set_ioctortype_handler( (int (*)(const char*))AddConstructorType );
    G__set_beforeparse_hook( BeforeParseInit );
@@ -6572,13 +6162,6 @@ int main(int argc, char **argv)
       const char* shadowNSName="ROOT";
       if (dict_type != kDictTypeCint)
          shadowNSName = "ROOT::Reflex";
-      G__ShadowMaker myShadowMaker((*dictSrcOut), shadowNSName, NeedShadowClass,
-                                   dict_type==kDictTypeCint ? NeedTypedefShadowClass : 0);
-      shadowMaker = &myShadowMaker;
-
-      G__ShadowMaker::VetoShadow(false);
-      // coverity[fun_call_w_exception] - that's just fine.
-      shadowMaker->WriteAllShadowClasses();
 
       //
       // Loop over all classes and create Streamer() & Showmembers() methods
@@ -6664,17 +6247,7 @@ int main(int argc, char **argv)
          if (!iter->RequestOnlyTClass()) {
             continue;
          }
-         G__ClassInfo clinfo( iter->GetRequestedName()[0] ? iter->GetRequestedName() : iter->GetNormalizedName() );
-         // fprintf(stderr,"rootcling: Writing TClass wrapper for class %s needShadowClass=%d\n",R__GetQualifiedName(*iter).c_str(),NeedShadowClass(clinfo));
-         if (NeedShadowClass(clinfo)) {
-            (*dictSrcOut) << "namespace ROOT {" << std::endl
-            << "   namespace Shadow {" << std::endl;
-            // coverity[fun_call_w_exception] - that's just fine.
-            shadowMaker->WriteShadowClass(clinfo);
-            (*dictSrcOut) << "   } // Of namespace ROOT::Shadow" << std::endl
-            << "} // Of namespace ROOT" << std::endl << std::endl;
-         }
-         if (G__ShadowMaker::IsSTLCont(clinfo.Name()) == 0 ) {
+         if (!IsSTLContainer(*iter)) {
             WriteClassInit(*iter);
          }
       }

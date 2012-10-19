@@ -2655,6 +2655,44 @@ Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType
                TDataType::GetTypeName(datatype), datatype, TDataType::GetTypeName(expectedType), expectedType, branch->GetName());
          return kMismatch;
       }
+   } else if ((expectedClass && (datatype != kOther_t && datatype != kNoType_t && datatype != kInt_t)) || 
+              (ptrClass && (expectedType != kOther_t && expectedType != kNoType_t && datatype != kInt_t)) ) {
+      // Sometime a null pointer can look an int, avoid complaining in that case.
+      if (expectedClass) {
+         Error("SetBranchAddress", "The pointer type given \"%s\" (%d) does not correspond to the type needed \"%s\" by the branch: %s", 
+               TDataType::GetTypeName(datatype), datatype, expectedClass->GetName(), branch->GetName());
+      } else {
+         // In this case, it is okay if the first data member is of the right type (to support the case where we are being passed
+         // a struct).
+         bool good = false;
+         if (ptrClass->IsLoaded()) {
+            TIter next(ptrClass->GetListOfRealData());
+            TRealData *rdm;
+            while ((rdm = (TRealData*)next())) {
+               if (rdm->GetThisOffset() == 0) {
+                  break;
+               }
+            }
+         } else {
+            TIter next(ptrClass->GetListOfDataMembers());
+            TDataMember *dm;
+            while ((dm = (TDataMember*)next())) {
+               if (dm->GetOffset() == 0) {
+                  TDataType *dmtype = dm->GetDataType();
+                  if (dmtype) {
+                     EDataType etype = (EDataType)dmtype->GetType();
+                     good = (etype == expectedType);
+                  }
+                  break;
+               }
+            }
+         }
+         if (!good) {
+            Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" (%d) by the branch: %s", 
+                  ptrClass->GetName(), TDataType::GetTypeName(expectedType), expectedType, branch->GetName());
+         }
+      }
+      return kMismatch;      
    }
    if (expectedClass && expectedClass->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(expectedClass->GetCollectionProxy())) {
       Error("SetBranchAddress", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
@@ -7015,6 +7053,7 @@ Int_t TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
 
    TBranch* branch = GetBranch(bname);
    if (!branch) {
+      if (ptr) *ptr = 0;
       Error("SetBranchAddress", "unknown branch -> %s", bname);
       return kMissingBranch;
    }
@@ -7046,14 +7085,13 @@ Int_t TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TCla
 
    TBranch* branch = GetBranch(bname);
    if (!branch) {
+      if (ptr) *ptr = 0;
       Error("SetBranchAddress", "unknown branch -> %s", bname);
       return kMissingBranch;
    }
-   if (ptr) {
-      *ptr = branch;
-   }
 
    Int_t res = CheckBranchAddressType(branch, ptrClass, datatype, isptr);
+   // This will set the value of *ptr to branch.
    SetBranchAddressImp(branch,addr,ptr);
    return res;
 }

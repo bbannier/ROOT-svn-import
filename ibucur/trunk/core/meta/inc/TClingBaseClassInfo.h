@@ -61,6 +61,7 @@ public:
    TClingBaseClassInfo(const TClingBaseClassInfo&);
    TClingBaseClassInfo& operator=(const TClingBaseClassInfo&);
 
+   TClingClassInfo *GetBase() const;
    int           InternalNext(int onlyDirect);
    bool          IsValid() const;
    int           Next();
@@ -68,7 +69,7 @@ public:
    long          Offset() const;
    long          Property() const;
    long          Tagnum() const;
-   const char   *FullName() const;
+   const char   *FullName(const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) const;
    const char   *Name() const;
    const char   *TmpltName() const;
 

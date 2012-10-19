@@ -9,11 +9,12 @@
 // so it provides it on the fly, and no transformations to delay the lookup
 // are performed.
 
-#include "SymbolResolverCallback.h"
+#include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/InterpreterCallbacks.h"
 
 .dynamicExtensions
 
-gCling->setCallbacks(new cling::test::SymbolResolverCallback(gCling, /*Enabled=*/true));
+gCling->setCallbacks(new cling::test::SymbolResolverCallback(gCling));
 jksghdgsjdf->getVersion() // CHECK: {{.*Interpreter.*}}
 hsdghfjagsp->Draw() // CHECK: (int const) 12
 

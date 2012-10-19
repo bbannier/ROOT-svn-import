@@ -49,8 +49,10 @@ TFPBlock::TFPBlock(Long64_t* offset, Int_t* length, Int_t nb)
       fRelOffset[i] = aux;
       aux += length[i];
    }
-   fFullSize = aux;
-   fBuffer = (char*) calloc(fFullSize, sizeof(char));
+
+   fCapacity = aux;
+   fDataSize = aux;
+   fBuffer = (char*) calloc(fCapacity, sizeof(char));
 }
 
 //__________________________________________________________________
@@ -78,8 +80,11 @@ void TFPBlock::SetPos(Int_t idx, Long64_t value)
 void TFPBlock::SetBuffer(char* buf)
 {
    // Set block buffer.
-
+   if ( fBuffer ) {
+     free(fBuffer);
+   }
    fBuffer = buf;
+
 }
 
 //__________________________________________________________________
@@ -102,8 +107,10 @@ void TFPBlock::ReallocBlock(Long64_t* offset, Int_t* length, Int_t nb)
       newSize += fLen[i];
    }
 
-   if (newSize > fFullSize) {
-     fBuffer = (char*) realloc(fBuffer, newSize);
-     fFullSize = newSize;
-   }   
+   if (newSize > fCapacity) {
+     fCapacity = newSize;
+     fBuffer = (char*) realloc(fBuffer, fCapacity);
+   }
+
+   fDataSize = newSize;
 }

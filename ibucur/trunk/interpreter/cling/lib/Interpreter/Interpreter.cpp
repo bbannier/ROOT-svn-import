@@ -20,28 +20,19 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Parse/Parser.h"
-#include "clang/Sema/Lookup.h"
-#include "clang/Sema/Overload.h"
-#include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
-#include "clang/Sema/TemplateDeduction.h"
 
 #include "llvm/Linker.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
-#include <iostream>
 #include <sstream>
 #include <vector>
 
@@ -213,7 +204,7 @@ namespace cling {
       // Set up the gCling variable
       std::stringstream initializer;
       initializer << "gCling=(cling::Interpreter*)" << (uintptr_t)this << ";";
-      evaluate(initializer.str());
+      execute(initializer.str());
     }
     else {
       declare("#include \"cling/Interpreter/CValuePrinter.h\"");
@@ -376,6 +367,7 @@ namespace cling {
     CompilationOptions CO;
     CO.DeclarationExtraction = 1;
     CO.ValuePrinting = CompilationOptions::VPAuto;
+    CO.ResultEvaluation = (bool)V;
     CO.DynamicScoping = isDynamicLookupEnabled();
     CO.Debug = isPrintingAST();
 
@@ -400,6 +392,7 @@ namespace cling {
     CO.CodeGeneration = 0;
     CO.DeclarationExtraction = 0;
     CO.ValuePrinting = 0;
+    CO.ResultEvaluation = 0;
     CO.DynamicScoping = isDynamicLookupEnabled();
     CO.Debug = isPrintingAST();
 
@@ -411,6 +404,7 @@ namespace cling {
     CompilationOptions CO;
     CO.DeclarationExtraction = 0;
     CO.ValuePrinting = 0;
+    CO.ResultEvaluation = 0;
     CO.DynamicScoping = isDynamicLookupEnabled();
     CO.Debug = isPrintingAST();
 
@@ -418,7 +412,7 @@ namespace cling {
   }
 
   Interpreter::CompilationResult
-  Interpreter::evaluate(const std::string& input, StoredValueRef* V /* = 0 */) {
+  Interpreter::evaluate(const std::string& input, StoredValueRef& V) {
     // Here we might want to enforce further restrictions like: Only one
     // ExprStmt can be evaluated and etc. Such enforcement cannot happen in the
     // worker, because it is used from various places, where there is no such
@@ -426,8 +420,9 @@ namespace cling {
     CompilationOptions CO;
     CO.DeclarationExtraction = 0;
     CO.ValuePrinting = 0;
+    CO.ResultEvaluation = 1;
 
-    return EvaluateInternal(input, CO, V);
+    return EvaluateInternal(input, CO, &V);
   }
 
   Interpreter::CompilationResult
@@ -435,8 +430,36 @@ namespace cling {
     CompilationOptions CO;
     CO.DeclarationExtraction = 0;
     CO.ValuePrinting = CompilationOptions::VPEnabled;
+    CO.ResultEvaluation = 0;
 
     return EvaluateInternal(input, CO, V);
+  }
+
+  Interpreter::CompilationResult
+  Interpreter::execute(const std::string& input) {
+    CompilationOptions CO;
+    CO.DeclarationExtraction = 0;
+    CO.ValuePrinting = 0;
+    CO.ResultEvaluation = 0;
+    CO.DynamicScoping = 0;
+    CO.Debug = isPrintingAST();
+
+    // Disable warnings which doesn't make sense when using the prompt
+    // This gets reset with the clang::Diagnostics().Reset()
+    // TODO: Here might be useful to issue unused variable diagnostic,
+    // because we don't do declaration extraction and the decl won't be visible
+    // anymore.
+    ignoreFakeDiagnostics();
+
+    // Wrap the expression
+    std::string WrapperName;
+    std::string Wrapper = input;
+    WrapInput(Wrapper, WrapperName);
+    if (m_IncrParser->Compile(Wrapper, CO) == IncrementalParser::kSuccess)
+      if (RunFunction(WrapperName, QualType()))
+        return Interpreter::kSuccess;
+
+    return Interpreter::kFailure;
   }
 
   void Interpreter::WrapInput(std::string& input, std::string& fname) {
@@ -445,17 +468,8 @@ namespace cling {
     input.append("\n;\n}");
   }
 
-  llvm::StringRef Interpreter::createUniqueWrapper() {
-    const size_t size = sizeof("__cling_Un1Qu3") + sizeof(m_UniqueCounter);
-    llvm::SmallString<size> out("__cling_Un1Qu3");
-    llvm::raw_svector_ostream(out) << m_UniqueCounter++;
-
-    return (getCI()->getASTContext().Idents.getOwn(out)).getName();
-  }
-
-  bool Interpreter::RunFunction(llvm::StringRef fname,
-                                clang::QualType retType,
-                                StoredValueRef* res) {
+  bool Interpreter::RunFunction(llvm::StringRef fname, clang::QualType retType,
+                                StoredValueRef* res /* = 0 */) {
     if (getCI()->getDiagnostics().hasErrorOccurred())
       return false;
 
@@ -467,7 +481,7 @@ namespace cling {
 
     Sema& S = getCI()->getSema();
     FunctionDecl* FD 
-      = cast_or_null<FunctionDecl>(utils::Lookup::Named(&S, fname.str().c_str()));
+      = cast_or_null<FunctionDecl>(utils::Lookup::Named(&S, fname.data()));
     
     if (FD) {
       mangleName(FD, mangledNameIfNeeded);
@@ -481,8 +495,25 @@ namespace cling {
   }
 
   void Interpreter::createUniqueName(std::string& out) {
-    out = "Un1Qu3";
+    out = utils::Synthesize::UniquePrefix;
     llvm::raw_string_ostream(out) << m_UniqueCounter++;
+  }
+
+  bool Interpreter::isUniqueName(llvm::StringRef name) {
+    return name.startswith(utils::Synthesize::UniquePrefix);
+  }
+
+  llvm::StringRef Interpreter::createUniqueWrapper() {
+    const size_t size 
+      = sizeof(utils::Synthesize::UniquePrefix) + sizeof(m_UniqueCounter);
+    llvm::SmallString<size> out(utils::Synthesize::UniquePrefix);
+    llvm::raw_svector_ostream(out) << m_UniqueCounter++;
+
+    return (getCI()->getASTContext().Idents.getOwn(out)).getName();
+  }
+
+  bool Interpreter::isUniqueWrapper(llvm::StringRef name) {
+    return name.startswith(utils::Synthesize::UniquePrefix);
   }
 
   Interpreter::CompilationResult
@@ -503,18 +534,9 @@ namespace cling {
   Interpreter::EvaluateInternal(const std::string& input, 
                                 const CompilationOptions& CO,
                                 StoredValueRef* V /* = 0 */) {
-
-    Sema& TheSema = getCI()->getSema();
-
-    DiagnosticsEngine& Diag = getCI()->getDiagnostics();
     // Disable warnings which doesn't make sense when using the prompt
     // This gets reset with the clang::Diagnostics().Reset()
-    Diag.setDiagnosticMapping(clang::diag::warn_unused_expr,
-                              clang::diag::MAP_IGNORE, SourceLocation());
-    Diag.setDiagnosticMapping(clang::diag::warn_unused_call,
-                              clang::diag::MAP_IGNORE, SourceLocation());
-    Diag.setDiagnosticMapping(clang::diag::warn_unused_comparison,
-                              clang::diag::MAP_IGNORE, SourceLocation());
+    ignoreFakeDiagnostics();
 
     // Wrap the expression
     std::string WrapperName;
@@ -523,7 +545,7 @@ namespace cling {
     QualType RetTy = getCI()->getASTContext().VoidTy;
 
     if (V) {
-      const Transaction* CurT = m_IncrParser->Parse(Wrapper);
+      const Transaction* CurT = m_IncrParser->Parse(Wrapper, CO);
       assert(CurT->size() && "No decls created by Parse!");
 
       // Find the wrapper function declaration.
@@ -532,66 +554,12 @@ namespace cling {
       //       instantiation happened.  Our wrapper function should be the
       //       last decl in the set.
       //
-      FunctionDecl* TopLevelFD 
+      FunctionDecl* FD 
         = dyn_cast<FunctionDecl>(CurT->getLastDecl().getSingleDecl());
-      assert(TopLevelFD && "No Decls Parsed?");
-      DeclContext* CurContext = TheSema.CurContext;
-      TheSema.CurContext = TopLevelFD;
-      ASTContext& Context(getCI()->getASTContext());
-      // We have to be able to mark the expression for printout. There are three
-      // scenarios:
-      // 0: Expression printing disabled - don't do anything just disable the
-      //    consumer
-      //    is our marker, even if there wasn't missing ';'.
-      // 1: Expression printing enabled - make sure we don't have NullStmt,
-      //    which is used as a marker to suppress the print out.
-      // 2: Expression printing auto - do nothing - rely on the omitted ';' to
-      //    not produce the suppress marker.
-      if (CompoundStmt* CS = dyn_cast<CompoundStmt>(TopLevelFD->getBody())) {
-        // Collect all Stmts, contained in the CompoundStmt
-        llvm::SmallVector<Stmt *, 4> Stmts;
-        for (CompoundStmt::body_iterator iStmt = CS->body_begin(),
-               eStmt = CS->body_end(); iStmt != eStmt; ++iStmt)
-          Stmts.push_back(*iStmt);
-
-        size_t indexOfLastExpr = Stmts.size();
-        while(indexOfLastExpr--) {
-          // find the trailing expression statement (skip e.g. null statements)
-          if (Expr* E = dyn_cast_or_null<Expr>(Stmts[indexOfLastExpr])) {
-            RetTy = E->getType();
-            if (!RetTy->isVoidType()) {
-              // Change the void function's return type
-              FunctionProtoType::ExtProtoInfo EPI;
-              QualType FuncTy = Context.getFunctionType(RetTy,/* ArgArray = */0,
-                                                        /* NumArgs = */0, EPI);
-              TopLevelFD->setType(FuncTy);
-              // Strip the parenthesis if any
-              if (ParenExpr* PE = dyn_cast<ParenExpr>(E))
-                E = PE->getSubExpr();
-
-              // Change it with return stmt
-              Stmts[indexOfLastExpr]
-                = TheSema.ActOnReturnStmt(SourceLocation(), E).take();
-            }
-            // even if void: we found an expression
-            break;
-          }
-        }
-
-        // case 1:
-        if (CO.ValuePrinting == CompilationOptions::VPEnabled)
-          if (indexOfLastExpr < Stmts.size() - 1 &&
-              isa<NullStmt>(Stmts[indexOfLastExpr + 1]))
-            Stmts.erase(Stmts.begin() + indexOfLastExpr);
-        // Stmts.insert(Stmts.begin() + indexOfLastExpr + 1,
-        //              TheSema.ActOnNullStmt(SourceLocation()).take());
-
-        // Update the CompoundStmt body
-        CS->setStmts(TheSema.getASTContext(), Stmts.data(), Stmts.size());
-
+      assert(FD && "No Decls Parsed?");
+      if (Expr* lastExpr = utils::Analyze::GetLastExpr(FD)) {
+        RetTy = lastExpr->getType();
       }
-
-      TheSema.CurContext = CurContext;
 
       m_IncrParser->commitCurrentTransaction();
     }
@@ -599,15 +567,10 @@ namespace cling {
       m_IncrParser->Compile(Wrapper, CO);
 
     // get the result
-    if (!V) {
-       if (RunFunction(WrapperName, RetTy)) {
-        return Interpreter::kSuccess;
-      }
-    } else if (RunFunction(WrapperName, RetTy, V)) {
+    if (RunFunction(WrapperName, RetTy, V))
       return Interpreter::kSuccess;
-    } else {
-       *V = StoredValueRef::invalidValue();
-    }
+    else if (V)
+        *V = StoredValueRef::invalidValue();
 
     return Interpreter::kFailure;
   }
@@ -651,13 +614,11 @@ namespace cling {
     TheSema.CurContext = DC;
 
     StoredValueRef Result;
-    if (TheSema.ExternalSource) {
-      getCallbacks()->setEnabled();
-      (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, &Result);
-      getCallbacks()->setEnabled(false);
+    if (TheSema.getExternalSource()) {
+      (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, Result);
     }
     else
-      (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, &Result);
+      (ValuePrinterReq) ? echo(expr, &Result) : evaluate(expr, Result);
 
     TheSema.CurContext = CurContext;
 
@@ -665,28 +626,18 @@ namespace cling {
   }
 
   void Interpreter::setCallbacks(InterpreterCallbacks* C) {
+    // We need it to enable LookupObject callback.
     m_Callbacks.reset(C);
-    Sema& S = getCI()->getSema();
-    if (!C)
-      delete S.ExternalSource;
-    else
-      S.ExternalSource = new DynamicIDHandler(this);
   }
 
   void Interpreter::enableDynamicLookup(bool value /*=true*/) {
     m_DynamicLookupEnabled = value;
 
-    Sema& S = getCI()->getSema();
     if (isDynamicLookupEnabled()) {
-      assert(!S.ExternalSource && "Already set Sema ExternalSource");
-      // Load the dynamic lookup specifics.
       declare("#include \"cling/Interpreter/DynamicLookupRuntimeUniverse.h\"");
-      S.ExternalSource = new DynamicIDHandler(this);
     }
-    else {
-      delete S.ExternalSource;
-      S.ExternalSource = 0;
-    }
+    else
+      setCallbacks(0);
   }
 
   void Interpreter::runStaticInitializersOnce() const {
@@ -722,6 +673,19 @@ namespace cling {
     }
   }
 
+  void Interpreter::ignoreFakeDiagnostics() const {
+    DiagnosticsEngine& Diag = getCI()->getDiagnostics();
+    // Disable warnings which doesn't make sense when using the prompt
+    // This gets reset with the clang::Diagnostics().Reset()
+    Diag.setDiagnosticMapping(clang::diag::warn_unused_expr,
+                              clang::diag::MAP_IGNORE, SourceLocation());
+    Diag.setDiagnosticMapping(clang::diag::warn_unused_call,
+                              clang::diag::MAP_IGNORE, SourceLocation());
+    Diag.setDiagnosticMapping(clang::diag::warn_unused_comparison,
+                              clang::diag::MAP_IGNORE, SourceLocation());
+
+  }
+
   bool Interpreter::addSymbol(const char* symbolName,  void* symbolAddress) {
     // Forward to ExecutionContext;
     if (!symbolName || !symbolAddress )
@@ -729,7 +693,6 @@ namespace cling {
 
     return m_ExecutionContext->addSymbol(symbolName,  symbolAddress);
   }
-
 
   void* Interpreter::getAddressOfGlobal(const clang::NamedDecl* D,
                                         bool* fromJIT /*=0*/) const {

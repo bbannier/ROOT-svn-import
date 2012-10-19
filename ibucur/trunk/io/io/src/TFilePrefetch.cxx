@@ -84,7 +84,7 @@ void TFilePrefetch::ReadAsync(TFPBlock* block, Bool_t &inCache)
    char* path = 0;
 
    if (CheckBlockInCache(path, block)){
-      block->SetBuffer(GetBlockFromCache(path, block->GetFullSize()));
+      block->SetBuffer(GetBlockFromCache(path, block->GetDataSize()));
       inCache = kTRUE;
    }
    else{
@@ -309,32 +309,55 @@ Int_t TFilePrefetch::ThreadStart()
    return rc;
 }
 
+
 //____________________________________________________________________________________________
 TThread::VoidRtnFunc_t TFilePrefetch::ThreadProc(void* arg)
 {
    // Execution loop of the consumer thread.
-
+  
+   int val = 0;
    TFilePrefetch* pClass = (TFilePrefetch*) arg;
-   TMutex *mutex = pClass->fCondNextFile->GetMutex();
+   TMutex *mutexNextFile = pClass->fCondNextFile->GetMutex();
+   TMutex *mutexPendingList = pClass->fMutexPendingList;
+  
+   while ( pClass->fNewBlockAdded->TimedWaitRelative(50) != 0 ) {
+      // Deal with the situation in which the signal was already sent
+      // before entering the wait logic
+      mutexPendingList->Lock();
+      val = pClass->fPendingBlocks->GetSize();
+      mutexPendingList->UnLock();
 
-   pClass->fNewBlockAdded->Wait();
-
-   while( pClass->fSemMasterWorker->TryWait() != 0 ) {
-
-      pClass->ReadListOfBlocks();
-
-      //need to signal TChain that we finished work
-      //in the previous file, before we move on
-      mutex->Lock();
-      pClass->fCondNextFile->Signal();
-      mutex->UnLock();
-
-      pClass->fNewBlockAdded->Wait();
+      if ( val ) {
+         break;
+      }
    }
 
-   pClass->fSemWorkerMaster->Post();       
+   while( pClass->fSemMasterWorker->TryWait() != 0 ) {
+      pClass->ReadListOfBlocks();
+
+     // Need to signal TChain that we finished work
+     // in the previous file, before we move on
+     mutexNextFile->Lock();
+     pClass->fCondNextFile->Signal();
+     mutexNextFile->UnLock();
+
+     while ( pClass->fNewBlockAdded->TimedWaitRelative(50) != 0 ) {
+        // Deal with the situation in which the signal was already sent
+        // before entering the wait logic
+        mutexPendingList->Lock();
+        val = pClass->fPendingBlocks->GetSize();
+        mutexPendingList->UnLock();
+        if ( val ) {
+           break;
+       }
+     }
+   }
+
+   pClass->fSemWorkerMaster->Post();
    return (TThread::VoidRtnFunc_t) 1;
 }
+
+
 
 //############################# CACHING PART ###################################
 
@@ -412,7 +435,7 @@ char* TFilePrefetch::GetBlockFromCache(const char* path, Int_t length)
    Double_t start = 0;
    if (gPerfStats != 0) start = TTimeStamp();
 
-   buffer = (char*) calloc(length+1, sizeof(char));
+   buffer = (char*) calloc(length, sizeof(char));
    file->ReadBuffer(buffer, 0, length);
 
    fFile->fBytesRead  += length;
@@ -426,6 +449,7 @@ char* TFilePrefetch::GetBlockFromCache(const char* path, Int_t length)
       gPerfStats->FileReadEvent(fFile, length, start);
    }
 
+   file->Close();
    delete file;
    return buffer;
 }
@@ -472,8 +496,9 @@ void TFilePrefetch::SaveBlockInCache(TFPBlock* block)
    }
 
    if (file) {
-      // coverity[unchecked_value] We do not print error message, have not error return code and close the file anyway, not need to check the return value.
-      file->WriteBuffer(block->GetBuffer(), block->GetFullSize());
+      // coverity[unchecked_value] We do not print error message, have not error
+      // return code and close the file anyway, not need to check the return value.
+      file->WriteBuffer(block->GetBuffer(), block->GetDataSize());
       file->Close();
       delete file;
    }
