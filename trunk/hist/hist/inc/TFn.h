@@ -58,15 +58,20 @@ namespace ROOT {
 class TFn : public TFormula, public TAttLine, public TAttFill, public TAttMarker,
    public ROOT::Math::IParamMultiGradFunction, public ROOT::Math::IGradientMultiDim {
 
+private:
+   void Init(Int_t ndim, Double_t* xmin, Double_t* xmax);
+
 protected:
-   Double_t    fXmin;        //Lower bounds for the range
-   Double_t    fXmax;        //Upper bounds for the range
+// XXX: fNdim is in TFormula
+//   Double_t    fXmin;        //Lower bounds for the range
+//   Double_t    fXmax;        //Upper bounds for the range
+   Double_t*   fMin;         //Lower bounds for the range
+   Double_t*   fMax;         //Upper bounds for the range
    Int_t       fNpx;         //Number of points used for the graphical representation
    Int_t       fType;        //(=0 for standard functions, 1 if pointer to function)
    Int_t       fNpfits;      //Number of points used in the fit
    Int_t       fNDF;         //Number of degrees of freedom in the fit
    Int_t       fNsave;       //Number of points used to fill array fSave
-   Int_t       fNdimensions; //Number of function dimensions
    Double_t    fChisquare;   //Function fit chisquare
    Double_t    *fIntegral;   //![fNpx] Integral of function binned on fNpx bins
    Double_t    *fParErrors;  //[fNpar] Array of errors of the fNpar parameters
@@ -88,7 +93,7 @@ protected:
    static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
 
    void CreateFromFunctor(const char *name, Int_t npar);
-   void CreateFromCintClass(const char *name, void * ptr, Double_t xmin, Double_t xmax, Int_t npar, const char * cname, const char * fname);
+   void CreateFromCintClass(const char *name, Int_t ndim, void * ptr, Double_t* min, Double_t* max, Int_t npar, const char * cname, const char * fname);
 
 public:
     // TFn status bits
@@ -97,14 +102,14 @@ public:
     };
 
    TFn();
-   TFn(const char *name, void *fcn, Double_t xmin, Double_t xmax, Int_t npar);
+   TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, Int_t npar);
 #ifndef __CINT__
-   TFn(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0);
-   TFn(const char *name, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0);
+   TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, Int_t npar=0);
+   TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t* min, Double_t* max, Int_t npar=0);
 #endif
 
    // Constructors using functors (compiled mode only)
-   TFn(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin = 0, Double_t xmax = 1, Int_t npar = 0);
+   TFn(const char *name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar = 0);
 
    // Template constructors from any  C++ callable object,  defining  the operator() (double * , double *)
    // and returning a double.
@@ -115,13 +120,11 @@ public:
    // xmin and xmax specify the plotting range,  npar is the number of parameters.
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <typename Func>
-   TFn(const char *name, Func f, Double_t xmin, Double_t xmax, Int_t npar, const char * = 0  ) :
+   TFn(const char *name, Int_t ndim, Func f, Double_t* min, Double_t* max, Int_t npar, const char * = 0  ) :
       TFormula(),
       TAttLine(),
       TAttFill(),
       TAttMarker(),
-      fXmin      ( xmin ),
-      fXmax      ( xmax ),
       fNpx       ( 100 ),
       fType      ( 1 ),
       fNpfits    ( 0 ),
@@ -144,6 +147,7 @@ public:
       fCintFunc  ( 0 ),
       fFunctor( ROOT::Math::ParamFunctor(f) )
    {
+      Init(ndim, min, max);
       CreateFromFunctor(name, npar);
    }
 
@@ -156,13 +160,11 @@ public:
    // xmin and xmax specify the plotting range,  npar is the number of parameters.
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <class PtrObj, typename MemFn>
-   TFn(const char *name, const  PtrObj& p, MemFn memFn, Double_t xmin, Double_t xmax, Int_t npar, const char * = 0, const char * = 0) :
+   TFn(const char *name, Int_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, Int_t npar, const char * = 0, const char * = 0) :
       TFormula(),
       TAttLine(),
       TAttFill(),
       TAttMarker(),
-      fXmin      ( xmin ),
-      fXmax      ( xmax ),
       fNpx       ( 100 ),
       fType      ( 1 ),
       fNpfits    ( 0 ),
@@ -185,17 +187,17 @@ public:
       fCintFunc  ( 0 ),
       fFunctor   ( ROOT::Math::ParamFunctor(p,memFn) )
    {
+      Init(ndim, min, max);
       CreateFromFunctor(name, npar);
    }
 
    // constructor used by CINT
-   TFn(const char *name, void *ptr, Double_t xmin, Double_t xmax, Int_t npar, const char *className );
-   TFn(const char *name, void *ptr, void *,Double_t xmin, Double_t xmax, Int_t npar, const char *className, const char *methodName = 0);
+   TFn(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char *className );
+   TFn(const char *name, Int_t ndim, void *ptr, void *, Double_t* min, Double_t* max, Int_t npar, const char *className, const char *methodName = 0);
 
    TFn(const TFn &f1);
    TFn& operator=(const TFn &rhs);
    virtual   ~TFn();
-   virtual void     Browse(TBrowser *b);
    virtual void     Copy(TObject &f1) const;
    // TODO: see versus parametrised
    virtual Double_t DoEval(Double_t *) const {
@@ -204,7 +206,6 @@ public:
       // TODO: solve constness issue - Why is EvalPar not constant?
       return 0.0;
    }
-   virtual Int_t    DistancetoPrimitive(Int_t px, Int_t py);
    virtual Double_t Eval(Double_t x, Double_t y=0, Double_t z=0, Double_t t=0) const;
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
    // for using TFn as a callable object (functor)
@@ -222,7 +223,6 @@ public:
     TMethodCall    *GetMethodCall() const {return fMethodCall;}
    virtual Int_t    GetNumberFreeParameters() const;
    virtual Int_t    GetNumberFitPoints() const {return fNpfits;}
-   virtual char    *GetObjectInfo(Int_t px, Int_t py) const;
         TObject    *GetParent() const {return fParent;}
    virtual Double_t GetParError(Int_t ipar) const;
    virtual Double_t *GetParErrors() const {return fParErrors;}
@@ -264,7 +264,7 @@ public:
    virtual void     SetParErrors(const Double_t *errors);
    virtual void     SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax);
    virtual void     SetParent(TObject *p=0) {fParent = p;}
-   virtual void     SetRange(Double_t xmin, Double_t xmax); // *MENU*
+   virtual void     SetRange(Double_t* min, Double_t* max); // *MENU*
 //   virtual void     SetRange(Double_t xmin, Double_t ymin,  Double_t xmax, Double_t ymax);
 //   virtual void     SetRange(Double_t xmin, Double_t ymin, Double_t zmin,  Double_t xmax, Double_t ymax, Double_t zmax);
    virtual void     SetSavedPoint(Int_t point, Double_t value);
