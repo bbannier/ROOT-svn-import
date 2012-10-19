@@ -347,12 +347,25 @@ End_Html */
 
 
 //______________________________________________________________________________
+void TFn::Init(Int_t ndim, Double_t* min, Double_t* max) 
+{
+   // TFn initializer, employed by constructors
+   if (ndim > 0) {
+      fNdim = ndim; // XXX: should we put this in the initialization list?
+      fMin = new Double_t[fNdim];
+      fMax = new Double_t[fNdim];
+      memcpy(fMin, min, fNdim * sizeof(Double_t));
+      memcpy(fMax, max, fNdim * sizeof(Double_t));
+   }
+} 
+
+//______________________________________________________________________________
 TFn::TFn(): TFormula(), TAttLine(), TAttFill(), TAttMarker()
 {
    // F1 default constructor.
 
-   fXmin      = 0;
-   fXmax      = 0;
+   fMin       = NULL;
+   fMax       = NULL;
    fNpx       = 100;
    fType      = 0;
    fNpfits    = 0;
@@ -377,7 +390,7 @@ TFn::TFn(): TFormula(), TAttLine(), TAttFill(), TAttMarker()
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
+TFn::TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, Int_t npar)
       :TFormula(), TAttLine(), TAttFill(), TAttMarker()
 {
    // F1 constructor using pointer to an interpreted function.
@@ -397,13 +410,12 @@ TFn::TFn(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
    //
    //  WARNING! A function created with this constructor cannot be Cloned.
 
+   Init(ndim, min, max);
 
-   fXmin       = xmin;
-   fXmax       = xmax;
    fNpx        = 100;
    fType       = 2;
    //fFunction   = 0;
-   if (npar > 0 ) fNpar = npar;
+  if (npar > 0) fNpar = npar;
    if (fNpar) {
       fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
@@ -469,7 +481,7 @@ TFn::TFn(const char *name,void *fcn, Double_t xmin, Double_t xmax, Int_t npar)
 
 
 //______________________________________________________________________________
-TFn::TFn(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin, Double_t xmax, Int_t npar)
+TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, Int_t npar)
       :TFormula(), TAttLine(), TAttFill(), TAttMarker()
 {
    // F1 constructor using a pointer to a real function.
@@ -484,8 +496,8 @@ TFn::TFn(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
-   fXmin       = xmin;
-   fXmax       = xmax;
+   Init(ndim, min, max);
+
    fNpx        = 100;
 
    fType       = 1;
@@ -541,7 +553,7 @@ TFn::TFn(const char *name,Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin, Double_t xmax, Int_t npar)
+TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t* min, Double_t* max, Int_t npar)
       :TFormula(), TAttLine(), TAttFill(), TAttMarker()
 {
    // F1 constructor using a pointer to real function.
@@ -556,8 +568,8 @@ TFn::TFn(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), D
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
-   fXmin       = xmin;
-   fXmax       = xmax;
+   Init(ndim, min, max);
+
    fNpx        = 100;
 
    fType       = 1;
@@ -614,13 +626,11 @@ TFn::TFn(const char *name,Double_t (*fcn)(const Double_t *, const Double_t *), D
 
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t xmax, Int_t npar ) :
+TFn::TFn(const char *name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
    TFormula(),
    TAttLine(),
    TAttFill(),
    TAttMarker(),
-   fXmin      ( xmin ),
-   fXmax      ( xmax ),
    fNpx       ( 100 ),
    fType      ( 1 ),
    fNpfits    ( 0 ),
@@ -652,6 +662,7 @@ TFn::TFn(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t x
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
+   Init(ndim, min, max);
    CreateFromFunctor(name, npar);
 }
 
@@ -699,7 +710,7 @@ void TFn::CreateFromFunctor(const char *name, Int_t npar)
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name,void *ptr, Double_t xmin, Double_t xmax, Int_t npar, const char * className )
+TFn::TFn(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char * className )
       :TFormula(), TAttLine(), TAttFill(), TAttMarker()
 {
    // F1 constructor from an interpreted class defining the operator() or Eval().
@@ -717,14 +728,14 @@ TFn::TFn(const char *name,void *ptr, Double_t xmin, Double_t xmax, Int_t npar, c
    //  This constructor is used only when using CINT.
    //  In compiled mode the template constructor is used and in that case className is not needed
 
-   CreateFromCintClass(name, ptr, xmin, xmax, npar, className, 0 );
+   CreateFromCintClass(name, ndim, ptr, min, max, npar, className, 0 );
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name,void *ptr, void * , Double_t xmin, Double_t xmax, Int_t npar, const char * className, const char * methodName)
+TFn::TFn(const char *name, Int_t ndim, void *ptr, void * , Double_t* min, Double_t* max, Int_t npar, const char * className, const char * methodName)
       :TFormula(), TAttLine(), TAttFill(), TAttMarker()
 {
-   // F1 constructor from an interpreter class using a specidied member function.
+   // F1 constructor from an interpreter class using a specified member function.
    // This constructor emulate the syntax of the template constructor using a C++ class and a given
    // member function pointer, which can be used only in C++ compiled mode.
    // The class name is required to get the type of class given the void pointer ptr.
@@ -742,19 +753,18 @@ TFn::TFn(const char *name,void *ptr, void * , Double_t xmin, Double_t xmax, Int_
    //  This constructor is used only when using CINT.
    //  In compiled mode the template constructor is used and in that case className is not needed
 
-   CreateFromCintClass(name, ptr, xmin, xmax, npar, className, methodName);
+   CreateFromCintClass(name, ndim, ptr, min, max, npar, className, methodName);
 }
 
 //______________________________________________________________________________
-void TFn::CreateFromCintClass(const char *name,void *ptr, Double_t xmin, Double_t xmax, Int_t npar, const char * className, const char * methodName)
+void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char * className, const char * methodName)
 {
    // Internal function used to create from TFn from an interpreter CINT class
    // with the specified type (className) and member function name (methodName).
    //
 
+   Init(ndim, min, max);
 
-   fXmin       = xmin;
-   fXmax       = xmax;
    fNpx        = 100;
    fType       = 3;
    if (npar > 0 ) fNpar = npar;
@@ -876,8 +886,8 @@ TFn::TFn(const TFn &f1) : TFormula(), TAttLine(f1), TAttFill(f1), TAttMarker(f1)
 {
    // Constuctor.
 
-   fXmin      = 0;
-   fXmax      = 0;
+   fMin       = NULL;
+   fMax       = NULL;
    fNpx       = 100;
    fType      = 0;
    fNpfits    = 0;
@@ -917,21 +927,14 @@ void TFn::AbsValue(Bool_t flag)
 
 
 //______________________________________________________________________________
-void TFn::Browse(TBrowser *b)
-{
-   // Browse.
-
-   Draw(b ? b->GetDrawOption() : "");
-   gPad->Update();
-}
-
-
-//______________________________________________________________________________
 void TFn::Copy(TObject &obj) const
 {
    // Copy this F1 to a new F1.
    // Note that the cached integral with its related arrays are not copied
    // (they are also set as transient data members) 
+
+
+   TFn& rhs = ((TFn&)obj);
 
    if (((TFn&)obj).fParMin)    delete [] ((TFn&)obj).fParMin;
    if (((TFn&)obj).fParMax)    delete [] ((TFn&)obj).fParMax;
@@ -944,12 +947,23 @@ void TFn::Copy(TObject &obj) const
    delete ((TFn&)obj).fHistogram;
    delete ((TFn&)obj).fMethodCall;
 
+
+
    TFormula::Copy(obj);
    TAttLine::Copy((TFn&)obj);
    TAttFill::Copy((TFn&)obj);
    TAttMarker::Copy((TFn&)obj);
-   ((TFn&)obj).fXmin = fXmin;
-   ((TFn&)obj).fXmax = fXmax;
+
+   if(rhs.fNdim != fNdim) {
+      delete [] rhs.fMin;
+      delete [] rhs.fMax;
+      rhs.fMin = new Double_t[fNdim];
+      rhs.fMax = new Double_t[fNdim];
+   }
+   memcpy(rhs.fMin, fMin, fNdim * sizeof(Double_t));
+   memcpy(rhs.fMax, fMax, fNdim * sizeof(Double_t));
+
+
    ((TFn&)obj).fNpx  = fNpx;
    ((TFn&)obj).fType = fType;
    ((TFn&)obj).fCintFunc  = fCintFunc;
@@ -992,38 +1006,6 @@ void TFn::Copy(TObject &obj) const
       ((TFn&)obj).fMethodCall  = m;
    }
 }
-
-//______________________________________________________________________________
-Int_t TFn::DistancetoPrimitive(Int_t px, Int_t py)
-{
-   // Compute distance from point px,py to a function.
-   //
-   //  Compute the closest distance of approach from point px,py to this
-   //  function. The distance is computed in pixels units.
-   //
-   //  Note that px is called with a negative value when the TFn is in
-   //  TGraph or TH1 list of functions. In this case there is no point
-   //  looking at the histogram axis.
-
-   if (!fHistogram) return 9999;
-   Int_t distance = 9999;
-   if (px >= 0) {
-      distance = fHistogram->DistancetoPrimitive(px,py);
-      if (distance <= 1) return distance;
-   } else {
-      px = -px;
-   }
-
-   Double_t xx[1];
-   Double_t x    = gPad->AbsPixeltoX(px);
-   xx[0]         = gPad->PadtoX(x);
-   if (xx[0] < fXmin || xx[0] > fXmax) return distance;
-   Double_t fval = Eval(xx[0]);
-   Double_t y    = gPad->YtoPad(fval);
-   Int_t pybin   = gPad->YtoAbsPixel(y);
-   return TMath::Abs(py - pybin);
-}
-
 
 //______________________________________________________________________________
 Double_t TFn::Eval(Double_t x, Double_t y, Double_t z, Double_t t) const
@@ -1143,6 +1125,8 @@ Double_t TFn::GetMaximum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    //
    // NOTE: see also TFn::GetMaximumX and TFn::GetX
 
+   // TODO: rethink this
+/*
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
    if (!logx && gPad != 0) logx = gPad->GetLogx(); 
@@ -1157,7 +1141,7 @@ Double_t TFn::GetMaximum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    Double_t x;
    x = - bm.FValMinimum();
 
-   return x;
+   return x;*/ return 0.0;
 }
 
 
@@ -1179,7 +1163,8 @@ Double_t TFn::GetMaximumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    //  This is done automatically if the log scale is set in the current Pad
     //
    // NOTE: see also TFn::GetX
-   
+   // TODO: rethink this
+/* 
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
    if (!logx && gPad != 0) logx = gPad->GetLogx(); 
@@ -1194,7 +1179,7 @@ Double_t TFn::GetMaximumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    Double_t x;
    x = bm.XMinimum();
 
-   return x;
+   return x;*/ return 0.0;
 }
 
 
@@ -1216,7 +1201,7 @@ Double_t TFn::GetMinimum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    //  This is done automatically if the log scale is set in the current Pad
    //
    // NOTE: see also TFn::GetMaximumX and TFn::GetX
-
+/*
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
    if (!logx && gPad != 0) logx = gPad->GetLogx(); 
@@ -1231,6 +1216,7 @@ Double_t TFn::GetMinimum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    x = bm.FValMinimum();
 
    return x;
+   */ return 0.0;
 }
 
 
@@ -1253,7 +1239,7 @@ Double_t TFn::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    //  This is done automatically if the log scale is set in the current Pad
    //
    // NOTE: see also TFn::GetX
-
+/*
    if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
 
    ROOT::Math::BrentMinimizer1D bm;
@@ -1265,7 +1251,7 @@ Double_t TFn::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t 
    Double_t x;
    x = bm.XMinimum();
 
-   return x;
+   return x;*/ return 0.0;
 }
 
 /*
@@ -1331,20 +1317,6 @@ Int_t TFn::GetNumberFreeParameters() const
       if (al*bl != 0 && al >= bl) nfree--;
    }
    return nfree;
-}
-
-
-//______________________________________________________________________________
-char *TFn::GetObjectInfo(Int_t px, Int_t /* py */) const
-{
-   // Redefines TObject::GetObjectInfo.
-   // Displays the function info (x, function value)
-   // corresponding to cursor position px,py
-
-   static char info[64];
-   Double_t x = gPad->PadtoX(gPad->AbsPixeltoX(px));
-   snprintf(info,64,"(x=%g, f=%g)",x,((TFn*)this)->Eval(x));
-   return info;
 }
 
 
@@ -1847,7 +1819,10 @@ Bool_t TFn::IsInside(const Double_t *x) const
 {
    // Return kTRUE if the point is inside the function range
 
-   if (x[0] < fXmin || x[0] > fXmax) return kFALSE;
+   for(Int_t i = 0; i < fNdim; i++)
+      if (x[i] < fMin[i] || x[i] > fMax[i]) 
+         return kFALSE;
+
    return kTRUE;
 }
 
@@ -1876,8 +1851,9 @@ void TFn::ReleaseParameter(Int_t ipar)
 //______________________________________________________________________________
 void TFn::Save(Double_t xmin, Double_t xmax, Double_t, Double_t, Double_t, Double_t)
 {
+   // TODO: all of this redone, maybe not needed
    // Save values of function in array fSave
-
+/*
    if (fSave != 0) {delete [] fSave; fSave = 0;}
    if (fParent && fParent->InheritsFrom(TH1::Class())) {
       //if parent is a histogram save the function at the center of the bins
@@ -1916,7 +1892,7 @@ void TFn::Save(Double_t xmin, Double_t xmax, Double_t, Double_t, Double_t, Doubl
       fSave[i] = EvalPar(xv,fParams);
    }
    fSave[fNpx+1] = xmin;
-   fSave[fNpx+2] = xmax;
+   fSave[fNpx+2] = xmax;*/
 }
 
 
@@ -1925,6 +1901,9 @@ void TFn::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
+   // FIXME: Reconsidering this
+
+/*
    Int_t i;
    char quote = '"';
    out<<"   "<<std::endl;
@@ -2014,6 +1993,7 @@ void TFn::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
       out<<"   "<<GetName()<<"->Draw("
          <<quote<<option<<quote<<");"<<std::endl;
    }
+   */
 }
 
 //______________________________________________________________________________
@@ -2131,15 +2111,16 @@ void TFn::SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax)
 
 
 //______________________________________________________________________________
-void TFn::SetRange(Double_t xmin, Double_t xmax)
+void TFn::SetRange(Double_t* min, Double_t* max)
 {
    // Initialize the upper and lower bounds to draw the function.
    //
    // The function range is also used in an histogram fit operation
    // when the option "R" is specified.
 
-   fXmin = xmin;
-   fXmax = xmax;
+   memcpy(fMin, min, fNdim * sizeof(Double_t));
+   memcpy(fMax, max, fNdim * sizeof(Double_t));
+   
    Update();
 }
 
@@ -2178,7 +2159,8 @@ void TFn::SetTitle(const char *title)
 void TFn::Streamer(TBuffer &b)
 {
    // Stream a class object.
-
+// TODO: rethink this
+/*
    if (b.IsReading()) {
       UInt_t R__s, R__c;
       Version_t v = b.ReadVersion(&R__s, &R__c);
@@ -2255,6 +2237,7 @@ void TFn::Streamer(TBuffer &b)
 
       if (saved) {delete [] fSave; fSave = 0; fNsave = 0;}
    }
+*/
 }
 
 
