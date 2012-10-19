@@ -27,13 +27,15 @@
 #include "TF1Helper.h"
 #include "Math/WrappedFunction.h"
 #include "Math/WrappedTF1.h"
+#include "Math/AdaptiveIntegratorMultiDim.h"
 #include "Math/BrentRootFinder.h"
 #include "Math/BrentMinimizer1D.h"
 #include "Math/BrentMethods.h"
-#include "Math/Integrator.h"
+#include "Math/Factory.h"
 #include "Math/GaussIntegrator.h"
 #include "Math/GaussLegendreIntegrator.h"
-#include "Math/AdaptiveIntegratorMultiDim.h"
+#include "Math/Integrator.h"
+#include "Math/Minimizer.h"
 #include "Math/RichardsonDerivator.h"
 #include "Math/Functor.h"
 #include "Fit/FitResult.h"
@@ -78,7 +80,9 @@ public:
    //
    TFn_EvalWrapper(TFn * f, const Double_t * par, bool useAbsVal, Double_t n = 1, Double_t x0 = 0) : 
       fFunc(f), 
-      fPar( ( (par) ? par : f->GetParameters() ) ),
+      // TODO: fix this, or maybe not use at all
+      fPar(par),
+//      fPar( ( (par) ? par : f->GetParameters() ) ),
       fAbsVal(useAbsVal),
       fN(n), 
       fX0(x0)   
@@ -360,7 +364,7 @@ void TFn::Init(Int_t ndim, Double_t* min, Double_t* max)
 } 
 
 //______________________________________________________________________________
-TFn::TFn(): TFormula(), TAttLine(), TAttFill(), TAttMarker()
+TFn::TFn() : TNamed()
 {
    // F1 default constructor.
 
@@ -371,7 +375,6 @@ TFn::TFn(): TFormula(), TAttLine(), TAttFill(), TAttMarker()
    fNpfits    = 0;
    fNDF       = 0;
    fNsave     = 0;
-   fChisquare = 0;
    fIntegral  = 0;
    fParErrors = 0;
    fParMin    = 0;
@@ -386,12 +389,11 @@ TFn::TFn(): TFormula(), TAttLine(), TAttFill(), TAttMarker()
    fMaximum   = -1111;
    fMethodCall = 0;
    fCintFunc   = 0;
-   SetFillStyle(0);
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, Int_t npar)
-      :TFormula(), TAttLine(), TAttFill(), TAttMarker()
+TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, Int_t npar) :
+   TNamed(name, "TFn created from a pointer to an interpreted function")
 {
    // F1 constructor using pointer to an interpreted function.
    //
@@ -417,7 +419,7 @@ TFn::TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, 
    //fFunction   = 0;
   if (npar > 0) fNpar = npar;
    if (fNpar) {
-      fNames      = new TString[fNpar];
+      //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
       fParMin     = new Double_t[fNpar];
@@ -433,7 +435,6 @@ TFn::TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, 
       fParMin    = 0;
       fParMax    = 0;
    }
-   fChisquare  = 0;
    fIntegral   = 0;
    fAlpha      = 0;
    fBeta       = 0;
@@ -454,12 +455,6 @@ TFn::TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, 
    gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
 
-   if (gStyle) {
-      SetLineColor(gStyle->GetFuncColor());
-      SetLineWidth(gStyle->GetFuncWidth());
-      SetLineStyle(gStyle->GetFuncStyle());
-   }
-   SetFillStyle(0);
 
    if (!fcn) return;
    const char *funcname = gCint->Getp2f2funcname(fcn);
@@ -467,7 +462,7 @@ TFn::TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, 
    if (funcname) {
       fMethodCall = new TMethodCall();
       fMethodCall->InitWithPrototype(funcname,"Double_t*,Double_t*");
-      fNumber = -1;
+      //fNumber = -1;
       gROOT->GetListOfFunctions()->Add(this);
       if (! fMethodCall->IsValid() ) {
          Error("TFn","No function found with the signature %s(Double_t*,Double_t*)",funcname);
@@ -481,8 +476,8 @@ TFn::TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, 
 
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, Int_t npar)
-      :TFormula(), TAttLine(), TAttFill(), TAttMarker()
+TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, Int_t npar) : 
+   TNamed(name, "TFn created from a pointer to a real function")
 {
    // F1 constructor using a pointer to a real function.
    //
@@ -507,7 +502,7 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
 
    if (npar > 0 ) fNpar = npar;
    if (fNpar) {
-      fNames      = new TString[fNpar];
+      //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
       fParMin     = new Double_t[fNpar];
@@ -523,7 +518,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
       fParMin    = 0;
       fParMax    = 0;
    }
-   fChisquare  = 0;
    fIntegral   = 0;
    fAlpha      = 0;
    fBeta       = 0;
@@ -544,17 +538,11 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
-   if (!gStyle) return;
-   SetLineColor(gStyle->GetFuncColor());
-   SetLineWidth(gStyle->GetFuncWidth());
-   SetLineStyle(gStyle->GetFuncStyle());
-   SetFillStyle(0);
-
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t* min, Double_t* max, Int_t npar)
-      :TFormula(), TAttLine(), TAttFill(), TAttMarker()
+TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, Int_t npar) : 
+   TNamed(name, "TFn created from a pointer to a real function")
 {
    // F1 constructor using a pointer to real function.
    //
@@ -579,7 +567,7 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t *, const D
 
    if (npar > 0 ) fNpar = npar;
    if (fNpar) {
-      fNames      = new TString[fNpar];
+      //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
       fParMin     = new Double_t[fNpar];
@@ -595,7 +583,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t *, const D
       fParMin    = 0;
       fParMax    = 0;
    }
-   fChisquare  = 0;
    fIntegral   = 0;
    fAlpha      = 0;
    fBeta       = 0;
@@ -616,27 +603,17 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t *, const D
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
-   if (!gStyle) return;
-   SetLineColor(gStyle->GetFuncColor());
-   SetLineWidth(gStyle->GetFuncWidth());
-   SetLineStyle(gStyle->GetFuncStyle());
-   SetFillStyle(0);
-
 }
 
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
-   TFormula(),
-   TAttLine(),
-   TAttFill(),
-   TAttMarker(),
+TFn::TFn(const char*name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
+   TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
    fNpx       ( 100 ),
    fType      ( 1 ),
    fNpfits    ( 0 ),
    fNDF       ( 0 ),
    fNsave     ( 0 ),
-   fChisquare ( 0 ),
    fIntegral  ( 0 ),
    fParErrors ( 0 ),
    fParMin    ( 0 ),
@@ -678,7 +655,7 @@ void TFn::CreateFromFunctor(const char *name, Int_t npar)
 
    if (npar > 0 ) fNpar = npar;
    if (fNpar) {
-      fNames      = new TString[fNpar];
+      //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
       fParMin     = new Double_t[fNpar];
@@ -701,17 +678,11 @@ void TFn::CreateFromFunctor(const char *name, Int_t npar)
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 
-   if (!gStyle) return;
-   SetLineColor(gStyle->GetFuncColor());
-   SetLineWidth(gStyle->GetFuncWidth());
-   SetLineStyle(gStyle->GetFuncStyle());
-   SetFillStyle(0);
-
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char * className )
-      :TFormula(), TAttLine(), TAttFill(), TAttMarker()
+TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, Int_t npar, const char* className) : 
+   TNamed(name, TString::Format("CINT class - %s", className).Data())
 {
    // F1 constructor from an interpreted class defining the operator() or Eval().
    // This constructor emulate the syntax of the template constructor using a C++ callable object (functor)
@@ -732,8 +703,8 @@ TFn::TFn(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, 
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, void *ptr, void * , Double_t* min, Double_t* max, Int_t npar, const char * className, const char * methodName)
-      :TFormula(), TAttLine(), TAttFill(), TAttMarker()
+TFn::TFn(const char* name, Int_t ndim, void *ptr, void *, Double_t* min, Double_t* max, Int_t npar, const char* className, const char* methodName) : 
+   TNamed(name, TString::Format("CINT class - %s", className).Data())
 {
    // F1 constructor from an interpreter class using a specified member function.
    // This constructor emulate the syntax of the template constructor using a C++ class and a given
@@ -757,7 +728,7 @@ TFn::TFn(const char *name, Int_t ndim, void *ptr, void * , Double_t* min, Double
 }
 
 //______________________________________________________________________________
-void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char * className, const char * methodName)
+void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char * className, const char* methodName)
 {
    // Internal function used to create from TFn from an interpreter CINT class
    // with the specified type (className) and member function name (methodName).
@@ -769,7 +740,7 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
    fType       = 3;
    if (npar > 0 ) fNpar = npar;
    if (fNpar) {
-      fNames      = new TString[fNpar];
+     // fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
       fParMin     = new Double_t[fNpar];
@@ -785,7 +756,6 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
       fParMin    = 0;
       fParMax    = 0;
    }
-   fChisquare  = 0;
    fIntegral   = 0;
    fAlpha      = 0;
    fBeta       = 0;
@@ -803,14 +773,8 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
 
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(f1old);
-   SetName(name);
+   //SetName(name);
 
-   if (gStyle) {
-      SetLineColor(gStyle->GetFuncColor());
-      SetLineWidth(gStyle->GetFuncWidth());
-      SetLineStyle(gStyle->GetFuncStyle());
-   }
-   SetFillStyle(0);
 
    if (!ptr) return;
    fCintFunc = ptr;
@@ -832,7 +796,8 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
             fMethodCall->InitWithPrototype(cl,"Eval","Double_t*,Double_t*");
       }
 
-      fNumber = -1;
+      //FIXME: what is this?
+      //fNumber = -1;
       gROOT->GetListOfFunctions()->Add(this);
       if (! fMethodCall->IsValid() ) {
          if (methodName)
@@ -882,7 +847,7 @@ TFn::~TFn()
 
 
 //______________________________________________________________________________
-TFn::TFn(const TFn &f1) : TFormula(), TAttLine(f1), TAttFill(f1), TAttMarker(f1)
+TFn::TFn(const TFn &f1) : TNamed(f1) 
 {
    // Constuctor.
 
@@ -893,7 +858,6 @@ TFn::TFn(const TFn &f1) : TFormula(), TAttLine(f1), TAttFill(f1), TAttMarker(f1)
    fNpfits    = 0;
    fNDF       = 0;
    fNsave     = 0;
-   fChisquare = 0;
    fIntegral  = 0;
    fParErrors = 0;
    fParMin    = 0;
@@ -908,7 +872,6 @@ TFn::TFn(const TFn &f1) : TFormula(), TAttLine(f1), TAttFill(f1), TAttMarker(f1)
    fMaximum   = -1111;
    fMethodCall = 0;
    fCintFunc   = 0;
-   SetFillStyle(0);
 
    ((TFn&)f1).Copy(*this);
 }
@@ -948,12 +911,6 @@ void TFn::Copy(TObject &obj) const
    delete ((TFn&)obj).fMethodCall;
 
 
-
-   TFormula::Copy(obj);
-   TAttLine::Copy((TFn&)obj);
-   TAttFill::Copy((TFn&)obj);
-   TAttMarker::Copy((TFn&)obj);
-
    if(rhs.fNdim != fNdim) {
       delete [] rhs.fMin;
       delete [] rhs.fMax;
@@ -968,7 +925,6 @@ void TFn::Copy(TObject &obj) const
    ((TFn&)obj).fType = fType;
    ((TFn&)obj).fCintFunc  = fCintFunc;
    ((TFn&)obj).fFunctor   = fFunctor;
-   ((TFn&)obj).fChisquare = fChisquare;
    ((TFn&)obj).fNpfits  = fNpfits;
    ((TFn&)obj).fNDF     = fNDF;
    ((TFn&)obj).fMinimum = fMinimum;
@@ -1052,7 +1008,11 @@ Double_t TFn::EvalPar(const Double_t *x, const Double_t *params)
    // InitArgs should be called everytime these addresses change.
 
 
-   if (fType == 0) return TFormula::EvalPar(x,params);
+   if (fType == 0) {
+      // TODO: include TFormula in TFn and call EvalPar
+      //return TFormula::EvalPar(x,params);
+      return 0.0;
+   }
    Double_t result = 0;
    if (fType == 1)  {
 //       if (fFunction) {
@@ -1086,28 +1046,18 @@ void TFn::FixParameter(Int_t ipar, Double_t value)
    // Fix the value of a parameter
    // The specified value will be used in a fit operation
 
-   if (ipar < 0 || ipar > fNpar-1) return;
-   SetParameter(ipar,value);
+   // TODO: see how to remove the double check for TF1 (it's done in SetParameter too)
+   if (ipar < 0 || ipar >= fNpar) return; 
+   fParams[ipar] = value;
+   Update();
+
    if (value != 0) SetParLimits(ipar,value,value);
    else            SetParLimits(ipar,1,1);
 }
 
 
 //______________________________________________________________________________
-TH1 *TFn::GetHistogram() const
-{
-   // Return a pointer to the histogram used to vusualize the function
-
-   if (fHistogram) return fHistogram;
-
-   // May be function has not yet be painted. force a pad update
-//   ((TFn*)this)->Paint();
-   return fHistogram;
-}
-
-
-//______________________________________________________________________________
-Double_t TFn::GetMaximum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter,Bool_t logx) const
+Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter, Bool_t logx) const
 {
    // Return the maximum value of the function
    // Method:
@@ -1125,14 +1075,34 @@ Double_t TFn::GetMaximum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t m
    //
    // NOTE: see also TFn::GetMaximumX and TFn::GetX
 
-   // TODO: rethink this
+   Double_t* usedMin; // if the input is not suitable, we bounce back to the object range minimum
+   Double_t* usedMax; // if the input is not suitable, we bounce back to the object range maximum
+
+   if (min == NULL) usedMin = fMin;
+   else usedMin = min;
+
+   if (max == NULL) usedMax = fMax;
+   else usedMax = max;
+
+   // fix invalid ranges
+   for(Int_t i = 0; i < fNdim; ++i) {
+      if(min[i] >= max[i]) {
+         min[i] = fMin[i];
+         max[i] = fMax[i];
+      }
+   }
+
+   // Create default minimizer
+   const char* minimizerName = ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
+   const char* minimizerAlgo = ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
+   ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer(minimizerName, minimizerAlgo);
+   R__ASSERT(minimizer != NULL);
+
+   if(epsilon > 0) minimizer->SetTolerance(epsilon);
+   if(maxiter > 0) minimizer->SetMaxFunctionCalls(maxiter);
 /*
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
-
-   if (!logx && gPad != 0) logx = gPad->GetLogx(); 
-
-   ROOT::Math::BrentMinimizer1D bm;
-   GInverseFunc g(this);
+   // need wrapper 
+   GInverseFuncNdim invfunc(this);
    ROOT::Math::WrappedFunction<GInverseFunc> wf1(g);
    bm.SetFunction( wf1, xmin, xmax );
    bm.SetNpx(fNpx);
@@ -1342,16 +1312,6 @@ void TFn::GetParLimits(Int_t ipar, Double_t &parmin, Double_t &parmax) const
    if (fParMax) parmax = fParMax[ipar];
 }
 
-
-//______________________________________________________________________________
-Double_t TFn::GetProb() const
-{
-   // Return the fit probability
-
-   if (fNDF <= 0) return 0;
-   return TMath::Prob(fChisquare,fNDF);
-}
-
 //______________________________________________________________________________
 Double_t TFn::GetRandom()
 {
@@ -1456,42 +1416,20 @@ Double_t TFn::GetRandom()
 }
 
 
-/**
 //______________________________________________________________________________
-void TFn::GetRange(Double_t &xmin, Double_t &xmax) const
+void TFn::GetRange(Double_t *min, Double_t *max) const
 {
-   // Return range of a 1-D function.
+   // Return range of a n-D function.
+   // NOTE: the user is responsible for deleting the arrays
 
-   xmin = fXmin;
-   xmax = fXmax;
+   delete [] min; delete [] max; // prevent memory leaks
+
+   min = new Double_t[fNdim];
+   max = new Double_t[fNdim];
+   memcpy(min, fMin, fNdim * sizeof(Double_t));
+   memcpy(max, fMax, fNdim * sizeof(Double_t));
 }
 
-
-//______________________________________________________________________________
-void TFn::GetRange(Double_t &xmin, Double_t &ymin,  Double_t &xmax, Double_t &ymax) const
-{
-   // Return range of a 2-D function.
-
-   xmin = fXmin;
-   xmax = fXmax;
-   ymin = 0;
-   ymax = 0;
-}
-
-
-//______________________________________________________________________________
-void TFn::GetRange(Double_t &xmin, Double_t &ymin, Double_t &zmin, Double_t &xmax, Double_t &ymax, Double_t &zmax) const
-{
-   // Return range of function.
-
-   xmin = fXmin;
-   xmax = fXmax;
-   ymin = 0;
-   ymax = 0;
-   zmin = 0;
-   zmax = 0;
-}
-*/
 
 //______________________________________________________________________________
 Double_t TFn::GetSave(const Double_t *xx)
@@ -1832,8 +1770,8 @@ void TFn::Print(Option_t *option) const
 {
    // Dump this function with its attributes.
 
-   TFormula::Print(option);
-   if (fHistogram) fHistogram->Print(option);
+//   TFormula::Print(option);
+//   if (fHistogram) fHistogram->Print(option);
 }
 
 
@@ -2013,10 +1951,10 @@ void TFn::SetFitResult(const ROOT::Fit::FitResult & result, const Int_t* indpar 
       Error("SetFitResult","Invalid Fit result passed - number of parameter is %d , different than TFn::GetNpar() = %d",fNpar,result.NPar());
       return;
    }
-   if (result.Chi2() > 0) 
-      SetChisquare(result.Chi2() );
-   else 
-      SetChisquare(result.MinFcnValue() );
+//   if (result.Chi2() > 0) 
+//      SetChisquare(result.Chi2() );
+//   else 
+//      SetChisquare(result.MinFcnValue() );
 
    SetNDF(result.Ndf() );
    SetNumberFitPoints(result.Ndf() + result.NFreeParameters() );
@@ -2058,7 +1996,7 @@ void TFn::SetNpx(Int_t npx)
 
    const Int_t minPx = 4;
    Int_t maxPx = 10000000;
-   if (GetNdim() > 1) maxPx = 10000;
+   if (fNdim > 1) maxPx = 10000;
    if (npx >= minPx && npx <= maxPx) {
       fNpx = npx;
    } 
@@ -2140,22 +2078,6 @@ void TFn::SetSavedPoint(Int_t point, Double_t value)
 
 
 //______________________________________________________________________________
-void TFn::SetTitle(const char *title)
-{
-   // Set function title
-   //  if title has the form "fffffff;xxxx;yyyy", it is assumed that
-   //  the function title is "fffffff" and "xxxx" and "yyyy" are the
-   //  titles for the X and Y axis respectively.
-
-   if (!title) return;
-   fTitle = title;
-   if (!fHistogram) return;
-   fHistogram->SetTitle(title);
-   if (gPad) gPad->Modified();
-}
-
-
-//______________________________________________________________________________
 void TFn::Streamer(TBuffer &b)
 {
    // Stream a class object.
@@ -2190,7 +2112,6 @@ void TFn::Streamer(TBuffer &b)
       }
       b >> fNpx;
       b >> fType;
-      b >> fChisquare;
       b.ReadArray(fParErrors);
       if (v > 1) {
          b.ReadArray(fParMin);
@@ -2246,6 +2167,7 @@ void TFn::Update()
 {
    // Called by functions such as SetRange, SetNpx, SetParameters
    // to force the deletion of the associated histogram or Integral
+   // TODO: reconsider
 
    delete fHistogram;
    fHistogram = 0;
@@ -2352,63 +2274,3 @@ Double_t TFn::CentralMoment(Double_t n, Double_t* a, Double_t* b, const Double_t
 }
 
 
-//______________________________________________________________________________
-// some useful static utility functions to compute sampling points for IntegralFast
-//______________________________________________________________________________
-#ifdef INTHEFUTURE
-void TFn::CalcGaussLegendreSamplingPoints(TGraph *g, Double_t eps)
-{
-   // Type safe interface (static method)
-   // The number of sampling points are taken from the TGraph
-
-   if (!g) return;
-   CalcGaussLegendreSamplingPoints(g->GetN(), g->GetX(), g->GetY(), eps);
-}
-
-
-//______________________________________________________________________________
-TGraph *TFn::CalcGaussLegendreSamplingPoints(Int_t num, Double_t eps)
-{
-   // Type safe interface (static method)
-   // A TGraph is created with new with num points and the pointer to the
-   // graph is returned by the function. It is the responsibility of the
-   // user to delete the object.
-   // if num is invalid (<=0) NULL is returned
-
-   if (num<=0)
-      return 0;
-
-   TGraph *g = new TGraph(num);
-   CalcGaussLegendreSamplingPoints(g->GetN(), g->GetX(), g->GetY(), eps);
-   return g;
-}
-#endif
-
-
-//______________________________________________________________________________
-void TFn::CalcGaussLegendreSamplingPoints(Int_t num, Double_t *x, Double_t *w, Double_t eps)
-{
-   // Type: unsafe but fast interface filling the arrays x and w (static method)
-   //
-   // Given the number of sampling points this routine fills the arrays x and w
-   // of length num, containing the abscissa and weight of the Gauss-Legendre
-   // n-point quadrature formula.
-   //
-   // Gauss-Legendre: W(x)=1  -1<x<1
-   //                 (j+1)P_{j+1} = (2j+1)xP_j-jP_{j-1}
-   //
-   // num is the number of sampling points (>0)
-   // x and w are arrays of size num
-   // eps is the relative precision
-   //
-   // If num<=0 or eps<=0 no action is done.
-   //
-   // Reference: Numerical Recipes in C, Second Edition
-
-   // This function is just kept like this for backward compatibility!
-
-   ROOT::Math::GaussLegendreIntegrator gli(num,eps);
-   gli.GetWeightVectors(x, w);
-
-
-}

@@ -26,15 +26,6 @@
 #ifndef ROOT_TFormula
 #include "TFormula.h"
 #endif
-#ifndef ROOT_TAttLine
-#include "TAttLine.h"
-#endif
-#ifndef ROOT_TAttFill
-#include "TAttFill.h"
-#endif
-#ifndef ROOT_TAttMarker
-#include "TAttMarker.h"
-#endif
 
 #ifndef ROOT_Math_ParamFunctor
 #include "Math/ParamFunctor.h"
@@ -55,24 +46,21 @@ namespace ROOT {
 }
 
 // TODO: check abstract methods that need implementing in new base classes
-class TFn : public TFormula, public TAttLine, public TAttFill, public TAttMarker,
-   public ROOT::Math::IParamMultiGradFunction, public ROOT::Math::IGradientMultiDim {
+class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, public ROOT::Math::IGradientMultiDim {
 
 private:
    void Init(Int_t ndim, Double_t* xmin, Double_t* xmax);
 
 protected:
-// XXX: fNdim is in TFormula
-//   Double_t    fXmin;        //Lower bounds for the range
-//   Double_t    fXmax;        //Upper bounds for the range
    Double_t*   fMin;         //Lower bounds for the range
    Double_t*   fMax;         //Upper bounds for the range
    Int_t       fNpx;         //Number of points used for the graphical representation
    Int_t       fType;        //(=0 for standard functions, 1 if pointer to function)
    Int_t       fNpfits;      //Number of points used in the fit
    Int_t       fNDF;         //Number of degrees of freedom in the fit
+   Int_t       fNdim;
+   Int_t       fNpar;
    Int_t       fNsave;       //Number of points used to fill array fSave
-   Double_t    fChisquare;   //Function fit chisquare
    Double_t    *fIntegral;   //![fNpx] Integral of function binned on fNpx bins
    Double_t    *fParErrors;  //[fNpar] Array of errors of the fNpar parameters
    Double_t    *fParMin;     //[fNpar] Array of lower limits of the fNpar parameters
@@ -81,6 +69,7 @@ protected:
    Double_t    *fAlpha;      //!Array alpha. for each bin in x the deconvolution r of fIntegral
    Double_t    *fBeta;       //!Array beta.  is approximated by x = alpha +beta*r *gamma*r**2
    Double_t    *fGamma;      //!Array gamma.
+   Double_t    *fParams;     //[fNpar] Array of parameters
    TObject     *fParent;     //!Parent object hooking this function (if one)
    TH1         *fHistogram;  //!Pointer to histogram used for visualisation
    Double_t     fMaximum;    //Maximum value for plotting
@@ -121,16 +110,12 @@ public:
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <typename Func>
    TFn(const char *name, Int_t ndim, Func f, Double_t* min, Double_t* max, Int_t npar, const char * = 0  ) :
-      TFormula(),
-      TAttLine(),
-      TAttFill(),
-      TAttMarker(),
+      TNamed(name, "TFn created by a templated constructor from any C++ functor"),
       fNpx       ( 100 ),
       fType      ( 1 ),
       fNpfits    ( 0 ),
       fNDF       ( 0 ),
       fNsave     ( 0 ),
-      fChisquare ( 0 ),
       fIntegral  ( 0 ),
       fParErrors ( 0 ),
       fParMin    ( 0 ),
@@ -161,16 +146,12 @@ public:
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <class PtrObj, typename MemFn>
    TFn(const char *name, Int_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, Int_t npar, const char * = 0, const char * = 0) :
-      TFormula(),
-      TAttLine(),
-      TAttFill(),
-      TAttMarker(),
+      TNamed     (name, "TFn created from a PtrObj"),
       fNpx       ( 100 ),
       fType      ( 1 ),
       fNpfits    ( 0 ),
       fNDF       ( 0 ),
       fNsave     ( 0 ),
-      fChisquare ( 0 ),
       fIntegral  ( 0 ),
       fParErrors ( 0 ),
       fParMin    ( 0 ),
@@ -212,9 +193,8 @@ public:
    virtual Double_t operator()(Double_t x, Double_t y=0, Double_t z = 0, Double_t t = 0) const; 
    virtual Double_t operator()(const Double_t *x, const Double_t *params=0);  
    virtual void     FixParameter(Int_t ipar, Double_t value);
-       Double_t     GetChisquare() const {return fChisquare;}
-           TH1     *GetHistogram() const;
-   virtual Double_t GetMaximum(Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
+   //        TH1     *GetHistogram() const; // XXX: THn?
+   virtual Double_t GetMaximum(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
    virtual Double_t GetMinimum(Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
    virtual Double_t GetMaximumX(Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
    virtual Double_t GetMinimumX(Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
@@ -227,17 +207,14 @@ public:
    virtual Double_t GetParError(Int_t ipar) const;
    virtual Double_t *GetParErrors() const {return fParErrors;}
    virtual void     GetParLimits(Int_t ipar, Double_t &parmin, Double_t &parmax) const;
-   virtual Double_t GetProb() const;
    virtual Double_t GetRandom();
-//   virtual void     GetRange(Double_t &xmin, Double_t &xmax) const;
-//   virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax) const;
-//   virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &zmin, Double_t &xmax, Double_t &ymax, Double_t &zmax) const;
+   virtual void     GetRange(Double_t* min, Double_t* xmax) const;
    virtual Double_t GetSave(const Double_t *x);
    // TODO: GetAxis (maybe)
    // TODO: GetPoint instead of GetX -> should be possible
 //virtual Double_t GetX(Double_t y, Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
 //   virtual Double_t GetXmin() const {return fXmin;}
-//   virtual Double_t GetXmax() const {return fXmax;}
+//   virtual Double_t GetXmax() const {return fXmax;}.
    virtual Double_t GradientPar(Int_t ipar, const Double_t *x, Double_t eps=0.01);
    virtual void     GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
    virtual void     InitArgs(const Double_t *x, const Double_t *params);
@@ -251,7 +228,6 @@ public:
    virtual void     ReleaseParameter(Int_t ipar);
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
    virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
-   virtual void     SetChisquare(Double_t chi2) {fChisquare = chi2;}
    virtual void     SetFitResult(const ROOT::Fit::FitResult & result, const Int_t * indpar = 0);
    template <class PtrObj, typename MemFn> 
    void SetFunction( PtrObj& p, MemFn memFn );
@@ -265,10 +241,7 @@ public:
    virtual void     SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax);
    virtual void     SetParent(TObject *p=0) {fParent = p;}
    virtual void     SetRange(Double_t* min, Double_t* max); // *MENU*
-//   virtual void     SetRange(Double_t xmin, Double_t ymin,  Double_t xmax, Double_t ymax);
-//   virtual void     SetRange(Double_t xmin, Double_t ymin, Double_t zmin,  Double_t xmax, Double_t ymax, Double_t zmax);
    virtual void     SetSavedPoint(Int_t point, Double_t value);
-   virtual void     SetTitle(const char *title=""); // *MENU*
    virtual void     Update();
 
    static  void     AbsValue(Bool_t reject=kTRUE);
@@ -281,11 +254,6 @@ public:
    virtual Double_t CentralMoment(Double_t n, Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001);
    virtual Double_t Mean(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return Moment(1,a,b,params,epsilon);}
    virtual Double_t Variance(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return CentralMoment(2,a,b,params,epsilon);}
-
-   //some useful static utility functions to compute sampling points for Integral
-   //static  void     CalcGaussLegendreSamplingPoints(TGraph *g, Double_t eps=3.0e-11);
-   //static  TGraph  *CalcGaussLegendreSamplingPoints(Int_t num=21, Double_t eps=3.0e-11);
-   static  void     CalcGaussLegendreSamplingPoints(Int_t num, Double_t *x, Double_t *w, Double_t eps=3.0e-11);
 
    ClassDef(TFn,1)  //The Parametric 1-D function
 };
