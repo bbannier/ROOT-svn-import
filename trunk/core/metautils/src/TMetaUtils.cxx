@@ -27,6 +27,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/CXXInheritance.h"
+#include "clang/AST/Attr.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
@@ -248,6 +250,257 @@ clang::QualType ROOT::TMetaUtils::AddDefaultParameters(clang::QualType instanceT
    return instanceType;
 }
 
+//////////////////////////////////////////////////////////////////////////
+static bool R__IsInt(const clang::Type *type) 
+{
+   const clang::BuiltinType * builtin = llvm::dyn_cast<clang::BuiltinType>(type->getCanonicalTypeInternal().getTypePtr());
+   if (builtin) {
+      return builtin->isInteger(); // builtin->getKind() == clang::BuiltinType::Int;
+   } else {
+      return false;
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////
+static bool R__IsInt(const clang::FieldDecl *field) 
+{
+   return R__IsInt(field->getType().getTypePtr());
+}
+
+//////////////////////////////////////////////////////////////////////////
+static const clang::FieldDecl *R__GetDataMemberFromAll(const clang::CXXRecordDecl &cl, const char *what)
+{
+   // Return a data member name 'what' in the class described by 'cl' if any.
+   
+   for(clang::RecordDecl::field_iterator field_iter = cl.field_begin(), end = cl.field_end();
+       field_iter != end;
+       ++field_iter)
+   {
+      if (field_iter->getNameAsString() == what) {
+         return *field_iter;
+      }
+   }
+   return 0;
+   
+}
+
+//////////////////////////////////////////////////////////////////////////
+static bool CXXRecordDecl__FindOrdinaryMember(const clang::CXXBaseSpecifier *Specifier,
+                                              clang::CXXBasePath &Path,
+                                              void *Name
+                                              )
+{
+   clang::RecordDecl *BaseRecord = Specifier->getType()->getAs<clang::RecordType>()->getDecl();
+
+   const clang::CXXRecordDecl *clxx = llvm::dyn_cast<clang::CXXRecordDecl>(BaseRecord);
+   if (clxx == 0) return false;
+   
+   const clang::FieldDecl *found = R__GetDataMemberFromAll(*clxx,(const char*)Name);
+   if (found) {
+      // Humm, this is somewhat bad (well really bad), oh well.
+      // Let's hope Paths never things its own those (it should not as far as I can tell).
+      Path.Decls.first  = (clang::NamedDecl**)found;
+      Path.Decls.second = 0;
+      return true;
+   }
+//   
+// This is inspired from CXXInheritance.cpp:
+/*   
+       RecordDecl *BaseRecord =
+         Specifier->getType()->castAs<RecordType>()->getDecl();
+    
+   const unsigned IDNS = clang::Decl::IDNS_Ordinary | clang::Decl::IDNS_Tag | clang::Decl::IDNS_Member;
+   clang::DeclarationName N = clang::DeclarationName::getFromOpaquePtr(Name);
+   for (Path.Decls = BaseRecord->lookup(N);
+        Path.Decls.first != Path.Decls.second;
+        ++Path.Decls.first) {
+      if ((*Path.Decls.first)->isInIdentifierNamespace(IDNS))
+         return true;
+   }
+*/   
+   return false;
+    
+}
+#include <stdio.h>
+
+//////////////////////////////////////////////////////////////////////////
+static const clang::FieldDecl *R__GetDataMemberFromAllParents(const clang::CXXRecordDecl &cl, const char *what)
+{
+   // Return a data member name 'what' in any of the base classes of the class described by 'cl' if any.
+   
+   clang::CXXBasePaths Paths;
+   Paths.setOrigin(const_cast<clang::CXXRecordDecl*>(&cl));
+   if (cl.lookupInBases(&CXXRecordDecl__FindOrdinaryMember,
+                        (void*) what,
+                        Paths) )
+   {
+      clang::CXXBasePaths::paths_iterator iter = Paths.begin();
+      if (iter != Paths.end()) {
+         // See CXXRecordDecl__FindOrdinaryMember, this is, well, awkward.
+         const clang::FieldDecl *found = (clang::FieldDecl *)iter->Decls.first;
+         return found;
+      }
+   }
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// ValidArrayIndex return a static string (so use it or copy it immediatly, do not
+// call GrabIndex twice in the same expression) containing the size of the
+// array data member.
+// In case of error, or if the size is not specified, GrabIndex returns 0.
+// If errnum is not null, *errnum updated with the error number:
+//   Cint::G__DataMemberInfo::G__VALID     : valid array index
+//   Cint::G__DataMemberInfo::G__NOT_INT   : array index is not an int
+//   Cint::G__DataMemberInfo::G__NOT_DEF   : index not defined before array 
+//                                          (this IS an error for streaming to disk)
+//   Cint::G__DataMemberInfo::G__IS_PRIVATE: index exist in a parent class but is private
+//   Cint::G__DataMemberInfo::G__UNKNOWN   : index is not known
+// If errstr is not null, *errstr is updated with the address of a static
+//   string containing the part of the index with is invalid.
+const char* ROOT::TMetaUtils::DataMemberInfo__ValidArrayIndex(const clang::FieldDecl &m, int *errnum, const char **errstr) 
+{
+   llvm::StringRef title;
+   
+   // Try to get the comment either from the annotation or the header file if present
+   if (clang::AnnotateAttr *A = m.getAttr<clang::AnnotateAttr>())
+      title = A->getAnnotation();
+   else
+      // Try to get the comment from the header file if present
+      title = ROOT::TMetaUtils::GetComment( m );
+
+   // Let's see if the user provided us with some information
+   // with the format: //[dimension] this is the dim of the array
+   // dimension can be an arithmetical expression containing, literal integer,
+   // the operator *,+ and - and data member of integral type.  In addition the
+   // data members used for the size of the array need to be defined prior to
+   // the array.
+   
+   if (errnum) *errnum = VALID;
+   
+   size_t rightbracket = title.find(']');
+   if ((title[0] != '[') ||
+       (rightbracket == llvm::StringRef::npos)) return 0;
+   
+   std::string working;
+   static std::string indexvar;
+   indexvar = title.substr(1,rightbracket-1).str();
+   
+   // now we should have indexvar=dimension
+   // Let's see if this is legal.
+   // which means a combination of data member and digit separated by '*','+','-'
+   // First we remove white spaces.
+   unsigned int i;
+   size_t indexvarlen = indexvar.length();
+   for ( i=0; i<=indexvarlen; i++) {
+      if (!isspace(indexvar[i])) {
+         working += indexvar[i];
+      }
+   };
+   
+   // Now we go through all indentifiers
+   const char *tokenlist = "*+-";
+   char *current = const_cast<char*>(working.c_str());
+   current = strtok(current,tokenlist);
+   
+   while (current!=0) {
+      // Check the token
+      if (isdigit(current[0])) {
+         for(i=0;i<strlen(current);i++) {
+            if (!isdigit(current[0])) {
+               // Error we only access integer.
+               //NOTE: *** Need to print an error;
+               //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not an interger\n",
+               //        member.MemberOf()->Name(), member.Name(), current);
+               if (errstr) *errstr = current;
+               if (errnum) *errnum = NOT_INT;
+               return 0;
+            }
+         }
+      } else { // current token is not a digit
+         // first let's see if it is a data member:
+         int found = 0;
+         const clang::CXXRecordDecl *parent_clxx = llvm::dyn_cast<clang::CXXRecordDecl>(m.getParent());
+         const clang::FieldDecl *index1 = R__GetDataMemberFromAll(*parent_clxx, current );
+         if ( index1 ) {
+            if ( R__IsInt(index1) ) {
+               found = 1;
+               // Let's see if it has already been written down in the
+               // Streamer.
+               // Let's see if we already wrote it down in the
+               // streamer.
+               for(clang::RecordDecl::field_iterator field_iter = parent_clxx->field_begin(), end = parent_clxx->field_end();
+                   field_iter != end;
+                   ++field_iter)
+               {
+                  if ( field_iter->getNameAsString() == m.getNameAsString() ) {
+                     // we reached the current data member before
+                     // reaching the index so we have not written it yet!
+                     //NOTE: *** Need to print an error;
+                     //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) has not been defined before the array \n",
+                     //        member.MemberOf()->Name(), member.Name(), current);
+                     if (errstr) *errstr = current;
+                     if (errnum) *errnum = NOT_DEF;
+                     return 0;
+                  }
+                  if ( field_iter->getNameAsString() == index1->getNameAsString() ) {
+                     break;
+                  }
+               } // end of while (m_local.Next())
+            } else {
+               //NOTE: *** Need to print an error;
+               //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
+               //        member.MemberOf()->Name(), member.Name(), current);
+               if (errstr) *errstr = current;
+               if (errnum) *errnum = NOT_INT;
+               return 0;
+            }
+         } else {
+            // There is no variable by this name in this class, let see
+            // the base classes!:
+            index1 = R__GetDataMemberFromAllParents( *parent_clxx, current );
+            if ( index1 ) {
+               if ( R__IsInt(index1) ) {
+                  found = 1;
+               } else {
+                  // We found a data member but it is the wrong type
+                  //NOTE: *** Need to print an error;
+                  //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
+                  //  member.MemberOf()->Name(), member.Name(), current);
+                  if (errnum) *errnum = NOT_INT;
+                  if (errstr) *errstr = current;
+                  //NOTE: *** Need to print an error;
+                  //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not int \n",
+                  //  member.MemberOf()->Name(), member.Name(), current);
+                  if (errnum) *errnum = NOT_INT;
+                  if (errstr) *errstr = current;
+                  return 0;
+               }
+               if ( found && (index1->getAccess() == clang::AS_private) ) {
+                  //NOTE: *** Need to print an error;
+                  //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is a private member of %s \n",
+                  if (errstr) *errstr = current;
+                  if (errnum) *errnum = IS_PRIVATE;
+                  return 0;
+               }
+            }
+            if (!found) {
+               //NOTE: *** Need to print an error;
+               //fprintf(stderr,"*** Datamember %s::%s: size of array (%s) is not known \n",
+               //        member.MemberOf()->Name(), member.Name(), indexvar);
+               if (errstr) *errstr = indexvar.c_str();
+               if (errnum) *errnum = UNKNOWN;
+               return 0;
+            } // end of if not found
+         } // end of if is a data member of the class
+      } // end of if isdigit
+      
+      current = strtok(0,tokenlist);
+   } // end of while loop on tokens      
+   
+   return indexvar.c_str();
+   
+}
 
 //////////////////////////////////////////////////////////////////////////
 void ROOT::TMetaUtils::GetCppName(std::string &out, const char *in)
@@ -295,7 +548,6 @@ void ROOT::TMetaUtils::GetCppName(std::string &out, const char *in)
    out.resize(j);
    return;
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 std::string ROOT::TMetaUtils::GetInterpreterExtraIncludePath(bool rootbuild)
@@ -443,8 +695,6 @@ clang::Module* ROOT::TMetaUtils::declareModuleMap(clang::CompilerInstance* CI,
          if (Dir) {
             HdrSearch.setDirectoryHasModuleMap(Dir);
          }
-#else
-         std::cerr << "   Modules disabled; parsing header files instead." << std::endl;
 #endif
       }
 
@@ -530,4 +780,36 @@ llvm::StringRef ROOT::TMetaUtils::GetComment(const clang::Decl &decl, clang::Sou
    }
 
    return llvm::StringRef(commentStart, commentEnd - commentStart);
+}
+
+llvm::StringRef ROOT::TMetaUtils::GetClassComment(const clang::CXXRecordDecl &decl, clang::SourceLocation *loc, const cling::Interpreter &interpreter)
+{
+   // Find the class comment (after the ClassDef).
+
+   using namespace clang;
+   SourceLocation commentSLoc;
+   llvm::StringRef comment;
+   
+   Sema& sema = interpreter.getCI()->getSema();
+
+   for(CXXRecordDecl::decl_iterator I = decl.decls_begin(), 
+       E = decl.decls_end(); I != E; ++I) {
+      if (!(*I)->isImplicit() 
+          && (isa<CXXMethodDecl>(*I) || isa<FieldDecl>(*I) || isa<VarDecl>(*I))) {
+         // For now we allow only a special macro (ClassDef) to have meaningful comments
+         SourceLocation maybeMacroLoc = (*I)->getLocation();
+         bool isClassDefMacro = maybeMacroLoc.isMacroID() && sema.findMacroSpelling(maybeMacroLoc, "ClassDef");
+         if (isClassDefMacro) {
+            while (isa<NamedDecl>(*I) && cast<NamedDecl>(*I)->getName() != "DeclFileLine")
+               ++I;
+            comment = ROOT::TMetaUtils::GetComment(**I, &commentSLoc);
+            if (comment.size()) {
+               if (loc) 
+                  *loc = commentSLoc;
+               return comment;
+            }
+         }
+      }
+   }
+   return llvm::StringRef();
 }

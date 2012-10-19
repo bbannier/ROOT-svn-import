@@ -10,6 +10,7 @@
 #include "DeclCollector.h"
 #include "DeclExtractor.h"
 #include "DynamicLookup.h"
+#include "ReturnSynthesizer.h"
 #include "ValuePrinterSynthesizer.h"
 #include "cling/Interpreter/CIFactory.h"
 #include "cling/Interpreter/Interpreter.h"
@@ -69,6 +70,7 @@ namespace cling {
 
     m_TTransformers.push_back(new DeclExtractor(&getCI()->getSema()));
     m_TTransformers.push_back(new ValuePrinterSynthesizer(&CI->getSema(), 0));
+    m_TTransformers.push_back(new ReturnSynthesizer(&CI->getSema()));
     m_TTransformers.push_back(new ASTDumper());
 
     m_Parser.reset(new Parser(CI->getPreprocessor(), CI->getSema(),
@@ -130,7 +132,8 @@ namespace cling {
     if (CurT->isNestedTransaction()) {
       assert(!CurT->getParent()->isCompleted() 
              && "Parent transaction completed!?");
-      CurT = m_Consumer->getTransaction()->getParent();
+      // FIXME: Not sure what I meant :) REVISIT
+      //CurT = m_Consumer->getTransaction()->getParent();
     }
   }
 
@@ -173,7 +176,7 @@ namespace cling {
 
     CurT->setState(Transaction::kCommitted);
     InterpreterCallbacks* callbacks = m_Interpreter->getCallbacks();
-    if (callbacks && callbacks->isEnabled())
+    if (callbacks)
       callbacks->TransactionCommitted(*CurT);
   }
 
@@ -220,7 +223,7 @@ namespace cling {
     SourceManager& SM = getCI()->getSourceManager();
     FileManager& FM = SM.getFileManager();
     const FileEntry* FE
-      = FM.getVirtualFile("Interactive/InputLineIncluder", 1U << 15U, time(0));
+      = FM.getVirtualFile("InteractiveInputLineIncluder.h", 1U << 15U, time(0));
     m_VirtualFileID = SM.createFileID(FE, SourceLocation(), SrcMgr::C_User);
 
     assert(!m_VirtualFileID.isInvalid() && "No VirtualFileID created?");
@@ -246,8 +249,9 @@ namespace cling {
     return Result;
   }
 
-  Transaction* IncrementalParser::Parse(llvm::StringRef input) {
-    beginTransaction(CompilationOptions());
+  Transaction* IncrementalParser::Parse(llvm::StringRef input,
+                                        const CompilationOptions& Opts) {
+    beginTransaction(Opts);
     ParseInternal(input);
     endTransaction();
 
@@ -351,7 +355,7 @@ namespace cling {
     NodeEraser.RevertTransaction(T);
 
     InterpreterCallbacks* callbacks = m_Interpreter->getCallbacks();
-    if (callbacks && callbacks->isEnabled())
+    if (callbacks)
       callbacks->TransactionUnloaded(*T);
   }
 

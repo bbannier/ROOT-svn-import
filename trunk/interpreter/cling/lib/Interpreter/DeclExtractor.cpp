@@ -5,7 +5,9 @@
 //------------------------------------------------------------------------------
 
 #include "DeclExtractor.h"
+
 #include "cling/Interpreter/Transaction.h"
+#include "cling/Utils/AST.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
@@ -42,7 +44,7 @@ namespace cling {
     FunctionDecl* FD = dyn_cast<FunctionDecl>(D);
 
     if (FD) {
-      if (FD->getNameAsString().find("__cling_Un1Qu3"))
+      if (!utils::Analyze::IsWrapper(FD))
         return true;
 
       llvm::SmallVector<NamedDecl*, 4> TouchedDecls;

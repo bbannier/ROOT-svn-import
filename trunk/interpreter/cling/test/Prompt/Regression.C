@@ -12,7 +12,13 @@ cling::StoredValueRef V;
 gCling->process("int a = print();",&V);
 //CHECK: print is run.
 gCling->process("a", &V);
-//CHECK: (int const) 1
+//CHECK: (int) 1
 gCling->process("a;", &V);
 //CHECK-NOT: print is run.
 // End PR #96277
+// PR #98146
+gCling->process("\"Root\"", &V);
+// CHECK: (const char [5]) @0x{{[1-9a-f][0-9a-f]*$}}
+V
+// CHECK: (cling::StoredValueRef) boxes [(const char [5])]
+// End PR #98146

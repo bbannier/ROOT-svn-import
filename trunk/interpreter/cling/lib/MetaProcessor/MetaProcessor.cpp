@@ -212,7 +212,8 @@ namespace cling {
   bool MetaProcessor::ProcessMeta(const std::string& input_line,
                                   StoredValueRef* result){
 
-   llvm::MemoryBuffer* MB = llvm::MemoryBuffer::getMemBuffer(input_line);
+   llvm::OwningPtr<llvm::MemoryBuffer> MB;
+   MB.reset(llvm::MemoryBuffer::getMemBuffer(input_line));
    Token Tok;
 
    CommandLexer CmdLexer(MB->getBufferStart(), MB->getBufferEnd(), 
@@ -436,7 +437,10 @@ namespace cling {
     Interpreter::CompilationResult interpRes = Interpreter::kSuccess;
     if (m_Interp.loadFile(file)) {
       std::string expression = pairFuncExt.first.str() + "(" + args.str() + ")";
-      interpRes = m_Interp.evaluate(expression, result);
+      if (result)
+        interpRes = m_Interp.evaluate(expression, *result);
+      else
+        interpRes = m_Interp.execute(expression);
     }
 
     return (interpRes != Interpreter::kFailure);

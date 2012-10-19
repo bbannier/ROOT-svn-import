@@ -66,6 +66,33 @@ TClingTypedefInfo::TClingTypedefInfo(cling::Interpreter *interp,
    }
 }
 
+TClingTypedefInfo::TClingTypedefInfo(cling::Interpreter *interp,
+                                     const clang::TypedefDecl *TdefD)
+   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(TdefD), 
+     fTitle("")
+{
+   // Lookup named typedef and initialize the iterator to point to it.
+   if (gDebug > 0) {
+      Info("TClingTypedefInfo::TClingTypedefInfo(interp,name)",
+           "looking up typedef: %s\n", TdefD->getNameAsString().c_str());
+   }
+   if (fDecl) {
+      if (gDebug > 0) {
+         Info("TClingTypedefInfo::TClingTypedefInfo(interp,name)",
+              "found typedef name: %s  decl: 0x%lx\n", 
+              TdefD->getNameAsString().c_str(), (long) fDecl);
+      }
+      // Initialize iterator to point at found typedef.
+      AdvanceToDecl(fDecl);
+   }
+   else {
+      if (gDebug > 0) {
+         Info("TClingTypedefInfo::TClingTypedefInfo(interp,name)",
+              "typedef not found name: %s\n", TdefD->getNameAsString().c_str());
+      }
+   }
+}
+
 //______________________________________________________________________________
 const clang::Decl *TClingTypedefInfo::GetDecl() const
 {
@@ -279,6 +306,10 @@ const char *TClingTypedefInfo::TrueName() const
    static std::string truename;
    truename.clear();
    const clang::TypedefDecl *td = llvm::dyn_cast<clang::TypedefDecl>(fDecl);
+   clang::QualType underlyingType = td->getUnderlyingType();
+   if (underlyingType->isBooleanType()) {
+      return "bool";
+   }
    truename = td->getUnderlyingType().getAsString();
    return truename.c_str();
 }
@@ -314,14 +345,16 @@ const char *TClingTypedefInfo::Title()
    // Iterate over the redeclarations, we can have muliple definitions in the 
    // redecl chain (came from merging of pcms).
    if (const TypedefNameDecl *TND = llvm::dyn_cast<TypedefNameDecl>(GetDecl())) {
-      if ( (TND = ROOT::TMetaUtils::GetAnnotatedRedeclarable(TND)) )
-         if (AnnotateAttr *A = TND->getAttr<AnnotateAttr>())
+      if ( (TND = ROOT::TMetaUtils::GetAnnotatedRedeclarable(TND)) ) {
+         if (AnnotateAttr *A = TND->getAttr<AnnotateAttr>()) {
             fTitle = A->getAnnotation().str();
+            return fTitle.c_str();
+         }
+      }
    }
-   else
-      // Try to get the comment from the header file if present
-      fTitle = ROOT::TMetaUtils::GetComment(*GetDecl()).str();
 
+   // Try to get the comment from the header file if present
+   fTitle = ROOT::TMetaUtils::GetComment(*GetDecl()).str();
    return fTitle.c_str();
 }
 

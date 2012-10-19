@@ -58,6 +58,105 @@
 #include <string>
 #include <vector>
 
+// This ought to be declared by the implementer .. oh well...
+extern void unresolvedSymbol();
+
+namespace {
+   static llvm::GenericValue convertIntegralToArg(const llvm::GenericValue& GV,
+                                                  const llvm::Type* targetType) {
+      // Do "extended" integral conversion, at least as CINT's dictionaries
+      // would have done it: everything is a long, then gets cast to whatever
+      // type is expected. "Whatever type" is an llvm type here, thus we do
+      // integral conversion, integral to ptr, integral to floating point.
+
+      // SetArg() takes a long (i.e. signed) or a longlong or a ulonglong:
+      const llvm::APInt& GVI = GV.IntVal;
+      const unsigned nSourceBits = GVI.getBitWidth();
+      bool sourceIsSigned = true;
+      if (nSourceBits > sizeof(long) * CHAR_BIT) {
+         // SetArg() does not have an interface for setting a ulong,
+         // so only check for [u]longlong
+         sourceIsSigned = GVI.isSignedIntN(nSourceBits);
+      }
+      switch (targetType->getTypeID()) {
+      case llvm::Type::IntegerTyID:
+         {
+            llvm::GenericValue ret;
+            const unsigned nTargetBits = targetType->getIntegerBitWidth();
+            ret.IntVal = (sourceIsSigned) ?
+               GVI.sextOrTrunc(nTargetBits) : GVI.zextOrTrunc(nTargetBits);
+            return ret;
+         }
+         break;
+
+      case llvm::Type::FloatTyID:
+         {
+            llvm::GenericValue ret;
+            ret.FloatVal = (sourceIsSigned) ?
+               (float)GVI.getSExtValue() : (float)GVI.getZExtValue();
+            return ret;
+         }
+         break;
+
+      case llvm::Type::DoubleTyID:
+         {
+            llvm::GenericValue ret;
+            ret.DoubleVal = (sourceIsSigned) ?
+               (double)GVI.getSExtValue() : (double)GVI.getZExtValue();
+            return ret;
+         }
+         break;
+
+      case llvm::Type::PointerTyID:
+         {
+            void* Ptr = (sourceIsSigned) ?
+               (void*)GVI.getSExtValue() : (void*)GVI.getZExtValue();
+            return llvm::PTOGV(Ptr);
+         }
+         break;
+
+      default:
+         Error("integralXConvertGV()",
+               "Cannot convert to parameter with TypeID %d",
+               targetType->getTypeID());
+      }
+      return GV;
+   }
+} // unnamed namespace
+
+
+std::string TClingCallFunc::ExprToString(const clang::Expr* expr) const
+{
+   // Get a string representation of an expression
+
+   clang::PrintingPolicy policy(fInterp->getCI()->
+                                getASTContext().getPrintingPolicy());
+   policy.SuppressTagKeyword = true;
+   policy.SuppressUnwrittenScope = false;
+   policy.SuppressInitializers = false;
+   policy.AnonymousTagLocations = false;
+
+   std::string buf;
+   llvm::raw_string_ostream out(buf);
+   expr->printPretty(out, /*Helper=*/0, policy, /*Indentation=*/0);
+   out << ';'; // no value printing
+   out.flush();
+   return buf;
+}
+
+cling::StoredValueRef
+TClingCallFunc::EvaluateExpression(const clang::Expr* expr) const
+{
+   // Evaluate an Expr* and return its cling::StoredValueRef
+   cling::StoredValueRef valref;
+   cling::Interpreter::CompilationResult cr 
+      = fInterp->evaluate(ExprToString(expr), valref);
+   if (cr == cling::Interpreter::kSuccess)
+      return valref;
+   return cling::StoredValueRef();
+}
+
+
 void TClingCallFunc::Exec(void *address) const
 {
    if (!IsValid()) {
@@ -127,7 +226,20 @@ long TClingCallFunc::ExecInt(void *address) const
          }
          const clang::ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
          int64_t size = Layout.getSize().getQuantity();
-         address = malloc(size);
+         address = malloc(size); // this is bad, we really need to call the class' own operator new but oh well
+
+         std::vector<llvm::GenericValue> args;
+         llvm::GenericValue this_ptr;
+         this_ptr.IntVal = llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
+                                       reinterpret_cast<unsigned long>(address));
+         args.push_back(this_ptr);
+         args.insert(args.end(), fArgs.begin(), fArgs.end());
+         val  = Invoke(args);
+         
+         // We don't really mean to call the constructor and return its (lack of)
+         // return value, we meant to execute and return 'new TypeOf(...)' and
+         // return the allocated address, so here you go:
+         return (long)(address);
       }
       else {
          if (!address) {
@@ -245,6 +357,7 @@ void TClingCallFunc::Init()
    fMethod = 0;
    fEEFunc = 0;
    fEEAddr = 0;
+   fArgVals.clear();
    fArgs.clear();
 }
 
@@ -263,6 +376,7 @@ bool TClingCallFunc::IsValid() const
 
 void TClingCallFunc::ResetArg()
 {
+   fArgVals.clear();
    fArgs.clear();
 }
 
@@ -303,44 +417,33 @@ void TClingCallFunc::SetArgArray(long *paramArr, int nparam)
    }
 }
 
-static void evaluateArgList(cling::Interpreter *interp,
-                            const std::string &ArgList,
-                            std::vector<cling::StoredValueRef> &EvaluatedArgs)
+void TClingCallFunc::EvaluateArgList(const std::string &ArgList)
 {
-   clang::PrintingPolicy Policy(interp->getCI()->
-      getASTContext().getPrintingPolicy());
-   Policy.SuppressTagKeyword = true;
-   Policy.SuppressUnwrittenScope = true;
-   Policy.SuppressInitializers = true;
-   Policy.AnonymousTagLocations = false;
-
    llvm::SmallVector<clang::Expr*, 4> exprs;
-   interp->getLookupHelper().findArgList(ArgList, exprs);
+   fInterp->getLookupHelper().findArgList(ArgList, exprs);
    for (llvm::SmallVector<clang::Expr*, 4>::const_iterator I = exprs.begin(),
          E = exprs.end(); I != E; ++I) {
-      std::string empty;
-      llvm::raw_string_ostream tmp(empty);
-      (*I)->printPretty(tmp, /*PrinterHelper=*/0, Policy, /*Indentation=*/0);
-      cling::StoredValueRef val;
-      cling::Interpreter::CompilationResult cres =
-         interp->evaluate(tmp.str(), &val);
-      if (cres != cling::Interpreter::kSuccess) {
+      cling::StoredValueRef val = EvaluateExpression(*I);
+      if (!val.isValid()) {
          // Bad expression, all done.
          break;
       }
-      EvaluatedArgs.push_back(val);
+      fArgVals.push_back(val);
    }
 }
 
 void TClingCallFunc::SetArgs(const char *params)
 {
-   evaluateArgList(fInterp, params, fArgVals);
+   EvaluateArgList(params);
    clang::ASTContext &Context = fInterp->getCI()->getASTContext();
    for (unsigned I = 0U, E = fArgVals.size(); I < E; ++I) {
       const cling::Value& val = fArgVals[I].get();
       if (!val.type->isIntegralType(Context) &&
             !val.type->isRealFloatingType() && !val.type->isPointerType()) {
          // Invalid argument type.
+         Error("TClingCallFunc::SetArgs", "Given arguments: %s", params);
+         Error("TClingCallFunc::SetArgs", "Argument number %u is not of "
+               "integral, floating, or pointer type!", I);
          break;
       }
       fArgs.push_back(val.value);
@@ -353,7 +456,17 @@ void TClingCallFunc::SetFunc(const TClingClassInfo *info, const char *method, co
    fMethod = new TClingMethodInfo(fInterp);
    fEEFunc = 0;
    fEEAddr = 0;
+   if (offset) {
+      *offset = 0L;
+   }
+   if (!info->IsValid()) {
+      return;
+   }
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
+   if (strcmp(params,")")==0) {
+      // CINT accepted ) as meaning no parameter.
+      params = "";
+   }
    const clang::FunctionDecl *decl = lh.findFunctionArgs(info->GetDecl(), method, params);
    if (!decl) {
       return;
@@ -361,11 +474,13 @@ void TClingCallFunc::SetFunc(const TClingClassInfo *info, const char *method, co
    fMethod->Init(decl);
    Init(decl);
    if (offset) {
-      offset = 0L;
+      // FIXME: set this to the correct offset!
+      *offset = 0L;
    }
    // FIXME: We should eliminate the double parse here!
+   fArgVals.clear();
    fArgs.clear();
-   evaluateArgList(fInterp, params, fArgVals);
+   EvaluateArgList(params);
    clang::ASTContext &Context = fInterp->getCI()->getASTContext();
    for (unsigned I = 0U, E = fArgVals.size(); I < E; ++I) {
       const cling::Value& val = fArgVals[I].get();
@@ -398,6 +513,9 @@ void TClingCallFunc::SetFuncProto(const TClingClassInfo *info, const char *metho
    fMethod = new TClingMethodInfo(fInterp);
    fEEFunc = 0;
    fEEAddr = 0;
+   if (offset) {
+      *offset = 0L;
+   }
    if (!info->IsValid()) {
       return;
    }
@@ -409,7 +527,8 @@ void TClingCallFunc::SetFuncProto(const TClingClassInfo *info, const char *metho
    fMethod->Init(FD);
    Init(FD);
    if (offset) {
-      offset = 0L;
+      // FIXME: set this to the correct offset!
+      *offset = 0L;
    }
 }
 
@@ -509,6 +628,8 @@ static llvm::Type *getLLVMType(llvm::LLVMContext &Context,
    }
    else if (QT->isVoidType()) {
       TY = llvm::Type::getVoidTy(Context);
+   } else {
+      Error("getLLVMType()", "Cannot handle type ID %d", QT->getTypeClass());
    }
    return TY;
 }
@@ -569,15 +690,17 @@ void TClingCallFunc::Init(const clang::FunctionDecl *FD)
    else {
       // Execution engine does not have it, check
       // the loaded shareable libraries.
+      // NOTE: This issues a spurious error message if we look for an
+      // unimplemented (but declared) function.
       void *FP = EE->getPointerToNamedFunction(FuncName,
                  /*AbortOnFailure=*/false);
-      //if (FP == unresolvedSymbol) {
-      //   // The ExecutionContext will refuse to do anything after this,
-      //   // so we must force it back to normal.
-      //   fInterp->resetUnresolved();
-      //}
-      //else 
-      if (FP) {
+      if (FP == unresolvedSymbol) {
+         // We failed to find an implementation for the function, the 
+         // interface requires the 'address' to be zero.
+         fEEAddr = 0;
+      } else if (FP) {
+         fEEAddr = FP;
+
          // Create a llvm function we can use to call it with later.
          llvm::LLVMContext &Context = *fInterp->getLLVMContext();
          unsigned NumParams = FD->getNumParams();
@@ -590,7 +713,12 @@ void TClingCallFunc::Init(const clang::FunctionDecl *FD)
          for (unsigned I = 0U; I < NumParams; ++I) {
             const clang::ParmVarDecl *PVD = FD->getParamDecl(I);
             clang::QualType QT = PVD->getType();
-            Params.push_back(getLLVMType(Context, ASTCtx, QT));
+            llvm::Type *argtype = getLLVMType(Context, ASTCtx, QT);
+            if (argtype == 0) {
+               // We are not in good shape, quit while we are still alive.
+               return;
+            }
+            Params.push_back(argtype);
          }
          llvm::Type *ReturnType = 0;
          if (llvm::isa<clang::CXXConstructorDecl>(FD)) {
@@ -601,60 +729,132 @@ void TClingCallFunc::Init(const clang::FunctionDecl *FD)
          else {
             ReturnType = getLLVMType(Context, ASTCtx, FD->getResultType());
          }
-         // Create the llvm function type.
-         llvm::FunctionType *FT = llvm::FunctionType::get(ReturnType, Params,
-                                  /*isVarArg=*/false);
-         // Create the ExecutionEngine function.
-         // Note: We use weak linkage here so lookup failure does not abort.
-         llvm::Function *F = llvm::Function::Create(FT,
-                             llvm::GlobalValue::ExternalWeakLinkage,
-                             FuncName, fInterp->getModule());
-         // FIXME: This probably does not work for Windows!
-         // See ASTContext::getFunctionType() for proper way to set it.
-         // Actually this probably is not needed.
-         F->setCallingConv(llvm::CallingConv::C);
-         // Map the created ExecutionEngine function to the
-         // address found in the shareable library, so the next
-         // time we do a lookup it will be found.
-         EE->addGlobalMapping(F, FP);
-         // Set our state.
-         fEEFunc = F;
-         fEEAddr = FP;
+         if (ReturnType) {
+            
+            // Create the llvm function type.
+            llvm::FunctionType *FT = llvm::FunctionType::get(ReturnType, Params,
+                                     /*isVarArg=*/false);
+            // Create the ExecutionEngine function.
+            // Note: We use weak linkage here so lookup failure does not abort.
+            llvm::Function *F = llvm::Function::Create(FT,
+                                llvm::GlobalValue::ExternalWeakLinkage,
+                                FuncName, fInterp->getModule());
+            // FIXME: This probably does not work for Windows!
+            // See ASTContext::getFunctionType() for proper way to set it.
+            // Actually this probably is not needed.
+            F->setCallingConv(llvm::CallingConv::C);
+            // Map the created ExecutionEngine function to the
+            // address found in the shareable library, so the next
+            // time we do a lookup it will be found.
+            EE->addGlobalMapping(F, FP);
+            // Set our state.
+            fEEFunc = F;
+         }
       }
    }
 }
 
-llvm::GenericValue TClingCallFunc::Invoke(const std::vector<llvm::GenericValue> &ArgValues) const
+llvm::GenericValue
+TClingCallFunc::Invoke(const std::vector<llvm::GenericValue> &ArgValues) const
 {
    // FIXME: We need to think about thunks for the this pointer adjustment,
-   //        and the return pointer adjustment.
+   //        and the return pointer adjustment for covariant return types.
    //if (!IsValid()) {
    //   return;
    //}
+   unsigned long num_given_args = static_cast<unsigned long>(ArgValues.size());
+   const clang::FunctionDecl *fd = fMethod->GetMethodDecl();
+   const clang::CXXMethodDecl *md = llvm::dyn_cast<clang::CXXMethodDecl>(fd);
+   const clang::DeclContext *dc = fd->getDeclContext();
+   bool isMemberFunction = true;
+   if (dc->isTranslationUnit() || dc->isNamespace() || (md && md->isStatic())) {
+      isMemberFunction = false;
+   }
+   unsigned num_params = fd->getNumParams();
+   unsigned min_args = fd->getMinRequiredArguments();
+   if (isMemberFunction) {
+      // Adjust for the hidden this pointer first argument.
+      ++num_params;
+      ++min_args;
+   }
+   if (num_given_args < min_args) {
+      // Not all required arguments given.
+      Error("TClingCallFunc::Invoke()",
+            "Not enough function arguments given (min: %u max:%u, given: %lu)",
+            min_args, num_params, num_given_args);
+      llvm::GenericValue bad_val;
+      return bad_val;
+   }
+   else if (num_given_args > num_params) {
+      Error("TClingCallFunc::Invoke()",
+            "Too many function arguments given (min: %u max: %u, given: %lu)",
+            min_args, num_params, num_given_args);
+      llvm::GenericValue bad_val;
+      return bad_val;
+   }
+
+   // This will be the arguments actually passed to the JIT function.
    std::vector<llvm::GenericValue> Args;
-   llvm::FunctionType *FT = fEEFunc->getFunctionType();
-   for (unsigned I = 0U, E = FT->getNumParams(); I < E; ++I) {
-      llvm::Type *TY = FT->getParamType(I);
-      if (TY->getTypeID() == llvm::Type::PointerTyID) {
-         // The cint interface passes these as integers, and we must
-         // convert them to pointers because GenericValue stores
-         // integer and pointer values in different data members.
-         Args.push_back(llvm::PTOGV(reinterpret_cast<void *>(
-                                       ArgValues[I].IntVal.getSExtValue())));
+   std::vector<cling::StoredValueRef> ArgsStorage;
+   // We are going to loop over the JIT function args.
+   llvm::FunctionType *ft = fEEFunc->getFunctionType();
+   clang::ASTContext& context = fd->getASTContext();
+   for (unsigned i = 0U, e = ft->getNumParams(); i < e; ++i) {
+      if (i < num_given_args) {
+         // We have a user-provided argument value.
+         const llvm::Type *ty = ft->getParamType(i);
+         Args.push_back(convertIntegralToArg(ArgValues[i], ty));
       }
       else {
-         Args.push_back(ArgValues[I]);
+         // Use the default value from the decl.
+         const clang::ParmVarDecl* pvd = 0;
+         if (!isMemberFunction) {
+            pvd = fd->getParamDecl(i);
+         }
+         else {
+            // Compensate for the undeclared added this pointer value.
+            pvd = fd->getParamDecl(i-1);
+         }
+         //assert(pvd->hasDefaultArg() && "No default for argument!");
+         const clang::Expr* expr = pvd->getDefaultArg();
+         cling::StoredValueRef valref = EvaluateExpression(expr);
+         if (valref.isValid()) {
+            ArgsStorage.push_back(valref);
+            const cling::Value& val = valref.get();
+            if (!val.type->isIntegralType(context) &&
+                  !val.type->isRealFloatingType() &&
+                  !val.type->canDecayToPointerType()) {
+               // Invalid argument type.
+               Error("TClingCallFunc::Invoke",
+                     "Default for argument %u: %s", i, ExprToString(expr).c_str());
+               Error("TClingCallFunc::Invoke",
+                     "is not of integral, floating, or pointer type!");
+               llvm::GenericValue bad_val;
+               return bad_val;
+            }
+            const llvm::Type *ty = ft->getParamType(i);
+            Args.push_back(convertIntegralToArg(val.value, ty));
+         }
+         else {
+            Error("TClingCallFunc::Invoke",
+                  "Could not evaluate default for argument %u: %s",
+                  i, ExprToString(expr).c_str());
+            llvm::GenericValue bad_val;
+            return bad_val;
+         }
       }
    }
-   llvm::GenericValue val;
-   val = fInterp->getExecutionEngine()->runFunction(fEEFunc, Args);
-   if (FT->getReturnType()->getTypeID() == llvm::Type::PointerTyID) {
-      //The cint interface requires pointers to be return as unsigned long.
-      llvm::GenericValue gv;
-      gv.IntVal = llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
-                              reinterpret_cast<unsigned long>(GVTOP(val)));
-      return gv;
+   llvm::GenericValue return_val;
+   return_val = fInterp->getExecutionEngine()->runFunction(fEEFunc, Args);
+   if (ft->getReturnType()->getTypeID() == llvm::Type::PointerTyID) {
+      // Note: The cint interface requires pointers to be
+      //       returned as unsigned long.
+      llvm::GenericValue converted_return_val;
+      converted_return_val.IntVal =
+         llvm::APInt(sizeof(unsigned long) * CHAR_BIT,
+            reinterpret_cast<unsigned long>(GVTOP(return_val)));
+      return converted_return_val;
    }
-   return val;
+   return return_val;
 }
 

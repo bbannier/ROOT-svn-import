@@ -130,6 +130,8 @@
 # include <float.h>
 #endif
 
+#include "RConfigure.h"
+
 //#if ROOT_VERSION_CODE >= ROOT_VERSION(3,03,5)
 #include "Riosfwd.h"
 #include "Riostream.h"
@@ -145,7 +147,10 @@
 #include "TClass.h"
 #include "TBrowser.h"
 #include "TString.h"
+#include "TInterpreter.h"
+#ifndef R__HAS_CLING
 #include "Api.h"
+#endif
 #include "TDataSetIter.h"
 #include "TTable.h"
 #include "TTableDescriptor.h"
@@ -780,21 +785,18 @@ Bool_t TTable::EntryLoop(const Char_t *exprFileName,Int_t &action, TObject *obj
  //
  //  Load file
    Double_t rmin[3],rmax[3];
-   switch(G__loadfile((Char_t *)exprFileName)) {
-      case G__LOADFILE_SUCCESS:
-      case G__LOADFILE_DUPLICATE:
-         break;
-      default:
-         Error("EntryLoop","Error: loading file %s",exprFileName);
-         G__unloadfile((Char_t *)exprFileName);
-         return kFALSE; // can not load file
+   if (gInterpreter->LoadFile((Char_t *)exprFileName) < 0) {
+      Error("EntryLoop","Error: loading file %s",exprFileName);
+      return kFALSE; // can not load file
    }
 
    // Float_t  Selection(Float_t *results[], void *address[], int& i$, int n$)
    //   where  i$ - meta variable to set current row index
    //          n$ - meta variable to set the total table size
    const Char_t *funcName = "SelectionQWERTY";
+#ifndef R__HAS_CLING 
 #define BYTECODE
+#endif
 #ifdef BYTECODE
    const Char_t *argtypes = "Float_t *,float **, int&, int& ";
    Long_t offset;
@@ -825,6 +827,17 @@ Bool_t TTable::EntryLoop(const Char_t *exprFileName,Int_t &action, TObject *obj
    callfunc.SetArg((Long_t)(addressArray));  // give 'void    *addressArray[]' as 2nd argument
    callfunc.SetArg((Long_t)(&i));            // give 'int& i$'                 as 3nd argument
    callfunc.SetArg((Long_t)(&nRows));        // give 'int& n$= nRows           as 4th argument
+#elif defined(R__HAS_CLING)
+   const Char_t *argtypes = "Float_t *,float **, int&, int& ";
+   Long_t offset;
+   ClassInfo_t *globals = gInterpreter->ClassInfo_Factory();
+   CallFunc_t *callfunc = gInterpreter->CallFunc_Factory();
+   gInterpreter->CallFunc_SetFunc(callfunc,globals,funcName,argtypes,&offset);
+
+   gInterpreter->CallFunc_SetArg(callfunc,(Long_t)(&results[0]));   // give 'Float_t *results[5]'     as 1st argument
+   gInterpreter->CallFunc_SetArg(callfunc,(Long_t)(addressArray));  // give 'void    *addressArray[]' as 2nd argument
+   gInterpreter->CallFunc_SetArg(callfunc,(Long_t)(&i));            // give 'int& i$'                 as 3nd argument
+   gInterpreter->CallFunc_SetArg(callfunc,(Long_t)(&nRows));        // give 'int& n$= nRows           as 4th argument
 #else
    char buf[200];
    sprintf(buf,"%s((Float_t*)(%ld),(void**)(%ld),*(int*)(%ld),*(int*)(%ld))"
@@ -836,8 +849,10 @@ Bool_t TTable::EntryLoop(const Char_t *exprFileName,Int_t &action, TObject *obj
 
 #ifdef BYTECODE
 #  define CALLMETHOD callfunc.Exec(0);
+#elif defined(R__HAS_CLING)
+#  define CALLMETHOD gInterpreter->CallFunc_Exec(callfunc,0);
 #else
-#  define CALLMETHOD G__calc(buf);
+#  define CALLMETHOD gInterpreter->ProcessLineFast(buf);
 #endif
 
 #define TAKEACTION_BEGIN                                                                    \
@@ -1026,7 +1041,11 @@ Bool_t TTable::EntryLoop(const Char_t *exprFileName,Int_t &action, TObject *obj
             break;
       };
    }
-   G__unloadfile((Char_t *)exprFileName);
+#if defined(R__HAS_CLING)
+   gInterpreter->CallFunc_Delete(callfunc);
+   gInterpreter->ClassInfo_Delete(globals);
+#endif
+   gInterpreter->UnloadFile((Char_t *)exprFileName);
    delete [] addressArray;
    return kTRUE;
 }

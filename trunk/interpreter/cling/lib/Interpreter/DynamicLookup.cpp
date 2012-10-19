@@ -21,28 +21,23 @@ using namespace clang;
 
 namespace cling {
 
-  DynamicIDHandler::DynamicIDHandler(Interpreter* interp)
-    : m_Interpreter(interp) { }
-
-
   // pin the vtable to this file
-  DynamicIDHandler::~DynamicIDHandler() {
-  }
+  DynamicIDHandler::~DynamicIDHandler() { }
 
   bool DynamicIDHandler::LookupUnqualified(LookupResult& R, Scope* S) {
 
-    if (!IsDynamicLookup(R, S))
+    // FIXME: Extract out somewhere else.
+    if (!test::SymbolResolverCallback::IsDynamicLookup(R, S))
       return false;
 
-    InterpreterCallbacks* callbacks = m_Interpreter->getCallbacks();
-    if (callbacks && callbacks->isEnabled()) {
-      return callbacks->LookupObject(R, S);
+    if (getCallbacks()) {
+      return getCallbacks()->LookupObject(R, S);
     }
 
     DeclarationName Name = R.getLookupName();
     IdentifierInfo* II = Name.getAsIdentifierInfo();
     SourceLocation Loc = R.getNameLoc();
-    ASTContext& C = m_Interpreter->getSema().getASTContext();
+    ASTContext& C = R.getSema().getASTContext();
     VarDecl* Result = VarDecl::Create(C,
                                       R.getSema().getFunctionLevelDeclContext(),
                                       Loc,
@@ -61,33 +56,6 @@ namespace cling {
     return false;
   }
 
-  bool DynamicIDHandler::IsDynamicLookup (LookupResult& R, Scope* S) {
-    if (R.getLookupKind() != Sema::LookupOrdinaryName) return false;
-    if (R.isForRedeclaration()) return false;
-    // FIXME: Figure out better way to handle:
-    // C++ [basic.lookup.classref]p1:
-    //   In a class member access expression (5.2.5), if the . or -> token is
-    //   immediately followed by an identifier followed by a <, the
-    //   identifier must be looked up to determine whether the < is the
-    //   beginning of a template argument list (14.2) or a less-than operator.
-    //   The identifier is first looked up in the class of the object
-    //   expression. If the identifier is not found, it is then looked up in
-    //   the context of the entire postfix-expression and shall name a class
-    //   or function template.
-    //
-    // We want to ignore object(.|->)member<template>
-    if (m_Interpreter->getSema().PP.LookAhead(0).getKind() == tok::less)
-      // TODO: check for . or -> in the cached token stream
-      return false;
-
-    for (Scope* DepScope = S; DepScope; DepScope = DepScope->getParent()) {
-      if (DeclContext* Ctx = static_cast<DeclContext*>(DepScope->getEntity())) {
-        return !Ctx->isDependentContext();
-      }
-    }
-
-    return true;
-  }
 } // end namespace cling
 
 namespace {
@@ -204,6 +172,7 @@ namespace cling {
 
     LookupResult R(*m_Sema, Name, SourceLocation(), Sema::LookupOrdinaryName,
                      Sema::ForRedeclaration);
+    assert(NSD && "There must be a valid namespace.");
     m_Sema->LookupQualifiedName(R, NSD);
     // We have specialized EvaluateT but we don't care because the templated 
     // decl is needed.
@@ -876,7 +845,8 @@ namespace cling {
   }
 
   void EvaluateTSynthesizer::createUniqueName(std::string& out) {
-    out = "autoGenName";
+    out = "__dynamic";
+    out += utils::Synthesize::UniquePrefix;
     llvm::raw_string_ostream(out) << m_UniqueNameCounter++;
   }
 

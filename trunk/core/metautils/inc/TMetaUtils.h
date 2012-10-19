@@ -51,6 +51,10 @@ namespace ROOT {
       // Add default template parameters.
       clang::QualType AddDefaultParameters(clang::QualType instanceType, const cling::Interpreter &interpret, const TNormalizedCtxt &normCtxt);
 
+      // Get the array index information for a data member.
+      enum DataMemberInfo__ValidArrayIndex_error_code { VALID, NOT_INT, NOT_DEF, IS_PRIVATE, UNKNOWN };
+      const char* DataMemberInfo__ValidArrayIndex(const clang::FieldDecl &m, int *errnum = 0, const char **errstr = 0);
+
       // Return the ROOT include directory
       std::string GetROOTIncludeDir(bool rootbuild);
 
@@ -100,6 +104,13 @@ namespace ROOT {
       //
       llvm::StringRef GetComment(const clang::Decl &decl, clang::SourceLocation *loc = 0);
 
+      // Return the class comment:
+      // class MyClass {
+      // ...
+      // ClassDef(MyClass, 1) // class comment
+      //
+      llvm::StringRef GetClassComment(const clang::CXXRecordDecl &decl, clang::SourceLocation *loc, const cling::Interpreter &interpreter);
+      
       // Scans the redeclaration chain for a definition of the redeclarable which
       // is annotated.
       //

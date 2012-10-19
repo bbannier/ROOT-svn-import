@@ -29,7 +29,6 @@ namespace cling {
   ///
   class ParserStateRAII {
   private:
-    Sema& S;
     Parser* P;
     Preprocessor& PP;
     DiagnosticConsumer* DClient;
@@ -38,9 +37,9 @@ namespace cling {
     bool OldSpellChecking;
 
   public:
-    ParserStateRAII(Sema& s, Parser* p, bool rip, bool sad, bool sc)
-       : S(s), P(p), PP(s.getPreprocessor()), 
-         DClient(s.getDiagnostics().getClient()), 
+    ParserStateRAII(Parser* p, bool rip, bool sad, bool sc)
+       : P(p), PP(P->getPreprocessor()), 
+         DClient(P->getActions().getDiagnostics().getClient()), 
          ResetIncrementalProcessing(rip),
          OldSuppressAllDiagnostics(sad), OldSpellChecking(sc)
     {}
@@ -54,16 +53,22 @@ namespace cling {
       //
       P->SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false, 
                    /*StopAtCodeCompletion*/false);
-      if (ResetIncrementalProcessing) {
-        PP.enableIncrementalProcessing(false);
-      }
+      PP.enableIncrementalProcessing(ResetIncrementalProcessing);
       DClient->EndSourceFile();
-      S.getDiagnostics().Reset();
+      P->getActions().getDiagnostics().Reset();
       PP.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
       const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking =
          OldSpellChecking;
     }
   };
+
+  LookupHelper::LookupHelper(clang::Parser* P) : m_Parser(P) {
+    const Preprocessor& PP = P->getPreprocessor();
+    m_PPSuppressAllDiags = PP.getDiagnostics().getSuppressAllDiagnostics();
+    m_PPResetIncrProcessing = PP.isIncrementalProcessingEnabled();
+    m_PPSpellChecking = PP.getLangOpts().SpellChecking;
+  }
+
 
   QualType LookupHelper::findType(llvm::StringRef typeName) const {
     //
@@ -73,48 +78,9 @@ namespace cling {
 
     // Use P for shortness
     Parser& P = *m_Parser;
-    Sema& S = P.getActions();
-    Preprocessor& PP = P.getPreprocessor();
-    //
-    //  Tell the diagnostic engine to ignore all diagnostics.
-    //
-    bool OldSuppressAllDiagnostics =
-      PP.getDiagnostics().getSuppressAllDiagnostics();
-    PP.getDiagnostics().setSuppressAllDiagnostics(true);
-    //
-    //  Tell the parser to not attempt spelling correction.
-    //
-    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
-    //
-    //  Tell the diagnostic consumer we are switching files.
-    //
-    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
-    DClient->BeginSourceFile(PP.getLangOpts(), &PP);
-    //
-    //  Create a fake file to parse the type name.
-    //
-    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-      std::string(typeName) + "\n", "lookup.type.by.name.file");
-    FileID FID = S.getSourceManager().createFileIDForMemBuffer(SB);
-    //
-    //  Turn on ignoring of the main file eof token.
-    //
-    //  Note: We need this because token readahead in the following
-    //        routine calls ends up parsing it multiple times.
-    //
-    bool ResetIncrementalProcessing = false;
-    if (!PP.isIncrementalProcessingEnabled()) {
-      ResetIncrementalProcessing = true;
-      PP.enableIncrementalProcessing();
-    }
-    //
-    //  Switch to the new file the way #include does.
-    //
-    //  Note: To switch back to the main file we must consume an eof token.
-    //
-    PP.EnterSourceFile(FID, /*DirLookup=*/0, SourceLocation());
-    PP.Lex(const_cast<Token&>(P.getCurToken()));
+    prepareForParsing(typeName, llvm::StringRef("lookup.type.by.name.file"));
+    ParserStateRAII ResetParserState(&P, m_PPResetIncrProcessing,
+                                     m_PPSuppressAllDiags, m_PPSpellChecking);
     //
     //  Try parsing the type name.
     //
@@ -128,35 +94,11 @@ namespace cling {
         TheQT = clang::Sema::GetTypeFromParser(Res.get(), &TSI);
       }
     }
-    //
-    // Advance the parser to the end of the file, and pop the include stack.
-    //
-    // Note: Consuming the EOF token will pop the include stack.
-    //
-    P.SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-                /*StopAtCodeCompletion*/false);
-    if (ResetIncrementalProcessing) {
-      PP.enableIncrementalProcessing(false);
-    }
-    DClient->EndSourceFile();
-    S.getDiagnostics().Reset();
-    S.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;
     return TheQT;
   }
 
   const Decl* LookupHelper::findScope(llvm::StringRef className,
                                       const Type** resultType /* = 0 */) const {
-    //
-    //  Our return value.
-    //
-    const Type* TheType = 0;
-    const Type** setResultType = &TheType;
-    if (resultType)
-      setResultType = resultType;
-    *setResultType = 0;
-
-    const Decl* TheDecl = 0;
     //
     //  Some utilities.
     //
@@ -165,56 +107,21 @@ namespace cling {
     Sema& S = P.getActions();
     Preprocessor& PP = P.getPreprocessor();
     ASTContext& Context = S.getASTContext();
+    prepareForParsing(className.str() + "::", 
+                      llvm::StringRef("lookup.class.by.name.file"));
+    ParserStateRAII ResetParserState(&P, m_PPResetIncrProcessing,
+                                     m_PPSuppressAllDiags, m_PPSpellChecking);
     //
-    //  Tell the diagnostic engine to ignore all diagnostics.
+    //  Our return values.
     //
-    bool OldSuppressAllDiagnostics =
-      PP.getDiagnostics().getSuppressAllDiagnostics();
-    PP.getDiagnostics().setSuppressAllDiagnostics(true);
-    //
-    //  Tell the parser to not attempt spelling correction.
-    //
-    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
-    //
-    //  Tell the diagnostic consumer we are switching files.
-    //
-    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
-    DClient->BeginSourceFile(S.getLangOpts(), &PP);
-    //
-    //  Convert the class name to a nested name specifier for parsing.
-    //
-    std::string classNameAsNNS = className.str() + "::\n";
-    //
-    //  Create a fake file to parse the class name.
-    //
-    llvm::MemoryBuffer* SB = llvm::MemoryBuffer::getMemBufferCopy(
-      classNameAsNNS, "lookup.class.by.name.file");
-    FileID FID = S.getSourceManager().createFileIDForMemBuffer(SB);
-    //
-    //  Turn on ignoring of the main file eof token.
-    //
-    //  Note: We need this because token readahead in the following
-    //        routine calls ends up parsing it multiple times.
-    //
-    bool ResetIncrementalProcessing = false;
-    if (!PP.isIncrementalProcessingEnabled()) {
-      ResetIncrementalProcessing = true;
-      PP.enableIncrementalProcessing();
-    }
-    //
-    //  Switch to the new file the way #include does.
-    //
-    //  Note: To switch back to the main file we must consume an eof token.
-    //
-    PP.EnterSourceFile(FID, 0, SourceLocation());
-    PP.Lex(const_cast<Token&>(P.getCurToken()));
-    //
-    //  Setup to reset parser state on exit.
-    //
-    ParserStateRAII ResetParserState(S, &P, ResetIncrementalProcessing,
-                                     OldSuppressAllDiagnostics, 
-                                     OldSpellChecking);
+    const Type* TheType = 0;
+    const Type** setResultType = &TheType;
+    if (resultType)
+      setResultType = resultType;
+    *setResultType = 0;
+
+    const Decl* TheDecl = 0;
+
     //
     //  Prevent failing on an assert in TryAnnotateCXXScopeToken.
     //
@@ -277,7 +184,9 @@ namespace cling {
                 // Note: Do we need to check for a dependent type here?
                 NestedNameSpecifier *prefix = NNS->getPrefix();
                 if (prefix) {
-                   QualType temp = Context.getElaboratedType(ETK_None,prefix,QualType(NNS->getAsType(),0));
+                   QualType temp 
+                     = Context.getElaboratedType(ETK_None,prefix,
+                                                 QualType(NNS->getAsType(),0));
                    *setResultType = temp.getTypePtr();
                 } else {
                    *setResultType = NNS->getAsType();
@@ -316,6 +225,7 @@ namespace cling {
     //
     P.SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
                 /*StopAtCodeCompletion*/false);
+    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
     DClient->EndSourceFile();
     S.getDiagnostics().Reset();
     //
@@ -349,46 +259,14 @@ namespace cling {
         }
       }
     }
+
     return TheDecl;
-  }
-
-  static bool FuncArgTypesMatch(const ASTContext& C, 
-                             const llvm::SmallVector<QualType, 4>& GivenArgTypes,
-                                const FunctionProtoType* FPT) {
-    // FIXME: What if FTP->arg_size() != GivenArgTypes.size()?
-    FunctionProtoType::arg_type_iterator ATI = FPT->arg_type_begin();
-    FunctionProtoType::arg_type_iterator E = FPT->arg_type_end();
-    llvm::SmallVector<QualType, 4>::const_iterator GAI = GivenArgTypes.begin();
-    for (; ATI && (ATI != E); ++ATI, ++GAI) {
-      if (!C.hasSameType(*ATI, *GAI)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  static bool IsOverload(const ASTContext& C,
-                         const TemplateArgumentListInfo* FuncTemplateArgs,
-                         const llvm::SmallVector<QualType, 4>& GivenArgTypes, 
-                         FunctionDecl* FD, bool UseUsingDeclRules) {
-    //FunctionTemplateDecl* FTD = FD->getDescribedFunctionTemplate();
-    QualType FQT = C.getCanonicalType(FD->getType());
-    if (llvm::isa<FunctionNoProtoType>(FQT.getTypePtr())) {
-      // A K&R-style function (no prototype), is considered to match the args.
-      return false;
-    }
-    const FunctionProtoType* FPT = llvm::cast<FunctionProtoType>(FQT);
-    if ((GivenArgTypes.size() != FPT->getNumArgs()) ||
-        //(GivenArgsAreEllipsis != FPT->isVariadic()) ||
-        !FuncArgTypesMatch(C, GivenArgTypes, FPT)) {
-      return true;
-    }
-    return false;
   }
 
   const FunctionDecl* LookupHelper::findFunctionProto(const Decl* scopeDecl,
                                                       llvm::StringRef funcName, 
                                                llvm::StringRef funcProto) const {
+    assert(scopeDecl && "Decl cannot be null");
     //
     //  Our return value.
     //
@@ -400,6 +278,9 @@ namespace cling {
     Sema& S = P.getActions();
     Preprocessor& PP = S.getPreprocessor();
     ASTContext& Context = S.getASTContext();
+    prepareForParsing(funcProto, llvm::StringRef("func.prototype.file"));
+    ParserStateRAII ResetParserState(&P, m_PPResetIncrProcessing,
+                                     m_PPSuppressAllDiags, m_PPSpellChecking);
     //
     //  Get the DeclContext we will search for the function.
     //
@@ -421,52 +302,22 @@ namespace cling {
     }
     DeclContext* foundDC = dyn_cast<DeclContext>(const_cast<Decl*>(scopeDecl));
     //
-    //  Tell the diagnostic engine to ignore all diagnostics.
+    //  If we are looking up a member function, construct
+    //  the implicit object argument.
     //
-    bool OldSuppressAllDiagnostics =
-      PP.getDiagnostics().getSuppressAllDiagnostics();
-    PP.getDiagnostics().setSuppressAllDiagnostics(true);
+    //  Note: For now this is always a non-CV qualified lvalue.
     //
-    //  Tell the parser to not attempt spelling correction.
-    //
-    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
-    //
-    //  Tell the diagnostic consumer we are switching files.
-    //
-    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
-    DClient->BeginSourceFile(PP.getLangOpts(), &PP);
-    //
-    //  Create a fake file to parse the prototype.
-    //
-    llvm::MemoryBuffer* SB 
-      = llvm::MemoryBuffer::getMemBufferCopy(funcProto.str() 
-                                             + "\n", "func.prototype.file");
-    FileID FID = S.getSourceManager().createFileIDForMemBuffer(SB);
-    //
-    //  Turn on ignoring of the main file eof token.
-    //
-    //  Note: We need this because token readahead in the following
-    //        routine calls ends up parsing it multiple times.
-    //
-    bool ResetIncrementalProcessing = false;
-    if (!PP.isIncrementalProcessingEnabled()) {
-      ResetIncrementalProcessing = true;
-      PP.enableIncrementalProcessing();
+    QualType ClassType;
+    Expr* ObjExpr = 0;
+    Expr::Classification ObjExprClassification;
+    if (CXXRecordDecl* CRD = dyn_cast<CXXRecordDecl>(foundDC)) {
+      ClassType = Context.getTypeDeclType(CRD).getCanonicalType();
+      ObjExpr = new (Context) OpaqueValueExpr(SourceLocation(),
+        ClassType, VK_LValue);
+      ObjExprClassification = ObjExpr->Classify(Context);
+      //GivenArgTypes.insert(GivenArgTypes.begin(), ClassType);
+      //GivenArgs.insert(GivenArgs.begin(), ObjExpr);
     }
-    //
-    //  Switch to the new file the way #include does.
-    //
-    //  Note: To switch back to the main file we must consume an eof token.
-    //
-    PP.EnterSourceFile(FID, /*DirLookup=*/0, SourceLocation());
-    PP.Lex(const_cast<Token&>(P.getCurToken()));
-    //
-    //  Setup to reset parser state on exit.
-    //
-    ParserStateRAII ResetParserState(S, &P, ResetIncrementalProcessing,
-                                     OldSuppressAllDiagnostics, 
-                                     OldSpellChecking);
     //
     //  Parse the prototype now.
     //
@@ -485,10 +336,13 @@ namespace cling {
       QT = QT.getCanonicalType();
       GivenArgTypes.push_back(QT);
       {
-        // FIXME: Make an attempt to release these.
+        ExprValueKind VK = VK_RValue;
+        if (QT->getAs<LValueReferenceType>()) {
+          VK = VK_LValue;
+        }
         clang::QualType NonRefQT(QT.getNonReferenceType());
         Expr* val = new (Context) OpaqueValueExpr(SourceLocation(), NonRefQT,
-          Expr::getValueKindForType(NonRefQT));
+          VK);
         GivenArgs.push_back(val);
       }
       // Type names should be comma separated.
@@ -507,6 +361,7 @@ namespace cling {
     //
     P.SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false, 
                 /*StopAtCodeCompletion*/false);
+    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
     DClient->EndSourceFile();
     S.getDiagnostics().Reset();
     //
@@ -587,63 +442,80 @@ namespace cling {
         // Lookup failed.
         return TheDecl;
       }
-      //
-      //  Now that we have a set of matching function names
-      //  in the class, we have to choose the one being asked
-      //  for given the passed template args and prototype.
-      //
-      for (LookupResult::iterator I = Result.begin(), E = Result.end();
-          I != E; ++I) {
-        NamedDecl* ND = *I;
+      {
         //
-        //  Check if this decl is from a using decl, it will not
-        //  be a match in some cases.
+        //  Construct the overload candidate set.
         //
-        bool IsUsingDecl = false;
-        if (llvm::isa<UsingShadowDecl>(ND)) {
-          IsUsingDecl = true;
-          ND = llvm::cast<UsingShadowDecl>(ND)->getTargetDecl();
+        OverloadCandidateSet Candidates(FuncNameInfo.getLoc());
+        for (LookupResult::iterator I = Result.begin(), E = Result.end();
+            I != E; ++I) {
+          NamedDecl* ND = *I;
+          if (FunctionDecl* FD = dyn_cast<FunctionDecl>(ND)) {
+            if (isa<CXXMethodDecl>(FD) &&
+                !cast<CXXMethodDecl>(FD)->isStatic() &&
+                !isa<CXXConstructorDecl>(FD)) {
+              // Class method, not static, not a constructor, so has
+              // an implicit object argument.
+              CXXMethodDecl* MD = cast<CXXMethodDecl>(FD);
+              if (FuncTemplateArgs && (FuncTemplateArgs->size() != 0)) {
+                // Explicit template args were given, cannot use a plain func.
+                continue;
+              }
+              S.AddMethodCandidate(MD, I.getPair(), MD->getParent(),
+                                   /*ObjectType=*/ClassType,
+                                  /*ObjectClassification=*/ObjExprClassification,
+                   llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
+                                   Candidates);
+            }
+            else {
+              const FunctionProtoType* Proto = dyn_cast<FunctionProtoType>(
+                FD->getType()->getAs<clang::FunctionType>());
+              if (!Proto) {
+                // Function has no prototype, cannot do overloading.
+                continue;
+              }
+              if (FuncTemplateArgs && (FuncTemplateArgs->size() != 0)) {
+                // Explicit template args were given, cannot use a plain func.
+                continue;
+              }
+              S.AddOverloadCandidate(FD, I.getPair(),
+                   llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
+                                     Candidates);
+            }
+          }
+          else if (FunctionTemplateDecl* FTD =
+              dyn_cast<FunctionTemplateDecl>(ND)) {
+            if (isa<CXXMethodDecl>(FTD->getTemplatedDecl()) &&
+                !cast<CXXMethodDecl>(FTD->getTemplatedDecl())->isStatic() &&
+                !isa<CXXConstructorDecl>(FTD->getTemplatedDecl())) {
+              // Class method template, not static, not a constructor, so has
+              // an implicit object argument.
+              S.AddMethodTemplateCandidate(FTD, I.getPair(),
+                                      cast<CXXRecordDecl>(FTD->getDeclContext()),
+                         const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
+                                           /*ObjectType=*/ClassType,
+                                  /*ObjectClassification=*/ObjExprClassification,
+                   llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
+                                           Candidates);
+            }
+            else {
+              S.AddTemplateOverloadCandidate(FTD, I.getPair(),
+                const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
+                llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
+                Candidates, /*SuppressUserConversions=*/false);
+            }
+          }
         }
         //
-        //  If found declaration was introduced by a using declaration,
-        //  we'll need to use slightly different rules for matching.
-        //  Essentially, these rules are the normal rules, except that
-        //  function templates hide function templates with different
-        //  return types or template parameter lists.
+        //  Find the best viable function from the set.
         //
-        bool UseMemberUsingDeclRules = IsUsingDecl && foundDC->isRecord();
-        if (FunctionTemplateDecl* FTD = dyn_cast<FunctionTemplateDecl>(ND)) {
-          // This decl is a function template.
-          //
-          //  Do template argument deduction and function argument matching.
-          //
-          FunctionDecl* Specialization;
-          sema::TemplateDeductionInfo TDI( (SourceLocation()) );
-          Sema::TemplateDeductionResult TDR 
-            = S.DeduceTemplateArguments(FTD,
-                         const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
-                   llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
-                                        Specialization, TDI);
-          if (TDR == Sema::TDK_Success) {
-            // We have a template argument match and func arg match.
-            TheDecl = Specialization;
-            break;
-          }
-        } else if (FunctionDecl* FD = dyn_cast<FunctionDecl>(ND)) {
-          // This decl is a function.
-          //
-          //  Do function argument matching.
-          //
-          if (!IsOverload(Context, FuncTemplateArgs, GivenArgTypes, FD,
-                          UseMemberUsingDeclRules)) {
-            // We have a function argument match.
-            if (UseMemberUsingDeclRules && IsUsingDecl) {
-              // But it came from a using decl and we are
-              // looking up a class member func, ignore it.
-              continue;
-            }
-            TheDecl = dyn_cast<clang::FunctionDecl>(*I);
-            break;
+        {
+          OverloadCandidateSet::iterator Best;
+          OverloadingResult OR = Candidates.BestViableFunction(S, 
+                                                             Result.getNameLoc(),
+                                                               Best);
+          if (OR == OR_Success) {
+            TheDecl = Best->Function;
           }
         }
       }
@@ -666,12 +538,10 @@ namespace cling {
     Sema& S = P.getActions();
     Preprocessor& PP = S.getPreprocessor();
     ASTContext& Context = S.getASTContext();
-    //
-    //  Tell the diagnostic engine to ignore all diagnostics.
-    //
-    bool OldSuppressAllDiagnostics =
-      PP.getDiagnostics().getSuppressAllDiagnostics();
-    PP.getDiagnostics().setSuppressAllDiagnostics(true);
+
+    prepareForParsing(funcArgs, llvm::StringRef("func.args.file"));
+    ParserStateRAII ResetParserState(&P, m_PPResetIncrProcessing,
+                                     m_PPSuppressAllDiags, m_PPSpellChecking);
     //
     //  Convert the passed decl into a nested name specifier,
     //  a scope spec, and a decl context.
@@ -719,7 +589,7 @@ namespace cling {
     //
     QualType ClassType;
     Expr* ObjExpr = 0;
-    Expr::Classification ObjExprClassification;
+    Expr::Classification ObjExprClassification = Expr::Classification();
     if (CXXRecordDecl* CRD = dyn_cast<CXXRecordDecl>(foundDC)) {
       ClassType = Context.getTypeDeclType(CRD).getCanonicalType();
       ObjExpr = new (Context) OpaqueValueExpr(SourceLocation(),
@@ -728,47 +598,7 @@ namespace cling {
       //GivenArgTypes.insert(GivenArgTypes.begin(), ClassType);
       //GivenArgs.insert(GivenArgs.begin(), ObjExpr);
     }
-    //
-    //  Tell the parser to not attempt spelling correction.
-    //
-    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
-    //
-    //  Tell the diagnostic consumer we are switching files.
-    //
-    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
-    DClient->BeginSourceFile(PP.getLangOpts(), &PP);
-    //
-    //  Create a fake file to parse the arguments.
-    //
-    llvm::MemoryBuffer* SB 
-      = llvm::MemoryBuffer::getMemBufferCopy(funcArgs.str()
-                                             + "\n", "func.args.file");
-    FileID FID = S.getSourceManager().createFileIDForMemBuffer(SB);
-    //
-    //  Turn on ignoring of the main file eof token.
-    //
-    //  Note: We need this because token readahead in the following
-    //        routine calls ends up parsing it multiple times.
-    //
-    bool ResetIncrementalProcessing = false;
-    if (!PP.isIncrementalProcessingEnabled()) {
-      ResetIncrementalProcessing = true;
-      PP.enableIncrementalProcessing();
-    }
-    //
-    //  Switch to the new file the way #include does.
-    //
-    //  Note: To switch back to the main file we must consume an eof token.
-    //
-    PP.EnterSourceFile(FID, 0, SourceLocation());
-    PP.Lex(const_cast<Token&>(P.getCurToken()));
-    //
-    //  Setup to reset parser state on exit.
-    //
-    ParserStateRAII ResetParserState(S, &P, ResetIncrementalProcessing,
-                                     OldSuppressAllDiagnostics, 
-                                     OldSpellChecking);
+
     //
     //  Parse the arguments now.
     //
@@ -818,6 +648,7 @@ namespace cling {
       //
       P.SkipUntil(clang::tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
                    /*StopAtCodeCompletion*/false);
+      DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
       DClient->EndSourceFile();
       S.getDiagnostics().Reset();
       //
@@ -891,20 +722,6 @@ namespace cling {
         // Lookup failed.
         return TheDecl;
       }
-      //
-      //  Dump what was found.
-      //
-      //if (Result.getResultKind() == LookupResult::Found) {
-      //  NamedDecl* ND = Result.getFoundDecl();
-      //  std::string buf;
-      //  llvm::raw_string_ostream tmp(buf);
-      //  ND->print(tmp, 0);
-      //  fprintf(stderr, "Found: %s\n", tmp.str().c_str());
-      //} else if (Result.getResultKind() == LookupResult::FoundOverloaded) {
-      //  fprintf(stderr, "Found overload set!\n");
-      //  Result.print(llvm::outs());
-      //  fprintf(stderr, "\n");
-      //}
       {
         //
         //  Construct the overload candidate set.
@@ -920,16 +737,8 @@ namespace cling {
               // Class method, not static, not a constructor, so has
               // an implicit object argument.
               CXXMethodDecl* MD = cast<CXXMethodDecl>(FD);
-              //{
-              //  std::string buf;
-              //  llvm::raw_string_ostream tmp(buf);
-              //  MD->print(tmp, 0);
-              //  fprintf(stderr, "Considering method: %s\n",
-              //    tmp.str().c_str());
-              //}
               if (FuncTemplateArgs && (FuncTemplateArgs->size() != 0)) {
                 // Explicit template args were given, cannot use a plain func.
-                //fprintf(stderr, "rejected: template args given\n");
                 continue;
               }
               S.AddMethodCandidate(MD, I.getPair(), MD->getParent(),
@@ -939,22 +748,14 @@ namespace cling {
                                    Candidates);
             }
             else {
-              //{
-              //  std::string buf;
-              //  llvm::raw_string_ostream tmp(buf);
-              //  FD->print(tmp, 0);
-              //  fprintf(stderr, "Considering func: %s\n", tmp.str().c_str());
-              //}
               const FunctionProtoType* Proto = dyn_cast<FunctionProtoType>(
                 FD->getType()->getAs<clang::FunctionType>());
               if (!Proto) {
                 // Function has no prototype, cannot do overloading.
-                //fprintf(stderr, "rejected: no prototype\n");
                 continue;
               }
               if (FuncTemplateArgs && (FuncTemplateArgs->size() != 0)) {
                 // Explicit template args were given, cannot use a plain func.
-                //fprintf(stderr, "rejected: template args given\n");
                 continue;
               }
               S.AddOverloadCandidate(FD, I.getPair(),
@@ -969,13 +770,6 @@ namespace cling {
                 !isa<CXXConstructorDecl>(FTD->getTemplatedDecl())) {
               // Class method template, not static, not a constructor, so has
               // an implicit object argument.
-              //{
-              //  std::string buf;
-              //  llvm::raw_string_ostream tmp(buf);
-              //  FTD->print(tmp, 0);
-              //  fprintf(stderr, "Considering method template: %s\n",
-              //    tmp.str().c_str());
-              //}
               S.AddMethodTemplateCandidate(FTD, I.getPair(),
                                       cast<CXXRecordDecl>(FTD->getDeclContext()),
                          const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
@@ -985,13 +779,6 @@ namespace cling {
                                            Candidates);
             }
             else {
-              //{
-              //  std::string buf;
-              //  llvm::raw_string_ostream tmp(buf);
-              //  FTD->print(tmp, 0);
-              //  fprintf(stderr, "Considering func template: %s\n",
-              //    tmp.str().c_str());
-              //}
               S.AddTemplateOverloadCandidate(FTD, I.getPair(),
                 const_cast<TemplateArgumentListInfo*>(FuncTemplateArgs),
                 llvm::makeArrayRef<Expr*>(GivenArgs.data(), GivenArgs.size()),
@@ -999,14 +786,6 @@ namespace cling {
             }
           }
           else {
-            //{
-            //  std::string buf;
-            //  llvm::raw_string_ostream tmp(buf);
-            //  FD->print(tmp, 0);
-            //  fprintf(stderr, "Considering non-func: %s\n",
-            //    tmp.str().c_str());
-            //  fprintf(stderr, "rejected: not a function\n");
-            //}
           }
         }
         //
@@ -1022,17 +801,6 @@ namespace cling {
           }
         }
       }
-      //
-      //  Dump the overloading result.
-      //
-      //if (TheDecl) {
-      //  std::string buf;
-      //  llvm::raw_string_ostream tmp(buf);
-      //  TheDecl->print(tmp, 0);
-      //  fprintf(stderr, "Match: %s\n", tmp.str().c_str());
-      //  TheDecl->dump();
-      //  fprintf(stderr, "\n");
-      //}
     }
     return TheDecl;
   }
@@ -1044,55 +812,9 @@ namespace cling {
     //
     // Use P for shortness
     Parser& P = *m_Parser;
-    Sema& S = P.getActions();
-    Preprocessor &PP = S.getPreprocessor();
-    //
-    //  Tell the diagnostic engine to ignore all diagnostics.
-    //
-    bool OldSuppressAllDiagnostics =
-      PP.getDiagnostics().getSuppressAllDiagnostics();
-    PP.getDiagnostics().setSuppressAllDiagnostics(true);
-    //
-    //  Tell the parser to not attempt spelling correction.
-    //
-    bool OldSpellChecking = PP.getLangOpts().SpellChecking;
-    const_cast<LangOptions &>(PP.getLangOpts()).SpellChecking = 0;
-    //
-    //  Tell the diagnostic consumer we are switching files.
-    //
-    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
-    DClient->BeginSourceFile(PP.getLangOpts(), &PP);
-    //
-    //  Create a fake file to parse the arguments.
-    //
-    llvm::MemoryBuffer *SB 
-      = llvm::MemoryBuffer::getMemBufferCopy(argList.str()
-                                             + "\n", "arg.list.file");
-    FileID FID = S.getSourceManager().createFileIDForMemBuffer(SB);
-    //
-    //  Turn on ignoring of the main file eof token.
-    //
-    //  Note: We need this because token readahead in the following
-    //        routine calls ends up parsing it multiple times.
-    //
-    bool ResetIncrementalProcessing = false;
-    if (!PP.isIncrementalProcessingEnabled()) {
-      ResetIncrementalProcessing = true;
-      PP.enableIncrementalProcessing();
-    }
-    //
-    //  Switch to the new file the way #include does.
-    //
-    //  Note: To switch back to the main file we must consume an eof token.
-    //
-    PP.EnterSourceFile(FID, 0, SourceLocation());
-    PP.Lex(const_cast<Token &>(P.getCurToken()));
-    //
-    //  Setup to reset parser state on exit.
-    //
-    ParserStateRAII ResetParserState(S, &P, ResetIncrementalProcessing,
-                                     OldSuppressAllDiagnostics, 
-                                     OldSpellChecking);
+    prepareForParsing(argList, llvm::StringRef("arg.list.file"));
+    ParserStateRAII ResetParserState(&P, m_PPResetIncrProcessing,
+                                     m_PPSuppressAllDiags, m_PPSpellChecking);
     //
     //  Parse the arguments now.
     //
@@ -1116,22 +838,54 @@ namespace cling {
         // if one of the arguments is not usable return empty.
         argExprs.clear();
     }
-    //
-    // Advance the parser to the end of the file, and pop the include stack.
-    //
-    // Note: Consuming the EOF token will pop the include stack.
-    //
-    P.SkipUntil(tok::eof, /*StopAtSemi*/false, /*DontConsume*/false,
-                /*StopAtCodeCompletion*/false);
-    if (ResetIncrementalProcessing) {
-      PP.enableIncrementalProcessing(false);
-    }
-    DClient->EndSourceFile();
-    S.getDiagnostics().Reset();
-    S.getDiagnostics().setSuppressAllDiagnostics(OldSuppressAllDiagnostics);
-    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = OldSpellChecking;    
   }
 
+  void LookupHelper::prepareForParsing(llvm::StringRef code, 
+                                       llvm::StringRef bufferName) const {
+    Parser& P = *m_Parser;
+    Sema& S = P.getActions();
+    Preprocessor& PP = P.getPreprocessor();
+    //
+    //  Tell the diagnostic engine to ignore all diagnostics.
+    //
+    m_PPSuppressAllDiags = PP.getDiagnostics().getSuppressAllDiagnostics();
+    PP.getDiagnostics().setSuppressAllDiagnostics(true);
+    //
+    //  Tell the parser to not attempt spelling correction.
+    //
+    m_PPSpellChecking = PP.getLangOpts().SpellChecking;
+    const_cast<LangOptions&>(PP.getLangOpts()).SpellChecking = 0;
+    //
+    //  Tell the diagnostic consumer we are switching files.
+    //
+    DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
+    DClient->BeginSourceFile(PP.getLangOpts(), &PP);
+    //
+    //  Create a fake file to parse the type name.
+    //
+    llvm::MemoryBuffer* SB 
+      = llvm::MemoryBuffer::getMemBufferCopy(code.str() + "\n",
+                                             bufferName.str());
+    FileID FID = S.getSourceManager().createFileIDForMemBuffer(SB);
+    //
+    //  Turn on ignoring of the main file eof token.
+    //
+    //  Note: We need this because token readahead in the following
+    //        routine calls ends up parsing it multiple times.
+    //
+    m_PPResetIncrProcessing = PP.isIncrementalProcessingEnabled();
+    if (!PP.isIncrementalProcessingEnabled()) {
+      m_PPResetIncrProcessing = true;
+      PP.enableIncrementalProcessing();
+    }
+    //
+    //  Switch to the new file the way #include does.
+    //
+    //  Note: To switch back to the main file we must consume an eof token.
+    //
+    PP.EnterSourceFile(FID, /*DirLookup=*/0, SourceLocation());
+    PP.Lex(const_cast<Token&>(P.getCurToken()));
 
+  }
 
 } // end namespace cling

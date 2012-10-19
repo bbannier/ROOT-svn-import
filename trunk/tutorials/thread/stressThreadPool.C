@@ -17,6 +17,7 @@
 //=============================================================================
 using namespace std;
 //=============================================================================
+// Don't set it less than 1, otherwise autotest won't be able to detect whether tests were successful or not
 const size_t g_sleeptime = 2; // in secs.
 const size_t g_multTasks = 10;
 //=============================================================================
@@ -49,13 +50,18 @@ void stressThreadPool(size_t _numThreads, bool _needDbg = false)
    size_t numTasks(_numThreads * g_multTasks);
    TThreadPool<TTestTask, EProc> threadPool(_numThreads, _needDbg);
    vector <TTestTask> tasksList(numTasks);
-   for (size_t i = 0; i < numTasks; ++i) {
-      threadPool.PushTask(tasksList[i], start);
+   // Pushing 4 * numTasks task in the pool
+   // We want to dain the task queue before pushing a next bunch of tasks (just to show you a Drain method ;) ) 
+   for (size_t j = 0; j < 4; ++j )
+   {
+      cout << "+++++++++ Starting iteration #" << j << " ++++++++++++"<< endl; 
+      for (size_t i = 0; i < numTasks; ++i) {
+         threadPool.PushTask(tasksList[i], start);
+      }
+
+      cout << "\n ****** Drain the tasks queue ******" << endl;
+      threadPool.Drain();
    }
-
-   cout << "\n Drain the tasks queue" << endl;
-   threadPool.Drain();
-
    cout << "\n Stopping..." << endl;
    threadPool.Stop(true);
 

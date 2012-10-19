@@ -92,6 +92,14 @@ TClingBaseClassInfo& TClingBaseClassInfo::operator=(
    return *this;
 }
 
+TClingClassInfo *TClingBaseClassInfo::GetBase() const
+{
+   if (!IsValid()) {
+      return 0;
+   }
+   return fBaseInfo;
+}
+
 bool TClingBaseClassInfo::IsValid() const
 {
    return
@@ -189,7 +197,7 @@ int TClingBaseClassInfo::InternalNext(int onlyDirect)
       }
       // Update info for this base class.
       delete fBaseInfo;
-      fBaseInfo = new TClingClassInfo(fInterp, Base);
+      fBaseInfo = new TClingClassInfo(fInterp, *Ty);
       // Iterator is now valid.
       return 1;
    }
@@ -271,12 +279,12 @@ long TClingBaseClassInfo::Tagnum() const
    return fBaseInfo->Tagnum();
 }
 
-const char* TClingBaseClassInfo::FullName() const
+const char* TClingBaseClassInfo::FullName(const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) const
 {
    if (!IsValid()) {
       return 0;
    }
-   return fBaseInfo->FullName();
+   return fBaseInfo->FullName(normCtxt);
 }
 
 const char* TClingBaseClassInfo::Name() const
