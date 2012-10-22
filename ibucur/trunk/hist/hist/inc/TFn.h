@@ -95,10 +95,11 @@ public:
     };
 
    TFn();
-   TFn(const char *name, Int_t ndim, void *fcn, Double_t* min, Double_t* max, Int_t npar);
+   TFn(const char* name, const char* formula, Double_t* min, Double_t* max);
+   TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, Int_t npar = 0);
 #ifndef __CINT__
-   TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, Int_t npar=0);
-   TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t* min, Double_t* max, Int_t npar=0);
+   TFn(const char* name, Int_t ndim, Double_t (*fcn)(Double_t*, Double_t*), Double_t* min, Double_t* max, Int_t npar = 0);
+   TFn(const char* name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, Int_t npar = 0);
 #endif
 
    // Constructors using functors (compiled mode only)

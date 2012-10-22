@@ -396,6 +396,56 @@ TFn::TFn() : TNamed()
 }
 
 //______________________________________________________________________________
+TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
+   TNamed(name, "TFn created from a formula definition (through TFormula)")
+{
+   // Constructor using a formula definition.
+   // See TFormula for the explanation of the constructor syntax.
+   // See tutorials: fillrandom, first, fit1, formula1, multifit for real examples.
+   fFormula = new TFormula(TString::Format("%s_formula", name).Data(), formula);
+   if(!fFormula) {
+      Error(TString::Format(
+         "TFn::TFn(%s) - object created incorrectly because of invalid formula").Data(), name
+      );
+   } else {
+
+      Init(fFormula->GetNdim(), min, max);
+      fNpx       = 100;
+      fType      = 0;
+      if (fFormula->GetNpar() > 0) {
+         fNpar = fFormula->GetNpar();
+         fParErrors = new Double_t[fNpar];
+         fParMin    = new Double_t[fNpar];
+         fParMax    = new Double_t[fNpar];
+         for (int i = 0; i < fNpar; i++) {
+            fParErrors[i]  = 0;
+            fParMin[i]     = 0;
+            fParMax[i]     = 0;
+         }
+      } else {
+         fParErrors = 0;
+         fParMin    = 0;
+         fParMax    = 0;
+      }
+      fIntegral   = 0;
+      fAlpha      = 0;
+      fBeta       = 0;
+      fGamma      = 0;
+      fParent     = 0;
+      fNpfits     = 0;
+      fNDF        = 0;
+      fNsave      = 0;
+      fSave       = 0;
+      fHistogram  = 0;
+      fMinimum    = -1111;
+      fMaximum    = -1111;
+      fMethodCall = 0;
+      fCintFunc   = 0;
+   }
+
+}
+
+//______________________________________________________________________________
 TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, Int_t npar) :
    TNamed(name, "TFn created from a pointer to an interpreted function")
 {
@@ -498,7 +548,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    Init(ndim, min, max);
 
    fNpx        = 100;
-
    fType       = 1;
    fMethodCall = 0;
    fCintFunc   = 0;
