@@ -499,9 +499,9 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    fMethodCall = 0;
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
-
-   if (npar > 0 ) fNpar = npar;
-   if (fNpar) {
+    
+   if (par > 0) {
+      fNpar = par;
       //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
@@ -565,8 +565,8 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
 
-   if (npar > 0 ) fNpar = npar;
-   if (fNpar) {
+   if (npar > 0) {
+      fNpar = npar;
       //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
@@ -653,8 +653,8 @@ void TFn::CreateFromFunctor(const char *name, Int_t npar)
 
    fNdim       = 1;
 
-   if (npar > 0 ) fNpar = npar;
-   if (fNpar) {
+   if (npar > 0) {
+      fNpar = npar;
       //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
@@ -738,8 +738,8 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
 
    fNpx        = 100;
    fType       = 3;
-   if (npar > 0 ) fNpar = npar;
-   if (fNpar) {
+   if (npar > 0) {
+      fNpar = npar;
      // fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
