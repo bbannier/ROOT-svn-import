@@ -127,11 +127,7 @@ NSPoint ConvertPointFromBaseToScreen(NSWindow *window, NSPoint windowPoint)
    tmpRect.size = CGSizeMake(1., 1.);//This is strange size :) But if they require rect, 0,0 - will not work?
    tmpRect = [window convertRectToScreen : tmpRect];
    
-   NSPoint screenPoint = tmpRect.origin;
-   //This is Cocoa's coordinates, but for ROOT I have to convert.
-   screenPoint.y = GlobalYCocoaToROOT(screenPoint.y);
-   
-   return screenPoint;
+   return tmpRect.origin;
 }
 
 //______________________________________________________________________________
@@ -141,8 +137,6 @@ NSPoint ConvertPointFromScreenToBase(NSPoint screenPoint, NSWindow *window)
 
    //I have no idea why apple deprecated function for a point conversion and requires rect conversion,
    //point conversion seems to produce wrong results with HiDPI.
-
-   screenPoint.y = GlobalYROOTToCocoa(screenPoint.y);
 
    NSRect tmpRect = {};
    tmpRect.origin = screenPoint;
@@ -210,7 +204,11 @@ NSPoint TranslateToScreen(NSView<X11Window> *from, NSPoint point)
    assert(from != nil && "TranslateToScreen, 'from' parameter is nil");
    
    const NSPoint winPoint = [from convertPoint : point toView : nil];
-   return ConvertPointFromBaseToScreen([from window], winPoint);
+
+   NSPoint screenPoint = ConvertPointFromBaseToScreen([from window], winPoint);
+   screenPoint.y = GlobalYCocoaToROOT(screenPoint.y);
+   
+   return screenPoint;
 }
 
 //______________________________________________________________________________
@@ -218,7 +216,9 @@ NSPoint TranslateFromScreen(NSPoint point, NSView<X11Window> *to)
 {
    assert(to != nil && "TranslateFromScreen, 'to' parameter is nil");
    
+   point.y = GlobalYROOTToCocoa(point.y);
    point = ConvertPointFromScreenToBase(point, [to window]);
+
    return [to convertPoint : point fromView : nil];
 }
 

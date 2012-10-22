@@ -1330,7 +1330,7 @@ void EventTranslator::CancelPointerGrab()
    } else if (fButtonGrabView) {
       //convertScreenToBase is deprecated.
       //const NSPoint location = [[fButtonGrabView window] convertScreenToBase : [NSEvent mouseLocation]];
-      const NSPoint location = ConvertPointFromBaseToScreen([fButtonGrabView window], [NSEvent mouseLocation]);
+      const NSPoint location = ConvertPointFromScreenToBase([NSEvent mouseLocation], [fButtonGrabView window]);
       
       const Util::NSScopeGuard<FakeCrossingEvent> event([[FakeCrossingEvent alloc] initWithWindow : [fButtonGrabView window] location : location ]);
       if (!event.Get()) {
