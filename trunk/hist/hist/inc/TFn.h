@@ -187,7 +187,7 @@ public:
       // TODO: solve constness issue - Why is EvalPar not constant?
       return 0.0;
    }
-   virtual Double_t Eval(Double_t x, Double_t y=0, Double_t z=0, Double_t t=0) const;
+   virtual Double_t Eval(Double_t* x);
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
    // for using TFn as a callable object (functor)
    virtual Double_t operator()(Double_t x, Double_t y=0, Double_t z = 0, Double_t t = 0) const; 
@@ -217,7 +217,7 @@ public:
 //   virtual Double_t GetXmax() const {return fXmax;}.
    virtual Double_t GradientPar(Int_t ipar, const Double_t *x, Double_t eps=0.01);
    virtual void     GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
-   virtual void     InitArgs(const Double_t *x, const Double_t *params);
+   virtual void     InitArgs(const Double_t *x, const Double_t *params = NULL);
    virtual Double_t IntegralError(Double_t a, Double_t b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
    virtual Double_t IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
    //virtual Double_t IntegralFast(const TGraph *g, Double_t a, Double_t b, Double_t *params=0);
@@ -259,7 +259,8 @@ public:
 };
 
 inline Double_t TFn::operator()(Double_t x, Double_t y, Double_t z, Double_t t) const  
-   { return Eval(x,y,z,t); }
+   { // FIXME: return Eval(x,y,z,t);
+   return 0.0; }
 inline Double_t TFn::operator()(const Double_t *x, const Double_t *params)
    { 
       if (fMethodCall) InitArgs(x,params);

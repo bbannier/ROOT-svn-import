@@ -56,7 +56,8 @@ class GFunc {
 public:
    GFunc(const TFn* function , double y ):fFunction(function), fY0(y) {}
    double operator()(double x) const {
-      return fFunction->Eval(x) - fY0;
+      // FIXME: return fFunction->Eval(x) - fY0;
+      return 0.0;
    }
 };
 
@@ -66,7 +67,8 @@ class GInverseFunc {
 public:
    GInverseFunc(const TFn* function):fFunction(function) {}
    double operator()(double x) const {
-      return - fFunction->Eval(x);
+// FIXME:      return - fFunction->Eval(x);
+      return 0.0; 
    }
 };
 
@@ -417,8 +419,8 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
    fNpx        = 100;
    fType       = 2;
    //fFunction   = 0;
-  if (npar > 0) fNpar = npar;
-   if (fNpar) {
+   if (npar > 0) {
+      fNpar = npar;
       //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
@@ -500,8 +502,8 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
     
-   if (par > 0) {
-      fNpar = par;
+   if (npar > 0) {
+      fNpar = npar;
       //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
@@ -964,26 +966,14 @@ void TFn::Copy(TObject &obj) const
 }
 
 //______________________________________________________________________________
-Double_t TFn::Eval(Double_t x, Double_t y, Double_t z, Double_t t) const
+Double_t TFn::Eval(Double_t* x)
 {
    // Evaluate this formula.
-   //
-   //   Computes the value of this function (general case for a 3-d function)
-   //   at point x,y,z.
-   //   For a 1-d function give y=0 and z=0
-   //   The current value of variables x,y,z is passed through x, y and z.
-   //   The parameters used will be the ones in the array params if params is given
-   //    otherwise parameters will be taken from the stored data members fParams
+   //   Computes the value of this n-d function on the vector x.
+   //   The parameters used will be the ones in the array fParams.
 
-   Double_t xx[4];
-   xx[0] = x;
-   xx[1] = y;
-   xx[2] = z;
-   xx[3] = t;
-
-   ((TFn*)this)->InitArgs(xx,fParams);
-
-   return ((TFn*)this)->EvalPar(xx,fParams);
+   InitArgs(x);
+   return EvalPar(x);
 }
 
 
