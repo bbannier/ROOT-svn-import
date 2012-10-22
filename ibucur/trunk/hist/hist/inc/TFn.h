@@ -55,7 +55,9 @@ protected:
    Double_t*   fMin;         //Lower bounds for the range
    Double_t*   fMax;         //Upper bounds for the range
    Int_t       fNpx;         //Number of points used for the graphical representation
-   Int_t       fType;        //(=0 for standard functions, 1 if pointer to function)
+   // TODO: change to an internal enum
+   Int_t       fType;        // 0 for standard functions, 
+                             // 1 if pointer to function)
    Int_t       fNpfits;      //Number of points used in the fit
    Int_t       fNDF;         //Number of degrees of freedom in the fit
    Int_t       fNdim;
@@ -74,6 +76,8 @@ protected:
    TH1         *fHistogram;  //!Pointer to histogram used for visualisation
    Double_t     fMaximum;    //Maximum value for plotting
    Double_t     fMinimum;    //Minimum value for plotting
+
+   TFormula    *fFormula;    //!Pointer to TFormula in case of standard function 
    TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
    void        *fCintFunc;              //! pointer to interpreted function class
    ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
@@ -188,10 +192,10 @@ public:
       return 0.0;
    }
    virtual Double_t Eval(Double_t* x);
-   virtual Double_t EvalPar(const Double_t *x, const Double_t *params=0);
+   virtual Double_t EvalPar(const Double_t *x, const Double_t *params =  NULL);
    // for using TFn as a callable object (functor)
-   virtual Double_t operator()(Double_t x, Double_t y=0, Double_t z = 0, Double_t t = 0) const; 
-   virtual Double_t operator()(const Double_t *x, const Double_t *params=0);  
+   virtual Double_t operator()(Double_t* x); 
+   virtual Double_t operator()(const Double_t* x, const Double_t* params = NULL);  
    virtual void     FixParameter(Int_t ipar, Double_t value);
    //        TH1     *GetHistogram() const; // XXX: THn?
    virtual Double_t GetMaximum(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
@@ -258,9 +262,8 @@ public:
    ClassDef(TFn,1)  //The Parametric n-D function
 };
 
-inline Double_t TFn::operator()(Double_t x, Double_t y, Double_t z, Double_t t) const  
-   { // FIXME: return Eval(x,y,z,t);
-   return 0.0; }
+// XXX: maybe do not need both, or Eval method
+inline Double_t TFn::operator()(Double_t *x) { return Eval(x); }
 inline Double_t TFn::operator()(const Double_t *x, const Double_t *params)
    { 
       if (fMethodCall) InitArgs(x,params);
