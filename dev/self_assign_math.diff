@@ -1,0 +1,150 @@
+Index: math/mathcore/inc/Math/ParamFunctor.h
+===================================================================
+--- math/mathcore/inc/Math/ParamFunctor.h	(revision 46712)
++++ math/mathcore/inc/Math/ParamFunctor.h	(working copy)
+@@ -276,12 +276,12 @@
+ //       fImpl.reset(copy.fImpl.release());
+ //       copy.fImpl.reset(p);
+ 
+-      
+-      if (fImpl) delete fImpl;
+-      fImpl = 0; 
+-      if (rhs.fImpl != 0) 
+-         fImpl = rhs.fImpl->Clone();
+-
++      if(this != &rhs) {
++         if (fImpl) delete fImpl;
++         fImpl = 0; 
++         if (rhs.fImpl != 0) 
++            fImpl = rhs.fImpl->Clone();
++      }
+       return *this;
+    }
+ 
+Index: math/minuit2/inc/Minuit2/MinuitParameter.h
+===================================================================
+--- math/minuit2/inc/Minuit2/MinuitParameter.h	(revision 46712)
++++ math/minuit2/inc/Minuit2/MinuitParameter.h	(working copy)
+@@ -80,16 +80,18 @@
+    {}
+   
+    MinuitParameter& operator=(const MinuitParameter& par) {
+-      fNum = par.fNum;
+-      fName = par.fName;
+-      fValue = par.fValue;
+-      fError = par.fError;
+-      fConst = par.fConst;
+-      fFix = par.fFix;
+-      fLoLimit = par.fLoLimit; 
+-      fUpLimit = par.fUpLimit;
+-      fLoLimValid = par.fLoLimValid; 
+-      fUpLimValid = par.fUpLimValid;
++      if(this != &par) {
++         fNum = par.fNum;
++         fName = par.fName;
++         fValue = par.fValue;
++         fError = par.fError;
++         fConst = par.fConst;
++         fFix = par.fFix;
++         fLoLimit = par.fLoLimit; 
++         fUpLimit = par.fUpLimit;
++         fLoLimValid = par.fLoLimValid; 
++         fUpLimValid = par.fUpLimValid;
++      }
+       return *this;
+    }
+ 
+Index: math/minuit2/inc/Minuit2/MnRefCountedPointer.h
+===================================================================
+--- math/minuit2/inc/Minuit2/MnRefCountedPointer.h	(revision 46712)
++++ math/minuit2/inc/Minuit2/MnRefCountedPointer.h	(working copy)
+@@ -44,7 +44,7 @@
+   bool IsValid() const {return fPtr != 0;}
+   
+   MnRefCountedPointer& operator=(const MnRefCountedPointer<T>& other) {
+-    if(fPtr != other.fPtr) {
++    if(this != &other && fPtr != other.fPtr) {
+       RemoveReference();
+       fPtr = other.fPtr;
+       fCounter = other.fCounter;
+Index: math/minuit2/inc/Minuit2/MnUserCovariance.h
+===================================================================
+--- math/minuit2/inc/Minuit2/MnUserCovariance.h	(revision 46712)
++++ math/minuit2/inc/Minuit2/MnUserCovariance.h	(working copy)
+@@ -52,8 +52,10 @@
+   MnUserCovariance(const MnUserCovariance& cov) : fData(cov.fData), fNRow(cov.fNRow) {}
+ 
+   MnUserCovariance& operator=(const MnUserCovariance& cov) {
+-    fData = cov.fData;
+-    fNRow = cov.fNRow;
++    if(this != &cov) {
++      fData = cov.fData;
++      fNRow = cov.fNRow;
++    }
+     return *this;
+   }
+ 
+Index: math/minuit2/inc/Minuit2/MnUserParameterState.h
+===================================================================
+--- math/minuit2/inc/Minuit2/MnUserParameterState.h	(revision 46712)
++++ math/minuit2/inc/Minuit2/MnUserParameterState.h	(working copy)
+@@ -62,18 +62,20 @@
+                                                              fGlobalCC(state.fGlobalCC), fIntParameters(state.fIntParameters), fIntCovariance(state.fIntCovariance) {}
+ 
+    MnUserParameterState& operator=(const MnUserParameterState& state) {
+-      fValid = state.fValid;
+-      fCovarianceValid = state.fCovarianceValid;
+-      fGCCValid = state.fGCCValid;
+-      fCovStatus = state.fCovStatus;
+-      fFVal = state.fFVal;
+-      fEDM = state.fEDM;
+-      fNFcn = state.fNFcn;
+-      fParameters = state.fParameters;
+-      fCovariance = state.fCovariance;
+-      fGlobalCC = state.fGlobalCC;
+-      fIntParameters = state.fIntParameters;
+-      fIntCovariance = state.fIntCovariance;
++      if(this != &state) {
++         fValid = state.fValid;
++         fCovarianceValid = state.fCovarianceValid;
++         fGCCValid = state.fGCCValid;
++         fCovStatus = state.fCovStatus;
++         fFVal = state.fFVal;
++         fEDM = state.fEDM;
++         fNFcn = state.fNFcn;
++         fParameters = state.fParameters;
++         fCovariance = state.fCovariance;
++         fGlobalCC = state.fGlobalCC;
++         fIntParameters = state.fIntParameters;
++         fIntCovariance = state.fIntCovariance;
++      }   
+       return *this;
+    }
+ 
+Index: math/minuit2/inc/Minuit2/MnUserTransformation.h
+===================================================================
+--- math/minuit2/inc/Minuit2/MnUserTransformation.h	(revision 46712)
++++ math/minuit2/inc/Minuit2/MnUserTransformation.h	(working copy)
+@@ -73,13 +73,15 @@
+       fLowerLimTrafo(trafo.fLowerLimTrafo), fCache(trafo.fCache) {}
+   
+    MnUserTransformation& operator=(const MnUserTransformation& trafo) {
+-      fPrecision = trafo.fPrecision;
+-      fParameters = trafo.fParameters;
+-      fExtOfInt = trafo.fExtOfInt;
+-      fDoubleLimTrafo = trafo.fDoubleLimTrafo;
+-      fUpperLimTrafo = trafo.fUpperLimTrafo;
+-      fLowerLimTrafo = trafo.fLowerLimTrafo;
+-      fCache = trafo.fCache;
++      if(this != &trafo) {
++         fPrecision = trafo.fPrecision;
++         fParameters = trafo.fParameters;
++         fExtOfInt = trafo.fExtOfInt;
++         fDoubleLimTrafo = trafo.fDoubleLimTrafo;
++         fUpperLimTrafo = trafo.fUpperLimTrafo;
++         fLowerLimTrafo = trafo.fLowerLimTrafo;
++         fCache = trafo.fCache;
++      }
+       return *this;
+    }
+ 
