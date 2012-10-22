@@ -19,7 +19,7 @@
 //                                                                      //
 // TFn                                                                  //
 //                                                                      //
-// The Parametric 1-D function                                          //
+// The Parametric n-D function                                          //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
@@ -255,7 +255,7 @@ public:
    virtual Double_t Mean(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return Moment(1,a,b,params,epsilon);}
    virtual Double_t Variance(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return CentralMoment(2,a,b,params,epsilon);}
 
-   ClassDef(TFn,1)  //The Parametric 1-D function
+   ClassDef(TFn,1)  //The Parametric n-D function
 };
 
 inline Double_t TFn::operator()(Double_t x, Double_t y, Double_t z, Double_t t) const  
