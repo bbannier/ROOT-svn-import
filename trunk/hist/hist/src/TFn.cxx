@@ -355,6 +355,8 @@ End_Html */
 //______________________________________________________________________________
 void TFn::Init(Int_t ndim, Double_t* min, Double_t* max) 
 {
+   fFormula = NULL;
+
    // TFn initializer, employed by constructors
    if (ndim > 0) {
       fNdim = ndim; // XXX: should we put this in the initialization list?
@@ -986,9 +988,7 @@ Double_t TFn::EvalPar(const Double_t *x, const Double_t *params)
    // and current values of parameters in array params.
    // If argument params is omitted or equal 0, the internal values
    // of parameters (array fParams) will be used instead.
-   // For a 1-D function only x[0] must be given.
-   // In case of a multi-dimemsional function, the arrays x must be
-   // filled with the corresponding number of dimensions.
+   // ! x must be filled with the corresponding number of dimensions.
    //
    // WARNING. In case of an interpreted function (fType=2), it is the
    // user's responsability to initialize the parameters via InitArgs
@@ -999,9 +999,7 @@ Double_t TFn::EvalPar(const Double_t *x, const Double_t *params)
 
 
    if (fType == 0) {
-      // TODO: include TFormula in TFn and call EvalPar
-      //return TFormula::EvalPar(x,params);
-      return 0.0;
+      return fFormula->EvalPar(x,params);
    }
    Double_t result = 0;
    if (fType == 1)  {
@@ -1012,7 +1010,7 @@ Double_t TFn::EvalPar(const Double_t *x, const Double_t *params)
          if (params) result = fFunctor((Double_t*)x,(Double_t*)params);
          else        result = fFunctor((Double_t*)x,fParams);
 
-      }else          result = GetSave(x);
+      } else          result = GetSave(x);
       return result;
    }
    if (fType == 2) {
