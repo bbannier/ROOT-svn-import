@@ -258,6 +258,9 @@ void GetRootWindowAttributes(WindowAttributes_t *attr);
 void GetWindowAttributes(NSObject<X11Window> *window, WindowAttributes_t *dst);
 
 //Coordinate conversion.
+NSPoint ConvertPointFromBaseToScreen(NSWindow *window, NSPoint windowPoint);
+NSPoint ConvertPointFromScreenToBase(NSPoint screenPoint, NSWindow *window);
+
 int GlobalYCocoaToROOT(CGFloat yCocoa);
 int GlobalYROOTToCocoa(CGFloat yROOT);
 
