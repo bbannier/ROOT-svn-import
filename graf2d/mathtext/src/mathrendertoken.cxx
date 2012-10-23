@@ -184,7 +184,7 @@ namespace mathtext {
 		const bool generalized_fraction =
 			fraction_iterator != math_list_end_interior;
 		bool delimiter = false;
-		float delimiter_height;
+      float delimiter_height = 0.f;
 		bounding_box_t bounding_box_delimiter_left(0, 0, 0, 0, 0, 0);
 		bounding_box_t bounding_box_delimiter_right(0, 0, 0, 0, 0, 0);
 
@@ -494,9 +494,9 @@ namespace mathtext {
 	math_tokenize(const math_text_t::atom_t &atom,
 				  const unsigned int style)
 	{
-		const float size = style_size(style);
+      const float size = style_size(style);
 		std::vector<math_text_renderer_t::math_token_t> token_list;
-		bounding_box_t nucleus_bounding_box;
+      bounding_box_t nucleus_bounding_box;
 		float current_x = 0;
 		float nucleus_shift_up = 0;
 

@@ -33,7 +33,7 @@ namespace mathtext {
 	private:
 		float _x[2];
 	public:
-		inline point_t(void)
+      inline point_t(void) : _x()
 		{
 		}
 		inline point_t(const point_t &point)
@@ -288,7 +288,7 @@ namespace mathtext {
 		float _advance;
 		float _italic_correction;
 	public:
-		inline bounding_box_t(void)
+      inline bounding_box_t(void) : _lower_left(), _upper_right(), _advance(), _italic_correction()
 		{
 		}
 		inline bounding_box_t(
