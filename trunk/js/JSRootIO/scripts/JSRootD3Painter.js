@@ -5,7 +5,7 @@
 
 // The "source_dir" variable is defined in JSRootInterface.js
 
-var d, key_tree, x_scale, y_scale;
+var d_tree, key_tree;
 
 var kWhite = 0, kBlack = 1, kGray = 920, kRed = 632, kGreen = 416, kBlue = 600,
     kYellow = 400, kMagenta = 616, kCyan = 432, kOrange = 800, kSpring = 820,
@@ -414,6 +414,68 @@ function format_id(id) {
    return g_id;
 };
 
+/*
+    Polyfill for touch dblclick
+    http://mckamey.mit-license.org
+*/
+function doubleTap(elem, speed, distance) {
+   if (!('ontouchstart' in elem)) {
+      // non-touch has native dblclick and no need for polyfill
+      return;
+   }
+   // default dblclick speed to half sec
+   speed = Math.abs(+speed) || 500;//ms
+   // default dblclick distance to within 40x40 area
+   distance = Math.abs(+distance) || 40;//px
+
+   var taps, x, y;
+   var reset = function() {
+      // reset state
+      taps = 0;
+      x = NaN;
+      y = NaN;
+   };
+   reset();
+
+   elem.addEventListener('touchstart', function(e) {
+      var touch = e.changedTouches[0] || {}, oldX = x, oldY = y;
+
+      taps++;
+      x = +touch.pageX || +touch.clientX || +touch.screenX;
+      y = +touch.pageY || +touch.clientY || +touch.screenY;
+
+      // NaN will always be false
+      if (Math.abs(oldX-x) < distance && Math.abs(oldY-y) < distance) {
+         // fire dblclick event
+         var e2 = document.createEvent('MouseEvents');
+         if (e2.initMouseEvent) {
+             e2.initMouseEvent(
+                 'dblclick',
+                 true,                   // dblclick bubbles
+                 true,                   // dblclick cancelable
+                 e.view,                 // copy view
+                 taps,                   // click count
+                 touch.screenX,          // copy coordinates
+                 touch.screenY,
+                 touch.clientX,
+                 touch.clientY,
+                 e.ctrlKey,              // copy key modifiers
+                 e.altKey,
+                 e.shiftKey,
+                 e.metaKey,
+                 e.button,               // copy button 0: left, 1: middle, 2: right
+                 touch.target);          // copy target
+         }
+         elem.dispatchEvent(e2);
+      }
+      setTimeout(reset, speed);
+   }, false);
+
+   elem.addEventListener('touchmove', function(e) {
+      reset();
+   }, false);
+};
+
 (function(){
 
    if (typeof JSROOTPainter == 'object'){
@@ -450,9 +512,9 @@ function format_id(id) {
       'bold oblique Courier New', 'Symbol', 'Times New Roman',
       'Wingdings', 'Symbol');
 
-   var root_line_styles = new Array("", "", "12, 12", "4, 8", "12, 16, 4, 16",
-         "20, 12, 4, 12", "20, 12, 4, 12, 4, 12, 4, 12", "20, 20",
-         "20, 12, 4, 12, 4, 12", "80, 20", "80, 40, 4, 40", "2, 4");
+   var root_line_styles = new Array("", "", "3, 3", "1, 2", "3, 4, 1, 4",
+         "5, 3, 1, 3", "5, 3, 1, 3, 1, 3, 1, 3", "5, 5",
+         "5, 3, 1, 3, 1, 3", "20, 5", "20, 10, 1, 10", "1, 1");
 
    JSROOTPainter = {};
 
@@ -723,10 +785,13 @@ function format_id(id) {
 
    JSROOTPainter.addInteraction = function(vis, obj) {
       var width = vis.attr("width"), height = vis.attr("height");
+      var e, origin, rect;
+      doubleTap(vis[0][0]);
 
       if (typeof(vis['objects']) === 'undefined')
          vis['objects'] = new Array();
       vis['objects'].push(obj);
+
       function refresh() {
          if (vis.x_axis && vis.y_axis) {
             vis.select(".xaxis").call(vis.x_axis);
@@ -747,67 +812,82 @@ function format_id(id) {
          }
       };
       var zoom = d3.behavior.zoom().x(obj.x).y(obj.y).on("zoom", refresh());
-      vis.on("mousedown", function() {
+      vis.on("touchstart", startRectSel);
+      vis.on("mousedown", startRectSel);
+
+      function startRectSel() {
+         d3.event.preventDefault();
          vis.select("#zoom_rect").remove();
-         var e = this, origin = d3.mouse(e),
-             rect = vis.append("rect").attr("class", "zoom").attr("id", "zoom_rect");
+         e = this;
+         var t = d3.event.changedTouches;
+         origin = t ? d3.touches(e, t)[0] : d3.mouse(e);
+         rect = vis.append("rect").attr("class", "zoom").attr("id", "zoom_rect");
          d3.select("body").classed("noselect", true);
+         d3.select("body").style("-webkit-user-select", "none");
          origin[0] = Math.max(0, Math.min(width, origin[0]));
          origin[1] = Math.max(0, Math.min(height, origin[1]));
-         vis.on("dblclick", function() {
-         //d3.select(window)
-         //  .on("dblclick", function() {
-            var xmin = vis['objects'][0]['x_min'],
-                xmax = vis['objects'][0]['x_max'],
-                ymin = vis['objects'][0]['y_min'],
-                ymax = vis['objects'][0]['y_max'];
+         vis.on("dblclick", unZoom);
+         d3.select(window)
+            .on("mousemove.zoomRect", moveRectSel)
+            .on("mouseup.zoomRect", endRectSel, true);
+         d3.select(window)
+            .on("touchmove.zoomRect", moveRectSel)
+            .on("touchend.zoomRect", endRectSel, true);
+         d3.event.stopPropagation();
+      };
+
+      function unZoom() {
+         d3.event.preventDefault();
+         var xmin = vis['objects'][0]['x_min'],
+             xmax = vis['objects'][0]['x_max'],
+             ymin = vis['objects'][0]['y_min'],
+             ymax = vis['objects'][0]['y_max'];
+         for (var i=0;i<vis['objects'].length;++i) {
+            zoom.x(vis['objects'][i].x.domain([xmin, xmax]))
+                .y(vis['objects'][i].y.domain([ymin, ymax]));
+         }
+         refresh();
+      };
+
+      function moveRectSel() {
+         d3.event.preventDefault();
+         var t = d3.event.changedTouches;
+         var m = t ? d3.touches(e, t)[0] : d3.mouse(e);
+         m[0] = Math.max(0, Math.min(width, m[0]));
+         m[1] = Math.max(0, Math.min(height, m[1]));
+         rect.attr("x", Math.min(origin[0], m[0]))
+             .attr("y", Math.min(origin[1], m[1]))
+             .attr("width", Math.abs(m[0] - origin[0]))
+             .attr("height", Math.abs(m[1] - origin[1]));
+      };
+
+      function endRectSel() {
+         d3.event.preventDefault();
+         d3.select(window).on("touchmove.zoomRect", null).on("touchend.zoomRect", null);
+         d3.select(window).on("mousemove.zoomRect", null).on("mouseup.zoomRect", null);
+         d3.select("body").classed("noselect", false);
+         var t = d3.event.changedTouches;
+         var m = t ? d3.touches(e, t)[0] : d3.mouse(e);
+         m[0] = Math.max(0, Math.min(width, m[0]));
+         m[1] = Math.max(0, Math.min(height, m[1]));
+         if (Math.abs(m[0] - origin[0]) > 10 && Math.abs(m[1] - origin[1]) > 10) {
+            var xmin = Math.min(vis['objects'][0].x.invert(origin[0]),
+                                vis['objects'][0].x.invert(m[0])),
+                xmax = Math.max(vis['objects'][0].x.invert(origin[0]),
+                                vis['objects'][0].x.invert(m[0])),
+                ymin = Math.min(vis['objects'][0].y.invert(origin[1]),
+                                vis['objects'][0].y.invert(m[1])),
+                ymax = Math.max(vis['objects'][0].y.invert(origin[1]),
+                                vis['objects'][0].y.invert(m[1]));
             for (var i=0;i<vis['objects'].length;++i) {
                zoom.x(vis['objects'][i].x.domain([xmin, xmax]))
                    .y(vis['objects'][i].y.domain([ymin, ymax]));
             }
-            refresh();
-           });
-         d3.select(window)
-           .on("mousemove.zoomRect", function() {
-               var m = d3.mouse(e);
-               m[0] = Math.max(0, Math.min(width, m[0]));
-               m[1] = Math.max(0, Math.min(height, m[1]));
-               rect.attr("x", Math.min(origin[0], m[0]))
-                   .attr("y", Math.min(origin[1], m[1]))
-                   .attr("width", Math.abs(m[0] - origin[0]))
-                   .attr("height", Math.abs(m[1] - origin[1]));
-            })
-            .on("mouseup.zoomRect", function() {
-               d3.select(window).on("mousemove.zoomRect", null).on("mouseup.zoomRect", null);
-               d3.select("body").classed("noselect", false);
-               var m = d3.mouse(e);
-               m[0] = Math.max(0, Math.min(width, m[0]));
-               m[1] = Math.max(0, Math.min(height, m[1]));
-               if (m[0] !== origin[0] && m[1] !== origin[1]) {
-                  /* for (var i=0;i<vis['objects'].length;++i) {
-                     zoom.x(vis['objects'][i].x.domain([origin[0], m[0]]
-                              .map(vis['objects'][i].x.invert).sort(d3.ascending)))
-                         .y(vis['objects'][i].y.domain([origin[1], m[1]]
-                              .map(vis['objects'][i].y.invert).sort(d3.ascending)));
-                  } */
-                  var xmin = Math.min(vis['objects'][0].x.invert(origin[0]),
-                                      vis['objects'][0].x.invert(m[0])),
-                      xmax = Math.max(vis['objects'][0].x.invert(origin[0]),
-                                      vis['objects'][0].x.invert(m[0])),
-                      ymin = Math.min(vis['objects'][0].y.invert(origin[1]),
-                                      vis['objects'][0].y.invert(m[1])),
-                      ymax = Math.max(vis['objects'][0].y.invert(origin[1]),
-                                      vis['objects'][0].y.invert(m[1]));
-                  for (var i=0;i<vis['objects'].length;++i) {
-                     zoom.x(vis['objects'][i].x.domain([xmin, xmax]))
-                         .y(vis['objects'][i].y.domain([ymin, ymax]));
-                  }
-               }
-               rect.remove();
-               refresh();
-            }, true);
-         d3.event.stopPropagation();
-      });
+         }
+         rect.remove();
+         refresh();
+         d3.select("body").style("-webkit-user-select", "auto");
+      };
    };
 
    JSROOTPainter.createCanvas = function(element, idx) {
@@ -1051,7 +1131,7 @@ function format_id(id) {
             .tickSize(-xDivLength, -xDivLength/2, -xDivLength/4)
             .tickFormat(function(d,i) {
                if (histo['fXaxis']['fTimeDisplay']) return dfx;
-               return d;
+               return parseFloat(d.toPrecision(12));
             })
             .ticks(n1ax);
       }
@@ -1114,7 +1194,7 @@ function format_id(id) {
             .tickSize(-yDivLength, -yDivLength/2, -yDivLength/4)
             .tickFormat(function(d,i) {
                if (histo['fYaxis']['fTimeDisplay']) return dfy;
-               return d;
+               return parseFloat(d.toPrecision(12));
             })
             .ticks(n1ay);
       }
@@ -1392,13 +1472,13 @@ function format_id(id) {
 
          /* X-axis */
          var x_axis = d3.svg.axis()
-             .scale(x)
-             .orient("bottom")
-             .tickPadding(5)
-             .tickSubdivide(5)
-             .tickSize(-0.03 * h, -0.03 * h / 2, null)
-             .tickFormat(function(d,i) { return d; })
-             .ticks(10);
+            .scale(x)
+            .orient("bottom")
+            .tickPadding(5)
+            .tickSubdivide(5)
+            .tickSize(-0.03 * h, -0.03 * h / 2, null)
+            .tickFormat(function(d,i) { return parseFloat(d.toPrecision(12)); })
+            .ticks(10);
 
          /* Y-axis minor ticks */
          var y_axis = d3.svg.axis()
@@ -1407,7 +1487,7 @@ function format_id(id) {
             .tickPadding(5)
             .tickSubdivide(5)
             .tickSize(-0.03 * w, -0.03 * w / 2, null)
-            .tickFormat(function(d,i) { return d; })
+            .tickFormat(function(d,i) { return parseFloat(d.toPrecision(12)); })
             .ticks(10);
 
          var xax = frame.append("svg:g")
@@ -1430,6 +1510,16 @@ function format_id(id) {
                .attr("font-family", "Arial")
                .attr("font-size", font_size)
                .text(func['fTitle']);
+/*
+            // foreign html objects don't work on IE, and not properly on FF... :-(
+            vis.append("foreignObject")
+               .attr("y", 0.05 * vis.attr("height"))
+               .attr("width", vis.attr("width"))
+               .attr("height", 100)
+            .append("xhtml:body")
+               .style("font", "14px 'Helvetica'")
+               .html("<h3><center>An HTML Foreign Object in SVG <font face='Symbol' color='green'>abCDEFG!</font></center></h3>");
+*/
          }
 
          xax.selectAll("text").attr("font-size", label_font_size);
@@ -2183,7 +2273,7 @@ function format_id(id) {
 
    JSROOTPainter.drawObject = function(obj, idx) {
       var i, svg = null;
-      function draw() {
+      function draw(init) {
 
          var render_to = '#histogram' + idx;
          $(render_to).empty();
@@ -2193,9 +2283,10 @@ function format_id(id) {
          }
          if (obj['_typename'].match(/\bTCanvas/)) {
             svg = JSROOTPainter.drawCanvas(obj, idx);
+            if (init == true)
+               window.setTimeout(function() { $(render_to)[0].scrollIntoView(); }, 50);
             return;
          }
-
          svg = JSROOTPainter.createCanvas($(render_to), idx);
          if (svg == null) return false;
          if (obj['_typename'].match(/\bTH1/)) {
@@ -2216,6 +2307,8 @@ function format_id(id) {
          else if (obj['_typename'] == 'JSROOTIO.TMultiGraph') {
             JSROOTPainter.drawMultiGraph(svg, null, obj, null);
          }
+         if (init == true)
+            window.setTimeout(function() { $(render_to)[0].scrollIntoView(); }, 50);
       };
       //A better idom for binding with resize is to debounce
       var debounce = function(fn, timeout) {
@@ -2227,10 +2320,9 @@ function format_id(id) {
             timeoutID = window.setTimeout(fn, timeout);
          }
       };
-      var debounced_draw = debounce(function() { draw(); }, 125);
-      var initial_draw = debounce(function() { draw(); }, 25);
+      var debounced_draw = debounce(function() { draw(false); }, 100);
       $(window).resize(debounced_draw);
-      initial_draw();
+      draw(true);
    };
 
    JSROOTPainter.drawPad = function(vis, pad) {
@@ -3022,10 +3114,10 @@ function format_id(id) {
    JSROOTPainter.displayStreamerInfos = function(streamerInfo, container) {
 
       delete d;
-      var content = "<p><a href='javascript: d.openAll();'>open all</a> | <a href='javascript: d.closeAll();'>close all</a></p>";
-      d = new dTree('d');
-      d.config.useCookies = false;
-      d.add(0, -1, 'Streamer Infos');
+      var content = "<p><a href='javascript: d_tree.openAll();'>open all</a> | <a href='javascript: d_tree.closeAll();'>close all</a></p>";
+      d_tree = new dTree('d_tree');
+      d_tree.config.useCookies = false;
+      d_tree.add(0, -1, 'Streamer Infos');
 
       var k = 1;
       var pid = 0;
@@ -3033,39 +3125,39 @@ function format_id(id) {
       var key;
       for (key in streamerInfo) {
          var entry = streamerInfo[key]['name'];
-         d.add(k, 0, entry); k++;
+         d_tree.add(k, 0, entry); k++;
       }
       var j=0;
       for (key in streamerInfo) {
          if (typeof(streamerInfo[key]['checksum']) != 'undefined')
-            d.add(k, j+1, 'Checksum: ' + streamerInfo[key]['checksum']); ++k;
+            d_tree.add(k, j+1, 'Checksum: ' + streamerInfo[key]['checksum']); ++k;
          if (typeof(streamerInfo[key]['classversion']) != 'undefined')
-            d.add(k, j+1, 'Class Version: ' + streamerInfo[key]['classversion']); ++k;
+            d_tree.add(k, j+1, 'Class Version: ' + streamerInfo[key]['classversion']); ++k;
          if (typeof(streamerInfo[key]['title']) != 'undefined')
-            d.add(k, j+1, 'Title: ' + streamerInfo[key]['title']); ++k;
+            d_tree.add(k, j+1, 'Title: ' + streamerInfo[key]['title']); ++k;
          if (typeof(streamerInfo[key]['elements']) != 'undefined') {
-            d.add(k, j+1, 'Elements'); pid=k; ++k;
+            d_tree.add(k, j+1, 'Elements'); pid=k; ++k;
             for (var l=0; l<streamerInfo[key]['elements']['array'].length; ++l) {
                if (typeof(streamerInfo[key]['elements']['array'][l]['element']) != 'undefined') {
-                  d.add(k, pid, streamerInfo[key]['elements']['array'][l]['element']['name']); cid=k; ++k;
-                  d.add(k, cid, streamerInfo[key]['elements']['array'][l]['element']['title']); ++k;
-                  d.add(k, cid, streamerInfo[key]['elements']['array'][l]['element']['typename']); ++k;
+                  d_tree.add(k, pid, streamerInfo[key]['elements']['array'][l]['element']['name']); cid=k; ++k;
+                  d_tree.add(k, cid, streamerInfo[key]['elements']['array'][l]['element']['title']); ++k;
+                  d_tree.add(k, cid, streamerInfo[key]['elements']['array'][l]['element']['typename']); ++k;
                }
                else if (typeof(streamerInfo[key]['elements']['array'][l]['name']) != 'undefined') {
-                  d.add(k, pid, streamerInfo[key]['elements']['array'][l]['name']); cid=k; ++k;
-                  d.add(k, cid, streamerInfo[key]['elements']['array'][l]['title']); ++k;
-                  d.add(k, cid, streamerInfo[key]['elements']['array'][l]['typename']); ++k;
+                  d_tree.add(k, pid, streamerInfo[key]['elements']['array'][l]['name']); cid=k; ++k;
+                  d_tree.add(k, cid, streamerInfo[key]['elements']['array'][l]['title']); ++k;
+                  d_tree.add(k, cid, streamerInfo[key]['elements']['array'][l]['typename']); ++k;
                }
             }
          }
          else if (typeof(streamerInfo[key]['array']) != 'undefined') {
             for (var l=0; l<streamerInfo[key]['array'].length; ++l) {
-               d.add(k, j+1, streamerInfo[key]['array'][l]['str']); ++k;
+               d_tree.add(k, j+1, streamerInfo[key]['array'][l]['str']); ++k;
             }
          }
          ++j;
       }
-      content += d;
+      content += d_tree;
       $(container).html(content);
    };
 
@@ -3084,6 +3176,8 @@ function format_id(id) {
       +"  stroke: steelblue;\n"
       +"  fill-opacity: 0.1;\n"
       +"}\n"
+      /* Correct overflow not hidden in IE9 */
+      +"svg:not(:root) { overflow: hidden; }\n"
       +"</style>\n";
    $(style).prependTo("body");
 

@@ -167,7 +167,6 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-#include "Shadow.h"
 #include "cintdictversion.h"
 #include "FastAllocString.h"
 #include "cling/Interpreter/Interpreter.h"
@@ -459,6 +458,15 @@ vector<RConstructorType> gIoConstructorTypes;
 void AddConstructorType(const char *arg)
 {
    if (arg) gIoConstructorTypes.push_back(RConstructorType(arg));
+}
+
+const clang::DeclContext *R__GetEnclosingSpace(const clang::RecordDecl &cl)
+{
+   const clang::DeclContext *ctxt = cl.getDeclContext();
+   while(ctxt && !ctxt->isNamespace()) {
+      ctxt = ctxt->getParent();
+   }
+   return ctxt;
 }
 
 bool ClassInfo__HasMethod(const clang::RecordDecl *cl, const char* name) 
@@ -932,7 +940,7 @@ bool InheritsFromTSelector(const clang::RecordDecl *cl)
    return R__IsBase(llvm::dyn_cast<clang::CXXRecordDecl>(cl), TObject_decl);
 }
 
-bool IsStdClass(const clang::CXXRecordDecl &cl)
+bool IsStdClass(const clang::RecordDecl &cl)
 {
    // Return true, if the decl is part of the std namespace.
 
@@ -955,10 +963,16 @@ void R__GetName(std::string &qual_name, const clang::NamedDecl *cl)
    cl->getNameForDiagnostic(qual_name,cl->getASTContext().getPrintingPolicy(),false); // qual_name = N->getQualifiedNameAsString();
 }
 
-inline bool R__IsTemplate(const clang::CXXRecordDecl *cl)
+inline bool R__IsTemplate(const clang::Decl &cl)
 {
-   return cl->getTemplateSpecializationKind() != clang::TSK_Undeclared;
+   return (cl.getKind() == clang::Decl::ClassTemplatePartialSpecialization
+           || cl.getKind() == clang::Decl::ClassTemplateSpecialization);
 }
+
+//inline bool R__IsTemplate(const clang::CXXRecordDecl *cl)
+//{
+//   return cl->getTemplateSpecializationKind() != clang::TSK_Undeclared;
+//}
 
 bool R__IsSelectionXml(const char *filename)
 {
@@ -1509,79 +1523,6 @@ bool CheckInputOperator(const clang::RecordDecl *cl, int dicttype)
    return has_input_error;
 }
 
-string FixSTLName(const string& cintName) {
-
-   const char *s = cintName.c_str();
-   char type[kMaxLen];
-   strlcpy(type, s,kMaxLen);
-
-#if 0 // (G__GNUC<3) && !defined (G__KCC)
-   if (!strncmp(type, "vector",6)   ||
-       !strncmp(type, "list",4)     ||
-       !strncmp(type, "deque",5)    ||
-       !strncmp(type, "map",3)      ||
-       !strncmp(type, "multimap",8) ||
-       !strncmp(type, "set",3)      ||
-       !strncmp(type, "multiset",8) ) {
-
-      // we need to remove this type of construct ",__malloc_alloc_template<0>"
-      // in case of older gcc
-      string result;
-      unsigned int i;
-      unsigned int start;
-      unsigned int next = 0;
-      unsigned int nesting = 0;
-      unsigned int end;
-      const string toReplace = "__malloc_alloc_template<0>";
-      const string replacement = "alloc";
-      for(i=0; i<cintName.length(); i++) {
-         switch (cintName[i]) {
-         case '<':
-            if (nesting==0) {
-               start = next;
-               next = i+1;
-               end = i;
-               result += cintName.substr(start,end-start);
-               result += "< ";
-            }
-            nesting++;
-            break;
-         case '>':
-            nesting--;
-            if (nesting==0) {
-               start = next;
-               next = i+1;
-               end = i;
-               string param = cintName.substr(start,end-start-1); // the -1 removes the space we know is there
-               if (param==toReplace) {
-                  result += replacement;
-               } else {
-                  result += FixSTLName(param);
-               }
-               result += " >";
-            }
-            break;
-         case ',':
-            if (nesting==1) {
-               start = next;
-               next = i+1;
-               end = i;
-               string param = cintName.substr(start,end-start);
-               if (param==toReplace) {
-                  result += replacement;
-               } else {
-                  result += FixSTLName(param);
-               }
-               result += ',';
-            }
-         }
-      }
-      return result;
-   }
-#endif
-   return cintName;
-}
-
 //______________________________________________________________________________
 bool CheckClassDef(const clang::RecordDecl *cl)
 {
@@ -1686,20 +1627,6 @@ bool HasResetAfterMerge(const clang::CXXRecordDecl *cl)
 }
 
 //______________________________________________________________________________
-int GetClassVersion(G__ClassInfo &cl)
-{
-   // Return the version number of the class or -1
-   // if the function Class_Version does not exist.
-
-   if (!cl.HasMethod("Class_Version")) return -1;
-
-   const char *function = "::Class_Version()";
-   string funcname = GetLong64_Name( cl.Fullname() ) + function;
-   int version = (int)G__int(G__calc(funcname.c_str()));
-   return version;
-}
-
-//______________________________________________________________________________
 int GetClassVersion(const clang::RecordDecl *cl)
 {
    // Return the version number of the class or -1
@@ -1779,40 +1706,32 @@ string GetNonConstMemberName(const clang::FieldDecl &m, const string &prefix = "
 }
 
 //______________________________________________________________________________
-bool NeedShadowClass(G__ClassInfo& cl)
+bool NeedShadowClass(const RScanner::AnnotatedRecordDecl &cl_input)
 {
-   if (G__ShadowMaker::IsStdPair(cl)) return true;
-   if (G__ShadowMaker::IsSTLCont(cl.Name())) return false;
-   if (strcmp(cl.Name(),"string") == 0 ) return false;
-
-   if (strcmp(cl.Name(),"complex<float>") == 0 || strcmp(cl.Name(),"complex<double>") == 0) return true;
-
-   if (cl.FileName() && !strncmp(cl.FileName(),"prec_stl",8)) {
-      // Allow I/O for auto_ptr ...
-      if (strncmp(cl.Name(),"auto_ptr<",strlen("auto_ptr<"))==0) return true;
-      return false;
+   if (IsStdClass(*cl_input.GetRecordDecl())) {
+      // getName() return the template name without argument!
+      llvm::StringRef name = (*cl_input).getName();
+      
+      if (name == "pair") return true;
+      if (name == "complex") return true;
+      if (name == "auto_ptr") return true;
+      if (STLKind(name.str().c_str())) return false;
+      if (name == "string" || name == "basic_string") return false;
    }
+   
    // This means templated classes hiding members won't have
-   // a proper shadow class, and the use has no change of
-   // vetoring a shadow, as we need it for ShowMembers :-/
-   if (cl.HasMethod("ShowMembers"))
-      return dict_type == kDictTypeReflex || cl.IsTmplt();
+   // a proper shadow class, and the user has no chance of
+   // veto-ing a shadow, as we need it for ShowMembers :-/
+   if (ClassInfo__HasMethod(cl_input,"ShowMembers"))
+      return dict_type == kDictTypeReflex || R__IsTemplate(*cl_input);
 
    // no streamer, no shadow
-   if (cl.RootFlag() == G__NOSTREAMER) return false;
+   if (cl_input.RequestNoStreamer()) return false;
 
    if (dict_type == kDictTypeReflex) return true;
-
-   return ((cl.RootFlag() & G__USEBYTECOUNT));
+   
+   return (cl_input.RequestStreamerInfo());
 }
-
-//______________________________________________________________________________
-bool NeedTypedefShadowClass(G__ClassInfo& cl)
-{
-   // shadow class is a typedef if the class has a ClassDef, and is not a templated class
-   return (cl.HasMethod("Class_Name") && !cl.IsTmplt());
-}
-
 
 //______________________________________________________________________________
 bool NeedTemplateKeyword(const clang::CXXRecordDecl *cl)
@@ -2096,7 +2015,7 @@ bool IsTemplateFloat16(const RScanner::AnnotatedRecordDecl &cl)
 
 #if KEEP_UNTIL_WE_RESOLVE_THE_TYPEDEF_AND_TEMPLATE_ISSUE
    // Return true if any of the argument is or contains a Float16.
-   if (!clinfo.IsTmplt()) return false;
+   if (!R__IsTemplate(*cl)) return false;
    
    static G__TypeInfo ti;
    char *current, *next;
@@ -2349,92 +2268,6 @@ bool IsStreamableObject(const clang::FieldDecl &m)
 }
 
 //______________________________________________________________________________
-G__TypeInfo &TemplateArg(G__DataMemberInfo &m, int count = 0)
-{
-   // Returns template argument. When count = 0 return first argument,
-   // 1 second, etc.
-
-   static G__TypeInfo ti;
-   char *current, *next;
-   G__FastAllocString arg( m.Name() );
-
-   arg = m.Type()->TmpltArg();
-   // arg is now a comma separated list of type names, and we want
-   // to return the 'count+1'-th element in the list.
-   int len = strlen(arg);
-   int nesting = 0;
-   int i = 0;
-   current = 0;
-   next = &(arg[0]);
-   for (int c = 0; c<len && i<=count; c++) {
-      switch (arg[c]) {
-      case '<':
-         nesting++; break;
-      case '>':
-         nesting--; break;
-      case ',':
-         if (nesting==0) {
-            arg[c]=0;
-            i++;
-            current = next;
-            next = &(arg[c+1]);
-         }
-         break;
-      }
-   }
-   if (current) ti.Init(current);
-
-   return ti;
-}
-
-//______________________________________________________________________________
-G__TypeInfo &TemplateArg(G__BaseClassInfo &m, int count = 0)
-{
-   // Returns template argument. When count = 0 return first argument,
-   // 1 second, etc.
-
-   static G__TypeInfo ti;
-   char *current, *next;
-   G__FastAllocString arg( m.Name() );
-
-   // arg is now is the name of class template instantiation.
-   // We first need to find the start of the list of its template arguments
-   // then we have a comma separated list of type names.  We want to return
-   // the 'count+1'-th element in the list.
-   int len = strlen(arg);
-   int nesting = 0;
-   int i = 0;
-   current = 0;
-   next = &(arg[0]);
-   for (int c = 0; c<len && i<=count; c++) {
-      switch (arg[c]) {
-      case '<':
-         if (nesting==0) {
-            arg[c]=0;
-            current = next;
-            next = &(arg[c+1]);
-         }
-         nesting++;
-         break;
-      case '>':
-         nesting--;
-         break;
-      case ',':
-         if (nesting==1) {
-            arg[c]=0;
-            i++;
-            current = next;
-            next = &(arg[c+1]);
-         }
-         break;
-      }
-   }
-   if (current) ti.Init(current);
-
-   return ti;
-}
-
-//______________________________________________________________________________
 void WriteAuxFunctions(const RScanner::AnnotatedRecordDecl &cl)
 {
    // Write the functions that are need for the TGenericClassInfo.
@@ -2541,187 +2374,6 @@ void WriteAuxFunctions(const RScanner::AnnotatedRecordDecl &cl)
       << "   }" << std::endl;
    }
    (*dictSrcOut) << "} // end of namespace ROOT for class " << classname.c_str() << std::endl << std::endl;
-}
-
-//______________________________________________________________________________
-void WriteStringOperators(FILE *fd)
-{
-   // Write static ANSI C++ string to TBuffer operators.
-
-   fprintf(fd, "//_______________________________________");
-   fprintf(fd, "_______________________________________\n");
-   fprintf(fd, "static TBuffer &operator>>(TBuffer &b, string &s)\n{\n");
-   fprintf(fd, "   // Reading string object.\n\n");
-   fprintf(fd, "   R__ASSERT(b.IsReading());\n");
-   fprintf(fd, "   char ch;\n");
-   fprintf(fd, "   do {\n");
-   fprintf(fd, "      b >> ch;\n");
-   fprintf(fd, "      if (ch) s.append(1, ch);\n");
-   fprintf(fd, "   } while (ch != 0);\n");
-   fprintf(fd, "   return b;\n");
-   fprintf(fd, "}\n");
-   fprintf(fd, "//_______________________________________");
-   fprintf(fd, "_______________________________________\n");
-   fprintf(fd, "static TBuffer &operator<<(TBuffer &b, string s)\n{\n");
-   fprintf(fd, "   // Writing string object.\n\n");
-   fprintf(fd, "   R__ASSERT(b.IsWriting());\n");
-   fprintf(fd, "   b.WriteString(s.c_str());\n");
-   fprintf(fd, "   return b;\n");
-   fprintf(fd, "}\n");
-}
-
-//______________________________________________________________________________
-int ElementStreamer(G__TypeInfo &ti, const char *R__t,int rwmode,const char *tcl=0)
-{
-   enum {
-      R__BIT_ISTOBJECT   = 0x10000000,
-      R__BIT_HASSTREAMER = 0x20000000,
-      kBIT_ISSTRING    = 0x40000000
-   };
-   
-   long prop = ti.Property();
-   string tiName(ti.Name());
-   string objType(ShortTypeName(tiName.c_str()));
-   string tiFullname;
-   if (ti.Fullname())
-      tiFullname = ti.Fullname();
-   int isTObj = (ti.IsBase("TObject") || tiFullname == "TObject");
-   int isStre = (ti.HasMethod("Streamer"));
-   
-   long kase = prop & (G__BIT_ISPOINTER|G__BIT_ISFUNDAMENTAL|G__BIT_ISENUM);
-   if (isTObj)              kase |= R__BIT_ISTOBJECT;
-   if (tiName == "string")  kase |= kBIT_ISSTRING;
-   if (tiName == "string*") kase |= kBIT_ISSTRING;
-   if (isStre)              kase |= R__BIT_HASSTREAMER;
-   
-   if (tcl == 0) {
-      tcl = " internal error in rootcint ";
-   }
-   //    if (strcmp(objType,"string")==0) RStl::Instance().GenerateTClassFor( "string", interp, normCtxt  );
-   
-   if (rwmode == 0) {  //Read mode
-      
-      if (R__t) (*dictSrcOut) << "            " << tiName << " " << R__t << ";" << std::endl;
-      switch (kase) {
-            
-         case G__BIT_ISFUNDAMENTAL:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            R__b >> " << R__t << ";" << std::endl;
-            break;
-            
-         case G__BIT_ISPOINTER|R__BIT_ISTOBJECT|R__BIT_HASSTREAMER:
-            if (!R__t)  return 1;
-            (*dictSrcOut) << "            " << R__t << " = (" << tiName << ")R__b.ReadObjectAny(" << tcl << ");"  << std::endl;
-            break;
-            
-         case G__BIT_ISENUM:
-            if (!R__t)  return 0;
-            //             fprintf(fp, "            R__b >> (Int_t&)%s;\n",R__t);
-            // On some platforms enums and not 'Int_t' and casting to a reference to Int_t
-            // induces the silent creation of a temporary which is 'filled' __instead of__
-            // the desired enum.  So we need to take it one step at a time.
-            (*dictSrcOut) << "            Int_t readtemp;" << std::endl
-            << "            R__b >> readtemp;" << std::endl
-            << "            " << R__t << " = static_cast<" << tiName << ">(readtemp);" << std::endl;
-            break;
-            
-         case R__BIT_HASSTREAMER:
-         case R__BIT_HASSTREAMER|R__BIT_ISTOBJECT:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            " << R__t << ".Streamer(R__b);" << std::endl;
-            break;
-            
-         case R__BIT_HASSTREAMER|G__BIT_ISPOINTER:
-            if (!R__t)  return 1;
-            //fprintf(fp, "            fprintf(stderr,\"info is %%p %%d\\n\",R__b.GetInfo(),R__b.GetInfo()?R__b.GetInfo()->GetOldVersion():-1);\n");
-            (*dictSrcOut) << "            if (R__b.GetInfo() && R__b.GetInfo()->GetOldVersion()<=3) {" << std::endl;
-            if (ti.Property() & G__BIT_ISABSTRACT) {
-               (*dictSrcOut) << "               R__ASSERT(0);// " << objType << " is abstract. We assume that older file could not be produced using this streaming method." << std::endl;
-            } else {
-               (*dictSrcOut) << "               " << R__t << " = new " << objType << ";" << std::endl
-               << "               " << R__t << "->Streamer(R__b);" << std::endl;
-            }
-            (*dictSrcOut) << "            } else {" << std::endl
-            << "               " << R__t << " = (" << tiName << ")R__b.ReadObjectAny(" << tcl << ");" << std::endl
-            << "            }" << std::endl;
-            break;
-            
-         case kBIT_ISSTRING:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            {TString R__str;" << std::endl
-            << "             R__str.Streamer(R__b);" << std::endl
-            << "             " << R__t << " = R__str.Data();}" << std::endl;
-            break;
-            
-         case kBIT_ISSTRING|G__BIT_ISPOINTER:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            {TString R__str;"  << std::endl
-            << "             R__str.Streamer(R__b);" << std::endl
-            << "             " << R__t << " = new string(R__str.Data());}" << std::endl;
-            break;
-            
-         case G__BIT_ISPOINTER:
-            if (!R__t)  return 1;
-            (*dictSrcOut) << "            " << R__t << " = (" << tiName << ")R__b.ReadObjectAny(" << tcl << ");" << std::endl;
-            break;
-            
-         default:
-            if (!R__t) return 1;
-            (*dictSrcOut) << "            R__b.StreamObject(&" << R__t << "," << tcl << ");" << std::endl;
-            break;
-      }
-      
-   } else {     //Write case
-      
-      switch (kase) {
-            
-         case G__BIT_ISFUNDAMENTAL:
-         case G__BIT_ISPOINTER|R__BIT_ISTOBJECT|R__BIT_HASSTREAMER:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            R__b << " << R__t << ";" << std::endl;
-            break;
-            
-         case G__BIT_ISENUM:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            {  void *ptr_enum = (void*)&" << R__t << ";\n";
-            (*dictSrcOut) << "               R__b >> *reinterpret_cast<Int_t*>(ptr_enum); }" << std::endl;
-            break;
-            
-         case R__BIT_HASSTREAMER:
-         case R__BIT_HASSTREAMER|R__BIT_ISTOBJECT:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            ((" << objType << "&)" << R__t << ").Streamer(R__b);" << std::endl;
-            break;
-            
-         case R__BIT_HASSTREAMER|G__BIT_ISPOINTER:
-            if (!R__t)  return 1;
-            (*dictSrcOut) << "            R__b.WriteObjectAny(" << R__t << "," << tcl << ");" << std::endl;
-            break;
-            
-         case kBIT_ISSTRING:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            {TString R__str(" << R__t << ".c_str());" << std::endl
-            << "             R__str.Streamer(R__b);};" << std::endl;
-            break;
-            
-         case kBIT_ISSTRING|G__BIT_ISPOINTER:
-            if (!R__t)  return 0;
-            (*dictSrcOut) << "            {TString R__str(" << R__t << "->c_str());" << std::endl
-            << "             R__str.Streamer(R__b);}" << std::endl;
-            break;
-            
-         case G__BIT_ISPOINTER:
-            if (!R__t)  return 1;
-            (*dictSrcOut) << "            R__b.WriteObjectAny(" << R__t << "," << tcl <<");" << std::endl;
-            break;
-            
-         default:
-            if (!R__t)  return 1;
-            (*dictSrcOut) << "            R__b.StreamObject((" << objType << "*)&" << R__t << "," << tcl << ");" << std::endl;
-            break;
-      }
-   }
-   return 0;
 }
 
 //______________________________________________________________________________
@@ -3210,6 +2862,39 @@ void WriteArrayDimensions(const clang::QualType &type)
 }
 
 //______________________________________________________________________________
+int WriteNamespaceHeader(std::ostream &out, const clang::DeclContext *ctxt)
+{
+   // Write all the necessary opening part of the namespace and
+   // return the number of closing brackets needed
+   // For example for Space1::Space2
+   // we write: namespace Space1 { namespace Space2 {
+   // and return 2.
+   
+   int closing_brackets = 0;
+
+   //fprintf(stderr,"DEBUG: in WriteNamespaceHeader for %s with %s\n",
+   //    cl.Fullname(),namespace_obj.Fullname());
+   if (ctxt && ctxt->isNamespace()) {
+      closing_brackets = WriteNamespaceHeader(out,ctxt->getParent());
+      for (int indent = 0; indent < closing_brackets; ++indent) {
+         out << "   ";
+      }
+      const clang::NamespaceDecl *ns = llvm::dyn_cast<clang::NamespaceDecl>(ctxt);
+      out << "namespace " << ns->getNameAsString() << " {" << std::endl;
+      closing_brackets++;
+   }
+   
+   return closing_brackets;
+}
+
+//______________________________________________________________________________
+int WriteNamespaceHeader(std::ostream &out, const clang::RecordDecl &cl)
+{
+   const clang::DeclContext *ctxt = R__GetEnclosingSpace(cl);
+   return WriteNamespaceHeader(out,ctxt);
+}
+
+//______________________________________________________________________________
 void WriteClassFunctions(const clang::CXXRecordDecl *cl)
 {
    // Write the code to set the class name and the initialization object.
@@ -3230,10 +2915,7 @@ void WriteClassFunctions(const clang::CXXRecordDecl *cl)
 
    int enclSpaceNesting = 0;
    if (!nsname.empty()) {
-      G__ShadowMaker nestTempShadowMaker(*dictSrcOut, "");
-      //G__ClassInfo clinfo(cl.GetRequestedName()[0] ? cl.GetRequestedName() : R__GetQualifiedName(cl).c_str());
-      G__ClassInfo clinfo(R__GetQualifiedName(*cl).c_str());
-      enclSpaceNesting = nestTempShadowMaker.WriteNamespaceHeader(clinfo);
+      enclSpaceNesting = WriteNamespaceHeader(*dictSrcOut,*cl);
    }
 
    (*dictSrcOut) << "//_______________________________________"
@@ -3317,7 +2999,7 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
    << "   void " << mappedname.c_str() << "_ShowMembers(void *obj, TMemberInspector &R__insp);"
    << std::endl;
 
-   if (!ClassInfo__HasMethod(cl,"Dictionary") || R__IsTemplate(cl))
+   if (!ClassInfo__HasMethod(cl,"Dictionary") || R__IsTemplate(*cl))
       (*dictSrcOut) << "   static void " << mappedname.c_str() << "_Dictionary();" << std::endl;
 
    if (HasDefaultConstructor(cl,&args)) {
@@ -3426,13 +3108,6 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
 
 
 
-   // Note this is falling back on CINT :(
-   // We need to to go back to CINT to preserve functionality.
-   G__ClassInfo clinfo( cl_input.GetRequestedName()[0] ? cl_input.GetRequestedName() : cl_input.GetNormalizedName() );
-   if (!clinfo.IsValid() && cl_input.GetRequestedName()[0] ) {
-      clinfo.Init(  R__GetQualifiedName(cl_input).c_str() );
-   }
-
    (*dictSrcOut) << "      " << csymbol.c_str() << " *ptr = 0;" << std::endl;
 
    //fprintf(fp, "      static ::ROOT::ClassInfo< %s > \n",classname.c_str());
@@ -3495,14 +3170,14 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
                  << "                  typeid(" << csymbol.c_str() << "), DefineBehavior(ptr, ptr)," << std::endl
                  << "                  ";
    //   fprintf(fp, "                  (::ROOT::ClassInfo< %s >::ShowMembersFunc_t)&::ROOT::ShowMembers,%d);\n", classname.c_str(),cl_input.RootFlag());
-   if (!NeedShadowClass(clinfo)) {
+   if (!NeedShadowClass(cl_input)) {
       if (!ClassInfo__HasMethod(cl,"ShowMembers")) (*dictSrcOut) << "0, ";
    } else {
       if (!ClassInfo__HasMethod(cl,"ShowMembers"))
          (*dictSrcOut) << "&" << mappedname.c_str() << "_ShowMembers, ";
    }
 
-   if (ClassInfo__HasMethod(cl,"Dictionary") && !R__IsTemplate(cl)) {
+   if (ClassInfo__HasMethod(cl,"Dictionary") && !R__IsTemplate(*cl)) {
       (*dictSrcOut) << "&" << csymbol.c_str() << "::Dictionary, ";
    } else {
       (*dictSrcOut) << "&" << mappedname.c_str() << "_Dictionary, ";
@@ -3611,7 +3286,7 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input)
    << "   static ::ROOT::TGenericClassInfo *_R__UNIQUE_(Init) = GenerateInitInstanceLocal((const "
    << csymbol.c_str() << "*)0x0); R__UseDummy(_R__UNIQUE_(Init));" << std::endl;
 
-   if (!ClassInfo__HasMethod(cl,"Dictionary") || R__IsTemplate(cl)) {
+   if (!ClassInfo__HasMethod(cl,"Dictionary") || R__IsTemplate(*cl)) {
       (*dictSrcOut) <<  std::endl << "   // Dictionary for non-ClassDef classes" << std::endl
       << "   static void " << mappedname.c_str() << "_Dictionary() {" << std::endl;
       (*dictSrcOut) << "      ::ROOT::GenerateInitInstanceLocal((const " << csymbol.c_str();
@@ -3871,9 +3546,7 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpr
 
    int enclSpaceNesting = 0;
    if (!nsname.empty()) {
-      G__ClassInfo clinfo(R__GetQualifiedName(cl).c_str());
-      G__ShadowMaker nestTempShadowMaker(*dictSrcOut, "");
-      enclSpaceNesting = nestTempShadowMaker.WriteNamespaceHeader(clinfo);
+      enclSpaceNesting = WriteNamespaceHeader(*dictSrcOut,*cl);
    }
    
    (*dictSrcOut) << "//_______________________________________"
@@ -3992,17 +3665,12 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpr
          if (strstr(type_name.c_str(),"Double32_t")) isDouble32=1;
 
          // No need to test for static, there are not in this list.
-         //   !(m.Property() & G__BIT_ISSTATIC)
-         // No need to test for CINT artifiical members:
-         //   strcmp(m.Name(), "G__virtualinfo")
          if (strncmp(comment, "!", 1)) {
 
             // fundamental type: short, int, long, etc....
             if (underling_type->isFundamentalType() || underling_type->isEnumeralType()) {
                if (type.getTypePtr()->isConstantArrayType() &&
                    type.getTypePtr()->getArrayElementTypeNoTypeQual()->isPointerType() ) 
-//               if (m.Property() & G__BIT_ISARRAY &&
-//                   m.Property() & G__BIT_ISPOINTER) 
                {
                   const clang::ConstantArrayType *arrayType = llvm::dyn_cast<clang::ConstantArrayType>(type.getTypePtr());
                   int s = R__GetFullArrayLength(arrayType);
@@ -4297,9 +3965,7 @@ void WriteAutoStreamer(const RScanner::AnnotatedRecordDecl &cl, const cling::Int
    
    int enclSpaceNesting = 0;
    if (!nsname.empty()) {
-      G__ShadowMaker nestTempShadowMaker(*dictSrcOut, "");
-      G__ClassInfo clinfo(R__GetQualifiedName(cl).c_str());
-      enclSpaceNesting = nestTempShadowMaker.WriteNamespaceHeader(clinfo);
+      enclSpaceNesting = WriteNamespaceHeader(*dictSrcOut,*cl);
    }
 
    (*dictSrcOut) << "//_______________________________________"
@@ -4391,10 +4057,12 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Inte
 }
 
 //______________________________________________________________________________
-void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
+void WriteBodyShowMembers(const RScanner::AnnotatedRecordDecl &cl, bool outside)
 {
-   string csymbol = cl.Fullname();
-   if ( ! TClassEdit::IsStdClass( csymbol.c_str() ) ) {
+   string csymbol;
+   R__GetQualifiedName(csymbol,*cl);
+
+   if ( ! IsStdClass(*cl) ) {
 
       // Prefix the full class name with '::' except for the STL
       // containers and std::string.  This is to request the
@@ -4403,7 +4071,7 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
    }
 
    std::string getClass;
-   if (cl.HasMethod("IsA") && !outside) {
+   if (ClassInfo__HasMethod(cl,"IsA") && !outside) {
       getClass = csymbol + "::IsA()";
    } else {
       getClass = "::ROOT::GenerateInitInstanceLocal((const ";
@@ -4421,11 +4089,6 @@ void WriteBodyShowMembers(G__ClassInfo& cl, bool outside)
 //______________________________________________________________________________
 void WriteShowMembers(const RScanner::AnnotatedRecordDecl &cl, bool outside = false)
 {
-   G__ClassInfo clinfo(cl.GetRequestedName()[0] ? cl.GetRequestedName() : cl.GetNormalizedName());
-   if (!clinfo.IsValid() && cl.GetRequestedName()[0] ) {
-      clinfo.Init(  R__GetQualifiedName(cl).c_str() );
-   }
-
    const clang::CXXRecordDecl* cxxdecl = llvm::dyn_cast<clang::CXXRecordDecl>(cl.GetRecordDecl());
 
    (*dictSrcOut) << "//_______________________________________";
@@ -4435,35 +4098,39 @@ void WriteShowMembers(const RScanner::AnnotatedRecordDecl &cl, bool outside = fa
    string mappedname;
    TMetaUtils::GetCppName(mappedname, classname.c_str());
 
-   if (outside || clinfo.IsTmplt()) {
+   if (outside || R__IsTemplate(*cl)) {
       (*dictSrcOut) << "namespace ROOT {" << std::endl
 
                     << "   void " << mappedname.c_str() << "_ShowMembers(void *obj, TMemberInspector &R__insp)"
                     << std::endl << "   {" << std::endl;
-      WriteBodyShowMembers(clinfo, outside || clinfo.IsTmplt());
+      WriteBodyShowMembers(cl, outside || R__IsTemplate(*cl));
       (*dictSrcOut) << "   }" << std::endl << std::endl;
       (*dictSrcOut) << "}" << std::endl << std::endl;
    }
 
    if (!outside) {
-      G__ClassInfo ns = clinfo.EnclosingSpace();
-      string clsname = clinfo.Fullname();
+      string clsname;
+      R__GetQualifiedName(clsname,*cl);
+      
+      const clang::DeclContext *ctxt = R__GetEnclosingSpace(*cl);
       string nsname;
-      if (ns.IsValid()) {
-         nsname = ns.Fullname();
-         clsname.erase (0, nsname.size() + 2);
+      if (ctxt) {
+         const clang::NamedDecl *ns = llvm::dyn_cast<clang::NamedDecl>(ctxt);
+         if (ns) {
+            R__GetQualifiedName(nsname,*ns);
+            clsname.erase (0, nsname.size() + 2);
+         }
       }
       bool add_template_keyword = NeedTemplateKeyword(cxxdecl);
       int enclSpaceNesting = 0;
       if (!nsname.empty()) {
-         G__ShadowMaker nestTempShadowMaker(*dictSrcOut, "");
-         enclSpaceNesting = nestTempShadowMaker.WriteNamespaceHeader(clinfo);
+         enclSpaceNesting = WriteNamespaceHeader(*dictSrcOut,*cl);
       }
       if (add_template_keyword) (*dictSrcOut) << "template <> ";
       (*dictSrcOut) << "void " << clsname << "::ShowMembers(TMemberInspector &R__insp)"
                     << std::endl << "{" << std::endl;
-      if (!clinfo.IsTmplt()) {
-         WriteBodyShowMembers(clinfo, outside);
+      if (!R__IsTemplate(*cl)) {
+         WriteBodyShowMembers(cl, outside);
       } else {
          string clnameNoDefArg = GetLong64_Name( cl.GetNormalizedName() );
          string mappednameNoDefArg;
@@ -4509,11 +4176,7 @@ void WriteClassCode(const RScanner::AnnotatedRecordDecl &cl, const cling::Interp
    if (ClassInfo__HasMethod(cl,"ShowMembers")) {
       WriteShowMembers(cl);
    } else {
-      G__ClassInfo clinfo(cl.GetRequestedName()[0] ? cl.GetRequestedName() : cl.GetNormalizedName());
-      if (!clinfo.IsValid() && cl.GetRequestedName()[0] ) {
-         clinfo.Init(  R__GetQualifiedName(cl).c_str() );
-      }
-      if (NeedShadowClass(clinfo)) {
+      if (NeedShadowClass(cl)) {
          WriteShowMembers(cl, true);
       }
    }
@@ -5600,16 +5263,24 @@ int main(int argc, char **argv)
    interp.declare("namespace std {} using namespace std;");
 #ifdef ROOTBUILD
    interp.declare("#include \"include/Rtypes.h\"");
+   interp.declare("#include \"include/TClingRuntime.h\"");
+   interp.declare("#include \"include/TObject.h\"");
 #else
 # ifndef ROOTINCDIR
    interp.declare("#include \"Rtypes.h\"");
+   interp.declare("#include \"TClingRuntime.h\"");
+   interp.declare("#include \"TObject.h\"");
 # else
    interp.declare("#include \"" ROOTINCDIR "/Rtypes.h\"");
+   interp.declare("#include \"" ROOTINCDIR "/TClingRuntime.h\"");
+   interp.declare("#include \"" ROOTINCDIR "/TObject.h\"");
 # endif
 #endif
    gInterp = &interp;
 
-   // For the list to also include string, we have to include it now.
+   
+
+   // For the list of 'opaque' typedef to also include string, we have to include it now.
    interp.declare("#include <string>");
   
    // We are now ready (enough is loaded) to init the list of opaque typedefs.
@@ -6158,10 +5829,6 @@ int main(int argc, char **argv)
       rewind(fpld);
       AddConstructorType("TRootIOCtor");
       AddConstructorType("");
-
-      const char* shadowNSName="ROOT";
-      if (dict_type != kDictTypeCint)
-         shadowNSName = "ROOT::Reflex";
 
       //
       // Loop over all classes and create Streamer() & Showmembers() methods

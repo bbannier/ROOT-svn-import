@@ -27,6 +27,7 @@ namespace clang {
   class CompilerInstance;
   class Decl;
   class DeclContext;
+  class FunctionDecl;
   class NamedDecl;
   class MangleContext;
   class QualType;
@@ -34,8 +35,6 @@ namespace clang {
 }
 
 namespace cling {
-  class CompilationOptions;
-
   namespace runtime {
     namespace internal {
       class DynamicExprInfo;
@@ -44,11 +43,13 @@ namespace cling {
       class LifetimeHandler;
     }
   }
+  class CompilationOptions;
   class ExecutionContext;
   class IncrementalParser;
   class InterpreterCallbacks;
   class LookupHelper;
   class StoredValueRef;
+  class Transaction;
 
   ///\brief Class that implements the interpreter-like behavior. It manages the
   /// incremental compilation.
@@ -210,7 +211,7 @@ namespace cling {
     ///
     ///\returns true if successful otherwise false.
     ///
-    bool RunFunction(llvm::StringRef fname, clang::QualType retType,
+    bool RunFunction(const clang::FunctionDecl* FD, clang::QualType resTy,
                      StoredValueRef* res = 0);
 
     ///\brief Forwards to cling::ExecutionContext::addSymbol.
@@ -426,6 +427,8 @@ namespace cling {
     void setCallbacks(InterpreterCallbacks* C);
     const InterpreterCallbacks* getCallbacks() const {return m_Callbacks.get();}
     InterpreterCallbacks* getCallbacks() { return m_Callbacks.get(); }
+
+    const Transaction* getFirstTransaction() const;
 
     ///\brief Gets the address of an existing global and whether it was JITted.
     ///

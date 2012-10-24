@@ -44,7 +44,8 @@ namespace cling {
   IncrementalParser::IncrementalParser(Interpreter* interp,
                                        int argc, const char* const *argv,
                                        const char* llvmdir):
-    m_Interpreter(interp), m_Consumer(0) {
+    m_Interpreter(interp), m_Consumer(0), m_FirstTransaction(0), 
+    m_LastTransaction(0) {
 
     CompilerInstance* CI
       = CIFactory::createCI(llvm::MemoryBuffer::getMemBuffer("", "CLING"),
@@ -68,10 +69,10 @@ namespace cling {
     // Add transformers to the IncrementalParser, which owns them
     m_TTransformers.push_back(new EvaluateTSynthesizer(&CI->getSema()));
 
-    m_TTransformers.push_back(new DeclExtractor(&getCI()->getSema()));
     m_TTransformers.push_back(new ValuePrinterSynthesizer(&CI->getSema(), 0));
     m_TTransformers.push_back(new ReturnSynthesizer(&CI->getSema()));
     m_TTransformers.push_back(new ASTDumper());
+    m_TTransformers.push_back(new DeclExtractor(&getCI()->getSema()));
 
     m_Parser.reset(new Parser(CI->getPreprocessor(), CI->getSema(),
                               false /*skipFuncBodies*/));
@@ -87,8 +88,13 @@ namespace cling {
      if (hasCodeGenerator()) {
        getCodeGenerator()->ReleaseModule();
      }
-     for (size_t i = 0; i < m_Transactions.size(); ++i)
-       delete m_Transactions[i];
+     const Transaction* T = getFirstTransaction();
+     const Transaction* nextT = 0;
+     while (T) {
+       nextT = T->getNext();
+       delete T;
+       T = nextT;
+     }
 
      for (size_t i = 0; i < m_TTransformers.size(); ++i)
        delete m_TTransformers[i];
@@ -113,7 +119,14 @@ namespace cling {
       return;
     }
 
-    m_Transactions.push_back(NewCurT);
+    if (!m_FirstTransaction) {
+      m_FirstTransaction = NewCurT;
+      m_LastTransaction = NewCurT;
+    }
+    else {
+      m_LastTransaction->setNext(NewCurT);
+      m_LastTransaction = NewCurT;
+    }
   }
 
   void IncrementalParser::endTransaction() const {
