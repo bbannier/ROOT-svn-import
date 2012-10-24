@@ -50,6 +50,7 @@ class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, p
 
 private:
    void Init(Int_t ndim, Double_t* xmin, Double_t* xmax);
+   virtual Double_t ConfigureAndMinimize(Double_t* x, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
 
 protected:
    Double_t*   fMin;         //Lower bounds for the range
