@@ -1106,38 +1106,54 @@ private:
    }
 };
 
-Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter, Bool_t logx) const
+//______________________________________________________________________________
+Double_t* TFn::GetMaximumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
 {
-   return 0.0;
+   // Return the X value corresponding to the maximum value of the function on the [min, max] subdomain
+   // If min, max are not set, the minimization is performed on the whole range
+   // The user is responsible for deleting the array returned
+   Double_t* x = new Double_t[fNdim];
+   ReverseSignTFn reverseSignFunc(const_cast<TFn*>(this));
+   ConfigureAndMinimize(&reverseSignFunc, x, min, max, epsilon, maxiter);   
+   return x;
 }
 
 //______________________________________________________________________________
-Double_t TFn::ConfigureAndMinimize(Double_t* x, Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter, Bool_t logx) const
+Double_t* TFn::GetMinimumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
 {
-   // Return the maximum value of the function
-   // Method:
-   //  First, the grid search is used to bracket the maximum
-   //  with the step size = (xmax-xmin)/fNpx.
-   //  This way, the step size can be controlled via the SetNpx() function.
-   //  If the function is unimodal or if its extrema are far apart, setting
-   //  the fNpx to a small value speeds the algorithm up many times.
-   //  Then, Brent's method is applied on the bracketed interval
-   //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) 
-   //  and absolute (if |x| < 1)  and maxiter (default = 100) controls the maximum number 
-   //  of iteration of the Brent algorithm
-   //  If the flag logx is set the grid search is done in log step size
-   //  This is done automatically if the log scale is set in the current Pad
-   //
-   // NOTE: see also TFn::GetMaximumX and TFn::GetX
+   // Return the X value corresponding to the minimum value of the function on the [min, max] subdomain
+   // If min, max are not set, the minimization is performed on the whole range
+   // The user is responsible for deleting the array returned
+   Double_t* x = new Double_t[fNdim];
+   ConfigureAndMinimize(const_cast<TFn*>(this), x, min, max, epsilon, maxiter);
+   return x;
+}
 
-   Double_t* usedMin; // if the input is not suitable, we bounce back to the object range minimum
-   Double_t* usedMax; // if the input is not suitable, we bounce back to the object range maximum
 
-   if (min == NULL) usedMin = fMin;
-   else usedMin = min;
+//______________________________________________________________________________
+Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+{
+   // Returns the maximum value of the function on the [min, max] subdomain if present, else on the full range
+   ReverseSignTFn reverseSignFunc(const_cast<TFn*>(this));
+   return ConfigureAndMinimize(&reverseSignFunc, NULL, min, max, epsilon, maxiter);
+}
 
-   if (max == NULL) usedMax = fMax;
-   else usedMax = max;
+//______________________________________________________________________________
+Double_t TFn::GetMinimum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+{
+   // Returns the minimum value of the function on the [min, max] subdomain if present, else on the full range
+   return ConfigureAndMinimize(const_cast<TFn*>(this), NULL, min, max, epsilon, maxiter);
+}
+
+
+//______________________________________________________________________________
+Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x, Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+{
+   // Perform a N-dimensional minimization on the ranges min and man with precision epsilon using at most 'maxiter' iterations
+   // The vector 'x' will contain the initial point on input, the minimum point on output;
+
+   if (min == NULL) min = fMin; // if the input is not suitable, we bounce back to the object range minimum
+   if (max == NULL) max = fMax; // if the input is not suitable, we bounce back to the object range maximum
 
    // fix invalid ranges
    for(Int_t i = 0; i < fNdim; ++i) {
@@ -1153,11 +1169,9 @@ Double_t TFn::ConfigureAndMinimize(Double_t* x, Double_t* min, Double_t* max, Do
    ROOT::Math::Minimizer* minimizer = ROOT::Math::Factory::CreateMinimizer(minimizerName, minimizerAlgo);
    R__ASSERT(minimizer != NULL);
 
+   minimizer->SetFunction(*func);
    if(epsilon > 0) minimizer->SetTolerance(epsilon);
    if(maxiter > 0) minimizer->SetMaxFunctionCalls(maxiter);
-
-   ReverseSignTFn reverseSignFunc(const_cast<TFn*>(this));
-   minimizer->SetFunction(reverseSignFunc);
 
    // set minimizer parameters (variables, step size, range)
    for (Int_t i = 0; i < fNdim; ++i) {
@@ -1166,133 +1180,25 @@ Double_t TFn::ConfigureAndMinimize(Double_t* x, Double_t* min, Double_t* max, Do
       // use given argument range to determine the step size or give some value depending on x
       if (max[i] > min[i]) {
          stepSize = (max[i] - min[i]) / 100.0;
-         minimizer->SetLimitedVariable(i, TString::Format("x_%d", i).Data(), x[i], stepSize, min[i], max[i]);
+         minimizer->SetLimitedVariable(i, TString::Format("x[%d]", i).Data(), x[i], stepSize, min[i], max[i]);
       } else {
       // TODO: why? if(std::abs(x[i]) > 1.0)
          stepSize = 0.1 * x[i];
-         minimizer->SetVariable(i, TString::Format("x_%d", i).Data(), x[i], stepSize);
+         minimizer->SetVariable(i, TString::Format("x[%d]", i).Data(), x[i], stepSize);
       }
    }
    delete min; delete max;
 
    // minimize and check success
-   if (!minimizer->Minimize()) Error("GetMaximum", "Error minimizing -(function %s)", GetName());
+   if (!minimizer->Minimize() || !minimizer->X())
+       Error("ConfigureAndMinimize", "Error minimizing function %s", GetName());
 
-   if (minimizer->X()) std::copy( minimizer->X(), minimizer->X() + fNdim, x);
+   if(x != NULL) std::copy( minimizer->X(), minimizer->X() + fNdim, x);
    Double_t funcMin = minimizer->MinValue();
+   
    delete minimizer;
 
-   return -funcMin;
-}
-
-
-//______________________________________________________________________________
-Double_t TFn::GetMaximumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter,Bool_t logx) const
-{
-   // Return the X value corresponding to the maximum value of the function
-   // Method:
-   //  First, the grid search is used to bracket the maximum
-   //  with the step size = (xmax-xmin)/fNpx.
-   //  This way, the step size can be controlled via the SetNpx() function.
-   //  If the function is unimodal or if its extrema are far apart, setting
-   //  the fNpx to a small value speeds the algorithm up many times.
-   //  Then, Brent's method is applied on the bracketed interval
-   //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) 
-   //  and absolute (if |x| < 1)  and maxiter (default = 100) controls the maximum number 
-   //  of iteration of the Brent algorithm
-   //  If the flag logx is set the grid search is done in log step size
-   //  This is done automatically if the log scale is set in the current Pad
-    //
-   // NOTE: see also TFn::GetX
-   // TODO: rethink this
-/* 
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
-
-   if (!logx && gPad != 0) logx = gPad->GetLogx(); 
-
-   ROOT::Math::BrentMinimizer1D bm;
-   GInverseFunc g(this);
-   ROOT::Math::WrappedFunction<GInverseFunc> wf1(g);
-   bm.SetFunction( wf1, xmin, xmax );
-   bm.SetNpx(fNpx);
-   bm.SetLogScan(logx);
-   bm.Minimize(maxiter, epsilon, epsilon );
-   Double_t x;
-   x = bm.XMinimum();
-
-   return x;*/ return 0.0;
-}
-
-
-//______________________________________________________________________________
-Double_t TFn::GetMinimum(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter, Bool_t logx) const
-{
-   // Returns the minimum value of the function on the (xmin, xmax) interval
-   // Method:
-   //  First, the grid search is used to bracket the maximum
-   //  with the step size = (xmax-xmin)/fNpx. This way, the step size
-   //  can be controlled via the SetNpx() function. If the function is
-   //  unimodal or if its extrema are far apart, setting the fNpx to
-   //  a small value speeds the algorithm up many times.
-   //  Then, Brent's method is applied on the bracketed interval
-   //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) 
-   //  and absolute (if |x| < 1)  and maxiter (default = 100) controls the maximum number 
-   //  of iteration of the Brent algorithm
-   //  If the flag logx is set the grid search is done in log step size
-   //  This is done automatically if the log scale is set in the current Pad
-   //
-   // NOTE: see also TFn::GetMaximumX and TFn::GetX
-/*
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
-
-   if (!logx && gPad != 0) logx = gPad->GetLogx(); 
-
-   ROOT::Math::BrentMinimizer1D bm;
-   ROOT::Math::WrappedFunction<const TFn&> wf1(*this);
-   bm.SetFunction( wf1, xmin, xmax );
-   bm.SetNpx(fNpx);
-   bm.SetLogScan(logx);
-   bm.Minimize(maxiter, epsilon, epsilon );
-   Double_t x;
-   x = bm.FValMinimum();
-
-   return x;
-   */ return 0.0;
-}
-
-
-//______________________________________________________________________________
-Double_t TFn::GetMinimumX(Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter, Bool_t logx) const
-{
-   // Returns the X value corresponding to the minimum value of the function
-   // on the (xmin, xmax) interval
-   // Method:
-   //  First, the grid search is used to bracket the maximum
-   //  with the step size = (xmax-xmin)/fNpx. This way, the step size
-   //  can be controlled via the SetNpx() function. If the function is
-   //  unimodal or if its extrema are far apart, setting the fNpx to
-   //  a small value speeds the algorithm up many times.
-   //  Then, Brent's method is applied on the bracketed interval
-   //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) 
-   //  and absolute (if |x| < 1)  and maxiter (default = 100) controls the maximum number 
-   //  of iteration of the Brent algorithm
-   //  If the flag logx is set the grid search is done in log step size
-   //  This is done automatically if the log scale is set in the current Pad
-   //
-   // NOTE: see also TFn::GetX
-/*
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
-
-   ROOT::Math::BrentMinimizer1D bm;
-   ROOT::Math::WrappedFunction<const TFn&> wf1(*this);
-   bm.SetFunction( wf1, xmin, xmax );
-   bm.SetNpx(fNpx);
-   bm.SetLogScan(logx);
-   bm.Minimize(maxiter, epsilon, epsilon );
-   Double_t x;
-   x = bm.XMinimum();
-
-   return x;*/ return 0.0;
+   return funcMin;
 }
 
 /*
