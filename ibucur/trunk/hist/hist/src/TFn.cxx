@@ -404,9 +404,7 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
    // See tutorials: fillrandom, first, fit1, formula1, multifit for real examples.
    fFormula = new TFormula(TString::Format("%s_formula", name).Data(), formula);
    if(!fFormula) {
-      Error(TString::Format(
-         "TFn::TFn(%s) - object created incorrectly because of invalid formula").Data(), name
-      );
+      Error("TFn::TFn(%s) - object created incorrectly because of invalid formula", name);
    } else {
 
       Init(fFormula->GetNdim(), min, max);
@@ -1085,6 +1083,7 @@ void TFn::FixParameter(Int_t ipar, Double_t value)
 
    // TODO: see how to remove the double check for TF1 (it's done in SetParameter too)
    if (ipar < 0 || ipar >= fNpar) return; 
+
    fParams[ipar] = value;
    Update();
 
@@ -1093,8 +1092,27 @@ void TFn::FixParameter(Int_t ipar, Double_t value)
 }
 
 
-//______________________________________________________________________________
+class ReverseSignTFn : public ROOT::Math::IBaseFunctionMultiDim {
+public:   
+   ReverseSignTFn(TFn* func) : fFunc(func) {}
+   virtual ROOT::Math::IBaseFunctionMultiDim* Clone() const {
+      return new ReverseSignTFn(fFunc);
+   }  
+   virtual UInt_t NDim() const { return fFunc->NDim(); }
+private:
+   TFn* fFunc;  
+   virtual Double_t DoEval(const Double_t* x) const {
+      return -(*fFunc)(x);
+   }
+};
+
 Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter, Bool_t logx) const
+{
+   return 0.0;
+}
+
+//______________________________________________________________________________
+Double_t TFn::ConfigureAndMinimize(Double_t* x, Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter, Bool_t logx) const
 {
    // Return the maximum value of the function
    // Method:
@@ -1137,18 +1155,34 @@ Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t m
 
    if(epsilon > 0) minimizer->SetTolerance(epsilon);
    if(maxiter > 0) minimizer->SetMaxFunctionCalls(maxiter);
-/*
-   // need wrapper 
-   GInverseFuncNdim invfunc(this);
-   ROOT::Math::WrappedFunction<GInverseFunc> wf1(g);
-   bm.SetFunction( wf1, xmin, xmax );
-   bm.SetNpx(fNpx);
-   bm.SetLogScan(logx);
-   bm.Minimize(maxiter, epsilon, epsilon );
-   Double_t x;
-   x = - bm.FValMinimum();
 
-   return x;*/ return 0.0;
+   ReverseSignTFn reverseSignFunc(const_cast<TFn*>(this));
+   minimizer->SetFunction(reverseSignFunc);
+
+   // set minimizer parameters (variables, step size, range)
+   for (Int_t i = 0; i < fNdim; ++i) {
+      Double_t stepSize = 0.1;
+
+      // use given argument range to determine the step size or give some value depending on x
+      if (max[i] > min[i]) {
+         stepSize = (max[i] - min[i]) / 100.0;
+         minimizer->SetLimitedVariable(i, TString::Format("x_%d", i).Data(), x[i], stepSize, min[i], max[i]);
+      } else {
+      // TODO: why? if(std::abs(x[i]) > 1.0)
+         stepSize = 0.1 * x[i];
+         minimizer->SetVariable(i, TString::Format("x_%d", i).Data(), x[i], stepSize);
+      }
+   }
+   delete min; delete max;
+
+   // minimize and check success
+   if (!minimizer->Minimize()) Error("GetMaximum", "Error minimizing -(function %s)", GetName());
+
+   if (minimizer->X()) std::copy( minimizer->X(), minimizer->X() + fNdim, x);
+   Double_t funcMin = minimizer->MinValue();
+   delete minimizer;
+
+   return -funcMin;
 }
 
 
