@@ -71,7 +71,8 @@ TClingDataMemberInfo::TClingDataMemberInfo(cling::Interpreter *interp, const cla
 : fInterp(interp), fClassInfo(0), fFirstTime(true), fTitle(""), 
 fSingleDecl(ValD) {
    using namespace llvm;
-   assert(isa<TranslationUnitDecl>(ValD->getDeclContext()) && "Not TU?");
+   assert((isa<TranslationUnitDecl>(ValD->getDeclContext()) || 
+           isa<EnumConstantDecl>(ValD)) && "Not TU?");
    assert((isa<VarDecl>(ValD) || 
            isa<FieldDecl>(ValD) || 
            isa<EnumConstantDecl>(ValD)) &&
@@ -242,33 +243,33 @@ int TClingDataMemberInfo::InternalNext()
 
 long TClingDataMemberInfo::Offset() const
 {
+   using namespace clang;
+
    if (!IsValid()) {
       return -1L;
    }
-   // Sanity check the current data member.
-   clang::Decl::Kind DK = GetDecl()->getKind();
-   if (
-       (DK != clang::Decl::Field) &&
-       (DK != clang::Decl::Var) &&
-       (DK != clang::Decl::EnumConstant)
-       ) {
-      // Error, was not a data member, variable, or enumerator.
-      return -1L;
-   }
-   if (DK == clang::Decl::Field) {
+
+   const Decl *D = GetDecl();
+
+   if (const FieldDecl *FldD = dyn_cast<FieldDecl>(D)) {
       // The current member is a non-static data member.
-      const clang::FieldDecl *FD = llvm::dyn_cast<clang::FieldDecl>(GetDecl());
-      clang::ASTContext &Context = FD->getASTContext();
-      const clang::RecordDecl *RD = FD->getParent();
+      clang::ASTContext &Context = FldD->getASTContext();
+      const clang::RecordDecl *RD = FldD->getParent();
       const clang::ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
-      uint64_t bits = Layout.getFieldOffset(FD->getFieldIndex());
+      uint64_t bits = Layout.getFieldOffset(FldD->getFieldIndex());
       int64_t offset = Context.toCharUnitsFromBits(bits).getQuantity();
       return static_cast<long>(offset);
-   }
-   // The current member is static data member, enumerator constant,
-   // or a global variable.
-   // FIXME: We are supposed to return the address of the storage
-   //        for the member here, only the interpreter knows that.
+   } 
+   // FIXME: We have to explicitly check for not enum constant because the 
+   // implementation of getAddressOfGlobal relies on mangling the name and in 
+   // clang there is misbehaviour in MangleContext::shouldMangleDeclName.
+   else if (const VarDecl *VD = dyn_cast<VarDecl>(D))
+      return reinterpret_cast<long>(fInterp->getAddressOfGlobal(VD));
+   // enum constants are esentially numbers and don't get addresses. However
+   // ROOT expects the address to the enum constant initalizer to be returned.
+   else if (const EnumConstantDecl *ECD = dyn_cast<EnumConstantDecl>(D))
+      return reinterpret_cast<long>(ECD->getInitVal().getRawData());
+   
    return -1L;
 }
 

@@ -27,28 +27,69 @@ namespace utils {
       .startswith(Synthesize::UniquePrefix);
   }
 
-  Expr* Analyze::GetLastExpr(FunctionDecl* FD, int* FoundAt /* =0 */) {
+  Expr* Analyze::GetOrCreateLastExpr(FunctionDecl* FD, 
+                                     int* FoundAt /*=0*/,
+                                     bool omitDeclStmts /*=true*/,
+                                     Sema* S /*=0*/) {
+    assert(FD && "We need a function declaration!");
+    assert((omitDeclStmts || S)
+           && "Sema needs to be set when omitDeclStmts is false");
     if (FoundAt)
       *FoundAt = -1;
 
+    Expr* result = 0;
     if (CompoundStmt* CS = dyn_cast<CompoundStmt>(FD->getBody())) {
       llvm::ArrayRef<Stmt*> Stmts 
         = llvm::makeArrayRef(CS->body_begin(), CS->size());
-          
       int indexOfLastExpr = Stmts.size();
-      while(indexOfLastExpr--) 
-        if (isa<Expr>(Stmts[indexOfLastExpr]))
-          break;
+      while(indexOfLastExpr--) {
+        if (!isa<NullStmt>(Stmts[indexOfLastExpr]))
+          break;          
+      }
+
       if (FoundAt)
         *FoundAt = indexOfLastExpr;
+
       if (indexOfLastExpr < 0)
         return 0;
-      return cast<Expr>(Stmts[indexOfLastExpr]);
+
+      if ( (result = dyn_cast<Expr>(Stmts[indexOfLastExpr])) )
+        return result;
+      if (!omitDeclStmts)
+        if (DeclStmt* DS = dyn_cast<DeclStmt>(Stmts[indexOfLastExpr])) {
+          std::vector<Stmt*> newBody = Stmts.vec();
+          for (DeclStmt::reverse_decl_iterator I = DS->decl_rbegin(),
+                 E = DS->decl_rend(); I != E; ++I) {
+            if (VarDecl* VD = dyn_cast<VarDecl>(*I)) {
+              // Change the void function's return type
+              // We can't PushDeclContext, because we don't have scope.
+              Sema::ContextRAII pushedDC(*S, FD);
+
+              QualType VDTy = VD->getType().getNonReferenceType();
+              // Get the location of the place we will insert.
+              SourceLocation Loc 
+                = newBody[indexOfLastExpr]->getLocEnd().getLocWithOffset(1);
+              Expr* DRE = S->BuildDeclRefExpr(VD, VDTy,VK_LValue, Loc).take();
+              assert(DRE && "Cannot be null");
+              indexOfLastExpr++;
+              newBody.insert(newBody.begin() + indexOfLastExpr, DRE);
+
+              // Attach the new body (note: it does dealloc/alloc of all nodes)
+              CS->setStmts(S->getASTContext(), &newBody.front(), newBody.size());
+              if (FoundAt)
+                *FoundAt = indexOfLastExpr;
+              return DRE;
+            }
+          }
+        }
+
+      return result;
     }
-    return 0;
+
+    return result;
   }
 
-  const char* Synthesize::UniquePrefix = "__cling_Un1Qu3";
+  const char* const Synthesize::UniquePrefix = "__cling_Un1Qu3";
 
   Expr* Synthesize::CStyleCastPtrExpr(Sema* S, QualType Ty, uint64_t Ptr) {
     ASTContext& Ctx = S->getASTContext();
@@ -63,7 +104,6 @@ namespace utils {
                                          Result).take();
     assert(Result && "Cannot create CStyleCastPtrExpr");
     return Result;
-
   }
 
   static
@@ -170,7 +210,7 @@ namespace utils {
 
     // In case of Int_t* we need to strip the pointer first, desugar and attach
     // the pointer once again.
-    if (QT->isPointerType()) {
+    if (isa<PointerType>(QT.getTypePtr())) {
       // Get the qualifiers.
       Qualifiers quals = QT.getQualifiers();      
       QT = GetPartiallyDesugaredType(Ctx, QT->getPointeeType(), TypesToSkip, 
@@ -183,7 +223,7 @@ namespace utils {
 
     // In case of Int_t& we need to strip the pointer first, desugar and attach
     // the pointer once again.
-    if (QT->isReferenceType()) {
+    if (isa<ReferenceType>(QT.getTypePtr())) {
       // Get the qualifiers.
       bool isLValueRefTy = isa<LValueReferenceType>(QT.getTypePtr());
       Qualifiers quals = QT.getQualifiers();
@@ -231,6 +271,14 @@ namespace utils {
         break;
       } else
         return QT;
+    }
+
+    // If we have a reference or pointer we still need to
+    // desugar what they point to.
+    if (isa<PointerType>(QT.getTypePtr()) || 
+        isa<ReferenceType>(QT.getTypePtr()) ) {
+      return GetPartiallyDesugaredType(Ctx, QT, TypesToSkip, 
+                                        fullyQualify);
     }
 
     NestedNameSpecifier* prefix = 0;

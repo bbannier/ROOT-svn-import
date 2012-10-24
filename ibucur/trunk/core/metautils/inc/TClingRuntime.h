@@ -1,18 +1,20 @@
-// @(#)root/globals:$Id$
-// Author: Fons Rademakers   12/10/2012
+// @(#)root/base:$Id$
+// Author: Rene Brun   26/12/94
 
 /*************************************************************************
- * Copyright (C) 1995-2012, Rene Brun and Fons Rademakers.               *
+ * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
  * All rights reserved.                                                  *
  *                                                                       *
  * For the licensing terms see $ROOTSYS/LICENSE.                         *
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
- 
-#include "TROOT.h"
 
-class TInitGlobals {
-public:
-   TInitGlobals() { /*gROOT = ROOT::GetROOT();*/ }   // The ROOT of EVERYTHING
-};
-static TInitGlobals gInitGlobals;
+// Minimal set of headers/functions to be available from the interpreter
+// without any explicit include.
+
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+

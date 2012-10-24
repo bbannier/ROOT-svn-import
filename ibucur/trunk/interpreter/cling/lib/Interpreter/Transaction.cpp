@@ -6,6 +6,8 @@
 
 #include "cling/Interpreter/Transaction.h"
 
+#include "cling/Utils/AST.h"
+
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -24,10 +26,21 @@ namespace cling {
       if (DGR.isNull() || (*I).getAsOpaquePtr() == DGR.getAsOpaquePtr())
         return;
     }
+    // register the wrapper if any.
+    if (DGR.isSingleDecl()) {
+      if (FunctionDecl* FD = dyn_cast<FunctionDecl>(DGR.getSingleDecl()))
+        if (utils::Analyze::IsWrapper(FD)) {
+          assert(!m_WrapperFD && "Two wrappers in one transaction?");
+          m_WrapperFD = FD;
+        }
+    }
     m_DeclQueue.push_back(DGR);
   }
 
   void Transaction::dump() const {
+    if (!size())
+      return;
+
     ASTContext& C = getFirstDecl().getSingleDecl()->getASTContext();
     PrintingPolicy Policy = C.getPrintingPolicy();
     Policy.DumpSourceManager = &C.getSourceManager();
@@ -35,6 +48,9 @@ namespace cling {
   }
 
   void Transaction::dumpPretty() const {
+    if (!size())
+      return;
+
     ASTContext& C = getFirstDecl().getSingleDecl()->getASTContext();
     PrintingPolicy Policy(C.getLangOpts());
     print(llvm::outs(), Policy, /*Indent*/0, /*PrintInstantiation*/true);

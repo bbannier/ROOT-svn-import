@@ -455,9 +455,12 @@ namespace cling {
     std::string WrapperName;
     std::string Wrapper = input;
     WrapInput(Wrapper, WrapperName);
-    if (m_IncrParser->Compile(Wrapper, CO) == IncrementalParser::kSuccess)
-      if (RunFunction(WrapperName, QualType()))
+    if (m_IncrParser->Compile(Wrapper, CO) == IncrementalParser::kSuccess) {
+      const Transaction* lastT = m_IncrParser->getLastTransaction();
+      if (lastT->getState() == Transaction::kCommitted
+          && RunFunction(lastT->getWrapperFD(), QualType()))
         return Interpreter::kSuccess;
+    }
 
     return Interpreter::kFailure;
   }
@@ -468,8 +471,8 @@ namespace cling {
     input.append("\n;\n}");
   }
 
-  bool Interpreter::RunFunction(llvm::StringRef fname, clang::QualType retType,
-                                StoredValueRef* res /* = 0 */) {
+  bool Interpreter::RunFunction(const FunctionDecl* FD, clang::QualType resTy,
+                                StoredValueRef* res /*=0*/) {
     if (getCI()->getDiagnostics().hasErrorOccurred())
       return false;
 
@@ -477,21 +480,16 @@ namespace cling {
       return true;
     }
 
+    if (!FD)
+      return false;
+
     std::string mangledNameIfNeeded;
-
-    Sema& S = getCI()->getSema();
-    FunctionDecl* FD 
-      = cast_or_null<FunctionDecl>(utils::Lookup::Named(&S, fname.data()));
-    
-    if (FD) {
-      mangleName(FD, mangledNameIfNeeded);
-      m_ExecutionContext->executeFunction(mangledNameIfNeeded.c_str(),
-                                          getCI()->getASTContext(),
-                                          retType, res);
-      return true;
-    }
-
-    return false;
+    mangleName(FD, mangledNameIfNeeded);
+    m_ExecutionContext->executeFunction(mangledNameIfNeeded.c_str(),
+                                        getCI()->getASTContext(),
+                                        resTy, res);
+    // FIXME: Probably we need better handling of the error case.
+    return true;
   }
 
   void Interpreter::createUniqueName(std::string& out) {
@@ -542,23 +540,16 @@ namespace cling {
     std::string WrapperName;
     std::string Wrapper = input;
     WrapInput(Wrapper, WrapperName);
-    QualType RetTy = getCI()->getASTContext().VoidTy;
-
+    QualType resTy = getCI()->getASTContext().VoidTy;
     if (V) {
-      const Transaction* CurT = m_IncrParser->Parse(Wrapper, CO);
+      Transaction* CurT = m_IncrParser->Parse(Wrapper, CO);
       assert(CurT->size() && "No decls created by Parse!");
 
-      // Find the wrapper function declaration.
-      //
-      // Note: The parse may have created a whole set of decls if a template
-      //       instantiation happened.  Our wrapper function should be the
-      //       last decl in the set.
-      //
-      FunctionDecl* FD 
-        = dyn_cast<FunctionDecl>(CurT->getLastDecl().getSingleDecl());
-      assert(FD && "No Decls Parsed?");
-      if (Expr* lastExpr = utils::Analyze::GetLastExpr(FD)) {
-        RetTy = lastExpr->getType();
+      if (Expr* E = utils::Analyze::GetOrCreateLastExpr(CurT->getWrapperFD(), 
+                                                        /*foundAt*/0,
+                                                        /*omitDS*/false, 
+                                                        &getSema())) {
+        resTy = E->getType();
       }
 
       m_IncrParser->commitCurrentTransaction();
@@ -567,7 +558,10 @@ namespace cling {
       m_IncrParser->Compile(Wrapper, CO);
 
     // get the result
-    if (RunFunction(WrapperName, RetTy, V))
+    const Transaction* lastT = m_IncrParser->getLastTransaction();
+
+    if (lastT->getState() == Transaction::kCommitted
+        && RunFunction(lastT->getWrapperFD(), resTy, V))
       return Interpreter::kSuccess;
     else if (V)
         *V = StoredValueRef::invalidValue();
@@ -628,6 +622,10 @@ namespace cling {
   void Interpreter::setCallbacks(InterpreterCallbacks* C) {
     // We need it to enable LookupObject callback.
     m_Callbacks.reset(C);
+  }
+
+  const Transaction* Interpreter::getFirstTransaction() const {
+    return m_IncrParser->getFirstTransaction();
   }
 
   void Interpreter::enableDynamicLookup(bool value /*=true*/) {

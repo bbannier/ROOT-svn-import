@@ -60,6 +60,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
@@ -75,6 +76,7 @@
 #include "cling/Interpreter/StoredValueRef.h"
 #include "cling/Interpreter/Transaction.h"
 #include "cling/MetaProcessor/MetaProcessor.h"
+#include "cling/Utils/AST.h"
 
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
@@ -162,6 +164,20 @@ void TCintWithCling__RegisterModule(const char* modulename,
 // The functions are used to bridge cling/clang/llvm compiled with no-rtti and
 // ROOT (which uses rtti)
 
+// Class extracting recursively every typedef defined somewhere.
+class TypedefVisitor : public RecursiveASTVisitor<TypedefVisitor> {
+private:
+   llvm::SmallVector<TypedefDecl*,128> &fTypedefs;
+public:
+   TypedefVisitor(llvm::SmallVector<TypedefDecl*,128> &defs) : fTypedefs(defs)
+   {}
+
+   bool VisitTypedefDecl(TypedefDecl *TdefD) {
+      fTypedefs.push_back(TdefD);
+      return true; // returning false will abort the in-depth traversal.
+   }
+};
+
 extern "C" 
 void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
    TCollection *listOfSmth = 0;
@@ -170,28 +186,68 @@ void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
        I != E; ++I)
       for (DeclGroupRef::const_iterator DI = I->begin(), DE = I->end(); 
            DI != DE; ++DI) {
-         // We care about declarations on the global scope.
-         if (!isa<TranslationUnitDecl>((*DI)->getDeclContext()))
+         if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(*DI)) {
+            listOfSmth = gROOT->GetListOfGlobalFunctions();
+            if (!isa<TranslationUnitDecl>(FD->getDeclContext()))
+               continue;
+            if(FD->isOverloadedOperator() 
+               || cling::utils::Analyze::IsWrapper(FD))
                continue;
 
-         if (const TypedefDecl* TdefD = dyn_cast<TypedefDecl>(*DI)) {
+            if (!listOfSmth->FindObject(FD->getNameAsString().c_str())) {  
+               listOfSmth->Add(new TFunction(new TClingMethodInfo(interp, FD)));
+            }            
+         }
+
+         if (isa<DeclContext>(*DI) && !isa<EnumDecl>(*DI)) {
+            // We have to find all the typedefs contained in that decl context
+            // and add it to the list of types.
+            listOfSmth = gROOT->GetListOfTypes();
+            llvm::SmallVector<TypedefDecl*, 128> Defs;
+            TypedefVisitor V(Defs);
+            V.TraverseDecl(*DI);
+            for (size_t i = 0; i < Defs.size(); ++i)
+            if (!listOfSmth->FindObject(Defs[i]->getNameAsString().c_str())) {
+               listOfSmth->Add(new TDataType(new TClingTypedefInfo(interp, Defs[i])));
+            }
+
+         }
+         else if (const TypedefDecl* TdefD = dyn_cast<TypedefDecl>(*DI)) {
             listOfSmth = gROOT->GetListOfTypes();
             if (!listOfSmth->FindObject(TdefD->getNameAsString().c_str())) {
                listOfSmth->Add(new TDataType(new TClingTypedefInfo(interp, TdefD)));
             }
          }
-         else if (const ValueDecl *ValD = dyn_cast<ValueDecl>(*DI)) {
+         else if (const NamedDecl *ND = dyn_cast<NamedDecl>(*DI)) {
+            // We care about declarations on the global scope.
+            if (!isa<TranslationUnitDecl>(ND->getDeclContext()))
+               continue;
+
             // ROOT says that global is enum/var/field declared on the global
             // scope.
-            if (!(isa<EnumConstantDecl>(ValD) || 
-                  isa<VarDecl>(ValD) || isa<FieldDecl>(ValD)))
+
+            listOfSmth = gROOT->GetListOfGlobals();
+
+            if (!(isa<EnumDecl>(ND) || 
+                  isa<VarDecl>(ND) || isa<FieldDecl>(ND)))
+               continue;
+
+            // Skip if already in the list.
+            if (listOfSmth->FindObject(ND->getNameAsString().c_str()))
                continue;
 
             // FIXME: Review needed: How does ROOT understand globals?
-            listOfSmth = gROOT->GetListOfGlobals();
-            if (!listOfSmth->FindObject(ValD->getNameAsString().c_str())) {  
-               listOfSmth->Add(new TGlobal(new TClingDataMemberInfo(interp, ValD)));
+            if (EnumDecl *ED = dyn_cast<EnumDecl>(*DI)) {
+               for(EnumDecl::enumerator_iterator EDI = ED->enumerator_begin(),
+                      EDE = ED->enumerator_end(); EDI != EDE; ++EDI) {
+                  if (!listOfSmth->FindObject((*EDI)->getNameAsString().c_str())) {  
+                     listOfSmth->Add(new TGlobal(new TClingDataMemberInfo(interp, *EDI)));
+                  }
+               }
             }
+            else
+               listOfSmth->Add(new TGlobal(new TClingDataMemberInfo(interp, 
+                                                                    cast<ValueDecl>(ND))));
          }
       }
 }
@@ -329,39 +385,6 @@ extern "C" void* TCint_FindSpecialObject(char* c, G__ClassInfo* ci, void** p1, v
 //
 //
 //
-
-#if 0
-//______________________________________________________________________________
-static void collect_comment(Preprocessor& PP, ExpectedData& ED)
-{
-   // Create a raw lexer to pull all the comments out of the main file.
-   // We don't want to look in #include'd headers for expected-error strings.
-   SourceManager& SM = PP.getSourceManager();
-   FileID FID = SM.getMainFileID();
-   if (SM.getMainFileID().isInvalid()) {
-      return;
-   }
-   // Create a lexer to lex all the tokens of the main file in raw mode.
-   const llvm::MemoryBuffer* FromFile = SM.getBuffer(FID);
-   Lexer RawLex(FID, FromFile, SM, PP.getLangOptions());
-   // Return comments as tokens, this is how we find expected diagnostics.
-   RawLex.SetCommentRetentionState(true);
-   Token Tok;
-   Tok.setKind(tok::comment);
-   while (Tok.isNot(tok::eof)) {
-      RawLex.Lex(Tok);
-      if (!Tok.is(tok::comment)) {
-         continue;
-      }
-      std::string Comment = PP.getSpelling(Tok);
-      if (Comment.empty()) {
-         continue;
-      }
-      // Find all expected errors/warnings/notes.
-      ParseDirective(&Comment[0], Comment.size(), ED, PP, Tok.getLocation());
-   };
-}
-#endif // 0
 
 //______________________________________________________________________________
 //
@@ -567,7 +590,6 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    , fInterpreter(0)
    , fMetaProcessor(0)
    , fNormalizedCtxt(0)
-   //   , fDeMux(0)
 {
    // Initialize the CINT+cling interpreter interface.
 
@@ -607,7 +629,7 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
 
    // For the list to also include string, we have to include it now.
    fInterpreter->declare("#include \"Rtypes.h\"\n#include <string>");
-   
+
    // During the loading of the first modules, RegisterModule which can calls Info
    // which needs the TClass for TCintWithCling, which in turns need the 'dictionary'
    // information to be loaded:
@@ -903,14 +925,16 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
    if (!strncmp(sLine.Data(), ".L", 2) || !strncmp(sLine.Data(), ".x", 2) ||
        !strncmp(sLine.Data(), ".X", 2)) {
       TString mod_line(sLine);
+      TString aclicMode;
+      TString arguments;
+      TString io;
+      TString fname = gSystem->SplitAclicMode(sLine.Data() + 3,
+                                              aclicMode, arguments, io);
       if ((mod_line[1] == 'x') || (mod_line[1] == 'X')) {
          // Let CINT load the file, but have only cling execute it.
          mod_line[1] = 'L';
       }
-      Ssiz_t paren_pos = mod_line.Last('(');
-      if ((paren_pos != kNPOS) && mod_line.EndsWith(")")) {
-         mod_line.Remove(paren_pos, mod_line.Length() - paren_pos);
-      }
+      mod_line = ".L " + fname;
       ret = ProcessLineCintOnly(mod_line, error);
    }
    // A non-zero returned value means the given line was
@@ -929,10 +953,17 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
       TString fname = gSystem->SplitAclicMode(sLine.Data() + 3,
          aclicMode, arguments, io);
       if (aclicMode.Length()) {
-         // There was a "+" at the end, strip it now.
-         mod_line = mod_line(0, 2) + " " + fname;
+         aclicMode.Append("kf");
+         gSystem->CompileMacro(fname,aclicMode);
+
+         if (strncmp(sLine.Data(), ".L", 2) != 0) {
+            // if execution was requested.
+            mod_line = fname + arguments + io;
+            indent = fMetaProcessor->process(mod_line, &result);
+         }
+      } else {
+         indent = fMetaProcessor->process(mod_line, &result);
       }
-      indent = fMetaProcessor->process(mod_line, &result);
    }
    else {
       indent = fMetaProcessor->process(sLine, &result);
@@ -1468,85 +1499,13 @@ void TCintWithCling::UpdateListOfGlobals()
 //______________________________________________________________________________
 void TCintWithCling::UpdateListOfGlobalFunctions()
 {
-   // Update the list of pointers to global functions. This function
-   // is called by TROOT::GetListOfGlobalFunctions().
-   if (!gROOT->fGlobalFunctions) {
-      // No global functions registered yet, trigger it:
-      gROOT->GetListOfGlobalFunctions();
-      // We were already called by TROOT::GetListOfGlobalFunctions()
-      return;
-   }
-   R__LOCKGUARD2(gCINTMutex);
-   TClingMethodInfo t(fInterpreter);
-   while (t.Next()) {
-      // if name cannot be obtained no use to put in list
-      if (t.IsValid() && t.Name()) {
-         Bool_t needToAdd = kTRUE;
-         // first remove if already in list
-         TList* listFuncs = ((THashTable*)(gROOT->fGlobalFunctions))->
-            GetListForObject(t.Name());
-         if (listFuncs && t.InterfaceMethod()) {
-            Long_t prop = -1;
-            TIter iFunc(listFuncs);
-            Bool_t foundStart = kFALSE;
-            TFunction* f = 0;
-            while (needToAdd && (f = (TFunction*)iFunc())) {
-               if (strcmp(f->GetName(), t.Name())) {
-                  if (foundStart) {
-                     break;
-                  }
-                  continue;
-               }
-               foundStart = kTRUE;
-               if (f->InterfaceMethod()) {
-                  if (prop == -1) {
-                     prop = t.Property();
-                  }
-                  needToAdd = !(prop & G__BIT_ISCOMPILED) &&
-                     (t.GetMangledName() != f->GetMangledName());
-               }
-            }
-         }
-         if (needToAdd) {
-            gROOT->fGlobalFunctions->Add(new TFunction(new TClingMethodInfo(t)));
-         }
-      }
-   }
+ // No op: see TClingCallbacks (used to update the list of global functions)
 }
 
 //______________________________________________________________________________
 void TCintWithCling::UpdateListOfTypes()
 {
-   // Update the list of pointers to Datatype (typedef) definitions. This
-   // function is called by TROOT::GetListOfTypes().
-   R__LOCKGUARD2(gCINTMutex);
-   //////// Remember the index of the last type that we looked at,
-   //////// so that we don't keep reprocessing the same types.
-   //////static int last_typenum = -1;
-   //////// Also remember the count from the last time the dictionary
-   //////// was rewound.  If it's been rewound since the last time we've
-   //////// been called, then we recan everything.
-   //////static int last_scratch_count = 0;
-   //////int this_scratch_count = G__scratch_upto(0);
-   //////if (this_scratch_count != last_scratch_count) {
-   //////   last_scratch_count = this_scratch_count;
-   //////   last_typenum = -1;
-   //////}
-   //////// Scan from where we left off last time.
-   TClingTypedefInfo* t = (TClingTypedefInfo*) TypedefInfo_Factory();
-   while (t->Next()) {
-      const char* name = t->Name();
-      if (gROOT && gROOT->fTypes && t->IsValid() && name) {
-         TDataType* d = (TDataType*) gROOT->fTypes->FindObject(name);
-         // only add new types, don't delete old ones with the same name
-         // (as is done in UpdateListOfGlobals()),
-         // this 'feature' is being used in TROOT::GetType().
-         if (!d) {
-            gROOT->fTypes->Add(new TDataType(new TClingTypedefInfo(*t)));
-         }
-         //////last_typenum = t->Typenum();
-      }
-   }
+ // No op: see TClingCallbacks (used to update the list of types)
 }
 
 //______________________________________________________________________________
@@ -2048,7 +2007,7 @@ void TCintWithCling::Execute(TObject* obj, TClass* cl, TMethod* method,
          if (i) {
             complete += ',';
          }
-         if (strstr(type.TrueName(), "char")) {
+         if (strstr(type.TrueName(*fNormalizedCtxt), "char")) {
             TString chpar('\"');
             chpar += (nxtpar->String()).ReplaceAll("\"", "\\\"");
             // At this point we have to check if string contains \\"
@@ -3893,7 +3852,7 @@ int TCintWithCling::TypeInfo_Size(TypeInfo_t* tinfo) const
 const char* TCintWithCling::TypeInfo_TrueName(TypeInfo_t* tinfo) const
 {
    TClingTypeInfo* TClinginfo = (TClingTypeInfo*) tinfo;
-   return TClinginfo->TrueName();
+   return TClinginfo->TrueName(*fNormalizedCtxt);
 }
 
 
@@ -3953,7 +3912,7 @@ int TCintWithCling::TypedefInfo_Size(TypedefInfo_t* tinfo) const
 const char* TCintWithCling::TypedefInfo_TrueName(TypedefInfo_t* tinfo) const
 {
    TClingTypedefInfo* TClinginfo = (TClingTypedefInfo*) tinfo;
-   return TClinginfo->TrueName();
+   return TClinginfo->TrueName(*fNormalizedCtxt);
 }
 
 //______________________________________________________________________________
