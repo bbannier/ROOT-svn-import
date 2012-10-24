@@ -846,7 +846,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
 
       JSROOTIO.TStreamer.prototype.Stream = function(obj, str, o) {
 
-         var pval;
+         var prop, pval;
          var ver = JSROOTIO.ReadVersion(str, o);
          o = ver['off'];
 
@@ -856,20 +856,20 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                continue;
             if (this[prop]['typename'] === 'BASE') {
                var clname = this[prop]['class'];
-               if (this[prop]['class'].indexOf("TArray") == 0) {
-                  var array_type = this[prop]['class'].charAt(this[prop]['class'].length-1)
+               if (clname.indexOf("TArray") == 0) {
+                  var array_type = clname.charAt(clname.length-1)
                   //o++; // ?????
                   obj['fN'] = JSROOTIO.ntou4(str, o);
                   var array = JSROOTIO.ReadArray(str, o, array_type);
                   obj['fArray'] = array['array'];
                   o = array['off'];
                }
-               else if (this[prop]['class'] === 'TObject') {
+               else if (clname === 'TObject') {
                   o += 2; // skip version
                   o += 4; // skip unique id
                   obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
                }
-               else if (this[prop]['class'] === 'TQObject') {
+               else if (clname === 'TQObject') {
                   // skip TQObject
                }
                else {
@@ -1782,9 +1782,9 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
             xhr.open('GET', url, true);
             var xhr_header = "bytes=" + pos + "-" + (pos + len);
             xhr.setRequestHeader("Range", xhr_header);
-            // next few lines are there to make Safari working with byte ranges...
             xhr.setRequestHeader("If-Modified-Since", "Wed, 31 Dec 1980 00:00:00 GMT");
-
+            
+            // next few lines are there to make Safari working with byte ranges...
             var HasArrayBuffer = ('ArrayBuffer' in window && 'Uint8Array' in window);
             if (HasArrayBuffer && 'mozResponseType' in xhr) {
                xhr.mozResponseType = 'arraybuffer';
