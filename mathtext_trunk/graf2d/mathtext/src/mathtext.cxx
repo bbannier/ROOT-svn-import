@@ -241,11 +241,11 @@ namespace mathtext {
 			wchar_t c;
 
 			// Skip over byte ordering marks
-			if(*iterator == 0xef) {
+			if((unsigned char)(*iterator) == 0xef) {
 				iterator++;
-				if(*iterator == 0xbb) {
+				if((unsigned char)(*iterator) == 0xbb) {
 					iterator++;
-					if(*iterator == 0xbf) {
+					if((unsigned char)(*iterator) == 0xbf) {
 						iterator++;
 					}
 				}
