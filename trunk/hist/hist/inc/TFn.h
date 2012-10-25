@@ -57,9 +57,7 @@ private:
    }
    // XXX: DoEval implemented from DoEval --> IParametericFunctionMultiDim interface
    virtual Double_t DoEvalPar(const Double_t* x, const Double_t* params = NULL) const;
-   virtual Double_t DoDerivative(const Double_t* x, UInt_t icoord) const {
-      return 0.0;
-   }
+   virtual Double_t DoDerivative(const Double_t* x, UInt_t icoord) const;
    virtual TFn* Clone() const { return new TFn(*this); }
 public:
    // From IBaseFunctionMultiDim
@@ -77,7 +75,7 @@ public:
    }
    virtual UInt_t NPar() const { return fNpar; }
    virtual void FdF(const Double_t* x, Double_t& f, Double_t* df) const {}
-   virtual void Gradient(const Double_t* x, Double_t* grad) const {}
+   virtual void Gradient(const Double_t* x, Double_t* grad) const;
 
 protected:
    Double_t*   fMin;         //Lower bounds for the range
@@ -223,23 +221,24 @@ public:
    virtual Double_t  GetMinimum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Double_t* GetMaximumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Double_t* GetMinimumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
-   virtual Int_t    GetNDF() const;
-   virtual Int_t    GetNpx() const {return fNpx;}
-    TMethodCall    *GetMethodCall() const {return fMethodCall;}
-   virtual Int_t    GetNumberFreeParameters() const;
-   virtual Int_t    GetNumberFitPoints() const {return fNpfits;}
-        TObject    *GetParent() const {return fParent;}
-   virtual Double_t GetParError(Int_t ipar) const;
-   virtual Double_t *GetParErrors() const {return fParErrors;}
-   virtual void     GetParLimits(Int_t ipar, Double_t &parmin, Double_t &parmax) const;
-   virtual Double_t GetRandom();
-   virtual void     GetRange(Double_t* min, Double_t* xmax) const;
-   virtual Double_t GetSave(const Double_t *x);
+   virtual Int_t     GetNDF() const;
+   virtual Int_t     GetNpx() const {return fNpx;}
+        TMethodCall* GetMethodCall() const {return fMethodCall;}
+   virtual Int_t     GetNumberFreeParameters() const;
+   virtual Int_t     GetNumberFitPoints() const {return fNpfits;}
+           TObject*  GetParent() const {return fParent;}
+   virtual Double_t  GetParError(Int_t ipar) const;
+   virtual Double_t* GetParErrors() const {return fParErrors;}
+   virtual void      GetParLimits(Int_t ipar, Double_t &parmin, Double_t &parmax) const;
+   virtual Double_t  GetRandom();
+   virtual void      GetRange(Double_t* min, Double_t* xmax) const;
+   virtual Double_t  GetSave(const Double_t *x);
    // TODO: GetAxis (maybe)
    // TODO: GetPoint instead of GetX -> should be possible
 //virtual Double_t GetX(Double_t y, Double_t xmin=0, Double_t xmax=0, Double_t epsilon = 1.E-10, Int_t maxiter = 100, Bool_t logx = false) const;
 //   virtual Double_t GetXmin() const {return fXmin;}
 //   virtual Double_t GetXmax() const {return fXmax;}.
+   // GradientPar returns a vector of size n (dimensions), containing the gradient in the point specified by x
    virtual Double_t GradientPar(Int_t ipar, const Double_t *x, Double_t eps=0.01);
    virtual void     GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
    virtual void     InitArgs(const Double_t *x, const Double_t *params = NULL);

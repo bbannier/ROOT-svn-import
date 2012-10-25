@@ -9,6 +9,8 @@
  * For the list of contributors see $ROOTSYS/README/CREDITS.             *
  *************************************************************************/
 
+#include <limits>
+
 #include "Riostream.h"
 #include "TROOT.h"
 #include "TMath.h"
@@ -52,10 +54,10 @@ ClassImp(TFn)
 // class wrapping evaluation of TFn(x) - y0
 class GFunc {
    const TFn* fFunction;
-   const double fY0;
+   const Double_t fY0;
 public:
-   GFunc(const TFn* function , double y ):fFunction(function), fY0(y) {}
-   double operator()(double x) const {
+   GFunc(const TFn* function , Double_t y ):fFunction(function), fY0(y) {}
+   Double_t operator()(Double_t x) const {
       // FIXME: return fFunction->Eval(x) - fY0;
       return 0.0;
    }
@@ -66,7 +68,7 @@ class GInverseFunc {
    const TFn* fFunction;
 public:
    GInverseFunc(const TFn* function):fFunction(function) {}
-   double operator()(double x) const {
+   Double_t operator()(Double_t x) const {
 // FIXME:      return - fFunction->Eval(x);
       return 0.0; 
    }
@@ -116,7 +118,7 @@ public:
 
    TFn * fFunc; 
    mutable Double_t fX[1]; 
-   const double * fPar; 
+   const Double_t * fPar; 
    Bool_t fAbsVal;
    Double_t fN; 
    Double_t fX0;
@@ -294,7 +296,7 @@ Begin_Html
 
 
 <a name="F4"></a><h3>D - A general C++ function object (functor) with parameters</h3>
-A TFn can be created from any C++ class implementing the operator()(double *x, double *p).
+A TFn can be created from any C++ class implementing the operator()(Double_t *x, Double_t *p).
 The advantage of the function object is that he can have a state and reference therefore what-ever other object.
 In this way the user can customize his function.
 <p>Example:
@@ -303,7 +305,7 @@ class  MyFunctionObject {
  public:
    // use constructor to customize your function object
 
-   double operator() (double *x, double *p) {
+   Double_t operator() (Double_t *x, Double_t *p) {
       // function implementation using class data members
    }
 };
@@ -324,13 +326,13 @@ Begin_Html
 
 <a name="F5"></a><h3>E - A member function with parameters of a general C++ class</h3>
 A TFn can be created in this case from any member function of a class which has the signature of
-(double * , double *) and returning a double.
+(Double_t * , Double_t *) and returning a Double_t.
 <p>Example:
 <div class="code"><pre>
 class  MyFunction {
  public:
    ...
-   double Evaluate() (double *x, double *p) {
+   Double_t Evaluate() (Double_t *x, Double_t *p) {
       // function implementation
    }
 };
@@ -732,7 +734,7 @@ TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, 
    // This constructor emulate the syntax of the template constructor using a C++ callable object (functor)
    // which can be used only in C++ compiled mode.
    // The class name is required to get the type of class given the void pointer ptr.
-   // For the method name is used the operator() (double *, double * ).
+   // For the method name is used the operator() (Double_t *, Double_t * ).
    // Use the other constructor taking the method name for different method names.
    //
    //  xmin and xmax specify the function plotting range
@@ -756,8 +758,8 @@ TFn::TFn(const char* name, Int_t ndim, void *ptr, void *, Double_t* min, Double_
    // The class name is required to get the type of class given the void pointer ptr.
    // The second void * is not needed for the CINT case, but is kept for emulating the API of the
    // template constructor.
-   // The method name is optional. By default is looked for operator() (double *, double *) or
-   // Eval(double *, double*)
+   // The method name is optional. By default is looked for operator() (Double_t *, Double_t *) or
+   // Eval(Double_t *, Double_t*)
    //
    //  xmin and xmax specify the function plotting range
    //  npar are the number of function parameters.
@@ -1020,6 +1022,57 @@ Double_t TFn::Eval(Double_t* x)
 
 
 //______________________________________________________________________________
+Double_t TFn::DoDerivative(const Double_t* x, UInt_t icoord) const
+{
+   /**   Calculate partial derivative of the function in point x, with respect to the 'icoord' coordonate
+    *    The numerical method employs the central difference to compute the partial derivative. The precision
+    *  of the computation is then improved via the Richardson Extrapolation.
+    *    (http://math.fullerton.edu/mathews/n2003/richardsonextrapmod.html) 
+    *    (http://cran.r-project.org/web/packages/numDeriv/index.html) 'R numDeriv package' 
+    *  @param[in]      x - The point where the derivative is computed
+    *  @param[in] icoord - The coordonate on which the derivation is performed. Must belong in [0, fNdim - 1].
+    *  @return             Partial derivative (w.r.t. icoord) value in point x.
+    */
+   if (icoord > UInt_t(fNdim)) {
+      Error("DoDerivative", "The index of the coordonate surpasses the bounds [0,%d] of the %d-dimensional \
+         function %s", fNdim - 1, fNdim, GetName());
+      return 0.0;
+   }
+   if (x == NULL) {
+      Error("DoDerivative", "Vector of coordinates, x, passed as input is not allocated");
+      return 0.0;
+   }
+
+   Double_t* xm = const_cast<Double_t*>(x); 
+   Double_t  x0 = x[icoord];
+   
+   //   The step size is chosen depending on x[icoord], except when the latter is too small, in which case
+   // a default epsilon is used.
+   Double_t eps = std::numeric_limits<Double_t>::epsilon() / 7e-7; // (see R numDeriv package)
+   Double_t h = 1e-4 * x0 < eps ? eps : 1e-4 * x0; // STEP SIZE -> gives precision
+   
+   xm[icoord] = x0 + h; Double_t f_plus  = DoEvalPar(xm);
+   xm[icoord] = x0 - h; Double_t f_minus = DoEvalPar(xm);
+   Double_t diff_h = f_plus - f_minus; 
+   // So far we have O(h^2) for the error term
+
+   // Now we use 2*h instead of h
+   h *= 2.0;
+
+   xm[icoord] = x0 + h;          f_plus  = DoEvalPar(xm);
+   xm[icoord] = x0 - h;          f_minus = DoEvalPar(xm);
+   Double_t diff_2h = f_plus - f_minus;
+
+   xm[icoord] = x0; // restore initial value of vector (it has virtually remained const)
+
+   // Richardson's extrapolation for f'(x), simplified expression -> O(h^3) error term
+   // Solution is equivalent to the five-point stencil (http://en.wikipedia.org/wiki/Five-point_stencil)
+   // note that the 6.0 appears instead of 12.0 at the denominator because we have doubled 'h'
+   return (8.0 * diff_h - diff_2h) / (6.0 * h);
+}
+
+
+//______________________________________________________________________________
 Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
 {
    // Evaluate function with given coordinates and parameters.
@@ -1071,7 +1124,7 @@ void TFn::FixParameter(Int_t ipar, Double_t value)
    // Fix the value of a parameter
    // The specified value will be used in a fit operation
 
-   // TODO: see how to remove the double check for TF1 (it's done in SetParameter too)
+   // TODO: see how to remove the Double_t check for TF1 (it's done in SetParameter too)
    if (ipar < 0 || ipar >= fNpar) return; 
 
    fParams[ipar] = value;
@@ -1470,6 +1523,20 @@ Double_t TFn::GetSave(const Double_t *xx)
 }
 
 
+void TFn::Gradient(const Double_t* x, Double_t* grad) const
+{
+   // Compute the gradient (derivative) in a given n-dim point x
+   // @in x = point where the derivative is computed
+   // @out grad = gradient coefficients
+
+   if (x == NULL) Error("Gradient", "Input parameter x missing");
+   if (grad == NULL) {
+      Warning("Gradient", "grad array not specified by user; creating internal %d-dim array; memory must be freed by user", fNdim);
+   }
+
+   for(Int_t i = 0; i < fNdim; ++i)
+      grad[i] = DoDerivative(x, i);
+}
 
 //______________________________________________________________________________
 Double_t TFn::GradientPar(Int_t ipar, const Double_t *x, Double_t eps)
@@ -1538,7 +1605,7 @@ Double_t TFn::GradientPar(Int_t ipar, const Double_t *x, Double_t eps)
 //______________________________________________________________________________
 void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps)
 {
-   // Compute the gradient wrt parameters
+   // Compute the gradient with respect to the parameters
    // Parameters:
    // x - point, were the gradient is computed
    // grad - used to return the computed gradient, assumed to be of at least fNpar size
@@ -1727,7 +1794,7 @@ Double_t TFn::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, In
 
    ROOT::Math::AdaptiveIntegratorMultiDim aimd(wf1, eps, eps, maxpts);
    aimd.SetMinPts(minpts);
-   double result = aimd.Integral(a,b);
+   Double_t result = aimd.Integral(a,b);
    relerr = aimd.RelError();
    nfnevl = aimd.NEval();
    ifail = 0;
@@ -2023,10 +2090,9 @@ void TFn::SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax)
    // when the option "B" is specified (Bounds).
    // To fix a parameter, use TFn::FixParameter
 
-   if (ipar < 0 || ipar > fNpar-1) return;
-   Int_t i;
-   if (!fParMin) {fParMin = new Double_t[fNpar]; for (i=0;i<fNpar;i++) fParMin[i]=0;}
-   if (!fParMax) {fParMax = new Double_t[fNpar]; for (i=0;i<fNpar;i++) fParMax[i]=0;}
+   if (ipar < 0 || ipar >= fNpar) return;
+   if (!fParMin) { fParMin = new Double_t[fNpar]; for (Int_t i = 0; i < fNpar; ++i) fParMin[i] = 0; }
+   if (!fParMax) { fParMax = new Double_t[fNpar]; for (Int_t i = 0; i < fNpar; ++i) fParMax[i] = 0; }
    fParMin[ipar] = parmin;
    fParMax[ipar] = parmax;
 }
