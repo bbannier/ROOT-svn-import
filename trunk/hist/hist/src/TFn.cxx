@@ -355,8 +355,6 @@ End_Html */
 //______________________________________________________________________________
 void TFn::Init(Int_t ndim, Double_t* min, Double_t* max) 
 {
-   fFormula = NULL;
-
    // TFn initializer, employed by constructors
    if (ndim > 0) {
       fNdim = ndim; // XXX: should we put this in the initialization list?
@@ -404,7 +402,7 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
    // See tutorials: fillrandom, first, fit1, formula1, multifit for real examples.
    fFormula = new TFormula(TString::Format("%s_formula", name).Data(), formula);
    if(!fFormula) {
-      Error("TFn::TFn(%s) - object created incorrectly because of invalid formula", name);
+      Error("TFn::TFn", "object %s created incorrectly because of invalid formula", name);
    } else {
 
       Init(fFormula->GetNdim(), min, max);
@@ -1135,7 +1133,7 @@ Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t m
 {
    // Returns the maximum value of the function on the [min, max] subdomain if present, else on the full range
    ReverseSignTFn reverseSignFunc(const_cast<TFn*>(this));
-   return ConfigureAndMinimize(&reverseSignFunc, NULL, min, max, epsilon, maxiter);
+   return -ConfigureAndMinimize(&reverseSignFunc, NULL, min, max, epsilon, maxiter);
 }
 
 //______________________________________________________________________________
@@ -1163,6 +1161,13 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
       }
    }
 
+   Double_t *localX = NULL;
+   if (x == NULL) {
+      localX = new Double_t[fNdim]; // if no initial input point is provided, create one at the middle of the range
+      x = localX;
+   }
+   for(Int_t i = 0; i < fNdim; ++i) x[i] = (min[i] + max[i]) / 2.0;
+
    // Create default minimizer
    const char* minimizerName = ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
    const char* minimizerAlgo = ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
@@ -1187,15 +1192,16 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
          minimizer->SetVariable(i, TString::Format("x[%d]", i).Data(), x[i], stepSize);
       }
    }
-   delete min; delete max;
 
    // minimize and check success
    if (!minimizer->Minimize() || !minimizer->X())
        Error("ConfigureAndMinimize", "Error minimizing function %s", GetName());
 
-   if(x != NULL) std::copy( minimizer->X(), minimizer->X() + fNdim, x);
+   if (localX != NULL) delete localX; // no input vector was provided, nothing needs to be returned to the user
+   else if (x != NULL) std::copy( minimizer->X(), minimizer->X() + fNdim, x); // set x to be point of minimum
+
    Double_t funcMin = minimizer->MinValue();
-   
+      
    delete minimizer;
 
    return funcMin;
