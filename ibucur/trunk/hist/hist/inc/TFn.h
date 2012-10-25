@@ -51,6 +51,37 @@ class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, p
 private:
    void Init(Int_t ndim, Double_t* xmin, Double_t* xmax);
    virtual Double_t ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100) const;
+   virtual Double_t DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t ipar) const {
+      // TODO: implement
+      return 0.0;
+   }
+   // XXX: DoEval implemented from DoEval --> IParametericFunctionMultiDim interface
+   virtual Double_t DoEvalPar(const Double_t*, const Double_t*) const {
+      // TODO: see how to return absolute value
+      // TODO: solve constness issue - Why is EvalPar not constant?
+      return 0.0;
+   }
+   virtual Double_t DoDerivative(const Double_t* x, UInt_t icoord) const {
+      return 0.0;
+   }
+   virtual TFn* Clone() const { return new TFn(*this); }
+public:
+   // From IBaseFunctionMultiDim
+   virtual UInt_t NDim() const { return fNdim; }
+   // From IBaseParam
+   virtual const Double_t* Parameters() const {
+      return fParams;
+   }
+   virtual void SetParameters(const Double_t* p) {
+      if (!p) {
+         Error("TFn::SetParameters", "Input parameter array not allocated");
+         return;
+      }
+      std::copy(p, p + fNpar, fParams);
+   }
+   virtual UInt_t NPar() const { return fNpar; }
+   virtual void FdF(const Double_t* x, Double_t& f, Double_t* df) const {}
+   virtual void Gradient(const Double_t* x, Double_t* grad) const {}
 
 protected:
    Double_t*   fMin;         //Lower bounds for the range
@@ -186,13 +217,6 @@ public:
    TFn& operator=(const TFn &rhs);
    virtual   ~TFn();
    virtual void     Copy(TObject &f1) const;
-   // TODO: see versus parametrised
-   virtual Double_t DoEval(Double_t *) const {
-      //return EvalPar(x, fParams); //TODO: check how parameters can be modified
-      // TODO: see how to return absolute value
-      // TODO: solve constness issue - Why is EvalPar not constant?
-      return 0.0;
-   }
    virtual Double_t Eval(Double_t* x);
    virtual Double_t EvalPar(const Double_t *x, const Double_t *params =  NULL);
    // for using TFn as a callable object (functor)
