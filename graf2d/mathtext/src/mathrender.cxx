@@ -16,6 +16,13 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 // 02110-1301 USA
 
+#ifdef WIN32
+// On Windows, Disable the warning:
+// "characters beyond first in wide-character constant ignored"
+#pragma warning( push )
+#pragma warning( disable : 4066)
+#endif
+
 #include <cmath>
 #include <algorithm>
 #include <sstream>
@@ -624,3 +631,6 @@ namespace mathtext {
 	}
 
 }
+#ifdef WIN32
+#pragma warning( pop )
+#endif
