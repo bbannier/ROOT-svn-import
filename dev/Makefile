@@ -1,7 +1,7 @@
 RC := root-config
 ROOTSYS = ../trunk
 include $(ROOTSYS)/etc/Makefile.arch
-MATHLIBS = -lRooFit -lRooFitCore -lRooStats -lHistFactory -lXMLParser -Llib -lRIO -lMatrix -lMinuit -lFoam
+MATHLIBS = -lRooFit -lRooFitCore -lRooStats -Llib -lRIO -lMatrix -lMinuit -lFoam
 
 
 #------------------------------------------------------------------------------
@@ -27,9 +27,9 @@ PVALUEOBJ = pvalue.$(ObjSuf)
 PVALUESRC = pvalue.$(SrcSuf)
 PVALUE    = pvalue$(ExeSuf)
 
-RFOBJ = rf501.$(ObjSuf)
-RFSRC = rf501.$(SrcSuf)
-RF = rf501$(ExeSuf)
+TFNOBJ = tfn.$(ObjSuf)
+TFNSRC = tfn.$(SrcSuf)
+TFN = tfn$(ExeSuf)
 
 COMBINEDOBJ = combined.$(ObjSuf)
 COMBINEDSRC = combined.$(SrcSuf)
@@ -39,8 +39,8 @@ endif
 
 #----------------------------------------------------------------------------
 
-PROGRAMS = $(TEST) $(TEST2) $(STRESSROOSTATS) $(MODEL) $(PVALUE) $(COMBINED)
-OBJS = $(TESTOBJ) $(TEST2OBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ) $(COMBINEDOBJ)
+PROGRAMS = $(TEST) $(TEST2) $(STRESSROOSTATS) $(MODEL) $(PVALUE) $(COMBINED) $(TFN)
+OBJS = $(TESTOBJ) $(TEST2OBJ) $(STRESSROOSTATSOBJ) $(MODELOBJ) $(PVALUEOBJ) $(COMBINEDOBJ) $(TFNOBJ)
 TESTS = $(TEST) $(TEST2)
 
 $(TEST):	$(TESTOBJ)
@@ -63,7 +63,7 @@ $(PVALUE): $(PVALUEOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
-$(RF) : $(RFOBJ)
+$(TFN) : $(TFNOBJ)
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(MATHLIBS) $(OutPutOpt)$@
 	@echo "$@ done"
 
