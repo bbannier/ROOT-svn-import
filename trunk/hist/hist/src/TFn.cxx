@@ -122,8 +122,6 @@ public:
    Double_t fX0;
 };*/
 
-class Test: public ROOT::Math::IGenFunction { };
-
 //______________________________________________________________________________
 /* Begin_Html
 <center><h2>TFn: n-Dim function class</h2></center>
@@ -360,8 +358,8 @@ void TFn::Init(Int_t ndim, Double_t* min, Double_t* max)
       fNdim = ndim; // XXX: should we put this in the initialization list?
       fMin = new Double_t[fNdim];
       fMax = new Double_t[fNdim];
-      memcpy(fMin, min, fNdim * sizeof(Double_t));
-      memcpy(fMax, max, fNdim * sizeof(Double_t));
+      std::copy(min, min + fNdim, fMin);
+      std::copy(max, max + fNdim, fMax);
    }
 } 
 
@@ -579,14 +577,13 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    fHistogram  = 0;
    fMinimum    = -1111;
    fMaximum    = -1111;
-   fNdim       = 1;
-
+/*
    // Store formula in linked list of formula in ROOT
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
-
+*/
 }
 
 //______________________________________________________________________________
@@ -700,8 +697,6 @@ void TFn::CreateFromFunctor(const char *name, Int_t npar)
    //
    //          Used by the template constructors
 
-   fNdim       = 1;
-
    if (npar > 0) {
       fNpar = npar;
       //fNames      = new TString[fNpar];
@@ -720,13 +715,13 @@ void TFn::CreateFromFunctor(const char *name, Int_t npar)
       fParMin    = 0;
       fParMax    = 0;
    }
-
+/*
    // Store formula in linked list of formula in ROOT
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(f1old);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
-
+*/
 }
 
 //______________________________________________________________________________
@@ -1163,7 +1158,11 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
       localX = new Double_t[fNdim]; // if no initial input point is provided, create one at the middle of the range
       x = localX;
    }
-   for(Int_t i = 0; i < fNdim; ++i) x[i] = (min[i] + max[i]) / 2.0;
+   for(Int_t i = 0; i < fNdim; ++i) {
+      x[i] = (min[i] + max[i]) / 2.0;
+      std::cout << "x[" << i << "]: " << x[i] << " | ";
+   }
+   std::cout << std::endl;
 
    // Create default minimizer
    const char* minimizerName = ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
@@ -1190,9 +1189,14 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
       }
    }
 
+   // TODO: remove in the end
+   minimizer->SetPrintLevel(1);
+
    // minimize and check success
-   if (!minimizer->Minimize() || !minimizer->X())
-       Error("ConfigureAndMinimize", "Error minimizing function %s", GetName());
+   if (!minimizer->Minimize())
+      Error("ConfigureAndMinimize", "Error minimizing function %s - check input and maximum number of iterations", GetName());
+   else if(!minimizer->X())
+      Error("ConfigureAndMinimize", "Minimizer did not return a valid minimum point (X array)");
 
    if (localX != NULL) delete localX; // no input vector was provided, nothing needs to be returned to the user
    else if (x != NULL) std::copy( minimizer->X(), minimizer->X() + fNdim, x); // set x to be point of minimum
