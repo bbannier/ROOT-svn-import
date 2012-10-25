@@ -49,18 +49,14 @@ namespace ROOT {
 class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, public ROOT::Math::IGradientMultiDim {
 
 private:
-   void Init(Int_t ndim, Double_t* xmin, Double_t* xmax);
+   void Init(Int_t ndim, Double_t* min, Double_t* max);
    virtual Double_t ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100) const;
    virtual Double_t DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t ipar) const {
       // TODO: implement
       return 0.0;
    }
    // XXX: DoEval implemented from DoEval --> IParametericFunctionMultiDim interface
-   virtual Double_t DoEvalPar(const Double_t*, const Double_t*) const {
-      // TODO: see how to return absolute value
-      // TODO: solve constness issue - Why is EvalPar not constant?
-      return 0.0;
-   }
+   virtual Double_t DoEvalPar(const Double_t* x, const Double_t* params = NULL) const;
    virtual Double_t DoDerivative(const Double_t* x, UInt_t icoord) const {
       return 0.0;
    }
@@ -218,7 +214,6 @@ public:
    virtual   ~TFn();
    virtual void     Copy(TObject &f1) const;
    virtual Double_t Eval(Double_t* x);
-   virtual Double_t EvalPar(const Double_t *x, const Double_t *params =  NULL);
    // for using TFn as a callable object (functor)
    virtual Double_t operator()(Double_t* x); 
    virtual Double_t operator()(const Double_t* x, const Double_t* params = NULL);  
@@ -293,7 +288,7 @@ inline Double_t TFn::operator()(Double_t *x) { return Eval(x); }
 inline Double_t TFn::operator()(const Double_t *x, const Double_t *params)
    { 
       if (fMethodCall) InitArgs(x,params);
-      return EvalPar(x,params); 
+      return DoEvalPar(x,params); 
    }
 
 /*
