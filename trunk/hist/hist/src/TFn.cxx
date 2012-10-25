@@ -74,7 +74,7 @@ public:
 
 // class wrapping function evaluation directly in n-Dim interface (used for integration) 
 // and implementing the methods for the momentum calculations
-
+/*
 class  TFn_EvalWrapper : public ROOT::Math::IParametricGradFunctionMultiDim { 
 public: 
    // TODO: remove from here
@@ -91,27 +91,27 @@ public:
    {
       fFunc->InitArgs(fX, fPar); 
    }
-/*
+
    ROOT::Math::IGenFunction * Clone()  const { 
       // use default copy constructor
       TFn_EvalWrapper * f =  new TFn_EvalWrapper( *this);
       f->fFunc->InitArgs(f->fX, f->fPar); 
       return f;
-   }*/
+   }
    // evaluate |f(x)|
    Double_t DoEval( Double_t* x) const {  
-      Double_t fval = fFunc->EvalPar( x, fPar);
+      Double_t fval = fFunc->DoEvalPar(x, fPar);
       return (fAbsVal && fval < 0) ? -fval : fval;
    } 
    // evaluate x * |f(x)|
    Double_t EvalFirstMom( Double_t x) { 
       fX[0] = x; 
-      return fX[0] * TMath::Abs( fFunc->EvalPar( fX, fPar) ); 
+      return fX[0] * TMath::Abs( fFunc->DoEvalPar( fX, fPar) ); 
    } 
    // evaluate (x - x0) ^n * f(x)
    Double_t EvalNMom( Double_t x) const  { 
       fX[0] = x; 
-      return TMath::Power( fX[0] - fX0, fN) * TMath::Abs( fFunc->EvalPar( fX, fPar) ); 
+      return TMath::Power( fX[0] - fX0, fN) * TMath::Abs( fFunc->DoEvalPar( fX, fPar) ); 
    }
 
    TFn * fFunc; 
@@ -120,7 +120,7 @@ public:
    Bool_t fAbsVal;
    Double_t fN; 
    Double_t fX0;
-};
+};*/
 
 class Test: public ROOT::Math::IGenFunction { };
 
@@ -1020,53 +1020,50 @@ Double_t TFn::Eval(Double_t* x)
    //   The parameters used will be the ones in the array fParams.
 
    InitArgs(x);
-   return EvalPar(x);
+   return DoEvalPar(x);
 }
 
 
 //______________________________________________________________________________
-Double_t TFn::EvalPar(const Double_t *x, const Double_t *params)
+Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
 {
    // Evaluate function with given coordinates and parameters.
    //
    // Compute the value of this function at point defined by array x
    // and current values of parameters in array params.
-   // If argument params is omitted or equal 0, the internal values
-   // of parameters (array fParams) will be used instead.
+   // If argument params is omitted, the internal values of parameters
+   // (array fParams) will be used instead.
    // ! x must be filled with the corresponding number of dimensions.
    //
-   // WARNING. In case of an interpreted function (fType=2), it is the
-   // user's responsability to initialize the parameters via InitArgs
+   // XXX: analyse this
+   // WARNING. In case of an interpreted function (fType = 2), it is the
+   // user's responsibility to initialize the parameters via InitArgs
    // before calling this function.
    // InitArgs should be called at least once to specify the addresses
    // of the arguments x and params.
    // InitArgs should be called everytime these addresses change.
 
+   TFn* mutableThis = const_cast<TFn*>(this);
 
    if (fType == 0) {
       return fFormula->EvalPar(x,params);
    }
    Double_t result = 0;
    if (fType == 1)  {
-//       if (fFunction) {
-//          if (params) result = (*fFunction)((Double_t*)x,(Double_t*)params);
-//          else        result = (*fFunction)((Double_t*)x,fParams);
-      if (!fFunctor.Empty()) {
-         if (params) result = fFunctor((Double_t*)x,(Double_t*)params);
-         else        result = fFunctor((Double_t*)x,fParams);
-
-      } else          result = GetSave(x);
+      if (!mutableThis->fFunctor.Empty()) {
+         if (params) result = mutableThis->fFunctor((Double_t*)x,(Double_t*)params);
+         else        result = mutableThis->fFunctor((Double_t*)x,fParams);
+      } else          result = const_cast<TFn*>(this)->GetSave(x);
       return result;
    }
    if (fType == 2) {
       if (fMethodCall) fMethodCall->Execute(result);
-      else             result = GetSave(x);
+      else             result = const_cast<TFn*>(this)->GetSave(x);
       return result;
    }
    if (fType == 3) {
-      //std::cout << "Eval interp function object  " << fCintFunc << " result = " << result << std::endl;
       if (fMethodCall) fMethodCall->Execute(fCintFunc,result);
-      else             result = GetSave(x);
+      else             result = const_cast<TFn*>(this)->GetSave(x);
       return result;
    }
    return result;
@@ -1516,10 +1513,10 @@ Double_t TFn::GradientPar(Int_t ipar, const Double_t *x, Double_t eps)
 
 
 
-   fParams[ipar] = par0 + h;     f1 = func->EvalPar(x,fParams);
-   fParams[ipar] = par0 - h;     f2 = func->EvalPar(x,fParams);
-   fParams[ipar] = par0 + h/2;   g1 = func->EvalPar(x,fParams);
-   fParams[ipar] = par0 - h/2;   g2 = func->EvalPar(x,fParams);
+   fParams[ipar] = par0 + h;     f1 = func->DoEvalPar(x,fParams);
+   fParams[ipar] = par0 - h;     f2 = func->DoEvalPar(x,fParams);
+   fParams[ipar] = par0 + h/2;   g1 = func->DoEvalPar(x,fParams);
+   fParams[ipar] = par0 - h/2;   g2 = func->DoEvalPar(x,fParams);
 
    //compute the central differences
    h2    = 1/(2.*h);
