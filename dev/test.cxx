@@ -37,7 +37,7 @@ void buildSimultaneousModel(RooWorkspace *w);
 void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const char* data = "data_obs") {
 
    RooStats::HistFactory::FlexibleInterpVar fiv;
-//   gSystem->Load("libHistFactory");   
+   gSystem->Load("libHistFactory");   
    TBenchmark myBenchmark;
 
    // XXX never forget workspace name
@@ -52,12 +52,17 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    buildAddModel(w);
    RooAddPdf *add = (RooAddPdf *)w->pdf("sum_pdf");
    ModelConfig* model = (ModelConfig*)w->obj("S+B");
+
+   w->data("data_obs")->Print("v");
    
    RooLinkedList commands;
    RooCmdArg arg1(RooFit::CloneData(kFALSE));
    RooCmdArg arg2(RooFit::Constrain(*model->GetNuisanceParameters()));
    commands.Add(&arg1);
    commands.Add(&arg2);
+   
+   std::cout << "Observables before createNLL " << std::endl;
+   model->GetObservables()->Print("v");
 
    // XXX never forget data set name
 //   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
@@ -67,9 +72,11 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    double lastVal = nll->getVal();
 //   double *values = new double[10];
 //   double *x = new double[10];
+   std::cout << "Observables after createNLL " << std::endl;
+   model->GetObservables()->Print("v");
+
    int j = 0;
    Int_t numPdfs = add->pdfList().getSize();
-   const RooArgSet* obs = model->GetObservables();
    for(double d = 0.3; j < 10; d += 0.2, j++) {
       TIterator *itPdf = add->pdfList().createIterator();
       TIterator *itCoef = add->coefList().createIterator();
@@ -78,18 +85,20 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
     //  values[j] = nll->getVal() - lastVal; 
   //    x[j] = d; lastVal = nll->getVal();
     //  std::cout << "nll diff " << d << " " << values[j] << std::endl;
-      std::cout << "obs " << obs->getRealValue("obs1") << " "
-                << obs->getRealValue("obs2") << " " 
-                << obs->getRealValue("obs3") << std::endl;
+   //   std::cout << "obs " << obs->getRealValue("obs1") << " "
+     //           << obs->getRealValue("obs2") << " " 
+       //         << obs->getRealValue("obs3") << std::endl;
 
       for(Int_t i = 0; i < numPdfs; ++i) {
          RooAbsReal *coef = (RooAbsReal *)(itCoef->Next());
          RooAbsPdf  *pdf  = (RooAbsPdf * )(itPdf->Next() );
          pdf->getVariables()->Print("v");
-         std::cout << "pdf " << i << pdf->ClassName() << " value " << pdf->getVal(obs) << std::endl;
-         std::cout << "coef " << i << " value " << coef->getVal() << std::endl;
+  //       std::cout << "pdf " << i << pdf->ClassName() << " value " << pdf->getVal(obs) << std::endl;
+//         std::cout << "coef " << i << " value " << coef->getVal() << std::endl;
       }
    }
+
+   w->data("data_obs")->Print("v");
 //   delete values; delete x;
    return;
 
