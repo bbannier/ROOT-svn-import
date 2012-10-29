@@ -42,39 +42,45 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 
    // XXX never forget workspace name
    // Build Higgs model
-//   TFile f("comb_hgg_125.root");
-//   TFile f(file);
-//   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
-//   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
+   TFile f(file);
+   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
+   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
-   RooWorkspace *w = new RooWorkspace("w", kTRUE);
+//   RooWorkspace *w = new RooWorkspace("w", kTRUE);
 //   buildSimultaneousModel(w);   
-   buildAddModel(w);
-   RooAddPdf *add = (RooAddPdf *)w->pdf("sum_pdf");
-   ModelConfig* model = (ModelConfig*)w->obj("S+B");
+//   buildAddModel(w);
+//   RooAddPdf *add = (RooAddPdf *)w->pdf("sum_pdf");
+//   ModelConfig* model = (ModelConfig*)w->obj("S+B");
 
-   w->data("data_obs")->Print("v");
+   *((RooArgSet *)model->GetObservables()) = *w->data(data)->get(0);
    
+
    RooLinkedList commands;
    RooCmdArg arg1(RooFit::CloneData(kFALSE));
    RooCmdArg arg2(RooFit::Constrain(*model->GetNuisanceParameters()));
    commands.Add(&arg1);
    commands.Add(&arg2);
    
-   std::cout << "Observables before createNLL " << std::endl;
-   model->GetObservables()->Print("v");
+//   std::cout << "Observables before createNLL " << std::endl;
+//   RooArgSet *getObs = (RooArgSet *)model->GetObservables();
+//   getObs->setRealValue("obs1", 3);
+//   *getObs = *w->data("data_obs")->get(9);
+//   getObs->Print("v");
 
    // XXX never forget data set name
 //   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
    RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
+  
+   *((RooArgSet *)nll->getObservables(*w->data(data))) = *model->GetObservables();
 
-   w->var("sig")->setVal(0.1);
-   double lastVal = nll->getVal();
+//   w->var("sig")->setVal(0.1);
+//   double lastVal = nll->getVal();
 //   double *values = new double[10];
 //   double *x = new double[10];
-   std::cout << "Observables after createNLL " << std::endl;
-   model->GetObservables()->Print("v");
-
+//   std::cout << "Observables after createNLL " << std::endl;
+//   RooArgSet obs;
+  // model->GetObservables()->snapshot(obs);
+/*
    int j = 0;
    Int_t numPdfs = add->pdfList().getSize();
    for(double d = 0.3; j < 10; d += 0.2, j++) {
@@ -82,6 +88,7 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
       TIterator *itCoef = add->coefList().createIterator();
 
       w->var("sig")->setVal(d);
+      getObs->setRealValue("obs1", 5);
     //  values[j] = nll->getVal() - lastVal; 
   //    x[j] = d; lastVal = nll->getVal();
     //  std::cout << "nll diff " << d << " " << values[j] << std::endl;
@@ -92,29 +99,40 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
       for(Int_t i = 0; i < numPdfs; ++i) {
          RooAbsReal *coef = (RooAbsReal *)(itCoef->Next());
          RooAbsPdf  *pdf  = (RooAbsPdf * )(itPdf->Next() );
-         pdf->getVariables()->Print("v");
-  //       std::cout << "pdf " << i << pdf->ClassName() << " value " << pdf->getVal(obs) << std::endl;
-//         std::cout << "coef " << i << " value " << coef->getVal() << std::endl;
+         RooArgSet vars(*pdf->getVariables());
+    //     vars = obs;
+        // std::cout << "getObs";
+        // getObs->Print("v");
+        // std::cout << "Vars";
+        // vars.Print("v");
+         std::cout << "\n" << pdf->getObservables(w->data("data_obs"))->find("obs1") << std::endl;
+        // if (pdf->getVariables()->find("obs1")) std::cout << "Vars: " << pdf->getVariables()->getRealValue("obs1") << std::endl;
+         std::cout << "\n" << getObs->find("obs1") << std::endl; 
+         //std::cout << "Obs: " << getObs->getRealValue("obs1") << std::endl;
+         //std::cout << "pdf " << i << pdf->ClassName() << " value " << pdf->getVal(obs) << std::endl;
+      std::cout << "\nObs: "; getObs->Print("v");
+      std::cout << "\nPdf: "; pdf->getObservables(w->data("data_obs"))->Print("v");
+//       std::cout << "coef " << i << " value " << coef->getVal() << std::endl;
       }
    }
 
    w->data("data_obs")->Print("v");
 //   delete values; delete x;
    return;
+*/
 
-
-  // RooMinimizer m(*nll);
-  // m.setMinimizerType("Minuit2");
+   RooMinimizer m(*nll);
+   m.setMinimizerType("Minuit");
 //   m.optimizeConst(2);
-  // m.setErrorLevel(0.5);
-  // m.setEps(1);
-  // m.setPrintLevel(2);
-  // m.setStrategy(0);
+   m.setErrorLevel(0.5);
+   m.setEps(1);
+   m.setPrintLevel(0);
+   m.setStrategy(0);
 
    myBenchmark.Start("CombinedLikelihood");
 
    for(Int_t i = 0; i < RUNS; i++) {
-  //    m.migrad();
+      m.migrad();
    }
 
    myBenchmark.Stop("CombinedLikelihood");
