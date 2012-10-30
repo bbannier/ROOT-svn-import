@@ -34,7 +34,7 @@
 #include "Math/IParamFunction.h"
 #endif
 #ifndef ROOT_Math_AdaptiveIntegratorMultiDim
-#include "Math/AdaptiveIntegratorMultiDim.h"
+#include "Math/IntegratorMultiDim.h"
 #endif
 
 class TF1;
@@ -84,7 +84,7 @@ protected:
    Double_t*   fMin;         //Lower bounds for the range
    Double_t*   fMax;         //Upper bounds for the range
    Double_t    fNorm;
-   ROOT::Math::AdaptiveIntegratorMultiDim fIntegrator;
+   ROOT::Math::IntegratorMultiDim fIntegrator;
    Int_t       fNpx;         //Number of points used for the graphical representation
    // TODO: change to an internal enum
    Int_t       fType;        // 0 for standard functions, 

@@ -903,7 +903,7 @@ TFn::~TFn()
 
 
 //______________________________________________________________________________
-TFn::TFn(const TFn &f1) : TNamed(f1) 
+TFn::TFn(const TFn &f1) : TNamed(f1), fIntegrator() 
 {
    // Constuctor.
 
@@ -985,9 +985,6 @@ void TFn::Copy(TObject &obj) const
    ((TFn&)obj).fNDF     = fNDF;
    ((TFn&)obj).fMinimum = fMinimum;
    ((TFn&)obj).fMaximum = fMaximum;
-
-   ((TFn&)obj).fIntegrator = ROOT::Math::AdaptiveIntegratorMultiDim(fIntegrator);
-   
 
    ((TFn&)obj).fParErrors = 0;
    ((TFn&)obj).fParMin    = 0;
