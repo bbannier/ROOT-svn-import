@@ -84,6 +84,7 @@
 #include <map>
 #include <set>
 #include <stdint.h>
+#include <fstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -197,6 +198,12 @@ void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
             if (!listOfSmth->FindObject(FD->getNameAsString().c_str())) {  
                listOfSmth->Add(new TFunction(new TClingMethodInfo(interp, FD)));
             }            
+         }
+
+         if (TagDecl *TD = dyn_cast<TagDecl>(*DI)) {
+            listOfSmth = gROOT->GetListOfClasses();
+            std::string name = TD->getNameAsString();
+            TCintWithCling::UpdateClassInfoWork(name.c_str());
          }
 
          if (isa<DeclContext>(*DI) && !isa<EnumDecl>(*DI)) {
@@ -664,16 +671,16 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    fLockProcessLine = kTRUE;
    // Disable the autoloader until it is explicitly enabled.
    G__set_class_autoloading(0);
-   G__RegisterScriptCompiler(&ScriptCompiler);
+   //G__RegisterScriptCompiler(&ScriptCompiler);
    G__set_ignoreinclude(&IgnoreInclude);
    G__InitUpdateClassInfo(&TCint_UpdateClassInfo);
    G__InitGetSpecialObject(&TCint_FindSpecialObject);
    // check whether the compiler is available:
-   char* path = gSystem->Which(gSystem->Getenv("PATH"), gSystem->BaseName(COMPILER));
-   if (path && path[0]) {
-      G__InitGenerateDictionary(&TCint_GenerateDictionary);
-   }
-   delete[] path;
+   //char* path = gSystem->Which(gSystem->Getenv("PATH"), gSystem->BaseName(COMPILER));
+   //if (path && path[0]) {
+   //   G__InitGenerateDictionary(&TCint_GenerateDictionary);
+   //}
+   //delete[] path;
    ResetAll();
 #ifndef R__WIN32
    optind = 1;  // make sure getopt() works in the main program
@@ -792,7 +799,7 @@ void TCintWithCling::RegisterModule(const char* modulename,
    gSystem->ExpandPathName(searchPath);
 
    if (!gSystem->FindFile(searchPath, pcmFileName)) {
-      Error("RegisterModule()", "Cannot find dictionary module %s in %s",
+      Error("RegisterModule", "cannot find dictionary module %s in %s",
             pcmFileName.Data(), searchPath.Data());
    } else {
       TCintWithCling::Info("RegisterModule", "Loading PCM %s", pcmFileName.Data());
@@ -801,7 +808,7 @@ void TCintWithCling::RegisterModule(const char* modulename,
    }
 
    for (const char** hdr = headers; *hdr; ++hdr) {
-      Info("RegisterModule()", "   #including %s...", *hdr);
+      Info("RegisterModule", "   #including %s...", *hdr);
       fInterpreter->parse(TString::Format("#include \"%s\"", *hdr).Data());
    }
 }
@@ -930,18 +937,13 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
       TString io;
       TString fname = gSystem->SplitAclicMode(sLine.Data() + 3,
                                               aclicMode, arguments, io);
-      if ((mod_line[1] == 'x') || (mod_line[1] == 'X')) {
-         // Let CINT load the file, but have only cling execute it.
-         mod_line[1] = 'L';
-      }
-      mod_line = ".L " + fname;
-      ret = ProcessLineCintOnly(mod_line, error);
    }
    // A non-zero returned value means the given line was
    // not a complete statement.
    int indent = 0;
    // This will hold the resulting value of the evaluation the given line.
    cling::StoredValueRef result;
+   cling::Interpreter::CompilationResult compRes = cling::Interpreter::kSuccess;
    if (!strncmp(sLine.Data(), ".L", 2) || !strncmp(sLine.Data(), ".x", 2) ||
        !strncmp(sLine.Data(), ".X", 2)) {
       // If there was a trailing "+", then CINT compiled the code above,
@@ -953,20 +955,59 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
       TString fname = gSystem->SplitAclicMode(sLine.Data() + 3,
          aclicMode, arguments, io);
       if (aclicMode.Length()) {
-         aclicMode.Append("kf");
+         // Remove the leading '+'
+         R__ASSERT(aclicMode[0]=='+' && "ACLiC mode must start with a +");
+         aclicMode[0]='k';    // We always want to keep the .so around.
+         if (aclicMode[1]=='+') {
+            // We have a 2nd +
+            aclicMode[1]='f'; // We want to force the recompilation.
+         }
          gSystem->CompileMacro(fname,aclicMode);
 
          if (strncmp(sLine.Data(), ".L", 2) != 0) {
             // if execution was requested.
-            mod_line = fname + arguments + io;
-            indent = fMetaProcessor->process(mod_line, &result);
+            
+            if (arguments.Length()==0) {
+               arguments = "()";
+            }
+            // We need to remove the extension.
+            Ssiz_t ext = fname.Last('.');
+            if (ext != kNPOS) {
+               fname.Remove(ext);
+            }
+            const char *function = gSystem->BaseName(fname);
+            mod_line = function + arguments + io;
+            indent = fMetaProcessor->process(mod_line, &result, &compRes);
          }
       } else {
-         indent = fMetaProcessor->process(mod_line, &result);
+         // not ACLiC
+         bool unnamedMacro = false;
+         {
+            std::string line;
+            std::ifstream in(fname);
+            static const char whitespace[] = " \t\r\n";
+            while (in) {
+               std::getline(in, line);
+               std::string::size_type posNonWS = line.find_first_not_of(whitespace);
+               if (posNonWS != std::string::npos) {
+                  unnamedMacro = (line[posNonWS] == '{');
+                  break;
+               }
+            }
+         }
+         if (unnamedMacro) {
+            compRes = fMetaProcessor->readInputFromFile(fname.Data(), &result,
+                                                        true /*ignoreOutmostBlock*/);
+         } else {
+            TString cintModLine = ".L " + fname;
+            ProcessLineCintOnly(cintModLine);
+
+            indent = fMetaProcessor->process(mod_line, &result, &compRes);
+         }
       }
-   }
+   } // .L / .X / .x
    else {
-      indent = fMetaProcessor->process(sLine, &result);
+      indent = fMetaProcessor->process(sLine, &result, &compRes);
    }
    if (result.isValid() && result.needsManagedAllocation())
       fTemporaries->push_back(result);
@@ -987,9 +1028,17 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
       /// fMetaProcessor->abortEvaluation();
       return 0;
    }
-   if (result.isValid()
+   if (error) {
+      switch (compRes) {
+      case cling::Interpreter::kSuccess: *error = kNoError; break;
+      case cling::Interpreter::kFailure: *error = kRecoverable; break;
+      case cling::Interpreter::kMoreInputExpected: *error = kProcessing; break;
+      }
+   }
+   if (compRes == cling::Interpreter::kSuccess
+       && result.isValid()
        && !result.get().isVoid(fInterpreter->getCI()->getASTContext())) {
-      return result.get().simplisticCastAs<long>();
+         return result.get().simplisticCastAs<long>();
    }
    return 0;
 }
@@ -1052,8 +1101,8 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
       = astContext.getASTRecordLayout(recordDecl);
 
    if (cl->Size() != recLayout.getSize().getQuantity()) {
-      Error("InspectMembers","TClass and cling disagree on the size of the class %s, respectively %d %ld\n",
-            cl->GetName(),cl->Size(),recLayout.getSize().getQuantity());
+      Error("InspectMembers","TClass and cling disagree on the size of the class %s, respectively %d %lld\n",
+            cl->GetName(),cl->Size(),(Long64_t)recLayout.getSize().getQuantity());
    }
    unsigned iNField = 0;
    // iterate over fields
@@ -2601,75 +2650,21 @@ void* TCintWithCling::FindSpecialObject(const char* item, G__ClassInfo* type,
 }
 
 //______________________________________________________________________________
-// Helper class for UpdateClassInfo
-namespace {
-class TInfoNode {
-private:
-   string fName;
-   Long_t fTagnum;
-public:
-   TInfoNode(const char* item, Long_t tagnum)
-      : fName(item), fTagnum(tagnum)
-   {}
-   void Update() {
-      TCintWithCling::UpdateClassInfoWork(fName.c_str(), fTagnum);
-   }
-};
-}
-
-//______________________________________________________________________________
 void TCintWithCling::UpdateClassInfo(char* item, Long_t tagnum)
 {
-   // Static function called by CINT when it changes the tagnum for
-   // a class (e.g. after re-executing the setup function). In such
-   // cases we have to update the tagnum in the G__ClassInfo used by
-   // the TClass for class "item".
-   R__LOCKGUARD(gCINTMutex);
-   if (gROOT && gROOT->GetListOfClasses()) {
-      static Bool_t entered = kFALSE;
-      static vector<TInfoNode> updateList;
-      Bool_t topLevel;
-      if (entered) {
-         topLevel = kFALSE;
-      }
-      else {
-         entered = kTRUE;
-         topLevel = kTRUE;
-      }
-      if (topLevel) {
-         UpdateClassInfoWork(item, tagnum);
-      }
-      else {
-         // If we are called indirectly from within another call to
-         // TCintWithCling::UpdateClassInfo, we delay the update until the dictionary loading
-         // is finished (i.e. when we return to the top level TCintWithCling::UpdateClassInfo).
-         // This allows for the dictionary to be fully populated when we actually
-         // update the TClass object.   The updating of the TClass sometimes
-         // (STL containers and when there is an emulated class) forces the building
-         // of the TClass object's real data (which needs the dictionary info).
-         updateList.push_back(TInfoNode(item, tagnum));
-      }
-      if (topLevel) {
-         while (!updateList.empty()) {
-            TInfoNode current(updateList.back());
-            updateList.pop_back();
-            current.Update();
-         }
-         entered = kFALSE;
-      }
-   }
+   // No op: see TClingCallbacks
 }
 
 //______________________________________________________________________________
-void TCintWithCling::UpdateClassInfoWork(const char* item, Long_t tagnum)
+//FIXME: Factor out that function in TClass, because TClass does it already twice
+void TCintWithCling::UpdateClassInfoWork(const char* item)
 {
    // This does the actual work of UpdateClassInfo.
    Bool_t load = kFALSE;
    if (strchr(item, '<') && TClass::GetClassShortTypedefHash()) {
       // We have a template which may have duplicates.
-      TString resolvedItem(
-         TClassEdit::ResolveTypedef(TClassEdit::ShortType(item,
-                                    TClassEdit::kDropStlDefault).c_str(), kTRUE));
+      TString resolvedItem(TClassEdit::ResolveTypedef(TClassEdit::ShortType(item,
+                                  TClassEdit::kDropStlDefault).c_str(), kTRUE));
       if (resolvedItem != item) {
          TClass* cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedItem);
          if (cl) {
@@ -2679,7 +2674,7 @@ void TCintWithCling::UpdateClassInfoWork(const char* item, Long_t tagnum)
       if (!load) {
          TIter next(TClass::GetClassShortTypedefHash()->GetListForObject(resolvedItem));
          while (TClass::TNameMapNode* htmp =
-                   static_cast<TClass::TNameMapNode*>(next())) {
+                static_cast<TClass::TNameMapNode*>(next())) {
             if (resolvedItem == htmp->String()) {
                TClass* cl = gROOT->GetClass(htmp->fOrigName, kFALSE);
                if (cl) {
@@ -2692,9 +2687,13 @@ void TCintWithCling::UpdateClassInfoWork(const char* item, Long_t tagnum)
          }
       }
    }
+   if (gROOT->GetListOfClasses()->GetEntries() == 0) {
+      // Nothing to find, let's not get yourself in trouble.
+      return;
+   }
    TClass* cl = gROOT->GetClass(item, load);
    if (cl) {
-      cl->ResetClassInfo(tagnum);
+      cl->ResetCaches();
    }
 }
 

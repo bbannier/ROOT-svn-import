@@ -108,10 +108,11 @@ TClingClassInfo::TClingClassInfo(cling::Interpreter *interp, const char *name)
 }
 
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp,
-                                 const clang::RecordType &type)
-   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(&type), fTitle("")
+                                 const clang::TagDecl &tag)
+   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0), 
+     fTitle("")
 {
-   fDecl = fType->getDecl();
+   Init(tag);
 }
 
 long TClingClassInfo::ClassProperty() const
@@ -234,37 +235,30 @@ TClingMethodInfo TClingClassInfo::GetMethod(const char *fname,
       const char *proto, long *poffset, MatchMode mode /*= ConversionMatch*/,
       InheritanceMode imode /*= WithInheritance*/) const
 {
+   if (poffset) {
+      *poffset = 0L;
+   }
    if (!IsValid()) {
       TClingMethodInfo tmi(fInterp);
       return tmi;
    }
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
-   const clang::FunctionDecl *FD = lh.findFunctionProto(fDecl, fname, proto);
+   const clang::FunctionDecl *fd = lh.findFunctionProto(fDecl, fname, proto);
+   if (!fd) {
+      // Function not found.
+      TClingMethodInfo tmi(fInterp);
+      return tmi;
+   }
    if (poffset) {
-     *poffset = 0L;
-     if (const clang::CXXMethodDecl *MD =
-           llvm::dyn_cast<clang::CXXMethodDecl>(FD)) {
-        const clang::CXXRecordDecl *definer = MD->getParent();
-        const clang::CXXRecordDecl *accessor =
-           llvm::cast<clang::CXXRecordDecl>(fDecl);
-        if (definer != accessor) {
-           // This function may not be accessible using a pointer
-           // to the declaring class, get the adjustment necessary
-           // to convert that to a pointer to the defining class.
-           TClingBaseClassInfo bi(fInterp, const_cast<TClingClassInfo*>(this));
-           while (bi.Next()) {
-              TClingClassInfo *bci = bi.GetBase();
-              if (bci->GetDecl() == definer) {
-                 // We have found the right base class, now get the
-                 // necessary adjustment.
-                 *poffset = bi.Offset();
-              }
-           }
-        }
+     // We have been asked to return a this pointer adjustment.
+     if (const clang::CXXMethodDecl *md =
+           llvm::dyn_cast<clang::CXXMethodDecl>(fd)) {
+        // This is a class member function.
+        *poffset = GetOffset(md);
      }
    }
    TClingMethodInfo tmi(fInterp);
-   tmi.Init(FD);
+   tmi.Init(fd);
    return tmi;
 }
 
@@ -284,14 +278,62 @@ int TClingClassInfo::GetMethodNArg(const char *method, const char *proto) const
    return clang_val;
 }
 
+long TClingClassInfo::GetOffset(const clang::CXXMethodDecl* md) const
+{
+   long offset = 0L;
+   const clang::CXXRecordDecl* definer = md->getParent();
+   const clang::CXXRecordDecl* accessor =
+      llvm::cast<clang::CXXRecordDecl>(fDecl);
+   if (definer != accessor) {
+      // This function may not be accessible using a pointer
+      // to the declaring class, get the adjustment necessary
+      // to convert that to a pointer to the defining class.
+      TClingBaseClassInfo bi(fInterp, const_cast<TClingClassInfo*>(this));
+      while (bi.Next(0)) {
+         TClingClassInfo* bci = bi.GetBase();
+         if (bci->GetDecl() == definer) {
+            // We have found the right base class, now get the
+            // necessary adjustment.
+            offset = bi.Offset();
+            break;
+         }
+      }
+   }
+   return offset;
+}
+
 bool TClingClassInfo::HasDefaultConstructor() const
 {
-   // Note: This is a ROOT special!  It actually test for the root ioctor.
+   // Return true if there a public constructor taking no argument
+   // (including a constructor that has default for all its argument).
+
+   // Note: This is could enhanced to also know about the ROOT ioctor
+   // but this was not the case in CINT.
+
    if (!IsValid()) {
       return false;
    }
-   // FIXME: Look for root ioctor when we have function lookup, and
-   //        rootcling can tell us what the name of the ioctor is.
+   
+   const clang::CXXRecordDecl *CRD =
+      llvm::dyn_cast<clang::CXXRecordDecl>(fDecl);
+
+   if (!CRD) return true; 
+
+   for(clang::CXXRecordDecl::ctor_iterator iter = CRD->ctor_begin(), end = CRD->ctor_end();
+       iter != end;
+       ++iter)
+   {
+      if (iter->getAccess() == clang::AS_public) {
+         // We can reach this constructor.
+         if (iter->getNumParams() == 0) {
+            return true;
+         }
+         if (iter->getNumParams() == 0) {
+            return true;
+         }
+      }
+   }
+
    return false;
 }
 
@@ -374,6 +416,13 @@ void TClingClassInfo::Init(int tagnum)
 {
    Warning("TClingClassInfo::Init(tagnum)","Not yet implemented\n");
    return;
+}
+
+void TClingClassInfo::Init(const clang::TagDecl &tag)
+{
+   fDecl = &tag;
+   clang::ASTContext &C = tag.getASTContext();
+   fType = C.getTagDeclType(&tag)->getAs<clang::TagType>();
 }
 
 bool TClingClassInfo::IsBase(const char *name) const
@@ -537,7 +586,8 @@ void *TClingClassInfo::New() const
 {
    // Invoke a new expression to use the class constructor
    // that takes no arguments to create an object of this class type.
-   if (!IsValid()) {
+
+   if (!HasDefaultConstructor()) {
       return 0;
    }
    std::ostringstream os;
@@ -558,7 +608,7 @@ void *TClingClassInfo::New(int n) const
    // Invoke a new expression to use the class constructor
    // that takes no arguments to create an array object
    // of this class type.
-   if (!IsValid()) {
+   if (!HasDefaultConstructor()) {
       return 0;
    }
    std::ostringstream os;
@@ -580,7 +630,7 @@ void *TClingClassInfo::New(int n, void *arena) const
    // constructor that takes no arguments to create an
    // array of objects of this class type in the given
    // memory arena.
-   if (!IsValid()) {
+   if (!HasDefaultConstructor()) {
       return 0;
    }
    std::ostringstream os;
@@ -602,7 +652,7 @@ void *TClingClassInfo::New(void *arena) const
    // Invoke a placement new expression to use the class
    // constructor that takes no arguments to create an
    // object of this class type in the given memory arena.
-   if (!IsValid()) {
+   if (!HasDefaultConstructor()) {
       return 0;
    }
    std::ostringstream os;

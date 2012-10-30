@@ -52,7 +52,7 @@ using namespace ROOT;
 
 // #define SELECTION_DEBUG
 
-void R__GetQualifiedName(std::string &qual_name, const clang::NamedDecl &cl);
+// void R__GetQualifiedName(std::string &qual_name, const clang::NamedDecl &cl);
 
 /* -------------------------------------------------------------------------- */
 using namespace clang;
@@ -96,8 +96,8 @@ RScanner::AnnotatedRecordDecl::AnnotatedRecordDecl(long index, const clang::Type
    
    TMetaUtils::GetNormalizedName( fNormalizedName, clang::QualType(requestedType,0), interpreter, normCtxt);
 
-   std::string canonicalName;
-   R__GetQualifiedName(canonicalName,*decl);
+   // std::string canonicalName;
+   // R__GetQualifiedName(canonicalName,*decl);
 
    // fprintf(stderr,"Created annotation with: requested name=%-22s normalized name=%-22s canonical name=%-22s\n",fRequestedName.c_str(),fNormalizedName.c_str(),canonicalName.c_str());
 }
@@ -754,7 +754,12 @@ bool RScanner::VisitRecordDecl(clang::RecordDecl* D)
    if(D && (D->isImplicit() || !D->isCompleteDefinition()) ) {
       return true;
    }
-   
+
+   const clang::CXXRecordDecl *cxxdecl = llvm::dyn_cast<clang::CXXRecordDecl>(D);
+   if (cxxdecl && cxxdecl->getDescribedClassTemplate ()) {
+      // Never select the class templates themselves.
+      return true;
+   }
    DumpDecl(D, "");
 
    if (fVerboseLevel > 2) {
@@ -1040,15 +1045,7 @@ bool RScanner::GetDeclName(clang::Decl* D, std::string& name) const
    clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
    
    if (N) {
-      if (N->getIdentifier()) {
-         name = N->getNameAsString();
-      }
-      //else if (N->isCXXClassMember()) { // CXXConstructor, CXXDestructor, operators
-      else {
-         name =  N->getNameAsString();
-      }
-      //else 
-      //   name = "strange";
+      name = N->getNameAsString();
       return true;
    }
    else {

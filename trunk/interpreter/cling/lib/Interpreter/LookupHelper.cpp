@@ -365,6 +365,10 @@ namespace cling {
     DClient->EndSourceFile();
     S.getDiagnostics().Reset();
     //
+    //  Setup to reparse as a type.
+    //
+    DClient->BeginSourceFile(PP.getLangOpts(), &PP);
+    //
     //  Create a fake file to parse the function name.
     //
     {
@@ -516,6 +520,9 @@ namespace cling {
                                                                Best);
           if (OR == OR_Success) {
             TheDecl = Best->Function;
+            // We prefer to get the canonical decl for consistency and ease
+            // of comparison.
+            TheDecl = TheDecl->getCanonicalDecl();
           }
         }
       }
@@ -651,6 +658,10 @@ namespace cling {
       DiagnosticConsumer* DClient = S.getDiagnostics().getClient();
       DClient->EndSourceFile();
       S.getDiagnostics().Reset();
+      //
+      //  Setup to reparse as a type.
+      //
+      DClient->BeginSourceFile(PP.getLangOpts(), &PP);
       //
       //  Create a fake file to parse the function name.
       //
@@ -798,6 +809,9 @@ namespace cling {
                                                                Best);
           if (OR == OR_Success) {
             TheDecl = Best->Function;
+            // We prefer to get the canonical decl for consistency and ease
+            // of comparison.
+            TheDecl = TheDecl->getCanonicalDecl();
           }
         }
       }
