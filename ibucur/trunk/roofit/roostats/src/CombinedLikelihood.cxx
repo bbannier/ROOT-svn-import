@@ -124,7 +124,7 @@ CombinedLikelihood::CombinedLikelihood(
          
          if(typeid(*constr) == typeid(RooGaussian)) {
             constr = new GaussianPDF(*((RooGaussian *)constr));
-            std::cout << "Converting RooGaussian to " << constr->ClassName() << std::endl;
+  //          std::cout << "Converting RooGaussian to " << constr->ClassName() << std::endl;
          }
 
          fConstraints.push_back(constr);
