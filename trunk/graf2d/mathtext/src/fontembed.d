@@ -1,0 +1,1 @@
+  graf2d/mathtext/src/fontembed.o graf2d/mathtext/src/fontembed.d: $(wildcard include/fontembed.h include/RConfig.h include/RVersion.h include/Byteswap.h /home/ibucur/roottrunk/graf2d/mathtext/src/table/macintoshordering.h /home/ibucur/roottrunk/graf2d/mathtext/src/table/adobeglyphlist.h)
