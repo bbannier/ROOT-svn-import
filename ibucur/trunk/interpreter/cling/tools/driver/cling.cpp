@@ -52,13 +52,19 @@ int main( int argc, char **argv ) {
    // If we are not interactive we're supposed to parse files
    if (!Interactive) {
      for (size_t I = 0, N = Inputs.size(); I < N; ++I) {
-       ret = ui.getMetaProcessor()->process((".x " + Inputs[I].File).c_str());
+       ui.getMetaProcessor()->process((".x " + Inputs[I].File).c_str());
+       ret = !CI->getDiagnostics().getClient()->getNumErrors();
      }
    }
    else {
       cling::UserInterface ui(interp);
       ui.runInteractively(interp.getOptions().NoLogo);
    }
+
+   // if we are running with -verify a reported has to be returned as unsuccess.
+   // This is relevan especially for the test suite.
+   if (CI->getDiagnosticOpts().VerifyDiagnostics)
+     ret = !CI->getDiagnostics().getClient()->getNumErrors();
 
    return ret ? 0 : 1;
 }

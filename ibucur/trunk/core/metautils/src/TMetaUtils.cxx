@@ -48,19 +48,29 @@
 //////////////////////////////////////////////////////////////////////////
 ROOT::TMetaUtils::TNormalizedCtxt::TNormalizedCtxt(const cling::LookupHelper &lh)
 {   
-   // Initialize the list of typedef to keep (i.e. make them opaque for normalization).
+   // Initialize the list of typedef to keep (i.e. make them opaque for normalization)
+   // and the list of typedef whose semantic is different from their underlying type
+   // (Double32_t and Float16_t).
    // This might be specific to an interpreter.
 
-   if (fTypeToSkip.empty()) {
-      clang::QualType toSkip = lh.findType("Double32_t");
-      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
-      toSkip = lh.findType("Float16_t");
-      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
-      toSkip = lh.findType("string");
-      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
-      toSkip = lh.findType("std::string");
-      if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+   clang::QualType toSkip = lh.findType("Double32_t");
+   if (!toSkip.isNull()) {
+      fTypeToSkip.insert(toSkip.getTypePtr());
+      fTypeWithAlternative.insert(toSkip.getTypePtr());
    }
+   toSkip = lh.findType("Float16_t");
+   if (!toSkip.isNull()) {
+      fTypeToSkip.insert(toSkip.getTypePtr());
+      fTypeWithAlternative.insert(toSkip.getTypePtr());
+   }
+   toSkip = lh.findType("Long64_t");
+   if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+   toSkip = lh.findType("ULong64_t");
+   if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+   toSkip = lh.findType("string");
+   if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
+   toSkip = lh.findType("std::string");
+   if (!toSkip.isNull()) fTypeToSkip.insert(toSkip.getTypePtr());
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -512,7 +522,7 @@ void ROOT::TMetaUtils::GetCppName(std::string &out, const char *in)
    unsigned int i=0,j=0,c;
    while((c=in[i])) {
       if (out.capacity() < (j+3)) {
-         out.resize(2*j);
+         out.resize(2*j+3);
       }
       switch(c) {
          case '+': strcpy(const_cast<char*>(out.data())+j,"pL"); j+=2; break; // Okay: we resized the underlying buffer if needed
@@ -598,8 +608,15 @@ void ROOT::TMetaUtils::GetNormalizedName(std::string &norm_name, const clang::Qu
    // Readd missing default template parameter.
    normalizedType = ROOT::TMetaUtils::AddDefaultParameters(normalizedType, interpreter, normCtxt);
    
+   clang::PrintingPolicy policy(ctxt.getPrintingPolicy());
+   policy.SuppressTagKeyword = true; // Never get the class or struct keyword
+   policy.SuppressScope = true;      // Force the scope to be coming from a clang::ElaboratedType.
+   // The scope suppression is required for getting rid of the anonymous part of the name of a class defined in an anonymous namespace.
+   // This gives us more control vs not using the clang::ElaboratedType and relying on the Policy.SuppressUnwrittenScope which would
+   // strip both the anonymous and the inline namespace names (and we probably do not want the later to be suppressed).
+
    std::string normalizedNameStep1;
-   normalizedType.getAsStringInternal(normalizedNameStep1,ctxt.getPrintingPolicy());
+   normalizedType.getAsStringInternal(normalizedNameStep1,policy);
    
    // Still remove the std:: and default template argument and insert the Long64_t
    TClassEdit::TSplitType splitname(normalizedNameStep1.c_str(),(TClassEdit::EModType)(TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault));

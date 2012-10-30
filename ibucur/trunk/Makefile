@@ -72,8 +72,8 @@ include $(MAKEFILEDEP)
 MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
                 core/textinput core/base core/cont core/meta core/thread \
                 io/io math/mathcore net/net core/zip core/lzma math/matrix \
-                core/newdelete hist/hist tree/tree \
-                graf2d/freetype graf2d/graf graf2d/gpad graf3d/g3d \
+                core/newdelete hist/hist tree/tree graf2d/freetype \
+                graf2d/mathtext graf2d/graf graf2d/gpad graf3d/g3d \
                 gui/gui math/minuit hist/histpainter tree/treeplayer \
                 gui/ged tree/treeviewer math/physics graf2d/postscript \
                 core/rint html montecarlo/eg \
@@ -501,7 +501,8 @@ ROOTMAP       = etc/system.rootmap
 
 ##### Extra libs needed for "static" target #####
 
-STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
+STATICEXTRALIBS = $(CLINGLIBEXTRA) \
+                  $(PCRELDFLAGS) $(PCRELIB) \
                   $(FREETYPELDFLAGS) $(FREETYPELIB)
 ifneq ($(SSLLIB),)
 STATICEXTRALIBS += $(SSLLIB)
@@ -510,7 +511,7 @@ ifeq ($(XFTLIB),yes)
 STATICEXTRALIBS += -lXft
 endif
 ifeq ($(BUILDCOCOA),yes)
-STATICEXTRALIBS += -framework Cocoa
+STATICEXTRALIBS += -framework Cocoa -framework OpenGL
 endif
 
 ##### libCore #####

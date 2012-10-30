@@ -386,9 +386,10 @@ namespace cling {
     ///\param [in] allowSharedLib - Whether to try to load the file as shared
     ///                             library.
     ///
-    ///\returns true for happiness.
+    ///\returns result of the compilation.
     ///
-    bool loadFile(const std::string& filename, bool allowSharedLib = true);
+    CompilationResult loadFile(const std::string& filename,
+                               bool allowSharedLib = true);
 
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled() { return m_DynamicLookupEnabled; }
@@ -403,8 +404,12 @@ namespace cling {
 
     llvm::Module* getModule() const;
 
+    //FIXME: This must be in InterpreterCallbacks.
     void installLazyFunctionCreator(void* (*fp)(const std::string&));
+    void suppressLazyFunctionCreatorDiags(bool suppressed = true);
 
+    //FIXME: Terrible hack to let the IncrementalParser run static inits on
+    // transaction completed.
     void runStaticInitializersOnce() const;
 
     int CXAAtExit(void (*func) (void*), void* arg, void* dso);

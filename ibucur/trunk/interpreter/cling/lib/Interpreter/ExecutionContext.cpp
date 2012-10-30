@@ -58,6 +58,8 @@ std::set<std::string> ExecutionContext::m_unresolvedSymbols;
 std::vector<ExecutionContext::LazyFunctionCreatorFunc_t>
   ExecutionContext::m_lazyFuncCreator;
 
+bool ExecutionContext::m_LazyFuncCreatorDiagsSuppressed = false;
+
 ExecutionContext::ExecutionContext():
   m_engine(0),
   m_RunningStaticInits(false),
@@ -119,8 +121,13 @@ ExecutionContext::NotifyLazyFunctionCreators(const std::string& mangled_name)
          = m_lazyFuncCreator.begin(), et = m_lazyFuncCreator.end();
        it != et; ++it) {
     void* ret = (void*)((LazyFunctionCreatorFunc_t)*it)(mangled_name);
-    if (ret) return ret;
+    if (ret) 
+      return ret;
   }
+
+  if (m_LazyFuncCreatorDiagsSuppressed)
+    return 0;
+
   return HandleMissingFunction(mangled_name);
 }
 

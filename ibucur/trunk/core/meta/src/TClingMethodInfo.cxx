@@ -121,20 +121,7 @@ void TClingMethodInfo::Init(const clang::FunctionDecl *decl)
    fFirstTime = true;
    fContextIdx = 0U;
    fIter = clang::DeclContext::decl_iterator();
-   if (!decl) {
-      return;
-   }
-   clang::DeclContext *DC =
-      const_cast<clang::DeclContext *>(decl->getDeclContext());
-   DC = DC->getPrimaryContext();
-   DC->collectAllContexts(fContexts);
-   fIter = DC->decls_begin();
-   while (InternalNext()) {
-      if (*fIter == decl) {
-         fFirstTime = true;
-         break;
-      }
-   }
+   fSingleDecl = decl;
 }
 
 void *TClingMethodInfo::InterfaceMethod() const
@@ -181,7 +168,7 @@ int TClingMethodInfo::InternalNext()
 
    assert(!fSingleDecl && "This is not an iterator!");
 
-   if (!GetMethodDecl()) {
+   if (!*fIter) {
       // Iterator is already invalid.
       return 0;
    }

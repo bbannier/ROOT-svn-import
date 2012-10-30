@@ -1475,7 +1475,7 @@ function doubleTap(elem, speed, distance) {
             .scale(x)
             .orient("bottom")
             .tickPadding(5)
-            .tickSubdivide(5)
+            .tickSubdivide(4)
             .tickSize(-0.03 * h, -0.03 * h / 2, null)
             .tickFormat(function(d,i) { return parseFloat(d.toPrecision(12)); })
             .ticks(10);
@@ -1485,10 +1485,10 @@ function doubleTap(elem, speed, distance) {
             .scale(y)
             .orient("left")
             .tickPadding(5)
-            .tickSubdivide(5)
+            .tickSubdivide(4)
             .tickSize(-0.03 * w, -0.03 * w / 2, null)
             .tickFormat(function(d,i) { return parseFloat(d.toPrecision(12)); })
-            .ticks(10);
+            .ticks(8);
 
          var xax = frame.append("svg:g")
             .attr("class", "xaxis")
@@ -1570,6 +1570,7 @@ function doubleTap(elem, speed, distance) {
    JSROOTPainter.drawGraph = function(vis, pad, graph, hframe) {
       var scalex = 1, scaley = 1, logx = false, logy = false, logz = false,
           gridx = false, gridy = false, draw_all = true;
+      var draw_errors = true;
       if (pad && typeof(pad) != 'undefined') {
          logx = pad['fLogx'];
          logy = pad['fLogy'];
@@ -1577,14 +1578,22 @@ function doubleTap(elem, speed, distance) {
          gridx = pad['fGridx'];
          gridy = pad['fGridy'];
       }
-      // check for axis scale format, and convert if required
       var xaxis_type = logx ? 'logarithmic' : 'linear';
-      if (graph['fHistogram']['fXaxis']['fTimeDisplay']) {
-         xaxis_type = 'datetime';
+      if (graph['_typename'] == 'JSROOTIO.TGraph') {
+         // check for axis scale format, and convert if required
+         if (graph['fHistogram']['fXaxis']['fTimeDisplay']) {
+            xaxis_type = 'datetime';
+         }
+         var yaxis_type = logy ? 'logarithmic' : 'linear';
+         if (graph['fHistogram']['fYaxis']['fTimeDisplay']) {
+            yaxis_type = 'datetime';
+         }
       }
-      var yaxis_type = logy ? 'logarithmic' : 'linear';
-      if (graph['fHistogram']['fYaxis']['fTimeDisplay']) {
-         yaxis_type = 'datetime';
+      else if (graph['_typename'] == 'JSROOTIO.TGraphErrors') {
+         maxEX = d3.max(graph['fEX']);
+         maxEY = d3.max(graph['fEY']);
+         if (maxEX < 1.0e-300 && maxEY < 1.0e-300)
+            draw_errors = false;
       }
       var seriesType = 'line';
       var showMarker = true;
@@ -1596,10 +1605,20 @@ function doubleTap(elem, speed, distance) {
             seriesType = 'scatter';
       }
       var bins = d3.range(graph['fNpoints']).map(function(p) {
-         return {
-            x: graph['fX'][p] * scalex,
-            y: graph['fY'][p] * scaley
-         };
+         if (graph['_typename'] == 'JSROOTIO.TGraphErrors') {
+            return {
+               x: graph['fX'][p] * scalex,
+               y: graph['fY'][p] * scaley,
+               xerr: graph['fEX'][p] * scalex,
+               yerr: graph['fEY'][p] * scaley
+            };
+         }
+         else {
+            return {
+               x: graph['fX'][p] * scalex,
+               y: graph['fY'][p] * scaley
+            };
+         }
       });
       var ret = hframe != null ? hframe : this.createFrame(vis, pad, graph['fHistogram'], null);
       var frame = ret['frame'];
@@ -1696,6 +1715,73 @@ function doubleTap(elem, speed, distance) {
                .style("stroke-width", ff)
                .style("fill", "none");
          }
+         if (graph['_typename'] == 'JSROOTIO.TGraphErrors' && draw_errors) {
+
+            /* Add x-error indicators */
+            g.selectAll("error_x")
+               .data(graph.bins)
+               .enter()
+               .append("svg:line")
+               .attr("x1", function(d) { return graph.x(d.x-d.xerr)} )
+               .attr("y1", function(d) { return graph.y(d.y)} )
+               .attr("x2", function(d) { return graph.x(d.x+d.xerr)} )
+               .attr("y2", function(d) { return graph.y(d.y)} )
+               .style("stroke", root_colors[graph['fLineColor']])
+               .style("stroke-width", graph['fLineWidth']);
+
+            g.selectAll("e1_x")
+               .data(graph.bins)
+               .enter()
+               .append("svg:line")
+               .attr("y1", function(d) { return graph.y(d.y)-3} )
+               .attr("x1", function(d) { return graph.x(d.x-d.xerr)})
+               .attr("y2", function(d) { return graph.y(d.y)+3})
+               .attr("x2", function(d) { return graph.x(d.x-d.xerr)})
+               .style("stroke", root_colors[graph['fLineColor']])
+               .style("stroke-width", graph['fLineWidth']);
+            g.selectAll("e1_x")
+               .data(graph.bins)
+               .enter()
+               .append("svg:line")
+               .attr("y1", function(d) { return graph.y(d.y)-3} )
+               .attr("x1", function(d) { return graph.x(d.x+d.xerr) })
+               .attr("y2", function(d) { return graph.y(d.y)+3})
+               .attr("x2", function(d) { return graph.x(d.x+d.xerr) })
+               .style("stroke", root_colors[graph['fLineColor']])
+               .style("stroke-width", graph['fLineWidth']);
+
+            g.selectAll("error_y")
+               .data(graph.bins)
+               .enter()
+               .append("svg:line")
+               .attr("x1", function(d) { return graph.x(d.x)})
+               .attr("y1", function(d) { return graph.y(d.y-d.yerr) })
+               .attr("x2", function(d) { return graph.x(d.x)})
+               .attr("y2", function(d) { return graph.y(d.y+d.yerr) })
+               .style("stroke", root_colors[graph['fLineColor']])
+               .style("stroke-width", graph['fLineWidth']);
+
+            g.selectAll("e1_y")
+               .data(graph.bins)
+               .enter()
+               .append("svg:line")
+               .attr("x1", function(d) { return graph.x(d.x)-3})
+               .attr("y1", function(d) { return graph.y(d.y-d.yerr) })
+               .attr("x2", function(d) { return graph.x(d.x)+3})
+               .attr("y2", function(d) { return graph.y(d.y-d.yerr) })
+               .style("stroke", root_colors[graph['fLineColor']])
+               .style("stroke-width", graph['fLineWidth']);
+            g.selectAll("e1_y")
+               .data(graph.bins)
+               .enter()
+               .append("svg:line")
+               .attr("x1", function(d) { return graph.x(d.x)-3})
+               .attr("y1", function(d) { return graph.y(d.y+d.yerr) })
+               .attr("x2", function(d) { return graph.x(d.x)+3})
+               .attr("y2", function(d) { return graph.y(d.y+d.yerr) })
+               .style("stroke", root_colors[graph['fLineColor']])
+               .style("stroke-width", graph['fLineWidth']);
+         }
          if (showMarker) {
             var filled = false;
             if ((graph['fMarkerStyle'] == 8) ||
@@ -1709,6 +1795,8 @@ function doubleTap(elem, speed, distance) {
             var filled = info_marker['toFill'];
             var toRotate = info_marker['toRotate'];
             var markerSize = graph['fMarkerSize'];
+            var markerScale = 65;
+            if (graph['fMarkerStyle'] == 1) markerScale = 1;
 
             switch (shape) {
                case 6:
@@ -1729,7 +1817,7 @@ function doubleTap(elem, speed, distance) {
                default:
                   var marker = d3.svg.symbol()
                               .type(d3.svg.symbolTypes[shape])
-                              .size(markerSize * 65);
+                              .size(markerSize * markerScale);
                   break;
             }
             g.selectAll("markers")
@@ -1752,7 +1840,8 @@ function doubleTap(elem, speed, distance) {
          this.drawTitle(vis, graph['fHistogram'], pad);
       }
       this.addInteraction(frame, graph);
-      this.drawFunctions(vis, graph['fHistogram'], pad, ret);
+      if ('fHistogram' in graph && graph['fHistogram'])
+         this.drawFunctions(vis, graph['fHistogram'], pad, ret);
    };
 
    JSROOTPainter.drawGrid = function(vis, histo, pad, x, y) {
@@ -2136,10 +2225,19 @@ function doubleTap(elem, speed, distance) {
    };
 
    JSROOTPainter.drawLegend = function(vis, pad, pave) {
-      var x = pave['fX1NDC'] * vis.attr("width")
-      var y = vis.attr("height") - pave['fY1NDC'] * vis.attr("height");
-      var w = (pave['fX2NDC'] - pave['fX1NDC']) * vis.attr("width");
-      var h = (pave['fY2NDC'] - pave['fY1NDC']) * vis.attr("height");
+      var x=0, y=0, w=0, h=0;
+      if (pave['fInit'] == 0) {
+          x = pave['fX1'] * vis.attr("width")
+          y = vis.attr("height") - pave['fY1'] * vis.attr("height");
+          w = (pave['fX2'] - pave['fX1']) * vis.attr("width");
+          h = (pave['fY2'] - pave['fY1']) * vis.attr("height");
+      }
+      else {
+          x = pave['fX1NDC'] * vis.attr("width")
+          y = vis.attr("height") - pave['fY1NDC'] * vis.attr("height");
+          w = (pave['fX2NDC'] - pave['fX1NDC']) * vis.attr("width");
+          h = (pave['fY2NDC'] - pave['fY1NDC']) * vis.attr("height");
+      }
       y -= h;
       var fillcolor = root_colors[pave['fFillColor']];
       var lcolor = root_colors[pave['fLineColor']];
@@ -2164,23 +2262,53 @@ function doubleTap(elem, speed, distance) {
 
       var tcolor = root_colors[pave['fTextColor']];
       var tpos_x = pave['fMargin'] * w;
-      var line_length = (0.8 * pave['fMargin']) * w;
-      var pos_x = (tpos_x - line_length) / 2;
       var nlines = pave['fPrimitives'].length;
       var font_size = Math.round(h / (nlines * 1.5));
       //var font_size = Math.round(pave['fTextSize'] * vis.height());
       var fontDetails = getFontDetails(root_fonts[Math.floor(pave['fTextFont']/10)]);
 
+      var max_len = 0, mul = 1.4;
+      for (var j=0; j<nlines; ++j) {
+         line = this.translateLaTeX(pave['fPrimitives'][j]['fLabel']);
+         lw = tpos_x + stringWidth(vis, line, fontDetails['name'], fontDetails['weight'],
+                                   font_size, fontDetails['style']);
+         if (lw > max_len) max_len = lw;
+      }
+      if (max_len > w) {
+         font_size *= 0.85 * (w / max_len);
+         mul *= 0.95 * (max_len / w);
+      }
+      var x1 = pave['fX1NDC'];
+      var x2 = pave['fX2NDC'];
+      var y1 = pave['fY1NDC'];
+      var y2 = pave['fY2NDC'];
+      var margin = pave['fMargin']*( x2-x1 )/pave['fNColumns'];
+      var yspace = (y2-y1)/nlines;
+      var ytext = y2 + 0.5*yspace;  // y-location of 0th entry
+      var boxw = margin*0.35;
+
       for (var i=0; i<nlines; ++i) {
          var leg = pave['fPrimitives'][i];
          var string = leg['fLabel'];
-         var pos_y = ((i+1) * (font_size * 1.4)) - (font_size/3);
-         var tpos_y = (i+1) * (font_size * 1.4);
+         var pos_y = ((i+1) * (font_size * mul)) - (font_size/3);
+         var tpos_y = (i+1) * (font_size * mul);
+
+         var mo = gFile.GetMappedObject(leg['fObject']);
+         if (mo) {
+            leg['fMarkerColor'] = mo['fMarkerColor'];
+            leg['fLineColor'] = mo['fLineColor'];
+            leg['fLineStyle'] = mo['fLineStyle'];
+            leg['fLineWidth'] = mo['fLineWidth'];
+            leg['fFillColor'] = mo['fFillColor'];
+            leg['fFillStyle'] = mo['fFillStyle'];
+         }
          var line_color = root_colors[leg['fLineColor']];
-         var line_style = leg['fLineStyle'];
          var line_width = leg['fLineWidth'];
          var line_style = root_line_styles[leg['fLineStyle']];
+         var fill_color = root_colors[leg['fFillColor']];
+         var fill_style = leg['fFillStyle'];
          var opt = leg['fOption'].toLowerCase();
+
          p.append("text")
             .attr("class", "text")
             .attr("text-anchor", "start")
@@ -2195,10 +2323,42 @@ function doubleTap(elem, speed, distance) {
 
          // Draw fill pattern (in a box)
          if (opt.indexOf('f') != -1) {
+            // box total height is yspace*0.7
+            // define x,y as the center of the symbol for this entry
+            var xsym = margin/2;
+            var ysym = ytext;
+            var xf = new Array(4), yf = new Array(4);
+            xf[0] = xsym - boxw;
+            yf[0] = ysym - yspace*0.35;
+            xf[1] = xsym + boxw;
+            yf[1] = yf[0];
+            xf[2] = xf[1];
+            yf[2] = ysym + yspace*0.35;
+            xf[3] = xf[0];
+            yf[3] = yf[2];
+            for (var j=0;j<4;j++) {
+               xf[j] = xf[j] * vis.attr("width");
+               yf[j] = yf[j] * vis.attr("height");
+            }
+            var ww = xf[1] - xf[0];
+            var hh = yf[2] - yf[0];
+            pos_y = pos_y - (hh/2);
+            var pos_x = (tpos_x/2) - (ww/2);
+
+            p.append("svg:rect")
+               .attr("x", pos_x)
+               .attr("y", pos_y)
+               .attr("width", ww)
+               .attr("height", hh)
+               .attr("fill", fill_color)
+               .style("stroke-width", line_width)
+               .style("stroke", line_color);
          }
          // Draw line
-         if (opt.indexOf('l') != -1 || opt.indexOf('f') != -1) {
+         if (opt.indexOf('l') != -1) {
             // line total length (in x) is margin*0.8
+            var line_length = (0.7 * pave['fMargin']) * w;
+            var pos_x = (tpos_x - line_length) / 2;
             p.append("svg:line")
                .attr("x1", pos_x)
                .attr("y1", pos_y)
@@ -2214,6 +2374,52 @@ function doubleTap(elem, speed, distance) {
          }
          // Draw Polymarker
          if (opt.indexOf('p') != -1) {
+
+            var line_length = (0.7 * pave['fMargin']) * w;
+            var pos_x = tpos_x / 2;
+
+            var filled = false;
+            if ((leg['fMarkerStyle'] == 8) ||
+                (leg['fMarkerStyle'] > 19 && leg['fMarkerStyle'] < 24) ||
+                (leg['fMarkerStyle'] == 29))
+               filled = true;
+
+            var info_marker = getRootMarker(root_markers, leg['fMarkerStyle']);
+
+            var shape = info_marker['shape'];
+            var filled = info_marker['toFill'];
+            var toRotate = info_marker['toRotate'];
+            var markerSize = leg['fMarkerSize'];
+            var markerScale = 65;
+            if (leg['fMarkerStyle'] == 1) markerScale = 1;
+
+            switch (shape) {
+               case 6:
+                  var marker = "M " + (-4 * markerSize) + " " + (-1 * markerSize)
+                              + " L " + 4 * markerSize + " " + (-1 * markerSize)
+                              + " L " + (-2.4 * markerSize) + " " + 4 * markerSize
+                              + " L 0 " + (-4 * markerSize) + " L " + 2.8 * markerSize
+                              + " " + 4 * markerSize + " z";
+                  break;
+               case 7:
+                  var marker = "M " + (- 4 * markerSize) + " " + (-4 * markerSize)
+                              + " L " + 4 * markerSize + " " + 4 * markerSize + " M 0 "
+                              + (-4 * markerSize) + " 0 " + 4 * markerSize + " M "
+                              + 4 * markerSize + " " + (-4 * markerSize) + " L "
+                              + (-4 * markerSize) + " " + 4 * markerSize + " M "
+                              + (-4 * markerSize) + " 0 L " + 4 * markerSize + " 0";
+                  break;
+               default:
+                  var marker = d3.svg.symbol()
+                              .type(d3.svg.symbolTypes[shape])
+                              .size(markerSize * markerScale);
+                  break;
+            }
+            p.append("svg:path")
+               .attr("transform", function(d) { return "translate(" + pos_x + "," + pos_y + ")"; })
+               .style("fill", filled ? root_colors[leg['fMarkerColor']] : "none")
+               .style("stroke", root_colors[leg['fMarkerColor']])
+               .attr("d", marker);
          }
       }
       if (lwidth && lwidth > 1) {
@@ -2236,23 +2442,92 @@ function doubleTap(elem, speed, distance) {
    };
 
    JSROOTPainter.drawMultiGraph = function(vis, pad, mgraph, hframe) {
+      var i, maximum, minimum, rwxmin=0, rwxmax=0, rwymin=0, rwymax=0, uxmin=0, uxmax=0, dx, dy;
+      var npt = 100;
       var histo = mgraph['fHistogram'];
       var graphs = mgraph['fGraphs'];
       var scalex = 1, scaley = 1;
       var logx = false, logy = false, logz = false, gridx = false, gridy = false;
       var draw_all = true;
       if (pad && typeof(pad) != 'undefined') {
+         rwxmin = pad.fUxmin;
+         rwxmax = pad.fUxmax;
+         rwymin = pad.fUymin;
+         rwymax = pad.fUymax;
          logx = pad['fLogx']; logy = pad['fLogy']; logz = pad['fLogz'];
          gridx = pad['fGridx']; gridy = pad['fGridy'];
       }
-      // check for axis scale format, and convert if required
-      var xaxis_type = logx ? 'logarithmic' : 'linear';
-      if (histo['fXaxis']['fTimeDisplay']) {
-         xaxis_type = 'datetime';
+      if ('fHistogram' in mgraph && mgraph['fHistogram']) {
+         minimum = mgraph['fHistogram']['fYaxis']['fXmin'];
+         maximum = mgraph['fHistogram']['fYaxis']['fXmax'];
+         if (pad && typeof(pad) != 'undefined') {
+            uxmin   = this.padtoX(pad, rwxmin);
+            uxmax   = this.padtoX(pad, rwxmax);
+         }
+      } else {
+         var g = graphs[0];
+         if (g) {
+            var r = g.computeRange();
+            rwxmin = r['xmin']; rwymin = r['ymin']; 
+            rwxmax = r['xmax']; rwymax = r['ymax'];
+         }
+         for (i=1; i<graphs.length; ++i) {
+            var rx1,ry1,rx2,ry2;
+            g = graphs[i];
+            var r = g.computeRange();
+            rx1 = r['xmin']; ry1 = r['ymin']; 
+            rx2 = r['xmax']; ry2 = r['ymax'];
+            if (rx1 < rwxmin) rwxmin = rx1;
+            if (ry1 < rwymin) rwymin = ry1;
+            if (rx2 > rwxmax) rwxmax = rx2;
+            if (ry2 > rwymax) rwymax = ry2;
+            if (g['fNpoints'] > npt) npt = g['fNpoints'];
+         }
+         if (rwxmin == rwxmax) rwxmax += 1.;
+         if (rwymin == rwymax) rwymax += 1.;
+         dx = 0.05*(rwxmax-rwxmin);
+         dy = 0.05*(rwymax-rwymin);
+         uxmin = rwxmin - dx;
+         uxmax = rwxmax + dx;
+         if (logy) {
+            if (rwymin <= 0) rwymin = 0.001*rwymax;
+            minimum = rwymin/(1+0.5*JSROOTMath.log10(rwymax/rwymin));
+            maximum = rwymax*(1+0.2*JSROOTMath.log10(rwymax/rwymin));
+         } else {
+            minimum  = rwymin - dy;
+            maximum  = rwymax + dy;
+         }
+         if (minimum < 0 && rwymin >= 0) minimum = 0;
+         if (maximum > 0 && rwymax <= 0) maximum = 0;
       }
-      var yaxis_type = logy ? 'logarithmic' : 'linear';
-      if (histo['fYaxis']['fTimeDisplay']) {
-         yaxis_type = 'datetime';
+      if (mgraph['fMinimum'] != -1111) rwymin = minimum = mgraph['fMinimum'];
+      if (mgraph['fMaximum'] != -1111) rwymax = maximum = mgraph['fMaximum'];
+      if (uxmin < 0 && rwxmin >= 0) {
+         if (logx) uxmin = 0.9*rwxmin;
+         //else                 uxmin = 0;
+      }
+      if (uxmax > 0 && rwxmax <= 0) {
+         if (logx) uxmax = 1.1*rwxmax;
+         //else                 uxmax = 0;
+      }
+      if (minimum < 0 && rwymin >= 0) {
+         if(logy) minimum = 0.9*rwymin;
+         //else                minimum = 0;
+      }
+      if (maximum > 0 && rwymax <= 0) {
+         if(logy) maximum = 1.1*rwymax;
+         //else                maximum = 0;
+      }
+      if (minimum <= 0 && logy) minimum = 0.001*maximum;
+      if (uxmin <= 0 && logx) {
+         if (uxmax > 1000) uxmin = 1;
+         else              uxmin = 0.001*uxmax;
+      }
+      rwymin = minimum;
+      rwymax = maximum;
+      if ('fHistogram' in mgraph && mgraph['fHistogram']) {
+         mgraph['fHistogram']['fYaxis']['fXmin'] = rwymin;
+         mgraph['fHistogram']['fYaxis']['fXmax'] = rwymax;
       }
       var frame;
       if (hframe) frame = hframe['frame'];
@@ -2260,11 +2535,102 @@ function doubleTap(elem, speed, distance) {
          hframe = this.createFrame(vis, pad, histo, null);
          frame = hframe['frame'];
       }
-      this.drawHistogram1D(vis, pad, histo, hframe);
-      hframe['xmin'] = histo['fXaxis']['fXmin'];
-      hframe['xmax'] = histo['fXaxis']['fXmax'];
-      hframe['ymin'] = histo['fYaxis']['fXmin'];
-      hframe['ymax'] = histo['fYaxis']['fXmax'];
+      // Create a temporary histogram to draw the axis
+      if ('fHistogram' in mgraph && mgraph['fHistogram']) {
+         this.drawHistogram1D(vis, pad, histo, hframe);
+         hframe['xmin'] = histo['fXaxis']['fXmin'];
+         hframe['xmax'] = histo['fXaxis']['fXmax'];
+         hframe['ymin'] = histo['fYaxis']['fXmin'];
+         hframe['ymax'] = histo['fYaxis']['fXmax'];
+      }
+      else {
+         // the graph is created with at least as many channels as there are points
+         // to permit zooming on the full range
+         var w = vis.attr("width"), h = vis.attr("height");
+         var label_font_size = Math.round(0.035 * h);
+         w = frame.attr("width"); h = frame.attr("height");
+         rwxmin = uxmin;
+         rwxmax = uxmax;
+         hframe['xmin'] = rwxmin;
+         hframe['xmax'] = rwxmax;
+         hframe['ymin'] = rwymin;
+         hframe['ymax'] = rwymax;
+
+         if (logx)
+            var x = d3.scale.log().domain([rwxmin, rwxmax]).range([0, w]);
+         else
+            var x = d3.scale.linear().domain([rwxmin, rwxmax]).range([0, w]);
+         if (logy)
+            var y = d3.scale.log().domain([rwymin, rwymax]).range([h, 0]);
+         else
+            var y = d3.scale.linear().domain([rwymin, rwymax]).range([h, 0]);
+
+         /* X-axis */
+         var x_axis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom")
+            .tickPadding(5)
+            .tickSubdivide(3)
+            .tickSize(-0.03 * h, -0.03 * h / 2, null)
+            .tickFormat(function(d,i) { return parseFloat(d.toPrecision(12)); })
+            .ticks(10);
+
+         /* Y-axis minor ticks */
+         var y_axis = d3.svg.axis()
+            .scale(y)
+            .orient("left")
+            .tickPadding(5)
+            .tickSubdivide(3)
+            .tickSize(-0.03 * w, -0.03 * w / 2, null)
+            .tickFormat(function(d,i) { return parseFloat(d.toPrecision(12)); })
+            .ticks(8);
+
+         var xax = frame.append("svg:g")
+            .attr("class", "xaxis")
+            .attr("transform", "translate(0," + h + ")")
+            .call(x_axis);
+
+         var yax = frame.append("svg:g")
+            .attr("class", "yaxis")
+            .call(y_axis);
+
+         var font_size = Math.round(0.050 * vis.attr("height"));
+         vis.append("text")
+            .attr("class", "title")
+            .attr("text-anchor", "middle")
+            .attr("x", vis.attr("width")/2)
+            .attr("y", 0.07 * vis.attr("height"))
+            .attr("font-family", "Arial")
+            .attr("font-size", font_size)
+            .text(mgraph['fTitle']);
+
+         xax.selectAll("text").attr("font-size", label_font_size);
+         yax.selectAll("text").attr("font-size", label_font_size);
+
+         frame['x_axis']  = x_axis;
+         frame['y_axis']  = y_axis;
+         frame['x_fsize'] = label_font_size;
+         frame['y_fsize'] = label_font_size;
+         frame['x_font']  = {'weight' : "",'style' : "", 'name' : "arial" };
+         frame['y_font']  = {'weight' : "",'style' : "", 'name' : "arial" };
+
+         var histo = new Object();
+         histo['fXaxis'] = new Object();
+         histo['fYaxis'] = new Object();
+         histo['x'] = x;
+         histo['y'] = y;
+         histo['x_min'] = rwxmin;
+         histo['x_max'] = rwxmax;
+         histo['y_min'] = rwymin;
+         histo['y_max'] = rwymax;
+         histo['fLineWidth'] = 1;
+         histo['fXaxis']['fNdivisions'] = 510;
+         histo['fYaxis']['fNdivisions'] = 510;
+         histo['redraw'] = function() {
+            JSROOTPainter.drawGrid(frame, histo, pad, x, y);
+         };
+         this.addInteraction(frame, histo);
+      }
       for (var i=0; i<graphs.length; ++i) {
          graphs[i]['fName'] += i;
          this.drawGraph(vis, pad, graphs[i], hframe);
@@ -2301,7 +2667,7 @@ function doubleTap(elem, speed, distance) {
          else if (obj['_typename'] == 'JSROOTIO.TF1') {
             JSROOTPainter.drawFunction(svg, null, obj, null);
          }
-         else if (obj['_typename'] == 'JSROOTIO.TGraph') {
+         else if (obj['_typename'].match(/\bTGraph/)) {
             JSROOTPainter.drawGraph(svg, null, obj, null);
          }
          else if (obj['_typename'] == 'JSROOTIO.TMultiGraph') {
@@ -2739,7 +3105,7 @@ function doubleTap(elem, speed, distance) {
                this.drawFunction(vis, pad, primitives[i], fframe);
             primitives[i]['isDrawn'] = true;
          }
-         if (classname == 'JSROOTIO.TGraph') {
+         if (classname.match(/\bTGraph/)) {
             primitives[i]['fName'] += i;
             this.drawGraph(vis, pad, primitives[i], frame);
          }
@@ -3007,7 +3373,7 @@ function doubleTap(elem, speed, distance) {
          var node_img = source_dir+'img/page.gif';
          if (keys[i]['className'].match(/\bTH1/)  ||
              keys[i]['className'].match(/\bTH2/)  ||
-             keys[i]['className'] == 'TGraph') {
+             keys[i]['className'].match(/\bTGraph/)) {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
             node_img = source_dir+'img/graphical.png';
          }
@@ -3069,7 +3435,7 @@ function doubleTap(elem, speed, distance) {
          var node_title = keys[i]['className'];
          if (keys[i]['className'].match(/\bTH1/) ||
              keys[i]['className'].match(/\bTH2/) ||
-             keys[i]['className'] == 'TGraph') {
+             keys[i]['className'].match(/\bTGraph/)) {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
             node_img = source_dir+'img/graphical.png';
             node_title = keys[i]['name'];

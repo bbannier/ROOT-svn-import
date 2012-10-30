@@ -189,6 +189,14 @@ void TVirtualX::CopyPixmap(Int_t /*wid*/, Int_t /*xpos*/, Int_t /*ypos*/)
 }
 
 //______________________________________________________________________________
+Double_t TVirtualX::GetOpenGLScalingFactor()
+{
+   //On a HiDPI resolution it can be > 1., this means glViewport should use
+   //scaled width and height.
+   return 1.;
+}
+
+//______________________________________________________________________________
 void TVirtualX::CreateOpenGLContext(Int_t /*wid*/)
 {
    // Creates OpenGL context for window "wid"
@@ -316,6 +324,23 @@ void TVirtualX::DrawText(Int_t /*x*/, Int_t /*y*/, Float_t /*angle*/,
 }
 
 //______________________________________________________________________________
+void TVirtualX::DrawText(Int_t /*x*/, Int_t /*y*/, Float_t /*angle*/,
+                         Float_t /*mgn*/, const wchar_t * /*text*/,
+                         ETextMode /*mode*/)
+{
+   // Draws a text string using current font.
+   //
+   // x,y   - text position
+   // angle - text angle
+   // mgn   - magnification factor
+   // text  - text string
+   // mode  - drawing mode:
+   //         mode = 0 the background is not drawn (kClear)
+   //         mode = 1 the background is drawn (kOpaque)
+
+}
+
+//______________________________________________________________________________
 UInt_t TVirtualX::ExecCommand(TGWin32Command * /*code*/)
 {
    // Executes the command "code" coming from the other threads (Win32)
@@ -396,6 +421,17 @@ void TVirtualX::GetRGB(Int_t /*index*/, Float_t &r, Float_t &g, Float_t &b)
 
 //______________________________________________________________________________
 void TVirtualX::GetTextExtent(UInt_t &w, UInt_t &h, char * /*mess*/)
+{
+   // Returns the size of the specified character string "mess".
+   //
+   // w    - the text width
+   // h    - the text height
+   // mess - the string
+
+   w = h = 0;
+}
+//______________________________________________________________________________
+void TVirtualX::GetTextExtent(UInt_t &w, UInt_t &h, wchar_t * /*mess*/)
 {
    // Returns the size of the specified character string "mess".
    //

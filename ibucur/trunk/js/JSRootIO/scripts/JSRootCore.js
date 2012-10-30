@@ -286,6 +286,7 @@ landaun = function(f, x, i) {
          obj['evalPar'] = function(x) {
             var i, _function = obj['fTitle'];
             _function = _function.replace('TMath::Exp(', 'Math.exp(');
+            _function = _function.replace('TMath::Abs(', 'Math.abs(');
             _function = _function.replace('gaus(', 'gaus(this, ' + x + ', ');
             _function = _function.replace('gausn(', 'gausn(this, ' + x + ', ');
             _function = _function.replace('expo(', 'expo(this, ' + x + ', ');
@@ -305,8 +306,33 @@ landaun = function(f, x, i) {
             }
             // use regex to replace ONLY the x variable (i.e. not 'x' in Math.exp...)
             _function = _function.replace(/\b(x)\b/gi, x)
+            _function = _function.replace(/\b(sin)\b/gi, 'Math.sin')
+            _function = _function.replace(/\b(cos)\b/gi, 'Math.cos')
+            _function = _function.replace(/\b(tan)\b/gi, 'Math.tan')
             var ret = eval(_function);
             return ret;
+         };
+      }
+      if (obj['_typename'].indexOf("JSROOTIO.TGraph") == 0) {
+         obj['computeRange'] = function() {
+            // Compute the x/y range of the points in this graph
+            var i, xmin = 0, xmax = 0, ymin = 0, ymax = 0;
+            if (obj['fNpoints'] > 0) {
+               xmin = xmax = obj['fX'][0];
+               ymin = ymax = obj['fY'][0];
+               for (i=1; i<obj['fNpoints']; i++) {
+                  if (obj['fX'][i] < xmin) xmin = obj['fX'][i];
+                  if (obj['fX'][i] > xmax) xmax = obj['fX'][i];
+                  if (obj['fY'][i] < ymin) ymin = obj['fY'][i];
+                  if (obj['fY'][i] > ymax) ymax = obj['fY'][i];
+               }
+            }
+            return {
+               xmin: xmin,
+               xmax: xmax,
+               ymin: ymin,
+               ymax: ymax
+            };
          };
       }
       if ((obj['_typename'].indexOf("JSROOTIO.TProfile") == 0) ||

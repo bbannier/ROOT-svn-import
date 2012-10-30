@@ -100,10 +100,6 @@ namespace cling {
        delete m_TTransformers[i];
   }
 
-  // pin the vtable here since there is no point to create dedicated to that
-  // cpp file.
-  TransactionTransformer::~TransactionTransformer() {}
-
   void IncrementalParser::beginTransaction(const CompilationOptions& Opts) {
     llvm::Module* M = 0;
     if (hasCodeGenerator())
@@ -154,22 +150,40 @@ namespace cling {
     Transaction* CurT = m_Consumer->getTransaction();
     assert(CurT->isCompleted() && "Transaction not ended!?");
 
+    // Check for errors coming from our custom consumers.
+    DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
+
     // Check for errors...
     if (CurT->getIssuedDiags() == Transaction::kErrors) {
       rollbackTransaction(CurT);
+      DClient.EndSourceFile();
       return;
     }
 
     // We are sure it's safe to pipe it through the transformers
-    for (size_t i = 0; i < m_TTransformers.size(); ++i)
-      if (!m_TTransformers[i]->TransformTransaction(*CurT)) {
-        // Roll back on error in a transformer
-        rollbackTransaction(CurT);
-        return;
+    bool success = true;
+    for (size_t i = 0; i < m_TTransformers.size(); ++i) {
+      DClient.BeginSourceFile(getCI()->getLangOpts(),
+                              &getCI()->getPreprocessor());
+      success = m_TTransformers[i]->TransformTransaction(*CurT); 
+      DClient.EndSourceFile();
+      if (!success) {
+        break;
       }
+    }
+
+    m_CI->getDiagnostics().Reset(); // FIXME: Should be in rollback transaction.
+
+    if (!success) {
+      // Roll back on error in a transformer
+      rollbackTransaction(CurT);
+      DClient.EndSourceFile();
+      return;
+    }
 
     // Pull all template instantiations in that came from the consumers.
     getCI()->getSema().PerformPendingInstantiations();
+    DClient.EndSourceFile();
 
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
@@ -189,6 +203,7 @@ namespace cling {
 
     CurT->setState(Transaction::kCommitted);
     InterpreterCallbacks* callbacks = m_Interpreter->getCallbacks();
+
     if (callbacks)
       callbacks->TransactionCommitted(*CurT);
   }
@@ -250,14 +265,7 @@ namespace cling {
     EParseResult Result = ParseInternal(input);
     endTransaction();
 
-    // Check for errors coming from our custom consumers.
-    DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
-    DClient.BeginSourceFile(getCI()->getLangOpts(),
-                            &getCI()->getPreprocessor());
     commitCurrentTransaction();
-
-    DClient.EndSourceFile();
-    m_CI->getDiagnostics().Reset();
 
     return Result;
   }
@@ -343,8 +351,6 @@ namespace cling {
     }
 
     S.PerformPendingInstantiations();
-
-    DClient.EndSourceFile();
 
     DiagnosticsEngine& Diag = S.getDiagnostics();
     if (Diag.hasErrorOccurred())
