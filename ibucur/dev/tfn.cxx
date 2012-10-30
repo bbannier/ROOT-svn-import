@@ -9,15 +9,15 @@
 
 // first test function - PASSED
 Double_t sum(Double_t *x, Double_t *) {
-   return x[0] * x[0] * x[0] + x[1] - std::exp(x[2]) + std::log(x[3]) - x[4];
+   return x[0] * x[0] * x[0] + x[1] - x[2] + x[3] * 2 - x[4];
 }
 
 // second test function
 
 int main(int argc, char* argv[]) {
 
-   Double_t min[DIM] = { 1.0, 1.0, 1.0, 2.0, 0.0 };
-   Double_t max[DIM] = { 2.0, 2.0, 2.0, 7.0, 5.0 };
+   Double_t min[DIM] = { 0.0, 1.0, 0.0, 2.0, 0.0 };
+   Double_t max[DIM] = { 1.0, 2.0, 2.0, 3.0, 1.0 };
 
    TFn f("FiveDimTFn", DIM, &sum, min, max, 0);
 //   TF2 f2("TF2", "x[0] + 2 * x[1]", 0.0, 1.0, 0.0, 1.0);
@@ -40,8 +40,17 @@ int main(int argc, char* argv[]) {
    for(int i = 0; i < DIM; ++i) std::cout << maxX[i] << " ";
    std::cout << std::endl;
 
-   std::cout << std::setprecision(15) << "P.deriv.coord.0: " << f.Derivative(min, 0) << " " << f.Derivative(max, 0) << std::endl;
+   std::cout << std::setprecision(6) << "P.deriv.coord.0: " << f.Derivative(min, 0) << " " << f.Derivative(max, 0) << std::endl;
    std::cout << "P.deriv.coord.1: " << f.Derivative(min, 2) << " " << f.Derivative(max, 2) << std::endl;
+
+   TF1* f1_c0 = f.Projection1D(0);
+
+   Double_t x = 0;
+
+   std::cout << "TF1 coord 0: (0) = " << (*f1_c0)(&x);
+   x = 0.5; std::cout << "; (1/2) = " << (*f1_c0)(&x);
+   x = 1.0; std::cout << "; (1.0) = " << (*f1_c0)(&x) << std::endl;
+
 
    return 0;
 }
