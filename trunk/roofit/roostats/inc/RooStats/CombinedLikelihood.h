@@ -62,10 +62,10 @@ private:
 class CachedPdf {
 public:
    // TODO: RooAbsPdf instead of RooAbsReal
-   CachedPdf(RooAbsReal *pdf, const RooArgSet* obs) : fPdf(pdf), fObs(obs), fCacheObs(*pdf->getParameters(obs)) {}
+   CachedPdf(RooAbsReal *pdf, const RooArgSet* obs) : fPdf(pdf), fObs(obs), fCacheObs(*fObs) {}
    void SetDataDirty() { fLastData = NULL; }
    const std::vector<Double_t>& Eval(const RooAbsData& data) {
-//      std::cout << "CachedPdf::Eval sig value " << fPdf->getVariables()->getRealValue("sig") << std::endl;
+//      std::cout << "CachedPdf::Eval -> "; fPdf->Print("");
       bool newData = (fLastData != &data);
       if (newData) {
          fLastData = &data;
@@ -76,7 +76,10 @@ public:
       }
       // TODO: see if it is worth to have multiple caches
       // if observables have changed value, the cache is renewed
-      else if (fCacheObs.IsDirty(kTRUE)) Fill(data);
+      else if (fCacheObs.IsDirty(kTRUE)) {
+         Fill(data);
+         std::cout << "fCacheObs gets dirty" << std::endl;
+      }
 
       return fValues;
    }
@@ -90,6 +93,8 @@ private:
    const RooAbsData* fLastData;   
 
    void Fill(const RooAbsData& data) {
+//      std::cout << "CachedPdf::Fill -> "; data.Print("");
+ //    fPdf->Print("");
       Int_t numEntries = data.numEntries();
       fValues.resize(numEntries);
       std::vector<Double_t>::iterator itVal = fValues.begin();
@@ -109,7 +114,7 @@ public:
    SumLikelihood(RooAbsPdf* pdf, RooAbsData* data) :
       RooAbsReal("SumLikelihood", "Cached version of normal log likelihood sum"),
       fPdf(pdf),
-      fParameters("params", "parameters", this),
+//      fParameters("params", "parameters", this),
       fZeroPoint(0)   
    {
       if(!pdf) throw std::invalid_argument("Pdf passed is null");
@@ -121,7 +126,7 @@ public:
    SumLikelihood(const SumLikelihood& rhs, const char* newName) :
       RooAbsReal(rhs, newName),
       fPdf(rhs.fPdf),
-      fParameters("params", "parameters", this),
+//      fParameters("params", "parameters", this),
       fZeroPoint(rhs.fZeroPoint) // XXX: or 0?
    {
       SetData(*rhs.fData);
@@ -148,6 +153,7 @@ public:
          Double_t coef = (*itCoef)->getVal();
          if (fIsRooAddPdf) {
             sumCoef += coef;
+//            std::cout << "coef " << coef << "sumCoef " << sumCoef << std::endl;
          } else { // RooRealSum 
             sumCoef += coef * fIntegrals[itCoef - begCoef]->getVal();
          }
@@ -156,6 +162,8 @@ public:
 
          const std::vector<Double_t>& pdfVals = (*itPdf).Eval(*fData);
          std::vector<Double_t>::const_iterator itVal = pdfVals.begin();
+//         std::cout << "SumLikelihood::evaluate -> fPartialSums::size = " << fPartialSums.size()
+//                   << " pdfVals::size = " << pdfVals.size() << std::endl;
          for(itSum = begSum; itSum != endSum; ++itSum, ++itVal) {
 //            std::cout << "pdf " << itPdf - fCachedPdfs.begin() << " value "
   //                    << itVal - pdfVals.begin() << " is " << *itVal << std::endl;
@@ -182,17 +190,21 @@ public:
       }
       
       result = -result;
-/*
+
       Double_t expectedEvents = fIsRooAddPdf ? sumCoef : fPdf->getNorm(fData->get());
       if (expectedEvents <= 0) {
          // TODO: CachingSimNLL::noDeepLEE_ logEvalError
          expectedEvents = 1e-6;
       }
 
+//      std::cout << expectedEvents << std::endl;
 
       result += expectedEvents - fSumWeights * log(expectedEvents);
-      result += fZeroPoint;
-*/
+//      result += fZeroPoint;
+//      std::cout << "NLL " << result << "  PDF " << fPdf->getVal() << "  Data " 
+  //              << fData->get()->getRealValue("CMS_hgg_mass") << " "
+    //            << std::endl;
+
       return result;
    }
 
@@ -237,6 +249,7 @@ private:
          for(Int_t i = 0; i < numPdfs; ++i) {
             RooAbsReal* coef = dynamic_cast<RooAbsReal*>(itCoef->Next());
             RooAbsPdf*  pdf  = dynamic_cast<RooAbsPdf* >(itPdf->Next() );
+            assert(coef != NULL); assert(pdf != NULL);
             fCoefficients.push_back(coef);
             fCachedPdfs.push_back(CachedPdf(pdf, observables));
          }
@@ -257,6 +270,7 @@ private:
             RooAbsReal* func = dynamic_cast<RooAbsReal*>(itFunc->Next() );
             fCoefficients.push_back(coef);
             fCachedPdfs.push_back(CachedPdf(func, observables));
+            // TODO: insert, allocate properly
             fIntegrals.push_back(func->createIntegral(*observables));
          }
       } else {
@@ -284,14 +298,14 @@ private:
       fSumWeights = 0.0;
 
       Double_t numEntries = data.numEntries();
-      fWeights.reserve(numEntries);
-      fPartialSums.reserve(numEntries);
+      fWeights.resize(numEntries);
+      fPartialSums.resize(numEntries);
       
-      for(Int_t i = 0, n = numEntries; i < n; ++i) {
+      for(Int_t i = 0; i < numEntries; ++i) {
          data.get(i);
          // TODO: check if double call to weight is costly
-         fWeights.push_back(data.weight());
-         fPartialSums.push_back(0.0);
+         fWeights[i] = data.weight();
+         fPartialSums[i] = 0.0;
          fSumWeights += fWeights[i];
       }
 /*
@@ -306,14 +320,13 @@ private:
    }
 
   // TODO: implement properly 
- //  virtual RooArgSet* getObservables(const RooArgSet* depList, Bool_t valueOnly = kTRUE) const {
-  //    return new RooArgSet();
- //  }
+  // virtual RooArgSet* getObservables(const RooArgSet*, Bool_t) const {
+  // }
    
    RooAbsPdf* fPdf;
    const RooAbsData *fData;
    
-   RooSetProxy fParameters;
+   //RooSetProxy fParameters;
 
    std::vector<Double_t> fWeights;
    mutable std::vector<CachedPdf> fCachedPdfs;
