@@ -46,13 +46,15 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    RooWorkspace* w = (RooWorkspace *)f.Get(ws);
    ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
+//   w->var("MH")->setVal(125);
+
 //   RooWorkspace *w = new RooWorkspace("w", kTRUE);
 //   buildSimultaneousModel(w);   
 //   buildAddModel(w);
 //   RooAddPdf *add = (RooAddPdf *)w->pdf("sum_pdf");
 //   ModelConfig* model = (ModelConfig*)w->obj("S+B");
 
-   *((RooArgSet *)model->GetObservables()) = *w->data(data)->get(0);
+//   *((RooArgSet *)model->GetObservables()) = *w->data(data)->get(0);
    
 
    RooLinkedList commands;
@@ -71,7 +73,7 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 //   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
    RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
   
-   *((RooArgSet *)nll->getObservables(*w->data(data))) = *model->GetObservables();
+ //  *((RooArgSet *)nll->getObservables(*w->data(data))) = *model->GetObservables();
 
 //   w->var("sig")->setVal(0.1);
 //   double lastVal = nll->getVal();
@@ -122,11 +124,11 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 */
 
    RooMinimizer m(*nll);
-   m.setMinimizerType("Minuit");
-//   m.optimizeConst(2);
+   m.setMinimizerType("Minuit2");
+   m.optimizeConst(2);
    m.setErrorLevel(0.5);
    m.setEps(1);
-   m.setPrintLevel(0);
+   m.setPrintLevel(-1);
    m.setStrategy(0);
 
    myBenchmark.Start("CombinedLikelihood");
@@ -149,6 +151,7 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    // Run MINOS on only one parameter (but which one?)
    // m.minos(/* param */);
 
+   m.save()->Print("v");
 
   // RooFitResult *r = m.save();
   // r->Print("v");
