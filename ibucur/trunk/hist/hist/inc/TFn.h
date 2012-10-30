@@ -33,8 +33,11 @@
 #ifndef ROOT_Math_IParamFunction
 #include "Math/IParamFunction.h"
 #endif
+#ifndef ROOT_Math_AdaptiveIntegratorMultiDim
+#include "Math/AdaptiveIntegratorMultiDim.h"
+#endif
 
-class TFn;
+class TF1;
 class TH1;
 class TAxis;
 class TMethodCall;
@@ -80,6 +83,8 @@ public:
 protected:
    Double_t*   fMin;         //Lower bounds for the range
    Double_t*   fMax;         //Upper bounds for the range
+   Double_t    fNorm;
+   ROOT::Math::AdaptiveIntegratorMultiDim fIntegrator;
    Int_t       fNpx;         //Number of points used for the graphical representation
    // TODO: change to an internal enum
    Int_t       fType;        // 0 for standard functions, 
@@ -148,6 +153,7 @@ public:
       fNDF       ( 0 ),
       fNsave     ( 0 ),
       fIntegral  ( 0 ),
+      fIntegrator   (),
       fParErrors ( 0 ),
       fParMin    ( 0 ),
       fParMax    ( 0 ),
@@ -184,6 +190,7 @@ public:
       fNDF       ( 0 ),
       fNsave     ( 0 ),
       fIntegral  ( 0 ),
+      fIntegrator   (),
       fParErrors ( 0 ),
       fParMin    ( 0 ),
       fParMax    ( 0 ),
@@ -248,6 +255,8 @@ public:
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t epsilon, Double_t &relerr,Int_t &nfnevl, Int_t &ifail);
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t epsilon, Double_t &relerr);
    virtual Bool_t   IsInside(const Double_t *x) const;
+   virtual Double_t Norm() const { return fNorm; }
+           TF1*     Projection1D(Int_t icoord) const;
    virtual void     Print(Option_t *option="") const;
    virtual void     ReleaseParameter(Int_t ipar);
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
@@ -268,16 +277,10 @@ public:
    virtual void     SetSavedPoint(Int_t point, Double_t value);
    virtual void     Update();
 
+
    static  void     AbsValue(Bool_t reject=kTRUE);
    static  void     RejectPoint(Bool_t reject=kTRUE);
    static  Bool_t   RejectedPoint();
-
-   // TODO: write a multi-dim version
-   //Moments
-   virtual Double_t Moment(Double_t n, Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001);
-   virtual Double_t CentralMoment(Double_t n, Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001);
-   virtual Double_t Mean(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return Moment(1,a,b,params,epsilon);}
-   virtual Double_t Variance(Double_t* a, Double_t* b, const Double_t *params=0, Double_t epsilon=0.000001) {return CentralMoment(2,a,b,params,epsilon);}
 
    ClassDef(TFn,1)  //The Parametric n-D function
 };

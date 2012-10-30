@@ -362,11 +362,15 @@ void TFn::Init(Int_t ndim, Double_t* min, Double_t* max)
       fMax = new Double_t[fNdim];
       std::copy(min, min + fNdim, fMin);
       std::copy(max, max + fNdim, fMax);
+      
+      fIntegrator.SetFunction(*this);
+      fIntegrator.SetRelTolerance(1e-6);
+      fNorm = fIntegrator.Integral(fMin, fMax);
    }
 } 
 
 //______________________________________________________________________________
-TFn::TFn() : TNamed()
+TFn::TFn() : TNamed(), fIntegrator()
 {
    // F1 default constructor.
 
@@ -395,7 +399,8 @@ TFn::TFn() : TNamed()
 
 //______________________________________________________________________________
 TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
-   TNamed(name, "TFn created from a formula definition (through TFormula)")
+   TNamed(name, "TFn created from a formula definition (through TFormula)"),
+   fIntegrator()
 {
    // Constructor using a formula definition.
    // See TFormula for the explanation of the constructor syntax.
@@ -443,7 +448,8 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
 
 //______________________________________________________________________________
 TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, Int_t npar) :
-   TNamed(name, "TFn created from a pointer to an interpreted function")
+   TNamed(name, "TFn created from a pointer to an interpreted function"),
+   fIntegrator()
 {
    // F1 constructor using pointer to an interpreted function.
    //
@@ -527,7 +533,8 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
 
 //______________________________________________________________________________
 TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, Int_t npar) : 
-   TNamed(name, "TFn created from a pointer to a real function")
+   TNamed(name, "TFn created from a pointer to a real function"),
+   fIntegrator()
 {
    // F1 constructor using a pointer to a real function.
    //
@@ -541,7 +548,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
-   Init(ndim, min, max);
 
    fNpx        = 100;
    fType       = 1;
@@ -579,6 +585,7 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    fHistogram  = 0;
    fMinimum    = -1111;
    fMaximum    = -1111;
+   Init(ndim, min, max);
 /*
    // Store formula in linked list of formula in ROOT
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
@@ -590,7 +597,8 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
 
 //______________________________________________________________________________
 TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, Int_t npar) : 
-   TNamed(name, "TFn created from a pointer to a real function")
+   TNamed(name, "TFn created from a pointer to a real function"),
+   fIntegrator()
 {
    // F1 constructor using a pointer to real function.
    //
@@ -662,6 +670,7 @@ TFn::TFn(const char*name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min,
    fNpfits    ( 0 ),
    fNDF       ( 0 ),
    fNsave     ( 0 ),
+   fIntegrator   (),
    fIntegral  ( 0 ),
    fParErrors ( 0 ),
    fParMin    ( 0 ),
@@ -728,7 +737,8 @@ void TFn::CreateFromFunctor(const char *name, Int_t npar)
 
 //______________________________________________________________________________
 TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, Int_t npar, const char* className) : 
-   TNamed(name, TString::Format("CINT class - %s", className).Data())
+   TNamed(name, TString::Format("CINT class - %s", className).Data()),
+   fIntegrator()
 {
    // F1 constructor from an interpreted class defining the operator() or Eval().
    // This constructor emulate the syntax of the template constructor using a C++ callable object (functor)
@@ -750,7 +760,8 @@ TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, 
 
 //______________________________________________________________________________
 TFn::TFn(const char* name, Int_t ndim, void *ptr, void *, Double_t* min, Double_t* max, Int_t npar, const char* className, const char* methodName) : 
-   TNamed(name, TString::Format("CINT class - %s", className).Data())
+   TNamed(name, TString::Format("CINT class - %s", className).Data()),
+   fIntegrator()
 {
    // F1 constructor from an interpreter class using a specified member function.
    // This constructor emulate the syntax of the template constructor using a C++ class and a given
@@ -876,7 +887,7 @@ TFn& TFn::operator=(const TFn &rhs)
 TFn::~TFn()
 {
    // TFn default destructor.
-
+   // TODO: delete fIntegral
    if (fParMin)    delete [] fParMin;
    if (fParMax)    delete [] fParMax;
    if (fParErrors) delete [] fParErrors;
@@ -885,7 +896,6 @@ TFn::~TFn()
    if (fBeta)      delete [] fBeta;
    if (fGamma)     delete [] fGamma;
    if (fSave)      delete [] fSave;
-   delete fHistogram;
    delete fMethodCall;
 
    if (fParent) fParent->RecursiveRemove(this);
@@ -975,6 +985,9 @@ void TFn::Copy(TObject &obj) const
    ((TFn&)obj).fNDF     = fNDF;
    ((TFn&)obj).fMinimum = fMinimum;
    ((TFn&)obj).fMaximum = fMaximum;
+
+   ((TFn&)obj).fIntegrator = ROOT::Math::AdaptiveIntegratorMultiDim(fIntegrator);
+   
 
    ((TFn&)obj).fParErrors = 0;
    ((TFn&)obj).fParMin    = 0;
@@ -1094,6 +1107,7 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
    TFn* mutableThis = const_cast<TFn*>(this);
 
    if (fType == 0) {
+      assert(fFormula != NULL);
       return fFormula->EvalPar(x,params);
    }
    Double_t result = 0;
@@ -1457,12 +1471,8 @@ Double_t TFn::GetRandom()
 void TFn::GetRange(Double_t *min, Double_t *max) const
 {
    // Return range of a n-D function.
-   // NOTE: the user is responsible for deleting the arrays
+   // NOTE: the user is responsible for creating arrays of sufficient size
 
-   delete [] min; delete [] max; // prevent memory leaks
-
-   min = new Double_t[fNdim];
-   max = new Double_t[fNdim];
    memcpy(min, fMin, fNdim * sizeof(Double_t));
    memcpy(max, fMax, fNdim * sizeof(Double_t));
 }
@@ -1814,7 +1824,6 @@ Bool_t TFn::IsInside(const Double_t *x) const
 
    return kTRUE;
 }
-
 
 //______________________________________________________________________________
 void TFn::Print(Option_t *option) const
@@ -2251,76 +2260,50 @@ Bool_t TFn::RejectedPoint()
    return fgRejectPoint;
 }
 
+class TFn_Projection1D {
+   public:
+      TFn_Projection1D(const TFn *func, Int_t icoord) : fFunc(func), fCoord(icoord), fIntegrator() {
+         // no check for coord - done by clients of class
+         fIntegrator.SetFunction(*fFunc);
+         fIntegrator.SetRelTolerance(1e-6);
+         fMin = new Double_t[fFunc->NDim()];
+         fMax = new Double_t[fFunc->NDim()];
+      }
+      ~TFn_Projection1D() { delete [] fMin; delete [] fMax; }
+      Double_t operator() (Double_t *x, Double_t *p) {
+         fFunc->GetRange(fMin, fMax);
+         assert(x != 0);
+         fMin[fCoord] = x[0] - 1e-6;
+         fMax[fCoord] = x[0] + 1e-6;
+         return fIntegrator.Integral(fMin, fMax) / 2e-6;
+      }
+   private:
+      Double_t* fMin;
+      Double_t* fMax;
+      const TFn* fFunc;
+      Int_t fCoord;
+      ROOT::Math::AdaptiveIntegratorMultiDim fIntegrator;
+};
+
 //______________________________________________________________________________
-Double_t TFn::Moment(Double_t n, Double_t* a, Double_t* b, const Double_t *params, Double_t epsilon)
+TF1* TFn::Projection1D(Int_t icoord) const
 {
-   // Return nth moment of function between a and b
-   // See TFn::Integral() for parameter definitions
+   // Return the 1D projection of the function on the icoord coordonate
+   // 
+   // NOTE: The TFn and its projection are intrinsically linked; if one changes
+   // (ranges for example), the other will as well
 
-   // wrapped function in interface for integral calculation
-   // using abs value of integral 
-
-//   TFn_EvalWrapper func(this, params, kTRUE, n); 
-   ROOT::Math::AdaptiveIntegratorMultiDim aimd;
-
-   aimd.SetFunction(*this);
-   aimd.SetRelTolerance(epsilon);
-
-   Double_t norm =  aimd.Integral(a, b);
-   if (norm == 0) {
-      Error("Moment", "Integral zero over range");
-      return 0;
+   if(icoord < 0 || icoord >= fNdim) {
+      Error("Projection1D", "Coordonate index passed as input is out of dimensional range");
+      return NULL;
    }
 
-   // calculate now integral of x^n f(x)
-   // wrapped the member function EvalNum in  interface required by integrator using the functor class 
-//   ROOT::Math::Functor1D xnfunc( &func, &TFn_EvalWrapper::EvalNMom);
-//   giod.SetFunction(xnfunc);
-
-//   Double_t res = giod.Integral(a,b)/norm;
-   
    //return res;
-   return 0.0;
+   TFn_Projection1D* proj = new TFn_Projection1D(this, icoord);
+   return new TF1(TString::Format("%s_Projection1D", GetName()), proj,
+      fMin[icoord], fMax[icoord], fNpar, "TFn_Projection1D");
+      
 }
 
-
-//______________________________________________________________________________
-Double_t TFn::CentralMoment(Double_t n, Double_t* a, Double_t* b, const Double_t *params, Double_t epsilon)
-{
-   // Return nth central moment of function between a and b
-   // (i.e the n-th moment around the mean value)   
-   //
-   // See TFn::Integral() for parameter definitions
-   //   Author: Gene Van Buren <gene@bnl.gov>
-  
-   //TFn_EvalWrapper func(this, params, kTRUE, n); 
-
-   ROOT::Math::AdaptiveIntegratorMultiDim aimd;
-
-   aimd.SetFunction(*this);
-   aimd.SetRelTolerance(epsilon);
-
-   Double_t norm =  aimd.Integral(a, b);
-   if (norm == 0) {
-      Error("Moment", "Integral zero over range");
-      return 0;
-   }
-
-   // calculate now integral of xf(x)
-   // wrapped the member function EvalFirstMom in  interface required by integrator using the functor class 
-   //ROOT::Math::Functor1D xfunc( &func, &TFn_EvalWrapper::EvalFirstMom);
-   //giod.SetFunction(xfunc);
-
-   // estimate of mean value
-   //Double_t xbar = giod.Integral(a,b)/norm;
-
-   // use different mean value in function wrapper 
-   //func.fX0 = xbar; 
-   //ROOT::Math::Functor1D xnfunc( &func, &TFn_EvalWrapper::EvalNMom);
-   //giod.SetFunction(xnfunc);
-
-   //Double_t res = giod.Integral(a,b)/norm;
-   return 0.0;
-}
 
 
