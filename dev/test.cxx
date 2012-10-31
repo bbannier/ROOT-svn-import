@@ -128,7 +128,7 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    m.optimizeConst(2);
    m.setErrorLevel(0.5);
    m.setEps(1);
-   m.setPrintLevel(-1);
+//   m.setPrintLevel(-1);
    m.setStrategy(0);
 
    myBenchmark.Start("CombinedLikelihood");
@@ -151,7 +151,7 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    // Run MINOS on only one parameter (but which one?)
    // m.minos(/* param */);
 
-   m.save()->Print("v");
+  // m.save()->Print("v");
 
   // RooFitResult *r = m.save();
   // r->Print("v");
