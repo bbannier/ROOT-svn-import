@@ -31,6 +31,7 @@ NamespaceImp(RooStats)
 #include "RooStats/ModelConfig.h"
 #include "RooStats/RooStatsUtils.h"
 #include "RooStats/CombinedLikelihood.h"
+#include "RooStats/SumLikelihood.h"
 #include <typeinfo>
 
 using namespace std;
@@ -46,7 +47,6 @@ namespace RooStats {
          return new CombinedLikelihood(*((RooSimultaneous *)&pdf), data, cmdList);
       } else if(pdfType == typeid(RooRealSumPdf) || pdfType == typeid(RooAddPdf)) {
          return new SumLikelihood(&pdf, &data);
-      // XXX: Bypassing this for now
       } else {
          return pdf.createNLL(data, cmdList);
       }

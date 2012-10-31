@@ -114,6 +114,7 @@
 #pragma link C++ class RooStats::CombinedDataSet<Double_t>+;
 #pragma link C++ class RooStats::GaussianPDF+;
 #pragma link C++ class RooStats::PoissonPDF+;
+#pragma link C++ class RooStats::SumLikelihood+;
 
 #pragma link C++ class AsymPow+;
 
