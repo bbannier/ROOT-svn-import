@@ -1,1 +1,0 @@
-  graf2d/mathtext/src/mathtextparse.o graf2d/mathtext/src/mathtextparse.d: $(wildcard include/mathtext.h /home/ibucur/roottrunk/graf2d/mathtext/src/table/mathfontch.h /home/ibucur/roottrunk/graf2d/mathtext/src/table/mathopstd.h /home/ibucur/roottrunk/graf2d/mathtext/src/table/mathbracketcs.h)
