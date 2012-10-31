@@ -87,7 +87,7 @@ protected:
                              // 1 if pointer to function)
    Int_t       fNpfits;      //Number of points used in the fit
    Int_t       fNDF;         //Number of degrees of freedom in the fit
-   Int_t       fNdim;
+   UInt_t       fNdim;
    Int_t       fNpar;
    Int_t       fNsave;       //Number of points used to fill array fSave
    Double_t    *fParErrors;  //[fNpar] Array of errors of the fNpar parameters
@@ -106,7 +106,6 @@ protected:
    ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
 
    static Bool_t fgAbsValue;  //use absolute value of function when computing integral
-   static Bool_t fgRejectPoint;  //True if point must be rejected in a fit
 
    void CreateFromFunctor(const char *name, Int_t npar);
    void CreateFromCintClass(const char *name, Int_t ndim, void * ptr, Double_t* min, Double_t* max, Int_t npar, const char * cname, const char * fname);
@@ -237,7 +236,7 @@ public:
    virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t epsilon, Double_t &relerr);
    virtual Bool_t   IsInside(const Double_t *x) const;
    virtual Double_t Norm() const { return fNorm; }
-           TF1*     Projection1D(Int_t icoord) const;
+           TF1*     Projection1D(UInt_t idxCoord) const;
    virtual void     Print(Option_t *option="") const;
    virtual void     ReleaseParameter(Int_t ipar);
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
@@ -256,10 +255,7 @@ public:
    virtual void     SetRange(Double_t* min, Double_t* max); // *MENU*
    virtual void     SetSavedPoint(Int_t point, Double_t value);
 
-
    static  void     AbsValue(Bool_t reject=kTRUE);
-   static  void     RejectPoint(Bool_t reject=kTRUE);
-   static  Bool_t   RejectedPoint();
 
    ClassDef(TFn,1)  //The Parametric n-D function
 };
