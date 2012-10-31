@@ -376,18 +376,13 @@ TFn::TFn() : TNamed(), fIntegrator()
 
    fMin       = NULL;
    fMax       = NULL;
-   fNpx       = 100;
    fType      = 0;
    fNpfits    = 0;
    fNDF       = 0;
    fNsave     = 0;
-   fIntegral  = 0;
    fParErrors = 0;
    fParMin    = 0;
    fParMax    = 0;
-   fAlpha     = 0;
-   fBeta      = 0;
-   fGamma     = 0;
    fParent    = 0;
    fSave      = 0;
    fHistogram = 0;
@@ -411,7 +406,6 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
    } else {
 
       Init(fFormula->GetNdim(), min, max);
-      fNpx       = 100;
       fType      = 0;
       if (fFormula->GetNpar() > 0) {
          fNpar = fFormula->GetNpar();
@@ -428,10 +422,6 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
          fParMin    = 0;
          fParMax    = 0;
       }
-      fIntegral   = 0;
-      fAlpha      = 0;
-      fBeta       = 0;
-      fGamma      = 0;
       fParent     = 0;
       fNpfits     = 0;
       fNDF        = 0;
@@ -470,7 +460,6 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
 
    Init(ndim, min, max);
 
-   fNpx        = 100;
    fType       = 2;
    //fFunction   = 0;
    if (npar > 0) {
@@ -491,10 +480,6 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
       fParMin    = 0;
       fParMax    = 0;
    }
-   fIntegral   = 0;
-   fAlpha      = 0;
-   fBeta       = 0;
-   fGamma      = 0;
    fParent     = 0;
    fNpfits     = 0;
    fNDF        = 0;
@@ -549,7 +534,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    // WARNING! A function created with this constructor cannot be Cloned.
 
 
-   fNpx        = 100;
    fType       = 1;
    fMethodCall = 0;
    fCintFunc   = 0;
@@ -573,10 +557,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
       fParMin    = 0;
       fParMax    = 0;
    }
-   fIntegral   = 0;
-   fAlpha      = 0;
-   fBeta       = 0;
-   fGamma      = 0;
    fNsave      = 0;
    fSave       = 0;
    fParent     = 0;
@@ -614,8 +594,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
 
    Init(ndim, min, max);
 
-   fNpx        = 100;
-
    fType       = 1;
    fMethodCall = 0;
    fCintFunc   = 0;
@@ -639,10 +617,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
       fParMin    = 0;
       fParMax    = 0;
    }
-   fIntegral   = 0;
-   fAlpha      = 0;
-   fBeta       = 0;
-   fGamma      = 0;
    fNsave      = 0;
    fSave       = 0;
    fParent     = 0;
@@ -665,20 +639,15 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
 //______________________________________________________________________________
 TFn::TFn(const char*name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
    TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
-   fNpx       ( 100 ),
    fType      ( 1 ),
    fNpfits    ( 0 ),
    fNDF       ( 0 ),
    fNsave     ( 0 ),
    fIntegrator   (),
-   fIntegral  ( 0 ),
    fParErrors ( 0 ),
    fParMin    ( 0 ),
    fParMax    ( 0 ),
    fSave      ( 0 ),
-   fAlpha     ( 0 ),
-   fBeta      ( 0 ),
-   fGamma     ( 0 ),
    fParent    ( 0 ),
    fHistogram ( 0 ),
    fMaximum   ( -1111 ),
@@ -793,7 +762,6 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
 
    Init(ndim, min, max);
 
-   fNpx        = 100;
    fType       = 3;
    if (npar > 0) {
       fNpar = npar;
@@ -813,10 +781,6 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
       fParMin    = 0;
       fParMax    = 0;
    }
-   fIntegral   = 0;
-   fAlpha      = 0;
-   fBeta       = 0;
-   fGamma      = 0;
    fParent     = 0;
    fNpfits     = 0;
    fNDF        = 0;
@@ -891,10 +855,6 @@ TFn::~TFn()
    if (fParMin)    delete [] fParMin;
    if (fParMax)    delete [] fParMax;
    if (fParErrors) delete [] fParErrors;
-   if (fIntegral)  delete [] fIntegral;
-   if (fAlpha)     delete [] fAlpha;
-   if (fBeta)      delete [] fBeta;
-   if (fGamma)     delete [] fGamma;
    if (fSave)      delete [] fSave;
    delete fMethodCall;
 
@@ -909,18 +869,13 @@ TFn::TFn(const TFn &f1) : TNamed(f1), fIntegrator()
 
    fMin       = NULL;
    fMax       = NULL;
-   fNpx       = 100;
    fType      = 0;
    fNpfits    = 0;
    fNDF       = 0;
    fNsave     = 0;
-   fIntegral  = 0;
    fParErrors = 0;
    fParMin    = 0;
    fParMax    = 0;
-   fAlpha     = 0;
-   fBeta      = 0;
-   fGamma     = 0;
    fParent    = 0;
    fSave      = 0;
    fHistogram = 0;
@@ -958,10 +913,6 @@ void TFn::Copy(TObject &obj) const
    if (((TFn&)obj).fParMin)    delete [] ((TFn&)obj).fParMin;
    if (((TFn&)obj).fParMax)    delete [] ((TFn&)obj).fParMax;
    if (((TFn&)obj).fParErrors) delete [] ((TFn&)obj).fParErrors;
-   if (((TFn&)obj).fIntegral)  delete [] ((TFn&)obj).fIntegral;
-   if (((TFn&)obj).fAlpha)     delete [] ((TFn&)obj).fAlpha;
-   if (((TFn&)obj).fBeta)      delete [] ((TFn&)obj).fBeta;
-   if (((TFn&)obj).fGamma)     delete [] ((TFn&)obj).fGamma;
    if (((TFn&)obj).fSave)      delete [] ((TFn&)obj).fSave;
    delete ((TFn&)obj).fHistogram;
    delete ((TFn&)obj).fMethodCall;
@@ -977,7 +928,6 @@ void TFn::Copy(TObject &obj) const
    memcpy(rhs.fMax, fMax, fNdim * sizeof(Double_t));
 
 
-   ((TFn&)obj).fNpx  = fNpx;
    ((TFn&)obj).fType = fType;
    ((TFn&)obj).fCintFunc  = fCintFunc;
    ((TFn&)obj).fFunctor   = fFunctor;
@@ -989,10 +939,6 @@ void TFn::Copy(TObject &obj) const
    ((TFn&)obj).fParErrors = 0;
    ((TFn&)obj).fParMin    = 0;
    ((TFn&)obj).fParMax    = 0;
-   ((TFn&)obj).fIntegral  = 0;
-   ((TFn&)obj).fAlpha     = 0;
-   ((TFn&)obj).fBeta      = 0;
-   ((TFn&)obj).fGamma     = 0;
    ((TFn&)obj).fParent    = fParent;
    ((TFn&)obj).fNsave     = fNsave;
    ((TFn&)obj).fSave      = 0;
@@ -1139,7 +1085,7 @@ void TFn::FixParameter(Int_t ipar, Double_t value)
    if (ipar < 0 || ipar >= fNpar) return; 
 
    fParams[ipar] = value;
-   Update();
+  // Update();
 
    if (value != 0) SetParLimits(ipar,value,value);
    else            SetParLimits(ipar,1,1);
@@ -2026,7 +1972,6 @@ void TFn::SetFitResult(const ROOT::Fit::FitResult & result, const Int_t* indpar 
          fParErrors[i] = result.Error(ipar);
    }
    //invalidate cached integral since parameters have changed
-   Update();   
          
 }
 
@@ -2038,31 +1983,6 @@ void TFn::SetNDF(Int_t ndf)
    // ndf should be the number of points used in a fit - the number of free parameters
 
    fNDF = ndf;
-}
-
-
-//______________________________________________________________________________
-void TFn::SetNpx(Int_t npx)
-{
-   // Set the number of points used to draw the function
-   //
-   // The default number of points along x is 100 for 1-d functions and 30 for 2-d/3-d functions
-   // You can increase this value to get a better resolution when drawing
-   // pictures with sharp peaks or to get a better result when using TFn::GetRandom
-   // the minimum number of points is 4, the maximum is 10000000 for 1-d and 10000 for 2-d/3-d functions
-
-   const Int_t minPx = 4;
-   Int_t maxPx = 10000000;
-   if (fNdim > 1) maxPx = 10000;
-   if (npx >= minPx && npx <= maxPx) {
-      fNpx = npx;
-   } 
-   else { 
-      if(npx < minPx) fNpx = minPx; 
-      if(npx > maxPx) fNpx = maxPx; 
-      Warning("SetNpx","Number of points must be >=%d && <= %d, fNpx set to %d",minPx,maxPx,fNpx);
-   } 
-   Update();
 }
 
 
@@ -2115,7 +2035,6 @@ void TFn::SetRange(Double_t* min, Double_t* max)
    memcpy(fMin, min, fNdim * sizeof(Double_t));
    memcpy(fMax, max, fNdim * sizeof(Double_t));
    
-   Update();
 }
 
 
@@ -2125,7 +2044,7 @@ void TFn::SetSavedPoint(Int_t point, Double_t value)
    // Restore value of function saved at point
 
    if (!fSave) {
-      fNsave = fNpx+3;
+      //fNsave = fNpx+3;
       fSave  = new Double_t[fNsave];
    }
    if (point < 0 || point >= fNsave) return;
@@ -2219,24 +2138,6 @@ void TFn::Streamer(TBuffer &b)
 
 
 //______________________________________________________________________________
-void TFn::Update()
-{
-   // Called by functions such as SetRange, SetNpx, SetParameters
-   // to force the deletion of the associated histogram or Integral
-   // TODO: reconsider
-
-   delete fHistogram;
-   fHistogram = 0;
-   if (fIntegral) {
-      delete [] fIntegral; fIntegral = 0;
-      delete [] fAlpha;    fAlpha    = 0;
-      delete [] fBeta;     fBeta     = 0;
-      delete [] fGamma;    fGamma    = 0;
-   }
-}
-
-
-//______________________________________________________________________________
 void TFn::RejectPoint(Bool_t reject)
 {
    // Static function to set the global flag to reject points
@@ -2257,29 +2158,22 @@ Bool_t TFn::RejectedPoint()
    return fgRejectPoint;
 }
 
+/**
+ * TFn_Projection1D is a helper class used to fix one coordinate of the original
+ * TFn and allow integration only on the other n-1 coordinates. 
+ */
 class TFn_Projection1D {
    public:
-      TFn_Projection1D(const TFn *func, Int_t icoord) : fFunc(func), fCoord(icoord), fIntegrator() {
+      TFn_Projection1D(const TFn *func, Int_t icoord) : fFunc(func), fCoord(icoord) {}
          // no check for coord - done by clients of class
-         fIntegrator.SetFunction(*fFunc);
-         fIntegrator.SetRelTolerance(1e-6);
-         fMin = new Double_t[fFunc->NDim()];
-         fMax = new Double_t[fFunc->NDim()];
-      }
-      ~TFn_Projection1D() { delete [] fMin; delete [] fMax; }
       Double_t operator() (Double_t *x, Double_t *p) {
-         fFunc->GetRange(fMin, fMax);
          assert(x != 0);
-         fMin[fCoord] = x[0] - 1e-6;
-         fMax[fCoord] = x[0] + 1e-6;
-         return fIntegrator.Integral(fMin, fMax) / 2e-6;
+         // TODO: fix coordinate
+         //return fFunc(x, p);
+         return 0.0;
       }
-   private:
-      Double_t* fMin;
-      Double_t* fMax;
       const TFn* fFunc;
       Int_t fCoord;
-      ROOT::Math::AdaptiveIntegratorMultiDim fIntegrator;
 };
 
 //______________________________________________________________________________
@@ -2297,9 +2191,9 @@ TF1* TFn::Projection1D(Int_t icoord) const
 
    //return res;
    TFn_Projection1D* proj = new TFn_Projection1D(this, icoord);
-   return new TF1(TString::Format("%s_Projection1D", GetName()), proj,
-      fMin[icoord], fMax[icoord], fNpar, "TFn_Projection1D");
-      
+//   return new TF1(TString::Format("%s_Projection1D", GetName()), proj,
+  //    fMin[icoord], fMax[icoord], fNpar, "TFn_Projection1D");
+   return new TF1();  
 }
 
 
