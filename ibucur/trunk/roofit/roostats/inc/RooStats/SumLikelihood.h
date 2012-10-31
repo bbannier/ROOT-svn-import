@@ -123,14 +123,14 @@ namespace RooStats {
       virtual TObject* clone(const char* name) const { return new SumLikelihood(*this, name); }
 
       virtual Double_t evaluate() const {
-         std::fill( fPartialSums.begin(), fPartialSums.end(), 0.0);
          
          std::vector<RooAbsReal*>::const_iterator itCoef, begCoef = fCoefficients.begin(), endCoef = fCoefficients.end();
          std::vector<CachedPdf>::iterator itPdf = fCachedPdfs.begin();
          std::vector<Double_t>::const_iterator itWgt, begWgt = fWeights.begin();
          std::vector<Double_t>::iterator itSum, begSum = fPartialSums.begin(), endSum = fPartialSums.end();
 
-
+         std::fill( fPartialSums.begin(), fPartialSums.end(), 0.0);
+     
    //      std::cout << "SumLikelihood::evaluate " << fCoefficients.size() << " "
      //              << fCachedPdfs.size() << " " << fWeights.size() << " "
        //            << fPartialSums.size() << std::endl;
@@ -223,16 +223,13 @@ namespace RooStats {
             fIsRooAddPdf = kTRUE;
 
             Int_t numPdfs = addPdf->pdfList().getSize();
-            // XXX: not such a big problem
             fCoefficients.reserve(numPdfs);
             fCachedPdfs.reserve(numPdfs);
 
             TIterator *itPdf  = addPdf->pdfList().createIterator();
             TIterator *itCoef = addPdf->coefList().createIterator();
-            
-           // std::cout << addPdf->pdfList().getSize() << " " << addPdf->coefList().getSize() << std::endl;
-            
-            // TODO TODO : last coefficient problem
+             
+            // FIXME : last coefficient problem
             for(Int_t i = 0; i < numPdfs; ++i) {
                RooAbsReal* coef = dynamic_cast<RooAbsReal*>(itCoef->Next());
                RooAbsPdf*  pdf  = dynamic_cast<RooAbsPdf* >(itPdf->Next() );
@@ -248,6 +245,7 @@ namespace RooStats {
             Int_t numFuncs = sumPdf->funcList().getSize();
             fCoefficients.reserve(numFuncs);
             fCachedPdfs.reserve(numFuncs);
+            fIntegrals.reserve(numFuncs);
               
             TIterator *itFunc = sumPdf->funcList().createIterator();
             TIterator *itCoef = sumPdf->coefList().createIterator();
@@ -257,11 +255,10 @@ namespace RooStats {
                RooAbsReal* func = dynamic_cast<RooAbsReal*>(itFunc->Next() );
                fCoefficients.push_back(coef);
                fCachedPdfs.push_back(CachedPdf(func, observables));
-               // TODO: insert, allocate properly
                fIntegrals.push_back(func->createIntegral(*observables));
             }
          } else {
-            throw std::invalid_argument("ERROR: SumLikelihood");
+            throw std::invalid_argument("SumLikelihood::Init");
          }
    /*
          TIterator *itPar = fPdf->getParameters(*fData)->createIterator();
