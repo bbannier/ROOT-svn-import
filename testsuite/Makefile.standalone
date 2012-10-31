@@ -4,7 +4,7 @@
 # using the local TMVA libraries
 #
 
-include $(ROOTSYS)/test/Makefile.arch
+include $(ROOTSYS)/etc/Makefile.arch
 
 #------------------------------------------------------------------------------
 # define local settings
