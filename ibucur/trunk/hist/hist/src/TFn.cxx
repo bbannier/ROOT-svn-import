@@ -45,7 +45,6 @@
 //#include <iostream>
 
 Bool_t TFn::fgAbsValue    = kFALSE;
-Bool_t TFn::fgRejectPoint = kFALSE;
 static Double_t gErrorTFn = 0;
 
 
@@ -1415,7 +1414,6 @@ void TFn::GetRange(Double_t *min, Double_t *max) const
 {
    // Return range of a n-D function.
    // NOTE: the user is responsible for creating arrays of sufficient size
-
    memcpy(min, fMin, fNdim * sizeof(Double_t));
    memcpy(max, fMax, fNdim * sizeof(Double_t));
 }
@@ -2136,63 +2134,85 @@ void TFn::Streamer(TBuffer &b)
 */
 }
 
-
-//______________________________________________________________________________
-void TFn::RejectPoint(Bool_t reject)
-{
-   // Static function to set the global flag to reject points
-   // the fgRejectPoint global flag is tested by all fit functions
-   // if TRUE the point is not included in the fit.
-   // This flag can be set by a user in a fitting function.
-   // The fgRejectPoint flag is reset by the TH1 and TGraph fitting functions.
-
-   fgRejectPoint = reject;
-}
-
-
-//______________________________________________________________________________
-Bool_t TFn::RejectedPoint()
-{
-   // See TFn::RejectPoint above
-
-   return fgRejectPoint;
-}
-
 /**
- * TFn_Projection1D is a helper class used to fix one coordinate of the original
+ * TFn_Projection1D is a helper / wrapper class used to fix one coordinate of the original
  * TFn and allow integration only on the other n-1 coordinates. 
  */
-class TFn_Projection1D {
-   public:
-      TFn_Projection1D(const TFn *func, Int_t icoord) : fFunc(func), fCoord(icoord) {}
-         // no check for coord - done by clients of class
-      Double_t operator() (Double_t *x, Double_t *p) {
-         assert(x != 0);
-         // TODO: fix coordinate
-         //return fFunc(x, p);
-         return 0.0;
+// TODO: maybe derive from TFn
+class TFn_Projection1D : ROOT::Math::IBaseFunctionMultiDim {
+public:
+   // assumes correct arguments are passed
+   // TODO: constify !!!
+   TFn_Projection1D(TFn& func, UInt_t idxCoord) :
+      fFunc(func), fNdim(fFunc.NDim()), fIdxCoord(idxCoord), fValCoord(0.0), fIntegral()
+   {
+      fX = new Double_t[fNdim];
+      fMin = new Double_t[fNdim];
+      fMax = new Double_t[fNdim];
+      fIntegral.SetFunction(*this);
+
+      fFunc.GetRange(fMin, fMax);
+      // shift range for n-1 dim integral
+      for(UInt_t i = fIdxCoord + 1; i < fNdim; ++i) {
+         fMin[i - 1] = fMin[i];
+         fMax[i - 1] = fMax[i];
       }
-      const TFn* fFunc;
-      Int_t fCoord;
+   }
+   ~TFn_Projection1D() { delete [] fX; delete [] fMin; delete [] fMax; } 
+
+   virtual UInt_t NDim() const { return fNdim - 1; }
+   
+   Double_t Integral(Double_t* valCoord, Double_t*) {
+      // TODO: check if in range
+      fValCoord = *valCoord;
+      return fIntegral.Integral(fMin, fMax);
+   }
+      
+protected:
+   // NOTE: DO NOT USE !!! Shallow copying
+   virtual TFn_Projection1D* Clone() const { return new TFn_Projection1D(fFunc, fIdxCoord); } 
+   
+private:
+   virtual Double_t DoEval(const Double_t *x) const {
+      assert(x != NULL);
+      for(UInt_t i = 0; i < fIdxCoord; ++i) fX[i] = x[i];
+      fX[fIdxCoord] = fValCoord;
+      for(UInt_t i = fIdxCoord + 1; i < fNdim; ++i) fX[i] = x[i - 1]; 
+      return fFunc(fX);
+   }
+     
+   TFn& fFunc;
+   UInt_t fNdim; // dimension of TFn
+   UInt_t fIdxCoord;
+   mutable Double_t fValCoord;
+   ROOT::Math::AdaptiveIntegratorMultiDim fIntegral;
+   
+   Double_t* fX;   //![fNdim] contains (n-1)-dim input array plus fixed value on specified coord
+   Double_t* fMin; //![fNdim] contains original TFn min range
+   Double_t* fMax; //![fNdim] contains original TFn max range
 };
 
 //______________________________________________________________________________
-TF1* TFn::Projection1D(Int_t icoord) const
+TF1* TFn::Projection1D(UInt_t idxCoord) const
 {
    // Return the 1D projection of the function on the icoord coordonate
    // 
    // NOTE: The TFn and its projection are intrinsically linked; if one changes
    // (ranges for example), the other will as well
 
-   if(icoord < 0 || icoord >= fNdim) {
+   // FIXME: return this
+   if(fNdim == 1) return NULL;
+
+   if(idxCoord >= fNdim) {
       Error("Projection1D", "Coordonate index passed as input is out of dimensional range");
       return NULL;
    }
 
-   //return res;
-   TFn_Projection1D* proj = new TFn_Projection1D(this, icoord);
-//   return new TF1(TString::Format("%s_Projection1D", GetName()), proj,
-  //    fMin[icoord], fMax[icoord], fNpar, "TFn_Projection1D");
+   // FIXME: remove const hack
+   TFn_Projection1D* proj =  new TFn_Projection1D(*(TFn*)this, idxCoord);
+
+   return new TF1(TString::Format("%s_Projection1D", GetName()), proj, &TFn_Projection1D::Integral,
+      fMin[idxCoord], fMax[idxCoord], fNpar, "TFn_Projection1D", "Integral");
    return new TF1();  
 }
 
