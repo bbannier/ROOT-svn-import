@@ -346,6 +346,7 @@ Double_t TMVA::OptimizeConfigParameters::GetFOM()
       }
    }
    fFOMvsIter.push_back(fom);
+   //   std::cout << "fom="<<fom<<std::endl; // should write that into a debug log (as option)
    return fom;
 }
 

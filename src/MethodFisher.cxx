@@ -365,7 +365,7 @@ void TMVA::MethodFisher::GetCov_WithinClass( void )
                Double_t v = ( (xval[x] - (*fMeanMatx)(x, 0))*(xval[y] - (*fMeanMatx)(y, 0)) )*weight;
                sumSig[k] += v;
             }else{
-               Double_t v = ( (xval[x] - (*fMeanMatx)(x, 0))*(xval[y] - (*fMeanMatx)(y, 0)) )*weight;
+               Double_t v = ( (xval[x] - (*fMeanMatx)(x, 1))*(xval[y] - (*fMeanMatx)(y, 1)) )*weight;
                sumBgd[k] += v;
             }
             k++;
@@ -376,6 +376,7 @@ void TMVA::MethodFisher::GetCov_WithinClass( void )
    for (Int_t x=0; x<nvar; x++) {
       for (Int_t y=0; y<nvar; y++) {
          (*fWith)(x, y) = (sumSig[k] + sumBgd[k])/(fSumOfWeightsS + fSumOfWeightsB);
+         (*fWith)(x, y) = (sumSig[k] + sumBgd[k]);
          k++;
       }
    }
@@ -448,6 +449,7 @@ void TMVA::MethodFisher::GetFisherCoeff( void )
    }
 
    TMatrixD invCov( *theMat );
+
    if ( TMath::Abs(invCov.Determinant()) < 10E-24 ) {
       Log() << kWARNING << "<GetFisherCoeff> matrix is almost singular with deterninant="
               << TMath::Abs(invCov.Determinant()) 
@@ -475,12 +477,12 @@ void TMVA::MethodFisher::GetFisherCoeff( void )
       for (jvar=0; jvar<GetNvar(); jvar++) {
          Double_t d = (*fMeanMatx)(jvar, 0) - (*fMeanMatx)(jvar, 1);
          (*fFisherCoeff)[ivar] += invCov(ivar, jvar)*d;
-      }    
-    
+      }
       // rescale
       (*fFisherCoeff)[ivar] *= xfact;
    }
-
+   
+   
    // offset correction
    fF0 = 0.0;
    for (ivar=0; ivar<GetNvar(); ivar++){ 

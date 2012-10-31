@@ -906,13 +906,13 @@ std::map<TString,Double_t>  TMVA::MethodBDT::OptimizeTuningParameters(TString fo
    // find some reasonable ranges for the optimisation of MinNodeEvents:
 
    tuneParameters.insert(std::pair<TString,Interval*>("NTrees",         new Interval(10,1000,5))); //  stepsize 50
-   tuneParameters.insert(std::pair<TString,Interval*>("MaxDepth",       new Interval(2,5,4)));    // stepsize 1
-   tuneParameters.insert(std::pair<TString,Interval*>("MinNodeSize",    new LogInterval(1,30,10)));    // 
+   tuneParameters.insert(std::pair<TString,Interval*>("MaxDepth",       new Interval(2,3,3)));    // stepsize 1
+   tuneParameters.insert(std::pair<TString,Interval*>("MinNodeSize",    new LogInterval(1,30,30)));    // 
    //tuneParameters.insert(std::pair<TString,Interval*>("NodePurityLimit",new Interval(.4,.6,3)));   // stepsize .1
 
    // method-specific parameters
    if        (fBoostType=="AdaBoost"){
-      tuneParameters.insert(std::pair<TString,Interval*>("AdaBoostBeta",   new Interval(.5,1.50,5)));   
+      tuneParameters.insert(std::pair<TString,Interval*>("AdaBoostBeta",   new Interval(.2,1.,5)));   
   
    }else if (fBoostType=="Grad"){
       tuneParameters.insert(std::pair<TString,Interval*>("Shrinkage",      new Interval(0.05,0.50,5)));  
@@ -2707,10 +2707,10 @@ void TMVA::MethodBDT::DeterminePreselectionCuts(const std::vector<const TMVA::Ev
    fIsHighSigCut.assign(GetNvar(),kFALSE);
    fIsHighBkgCut.assign(GetNvar(),kFALSE);
 
-   fLowSigCut.assign(GetNvar(),0.); 
-   fLowBkgCut.assign(GetNvar(),0.); 
-   fHighSigCut.assign(GetNvar(),0.);
-   fHighBkgCut.assign(GetNvar(),0.);
+   fLowSigCut.assign(GetNvar(),0.);   //  ---------------| -->  in var is signal (accept all above lower cut)
+   fLowBkgCut.assign(GetNvar(),0.);   //  ---------------| -->  in var is bkg    (accept all above lower cut)
+   fHighSigCut.assign(GetNvar(),0.);  //  <-- | --------------  in var is signal (accept all blow cut)
+   fHighBkgCut.assign(GetNvar(),0.);  //  <-- | --------------  in var is blg    (accept all blow cut)
    
   
    // Initialize (un)weighted counters for signal & background
@@ -2757,7 +2757,7 @@ void TMVA::MethodBDT::DeterminePreselectionCuts(const std::vector<const TMVA::Ev
          
          nSelS = bdtEventSample[iev].GetCumulativeWeight(true);
          nSelB = bdtEventSample[iev].GetCumulativeWeight(false);
-         // you look for some 100% efficient pre-selection cut to remove background.. i.e. nSelS=0 && nSelB>5%nTotB or nSel>5%nTotS && nSelB=0
+         // you look for some 100% efficient pre-selection cut to remove background.. i.e. nSelS=0 && nSelB>5%nTotB or ( nSelB=0 nSelS>5%nTotS)
          tmpEffS=nSelS/nTotS;
          tmpEffB=nSelB/nTotB;
          tmpRejS=1-tmpEffS;
