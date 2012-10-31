@@ -1113,6 +1113,7 @@ void TMVA::MethodBase::TestClassification()
       }
    }
    
+   // uncomment those (and several others if you want unnormalized output
    gTools().NormHist( mva_s  );
    gTools().NormHist( mva_b  );
    gTools().NormHist( proba_s );
@@ -2417,6 +2418,7 @@ Double_t TMVA::MethodBase::GetTrainingEfficiency(const TString& theString)
       }
 
       // normalise output distributions
+      // uncomment those (and several others if you want unnormalized output
       gTools().NormHist( mva_s_tr  );
       gTools().NormHist( mva_b_tr  );
 
