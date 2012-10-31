@@ -48,7 +48,6 @@ namespace ROOT {
    }
 }
 
-// TODO: check abstract methods that need implementing in new base classes
 class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, public ROOT::Math::IGradientMultiDim {
 
 private:
@@ -66,9 +65,7 @@ public:
    // From IBaseFunctionMultiDim
    virtual UInt_t NDim() const { return fNdim; }
    // From IBaseParam
-   virtual const Double_t* Parameters() const {
-      return fParams;
-   }
+   virtual const Double_t* Parameters() const { return fParams; }
    virtual void SetParameters(const Double_t* p) {
       if (!p) {
          Error("TFn::SetParameters", "Input parameter array not allocated");
@@ -85,7 +82,6 @@ protected:
    Double_t*   fMax;         //Upper bounds for the range
    Double_t    fNorm;
    ROOT::Math::IntegratorMultiDim fIntegrator;
-   Int_t       fNpx;         //Number of points used for the graphical representation
    // TODO: change to an internal enum
    Int_t       fType;        // 0 for standard functions, 
                              // 1 if pointer to function)
@@ -94,14 +90,10 @@ protected:
    Int_t       fNdim;
    Int_t       fNpar;
    Int_t       fNsave;       //Number of points used to fill array fSave
-   Double_t    *fIntegral;   //![fNpx] Integral of function binned on fNpx bins
    Double_t    *fParErrors;  //[fNpar] Array of errors of the fNpar parameters
    Double_t    *fParMin;     //[fNpar] Array of lower limits of the fNpar parameters
    Double_t    *fParMax;     //[fNpar] Array of upper limits of the fNpar parameters
    Double_t    *fSave;       //[fNsave] Array of fNsave function values
-   Double_t    *fAlpha;      //!Array alpha. for each bin in x the deconvolution r of fIntegral
-   Double_t    *fBeta;       //!Array beta.  is approximated by x = alpha +beta*r *gamma*r**2
-   Double_t    *fGamma;      //!Array gamma.
    Double_t    *fParams;     //[fNpar] Array of parameters
    TObject     *fParent;     //!Parent object hooking this function (if one)
    TH1         *fHistogram;  //!Pointer to histogram used for visualisation
@@ -147,20 +139,15 @@ public:
    template <typename Func>
    TFn(const char *name, Int_t ndim, Func f, Double_t* min, Double_t* max, Int_t npar, const char * = 0  ) :
       TNamed(name, "TFn created by a templated constructor from any C++ functor"),
-      fNpx       ( 100 ),
       fType      ( 1 ),
       fNpfits    ( 0 ),
       fNDF       ( 0 ),
       fNsave     ( 0 ),
-      fIntegral  ( 0 ),
       fIntegrator   (),
       fParErrors ( 0 ),
       fParMin    ( 0 ),
       fParMax    ( 0 ),
       fSave      ( 0 ),
-      fAlpha     ( 0 ),
-      fBeta      ( 0 ),
-      fGamma     ( 0 ),
       fParent    ( 0 ),
       fHistogram ( 0 ),
       fMaximum   ( -1111 ),
@@ -184,20 +171,15 @@ public:
    template <class PtrObj, typename MemFn>
    TFn(const char *name, Int_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, Int_t npar, const char * = 0, const char * = 0) :
       TNamed     (name, "TFn created from a PtrObj"),
-      fNpx       ( 100 ),
       fType      ( 1 ),
       fNpfits    ( 0 ),
       fNDF       ( 0 ),
       fNsave     ( 0 ),
-      fIntegral  ( 0 ),
       fIntegrator   (),
       fParErrors ( 0 ),
       fParMin    ( 0 ),
       fParMax    ( 0 ),
       fSave      ( 0 ),
-      fAlpha     ( 0 ),
-      fBeta      ( 0 ),
-      fGamma     ( 0 ),
       fParent    ( 0 ),
       fHistogram ( 0 ),
       fMaximum   ( -1111 ),
@@ -229,7 +211,6 @@ public:
    virtual Double_t* GetMaximumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Double_t* GetMinimumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Int_t     GetNDF() const;
-   virtual Int_t     GetNpx() const {return fNpx;}
         TMethodCall* GetMethodCall() const {return fMethodCall;}
    virtual Int_t     GetNumberFreeParameters() const;
    virtual Int_t     GetNumberFitPoints() const {return fNpfits;}
@@ -268,14 +249,12 @@ public:
    void SetFunction( Func f );
    virtual void     SetNDF(Int_t ndf);
    virtual void     SetNumberFitPoints(Int_t npfits) {fNpfits = npfits;}
-   virtual void     SetNpx(Int_t npx=100); // *MENU*
    virtual void     SetParError(Int_t ipar, Double_t error);
    virtual void     SetParErrors(const Double_t *errors);
    virtual void     SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax);
    virtual void     SetParent(TObject *p=0) {fParent = p;}
    virtual void     SetRange(Double_t* min, Double_t* max); // *MENU*
    virtual void     SetSavedPoint(Int_t point, Double_t value);
-   virtual void     Update();
 
 
    static  void     AbsValue(Bool_t reject=kTRUE);
