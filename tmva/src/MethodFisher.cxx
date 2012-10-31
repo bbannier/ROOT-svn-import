@@ -376,7 +376,6 @@ void TMVA::MethodFisher::GetCov_WithinClass( void )
    for (Int_t x=0; x<nvar; x++) {
       for (Int_t y=0; y<nvar; y++) {
          (*fWith)(x, y) = (sumSig[k] + sumBgd[k])/(fSumOfWeightsS + fSumOfWeightsB);
-         (*fWith)(x, y) = (sumSig[k] + sumBgd[k]);
          k++;
       }
    }
