@@ -44,8 +44,6 @@
 
 //#include <iostream>
 
-static Double_t gErrorTFn = 0;
-
 
 ClassImp(TFn)
 
@@ -329,9 +327,12 @@ End_Html */
 
 
 //______________________________________________________________________________
-void TFn::Init(Int_t ndim, Double_t* min, Double_t* max) 
+void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar) 
 {
    // TFn initializer, employed by constructors
+   fMin = fMax = NULL;
+   fParams = fParErrors = fParMin = fParMax = NULL;
+
    if (ndim > 0) {
       fNdim = ndim; // XXX: should we put this in the initialization list?
       fMin = new Double_t[fNdim];
@@ -340,9 +341,21 @@ void TFn::Init(Int_t ndim, Double_t* min, Double_t* max)
       std::copy(max, max + fNdim, fMax);
       
       fIntegrator.SetFunction(*this);
-      fIntegrator.SetRelTolerance(1e-6);
       fNorm = fIntegrator.Integral(fMin, fMax);
+   }   
+   
+   if (npar > 0) {
+      fNpar = npar;
+      //fNames      = new TString[fNpar];
+      fParams     = new Double_t[fNpar];
+      fParErrors  = new Double_t[fNpar];
+      fParMin     = new Double_t[fNpar];
+      fParMax     = new Double_t[fNpar];
+
+      for (UInt_t i = 0; i < fNpar; i++)
+         fParams[i] = fParErrors[i] = fParMin[i] = fParMax[i] = 0;
    }
+ 
 } 
 
 //______________________________________________________________________________
@@ -359,9 +372,6 @@ TFn::TFn() : TNamed(), fIntegrator()
    fParMax    = 0;
    fParent    = 0;
    fSave      = 0;
-   fHistogram = 0;
-   fMinimum   = -1111;
-   fMaximum   = -1111;
    fMethodCall = 0;
    fCintFunc   = 0;
 }
@@ -379,29 +389,11 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
       Error("TFn::TFn", "object %s created incorrectly because of invalid formula", name);
    } else {
 
-      Init(fFormula->GetNdim(), min, max);
+      Init(fFormula->GetNdim(), min, max, fFormula->GetNpar());
       fType      = 0;
-      if (fFormula->GetNpar() > 0) {
-         fNpar = fFormula->GetNpar();
-         fParErrors = new Double_t[fNpar];
-         fParMin    = new Double_t[fNpar];
-         fParMax    = new Double_t[fNpar];
-         for (int i = 0; i < fNpar; i++) {
-            fParErrors[i]  = 0;
-            fParMin[i]     = 0;
-            fParMax[i]     = 0;
-         }
-      } else {
-         fParErrors = 0;
-         fParMin    = 0;
-         fParMax    = 0;
-      }
       fParent     = 0;
       fNsave      = 0;
       fSave       = 0;
-      fHistogram  = 0;
-      fMinimum    = -1111;
-      fMaximum    = -1111;
       fMethodCall = 0;
       fCintFunc   = 0;
    }
@@ -434,30 +426,9 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
 
    fType       = 2;
    //fFunction   = 0;
-   if (npar > 0) {
-      fNpar = npar;
-      //fNames      = new TString[fNpar];
-      fParams     = new Double_t[fNpar];
-      fParErrors  = new Double_t[fNpar];
-      fParMin     = new Double_t[fNpar];
-      fParMax     = new Double_t[fNpar];
-      for (int i = 0; i < fNpar; i++) {
-         fParams[i]     = 0;
-         fParErrors[i]  = 0;
-         fParMin[i]     = 0;
-         fParMax[i]     = 0;
-      }
-   } else {
-      fParErrors = 0;
-      fParMin    = 0;
-      fParMax    = 0;
-   }
-   fParent     = 0;
+  fParent     = 0;
    fNsave      = 0;
    fSave       = 0;
-   fHistogram  = 0;
-   fMinimum    = -1111;
-   fMaximum    = -1111;
    fMethodCall = 0;
    fCintFunc   = 0;
    fNdim       = 1;
@@ -487,7 +458,7 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
 
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, Int_t npar) : 
+TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, UInt_t npar) : 
    TNamed(name, "TFn created from a pointer to a real function"),
    fIntegrator()
 {
@@ -508,32 +479,12 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    fMethodCall = 0;
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
-    
-   if (npar > 0) {
-      fNpar = npar;
-      //fNames      = new TString[fNpar];
-      fParams     = new Double_t[fNpar];
-      fParErrors  = new Double_t[fNpar];
-      fParMin     = new Double_t[fNpar];
-      fParMax     = new Double_t[fNpar];
-      for (int i = 0; i < fNpar; i++) {
-         fParams[i]     = 0;
-         fParErrors[i]  = 0;
-         fParMin[i]     = 0;
-         fParMax[i]     = 0;
-      }
-   } else {
-      fParErrors = 0;
-      fParMin    = 0;
-      fParMax    = 0;
-   }
+
+
    fNsave      = 0;
    fSave       = 0;
    fParent     = 0;
-   fHistogram  = 0;
-   fMinimum    = -1111;
-   fMaximum    = -1111;
-   Init(ndim, min, max);
+   Init(ndim, min, max, npar);
 /*
    // Store formula in linked list of formula in ROOT
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
@@ -560,38 +511,16 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
-   Init(ndim, min, max);
+   Init(ndim, min, max, npar);
 
    fType       = 1;
    fMethodCall = 0;
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
 
-   if (npar > 0) {
-      fNpar = npar;
-      //fNames      = new TString[fNpar];
-      fParams     = new Double_t[fNpar];
-      fParErrors  = new Double_t[fNpar];
-      fParMin     = new Double_t[fNpar];
-      fParMax     = new Double_t[fNpar];
-      for (int i = 0; i < fNpar; i++) {
-         fParams[i]     = 0;
-         fParErrors[i]  = 0;
-         fParMin[i]     = 0;
-         fParMax[i]     = 0;
-      }
-   } else {
-      fParErrors = 0;
-      fParMin    = 0;
-      fParMax    = 0;
-   }
-   fNsave      = 0;
+  fNsave      = 0;
    fSave       = 0;
    fParent     = 0;
-   fHistogram  = 0;
-   fMinimum    = -1111;
-   fMaximum    = -1111;
-   fNdim       = 1;
 
    // Store formula in linked list of formula in ROOT
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
@@ -603,7 +532,7 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
 
 
 //______________________________________________________________________________
-TFn::TFn(const char*name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
+TFn::TFn(const char* name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
    TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
    fType      ( 1 ),
    fNsave     ( 0 ),
@@ -613,9 +542,6 @@ TFn::TFn(const char*name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min,
    fParMax    ( 0 ),
    fSave      ( 0 ),
    fParent    ( 0 ),
-   fHistogram ( 0 ),
-   fMaximum   ( -1111 ),
-   fMinimum   ( -1111 ),
    fMethodCall( 0 ),
    fCintFunc  ( 0 ),
    fFunctor   ( ROOT::Math::ParamFunctor(f) )
@@ -629,36 +555,18 @@ TFn::TFn(const char*name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min,
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
-   Init(ndim, min, max);
-   CreateFromFunctor(name, npar);
+   Init(ndim, min, max, npar);
+   CreateFromFunctor(name);
 }
 
 
 //______________________________________________________________________________
-void TFn::CreateFromFunctor(const char *name, Int_t npar)
+void TFn::CreateFromFunctor(const char *name)
 {
    // Internal Function to Create a TFn  using a Functor.
    //
    //          Used by the template constructors
 
-   if (npar > 0) {
-      fNpar = npar;
-      //fNames      = new TString[fNpar];
-      fParams     = new Double_t[fNpar];
-      fParErrors  = new Double_t[fNpar];
-      fParMin     = new Double_t[fNpar];
-      fParMax     = new Double_t[fNpar];
-      for (int i = 0; i < fNpar; i++) {
-         fParams[i]     = 0;
-         fParErrors[i]  = 0;
-         fParMin[i]     = 0;
-         fParMax[i]     = 0;
-      }
-   } else {
-      fParErrors = 0;
-      fParMin    = 0;
-      fParMax    = 0;
-   }
 /*
    // Store formula in linked list of formula in ROOT
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
@@ -724,35 +632,14 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
    // with the specified type (className) and member function name (methodName).
    //
 
-   Init(ndim, min, max);
+   Init(ndim, min, max, npar);
 
    fType       = 3;
-   if (npar > 0) {
-      fNpar = npar;
-     // fNames      = new TString[fNpar];
-      fParams     = new Double_t[fNpar];
-      fParErrors  = new Double_t[fNpar];
-      fParMin     = new Double_t[fNpar];
-      fParMax     = new Double_t[fNpar];
-      for (int i = 0; i < fNpar; i++) {
-         fParams[i]     = 0;
-         fParErrors[i]  = 0;
-         fParMin[i]     = 0;
-         fParMax[i]     = 0;
-      }
-   } else {
-      fParErrors = 0;
-      fParMin    = 0;
-      fParMax    = 0;
-   }
+
    fParent     = 0;
    fNsave      = 0;
    fSave       = 0;
-   fHistogram  = 0;
-   fMinimum    = -1111;
-   fMaximum    = -1111;
    fMethodCall = 0;
-   fNdim       = 1;
 
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(f1old);
@@ -838,9 +725,6 @@ TFn::TFn(const TFn &f1) : TNamed(f1), fIntegrator()
    fParMax    = 0;
    fParent    = 0;
    fSave      = 0;
-   fHistogram = 0;
-   fMinimum   = -1111;
-   fMaximum   = -1111;
    fMethodCall = 0;
    fCintFunc   = 0;
 
@@ -861,7 +745,6 @@ void TFn::Copy(TObject &obj) const
    if (((TFn&)obj).fParMax)    delete [] ((TFn&)obj).fParMax;
    if (((TFn&)obj).fParErrors) delete [] ((TFn&)obj).fParErrors;
    if (((TFn&)obj).fSave)      delete [] ((TFn&)obj).fSave;
-   delete ((TFn&)obj).fHistogram;
    delete ((TFn&)obj).fMethodCall;
 
 
@@ -878,8 +761,6 @@ void TFn::Copy(TObject &obj) const
    ((TFn&)obj).fType = fType;
    ((TFn&)obj).fCintFunc  = fCintFunc;
    ((TFn&)obj).fFunctor   = fFunctor;
-   ((TFn&)obj).fMinimum = fMinimum;
-   ((TFn&)obj).fMaximum = fMaximum;
 
    ((TFn&)obj).fParErrors = 0;
    ((TFn&)obj).fParMin    = 0;
@@ -887,7 +768,6 @@ void TFn::Copy(TObject &obj) const
    ((TFn&)obj).fParent    = fParent;
    ((TFn&)obj).fNsave     = fNsave;
    ((TFn&)obj).fSave      = 0;
-   ((TFn&)obj).fHistogram = 0;
    ((TFn&)obj).fMethodCall = 0;
    if (fNsave) {
       ((TFn&)obj).fSave = new Double_t[fNsave];
@@ -897,10 +777,11 @@ void TFn::Copy(TObject &obj) const
       ((TFn&)obj).fParErrors = new Double_t[fNpar];
       ((TFn&)obj).fParMin    = new Double_t[fNpar];
       ((TFn&)obj).fParMax    = new Double_t[fNpar];
-      Int_t i;
-      for (i=0;i<fNpar;i++)   ((TFn&)obj).fParErrors[i] = fParErrors[i];
-      for (i=0;i<fNpar;i++)   ((TFn&)obj).fParMin[i]    = fParMin[i];
-      for (i=0;i<fNpar;i++)   ((TFn&)obj).fParMax[i]    = fParMax[i];
+      for (UInt_t i = 0; i<fNpar; ++i)  {
+         ((TFn&)obj).fParErrors[i] = fParErrors[i];
+         ((TFn&)obj).fParMin[i]    = fParMin[i];
+         ((TFn&)obj).fParMax[i]    = fParMax[i];
+      }
    }
    if (fMethodCall) {
       // use copy-constructor of TMethodCall 
@@ -1021,13 +902,13 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
 
 
 //______________________________________________________________________________
-void TFn::FixParameter(Int_t ipar, Double_t value)
+void TFn::FixParameter(UInt_t ipar, Double_t value)
 {
    // Fix the value of a parameter
    // The specified value will be used in a fit operation
 
    // TODO: see how to remove the Double_t check for TF1 (it's done in SetParameter too)
-   if (ipar < 0 || ipar >= fNpar) return; 
+   if (ipar >= fNpar) return; 
 
    fParams[ipar] = value;
   // Update();
@@ -1101,7 +982,7 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
    if (max == NULL) max = fMax; // if the input is not suitable, we bounce back to the object range maximum
 
    // fix invalid ranges
-   for(Int_t i = 0; i < fNdim; ++i) {
+   for(UInt_t i = 0; i < fNdim; ++i) {
       if(min[i] >= max[i]) {
          min[i] = fMin[i];
          max[i] = fMax[i];
@@ -1113,7 +994,7 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
       localX = new Double_t[fNdim]; // if no initial input point is provided, create one at the middle of the range
       x = localX;
    }
-   for(Int_t i = 0; i < fNdim; ++i) {
+   for(UInt_t i = 0; i < fNdim; ++i) {
       x[i] = (min[i] + max[i]) / 2.0;
       std::cout << "x[" << i << "]: " << x[i] << " | ";
    }
@@ -1130,7 +1011,7 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
    if(maxiter > 0) minimizer->SetMaxFunctionCalls(maxiter);
 
    // set minimizer parameters (variables, step size, range)
-   for (Int_t i = 0; i < fNdim; ++i) {
+   for (UInt_t i = 0; i < fNdim; ++i) {
       Double_t stepSize = 0.1;
 
       // use given argument range to determine the step size or give some value depending on x
@@ -1163,52 +1044,15 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
    return funcMin;
 }
 
-/*
-//______________________________________________________________________________
-Double_t TFn::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, Int_t maxiter, Bool_t logx) const
-{
-   // Returns the X value corresponding to the function value fy for (xmin<x<xmax).
-   // in other words it can find the roots of the function when fy=0 and successive calls
-   // by changing the next call to [xmin+eps,xmax] where xmin is the previous root.
-   // Method:
-   //  First, the grid search is used to bracket the maximum
-   //  with the step size = (xmax-xmin)/fNpx. This way, the step size
-   //  can be controlled via the SetNpx() function. If the function is
-   //  unimodal or if its extrema are far apart, setting the fNpx to
-   //  a small value speeds the algorithm up many times.
-   //  Then, Brent's method is applied on the bracketed interval
-   //  epsilon (default = 1.E-10) controls the relative accuracy (if |x| > 1 ) 
-   //  and absolute (if |x| < 1)  and maxiter (default = 100) controls the maximum number 
-   //  of iteration of the Brent algorithm
-   //  If the flag logx is set the grid search is done in log step size
-   //  This is done automatically if the log scale is set in the current Pad
-   //
-   // NOTE: see also TFn::GetMaximumX, TFn::GetMinimumX
-
-   if (xmin >= xmax) {xmin = fXmin; xmax = fXmax;}
-
-   if (!logx && gPad != 0) logx = gPad->GetLogx(); 
-
-   GFunc g(this, fy);
-   ROOT::Math::WrappedFunction<GFunc> wf1(g);
-   ROOT::Math::BrentRootFinder brf;
-   brf.SetFunction(wf1,xmin,xmax);
-   brf.SetNpx(fNpx);
-   brf.SetLogScan(logx);
-   brf.Solve(maxiter, epsilon, epsilon);
-   return brf.Root();
-
-}
-*/
 
 //______________________________________________________________________________
-Int_t TFn::GetNumberFreeParameters() const
+UInt_t TFn::GetNumberFreeParameters() const
 {
    // Return the number of free parameters
 
-   Int_t nfree = fNpar;
+   UInt_t nfree = fNpar;
    Double_t al,bl;
-   for (Int_t i=0;i<fNpar;i++) {
+   for (UInt_t i = 0; i < fNpar; ++i) {
       ((TFn*)this)->GetParLimits(i,al,bl);
       if (al*bl != 0 && al >= bl) nfree--;
    }
@@ -1217,23 +1061,26 @@ Int_t TFn::GetNumberFreeParameters() const
 
 
 //______________________________________________________________________________
-Double_t TFn::GetParError(Int_t ipar) const
+Double_t TFn::GetParError(UInt_t ipar) const
 {
    // Return value of parameter number ipar
 
-   if (ipar < 0 || ipar > fNpar-1) return 0;
+   if (ipar >= fNpar) {
+      Error("GetParError", "Parameter index is out of dimensional range");
+      return 0;
+   }
    return fParErrors[ipar];
 }
 
 
 //______________________________________________________________________________
-void TFn::GetParLimits(Int_t ipar, Double_t &parmin, Double_t &parmax) const
+void TFn::GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const
 {
    // Return limits for parameter ipar.
 
    parmin = 0;
    parmax = 0;
-   if (ipar < 0 || ipar > fNpar-1) return;
+   if (ipar >= fNpar) return;
    if (fParMin) parmin = fParMin[ipar];
    if (fParMax) parmax = fParMax[ipar];
 }
@@ -1258,87 +1105,7 @@ Double_t TFn::GetRandom()
    //   of bins is greater than 50.
 
    //  Check if integral array must be build
-/*   if (fIntegral == 0) {
-      fIntegral = new Double_t[fNpx+1];
-      fAlpha    = new Double_t[fNpx+1];
-      fBeta     = new Double_t[fNpx];
-      fGamma    = new Double_t[fNpx];
-      fIntegral[0] = 0;
-      fAlpha[fNpx] = 0;
-      Double_t integ;
-      Int_t intNegative = 0;
-      Int_t i;
-      Bool_t logbin = kFALSE;
-      Double_t dx;
-      Double_t xmin = fXmin;
-      Double_t xmax = fXmax;
-      if (xmin > 0 && xmax/xmin> fNpx) {
-         logbin =  kTRUE;
-         fAlpha[fNpx] = 1;
-         xmin = TMath::Log10(fXmin);
-         xmax = TMath::Log10(fXmax);
-      }
-      dx = (xmax-xmin)/fNpx;
-         
-      Double_t *xx = new Double_t[fNpx+1];
-      for (i=0;i<fNpx;i++) {
-            xx[i] = xmin +i*dx;
-      }
-      xx[fNpx] = xmax;
-      for (i=0;i<fNpx;i++) {
-         if (logbin) {
-            integ = Integral(TMath::Power(10,xx[i]), TMath::Power(10,xx[i+1]));
-         } else {
-            integ = Integral(xx[i],xx[i+1]);
-         }
-         if (integ < 0) {intNegative++; integ = -integ;}
-         fIntegral[i+1] = fIntegral[i] + integ;
-      }
-      if (intNegative > 0) {
-         Warning("GetRandom","function:%s has %d negative values: abs assumed",GetName(),intNegative);
-      }
-      if (fIntegral[fNpx] == 0) {
-         delete [] xx;
-         Error("GetRandom","Integral of function is zero");
-         return 0;
-      }
-      Double_t total = fIntegral[fNpx];
-      for (i=1;i<=fNpx;i++) {  // normalize integral to 1
-         fIntegral[i] /= total;
-      }
-      //the integral r for each bin is approximated by a parabola
-      //  x = alpha + beta*r +gamma*r**2
-      // compute the coefficients alpha, beta, gamma for each bin
-      Double_t x0,r1,r2,r3;
-      for (i=0;i<fNpx;i++) {
-         x0 = xx[i];
-         r2 = fIntegral[i+1] - fIntegral[i];
-         if (logbin) r1 = Integral(TMath::Power(10,x0),TMath::Power(10,x0+0.5*dx))/total;
-         else        r1 = Integral(x0,x0+0.5*dx)/total;
-         r3 = 2*r2 - 4*r1;
-         if (TMath::Abs(r3) > 1e-8) fGamma[i] = r3/(dx*dx);
-         else           fGamma[i] = 0;
-         fBeta[i]  = r2/dx - fGamma[i]*dx;
-         fAlpha[i] = x0;
-         fGamma[i] *= 2;
-      }
-      delete [] xx;
-   }
-
-   // return random number
-   Double_t r  = gRandom->Rndm();
-   Int_t bin  = TMath::BinarySearch(fNpx,fIntegral,r);
-   Double_t rr = r - fIntegral[bin];
-
-   Double_t yy;
-   if(fGamma[bin] != 0)
-      yy = (-fBeta[bin] + TMath::Sqrt(fBeta[bin]*fBeta[bin]+2*fGamma[bin]*rr))/fGamma[bin];
-   else
-      yy = rr/fBeta[bin];
-   Double_t x = fAlpha[bin] + yy;
-   if (fAlpha[fNpx] > 0) return TMath::Power(10,x);
-   return x;*/
-   return 0.0;
+  return 0.0;
 }
 
 
@@ -1418,12 +1185,12 @@ void TFn::Gradient(const Double_t* x, Double_t* grad) const
       Warning("Gradient", "grad array not specified by user; creating internal %d-dim array; memory must be freed by user", fNdim);
    }
 
-   for(Int_t i = 0; i < fNdim; ++i)
+   for(UInt_t i = 0; i < fNdim; ++i)
       grad[i] = DoDerivative(x, i);
 }
 
 //______________________________________________________________________________
-Double_t TFn::GradientPar(Int_t ipar, const Double_t *x, Double_t eps)
+Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps)
 {
    // Compute the gradient (derivative) wrt a parameter ipar
    // Parameters:
@@ -1506,7 +1273,7 @@ void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps)
       eps = 0.01;
    }
 
-   for (Int_t ipar=0; ipar<fNpar; ipar++){
+   for (UInt_t ipar = 0; ipar < fNpar; ++ipar){
       grad[ipar] = GradientPar(ipar,x,eps);
    }
 }
@@ -1564,7 +1331,6 @@ Double_t TFn::IntegralError(Int_t n, const Double_t * a, const Double_t * b, con
 {
    // Return Error on Integral of a parameteric function with dimension larger tan one 
    // between a[] and b[]  due to the parameters uncertainties.
-   // For a TFn with dimension larger than 1 (for example a TF2 or TF3) 
    // TFn::IntegralMultiple is used for the integral calculation
    //
    // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat) can be optionally passed.
@@ -1587,29 +1353,42 @@ Double_t TFn::IntegralError(Int_t n, const Double_t * a, const Double_t * b, con
    // ..... after performing other fits on the same function do 
    // func->IntegralError(x1,x2,r->GetParams(), r->GetCovarianceMatrix()->GetMatrixArray() );
    // FIXME
+   if (fNpar == 0) {
+      Error("IntegralError", "Function has no parameters");
+      return 0.0;
+   }
+/*
+   std::vector<Double_t> oldParams(fNpar);
+   std::copy(fParams, fParams + fNpar, oldParams.begin());
+   SetParameters(params);
+
+   TMatrixDSym covMatrix(fNPar);
+
+   if (covmat == NULL) {
+      TVirtualFitter* vFitter = TVirtualFitter::GetFitter();
+      TBackCompFitter* bcFitter = 
+*/
    return 0.0;
    //return ROOT::TFnHelper::IntegralError(this,n,a,b,params,covmat,epsilon);
 }
 
 //______________________________________________________________________________
-Double_t TFn::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t eps, Double_t &relerr)
+Double_t TFn::IntegralMultiple(const Double_t *a, const Double_t *b, Double_t eps, Double_t &relErr)
 {
    //  See more general prototype below.
    //  This interface kept for back compatibility
 
-   Int_t nfnevl,ifail;
-   Int_t minpts = 2+2*n*(n+1)+1; //ie 7 for n=1
-   Int_t maxpts = 1000;
-   Double_t result = IntegralMultiple(n,a,b,minpts, maxpts,eps,relerr,nfnevl,ifail);
-   if (ifail > 0) {
-      Warning("IntegralMultiple","failed code=%d, ",ifail);
-   }
+   Int_t nFuncEval, status;
+   Int_t minPts = (1 << fNdim) + 2 * fNdim * (fNdim + 1) + 1; //ie 7 for n=1
+   Int_t maxPts = std::max(minPts, 1000);
+   Double_t result = IntegralMultiple(a, b, minPts, maxPts, eps, relErr, nFuncEval, status);
+   if (status != 0) Warning("IntegralMultiple","exit status code = %d, ", status);
    return result;
 }
 
 
 //______________________________________________________________________________
-Double_t TFn::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t eps, Double_t &relerr,Int_t &nfnevl, Int_t &ifail)
+Double_t TFn::IntegralMultiple(const Double_t* a, const Double_t* b, Int_t minPts, Int_t maxPts, Double_t eps, Double_t &relErr, Int_t &nFuncEval, Int_t &status)
 {
    //  Adaptive Quadrature for Multiple Integrals over N-Dimensional
    //  Rectangular Regions
@@ -1621,33 +1400,30 @@ Double_t TFn::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, In
    // Author(s): A.C. Genz, A.A. Malik
    // converted/adapted by R.Brun to C++ from Fortran CERNLIB routine RADMUL (D120)
    // The new code features many changes compared to the Fortran version.
-   // Note that this function is currently called only by TF2::Integral (n=2)
-   // and TF3::Integral (n=3).
    //
    // This function computes, to an attempted specified accuracy, the value of
    // the integral over an n-dimensional rectangular region.
    //
    // Input parameters:
    //
-   //    n     : Number of dimensions [2,15]
-   //    a,b   : One-dimensional arrays of length >= N . On entry A[i],  and  B[i],
+   //    a,b   : One-dimensional arrays of length fNdim (TFn::GetNDim()). On entry A[i],  and  B[i],
    //            contain the lower and upper limits of integration, respectively.
-   //    minpts: Minimum number of function evaluations requested. Must not exceed maxpts.
-   //            if minpts < 1 minpts is set to 2^n +2*n*(n+1) +1
-   //    maxpts: Maximum number of function evaluations to be allowed.
-   //            maxpts >= 2^n +2*n*(n+1) +1
-   //            if maxpts<minpts, maxpts is set to 10*minpts
+   //    minPts: Minimum number of function evaluations requested. Must not exceed maxPts.
+   //            if minPts < 1 minPts is set to 2^fNdim + 2 * fNdim * (fNdim + 1) +1
+   //    maxPts: Maximum number of function evaluations to be allowed.
+   //            maxPts >= 2^fNdim + 2 * fNdim * (fNdim + 1) +1
+   //            if maxPts < minPts, maxPts is set to 10*minPts
    //    eps   : Specified relative accuracy.
    //
    // Output parameters:
    //
-   //    relerr : Contains, on exit, an estimation of the relative accuracy of the result.
-   //    nfnevl : number of function evaluations performed.
-   //    ifail  :
-   //        0 Normal exit.  . At least minpts and at most maxpts calls to the function were performed.
-   //        1 maxpts is too small for the specified accuracy eps.
-   //          The result and relerr contain the values obtainable for the
-   //          specified value of maxpts.
+   //    relErr    : Contains, on exit, an estimation of the relative accuracy of the result.
+   //    nFuncEval : number of function evaluations performed.
+   //    status  :
+   //        0 Normal exit.  . At least minPts and at most maxPts calls to the function were performed.
+   //        1 maxPts is too small for the specified accuracy eps.
+   //          The result and relErr contain the values obtainable for the
+   //          specified value of maxPts.
    //        3 n<2 or n>15
    //
    // Method:
@@ -1674,14 +1450,12 @@ Double_t TFn::IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, In
    //   2.A. van Doren and L. de Ridder, An adaptive algorithm for numerical
    //     integration over an n-dimensional cube, J.Comput. Appl. Math. 2 (1976) 207-217.
 
-   ROOT::Math::WrappedMultiFunction<TFn&> wf1(*this, n);
-
-   ROOT::Math::AdaptiveIntegratorMultiDim aimd(wf1, eps, eps, maxpts);
-   aimd.SetMinPts(minpts);
+   ROOT::Math::AdaptiveIntegratorMultiDim aimd(*this, eps, eps, maxPts);
+   aimd.SetMinPts(minPts);
    Double_t result = aimd.Integral(a,b);
-   relerr = aimd.RelError();
-   nfnevl = aimd.NEval();
-   ifail = 0;
+   relErr = aimd.RelError();
+   nFuncEval = aimd.NEval();
+   status = 0;
 
    return result;
 }
@@ -1692,7 +1466,7 @@ Bool_t TFn::IsInside(const Double_t *x) const
 {
    // Return kTRUE if the point is inside the function range
 
-   for(Int_t i = 0; i < fNdim; i++)
+   for(UInt_t i = 0; i < fNdim; i++)
       if (x[i] < fMin[i] || x[i] > fMax[i]) 
          return kFALSE;
 
@@ -1709,12 +1483,12 @@ void TFn::Print(Option_t *option) const
 
 
 //______________________________________________________________________________
-void TFn::ReleaseParameter(Int_t ipar)
+void TFn::ReleaseParameter(UInt_t ipar)
 {
    // Release parameter number ipar If used in a fit, the parameter
    // can vary freely. The parameter limits are reset to 0,0.
 
-   if (ipar < 0 || ipar > fNpar-1) return;
+   if (ipar >= fNpar) return;
    SetParLimits(ipar, 0.0, 0.0);
 }
 
@@ -1868,11 +1642,11 @@ void TFn::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 }
 
 //______________________________________________________________________________
-void TFn::SetParError(Int_t ipar, Double_t error)
+void TFn::SetParError(UInt_t ipar, Double_t error)
 {
    // Set error for parameter number ipar
 
-   if (ipar < 0 || ipar >= fNpar) return;
+   if (ipar >= fNpar) return;
    fParErrors[ipar] = error;
 }
 
@@ -1884,12 +1658,12 @@ void TFn::SetParErrors(const Double_t *errors)
    // when calling this function, the array errors must have at least fNpar values
 
    if (!errors) return;
-   for (Int_t i=0;i<fNpar;i++) fParErrors[i] = errors[i];
+   for (UInt_t i = 0; i < fNpar; ++i) fParErrors[i] = errors[i];
 }
 
 
 //______________________________________________________________________________
-void TFn::SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax)
+void TFn::SetParLimits(UInt_t ipar, Double_t parmin, Double_t parmax)
 {
    // Set limits for parameter ipar.
    //
@@ -1897,9 +1671,9 @@ void TFn::SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax)
    // when the option "B" is specified (Bounds).
    // To fix a parameter, use TFn::FixParameter
 
-   if (ipar < 0 || ipar >= fNpar) return;
-   if (!fParMin) { fParMin = new Double_t[fNpar]; for (Int_t i = 0; i < fNpar; ++i) fParMin[i] = 0; }
-   if (!fParMax) { fParMax = new Double_t[fNpar]; for (Int_t i = 0; i < fNpar; ++i) fParMax[i] = 0; }
+   if (ipar >= fNpar) return;
+   if (!fParMin) { fParMin = new Double_t[fNpar]; for (UInt_t i = 0; i < fNpar; ++i) fParMin[i] = 0; }
+   if (!fParMax) { fParMax = new Double_t[fNpar]; for (UInt_t i = 0; i < fNpar; ++i) fParMax[i] = 0; }
    fParMin[ipar] = parmin;
    fParMax[ipar] = parmax;
 }
@@ -1976,17 +1750,10 @@ void TFn::Streamer(TBuffer &b)
          fParMax = new Double_t[fNpar+1];
       }
       if (v == 1) {
-         b >> fHistogram;
-         delete fHistogram; fHistogram = 0;
       }
       if (v > 1) {
-         if (v < 4) {
-            Float_t minimum,maximum;
-            b >> minimum; fMinimum =minimum;
-            b >> maximum; fMaximum =maximum;
+         if (v < 4) { // XXX fMaximum was here
          } else {
-            b >> fMinimum;
-            b >> fMaximum;
          }
       }
       if (v > 2) {
