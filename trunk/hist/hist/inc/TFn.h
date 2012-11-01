@@ -33,14 +33,16 @@
 #ifndef ROOT_Math_IParamFunction
 #include "Math/IParamFunction.h"
 #endif
-#ifndef ROOT_Math_AdaptiveIntegratorMultiDim
+#ifndef ROOT_Math_IntegratorMultiDim
 #include "Math/IntegratorMultiDim.h"
+#endif
+#ifndef ROOT_Math_DistSampler
+#include "Math/DistSampler.h"
 #endif
 
 class TF1;
-class TH1;
-class TAxis;
 class TMethodCall;
+
 
 class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, public ROOT::Math::IGradientMultiDim {
 
@@ -68,6 +70,8 @@ private:
 
    Double_t    fNorm;
    ROOT::Math::IntegratorMultiDim fIntegrator;
+   ROOT::Math::DistSampler* fSampler;
+
    // TODO: change to an internal enum
    Int_t       fType;        // 0 for standard functions, 
                              // 1 if pointer to function)
@@ -166,9 +170,10 @@ public:
    virtual Double_t  GetParError(UInt_t ipar) const;
    virtual Double_t* GetParErrors() const { return fParErrors; }
    virtual void      GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const;
-   virtual Double_t  GetRandom();
+   // Return a sample random number following this distribution
+   // TODO: normalize
+   virtual const Double_t* GetRandom() const { return fSampler->Sample(); }
    virtual void      GetRange(Double_t* min, Double_t* xmax) const;
-   virtual Double_t  GetSave(const Double_t *x);
    // GradientPar returns a vector of size n (dimensions), containing the gradient in the point specified by x
    virtual Double_t GradientPar(UInt_t ipar, const Double_t *x, Double_t eps=0.01);
    virtual void     GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
@@ -182,8 +187,6 @@ public:
            TF1*     Projection1D(UInt_t idxCoord) const;
    virtual void     Print(Option_t *option="") const;
    virtual void     ReleaseParameter(UInt_t ipar);
-   virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
-   virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
    template <class PtrObj, typename MemFn> 
    void SetFunction( PtrObj& p, MemFn memFn );
    template <typename Func> 
