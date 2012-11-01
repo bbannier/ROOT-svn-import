@@ -1327,7 +1327,7 @@ void TGCocoa::ShapeCombineMask(Window_t windowID, Int_t /*x*/, Int_t /*y*/, Pixm
 //______________________________________________________________________________
 void TGCocoa::SetMWMHints(Window_t wid, UInt_t value, UInt_t funcs, UInt_t /*input*/)
 {
-   // Sets decoration style.
+   // Sets decoration style.   
    assert(!fPimpl->IsRootWindow(wid) && "SetMWMHints, called for 'root' window");
    
    QuartzWindow * const qw = fPimpl->GetWindow(wid).fQuartzWindow;
@@ -1383,12 +1383,13 @@ void TGCocoa::SetWMSizeHints(Window_t wid, UInt_t wMin, UInt_t hMin, UInt_t wMax
    //
    assert(!fPimpl->IsRootWindow(wid) && "SetWMSizeHints, called for 'root' window");
 
-   QuartzWindow * const qw = fPimpl->GetWindow(wid).fQuartzWindow;   
-   //I can use CGSizeMake, but what if NSSize one bad day becomes something else? :)
-   NSSize minSize = {}; minSize.width = wMin, minSize.height = hMin;
-   [qw setMinSize : minSize];
-   NSSize maxSize = {}; maxSize.width = wMax, maxSize.height = hMax;
-   [qw setMaxSize : maxSize];
+   const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+   const NSRect minRect = [NSWindow frameRectForContentRect : CGRectMake(0., 0., wMin, hMin) styleMask : styleMask];
+   const NSRect maxRect = [NSWindow frameRectForContentRect : CGRectMake(0., 0., wMax, hMax) styleMask : styleMask];
+
+   QuartzWindow * const qw = fPimpl->GetWindow(wid).fQuartzWindow;
+   [qw setMinSize : minRect.size];
+   [qw setMaxSize : maxRect.size];
 }
 
 //______________________________________________________________________________
@@ -2141,7 +2142,7 @@ Int_t TGCocoa::OpenPixmap(UInt_t w, UInt_t h)
    newSize.width = w;
    newSize.height = h;
 
-   Util::NSScopeGuard<QuartzPixmap> pixmap([[QuartzPixmap alloc] initWithW : w H : h]);
+   Util::NSScopeGuard<QuartzPixmap> pixmap([[QuartzPixmap alloc] initWithW : w H : h scaleFactor : [[NSScreen mainScreen] backingScaleFactor]]);
    if (pixmap.Get()) {
       pixmap.Get().fID = fPimpl->RegisterDrawable(pixmap.Get());//Can throw.
       return (Int_t)pixmap.Get().fID;
@@ -2163,7 +2164,7 @@ Int_t TGCocoa::ResizePixmap(Int_t wid, UInt_t w, UInt_t h)
    if (w == pixmap.fWidth && h == pixmap.fHeight)
       return 1;
    
-   if ([pixmap resizeW : w H : h])//This can throw std::bad_alloc, ok, no resource will leak.
+   if ([pixmap resizeW : w H : h scaleFactor : [[NSScreen mainScreen] backingScaleFactor]])//This can throw std::bad_alloc, ok, no resource will leak.
       return 1;
 
    return -1;
@@ -3245,7 +3246,7 @@ void TGCocoa::SetDoubleBufferON()
          return;
    }
 
-   Util::NSScopeGuard<QuartzPixmap> pixmap([[QuartzPixmap alloc] initWithW : currW H : currH]);
+   Util::NSScopeGuard<QuartzPixmap> pixmap([[QuartzPixmap alloc] initWithW : currW H : currH scaleFactor : [[NSScreen mainScreen] backingScaleFactor]]);
    if (pixmap.Get()) {
       window.fBackBuffer = pixmap.Get();
    } else {

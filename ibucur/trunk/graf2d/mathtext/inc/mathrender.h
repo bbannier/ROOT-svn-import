@@ -19,10 +19,22 @@
 #ifndef MATHRENDER_H_
 #define MATHRENDER_H_
 
+#ifdef _MSC_VER
+// Visual C++ 2008 doesn't have stdint.h
+typedef __int8 int8_t;
+typedef __int16 int16_t;
+typedef __int32 int32_t;
+typedef __int64 int64_t;
+typedef unsigned __int8 uint8_t;
+typedef unsigned __int16 uint16_t;
+typedef unsigned __int32 uint32_t;
+typedef unsigned __int64 uint64_t;
+#else
+#include <stdint.h>
+#endif
 #include <math.h>
 #include <string>
 #include <iostream>
-#include <stdint.h>
 #include "mathtext.h"
 
 namespace mathtext {
@@ -619,13 +631,14 @@ namespace mathtext {
 		public:
 			point_t _offset;
 			bounding_box_t _bounding_box;
+			struct extension_t {
+				wchar_t _glyph;
+				unsigned int _family;
+				float _size;
+			};
 			union {
 				unsigned int _style;
-				struct {
-					wchar_t _glyph;
-					unsigned int _family;
-					float _size;
-				} _extensible;
+				extension_t _extensible;
 			};
 			float _delimiter_height;
 			inline math_token_t(
