@@ -40,7 +40,7 @@
 
 class TF1;
 class TMethodCall;
-
+class THn;
 
 class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, public ROOT::Math::IGradientMultiDim {
 
@@ -149,6 +149,7 @@ public:
    //virtual Double_t  operator()(Double_t* x); 
    virtual Double_t  operator()(const Double_t* x, const Double_t* params = NULL);  
    virtual void      FixParameter(UInt_t ipar, Double_t value);
+   virtual THn*      GetHistogram() const;
    virtual Double_t  GetMaximum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Double_t  GetMinimum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Double_t* GetMaximumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
@@ -164,9 +165,9 @@ public:
    virtual const Double_t* GetRandom() const { return fSampler->Sample(); }
    virtual void      GetRange(Double_t* min, Double_t* xmax) const;
    // GradientPar returns a vector of size n (dimensions), containing the gradient in the point specified by x
-   virtual Double_t  GradientPar(UInt_t ipar, const Double_t *x, Double_t eps=0.01);
-   virtual void      GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
-   virtual void      InitArgs(const Double_t *x, const Double_t *params = NULL);
+   virtual Double_t  GradientPar(UInt_t ipar, const Double_t* x, Double_t eps = 0.01) const;
+   virtual void      GradientPar(const Double_t* x, Double_t* grad, Double_t eps = 0.01) const;
+   virtual void      InitArgs(const Double_t* x, const Double_t *params = NULL);
    virtual Double_t  IntegralError(Double_t a, Double_t b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
    virtual Double_t  IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
    virtual Double_t  IntegralMultiple(const Double_t* a, const Double_t* b, Int_t minPts, Int_t maxPts, Double_t eps, Double_t& relErr,Int_t& nFuncEval, Int_t& status);
