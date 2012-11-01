@@ -361,21 +361,10 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar)
 } 
 
 //______________________________________________________________________________
-TFn::TFn() : TNamed(), fIntegrator()
+TFn::TFn() : TNamed(), fIntegrator(), fType(0), fParent(NULL), fMethodCall(NULL), fCintFunc(NULL)
 {
-   // F1 default constructor.
-
-   fMin       = NULL;
-   fMax       = NULL;
-   fType      = 0;
-   fNsave     = 0;
-   fParErrors = 0;
-   fParMin    = 0;
-   fParMax    = 0;
-   fParent    = 0;
-   fSave      = 0;
-   fMethodCall = 0;
-   fCintFunc   = 0;
+   // TFn default constructor.
+   Init(0, NULL, NULL, 0);
 }
 
 //______________________________________________________________________________
@@ -394,8 +383,6 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
       Init(fFormula->GetNdim(), min, max, fFormula->GetNpar());
       fType      = 0;
       fParent     = 0;
-      fNsave      = 0;
-      fSave       = 0;
       fMethodCall = 0;
       fCintFunc   = 0;
    }
@@ -424,16 +411,13 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
    //
    //  WARNING! A function created with this constructor cannot be Cloned.
 
-   Init(ndim, min, max);
+   Init(ndim, min, max, npar);
 
    fType       = 2;
    //fFunction   = 0;
   fParent     = 0;
-   fNsave      = 0;
-   fSave       = 0;
    fMethodCall = 0;
    fCintFunc   = 0;
-   fNdim       = 1;
 
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(f1old);
@@ -483,8 +467,6 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    fFunctor = ROOT::Math::ParamFunctor(fcn);
 
 
-   fNsave      = 0;
-   fSave       = 0;
    fParent     = 0;
    Init(ndim, min, max, npar);
 /*
@@ -520,8 +502,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
    fCintFunc   = 0;
    fFunctor = ROOT::Math::ParamFunctor(fcn);
 
-  fNsave      = 0;
-   fSave       = 0;
    fParent     = 0;
 
    // Store formula in linked list of formula in ROOT
@@ -537,12 +517,10 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
 TFn::TFn(const char* name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
    TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
    fType      ( 1 ),
-   fNsave     ( 0 ),
    fIntegrator   (),
    fParErrors ( 0 ),
    fParMin    ( 0 ),
    fParMax    ( 0 ),
-   fSave      ( 0 ),
    fParent    ( 0 ),
    fMethodCall( 0 ),
    fCintFunc  ( 0 ),
@@ -639,8 +617,6 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
    fType       = 3;
 
    fParent     = 0;
-   fNsave      = 0;
-   fSave       = 0;
    fMethodCall = 0;
 
    TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
@@ -685,19 +661,6 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
 }
 
 
-
-//______________________________________________________________________________
-TFn& TFn::operator=(const TFn &rhs)
-{
-   // Operator =
-
-   if (this != &rhs) {
-      rhs.Copy(*this);
-   }
-   return *this;
-}
-
-
 //______________________________________________________________________________
 TFn::~TFn()
 {
@@ -706,7 +669,6 @@ TFn::~TFn()
    if (fParMin)    delete [] fParMin;
    if (fParMax)    delete [] fParMax;
    if (fParErrors) delete [] fParErrors;
-   if (fSave)      delete [] fSave;
    delete fMethodCall;
 
    if (fParent) fParent->RecursiveRemove(this);
@@ -714,83 +676,57 @@ TFn::~TFn()
 
 
 //______________________________________________________________________________
-TFn::TFn(const TFn &f1) : TNamed(f1), fIntegrator() 
+TFn::TFn(const TFn &rhs) : TNamed(rhs), fIntegrator() 
 {
-   // Constuctor.
+   // Copy constructor.
+  
+   fType = rhs.fType; 
+   fParent = rhs.fParent;
+   fMethodCall = rhs.fMethodCall;
+   fCintFunc = rhs.fCintFunc;
 
-   fMin       = NULL;
-   fMax       = NULL;
-   fType      = 0;
-   fNsave     = 0;
-   fParErrors = 0;
-   fParMin    = 0;
-   fParMax    = 0;
-   fParent    = 0;
-   fSave      = 0;
-   fMethodCall = 0;
-   fCintFunc   = 0;
-
-   ((TFn&)f1).Copy(*this);
+   Init(rhs.fNdim, rhs.fMin, rhs.fMax, rhs.fNpar);
 }
 
 //______________________________________________________________________________
-void TFn::Copy(TObject &obj) const
+TFn& TFn::operator=(const TFn& rhs)
 {
-   // Copy this F1 to a new F1.
-   // Note that the cached integral with its related arrays are not copied
-   // (they are also set as transient data members) 
+   // Assignment operator.
 
+   if (this != &rhs) {
 
-   TFn& rhs = ((TFn&)obj);
+      fType = rhs.fType;
+      fFunctor = rhs.fFunctor;
+      fCintFunc = rhs.fCintFunc;
+      fParent = rhs.fParent;
+      fNorm = rhs.fNorm;
 
-   if (((TFn&)obj).fParMin)    delete [] ((TFn&)obj).fParMin;
-   if (((TFn&)obj).fParMax)    delete [] ((TFn&)obj).fParMax;
-   if (((TFn&)obj).fParErrors) delete [] ((TFn&)obj).fParErrors;
-   if (((TFn&)obj).fSave)      delete [] ((TFn&)obj).fSave;
-   delete ((TFn&)obj).fMethodCall;
+      delete fMethodCall;
+      if (rhs.fMethodCall) fMethodCall =  new TMethodCall(*fMethodCall);
 
+      if (fNdim != rhs.fNdim) {
+         fNdim = rhs.fNdim;
+         delete [] fMin; 
+         delete [] fMax;
+      }
 
-   if(rhs.fNdim != fNdim) {
-      delete [] rhs.fMin;
-      delete [] rhs.fMax;
-      rhs.fMin = new Double_t[fNdim];
-      rhs.fMax = new Double_t[fNdim];
-   }
-   memcpy(rhs.fMin, fMin, fNdim * sizeof(Double_t));
-   memcpy(rhs.fMax, fMax, fNdim * sizeof(Double_t));
-
-
-   ((TFn&)obj).fType = fType;
-   ((TFn&)obj).fCintFunc  = fCintFunc;
-   ((TFn&)obj).fFunctor   = fFunctor;
-
-   ((TFn&)obj).fParErrors = 0;
-   ((TFn&)obj).fParMin    = 0;
-   ((TFn&)obj).fParMax    = 0;
-   ((TFn&)obj).fParent    = fParent;
-   ((TFn&)obj).fNsave     = fNsave;
-   ((TFn&)obj).fSave      = 0;
-   ((TFn&)obj).fMethodCall = 0;
-   if (fNsave) {
-      ((TFn&)obj).fSave = new Double_t[fNsave];
-      for (Int_t j=0;j<fNsave;j++) ((TFn&)obj).fSave[j] = fSave[j];
-   }
-   if (fNpar) {
-      ((TFn&)obj).fParErrors = new Double_t[fNpar];
-      ((TFn&)obj).fParMin    = new Double_t[fNpar];
-      ((TFn&)obj).fParMax    = new Double_t[fNpar];
-      for (UInt_t i = 0; i<fNpar; ++i)  {
-         ((TFn&)obj).fParErrors[i] = fParErrors[i];
-         ((TFn&)obj).fParMin[i]    = fParMin[i];
-         ((TFn&)obj).fParMax[i]    = fParMax[i];
+      if (fNpar != rhs.fNpar) {
+         fNpar = rhs.fNpar;
+         delete [] fParMin; 
+         delete [] fParMax; 
+         delete [] fParErrors;
+        
+         if (fNpar > 0) { 
+            fParMin = new Double_t[fNpar]; fParMin = NULL;
+            fParMax = new Double_t[fNpar]; fParMax = NULL;
+            fParErrors = new Double_t[fNpar]; fParErrors = NULL;
+            std::copy(rhs.fParMin, rhs.fParMin + fNpar, fParMin);
+            std::copy(rhs.fParMax, rhs.fParMax + fNpar, fParMax);
+            std::copy(rhs.fParErrors, rhs.fParErrors + fNpar, fParErrors);
+         }
       }
    }
-   if (fMethodCall) {
-      // use copy-constructor of TMethodCall 
-      TMethodCall *m = new TMethodCall(*fMethodCall);
-//       m->InitWithPrototype(fMethodCall->GetMethodName(),fMethodCall->GetProto());
-      ((TFn&)obj).fMethodCall  = m;
-   }
+
 }
 
 //______________________________________________________________________________
@@ -1464,20 +1400,6 @@ void TFn::SetRange(Double_t* min, Double_t* max)
 
    memcpy(fMin, min, fNdim * sizeof(Double_t));
    memcpy(fMax, max, fNdim * sizeof(Double_t)); 
-}
-
-
-//______________________________________________________________________________
-void TFn::SetSavedPoint(Int_t point, Double_t value)
-{
-   // Restore value of function saved at point
-
-   if (!fSave) {
-      //fNsave = fNpx+3;
-      fSave  = new Double_t[fNsave];
-   }
-   if (point < 0 || point >= fNsave) return;
-   fSave[point] = value;
 }
 
 
