@@ -17,18 +17,16 @@
 #include "TFn.h"
 #include "THn.h"
 #include "TRandom.h"
+#include "TClass.h"
 #include "TInterpreter.h"
 #include "TPluginManager.h"
-#include "TBrowser.h"
-#include "TColor.h"
-#include "TClass.h"
 #include "TMethodCall.h"
-#include "TF1Helper.h"
+#include "TVectorD.h"
+#include "TMatrixD.h"
 #include "Math/WrappedFunction.h"
 #include "Math/WrappedTF1.h"
 #include "Math/AdaptiveIntegratorMultiDim.h"
 #include "Math/BrentRootFinder.h"
-#include "Math/BrentMinimizer1D.h"
 #include "Math/BrentMethods.h"
 #include "Math/Factory.h"
 #include "Math/GaussIntegrator.h"
@@ -38,8 +36,6 @@
 #include "Math/RichardsonDerivator.h"
 #include "Math/Functor.h"
 #include "Fit/FitResult.h"
-
-//#include <iostream>
 
 
 ClassImp(TFn)
@@ -1178,15 +1174,18 @@ void TFn::InitArgs(const Double_t *x, const Double_t *params)
    }
 }
 
-class TGradientParFunction {
+class TFn_GradientPar {
 public:
-   TGradientParFunction(Int_t ipar, TFn* f) {}
-   Double_t operator() (Double_t *x, Double_t*) const { f->GradientPar(ipar, x); }
+   TFn_GradientPar(UInt_t idxParam, TFn& func) : fFunc(func), fIdxParam(idxParam) {}
+   Double_t operator() (Double_t *x, Double_t*) const { return fFunc.GradientPar(fIdxParam, x); }
+
+   TFn& fFunc;
+   UInt_t fIdxParam;
 };
 
 
 //______________________________________________________________________________
-Double_t TFn::IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t * params, const  Double_t * covmat, Double_t epsilon )
+Double_t TFn::IntegralError(const Double_t * a, const Double_t * b, const Double_t * params, const  Double_t * covmat, Double_t epsilon )
 {
    // Return Error on Integral of a parameteric function with dimension larger than one between a[] and b[],
    // due to the parameters uncertainties. TFn::IntegralMultiple is used for the integral calculation
@@ -1215,7 +1214,6 @@ Double_t TFn::IntegralError(Int_t n, const Double_t * a, const Double_t * b, con
    TMatrixDSym covMatrix(fNpar);
    covMatrix.Use(fNpar, covmat);
    
-   // 
 
    // loop on the parameter and calculate the errors
    TVectorD ig(fNpar);
@@ -1223,7 +1221,10 @@ Double_t TFn::IntegralError(Int_t n, const Double_t * a, const Double_t * b, con
       // check that the parameter error is not zero, otherwise skip it
       Double_t integral = 0.0;
       if (covMatrix(i,i) > 0.0) {
-         Di
+         TFn gradFunc(TString::Format("%s_GradientPar", GetName()),
+            fNdim, TFn_GradientPar(i, *(TFn*)this), 0, 0, 0);
+      }
+   }
 
 /*
    std::vector<Double_t> oldParams(fNpar);
