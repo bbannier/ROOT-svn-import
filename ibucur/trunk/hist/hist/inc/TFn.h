@@ -168,8 +168,7 @@ public:
    virtual Double_t  GradientPar(UInt_t ipar, const Double_t* x, Double_t eps = 0.01) const;
    virtual void      GradientPar(const Double_t* x, Double_t* grad, Double_t eps = 0.01) const;
    virtual void      InitArgs(const Double_t* x, const Double_t *params = NULL);
-   virtual Double_t  IntegralError(Double_t a, Double_t b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
-   virtual Double_t  IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
+   virtual Double_t  IntegralError(const Double_t* a, const Double_t* b, const Double_t* params = NULL, const Double_t* covmat = NULL, Double_t eps = 1e-6);
    virtual Double_t  IntegralMultiple(const Double_t* a, const Double_t* b, Int_t minPts, Int_t maxPts, Double_t eps, Double_t& relErr,Int_t& nFuncEval, Int_t& status);
    virtual Double_t  IntegralMultiple(const Double_t* a, const Double_t* b, Double_t eps, Double_t& relErr);
    virtual Bool_t    IsInside(const Double_t *x) const;
