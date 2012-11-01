@@ -44,34 +44,10 @@
 
 //#include <iostream>
 
-Bool_t TFn::fgAbsValue    = kFALSE;
 static Double_t gErrorTFn = 0;
 
 
 ClassImp(TFn)
-
-// class wrapping evaluation of TFn(x) - y0
-class GFunc {
-   const TFn* fFunction;
-   const Double_t fY0;
-public:
-   GFunc(const TFn* function , Double_t y ):fFunction(function), fY0(y) {}
-   Double_t operator()(Double_t x) const {
-      // FIXME: return fFunction->Eval(x) - fY0;
-      return 0.0;
-   }
-};
-
-// class wrapping evaluation of -TFn(x)
-class GInverseFunc {
-   const TFn* fFunction;
-public:
-   GInverseFunc(const TFn* function):fFunction(function) {}
-   Double_t operator()(Double_t x) const {
-// FIXME:      return - fFunction->Eval(x);
-      return 0.0; 
-   }
-};
 
 // class wrapping function evaluation directly in n-Dim interface (used for integration) 
 // and implementing the methods for the momentum calculations
@@ -144,8 +120,9 @@ The following types of functions can be created:
 <a name="F1"></a><h3>A - Expression using variable x and no parameters</h3>
 <h4>Case 1: inline expression using standard C++ functions/operators</h4>
 <div class="code"><pre>
-   TFn *fa1 = new TFn("fa1","sin(x)/x",0,10);
-   fa1->Draw();
+   Double_t min = { ... }
+   Double_t max = { ... }
+   TFn *fn1 = new TFn("fn1","x[0] + sin(x[1])/x[1] + exp(x[2])", &min, &max);
 </pre></div><div class="clear" />
 End_Html
 Begin_Macro
@@ -376,8 +353,6 @@ TFn::TFn() : TNamed(), fIntegrator()
    fMin       = NULL;
    fMax       = NULL;
    fType      = 0;
-   fNpfits    = 0;
-   fNDF       = 0;
    fNsave     = 0;
    fParErrors = 0;
    fParMin    = 0;
@@ -422,8 +397,6 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
          fParMax    = 0;
       }
       fParent     = 0;
-      fNpfits     = 0;
-      fNDF        = 0;
       fNsave      = 0;
       fSave       = 0;
       fHistogram  = 0;
@@ -480,8 +453,6 @@ TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, 
       fParMax    = 0;
    }
    fParent     = 0;
-   fNpfits     = 0;
-   fNDF        = 0;
    fNsave      = 0;
    fSave       = 0;
    fHistogram  = 0;
@@ -559,8 +530,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(Double_t *, Double_t *), 
    fNsave      = 0;
    fSave       = 0;
    fParent     = 0;
-   fNpfits     = 0;
-   fNDF        = 0;
    fHistogram  = 0;
    fMinimum    = -1111;
    fMaximum    = -1111;
@@ -619,8 +588,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
    fNsave      = 0;
    fSave       = 0;
    fParent     = 0;
-   fNpfits     = 0;
-   fNDF        = 0;
    fHistogram  = 0;
    fMinimum    = -1111;
    fMaximum    = -1111;
@@ -639,8 +606,6 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
 TFn::TFn(const char*name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
    TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
    fType      ( 1 ),
-   fNpfits    ( 0 ),
-   fNDF       ( 0 ),
    fNsave     ( 0 ),
    fIntegrator   (),
    fParErrors ( 0 ),
@@ -781,8 +746,6 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
       fParMax    = 0;
    }
    fParent     = 0;
-   fNpfits     = 0;
-   fNDF        = 0;
    fNsave      = 0;
    fSave       = 0;
    fHistogram  = 0;
@@ -869,8 +832,6 @@ TFn::TFn(const TFn &f1) : TNamed(f1), fIntegrator()
    fMin       = NULL;
    fMax       = NULL;
    fType      = 0;
-   fNpfits    = 0;
-   fNDF       = 0;
    fNsave     = 0;
    fParErrors = 0;
    fParMin    = 0;
@@ -885,19 +846,6 @@ TFn::TFn(const TFn &f1) : TNamed(f1), fIntegrator()
 
    ((TFn&)f1).Copy(*this);
 }
-
-
-//______________________________________________________________________________
-void TFn::AbsValue(Bool_t flag)
-{
-   // Static function: set the fgAbsValue flag.
-   // By default TFn::Integral uses the original function value to compute the integral
-   // However, TFn::Moment, CentralMoment require to compute the integral
-   // using the absolute value of the function.
-
-   fgAbsValue = flag;
-}
-
 
 //______________________________________________________________________________
 void TFn::Copy(TObject &obj) const
@@ -930,8 +878,6 @@ void TFn::Copy(TObject &obj) const
    ((TFn&)obj).fType = fType;
    ((TFn&)obj).fCintFunc  = fCintFunc;
    ((TFn&)obj).fFunctor   = fFunctor;
-   ((TFn&)obj).fNpfits  = fNpfits;
-   ((TFn&)obj).fNDF     = fNDF;
    ((TFn&)obj).fMinimum = fMinimum;
    ((TFn&)obj).fMaximum = fMaximum;
 
@@ -1254,19 +1200,6 @@ Double_t TFn::GetX(Double_t fy, Double_t xmin, Double_t xmax, Double_t epsilon, 
 
 }
 */
-
-//______________________________________________________________________________
-Int_t TFn::GetNDF() const
-{
-   // Return the number of degrees of freedom in the fit
-   // the fNDF parameter has been previously computed during a fit.
-   // The number of degrees of freedom corresponds to the number of points
-   // used in the fit minus the number of free parameters.
-
-   if (fNDF == 0 && (fNpfits > fNpar) ) return fNpfits-fNpar;
-   return fNDF;
-}
-
 
 //______________________________________________________________________________
 Int_t TFn::GetNumberFreeParameters() const
@@ -1772,7 +1705,6 @@ void TFn::Print(Option_t *option) const
    // Dump this function with its attributes.
 
 //   TFormula::Print(option);
-//   if (fHistogram) fHistogram->Print(option);
 }
 
 
@@ -1783,7 +1715,7 @@ void TFn::ReleaseParameter(Int_t ipar)
    // can vary freely. The parameter limits are reset to 0,0.
 
    if (ipar < 0 || ipar > fNpar-1) return;
-   SetParLimits(ipar,0,0);
+   SetParLimits(ipar, 0.0, 0.0);
 }
 
 
@@ -1936,60 +1868,11 @@ void TFn::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 }
 
 //______________________________________________________________________________
-void TFn::SetFitResult(const ROOT::Fit::FitResult & result, const Int_t* indpar )
-{
-   // Set the result from the fit  
-   // parameter values, errors, chi2, etc...
-   // Optionally a pointer to a vector (with size fNpar) of the parameter indices in the FitResult can be passed
-   // This is useful in the case of a combined fit with different functions, and the FitResult contains the global result 
-   // By default it is assume that indpar = {0,1,2,....,fNpar-1}. 
-
-   if (result.IsEmpty()) { 
-      Warning("SetFitResult","Empty Fit result - nathing is set in TFn");
-      return;      
-   }
-   if (indpar == 0 && fNpar != (int) result.NPar() ) { 
-      Error("SetFitResult","Invalid Fit result passed - number of parameter is %d , different than TFn::GetNpar() = %d",fNpar,result.NPar());
-      return;
-   }
-//   if (result.Chi2() > 0) 
-//      SetChisquare(result.Chi2() );
-//   else 
-//      SetChisquare(result.MinFcnValue() );
-
-   SetNDF(result.Ndf() );
-   SetNumberFitPoints(result.Ndf() + result.NFreeParameters() );
-
-
-   for (Int_t i = 0; i < fNpar; ++i) { 
-      Int_t ipar = (indpar != 0) ? indpar[i] : i;  
-      if (ipar < 0) continue;
-      fParams[i] = result.Parameter(ipar);
-      // in case errors are not present do not set them
-      if (ipar < (int) result.Errors().size() )
-         fParErrors[i] = result.Error(ipar);
-   }
-   //invalidate cached integral since parameters have changed
-         
-}
-
-
-//______________________________________________________________________________
-void TFn::SetNDF(Int_t ndf)
-{
-   // Set the number of degrees of freedom
-   // ndf should be the number of points used in a fit - the number of free parameters
-
-   fNDF = ndf;
-}
-
-
-//______________________________________________________________________________
 void TFn::SetParError(Int_t ipar, Double_t error)
 {
    // Set error for parameter number ipar
 
-   if (ipar < 0 || ipar > fNpar-1) return;
+   if (ipar < 0 || ipar >= fNpar) return;
    fParErrors[ipar] = error;
 }
 
@@ -2031,8 +1914,7 @@ void TFn::SetRange(Double_t* min, Double_t* max)
    // when the option "R" is specified.
 
    memcpy(fMin, min, fNdim * sizeof(Double_t));
-   memcpy(fMax, max, fNdim * sizeof(Double_t));
-   
+   memcpy(fMax, max, fNdim * sizeof(Double_t)); 
 }
 
 
@@ -2093,7 +1975,6 @@ void TFn::Streamer(TBuffer &b)
          fParMin = new Double_t[fNpar+1];
          fParMax = new Double_t[fNpar+1];
       }
-      b >> fNpfits;
       if (v == 1) {
          b >> fHistogram;
          delete fHistogram; fHistogram = 0;
