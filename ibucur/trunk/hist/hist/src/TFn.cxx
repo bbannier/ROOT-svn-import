@@ -15,10 +15,7 @@
 #include "TROOT.h"
 #include "TMath.h"
 #include "TFn.h"
-#include "TH1.h"
-#include "TGraph.h"
-#include "TVirtualPad.h"
-#include "TStyle.h"
+#include "THn.h"
 #include "TRandom.h"
 #include "TInterpreter.h"
 #include "TPluginManager.h"
@@ -727,6 +724,7 @@ TFn& TFn::operator=(const TFn& rhs)
       }
    }
 
+   return *this;
 }
 
 //______________________________________________________________________________
@@ -817,7 +815,7 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
       assert(fFormula != NULL);
       return fFormula->EvalPar(x,params);
    }
-   Double_t result = 0;
+   Double_t result = 0.0;
    if (fType == 1)  {
       if (!mutableThis->fFunctor.Empty()) {
          if (params) result = mutableThis->fFunctor((Double_t*)x,(Double_t*)params);
@@ -854,6 +852,36 @@ void TFn::FixParameter(UInt_t ipar, Double_t value)
    if (value != 0) SetParLimits(ipar,value,value);
    else            SetParLimits(ipar,1,1);
 }
+
+//______________________________________________________________________________
+THn* TFn::GetHistogram() const 
+{
+   // Create an approximative histogram for the function
+   
+   Int_t* fNpoints = new Int_t[fNdim];
+   Double_t* df = new Double_t[fNdim];
+   Double_t* crtPoint = new Double_t[fNdim]; // placed in bin center
+   for (UInt_t i = 0; i < fNdim; ++i) {
+      fNpoints[i] = 10;
+      assert(fNpoints[i] > 0);
+      df[i] = (fMax[i] - fMin[i]) / fNpoints[i];
+      crtPoint[i] = fMin[i] - df[i] / 2.0;
+   }
+
+   THn* hist = new THnD(TString::Format("%s_Histogram", GetName()).Data(), 
+      TString::Format("%s THn Approximation", GetTitle()).Data(), fNdim, fNpoints, fMin, fMax);
+
+   for (UInt_t i = 0; i < fNdim; ++i) {
+      for (Int_t j = 0; j < fNpoints[i]; ++j) {
+         crtPoint[i] += df[i]; // traverse the grid
+         Int_t bin = hist->GetBin(crtPoint);
+         hist->SetBinContent(bin, DoEvalPar(crtPoint, fParams));
+      }
+   }
+
+   return hist;
+}
+
 
 
 class ReverseSignTFn : public ROOT::Math::IBaseFunctionMultiDim {
@@ -1049,7 +1077,7 @@ void TFn::Gradient(const Double_t* x, Double_t* grad) const
 }
 
 //______________________________________________________________________________
-Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps)
+Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps) const
 {
    // Compute the gradient (derivative) wrt a parameter ipar
    // Parameters:
@@ -1063,17 +1091,18 @@ Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps)
    //
    // If a paramter is fixed, the gradient on this parameter = 0
 
-   if (fNpar == 0) return 0; 
+   if (fNpar == 0) return 0.0; 
 
-   if(eps< 1e-10 || eps > 1) {
-      Warning("Derivative","parameter esp=%g out of allowed range[1e-10,1], reset to 0.01",eps);
+   if (eps< 1e-10 || eps > 1) {
+      Warning("Derivative","parameter esp=%g out of allowed range[1e-10,1], reset to 0.01", eps);
       eps = 0.01;
    }
+
    Double_t h;
    TFn *func = (TFn*)this;
+
    //save original parameters
    Double_t par0 = fParams[ipar];
-
 
    func->InitArgs(x, fParams);
 
@@ -1087,12 +1116,10 @@ Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps)
    }
 
    // check if error has been computer (is not zero)
-   if (func->GetParError(ipar)!=0)
+   if (func->GetParError(ipar) != 0.0)
       h = eps*func->GetParError(ipar);
    else
-      h=eps;
-
-
+      h = eps;
 
    fParams[ipar] = par0 + h;     f1 = func->DoEvalPar(x,fParams);
    fParams[ipar] = par0 - h;     f2 = func->DoEvalPar(x,fParams);
@@ -1100,9 +1127,9 @@ Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps)
    fParams[ipar] = par0 - h/2;   g2 = func->DoEvalPar(x,fParams);
 
    //compute the central differences
-   h2    = 1/(2.*h);
-   d0    = f1 - f2;
-   d2    = 2*(g1 - g2);
+   h2 = 1 / (2.0 * h);
+   d0 = f1 - f2;
+   d2 = 2.0 * (g1 - g2);
 
    Double_t  grad = h2*(4*d2 - d0)/3.;
 
@@ -1113,27 +1140,27 @@ Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps)
 }
 
 //______________________________________________________________________________
-void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps)
+void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps) const
 {
-   // Compute the gradient with respect to the parameters
-   // Parameters:
-   // x - point, were the gradient is computed
-   // grad - used to return the computed gradient, assumed to be of at least fNpar size
-   // eps - if the errors of parameters have been computed, the step used in
-   // numerical differentiation is eps*parameter_error.
-   // if the errors have not been computed, step=eps is used
-   // default value of eps = 0.01
-   // Method is the same as in Derivative() function
-   //
-   // If a paramter is fixed, the gradient on this parameter = 0
-
+   /**
+    * Compute the gradient with respect to the parameters (fParams);
+    * @param[in] x - point, were the gradient is computed
+    * @param[in] eps = 0.01 - step used in numerical differentiation;
+    *    if the parameter errors have been computed, the step used is
+    *    eps * parError instead of eps
+    * @param[out] grad - array where the computed gradient is returned, assumed to be of size fNpar
+    *
+    * The differentiation method employed is the same as in Derivative().
+    * If a parameter is fixed, the gradient on it is 0.0 . 
+    */
+    
    if(eps< 1e-10 || eps > 1) {
       Warning("Derivative","parameter esp=%g out of allowed range[1e-10,1], reset to 0.01",eps);
       eps = 0.01;
    }
 
    for (UInt_t ipar = 0; ipar < fNpar; ++ipar){
-      grad[ipar] = GradientPar(ipar,x,eps);
+      grad[ipar] = GradientPar(ipar, x, eps);
    }
 }
 
@@ -1151,71 +1178,53 @@ void TFn::InitArgs(const Double_t *x, const Double_t *params)
    }
 }
 
-//______________________________________________________________________________
-Double_t TFn::IntegralError(Double_t a, Double_t b, const Double_t * params, const Double_t * covmat, Double_t epsilon )
-{
-   // Return Error on Integral of a parameteric function between a and b 
-   // due to the parameter uncertainties.
-   // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat)
-   // can be optionally passed.  By default (i.e. when a zero pointer is passed) the current stored 
-   // parameter values are used to estimate the integral error together with the covariance matrix
-   // from the last fit (retrieved from the global fitter instance) 
-   //
-   // IMPORTANT NOTE1: When no covariance matrix is passed and in the meantime a fit is done 
-   // using another function, the routine will signal an error and it will return zero only 
-   // when the number of fit parameter is different than the values stored in TFn (TFn::GetNpar() ). 
-   // In the case that npar is the same, an incorrect result is returned. 
-   //
-   // IMPORTANT NOTE2: The user must pass a pointer to the elements of the full covariance matrix 
-   // dimensioned with the right size (npar*npar), where npar is the total number of parameters (TFn::GetNpar()), 
-   // including also the fixed parameters. When there are fixed parameters, the pointer returned from 
-   // TVirtualFitter::GetCovarianceMatrix() cannot be used. 
-   // One should use the TFitResult class, as shown in the example below.   
-   // 
-   // To get the matrix and values from an old fit do for example:  
-   // TFitResultPtr r = histo->Fit(func, "S");
-   // ..... after performing other fits on the same function do 
-   // func->IntegralError(x1,x2,r->GetParams(), r->GetCovarianceMatrix()->GetMatrixArray() );
+class TGradientParFunction {
+public:
+   TGradientParFunction(Int_t ipar, TFn* f) {}
+   Double_t operator() (Double_t *x, Double_t*) const { f->GradientPar(ipar, x); }
+};
 
-   Double_t x1[1]; 
-   Double_t x2[1]; 
-   x1[0] = a, x2[0] = b;
-   // FIXME 
-   return 0.0;
-   //return ROOT::TFnHelper::IntegralError(this,1,x1,x2,params,covmat,epsilon);
-}
 
 //______________________________________________________________________________
 Double_t TFn::IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t * params, const  Double_t * covmat, Double_t epsilon )
 {
-   // Return Error on Integral of a parameteric function with dimension larger tan one 
-   // between a[] and b[]  due to the parameters uncertainties.
-   // TFn::IntegralMultiple is used for the integral calculation
+   // Return Error on Integral of a parameteric function with dimension larger than one between a[] and b[],
+   // due to the parameters uncertainties. TFn::IntegralMultiple is used for the integral calculation
    //
-   // A pointer to a vector of parameter values and to the elements of the covariance matrix (covmat) can be optionally passed.
-   // By default (i.e. when a zero pointer is passed) the current stored parameter values are used to estimate the integral error 
-   // together with the covariance matrix from the last fit (retrieved from the global fitter instance).
+   // A pointer to the covariance matrix (covmat) must be passed.
    //
-   // IMPORTANT NOTE1: When no covariance matrix is passed and in the meantime a fit is done 
-   // using another function, the routine will signal an error and it will return zero only 
-   // when the number of fit parameter is different than the values stored in TFn (TFn::GetNpar() ). 
-   // In the case that npar is the same, an incorrect result is returned. 
-   //
-   // IMPORTANT NOTE2: The user must pass a pointer to the elements of the full covariance matrix 
-   // dimensioned with the right size (npar*npar), where npar is the total number of parameters (TFn::GetNpar()), 
-   // including also the fixed parameters. When there are fixed parameters, the pointer returned from 
-   // TVirtualFitter::GetCovarianceMatrix() cannot be used. 
+   // NOTE: The user must pass a pointer to the elements of the full covariance matrix dimensioned with the 
+   // right size (npar*npar), where npar is the total number of parameters (TFn::GetNpar()), including 
+   // fixed parameters.
    // One should use the TFitResult class, as shown in the example below.   
    // 
    // To get the matrix and values from an old fit do for example:  
    // TFitResultPtr r = histo->Fit(func, "S");
    // ..... after performing other fits on the same function do 
    // func->IntegralError(x1,x2,r->GetParams(), r->GetCovarianceMatrix()->GetMatrixArray() );
-   // FIXME
+
    if (fNpar == 0) {
       Error("IntegralError", "Function has no parameters");
       return 0.0;
    }
+   if (covmat == NULL) {
+      Error("IntegralError", "No input covariance matrix provided");
+      return 0.0;
+   }
+
+   TMatrixDSym covMatrix(fNpar);
+   covMatrix.Use(fNpar, covmat);
+   
+   // 
+
+   // loop on the parameter and calculate the errors
+   TVectorD ig(fNpar);
+   for(UInt_t i = 0; i < fNpar; ++i) {
+      // check that the parameter error is not zero, otherwise skip it
+      Double_t integral = 0.0;
+      if (covMatrix(i,i) > 0.0) {
+         Di
+
 /*
    std::vector<Double_t> oldParams(fNpar);
    std::copy(fParams, fParams + fNpar, oldParams.begin());
@@ -1560,6 +1569,8 @@ TF1* TFn::Projection1D(UInt_t idxCoord) const
       fMin[idxCoord], fMax[idxCoord], fNpar, "TFn_Projection1D", "Integral");
    return new TF1();  
 }
+
+
 
 
 
