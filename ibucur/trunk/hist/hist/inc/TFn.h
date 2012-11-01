@@ -85,8 +85,6 @@ protected:
    // TODO: change to an internal enum
    Int_t       fType;        // 0 for standard functions, 
                              // 1 if pointer to function)
-   Int_t       fNpfits;      //Number of points used in the fit
-   Int_t       fNDF;         //Number of degrees of freedom in the fit
    UInt_t       fNdim;
    Int_t       fNpar;
    Int_t       fNsave;       //Number of points used to fill array fSave
@@ -105,17 +103,10 @@ protected:
    void        *fCintFunc;              //! pointer to interpreted function class
    ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
 
-   static Bool_t fgAbsValue;  //use absolute value of function when computing integral
-
    void CreateFromFunctor(const char *name, Int_t npar);
    void CreateFromCintClass(const char *name, Int_t ndim, void * ptr, Double_t* min, Double_t* max, Int_t npar, const char * cname, const char * fname);
 
 public:
-    // TFn status bits
-    enum {
-       kNotDraw     = BIT(9)  // don't draw the function when in a TH1
-    };
-
    TFn();
    TFn(const char* name, const char* formula, Double_t* min, Double_t* max);
    TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, Int_t npar = 0);
@@ -139,8 +130,6 @@ public:
    TFn(const char *name, Int_t ndim, Func f, Double_t* min, Double_t* max, Int_t npar, const char * = 0  ) :
       TNamed(name, "TFn created by a templated constructor from any C++ functor"),
       fType      ( 1 ),
-      fNpfits    ( 0 ),
-      fNDF       ( 0 ),
       fNsave     ( 0 ),
       fIntegrator   (),
       fParErrors ( 0 ),
@@ -171,8 +160,6 @@ public:
    TFn(const char *name, Int_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, Int_t npar, const char * = 0, const char * = 0) :
       TNamed     (name, "TFn created from a PtrObj"),
       fType      ( 1 ),
-      fNpfits    ( 0 ),
-      fNDF       ( 0 ),
       fNsave     ( 0 ),
       fIntegrator   (),
       fParErrors ( 0 ),
@@ -209,10 +196,8 @@ public:
    virtual Double_t  GetMinimum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Double_t* GetMaximumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
    virtual Double_t* GetMinimumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 1000) const;
-   virtual Int_t     GetNDF() const;
         TMethodCall* GetMethodCall() const {return fMethodCall;}
    virtual Int_t     GetNumberFreeParameters() const;
-   virtual Int_t     GetNumberFitPoints() const {return fNpfits;}
            TObject*  GetParent() const {return fParent;}
    virtual Double_t  GetParError(Int_t ipar) const;
    virtual Double_t* GetParErrors() const {return fParErrors;}
@@ -241,21 +226,16 @@ public:
    virtual void     ReleaseParameter(Int_t ipar);
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
    virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
-   virtual void     SetFitResult(const ROOT::Fit::FitResult & result, const Int_t * indpar = 0);
    template <class PtrObj, typename MemFn> 
    void SetFunction( PtrObj& p, MemFn memFn );
    template <typename Func> 
    void SetFunction( Func f );
-   virtual void     SetNDF(Int_t ndf);
-   virtual void     SetNumberFitPoints(Int_t npfits) {fNpfits = npfits;}
    virtual void     SetParError(Int_t ipar, Double_t error);
    virtual void     SetParErrors(const Double_t *errors);
    virtual void     SetParLimits(Int_t ipar, Double_t parmin, Double_t parmax);
    virtual void     SetParent(TObject *p=0) {fParent = p;}
    virtual void     SetRange(Double_t* min, Double_t* max); // *MENU*
    virtual void     SetSavedPoint(Int_t point, Double_t value);
-
-   static  void     AbsValue(Bool_t reject=kTRUE);
 
    ClassDef(TFn,1)  //The Parametric n-D function
 };
