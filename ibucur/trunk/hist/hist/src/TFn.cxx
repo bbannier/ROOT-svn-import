@@ -332,6 +332,7 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar)
    // TFn initializer, employed by constructors
    fMin = fMax = NULL;
    fParams = fParErrors = fParMin = fParMax = NULL;
+   fNorm = -1.0; // set an invalid value, until first calculation
 
    if (ndim > 0) {
       fNdim = ndim; // XXX: should we put this in the initialization list?
@@ -341,7 +342,8 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar)
       std::copy(max, max + fNdim, fMax);
       
       fIntegrator.SetFunction(*this);
-      fNorm = fIntegrator.Integral(fMin, fMax);
+   
+      // TODO: calculate in Norm()
    }   
    
    if (npar > 0) {
@@ -884,17 +886,17 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
       if (!mutableThis->fFunctor.Empty()) {
          if (params) result = mutableThis->fFunctor((Double_t*)x,(Double_t*)params);
          else        result = mutableThis->fFunctor((Double_t*)x,fParams);
-      } else          result = const_cast<TFn*>(this)->GetSave(x);
+      } // else          result = const_cast<TFn*>(this)->GetSave(x);
       return result;
    }
    if (fType == 2) {
       if (fMethodCall) fMethodCall->Execute(result);
-      else             result = const_cast<TFn*>(this)->GetSave(x);
+      // else             result = const_cast<TFn*>(this)->GetSave(x);
       return result;
    }
    if (fType == 3) {
       if (fMethodCall) fMethodCall->Execute(fCintFunc,result);
-      else             result = const_cast<TFn*>(this)->GetSave(x);
+      // else             result = const_cast<TFn*>(this)->GetSave(x);
       return result;
    }
    return result;
@@ -1086,91 +1088,12 @@ void TFn::GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const
 }
 
 //______________________________________________________________________________
-Double_t TFn::GetRandom()
-{
-   // Return a random number following this function shape
-   //
-   //   The distribution contained in the function fname (TFn) is integrated
-   //   over the channel contents.
-   //   It is normalized to 1.
-   //   For each bin the integral is approximated by a parabola.
-   //   The parabola coefficients are stored as non persistent data members
-   //   Getting one random number implies:
-   //     - Generating a random number between 0 and 1 (say r1)
-   //     - Look in which bin in the normalized integral r1 corresponds to
-   //     - Evaluate the parabolic curve in the selected bin to find
-   //       the corresponding X value.
-   //   if the ratio fXmax/fXmin > fNpx the integral is tabulated in log scale in x
-   //   The parabolic approximation is very good as soon as the number
-   //   of bins is greater than 50.
-
-   //  Check if integral array must be build
-  return 0.0;
-}
-
-
-//______________________________________________________________________________
 void TFn::GetRange(Double_t *min, Double_t *max) const
 {
    // Return range of a n-D function.
    // NOTE: the user is responsible for creating arrays of sufficient size
    memcpy(min, fMin, fNdim * sizeof(Double_t));
    memcpy(max, fMax, fNdim * sizeof(Double_t));
-}
-
-
-//______________________________________________________________________________
-Double_t TFn::GetSave(const Double_t *xx)
-{
-    // Get value corresponding to X in array of fSave values
-
-   if (fNsave <= 0) return 0;
-   if (fSave == 0) return 0;
-   Double_t x    = Double_t(xx[0]);
-   Double_t y,dx,xmin,xmax,xlow,xup,ylow,yup;
-   if (fParent && fParent->InheritsFrom(TH1::Class())) {
-      //if parent is a histogram the function had been savedat the center of the bins
-      //we make a linear interpolation between the saved values
-      xmin = fSave[fNsave-3];
-      xmax = fSave[fNsave-2];
-      if (fSave[fNsave-1] == xmax) {
-         TH1 *h = (TH1*)fParent;
-         TAxis *xaxis = h->GetXaxis();
-         Int_t bin1  = xaxis->FindBin(xmin);
-         Int_t binup = xaxis->FindBin(xmax);
-         Int_t bin   = xaxis->FindBin(x);
-         if (bin < binup) {
-            xlow = xaxis->GetBinCenter(bin);
-            xup  = xaxis->GetBinCenter(bin+1);
-            ylow = fSave[bin-bin1];
-            yup  = fSave[bin-bin1+1];
-         } else {
-            xlow = xaxis->GetBinCenter(bin-1);
-            xup  = xaxis->GetBinCenter(bin);
-            ylow = fSave[bin-bin1-1];
-            yup  = fSave[bin-bin1];
-         }
-         dx = xup-xlow;
-         y  = ((xup*ylow-xlow*yup) + x*(yup-ylow))/dx;
-         return y;
-      }
-   }
-   Int_t np = fNsave - 3;
-   xmin = Double_t(fSave[np+1]);
-   xmax = Double_t(fSave[np+2]);
-   dx   = (xmax-xmin)/np;
-   if (x < xmin || x > xmax) return 0;
-   // return a Nan in case of x=nan, otherwise will crash later
-   if (TMath::IsNaN(x) ) return x; 
-   if (dx <= 0) return 0;
-
-   Int_t bin     = Int_t((x-xmin)/dx);
-   xlow = xmin + bin*dx;
-   xup  = xlow + dx;
-   ylow = fSave[bin];
-   yup  = fSave[bin+1];
-   y    = ((xup*ylow-xlow*yup) + x*(yup-ylow))/dx;
-   return y;
 }
 
 
@@ -1492,154 +1415,6 @@ void TFn::ReleaseParameter(UInt_t ipar)
    SetParLimits(ipar, 0.0, 0.0);
 }
 
-
-//______________________________________________________________________________
-void TFn::Save(Double_t xmin, Double_t xmax, Double_t, Double_t, Double_t, Double_t)
-{
-   // TODO: all of this redone, maybe not needed
-   // Save values of function in array fSave
-/*
-   if (fSave != 0) {delete [] fSave; fSave = 0;}
-   if (fParent && fParent->InheritsFrom(TH1::Class())) {
-      //if parent is a histogram save the function at the center of the bins
-      if ((xmin >0 && xmax > 0) && TMath::Abs(TMath::Log10(xmax/xmin) > TMath::Log10(fNpx))) {
-         TH1 *h = (TH1*)fParent;
-         Int_t bin1 = h->GetXaxis()->FindBin(xmin);
-         Int_t bin2 = h->GetXaxis()->FindBin(xmax);
-         fNsave = bin2-bin1+4;
-         fSave  = new Double_t[fNsave];
-         Double_t xv[1];
-         InitArgs(xv,fParams);
-         for (Int_t i=bin1;i<=bin2;i++) {
-            xv[0]    = h->GetXaxis()->GetBinCenter(i);
-            fSave[i-bin1] = EvalPar(xv,fParams);
-         }
-         fSave[fNsave-3] = xmin;
-         fSave[fNsave-2] = xmax;
-         fSave[fNsave-1] = xmax;
-         return;
-      }
-   }
-   fNsave = fNpx+3;
-   if (fNsave <= 3) {fNsave=0; return;}
-   fSave  = new Double_t[fNsave];
-   Double_t dx = (xmax-xmin)/fNpx;
-   if (dx <= 0) {
-      dx = (fXmax-fXmin)/fNpx;
-      fNsave--;
-      xmin = fXmin +0.5*dx;
-      xmax = fXmax -0.5*dx;
-   }
-   Double_t xv[1];
-   InitArgs(xv,fParams);
-   for (Int_t i=0;i<=fNpx;i++) {
-      xv[0]    = xmin + dx*i;
-      fSave[i] = EvalPar(xv,fParams);
-   }
-   fSave[fNpx+1] = xmin;
-   fSave[fNpx+2] = xmax;*/
-}
-
-
-//______________________________________________________________________________
-void TFn::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
-{
-   // Save primitive as a C++ statement(s) on output stream out
-
-   // FIXME: Reconsidering this
-
-/*
-   Int_t i;
-   char quote = '"';
-   out<<"   "<<std::endl;
-   //if (!fMethodCall) {
-   if (!fType) {
-      out<<"   TFn *"<<GetName()<<" = new TFn("<<quote<<GetName()<<quote<<","<<quote<<GetTitle()<<quote<<","<<fXmin<<","<<fXmax<<");"<<std::endl;
-      if (fNpx != 100) {
-         out<<"   "<<GetName()<<"->SetNpx("<<fNpx<<");"<<std::endl;
-      }
-   } else {
-      out<<"   TFn *"<<GetName()<<" = new TFn("<<quote<<"*"<<GetName()<<quote<<","<<fXmin<<","<<fXmax<<","<<GetNpar()<<");"<<std::endl;
-      out<<"    //The original function : "<<GetTitle()<<" had originally been created by:" <<std::endl;
-      out<<"    //TFn *"<<GetName()<<" = new TFn("<<quote<<GetName()<<quote<<","<<GetTitle()<<","<<fXmin<<","<<fXmax<<","<<GetNpar()<<");"<<std::endl;
-      out<<"   "<<GetName()<<"->SetRange("<<fXmin<<","<<fXmax<<");"<<std::endl;
-      out<<"   "<<GetName()<<"->SetName("<<quote<<GetName()<<quote<<");"<<std::endl;
-      out<<"   "<<GetName()<<"->SetTitle("<<quote<<GetTitle()<<quote<<");"<<std::endl;
-      if (fNpx != 100) {
-         out<<"   "<<GetName()<<"->SetNpx("<<fNpx<<");"<<std::endl;
-      }
-      Double_t dx = (fXmax-fXmin)/fNpx;
-      Double_t xv[1];
-      InitArgs(xv,fParams);
-      for (i=0;i<=fNpx;i++) {
-         xv[0]    = fXmin + dx*i;
-         Double_t save = EvalPar(xv,fParams);
-         out<<"   "<<GetName()<<"->SetSavedPoint("<<i<<","<<save<<");"<<std::endl;
-      }
-      out<<"   "<<GetName()<<"->SetSavedPoint("<<fNpx+1<<","<<fXmin<<");"<<std::endl;
-      out<<"   "<<GetName()<<"->SetSavedPoint("<<fNpx+2<<","<<fXmax<<");"<<std::endl;
-   }
-
-   if (TestBit(kNotDraw)) {
-      out<<"   "<<GetName()<<"->SetBit(TFn::kNotDraw);"<<std::endl;
-   }
-   if (GetFillColor() != 0) {
-      if (GetFillColor() > 228) {
-         TColor::SaveColor(out, GetFillColor());
-         out<<"   "<<GetName()<<"->SetFillColor(ci);" << std::endl;
-      } else
-         out<<"   "<<GetName()<<"->SetFillColor("<<GetFillColor()<<");"<<std::endl;
-   }
-   if (GetFillStyle() != 1001) {
-      out<<"   "<<GetName()<<"->SetFillStyle("<<GetFillStyle()<<");"<<std::endl;
-   }
-   if (GetMarkerColor() != 1) {
-      if (GetMarkerColor() > 228) {
-         TColor::SaveColor(out, GetMarkerColor());
-         out<<"   "<<GetName()<<"->SetMarkerColor(ci);" << std::endl;
-      } else
-         out<<"   "<<GetName()<<"->SetMarkerColor("<<GetMarkerColor()<<");"<<std::endl;
-   }
-   if (GetMarkerStyle() != 1) {
-      out<<"   "<<GetName()<<"->SetMarkerStyle("<<GetMarkerStyle()<<");"<<std::endl;
-   }
-   if (GetMarkerSize() != 1) {
-      out<<"   "<<GetName()<<"->SetMarkerSize("<<GetMarkerSize()<<");"<<std::endl;
-   }
-   if (GetLineColor() != 1) {
-      if (GetLineColor() > 228) {
-         TColor::SaveColor(out, GetLineColor());
-         out<<"   "<<GetName()<<"->SetLineColor(ci);" << std::endl;
-      } else
-         out<<"   "<<GetName()<<"->SetLineColor("<<GetLineColor()<<");"<<std::endl;
-   }
-   if (GetLineWidth() != 4) {
-      out<<"   "<<GetName()<<"->SetLineWidth("<<GetLineWidth()<<");"<<std::endl;
-   }
-   if (GetLineStyle() != 1) {
-      out<<"   "<<GetName()<<"->SetLineStyle("<<GetLineStyle()<<");"<<std::endl;
-   }
-   if (GetChisquare() != 0) {
-      out<<"   "<<GetName()<<"->SetChisquare("<<GetChisquare()<<");"<<std::endl;
-      out<<"   "<<GetName()<<"->SetNDF("<<GetNDF()<<");"<<std::endl;
-   }
-
-   //if (GetXaxis()) GetXaxis()->SaveAttributes(out,GetName(),"->GetXaxis()");
-   //if (GetYaxis()) GetYaxis()->SaveAttributes(out,GetName(),"->GetYaxis()");
-
-   Double_t parmin, parmax;
-   for (i=0;i<fNpar;i++) {
-      out<<"   "<<GetName()<<"->SetParameter("<<i<<","<<GetParameter(i)<<");"<<std::endl;
-      out<<"   "<<GetName()<<"->SetParError("<<i<<","<<GetParError(i)<<");"<<std::endl;
-      GetParLimits(i,parmin,parmax);
-      out<<"   "<<GetName()<<"->SetParLimits("<<i<<","<<parmin<<","<<parmax<<");"<<std::endl;
-   }
-   if (!strstr(option,"nodraw")) {
-      out<<"   "<<GetName()<<"->Draw("
-         <<quote<<option<<quote<<");"<<std::endl;
-   }
-   */
-}
 
 //______________________________________________________________________________
 void TFn::SetParError(UInt_t ipar, Double_t error)
