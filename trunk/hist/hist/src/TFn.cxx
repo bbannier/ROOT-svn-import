@@ -1185,7 +1185,7 @@ public:
 
 
 //______________________________________________________________________________
-Double_t TFn::IntegralError(const Double_t * a, const Double_t * b, const Double_t * params, const  Double_t * covmat, Double_t epsilon )
+Double_t TFn::IntegralError(const Double_t* a, const Double_t* b, const Double_t* params, const Double_t* covmat, Double_t eps)
 {
    // Return Error on Integral of a parameteric function with dimension larger than one between a[] and b[],
    // due to the parameters uncertainties. TFn::IntegralMultiple is used for the integral calculation
@@ -1214,31 +1214,21 @@ Double_t TFn::IntegralError(const Double_t * a, const Double_t * b, const Double
    TMatrixDSym covMatrix(fNpar);
    covMatrix.Use(fNpar, covmat);
    
-
    // loop on the parameter and calculate the errors
-   TVectorD ig(fNpar);
+   TVectorD integrals(fNpar);
    for(UInt_t i = 0; i < fNpar; ++i) {
       // check that the parameter error is not zero, otherwise skip it
-      Double_t integral = 0.0;
+      integrals[i] = 0.0;
       if (covMatrix(i,i) > 0.0) {
+         Double_t relErr; // dummy variable
          TFn gradFunc(TString::Format("%s_GradientPar", GetName()),
             fNdim, TFn_GradientPar(i, *(TFn*)this), 0, 0, 0);
+         integrals[i] = gradFunc.IntegralMultiple(a, b, eps, relErr);
       }
    }
+   Double_t err = covMatrix.Similarity(integrals); // integrals^T * covMatrix * integrals
 
-/*
-   std::vector<Double_t> oldParams(fNpar);
-   std::copy(fParams, fParams + fNpar, oldParams.begin());
-   SetParameters(params);
-
-   TMatrixDSym covMatrix(fNPar);
-
-   if (covmat == NULL) {
-      TVirtualFitter* vFitter = TVirtualFitter::GetFitter();
-      TBackCompFitter* bcFitter = 
-*/
-   return 0.0;
-   //return ROOT::TFnHelper::IntegralError(this,n,a,b,params,covmat,epsilon);
+   return std::sqrt(err);
 }
 
 //______________________________________________________________________________
