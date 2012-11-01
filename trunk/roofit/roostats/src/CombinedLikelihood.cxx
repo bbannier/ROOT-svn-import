@@ -103,7 +103,7 @@ CombinedLikelihood::CombinedLikelihood(
       // TODO: eliminate logL variable if not needed in the end 
       RooAbsReal* logL = RooStats::CreateNLL(*fPdf->getPdf(crtLabel), *fDataSets[i], cmdList);
       // FIXME: temporary testing
-      logL->constOptimizeTestStatistic(RooAbsArg::Activate, true);
+//      logL->constOptimizeTestStatistic(RooAbsArg::Activate, true);
       fChannelLikelihoods.push_back(logL);
    } 
 
