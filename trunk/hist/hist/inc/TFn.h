@@ -163,14 +163,14 @@ public:
    virtual void      GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const;
    // Return a sample random number following this distribution
    // TODO: normalize
-   virtual const Double_t* GetRandom() const { return fSampler->Sample(); }
+   virtual const Double_t* GetRandom() const;
    virtual void      GetRange(Double_t* min, Double_t* xmax) const;
    // GradientPar returns a vector of size n (dimensions), containing the gradient in the point specified by x
    virtual Double_t  GradientPar(UInt_t ipar, const Double_t* x, Double_t eps = 0.01) const;
    virtual void      GradientPar(const Double_t* x, Double_t* grad, Double_t eps = 0.01) const;
    virtual void      InitArgs(const Double_t* x, const Double_t *params = NULL);
    virtual Double_t  IntegralError(const Double_t* a, const Double_t* b, const Double_t* params = NULL, const Double_t* covmat = NULL, Double_t eps = 1e-6);
-   virtual Double_t  IntegralMultiple(const Double_t* a, const Double_t* b, Int_t minPts, Int_t maxPts, Double_t eps, Double_t& relErr,Int_t& nFuncEval, Int_t& status);
+   virtual Double_t  IntegralMultiple(const Double_t* a, const Double_t* b, UInt_t maxCalls, Double_t eps, Double_t& relErr,Int_t& nFuncEval, Int_t& status);
    virtual Double_t  IntegralMultiple(const Double_t* a, const Double_t* b, Double_t eps, Double_t& relErr);
    virtual Bool_t    IsInside(const Double_t *x) const;
    virtual UInt_t    NDim() const { return fNdim; } // Inherited from ROOT::Math::IBaseFunctionMultiDim

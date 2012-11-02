@@ -24,16 +24,17 @@
 #include "TMethodCall.h"
 #include "TVectorD.h"
 #include "TMatrixD.h"
-#include "Math/AdaptiveIntegratorMultiDim.h"
+#include "Math/IntegratorMultiDim.h"
 #include "Math/BrentRootFinder.h"
 #include "Math/BrentMethods.h"
 #include "Math/Factory.h"
+#include "Math/Functor.h"
 #include "Math/GaussIntegrator.h"
 #include "Math/GaussLegendreIntegrator.h"
 #include "Math/Integrator.h"
 #include "Math/Minimizer.h"
 #include "Math/RichardsonDerivator.h"
-#include "Math/Functor.h"
+#include "Math/DistSampler.h"
 #include "Fit/FitResult.h"
 
 
@@ -276,16 +277,18 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar)
    fParams = fParErrors = fParMin = fParMax = NULL;
    fNorm = -1.0; // set an invalid value, until first calculation
 
+   fSampler = ROOT::Math::Factory::CreateDistSampler();
+   if (!fSampler) {
+      Error("Init", "ROOT::Math::Factory could not create the default ROOT::Math::DistSampler");
+      return;
+   }
+
    if (ndim > 0) {
       fNdim = ndim; // XXX: should we put this in the initialization list?
       fMin = new Double_t[fNdim];
       fMax = new Double_t[fNdim];
       std::copy(min, min + fNdim, fMin);
-      std::copy(max, max + fNdim, fMax);
-      
-      fIntegrator.SetFunction(*this);
-   
-      // TODO: calculate in Norm()
+      std::copy(max, max + fNdim, fMax);   
    }   
    
    if (npar > 0) {
@@ -396,7 +399,7 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    fIntegrator(),
    fCintFunc(NULL),
    fFormula(NULL),
-   fFunctor(ROOT::Math::ParamFunctor(fcn)),
+   fFunctor(fcn),
    fMethodCall(NULL)
 {
    // TFn constructor using a pointer to a real function.
@@ -410,9 +413,9 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    //   note the interface with an intermediate pointer.
    //
    // WARNING! A function created with this constructor cannot be Cloned.
-
-   Init(ndim, min, max, npar);
-   ConfigureFunctor(name);
+   std::cout << "Ground Control to Major Tom!" << std::endl;
+//   Init(ndim, min, max, npar);
+//   ConfigureFunctor(name);
 }
 
 //______________________________________________________________________________
@@ -438,8 +441,9 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
+   std::cout << "Ground Control to Major Tom!" << std::endl;
    Init(ndim, min, max, npar);
-   ConfigureFunctor(name);
+//   ConfigureFunctor(name);
 }
 
 
@@ -465,7 +469,7 @@ TFn::TFn(const char* name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min
     */
 
    Init(ndim, min, max, npar);
-   ConfigureFunctor(name);
+//  ConfigureFunctor(name);
 }
 
 
@@ -592,8 +596,8 @@ TFn::~TFn()
    delete [] fParMin;
    delete [] fParMax;
    delete [] fParErrors;
-   delete fFormula;
-   delete fMethodCall;
+   //delete fFormula;
+   //delete fMethodCall;
 
 }
 
@@ -1174,6 +1178,50 @@ void TFn::InitArgs(const Double_t *x, const Double_t *params)
 }
 
 
+/**
+ * TFn_GradientPar : Auxiliary class used by GetRandom.
+ *
+ * Given a TFn representing a function f(x|p), where x is the input variable vector, p is the parameter 
+ * vector, and p_i is the ith parameter, the user can create a new object equivalent to f normalized
+ * over the range of x, by wrapping the TFn in a TFn_Normalised.
+ *
+ */
+class TFn_Normalised : public ROOT::Math::IBaseFunctionMultiDim {
+public:
+   TFn_Normalised(const TFn& func) : fFunc(func) {}
+
+   UInt_t NDim() const { return fFunc.NDim(); }
+   // NOTE: use with caution
+   TFn_Normalised* Clone() const { return new TFn_Normalised(*fFunc.Clone()); }
+  
+private:
+   const TFn& fFunc;
+   Double_t DoEval(const Double_t* x) const { return (*((TFn*)&fFunc))(x) / fFunc.Norm(); }
+};
+
+
+//______________________________________________________________________________
+const Double_t* TFn::GetRandom() const { 
+   /**
+    * Return a random sample (vector of n-dim) from the multivariate distribution associated with
+    * this function. In order to get the distribution, the function is normalised.
+    */
+   
+   if (fSampler == NULL) {
+      const TFn_Normalised func_norm(*this);
+      fSampler->SetFunction(*this);
+   }
+   return fSampler->Sample();
+}
+
+/**
+ * TFn_GradientPar : Auxiliary class used by IntegralError.
+ *
+ * Given a TFn representing a function f(x|p), where x is the input variable vector, p is the parameter 
+ * vector, and p_i is the ith parameter, the user can create a new object equivalent to the function
+ * df(x|p)/d{p_i} by wrapping the TFn in a TFn_GradientPar.
+ *
+ */
 class TFn_GradientPar {
 public:
    TFn_GradientPar(UInt_t idxParam, TFn& func) : fFunc(func), fIdxParam(idxParam) {}
@@ -1182,7 +1230,6 @@ public:
    TFn& fFunc;
    UInt_t fIdxParam;
 };
-
 
 //______________________________________________________________________________
 Double_t TFn::IntegralError(const Double_t* a, const Double_t* b, const Double_t* params, const Double_t* covmat, Double_t eps)
@@ -1240,6 +1287,7 @@ Double_t TFn::IntegralError(const Double_t* a, const Double_t* b, const Double_t
    return std::sqrt(err);
 }
 
+
 //______________________________________________________________________________
 Double_t TFn::IntegralMultiple(const Double_t *a, const Double_t *b, Double_t eps, Double_t &relErr)
 {
@@ -1247,16 +1295,13 @@ Double_t TFn::IntegralMultiple(const Double_t *a, const Double_t *b, Double_t ep
    //  This interface kept for back compatibility
 
    Int_t nFuncEval, status;
-   Int_t minPts = (1 << fNdim) + 2 * fNdim * (fNdim + 1) + 1; //ie 7 for n=1
-   Int_t maxPts = std::max(minPts, 1000);
-   Double_t result = IntegralMultiple(a, b, minPts, maxPts, eps, relErr, nFuncEval, status);
+   Double_t result = IntegralMultiple(a, b, 100000, eps, relErr, nFuncEval, status);
    if (status != 0) Warning("IntegralMultiple","exit status code = %d, ", status);
    return result;
 }
 
-
 //______________________________________________________________________________
-Double_t TFn::IntegralMultiple(const Double_t* a, const Double_t* b, Int_t minPts, Int_t maxPts, Double_t eps, Double_t &relErr, Int_t &nFuncEval, Int_t &status)
+Double_t TFn::IntegralMultiple(const Double_t* a, const Double_t* b, UInt_t maxCalls, Double_t eps, Double_t &relErr, Int_t &nFuncEval, Int_t &status)
 {
    //  Adaptive Quadrature for Multiple Integrals over N-Dimensional
    //  Rectangular Regions
@@ -1276,11 +1321,7 @@ Double_t TFn::IntegralMultiple(const Double_t* a, const Double_t* b, Int_t minPt
    //
    //    a,b   : One-dimensional arrays of length fNdim (TFn::GetNDim()). On entry A[i],  and  B[i],
    //            contain the lower and upper limits of integration, respectively.
-   //    minPts: Minimum number of function evaluations requested. Must not exceed maxPts.
-   //            if minPts < 1 minPts is set to 2^fNdim + 2 * fNdim * (fNdim + 1) +1
-   //    maxPts: Maximum number of function evaluations to be allowed.
-   //            maxPts >= 2^fNdim + 2 * fNdim * (fNdim + 1) +1
-   //            if maxPts < minPts, maxPts is set to 10*minPts
+   //    maxCalls: Maximum number of function evaluations to be allowed.
    //    eps   : Specified relative accuracy.
    //
    // Output parameters:
@@ -1318,11 +1359,12 @@ Double_t TFn::IntegralMultiple(const Double_t* a, const Double_t* b, Int_t minPt
    //   2.A. van Doren and L. de Ridder, An adaptive algorithm for numerical
    //     integration over an n-dimensional cube, J.Comput. Appl. Math. 2 (1976) 207-217.
 
-   ROOT::Math::AdaptiveIntegratorMultiDim aimd(*this, eps, eps, maxPts);
-   aimd.SetMinPts(minPts);
-   Double_t result = aimd.Integral(a,b);
-   relErr = aimd.RelError();
-   nFuncEval = aimd.NEval();
+   fIntegrator.SetFunction(*this);
+   fIntegrator.SetAbsTolerance(eps);
+   fIntegrator.SetRelTolerance(eps);
+   Double_t result = fIntegrator.Integral(a,b);
+//   relErr = fIntegrator.RelError();
+//   nFuncEval = fIntegrator.NEval();
    status = 0;
 
    return result;
@@ -1414,17 +1456,17 @@ void TFn::SetRange(Double_t* min, Double_t* max)
  * TFn_Projection1D is a helper / wrapper class used to fix one coordinate of the original
  * TFn and allow integration only on the other n-1 coordinates. 
  */
-class TFn_Projection1D : ROOT::Math::IBaseFunctionMultiDim {
+class TFn_Projection1D : public ROOT::Math::IBaseFunctionMultiDim {
 public:
    // assumes correct arguments are passed
    // TODO: constify !!!
    TFn_Projection1D(TFn& func, UInt_t idxCoord) :
-      fFunc(func), fNdim(fFunc.NDim()), fIdxCoord(idxCoord), fValCoord(0.0), fIntegral()
+      fFunc(func), fNdim(fFunc.NDim()), fIdxCoord(idxCoord), fValCoord(0.0), fIntegrator()
    {
       fX = new Double_t[fNdim];
       fMin = new Double_t[fNdim];
       fMax = new Double_t[fNdim];
-      fIntegral.SetFunction(*this);
+      fIntegrator.SetFunction(*this);
 
       fFunc.GetRange(fMin, fMax);
       // shift range for n-1 dim integral
@@ -1440,7 +1482,7 @@ public:
    Double_t Integral(Double_t* valCoord, Double_t*) {
       // TODO: check if in range
       fValCoord = *valCoord;
-      return fIntegral.Integral(fMin, fMax);
+      return fIntegrator.Integral(fMin, fMax);
    }
       
 protected:
@@ -1460,7 +1502,7 @@ private:
    UInt_t fNdim; // dimension of TFn
    UInt_t fIdxCoord;
    mutable Double_t fValCoord;
-   ROOT::Math::AdaptiveIntegratorMultiDim fIntegral;
+   ROOT::Math::IntegratorMultiDim fIntegrator;
    
    Double_t* fX;   //![fNdim] contains (n-1)-dim input array plus fixed value on specified coord
    Double_t* fMin; //![fNdim] contains original TFn min range
