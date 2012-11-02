@@ -53,8 +53,8 @@ private:
    const std::vector<TString>* fSpecNames;
    TFile* fTestFile;
    TTree* fTestTree;
-   int fNVar;
-   int fNSpecs;
+   UInt_t fNVar;
+   UInt_t fNSpecs;
    static const int fMaxEvt=50;
 };
 

@@ -59,8 +59,8 @@ void MethodUnitTestWithROCLimits::run()
 
   if (_methodOption.Contains("VarTransform")) factoryOptions+=":Transformations=I;D;P;G;N;U";
   Factory* factory = new Factory( "TMVAUnitTesting", outputFile, factoryOptions );
-  // factory->AddVariable( "myvar1 := var1+var2", 'F' );
-  // factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
+  //  factory->AddVariable( "myvar1 := var1+var2", 'F' );
+  //  factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
   factory->AddVariable( Form("%s  := %s",_TreeVariableNames->at(0).Data(), _VariableNames->at(0).Data()), 'F' );
   factory->AddVariable( Form("%s  := %s",_TreeVariableNames->at(1).Data(), _VariableNames->at(1).Data()), "Expression 2", "",'F' );
   factory->AddVariable( _VariableNames->at(2),                "Variable 3", "units", 'F' );
