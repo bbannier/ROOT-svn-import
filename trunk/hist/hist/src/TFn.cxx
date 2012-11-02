@@ -14,6 +14,7 @@
 #include "Riostream.h"
 #include "TROOT.h"
 #include "TMath.h"
+#include "TF1.h"
 #include "TFn.h"
 #include "THn.h"
 #include "TRandom.h"
@@ -23,8 +24,6 @@
 #include "TMethodCall.h"
 #include "TVectorD.h"
 #include "TMatrixD.h"
-#include "Math/WrappedFunction.h"
-#include "Math/WrappedTF1.h"
 #include "Math/AdaptiveIntegratorMultiDim.h"
 #include "Math/BrentRootFinder.h"
 #include "Math/BrentMethods.h"
@@ -39,56 +38,6 @@
 
 
 ClassImp(TFn)
-
-// class wrapping function evaluation directly in n-Dim interface (used for integration) 
-// and implementing the methods for the momentum calculations
-/*
-class  TFn_EvalWrapper : public ROOT::Math::IParametricGradFunctionMultiDim { 
-public: 
-   // TODO: remove from here
-   //   TFn_EvalWrapper func(this, params, kTRUE, n); Moments and CentralMoments norm
-   //
-   TFn_EvalWrapper(TFn * f, const Double_t * par, bool useAbsVal, Double_t n = 1, Double_t x0 = 0) : 
-      fFunc(f), 
-      // TODO: fix this, or maybe not use at all
-      fPar(par),
-//      fPar( ( (par) ? par : f->GetParameters() ) ),
-      fAbsVal(useAbsVal),
-      fN(n), 
-      fX0(x0)   
-   {
-      fFunc->InitArgs(fX, fPar); 
-   }
-
-   ROOT::Math::IGenFunction * Clone()  const { 
-      // use default copy constructor
-      TFn_EvalWrapper * f =  new TFn_EvalWrapper( *this);
-      f->fFunc->InitArgs(f->fX, f->fPar); 
-      return f;
-   }
-   // evaluate |f(x)|
-   Double_t DoEval( Double_t* x) const {  
-      Double_t fval = fFunc->DoEvalPar(x, fPar);
-      return (fAbsVal && fval < 0) ? -fval : fval;
-   } 
-   // evaluate x * |f(x)|
-   Double_t EvalFirstMom( Double_t x) { 
-      fX[0] = x; 
-      return fX[0] * TMath::Abs( fFunc->DoEvalPar( fX, fPar) ); 
-   } 
-   // evaluate (x - x0) ^n * f(x)
-   Double_t EvalNMom( Double_t x) const  { 
-      fX[0] = x; 
-      return TMath::Power( fX[0] - fX0, fN) * TMath::Abs( fFunc->DoEvalPar( fX, fPar) ); 
-   }
-
-   TFn * fFunc; 
-   mutable Double_t fX[1]; 
-   const Double_t * fPar; 
-   Bool_t fAbsVal;
-   Double_t fN; 
-   Double_t fX0;
-};*/
 
 //______________________________________________________________________________
 /* Begin_Html
@@ -354,7 +303,15 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar)
 } 
 
 //______________________________________________________________________________
-TFn::TFn() : TNamed(), fIntegrator(), fType(0), fParent(NULL), fMethodCall(NULL), fCintFunc(NULL)
+TFn::TFn() : 
+   TNamed(), 
+   fParent(NULL), 
+   fType(0), 
+   fIntegrator(), 
+   fCintFunc(NULL), 
+   fFormula(NULL), 
+   fFunctor(), 
+   fMethodCall(NULL)
 {
    // TFn default constructor.
    Init(0, NULL, NULL, 0);
@@ -363,85 +320,86 @@ TFn::TFn() : TNamed(), fIntegrator(), fType(0), fParent(NULL), fMethodCall(NULL)
 //______________________________________________________________________________
 TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
    TNamed(name, "TFn created from a formula definition (through TFormula)"),
-   fIntegrator()
+   fParent(NULL),
+   fType(0),
+   fIntegrator(),
+   fCintFunc(NULL),
+   fFormula(new TFormula(TString::Format("%s_formula", name).Data(), formula)),
+   fFunctor(),
+   fMethodCall(NULL)
 {
-   // Constructor using a formula definition.
-   // See TFormula for the explanation of the constructor syntax.
+   // TFn constructor using a formula definition.
+   // See TFormula for the explanation of its constructor syntax.
    // See tutorials: fillrandom, first, fit1, formula1, multifit for real examples.
-   fFormula = new TFormula(TString::Format("%s_formula", name).Data(), formula);
-   if(!fFormula) {
+
+   if(!fFormula)
       Error("TFn::TFn", "object %s created incorrectly because of invalid formula", name);
-   } else {
-
+   else
       Init(fFormula->GetNdim(), min, max, fFormula->GetNpar());
-      fType      = 0;
-      fParent     = 0;
-      fMethodCall = 0;
-      fCintFunc   = 0;
-   }
-
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, Int_t npar) :
+TFn::TFn(const char* name, UInt_t ndim, void* fcn, Double_t* min, Double_t* max, UInt_t npar) :
    TNamed(name, "TFn created from a pointer to an interpreted function"),
-   fIntegrator()
+   fParent(NULL),
+   fType(2),
+   fIntegrator(),
+   fCintFunc(NULL),
+   fFormula(NULL),
+   fFunctor(),
+   fMethodCall(NULL)
 {
-   // F1 constructor using pointer to an interpreted function.
-   //
-   //  See TFormula constructor for explanation of the formula syntax.
-   //
-   //  Creates a function of type C between xmin and xmax.
-   //  The function is defined with npar parameters
-   //  fcn must be a function of type:
-   //     Double_t fcn(Double_t *x, Double_t *params)
-   //
-   //  see tutorial; myfit for an example of use
-   //  also test/stress.cxx (see function stress1)
-   //
-   //
-   //  This constructor is called for functions of type C by CINT.
-   //
-   //  WARNING! A function created with this constructor cannot be Cloned.
+   /**
+    * TFn constructor using pointer to an interpreted function.
+    * This constructor is called for functions of type C by CINT.
+    *
+    * @param [in] min and max = ranges for the function variables
+    * @param [in] npar = number of parameters with which the function is defined
+    * @param [in] fcn = function of type "Double_t fcn(Double_t *x, Double_t *params)"
+    *
+    * see tutorial; myfit and test/stress.cxx
+    *
+    * WARNING! A function created with this constructor cannot be Cloned.
+    */
+   
+   if (!fcn) {
+      Error("TFn", "Input pointer to interpreted function is NULL - TFn object %s is incomplete", name);
+      return;
+   }
 
    Init(ndim, min, max, npar);
 
-   fType       = 2;
-   //fFunction   = 0;
-  fParent     = 0;
-   fMethodCall = 0;
-   fCintFunc   = 0;
-
-   TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
+   TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
+   gROOT->GetListOfFunctions()->Remove(fnOld);
    SetName(name);
 
-
-   if (!fcn) return;
    const char *funcname = gCint->Getp2f2funcname(fcn);
    SetTitle(funcname);
    if (funcname) {
       fMethodCall = new TMethodCall();
-      fMethodCall->InitWithPrototype(funcname,"Double_t*,Double_t*");
-      //fNumber = -1;
+      fMethodCall->InitWithPrototype(funcname, "Double_t*,Double_t*");
       gROOT->GetListOfFunctions()->Add(this);
-      if (! fMethodCall->IsValid() ) {
-         Error("TFn","No function found with the signature %s(Double_t*,Double_t*)",funcname);
+      if (!fMethodCall->IsValid()) {
+         Error("TFn", "No function found with the signature %s(Double_t*,Double_t*)", funcname);
       }
    } else {
-      Error("TFn","can not find any function at the address 0x%lx. This function requested for %s",(Long_t)fcn,name);
+      Error("TFn", "can not find any function at the address 0x%lx. This function requested for %s", (Long_t)fcn, name);
    }
-
-
 }
 
 
 //______________________________________________________________________________
 TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *), Double_t* min, Double_t* max, UInt_t npar) : 
    TNamed(name, "TFn created from a pointer to a real function"),
-   fIntegrator()
+   fParent(NULL),
+   fType(1),
+   fIntegrator(),
+   fCintFunc(NULL),
+   fFormula(NULL),
+   fFunctor(ROOT::Math::ParamFunctor(fcn)),
+   fMethodCall(NULL)
 {
-   // F1 constructor using a pointer to a real function.
+   // TFn constructor using a pointer to a real function.
    //
    //   npar is the number of free parameters used by the function
    //
@@ -453,28 +411,20 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    //
    // WARNING! A function created with this constructor cannot be Cloned.
 
-
-   fType       = 1;
-   fMethodCall = 0;
-   fCintFunc   = 0;
-   fFunctor = ROOT::Math::ParamFunctor(fcn);
-
-
-   fParent     = 0;
    Init(ndim, min, max, npar);
-/*
-   // Store formula in linked list of formula in ROOT
-   TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
-   SetName(name);
-   gROOT->GetListOfFunctions()->Add(this);
-*/
+   ConfigureFunctor(name);
 }
 
 //______________________________________________________________________________
 TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, Int_t npar) : 
    TNamed(name, "TFn created from a pointer to a real function"),
-   fIntegrator()
+   fParent(NULL),
+   fType(1),
+   fIntegrator(),
+   fCintFunc(NULL),
+   fFormula(NULL),
+   fFunctor(ROOT::Math::ParamFunctor(fcn)),
+   fMethodCall(NULL)
 {
    // F1 constructor using a pointer to real function.
    //
@@ -489,65 +439,48 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
    // WARNING! A function created with this constructor cannot be Cloned.
 
    Init(ndim, min, max, npar);
-
-   fType       = 1;
-   fMethodCall = 0;
-   fCintFunc   = 0;
-   fFunctor = ROOT::Math::ParamFunctor(fcn);
-
-   fParent     = 0;
-
-   // Store formula in linked list of formula in ROOT
-   TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
-   SetName(name);
-   gROOT->GetListOfFunctions()->Add(this);
-
+   ConfigureFunctor(name);
 }
 
 
 //______________________________________________________________________________
 TFn::TFn(const char* name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
    TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
-   fType      ( 1 ),
-   fIntegrator   (),
-   fParErrors ( 0 ),
-   fParMin    ( 0 ),
-   fParMax    ( 0 ),
-   fParent    ( 0 ),
-   fMethodCall( 0 ),
-   fCintFunc  ( 0 ),
-   fFunctor   ( ROOT::Math::ParamFunctor(f) )
+   fParent(NULL),
+   fType(1),
+   fIntegrator(),
+   fCintFunc(NULL),
+   fFormula(NULL),
+   fFunctor(f),
+   fMethodCall(NULL)
 {
-   // F1 constructor using the Functor class.
-   //
-   //   xmin and xmax define the plotting range of the function
-   //   npar is the number of free parameters used by the function
-   //
-   //   This constructor can be used only in compiled code
-   //
-   // WARNING! A function created with this constructor cannot be Cloned.
+   /** TFn constructor using the Functor class.
+    *
+    * @param [in] min and xmax define the range of the function
+    * @param [in] npar is the number of free parameters used by the function
+    *
+    *   This constructor can be used only in compiled code
+    *
+    * WARNING! A function created with this constructor cannot be Cloned.
+    */
 
    Init(ndim, min, max, npar);
-   CreateFromFunctor(name);
+   ConfigureFunctor(name);
 }
 
 
 //______________________________________________________________________________
-void TFn::CreateFromFunctor(const char *name)
+void TFn::ConfigureFunctor(const char *name)
 {
    // Internal Function to Create a TFn  using a Functor.
-   //
-   //          Used by the template constructors
 
-/*
    // Store formula in linked list of formula in ROOT
-   TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
+   TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
+   gROOT->GetListOfFunctions()->Remove(fnOld);
    SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
-*/
 }
+
 
 //______________________________________________________________________________
 TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, Int_t npar, const char* className) : 
@@ -569,7 +502,8 @@ TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, 
    //  This constructor is used only when using CINT.
    //  In compiled mode the template constructor is used and in that case className is not needed
 
-   CreateFromCintClass(name, ndim, ptr, min, max, npar, className, 0 );
+   Init(ndim, min, max, npar);
+   ConfigureCintClass(name, ptr, className, NULL);
 }
 
 //______________________________________________________________________________
@@ -595,27 +529,24 @@ TFn::TFn(const char* name, Int_t ndim, void *ptr, void *, Double_t* min, Double_
    //  This constructor is used only when using CINT.
    //  In compiled mode the template constructor is used and in that case className is not needed
 
-   CreateFromCintClass(name, ndim, ptr, min, max, npar, className, methodName);
+   Init(ndim, min, max, npar);
+   ConfigureCintClass(name, ptr, className, methodName);
 }
 
 //______________________________________________________________________________
-void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char * className, const char* methodName)
+void TFn::ConfigureCintClass(const char *name, void *ptr, const char * className, const char* methodName)
 {
    // Internal function used to create from TFn from an interpreter CINT class
    // with the specified type (className) and member function name (methodName).
    //
 
-   Init(ndim, min, max, npar);
-
    fType       = 3;
 
-   fParent     = 0;
-   fMethodCall = 0;
+   fParent     = NULL;
+   fMethodCall = NULL;
 
-   TFn *f1old = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(f1old);
-   //SetName(name);
-
+   TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
+   gROOT->GetListOfFunctions()->Remove(fnOld);
 
    if (!ptr) return;
    fCintFunc = ptr;
@@ -627,8 +558,7 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
    if (cl) {
       fMethodCall = new TMethodCall();
 
-
-      if (methodName)
+      if (methodName) 
          fMethodCall->InitWithPrototype(cl,methodName,"Double_t*,Double_t*");
       else {
          fMethodCall->InitWithPrototype(cl,"operator()","Double_t*,Double_t*");
@@ -637,46 +567,49 @@ void TFn::CreateFromCintClass(const char *name, Int_t ndim, void *ptr, Double_t*
             fMethodCall->InitWithPrototype(cl,"Eval","Double_t*,Double_t*");
       }
 
-      //FIXME: what is this?
-      //fNumber = -1;
       gROOT->GetListOfFunctions()->Add(this);
       if (! fMethodCall->IsValid() ) {
          if (methodName)
-            Error("TFn","No function found in class %s with the signature %s(Double_t*,Double_t*)",className,methodName);
+            Error("TFn", "No function found in class %s with the signature %s(Double_t*,Double_t*)", className, methodName);
          else
-            Error("TFn","No function found in class %s with the signature operator() (Double_t*,Double_t*) or Eval(Double_t*,Double_t*)",className);
+            Error("TFn", "No function found in class %s with the signature operator() (Double_t*,Double_t*) or Eval(Double_t*,Double_t*)", className);
       }
    } else {
-      Error("TFn","can not find any class with name %s at the address 0x%lx",className,(Long_t)ptr);
+      Error("TFn", "cannot find any class with name %s at the address 0x%lx", className, (Long_t)ptr);
    }
-
-
 }
 
 
 //______________________________________________________________________________
 TFn::~TFn()
 {
-   // TFn default destructor.
-   // TODO: delete fIntegral
-   if (fParMin)    delete [] fParMin;
-   if (fParMax)    delete [] fParMax;
-   if (fParErrors) delete [] fParErrors;
+   // TFn destructor.
+   
+   if (fParent) fParent->RecursiveRemove(this);
+   delete [] fMin;
+   delete [] fMax;
+   delete [] fParams;
+   delete [] fParMin;
+   delete [] fParMax;
+   delete [] fParErrors;
+   delete fFormula;
    delete fMethodCall;
 
-   if (fParent) fParent->RecursiveRemove(this);
 }
 
 
 //______________________________________________________________________________
-TFn::TFn(const TFn &rhs) : TNamed(rhs), fIntegrator() 
+TFn::TFn(const TFn &rhs, const char* name) : TNamed(rhs), fIntegrator() 
 {
-   // Copy constructor.
-  
-   fType = rhs.fType; 
-   fParent = rhs.fParent;
-   fMethodCall = rhs.fMethodCall;
+   // TFn copy constructor.
+   if (name) SetName(name);
+   else SetName(TString::Format("%s_copy", rhs.GetName()));
+
    fCintFunc = rhs.fCintFunc;
+   fFormula = rhs.fFormula;
+   fMethodCall = rhs.fMethodCall;
+   fParent = rhs.fParent;
+   fType = rhs.fType; 
 
    Init(rhs.fNdim, rhs.fMin, rhs.fMax, rhs.fNpar);
 }
@@ -689,6 +622,7 @@ TFn& TFn::operator=(const TFn& rhs)
    if (this != &rhs) {
 
       fType = rhs.fType;
+      fFormula = rhs.fFormula;
       fFunctor = rhs.fFunctor;
       fCintFunc = rhs.fCintFunc;
       fParent = rhs.fParent;
@@ -747,6 +681,7 @@ Double_t TFn::DoDerivative(const Double_t* x, UInt_t icoord) const
     *  @param[in] icoord - The coordonate on which the derivation is performed. Must belong in [0, fNdim - 1].
     *  @return             Partial derivative (w.r.t. icoord) value in point x.
     */
+
    if (icoord > UInt_t(fNdim)) {
       Error("DoDerivative", "The index of the coordonate surpasses the bounds [0,%d] of the %d-dimensional \
          function %s", fNdim - 1, fNdim, GetName());
@@ -760,7 +695,7 @@ Double_t TFn::DoDerivative(const Double_t* x, UInt_t icoord) const
    Double_t* xm = const_cast<Double_t*>(x); 
    Double_t  x0 = x[icoord];
    
-   //   The step size is chosen depending on x[icoord], except when the latter is too small, in which case
+   // The step size is chosen depending on x[icoord], except when the latter is too small, in which case
    // a default epsilon is used.
    Double_t eps = std::numeric_limits<Double_t>::epsilon() / 7e-7; // (see R numDeriv package)
    Double_t h = 1e-4 * x0 < eps ? eps : 1e-4 * x0; // STEP SIZE -> gives precision
@@ -839,15 +774,13 @@ void TFn::FixParameter(UInt_t ipar, Double_t value)
    // Fix the value of a parameter
    // The specified value will be used in a fit operation
 
-   // TODO: see how to remove the Double_t check for TF1 (it's done in SetParameter too)
    if (ipar >= fNpar) return; 
-
    fParams[ipar] = value;
-  // Update();
 
-   if (value != 0) SetParLimits(ipar,value,value);
-   else            SetParLimits(ipar,1,1);
+   if (value != 0.0) SetParLimits(ipar,value,value);
+   else SetParLimits(ipar,1,1);
 }
+
 
 //______________________________________________________________________________
 THn* TFn::GetHistogram() const 
@@ -1029,7 +962,7 @@ Double_t TFn::GetParError(UInt_t ipar) const
 
    if (ipar >= fNpar) {
       Error("GetParError", "Parameter index is out of dimensional range");
-      return 0;
+      return 0.0;
    }
    return fParErrors[ipar];
 }
@@ -1040,8 +973,7 @@ void TFn::GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const
 {
    // Return limits for parameter ipar.
 
-   parmin = 0;
-   parmax = 0;
+   parmin = parmax = 0;
    if (ipar >= fNpar) return;
    if (fParMin) parmin = fParMin[ipar];
    if (fParMax) parmax = fParMax[ipar];
@@ -1052,11 +984,18 @@ void TFn::GetRange(Double_t *min, Double_t *max) const
 {
    // Return range of a n-D function.
    // NOTE: the user is responsible for creating arrays of sufficient size
-   memcpy(min, fMin, fNdim * sizeof(Double_t));
-   memcpy(max, fMax, fNdim * sizeof(Double_t));
+   std::copy(fMin, fMin + fNdim, min);
+   std::copy(fMax, fMax + fNdim, max);
 }
 
 
+//______________________________________________________________________________
+void TFn::FdF(const Double_t* x, Double_t& f, Double_t* df) const {
+   Gradient(x, df);
+   f = DoEvalPar(x);
+}
+
+//______________________________________________________________________________
 void TFn::Gradient(const Double_t* x, Double_t* grad) const
 {
    // Compute the gradient (derivative) in a given n-dim point x
@@ -1071,6 +1010,65 @@ void TFn::Gradient(const Double_t* x, Double_t* grad) const
    for(UInt_t i = 0; i < fNdim; ++i)
       grad[i] = DoDerivative(x, i);
 }
+
+Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t ipar) const 
+{
+   
+   if (ipar >= fNpar) {
+      Warning("DoParameterDerivative", "Input parameter index is out of dimensional range; returning 0.0");
+      return 0.0;
+   }
+
+   Double_t* params = new Double_t[fNpar];
+
+   if (p == NULL) {
+      Warning("DoParameterDerivative", "Input parameters not specified by user; using internal parameter values");
+      std::copy(fParams, fParams + fNpar, params);
+   } else {
+      std::copy(p, p + fNpar, params);
+   }
+
+   Double_t h; Double_t eps = 1e-6;
+   TFn *func = (TFn*)this;
+
+   //save original parameters
+   Double_t par0 = params[ipar];
+
+   func->InitArgs(x, params);
+
+   Double_t al, bl;
+   Double_t f1, f2, g1, g2, h2, d0, d2;
+
+   func->GetParLimits(ipar, al, bl);
+   if (al * bl != 0.0 && al >= bl) {
+      //this parameter is fixed
+      return 0;
+   }
+
+   // check if error has been computer (is not zero)
+   if (func->GetParError(ipar) != 0.0)
+      h = eps * func->GetParError(ipar);
+   else
+      h = eps;
+
+   params[ipar] = par0 + h;     f1 = func->DoEvalPar(x, params);
+   params[ipar] = par0 - h;     f2 = func->DoEvalPar(x, params);
+   params[ipar] = par0 + h/2;   g1 = func->DoEvalPar(x, params);
+   params[ipar] = par0 - h/2;   g2 = func->DoEvalPar(x, params);
+
+   //compute the central differences
+   h2 = 1.0 / (2.0 * h);
+   d0 = f1 - f2;
+   d2 = 2.0 * (g1 - g2);
+
+   Double_t grad = h2 * (4.0 * d2 - d0) / 3.0;
+
+   // restore original value
+   fParams[ipar] = par0;
+
+   return grad;
+}
+
 
 //______________________________________________________________________________
 Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps) const
@@ -1135,6 +1133,7 @@ Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps) const
    return grad;
 }
 
+
 //______________________________________________________________________________
 void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps) const
 {
@@ -1155,10 +1154,10 @@ void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps) const
       eps = 0.01;
    }
 
-   for (UInt_t ipar = 0; ipar < fNpar; ++ipar){
+   for (UInt_t ipar = 0; ipar < fNpar; ++ipar)
       grad[ipar] = GradientPar(ipar, x, eps);
-   }
 }
+
 
 //______________________________________________________________________________
 void TFn::InitArgs(const Double_t *x, const Double_t *params)
@@ -1173,6 +1172,7 @@ void TFn::InitArgs(const Double_t *x, const Double_t *params)
       fMethodCall->SetParamPtrs(args);
    }
 }
+
 
 class TFn_GradientPar {
 public:
@@ -1211,6 +1211,13 @@ Double_t TFn::IntegralError(const Double_t* a, const Double_t* b, const Double_t
       return 0.0;
    }
 
+   Double_t* oldParams = NULL;
+   if (params) {
+      oldParams = new Double_t[fNpar];
+      std::copy(fParams, fParams + fNpar, oldParams);
+      SetParameters(params);
+   }
+
    TMatrixDSym covMatrix(fNpar);
    covMatrix.Use(fNpar, covmat);
    
@@ -1227,6 +1234,8 @@ Double_t TFn::IntegralError(const Double_t* a, const Double_t* b, const Double_t
       }
    }
    Double_t err = covMatrix.Similarity(integrals); // integrals^T * covMatrix * integrals
+
+   if (oldParams) SetParameters(oldParams);
 
    return std::sqrt(err);
 }
@@ -1335,9 +1344,8 @@ Bool_t TFn::IsInside(const Double_t *x) const
 //______________________________________________________________________________
 void TFn::Print(Option_t *option) const
 {
-   // Dump this function with its attributes.
-
-//   TFormula::Print(option);
+   // TODO: improve
+   TNamed::Print(option);
 }
 
 
@@ -1377,14 +1385,10 @@ void TFn::SetParErrors(const Double_t *errors)
 void TFn::SetParLimits(UInt_t ipar, Double_t parmin, Double_t parmax)
 {
    // Set limits for parameter ipar.
-   //
-   // The specified limits will be used in a fit operation
-   // when the option "B" is specified (Bounds).
+   //  The specified limits will be used in a fit operation when the option "B" is specified (Bounds).
    // To fix a parameter, use TFn::FixParameter
 
    if (ipar >= fNpar) return;
-   if (!fParMin) { fParMin = new Double_t[fNpar]; for (UInt_t i = 0; i < fNpar; ++i) fParMin[i] = 0; }
-   if (!fParMax) { fParMax = new Double_t[fNpar]; for (UInt_t i = 0; i < fNpar; ++i) fParMax[i] = 0; }
    fParMin[ipar] = parmin;
    fParMax[ipar] = parmax;
 }
@@ -1397,93 +1401,19 @@ void TFn::SetRange(Double_t* min, Double_t* max)
    //
    // The function range is also used in an histogram fit operation
    // when the option "R" is specified.
-
-   memcpy(fMin, min, fNdim * sizeof(Double_t));
-   memcpy(fMax, max, fNdim * sizeof(Double_t)); 
-}
-
-
-//______________________________________________________________________________
-void TFn::Streamer(TBuffer &b)
-{
-   // Stream a class object.
-// TODO: rethink this
-/*
-   if (b.IsReading()) {
-      UInt_t R__s, R__c;
-      Version_t v = b.ReadVersion(&R__s, &R__c);
-      if (v > 4) {
-         b.ReadClassBuffer(TFn::Class(), this, v, R__s, R__c);
-         if (v == 5 && fNsave > 0) {
-            //correct badly saved fSave in 3.00/06
-            Int_t np = fNsave - 3;
-            fSave[np]   = fSave[np-1];
-            fSave[np+1] = fXmin;
-            fSave[np+2] = fXmax;
-         }
-         return;
-      }
-      //====process old versions before automatic schema evolution
-      TFormula::Streamer(b);
-      TAttLine::Streamer(b);
-      TAttFill::Streamer(b);
-      TAttMarker::Streamer(b);
-      if (v < 4) {
-         Float_t xmin,xmax;
-         b >> xmin; fXmin = xmin;
-         b >> xmax; fXmax = xmax;
-      } else {
-         b >> fXmin;
-         b >> fXmax;
-      }
-      b >> fNpx;
-      b >> fType;
-      b.ReadArray(fParErrors);
-      if (v > 1) {
-         b.ReadArray(fParMin);
-         b.ReadArray(fParMax);
-      } else {
-         fParMin = new Double_t[fNpar+1];
-         fParMax = new Double_t[fNpar+1];
-      }
-      if (v == 1) {
-      }
-      if (v > 1) {
-         if (v < 4) { // XXX fMaximum was here
-         } else {
-         }
-      }
-      if (v > 2) {
-         b >> fNsave;
-         if (fNsave > 0) {
-            fSave = new Double_t[fNsave+10];
-            b.ReadArray(fSave);
-            //correct fSave limits to match new version
-            fSave[fNsave]   = fSave[fNsave-1];
-            fSave[fNsave+1] = fSave[fNsave+2];
-            fSave[fNsave+2] = fSave[fNsave+3];
-            fNsave += 3;
-         } else fSave = 0;
-      }
-      b.CheckByteCount(R__s, R__c, TFn::IsA());
-      //====end of old versions
-
-   } else {
-      Int_t saved = 0;
-      if (fType > 0 && fNsave <= 0) { saved = 1; Save(fXmin,fXmax,0,0,0,0);}
-
-      b.WriteClassBuffer(TFn::Class(),this);
-
-      if (saved) {delete [] fSave; fSave = 0; fNsave = 0;}
+   if (min == NULL || max == NULL) {
+      Error("SetRange", "Input ranges are invalid (unallocated memory)");
+      return;
    }
-*/
+   std::copy(min, min + fNdim, fMin);
+   std::copy(max, max + fNdim, fMax);
 }
+
 
 /**
  * TFn_Projection1D is a helper / wrapper class used to fix one coordinate of the original
  * TFn and allow integration only on the other n-1 coordinates. 
  */
-// TODO: maybe derive from TFn
 class TFn_Projection1D : ROOT::Math::IBaseFunctionMultiDim {
 public:
    // assumes correct arguments are passed
