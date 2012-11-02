@@ -2,20 +2,26 @@
 #include <string>
 #include "tmvaglob.C"
 
+#include "TH1.h"
+#include "TGraph.h"
 
 // input: - Input file (result from TMVA),
 //        - use of TMVA plotting TStyle
+void bdtcontrolplots(TDirectory *);
+
 void BDTControlPlots( TString fin = "TMVA.root", Bool_t useTMVAStyle = kTRUE )
 {
    // set style and remove existing canvas'
    TMVAGlob::Initialize( useTMVAStyle );
   
    // checks if file with name "fin" is already open, and if not opens one
-   TFile* file = TMVAGlob::OpenFile( fin );  
+   TFile* file;
+   file = TMVAGlob::OpenFile( fin );  
 
    // get all titles of the method BDT
    TList titles;
-   UInt_t ninst = TMVAGlob::GetListOfTitles("Method_BDT",titles);
+   TString methodName = "Method_BDT";
+   UInt_t ninst = TMVAGlob::GetListOfTitles(methodName,titles);
    if (ninst==0) {
       cout << "Could not locate directory 'Method_BDT' in file " << fin << endl;
       return;
@@ -44,15 +50,16 @@ void bdtcontrolplots( TDirectory *bdtdir ) {
    c->Divide(3,2);
 
 
-   const TString titName = bdtdir->GetName();
 
-   TString hname[nPlots]={"BoostMonitor","BoostWeight","BoostWeightVsTree","ErrFractHist","NodesBeforePruning",titName+"_FOMvsIterFrame"}
+
+   TString hname[nPlots]={"BoostMonitor","BoostWeight","BoostWeightVsTree","ErrFractHist","NodesBeforePruning",titName+"_FOMvsIterFrame"};
 
    Bool_t BoostMonitorIsDone=kFALSE;
 
    for (Int_t i=0; i<nPlots; i++){
       Int_t color = 4; 
-      TPad * cPad = (TPad*)c->cd(i+1);
+      TPad * cPad;
+      cPad = (TPad*)c->cd(i+1);
       TH1 *h = (TH1*) bdtdir->Get(hname[i]);
       
       if (h){
@@ -85,66 +92,82 @@ void bdtcontrolplots( TDirectory *bdtdir ) {
    }
    
    
+   TCanvas *c2 = NULL;
    if (BoostMonitorIsDone){
       sprintf( cn2, "cv2_%s", titName.Data() );
-      TCanvas *c2 = new TCanvas( cn2,  Form( "%s BoostWeights", titName.Data() ),
+      c2 = new TCanvas( cn2,  Form( "%s BoostWeights", titName.Data() ),
                                  1200, 1200 ); 
       c2->Divide(5,5);
       Int_t ipad=1;
       
       TIter keys( bdtdir->GetListOfKeys() );
       TKey *key;
-      gDirectory.ls();
+      //      gDirectory->ls();
       while ( (key = (TKey*)keys.Next()) && ipad < 26) {
-         cout << "bla " << key->GetName() << endl;
          TObject *obj=key->ReadObj();
-         cout << "blaa " << obj->GetName() << " " << obj->GetTitle()<< endl;
          if (obj->IsA()->InheritsFrom(TH1::Class())){   
-            TH1F *h = (TH1F*)obj;
+            TH1F *hx = (TH1F*)obj;
             TString hname(Form("%s",obj->GetTitle()));
-            cout << "Hname = " << hname << "  "  << obj->GetTitle() << endl;
-            if (hname.Contains("BoostWeightsInTreeB")){
+            if (hname.Contains("BoostWeightsInTreeB")){ 
                c2->cd(ipad++);
-               h->SetLineColor(2);
-               h->Draw();
+               hx->SetLineColor(4);
+               hx->Draw();
                hname.ReplaceAll("TreeB","TreeS");
-               h = (TH1F*) gDirectory->Get(hname.Data());
-               if (h) {
-                  h->SetLineColor(4);
-                  h->Draw("same");
+               bdtdir->GetObject(hname.Data(),hx);
+               if (hx) {
+                  hx->SetLineColor(2);
+                  hx->Draw("same");
                }
             }
             c2->Update();
          }
       }
-      /*
-      while ( (key = (TKey*)keys.Next()) && ipad < 25) {
-         cout << "bla " << key->GetName() << endl;
-         TObject *obj=key->ReadObj();
-         cout << "blaa " << obj->GetName() << " " << obj->GetTitle()<< endl;
-          if (obj->IsA()->InheritsFrom(TH1::Class())){   
-             TH1F *h = (TH1F*)obj;
-             c2->cd(ipad++);
-             h->Draw();
-             TString hname(Form("%s",h->GetName()));
-             cout << "Hname = " << hname << endl;
-             // if (hname.Contains("BoostWeightsInTreeS")){
-              //    c2->cd(ipad++);
-              //    h->Draw();
-              //    hname.ReplaceAll("S","B");
-              //    h = (TH1*) bdtdir->Get(hname.Data());
-              //    if (h) h->Draw("same");
-              // }
-              c2->Update();
-          }
-      }
-      */
                
    }
+
    // write to file
    TString fname = Form( "plots/%s_ControlPlots", titName.Data() );
    TMVAGlob::imgconv( c, fname );
    
+   if (c2){
+      fname = Form( "plots/%s_ControlPlots2", titName.Data() );
+      TMVAGlob::imgconv( c2, fname );
+   }
+
+   TCanvas *c3 = NULL;
+   if (BoostMonitorIsDone){
+      sprintf( cn2, "cv3_%s", titName.Data() );
+      c3 = new TCanvas( cn2,  Form( "%s Variables", titName.Data() ),
+                        1200, 1200 ); 
+      c3->Divide(5,5);
+      Int_t ipad=1;
+      
+      TIter keys( bdtdir->GetListOfKeys() );
+      TKey *key;
+      //      gDirectory->ls();
+      while ( (key = (TKey*)keys.Next()) && ipad < 26) {
+         TObject *obj=key->ReadObj();
+         if (obj->IsA()->InheritsFrom(TH1::Class())){   
+            TH1F *hx = (TH1F*)obj;
+            TString hname(Form("%s",obj->GetTitle()));
+            if (hname.Contains("SigVar0AtTree")){ 
+               c3->cd(ipad++);
+               hx->SetLineColor(4);
+               hx->Draw();
+               hname.ReplaceAll("Sig","Bkg");
+               bdtdir->GetObject(hname.Data(),hx);
+               if (hx) {
+                  hx->SetLineColor(2);
+                  hx->Draw("same");
+               }
+            }
+            c3->Update();
+         }
+      }
+               
+   }
+
+
 }
 
 

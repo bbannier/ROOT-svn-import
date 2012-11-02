@@ -180,7 +180,7 @@ void TMVAClassification( TString myMethodList = "" )
    // Define the input variables that shall be used for the MVA training
    // note that you may also use variable expressions, such as: "3*var1/var2*abs(var3)"
    // [all types of expressions that can also be parsed by TTree::Draw( "expression" )]
-   factory->AddVariable( "myvar1 := var1+var2", 'F' );
+   factory->AddVariable( "myvar1 := var1+var2", -2, 2, 'F' );
    factory->AddVariable( "myvar2 := var1-var2", "Expression 2", "", 'F' );
    factory->AddVariable( "var3",                "Variable 3", "units", 'F' );
    factory->AddVariable( "var4",                "Variable 4", "units", 'F' );
@@ -269,10 +269,8 @@ void TMVAClassification( TString myMethodList = "" )
    // for training, and the other half for testing:
    //    factory->PrepareTrainingAndTestTree( mycut, "SplitMode=random:!V" );
    // To also specify the number of testing events, use:
-   //    factory->PrepareTrainingAndTestTree( mycut,
-   //                                         "NSigTrain=3000:NBkgTrain=3000:NSigTest=3000:NBkgTest=3000:SplitMode=Random:!V" );
    factory->PrepareTrainingAndTestTree( mycuts, mycutb,
-                                        "nTrain_Signal=0:nTrain_Background=0:SplitMode=Random:NormMode=NumEvents:!V" );
+                                        "nTrain_Signal=1000:nTrain_Background=3000:SplitMode=Random:NormMode=NumEvents:!V" );
 
    // ---- Book MVA methods
    //
@@ -432,7 +430,11 @@ void TMVAClassification( TString myMethodList = "" )
 
    if (Use["BDT"])  // Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDT",
-                           "!H:!V:NTrees=850:MinNodeSize=2.5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:SeparationType=GiniIndex:nCuts=20" );
+      "!H:!V:NTrees=500:MinNodeSize=2.5%:MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5:SeparationType=GiniIndex:nCuts=20:DoBoostMonitor" );
+
+   if (Use["BDT"])  // Adaptive Boost
+      factory->BookMethod( TMVA::Types::kBDT, "BDT2",
+                           "!H:!V:NTrees=500:MinNodeSize=2.5%:MaxDepth=3:!UseYesNoLeaf:BoostType=AdaCost:Css=.1:Cbb=.25:Cts_sb=.5:Ctb_ss=0.75:AdaBoostBeta=0.5:SeparationType=GiniIndexWithLaplace:SigToBkgFraction=1.:nCuts=20:DoBoostMonitor" );
 
    if (Use["BDTB"]) // Bagging
       factory->BookMethod( TMVA::Types::kBDT, "BDTB",
@@ -440,7 +442,8 @@ void TMVAClassification( TString myMethodList = "" )
 
    if (Use["BDTD"]) // Decorrelation + Adaptive Boost
       factory->BookMethod( TMVA::Types::kBDT, "BDTD",
-                           "!H:!V:NTrees=400:MinNodeSize=5%:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:VarTransform=Decorrelate" );
+                           "!H:!V:NTrees=400:nEventsMin=200:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=10:PruneMethod=NoPruning:VarTransform=Decorrelate");
+   //                           "!H:!V:NTrees=400:MinNodeSize=5%:MaxDepth=3:BoostType=AdaBoost:SeparationType=GiniIndex:nCuts=20:VarTransform=Decorrelate" );
 
    if (Use["BDTF"])  // Allow Using Fisher discriminant in node splitting for (strong) linearly correlated variables
       factory->BookMethod( TMVA::Types::kBDT, "BDTMitFisher",
@@ -458,7 +461,7 @@ void TMVAClassification( TString myMethodList = "" )
    // ---- Now you can optimize the setting (configuration) of the MVAs using the set of training events
 
    // factory->OptimizeAllMethods("SigEffAt001","Scan");
-   factory->OptimizeAllMethods("ROCIntegral","FitGA");
+   //   factory->OptimizeAllMethods("ROCIntegral","FitGA");
 
    // --------------------------------------------------------------------------------------------------
 

@@ -237,7 +237,7 @@ void TMVAGui( const char* fName = "TMVA.root" )
    title = Form( "(%i) Decision Tree Control Plots (BDT)", ++ic );
    ActionButton( cbar,  
                  title,
-                 Form( ".x BDTControlPlots.C(\"%s\")", fName ),
+                 Form( ".x BDTControlPlots.C+(\"%s\")", fName ),
                  "Plots to monitor boosting and pruning of decision trees (macro BDTControlPlots.C)",
                  buttonType, "BDT" );
    //    ActionButton( cbar,  
