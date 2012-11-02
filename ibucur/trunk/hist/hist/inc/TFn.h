@@ -47,44 +47,42 @@ class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, p
 private:
    void Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0);
    virtual Double_t ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100) const;
-   virtual Double_t DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t ipar) const {
-      // TODO: implement
-      return 0.0;
-   }
+   virtual Double_t DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t ipar) const;
    virtual Double_t DoEvalPar(const Double_t* x, const Double_t* params = NULL) const; // inherited ROOT::Math::IParametricFunctionMultiDim
    virtual Double_t DoDerivative(const Double_t* x, UInt_t icoord) const;
    
-   UInt_t      fNdim;
-   Double_t*   fMin;         //[fNdim ]Lower bounds for the range
-   Double_t*   fMax;         //[fNdim] Upper bounds for the range
+   UInt_t fNdim;
+   Double_t* fMin;         //[fNdim ]Lower bounds for the range
+   Double_t* fMax;         //[fNdim] Upper bounds for the range
 
-   UInt_t      fNpar;
-   Double_t    *fParams;     //[fNpar] Array of parameters
-   Double_t    *fParErrors;  //[fNpar] Array of errors of the fNpar parameters
-   Double_t    *fParMin;     //[fNpar] Array of lower limits of the fNpar parameters
-   Double_t    *fParMax;     //[fNpar] Array of upper limits of the fNpar parameters
+   UInt_t fNpar;
+   Double_t* fParams;     //[fNpar] Array of parameters
+   Double_t* fParErrors;  //[fNpar] Array of errors of the fNpar parameters
+   Double_t* fParMin;     //[fNpar] Array of lower limits of the fNpar parameters
+   Double_t* fParMax;     //[fNpar] Array of upper limits of the fNpar parameters
 
-   Double_t    fNorm;
-   ROOT::Math::IntegratorMultiDim fIntegrator;
-   ROOT::Math::DistSampler* fSampler;
+   Double_t fNorm;
 
-   TObject     *fParent;     //!Parent object hooking this function (if one)
    // TODO: change to an internal enum
+   TObject     *fParent;     //!Parent object hooking this function (if one)
    Int_t        fType;        // 0 for standard functions, 
                              // 1 if pointer to function)
 
+   ROOT::Math::IntegratorMultiDim fIntegrator;
+   ROOT::Math::DistSampler* fSampler;
+   
+   void        *fCintFunc;   //!Pointer to interpreted function class
    TFormula    *fFormula;    //!Pointer to TFormula in case of standard function 
-   TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
-   void        *fCintFunc;              //! pointer to interpreted function class
    ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
+   TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
 
-   void CreateFromFunctor(const char *name);
-   void CreateFromCintClass(const char *name, Int_t ndim, void * ptr, Double_t* min, Double_t* max, Int_t npar, const char * cname, const char * fname);
+   void ConfigureFunctor(const char *name);
+   void ConfigureCintClass(const char *name, void * ptr, const char * cname, const char * fname);
 
 public:
    TFn();
    TFn(const char* name, const char* formula, Double_t* min, Double_t* max);
-   TFn(const char* name, Int_t ndim, void* fcn, Double_t* min, Double_t* max, Int_t npar = 0);
+   TFn(const char* name, UInt_t ndim, void* fcn, Double_t* min, Double_t* max, UInt_t npar = 0);
 #ifndef __CINT__
    TFn(const char* name, UInt_t ndim, Double_t (*fcn)(Double_t*, Double_t*), Double_t* min, Double_t* max, UInt_t npar = 0);
    TFn(const char* name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, Int_t npar = 0);
@@ -103,15 +101,16 @@ public:
    template <typename Func>
    TFn(const char *name, Int_t ndim, Func f, Double_t* min, Double_t* max, Int_t npar, const char * = 0  ) :
       TNamed(name, "TFn created by a templated constructor from any C++ functor"),
-      fType      ( 1 ),
+      fParent(NULL),
+      fType(1),
       fIntegrator(),
-      fParent    ( 0 ),
-      fMethodCall ( 0),
-      fCintFunc  ( 0 ),
-      fFunctor( ROOT::Math::ParamFunctor(f) )
+      fCintFunc(NULL),
+      fFormula(NULL),
+      fFunctor(ROOT::Math::ParamFunctor(f)),
+      fMethodCall(NULL)
    {
       Init(ndim, min, max, npar);
-      CreateFromFunctor(name);
+      ConfigureFunctor(name);
    }
 
    // Template constructors from a pointer to any C++ class of type PtrObj with a specific member function of type
@@ -124,16 +123,17 @@ public:
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <class PtrObj, typename MemFn>
    TFn(const char *name, Int_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, Int_t npar, const char * = 0, const char * = 0) :
-      TNamed     (name, "TFn created from a PtrObj"),
-      fType      ( 1 ),
+      TNamed(name, "TFn created from a PtrObj"),
+      fParent(NULL),
+      fType(1),
       fIntegrator(),
-      fParent    ( 0 ),
-      fMethodCall( 0 ),
-      fCintFunc  ( 0 ),
-      fFunctor   ( ROOT::Math::ParamFunctor(p,memFn) )
+      fCintFunc(NULL),
+      fFormula(NULL),
+      fFunctor(ROOT::Math::ParamFunctor(p, memFn)),
+      fMethodCall(NULL)
    {
       Init(ndim, min, max, npar);
-      CreateFromFunctor(name);
+      ConfigureFunctor(name);
    }
 
    // constructor used by CINT
@@ -141,9 +141,10 @@ public:
    TFn(const char *name, Int_t ndim, void *ptr, void *, Double_t* min, Double_t* max, Int_t npar, const char *className, const char *methodName = 0);
 
    virtual   ~TFn();
-   TFn(const TFn &f1);
+   TFn(const TFn &f1, const char *name = NULL);
    TFn& operator=(const TFn &rhs);
-   virtual TFn* Clone() const { return new TFn(*this); }
+   virtual TFn*      Clone(const char* name) const { return new TFn(*this, name); } // inherited TObject
+   virtual TFn*      Clone() const { return new TFn(*this); } // inherited ROOT::Math::IBaseFunctionMultiDim
 
    virtual Double_t Eval(Double_t* x);
    //virtual Double_t  operator()(Double_t* x); 
@@ -186,6 +187,8 @@ public:
    virtual void      SetParLimits(UInt_t ipar, Double_t parmin, Double_t parmax);
    virtual void      SetParent(TObject *p=0) { fParent = p;}
    virtual void      SetRange(Double_t* min, Double_t* max);
+
+   virtual UInt_t NPar() const { return fNpar; } // inherited ROOT::Math::IBaseParam
    virtual const Double_t* Parameters() const { return fParams; } // inherited ROOT::Math::IBaseParam
    virtual void SetParameters(const Double_t* p) { // inherited ROOT::Math::IBaseParam
       if (!p) {
@@ -194,8 +197,7 @@ public:
       }
       std::copy(p, p + fNpar, fParams);
    }
-   virtual UInt_t NPar() const { return fNpar; }
-   virtual void FdF(const Double_t* x, Double_t& f, Double_t* df) const {}
+   virtual void FdF(const Double_t* x, Double_t& f, Double_t* df) const;
    virtual void Gradient(const Double_t* x, Double_t* grad) const;
 
    ClassDef(TFn,1)  //The Parametric n-D function
