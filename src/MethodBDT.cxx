@@ -2482,18 +2482,20 @@ void TMVA::MethodBDT::MakeClassSpecific( std::ostream& fout, const TString& clas
    fout << "double " << className << "::GetMvaValue__( const std::vector<double>& inputValues ) const" << std::endl;
    fout << "{" << std::endl;
    fout << "   double myMVA = 0;" << std::endl;
-   for (UInt_t ivar = 0; ivar< fIsLowBkgCut.size(); ivar++){
-      if (fIsLowBkgCut[ivar]){
-         fout << "   if (inputValues["<<ivar<<"] < " << fLowBkgCut[ivar] << ") return -1;  // is background preselection cut" << std::endl;
-      }
-      if (fIsLowSigCut[ivar]){
-         fout << "   if (inputValues["<<ivar<<"] < "<< fLowSigCut[ivar] << ") return  1;  // is signal preselection cut" << std::endl;
-      }
-      if (fIsHighBkgCut[ivar]){
-         fout << "   if (inputValues["<<ivar<<"] > "<<fHighBkgCut[ivar] <<")  return -1;  // is background preselection cut" << std::endl;
-      }
-      if (fIsHighSigCut[ivar]){
-         fout << "   if (inputValues["<<ivar<<"] > "<<fHighSigCut[ivar]<<")  return  1;  // is signal preselection cut" << std::endl;
+   if (fDoPreselection){
+      for (UInt_t ivar = 0; ivar< fIsLowBkgCut.size(); ivar++){
+         if (fIsLowBkgCut[ivar]){
+            fout << "   if (inputValues["<<ivar<<"] < " << fLowBkgCut[ivar] << ") return -1;  // is background preselection cut" << std::endl;
+         }
+         if (fIsLowSigCut[ivar]){
+            fout << "   if (inputValues["<<ivar<<"] < "<< fLowSigCut[ivar] << ") return  1;  // is signal preselection cut" << std::endl;
+         }
+         if (fIsHighBkgCut[ivar]){
+            fout << "   if (inputValues["<<ivar<<"] > "<<fHighBkgCut[ivar] <<")  return -1;  // is background preselection cut" << std::endl;
+         }
+         if (fIsHighSigCut[ivar]){
+            fout << "   if (inputValues["<<ivar<<"] > "<<fHighSigCut[ivar]<<")  return  1;  // is signal preselection cut" << std::endl;
+         }
       }
    }
 
