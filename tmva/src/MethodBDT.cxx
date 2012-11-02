@@ -648,9 +648,8 @@ TMVA::MethodBDT::~MethodBDT( void )
 //_______________________________________________________________________
 void TMVA::MethodBDT::InitEventSample( void )
 {
-   // Write all Events from the Tree into a vector of Events, that are
-   // more easily manipulated. This method should never be called without
-   // existing trainingTree, as it the vector of events from the ROOT training tree
+   // initialize the event sample (i.e. reset the boost-weights... etc)
+
    if (!HasTrainingTree()) Log() << kFATAL << "<Init> Data().TrainingTree() is zero pointer" << Endl;
 
    if (fEventSample.size() > 0) { // do not re-initialise the event sample, just set all boostweights to 1. as if it were untouched
@@ -659,17 +658,20 @@ void TMVA::MethodBDT::InitEventSample( void )
    } else {
       Data()->SetCurrentType(Types::kTraining);
       UInt_t nevents = Data()->GetNTrainingEvents();
-      //      DeterminePreselectionCuts(GetEventCollection(Types::kTraining));
+
       std::vector<const TMVA::Event*> tmp;
       for (Long64_t ievt=0; ievt<nevents; ievt++) {
-	  const Event *event = GetEvent(ievt);
+	 const Event *event = new Event(*(GetEvent(ievt)));
          tmp.push_back(event);
       }
+
       DeterminePreselectionCuts(tmp);
+      for (UInt_t i=0; i<tmp.size(); i++) delete tmp[i];
+     
 
       Bool_t firstNegWeight=kTRUE;
       for (Long64_t ievt=0; ievt<nevents; ievt++) {
-         const Event *event = GetEvent(ievt);
+         const Event *event = new Event(*(GetEvent(ievt)));
          if (fDoPreselection){
            if (TMath::Abs(ApplyPreselectionCuts(event)) > 0.05) continue;
          }
@@ -713,8 +715,9 @@ void TMVA::MethodBDT::InitEventSample( void )
       }
       
       // some pre-processing for events with negative weights
-      if (fPairNegWeightsGlobal) PreProcessNegativeEventWeights();
+      //      if (fPairNegWeightsGlobal) PreProcessNegativeEventWeights();
    }
+
 
    // it does not make sense in decision trees to start with unequal number of signal/background
    // events (weights) .. hence normalize them now (happens atherwise in first 'boosting step'
@@ -729,19 +732,19 @@ void TMVA::MethodBDT::InitEventSample( void )
    //
    // ==> b = n/((1+f)BW)  and a = (nf/(1+f))/SW
 
-
    Double_t nevents = fEventSample.size();
    Double_t sumSigW=0, sumBkgW=0;
    for (UInt_t ievt=0; ievt<fEventSample.size(); ievt++) {
       if ((DataInfo().IsSignal(fEventSample[ievt])) ) sumSigW += fEventSample[ievt]->GetWeight();
-      else sumBkgW += fEventSample[ievt]->GetWeight();
-   }
+      else sumBkgW += fEventSample[ievt]->GetWeight(); 
+  }
    Double_t normSig = nevents/((1+fSigToBkgFraction)*sumSigW)*fSigToBkgFraction;
    Double_t normBkg = nevents/((1+fSigToBkgFraction)*sumBkgW); ;
    for (Long64_t ievt=0; ievt<nevents; ievt++) {
       if ((DataInfo().IsSignal(fEventSample[ievt])) ) fEventSample[ievt]->SetBoostWeight(normSig);
       else                                            fEventSample[ievt]->SetBoostWeight(normBkg);
    }
+
    //just for debug purposes..
    /*
    sumSigW=0;
@@ -1089,7 +1092,7 @@ void TMVA::MethodBDT::Train()
                   << Endl;
          }
          UInt_t nClasses = DataInfo().GetNClasses();
-         for (UInt_t i=0;i<nClasses;i++){
+         for (UInt_t i=0;i<nClasses;i++){            
             fForest.push_back( new DecisionTree( fSepType, fMinNodeSize, fNCuts, i,
                                                  fRandomisedTrees, fUseNvars, fUsePoissonNvars, fNNodesMax, fMaxDepth,
                                                  itree*nClasses+i, fNodePurityLimit, itree*nClasses+i));
@@ -1145,17 +1148,19 @@ void TMVA::MethodBDT::Train()
          }
          else {
             if(!fPruneBeforeBoost) { // only prune after boosting
-               if(fBaggedGradBoost)
+               if(fBaggedGradBoost){
                   fBoostWeights.push_back(this->Boost(fSubSample, fForest.back(), itree));
-               else
+               }else{
                   fBoostWeights.push_back(this->Boost(fEventSample, fForest.back(), itree));
-               // if fAutomatic == true, pruneStrength will be the optimal pruning strength
+               }
+   
+   // if fAutomatic == true, pruneStrength will be the optimal pruning strength
                // determined by the pruning algorithm; otherwise, it is simply the strength parameter
                // set by the user
-               fForest.back()->PruneTree(validationSample);
+               if  (fPruneMethod != DecisionTree::kNoPruning) fForest.back()->PruneTree(validationSample);
             }
             else { // prune first, then apply a boosting cycle
-               fForest.back()->PruneTree(validationSample);
+               if  (fPruneMethod != DecisionTree::kNoPruning) fForest.back()->PruneTree(validationSample);
                fBoostWeights.push_back( this->Boost(fEventSample, fForest.back(), itree) );
             }
             
@@ -1201,7 +1206,9 @@ void TMVA::MethodBDT::Train()
 
 
    // reset all previously stored/accumulated BOOST weights in the event sample
-   for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
+   //   for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
+   for (UInt_t i=0; i<fEventSample.size();      i++) delete fEventSample[i];
+   for (UInt_t i=0; i<fValidationSample.size(); i++) delete fValidationSample[i];
 
 }
 
@@ -1608,6 +1615,7 @@ Double_t TMVA::MethodBDT::AdaBoost( std::vector<const TMVA::Event*>& eventSample
          }
       }
    }
+
    err = sumGlobalwfalse/sumGlobalw ;
    if ( DoRegression() ) {
       //if quadratic loss:
@@ -1667,7 +1675,8 @@ Double_t TMVA::MethodBDT::AdaBoost( std::vector<const TMVA::Event*>& eventSample
      boostWeight = TMath::Log((1.-err)/err)*fAdaBoostBeta;
    else
      boostWeight = TMath::Log((1.+err)/(1-err))*fAdaBoostBeta;
-
+   
+   
    Log() << kDEBUG << "BDT AdaBoos  wrong/all: " << sumGlobalwfalse << "/" << sumGlobalw << " 1-err/err="<<boostWeight<< " log.."<<TMath::Log(boostWeight)<<Endl;
 
    Results* results = Data()->GetResults(GetMethodName(),Types::kTraining, Types::kMaxAnalysisType);

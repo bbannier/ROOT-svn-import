@@ -220,7 +220,6 @@ const std::vector<TMVA::Event*>* TMVA::TransformationHandler::CalcTransformation
          // we now created a new vector, so the next transformations replace the 
          // events by their transformed versions
          replaceColl = kTRUE;  
-         Log() << kWARNING << " Help... Joerg/Andreas? .. I (Helge) had to disable this replacement of the events due to \"const\" problems, is this o.k. or does it create other problems?"<<Endl;
          rClsIt++;
       }
    }
