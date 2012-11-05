@@ -376,6 +376,15 @@ void TMVA::MethodFisher::GetCov_WithinClass( void )
    for (Int_t x=0; x<nvar; x++) {
       for (Int_t y=0; y<nvar; y++) {
          (*fWith)(x, y) = (sumSig[k] + sumBgd[k])/(fSumOfWeightsS + fSumOfWeightsB);
+         // HHV: I am still convinced that THIS is how it should be (below) However, right now
+         // the current version corresponds so nicely with LD, that I don't dare to change it
+         // The reason WHY it correpsonds currently with LD is probably, because also in LD
+         // the weights are not treated correctly in my opinion. I mean, signal and background
+         // should be weighted such that they correspond to same effective number of events. 
+         // THAT is NOT done currently, but just "event weights" are used. If those are weighted
+         // accordingly (as we typically do) then.. fine. Otherwise I think this does NOT give the
+         // proper result.....
+         //(*fWith)(x, y) = sumSig[k]/fSumOfWeightsS + sumBgd[k]/fSumOfWeightsB;
          k++;
       }
    }

@@ -1416,7 +1416,7 @@ TMVA::Tools::CalcCovarianceMatrices( const std::vector<const Event*>& events, In
 	eventVector.push_back (new Event(*(*it)));
     }
     std::vector<TMatrixDSym*>* returnValue = CalcCovarianceMatrices (eventVector, maxCls, transformBase);
-    for (std::vector<const Event*>::const_iterator it = events.begin(), itEnd = events.end(); it != itEnd; ++it)
+    for (std::vector<Event*>::const_iterator it = eventVector.begin(), itEnd = eventVector.end(); it != itEnd; ++it)
     {
 	delete (*it);
     }

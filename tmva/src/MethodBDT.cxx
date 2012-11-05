@@ -661,7 +661,8 @@ void TMVA::MethodBDT::InitEventSample( void )
 
       std::vector<const TMVA::Event*> tmp;
       for (Long64_t ievt=0; ievt<nevents; ievt++) {
-	 const Event *event = new Event(*(GetEvent(ievt)));
+         //	 const Event *event = new Event(*(GetEvent(ievt)));
+         const Event* event = new Event( *GetTrainingEvent(ievt) );
          tmp.push_back(event);
       }
 
@@ -671,7 +672,8 @@ void TMVA::MethodBDT::InitEventSample( void )
 
       Bool_t firstNegWeight=kTRUE;
       for (Long64_t ievt=0; ievt<nevents; ievt++) {
-         const Event *event = new Event(*(GetEvent(ievt)));
+         //         const Event *event = new Event(*(GetEvent(ievt)));
+         const Event* event = new Event( *GetTrainingEvent(ievt) );
          if (fDoPreselection){
            if (TMath::Abs(ApplyPreselectionCuts(event)) > 0.05) continue;
          }
@@ -681,6 +683,7 @@ void TMVA::MethodBDT::InitEventSample( void )
                Log() << kWARNING << " Note, you have events with negative event weight in the sample, but you've chosen to ignore them" << Endl;
                firstNegWeight=kFALSE;
             }
+            delete event;
          }else{
             if (event->GetWeight() < 0) {
                fTrainWithNegWeights=kTRUE;
@@ -1207,6 +1210,7 @@ void TMVA::MethodBDT::Train()
 
    // reset all previously stored/accumulated BOOST weights in the event sample
    //   for (UInt_t iev=0; iev<fEventSample.size(); iev++) fEventSample[iev]->SetBoostWeight(1.);
+   Log() << kDEBUG << "Now I delete the privat data sample"<< Endl;
    for (UInt_t i=0; i<fEventSample.size();      i++) delete fEventSample[i];
    for (UInt_t i=0; i<fValidationSample.size(); i++) delete fValidationSample[i];
 
