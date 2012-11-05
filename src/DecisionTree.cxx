@@ -1336,16 +1336,17 @@ std::vector<Double_t>  TMVA::DecisionTree::GetFisherCoefficients(const EventCons
       
       // read the Training Event into "event"
       const Event * ev = eventSample[ievt];
-
+      
       // sum of weights
       Double_t weight = ev->GetWeight();
       if (ev->GetClass() == fSigClass) sumOfWeightsS += weight;
       else                             sumOfWeightsB += weight;
 
       Double_t* sum = ev->GetClass() == fSigClass ? sumS : sumB;
-      for (UInt_t ivar=0; ivar<nFisherVars; ivar++) sum[ivar] += ev->GetValue( mapVarInFisher[ivar] )*weight;
+      for (UInt_t ivar=0; ivar<nFisherVars; ivar++) {
+         sum[ivar] += ev->GetValue( mapVarInFisher[ivar] )*weight;
+      }
    }
-
    for (UInt_t ivar=0; ivar<nFisherVars; ivar++) {   
       (*meanMatx)( ivar, 2 ) = sumS[ivar];
       (*meanMatx)( ivar, 0 ) = sumS[ivar]/sumOfWeightsS;
@@ -1356,7 +1357,9 @@ std::vector<Double_t>  TMVA::DecisionTree::GetFisherCoefficients(const EventCons
       // signal + background
       (*meanMatx)( ivar, 2 ) /= (sumOfWeightsS + sumOfWeightsB);
    }  
+
    delete [] sumS;
+
    delete [] sumB;
 
    // the matrix of covariance 'within class' reflects the dispersion of the
@@ -1379,17 +1382,19 @@ std::vector<Double_t>  TMVA::DecisionTree::GetFisherCoefficients(const EventCons
    for (UInt_t ievt=0; ievt<nevents; ievt++) {
 
       // read the Training Event into "event"
-      const Event* ev = eventSample[ievt];
+      //      const Event* ev = eventSample[ievt];
+      const Event* ev = eventSample.at(ievt);
 
       Double_t weight = ev->GetWeight(); // may ignore events with negative weights
 
-      for (UInt_t x=0; x<nFisherVars; x++) xval[x] = ev->GetValue( mapVarInFisher[x] );
+      for (UInt_t x=0; x<nFisherVars; x++) {
+         xval[x] = ev->GetValue( mapVarInFisher[x] );
+      }
       Int_t k=0;
       for (UInt_t x=0; x<nFisherVars; x++) {
          for (UInt_t y=0; y<nFisherVars; y++) {            
-            Double_t v = ( (xval[x] - (*meanMatx)(x, 0))*(xval[y] - (*meanMatx)(y, 0)) )*weight;
-            if ( ev->GetClass() == fSigClass ) sum2Sig[k] += v;
-            else                               sum2Bgd[k] += v;
+            if ( ev->GetClass() == fSigClass ) sum2Sig[k] += ( (xval[x] - (*meanMatx)(x, 0))*(xval[y] - (*meanMatx)(y, 0)) )*weight;
+            else                               sum2Bgd[k] += ( (xval[x] - (*meanMatx)(x, 1))*(xval[y] - (*meanMatx)(y, 1)) )*weight;
             k++;
          }
       }
@@ -1397,7 +1402,7 @@ std::vector<Double_t>  TMVA::DecisionTree::GetFisherCoefficients(const EventCons
    Int_t k=0;
    for (UInt_t x=0; x<nFisherVars; x++) {
       for (UInt_t y=0; y<nFisherVars; y++) {
-         (*with)(x, y) = (sum2Sig[k] + sum2Bgd[k])/(sumOfWeightsS + sumOfWeightsB);
+         (*with)(x, y) = sum2Sig[k]/sumOfWeightsS + sum2Bgd[k]/sumOfWeightsB;
          k++;
       }
    }
