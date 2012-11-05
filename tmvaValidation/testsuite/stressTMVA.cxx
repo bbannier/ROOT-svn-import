@@ -70,6 +70,8 @@ void addClassificationTests( UnitTestSuite& TMVA_test, bool full=true)
                                                                 "!H:!V:VolumeRangeMode=Adaptive:KernelEstimator=Gauss:GaussSigma=0.3:NEventsMin=100:NEventsMax=600:VarTransform=PCA" , 0.90, 0.93) );
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kPDEFoam, "PDEFoam",
                                                       "!H:!V:SigBgSeparate=F:TailCut=0.001:VolFrac=0.0666:nActiveCells=500:nSampl=2000:nBin=5:Nmin=100:Kernel=None:Compress=T" , 0.79, 0.85) );
+   TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kPDEFoam, "PDEFoam_SigBgSeparate",
+                                                      "!H:!V:SigBgSeparate=T:TailCut=0.001:VolFrac=0.0666:nActiveCells=500:nSampl=2000:nBin=5:Nmin=10:Kernel=None:Compress=T" , 0.75, 0.85) );
    TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kKNN, "KNN",
                                                       "H:nkNN=20:ScaleFrac=0.8:SigmaFact=1.0:Kernel=Gaus:UseKernel=F:UseWeight=T:!Trim" , 0.8, 0.9) );
    //if (full) TMVA_test.addTest(new MethodUnitTestWithROCLimits( TMVA::Types::kHMatrix, "HMatrix", "!H:!V:VarTransform=G" , 0.88, 0.98) );
