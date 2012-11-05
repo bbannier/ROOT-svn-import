@@ -211,11 +211,6 @@ Float_t TMVA::Event::GetValue( UInt_t ivar ) const
       retval = *((*fValuesDynamic).at(ivar));
    }
    else{
-      if (fValues.size() > 4){
-         std::cout<<  " " << fValues.size() << std::endl;
-         
-         throw std::string(" ???????????????????????");
-      }
       retval = fValues.at(ivar);
    }
 
