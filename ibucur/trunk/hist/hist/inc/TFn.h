@@ -52,7 +52,7 @@ private:
    virtual Double_t DoDerivative(const Double_t* x, UInt_t icoord) const;
    
    UInt_t fNdim;
-   Double_t* fMin;         //[fNdim ]Lower bounds for the range
+   Double_t* fMin;         //[fNdim] Lower bounds for the range
    Double_t* fMax;         //[fNdim] Upper bounds for the range
 
    UInt_t fNpar;
@@ -85,11 +85,11 @@ public:
    TFn(const char* name, UInt_t ndim, void* fcn, Double_t* min, Double_t* max, UInt_t npar = 0);
 #ifndef __CINT__
    TFn(const char* name, UInt_t ndim, Double_t (*fcn)(Double_t*, Double_t*), Double_t* min, Double_t* max, UInt_t npar = 0);
-   TFn(const char* name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, Int_t npar = 0);
+   TFn(const char* name, UInt_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, UInt_t npar = 0);
 #endif
 
    // Constructors using functors (compiled mode only)
-   TFn(const char *name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar = 0);
+   TFn(const char *name, UInt_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, UInt_t npar = 0);
 
    // Template constructors from any C++ callable object, defining "Double_t operator() (Double_t*, Double_t*)".
    // The class name is not needed when using compile code, while it is required when using
@@ -99,7 +99,7 @@ public:
    // xmin and xmax specify the plotting range,  npar is the number of parameters.
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <typename Func>
-   TFn(const char *name, Int_t ndim, Func f, Double_t* min, Double_t* max, Int_t npar, const char * = 0  ) :
+   TFn(const char *name, UInt_t ndim, Func f, Double_t* min, Double_t* max, UInt_t npar, const char * = 0  ) :
       TNamed(name, "TFn created by a templated constructor from any C++ functor"),
       fParent(NULL),
       fType(1),
@@ -109,6 +109,7 @@ public:
       fFunctor(ROOT::Math::ParamFunctor(f)),
       fMethodCall(NULL)
    {
+      std::cout << "TFn template 1 " << std::endl;
       Init(ndim, min, max, npar);
       ConfigureFunctor(name);
    }
@@ -122,7 +123,7 @@ public:
    // xmin and xmax specify the plotting range,  npar is the number of parameters.
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <class PtrObj, typename MemFn>
-   TFn(const char *name, Int_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, Int_t npar, const char * = 0, const char * = 0) :
+   TFn(const char *name, UInt_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, UInt_t npar, const char * = 0, const char * = 0) :
       TNamed(name, "TFn created from a PtrObj"),
       fParent(NULL),
       fType(1),
@@ -132,13 +133,14 @@ public:
       fFunctor(ROOT::Math::ParamFunctor(p, memFn)),
       fMethodCall(NULL)
    {
-      Init(ndim, min, max, npar);
-      ConfigureFunctor(name);
+      std::cout << "TFn template 2 " << std::endl;
+ //     Init(ndim, min, max, npar);
+//      ConfigureFunctor(name);
    }
 
    // constructor used by CINT
-   TFn(const char *name, Int_t ndim, void *ptr, Double_t* min, Double_t* max, Int_t npar, const char *className );
-   TFn(const char *name, Int_t ndim, void *ptr, void *, Double_t* min, Double_t* max, Int_t npar, const char *className, const char *methodName = 0);
+   TFn(const char *name, UInt_t ndim, void *ptr, Double_t* min, Double_t* max, UInt_t npar, const char *className );
+   TFn(const char *name, UInt_t ndim, void *ptr, void *, Double_t* min, Double_t* max, UInt_t npar, const char *className, const char *methodName = 0);
 
    virtual   ~TFn();
    TFn(const TFn &f1, const char *name = NULL);
@@ -166,8 +168,8 @@ public:
    virtual const Double_t* GetRandom() const;
    virtual void      GetRange(Double_t* min, Double_t* xmax) const;
    // GradientPar returns a vector of size n (dimensions), containing the gradient in the point specified by x
-   virtual Double_t  GradientPar(UInt_t ipar, const Double_t* x, Double_t eps = 0.01) const;
-   virtual void      GradientPar(const Double_t* x, Double_t* grad, Double_t eps = 0.01) const;
+//   virtual Double_t  GradientPar(UInt_t ipar, const Double_t* x, Double_t eps = 0.01) const;
+//   virtual void      GradientPar(const Double_t* x, Double_t* grad, Double_t eps = 0.01) const;
    virtual void      InitArgs(const Double_t* x, const Double_t *params = NULL);
    virtual Double_t  IntegralError(const Double_t* a, const Double_t* b, const Double_t* params = NULL, const Double_t* covmat = NULL, Double_t eps = 1e-6);
    virtual Double_t  IntegralMultiple(const Double_t* a, const Double_t* b, UInt_t maxCalls, Double_t eps, Double_t& relErr,Int_t& nFuncEval, Int_t& status);
@@ -175,7 +177,7 @@ public:
    virtual Bool_t    IsInside(const Double_t *x) const;
    virtual UInt_t    NDim() const { return fNdim; } // Inherited from ROOT::Math::IBaseFunctionMultiDim
    virtual Double_t  Norm() const { return fNorm; }
-           TF1*      Projection1D(UInt_t idxCoord) const;
+           TF1*      Projection1D(UInt_t icoord) const;
    virtual void      Print(Option_t *option="") const;
    virtual void      ReleaseParameter(UInt_t ipar);
    template <class PtrObj, typename MemFn> 
