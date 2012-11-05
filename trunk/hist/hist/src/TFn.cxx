@@ -293,11 +293,10 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar)
    
    if (npar > 0) {
       fNpar = npar;
-      //fNames      = new TString[fNpar];
       fParams     = new Double_t[fNpar];
-      fParErrors  = new Double_t[fNpar];
       fParMin     = new Double_t[fNpar];
       fParMax     = new Double_t[fNpar];
+      fParErrors  = new Double_t[fNpar];
 
       for (UInt_t i = 0; i < fNpar; i++)
          fParams[i] = fParErrors[i] = fParMin[i] = fParMax[i] = 0;
@@ -413,13 +412,12 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    //   note the interface with an intermediate pointer.
    //
    // WARNING! A function created with this constructor cannot be Cloned.
-   std::cout << "Ground Control to Major Tom!" << std::endl;
-//   Init(ndim, min, max, npar);
-//   ConfigureFunctor(name);
+   Init(ndim, min, max, npar);
+   ConfigureFunctor(name);
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, Int_t npar) : 
+TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(const Double_t*, const Double_t*), Double_t* min, Double_t* max, UInt_t npar) : 
    TNamed(name, "TFn created from a pointer to a real function"),
    fParent(NULL),
    fType(1),
@@ -440,15 +438,13 @@ TFn::TFn(const char *name, Int_t ndim, Double_t (*fcn)(const Double_t*, const Do
    //   note the interface with an intermediate pointer.
    //
    // WARNING! A function created with this constructor cannot be Cloned.
-
-   std::cout << "Ground Control to Major Tom!" << std::endl;
    Init(ndim, min, max, npar);
-//   ConfigureFunctor(name);
+   ConfigureFunctor(name);
 }
 
 
 //______________________________________________________________________________
-TFn::TFn(const char* name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, Int_t npar ) :
+TFn::TFn(const char* name, UInt_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, UInt_t npar ) :
    TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
    fParent(NULL),
    fType(1),
@@ -469,7 +465,7 @@ TFn::TFn(const char* name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min
     */
 
    Init(ndim, min, max, npar);
-//  ConfigureFunctor(name);
+   ConfigureFunctor(name);
 }
 
 
@@ -477,17 +473,16 @@ TFn::TFn(const char* name, Int_t ndim, ROOT::Math::ParamFunctor f, Double_t* min
 void TFn::ConfigureFunctor(const char *name)
 {
    // Internal Function to Create a TFn  using a Functor.
-
    // Store formula in linked list of formula in ROOT
-   TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
-   gROOT->GetListOfFunctions()->Remove(fnOld);
+/*   TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
+   if(fnOld) gROOT->GetListOfFunctions()->Remove(fnOld);
    SetName(name);
-   gROOT->GetListOfFunctions()->Add(this);
+   gROOT->GetListOfFunctions()->Add(this);*/
 }
 
 
 //______________________________________________________________________________
-TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, Int_t npar, const char* className) : 
+TFn::TFn(const char* name, UInt_t ndim, void* ptr, Double_t* min, Double_t* max, UInt_t npar, const char* className) : 
    TNamed(name, TString::Format("CINT class - %s", className).Data()),
    fIntegrator()
 {
@@ -511,7 +506,7 @@ TFn::TFn(const char* name, Int_t ndim, void* ptr, Double_t* min, Double_t* max, 
 }
 
 //______________________________________________________________________________
-TFn::TFn(const char* name, Int_t ndim, void *ptr, void *, Double_t* min, Double_t* max, Int_t npar, const char* className, const char* methodName) : 
+TFn::TFn(const char* name, UInt_t ndim, void *ptr, void *, Double_t* min, Double_t* max, UInt_t npar, const char* className, const char* methodName) : 
    TNamed(name, TString::Format("CINT class - %s", className).Data()),
    fIntegrator()
 {
@@ -589,15 +584,16 @@ TFn::~TFn()
 {
    // TFn destructor.
    
+   if(fMin) { delete [] fMin; fMin = NULL; }
+   if(fMax) { delete [] fMax; fMax = NULL; }
+   if(fParams) delete [] fParams;
+   if(fParMin) delete [] fParMin;
+   if(fParMax) delete [] fParMax;
+   if(fParErrors) delete [] fParErrors;
+   delete fFormula;
+   delete fMethodCall;
+   
    if (fParent) fParent->RecursiveRemove(this);
-   delete [] fMin;
-   delete [] fMax;
-   delete [] fParams;
-   delete [] fParMin;
-   delete [] fParMax;
-   delete [] fParErrors;
-   //delete fFormula;
-   //delete fMethodCall;
 
 }
 
@@ -1032,7 +1028,7 @@ Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t
       std::copy(p, p + fNpar, params);
    }
 
-   Double_t h; Double_t eps = 1e-6;
+   Double_t h; Double_t eps = 1e-6; // TODO: make eps configurable somehow
    TFn *func = (TFn*)this;
 
    //save original parameters
@@ -1073,7 +1069,7 @@ Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t
    return grad;
 }
 
-
+/*
 //______________________________________________________________________________
 Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps) const
 {
@@ -1141,7 +1137,7 @@ Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps) const
 //______________________________________________________________________________
 void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps) const
 {
-   /**
+   
     * Compute the gradient with respect to the parameters (fParams);
     * @param[in] x - point, were the gradient is computed
     * @param[in] eps = 0.01 - step used in numerical differentiation;
@@ -1151,7 +1147,7 @@ void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps) const
     *
     * The differentiation method employed is the same as in Derivative().
     * If a parameter is fixed, the gradient on it is 0.0 . 
-    */
+    
     
    if(eps< 1e-10 || eps > 1) {
       Warning("Derivative","parameter esp=%g out of allowed range[1e-10,1], reset to 0.01",eps);
@@ -1161,7 +1157,7 @@ void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps) const
    for (UInt_t ipar = 0; ipar < fNpar; ++ipar)
       grad[ipar] = GradientPar(ipar, x, eps);
 }
-
+*/
 
 //______________________________________________________________________________
 void TFn::InitArgs(const Double_t *x, const Double_t *params)
@@ -1179,7 +1175,7 @@ void TFn::InitArgs(const Double_t *x, const Double_t *params)
 
 
 /**
- * TFn_GradientPar : Auxiliary class used by GetRandom.
+ * TFn_Normalised : Auxiliary class used by GetRandom.
  *
  * Given a TFn representing a function f(x|p), where x is the input variable vector, p is the parameter 
  * vector, and p_i is the ith parameter, the user can create a new object equivalent to f normalized
@@ -1224,8 +1220,8 @@ const Double_t* TFn::GetRandom() const {
  */
 class TFn_GradientPar {
 public:
-   TFn_GradientPar(UInt_t idxParam, TFn& func) : fFunc(func), fIdxParam(idxParam) {}
-   Double_t operator() (Double_t *x, Double_t*) const { return fFunc.GradientPar(fIdxParam, x); }
+   TFn_GradientPar(UInt_t ipar, TFn& func) : fFunc(func), fIdxParam(ipar) {}
+   Double_t operator() (Double_t *x, Double_t*) const { return fFunc.ParameterDerivative(x, fIdxParam); }
 
    TFn& fFunc;
    UInt_t fIdxParam;
@@ -1460,8 +1456,8 @@ class TFn_Projection1D : public ROOT::Math::IBaseFunctionMultiDim {
 public:
    // assumes correct arguments are passed
    // TODO: constify !!!
-   TFn_Projection1D(TFn& func, UInt_t idxCoord) :
-      fFunc(func), fNdim(fFunc.NDim()), fIdxCoord(idxCoord), fValCoord(0.0), fIntegrator()
+   TFn_Projection1D(TFn& func, UInt_t icoord) :
+      fFunc(func), fNdim(fFunc.NDim()), fIdxCoord(icoord), fValCoord(0.0), fIntegrator()
    {
       fX = new Double_t[fNdim];
       fMin = new Double_t[fNdim];
@@ -1510,27 +1506,27 @@ private:
 };
 
 //______________________________________________________________________________
-TF1* TFn::Projection1D(UInt_t idxCoord) const
+TF1* TFn::Projection1D(UInt_t icoord) const
 {
    // Return the 1D projection of the function on the icoord coordonate
    // 
    // NOTE: The TFn and its projection are intrinsically linked; if one changes
    // (ranges for example), the other will as well
 
-   // FIXME: return this
-   if(fNdim == 1) return NULL;
-
-   if(idxCoord >= fNdim) {
+   if(fNdim == 1) {
+      Error("Projection1D", "Trying to project a 1-D function on one dimension");
+      return NULL;
+   }
+   if(icoord >= fNdim) {
       Error("Projection1D", "Coordonate index passed as input is out of dimensional range");
       return NULL;
    }
 
    // FIXME: remove const hack
-   TFn_Projection1D* proj =  new TFn_Projection1D(*(TFn*)this, idxCoord);
+   TFn_Projection1D* proj =  new TFn_Projection1D(*(TFn*)this, icoord);
 
    return new TF1(TString::Format("%s_Projection1D", GetName()), proj, &TFn_Projection1D::Integral,
-      fMin[idxCoord], fMax[idxCoord], fNpar, "TFn_Projection1D", "Integral");
-   return new TF1();  
+      fMin[icoord], fMax[icoord], fNpar, "TFn_Projection1D", "Integral");
 }
 
 
