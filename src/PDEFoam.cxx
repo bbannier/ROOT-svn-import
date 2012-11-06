@@ -492,7 +492,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
       if (fDim>0) for (j=0; j<fDim; j++) xRand[j]= cellPosi[j] +fAlpha[j]*(cellSize[j]);
 
       wt         = dx*Eval(xRand, event_density);
-      totevents += dx*event_density;
+      totevents += event_density;
       
       nProj = 0;
       if (fDim>0) {
@@ -512,6 +512,7 @@ void TMVA::PDEFoam::Explore(PDEFoamCell *cell)
       nevEff = ceSum[0]*ceSum[0]/ceSum[1];
       if ( nevEff >= fNBin*fEvPerBin) break;
    }   // ||||||||||||||||||||||||||END MC LOOP|||||||||||||||||||||||||||||
+   totevents *= dx;
    totevents /= fNSampl;
 
    // make shure that, if root cell is explored, more than zero
