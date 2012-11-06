@@ -2516,6 +2516,9 @@ void print_mask_info(ULong_t mask)
    case kArrowRight:
       pngFileName = "right_arrow_cursor.png";
       break;
+   case kRotate:
+      pngFileName = "rotate.png";
+      break;
    case kBottomLeft:
    case kTopRight:
       pngFileName = "top_right_cursor.png";
