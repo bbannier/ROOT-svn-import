@@ -652,7 +652,7 @@ Long_t TMVA::PDEFoam::PeekMax()
    Long_t iCell = -1;
 
    Long_t  i;
-   Double_t  drivMax, driv;
+   Double_t  drivMax, driv, xDiv;
    Bool_t bCutNmin = kTRUE;
    Bool_t bCutMaxDepth = kTRUE;
    //   drivMax = kVlow;
@@ -660,10 +660,15 @@ Long_t TMVA::PDEFoam::PeekMax()
    for(i=0; i<=fLastCe; i++) {//without root
       if( fCells[i]->GetStat() == 1 ) {
          // if driver integral < numeric limit, skip cell
-         if (fCells[i]->GetDriv() < std::numeric_limits<float>::epsilon())
+         driv = fCells[i]->GetDriv();
+         if (driv < std::numeric_limits<float>::epsilon())
             continue;
 
-         driv =  TMath::Abs( fCells[i]->GetDriv());
+         // do not split cell at the edges
+         xDiv = TMath::Abs(fCells[i]->GetXdiv());
+         if (xDiv <= std::numeric_limits<Double_t>::epsilon() ||
+             xDiv >= 1.0 - std::numeric_limits<Double_t>::epsilon())
+            continue;
 
          // apply cut on depth
          if (GetMaxDepth() > 0)
