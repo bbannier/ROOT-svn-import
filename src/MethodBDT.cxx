@@ -666,7 +666,9 @@ void TMVA::MethodBDT::InitEventSample( void )
          tmp.push_back(event);
       }
 
-      DeterminePreselectionCuts(tmp);
+      if (!DoRegression()) DeterminePreselectionCuts(tmp);
+      else fDoPreselection = kFALSE; // just to make sure...
+
       for (UInt_t i=0; i<tmp.size(); i++) delete tmp[i];
      
 
@@ -2036,15 +2038,17 @@ void TMVA::MethodBDT::AddWeightsXMLTo( void* parent ) const
    // write weights to XML
    void* wght = gTools().AddChild(parent, "Weights");
 
-   for (UInt_t ivar=0; ivar<GetNvar(); ivar++){
-     gTools().AddAttr( wght, Form("PreselectionLowBkgVar%d",ivar),      fIsLowBkgCut[ivar]);
-     gTools().AddAttr( wght, Form("PreselectionLowBkgVar%dValue",ivar), fLowBkgCut[ivar]);
-     gTools().AddAttr( wght, Form("PreselectionLowSigVar%d",ivar),      fIsLowSigCut[ivar]);
-     gTools().AddAttr( wght, Form("PreselectionLowSigVar%dValue",ivar), fLowSigCut[ivar]);
-     gTools().AddAttr( wght, Form("PreselectionHighBkgVar%d",ivar),     fIsHighBkgCut[ivar]);
-     gTools().AddAttr( wght, Form("PreselectionHighBkgVar%dValue",ivar),fHighBkgCut[ivar]);
-     gTools().AddAttr( wght, Form("PreselectionHighSigVar%d",ivar),     fIsHighSigCut[ivar]);
-     gTools().AddAttr( wght, Form("PreselectionHighSigVar%dValue",ivar),fHighSigCut[ivar]);
+   if (fDoPreselection){
+      for (UInt_t ivar=0; ivar<GetNvar(); ivar++){
+         gTools().AddAttr( wght, Form("PreselectionLowBkgVar%d",ivar),      fIsLowBkgCut[ivar]);
+         gTools().AddAttr( wght, Form("PreselectionLowBkgVar%dValue",ivar), fLowBkgCut[ivar]);
+         gTools().AddAttr( wght, Form("PreselectionLowSigVar%d",ivar),      fIsLowSigCut[ivar]);
+         gTools().AddAttr( wght, Form("PreselectionLowSigVar%dValue",ivar), fLowSigCut[ivar]);
+         gTools().AddAttr( wght, Form("PreselectionHighBkgVar%d",ivar),     fIsHighBkgCut[ivar]);
+         gTools().AddAttr( wght, Form("PreselectionHighBkgVar%dValue",ivar),fHighBkgCut[ivar]);
+         gTools().AddAttr( wght, Form("PreselectionHighSigVar%d",ivar),     fIsHighSigCut[ivar]);
+         gTools().AddAttr( wght, Form("PreselectionHighSigVar%dValue",ivar),fHighSigCut[ivar]);
+      }
    }
 
 
