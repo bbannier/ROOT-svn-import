@@ -46,6 +46,7 @@ class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, p
 
 private:
    void Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0); // initalization function
+   void InitArgs(const Double_t* x, const Double_t *params = NULL);
    void ConfigureFunctor(const char *name);
    void ConfigureCintClass(const char *name, void * ptr, const char * cname, const char * fname);
    Double_t ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100) const;
@@ -81,6 +82,7 @@ private:
 public:
    TFn();
    TFn(const char* name, const char* formula, Double_t* min, Double_t* max);
+   TFn(const char* name, UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0);
    TFn(const char* name, UInt_t ndim, void* fcn, Double_t* min, Double_t* max, UInt_t npar = 0);
 #ifndef __CINT__
    // TODO: determine if there is still a reason to keep these constructors
@@ -140,14 +142,12 @@ public:
    TFn(const char *name, UInt_t ndim, void *ptr, Double_t* min, Double_t* max, UInt_t npar, const char *className );
    TFn(const char *name, UInt_t ndim, void *ptr, void *, Double_t* min, Double_t* max, UInt_t npar, const char *className, const char *methodName = 0);
 
-   virtual   ~TFn();
+   virtual ~TFn();
    TFn(const TFn &rhs, const char *name = NULL);
    TFn& operator=(const TFn &rhs);
-   virtual TFn*      Clone(const char* name) const { return new TFn(*this, name); } // inherited TObject
-   virtual TFn*      Clone() const { return new TFn(*this); } // inherited ROOT::Math::IBaseFunctionMultiDim
+   virtual TFn* Clone(const char* name) const { return new TFn(*this, name); } // inherited TObject
+   virtual TFn* Clone() const { return new TFn(*this); } // inherited ROOT::Math::IBaseFunctionMultiDim
 
-   virtual Double_t Eval(Double_t* x);
-   //virtual Double_t  operator()(Double_t* x); 
    virtual Double_t  operator()(const Double_t* x, const Double_t* params = NULL);  
    virtual void      FixParameter(UInt_t ipar, Double_t value);
    virtual void      FdF(const Double_t* x, Double_t& f, Double_t* df) const; // inherited ROOT::Math::IGradientMultiDim
@@ -168,9 +168,8 @@ public:
    virtual void      Gradient(const Double_t* x, Double_t* grad) const; // inherited ROOT::Math::IGradientMultiDim
 //   virtual Double_t  GradientPar(UInt_t ipar, const Double_t* x, Double_t eps = 0.01) const;
 //   virtual void      GradientPar(const Double_t* x, Double_t* grad, Double_t eps = 0.01) const;
-   virtual void      InitArgs(const Double_t* x, const Double_t *params = NULL);
    virtual Double_t  IntegralError(const Double_t* a, const Double_t* b, const Double_t* params = NULL, const Double_t* covmat = NULL, Double_t eps = 1e-6);
-   virtual Double_t  Integral(const Double_t* a = NULL, const Double_t* b = NULL, Double_t absTolerance = 1e-6, Double_t relTolerance = 1e-6, UInt_t maxCalls = 100000) const;
+   virtual Double_t  Integral(const Double_t* a = NULL, const Double_t* b = NULL, Double_t absTol = 1e-6, Double_t relTol = 1e-6, UInt_t maxEval = 100000, Double_t* error = NULL, Int_t* status = NULL) const;
    virtual Bool_t    IsInside(const Double_t *x) const;
    virtual UInt_t    NDim() const { return fNdim; } // Inherited from ROOT::Math::IBaseFunctionMultiDim
    virtual UInt_t    NPar() const { return fNpar; } // inherited ROOT::Math::IBaseParam
