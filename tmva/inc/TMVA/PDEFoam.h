@@ -76,11 +76,12 @@ namespace TMVA {
    // enum type for possible foam cell values
    // kValue         : cell value who's rms is minimized
    // kValueError    : error on kValue
-   // kValueDensity  : volume density of kValue
+   // kValueDensity  : kValue / cell volume
    // kMeanValue     : mean sampling value (saved in fIntegral)
    // kRms           : rms of sampling distribution (saved in fDriver)
    // kRmsOvMean     : rms/mean of sampling distribution (saved in
    //                  fDriver and fIntegral)
+   // kCellVolume    : volume of cell
    enum ECellValue { kValue, kValueError, kValueDensity, kMeanValue, 
 		     kRms, kRmsOvMean, kCellVolume };
 }
