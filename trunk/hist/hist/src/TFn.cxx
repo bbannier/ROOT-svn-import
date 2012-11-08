@@ -252,44 +252,59 @@ Begin_Html
    if running in CINT and they are not need in compiled C++ mode.
    See also the tutorial math/exampleFunctor.C for a running example.
 End_Html */
-
+class TFn_AbsValue : public ROOT::Math::IBaseFunctionMultiDim {
+public:
+   TFn_AbsValue(const TFn& func) : fFunc(func) {}
+   UInt_t NDim() const { return fFunc.NDim(); }
+private:
+   TFn_AbsValue* Clone() const { return NULL; } // do not use
+   const TFn& fFunc;
+   Double_t DoEval(const Double_t* x) const {
+      Double_t result = fFunc(x);
+      return result < 0 ? -result : result;
+   }
+};
 
 /**
- * @class TFn_Normalised 
+ * @class TFn_Distribution 
  * @brief Auxiliary class used in TFn::Init to initialize fSampler.
  *
  * Given a TFn representing a function f(x|p), where x is the input variable vector, p is the parameter 
  * vector, and p_i is the ith parameter, the user can create a new object equivalent to f normalized
- * over the range of x, by wrapping the TFn in a TFn_Normalised.
+ * over the range of x, by wrapping the TFn in a TFn_Distribution.
  *
  */
-class TFn_Normalised : public ROOT::Math::IBaseFunctionMultiDim {
+class TFn_Distribution : public ROOT::Math::IBaseFunctionMultiDim {
 public:
-   TFn_Normalised(const TFn& func) : fFunc(func), fNormalisationConstant(fFunc.Integral()) {}
-
+   TFn_Distribution(const TFn& func) : fFunc(func), fIntegrator(fFunc) { 
+      func.GetRange(fMin, fMax);
+      fNormalisationConstant = fIntegrator.Integral(fMin, fMax);
+   }
+   ~TFn_Distribution() { delete[] fMin; delete[] fMax; }
    UInt_t NDim() const { return fFunc.NDim(); }
-   // NOTE: use with caution
-   TFn_Normalised* Clone() const { return new TFn_Normalised(*fFunc.Clone()); }
-  
 private:
-   const TFn& fFunc;
-   const Double_t fNormalisationConstant;
-   Double_t DoEval(const Double_t* x) const { return (*((TFn*)&fFunc))(x) / fNormalisationConstant; }
+   TFn_Distribution* Clone() const { return NULL; } // do not use
+   const TFn_AbsValue fFunc;
+   Double_t fNormalisationConstant;
+   Double_t* fMin;
+   Double_t* fMax;
+   Double_t DoEval(const Double_t* x) const { 
+      if (fNormalisationConstant == 0.0) return 0.0;
+      return fFunc(x) / fNormalisationConstant;
+   }
+   ROOT::Math::IntegratorMultiDim fIntegrator;
 };
 
-
-
 //______________________________________________________________________________
-void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar) 
+void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar, Double_t* params, Double_t* parMin, Double_t* parMax, Double_t* parErrors) 
 {
    // TFn initializer, employed by constructors
    fMin = fMax = NULL;
    fParams = fParErrors = fParMin = fParMax = NULL;
-   fNorm = -1.0; // set an invalid value, until first calculation
    fNdim = fNpar = 0;
 
    if (ndim > 0) {
-      fNdim = ndim; // XXX: should we put this in the initialization list?
+      fNdim = ndim;
       fMin = new Double_t[fNdim];
       fMax = new Double_t[fNdim];
       std::copy(min, min + fNdim, fMin);
@@ -303,12 +318,18 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar)
       fParMax     = new Double_t[fNpar];
       fParErrors  = new Double_t[fNpar];
 
-      for (UInt_t i = 0; i < fNpar; i++)
-         fParams[i] = fParErrors[i] = fParMin[i] = fParMax[i] = 0;
+      if (params) std::copy(params, params + fNpar, fParams);
+      else std::fill(fParams, fParams + fNpar, 0);
+      if (parMin) std::copy(parMin, parMin + fNpar, fParMin);
+      else std::fill(fParMin, fParMin + fNpar, 0);
+      if (parMax) std::copy(parMax, parMax + fNpar, fParMax);
+      else std::fill(fParMax, fParMax + fNpar, 0);
+      if (parErrors) std::copy(parErrors, parErrors + fNpar, fParErrors);
+      else std::fill(fParErrors, fParErrors + fNpar, 0);
    }
    
    fSampler = ROOT::Math::Factory::CreateDistSampler();
-   fSampler->SetFunction(TFn_Normalised(*this));
+   fSampler->SetFunction(TFn_Distribution(*this));
    if (!fSampler) {
       Error("Init", "ROOT::Math::Factory could not create the default ROOT::Math::DistSampler");
       return;
@@ -375,9 +396,9 @@ TFn::TFn(const char* name, UInt_t ndim, Double_t* min, Double_t* max, UInt_t npa
     * @warning Function must be of type Double_t fcn(Double_t* x, Double_t* params)
     */
    Init(ndim, min, max, npar);
+
    TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(fnOld);
-   // SetName(name);
    
    if (name) {
       if(*name == '*') return; // is this possible?
@@ -424,7 +445,6 @@ TFn::TFn(const char* name, UInt_t ndim, void* fcn, Double_t* min, Double_t* max,
 
    TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(fnOld);
-   SetName(name);
 
    const char *funcname = gCint->Getp2f2funcname(fcn);
    SetTitle(funcname);
@@ -525,7 +545,6 @@ void TFn::ConfigureFunctor(const char* name)
    // TODO: make this work, or remove if not really needed
    TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    if(fnOld) gROOT->GetListOfFunctions()->Remove(fnOld);
-   SetName(name);
    gROOT->GetListOfFunctions()->Add(this);
 }
 
@@ -602,7 +621,6 @@ void TFn::ConfigureCintClass(const char *name, void *ptr, const char * className
 
    TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    gROOT->GetListOfFunctions()->Remove(fnOld);
-   SetName(name);
 
    if (!ptr) return;
    fCintFunc = ptr;
@@ -660,7 +678,7 @@ TFn::TFn(const TFn &rhs, const char* name) : TNamed(rhs)
    // TFn copy constructor.
    if (name) SetName(name);
    else SetName(TString::Format("%s_copy", rhs.GetName()));
-
+   // TODO: fix fFormula
    fType = rhs.fType; 
    fFormula = rhs.fFormula; 
    fCintFunc = rhs.fCintFunc;
@@ -676,47 +694,43 @@ TFn& TFn::operator=(const TFn& rhs)
    // Assignment operator.
 
    if (this != &rhs) {
-
-      fParent = rhs.fParent;
-      
+      // TODO: implement swap-and-copy idiom
+      fParent = rhs.fParent; 
       fType = rhs.fType;
       fFunctor = rhs.fFunctor;
       fCintFunc = rhs.fCintFunc;
       delete fFormula; if(rhs.fFormula) fFormula = new TFormula(*fFormula);
       delete fMethodCall; if (rhs.fMethodCall) fMethodCall =  new TMethodCall(*fMethodCall);
 
-      if (fNdim != rhs.fNdim) {
-         fNdim = rhs.fNdim;
-         delete [] fMin; 
-         delete [] fMax;
+      delete [] fMin; delete [] fMax;
+      delete [] fParams; delete [] fParMin; delete [] fParMax; delete [] fParErrors;
+      delete fSampler;
 
-         if(fNdim > 0) {
-            fMin = new Double_t[fNdim];
-            fMax = new Double_t[fNdim];
-            std::copy(rhs.fMin, rhs.fMin + fNdim, fMin);
-            std::copy(rhs.fMax, rhs.fMax + fNdim, fMax);
-         }
-      }
-
-      if (fNpar != rhs.fNpar) {
-         fNpar = rhs.fNpar;
-         delete [] fParMin; 
-         delete [] fParMax; 
-         delete [] fParErrors;
-        
-         if (fNpar > 0) { 
-            fParMin = new Double_t[fNpar];
-            fParMax = new Double_t[fNpar];
-            fParErrors = new Double_t[fNpar];
-            std::copy(rhs.fParMin, rhs.fParMin + fNpar, fParMin);
-            std::copy(rhs.fParMax, rhs.fParMax + fNpar, fParMax);
-            std::copy(rhs.fParErrors, rhs.fParErrors + fNpar, fParErrors);
-         }
-      }
-   }
+      Init(rhs.fNdim, rhs.fMin, rhs.fMax, rhs.fNpar);
+  }
 
    return *this;
 }
+
+
+class TFn_OneVariableCoordinate : public ROOT::Math::IBaseFunctionOneDim {
+public:
+   TFn_OneVariableCoordinate(const TFn& func, const Double_t* x, UInt_t icoord) : fFunc(func), fIdxCoord(icoord) {
+      fX = new Double_t[func.NDim()];
+      std::copy(x, x + func.NDim(), fX);
+   }
+   ~TFn_OneVariableCoordinate() { delete [] fX; }
+private: 
+   virtual ROOT::Math::IBaseFunctionOneDim* Clone() const { return NULL; }; // do not use
+
+   const TFn& fFunc;
+   const UInt_t fIdxCoord;
+   Double_t* fX;
+   virtual Double_t DoEval(Double_t x) const {
+      fX[fIdxCoord] = x;
+      return fFunc(fX);
+   }
+};
 
 //______________________________________________________________________________
 Double_t TFn::DoDerivative(const Double_t* x, UInt_t icoord) const
@@ -740,60 +754,31 @@ Double_t TFn::DoDerivative(const Double_t* x, UInt_t icoord) const
       return 0.0;
    }
 
-   Double_t* xm = const_cast<Double_t*>(x); 
-   Double_t  x0 = x[icoord];
-   
-   // The step size is chosen depending on x[icoord], except when the latter is too small, in which case
-   // a default epsilon is used.
-   Double_t eps = std::numeric_limits<Double_t>::epsilon() / 7e-7; // (see R numDeriv package)
-   Double_t h = 1e-4 * x0 < eps ? eps : 1e-4 * x0; // STEP SIZE -> gives precision
-   
-   xm[icoord] = x0 + h; Double_t f_plus  = DoEvalPar(xm);
-   xm[icoord] = x0 - h; Double_t f_minus = DoEvalPar(xm);
-   Double_t diff_h = f_plus - f_minus; 
-   // So far we have O(h^2) for the error term
+   TFn_OneVariableCoordinate func(*this, x, icoord);
+   ROOT::Math::RichardsonDerivator derivator(func);
 
-   // Now we use 2*h instead of h
-   h *= 2.0;
-
-   xm[icoord] = x0 + h;          f_plus  = DoEvalPar(xm);
-   xm[icoord] = x0 - h;          f_minus = DoEvalPar(xm);
-   Double_t diff_2h = f_plus - f_minus;
-
-   xm[icoord] = x0; // restore initial value of vector (it has virtually remained const)
-
-   // Richardson's extrapolation for f'(x), simplified expression -> O(h^3) error term
-   // Solution is equivalent to the five-point stencil (http://en.wikipedia.org/wiki/Five-point_stencil)
-   // note that the 6.0 appears instead of 12.0 at the denominator because we have doubled 'h'
-   return (8.0 * diff_h - diff_2h) / (6.0 * h);
+   return derivator.Derivative1(x[icoord]);
 }
 
 
 //______________________________________________________________________________
 Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
 {
-   // Evaluate function with given coordinates and parameters.
-   //
-   // Compute the value of this function at point defined by array x
-   // and current values of parameters in array params.
-   // If argument params is omitted, the internal values of parameters
-   // (array fParams) will be used instead.
-   // ! x must be filled with the corresponding number of dimensions.
-   //
-   // XXX: analyse this
-   // WARNING. In case of an interpreted function (fType = INTERPRETER_FUNCTOR), 
-   // it is the user's responsibility to initialize the parameters via InitArgs
-   // before calling this function. InitArgs should be called at least once to 
-   // specify the addresses of the arguments x and params. InitArgs should be called 
-   // everytime these addresses change.
-
+   /**
+    * @brief Evaluate function with given coordinates and parameters.
+    *
+    * Compute the value of this function at point defined by array x and current 
+    * values of parameters in array params. If argument params is omitted, the 
+    * internal values of parameters will be used instead.
+   
+    * @warning x must be filled with the corresponding number of dimensions.
+    */
    TFn* func = const_cast<TFn*>(this);
-   if(fMethodCall) func->InitArgs(x, params); // TODO: yes or not?
+   UpdateCintAddresses(x, params); 
 
    Double_t result = 0.0;
    if (fType == FORMULA) {
-      assert(fFormula != NULL);
-      return fFormula->EvalPar(x,params);
+      if(fFormula) result = fFormula->EvalPar(x,params);
    } else if (fType == FUNCTOR)  {
       if (!func->fFunctor.Empty()) {
          if (params) result = func->fFunctor((Double_t*)x,(Double_t*)params);
@@ -825,24 +810,33 @@ void TFn::FixParameter(UInt_t ipar, Double_t value)
 
 
 //______________________________________________________________________________
-THn* TFn::GetHistogram() const 
+THn* TFn::GetHistogram(const UInt_t* npoints) const 
 {
    // Create an approximative histogram for the function
-  // TODO: points 
-   Int_t* fNpoints = new Int_t[fNdim];
+  
+   if (npoints == NULL) {
+      Error("GetHistogram", "Array containting number of resolution points for each dimension has not been specified.");
+      return NULL;
+   } else {
+      for (UInt_t i = 0; i < fNdim; ++i)
+         if (npoints[i] == 0) {
+            Error("GetHistogram", "Number of points to be extracted on dimension %u is set to 0. Invalid value", i);
+            return NULL;
+         }
+   } 
+
    Double_t* df = new Double_t[fNdim];
    Double_t* crtPoint = new Double_t[fNdim]; // placed in bin center
    for (UInt_t i = 0; i < fNdim; ++i) {
-      fNpoints[i] = 10;
-      df[i] = (fMax[i] - fMin[i]) / fNpoints[i];
+      df[i] = (fMax[i] - fMin[i]) / npoints[i];
       crtPoint[i] = fMin[i] - df[i] / 2.0;
    }
 
    THn* hist = new THnD(TString::Format("%s_Histogram", GetName()).Data(), 
-      TString::Format("%s THn Approximation", GetTitle()).Data(), fNdim, fNpoints, fMin, fMax);
+      TString::Format("%s THn Approximation", GetTitle()).Data(), fNdim, (const Int_t *)npoints, fMin, fMax);
 
    for (UInt_t i = 0; i < fNdim; ++i) {
-      for (Int_t j = 0; j < fNpoints[i]; ++j) {
+      for (UInt_t j = 0; j < npoints[i]; ++j) {
          crtPoint[i] += df[i]; // traverse the grid
          Int_t bin = hist->GetBin(crtPoint);
          hist->SetBinContent(bin, DoEvalPar(crtPoint, fParams));
@@ -1006,7 +1000,7 @@ Double_t TFn::GetParError(UInt_t ipar) const
 
 
 //______________________________________________________________________________
-void TFn::GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const
+void TFn::GetParLimits(UInt_t ipar, Double_t& parmin, Double_t& parmax) const
 {
    // Return limits for parameter ipar.
 
@@ -1017,10 +1011,11 @@ void TFn::GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const
 }
 
 //______________________________________________________________________________
-void TFn::GetRange(Double_t *min, Double_t *max) const
+void TFn::GetRange(Double_t*& min, Double_t*& max) const
 {
-   // Return range of a n-D function.
-   // NOTE: the user is responsible for creating arrays of sufficient size
+   // Return range of a n-D function. Deletes input pointers.
+   delete [] min; min = new Double_t[fNdim];
+   delete [] max; max = new Double_t[fNdim];
    std::copy(fMin, fMin + fNdim, min);
    std::copy(fMax, fMax + fNdim, max);
 }
@@ -1048,159 +1043,64 @@ void TFn::Gradient(const Double_t* x, Double_t* grad) const
       grad[i] = DoDerivative(x, i);
 }
 
-Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* p, UInt_t ipar) const 
+class TFn_OneVariableParameter : public ROOT::Math::IBaseFunctionOneDim {
+public:
+   TFn_OneVariableParameter(const TFn& func, const Double_t* x, const Double_t* params, UInt_t ipar) : fFunc(func), fIdxParam(ipar) {
+      fX = new Double_t[func.NDim()];
+      fParams = new Double_t[func.NPar()];
+      std::copy(x, x + func.NDim(), fX);
+      std::copy(params, params + func.NPar(), fParams);
+   }
+   ~TFn_OneVariableParameter() { delete [] fX; delete [] fParams; }
+
+private:
+   virtual TFn_OneVariableParameter* Clone() const { return NULL; } // do not use
+
+   // params are the variable here, not the coordinates
+   virtual Double_t DoEval(Double_t p) const {
+      fParams[fIdxParam] = p;
+      return fFunc(fX, fParams);
+   }
+
+   const TFn& fFunc;
+   Double_t* fX;
+   Double_t* fParams;
+   const UInt_t fIdxParam;
+};
+
+Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* params, UInt_t ipar) const 
 {
-   
    if (ipar >= fNpar) {
-      Warning("DoParameterDerivative", "Input parameter index is out of dimensional range; returning 0.0");
+      Error("DoParameterDerivative", "Input parameter index is out of dimensional range");
+      return 0.0;
+   }
+   
+   Double_t al, bl;
+   GetParLimits(ipar, al, bl);
+   if (al * bl != 0.0 && al >= bl) {
+      Error("DoParameterDerivative", "Chosen input parameter with index %d is fixed", ipar);
       return 0.0;
    }
 
-   Double_t* params = new Double_t[fNpar];
-
-   if (p == NULL) {
+   const Double_t* actualParams = NULL;
+   if (params == NULL) {
       Warning("DoParameterDerivative", "Input parameters not specified by user; using internal parameter values");
-      std::copy(fParams, fParams + fNpar, params);
+      actualParams = fParams;
    } else {
-      std::copy(p, p + fNpar, params);
+      actualParams = params;
    }
-
-   Double_t h; Double_t eps = 1e-6; // TODO: make eps configurable somehow
-   TFn *func = (TFn*)this;
-
-   //save original parameters
-   Double_t par0 = params[ipar];
-
-   func->InitArgs(x, params);
-
-   Double_t al, bl;
-   Double_t f1, f2, g1, g2, h2, d0, d2;
-
-   func->GetParLimits(ipar, al, bl);
-   if (al * bl != 0.0 && al >= bl) {
-      //this parameter is fixed
-      return 0;
-   }
-
-   // check if error has been computer (is not zero)
-   if (func->GetParError(ipar) != 0.0)
-      h = eps * func->GetParError(ipar);
-   else
-      h = eps;
-
-   params[ipar] = par0 + h;     f1 = func->DoEvalPar(x, params);
-   params[ipar] = par0 - h;     f2 = func->DoEvalPar(x, params);
-   params[ipar] = par0 + h/2;   g1 = func->DoEvalPar(x, params);
-   params[ipar] = par0 - h/2;   g2 = func->DoEvalPar(x, params);
-
-   //compute the central differences
-   h2 = 1.0 / (2.0 * h);
-   d0 = f1 - f2;
-   d2 = 2.0 * (g1 - g2);
-
-   Double_t grad = h2 * (4.0 * d2 - d0) / 3.0;
-
-   // restore original value
-   fParams[ipar] = par0;
-
-   return grad;
-}
-
-/*
-//______________________________________________________________________________
-Double_t TFn::GradientPar(UInt_t ipar, const Double_t *x, Double_t eps) const
-{
-   // Compute the gradient (derivative) wrt a parameter ipar
-   // Parameters:
-   // ipar - index of parameter for which the derivative is computed
-   // x - point, where the derivative is computed
-   // eps - if the errors of parameters have been computed, the step used in
-   // numerical differentiation is eps*parameter_error.
-   // if the errors have not been computed, step=eps is used
-   // default value of eps = 0.01
-   // Method is the same as in Derivative() function
-   //
-   // If a paramter is fixed, the gradient on this parameter = 0
-
-   if (fNpar == 0) return 0.0; 
-
-   if (eps< 1e-10 || eps > 1) {
-      Warning("Derivative","parameter esp=%g out of allowed range[1e-10,1], reset to 0.01", eps);
-      eps = 0.01;
-   }
-
-   Double_t h;
-   TFn *func = (TFn*)this;
-
-   //save original parameters
-   Double_t par0 = fParams[ipar];
-
-   func->InitArgs(x, fParams);
-
-   Double_t al, bl;
-   Double_t f1, f2, g1, g2, h2, d0, d2;
-
-   ((TFn*)this)->GetParLimits(ipar,al,bl);
-   if (al*bl != 0 && al >= bl) {
-      //this parameter is fixed
-      return 0;
-   }
-
-   // check if error has been computer (is not zero)
-   if (func->GetParError(ipar) != 0.0)
-      h = eps*func->GetParError(ipar);
-   else
-      h = eps;
-
-   fParams[ipar] = par0 + h;     f1 = func->DoEvalPar(x,fParams);
-   fParams[ipar] = par0 - h;     f2 = func->DoEvalPar(x,fParams);
-   fParams[ipar] = par0 + h/2;   g1 = func->DoEvalPar(x,fParams);
-   fParams[ipar] = par0 - h/2;   g2 = func->DoEvalPar(x,fParams);
-
-   //compute the central differences
-   h2 = 1 / (2.0 * h);
-   d0 = f1 - f2;
-   d2 = 2.0 * (g1 - g2);
-
-   Double_t  grad = h2*(4*d2 - d0)/3.;
-
-   // restore original value
-   fParams[ipar] = par0;
-
-   return grad;
-}
-
-
-//______________________________________________________________________________
-void TFn::GradientPar(const Double_t *x, Double_t *grad, Double_t eps) const
-{
    
-    * Compute the gradient with respect to the parameters (fParams);
-    * @param[in] x - point, were the gradient is computed
-    * @param[in] eps = 0.01 - step used in numerical differentiation;
-    *    if the parameter errors have been computed, the step used is
-    *    eps * parError instead of eps
-    * @param[out] grad - array where the computed gradient is returned, assumed to be of size fNpar
-    *
-    * The differentiation method employed is the same as in Derivative().
-    * If a parameter is fixed, the gradient on it is 0.0 . 
-    
-    
-   if(eps< 1e-10 || eps > 1) {
-      Warning("Derivative","parameter esp=%g out of allowed range[1e-10,1], reset to 0.01",eps);
-      eps = 0.01;
-   }
+   TFn_OneVariableParameter func(*this, x, actualParams, ipar);
+   ROOT::Math::RichardsonDerivator derivator(func);
 
-   for (UInt_t ipar = 0; ipar < fNpar; ++ipar)
-      grad[ipar] = GradientPar(ipar, x, eps);
+   return derivator.Derivative1(actualParams[ipar]);
 }
-*/
+
 
 //______________________________________________________________________________
-void TFn::InitArgs(const Double_t *x, const Double_t *params)
+void TFn::UpdateCintAddresses(const Double_t *x, const Double_t *params) const
 {
-   // Initialize parameters addresses.
-
+   // Initialize parameters addresses in case of CINT function.
    if (fMethodCall) {
       Long_t args[2];
       args[0] = (Long_t)x;
@@ -1232,10 +1132,10 @@ const Double_t* TFn::GetRandom() const {
  */
 class TFn_ParameterDerivative {
 public:
-   TFn_ParameterDerivative(UInt_t ipar, TFn& func) : fFunc(func), fIdxParam(ipar) {}
+   TFn_ParameterDerivative(const TFn& func, UInt_t ipar) : fFunc(func), fIdxParam(ipar) {}
    Double_t operator() (Double_t *x, Double_t*) const { return fFunc.ParameterDerivative(x, fIdxParam); }
 
-   TFn& fFunc;
+   const TFn& fFunc;
    UInt_t fIdxParam;
 };
 
@@ -1282,8 +1182,8 @@ Double_t TFn::IntegralError(const Double_t* a, const Double_t* b, const Double_t
       // check that the parameter error is not zero, otherwise skip it
       integrals[i] = 0.0;
       if (covMatrix(i,i) > 0.0) {
-         TFn gradFunc(TString::Format("%s_GradientPar", GetName()),
-            fNdim, TFn_ParameterDerivative(i, *(TFn*)this), 0, 0, 0);
+         TFn gradFunc(TString::Format("%s_ParameterDerivative", GetName()),
+            fNdim, TFn_ParameterDerivative(*this, i), fMin, fMax, fNpar);
          integrals[i] = gradFunc.Integral(a, b, eps, eps);
       }
    }
@@ -1331,7 +1231,6 @@ Bool_t TFn::IsInside(const Double_t *x) const
    for(UInt_t i = 0; i < fNdim; i++)
       if (x[i] < fMin[i] || x[i] > fMax[i]) 
          return kFALSE;
-
    return kTRUE;
 }
 
@@ -1350,18 +1249,32 @@ void TFn::ReleaseParameter(UInt_t ipar)
 {
    // Release parameter number ipar If used in a fit, the parameter
    // can vary freely. The parameter limits are reset to 0,0.
-
-   if (ipar >= fNpar) return;
+   if (ipar >= fNpar) {
+      Error("ReleaseParameter", "Parameter index is out of bounds. Function has only %d parameters.", fNpar);
+      return;
+   }
    SetParLimits(ipar, 0.0, 0.0);
 }
 
+//______________________________________________________________________________
+void TFn::SetParameters(const Double_t* params)
+{
+   // Set error for parameter number ipar
+   if (params == NULL) {
+      Warning("SetParameters", "Input parameter array is not allocated. Parameters have not changed.");
+      return;
+   }
+   std::copy(params, params + fNpar, fParams);
+}
 
 //______________________________________________________________________________
 void TFn::SetParError(UInt_t ipar, Double_t error)
 {
    // Set error for parameter number ipar
-
-   if (ipar >= fNpar) return;
+   if (ipar >= fNpar) {
+      Warning("SetParError", "Parameter index is out of bounds. Function has only %d parameters.", fNpar);
+      return;
+   }
    fParErrors[ipar] = error;
 }
 
@@ -1372,7 +1285,10 @@ void TFn::SetParErrors(const Double_t *errors)
    // Set errors for all active parameters
    // when calling this function, the array errors must have at least fNpar values
 
-   if (!errors) return;
+   if (errors == NULL) {
+      Warning("SetParErrors", "Input errors array was not specified; Keeping old parameter errors values");
+      return;
+   }
    for (UInt_t i = 0; i < fNpar; ++i) fParErrors[i] = errors[i];
 }
 
@@ -1381,12 +1297,13 @@ void TFn::SetParErrors(const Double_t *errors)
 void TFn::SetParLimits(UInt_t ipar, Double_t parmin, Double_t parmax)
 {
    // Set limits for parameter ipar.
-   //  The specified limits will be used in a fit operation when the option "B" is specified (Bounds).
+   // The specified limits will be used in a fit operation when the option "B" is specified (Bounds).
    // To fix a parameter, use TFn::FixParameter
-
-   if (ipar >= fNpar) return;
-   fParMin[ipar] = parmin;
-   fParMax[ipar] = parmax;
+   if (ipar >= fNpar) {
+      Warning("SetParLimits", "Parameter index is out of bounds. Function has only %d parameters.", fNpar);
+      return;
+   }
+   fParMin[ipar] = parmin; fParMax[ipar] = parmax;
 }
 
 
@@ -1398,7 +1315,7 @@ void TFn::SetRange(Double_t* min, Double_t* max)
    // The function range is also used in an histogram fit operation
    // when the option "R" is specified.
    if (min == NULL || max == NULL) {
-      Error("SetRange", "Input ranges are invalid");
+      Warning("SetRange", "Input ranges have not been specified; keeping old values");
       return;
    }
    std::copy(min, min + fNdim, fMin);
@@ -1413,13 +1330,10 @@ void TFn::SetRange(Double_t* min, Double_t* max)
 class TFn_Projection1D : public ROOT::Math::IBaseFunctionMultiDim {
 public:
    // assumes correct arguments are passed
-   // TODO: constify !!!
-   TFn_Projection1D(TFn& func, UInt_t icoord) :
+   TFn_Projection1D(const TFn& func, UInt_t icoord) :
       fFunc(func), fNdim(fFunc.NDim()), fIdxCoord(icoord), fValCoord(0.0), fIntegrator(*this)
    {
       fX = new Double_t[fNdim];
-      fMin = new Double_t[fNdim];
-      fMax = new Double_t[fNdim];
 
       fFunc.GetRange(fMin, fMax);
       // shift range for n-1 dim integral
@@ -1433,25 +1347,21 @@ public:
    virtual UInt_t NDim() const { return fNdim - 1; }
    
    Double_t Integral(Double_t* valCoord, Double_t*) {
-      // TODO: check if in range
       fValCoord = valCoord[0];
       return fIntegrator.Integral(fMin, fMax);
    }
       
-protected:
-   // NOTE: DO NOT USE !!! Shallow copying
-   virtual TFn_Projection1D* Clone() const { return new TFn_Projection1D(fFunc, fIdxCoord); } 
-   
 private:
+   virtual TFn_Projection1D* Clone() const { return NULL; } // do not use !!!
+      
    virtual Double_t DoEval(const Double_t *x) const {
-      R__ASSERT(x != NULL);
       for(UInt_t i = 0; i < fIdxCoord; ++i) fX[i] = x[i];
       fX[fIdxCoord] = fValCoord;
-      for(UInt_t i = fIdxCoord + 1; i < fNdim; ++i) fX[i] = x[i - 1]; 
+      for(UInt_t i = fIdxCoord + 1; i < fNdim; ++i) fX[i] = x[i - 1];
       return fFunc(fX);
    }
      
-   TFn& fFunc; // function that is projected
+   const TFn& fFunc; // function that is projected
    UInt_t fNdim; // dimension of TFn
    UInt_t fIdxCoord; // coordinate on which the projection is made
    mutable Double_t fValCoord; // value of the coordinate
@@ -1478,9 +1388,8 @@ TF1* TFn::Projection1D(UInt_t icoord) const
       Error("Projection1D", "Coordonate index passed as input is out of dimensional range");
       return NULL;
    }
-
    // FIXME: remove const hack
-   TFn_Projection1D* proj =  new TFn_Projection1D(*(TFn*)this, icoord);
+   TFn_Projection1D* proj =  new TFn_Projection1D(*this, icoord);
    return new TF1(TString::Format("%s_Projection1D", GetName()), proj, &TFn_Projection1D::Integral,
       fMin[icoord], fMax[icoord], fNpar);
 }
