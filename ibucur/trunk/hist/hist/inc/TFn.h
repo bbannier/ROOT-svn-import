@@ -45,11 +45,11 @@ class THn;
 class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, public ROOT::Math::IGradientMultiDim {
 
 private:
-   void Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0); // initalization function
-   void InitArgs(const Double_t* x, const Double_t *params = NULL);
+   void Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0, Double_t* params = NULL, Double_t* parMin = NULL, Double_t* parMax = NULL, Double_t* parErrors = NULL); // initalization function
    void ConfigureFunctor(const char *name);
    void ConfigureCintClass(const char *name, void * ptr, const char * cname, const char * fname);
-   Double_t ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.E-10, Int_t maxiter = 100) const;
+   Double_t ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1e-10, Int_t maxiter = 100) const;
+   void UpdateCintAddresses(const Double_t* x, const Double_t* params = NULL) const;
 
    virtual Double_t DoDerivative(const Double_t* x, UInt_t icoord) const; // inherited ROOT::Math::IGradientMultiDim
    virtual Double_t DoEvalPar(const Double_t* x, const Double_t* params = NULL) const; // inherited ROOT::Math::IParametricFunctionMultiDim
@@ -58,7 +58,6 @@ private:
    UInt_t fNdim;          // number of dimensions (vector coordinates)
    Double_t* fMin;        //[fNdim] Lower bounds for the range
    Double_t* fMax;        //[fNdim] Upper bounds for the range
-   Double_t fNorm;        // field to store / cache the norm of TFn
 
    UInt_t fNpar;          // number of parameters
    Double_t* fParams;     //[fNpar] Array of parameters
@@ -76,7 +75,6 @@ private:
    void *fCintFunc;   //!Pointer to interpreted function class
    TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
 
-   ROOT::Math::IntegratorMultiDim fIntegrator;
    ROOT::Math::DistSampler* fSampler;
 
 public:
@@ -101,15 +99,14 @@ public:
    // xmin and xmax specify the plotting range,  npar is the number of parameters.
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <typename Func>
-   TFn(const char *name, UInt_t ndim, Func f, Double_t* min, Double_t* max, UInt_t npar, const char * = 0  ) :
+   TFn(const char *name, UInt_t ndim, Func f, Double_t* min, Double_t* max, UInt_t npar = 0, const char* = NULL ) :
       TNamed(name, "TFn created by a templated constructor from any C++ functor"),
       fParent(NULL),
       fType(FUNCTOR),
       fFormula(NULL),
       fFunctor(ROOT::Math::ParamFunctor(f)),
       fCintFunc(NULL),
-      fMethodCall(NULL),
-      fIntegrator()
+      fMethodCall(NULL)
    {
       Init(ndim, min, max, npar);
       ConfigureFunctor(name);
@@ -124,15 +121,14 @@ public:
    // xmin and xmax specify the plotting range,  npar is the number of parameters.
    // See the tutorial math/exampleFunctor.C for an example of using this constructor
    template <class PtrObj, typename MemFn>
-   TFn(const char *name, UInt_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, UInt_t npar, const char * = 0, const char * = 0) :
+   TFn(const char *name, UInt_t ndim, const PtrObj& p, MemFn memFn, Double_t* min, Double_t* max, UInt_t npar = 0, const char* = NULL, const char* = NULL) :
       TNamed(name, "TFn created from a PtrObj"),
       fParent(NULL),
       fType(FUNCTOR),
       fFormula(NULL),
       fFunctor(ROOT::Math::ParamFunctor(p, memFn)),
       fCintFunc(NULL),
-      fMethodCall(NULL),
-      fIntegrator()
+      fMethodCall(NULL)
    {
       Init(ndim, min, max, npar);
       ConfigureFunctor(name);
@@ -148,14 +144,13 @@ public:
    virtual TFn* Clone(const char* name) const { return new TFn(*this, name); } // inherited TObject
    virtual TFn* Clone() const { return new TFn(*this); } // inherited ROOT::Math::IBaseFunctionMultiDim
 
-   virtual Double_t  operator()(const Double_t* x, const Double_t* params = NULL);  
    virtual void      FixParameter(UInt_t ipar, Double_t value);
    virtual void      FdF(const Double_t* x, Double_t& f, Double_t* df) const; // inherited ROOT::Math::IGradientMultiDim
-   virtual THn*      GetHistogram() const;
-   virtual Double_t  GetMaximum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.e-10, Int_t maxIter = 1000) const;
-   virtual Double_t  GetMinimum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.e-10, Int_t maxIter = 1000) const;
-   virtual Double_t* GetMaximumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.e-10, Int_t maxIter = 1000) const;
-   virtual Double_t* GetMinimumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1.e-10, Int_t maxIter = 1000) const;
+   virtual THn*      GetHistogram(const UInt_t* npoints) const;
+   virtual Double_t  GetMaximum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1e-10, Int_t maxIter = 1000) const;
+   virtual Double_t  GetMinimum (Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1e-10, Int_t maxIter = 1000) const;
+   virtual Double_t* GetMaximumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1e-10, Int_t maxIter = 1000) const;
+   virtual Double_t* GetMinimumX(Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1e-10, Int_t maxIter = 1000) const;
    virtual TMethodCall* GetMethodCall() const { return fMethodCall; }
    virtual UInt_t    GetNumberFreeParameters() const;
    virtual TObject*  GetParent() const { return fParent; }
@@ -164,7 +159,7 @@ public:
    virtual void      GetParLimits(UInt_t ipar, Double_t &parmin, Double_t &parmax) const;
    // Return a sample random number following this distribution
    virtual const Double_t* GetRandom() const;
-   virtual void      GetRange(Double_t* min, Double_t* xmax) const;
+   virtual void      GetRange(Double_t*& min, Double_t*& max) const;
    virtual void      Gradient(const Double_t* x, Double_t* grad) const; // inherited ROOT::Math::IGradientMultiDim
 //   virtual Double_t  GradientPar(UInt_t ipar, const Double_t* x, Double_t eps = 0.01) const;
 //   virtual void      GradientPar(const Double_t* x, Double_t* grad, Double_t eps = 0.01) const;
@@ -177,28 +172,15 @@ public:
    virtual TF1*      Projection1D(UInt_t icoord) const;
    virtual void      Print(Option_t *option="") const;
    virtual void      ReleaseParameter(UInt_t ipar);
+   virtual void SetParameters(const Double_t* p); // inherited ROOT::Math::IBaseParam
    virtual void      SetParError(UInt_t ipar, Double_t error);
    virtual void      SetParErrors(const Double_t *errors);
    virtual void      SetParLimits(UInt_t ipar, Double_t parmin, Double_t parmax);
    virtual void      SetParent(TObject *p=0) { fParent = p;}
    virtual void      SetRange(Double_t* min, Double_t* max);
 
-   virtual void SetParameters(const Double_t* p) { // inherited ROOT::Math::IBaseParam
-      if (!p) {
-         Error("SetParameters", "Input parameter array not allocated");
-         return;
-      }
-      std::copy(p, p + fNpar, fParams);
-   }
-
    ClassDef(TFn, 1)  //The Parametric n-D function
 };
-
-inline Double_t TFn::operator()(const Double_t *x, const Double_t *params)
-   { 
-      if (fMethodCall) InitArgs(x,params);
-      return DoEvalPar(x,params); 
-   }
 
 
 #endif // ROOT_TFn
