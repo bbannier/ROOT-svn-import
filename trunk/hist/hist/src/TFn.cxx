@@ -342,7 +342,7 @@ TFn::TFn() :
    TNamed(), 
    fParent(NULL), 
    fType(EMPTY), 
-   fFormula(NULL), 
+   fFormula(), 
    fFunctor(), 
    fCintFunc(NULL), 
    fMethodCall(NULL)
@@ -356,7 +356,7 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
    TNamed(name, "TFn created from a formula definition (through TFormula)"),
    fParent(NULL),
    fType(FORMULA),
-   fFormula(new TFormula(name, formula)),
+   fFormula(name, formula),
    fFunctor(),
    fCintFunc(NULL),
    fMethodCall(NULL)
@@ -364,11 +364,7 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
    // TFn constructor using a formula definition.
    // See TFormula for the explanation of its constructor syntax.
    // See tutorials: fillrandom, first, fit1, formula1, multifit for real examples.
-
-   if(!fFormula)
-      Error("TFn::TFn", "object %s created incorrectly because of invalid formula", name);
-   else
-      Init(fFormula->GetNdim(), min, max, fFormula->GetNpar());
+   Init(fFormula.GetNdim(), min, max, fFormula.GetNpar());
 }
 
 //______________________________________________________________________________
@@ -376,11 +372,10 @@ TFn::TFn(const char* name, UInt_t ndim, Double_t* min, Double_t* max, UInt_t npa
    TNamed(name, "TFn created from the name of an interpreted function"),
    fParent(NULL),
    fType(INTERPRETER_FUNCTOR),
-   fFormula(NULL),
+   fFormula(),
    fFunctor(),
    fCintFunc(NULL),
-   fMethodCall(NULL),
-   fSampler(NULL)
+   fMethodCall(NULL)
 {
    /**
     * @brief TFn constructor using the name of an interpreted function.
@@ -417,11 +412,10 @@ TFn::TFn(const char* name, UInt_t ndim, void* fcn, Double_t* min, Double_t* max,
    TNamed(name, "TFn created from a pointer to an interpreted function"),
    fParent(NULL),
    fType(INTERPRETER_FUNCTOR),
-   fFormula(NULL),
+   fFormula(),
    fFunctor(),
    fCintFunc(NULL),
-   fMethodCall(NULL),
-   fSampler(NULL)
+   fMethodCall(NULL)
 {
    /**
     * TFn constructor using a pointer to an interpreted function.
@@ -467,7 +461,7 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    fParent(NULL),
    fType(FUNCTOR),
    fCintFunc(NULL),
-   fFormula(NULL),
+   fFormula(),
    fFunctor(fcn),
    fMethodCall(NULL)
 {
@@ -492,7 +486,7 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(const Double_t*, const D
    fParent(NULL),
    fType(FUNCTOR),
    fCintFunc(NULL),
-   fFormula(NULL),
+   fFormula(),
    fFunctor(ROOT::Math::ParamFunctor(fcn)),
    fMethodCall(NULL)
 {
@@ -517,11 +511,10 @@ TFn::TFn(const char* name, UInt_t ndim, ROOT::Math::ParamFunctor f, Double_t* mi
    TNamed(name, "TFn created from ROOT::Math::ParamFunctor"),
    fParent(NULL),
    fType(FUNCTOR),
-   fFormula(NULL),
+   fFormula(),
    fFunctor(f),
    fCintFunc(NULL),
-   fMethodCall(NULL),
-   fSampler(NULL)
+   fMethodCall(NULL)
 {
    /** 
     * TFn constructor using the Functor class.
@@ -554,11 +547,10 @@ TFn::TFn(const char* name, UInt_t ndim, void* ptr, Double_t* min, Double_t* max,
    TNamed(name, TString::Format("CINT - class %s", className).Data()),
    fParent(),
    fType(INTERPRETER_CLASS),
-   fFormula(NULL),
+   fFormula(),
    fFunctor(),
    fCintFunc(NULL),
-   fMethodCall(NULL),
-   fSampler(NULL)
+   fMethodCall(NULL)
 {
    /**
     * @brief TFn constructor from an interpreted class defining the operator() or Eval().
@@ -586,11 +578,10 @@ TFn::TFn(const char* name, UInt_t ndim, void *ptr, void *, Double_t* min, Double
    TNamed(name, TString::Format("CINT - class %s - method %s", className, methodName).Data()),
    fParent(),
    fType(INTERPRETER_CLASS),
-   fFormula(NULL),
+   fFormula(),
    fFunctor(),
    fCintFunc(NULL),
-   fMethodCall(NULL),
-   fSampler(NULL)
+   fMethodCall(NULL)
 {
    /**
     * @brief TFn constructor from an interpreter class using a specified member function.
@@ -666,25 +657,24 @@ TFn::~TFn()
    delete [] fParMin;
    delete [] fParMax;
    delete [] fParErrors;
-   delete fFormula;
    delete fMethodCall;
    delete fSampler;
 }
 
 
 //______________________________________________________________________________
-TFn::TFn(const TFn &rhs, const char* name) : TNamed(rhs) 
+TFn::TFn(const TFn &rhs, const char* name) : 
+   TNamed(rhs),
+   fParent(rhs.fParent),
+   fType(rhs.fType),
+   fFormula(rhs.fFormula),
+   fFunctor(rhs.fFunctor),
+   fCintFunc(rhs.fCintFunc),
+   fMethodCall(rhs.fMethodCall)
 {
    // TFn copy constructor.
    if (name) SetName(name);
-   else SetName(TString::Format("%s_copy", rhs.GetName()));
-   // TODO: fix fFormula
-   fType = rhs.fType; 
-   fFormula = rhs.fFormula; 
-   fCintFunc = rhs.fCintFunc;
-   fMethodCall = rhs.fMethodCall;
-   fParent = rhs.fParent;
-
+   else SetName(TString::Format("%s_copy", rhs.GetName())); 
    Init(rhs.fNdim, rhs.fMin, rhs.fMax, rhs.fNpar);
 }
 
@@ -694,17 +684,15 @@ TFn& TFn::operator=(const TFn& rhs)
    // Assignment operator.
 
    if (this != &rhs) {
-      // TODO: implement swap-and-copy idiom
       fParent = rhs.fParent; 
       fType = rhs.fType;
       fFunctor = rhs.fFunctor;
-      fCintFunc = rhs.fCintFunc;
-      delete fFormula; if(rhs.fFormula) fFormula = new TFormula(*fFormula);
+      fFormula = rhs.fFormula;
       delete fMethodCall; if (rhs.fMethodCall) fMethodCall =  new TMethodCall(*fMethodCall);
 
       delete [] fMin; delete [] fMax;
       delete [] fParams; delete [] fParMin; delete [] fParMax; delete [] fParErrors;
-      delete fSampler;
+      delete fSampler; 
 
       Init(rhs.fNdim, rhs.fMin, rhs.fMax, rhs.fNpar);
   }
@@ -778,7 +766,7 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
 
    Double_t result = 0.0;
    if (fType == FORMULA) {
-      if(fFormula) result = fFormula->EvalPar(x,params);
+      result = func->fFormula.EvalPar(x,params);
    } else if (fType == FUNCTOR)  {
       if (!func->fFunctor.Empty()) {
          if (params) result = func->fFunctor((Double_t*)x,(Double_t*)params);
@@ -850,16 +838,12 @@ THn* TFn::GetHistogram(const UInt_t* npoints) const
 
 class TFn_ReverseSign : public ROOT::Math::IBaseFunctionMultiDim {
 public:   
-   TFn_ReverseSign(TFn* func) : fFunc(func) {}
-   virtual ROOT::Math::IBaseFunctionMultiDim* Clone() const {
-      return new TFn_ReverseSign(fFunc);
-   }  
-   virtual UInt_t NDim() const { return fFunc->NDim(); }
+   TFn_ReverseSign(const TFn& func) : fFunc(func) {}
+   virtual UInt_t NDim() const { return fFunc.NDim(); }
 private:
-   TFn* fFunc;  
-   virtual Double_t DoEval(const Double_t* x) const {
-      return -(*fFunc)(x);
-   }
+   virtual ROOT::Math::IBaseFunctionMultiDim* Clone() const { return NULL; }  
+   const TFn& fFunc;  
+   virtual Double_t DoEval(const Double_t* x) const { return -fFunc(x); }
 };
 
 //______________________________________________________________________________
@@ -869,7 +853,7 @@ Double_t* TFn::GetMaximumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t
    // If min, max are not set, the minimization is performed on the whole range
    // The user is responsible for deleting the array returned
    Double_t* x = new Double_t[fNdim];
-   TFn_ReverseSign reverseSignFunc(const_cast<TFn*>(this));
+   TFn_ReverseSign reverseSignFunc(*this);
    ConfigureAndMinimize(&reverseSignFunc, x, min, max, epsilon, maxiter);   
    return x;
 }
@@ -890,7 +874,7 @@ Double_t* TFn::GetMinimumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t
 Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
 {
    // Returns the maximum value of the function on the [min, max] subdomain if present, else on the full range
-   TFn_ReverseSign reverseSignFunc(const_cast<TFn*>(this));
+   TFn_ReverseSign reverseSignFunc(*this);
    return -ConfigureAndMinimize(&reverseSignFunc, NULL, min, max, epsilon, maxiter);
 }
 

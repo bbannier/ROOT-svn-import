@@ -70,10 +70,10 @@ private:
    enum EFunctor { FORMULA, FUNCTOR, INTERPRETER_FUNCTOR, INTERPRETER_CLASS, EMPTY }; // type of construction parameter
    EFunctor fType;
 
-   TFormula *fFormula;    //!Pointer to TFormula in case of standard function 
+   TFormula fFormula;    //!Pointer to TFormula in case of standard function 
    ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
-   void *fCintFunc;   //!Pointer to interpreted function class
-   TMethodCall *fMethodCall; //!Pointer to MethodCall in case of interpreted function
+   void* fCintFunc;   //!Pointer to interpreted function class
+   TMethodCall* fMethodCall; //!Pointer to MethodCall in case of interpreted function
 
    ROOT::Math::DistSampler* fSampler;
 
@@ -103,7 +103,7 @@ public:
       TNamed(name, "TFn created by a templated constructor from any C++ functor"),
       fParent(NULL),
       fType(FUNCTOR),
-      fFormula(NULL),
+      fFormula(),
       fFunctor(ROOT::Math::ParamFunctor(f)),
       fCintFunc(NULL),
       fMethodCall(NULL)
@@ -125,7 +125,7 @@ public:
       TNamed(name, "TFn created from a PtrObj"),
       fParent(NULL),
       fType(FUNCTOR),
-      fFormula(NULL),
+      fFormula(),
       fFunctor(ROOT::Math::ParamFunctor(p, memFn)),
       fCintFunc(NULL),
       fMethodCall(NULL)
