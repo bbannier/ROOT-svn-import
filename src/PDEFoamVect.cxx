@@ -204,7 +204,7 @@ void TMVA::PDEFoamVect::Print(Option_t *option) const
    streamsize wid = std::cout.width(); // saving current field width
    if(!option) Error( "Print ", "No option set \n");
    std::cout << "(";
-   for(Int_t i=0; i<fDim-1; i++) 
+   for(Int_t i=0; i<fDim-1; i++)
       std::cout << std::setw(12) << *(fCoords+i) << ",";
    std::cout << std::setw(12) << *(fCoords+fDim-1);
    std::cout << ")";
