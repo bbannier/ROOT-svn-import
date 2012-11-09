@@ -326,15 +326,14 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar, Double_t*
       else std::fill(fParMax, fParMax + fNpar, 0);
       if (parErrors) std::copy(parErrors, parErrors + fNpar, fParErrors);
       else std::fill(fParErrors, fParErrors + fNpar, 0);
-   }
-   
+   } 
+
    fSampler = ROOT::Math::Factory::CreateDistSampler();
-   fSampler->SetFunction(TFn_Distribution(*this));
    if (!fSampler) {
       Error("Init", "ROOT::Math::Factory could not create the default ROOT::Math::DistSampler");
       return;
    }
- 
+   fSampler->SetFunction(TFn_Distribution(*this)); 
 } 
 
 //______________________________________________________________________________
@@ -525,8 +524,8 @@ TFn::TFn(const char* name, UInt_t ndim, ROOT::Math::ParamFunctor f, Double_t* mi
     * WARNING! This constructor can be used only in compiled code
     * WARNING! A function created with this constructor cannot be Cloned.
     */
-   Init(ndim, min, max, npar);
    ConfigureFunctor(name);
+   Init(ndim, min, max, npar);
 }
 
 
@@ -569,8 +568,8 @@ TFn::TFn(const char* name, UInt_t ndim, void* ptr, Double_t* min, Double_t* max,
     * @example tutorials/math/exampleFunctor.C
     * @warning This constructor is used only when using CINT.
     */
-   Init(ndim, min, max, npar);
    ConfigureCintClass(name, ptr, className, NULL);
+   Init(ndim, min, max, npar);
 }
 
 //______________________________________________________________________________
@@ -600,8 +599,8 @@ TFn::TFn(const char* name, UInt_t ndim, void *ptr, void *, Double_t* min, Double
     * @example tutorials/math/exampleFunctor.C
     * @warning This constructor is used only when using CINT.
     */
-   Init(ndim, min, max, npar);
    ConfigureCintClass(name, ptr, className, methodName);
+   Init(ndim, min, max, npar);
 }
 
 //______________________________________________________________________________
@@ -621,17 +620,16 @@ void TFn::ConfigureCintClass(const char *name, void *ptr, const char * className
 
    if (cl) {
       fMethodCall = new TMethodCall();
-
       if (methodName) 
          fMethodCall->InitWithPrototype(cl, methodName, "Double_t*,Double_t*");
       else {
          fMethodCall->InitWithPrototype(cl, "operator()", "Double_t*,Double_t*");
-         if (! fMethodCall->IsValid() ) // try with Eval if operator() is not found
+         if (!fMethodCall->IsValid()) // try with Eval if operator() is not found
             fMethodCall->InitWithPrototype(cl,"Eval","Double_t*,Double_t*");
       }
 
       gROOT->GetListOfFunctions()->Add(this);
-      if (! fMethodCall->IsValid() ) {
+      if (!fMethodCall->IsValid()) {
          if (methodName)
             Error("TFn", "No function found in class %s with the signature %s(Double_t*,Double_t*)", className, methodName);
          else
@@ -647,18 +645,16 @@ void TFn::ConfigureCintClass(const char *name, void *ptr, const char * className
 TFn::~TFn()
 {
    // TFn destructor.
-
-   if (gROOT) gROOT->GetListOfFunctions()->Remove(this);
-   if (fParent) fParent->RecursiveRemove(this); fParent = NULL; 
-
+   //delete fSampler;
    delete [] fMin;
    delete [] fMax;
    delete [] fParams;
    delete [] fParMin;
    delete [] fParMax;
    delete [] fParErrors;
-   delete fMethodCall;
-   delete fSampler;
+   
+   if (gROOT) gROOT->GetListOfFunctions()->Remove(this);
+   if (fParent) fParent->RecursiveRemove(this); fParent = NULL; 
 }
 
 
@@ -669,12 +665,12 @@ TFn::TFn(const TFn &rhs, const char* name) :
    fType(rhs.fType),
    fFormula(rhs.fFormula),
    fFunctor(rhs.fFunctor),
-   fCintFunc(rhs.fCintFunc),
-   fMethodCall(rhs.fMethodCall)
+   fCintFunc(rhs.fCintFunc)
 {
    // TFn copy constructor.
    if (name) SetName(name);
-   else SetName(TString::Format("%s_copy", rhs.GetName())); 
+   else SetName(TString::Format("%s_copy", rhs.GetName()));
+   if (rhs.fMethodCall) fMethodCall = new TMethodCall(*rhs.fMethodCall);
    Init(rhs.fNdim, rhs.fMin, rhs.fMax, rhs.fNpar);
 }
 
@@ -688,7 +684,7 @@ TFn& TFn::operator=(const TFn& rhs)
       fType = rhs.fType;
       fFunctor = rhs.fFunctor;
       fFormula = rhs.fFormula;
-      delete fMethodCall; if (rhs.fMethodCall) fMethodCall =  new TMethodCall(*fMethodCall);
+      *fMethodCall = *rhs.fMethodCall;
 
       delete [] fMin; delete [] fMax;
       delete [] fParams; delete [] fParMin; delete [] fParMax; delete [] fParErrors;
@@ -761,6 +757,11 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
    
     * @warning x must be filled with the corresponding number of dimensions.
     */
+   if (params == NULL && fNpar > 0) {
+      Info("DoEvalPar", "Parameter array not specified. Using internal parameters.");
+      params = fParams;
+   }
+
    TFn* func = const_cast<TFn*>(this);
    UpdateCintAddresses(x, params); 
 
@@ -768,15 +769,13 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
    if (fType == FORMULA) {
       result = func->fFormula.EvalPar(x,params);
    } else if (fType == FUNCTOR)  {
-      if (!func->fFunctor.Empty()) {
-         if (params) result = func->fFunctor((Double_t*)x,(Double_t*)params);
-         else        result = func->fFunctor((Double_t*)x,fParams);
-      } // else          result = const_cast<TFn*>(this)->GetSave(x);
+      if (!func->fFunctor.Empty()) result = func->fFunctor((Double_t*)x,(Double_t*)params);
+      // else          result = const_cast<TFn*>(this)->GetSave(x);
    } else if (fType == INTERPRETER_FUNCTOR) {
-      if (fMethodCall) fMethodCall->Execute(result);
+      fMethodCall->Execute(result);
       // else             result = const_cast<TFn*>(this)->GetSave(x);
    } else if (fType == INTERPRETER_CLASS) {
-      if (fMethodCall) fMethodCall->Execute(fCintFunc,result);
+      fMethodCall->Execute(fCintFunc, result);
       // else             result = const_cast<TFn*>(this)->GetSave(x);
    }
    return result;
@@ -789,7 +788,10 @@ void TFn::FixParameter(UInt_t ipar, Double_t value)
    // Fix the value of a parameter
    // The specified value will be used in a fit operation
 
-   if (ipar >= fNpar) return; 
+   if (ipar >= fNpar) {
+      Error("FixParameter", "Parameter index is out of range. Function has only %d parameters.", fNpar);
+      return; 
+   }
    fParams[ipar] = value;
 
    if (value != 0.0) SetParLimits(ipar,value,value);
@@ -833,7 +835,6 @@ THn* TFn::GetHistogram(const UInt_t* npoints) const
 
    return hist;
 }
-
 
 
 class TFn_ReverseSign : public ROOT::Math::IBaseFunctionMultiDim {
@@ -973,7 +974,7 @@ Double_t TFn::GetParError(UInt_t ipar) const
    // Return value of parameter number ipar
 
    if (ipar >= fNpar) {
-      Error("GetParError", "Parameter index is out of dimensional range");
+      Error("GetParError", "Parameter index is out of range. Function has only %d parameters.", fNpar);
       return 0.0;
    }
    return fParErrors[ipar];
@@ -986,7 +987,10 @@ void TFn::GetParLimits(UInt_t ipar, Double_t& parmin, Double_t& parmax) const
    // Return limits for parameter ipar.
 
    parmin = parmax = 0;
-   if (ipar >= fNpar) return;
+   if (ipar >= fNpar) {
+      Error("GetParLimits", "Parameter index is out of range. Function has only %d parameters.", fNpar);
+      return;
+   }
    if (fParMin) parmin = fParMin[ipar];
    if (fParMax) parmax = fParMax[ipar];
 }
@@ -1052,7 +1056,7 @@ private:
 Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* params, UInt_t ipar) const 
 {
    if (ipar >= fNpar) {
-      Error("DoParameterDerivative", "Input parameter index is out of dimensional range");
+      Error("DoParameterDerivative", "Parameter index is out of range. Function has only %d parameters.", fNpar);
       return 0.0;
    }
    
@@ -1082,13 +1086,11 @@ Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* params, U
 void TFn::UpdateCintAddresses(const Double_t *x, const Double_t *params) const
 {
    // Initialize parameters addresses in case of CINT function.
-   if (fMethodCall) {
-      Long_t args[2];
-      args[0] = (Long_t)x;
-      if (params) args[1] = (Long_t)params;
-      else        args[1] = (Long_t)fParams;
-      fMethodCall->SetParamPtrs(args);
-   }
+   Long_t args[2];
+   args[0] = (Long_t)x;
+   if (params) args[1] = (Long_t)params;
+   else        args[1] = (Long_t)fParams;
+   fMethodCall->SetParamPtrs(args);
 }
 
 
@@ -1097,7 +1099,7 @@ const Double_t* TFn::GetRandom() const {
    /**
     * Return a random sample (vector of n-dim) from the multivariate distribution associated with
     * this function. In order to get the distribution, the function is normalised.
-    */ 
+    */    
    return fSampler->Sample();
 }
 
@@ -1231,7 +1233,7 @@ void TFn::ReleaseParameter(UInt_t ipar)
    // Release parameter number ipar If used in a fit, the parameter
    // can vary freely. The parameter limits are reset to 0,0.
    if (ipar >= fNpar) {
-      Error("ReleaseParameter", "Parameter index is out of bounds. Function has only %d parameters.", fNpar);
+      Error("ReleaseParameter", "Parameter index is out of range. Function has only %d parameters.", fNpar);
       return;
    }
    SetParLimits(ipar, 0.0, 0.0);
@@ -1253,7 +1255,7 @@ void TFn::SetParError(UInt_t ipar, Double_t error)
 {
    // Set error for parameter number ipar
    if (ipar >= fNpar) {
-      Warning("SetParError", "Parameter index is out of bounds. Function has only %d parameters.", fNpar);
+      Warning("SetParError", "Parameter index is out of range. Function has only %d parameters.", fNpar);
       return;
    }
    fParErrors[ipar] = error;
@@ -1281,7 +1283,7 @@ void TFn::SetParLimits(UInt_t ipar, Double_t parmin, Double_t parmax)
    // The specified limits will be used in a fit operation when the option "B" is specified (Bounds).
    // To fix a parameter, use TFn::FixParameter
    if (ipar >= fNpar) {
-      Warning("SetParLimits", "Parameter index is out of bounds. Function has only %d parameters.", fNpar);
+      Warning("SetParLimits", "Parameter index is out of range. Function has only %d parameters.", fNpar);
       return;
    }
    fParMin[ipar] = parmin; fParMax[ipar] = parmax;
