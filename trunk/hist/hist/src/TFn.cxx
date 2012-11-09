@@ -763,7 +763,6 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
    }
 
    TFn* func = const_cast<TFn*>(this);
-   UpdateCintAddresses(x, params); 
 
    Double_t result = 0.0;
    if (fType == FORMULA) {
@@ -772,9 +771,11 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
       if (!func->fFunctor.Empty()) result = func->fFunctor((Double_t*)x,(Double_t*)params);
       // else          result = const_cast<TFn*>(this)->GetSave(x);
    } else if (fType == INTERPRETER_FUNCTOR) {
+      UpdateCintAddresses(x, params); 
       fMethodCall->Execute(result);
       // else             result = const_cast<TFn*>(this)->GetSave(x);
-   } else if (fType == INTERPRETER_CLASS) {
+   } else if (fType == INTERPRETER_CLASS) {   
+      UpdateCintAddresses(x, params); 
       fMethodCall->Execute(fCintFunc, result);
       // else             result = const_cast<TFn*>(this)->GetSave(x);
    }
@@ -815,22 +816,35 @@ THn* TFn::GetHistogram(const UInt_t* npoints) const
          }
    } 
 
-   Double_t* df = new Double_t[fNdim];
-   Double_t* crtPoint = new Double_t[fNdim]; // placed in bin center
+   UInt_t cumulPoints[fNdim]; cumulPoints[fNdim - 1] = 1;
+   for (UInt_t i = fNdim - 1; i > 0; --i) cumulPoints[i - 1] = cumulPoints[i] * npoints[i];
+   UInt_t totalPoints = cumulPoints[0] * npoints[0];
+
+   Double_t dx[fNdim]; // steps in changing x for each dimension, dependent on npoints
+   Double_t origPoint[fNdim]; // origin point
+   Double_t crtPoint[fNdim]; // placed in bin center
+   UInt_t crtBin[fNdim]; // current bin index for each dimension
+
    for (UInt_t i = 0; i < fNdim; ++i) {
-      df[i] = (fMax[i] - fMin[i]) / npoints[i];
-      crtPoint[i] = fMin[i] - df[i] / 2.0;
+      dx[i] = (fMax[i] - fMin[i]) / npoints[i];
+      origPoint[i] = fMin[i] + dx[i] / 2.0;
    }
 
    THn* hist = new THnD(TString::Format("%s_Histogram", GetName()).Data(), 
-      TString::Format("%s THn Approximation", GetTitle()).Data(), fNdim, (const Int_t *)npoints, fMin, fMax);
+      TString::Format("THn Approximation of a %s", GetTitle()).Data(), fNdim, (const Int_t *)npoints, fMin, fMax);
 
-   for (UInt_t i = 0; i < fNdim; ++i) {
-      for (UInt_t j = 0; j < npoints[i]; ++j) {
-         crtPoint[i] += df[i]; // traverse the grid
-         Int_t bin = hist->GetBin(crtPoint);
-         hist->SetBinContent(bin, DoEvalPar(crtPoint, fParams));
+   for (UInt_t i = 0; i < totalPoints; ++i) {
+      // Get Current bin
+      Int_t cumulBin = i;
+      for (UInt_t j = 0; j < fNdim; ++j) {
+         crtBin[j] = cumulBin / cumulPoints[j];
+         cumulBin = cumulBin % cumulPoints[j];
+         crtPoint[j] = origPoint[j] + dx[j] * crtBin[j];
       }
+      R__ASSERT(cumulBin == 0);
+       
+      Int_t histBin = hist->GetBin(crtPoint); // NOTE: hist has different bin numbers because of underflow / overflow bins
+      hist->SetBinContent(histBin, DoEvalPar(crtPoint, fParams));
    }
 
    return hist;

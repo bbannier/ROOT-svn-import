@@ -3,7 +3,6 @@ ROOTSYS = ../trunk
 include $(ROOTSYS)/etc/Makefile.arch
 MATHLIBS = -lRooFit -lRooFitCore -lRooStats -Llib -lRIO -lMatrix -lMinuit -lFoam -lHistFactory
 
-
 #------------------------------------------------------------------------------
 
 ifeq ($(shell $(RC) --has-roofit),yes)
