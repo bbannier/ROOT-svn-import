@@ -847,49 +847,49 @@ private:
 };
 
 //______________________________________________________________________________
-Double_t* TFn::GetMaximumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+Double_t* TFn::GetMaximumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
 {
    // Return the X value corresponding to the maximum value of the function on the [min, max] subdomain
    // If min, max are not set, the minimization is performed on the whole range
    // The user is responsible for deleting the array returned
    Double_t* x = new Double_t[fNdim];
    TFn_ReverseSign reverseSignFunc(*this);
-   ConfigureAndMinimize(&reverseSignFunc, x, min, max, epsilon, maxiter);   
+   ConfigureAndMinimize(&reverseSignFunc, x, min, max, epsilon, maxIter);   
    return x;
 }
 
 //______________________________________________________________________________
-Double_t* TFn::GetMinimumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+Double_t* TFn::GetMinimumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
 {
    // Return the X value corresponding to the minimum value of the function on the [min, max] subdomain
    // If min, max are not set, the minimization is performed on the whole range
    // The user is responsible for deleting the array returned
    Double_t* x = new Double_t[fNdim];
-   ConfigureAndMinimize(const_cast<TFn*>(this), x, min, max, epsilon, maxiter);
+   ConfigureAndMinimize(const_cast<TFn*>(this), x, min, max, epsilon, maxIter);
    return x;
 }
 
 
 //______________________________________________________________________________
-Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
 {
    // Returns the maximum value of the function on the [min, max] subdomain if present, else on the full range
    TFn_ReverseSign reverseSignFunc(*this);
-   return -ConfigureAndMinimize(&reverseSignFunc, NULL, min, max, epsilon, maxiter);
+   return -ConfigureAndMinimize(&reverseSignFunc, NULL, min, max, epsilon, maxIter);
 }
 
 //______________________________________________________________________________
-Double_t TFn::GetMinimum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+Double_t TFn::GetMinimum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
 {
    // Returns the minimum value of the function on the [min, max] subdomain if present, else on the full range
-   return ConfigureAndMinimize(const_cast<TFn*>(this), NULL, min, max, epsilon, maxiter);
+   return ConfigureAndMinimize(const_cast<TFn*>(this), NULL, min, max, epsilon, maxIter);
 }
 
 
 //______________________________________________________________________________
-Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x, Double_t* min, Double_t* max, Double_t epsilon, Int_t maxiter) const
+Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x, Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
 {
-   // Perform a N-dimensional minimization on the ranges min and man with precision epsilon using at most 'maxiter' iterations
+   // Perform a N-dimensional minimization on the ranges min and man with precision epsilon using at most 'maxIter' iterations
    // The vector 'x' will contain the initial point on input, the minimum point on output;
 
    if (min == NULL) min = fMin; // if the input is not suitable, we bounce back to the object range minimum
@@ -918,7 +918,7 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
 
    minimizer->SetFunction(*func);
    if(epsilon > 0) minimizer->SetTolerance(epsilon);
-   if(maxiter > 0) minimizer->SetMaxFunctionCalls(maxiter);
+   if(maxIter > 0) minimizer->SetMaxFunctionCalls(100000);
 
    // set minimizer parameters (variables, step size, range)
    for (UInt_t i = 0; i < fNdim; ++i) {
@@ -934,9 +934,6 @@ Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Doub
          minimizer->SetVariable(i, TString::Format("x[%d]", i).Data(), x[i], stepSize);
       }
    }
-
-   // TODO: remove in the end
-   minimizer->SetPrintLevel(1);
 
    // minimize and check success
    if (!minimizer->Minimize())
@@ -998,8 +995,8 @@ void TFn::GetParLimits(UInt_t ipar, Double_t& parmin, Double_t& parmax) const
 void TFn::GetRange(Double_t*& min, Double_t*& max) const
 {
    // Return range of a n-D function. Deletes input pointers.
-   delete [] min; min = new Double_t[fNdim];
-   delete [] max; max = new Double_t[fNdim];
+   min = new Double_t[fNdim];
+   max = new Double_t[fNdim];
    std::copy(fMin, fMin + fNdim, min);
    std::copy(fMax, fMax + fNdim, max);
 }
@@ -1212,7 +1209,7 @@ Bool_t TFn::IsInside(const Double_t *x) const
 {
    // Return kTRUE if the point is inside the function range
 
-   for(UInt_t i = 0; i < fNdim; i++)
+   for(UInt_t i = 0; i < fNdim; ++i)
       if (x[i] < fMin[i] || x[i] > fMax[i]) 
          return kFALSE;
    return kTRUE;
