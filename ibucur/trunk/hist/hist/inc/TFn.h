@@ -75,7 +75,7 @@ private:
    void* fCintFunc;   //!Pointer to interpreted function class
    TMethodCall* fMethodCall; //!Pointer to MethodCall in case of interpreted function
 
-   ROOT::Math::DistSampler* fSampler;
+   mutable ROOT::Math::DistSampler* fSampler;
 
 public:
    TFn();
@@ -109,7 +109,7 @@ public:
       fFormula(),
       fFunctor(ROOT::Math::ParamFunctor(f)),
       fCintFunc(NULL),
-      fMethodCall()
+      fMethodCall(NULL)
    {
       ConfigureFunctor(name);
       Init(ndim, min, max, npar);
@@ -131,7 +131,7 @@ public:
       fFormula(),
       fFunctor(ROOT::Math::ParamFunctor(p, memFn)),
       fCintFunc(NULL),
-      fMethodCall()
+      fMethodCall(NULL)
    {
       ConfigureFunctor(name);
       Init(ndim, min, max, npar);
