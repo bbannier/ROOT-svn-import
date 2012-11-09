@@ -7,6 +7,7 @@
 #include "Math/ParamFunctor.h"
 #include "Math/DistSampler.h"
 #include "TFoamSampler.h"
+#include "/home/ibucur/rootdev/trunk/hist/hist/src/TFn.cxx"
 
 #define DIM 5
 
@@ -52,6 +53,8 @@ int main(int argc, char* argv[]) {
    Double_t max[DIM] = { 1.0, 4.0, 2.0, 3.0, 1.0 };
    Double_t min0 = 0.0;
    Double_t max0 = 1.0;
+   Double_t min2[2] = {0.0, 0.0};
+   Double_t max2[2] = {1.0, 1.0};
 
 //   TF1 f1("OneDimFn", "x + 2", 0.0, 1.0);
    // TODO: solve overload problem
@@ -60,7 +63,9 @@ int main(int argc, char* argv[]) {
    TF1 f1("OneDimTFn", &sum1, 2.0, 3.0);
    TFn fn("FiveDim", "x[0] + x[1] + x[2] + x[3] + x[4]", min, max);
    TFn fn11("OneDimOnePar", "[0] * exp(x)", &min0, &max0);
- 
+   TFn f2("TwoDim", "x[0]^2 + x[1]", min2, max2);
+   TFn_Distribution tnd(f2);
+
    std::cout << "f object name is " << f.GetName() << std::endl;
    std::cout << "Normalisation constant " << f.Integral() << std::endl;
    std::cout << "GetMinimum  " << f.GetMinimum(NULL, NULL, 1e-6, 1000)  << std::endl;
@@ -68,14 +73,12 @@ int main(int argc, char* argv[]) {
    std::cout << "GetMinimum fx " << fx.GetMinimum(NULL, NULL, 1e-6, 1000)  << std::endl;
    std::cout << "GetMaximum fx " << f.GetMaximum(NULL, NULL, 1e-6, 1000)  << std::endl;
 
-
    Double_t *minX = f.GetMinimumX(NULL, NULL, 1e-6, 1000);
    Double_t *maxX = f.GetMaximumX(NULL, NULL, 1e-6, 1000);
    
    std::cout << "GetMinimumX ";
    for(int i = 0; i < DIM; ++i) std::cout << minX[i] << " ";
    std::cout << std::endl;
-   
 
    std::cout << "GetMaximumX ";
    for(int i = 0; i < DIM; ++i) std::cout << maxX[i] << " ";
@@ -92,15 +95,26 @@ int main(int argc, char* argv[]) {
    x = 0.5; std::cout << "; (1/2) = " << (*f1_c0)(&x);
    x = 1.0; std::cout << "; (1.0) = " << (*f1_c0)(&x) << std::endl;
 
-   cint_func();
+//   cint_func();
 
-   UInt_t npoints[DIM] = { 10, 1, 1, 1, 1 };
+   std::cout << "GetHistogram: " << std::endl;
+   UInt_t npoints[DIM] = { 3, 2, 1, 2, 1 };
    THn* histo = fn.GetHistogram(npoints);
-   histo->Print("v");
+   std::cout << "32121   " << histo->GetBinContent((const Int_t *)npoints) << std::endl;
+   npoints[0] = 1; std::cout << "12121   " << histo->GetBinContent((const Int_t *)npoints) << std::endl;
+   npoints[0] = 2; std::cout << "22121   " << histo->GetBinContent((const Int_t *)npoints) << std::endl;
+   npoints[1] = 1; std::cout << "21121   " << histo->GetBinContent((const Int_t *)npoints) << std::endl;
+   npoints[3] = 1; std::cout << "21111   " << histo->GetBinContent((const Int_t *)npoints) << std::endl;
+   npoints[0] = 1; std::cout << "11111   " << histo->GetBinContent((const Int_t *)npoints) << std::endl;
+   npoints[0] = 0; std::cout << "01111   " << histo->GetBinContent((const Int_t *)npoints) << std::endl;
+
+   std::cout << "TFn_Distribution values: " << std::endl;
+   std::cout << "min " << tnd(min2) << " max " << tnd(max2) << std::endl;
+
 
    for(Int_t i = 0; i < 10; ++i) {
-      const Double_t* x = fn.GetRandom();
-      for(Int_t j = 0; j < DIM; ++j) std::cout << x[j] << " ";
+      const Double_t* x = f2.GetRandom();
+      for(Int_t j = 0; j < 2; ++j) std::cout << x[j] << " ";
       std::cout << std::endl;
    }
 
