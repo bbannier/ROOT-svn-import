@@ -255,11 +255,11 @@ End_Html */
 class TFn_AbsValue : public ROOT::Math::IBaseFunctionMultiDim {
 public:
    TFn_AbsValue(const TFn& func) : fFunc(func) {}
-   UInt_t NDim() const { return fFunc.NDim(); }
+   virtual UInt_t NDim() const { return fFunc.NDim(); }
 private:
-   TFn_AbsValue* Clone() const { return NULL; } // do not use
+   virtual TFn_AbsValue* Clone() const { return NULL; } // do not use
    const TFn& fFunc;
-   Double_t DoEval(const Double_t* x) const {
+   virtual Double_t DoEval(const Double_t* x) const {
       Double_t result = fFunc(x);
       return result < 0 ? -result : result;
    }
@@ -281,15 +281,16 @@ public:
       fNormalisationConstant = fIntegrator.Integral(fMin, fMax);
    }
    ~TFn_Distribution() { delete[] fMin; delete[] fMax; }
-   UInt_t NDim() const { return fFunc.NDim(); }
+   virtual UInt_t NDim() const { return fFunc.NDim(); }
 private:
-   TFn_Distribution* Clone() const { return NULL; } // do not use
+   virtual TFn_Distribution* Clone() const { return NULL; } // do not use
    const TFn_AbsValue fFunc;
    Double_t fNormalisationConstant;
    Double_t* fMin;
    Double_t* fMax;
-   Double_t DoEval(const Double_t* x) const { 
+   virtual Double_t DoEval(const Double_t* x) const { 
       if (fNormalisationConstant == 0.0) return 0.0;
+      //std::cout << "TFn_Distribution::fNormalisationConstant " << fNormalisationConstant << std::endl;
       return fFunc(x) / fNormalisationConstant;
    }
    ROOT::Math::IntegratorMultiDim fIntegrator;
@@ -327,13 +328,6 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar, Double_t*
       if (parErrors) std::copy(parErrors, parErrors + fNpar, fParErrors);
       else std::fill(fParErrors, fParErrors + fNpar, 0);
    } 
-
-   fSampler = ROOT::Math::Factory::CreateDistSampler();
-   if (!fSampler) {
-      Error("Init", "ROOT::Math::Factory could not create the default ROOT::Math::DistSampler");
-      return;
-   }
-   fSampler->SetFunction(TFn_Distribution(*this)); 
 } 
 
 //______________________________________________________________________________
@@ -1114,6 +1108,16 @@ const Double_t* TFn::GetRandom() const {
     * Return a random sample (vector of n-dim) from the multivariate distribution associated with
     * this function. In order to get the distribution, the function is normalised.
     */    
+   if (!fSampler) {
+      TFn_Distribution* tn = new TFn_Distribution(*this);
+      fSampler = ROOT::Math::Factory::CreateDistSampler(); // ugly, but couldn't find better solution
+      if (!fSampler) {
+         Error("GetRandom", "ROOT::Math::Factory could not create the default ROOT::Math::DistSampler");
+         return NULL;
+      }
+      fSampler->SetFunction(*tn); 
+      fSampler->Init();
+   }
    return fSampler->Sample();
 }
 
