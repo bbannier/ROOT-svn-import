@@ -24,6 +24,29 @@
 #include "TVirtualX.h"
 #include "TError.h"
 
+@interface RunStopper : NSObject
+@end
+
+@implementation RunStopper
+
+//We attach this delegate only once, when trying to initialize NSApplication (by calling its -run method).
+//______________________________________________________________________________
+- (void) stopRun
+{
+   [NSApp stop : nil];
+   //This is not enough to stop, from docs:
+   //This method notifies the application that you want to exit the current run loop as soon as it finishes processing the current NSEvent object.
+   //This method does not forcibly exit the current run loop. Instead it sets a flag that the application checks only after it finishes dispatching an actual event object.
+
+
+   //I'm sending a fake event, to stop.
+   NSEvent* stopEvent = [NSEvent otherEventWithType: NSApplicationDefined location: NSMakePoint(0,0) modifierFlags: 0 timestamp: 0.0
+                                 windowNumber: 0 context: nil subtype: 0 data1: 0 data2: 0];
+   [NSApp postEvent : stopEvent atStart: true];
+}
+
+@end
+
 @interface MenuLoader : NSObject
 {
 }
@@ -615,6 +638,17 @@ TMacOSXSystem::TMacOSXSystem()
                     fCallAppRun(true)
 {
    [NSApplication sharedApplication];
+
+   //Documentation says, that +sharedApplication, initializes the app. But this is not true,
+   //it's still not really initialized, part of initialization is done by -run method.
+
+   //If you call run, it never returns unless app is finished. I have to stop Cocoa's event loop
+   //processing, since we have our own event loop.
+   
+   const ROOT::MacOSX::Util::NSScopeGuard<RunStopper> stopper([[RunStopper alloc] init]);
+
+   [stopper.Get() performSelector : @selector(stopRun) withObject : nil afterDelay : 0.05];//Delay? What it should be?
+   [NSApp run];
 }
 
 //______________________________________________________________________________
@@ -701,9 +735,19 @@ void TMacOSXSystem::WaitEvents(Long_t nextto)
    
    if (fCallAppRun && hadGUIEvent) {
       fCallAppRun = false;
-      
-      [NSApp performSelector : @selector(terminate:) withObject : nil afterDelay : 0.1];
-      [NSApp run];
+      /*NSEvent* stopEvent = [NSEvent otherEventWithType: NSApplicationDefined
+                                     location: NSMakePoint(0,0)
+                               modifierFlags: 0
+                                   timestamp: 0.0
+                                 windowNumber: 0
+                                     context: nil
+                                     subtype: 0
+                                       data1: 0
+                                       data2: 0];
+      [NSApp postEvent : stopEvent atStart: true];
+      [NSApp stop:NSApp];//performSelector : @selector(stop:) withObject : nil afterDelay : 0.05];
+
+      [NSApp run];*/
       [MenuLoader populateMainMenu];
    }
 }
