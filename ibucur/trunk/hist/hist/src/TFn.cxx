@@ -528,7 +528,6 @@ void TFn::ConfigureFunctor(const char* name)
 {
    // Internal Function to Create a TFn  using a Functor.
    // Store formula in linked list of formula in ROOT
-   // TODO: make this work, or remove if not really needed
    TFn *fnOld = (TFn*)gROOT->GetListOfFunctions()->FindObject(name);
    if(fnOld) gROOT->GetListOfFunctions()->Remove(fnOld);
    gROOT->GetListOfFunctions()->Add(this);
@@ -665,6 +664,7 @@ TFn::TFn(const TFn &rhs, const char* name) :
    if (name) SetName(name);
    else SetName(TString::Format("%s_copy", rhs.GetName()));
    if (rhs.fMethodCall) fMethodCall = new TMethodCall(*rhs.fMethodCall);
+   else fMethodCall = NULL;
    Init(rhs.fNdim, rhs.fMin, rhs.fMax, rhs.fNpar);
 }
 
@@ -1109,14 +1109,17 @@ const Double_t* TFn::GetRandom() const {
     * this function. In order to get the distribution, the function is normalised.
     */    
    if (!fSampler) {
-      TFn_Distribution* tn = new TFn_Distribution(*this);
-      fSampler = ROOT::Math::Factory::CreateDistSampler(); // ugly, but couldn't find better solution
+      Double_t *min, *max; GetRange(min, max);
+      TFn_Distribution* tn = new TFn_Distribution(*this); // FIXME maybe move to field status
+      fSampler = ROOT::Math::Factory::CreateDistSampler(); 
       if (!fSampler) {
          Error("GetRandom", "ROOT::Math::Factory could not create the default ROOT::Math::DistSampler");
          return NULL;
       }
       fSampler->SetFunction(*tn); 
+      fSampler->SetRange(min, max);
       fSampler->Init();
+      delete min; delete max; // sampler clones range (apparently)
    }
    return fSampler->Sample();
 }
@@ -1241,7 +1244,8 @@ void TFn::Print(Option_t *option) const
 {
    // TODO: improve
    TNamed::Print(option);
-   Printf(" %20s: %s Ndim = %d, Npar = %d", GetName(), GetTitle(), fNdim, fNpar);
+   Printf("Number of dimensions = %d, Number of parameters = %d", fNdim, fNpar);
+   for (UInt_t i = 0; i < fNdim; ++i) Printf("Dimension %d range:\t [%12.6lf, %12.6lf]", i, fMin[i], fMax[i]);
 }
 
 
