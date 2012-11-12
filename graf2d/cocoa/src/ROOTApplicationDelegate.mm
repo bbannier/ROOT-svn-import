@@ -50,25 +50,4 @@
    (void) aNotification;
 }
 
-/*
-//______________________________________________________________________________
-- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
-{
-   NSLog(@"AAAA??");
-   [NSApp stop : nil];
-   NSEvent* stopEvent = [NSEvent otherEventWithType: NSApplicationDefined
-                                     location: NSMakePoint(0,0)
-                               modifierFlags: 0
-                                   timestamp: 0.0
-                                 windowNumber: 0
-                                     context: nil
-                                     subtype: 0
-                                       data1: 0
-                                       data2: 0];
-   [NSApp postEvent : stopEvent atStart: true];
-
-   return NSTerminateCancel;
-}
-*/
-
 @end
