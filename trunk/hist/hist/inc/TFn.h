@@ -46,7 +46,7 @@ class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, p
 
 private:
    void Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0, Double_t* params = NULL, Double_t* parMin = NULL, Double_t* parMax = NULL, Double_t* parErrors = NULL); // initalization function
-   void ConfigureFunctor(const char *name);
+   void StoreFunctor(const char *name);
    void ConfigureCintClass(const char *name, void * ptr, const char * cname, const char * fname);
    Double_t ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1e-10, Int_t maxIter = 1000) const;
    void UpdateCintAddresses(const Double_t* x, const Double_t* params = NULL) const;
@@ -111,7 +111,7 @@ public:
       fCintFunc(NULL),
       fMethodCall(NULL)
    {
-      ConfigureFunctor(name);
+      StoreFunctor(name);
       Init(ndim, min, max, npar);
    }
 
@@ -133,7 +133,7 @@ public:
       fCintFunc(NULL),
       fMethodCall(NULL)
    {
-      ConfigureFunctor(name);
+      StoreFunctor(name);
       Init(ndim, min, max, npar);
    }
 

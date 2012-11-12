@@ -303,6 +303,7 @@ void TFn::Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar, Double_t*
    fMin = fMax = NULL;
    fParams = fParErrors = fParMin = fParMax = NULL;
    fNdim = fNpar = 0;
+   fSampler = NULL;
 
    if (ndim > 0) {
       fNdim = ndim;
@@ -470,7 +471,7 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    //
    // WARNING! A function created with this constructor cannot be Cloned.
    Init(ndim, min, max, npar);
-   ConfigureFunctor(name);
+   StoreFunctor(name);
 }
 
 //______________________________________________________________________________
@@ -495,7 +496,7 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(const Double_t*, const D
    //
    // WARNING! A function created with this constructor cannot be Cloned.
    Init(ndim, min, max, npar);
-//   ConfigureFunctor(name);
+//   StoreFunctor(name);
 }
 */
 
@@ -518,13 +519,13 @@ TFn::TFn(const char* name, UInt_t ndim, ROOT::Math::ParamFunctor f, Double_t* mi
     * WARNING! This constructor can be used only in compiled code
     * WARNING! A function created with this constructor cannot be Cloned.
     */
-   ConfigureFunctor(name);
+   StoreFunctor(name);
    Init(ndim, min, max, npar);
 }
 
 
 //______________________________________________________________________________
-void TFn::ConfigureFunctor(const char* name)
+void TFn::StoreFunctor(const char* name)
 {
    // Internal Function to Create a TFn  using a Functor.
    // Store formula in linked list of formula in ROOT
