@@ -50,9 +50,11 @@
    (void) aNotification;
 }
 
+/*
 //______________________________________________________________________________
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender
 {
+   NSLog(@"AAAA??");
    [NSApp stop : nil];
    NSEvent* stopEvent = [NSEvent otherEventWithType: NSApplicationDefined
                                      location: NSMakePoint(0,0)
@@ -67,5 +69,6 @@
 
    return NSTerminateCancel;
 }
+*/
 
 @end
