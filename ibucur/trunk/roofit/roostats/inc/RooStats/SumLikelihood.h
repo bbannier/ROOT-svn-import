@@ -169,7 +169,7 @@ namespace RooStats {
                // TODO: CachingSimNLL::noDeepLEE_
             }
 
-            Double_t term = (*itSum <= 0 ? -9e9 : log( *itSum)); 
+            Double_t term = (*itSum <= 0 ? -9e9 : log( (*itSum) / sumCoef) ); 
             // TODO: Determine the reason for -9e9
             // TODO: KAHAN_SUM
             //std::cout << "SumLikelihood::evaluate term " << term << " " << result <<  std::endl;
