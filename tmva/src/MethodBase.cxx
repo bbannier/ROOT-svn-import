@@ -3099,7 +3099,7 @@ const std::vector<TMVA::Event*>& TMVA::MethodBase::GetEventCollection( Types::ET
    Int_t idx = Data()->TreeIndex(type);  //index indicating Training,Testing,...  events/datasets
    if (fEventCollections.at(idx) == 0) {
       fEventCollections.at(idx) = &(Data()->GetEventCollection(type));
-      fEventCollections.at(idx) = GetTransformationHandler().CalcTransformations(*(fEventCollections.at(idx)));
+      fEventCollections.at(idx) = GetTransformationHandler().CalcTransformations(*(fEventCollections.at(idx)),kTRUE);
    }
    return *(fEventCollections.at(idx));
 }
