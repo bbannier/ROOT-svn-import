@@ -19,6 +19,7 @@
 #include "RooCmdArg.h"
 #include "RooLinkedList.h"
 #include "RooAddPdf.h"
+#include "RooNumIntConfig.h"
 
 // RooStats headers
 #include "RooStats/ModelConfig.h"
@@ -35,6 +36,8 @@ void buildAddModel(RooWorkspace *w);
 void buildSimultaneousModel(RooWorkspace *w);
 
 void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const char* data = "data_obs") {
+
+   RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
 
    RooStats::HistFactory::FlexibleInterpVar fiv;
    gSystem->Load("libHistFactory");   
