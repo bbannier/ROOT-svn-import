@@ -32,6 +32,7 @@ const int RUNS = 1;
 using namespace RooFit;
 using namespace RooStats;
 
+void buildSumModel(RooWorkspace *w);
 void buildAddModel(RooWorkspace *w);
 void buildSimultaneousModel(RooWorkspace *w);
 
@@ -45,21 +46,20 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 
    // XXX never forget workspace name
    // Build Higgs model
-   TFile f(file);
-   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
-   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
+//   TFile f(file);
+//   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
+//   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
 //   w->var("MH")->setVal(125);
 
-//   RooWorkspace *w = new RooWorkspace("w", kTRUE);
+   RooWorkspace *w = new RooWorkspace("w", kTRUE);
 //   buildSimultaneousModel(w);   
-//   buildAddModel(w);
-//   RooAddPdf *add = (RooAddPdf *)w->pdf("sum_pdf");
-//   ModelConfig* model = (ModelConfig*)w->obj("S+B");
+   buildAddModel(w);
+//   buildSumModel(w);
+   ModelConfig* model = (ModelConfig*)w->obj("S+B");
 
 //   *((RooArgSet *)model->GetObservables()) = *w->data(data)->get(0);
    
-
    RooLinkedList commands;
    RooCmdArg arg1(RooFit::CloneData(kFALSE));
    RooCmdArg arg2(RooFit::Constrain(*model->GetNuisanceParameters()));
@@ -244,6 +244,32 @@ void buildAddModel(RooWorkspace *w)
 }
 
 
+void buildSumModel(RooWorkspace *w)
+{
+   w->factory("Poisson::p1(obs1[3,1,5],sig[2,1,10])");
+   w->factory("prod::sig2(2,sig)");
+   w->factory("Poisson::p2(obs2[2,1,5],sig2)");
+   w->factory("prod::sig3(3,sig)");
+   w->factory("Poisson::p3(obs3[1,1,10],sig3)");
+   w->factory("f1[1,0,2]");
+   w->factory("f2[1.5,0,2]");
+   w->factory("f3[1,0,2]");
+   w->factory("SUM::sum_pdf(f1*p1,f2*p2, f3*p3)");
+
+   ModelConfig* sbModel = new ModelConfig("S+B", w);
+   sbModel->SetObservables("obs1,obs2,obs3");
+   sbModel->SetParametersOfInterest("sig");
+   sbModel->SetNuisanceParameters("f1,f2,f3");
+   sbModel->SetPdf("sum_pdf");
+   w->import(*sbModel);
+
+
+   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 10);
+   data->SetName("data_obs");
+   w->import(*data);
+
+   w->pdf("sum_pdf")->Print("");
+}
 
 
 
