@@ -55,7 +55,11 @@ void MethodUnitTestWithROCLimits::run()
 
 // FIXME:: make the factory option mutable?
 // absolute silence options:
+#ifdef VERBOSE
+  string factoryOptions( "V:!Silent:AnalysisType=Classification:!Color:!DrawProgressBar" );
+#else
   string factoryOptions( "!V:Silent:AnalysisType=Classification:!Color:!DrawProgressBar" );
+#endif
 
   if (_methodOption.Contains("VarTransform")) factoryOptions+=":Transformations=I;D;P;G;N;U";
   Factory* factory = new Factory( "TMVAUnitTesting", outputFile, factoryOptions );

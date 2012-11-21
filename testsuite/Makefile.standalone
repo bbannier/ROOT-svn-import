@@ -31,9 +31,13 @@ TMVAUTDIR        = tmvaut
 TMVAUTSOURCES    = $(wildcard $(TMVAUTDIR)/*.cxx)
 TMVAUTOBJECTS    = $(TMVAUTSOURCES:.cxx=.o)
 TMVAUTH          = $(TMVAUTSOURCES:.cxx=.h)
+TMVAOPTIONS = -DFULL -DCOUTDEBUG -DNOCLEANUP
+#
+# comment the next line in if you require tons of output (for debug only)
+#TMVAOPTIONS += -DVERBOSE
 
 $(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
-	$(CXX) -g  $(TMVAINCLUDE) $(CXXFLAGS) -DFULL -DCOUTDEBUG -DNOCLEANUP -c $< -o $@
+	$(CXX) -g  $(TMVAINCLUDE) $(CXXFLAGS) $(TMVAOPTIONS) -c $< -o $@
 
 $(STRESSTMVA):  $(STRESSTMVAO) $(TMVAUTOBJECTS)
 	@rm -f *.d *.so                                

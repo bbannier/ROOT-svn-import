@@ -81,7 +81,11 @@ bool utFactory::addEventsToFactoryByHand(const char* factoryname, const char* op
    else _methodTitle="LD";
 
    TString prepareString="";
+#ifdef VERBOSE
+   string factoryOptions( "V:!Silent:Transformations=I:AnalysisType=Classification:!Color:!DrawProgressBar" );
+#else
    string factoryOptions( "!V:Silent:Transformations=I:AnalysisType=Classification:!Color:!DrawProgressBar" );
+#endif
    TString outfileName( "weights/ByHand.root" );
    TFile* outputFile = new TFile( outfileName, "RECREATE" );
    outputFile->cd();

@@ -133,7 +133,11 @@ void ReaderTest::run()
    std::vector< TMVA::Reader* > reader(nTest);
    for (int iTest=0;iTest<nTest;iTest++){
       //std::cout << "iTest="<<iTest<<std::endl;
+#ifdef VERBOSE
+      reader[iTest] = new TMVA::Reader( "!Color:!Silent" );
+#else
       reader[iTest] = new TMVA::Reader( "!Color:Silent" );
+#endif
       for (UInt_t i=0;i<fNVar;i++)
          reader[iTest]->AddVariable( fVariableNames->at(i),&testvar[i]);
       for (UInt_t j=0;j<fNSpecs;j++) reader[iTest]->AddSpectator( fSpecNames->at(j) ,&specvar[j]); 
