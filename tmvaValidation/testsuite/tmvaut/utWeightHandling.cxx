@@ -90,7 +90,11 @@ bool utWeightHandling::operateSingleFactory(const char* factoryname, const char*
 
    TString _methodTitle="LD",_methodOption="!H:!V"; // fix me
    TString prepareString="";
-   string factoryOptions( "!V:Silent:Transformations=I,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
+#ifdef VERBOSE
+   string factoryOptions( "V:!Silent:Transformations=I,D:AnalysisType=Classification:!Color:!DrawProgressBar" );
+#else
+   string factoryOptions( "!V:Silent:Transformations=I,D:AnalysisType=Classification:!Color:!DrawProgressBar" );   
+#endif
    TString outfileName( "weights/TMVA.root" );
    TFile* outputFile = TFile::Open( outfileName, "RECREATE" );
 

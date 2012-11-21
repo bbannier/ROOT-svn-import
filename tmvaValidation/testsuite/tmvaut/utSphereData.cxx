@@ -40,8 +40,11 @@ void utSphereData::run()
 
 // FIXME:: make the factory option mutable?
 // absolute silence options:
+#ifdef VERBOSE
+  string factoryOptions( "V:!Silent:Transformations=I;D;P;G;N;U:AnalysisType=Classification:!Color:!DrawProgressBar" );
+#else
   string factoryOptions( "!V:Silent:Transformations=I;D;P;G;N;U:AnalysisType=Classification:!Color:!DrawProgressBar" );
-
+#endif
   Factory* factory = new Factory( "TMVASphereData", outputFile, factoryOptions );
   
   factory->AddVariable( "var0",  "Variable 0", 'F' );

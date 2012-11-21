@@ -39,8 +39,11 @@ void RegressionUnitTestWithDeviation::run()
 
    // FIXME:: make the factory option mutable?
    // absolute silence options:
+#ifdef VERBOSE
+   string factoryOptions( "V:!Silent:Transformations=I;D;P;G;N;U:AnalysisType=Regression:!Color:!DrawProgressBar" );
+#else
    string factoryOptions( "!V:Silent:Transformations=I;D;P;G;N;U:AnalysisType=Regression:!Color:!DrawProgressBar" );
-
+#endif
    Factory* factory = new Factory( "TMVARegressionUnitTesting", outputFile, factoryOptions );
 
    factory->AddVariable( "var1", "Variable 1", "units", 'F' ); // fix me

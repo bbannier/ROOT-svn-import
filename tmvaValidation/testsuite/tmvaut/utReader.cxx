@@ -41,7 +41,11 @@ void utReader::run()
    vector<float> testvar(10);
    std::vector< TMVA::Reader* > reader(nTest);
    for (int iTest=0;iTest<nTest;iTest++){
+#ifdef VERBOSE
+      reader[iTest] = new TMVA::Reader( "!Color:!Silent" );
+#else
       reader[iTest] = new TMVA::Reader( "!Color:Silent" );
+#endif
       if (iTest==0){
          reader[iTest]->AddVariable( "var0" ,&testvar[0]);
          reader[iTest]->AddVariable( "var1" ,&testvar[1]);
