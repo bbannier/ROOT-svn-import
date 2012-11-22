@@ -57,18 +57,12 @@
 #include "TROOT.h"
 #include "TFile.h"
 #include "TH1.h"
-#include "Api.h"
 #include <map>
 #include <string>
 #include <list>
 #include <set>
 
 using namespace std ;
-
-
-#if ROOT_VERSION_CODE <= ROOT_VERSION(5,19,02)
-#include "Api.h"
-#endif
 
 
 #include "TClass.h"
@@ -242,8 +236,8 @@ Bool_t RooWorkspace::import(const char* fileSpec, const RooCmdArg& arg1, const R
   // The arguments will be passed on to the relevant RooAbsArg& or RooAbsData& import call
 
   // Parse file/workspace/objectname specification
-  char buf[1024] ;
-  strlcpy(buf,fileSpec,1024) ;
+  char buf[10240] ;
+  strlcpy(buf,fileSpec,10240) ;
   char* filename = strtok(buf,":") ;
   char* wsname = strtok(0,":") ;
   char* objname = strtok(0,":") ;
@@ -382,15 +376,15 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   if (strlen(varChangeIn)>0) {
     
     // Parse comma separated lists into map<string,string>
-    char tmp[1024] ;
-    strlcpy(tmp,varChangeIn,1024) ;
+    char tmp[10240] ;
+    strlcpy(tmp,varChangeIn,10240) ;
     list<string> tmpIn,tmpOut ;
     char* ptr = strtok(tmp,",") ;
     while (ptr) {
       tmpIn.push_back(ptr) ;
       ptr = strtok(0,",") ;
     }
-    strlcpy(tmp,varChangeOut,1024) ;
+    strlcpy(tmp,varChangeOut,10240) ;
     ptr = strtok(tmp,",") ;
     while (ptr) {
       tmpOut.push_back(ptr) ;
@@ -406,9 +400,9 @@ Bool_t RooWorkspace::import(const RooAbsArg& inArg, const RooCmdArg& arg1, const
   // Process RenameAllVariables argument if specified  
   // First convert exception list if provided
   std::set<string> exceptVarNames ;
-  char tmp[1024] ;
+  char tmp[10240] ;
   if (exceptVars && strlen(exceptVars)) {
-    strlcpy(tmp,exceptVars,1024) ;
+    strlcpy(tmp,exceptVars,10240) ;
     char* ptr = strtok(tmp,",") ;
     while(ptr) {
       exceptVarNames.insert(ptr) ;
@@ -713,15 +707,15 @@ Bool_t RooWorkspace::import(RooAbsData& inData, const RooCmdArg& arg1, const Roo
   if (strlen(varChangeIn)>0) {
     
     // Parse comma separated lists of variable name changes
-    char tmp[1024] ;
-    strlcpy(tmp,varChangeIn,1024) ;
+    char tmp[10240] ;
+    strlcpy(tmp,varChangeIn,10240) ;
     list<string> tmpIn,tmpOut ;
     char* ptr = strtok(tmp,",") ;
     while (ptr) {
       tmpIn.push_back(ptr) ;
       ptr = strtok(0,",") ;
     }
-    strlcpy(tmp,varChangeOut,1024) ;
+    strlcpy(tmp,varChangeOut,10240) ;
     ptr = strtok(tmp,",") ;
     while (ptr) {
       tmpOut.push_back(ptr) ;
@@ -850,8 +844,8 @@ Bool_t RooWorkspace::extendSet(const char* name, const char* newContents)
   RooArgSet wsargs ;
 
   // Check all constituents of provided set
-  char buf[1024] ;
-  strlcpy(buf,newContents,1024) ;
+  char buf[10240] ;
+  strlcpy(buf,newContents,10240) ;
   char* token = strtok(buf,",") ;
   while(token) {
     // If missing, either import or report error
@@ -1214,8 +1208,8 @@ RooArgSet RooWorkspace::argSet(const char* nameList) const
   // Return set of RooAbsArgs matching to given list of names
   RooArgSet ret ;
 
-  char tmp[1024] ;
-  strlcpy(tmp,nameList,1024) ;
+  char tmp[10240] ;
+  strlcpy(tmp,nameList,10240) ;
   char* token = strtok(tmp,",") ;
   while(token) {
     RooAbsArg* oneArg = arg(token) ;
@@ -1470,11 +1464,7 @@ Bool_t RooWorkspace::CodeRepo::autoImportClass(TClass* tc, Bool_t doReplace)
   // Require that class meets technical criteria to be persistable (i.e it has a default ctor)
   // (We also need a default ctor of abstract classes, but cannot check that through is interface
   //  as TClass::HasDefaultCtor only returns true for callable default ctors)
-#if ROOT_VERSION_CODE <= ROOT_VERSION(5,19,02)
-  if (!(tc->GetClassInfo()->Property()&G__BIT_ISABSTRACT) && !tc->HasDefaultConstructor()) {
-#else
-  if (!(gCint->ClassInfo_Property(tc->GetClassInfo())&G__BIT_ISABSTRACT) && !tc->HasDefaultConstructor()) {
-#endif
+  if (!(tc->Property() & kIsAbstract) && !tc->HasDefaultConstructor()) {
     oocoutW(_wspace,ObjectHandling) << "RooWorkspace::autoImportClass(" << _wspace->GetName() << ") WARNING cannot import class " 
 				    << tc->GetName() << " : it cannot be persisted because it doesn't have a default constructor. Please fix " << endl ;
     return kFALSE ;      
@@ -1575,7 +1565,7 @@ Bool_t RooWorkspace::CodeRepo::autoImportClass(TClass* tc, Bool_t doReplace)
     }
   }
   
-  char buf[1024] ;
+  char buf[10240] ;
 
   // *** Phase 3 *** Prepare to import code from files into STL string buffer
   //
@@ -1643,8 +1633,8 @@ Bool_t RooWorkspace::CodeRepo::autoImportClass(TClass* tc, Bool_t doReplace)
       // Look for include of declaration file corresponding to this implementation file
       if (strstr(buf,"#include")) {
 	// Process #include statements here
-	char tmp[1024] ;
-	strlcpy(tmp,buf,1024) ;
+	char tmp[10240] ;
+	strlcpy(tmp,buf,10240) ;
 	strtok(tmp," <\"") ;
 	char* incfile = strtok(0," <\"") ;
 	
@@ -2491,8 +2481,8 @@ Bool_t RooWorkspace::CodeRepo::compileClasses()
     ifstream ifdecl(fdname.c_str()) ;
     if (ifdecl) {
       TString contents ;
-      char buf[1024] ;
-      while(ifdecl.getline(buf,1024)) {
+      char buf[10240] ;
+      while(ifdecl.getline(buf,10240)) {
 	contents += buf ;
 	contents += "\n" ;
       }      
@@ -2520,8 +2510,8 @@ Bool_t RooWorkspace::CodeRepo::compileClasses()
     ifstream ifimpl(finame.c_str()) ;
     if (ifimpl) {
       TString contents ;
-      char buf[1024] ;
-      while(ifimpl.getline(buf,1024)) {
+      char buf[10240] ;
+      while(ifimpl.getline(buf,10240)) {
 	contents += buf ;
 	contents += "\n" ;
       }      
@@ -2707,13 +2697,15 @@ Bool_t RooWorkspace::isValidCPPID(const char* name)
 void RooWorkspace::unExport()
 {
   // Delete exported reference in CINT namespace 
-  char buf[1024] ;
   TIterator* iter = _allOwnedNodes.createIterator() ;
   TObject* wobj ;
   while((wobj=iter->Next())) {
     if (isValidCPPID(wobj->GetName())) {
-      strlcpy(buf,Form("%s::%s",_exportNSName.c_str(),wobj->GetName()),1024) ;
-      G__deletevariable(buf) ;
+      // Temporary work-around for properly deleting the variable from
+      // the interpreter: at least mark all subsequent uses as invalid.
+      char buf[10240] ;
+      strlcpy(buf,Form("%s::%s",_exportNSName.c_str(),wobj->GetName()),10240) ;
+      gInterpreter->DeleteVariable(buf);
     }
   }
   delete iter ;
