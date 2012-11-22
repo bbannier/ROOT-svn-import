@@ -96,14 +96,17 @@ namespace utils {
     if (!Ty->isPointerType())
       Ty = Ctx.getPointerType(Ty);
     TypeSourceInfo* TSI = Ctx.CreateTypeSourceInfo(Ty);
-    const llvm::APInt Addr(8 * sizeof(void *), Ptr);
 
-    Expr* Result = IntegerLiteral::Create(Ctx, Addr, Ctx.UnsignedLongTy,
-                                          SourceLocation());
+    Expr* Result = Synthesize::IntegerLiteralExpr(Ctx, Ptr);
     Result = S->BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(),
-                                         Result).take();
+                                    Result).take();
     assert(Result && "Cannot create CStyleCastPtrExpr");
     return Result;
+  }
+
+  IntegerLiteral* Synthesize::IntegerLiteralExpr(ASTContext& C, uint64_t Ptr) {
+    const llvm::APInt Addr(8 * sizeof(void *), Ptr);
+    return IntegerLiteral::Create(C, Addr, C.UnsignedLongTy, SourceLocation());
   }
 
   static
@@ -190,7 +193,7 @@ namespace utils {
        const NamedDecl* outer 
           = llvm::dyn_cast_or_null<NamedDecl>(decl->getDeclContext());
        while ( outer && outer->getName().size() ) {
-        // NOTE: Net is being cast to widely, replace by a lookup. 
+        // NOTE: Net is being cast too widely, replace by a lookup. 
         if (outer->getName().compare("std") == 0) {
           return true;
         }
@@ -410,8 +413,12 @@ namespace utils {
               prefix = CreateNestedNameSpecifier(Ctx,
                                           llvm::dyn_cast<NamespaceDecl>(outer));
             } else {
-              prefix = CreateNestedNameSpecifier(Ctx,
-                                          llvm::dyn_cast<TagDecl>(outer));
+              // We should only create the nested name specifier
+              // if the outer scope is really a TagDecl.
+              // It could also be a CXXMethod for example.
+              TagDecl *tdecl = llvm::dyn_cast<TagDecl>(outer);
+              if (tdecl) 
+                 prefix = CreateNestedNameSpecifier(Ctx,tdecl);
             }
           }
         }
@@ -427,7 +434,7 @@ namespace utils {
       llvm::SmallVector<TemplateArgument, 4> desArgs;
       for(TemplateSpecializationType::iterator I = TST->begin(), E = TST->end();
           I != E; ++I) {
-        if (I->getKind() != clang::TemplateArgument::Type) {
+        if (I->getKind() != TemplateArgument::Type) {
           desArgs.push_back(*I);
           continue;
         }
@@ -465,14 +472,14 @@ namespace utils {
   }
 
   NamespaceDecl* Lookup::Namespace(Sema* S, const char* Name,
-                                   DeclContext* Within) {
+                                   const DeclContext* Within) {
     DeclarationName DName = &S->Context.Idents.get(Name);
     LookupResult R(*S, DName, SourceLocation(),
                    Sema::LookupNestedNameSpecifierName);
     if (!Within)
       S->LookupName(R, S->TUScope);
     else
-      S->LookupQualifiedName(R, Within);
+      S->LookupQualifiedName(R, const_cast<DeclContext*>(Within));
 
     if (R.empty())
       return 0;
@@ -482,19 +489,20 @@ namespace utils {
     return dyn_cast<NamespaceDecl>(R.getFoundDecl());
   }
 
-  NamedDecl* Lookup::Named(Sema* S, const char* Name, DeclContext* Within) {
+  NamedDecl* Lookup::Named(Sema* S, const char* Name,
+                           const DeclContext* Within) {
     DeclarationName DName = &S->Context.Idents.get(Name);
     return Lookup::Named(S, DName, Within);
   }
 
   NamedDecl* Lookup::Named(Sema* S, const DeclarationName& Name, 
-                           DeclContext* Within) {
+                           const DeclContext* Within) {
     LookupResult R(*S, Name, SourceLocation(), Sema::LookupOrdinaryName,
                    Sema::ForRedeclaration);
     if (!Within)
       S->LookupName(R, S->TUScope);
     else
-      S->LookupQualifiedName(R, Within);
+      S->LookupQualifiedName(R, const_cast<DeclContext*>(Within));
 
     if (R.empty())
       return 0;

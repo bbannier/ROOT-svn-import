@@ -13,6 +13,7 @@
 #include "TROOT.h"
 #include "TClass.h"
 #include "TLatex.h"
+#include "TMathText.h"
 #include "TMath.h"
 #include "TVirtualPad.h"
 #include "TVirtualPS.h"
@@ -44,6 +45,7 @@ It provides several functionalities:
 <li><a href="#L11"> Character Adjustement</a></li>
 <li><a href="#L12"> Italic and Boldface</a></li>
 <li><a href="#L13"> Examples</a></li>
+<li><a href="#L14"> Interface to TMathText</a></li>
 </ul>
 
 When the font precision (see <tt>TAttText</tt>) is low (0 or 1), TLatex is
@@ -293,6 +295,15 @@ Begin_Macro(source)
    return ex3;
 }
 End_Macro
+ 
+Begin_Html
+<a name="L14"></a><h3>Interface to TMathText</h3>
+The class <tt>TMathText</tt> is a TeX math formulae interpreter. It uses plain
+TeX syntax and uses "\" as control instead of "#". If a piece of text containing
+"\" is given to <tt>TLatex</tt> then <tt>TMathText</tt> is automatically invoked.
+Therefore, as histograms' titles, axis titles, labels etc ... are drawn using
+<tt>TLatex</tt>, the <tt>TMathText</tt> syntax can be used for them also. 
+End_Html
 */
 
 
@@ -1837,6 +1848,14 @@ void TLatex::PaintLatex(Double_t x, Double_t y, Double_t angle, Double_t size, c
       if (gVirtualX) gVirtualX->SetTextAngle(angle);
       if (gVirtualPS) gVirtualPS->SetTextAngle(angle);
       gPad->PaintText(x,y,text1);
+      return;
+   }
+   
+   // Paint the text using TMathText if contains a "\"
+   if (strstr(text1,"\\")) {
+      TMathText tm;
+      tm.SetTextAlign(GetTextAlign());
+      tm.PaintMathText(x, y, angle, size, text1);
       return;
    }
 

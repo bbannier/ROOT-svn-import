@@ -25,12 +25,12 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 
 #include "llvm/Linker.h"
 #include "llvm/LLVMContext.h"
-#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Path.h"
 
 #include <sstream>
@@ -39,59 +39,6 @@
 using namespace clang;
 
 namespace {
-static bool tryLinker(const std::string& filename,
-                      const cling::InvocationOptions& Opts,
-                      llvm::Module* module) {
-  assert(module && "Module must exist for linking!");
-  llvm::Linker L("cling", module, llvm::Linker::QuietWarnings
-                 | llvm::Linker::QuietErrors);
-  for (std::vector<llvm::sys::Path>::const_iterator I
-         = Opts.LibSearchPath.begin(), E = Opts.LibSearchPath.end(); I != E;
-       ++I) {
-    L.addPath(*I);
-  }
-  L.addSystemPaths();
-  bool Native = true;
-  if (L.LinkInLibrary(filename, Native)) {
-    // that didn't work, try bitcode:
-    llvm::sys::Path FilePath(filename);
-    std::string Magic;
-    if (!FilePath.getMagicNumber(Magic, 64)) {
-      // filename doesn't exist...
-      L.releaseModule();
-      return false;
-    }
-    if (llvm::sys::IdentifyFileType(Magic.c_str(), 64)
-        == llvm::sys::Bitcode_FileType) {
-      // We are promised a bitcode file, complain if it fails
-      L.setFlags(0);
-      if (L.LinkInFile(llvm::sys::Path(filename), Native)) {
-        L.releaseModule();
-        return false;
-      }
-    } else {
-      // Nothing the linker can handle
-      L.releaseModule();
-      return false;
-    }
-  } else if (Native) {
-    // native shared library, load it!
-    llvm::sys::Path SoFile = L.FindLib(filename);
-    assert(!SoFile.isEmpty() && "The shared lib exists but can't find it!");
-    std::string errMsg;
-    bool hasError = llvm::sys::DynamicLibrary
-      ::LoadLibraryPermanently(SoFile.str().c_str(), &errMsg);
-    if (hasError) {
-      llvm::errs() << "Could not load shared library!\n"
-                   << "\n"
-                   << errMsg.c_str();
-      L.releaseModule();
-      return false;
-    }
-  }
-  L.releaseModule();
-  return true;
-}
 
 static bool canWrapForCall(const std::string& input_line) {
    // Whether input_line can be wrapped into a function.
@@ -102,23 +49,48 @@ static bool canWrapForCall(const std::string& input_line) {
    return true;
 }
 
+  static cling::Interpreter::ExecutionResult
+  ConvertExecutionResult(cling::ExecutionContext::ExecutionResult ExeRes) {
+    switch (ExeRes) {
+    case cling::ExecutionContext::kExeSuccess:
+      return cling::Interpreter::kExeSuccess;
+    case cling::ExecutionContext::kExeFunctionNotCompiled:
+      return cling::Interpreter::kExeFunctionNotCompiled;
+    case cling::ExecutionContext::kExeUnresolvedSymbols:
+      return cling::Interpreter::kExeUnresolvedSymbols;
+    default: break;
+    }
+    return cling::Interpreter::kExeSuccess;
+  }
+
 } // unnamed namespace
 
-namespace cling {
 
+// "Declared" to the JIT in RuntimeUniverse.h
+extern "C" 
+int cling__runtime__internal__local_cxa_atexit(void (*func) (void*), void* arg,
+                                               void* dso,
+                                               void* interp) {
+   return ((cling::Interpreter*)interp)->CXAAtExit(func, arg, dso);
+}
+
+namespace cling {
+#if (!_WIN32)
   // "Declared" to the JIT in RuntimeUniverse.h
   namespace runtime {
     namespace internal {
-      int local_cxa_atexit(void (*func) (void*), void* arg,
-                           void* dso, Interpreter* interp) {
-        return interp->CXAAtExit(func, arg, dso);
-      }
       struct __trigger__cxa_atexit {
         ~__trigger__cxa_atexit();
-      };
-      __trigger__cxa_atexit::~__trigger__cxa_atexit() {}
+      } S;
+      __trigger__cxa_atexit::~__trigger__cxa_atexit() {
+        if (std::getenv("bar") == (char*)-1) {
+          llvm::errs() <<
+            "UNEXPECTED cling::runtime::internal::__trigger__cxa_atexit\n";
+        }
+      }
     }
   }
+#endif
 
   // This function isn't referenced outside its translation unit, but it
   // can't use the "static" keyword because its address is used for
@@ -130,6 +102,14 @@ namespace cling {
     // allow taking the address of ::main however.
     void *MainAddr = (void*) (intptr_t) GetExecutablePath;
     return llvm::sys::Path::GetMainExecutable(Argv0, MainAddr);
+  }
+
+  const Parser& Interpreter::getParser() const {
+    return *m_IncrParser->getParser();
+  }
+
+  CodeGenerator* Interpreter::getCodeGenerator() const {
+    return m_IncrParser->getCodeGenerator();
   }
 
   void Interpreter::unload() {
@@ -152,7 +132,11 @@ namespace cling {
     m_IncrParser.reset(new IncrementalParser(this, LeftoverArgs.size(),
                                              &LeftoverArgs[0],
                                              llvmdir));
-    m_LookupHelper.reset(new LookupHelper(m_IncrParser->getParser()));
+    Sema& SemaRef = getSema();
+    m_LookupHelper.reset(new LookupHelper(new Parser(SemaRef.getPreprocessor(), 
+                                                     SemaRef, 
+                                                     /*SkipFunctionBodies*/false,
+                                                     /*isTemp*/true)));
 
     m_ExecutionContext.reset(new ExecutionContext());
 
@@ -181,8 +165,8 @@ namespace cling {
       }
     }
 
-    m_ExecutionContext->addSymbol("local_cxa_atexit",
-                  (void*)(intptr_t)&cling::runtime::internal::local_cxa_atexit);
+    m_ExecutionContext->addSymbol("cling__runtime__internal__local_cxa_atexit",
+                  (void*)(intptr_t)&cling__runtime__internal__local_cxa_atexit);
 
     // Enable incremental processing, which prevents the preprocessor destroying
     // the lexer on EOF token.
@@ -211,9 +195,17 @@ namespace cling {
     }
 
     handleFrontendOptions();
+
+    // Tell the diagnostic client that we are entering file parsing mode.
+    DiagnosticConsumer& DClient = getCI()->getDiagnosticClient();
+    DClient.BeginSourceFile(getCI()->getLangOpts(),
+                            &getCI()->getPreprocessor());
   }
 
   Interpreter::~Interpreter() {
+    DiagnosticConsumer& DClient = getCI()->getDiagnosticClient();
+    DClient.EndSourceFile();
+
     for (size_t I = 0, N = m_AtExitFuncs.size(); I < N; ++I) {
       const CXAAtExitElement& AEE = m_AtExitFuncs[N - I - 1];
       (*AEE.m_Func)(AEE.m_Arg);
@@ -241,7 +233,7 @@ namespace cling {
 
     CompilerInstance* CI = getCI();
     HeaderSearchOptions& headerOpts = CI->getHeaderSearchOpts();
-    const bool IsUserSupplied = false;
+    const bool IsUserSupplied = true;
     const bool IsFramework = false;
     const bool IsSysRootRelative = true;
     headerOpts.AddPath(incpath, frontend::Angled, IsUserSupplied, IsFramework,
@@ -253,13 +245,23 @@ namespace cling {
                                     PP.getTargetInfo().getTriple());
   }
 
-  // Copied from clang/lib/Frontend/CompilerInvocation.cpp
   void Interpreter::DumpIncludePath() {
+    llvm::SmallVector<std::string, 100> IncPaths;
+    GetIncludePaths(IncPaths, true /*withSystem*/, true /*withFlags*/);
+    // print'em all
+    for (unsigned i = 0; i < IncPaths.size(); ++i) {
+      llvm::outs() << IncPaths[i] <<"\n";
+    }
+  }
+
+  // Adapted from clang/lib/Frontend/CompilerInvocation.cpp
+  void Interpreter::GetIncludePaths(llvm::SmallVectorImpl<std::string>& incpaths,
+                                   bool withSystem, bool withFlags) {
     const HeaderSearchOptions Opts(getCI()->getHeaderSearchOpts());
-    std::vector<std::string> Res;
-    if (Opts.Sysroot != "/") {
-      Res.push_back("-isysroot");
-      Res.push_back(Opts.Sysroot);
+
+    if (withFlags && Opts.Sysroot != "/") {
+      incpaths.push_back("-isysroot");
+      incpaths.push_back(Opts.Sysroot);
     }
 
     /// User specified include entries.
@@ -270,72 +272,76 @@ namespace cling {
       if (E.IsUserSupplied) {
         switch (E.Group) {
         case frontend::After:
-          Res.push_back("-idirafter");
+          if (withFlags) incpaths.push_back("-idirafter");
           break;
 
         case frontend::Quoted:
-          Res.push_back("-iquote");
+          if (withFlags) incpaths.push_back("-iquote");
           break;
 
         case frontend::System:
-          Res.push_back("-isystem");
+          if (!withSystem) continue;
+          if (withFlags) incpaths.push_back("-isystem");
           break;
 
         case frontend::IndexHeaderMap:
-          Res.push_back("-index-header-map");
-          Res.push_back(E.IsFramework? "-F" : "-I");
+          if (!withSystem) continue;
+          if (withFlags) incpaths.push_back("-index-header-map");
+          if (withFlags) incpaths.push_back(E.IsFramework? "-F" : "-I");
           break;
 
         case frontend::CSystem:
-          Res.push_back("-c-isystem");
+          if (!withSystem) continue;
+          if (withFlags) incpaths.push_back("-c-isystem");
           break;
 
         case frontend::CXXSystem:
-          Res.push_back("-cxx-isystem");
+          if (!withSystem) continue;
+          if (withFlags) incpaths.push_back("-cxx-isystem");
           break;
 
         case frontend::ObjCSystem:
-          Res.push_back("-objc-isystem");
+          if (!withSystem) continue;
+          if (withFlags) incpaths.push_back("-objc-isystem");
           break;
 
         case frontend::ObjCXXSystem:
-          Res.push_back("-objcxx-isystem");
+          if (!withSystem) continue;
+          if (withFlags) incpaths.push_back("-objcxx-isystem");
           break;
 
         case frontend::Angled:
-          Res.push_back(E.IsFramework ? "-F" : "-I");
+          if (withFlags) incpaths.push_back(E.IsFramework ? "-F" : "-I");
           break;
         }
       } else {
+        if (!withSystem) continue;
         if (E.Group != frontend::Angled && E.Group != frontend::System)
           llvm::report_fatal_error("Invalid option set!");
-        Res.push_back(E.Group == frontend::Angled ? "-iwithprefixbefore" :
-                      "-iwithprefix");
+        if (withFlags)
+          incpaths.push_back(E.Group == frontend::Angled ?
+                             "-iwithprefixbefore" :
+                             "-iwithprefix");
       }
-      Res.push_back(E.Path);
+      incpaths.push_back(E.Path);
     }
 
-    if (!Opts.ResourceDir.empty()) {
-      Res.push_back("-resource-dir");
-      Res.push_back(Opts.ResourceDir);
+    if (withSystem && !Opts.ResourceDir.empty()) {
+      if (withFlags) incpaths.push_back("-resource-dir");
+      incpaths.push_back(Opts.ResourceDir);
     }
-    if (!Opts.ModuleCachePath.empty()) {
-      Res.push_back("-fmodule-cache-path");
-      Res.push_back(Opts.ModuleCachePath);
+    if (withSystem && withFlags && !Opts.ModuleCachePath.empty()) {
+      incpaths.push_back("-fmodule-cache-path");
+      incpaths.push_back(Opts.ModuleCachePath);
     }
-    if (!Opts.UseStandardSystemIncludes)
-      Res.push_back("-nostdinc");
-    if (!Opts.UseStandardCXXIncludes)
-      Res.push_back("-nostdinc++");
-    if (Opts.UseLibcxx)
-      Res.push_back("-stdlib=libc++");
-    if (Opts.Verbose)
-      Res.push_back("-v");
-
-    // print'em all
-    for (unsigned i = 0; i < Res.size(); ++i) {
-      llvm::outs() << Res[i] <<"\n";
-    }
+    if (withSystem && withFlags && !Opts.UseStandardSystemIncludes)
+      incpaths.push_back("-nostdinc");
+    if (withSystem && withFlags && !Opts.UseStandardCXXIncludes)
+      incpaths.push_back("-nostdinc++");
+    if (withSystem && withFlags && Opts.UseLibcxx)
+      incpaths.push_back("-stdlib=libc++");
+    if (withSystem && withFlags && Opts.Verbose)
+      incpaths.push_back("-v");
   }
 
   CompilerInstance* Interpreter::getCI() const {
@@ -455,13 +461,20 @@ namespace cling {
     std::string WrapperName;
     std::string Wrapper = input;
     WrapInput(Wrapper, WrapperName);
-    if (m_IncrParser->Compile(Wrapper, CO) == IncrementalParser::kSuccess) {
-      const Transaction* lastT = m_IncrParser->getLastTransaction();
+    
+    const Transaction* lastT = m_IncrParser->Compile(Wrapper, CO);
+    if (lastT->getIssuedDiags() == Transaction::kNone)
       if (lastT->getState() == Transaction::kCommitted
-          && RunFunction(lastT->getWrapperFD(), QualType()))
+          && RunFunction(lastT->getWrapperFD()) < kExeFirstError)
         return Interpreter::kSuccess;
-    }
 
+    return Interpreter::kFailure;
+  }
+
+  Interpreter::CompilationResult Interpreter::codegen(Transaction* T) {
+    m_IncrParser->commitTransaction(T);
+    if (T->getState() == Transaction::kCommitted)
+      return Interpreter::kSuccess;
     return Interpreter::kFailure;
   }
 
@@ -471,25 +484,25 @@ namespace cling {
     input.append("\n;\n}");
   }
 
-  bool Interpreter::RunFunction(const FunctionDecl* FD, clang::QualType resTy,
-                                StoredValueRef* res /*=0*/) {
+  Interpreter::ExecutionResult
+  Interpreter::RunFunction(const FunctionDecl* FD, StoredValueRef* res /*=0*/) {
     if (getCI()->getDiagnostics().hasErrorOccurred())
-      return false;
+      return kExeCompilationError;
 
     if (!m_IncrParser->hasCodeGenerator()) {
-      return true;
+      return kExeNoCodeGen;
     }
 
     if (!FD)
-      return false;
+      return kExeUnkownFunction;
 
     std::string mangledNameIfNeeded;
     mangleName(FD, mangledNameIfNeeded);
-    m_ExecutionContext->executeFunction(mangledNameIfNeeded.c_str(),
-                                        getCI()->getASTContext(),
-                                        resTy, res);
-    // FIXME: Probably we need better handling of the error case.
-    return true;
+    ExecutionContext::ExecutionResult ExeRes =
+       m_ExecutionContext->executeFunction(mangledNameIfNeeded.c_str(),
+                                           getCI()->getASTContext(),
+                                           FD->getResultType(), res);
+    return ConvertExecutionResult(ExeRes);
   }
 
   void Interpreter::createUniqueName(std::string& out) {
@@ -519,9 +532,10 @@ namespace cling {
                                const CompilationOptions& CO,
                                const clang::Decl** D /* = 0 */) {
 
-    if (m_IncrParser->Compile(input, CO) != IncrementalParser::kFailed) {
+    const Transaction* lastT = m_IncrParser->Compile(input, CO);
+    if (lastT->getIssuedDiags() != Transaction::kErrors) {
       if (D)
-        *D = m_IncrParser->getLastTransaction()->getFirstDecl().getSingleDecl();
+        *D = lastT->getFirstDecl().getSingleDecl();
       return Interpreter::kSuccess;
     }
 
@@ -540,28 +554,18 @@ namespace cling {
     std::string WrapperName;
     std::string Wrapper = input;
     WrapInput(Wrapper, WrapperName);
-    QualType resTy = getCI()->getASTContext().VoidTy;
+    Transaction* lastT = 0;
     if (V) {
-      Transaction* CurT = m_IncrParser->Parse(Wrapper, CO);
-      assert(CurT->size() && "No decls created by Parse!");
+      lastT = m_IncrParser->Parse(Wrapper, CO);
+      assert(lastT->size() && "No decls created by Parse!");
 
-      if (Expr* E = utils::Analyze::GetOrCreateLastExpr(CurT->getWrapperFD(), 
-                                                        /*foundAt*/0,
-                                                        /*omitDS*/false, 
-                                                        &getSema())) {
-        resTy = E->getType();
-      }
-
-      m_IncrParser->commitCurrentTransaction();
+      m_IncrParser->commitTransaction(lastT);
     }
     else
-      m_IncrParser->Compile(Wrapper, CO);
-
-    // get the result
-    const Transaction* lastT = m_IncrParser->getLastTransaction();
+      lastT = m_IncrParser->Compile(Wrapper, CO);
 
     if (lastT->getState() == Transaction::kCommitted
-        && RunFunction(lastT->getWrapperFD(), resTy, V))
+        && RunFunction(lastT->getWrapperFD(), V) < kExeFirstError)
       return Interpreter::kSuccess;
     else if (V)
         *V = StoredValueRef::invalidValue();
@@ -569,27 +573,121 @@ namespace cling {
     return Interpreter::kFailure;
   }
 
-   Interpreter::CompilationResult
-   Interpreter::loadFile(const std::string& filename,
-                         bool allowSharedLib /*=true*/) {
+  void Interpreter::addLoadedFile(const std::string& name,
+                                  Interpreter::LoadedFileInfo::FileType type,
+                                  const llvm::sys::DynamicLibrary* dyLib) {
+    m_LoadedFiles.push_back(new LoadedFileInfo(name, type, dyLib));
+  }
+
+  Interpreter::CompilationResult
+  Interpreter::loadFile(const std::string& filename,
+                        bool allowSharedLib /*=true*/) {
     if (allowSharedLib) {
-      llvm::Module* module = m_IncrParser->getCodeGenerator()->GetModule();
-      if (module) {
-        if (tryLinker(filename, getOptions(), module))
-          return kSuccess;
-        if (filename.compare(0, 3, "lib") == 0) {
-          // starts with "lib", try without (the llvm::Linker forces
-          // a "lib" in front, which makes it liblib...
-          if (tryLinker(filename.substr(3, std::string::npos),
-                        getOptions(), module))
-            return kSuccess;
-        }
-      }
+      bool tryCode;
+      if (loadLibrary(filename, false, &tryCode)
+          == kLoadLibSuccess)
+        return kSuccess;
+      if (!tryCode)
+        return kFailure;
     }
 
     std::string code;
     code += "#include \"" + filename + "\"";
-    return declare(code);
+    CompilationResult res = declare(code);
+    if (res == kSuccess)
+      addLoadedFile(filename, LoadedFileInfo::kSource);
+    return res;
+  }
+
+
+  Interpreter::LoadLibResult
+  Interpreter::tryLinker(const std::string& filename, bool permanent,
+                         bool& tryCode) {
+    using namespace llvm::sys;
+    tryCode = true;
+    llvm::Module* module = m_IncrParser->getCodeGenerator()->GetModule();
+    assert(module && "Module must exist for linking!");
+
+    llvm::Linker L("cling", module, llvm::Linker::QuietWarnings
+                   | llvm::Linker::QuietErrors);
+    struct LinkerModuleReleaseRAII {
+      LinkerModuleReleaseRAII(llvm::Linker& L): m_L(L) {}
+      ~LinkerModuleReleaseRAII() { m_L.releaseModule(); }
+      llvm::Linker& m_L;
+    } LinkerModuleReleaseRAII_(L);
+
+    const InvocationOptions& Opts = getOptions();
+    for (std::vector<Path>::const_iterator I
+           = Opts.LibSearchPath.begin(), E = Opts.LibSearchPath.end(); I != E;
+         ++I) {
+      L.addPath(*I);
+    }
+    L.addSystemPaths();
+    bool Native = true;
+    if (L.LinkInLibrary(filename, Native)) {
+      // that didn't work, try bitcode:
+      Path FilePath(filename);
+      std::string Magic;
+      if (!FilePath.getMagicNumber(Magic, 64)) {
+        // filename doesn't exist...
+        // tryCode because it might be found through -I
+        return kLoadLibError;
+      }
+      if (IdentifyFileType(Magic.c_str(), 64) != Bitcode_FileType) {
+        // Nothing the linker can handle
+        return kLoadLibError;
+      }
+      // We are promised a bitcode file, complain if it fails
+      L.setFlags(0);
+      if (L.LinkInFile(Path(filename), Native)) {
+        tryCode = false;
+        return kLoadLibError;
+      }
+      addLoadedFile(filename, LoadedFileInfo::kBitcode);
+      return kLoadLibSuccess;
+    }
+    if (Native) {
+      tryCode = false;
+      // native shared library, load it!
+      Path SoFile = L.FindLib(filename);
+      assert(!SoFile.isEmpty() && "The shared lib exists but can't find it!");
+      std::string errMsg;
+      // TODO: !permanent case
+      DynamicLibrary DyLib
+        = DynamicLibrary::getPermanentLibrary(SoFile.str().c_str(), &errMsg);
+      if (!DyLib.isValid()) {
+        llvm::errs() << "cling::Interpreter::tryLinker(): " << errMsg << '\n';
+        return kLoadLibError;
+      }
+      std::pair<std::set<llvm::sys::DynamicLibrary>::iterator, bool> insRes
+        = m_DyLibs.insert(DyLib);
+      if (!insRes.second)
+        return kLoadLibExists;
+      addLoadedFile(SoFile.str(), LoadedFileInfo::kDynamicLibrary,
+                    &(*insRes.first));
+      return kLoadLibSuccess;
+    }
+    return kLoadLibError;
+  }
+
+  Interpreter::LoadLibResult
+  Interpreter::loadLibrary(const std::string& filename, bool permanent,
+                           bool* tryCode) {
+    bool tryCodeDummy;
+    LoadLibResult res = tryLinker(filename, permanent,
+                                  tryCode ? *tryCode : tryCodeDummy);
+    if (res != kLoadLibError) {
+      return res;
+    }
+    if (filename.compare(0, 3, "lib") == 0) {
+      // starts with "lib", try without (the llvm::Linker forces
+      // a "lib" in front, which makes it liblib...
+      res = tryLinker(filename.substr(3, std::string::npos), permanent,
+                      tryCodeDummy);
+      if (res != kLoadLibError)
+        return res;
+    }
+    return kLoadLibError;
   }
 
   void Interpreter::installLazyFunctionCreator(void* (*fp)(const std::string&)) {
@@ -643,11 +741,14 @@ namespace cling {
       setCallbacks(0);
   }
 
-  void Interpreter::runStaticInitializersOnce() const {
+  Interpreter::ExecutionResult
+  Interpreter::runStaticInitializersOnce() const {
     // Forward to ExecutionContext; should not be called by
     // anyone except for IncrementalParser.
     llvm::Module* module = m_IncrParser->getCodeGenerator()->GetModule();
-    m_ExecutionContext->runStaticInitializersOnce(module);
+    ExecutionContext::ExecutionResult ExeRes
+       = m_ExecutionContext->runStaticInitializersOnce(module);
+    return ConvertExecutionResult(ExeRes);
   }
 
   int Interpreter::CXAAtExit(void (*func) (void*), void* arg, void* dso) {
@@ -686,7 +787,8 @@ namespace cling {
                               clang::diag::MAP_IGNORE, SourceLocation());
     Diag.setDiagnosticMapping(clang::diag::warn_unused_comparison,
                               clang::diag::MAP_IGNORE, SourceLocation());
-
+    Diag.setDiagnosticMapping(clang::diag::ext_return_has_expr,
+                              clang::diag::MAP_IGNORE, SourceLocation());
   }
 
   bool Interpreter::addSymbol(const char* symbolName,  void* symbolAddress) {
@@ -702,10 +804,14 @@ namespace cling {
     // Return a symbol's address, and whether it was jitted.
     std::string mangledName;
     mangleName(D, mangledName);
+    return getAddressOfGlobal(mangledName.c_str(), fromJIT);
+  }
+
+  void* Interpreter::getAddressOfGlobal(const char* SymName,
+                                        bool* fromJIT /*=0*/) const {
+    // Return a symbol's address, and whether it was jitted.
     llvm::Module* module = m_IncrParser->getCodeGenerator()->GetModule();
-    return m_ExecutionContext->getAddressOfGlobal(module,
-                                                  mangledName.c_str(),
-                                                  fromJIT);
+    return m_ExecutionContext->getAddressOfGlobal(module, SymName, fromJIT);
   }
 
 } // namespace cling

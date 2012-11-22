@@ -24,9 +24,11 @@
 #include "cling/Interpreter/LookupHelper.h"
 #include "cling/Utils/AST.h"
 
+#include "TMetaUtils.h"
+
 namespace {
    static cling::Interpreter *gInterpreter = 0;
-   llvm::SmallSet<const clang::Type*, 4> gTypeToSkip;
+   ROOT::TMetaUtils::TNormalizedCtxt *gNormalizedCtxt = 0;
 }
 
 #endif
@@ -36,9 +38,10 @@ namespace std {} using namespace std;
 #ifndef R__HAS_CLING
 #else
 //______________________________________________________________________________
-void TClassEdit::Init(cling::Interpreter &interpreter)
+void TClassEdit::Init(cling::Interpreter &interpreter,ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    gInterpreter = &interpreter;
+   gNormalizedCtxt = &normCtxt;
 }
 #endif
 
@@ -111,7 +114,7 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
    // if (mode&2) remove default allocators from STL containers
    // if (mode&4) remove all     allocators from STL containers
    // if (mode&8) return inner class of stl container. list<innerClass>
-   // if (mode&16) return deapest class of stl container. vector<list<deapest>>
+   // if (mode&16) return deepest class of stl container. vector<list<deepest>>
    // if (mode&kDropAllDefault) remove default template arguments
    /////////////////////////////////////////////////////////////////////////////
 
@@ -258,7 +261,7 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
          const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
          clang::QualType t = lh.findType(nameSuperLong);
          if (!t.isNull()) {
-            clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gTypeToSkip, true /* fully qualify */);
+            clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gNormalizedCtxt->GetTypeToSkip(), true /* fully qualify */);
             if (!dest.isNull() && (dest != t)) 
                dest.getAsStringInternal(nameSuperLong,gInterpreter->getCI()->getASTContext().getPrintingPolicy());
          }
@@ -279,7 +282,7 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
             const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
             clang::QualType t = lh.findType((nonDefName + closeTemplate).c_str());
             if (!t.isNull()) {
-               clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gTypeToSkip, true /* fully qualify */);
+               clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gNormalizedCtxt->GetTypeToSkip(), true /* fully qualify */);
                if ( !dest.isNull() && (dest!=t) && nameSuperLong == t.getAsString(gInterpreter->getCI()->getASTContext().getPrintingPolicy()) )
                   break;
             }
@@ -819,6 +822,8 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
                      }
 #endif
                   }
+                  // Consume the 2nd semi colon
+                  ++k;
                }
             }
          }
@@ -836,9 +841,22 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
             const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
             clang::QualType t = lh.findType(tname);
             if (!t.isNull()) {
-               clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gTypeToSkip, true /* fully qualify */);
+               clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gNormalizedCtxt->GetTypeToSkip(), true /* fully qualify */);
                if (!dest.isNull() && dest != t ) {
-                  return t.getAsString(gInterpreter->getCI()->getASTContext().getPrintingPolicy());
+                  clang::PrintingPolicy policy(gInterpreter->getCI()->getASTContext().getPrintingPolicy());
+                  policy.SuppressTagKeyword = true; // Never get the class or struct keyword
+                  policy.SuppressScope = true;      // Force the scope to be coming from a clang::ElaboratedType.
+                  // The scope suppression is required for getting rid of the anonymous part of the name of a class defined in an anonymous namespace.
+                  // This gives us more control vs not using the clang::ElaboratedType and relying on the Policy.SuppressUnwrittenScope which would
+                  // strip both the anonymous and the inline namespace names (and we probably do not want the later to be suppressed).
+                  string result;
+                  dest.getAsStringInternal(result,policy);
+                  // Strip the std::
+                  if ( strncmp(result.c_str(), "std::", 5) == 0) {
+                     return result.substr(5);
+                  } else {
+                     return result;
+                  }
                }
             }
          }
@@ -858,9 +876,26 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
 #endif
 
    int prev = 0;
-   for (int i=0; i<len; ++i) {
+   if (len > 5 && strncmp(tname,"std::",5) == 0) {
+      prev = 5;
+   }
+   for (int i=prev; i<len; ++i) {
       switch (tname[i]) {
-         case '<':
+         case ':': {
+           if ( strncmp(tname+prev,"std::",5) == 0 ) {
+              prev += 5;
+              ++i;
+           }
+           break;
+         }
+         case '<': {
+           char keep = input[i];
+           string temp( input, prev,i-prev );
+	   answ << temp;
+           answ << keep;
+           prev = i+1;
+           break; // We do not have a complete type yet.
+         }
          case '>':
          case '*':
          case ' ':

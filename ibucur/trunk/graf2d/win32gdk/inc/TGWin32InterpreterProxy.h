@@ -49,6 +49,7 @@ public:
    void     EnableAutoLoading();
    void     EndOfLineAction();
    Int_t    InitializeDictionaries();
+   void     InspectMembers(TMemberInspector&, void* obj, const TClass* cl);
    Int_t    Load(const char *filenam, Bool_t system = kFALSE);
    void     LoadMacro(const char *filename, EErrorCode *error = 0);
    Int_t    LoadLibraryMap(const char *rootmapfile = 0);
@@ -67,6 +68,7 @@ public:
    void     ResetGlobalVar(void *obj);
    void     RewindDictionary();
    Int_t    DeleteGlobal(void *obj);
+   Int_t    DeleteVariable(const char *name);
    void     SaveContext();
    void     SaveGlobalsContext();
    void     UpdateListOfGlobals();

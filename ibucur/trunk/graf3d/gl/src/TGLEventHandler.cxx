@@ -35,6 +35,7 @@
 #include "TGLAnnotation.h"
 #include "TEnv.h"
 #include "TMath.h"
+#include "RConfigure.h"
 
 //______________________________________________________________________________
 //
@@ -240,7 +241,8 @@ void TGLEventHandler::ExecuteEvent(Int_t event, Int_t px, Int_t py)
 
    // Map our event EEventType (base/inc/Buttons.h) back to Event_t (base/inc/GuiTypes.h)
    // structure, and call appropriate HandleXyzz() function
-   Event_t eventSt;
+   Event_t eventSt = { kOtherEvent, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       kFALSE, 0, 0, {0, 0, 0, 0, 0} };
    eventSt.fX = px;
    eventSt.fY = py;
    eventSt.fState = 0;
@@ -489,6 +491,13 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       fActiveButtonID = event->fCode;
    }
 
+#if defined(R__HAS_COCOA)
+   // On osx/cocoa use cmd modifier for mouse-2 and cmd-alt for mouse-3.
+   if (event->fCode == kButton1 && event->fState & kKeyMod2Mask)
+   {
+      event->fCode = event->fState & kKeyMod1Mask ? kButton3 : kButton2;
+   }
+#endif
 
    // Button DOWN
    if (event->fType == kButtonPress)
@@ -518,9 +527,11 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
                TGLSelectRecord& rec = fGLViewer->GetSelRec();
                TObject* obj = rec.GetObject();
                TGLRect& vp = fGLViewer->CurrentCamera().RefViewport();
+               Int_t    x = event->fX, y = event->fY;
+               TGLUtil::PointToViewport(x, y);
                new TGLAnnotation(fGLViewer, obj->GetTitle(),
-                                 event->fX * 1.0f/vp.Width(),
-                                 1 - event->fY * 1.0f/vp.Height(), v);
+                                 x * 1.0f/vp.Width(),
+                                 1 - y * 1.0f/vp.Height(), v);
             }
 
             fGLViewer->RequestDraw();
@@ -532,7 +543,9 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
 
       if (fGLViewer->fDragAction == TGLViewer::kDragNone && fGLViewer->fCurrentOvlElm)
       {
-         if (fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event))
+         Event_t e = *event;
+         TGLUtil::PointToViewport(e.fX, e.fY);
+         if (fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, &e))
          {
             handled     = kTRUE;
             fGLViewer->fDragAction = TGLViewer::kDragOverlay;
@@ -542,7 +555,7 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
 
       if ( ! handled)
       {
-         switch(event->fCode)
+         switch (event->fCode)
          {
             // LEFT mouse button
             case kButton1:
@@ -599,7 +612,9 @@ Bool_t TGLEventHandler::HandleButton(Event_t * event)
       }
       else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay && fGLViewer->fCurrentOvlElm)
       {
-         fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
+         Event_t e = *event;
+         TGLUtil::PointToViewport(e.fX, e.fY);
+         fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, &e);
          fGLViewer->OverlayDragFinished();
          if (fGLViewer->RequestOverlaySelect(event->fX, event->fY))
             fGLViewer->RequestDraw();
@@ -702,7 +717,9 @@ Bool_t TGLEventHandler::HandleConfigureNotify(Event_t *event)
    }
    if (event)
    {
-      fGLViewer->SetViewport(event->fX, event->fY, event->fWidth, event->fHeight);
+      Int_t x = event->fX, y = event->fY, w = event->fWidth, h = event->fHeight;
+      TGLUtil::PointToViewport(x, y, w, h);
+      fGLViewer->SetViewport(x, y, w, h);
       fGLViewer->fRedrawTimer->RequestDraw(10, TGLRnrCtx::kLODMed);
    }
    return kTRUE;
@@ -759,13 +776,21 @@ Bool_t TGLEventHandler::HandleKey(Event_t *event)
       keysym = event->fCode;
    fGLViewer->fRnrCtx->SetEventKeySym(keysym);
 
-   Bool_t redraw = kFALSE;
-   if (fGLViewer->fCurrentOvlElm &&
-       fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event))
+   Bool_t handled = kFALSE;
+   Bool_t redraw  = kFALSE;
+
+   if (fGLViewer->fCurrentOvlElm)
    {
-      redraw = kTRUE;
+      Event_t e = *event;
+      TGLUtil::PointToViewport(e.fX, e.fY);
+      if (fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, &e))
+      {
+         handled = kTRUE;
+         redraw  = kTRUE;
+      }
    }
-   else
+
+   if ( ! handled)
    {
       const Bool_t mod1 = event->fState & kKeyControlMask;
       const Bool_t mod2 = event->fState & kKeyShiftMask;
@@ -885,6 +910,7 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    Int_t  yDelta = TMath::Nint(fMouseDragFactor * ControlValue(event->fY - fLastPos.fY));
    Bool_t mod1   = event->fState & kKeyControlMask;
    Bool_t mod2   = event->fState & kKeyShiftMask;
+   TGLUtil::PointToViewport(xDelta, yDelta);
 
    if (fMouseTimerRunning) StopMouseTimer();
 
@@ -904,7 +930,11 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
       }
       changed = fGLViewer->RequestOverlaySelect(event->fX, event->fY);
       if (fGLViewer->fCurrentOvlElm)
-         processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
+      {
+         Event_t e = *event;
+         TGLUtil::PointToViewport(e.fX, e.fY);
+         processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, &e);
+      }
       lod = TGLRnrCtx::kLODHigh;
       if ( ! processed && ! fMouseTimerRunning)
          StartMouseTimer();
@@ -923,8 +953,11 @@ Bool_t TGLEventHandler::HandleMotion(Event_t * event)
    }
    else if (fGLViewer->fDragAction == TGLViewer::kDragOverlay)
    {
-      if (fGLViewer->fCurrentOvlElm)
-         processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, event);
+      if (fGLViewer->fCurrentOvlElm) {
+         Event_t e = *event;
+         TGLUtil::PointToViewport(e.fX, e.fY);
+         processed = fGLViewer->fCurrentOvlElm->Handle(*fGLViewer->fRnrCtx, fGLViewer->fOvlSelRec, &e);
+      }
    }
 
    fLastPos.fX = event->fX;

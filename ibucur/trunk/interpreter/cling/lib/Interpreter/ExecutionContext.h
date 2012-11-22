@@ -8,6 +8,7 @@
 #define CLING_EXECUTIONCONTEXT_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/OwningPtr.h"
 
 #include <vector>
 #include <set>
@@ -31,6 +32,13 @@ namespace cling {
 
   public:
 
+    enum ExecutionResult {
+      kExeSuccess,
+      kExeFunctionNotCompiled,
+      kExeUnresolvedSymbols,
+      kNumExeResults
+    };
+
     ExecutionContext();
     ~ExecutionContext();
 
@@ -39,13 +47,13 @@ namespace cling {
       m_LazyFuncCreatorDiagsSuppressed = suppressed;
     }
 
-    void runStaticInitializersOnce(llvm::Module* m);
+    ExecutionResult runStaticInitializersOnce(llvm::Module* m);
     void runStaticDestructorsOnce(llvm::Module* m);
 
-    void executeFunction(llvm::StringRef function,
-                         const clang::ASTContext& Ctx,
-                         clang::QualType retType,
-                         StoredValueRef* returnValue = 0);
+    ExecutionResult executeFunction(llvm::StringRef function,
+                                    const clang::ASTContext& Ctx,
+                                    clang::QualType retType,
+                                    StoredValueRef* returnValue = 0);
 
     ///\brief Adds a symbol (function) to the execution engine.
     ///
@@ -72,7 +80,7 @@ namespace cling {
                              bool* fromJIT = 0) const;
 
     llvm::ExecutionEngine* getExecutionEngine() const {
-      return m_engine;
+      return m_engine.get();
     }
 
   private:
@@ -86,15 +94,15 @@ namespace cling {
     static std::set<std::string> m_unresolvedSymbols;
     static std::vector<LazyFunctionCreatorFunc_t> m_lazyFuncCreator;
 
-    ///\ Whether or not the function creator to be queried.
+    ///\brief Whether or not the function creator to be queried.
     static bool m_LazyFuncCreatorDiagsSuppressed;
 
-    llvm::ExecutionEngine* m_engine; // Owned by JIT
+    llvm::OwningPtr<llvm::ExecutionEngine> m_engine;
 
-    /// \brief prevent the recursive run of the static inits
+    ///\brief prevent the recursive run of the static inits
     bool m_RunningStaticInits;
 
-    /// \brief Whether cxa_at_exit has been rewired to the Interpreter's version
+    ///\brief Whether cxa_at_exit has been rewired to the Interpreter's version
     bool m_CxaAtExitRemapped;
   };
 } // end cling

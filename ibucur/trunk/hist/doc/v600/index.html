@@ -13,6 +13,9 @@ if all the bins' contents are positive some empty bins might be painted. And vic
 if some bins have a negative content some empty bins might be not painted.
 </li>
 <li>
+With option COLZ the axis attributes were not imported correctly on the palette axis.
+</li>
+<li>
 Make sure the 2D drawing options COL, ARR, CONT and BOX are ignored when used to
 plot a 1D histogram. 1D histograms plotted with one of these options is now drawn
 with the default 1D plotting option. This is useful when the default option in the
@@ -88,5 +91,22 @@ Now just set the new correct binning on the previously existing histogram.
 <li>
 When <tt>GetX(YZ)axis</tt> were called on a <tt>TGraph2D</tt>, the frame limit
 and plotting options were changed.
+</li>
+</ul>
+
+<h3>TF1</h3>
+<ul>
+<li>
+Implement the possibility to save a <tt>TF1</tt> as C code indenpant from ROOT.
+It is enough to save the function as a ".cc" file.
+<p>
+Example:
+<pre>
+root [0] TF1 *f1 = new TF1("f1","x*x",-10,10)
+root [1] f1->SaveAs("f1.cc");
+Info in <TF1::SaveAs>: cc file: f1.cc has been generated
+   root [2] .x f1.cc(9.)
+   (double)8.10019368181367980e+01
+</pre>
 </li>
 </ul>

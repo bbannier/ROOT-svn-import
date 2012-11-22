@@ -15,6 +15,7 @@ namespace clang {
   class DeclContext;
   class DeclarationName;
   class FunctionDecl;
+  class IntegerLiteral;
   class NamedDecl;
   class NamespaceDecl;
   class QualType;
@@ -71,8 +72,14 @@ namespace utils {
     ///\brief Synthesizes c-style cast in the AST from given pointer and type to
     /// cast to.
     ///
-    static clang::Expr* CStyleCastPtrExpr(clang::Sema* S,
-                                          clang::QualType Ty, uint64_t Ptr);
+    static clang::Expr* CStyleCastPtrExpr(clang::Sema* S, clang::QualType Ty, 
+                                          uint64_t Ptr);
+
+    ///\brief Synthesizes integer literal given an unsigned.
+    ///
+    static clang::IntegerLiteral* IntegerLiteralExpr(clang::ASTContext& C, 
+                                                     uint64_t Ptr);
+
   };
 
   ///\brief Class containing static utility functions transforming AST nodes or
@@ -116,7 +123,7 @@ namespace utils {
     ///
     static clang::NamespaceDecl* Namespace(clang::Sema* S,
                                            const char* Name,
-                                           clang::DeclContext* Within = 0);
+                                          const clang::DeclContext* Within = 0);
 
     ///\brief Quick lookup for a single named declaration in a given 
     /// declaration context.
@@ -129,7 +136,7 @@ namespace utils {
     ///
     static clang::NamedDecl* Named(clang::Sema* S,
                                    const char* Name,
-                                   clang::DeclContext* Within = 0);
+                                   const clang::DeclContext* Within = 0);
 
     ///\brief Quick lookup for a single namespace declaration in a given 
     /// declaration context.
@@ -143,7 +150,7 @@ namespace utils {
     ///
     static clang::NamedDecl* Named(clang::Sema* S,
                                    const clang::DeclarationName& Name,
-                                   clang::DeclContext* Within = 0);
+                                   const clang::DeclContext* Within = 0);
 
   };
 } // end namespace utils

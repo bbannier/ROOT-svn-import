@@ -411,6 +411,18 @@ function format_id(id) {
       g_id = g_id.replace('>', 'gt');
    while (g_id.indexOf('<') != -1)
       g_id = g_id.replace('<', 'lt');
+   while (g_id.indexOf('\\') != -1)
+      g_id = g_id.replace('\\', '');
+   while (g_id.indexOf('\'') != -1)
+      g_id = g_id.replace('\'', '');
+   while (g_id.indexOf('(') != -1)
+      g_id = g_id.replace('(', '_');
+   while (g_id.indexOf(')') != -1)
+      g_id = g_id.replace(')', '_');
+   while (g_id.indexOf('/') != -1)
+      g_id = g_id.replace('/', '_');
+   while (g_id.indexOf('-') != -1)
+      g_id = g_id.replace('-', '_');
    return g_id;
 };
 
@@ -476,17 +488,18 @@ function doubleTap(elem, speed, distance) {
    }, false);
 };
 
-function createFillPatterns(svg, id, line_color) {
+function createFillPatterns(svg, id, color) {
    // create fill patterns - only if they don't exists yet
+   var line_color = JSROOTPainter.getRootColor(color);
    for (var i=0; i<defs[0][0]['childNodes'].length;++i) {
-      if (defs[0][0]['childNodes'][i]['id'] == "pat"+id &&
+      if (defs[0][0]['childNodes'][i]['id'] == "pat" + id + "_" + color &&
           defs[0][0]['childNodes'][i]['style']['stroke'] == line_color)
          return;
    }
    switch (id) {
       case 3001:
          defs.append('svg:pattern')
-            .attr("id", "pat3001")
+            .attr("id", "pat3001_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "3px")
             .attr("height", "2px")
@@ -512,7 +525,7 @@ function createFillPatterns(svg, id, line_color) {
          break;
       case 3002:
          defs.append('svg:pattern')
-            .attr("id", "pat3002")
+            .attr("id", "pat3002_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "4px")
             .attr("height", "2px")
@@ -532,7 +545,7 @@ function createFillPatterns(svg, id, line_color) {
          break;
       case 3003:
          defs.append('svg:pattern')
-            .attr("id", "pat3003")
+            .attr("id", "pat3003_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "4px")
             .attr("height", "4px")
@@ -552,7 +565,7 @@ function createFillPatterns(svg, id, line_color) {
          break;
       case 3004:
          defs.append('svg:pattern')
-            .attr("id", "pat3004")
+            .attr("id", "pat3004_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "8px")
             .attr("height", "8px")
@@ -567,7 +580,7 @@ function createFillPatterns(svg, id, line_color) {
          break;
       case 3005:
          defs.append('svg:pattern')
-            .attr("id", "pat3005")
+            .attr("id", "pat3005_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "8px")
             .attr("height", "8px")
@@ -582,7 +595,7 @@ function createFillPatterns(svg, id, line_color) {
          break;
       case 3006:
          defs.append('svg:pattern')
-            .attr("id", "pat3006")
+            .attr("id", "pat3006_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "4px")
             .attr("height", "4px")
@@ -597,7 +610,7 @@ function createFillPatterns(svg, id, line_color) {
          break;
       case 3007:
          defs.append('svg:pattern')
-            .attr("id", "pat3007")
+            .attr("id", "pat3007_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "4px")
             .attr("height", "4px")
@@ -612,7 +625,7 @@ function createFillPatterns(svg, id, line_color) {
          break;
       default: /* == 3004 */
          defs.append('svg:pattern')
-            .attr("id", "pat"+id)
+            .attr("id", "pat"+id+"_"+color)
             .attr("patternUnits", "userSpaceOnUse")
             .attr("width", "8px")
             .attr("height", "8px")
@@ -666,15 +679,19 @@ function createFillPatterns(svg, id, line_color) {
 
    var root_line_styles = new Array("", "", "3, 3", "1, 2", "3, 4, 1, 4",
          "5, 3, 1, 3", "5, 3, 1, 3, 1, 3, 1, 3", "5, 5",
-         "5, 3, 1, 3, 1, 3", "20, 5", "20, 10, 1, 10", "1, 1");
+         "5, 3, 1, 3, 1, 3", "20, 5", "20, 10, 1, 10", "1, 2");
 
    JSROOTPainter = {};
 
-   JSROOTPainter.version = '1.4 2012/02/24';
+   JSROOTPainter.version = '2.0 2012/11/10';
 
    /*
     * Helper functions
     */
+
+   JSROOTPainter.getRootColor = function(color) {
+      return root_colors[color];
+   };
 
    JSROOTPainter.padtoX = function(pad, x) {
       // Convert x from pad to X.
@@ -938,10 +955,12 @@ function createFillPatterns(svg, id, line_color) {
    JSROOTPainter.addInteraction = function(vis, obj) {
       var width = vis.attr("width"), height = vis.attr("height");
       var e, origin, rect;
-      doubleTap(vis[0][0]);
 
-      if (typeof(vis['objects']) === 'undefined')
+      if (typeof(vis['objects']) === 'undefined') {
          vis['objects'] = new Array();
+         doubleTap(vis[0][0]);
+      }
+      if (vis['objects'].indexOf(obj) != -1) return;
       vis['objects'].push(obj);
 
       function refresh() {
@@ -963,7 +982,8 @@ function createFillPatterns(svg, id, line_color) {
             vis['objects'][i].redraw();
          }
       };
-      var zoom = d3.behavior.zoom().x(obj.x).y(obj.y).on("zoom", refresh());
+      //var zoom = d3.behavior.zoom().x(obj.x).y(obj.y).on("zoom", refresh());
+      var zoom = d3.behavior.zoom().x(obj.x).y(obj.y);
       vis.on("touchstart", startRectSel);
       vis.on("mousedown", startRectSel);
 
@@ -1339,6 +1359,7 @@ function createFillPatterns(svg, id, line_color) {
             }});
       }
       else {
+         if (n1ay >= 10) n1ay -= 2;
          var y_axis = d3.svg.axis()
             .scale(yy)
             .orient("left")
@@ -1522,6 +1543,7 @@ function createFillPatterns(svg, id, line_color) {
             });
       };
       histo['redraw'] = do_redraw;
+      do_redraw();
    };
 
    JSROOTPainter.drawFunction = function(vis, pad, func, hframe) {
@@ -1542,30 +1564,62 @@ function createFillPatterns(svg, id, line_color) {
       if (func['fLineColor'] == 0) {
          linecolor = '#4572A7';
       }
+      var interpolate_method = 'basis';
       var h, hmin = 1.0e32, hmax = -1.0e32;
-      // use fNpfits instead of fNpx if possible (to use more points)
-      if (func['fNpfits'] <= 103) func['fNpfits'] = 333;
-      var nb_points = Math.max(func['fNpx'], func['fNpfits']);
-      var binwidth = ((func['fXmax'] - func['fXmin']) / nb_points);
-      for (var i=0;i<nb_points;++i) {
-         h = func.evalPar(func['fXmin'] + (i * binwidth));
-         if (h > hmax) hmax = h;
-         if (h < hmin) hmin = h;
+      if (func['fNsave'] > 0) {
+         // in the case where the points have been saved, useful for example 
+         // if we don't have the user's function
+         var nb_points = func['fNpx'];
+         for (var i=0;i<nb_points;++i) {
+            if (func['fSave'][i] > hmax) hmax = h;
+            if (func['fSave'][i] < hmin) hmin = h;
+         }
+         if (hmax > 0.0) hmax *= 1.05;
+         if (hmin < 0.0) hmin *= 1.05;
+         func['fYmin'] = hmin;
+         func['fYmax'] = hmax;
+         func['x_min'] = func['fSave'][nb_points+1];
+         func['x_max'] = func['fSave'][nb_points+2];
+         func['y_min'] = func['fYmin'];
+         func['y_max'] = func['fYmax'];
+         binwidth = ((func['x_max'] - func['x_min']) / nb_points);
+         var bins = d3.range(nb_points).map(function(p) {
+            return {
+               x: func['x_min'] + (p * binwidth),
+               y: func['fSave'][p]
+            };
+         });
+         func['bins'] = bins;
+         interpolate_method = 'monotone';
       }
-      if (hmax > 0.0) hmax *= 1.1;
-      if (hmin < 0.0) hmin *= 1.1;
-      func['fYmin'] = hmin;
-      func['fYmax'] = hmax;
-      func['x_min'] = func['fXmin'];
-      func['x_max'] = func['fXmax'];
-      func['y_min'] = func['fYmin'];
-      func['y_max'] = func['fYmax'];
-      var bins = d3.range(nb_points).map(function(p) {
-         return {
-            x: func['fXmin'] + (p * binwidth),
-            y: func.evalPar(func['fXmin'] + (p * binwidth))
-         };
-      });
+      else {
+         // we don't have the points, so let's try to interpret the function
+         // use fNpfits instead of fNpx if possible (to use more points)
+         if (func['fNpfits'] <= 103) func['fNpfits'] = 333;
+         var nb_points = Math.max(func['fNpx'], func['fNpfits']);
+         var binwidth = ((func['fXmax'] - func['fXmin']) / nb_points);
+         for (var i=0;i<nb_points;++i) {
+            h = func.evalPar(func['fXmin'] + (i * binwidth));
+            if (h > hmax) hmax = h;
+            if (h < hmin) hmin = h;
+         }
+         if (hmax > 0.0) hmax *= 1.05;
+         if (hmin < 0.0) hmin *= 1.05;
+         func['fYmin'] = hmin;
+         func['fYmax'] = hmax;
+         func['x_min'] = func['fXmin'];
+         func['x_max'] = func['fXmax'];
+         func['y_min'] = func['fYmin'];
+         func['y_max'] = func['fYmax'];
+         var bins = d3.range(nb_points).map(function(p) {
+            return {
+               x: func['fXmin'] + (p * binwidth),
+               y: func.evalPar(func['fXmin'] + (p * binwidth))
+            };
+         });
+         func['bins'] = bins;
+         interpolate_method = 'cardinal-open';
+      }
       var ret = hframe != null ? hframe : this.createFrame(vis, pad, func, null);
       var frame = ret['frame'];
       var svg_frame = d3.select(ret['id']);
@@ -1594,7 +1648,6 @@ function createFillPatterns(svg, id, line_color) {
       }
       func['x'] = x;
       func['y'] = y;
-      func['bins'] = bins;
 
       function do_redraw() {
 
@@ -1607,17 +1660,18 @@ function createFillPatterns(svg, id, line_color) {
          var line = d3.svg.line()
             .x(function(d) { return func.x(d.x);})
             .y(function(d) { return func.y(d.y);})
-            .interpolate('cardinal-open');
+            .interpolate(interpolate_method);
 
          g.append("svg:path")
             .attr("class", "line")
-            .attr("d", line(bins))
+            .attr("d", line(func.bins))
             .style("stroke", linecolor)
             .style("stroke-width", func['fLineWidth'])
             .style("stroke-dasharray", root_line_styles[func['fLineStyle']])
             .style("fill", "none");
       };
       func['redraw'] = do_redraw;
+      do_redraw();
 
       if (draw_all) {
 
@@ -1664,18 +1718,7 @@ function createFillPatterns(svg, id, line_color) {
                .attr("font-family", "Arial")
                .attr("font-size", font_size)
                .text(func['fTitle']);
-/*
-            // foreign html objects don't work on IE, and not properly on FF... :-(
-            vis.append("foreignObject")
-               .attr("y", 0.05 * vis.attr("height"))
-               .attr("width", vis.attr("width"))
-               .attr("height", 100)
-            .append("xhtml:body")
-               .style("font", "14px 'Helvetica'")
-               .html("<h3><center>An HTML Foreign Object in SVG <font face='Symbol' color='green'>abCDEFG!</font></center></h3>");
-*/
          }
-
          xax.selectAll("text").attr("font-size", label_font_size);
          yax.selectAll("text").attr("font-size", label_font_size);
 
@@ -1819,21 +1862,210 @@ function createFillPatterns(svg, id, line_color) {
 
       // exclusion graphs
       var lw = graph['fLineWidth'];
-      var ec, ff, exclusionGraph = false;
+      var ec, ff = 1, exclusionGraph = false;
       if (graph['fLineWidth'] > 99) {
-         var glw = graph['fLineWidth'];
+         exclusionGraph = true;
+         var normx, normy;
+         var n = graph['fNpoints'];
+         var glw = graph['fLineWidth'],
+             xo = new Array(n+2), yo = new Array(n+2),
+             xt = new Array(n+2), yt = new Array(n+2),
+             xf = new Array(2*n+2), yf = new Array(2*n+2);
          // negative value means another side of the line...
          if (glw > 32767) {
             glw = 65536 - glw;
          }
-         exclusionGraph = true;
-         //lw = (glw/100)*0.005; // ? from TGraphPainter src...
          lw = glw % 100; // line width
-         //ff = (glw - lw) / 100; // filled width
-         ff = (glw - lw) * 0.05; // filled width
          ec = root_colors[graph['fFillColor']];
          ec = ec.replace('rgb', 'rgba');
-         ec = ec.replace(')', ',0.30)');
+         ec = ec.replace(')', ', 0.20)');
+
+         var a, i, j, nf, wk = (glw/100)*0.005;
+         if (graph['fLineWidth'] > 32767)
+            wk *= -1;
+
+         var ratio = w / h;
+
+         var xmin = graph['x_min'], xmax = graph['x_max'],
+             ymin = graph['y_min'], ymax = graph['y_max'];
+         for (i=0; i<n; i++) {
+            xo[i] = (graph['fX'][i] - xmin) / (xmax - xmin);
+            yo[i] = (graph['fY'][i] - ymin) / (ymax - ymin);
+            if (w > h) yo[i] = yo[i] / ratio;
+            else if (h > w) xo[i] = xo[i] / ratio;
+         }
+         // The first part of the filled area is made of the graph points.
+         // Make sure that two adjacent points are different.
+         xf[0] = xo[0];
+         yf[0] = yo[0];
+         nf = 0;
+         for (i=1; i<n; i++) {
+            if (xo[i] == xo[i-1] && yo[i] == yo[i-1]) continue;
+            nf++;
+            xf[nf] = xo[i];
+            if (xf[i] == xf[i-1]) xf[i] += 0.000001; // add an epsilon to avoid exact vertical lines.
+            yf[nf] = yo[i];
+         }
+         // For each graph points a shifted points is computed to build up
+         // the second part of the filled area. First and last points are
+         // treated as special cases, outside of the loop.
+         if (xf[1] == xf[0]) {
+            a = Math.PI / 2.0;
+         } else {
+            a = Math.atan((yf[1] - yf[0]) / (xf[1] - xf[0]));
+         }
+         if (xf[0] <= xf[1]) {
+            xt[0] = xf[0] - wk * Math.sin(a);
+            yt[0] = yf[0] + wk * Math.cos(a);
+         } else {
+            xt[0] = xf[0] + wk * Math.sin(a);
+            yt[0] = yf[0] - wk * Math.cos(a);
+         }
+         if (xf[nf] == xf[nf-1]) {
+            a = Math.PI / 2.0;
+         } else {
+            a = Math.atan((yf[nf] - yf[nf-1]) / (xf[nf] - xf[nf-1]));
+         }
+         if (xf[nf] >= xf[nf-1]) {
+            xt[nf] = xf[nf] - wk * Math.sin(a);
+            yt[nf] = yf[nf] + wk * Math.cos(a);
+         } else {
+            xt[nf] = xf[nf] + wk * Math.sin(a);
+            yt[nf] = yf[nf] - wk * Math.cos(a);
+         }
+
+         var a1, a2, a3, xi0, yi0, xi1, yi1, xi2, yi2;
+         for (i=1; i<nf; i++) {
+            xi0 = xf[i];
+            yi0 = yf[i];
+            xi1 = xf[i+1];
+            yi1 = yf[i+1];
+            xi2 = xf[i-1];
+            yi2 = yf[i-1];
+            if (xi1 == xi0) {
+               a1 = Math.PI / 2.0;
+            } else {
+               a1  = Math.atan((yi1 - yi0) / (xi1 - xi0));
+            }
+            if (xi1 < xi0) a1 = a1 + Math.PI;
+            if (xi2 == xi0) {
+               a2 = Math.PI / 2.0;
+            } else {
+               a2  = Math.atan((yi0 - yi2) / (xi0 - xi2));
+            }
+            if (xi0 < xi2) a2 = a2 + Math.PI;
+            x1 = xi0 - wk * Math.sin(a1);
+            y1 = yi0 + wk * Math.cos(a1);
+            x2 = xi0 - wk * Math.sin(a2);
+            y2 = yi0 + wk * Math.cos(a2);
+            xm = (x1 + x2) * 0.5;
+            ym = (y1 + y2) * 0.5;
+            if (xm == xi0) {
+               a3 = Math.PI / 2.0;
+            } else {
+               a3 = Math.atan((ym - yi0) / (xm - xi0));
+            }
+            x3 = xi0 - wk * Math.sin(a3 + (Math.PI / 2.0));
+            y3 = yi0 + wk * Math.cos(a3 + (Math.PI / 2.0));
+            // Rotate (x3,y3) by PI around (xi0,yi0) if it is not on the (xm,ym) side.
+            if ((xm - xi0) * (x3 - xi0) < 0 && (ym - yi0) * (y3 - yi0) < 0) {
+               x3 = 2 * xi0 - x3;
+               y3 = 2 * yi0 - y3;
+            }
+            if ((xm == x1) && (ym == y1)) {
+               x3 = xm;
+               y3 = ym;
+            }
+            xt[i] = x3;
+            yt[i] = y3;
+         }
+         // Close the polygon if the first and last points are the same
+         if (xf[nf] == xf[0] && yf[nf] == yf[0]) {
+            xm = (xt[nf] + xt[0]) * 0.5;
+            ym = (yt[nf] + yt[0]) * 0.5;
+            if (xm == xf[0]) {
+               a3 = Math.PI / 2.0;
+            } else {
+               a3 = Math.atan((ym - yf[0]) / (xm - xf[0]));
+            }
+            x3 = xf[0] + wk * Math.sin(a3 + (Math.PI / 2.0));
+            y3 = yf[0] - wk * Math.cos(a3 + (Math.PI / 2.0));
+            if ((xm - xf[0]) * (x3 - xf[0]) < 0 && (ym - yf[0]) * (y3 - yf[0]) < 0) {
+               x3 = 2 * xf[0] - x3;
+               y3 = 2 * yf[0] - y3;
+            }
+            xt[nf] = x3;
+            xt[0]  = x3;
+            yt[nf] = y3;
+            yt[0]  = y3;
+         }
+         // Find the crossing segments and remove the useless ones
+         var xc, yc, c1, b1, c2, b2;
+         var cross = false;
+         var nf2 = nf;
+         for (i=nf2; i>0; i--) {
+            for (j=i-1; j>0; j--) {
+               if (xt[i-1] == xt[i] || xt[j-1] == xt[j]) continue;
+               c1  = (yt[i-1] - yt[i]) / (xt[i-1] - xt[i]);
+               b1  = yt[i] - c1 * xt[i];
+               c2  = (yt[j-1] - yt[j]) / (xt[j-1] - xt[j]);
+               b2  = yt[j] - c2 * xt[j];
+               if (c1 != c2) {
+                  xc = (b2 - b1) / (c1 - c2);
+                  yc = c1 * xc + b1;
+                  if (xc > Math.min(xt[i], xt[i-1]) && xc < Math.max(xt[i], xt[i-1]) &&
+                      xc > Math.min(xt[j], xt[j-1]) && xc < Math.max(xt[j], xt[j-1]) &&
+                      yc > Math.min(yt[i], yt[i-1]) && yc < Math.max(yt[i], yt[i-1]) &&
+                      yc > Math.min(yt[j], yt[j-1]) && yc < Math.max(yt[j], yt[j-1])) {
+                     nf++; xf[nf] = xt[i]; yf[nf] = yt[i];
+                     nf++; xf[nf] = xc   ; yf[nf] = yc;
+                     i = j;
+                     cross = true;
+                     break;
+                  } else {
+                     continue;
+                  }
+               } else {
+                  continue;
+               }
+            }
+            if (!cross) {
+               nf++;
+               xf[nf] = xt[i];
+               yf[nf] = yt[i];
+            }
+            cross = false;
+         }
+         nf++; xf[nf] = xt[0]; yf[nf] = yt[0]; nf++;
+         for (i=0; i<nf; i++) {
+            if (w > h) {
+               xf[i] = xmin + (xf[i] * (xmax - xmin));
+               yf[i] = ymin + (yf[i] * (ymax - ymin)) * ratio;
+            }
+            else if (h > w) {
+               xf[i] = xmin + (xf[i] * (xmax - xmin)) * ratio;
+               yf[i] = ymin + (yf[i] * (ymax - ymin));
+            }
+            else {
+               xf[i] = xmin + (xf[i] * (xmax - xmin));
+               yf[i] = ymin + (yf[i] * (ymax - ymin));
+            }
+            if (logx && xf[i] <= 0.0) xf[i] = xmin;
+            if (logy && yf[i] <= 0.0) yf[i] = ymin;
+         }
+         var excl = d3.range(nf).map(function(p) {
+            return {
+               x: xf[p],
+               y: yf[p]
+            };
+         });
+         /* some clean-up */
+         xo.splice(0, xo.length); yo.splice(0, yo.length);
+         xo = null; yo = null;
+         xt.splice(0, xt.length); yt.splice(0, yt.length);
+         xt = null; yt = null;
+         xf.splice(0, xf.length); yf.splice(0, yf.length);
+         xf = null; yf = null;
       }
 
       function do_redraw() {
@@ -1851,7 +2083,30 @@ function createFillPatterns(svg, id, line_color) {
             var line = d3.svg.line()
                .x(function(d) { return graph.x(d.x);})
                .y(function(d) { return graph.y(d.y);});
-
+         }
+         if (exclusionGraph) {
+            /* first draw exclusion area, and then the line */
+            showMarker = false;
+            if (graph['fFillStyle'] > 3000 && graph['fFillStyle'] <= 3025) {
+               createFillPatterns(vis, graph['fFillStyle'], graph['fFillColor']);
+               g.append("svg:path")
+                  .attr("class", "line")
+                  .attr("d", line(excl))
+                  .style("stroke", "none")
+                  .style("stroke-width", ff)
+                  .style("fill", "url(#pat" + graph['fFillStyle'] + "_" + graph['fFillColor'] + ")")
+                  .style("antialias", "false");
+            }
+            else {
+               g.append("svg:path")
+                  .attr("class", "line")
+                  .attr("d", line(excl))
+                  .style("stroke", "none")
+                  .style("stroke-width", ff)
+                  .style("fill", ec);
+            }
+         }
+         if (seriesType == 'line') {
             g.append("svg:path")
                .attr("class", "line")
                .attr("d", line(bins))
@@ -1860,17 +2115,7 @@ function createFillPatterns(svg, id, line_color) {
                .style("stroke-dasharray", root_line_styles[graph['fLineStyle']])
                .style("fill", "none");
          }
-         if (exclusionGraph) {
-            showMarker = false;
-            g.append("svg:path")
-               .attr("class", "line")
-               .attr("d", line(bins))
-               .style("stroke", ec)
-               .style("stroke-width", ff)
-               .style("fill", "none");
-         }
          if (graph['_typename'] == 'JSROOTIO.TGraphErrors' && draw_errors) {
-
             /* Add x-error indicators */
             g.selectAll("error_x")
                .data(graph.bins)
@@ -1904,6 +2149,7 @@ function createFillPatterns(svg, id, line_color) {
                .style("stroke", root_colors[graph['fLineColor']])
                .style("stroke-width", graph['fLineWidth']);
 
+            /* Add y-error indicators */
             g.selectAll("error_y")
                .data(graph.bins)
                .enter()
@@ -1937,6 +2183,7 @@ function createFillPatterns(svg, id, line_color) {
                .style("stroke-width", graph['fLineWidth']);
          }
          if (showMarker) {
+            /* Add markers */
             var filled = false;
             if ((graph['fMarkerStyle'] == 8) ||
                 (graph['fMarkerStyle'] > 19 && graph['fMarkerStyle'] < 24) ||
@@ -1988,6 +2235,7 @@ function createFillPatterns(svg, id, line_color) {
          }
       };
       graph['redraw'] = do_redraw;
+      do_redraw();
 
       if (draw_all) {
          this.drawAxes(frame, graph['fHistogram'], pad, x, y);
@@ -2057,7 +2305,12 @@ function createFillPatterns(svg, id, line_color) {
 
    JSROOTPainter.drawHistogram1D = function(vis, pad, histo, hframe) {
       var i, logx = false, logy = false, logz = false, gridx = false, gridy = false;
+      var same = false;
       var opt = histo['fOption'].toLowerCase();
+      if (opt.indexOf('same') != -1) {
+         same = true;
+         opt = opt.replace('same', '');
+      }
       var draw_all = false;
       if (hframe == null || (hframe['xmin'] < 1e-300 && hframe['xmax'] < 1e-300 &&
           hframe['ymin'] < 1e-300 && hframe['ymax'] < 1e-300)) {
@@ -2083,7 +2336,7 @@ function createFillPatterns(svg, id, line_color) {
          if (histo['fArray'][i+1] < hmin) hmin = histo['fArray'][i+1];
          if (histo['fArray'][i+1] > hmax) hmax = histo['fArray'][i+1];
       }
-      var mul = (hmin < 0) ? 1.1 : 1.0;
+      var mul = (hmin < 0) ? 1.05 : 1.0;
       if (hmin < 1e-300 && hmax < 1e-300) {
          var ymin = histo['fYaxis']['fXmin'], ymax = histo['fYaxis']['fXmax'];
          if (histo['fMinimum'] != -1111) ymin = histo['fMinimum'];
@@ -2103,8 +2356,6 @@ function createFillPatterns(svg, id, line_color) {
          else
             var y = d3.scale.linear().domain([ymin, ymax]).range([h, 0]);
 
-//         frame['x'] = x;
-//         frame['y'] = y;
          // avoid this!
          histo['fYaxis']['fXmin'] = ymin;
          histo['fYaxis']['fXmax'] = ymax;
@@ -2122,6 +2373,7 @@ function createFillPatterns(svg, id, line_color) {
          this.drawTitle(vis, histo, pad);
          this.addInteraction(frame, histo);
          this.drawFunctions(vis, histo, pad, ret);
+         histo.redraw();
          return {
             frame: frame,
             xmin: histo['fXaxis']['fXmin'],
@@ -2133,7 +2385,7 @@ function createFillPatterns(svg, id, line_color) {
       if (histo['fMinimum'] != -1111) hmin = histo['fMinimum'];
       if (histo['fMaximum'] != -1111) hmax = histo['fMaximum'];
       histo['fYaxis']['fXmin'] = hmin * mul;
-      histo['fYaxis']['fXmax'] = hmax * 1.1;
+      histo['fYaxis']['fXmax'] = hmax * 1.05;
       var binwidth = ((histo['fXaxis']['fXmax'] - histo['fXaxis']['fXmin']) / histo['fXaxis']['fNbins']);
       var bins = d3.range(histo['fXaxis']['fNbins']).map(function(p) {
          var offset = (opt.indexOf('e') != -1) ? (p * binwidth) - (binwidth / 2.0) : (p * binwidth);
@@ -2153,23 +2405,28 @@ function createFillPatterns(svg, id, line_color) {
       else
          var x = d3.scale.linear().domain([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]).range([0, w]);
       if (logy)
-         var y = d3.scale.log().domain([mul * d3.min(bins, function(d) { return d.y; }),
-                      1.1 * d3.max(bins, function(d) { return d.y; })]).range([h, 0]);
+         var y = d3.scale.log().domain([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]).range([h, 0]);
       else
-         var y = d3.scale.linear().domain([mul * d3.min(bins, function(d) { return d.y; }),
-                      1.1 * d3.max(bins, function(d) { return d.y; })]).range([h, 0]);
+         var y = d3.scale.linear().domain([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]).range([h, 0]);
 
-      ret['ymin'] = hmin;
-      ret['ymax'] = hmax;
+      if (same) {
+         x.domain([ret['xmin'],ret['xmax']]);
+         y.domain([ret['ymin'],ret['ymax']]);
+      }
+      else {
+         ret['ymin'] = histo['fYaxis']['fXmin'];
+         ret['ymax'] = histo['fYaxis']['fXmax'];
+      }
       if (histo['fXaxis'].TestBit(EAxisBits.kAxisRange)) {
          ret['xmin'] = histo.getBinLowEdge(histo['fXaxis']['fFirst']);
          ret['xmax'] = histo.getBinUpEdge(histo['fXaxis']['fLast']);
          x.domain([ret['xmin'],ret['xmax']]);
+         y.domain([ret['ymin'],ret['ymax']]);
       }
       histo['x_min'] = histo['fXaxis']['fXmin'];
       histo['x_max'] = histo['fXaxis']['fXmax'];
-      histo['y_min'] = hmin * mul;
-      histo['y_max'] = hmax * 1.1;
+      histo['y_min'] = histo['fYaxis']['fXmin'];
+      histo['y_max'] = histo['fYaxis']['fXmax'];
 
       histo['x'] = x;
       histo['y'] = y;
@@ -2199,13 +2456,13 @@ function createFillPatterns(svg, id, line_color) {
                   .interpolate("step-before")
 
                if (histo['fFillStyle'] > 3000 && histo['fFillStyle'] <= 3025) {
-                  createFillPatterns(vis, histo['fFillStyle'], fillcolor);
+                  createFillPatterns(vis, histo['fFillStyle'], histo['fFillColor']);
                   g.append("svg:path")
                      .attr("class", "area")
                      .attr("d", area(bins))
                      .style("stroke", linecolor)
                      .style("stroke-width", histo['fLineWidth'])
-                     .style("fill", "url(#pat" + histo['fFillStyle'] + ")")
+                     .style("fill", "url(#pat" + histo['fFillStyle'] + "_" + histo['fFillColor'] + ")")
                      .style("antialias", "false");
                }
                else {
@@ -2231,10 +2488,12 @@ function createFillPatterns(svg, id, line_color) {
                   .style("stroke", linecolor)
                   .style("stroke-width", histo['fLineWidth'])
                   .style("fill", "none")
+                  .style("stroke-dasharray", histo['fLineStyle'] > 1 ? root_line_styles[histo['fLineStyle']] : null)
                   .style("antialias", "false");
             }
          };
          histo['redraw'] = do_redraw;
+         do_redraw();
       }
       if (draw_all)
          this.drawAxes(frame, histo, pad, x, y);
@@ -2373,6 +2632,7 @@ function createFillPatterns(svg, id, line_color) {
             .text(function(d) { return "x = " + d.x.toPrecision(5) + " \ny = " + d.y.toPrecision(5) + " \nentries = " + d.z; });
       };
       histo['redraw'] = do_redraw;
+      do_redraw();
 
       if (opt.indexOf('colz') != -1) {
          // just to initialize the default palette
@@ -2389,6 +2649,31 @@ function createFillPatterns(svg, id, line_color) {
       this.drawFunctions(vis, histo, pad, ret);
       if (!pad || typeof(pad) == 'undefined')
          this.drawStat(vis, histo);
+   };
+
+   JSROOTPainter.drawLatex = function(vis, string, x, y, attr) {
+      var w = vis.attr("width"), h = vis.attr("height");
+      while (string.indexOf('#') != -1)
+         string = string.replace('#', '\\');
+      string = string.replace(' ', '\\: ');
+
+      // method using jsMath do display formulae and LateX
+      // unfortunately it works only on FireFox (Chrome displays it, 
+      // but at wrong coordinates, and IE doesn't support foreignObject 
+      // in SVG...)
+      string = '\\displaystyle \\rm ' + string;
+      var fo = vis.append("foreignObject")
+         .attr("x", x)
+         .attr("y", y)
+         .attr("width", w - x)
+         .attr("height", h - y);
+      var math = fo.append("xhtml:div")
+         .style("display", "inline")
+         .style("color", attr['font-color'])
+         .style('font-size', (attr['font-size']*0.98)+'px')
+         .attr("class", "math")
+         .html(string);
+      jsMath.ProcessElement(math[0][0]);
    };
 
    JSROOTPainter.drawLegend = function(vis, pad, pave) {
@@ -2459,15 +2744,21 @@ function createFillPatterns(svg, id, line_color) {
          var string = leg['fLabel'];
          var pos_y = ((i+1) * (font_size * mul)) - (font_size/3);
          var tpos_y = (i+1) * (font_size * mul);
+         if (nlines == 1) {
+            var pos_y = (h * 0.75) - (font_size/3);
+            var tpos_y = h * 0.75;
+         }
 
          var mo = gFile.GetMappedObject(leg['fObject']);
          if (mo) {
+            leg['fFillColor']   = mo['fFillColor'];
+            leg['fFillStyle']   = mo['fFillStyle'];
+            leg['fLineColor']   = mo['fLineColor'];
+            leg['fLineStyle']   = mo['fLineStyle'];
+            leg['fLineWidth']   = mo['fLineWidth'];
             leg['fMarkerColor'] = mo['fMarkerColor'];
-            leg['fLineColor'] = mo['fLineColor'];
-            leg['fLineStyle'] = mo['fLineStyle'];
-            leg['fLineWidth'] = mo['fLineWidth'];
-            leg['fFillColor'] = mo['fFillColor'];
-            leg['fFillStyle'] = mo['fFillStyle'];
+            leg['fMarkerSize']  = mo['fMarkerSize'];
+            leg['fMarkerStyle'] = mo['fMarkerStyle'];
          }
          var line_color = root_colors[leg['fLineColor']];
          var line_width = leg['fLineWidth'];
@@ -2513,13 +2804,13 @@ function createFillPatterns(svg, id, line_color) {
             var pos_x = (tpos_x/2) - (ww/2);
 
             if (fill_style > 3000) {
-               createFillPatterns(vis, fill_style, fill_color);
+               createFillPatterns(vis, fill_style, leg['fFillColor']);
                p.append("svg:rect")
                   .attr("x", pos_x)
                   .attr("y", pos_y)
                   .attr("width", ww)
                   .attr("height", hh)
-                  .style("fill", "url(#pat" + fill_style + ")")
+                  .style("fill", "url(#pat" + fill_style + "_" + leg['fFillColor'] + ")")
                   .style("stroke-width", line_width)
                   .style("stroke", line_color);
             }
@@ -2809,6 +3100,7 @@ function createFillPatterns(svg, id, line_color) {
          histo['redraw'] = function() {
             JSROOTPainter.drawGrid(frame, histo, pad, x, y);
          };
+         histo.redraw();
          this.addInteraction(frame, histo);
       }
       for (var i=0; i<graphs.length; ++i) {
@@ -2822,6 +3114,10 @@ function createFillPatterns(svg, id, line_color) {
       function draw(init) {
 
          var render_to = '#histogram' + idx;
+         if (typeof($(render_to)[0]) == 'undefined') { 
+            obj = null; 
+            return; 
+         }
          $(render_to).empty();
 
          for (i=0; i<func_list.length; ++i) {
@@ -2835,13 +3131,13 @@ function createFillPatterns(svg, id, line_color) {
          }
          svg = JSROOTPainter.createCanvas($(render_to), idx);
          if (svg == null) return false;
-         if (obj['_typename'].match(/\bTH1/)) {
+         if (obj['_typename'].match(/\bJSROOTIO.TH1/)) {
             JSROOTPainter.drawHistogram1D(svg, null, obj, null);
          }
-         else if (obj['_typename'].match(/\bTH2/)) {
+         else if (obj['_typename'].match(/\bJSROOTIO.TH2/)) {
             JSROOTPainter.drawHistogram2D(svg, null, obj, null);
          }
-         else if (obj['_typename'].match(/\bTProfile/)) {
+         else if (obj['_typename'].match(/\bJSROOTIO.TProfile/)) {
             JSROOTPainter.drawProfile(svg, null, obj, null);
          }
          else if (obj['_typename'] == 'JSROOTIO.TF1') {
@@ -2852,6 +3148,9 @@ function createFillPatterns(svg, id, line_color) {
          }
          else if (obj['_typename'] == 'JSROOTIO.TMultiGraph') {
             JSROOTPainter.drawMultiGraph(svg, null, obj, null);
+         }
+         else if (typeof(drawUserObject) == 'function') {
+            drawUserObject(obj, svg);
          }
          if (init == true)
             window.setTimeout(function() { $(render_to)[0].scrollIntoView(); }, 50);
@@ -3261,7 +3560,7 @@ function createFillPatterns(svg, id, line_color) {
          if (classname == 'JSROOTIO.TText') {
             this.drawText(vis, pad, primitives[i]);
          }
-         if (classname.match(/\bTH1/)) {
+         if (classname.match(/\bJSROOTIO.TH1/)) {
             this.drawHistogram1D(vis, pad, primitives[i], frame);
             if (fframe) {
                fframe['xmin'] = primitives[i]['fXaxis']['fXmin'];
@@ -3274,10 +3573,10 @@ function createFillPatterns(svg, id, line_color) {
                }
             }
          }
-         if (classname.match(/\bTH2/)) {
+         if (classname.match(/\bJSROOTIO.TH2/)) {
             this.drawHistogram2D(vis, pad, primitives[i], frame);
          }
-         if (classname.match(/\bTProfile/)) {
+         if (classname.match(/\bJSROOTIO.TProfile/)) {
             this.drawProfile(vis, pad, primitives[i], frame);
          }
          if (classname == 'JSROOTIO.TF1') {

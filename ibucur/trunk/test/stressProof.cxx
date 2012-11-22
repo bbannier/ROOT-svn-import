@@ -1738,6 +1738,9 @@ Int_t PT_CheckSimpleNtuple(TQueryResult *qr, Long64_t nevt, const char *dsname)
    SafeDelete(hpx);
    SafeDelete(hpz);
    SafeDelete(hpr);
+     
+   // Clear dsname
+   gProof->ClearData(TProof::kDataset |TProof::kForceClear, dsname);
    
    // Done
    PutPoint();
@@ -1982,6 +1985,8 @@ Int_t PT_CheckDataset(TQueryResult *qr, Long64_t nevt)
       printf("\n >>> Test failure: dataset '%s' not found in the repository\n", dsname);
       return -1;
    }
+   // ... and that the default tree is 'ntuple' 
+   gProof->SetDataSetTreeName(dsname, "ntuple");
 
    // Create the histos
    TH1F *h1s[3] = {0};

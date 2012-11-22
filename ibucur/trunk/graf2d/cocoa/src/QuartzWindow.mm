@@ -24,10 +24,12 @@
 #import <stdexcept>
 #import <cassert>
 
+#import "ROOTOpenGLView.h"
 #import "QuartzWindow.h"
 #import "QuartzPixmap.h"
 #import "QuartzUtils.h"
 #import "CocoaUtils.h"
+#import "X11Colors.h"
 #import "X11Buffer.h"
 #import "X11Events.h"
 #import "TGWindow.h"
@@ -529,6 +531,8 @@ void SetWindowAttributes(const SetWindowAttributes_t *attr, NSObject<X11Window> 
          [qw setStyleMask : NSBorderlessWindowMask];
          [qw setAlphaValue : 0.95];
       }
+      
+      window.fOverrideRedirect = YES;
    }
 }
 
@@ -588,7 +592,7 @@ void GetWindowAttributes(NSObject<X11Window> *window, WindowAttributes_t *dst)
    //Not used by GUI.
    //dst->fDoNotPropagateMask
 
-   dst->fOverrideRedirect = 0;
+   dst->fOverrideRedirect = window.fOverrideRedirect;
    //Dummy value.
    dst->fScreen = 0;
 }
@@ -901,6 +905,31 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
+- (id) initWithGLView : (ROOTOpenGLView *) glView
+{
+   assert(glView != nil && "initWithGLView, glView parameter is nil");
+   
+   const NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask;
+
+   NSRect contentRect = glView.frame;
+   contentRect.origin = CGPointZero;
+
+   self = [super initWithContentRect : contentRect styleMask : styleMask backing : NSBackingStoreBuffered defer : NO];
+
+   if (self) {
+      //ROOT's not able to draw GUI concurrently, thanks to global variables and gVirtualX itself.
+      [self setAllowsConcurrentViewDrawing : NO];
+      self.delegate = self;
+      fContentView = glView;
+      [self setContentView : fContentView];
+      fDelayedTransient = NO;
+      fIsDeleted = NO;
+   }
+   
+   return self;
+}
+
+//______________________________________________________________________________
 - (void) dealloc
 {
    [fShapeCombineMask release];
@@ -1081,7 +1110,7 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+- (void) copy : (NSObject<X11Drawable> *) src area : (X11::Rectangle) area withMask : (QuartzImage *)mask clipOrigin : (X11::Point) clipXY toPoint : (X11::Point) dstPoint
 {
    assert(fContentView != nil && "copy:area:toPoint:, fContentView is nil");
 
@@ -1089,7 +1118,7 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (unsigned char *) readColorBits : (Rectangle_t) area
+- (unsigned char *) readColorBits : (X11::Rectangle) area
 {
    assert(fContentView != nil && "readColorBits:, fContentView is nil");
    
@@ -1127,6 +1156,28 @@ void print_mask_info(ULong_t mask)
 
 //... forwards to fContentView.
 
+//______________________________________________________________________________
+- (void) setFBackgroundPixel : (unsigned long) backgroundColor
+{
+   assert(fContentView != nil && "setFBackgroundPixel, fContentView is nil");
+
+   if (!fShapeCombineMask) {
+      CGFloat rgba[] = {0., 0., 0., 1.};
+      X11::PixelToRGB(backgroundColor, rgba);
+
+      [self setBackgroundColor : [NSColor colorWithColorSpace : [NSColorSpace deviceRGBColorSpace] components : rgba count : 4]];
+   }
+   
+   fContentView.fBackgroundPixel = backgroundColor;
+}
+
+//______________________________________________________________________________
+- (unsigned long) fBackgroundPixel
+{
+   assert(fContentView != nil && "fBackgroundPixel, fContentView is nil");
+
+   return fContentView.fBackgroundPixel;
+}
 
 //______________________________________________________________________________
 - (int) fMapState
@@ -1183,8 +1234,8 @@ void print_mask_info(ULong_t mask)
    
    const Util::AutoreleasePool pool;
 
-   [self makeKeyAndOrderFront : self];
    [fContentView setHidden : NO];
+   [self makeKeyAndOrderFront : self];
    [fContentView configureNotifyTree];
 
    if (fDelayedTransient) {
@@ -1200,8 +1251,8 @@ void print_mask_info(ULong_t mask)
 
    const Util::AutoreleasePool pool;
 //   [self orderFront : self];
-   [self makeKeyAndOrderFront : self];
    [fContentView setHidden : NO];
+   [self makeKeyAndOrderFront : self];
    [fContentView configureNotifyTree];
    
    if (fDelayedTransient) {
@@ -1451,6 +1502,7 @@ void print_mask_info(ULong_t mask)
 @synthesize fBitGravity;
 @synthesize fWinGravity;
 @synthesize fBackgroundPixel;
+@synthesize fOverrideRedirect;
 //SetWindowAttributes_t/WindowAttributes_t
 /////////////////////
 @synthesize fParentView;
@@ -1615,7 +1667,7 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area withMask : (QuartzImage *) mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+- (void) copyImage : (QuartzImage *) srcImage area : (X11::Rectangle) area withMask : (QuartzImage *) mask clipOrigin : (X11::Point) clipXY toPoint : (X11::Point) dstPoint
 {
    //TODO: test and fix all possible cases with crop area and masks.
 
@@ -1656,14 +1708,18 @@ void print_mask_info(ULong_t mask)
    if (mask) {
       assert(mask.fImage != nil && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
       assert(CGImageIsMask(mask.fImage) == true && "copyImage:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
-      clipXY.fY = X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
-      const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+      //clipXY.fY = X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
+      const CGFloat clipY = X11::LocalYROOTToCocoa(self, CGFloat(clipXY.fY) + mask.fHeight);
+      //const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+      const CGRect clipRect = CGRectMake(clipXY.fX, clipY, mask.fWidth, mask.fHeight);      
       CGContextClipToMask(self.fContext, clipRect, mask.fImage);
    }
    
    //Convert from X11 to Cocoa (as soon as we scaled y * -1).
-   dstPoint.fY = X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
-   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   //dstPoint.fY = X11::LocalYROOTToCocoa(self, dstPoint.fY + area.fHeight);
+   const CGFloat dstY = X11::LocalYROOTToCocoa(self, CGFloat(dstPoint.fY) + area.fHeight);
+   //const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
 
    if (needSubImage)
@@ -1671,7 +1727,7 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) copyView : (QuartzView *) srcView area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+- (void) copyView : (QuartzView *) srcView area : (X11::Rectangle) area toPoint : (X11::Point) dstPoint
 {
    //To copy one "window" to another "window", I have to ask source QuartzView to draw intself into
    //bitmap, and copy this bitmap into the destination view.
@@ -1709,7 +1765,7 @@ void print_mask_info(ULong_t mask)
    }
 
    const Quartz::CGStateGuard ctxGuard(self.fContext);
-   const CGRect imageRect = CGRectMake(dstPoint.fX, [self visibleRect].size.height - (dstPoint.fY + area.fHeight), area.fWidth, area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, [self visibleRect].size.height - (CGFloat(dstPoint.fY) + area.fHeight), area.fWidth, area.fHeight);
 
    CGContextTranslateCTM(self.fContext, 0., [self visibleRect].size.height); 
    CGContextScaleCTM(self.fContext, 1., -1.);
@@ -1718,7 +1774,7 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) copyPixmap : (QuartzPixmap *) srcPixmap area : (Rectangle_t) area withMask : (QuartzImage *) mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+- (void) copyPixmap : (QuartzPixmap *) srcPixmap area : (X11::Rectangle) area withMask : (QuartzImage *) mask clipOrigin : (X11::Point) clipXY toPoint : (X11::Point) dstPoint
 {
    //Check parameters.
    assert(srcPixmap != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, srcPixmap parameter is nil");
@@ -1758,13 +1814,16 @@ void print_mask_info(ULong_t mask)
       assert(mask.fImage != nil && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is nil");
       assert(CGImageIsMask(mask.fImage) == true && "copyPixmap:area:withMask:clipOrigin:toPoint:, mask.fImage is not a mask");
 
-      clipXY.fY = X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
-      const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+      //clipXY.fY = X11::LocalYROOTToCocoa(self, clipXY.fY + mask.fHeight);
+      const CGFloat clipY = X11::LocalYROOTToCocoa(self, CGFloat(clipXY.fY) + mask.fHeight);
+      //const CGRect clipRect = CGRectMake(clipXY.fX, clipXY.fY, mask.fWidth, mask.fHeight);
+      const CGRect clipRect = CGRectMake(clipXY.fX, clipY, mask.fWidth, mask.fHeight);
       CGContextClipToMask(self.fContext, clipRect, mask.fImage);
    }
    
-   dstPoint.fY = X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
-   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   //dstPoint.fY = X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
+   const CGFloat dstY = X11::LocalYCocoaToROOT(self, CGFloat(dstPoint.fY) + area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, imageFromPixmap.Get());
    
    if (needSubImage)
@@ -1773,7 +1832,7 @@ void print_mask_info(ULong_t mask)
 
 
 //______________________________________________________________________________
-- (void) copyImage : (QuartzImage *) srcImage area : (Rectangle_t) area toPoint : (Point_t) dstPoint
+- (void) copyImage : (QuartzImage *) srcImage area : (X11::Rectangle) area toPoint : (X11::Point) dstPoint
 {
    assert(srcImage != nil && "copyImage:area:toPoint:, srcImage parameter is nil");
    assert(srcImage.fImage != nil && "copyImage:area:toPoint:, srcImage.fImage is nil");
@@ -1801,8 +1860,10 @@ void print_mask_info(ULong_t mask)
    CGContextTranslateCTM(self.fContext, 0., self.fHeight); 
    CGContextScaleCTM(self.fContext, 1., -1.);
 
-   dstPoint.fY = X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
-   const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   //dstPoint.fY = X11::LocalYCocoaToROOT(self, dstPoint.fY + area.fHeight);
+   const CGFloat dstY = X11::LocalYCocoaToROOT(self, CGFloat(dstPoint.fY) + area.fHeight);
+   //const CGRect imageRect = CGRectMake(dstPoint.fX, dstPoint.fY, area.fWidth, area.fHeight);
+   const CGRect imageRect = CGRectMake(dstPoint.fX, dstY, area.fWidth, area.fHeight);
    CGContextDrawImage(self.fContext, imageRect, subImage);
    
    if (needSubImage)
@@ -1810,9 +1871,10 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *)mask clipOrigin : (Point_t) clipXY toPoint : (Point_t) dstPoint
+- (void) copy : (NSObject<X11Drawable> *) src area : (X11::Rectangle) area withMask : (QuartzImage *)mask clipOrigin : (X11::Point) clipXY toPoint : (X11::Point) dstPoint
 {
    assert(src != nil && "copy:area:withMask:clipOrigin:toPoint:, src parameter is nil");
+   assert(area.fWidth && area.fHeight && "copy:area:withMask:clipOrigin:toPoint:, area to copy is empty");
    
    if ([src isKindOfClass : [QuartzWindow class]]) {
       //Forget about mask (can I have it???)
@@ -1832,16 +1894,13 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (unsigned char *) readColorBits : (Rectangle_t) area
+- (unsigned char *) readColorBits : (X11::Rectangle) area
 {
-   //TODO: make the part, reading pixels
-   //from NSBitmapImageRep not so lame.
+   //
+   assert(area.fWidth && area.fHeight && "readColorBits:, area to copy is empty");
+
    const NSRect visRect = [self visibleRect];
-   Rectangle_t srcRect = {};
-   srcRect.fX = visRect.origin.x;
-   srcRect.fY = visRect.origin.y;
-   srcRect.fWidth = visRect.size.width;
-   srcRect.fHeight = visRect.size.height;
+   const X11::Rectangle srcRect(int(visRect.origin.x), int(visRect.origin.y), unsigned(visRect.size.width), unsigned(visRect.size.height));
    
    if (!X11::AdjustCropArea(srcRect, area)) {
       NSLog(@"QuartzView: -readColorBits:, visible rect of view and copy area do not intersect");
@@ -1880,8 +1939,8 @@ void print_mask_info(ULong_t mask)
    const unsigned char *line = srcData + area.fY * dataWidth * 4;
    const unsigned char *srcPixel = line + area.fX * 4;
       
-   for (UShort_t i = 0; i < area.fHeight; ++i) {
-      for (UShort_t j = 0; j < area.fWidth; ++j, srcPixel += 4, dstPixel += 4) {
+   for (unsigned i = 0; i < area.fHeight; ++i) {
+      for (unsigned j = 0; j < area.fWidth; ++j, srcPixel += 4, dstPixel += 4) {
          dstPixel[0] = srcPixel[2];
          dstPixel[1] = srcPixel[1];
          dstPixel[2] = srcPixel[0];
@@ -1915,7 +1974,6 @@ void print_mask_info(ULong_t mask)
 
    return fBackgroundPixmap;
 }
-
 
 //______________________________________________________________________________
 - (int) fMapState
@@ -2163,7 +2221,7 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (void) addPassiveKeyGrab : (unichar) keyCode modifiers : (NSUInteger) modifiers
 {
-   //Remove and add (not to traverse twice).
+   //TODO: why am I removing the old one??? :)
    [self removePassiveKeyGrab : keyCode modifiers : modifiers];
    PassiveKeyGrab * const newGrab = [[PassiveKeyGrab alloc] initWithKey : keyCode modifiers : modifiers];
    [fPassiveKeyGrabs addObject : newGrab];
@@ -2268,11 +2326,9 @@ void print_mask_info(ULong_t mask)
 
          if (fBackBuffer) {
             //Very "special" window.
-            Rectangle_t copyArea = {};//TODO: why Rectangle_t uses UShort_t instead of unsigned??? Have to declare my own rect_t later:((
-            copyArea.fWidth = UShort_t(fBackBuffer.fWidth);
-            copyArea.fHeight = UShort_t(fBackBuffer.fHeight);
+            const X11::Rectangle copyArea(0, 0, fBackBuffer.fWidth, fBackBuffer.fHeight);
 
-            [self copy : fBackBuffer area : copyArea withMask : nil clipOrigin : Point_t() toPoint : Point_t()];
+            [self copy : fBackBuffer area : copyArea withMask : nil clipOrigin : X11::Point() toPoint : X11::Point()];
          }
      
          vx->CocoaDrawOFF();
@@ -2324,7 +2380,7 @@ void print_mask_info(ULong_t mask)
 - (void) mouseDown : (NSEvent *) theEvent
 {
    assert(fID != 0 && "mouseDown, fID is 0");
-
+   
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "mouseDown, gVirtualX is either null or has a type, different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton1);
@@ -2362,6 +2418,7 @@ void print_mask_info(ULong_t mask)
    print_mask_info(fEventMask);
    NSLog(@"grab mask is:");
    print_mask_info(fPassiveGrabEventMask);
+   NSLog(@"view's geometry: x == %g, y == %g, w == %g, h == %g", self.frame.origin.x, self.frame.origin.y, self.frame.size.width, self.frame.size.height);
    NSLog(@"----------------End of view info------------------");
 }
 #endif
@@ -2378,6 +2435,22 @@ void print_mask_info(ULong_t mask)
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "rightMouseDown, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton3);
+}
+
+//______________________________________________________________________________
+- (void) otherMouseDown : (NSEvent *) theEvent
+{
+   assert(fID != 0 && "otherMouseDown, fID is 0");
+   
+   //Funny enough, [theEvent buttonNumber] is not the same thing as button masked in [NSEvent pressedMouseButtons],
+   //button number actually is a kind of right operand for bitshift for pressedMouseButtons.
+   if ([theEvent buttonNumber] == 2) {//this '2' will correspond to '4' in pressedMouseButtons.
+      //I do not care about mouse buttons after left/right/wheel - ROOT does not have
+      //any code for this.
+      TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx != 0 && "otherMouseDown, gVirtualX is either null or has type different from TGCocoa");
+      vx->GetEventTranslator()->GenerateButtonPressEvent(self, theEvent, kButton2);
+   }
 }
 
 //______________________________________________________________________________
@@ -2399,6 +2472,17 @@ void print_mask_info(ULong_t mask)
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
    assert(vx != 0 && "rightMouseUp, gVirtualX is either null or has type different from TGCocoa");
    vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton3);
+}
+
+//______________________________________________________________________________
+- (void) otherMouseUp : (NSEvent *) theEvent
+{
+   assert(fID != 0 && "otherMouseUp, fID is 0");
+   
+   //Here I assume it's always kButton2.
+   TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != 0 && "otherMouseUp, gVirtualX is either null or has type different from TGCocoa");
+   vx->GetEventTranslator()->GenerateButtonReleaseEvent(self, theEvent, kButton2);
 }
 
 //______________________________________________________________________________
@@ -2443,7 +2527,7 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "mouseDragged, fID is 0");
    
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != 0 && "mouseMoved, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "mouseDragged, gVirtualX is null or not of TGCocoa type");
    
    vx->GetEventTranslator()->GeneratePointerMotionEvent(theEvent);   
 }
@@ -2454,9 +2538,21 @@ void print_mask_info(ULong_t mask)
    assert(fID != 0 && "rightMouseDragged, fID is 0");
 
    TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != 0 && "rightMouseMoved, gVirtualX is null or not of TGCocoa type");
+   assert(vx != 0 && "rightMouseDragged, gVirtualX is null or not of TGCocoa type");
    
    vx->GetEventTranslator()->GeneratePointerMotionEvent(theEvent);
+}
+
+//______________________________________________________________________________
+- (void) otherMouseDragged : (NSEvent *)theEvent
+{
+   assert(fID != 0 && "otherMouseDragged, fID is 0");
+
+   if ([theEvent buttonNumber] == 2) {
+      TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx != 0 && "otherMouseDragged, gVirtualX is null or not of TGCocoa type");
+      vx->GetEventTranslator()->GeneratePointerMotionEvent(theEvent);
+   }
 }
 
 //______________________________________________________________________________
@@ -2470,9 +2566,14 @@ void print_mask_info(ULong_t mask)
 }
 
 //______________________________________________________________________________
-- (void) keyUp:(NSEvent *)theEvent
+- (void) keyUp : (NSEvent *) theEvent
 {
-   (void)theEvent;
+   assert(fID != 0 && "keyUp, fID is 0");
+
+   TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
+   assert(vx != 0 && "keyUp, gVirtualX is null or not of TGCocoa type");
+   vx->GetEventTranslator()->GenerateKeyReleaseEvent(self, theEvent);
+
 }
 
 //First responder staff.
@@ -2493,22 +2594,24 @@ void print_mask_info(ULong_t mask)
 //______________________________________________________________________________
 - (BOOL) becomeFirstResponder
 {
-   //Change focus.
-   NSView<X11Window> *focusView = nil;
-   for (NSView<X11Window> *view = self; view; view = view.fParentView) {
-      if (view.fEventMask & kFocusChangeMask) {
-         focusView = view;
-         break;
+   if (!fOverrideRedirect) {
+      //Change focus.
+      NSView<X11Window> *focusView = nil;
+      for (NSView<X11Window> *view = self; view; view = view.fParentView) {
+         if (view.fEventMask & kFocusChangeMask) {
+            focusView = view;
+            break;
+         }
       }
+
+      if (!focusView)
+         focusView = ((QuartzWindow *)[self window]).fContentView;
+      
+      TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
+      assert(vx != 0 && "becomeFirstResponder, gVirtualX is null or not of TGCocoa type");
+      vx->GetEventTranslator()->GenerateFocusChangeEvent(focusView);
    }
-
-   if (!focusView)
-      focusView = ((QuartzWindow *)[self window]).fContentView;
    
-   TGCocoa * const vx = dynamic_cast<TGCocoa *>(gVirtualX);
-   assert(vx != 0 && "becomeFirstResponder, gVirtualX is null or not of TGCocoa type");
-   vx->GetEventTranslator()->GenerateFocusChangeEvent(focusView);
-
    return YES;
 }
 
@@ -2550,6 +2653,9 @@ void print_mask_info(ULong_t mask)
    case kArrowRight:
       pngFileName = "right_arrow_cursor.png";
       break;
+   case kRotate:
+      pngFileName = "rotate.png";
+      break;      
    case kBottomLeft:
    case kTopRight:
       pngFileName = "top_right_cursor.png";
@@ -2572,6 +2678,7 @@ void print_mask_info(ULong_t mask)
       
       NSString *nsPath = [NSString stringWithFormat : @"%s", path];//in autorelease pool.
       NSImage * const cursorImage = [[NSImage alloc] initWithContentsOfFile : nsPath];//must call release.
+
 
       if (!cursorImage)
          return nil;

@@ -70,45 +70,19 @@ TClingClassInfo::TClingClassInfo(cling::Interpreter *interp, const char *name)
    : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0),
      fTitle("")
 {
-   if (gDebug > 0) {
-      Info("TClingClassInfo(name)", "looking up class name: %s\n", name);
-   }
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
    const clang::Type *type = 0;
    const clang::Decl *decl = lh.findScope(name,&type);
    if (!decl) {
-      if (gDebug > 0) {
-         Info("TClingClassInfo(name)", "cling class not found name: %s\n",
-              name);
-      }
       std::string buf = TClassEdit::InsertStd(name);
       decl = lh.findScope(buf,&type);
-      if (!decl) {
-         if (gDebug > 0) {
-            Info("TClingClassInfo(name)", "cling class not found name: %s\n",
-                 buf.c_str());
-         }
-      }
-      else {
-         if (gDebug > 0) {
-            Info("TClingClassInfo(name)", "found cling class name: %s  "
-                 "decl: 0x%lx\n", buf.c_str(), (long) decl);
-         }
-      }
-   }
-   else {
-      if (gDebug > 0) {
-         Info("TClingClassInfo(name)", "found cling class name: %s  "
-              "decl: 0x%lx\n", name, (long) decl);
-      }
    }
    fDecl = decl;
-   if (type) 
-      fType = type->getAs<clang::RecordType>(); // NOTE: getAs removes some typedefs.
+   fType = type;
 }
 
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp,
-                                 const clang::TagDecl &tag)
+                                 const clang::Type &tag)
    : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0), 
      fTitle("")
 {
@@ -368,9 +342,6 @@ bool TClingClassInfo::HasMethod(const char *name) const
 
 void TClingClassInfo::Init(const char *name)
 {
-   if (gDebug > 0) {
-      Info("TClingClassInfo::Init(name)", "looking up class: %s\n", name);
-   }
    fFirstTime = true;
    fDescend = false;
    fIter = clang::DeclContext::decl_iterator();
@@ -380,30 +351,8 @@ void TClingClassInfo::Init(const char *name)
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
    const clang::Decl *decl = lh.findScope(name);
    if (!decl) {
-      if (gDebug > 0) {
-         Info("TClingClassInfo::Init(name)", "cling class not found "
-              "name: %s\n", name);
-      }
       std::string buf = TClassEdit::InsertStd(name);
       decl = lh.findScope(buf);
-      if (!decl) {
-         if (gDebug > 0) {
-            Info("TClingClassInfo::Init(name)", "cling class not found "
-                 "name: %s\n", buf.c_str());
-         }
-      }
-      else {
-         if (gDebug > 0) {
-            Info("TClingClassInfo::Init(name)", "found cling class "
-                 "name: %s  decl: 0x%lx\n", buf.c_str(), (long) decl);
-         }
-      }
-   }
-   else {
-      if (gDebug > 0) {
-         Info("TClingClassInfo::Init(name)", "found cling class "
-              "name: %s  decl: 0x%lx\n", name, (long) decl);
-      }
    }
    fDecl = decl;
    if (decl) {
@@ -414,15 +363,22 @@ void TClingClassInfo::Init(const char *name)
 
 void TClingClassInfo::Init(int tagnum)
 {
-   Warning("TClingClassInfo::Init(tagnum)","Not yet implemented\n");
+   Fatal("TClingClassInfo::Init(tagnum)","Should no longer be called");
    return;
 }
 
-void TClingClassInfo::Init(const clang::TagDecl &tag)
+void TClingClassInfo::Init(const clang::Type &tag)
 {
-   fDecl = &tag;
-   clang::ASTContext &C = tag.getASTContext();
-   fType = C.getTagDeclType(&tag)->getAs<clang::TagType>();
+   fType = &tag;
+   fDecl = fType->getAsCXXRecordDecl();
+   if (!fDecl) {
+      clang::QualType qType(fType,0);
+      static clang::PrintingPolicy
+         printPol(fInterp->getCI()->getLangOpts());
+      printPol.SuppressScope = false;
+      Error("TClingClassInfo::Init(const clang::Type&)","The given type %s does not point to a CXXRecordDecl",
+            qType.getAsString(printPol).c_str());
+   }
 }
 
 bool TClingClassInfo::IsBase(const char *name) const
@@ -570,7 +526,7 @@ int TClingClassInfo::InternalNext()
          fType = 0;
          if (fDecl) {
             const clang::RecordDecl *rdecl = llvm::dyn_cast<clang::RecordDecl>(fDecl);
-            if (rdecl) fType = rdecl->getASTContext().getRecordType(rdecl)->getAs<clang::RecordType>();
+            if (rdecl) fType = rdecl->getASTContext().getRecordType(rdecl).getTypePtr();
          }
          return 1;
       }

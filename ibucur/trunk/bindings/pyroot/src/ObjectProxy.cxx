@@ -151,6 +151,11 @@ namespace {
    // Build a representation string of the object proxy that shows the address
    // of the C++ object that is held, as well as its type.
       TClass* klass = pyobj->ObjectIsA();
+      if ( pyobj->GetObject() ) {
+         TClass* clActual = klass->GetActualClass( pyobj->GetObject() );
+         if ( clActual ) klass = clActual;
+      }
+
       std::string clName = klass ? klass->GetName() : "<unknown>";
       if ( pyobj->fFlags & ObjectProxy::kIsReference )
          clName.append( "*" );
@@ -163,7 +168,7 @@ namespace {
          if ( name ) {
             if ( PyROOT_PyUnicode_GET_SIZE( name ) != 0 ) {
                PyObject* repr = PyROOT_PyUnicode_FromFormat( "<ROOT.%s object (\"%s\") at %p>",
-                  clName.c_str(), PyROOT_PyUnicode_AsString( name ), pyobj->fObject );
+                  clName.c_str(), PyROOT_PyUnicode_AsString( name ), pyobj->GetObject() );
                Py_DECREF( name );
                return repr;
             }
@@ -174,7 +179,7 @@ namespace {
 
    // get here if object has no method GetName() or name = ""
       return PyROOT_PyUnicode_FromFormat( const_cast< char* >( "<ROOT.%s object at %p>" ),
-         clName.c_str(), pyobj->fObject );
+         clName.c_str(), pyobj->GetObject() );
    }
 
 

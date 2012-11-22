@@ -109,9 +109,12 @@ namespace cling {
     /// \name Iteration
 
     typedef DeclQueue::const_iterator const_iterator;
+    typedef DeclQueue::iterator iterator;
     typedef DeclQueue::const_reverse_iterator const_reverse_iterator;
     const_iterator decls_begin() const { return m_DeclQueue.begin(); }
+    iterator decls_begin() { return m_DeclQueue.begin(); }
     const_iterator decls_end() const { return m_DeclQueue.end(); }
+    iterator decls_end() { return m_DeclQueue.end(); }
     const_reverse_iterator rdecls_begin() const { return m_DeclQueue.rbegin(); }
     const_reverse_iterator rdecls_end() const { return m_DeclQueue.rend(); }
 
@@ -199,7 +202,7 @@ namespace cling {
     ///\param[in] nested - The transaction to be nested.
     ///
     void addNestedTransaction(Transaction* nested) {
-      nested->setParent(nested);
+      nested->setParent(this);
       // Leave a marker in the parent transaction, where the nested transaction
       // started. Using empty DeclGroupRef is save because append() filters
       // out possible empty DeclGroupRefs.
@@ -219,6 +222,11 @@ namespace cling {
     ///\brief Appends a declaration group to the transaction if doesn't exist.
     ///
     void appendUnique(clang::DeclGroupRef DGR);
+
+    ///\brief Wraps the declaration into declaration group and appends it to 
+    /// the transaction if doesn't exist.
+    ///
+    void appendUnique(clang::Decl* D);
 
     ///\brief Clears all declarations in the transaction.
     ///

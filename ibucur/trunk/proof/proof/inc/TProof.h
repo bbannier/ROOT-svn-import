@@ -317,12 +317,16 @@ private:
    TString      fExp;
    Int_t        fIdx;
    Int_t        fNWrks;
+   Int_t        fLastNWrks;
    static char  fgCr[4];
 public:
-   TProofMergePrg() : fExp(), fIdx(-1), fNWrks(-1) { }
+   TProofMergePrg() : fExp(), fIdx(-1), fNWrks(-1), fLastNWrks(-1) { }
 
-   const char  *Export() { fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
-                           return fExp.Data(); }
+   const char  *Export(Bool_t &changed) {
+                  fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
+                  changed = (fLastNWrks != fNWrks || fLastNWrks == -1) ? kTRUE : kFALSE;
+                  fLastNWrks = fNWrks;
+                  return fExp.Data(); }
    void         DecreaseNWrks() { fNWrks--; }
    void         IncreaseNWrks() { fNWrks++; }
    void         IncreaseIdx() { fIdx++; if (fIdx == 4) fIdx = 0; }
@@ -470,12 +474,18 @@ private:
       kBuildAll            = 0,
       kCollectBuildResults = 1
    };
+   enum EParCheckVersionOpt {
+      kDontCheck   = 0,
+      kCheckROOT    = 1,
+      kCheckSVN     = 2
+   };
    enum EProofShowQuotaOpt {
       kPerGroup = 0x1,
       kPerUser = 0x2
    };
 
    Bool_t          fValid;           //is this a valid proof object
+   Bool_t          fTty;             //TRUE if connected to a terminal
    TString         fMaster;          //master server ("" if a master); used in the browser
    TString         fWorkDir;         //current work directory on remote servers
    TString         fGroup;           //PROOF group of this user
@@ -624,8 +634,8 @@ private:
    Int_t    SetParallelSilent(Int_t nodes, Bool_t random = kFALSE);
    void     RecvLogFile(TSocket *s, Int_t size);
    void     NotifyLogMsg(const char *msg, const char *sfx = "\n");
-   Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll);
-   Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0);
+   Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll, Int_t chkveropt = 2);
+   Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0, Int_t chkveropt = 2);
    Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE, TList *loadopts = 0);
    Int_t    LoadPackageOnClient(const char *package, TList *loadopts = 0);
    Int_t    UnloadPackage(const char *package);
@@ -895,7 +905,7 @@ public:
    virtual void ShowDataSetCache(const char *dataset = 0);
    virtual void ClearDataSetCache(const char *dataset = 0);
 
-   void         ShowData();
+   virtual void ShowData();
    void         ClearData(UInt_t what = kUnregistered, const char *dsname = 0);
 
    const char *GetMaster() const { return fMaster; }
@@ -928,11 +938,12 @@ public:
    Float_t     GetRealTime() const { return fRealTime; }
    Float_t     GetCpuTime() const { return fCpuTime; }
 
-   Bool_t      IsLite() const { return (fServType == TProofMgr::kProofLite); }
-   Bool_t      IsProofd() const { return (fServType == TProofMgr::kProofd); }
+   Bool_t      IsLite() const { return (fServType == TProofMgr::kProofLite) ? kTRUE : kFALSE; }
+   Bool_t      IsProofd() const { return (fServType == TProofMgr::kProofd) ? kTRUE : kFALSE; }
    Bool_t      IsFolder() const { return kTRUE; }
    Bool_t      IsMaster() const { return fMasterServ; }
    Bool_t      IsValid() const { return fValid; }
+   Bool_t      IsTty() const { return fTty; }
    Bool_t      IsParallel() const { return GetParallel() > 0 ? kTRUE : kFALSE; }
    Bool_t      IsIdle() const { return (fNotIdle <= 0) ? kTRUE : kFALSE; }
    Bool_t      IsWaiting() const { return fIsWaiting; }

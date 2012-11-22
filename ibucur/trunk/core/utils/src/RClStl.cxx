@@ -15,6 +15,7 @@
 
 #include "RClStl.h"
 #include "TClassEdit.h"
+#include "TMetaUtils.h"
 using namespace TClassEdit;
 #include <stdio.h>
 
@@ -24,6 +25,7 @@ using namespace TClassEdit;
 #include "Scanner.h"
 
 #include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/LookupHelper.h"
 
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -180,21 +182,6 @@ void ROOT::RStl::Print()
    }
 }
 
-std::string ROOT::RStl::DropDefaultArg(const std::string &classname)
-{
-   // Remove the default argument from the stl container.
-
-   G__ClassInfo cl(classname.c_str());
-
-   if ( cl.TmpltName() == 0 ) return classname;
-
-   if ( TClassEdit::STLKind( cl.TmpltName() ) == 0 ) return classname;
-
-   return TClassEdit::ShortType( cl.Fullname(),
-                                 TClassEdit::kDropStlDefault );
-
-}
-
 void ROOT::RStl::WriteClassInit(FILE* /*file*/, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    // This function writes the TGeneraticClassInfo initialiser
@@ -203,9 +190,18 @@ void ROOT::RStl::WriteClassInit(FILE* /*file*/, const cling::Interpreter &interp
 
    list_t::iterator iter;
    for(iter = fList.begin(); iter != fList.end(); ++iter) {
-      if (!iter->GetRecordDecl()->isCompleteDefinition()) {
-         fprintf(stderr,"Error: incomplete definition for %s\n",iter->GetNormalizedName());
-         continue;
+ 
+      if (!iter->GetRecordDecl()->getDefinition()) {
+
+         // We do not have a complete definition, we need to force the instantiation
+         // and findScope can do that.
+         const cling::LookupHelper& lh = interp.getLookupHelper();
+         const clang::CXXRecordDecl *result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(lh.findScope(iter->GetNormalizedName(),0));
+
+         if (!result || !iter->GetRecordDecl()->getDefinition()) {
+            fprintf(stderr,"Error: incomplete definition for %s\n",iter->GetNormalizedName());
+            continue;
+         }
       }
 
       // std::string fullname = R__GetQualifiedName(*iter->GetRecordDecl());      
@@ -226,9 +222,10 @@ void ROOT::RStl::WriteStreamer(FILE *file,const clang::CXXRecordDecl *stlcl)
    std::string shortTypeName = GetLong64_Name( TClassEdit::ShortType(R__GetQualifiedName(*stlcl).c_str(),TClassEdit::kDropStlDefault) );
    std::string noConstTypeName( TClassEdit::CleanType(shortTypeName.c_str(),2) );
 
-   streamerName += G__map_cpp_name((char *)shortTypeName.c_str());
-   std::string typedefName = G__map_cpp_name((char *)shortTypeName.c_str());
-
+   std::string typedefName;
+   ROOT::TMetaUtils::GetCppName(typedefName, shortTypeName.c_str());
+   streamerName += typedefName;
+   
    const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (stlcl);
    if (!tmplt_specialization) return;
 

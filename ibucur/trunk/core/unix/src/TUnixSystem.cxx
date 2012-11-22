@@ -4514,24 +4514,23 @@ void TUnixSystem::SetDynamicPath(const char *path)
 }
 
 //______________________________________________________________________________
-char *TUnixSystem::DynamicPathName(const char *lib, Bool_t quiet)
+const char *TUnixSystem::FindDynamicLibrary(TString& sLib, Bool_t quiet)
 {
    // Returns the path of a shared library (searches for library in the
    // shared library search path). If no file name extension is provided
-   // it first tries .so, .sl, .dl and then .a (for AIX). The returned string
-   // must be deleted.
+   // it first tries .so, .sl, .dl and then .a (for AIX).
 
-   char *name;
-
-   int ext = 0, len = strlen(lib);
+   TString searchFor = sLib;
 #ifdef __APPLE__
    // On a MAC, a library might not have any extensions, so let's try the raw
    // name first.
-   name = gSystem->Which(GetDynamicPath(), lib, kReadPermission);
-   if (name) {
-      return name;
+   if (gSystem->FindFile(GetDynamicPath(), sLib, kReadPermission)) {
+      return sLib;
    }
+   sLib = searchFor;
 #endif
+   const char* lib = sLib.Data();
+   int len = sLib.Length();
    if (len > 3 && (!strcmp(lib+len-3, ".so")    ||
                    !strcmp(lib+len-3, ".dl")    ||
                    !strcmp(lib+len-4, ".dll")   ||
@@ -4539,44 +4538,32 @@ char *TUnixSystem::DynamicPathName(const char *lib, Bool_t quiet)
                    !strcmp(lib+len-6, ".dylib") ||
                    !strcmp(lib+len-3, ".sl")    ||
                    !strcmp(lib+len-2, ".a"))) {
-      name = gSystem->Which(GetDynamicPath(), lib, kReadPermission);
-      ext  = 1;
-   } else {
-      TString fname;
-      fname.Form("%s.so", lib);
-      name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-      if (!name) {
-         fname.Form("%s.dll", lib);
-         name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-         if (!name) {
-            fname.Form("%s.dylib", lib);
-            name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-            if (!name) {
-               fname.Form("%s.sl", lib);
-               name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-               if (!name) {
-                  fname.Form("%s.dl", lib);
-                  name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-                  if (!name) {
-                     fname.Form("%s.a", lib);
-                     name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-                  }
-               }
-            }
-         }
+      if (gSystem->FindFile(GetDynamicPath(), sLib, kReadPermission))
+         return sLib;
+      if (!quiet)
+         Error("FindDynamicLibrary",
+               "%s does not exist in %s", searchFor.Data(), GetDynamicPath());
+      return 0;
+   }
+   static const char* exts[] = {
+      ".so", ".dll", ".dylib", ".sl", ".dl", ".a", 0 };
+   const char** ext = exts;
+   while (*ext) {
+      TString fname(sLib);
+      fname += *ext;
+      ++ext;
+      if (gSystem->FindFile(GetDynamicPath(), fname, kReadPermission)) {
+         sLib.Swap(fname);
+         return sLib;
       }
    }
 
-   if (!name && !quiet) {
-      if (ext)
-         Error("DynamicPathName",
-               "%s does not exist in %s", lib, GetDynamicPath());
-      else
-         Error("DynamicPathName",
-               "%s[.so | .dll | .dylib | .sl | .dl | .a] does not exist in %s", lib, GetDynamicPath());
-   }
+   if (!quiet)
+      Error("FindDynamicLibrary",
+            "%s[.so | .dll | .dylib | .sl | .dl | .a] does not exist in %s",
+            searchFor.Data(), GetDynamicPath());
 
-   return name;
+   return 0;
 }
 
 //______________________________________________________________________________

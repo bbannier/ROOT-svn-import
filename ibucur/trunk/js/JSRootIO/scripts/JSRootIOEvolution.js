@@ -29,7 +29,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
 
    JSROOTIO = {};
 
-   JSROOTIO.version = "1.6 2012/02/24";
+   JSROOTIO.version = "1.7 2012/11/10";
 
    JSROOTIO.BIT = function(bits, index) {
       var mask = 1 << index;
@@ -567,6 +567,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
             gFile.fStreamers[clname][element['name']]['class']    = element['name'];
             gFile.fStreamers[clname][element['name']]['cntname']  = s_i['elements']['array'][j]['countName'];
             gFile.fStreamers[clname][element['name']]['type']     = element['type'];
+            gFile.fStreamers[clname][element['name']]['length']   = element['length'];
          }
       }
       return gFile.fStreamers[clname];
@@ -592,7 +593,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
 
 (function(){
 
-   var version = "1.8 2012/02/24";
+   var version = "1.9 2012/11/10";
 
    // ctor
    JSROOTIO.TStreamer = function(file) {
@@ -677,7 +678,9 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                   var clRef = gFile.fStreamerInfo.ReadClass(str, o);
                   if (clRef && clRef['name']) o = clRef['off'];
                   obj[prop] = new Object();
+                  obj[prop]['_typename'] = 'JSROOTIO.' + classname;
                   o = JSROOTIO.GetStreamer(classname).Stream(obj[prop], str, o);
+                  JSROOTCore.addMethods(obj[prop]);
                }
                break;
             case kAny:
@@ -708,7 +711,9 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                   var clRef = gFile.fStreamerInfo.ReadClass(str, o);
                   if (clRef && clRef['name']) o = clRef['off'];
                   obj[prop] = new Object();
+                  obj[prop]['_typename'] = 'JSROOTIO.' + classname;
                   o = JSROOTIO.GetStreamer(classname).Stream(obj[prop], str, o);
+                  JSROOTCore.addMethods(obj[prop]);
                }
                break;
             case kTString:
@@ -758,10 +763,10 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                break;
             case kStreamer:
                alert('failed to stream ' + prop + ' (' + this[prop]['typename'] + ')');
-               break
+               break;
             case kStreamLoop:
                alert('failed to stream ' + prop + ' (' + this[prop]['typename'] + ')');
-               break
+               break;
             case kOffsetL+kShort:
             case kOffsetL+kUShort:
                var n_el = str.charCodeAt(o) & 0xff;
@@ -771,7 +776,8 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                break;
             case kOffsetL+kInt:
             case kOffsetL+kUInt:
-               var n_el = str.charCodeAt(o) & 0xff;
+               //var n_el = str.charCodeAt(o) & 0xff;
+               var n_el  = this[prop]['length'];
                var array = JSROOTIO.ReadFastArray(str, o, n_el, 'I');
                obj[prop] = array['array'];
                o = array['off'];
@@ -780,20 +786,23 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
             case kOffsetL+kULong:
             case kOffsetL+kLong64:
             case kOffsetL+kULong64:
-               var n_el = str.charCodeAt(o) & 0xff;
+               //var n_el = str.charCodeAt(o) & 0xff;
+               var n_el  = this[prop]['length'];
                var array = JSROOTIO.ReadFastArray(str, o, n_el, 'L');
                obj[prop] = array['array'];
                o = array['off'];
                break;
             case kOffsetL+kFloat:
             case kOffsetL+kDouble32:
-               var n_el = str.charCodeAt(o) & 0xff;
+               //var n_el = str.charCodeAt(o) & 0xff;
+               var n_el  = this[prop]['length'];
                var array = JSROOTIO.ReadFastArray(str, o, n_el, 'F');
                obj[prop] = array['array'];
                o = array['off'];
                break;
             case kOffsetL+kDouble:
-               var n_el = str.charCodeAt(o) & 0xff;
+               //var n_el = str.charCodeAt(o) & 0xff;
+               var n_el  = this[prop]['length'];
                var array = JSROOTIO.ReadFastArray(str, o, n_el, 'D');
                obj[prop] = array['array'];
                o = array['off'];
@@ -988,8 +997,13 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                   // skip TQObject...
                   break;
                default:
-                  // basic types and standard streamers
-                  o = this.ReadBasicType(str, o, obj, prop);
+                  if (this[prop]['type'] == kAny && typeof(streamUserType) == 'function') {
+                     o = streamUserType(this, str, o, obj, prop);
+                  }
+                  else {
+                     // basic types and standard streamers
+                     o = this.ReadBasicType(str, o, obj, prop);
+                  }
                   break;
             }
          }
@@ -1741,6 +1755,9 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                   callbk(file, filecontent, obj); // Call callback func with data
                   delete filecontent;
                   filecontent = null;
+               }
+               else if (this.readyState == 4 && this.status == 404) {
+                  alert("Error 404: File not found!");
                }
             }
             xhr.open('GET', url, true);

@@ -46,24 +46,31 @@
 #include "TGMimeTypes.h"
 #include "TGFrame.h"
 #include "TGIdleHandler.h"
-
+#include "TError.h"
 
 // Global pointer to the TGClient object
 TGClient *gClient = 0;
 
 // Initialize gClient in case libGui is loaded in batch mode
 extern "C" void G__cpp_setup_tagtableG__Gui1();
+void TriggerDictionaryInitalization_G__Gui1();
 class TGClientInit {
 public:
    TGClientInit() { 
 #ifdef R__HAS_CLING
       if (ROOT::gROOTLocal && ROOT::gROOTLocal->IsBatch()) {
+         // For now check if the heaeder files (or the module containing them)
+         // has been loaded in Cling.
+         // This is required because the dictionaries must be initialized 
+         // __before__ the TGClient creation which will induce the creation 
+         // of a TClass object which will need the dictionary for TGClient!
+         TriggerDictionaryInitalization_G__Gui1();
 #else
       if (gROOT && gROOT->IsBatch()) {
-#endif
          // Insure that the CINT dictionary is initialized __before__ the TGClient creation which
          // will induce the creation of a TClass object which will need the dictionary for TGClient!
          G__cpp_setup_tagtableG__Gui1(); 
+#endif
          new TGClient();
       }
       TApplication::NeedGraphicsLibs(); 

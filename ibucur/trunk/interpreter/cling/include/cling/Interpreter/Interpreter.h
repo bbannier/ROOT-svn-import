@@ -11,8 +11,10 @@
 
 #include "llvm/ADT/OwningPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DynamicLibrary.h"
 
 #include <string>
+#include <set>
 
 namespace llvm {
   class raw_ostream;
@@ -24,12 +26,14 @@ namespace llvm {
 
 namespace clang {
   class ASTContext;
+  class CodeGenerator;
   class CompilerInstance;
   class Decl;
   class DeclContext;
   class FunctionDecl;
   class NamedDecl;
   class MangleContext;
+  class Parser;
   class QualType;
   class Sema;
 }
@@ -64,6 +68,79 @@ namespace cling {
       kSuccess,
       kFailure,
       kMoreInputExpected
+    };
+
+    ///\brief Describes the result of loading a library.
+    ///
+    enum LoadLibResult {
+      kLoadLibSuccess, // library loaded successfully
+      kLoadLibExists,  // library was already loaded
+      kLoadLibError, // library was not found
+      kLoadLibNumResults
+    };
+
+    ///\brief Describes the result of running a function.
+    ///
+    enum ExecutionResult {
+      ///\brief The function was run successfully.
+      kExeSuccess,
+      ///\brief Code generator is unavailable; not an error.
+      kExeNoCodeGen,
+
+      ///\brief First error value.
+      kExeFirstError,
+      ///\brief The function is not known and cannot be called.
+      kExeFunctionNotCompiled = kExeFirstError,
+      ///\brief While compiling the function, unknown symbols were encountered.
+      kExeUnresolvedSymbols,
+      ///\brief Compilation error.
+      kExeCompilationError,
+      ///\brief The function is not known.
+      kExeUnkownFunction,
+
+      ///\brief Number of possible results.
+      kNumExeResults
+    };
+
+
+    class LoadedFileInfo {
+    public:
+      enum FileType {
+        kSource,
+        kDynamicLibrary,
+        kBitcode,
+        kNumFileTypes
+      };
+
+      ///\brief Name as loaded for the first time.
+      ///
+      const std::string& getName() const { return m_Name; }
+
+      ///\brief Type of the file.
+      FileType getType() const { return m_Type; }
+
+      ///\brief Pointer to Interpreter::m_DyLibs entry if dynamic library
+      ///
+      const llvm::sys::DynamicLibrary* getDynLib() const { return m_DynLib; }
+
+    private:
+      ///\brief Constructor used by Interpreter.
+      LoadedFileInfo(const std::string& name, FileType type,
+                     const llvm::sys::DynamicLibrary* dynLib):
+        m_Name(name), m_Type(type), m_DynLib(dynLib) {}
+
+      ///\brief Name as loaded for the first time.
+      ///
+      std::string m_Name;
+
+      ///\brief Type of the file.
+      FileType m_Type;
+
+      ///\brief Pointer to Interpreter::m_DyLibs entry if dynamic library
+      ///
+      const llvm::sys::DynamicLibrary* m_DynLib;
+
+      friend class Interpreter;
     };
 
   private:
@@ -160,6 +237,22 @@ namespace cling {
     ///
     llvm::SmallVector<CXAAtExitElement, 20> m_AtExitFuncs;
 
+    ///\brief DynamicLibraries loaded by this Interpreter.
+    ///
+    std::set<llvm::sys::DynamicLibrary> m_DyLibs;
+
+    ///\brief Information about loaded files.
+    ///
+    llvm::SmallVector<LoadedFileInfo*, 200> m_LoadedFiles;
+
+    ///\brief Try to load a library file via the llvm::Linker.
+    ///
+    LoadLibResult tryLinker(const std::string& filename, bool permanent,
+                            bool& tryCode);
+
+    void addLoadedFile(const std::string& name, LoadedFileInfo::FileType type,
+                       const llvm::sys::DynamicLibrary* dyLib = 0);
+
     ///\brief Processes the invocation options.
     ///
     void handleFrontendOptions();
@@ -209,10 +302,10 @@ namespace cling {
     ///       initialized to point to the return value's location if the 
     ///       expression result is an aggregate.
     ///
-    ///\returns true if successful otherwise false.
+    ///\returns The result of the execution.
     ///
-    bool RunFunction(const clang::FunctionDecl* FD, clang::QualType resTy,
-                     StoredValueRef* res = 0);
+    ExecutionResult RunFunction(const clang::FunctionDecl* FD,
+                                StoredValueRef* res = 0);
 
     ///\brief Forwards to cling::ExecutionContext::addSymbol.
     ///
@@ -247,6 +340,9 @@ namespace cling {
 
     const LookupHelper& getLookupHelper() const { return *m_LookupHelper; }
 
+    const clang::Parser& getParser() const;
+
+    clang::CodeGenerator* getCodeGenerator() const;
 
     ///\brief Shows the current version of the project.
     ///
@@ -288,6 +384,20 @@ namespace cling {
     ///\brief Adds an include path (-I).
     ///
     void AddIncludePath(llvm::StringRef incpath);
+
+    ///\brief Prints the current include paths that are used.
+    ///
+    ///\param[out] incpaths - Pass in a llvm::SmallVector<std::string, N> with
+    ///       sufficiently sized N, to hold the result of the call.
+    ///\param[in] withSystem - if true, incpaths will also contain system
+    ///       include paths (framework, STL etc).
+    ///\param[in] withFlags - if true, each element in incpaths will be prefixed
+    ///       with a "-I" or similar, and some entries of incpaths will signal
+    ///       a new include path region (e.g. "-cxx-isystem"). Also, flags
+    ///       defining header search behavior will be included in incpaths, e.g.
+    ///       "-nostdinc".
+    void GetIncludePaths(llvm::SmallVectorImpl<std::string>& incpaths,
+                         bool withSystem, bool withFlags);
 
     ///\brief Prints the current include paths that are used.
     ///
@@ -365,7 +475,7 @@ namespace cling {
     ///       expression result is an aggregate.
     ///
     ///\returns Whether the operation was fully successful.
-    ///
+    /// 
     CompilationResult echo(const std::string& input, StoredValueRef* V = 0);
 
     ///\brief Compiles input line and runs.
@@ -380,6 +490,17 @@ namespace cling {
     ///
     CompilationResult execute(const std::string& input);
 
+    ///\brief Generates code for a given transaction. NOTE: we will have to 
+    /// think of better name because it doesn't do codegen only it applies the
+    /// specified by the compilation options transformations, too.
+    ///
+    /// @param[in] T - The cling::Transaction that contains the declarations and
+    ///                the compilation/generation options.
+    ///
+    ///\returns Whether the operation was fully successfil.
+    ///
+    CompilationResult codegen(Transaction* T);
+
     ///\brief Loads header file or shared library.
     ///
     ///\param [in] filename - The file to loaded.
@@ -391,11 +512,30 @@ namespace cling {
     CompilationResult loadFile(const std::string& filename,
                                bool allowSharedLib = true);
 
+    ///\brief Loads a shared library.
+    ///
+    ///\param [in] filename - The file to loaded.
+    ///\param [in] permanent - If false, the file can be unloaded later.
+    ///\param [out] tryCode - If not NULL, it will be set to false if this file
+    ///        cannot be included.
+    ///
+    ///\returns kLoadLibSuccess on success, kLoadLibExists if the library was
+    /// already loaded, kLoadLibError if the library cannot be found or any
+    /// other error was encountered.
+    ///
+     LoadLibResult loadLibrary(const std::string& filename, bool permanent,
+                               bool *tryCode = 0);
+
+    ///\brief Get the collection of loaded files.
+    ///
+    const llvm::SmallVectorImpl<LoadedFileInfo*>& getLoadedFiles() const {
+      return m_LoadedFiles; }
+
     void enableDynamicLookup(bool value = true);
     bool isDynamicLookupEnabled() { return m_DynamicLookupEnabled; }
 
     bool isPrintingAST() { return m_PrintAST; }
-    void enablePrintAST(bool print = true) { m_PrintAST = print;}
+    void enablePrintAST(bool print = true) { m_PrintAST = print; }
 
     clang::CompilerInstance* getCI() const;
     const clang::Sema& getSema() const;
@@ -410,7 +550,7 @@ namespace cling {
 
     //FIXME: Terrible hack to let the IncrementalParser run static inits on
     // transaction completed.
-    void runStaticInitializersOnce() const;
+    ExecutionResult runStaticInitializersOnce() const;
 
     int CXAAtExit(void (*func) (void*), void* arg, void* dso);
 
@@ -445,9 +585,30 @@ namespace cling {
     ///
     void* getAddressOfGlobal(const clang::NamedDecl* D, bool* fromJIT = 0) const;
 
+    ///\brief Gets the address of an existing global and whether it was JITted.
+    ///
+    /// JIT symbols might not be immediately convertible to e.g. a function
+    /// pointer as their call setup is different.
+    ///
+    ///\param[in]  SymName - the name of the global to search
+    ///\param[out] fromJIT - whether the symbol was JITted.
+    ///
+    void* getAddressOfGlobal(const char* SymName, bool* fromJIT = 0) const;
+
     friend class runtime::internal::LifetimeHandler;
   };
 
+  namespace internal {
+    // Force symbols needed by runtime to be included in binaries.
+    void symbol_requester();
+    static struct ForceSymbolsAsUsed {
+      ForceSymbolsAsUsed(){
+        // Never true, but don't tell the compiler.
+        // Prevents stripping the symbol due to dead-code optimization.
+        if (std::getenv("bar") == (char*) -1) symbol_requester();
+      }
+    } sForceSymbolsAsUsed;
+  }
 } // namespace cling
 
 #endif // CLING_INTERPRETER_H

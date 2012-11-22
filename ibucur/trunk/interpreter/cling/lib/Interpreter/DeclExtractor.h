@@ -8,15 +8,17 @@
 #define CLING_DECL_EXTRACTOR_H
 
 #include "TransactionTransformer.h"
-
-#include "clang/Sema/Lookup.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang {
   class ASTContext;
-  class Decl;
   class DeclContext;
+  class FunctionDecl;
+  class LookupResult;
   class NamedDecl;
   class Scope;
+  class Sema;
+  class TagDecl;
 }
 
 namespace cling {
@@ -39,10 +41,10 @@ namespace cling {
     ///\brief Tries to extract the declaration on the global scope (translation
     /// unit scope).
     ///
-    ///\param D[in] - The declaration to be extracted.
+    ///\param D[in] - The function declaration to extract from.
     ///\returns true on success.
     ///
-    bool ExtractDecl(clang::Decl* D);
+    bool ExtractDecl(clang::FunctionDecl* FD);
 
     ///\brief Checks for clashing names when trying to extract a declaration.
     ///

@@ -107,16 +107,16 @@ namespace cling {
 
     ///\brief Starts a transaction.
     ///
-    void beginTransaction(const CompilationOptions& Opts);
+    Transaction* beginTransaction(const CompilationOptions& Opts);
 
     ///\brief Finishes a transaction.
     ///
-    void endTransaction() const;
+    Transaction* endTransaction() const;
 
-    ///\brief Commits the current transaction if it was compete. I.e pipes it 
+    ///\brief Commits a transaction if it was compete. I.e pipes it 
     /// through the consumer chain, including codegen.
     ///
-    void commitCurrentTransaction();
+    void commitTransaction(Transaction* T);
 
     ///\brief Reverts the AST into its previous state.
     ///
@@ -145,15 +145,21 @@ namespace cling {
       return m_LastTransaction; 
     }
 
+    ///\brief Returns the list of transactions seen by the interpreter.
+    /// Intentionally makes a copy - that function is meant to be use for debug
+    /// purposes.
+    ///
+    std::vector<const Transaction*> getAllTransactions();
+
     /// \}
 
     ///\brief Compiles the given input with the given compilation options.
     ///
     ///\param[in] input - The code to compile.
     ///\param[in] Opts - The compilation options to use.
-    ///\returns whether the operation was successful.
+    ///\returns the declarations that were compiled.
     ///
-    EParseResult Compile(llvm::StringRef input, const CompilationOptions& Opts);
+    Transaction* Compile(llvm::StringRef input, const CompilationOptions& Opts);
 
     ///\brief Parses the given input without calling the custom consumers and 
     /// code generation.

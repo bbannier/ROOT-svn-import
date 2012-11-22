@@ -64,9 +64,10 @@ class G__ClassInfo;
 
 using namespace Cint;
 
+class TEnv;
+class TClingCallbacks;
 class TMethod;
 class TObjArray;
-class TEnv;
 
 namespace cling {
 class Interpreter;
@@ -93,7 +94,6 @@ private: // Data Members
    G__dictposition fDictPos;          // CINT dictionary context after initialization is complete.
    G__dictposition fDictPosGlobals;   // CINT dict context after ResetGlobals().
    TString         fSharedLibs;       // Shared libraries loaded by G__loadfile().
-   Int_t           fSharedLibsSerial; // Last time we set fSharedLibs.
    Int_t           fGlobalsListSerial;// Last time we refreshed the ROOT list of globals.
    TString         fIncludePath;      // Interpreter include path.
    TString         fRootmapLoadPath;  // Dynamic load path for rootmap files.
@@ -106,6 +106,9 @@ private: // Data Members
 
    std::vector<cling::StoredValueRef> *fTemporaries;    // Stack of temporaries
    ROOT::TMetaUtils::TNormalizedCtxt  *fNormalizedCtxt; // Which typedef to avoid striping.
+
+   void*           fPrevLoadedDynLibInfo; // Internal info to mark the last loaded libray.
+   TClingCallbacks* fClingCallbacks; // cling::Interpreter owns it.
 
 public: // Public Interface
 
@@ -132,7 +135,7 @@ public: // Public Interface
    virtual const char* GetSTLIncludePath() const;
    TObjArray*  GetRootMapFiles() const { return fRootmapFiles; }
    Int_t   InitializeDictionaries();
-   void    InspectMembers(TMemberInspector&, void* obj, TClass* cl);
+   void    InspectMembers(TMemberInspector&, void* obj, const TClass* cl);
    Bool_t  IsLoaded(const char* filename) const;
    Int_t   Load(const char* filenam, Bool_t system = kFALSE);
    void    LoadMacro(const char* filename, EErrorCode* error = 0);
@@ -158,6 +161,7 @@ public: // Public Interface
    void    ResetGlobalVar(void* obj);
    void    RewindDictionary();
    Int_t   DeleteGlobal(void* obj);
+   Int_t   DeleteVariable(const char *name);
    void    SaveContext();
    void    SaveGlobalsContext();
    void    UpdateListOfGlobals();
@@ -196,10 +200,11 @@ public: // Public Interface
    static int   AutoLoadCallback(const char* cls, const char* lib);
    static void  UpdateClassInfo(char* name, Long_t tagnum);
    static void  UpdateClassInfoWork(const char* name);
+          void  UpdateClassInfoWithDecl(void* vTD);
    static void  UpdateAllCanvases();
 
    // Misc
-   virtual int    DisplayClass(FILE* fout, char* name, int base, int start) const;
+   virtual int    DisplayClass(FILE* fout, const char* name, int base, int start) const;
    virtual int    DisplayIncludePath(FILE* fout) const;
    virtual void*  FindSym(const char* entry) const;
    virtual void   GenericError(const char* error) const;
@@ -314,6 +319,7 @@ public: // Public Interface
    virtual void   MethodInfo_CreateSignature(MethodInfo_t* minfo, TString& signature) const;
    virtual void   MethodInfo_Delete(MethodInfo_t* minfo) const;
    virtual MethodInfo_t*  MethodInfo_Factory() const;
+   virtual MethodInfo_t*  MethodInfo_Factory(ClassInfo_t *clinfo) const;
    virtual MethodInfo_t*  MethodInfo_FactoryCopy(MethodInfo_t* minfo) const;
    virtual MethodInfo_t*  MethodInfo_InterfaceMethod(MethodInfo_t* minfo) const;
    virtual bool   MethodInfo_IsValid(MethodInfo_t* minfo) const;
@@ -331,6 +337,7 @@ public: // Public Interface
    // G__MethodArgInfo interface
    virtual void   MethodArgInfo_Delete(MethodArgInfo_t* marginfo) const;
    virtual MethodArgInfo_t*  MethodArgInfo_Factory() const;
+   virtual MethodArgInfo_t*  MethodArgInfo_Factory(MethodInfo_t *minfo) const;
    virtual MethodArgInfo_t*  MethodArgInfo_FactoryCopy(MethodArgInfo_t* marginfo) const;
    virtual bool   MethodArgInfo_IsValid(MethodArgInfo_t* marginfo) const;
    virtual int    MethodArgInfo_Next(MethodArgInfo_t* marginfo) const;
@@ -338,6 +345,7 @@ public: // Public Interface
    virtual const char* MethodArgInfo_DefaultValue(MethodArgInfo_t* marginfo) const;
    virtual const char* MethodArgInfo_Name(MethodArgInfo_t* marginfo) const;
    virtual const char* MethodArgInfo_TypeName(MethodArgInfo_t* marginfo) const;
+   virtual const char* MethodArgInfo_TrueTypeName(MethodArgInfo_t* marginfo) const;
 
 
    // G__TypeInfo interface
@@ -359,6 +367,7 @@ public: // Public Interface
    virtual TypedefInfo_t*  TypedefInfo_FactoryCopy(TypedefInfo_t* tinfo) const;
    virtual void   TypedefInfo_Init(TypedefInfo_t* tinfo, const char* funcname) const;
    virtual bool   TypedefInfo_IsValid(TypedefInfo_t* tinfo) const;
+   virtual int    TypedefInfo_Next(TypedefInfo_t* tinfo) const;
    virtual Long_t TypedefInfo_Property(TypedefInfo_t* tinfo) const;
    virtual int    TypedefInfo_Size(TypedefInfo_t* tinfo) const;
    virtual const char* TypedefInfo_TrueName(TypedefInfo_t* tinfo) const;
@@ -375,9 +384,8 @@ private: // Private Utility Functions
    {
    }
 
-   Long_t ProcessLineCintOnly(const char* line, TInterpreter::EErrorCode* error = 0);
-
-public: // ROOT Metadata
+   void UpdateListOfLoadedSharedLibraries();
+   void RegisterLoadedSharedLibrary(const char* name);
 
    ClassDef(TCintWithCling, 0) //Interface to CINT C/C++ interpreter
 };

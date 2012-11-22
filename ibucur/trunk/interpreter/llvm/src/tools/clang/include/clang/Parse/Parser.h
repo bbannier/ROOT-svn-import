@@ -43,6 +43,7 @@ namespace clang {
   class InMessageExpressionRAIIObject;
   class PoisonSEHIdentifiersRAIIObject;
   class VersionTuple;
+  class DestroyTemplateIdAnnotationsRAIIObj;
 
 /// PrettyStackTraceParserEntry - If a crash happens while the parser is active,
 /// an entry is printed for it.
@@ -89,6 +90,7 @@ class Parser : public CodeCompletionHandler {
   friend class ObjCDeclContextSwitch;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
+  friend class DestroyTemplateIdAnnotationsRAIIObj;
 
   Preprocessor &PP;
 
@@ -223,8 +225,10 @@ class Parser : public CodeCompletionHandler {
 
   bool SkipFunctionBodies;
 
+  bool IsTemporary;
 public:
-  Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
+  Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies, 
+         bool isTemp = false);
   ~Parser();
 
   const LangOptions &getLangOpts() const { return PP.getLangOpts(); }
@@ -234,6 +238,34 @@ public:
   AttributeFactory &getAttrFactory() { return AttrFactory; }
 
   const Token &getCurToken() const { return Tok; }
+
+  /// A RAII object to temporarily reset PP's state and restore it.
+  class ParserCurTokRestoreRAII {
+  private:
+    Parser &P;
+    Token SavedTok;
+
+  public:
+    ParserCurTokRestoreRAII(Parser &P)
+      : P(P), SavedTok(P.Tok) 
+    {
+    }
+
+    void pop() {
+      if (SavedTok.is(tok::unknown))
+        return;
+
+      P.Tok = SavedTok;
+      
+      SavedTok.startToken();
+    }
+
+    ~ParserCurTokRestoreRAII() {
+      pop();
+    }
+  };
+
+
   Scope *getCurScope() const { return Actions.getCurScope(); }
 
   Decl  *getObjCDeclContext() const { return Actions.getObjCDeclContext(); }
@@ -720,7 +752,7 @@ public:
     return Diag(Tok, DiagID);
   }
 
-private:
+protected:
   void SuggestParentheses(SourceLocation Loc, unsigned DK,
                           SourceRange ParenRange);
   void CheckNestedObjCContexts(SourceLocation AtLoc);

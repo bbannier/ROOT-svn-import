@@ -376,7 +376,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                   len = identifier.length();
                }
             }
-            if (len > 2) { // process the +, -, -! endings of the classes
+            if (len > 1) { // process the +, -, -! endings of the classes
                
                bool ending = false;
                int where = 1;
@@ -404,7 +404,11 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                   std::cerr << "Warning: " << identifier << " option + mutual exclusive with -, + prevails\n";
                   csr.SetRequestNoStreamer(false);
                }
-               identifier.erase(len - (where-2));
+               if (ending) {
+                  identifier.erase(len - (where-2)); // We 'consumed' one of the class token
+               } else {
+                  identifier.erase(len - (where-1));
+               }
             }
             
             if (linkOn) {
@@ -460,7 +464,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             csr.SetAttributeValue("name", identifier);
 
             fSelectionRules->AddClassSelectionRule(csr);
-            //csr.PrintAttributes(3);
+            //csr.PrintAttributes(std::cout,3);
          }
          break;
       case kIOCtorType:

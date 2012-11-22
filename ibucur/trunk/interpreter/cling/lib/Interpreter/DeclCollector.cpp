@@ -25,7 +25,7 @@ namespace cling {
   }
 
   void DeclCollector::HandleInterestingDecl(DeclGroupRef DGR) {
-    assert("Not implemented yet!");
+    assert(0 && "Not implemented yet!");
   }
 
   // Does more than we want:
@@ -38,16 +38,19 @@ namespace cling {
     // Intentional no-op.
   }
 
-  void DeclCollector::HandleVTable(CXXRecordDecl* RD,
-                                     bool DefinitionRequired) {
-    assert("Not implemented yet!");
+  void DeclCollector::HandleVTable(CXXRecordDecl* RD, bool DefinitionRequired) {
+    // Intentional no-op. It comes through Sema::DefineUsedVTables, which
+    // comes either Sema::ActOnEndOfTranslationUnit or while instantiating a
+    // template. In our case we will do it on transaction commit, without 
+    // keeping track of used vtables, because we have cases where we bypass the
+    // clang/AST and directly ask the module so that we have to generate 
+    // everything without extra smartness.
   }
 
   void DeclCollector::CompleteTentativeDefinition(VarDecl* VD) {
-    assert("Not implemented yet!");
+    assert(0 && "Not implemented yet!");
   }
 
   void DeclCollector::HandleTranslationUnit(ASTContext& Ctx) {
-    assert("Not implemented yet!");
   }
 } // namespace cling
