@@ -85,22 +85,23 @@ namespace cling {
   }
 
   IncrementalParser::~IncrementalParser() {
-     if (hasCodeGenerator()) {
-       getCodeGenerator()->ReleaseModule();
-     }
-     const Transaction* T = getFirstTransaction();
-     const Transaction* nextT = 0;
-     while (T) {
-       nextT = T->getNext();
-       delete T;
-       T = nextT;
-     }
+    if (hasCodeGenerator()) {
+      getCodeGenerator()->ReleaseModule();
+    }
+    const Transaction* T = getFirstTransaction();
+    const Transaction* nextT = 0;
+    while (T) {
+      nextT = T->getNext();
+      delete T;
+      T = nextT;
+    }
 
-     for (size_t i = 0; i < m_TTransformers.size(); ++i)
-       delete m_TTransformers[i];
+    for (size_t i = 0; i < m_TTransformers.size(); ++i)
+      delete m_TTransformers[i];
   }
 
-  void IncrementalParser::beginTransaction(const CompilationOptions& Opts) {
+  Transaction* IncrementalParser::beginTransaction(const CompilationOptions& 
+                                                   Opts) {
     llvm::Module* M = 0;
     if (hasCodeGenerator())
       M = getCodeGenerator()->GetModule();
@@ -112,7 +113,7 @@ namespace cling {
     // transaction - it must be nested transaction.
     if (OldCurT && !OldCurT->isCompleted()) {
       OldCurT->addNestedTransaction(NewCurT); // takes the ownership
-      return;
+      return NewCurT;
     }
 
     if (!m_FirstTransaction) {
@@ -123,9 +124,11 @@ namespace cling {
       m_LastTransaction->setNext(NewCurT);
       m_LastTransaction = NewCurT;
     }
+
+    return NewCurT;
   }
 
-  void IncrementalParser::endTransaction() const {
+  Transaction* IncrementalParser::endTransaction() const {
     Transaction* CurT = m_Consumer->getTransaction();
     CurT->setCompleted();
     const DiagnosticsEngine& Diags = getCI()->getSema().getDiagnostics();
@@ -138,35 +141,42 @@ namespace cling {
       CurT->setIssuedDiags(Transaction::kErrors);
 
       
-    if (CurT->isNestedTransaction()) {
-      assert(!CurT->getParent()->isCompleted() 
-             && "Parent transaction completed!?");
-      // FIXME: Not sure what I meant :) REVISIT
-      //CurT = m_Consumer->getTransaction()->getParent();
+    if (CurT->hasNestedTransactions()) {
+      for(Transaction::const_nested_iterator I = CurT->nested_decls_begin(),
+            E = CurT->nested_decls_end(); I != E; ++I)
+        assert((*I)->isCompleted() && "Nested transaction not completed!?");
     }
+
+    if (CurT->isNestedTransaction()) {
+      // TODO: Add proper logic in the case where there are multiple nested
+      // transaction. This now won't handle the case where there are more than
+      // one level 1 nested transactions.
+      m_Consumer->setTransaction(CurT->getParent());
+    }
+
+    return CurT;
   }
 
-  void IncrementalParser::commitCurrentTransaction() {
-    Transaction* CurT = m_Consumer->getTransaction();
-    assert(CurT->isCompleted() && "Transaction not ended!?");
-
-    // Check for errors coming from our custom consumers.
-    DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
+  void IncrementalParser::commitTransaction(Transaction* T) {
+    //Transaction* CurT = m_Consumer->getTransaction();
+    assert(T->isCompleted() && "Transaction not ended!?");
 
     // Check for errors...
-    if (CurT->getIssuedDiags() == Transaction::kErrors) {
-      rollbackTransaction(CurT);
-      DClient.EndSourceFile();
+    if (T->getIssuedDiags() == Transaction::kErrors) {
+      rollbackTransaction(T);
       return;
+    }
+
+    if (T->hasNestedTransactions()) {
+      for(Transaction::const_nested_iterator I = T->nested_decls_begin(),
+            E = T->nested_decls_end(); I != E; ++I)
+        commitTransaction(*I);
     }
 
     // We are sure it's safe to pipe it through the transformers
     bool success = true;
     for (size_t i = 0; i < m_TTransformers.size(); ++i) {
-      DClient.BeginSourceFile(getCI()->getLangOpts(),
-                              &getCI()->getPreprocessor());
-      success = m_TTransformers[i]->TransformTransaction(*CurT); 
-      DClient.EndSourceFile();
+      success = m_TTransformers[i]->TransformTransaction(*T); 
       if (!success) {
         break;
       }
@@ -176,36 +186,53 @@ namespace cling {
 
     if (!success) {
       // Roll back on error in a transformer
-      rollbackTransaction(CurT);
-      DClient.EndSourceFile();
+      rollbackTransaction(T);
       return;
     }
 
     // Pull all template instantiations in that came from the consumers.
     getCI()->getSema().PerformPendingInstantiations();
-    DClient.EndSourceFile();
 
     m_Consumer->HandleTranslationUnit(getCI()->getASTContext());
 
-    if (CurT->getCompilationOpts().CodeGeneration && hasCodeGenerator()) {
+    if (T->getCompilationOpts().CodeGeneration && hasCodeGenerator()) {
       // Reset the module builder to clean up global initializers, c'tors, d'tors
       getCodeGenerator()->Initialize(getCI()->getASTContext());
 
       // codegen the transaction
-      for (Transaction::const_iterator I = CurT->decls_begin(), 
-             E = CurT->decls_end(); I != E; ++I) {
+      // We assume that there is no ordering of the calls to HandleXYZ, because
+      // in clang they can happen in different order too, eg. coming from 
+      // template instatiator and so on.
+      for (Transaction::iterator I = T->decls_begin(), 
+             E = T->decls_end(); I != E; ++I) {
+          for (DeclGroupRef::const_iterator J = I->begin(), L = I->end();
+               J != L; ++J)
+            if (TagDecl* TD = dyn_cast<TagDecl>(*J))
+              if (TD->isThisDeclarationADefinition()) {
+                getCodeGenerator()->HandleTagDeclDefinition(TD);
+
+                if (CXXRecordDecl* CXXRD = dyn_cast<CXXRecordDecl>(TD))
+                  if (CXXRD->isDynamicClass())
+                    getCodeGenerator()->HandleVTable(CXXRD, true);
+            }
+        
         getCodeGenerator()->HandleTopLevelDecl(*I);
       }
       getCodeGenerator()->HandleTranslationUnit(getCI()->getASTContext());
       // run the static initializers that came from codegenning
-      m_Interpreter->runStaticInitializersOnce();
+      if (m_Interpreter->runStaticInitializersOnce()
+          >= Interpreter::kExeFirstError) {
+         // Roll back on error in a transformer
+         rollbackTransaction(T);
+         return;
+      }
     }
 
-    CurT->setState(Transaction::kCommitted);
+    T->setState(Transaction::kCommitted);
     InterpreterCallbacks* callbacks = m_Interpreter->getCallbacks();
 
     if (callbacks)
-      callbacks->TransactionCommitted(*CurT);
+      callbacks->TransactionCommitted(*T);
   }
 
   void IncrementalParser::rollbackTransaction(Transaction* T) const {
@@ -215,6 +242,16 @@ namespace cling {
       T->setState(Transaction::kRolledBack);
     else
       T->setState(Transaction::kRolledBackWithErrors);
+  }
+
+  std::vector<const Transaction*> IncrementalParser::getAllTransactions() {
+    std::vector<const Transaction*> result;
+    const cling::Transaction* T = getFirstTransaction();
+    while (T) {
+      result.push_back(T);
+      T = T->getNext();
+    }
+    return result;
   }
 
   // Each input line is contained in separate memory buffer. The SourceManager
@@ -257,26 +294,28 @@ namespace cling {
     assert(!m_VirtualFileID.isInvalid() && "No VirtualFileID created?");
   }
 
-  IncrementalParser::EParseResult
-  IncrementalParser::Compile(llvm::StringRef input,
-                             const CompilationOptions& Opts) {
+  Transaction* IncrementalParser::Compile(llvm::StringRef input,
+                                          const CompilationOptions& Opts) {
 
-    beginTransaction(Opts);
-    EParseResult Result = ParseInternal(input);
+    Transaction* CurT = beginTransaction(Opts);
+    EParseResult ParseRes = ParseInternal(input);
+
+    if (ParseRes == kSuccessWithWarnings)
+      CurT->setIssuedDiags(Transaction::kWarnings);
+    else if (ParseRes == kFailed)
+      CurT->setIssuedDiags(Transaction::kErrors);
+
     endTransaction();
+    commitTransaction(CurT);
 
-    commitCurrentTransaction();
-
-    return Result;
+    return CurT;
   }
 
   Transaction* IncrementalParser::Parse(llvm::StringRef input,
                                         const CompilationOptions& Opts) {
     beginTransaction(Opts);
     ParseInternal(input);
-    endTransaction();
-
-    return getLastTransaction();
+    return endTransaction();
   }
 
   // Add the input to the memory buffer, parse it, and add it to the AST.
@@ -295,16 +334,12 @@ namespace cling {
     llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(&S);
 
     Preprocessor& PP = m_CI->getPreprocessor();
-    DiagnosticConsumer& DClient = m_CI->getDiagnosticClient();
-
     if (!PP.getCurrentLexer()) {
        PP.EnterSourceFile(m_CI->getSourceManager().getMainFileID(),
                           0, SourceLocation());
     }
     assert(PP.isIncrementalProcessingEnabled() && "Not in incremental mode!?");
     PP.enableIncrementalProcessing();
-
-    DClient.BeginSourceFile(m_CI->getLangOpts(), &PP);
 
     std::ostringstream source_name;
     source_name << "input_line_" << (m_MemoryBuffers.size() + 1);

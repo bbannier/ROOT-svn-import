@@ -67,9 +67,10 @@ TClingDataMemberInfo::TClingDataMemberInfo(cling::Interpreter *interp,
    }
 }
 
-TClingDataMemberInfo::TClingDataMemberInfo(cling::Interpreter *interp, const clang::ValueDecl *ValD)
-: fInterp(interp), fClassInfo(0), fFirstTime(true), fTitle(""), 
-fSingleDecl(ValD) {
+TClingDataMemberInfo::TClingDataMemberInfo(cling::Interpreter *interp, 
+                                           const clang::ValueDecl *ValD)
+  : fInterp(interp), fClassInfo(new TClingClassInfo(interp)), fFirstTime(true), 
+    fTitle(""), fSingleDecl(ValD) {
    using namespace llvm;
    assert((isa<TranslationUnitDecl>(ValD->getDeclContext()) || 
            isa<EnumConstantDecl>(ValD)) && "Not TU?");
@@ -301,6 +302,11 @@ long TClingDataMemberInfo::Property() const
          property |= G__BIT_ISSTATIC;
       }
    }
+   if (llvm::isa<clang::EnumConstantDecl>(GetDecl())) {
+      // Enumaration constant are considered to be 'static' data member in
+      // the CINT (and thus ROOT) scheme.
+      property |= G__BIT_ISSTATIC;
+   }
    const clang::ValueDecl *vd = llvm::dyn_cast<clang::ValueDecl>(GetDecl());
    clang::QualType qt = vd->getType();
    if (llvm::isa<clang::TypedefType>(qt)) {
@@ -415,10 +421,17 @@ const char *TClingDataMemberInfo::TypeName() const
          vdType = GetDecl()->getASTContext().getQualifiedType(vdType->getBaseElementTypeUnsafe(),vdType.getQualifiers());
       }
 
+      // if (we_need_to_do_the_subst_because_the_class_is_a_template_instance_of_double32_t)
+      vdType = ROOT::TMetaUtils::ReSubstTemplateArg(vdType, fClassInfo->GetType() );
+
+      vdType = ROOT::TMetaUtils::GetFullyQualifiedType( vdType, *fInterp );
+
       clang::PrintingPolicy policy(Ctxt.getPrintingPolicy());
+      policy.SuppressScope = false;
       policy.AnonymousTagLocations = false;
 
-      buf = TClassEdit::CleanType(vdType.getAsString(policy).c_str(),0,0);
+      TClassEdit::TSplitType splitname(vdType.getAsString(policy).c_str(),(TClassEdit::EModType)(TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault));
+      splitname.ShortType(buf,TClassEdit::kDropStd | TClassEdit::kDropStlDefault );
       return buf.c_str();
    }
    return 0;
@@ -432,10 +445,11 @@ const char *TClingDataMemberInfo::TypeTrueName(const ROOT::TMetaUtils::TNormaliz
    // Note: This must be static because we return a pointer inside it!
    static std::string buf;
    buf.clear();
-   clang::PrintingPolicy policy(GetDecl()->getASTContext().getPrintingPolicy());
-   policy.AnonymousTagLocations = false;
    if (const clang::ValueDecl *vd = llvm::dyn_cast<clang::ValueDecl>(GetDecl())) {
-      ROOT::TMetaUtils::GetNormalizedName(buf, vd->getType(), *fInterp, normCtxt);
+      // if (we_need_to_do_the_subst_because_the_class_is_a_template_instance_of_double32_t)
+      clang::QualType vdType = ROOT::TMetaUtils::ReSubstTemplateArg(vd->getType(), fClassInfo->GetType());
+
+      ROOT::TMetaUtils::GetNormalizedName(buf, vdType, *fInterp, normCtxt);
 
       // In CINT's version, the type name returns did *not* include any array
       // information, ROOT's existing code depends on it.

@@ -10,15 +10,18 @@
 namespace clang {
   class ASTContext;
   class Expr;
+  class QualType;
 }
 
 namespace cling {
 
   class ValuePrinterInfo {
   private:
-    const clang::Expr* m_Expr;
-    const clang::ASTContext* m_Context;
+    void* /* clang::QualType */ m_Type; // QualType buffer to prevent #include
+    clang::ASTContext* m_Context;
     unsigned m_Flags;
+
+    void Init(clang::QualType Ty);
 
   public:
     enum ValuePrinterFlags {
@@ -27,9 +30,11 @@ namespace cling {
       VPI_Polymorphic = 4
     };
 
-    ValuePrinterInfo(clang::Expr* E, clang::ASTContext* Ctx);
-    const clang::Expr* getExpr() const { return m_Expr; }
-    const clang::ASTContext* getASTContext() const { return m_Context; }
+    ValuePrinterInfo(clang::Expr* Expr, clang::ASTContext* Ctx);
+    ValuePrinterInfo(clang::QualType Ty, clang::ASTContext* Ctx);
+    const clang::QualType& getType() const {
+      return *reinterpret_cast<const clang::QualType*>(&m_Type); }
+    clang::ASTContext* getASTContext() const { return m_Context; }
     unsigned getFlags() { return m_Flags; }
   };
 

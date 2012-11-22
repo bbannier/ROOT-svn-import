@@ -19,7 +19,7 @@ HF_PREPAREHISTFACTORY := bin/prepareHistFactory
 
 ##### tf_makeworkspace.exe #####
 
-HF_MAKEWORKSPACEEXES   := $(MODDIRS)/MakeModelAndMeasurements.cxx
+HF_MAKEWORKSPACEEXES   := $(MODDIRS)/MakeModelAndMeasurements.cxx $(MODDIRS)/hist2workspace.cxx
 HF_MAKEWORKSPACEEXEO   := $(call stripsrc,$(HF_MAKEWORKSPACEEXES:.cxx=.o))
 HF_MAKEWORKSPACEEXEDEP := $(HF_MAKEWORKSPACEEXEO:.o=.d)
 
@@ -66,7 +66,12 @@ HISTFACTORYDH   := $(HISTFACTORYDS:.cxx=.h)
 HISTFACTORYH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/RooStats/HistFactory/*.h))
 HISTFACTORYS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
 HISTFACTORYO    := $(call stripsrc,$(HISTFACTORYS:.cxx=.o))
-
+#location of header files for rootcint (cannot use absolute path for win32)
+ifeq ($(PLATFORM),win32)
+HISTFACTORYDICTI    := roofit/histfactory/inc
+else
+HISTFACTORYDICTI    := $(MODDIRI)
+endif	
 
 HISTFACTORYDEP  := $(HISTFACTORYO:.o=.d) $(HISTFACTORYDO:.o=.d)
 
@@ -102,7 +107,8 @@ $(HISTFACTORYLIB): $(HISTFACTORYO) $(HISTFACTORYDO) $(ORDER_) $(MAINLIBS) \
 $(HISTFACTORYDS):  $(HISTFACTORYH) $(HISTFACTORYL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c $(HISTFACTORYH) $(HISTFACTORYL)
+		@echo `pwd`
+		$(ROOTCINTTMP) -f $@  -c -I$(HISTFACTORYDICTI) $(HISTFACTORYH)  $(HISTFACTORYL) 
 
 $(HISTFACTORYMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HISTFACTORYL)
 		$(RLIBMAP) -o  $@ -l $(HISTFACTORYLIB) \

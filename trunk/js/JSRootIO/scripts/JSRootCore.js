@@ -54,6 +54,12 @@ var EBinErrorOpt = {
    kPoisson2 : 2   // errors from Poisson interval at 95% CL (~ 2 sigma)
 };
 
+var kCARTESIAN   = 1;
+var kPOLAR       = 2;
+var kCYLINDRICAL = 3;
+var kSPHERICAL   = 4;
+var kRAPIDITY    = 5;
+
 String.prototype.endsWith = function(str, ignoreCase) {
    return (ignoreCase ? this.toUpperCase() : this).slice(-str.length)
        == (ignoreCase ? str.toUpperCase() : str);
@@ -119,6 +125,11 @@ landaun = function(f, x, i) {
 
    JSROOTCore.addMethods = function(obj) {
       // check object type and add methods if needed
+      if (typeof(obj['fBits']) != "undefined" && typeof(obj['TestBit']) == "undefined") {
+         obj['TestBit'] = function (f) {
+            return ((obj['fBits'] & f) != 0);
+         };
+      }
       if (!obj['_typename'] || typeof(obj['_typename']) == 'undefined')
          return;
       if (obj['_typename'].indexOf("JSROOTIO.TH1") == 0 ||

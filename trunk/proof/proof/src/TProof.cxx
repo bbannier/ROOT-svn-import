@@ -102,7 +102,7 @@ Bool_t TProofInterruptHandler::Notify()
 {
    // TProof interrupt handler.
 
-   if (isatty(0) == 0 || isatty(1) == 0 || fProof->GetRemoteProtocol() < 22) {
+   if (!fProof->IsTty() || fProof->GetRemoteProtocol() < 22) {
 
       // Cannot ask the user : abort any remote processing
       fProof->StopProcess(kTRUE);
@@ -111,7 +111,7 @@ Bool_t TProofInterruptHandler::Notify()
       // Real stop or request to switch to asynchronous?
       const char *a = 0;
       if (fProof->GetRemoteProtocol() < 22) {
-         a = Getline("\nSwith to asynchronous mode not supported remotely:"
+         a = Getline("\nSwitch to asynchronous mode not supported remotely:"
                      "\nEnter S/s to stop, Q/q to quit, any other key to continue: ");
       } else {
          a = Getline("\nEnter A/a to switch asynchronous, S/s to stop, Q/q to quit,"
@@ -498,6 +498,7 @@ void TProof::InitMembers()
    // Default initializations
 
    fValid = kFALSE;
+   fTty = kFALSE;
    fRecvMessages = 0;
    fSlaveInfo = 0;
    fMasterServ = kFALSE;
@@ -715,6 +716,9 @@ Int_t TProof::Init(const char *, const char *conffile,
 
    fValid = kFALSE;
 
+   // Connected to terminal?
+   fTty = (isatty(0) == 0 || isatty(1) == 0) ? kFALSE : kTRUE;
+
    // If in attach mode, options is filled with additional info
    Bool_t attach = kFALSE;
    if (strlen(fUrl.GetOptions()) > 0) {
@@ -886,6 +890,7 @@ Int_t TProof::Init(const char *, const char *conffile,
          Int_t from = 0;
          TString ldir;
          while (globpack.Tokenize(ldir, from, ":")) {
+            TProofServ::ResolveKeywords(ldir);
             if (gSystem->AccessPathName(ldir, kReadPermission)) {
                Warning("Init", "directory for global packages %s does not"
                                " exist or is not readable", ldir.Data());
@@ -3037,11 +3042,13 @@ Int_t TProof::HandleInputMessage(TSlave *sl, TMessage *mess, Bool_t deactonfail)
                      // Increment counter on the client side
                      fMergePrg.IncreaseIdx();
                      TString msg;
-                     msg.Form("%s: merging output objects ... %s", prefix, fMergePrg.Export());
-                     if (gProofServ)
+                     Bool_t changed = kFALSE;
+                     msg.Form("%s: merging output objects ... %s", prefix, fMergePrg.Export(changed));
+                     if (gProofServ) {
                         gProofServ->SendAsynMessage(msg.Data(), kFALSE);
-                     else
+                     } else if (IsTty() || changed) {
                         fprintf(stderr, "%s\r", msg.Data());
+                     }
                      // Add or merge it
                      if ((fPlayer->AddOutputObject(o) == 1)) {
                         // Remove the object if it has been merged
@@ -6839,7 +6846,7 @@ void TProof::ClearData(UInt_t what, const char *dsname)
    // Check whether we need to prompt
    TString prompt, a("Y");
    Bool_t force = (what & kForceClear) ? kTRUE : kFALSE;
-   Bool_t doask = (!force && isatty(0) != 0 && isatty(1) != 0) ? kTRUE : kFALSE;
+   Bool_t doask = (!force && IsTty()) ? kTRUE : kFALSE;
 
    // If all just send the request
    if ((what & TProof::kPurge)) {
@@ -7457,7 +7464,7 @@ Int_t TProof::DisablePackages()
 }
 
 //______________________________________________________________________________
-Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
+Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt, Int_t chkveropt)
 {
    // Build specified package. Executes the PROOF-INF/BUILD.sh
    // script if it exists on all unique nodes. If opt is kBuildOnSlavesNoWait
@@ -7491,7 +7498,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
    Int_t st = 0;
    if (buildOnClient) {
       if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Lock();
-      if ((st = BuildPackageOnClient(pac, 1, &pdir) != 0)) {
+      if ((st = BuildPackageOnClient(pac, 1, &pdir, chkveropt) != 0)) {
          if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Unlock();
          return -1;
       }
@@ -7499,11 +7506,11 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
 
    if (opt <= kBuildAll && (!IsLite() || !buildOnClient)) {
       TMessage mess(kPROOF_CACHE);
-      mess << Int_t(kBuildPackage) << pac;
+      mess << Int_t(kBuildPackage) << pac << chkveropt;
       Broadcast(mess, kUnique);
 
       TMessage mess2(kPROOF_CACHE);
-      mess2 << Int_t(kBuildSubPackage) << pac;
+      mess2 << Int_t(kBuildSubPackage) << pac << chkveropt;
       Broadcast(mess2, fNonUniqueMasters);
    }
 
@@ -7511,7 +7518,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
       // by first forwarding the build commands to the master and slaves
       // and only then building locally we build in parallel
       if (buildOnClient) {
-         st = BuildPackageOnClient(pac, 2, &pdir);
+         st = BuildPackageOnClient(pac, 2, &pdir, chkveropt);
          if (TestBit(TProof::kIsClient) && fPackageLock) fPackageLock->Unlock();
       }
 
@@ -7527,7 +7534,7 @@ Int_t TProof::BuildPackage(const char *package, EBuildPackageOpt opt)
 }
 
 //______________________________________________________________________________
-Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
+Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path, Int_t chkveropt)
 {
    // Build specified package on the client. Executes the PROOF-INF/BUILD.sh
    // script if it exists on the client.
@@ -7654,6 +7661,7 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
 
             // read version from file proofvers.txt, and if current version is
             // not the same do a "BUILD.sh clean"
+            Bool_t goodver = kTRUE;
             Bool_t savever = kFALSE;
             Int_t rev = -1;
             TString v;
@@ -7664,9 +7672,13 @@ Int_t TProof::BuildPackageOnClient(const char *pack, Int_t opt, TString *path)
                r.Gets(f);
                rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
                fclose(f);
+               if (chkveropt == kCheckROOT || chkveropt == kCheckSVN) {
+                  if (v != gROOT->GetVersion()) goodver = kFALSE;
+                  if (goodver && chkveropt == kCheckSVN)
+                     if (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision()) goodver = kFALSE;
+               }
             }
-            if (!f || v != gROOT->GetVersion() ||
-               (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
+            if (!f || !goodver) {
                savever = kTRUE;
                Info("BuildPackageOnClient",
                   "%s: version change (current: %s:%d, build: %s:%d): cleaning ... ",
@@ -8051,14 +8063,52 @@ Int_t TProof::EnablePackage(const char *package, const char *loadopts,
    // The default is to enable packages also on the client.
    // It is is possible to specify options for the loading step via 'loadopts';
    // the string will be passed passed as argument to SETUP.
+   // Special option 'chkv=<o>' (or 'checkversion=<o>') can be used to control
+   // plugin version checking during building: possible choices are:
+   //     off         no check; failure may occur at loading
+   //     on          check ROOT version [default]
+   //     svn         check ROOT version and SVN revision number.
+   // (Use ';', ' ' or '|' to separate 'chkv=<o>' from the rest.) 
    // Returns 0 in case of success and -1 in case of error.
 
    TList *optls = 0;
    if (loadopts && strlen(loadopts)) {
       if (fProtocol > 28) {
-         optls = new TList;
-         optls->Add(new TObjString(loadopts));
-         optls->SetOwner(kTRUE);
+         TObjString *os = new TObjString(loadopts);
+         // Filter out 'checkversion=off|on|svn' or 'chkv=...'
+         os->String().ReplaceAll("checkversion=", "chkv=");
+         Ssiz_t fcv = kNPOS, lcv = kNPOS;
+         if ((fcv = os->String().Index("chkv=")) !=  kNPOS) {
+            TRegexp re("[; |]");
+            if ((lcv = os->String().Index(re, fcv)) == kNPOS) {
+               lcv = os->String().Length();
+            }
+            TString ocv = os->String()(fcv, lcv - fcv);
+            Int_t cvopt = -1;
+            if (ocv.EndsWith("=off") || ocv.EndsWith("=0"))
+               cvopt = (Int_t) kDontCheck;
+            else if (ocv.EndsWith("=on") || ocv.EndsWith("=1"))
+               cvopt = (Int_t) kCheckROOT;
+            else if (ocv.EndsWith("=svn") || ocv.EndsWith("=2"))
+               cvopt = (Int_t) kCheckSVN;
+            else
+               Warning("EnablePackage", "'checkversion' option unknown from argument: '%s' - ignored", ocv.Data()); 
+            if (cvopt > -1) {
+               if (gDebug > 0)
+                  Info("EnablePackage", "setting check version option from argument: %d", cvopt);
+               optls = new TList;
+               optls->Add(new TParameter<Int_t>("PROOF_Package_CheckVersion", (Int_t) cvopt));
+               // Remove the special option from; we leave a separator if there were two (one before and one after)
+               if (lcv != kNPOS && fcv == 0) ocv += os->String()[lcv];
+               if (fcv > 0 && os->String().Index(re, fcv - 1) == fcv - 1) os->String().Remove(fcv - 1, 1);
+               os->String().ReplaceAll(ocv.Data(), "");
+            }
+         }
+         if (!os->String().IsNull()) {
+            if (!optls) optls = new TList;
+            optls->Add(new TObjString(os->String().Data()));
+         }
+         if (optls) optls->SetOwner(kTRUE);
       } else {
          // Notify
          Warning("EnablePackage", "remote server does not support options: ignoring the option string");
@@ -8101,10 +8151,34 @@ Int_t TProof::EnablePackage(const char *package, TList *loadopts,
    if (notOnClient)
       opt = kDontBuildOnClient;
 
-   if (BuildPackage(pac, opt) == -1)
+   // Get check version option; user settings have priority
+   Int_t chkveropt = kCheckROOT;
+   TString ocv = gEnv->GetValue("Proof.Package.CheckVersion", "");
+   if (!ocv.IsNull()) {
+      if (ocv == "off" || ocv == "0")
+         chkveropt = (Int_t) kDontCheck;
+      else if (ocv == "on" || ocv == "1")
+         chkveropt = (Int_t) kCheckROOT;
+      else if (ocv == "svn" || ocv == "2")
+         chkveropt = (Int_t) kCheckSVN;
+      else
+         Warning("EnablePackage", "'checkversion' option unknown from rootrc: '%s' - ignored", ocv.Data()); 
+   }      
+   if (loadopts) {
+      TParameter<Int_t> *pcv = (TParameter<Int_t> *) loadopts->FindObject("PROOF_Package_CheckVersion");
+      if (pcv) {
+         chkveropt = pcv->GetVal();
+         loadopts->Remove(pcv);
+         delete pcv;
+      }
+   }
+  if (gDebug > 0)
+      Info("EnablePackage", "using check version option: %d", chkveropt);
+   
+   if (BuildPackage(pac, opt, chkveropt) == -1)
       return -1;
 
-   TList *optls = loadopts;
+   TList *optls = (loadopts && loadopts->GetSize() > 0) ? loadopts : 0;
    if (optls && fProtocol <= 28) {
       Warning("EnablePackage", "remote server does not support options: ignoring the option list");
       optls = 0;
@@ -9033,9 +9107,10 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed,
    }
    Float_t evtrti = (procTime > 0. && processed > 0) ? processed / procTime : -1.;
    Float_t mbsrti = (procTime > 0. && bytesread > 0) ? bytesread / procTime : -1.;
+   TString sunit("B/s");
    if (evtrti > 0.) {
+      Float_t remainingTime = (total >= processed) ? (total - processed) / evtrti : -1;
       if (mbsrti > 0.) {
-         TString sunit("B/s");
          const Float_t toK = 1024., toM = 1048576., toG = 1073741824.;
          if (mbsrti >= toG) {
             mbsrti /= toG;
@@ -9047,18 +9122,19 @@ void TProof::PrintProgress(Long64_t total, Long64_t processed,
             mbsrti /= toK;
             sunit = "kB/s";
          }
-         fprintf(stderr, "| %.02f %% [%.1f evts/s, %.1f %s]\r",
-                (total ? ((100.0*processed)/total) : 100.0), evtrti, mbsrti, sunit.Data());
+         fprintf(stderr, "| %.02f %% [%.1f evts/s, %.1f %s, time left: %.1f s]\r",
+                (total ? ((100.0*processed)/total) : 100.0), evtrti, mbsrti, sunit.Data(), remainingTime);
       } else {
-         fprintf(stderr, "| %.02f %% [%.1f evts/s]\r",
-                (total ? ((100.0*processed)/total) : 100.0), evtrti);
+         fprintf(stderr, "| %.02f %% [%.1f evts/s, time left: %.1f s]\r",
+                (total ? ((100.0*processed)/total) : 100.0), evtrti, remainingTime);
       }
    } else {
       fprintf(stderr, "| %.02f %%\r",
               (total ? ((100.0*processed)/total) : 100.0));
    }
-   if (processed >= total)
-      fprintf(stderr, "\n");
+   if (processed >= total) {
+      fprintf(stderr, "\n Query processing time: %.1f s\n", procTime);
+   }
 }
 
 //______________________________________________________________________________

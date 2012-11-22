@@ -26,7 +26,7 @@ textarea { font-size: 100%;}
 
 p { margin-top: 6px; padding: 0 10px 1em; }
 
-#main { left: 1%; right: 66%; overflow: auto; }
+#main { left: 3px; right: 66%; overflow: auto; }
 
 #report { height:100%; }
 
@@ -34,8 +34,9 @@ p { margin-top: 6px; padding: 0 10px 1em; }
 
 #reportHolder {
    left: 35%;
-   right: 1%;
+   right: 3px;
    overflow: auto;
+   overflow-y: scroll;
    font-size:9pt;font-weight:normal;color:#191970;
 }
 
@@ -43,8 +44,8 @@ div.column {
    border: 1px dotted #666;
    background-color: #E6E6FA;
    position: absolute;
-   top: 20px;
-   bottom: 20px;
+   top: 3px;
+   bottom: 17px;
    padding: 8px;
 }
 
@@ -63,7 +64,7 @@ input.tb {
 .ui-icon-triangle-1-s { background-position: -64px -16px; }
 
 .ui-accordion { 
-   width: 100%;
+   width: 100%; margin-right: 15px;
 }
 .ui-accordion-header {
    background-color: #c0c8ff;
@@ -104,6 +105,23 @@ input.tb {
 }
 .ui-accordion-content-active {
    background-color: #ffffff;
+}
+
+button.closeButton {
+   margin-top: -3px; 
+   margin-right: 2px; 
+   float: right;
+}
+
+#overlay {
+   z-index:1000;
+   position:absolute;
+   border: 1px solid #7777ff;
+   bottom:1px;
+   left:3px;
+   background:#ddddff;
+   opacity:0.6;
+   -moz-opacity:0.6;
 }
 
 /*--------------------------------------------------|

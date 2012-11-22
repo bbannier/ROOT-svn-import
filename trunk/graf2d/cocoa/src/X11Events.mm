@@ -179,6 +179,10 @@ void MapUnicharToKeySym(unichar key, char *buf, Int_t /*len*/, UInt_t &rootKeySy
 //______________________________________________________________________________
 Int_t MapKeySymToKeyCode(Int_t keySym)
 {
+   //Apart from special keys, ROOT has also ASCII symbols, they map directly to themselves.
+   if (keySym >= 0x20 && keySym <= 0x7e)
+      return keySym;
+
    static const KeySymPair<EKeySym, unichar> keyMap[] = {
       {kKey_Escape, 27},
       {kKey_Tab, NSTabCharacter},
@@ -303,6 +307,8 @@ UInt_t GetModifiers()
       rootModifiers |= kButton1Mask;
    if (buttons & 2)
       rootModifiers |= kButton3Mask;
+   if (buttons & (1 << 2))
+      rootModifiers |= kButton2Mask;
 
    return rootModifiers;
 }
@@ -393,6 +399,8 @@ unsigned GetModifiersFromCocoaEvent(NSEvent *theEvent)
       rootModifiers |= kButton1Mask;
    if (buttons & 2)
       rootModifiers |= kButton3Mask;
+   if (buttons & (1 << 2))
+      rootModifiers |= kButton2Mask;
 
    return rootModifiers;
 }
@@ -1673,7 +1681,7 @@ void EventTranslator::GenerateKeyReleaseEventNoGrab(NSEvent *theEvent)
 
    if (candidateView && Detail::IsParent(fFocusView, candidateView))
       GenerateKeyEventForView(candidateView, theEvent);
-   else 
+   else
       GenerateKeyEventForView(fFocusView, theEvent);
 }
 
@@ -1698,7 +1706,7 @@ void EventTranslator::GenerateKeyEventForView(NSView<X11Window> *view, NSEvent *
       childView = view.isHidden ? nil : view;
       view = view.fParentView;
    }
-      
+ 
    NSPoint mousePosition = {};
    if (QuartzWindow * const topLevel = FindWindowUnderPointer())
       mousePosition = [topLevel mouseLocationOutsideOfEventStream];
@@ -1766,7 +1774,7 @@ void EventTranslator::FindKeyGrabView(NSView<X11Window> *fromView, NSEvent *theE
    assert(characters != nil && "FindKeyGrabView, [theEvent characters] returned nil");
    assert([characters length] > 0 && "FindKeyGrabView, characters is an empty string");
 
-   const NSUInteger modifiers = [theEvent modifierFlags];
+   const NSUInteger modifiers = [theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
    const unichar keyCode = [characters characterAtIndex : 0];
 
    for (NSView<X11Window> *v = fromView; v; v = v.fParentView) {

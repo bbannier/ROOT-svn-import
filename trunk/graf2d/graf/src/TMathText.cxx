@@ -12,6 +12,9 @@
 #include "Riostream.h"
 #include "TROOT.h"
 #include "TClass.h"
+#  include <ft2build.h>
+#  include FT_FREETYPE_H
+#  include FT_GLYPH_H
 #include "TTF.h"
 #include "TMathText.h"
 #include "TMath.h"
@@ -24,10 +27,10 @@
 
 //______________________________________________________________________________
 /* Begin_Html
-<center><h2>TMathText : to draw LaTex Mathematical Formula</h2></center>
+<center><h2>TMathText : to draw TeX Mathematical Formula</h2></center>
  
-TMathText's purpose is to write mathematical equations, exactly as LaTex would
-do it. The syntax is the same as LaTex's.
+TMathText's purpose is to write mathematical equations, exactly as TeX would
+do it. The syntax is the same as the TeX's one.
 <p>
 The following example demonstate how to use TMathText:
 End_Html
@@ -662,14 +665,14 @@ void TMathText::SavePrimitive(std::ostream &out, Option_t * /*= ""*/)
 
    s.ReplaceAll("\\","\\\\");
    s.ReplaceAll("\"","\\\"");
-   out << "   tex = new TMathText("<< fX << "," << fY << ","
+   out << "mathtex = new TMathText("<< fX << "," << fY << ","
       << quote << s.Data() << quote << ");" << std::endl;
    if (TestBit(kTextNDC)) {
-      out << "tex->SetNDC();" << std::endl;
+      out << "mathtex->SetNDC();" << std::endl;
    }
 
-   SaveTextAttributes(out, "tex", 11, 0, 1, 42, 0.05);
-   SaveFillAttributes(out, "tex", 0, 1001);
+   SaveTextAttributes(out, "mathtex", 11, 0, 1, 42, 0.05);
+   SaveFillAttributes(out, "mathtex", 0, 1001);
 
-   out<<"   tex->Draw();" << std::endl;
+   out<<"   mathtex->Draw();" << std::endl;
 }

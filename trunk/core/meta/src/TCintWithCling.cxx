@@ -55,6 +55,7 @@
 #include "RConfigure.h"
 #include "compiledata.h"
 #include "TMetaUtils.h"
+#include "TVirtualCollectionProxy.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -81,6 +82,8 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <iostream>
+#include <cassert>
 #include <map>
 #include <set>
 #include <stdint.h>
@@ -91,10 +94,16 @@
 
 #include <cxxabi.h>
 #include <limits.h>
+#include <stdio.h>
 
 #ifdef __APPLE__
 #include <dlfcn.h>
+#include <mach-o/dyld.h>
 #endif // __APPLE__
+
+#ifdef R__LINUX
+#include <dlfcn.h>
+#endif
 
 using namespace std;
 using namespace clang;
@@ -173,11 +182,61 @@ public:
    TypedefVisitor(llvm::SmallVector<TypedefDecl*,128> &defs) : fTypedefs(defs)
    {}
 
+   bool TraverseStmt(Stmt*) {
+      // Don't descend into function bodies.
+      return true;
+   }
+   bool TraverseClassTemplateDecl(ClassTemplateDecl*) {
+      // Don't descend into templates (but only instances thereof).
+      return true;
+   }
+   bool TraverseClassTemplatePartialSpecializationDecl(ClassTemplatePartialSpecializationDecl*) {
+      // Don't descend into templates partial specialization (but only instances thereof).
+      return true;
+   }
+
    bool VisitTypedefDecl(TypedefDecl *TdefD) {
       fTypedefs.push_back(TdefD);
       return true; // returning false will abort the in-depth traversal.
    }
 };
+
+//______________________________________________________________________________
+static void TCintWithCling__UpdateClassInfo(TagDecl* TD)
+{
+   // Update TClingClassInfo for a class (e.g. upon seeing a definition).
+   static Bool_t entered = kFALSE;
+   static vector<TagDecl*> updateList;
+   Bool_t topLevel;
+
+   if (entered) topLevel = kFALSE;
+   else {
+      entered = kTRUE;
+      topLevel = kTRUE;
+   }
+   if (topLevel) {
+      ((TCintWithCling*)gInterpreter)->UpdateClassInfoWithDecl(TD);
+   } else {
+      // If we are called indirectly from within another call to
+      // TCint::UpdateClassInfo, we delay the update until the dictionary loading
+      // is finished (i.e. when we return to the top level TCint::UpdateClassInfo).
+      // This allows for the dictionary to be fully populated when we actually
+      // update the TClass object.   The updating of the TClass sometimes
+      // (STL containers and when there is an emulated class) forces the building
+      // of the TClass object's real data (which needs the dictionary info).
+      updateList.push_back(TD);
+   }
+   if (topLevel) {
+      while (!updateList.empty()) {
+         ((TCintWithCling*)gInterpreter)
+            ->UpdateClassInfoWithDecl(updateList.back());
+         updateList.pop_back();
+      }
+      entered = kFALSE;
+   }
+}
+
+
 
 extern "C" 
 void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
@@ -187,25 +246,6 @@ void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
        I != E; ++I)
       for (DeclGroupRef::const_iterator DI = I->begin(), DE = I->end(); 
            DI != DE; ++DI) {
-         if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(*DI)) {
-            listOfSmth = gROOT->GetListOfGlobalFunctions();
-            if (!isa<TranslationUnitDecl>(FD->getDeclContext()))
-               continue;
-            if(FD->isOverloadedOperator() 
-               || cling::utils::Analyze::IsWrapper(FD))
-               continue;
-
-            if (!listOfSmth->FindObject(FD->getNameAsString().c_str())) {  
-               listOfSmth->Add(new TFunction(new TClingMethodInfo(interp, FD)));
-            }            
-         }
-
-         if (TagDecl *TD = dyn_cast<TagDecl>(*DI)) {
-            listOfSmth = gROOT->GetListOfClasses();
-            std::string name = TD->getNameAsString();
-            TCintWithCling::UpdateClassInfoWork(name.c_str());
-         }
-
          if (isa<DeclContext>(*DI) && !isa<EnumDecl>(*DI)) {
             // We have to find all the typedefs contained in that decl context
             // and add it to the list of types.
@@ -218,6 +258,21 @@ void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
                listOfSmth->Add(new TDataType(new TClingTypedefInfo(interp, Defs[i])));
             }
 
+         }
+         if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(*DI)) {
+            listOfSmth = gROOT->GetListOfGlobalFunctions();
+            if (!isa<TranslationUnitDecl>(FD->getDeclContext()))
+               continue;
+            if(FD->isOverloadedOperator() 
+               || cling::utils::Analyze::IsWrapper(FD))
+               continue;
+
+            if (!listOfSmth->FindObject(FD->getNameAsString().c_str())) {  
+               listOfSmth->Add(new TFunction(new TClingMethodInfo(interp, FD)));
+            }            
+         }
+         else if (TagDecl *TD = dyn_cast<TagDecl>(*DI)) {
+            TCintWithCling__UpdateClassInfo(TD);
          }
          else if (const TypedefDecl* TdefD = dyn_cast<TypedefDecl>(*DI)) {
             listOfSmth = gROOT->GetListOfTypes();
@@ -235,15 +290,13 @@ void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction &T) {
 
             listOfSmth = gROOT->GetListOfGlobals();
 
-            if (!(isa<EnumDecl>(ND) || 
-                  isa<VarDecl>(ND) || isa<FieldDecl>(ND)))
+            if (!(isa<EnumDecl>(ND) || isa<VarDecl>(ND)))
                continue;
 
             // Skip if already in the list.
             if (listOfSmth->FindObject(ND->getNameAsString().c_str()))
                continue;
 
-            // FIXME: Review needed: How does ROOT understand globals?
             if (EnumDecl *ED = dyn_cast<EnumDecl>(*DI)) {
                for(EnumDecl::enumerator_iterator EDI = ED->enumerator_begin(),
                       EDE = ED->enumerator_end(); EDI != EDE; ++EDI) {
@@ -287,6 +340,15 @@ TObject* TCintWithCling__GetObjectAddress(const char *Name, void *&LookupCtx) {
 extern "C" const Decl* TCintWithCling__GetObjectDecl(TObject *obj) {
    return ((TClingClassInfo*)obj->IsA()->GetClassInfo())->GetDecl();
 }
+
+// Load library containing specified class. Returns 0 in case of error
+// and 1 in case if success.
+extern "C" int TCintWithCling__AutoLoadCallback(const char* className)
+{
+   string cls(className);
+   return gCint->AutoLoad(cls.c_str());
+}
+
 //______________________________________________________________________________
 //
 //
@@ -336,9 +398,7 @@ void* autoloadCallback(const std::string& mangled_name)
    TString lib;
    Ssiz_t posLib = 0;
    while (libs.Tokenize(lib, posLib)) {
-      std::string errmsg;
-      bool load_failed = llvm::sys::DynamicLibrary::LoadLibraryPermanently(lib, &errmsg);
-      if (load_failed) {
+      if (gInterpreter->Load(lib, kFALSE /*system*/) < 0) {
          // The library load failed, all done.
          //fprintf(stderr, "load failed: %s\n", errmsg.c_str());
          return 0;
@@ -350,8 +410,6 @@ void* autoloadCallback(const std::string& mangled_name)
    //fprintf(stderr, "addr: %016lx\n", reinterpret_cast<unsigned long>(addr));
    return addr;
 }
-
-
 
 //______________________________________________________________________________
 //
@@ -372,26 +430,6 @@ extern "C" void TCint_UpdateClassInfo(char* c, Long_t l)
 {
    TCintWithCling::UpdateClassInfo(c, l);
 }
-
-extern "C" int TCint_AutoLoadCallback(char* c, char* l)
-{
-   ULong_t varp = G__getgvp();
-   G__setgvp((Long_t)G__PVOID);
-   string cls(c);
-   int result =  TCintWithCling::AutoLoadCallback(cls.c_str(), l);
-   G__setgvp(varp);
-   return result;
-}
-
-extern "C" void* TCint_FindSpecialObject(char* c, G__ClassInfo* ci, void** p1, void** p2)
-{
-   return TCintWithCling::FindSpecialObject(c, ci, p1, p2);
-}
-
-//______________________________________________________________________________
-//
-//
-//
 
 //______________________________________________________________________________
 //
@@ -590,13 +628,9 @@ ClassImp(TCintWithCling)
 
 //______________________________________________________________________________
 TCintWithCling::TCintWithCling(const char *name, const char *title)
-   : TInterpreter(name, title)
-   , fSharedLibs("")
-   , fSharedLibsSerial(-1)
-   , fGlobalsListSerial(-1)
-   , fInterpreter(0)
-   , fMetaProcessor(0)
-   , fNormalizedCtxt(0)
+: TInterpreter(name, title), fGlobalsListSerial(-1), fInterpreter(0), 
+   fMetaProcessor(0), fNormalizedCtxt(0), fPrevLoadedDynLibInfo(0),
+   fClingCallbacks(0)
 {
    // Initialize the CINT+cling interpreter interface.
 
@@ -645,7 +679,7 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    // We are now ready (enough is loaded) to init the list of opaque typedefs.
    fNormalizedCtxt = new ROOT::TMetaUtils::TNormalizedCtxt(fInterpreter->getLookupHelper());
 
-   TClassEdit::Init(*fInterpreter);
+   TClassEdit::Init(*fInterpreter,*fNormalizedCtxt);
 
    // set the gModuleHeaderInfoBuffer pointer
    TCintWithCling__RegisterModule(0, 0, 0, 0, 0);
@@ -674,7 +708,6 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    //G__RegisterScriptCompiler(&ScriptCompiler);
    G__set_ignoreinclude(&IgnoreInclude);
    G__InitUpdateClassInfo(&TCint_UpdateClassInfo);
-   G__InitGetSpecialObject(&TCint_FindSpecialObject);
    // check whether the compiler is available:
    //char* path = gSystem->Which(gSystem->Getenv("PATH"), gSystem->BaseName(COMPILER));
    //if (path && path[0]) {
@@ -688,10 +721,6 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    // Make sure that ALL macros are seen as C++.
    G__LockCpp();
    // Initialize for ROOT:
-   // Disallow the interpretation of Rtypes.h, TError.h and TGenericClassInfo.h
-   ProcessLineCintOnly("#define ROOT_Rtypes 0");
-   ProcessLineCintOnly("#define ROOT_TError 0");
-   ProcessLineCintOnly("#define ROOT_TGenericClassInfo 0");
    TString include;
    // Add the root include directory to list searched by default
 #ifndef ROOTINCDIR
@@ -701,16 +730,10 @@ TCintWithCling::TCintWithCling(const char *name, const char *title)
    include = ROOTINCDIR;
 #endif // ROOTINCDIR
    TCintWithCling::AddIncludePath(include);
-   // Allow the usage of ClassDef and ClassImp in interpreted macros
-   // if RtypesCint.h can be found (think of static executable without include/)
-   char* whichTypesCint = gSystem->Which(include, "RtypesCint.h");
-   if (whichTypesCint) {
-      ProcessLineCintOnly("#include <RtypesCint.h>");
-      delete[] whichTypesCint;
-   }
 
    // Attach cling callbacks
-   fInterpreter->setCallbacks(new TClingCallbacks(fInterpreter));
+   fClingCallbacks = new TClingCallbacks(fInterpreter);
+   fInterpreter->setCallbacks(fClingCallbacks);
 }
 
 //______________________________________________________________________________
@@ -763,7 +786,7 @@ void TCintWithCling::RegisterModule(const char* modulename,
       if (posAssign != kNPOS) {
          macroPP[posAssign] = ' ';
       }
-      fInterpreter->declare(macroPP.Data());
+      fInterpreter->parse(macroPP.Data());
    }
    for (const char** macroU = macroUndefines; *macroU; ++macroU) {
       TString macroPP("#undef ");
@@ -773,7 +796,7 @@ void TCintWithCling::RegisterModule(const char* modulename,
       if (posAssign != kNPOS) {
          macroPP[posAssign] = ' ';
       }
-      fInterpreter->declare(macroPP.Data());
+      fInterpreter->parse(macroPP.Data());
    }
 
    // Assemble search path:   
@@ -800,123 +823,36 @@ void TCintWithCling::RegisterModule(const char* modulename,
 
    if (!gSystem->FindFile(searchPath, pcmFileName)) {
       Error("RegisterModule", "cannot find dictionary module %s in %s",
-            pcmFileName.Data(), searchPath.Data());
+            ROOT::TMetaUtils::GetModuleFileName(modulename).c_str(), searchPath.Data());
    } else {
-      TCintWithCling::Info("RegisterModule", "Loading PCM %s", pcmFileName.Data());
+      if (gDebug > 5) Info("RegisterModule", "Loading PCM %s", pcmFileName.Data());
       clang::CompilerInstance* CI = fInterpreter->getCI();
       ROOT::TMetaUtils::declareModuleMap(CI, pcmFileName, headers);
    }
 
+   bool oldValue = false;
+   if (fClingCallbacks)
+     oldValue = SetClassAutoloading(false);
+
    for (const char** hdr = headers; *hdr; ++hdr) {
-      Info("RegisterModule", "   #including %s...", *hdr);
+      if (gDebug > 5) Info("RegisterModule", "   #including %s...", *hdr);
       fInterpreter->parse(TString::Format("#include \"%s\"", *hdr).Data());
    }
-}
 
-//______________________________________________________________________________
-Long_t TCintWithCling::ProcessLineCintOnly(const char* line, EErrorCode* error /*=0*/)
-{
-   // Let CINT process a command line.
-   // If the command is executed and the result of G__process_cmd is 0,
-   // the return value is the int value corresponding to the result of the command
-   // (float and double return values will be truncated).
-
-   Long_t ret = 0;
-   if (gApplication) {
-      if (gApplication->IsCmdThread()) {
-         if (gGlobalMutex && !gCINTMutex && fLockProcessLine) {
-            gGlobalMutex->Lock();
-            if (!gCINTMutex)
-               gCINTMutex = gGlobalMutex->Factory(kTRUE);
-            gGlobalMutex->UnLock();
-         }
-         R__LOCKGUARD(fLockProcessLine ? gCINTMutex : 0);
-         gROOT->SetLineIsProcessing();
-
-         G__value local_res;
-         G__setnull(&local_res);
-
-         // It checks whether the input line contains the "fantom" method
-         // to synchronize user keyboard input and ROOT prompt line
-         if (strstr(line,fantomline)) {
-            G__free_tempobject();
-            TCintWithCling::UpdateAllCanvases();
-         } else {
-            int local_error = 0;
-
-            int prerun = G__getPrerun();
-            G__setPrerun(0);
-            ret = G__process_cmd(const_cast<char*>(line), fPrompt, &fMore, &local_error, &local_res);
-            G__setPrerun(prerun);
-            if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
-               ResetGlobals();
-               gApplication->Terminate(fExitCode);
-            }
-            if (error)
-               *error = (EErrorCode)local_error;
-         }
-
-         if (ret == 0) {
-            // prevent overflow signal
-            double resd = G__double(local_res);
-            if (resd > LONG_MAX) ret = LONG_MAX;
-            else if (resd < LONG_MIN) ret = LONG_MIN;
-            else ret = G__int_cast(local_res);
-         }
-
-         gROOT->SetLineHasBeenProcessed();
-      } else {
-         ret = ProcessLineCintOnly(line, error);
-      }
-   } else {
-      if (gGlobalMutex && !gCINTMutex && fLockProcessLine) {
-         gGlobalMutex->Lock();
-         if (!gCINTMutex)
-            gCINTMutex = gGlobalMutex->Factory(kTRUE);
-         gGlobalMutex->UnLock();
-      }
-      R__LOCKGUARD(fLockProcessLine ? gCINTMutex : 0);
-      gROOT->SetLineIsProcessing();
-
-      G__value local_res;
-      G__setnull(&local_res);
-
-      int local_error = 0;
-
-      int prerun = G__getPrerun();
-      G__setPrerun(0);
-      ret = G__process_cmd(const_cast<char*>(line), fPrompt, &fMore, &local_error, &local_res);
-      G__setPrerun(prerun);
-      if (local_error == 0 && G__get_return(&fExitCode) == G__RETURN_EXIT2) {
-         ResetGlobals();
-         exit(fExitCode);
-      }
-      if (error)
-         *error = (EErrorCode)local_error;
-
-      if (ret == 0) {
-         // prevent overflow signal
-         double resd = G__double(local_res);
-         if (resd > LONG_MAX) ret = LONG_MAX;
-         else if (resd < LONG_MIN) ret = LONG_MIN;
-         else ret = G__int_cast(local_res);
-      }
-
-      gROOT->SetLineHasBeenProcessed();
-   }
-   return ret;
+   if (fClingCallbacks)
+     SetClassAutoloading(oldValue);
 }
 
 //______________________________________________________________________________
 Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
 {
-   // Let CINT process a command line.
+   // Let cling process a command line.
    //
-   // If the command is executed and the result is 0, then the return value
+   // If the command is executed and the error is 0, then the return value
    // is the int value corresponding to the result of the executed command
    // (float and double return values will be truncated).
    //
-   //
+
    // Copy the passed line, it comes from a static buffer in TApplication
    // and we can be reentered through the CINT routine G__process_cmd,
    // which would overwrite the static buffer and we would forget what we
@@ -924,20 +860,39 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
    //
    TString sLine(line);
    if (strstr(line,fantomline)) {
-      // End-Of-Line action, CINT-only.
-      return TCintWithCling::ProcessLineCintOnly(sLine, error);
+      // End-Of-Line action
+      // See the comment (copied from above):
+      // It is a "fantom" method to synchronize user keyboard input
+      // and ROOT prompt line (for WIN32)
+      // and is implemented by 
+      if (gApplication) {
+         if (gApplication->IsCmdThread()) {
+            if (gGlobalMutex && !gCINTMutex && fLockProcessLine) {
+               gGlobalMutex->Lock();
+               if (!gCINTMutex)
+                  gCINTMutex = gGlobalMutex->Factory(kTRUE);
+               gGlobalMutex->UnLock();
+            }
+            R__LOCKGUARD(fLockProcessLine ? gCINTMutex : 0);
+            gROOT->SetLineIsProcessing();
+
+            UpdateAllCanvases();
+
+            gROOT->SetLineHasBeenProcessed();
+         }
+      }
+      return 0;
    }
-   Long_t ret = 0L;
-   (void)ret;
-   if (!strncmp(sLine.Data(), ".L", 2) || !strncmp(sLine.Data(), ".x", 2) ||
-       !strncmp(sLine.Data(), ".X", 2)) {
-      TString mod_line(sLine);
-      TString aclicMode;
-      TString arguments;
-      TString io;
-      TString fname = gSystem->SplitAclicMode(sLine.Data() + 3,
-                                              aclicMode, arguments, io);
+      
+   if (gGlobalMutex && !gCINTMutex && fLockProcessLine) {
+      gGlobalMutex->Lock();
+      if (!gCINTMutex)
+         gCINTMutex = gGlobalMutex->Factory(kTRUE);
+      gGlobalMutex->UnLock();
    }
+   R__LOCKGUARD(fLockProcessLine ? gCINTMutex : 0);
+   gROOT->SetLineIsProcessing();
+
    // A non-zero returned value means the given line was
    // not a complete statement.
    int indent = 0;
@@ -989,19 +944,18 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
             while (in) {
                std::getline(in, line);
                std::string::size_type posNonWS = line.find_first_not_of(whitespace);
-               if (posNonWS != std::string::npos) {
-                  unnamedMacro = (line[posNonWS] == '{');
-                  break;
-               }
+               if (posNonWS == std::string::npos) continue;
+               if (line[posNonWS] == '/' && line[posNonWS + 1] == '/')
+                  // Too bad, we only suppose C++ comments here.
+                  continue;
+               unnamedMacro = (line[posNonWS] == '{');
+               break;
             }
          }
          if (unnamedMacro) {
             compRes = fMetaProcessor->readInputFromFile(fname.Data(), &result,
                                                         true /*ignoreOutmostBlock*/);
          } else {
-            TString cintModLine = ".L " + fname;
-            ProcessLineCintOnly(cintModLine);
-
             indent = fMetaProcessor->process(mod_line, &result, &compRes);
          }
       }
@@ -1011,7 +965,7 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
    }
    if (result.isValid() && result.needsManagedAllocation())
       fTemporaries->push_back(result);
-   if ((sLine[0] == '#') || (sLine[0] == '.')) {
+   if (sLine[0] == '.') {
       // Let CINT see preprocessor and meta commands, but only
       // after cling has seen them first, otherwise any dictionary
       // loading triggered by CINT will cause TClass constructors
@@ -1020,12 +974,14 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
       if ((c != 'I') && (c != 'L') && (c != 'x') && (c != 'X')) {
          // But not .I which is cling-only, and the .L, .x,
          // and .X commands were handled above.
-         ret = ProcessLineCintOnly(sLine, error);
+         if (sLine.BeginsWith(".class "))
+            DisplayClass(stdout, sLine.Data() + 7, 0, 0); //:))
       }
    }
    if (indent) {
       // incomplete expression, needs something like:
       /// fMetaProcessor->abortEvaluation();
+      gROOT->SetLineHasBeenProcessed();
       return 0;
    }
    if (error) {
@@ -1037,9 +993,12 @@ Long_t TCintWithCling::ProcessLine(const char* line, EErrorCode* error/*=0*/)
    }
    if (compRes == cling::Interpreter::kSuccess
        && result.isValid()
-       && !result.get().isVoid(fInterpreter->getCI()->getASTContext())) {
-         return result.get().simplisticCastAs<long>();
+       && !result.get().isVoid(fInterpreter->getCI()->getASTContext())) 
+   {
+      gROOT->SetLineHasBeenProcessed();
+      return result.get().simplisticCastAs<long>();
    }
+   gROOT->SetLineHasBeenProcessed();
    return 0;
 }
 
@@ -1061,20 +1020,23 @@ void TCintWithCling::AddIncludePath(const char *path)
    // looks for include files. Only one path item can be specified at a
    // time, i.e. "path1:path2" is not supported.
 
-   fInterpreter->AddIncludePath(path);
-   //TCintWithCling::AddIncludePath(path);
    R__LOCKGUARD(gCINTMutex);
-   char* incpath = gSystem->ExpandPathName(path);
-   G__add_ipath(incpath);
-   delete[] incpath;
+   fInterpreter->AddIncludePath(path);
 }
 
 //______________________________________________________________________________
 void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
-                                    TClass* cl)
+                                    const TClass* cl)
 {
    // Visit all members over members, recursing over base classes.
    
+   if (!cl || cl->GetCollectionProxy()) {
+      // We do not need to investigate the content of the STL
+      // collection, they are opaque to us (and details are
+      // uninteresting).
+      return;
+   }
+
    char* cobj = (char*) obj; // for ptr arithmetics
 
    static clang::PrintingPolicy
@@ -1100,10 +1062,16 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
    const clang::ASTRecordLayout& recLayout
       = astContext.getASTRecordLayout(recordDecl);
 
+   // TVirtualCollectionProxy *proxy = cl->GetCollectionProxy();
+   // if (proxy && ( proxy->GetProperties() & TVirtualCollectionProxy::kIsEmulated ) ) {
+   //    Error("InspectMembers","The TClass for %s has an emulated proxy but we are looking at a compiled version of the collection!\n",
+   //          cl->GetName());
+   // }
    if (cl->Size() != recLayout.getSize().getQuantity()) {
       Error("InspectMembers","TClass and cling disagree on the size of the class %s, respectively %d %lld\n",
             cl->GetName(),cl->Size(),(Long64_t)recLayout.getSize().getQuantity());
    }
+
    unsigned iNField = 0;
    // iterate over fields
    // FieldDecls are non-static, else it would be a VarDecl.
@@ -1111,7 +1079,7 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
         eField = recordDecl->field_end(); iField != eField;
         ++iField, ++iNField) {
 
-      clang::QualType memberQT = iField->getType().getDesugaredType(astContext);
+      clang::QualType memberQT = cling::utils::Transform::GetPartiallyDesugaredType(astContext, iField->getType(), fNormalizedCtxt->GetTypeToSkip(), false /* fully qualify */);
       if (memberQT.isNull()) {
          std::string memberName;
          iField->getNameForDiagnostic(memberName, printPol, true /*fqi*/);
@@ -1136,7 +1104,7 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
          ispointer = true;
          clang::QualType ptrQT
             = memNonPtrType->getAs<clang::PointerType>()->getPointeeType();
-         ptrQT = ptrQT.getDesugaredType(astContext);
+         ptrQT = cling::utils::Transform::GetPartiallyDesugaredType(astContext, ptrQT, fNormalizedCtxt->GetTypeToSkip(), false /* fully qualify */);
          if (ptrQT.isNull()) {
             std::string memberName;
             iField->getNameForDiagnostic(memberName, printPol, true /*fqi*/);
@@ -1197,7 +1165,7 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
       // R__insp.Inspect(R__cl, R__insp.GetParent(), "fName", &fName);
       // R__insp.InspectMember(fName, "fName.");
       // R__insp.Inspect(R__cl, R__insp.GetParent(), "*fClass", &fClass);
-      insp.Inspect(cl, insp.GetParent(), fieldName.c_str(), cobj + fieldOffset);
+      insp.Inspect(const_cast<TClass*>(cl), insp.GetParent(), fieldName.c_str(), cobj + fieldOffset);
 
       if (!ispointer) {
          const clang::CXXRecordDecl* fieldRecDecl = memNonPtrType->getAsCXXRecordDecl();
@@ -1205,9 +1173,8 @@ void TCintWithCling::InspectMembers(TMemberInspector& insp, void* obj,
             // nested objects get an extra call to InspectMember
             // R__insp.InspectMember("FileStat_t", (void*)&fFileStat, "fFileStat.", false);
             std::string sFieldRecName;
-            fieldRecDecl->getNameForDiagnostic(sFieldRecName,
-                                               printPol, true /*fqi*/);
-            llvm::StringRef comment = ROOT::TMetaUtils::GetComment(*recordDecl, 0);
+            ROOT::TMetaUtils::GetNormalizedName(sFieldRecName, clang::QualType(memNonPtrType,0), *fInterpreter, *fNormalizedCtxt);
+            llvm::StringRef comment = ROOT::TMetaUtils::GetComment(* (*iField), 0);
             // NOTE, we have to change this to support selection XML!
             bool transient = !comment.empty() && comment[0] == '!';
             
@@ -1293,10 +1260,8 @@ void TCintWithCling::EnableAutoLoading()
    // is used that is stored in a not yet loaded library. Uses the
    // information stored in the class/library map (typically
    // $ROOTSYS/etc/system.rootmap).
-   R__LOCKGUARD(gCINTMutex);
-   G__set_class_autoloading_callback(&TCint_AutoLoadCallback);
-   G__set_class_autoloading(1);
    LoadLibraryMap();
+   SetClassAutoloading(true);
 }
 
 //______________________________________________________________________________
@@ -1317,52 +1282,130 @@ Bool_t TCintWithCling::IsLoaded(const char* filename) const
    //            the include path
    //            the shared library path
    R__LOCKGUARD(gCINTMutex);
-   G__SourceFileInfo file(filename);
-   if (file.IsValid()) {
-      return kTRUE;
-   };
-   char* next = gSystem->Which(TROOT::GetMacroPath(), filename, kReadPermission);
-   if (next) {
-      file.Init(next);
-      delete[] next;
-      if (file.IsValid()) {
-         return kTRUE;
-      };
+
+   typedef cling::Interpreter::LoadedFileInfo FileInfo_t;
+   typedef llvm::SmallVectorImpl<FileInfo_t*> AllFileInfos_t;
+
+   llvm::StringMap<const FileInfo_t*> fileMap;
+
+   // Fill fileMap; return early on exact match.
+   const AllFileInfos_t& allFiles = fInterpreter->getLoadedFiles();
+   for (AllFileInfos_t::const_iterator iF = allFiles.begin(), iE = allFiles.end();
+        iF != iE; ++iF) {
+      if ((*iF)->getName() == filename) return kTRUE; // exact match
+      fileMap[(*iF)->getName()] = *iF;
    }
+
+   if (fileMap.empty()) return kFALSE;
+
+   // Check MacroPath.
+   TString sFilename(filename);
+   if (gSystem->FindFile(TROOT::GetMacroPath(), sFilename, kReadPermission)
+       && fileMap.count(sFilename.Data())) {
+      return kTRUE;
+   }
+
+   // Check IncludePath.
    TString incPath = gSystem->GetIncludePath(); // of the form -Idir1  -Idir2 -Idir3
-   incPath.Append(":").Prepend(" ");
+   incPath.Append(":").Prepend(" "); // to match " -I" (note leading ' ')
    incPath.ReplaceAll(" -I", ":");      // of form :dir1 :dir2:dir3
    while (incPath.Index(" :") != -1) {
       incPath.ReplaceAll(" :", ":");
    }
    incPath.Prepend(".:");
-# ifdef CINTINCDIR
-   TString cintdir = CINTINCDIR;
-# else
-   TString cintdir = "$(ROOTSYS)/cint";
-# endif
-   incPath.Append(":");
-   incPath.Append(cintdir);
-   incPath.Append("/include:");
-   incPath.Append(cintdir);
-   incPath.Append("/stl");
-   next = gSystem->Which(incPath, filename, kReadPermission);
-   if (next) {
-      file.Init(next);
-      delete[] next;
-      if (file.IsValid()) {
-         return kTRUE;
-      };
+   sFilename = filename;
+   if (gSystem->FindFile(incPath, sFilename, kReadPermission)
+       && fileMap.count(sFilename.Data())) {
+      return kTRUE;
    }
-   next = gSystem->DynamicPathName(filename, kTRUE);
-   if (next) {
-      file.Init(next);
-      delete[] next;
-      if (file.IsValid()) {
-         return kTRUE;
-      };
+
+   // Check shared library.
+   sFilename = filename;
+   if (gSystem->FindDynamicLibrary(sFilename, kTRUE)
+       && fileMap.count(sFilename.Data())) {
+      return kTRUE;
    }
    return kFALSE;
+}
+
+//______________________________________________________________________________
+void TCintWithCling::UpdateListOfLoadedSharedLibraries()
+{
+#ifdef R_WIN32
+   // need to call RegisterLoadedSharedLibrary() here
+   // by calling Win32's EnumerateLoadedModules().
+   Error("TCintWithCling::UpdateListOfLoadedSharedLibraries",
+         "Platform not supported!");   
+#elif defined(R__MACOSX)
+   // fPrevLoadedDynLibInfo stores the *next* image index to look at
+   uint32_t imageIndex = (uint32_t) (size_t) fPrevLoadedDynLibInfo;
+   const char* imageName = 0;
+   while ((imageName = _dyld_get_image_name(imageIndex))) {
+      // Skip binary
+      if (imageIndex > 0)
+         RegisterLoadedSharedLibrary(imageName);
+      ++imageIndex;
+   }
+   fPrevLoadedDynLibInfo = (void*)(size_t)imageIndex;
+#elif defined(R__LINUX)
+   struct PointerNo4_t {
+      void* fSkip[3];
+      void* fPtr;
+   };
+   struct LinkMap_t {
+      void* fAddr;
+      const char* fName;
+      void* fLd;
+      LinkMap_t* fNext;
+      LinkMap_t* fPrev;
+   };
+   if (!fPrevLoadedDynLibInfo || fPrevLoadedDynLibInfo == (void*)(size_t)-1) {
+      PointerNo4_t* procLinkMap = (PointerNo4_t*)dlopen(0,  RTLD_LAZY | RTLD_GLOBAL);
+      // 4th pointer of 4th pointer is the linkmap.
+      // See http://syprog.blogspot.fr/2011/12/listing-loaded-shared-objects-in-linux.html
+      LinkMap_t* linkMap = (LinkMap_t*) ((PointerNo4_t*)procLinkMap->fPtr)->fPtr;
+      RegisterLoadedSharedLibrary(linkMap->fName);
+      fPrevLoadedDynLibInfo = linkMap;
+   }
+   
+   LinkMap_t* iDyLib = (LinkMap_t*)fPrevLoadedDynLibInfo;
+   while (iDyLib->fNext) {
+      iDyLib = iDyLib->fNext;
+      RegisterLoadedSharedLibrary(iDyLib->fName);
+   }
+   fPrevLoadedDynLibInfo = iDyLib;
+#else
+   Error("TCintWithCling::UpdateListOfLoadedSharedLibraries",
+         "Platform not supported!");
+#endif
+}
+
+//______________________________________________________________________________
+void TCintWithCling::RegisterLoadedSharedLibrary(const char* filename)
+{
+   // Register a new shared library name with the interpreter; add it to
+   // fSharedLibs.
+
+   // Ignore NULL filenames, aka "the process".
+   if (!filename) return;
+
+   // Tell the interpreter that this library is available; all libraries can be
+   // used to resolve symbols.
+   fInterpreter->loadLibrary(filename, true /*permanent*/);
+
+#if defined(R__MACOSX)
+   // Check that this is not a system library
+   if (!strncmp(filename, "/usr/lib/system/", 16)
+       || !strncmp(filename, "/usr/lib/libc++", 15)
+       || !strncmp(filename, "/System/Library/Frameworks/", 27)
+       || !strncmp(filename, "/System/Library/PrivateFrameworks/", 34))
+      return;
+#endif
+   // Update string of available libraries.
+   if (!fSharedLibs.IsNull()) {
+      fSharedLibs.Append(" ");
+   }
+   fSharedLibs.Append(filename);
 }
 
 //______________________________________________________________________________
@@ -1370,16 +1413,21 @@ Int_t TCintWithCling::Load(const char* filename, Bool_t system)
 {
    // Load a library file in CINT's memory.
    // if 'system' is true, the library is never unloaded.
+   // Return 0 on success, -1 on failure.
+
+   // Used to return 0 on success, 1 on duplicate, -1 on failure, -2 on "fatal".
    R__LOCKGUARD2(gCINTMutex);
-   int i;
-   if (!system) {
-      i = G__loadfile(filename);
+   cling::Interpreter::LoadLibResult res
+      = fInterpreter->loadLibrary(filename, system);
+   if (res == cling::Interpreter::kLoadLibSuccess) {
+      UpdateListOfLoadedSharedLibraries();
    }
-   else {
-      i = G__loadsystemfile(filename);
-   }
-   UpdateListOfTypes();
-   return i;
+   switch (res) {
+   case cling::Interpreter::kLoadLibSuccess: return 0;
+   case cling::Interpreter::kLoadLibExists:  return 1;
+   default: break;
+   };
+   return -1;
 }
 
 //______________________________________________________________________________
@@ -1524,6 +1572,55 @@ Int_t TCintWithCling::DeleteGlobal(void* obj)
 }
 
 //______________________________________________________________________________
+Int_t TCintWithCling::DeleteVariable(const char* name)
+{
+   // Undeclare obj called name.
+   // Returns 1 in case of success, 0 for failure.
+   R__LOCKGUARD(gCINTMutex);
+   llvm::StringRef srName(name);
+   const char* unscopedName = name;
+   llvm::StringRef::size_type posScope = srName.rfind("::");
+   const clang::DeclContext* declCtx = 0;
+   if (posScope != llvm::StringRef::npos) {
+      const cling::LookupHelper& lh = fInterpreter->getLookupHelper();
+      const clang::Decl* scopeDecl = lh.findScope(srName.substr(0, posScope));
+      if (!scopeDecl) {
+         Error("DeleteVariable", "Cannot find enclosing scope for variable %s",
+               name);
+         return 0;
+      }
+      declCtx = llvm::dyn_cast<clang::DeclContext>(scopeDecl);
+      if (!declCtx) {
+         Error("DeleteVariable",
+               "Enclosing scope for variable %s is not a declaration context",
+               name);
+         return 0;
+      }
+      unscopedName += posScope + 2;
+   }
+   clang::NamedDecl* nVarDecl
+      = cling::utils::Lookup::Named(&fInterpreter->getSema(), unscopedName, declCtx);
+   if (!nVarDecl) {
+      Error("DeleteVariable", "Unknown variable %s", name);
+      return 0;
+   }
+   clang::VarDecl* varDecl = llvm::dyn_cast<clang::VarDecl>(nVarDecl);
+   if (!varDecl) {
+      Error("DeleteVariable", "Entity %s is not a variable", name);
+      return 0;
+   }
+
+   clang::QualType qType = varDecl->getType();
+   const clang::Type* type = qType->getUnqualifiedDesugaredType();
+   if (type->isPointerType() || type->isReferenceType()) {
+      int** ppInt = (int**)fInterpreter->getAddressOfGlobal(varDecl);
+      // set pointer / reference to invalid.
+      if (ppInt) *ppInt = 0;
+   }
+   return 1;
+}
+
+//______________________________________________________________________________
 void TCintWithCling::SaveContext()
 {
    // Save the current CINT state.
@@ -1625,7 +1722,7 @@ void TCintWithCling::SetClassInfo(TClass* cl, Bool_t reload)
 //______________________________________________________________________________
 Bool_t TCintWithCling::CheckClassInfo(const char* name, Bool_t autoload /*= kTRUE*/)
 {
-   // Checks if a class with the specified name is defined in CINT.
+   // Checks if a class with the specified name is defined in Cling.
    // Returns kFALSE is class is not defined.
    // In the case where the class is not loaded and belongs to a namespace
    // or is nested, looking for the full class name is outputing a lots of
@@ -1675,29 +1772,25 @@ Bool_t TCintWithCling::CheckClassInfo(const char* name, Bool_t autoload /*= kTRU
       current += 2;
    }
    strlcpy(classname, name, nch);
-   int flag = 2;
-   if (!autoload) {
-      flag = 3;
+
+   int storeAutoload = SetClassAutoloading(false);
+
+   // Note that when using CINT we explicitly requested
+   // for template to *not* be instantiated as a
+   // consequence to the equivalent call.  
+   // We need to review whether we want to re-add this
+   // distinction ...
+   TClingClassInfo tci(fInterpreter, classname);
+   if (!tci.IsValid()) {
+      delete[] classname;
+      SetClassAutoloading(storeAutoload);
+      return kFALSE;
    }
-   Int_t tagnum = G__defined_tagname(classname, flag); // This function might modify the name (to add space between >>).
-   if (tagnum >= 0) {
-      TClingClassInfo tci(fInterpreter, classname);
-      G__ClassInfo info(tagnum);
-      // If autoloading is off then Property() == 0 for autoload entries.
-      if (!autoload && !info.Property()) {
-         return kTRUE;
-      }
-      if (!tci.IsValid()) {
-         if (!(info.Property() & (G__BIT_ISENUM)) && info.Size()) // Size()==0 is an approximation of IsForwardDeclaredOrSetForAutoloading() 
-             Warning("CheckClassInfo", "class '%s' exists in CINT, but not in the AST!\n", classname);
-         delete[] classname;
-         return kFALSE;
-      }
-      if (info.Property() & (G__BIT_ISENUM | G__BIT_ISCLASS | G__BIT_ISSTRUCT | G__BIT_ISUNION | G__BIT_ISNAMESPACE)) {
-         // We are now sure that the entry is not in fact an autoload entry.
-         delete[] classname;
-         return kTRUE;
-      }
+   if (tci.Property() & (G__BIT_ISENUM | G__BIT_ISCLASS | G__BIT_ISSTRUCT | G__BIT_ISUNION | G__BIT_ISNAMESPACE)) {
+      // We are now sure that the entry is not in fact an autoload entry.
+      delete[] classname;
+      SetClassAutoloading(storeAutoload);
+      return kTRUE;
    }
 
    // Setting up iterator part of TClingTypedefInfo is too slow.
@@ -1706,6 +1799,7 @@ Bool_t TCintWithCling::CheckClassInfo(const char* name, Bool_t autoload /*= kTRU
    TClingTypedefInfo t(fInterpreter, name);
    if (t.IsValid() && !(t.Property() & G__BIT_ISFUNDAMENTAL)) {
       delete[] classname;
+      SetClassAutoloading(storeAutoload);
       return kTRUE;
    }
    */
@@ -1734,6 +1828,7 @@ Bool_t TCintWithCling::CheckClassInfo(const char* name, Bool_t autoload /*= kTRU
    }
 
    delete[] classname;
+   SetClassAutoloading(storeAutoload);
    return (decl);
 }
 
@@ -1918,7 +2013,7 @@ TString TCintWithCling::GetMangledNameWithPrototype(TClass* cl, const char* meth
 
 //______________________________________________________________________________
 void* TCintWithCling::GetInterfaceMethod(TClass* cl, const char* method,
-                                const char* params)
+                                         const char* params)
 {
    // Return pointer to CINT interface function for a method of a class with
    // parameters params (params is a string of actual arguments, not formal
@@ -2086,11 +2181,11 @@ const char* TCintWithCling::GetTopLevelMacroName() const
 {
    // Return the file name of the current un-included interpreted file.
    // See the documentation for GetCurrentMacroName().
-   G__SourceFileInfo srcfile(G__get_ifile()->filenum);
-   while (srcfile.IncludedFrom().IsValid()) {
-      srcfile = srcfile.IncludedFrom();
-   }
-   return srcfile.Name();
+
+   Warning("GetTopLevelMacroName", "Must change return type!");
+   static std::string sMacroName;
+   sMacroName = fMetaProcessor->getTopExecutingFile();
+   return sMacroName.c_str();
 }
 
 //______________________________________________________________________________
@@ -2101,12 +2196,12 @@ const char* TCintWithCling::GetCurrentMacroName() const
    // GetCurrentMacroName() and GetTopLevelMacroName():
    // BEGIN_HTML <!--
    /* -->
-      <span style="color:#ffffff;background-color:#7777ff;padding-left:0.3em;padding-right:0.3em">inclfile.h</span>
+      <span style="color:#ffffff;background-color:#7777ff;padding-left:0.3em;padding-right:0.3em">inclfile.C</span>
       <!--div style="border:solid 1px #ffff77;background-color: #ffffdd;float:left;padding:0.5em;margin-bottom:0.7em;"-->
       <div class="code">
       <pre style="margin:0pt">#include &lt;iostream&gt;
-   void inclfunc() {
-   std::cout &lt;&lt; "In inclfile.h" &lt;&lt; std::endl;
+   void inclfile() {
+   std::cout &lt;&lt; "In inclfile.C" &lt;&lt; std::endl;
    std::cout &lt;&lt; "  TCintWithCling::GetCurrentMacroName() returns  " &lt;&lt;
       TCintWithCling::GetCurrentMacroName() &lt;&lt; std::endl;
    std::cout &lt;&lt; "  TCintWithCling::GetTopLevelMacroName() returns " &lt;&lt;
@@ -2116,15 +2211,14 @@ const char* TCintWithCling::GetCurrentMacroName() const
       <span style="color:#ffffff;background-color:#7777ff;padding-left:0.3em;padding-right:0.3em">mymacro.C</span>
       <div style="border:solid 1px #ffff77;background-color: #ffffdd;float:left;padding:0.5em;margin-bottom:0.7em;">
       <pre style="margin:0pt">#include &lt;iostream&gt;
-   #include "inclfile.h"
    void mymacro() {
    std::cout &lt;&lt; "In mymacro.C" &lt;&lt; std::endl;
    std::cout &lt;&lt; "  TCintWithCling::GetCurrentMacroName() returns  " &lt;&lt;
       TCintWithCling::GetCurrentMacroName() &lt;&lt; std::endl;
    std::cout &lt;&lt; "  TCintWithCling::GetTopLevelMacroName() returns " &lt;&lt;
       TCintWithCling::GetTopLevelMacroName() &lt;&lt; std::endl;
-   std::cout &lt;&lt; "  Now calling inclfunc..." &lt;&lt; std::endl;
-   inclfunc();
+   std::cout &lt;&lt; "  Now calling inclfile..." &lt;&lt; std::endl;
+   gInterpreter->ProcessLine(".x inclfile.C");;
    }</pre></div>
    <div style="clear:both"></div>
    <!-- */
@@ -2135,11 +2229,18 @@ const char* TCintWithCling::GetCurrentMacroName() const
    // In mymacro.C
    //   TCintWithCling::GetCurrentMacroName() returns  ./mymacro.C
    //   TCintWithCling::GetTopLevelMacroName() returns ./mymacro.C
-   //   Now calling inclfunc...
+   //   Now calling inclfile...
    // In inclfile.h
-   //   TCintWithCling::GetCurrentMacroName() returns  inclfile.h
+   //   TCintWithCling::GetCurrentMacroName() returns  inclfile.C
    //   TCintWithCling::GetTopLevelMacroName() returns ./mymacro.C
-   return G__get_ifile()->name;
+
+#ifdef R__MUST_REVISIT
+R__MUST_REVISIT(6,0)
+   Warning("GetCurrentMacroName", "Must change return type!");
+#endif
+   static std::string sMacroName;
+   sMacroName = fMetaProcessor->getCurrentlyExecutingFile();
+   return sMacroName.c_str();
 }
 
 //______________________________________________________________________________
@@ -2194,8 +2295,8 @@ Int_t TCintWithCling::LoadLibraryMap(const char* rootmapfile)
    // Load map between class and library. If rootmapfile is specified a
    // specific rootmap file can be added (typically used by ACLiC).
    // In case of error -1 is returned, 0 otherwise.
-   // Cint uses this information to automatically load the shared library
-   // for a class (autoload mechanism).
+   // The interpreter uses this information to automatically load the shared 
+   // library for a class (autoload mechanism).
    // See also the AutoLoadCallback() method below.
    R__LOCKGUARD(gCINTMutex);
    // open the [system].rootmap files
@@ -2204,9 +2305,6 @@ Int_t TCintWithCling::LoadLibraryMap(const char* rootmapfile)
       fMapfile->IgnoreDuplicates(kTRUE);
       fRootmapFiles = new TObjArray;
       fRootmapFiles->SetOwner();
-      // Make sure that this information will be useable by inserting our
-      // autoload call back!
-      G__set_class_autoloading_callback(&TCint_AutoLoadCallback);
    }
    // Load all rootmap files in the dynamic load path ((DY)LD_LIBRARY_PATH, etc.).
    // A rootmap file must end with the string ".rootmap".
@@ -2250,10 +2348,10 @@ Int_t TCintWithCling::LoadLibraryMap(const char* rootmapfile)
                            fMapfile->ReadFile(p, kEnvGlobal);
                            fRootmapFiles->Add(new TNamed(f, p));
                         }
-                        //                        else {
-                        //                           fprintf(stderr,"Reject %s because %s is already there\n",p.Data(),f.Data());
-                        //                           fRootmapFiles->FindObject(f)->ls();
-                        //                        }
+                        // else {
+                        //    fprintf(stderr,"Reject %s because %s is already there\n",p.Data(),f.Data());
+                        //    fRootmapFiles->FindObject(f)->ls();
+                        // }
                      }
                   }
                   if (f.BeginsWith("rootmap")) {
@@ -2301,43 +2399,6 @@ Int_t TCintWithCling::LoadLibraryMap(const char* rootmapfile)
          // convert "-" to " ", since class names may have
          // blanks and TEnv considers a blank a terminator
          cls.ReplaceAll("-", " ");
-         if (cls.Contains(":")) {
-            // We have a namespace and we have to check it first
-            int slen = cls.Length();
-            for (int k = 0; k < slen; k++) {
-               if (cls[k] == ':') {
-                  if (k + 1 >= slen || cls[k + 1] != ':') {
-                     // we expected another ':'
-                     break;
-                  }
-                  if (k) {
-                     TString base = cls(0, k);
-                     if (base == "std") {
-                        // std is not declared but is also ignored by CINT!
-                        break;
-                     }
-                     else {
-                        // Only declared the namespace do not specify any library because
-                        // the namespace might be spread over several libraries and we do not
-                        // know (yet?) which one the user will need!
-                        // But what if it's not a namespace but a class?
-                        // Does CINT already know it?
-                        const char* baselib = G__get_class_autoloading_table(const_cast<char*>(base.Data()));
-                        if ((!baselib || !baselib[0]) && !rec->FindObject(base)) {
-                           G__set_class_autoloading_table(const_cast<char*>(base.Data()), const_cast<char*>(""));
-                        }
-                     }
-                     ++k;
-                  }
-               }
-               else if (cls[k] == '<') {
-                  // We do not want to look at the namespace inside the template parameters!
-                  break;
-               }
-            }
-         }
-         G__set_class_autoloading_table(const_cast<char*>(cls.Data()), const_cast<char*>(lib));
-         G__security_recover(stderr); // Ignore any error during this setting.
          if (gDebug > 6) {
             const char* wlib = gSystem->DynamicPathName(lib, kTRUE);
             if (wlib) {
@@ -2474,43 +2535,11 @@ Int_t TCintWithCling::UnloadLibraryMap(const char* library)
          // convert "-" to " ", since class names may have
          // blanks and TEnv considers a blank a terminator
          cls.ReplaceAll("-", " ");
-         if (cls.Contains(":")) {
-            // We have a namespace and we have to check it first
-            int slen = cls.Length();
-            for (int k = 0; k < slen; k++) {
-               if (cls[k] == ':') {
-                  if (k + 1 >= slen || cls[k + 1] != ':') {
-                     // we expected another ':'
-                     break;
-                  }
-                  if (k) {
-                     TString base = cls(0, k);
-                     if (base == "std") {
-                        // std is not declared but is also ignored by CINT!
-                        break;
-                     }
-                     else {
-                        // Only declared the namespace do not specify any library because
-                        // the namespace might be spread over several libraries and we do not
-                        // know (yet?) which one the user will need!
-                        //G__remove_from_class_autoloading_table((char*)base.Data());
-                     }
-                     ++k;
-                  }
-               }
-               else if (cls[k] == '<') {
-                  // We do not want to look at the namespace inside the template parameters!
-                  break;
-               }
-            }
-         }
          if (!strcmp(library, lib)) {
             if (fMapfile->GetTable()->Remove(rec) == 0) {
                Error("UnloadLibraryMap", "entry for <%s,%s> not found in library map table", cls.Data(), lib);
                ret = -1;
             }
-            G__set_class_autoloading_table(const_cast<char*>(cls.Data()), (char*)(-1));
-            G__security_recover(stderr); // Ignore any error during this setting.
          }
          delete tokens;
       }
@@ -2539,7 +2568,7 @@ Int_t TCintWithCling::AutoLoad(const char* cls)
       return status;
    }
    // Prevent the recursion when the library dictionary are loaded.
-   Int_t oldvalue = G__set_class_autoloading(0);
+   Int_t oldvalue = SetClassAutoloading(false);
    // lookup class to find list of dependent libraries
    TString deplibs = GetClassSharedLibs(cls);
    if (!deplibs.IsNull()) {
@@ -2549,81 +2578,30 @@ Int_t TCintWithCling::AutoLoad(const char* cls)
          const char* deplib = ((TObjString*)tokens->At(i))->GetName();
          if (gROOT->LoadClass(cls, deplib) == 0) {
             if (gDebug > 0)
-               ::Info("TCintWithCling::AutoLoad", "loaded dependent library %s for class %s",
-                      deplib, cls);
+               ::Info("TCintWithCling::AutoLoad",
+                      "loaded dependent library %s for class %s", deplib, cls);
          }
          else
-            ::Error("TCintWithCling::AutoLoad", "failure loading dependent library %s for class %s",
+            ::Error("TCintWithCling::AutoLoad",
+                    "failure loading dependent library %s for class %s",
                     deplib, cls);
       }
       const char* lib = ((TObjString*)tokens->At(0))->GetName();
       if (lib[0]) {
          if (gROOT->LoadClass(cls, lib) == 0) {
             if (gDebug > 0)
-               ::Info("TCintWithCling::AutoLoad", "loaded library %s for class %s",
-                      lib, cls);
+               ::Info("TCintWithCling::AutoLoad",
+                      "loaded library %s for class %s", lib, cls);
             status = 1;
          }
          else
-            ::Error("TCintWithCling::AutoLoad", "failure loading library %s for class %s",
-                    lib, cls);
+            ::Error("TCintWithCling::AutoLoad",
+                    "failure loading library %s for class %s", lib, cls);
       }
       delete tokens;
    }
-   G__set_class_autoloading(oldvalue);
+   SetClassAutoloading(oldvalue);
    return status;
-}
-
-//______________________________________________________________________________
-Int_t TCintWithCling::AutoLoadCallback(const char* cls, const char* lib)
-{
-   // Load library containing specified class. Returns 0 in case of error
-   // and 1 in case if success.
-   R__LOCKGUARD(gCINTMutex);
-   if (!gROOT || !gInterpreter || !cls || !lib) {
-      return 0;
-   }
-   // calls to load libCore might come in the very beginning when libCore
-   // dictionary is not fully loaded yet, ignore it since libCore is always
-   // loaded
-   if (strstr(lib, "libCore")) {
-      return 1;
-   }
-   // lookup class to find list of dependent libraries
-   TString deplibs = gInterpreter->GetClassSharedLibs(cls);
-   if (!deplibs.IsNull()) {
-      if (gDebug > 0 && gDebug <= 4)
-         ::Info("TCintWithCling::AutoLoadCallback", "loaded dependent library %s for class %s",
-                deplibs.Data(), cls);
-      TString delim(" ");
-      TObjArray* tokens = deplibs.Tokenize(delim);
-      for (Int_t i = tokens->GetEntriesFast() - 1; i > 0; i--) {
-         const char* deplib = ((TObjString*)tokens->At(i))->GetName();
-         if (gROOT->LoadClass(cls, deplib) == 0) {
-            if (gDebug > 4)
-               ::Info("TCintWithCling::AutoLoadCallback", "loaded dependent library %s for class %s",
-                      deplib, cls);
-         }
-         else {
-            ::Error("TCintWithCling::AutoLoadCallback", "failure loading dependent library %s for class %s",
-                    deplib, cls);
-         }
-      }
-      delete tokens;
-   }
-   if (lib[0]) {
-      if (gROOT->LoadClass(cls, lib) == 0) {
-         if (gDebug > 0)
-            ::Info("TCintWithCling::AutoLoadCallback", "loaded library %s for class %s",
-                   lib, cls);
-         return 1;
-      }
-      else {
-         ::Error("TCintWithCling::AutoLoadCallback", "failure loading library %s for class %s",
-                 lib, cls);
-      }
-   }
-   return 0;
 }
 
 //______________________________________________________________________________
@@ -2650,6 +2628,39 @@ void* TCintWithCling::FindSpecialObject(const char* item, G__ClassInfo* type,
 }
 
 //______________________________________________________________________________
+void TCintWithCling::UpdateClassInfoWithDecl(void* vTD)
+{
+   // Internal function. Inform a TClass about its new TagDecl.
+   TagDecl* td = (TagDecl*)vTD;
+   TagDecl* tdDef = td->getDefinition();
+   if (tdDef) td = tdDef;
+   std::string name = td->getName();
+   
+   // Supposedly we are being called being something is being
+   // loaded ... let's now tell the autoloader to do the work
+   // yet another time.
+   int storedAutoloading = SetClassAutoloading(false);
+   TClass* cl = TClass::GetClassOrAlias(name.c_str());
+   if (cl) {
+      TClingClassInfo* cci = ((TClingClassInfo*)cl->fClassInfo);
+      if (cci) {
+         const TagDecl* tdOld = llvm::dyn_cast_or_null<TagDecl>(cci->GetDecl());
+         if (!tdOld || tdDef) {
+            cl->ResetCaches();
+            cci->Init(*cci->GetType());
+         }
+      } else {
+         cl->ResetCaches();
+         // yes, this is alsmost a waste of time, but we do need to lookup
+         // the 'type' corresponding to the TClass anyway in order to
+         // preserver the opaque typedefs (Double32_t)
+         cl->fClassInfo = new TClingClassInfo(fInterpreter, cl->GetName());
+      }
+   }
+   SetClassAutoloading(storedAutoloading);
+}
+
+//______________________________________________________________________________
 void TCintWithCling::UpdateClassInfo(char* item, Long_t tagnum)
 {
    // No op: see TClingCallbacks
@@ -2659,42 +2670,8 @@ void TCintWithCling::UpdateClassInfo(char* item, Long_t tagnum)
 //FIXME: Factor out that function in TClass, because TClass does it already twice
 void TCintWithCling::UpdateClassInfoWork(const char* item)
 {
-   // This does the actual work of UpdateClassInfo.
-   Bool_t load = kFALSE;
-   if (strchr(item, '<') && TClass::GetClassShortTypedefHash()) {
-      // We have a template which may have duplicates.
-      TString resolvedItem(TClassEdit::ResolveTypedef(TClassEdit::ShortType(item,
-                                  TClassEdit::kDropStlDefault).c_str(), kTRUE));
-      if (resolvedItem != item) {
-         TClass* cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedItem);
-         if (cl) {
-            load = kTRUE;
-         }
-      }
-      if (!load) {
-         TIter next(TClass::GetClassShortTypedefHash()->GetListForObject(resolvedItem));
-         while (TClass::TNameMapNode* htmp =
-                static_cast<TClass::TNameMapNode*>(next())) {
-            if (resolvedItem == htmp->String()) {
-               TClass* cl = gROOT->GetClass(htmp->fOrigName, kFALSE);
-               if (cl) {
-                  // we found at least one equivalent.
-                  // let's force a reload
-                  load = kTRUE;
-                  break;
-               }
-            }
-         }
-      }
-   }
-   if (gROOT->GetListOfClasses()->GetEntries() == 0) {
-      // Nothing to find, let's not get yourself in trouble.
-      return;
-   }
-   TClass* cl = gROOT->GetClass(item, load);
-   if (cl) {
-      cl->ResetCaches();
-   }
+   // This is a no-op as part of the API.
+   // TCintWithCling uses UpdateClassInfoWithDecl() instead.
 }
 
 //______________________________________________________________________________
@@ -2711,63 +2688,9 @@ void TCintWithCling::UpdateAllCanvases()
 //______________________________________________________________________________
 const char* TCintWithCling::GetSharedLibs()
 {
-   // Return the list of shared libraries known to CINT.
-   if (fSharedLibsSerial == G__SourceFileInfo::SerialNumber()) {
-      return fSharedLibs;
-   }
-   fSharedLibsSerial = G__SourceFileInfo::SerialNumber();
-   fSharedLibs.Clear();
-   G__SourceFileInfo cursor(0);
-   while (cursor.IsValid()) {
-      const char* filename = cursor.Name();
-      if (filename == 0) {
-         continue;
-      }
-      Int_t len = strlen(filename);
-      const char* end = filename + len;
-      Bool_t needToSkip = kFALSE;
-      if (len > 5 && ((strcmp(end - 4, ".dll") == 0) || (strstr(filename, "Dict.") != 0)  || (strstr(filename, "MetaTCint") != 0))) {
-         // Filter out the cintdlls
-         static const char* excludelist [] = {
-            "stdfunc.dll", "stdcxxfunc.dll", "posix.dll", "ipc.dll", "posix.dll"
-            "string.dll", "vector.dll", "vectorbool.dll", "list.dll", "deque.dll",
-            "map.dll", "map2.dll", "set.dll", "multimap.dll", "multimap2.dll",
-            "multiset.dll", "stack.dll", "queue.dll", "valarray.dll",
-            "exception.dll", "stdexcept.dll", "complex.dll", "climits.dll",
-            "libvectorDict.", "libvectorboolDict.", "liblistDict.", "libdequeDict.",
-            "libmapDict.", "libmap2Dict.", "libsetDict.", "libmultimapDict.", "libmultimap2Dict.",
-            "libmultisetDict.", "libstackDict.", "libqueueDict.", "libvalarrayDict."
-         };
-         static const unsigned int excludelistsize = sizeof(excludelist) / sizeof(excludelist[0]);
-         static int excludelen[excludelistsize] = { -1};
-         if (excludelen[0] == -1) {
-            for (unsigned int i = 0; i < excludelistsize; ++i) {
-               excludelen[i] = strlen(excludelist[i]);
-            }
-         }
-         const char* basename = gSystem->BaseName(filename);
-         for (unsigned int i = 0; !needToSkip && i < excludelistsize; ++i) {
-            needToSkip = (!strncmp(basename, excludelist[i], excludelen[i]));
-         }
-      }
-      if (!needToSkip &&
-            (
-#if defined(R__MACOSX) && defined(MAC_OS_X_VERSION_10_5)
-               (dlopen_preflight(filename)) ||
-#endif
-               (len > 2 && strcmp(end - 2, ".a") == 0)    ||
-               (len > 3 && (strcmp(end - 3, ".sl") == 0   ||
-                            strcmp(end - 3, ".dl") == 0   ||
-                            strcmp(end - 3, ".so") == 0)) ||
-               (len > 4 && (strcasecmp(end - 4, ".dll") == 0)) ||
-               (len > 6 && (strcasecmp(end - 6, ".dylib") == 0)))) {
-         if (!fSharedLibs.IsNull()) {
-            fSharedLibs.Append(" ");
-         }
-         fSharedLibs.Append(filename);
-      }
-      cursor.Next();
-   }
+   // Return the list of shared libraries loaded into the process.
+   if (!fPrevLoadedDynLibInfo && fSharedLibs.IsNull())
+      UpdateListOfLoadedSharedLibraries();
    return fSharedLibs;
 }
 
@@ -2857,13 +2780,28 @@ const char* TCintWithCling::GetIncludePath()
 {
    // Refresh the list of include paths known to the interpreter and return it
    // with -I prepended.
+
    R__LOCKGUARD(gCINTMutex);
+   
    fIncludePath = "";
-   G__IncludePathInfo path;
-   while (path.Next()) {
-      const char* pathname = path.Name();
-      fIncludePath.Append(" -I\"").Append(pathname).Append("\" ");
+
+   llvm::SmallVector<std::string, 10> includePaths;//Why 10? Hell if I know.
+   //false - no system header, true - with flags.
+   fInterpreter->GetIncludePaths(includePaths, false, true);
+   if (const size_t nPaths = includePaths.size()) {
+      assert(!(nPaths & 1) && "GetIncludePath, number of paths and options is not equal");
+
+      for (size_t i = 0; i < nPaths; i += 2) {
+         if (i)
+            fIncludePath.Append(' ');
+         fIncludePath.Append(includePaths[i].c_str());
+
+         if (includePaths[i] != "-I")
+            fIncludePath.Append(' ');
+         fIncludePath.Append(includePaths[i + 1], includePaths[i + 1].length());
+      }
    }
+
    return fIncludePath;
 }
 
@@ -2891,7 +2829,7 @@ const char* TCintWithCling::GetSTLIncludePath() const
 //                      M I S C
 //______________________________________________________________________________
 
-int TCintWithCling::DisplayClass(FILE* fout, char* name, int base, int start) const
+int TCintWithCling::DisplayClass(FILE* fout, const char* name, int base, int start) const
 {
    // Interface to CINT function
    if (!name || !name[0]) {
@@ -2903,21 +2841,42 @@ int TCintWithCling::DisplayClass(FILE* fout, char* name, int base, int start) co
    } else
       TClingDisplayClass::DisplayClass(fout, fInterpreter, name, true);//for the single class, info is always verbose.
 
-   return G__display_class(fout, name, base, start);
+   return 0;
 }
 
 //______________________________________________________________________________
-int TCintWithCling::DisplayIncludePath(FILE* fout) const
+int TCintWithCling::DisplayIncludePath(FILE *fout) const
 {
    // Interface to CINT function
-   return G__display_includepath(fout);
+   assert(fout != 0 && "DisplayIncludePath, 'fout' parameter is null");
+
+   llvm::SmallVector<std::string, 10> includePaths;//Why 10? Hell if I know.
+   //false - no system header, true - with flags.
+   fInterpreter->GetIncludePaths(includePaths, false, true);
+   if (const size_t nPaths = includePaths.size()) {
+      assert(!(nPaths & 1) && "DisplayIncludePath, number of paths and options is not equal");
+
+      std::string allIncludes("include path:");
+      for (size_t i = 0; i < nPaths; i += 2) {
+         allIncludes += ' ';
+         allIncludes += includePaths[i];
+
+         if (includePaths[i] != "-I")
+            allIncludes += ' ';
+         allIncludes += includePaths[i + 1];
+      }
+
+      fprintf(fout, "%s\n", allIncludes.c_str());
+   }
+
+   return 0;
 }
 
 //______________________________________________________________________________
 void* TCintWithCling::FindSym(const char* entry) const
 {
    // Interface to CINT function
-   return G__findsym(entry);
+   return fInterpreter->getAddressOfGlobal(entry);
 }
 
 //______________________________________________________________________________
@@ -2930,22 +2889,38 @@ void TCintWithCling::GenericError(const char* error) const
 //______________________________________________________________________________
 Long_t TCintWithCling::GetExecByteCode() const
 {
-   // Interface to CINT function
-   return (Long_t)G__exec_bytecode;
+   // This routines used to return the address of the internal wrapper
+   // function (of the interpreter) that was used to call *all* the
+   // interpreted functions that were bytecode compiled (no longer 
+   // interpreted line by line).  In Cling, there is no such
+   // wrapper function.
+   // In practice this routines was use to decipher whether the
+   // pointer returns by InterfaceMethod could be used to uniquely
+   // represent the function.  In Cling if the function is in a 
+   // useable state (its compiled version is available), this is
+   // always the case.  
+   // See TClass::GetMethod.
+
+   return 0;
 }
 
 //______________________________________________________________________________
 Long_t TCintWithCling::Getgvp() const
 {
-   // Interface to CINT function
-   return (Long_t)G__getgvp();
+   // Interface to the CINT global object pointer which was controlling the
+   // behavior of the wrapper around the calls to operator new and the constructor
+   // and operator delete and the destructor.
+
+   Error("Getgvp","This was controlling the behavior of the wrappers for object construction and destruction.\nThis is now a nop and likely change the behavior of the calling routines.");
+   return 0;
 }
 
 //______________________________________________________________________________
-const char* TCintWithCling::Getp2f2funcname(void* receiver) const
+const char* TCintWithCling::Getp2f2funcname(void*) const
 {
-   // Interface to CINT function
-   return G__p2f2funcname(receiver);
+   Error("Getp2f2funcname", "Will not be implemented: "
+         "all function pointers are compiled!");
+   return NULL;
 }
 
 //______________________________________________________________________________
@@ -2958,15 +2933,17 @@ int TCintWithCling::GetSecurityError() const
 //______________________________________________________________________________
 int TCintWithCling::LoadFile(const char* path) const
 {
-   // Interface to CINT function
-   return G__loadfile(path);
+   // Load a source file or library called path into the interpreter.
+   return fInterpreter->loadFile(path);
 }
 
 //______________________________________________________________________________
 void TCintWithCling::LoadText(const char* text) const
 {
-   // Interface to CINT function
-   G__load_text(text);
+   // Load the declarations from text into the interpreter.
+   // Note that this cannot be (top level) statements; text must contain
+   // top level declarations.
+   fInterpreter->declare(text);
 }
 
 //______________________________________________________________________________
@@ -2979,24 +2956,35 @@ const char* TCintWithCling::MapCppName(const char* name) const
 }
 
 //______________________________________________________________________________
-void TCintWithCling::SetAlloclockfunc(void (*p)()) const
+void TCintWithCling::SetAlloclockfunc(void (* /* p */ )()) const
 {
-   // Interface to CINT function
-   G__set_alloclockfunc(p);
+   // [Place holder for Mutex Lock] 
+   // Provide the interpreter with a way to
+   // acquire a lock used to protect critical section 
+   // of its code (non-thread safe parts).
+
+   // nothing to do for now.
 }
 
 //______________________________________________________________________________
-void TCintWithCling::SetAllocunlockfunc(void (*p)()) const
+void TCintWithCling::SetAllocunlockfunc(void (* /* p */ )()) const
 {
-   // Interface to CINT function
-   G__set_allocunlockfunc(p);
+   // [Place holder for Mutex Unlock] Provide the interpreter with a way to
+   // release a lock used to protect critical section 
+   // of its code (non-thread safe parts).
+
+   // nothing to do for now.
 }
 
 //______________________________________________________________________________
 int TCintWithCling::SetClassAutoloading(int autoload) const
 {
-   // Interface to CINT function
-   return G__set_class_autoloading(autoload);
+   // Enable/Disable the Autoloading of libraries.
+   // Returns the old value, i.e whether it was enabled or not.
+   assert(fClingCallbacks && "We must have callbacks!");
+   bool oldVal =  fClingCallbacks->IsAutoloadingEnabled();
+   fClingCallbacks->SetAutoloadingEnabled(autoload);
+   return oldVal;
 }
 
 //______________________________________________________________________________
@@ -3009,22 +2997,24 @@ void TCintWithCling::SetErrmsgcallback(void* p) const
 //______________________________________________________________________________
 void TCintWithCling::Setgvp(Long_t gvp) const
 {
-   // Interface to CINT function
-   G__setgvp(gvp);
+   // Interface to the CINT global object pointer which was controlling the
+   // behavior of the wrapper around the calls to operator new and the constructor
+   // and operator delete and the destructor.
+
+   Error("Setgvp","This was controlling the behavior of the wrappers for object construction and destruction.\nThis is now a nop and likely change the behavior of the calling routines.");
+
 }
 
 //______________________________________________________________________________
 void TCintWithCling::SetRTLD_NOW() const
 {
-   // Interface to CINT function
-   G__Set_RTLD_NOW();
+   Error("SetRTLD_NOW()", "Will never be implemented! Don't use!");
 }
 
 //______________________________________________________________________________
 void TCintWithCling::SetRTLD_LAZY() const
 {
-   // Interface to CINT function
-   G__Set_RTLD_LAZY();
+   Error("SetRTLD_LAZY()", "Will never be implemented! Don't use!");
 }
 
 //______________________________________________________________________________
@@ -3037,8 +3027,44 @@ void TCintWithCling::SetTempLevel(int val) const
 //______________________________________________________________________________
 int TCintWithCling::UnloadFile(const char* path) const
 {
-   // Interface to CINT function
-   return G__unloadfile(path);
+   // Unload a shared library or a source file.
+
+   // Check fInterpreter->getLoadedFiles() to determine whether this is a shared
+   // library or code. If it's not in there complain.
+   typedef llvm::SmallVectorImpl<cling::Interpreter::LoadedFileInfo*> LoadedFiles_t;
+   const LoadedFiles_t& loadedFiles = fInterpreter->getLoadedFiles();
+   const cling::Interpreter::LoadedFileInfo* fileInfo = 0;
+   for (LoadedFiles_t::const_iterator iF = loadedFiles.begin(),
+           eF = loadedFiles.end(); iF != eF; ++iF) {
+      if ((*iF)->getName() == path) {
+         fileInfo = *iF;
+      }
+   }
+   if (!fileInfo) {
+      Error("UnloadFile", "File %s has not been loaded!", path);
+      return -1;
+   }
+
+   if (fileInfo->getType() == cling::Interpreter::LoadedFileInfo::kDynamicLibrary) {
+      // Signal that the list of shared libs needs to be updated.
+      const_cast<TCintWithCling*>(this)->fPrevLoadedDynLibInfo = 0;
+      const_cast<TCintWithCling*>(this)->fSharedLibs = "";
+
+      Error("UnloadFile", "Unloading of shared libraries not yet implemented!\n"
+            "Not unloading file %s!", path);
+
+      return -1;
+   } else if (fileInfo->getType() == cling::Interpreter::LoadedFileInfo::kSource) {
+      Error("UnloadFile", "Unloading of source files not yet implemented!\n"
+            "Not unloading file %s!", path);
+      return -1;
+   } else {
+      Error("UnloadFile", "Unloading of files of type %d not yet implemented!\n"
+            "Not unloading file %s!", (int)fileInfo->getType(), path);
+      return -1;
+   }
+
+   return -1;
 }
 
 
@@ -3626,6 +3652,11 @@ MethodInfo_t* TCintWithCling::MethodInfo_Factory() const
 }
 
 //______________________________________________________________________________
+MethodInfo_t* TCintWithCling::MethodInfo_Factory(ClassInfo_t* clinfo) const
+{
+   return (MethodInfo_t*) new TClingMethodInfo(fInterpreter, (TClingClassInfo*)clinfo);
+}
+//______________________________________________________________________________
 MethodInfo_t* TCintWithCling::MethodInfo_FactoryCopy(MethodInfo_t* minfo) const
 {
    return (MethodInfo_t*) new TClingMethodInfo(*(TClingMethodInfo*)minfo);
@@ -3733,6 +3764,12 @@ MethodArgInfo_t* TCintWithCling::MethodArgInfo_Factory() const
 }
 
 //______________________________________________________________________________
+MethodArgInfo_t* TCintWithCling::MethodArgInfo_Factory(MethodInfo_t *minfo) const
+{
+   return (MethodArgInfo_t*) new TClingMethodArgInfo(fInterpreter, (TClingMethodInfo*)minfo);
+}
+
+//______________________________________________________________________________
 MethodArgInfo_t* TCintWithCling::MethodArgInfo_FactoryCopy(MethodArgInfo_t* marginfo) const
 {
    return (MethodArgInfo_t*)
@@ -3779,6 +3816,13 @@ const char* TCintWithCling::MethodArgInfo_TypeName(MethodArgInfo_t* marginfo) co
 {
    TClingMethodArgInfo* info = (TClingMethodArgInfo*) marginfo;
    return info->TypeName();
+}
+
+//______________________________________________________________________________
+const char* TCintWithCling::MethodArgInfo_TrueTypeName(MethodArgInfo_t* marginfo) const
+{
+   TClingMethodArgInfo* info = (TClingMethodArgInfo*) marginfo;
+   return info->Type()->TrueName(*fNormalizedCtxt);
 }
 
 
@@ -3891,6 +3935,13 @@ bool TCintWithCling::TypedefInfo_IsValid(TypedefInfo_t* tinfo) const
 {
    TClingTypedefInfo* TClinginfo = (TClingTypedefInfo*) tinfo;
    return TClinginfo->IsValid();
+}
+
+//______________________________________________________________________________
+Int_t TCintWithCling::TypedefInfo_Next(TypedefInfo_t* tinfo) const
+{
+   TClingTypedefInfo* TClinginfo = (TClingTypedefInfo*) tinfo;
+   return TClinginfo->Next();
 }
 
 //______________________________________________________________________________

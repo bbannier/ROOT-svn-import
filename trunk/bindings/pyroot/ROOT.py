@@ -126,7 +126,7 @@ class _Configuration( object ):
    def __init__( self ):
       self.IgnoreCommandLineOptions = 0
       # TODO: re-enable the GUI thread
-      self.StartGuiThread = False
+      self.StartGuiThread = True
       self._gts = []
 
    def __setGTS( self, value ):
@@ -234,13 +234,11 @@ class _ExpandMacroFunction( object ):
          return 1
       return 0
 
-
-# TODO: get the right #includes for these expansions (or rely on C++ side?)
-#_root.gPad         = _ExpandMacroFunction( "TVirtualPad",  "Pad" )
-#_root.gVirtualX    = _ExpandMacroFunction( "TVirtualX",    "Instance" )
-#_root.gDirectory   = _ExpandMacroFunction( "TDirectory",   "CurrentDirectory" )
-#_root.gFile        = _ExpandMacroFunction( "TFile",        "CurrentFile" )
-#_root.gInterpreter = _ExpandMacroFunction( "TInterpreter", "Instance" )
+_root.gPad         = _ExpandMacroFunction( "TVirtualPad",  "Pad" )
+_root.gVirtualX    = _ExpandMacroFunction( "TVirtualX",    "Instance" )
+_root.gDirectory   = _ExpandMacroFunction( "TDirectory",   "CurrentDirectory" )
+_root.gFile        = _ExpandMacroFunction( "TFile",        "CurrentFile" )
+_root.gInterpreter = _ExpandMacroFunction( "TInterpreter", "Instance" )
 
 
 ### special case pythonization --------------------------------------------------
@@ -490,8 +488,13 @@ class ModuleFacade( types.ModuleType ):
       appc = _root.MakeRootClass( 'PyROOT::TPyROOTApplication' )
       if appc.CreatePyROOTApplication(True): # for Cling: no default args
          appc.InitROOTGlobals()
-         appc.InitCINTMessageCallback();
+         # TODO Cling equivalent needed: appc.InitCINTMessageCallback();
          appc.InitROOTMessageCallback();
+
+       # make gApplication available on the prompt
+       # TODO: Cling can't handle default arguments (crashes)
+         import array
+         _root.gROOT.ProcessLine( '#include "TApplication.h"', array.array('i', [0]) )
 
       if hasargv and PyConfig.IgnoreCommandLineOptions:
          sys.argv = argv
@@ -499,7 +502,7 @@ class ModuleFacade( types.ModuleType ):
     # must be called after gApplication creation:
       if '__IPYTHON__' in __builtins__:
        # IPython's FakeModule hack otherwise prevents usage of python from CINT
-         _root.gROOT.ProcessLine( 'TPython::Exec( "" )' )
+         _root.gROOT.ProcessLine( 'TPython::Exec( "" );' )
          sys.modules[ '__main__' ].__builtins__ = __builtins__
 
     # custom logon file (must be after creation of ROOT globals)

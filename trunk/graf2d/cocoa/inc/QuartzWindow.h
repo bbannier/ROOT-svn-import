@@ -14,6 +14,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+#import "CocoaGuiTypes.h"
 #import "X11Drawable.h"
 #import "GuiTypes.h"
 
@@ -23,6 +24,7 @@
 //                                            //
 ////////////////////////////////////////////////
 
+@class ROOTOpenGLView;
 @class QuartzImage;
 
 @interface QuartzWindow : NSWindow<X11Window, NSWindowDelegate>
@@ -31,9 +33,11 @@
 //I do declare all methods here, just for clarity.
 
 //Life-cycle: "ctor".
-- (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle 
+- (id) initWithContentRect : (NSRect) contentRect styleMask : (NSUInteger) windowStyle
        backing : (NSBackingStoreType) bufferingType defer : (BOOL) deferCreation
        windowAttributes : (const SetWindowAttributes_t *) attr;
+
+- (id) initWithGLView : (ROOTOpenGLView *) glView;
 
 - (void) dealloc;
 
@@ -74,17 +78,17 @@
 - (void) setX : (int) x Y : (int) y;
 
 //
-- (void) copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *) mask 
-         clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint;
+- (void) copy : (NSObject<X11Drawable> *) src area : (ROOT::MacOSX::X11::Rectangle) area withMask : (QuartzImage *) mask
+         clipOrigin : (ROOT::MacOSX::X11::Point) origin toPoint : (ROOT::MacOSX::X11::Point) dstPoint;
 
-- (unsigned char *) readColorBits : (Rectangle_t) area;
+- (unsigned char *) readColorBits : (ROOT::MacOSX::X11::Rectangle) area;
 
 
 //X11Window protocol.
 
 /////////////////////////////////////////////////////////////////
 //SetWindowAttributes_t/WindowAttributes_t
-
+@property (nonatomic, assign) unsigned long fBackgroundPixel;
 @property (nonatomic, readonly) int         fMapState;
 
 //End of SetWindowAttributes_t/WindowAttributes_t
@@ -155,9 +159,9 @@
 - (void)     setX : (int) x Y : (int) y width : (unsigned) w height : (unsigned) h;
 - (void)     setX : (int) x Y : (int) y;
 
-- (void)     copy : (NSObject<X11Drawable> *) src area : (Rectangle_t) area withMask : (QuartzImage *)mask 
-             clipOrigin : (Point_t) origin toPoint : (Point_t) dstPoint;
-- (unsigned char *) readColorBits : (Rectangle_t) area;
+- (void)     copy : (NSObject<X11Drawable> *) src area : (ROOT::MacOSX::X11::Rectangle) area withMask : (QuartzImage *)mask 
+             clipOrigin : (ROOT::MacOSX::X11::Point) origin toPoint : (ROOT::MacOSX::X11::Point) dstPoint;
+- (unsigned char *) readColorBits : (ROOT::MacOSX::X11::Rectangle) area;
 
 //X11Window protocol.
 
@@ -172,6 +176,7 @@
 @property (nonatomic, assign) unsigned long fBackgroundPixel;
 @property (nonatomic, retain) QuartzImage  *fBackgroundPixmap;//Hmm, image, pixmap ...
 @property (nonatomic, readonly) int         fMapState;
+@property (nonatomic, assign) BOOL          fOverrideRedirect;
 
 //End of SetWindowAttributes_t/WindowAttributes_t
 /////////////////////////////////////////////////////////////////

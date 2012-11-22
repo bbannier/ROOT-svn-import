@@ -17,6 +17,7 @@
 #include "llvm/Support/Path.h"
 
 #include <fstream>
+#include <cctype>
 
 using namespace clang;
 
@@ -178,6 +179,19 @@ namespace cling {
       return Result.kind != tok::unknown;
     }
 
+    bool LexComment(Token& Result) {
+      // only handles "//" for now.
+      Result.startToken();
+      LexBlankSpace();
+      Result.bufStart = curPos;
+      if (*curPos == '/' && curPos[1] == '/') {
+        Result.bufEnd = strchr(curPos + 2, '\n');
+        if (!Result.bufEnd) Result.bufEnd = bufferEnd;
+        return true;
+      }
+      return false;
+    }
+
   };
 
   MetaProcessor::MetaProcessor(Interpreter& interp) : m_Interp(interp) {
@@ -260,7 +274,7 @@ namespace cling {
    }
 
    if (!CmdLexer.LexIdent(Tok)) {
-     llvm::errs() << "Command name token expected. Try .help\n";
+     llvm::errs() << "Error in cling::MetaProcessor: command name token expected. Try .help\n";
      if (compRes) *compRes = Interpreter::kFailure;
      return false;
    }
@@ -277,21 +291,27 @@ namespace cling {
    }
    else if (CmdStartChar == 'L') {
      if (!CmdLexer.LexAnyString(Tok)) {
-       llvm::errs() <<  "Filename expected.\n";
+       llvm::errs() << "Error in cling::MetaProcessor: Filename expected.\n";
        if (compRes) *compRes = Interpreter::kFailure;
        return false;
      }
      //TODO: Check if the file exists and is readable.
-     if (!m_Interp.loadFile(llvm::StringRef(Tok.getBufStart(), Tok.getLength()))) {
-       llvm::errs() << "Load file failed.\n";
+     if (Interpreter::kSuccess !=
+         m_Interp.loadFile(llvm::StringRef(Tok.getBufStart(),
+                                           Tok.getLength()))) {
+       llvm::errs() << "Error in cling::MetaProcessor: load file failed.\n";
        if (compRes) *compRes = Interpreter::kFailure;
+     }
+     if (CmdLexer.LexComment(Tok)) {
+       // Forward comments to the interpreter; they might be expected-diags.
+       m_Interp.declare(llvm::StringRef(Tok.getBufStart(), Tok.getLength()).str());
      }
 
      return true;
    }
    else if (CmdStartChar == 'x' || CmdStartChar == 'X') {
      if (!CmdLexer.LexAnyString(Tok)) {
-       llvm::errs() << "Filename expected.\n";
+       llvm::errs() << "Error in cling::MetaProcessor: filename expected.\n";
        if (compRes) *compRes = Interpreter::kFailure;
        return false;
      }
@@ -299,41 +319,42 @@ namespace cling {
      llvm::StringRef args;
      // TODO: Check whether the file exists using the compilers header search.
      // if (!file.canRead()) {
-     //   llvm::errs() << "File doesn't exist or not readable.\n";
+     //   llvm::errs() << "cling::MetaProcessor: File doesn't exist or not readable.\n";
      //   return false;       
      // }
      CmdLexer.LexSpecialSymbol(Tok);
      if (Tok.getKind() == tok::l_paren) {
        // Good enough for now.
-       if (!CmdLexer.LexAnyString(Tok)) {
-         llvm::errs() << "Argument list expected.\n";
-         if (compRes) *compRes = Interpreter::kFailure;
-         return false;
+       if (CmdLexer.LexAnyString(Tok)) {
+          args = llvm::StringRef(Tok.getBufStart(), Tok.getLength());
        }
-       args = llvm::StringRef(Tok.getBufStart(), Tok.getLength());
        if (!CmdLexer.LexSpecialSymbol(Tok) && Tok.getKind() == tok::r_paren) {
-         llvm::errs() << "Closing parenthesis expected.\n";
+         llvm::errs() << "Error in cling::MetaProcessor: closing parenthesis expected.\n";
          if (compRes) *compRes = Interpreter::kFailure;
          return false;
        }
      }
+     if (CmdLexer.LexComment(Tok)) {
+       // forward comments to the interpreter; they might be expected-diags.
+       m_Interp.declare(llvm::StringRef(Tok.getBufStart(), Tok.getLength()).str());
+     }
      if (!executeFile(file.str(), args, result, compRes))
-       llvm::errs() << "Execute file failed.\n";
+       llvm::errs() << "Error in cling::MetaProcessor: execute file failed.\n";
      return true;     
    }
    else if (CmdStartChar == 'U') {
      // if (!CmdLexer.LexAnyString(Tok)) {
-     //   llvm::errs() << "Filename expected.\n";
+     //   llvm::errs() << "cling::MetaProcessor: Filename expected.\n";
      //   return false;
      // }
      // llvm::sys::Path file(llvm::StringRef(Tok.bufStart, Tok.getLength()));
      // TODO: Check whether the file exists using the compilers header search.
      // if (!file.canRead()) {
-     //   llvm::errs() << "File doesn't exist or not readable.\n";
+     //   llvm::errs() << "cling::MetaProcessor: File doesn't exist or not readable.\n";
      //   return false;       
      // } else
      // if (file.isDynamicLibrary()) {
-     //   llvm::errs() << "cannot unload shared libraries yet!.\n";
+     //   llvm::errs() << "Error in cling::MetaProcessor: cannot unload shared libraries yet!.\n";
      //   return false;
      // }
      // TODO: Later comes more fine-grained unloading. For now just:
@@ -349,7 +370,7 @@ namespace cling {
        llvm::sys::Path path(llvm::StringRef(Tok.getBufStart(), Tok.getLength()));
        // TODO: Check whether the file exists using the compilers header search.
        // if (!path.canRead()) {
-       //   llvm::errs() << "Path doesn't exist or not readable.\n";
+       //   llvm::errs() << "Error in cling::MetaProcessor: path doesn't exist or not readable.\n";
        //   return false;       
        // }
        m_Interp.AddIncludePath(path.str());
@@ -371,7 +392,7 @@ namespace cling {
        else if (Tok.getKind() == tok::booltrue)
          m_Interp.enablePrintAST(true);
        else {
-         llvm::errs() << "Boolean value expected.\n";
+         llvm::errs() << "Error in cling::MetaProcessor: boolean value expected.\n";
          if (compRes) *compRes = Interpreter::kFailure;
          return false;
        }
@@ -390,7 +411,7 @@ namespace cling {
        else if (Tok.getKind() == tok::booltrue)
          m_Options.RawInput = true;
        else {
-         llvm::errs() << "Boolean value expected.\n";
+         llvm::errs() << "Error in cling::MetaProcessor: boolean value expected.\n";
          if (compRes) *compRes = Interpreter::kFailure;
          return false;
        }
@@ -409,7 +430,7 @@ namespace cling {
        else if (Tok.getKind() == tok::booltrue)
          m_Interp.enableDynamicLookup(true);
        else {
-         llvm::errs() << "Boolean value expected.\n";
+         llvm::errs() << "Error in cling::MetaProcessor: boolean value expected.\n";
          if (compRes) *compRes = Interpreter::kFailure;
          return false;
        }
@@ -420,8 +441,18 @@ namespace cling {
      PrintCommandHelp();
      return true;
    }
-   else if (Command.equals("file")) {
+   else if (Command.equals("filesEx")) {
      PrintFileStats();
+     return true;
+   }
+   else if (Command.equals("files")) {
+     typedef llvm::SmallVectorImpl<Interpreter::LoadedFileInfo*> LoadedFiles_t;
+     const LoadedFiles_t& LoadedFiles = m_Interp.getLoadedFiles();
+     for (LoadedFiles_t::const_iterator I = LoadedFiles.begin(),
+            E = LoadedFiles.end(); I != E; ++I) {
+       char cType[] = { 'S', 'D', 'B' };
+       llvm::outs() << '[' << cType[(*I)->getType()] << "] " << (*I)->getName() << '\n';
+     }
      return true;
    }
 
@@ -485,10 +516,17 @@ namespace cling {
     Interpreter::CompilationResult interpRes = m_Interp.loadFile(file);
     if (interpRes == Interpreter::kSuccess) {
       std::string expression = pairFuncExt.first.str() + "(" + args.str() + ")";
+      m_CurrentlyExecutingFile = file;
+      bool topmost = !m_TopExecutingFile.data();
+      if (topmost)
+        m_TopExecutingFile = m_CurrentlyExecutingFile;
       if (result)
         interpRes = m_Interp.evaluate(expression, *result);
       else
         interpRes = m_Interp.execute(expression);
+      m_CurrentlyExecutingFile = llvm::StringRef();
+      if (topmost)
+        m_TopExecutingFile = llvm::StringRef();
     }
     if (compRes) *compRes = interpRes;
     return (interpRes != Interpreter::kFailure);
@@ -498,46 +536,75 @@ namespace cling {
   MetaProcessor::readInputFromFile(llvm::StringRef filename,
                                  StoredValueRef* result /* = 0 */,
                                  bool ignoreOutmostBlock /*=false*/) {
-    static const char whitespace[] = " \t\r\n";
-    Interpreter::CompilationResult ret = Interpreter::kSuccess;
-    std::vector<std::string> lines;
-    std::ifstream in(filename.str().c_str());
-    std::string line;
-    while (in) {
-      std::getline(in, line);
-      if (line.find_first_not_of(whitespace) != std::string::npos) {
-        // collect all non-whitespace lines:
-        lines.push_back(line);
-      }
-    }
-    if (ignoreOutmostBlock && !lines.empty()) {
-      std::string::size_type posNonWS = lines[0].find_first_not_of(whitespace);
-      if (posNonWS != std::string::npos) {
-        if (lines[0][posNonWS] == '{') {
-          // hide the curly brace:
-          lines[0][posNonWS] = ' ';
-          // and the matching closing '}'
-          posNonWS = lines[lines.size() - 1].find_last_not_of(whitespace);
-          if (posNonWS != std::string::npos) {
-            lines[lines.size() - 1][posNonWS] = ' ';
-          } else {
-            llvm::errs() << "Error in Interpreter::readInputFromFile(): missing closing '}'!\n";
-            // be confident, just go on.
-           }
+
+    {
+      // check that it's not binary:
+      std::ifstream in(filename.str().c_str(), std::ios::in | std::ios::binary);
+      char magic[1024] = {0};
+      in.read(magic, sizeof(magic));
+      size_t readMagic = in.gcount();
+      if (readMagic >= 4) {
+        llvm::sys::LLVMFileType fileType
+          = llvm::sys::IdentifyFileType(magic, 4);
+        if (fileType != llvm::sys::Unknown_FileType) {
+          llvm::errs() << "Error in cling::MetaProcessor: "
+            "cannot read input from a binary file!\n";
+          return Interpreter::kFailure;
+        }
+        unsigned printable = 0;
+        for (size_t i = 0; i < readMagic; ++i)
+          if (isprint(magic[i]))
+            ++printable;
+        if (10 * printable <  5 * readMagic) {
+          // 50% printable for ASCII files should be a safe guess.
+          llvm::errs() << "Error in cling::MetaProcessor: "
+            "cannot read input from a (likely) binary file!\n" << printable;
+          return Interpreter::kFailure;
         }
       }
     }
-    for (std::vector<std::string>::const_iterator i = lines.begin(),
-           e = lines.end(); i != e; ++i) {
-      Interpreter::CompilationResult resLine = Interpreter::kSuccess;
-      process(i->c_str(), result, &resLine);
-      if (ret != Interpreter::kFailure
-          && resLine != Interpreter::kSuccess) {
-         // ret == kFailure is immutable ("wins"),
-         // resLine == success is irrelevant.
-        ret = resLine;
-      }
-    }
+
+    std::ifstream in(filename.str().c_str());
+    in.seekg(0, std::ios::end);
+    size_t size = in.tellg();
+    std::string content(size, ' ');
+    in.seekg(0);
+    in.read(&content[0], size); 
+
+    if (ignoreOutmostBlock && !content.empty()) {
+      static const char whitespace[] = " \t\r\n";
+      std::string::size_type posNonWS = content.find_first_not_of(whitespace);
+      if (posNonWS != std::string::npos) {
+        if (content[posNonWS] == '{') {
+          // hide the curly brace:
+          content[posNonWS] = ' ';
+          // and the matching closing '}'
+          posNonWS = content.find_last_not_of(whitespace);
+          if (posNonWS != std::string::npos) {
+            if (content[posNonWS] == ';' && content[posNonWS-1] == '}') {
+              content[posNonWS--] = ' '; // replace ';' and enter next if
+            }
+            if (content[posNonWS] == '}') {
+              content[posNonWS] = ' '; // replace '}'
+            } else {
+              llvm::errs() << "Error in cling::MetaProcessor: missing closing '}'!\n";
+              // be confident, just go on.
+            }
+          } // find '}'
+        } // have '{'
+      } // have non-whitespace
+    } // ignore outmost block
+
+    std::string strFilename(filename.str());
+    m_CurrentlyExecutingFile = strFilename;
+    bool topmost = !m_TopExecutingFile.data();
+    if (topmost)
+      m_TopExecutingFile = m_CurrentlyExecutingFile;
+    Interpreter::CompilationResult ret = Interpreter::kSuccess;
+    process(content.c_str(), result, &ret);
+    m_CurrentlyExecutingFile = llvm::StringRef();
+    if (topmost)
+      m_TopExecutingFile = llvm::StringRef();
     return ret;
   }
 

@@ -23,9 +23,6 @@
 #include "TMethodArg.h"
 #include "TError.h"
 
-// CINT
-#include "Api.h"
-
 // Standard
 #include <stdlib.h>
 #include <stdio.h>
@@ -596,11 +593,14 @@ PyROOT::Utility::EDataType PyROOT::Utility::EffectiveType( const std::string& na
 // Determine the actual type (to be used for types that are not classes).
    EDataType effType = kOther;
 
-   G__TypeInfo ti( name.c_str() );
-   if ( ti.Property() & G__BIT_ISENUM )
-      return EDataType( (int) kEnum );
+// TODO: figure out enum for Cling
+/*   if ( ti.Property() & G__BIT_ISENUM )
+     return EDataType( (int) kEnum ); */
 
-   std::string shortName = TClassEdit::ShortType( ti.TrueName(), 1 );
+   std::string fullType = TClassEdit::CleanType( name.c_str() );
+   std::string resolvedType = TClassEdit::ResolveTypedef( fullType.c_str(), true );
+
+   std::string shortName = TClassEdit::ShortType( resolvedType.c_str(), 1 );
 
    const std::string& cpd = Compound( name );
    const int mask = cpd == "*" ? kPtrMask : 0;
@@ -684,19 +684,16 @@ const std::string PyROOT::Utility::ClassName( PyObject* pyobj )
 }
 
 //____________________________________________________________________________
-const std::string PyROOT::Utility::ResolveTypedef( const std::string& typeName )
+const std::string PyROOT::Utility::ResolveTypedef( const std::string& tname )
 {
 // Helper; captures common code needed to find the real class name underlying
 // a typedef (if any).
-   G__TypeInfo ti( typeName.c_str() );
-   if ( ! ti.IsValid() )
-      return typeName;
-
-   return ti.TrueName();
+   std::string tclean = TClassEdit::CleanType( tname.c_str() );
+   return TClassEdit::ResolveTypedef( tclean.c_str(), true );
 }
 
 //____________________________________________________________________________
-Long_t PyROOT::Utility::GetObjectOffset( TClass* clCurrent, TClass* clDesired, void* address, Bool_t downcast ) {
+Long_t PyROOT::Utility::GetObjectOffset( TClass* clCurrent, TClass* clDesired, void* /* address */, Bool_t downcast ) {
 // root/meta base class offset fails in the case of virtual inheritance
    Long_t offset = 0;
 
@@ -713,9 +710,14 @@ Long_t PyROOT::Utility::GetObjectOffset( TClass* clCurrent, TClass* clDesired, v
 }
 
 //____________________________________________________________________________
-void PyROOT::Utility::ErrMsgCallback( char* msg )
+void PyROOT::Utility::ErrMsgCallback( char* /* msg */ )
 {
 // Translate CINT error/warning into python equivalent.
+
+// TODO (Cling): this function is probably not going to be used anymore and
+// may need removing at some point for cleanup
+
+/* Commented out for Cling ---
 
 // ignore the "*** Interpreter error recovered ***" message
    if ( strstr( msg, "error recovered" ) )
@@ -780,6 +782,8 @@ void PyROOT::Utility::ErrMsgCallback( char* msg )
       fprintf( stdout, "Note: (file \"%s\", line %d) %s\n", errFile, errLine, p+6 );
    else   // unknown: printing it to screen is the safest action
       fprintf( stdout, "Message: (file \"%s\", line %d) %s\n", errFile, errLine, msg );
+
+ --- Commented out for Cling */
 }
 
 //____________________________________________________________________________
@@ -807,6 +811,7 @@ void PyROOT::Utility::ErrMsgHandler( int level, Bool_t abort, const char* locati
 
 
 //____________________________________________________________________________
+/* TODO: write Cling equivalent
 Long_t PyROOT::Utility::InstallMethod( G__ClassInfo* scope, PyObject* callback, 
    const std::string& mtName, const char* rtype, const char* signature,
    void* func, Int_t npar, Long_t extra )
@@ -873,6 +878,7 @@ Long_t PyROOT::Utility::InstallMethod( G__ClassInfo* scope, PyObject* callback,
 // hard to check result ... assume ok
    return s_fid;
 }
+*/
 
 //____________________________________________________________________________
 PyObject* PyROOT::Utility::GetInstalledMethod( int tagnum, Long_t* extra )

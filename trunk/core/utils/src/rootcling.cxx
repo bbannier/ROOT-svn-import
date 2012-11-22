@@ -159,16 +159,16 @@
 // arguments in the compiled version of rootcint.                       //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef __CINT__
-
 #include "RConfigure.h"
 #include "RConfig.h"
 #include "Rtypes.h"
+
 #include <iostream>
 #include <memory>
 #include <vector>
+
 #include "cintdictversion.h"
-#include "FastAllocString.h"
+
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/LookupHelper.h"
 #include "cling/Interpreter/Value.h"
@@ -194,20 +194,6 @@
 #include "cygpath.h"
 #endif
 
-#ifdef fgets // in G__ci.h
-#  undef fgets
-#  undef printf
-#  undef fprintf
-#  undef fputc
-#  undef putc
-#  undef putchar
-#  undef fputs
-#  undef puts
-#  undef fgets
-#  undef gets
-#  undef system
-#endif
-
 #ifdef ROOTBUILD
 # define ROOTBUILDVAL true
 #else
@@ -224,13 +210,6 @@ template <typename T> struct R__IsPointer { enum { kVal = 0 }; };
 
 template <typename T> struct R__IsPointer<T*> { enum { kVal = 1 }; };
 
-extern "C" {
-   void  G__setothermain(int othermain);
-   int  G__setglobalcomp(int globalcomp);
-   int   G__main(int argc, char **argv);
-   void  G__exit(int rtn);
-   struct G__includepath *G__getipathentry();
-}
 const char *ShortTypeName(const char *typeDesc);
 
 const char *help =
@@ -340,10 +319,6 @@ const char *help =
 "   LinkDef.h, Linkdef.h or linkdef.h, i.e. NA49_LinkDef.h is fine,\n"
 "   just like linkdef1.h. Linkdef.h is case sensitive.\n";
 
-#else
-#include <ertti.h>
-#endif
-
 #ifdef _WIN32
 #ifdef system
 #undef system
@@ -381,6 +356,10 @@ using namespace ROOT;
 #include "SelectionRules.h"
 #include "Scanner.h"
 
+enum {
+   TClassTable__kHasCustomStreamerMember = 0x10 // See TClassTable.h
+};
+
 cling::Interpreter *gInterp = 0;
 
 // NOTE: This belongs in RConversionRules.cxx but can only be moved there if it is not shared with rootcint
@@ -406,14 +385,16 @@ cling::Interpreter *gInterp = 0;
 
          typenameStr.clear();
          dims.clear();
-         if (field_iter->getType()->isConstantArrayType()) {
-            const clang::ConstantArrayType *arrayType = llvm::dyn_cast<clang::ConstantArrayType>(field_iter->getType().getTypePtr());
+         clang::QualType fieldType(field_iter->getType());
+         if (fieldType->isConstantArrayType()) {
+            const clang::ConstantArrayType *arrayType = llvm::dyn_cast<clang::ConstantArrayType>(fieldType.getTypePtr());
             while (arrayType) {
                dims << "[" << arrayType->getSize().getLimitedValue() << "]";
+               fieldType = arrayType->getElementType();
                arrayType = llvm::dyn_cast<clang::ConstantArrayType>(arrayType->getArrayElementTypeNoTypeQual());
             }
          }
-         R__GetQualifiedName(typenameStr, field_iter->getType(), *(*field_iter));
+         R__GetQualifiedName(typenameStr, fieldType, *(*field_iter));
 
          nameType[field_iter->getName().str()] = TSchemaType(typenameStr.c_str(),dims.str().c_str());
       }
@@ -492,10 +473,9 @@ static std::string R__GetRelocatableHeaderName(const char *header, const std::st
 using namespace ROOT;
 
 std::ostream* dictSrcOut=&std::cout;
+std::ostream* dictHdrOut=&std::cout;
 
 bool gNeedCollectionProxy = false;
-
-char *StrDup(const char *str);
 
 class RConstructorType {
    std::string           fArgTypeName;
@@ -1245,121 +1225,18 @@ bool ParsePragmaLine(const std::string& line, const char* expectedTokens[],
    return true;
 }
 
-namespace {
-   class R__tmpnamElement {
-   public:
-      R__tmpnamElement() : fTmpnam() {}
-      R__tmpnamElement(const std::string& tmpnam): fTmpnam(tmpnam) {}
-      ~R__tmpnamElement() { unlink(fTmpnam.c_str()); }
-   private:
-      string fTmpnam;
-   };
-}
-
-#ifndef R__USE_MKSTEMP
-# if defined(R__GLIBC) || defined(__FreeBSD__) || \
-    (defined(__APPLE__) && defined(MAC_OS_X_VERSION_10_5))
-#  define R__USE_MKSTEMP 1
-# endif
-#endif
-
-//______________________________________________________________________________
-string R__tmpnam()
-{
-   // return a unique temporary file name as defined by tmpnam
-
-   static char filename[L_tmpnam+2];
-   static string tmpdir;
-   static bool initialized = false;
-   static list<R__tmpnamElement> tmpnamList;
-
-
-   if (!initialized) {
-#if R__USE_MKSTEMP
-      // Unlike tmpnam mkstemp does not prepend anything
-      // to its result but must get the pattern as a
-      // full pathname.
-      tmpdir = std::string(P_tmpdir) + "/";
-#endif
-
-      if (strlen(P_tmpdir) <= 2) {
-         // tmpnam (see man page) prepends the value of the
-         // P_tmpdir (defined in stdio.h) to its result.
-         // If P_tmpdir is less that 2 character it is likely to
-         // just be '/' or '\\' and we do not want to write in
-         // the root directory, so let's add the temp directory.
-         char *tmp;
-         if ((tmp = getenv("CINTTMPDIR"))) tmpdir = tmp;
-         else if ((tmp=getenv("TEMP")))    tmpdir = tmp;
-         else if ((tmp=getenv("TMP")))     tmpdir = tmp;
-         else tmpdir = ".";
-         tmpdir += '/';
-      }
-      initialized = true;
-   }
-
-#if R__USE_MKSTEMP
-   static const char *radix = "XXXXXX";
-   static const char *prefix = "rootcint_";
-   if (tmpdir.length() + strlen(radix) + strlen(prefix) + 2 > L_tmpnam + 2) {
-      // too long
-      std::cerr << "Temporary file name too long! Trying with /tmp..." << std::endl;
-      tmpdir = "/tmp/";
-   }
-   strlcpy(filename, tmpdir.c_str(),L_tmpnam+2);
-   strlcat(filename, prefix,L_tmpnam+2);
-   strlcat(filename, radix,L_tmpnam+2);
-   mode_t old_umask = umask(077); // be restrictive for mkstemp()
-   int temp_fileno = mkstemp(filename);/*mkstemp not only generate file name but also opens the file*/
-   umask(old_umask);
-   if (temp_fileno >= 0) {
-      close(temp_fileno);
-   }
-   remove(filename);
-   tmpnamList.push_back(R__tmpnamElement(filename));
-   return filename;
-
-#else
-   tmpnam(filename);
-
-   string result(tmpdir);
-   result += filename;
-   result += "_rootcint";
-   tmpnamList.push_back(R__tmpnamElement(result));
-   return result;
-#endif
-}
-
-#ifdef _WIN32
-//______________________________________________________________________________
-// defined in newlink.c
-extern "C" FILE *FOpenAndSleep(const char *filename, const char *mode);
-
-# ifdef fopen
-#  undef fopen
-# endif
-# define fopen(A,B) FOpenAndSleep((A),(B))
-#endif
-
-
 //______________________________________________________________________________
 typedef map<string,string> Recmap_t;
 Recmap_t gAutoloads;
 string gLiblistPrefix;
 string gLibsNeeded;
 
-int AutoLoadCallbackImpl(char *c, char *)
+void RecordDeclCallback(const char *c)
 {
    string need( gAutoloads[c] );
    if (need.length() && gLibsNeeded.find(need)==string::npos) {
       gLibsNeeded += " " + need;
    }
-   return -1; // We did not actually 'succeed' in loading the definition.
-}
-
-extern "C" int AutoLoadCallback(char *c, char *l)
-{
-   return AutoLoadCallbackImpl(c,l);
 }
 
 void LoadLibraryMap()
@@ -1430,13 +1307,6 @@ void LoadLibraryMap()
                            break;
                         } else {
                            gAutoloads[base] = ""; // We never load namespaces on their own.
-                           if (sbuffer < base.size()+20) {
-                              delete [] buffer;
-                              sbuffer = base.size()+20;
-                              buffer = new char[sbuffer];
-                           }
-                           strlcpy(buffer,base.c_str(),sbuffer);
-                           G__set_class_autoloading_table(buffer, (char*)""); // We never load namespaces on their own.
                         }
                         ++k;
                      }
@@ -1458,29 +1328,11 @@ void LoadLibraryMap()
                buffer = new char[sbuffer];
             }
             strlcpy(buffer,classname.c_str(),sbuffer);
-            G__set_class_autoloading_table(buffer,(char*)line.c_str());
          }
       }
       file.close();
    }
 }
-
-extern "C" {
-   typedef void G__parse_hook_t ();
-   G__parse_hook_t* G__set_beforeparse_hook (G__parse_hook_t* hook);
-}
-
-//______________________________________________________________________________
-void BeforeParseInit()
-{
-   // If needed initialize the autoloading hook
-   if (gLiblistPrefix.length()) {
-      G__set_class_autoloading_table((char*)"ROOT", (char*)"libCore.so");
-      LoadLibraryMap();
-      G__set_class_autoloading_callback(&AutoLoadCallback);
-   }
-}
-
 
 //______________________________________________________________________________
 bool CheckInputOperator(const char *what, const char *proto, const string &fullname, const clang::RecordDecl *cl)
@@ -1488,10 +1340,17 @@ bool CheckInputOperator(const char *what, const char *proto, const string &fulln
    // Check if the specificed operator (what) has been properly declared if the user has
    // resquested a custom version.
 
+ 
    const clang::FunctionDecl *method = R__GetFuncWithProto(llvm::dyn_cast<clang::Decl>(cl->getDeclContext()), what, proto);
+   if (!method) {
+      // This intended to find the global scope.
+      clang::TranslationUnitDecl *TU =
+         cl->getASTContext().getTranslationUnitDecl();
+      method = R__GetFuncWithProto(TU, what, proto);
+   }
    bool has_input_error = false;
    if (method != 0 && (method->getAccess() == clang::AS_public || method->getAccess() == clang::AS_none) ) {
-      std::string filename = R__GetFileName(cl);
+      std::string filename = R__GetFileName(method);
       if (strstr(filename.c_str(),"TBuffer.h")!=0 ||
           strstr(filename.c_str(),"Rtypes.h" )!=0) {
 
@@ -1502,11 +1361,17 @@ bool CheckInputOperator(const char *what, const char *proto, const string &fulln
    }
    if (has_input_error) {
       // We don't want to generate duplicated error messages in several dictionaries (when generating temporaries)
+      const char *maybeconst = "";
+      const char *mayberef = "&";
+      if (what[strlen(what)-1]=='<') {
+         maybeconst = "const ";
+         mayberef = "";
+      }
       Error(0,
             "in this version of ROOT, the option '!' used in a linkdef file\n"
             "       implies the actual existence of customized operators.\n"
             "       The following declaration is now required:\n"
-            "   TBuffer &%s(TBuffer &,%s *&);\n",what,fullname.c_str());
+            "   TBuffer &%s(TBuffer &,%s%s *%s);\n",what,maybeconst,fullname.c_str(),mayberef);
    }
    return has_input_error;
  
@@ -1930,9 +1795,10 @@ bool CheckConstructor(const clang::CXXRecordDecl *cl, RConstructorType &ioctorty
 }
 
 //______________________________________________________________________________
-bool HasDefaultConstructor(const clang::CXXRecordDecl *cl, string *arg)
+bool HasIOConstructor(const clang::CXXRecordDecl *cl, string *arg)
 {
    // return true if we can find an constructor calleable without any arguments
+   // or with one the IOCtor special types.
 
    bool result = false;
 
@@ -2199,7 +2065,7 @@ void WriteAuxFunctions(const RScanner::AnnotatedRecordDecl &cl)
    (*dictSrcOut) << "namespace ROOT {" << std::endl;
 
    string args;
-   if (HasDefaultConstructor(clxx,&args)) {
+   if (HasIOConstructor(clxx,&args)) {
       // write the constructor wrapper only for concrete classes
       (*dictSrcOut) << "   // Wrappers around operator new" << std::endl
                     << "   static void *new_" << mappedname.c_str() << "(void *p) {" << std::endl
@@ -2280,11 +2146,16 @@ void WriteAuxFunctions(const RScanner::AnnotatedRecordDecl &cl)
 //______________________________________________________________________________
 int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &qti, const char *R__t,int rwmode,const char *tcl=0)
 {
+
    static const clang::CXXRecordDecl *TObject_decl = R__ScopeSearch("TObject");
    enum {
-      R__BIT_ISTOBJECT   = 0x10000000,
-      R__BIT_HASSTREAMER = 0x20000000,
-      kBIT_ISSTRING    = 0x40000000
+      kBIT_ISTOBJECT     = 0x10000000,
+      kBIT_HASSTREAMER   = 0x20000000,
+      kBIT_ISSTRING      = 0x40000000,
+      
+      kBIT_ISPOINTER     = 0x00001000,
+      kBIT_ISFUNDAMENTAL = 0x00000020,
+      kBIT_ISENUM        = 0x00000008
    };
 
    const clang::Type &ti( * qti.getTypePtr() );
@@ -2303,13 +2174,13 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
  
    long kase = 0;   
 
-   if (ti.isPointerType())           kase |= G__BIT_ISPOINTER;
-   if (rawtype->isFundamentalType()) kase |= G__BIT_ISFUNDAMENTAL;
-   if (rawtype->isEnumeralType())    kase |= G__BIT_ISENUM;
+   if (ti.isPointerType())           kase |= kBIT_ISPOINTER;
+   if (rawtype->isFundamentalType()) kase |= kBIT_ISFUNDAMENTAL;
+   if (rawtype->isEnumeralType())    kase |= kBIT_ISENUM;
 
 
-   if (isTObj)              kase |= R__BIT_ISTOBJECT;
-   if (isStre)              kase |= R__BIT_HASSTREAMER;
+   if (isTObj)              kase |= kBIT_ISTOBJECT;
+   if (isStre)              kase |= kBIT_HASSTREAMER;
    if (tiName == "string")  kase |= kBIT_ISSTRING;
    if (tiName == "string*") kase |= kBIT_ISSTRING;
    
@@ -2324,17 +2195,17 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
       if (R__t) (*dictSrcOut) << "            " << tiName << " " << R__t << ";" << std::endl;
       switch (kase) {
 
-      case G__BIT_ISFUNDAMENTAL:
+      case kBIT_ISFUNDAMENTAL:
          if (!R__t)  return 0;
          (*dictSrcOut) << "            R__b >> " << R__t << ";" << std::endl;
          break;
 
-      case G__BIT_ISPOINTER|R__BIT_ISTOBJECT|R__BIT_HASSTREAMER:
+      case kBIT_ISPOINTER|kBIT_ISTOBJECT|kBIT_HASSTREAMER:
          if (!R__t)  return 1;
          (*dictSrcOut) << "            " << R__t << " = (" << tiName << ")R__b.ReadObjectAny(" << tcl << ");"  << std::endl;
          break;
 
-      case G__BIT_ISENUM:
+      case kBIT_ISENUM:
          if (!R__t)  return 0;
          //             fprintf(fp, "            R__b >> (Int_t&)%s;\n",R__t);
          // On some platforms enums and not 'Int_t' and casting to a reference to Int_t
@@ -2345,13 +2216,13 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
                        << "            " << R__t << " = static_cast<" << tiName << ">(readtemp);" << std::endl;
          break;
 
-      case R__BIT_HASSTREAMER:
-      case R__BIT_HASSTREAMER|R__BIT_ISTOBJECT:
+      case kBIT_HASSTREAMER:
+      case kBIT_HASSTREAMER|kBIT_ISTOBJECT:
          if (!R__t)  return 0;
          (*dictSrcOut) << "            " << R__t << ".Streamer(R__b);" << std::endl;
          break;
 
-      case R__BIT_HASSTREAMER|G__BIT_ISPOINTER:
+      case kBIT_HASSTREAMER|kBIT_ISPOINTER:
          if (!R__t)  return 1;
          //fprintf(fp, "            fprintf(stderr,\"info is %%p %%d\\n\",R__b.GetInfo(),R__b.GetInfo()?R__b.GetInfo()->GetOldVersion():-1);\n");
          (*dictSrcOut) << "            if (R__b.GetInfo() && R__b.GetInfo()->GetOldVersion()<=3) {" << std::endl;
@@ -2373,14 +2244,14 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
                        << "             " << R__t << " = R__str.Data();}" << std::endl;
          break;
 
-      case kBIT_ISSTRING|G__BIT_ISPOINTER:
+      case kBIT_ISSTRING|kBIT_ISPOINTER:
          if (!R__t)  return 0;
          (*dictSrcOut) << "            {TString R__str;"  << std::endl
                        << "             R__str.Streamer(R__b);" << std::endl
                        << "             " << R__t << " = new string(R__str.Data());}" << std::endl;
          break;
 
-      case G__BIT_ISPOINTER:
+      case kBIT_ISPOINTER:
          if (!R__t)  return 1;
          (*dictSrcOut) << "            " << R__t << " = (" << tiName << ")R__b.ReadObjectAny(" << tcl << ");" << std::endl;
          break;
@@ -2395,25 +2266,25 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
 
       switch (kase) {
 
-      case G__BIT_ISFUNDAMENTAL:
-      case G__BIT_ISPOINTER|R__BIT_ISTOBJECT|R__BIT_HASSTREAMER:
+      case kBIT_ISFUNDAMENTAL:
+      case kBIT_ISPOINTER|kBIT_ISTOBJECT|kBIT_HASSTREAMER:
          if (!R__t)  return 0;
          (*dictSrcOut) << "            R__b << " << R__t << ";" << std::endl;
          break;
 
-      case G__BIT_ISENUM:
+      case kBIT_ISENUM:
          if (!R__t)  return 0;
          (*dictSrcOut) << "            {  void *ptr_enum = (void*)&" << R__t << ";\n";
          (*dictSrcOut) << "               R__b >> *reinterpret_cast<Int_t*>(ptr_enum); }" << std::endl;
          break;
 
-      case R__BIT_HASSTREAMER:
-      case R__BIT_HASSTREAMER|R__BIT_ISTOBJECT:
+      case kBIT_HASSTREAMER:
+      case kBIT_HASSTREAMER|kBIT_ISTOBJECT:
          if (!R__t)  return 0;
          (*dictSrcOut) << "            ((" << objType << "&)" << R__t << ").Streamer(R__b);" << std::endl;
          break;
 
-      case R__BIT_HASSTREAMER|G__BIT_ISPOINTER:
+      case kBIT_HASSTREAMER|kBIT_ISPOINTER:
          if (!R__t)  return 1;
          (*dictSrcOut) << "            R__b.WriteObjectAny(" << R__t << "," << tcl << ");" << std::endl;
          break;
@@ -2424,13 +2295,13 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
                        << "             R__str.Streamer(R__b);};" << std::endl;
          break;
 
-      case kBIT_ISSTRING|G__BIT_ISPOINTER:
+      case kBIT_ISSTRING|kBIT_ISPOINTER:
          if (!R__t)  return 0;
          (*dictSrcOut) << "            {TString R__str(" << R__t << "->c_str());" << std::endl
                        << "             R__str.Streamer(R__b);}" << std::endl;
          break;
 
-      case G__BIT_ISPOINTER:
+      case kBIT_ISPOINTER:
          if (!R__t)  return 1;
          (*dictSrcOut) << "            R__b.WriteObjectAny(" << R__t << "," << tcl <<");" << std::endl;
          break;
@@ -2459,7 +2330,8 @@ int STLContainerStreamer(const clang::FieldDecl &m, int rwmode, const cling::Int
    if (stltype!=0) {
       //        fprintf(stderr,"Add %s (%d) which is also %s\n",
       //                m.Type()->Name(), stltype, m.Type()->TrueName() );
-      RStl::Instance().GenerateTClassFor(m.getType(),interp,normCtxt);
+      clang::QualType utype(R__GetUnderlyingType(m.getType()),0);      
+      RStl::Instance().GenerateTClassFor(utype,interp,normCtxt);
    }
    if (stltype<=0) return 0;
    if (clxx->getTemplateSpecializationKind() == clang::TSK_Undeclared) return 0;
@@ -2468,10 +2340,6 @@ int STLContainerStreamer(const clang::FieldDecl &m, int rwmode, const cling::Int
    if (!tmplt_specialization) return 0;
 
 
-   // string stlType( RStl::DropDefaultArg( m.Type()->Name() ) );
-   //    string stlType( TClassEdit::ShortType(m.Type()->Name(),
-   //                                          TClassEdit::kDropTrailStar|
-   //                                          TClassEdit::kDropStlDefault) );
    string stlType( ShortTypeName(mTypename.c_str()) );
    string stlName;
    stlName = ShortTypeName(m.getName().str().c_str());
@@ -2895,7 +2763,7 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input, const cling::
    if (!ClassInfo__HasMethod(cl,"Dictionary") || R__IsTemplate(*cl))
       (*dictSrcOut) << "   static void " << mappedname.c_str() << "_Dictionary();" << std::endl;
 
-   if (HasDefaultConstructor(cl,&args)) {
+   if (HasIOConstructor(cl,&args)) {
       (*dictSrcOut) << "   static void *new_" << mappedname.c_str() << "(void *p = 0);" << std::endl;
       if (args.size()==0 && NeedDestructor(cl))
          (*dictSrcOut) << "   static void *newArray_" << mappedname.c_str()
@@ -3063,11 +2931,11 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input, const cling::
 
    Int_t rootflag = cl_input.RootFlag();
    if (HasCustomStreamerMemberFunction(cl_input)) {
-      rootflag = rootflag | G__HASCUSTOM_STREAMERMEMBER;
+      rootflag = rootflag | TClassTable__kHasCustomStreamerMember;
    }
    (*dictSrcOut) << "isa_proxy, " << rootflag << "," << std::endl
                  << "                  sizeof(" << csymbol.c_str() << ") );" << std::endl;
-   if (HasDefaultConstructor(cl,&args)) {
+   if (HasIOConstructor(cl,&args)) {
       (*dictSrcOut) << "      instance.SetNew(&new_" << mappedname.c_str() << ");" << std::endl;
       if (args.size()==0 && NeedDestructor(cl))
          (*dictSrcOut) << "      instance.SetNewArray(&newArray_" << mappedname.c_str() << ");" << std::endl;
@@ -3852,21 +3720,7 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Inte
    {
       int k = IsSTLContainer(*iter);
       if (k!=0) {
-         clang::SourceManager& sourceManager = clxx->getASTContext().getSourceManager();
-         size_t len = sourceManager.getCharacterData(iter->getLocEnd()) - sourceManager.getCharacterData(iter->getLocStart());
-         llvm::StringRef baseAsWritten( sourceManager.getCharacterData(iter->getLocStart()), len+1 );
-         // And we need to skip the access specifier and white space.
-         size_t offset = 0;
-         switch (iter->getAccessSpecifierAsWritten()) {
-         case clang::AS_public   : offset += strlen("public"); break;
-         case clang::AS_protected: offset += strlen("protected"); break;
-         case clang::AS_private  : offset += strlen("private"); break;
-         case clang::AS_none     : break;
-         }
-         while( offset<=len && ( (baseAsWritten.data()+offset)[0] == ':' || isspace((baseAsWritten.data()+offset)[0]) ) ) {
-            ++offset;
-         }
-         RStl::Instance().GenerateTClassFor( baseAsWritten.str().c_str()+offset, iter->getType()->getAsCXXRecordDecl (), interp, normCtxt);
+         RStl::Instance().GenerateTClassFor( iter->getType(), interp, normCtxt);
       }
    }
 
@@ -3892,7 +3746,8 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Inte
       if (k!=0) {
          //          fprintf(stderr,"Add %s which is also",m.Type()->Name());
          //          fprintf(stderr," %s\n",R__TrueName(**field_iter) );
-         RStl::Instance().GenerateTClassFor(field_iter->getType(), interp, normCtxt);
+         clang::QualType utype(R__GetUnderlyingType(field_iter->getType()),0);
+         RStl::Instance().GenerateTClassFor(utype, interp, normCtxt);
       }      
    }
 
@@ -3920,10 +3775,10 @@ void WriteBodyShowMembers(const RScanner::AnnotatedRecordDecl &cl, bool outside)
       getClass += csymbol + "*)0x0)->GetClass()";
    }
    if (outside) {
-      (*dictSrcOut) << "   ((TCintWithCling*)gInterpreter)->InspectMembers(R__insp, obj, "
+      (*dictSrcOut) << "   gInterpreter->InspectMembers(R__insp, obj, "
                     << getClass << ");" << std::endl;
    } else {
-      (*dictSrcOut) << "   ((TCintWithCling*)gInterpreter)->InspectMembers(R__insp, this, "
+      (*dictSrcOut) << "   gInterpreter->InspectMembers(R__insp, this, "
                     << getClass << ");" << std::endl;
    }
 }
@@ -3988,7 +3843,6 @@ void WriteClassCode(const RScanner::AnnotatedRecordDecl &cl, const cling::Interp
    std::string fullname;
    R__GetQualifiedName(fullname,cl);
    if (TClassEdit::IsSTLCont(fullname.c_str()) ) {
-      // coverity[fun_call_w_exception] - that's just fine.
       RStl::Instance().GenerateTClassFor(cl.GetNormalizedName(), llvm::dyn_cast<clang::CXXRecordDecl>(cl.GetRecordDecl()), interp, normCtxt);
       return;
    }
@@ -4075,11 +3929,11 @@ void GenerateLinkdef(int *argc, char **argv, int iv, std::string &code_for_parse
 }
 
 //______________________________________________________________________________
-bool Which(const char *fname, string& pname)
+bool Which(cling::Interpreter &interp, const char *fname, string& pname)
 {
-   // Find file name in path specified via -I statements to CINT.
-   // Can be only called after G__main(). Return pointer to static
-   // space containing full pathname or 0 in case file not found.
+   // Find file name in path specified via -I statements to Cling.
+   // Return false if the file can not be found.
+   // If the file is found, set pname to the full path name and return true.
 
    FILE *fp = 0;
 
@@ -4094,10 +3948,14 @@ bool Which(const char *fname, string& pname)
       return true;
    }
 
-   struct G__includepath *ipath = G__getipathentry();
+   llvm::SmallVector<std::string, 10> includePaths;//Why 10? Hell if I know.
+   //false - no system header, false - with flags.
+   interp.GetIncludePaths(includePaths, false, false);
 
-   while (!fp && ipath->pathname) {
-      pname = ipath->pathname;
+   const size_t nPaths = includePaths.size();
+   for (size_t i = 0; i < nPaths; i += 1 /* 2 */) {
+
+      pname = includePaths[i].c_str();
 #ifdef WIN32
       pname += "\\";
       static const char* fopenopts = "rb";
@@ -4107,54 +3965,13 @@ bool Which(const char *fname, string& pname)
 #endif
       pname += fname;
       fp = fopen(pname.c_str(), fopenopts);
-      ipath = ipath->next;
-   }
-   if (fp) {
-      fclose(fp);
-      return true;
+      if (fp) {
+         fclose(fp);
+         return true;
+      }         
    }
    pname = "";
    return false;
-}
-
-//______________________________________________________________________________
-char *StrDup(const char *str)
-{
-   // Duplicate the string str. The returned string has to be deleted by
-   // the user.
-
-   if (!str) return 0;
-
-   // allocate 20 extra characters in case of eg, vector<vector<T>>
-   int nch = strlen(str)+20;
-   char *s = new char[nch];
-   if (s) strlcpy(s, str,nch);
-
-   return s;
-}
-
-//______________________________________________________________________________
-char *Compress(const char *str)
-{
-   // Remove all blanks from the string str. The returned string has to be
-   // deleted by the user.
-
-   if (!str) return 0;
-
-   const char *p = str;
-   // allocate 20 extra characters in case of eg, vector<vector<T>>
-   char *s, *s1 = new char[strlen(str)+20];
-   s = s1;
-
-   while (*p) {
-      // keep space for A<const B>!
-      if (*p != ' ' || (p - str > 0 && isalnum(*(p-1))))
-         *s++ = *p;
-      p++;
-   }
-   *s = '\0';
-
-   return s1;
 }
 
 //______________________________________________________________________________
@@ -4212,184 +4029,6 @@ void StrcpyArgWithEsc(string& escaped, const char *original)
    escaped = CopyArg( original );
 }
 
-//______________________________________________________________________________
-void ReplaceFile(const char *tmpdictname, const char *dictname)
-{
-   // Unlink dictname and move tmpdictname into dictname
-
-#ifdef WIN32
-   int tries=0;
-   bool success=false;
-   while (!success && ++tries<51) {
-      success = (unlink(dictname) != -1);
-      if (!success && tries<50)
-         if (errno!=EACCES) break;
-         else Sleep(200);
-   }
-   if (success) {
-      success=false;
-      tries=0;
-      while (!success && ++tries<52) {
-         success = (rename(tmpdictname, dictname) != -1);
-         if (!success && tries<51)
-            if (errno!=EACCES) break;
-            else Sleep(200);
-      }
-   }
-   if (!success)
-      Error(0, "rootcint: failed to rename %s to %s in ReplaceBundleInDict() after %d tries (error is %d)\n",
-            tmpdictname, dictname, tries, errno);
-#else
-   if (unlink(dictname) == -1 || rename(tmpdictname, dictname) == -1)
-      Error(0, "rootcint: failed to rename %s to %s in ReplaceBundleInDict()\n",
-            tmpdictname, dictname);
-#endif
-
-}
-
-//______________________________________________________________________________
-void ReplaceBundleInDict(const char *dictname, const string &bundlename)
-{
-   // Replace the bundlename in the dict.cxx and .h file by the contents
-   // of the bundle.
-
-   // First patch dict.cxx. Create tmp file and copy dict.cxx to this file.
-   // When discovering a line like:
-   //   G__add_compiledheader("bundlename");
-   // replace it by the appropriate number of lines contained in the bundle.
-
-   FILE *fpd = fopen(dictname, "r");
-   if (!fpd) {
-      Error(0, "rootcint: failed to open %s in ReplaceBundleInDict()\n",
-            dictname);
-      return;
-   }
-
-   string tmpdictname(dictname);
-   tmpdictname += "_+_+_+rootcinttmp";
-   FILE *tmpdict = fopen(tmpdictname.c_str(), "w");
-   if (!tmpdict) {
-      Error(0, "rootcint: failed to open %s in ReplaceBundleInDict()\n",
-            tmpdictname.c_str());
-      fclose(fpd);
-      return;
-   }
-
-   string esc_bundlename;
-   StrcpyWithEsc(esc_bundlename, bundlename.c_str());
-
-   string checkline("  G__add_compiledheader(\"");
-   checkline += esc_bundlename;
-   checkline += "\");";
-   int clen = checkline.length();
-
-   char line[BUFSIZ];
-   if (tmpdict && fpd) {
-      while (fgets(line, BUFSIZ, fpd)) {
-         if (!strncmp(line, checkline.c_str(), clen)) {
-            FILE *fb = fopen(bundlename.c_str(), "r");
-            if (!fb) {
-               Error(0, "rootcint: failed to open %s in ReplaceBundleInDict()\n",
-                     bundlename.c_str());
-               fclose(fpd);
-               fclose(tmpdict);
-               remove(tmpdictname.c_str());
-               return;
-            }
-            while (fgets(line, BUFSIZ, fb)) {
-               char *s = strchr(line, '"');
-               if (!s) continue;
-               s++;
-               char *s1 = strrchr(s, '"');
-               if (R__IsSelectionFile(s))
-                  continue;
-               if (s1) {
-                  *s1 = 0;
-                  fprintf(tmpdict, "  G__add_compiledheader(\"%s\");\n", s);
-               }
-            }
-            fclose(fb);
-         } else
-            fprintf(tmpdict, "%s", line);
-      }
-   }
-
-   fclose(tmpdict);
-   fclose(fpd);
-
-   ReplaceFile(tmpdictname.c_str(),dictname);
-
-   // Next patch dict.h. Create tmp file and copy dict.h to this file.
-   // When discovering a line like:
-   //   #include "bundlename"
-   // replace it by the appropriate number of lines contained in the bundle.
-
-   // make dict.h
-   string dictnameh(dictname);
-   size_t dh = dictnameh.rfind('.');
-   if (dh != std::string::npos) {
-      dictnameh.erase(dh + 1);
-      dictnameh += "h";
-   } else {
-      Error(0, "rootcint: failed create dict.h in ReplaceBundleInDict()\n");
-      return;
-   }
-
-   fpd = fopen(dictnameh.c_str(), "r");
-   if (!fpd) {
-      Error(0, "rootcint: failed to open %s in ReplaceBundleInDict()\n",
-            dictnameh.c_str());
-      return;
-   }
-   tmpdict = fopen(tmpdictname.c_str(), "w");
-   if (!tmpdict) {
-      Error(0, "rootcint: failed to open %s in ReplaceBundleInDict()\n",
-            tmpdictname.c_str());
-      fclose(fpd);
-      return;
-   }
-
-   checkline = "#include \"";
-   checkline += esc_bundlename + "\"";
-   clen = checkline.length();
-
-   if (tmpdict && fpd) {
-      while (fgets(line, BUFSIZ, fpd)) {
-         if (!strncmp(line, checkline.c_str(), clen)) {
-            FILE *fb = fopen(bundlename.c_str(), "r");
-            if (!fb) {
-               Error(0, "rootcint: failed to open %s in ReplaceBundleInDict()\n",
-                     bundlename.c_str());
-               fclose(tmpdict);
-               fclose(fpd);
-               return;
-            }
-            while (fgets(line, BUFSIZ, fb)) {
-               char *s = strchr(line, '<');
-               if (!s) continue;
-               s++;
-               char *s1 = strrchr(s, '>');
-               if (R__IsSelectionFile(s))
-                  continue;
-               if (s1) {
-                  *s1 = 0;
-                  fprintf(tmpdict, "#include \"%s\"\n", s);
-               }
-            }
-            fclose(fb);
-         } else
-            fprintf(tmpdict, "%s", line);
-      }
-   }
-
-   fclose(tmpdict);
-   fclose(fpd);
-
-   ReplaceFile(tmpdictname.c_str(),dictnameh.c_str());
-}
-
-string bundlename;
-string tname;
 string dictsrc;
 
 //______________________________________________________________________________
@@ -4397,8 +4036,6 @@ void CleanupOnExit(int code)
 {
    // Removes tmp files, and (if code!=0) output files.
 
-   if (!bundlename.empty()) unlink(bundlename.c_str());
-   if (!tname.empty()) unlink(tname.c_str());
    if (code) {
       if (!dictsrc.empty()) {
          unlink(dictsrc.c_str());
@@ -4487,7 +4124,8 @@ static ESourceFileKind GetSourceFileKind(const char* filename)
 
 
 //______________________________________________________________________________
-static int GenerateModule(const char* dictSrcFile, const std::vector<std::string>& args, const std::string &currentDirectory)
+static int GenerateModule(const char* dictSrcFile, const std::vector<std::string>& args,
+                          const std::string &currentDirectory)
 {
    // Generate the clang module given the arguments.
    // Returns != 0 on error.
@@ -4524,16 +4162,14 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
    }
 
    // Dictionary initialization code for loading the module
-   (*dictSrcOut) << "namespace {\n"
-      "  static struct DictInit {\n"
-      "    DictInit() {\n"
+   (*dictSrcOut) << "void TriggerDictionaryInitalization_" << dictname << "() {\n"
       "      static const char* headers[] = {\n";
-
    {
       for (size_t iH = 0, eH = headers.size(); iH < eH; ++iH) {
          (*dictSrcOut) << "             \"" << headers[iH] << "\"," << std::endl;
       }
    }
+
    (*dictSrcOut) << 
       "      0 };\n"
       "      static const char* includePaths[] = {\n";
@@ -4541,6 +4177,7 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
            iI = compI.begin(), iE = compI.end(); iI != iE; ++iI) {
       (*dictSrcOut) << "             \"" << *iI << "\"," << std::endl;
    }
+
    (*dictSrcOut) << 
       "      0 };\n"
       "      static const char* macroDefines[] = {\n";
@@ -4548,6 +4185,7 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
            iD = compD.begin(), iDE = compD.end(); iD != iDE; ++iD) {
       (*dictSrcOut) << "             \"" << *iD << "\"," << std::endl;
    }
+
    (*dictSrcOut) << 
       "      0 };\n"
       "      static const char* macroUndefines[] = {\n";
@@ -4555,12 +4193,22 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
            iU = compU.begin(), iUE = compU.end(); iU != iUE; ++iU) {
       (*dictSrcOut) << "             \"" << *iU << "\"," << std::endl;
    }
+
    (*dictSrcOut) << 
       "      0 };\n"
-      "      TCintWithCling__RegisterModule(\"" << dictname << "\",\n"
-      "         headers, includePaths, macroDefines, macroUndefines);\n"
+      "      static bool sInitialized = false;\n"
+      "      if (!sInitialized) {\n;"
+      "        TCintWithCling__RegisterModule(\"" << dictname << "\",\n"
+      "          headers, includePaths, macroDefines, macroUndefines);\n"
+      "        sInitialized = true;\n"
+      "      }\n"
       "    }\n"
-      "  } __TheInitializer;\n"
+      "namespace {\n"
+      "  static struct DictInit {\n"
+      "    DictInit() {\n"
+      "      TriggerDictionaryInitalization_" << dictname << "();\n"
+      "    }\n"
+      "  } __TheDictionaryInitializer;\n"
       "}" << std::endl;
 
    clang::CompilerInstance* CI = gInterp->getCI();
@@ -4652,9 +4300,8 @@ int main(int argc, char **argv)
    }
 
    char dictname[1024];
-   int i, j, ic, ifl, force;
+   int i, ic, ifl, force;
    int icc = 0;
-   int use_preprocessor = 0;
    bool requestAllSymbols = false; // Would be set to true is we decide to support an option like --deep.
 
    std::string currentDirectory;
@@ -4825,18 +4472,9 @@ int main(int argc, char **argv)
       if (force) ic = 2;
       ifl = 0;
    }
-
-   // If the user request use of a preprocessor we are going to bundle
-   // all the files into one so that cint considers them one compilation
-   // unit and so that each file that contains code guard is really
-   // included only once.
-   for (i = 1; i < argc; i++)
-      if (strcmp(argv[i], "-p") == 0) use_preprocessor = 1;
-
-#ifndef __CINT__
-   int   argcc, iv, il;
+   
+   int iv, il;
    std::vector<std::string> path;
-   char *argvv[500];
 
    std::vector<std::string> clingArgs;
    clingArgs.push_back(argv[0]);
@@ -4853,23 +4491,11 @@ int main(int argc, char **argv)
 #endif
    path.push_back(std::string("-I") + TMetaUtils::GetROOTIncludeDir(ROOTBUILDVAL));
 
-   argvv[0] = argv[0];
-   argcc = 1;
 
    if (ic < argc && !strcmp(argv[ic], "-c")) {
       icc++;
       if (ifl) {
-         char *s;
          ic++;
-         argvv[argcc++] = (char *)"-q0";
-         argvv[argcc++] = (char *)"-n";
-         int ncha = strlen(argv[ifl])+1;
-         argvv[argcc] = (char *)calloc(ncha, 1);
-         strlcpy(argvv[argcc], argv[ifl],ncha); argcc++;
-         argvv[argcc++] = (char *)"-N";
-         s = strrchr(dictname,'.');
-         argvv[argcc] = (char *)calloc(strlen(dictname), 1);
-         strncpy(argvv[argcc], dictname, s-dictname); argcc++;
 
          while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
             if (strcmp("+P", argv[ic]) == 0 ||
@@ -4884,127 +4510,14 @@ int main(int argc, char **argv)
                    && strcmp("-p", argv[ic])) {
                   clingArgs.push_back(argv[ic]);
                }
-               argvv[argcc++] = argv[ic++];
+               ic++;
             } else {
                ic++;
             }
          }
 
          for (i = 0; i < (int)path.size(); i++) {
-            argvv[argcc++] = (char*)path[i].c_str();
             clingArgs.push_back(path[i].c_str());
-         }
-
-#ifdef __hpux
-         argvv[argcc++] = (char *)"-I/usr/include/X11R5";
-#endif
-         switch (gErrorIgnoreLevel) {
-         case kInfo:     argvv[argcc++] = (char *)"-J4"; break;
-         case kNote:     argvv[argcc++] = (char *)"-J3"; break;
-         case kWarning:  argvv[argcc++] = (char *)"-J2"; break;
-         case kError:    argvv[argcc++] = (char *)"-J1"; break;
-         case kSysError:
-         case kFatal:    argvv[argcc++] = (char *)"-J0"; break;
-         default:        argvv[argcc++] = (char *)"-J1"; break;
-         }
-
-         if (!use_preprocessor) {
-            // If the compiler's preprocessor is not used
-            // we still need to declare the compiler specific flags
-            // so that the header file are properly parsed.
-#ifdef __KCC
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__KCC=%ld", (long)__KCC); argcc++;
-#endif
-#ifdef __INTEL_COMPILER
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__INTEL_COMPILER=%ld", (long)__INTEL_COMPILER); argcc++;
-#endif
-#ifdef __xlC__
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__xlC__=%ld", (long)__xlC__); argcc++;
-#endif
-#ifdef __GNUC__
-            argvv[argcc] = (char *)calloc(64, 1);
-            // coverity[secure_coding] - sufficient space
-            snprintf(argvv[argcc],64, "-D__GNUC__=%ld", (long)__GNUC__); argcc++;
-#endif
-#ifdef __GNUC_MINOR__
-            argvv[argcc] = (char *)calloc(64, 1);
-            // coverity[secure_coding] - sufficient space
-            snprintf(argvv[argcc],64, "-D__GNUC_MINOR__=%ld", (long)__GNUC_MINOR__); argcc++;
-#endif
-#ifdef __HP_aCC
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64 "-D__HP_aCC=%ld", (long)__HP_aCC); argcc++;
-#endif
-#ifdef __sun
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__sun=%ld", (long)__sun); argcc++;
-#endif
-#ifdef __SUNPRO_CC
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__SUNPRO_CC=%ld", (long)__SUNPRO_CC); argcc++;
-#endif
-#ifdef __ia64__
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__ia64__=%ld", (long)__ia64__); argcc++;
-#endif
-#ifdef __x86_64__
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__x86_64__=%ld", (long)__x86_64__); argcc++;
-#endif
-#ifdef __i386__
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__i386__=%ld", (long)__i386__); argcc++;
-#endif
-#ifdef __arm__
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D__arm__=%ld", (long)__arm__); argcc++;
-#endif
-#ifdef R__B64
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-DR__B64"); argcc++;
-#endif
-#ifdef _WIN32
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D_WIN32=%ld",(long)_WIN32); argcc++;
-#endif
-#ifdef WIN32
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-DWIN32=%ld",(long)WIN32); argcc++;
-#endif
-#ifdef _MSC_VER
-            argvv[argcc] = (char *)calloc(64, 1);
-            snprintf(argvv[argcc],64, "-D_MSC_VER=%ld",(long)_MSC_VER); argcc++;
-#endif
-         }
-#ifdef ROOTBUILD
-         argvv[argcc++] = (char *)"-DG__NOCINTDLL";
-         clingArgs.push_back(argvv[argcc - 1]);
-#endif
-         argvv[argcc++] = (char *)"-DTRUE=1";
-         clingArgs.push_back(argvv[argcc - 1]);
-         argvv[argcc++] = (char *)"-DFALSE=0";
-         clingArgs.push_back(argvv[argcc - 1]);
-         argvv[argcc++] = (char *)"-Dexternalref=extern";
-         argvv[argcc++] = (char *)"-DSYSV";
-         argvv[argcc++] = (char *)"-D__MAKECINT__";
-         // NO! clang needs to see the truth.
-         // clingArgs.push_back(argvv[argcc - 1]);
-         argvv[argcc++] = (char *)"-V";        // include info on private members
-         argvv[argcc++] = (char *)"-c-10";
-         argvv[argcc++] = (char *)"+V";        // turn on class comment mode
-         if (!use_preprocessor) {
-#ifdef ROOTBUILD
-            argvv[argcc++] = (char *)"TObject.h";
-            argvv[argcc++] = (char *)"TMemberInspector.h";
-            //argvv[argcc++] = (char *)"base/inc/TObject.h";
-            //argvv[argcc++] = (char *)"base/inc/TMemberInspector.h";
-#else
-            argvv[argcc++] = (char *)"TObject.h";
-            argvv[argcc++] = (char *)"TMemberInspector.h";
-#endif
          }
       } else {
          Error(0, "%s: option -c can only be used when an output file has been specified\n", argv[0]);
@@ -5060,16 +4573,12 @@ int main(int argc, char **argv)
   
    // We are now ready (enough is loaded) to init the list of opaque typedefs.
    ROOT::TMetaUtils::TNormalizedCtxt normCtxt(interp.getLookupHelper());
-   TClassEdit::Init(interp);
+   TClassEdit::Init(interp,normCtxt);
 
    // flags used only for the pragma parser:
    clingArgs.push_back("-D__CINT__");
    clingArgs.push_back("-D__MAKECINT__");
    char platformDefines[64] = {0};
-#ifdef __KCC
-   snprintf(platformDefines, 64, "-DG__KCC=%ld", (long)__KCC);
-   clingArgs.push_back(platformDefines);
-#endif
 #ifdef __INTEL_COMPILER
    snprintf(platformDefines, 64, "-DG__INTEL_COMPILER=%ld", (long)__INTEL_COMPILER);
    clingArgs.push_back(platformDefines);
@@ -5138,175 +4647,94 @@ int main(int argc, char **argv)
 
    std::string interpPragmaSource;
    std::string includeForSource;
-   std::list<std::string> includedFilesForBundle;
    string esc_arg;
-   bool insertedBundle = false;
-   FILE *bundle = 0;
-   if (use_preprocessor) {
-      bundlename = R__tmpnam();
-      bundlename += ".h";
-      bundle = fopen(bundlename.c_str(), "w");
-      if (!bundle) {
-         Error(0, "%s: failed to open %s, usage of external preprocessor by CINT is not optimal\n",
-               argv[0], bundlename.c_str());
-         use_preprocessor = 0;
-      } else {
-         // use <> instead of "" otherwise the CPP will search first
-         // for these files in /tmp (location of the bundle.h) where
-         // it might not find the files (if starting with ./ or ../)
-         // or, even worse, pick up a wrong version placed in /tmp.
-         fprintf(bundle,"#include <TObject.h>\n");
-         fprintf(bundle,"#include <TMemberInspector.h>\n");
-      }
-   }
    for (i = ic; i < argc; i++) {
       if (!iv && *argv[i] != '-' && *argv[i] != '+') {
-         if (!icc) {
-            for (j = 0; j < (int)path.size(); j++) {
-               argvv[argcc++] = (char*)path[j].c_str();
-            }
-            argvv[argcc++] = (char *)"+V";
-         }
-         iv = argcc;
+         iv = i;
       }
       if (R__IsSelectionFile(argv[i])) {
          il = i;
          if (i != argc-1) {
             Error(0, "%s: %s must be last file on command line\n", argv[0], argv[i]);
-            if (use_preprocessor) {
-               fclose(bundle);
-            }
             return 1;
          }
       }
       if (!strcmp(argv[i], "-c")) {
          Error(0, "%s: option -c must come directly after the output file\n", argv[0]);
-         if (use_preprocessor) {
-            fclose(bundle);
-         }
          return 1;
       }
-#define CINT_INCLUDE
-      if (use_preprocessor && *argv[i] != '-' && *argv[i] != '+') {
-         StrcpyArgWithEsc(esc_arg, argv[i]);
-         if (use_preprocessor) {
-            // see comment about <> and "" above
-            fprintf(bundle,"#include <%s>\n", esc_arg.c_str());
-            includedFilesForBundle.push_back(argv[i]);
-            if (!insertedBundle) {
-#ifdef CINT_INCLUDE
-               argvv[argcc++] = (char*)bundlename.c_str();
-#endif
-               insertedBundle = true;
-            }
-         }
-         interp.declare(std::string("#include \"") + argv[i] + "\"");
-         interpPragmaSource += std::string("#include \"") + argv[i] + "\"\n";
-         std::string header( R__GetRelocatableHeaderName( argv[i], currentDirectory ) );
-         if (!R__IsSelectionFile(argv[i])) 
-            includeForSource += std::string("#include \"") + header + "\"\n";
-         pcmArgs.push_back(header);
-      } else {
-         if (strcmp("-pipe", argv[ic])!=0) {
-            // filter out undesirable options
-            string argkeep;
+      if (strcmp("-pipe", argv[ic])!=0) {
+         // filter out undesirable options
+         string argkeep;
             // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
-            StrcpyArg(argkeep, argv[i]);
-            int ncha = argkeep.length()+1;
-            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
-            argvv[argcc++] = (char*)calloc(ncha,1);
-            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
-            strlcpy(argvv[argcc-1],argkeep.c_str(),ncha);
-
-            if (*argv[i] != '-' && *argv[i] != '+') {
-               // Looks like a file
-               interp.declare(std::string("#include \"") + argv[i] + "\"");
+         StrcpyArg(argkeep, argv[i]);
+         
+         if (*argv[i] != '-' && *argv[i] != '+') {
+            // Looks like a file
+            if (cling::Interpreter::kSuccess 
+                == interp.declare(std::string("#include \"") + argv[i] + "\"")) {
                interpPragmaSource += std::string("#include \"") + argv[i] + "\"\n";
                std::string header( R__GetRelocatableHeaderName( argv[i], currentDirectory ) );
                if (!R__IsSelectionFile(argv[i])) 
                   includeForSource += std::string("#include \"") + header + "\"\n";
                pcmArgs.push_back(header);
-
-#ifndef CINT_INCLUDE
-               // remove header files from CINT view
-               free(argvv[argcc-1]);
-               argvv[--argcc] = 0;
-#endif
+            } else {
+               Error(0, "%s: compilation failure\n", argv[0]);
+               CleanupOnExit(1);
+               return 1;
             }
+            
          }
       }
-   }
-   if (use_preprocessor) {
-      fclose(bundle);
    }
 
    if (!iv) {
       Error(0, "%s: no input files specified\n", argv[0]);
+      CleanupOnExit(1);
       return 1;
    }
 
    if (!il) {
-      // replace bundlename by headers for autolinkdef
-      char* bundleAutoLinkdef = argvv[argcc - 1];
-      if (insertedBundle)
-         --argcc;
-      for (std::list<std::string>::const_iterator iHdr = includedFilesForBundle.begin();
-           iHdr != includedFilesForBundle.end(); ++iHdr) {
-         argvv[argcc] = StrDup(iHdr->c_str());
-         ++argcc;
-      }
-      GenerateLinkdef(&argcc, argvv, iv, interpPragmaSource);
-      for (int iarg = argcc - includedFilesForBundle.size();
-           iarg < argcc; ++iarg)
-         delete [] argvv[iarg];
-      argcc -= includedFilesForBundle.size();
-      if (insertedBundle)
-         ++argcc;
-      argvv[argcc - 1] = bundleAutoLinkdef;
-
+      // Generate autolinkdef
+      GenerateLinkdef(&argc, argv, iv, interpPragmaSource);
    }
 
-   G__setothermain(2);
-   G__set_beforeparse_hook( BeforeParseInit );
-   if (G__main(argcc, argvv) < 0) {
-      Error(0, "%s: error loading headers...\n", argv[0]);
-      CleanupOnExit(1);
-      return 1;
-   } else {
-      if (ifl) {
-         FILE *fpd = fopen(argv[ifl], "r");
-         if (fpd==0) {
-            // The dictionary file was not created by CINT.
-            // There mush have been an error.
-            Error(0, "%s: error loading headers...\n", argv[0]);
-            CleanupOnExit(1);
-            return 1;
-         }
-         fclose(fpd);
-      }
-   }
-   G__setglobalcomp(0); // G__NOLINK
-#endif
-
-   if (use_preprocessor && icc)
-      ReplaceBundleInDict(argv[ifl], bundlename);
-
-   // Check if code goes to stdout or cint file, use temporary file
-   // for prepending of the rootcint generated code (STK)
+   // make name of dict include file "aapDict.cxx" -> "aapDict.h"
+   std::string dictheader( argv[ifl] );
+   size_t pos = dictheader.rfind('.');
+   dictheader.erase(pos);
+   dictheader.append(".h");
+   
+   std::string inclf(dictname);
+   pos = inclf.rfind('.');
+   inclf.erase(pos);
+   inclf.append(".h");
+   
+   // Check if code goes to stdout or rootcling file
    std::ofstream fileout;
+   std::ofstream headerout;
    if (ifl) {
-      tname = R__tmpnam();
-      fileout.open(tname.c_str());
+      fileout.open(argv[ifl]);
       dictSrcOut = &fileout;
       if (!(*dictSrcOut)) {
          Error(0, "rootcint: failed to open %s in main\n",
-               tname.c_str());
+               argv[ifl]);
          CleanupOnExit(1);
          return 1;
       }
-   } else
+      headerout.open(dictheader.c_str());
+      dictHdrOut = &headerout;
+      if (!(*dictHdrOut)) {
+         Error(0, "rootcint: failed to open %s in main\n",
+               dictheader.c_str());
+         CleanupOnExit(1);
+         return 1;
+      }
+   } else {
       dictSrcOut = &std::cout;
-
+      dictHdrOut = &std::cout;
+   }
+   
    string main_dictname(argv[ifl]);
    size_t dh = main_dictname.rfind('.');
    if (dh != std::string::npos) {
@@ -5323,34 +4751,9 @@ int main(int argc, char **argv)
                  << "//" << std::endl << std::endl
 
                  << "#define R__DICTIONARY_FILENAME " << main_dictname << std::endl
-                 << "#include \"RConfig.h\" //rootcint 4834" << std::endl
-                 << "#if !defined(R__ACCESS_IN_SYMBOL)" << std::endl
-                 << "//Break the privacy of classes -- Disabled for the moment" << std::endl
-                 << "#define private public" << std::endl
-                 << "#define protected public" << std::endl
-                 << "#endif" << std::endl
+                 << "#include \"" << inclf << "\"\n"
                  << std::endl;
 #ifndef R__SOLARIS
-   (*dictSrcOut) << "// Since CINT ignores the std namespace, we need to do so in this file." << std::endl
-                 << "namespace std {} using namespace std;" << std::endl << std::endl;
-   int linesToSkip = 16; // number of lines up to here.
-#else
-   int linesToSkip = 13; // number of lines up to here.
-#endif
-
-   (*dictSrcOut) << "#include \"TClass.h\"" << std::endl
-                 << "#include \"TCintWithCling.h\"" << std::endl
-                 << "#include \"TBuffer.h\"" << std::endl
-                 << "#include \"TMemberInspector.h\"" << std::endl
-                 << "#include \"TError.h\"" << std::endl << std::endl
-                 << "#ifndef G__ROOT" << std::endl
-                 << "#define G__ROOT" << std::endl
-                 << "#endif" << std::endl << std::endl
-                 << "#include \"RtypesImp.h\"" << std::endl
-                 << "#include \"TIsAProxy.h\"" << std::endl
-                 << "#include \"TFileMergeInfo.h\"" << std::endl;
-   (*dictSrcOut) << std::endl;
-#ifdef R__SOLARIS
    (*dictSrcOut) << "// Since CINT ignores the std namespace, we need to do so in this file." << std::endl
                  << "namespace std {} using namespace std;" << std::endl << std::endl;
 #endif
@@ -5363,9 +4766,9 @@ int main(int argc, char **argv)
    if (!il) {
       linkdefFilename = "in memory";
    } else {
-      bool found = Which(argv[il], linkdefFilename);
+      bool found = Which(interp, argv[il], linkdefFilename);
       if (!found) {
-         Error(0, "%s: cannot open file %s\n", argv[0], argv[il]);
+         Error(0, "%s: cannot open linkdef file %s\n", argv[0], argv[il]);
          CleanupOnExit(1);
          return 1;
       }
@@ -5412,7 +4815,7 @@ int main(int argc, char **argv)
          file.close();
       }
       else {
-         Error(0,"XML file %s couldn't be opened!",linkdefFilename.c_str());
+         Error(0,"XML file %s couldn't be opened!\n",linkdefFilename.c_str());
       }
 
    } else if (R__IsLinkdefFile(linkdefFilename.c_str())) {
@@ -5423,7 +4826,7 @@ int main(int argc, char **argv)
          file.close();
       }
       else {
-         Error(0,"Linkdef file %s couldn't be opened!",linkdefFilename.c_str());
+         Error(0,"Linkdef file %s couldn't be opened!\n",linkdefFilename.c_str());
       }
 
       selectionRules.SetSelectionFileType(SelectionRules::kLinkdefFile);
@@ -5474,8 +4877,14 @@ int main(int argc, char **argv)
 
    selectionRules.SearchNames(interp);
 
-   RScanner scan(selectionRules,interp,normCtxt);
    clang::CompilerInstance* CI = interp.getCI();
+   
+   RScanner scan(selectionRules,interp,normCtxt);
+   // If needed initialize the autoloading hook
+   if (gLiblistPrefix.length()) {
+      LoadLibraryMap();
+      scan.SetRecordDeclCallback(RecordDeclCallback);
+   }
    scan.Scan(CI->getASTContext());
 
    bool has_input_error = false;
@@ -5617,8 +5026,6 @@ int main(int argc, char **argv)
    // coverity[fun_call_w_exception] - that's just fine.
    RStl::Instance().WriteClassInit(0, interp, normCtxt);
    
-   if (use_preprocessor) remove(bundlename.c_str());
-
    // Now we have done all our looping and thus all the possible 
    // annotation, let's write the pcms.
    if (strstr(dictname,"rootcint_") != dictname) {
@@ -5630,55 +5037,41 @@ int main(int argc, char **argv)
       GenerateModule(dictname, pcmArgs, currentDirectory);
    }
 
-   // Append CINT dictionary to file containing Streamers and ShowMembers
-   if (ifl) {
-      char line[BUFSIZ];
-      FILE *fpd = fopen(argv[ifl], "r");
-      FILE* fp = fopen(tname.c_str(), "a");
-
-      if (fp && fpd)
-         while (fgets(line, BUFSIZ, fpd))
-            fprintf(fp, "%s", line);
-
-      if (fp)  fclose(fp);
-      if (fpd) fclose(fpd);
-
-      // copy back to dictionary file
-      fpd = fopen(argv[ifl], "w");
-      fp  = fopen(tname.c_str(), "r");
-
-      if (fp && fpd) {
-
-         // make name of dict include file "aapDict.cxx" -> "aapDict.h"
-         int  nl = 0;
-         char *s = strrchr(dictname, '.');
-         if (s) *s = 0;
-         string inclf(dictname); inclf += ".h";
-         if (s) *s = '.';
-         
-         // during copy put dict include on top and remove later reference
-         while (fgets(line, BUFSIZ, fp)) {
-            if (!strncmp(line, "#include", 8) && strstr(line, "\" //newlink 3678 "))
-               continue;
-            fprintf(fpd, "%s", line);
-
-
-            // 'linesToSkip' is because we want to put it after #defined private/protected
-            if (++nl == linesToSkip && icc) {
-               fprintf(fpd, "#include \"%s\"\n", inclf.c_str());
-
-               if (gNeedCollectionProxy) {
-                  fprintf(fpd, "\n#include \"TCollectionProxyInfo.h\"");
-               }
-            }
-         }
-      }
-
-      if (fp)  fclose(fp);
-      if (fpd) fclose(fpd);
-      remove(tname.c_str());
+   // Now that CINT is not longer there to write the header file,
+   // write one and include in there a few things for backward 
+   // compatibility.
+   (*dictHdrOut) << "/********************************************************************\n";
+   
+   (*dictHdrOut) << "* " << dictheader << "\n";
+   (*dictHdrOut) << "* CAUTION: DON'T CHANGE THIS FILE. THIS FILE IS AUTOMATICALLY GENERATED\n";
+   (*dictHdrOut) << "*          FROM HEADER FILES LISTED IN 'DictInit::headers'.\n";
+   (*dictHdrOut) << "*          CHANGE THOSE HEADER FILES AND REGENERATE THIS FILE.\n";
+   (*dictHdrOut) << "********************************************************************/\n";
+   (*dictHdrOut) << "#include <stddef.h>\n";
+   (*dictHdrOut) << "#include <stdio.h>\n";
+   (*dictHdrOut) << "#include <stdlib.h>\n";
+   (*dictHdrOut) << "#include <math.h>\n";
+   (*dictHdrOut) << "#include <string.h>\n";
+   (*dictHdrOut) << "#define G__DICTIONARY\n";
+   (*dictHdrOut) << "#include \"RConfig.h\"\n"
+                 << "#include \"TClass.h\"\n"
+                 << "#include \"TCintWithCling.h\"\n"
+                 << "#include \"TBuffer.h\"\n"
+                 << "#include \"TMemberInspector.h\"\n"
+                 << "#include \"TError.h\"\n\n"
+                 << "#ifndef G__ROOT\n"
+                 << "#define G__ROOT\n"
+                 << "#endif\n\n"
+                 << "#include \"RtypesImp.h\"\n"
+                 << "#include \"TIsAProxy.h\"\n"
+                 << "#include \"TFileMergeInfo.h\"\n";
+   (*dictSrcOut) << std::endl;
+   if (gNeedCollectionProxy) {
+      (*dictHdrOut) << "#include <algorithm>\n";
+      (*dictHdrOut) << "\n#include \"TCollectionProxyInfo.h\"";
    }
-
+   (*dictHdrOut) << "\n";
+   
    if (gLiblistPrefix.length()) {
       string liblist_filename = gLiblistPrefix + ".out";
 
@@ -5703,9 +5096,6 @@ int main(int argc, char **argv)
       }
    }
 
-   G__setglobalcomp(-1);  // G__CPPLINK
    CleanupOnExit(0);
-
-   G__exit(0);
    return 0;
 }

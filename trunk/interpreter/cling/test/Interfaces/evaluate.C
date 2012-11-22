@@ -7,7 +7,7 @@
 cling::StoredValueRef V;
 V // CHECK: (cling::StoredValueRef) <<<invalid>>> @0x{{.*}}
 
-gCling->evaluate("1;", V);
+gCling->evaluate("return 1;", V);
 V // CHECK: (cling::StoredValueRef) boxes [(int) 1]
 
 long LongV = 17;
@@ -20,7 +20,7 @@ V // CHECK: (cling::StoredValueRef) boxes [(int *) 0x12]
 
 cling::StoredValueRef Result;
 gCling->evaluate("V", Result);
-Result // CHECK: (cling::StoredValueRef) boxes [(cling::StoredValueRef)]
+Result // CHECK: (cling::StoredValueRef) boxes [(cling::StoredValueRef) boxes [(int *) 0x12]]
 V // CHECK: (cling::StoredValueRef) boxes [(int *) 0x12]
 
 // Savannah #96277

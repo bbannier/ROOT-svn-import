@@ -16,9 +16,6 @@
 #include "TClassEdit.h"
 #include "TInterpreter.h"
 
-// CINT
-#include "Api.h"
-
 // Standard
 #include <limits.h>
 #include <string.h>
@@ -406,9 +403,11 @@ Bool_t PyROOT::TMacroConverter::SetArg( PyObject*, TParameter_t&, CallFunc_t*, L
    return kFALSE;
 }
 
-PyObject* PyROOT::TMacroConverter::FromMemory( void* address )
+PyObject* PyROOT::TMacroConverter::FromMemory( void* /* address */ )
 {
 // no info available from ROOT/meta; go directly to CINT for the type info
+   PyErr_SetString( PyExc_TypeError, "NO MACRO SUPPORT IN CLING!" );
+/* TODO: get macro support from Cling ---
    G__DataMemberInfo dmi;
    while ( dmi.Next() ) {    // using G__ClassInfo().GetDataMember() would cause overwrite
 
@@ -431,6 +430,7 @@ PyObject* PyROOT::TMacroConverter::FromMemory( void* address )
 
 // type unknown/not implemented
    PyErr_SetString( PyExc_AttributeError, "requested macro not found" );
+--- no macro support from Cling */
    return 0;
 }
 
@@ -842,14 +842,9 @@ Bool_t PyROOT::TRootObjectConverter::SetArg(
 
    // calculate offset between formal and actual arguments
       para.fVoidp = pyobj->GetObject();
-      G__ClassInfo* clFormalInfo = (G__ClassInfo*)fClass->GetClassInfo();
-      G__ClassInfo* clActualInfo = (G__ClassInfo*)pyobj->ObjectIsA()->GetClassInfo();
-      Long_t offset = 0;
-      if ( clFormalInfo && clActualInfo && clFormalInfo != clActualInfo )
-         offset = G__isanybase( clFormalInfo->Tagnum(), clActualInfo->Tagnum(), para.fLong );
+      para.fLong += Utility::GetObjectOffset( fClass, pyobj->ObjectIsA(), para.fVoidp );
 
    // set pointer (may be null) and declare success
-      para.fLong += offset;
       if ( func )
          gInterpreter->CallFunc_SetArg( func,  para.fLong );
       return kTRUE;
@@ -1033,7 +1028,7 @@ Bool_t PyROOT::TPyObjectConverter::ToMemory( PyObject* value, void* address )
 
 
 //- factories -----------------------------------------------------------------
-PyROOT::TConverter* PyROOT::CreateConverter( const std::string& fullType, Long_t user )
+PyROOT::TConverter* PyROOT::CreateConverter( const std::string& fullType_, Long_t user )
 {
 // The matching of the fulltype to a converter factory goes through up to five levels:
 //   1) full, exact match
@@ -1044,14 +1039,17 @@ PyROOT::TConverter* PyROOT::CreateConverter( const std::string& fullType, Long_t
 //
 // If all fails, void is used, which will generate a run-time warning when used.
 
-// resolve typedefs etc.
-   G__TypeInfo ti( fullType.c_str() );
-   std::string resolvedType = ti.TrueName();
-   if ( ! ti.IsValid() )
-      resolvedType = fullType;     // otherwise, resolvedType will be "(unknown)"
+// an exactly matching converter is best
+   std::string fullType = TClassEdit::CleanType( fullType_.c_str() );
+   ConvFactories_t::iterator h = gConvFactories.find( fullType );
+   if ( h != gConvFactories.end() )
+      return (h->second)( user );
 
-// an exactly matching converter is preferred
-   ConvFactories_t::iterator h = gConvFactories.find( resolvedType );
+// resolve typedefs etc.
+   std::string resolvedType = TClassEdit::ResolveTypedef( fullType.c_str(), true );
+
+// a full, qualified matching converter is preferred
+   h = gConvFactories.find( resolvedType );
    if ( h != gConvFactories.end() )
       return (h->second)( user );
 
@@ -1065,7 +1063,7 @@ PyROOT::TConverter* PyROOT::CreateConverter( const std::string& fullType, Long_t
       return (h->second)( user );
 
 //-- nothing? collect qualifier information
-   Bool_t isConst = ti.Property() & G__BIT_ISCONSTANT;
+   Bool_t isConst = kFALSE; // # TODO: where to get const info?? ti.Property() & G__BIT_ISCONSTANT;
 
 // accept const <type>& as converter by value (as python copies most types)
    if ( isConst && cpd == "&" ) {
@@ -1096,12 +1094,13 @@ PyROOT::TConverter* PyROOT::CreateConverter( const std::string& fullType, Long_t
       else if ( cpd == "" )               // by value
          result = new TStrictRootObjectConverter( klass, kTRUE );
 
-   } else if ( ti.Property() & G__BIT_ISENUM ) {
-   // special case (CINT): represent enums as unsigned integers
-      if ( cpd == "&" && !isConst ) {
-         h = gConvFactories.find( "long&" );
-      } else
-         h = gConvFactories.find( "UInt_t" );
+   // TODO: figure out enums
+   //   } else if ( ti.Property() & G__BIT_ISENUM ) {
+   //   // special case (CINT): represent enums as unsigned integers
+   //      if ( cpd == "&" && !isConst ) {
+   //         h = gConvFactories.find( "long&" );
+   //      } else
+   //         h = gConvFactories.find( "UInt_t" );
    }
 
    if ( ! result && h != gConvFactories.end() )

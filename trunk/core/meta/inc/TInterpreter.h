@@ -71,6 +71,7 @@ public:
    virtual const char *GetSTLIncludePath() const { return ""; }
    virtual TObjArray  *GetRootMapFiles() const = 0;
    virtual Int_t    InitializeDictionaries() = 0;
+   virtual void     InspectMembers(TMemberInspector&, void* obj, const TClass* cl) = 0;
    virtual Bool_t   IsLoaded(const char *filename) const = 0;
    virtual Int_t    Load(const char *filenam, Bool_t system = kFALSE) = 0;
    virtual void     LoadMacro(const char *filename, EErrorCode *error = 0) = 0;
@@ -90,6 +91,7 @@ public:
    virtual void     ResetGlobalVar(void *obj) = 0;
    virtual void     RewindDictionary() = 0;
    virtual Int_t    DeleteGlobal(void *obj) = 0;
+   virtual Int_t    DeleteVariable(const char* name) = 0;
    virtual void     SaveContext() = 0;
    virtual void     SaveGlobalsContext() = 0;
    virtual void     UpdateListOfGlobals() = 0;
@@ -123,7 +125,7 @@ public:
    //The dummy implementation avoids an implementation in TGWin32InterpreterProxy
 
    // Misc
-   virtual int    DisplayClass(FILE * /* fout */,char * /* name */,int /* base */,int /* start */) const {return 0;}
+   virtual int    DisplayClass(FILE * /* fout */,const char * /* name */,int /* base */,int /* start */) const {return 0;}
    virtual int    DisplayIncludePath(FILE * /* fout */) const {return 0;}
    virtual void  *FindSym(const char * /* entry */) const {return 0;}
    virtual void   GenericError(const char * /* error */) const {;}
@@ -238,6 +240,7 @@ public:
    virtual void   MethodInfo_CreateSignature(MethodInfo_t * /* minfo */, TString & /* signature */) const {;}
    virtual void   MethodInfo_Delete(MethodInfo_t * /* minfo */) const {;}
    virtual MethodInfo_t  *MethodInfo_Factory() const {return 0;}
+   virtual MethodInfo_t  *MethodInfo_Factory(ClassInfo_t * /*clinfo*/) const {return 0;}
    virtual MethodInfo_t  *MethodInfo_FactoryCopy(MethodInfo_t * /* minfo */) const {return 0;}
    virtual MethodInfo_t  *MethodInfo_InterfaceMethod(MethodInfo_t * /* minfo */) const {return 0;}
    virtual Bool_t MethodInfo_IsValid(MethodInfo_t * /* minfo */) const {return 0;}
@@ -255,6 +258,7 @@ public:
    // G__MethodArgInfo interface            
    virtual void   MethodArgInfo_Delete(MethodArgInfo_t * /* marginfo */) const {;}
    virtual MethodArgInfo_t  *MethodArgInfo_Factory() const {return 0;}
+   virtual MethodArgInfo_t  *MethodArgInfo_Factory(MethodInfo_t * /*minfo*/) const {return 0;}
    virtual MethodArgInfo_t  *MethodArgInfo_FactoryCopy(MethodArgInfo_t * /* marginfo */) const {return 0;}
    virtual Bool_t MethodArgInfo_IsValid(MethodArgInfo_t * /* marginfo */) const {return 0;}
    virtual int    MethodArgInfo_Next(MethodArgInfo_t * /* marginfo */) const {return 0;}
@@ -262,6 +266,7 @@ public:
    virtual const char *MethodArgInfo_DefaultValue(MethodArgInfo_t * /* marginfo */) const {return 0;}
    virtual const char *MethodArgInfo_Name(MethodArgInfo_t * /* marginfo */) const {return 0;}
    virtual const char *MethodArgInfo_TypeName(MethodArgInfo_t * /* marginfo */) const {return 0;}
+   virtual const char *MethodArgInfo_TrueTypeName(MethodArgInfo_t * /* marginfo */) const {return 0;}
 
                   
    // G__TypeInfo interface            
@@ -283,6 +288,7 @@ public:
    virtual TypedefInfo_t  *TypedefInfo_FactoryCopy(TypedefInfo_t * /* tinfo */) const {return 0;}
    virtual void   TypedefInfo_Init(TypedefInfo_t * /* tinfo */, const char * /* funcname */) const {;}
    virtual Bool_t TypedefInfo_IsValid(TypedefInfo_t * /* tinfo */) const {return 0;}
+   virtual int    TypedefInfo_Next(TypedefInfo_t* /*tinfo*/) const {return 0;}
    virtual Long_t TypedefInfo_Property(TypedefInfo_t * /* tinfo */) const {return 0;}
    virtual int    TypedefInfo_Size(TypedefInfo_t * /* tinfo */) const {return 0;}
    virtual const char *TypedefInfo_TrueName(TypedefInfo_t * /* tinfo */) const {return 0;}

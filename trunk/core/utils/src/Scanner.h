@@ -27,7 +27,10 @@
 #include <stack>
 
 namespace clang {
+   class ClassTemplatePartialSpecializationDecl;
+   class ClassTemplateDecl;
    class RecordDecl;
+   class Stmt;
 }
 
 namespace cling {
@@ -48,8 +51,13 @@ class SelectionRules;
 // which traverses every node of the AST
 class RScanner: public clang::RecursiveASTVisitor<RScanner>
 {
+public:
+   typedef void (*DeclCallback)(const char *type);
+
 private:
    const SelectionRules &fSelectionRules;
+   DeclCallback fRecordDeclCallback;
+
    const clang::SourceManager* fSourceManager;
    unsigned int fVerboseLevel;
 
@@ -223,6 +231,19 @@ public:
    // Configure the vistitor to also visit template instantiation.
    bool shouldVisitTemplateInstantiations() const { return true; }
 
+   bool TraverseStmt(clang::Stmt*) {
+      // Don't descend into function bodies.
+      return true;
+   }
+   //bool TraverseClassTemplateDecl(clang::ClassTemplateDecl*) {
+   //   // Don't descend into templates (but only instances thereof).
+   //   return true;
+   //}
+   bool TraverseClassTemplatePartialSpecializationDecl(clang::ClassTemplatePartialSpecializationDecl*) {
+      // Don't descend into templates partial specialization (but only instances thereof).
+      return true;
+   }
+
    bool VisitEnumDecl(clang::EnumDecl* D); //Visitor for every EnumDecl i.e. enumeration node in the AST
    bool VisitFieldDecl(clang::FieldDecl* D); //Visitor for e field inside a class
    bool VisitFunctionDecl(clang::FunctionDecl* D); //Visitor for every FunctionDecl i.e. function node in the AST
@@ -233,6 +254,9 @@ public:
    
    bool TraverseDeclContextHelper(clang::DeclContext *DC); // Here is the code magic :) - every Decl 
    // according to its type is processed by the corresponding Visitor method
+
+   // Set a callback to record which are declared.
+   DeclCallback SetRecordDeclCallback(DeclCallback callback);
 
    // Main interface of this class.
    void Scan(const clang::ASTContext &C);

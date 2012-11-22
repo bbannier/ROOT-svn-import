@@ -81,6 +81,10 @@ namespace ROOT {
       // that can be used in C++ as a variable name.
       void GetCppName(std::string &output, const char *input);
 
+      // Return the type with all parts fully qualified (most typedefs),
+      // including template arguments.
+      clang::QualType GetFullyQualifiedType(const clang::QualType &type, const cling::Interpreter &interpreter);
+
       // Return the type name normalized for ROOT,
       // keeping only the ROOT opaque typedef (Double32_t, etc.) and
       // adding default template argument for all types except the STL collections
@@ -143,6 +147,12 @@ namespace ROOT {
 
          return TND;
       }
+
+      // Check if 'input' or any of its template parameter was substituted when
+      // instantiating the class template instance and replace it with the 
+      // partially sugared type we have from 'instance'.
+      clang::QualType ReSubstTemplateArg(clang::QualType input, const clang::Type *instance);
+ 
 
    } // namespace TMetaUtils
 

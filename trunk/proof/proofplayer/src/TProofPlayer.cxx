@@ -2496,7 +2496,12 @@ Bool_t TProofPlayerRemote::MergeOutputFiles()
                   TIter next(fileList);
                   TObjString *url = 0;
                   while((url = (TObjString*)next())) {
-                     gSystem->Unlink(url->GetString());
+                     TUrl u(url->GetName());
+                     if (!strcmp(u.GetProtocol(), "file")) {
+                        gSystem->Unlink(u.GetFile());
+                     } else {
+                        gSystem->Unlink(url->GetName());
+                     }
                   }
                }
                // Reset the merger
@@ -2737,12 +2742,13 @@ Long64_t TProofPlayerRemote::Finalize(Bool_t force, Bool_t sync)
          // We have transferred copy of the output objects in TQueryResult,
          // so now we can cleanup the selector, making sure that we do not
          // touch the output objects
-         if (output) output->SetOwner(kFALSE);
+         if (output) { output->SetOwner(kFALSE); output->Clear("nodelete"); }
          if (fCreateSelObj) SafeDelete(fSelector);
 
          // Delete fOutput (not needed anymore, cannot be finalized twice),
          // making sure that the objects saved in TQueryResult are not deleted
          fOutput->SetOwner(kFALSE);
+         fOutput->Clear("nodelete");
          SafeDelete(fOutput);
       }
    }
