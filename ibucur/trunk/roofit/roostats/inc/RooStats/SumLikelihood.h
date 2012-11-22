@@ -56,17 +56,19 @@ namespace RooStats {
          bool newData = (fLastData != &data);
          if (newData) {
             fLastData = &data;
+           // fPdf->setOperMode(RooAbsArg::ADirty); // does not help
             fPdf->optimizeCacheMode(*data.get()); 
             fPdf->attachDataSet(data); // TODO: is it necessary?
             const_cast<RooAbsData*>(fLastData)->setDirtyProp(kFALSE);
-            Fill(data);
+            //Fill(data);
          }
          // TODO: see if it is worth to have multiple caches
          // if observables have changed value, the cache is renewed
-         else if (fCacheObs.IsDirty(kTRUE)) {
-            Fill(data);
-            std::cout << "fCacheObs gets dirty" << std::endl;
-         }
+         //else if (fCacheObs.IsDirty(kTRUE)) {
+         //   Fill(data);
+         //   std::cout << "fCacheObs gets dirty" << std::endl;
+        // }
+         Fill(data);
 
          return fValues;
       }
@@ -87,6 +89,10 @@ namespace RooStats {
          std::vector<Double_t>::iterator itVal = fValues.begin();
 
          for(Int_t i = 0; i < numEntries; ++i) {
+     //       std::cout << "CachedPdf::Fill Entry " << i << " pdf value " << fPdf->getVal(fObs)
+       //               << " and the obs are (" << fObs->getRealValue("obs1") << ","
+         //             << fObs->getRealValue("obs2") << "," << fObs->getRealValue("obs3")
+           //           << std::endl;
             data.get(i);
             fValues[i] = fPdf->getVal(fObs);
          }
@@ -152,9 +158,9 @@ namespace RooStats {
    //         std::cout << "SumLikelihood::evaluate -> fPartialSums::size = " << fPartialSums.size()
    //                   << " pdfVals::size = " << pdfVals.size() << std::endl;
             for(itSum = begSum; itSum != endSum; ++itSum, ++itVal) {
-   //            std::cout << "pdf " << itPdf - fCachedPdfs.begin() << " value "
-     //                    << itVal - pdfVals.begin() << " is " << *itVal << std::endl;
+              // std::cout << "pdf " << itPdf - fCachedPdfs.begin() << " value " << itVal - pdfVals.begin() << " is " << *itVal << " and coef is " << coef <<  std::endl;
                *itSum += coef * (*itVal);
+            
             }
          }
 
@@ -169,23 +175,24 @@ namespace RooStats {
                // TODO: CachingSimNLL::noDeepLEE_
             }
 
-            Double_t term = (*itSum <= 0 ? -9e9 : log( (*itSum) / sumCoef) ); 
-            // TODO: Determine the reason for -9e9
-            // TODO: KAHAN_SUM
-            //std::cout << "SumLikelihood::evaluate term " << term << " " << result <<  std::endl;
+            Double_t term = (*itWgt) * (*itSum <= 0 ? -9e9 : log( (*itSum) / sumCoef )); 
+            // std::cout << "SumLikelihood::evaluate term " << term << " " << result <<  std::endl;
             result += term;
          }
          
          result = -result;
 
-         Double_t expectedEvents = fIsRooAddPdf ? sumCoef : fPdf->getNorm(fData->get());
+         fData->get()->Print("");
+         std::cout << "SumLikelihood::evaluate getNorm " << fPdf->getNorm(fData->get()) << " sumCoef " << sumCoef << " fSumWeights " << fSumWeights << std::endl;
+         Double_t expectedEvents = fIsRooAddPdf ? sumCoef : sumCoef;
          if (expectedEvents <= 0) {
             // TODO: CachingSimNLL::noDeepLEE_ logEvalError
             expectedEvents = 1e-6;
          }
 
-   //      std::cout << expectedEvents << std::endl;
-
+         //std::cout << "SumLikelihood:: evaluate expectedEvents | eeTerm " << expectedEvents << " " 
+          //         << expectedEvents - fSumWeights * log(expectedEvents) << std::endl;
+      
          result += expectedEvents - fSumWeights * log(expectedEvents);
    //      result += fZeroPoint;
    //      std::cout << "NLL " << result << "  PDF " << fPdf->getVal() << "  Data " 
@@ -206,7 +213,10 @@ namespace RooStats {
     //   fPdf->getParameters(fData)->Print("");
          return fPdf->getParameters(fData);
       }
-     
+
+      virtual RooArgSet* getObservables(const RooArgSet*, Bool_t) const {
+         return new RooArgSet();
+      }
 
    private:
       void Init() {
