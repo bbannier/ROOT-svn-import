@@ -1,3 +1,6 @@
+// C / C++ headers
+#include <iomanip>
+
 // ROOT headers
 #include "TBenchmark.h"
 #include "TCanvas.h"
@@ -54,8 +57,8 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 
    RooWorkspace *w = new RooWorkspace("w", kTRUE);
 //   buildSimultaneousModel(w);   
-   buildAddModel(w);
-//   buildSumModel(w);
+//   buildAddModel(w);
+   buildSumModel(w);
    ModelConfig* model = (ModelConfig*)w->obj("S+B");
 
 //   *((RooArgSet *)model->GetObservables()) = *w->data(data)->get(0);
@@ -65,6 +68,10 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    RooCmdArg arg2(RooFit::Constrain(*model->GetNuisanceParameters()));
    commands.Add(&arg1);
    commands.Add(&arg2);
+
+   ((RooArgSet *)model->GetObservables())->setRealValue("x", 0);
+   RooDataSet data2("data", "data", *model->GetObservables());
+   data2.add(*model->GetObservables());
    
 //   std::cout << "Observables before createNLL " << std::endl;
 //   RooArgSet *getObs = (RooArgSet *)model->GetObservables();
@@ -74,58 +81,60 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 
    // XXX never forget data set name
    RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
-//   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
-
+//   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), data2, commands);
   
  //  *((RooArgSet *)nll->getObservables(*w->data(data))) = *model->GetObservables();
 
-//   w->var("sig")->setVal(0.1);
-//   double lastVal = nll->getVal();
-//   double *values = new double[10];
-//   double *x = new double[10];
+   w->var("sig")->setVal(10);
+
+
+   double lastVal = nll->getVal();
+   std::cout << std::setprecision(15) << "lastVal " << lastVal << std::endl; return;
+   double *values = new double[10];
+   double *x = new double[10];
 //   std::cout << "Observables after createNLL " << std::endl;
 //   RooArgSet obs;
   // model->GetObservables()->snapshot(obs);
-/*
+
    int j = 0;
+   RooAddPdf* add = (RooAddPdf *)w->pdf("sum_pdf");
    Int_t numPdfs = add->pdfList().getSize();
    for(double d = 0.3; j < 10; d += 0.2, j++) {
-      TIterator *itPdf = add->pdfList().createIterator();
-      TIterator *itCoef = add->coefList().createIterator();
+//      TIterator *itPdf = add->pdfList().createIterator();
+//      TIterator *itCoef = add->coefList().createIterator();
 
       w->var("sig")->setVal(d);
-      getObs->setRealValue("obs1", 5);
-    //  values[j] = nll->getVal() - lastVal; 
-  //    x[j] = d; lastVal = nll->getVal();
-    //  std::cout << "nll diff " << d << " " << values[j] << std::endl;
+ //     getObs->setRealValue("obs1", 5);
+      values[j] = nll->getVal() - lastVal; 
+      x[j] = d; lastVal = nll->getVal();
+      std::cout << std::setprecision(15) << "nll val " << lastVal << " diff " << d << " " << values[j] << std::endl;
    //   std::cout << "obs " << obs->getRealValue("obs1") << " "
      //           << obs->getRealValue("obs2") << " " 
        //         << obs->getRealValue("obs3") << std::endl;
 
       for(Int_t i = 0; i < numPdfs; ++i) {
-         RooAbsReal *coef = (RooAbsReal *)(itCoef->Next());
-         RooAbsPdf  *pdf  = (RooAbsPdf * )(itPdf->Next() );
-         RooArgSet vars(*pdf->getVariables());
+//         RooAbsReal *coef = (RooAbsReal *)(itCoef->Next());
+  //       RooAbsPdf  *pdf  = (RooAbsPdf * )(itPdf->Next() );
+    //     RooArgSet vars(*pdf->getVariables());
     //     vars = obs;
         // std::cout << "getObs";
         // getObs->Print("v");
         // std::cout << "Vars";
         // vars.Print("v");
-         std::cout << "\n" << pdf->getObservables(w->data("data_obs"))->find("obs1") << std::endl;
+//         std::cout << "\n" << pdf->getObservables(w->data("data_obs"))->find("obs1") << std::endl;
         // if (pdf->getVariables()->find("obs1")) std::cout << "Vars: " << pdf->getVariables()->getRealValue("obs1") << std::endl;
-         std::cout << "\n" << getObs->find("obs1") << std::endl; 
+//         std::cout << "\n" << getObs->find("obs1") << std::endl; 
          //std::cout << "Obs: " << getObs->getRealValue("obs1") << std::endl;
          //std::cout << "pdf " << i << pdf->ClassName() << " value " << pdf->getVal(obs) << std::endl;
-      std::cout << "\nObs: "; getObs->Print("v");
-      std::cout << "\nPdf: "; pdf->getObservables(w->data("data_obs"))->Print("v");
+//      std::cout << "\nObs: "; getObs->Print("v");
+//      std::cout << "\nPdf: "; pdf->getObservables(w->data("data_obs"))->Print("v");
 //       std::cout << "coef " << i << " value " << coef->getVal() << std::endl;
       }
    }
 
-   w->data("data_obs")->Print("v");
-//   delete values; delete x;
+
    return;
-*/
+
 
    RooMinimizer m(*nll);
    m.setMinimizerType("Minuit2");
@@ -220,14 +229,17 @@ void buildAddModel(RooWorkspace *w)
    w->factory("Gaussian::s1(obs1[10,-1000,1000], sig[10,-1000,1000], bkg1[1,0,1000])");
    w->factory("Gaussian::s2(obs2[10,-1000,1000], 40, sig)");
    w->factory("Gaussian::s3(obs3[20,0,1000], sig, 1)"); 
-   w->factory("SUM::sum_pdf(0.2*s1,0.3*s2,0.5*s3)");
+   w->factory("f1[1,0,2]");
+   w->factory("f2[1.5,0,2]");
+   w->factory("f3[1,0,2]");
+   w->factory("SUM::sum_pdf(f1*s1,f2*s2,f3*s3)");
 
    // create combined signal + background model configuration
    ModelConfig *sbModel = new ModelConfig("S+B", w);
    sbModel->SetObservables("obs1,obs2,obs3");
    sbModel->SetParametersOfInterest("sig");
 //   sbModel->SetGlobalObservables("gbkg1,gbkg2,gbkg3");
-   sbModel->SetNuisanceParameters("bkg1");
+   sbModel->SetNuisanceParameters("bkg1,f1,f2,f3");
    sbModel->SetPdf("sum_pdf");
    w->import(*sbModel);
 
@@ -247,25 +259,28 @@ void buildAddModel(RooWorkspace *w)
 
 void buildSumModel(RooWorkspace *w)
 {
-   w->factory("Poisson::p1(obs1[3,1,5],sig[2,1,10])");
-   w->factory("prod::sig2(2,sig)");
-   w->factory("Poisson::p2(obs2[2,1,5],sig2)");
-   w->factory("prod::sig3(3,sig)");
-   w->factory("Poisson::p3(obs3[1,1,10],sig3)");
-   w->factory("f1[1,0,2]");
+   w->factory("FormulaVar::f1('@0*@1+1',{x[0,10],sig[0,1e6]})");
+   w->factory("n[0,10]");
+//   w->factory("Poisson::p1(obs1[3,1,5],sig[2,1,10])");
+ //  w->factory("prod::sig2(2,sig)");
+ //  w->factory("Poisson::p2(obs2[2,1,5],sig2)");
+ //  w->factory("prod::sig3(3,sig)");
+ //  w->factory("Poisson::p3(obs3[1,1,10],sig3)");
+ //  w->factory("f1[1,0,2]");
    w->factory("f2[1.5,0,2]");
    w->factory("f3[1,0,2]");
-   w->factory("SUM::sum_pdf(f1*p1,f2*p2, f3*p3)");
+   w->factory("ASUM::sum_pdf(n*f1)");
 
    ModelConfig* sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables("obs1,obs2,obs3");
+   sbModel->SetObservables("x");
    sbModel->SetParametersOfInterest("sig");
-   sbModel->SetNuisanceParameters("f1,f2,f3");
+   //sbModel->SetNuisanceParameters("f1,f2,f3");
    sbModel->SetPdf("sum_pdf");
    w->import(*sbModel);
 
 
    RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 10);
+   data->get(5)->Print("v");
    data->SetName("data_obs");
    w->import(*data);
 
