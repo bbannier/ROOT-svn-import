@@ -28,6 +28,8 @@ namespace RooStats {
          Bool_t hasChanged = kFALSE;
          for( ; varIter != varEnd; ++varIter, ++valIter) {
             Double_t value = (*varIter)->getVal();
+           // std::cout << "CachedArgSet::IsDirty variable '" << (*varIter)->GetName() 
+             //         << "' new value " << value << " old value " << *valIter << std::endl;
             if (value != *valIter) {
                hasChanged = kTRUE;
                if (updateIfChanged) { *valIter = value; }
@@ -49,32 +51,34 @@ namespace RooStats {
    public:
       // TODO: RooAbsPdf instead of RooAbsReal
       CachedPdf() : fPdf(NULL), fObs(NULL), fCacheObs(), fVariables(), fValues(), fLastData(NULL) {}
-      CachedPdf(RooAbsReal *pdf, const RooArgSet* obs) : fPdf(pdf), fObs(obs), fCacheObs(*fObs), fVariables(), fValues(), fLastData(NULL) {}
+      CachedPdf(RooAbsReal *pdf, const RooArgSet* obs) : fPdf(pdf), fObs(obs), fCacheObs(*fPdf->getParameters(fObs)), fVariables(), fValues(), fLastData(NULL) {}
       void SetDataDirty() { fLastData = NULL; }
       const std::vector<Double_t>& Eval(const RooAbsData& data) {
-   //      std::cout << "CachedPdf::Eval -> "; fPdf->Print("");
+        // std::cout << "CachedPdf::Eval -> "; fPdf->Print("");
          bool newData = (fLastData != &data);
          if (newData) {
             fLastData = &data;
-           // fPdf->setOperMode(RooAbsArg::ADirty); // does not help
-            fPdf->optimizeCacheMode(*data.get()); 
-            fPdf->attachDataSet(data); // TODO: is it necessary?
+            fPdfClone = (RooAbsReal*) fPdf->cloneTree();
+            fPdfClone->optimizeCacheMode(*data.get()); 
+            fPdfClone->attachDataSet(data); 
+            fPdfClone->recursiveRedirectServers(*fPdf->getParameters(data));
             const_cast<RooAbsData*>(fLastData)->setDirtyProp(kFALSE);
-            //Fill(data);
+            Fill(data);
          }
          // TODO: see if it is worth to have multiple caches
-         // if observables have changed value, the cache is renewed
-         //else if (fCacheObs.IsDirty(kTRUE)) {
-         //   Fill(data);
-         //   std::cout << "fCacheObs gets dirty" << std::endl;
-        // }
-         Fill(data);
+         // if nuisance parameters have changed value, the cache is renewed
+         else if (fCacheObs.IsDirty(kTRUE)) {
+            Fill(data);
+          //  std::cout << "fCacheObs gets dirty" << std::endl;
+         }
+         //Fill(data);
 
          return fValues;
       }
 
    private:
       RooAbsReal* fPdf;
+      RooAbsReal* fPdfClone;
       const RooArgSet* fObs;
       CachedArgSet fCacheObs;
       std::vector<RooRealVar*> fVariables;
@@ -89,12 +93,8 @@ namespace RooStats {
          std::vector<Double_t>::iterator itVal = fValues.begin();
 
          for(Int_t i = 0; i < numEntries; ++i) {
-     //       std::cout << "CachedPdf::Fill Entry " << i << " pdf value " << fPdf->getVal(fObs)
-       //               << " and the obs are (" << fObs->getRealValue("obs1") << ","
-         //             << fObs->getRealValue("obs2") << "," << fObs->getRealValue("obs3")
-           //           << std::endl;
             data.get(i);
-            fValues[i] = fPdf->getVal(fObs);
+            fValues[i] = fPdfClone->getVal(fObs);
          }
       }
    };
@@ -129,7 +129,6 @@ namespace RooStats {
       virtual TObject* clone(const char* name) const { return new SumLikelihood(*this, name); }
 
       virtual Double_t evaluate() const {
-         
          std::vector<RooAbsReal*>::const_iterator itCoef, begCoef = fCoefficients.begin(), endCoef = fCoefficients.end();
          std::vector<CachedPdf>::iterator itPdf = fCachedPdfs.begin();
          std::vector<Double_t>::const_iterator itWgt, begWgt = fWeights.begin();
@@ -148,7 +147,7 @@ namespace RooStats {
                sumCoef += coef;
    //            std::cout << "coef " << coef << "sumCoef " << sumCoef << std::endl;
             } else { // RooRealSum 
-               sumCoef += coef * fIntegrals[itCoef - begCoef]->getVal();
+               //sumCoef += coef * fIntegrals[itCoef - begCoef]->getVal();
             }
 
             // get pdf values
@@ -164,6 +163,8 @@ namespace RooStats {
             }
          }
 
+         if (!fIsRooAddPdf) sumCoef = fPdf->getNorm(fData->get());
+
 
          // get final NLL
          Double_t result = 0.0;
@@ -175,16 +176,16 @@ namespace RooStats {
                // TODO: CachingSimNLL::noDeepLEE_
             }
 
-            Double_t term = (*itWgt) * (*itSum <= 0 ? -9e9 : log( (*itSum) / sumCoef )); 
+            Double_t term = (*itWgt) * (*itSum <= 0 ? -9e9 : log( (*itSum) / sumCoef)); 
             // std::cout << "SumLikelihood::evaluate term " << term << " " << result <<  std::endl;
             result += term;
          }
          
          result = -result;
 
-         fData->get()->Print("");
-         std::cout << "SumLikelihood::evaluate getNorm " << fPdf->getNorm(fData->get()) << " sumCoef " << sumCoef << " fSumWeights " << fSumWeights << std::endl;
-         Double_t expectedEvents = fIsRooAddPdf ? sumCoef : sumCoef;
+     //    std::cout << "SumLikelihood::evaluate getNorm " << fPdf->getNorm(fData->get()) << " sumCoef " << sumCoef << " fSumWeights " << fSumWeights << std::endl;
+         //fPdf->Print("t");
+         Double_t expectedEvents = sumCoef;
          if (expectedEvents <= 0) {
             // TODO: CachingSimNLL::noDeepLEE_ logEvalError
             expectedEvents = 1e-6;
