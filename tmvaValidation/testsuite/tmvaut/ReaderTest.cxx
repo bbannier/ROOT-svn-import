@@ -107,7 +107,7 @@ void ReaderTest::run()
    test_(fTestFile && fTestTree);
    if (!(fTestFile && fTestTree)) return;
    const int nTest=1; // ToDo 3 reader usages
-   const float effS=0.301;
+   const float effS=0.70;
    float testTarget,readerVal=0.;
    
    // setup test tree access
@@ -132,9 +132,8 @@ void ReaderTest::run()
 
    std::vector< TMVA::Reader* > reader(nTest);
    for (int iTest=0;iTest<nTest;iTest++){
-      //std::cout << "iTest="<<iTest<<std::endl;
 #ifdef VERBOSE
-      reader[iTest] = new TMVA::Reader( "!Color:!Silent" );
+      reader[iTest] = new TMVA::Reader( "!Color:V" );
 #else
       reader[iTest] = new TMVA::Reader( "!Color:Silent" );
 #endif
@@ -187,7 +186,7 @@ void ReaderTest::run()
          maxdiff = diff > maxdiff ? diff : maxdiff;
          sumdiff += diff;
          if (ievt>0 && iTest ==0 && TMath::Abs(readerVal-previousVal)<1.e-6) stuckCount++;
-         //if (ievt<5) std::cout << "i="<<iTest<<", readerVal="<<readerVal<<" testTarget"<<testTarget<<" diff="<<diff<<" stuckcount="<<stuckCount<<std::endl;
+         //if (ievt<5) std::cout << "i="<<iTest<<", readerVal="<<readerVal<<" testTarget"<<testTarget<<" diff="<<diff<<" stuckcount="<<stuckCount << std::endl;
 
          if (iTest ==0 ) previousVal=readerVal;
       }
