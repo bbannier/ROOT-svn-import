@@ -56,7 +56,7 @@ void MethodUnitTestWithROCLimits::run()
 // FIXME:: make the factory option mutable?
 // absolute silence options:
 #ifdef VERBOSE
-  string factoryOptions( "V:!Silent:AnalysisType=Classification:!Color:!DrawProgressBar" );
+  string factoryOptions( "V:AnalysisType=Classification" );
 #else
   string factoryOptions( "!V:Silent:AnalysisType=Classification:!Color:!DrawProgressBar" );
 #endif
@@ -98,9 +98,13 @@ void MethodUnitTestWithROCLimits::run()
   TCut mycutb = "";
   
   // FIXME:: make options string mutable?
+#ifdef VERBOSE
+  factory->PrepareTrainingAndTestTree( mycuts, mycutb,
+				       "nTrain_Signal=1000:nTrain_Background=1000:nTest_Signal=5000:nTest_Background=5000:SplitMode=Random:NormMode=NumEvents:V" );
+#else
   factory->PrepareTrainingAndTestTree( mycuts, mycutb,
 				       "nTrain_Signal=1000:nTrain_Background=1000:nTest_Signal=5000:nTest_Background=5000:SplitMode=Random:NormMode=NumEvents:!V" );
- 
+ #endif
   factory->BookMethod(_methodType, _methodTitle, _methodOption);
 
   factory->TrainAllMethods();
@@ -175,7 +179,11 @@ void MethodUnitTestWithROCLimits::run()
   testTree2->SetBranchAddress("var1",&dummy[1]);
 
   TString readerName = _methodTitle + TString(" method");
+#ifdef VERBOSE
+  TString readerOption="V";
+#else
   TString readerOption="!Color:Silent";
+#endif
   TString dir    = "weights/TMVAUnitTesting_";
   TString weightfile=dir+_methodTitle+".weights.xml";
   TString weightfile2="weights/ByHand_BDT.weights.xml"; //TMVATest3VarF2VarI_BDT.weights.xml
