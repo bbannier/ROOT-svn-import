@@ -69,9 +69,9 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    commands.Add(&arg1);
    commands.Add(&arg2);
 
-   ((RooArgSet *)model->GetObservables())->setRealValue("x", 0);
-   RooDataSet data2("data", "data", *model->GetObservables());
-   data2.add(*model->GetObservables());
+//   ((RooArgSet *)model->GetObservables())->setRealValue("x", 0);
+//   RooDataSet data2("data", "data", *model->GetObservables());
+//   data2.add(*model->GetObservables());
    
 //   std::cout << "Observables before createNLL " << std::endl;
 //   RooArgSet *getObs = (RooArgSet *)model->GetObservables();
@@ -81,15 +81,14 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 
    // XXX never forget data set name
    RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
-//   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), data2, commands);
+//   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
   
- //  *((RooArgSet *)nll->getObservables(*w->data(data))) = *model->GetObservables();
 
-   w->var("sig")->setVal(10);
+   w->var("sig")->setVal(0.1);
 
 
    double lastVal = nll->getVal();
-   std::cout << std::setprecision(15) << "lastVal " << lastVal << std::endl; return;
+   std::cout << std::setprecision(15) << "lastVal " << lastVal << std::endl; 
    double *values = new double[10];
    double *x = new double[10];
 //   std::cout << "Observables after createNLL " << std::endl;
@@ -259,22 +258,22 @@ void buildAddModel(RooWorkspace *w)
 
 void buildSumModel(RooWorkspace *w)
 {
-   w->factory("FormulaVar::f1('@0*@1+1',{x[0,10],sig[0,1e6]})");
-   w->factory("n[0,10]");
-//   w->factory("Poisson::p1(obs1[3,1,5],sig[2,1,10])");
- //  w->factory("prod::sig2(2,sig)");
- //  w->factory("Poisson::p2(obs2[2,1,5],sig2)");
- //  w->factory("prod::sig3(3,sig)");
- //  w->factory("Poisson::p3(obs3[1,1,10],sig3)");
- //  w->factory("f1[1,0,2]");
+ //  w->factory("FormulaVar::f1('@0*@1+1',{x[0,10],sig[0,1e6]})");
+//   w->factory("n[0,10]");
+   w->factory("Poisson::p1(obs1[3,1,5],sig[2,1,10])");
+   w->factory("prod::sig2(2,sig)");
+   w->factory("Poisson::p2(obs2[2,1,5],sig2)");
+   w->factory("prod::sig3(3,sig)");
+   w->factory("Poisson::p3(obs3[1,1,10],sig3)");
+   w->factory("f1[1,0,2]");
    w->factory("f2[1.5,0,2]");
    w->factory("f3[1,0,2]");
-   w->factory("ASUM::sum_pdf(n*f1)");
+   w->factory("ASUM::sum_pdf(f1*p1,f2*p2,f3*p3)");
 
    ModelConfig* sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables("x");
+   sbModel->SetObservables("obs1,obs2,obs3");
    sbModel->SetParametersOfInterest("sig");
-   //sbModel->SetNuisanceParameters("f1,f2,f3");
+   sbModel->SetNuisanceParameters("f1,f2,f3");
    sbModel->SetPdf("sum_pdf");
    w->import(*sbModel);
 

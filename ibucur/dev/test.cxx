@@ -39,7 +39,7 @@ void buildSumModel(RooWorkspace *w);
 void buildAddModel(RooWorkspace *w);
 void buildSimultaneousModel(RooWorkspace *w);
 
-void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const char* data = "data_obs") {
+void test2(Int_t sumLikelihood = kTRUE, const char* file = "comb_hgg_125.root", const char* ws = "w", const char* data = "data_obs") {
 
    RooAbsReal::defaultIntegratorConfig()->method1D().setLabel("RooAdaptiveGaussKronrodIntegrator1D");
 
@@ -49,17 +49,17 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 
    // XXX never forget workspace name
    // Build Higgs model
-//   TFile f(file);
-//   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
-//   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
+   TFile f(file);
+   RooWorkspace* w = (RooWorkspace *)f.Get(ws);
+   ModelConfig* model = (ModelConfig*)w->obj("ModelConfig");
 
 //   w->var("MH")->setVal(125);
 
-   RooWorkspace *w = new RooWorkspace("w", kTRUE);
-//   buildSimultaneousModel(w);   
+//   RooWorkspace *w = new RooWorkspace("w", kTRUE);
+ //  buildSimultaneousModel(w);   
+//   buildSumModel(w);
 //   buildAddModel(w);
-   buildSumModel(w);
-   ModelConfig* model = (ModelConfig*)w->obj("S+B");
+//   ModelConfig* model = (ModelConfig*)w->obj("S+B");
 
 //   *((RooArgSet *)model->GetObservables()) = *w->data(data)->get(0);
    
@@ -69,50 +69,51 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    commands.Add(&arg1);
    commands.Add(&arg2);
 
-   ((RooArgSet *)model->GetObservables())->setRealValue("x", 0);
-   RooDataSet data2("data", "data", *model->GetObservables());
-   data2.add(*model->GetObservables());
+//   ((RooArgSet *)model->GetObservables())->setRealValue("x", 0);
+//   RooDataSet data2("data", "data", *model->GetObservables());
+//   data2.add(*model->GetObservables());
    
-//   std::cout << "Observables before createNLL " << std::endl;
-//   RooArgSet *getObs = (RooArgSet *)model->GetObservables();
-//   getObs->setRealValue("obs1", 3);
-//   *getObs = *w->data("data_obs")->get(9);
-//   getObs->Print("v");
 
    // XXX never forget data set name
-//   RooAbsReal* nll = model->GetPdf()->createNLL(*w->data(data), commands);
-   RooAbsReal* nll = RooStats::CreateNLL(*model->GetPdf(), data2, commands);
+   RooAbsReal* nll = NULL;
+   if (sumLikelihood) {
+      std::cout << "Using SumLikelihood" << std::endl;
+      nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
+   } else {
+      std::cout << "Using RooFit" << std::endl;
+      nll = model->GetPdf()->createNLL(*w->data(data), commands);
+   }
   
  //  *((RooArgSet *)nll->getObservables(*w->data(data))) = *model->GetObservables();
 
-   w->var("sig")->setVal(10);
+//   w->var("sig")->setVal(0.3);
 
 
-   double lastVal = nll->getVal();
-   std::cout << std::setprecision(15) << "lastVal " << lastVal << std::endl; return;
-   double *values = new double[10];
-   double *x = new double[10];
+//   double lastVal = nll->getVal();
+//   std::cout << std::setprecision(15) << "lastVal " << lastVal << std::endl;
+//   double *values = new double[10];
+//   double *x = new double[10];
 //   std::cout << "Observables after createNLL " << std::endl;
 //   RooArgSet obs;
   // model->GetObservables()->snapshot(obs);
 
    int j = 0;
-   RooAddPdf* add = (RooAddPdf *)w->pdf("sum_pdf");
-   Int_t numPdfs = add->pdfList().getSize();
+//   RooAddPdf* add = (RooAddPdf *)w->pdf("sum_pdf");
+//   Int_t numPdfs = add->pdfList().getSize();
    for(double d = 0.3; j < 10; d += 0.2, j++) {
 //      TIterator *itPdf = add->pdfList().createIterator();
 //      TIterator *itCoef = add->coefList().createIterator();
 
-      w->var("sig")->setVal(d);
+//      w->var("sig")->setVal(d);
  //     getObs->setRealValue("obs1", 5);
-      values[j] = nll->getVal() - lastVal; 
-      x[j] = d; lastVal = nll->getVal();
-      std::cout << std::setprecision(15) << "nll val " << lastVal << " diff " << d << " " << values[j] << std::endl;
+     // values[j] = nll->getVal() - lastVal; 
+  //    x[j] = d; lastVal = nll->getVal();
+    //  std::cout << std::setprecision(15) << "nll val " << lastVal << " diff " << d << " " << values[j] << std::endl;
    //   std::cout << "obs " << obs->getRealValue("obs1") << " "
      //           << obs->getRealValue("obs2") << " " 
        //         << obs->getRealValue("obs3") << std::endl;
 
-      for(Int_t i = 0; i < numPdfs; ++i) {
+   //   for(Int_t i = 0; i < numPdfs; ++i) {
 //         RooAbsReal *coef = (RooAbsReal *)(itCoef->Next());
   //       RooAbsPdf  *pdf  = (RooAbsPdf * )(itPdf->Next() );
     //     RooArgSet vars(*pdf->getVariables());
@@ -129,11 +130,11 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
 //      std::cout << "\nObs: "; getObs->Print("v");
 //      std::cout << "\nPdf: "; pdf->getObservables(w->data("data_obs"))->Print("v");
 //       std::cout << "coef " << i << " value " << coef->getVal() << std::endl;
-      }
+//      }
    }
 
 
-   return;
+  // return;
 
 
    RooMinimizer m(*nll);
@@ -141,7 +142,7 @@ void test2(const char* file = "comb_hgg_125.root", const char* ws = "w", const c
    m.optimizeConst(2);
    m.setErrorLevel(0.5);
    m.setEps(1);
-//   m.setPrintLevel(-1);
+   if(RUNS > 1) m.setPrintLevel(-1);
    m.setStrategy(0);
 
    myBenchmark.Start("CombinedLikelihood");
@@ -259,28 +260,30 @@ void buildAddModel(RooWorkspace *w)
 
 void buildSumModel(RooWorkspace *w)
 {
-   w->factory("FormulaVar::f1('@0*@1+1',{x[0,10],sig[0,1e6]})");
-   w->factory("n[0,10]");
-//   w->factory("Poisson::p1(obs1[3,1,5],sig[2,1,10])");
- //  w->factory("prod::sig2(2,sig)");
- //  w->factory("Poisson::p2(obs2[2,1,5],sig2)");
- //  w->factory("prod::sig3(3,sig)");
- //  w->factory("Poisson::p3(obs3[1,1,10],sig3)");
- //  w->factory("f1[1,0,2]");
+//   w->factory("FormulaVar::f1('@0*@1+1',{x[0,10],sig[0,1e6]})");
+//   w->factory("n[0,10]");
+   w->factory("Poisson::p1(obs1[3,1,5],sig[2,1,10])");
+   w->factory("prod::sig2(2,sig)");
+   w->factory("Poisson::p2(obs2[2,1,5],sig2)");
+   w->factory("prod::sig3(3,sig)");
+   w->factory("Poisson::p3(obs3[1,1,10],sig3)");
+   w->factory("f1[1,0,2]");
    w->factory("f2[1.5,0,2]");
    w->factory("f3[1,0,2]");
-   w->factory("ASUM::sum_pdf(n*f1)");
+//   w->factory("ASUM::sum_pdf(n*f1)");
+   w->factory("ASUM::sum_pdf(f1*p1,f2*p2,f3*p3)");
 
    ModelConfig* sbModel = new ModelConfig("S+B", w);
-   sbModel->SetObservables("x");
+   sbModel->SetObservables("obs1,obs2,obs3");
    sbModel->SetParametersOfInterest("sig");
-   //sbModel->SetNuisanceParameters("f1,f2,f3");
+   sbModel->SetNuisanceParameters("f1,f2,f3");
    sbModel->SetPdf("sum_pdf");
    w->import(*sbModel);
 
-
-   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 10);
-   data->get(5)->Print("v");
+   RooDataSet *data = w->pdf("sum_pdf")->generate(*sbModel->GetObservables(), 3);
+//   data->get(0)->Print("v");
+//   data->get(1)->Print("v");
+//   data->get(2)->Print("v");
    data->SetName("data_obs");
    w->import(*data);
 
@@ -289,9 +292,11 @@ void buildSumModel(RooWorkspace *w)
 
 
 int main(int argc, char* argv[]) {
-   if(argc == 4) {
+   if(argc == 2) {
+      test2(atoi(argv[1]));
+   } else if(argc == 5) {
       std::cout << "Using command line args" << std::endl;
-      test2(argv[1], argv[2], argv[3]);
+      test2(atoi(argv[1]), argv[2], argv[3], argv[4]);
    } else {
       std::cout << "Using default args" << std::endl;
       test2();
