@@ -52,7 +52,7 @@ namespace UnitTesting
       double _ROCValue;
       
       bool ROCIntegralWithinInterval();
-      bool create_data(const char* filename, int nmax=20000);
+      bool create_data(const char* filename, int nmax=20000, int nvar=4);
       // disallow copy constructor and assignment
       MethodUnitTestWithComplexData(const MethodUnitTestWithComplexData&);
       MethodUnitTestWithComplexData& operator=(const MethodUnitTestWithComplexData&);

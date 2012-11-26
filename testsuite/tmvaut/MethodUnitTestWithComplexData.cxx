@@ -41,19 +41,20 @@ void MethodUnitTestWithComplexData::run()
   string factoryOptions( "!V:Silent:Transformations=I;D;P;G;N;U:AnalysisType=Classification:!Color:!DrawProgressBar" );
 #endif
   Factory* factory = new Factory( "TMVAComplexUnitTesting", outputFile, factoryOptions );
-  
-  factory->AddVariable( "var0",  "Variable 0", 'F' );
-  factory->AddVariable( "var1",  "Variable 1", 'F' );
-  factory->AddVariable( "var2",  "Variable 2", 'F' );
-  factory->AddVariable( "var3",  "Variable 3", 'F' );
+  int nvar=4, nev=20000;
+  if (_treeString.Contains("nvar50_")) nvar=50;
+  if (_treeString.Contains("nvar100_")) nvar=100;
+  if (nvar>4) std::cout << "number of variables ="<<nvar<<std::endl;
+  for (int ivar=0;ivar<nvar;ivar++) factory->AddVariable( TString::Format("var%d",ivar),  TString::Format("Variable %d",ivar), 'F' );
   factory->AddSpectator( "is1", 'I' );
   factory->AddSpectator( "evtno", 'I' );
   
   TFile* input(0);
 // FIXME:: give the filename of the sample somewhere else?
-  TString fname = "weights/tmva_complex_data.root"; 
+  TString fname = "weights/tmva_complex_data.root";
+  if (nvar>4)  fname = TString::Format("weights/tmva_complex_data%d.root",nvar);
   input = TFile::Open( fname );  
-  if (input == NULL) create_data("weights/tmva_complex_data.root");
+  if (input == NULL) create_data(fname,nev,nvar);
   input = TFile::Open( fname );  
   if (input == NULL) 
     {
@@ -112,10 +113,10 @@ void MethodUnitTestWithComplexData::run()
   delete factory;
 }
 
-bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax)
-{
+  bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax, int nvar)
+{   
+   std::cout << "creating file=" << filename<<" nmax="<<nmax<<" nvar="<<nvar<<std::endl;
    TFile* dataFile = TFile::Open(filename,"RECREATE");
-   int nvar = 4;
    int nsig = 0, nbgd=0;
    Float_t weight=1;
    Float_t xvar[100];
@@ -158,7 +159,7 @@ bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax)
 
    TRandom R( 100 );
    do {
-      for (Int_t ivar=0; ivar<nvar-1; ivar++) { xvar[ivar]=2.*R.Rndm()-1.;}
+      for (Int_t ivar=0; ivar<nvar; ivar++) { xvar[ivar]=2.*R.Rndm()-1.;}
       Float_t xout = xvar[0]+xvar[1]+xvar[2]*xvar[1]-xvar[0]*xvar[1]*xvar[1];
       xvar[3] = xout + 4. *R.Rndm()-2.;
       bool is = (TMath::Abs(xout)<0.3);
