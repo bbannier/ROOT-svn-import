@@ -179,6 +179,8 @@ void addDataInputTests( UnitTestSuite& TMVA_test, bool full=true)
    TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
    TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=alternate:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.95) );
    TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("sig1_sig2_bgd1_bgd2"), TString("SplitMode=block:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.9, 0.994) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("nvar50_sig1_bgd1"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.48, 0.52) );
+   TMVA_test.addTest(new MethodUnitTestWithComplexData(TString("nvar100_sig1_bgd1"), TString("nTrain_Signal=500:nTrain_Background=500:SplitMode=random:NormMode=NumEvents:!V"), TMVA::Types::kLikelihood, "LikelihoodD", lhstring , 0.48, 0.52) );
 }
 
 void addComplexClassificationTests( UnitTestSuite& TMVA_test, bool full=true )
