@@ -11,7 +11,7 @@ include $(ROOTSYS)/etc/Makefile.arch
 ifeq ($(TMVASYS),)
 TMVAINC = -I../../tmva
 TMVALD  = -L../../tmva/lib
-TMVALIB = -lTMVA.1
+TMVALIB = -lTMVA
 else ifeq ($(TMVASYS),ROOT)
 TMVAINC = 
 TMVALD  = 
@@ -19,7 +19,7 @@ TMVALIB =
 else
 TMVAINC = -I$(TMVASYS)
 TMVALD  = -L$(TMVASYS)/lib
-TMVALIB = -lTMVA.1
+TMVALIB = -lTMVA
 endif
 
 ifneq ($(FULL),)
