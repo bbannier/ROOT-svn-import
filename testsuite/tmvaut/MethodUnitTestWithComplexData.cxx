@@ -1,6 +1,8 @@
 #include "MethodUnitTestWithComplexData.h"
 #include "TFile.h"
 #include "TMVA/MethodBase.h"
+#include "TSystem.h"
+#include "TROOT.h"
 
 using namespace std;
 using namespace UnitTesting;
@@ -33,28 +35,26 @@ void MethodUnitTestWithComplexData::run()
   if(!outputFile)
     return;    
 
-// FIXME:: make the factory option mutable?
-// absolute silence options:
 #ifdef VERBOSE
   string factoryOptions( "V:!Silent:Transformations=I;D;P;G;N;U:AnalysisType=Classification:!Color:!DrawProgressBar" );
 #else
+  // absolute silence options:
   string factoryOptions( "!V:Silent:Transformations=I;D;P;G;N;U:AnalysisType=Classification:!Color:!DrawProgressBar" );
 #endif
   Factory* factory = new Factory( "TMVAComplexUnitTesting", outputFile, factoryOptions );
   int nvar=4, nev=20000;
+  if (_treeString.Contains("nvar20_")) nvar=20;
+  if (_treeString.Contains("nvar30_")) nvar=30;
   if (_treeString.Contains("nvar50_")) nvar=50;
   if (_treeString.Contains("nvar100_")) nvar=100;
-  if (nvar>4) std::cout << "number of variables ="<<nvar<<std::endl;
   for (int ivar=0;ivar<nvar;ivar++) factory->AddVariable( TString::Format("var%d",ivar),  TString::Format("Variable %d",ivar), 'F' );
   factory->AddSpectator( "is1", 'I' );
   factory->AddSpectator( "evtno", 'I' );
   
   TFile* input(0);
-// FIXME:: give the filename of the sample somewhere else?
   TString fname = "weights/tmva_complex_data.root";
   if (nvar>4)  fname = TString::Format("weights/tmva_complex_data%d.root",nvar);
-  input = TFile::Open( fname );  
-  if (input == NULL) create_data(fname,nev,nvar);
+  if (gSystem->Exec("ls "+fname) != 0) create_data(fname,nev,nvar);
   input = TFile::Open( fname );  
   if (input == NULL) 
     {
@@ -115,7 +115,9 @@ void MethodUnitTestWithComplexData::run()
 
   bool MethodUnitTestWithComplexData::create_data(const char* filename, int nmax, int nvar)
 {   
+#ifdef COUTDEBUG
    std::cout << "creating file=" << filename<<" nmax="<<nmax<<" nvar="<<nvar<<std::endl;
+#endif
    TFile* dataFile = TFile::Open(filename,"RECREATE");
    int nsig = 0, nbgd=0;
    Float_t weight=1;
@@ -159,9 +161,10 @@ void MethodUnitTestWithComplexData::run()
 
    TRandom R( 100 );
    do {
-      for (Int_t ivar=0; ivar<nvar; ivar++) { xvar[ivar]=2.*R.Rndm()-1.;}
+      for (Int_t ivar=0; ivar<nvar-1; ivar++) { xvar[ivar]=2.*R.Rndm()-1.;}
       Float_t xout = xvar[0]+xvar[1]+xvar[2]*xvar[1]-xvar[0]*xvar[1]*xvar[1];
       xvar[3] = xout + 4. *R.Rndm()-2.;
+      xvar[nvar-1] = xvar[3];
       bool is = (TMath::Abs(xout)<0.3);
       if (is) is1=1; else is1=0;
       bool isSignal;

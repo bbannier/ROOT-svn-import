@@ -34,7 +34,7 @@ TMVAUTH          = $(TMVAUTSOURCES:.cxx=.h)
 TMVAOPTIONS = -DFULL -DCOUTDEBUG -DNOCLEANUP
 #
 # comment the next line in if you require tons of output (for debug only)
-TMVAOPTIONS += -DVERBOSE
+#TMVAOPTIONS += -DVERBOSE
 
 $(TMVAUTOBJECTS): %.o : %.cxx $(TMVAUTH)
 	$(CXX) -g  $(TMVAINCLUDE) $(CXXFLAGS) $(TMVAOPTIONS) -c $< -o $@
