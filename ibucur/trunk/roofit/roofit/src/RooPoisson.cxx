@@ -146,10 +146,12 @@ Double_t RooPoisson::analyticalIntegral(Int_t code, const char* rangeName) const
     // the integral with respect to the mean is the integral of a gamma distribution 
     Double_t mean_min = mean.min(rangeName);
     Double_t mean_max = mean.max(rangeName);
+     
+    Double_t ix;
+    if(_noRounding) ix = x + 1;
+    else ix = Int_t(TMath::Floor(x)) + 1.0; // negative ix does not need protection (gamma returns 0.0)
     
-    Int_t ix = Int_t(TMath::Floor(x)) + 1; // negative ix does not need protection (gamma returns 0.0)
-
-    return ROOT::Math::gamma_cdf(mean_max, ix, 1) - ROOT::Math::gamma_cdf(mean_min, ix, 1);
+    return ROOT::Math::gamma_cdf(mean_max, ix, 1.0) - ROOT::Math::gamma_cdf(mean_min, ix, 1.0);
   }
 
 }
