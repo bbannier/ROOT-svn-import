@@ -6,6 +6,7 @@
 
 #include "cling/MetaProcessor/MetaProcessor.h"
 
+#include "Display.h"
 #include "InputValidator.h"
 #include "cling/Interpreter/Interpreter.h"
 
@@ -17,7 +18,9 @@
 #include "llvm/Support/Path.h"
 
 #include <fstream>
+#include <cstdlib>
 #include <cctype>
+
 
 using namespace clang;
 
@@ -31,6 +34,7 @@ namespace cling {
       r_paren,
       anystring,
       comma,
+      exclamation,
       booltrue,
       boolfalse,
       eof,
@@ -51,6 +55,7 @@ namespace cling {
     tok::TokenKind getKind() const { return kind; }
     size_t getLength() const { return bufEnd - bufStart; }
     const char* getBufStart() const { return bufStart; }
+    const char *getBufEnd() const {return bufEnd; }
 
     friend class CommandLexer;
   };
@@ -69,7 +74,7 @@ namespace cling {
 
     void LexBlankSpace() {
       // TODO: React on EOF.
-      while (*curPos == ' ' || *curPos == '\t')
+      while (curPos != bufferEnd && (*curPos == ' ' || *curPos == '\t'))
         ++curPos;
     }
 
@@ -91,13 +96,25 @@ namespace cling {
       Result.startToken();
       Result.bufStart = curPos;
       unsigned char C = *curPos;
-      while ((C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z'))
+      while ((C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z') || C == '_')
         C = *++curPos;
       Result.bufEnd = curPos;
       if (Result.getLength() > 0) { 
         Result.kind = tok::ident;
         return true;
       } 
+      return false;
+    }
+    
+    bool LexExclamation(Token& Result) {
+      if (curPos != bufferEnd && *curPos == '!') {
+         Result.startToken();
+         Result.bufStart = curPos;
+         Result.bufEnd = ++curPos;
+         Result.kind = tok::exclamation;
+         return true;
+      }
+
       return false;
     }
 
@@ -140,7 +157,14 @@ namespace cling {
       }
       return false;        
     }
-
+    
+    void LexTailString(Token& Result) {
+      Result.startToken();
+      Result.bufStart = curPos;
+      Result.bufEnd = bufferEnd;
+      Result.kind = tok::anystring;
+    }
+    
     bool LexSpecialSymbol(Token& Result) {
       Result.startToken();
       LexBlankSpace();
@@ -226,7 +250,7 @@ namespace cling {
 
     // Check if the current statement is now complete. If not, return to
     // prompt for more.
-    if (m_InputValidator->validate(input_line, m_Interp.getCI()->getLangOpts())
+    if (m_InputValidator->validate(input_line)
         == InputValidator::kIncomplete) {
       if (compRes) *compRes = Interpreter::kMoreInputExpected;
       return m_InputValidator->getExpectedIndent();
@@ -273,8 +297,8 @@ namespace cling {
      return false;
    }
 
-   if (!CmdLexer.LexIdent(Tok)) {
-     llvm::errs() << "Error in cling::MetaProcessor: command name token expected. Try .help\n";
+   if (!CmdLexer.LexIdent(Tok) && !CmdLexer.LexExclamation(Tok)) {
+     llvm::errs() << "Error in cling::MetaProcessor: command name token or '!' expected. Try .help\n";
      if (compRes) *compRes = Interpreter::kFailure;
      return false;
    }
@@ -284,8 +308,19 @@ namespace cling {
    unsigned char CmdStartChar = *Tok.getBufStart();
    if (compRes) *compRes = Interpreter::kSuccess;
 
-   // .q Exits the process.
-   if (CmdStartChar == 'q') {
+   if (Tok.getKind() == tok::exclamation) {
+     CmdLexer.LexBlankSpace();
+     CmdLexer.LexTailString(Tok);
+     if (Tok.getLength()) {
+       std::string cmd(Tok.getBufStart(), Tok.getLength());
+       //That's what CINT does.
+       std::system(cmd.c_str());
+     }
+
+     return true;
+   }
+   else if (CmdStartChar == 'q') {
+     // .q Exits the process.
      m_Options.Quitting = true;
      return true;
    }
@@ -379,6 +414,43 @@ namespace cling {
        m_Interp.DumpIncludePath();
      }
      return true;
+   }
+   else if (CmdStartChar == 'g') {
+      std::string varName;
+      
+      if (Tok.getLength() > 1)
+         varName.assign(Tok.getBufStart() + 1, Tok.getBufEnd());
+      else {
+         CmdLexer.LexBlankSpace();
+         if (CmdLexer.LexIdent(Tok))
+            varName.assign(Tok.getBufStart(), Tok.getBufEnd());
+      }
+      
+      if (varName.length())
+         DisplayGlobal(llvm::outs(), &m_Interp, varName.c_str());
+      else
+         DisplayGlobals(llvm::outs(), &m_Interp);
+      
+      return true;
+   }
+   else if (Command.equals("class")) {
+      CmdLexer.LexBlankSpace();
+      CmdLexer.LexTailString(Tok);
+      if (Tok.getLength()) {
+         std::string className(Tok.getBufStart(), Tok.getLength());
+         DisplayClass(llvm::outs(), &m_Interp, className.c_str(), true);
+      } else
+         DisplayClasses(llvm::outs(), &m_Interp, false);
+
+      return true;
+   }
+   else if (Command.equals("Class")) {
+      DisplayClasses(llvm::outs(), &m_Interp, true);
+      return true;
+   }
+   else if (Command.equals("typedef")) {
+      //
+      return true;
    }
    else if (Command.equals("printAST")) {
      if (!CmdLexer.LexBool(Tok)) {
