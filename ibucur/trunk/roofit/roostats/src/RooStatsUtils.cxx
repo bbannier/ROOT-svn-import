@@ -76,7 +76,9 @@ namespace RooStats {
          RooAbsCategoryLValue *cat = (RooAbsCategoryLValue *) sim->indexCat().clone(sim->indexCat().GetName());
          for (int ic = 0, nc = cat->numBins((const char *)0); ic < nc; ++ic) {
             cat->setBin(ic);
-            FactorizePdf(observables, *sim->getPdf(cat->getLabel()), obsTerms, constraints);
+            RooAbsPdf* catPdf = sim->getPdf(cat->getLabel());
+            // it is possible that a pdf is not defined for every category
+            if (catPdf != 0) FactorizePdf(observables, *catPdf, obsTerms, constraints);
          }
          delete cat;
       } else if (pdf.dependsOn(observables)) {
@@ -161,7 +163,10 @@ namespace RooStats {
 
          for (int ic = 0, nc = cat->numBins((const char *)NULL); ic < nc; ++ic) {
             cat->setBin(ic);
-            RooAbsPdf *newPdf = StripConstraints(*sim->getPdf(cat->getLabel()), observables, constraints);
+            RooAbsPdf* catPdf = sim->getPdf(cat->getLabel());
+            RooAbsPdf* newPdf = NULL;
+            // it is possible that a pdf is not defined for every category
+            if(catPdf != NULL) newPdf = StripConstraints(*catPdf, observables, constraints);
             if(newPdf == NULL) { delete cat; return NULL; } // all channels must have observables
             pdfList.add(*newPdf);
          }
