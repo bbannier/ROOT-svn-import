@@ -154,6 +154,8 @@ Double_t RooPoisson::analyticalIntegral(Int_t code, const char* rangeName) const
     return ROOT::Math::gamma_cdf(mean_max, ix, 1.0) - ROOT::Math::gamma_cdf(mean_min, ix, 1.0);
   }
 
+  return 0;
+
 }
 
 
