@@ -60,9 +60,6 @@
 #include "TMVA/Ranking.h"
 
 using std::vector;
-using std::stringstream;
-using std::exit;
-using std::atoi;
 
 ClassImp(TMVA::MethodANNBase)
 
@@ -311,6 +308,9 @@ void TMVA::MethodANNBase::BuildNetwork( std::vector<Int_t>* layout, std::vector<
    if (weights == NULL) InitWeights();
    else                 ForceWeights(weights);
 }
+
+
+
 
 //______________________________________________________________________________
 void TMVA::MethodANNBase::BuildLayers( std::vector<Int_t>* layout, Bool_t fromFile )
@@ -630,6 +630,14 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetRegressionValues()
    return *fRegressionReturnVal;
 }
 
+
+
+
+
+
+
+
+
 //_______________________________________________________________________
 const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
 {
@@ -665,6 +673,8 @@ const std::vector<Float_t> &TMVA::MethodANNBase::GetMulticlassValues()
          }
       (*fMulticlassReturnVal).push_back(1.0/(1.0+norm));
    }
+
+
    
    return *fMulticlassReturnVal;
 }
@@ -691,7 +701,7 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
          void* neuronxml = gTools().AddChild(layerxml, "Neuron");
          gTools().AddAttr(neuronxml, "NSynapses", gTools().StringFromInt(numSynapses) );
          if(numSynapses==0) continue;
-         stringstream s("");
+	     std::stringstream s("");
          s.precision( 16 );
          for (Int_t k = 0; k < numSynapses; k++) {
             TSynapse* synapse = neuron->PostLinkAt(k);
@@ -724,7 +734,7 @@ void TMVA::MethodANNBase::AddWeightsXMLTo( void* parent ) const
          gTools().xmlengine().NewAttr(xmlRow, 0, "Index", gTools().StringFromInt(row) );
 
          // create the rows
-         stringstream s("");
+	     std::stringstream s("");
          s.precision( 16 );
          for( Int_t col = 0; col < nCols; ++col ){
             s << std::scientific << (*(elements+index)) << " ";
@@ -783,7 +793,7 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
          gTools().ReadAttr( nodeN, "NSynapses", nSyn );
          if( nSyn > 0 ){
             const char* content = gTools().GetContent(nodeN);
-            stringstream s(content);
+            std::stringstream s(content);
             for (UInt_t iSyn = 0; iSyn<nSyn; iSyn++) { // synapses
 
                TSynapse* synapse = neuron->PostLinkAt(iSyn);
@@ -832,7 +842,7 @@ void TMVA::MethodANNBase::ReadWeightsFromXML( void* wghtnode )
 
       const char* content = gTools().xmlengine().GetNodeContent(xmlRow);
 
-      stringstream s(content);
+      std::stringstream s(content);
       for (Int_t iCol = 0; iCol<nCols; iCol++) { // columns
 	 s >> (*(elements+index));
 	 ++index;
