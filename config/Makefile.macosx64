@@ -64,6 +64,7 @@ CINTCFLAGS    = -m64 -pipe -W -Wall -fsigned-char -fno-common \
                 -DG__ROOT -DG__REDIRECTIO -DG__OSFDLL \
                 -DG__STD_EXCEPTION $(TARGETFLAGS)
 COMPILER      = gnu
+AVXFLAGS      = -mavx
 
 # Linker:
 ifeq ($(subst $(APPLE_CLANG),,12),12)

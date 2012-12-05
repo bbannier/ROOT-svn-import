@@ -102,6 +102,7 @@ options="                    \
    enable_table              \
    enable_tmva               \
    enable_unuran             \
+   enable_vc                 \
    enable_winrtdebug         \
    enable_x11                \
    enable_xft                \
@@ -162,6 +163,7 @@ enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
 enable_unuran=no
+enable_vc=no
 enable_winrtdebug=
 enable_builtin_freetype=no
 enable_builtin_ftgl=no
@@ -231,6 +233,7 @@ TABLE            \
 XMLDIR           \
 ROOTDICTTYPE     \
 CASROOT          \
+VC               \
 "
 configenvvars=
 for c in $envvars ; do
@@ -1565,6 +1568,7 @@ enable/disable options, prefix with either --enable- or --disable-
   table              Build libTable contrib library
   tmva               Build TMVA multi variate analysis library
   unuran             UNURAN - package for generating non-uniform random numbers
+  vc                 Vc adds a few new types for portable and intuitive SIMD programming
   winrtdebug         Link against the Windows debug runtime library
   x11                X11 support
   xml                XML parser interface
@@ -6092,6 +6096,19 @@ fi
 
 ######################################################################
 #
+### echo %%% Vc Library - Contributed library
+#
+message "Checking whether to build libVc"
+if test "x$enable_vc" = "xyes" || test ! "x$VC" = "x"; then
+    enable_vc="yes"
+    result "yes"
+else
+    enable_vc=""
+    result "no"
+fi
+
+######################################################################
+#
 ### echo %%% GDML Library - Contributed library
 #
 message "Checking whether to build libGdml"
@@ -6239,6 +6256,7 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_xml"      = "xyes" && pl="$pl libroot-io-xmlparser"
     test "x$enable_mathmore" = "xyes" && pl="$pl libroot-math-mathmore"
     test "x$enable_unuran"   = "xyes" && pl="$pl libroot-math-unuran"
+    test "x$enable_vc"       = "xyes" && pl="$pl libroot-math-vc"
     test "x$enable_table"    = "xyes" && pl="$pl libroot-misc-table"
     test "x$enable_ldap"     = "xyes" && pl="$pl libroot-net-ldap"
     test "x$enable_roofit"   = "xyes" && pl="$pl libroot-roofit"
@@ -6701,6 +6719,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildroofit@|$enable_roofit|"        \
     -e "s|@buildminuit2@|$enable_minuit2|"      \
     -e "s|@buildunuran@|$enable_unuran|"        \
+    -e "s|@buildvc@|$enable_vc|"        \
     -e "s|@buildgdml@|$enable_gdml|"            \
     -e "s|@buildgeocad@|$enable_geocad|"        \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
