@@ -78,7 +78,7 @@ void test2(Int_t sumLikelihood = kTRUE, const char* file = "comb_hgg_125.root", 
    RooAbsReal* nll = NULL;
    if (sumLikelihood) {
       std::cout << "Using SumLikelihood" << std::endl;
-      nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
+//      nll = RooStats::CreateNLL(*model->GetPdf(), *w->data(data), commands);
    } else {
       std::cout << "Using RooFit" << std::endl;
       nll = model->GetPdf()->createNLL(*w->data(data), commands);
