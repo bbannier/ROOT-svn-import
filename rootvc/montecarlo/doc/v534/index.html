@@ -1,0 +1,34 @@
+<br/> 
+<hr/> 
+<a name="montecarlo"></a> 
+<h3>MonteCarlo Libraries</h3>
+
+<h4>VMC</h4>
+<ul>
+<li> 
+Update of the VMC interfaces for multi-threading: 
+TVirtualMC and TVirtualMCApplication instances are now declared thread local.
+</li>
+<li>
+Removed deprecated functions from TVirtualMC:
+<pre>
+  // Return parameters for material specified by material number imat
+  // Deprecated - replaced with GetMaterial()
+  virtual void  Gfmate(Int_t imat, char *name, Float_t &amp;a, Float_t &amp;z,
+                       Float_t &amp;dens, Float_t &amp;radl, Float_t &amp;absl,
+                       Float_t *ubuf, Int_t &amp;nbuf) = 0;
+
+  //  Return parameters for material specified by material number imat
+  // (in double precision)
+  // Deprecated - replaced with GetMaterial()
+  virtual void  Gfmate(Int_t imat, char *name, Double_t &amp;a, Double_t &amp;z,
+                       Double_t &amp;dens, Double_t &amp;radl, Double_t &amp;absl,
+                       Double_t *ubuf, Int_t &amp;nbuf) = 0;
+
+  // Check the parameters of a tracking medium
+  // Deprecated
+  virtual void  Gckmat(Int_t imed, char *name) = 0;
+</pre>
+</li>
+</ul>
+
