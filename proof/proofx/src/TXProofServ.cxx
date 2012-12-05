@@ -359,13 +359,19 @@ Int_t TXProofServ::CreateServer()
 
    // if master, start slave servers
    if (IsMaster()) {
-      TString master = Form("proof://%s@__master__", fUser.Data());
+      TString master;
+      
+      if (fConfFile.BeginsWith("lite:")) {
+         master = "lite://";
+      } else {
+         master.Form("proof://%s@__master__", fUser.Data());
 
-      // Add port, if defined
-      Int_t port = gEnv->GetValue("ProofServ.XpdPort", -1);
-      if (port > -1) {
-         master += ":";
-         master += port;
+         // Add port, if defined
+         Int_t port = gEnv->GetValue("ProofServ.XpdPort", -1);
+         if (port > -1) {
+            master += ":";
+            master += port;
+         }
       }
 
       // Make sure that parallel startup via threads is not active
@@ -399,13 +405,25 @@ Int_t TXProofServ::CreateServer()
          return -1;
       }
 
-      // make instance of TProof
-      fProof = reinterpret_cast<TProof*>(h->ExecPlugin(5, master.Data(),
-                                                          fConfFile.Data(),
-                                                          fConfDir.Data(),
-                                                          fLogLevel,
-                                                          fTopSessionTag.Data()));
-
+      // Make instance of TProof
+      if (fConfFile.BeginsWith("lite:")) {
+         // Remove input and signal handlers to avoid spurious "signals"
+         // during startup
+         gSystem->RemoveFileHandler(fInputHandler);
+         fProof = reinterpret_cast<TProof*>(h->ExecPlugin(6, master.Data(),
+                                                            0, 0,
+                                                            fLogLevel,
+                                                            fSessionDir.Data(), 0));
+         // Re-enable input and signal handlers
+         gSystem->AddFileHandler(fInputHandler);
+      } else {
+         fProof = reinterpret_cast<TProof*>(h->ExecPlugin(5, master.Data(),
+                                                            fConfFile.Data(),
+                                                            fConfDir.Data(),
+                                                            fLogLevel,
+                                                            fTopSessionTag.Data()));
+      }
+      
       // Save worker info
       if (fProof) fProof->SaveWorkerInfo();
 
@@ -674,11 +692,30 @@ Int_t TXProofServ::Setup()
    fWorkDir = gEnv->GetValue("ProofServ.Sandbox", Form("~/%s", kPROOF_WorkDir));
 
    // Get Session tag
-   if ((fTopSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
+   if ((fSessionTag = gEnv->GetValue("ProofServ.SessionTag", "-1")) == "-1") {
       Error("Setup", "Session tag missing");
       return -1;
    }
-   fSessionTag = fTopSessionTag;
+   // Get top session tag, i.e. the tag of the PROOF session
+   if ((fTopSessionTag = gEnv->GetValue("ProofServ.TopSessionTag", "-1")) == "-1") {
+      fTopSessionTag = "";
+      // Try to extract it from log file path (for backward compatibility)
+      if (gSystem->Getenv("ROOTPROOFLOGFILE")) {
+         fTopSessionTag = gSystem->DirName(gSystem->Getenv("ROOTPROOFLOGFILE"));
+         Ssiz_t lstl;
+         if ((lstl = fTopSessionTag.Last('/')) != kNPOS) fTopSessionTag.Remove(0, lstl + 1);
+         if (fTopSessionTag.BeginsWith("session-")) {
+            fTopSessionTag.Remove(0, strlen("session-"));
+         } else {
+            fTopSessionTag = "";
+         }
+      }
+      if (fTopSessionTag.IsNull()) {
+         Error("Setup", "top session tag missing");
+         return -1;
+      }
+   }
+
    // Make sure the process ID is in the tag
    TString spid = Form("-%d", gSystem->GetPid());
    if (!fSessionTag.EndsWith(spid)) {
@@ -946,11 +983,8 @@ Bool_t TXProofServ::HandleInput(const void *in)
 
    } else if (acod == kXPD_inflate) {
 
-      // Set inflate factor
-      fInflateFactor = (hin->fInt2 >= 1000) ? hin->fInt2 : fInflateFactor;
-      // Notify
-      Info("HandleInput", "kXPD_inflate: inflate factor set to %f",
-           (Float_t) fInflateFactor / 1000.);
+      // Obsolete type
+      Warning("HandleInput", "kXPD_inflate: obsolete message type");
 
    } else if (acod == kXPD_priority) {
 

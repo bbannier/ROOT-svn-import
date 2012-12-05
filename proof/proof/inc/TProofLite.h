@@ -72,10 +72,11 @@ private:
    void  NotifyStartUp(const char *action, Int_t done, Int_t tot);
    Int_t SetProofServEnv(const char *ord);
    Int_t InitDataSetManager();
-   Int_t RegisterDataSets(TList *in, TList *out);
+
    void  ResolveKeywords(TString &s, const char *logfile);
 
-   void SendInputDataFile();
+   void  SendInputDataFile();
+   void  ShowDataDir(const char *dirname);
 
 protected:
    TProofLite() : TProof() { } // For derived classes to use
@@ -132,6 +133,9 @@ public:
    void  ClearCache(const char *file = 0);
    Int_t Load(const char *macro, Bool_t notOnClient = kFALSE, Bool_t uniqueOnly = kTRUE,
               TList *wrks = 0);
+
+   // Data management
+   void ShowData();
 
    // Query management
    TList *GetListOfQueries(Option_t *opt = "");

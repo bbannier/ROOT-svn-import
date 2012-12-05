@@ -43,8 +43,8 @@ ClassImp(THnBase);
 //______________________________________________________________________________
 THnBase::THnBase(const char* name, const char* title, Int_t dim,
                  const Int_t* nbins, const Double_t* xmin, const Double_t* xmax):
-   TNamed(name, title), fNdimensions(dim), fAxes(dim), fEntries(0), fTsumw(0),
-   fTsumw2(-1.), fTsumwx(dim), fTsumwx2(dim),
+   TNamed(name, title), fNdimensions(dim), fAxes(dim), fBrowsables(dim),
+   fEntries(0), fTsumw(0), fTsumw2(-1.), fTsumwx(dim), fTsumwx2(dim),
    fIntegral(0), fIntegralStatus(kNoInt)
 {
    // Construct a THnBase with "dim" dimensions,
@@ -318,9 +318,7 @@ void THnBase::Add(const TH1* hist, Double_t c /*=1.*/)
 {
    // Fill the THnBase with the bins of hist that have content
    // or error != 0.
-   Long64_t nbins = hist->GetNbinsX() + 2;
-   if (hist->GetDimension() >= 2) nbins *= hist->GetNbinsY() + 2;
-   if (hist->GetDimension() >= 3) nbins *= hist->GetNbinsZ() + 2;
+   Long64_t nbins = hist->GetNcells();
    int x[3] = {0,0,0};
    for (int i = 0; i < nbins; ++i) {
       double value = hist->GetBinContent(i);
@@ -417,13 +415,6 @@ void THnBase::GetRandom(Double_t *rand, Bool_t subBinRandom /* = kTRUE */)
 Bool_t THnBase::IsInRange(Int_t *coord) const
 {
    // Check whether bin coord is in range, as defined by TAxis::SetRange().
-   // Currently, TAxis::SetRange() does not allow to select all but over- and
-   // underflow bins (it instead resets the axis to "no range selected").
-   // Instead, simply call
-   //    TAxis* axis12 = hsparse.GetAxis(12);
-   //    axis12->SetRange(1, axis12->GetNbins());
-   //    axis12->SetBit(TAxis::kAxisRange);
-   // to deselect the under- and overflow bins in the 12th dimension.
 
    Int_t min = 0;
    Int_t max = 0;
@@ -432,13 +423,6 @@ Bool_t THnBase::IsInRange(Int_t *coord) const
       if (!axis->TestBit(TAxis::kAxisRange)) continue;
       min = axis->GetFirst();
       max = axis->GetLast();
-      if (min == 0 && max == 0) {
-         // special case where TAxis::SetBit(kAxisRange) and
-         // over- and underflow bins are de-selected.
-         // first and last are == 0 due to axis12->SetRange(1, axis12->GetNbins());
-         min = 1;
-         max = axis->GetNbins();
-      }
       if (coord[i] < min || coord[i] > max)
          return kFALSE;
    }
@@ -1383,7 +1367,7 @@ void THnBase::Browse(TBrowser *b)
    // dimension.
    if (fBrowsables.IsEmpty()) {
       for (Int_t dim = 0; dim < fNdimensions; ++dim) {
-         fBrowsables[dim] = new ROOT::THnBaseBrowsable(this, dim);
+         fBrowsables.AddAtAndExpand(new ROOT::THnBaseBrowsable(this, dim), dim);
       }
       fBrowsables.SetOwner();
    }

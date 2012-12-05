@@ -31,6 +31,8 @@
 
 #include "TBench.h"
 
+using namespace std;
+
 struct TBenchData {
    TBenchData() : cp1(0), nbytes1(0), cp2w(0), cp2r(0), cx3(0), nbytes3(0), cp3w(0), cp3r(0)  {}
    TBenchData(const char *name, Double_t i_cp1, Float_t i_cx3, Long64_t i_nbytes1, Long64_t i_nbytes3, Double_t i_cp2w, Double_t i_cp3w, Double_t i_cp2r, Double_t i_cp3r) 
@@ -305,7 +307,7 @@ int main(int argc, char **argv)
    }
    printf("*     Reference machine pcbrun4.cern.ch  RedHat Linux 7.3                     *\n");
    printf("*         (Pentium IV 2.4 Ghz 512 Mbytes RAM, IDE disk)                       *\n");
-   printf("*           (send your results to rootdev@root.cern.ch)                       *\n");
+   printf("*           (send your results to rootdev@cern.ch)                            *\n");
    printf("*******************************************************************************\n");
    printf("* Time to fill the structures  (seconds)   Reference      cx      Reference   *\n");
    printf("*******************************************************************************\n");

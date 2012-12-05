@@ -28,6 +28,8 @@ using namespace std;
 
 Bool_t RooStats::ProfileLikelihoodTestStat::fgAlwaysReuseNll = kTRUE ;
 
+void RooStats::ProfileLikelihoodTestStat::SetAlwaysReuseNLL(Bool_t flag) { fgAlwaysReuseNll = flag ; }
+
 Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type, RooAbsData& data, RooArgSet& paramsOfInterest) {
         // interna function to evaluate test statistics
         // can do depending on type: 
@@ -71,7 +73,7 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
           RooStats::RemoveConstantParameters(allParams);
 
           // need to call constrain for RooSimultaneous until stripDisconnected problem fixed
-          fNll = (RooNLLVar*) fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
+          fNll = fPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams),RooFit::ConditionalObservables(fConditionalObs));
 
           created = kTRUE ;
           delete allParams;
@@ -106,6 +108,7 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
        double uncondML = 0;
        double fit_favored_mu = 0;
        int statusD = 0;
+       RooArgSet * detOutput = 0;
        if (type != 2) {
           // minimize and count eval errors
           fNll->clearEvalErrorLog();
@@ -118,8 +121,11 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
              if (firstPOI) fit_favored_mu = attachedSet->getRealValue(firstPOI->GetName()) ;
 
              // save this snapshot
-             if( fDetailedOutputEnabled )
-		  fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitUncond_", fDetailedOutputWithErrorsAndPulls));
+             if( fDetailedOutputEnabled ) {
+                detOutput = DetailedOutputAggregator::GetAsArgSet(result, "fitUncond_", fDetailedOutputWithErrorsAndPulls);
+                fDetailedOutput->addOwned(*detOutput);
+                delete detOutput;
+             }
              delete result;
           }
           else { 
@@ -176,8 +182,11 @@ Double_t RooStats::ProfileLikelihoodTestStat::EvaluateProfileLikelihood(int type
             if (result) { 
                condML = result->minNll();
                statusN = result->status();
-               if( fDetailedOutputEnabled )
-                  fDetailedOutput->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitCond_", fDetailedOutputWithErrorsAndPulls));
+               if( fDetailedOutputEnabled ) {
+                  detOutput = DetailedOutputAggregator::GetAsArgSet(result, "fitCond_", fDetailedOutputWithErrorsAndPulls);
+                  fDetailedOutput->addOwned(*detOutput);
+                  delete detOutput; 
+               }
                delete result;
             }
             else { 

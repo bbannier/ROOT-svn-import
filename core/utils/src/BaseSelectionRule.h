@@ -24,10 +24,12 @@
 #include <string>
 #include <map>
 #include <list>
+#include <iosfwd>
 
 namespace clang {
    class NamedDecl;
    class CXXRecordDecl;
+   class Type;
 }
 
 class BaseSelectionRule
@@ -40,6 +42,12 @@ public:
       kNo,
       kDontCare
    };
+   enum EMatchType {
+      kName,
+      kPattern,
+      kFile,
+      kNoMatch
+   };
 
 private:
    long                   fIndex;           // Index indicating the ordering of the rules.
@@ -49,11 +57,15 @@ private:
    std::list<std::string> fFileSubPatterns; // a list of subpatterns, generated form a file_pattern attribute
    bool                   fMatchFound;      // this is true if this selection rule has been used at least once
    const clang::CXXRecordDecl  *fCXXRecordDecl;   // Record decl of the entity searched for.
+   const clang::Type           *fRequestedType;   // Same as the record decl but with some of the typedef preserved (Double32_t, Float16_t, etc..)
       
 public:
    BaseSelectionRule(long index) : fIndex(index),fIsSelected(kNo),fMatchFound(false),fCXXRecordDecl(0) {} 
    BaseSelectionRule(long index, ESelect sel, const std::string& attributeName, const std::string& attributeValue);
    
+   virtual void DebugPrint() const;
+   virtual void Print(std::ostream &out) const = 0;
+
    long    GetIndex() const { return fIndex; }
 
    bool    HasAttributeWithName(const std::string& attributeName) const; // returns true if there is an attribute with the specified name
@@ -66,19 +78,16 @@ public:
    
    const AttributesMap_t& GetAttributes() const; // returns the list of attributes
    void  PrintAttributes(int level) const;       // prints the list of attributes - level is the number of tabs from the beginning of the line
+   void  PrintAttributes(std::ostream &out, int level) const;       // prints the list of attributes - level is the number of tabs from the beginning of the line
 
-   bool  IsSelected (const clang::NamedDecl *decl, const std::string& name, const std::string& prototype, const std::string& file_name, bool& dontCare, bool& noName, bool& file, bool isLinkdef) const; // for more detailed description look at the .cxx file
+   EMatchType Match(const clang::NamedDecl *decl, const std::string& name, const std::string& prototype, bool isLinkdef) const; // for more detailed description look at the .cxx file
 
    void  SetMatchFound(bool match); // set fMatchFound
    bool  GetMatchFound() const;     // get fMatchFound
    
+   const clang::Type *GetRequestedType() const;
    const clang::CXXRecordDecl *GetCXXRecordDecl() const;
-   void SetCXXRecordDecl(const clang::CXXRecordDecl *decl);
-
-   virtual bool RequestOnlyTClass() const;      // True if the user want the TClass intiliazer but *not* the interpreter meta data
-   virtual bool RequestNoStreamer() const;      // Request no Streamer function in the dictionary
-   virtual bool RequestNoInputOperator() const; // Request no generation on a default input operator by rootcint or the compiler.
-   virtual bool RequestStreamerInfo() const;    // Request the ROOT 4+ I/O streamer
+   void SetCXXRecordDecl(const clang::CXXRecordDecl *decl, const clang::Type *typeptr);
 
 protected:
    static bool  BeginsWithStar(const std::string& pattern); // returns true if a pattern begins with a star
@@ -91,4 +100,9 @@ protected:
    static void  ProcessPattern(const std::string& pattern, std::list<std::string>& out); // divides a pattern into a list of sub-patterns
 };
 
+inline std::ostream &operator<<(std::ostream& out, const BaseSelectionRule &obj)
+{
+   obj.Print(out);
+   return out;
+}
 #endif

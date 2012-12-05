@@ -102,6 +102,8 @@ function argument.
 #include "TFumili.h"
 #include "TMath.h"
 #include "TF1.h"
+#include "TF2.h"
+#include "TF3.h"
 #include "TH1.h"
 #include "TGraphAsymmErrors.h"
 
@@ -488,7 +490,7 @@ Int_t TFumili::ExecuteCommand(const char *command, Double_t *args, Int_t nargs){
          else
             if(fCmPar[0]==1.) {
                ReleaseParameter(fLastFixed);
-               cout <<fLastFixed<<endl;
+               std::cout <<fLastFixed<<std::endl;
             }
          return 0;
       case 10: // RELease <parno> ...
@@ -674,9 +676,9 @@ Int_t TFumili::ExecuteSetCommand(Int_t nargs){
             printf("%5s: ",fANames[nnn++].Data());
             for (Int_t j=0;j<=i;j++)
                printf("%11.2E",fZ[l++]);
-            cout<<endl;
+            std::cout<<std::endl;
          }
-         cout<<endl;
+         std::cout<<std::endl;
          return 0;
          }
       case 4:
@@ -686,7 +688,7 @@ Int_t TFumili::ExecuteSetCommand(Int_t nargs){
             printf("%5s: ",fANames[i].Data());
             printf("%11.3E\n",TMath::Sqrt(1-1/((fR[i]!=0.)?fR[i]:1.)) );
          }
-         cout<<endl;
+         std::cout<<std::endl;
          return 0;
       case 5:   // PRIntout not implemented
          return -10;
@@ -1850,11 +1852,11 @@ void TFumili::FitChisquareI(Int_t &npar, Double_t *gin, Double_t &f, Double_t *u
       TF1::RejectPoint(kFALSE);
       f1->SetParameters(u);
       if (nd < 2) {
-         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],u)/cache[3];
+         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3])/cache[3];
       } else if (nd < 3) {
-         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5])/(cache[3]*cache[5]);
+         fu = ((TF2*)f1)->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5])/(cache[3]*cache[5]);
       } else {
-         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5],cache[6] - 0.5*cache[7],cache[6] + 0.5*cache[7])/(cache[3]*cache[5]*cache[7]);
+         fu = ((TF3*)f1)->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5],cache[6] - 0.5*cache[7],cache[6] + 0.5*cache[7])/(cache[3]*cache[5]*cache[7]);
       }
       if (TF1::RejectedPoint()) {cache += fPointSize; continue;}
       eu = cache[1];
@@ -2016,11 +2018,11 @@ void TFumili::FitLikelihoodI(Int_t &npar, Double_t *gin, Double_t &f, Double_t *
       cu  = cache[0];
       TF1::RejectPoint(kFALSE);
       if (nd < 2) {
-         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],u)/cache[3];
+         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3])/cache[3];
       } else if (nd < 3) {
-         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5])/(cache[3]*cache[5]);
+         fu = ((TF2*)f1)->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5])/(cache[3]*cache[5]);
       } else {
-         fu = f1->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5],cache[6] - 0.5*cache[7],cache[6] + 0.5*cache[7])/(cache[3]*cache[5]*cache[7]);
+         fu = ((TF3*)f1)->Integral(cache[2] - 0.5*cache[3],cache[2] + 0.5*cache[3],cache[4] - 0.5*cache[5],cache[4] + 0.5*cache[5],cache[6] - 0.5*cache[7],cache[6] + 0.5*cache[7])/(cache[3]*cache[5]*cache[7]);
       }
       if (TF1::RejectedPoint()) {cache += fPointSize; continue;}
       if (flag == 2) {

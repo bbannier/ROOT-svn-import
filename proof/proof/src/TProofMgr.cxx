@@ -90,16 +90,6 @@ TProofMgr::TProofMgr(const char *url, Int_t, const char *alias)
       fUrl.SetPort(port);
    }
 
-   // Make sure that the user is defined
-   if (strlen(fUrl.GetUser()) <= 0) {
-      // Fill in the default user
-      UserGroup_t *pw = gSystem->GetUserInfo();
-      if (pw) {
-         fUrl.SetUser(pw->fUser);
-         delete pw;
-      }
-   }
-
    // Check and save the host FQDN ...
    if (strcmp(fUrl.GetHost(), "__lite__")) {
       if (strcmp(fUrl.GetHost(), fUrl.GetHostFQDN()))
@@ -977,8 +967,8 @@ TFileCollection *TProofMgr::UploadFiles(const char *srcfiles,
    TString line;
    if (R_ISREG(fst.fMode)) {
       // Text file
-      ifstream f;
-      f.open(inpath.Data(), ifstream::out);
+      std::ifstream f;
+      f.open(inpath.Data(), std::ifstream::out);
       if (f.is_open()) {
          while (f.good()) {
             line.ReadToDelim(f);
@@ -1019,6 +1009,33 @@ TFileCollection *TProofMgr::UploadFiles(const char *srcfiles,
    }
    // Done
    return ds;
+}
+
+//______________________________________________________________________________
+Int_t TProofMgr::Rm(const char *what, const char *, const char *)
+{
+   // Run 'rm' on 'what'. Locally it is just a call to TSystem::Unlink .
+
+   Int_t rc = -1;
+   // Nothing to do if not in contact with proofserv
+   if (!IsValid()) {
+      Error("Rm", "invalid TProofMgr - do nothing");
+      return rc;
+   }
+   // Nothing to do if not in contact with proofserv
+   if (!what || (what && strlen(what) <= 0)) {
+      Error("Rm", "path undefined!");
+      return rc;
+   }
+   
+   TUrl u(what);
+   if (!strcmp(u.GetProtocol(), "file")) {
+      rc = gSystem->Unlink(u.GetFile());
+   } else {
+      rc = gSystem->Unlink(what);
+   }
+   // Done
+   return (rc == 0) ? 0 : -1;
 }
 
 //

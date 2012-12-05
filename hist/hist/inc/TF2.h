@@ -41,7 +41,6 @@ protected:
 public:
    TF2();
    TF2(const char *name, const char *formula, Double_t xmin=0, Double_t xmax=1, Double_t ymin=0, Double_t ymax=1);
-   TF2(const char *name, void *fcn, Double_t xmin=0, Double_t xmax=1, Double_t ymin=0, Double_t ymax=1, Int_t npar=0);
 #ifndef __CINT__
    TF2(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin=0, Double_t xmax=1, Double_t ymin=0, Double_t ymax=1, Int_t npar=0);
    TF2(const char *name, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin=0, Double_t xmax=1, Double_t ymin=0, Double_t ymax=1, Int_t npar=0);
@@ -71,9 +70,12 @@ public:
       fNdim = 2;
    } 
 
+#ifndef R__HAS_CLING
    // constructor used by CINT 
+   TF2(const char *name, void *fcn, Double_t xmin=0, Double_t xmax=1, Double_t ymin=0, Double_t ymax=1, Int_t npar=0);
    TF2(const char *name, void *ptr,  Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar, const char *className ); 
    TF2(const char *name, void *ptr, void *,Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar, const char *className, const char *methodName = 0);
+#endif
 
    TF2(const TF2 &f2);
    TF2 &operator=(const TF2& rhs);
@@ -93,22 +95,25 @@ public:
        Double_t     GetRandom();
        Double_t     GetRandom(Double_t xmin, Double_t xmax);
    virtual void     GetRandom2(Double_t &xrandom, Double_t &yrandom);
-   virtual void     GetRange(Double_t &xmin, Double_t &xmax) const { TF1::GetRange(xmin, xmax); }
+   using TF1::GetRange; 
    virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax) const;
    virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &zmin, Double_t &xmax, Double_t &ymax, Double_t &zmax) const;
    virtual Double_t GetSave(const Double_t *x);
-   virtual void     GetMinimumXY(Double_t &x, Double_t &y);
+   virtual Double_t GetMinimumXY(Double_t &x, Double_t &y) const;
+   virtual Double_t GetMaximumXY(Double_t &x, Double_t &y) const;
+   using TF1::GetMinimum;
+   using TF1::GetMaximum;
+   virtual Double_t GetMinimum(Double_t *x ) const;
+   virtual Double_t GetMaximum(Double_t *x ) const;
    virtual Double_t GetYmin() const {return fYmin;}
    virtual Double_t GetYmax() const {return fYmax;}
-   virtual Double_t Integral(Double_t a, Double_t b, const Double_t *params=0, Double_t epsil=0.000001) {return TF1::Integral(a,b,params,epsil);}
-   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsil=0.000001);
-   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsil=0.000001)
-                            {return TF1::Integral(ax,bx,ay,by,az,bz,epsil);}
+   using TF1::Integral;
+   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsrel=1.e-6); 
    virtual Bool_t   IsInside(const Double_t *x) const;
    virtual TH1     *CreateHistogram();
    virtual void     Paint(Option_t *option="");
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
-   virtual void     SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void     SetNpy(Int_t npy=100); // *MENU*
    virtual void     SetContour(Int_t nlevels=20, const Double_t *levels=0);
    virtual void     SetContourLevel(Int_t level, Double_t value);
@@ -127,6 +132,10 @@ public:
    virtual Double_t Variance2Y(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsilon=0.000001) {return CentralMoment2(0,ax,bx,2,ay,by,epsilon);}
 
    virtual Double_t Covariance2XY(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsilon=0.000001) {return CentralMoment2(1,ax,bx,1,ay,by,epsilon);}
+
+protected: 
+
+   virtual Double_t FindMinMax(Double_t* x, bool findmax) const; 
 
    ClassDef(TF2,4)  //The Parametric 2-D function
 };

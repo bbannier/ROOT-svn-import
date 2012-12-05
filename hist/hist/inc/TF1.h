@@ -23,6 +23,8 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#include "RConfigure.h"
+
 #ifndef ROOT_TFormula
 #include "TFormula.h"
 #endif
@@ -83,7 +85,13 @@ protected:
    static TF1   *fgCurrent;   //pointer to current function being processed
 
    void CreateFromFunctor(const char *name, Int_t npar);
+
+#ifndef R__HAS_CLING
    void CreateFromCintClass(const char *name, void * ptr, Double_t xmin, Double_t xmax, Int_t npar, const char * cname, const char * fname);
+#endif
+
+   virtual Double_t GetMinMaxNDim(Double_t * x , Bool_t findmax, Double_t epsilon = 0, Int_t maxiter = 0) const;
+   virtual void GetRange(Double_t * xmin, Double_t * xmax) const; 
 
 public:
     // TF1 status bits
@@ -94,7 +102,6 @@ public:
    TF1();
    TF1(const char *name, const char *formula, Double_t xmin=0, Double_t xmax=1);
    TF1(const char *name, Double_t xmin, Double_t xmax, Int_t npar);
-   TF1(const char *name, void *fcn, Double_t xmin, Double_t xmax, Int_t npar);
 #ifndef __CINT__
    TF1(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0);
    TF1(const char *name, Double_t (*fcn)(const Double_t *, const Double_t *), Double_t xmin=0, Double_t xmax=1, Int_t npar=0);
@@ -185,9 +192,12 @@ public:
       CreateFromFunctor(name, npar);
    }
 
-   // constructor used by CINT
+#ifndef R__HAS_CLING
+   // constructors used by CINT
    TF1(const char *name, void *ptr, Double_t xmin, Double_t xmax, Int_t npar, const char *className );
+   TF1(const char *name, void *fcn, Double_t xmin, Double_t xmax, Int_t npar);
    TF1(const char *name, void *ptr, void *,Double_t xmin, Double_t xmax, Int_t npar, const char *className, const char *methodName = 0);
+#endif
 
    TF1(const TF1 &f1);
    TF1& operator=(const TF1 &rhs);
@@ -245,21 +255,24 @@ public:
    virtual void     GradientPar(const Double_t *x, Double_t *grad, Double_t eps=0.01);
    virtual void     InitArgs(const Double_t *x, const Double_t *params);
    static  void     InitStandardFunctions();
-   virtual Double_t Integral(Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=1e-12);
-   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsilon=1e-12);
-   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=1e-12);
-   virtual Double_t IntegralError(Double_t a, Double_t b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
-   virtual Double_t IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1e-12);
+   virtual Double_t Integral(Double_t a, Double_t b, Double_t epsrel=1.e-12);
+   virtual Double_t IntegralOneDim(Double_t a, Double_t b, Double_t epsrel, Double_t epsabs, Double_t &err);
+   virtual Double_t IntegralError(Double_t a, Double_t b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1.E-2);
+   virtual Double_t IntegralError(Int_t n, const Double_t * a, const Double_t * b, const Double_t *params=0, const Double_t *covmat=0, Double_t epsilon=1.E-2);
    //virtual Double_t IntegralFast(const TGraph *g, Double_t a, Double_t b, Double_t *params=0);
    virtual Double_t IntegralFast(Int_t num, Double_t *x, Double_t *w, Double_t a, Double_t b, Double_t *params=0, Double_t epsilon=1e-12);
-   virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t minpts, Int_t maxpts, Double_t epsilon, Double_t &relerr,Int_t &nfnevl, Int_t &ifail);
-   virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t epsilon, Double_t &relerr);
+   virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t maxpts, Double_t epsrel, Double_t epsabs ,Double_t &relerr,Int_t &nfnevl, Int_t &ifail);
+   // for backward compatibility
+   virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Int_t /*minpts*/, Int_t maxpts, Double_t epsrel, Double_t &relerr,Int_t &nfnevl, Int_t &ifail) { 
+      return  IntegralMultiple(n,a,b,maxpts, epsrel, epsrel, relerr, nfnevl, ifail);  
+   }
+   virtual Double_t IntegralMultiple(Int_t n, const Double_t *a, const Double_t *b, Double_t epsrel, Double_t &relerr);
    virtual Bool_t   IsInside(const Double_t *x) const;
    virtual void     Paint(Option_t *option="");
    virtual void     Print(Option_t *option="") const;
    virtual void     ReleaseParameter(Int_t ipar);
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
-   virtual void     SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void     SetChisquare(Double_t chi2) {fChisquare = chi2;}
    virtual void     SetFitResult(const ROOT::Fit::FitResult & result, const Int_t * indpar = 0);
    template <class PtrObj, typename MemFn> 

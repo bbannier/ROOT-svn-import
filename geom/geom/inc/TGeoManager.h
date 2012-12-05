@@ -76,6 +76,7 @@ private :
    Bool_t                fLoopVolumes;      //! flag volume lists loop
    Bool_t                fStreamVoxels;     // flag to allow voxelization I/O
    Bool_t                fIsGeomReading;    //! flag set when reading geometry
+   Bool_t                fIsGeomCleaning;   //! flag to notify that the manager is being destructed
    Bool_t                fPhiCut;           // flag for phi cuts
    Bool_t                fTimeCut;          // time cut for tracks
    Bool_t                fDrawExtra;        //! flag that the list of physical nodes has to be drawn
@@ -239,7 +240,7 @@ public:
    void                   DrawPath(const char *path);
    void                   PrintOverlaps() const; // *MENU*
    void                   RandomPoints(const TGeoVolume *vol, Int_t npoints=10000, Option_t *option="");
-   void                   RandomRays(Int_t nrays=1000, Double_t startx=0, Double_t starty=0, Double_t startz=0);
+   void                   RandomRays(Int_t nrays=1000, Double_t startx=0, Double_t starty=0, Double_t startz=0, const char *target_vol=0, Bool_t check_norm=kFALSE);
    TGeoNode              *SamplePoints(Int_t npoints, Double_t &dist, Double_t epsil=1E-5,
                                        const char *g3path="");
    void                   SetNmeshPoints(Int_t npoints=1000);
@@ -450,6 +451,7 @@ public:
    static TGeoManager    *Import(const char *filename, const char *name="", Option_t *option="");
    static Bool_t          IsLocked();
    Bool_t                 IsStreamingVoxels() const {return fStreamVoxels;}
+   Bool_t                 IsCleaning() const {return fIsGeomCleaning;}
 
    //--- list getters
    TObjArray             *GetListOfNodes()              {return fNodes;}

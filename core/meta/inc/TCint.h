@@ -87,6 +87,8 @@ public:
    Int_t   GetExitCode() const { return fExitCode; }
    TEnv   *GetMapfile() const { return fMapfile; }
    Int_t   GetMore() const { return fMore; }
+   TClass *GenerateTClass(const char *classname, Bool_t silent = kFALSE); 
+   TClass *GenerateTClass(ClassInfo_t *classinfo, Bool_t silent = kFALSE); 
    Int_t   GenerateDictionary(const char *classes, const char *includes = 0, const char *options = 0); 
    char   *GetPrompt() { return fPrompt; }
    const char *GetSharedLibs();
@@ -96,6 +98,7 @@ public:
    virtual const char *GetSTLIncludePath() const;
    TObjArray  *GetRootMapFiles() const { return fRootmapFiles; }
    Int_t   InitializeDictionaries();
+   void    InspectMembers(TMemberInspector&, void* obj, const TClass* cl);
    Bool_t  IsLoaded(const char *filename) const;
    Int_t   Load(const char *filenam, Bool_t system = kFALSE);
    void    LoadMacro(const char *filename, EErrorCode *error = 0);
@@ -116,6 +119,7 @@ public:
    void    ResetGlobalVar(void *obj);
    void    RewindDictionary();
    Int_t   DeleteGlobal(void *obj);
+   Int_t   DeleteVariable(const char *name);
    void    SaveContext();
    void    SaveGlobalsContext();
    void    UpdateListOfGlobals();
@@ -123,6 +127,7 @@ public:
    void    UpdateListOfTypes();
    void    SetClassInfo(TClass *cl, Bool_t reload = kFALSE);
    Bool_t  CheckClassInfo(const char *name, Bool_t autoload = kTRUE);
+   Bool_t  CheckClassTemplate(const char *name);
    Long_t  Calc(const char *line, EErrorCode *error = 0);
    void    CreateListOfBaseClasses(TClass *cl);
    void    CreateListOfDataMembers(TClass *cl);
@@ -153,7 +158,7 @@ public:
    static void  UpdateAllCanvases();
 
    // Misc
-   virtual int    DisplayClass(FILE *fout,char *name,int base,int start) const;
+   virtual int    DisplayClass(FILE *fout,const char *name,int base,int start) const;
    virtual int    DisplayIncludePath(FILE *fout) const;
    virtual void  *FindSym(const char *entry) const;
    virtual void   GenericError(const char *error) const;
@@ -207,7 +212,6 @@ public:
    virtual void   ClassInfo_DeleteArray(ClassInfo_t *info, void *arena, bool dtorOnly) const;
    virtual void   ClassInfo_Destruct(ClassInfo_t *info, void *arena) const;
    virtual ClassInfo_t  *ClassInfo_Factory() const;
-   virtual ClassInfo_t  *ClassInfo_Factory(G__value * /* value */) const;
    virtual ClassInfo_t  *ClassInfo_Factory(ClassInfo_t *cl) const;
    virtual ClassInfo_t  *ClassInfo_Factory(const char *name) const;
    virtual int    ClassInfo_GetMethodNArg(ClassInfo_t *info, const char *method,const char *proto) const;
@@ -226,7 +230,6 @@ public:
    virtual void  *ClassInfo_New(ClassInfo_t *info, int n, void *arena) const;
    virtual void  *ClassInfo_New(ClassInfo_t *info, void *arena) const;
    virtual Long_t ClassInfo_Property(ClassInfo_t *info) const;
-   virtual int    ClassInfo_RootFlag(ClassInfo_t *info) const;
    virtual int    ClassInfo_Size(ClassInfo_t *info) const;
    virtual Long_t ClassInfo_Tagnum(ClassInfo_t *info) const;
    virtual const char *ClassInfo_FileName(ClassInfo_t *info) const;
@@ -270,6 +273,7 @@ public:
    virtual void   MethodInfo_CreateSignature(MethodInfo_t *minfo, TString &signature) const;
    virtual void   MethodInfo_Delete(MethodInfo_t *minfo) const;
    virtual MethodInfo_t  *MethodInfo_Factory() const;
+   virtual MethodInfo_t  *MethodInfo_Factory(ClassInfo_t *clinfo) const;
    virtual MethodInfo_t  *MethodInfo_FactoryCopy(MethodInfo_t *minfo) const;
    virtual MethodInfo_t  *MethodInfo_InterfaceMethod(MethodInfo_t *minfo) const;
    virtual Bool_t MethodInfo_IsValid(MethodInfo_t *minfo) const;
@@ -287,6 +291,7 @@ public:
    // G__MethodArgInfo interface
    virtual void   MethodArgInfo_Delete(MethodArgInfo_t *marginfo) const;
    virtual MethodArgInfo_t  *MethodArgInfo_Factory() const;
+   virtual MethodArgInfo_t  *MethodArgInfo_Factory(MethodInfo_t *minfo) const;
    virtual MethodArgInfo_t  *MethodArgInfo_FactoryCopy(MethodArgInfo_t *marginfo) const;
    virtual Bool_t MethodArgInfo_IsValid(MethodArgInfo_t *marginfo) const;
    virtual int    MethodArgInfo_Next(MethodArgInfo_t *marginfo) const;
@@ -294,12 +299,12 @@ public:
    virtual const char *MethodArgInfo_DefaultValue(MethodArgInfo_t *marginfo) const;
    virtual const char *MethodArgInfo_Name(MethodArgInfo_t *marginfo) const;
    virtual const char *MethodArgInfo_TypeName(MethodArgInfo_t *marginfo) const;
+   virtual const char *MethodArgInfo_TrueTypeName(MethodArgInfo_t *marginfo) const;
 
 
    // G__TypeInfo interface
    virtual void   TypeInfo_Delete(TypeInfo_t *tinfo) const;
    virtual TypeInfo_t *TypeInfo_Factory() const;
-   virtual TypeInfo_t *TypeInfo_Factory(G__value * /* value */) const;
    virtual TypeInfo_t *TypeInfo_FactoryCopy(TypeInfo_t * /* tinfo */) const;
    virtual void   TypeInfo_Init(TypeInfo_t *tinfo, const char *funcname) const;
    virtual Bool_t TypeInfo_IsValid(TypeInfo_t *tinfo) const;
@@ -316,6 +321,7 @@ public:
    virtual TypedefInfo_t  *TypedefInfo_FactoryCopy(TypedefInfo_t *tinfo) const;
    virtual void   TypedefInfo_Init(TypedefInfo_t *tinfo, const char *funcname) const;
    virtual Bool_t TypedefInfo_IsValid(TypedefInfo_t *tinfo) const;
+   virtual int    TypedefInfo_Next(TypedefInfo_t* tinfo) const;
    virtual Long_t TypedefInfo_Property(TypedefInfo_t *tinfo) const;
    virtual int    TypedefInfo_Size(TypedefInfo_t *tinfo) const;
    virtual const char *TypedefInfo_TrueName(TypedefInfo_t *tinfo) const;

@@ -50,11 +50,12 @@ options="                    \
    enable_builtin_pcre       \
    enable_builtin_zlib       \
    enable_builtin_lzma       \
+   enable_builtin_llvm       \
    enable_cxx11              \
+   enable_libcxx11           \
    enable_castor             \
    enable_chirp              \
    enable_cintex             \
-   enable_clarens            \
    enable_cling              \
    enable_cocoa              \
    enable_dcache             \
@@ -65,6 +66,7 @@ options="                    \
    enable_gviz               \
    enable_gdml               \
    enable_genvector          \
+   enable_geocad             \
    enable_gfal               \
    enable_glite              \
    enable_globus             \
@@ -80,7 +82,6 @@ options="                    \
    enable_odbc               \
    enable_opengl             \
    enable_oracle             \
-   enable_peac               \
    enable_pgsql              \
    enable_pythia6            \
    enable_pythia8            \
@@ -101,7 +102,6 @@ options="                    \
    enable_table              \
    enable_tmva               \
    enable_unuran             \
-   enable_vc                 \
    enable_winrtdebug         \
    enable_x11                \
    enable_xft                \
@@ -141,11 +141,13 @@ done
 for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_cxx11=no
+enable_libcxx11=no
 enable_cling=no
-enable_cocoa=no
+enable_cocoa=
 enable_afs=no
 enable_alloc=no
 enable_gdml=no
+enable_geocad=no
 enable_globus=no
 enable_explicitlink=no
 enable_gsl_shared=no
@@ -160,7 +162,6 @@ enable_soversion=no
 enable_table=no
 enable_thread=yes        # cannot be disabled (not in above options list)
 enable_unuran=no
-enable_vc=no
 enable_winrtdebug=
 enable_builtin_freetype=no
 enable_builtin_ftgl=no
@@ -168,10 +169,12 @@ enable_builtin_glew=no
 enable_builtin_pcre=no
 enable_builtin_zlib=no
 enable_builtin_lzma=no
+enable_builtin_llvm=yes
 enable_afdsmgrd=no
 
 if test "x$ENABLEALL" = "xyes"; then
     enable_gdml=yes
+    enable_geocad=yes
     enable_qt=yes
     enable_qtgsi=yes
     enable_roofit=yes
@@ -227,7 +230,7 @@ MINUIT2          \
 TABLE            \
 XMLDIR           \
 ROOTDICTTYPE     \
-VC               \
+CASROOT          \
 "
 configenvvars=
 for c in $envvars ; do
@@ -839,6 +842,9 @@ check_link() {
        fi
        cat <<EOF > conftest.mk
 include ${ac_srcdir}/config/Makefile.${arch}
+CC  = ${altcc}
+CXX = ${altcxx}
+LD  = ${altld}
 conftest: conftest.c
 	\$(CC) \$(CFLAGS) \$(LDFLAGS) \$< -o \$@ $linkdir $linklib
 
@@ -853,6 +859,9 @@ EOF
        fi
        cat <<EOF > conftest.mk
 include ${ac_srcdir}/config/Makefile.${arch}
+CC  = ${altcc}
+CXX = ${altcxx}
+LD  = ${altld}
 conftest:conftest.c
 	\$(CC) \$(CFLAGS) \$(LDFLAGS) \$< -o \$@ $linkdir $linklib
 
@@ -887,7 +896,7 @@ check_cxxopt() {
 
     # Assert that we got enough arguments
     if test $# -lt 1 ; then
-        echo "check_compopt: need at least one argument"
+        echo "check_cxxopt: need at least one argument"
         cxxopt_result=0
         return 1
     fi
@@ -898,6 +907,9 @@ check_cxxopt() {
     logmsg " trying to compile with option $cxxopt"
     cat <<EOF > conftest.mk
 include ${ac_srcdir}/config/Makefile.${arch}
+CC  = ${altcc}
+CXX = ${altcxx}
+LD  = ${altld}
 conftest: conftest.cxx
 	\$(CXX) \$(CFLAGS) $cxxopt \$(LDFLAGS) \$< -o \$@
 
@@ -1210,7 +1222,6 @@ guess_architecture() {
     logmsg "rele=$rele"
     case "$arch:$chip:$rele" in
         aix*)                  arch=aix5            ;;
-        osf1*:alpha:*)         arch=alphacxx6       ;;
         freebsd*:*:[789]*)     arch=freebsd7        ;;
         freebsd*:*:6*)         arch=freebsd5        ;;
         freebsd*:*:5*)         arch=freebsd5        ;;
@@ -1221,10 +1232,9 @@ guess_architecture() {
         hurd*:*:*)             arch=hurddeb         ;;
         linux:ia64:*)          arch=linuxia64gcc    ;;
         linux:x86_64:*)        arch=linuxx8664gcc   ;;
-        linux:alpha:*)         arch=linuxalphagcc   ;;
+        linux:x32:*)           arch=linuxx32gcc     ;;
         linux:arm*:*)          arch=linuxarm        ;;
         linux:hppa*:*)         arch=linux           ;;
-        linux:mips:*)          arch=linuxmips       ;;
         linux:sparc*:*)        arch=linux           ;;
         linux:parisc*:*)       arch=linuxhppa       ;;
         linux:ppc64*:*)        arch=linuxppc64gcc   ;;
@@ -1235,7 +1245,6 @@ guess_architecture() {
         lynx:*:*)              arch=lynxos          ;;
         darwin:power*:*)       arch=macosx          ;;
         darwin:*86*:*)         arch=macosx          ;;
-        irix*:sgi*:*)          arch=sgicc           ;;
         sunos:sun*:6*)         arch=solarisCC5      ;;
         sunos:sun*:5*)         arch=solarisCC5      ;;
         sunos:sun*:4*)         arch=solaris         ;;
@@ -1478,6 +1487,17 @@ If any of the flags --cintincdir, --datadir, --docdir, --etcdir, --iconpath
 ROOT will be compiled with static directory names, and you should not set
 the ROOTSYS environment variable.
 
+To reduce the output of configure by removing the trailing howto message, use:
+
+   --nohowto
+
+Use the flag:
+
+  --fail-on-missing 
+
+to force configure to fail if a component that has been explicitly enabled
+is missing some dependencies and can not be built.
+
 enable/disable options, prefix with either --enable- or --disable-
 
   afdsmgrd           Dataset manager for PROOF-based analysis facilities
@@ -1486,19 +1506,20 @@ enable/disable options, prefix with either --enable- or --disable-
   asimage            Image processing support, requires libAfterImage
   astiff             Include tiff support in image processing
   bonjour            Bonjour support, requires libdns_sd and/or Avahi
-  builtin-afterimage Built included libAfterImage, or use system libAfterImage
-  builtin-ftgl       Built included libFTGL, or use system libftgl
-  builtin-freetype   Built included libfreetype, or use system libfreetype
-  builtin-glew       Built included libGLEW, or use system libGLEW
-  builtin-pcre       Built included libpcre, or use system libpcre
-  builtin-zlib       Built included libz, or use system libz
-  builtin-lzma       Built included liblzma, or use system liblzma
-  c++11              Build using C++11 compatible mode, requires gcc > 4.7.x or clang
+  builtin-afterimage Build included libAfterImage, or use system libAfterImage
+  builtin-ftgl       Build included libFTGL, or use system libftgl
+  builtin-freetype   Build included libfreetype, or use system libfreetype
+  builtin-glew       Build included libGLEW, or use system libGLEW
+  builtin-pcre       Build included libpcre, or use system libpcre
+  builtin-zlib       Build included libz, or use system libz
+  builtin-lzma       Build included liblzma, or use system liblzma
+  builtin-llvm       Build included libclang, or use system libclang
+  cxx11              Build using C++11 compatible mode, requires gcc > 4.7.x or clang
+  libcxx11           Build using libc++, requires cxx11 option (MacOS X only, for the time being)
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
   chirp              Chirp filesystem support, requires cctools >= 3.2.2
   cintex             Build the libCintex Reflex interface library
-  clarens            Clarens RPC support, optionally used by PROOF
-  cling              Use cling as interpreter backend (experimental!), needs --with-llvm-config
+  cling              Use cling as interpreter backend (experimental!)
   cocoa              Use native Cocoa/Quartz graphics backend (MacOS X only)
   dcache             dCache support, requires libdcap from DESY
   explicitlink       Explicitly link with all dependent libraries
@@ -1507,6 +1528,7 @@ enable/disable options, prefix with either --enable- or --disable-
   fitsio             Read images and data from FITS files, requires cfitsio
   gviz               Graphs visualization support, requires graphviz
   gdml               GDML writer and reader
+  geocad             ROOT-CAD Interface
   gfal               GFAL support, requires libgfal
   globus             Globus authentication support, requires Globus toolkit
   glite              gLite support, requires libglite-api-wrapper v.3 from GSI (https://subversion.gsi.de/trac/dgrid/wiki)
@@ -1523,7 +1545,6 @@ enable/disable options, prefix with either --enable- or --disable-
   odbc               ODBC support, requires libiodbc or libodbc
   opengl             OpenGL support, requires libGL and libGLU
   oracle             Oracle support, requires libocci
-  peac               PEAC, PROOF Enabled Analysis Center, requires Clarens
   pgsql              PostgreSQL support, requires libpq
   pythia6            Pythia6 EG support, requires libPythia6
   pythia8            Pythia8 EG support, requires libPythia8
@@ -1544,7 +1565,6 @@ enable/disable options, prefix with either --enable- or --disable-
   table              Build libTable contrib library
   tmva               Build TMVA multi variate analysis library
   unuran             UNURAN - package for generating non-uniform random numbers
-  vc                 Vc adds a few new types for portable and intuitive SIMD programming
   winrtdebug         Link against the Windows debug runtime library
   x11                X11 support
   xml                XML parser interface
@@ -1615,6 +1635,8 @@ with options, prefix with --with-, enables corresponding support
   monalisa-libdir    Monalisa support, location of libapmoncpp
   mysql-incdir       MySQL support, location of mysql.h
   mysql-libdir       MySQL support, location of libmysqlclient
+  occ-incdir         GEOCAD support, location of OpenCascade inc files
+  occ-libdir         GEOCAD support, location of OpenCascade lib files
   odbc-incdir        ODBC support, location of sqlext.h
   odbc-libdir        ODBC support, location of libiodbc or libodbc
   opengl-incdir      OpenGL support, location of GL/gl.h
@@ -1682,7 +1704,7 @@ for example
 
   $0 --help | more
 
-Report bugs to <rootdev@root.cern.ch>
+Report bugs to <rootdev@cern.ch>
 EOF
 }
 
@@ -1737,16 +1759,16 @@ fi
 platform=`grep "^PLATFORM *=" ${ac_srcdir}/config/Makefile.$arch | awk '{ print $3 }'`
 
 case $arch in
-sgicc)
-   logmsg "Will check 32bit libraries"
-   checklib32="yes" ;;
-linuxppc64*|sgicc64)
+linuxppc64*)
    logmsg "Will ONLY check 64bit libraries"
    checkonlylib64="yes" ;;
 linuxx8664*)
    logmsg "Will check 64bit libraries"
    checklinux64="yes"
    checklib64="yes" ;;
+linuxx32*)
+   logmsg "Will check x32 libraries in the future"
+   logmsg "For now expect proper libraries through configure flags" ;;
 hpuxia64acc)
    logmsg "Will check HP/UX 64bit libraries"
    checkhpux64="yes" ;;
@@ -1811,6 +1833,9 @@ if test "x$platform" = "xmacosx" ; then
    if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 6 ]; then
       macosx106=yes
    fi
+   if [ `sw_vers | sed -n 's/ProductVersion://p' | cut -d . -f 2` -ge 8 ]; then
+      macosx108=yes
+   fi
 fi
 
 if test "x$platform" = "xlinux" ; then
@@ -1851,8 +1876,8 @@ trapcmd="rm -rf Makefile.tmp RConfigure.tmp RConfigure-out.tmp \
          RConfigOptions.tmp RConfigOptions-out.tmp \
          Makefile-comp.tmp root-config.tmp rootrc.tmp \
          rootauthrc.tmp rootdaemonrc.tmp memprobe.tmp rootd.tmp \
-         proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp conftest.mk \
-         conftest.c conftest conftest.dSYM"
+         proofd.tmp rootd.xinetd.tmp proofd.xinetd.tmp proofserv.tmp \
+         roots.tmp conftest.mk conftest.c conftest conftest.dSYM"
 trap "$trapcmd; exit 1" 1 2 3 15
 trap "$trapcmd" 0
 
@@ -1926,8 +1951,11 @@ if test $# -gt 0 ; then
       --with-gsl-incdir=*)     gslincdir=$optarg     ; enable_gsl="yes"     ;;
       --with-gsl-libdir=*)     gsllibdir=$optarg     ; enable_gsl="yes"     ;;
       --with-globus=*)         globusdir=$optarg     ; enable_globus="yes"  ;;
-      --with-globus-incdir=*)  globusincdir=$optarg  ; enable_globus="yes"    ;;
-      --with-globus-libdir=*)  globuslibdir=$optarg  ; enable_globus="yes"    ;;
+      --with-globus-incdir=*)  globusincdir=$optarg  ; enable_globus="yes"  ;;
+      --with-globus-libdir=*)  globuslibdir=$optarg  ; enable_globus="yes"  ;;
+      --with-geocad=*)         geocaddir=$optarg     ; enable_geocad="yes"  ;;
+      --with-occ-incdir=*)     occincdir=$optarg     ; enable_geocad="yes"  ;;
+      --with-occ-libdir=*)     occlibdir=$optarg     ; enable_geocad="yes"  ;;
       --with-gccxml=*)         gccxml=$optarg        ;;
       --with-hdfs-incdir=*)    hdfsincdir=$optarg    ; enable_hdfs="yes"    ;;
       --with-hdfs-libdir=*)    hdfslibdir=$optarg    ; enable_hdfs="yes"    ;;
@@ -1938,7 +1966,7 @@ if test $# -gt 0 ; then
       --with-krb5-libdir=*)    krb5libdir=$optarg    ; enable_krb5="yes"    ;;
       --with-ldap-incdir=*)    ldapincdir=$optarg    ; enable_ldap="yes"    ;;
       --with-ldap-libdir=*)    ldaplibdir=$optarg    ; enable_ldap="yes"    ;;
-      --with-llvm-config=*)    llvmconfig=$optarg    ;; # require explicit --enable-cling
+      --with-llvm-config=*)    llvmconfig=$optarg    ; enable_builtin_llvm=no;; # require explicit --enable-cling
       --with-mysql-incdir=*)   mysqlincdir=$optarg   ; enable_mysql="yes"   ;;
       --with-mysql-libdir=*)   mysqllibdir=$optarg   ; enable_mysql="yes"   ;;
       --with-monalisa-incdir=*)monalisaincdir=$optarg; enable_monalisa="yes";;
@@ -2324,10 +2352,113 @@ fi
 
 ######################################################################
 #
+### echo %%% libc++ - compile and link using libc++ (need OSX and cxx11 option)
+#
+# needs gcc > 4.7.x or clang
+uselibcxx11="undef"
+if test "x$enable_cxx11" = "xyes" && test "x$enable_libcxx11" = "xyes" ; then
+    message "Checking whether libc++ is supported"
+    check_cxxopt -std=c++11 -stdlib=libc++
+    if test $cxxopt_result -eq 0 ; then
+        enable_libcxx11="no"
+        result "no"
+    else
+        uselibcxx11="define"
+        result "yes"
+    fi
+fi
+
+######################################################################
+#
+### echo %%% Check for linker's support of --no-ctors-in-init-array
+#
+### This changes the sequence for static initialization to be right
+### to left.
+#
+logmsg "Derminining support for --no-ctors-in-init-array"
+cat <<EOF > conftest.mk
+include ${ac_srcdir}/config/Makefile.${arch}
+CC  = ${altcc}
+CXX = ${altcxx}
+LD  = ${altld}
+conftest: conftest.cxx
+	\$(CC) \$(LDFLAGS) -Wl,--no-ctors-in-init-array \$^ -o \$@
+
+conftest.cxx:
+	echo 'int main(int,char*[]){return 0;}' >> \$@
+EOF
+$gnumake -f conftest.mk >> $logfile 2>&1
+if test $? -eq 0 ; then
+    logmsg "  supported"
+    ctorsinitarray="yes"
+else
+    logmsg "  not supported"
+    ctorsinitarray="no"
+fi
+rm -f conftest.mk conftest conftest.cxx
+
+######################################################################
+#
+### echo %%% Cling - LLVM/clang based interpreter prototype
+#
+hascling="undef"
+hasllvm="undef"
+llvmdir="/**/"
+clingextrares=""
+if test ! "x$enable_cling" = "xno"; then
+    message "Checking for llvm-config"
+    if test "x$enable_builtin_llvm" = "x" || \
+       test "x$enable_builtin_llvm" = "xno" ; then
+	
+        # allow LLVMDIR instead of --with-llvm-config
+        if test "x$llvmconfig" = "x" ; then
+            if test ! "x$LLVMDIR" = "x" ; then
+                llvmconfig="$LLVMDIR/bin"
+            else
+                result "no"
+                clingextrares="(needs --with-llvm-config or \$LLVMDIR)"
+            fi
+        fi
+        if test ! "x$llvmconfig" = "x"; then
+            if test -d "$llvmconfig"; then
+                llvmconfig=$llvmconfig/llvm-config
+            fi
+            if test -f $llvmconfig && test -x $llvmconfig; then
+                hascling="define"
+                hasllvm="define"
+                llvmdir="`dirname $llvmconfig`"
+                llvmdir='"'"`dirname $llvmdir`"'"'
+            fi
+        fi
+    else
+        hascling="define"
+    fi
+else
+    enable_builtin_llvm="no"
+fi
+if test "x$hascling" = "xundef"; then
+    enable_cling="no"
+    message "Checking whether to integrate experimental cling"
+    result "no $clingextrares"
+else
+    result "$llvmconfig" # have llvm
+    enable_cling="yes"
+    message "Checking whether to integrate experimental cling"
+    result "yes"
+fi
+
+######################################################################
+#
 ### echo %%% Check if native MacOS X Cocoa/Quartz backend should be build
 #
 if test ! "x$platform" = "xmacosx"; then
     enable_cocoa="no"
+fi
+if test "x$macosx108" = "xyes" && test "x$enable_cocoa" = "x"; then
+   enable_cocoa="yes"
+fi
+if test "x$enable_cocoa" = "x"; then
+   enable_cocoa="no"
 fi
 
 hascocoa="undef"
@@ -2336,6 +2467,17 @@ if test "x$enable_cocoa" = "xyes"; then
     hascocoa="define"
     enable_x11="no"
     result "yes"
+    message "Checking for OSX SDK"
+    osxsdk=`make -s -f ${ac_srcdir}/config/Makefile.$arch CONFIGURE=yes showsdk`
+    result "$osxsdk"
+    if [ ! -d $osxsdk ]; then
+        result "`basename $0`: no OSX SDK found at $osxsdk"
+        result "Run "xcode-select" to update the developer directory path"
+        exit 1
+    else
+	openglincdir=${osxsdk}/System/Library/Frameworks/OpenGL.framework/Headers
+	opengllibdir=${osxsdk}/System/Library/Frameworks/OpenGL.framework/Libraries
+    fi
 fi
 
 ######################################################################
@@ -2461,6 +2603,11 @@ if test ! "x$enable_x11" = "xno" ; then
         result "For consistency they should be in the same directory"
         exit 1
     fi
+else
+    x11libdir=""
+    xpmlibdir=""
+    xftlibdir=""
+    xextlibdir=""
 fi
 
 ######################################################################
@@ -2575,20 +2722,29 @@ if test "x$enable_builtin_freetype" = "x" || \
 
    checking_msg "freetype-config"
    if `$cwhich freetype-config > /dev/null 2>&1` && test "x$host" = "x" ; then
-      $cwhich freetype-config
-
-      message "Checking for libfreetype version >= 9.3.0"
-      ttf2_version=`freetype-config --version | \
-          tr '.' ' ' | \
-          awk 'BEGIN { FS = " "; } \
-              { printf "%d", ($''1 * 1000 + $''2) * 1000 + $''3;}'`
-      # First good version is 9.3.0
-      if test $ttf2_version -lt 9003000 ; then
-         result "no (`freetype-config --version`)"
+      if test "x$macosx108" = "xyes" && (file -h `$cwhich freetype-config` | grep 'xstub' > /dev/null 2>&1 || test "x$enable_cocoa" = "xyes"); then
          enable_builtin_freetype="yes"
+         if file -h `$cwhich freetype-config` | grep 'xstub' > /dev/null 2>&1 ; then
+            result "XQuartz not installed"
+         else
+            result "using builtin freetype"
+         fi
       else
-         result "ok"
-         enable_builtin_freetype="no"
+         $cwhich freetype-config
+
+         message "Checking for libfreetype version >= 9.3.0"
+         ttf2_version=`freetype-config --version | \
+             tr '.' ' ' | \
+             awk 'BEGIN { FS = " "; } \
+                 { printf "%d", ($''1 * 1000 + $''2) * 1000 + $''3;}'`
+         # First good version is 9.3.0
+         if test $ttf2_version -lt 9003000 ; then
+            result "no (`freetype-config --version`)"
+            enable_builtin_freetype="yes"
+         else
+            result "ok"
+            enable_builtin_freetype="no"
+         fi
       fi
    else
       enable_builtin_freetype="yes"
@@ -2728,7 +2884,7 @@ if test ! "x$enable_opengl" = "xno" && test ! "x$platform" = "xwin32" ; then
         /usr/include/Mesa /usr/local/include/Mesa /usr/Mesa/include \
         /usr/local/Mesa/include /usr/Mesa /usr/local/Mesa /opt/Mesa \
         /opt/Mesa/include /opt/graphics/OpenGL/include"
-    check_header "GL/gl.h" "$openglincdir" $openglincdirs
+    check_header "GL/gl.h gl.h" "$openglincdir" $openglincdirs
     openglinc=$found_hdr
     openglincdir=$found_dir
 
@@ -4086,7 +4242,9 @@ if test ! "x$enable_asimage" = "xno" ; then
     fi
     # If we didn't find the system libAfterImage, or the user didn't ask
     # for a system library, then see if we have various headers needed.
-    if test "x$enable_builtin_afterimage" = "xyes" ; then
+    # For Cocoa backend force libAfterImage builtin jpeg and png libs
+    # to avoid system versions based on X11. 
+    if test "x$enable_builtin_afterimage" = "xyes" && test ! "x$enable_cocoa" = "xyes"; then
        check_header "jpeglib.h" "" \
           $ASIMAGE ${ASIMAGE:+$ASIMAGE/include} \
           ${finkdir:+$finkdir/include} \
@@ -4160,6 +4318,39 @@ check_explicit "$enable_asimage" "$enable_asimage_explicit" \
 
 ######################################################################
 #
+### echo %%% GEOCAD Library - Contributed library
+#
+# (See http://www.opencascade.org/)
+#
+# If the user has set the flags "--disable-geocad", we don't check for
+# OpenCascade at all.
+#
+if test ! "x$enable_geocad" = "xno"; then
+    # Check for OpenCascade include and library
+    check_header "XCAFApp_Application.hxx" "$occincdir" \
+        $CASROOT ${CASROOT:+$CASROOT/inc} /usr/include/opencascade \
+        /usr/include
+    occinc=$found_hdr
+    occincdir=$found_dir
+
+    check_library "libTKXCAF" "$enable_shared" "$occlibdir" \
+       $CASROOT ${CASROOT:+$CASROOT/lib} /usr/lib
+    occlib=$found_lib
+    occlibdir=$found_dir
+
+    if test ! "x$occlib" = "x" ; then
+       occlib="-lTKPrim -lTKBRep -lTKOffset -lTKGeomBase -lTKShHealing -lTKTopAlgo -lTKSTEP -lTKG2d -lTKBool -lTKBO -lTKXCAF -lTKXDESTEP -lTKLCAF -lTKernel -lTKXSBase -lTKG3d -lTKMath"
+    fi
+
+    if test "x$occincdir" = "x" || test "x$occlib" = "x"; then
+        enable_geocad="no"
+    fi
+fi
+check_explicit "$enable_geocad" "$enable_geocad_explicit" \
+     "Explicitly required GeoCad dependencies not fulfilled"
+
+######################################################################
+#
 ### echo %%% LDAP Support - Third party libraries
 #
 # (See openldap.org)
@@ -4214,12 +4405,23 @@ check_explicit "$enable_ldap" "$enable_ldap_explicit" \
 # (See http://www.python.org)
 #
 if test ! "x$enable_python" = "xno" ; then
+    # PyROOT depends on cling
+    message "Checking for PyROOT prerequisites"
+    if test ! "x$enable_cling" = "xyes"; then
+        enable_python="no"
+        result "no (cling disabled)"
+    else
+	result "yes"
+    fi
+fi
+if test ! "x$enable_python" = "xno" ; then
     # Check for Python include and library
     mypython=`$cwhich python 2> /dev/null`
     if test ! "x$mypython" = "x" && test -x "$mypython" ; then
        pythonvers=`python -c 'import sys; sys.stdout.write(sys.version[:3])'`
        pythonsysincdir=`python -c 'import sys; sys.stdout.write(sys.prefix + "/include/python" + sys.version[:3])'`
-       pythonsyslibdir=`python -c 'import sys; sys.stdout.write(sys.prefix + "/lib/python" + sys.version[:3])'`
+       #pythonsyslibdir=`python -c 'import sys; sys.stdout.write(sys.prefix + "/lib/python" + sys.version[:3])'`
+       pythonsyslibdir=`python -c 'import sys; sys.stdout.write(sys.prefix + "/lib")'`
        pythonsyslibdir2=
        if test "x$platform" = "xmacosx"; then
           pythonsyslibdir2=`python -c 'import sys; sys.stdout.write(sys.prefix)'`
@@ -5890,19 +6092,6 @@ fi
 
 ######################################################################
 #
-### echo %%% Vc Library - Contributed library
-#
-message "Checking whether to build libVc"
-if test "x$enable_vc" = "xyes" || test ! "x$VC" = "x"; then
-    enable_vc="yes"
-    result "yes"
-else
-    enable_vc=""
-    result "no"
-fi
-
-######################################################################
-#
 ### echo %%% GDML Library - Contributed library
 #
 message "Checking whether to build libGdml"
@@ -5959,81 +6148,6 @@ result $enable_memstat
 
 ######################################################################
 #
-### echo %%% Clarens Support - Third party libraries
-#
-# (See http://clarens.sourceforge.net/)
-#
-checking_msg "Clarens support"
-
-if test ! "x$enable_clarens" = "xno" ; then
-
-    myxmlrpc=`$cwhich xmlrpc-c-config 2> /dev/null`
-    if test ! "x$myxmlrpc" = "x" && test -x "$myxmlrpc" ; then
-        clarensincdir=`xmlrpc-c-config curl-client --cflags 2> /dev/null`
-        if test $? -ne 0 ; then clarensincdir= ; fi
-        clarenslibs=`xmlrpc-c-config curl-client --ldadd 2> /dev/null`
-        if test $? -ne 0 ; then clarenslibs= ; fi
-        if test "x$clarensincdir" = "x" ; then
-            clarensincdir=`xmlrpc-c-config client --cflags 2> /dev/null`
-            if test $? -ne 0 ; then clarensincdir= ; fi
-            clarenslibs=`xmlrpc-c-config client --ldadd 2> /dev/null`
-            if test $? -ne 0 ; then clarenslibs= ; fi
-        fi
-        if test "x$clarensincdir" = "x" ; then
-            clarensincdir=`xmlrpc-c-config --cflags 2> /dev/null`
-            if test $? -ne 0 ; then clarensincdir= ; fi
-            clarenslibs=`xmlrpc-c-config --ldadd 2> /dev/null`
-            if test $? -ne 0 ; then clarenslibs= ; fi
-        fi
-    else
-        clarensincdir=""
-        clarenslibs=""
-    fi
-    if test "x$cryptolib" = "x" ; then
-        # depends also on libcrypto
-        clarensincdir=""
-        clarenslibs=""
-    fi
-    if test "x$clarensincdir" = "x" || test "x$clarenslibs" = "x"; then
-        enable_clarens="no"
-    fi
-fi
-
-if test "x$enable_clarens" = "xyes" ; then
-    result "yes"
-else
-    result "no"
-fi
-check_explicit "$enable_clarens" "$enable_clarens_explicit" \
-     "Explicitly required Clarens dependencies not fulfilled"
-
-######################################################################
-#
-### echo %%% PEAC Support - depends on Clarens
-#
-# (See http://www.clarens.org)
-#
-checking_msg "PEAC support"
-
-if test ! "x$enable_peac" = "xno" ; then
-
-    if test "x$enable_clarens" = "xno"; then
-        enable_peac="no"
-    fi
-fi
-
-if test "x$enable_peac" = "xyes" ; then
-    buildpeac="yes"
-else
-    buildpeac="no"
-fi
-
-result "$buildpeac"
-check_explicit "$enable_peac" "$enable_peac_explicit" \
-     "Explicitly required Peac dependencies not fulfilled"
-
-######################################################################
-#
 ### echo %%% Check for afdsmgrd support
 #
 # afdsmgrd -- Dataset manager for PROOF-based analysis facilities
@@ -6061,50 +6175,16 @@ if test "x$enable_afdsmgrd" = "xyes" ; then
     fi
 
     if test ! "x$afdsmgrdapmondir" = "x" ; then
-        afdsmgrdapmon="--with-apmon=$afdsmgrdapmondir"
+        afdsmgrdapmon="$afdsmgrdapmondir"
         afdsmgrdapmonmsg=", using ApMon at $afdsmgrdapmondir"
     else
-        afdsmgrdapmon="--disable-apmon"
+        afdsmgrdapmon=""
         afdsmgrdapmonmsg=", ApMon support disabled"
     fi
 else
     enable_afdsmgrd="no"
 fi
 result "$enable_afdsmgrd$afdsmgrdapmonmsg"
-
-######################################################################
-#
-### echo %%% Cling - LLVM/clang based interpreter prototype
-#
-message "Checking whether to integrate experimental cling"
-hascling="undef"
-clingextrares=""
-if test ! "x$enable_cling" = "xno"; then
-    # allow LLVMDIR instead of --with-llvm-config
-    if test "x$llvmconfig" = "x" ; then
-        if test ! "x$LLVMDIR" = "x" ; then
-            llvmconfig="$LLVMDIR/bin"
-        else
-            clingextrares="(needs --with-llvm-config or \$LLVMDIR)"
-        fi
-        result "no"
-    fi
-    if test ! "x$llvmconfig" = "x"; then
-        if test -d "$llvmconfig"; then
-            llvmconfig=$llvmconfig/llvm-config
-        fi
-        if test -f $llvmconfig && test -x $llvmconfig; then
-            hascling="define"
-        fi
-    fi
-fi
-if test "x$hascling" = "xundef"; then
-    enable_cling="no"
-    result "no $clingextrares"
-else
-    enable_cling="yes"
-    result "yes"
-fi
 
 ######################################################################
 #
@@ -6159,13 +6239,12 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_xml"      = "xyes" && pl="$pl libroot-io-xmlparser"
     test "x$enable_mathmore" = "xyes" && pl="$pl libroot-math-mathmore"
     test "x$enable_unuran"   = "xyes" && pl="$pl libroot-math-unuran"
-    test "x$enable_vc"       = "xyes" && pl="$pl libroot-math-vc"
     test "x$enable_table"    = "xyes" && pl="$pl libroot-misc-table"
     test "x$enable_ldap"     = "xyes" && pl="$pl libroot-net-ldap"
-    test "x$enable_clarens"  = "xyes" && pl="$pl libroot-proof-clarens"
     test "x$enable_roofit"   = "xyes" && pl="$pl libroot-roofit"
     test "x$enable_asimage"  = "xyes" && pl="$pl root-plugin-graf2d-asimage"
     test "x$enable_gdml"     = "xyes" && pl="$pl root-plugin-geom-gdml"
+    test "x$enable_geocad"   = "xyes" && pl="$pl root-plugin-geom-geocad"
     test "x$enable_qt"       = "xyes" && pl="$pl root-plugin-gui-qt root-plugin-graf2d-qt"
     test "x$enable_castor"   = "xyes" && pl="$pl root-plugin-io-castor"
     test "x$enable_chirp"    = "xyes" && pl="$pl root-plugin-io-chirp"
@@ -6184,7 +6263,6 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_krb5"     = "xyes" && pl="$pl root-plugin-net-krb5"
     test "x$enable_monalisa" = "xyes" && pl="$pl root-plugin-net-monalisa"
     test "x$enable_srp"      = "xyes" && pl="$pl root-plugin-net-srp"
-    test "x$enable_peac"     = "xyes" && pl="$pl root-plugin-proof-peac"
     test "x$enable_mysql"    = "xyes" && pl="$pl root-plugin-sql-mysql"
     test "x$enable_odbc"     = "xyes" && pl="$pl root-plugin-sql-odbc"
     test "x$enable_oracle"   = "xyes" && pl="$pl root-plugin-sql-oracle"
@@ -6363,6 +6441,9 @@ if test -d cint/cint7 ; then
 fi
 if test -d core/editline ; then
    rm -rf core/editline
+fi
+if test -d core/globals ; then
+   rm -rf core/globals
 fi
 if test -d net/xrootd ; then
    rm -rf net/xrootd
@@ -6569,6 +6650,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildglew@|$enable_builtin_glew|"    \
     -e "s|@builtinfreetype@|$enable_builtin_freetype|"      \
     -e "s|@builtinpcre@|$enable_builtin_pcre|"  \
+    -e "s|@builtinllvm@|$enable_builtin_llvm|"  \
     -e "s|@hasxrd@|$enable_xrootd|"             \
     -e "s|@castorincdir@|$castorincdir|"        \
     -e "s|@castorlib@|$castorlib|"              \
@@ -6580,8 +6662,6 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@cintmaxstruct@|$cintmaxstruct|"      \
     -e "s|@cintmaxtypedef@|$cintmaxtypedef|"    \
     -e "s|@cintlongline@|$cintlongline|"        \
-    -e "s|@clarensincdir@|$clarensincdir|"      \
-    -e "s|@clarenslibs@|$clarenslibs|"          \
     -e "s|@cintincdir@|$cintincdir|"            \
     -e "s|@cppunit@|$cppunit|"                  \
     -e "s|@datadir@|$datadir|"                  \
@@ -6621,8 +6701,8 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@buildroofit@|$enable_roofit|"        \
     -e "s|@buildminuit2@|$enable_minuit2|"      \
     -e "s|@buildunuran@|$enable_unuran|"        \
-    -e "s|@buildvc@|$enable_vc|"        \
     -e "s|@buildgdml@|$enable_gdml|"            \
+    -e "s|@buildgeocad@|$enable_geocad|"        \
     -e "s|@buildmonalisa@|$enable_monalisa|"    \
     -e "s|@buildtable@|$enable_table|"          \
     -e "s|@buildtmva@|$enable_tmva|"            \
@@ -6637,6 +6717,7 @@ sed -e "s|@aclocaldir@|$aclocaldir|"            \
     -e "s|@glitelib@|$glitelib|"                \
     -e "s|@glitelibdir@|$glitelibdir|"          \
     -e "s|@gaw_cppflags@|$gaw_cppflags|"        \
+    -e "s|@ctorsinitarray@|$ctorsinitarray|"    \
         < Makefile.tmp > Makefile.tmpp
 mv Makefile.tmpp Makefile.tmp
 
@@ -6685,6 +6766,9 @@ sed -e "s|@globusincdir@|$globusincdir|"        \
     -e "s|@mysqlincdir@|$mysqlincdir|"          \
     -e "s|@mysqllib@|$mysqllib|"                \
     -e "s|@mysqllibdir@|$mysqllibdir|"          \
+    -e "s|@occincdir@|$occincdir|"              \
+    -e "s|@occlib@|$occlib|"                    \
+    -e "s|@occlibdir@|$occlibdir|"              \
     -e "s|@odbcincdir@|$odbcincdir|"            \
     -e "s|@odbclib@|$odbclib|"                  \
     -e "s|@odbclibdir@|$odbclibdir|"            \
@@ -6796,13 +6880,12 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@buildsrputil@|$enable_srputil|"      \
     -e "s|@buildkrb5@|$enable_krb5|"            \
     -e "s|@buildglobus@|$enable_globus|"        \
-    -e "s|@buildclarens@|$enable_clarens|"      \
-    -e "s|@buildpeac@|$buildpeac|"              \
     -e "s|@buildafdsmgrd@|$enable_afdsmgrd|"    \
     -e "s|@afdsmgrdapmon@|$afdsmgrdapmon|"      \
     -e "s|@buildglite@|$enable_glite|"          \
     -e "s|@buildcocoa@|$enable_cocoa|"          \
     -e "s|@c++11@|$enable_cxx11|"               \
+    -e "s|@libc++11@|$enable_libcxx11|"         \
     < Makefile.tmp > $MAKEOUT
 rm -f Makefile.tmp
 
@@ -6856,6 +6939,9 @@ sed \
     -e "s|@hascling@|$hascling|"           \
     -e "s|@hascocoa@|$hascocoa|"           \
     -e "s|@usec++11@|$usecxx11|"           \
+    -e "s|@uselibc++11@|$uselibcxx11|"     \
+    -e "s|@hasllvm@|$hasllvm|"             \
+    -e "s|@llvmdir@|$llvmdir|"             \
     < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
 

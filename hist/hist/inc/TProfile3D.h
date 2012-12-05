@@ -100,7 +100,6 @@ public:
    virtual Bool_t    Divide(TF1 *h1, Double_t c1=1);
    virtual Bool_t    Divide(const TH1 *h1);
    virtual Bool_t    Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
-   virtual TH1      *DrawCopy(Option_t *option="") const;
    virtual Int_t     Fill(Double_t x, Double_t y, Double_t z, Double_t t);
    virtual Int_t     Fill(Double_t x, Double_t y, Double_t z, Double_t t, Double_t w);
    virtual Double_t  GetBinContent(Int_t bin) const;
@@ -127,7 +126,7 @@ public:
    virtual void      PutStats(Double_t *stats);
    virtual void      Reset(Option_t *option="");
    virtual void      RebinAxis(Double_t x, TAxis *axis);
-   virtual void      SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void      SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void      Scale(Double_t c1=1, Option_t *option="");
    virtual void      SetBinEntries(Int_t bin, Double_t w);
    virtual void      SetBins(Int_t nbinsx, Double_t xmin, Double_t xmax, 

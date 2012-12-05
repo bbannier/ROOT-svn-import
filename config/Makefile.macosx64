@@ -4,10 +4,7 @@
 
 PLATFORM      = macosx
 
-#DWARF2       := $(shell gcc --version | sed -n 's,.*build \([0-9]*\).$$,\1,p' |\
-#                  awk '{ if ($$1>=5341) print "dwarf-2" }')
-
-DEBUGFLAGS    = -g$(DWARF2)
+DEBUGFLAGS    = -g
 OPTFLAGS      = -O2
 ifeq (debug,$(findstring debug,$(ROOTBUILD)))
 OPT           = $(DEBUGFLAGS)
@@ -26,6 +23,8 @@ MACOSXVERS    = 10.$(MACOSX_MINOR)
 else
 MACOSXVERS    = $(MACOSX_DEPLOYMENT_TARGET)
 endif
+XCODE_PATH   := $(shell /usr/bin/xcode-select -print-path)
+OSXSDK       := $(XCODE_PATH)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX$(MACOSXVERS).sdk
 
 # Compiler:
 # From "Apple clang version ... (based on LLVM 3.0svn)"
@@ -40,6 +39,10 @@ CXX           = clang++
 CC            = clang
 ifeq ($(CXX11),yes)
 CXX11FLAGS    = -std=c++11
+endif
+ifeq ($(LIBCXX11),yes)
+CXX11FLAGS   += -stdlib=libc++
+CXX11LDFLAGS  = -stdlib=libc++
 endif
 else
 CXX           = g++
@@ -61,7 +64,6 @@ CINTCFLAGS    = -m64 -pipe -W -Wall -fsigned-char -fno-common \
                 -DG__ROOT -DG__REDIRECTIO -DG__OSFDLL \
                 -DG__STD_EXCEPTION $(TARGETFLAGS)
 COMPILER      = gnu
-AVXFLAGS      = -mavx
 
 # Linker:
 ifeq ($(subst $(APPLE_CLANG),,12),12)
@@ -69,7 +71,7 @@ LD            = clang++
 else
 LD            = g++
 endif
-LDFLAGS       = $(OPT) -m64 -mmacosx-version-min=$(MACOSXVERS)
+LDFLAGS       = $(OPT) -m64 -mmacosx-version-min=$(MACOSXVERS) $(CXX11LDFLAGS)
 
 FORCELINK     = yes
 NEEDFINK      = yes
@@ -139,6 +141,7 @@ MACOSX_SSL_DEPRECATED = yes
 endif
 ifeq ($(MACOSX_MINOR),8)
 MACOSX_SSL_DEPRECATED = yes
+MACOSX_ODBC_DEPRECATED = yes
 endif
 
 ifeq ($(CONFIGURE),yes)
@@ -153,4 +156,7 @@ showld:
 
 showf77:
 	@echo "$(F77ORG)"
+
+showsdk:
+	@echo "$(OSXSDK)"
 endif

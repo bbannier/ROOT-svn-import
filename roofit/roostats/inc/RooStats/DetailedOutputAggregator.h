@@ -37,6 +37,7 @@ class RooAbsCollection;
 class RooFitResult;
 class RooDataSet;
 class RooArgList;
+class RooArgSet; 
 
 namespace RooStats {
 
@@ -59,6 +60,7 @@ namespace RooStats {
 
       const RooArgList* GetAsArgList() const {
          // Returns this set of detailed output.
+         // and transfer ownership of the set 
          return fBuiltSet;
       }
       

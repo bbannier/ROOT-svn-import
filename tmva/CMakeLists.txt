@@ -2,11 +2,13 @@
 # CMakeLists.txt file for building ROOT tmva package
 # @author Pere Mato, CERN
 ############################################################################
+#---The following is needed becuase client codes of TMVA (in ROOT itself) assumes to find header files under /TVMA
+#execute_process(COMMAND cmake -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/inc ${CMAKE_CURRENT_SOURCE_DIR}/inc/TMVA)
+
 if(NOT CMAKE_PROJECT_NAME STREQUAL ROOT)
   cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
   project(TMVA)
-  find_package(ROOT REQUIRED)
-  include(${ROOT_USE_FILE})
+  include(${ROOTSYS}/cmake/modules/StandaloneBuild.cmake)
 endif()
 
 ROOT_USE_PACKAGE(math/mathcore)
@@ -27,8 +29,8 @@ set(headers2 TSpline2.h TSpline1.h PDF.h BinaryTree.h BinarySearchTreeNode.h Bin
 	     Node.h SdivSqrtSplusB.h SeparationBase.h RegressionVariance.h Tools.h Reader.h 
 	     GeneticAlgorithm.h GeneticGenes.h GeneticPopulation.h GeneticRange.h GiniIndex.h 
 	     GiniIndexWithLaplace.h SimulatedAnnealing.h)
-set(headers3 Config.h KDEKernel.h Interval.h FitterBase.h MCFitter.h GeneticFitter.h SimulatedAnnealingFitter.h
-         MinuitFitter.h MinuitWrapper.h IFitterTarget.h
+set(headers3 Config.h KDEKernel.h Interval.h LogInterval.h FitterBase.h MCFitter.h GeneticFitter.h 
+         SimulatedAnnealingFitter.h MinuitFitter.h MinuitWrapper.h IFitterTarget.h
          PDEFoam.h PDEFoamDecisionTree.h PDEFoamDensityBase.h PDEFoamDiscriminantDensity.h
          PDEFoamEventDensity.h PDEFoamTargetDensity.h PDEFoamDecisionTreeDensity.h PDEFoamMultiTarget.h
          PDEFoamVect.h PDEFoamCell.h PDEFoamDiscriminant.h PDEFoamEvent.h PDEFoamTarget.h

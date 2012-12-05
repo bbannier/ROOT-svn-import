@@ -44,6 +44,8 @@
 #include <exception>
 #include <new>
 
+using namespace std;
+
 #if (defined(__FreeBSD__) && (__FreeBSD__ < 4)) || \
     (defined(__APPLE__) && (!defined(MAC_OS_X_VERSION_10_3) || \
      (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3)))
@@ -123,6 +125,14 @@ TString TProofServ::fgSysLogEntity("undef:default");
 
 // File where to log: default stderr
 FILE *TProofServ::fgErrorHandlerFile = 0;
+
+// Integrate with crash reporter.
+#ifdef __APPLE__
+extern "C" {
+static const char *__crashreporter_info__ = 0;
+asm(".desc ___crashreporter_info__, 0x10");
+}
+#endif
 
 // To control allowed actions while processing
 Int_t TProofServ::fgRecursive = 0;
@@ -661,8 +671,6 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fReaperTimer     = 0;
    fIdleTOTimer     = 0;
 
-   fInflateFactor   = 1000;
-
    fDataSetManager  = 0; // Initialized in Setup()
 
    fInputHandler    = 0;
@@ -851,9 +859,9 @@ Int_t TProofServ::CreateServer()
       }
    }
 
-   // Everybody expects iostream to be available, so load it...
+   // Everybody expects std::iostream to be available, so load it...
    ProcessLine("#include <iostream>", kTRUE);
-   ProcessLine("#include <string>",kTRUE); // for std::string iostream.
+   ProcessLine("#include <string>",kTRUE); // for std::string std::iostream.
 
    // The following libs are also useful to have, make sure they are loaded...
    //gROOT->LoadClass("TMinuit",     "Minuit");
@@ -1137,24 +1145,6 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
    Double_t cputime = fCompute.CpuTime();
    Double_t realtime = fCompute.RealTime();
 
-   // Apply inflate factor, if needed
-   PDB(kLoop, 2)
-      Info("GetNextPacket", "inflate factor: %d"
-                            " (realtime: %f, cputime: %f, entries: %lld)",
-                            fInflateFactor, realtime, cputime, totalEntries);
-   if (fInflateFactor > 1000) {
-      UInt_t sleeptime = (UInt_t) (cputime * (fInflateFactor - 1000)) ;
-      Int_t i = 0;
-      for (i = kSigBus ; i <= kSigUser2 ; i++)
-         gSystem->IgnoreSignal((ESignals)i, kTRUE);
-      gSystem->Sleep(sleeptime);
-      for (i = kSigBus ; i <= kSigUser2 ; i++)
-         gSystem->IgnoreSignal((ESignals)i, kFALSE);
-      realtime += sleeptime / 1000.;
-      PDB(kLoop, 2)
-         Info("GetNextPacket","slept %d millisec", sleeptime);
-   }
-
    if (fProtocol > 18) {
       req << fLatency.RealTime();
       TProofProgressStatus *status = 0;
@@ -1186,6 +1176,9 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
       // used to flag files as missing
       req << totalEntries;
 
+      // Send the time spent in saving the partial result to file
+      if (fProtocol > 34) req << fSaveOutput.RealTime();
+
       PDB(kLoop, 1) {
          PDB(kLoop, 2) status->Print();
          Info("GetNextPacket","cacheSize: %lld, learnent: %d", cacheSize, learnent);
@@ -1206,6 +1199,14 @@ TDSetElement *TProofServ::GetNextPacket(Long64_t totalEntries)
    if (rc <= 0) {
       Error("GetNextPacket","Send() failed, returned %d", rc);
       return 0;
+   }
+
+   // Save the current output
+   if (fPlayer) {
+      fSaveOutput.Start();
+      if (fPlayer->SavePartialResults(kFALSE) < 0)
+         Warning("GetNextPacket", "problems saving partial results");
+      fSaveOutput.Stop();
    }
 
    TDSetElement  *e = 0;
@@ -1530,8 +1531,12 @@ Int_t TProofServ::HandleSocketInput(TMessage *mess, Bool_t all)
          {  UInt_t mask;
             mess->ReadString(str, sizeof(str));
             sscanf(str, "%d %u", &fLogLevel, &mask);
+            Bool_t levelchanged = (fLogLevel != gProofDebugLevel) ? kTRUE : kFALSE;
             gProofDebugLevel = fLogLevel;
             gProofDebugMask  = (TProofDebug::EProofDebugMask) mask;
+            if (levelchanged)
+               Info("HandleSocketInput:kPROOF_LOGLEVEL", "debug level set to %d (mask: 0x%x)",
+                    gProofDebugLevel, gProofDebugMask);
             if (IsMaster())
                fProof->SetLogLevel(fLogLevel, mask);
          }
@@ -2980,9 +2985,13 @@ Int_t TProofServ::SetupCommon()
 
    // Check and make sure "data" directory exists
    fDataDir = gEnv->GetValue("ProofServ.DataDir","");
+   Ssiz_t isep = kNPOS;
    if (fDataDir.IsNull()) {
       // Use default
       fDataDir.Form("%s/%s/<ord>/<stag>", fWorkDir.Data(), kPROOF_DataDir);
+   } else if ((isep = fDataDir.Last(' ')) !=  kNPOS) {
+      fDataDirOpts = fDataDir(isep + 1, fDataDir.Length());
+      fDataDir.Remove(isep);
    }
    ResolveKeywords(fDataDir);
    if (gSystem->AccessPathName(fDataDir))
@@ -3052,6 +3061,7 @@ Int_t TProofServ::SetupCommon()
                fGlobalPackageDirList = new THashList();
                fGlobalPackageDirList->SetOwner();
             }
+            ResolveKeywords(ldir);
             fGlobalPackageDirList->Add(new TNamed(key,ldir));
             Info("SetupCommon", "directory for global packages %s added to the list",
                           ldir.Data());
@@ -3109,8 +3119,7 @@ Int_t TProofServ::SetupCommon()
    if (IsMaster()) {
       // Send session tag to client
       TMessage m(kPROOF_SESSIONTAG);
-      m << fTopSessionTag;
-      if (GetProtocol() > 24) m << fGroup;
+      m << fTopSessionTag << fGroup << fUser;
       fSocket->Send(m);
       // Group priority
       fGroupPriority = GetPriority();
@@ -3180,7 +3189,7 @@ Int_t TProofServ::SetupCommon()
    if (quotas.IsNull())
       quotas = gEnv->GetValue("ProofServ.UserQuotas", "");
    if (!quotas.IsNull()) {
-      // Parse it; format ("maxquerykept:10 hwmsz:800m maxsz:1g")
+      // Parse it; format ("maxquerykept=10 hwmsz=800m maxsz=1g")
       TString tok;
       Ssiz_t from = 0;
       while (quotas.Tokenize(tok, from, " ")) {
@@ -3624,32 +3633,21 @@ void TProofServ::HandleArchive(TMessage *mess, TString *slb)
 }
 
 //______________________________________________________________________________
-TMap *TProofServ::GetDataSetNodeMap(const char *dsn, TString &emsg)
+TMap *TProofServ::GetDataSetNodeMap(TFileCollection *fc, TString &emsg)
 {
-   // Get a map {server-name, list-of-files} for the daset dsn to be used in
+   // Get a map {server-name, list-of-files} for collection 'fc' to be used in
    // TPacketizerFile. Returns a pointer to the map (ownership of the caller).
    // Or (TMap *)0 and an error message in emsg.
 
    TMap *fcmap = 0;
    emsg = "";
    
-   // Make sure we have something in input and a dataset manager
-   if (!fDataSetManager) {
-      emsg.Form("dataset manager not initialized!");
-      return fcmap;
-   }
-   if (!dsn || (dsn && strlen(dsn) <= 0)) {
-      emsg.Form("dataset name undefined!");
+   // Sanity checks
+   if (!fc) {
+      emsg.Form("file collection undefined!");
       return fcmap;
    }
 
-   TFileCollection *fc = 0;
-   // Get the dataset
-   if (!(fc = fDataSetManager->GetDataSet(dsn))) {
-      emsg.Form("requested dataset '%s' does not exists", dsn);
-      return fcmap;
-   }
-    
    // Prepare data set map
    fcmap = new TMap();
 
@@ -3738,8 +3736,26 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
             if (!dsn.Contains(":") || dsn.BeginsWith("dataset:")) {
                dsn.ReplaceAll("dataset:", "");
                // Get the map for TPacketizerFile
-               TMap *fcmap = GetDataSetNodeMap(dsn, emsg);
-               if (!fcmap) {
+               // Make sure we have something in input and a dataset manager
+               if (!fDataSetManager) {
+                  emsg.Form("dataset manager not initialized!");
+               } else {
+                  TFileCollection *fc = 0;
+                  // Get the dataset
+                  if (!(fc = fDataSetManager->GetDataSet(dsn))) {
+                     emsg.Form("requested dataset '%s' does not exists", dsn.Data());
+                  } else {
+                     TMap *fcmap = GetDataSetNodeMap(fc, emsg);
+                     if (fcmap) {
+                        input->Remove(ftp);
+                        delete ftp;
+                        fcmap->SetOwner(kTRUE);
+                        fcmap->SetName("PROOF_FilesToProcess");
+                        input->Add(fcmap);
+                     }
+                  }
+               }
+               if (!emsg.IsNull()) {
                   SendAsynMessage(TString::Format("HandleProcess on %s: %s",
                                                   fPrefix.Data(), emsg.Data()));
                   Error("HandleProcess", "%s", emsg.Data());
@@ -3747,11 +3763,6 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
                   if (sync) SendLogFile();
                   return;
                }
-               input->Remove(ftp);
-               delete ftp;
-               fcmap->SetOwner(kTRUE);
-               fcmap->SetName("PROOF_FilesToProcess");
-               input->Add(fcmap);
             }
          }
       }
@@ -3950,6 +3961,7 @@ void TProofServ::HandleProcess(TMessage *mess, TString *slb)
 
       // Reset latency stopwatch
       fLatency.Reset();
+      fSaveOutput.Reset();
 
       // Process
       PDB(kGlobal, 1) Info("HandleProcess", "calling %s::Process()", fPlayer->IsA()->GetName());
@@ -4461,8 +4473,9 @@ void TProofServ::ProcessNext(TString *slb)
    if (fDataSetManager && fPlayer->GetOutputList()) {
       TNamed *psr = (TNamed *) fPlayer->GetOutputList()->FindObject("PROOFSERV_RegisterDataSet");
       if (psr) {
-         if (RegisterDataSets(input, fPlayer->GetOutputList()) != 0)
-            Warning("ProcessNext", "problems registering produced datasets");
+         TString emsg;
+         if (RegisterDataSets(input, fPlayer->GetOutputList(), fDataSetManager, emsg) != 0)
+            Warning("ProcessNext", "problems registering produced datasets: %s", emsg.Data());
          do {
             fPlayer->GetOutputList()->Remove(psr);
             delete psr;
@@ -4477,6 +4490,31 @@ void TProofServ::ProcessNext(TString *slb)
          fQMgr->SaveQuery(pq, fMaxQueries);
    }
 
+   // If we were requested to save results on the master and we are not in save-to-file mode
+   // then we save the results
+   if (IsTopMaster() && fPlayer->GetOutputList()) {
+      Bool_t save = kTRUE;
+      TIter nxo(fPlayer->GetOutputList());
+      TObject *xo = 0;
+      while ((xo = nxo())) {
+         if (xo->InheritsFrom("TProofOutputFile") && xo->TestBit(TProofOutputFile::kSwapFile)) {
+            save = kFALSE;
+            break;
+         }
+      }
+      if (save) {
+         TNamed *nof = (TNamed *) input->FindObject("PROOF_DefaultOutputOption");
+         if (nof) {
+            TString oopt(nof->GetTitle());
+            if (oopt.BeginsWith("of:")) {
+               oopt.Replace(0, 3, "");
+               if (!oopt.IsNull()) fPlayer->SetOutputFilePath(oopt);
+               fPlayer->SavePartialResults(kTRUE, kTRUE);
+            }
+         }
+      }
+   }
+   
    // Send back the results
    TQueryResult *pqr = pq->CloneInfo();
    // At least the TDSet name in the light object
@@ -4528,18 +4566,22 @@ void TProofServ::ProcessNext(TString *slb)
 }
 
 //______________________________________________________________________________
-Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
+Int_t TProofServ::RegisterDataSets(TList *in, TList *out,
+                                   TDataSetManager *dsm, TString &msg)
 {
    // Register TFileCollections in 'out' as datasets according to the rules in 'in'
 
    PDB(kDataset, 1)
-      Info("RegisterDataSets", "enter: %d objs in the output list", (out ? out->GetSize() : -1));
+      ::Info("TProofServ::RegisterDataSets",
+             "enter: %d objs in the output list", (out ? out->GetSize() : -1));
 
-   if (!in || !out) return 0;
-
+   if (!in || !out || !dsm) {
+      ::Error("TProofServ::RegisterDataSets", "invalid inputs: %p, %p, %p", in, out, dsm);
+      return 0;
+   }
+   msg = "";
    THashList tags;
    TList torm;
-   TString msg;
    TIter nxo(out);
    TObject *o = 0;
    while ((o = nxo())) {
@@ -4565,51 +4607,41 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
             regopt.ReplaceAll(":sortidx:", "");
          }
          // Register this dataset
-         if (fDataSetManager) {
-            if (fDataSetManager->TestBit(TDataSetManager::kAllowRegister)) {
-               // Extract the list
-               if (ds->GetList()->GetSize() > 0) {
-                  // Register the dataset (quota checks are done inside here)
-                  msg.Form("Registering and verifying dataset '%s' ... ", ds->GetName());
-                  SendAsynMessage(msg.Data(), kFALSE);
-                  Int_t rc = 0;
-                  FlushLogFile();
-                  {  TProofServLogHandlerGuard hg(fLogFile,  fSocket);
-                     // Always allow verification for this action
-                     Bool_t allowVerify = fDataSetManager->TestBit(TDataSetManager::kAllowVerify) ? kTRUE : kFALSE;
-                     if (regopt.Contains("V") && !allowVerify)
-                        fDataSetManager->SetBit(TDataSetManager::kAllowVerify);
-                     rc = fDataSetManager->RegisterDataSet(ds->GetName(), ds, regopt);
-                     // Reset to the previous state if needed
-                     if (regopt.Contains("V") && !allowVerify)
-                        fDataSetManager->ResetBit(TDataSetManager::kAllowVerify);
-                  }
-                  if (rc != 0) {
-                     Warning("RegisterDataSets",
-                              "failure registering dataset '%s'", ds->GetName());
-                     msg.Form("Registering and verifying dataset '%s' ... failed! See log for more details", ds->GetName());
-                  } else {
-                     Info("RegisterDataSets", "dataset '%s' successfully registered", ds->GetName());
-                     msg.Form("Registering and verifying dataset '%s' ... OK", ds->GetName());
-                     // Add tag to the list of processed tags to avoid double processing
-                     // (there may be more objects with the same name, created by each worker)
-                     tags.Add(new TObjString(tag));
-                  }
-                  SendAsynMessage(msg.Data(), kTRUE);
-                  // Notify
-                  PDB(kDataset, 2) {
-                     Info("RegisterDataSets","printing collection");
-                     ds->Print("F");
-                  }
+         if (dsm->TestBit(TDataSetManager::kAllowRegister)) {
+            // Extract the list
+            if (ds->GetList()->GetSize() > 0) {
+               // Register the dataset (quota checks are done inside here)
+               const char *vfmsg = regopt.Contains("V") ? " and verifying" : ""; 
+               msg.Form("Registering%s dataset '%s' ... ", vfmsg, ds->GetName());
+               // Always allow verification for this action
+               Bool_t allowVerify = dsm->TestBit(TDataSetManager::kAllowVerify) ? kTRUE : kFALSE;
+               if (regopt.Contains("V") && !allowVerify) dsm->SetBit(TDataSetManager::kAllowVerify);
+               // Main action
+               Int_t rc = dsm->RegisterDataSet(ds->GetName(), ds, regopt);
+               // Reset to the previous state if needed
+               if (regopt.Contains("V") && !allowVerify) dsm->ResetBit(TDataSetManager::kAllowVerify);
+               if (rc != 0) {
+                  ::Warning("TProofServ::RegisterDataSets",
+                            "failure registering or verifying dataset '%s'", ds->GetName());
+                  msg.Form("Registering%s dataset '%s' ... failed! See log for more details", vfmsg, ds->GetName());
                } else {
-                  Warning("RegisterDataSets", "collection '%s' is empty", o->GetName());
+                  ::Info("TProofServ::RegisterDataSets", "dataset '%s' successfully registered%s",
+                                                         ds->GetName(), (strlen(vfmsg) > 0) ? " and verified" : "");
+                  msg.Form("Registering%s dataset '%s' ... OK", vfmsg, ds->GetName());
+                  // Add tag to the list of processed tags to avoid double processing
+                  // (there may be more objects with the same name, created by each worker)
+                  tags.Add(new TObjString(tag));
+               }
+               // Notify
+               PDB(kDataset, 2) {
+                  ::Info("TProofServ::RegisterDataSets", "printing collection");
+                  ds->Print("F");
                }
             } else {
-               Info("RegisterDataSets", "dataset registration not allowed");
-               return -1;
+               ::Warning("TProofServ::RegisterDataSets", "collection '%s' is empty", o->GetName());
             }
          } else {
-            Error("RegisterDataSets", "dataset manager is undefined!");
+            ::Info("TProofServ::RegisterDataSets", "dataset registration not allowed");
             return -1;
          }
       }
@@ -4626,7 +4658,7 @@ Int_t TProofServ::RegisterDataSets(TList *in, TList *out)
    }
    tags.SetOwner(kTRUE);
 
-   PDB(kDataset, 1) Info("RegisterDataSets", "exit");
+   PDB(kDataset, 1) ::Info("TProofServ::RegisterDataSets", "exit");
    // Done
    return 0;
 }
@@ -5165,6 +5197,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
    Bool_t all = kFALSE;
    TMessage msg;
    Bool_t fromglobal = kFALSE;
+   Int_t chkveropt = TProof::kCheckROOT;  // Default: check ROOT version
 
    // Notification message
    TString noth;
@@ -5258,6 +5291,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
          break;
       case TProof::kBuildPackage:
          (*mess) >> package;
+         if ((mess->BufferSize() > mess->Length())) (*mess) >> chkveropt;
 
          // always follows BuildPackage so no need to check for PROOF-INF
          pdir = fPackageDir + "/" + package;
@@ -5322,6 +5356,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
 
                // read version from file proofvers.txt, and if current version is
                // not the same do a "BUILD.sh clean"
+               Bool_t goodver = kTRUE;
                Bool_t savever = kFALSE;
                TString v;
                Int_t rev = -1;
@@ -5332,9 +5367,13 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
                   r.Gets(f);
                   rev = (!r.IsNull() && r.IsDigit()) ? r.Atoi() : -1;
                   fclose(f);
+                  if (chkveropt == TProof::kCheckROOT || chkveropt == TProof::kCheckSVN) {
+                     if (v != gROOT->GetVersion()) goodver = kFALSE;
+                     if (goodver && chkveropt == TProof::kCheckSVN)
+                        if (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision()) goodver = kFALSE;
+                  }
                }
-               if (!f || v != gROOT->GetVersion() ||
-                  (gROOT->GetSvnRevision() > 0 && rev != gROOT->GetSvnRevision())) {
+               if (!f || !goodver) {
                   if (!fromglobal || !gSystem->AccessPathName(pdir, kWritePermission)) {
                      savever = kTRUE;
                      SendAsynMessage(TString::Format("%s: %s: version change (current: %s:%d,"
@@ -5429,7 +5468,7 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
             PDB(kPackage, 1)
                Info("HandleCache", "package %s successfully built", package.Data());
          }
-         if (slb) slb->Form("%d %s %d", type, package.Data(), status);
+         if (slb) slb->Form("%d %s %d %d", type, package.Data(), status, chkveropt);
          break;
       case TProof::kLoadPackage:
          (*mess) >> package;
@@ -5669,9 +5708,10 @@ Int_t TProofServ::HandleCache(TMessage *mess, TString *slb)
          break;
       case TProof::kBuildSubPackage:
          (*mess) >> package;
+         if ((mess->BufferSize() > mess->Length())) (*mess) >> chkveropt;
          if (IsMaster())
-            fProof->BuildPackage(package);
-         if (slb) slb->Form("%d %s", type, package.Data());
+            fProof->BuildPackage(package, TProof::kBuildAll, chkveropt);
+         if (slb) slb->Form("%d %s %d", type, package.Data(), chkveropt);
          break;
       case TProof::kUnloadPackage:
          (*mess) >> package;
@@ -5803,24 +5843,27 @@ Int_t TProofServ::HandleWorkerLists(TMessage *mess)
    switch (type) {
       case TProof::kActivateWorker:
          (*mess) >> ord;
+         if (ord != "*" && !ord.BeginsWith(GetOrdinal()) && ord != "restore") break;
          if (fProof) {
             Int_t nact = fProof->GetListOfActiveSlaves()->GetSize();
             Int_t nactmax = fProof->GetListOfSlaves()->GetSize() -
                             fProof->GetListOfBadSlaves()->GetSize();
-            if (nact < nactmax) {
+            if (nact < nactmax || !IsEndMaster()) {
                Int_t nwc = fProof->ActivateWorker(ord);
                Int_t nactnew = fProof->GetListOfActiveSlaves()->GetSize();
                if (ord == "*") {
                   if (nactnew == nactmax) {
-                     Info("HandleWorkerList", "all workers (re-)activated");
+                     PDB(kGlobal, 1) Info("HandleWorkerList", "all workers (re-)activated");
                   } else {
-                     Info("HandleWorkerList", "%d workers could not be (re-)activated", nactmax - nactnew);
+                     if (IsEndMaster())
+                        PDB(kGlobal, 1) Info("HandleWorkerList", "%d workers could not be (re-)activated", nactmax - nactnew);
                   }
-               } else {
+               } else if (ord.BeginsWith(GetOrdinal())) {
                   if (nactnew == (nact + nwc)) {
-                     Info("HandleWorkerList","worker(s) %s (re-)activated", ord.Data());
+                     if (nwc > 0)
+                        PDB(kGlobal, 1) Info("HandleWorkerList","worker(s) %s (re-)activated", ord.Data());
                   } else {
-                     if (nwc != -2) {
+                     if (nwc != -2 && IsEndMaster()) {
                         Error("HandleWorkerList", "some worker(s) could not be (re-)activated;"
                                                   " # of actives: %d --> %d (nwc: %d)",
                                                   nact, nactnew, nwc);
@@ -5829,7 +5872,7 @@ Int_t TProofServ::HandleWorkerLists(TMessage *mess)
                   }
                }
             } else {
-               Info("HandleWorkerList","all workers are already active");
+               PDB(kGlobal, 1) Info("HandleWorkerList","all workers are already active");
             }
          } else {
             Warning("HandleWorkerList","undefined PROOF session: protocol error?");
@@ -5837,6 +5880,7 @@ Int_t TProofServ::HandleWorkerLists(TMessage *mess)
          break;
       case TProof::kDeactivateWorker:
          (*mess) >> ord;
+         if (ord != "*" && !ord.BeginsWith(GetOrdinal()) && ord != "restore") break;
          if (fProof) {
             Int_t nact = fProof->GetListOfActiveSlaves()->GetSize();
             if (nact > 0) {
@@ -5844,15 +5888,17 @@ Int_t TProofServ::HandleWorkerLists(TMessage *mess)
                Int_t nactnew = fProof->GetListOfActiveSlaves()->GetSize();
                if (ord == "*") {
                   if (nactnew == 0) {
-                     Info("HandleWorkerList","all workers deactivated");
+                     PDB(kGlobal, 1) Info("HandleWorkerList","all workers deactivated");
                   } else {
-                     Info("HandleWorkerList","%d workers could not be deactivated", nactnew);
+                     if (IsEndMaster())
+                        PDB(kGlobal, 1) Info("HandleWorkerList","%d workers could not be deactivated", nactnew);
                   }
                } else {
                   if (nactnew == (nact - nwc)) {
-                     Info("HandleWorkerList","worker(s) %s deactivated", ord.Data());
+                     if (nwc > 0)
+                        PDB(kGlobal, 1) Info("HandleWorkerList","worker(s) %s deactivated", ord.Data());
                   } else {
-                     if (nwc != -2) {
+                     if (nwc != -2 && IsEndMaster()) {
                         Error("HandleWorkerList", "some worker(s) could not be deactivated:"
                                                   " # of actives: %d --> %d (nwc: %d)",
                                                   nact, nactnew, nwc);
@@ -5861,7 +5907,7 @@ Int_t TProofServ::HandleWorkerLists(TMessage *mess)
                   }
                }
             } else {
-               Info("HandleWorkerList","all workers are already inactive");
+               PDB(kGlobal, 1) Info("HandleWorkerList","all workers are already inactive");
             }
          } else {
             Warning("HandleWorkerList","undefined PROOF session: protocol error?");
@@ -6043,6 +6089,12 @@ void TProofServ::ErrorHandler(Int_t level, Bool_t abort, const char *location,
    
    if (tosyslog)
       gSystem->Syslog(loglevel, buf);
+
+#ifdef __APPLE__
+   if (__crashreporter_info__)
+      delete [] __crashreporter_info__;
+   __crashreporter_info__ = StrDup(buf);
+#endif
    
    if (abort) {
 
@@ -7037,12 +7089,18 @@ Int_t TProofServ::Fork()
 //______________________________________________________________________________
 void TProofServ::ResolveKeywords(TString &fname, const char *path)
 {
-   // Replace <ord>, <user>, <u>, <group>, <stag>, <qnum> and <file> placeholders in fname
+   // Replace <ord>, <user>, <u>, <group>, <stag>, <qnum>, <file>, <rver> and
+   // <build> placeholders in fname.
+   // Here, <rver> is the root version in integer form, e.g. 53403, and <build> a
+   // string includign version, architecture and compiler version, e.g.
+   // '53403_linuxx8664gcc_gcc46' .
 
    // Replace <user>, if any
    if (fname.Contains("<user>")) {
       if (gProofServ && gProofServ->GetUser() && strlen(gProofServ->GetUser())) {
          fname.ReplaceAll("<user>", gProofServ->GetUser());
+      } else if (gProof && gProof->GetUser() && strlen(gProof->GetUser())) {
+         fname.ReplaceAll("<user>", gProof->GetUser());
       } else {
          fname.ReplaceAll("<user>", "nouser");
       }
@@ -7052,23 +7110,32 @@ void TProofServ::ResolveKeywords(TString &fname, const char *path)
       if (gProofServ && gProofServ->GetUser() && strlen(gProofServ->GetUser())) {
          TString u(gProofServ->GetUser()[0]);
          fname.ReplaceAll("<u>", u);
+      } else if (gProof && gProof->GetUser() && strlen(gProof->GetUser())) {
+         TString u(gProof->GetUser()[0]);
+         fname.ReplaceAll("<u>", u);
       } else {
          fname.ReplaceAll("<u>", "n");
       }
    }
    // Replace <group>, if any
    if (fname.Contains("<group>")) {
-      if (gProofServ && gProofServ->GetGroup() && strlen(gProofServ->GetGroup()))
+      if (gProofServ && gProofServ->GetGroup() && strlen(gProofServ->GetGroup())) {
          fname.ReplaceAll("<group>", gProofServ->GetGroup());
-      else
+      } else if (gProof && gProof->GetGroup() && strlen(gProof->GetGroup())) {
+         fname.ReplaceAll("<group>", gProof->GetGroup());
+      } else {
          fname.ReplaceAll("<group>", "default");
+      }
    }
    // Replace <stag>, if any
    if (fname.Contains("<stag>")) {
-      if (gProofServ && gProofServ->GetSessionTag() && strlen(gProofServ->GetSessionTag()))
+      if (gProofServ && gProofServ->GetSessionTag() && strlen(gProofServ->GetSessionTag())) {
          fname.ReplaceAll("<stag>", gProofServ->GetSessionTag());
-      else
+      } else if (gProof && gProof->GetSessionTag() && strlen(gProof->GetSessionTag())) {
+         fname.ReplaceAll("<stag>", gProof->GetSessionTag());
+      } else {
          ::Warning("TProofServ::ResolveKeywords", "session tag undefined: ignoring");
+      }
    }
    // Replace <ord>, if any
    if (fname.Contains("<ord>")) {
@@ -7087,6 +7154,17 @@ void TProofServ::ResolveKeywords(TString &fname, const char *path)
    // Replace <file>, if any
    if (fname.Contains("<file>") && path && strlen(path) > 0) {
       fname.ReplaceAll("<file>", path);
+   }
+   // Replace <rver>, if any
+   if (fname.Contains("<rver>")) {
+      TString v = TString::Format("%d", gROOT->GetVersionInt());
+      fname.ReplaceAll("<rver>", v);
+   }
+   // Replace <build>, if any
+   if (fname.Contains("<build>")) {
+      TString b = TString::Format("%d_%s_%s", gROOT->GetVersionInt(), gSystem->GetBuildArch(),
+                                  gSystem->GetBuildCompilerVersion());
+      fname.ReplaceAll("<build>", b);
    }
 }
 
@@ -7246,6 +7324,42 @@ Float_t TProofServ::GetMemStop()
 {
    // MemStop getter
    return fgMemStop;
+}
+
+//______________________________________________________________________________
+void TProofServ::GetLocalServer(TString &dsrv)
+{
+   // Extract LOCALDATASERVER info in 'dsrv'
+ 
+   // Check if a local data server has been specified
+   if (gSystem->Getenv("LOCALDATASERVER")) {
+      dsrv = gSystem->Getenv("LOCALDATASERVER");
+      if (!dsrv.EndsWith("/")) dsrv += "/";
+   }
+   
+   // Done
+   return;
+}
+
+//______________________________________________________________________________
+void TProofServ::FilterLocalroot(TString &path, const char *dsrv)
+{
+   // If 'path' is local and 'dsrv' is Xrootd, apply 'path.Localroot' settings,
+   // if any.
+   // The final path via the server is dsrv+path.
+
+   TUrl u(path, kTRUE);
+   if (!strcmp(u.GetProtocol(), "file")) {
+      // Remove prefix, if any, if included and if Xrootd
+      TString pfx  = gEnv->GetValue("Path.Localroot","");
+      if (!pfx.IsNull() && !strncmp(u.GetFile(), pfx.Data(), pfx.Length())) {
+         TString srvp = TUrl(dsrv).GetProtocol();
+         if (srvp == "root" || srvp == "xrd") path.Remove(0, pfx.Length());
+      }
+   }
+   
+   // Done
+   return;
 }
 
 //______________________________________________________________________________

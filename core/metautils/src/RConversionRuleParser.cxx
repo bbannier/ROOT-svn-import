@@ -10,15 +10,17 @@
 #include <map>
 #include <sstream>
 
+// #include "clang/AST/DeclCXX.h"
+
 namespace ROOT
 {
    //--------------------------------------------------------------------------
    // Allocate global variables
    //--------------------------------------------------------------------------
-   SchemaRuleClassMap_t G__ReadRules;
-   SchemaRuleClassMap_t G__ReadRawRules;
+   SchemaRuleClassMap_t gReadRules;
+   SchemaRuleClassMap_t gReadRawRules;
 
-   static Bool_t ValidateRule( const std::map<std::string, std::string>& rule, string &error_string );
+   static Bool_t ValidateRule( const std::map<std::string, std::string>& rule, std::string &error_string );
    
    static std::string::size_type FindEndSymbol(std::string &command) 
    {
@@ -206,7 +208,7 @@ namespace ROOT
    }
 
    //--------------------------------------------------------------------------
-   static Bool_t ValidateRule( const std::map<std::string, std::string>& rule, string &error_string )
+   static Bool_t ValidateRule( const std::map<std::string, std::string>& rule, std::string &error_string )
    {
       // Validate if the user specified rules are correct
 
@@ -350,6 +352,7 @@ namespace ROOT
       return true;
    }
 
+#ifndef R__HAS_CLING
    //--------------------------------------------------------------------------
    void CreateNameTypeMap( G__ClassInfo &cl, MembersTypeMap_t& nameType )
    {
@@ -386,10 +389,11 @@ namespace ROOT
          nameType[base.Name()] = TSchemaType(base.Name(),"");
       }
    }
+#endif
 
    //---------------------------------------------------------------------------
-   Bool_t HasValidDataMembers( SchemaRuleMap_t& rule,
-                             MembersTypeMap_t& members )
+   Bool_t HasValidDataMembers(SchemaRuleMap_t& rule,
+                              MembersTypeMap_t& members )
    {
       // Check if given rule contains references to valid data members
       std::list<std::string>           mem;
@@ -727,7 +731,7 @@ namespace ROOT
             StrReplace( code, "\n", "\\n" );
             StrReplace( code, "\"", "\\\"");
 
-            output << "      rule->fFunctionPtr = (void *)G__func2void( ";
+            output << "      rule->fFunctionPtr = (void *)TFunc2void( ";
             output << (*it)["funcname"] << ");" << std::endl;
             output << "      rule->fCode        = \"" << code;
             output << "\";" << std::endl;
@@ -772,7 +776,7 @@ namespace ROOT
       //-----------------------------------------------------------------------
       // Processing read rules
       //-----------------------------------------------------------------------
-      for( it = G__ReadRules.begin(); it != G__ReadRules.end(); ++it ) {
+      for( it = gReadRules.begin(); it != gReadRules.end(); ++it ) {
          for( rule = it->second.begin(); rule != it->second.end(); ++rule ) {
             attr = rule->find( "include" );
             if( attr == rule->end() ) continue;
@@ -784,7 +788,7 @@ namespace ROOT
       //-----------------------------------------------------------------------
       // Processing read raw rules
       //-----------------------------------------------------------------------
-      for( it = G__ReadRawRules.begin(); it != G__ReadRawRules.end(); ++it ) {
+      for( it = gReadRawRules.begin(); it != gReadRawRules.end(); ++it ) {
          for( rule = it->second.begin(); rule != it->second.end(); ++rule ) {
             attr = rule->find( "include" );
             if( attr == rule->end() ) continue;
@@ -801,7 +805,7 @@ namespace ROOT
    }
 
    //--------------------------------------------------------------------------
-   void ProcessReadPragma( char* args )
+   void ProcessReadPragma( const char* args )
    {
       // I am being called when a read pragma is encountered
 
@@ -821,18 +825,18 @@ namespace ROOT
       //-----------------------------------------------------------------------
       SchemaRuleClassMap_t::iterator it;
       std::string                    targetClass = rule["targetClass"];
-      it = G__ReadRules.find( targetClass );
-      if( it == G__ReadRules.end() ) {
+      it = gReadRules.find( targetClass );
+      if( it == gReadRules.end() ) {
          std::list<SchemaRuleMap_t> lst;
          lst.push_back( rule );
-         G__ReadRules[targetClass] = lst;
+         gReadRules[targetClass] = lst;
       }
       else
          it->second.push_back( rule );
    }
 
    //--------------------------------------------------------------------------
-   void ProcessReadRawPragma( char* args )
+   void ProcessReadRawPragma( const char* args )
    {
       // I am being called then a readraw pragma is encountered
 
@@ -852,11 +856,11 @@ namespace ROOT
       //-----------------------------------------------------------------------
       SchemaRuleClassMap_t::iterator it;
       std::string                    targetClass = rule["targetClass"];
-      it = G__ReadRawRules.find( targetClass );
-      if( it == G__ReadRawRules.end() ) {
+      it = gReadRawRules.find( targetClass );
+      if( it == gReadRawRules.end() ) {
          std::list<SchemaRuleMap_t> lst;
          lst.push_back( rule );
-         G__ReadRawRules[targetClass] = lst;
+         gReadRawRules[targetClass] = lst;
       }
       else
          it->second.push_back( rule );

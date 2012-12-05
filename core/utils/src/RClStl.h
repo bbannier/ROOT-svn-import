@@ -31,21 +31,31 @@ namespace clang {
    class CXXRecordDecl;
 }
 
+namespace cling {
+   class Interpreter;
+}
+
+namespace ROOT {
+   namespace TMetaUtils {
+      class TNormalizedCtxt;
+   }
+}
+
 namespace ROOT {
 
    class RStl {
    private:
-      typedef std::set<RScanner::AnnotatedRecordDecl> list_t;
+      typedef std::set<RScanner::AnnotatedRecordDecl,RScanner::AnnotatedRecordDecl::CompareByName> list_t;
       list_t fList;
 
    public:
       static RStl& Instance();
       ~RStl() {};
       
-      static std::string DropDefaultArg(const std::string &classname);
-      void GenerateTClassFor(const char *requestedName, const clang::CXXRecordDecl *stlClass);
+      void GenerateTClassFor(const char *requestedName, const clang::CXXRecordDecl *stlClass, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
+      void GenerateTClassFor(const clang::QualType &type, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
       void Print();
-      void WriteClassInit(FILE *file);
+      void WriteClassInit(FILE *file, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
       void WriteStreamer(FILE *file,const clang::CXXRecordDecl *stlcl);
       void WriteStreamer(FILE *file);
       

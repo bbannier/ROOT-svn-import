@@ -97,7 +97,9 @@ private:
    TString       fQueryDir;         //directory containing query results and status
    TString       fDataSetDir;       //directory containing info about known data sets
    TString       fDataDir;          //directory containing data files produced during queries
+   TString       fDataDirOpts;      //Url type options for fDataDir
    TString       fAdminPath;        //admin path for this session
+   TString       fOutputFile;       //path with the temporary results of the current or last query
    TProofLockPath *fPackageLock;    //package dir locker
    TProofLockPath *fCacheLock;      //cache dir locker
    TProofLockPath *fQueryLock;      //query dir locker
@@ -122,7 +124,8 @@ private:
    Float_t       fRealTime;         //real time spent executing commands
    Float_t       fCpuTime;          //CPU time spent executing commands
    TStopwatch    fLatency;          //measures latency of packet requests
-   TStopwatch    fCompute;          //measures time spend processing a packet
+   TStopwatch    fCompute;          //measures time spent processing a packet
+   TStopwatch    fSaveOutput;       //measures time spent saving the partial result
    Int_t         fQuerySeqNum;      //sequential number of the current or last query
 
    Int_t         fTotSessions;      //Total number of PROOF sessions on the cluster 
@@ -146,8 +149,6 @@ private:
    TShutdownTimer *fShutdownTimer;  // Timer used to shutdown out-of-control sessions
    TReaperTimer   *fReaperTimer;    // Timer used to control children state
    TIdleTOTimer   *fIdleTOTimer;    // Timer used to control children state
-
-   Int_t         fInflateFactor;    // Factor in 1/1000 to inflate the CPU time
 
    Int_t         fCompressMsg;     // Compression level for messages
 
@@ -200,9 +201,6 @@ private:
    // Results handling
    Int_t         SendResults(TSocket *sock, TList *outlist = 0, TQueryResult *pq = 0);
    Bool_t        AcceptResults(Int_t connections, TVirtualProofPlayer *mergerPlayer);
-   
-   TMap         *GetDataSetNodeMap(const char *dsn, TString &emsg);
-   Int_t         RegisterDataSets(TList *in, TList *out);
 
    // Waiting queries handlers
    void          SetIdle(Bool_t st = kTRUE);
@@ -254,10 +252,12 @@ public:
    const char    *GetGroup()      const { return fGroup; }
    const char    *GetWorkDir()    const { return fWorkDir; }
    const char    *GetImage()      const { return fImage; }
-   const char    *GetSessionTag() const { return fTopSessionTag; }
+   const char    *GetSessionTag() const { return fSessionTag; }
+   const char    *GetTopSessionTag() const { return fTopSessionTag; }
    const char    *GetSessionDir() const { return fSessionDir; }
    const char    *GetPackageDir() const { return fPackageDir; }
    const char    *GetDataDir()    const { return fDataDir; }
+   const char    *GetDataDirOpts() const { return fDataDirOpts; }
    Int_t          GetProtocol()   const { return fProtocol; }
    const char    *GetOrdinal()    const { return fOrdinal; }
    Int_t          GetGroupId()    const { return fGroupId; }
@@ -274,8 +274,6 @@ public:
 
    void           GetOptions(Int_t *argc, char **argv);
    TList         *GetEnabledPackages() const { return fEnabledPackages; }
-
-   Int_t          GetInflateFactor() const { return fInflateFactor; }
 
    static Long_t  GetVirtMemMax();
    static Long_t  GetResMemMax();
@@ -342,6 +340,14 @@ public:
 
    static void    SetLastMsg(const char *lastmsg);
    static void    SetLastEntry(Long64_t lastentry);
+
+   // To handle local data server related paths
+   static void    FilterLocalroot(TString &path, const char *url = "root://dum/");
+   static void    GetLocalServer(TString &dsrv);
+
+   // To prepara ethe map of files to process
+   static TMap   *GetDataSetNodeMap(TFileCollection *fc, TString &emsg);
+   static Int_t   RegisterDataSets(TList *in, TList *out, TDataSetManager *dsm, TString &e);
 
    static Bool_t      IsActive();
    static TProofServ *This();

@@ -883,7 +883,14 @@ Bool_t TGLViewer::SavePictureUsingFBO(const TString &fileName, Int_t w, Int_t h,
    catch (std::runtime_error& exc)
    {
       Error(eh, "%s",exc.what());
-      return kFALSE;
+      if (gEnv->GetValue("OpenGL.SavePictureFallbackToBB", 1)) {
+         Info(eh, "Falling back to saving image via back-buffer. Window must be fully visible.");
+         if (w != fViewport.Width() || h != fViewport.Height())
+            Warning(eh, "Back-buffer does not support image scaling, window size will be used.");
+         return SavePictureUsingBB(fileName);
+      } else {
+         return kFALSE;
+      }
    }
 
    TGLRect old_vp(fViewport);
@@ -1157,11 +1164,13 @@ Bool_t TGLViewer::DoSelect(Int_t x, Int_t y)
       return kFALSE;
    }
 
+   TGLUtil::PointToViewport(x, y);
+
    TUnlocker ulck(this);
 
    MakeCurrent();
 
-   fRnrCtx->BeginSelection(x, y, 3);
+   fRnrCtx->BeginSelection(x, y, TGLUtil::GetPickingRadius());
    glRenderMode(GL_SELECT);
 
    PreRender();
@@ -1222,6 +1231,8 @@ Bool_t TGLViewer::DoSecondarySelect(Int_t x, Int_t y)
       return kFALSE;
    }
 
+   TGLUtil::PointToViewport(x, y);
+
    TUnlocker ulck(this);
 
    if (! fSelRec.GetSceneInfo() || ! fSelRec.GetPhysShape() ||
@@ -1244,7 +1255,7 @@ Bool_t TGLViewer::DoSecondarySelect(Int_t x, Int_t y)
    SceneInfoList_t foo;
    foo.push_back(sinfo);
    fScenes.swap(foo);
-   fRnrCtx->BeginSelection(x, y, 3);
+   fRnrCtx->BeginSelection(x, y, TGLUtil::GetPickingRadius());
    fRnrCtx->SetSecSelection(kTRUE);
    glRenderMode(GL_SELECT);
 
@@ -1329,11 +1340,13 @@ Bool_t TGLViewer::DoOverlaySelect(Int_t x, Int_t y)
       return kFALSE;
    }
 
+   TGLUtil::PointToViewport(x, y);
+
    TUnlocker ulck(this);
 
    MakeCurrent();
 
-   fRnrCtx->BeginSelection(x, y, 3);
+   fRnrCtx->BeginSelection(x, y, TGLUtil::GetPickingRadius());
    glRenderMode(GL_SELECT);
 
    PreRenderOverlaySelection();
@@ -1769,6 +1782,20 @@ void TGLViewer::SetPerspectiveCamera(ECameraType camera,
          break;
       }
    }
+}
+
+//______________________________________________________________________________
+void TGLViewer::ReinitializeCurrentCamera(const TGLVector3& hAxis, const TGLVector3& vAxis, Bool_t redraw)
+{
+   // Change base-vectors defining the camera-base transformation of current
+   // camera. hAxis and vAxis are the default directions for forward
+   // (inverted) and upwards.
+
+   TGLMatrix& cb = fCurrentCamera->RefCamBase();
+   cb.Set(cb.GetTranslation(), vAxis, hAxis);
+   fCurrentCamera->Setup(fOverallBoundingBox, kTRUE);
+   if (redraw)
+      RequestDraw();
 }
 
 //______________________________________________________________________________

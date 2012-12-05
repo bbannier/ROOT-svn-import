@@ -1,18 +1,13 @@
-/*****************************************************************************
- * Project: RooFit                                                           *
- * Package: RooFitCore                                                       *
- *    File: $Id: ParamHistFunc.h,v 1.3 2007/05/11 09:11:30 verkerke Exp $
- * Authors:                                                                  *
- *   WV, Wouter Verkerke, UC Santa Barbara, verkerke@slac.stanford.edu       *
- *   DK, David Kirkby,    UC Irvine,         dkirkby@uci.edu                 *
- *                                                                           *
- * Copyright (c) 2000-2005, Regents of the University of California          *
- *                          and Stanford University. All rights reserved.    *
- *                                                                           *
- * Redistribution and use in source and binary forms,                        *
- * with or without modification, are permitted according to the terms        *
- * listed in LICENSE (http://roofit.sourceforge.net/license.txt)             *
- *****************************************************************************/
+// @(#)root/roostats:$Id:  cranmer $
+// Author: George Lewis, Kyle Cranmer
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
 
 #ifndef ROO_PARAMHISTFUNC
 #define ROO_PARAMHISTFUNC
@@ -44,7 +39,7 @@ public:
   ParamHistFunc(const ParamHistFunc& other, const char* name = 0);
   virtual TObject* clone(const char* newname) const { return new ParamHistFunc(*this, newname); }
 
-  //  void printMetaArgs(ostream& os) const ;
+  //  void printMetaArgs(std::ostream& os) const ;
 
   const RooArgList& paramList() const { return _paramSet ; }
 
@@ -92,7 +87,7 @@ protected:
     RooArgList _funcIntList ;
     RooArgList _lowIntList ;
     RooArgList _highIntList ;
-    // will want vector<RooRealVar*> for low and high also
+    // will want std::vector<RooRealVar*> for low and high also
   } ;
   mutable RooObjCacheManager _normIntMgr ; // The integration cache manager
 
@@ -105,6 +100,7 @@ protected:
   Int_t _numBins;
   mutable std::map<Int_t, Int_t> _binMap;
   mutable RooDataHist _dataSet;
+  Bool_t _Normalized;
 
   // std::vector< Double_t > _nominalVals; // The nominal vals when gamma = 1.0 ( = 1.0 by default)
   RooArgList   _ownedList ;       // List of owned components

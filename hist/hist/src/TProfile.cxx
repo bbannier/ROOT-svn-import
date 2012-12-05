@@ -642,21 +642,6 @@ Bool_t TProfile::Divide(const TH1 *h1, const TH1 *h2, Double_t c1, Double_t c2, 
 }
 
 //______________________________________________________________________________
-TH1 *TProfile::DrawCopy(Option_t *option) const
-{
-//*-*-*-*-*-*-*-*Draw a copy of this profile histogram*-*-*-*-*-*-*-*-*-*-*-*
-//*-*            =====================================
-   TString opt = option;
-   opt.ToLower();
-   if (gPad && !opt.Contains("same")) gPad->Clear();
-   TProfile *newpf = (TProfile*)Clone();
-   newpf->SetDirectory(0);
-   newpf->SetBit(kCanDelete);
-   newpf->AppendPad(option);
-   return newpf;
-}
-
-//______________________________________________________________________________
 Int_t TProfile::Fill(Double_t x, Double_t y)
 {
 //*-*-*-*-*-*-*-*-*-*-*Fill a Profile histogram (no weights)*-*-*-*-*-*-*-*
@@ -729,13 +714,14 @@ Int_t TProfile::Fill(Double_t x, Double_t y, Double_t w)
       if (y <fYmin || y> fYmax || TMath::IsNaN(y) ) return -1;
    }
 
-   Double_t u= w; // (w > 0 ? w : -w);
+   Double_t u= w; 
    fEntries++;
    bin =fXaxis.FindBin(x);
    AddBinContent(bin, u*y);
    fSumw2.fArray[bin] += u*y*y;
-   fBinEntries.fArray[bin] += u;
+   if (!fBinSumw2.fN && u != 1.)  Sumw2();  // must be called before accumulating the entries 
    if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += u*u;
+   fBinEntries.fArray[bin] += u;
    if (bin == 0 || bin > fXaxis.GetNbins()) {
       if (!fgStatOverflows) return -1;
    }
@@ -764,8 +750,9 @@ Int_t TProfile::Fill(const char *namex, Double_t y, Double_t w)
    bin =fXaxis.FindBin(namex);
    AddBinContent(bin, u*y);
    fSumw2.fArray[bin] += u*y*y;
-   fBinEntries.fArray[bin] += u;
+   if (!fBinSumw2.fN && u != 1.)  Sumw2();  // must be called before accumulating the entries 
    if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += u*u;
+   fBinEntries.fArray[bin] += u;
    if (bin == 0 || bin > fXaxis.GetNbins()) {
       if (!fgStatOverflows) return -1;
    }
@@ -797,8 +784,9 @@ void TProfile::FillN(Int_t ntimes, const Double_t *x, const Double_t *y, const D
       bin =fXaxis.FindBin(x[i]);
       AddBinContent(bin, u*y[i]);
       fSumw2.fArray[bin] += u*y[i]*y[i];
-      fBinEntries.fArray[bin] += u;
+      if (!fBinSumw2.fN && u != 1.)  Sumw2();  // must be called before accumulating the entries 
       if (fBinSumw2.fN)  fBinSumw2.fArray[bin] += u*u;
+      fBinEntries.fArray[bin] += u;
       if (bin == 0 || bin > fXaxis.GetNbins()) {
          if (!fgStatOverflows) continue;
       }
@@ -897,22 +885,6 @@ Option_t *TProfile::GetErrorOption() const
    if (fErrorMode == kERRORSPREADI) return "i";
    if (fErrorMode == kERRORSPREADG) return "g";
    return "";
-}
-
-//______________________________________________________________________________
-char* TProfile::GetObjectInfo(Int_t px, Int_t py) const
-{
-   //   Redefines TObject::GetObjectInfo.
-   //   Displays the profile info (bin number, contents, eroor, entries per bin
-   //   corresponding to cursor position px,py
-   //
-   if (!gPad) return (char*)"";
-   static char info[200];
-   Double_t x  = gPad->PadtoX(gPad->AbsPixeltoX(px));
-   Double_t y  = gPad->PadtoY(gPad->AbsPixeltoY(py));
-   Int_t binx   = GetXaxis()->FindFixBin(x);
-   snprintf(info,200,"(x=%g, y=%g, binx=%d, binc=%g, bine=%g, binn=%d)", x, y, binx, GetBinContent(binx), GetBinError(binx), (Int_t)GetBinEntries(binx));
-   return info;
 }
 
 //______________________________________________________________________________
@@ -1559,7 +1531,7 @@ void TProfile::Reset(Option_t *option)
 }
 
 //______________________________________________________________________________
-void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TProfile::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
     // Save primitive as a C++ statement(s) on output stream out
 
@@ -1579,11 +1551,11 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
          if (i != 0) out << ", ";
          out << GetXaxis()->GetXbins()->fArray[i];
       }
-      out << "}; " << endl;
+      out << "}; " << std::endl;
    }
 
    char quote = '"';
-   out<<"   "<<endl;
+   out<<"   "<<std::endl;
    out<<"   "<<ClassName()<<" *";
 
    //histogram pointer has by default teh histogram name.
@@ -1604,21 +1576,21 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    else
       out << "," << GetXaxis()->GetXmin()
           << "," << GetXaxis()->GetXmax()
-          <<","<<quote<<GetErrorOption()<<quote<<");"<<endl;
+          <<","<<quote<<GetErrorOption()<<quote<<");"<<std::endl;
 
    // save bin entries
    Int_t bin;
    for (bin=0;bin<fNcells;bin++) {
       Double_t bi = GetBinEntries(bin);
       if (bi) {
-         out<<"   "<<hname<<"->SetBinEntries("<<bin<<","<<bi<<");"<<endl;
+         out<<"   "<<hname<<"->SetBinEntries("<<bin<<","<<bi<<");"<<std::endl;
       }
    }
    //save bin contents
    for (bin=0;bin<fNcells;bin++) {
       Double_t bc = fArray[bin];
       if (bc) {
-         out<<"   "<<hname<<"->SetBinContent("<<bin<<","<<bc<<");"<<endl;
+         out<<"   "<<hname<<"->SetBinContent("<<bin<<","<<bc<<");"<<std::endl;
       }
    }
    // save bin errors
@@ -1626,7 +1598,7 @@ void TProfile::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       for (bin=0;bin<fNcells;bin++) {
          Double_t be = TMath::Sqrt(fSumw2.fArray[bin]);
          if (be) {
-            out<<"   "<<hname<<"->SetBinError("<<bin<<","<<be<<");"<<endl;
+            out<<"   "<<hname<<"->SetBinError("<<bin<<","<<be<<");"<<std::endl;
          }
       }
    }

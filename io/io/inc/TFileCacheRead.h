@@ -32,54 +32,56 @@ class TFilePrefetch;
 class TFileCacheRead : public TObject {
 
 protected:
-   TFilePrefetch* fPrefetch;       //!Object that does the asynchronous reading in another thread
-   Int_t         fBufferSizeMin;  //Original size of fBuffer
-   Int_t         fBufferSize;     //Allocated size of fBuffer (at a given time)
-   Int_t         fBufferLen;      //Current buffer length (<= fBufferSize)
+   TFilePrefetch *fPrefetch;         //! Object that does the asynchronous reading in another thread
+   Int_t          fBufferSizeMin;    // Original size of fBuffer
+   Int_t          fBufferSize;       // Allocated size of fBuffer (at a given time)
+   Int_t          fBufferLen;        // Current buffer length (<= fBufferSize)
 
-   Long64_t      fBytesRead;      //Number of bytes read for this cache
-   Long64_t      fBytesReadExtra; //Number of extra bytes (overhead) read by the readahead buffer
-   Int_t         fReadCalls;      //Number of read calls for this cache
-   Long64_t      fNoCacheBytesRead; //Number of bytes read by basket to fill cached tree
-   Int_t         fNoCacheReadCalls; //Number of read calls by basket to fill cached tree
+   Long64_t       fBytesRead;        // Number of bytes read for this cache
+   Long64_t       fBytesReadExtra;   // Number of extra bytes (overhead) read by the readahead buffer
+   Int_t          fReadCalls;        // Number of read calls for this cache
+   Long64_t       fNoCacheBytesRead; // Number of bytes read by basket to fill cached tree
+   Int_t          fNoCacheReadCalls; // Number of read calls by basket to fill cached tree
 
-   Bool_t        fAsyncReading;
-   Bool_t        fEnablePrefetching; //reading by prefetching asynchronously 
+   Bool_t         fAsyncReading;
+   Bool_t         fEnablePrefetching;// reading by prefetching asynchronously 
 
-   Int_t         fNseek;          //Number of blocks to be prefetched
-   Int_t         fNtot;           //Total size of prefetched blocks
-   Int_t         fNb;             //Number of long buffers
-   Int_t         fSeekSize;       //Allocated size of fSeek
-   Long64_t     *fSeek;           //[fNseek] Position on file of buffers to be prefetched
-   Long64_t     *fSeekSort;       //[fNseek] Position on file of buffers to be prefetched (sorted)
-   Int_t        *fSeekIndex;      //[fNseek] sorted index table of fSeek
-   Long64_t     *fPos;            //[fNb] start of long buffers
-   Int_t        *fSeekLen;        //[fNseek] Length of buffers to be prefetched
-   Int_t        *fSeekSortLen;    //[fNseek] Length of buffers to be prefetched (sorted)
-   Int_t        *fSeekPos;        //[fNseek] Position of sorted blocks in fBuffer
-   Int_t        *fLen;            //[fNb] Length of long buffers
-   TFile        *fFile;           //Pointer to file
-   char         *fBuffer;         //[fBufferSize] buffer of contiguous prefetched blocks
-   Bool_t        fIsSorted;       //True if fSeek array is sorted
-   Bool_t        fIsTransferred;   //True when fBuffer contains something valid
-   Long64_t      fPrefetchedBlocks; // Number of blocks prefetched.
+   Int_t          fNseek;            // Number of blocks to be prefetched
+   Int_t          fNtot;             // Total size of prefetched blocks
+   Int_t          fNb;               // Number of long buffers
+   Int_t          fSeekSize;         // Allocated size of fSeek
+   Long64_t      *fSeek;             //[fNseek] Position on file of buffers to be prefetched
+   Long64_t      *fSeekSort;         //[fNseek] Position on file of buffers to be prefetched (sorted)
+   Int_t         *fSeekIndex;        //[fNseek] sorted index table of fSeek
+   Long64_t      *fPos;              //[fNb] start of long buffers
+   Int_t         *fSeekLen;          //[fNseek] Length of buffers to be prefetched
+   Int_t         *fSeekSortLen;      //[fNseek] Length of buffers to be prefetched (sorted)
+   Int_t         *fSeekPos;          //[fNseek] Position of sorted blocks in fBuffer
+   Int_t         *fLen;              //[fNb] Length of long buffers
+   TFile         *fFile;             // Pointer to file
+   char          *fBuffer;           //[fBufferSize] buffer of contiguous prefetched blocks
+   Bool_t         fIsSorted;         // True if fSeek array is sorted
+   Bool_t         fIsTransferred;    // True when fBuffer contains something valid
+   Long64_t       fPrefetchedBlocks; // Number of blocks prefetched.
 
-   //varibles for the second block prefetched with the same semantics as for the first one
-   Int_t         fBNseek;
-   Int_t         fBNtot;
-   Int_t         fBNb;
-   Int_t         fBSeekSize;
-   Long64_t     *fBSeek;
-   Long64_t     *fBSeekSort;
-   Int_t        *fBSeekIndex;
-   Long64_t     *fBPos;
-   Int_t        *fBSeekLen;
-   Int_t        *fBSeekSortLen;
-   Int_t        *fBSeekPos;
-   Int_t        *fBLen;
-   Bool_t        fBIsSorted;
-   Bool_t        fBIsTransferred;
+   //variables for the second block prefetched with the same semantics as for the first one
+   Int_t          fBNseek;
+   Int_t          fBNtot;
+   Int_t          fBNb;
+   Int_t          fBSeekSize;
+   Long64_t      *fBSeek;        //[fBNseek] 
+   Long64_t      *fBSeekSort;    //[fBNseek] 
+   Int_t         *fBSeekIndex;   //[fBNseek] 
+   Long64_t      *fBPos;         //[fBNb]
+   Int_t         *fBSeekLen;     //[fBNseek] 
+   Int_t         *fBSeekSortLen; //[fBNseek] 
+   Int_t         *fBSeekPos;     //[fBNseek] 
+   Int_t         *fBLen;         //[fBNb]
+   Bool_t         fBIsSorted;
+   Bool_t         fBIsTransferred;
 
+   void SetEnablePrefetchingImpl(Bool_t setPrefetching = kFALSE); // Can not be virtual as it is called from the constructor.
+   
 private:
    TFileCacheRead(const TFileCacheRead &);            //cannot be copied
    TFileCacheRead& operator=(const TFileCacheRead &);
@@ -92,6 +94,7 @@ public:
    virtual void        AddBranch(const char * /*branch*/, Bool_t /*subbranches*/ = kFALSE) {}
    virtual void        AddNoCacheBytesRead(Long64_t len) { fNoCacheBytesRead += len; }
    virtual void        AddNoCacheReadCalls(Int_t reads) { fNoCacheReadCalls += reads; }
+   virtual void        Close(Option_t *option="");
    virtual Int_t       GetBufferSize() const { return fBufferSize; };
    virtual Long64_t    GetBytesRead() const { return fBytesRead; }
    virtual Long64_t    GetNoCacheBytesRead() const { return fNoCacheBytesRead; }
@@ -104,7 +107,7 @@ public:
    virtual Int_t       GetUnzipBuffer(char ** /*buf*/, Long64_t /*pos*/, Int_t /*len*/, Bool_t * /*free*/) { return -1; }
            Long64_t    GetPrefetchedBlocks() const { return fPrefetchedBlocks; }
    virtual Bool_t      IsAsyncReading() const { return fAsyncReading; };
-   virtual void        SetEnablePrefetching(Bool_t setPrefetching = kFALSE) { fEnablePrefetching = setPrefetching; }
+   virtual void        SetEnablePrefetching(Bool_t setPrefetching = kFALSE);
    virtual Bool_t      IsEnablePrefetching() const { return fEnablePrefetching; };
    virtual Bool_t      IsLearning() const {return kFALSE;}
    virtual void        Prefetch(Long64_t pos, Int_t len);

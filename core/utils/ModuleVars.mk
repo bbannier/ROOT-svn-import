@@ -7,22 +7,21 @@ ifneq ($(HOST),)
 
 UTILSDIRS    := $(BUILDTOOLSDIR)/core/utils/src
 
+ifeq ($(BUILDCLING),yes)
+ROOTCLINGS    := $(UTILSDIRS)/rootcling.cxx \
+                 $(filter-out %RStl.cxx,$(filter-out %root%.cxx,$(filter-out %_tmp.cxx,$(wildcard $(UTILSDIRS)/*.cxx))))
+ROOTCLINGTMPS := $(ROOTCLINGS:.cxx=_tmp.cxx)
+ROOTCLINGTMPO := $(ROOTCLINGS:.cxx=_tmp.o)
+ROOTCLINGTMPEXE := $(UTILSDIRS)/rootcling_tmp$(EXEEXT)
+ROOTCINTTMP  ?= $(ROOTCLINGTMPEXE) -$(ROOTDICTTYPE)
+
+else 
 ROOTCINTS    := $(UTILSDIRS)/rootcint.cxx \
                 $(filter-out %_tmp.cxx,$(wildcard $(UTILSDIRS)/R*.cxx))
 ROOTCINTTMPO := $(ROOTCINTS:.cxx=_tmp.o)
 ROOTCINTTMPEXE := $(UTILSDIRS)/rootcint_tmp$(EXEEXT)
 ROOTCINTTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
 
-ifeq ($(BUILDCLING),yes)
-ROOTCLINGS    := $(UTILSDIRS)/rootcling.cxx \
-                 $(filter-out %RStl.cxx,$(filter-out %root%.cxx,$(filter-out %_tmp.cxx,$(wildcard $(UTILSDIRS)/*.cxx))))
-ROOTCLINGTMPO := $(ROOTCLINGS:.cxx=_tmp.o)
-ROOTCLINGTMPEXE := $(UTILSDIRS)/rootcling_tmp$(EXEEXT)
-ifeq ($(ROOT_REVERT_TO_ROOTCINT),)
-ROOTCINTTMP  ?= $(ROOTCLINGTMPEXE) -$(ROOTDICTTYPE)
-else
-ROOTCINTTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
-endif
 endif
 
 ##### Dependencies for all dictionaries
@@ -35,37 +34,47 @@ endif
 ##### rlibmap #####
 RLIBMAP      := $(BUILDTOOLSDIR)/bin/rlibmap$(EXEEXT)
 
-else
+else # ifneq ($(HOST),)
 
 MODNAME      := utils
+
 MODDIR       := $(ROOT_SRCDIR)/core/$(MODNAME)
+MODDIRS      := $(MODDIR)/src
+MODDIRI      := $(MODDIR)/inc
+
 UTILSDIR     := $(MODDIR)
 UTILSDIRS    := $(UTILSDIR)/src
 UTILSDIRI    := $(UTILSDIR)/inc
 
 ##### rootcint #####%
+ifneq ($(BUILDCLING),yes)
 ROOTCINTS    := $(UTILSDIRS)/rootcint.cxx \
-                $(filter-out %RClStl.cxx,$(filter-out %_tmp.cxx,$(wildcard $(UTILSDIRS)/R*.cxx)))
+                $(filter-out %RClStl.cxx %_tmp.cxx,$(wildcard $(UTILSDIRS)/R*.cxx))
+ROOTCINTO    := $(call stripsrc,$(ROOTCINTS:.cxx=.o))
 ROOTCINTTMPO := $(call stripsrc,$(ROOTCINTS:.cxx=_tmp.o))
+ROOTCINTDEP  := $(ROOTCINTO:.o=.d) $(ROOTCINTTMPO:.o=.d)
 
 ROOTCINTTMPEXE := $(call stripsrc,$(UTILSDIRS)/rootcint_tmp$(EXEEXT))
 ROOTCINTEXE  := bin/rootcint$(EXEEXT)
 ROOTCINTTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
+endif # ifneq ($(BUILDCLING),yes)
 
-##### rootcint #####
+##### rootcling #####
 ifeq ($(BUILDCLING),yes)
-ROOTCLINGS    := $(UTILSDIRS)/rootcling.cxx \
-                 $(filter-out %RStl.cxx,$(filter-out %_tmp.cxx,$(filter-out %rlibmap.cxx,$(filter-out %rootcling.cxx,$(filter-out %rootcint.cxx,$(filter-out %_tmp.cxx,$(wildcard $(UTILSDIRS)/*.cxx)))))))
-ROOTCLINGTMPO := $(call stripsrc,$(ROOTCLINGS:.cxx=_tmp.o))
+ROOTCLINGUTILS := $(filter-out %/rlibmap.cxx %/rootcint.cxx %/rootcling.cxx %/RStl.cxx %_tmp.cxx,\
+                  $(wildcard $(UTILSDIRS)/*.cxx))
+ROOTCLINGUTILO := $(call stripsrc,$(ROOTCLINGUTILS:.cxx=.o))
+ROOTCLINGS := $(wildcard $(UTILSDIRS)/rootcling.cxx)
+ROOTCLINGO := $(call stripsrc,$(ROOTCLINGS:.cxx=.o))
+ROOTCLINGTMPS := $(call stripsrc,$(ROOTCLINGS:.cxx=_tmp.cxx))
+ROOTCLINGTMPO := $(ROOTCLINGTMPS:.cxx=.o)
+ROOTCLINGDEP := $(ROOTCLINGO:.o=.d) $(ROOTCLINGTMPO:.o=.d) $(ROOTCLINGUTILO:.o=.d)
 
+ROOTCINTEXE  := bin/rootcint$(EXEEXT)
 ROOTCLINGTMPEXE := $(call stripsrc,$(UTILSDIRS)/rootcling_tmp$(EXEEXT))
 ROOTCLINGEXE  := bin/rootcling$(EXEEXT)
-ifeq ($(ROOT_REVERT_TO_ROOTCINT),)
 ROOTCLINGTMP  ?= $(ROOTCLINGTMPEXE) -$(ROOTDICTTYPE)
-else
-ROOTCLINGTMP  ?= $(ROOTCINTTMPEXE) -$(ROOTDICTTYPE)
-endif
-endif
+endif # ifeq ($(BUILDCLING),yes)
 
 ##### Dependencies for all dictionaries
 ifeq ($(BUILDCLING),yes)
@@ -75,16 +84,21 @@ ROOTCINTTMPDEP = $(ROOTCINTTMPO) $(ORDER_) $(ROOTCINTTMPEXE)
 endif
 
 ##### rlibmap #####
+RLIBMAPS     := $(UTILSDIRS)/rlibmap.cxx
+RLIBMAPO     := $(call stripsrc,$(RLIBMAPS:.cxx=.o))
+RLIBMAPDEP   := $(RLIBMAPO:.o=.d)
 RLIBMAP      := bin/rlibmap$(EXEEXT)
 
+# include all dependency files
+INCLUDEFILES += $(ROOTCINTDEP) $(ROOTCLINGDEP) $(RLIBMAPDEP)
+
 ifeq ($(BUILDCLING),yes)
-ROOTCLINGCXXFLAGS = $(filter-out -Wcast-qual,$(CLINGCXXFLAGS)) \
-  '-DR__CLANG="$(LLVMCONFIG:llvm-config=clang++)"'
+ROOTCLINGCXXFLAGS = $(filter-out -Wcast-qual,$(CLINGCXXFLAGS))
 ifneq ($(CXX:g++=),$(CXX))
 ROOTCLINGCXXFLAGS += -Wno-shadow -Wno-unused-parameter
 endif
-else
+else # ifeq ($(BUILDCLING),yes)
 ROOTCLINGCXXFLAGS := 
-endif
+endif # ifeq ($(BUILDCLING),yes)
 
-endif
+endif # ifneq ($(HOST),)

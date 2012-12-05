@@ -13,6 +13,17 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/SmallSet.h"
+#include "clang/Sema/Sema.h"
+#include "clang/Frontend/CompilerInstance.h"
+
+#include "cling/Interpreter/Interpreter.h"
+extern cling::Interpreter *gInterp;
+
+#include "TClassEdit.h"
+#include "TMetaUtils.h"
+
+using namespace ROOT;
 
 #include <iostream>
 #include <sstream> // class ostringstream
@@ -43,6 +54,8 @@
 
 // #define SELECTION_DEBUG
 
+// void R__GetQualifiedName(std::string &qual_name, const clang::NamedDecl &cl);
+
 /* -------------------------------------------------------------------------- */
 using namespace clang;
 const char* RScanner::fgClangDeclKey = "ClangDecl"; // property key used for connection with Clang objects
@@ -56,10 +69,88 @@ std::map <clang::Decl*, std::string> RScanner::fgAnonymousClassMap;
 std::map <clang::Decl*, std::string> RScanner::fgAnonymousEnumMap;
 
 //______________________________________________________________________________
-RScanner::RScanner (const SelectionRules &rules) : fSelectionRules(rules)
+RScanner::AnnotatedRecordDecl::AnnotatedRecordDecl(long index, const clang::RecordDecl *decl, 
+                                                   bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass, int rRequestedVersionNumber,
+                                                   const cling::Interpreter &interpreter, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) :
+   fRuleIndex(index), fDecl(decl), fRequestStreamerInfo(rStreamerInfo), fRequestNoStreamer(rNoStreamer),
+   fRequestNoInputOperator(rRequestNoInputOperator), fRequestOnlyTClass(rRequestOnlyTClass), fRequestedVersionNumber(rRequestedVersionNumber) 
 {
-   fSourceManager = NULL;
+   // There is no requested type name.
+   // Still let's normalized the actual name.
    
+   TMetaUtils::GetNormalizedName(fNormalizedName, decl->getASTContext().getTypeDeclType(decl),interpreter,normCtxt);
+
+}
+
+
+//______________________________________________________________________________
+RScanner::AnnotatedRecordDecl::AnnotatedRecordDecl(long index, const clang::Type *requestedType, const clang::RecordDecl *decl, const char *requestName, 
+                                                   bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass, int rRequestVersionNumber, 
+                                                   const cling::Interpreter &interpreter, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) : 
+   fRuleIndex(index), fDecl(decl), fRequestedName(""), fRequestStreamerInfo(rStreamerInfo), fRequestNoStreamer(rNoStreamer),
+   fRequestNoInputOperator(rRequestNoInputOperator), fRequestOnlyTClass(rRequestOnlyTClass), fRequestedVersionNumber(rRequestVersionNumber) 
+{
+   // Normalize the requested type name.
+   
+   // For comparison purposes.
+   TClassEdit::TSplitType splitname1(requestName,(TClassEdit::EModType)(TClassEdit::kLong64 | TClassEdit::kDropStd));
+   splitname1.ShortType( fRequestedName, TClassEdit::kDropAllDefault );
+   
+   TMetaUtils::GetNormalizedName( fNormalizedName, clang::QualType(requestedType,0), interpreter, normCtxt);
+
+   // std::string canonicalName;
+   // R__GetQualifiedName(canonicalName,*decl);
+
+   // fprintf(stderr,"Created annotation with: requested name=%-22s normalized name=%-22s canonical name=%-22s\n",fRequestedName.c_str(),fNormalizedName.c_str(),canonicalName.c_str());
+}
+
+//______________________________________________________________________________
+RScanner::AnnotatedRecordDecl::AnnotatedRecordDecl(long index, const clang::RecordDecl *decl, const char *requestName, 
+                                                   bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass, int rRequestVersionNumber, 
+                                                   const cling::Interpreter &interpreter, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) : 
+   fRuleIndex(index), fDecl(decl), fRequestedName(""), fRequestStreamerInfo(rStreamerInfo), fRequestNoStreamer(rNoStreamer),
+   fRequestNoInputOperator(rRequestNoInputOperator), fRequestOnlyTClass(rRequestOnlyTClass), fRequestedVersionNumber(rRequestVersionNumber) 
+{
+   // Normalize the requested name.
+
+   // const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (decl);
+   // if (tmplt_specialization) {
+   //    tmplt_specialization->getTemplateArgs ().data()->print(decl->getASTContext().getPrintingPolicy(),llvm::outs());
+   //    llvm::outs() << "\n";
+   // }
+   // const char *current = requestName;
+   // Strips spaces and std::
+   if (requestName && requestName[0]) {
+      TClassEdit::TSplitType splitname(requestName,(TClassEdit::EModType)(TClassEdit::kDropAllDefault | TClassEdit::kLong64 | TClassEdit::kDropStd));
+      splitname.ShortType( fRequestedName, TClassEdit::kDropAllDefault | TClassEdit::kLong64 | TClassEdit::kDropStd );
+
+      fNormalizedName = fRequestedName;
+   } else {
+      TMetaUtils::GetNormalizedName( fNormalizedName, decl->getASTContext().getTypeDeclType(decl),interpreter,normCtxt);
+   }
+}
+
+//______________________________________________________________________________
+int RScanner::AnnotatedRecordDecl::RootFlag() const 
+{
+   // Return the request (streamerInfo, has_version, etc.) combined in a single
+   // int.  See RScanner::AnnotatedRecordDecl::ERootFlag.
+
+   int result = 0;
+   if (fRequestNoStreamer) result = kNoStreamer;
+   if (fRequestNoInputOperator) result |= kNoInputOperator;
+   if (fRequestStreamerInfo) result |= kStreamerInfo;
+   if (fRequestedVersionNumber > -1) result |= kHasVersion;
+   return result;
+}
+
+//______________________________________________________________________________
+RScanner::RScanner (const SelectionRules &rules, const cling::Interpreter &interpret, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt, unsigned int verbose /* = 0 */) : 
+   fSelectionRules(rules), fRecordDeclCallback(0), fSourceManager(0), fVerboseLevel(verbose), fInterpreter(interpret), fNormCtxt(normCtxt)
+{
+   // Regular constructor setting up the scanner to search for entities
+   // matching the 'rules'.
+
    for (int i = 0; i <= fgDeclLast; i ++)
       fDeclTable [i] = false;
    
@@ -591,6 +682,19 @@ std::string RScanner::FuncParameterList(clang::FunctionDecl* D) const
    return "(" + result + ")";
 }
 
+class RPredicateIsSameNamespace
+{
+private:
+   clang::NamespaceDecl *fTarget;
+public:
+   RPredicateIsSameNamespace(clang::NamespaceDecl *target) : fTarget(target) {}
+
+   bool operator()(const RScanner::AnnotatedNamespaceDecl& element) 
+   {
+      return (fTarget == element);
+   }
+};
+
 // This method visits a namespace node 
 bool RScanner::VisitNamespaceDecl(clang::NamespaceDecl* N)
 {
@@ -601,28 +705,35 @@ bool RScanner::VisitNamespaceDecl(clang::NamespaceDecl* N)
    }
    
    bool ret = true;
-   const BaseSelectionRule *selected;
-   
+
    DumpDecl(N, "");
    
-   selected = fSelectionRules.IsDeclSelected(N);
+   const ClassSelectionRule *selected = fSelectionRules.IsDeclSelected(N);
    if (selected) {
       
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> true";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> true";
 #endif
+      clang::DeclContext* primary_ctxt = N->getPrimaryContext();
+      clang::NamespaceDecl* primary = llvm::dyn_cast<clang::NamespaceDecl>(primary_ctxt);
       
-      std::string qual_name;
-      GetDeclQualName(N,qual_name);
-      std::cout<<"\tSelected namespace -> " << qual_name << "\n";
+      RPredicateIsSameNamespace pred(primary);
+      if ( find_if(fSelectedNamespaces.begin(),fSelectedNamespaces.end(),pred) == fSelectedNamespaces.end() ) {
+         // The namespace is not already registered.
 
-      fSelectedNamespaces.push_back(AnnotatedNamespaceDecl(N,selected->GetIndex(),selected->RequestOnlyTClass()));
-      
+         if (fVerboseLevel > 0) {
+            std::string qual_name;
+            GetDeclQualName(N,qual_name);
+            //      std::cout<<"\tSelected namespace -> " << qual_name << " ptr " << (void*)N <<   " decl ctxt " << (void*)N->getPrimaryContext() << " classname " <<primary->getNameAsString() << "\n";
+            std::cout<<"\tSelected namespace -> " << qual_name << "\n";
+         }
+         fSelectedNamespaces.push_back(AnnotatedNamespaceDecl(primary,selected->GetIndex(),selected->RequestOnlyTClass()));
+      }
       ret = true;
    }
    else {
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> false";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> false";
 #endif
    }
    
@@ -638,51 +749,85 @@ bool RScanner::VisitNamespaceDecl(clang::NamespaceDecl* N)
 // For every class the class builder is put on top of the fClassBuilders stack
 bool RScanner::VisitRecordDecl(clang::RecordDecl* D)
 {
-   
+
    bool ret = true;
-   const BaseSelectionRule *selected;
+
+   if (D && fRecordDeclCallback) {
+      // Pass on any declaration.   This is usually used to record dependency.
+      // Since rootcint see C++ compliant header files, we can assume that
+      // if a forward declaration or declaration has been inserted, the
+      // classes for which we are creating a dictionary will be using
+      // them either directly or indirectly.   Any false positive can be
+      // resolved by removing the spurrious dependency in the (user) header 
+      // files.
+      std::string qual_name;
+      GetDeclQualName(D,qual_name);
+      fRecordDeclCallback(qual_name.c_str());
+   }
    
    // in case it is implicit or a forward declaration, we are not interested.
    if(D && (D->isImplicit() || !D->isCompleteDefinition()) ) {
       return true;
    }
-   
-   DumpDecl(D, "");
-   std::string qual_name2;
-   
-   if (GetDeclQualName(D, qual_name2))
-      std::cout<<"\tLooking -> " << qual_name2 << "\n";
-   if (qual_name2 == "TemplateClass") {
-      std::cout<<"  "<<D->clang::Decl::getDeclKindName()<<"\n";
+
+   const clang::CXXRecordDecl *cxxdecl = llvm::dyn_cast<clang::CXXRecordDecl>(D);
+   if (cxxdecl && cxxdecl->getDescribedClassTemplate ()) {
+      // Never select the class templates themselves.
+      return true;
    }
-  
-   selected = fSelectionRules.IsDeclSelected(D);
-   if (selected) {
+   DumpDecl(D, "");
+
+   if (fVerboseLevel > 2) {
+      std::string qual_name2;   
+      if (GetDeclQualName(D, qual_name2))
+         std::cout<<"\tLooking -> " << qual_name2 << "\n";
+      if (qual_name2 == "TemplateClass") {
+         std::cout<<"  "<<D->clang::Decl::getDeclKindName()<<"\n";
+      }
+   }
+   
+   const ClassSelectionRule *selected = fSelectionRules.IsDeclSelected(D);
+   if (selected && selected->GetSelected() == BaseSelectionRule::kYes) {
+      // For the case kNo, we could (but don't) remove the node from the pcm
+      // For the case kDontCare, the rule is just a place holder and we are actually trying to exclude some of its children
+      // (this is used only in the selection xml case).
       
+      // Reject the selection of std::pair on the ground that it is trivial
+      // and can easily be recreated from the AST information.
+      if (D->getName() == "pair") {
+         const clang::NamespaceDecl *ctxt = llvm::dyn_cast<clang::NamespaceDecl>(D->getDeclContext())->getCanonicalDecl();
+         if (ctxt && ctxt == fInterpreter.getCI()->getSema().getStdNamespace()) { 
+            if (selected->HasAttributeWithName("file_name") || selected->HasAttributeWithName("file_pattern")) {
+               return true;
+            }
+         }
+      }
+
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> true";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> true";
 #endif
-      
+
       std::string qual_name;
       GetDeclQualName(D,qual_name);
-      std::cout<<"\tSelected class -> " << qual_name << "\n";
+      if (fVerboseLevel > 0) std::cout<<"\tSelected class -> " << qual_name << "\n";
       
-      if (selected->HasAttributeWithName("name")) {
-         std::string name_value;
-         selected->GetAttributeValue("name", name_value);
-         fSelectedClasses.push_back(AnnotatedRecordDecl(selected->GetIndex(),D,name_value.c_str(),
+      std::string name_value;
+      if (selected->GetAttributeValue("name", name_value)) {
+         fSelectedClasses.push_back(AnnotatedRecordDecl(selected->GetIndex(),selected->GetRequestedType(), D,name_value.c_str(),
                                                         selected->RequestStreamerInfo(),selected->RequestNoStreamer(),
-                                                        selected->RequestNoInputOperator(),selected->RequestOnlyTClass()));
+                                                        selected->RequestNoInputOperator(),selected->RequestOnlyTClass(),selected->RequestedVersionNumber(),
+                                                        fInterpreter,fNormCtxt));
       } else {
          fSelectedClasses.push_back(AnnotatedRecordDecl(selected->GetIndex(),D,
                                                         selected->RequestStreamerInfo(),selected->RequestNoStreamer(),
-                                                        selected->RequestNoInputOperator(),selected->RequestOnlyTClass()));
+                                                        selected->RequestNoInputOperator(),selected->RequestOnlyTClass(),selected->RequestedVersionNumber(),
+                                                        fInterpreter,fNormCtxt));
       }         
       ret = true;
    }
    else {
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> false";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> false";
 #endif
    }
    
@@ -718,20 +863,20 @@ bool RScanner::VisitEnumDecl(clang::EnumDecl* D)
    if(fSelectionRules.IsDeclSelected(D)) {
       
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> true";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> true";
 #endif
 
       clang::DeclContext *ctx = D->getDeclContext();
       
       clang::Decl* parent = dyn_cast<clang::Decl> (ctx);
       if (!parent) {
-         std::cout<<"Could not cast parent context to parent Decl"<<std::endl;
+         ShowWarning("Could not cast parent context to parent Decl","");
          return false;
       }
 
       std::string qual_name;
       GetDeclQualName(D,qual_name);
-      std::cout<<"\tSelected enum -> " << qual_name << "\n";
+      if (fVerboseLevel > 0) std::cout<<"\tSelected enum -> " << qual_name << "\n";
 
       //if ((fSelectionRules.isSelectionXMLFile() && ctx->isRecord()) || (fSelectionRules.isLinkdefFile() && ctx->isRecord() && fSelectionRules.IsDeclSelected(parent))) {
       if (ctx->isRecord() && fSelectionRules.IsDeclSelected(parent)) {
@@ -762,7 +907,7 @@ bool RScanner::VisitEnumDecl(clang::EnumDecl* D)
    }
    else {
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> false";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> false";
 #endif
    }
    
@@ -778,17 +923,18 @@ bool RScanner::VisitVarDecl(clang::VarDecl* D)
    
    if(fSelectionRules.IsDeclSelected(D)){
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> true";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> true";
 #endif
-      std::string var_name;      
-      var_name = D->getQualifiedNameAsString();
 
-      std::cout<<"\tSelected variable -> " << var_name << "\n";
-      
+      if (fVerboseLevel > 0) {
+         std::string var_name;      
+         var_name = D->getQualifiedNameAsString();
+         std::cout<<"\tSelected variable -> " << var_name << "\n";
+      }
    }
    else {
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> false";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> false";
 #endif
    }
    
@@ -803,17 +949,18 @@ bool RScanner::VisitFieldDecl(clang::FieldDecl* D)
    
    if(fSelectionRules.IsDeclSelected(D)){
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> true";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> true";
 #endif
 
+      // if (fVerboseLevel > 0) {
 //      std::string qual_name;
 //      GetDeclQualName(D,qual_name);
 //      std::cout<<"\tSelected field -> " << qual_name << "\n";
-      
+      // }
    }
    else {
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> false";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> false";
 #endif
    }
    
@@ -830,42 +977,38 @@ bool RScanner::VisitFunctionDecl(clang::FunctionDecl* D)
    
    if(fSelectionRules.IsDeclSelected(D)){
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> true";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> true";
 #endif
       
-      std::string qual_name;
-      std::string prototype;
-      
-      std::string name;
-      std::string func_name = D->getQualifiedNameAsString() + FuncParameterList(D);
-      
-      std::string params = FuncParameters(D);
-      
-      clang::DeclContext * ctx = D->getDeclContext();
-      clang::Decl* parent = dyn_cast<clang::Decl> (ctx);
-      if (!parent) {
-         std::cout<<"Could not cast parent context to parent Decl"<<std::endl;
-         return false;
-      }
-#ifdef SELECTION_DEBUG
-      std::cout<<"\n\tParams are "<<params;
-#endif
-      
-      if ((fSelectionRules.IsSelectionXMLFile() && ctx->isRecord()) || (fSelectionRules.IsLinkdefFile() && ctx->isRecord() && fSelectionRules.IsDeclSelected(parent))) {
-         //if (ctx->isRecord() && fSelectionRules.IsDeclSelected(parent)){ // Do I need the second part? - Yes - Optimization for Linkdef?
-         
-         name = D->getNameAsString();
-      }
-      else{
-         name = D->getQualifiedNameAsString();
-         
-      }
 
-      // std::cout<<"\tSelected function -> " << name << "\n";
+      if (fVerboseLevel > 0) {
+         // std::string func_name = D->getQualifiedNameAsString() + FuncParameterList(D);
+         std::string name;
+         clang::DeclContext * ctx = D->getDeclContext();
+         clang::Decl* parent = dyn_cast<clang::Decl> (ctx);
+         if (!parent) {
+            ShowError("in VisitFunctionDecl, could not cast parent context to parent Decl","");
+            return false;
+         }
+         if ((fSelectionRules.IsSelectionXMLFile() && ctx->isRecord()) || (fSelectionRules.IsLinkdefFile() && ctx->isRecord() && fSelectionRules.IsDeclSelected(parent))) {
+            //if (ctx->isRecord() && fSelectionRules.IsDeclSelected(parent)){ // Do I need the second part? - Yes - Optimization for Linkdef?
+            
+            name = D->getNameAsString();
+         }
+         else{
+            name = D->getQualifiedNameAsString();  
+         }
+         std::cout<<"\tSelected function -> " << name << "\n";
+         if (fVerboseLevel > 3) {
+            std::string params = FuncParameters(D);
+            std::cout<<"\n\tParams are "<<params;
+         }
+      }
+      
    }
    else {
 #ifdef SELECTION_DEBUG
-      std::cout<<"\n\tSelected -> false";
+      if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> false";
 #endif
    }
    
@@ -907,18 +1050,21 @@ std::string RScanner::GetClassName(clang::DeclContext* DC) const
 
 void RScanner::DumpDecl(clang::Decl* D, const char* msg) const
 {
+   if (fVerboseLevel > 3) {
+      return;
+   }
    std::string name;
    
    if (!D) {
 #ifdef SELECTION_DEBUG
-      printf("\nDEBUG - DECL is NULL: %s", msg);
+      if (fVerboseLevel > 3) printf("\nDEBUG - DECL is NULL: %s", msg);
 #endif
       return;
    }
    
    GetDeclName(D, name);
 #ifdef SELECTION_DEBUG
-   std::cout<<"\n\n"<<name<<" -> "<<D->getDeclKindName()<<": "<<msg;
+   if (fVerboseLevel > 3) std::cout<<"\n\n"<<name<<" -> "<<D->getDeclKindName()<<": "<<msg;
 #endif
 }
 
@@ -928,15 +1074,7 @@ bool RScanner::GetDeclName(clang::Decl* D, std::string& name) const
    clang::NamedDecl* N = dyn_cast<clang::NamedDecl> (D);
    
    if (N) {
-      if (N->getIdentifier()) {
-         name = N->getNameAsString();
-      }
-      //else if (N->isCXXClassMember()) { // CXXConstructor, CXXDestructor, operators
-      else {
-         name =  N->getNameAsString();
-      }
-      //else 
-      //   name = "strange";
+      name = N->getNameAsString();
       return true;
    }
    else {
@@ -989,7 +1127,7 @@ bool RScanner::GetFunctionPrototype(clang::Decl* D, std::string& prototype) cons
       return true;
    }
    else {
-      std::cout<<"Warning - can't convert Decl to FunctionDecl"<<std::endl;
+      ShowWarning("can't convert Decl to FunctionDecl","");
       return false;
    }
 }
@@ -1000,21 +1138,23 @@ void RScanner::Scan(const clang::ASTContext &C)
    fSourceManager = &C.getSourceManager();
    
 #ifdef SELECTION_DEBUG
-   printf("\nDEBUG from Velislava - into the Scan() function!!!\n");
+   if (fVerboseLevel > 3) printf("\nDEBUG from Velislava - into the Scan() function!!!\n");
 #endif
 
 #ifdef SELECTION_DEBUG
-   fSelectionRules.PrintSelectionRules();
+   if (fVerboseLevel > 3) fSelectionRules.PrintSelectionRules();
 #endif
    
-   if (fSelectionRules.GetHasFileNameRule())
-      std::cout<<"File name detected"<<std::endl;
-   
+   if (fVerboseLevel > 0)  {
+      if (fSelectionRules.GetHasFileNameRule())
+         std::cout<<"File name detected"<<std::endl;
+   }
+
    TraverseDecl(C.getTranslationUnitDecl());
       
    if (!fSelectionRules.AreAllSelectionRulesUsed()) {
 #ifdef SELECTION_DEBUG
-      std::cout<<"\nDEBUG - unused sel rules"<<std::endl;
+      if (fVerboseLevel > 3) std::cout<<"\nDEBUG - unused sel rules"<<std::endl;
 #endif
    }
    
@@ -1023,4 +1163,12 @@ void RScanner::Scan(const clang::ASTContext &C)
 }
 
 
+//______________________________________________________________________________
+RScanner::DeclCallback RScanner::SetRecordDeclCallback(RScanner::DeclCallback callback)
+{
+   // Set the callback to the RecordDecl and return the previous one.
 
+   DeclCallback old = fRecordDeclCallback;
+   fRecordDeclCallback = callback;
+   return old;
+}

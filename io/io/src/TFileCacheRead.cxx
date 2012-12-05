@@ -137,37 +137,13 @@ TFileCacheRead::TFileCacheRead(TFile *file, Int_t buffersize, TObject *tree)
    //initialise the prefetch object and set the cache directory
    // start the thread only if the file is not local  
    fEnablePrefetching = gEnv->GetValue("TFile.AsyncPrefetching", 0);
+   
    if (fEnablePrefetching && strcmp(file->GetEndpointUrl()->GetProtocol(), "file")){
-      fPrefetch = new TFilePrefetch(file);
-      const char* cacheDir = gEnv->GetValue("Cache.Directory", "");
-      if (strcmp(cacheDir, ""))
-        if (!fPrefetch->SetCache((char*) cacheDir))
-           fprintf(stderr, "Error while trying to set the cache directory.\n");
-      if (fPrefetch->ThreadStart()){
-         fprintf(stderr,"Error stating prefetching thread. Disabling prefetching.\n");
-         fEnablePrefetching = 0;
-      }
+      SetEnablePrefetchingImpl(true);
    }
-   else //disable the async pref for local files
-      fEnablePrefetching = 0;
-
-   //environment variable used to switch to the new method of reading asynchronously
-   if (fEnablePrefetching){
-      fAsyncReading = kFALSE;
+   else { //disable the async pref for local files
+      SetEnablePrefetchingImpl(false);
    }
-   else {
-      fAsyncReading = gEnv->GetValue("TFile.AsyncReading", 0);
-      if (fAsyncReading) {
-         // Check if asynchronous reading is supported by this TFile specialization
-         fAsyncReading = kFALSE;
-         if (file && !(file->ReadBufferAsync(0, 0)))
-            fAsyncReading = kTRUE;
-      }
-      if (!fAsyncReading) {
-         // we use sync primitives, hence we need the local buffer
-         fBuffer = new char[fBufferSize];
-      }
-   }  
 
    fIsSorted    = kFALSE;
    fIsTransferred = kFALSE;
@@ -191,7 +167,8 @@ TFileCacheRead::~TFileCacheRead()
    delete [] fSeekSortLen;
    delete [] fSeekPos;
    delete [] fLen;
-   delete [] fBuffer;
+   if (fBuffer)
+      delete [] fBuffer;
    delete [] fBSeek;
    delete [] fBSeekIndex;
    delete [] fBSeekSort;
@@ -200,6 +177,21 @@ TFileCacheRead::~TFileCacheRead()
    delete [] fBSeekSortLen;
    delete [] fBSeekPos;
    delete [] fBLen;
+}
+
+//_____________________________________________________________________________
+void TFileCacheRead::Close(Option_t * /* opt = "" */)
+{
+   // Close out any threads or asynchronous fetches used by the underlying 
+   // implementation.
+   // This is called by TFile::Close to prevent usage of the file handles
+   // after the closing of the file.
+   
+   if (fPrefetch) {
+      delete fPrefetch;
+      fPrefetch = 0;
+   }
+
 }
 
 //_____________________________________________________________________________
@@ -417,27 +409,29 @@ Int_t TFileCacheRead::ReadBufferExtPrefetch(char *buf, Long64_t pos, Int_t len, 
       }
    }
 
-   //try to prefetch from the first block                                                                                                                  
-   if (loc < 0)
+   // try to prefetch from the first block
+   if (loc < 0) {
       loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+   }
 
    if (loc >= 0 && loc < fNseek && pos == fSeekSort[loc]) {
       if (buf && fPrefetch){
-         //prefetch with the new method                  
+         // prefetch with the new method                  
          fPrefetch->ReadBuffer(buf, pos, len);
+         return 1;
       }
-      return 1;
    }
    else if (buf && fPrefetch){
-      //try to preferch from the second block                                                                                                               
+      // try to preferch from the second block
       loc = (Int_t)TMath::BinarySearch(fBNseek, fBSeekSort, pos);
- 
+
       if (loc >= 0 && loc < fBNseek && pos == fBSeekSort[loc]){
-         if (fPrefetch->ReadBuffer(buf, pos, len))
-             return 1;
+         if (fPrefetch->ReadBuffer(buf, pos, len)) {
+           return 1;
+        }
       }
    }   
-   
+
    return 0;
 }
 
@@ -513,13 +507,15 @@ Int_t TFileCacheRead::ReadBufferExtNormal(char *buf, Long64_t pos, Int_t len, In
       }
 
       if (gDebug > 0)
-         Info("ReadBuffer","pos=%lld, len=%d, retval=%d, loc=%d, fseekSort[loc]=%lld, fSeekLen[loc]=%d", pos, len, retval, loc, fSeekSort[loc], fSeekLen[loc]);
+         Info("ReadBuffer","pos=%lld, len=%d, retval=%d, loc=%d, "
+              "fseekSort[loc]=%lld, fSeekLen[loc]=%d",
+              pos, len, retval, loc, fSeekSort[loc], fSeekLen[loc]);
       
       return retval;
    } else {
 
       if (loc < 0)
-         loc = (Int_t)TMath::BinarySearch(fNseek,fSeekSort,pos);
+         loc = (Int_t)TMath::BinarySearch(fNseek, fSeekSort, pos);
 
       if (loc >= 0 && loc <fNseek && pos == fSeekSort[loc]) {
          if (buf) {
@@ -677,3 +673,61 @@ TFilePrefetch* TFileCacheRead::GetPrefetchObj(){
   
    return this->fPrefetch;
 }
+
+//______________________________________________________________________________
+void TFileCacheRead::SetEnablePrefetching(Bool_t setPrefetching) 
+{
+   // Set the prefetching mode of this file.
+   // if 'setPrefetching', enable the asynchronous prefetching
+   // (using TFilePrefetch) and if the gEnv and rootrc 
+   // variable Cache.Directory is set, also enable the local
+   // caching of the prefetched blocks.
+   // if 'setPrefetching', the old prefetcher is enabled is
+   // the gEnv and rootrc variable is TFile.AsyncReading
+   
+   SetEnablePrefetchingImpl(setPrefetching);
+}
+
+//______________________________________________________________________________
+void TFileCacheRead::SetEnablePrefetchingImpl(Bool_t setPrefetching) 
+{
+   // TFileCacheRead implementation of SetEnablePrefetching.
+   //
+   // This function is called from the constructor and should not be virtual.
+      
+   fEnablePrefetching = setPrefetching;
+   
+   if (!fPrefetch && fEnablePrefetching) {
+      fPrefetch = new TFilePrefetch(fFile);
+      const char* cacheDir = gEnv->GetValue("Cache.Directory", "");
+      if (strcmp(cacheDir, ""))
+        if (!fPrefetch->SetCache((char*) cacheDir))
+           fprintf(stderr, "Error while trying to set the cache directory.\n");
+      if (fPrefetch->ThreadStart()){
+         fprintf(stderr,"Error stating prefetching thread. Disabling prefetching.\n");
+         fEnablePrefetching = 0;
+      }
+   } else if (fPrefetch && !fEnablePrefetching) {
+       SafeDelete(fPrefetch);
+       fPrefetch = NULL;
+   }
+
+   //environment variable used to switch to the new method of reading asynchronously
+   if (fEnablePrefetching) {
+      fAsyncReading = kFALSE;
+   }
+   else {
+      fAsyncReading = gEnv->GetValue("TFile.AsyncReading", 0);
+      if (fAsyncReading) {
+         // Check if asynchronous reading is supported by this TFile specialization
+         fAsyncReading = kFALSE;
+         if (fFile && !(fFile->ReadBufferAsync(0, 0)))
+            fAsyncReading = kTRUE;
+         }
+      if (!fAsyncReading && fBuffer == 0) {
+         // we use sync primitives, hence we need the local buffer
+         fBuffer = new char[fBufferSize];
+      }
+   }
+}
+

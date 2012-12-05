@@ -19,7 +19,6 @@
 #include "RooFit.h"
 
 #include "RooGlobalFunc.h"
-#include "RooGlobalFunc.h"
 #include "RooCategory.h"
 #include "RooRealConstant.h"
 #include "RooDataSet.h"
@@ -29,6 +28,8 @@
 #include "RooFitResult.h"
 #include "RooAbsPdf.h"
 #include "TH1.h"
+
+using namespace std;
 
 namespace RooFit {
 
@@ -118,8 +119,8 @@ namespace RooFit {
 
   
   // RooDataSet::ctor arguments
-  RooCmdArg WeightVar(const char* name)                 { return RooCmdArg("WeightVarName",0,0,0,0,name,0,0,0) ; }
-  RooCmdArg WeightVar(const RooRealVar& arg)            { return RooCmdArg("WeightVar",0,0,0,0,0,0,&arg,0) ; }
+  RooCmdArg WeightVar(const char* name, Bool_t reinterpretAsWeight) { return RooCmdArg("WeightVarName",reinterpretAsWeight,0,0,0,name,0,0,0) ; }
+  RooCmdArg WeightVar(const RooRealVar& arg, Bool_t reinterpretAsWeight)  { return RooCmdArg("WeightVar",reinterpretAsWeight,0,0,0,0,0,&arg,0) ; }
   RooCmdArg Link(const char* state, RooAbsData& data)   { return RooCmdArg("LinkDataSlice",0,0,0,0,state,0,&data,0) ;} 
   RooCmdArg Import(const char* state, RooDataSet& data) { return RooCmdArg("ImportDataSlice",0,0,0,0,state,0,&data,0) ; }
   RooCmdArg Import(RooDataSet& data)                    { return RooCmdArg("ImportData",0,0,0,0,0,0,&data,0) ; }
@@ -291,7 +292,7 @@ namespace RooFit {
   RooCmdArg ClassName(const char* name)     { return RooCmdArg("ClassName",0,0,0,0,name,0,0,0) ; }
   RooCmdArg BaseClassName(const char* name) { return RooCmdArg("BaseClassName",0,0,0,0,name,0,0,0) ; }
   RooCmdArg TagName(const char* name)     { return RooCmdArg("LabelName",0,0,0,0,name,0,0,0) ; }
-  RooCmdArg OutputStream(ostream& os)    { return RooCmdArg("OutputStream",0,0,0,0,0,0,reinterpret_cast<TObject*>(&os),0) ; }
+   RooCmdArg OutputStream(ostream& os)    { return RooCmdArg("OutputStream",0,0,0,0,0,0,reinterpret_cast<TObject*>(&os),0) ; }
   RooCmdArg Prefix(Bool_t flag)          { return RooCmdArg("Prefix",flag,0,0,0,0,0,0,0) ; }
   RooCmdArg Color(Color_t color)         { return RooCmdArg("Color",color,0,0,0,0,0,0,0) ; }
 

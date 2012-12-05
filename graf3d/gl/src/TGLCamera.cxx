@@ -44,6 +44,7 @@ UInt_t         TGLCamera::fgDollyDeltaSens       = 500;
 TGLCamera::TGLCamera() :
    fExternalCenter(kFALSE),
    fFixDefCenter(kFALSE),
+   fWasArcBalled(kFALSE),
    fCenter(&fDefCenter),
    fNearClip(0), fFarClip(0),
    fDollyDefault(1.0), fDollyDistance(1.0),
@@ -66,6 +67,7 @@ TGLCamera::TGLCamera() :
 TGLCamera::TGLCamera(const TGLVector3 & hAxis, const TGLVector3 & vAxis) :
    fExternalCenter(kFALSE),
    fFixDefCenter(kFALSE),
+   fWasArcBalled(kFALSE),
    fCenter(&fDefCenter),
    fNearClip(0), fFarClip(0),
    fDollyDefault(1.0), fDollyDistance(1.0),
@@ -261,11 +263,12 @@ TGLVertex3 TGLCamera::FrustumCenter() const
 }
 
 //______________________________________________________________________________
-EOverlap TGLCamera::FrustumOverlap(const TGLBoundingBox & box) const
+Rgl::EOverlap TGLCamera::FrustumOverlap(const TGLBoundingBox & box) const
 {
    // Calcaulte overlap (kInside, kOutside, kPartial) of box with camera
    // frustum
    // Camera must have valid frustum cache - call Apply() after last modifcation, before using
+
    if (fCacheDirty) {
       Error("TGLCamera::FrustumOverlap()", "cache dirty - must call Apply()");
    }
@@ -277,8 +280,9 @@ EOverlap TGLCamera::FrustumOverlap(const TGLBoundingBox & box) const
    // TODO: Improve this - have a reliable test (seperating axes).
 
    Int_t planesInside = 0; // Assume outside to start
-   for (Int_t planeIndex = 0; planeIndex < kPlanesPerFrustum; ++planeIndex) {
-      EOverlap planeOverlap = box.Overlap(fFrustumPlanes[planeIndex]);
+   for (Int_t planeIndex = 0; planeIndex < kPlanesPerFrustum; ++planeIndex)
+   {
+      Rgl::EOverlap planeOverlap = box.Overlap(fFrustumPlanes[planeIndex]);
 
       // Special case - any object which comes through the near clipping
       // plane is completely removed - disabled at present
@@ -288,22 +292,22 @@ EOverlap TGLCamera::FrustumOverlap(const TGLBoundingBox & box) const
          return kOutside;
       }*/
       // Once we find a single plane which shape is outside, we are outside the frustum
-      if ( planeOverlap == kOutside ) {
-         return kOutside;
-      } else if ( planeOverlap == kInside ) {
+      if (planeOverlap == Rgl::kOutside) {
+         return Rgl::kOutside;
+      } else if (planeOverlap == Rgl::kInside) {
          planesInside++;
       }
    }
    // Completely inside frustum
-   if ( planesInside == kPlanesPerFrustum ) {
-      return kInside;
+   if (planesInside == kPlanesPerFrustum) {
+      return Rgl::kInside;
    } else {
-      return kPartial;
+      return Rgl::kPartial;
    }
 }
 
 //______________________________________________________________________________
-EOverlap TGLCamera::ViewportOverlap(const TGLBoundingBox & box) const
+Rgl::EOverlap TGLCamera::ViewportOverlap(const TGLBoundingBox & box) const
 {
    // Calculate overlap (kInside, kOutside, kPartial) of box projection onto viewport
    // (as rect) against the viewport rect.
@@ -580,23 +584,30 @@ Bool_t TGLCamera::OfInterest(const TGLBoundingBox & box, Bool_t ignoreSize) cons
    // thus fires an internal rebuild to fill scene properly and
    // finally setup camera properly.
 
-   if (fInterestBox.IsEmpty()) {
-      if (box.Diagonal() >= fLargestSeen * 0.001) {
+   if (fInterestBox.IsEmpty())
+   {
+      if (box.Diagonal() >= fLargestSeen * 0.001)
+      {
          if (box.Diagonal() > fLargestSeen) {
             fLargestSeen = box.Diagonal();
          }
          interest = kTRUE;
       }
-   } else {
+   }
+   else
+   {
       // Objects are of interest if the have length ratio c.f. the
       // current interest box, and they at least partially overlap it.
       // Some objects have zero volume BBs - e.g. single points - skip
       // the test for these as there is no way to threshold on 0.
-      if (box.IsEmpty()) {
+      if (box.IsEmpty())
+      {
          interest = kTRUE;
-      } else {
+      }
+      else
+      {
          if (ignoreSize || box.Diagonal() / fInterestBox.Diagonal() > 0.0001)
-            interest = fInterestBox.Overlap(box) != kOutside;
+            interest = fInterestBox.Overlap(box) != Rgl::kOutside;
       }
    }
 
@@ -618,7 +629,7 @@ Bool_t TGLCamera::UpdateInterest(Bool_t force)
    // sizable amount).
    //
    // If the interest box is updated we return kTRUE - kFALSE otherwise.
-   //
+
    Bool_t exposedUpdate = kFALSE;
 
    // Construct a new interest box using the current frustum box as a basis
@@ -646,12 +657,13 @@ Bool_t TGLCamera::UpdateInterest(Bool_t force)
    // ii) The current frustum is not inside existing interest
    // iii) Force case (debugging)
    if (volRatio > 8.0 || volRatio < 0.125 || fInterestBox.IsEmpty() ||
-       fInterestBox.Overlap(frustumBox) != kInside || force) {
+       fInterestBox.Overlap(frustumBox) != Rgl::kInside || force)
+   {
       fPreviousInterestBox = fInterestBox;
       fInterestBox = newInterestBox;
 
       // Frustum should be fully contained now
-      if (fInterestBox.Overlap(frustumBox) != kInside) {
+      if (fInterestBox.Overlap(frustumBox) != Rgl::kInside) {
          Error("TGLCamera::UpdateInterest", "update interest box does not contain frustum");
       }
 
@@ -901,24 +913,41 @@ Bool_t TGLCamera::RotateRad(Double_t hRotate, Double_t vRotate)
    // Rotate camera around center.
 
    using namespace TMath;
-   if (hRotate != 0.0)
+
+   if (fWasArcBalled)
+   {
+      Double_t *M = fCamTrans.Arr();
+      Double_t  d = M[2];
+      if      (d >  1) d =  1;
+      else if (d < -1) d = -1; // Fix numerical errors
+
+      Double_t theta = ASin(d);
+      Double_t phi   = Abs(Cos(theta)) > 8.7e-6 ? ATan2(M[1], M[0]) : ATan2(-M[4], M[5]);
+
+      M[0] = M[5] = M[10] = 1;
+      M[1] = M[2] = M[4] = M[6] = M[8] = M[9] = 0;
+      fCamTrans.RotateLF(1, 2, phi);
+      fCamTrans.RotateLF(1, 3, theta);
+   }
+
+   if (hRotate != 0.0 || fWasArcBalled)
    {
       TGLVector3 fwd  = fCamTrans.GetBaseVec(1);
       TGLVector3 lft  = fCamTrans.GetBaseVec(2);
       TGLVector3 up   = fCamTrans.GetBaseVec(3);
       TGLVector3 pos  = fCamTrans.GetTranslation();
 
-      TGLVector3 deltaT = pos - (pos*lft)*lft;
-      Double_t   deltaF = deltaT * fwd;
-      Double_t   deltaU = deltaT * up;
+      Double_t deltaF = pos * fwd;
+      Double_t deltaU = pos * up;
 
       // up vector lock
       TGLVector3 zdir = fCamBase.GetBaseVec(3);
+
       fCamBase.RotateIP(fwd);
       Double_t theta = ACos(fwd*zdir);
-      if(theta+hRotate < fVAxisMinAngle)
+      if (theta + hRotate < fVAxisMinAngle)
          hRotate = fVAxisMinAngle - theta;
-      else if(theta+hRotate > Pi() - fVAxisMinAngle)
+      else if (theta + hRotate > Pi() - fVAxisMinAngle)
          hRotate = Pi() - fVAxisMinAngle - theta;
 
       fCamTrans.MoveLF(1, -deltaF);
@@ -926,11 +955,66 @@ Bool_t TGLCamera::RotateRad(Double_t hRotate, Double_t vRotate)
       fCamTrans.RotateLF(3, 1, hRotate);
       fCamTrans.MoveLF(3,  deltaU);
       fCamTrans.MoveLF(1,  deltaF);
+
+      fWasArcBalled = kFALSE;
    }
    if (vRotate != 0.0)
    {
       fCamTrans.RotatePF(1, 2, -vRotate);
    }
+
+   IncTimeStamp();
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+Bool_t TGLCamera::RotateArcBall(Int_t xDelta, Int_t yDelta, Bool_t mod1, Bool_t mod2)
+{
+   // Rotate the camera round view volume center established in Setup().
+   // Arguments are:
+   // xDelta - horizontal delta (pixels)
+   // YDelta - vertical delta (pixels)
+
+   Double_t vRotate = AdjustDelta(xDelta, TMath::TwoPi() / fViewport.Width(), mod1, mod2);
+   Double_t hRotate = AdjustDelta(yDelta, TMath::Pi()   / fViewport.Height(), mod1, mod2);
+
+   return RotateArcBallRad(hRotate, vRotate);
+}
+
+//______________________________________________________________________________
+Bool_t TGLCamera::RotateArcBallRad(Double_t hRotate, Double_t vRotate)
+{
+   // Rotate camera around center.
+
+   using namespace TMath;
+
+   TGLVector3 fwd  = fCamTrans.GetBaseVec(1);
+   TGLVector3 lft  = fCamTrans.GetBaseVec(2);
+   TGLVector3 up   = fCamTrans.GetBaseVec(3);
+   TGLVector3 pos  = fCamTrans.GetTranslation();
+
+   Double_t deltaF = pos * fwd;
+   Double_t deltaL = pos * lft;
+   Double_t deltaU = pos * up;
+
+   fCamTrans.MoveLF(1, -deltaF);
+   fCamTrans.MoveLF(2, -deltaL);
+   fCamTrans.MoveLF(3, -deltaU);
+
+   if (hRotate != 0.0)
+   {
+      fCamTrans.RotateLF(3, 1, hRotate);
+   }
+   if (vRotate != 0.0)
+   {
+      fCamTrans.RotateLF(1, 2, -vRotate);
+   }
+
+   fCamTrans.MoveLF(3, deltaU);
+   fCamTrans.MoveLF(2, deltaL);
+   fCamTrans.MoveLF(1, deltaF);
+
+   fWasArcBalled = kTRUE;
 
    IncTimeStamp();
    return kTRUE;

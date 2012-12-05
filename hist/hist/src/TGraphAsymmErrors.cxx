@@ -636,29 +636,38 @@ void TGraphAsymmErrors::Divide(const TH1* pass, const TH1* total, Option_t *opt)
 
 
       //using bayesian statistics
-      if(bIsBayesian) {
+      if(bIsBayesian) {         
          double aa,bb;
-         if (bEffective) {
-            // tw/tw2 renormalize the weights
-            double norm = (tw2 > 0) ? tw/tw2 : 0.;
-            aa =  pw * norm + alpha;
-            bb =  (tw - pw) * norm + beta;
-         }
-         else {
-            aa = double(p) + alpha;
-            bb = double(t-p) + beta;
-         }
-         if (usePosteriorMode)
-            eff = TEfficiency::BetaMode(aa,bb);
-         else
-            eff = TEfficiency::BetaMean(aa,bb);
 
-         if (useShortestInterval) {
-            TEfficiency::BetaShortestInterval(conf,aa,bb,low,upper);
+         if (bEffective && tw2 <= 0) { 
+            // case of bins with zero errors 
+            eff = pw/tw; 
+            low = eff; upper = eff;
          }
-         else {
-            low = TEfficiency::BetaCentralInterval(conf,aa,bb,false);
-            upper = TEfficiency::BetaCentralInterval(conf,aa,bb,true);
+         else { 
+
+            if (bEffective) {
+               // tw/tw2 renormalize the weights
+               double norm = tw/tw2;  // case of tw2 = 0 is treated above
+               aa =  pw * norm + alpha;
+               bb =  (tw - pw) * norm + beta;
+            }
+            else {
+               aa = double(p) + alpha;
+               bb = double(t-p) + beta;
+            }
+            if (usePosteriorMode)
+               eff = TEfficiency::BetaMode(aa,bb);
+            else
+               eff = TEfficiency::BetaMean(aa,bb);
+            
+            if (useShortestInterval) {
+               TEfficiency::BetaShortestInterval(conf,aa,bb,low,upper);
+            }
+            else {
+               low = TEfficiency::BetaCentralInterval(conf,aa,bb,false);
+               upper = TEfficiency::BetaCentralInterval(conf,aa,bb,true);
+            }
          }
       }
       // case of non-bayesian statistics
@@ -914,6 +923,40 @@ Double_t TGraphAsymmErrors::GetErrorYlow(Int_t i) const
 
 
 //______________________________________________________________________________
+Int_t TGraphAsymmErrors::Merge(TCollection* li)
+{
+   // Adds all graphs with asymmetric errors from the collection to this graph.
+   // Returns the total number of poins in the result or -1 in case of an error.
+
+   TIter next(li);
+   while (TObject* o = next()) {
+      TGraph *g = dynamic_cast<TGraph*>(o);
+      if (!g) {
+         Error("Merge",
+               "Cannot merge - an object which doesn't inherit from TGraph found in the list");
+         return -1;
+      }
+      int n0 = GetN();
+      int n1 = n0+g->GetN();
+      Set(n1);
+      Double_t * x = g->GetX();
+      Double_t * y = g->GetY();
+      Double_t * exlow  = g->GetEXlow();
+      Double_t * exhigh = g->GetEXhigh();
+      Double_t * eylow  = g->GetEYlow();
+      Double_t * eyhigh = g->GetEYhigh();
+      for (Int_t i = 0 ; i < g->GetN(); i++) {
+         SetPoint(n0+i, x[i], y[i]);
+         if (exlow)  fEXlow[n0+i]  = exlow[i];
+         if (exhigh) fEXhigh[n0+i] = exhigh[i];
+         if (eylow)  fEYlow[n0+i]  = eylow[i];
+         if (eyhigh) fEYhigh[n0+i] = eyhigh[i];
+      }
+   }
+   return GetN();
+}
+
+//______________________________________________________________________________
 void TGraphAsymmErrors::Print(Option_t *) const
 {
    // Print graph and errors values.
@@ -926,28 +969,28 @@ void TGraphAsymmErrors::Print(Option_t *) const
 
 
 //______________________________________________________________________________
-void TGraphAsymmErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGraphAsymmErrors::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
     // Save primitive as a C++ statement(s) on output stream out
 
    char quote = '"';
-   out<<"   "<<endl;
+   out<<"   "<<std::endl;
    if (gROOT->ClassSaved(TGraphAsymmErrors::Class())) {
       out<<"   ";
    } else {
       out<<"   TGraphAsymmErrors *";
    }
-   out<<"grae = new TGraphAsymmErrors("<<fNpoints<<");"<<endl;
-   out<<"   grae->SetName("<<quote<<GetName()<<quote<<");"<<endl;
-   out<<"   grae->SetTitle("<<quote<<GetTitle()<<quote<<");"<<endl;
+   out<<"grae = new TGraphAsymmErrors("<<fNpoints<<");"<<std::endl;
+   out<<"   grae->SetName("<<quote<<GetName()<<quote<<");"<<std::endl;
+   out<<"   grae->SetTitle("<<quote<<GetTitle()<<quote<<");"<<std::endl;
 
    SaveFillAttributes(out,"grae",0,1001);
    SaveLineAttributes(out,"grae",1,1,1);
    SaveMarkerAttributes(out,"grae",1,1,1);
 
    for (Int_t i=0;i<fNpoints;i++) {
-      out<<"   grae->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<endl;
-      out<<"   grae->SetPointError("<<i<<","<<fEXlow[i]<<","<<fEXhigh[i]<<","<<fEYlow[i]<<","<<fEYhigh[i]<<");"<<endl;
+      out<<"   grae->SetPoint("<<i<<","<<fX[i]<<","<<fY[i]<<");"<<std::endl;
+      out<<"   grae->SetPointError("<<i<<","<<fEXlow[i]<<","<<fEXhigh[i]<<","<<fEYlow[i]<<","<<fEYhigh[i]<<");"<<std::endl;
    }
 
    static Int_t frameNumber = 0;
@@ -957,8 +1000,8 @@ void TGraphAsymmErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       hname += frameNumber;
       fHistogram->SetName(Form("Graph_%s",hname.Data()));
       fHistogram->SavePrimitive(out,"nodraw");
-      out<<"   grae->SetHistogram("<<fHistogram->GetName()<<");"<<endl;
-      out<<"   "<<endl;
+      out<<"   grae->SetHistogram("<<fHistogram->GetName()<<");"<<std::endl;
+      out<<"   "<<std::endl;
    }
 
    // save list of functions
@@ -967,18 +1010,18 @@ void TGraphAsymmErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    while ((obj=next())) {
       obj->SavePrimitive(out,"nodraw");
       if (obj->InheritsFrom("TPaveStats")) {
-         out<<"   grae->GetListOfFunctions()->Add(ptstats);"<<endl;
-         out<<"   ptstats->SetParent(grae->GetListOfFunctions());"<<endl;
+         out<<"   grae->GetListOfFunctions()->Add(ptstats);"<<std::endl;
+         out<<"   ptstats->SetParent(grae->GetListOfFunctions());"<<std::endl;
       } else {
-         out<<"   grae->GetListOfFunctions()->Add("<<obj->GetName()<<");"<<endl;
+         out<<"   grae->GetListOfFunctions()->Add("<<obj->GetName()<<");"<<std::endl;
       }
    }
 
    const char *l = strstr(option,"multigraph");
    if (l) {
-      out<<"   multigraph->Add(grae,"<<quote<<l+10<<quote<<");"<<endl;
+      out<<"   multigraph->Add(grae,"<<quote<<l+10<<quote<<");"<<std::endl;
    } else {
-      out<<"   grae->Draw("<<quote<<option<<quote<<");"<<endl;
+      out<<"   grae->Draw("<<quote<<option<<quote<<");"<<std::endl;
    }
 }
 

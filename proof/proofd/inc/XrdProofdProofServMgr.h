@@ -41,6 +41,9 @@ class XrdSysLogger;
 #define PSMMAXCNTS  3
 #define PSMCNTOK(t) (t >= 0 && t < PSMMAXCNTS)
 
+// Security handle
+typedef int (*XrdSecCredsSaver_t)(XrdSecCredentials *, const char *fn, const XrdProofUI &ui);
+
 // Aux structure for session set env inputs
 typedef struct {
    XrdProofdProofServ *fPS;
@@ -69,6 +72,7 @@ public:
    int            fPid;
    int            fID;
    int            fSrvType;
+   int            fPLiteNWrks;
    int            fStatus;
    XrdOucString   fUser;
    XrdOucString   fGroup;
@@ -157,6 +161,8 @@ class XrdProofdProofServMgr : public XrdProofdConfig {
    XrdOucHash<XrdProofdProofServ> fSessions; // List of sessions
    std::list<XrdProofdProofServ *> fActiveSessions;     // List of active sessions (non-idle)
    std::list<XpdClientSessions *> *fRecoverClients; // List of client potentially recovering
+
+   XrdSecCredsSaver_t fCredsSaver; // If defined, function to be used to save the credentials
 
    int                DoDirectiveProofServMgr(char *, XrdOucStream *, bool);
    int                DoDirectivePutEnv(char *, XrdOucStream *, bool);
@@ -263,8 +269,6 @@ public:
 
    int               SetProofServEnv(XrdProofdProtocol *p, void *in);
    int               SetProofServEnvOld(XrdProofdProtocol *p, void *in);
-
-   int               SaveAFSkey(XrdSecCredentials *c, const char *fn, XrdProofUI ui);
    int               SetUserEnvironment(XrdProofdProtocol *p);
 
    static int        SetProofServEnv(XrdProofdManager *m, XrdROOT *r);

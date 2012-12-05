@@ -208,7 +208,7 @@ TGeoMatrix::~TGeoMatrix()
 {
 // Destructor
    if (IsRegistered() && gGeoManager) {
-      if (gGeoManager->GetListOfVolumes()) {
+      if (!gGeoManager->IsCleaning()) {
          gGeoManager->GetListOfMatrices()->Remove(this);
          Warning("dtor", "Registered matrix %s was removed", GetName());
       }
@@ -377,7 +377,7 @@ void TGeoMatrix::LocalToMasterBomb(const Double_t *local, Double_t *master) cons
    }   
    Int_t i;
    const Double_t *tr = GetTranslation();
-   Double_t bombtr[3];
+   Double_t bombtr[3] = {0.,0.,0.};
    gGeoManager->BombTranslation(tr, &bombtr[0]);
    if (!IsRotation()) {
       for (i=0; i<3; i++) master[i] = bombtr[i] + local[i];
@@ -441,7 +441,7 @@ void TGeoMatrix::MasterToLocalBomb(const Double_t *master, Double_t *local) cons
       return;
    }   
    const Double_t *tr = GetTranslation();
-   Double_t bombtr[3];
+   Double_t bombtr[3] = {0.,0.,0.};
    Int_t i;
    gGeoManager->UnbombTranslation(tr, &bombtr[0]);
    if (!IsRotation()) {
@@ -700,7 +700,7 @@ void TGeoTranslation::LocalToMasterBomb(const Double_t *local, Double_t *master)
 {
 // convert a point by multiplying its column vector (x, y, z, 1) to matrix inverse
    const Double_t *tr = GetTranslation();
-   Double_t bombtr[3];
+   Double_t bombtr[3] = {0.,0.,0.};
    gGeoManager->BombTranslation(tr, &bombtr[0]);
    for (Int_t i=0; i<3; i++) 
       master[i] = bombtr[i] + local[i]; 
@@ -727,22 +727,22 @@ void TGeoTranslation::MasterToLocalBomb(const Double_t *master, Double_t *local)
 {
 // convert a point by multiplying its column vector (x, y, z, 1) to matrix
    const Double_t *tr = GetTranslation();
-   Double_t bombtr[3];
+   Double_t bombtr[3] = {0.,0.,0.};
    gGeoManager->UnbombTranslation(tr, &bombtr[0]);
    for (Int_t i=0; i<3; i++) 
       local[i] =  master[i]-bombtr[i];
 }
 
 //_____________________________________________________________________________
-void TGeoTranslation::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoTranslation::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    if (TestBit(kGeoSavePrimitive)) return;
-   out << "   // Translation: " << GetName() << endl;
-   out << "   dx = " << fTranslation[0] << ";" << endl;
-   out << "   dy = " << fTranslation[1] << ";" << endl;
-   out << "   dz = " << fTranslation[2] << ";" << endl;
-   out << "   TGeoTranslation *" << GetPointerName() << " = new TGeoTranslation(\"" << GetName() << "\",dx,dy,dz);" << endl;
+   out << "   // Translation: " << GetName() << std::endl;
+   out << "   dx = " << fTranslation[0] << ";" << std::endl;
+   out << "   dy = " << fTranslation[1] << ";" << std::endl;
+   out << "   dz = " << fTranslation[2] << ";" << std::endl;
+   out << "   TGeoTranslation *" << GetPointerName() << " = new TGeoTranslation(\"" << GetName() << "\",dx,dy,dz);" << std::endl;
    TObject::SetBit(kGeoSavePrimitive);
 }
 
@@ -1043,17 +1043,17 @@ void TGeoRotation::ReflectZ(Bool_t leftside, Bool_t)
 }      
 
 //_____________________________________________________________________________
-void TGeoRotation::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoRotation::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    if (TestBit(kGeoSavePrimitive)) return;
-   out << "   // Rotation: " << GetName() << endl;
+   out << "   // Rotation: " << GetName() << std::endl;
    Double_t th1,ph1,th2,ph2,th3,ph3;
    GetAngles(th1,ph1,th2,ph2,th3,ph3);
-   out << "   thx = " << th1 << ";    phx = " << ph1 << ";" << endl;
-   out << "   thy = " << th2 << ";    phy = " << ph2 << ";" << endl;
-   out << "   thz = " << th3 << ";    phz = " << ph3 << ";" << endl;
-   out << "   TGeoRotation *" << GetPointerName() << " = new TGeoRotation(\"" << GetName() << "\",thx,phx,thy,phy,thz,phz);" << endl;
+   out << "   thx = " << th1 << ";    phx = " << ph1 << ";" << std::endl;
+   out << "   thy = " << th2 << ";    phy = " << ph2 << ";" << std::endl;
+   out << "   thz = " << th3 << ";    phz = " << ph3 << ";" << std::endl;
+   out << "   TGeoRotation *" << GetPointerName() << " = new TGeoRotation(\"" << GetName() << "\",thx,phx,thy,phy,thz,phz);" << std::endl;
    TObject::SetBit(kGeoSavePrimitive);
 }
 
@@ -1271,6 +1271,19 @@ TGeoScale::~TGeoScale()
 {
 // destructor
 }
+
+//_____________________________________________________________________________
+TGeoScale &TGeoScale::operator=(const TGeoScale &other)
+{
+// Assignment operator
+   if (&other == this) return *this;
+   SetBit(kGeoScale);
+   const Double_t *scl =  other.GetScale();
+   memcpy(fScale, scl, kN3);
+   if (fScale[0]*fScale[1]*fScale[2]<0) SetBit(kGeoReflection);
+   else SetBit(kGeoReflection, kFALSE);
+   return *this;
+}   
 
 //_____________________________________________________________________________
 TGeoMatrix& TGeoScale::Inverse() const
@@ -1720,21 +1733,21 @@ void TGeoCombiTrans::ReflectZ(Bool_t leftside, Bool_t rotonly)
 }      
 
 //_____________________________________________________________________________
-void TGeoCombiTrans::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGeoCombiTrans::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    if (TestBit(kGeoSavePrimitive)) return;
-   out << "   // Combi transformation: " << GetName() << endl;
-   out << "   dx = " << fTranslation[0] << ";" << endl;
-   out << "   dy = " << fTranslation[1] << ";" << endl;
-   out << "   dz = " << fTranslation[2] << ";" << endl;
+   out << "   // Combi transformation: " << GetName() << std::endl;
+   out << "   dx = " << fTranslation[0] << ";" << std::endl;
+   out << "   dy = " << fTranslation[1] << ";" << std::endl;
+   out << "   dz = " << fTranslation[2] << ";" << std::endl;
    if (fRotation && fRotation->IsRotation()) {
       fRotation->SavePrimitive(out,option);
       out << "   " << GetPointerName() << " = new TGeoCombiTrans(\"" << GetName() << "\", dx,dy,dz,";
-      out << fRotation->GetPointerName() << ");" << endl;
+      out << fRotation->GetPointerName() << ");" << std::endl;
    } else {   
-      out << "   " << GetPointerName() << " = new TGeoCombiTrans(\"" << GetName() << "\");" << endl;
-      out << "   " << GetPointerName() << "->SetTranslation(dx,dy,dz);" << endl;
+      out << "   " << GetPointerName() << " = new TGeoCombiTrans(\"" << GetName() << "\");" << std::endl;
+      out << "   " << GetPointerName() << "->SetTranslation(dx,dy,dz);" << std::endl;
    }   
    TObject::SetBit(kGeoSavePrimitive);
 }
@@ -1888,13 +1901,13 @@ void TGeoGenTrans::Clear(Option_t *)
 void TGeoGenTrans::SetScale(Double_t sx, Double_t sy, Double_t sz)
 {
 // set the scale
-   fScale[0] = sx;
-   fScale[1] = sy;
-   fScale[2] = sz;
-   if (!(Normalize())) {
+   if (sx<1.E-5 || sy<1.E-5 || sz<1.E-5) {
       Error("ctor", "Invalid scale");
       return;
    }
+   fScale[0] = sx;
+   fScale[1] = sy;
+   fScale[2] = sz;
 }
 
 //_____________________________________________________________________________
@@ -2415,23 +2428,23 @@ void TGeoHMatrix::ReflectZ(Bool_t leftside, Bool_t rotonly)
 }      
 
 //_____________________________________________________________________________
-void TGeoHMatrix::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoHMatrix::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    if (TestBit(kGeoSavePrimitive)) return;
    const Double_t *tr = fTranslation;
    const Double_t *rot = fRotationMatrix;
-   out << "   // HMatrix: " << GetName() << endl;
-   out << "   tr[0]  = " << tr[0] << ";    " << "tr[1] = " << tr[1] << ";    " << "tr[2] = " << tr[2] << ";" << endl;
-   out << "   rot[0] =" << rot[0] << ";    " << "rot[1] = " << rot[1] << ";    " << "rot[2] = " << rot[2] << ";" << endl; 
-   out << "   rot[3] =" << rot[3] << ";    " << "rot[4] = " << rot[4] << ";    " << "rot[5] = " << rot[5] << ";" << endl; 
-   out << "   rot[6] =" << rot[6] << ";    " << "rot[7] = " << rot[7] << ";    " << "rot[8] = " << rot[8] << ";" << endl; 
+   out << "   // HMatrix: " << GetName() << std::endl;
+   out << "   tr[0]  = " << tr[0] << ";    " << "tr[1] = " << tr[1] << ";    " << "tr[2] = " << tr[2] << ";" << std::endl;
+   out << "   rot[0] =" << rot[0] << ";    " << "rot[1] = " << rot[1] << ";    " << "rot[2] = " << rot[2] << ";" << std::endl; 
+   out << "   rot[3] =" << rot[3] << ";    " << "rot[4] = " << rot[4] << ";    " << "rot[5] = " << rot[5] << ";" << std::endl; 
+   out << "   rot[6] =" << rot[6] << ";    " << "rot[7] = " << rot[7] << ";    " << "rot[8] = " << rot[8] << ";" << std::endl; 
    char *name = GetPointerName();
-   out << "   TGeoHMatrix *" << name << " = new TGeoHMatrix(\"" << GetName() << "\");" << endl;
-   out << "   " << name << "->SetTranslation(tr);" << endl;
-   out << "   " << name << "->SetRotation(rot);" << endl;
-   if (IsTranslation()) out << "   " << name << "->SetBit(TGeoMatrix::kGeoTranslation);" << endl;
-   if (IsRotation()) out << "   " << name << "->SetBit(TGeoMatrix::kGeoRotation);" << endl;
-   if (IsReflection()) out << "   " << name << "->SetBit(TGeoMatrix::kGeoReflection);" << endl;
+   out << "   TGeoHMatrix *" << name << " = new TGeoHMatrix(\"" << GetName() << "\");" << std::endl;
+   out << "   " << name << "->SetTranslation(tr);" << std::endl;
+   out << "   " << name << "->SetRotation(rot);" << std::endl;
+   if (IsTranslation()) out << "   " << name << "->SetBit(TGeoMatrix::kGeoTranslation);" << std::endl;
+   if (IsRotation()) out << "   " << name << "->SetBit(TGeoMatrix::kGeoRotation);" << std::endl;
+   if (IsReflection()) out << "   " << name << "->SetBit(TGeoMatrix::kGeoReflection);" << std::endl;
    TObject::SetBit(kGeoSavePrimitive);
 }

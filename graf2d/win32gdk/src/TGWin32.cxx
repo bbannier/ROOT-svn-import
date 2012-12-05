@@ -21,6 +21,9 @@
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
+#  include <ft2build.h>
+#  include FT_FREETYPE_H
+#  include FT_GLYPH_H
 #include "TGWin32.h"
 #include <stdio.h>
 #include <string.h>
@@ -900,7 +903,10 @@ void TGWin32::CloseDisplay()
    gPtr2VirtualX = 0;
    gPtr2Interpreter = 0;
    gVirtualX = TGWin32VirtualXProxy::RealObject();
-   gInterpreter = TGWin32InterpreterProxy::RealObject();
+   // Following the change in revision 47611,
+   // gInterpreter is a read-only variable but its value
+   // is overridden by gPtr2Interpreter when it is not null.
+   //   gInterpreter = TGWin32InterpreterProxy::RealObject();
 
    // The lock above does not work, so at least
    // minimize the risk
@@ -1342,6 +1348,21 @@ void TGWin32::DrawImage(FT_Bitmap *source, ULong_t fore, ULong_t back,
 //______________________________________________________________________________
 void TGWin32::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn,
                        const char *text, ETextMode mode)
+{
+   // Draw text using TrueType fonts. If TrueType fonts are not available the
+   // text is drawn with TGWin32::DrawText.
+
+   if (!TTF::IsInitialized()) TTF::Init();
+   TTF::SetRotationMatrix(angle);
+   TTF::PrepareString(text);
+   TTF::LayoutGlyphs();
+   Align();
+   RenderString(x, y, mode);
+}
+
+//______________________________________________________________________________
+void TGWin32::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn,
+                       const wchar_t *text, ETextMode mode)
 {
    // Draw text using TrueType fonts. If TrueType fonts are not available the
    // text is drawn with TGWin32::DrawText.

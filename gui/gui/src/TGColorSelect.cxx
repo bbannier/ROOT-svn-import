@@ -50,6 +50,7 @@
 #include "TGColorSelect.h"
 #include "TGColorDialog.h"
 #include "TGResourcePool.h"
+#include "RConfigure.h"
 #include "TG3DLine.h"
 #include "TColor.h"
 #include "Riostream.h"
@@ -453,6 +454,9 @@ Bool_t TGColorSelect::HandleButton(Event_t *event)
          gVirtualX->TranslateCoordinates(fId, gClient->GetDefaultRoot()->GetId(),
                                          0, fHeight, ax, ay, wdummy);
 
+#ifdef R__HAS_COCOA
+         gVirtualX->SetWMTransientHint(fColorPopup->GetId(), GetId());
+#endif
          fColorPopup->PlacePopup(ax, ay, fColorPopup->GetDefaultWidth(),
                                          fColorPopup->GetDefaultHeight());
          fColorPopup = 0;
@@ -504,8 +508,17 @@ void TGColorSelect::DoRedraw()
 
       if (fState == kButtonDown) { ++x; ++y; }
 
+#ifdef R__HAS_COCOA
+      //Adjustment for Quartz 2D is required:
+      //first, I DO not try to fit filled rectangle into outline - this
+      //simply DOES NOT work (with retina/non-retina display, for example.
+      //First - fill rectable, then draw outline.
+      gVirtualX->FillRectangle(fId, fDrawGC(), x + 1, y + 1, w - 1, h - 1);
+      gVirtualX->DrawRectangle(fId, GetShadowGC()(), x + 1, y + 1, w - 1, h - 1);
+#else
       gVirtualX->DrawRectangle(fId, GetShadowGC()(), x, y, w - 1, h - 1);
       gVirtualX->FillRectangle(fId, fDrawGC(), x + 1, y + 1, w - 2, h - 2);
+#endif
 
       // separator
 
@@ -526,7 +539,7 @@ void TGColorSelect::DoRedraw()
 
       if (fState == kButtonDown) { ++x; ++y; }
 
-      DrawTriangle(GetShadowGC()(), x, y);
+      DrawTriangle(GetBlackGC()(), x, y);
 
    } else {
 
@@ -566,12 +579,24 @@ void TGColorSelect::DrawTriangle(GContext_t gc, Int_t x, Int_t y)
 
    Point_t points[3];
 
+#ifdef R__HAS_COCOA
+   //When it comes to tiny pixel-precise objects like this,
+   //Quartz is not really good: triangle is ugly and wrong.
+   //I have to adjust pixels manually.
+   points[0].fX = x;
+   points[0].fY = y;
+   points[1].fX = x + 6;
+   points[1].fY = y;
+   points[2].fX = x + 3;
+   points[2].fY = y + 3;
+#else
    points[0].fX = x;
    points[0].fY = y;
    points[1].fX = x + 5;
    points[1].fY = y;
    points[2].fX = x + 2;
    points[2].fY = y + 3;
+#endif
 
    gVirtualX->FillPolygon(fId, gc, points, 3);
 }
@@ -589,7 +614,7 @@ void TGColorSelect::SetColor(ULong_t color, Bool_t emit)
 }
 
 //______________________________________________________________________________
-void TGColorSelect::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGColorSelect::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
     // Save a color select widget as a C++ statement(s) on output stream out
 
@@ -601,22 +626,22 @@ void TGColorSelect::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    const char *colorname = TColor::PixelAsHexString(color);
    gClient->GetColorByName(colorname, color);
 
-   out << endl << "   // color select widget" << endl;
-   out << "   ULong_t " << cvar.Data() << ";" << endl;
+   out << std::endl << "   // color select widget" << std::endl;
+   out << "   ULong_t " << cvar.Data() << ";" << std::endl;
    out << "   gClient->GetColorByName(" << quote << colorname << quote
-       << ", " << cvar.Data() << ");" << endl;
+       << ", " << cvar.Data() << ");" << std::endl;
 
    out <<"   TGColorSelect *";
    out << GetName() << " = new TGColorSelect(" << fParent->GetName()
-       << ", " << cvar.Data() << ", " << WidgetId() << ");" << endl;
+       << ", " << cvar.Data() << ", " << WidgetId() << ");" << std::endl;
    nn++;
 
    if (option && strstr(option, "keep_names"))
-      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << std::endl;
 
    if (!IsEnabled()) {
-      out << "   " << GetName() << "->Disable();" << endl;
+      out << "   " << GetName() << "->Disable();" << std::endl;
    }
-   out << endl;
+   out << std::endl;
 }
 

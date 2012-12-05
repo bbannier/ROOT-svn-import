@@ -446,7 +446,6 @@ void TDumpMembers::Inspect(TClass *cl, const char *pname, const char *mname, con
 }
 
 THashTable* TClass::fgClassTypedefHash = 0;
-THashTable* TClass::fgClassShortTypedefHash = 0;
 
 //______________________________________________________________________________
 //______________________________________________________________________________
@@ -1021,10 +1020,6 @@ void TClass::Init(const char *name, Version_t cversion,
          fgClassTypedefHash->Add (new TNameMapNode (name, fName));
          SetBit (kHasNameMapNode);         
 
-         TString resolvedShort = TClassEdit::ResolveTypedef(fName, kTRUE);
-         if (resolvedShort != fName) {
-            fgClassShortTypedefHash->Add (new TNameMapNode (resolvedShort, fName));
-         }         
       }
       resolvedThis = TClassEdit::ResolveTypedef (name, kTRUE);
       if (resolvedThis != name) {
@@ -1170,23 +1165,7 @@ TClass::~TClass()
             break;
          }
       }
-   }
-   if (fgClassShortTypedefHash && TestBit (kHasNameMapNode)) {
-      TString resolvedShort =
-       TClassEdit::ResolveTypedef
-         (TClassEdit::ShortType(GetName(),
-                                TClassEdit::kDropStlDefault).c_str(),
-          kTRUE);
-      TIter next (fgClassShortTypedefHash->GetListForObject (resolvedShort));
-      while ( TNameMapNode* htmp = static_cast<TNameMapNode*> (next()) ) {
-         if (resolvedShort == htmp->String() && htmp->fOrigName == GetName()) {
-            fgClassShortTypedefHash->Remove (htmp);
-            delete htmp;
-            break;
-         }
-      }
-   }
-   
+   }   
 
    // Not owning lists, don't call Delete()
    // But this still need to be done first because the TList desctructor
@@ -1409,8 +1388,7 @@ Bool_t TClass::AddRule( const char *rule )
    TClass *cl = TClass::GetClass( ruleobj->GetTargetClass() );
    if (!cl) {
       // Create an empty emulated class for now.
-      cl = new TClass(ruleobj->GetTargetClass(), 1, 0, 0, -1, -1, kTRUE);
-      cl->SetBit(TClass::kIsEmulation);
+      cl = gInterpreter->GenerateTClass(ruleobj->GetTargetClass(), /*silent = */ kTRUE);
    }
    ROOT::TSchemaRuleSet* rset = cl->GetSchemaRules( kTRUE );
       
@@ -1828,9 +1806,11 @@ Bool_t TClass::CallShowMembers(void* obj, TMemberInspector &insp,
                // function and that it's okay.
                return kTRUE;
             }
-            // Let the caller protest:
-            // Error("CallShowMembers", "Cannot find any ShowMembers function for %s!", GetName());
-            return kFALSE;
+            // Since we do have some dictionary information, let's
+            // call the interpreter's ShowMember.
+            // This works with Cling and might work with CINT (to support interpreted classes)
+            gInterpreter->InspectMembers(insp, obj, this);
+            return kTRUE;
          } else {
             R__LOCKGUARD2(gCINTMutex);
             gCint->CallFunc_ResetArg(fInterShowMembers);
@@ -1853,67 +1833,9 @@ void TClass::InterpretedShowMembers(void* obj, TMemberInspector &insp)
 {
    // Do a ShowMembers() traversal of all members and base classes' members
    // using the reflection information from the interpreter. Works also for
-   // ionterpreted objects.
+   // interpreted objects.
 
-   if (!fClassInfo) return;
-
-   DataMemberInfo_t* dmi = gCint->DataMemberInfo_Factory(fClassInfo);
-
-   TString name("*");
-   while (gCint->DataMemberInfo_Next(dmi)) {
-      name.Remove(1);
-      name += gCint->DataMemberInfo_Name(dmi);
-      if (name == "*G__virtualinfo") continue;
-
-      // skip static members and the member G__virtualinfo inserted by the
-      // CINT RTTI system
-      Long_t prop = gCint->DataMemberInfo_Property(dmi) | gCint->DataMemberInfo_TypeProperty(dmi);
-      if (prop & (G__BIT_ISSTATIC | G__BIT_ISENUM))
-         continue;
-      Bool_t isPointer =  gCint->DataMemberInfo_TypeProperty(dmi) & G__BIT_ISPOINTER;
-
-      // Array handling
-      if (prop & G__BIT_ISARRAY) {
-         int arrdim = gCint->DataMemberInfo_ArrayDim(dmi);
-         for (int dim = 0; dim < arrdim; dim++) {
-            int nelem = gCint->DataMemberInfo_MaxIndex(dmi, dim);
-            name += TString::Format("[%d]", nelem);
-         }
-      }
-
-      const char* inspname = name;
-      if (!isPointer) {
-         // no '*':
-         ++inspname;
-      }
-      void* maddr = ((char*)obj) + gCint->DataMemberInfo_Offset(dmi);
-      insp.Inspect(this, insp.GetParent(), inspname, maddr);
-
-      // If struct member: recurse.
-      if (!isPointer && !(prop & G__BIT_ISFUNDAMENTAL)) {
-         std::string clmName(TClassEdit::ShortType(gCint->DataMemberInfo_TypeName(dmi),
-                                                   TClassEdit::kDropTrailStar) );
-         TClass* clm = TClass::GetClass(clmName.c_str());
-         if (clm) {
-            insp.InspectMember(clm, maddr, name);
-         }
-      }
-   } // while next data member
-   gCint->DataMemberInfo_Delete(dmi);
-
-   // Iterate over base classes
-   BaseClassInfo_t* bci = gCint->BaseClassInfo_Factory(fClassInfo);
-   while (gCint->BaseClassInfo_Next(bci)) {
-      const char* bclname = gCint->BaseClassInfo_Name(bci);
-      TClass* bcl = TClass::GetClass(bclname);
-      void* baddr = ((char*)obj) + gCint->BaseClassInfo_Offset(bci);
-      if (bcl) {
-         bcl->CallShowMembers(baddr, insp);
-      } else {
-         Warning("InterpretedShowMembers()", "Unknown class %s", bclname);
-      }
-   }
-   gCint->BaseClassInfo_Delete(bci);
+   return gInterpreter->InspectMembers(insp, obj, this);
 }
 
 //______________________________________________________________________________
@@ -1941,7 +1863,7 @@ Bool_t TClass::CanSplit() const
 
 //   Uncommenting this would change the default bahavior and disallow the splitting by
 //   default.
-//   if (!GetCollectionProxy() && (GetStreamer()!=0 || (GetClassInfo() && gCint->ClassInfo_RootFlag(GetClassInfo()) & 1))) {
+//   if (!GetCollectionProxy() && (GetStreamer()!=0 || TestBit(TClass::kHasCustomStreamerMember))) {
 //      return kFALSE;
 //   }
 
@@ -2471,6 +2393,46 @@ TVirtualIsAProxy* TClass::GetIsAProxy() const
 
 
 //______________________________________________________________________________
+TClass *TClass::GetClassOrAlias(const char *name)
+{
+   // Static method returning pointer to TClass of the specified class name.
+   // Also checks for possible templatye alias names (e.g. vector<Int_t>
+   // vs. vector<int>). Otherwise acts like GetClass(name, false).
+   Bool_t load = kFALSE;
+   if (strchr(name, '<') && TClass::GetClassTypedefHash()) {
+      // We have a template which may have duplicates.
+      TString resolvedName(TClassEdit::ResolveTypedef(TClassEdit::ShortType(name,
+                                  TClassEdit::kDropStlDefault).c_str(), kTRUE));
+      if (resolvedName != name) {
+         TClass* cl = (TClass*)gROOT->GetListOfClasses()->FindObject(resolvedName);
+         if (cl) {
+            load = kTRUE;
+         }
+      }
+      if (!load) {
+         TIter next(TClass::GetClassTypedefHash()->GetListForObject(resolvedName));
+         while (TClass::TNameMapNode* htmp =
+                static_cast<TClass::TNameMapNode*>(next())) {
+            if (resolvedName == htmp->String()) {
+               TClass* cl = TClass::GetClass(htmp->fOrigName, kFALSE);
+               if (cl) {
+                  // we found at least one equivalent.
+                  // let's force a reload
+                  load = kTRUE;
+                  break;
+               }
+            }
+         }
+      }
+   }
+   if (gROOT->GetListOfClasses()->GetEntries() == 0) {
+      // Nothing to find, let's not get yourself in trouble.
+      return 0;
+   }
+   return TClass::GetClass(name, load);
+}
+
+//______________________________________________________________________________
 TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
 {
    // Static method returning pointer to TClass of the specified class name.
@@ -2544,7 +2506,10 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
          if (objType) {
             const char *typdfName = objType->GetTypeName();
             if (typdfName && strcmp(typdfName, name)) {
-               cl = TClass::GetClass(typdfName, load);
+               TString alternateName(typdfName);
+               // TClass::GetClass might get call GetTypeName and thus
+               // re-use the static storage use by GetTypeName!
+               cl = TClass::GetClass(alternateName, load);
                return cl;
             }
          }
@@ -2610,6 +2575,10 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
    strlcpy(modifiable_name,name,nch);
    if (gInterpreter->CheckClassInfo(modifiable_name)) {
       const char *altname = gInterpreter->GetInterpreterTypeName(modifiable_name,kTRUE);
+      if ( strncmp(altname,"std::",5)==0 ) {
+         // Don't add std::, we almost always remove it.
+         altname += 5;
+      }
       if (strcmp(altname,name)!=0) {
          // altname now contains the full name of the class including a possible
          // namespace if there has been a using namespace statement.
@@ -2628,9 +2597,9 @@ TClass *TClass::GetClass(const char *name, Bool_t load, Bool_t silent)
 }
 
 //______________________________________________________________________________
-THashTable *TClass::GetClassShortTypedefHash() {
+THashTable *TClass::GetClassTypedefHash() {
    // Return the class' names massaged with TClassEdit::ShortType with kDropStlDefault.
-   return fgClassShortTypedefHash;
+   return fgClassTypedefHash;
 }
 
 //______________________________________________________________________________
@@ -3178,14 +3147,38 @@ void TClass::ReplaceWith(TClass *newcl, Bool_t recurse) const
 void TClass::ResetClassInfo(Long_t tagnum)
 {
    // Make sure that the current ClassInfo is up to date.
-
-   if (fClassInfo && gCint->ClassInfo_Tagnum(fClassInfo) != tagnum) {
+   if (!fClassInfo || gCint->ClassInfo_Tagnum(fClassInfo) != tagnum) {
+      if (!fClassInfo)
+         fClassInfo = gInterpreter->ClassInfo_Factory();
       gCint->ClassInfo_Init(fClassInfo,(Int_t)tagnum);
-      if (fBase) {
-         fBase->Delete();
-         delete fBase; fBase = 0;
-      }
+      ResetCaches();
    }
+}
+
+//______________________________________________________________________________
+void TClass::ResetCaches()
+{
+   // To clean out all caches.
+
+   // Not owning lists, don't call Delete()
+   delete fAllPubData;     fAllPubData  =0;
+   delete fAllPubMethod;   fAllPubMethod=0;
+
+   if (fBase) 
+      fBase->Delete();
+   delete fBase; fBase = 0;
+
+   if (fData)
+      fData->Delete();
+   delete fData;   fData = 0;
+      
+   if (fMethod)
+      fMethod->Delete();
+   delete fMethod;   fMethod=0;
+      
+   if (fRealData)
+      fRealData->Delete();
+   delete fRealData;  fRealData=0;
 }
 
 //______________________________________________________________________________

@@ -17,15 +17,16 @@
 
 #ifndef ROOT_Fit_DataVector
 #include "Fit/DataVector.h"
+#endif
+#ifndef ROOT_Fit_BinData
 #include "Fit/BinData.h"
 #endif
-
 
 namespace ROOT { 
 
    namespace Fit { 
 
-      // This is a proxy to a list<Box>
+      // This is a proxy to a std::list<Box>
       class ProxyListBox;
 
       class SparseData : public FitData  { 

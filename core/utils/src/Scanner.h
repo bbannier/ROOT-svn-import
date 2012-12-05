@@ -27,7 +27,20 @@
 #include <stack>
 
 namespace clang {
+   class ClassTemplatePartialSpecializationDecl;
+   class ClassTemplateDecl;
    class RecordDecl;
+   class Stmt;
+}
+
+namespace cling {
+   class Interpreter;
+}
+
+namespace ROOT {
+   namespace TMetaUtils {
+      class TNormalizedCtxt;
+   }
 }
 
 class SelectionRules;
@@ -38,9 +51,37 @@ class SelectionRules;
 // which traverses every node of the AST
 class RScanner: public clang::RecursiveASTVisitor<RScanner>
 {
+public:
+   typedef void (*DeclCallback)(const char *type);
+
 private:
    const SelectionRules &fSelectionRules;
+   DeclCallback fRecordDeclCallback;
+
    const clang::SourceManager* fSourceManager;
+   unsigned int fVerboseLevel;
+
+private:
+   static int fgAnonymousClassCounter;
+   static int fgBadClassCounter;
+   static int fgAnonymousEnumCounter;
+
+   static std::map <clang::Decl*, std::string> fgAnonymousClassMap;
+   static std::map <clang::Decl*, std::string> fgAnonymousEnumMap;
+
+private:
+   // only for debugging
+
+   static const int fgDeclLast = clang::Decl::Var;
+   bool fDeclTable [ fgDeclLast+1 ];
+
+   static const int fgTypeLast = clang::Type::TemplateTypeParm;
+   bool fTypeTable [ fgTypeLast+1 ];
+
+   clang::Decl * fLastDecl;
+
+   const cling::Interpreter                &fInterpreter;
+   const ROOT::TMetaUtils::TNormalizedCtxt &fNormCtxt;
 
 public:
    static const char* fgClangDeclKey; // property key used for CLang declaration objects
@@ -51,36 +92,60 @@ public:
       long fRuleIndex;
       const clang::RecordDecl* fDecl;
       std::string fRequestedName;
+      std::string fNormalizedName;
       bool fRequestStreamerInfo;
       bool fRequestNoStreamer;
       bool fRequestNoInputOperator;
       bool fRequestOnlyTClass;
+      int  fRequestedVersionNumber;
       
    public:
-      AnnotatedRecordDecl(long index, const clang::RecordDecl *decl, bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass) : 
-            fRuleIndex(index), fDecl(decl), fRequestStreamerInfo(rStreamerInfo), fRequestNoStreamer(rNoStreamer),
-            fRequestNoInputOperator(rRequestNoInputOperator), fRequestOnlyTClass(rRequestOnlyTClass) {}
-      AnnotatedRecordDecl(long index, const clang::RecordDecl *decl, const char *requestName, bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass) : 
-            fRuleIndex(index), fDecl(decl), fRequestedName(requestName), fRequestStreamerInfo(rStreamerInfo), fRequestNoStreamer(rNoStreamer),
-            fRequestNoInputOperator(rRequestNoInputOperator), fRequestOnlyTClass(rRequestOnlyTClass) {}
-      ~AnnotatedRecordDecl() {
+      enum ERootFlag {
+         kNoStreamer      = 0x01,
+         kNoInputOperator = 0x02,
+         kUseByteCount    = 0x04,
+         kStreamerInfo    = 0x04,
+         kHasVersion      = 0x08
+      };
+
+      AnnotatedRecordDecl(long index, const clang::RecordDecl *decl, bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass, int rRequestedVersionNumber, const cling::Interpreter &interpret, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
+      AnnotatedRecordDecl(long index, const clang::RecordDecl *decl, const char *requestName, bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass, int rRequestedVersionNumber, const cling::Interpreter &interpret, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
+      AnnotatedRecordDecl(long index, const clang::Type *requestedType, const clang::RecordDecl *decl, const char *requestedName, bool rStreamerInfo, bool rNoStreamer, bool rRequestNoInputOperator, bool rRequestOnlyTClass, int rRequestedVersionNumber, const cling::Interpreter &interpret, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
+     ~AnnotatedRecordDecl() {
          // Nothing to do we do not own the pointer;
       }
+
+      long GetRuleIndex() const { return fRuleIndex; }
+
       const char *GetRequestedName() const { return fRequestedName.c_str(); }
-      bool RequestStreamerInfo() const { return fRequestStreamerInfo; }
+      const char *GetNormalizedName() const { return fNormalizedName.c_str(); }
+      bool HasClassVersion() const { return fRequestedVersionNumber >=0 ; }
+      bool RequestStreamerInfo() const { 
+         // Equivalent to CINT's cl.RootFlag() & G__USEBYTECOUNT 
+         return fRequestStreamerInfo; 
+      }
       bool RequestNoInputOperator() const { return fRequestNoInputOperator; }
       bool RequestNoStreamer() const { return fRequestNoStreamer; }
       bool RequestOnlyTClass() const { return fRequestOnlyTClass; }
+      int  RequestedVersionNumber() const { return fRequestedVersionNumber; }
+      int  RootFlag() const;
       const clang::RecordDecl* GetRecordDecl() const { return fDecl; }
 
       operator clang::RecordDecl const *() const {
          return fDecl;
       }
       
-      bool operator<(const AnnotatedRecordDecl& right) 
+      bool operator<(const AnnotatedRecordDecl& right) const
       {
          return fRuleIndex < right.fRuleIndex;
       }
+
+      struct CompareByName {
+         bool operator() (const AnnotatedRecordDecl& right, const AnnotatedRecordDecl& left) 
+         {
+            return left.fNormalizedName < right.fNormalizedName;
+         }
+      };
    };
    typedef std::vector<AnnotatedRecordDecl>   ClassColl_t;
    
@@ -114,25 +179,6 @@ public:
    // public for now, the list of selected classes.
    ClassColl_t     fSelectedClasses;
    NamespaceColl_t fSelectedNamespaces;
-
-private:
-   static int fgAnonymousClassCounter;
-   static int fgBadClassCounter;
-   static int fgAnonymousEnumCounter;
-
-   static std::map <clang::Decl*, std::string> fgAnonymousClassMap;
-   static std::map <clang::Decl*, std::string> fgAnonymousEnumMap;
-
-private:
-   // only for debugging
-
-   static const int fgDeclLast = clang::Decl::Var;
-   bool fDeclTable [ fgDeclLast+1 ];
-
-   static const int fgTypeLast = clang::Type::TemplateTypeParm;
-   bool fTypeTable [ fgTypeLast+1 ];
-
-   clang::Decl * fLastDecl;
 
 private:
    void ShowInfo(const std::string &msg, const std::string &location = "") const;
@@ -178,12 +224,25 @@ private:
    unsigned int VarModifiers(clang::VarDecl* D) const;
 
 public:
-   RScanner (const SelectionRules &rules);
+   RScanner (const SelectionRules &rules, const cling::Interpreter &interpret, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt, unsigned int verbose = 0);
    virtual ~ RScanner ();
 
 public:
    // Configure the vistitor to also visit template instantiation.
    bool shouldVisitTemplateInstantiations() const { return true; }
+
+   bool TraverseStmt(clang::Stmt*) {
+      // Don't descend into function bodies.
+      return true;
+   }
+   //bool TraverseClassTemplateDecl(clang::ClassTemplateDecl*) {
+   //   // Don't descend into templates (but only instances thereof).
+   //   return true;
+   //}
+   bool TraverseClassTemplatePartialSpecializationDecl(clang::ClassTemplatePartialSpecializationDecl*) {
+      // Don't descend into templates partial specialization (but only instances thereof).
+      return true;
+   }
 
    bool VisitEnumDecl(clang::EnumDecl* D); //Visitor for every EnumDecl i.e. enumeration node in the AST
    bool VisitFieldDecl(clang::FieldDecl* D); //Visitor for e field inside a class
@@ -195,6 +254,9 @@ public:
    
    bool TraverseDeclContextHelper(clang::DeclContext *DC); // Here is the code magic :) - every Decl 
    // according to its type is processed by the corresponding Visitor method
+
+   // Set a callback to record which are declared.
+   DeclCallback SetRecordDeclCallback(DeclCallback callback);
 
    // Main interface of this class.
    void Scan(const clang::ASTContext &C);

@@ -49,6 +49,7 @@ public:
    void     EnableAutoLoading();
    void     EndOfLineAction();
    Int_t    InitializeDictionaries();
+   void     InspectMembers(TMemberInspector&, void* obj, const TClass* cl);
    Int_t    Load(const char *filenam, Bool_t system = kFALSE);
    void     LoadMacro(const char *filename, EErrorCode *error = 0);
    Int_t    LoadLibraryMap(const char *rootmapfile = 0);
@@ -67,6 +68,7 @@ public:
    void     ResetGlobalVar(void *obj);
    void     RewindDictionary();
    Int_t    DeleteGlobal(void *obj);
+   Int_t    DeleteVariable(const char *name);
    void     SaveContext();
    void     SaveGlobalsContext();
    void     UpdateListOfGlobals();
@@ -74,6 +76,7 @@ public:
    void     UpdateListOfTypes();
    void     SetClassInfo(TClass *cl, Bool_t reload = kFALSE);
    Bool_t   CheckClassInfo(const char *name, Bool_t autoload = kTRUE);
+   Bool_t   CheckClassTemplate(const char *name);
    Long_t   Calc(const char *line, EErrorCode* error = 0);
    void     CreateListOfBaseClasses(TClass *cl);
    void     CreateListOfDataMembers(TClass *cl);
@@ -88,6 +91,8 @@ public:
    Bool_t   IsProcessLineLocked() const { return RealObject()->IsProcessLineLocked(); }
    void     SetProcessLineLock(Bool_t lock = kTRUE);
    Int_t    GetExitCode() const { return RealObject()->GetExitCode(); }
+   TClass  *GenerateTClass(const char *classname, Bool_t silent = kFALSE); 
+   TClass  *GenerateTClass(ClassInfo_t *classinfo, Bool_t silent = kFALSE); 
    Int_t    GenerateDictionary(const char *classes, const char *includes = 0, const char *options = 0); 
    Int_t    GetMore() const {  return RealObject()->GetMore(); }
    Bool_t   IsLoaded(const char *filename) const {  return RealObject()->IsLoaded(filename); }

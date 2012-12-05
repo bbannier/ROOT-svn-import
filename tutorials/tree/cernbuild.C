@@ -2,7 +2,7 @@
 // see also a variant in staff.C
 // Author: Rene Brun
    
-TFile *cernbuild(Int_t get=0) {
+TFile *cernbuild(Int_t get=0, Int_t print=1) {
 
    Int_t           Category;
    UInt_t          Flag;
@@ -62,12 +62,12 @@ TFile *cernbuild(Int_t get=0) {
    tree->Branch("Division",Division,"Division/C");
    tree->Branch("Nation",Nation,"Nation/C");
    char line[80];
-   while (fgets(&line,80,fp)) {
+   while (fgets(line,80,fp)) {
       sscanf(&line[0],"%d %d %d %d %d",&Category,&Flag,&Age,&Service,&Children);
       sscanf(&line[32],"%d %d  %d %d %s %s",&Grade,&Step,&Hrweek,&Cost,Division,Nation);
       tree->Fill();
    }
-   tree->Print();
+   if (print) tree->Print();
    tree->Write();
 
    fclose(fp);

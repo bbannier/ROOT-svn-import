@@ -351,7 +351,7 @@ void TGeoChecker::CheckBoundaryErrors(Int_t ntracks, Double_t radius)
    }
    fTimer->Stop();
 
-   printf("CPU time/point = %5.2emus: Real time/point = %5.2emus\n",
+   if (itry) printf("CPU time/point = %5.2emus: Real time/point = %5.2emus\n",
 	       1000000.*fTimer->CpuTime()/itry,1000000.*fTimer->RealTime()/itry);
    bug->Write();
    delete bug;
@@ -360,7 +360,7 @@ void TGeoChecker::CheckBoundaryErrors(Int_t ntracks, Double_t radius)
 
    CheckBoundaryReference();
 
-   printf("Effic = %3.1f%%\n",(100.*igen)/itry);
+   if (itry) printf("Effic = %3.1f%%\n",(100.*igen)/itry);
    TCanvas *c1 = new TCanvas("c1","Results",600,800);
    c1->Divide(1,2);
    c1->cd(1);
@@ -527,6 +527,10 @@ void TGeoChecker::CheckGeometryFull(Bool_t checkoverlaps, Bool_t checkcrossings,
 //      if ((i%1000)==0) printf("... remaining tracks %i\n", ntracks-i);
       nbound += PropagateInGeom(point,dir);
    }
+   if (!nbound) {
+      printf("No boundary crossed\n");
+      return;
+   }   
    fTimer->Stop();
    Double_t time1 = fTimer->CpuTime() *1.E6;
    Double_t time2 = time1/ntracks;
@@ -602,7 +606,7 @@ void TGeoChecker::CheckGeometryFull(Bool_t checkoverlaps, Bool_t checkcrossings,
    h1->SetBit(TH1::kCanRebin);
    for (i=0; i<nuid; i++) {
       vol = fGeoManager->GetVolume(i);
-      if (!vol->GetNdaughters()) continue;
+      if (!vol || !vol->GetNdaughters()) continue;
       value = fVal1[i]*fVal2[i]/ntracks/time_tot_pertrack;
       h1->Fill(vol->GetName(), value);
       h2->Fill(vol->GetNdaughters(), fVal2[i]);
@@ -2086,7 +2090,7 @@ void TGeoChecker::RandomPoints(TGeoVolume *vol, Int_t npoints, Option_t *option)
       i++;
    }
    printf("Number of visible points : %i\n", i);
-   ratio = (Double_t)i/(Double_t)igen;
+   if (igen) ratio = (Double_t)i/(Double_t)igen;
    printf("efficiency : %g\n", ratio);
    for (Int_t m=0; m<128; m++) {
       marker = (TPolyMarker3D*)pm->At(m);
@@ -2100,16 +2104,22 @@ void TGeoChecker::RandomPoints(TGeoVolume *vol, Int_t npoints, Option_t *option)
 }   
 
 //______________________________________________________________________________
-void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Double_t startz)
+void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Double_t startz, const char *target_vol, Bool_t check_norm)
 {
 // Randomly shoot nrays from point (startx,starty,startz) and plot intersections 
 // with surfaces for current top node.
    TObjArray *pm = new TObjArray(128);
+   TString starget = target_vol;
    TPolyLine3D *line = 0;
    TPolyLine3D *normline = 0;
    TGeoVolume *vol=fGeoManager->GetTopVolume();
 //   vol->VisibleDaughters(kTRUE);
 
+   Bool_t random = kFALSE;
+   if (nrays<=0) {
+      nrays = 100000;
+      random = kTRUE;
+   }   
    Double_t start[3];
    Double_t dir[3];
    const Double_t *point = fGeoManager->GetCurrentPoint();
@@ -2122,7 +2132,9 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
    Int_t itot=0;
    Int_t n10=nrays/10;
    Double_t theta,phi, step, normlen;
-   const Double_t *normal;
+   Double_t ox = ((TGeoBBox*)vol->GetShape())->GetOrigin()[0];
+   Double_t oy = ((TGeoBBox*)vol->GetShape())->GetOrigin()[1];
+   Double_t oz = ((TGeoBBox*)vol->GetShape())->GetOrigin()[2];
    Double_t dx = ((TGeoBBox*)vol->GetShape())->GetDX();
    Double_t dy = ((TGeoBBox*)vol->GetShape())->GetDY();
    Double_t dz = ((TGeoBBox*)vol->GetShape())->GetDZ();
@@ -2136,9 +2148,15 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
       if (n10) {
          if ((itot%n10) == 0) printf("%i percent\n", Int_t(100*itot/nrays));
       }
-      start[0] = startx;
-      start[1] = starty;
-      start[2] = startz;
+      if (random) {
+         start[0] = ox-dx+2*dx*gRandom->Rndm();
+         start[1] = oy-dy+2*dy*gRandom->Rndm();
+         start[2] = oz-dz+2*dz*gRandom->Rndm();
+      } else {   
+         start[0] = startx;
+         start[1] = starty;
+         start[2] = startz;
+      }   
       phi = 2*TMath::Pi()*gRandom->Rndm();
       theta= TMath::ACos(1.-2.*gRandom->Rndm());
       dir[0]=TMath::Sin(theta)*TMath::Cos(phi);
@@ -2147,11 +2165,16 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
       startnode = fGeoManager->InitTrack(start[0],start[1],start[2], dir[0],dir[1],dir[2]);
       line = 0;
       if (fGeoManager->IsOutside()) startnode=0;
-      vis1 = (startnode)?(startnode->IsOnScreen()):kFALSE;
+      vis1 = kFALSE;
+      if (target_vol) {
+         if (startnode && starget==startnode->GetVolume()->GetName()) vis1 = kTRUE;
+      } else {   
+         if (startnode && startnode->IsOnScreen()) vis1 = kTRUE;
+      }   
       if (vis1) {
          line = new TPolyLine3D(2);
          line->SetLineColor(startnode->GetVolume()->GetLineColor());
-         line->SetPoint(ipoint++, startx, starty, startz);
+         line->SetPoint(ipoint++, start[0], start[1], start[2]);
          i++;
          pm->Add(line);
       }
@@ -2160,13 +2183,19 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
          if (step<TGeoShape::Tolerance()) inull++;
          else inull = 0;
          if (inull>5) break;
-         normal = fGeoManager->FindNormalFast();
-         if (!normal) break;
-         vis2 = endnode->IsOnScreen();
+         const Double_t *normal = 0;
+         if (check_norm) {
+            normal = fGeoManager->FindNormalFast();
+            if (!normal) break;
+         }   
+         vis2 = kFALSE;
+         if (target_vol) {
+            if (starget==endnode->GetVolume()->GetName()) vis2 = kTRUE;
+         } else if (endnode->IsOnScreen()) vis2 = kTRUE;
          if (ipoint>0) {
          // old visible node had an entry point -> finish segment
             line->SetPoint(ipoint, point[0], point[1], point[2]);
-            if (!vis2) {
+            if (!vis2 && check_norm) {
                normline = new TPolyLine3D(2);
                normline->SetLineColor(kBlue);
                normline->SetLineWidth(1);
@@ -2185,15 +2214,17 @@ void TGeoChecker::RandomRays(Int_t nrays, Double_t startx, Double_t starty, Doub
             line->SetLineColor(endnode->GetVolume()->GetLineColor());
             line->SetPoint(ipoint++, point[0], point[1], point[2]);
             i++;
-            normline = new TPolyLine3D(2);
-            normline->SetLineColor(kBlue);
-            normline->SetLineWidth(2);
-            normline->SetPoint(0, point[0], point[1], point[2]);
-            normline->SetPoint(1, point[0]+normal[0]*normlen, 
-                                  point[1]+normal[1]*normlen, 
-                                  point[2]+normal[2]*normlen);
+            if (check_norm) {
+               normline = new TPolyLine3D(2);
+               normline->SetLineColor(kBlue);
+               normline->SetLineWidth(2);
+               normline->SetPoint(0, point[0], point[1], point[2]);
+               normline->SetPoint(1, point[0]+normal[0]*normlen, 
+                                     point[1]+normal[1]*normlen, 
+                                     point[2]+normal[2]*normlen);
+            }                         
             pm->Add(line);
-            pm->Add(normline);
+            if (!random) pm->Add(normline);
          } 
       }      
    }   

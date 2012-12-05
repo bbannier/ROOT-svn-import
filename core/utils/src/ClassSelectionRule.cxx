@@ -16,6 +16,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "ClassSelectionRule.h"
+#include <iostream>
 
 void ClassSelectionRule::AddFieldSelectionRule(VariableSelectionRule field)
 {
@@ -43,6 +44,53 @@ bool ClassSelectionRule::HasMethodSelectionRules() const
   return !fMethodSelectionRules.empty();
 }
 
+void ClassSelectionRule::Print(std::ostream &out) const
+{
+   out<<"\t\tSelected: ";
+   switch(GetSelected()){
+      case BaseSelectionRule::kYes: out<<"Yes"<<std::endl;
+         break;
+      case BaseSelectionRule::kNo: out<<"No"<<std::endl;
+         break;
+      case BaseSelectionRule::kDontCare: out<<"Don't Care"<<std::endl;
+         break;
+      default: out<<"Unspecified"<<std::endl;
+   }
+   out<<"\t\tAttributes: "<<std::endl;
+   PrintAttributes(out,2);
+   
+   if (HasFieldSelectionRules()) {
+      //out<<"\t\tHas field entries"<<std::endl;
+      std::list<VariableSelectionRule> fields = GetFieldSelectionRules();
+      std::list<VariableSelectionRule>::iterator fit = fields.begin();
+      int j = 0;
+      
+      for (; fit != fields.end(); ++fit, ++j) 
+         {
+            out<<"\t\tField "<<j<<":"<<std::endl;
+            out<<*fit;
+          }
+   } 
+   else {
+      out<<"\t\tNo field sel rules"<<std::endl;
+   }
+   if (HasMethodSelectionRules()) {
+      //out<<"\t\tHas method entries"<<std::endl;
+      std::list<FunctionSelectionRule> methods = GetMethodSelectionRules();
+      std::list<FunctionSelectionRule>::iterator mit = methods.begin();
+      int k = 0;
+      
+      for (; mit != methods.end(); ++mit, ++k) 
+         {
+            out<<"\t\tMethod "<<k<<":"<<std::endl;
+            out<<*mit;
+         }
+   }
+   else {
+      out<<"\t\tNo method sel rules"<<std::endl;
+   }
+}
+
 //const std::list<FunctionSelectionRule>& ClassSelectionRule::GetMethodSelectionRules()
 const std::list<FunctionSelectionRule>& ClassSelectionRule::GetMethodSelectionRules() const
 {
@@ -59,34 +107,34 @@ void ClassSelectionRule::SetInheritable(bool inherit)
   fIsInheritable = inherit;
 }
 
-bool ClassSelectionRule::HasPlus() const
+bool ClassSelectionRule::RequestStreamerInfo() const
 {
-   return fPlus;
+   return fRequestStreamerInfo;
 }
 
-void ClassSelectionRule::SetPlus(bool pl)
+void ClassSelectionRule::SetRequestStreamerInfo(bool pl)
 {
-   fPlus = pl;
+   fRequestStreamerInfo = pl;
 }
 
-bool ClassSelectionRule::HasMinus() const
+bool ClassSelectionRule::RequestNoStreamer() const
 {
-   return fMinus;
+   return fRequestNoStreamer;
 }
 
-void ClassSelectionRule::SetMinus(bool mn)
+void ClassSelectionRule::SetRequestNoStreamer(bool mn)
 {
-   fMinus = mn;
+   fRequestNoStreamer = mn;
 }
 
-bool ClassSelectionRule::HasExclamation() const
+bool ClassSelectionRule::RequestNoInputOperator() const
 {
-   return fExclamation;
+   return fRequestNoInputOperator;
 }
 
-void ClassSelectionRule::SetExclamation(bool excl)
+void ClassSelectionRule::SetRequestNoInputOperator(bool excl)
 {
-   fExclamation = excl;
+   fRequestNoInputOperator = excl;
 }
 
 void ClassSelectionRule::SetRequestOnlyTClass(bool value)
@@ -104,6 +152,11 @@ void ClassSelectionRule::SetRequestPrivate(bool value)
    fRequestPrivate = value;
 }
 
+void ClassSelectionRule::SetRequestedVersionNumber(int version)
+{
+   fRequestedVersionNumber = version;
+};
+
 bool ClassSelectionRule::RequestOnlyTClass() const
 {
    return fRequestOnlyTClass;
@@ -119,18 +172,7 @@ bool ClassSelectionRule::RequestPrivate() const
    return fRequestPrivate;
 }
 
-bool ClassSelectionRule::RequestNoStreamer() const
-{
-   return HasMinus();
+int ClassSelectionRule::RequestedVersionNumber() const
+{ 
+   return fRequestedVersionNumber;
 }
-
-bool ClassSelectionRule::RequestNoInputOperator() const
-{
-   return HasExclamation();
-}
-
-bool ClassSelectionRule::RequestStreamerInfo() const
-{
-   return HasPlus();
-}
-

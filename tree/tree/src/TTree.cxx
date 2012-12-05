@@ -106,7 +106,11 @@
 //          Or
 //             MyDataClass* p_object = new MyDataClass;
 //             tree->Branch(branchname, &p_object);
-//
+//       Whether the pointer is set to zero or not, the ownership of the object
+//       is not taken over by the TTree.  I.e. eventhough an object will be allocated
+//       by TTree::Branch if the pointer p_object is zero, the object will <b>not</b>
+//       be deleted when the TTree is deleted.
+// 
 //  ==> Case C
 //      ======
 //     MyClass object;
@@ -1979,23 +1983,36 @@ TBranch* TTree::Bronch(const char* name, const char* classname, void* addr, Int_
    //
    //    WARNING about this new function
    //    ===============================
-   //    This function is designed to replace the function TTree::Branch above.
-   //    This function is far more powerful than the Branch function.
-   //    It supports the full C++, including STL and has the same behaviour
-   //    in split or non-split mode. classname does not have to derive from TObject.
-   //    The function is based on the new TStreamerInfo.
+   //
+   //    This function is designed to replace the internal
+   //    implementation of the old TTree::Branch (whose implementation
+   //    has been moved to BranchOld).
+   //
+   //    NOTE: The 'Bronch' method supports only one possible calls
+   //    signature (where the object type has to be specified
+   //    explicitly and the address must be the address of a pointer).
+   //    For more flexibility use 'Branch'.  Use Bronch only in (rare)
+   //    cases (likely to be legacy cases) where both the new and old
+   //    implementation of Branch needs to be used at the same time.
+   // 
+   //    This function is far more powerful than the old Branch
+   //    function.  It supports the full C++, including STL and has
+   //    the same behaviour in split or non-split mode. classname does
+   //    not have to derive from TObject.  The function is based on
+   //    the new TStreamerInfo.
    //
    //    Build a TBranchElement for an object of class classname.
    //
-   //    addr is the address of a pointer to an object of class classname.
-   //    The class dictionary must be available (ClassDef in class header).
+   //    addr is the address of a pointer to an object of class
+   //    classname.  The class dictionary must be available (ClassDef
+   //    in class header).
    //
    //    Note: See the comments in TBranchElement::SetAddress() for a more
    //          detailed discussion of the meaning of the addr parameter.
    //
-   //    This option requires access to the library where the corresponding class
-   //    is defined. Accessing one single data member in the object implies
-   //    reading the full object.
+   //    This option requires access to the library where the
+   //    corresponding class is defined. Accessing one single data
+   //    member in the object implies reading the full object.
    //
    //    By default the branch buffers are stored in the same file as the Tree.
    //    use TBranch::SetFile to specify a different file
@@ -2046,13 +2063,6 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
    //a TBranchObject. We cannot assume that TClass::ReadBuffer is consistent
    //with the custom Streamer. The penalty is that one cannot process
    //this Tree without the class library containing the class.
-   //The following convention is used for the RootFlag
-   // #pragma link C++ class TExMap;     rootflag = 0
-   // #pragma link C++ class TList-;     rootflag = 1
-   // #pragma link C++ class TArray!;    rootflag = 2
-   // #pragma link C++ class TArrayC-!;  rootflag = 3
-   // #pragma link C++ class TBits+;     rootflag = 4
-   // #pragma link C++ class Txxxx+!;    rootflag = 6
 
    char* objptr = 0;
    if (!isptrptr) {
@@ -2076,12 +2086,12 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
          Error("Bronch", "TClonesArray with no dictionary defined in branch: %s", name);
          return 0;
       }
-      int rootflag = gCint->ClassInfo_RootFlag(classinfo);
+      bool hasCustomStreamer = clones->GetClass()->TestBit(TClass::kHasCustomStreamerMember);
       if (splitlevel > 0) {
-         if (rootflag & 1)
+         if (hasCustomStreamer)
             Warning("Bronch", "Using split mode on a class: %s with a custom Streamer", clones->GetClass()->GetName());
       } else {
-         if (rootflag & 1) clones->BypassStreamer(kFALSE);
+         if (hasCustomStreamer) clones->BypassStreamer(kFALSE);
          TBranchObject *branch = new TBranchObject(this,name,classname,addr,bufsize,0,isptrptr);
          fBranches.Add(branch);
          return branch;
@@ -2106,7 +2116,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
                Error("Bronch", "Container with no dictionary defined in branch: %s", name);
                return 0;
             }
-            if (gCint->ClassInfo_RootFlag(classinfo) & 1) {
+            if (inklass->TestBit(TClass::kHasCustomStreamerMember)) {
                Warning("Bronch", "Using split mode on a class: %s with a custom Streamer", inklass->GetName());
             }
          }
@@ -2135,7 +2145,7 @@ TBranch* TTree::BronchExec(const char* name, const char* classname, void* addr, 
       return 0;
    }
 
-   if (!cl->GetCollectionProxy() && (gCint->ClassInfo_RootFlag(cl->GetClassInfo()) & 1)) {
+   if (!cl->GetCollectionProxy() && cl->TestBit(TClass::kHasCustomStreamerMember)) {
       // Not an STL container and the linkdef file had a "-" after the class name.
       hasCustomStreamer = kTRUE;
    }
@@ -2645,6 +2655,44 @@ Int_t TTree::CheckBranchAddressType(TBranch* branch, TClass* ptrClass, EDataType
                TDataType::GetTypeName(datatype), datatype, TDataType::GetTypeName(expectedType), expectedType, branch->GetName());
          return kMismatch;
       }
+   } else if ((expectedClass && (datatype != kOther_t && datatype != kNoType_t && datatype != kInt_t)) || 
+              (ptrClass && (expectedType != kOther_t && expectedType != kNoType_t && datatype != kInt_t)) ) {
+      // Sometime a null pointer can look an int, avoid complaining in that case.
+      if (expectedClass) {
+         Error("SetBranchAddress", "The pointer type given \"%s\" (%d) does not correspond to the type needed \"%s\" by the branch: %s", 
+               TDataType::GetTypeName(datatype), datatype, expectedClass->GetName(), branch->GetName());
+      } else {
+         // In this case, it is okay if the first data member is of the right type (to support the case where we are being passed
+         // a struct).
+         bool good = false;
+         if (ptrClass->IsLoaded()) {
+            TIter next(ptrClass->GetListOfRealData());
+            TRealData *rdm;
+            while ((rdm = (TRealData*)next())) {
+               if (rdm->GetThisOffset() == 0) {
+                  break;
+               }
+            }
+         } else {
+            TIter next(ptrClass->GetListOfDataMembers());
+            TDataMember *dm;
+            while ((dm = (TDataMember*)next())) {
+               if (dm->GetOffset() == 0) {
+                  TDataType *dmtype = dm->GetDataType();
+                  if (dmtype) {
+                     EDataType etype = (EDataType)dmtype->GetType();
+                     good = (etype == expectedType);
+                  }
+                  break;
+               }
+            }
+         }
+         if (!good) {
+            Error("SetBranchAddress", "The pointer type given \"%s\" does not correspond to the type needed \"%s\" (%d) by the branch: %s", 
+                  ptrClass->GetName(), TDataType::GetTypeName(expectedType), expectedType, branch->GetName());
+         }
+      }
+      return kMismatch;      
    }
    if (expectedClass && expectedClass->GetCollectionProxy() && dynamic_cast<TEmulatedCollectionProxy*>(expectedClass->GetCollectionProxy())) {
       Error("SetBranchAddress", "The class requested (%s) for the branch \"%s\" refer to an stl collection and do not have a compiled CollectionProxy.  "
@@ -4772,6 +4820,10 @@ Int_t TTree::GetEntry(Long64_t entry, Int_t getall)
    //  additional advantage that functions like TTree::Draw (internally calling
    //  TTree::GetEntry) will be functional even when the classes in the file are
    //  not available.
+   //
+   //  Note: See the comments in TBranchElement::SetAddress() for the 
+   //    object ownership policy of the underlying (user) data.
+
 
    // We already have been visited while recursively looking
    // through the friends tree, let return
@@ -5412,7 +5464,9 @@ Long64_t TTree::LoadTree(Long64_t entry)
                continue;
             }
             TTree* friendTree = fe->GetTree();
-            if (friendTree->IsA() == TTree::Class()) {
+            if (friendTree == 0) {
+               // Somehow we failed to retrieve the friend TTree.
+            } else if (friendTree->IsA() == TTree::Class()) {
                // Friend is actually a tree.
                if (friendTree->LoadTreeFriend(entry, this) >= 0) {
                   friendHasEntry = kTRUE;
@@ -5824,6 +5878,8 @@ Long64_t TTree::Merge(TCollection* li, TFileMergeInfo *info)
          newtree->Write();
          delete newtree;
       }
+      // Make sure things are really written out to disk before attempting any reading. 
+      info->fOutputDirectory->GetFile()->Flush();
       info->fOutputDirectory->ReadTObject(this,this->GetName());
    }
    if (!li) return 0;
@@ -6322,7 +6378,7 @@ Long64_t TTree::ReadFile(const char* filename, const char* branchDescriptor, cha
 }
 
 //______________________________________________________________________________
-char TTree::GetNewlineValue(istream &inputStream)
+char TTree::GetNewlineValue(std::istream &inputStream)
 {
    // Determine which newline this file is using.
    // Return '\r' for Windows '\r\n' as that already terminates.
@@ -6348,7 +6404,7 @@ char TTree::GetNewlineValue(istream &inputStream)
 }
 
 //______________________________________________________________________________
-Long64_t TTree::ReadStream(istream& inputStream, const char *branchDescriptor, char delimiter)
+Long64_t TTree::ReadStream(std::istream& inputStream, const char *branchDescriptor, char delimiter)
 {
    // Create or simply read branches from an input stream.
    //
@@ -6994,11 +7050,12 @@ Int_t TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr)
    // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    // Note: See the comments in TBranchElement::SetAddress() for the
-   //       meaning of the addr parameter.
+   //       meaning of the addr parameter and the object ownership policy.
    //
 
    TBranch* branch = GetBranch(bname);
    if (!branch) {
+      if (ptr) *ptr = 0;
       Error("SetBranchAddress", "unknown branch -> %s", bname);
       return kMissingBranch;
    }
@@ -7012,7 +7069,7 @@ Int_t TTree::SetBranchAddress(const char* bname, void* addr, TClass* ptrClass, E
    // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    // Note: See the comments in TBranchElement::SetAddress() for the
-   //       meaning of the addr parameter.
+   //       meaning of the addr parameter and the object ownership policy.
    //
 
    return SetBranchAddress(bname, addr, 0, ptrClass, datatype, isptr);
@@ -7025,19 +7082,18 @@ Int_t TTree::SetBranchAddress(const char* bname, void* addr, TBranch** ptr, TCla
    // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    // Note: See the comments in TBranchElement::SetAddress() for the
-   //       meaning of the addr parameter.
+   //       meaning of the addr parameter and the object ownership policy.
    //
 
    TBranch* branch = GetBranch(bname);
    if (!branch) {
+      if (ptr) *ptr = 0;
       Error("SetBranchAddress", "unknown branch -> %s", bname);
       return kMissingBranch;
    }
-   if (ptr) {
-      *ptr = branch;
-   }
 
    Int_t res = CheckBranchAddressType(branch, ptrClass, datatype, isptr);
+   // This will set the value of *ptr to branch.
    SetBranchAddressImp(branch,addr,ptr);
    return res;
 }
@@ -7049,7 +7105,7 @@ Int_t TTree::SetBranchAddressImp(TBranch *branch, void* addr, TBranch** ptr)
    // See TTree::CheckBranchAddressType for the semantic of the return value.
    //
    // Note: See the comments in TBranchElement::SetAddress() for the
-   //       meaning of the addr parameter.
+   //       meaning of the addr parameter and the object ownership policy.
    //
 
    if (ptr) {
@@ -7256,11 +7312,6 @@ void TTree::SetCacheSize(Long64_t cacheSize)
    // if cachesize = 0 the existing cache (if any) is deleted.
    // if cachesize = -1 (default) it is set to the AutoFlush value when writing
    //    the Tree (default is 30 MBytes).
-   // WARNING: Currently only ONE TTree object can be 'cached' per TFile object.
-   // This call disable the cache for the other TTree objects read from the same
-   // TFile object as this TTree (The SetCacheSize called __last__ wins).
-   // To cache multiple TTree objects in the same ROOT file, you must create
-   // one TFile object per TTree object.
 
    if (cacheSize < 0) {
       if (fAutoFlush < 0) cacheSize = -fAutoFlush;
@@ -7420,6 +7471,19 @@ void TTree::SetDirectory(TDirectory* dir)
    }
    if (fDirectory) {
       fDirectory->Remove(this);
+
+      // Delete or move the file cache if it points to this Tree
+      TFile *file = fDirectory->GetFile();
+      if (file) {
+         TFileCacheRead *pf = file->GetCacheRead(this);
+         file->SetCacheRead(0,this);
+         TFile *newfile = dir ? dir->GetFile() : 0;
+         if (newfile) {
+            newfile->SetCacheRead(pf,this);
+         } else {
+            delete pf;
+         }
+      }
    }
    fDirectory = dir;
    if (fDirectory) {

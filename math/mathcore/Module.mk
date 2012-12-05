@@ -48,6 +48,9 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/Math/Functor.h \
                 $(MODDIRI)/Math/Minimizer.h \
                 $(MODDIRI)/Math/MinimizerOptions.h \
+                $(MODDIRI)/Math/MinimTransformFunction.h \
+                $(MODDIRI)/Math/MinimTransformVariable.h \
+                $(MODDIRI)/Math/BasicMinimizer.h \
                 $(MODDIRI)/Math/IntegratorOptions.h \
                 $(MODDIRI)/Math/IOptions.h \
                 $(MODDIRI)/Math/Integrator.h \
@@ -68,6 +71,7 @@ MATHCOREDH2  := $(MODDIRI)/TRandom.h \
                 $(MODDIRI)/Math/DistSampler.h \
                 $(MODDIRI)/Math/DistSamplerOptions.h \
                 $(MODDIRI)/Math/GoFTest.h \
+                $(MODDIRI)/Math/ChebyshevPol.h \
                 $(MODDIRI)/Math/SpecFuncMathCore.h \
                 $(MODDIRI)/Math/DistFuncMathCore.h
 MATHCOREDH3  := $(filter-out $(MODDIRI)/Fit/Chi2Grad%,$(wildcard $(MODDIRI)/Fit/*.h))

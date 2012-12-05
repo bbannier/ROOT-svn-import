@@ -73,6 +73,8 @@
 char* operator+( streampos&, char* );
 #endif
 
+using namespace std;
+
 ClassImp(RooMinuit)
 ;
 
@@ -1191,7 +1193,7 @@ void RooMinuitGlue(Int_t& /*np*/, Double_t* /*gin*/,
   // Calculate the function for these parameters
   f= context->_func->getVal() ;
   context->_evalCounter++ ;
-  if ( RooAbsPdf::evalError() || RooAbsReal::numEvalErrors()>0 ) {
+  if ( RooAbsPdf::evalError() || RooAbsReal::numEvalErrors()>0 || f>1e30) {
 
     if (context->_printEvalErrors>=0) {
 
@@ -1219,7 +1221,7 @@ void RooMinuitGlue(Int_t& /*np*/, Double_t* /*gin*/,
     }
 
     if (context->_doEvalErrorWall) {
-      f = maxFCN ;
+      f = maxFCN+1 ;
     }
 
     RooAbsPdf::clearEvalError() ;

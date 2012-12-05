@@ -58,6 +58,7 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
       if( fConditionalMLEsNull ) {
          oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Null." << endl;
          *allParams = *fConditionalMLEsNull;
+         // LM: fConditionalMLEsNull must be nuisance parameters otherwise an error message will be printed
          allButNuisance.add( *fConditionalMLEsNull );
          if (fNullModel->GetNuisanceParameters()) {
             RooArgSet remain(*fNullModel->GetNuisanceParameters());
@@ -72,15 +73,21 @@ int FrequentistCalculator::PreNullHook(RooArgSet *parameterPoint, double obsTest
       oocoutI((TObject*)0,InputArguments) << "Profiling conditional MLEs for Null." << endl;
       RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
       RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
+
+      RooArgSet conditionalObs;
+      if (fNullModel->GetConditionalObservables()) conditionalObs.add(*fNullModel->GetConditionalObservables());
       
-      RooAbsReal* nll = fNullModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
+      RooAbsReal* nll = fNullModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams), 
+                                                        RooFit::ConditionalObservables(conditionalObs));
       RooProfileLL* profile = dynamic_cast<RooProfileLL*>(nll->createProfile(allButNuisance));
       profile->getVal(); // this will do fit and set nuisance parameters to profiled values
 
       // Hack to extract a RooFitResult
       if (fStoreFitInfo) {
          RooFitResult *result = profile->minuit()->save();
-         fFitInfo->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitNull_"));
+         RooArgSet * detOutput = DetailedOutputAggregator::GetAsArgSet(result, "fitNull_");
+         fFitInfo->addOwned(*detOutput);
+         delete detOutput; 
          delete result;
       }
    
@@ -144,6 +151,7 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
       if( fConditionalMLEsAlt ) {
          oocoutI((TObject*)0,InputArguments) << "Using given conditional MLEs for Alt." << endl;
          *allParams = *fConditionalMLEsAlt;
+         // LM: fConditionalMLEsAlt must be nuisance parameters otherwise an error message will be printed
          allButNuisance.add( *fConditionalMLEsAlt );
          if (fAltModel->GetNuisanceParameters()) {
             RooArgSet remain(*fAltModel->GetNuisanceParameters());
@@ -158,15 +166,22 @@ int FrequentistCalculator::PreAltHook(RooArgSet *parameterPoint, double obsTestS
       oocoutI((TObject*)0,InputArguments) << "Profiling conditional MLEs for Alt." << endl;
       RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
       RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-      
-      RooAbsReal* nll = fAltModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams));
+
+      RooArgSet conditionalObs;
+      if (fAltModel->GetConditionalObservables()) conditionalObs.add(*fAltModel->GetConditionalObservables());
+            
+      RooAbsReal* nll = fAltModel->GetPdf()->createNLL(*const_cast<RooAbsData*>(fData), RooFit::CloneData(kFALSE), RooFit::Constrain(*allParams),
+                                                        RooFit::ConditionalObservables(conditionalObs));
+
       RooProfileLL* profile = dynamic_cast<RooProfileLL*>(nll->createProfile(allButNuisance));
       profile->getVal(); // this will do fit and set nuisance parameters to profiled values
 
       // Hack to extract a RooFitResult
       if (fStoreFitInfo) {
          RooFitResult *result = profile->minuit()->save();
-         fFitInfo->addOwned(*DetailedOutputAggregator::GetAsArgSet(result, "fitAlt_"));
+         RooArgSet * detOutput =  DetailedOutputAggregator::GetAsArgSet(result, "fitAlt_");
+         fFitInfo->addOwned(*detOutput);
+         delete detOutput;
          delete result;
       }
    

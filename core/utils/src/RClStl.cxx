@@ -11,10 +11,10 @@
 
 #include "RConfigure.h"
 #include "RConfig.h"
-#include "Api.h"
 
 #include "RClStl.h"
 #include "TClassEdit.h"
+#include "TMetaUtils.h"
 using namespace TClassEdit;
 #include <stdio.h>
 
@@ -23,8 +23,16 @@ using namespace TClassEdit;
 
 #include "Scanner.h"
 
+#include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/LookupHelper.h"
+
+#include "clang/Sema/Sema.h"
+#include "clang/Sema/Template.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/AST/DeclTemplate.h"
+
 // From the not-existing yet rootcint.h
-void WriteClassInit(const RScanner::AnnotatedRecordDecl &decl);
+void WriteClassInit(const RScanner::AnnotatedRecordDecl &decl, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
 void WriteAuxFunctions(const RScanner::AnnotatedRecordDecl &decl);
 std::string R__GetQualifiedName(const clang::NamedDecl &cl);
 
@@ -51,7 +59,62 @@ ROOT::RStl& ROOT::RStl::Instance()
 
 }
 
-void ROOT::RStl::GenerateTClassFor(const char *requestedName, const clang::CXXRecordDecl *stlclass)
+void ROOT::RStl::GenerateTClassFor(const clang::QualType &type, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
+{
+   // Force the generation of the TClass for the given class.
+
+   const clang::CXXRecordDecl *stlclass = type.getTypePtr()->getAsCXXRecordDecl();
+   if (stlclass == 0) {
+      return;
+   }
+   const clang::ClassTemplateSpecializationDecl *templateCl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(stlclass);
+
+   if (templateCl == 0) {
+      Error("RStl::GenerateTClassFor","%s not in a template",
+            R__GetQualifiedName(*stlclass).c_str());      
+   }
+
+   if ( TClassEdit::STLKind( stlclass->getName().str().c_str() )  == TClassEdit::kVector ) {
+      const clang::TemplateArgument &arg( templateCl->getTemplateArgs().get(0) );
+      if (arg.getKind() == clang::TemplateArgument::Type) {
+         const clang::NamedDecl *decl = arg.getAsType().getTypePtr()->getAsCXXRecordDecl();
+         if (decl) {
+            // NOTE: we should just compare the decl to the bool builtin!
+            llvm::StringRef argname = decl->getName();
+            if ( (argname.str() == "bool") || (argname.str() == "Bool_t") ) {
+               Warning("std::vector<bool>", " is not fully supported yet!\nUse std::vector<char> or std::deque<bool> instead.\n");
+            }
+         }
+      }
+   }
+   
+   fList.insert( RScanner::AnnotatedRecordDecl(++fgCount,type.getTypePtr(),stlclass,"",false /* for backward compatibility rather than 'true' .. neither really make a difference */,false,false,false,-1, interp, normCtxt) );
+   
+   for(unsigned int i=0; i <  templateCl->getTemplateArgs().size(); ++i) {
+      const clang::TemplateArgument &arg( templateCl->getTemplateArgs().get(i) );
+      if (arg.getKind() == clang::TemplateArgument::Type) {
+         const clang::NamedDecl *decl = arg.getAsType().getTypePtr()->getAsCXXRecordDecl();
+         
+         if (decl && TClassEdit::STLKind( decl->getName().str().c_str() ) != 0 )
+            {
+               const clang::CXXRecordDecl *clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+               if (clxx) {
+                  if (!clxx->isCompleteDefinition()) {
+                     clang::SourceLocation Loc = clxx->getLocation ();
+                     clang::Sema& S = interp.getCI()->getSema();
+                     /* bool result = */ S.RequireCompleteType( Loc,  arg.getAsType() , 0);
+                  }
+                  // Do we need to strip the qualifier?
+                  GenerateTClassFor(arg.getAsType(),interp,normCtxt);
+               }
+            }
+      }
+   }
+
+   //    fprintf(stderr,"ROOT::RStl registered %s as %s\n",stlclassname.c_str(),registername.c_str());
+}
+
+void ROOT::RStl::GenerateTClassFor(const char *requestedName, const clang::CXXRecordDecl *stlclass, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    // Force the generation of the TClass for the given class.
 
@@ -63,33 +126,45 @@ void ROOT::RStl::GenerateTClassFor(const char *requestedName, const clang::CXXRe
    }
    
    
-   if ( TClassEdit::STLKind( stlclass->getName().data() )  == TClassEdit::kVector ) {
+   if ( TClassEdit::STLKind( stlclass->getName().str().c_str() )  == TClassEdit::kVector ) {
       const clang::TemplateArgument &arg( templateCl->getTemplateArgs().get(0) );
       if (arg.getKind() == clang::TemplateArgument::Type) {
          const clang::NamedDecl *decl = arg.getAsType().getTypePtr()->getAsCXXRecordDecl();
          if (decl) {
+            // NOTE: we should just compare the decl to the bool builtin!
             llvm::StringRef argname = decl->getName();
-            if ( 0 == strcmp(argname.data(),"bool") || 0 == strcmp(argname.data(),"Bool_t") ) {
+            if ( (argname.str() == "bool") || (argname.str() == "Bool_t") ) {
                Warning("std::vector<bool>", " is not fully supported yet!\nUse std::vector<char> or std::deque<bool> instead.\n");
             }
          }
       }
    }
    
-   fList.insert( RScanner::AnnotatedRecordDecl(++fgCount,stlclass,requestedName,true,false,false,false) );
+   fList.insert( RScanner::AnnotatedRecordDecl(++fgCount,stlclass,requestedName,true,false,false,false,-1, interp,normCtxt) );
    
+   TClassEdit::TSplitType splitType( requestedName, (TClassEdit::EModType)(TClassEdit::kLong64 | TClassEdit::kDropStd) );
    for(unsigned int i=0; i <  templateCl->getTemplateArgs().size(); ++i) {
       const clang::TemplateArgument &arg( templateCl->getTemplateArgs().get(i) );
       if (arg.getKind() == clang::TemplateArgument::Type) {
          const clang::NamedDecl *decl = arg.getAsType().getTypePtr()->getAsCXXRecordDecl();
-      
-         if (decl && TClassEdit::STLKind( decl->getName().data() ) != 0 )
-         {
-            const clang::CXXRecordDecl *clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
-            if (clxx) {
-               GenerateTClassFor( "", clxx );
+         
+         if (decl && TClassEdit::STLKind( decl->getName().str().c_str() ) != 0 )
+            {
+               const clang::CXXRecordDecl *clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+               if (clxx) {
+                  if (!clxx->isCompleteDefinition()) {
+                     clang::SourceLocation Loc = clxx->getLocation ();
+                     clang::Sema& S = interp.getCI()->getSema();
+                     /* bool result = */ S.RequireCompleteType( Loc,  arg.getAsType() , 0);
+                     clxx = arg.getAsType().getTypePtr()->getAsCXXRecordDecl();
+                  }
+                  if (!splitType.fElements.empty()) {
+                     GenerateTClassFor( splitType.fElements[i+1].c_str(), clxx, interp, normCtxt);
+                  } else {
+                     GenerateTClassFor( "", clxx, interp, normCtxt );
+                  }
+               }
             }
-         }
       }
    }
 
@@ -106,22 +181,7 @@ void ROOT::RStl::Print()
    }
 }
 
-std::string ROOT::RStl::DropDefaultArg(const std::string &classname)
-{
-   // Remove the default argument from the stl container.
-
-   G__ClassInfo cl(classname.c_str());
-
-   if ( cl.TmpltName() == 0 ) return classname;
-
-   if ( TClassEdit::STLKind( cl.TmpltName() ) == 0 ) return classname;
-
-   return TClassEdit::ShortType( cl.Fullname(),
-                                 TClassEdit::kDropStlDefault );
-
-}
-
-void ROOT::RStl::WriteClassInit(FILE* /*file*/)
+void ROOT::RStl::WriteClassInit(FILE* /*file*/, const cling::Interpreter &interp, const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    // This function writes the TGeneraticClassInfo initialiser
    // and the auxiliary functions (new and delete wrappers) for
@@ -129,7 +189,24 @@ void ROOT::RStl::WriteClassInit(FILE* /*file*/)
 
    list_t::iterator iter;
    for(iter = fList.begin(); iter != fList.end(); ++iter) {
-      ::WriteClassInit( *iter );
+ 
+      if (!iter->GetRecordDecl()->getDefinition()) {
+
+         // We do not have a complete definition, we need to force the instantiation
+         // and findScope can do that.
+         const cling::LookupHelper& lh = interp.getLookupHelper();
+         const clang::CXXRecordDecl *result = llvm::dyn_cast_or_null<clang::CXXRecordDecl>(lh.findScope(iter->GetNormalizedName(),0));
+
+         if (!result || !iter->GetRecordDecl()->getDefinition()) {
+            fprintf(stderr,"Error: incomplete definition for %s\n",iter->GetNormalizedName());
+            continue;
+         }
+      }
+
+      // std::string fullname = R__GetQualifiedName(*iter->GetRecordDecl());      
+      // fprintf(stderr,"RStl is generating TClass for %ld %s %s %s\n",iter->GetRuleIndex(),iter->GetRequestedName(),iter->GetNormalizedName(),fullname.c_str());
+
+      ::WriteClassInit( *iter, interp, normCtxt );
       ::WriteAuxFunctions( *iter );
    }
 }
@@ -144,13 +221,14 @@ void ROOT::RStl::WriteStreamer(FILE *file,const clang::CXXRecordDecl *stlcl)
    std::string shortTypeName = GetLong64_Name( TClassEdit::ShortType(R__GetQualifiedName(*stlcl).c_str(),TClassEdit::kDropStlDefault) );
    std::string noConstTypeName( TClassEdit::CleanType(shortTypeName.c_str(),2) );
 
-   streamerName += G__map_cpp_name((char *)shortTypeName.c_str());
-   std::string typedefName = G__map_cpp_name((char *)shortTypeName.c_str());
-
+   std::string typedefName;
+   ROOT::TMetaUtils::GetCppName(typedefName, shortTypeName.c_str());
+   streamerName += typedefName;
+   
    const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (stlcl);
    if (!tmplt_specialization) return;
 
-   int stltype = TClassEdit::STLKind(tmplt_specialization->getName().data()); 
+   int stltype = TClassEdit::STLKind(tmplt_specialization->getName().str().c_str()); 
 
    const clang::TemplateArgument &arg0( tmplt_specialization->getTemplateArgs().get(0) );
 

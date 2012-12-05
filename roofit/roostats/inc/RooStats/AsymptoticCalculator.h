@@ -42,7 +42,8 @@ namespace RooStats {
          RooAbsData &data,  // need to pass non-const since RooAbsPdf::fitTo takes a non-const data set 
          const ModelConfig &altModel,
          const ModelConfig &nullModel,  
-         bool nominalAsimov = false 
+         bool nominalAsimov = false, 
+         unsigned int  asimovBins = 0
          );
       //    HypoTestCalculatorGeneric(data, altModel, nullModel, 0)
       // {
@@ -86,7 +87,6 @@ namespace RooStats {
       bool IsTwoSided() const { return (!fOneSided && !fOneSidedDiscovery); }
       bool IsOneSidedDiscovery() const { return fOneSidedDiscovery; }
 
-
       // set using of qtilde, by default is controlled if RoORealVar is limited or not 
       void SetQTilde(bool on) { fUseQTilde = on; }
 
@@ -117,7 +117,7 @@ namespace RooStats {
       static void FillBins(const RooAbsPdf & pdf, const RooArgList &obs, RooAbsData & data, int &index,  double
                            &binVolume, int &ibin); 
 
-      static double EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data, const RooArgSet *poiSet = 0); 
+      static double EvaluateNLL(RooAbsPdf & pdf, RooAbsData& data, const RooArgSet * condObs, const RooArgSet *poiSet = 0 ); 
 
       static bool SetObsToExpected(RooAbsPdf &pdf, const RooArgSet &obs);
       static bool SetObsToExpected(RooProdPdf &prod, const RooArgSet &obs); 

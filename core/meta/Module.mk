@@ -29,10 +29,13 @@ endif
 METAH        := $(filter-out $(MODDIRI)/TCint.h,$(METAH))
 METAS        := $(filter-out $(MODDIRS)/TCint.cxx,$(METAS))
 else
-METAH        := $(filter-out $(MODDIRI)/TCintWithCling.h,$(METAH))
-METAS        := $(filter-out $(MODDIRS)/TCintWithCling.cxx,$(METAS))
+METAH        := $(filter-out $(MODDIRI)/TCintWithCling.h \
+                $(MODDIRI)/TCling%.h,$(METAH))
+METAS        := $(filter-out $(MODDIRS)/TCintWithCling.cxx \
+                $(MODDIRS)/TCling%.cxx,$(METAS))
 METADCXXCLING:=
 endif
+METAHFORD    := $(filter-out $(MODDIRI)/TCling%,$(METAH))
 METAO        := $(call stripsrc,$(METAS:.cxx=.o))
 
 METADEP      := $(METAO:.o=.d) $(METADO:.o=.d)
@@ -49,10 +52,10 @@ INCLUDEFILES += $(METADEP)
 include/%.h:    $(METADIRI)/%.h
 		cp $< $@
 
-$(METADS):      $(METAH) $(METAL) $(ROOTCINTTMPDEP)
+$(METADS):      $(METAHFORD) $(METAL) $(ROOTCINTTMPDEP) $(LLVMDEP)
 		$(MAKEDIR)
 		@echo "Generating dictionary $@..."
-		$(ROOTCINTTMP) -f $@ -c -DG__API $(METADCLINGCXXFLAGS) $(METAH) $(METAL)
+		$(ROOTCINTTMP) -f $@ -c -DG__API $(METADCLINGCXXFLAGS) $(METAHFORD) $(METAL)
 
 all-$(MODNAME): $(METAO) $(METADO)
 
@@ -68,4 +71,12 @@ distclean::     distclean-$(MODNAME)
 
 # Optimize dictionary with stl containers.
 $(METADO): NOOPT = $(OPT)
+$(call stripsrc,$(MODDIRS)/TCintWithCling.o): $(LLVMDEP)
 $(call stripsrc,$(MODDIRS)/TCintWithCling.o): CXXFLAGS += $(METACLINGCXXFLAGS)
+$(call stripsrc,$(patsubst %.cxx,%.o,$(wildcard $(MODDIRS)/TCling*.cxx))): \
+   $(LLVMDEP)
+$(call stripsrc,$(patsubst %.cxx,%.o,$(wildcard $(MODDIRS)/TCling*.cxx))): \
+   CXXFLAGS += $(METACLINGCXXFLAGS)
+$(call stripsrc,$(MODDIRS)/TClingCallbacks.o): \
+   CXXFLAGS += $(METACLINGCXXFLAGS) -fno-rtti
+

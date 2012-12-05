@@ -66,8 +66,12 @@ protected:
    Int_t    Fill(const char*,Double_t,Double_t) {return Fill(0);} //MayNotUse
    Int_t    Fill(const char*,const char*,Double_t) {return Fill(0);} //MayNotUse
 
-public:
+private: 
+
    TH3(const TH3&);
+   TH3& operator=(const TH3&); // Not implemented   
+
+public:
    virtual ~TH3();
    virtual Int_t    BufferEmpty(Int_t action=0);
    virtual void     Copy(TObject &hnew) const;
@@ -87,6 +91,9 @@ public:
    virtual Int_t    FindLastBinAbove (Double_t threshold=0, Int_t axis=1) const;
    virtual void     FitSlicesZ(TF1 *f1=0,Int_t binminx=1, Int_t binmaxx=0,Int_t binminy=1, Int_t binmaxy=0,
                                         Int_t cut=0 ,Option_t *option="QNR"); // *MENU*
+   virtual Double_t GetBinContent(Int_t bin) const { return TH1::GetBinContent(bin); }
+   virtual Double_t GetBinContent(Int_t bin, Int_t) const { return TH1::GetBinContent(bin); }
+   virtual Double_t GetBinContent(Int_t binx, Int_t biny, Int_t binz) const { return TH1::GetBinContent( GetBin(binx, biny, binz) ); }
    using TH1::GetBinErrorLow;
    using TH1::GetBinErrorUp;
    virtual Double_t GetBinErrorLow(Int_t binx, Int_t biny, Int_t binz) { return TH1::GetBinErrorLow( GetBin(binx, biny, binz) ); }
@@ -106,12 +113,12 @@ public:
    virtual Double_t Interpolate(Double_t x, Double_t y, Double_t z);
    virtual Double_t KolmogorovTest(const TH1 *h2, Option_t *option="") const;
    virtual Long64_t Merge(TCollection *list);
-         TH1D      *ProjectionX(const char *name="_px", Int_t firstybin=0, Int_t lastybin=-1, Int_t firstzbin=0,
-                                Int_t lastzbin=-1, Option_t *option="") const; // *MENU*
-         TH1D      *ProjectionY(const char *name="_py", Int_t firstxbin=0, Int_t lastxbin=-1, Int_t firstzbin=0,
-                                Int_t lastzbin=-1, Option_t *option="") const; // *MENU*
-         TH1D      *ProjectionZ(const char *name="_pz", Int_t firstxbin=0, Int_t lastxbin=-1, Int_t firstybin=0,
-                                Int_t lastybin=-1, Option_t *option="") const; // *MENU*
+         TH1D      *ProjectionX(const char *name="_px", Int_t iymin=0, Int_t iymax=-1, Int_t izmin=0,
+                                Int_t izmax=-1, Option_t *option="") const; // *MENU*
+         TH1D      *ProjectionY(const char *name="_py", Int_t ixmin=0, Int_t ixmax=-1, Int_t izmin=0,
+                                Int_t izmax=-1, Option_t *option="") const; // *MENU*
+         TH1D      *ProjectionZ(const char *name="_pz", Int_t ixmin=0, Int_t ixmax=-1, Int_t iymin=0,
+                                Int_t iymax=-1, Option_t *option="") const; // *MENU*
          TH1       *Project3D(Option_t *option="x") const; // *MENU*
    TProfile2D      *Project3DProfile(Option_t *option="xy") const; // *MENU*
    virtual void     PutStats(Double_t *stats);
@@ -120,6 +127,9 @@ public:
    virtual TH3     *RebinZ(Int_t ngroup = 2, const char *newname = "");
    virtual TH3     *Rebin3D(Int_t nxgroup = 2, Int_t nygroup = 2, Int_t nzgroup = 2, const char *newname = "");
    virtual void     Reset(Option_t *option="");
+   virtual void      SetBinContent(Int_t bin, Double_t content);
+   virtual void      SetBinContent(Int_t bin, Int_t, Double_t content) { SetBinContent(bin, content); }
+   virtual void      SetBinContent(Int_t binx, Int_t biny, Int_t binz, Double_t content) { SetBinContent(GetBin(binx, biny, binz), content); }
    virtual void     SetShowProjection(const char *option="xy",Int_t nbins=1);   // *MENU*
 
 protected:
@@ -154,14 +164,7 @@ public:
    virtual void      AddBinContent(Int_t bin);
    virtual void      AddBinContent(Int_t bin, Double_t w);
    virtual void      Copy(TObject &hnew) const;
-   virtual TH1      *DrawCopy(Option_t *option="") const ;
-   virtual Double_t  GetBinContent(Int_t bin) const;
-   virtual Double_t  GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t  GetBinContent(Int_t binx, Int_t biny, Int_t binz) const {return GetBinContent(GetBin(binx,biny,binz));}
    virtual void      Reset(Option_t *option="");
-   virtual void      SetBinContent(Int_t bin, Double_t content);
-   virtual void      SetBinContent(Int_t bin, Int_t, Double_t content) {SetBinContent(bin,content);}
-   virtual void      SetBinContent(Int_t binx, Int_t biny, Int_t binz, Double_t content) {SetBinContent(GetBin(binx,biny,binz),content);}
    virtual void      SetBinsLength(Int_t n=-1);
            TH3C&     operator=(const TH3C &h1);
    friend  TH3C      operator*(Float_t c1, TH3C &h1);
@@ -171,6 +174,10 @@ public:
    friend  TH3C      operator*(TH3C &h1, TH3C &h2);
    friend  TH3C      operator/(TH3C &h1, TH3C &h2);
 
+protected:
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
+   virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Char_t (content); }
+   
    ClassDef(TH3C,3)  //3-Dim histograms (one char per channel)
 };
 
@@ -193,14 +200,7 @@ public:
    virtual void      AddBinContent(Int_t bin);
    virtual void      AddBinContent(Int_t bin, Double_t w);
    virtual void      Copy(TObject &hnew) const;
-   virtual TH1      *DrawCopy(Option_t *option="") const;
-   virtual Double_t  GetBinContent(Int_t bin) const;
-   virtual Double_t  GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t  GetBinContent(Int_t binx, Int_t biny, Int_t binz) const {return GetBinContent(GetBin(binx,biny,binz));}
    virtual void      Reset(Option_t *option="");
-   virtual void      SetBinContent(Int_t bin, Double_t content);
-   virtual void      SetBinContent(Int_t bin, Int_t, Double_t content) {SetBinContent(bin,content);}
-   virtual void      SetBinContent(Int_t binx, Int_t biny, Int_t binz, Double_t content) {SetBinContent(GetBin(binx,biny,binz),content);}
    virtual void      SetBinsLength(Int_t n=-1);
            TH3S&     operator=(const TH3S &h1);
    friend  TH3S      operator*(Float_t c1, TH3S &h1);
@@ -209,6 +209,10 @@ public:
    friend  TH3S      operator-(TH3S &h1, TH3S &h2);
    friend  TH3S      operator*(TH3S &h1, TH3S &h2);
    friend  TH3S      operator/(TH3S &h1, TH3S &h2);
+
+protected:
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
+   virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Short_t (content); }
 
    ClassDef(TH3S,3)  //3-Dim histograms (one short per channel)
 };
@@ -232,14 +236,7 @@ public:
    virtual void      AddBinContent(Int_t bin);
    virtual void      AddBinContent(Int_t bin, Double_t w);
    virtual void      Copy(TObject &hnew) const;
-   virtual TH1      *DrawCopy(Option_t *option="") const;
-   virtual Double_t  GetBinContent(Int_t bin) const;
-   virtual Double_t  GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t  GetBinContent(Int_t binx, Int_t biny, Int_t binz) const {return GetBinContent(GetBin(binx,biny,binz));}
    virtual void      Reset(Option_t *option="");
-   virtual void      SetBinContent(Int_t bin, Double_t content);
-   virtual void      SetBinContent(Int_t bin, Int_t, Double_t content) {SetBinContent(bin,content);}
-   virtual void      SetBinContent(Int_t binx, Int_t biny, Int_t binz, Double_t content) {SetBinContent(GetBin(binx,biny,binz),content);}
    virtual void      SetBinsLength(Int_t n=-1);
            TH3I&     operator=(const TH3I &h1);
    friend  TH3I      operator*(Float_t c1, TH3I &h1);
@@ -248,6 +245,10 @@ public:
    friend  TH3I      operator-(TH3I &h1, TH3I &h2);
    friend  TH3I      operator*(TH3I &h1, TH3I &h2);
    friend  TH3I      operator/(TH3I &h1, TH3I &h2);
+
+protected:
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
+   virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Int_t (content); }
 
    ClassDef(TH3I,3)  //3-Dim histograms (one 32 bits integer per channel)
 };
@@ -273,14 +274,7 @@ public:
    virtual void      AddBinContent(Int_t bin, Double_t w)
                                  {fArray[bin] += Float_t (w);}
    virtual void      Copy(TObject &hnew) const;
-   virtual TH1      *DrawCopy(Option_t *option="") const;
-   virtual Double_t  GetBinContent(Int_t bin) const;
-   virtual Double_t  GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t  GetBinContent(Int_t binx, Int_t biny, Int_t binz) const {return GetBinContent(GetBin(binx,biny,binz));}
    virtual void      Reset(Option_t *option="");
-   virtual void      SetBinContent(Int_t bin, Double_t content);
-   virtual void      SetBinContent(Int_t bin, Int_t, Double_t content) {SetBinContent(bin,content);}
-   virtual void      SetBinContent(Int_t binx, Int_t biny, Int_t binz, Double_t content) {SetBinContent(GetBin(binx,biny,binz),content);}
    virtual void      SetBinsLength(Int_t n=-1);
            TH3F&     operator=(const TH3F &h1);
    friend  TH3F      operator*(Float_t c1, TH3F &h1);
@@ -289,6 +283,10 @@ public:
    friend  TH3F      operator-(TH3F &h1, TH3F &h2);
    friend  TH3F      operator*(TH3F &h1, TH3F &h2);
    friend  TH3F      operator/(TH3F &h1, TH3F &h2);
+
+protected:
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return Double_t (fArray[bin]); }
+   virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = Float_t (content); }
 
    ClassDef(TH3F,3)  //3-Dim histograms (one float per channel)
 };
@@ -313,14 +311,7 @@ public:
    virtual void      AddBinContent(Int_t bin, Double_t w)
                                  {fArray[bin] += Double_t (w);}
    virtual void      Copy(TObject &hnew) const;
-   virtual TH1      *DrawCopy(Option_t *option="") const;
-   virtual Double_t  GetBinContent(Int_t bin) const;
-   virtual Double_t  GetBinContent(Int_t bin, Int_t) const {return GetBinContent(bin);}
-   virtual Double_t  GetBinContent(Int_t binx, Int_t biny, Int_t binz) const {return GetBinContent(GetBin(binx,biny,binz));}
    virtual void      Reset(Option_t *option="");
-   virtual void      SetBinContent(Int_t bin, Double_t content);
-   virtual void      SetBinContent(Int_t bin, Int_t, Double_t content) {SetBinContent(bin,content);}
-   virtual void      SetBinContent(Int_t binx, Int_t biny, Int_t binz, Double_t content) {SetBinContent(GetBin(binx,biny,binz),content);}
    virtual void      SetBinsLength(Int_t n=-1);
            TH3D&     operator=(const TH3D &h1);
    friend  TH3D      operator*(Float_t c1, TH3D &h1);
@@ -329,6 +320,10 @@ public:
    friend  TH3D      operator-(TH3D &h1, TH3D &h2);
    friend  TH3D      operator*(TH3D &h1, TH3D &h2);
    friend  TH3D      operator/(TH3D &h1, TH3D &h2);
+
+protected:
+   virtual Double_t RetrieveBinContent(Int_t bin) const { return fArray[bin]; }
+   virtual void     UpdateBinContent(Int_t bin, Double_t content) { fArray[bin] = content; }
 
    ClassDef(TH3D,3)  //3-Dim histograms (one double per channel)
 };

@@ -85,6 +85,7 @@ TSVG::TSVG() : TVirtualPS()
    fXsize       = 0.;
    fYsize       = 0.;
    fYsizeSVG    = 0;
+   SetTitle("SVG");
 }
 
 
@@ -100,6 +101,7 @@ TSVG::TSVG(const char *fname, Int_t wtype) : TVirtualPS(fname, wtype)
    //          has a default value (which is ignore in the SVG case).
 
    fStream = 0;
+   SetTitle("SVG");
    Open(fname, wtype);
 }
 
@@ -132,7 +134,7 @@ void TSVG::Open(const char *fname, Int_t wtype)
    }
 
    // Open OS file
-   fStream   = new ofstream(fname,ios::out);
+   fStream   = new std::ofstream(fname,std::ios::out);
    if (fStream == 0 || !fStream->good()) {
       printf("ERROR in TSVG::Open: Cannot open file:%s\n",fname);
       if (fStream == 0) return;

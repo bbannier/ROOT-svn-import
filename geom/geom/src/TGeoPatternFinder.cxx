@@ -63,7 +63,7 @@ TGeoPatternFinder::ThreadData_t::~ThreadData_t()
 {
    // Destructor.
 
-   if (fMatrix != gGeoIdentity) delete fMatrix;
+//   if (fMatrix != gGeoIdentity) delete fMatrix;
 }
 
 //______________________________________________________________________________
@@ -317,8 +317,13 @@ void TGeoPatternX::cd(Int_t idiv)
 TGeoMatrix* TGeoPatternX::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoTranslation(0.,0.,0.);
+   if (!IsReflected()) {
+      TGeoMatrix *matrix = new TGeoTranslation(0.,0.,0.);
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoCombiTrans *combi = new TGeoCombiTrans();
+   combi->RegisterYourself();
    combi->ReflectZ(kTRUE);
    combi->ReflectZ(kFALSE);
    return combi;   
@@ -395,7 +400,7 @@ TGeoPatternFinder *TGeoPatternX::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternX::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternX::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -487,11 +492,16 @@ void TGeoPatternY::cd(Int_t idiv)
 TGeoMatrix* TGeoPatternY::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoTranslation(0.,0.,0.);
+   if (!IsReflected()) {
+      TGeoMatrix *matrix = new TGeoTranslation(0.,0.,0.);
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoCombiTrans *combi = new TGeoCombiTrans();
+   combi->RegisterYourself();
    combi->ReflectZ(kTRUE);
    combi->ReflectZ(kFALSE);
-   return combi;   
+   return combi;
 }
 
 //_____________________________________________________________________________
@@ -565,7 +575,7 @@ TGeoPatternFinder *TGeoPatternY::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternY::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternY::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -653,8 +663,13 @@ void TGeoPatternZ::cd(Int_t idiv)
 TGeoMatrix* TGeoPatternZ::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoTranslation(0.,0.,0.);
+   if (!IsReflected()) {
+      TGeoMatrix *matrix = new TGeoTranslation(0.,0.,0.);
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoCombiTrans *combi = new TGeoCombiTrans();
+   combi->RegisterYourself();
    combi->ReflectZ(kTRUE);
    combi->ReflectZ(kFALSE);
    return combi;   
@@ -731,7 +746,7 @@ TGeoPatternFinder *TGeoPatternZ::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternZ::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;
@@ -868,7 +883,7 @@ TGeoPatternFinder *TGeoPatternParaX::MakeCopy(Bool_t reflect)
 }
       
 //______________________________________________________________________________
-void TGeoPatternParaX::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternParaX::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -879,8 +894,13 @@ void TGeoPatternParaX::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*
 TGeoMatrix* TGeoPatternParaX::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoTranslation(0.,0.,0.);
+   if (!IsReflected()) {
+      TGeoMatrix *matrix = new TGeoTranslation(0.,0.,0.);
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoCombiTrans *combi = new TGeoCombiTrans();
+   combi->RegisterYourself();
    combi->ReflectZ(kTRUE);
    combi->ReflectZ(kFALSE);
    return combi;   
@@ -1024,7 +1044,7 @@ TGeoPatternFinder *TGeoPatternParaY::MakeCopy(Bool_t reflect)
 }
          
 //______________________________________________________________________________
-void TGeoPatternParaY::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternParaY::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -1035,8 +1055,13 @@ void TGeoPatternParaY::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*
 TGeoMatrix* TGeoPatternParaY::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoTranslation(0.,0.,0.);
+   if (!IsReflected()) {
+      TGeoMatrix *matrix = new TGeoTranslation(0.,0.,0.);
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoCombiTrans *combi = new TGeoCombiTrans();
+   combi->RegisterYourself();
    combi->ReflectZ(kTRUE);
    combi->ReflectZ(kFALSE);
    return combi;   
@@ -1184,7 +1209,7 @@ TGeoPatternFinder *TGeoPatternParaZ::MakeCopy(Bool_t reflect)
 }
          
 //______________________________________________________________________________
-void TGeoPatternParaZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternParaZ::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;
@@ -1195,8 +1220,13 @@ void TGeoPatternParaZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*
 TGeoMatrix* TGeoPatternParaZ::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoTranslation(0.,0.,0.);
+   if (!IsReflected()) {
+      TGeoMatrix *matrix = new TGeoTranslation(0.,0.,0.);
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoCombiTrans *combi = new TGeoCombiTrans();
+   combi->RegisterYourself();
    combi->ReflectZ(kTRUE);
    combi->ReflectZ(kFALSE);
    return combi;   
@@ -1353,7 +1383,7 @@ TGeoPatternFinder *TGeoPatternTrapZ::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternTrapZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternTrapZ::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;
@@ -1364,8 +1394,13 @@ void TGeoPatternTrapZ::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*
 TGeoMatrix* TGeoPatternTrapZ::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoTranslation(0.,0.,0.);
+   if (!IsReflected()) {
+      TGeoMatrix *matrix = new TGeoTranslation(0.,0.,0.);
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoCombiTrans *combi = new TGeoCombiTrans();
+   combi->RegisterYourself();
    combi->ReflectZ(kTRUE);
    combi->ReflectZ(kFALSE);
    return combi;   
@@ -1497,7 +1532,7 @@ TGeoPatternFinder *TGeoPatternCylR::MakeCopy(Bool_t reflect)
 }
       
 //______________________________________________________________________________
-void TGeoPatternCylR::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternCylR::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -1647,7 +1682,7 @@ TGeoPatternFinder *TGeoPatternCylPhi::MakeCopy(Bool_t reflect)
 }
    
 //______________________________________________________________________________
-void TGeoPatternCylPhi::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternCylPhi::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -1676,8 +1711,13 @@ void TGeoPatternCylPhi::Streamer(TBuffer &R__b)
 TGeoMatrix* TGeoPatternCylPhi::CreateMatrix() const
 {
    // Return new matrix of type used by  this finder.
-   if (!IsReflected()) return new TGeoRotation();
+   if (!IsReflected()) {
+      TGeoRotation *matrix = new TGeoRotation();
+      matrix->RegisterYourself();
+      return matrix;
+   }   
    TGeoRotation *rot = new TGeoRotation();
+   rot->RegisterYourself();
    rot->ReflectZ(kTRUE);
    rot->ReflectZ(kFALSE);
    return rot;   
@@ -1776,7 +1816,7 @@ TGeoPatternFinder *TGeoPatternSphR::MakeCopy(Bool_t)
 }
    
 //______________________________________________________________________________
-void TGeoPatternSphR::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternSphR::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 1;
@@ -1880,7 +1920,7 @@ TGeoPatternFinder *TGeoPatternSphTheta::MakeCopy(Bool_t)
 }
    
 //______________________________________________________________________________
-void TGeoPatternSphTheta::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternSphTheta::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 2;
@@ -1984,7 +2024,7 @@ TGeoPatternFinder *TGeoPatternSphPhi::MakeCopy(Bool_t)
 }
    
 //______________________________________________________________________________
-void TGeoPatternSphPhi::SavePrimitive(ostream &out, Option_t * /*option*/ /*= ""*/)
+void TGeoPatternSphPhi::SavePrimitive(std::ostream &out, Option_t * /*option*/ /*= ""*/)
 {
    // Save a primitive as a C++ statement(s) on output stream "out".
    Int_t iaxis = 3;

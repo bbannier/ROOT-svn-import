@@ -244,8 +244,9 @@ Long_t TMacro::Exec(const char *params, Int_t* error)
    //the current implementation uses a file in the current directory.
    //should be replaced by a direct execution from memory by CINT
    TString fname = GetName();
-   fname += ".Cexec";
-   SaveSource(fname);
+   fname += ".C";
+   FILE *fp = gSystem->TempFileName(fname);
+   SaveSource(fp);
    //disable a possible call to gROOT->Reset from the executed script
    gROOT->SetExecutingMacro(kTRUE);
    //execute script in /tmp
@@ -304,7 +305,7 @@ Int_t TMacro::ReadFile(const char *filename)
    // Read lines in filename in this macro.
 
    if (!fLines) fLines = new TList();
-   ifstream in;
+   std::ifstream in;
    in.open(filename);
    if (!in.good()) {
       Error("ReadFile","Cannot open file: %s",filename);
@@ -328,8 +329,8 @@ void TMacro::SaveSource(const char *filename)
 {
    // Save macro source in filename.
 
-   ofstream out;
-   out.open(filename, ios::out);
+   std::ofstream out;
+   out.open(filename, std::ios::out);
    if (!out.good ()) {
       Printf("SaveSource cannot open file: %s",filename);
       return;
@@ -338,33 +339,47 @@ void TMacro::SaveSource(const char *filename)
    TIter next(fLines);
    TObjString *obj;
    while ((obj = (TObjString*) next())) {
-      out<<obj->GetName()<<endl;
+      out<<obj->GetName()<<std::endl;
    }
    out.close();
 }
 
 //______________________________________________________________________________
-void TMacro::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TMacro::SaveSource(FILE *fp)
+{
+   // Save macro source in file pointer fp.
+
+   if (!fLines) {fclose(fp); return;}
+   TIter next(fLines);
+   TObjString *obj;
+   while ((obj = (TObjString*) next())) {
+      fprintf(fp, "%s\n", obj->GetName());
+   }
+   fclose(fp);
+}
+
+//______________________________________________________________________________
+void TMacro::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save macro source on stream out.
 
    char quote = '"';
-   out<<"   "<<endl;
+   out<<"   "<<std::endl;
    if (gROOT->ClassSaved(TMacro::Class())) {
       out<<"   ";
    } else {
       out<<"   "<<ClassName()<<" *";
    }
-   out<<"macro = new "<<ClassName()<<"("<<quote<<GetName()<<quote<<","<<quote<<GetTitle()<<quote<<");"<<endl;
+   out<<"macro = new "<<ClassName()<<"("<<quote<<GetName()<<quote<<","<<quote<<GetTitle()<<quote<<");"<<std::endl;
    if (!fLines) return;
    TIter next(fLines);
    TObjString *obj;
    while ((obj = (TObjString*) next())) {
       TString s = obj->GetName();
       s.ReplaceAll("\"","\\\"");
-      out<<"   macro->AddLine("<<quote<<s.Data()<<quote<<");"<<endl;
+      out<<"   macro->AddLine("<<quote<<s.Data()<<quote<<");"<<std::endl;
    }
-   out<<"   macro->Draw("<<quote<<option<<quote<<");"<<endl;
+   out<<"   macro->Draw("<<quote<<option<<quote<<");"<<std::endl;
 }
 
 //______________________________________________________________________________

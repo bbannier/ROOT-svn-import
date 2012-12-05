@@ -16,8 +16,8 @@
 // * $ root                                                                * //
 // * root[] .include $ROOTSYS/tutorials                                    * //
 // * root[] .L stressProof.cxx+                                            * //
-// * root[] stressProof(master, wrks, verbose, logfile, dyn, \             * //
-// *                    skipds, tests, h1src, eventsrc, dryrun)            * //
+// * root[] stressProof(master, tests, wrks, verbose, logfile, dyn, \      * //
+// *                    dyn, skipds, h1src, eventsrc, dryrun)              * //
 // *                                                                       * //
 // * The arguments have the same meaning as above except for               * //
 // *     verbose [Int_t]   increasing verbosity (0 == minimal)             * //
@@ -58,10 +58,12 @@
 // *   Test 20 : File-resident output: merge ...................... OK *   * //
 // *   Test 21 : File-resident output: merge w/ submergers ........ OK *   * //
 // *   Test 22 : File-resident output: create dataset ............. OK *   * //
-// *   Test 23 : TTree friends (and TPacketizerFile) .............. OK *   * //
-// *   Test 24 : TTree friends, same file ......................... OK *   * //
-// *   Test 25 : Simple: selector by object ....................... OK *   * //
-// *   Test 26 : H1 dataset: selector by object ................... OK *   * //
+// *   Test 23 : File-resident output: multi trees ................ OK *   * //
+// *   Test 24 : TTree friends (and TPacketizerFile) .............. OK *   * //
+// *   Test 25 : TTree friends, same file ......................... OK *   * //
+// *   Test 26 : Handling output via file ......................... OK *   * //
+// *   Test 27 : Simple: selector by object ....................... OK *   * //
+// *   Test 28 : H1 dataset: selector by object ................... OK *   * //
 // *  * All registered tests have been passed  :-)                     *   * //
 // *  ******************************************************************   * //
 // *                                                                       * //
@@ -130,6 +132,8 @@
 
 #include "proof/getProof.C"
 
+#define PT_NUMTEST 28
+
 static const char *urldef = "proof://localhost:40000";
 static TString gtutdir;
 static TString gsandbox;
@@ -192,13 +196,14 @@ static TString gPackEvent("/proof/event.par");
 static TString gPack1("/proof/packtest1.par");
 static TString gPack2("/proof/packtest2.par");
 
-int stressProof(const char *url = "proof://localhost:40000",
-                Int_t nwrks = -1, const char *verbose = "1",
-                const char *logfile = 0, Bool_t dyn = kFALSE,
-                Bool_t skipds = kTRUE, const char *tests = 0,
+int stressProof(const char *url = 0,
+                const char *tests = 0, Int_t nwrks = -1,
+                const char *verbose = "1", const char *logfile = 0,
+                Bool_t dyn = kFALSE, Bool_t skipds = kTRUE, 
                 const char *h1src = 0, const char *eventsrc = 0,
                 Bool_t dryrun = kFALSE, Bool_t showcpu = kFALSE,
-                Bool_t clearcache = kFALSE, Bool_t useprogress = kTRUE, const char *tutdir = 0);
+                Bool_t clearcache = kFALSE, Bool_t useprogress = kTRUE,
+                const char *tutdir = 0, Bool_t cleanlog = kFALSE);
 
 //_____________________________batch only_____________________
 #ifndef __CINT__
@@ -228,7 +233,18 @@ int main(int argc,const char *argv[])
       printf("                 options (see TProofDebug.h) and is enabled only is level > 1 (default kAll).\n");
       printf("   -l logfile    file where to redirect the processing logs; must be writable;\n");
       printf("                 default is a temporary file deleted at the end of the test\n");
-      printf("                 in case of success; can be also passed via the env STRESSPROOF_LOGFILE\n");
+      printf("                 in case of success. Some format specifiers can be used in the file name:\n");
+      printf("                 - %%p is replaced by the current process ID; \n");
+      printf("                 - %%tmp is replaced by the temporary directory; \n");
+      printf("                 - %%d is replaced by date and time at test startup in the form YYYYMMDD-HHMM, \n");
+      printf("                   e.g. 20120904-1138. \n");
+      printf("                 The log file path can be also passed via the env STRESSPROOF_LOGFILE.\n");
+      printf("                 In case of failure, the log files of the nodes (master and workers) are saved into\n");
+      printf("                 a file called <logfile>.nodes .\n");
+      printf("   -cleanlog     Delete the logfile specified via '-l' in case of a successful run; by default\n");
+      printf("                 the file specified by '-l' is kept in all cases (default log files are deleted\n");
+      printf("                 on success); adding this switch allows to keep a user-defined log file only\n");
+      printf("                 in case of error.\n");
       printf("   -dyn          run the test in dynamicStartup mode\n");
       printf("   -ds           force the dataset test if skipped by default\n");
       printf("   -t tests      run only tests in the comma-separated list and those from which they\n");
@@ -252,7 +268,7 @@ int main(int argc,const char *argv[])
       printf("   -g            enable graphics; default is to run in text mode.\n");
       printf("   -cpu          show CPU times used by each successful test; used for calibration.\n");
       printf("   -clearcache   clear memory cache associated with the files processed when local.\n");
-      printf("   -noprogress   do not show progress whose escaped chars may confuse some wrapper applications.\n");
+      printf("   -noprogress   do not show progress (escaped chars may confuse some wrapper applications)\n");
       printf("   -tut tutdir   specify alternative location for the ROOT tutorials; allows to run multiple\n");
       printf("                 concurrent instances of stressProof, for tests, for example.\n");
       printf("                 Can be also passed via the env STRESSPROOF_TUTORIALDIR.\n");
@@ -269,6 +285,7 @@ int main(int argc,const char *argv[])
    Bool_t showcpu = kFALSE;
    Bool_t clearcache = kFALSE;
    Bool_t useprogress = kTRUE;
+   Bool_t cleanlog = kFALSE;
    const char *logfile = 0;
    const char *h1src = 0;
    const char *eventsrc = 0;
@@ -303,6 +320,9 @@ int main(int argc,const char *argv[])
             logfile = argv[i+1];
             i += 2;
          }
+      } else if (!strncmp(argv[i],"-cleanlog",11)) {
+         cleanlog = kTRUE;
+         i++;
       } else if (!strncmp(argv[i],"-v",2)) {
          // For backward compatibility
          if (!strncmp(argv[i],"-vv",3)) verbose = "2";
@@ -377,8 +397,8 @@ int main(int argc,const char *argv[])
       gROOT->SetBatch(kTRUE);
    }
 
-   int rc = stressProof(url, nWrks, verbose, logfile, gDynamicStartup, gSkipDataSetTest,
-                        tests, h1src, eventsrc, dryrun, showcpu, clearcache, useprogress, tutdir);
+   int rc = stressProof(url, tests, nWrks, verbose, logfile, gDynamicStartup, gSkipDataSetTest,
+                        h1src, eventsrc, dryrun, showcpu, clearcache, useprogress, tutdir, cleanlog);
 
    gSystem->Exit(rc);
 }
@@ -528,7 +548,7 @@ private:
    Double_t        fProofMarks; // PROOF marks
    Bool_t          fUseForMarks; // Use in the calculation of the average PROOF marks
    
-   static Double_t gRefReal[26]; // Reference Cpu times
+   static Double_t gRefReal[PT_NUMTEST]; // Reference Cpu times
 
 public:
    ProofTest(const char *n, Int_t seq, ProofTestFun_t f, void *a = 0,
@@ -555,10 +575,10 @@ public:
 
 // Reference time measured on a HP DL580 24 core (4 x Intel(R) Xeon(R) CPU X7460
 // @ 2.132 GHz, 48GB RAM, 1 Gb/s NIC) with 4 workers.
-Double_t ProofTest::gRefReal[26] = {
+Double_t ProofTest::gRefReal[PT_NUMTEST] = {
    3.047808,   // #1:  Open a session
    0.021979,   // #2:  Get session logs
-   3.148925,   // #3:  Simple random number generation
+   4.779971,   // #3:  Simple random number generation
    0.276155,   // #4:  Dataset handling with H1 files
    5.355514,   // #5:  H1: chain processing
    2.414207,   // #6:  H1: file collection processing
@@ -578,10 +598,12 @@ Double_t ProofTest::gRefReal[26] = {
    2.489555,   // #20: File-resident output: merge
    0.180897,   // #21: File-resident output: merge w/ submergers
    1.417233,   // #22: File-resident output: create dataset
-   7.452465,   // #23: TTree friends (and TPacketizerFile)
-   0.259239,   // #24: TTree friends, same file
-   0.000000,   // #25: Simple random number generation by TSelector object
-   0.000000    // #26: H1: by-object processing
+   0.000000,   // #23: File-resident output: multi trees
+   7.452465,   // #24: TTree friends (and TPacketizerFile)
+   0.259239,   // #25: TTree friends, same file
+   6.868858,   // #26: Simple generation: merge-via-file
+   6.362017,   // #27: Simple random number generation by TSelector object
+   5.519631    // #28: H1: by-object processing
 };
 
 //
@@ -715,6 +737,8 @@ Int_t PT_Friends(void *, RunTimes &);
 Int_t PT_SimpleByObj(void *, RunTimes &);
 Int_t PT_H1ChainByObj(void *, RunTimes &);
 Int_t PT_AssertTutorialDir(const char *tutdir);
+Int_t PT_MultiTrees(void *, RunTimes &);
+Int_t PT_OutputHandlingViaFile(void *, RunTimes &);
 
 // Auxilliary functions
 void PT_GetLastTimes(RunTimes &tt)
@@ -752,14 +776,20 @@ typedef struct {
    Int_t fType;
 } PT_Packetizer_t;
 
+// Options
+typedef struct {
+   Int_t fOne;
+   Int_t fTwo;
+} PT_Option_t;
+
 static PT_Packetizer_t gStd_Old = { "TPacketizer", 0 };
 
 //_____________________________________________________________________________
-int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *logfile,
-                Bool_t dyn, Bool_t skipds, const char *tests,
+int stressProof(const char *url, const char *tests, Int_t nwrks,
+                const char *verbose, const char *logfile, Bool_t dyn, Bool_t skipds,
                 const char *h1src, const char *eventsrc,
                 Bool_t dryrun, Bool_t showcpu, Bool_t clearcache, Bool_t useprogress,
-                const char *tutdir)
+                const char *tutdir, Bool_t cleanlog)
 {
    printf("******************************************************************\n");
    printf("*  Starting  P R O O F - S T R E S S  suite                      *\n");
@@ -840,10 +870,22 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
    if (logfile && strlen(logfile) > 0 && !dryrun) {
       usedeflog = kFALSE;
       glogfile = logfile;
-      if (glogfile.Contains("<tmpdir>"))
-         glogfile.ReplaceAll("<tmpdir>", gSystem->TempDirectory());
+      if (glogfile.Contains("%tmp"))
+         glogfile.ReplaceAll("%tmp", gSystem->TempDirectory());
+      if (glogfile.Contains("%p")) {
+         TString apid = TString::Format("%d", gSystem->GetPid());
+         glogfile.ReplaceAll("%p", apid);
+      }
+      if (glogfile.Contains("%d")) {
+         TString d(TDatime().AsSQLString());
+         d.Remove(d.Last(':'));
+         d.ReplaceAll("-", "");
+         d.ReplaceAll(":", "");
+         d.ReplaceAll(" ", "-");
+         glogfile.ReplaceAll("%d", d);
+      }
       if (!gSystem->AccessPathName(glogfile, kFileExists)) {
-         if (!gSystem->AccessPathName(glogfile, kWritePermission)) {
+         if (gSystem->AccessPathName(glogfile, kWritePermission)) {
             printf(" >>> Cannot write to log file %s - ignore file request\n", logfile);
             usedeflog = kTRUE;
          }
@@ -862,10 +904,12 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
          return 1;
       }
       fclose(flog);
-      if (gverbose > 0) {
-         printf("*  Log file: %s\n", glogfile.Data());
-         printf("******************************************************************\n");
-      }
+   }
+   if (gverbose > 0) {
+      printf("*  Log file: %s\n", glogfile.Data());
+      if (cleanlog)
+         printf("*  (NB: file will be removed if test is successful)              *\n");
+      printf("******************************************************************\n");
    }
 
    if (gSkipDataSetTest && gverbose > 0) {
@@ -889,7 +933,7 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
          }
       } else if (!gh1src.BeginsWith(h1src)) {
          if (gverbose > 0) {
-            printf("*  Taking H1 files from: %s\n", h1src);
+            printf("*  Taking 'h1' files from: %s\n", h1src);
             printf("******************************************************************\n");
          }
          gh1src = h1src;
@@ -969,9 +1013,9 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
    // Test admin functionality
    testList->Add(new ProofTest("Admin functionality", 16, &PT_AdminFunc, 0, "1"));
    // Test merging via submergers
-   Bool_t useMergers = kTRUE;
+   PT_Option_t pfoptm = {1, 0};
    testList->Add(new ProofTest("Dynamic sub-mergers functionality", 17,
-                                &PT_Simple, (void *)&useMergers, "1", "ProofSimple", kTRUE));
+                                &PT_Simple, (void *)&pfoptm, "1", "ProofSimple", kTRUE));
    // Test range chain and dataset processing EventProc
    testList->Add(new ProofTest("Event range processing", 18,
                                &PT_EventRange, 0, "1,11", "ProofEventProc,ProcFileElements", kTRUE));
@@ -982,20 +1026,25 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
    testList->Add(new ProofTest("File-resident output: merge", 20, &PT_POFNtuple, 0, "1", "ProofNtuple", kTRUE));
    // Test TProofOutputFile technology for ntuple creation using submergers
    testList->Add(new ProofTest("File-resident output: merge w/ submergers", 21,
-                               &PT_POFNtuple, (void *)&useMergers, "1", "ProofNtuple", kTRUE));
+                               &PT_POFNtuple, (void *)&pfoptm, "1", "ProofNtuple", kTRUE));
    // Test TProofOutputFile technology for dataset creation (tests TProofDraw too)
    testList->Add(new ProofTest("File-resident output: create dataset", 22, &PT_POFDataset, 0, "1", "ProofNtuple", kTRUE));
+   // Test selecting different TTrees in same files
+   testList->Add(new ProofTest("File-resident output: multi trees", 23, &PT_MultiTrees, 0, "1,22", "ProofNtuple", kTRUE));
    // Test TPacketizerFile and TTree friends in separate files
-   testList->Add(new ProofTest("TTree friends (and TPacketizerFile)", 23, &PT_Friends, 0, "1", "ProofFriends,ProofAux", kTRUE));
+   testList->Add(new ProofTest("TTree friends (and TPacketizerFile)", 24, &PT_Friends, 0, "1", "ProofFriends,ProofAux", kTRUE));
    // Test TPacketizerFile and TTree friends in same file
    Bool_t sameFile = kTRUE;
-   testList->Add(new ProofTest("TTree friends, same file", 24,
+   testList->Add(new ProofTest("TTree friends, same file", 25,
                                &PT_Friends, (void *)&sameFile, "1", "ProofFriends,ProofAux", kTRUE));
 
+   // Test handling output via file
+   testList->Add(new ProofTest("Handling output via file", 26,
+                                &PT_OutputHandlingViaFile, 0, "1", "ProofSimple", kTRUE));
    // Simple histogram generation by TSelector object
-   testList->Add(new ProofTest("Simple: selector by object", 25, &PT_SimpleByObj, 0, "1", "ProofSimple", kTRUE));
+   testList->Add(new ProofTest("Simple: selector by object", 27, &PT_SimpleByObj, 0, "1", "ProofSimple", kTRUE));
    // H1 analysis over HTTP by TSeletor object
-   testList->Add(new ProofTest("H1 chain: selector by object", 26, &PT_H1ChainByObj, 0, "1", "h1analysis", kTRUE));
+   testList->Add(new ProofTest("H1 chain: selector by object", 28, &PT_H1ChainByObj, 0, "1", "h1analysis", kTRUE));
    // The selectors
    if (PT_AssertTutorialDir(gTutDir) != 0) {
       printf("*  Some of the tutorial files are missing! Stop\n");
@@ -1051,7 +1100,7 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
             printf("*  Non-positive test number: %d\n", test);
             continue;
          }
-         const int tmx = 26;
+         const int tmx = PT_NUMTEST;
          if (test > tmx) {
             printf("*                                                               **\r");
             printf("*  Unknown test number: %d\n", test);
@@ -1118,7 +1167,7 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
       if (!all && !dryrun) {
          // Notify the enabled tests
          printf("*                                                               **\r");
-         printf("*  Running only tests %s (and related)\n", ten.Data());
+         printf("*  Running only test(s) %s (and related)\n", ten.Data());
          printf("******************************************************************\n");
       }      
    }
@@ -1181,12 +1230,28 @@ int stressProof(const char *url, Int_t nwrks, const char *verbose, const char *l
             kept = kFALSE;
          }
       }
-      if (kept)
-         printf("* Log file kept at %s\n", glogfile.Data());
+      if (kept) {
+         TString logfiles(glogfile);
+         // Save also the logs from the workers
+         TProofMgr *mgr = gProof->GetManager();
+         if (mgr) {
+            TProofLog *pl = mgr->GetSessionLogs();
+            if (pl) {
+               logfiles += ".nodes";
+               pl->Retrieve("*",  TProofLog::kAll, logfiles);
+               SafeDelete(pl);
+            } else {
+               printf("+++ Warning: could not get the session logs\n");
+            }
+         } else {
+            printf("+++ Warning: could not attach to manager to get the session logs\n");
+         }         
+         printf("* Main log file kept at %s (Proof logs in %s)\n", glogfile.Data(), logfiles.Data());
+      }
    } else {
       printf("* All registered tests have been passed  :-)                     *\n");
       // Remove log file if not passed by the user
-      if (usedeflog)
+      if (usedeflog || cleanlog)
          gSystem->Unlink(glogfile);
    }
 
@@ -1329,9 +1394,11 @@ Int_t PT_H1AssertFiles(const char *h1src)
             printf("\n >>> Test failure: file %s not found in archive %s\n", src.Data(), h1src);
             return -1;
          }
-         gSystem->RedirectOutput(0, 0, &gRH);
-         printf("%d\b", i);
-         gSystem->RedirectOutput(glogfile, "a", &gRH);
+         if (guseprogress) {
+            gSystem->RedirectOutput(0, 0, &gRH);
+            printf("%d\b", i);
+            gSystem->RedirectOutput(glogfile, "a", &gRH);
+         }
       }
       gh1sep = '#';
    } else {
@@ -1344,9 +1411,11 @@ Int_t PT_H1AssertFiles(const char *h1src)
             printf("\n >>> Test failure: file %s does not exist\n", src.Data());
             return -1;
          }
-         gSystem->RedirectOutput(0, 0, &gRH);
-         printf("%d\b", i);
-         gSystem->RedirectOutput(glogfile, "a", &gRH);
+         if (guseprogress) {
+            gSystem->RedirectOutput(0, 0, &gRH);
+            printf("%d\b", i);
+            gSystem->RedirectOutput(glogfile, "a", &gRH);
+         }
       }
    }
    gh1src = h1src;
@@ -1430,9 +1499,11 @@ Int_t PT_EventAssertFiles(const char *eventsrc, Int_t nf = 10)
             printf("\n >>> Test failure: problems retrieving %s\n", src.Data());
             return -1;
          }
-         gSystem->RedirectOutput(0, 0, &gRH);
-         printf("%d\b", i);
-         gSystem->RedirectOutput(glogfile, "a", &gRH);
+         if (guseprogress) {
+            gSystem->RedirectOutput(0, 0, &gRH);
+            printf("%d\b", i);
+            gSystem->RedirectOutput(glogfile, "a", &gRH);
+         }
       }
       geventlocal = kTRUE;
       // Done
@@ -1448,9 +1519,11 @@ Int_t PT_EventAssertFiles(const char *eventsrc, Int_t nf = 10)
          printf("\n >>> Test failure: file %s does not exist\n", src.Data());
          return -1;
       }
-      gSystem->RedirectOutput(0, 0, &gRH);
-      printf("%d\b", i);
-      gSystem->RedirectOutput(glogfile, "a", &gRH);
+      if (guseprogress) {
+         gSystem->RedirectOutput(0, 0, &gRH);
+         printf("%d\b", i);
+         gSystem->RedirectOutput(glogfile, "a", &gRH);
+      }
    }
    geventsrc = eventsrc;
 
@@ -1565,7 +1638,7 @@ Int_t PT_CheckSimple(TQueryResult *qr, Long64_t nevt, Int_t nhist)
    PutPoint();
    TH1F **hist = new TH1F*[nhist];
    for (Int_t i=0; i < nhist; i++) {
-      hist[i] = dynamic_cast<TH1F *>(out->FindObject(Form("h%d",i)));
+      hist[i] = dynamic_cast<TH1F *>(TProof::GetOutput(Form("h%d",i), out));
       if (!hist[i]) {
          printf("\n >>> Test failure: 'h%d' histo not found\n", i);
          return -1;
@@ -1583,6 +1656,92 @@ Int_t PT_CheckSimple(TQueryResult *qr, Long64_t nevt, Int_t nhist)
       }
    }
 
+   // Done
+   PutPoint();
+   return 0;
+}
+
+//_____________________________________________________________________________
+Int_t PT_CheckSimpleNtuple(TQueryResult *qr, Long64_t nevt, const char *dsname)
+{
+   // Check the ntuple created by the ProofSimple analysis
+
+   if (!qr) {
+      printf("\n >>> Test failure: query result not found\n");
+      return -1;
+   }
+
+   // Make sure the output list is there
+   PutPoint();
+   TList *out = qr->GetOutputList();
+   if (!out) {
+      printf("\n >>> Test failure: output list not found\n");
+      return -1;
+   }
+   
+   // Get the file collection
+   PutPoint();
+   TFileCollection *fc = dynamic_cast<TFileCollection *>(out->FindObject(dsname));
+   if (!fc) {
+      printf("\n >>> Test failure: TFileCollection for dataset '%s' not"
+             " found in the output list\n", dsname);
+      return -1;
+   }
+   
+   // Check the default tree name
+   const char *tname = "/ntuple";
+   PutPoint();
+   if (!fc->GetDefaultTreeName() || strcmp(fc->GetDefaultTreeName(), tname)) {
+      printf("\n >>> Test failure: default tree name does not match (%s != %s)\n",
+             fc->GetDefaultTreeName(), tname);
+      return -1;
+   }
+
+   // Check the number of entries
+   PutPoint();
+   if (fc->GetTotalEntries(tname) != nevt) {
+      printf("\n >>> Test failure: number of entries does not match (%lld != %lld)\n",
+             fc->GetTotalEntries(tname), nevt);
+      return -1;
+   }
+   
+   // Check 'pz' histo
+   TH1F *hpx = new TH1F("PT_px", "PT_px", 20, -5., 5.);
+   PutPoint();
+   gProof->DrawSelect(dsname, "px >> PT_px");
+   if (TMath::Abs(hpx->GetMean()) > 5 * hpx->GetRMS() / TMath::Sqrt(hpx->GetEntries())) {
+      printf("\n >>> Test failure: 'hpx' histo: mean > 5 * RMS/Sqrt(N) (%f,%f)\n",
+             hpx->GetMean(), hpx->GetRMS());
+      return -1;
+   }
+      
+   // Check 'pz' histo
+   TH1F *hpz = new TH1F("PT_pz", "PT_pz", 20, 0., 20.);
+   PutPoint();
+   gProof->DrawSelect(dsname, "pz >> PT_pz");
+   if (TMath::Abs(hpz->GetMean() - 2.) > 5 * 2. / TMath::Sqrt(hpz->GetEntries())) {
+      printf("\n >>> Test failure: 'hpz' histo: (mean - 2) > 5 * RMS/Sqrt(N) (%f,%f)\n",
+             hpz->GetMean(), hpz->GetRMS());
+      return -1;
+   }
+
+   // Check 'random' histo
+   TH1F *hpr = new TH1F("PT_rndm", "PT_rndm", 20, 0., 20.);
+   PutPoint();
+   gProof->DrawSelect(dsname, "random >> PT_rndm");
+   if (TMath::Abs(hpr->GetMean() - .5) > 5 * .5 / TMath::Sqrt(hpr->GetEntries())) {
+      printf("\n >>> Test failure: 'hpr' histo: (mean - .5) > 5 * RMS/Sqrt(N) (%f,%f)\n",
+             hpr->GetMean(), hpr->GetRMS());
+      return -1;
+   }
+
+   SafeDelete(hpx);
+   SafeDelete(hpz);
+   SafeDelete(hpr);
+     
+   // Clear dsname
+   gProof->ClearData(TProof::kDataset |TProof::kForceClear, dsname);
+   
    // Done
    PutPoint();
    return 0;
@@ -1826,6 +1985,8 @@ Int_t PT_CheckDataset(TQueryResult *qr, Long64_t nevt)
       printf("\n >>> Test failure: dataset '%s' not found in the repository\n", dsname);
       return -1;
    }
+   // ... and that the default tree is 'ntuple' 
+   gProof->SetDataSetTreeName(dsname, "ntuple");
 
    // Create the histos
    TH1F *h1s[3] = {0};
@@ -1846,8 +2007,8 @@ Int_t PT_CheckDataset(TQueryResult *qr, Long64_t nevt)
    Int_t rch1s = 0;
    TString emsg;
    // Check the histogram entries and mean values
-   Float_t hent[3] = { .607275, .367860, .067741};
-   Double_t hmea[3] = { 2.003304, 1.995983 , 3.044178};
+   Float_t hent[3] = { .607700, .364900, .065100};
+   Double_t hmea[3] = { 2.022, 2.046 , 3.043};
    Double_t prec = 10. / TMath::Sqrt(nevt);  // ~10 sigma ... conservative
    for (Int_t i = 0; i < 3; i++) {
       Double_t ent = h1s[i]->GetEntries();
@@ -1869,7 +2030,6 @@ Int_t PT_CheckDataset(TQueryResult *qr, Long64_t nevt)
 
    // Cleanup
    for (Int_t i = 0; i < 3; i++) delete h1s[i];   
-   gProof->RemoveDataSet(dsname);
 
    // Check the result
    if (rch1s != 0) {
@@ -2012,6 +2172,16 @@ Int_t PT_Open(void *args, RunTimes &tt)
       printf("\n >>> Test failure: could not start the session\n");
       return -1;
    }
+   
+   // Re-check locality: if the logged user name is different from the local one, we may
+   // not have all the rights we need, so we go no-local
+   if (gLocalCluster) {
+      UserGroup_t *pw = gSystem->GetUserInfo();
+      if (pw) {
+         if (strcmp(pw->fUser, p->GetUser())) gLocalCluster = kFALSE;
+         delete pw;
+      }
+   }
 
    // Set debug level, if required
    if (gverbose > 1) {
@@ -2096,7 +2266,7 @@ Int_t PT_GetLogs(void *args, RunTimes &tt)
 }
 
 //_____________________________________________________________________________
-Int_t PT_Simple(void *submergers, RunTimes &tt)
+Int_t PT_Simple(void *opts, RunTimes &tt)
 {
    // Test run for the ProofSimple analysis (see tutorials)
 
@@ -2107,10 +2277,14 @@ Int_t PT_Simple(void *submergers, RunTimes &tt)
       return -1;
    }
 
+   PT_Option_t *ptopt = (PT_Option_t *) opts;
+   
    // Setup submergers if required
-   if (submergers) {
+   if (ptopt && ptopt->fOne > 0) {
       gProof->SetParameter("PROOF_UseMergers", 0);
    }
+   // Setup save-to-file, if required
+   TString opt = (ptopt && ptopt->fTwo > 0) ? "stf" : "" ;
 
    // Define the number of events and histos
    Long64_t nevt = 1000000;
@@ -2125,7 +2299,7 @@ Int_t PT_Simple(void *submergers, RunTimes &tt)
    PutPoint();
    {  SwitchProgressGuard spg;
       gTimer.Start();
-      gProof->Process(gSimpleSel.Data(), nevt);
+      gProof->Process(gSimpleSel.Data(), nevt, opt);
       gTimer.Stop();
    }
 
@@ -2142,6 +2316,90 @@ Int_t PT_Simple(void *submergers, RunTimes &tt)
    // Check the results
    PutPoint();
    return PT_CheckSimple(gProof->GetQueryResult(), nevt, nhist);
+}
+
+//_____________________________________________________________________________
+Int_t PT_OutputHandlingViaFile(void *opts, RunTimes &tt)
+{
+   // Test output handling via file using ProofSimple (see tutorials)
+
+   // Checking arguments
+   PutPoint();
+   if (!gProof) {
+      printf("\n >>> Test failure: no PROOF session found\n");
+      return -1;
+   }
+
+   PT_Option_t *ptopt = (PT_Option_t *) opts;
+   
+   // Setup submergers if required
+   if (ptopt && ptopt->fOne > 0) {
+      gProof->SetParameter("PROOF_UseMergers", 0);
+   }
+   // Setup save-to-file, if required
+   TString opt = (ptopt && ptopt->fTwo > 0) ? "stf" : "" ;
+
+   // Define the number of events and histos
+   Long64_t nevt = 1000000 * gProof->GetParallel();
+   Int_t nhist = 16;
+   // The number of histograms is added as parameter in the input list
+   gProof->SetParameter("ProofSimple_NHist", (Long_t)nhist);
+
+   // Merged file pptions to be tested
+   const char *testopt[4] = { "stf", "of=proofsimple.root", "of=proofsimple.root;stf",
+                                     "of=master:proofsimple.root" };
+
+   for (Int_t i = 0; i < 4; i++) {
+      // Clear the list of query results
+      if (gProof->GetQueryResults()) gProof->GetQueryResults()->Clear();
+
+      // Save results to file 'proofsimple.root'
+      PutPoint();
+      {  SwitchProgressGuard spg;
+         gTimer.Start();
+         gProof->Process(gSimpleSel.Data(), nevt, testopt[i]);
+         gTimer.Stop();
+      }
+      if (PT_CheckSimple(gProof->GetQueryResult(), nevt, nhist) != 0) {
+          printf("\n >>> Test failure: output handling via file: option '%s'\n", testopt[i]);
+         return -1;
+      }
+      // Count
+      gSimpleCnt++;
+      gSimpleTime += gTimer.RealTime();
+      // Remove file
+      gSystem->Unlink("proofsimple.root");
+   }
+      
+   // Test dataset creationg with a ntuple
+   const char *dsname = "PT_ds_proofsimple";
+   if (gProof->GetQueryResults()) gProof->GetQueryResults()->Clear();
+   if (gProof->ExistsDataSet(dsname)) gProof->RemoveDataSet(dsname);
+
+   // We want the ntuple
+   gProof->SetParameter("ProofSimple_Ntuple", "");
+
+   // Save results to file 'proofsimple.root'
+   PutPoint();
+   {  SwitchProgressGuard spg;
+      gTimer.Start();
+      gProof->Process(gSimpleSel.Data(), nevt, TString::Format("ds=%s|V", dsname));
+      gTimer.Stop();
+   }
+   if (!gProof->ExistsDataSet(dsname)) {
+      printf("\n >>> Test failure: output handling via file: dataset '%s' not created\n", dsname);
+      return -1;
+   }
+
+   // Remove any setting related to submergers
+   gProof->DeleteParameters("PROOF_UseMergers");
+
+   // The runtimes
+   PT_GetLastProofTimes(tt);
+
+   // Check the results
+   PutPoint();
+   return PT_CheckSimpleNtuple(gProof->GetQueryResult(), nevt, dsname);
 }
 
 //_____________________________________________________________________________
@@ -3557,7 +3815,7 @@ Int_t PT_EventRange(void *arg, RunTimes &tt)
 }
 
 //_____________________________________________________________________________
-Int_t PT_POFNtuple(void *submergers, RunTimes &tt)
+Int_t PT_POFNtuple(void *opts, RunTimes &tt)
 {
    // Test TProofOutputFile technology to create a ntuple, with or without
    // submergers
@@ -3569,37 +3827,15 @@ Int_t PT_POFNtuple(void *submergers, RunTimes &tt)
       return -1;
    }
 
+   PT_Option_t *ptopt = (PT_Option_t *) opts;
+   
    // Setup submergers if required
-   if (submergers) {
+   if (ptopt && ptopt->fTwo > 0) {
       gProof->SetParameter("PROOF_UseMergers", 0);
    }
 
    // Output file
-   TString fout = TString::Format("%s/ProofNtuple.root", gSystem->WorkingDirectory());
-   // Cleanup any existing instance of the output file
-   gSystem->Unlink(fout);
-
-   if (!gLocalCluster) {
-      // Setup a local basic xrootd to receive the file
-      Bool_t xrdok = kFALSE;
-      Int_t port = 9000;
-      while (port < 9010) {
-         if (checkXrootdAt(port) != 1) {
-            if (startXrootdAt(port, gSystem->WorkingDirectory(), kTRUE) == 0) {
-               xrdok = kTRUE;
-               break;
-            }
-         }
-         port++;
-      }
-      if (!xrdok) {
-         printf(" >>> PT_POFNtuple: could not start basic xrootd on ports 9000-9009 - skip this test");
-         return 1;
-      }
-      fout.Insert(0, TString::Format("root://%s:%d/", TUrl(gSystem->HostName()).GetHostFQDN(), port));
-      // Make a copy of the files on the master before merging
-      gProof->AddInput(new TNamed("PROOF_OUTPUTFILE_LOCATION", "LOCAL"));
-   }
+   TString fout("<datadir>/ProofNtuple.root");
    gProof->AddInput(new TNamed("PROOF_OUTPUTFILE", fout.Data()));
 
    // We use the 'NtpRndm' for a fixed values of randoms; we need to send over the file
@@ -3649,10 +3885,19 @@ Int_t PT_POFDataset(void *, RunTimes &tt)
       printf("\n >>> Test failure: no PROOF session found\n");
       return -1;
    }
+   
+   const char *dsname = "testNtuple";
+   // Clean-up any existing dataset with that name
+   if (gProof->ExistsDataSet(dsname)) gProof->RemoveDataSet(dsname);
 
    // Ask for registration of the dataset (the default is the the TFileCollection is return
    // without registration; the name of the TFileCollection is the name of the dataset
-   gProof->SetParameter("SimpleNtuple.root","testNtuple");
+   gProof->SetParameter("SimpleNtuple.root", dsname);
+
+   // We use the 'NtpRndm' for a fixed values of randoms; we need to send over the file
+   gProof->SetInputDataFile(gNtpRndm);
+   // Set the related parameter
+   gProof->SetParameter("PROOF_USE_NTP_RNDM","yes");
 
    // Define the number of events and histos
    Long64_t nevt = 1000000;
@@ -3674,6 +3919,8 @@ Int_t PT_POFDataset(void *, RunTimes &tt)
    // Remove any setting related to submergers
    gProof->DeleteParameters("PROOF_NTUPLE_DONT_PLOT");
    gProof->DeleteParameters("SimpleNtuple.root");
+   gProof->DeleteParameters("PROOF_USE_NTP_RNDM");
+   gProof->SetInputDataFile(0);
 
    // The runtimes
    PT_GetLastProofTimes(tt);
@@ -3681,6 +3928,129 @@ Int_t PT_POFDataset(void *, RunTimes &tt)
    // Check the results
    PutPoint();
    return PT_CheckDataset(gProof->GetQueryResult(), nevt);
+}
+
+//_____________________________________________________________________________
+Int_t PT_MultiTrees(void *, RunTimes &tt)
+{
+   // Test processing of multiple trees in the same files
+
+   // Checking arguments
+   PutPoint();
+   if (!gProof) {
+      printf("\n >>> Test failure: no PROOF session found\n");
+      return -1;
+   }
+
+   const char *dsname = "testNtuple";
+   // There must be a dataset 'testNtuple' already registered and validated
+   if (!gProof->ExistsDataSet(dsname)) {
+      printf("\n >>> Test failure: dataset '%s' does not exist\n", dsname);
+      return -1;
+   }
+
+   // Get the associated TFileCollection
+   TFileCollection *fc = gProof->GetDataSet(dsname);
+   if (!fc) {
+      printf("\n >>> Test failure: unable to get TFileCollection for dataset '%s'\n", dsname);
+      return -1;
+   }
+
+   // Now create a TDSet out of the TFileCollection
+   TDSet *dset = new TDSet("testntps", "ntuple", "/", "TTree");
+   TChain *ch1 = new TChain("ntuple");
+   TChain *ch2 = new TChain("ntuple2");
+   TIter nxf(fc->GetList());
+   TFileInfo *fi = 0;
+   while ((fi = (TFileInfo *) nxf())) {
+      dset->Add(fi->GetCurrentUrl()->GetUrl());
+      ch1->Add(fi->GetCurrentUrl()->GetUrl());
+      ch2->Add(fi->GetCurrentUrl()->GetUrl());
+   }
+
+   // Check the ntuple content by filling some histos
+   TH1F *h1s[2] = {0};
+   h1s[0] = new TH1F("h1_1", "3*px+2 with px**2+py**2>1", 50, -15., 15.);
+   h1s[1] = new TH1F("h1_2", "vx**2+vy**2 with abs(vz)<.1", 50, 0., 10.);
+
+   Int_t rch1s = 0;
+   TString emsg;
+   const char *type[3] = { "dsname", "TDSet", "TChain" };
+   for (Int_t j = 0; j < 3; j++) {
+
+      PutPoint();
+
+      if (j == 0) {
+         // Fill the first histo from the first ntuple
+         gProof->SetDataSetTreeName(dsname, "ntuple");
+         {  SwitchProgressGuard spg;
+            gProof->DrawSelect(dsname, "3*px+2>>h1_1", "px*px+py*py>1");
+         }
+         // Fill the second histo from the second ntuple
+         gProof->SetDataSetTreeName(dsname, "ntuple2");
+         {  SwitchProgressGuard spg;
+            gProof->DrawSelect(dsname, "vx*vx+vy*vy>>h1_2", "vz>-0.1&&vz<0.1");
+         }
+      } else if (j == 1) {
+         // Fill the first histo from the first ntuple
+         dset->SetObjName("ntuple");
+         {  SwitchProgressGuard spg;
+            gProof->DrawSelect(dset, "3*px+2>>h1_1", "px*px+py*py>1");
+         }
+         // Fill the second histo from the second ntuple
+         dset->SetObjName("ntuple2");
+         {  SwitchProgressGuard spg;
+            gProof->DrawSelect(dset, "vx*vx+vy*vy>>h1_2", "vz>-0.1&&vz<0.1");
+         }
+      } else {
+         // Fill the first histo from the first ntuple
+         {  SwitchProgressGuard spg;
+            ch1->Draw("3*px+2>>h1_1", "px*px+py*py>1");
+         }
+         // Fill the second histo from the second ntuple
+         {  SwitchProgressGuard spg;
+            ch2->Draw("vx*vx+vy*vy>>h1_2", "vz>-0.1&&vz<0.1");
+         }
+      }
+
+      rch1s = 0;
+      // Check the histogram entries and mean values
+      Int_t hent[2] = { 607700, 96100};
+      Double_t hmea[2] = { 2.022, 1.859};
+      for (Int_t i = 0; i < 2; i++) {
+         if ((Int_t)(h1s[i]->GetEntries()) != hent[i]) {
+            emsg.Form("%s: '%s' histo: wrong number of entries (%d: expected %d)",
+                      type[j], h1s[i]->GetName(), (Int_t)(h1s[i]->GetEntries()), hent[i]);
+            rch1s = -1;
+            break;
+         }
+         if (TMath::Abs((h1s[i]->GetMean() - hmea[i]) / hmea[i]) > 0.001) {
+            emsg.Form("%s: '%s' histo: wrong mean (%f: expected %f)",
+                      type[j], h1s[i]->GetName(), h1s[i]->GetMean(), hmea[i]);
+            rch1s = -1;
+            break;
+         }
+      }
+   }
+
+   // Cleanup
+   for (Int_t i = 0; i < 2; i++) delete h1s[i];
+
+   // Check the result
+   if (rch1s != 0) {
+      printf("\n >>> Test failure: %s\n", emsg.Data());
+      return -1;
+   }
+
+   // Clean-up
+   gProof->RemoveDataSet(dsname);
+
+   // The runtimes
+   PT_GetLastProofTimes(tt);
+
+   // Check the results
+   PutPoint();
+   return rch1s;
 }
 
 //_____________________________________________________________________________
@@ -3801,6 +4171,9 @@ Int_t PT_Friends(void *sf, RunTimes &tt)
 
    // Remove any setting
    gProof->DeleteParameters("PROOF_DONT_PLOT");
+   gProof->GetInputList()->Remove(files);
+   files->SetOwner(kTRUE);
+   SafeDelete(files);
    // Clear the files created by this run
    gProof->ClearData(TProof::kUnregistered | TProof::kForceClear);
 

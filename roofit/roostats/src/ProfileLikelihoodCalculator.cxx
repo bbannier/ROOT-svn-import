@@ -67,6 +67,8 @@ END_HTML
 #include "Math/MinimizerOptions.h"
 //#include "RooProdPdf.h"
 
+using namespace std;
+
 ClassImp(RooStats::ProfileLikelihoodCalculator) ;
 
 using namespace RooFit;
@@ -137,8 +139,9 @@ void  ProfileLikelihoodCalculator::DoGlobalFit() const {
    int level = ROOT::Math::MinimizerOptions::DefaultPrintLevel() -1;// RooFit level starts from  -1
    oocoutP((TObject*)0,Minimization) << "ProfileLikelihoodCalcultor::DoGlobalFit - using " << minimType << " / " << minimAlgo << " with strategy " << strategy << std::endl;
    // do global fit and store fit result for further use 
-   fFitResult = pdf->fitTo(*data, Constrain(*constrainedParams),Strategy(strategy),PrintLevel(level),
-                                  Hesse(kFALSE),Save(kTRUE),Minimizer(minimType,minimAlgo));
+   fFitResult = pdf->fitTo(*data, Constrain(*constrainedParams),ConditionalObservables(fConditionalObs),
+                           Strategy(strategy),PrintLevel(level),
+                           Hesse(kFALSE),Save(kTRUE),Minimizer(minimType,minimAlgo));
   
    // print fit result 
    if (fFitResult) 
@@ -171,8 +174,9 @@ LikelihoodInterval* ProfileLikelihoodCalculator::GetInterval() const {
    RooProfileLL* profile = new RooProfileLL("pll","",*nll, *fPOI);
    profile->addOwnedComponents(*nll) ;  // to avoid memory leak
    */
+   
+   RooAbsReal *  nll = pdf->createNLL(*data, CloneData(kTRUE), Constrain(*constrainedParams),ConditionalObservables(fConditionalObs));
 
-   RooAbsReal* nll = pdf->createNLL(*data, CloneData(kTRUE), Constrain(*constrainedParams));
    RooAbsReal* profile = nll->createProfile(fPOI);
    profile->addOwnedComponents(*nll) ;  // to avoid memory leak
 
@@ -297,7 +301,8 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
       const char * minimAlgo = ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str();
       int level = ROOT::Math::MinimizerOptions::DefaultPrintLevel()-1; // RooFit levels starts from -1
       oocoutP((TObject*)0,Minimization) << "ProfileLikelihoodCalcultor::GetHypoTest - do conditional fit " << std::endl;
-      RooFitResult* fit2 = pdf->fitTo(*data,Constrain(*constrainedParams),Hesse(kFALSE),Strategy(0), Minos(kFALSE),
+      RooFitResult* fit2 = pdf->fitTo(*data,Constrain(*constrainedParams),ConditionalObservables(fConditionalObs), 
+                                      Hesse(kFALSE),Strategy(0), Minos(kFALSE),
                                       Minimizer(minimType,minimAlgo), Save(kTRUE),PrintLevel(level));
      
       // print fit result 
@@ -312,18 +317,25 @@ HypoTestResult* ProfileLikelihoodCalculator::GetHypoTest() const {
    }
    else { 
       // get just the likelihood value (no need to do a fit since the likelihood is a constant function)
-      RooAbsReal* nll = pdf->createNLL(*data, CloneData(kTRUE), Constrain(*constrainedParams));
+      RooAbsReal* nll = pdf->createNLL(*data, CloneData(kTRUE), Constrain(*constrainedParams),ConditionalObservables(fConditionalObs));
       NLLatCondMLE = nll->getVal();
       delete nll;
    }
 
    // Use Wilks' theorem to translate -2 log lambda into a signifcance/p-value
    Double_t deltaNLL = std::max( NLLatCondMLE-NLLatMLE, 0.);
+   
+   // get number of free parameter of interest
+   RemoveConstantParameters(poiList);
+   int ndf = poiList.getSize();
+
+   Double_t pvalue = ROOT::Math::chisquared_cdf_c( 2* deltaNLL, ndf);
+   
+   // in case of one dimenension (1 poi) do the one-sided p-value (need to divide by 2)
+   if (ndf == 1) pvalue = 0.5 * pvalue; 
 
    TString name = TString("ProfileLRHypoTestResult_");// + TString(GetName() ); 
-   HypoTestResult* htr = 
-      new HypoTestResult(name, SignificanceToPValue(sqrt( 2*deltaNLL)), 0 );
-
+   HypoTestResult* htr = new HypoTestResult(name, pvalue, 0 );
 
    // restore previous value of poi
    for (unsigned int i = 0; i < oldValues.size(); ++i) { 

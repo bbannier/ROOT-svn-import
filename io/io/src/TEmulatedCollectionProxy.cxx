@@ -39,7 +39,7 @@
 //
 
 static TStreamerElement* R__CreateEmulatedElement(const char *dmName, const char *dmFull, Int_t offset);
-static TStreamerInfo *R__GenerateTClassForPair(const string &f, const string &s);
+static TStreamerInfo *R__GenerateTClassForPair(const std::string &f, const std::string &s);
 
 TEmulatedCollectionProxy::TEmulatedCollectionProxy(const TEmulatedCollectionProxy& copy)
    : TGenCollectionProxy(copy)
@@ -619,7 +619,7 @@ static TStreamerElement* R__CreateEmulatedElement(const char *dmName, const char
    } else {
 
       static const char *full_string_name = "basic_string<char,char_traits<char>,allocator<char> >";
-      if (strcmp(dmType,"string") == 0 || strcmp(dmType,full_string_name)==0 ) {
+      if (strcmp(dmType,"string") == 0 || strcmp(dmType,"std::string") == 0 || strcmp(dmType,full_string_name)==0 ) {
          return new TStreamerSTLstring(dmName,dmTitle,offset,dmFull,dmIsPtr);
       }
       if (TClassEdit::IsSTLCont(dmType)) {
@@ -652,9 +652,9 @@ static TStreamerElement* R__CreateEmulatedElement(const char *dmName, const char
 }
 
 
-static TStreamerInfo *R__GenerateTClassForPair(const string &fname, const string &sname)
+static TStreamerInfo *R__GenerateTClassForPair(const std::string &fname, const std::string &sname)
 {
-   // Generate a TStreamerInfo for a pair<fname,sname>
+   // Generate a TStreamerInfo for a std::pair<fname,sname>
    // This TStreamerInfo is then used as if it was read from a file to generate
    // and emulated TClass.
    
@@ -671,9 +671,6 @@ static TStreamerInfo *R__GenerateTClassForPair(const string &fname, const string
       
       size = fel->GetSize();
       Int_t sp = sizeof(void *);
-#if defined(R__SGI64)
-      sp = 8;
-#endif
       //align the non-basic data types (required on alpha and IRIX!!)
       if (size%sp != 0) size = size - size%sp + sp;
    } else {

@@ -26,16 +26,26 @@
 #include <map>
 #include "llvm/ADT/StringRef.h"
 
+namespace cling {
+   class Interpreter;
+}
+
 class SelectionRules;
 class PragmaCreateCollector;
 class PragmaLinkCollector;
+class LinkdefReaderPragmaHandler;
+class PragmaExtraInclude;
 
 class LinkdefReader 
 {
+public:
+   typedef void (*IOCtorTypeCallback)(const char *type);
 private:
    long fLine;  // lines count - for error messages
    long fCount; // Number of rules created so far.
-   SelectionRules *fSelectionRules; // set of rules being filleed.
+   SelectionRules    *fSelectionRules;     // set of rules being filleed.
+   std::string        fIncludes;           // Extra set of file to be included by the intepreter.
+   IOCtorTypeCallback fIOCtorTypeCallback; // List of values of #pragma ioctortype
 private:
 
    enum EPragmaNames { // the processed pragma attributes
@@ -46,9 +56,12 @@ private:
       kFunction,
       kEnum,
       kClass,
+      kNamespace,
       kUnion,
       kStruct,
       kOperators,
+      kIOCtorType,
+      kIgnore,
       kUnknown
   };
 
@@ -67,17 +80,25 @@ private:
 
    friend class PragmaCreateCollector;
    friend class PragmaLinkCollector;
-   
+   friend class LinkdefReaderPragmaHandler;
+   friend class PragmaExtraInclude;
+
 public:
    LinkdefReader();
+
+   bool LoadIncludes(cling::Interpreter &interp, std::string &extraInclude); 
+   void SetIOCtorTypeCallback(IOCtorTypeCallback callback);
 
    bool Parse(SelectionRules& sr, llvm::StringRef code, const std::vector<std::string> &parserArgs, const char *llvmdir);
    
 private:
    static void PopulatePragmaMap();
    static void PopulateCppMap();
-   
-   bool AddRule(std::string ruletype, std::string identifier, bool linkOn, bool requestOnlyTClass);
+
+   struct Options;
+
+   bool AddInclude(std::string include);
+   bool AddRule(std::string ruletype, std::string identifier, bool linkOn, bool requestOnlyTClass, Options *option = 0);
    
    bool ProcessFunctionPrototype(std::string& proto, bool& name); // transforms the function prototypes to a more unified form
    bool ProcessOperators(std::string& pattern); // transforms the operators statement to the suitable function pattern

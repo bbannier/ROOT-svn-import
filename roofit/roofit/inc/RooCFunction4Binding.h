@@ -14,6 +14,9 @@
 #define ROOCFUNCTION4BINDING
 
 #include "TString.h"
+#ifndef ROOT_RConfigure
+#include "RConfigure.h"
+#endif
 #include "RooAbsReal.h"
 #include "RooAbsPdf.h"
 #include "RooRealProxy.h"
@@ -28,8 +31,10 @@ typedef Double_t (*CFUNCD4DDDD)(Double_t,Double_t,Double_t,Double_t) ;
 typedef Double_t (*CFUNCD4DDDI)(Double_t,Double_t,Double_t,Int_t) ;
 typedef Double_t (*CFUNCD4DDDB)(Double_t,Double_t,Double_t,Bool_t) ;
 
+#ifndef R__HAS_CLING
 RooAbsReal* bindFunction(const char* name,void* func,RooAbsReal& x, RooAbsReal& y, RooAbsReal& z, RooAbsReal& w) ;
 RooAbsPdf* bindPdf(const char* name,void* func,RooAbsReal& x, RooAbsReal& y, RooAbsReal& z, RooAbsReal& w) ;
+#endif
 #ifndef __CINT__
 RooAbsReal* bindFunction(const char* name,CFUNCD4DDDD func,RooAbsReal& x, RooAbsReal& y, RooAbsReal& z, RooAbsReal& w) ;
 RooAbsReal* bindFunction(const char* name,CFUNCD4DDDI func,RooAbsReal& x, RooAbsReal& y, RooAbsReal& z, RooAbsReal& w) ;
@@ -182,7 +187,7 @@ void RooCFunction4Ref<VO,VI1,VI2,VI3,VI4>::Streamer(TBuffer &R__b)
 
      if (tmpName=="UNKNOWN" && R__v>0) {
 
-       coutW(ObjectHandling) << "WARNING: Objected embeds function pointer to unknown function, object will not be functional" << endl ;
+       coutW(ObjectHandling) << "WARNING: Objected embeds function pointer to unknown function, object will not be functional" << std::endl ;
        _ptr = dummyFunction ;
 
      } else {
@@ -192,7 +197,7 @@ void RooCFunction4Ref<VO,VI1,VI2,VI3,VI4>::Streamer(TBuffer &R__b)
 
        if (_ptr==0) {
 	 coutW(ObjectHandling) << "ERROR: Objected embeds pointer to function named " << tmpName
-			       << " but no such function is registered, object will not be functional" << endl ;
+			       << " but no such function is registered, object will not be functional" << std::endl ;
        }
      }
 
@@ -208,7 +213,7 @@ void RooCFunction4Ref<VO,VI1,VI2,VI3,VI4>::Streamer(TBuffer &R__b)
      TString tmpName = fmap().lookupName(_ptr) ;
      if (tmpName.Length()==0) {
        coutW(ObjectHandling) << "WARNING: Cannot persist unknown function pointer " << Form("0x%lx",(ULong_t)_ptr)
-			     << " written object will not be functional when read back" <<  endl ;
+			     << " written object will not be functional when read back" <<  std::endl ;
        tmpName="UNKNOWN" ;
      }
 
@@ -233,7 +238,7 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooCFunction4Binding(*this,newname); }
   inline virtual ~RooCFunction4Binding() { }
 
-  void printArgs(ostream& os) const {
+  void printArgs(std::ostream& os) const {
     // Print object arguments and name/address of function pointer
     os << "[ function=" << func.name() << " " ;
     for (Int_t i=0 ; i<numProxies() ; i++) {
@@ -306,7 +311,7 @@ public:
   virtual TObject* clone(const char* newname) const { return new RooCFunction4PdfBinding(*this,newname); }
   inline virtual ~RooCFunction4PdfBinding() { }
 
-  void printArgs(ostream& os) const {
+  void printArgs(std::ostream& os) const {
     // Print object arguments and name/address of function pointer
     os << "[ function=" << func.name() << " " ;
     for (Int_t i=0 ; i<numProxies() ; i++) {

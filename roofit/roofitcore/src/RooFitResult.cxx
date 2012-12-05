@@ -56,6 +56,8 @@
 
 
 
+using namespace std;
+
 ClassImp(RooFitResult) 
 ;
 
@@ -606,7 +608,7 @@ void RooFitResult::fillCorrMatrix(const std::vector<double>& globalCC, const TMa
   for(int i=0 ; i<_CM->GetNcols() ; i++) {
     (*_GC)[i] = globalCC[i] ;
   }
-  fillLegacyCorrMatrix() ;
+  //fillLegacyCorrMatrix() ;
 }
 
 

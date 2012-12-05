@@ -127,6 +127,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
    fWorkDir = "";
    fMUWorkDir = "";
    fSuperMst = 0;
+   fRemotePLite = 0;
    fNamespace = "/proofpool";
    fMastersAllowed.clear();
    fOperationMode = kXPD_OpModeOpen;
@@ -137,6 +138,7 @@ XrdProofdManager::XrdProofdManager(XrdProtocol_Config *pi, XrdSysError *edest)
    // Data dir
    fDataDir = "";        // Default <workdir>/<user>/data
    fDataDirOpts = "";    // Default: no action
+   fDataDirUrlOpts = ""; // Default: none
 
    // Rootd file serving enabled by default in readonly mode
    fRootdExe = "<>";
@@ -540,38 +542,87 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps,
    }
 
    // Query the scheduler for the list of workers
-   std::list<XrdProofWorker *> wrks;
+   std::list<XrdProofWorker *> wrks, uwrks;
    if ((rc = fProofSched->GetWorkers(xps, &wrks, query)) < 0) {
       TRACE(XERR, "error getting list of workers from the scheduler");
       return -1;
    }
+   std::list<XrdProofWorker *>::iterator iw, iaw;
    // If we got a new list we save it into the session object
    if (rc == 0) {
 
       TRACE(DBG, "list size: " << wrks.size());
-
-      // The full list
+      
       XrdOucString ord;
       int ii = -1;
-      std::list<XrdProofWorker *>::iterator iw;
-      for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
-         XrdProofWorker *w = *iw;
-         // Count (fActive is increased inside here)
-         if (ii == -1)
-            ord = "master";
-         else
-            XPDFORM(ord, "%d", ii);
-         ii++;
-         xps->AddWorker(ord.c_str(), w);
-         // Add proofserv and increase the counter
-         w->AddProofServ(xps);
+      // If in remote PLite mode, we need to isolate the number of workers
+      // per unique node
+      if (fRemotePLite) {
+         for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
+            XrdProofWorker *w = *iw;
+            // Do we have it already in the unique list?
+            bool isnew = 1;
+            for (iaw = uwrks.begin(); iaw != uwrks.end() ; iaw++) {
+               XrdProofWorker *uw = *iaw;
+               if (w->fHost == uw->fHost && w->fPort == uw->fPort) {
+                  uw->fNwrks += 1;
+                  isnew = 0;
+                  break;
+               }
+            }
+            if (isnew) {
+               // Count (fActive is increased inside here)
+               if (ii == -1) {
+                  ord = "master";
+               } else {
+                  XPDFORM(ord, "%d", ii);
+               }
+               ii++;
+               XrdProofWorker *uw = new XrdProofWorker(*w);
+               uw->fType = 'S';
+               uw->fOrd = ord;
+               uwrks.push_back(uw);
+               // Setup connection with the proofserv using the original 
+               xps->AddWorker(ord.c_str(), w);
+               w->AddProofServ(xps);
+            }
+         }
+         for (iw = uwrks.begin(); iw != uwrks.end() ; iw++) {
+            XrdProofWorker *w = *iw;
+            // Master at the beginning
+            if (w->fType == 'M') {
+               if (lw.length() > 0) lw.insert('&',0);
+               lw.insert(w->Export(), 0);
+            } else {
+               // Add separator if not the first
+               if (lw.length() > 0) lw += '&';
+               // Add export version of the info
+               lw += w->Export(0);
+            }
+         }         
+
+      } else {
+
+         // The full list
+         for (iw = wrks.begin(); iw != wrks.end() ; iw++) {
+            XrdProofWorker *w = *iw;
+            // Count (fActive is increased inside here)
+            if (ii == -1)
+               ord = "master";
+            else
+               XPDFORM(ord, "%d", ii);
+            ii++;
+            xps->AddWorker(ord.c_str(), w);
+            // Add proofserv and increase the counter
+            w->AddProofServ(xps);
+         }
       }
    }
 
    int proto = (xps->ROOT()) ? xps->ROOT()->SrvProtVers() : -1;
    if (rc != 2 || (proto < 21 && rc == 0)) {
       // Get the list in exported format
-      xps->ExportWorkers(lw);
+      if (lw.length() <= 0) xps->ExportWorkers(lw);
       TRACE(DBG, "from ExportWorkers: " << lw);
    } else if (proto >= 21) {
       // Signal enqueing
@@ -579,6 +630,16 @@ int XrdProofdManager::GetWorkers(XrdOucString &lw, XrdProofdProofServ *xps,
    }
 
    if (TRACING(REQ)) fNetMgr->Dump();
+
+   // Clear the temp list
+   if (uwrks.size() > 0) {
+      iw = uwrks.begin();
+      while (iw != uwrks.end()) {
+         XrdProofWorker *w = *iw;
+         iw = uwrks.erase(iw);
+         delete w;
+      }
+   }
 
    return rc;
 }
@@ -750,20 +811,23 @@ int XrdProofdManager::Config(bool rcf)
 
    // Data directory, if specified
    if (fDataDir.length() > 0) {
-      // Make sure it exists
-      if (XrdProofdAux::AssertDir(fDataDir.c_str(), ui, fChangeOwn) != 0) {
-         XPDERR("unable to assert data dir: " << fDataDir);
-         return -1;
-      }
-      // Get the right privileges now
-      XrdSysPrivGuard pGuard((uid_t)ui.fUid, (gid_t)ui.fGid);
-      if (XpdBadPGuard(pGuard, ui.fUid)) {
-         TRACE(XERR, "could not get privileges to set/change ownership of " << fDataDir);
-         return -1;
-      }
-      if (chmod(fDataDir.c_str(), 0777) != 0) {
-         XPDERR("problems setting permissions 0777 data dir: " << fDataDir);
-         return -1;
+      if (fDataDir.endswith('/')) fDataDir.erasefromend(1);
+      if (fDataDirOpts.length() > 0) {
+         // Make sure it exists
+         if (XrdProofdAux::AssertDir(fDataDir.c_str(), ui, fChangeOwn) != 0) {
+            XPDERR("unable to assert data dir: " << fDataDir << " (opts: "<<fDataDirOpts<<")");
+            return -1;
+         }
+         // Get the right privileges now
+         XrdSysPrivGuard pGuard((uid_t)ui.fUid, (gid_t)ui.fGid);
+         if (XpdBadPGuard(pGuard, ui.fUid)) {
+            TRACE(XERR, "could not get privileges to set/change ownership of " << fDataDir);
+            return -1;
+         }
+         if (chmod(fDataDir.c_str(), 0777) != 0) {
+            XPDERR("problems setting permissions 0777 data dir: " << fDataDir);
+            return -1;
+         }
       }
       TRACE(ALL, "data directories under: " << fDataDir);
    }
@@ -799,6 +863,10 @@ int XrdProofdManager::Config(bool rcf)
       const char *st[] = { "disabled", "enabled" };
       TRACE(ALL, "user config files are " << st[fNetMgr->WorkerUsrCfg()]);
    }
+
+   // If using the PLite optimization notify it
+   if (fRemotePLite)
+      TRACE(ALL, "multi-process on nodes handled with proof-lite");
 
    // Validate dataset sources (if not worker)
    fDataSetExp = "";
@@ -1113,6 +1181,7 @@ bool XrdProofdManager::ValidateLocalDataSetSrc(XrdOucString &url, bool &local)
                if (!flck) {
                   TRACE(XERR, "Cannot open file '" << fnpath << "' with the lock file path; errno: " << errno);
                } else {
+                  errno = 0;
                   off_t ofs = lseek(fileno(flck), 0, SEEK_CUR);
                   if (ofs == 0) {
                      // New file: write the default lock file path
@@ -1123,13 +1192,15 @@ bool XrdProofdManager::ValidateLocalDataSetSrc(XrdOucString &url, bool &local)
                      fprintf(flck, "%s\n", fnlock.c_str());
                      if (fclose(flck) != 0)
                         TRACE(XERR, "Problems closing file '" << fnpath << "'; errno: " << errno);
+                     flck = 0;
                      if (XrdProofdAux::ChangeOwn(fnpath.c_str(), ui) != 0) {
                         TRACE(XERR, "Problems asserting ownership of " << fnpath);
                      }
-                  } else if (ofs != (off_t)(-1)) {
+                  } else if (ofs == (off_t)(-1)) {
                      TRACE(XERR, "Problems getting current position on file '" << fnpath << "'; errno: " << errno);
                   }
-                  fclose(flck);
+                  if (flck && fclose(flck) != 0)
+                     TRACE(XERR, "Problems closing file '" << fnpath << "'; errno: " << errno);
                }
             }
             // Make sure that everybody can modify the file for updates
@@ -1173,6 +1244,7 @@ void XrdProofdManager::RegisterDirectives()
    Register("image", new XrdProofdDirective("image", (void *)&fImage, &DoDirectiveString));
    Register("workdir", new XrdProofdDirective("workdir", (void *)&fWorkDir, &DoDirectiveString));
    Register("sockpathdir", new XrdProofdDirective("sockpathdir", (void *)&fSockPathDir, &DoDirectiveString));
+   Register("remoteplite", new XrdProofdDirective("remoteplite", (void *)&fRemotePLite, &DoDirectiveInt));
 }
 
 //______________________________________________________________________________
@@ -1187,6 +1259,7 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
    //     <group>            user group
    //     <uid>              user ID
    //     <gid>              user group ID
+   //     <effuser>          effective user name (for multiuser or user mapping modes)
    // Return the number of keywords resolved.
    XPDLOC(ALL, "Manager::ResolveKeywords")
 
@@ -1212,6 +1285,15 @@ int XrdProofdManager::ResolveKeywords(XrdOucString &s, XrdProofdClient *pcl)
       sport += Port();
       if (s.replace("<port>", sport.c_str()))
          nk++;
+   }
+
+   // Parse <effuser> of the process
+   if (s.find("<effuser>") != STR_NPOS) {
+      XrdProofUI eui;
+      if (XrdProofdAux::GetUserInfo(geteuid(), eui) == 0) {
+         if (s.replace("<effuser>", eui.fUser.c_str()))
+            nk++;
+      }
    }
 
    // Parse <user>
@@ -1683,12 +1765,20 @@ int XrdProofdManager::DoDirectiveDataDir(char *val, XrdOucStream *cfg, bool)
 
    // Data directory and write permissions
    fDataDir = val;
+   fDataDirOpts = "";
+   fDataDirUrlOpts = "";
    XrdOucString opts;
    char *nxt = 0;
    while ((nxt = cfg->GetWord()) && (opts.length() == 0)) {
       opts = nxt;
    }
    if (opts.length() > 0) fDataDirOpts = opts;
+   // Check if URL type options have been spcified in the main url
+   int iq = STR_NPOS;
+   if ((iq = fDataDir.rfind('?')) != STR_NPOS) {
+      fDataDirUrlOpts.assign(fDataDir, iq + 1);
+      fDataDir.erase(iq);
+   }
 
    // Done
    return 0;

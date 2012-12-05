@@ -10,10 +10,40 @@
 #include "Rstrstream.h"
 #include <set>
 
+#ifndef R__HAS_CLING
 // CINT's API.
 #include "Api.h"
+#else
+#include "llvm/ADT/SmallSet.h"
+
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Type.h"
+
+#include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/LookupHelper.h"
+#include "cling/Utils/AST.h"
+
+#include "TMetaUtils.h"
+
+namespace {
+   static cling::Interpreter *gInterpreter = 0;
+   ROOT::TMetaUtils::TNormalizedCtxt *gNormalizedCtxt = 0;
+}
+
+#endif
 
 namespace std {} using namespace std;
+
+#ifndef R__HAS_CLING
+#else
+//______________________________________________________________________________
+void TClassEdit::Init(cling::Interpreter &interpreter,ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
+{
+   gInterpreter = &interpreter;
+   gNormalizedCtxt = &normCtxt;
+}
+#endif
 
 //______________________________________________________________________________
 TClassEdit::TSplitType::TSplitType(const char *type2split, EModType mode) : fName(type2split), fNestedLocation(0)
@@ -84,7 +114,7 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
    // if (mode&2) remove default allocators from STL containers
    // if (mode&4) remove all     allocators from STL containers
    // if (mode&8) return inner class of stl container. list<innerClass>
-   // if (mode&16) return deapest class of stl container. vector<list<deapest>>
+   // if (mode&16) return deepest class of stl container. vector<list<deepest>>
    // if (mode&kDropAllDefault) remove default template arguments
    /////////////////////////////////////////////////////////////////////////////
 
@@ -100,7 +130,13 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
    //      {for (int i=0;i<narg;i++) fprintf(stderr,"calling ShortType %d for %s with %d %s \n",
    //                                        mode,typeDesc,i,arglist[i].c_str());
    //      }
-   if (fElements[narg-1].empty() == false && fElements[narg-1][0]=='*') {
+   if (fElements[narg-1].empty() == false &&
+       (fElements[narg-1][0]=='*' 
+        || fElements[narg-1][0]=='&' 
+        || 0 == fElements[narg-1].compare(0,6,"const*") 
+        || 0 == fElements[narg-1].compare(0,6,"const&") 
+        )
+       ) {
       if ((mode&1)==0) tailLoc = narg-1;
       narg--;
    }
@@ -198,9 +234,12 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
    //   do the same for all inside
    for (int i=1;i<narg; i++) {
       if (strchr(fElements[i].c_str(),'<')==0) {
-         if (mode&kDropStd && strncmp( fElements[i].c_str(), "std::", 5) == 0) {
-            fElements[i].erase(0,5);
-         }         
+         if (mode&kDropStd) {
+            unsigned int offset = (0==strncmp("const ",fElements[i].c_str(),6)) ? 6 : 0;
+            if (strncmp( fElements[i].c_str() + offset, "std::", 5) == 0) {
+               fElements[i].erase(offset,5);
+            }
+         }
          continue;
       }
       bool hasconst = 0==strncmp("const ",fElements[i].c_str(),6);
@@ -218,19 +257,43 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
       std::string nonDefName = answ;
       // "superlong" because tLong might turn fName into an even longer name
       std::string nameSuperLong = fName;
+#ifndef R__HAS_CLING
       G__TypedefInfo td;
       td.Init(nameSuperLong.c_str());
       if (td.IsValid())
          nameSuperLong = td.TrueName();
+#else
+      if (gInterpreter) {
+         const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
+         clang::QualType t = lh.findType(nameSuperLong);
+         if (!t.isNull()) {
+            clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gNormalizedCtxt->GetTypeToSkip(), true /* fully qualify */);
+            if (!dest.isNull() && (dest != t)) 
+               dest.getAsStringInternal(nameSuperLong,gInterpreter->getCI()->getASTContext().getPrintingPolicy());
+         }
+      }
+#endif
       while (++nargNonDefault < narg) {
          // If T<a> is a "typedef" (aka default template params)
          // to T<a,b> then we can strip the "b".
          const char* closeTemplate = " >";
          if (nonDefName[nonDefName.length() - 1] != '>')
             ++closeTemplate;
+#ifndef R__HAS_CLING
          td.Init((nonDefName + closeTemplate).c_str());
          if (td.IsValid() && nameSuperLong == td.TrueName())
             break;
+#else
+         if (gInterpreter) {
+            const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
+            clang::QualType t = lh.findType((nonDefName + closeTemplate).c_str());
+            if (!t.isNull()) {
+               clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gNormalizedCtxt->GetTypeToSkip(), true /* fully qualify */);
+               if ( !dest.isNull() && (dest!=t) && nameSuperLong == t.getAsString(gInterpreter->getCI()->getASTContext().getPrintingPolicy()) )
+                  break;
+            }
+         }
+#endif
          if (nargNonDefault>1) nonDefName += ",";
          nonDefName += fElements[nargNonDefault];
       }
@@ -470,8 +533,12 @@ int TClassEdit::GetSplit(const char *type, vector<string>& output, int &nestedLo
    output.clear();
    if (strlen(type)==0) return 0;
   
-   string full( mode & kLong64 ? TClassEdit::GetLong64_Name( CleanType(type, 1 /* keepInnerConst */) )
-               : CleanType(type, 1 /* keepInnerConst */) );
+   int cleantypeMode = 1 /* keepInnerConst */;
+   if (mode & kKeepOuterConst) {
+      cleantypeMode = 0; /* remove only the outer class keyword */
+   }
+   string full( mode & kLong64 ? TClassEdit::GetLong64_Name( CleanType(type, cleantypeMode) )
+               : CleanType(type, cleantypeMode) );
    if ( mode & kDropStd && strncmp( full.c_str(), "std::", 5) == 0) {
       full.erase(0,5);
    }
@@ -482,11 +549,43 @@ int TClassEdit::GetSplit(const char *type, vector<string>& output, int &nestedLo
    const unsigned int tlen( full.size() );
    if ( tlen > 0 ) {
       const char *starloc = t + tlen - 1;
-      if ( (*starloc)=='*' ) {
-         while( (*(starloc-1))=='*' ) { starloc--; }
+      bool hasconst = false;
+      if ( (*starloc)=='t' 
+          && (starloc-t) > 5 && 0 == strncmp((starloc-5),"const",5) 
+          && ( (*(starloc-6)) == ' ' || (*(starloc-6)) == '*' || (*(starloc-6)) == '&') ) {
+         // we are ending on a const.
+         starloc -= 4;
+         if ((*starloc-1)==' ') {
+            // Take the space too.
+            starloc--;
+         }
+         hasconst = true;
+      }
+      if ( hasconst || (*starloc)=='*' || (*starloc)=='&' ) {
+         while( (*(starloc-1))=='*' || (*(starloc-1))=='&' || (*(starloc-1))=='t') { 
+            if ( (*(starloc-1))=='t' ) {
+               if ( (starloc-1-t) > 5 && 0 == strncmp((starloc-5),"const",5)
+                   && ( (*(starloc-6)) == ' ' || (*(starloc-6)) == '*' || (*(starloc-6)) == '&') ) {
+                  // we have a const.
+                  starloc -= 5;
+                  if ((*starloc-1)==' ') {
+                     // Take the space too.
+                     starloc--;
+                  }
+               } else {
+                  break;
+               }
+            } else {
+               starloc--;
+            }
+         }
          stars = starloc;
          const unsigned int starlen = strlen(starloc);
          full.erase(tlen-starlen,starlen);
+      } else if (hasconst) {
+         stars = starloc;
+         const unsigned int starlen = strlen(starloc);
+         full.erase(tlen-starlen,starlen);         
       }
    }
 
@@ -599,7 +698,7 @@ string TClassEdit::CleanType(const char *typeDesc, int mode, const char **tail)
       
       if (*c == '<')   lev++;
       if (lev==0 && !isalnum(*c)) {
-         if (!strchr("*:_$ []-@",*c)) break;
+         if (!strchr("*&:_$ []-@",*c)) break;
       }
       if (c[0]=='>' && result.size() && result[result.size()-1]=='>') result+=" ";
 
@@ -700,10 +799,13 @@ namespace {
       // This helper function indicates whether we really want to replace
       // a type.
 
+      // In cling, looking up 'unsigned' by itself will point to a type
+      // 'unsigned int' ... so because of the simplistic parsing of ResolveTypedef
+      // this is cause 'unsigned int' (as input) to be replace with 'unsigned int int'
       const char *excludelist [] = {"Char_t","Short_t","Int_t","Long_t","Float_t",
                                     "Int_t","Double_t","Double32_t","Float16_t",
                                     "UChar_t","UShort_t","UInt_t","ULong_t","UInt_t",
-                                    "Long64_t","ULong64_t","Bool_t"};
+                                    "Long64_t","ULong64_t","Bool_t","unsigned"};
 
       for (unsigned int i=0; i < sizeof(excludelist)/sizeof(excludelist[0]); ++i) {
          if (strcmp(name,excludelist[i])==0) return false;
@@ -733,6 +835,8 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
          int slen = strlen(tname);
          for(int k=0;k<slen;++k) {
             if (tname[k]==':') {
+               // NOTE: there is a missing increment of k, which means that 
+               // this next steps prevents to look at typedef define in a scope.
                if (k+1>=slen || tname[k+1]!=':') {
                   // we expected another ':'
                   return tname;
@@ -744,12 +848,24 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
                      tname += 5;
                      break;
                   } else {
+#ifndef R__HAS_CLING
                      G__ClassInfo info(base.c_str());
                      if (!info.IsLoaded()) {
                         // the nesting namespace is not declared
                         return tname;
                      }
+#else
+                     if (gInterpreter) {
+                        const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
+                        if (!lh.findScope(base.c_str(),0)) {                        
+                           // the nesting namespace is not declared
+                           return tname;
+                        }
+                     }
+#endif
                   }
+                  // Consume the 2nd semi colon
+                  ++k;
                }
             }
          }
@@ -758,9 +874,35 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
       // We have a very simple type
 
       if (resolveAll || ShouldReplace(tname)) {
+#ifndef R__HAS_CLING
          G__TypedefInfo t;
          t.Init(tname);
          if (t.IsValid()) return t.TrueName();
+#else
+         if (gInterpreter) {
+            const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
+            clang::QualType t = lh.findType(tname);
+            if (!t.isNull()) {
+               clang::QualType dest = cling::utils::Transform::GetPartiallyDesugaredType(gInterpreter->getCI()->getASTContext(), t, gNormalizedCtxt->GetTypeToSkip(), true /* fully qualify */);
+               if (!dest.isNull() && dest != t ) {
+                  clang::PrintingPolicy policy(gInterpreter->getCI()->getASTContext().getPrintingPolicy());
+                  policy.SuppressTagKeyword = true; // Never get the class or struct keyword
+                  policy.SuppressScope = true;      // Force the scope to be coming from a clang::ElaboratedType.
+                  // The scope suppression is required for getting rid of the anonymous part of the name of a class defined in an anonymous namespace.
+                  // This gives us more control vs not using the clang::ElaboratedType and relying on the Policy.SuppressUnwrittenScope which would
+                  // strip both the anonymous and the inline namespace names (and we probably do not want the later to be suppressed).
+                  string result;
+                  dest.getAsStringInternal(result,policy);
+                  // Strip the std::
+                  if ( strncmp(result.c_str(), "std::", 5) == 0) {
+                     return result.substr(5);
+                  } else {
+                     return result;
+                  }
+               }
+            }
+         }
+#endif
       }
       return tname;
    }
@@ -776,9 +918,26 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
 #endif
 
    int prev = 0;
-   for (int i=0; i<len; ++i) {
+   if (len > 5 && strncmp(tname,"std::",5) == 0) {
+      prev = 5;
+   }
+   for (int i=prev; i<len; ++i) {
       switch (tname[i]) {
-         case '<':
+         case ':': {
+           if ( strncmp(tname+prev,"std::",5) == 0 ) {
+              prev += 5;
+              ++i;
+           }
+           break;
+         }
+         case '<': {
+           char keep = input[i];
+           string temp( input, prev,i-prev );
+	   answ << temp;
+           answ << keep;
+           prev = i+1;
+           break; // We do not have a complete type yet.
+         }
          case '>':
          case '*':
          case ' ':

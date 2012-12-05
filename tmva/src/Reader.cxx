@@ -324,7 +324,7 @@ TString TMVA::Reader::GetMethodTypeFromFile( const TString& filename )
 {
    // read the method type from the file
 
-   ifstream fin( filename );
+   std::ifstream fin( filename );
    if (!fin.good()) { // file not found --> Error
       Log() << kFATAL << "<BookMVA> fatal error: "
             << "unable to open input weight file: " << filename << Endl;
@@ -333,7 +333,11 @@ TString TMVA::Reader::GetMethodTypeFromFile( const TString& filename )
    TString fullMethodName("");
    if (filename.EndsWith(".xml")) {
       fin.close();
-      void* doc      = gTools().xmlengine().ParseFile(filename);// the default buffer size in TXMLEngine::ParseFile is 100k. Starting with ROOT 5.29 one can set the buffer size, see: http://savannah.cern.ch/bugs/?78864. This might be necessary for large XML files
+#if ROOT_VERSION_CODE >= ROOT_VERSION(5,29,0)
+      void* doc      = gTools().xmlengine().ParseFile(filename,gTools().xmlenginebuffersize());// the default buffer size in TXMLEngine::ParseFile is 100k. Starting with ROOT 5.29 one can set the buffer size, see: http://savannah.cern.ch/bugs/?78864. This might be necessary for large XML files
+#else
+      void* doc      = gTools().xmlengine().ParseFile(filename);
+#endif
       void* rootnode = gTools().xmlengine().DocGetRootElement(doc); // node "MethodSetup"
       gTools().ReadAttr(rootnode, "Method", fullMethodName);
       gTools().xmlengine().FreeDoc(doc);
@@ -459,7 +463,7 @@ TMVA::IMethod* TMVA::Reader::BookMVA( TMVA::Types::EMVA methodType, const char* 
 //_______________________________________________________________________
 Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const TString& methodTag, Double_t aux )
 {
-   // Evaluate a vector<float> of input data for a given method
+   // Evaluate a std::vector<float> of input data for a given method
    // The parameter aux is obligatory for the cuts method where it represents the efficiency cutoff
 
    // create a temporary event from the vector.
@@ -483,7 +487,7 @@ Double_t TMVA::Reader::EvaluateMVA( const std::vector<Float_t>& inputVec, const 
 //_______________________________________________________________________
 Double_t TMVA::Reader::EvaluateMVA( const std::vector<Double_t>& inputVec, const TString& methodTag, Double_t aux )
 {
-   // Evaluate a vector<double> of input data for a given method
+   // Evaluate a std::vector<double> of input data for a given method
    // The parameter aux is obligatory for the cuts method where it represents the efficiency cutoff
 
    // performs a copy to float values which are internally used by all methods

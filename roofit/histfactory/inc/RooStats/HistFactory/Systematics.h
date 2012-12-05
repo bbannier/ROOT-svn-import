@@ -1,3 +1,12 @@
+// @(#)root/roostats:$Id$
+// Author: George Lewis, Kyle Cranmer
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
 
 #ifndef HISTFACTORY_SYSTEMATICS_H
 #define HISTFACTORY_SYSTEMATICS_H
@@ -16,7 +25,7 @@ namespace RooStats{
 namespace HistFactory {
 
 
-  namespace Constraint{
+  namespace Constraint {
     enum Type{ Gaussian, Poisson };            
     std::string Name( Type type ); 
     Type GetType( std::string Name );
@@ -87,8 +96,8 @@ namespace HistFactory {
     //friend class Channel;
 
 
-    HistoSys() : fhLow(NULL), fhHigh(NULL ) {;}
-
+    HistoSys() : fhLow(NULL), fhHigh(NULL) {;}
+    HistoSys(const std::string& Name) : fName(Name), fhLow(NULL), fhHigh(NULL) {;}
 
     void Print(std::ostream& = std::cout);  
     void writeToFile( std::string FileName, std::string DirName );

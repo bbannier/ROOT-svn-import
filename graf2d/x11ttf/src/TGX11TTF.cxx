@@ -25,6 +25,9 @@
 
 #include <stdlib.h>
 
+#  include <ft2build.h>
+#  include FT_FREETYPE_H
+#  include FT_GLYPH_H
 #include "TGX11TTF.h"
 #include "TClass.h"
 #include "TEnv.h"
@@ -351,6 +354,25 @@ void TGX11TTF::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn,
 }
 
 //______________________________________________________________________________
+void TGX11TTF::DrawText(Int_t x, Int_t y, Float_t angle, Float_t mgn,
+                        const wchar_t *text, ETextMode mode)
+{
+   // Draw text using TrueType fonts. If TrueType fonts are not available the
+   // text is drawn with TGX11::DrawText.
+
+   if (!fHasTTFonts) {
+      TGX11::DrawText(x, y, angle, mgn, text, mode);
+   } else {
+      if (!TTF::fgInit) TTF::Init();
+      TTF::SetRotationMatrix(angle);
+      TTF::PrepareString(text);
+      TTF::LayoutGlyphs();
+      Align();
+      RenderString(x, y, mode);
+   }
+}
+
+//______________________________________________________________________________
 XImage *TGX11TTF::GetBackground(Int_t x, Int_t y, UInt_t w, UInt_t h)
 {
    // Get the background of the current window in an XImage.
@@ -393,7 +415,13 @@ Bool_t TGX11TTF::IsVisible(Int_t x, Int_t y, UInt_t w, UInt_t h)
    // If string falls outside window, there is probably no need to draw it.
    if (x + (int)w <= 0 || x >= (int)width)  return kFALSE;
    if (y + (int)h <= 0 || y >= (int)height) return kFALSE;
-
+   
+   // If w or h are much larger than the window size, there is probably no need
+   // to draw it. Moreover a to large text size may produce a Seg Fault in
+   // malloc in RenderString.
+   if (w > 10*width)  return kFALSE;
+   if (h > 10*height) return kFALSE;
+   
    return kTRUE;
 }
 

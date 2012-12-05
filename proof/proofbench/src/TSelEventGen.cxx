@@ -357,24 +357,12 @@ Bool_t TSelEventGen::Process(Long64_t entry)
    TString fndset(filename);
       
    // Set the Url for remote access
-   TString dsrv, seed;
-   seed = TString::Format("%s/%s", gSystem->HostName(), filename.Data());
+   TString seed = TString::Format("%s/%s", gSystem->HostName(), filename.Data()), dsrv;
    TUrl basedirurl(filename, kTRUE);
    if (!strcmp(basedirurl.GetProtocol(), "file")) {
-      if (gSystem->Getenv("LOCALDATASERVER")) {
-         dsrv = gSystem->Getenv("LOCALDATASERVER");
-         if (!dsrv.EndsWith("/")) dsrv += "/";
-      } else {
-         dsrv.Form("root://%s/", TUrl(gSystem->HostName()).GetHostFQDN());
-      }
-      TString srvProto = TUrl(dsrv).GetProtocol();
-         
-      // Remove prefix, if any, if included and if Xrootd
-      TString pfx  = gEnv->GetValue("Path.Localroot","");
-      if (!pfx.IsNull() && fndset.BeginsWith(pfx) &&
-         (srvProto == "root" || srvProto == "xrd")) fndset.Remove(0, pfx.Length());
+      TProofServ::GetLocalServer(dsrv);
+      TProofServ::FilterLocalroot(fndset, dsrv);      
    }
-   
 
    //generate files
    Long64_t neventstogenerate = fNEvents;

@@ -50,6 +50,10 @@ public:
       kProcessRemotely = BIT(15),   // TRUE if this line has to be processed remotely
       kDefaultApplication = BIT(16) // TRUE if created via CreateApplication()
    };
+   // TApplication specific bits for fFiles
+   enum EFileBits {
+      kExpression = BIT(14)  // If the arguments is an expression rather than a file.
+   };
    enum EExitOnException {
       kDontExit,
       kExit,
@@ -66,7 +70,7 @@ private:
    Bool_t             fNoLogo;          //Do not show splash screen and welcome message
    Bool_t             fQuit;            //Exit after having processed input files
    Bool_t             fUseMemstat;      //Run with TMemStat enabled
-   TObjArray         *fFiles;           //Array of input files (TObjString's) specified via argv
+   TObjArray         *fFiles;           //Array of input files or C++ expression (TObjString's) specified via argv
    TString            fWorkDir;         //Working directory specified via argv
    TString            fIdleCommand;     //Command to execute while application is idle
    TTimer            *fIdleTimer;       //Idle timer
@@ -154,7 +158,7 @@ public:
    virtual void    Terminate(Int_t status = 0);       //*SIGNAL*
    virtual void    KeyPressed(Int_t key);             //*SIGNAL*
    virtual void    ReturnPressed(char *text );        //*SIGNAL*
-   virtual Int_t   TabCompletionHook(char *buf, int *pLoc, ostream& out);
+   virtual Int_t   TabCompletionHook(char *buf, int *pLoc, std::ostream& out);
 
    static Long_t   ExecuteFile(const char *file, Int_t *error = 0, Bool_t keep = kFALSE);
    static TList   *GetApplications();

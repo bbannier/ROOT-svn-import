@@ -15,7 +15,7 @@ Axis_t xxmin, Axis_t  xxmax)
 <listitem><para><code>*fname: </code>The name of the fitted function (the model) is passed as the first parameter. This name may be one of ROOT pre-defined function names or a
 user-defined function. The functions below are predefined, and can be used with the <emphasis role="bold"><code>TH1</code></emphasis><code>::Fit</code>
 method:</para></listitem>
-<listitem><para>"<code>gaus</code>" Gaussian function with 3 parameters:              <code>f(x) = p0*exp(-0.5*((x-p1)/p2)^2))</code></para></listitem>
+<listitem><para>"<code>gaus</code>" Gaussian function with 3 parameters:              <code>f(x) = p0*exp(-0.5*((x-p1)/p2)^2)</code></para></listitem>
 <listitem><para>"<code>expo</code>"An Exponential with 2 parameters:  <code>f(x) = exp(p0+p1*x)</code> </para></listitem>
 <listitem><para>"<code>pol</code><emphasis role="italic"><code>N</code></emphasis>" A polynomial of degree <emphasis role="italic">N</emphasis>:   <code>f(x) = p0 + p1*x + p2*x2 +...</code> </para></listitem>
 <listitem><para>"<code>landau</code>" Landau function with mean and sigma. This function has been adaptedfrom the <code>CERNLIB</code> routine <code>G110 denlan</code>.</para></listitem>
@@ -136,21 +136,21 @@ return fitval;
 <programlisting language="c++"><emphasis role="italic"><code>// this function used fitf to fit a histogram</code></emphasis>
 void fitexample() {
 
-<emphasis role="italic"><code>  // open a file and get a histogram</code></emphasis>
-TFile *f = new TFile("hsimple.root");
-TH1F *hpx = (TH1F*)f-&gt;Get(*hpx);
+<emphasis role="italic"><code>   // open a file and get a histogram</code></emphasis>
+   TFile *f = new TFile("hsimple.root");
+   TH1F *hpx = (TH1F*)f-&gt;Get("hpx");
 
-<emphasis role="italic"><code>  // Create a TF1 object using the function defined above. The last three</code></emphasis>
-<emphasis role="italic"><code>  //  parameters specify the number of parameters for the function.</code></emphasis>
-TF1 *func = new TF1("fit",fitf,-3,3,3);
-<emphasis role="italic"><code>  // set the parameters to the mean and RMS of the histogram</code></emphasis>
-func-&gt;SetParameters(500,hpx-&gt;GetMean(),hpx-&gt;GetRMS());
+<emphasis role="italic"><code>   // Create a TF1 object using the function defined above. The last three</code></emphasis>
+<emphasis role="italic"><code>   //  parameters specify the number of parameters for the function.</code></emphasis>
+   TF1 *func = new TF1("fit",fitf,-3,3,3);
+<emphasis role="italic"><code>   // set the parameters to the mean and RMS of the histogram</code></emphasis>
+   func-&gt;SetParameters(500,hpx-&gt;GetMean(),hpx-&gt;GetRMS());
 
-<emphasis role="italic"><code>  // give the parameters meaningful names</code></emphasis>
-func-&gt;SetParNames ("Constant","Mean_value","Sigma");
+<emphasis role="italic"><code>   // give the parameters meaningful names</code></emphasis>
+   func-&gt;SetParNames ("Constant","Mean_value","Sigma");
 
-<emphasis role="italic"><code>  // call TH1::Fit with the name of the TF1 object </code></emphasis>
-hpx-&gt;Fit("fit");
+<emphasis role="italic"><code>   // call TH1::Fit with the name of the TF1 object </code></emphasis>
+   hpx-&gt;Fit("fit");
 }
 </programlisting>
 

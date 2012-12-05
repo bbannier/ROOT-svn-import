@@ -31,6 +31,9 @@
 #ifndef ROOT_TList
 #include "TList.h"
 #endif
+#ifndef ROOT_RConfigure
+#include "RConfigure.h"
+#endif
 
 class TClass;
 class TCanvas;
@@ -49,15 +52,25 @@ class TPluginManager;
 class TProcessUUID;
 class TClassGenerator;
 class TVirtualMutex;
+class TROOT;
 
 
 
 R__EXTERN TVirtualMutex *gROOTMutex;
 
+#ifdef R__HAS_CLING
+namespace ROOT {
+   TROOT *GetROOT2();
+}
+#endif
+
 class TROOT : public TDirectory {
 
 friend class TCint;
 friend class TCintWithCling;
+#ifdef R__HAS_CLING
+friend TROOT *ROOT::GetROOT2();
+#endif
 
 private:
    Int_t           fLineIsProcessing;     //To synchronize multi-threads
@@ -131,6 +144,9 @@ protected:
                   TROOT();                //Only used by Dictionary
    void           InitSystem();           //Operating System interface
    void           InitThreads();          //Initialize threads library
+#ifdef R__HAS_CLING
+   void           InitInterpreter();      //Initialize interpreter (cling)
+#endif
    void           ReadSvnInfo();          //Read Subversion revision number and branch name
    void          *operator new(size_t l) { return TObject::operator new(l); }
 
@@ -279,8 +295,16 @@ public:
 };
 
 
-R__EXTERN TROOT *gROOT;
 namespace ROOT {
    TROOT *GetROOT();
+#ifdef R__HAS_CLING
+   R__EXTERN TROOT *gROOTLocal;
+#endif
 }
+#ifdef R__HAS_CLING
+#define gROOT (ROOT::GetROOT())
+#else
+R__EXTERN TROOT *gROOT;
+#endif
+
 #endif

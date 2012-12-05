@@ -167,7 +167,7 @@ RooDataHist::RooDataHist(const char *name, const char *title, const RooArgList& 
   _dstore = (defaultStorageType==Tree) ? ((RooAbsDataStore*) new RooTreeDataStore(name,title,_vars)) : 
                                          ((RooAbsDataStore*) new RooVectorDataStore(name,title,_vars)) ;
   
-  importTH1Set(vars, indexCat, histMap, wgt, kTRUE) ;
+  importTH1Set(vars, indexCat, histMap, wgt, kFALSE) ;
 
   _dstore->setExternalWeightArray(_wgt,_errLo,_errHi,_sumw2) ;
 }
@@ -219,7 +219,7 @@ RooDataHist::RooDataHist(const char *name, const char *title, const RooArgList& 
     assert(0) ; 
   }
 
-  importTH1(vars,*const_cast<TH1*>(hist),wgt, kTRUE) ;
+  importTH1(vars,*const_cast<TH1*>(hist),wgt, kFALSE) ;
 
   _dstore->setExternalWeightArray(_wgt,_errLo,_errHi,_sumw2) ;
 }
@@ -328,7 +328,7 @@ RooDataHist::RooDataHist(const char *name, const char *title, const RooArgList& 
 	hmap[token] = (TH1*) hiter->Next() ;
 	token = strtok(0,",") ;
       }
-      importTH1Set(vars,*indexCat,hmap,initWgt,kTRUE) ;
+      importTH1Set(vars,*indexCat,hmap,initWgt,kFALSE) ;
     } else {
 
       // Initialize importing mapped set of RooDataHists
@@ -394,7 +394,7 @@ void RooDataHist::importTH1(const RooArgList& vars, TH1& histo, Double_t wgt, Bo
     zmin = offset[2] ;
     volume *= (zvar->getMax()-zvar->getMin()) ;
   }
-  Double_t avgBV = volume / numEntries() ;
+  //Double_t avgBV = volume / numEntries() ;
 //   cout << "average bin volume = " << avgBV << endl ;
 
   Int_t ix(0),iy(0),iz(0) ;
@@ -406,18 +406,16 @@ void RooDataHist::importTH1(const RooArgList& vars, TH1& histo, Double_t wgt, Bo
 	if (zvar) {
 	  for (iz=0 ; iz < zvar->getBins() ; iz++) {
 	    zvar->setBin(iz) ;
-	    Double_t bv = doDensityCorrection ? binVolume(vset)/avgBV : 1;
+	    Double_t bv = doDensityCorrection ? binVolume(vset) : 1;
 	    add(vset,bv*histo.GetBinContent(ix+1+xmin,iy+1+ymin,iz+1+zmin)*wgt,bv*TMath::Power(histo.GetBinError(ix+1+xmin,iy+1+ymin,iz+1+zmin)*wgt,2)) ;
 	  }
 	} else {
-	  Double_t bv = doDensityCorrection ? binVolume(vset)/avgBV : 1;
+	  Double_t bv = doDensityCorrection ? binVolume(vset) : 1;
 	  add(vset,bv*histo.GetBinContent(ix+1+xmin,iy+1+ymin)*wgt,bv*TMath::Power(histo.GetBinError(ix+1+xmin,iy+1+ymin)*wgt,2)) ;
 	}
       }
     } else {
-      Double_t bv = doDensityCorrection ? binVolume(vset)/avgBV : 1 ;
-//       cout << " RooDataHist(" << GetName() << ") ix = " << ix << " binVolume = " << bv << " binContent = " << histo.GetBinContent(ix+1+xmin) 
-// 	   << " wgt = " << wgt << " value in RDH = " << bv*histo.GetBinContent(ix+1+xmin)*wgt << endl ;
+      Double_t bv = doDensityCorrection ? binVolume(vset) : 1 ;
       add(vset,bv*histo.GetBinContent(ix+1+xmin)*wgt,bv*TMath::Power(histo.GetBinError(ix+1+xmin)*wgt,2)) ;	    
     }
   }  
@@ -852,9 +850,10 @@ void RooDataHist::initialize(const char* binningName, Bool_t fillTree)
       RooAbsLValue* arglv = dynamic_cast<RooAbsLValue*>(arg2) ;
       arglv->setBin(idx) ;
       theBinVolume *= arglv->getBinWidth(idx) ;
-//       cout << "init: binv[" << idx << "] = " << theBinVolume << endl ;
+//       cout << "init: bin width at idx=" << idx << " = " << arglv->getBinWidth(idx) << " binv[" << idx << "] = " << theBinVolume << endl ;
     }
     _binv[ibin] = theBinVolume ;
+//     cout << "binv[" << ibin << "] = " << theBinVolume << endl ;
     fill() ;
   }
 

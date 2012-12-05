@@ -14,13 +14,6 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-//#pragma link C++ global gMinuit;
-#pragma link C++ global gMinuit2;
-#pragma link C++ global gFumili2;
-
-#pragma link C++ class TFitterMinuit;
-#pragma link C++ class TFitterFumili;
-#pragma link C++ class TFcnAdapter;
 
 //#pragma link C++ namespace ROOT::Minuit2;
 
@@ -56,6 +49,8 @@
 #pragma link C++ class ROOT::Minuit2::FumiliMinimizer; 
 #pragma link C++ class ROOT::Minuit2::MnMachinePrecision; 
 
-#pragma link C++ class vector<ROOT::Minuit2::MinuitParameter >;
+#pragma link C++ class std::vector<ROOT::Minuit2::MinuitParameter >;
+
+#pragma link C++ class TMinuit2TraceObject-; 
 
 #endif

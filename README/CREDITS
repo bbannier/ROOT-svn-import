@@ -638,6 +638,10 @@ N: Suzanne Panacek
 E: spanacek@fnal.gov
 D: editor of the User's Guide
 
+N: Iulia Pasov
+E: iulia.pasov@gmail.com
+D: prototyping JavaScript graphics with d3.js
+
 N: Marc Paterno
 E: paterno@fnal.gov
 D: implement utility functions used by TGraphAsymmErrors::BayesDivide
@@ -687,6 +691,10 @@ D: contributed to TMultiDimFit::EvalError function
 N: Bartolomeu Rabacal
 E: brabacal@cern.ch
 D: Math libraries: GoFTest and TKDE classes 
+
+N: Nathalie Rauschmayr
+E: Nathalie.Rauschmayr@cern.ch
+D: port to x32 psABI and its validation
 
 N: Sven Ravndal
 E: Sven.Ravndal@dresdner-bank.com
@@ -843,3 +851,7 @@ D: contributed to Reflex
 N: Andreas Zoglauer
 E: zog@mpe.mpg.de
 D: contributed to TStyle::CreateGradientColorTable()
+
+N: Yue Shi Lai
+E: ylai@mit.edu
+D: TMathText class

@@ -12,6 +12,11 @@
 #include "TEveLine.h"
 #include "TEveProjectionManager.h"
 
+namespace
+{
+   inline Float_t sqr(Float_t x) { return x*x; }
+}
+
 //==============================================================================
 //==============================================================================
 // TEveLine
@@ -218,6 +223,22 @@ void TEveLine::ReduceSegmentLengths(Float_t max)
 }
 
 //______________________________________________________________________________
+Float_t TEveLine::CalculateLineLength() const
+{
+   // Sum-up lengths of individual segments.
+
+   Float_t sum = 0;
+
+   Int_t    s = Size();
+   Float_t *p = GetP();
+   for (Int_t i = 1; i < s; ++i, p += 3)
+   {
+      sum += TMath::Sqrt(sqr(p[3] - p[0]) + sqr(p[4] - p[1]) + sqr(p[5] - p[2]));
+   }
+   return sum;
+}
+
+//______________________________________________________________________________
 TEveVector TEveLine::GetLineStart() const
 {
    // Return the first point of the line.
@@ -259,7 +280,7 @@ void TEveLine::CopyVizParams(const TEveElement* el)
 }
 
 //______________________________________________________________________________
-void TEveLine::WriteVizParams(ostream& out, const TString& var)
+void TEveLine::WriteVizParams(std::ostream& out, const TString& var)
 {
    // Write visualization parameters.
 

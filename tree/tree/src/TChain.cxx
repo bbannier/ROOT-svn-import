@@ -1406,28 +1406,36 @@ Long64_t TChain::LoadTree(Long64_t entry)
    // FIXME: The "unless" case here causes us to leak memory.
    if (fFile) {
       if (!fDirectory->GetList()->FindObject(this)) {
-         tpf = (TTreeCache*) fFile->GetCacheRead(fTree);
-         if (tpf) {
-            tpf->ResetCache();
-            if (tpf->IsEnablePrefetching()){
-               //wait for thread to finish current work
-               tpf->GetPrefetchObj()->GetMutexSynch()->Lock();
-               tpf->GetPrefetchObj()->GetMutexSynch()->UnLock();
+         if (fTree) {
+            // (fFile != 0 && fTree == 0) can happen when 
+            // InvalidateCurrentTree is called (for example from
+            // AddFriend).  Having fTree === 0 is necessary in that
+            // case because in some cases GetTree is used as a check
+            // to see if a TTree is already loaded.
+            // However, this prevent using the following to reuse
+            // the TTreeCache object.
+            tpf = (TTreeCache*) fFile->GetCacheRead(fTree);
+            if (tpf) {
+               tpf->ResetCache();
+               if (tpf->IsEnablePrefetching()){
+                  //wait for thread to finish current work
+                  tpf->GetPrefetchObj()->GetCondNextFile()->Wait();
+               }
             }
+            fFile->SetCacheRead(0, fTree);
+            // If the tree has clones, copy them into the chain
+            // clone list so we can change their branch addresses
+            // when necessary.
+            //
+            // This is to support the syntax:
+            //
+            //      TTree* clone = chain->GetTree()->CloneTree(0);
+            //
+            // We need to call the invalidate exactly here, since
+            // we no longer need the value of fTree and it is 
+            // about to be deleted.
+            InvalidateCurrentTree();
          }
-         fFile->SetCacheRead(0, fTree);
-         // If the tree has clones, copy them into the chain
-         // clone list so we can change their branch addresses
-         // when necessary.
-         //
-         // This is to support the syntax:
-         //
-         //      TTree* clone = chain->GetTree()->CloneTree(0);
-         //
-         // We need to call the invalidate exactly here, since
-         // we no longer need the value of fTree and it is 
-         // about to be deleted.
-         if (fTree) InvalidateCurrentTree();
 
          if (fCanDeleteRefs) {
             fFile->Close("R");
@@ -1509,7 +1517,6 @@ Long64_t TChain::LoadTree(Long64_t entry)
          // TTreeCache.
          delete tpf;
          tpf = 0;
-         this->SetCacheSize(fCacheSize);
       }
    } else {
       this->SetCacheSize(fCacheSize);
@@ -2099,6 +2106,29 @@ void TChain::RecursiveRemove(TObject *obj)
 }
 
 //______________________________________________________________________________
+void TChain::RemoveFriend(TTree* oldFriend)
+{
+   // Remove a friend from the list of friends.
+   
+   // We already have been visited while recursively looking
+   // through the friends tree, let return
+
+   if (!fFriends) {
+      return;
+   }
+
+   TTree::RemoveFriend(oldFriend);
+
+   if (fProofChain)
+      // This updates the proxy chain when we will really use PROOF
+      ResetBit(kProofUptodate);
+   
+   // We need to invalidate the loading of the current tree because its list
+   // of real friends is now obsolete.  It is repairable only from LoadTree.
+   InvalidateCurrentTree();
+}
+
+//______________________________________________________________________________
 void TChain::Reset(Option_t*)
 {
    // Resets the state of this chain.
@@ -2168,16 +2198,16 @@ void TChain::SetAutoDelete(Bool_t autodelete)
 
 void TChain::SetCacheSize(Long64_t cacheSize)
 {
-   TTree::SetCacheSize(cacheSize);
-   TFile* file = GetCurrentFile();
-   if (!file) {
-      return;
+   // Set the cache size of the underlying TTree,
+   // See TTree::SetCacheSize.
+
+   if (fTree) {
+      fTree->SetCacheSize(cacheSize);
+   } else {
+      // If we don't have a TTree yet, do not
+      // allocate the cache.
    }
-   TFileCacheRead* pf = file->GetCacheRead(this);
-   if (pf) {
-      file->SetCacheRead(0, this);
-      file->SetCacheRead(pf, fTree);
-   }
+   fCacheSize = cacheSize; // Record requested size.
 }
 
 //______________________________________________________________________________
@@ -2258,6 +2288,9 @@ Int_t TChain::SetBranchAddress(const char *bname, void* add, TBranch** ptr)
             }
          }
          branch->SetAddress(add);
+      } else {
+         Error("SetBranchAddress", "unknown branch -> %s", bname);
+         return kMissingBranch;
       }
    } else {
       if (ptr) {

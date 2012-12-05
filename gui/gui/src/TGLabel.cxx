@@ -61,7 +61,7 @@ TGLabel::TGLabel(const TGWindow *p, TGString *text, GContext_t norm,
    fMLeft = fMRight = fMTop = fMBottom = 0;
 
    if (!norm) {
-      norm = fgDefaultGC->GetGC();
+      norm = GetDefaultGC().GetGC();
    }
    fNormGC = norm;
 
@@ -102,7 +102,7 @@ TGLabel::TGLabel(const TGWindow *p, const char *text, GContext_t norm,
    fMLeft = fMRight = fMTop = fMBottom = 0;
 
    if (!norm) {
-      norm = fgDefaultGC->GetGC();
+      norm = GetDefaultGC().GetGC();
    }
    fNormGC = norm;
 
@@ -224,7 +224,7 @@ void TGLabel::DoRedraw()
       TGGC *gc = pool->FindGC(fNormGC);
 
       if (!gc) {
-         fNormGC = fgDefaultGC->GetGC();
+         fNormGC = GetDefaultGC().GetGC();
          gc = pool->FindGC(fNormGC);
       }
       if (!gc) return;
@@ -336,7 +336,7 @@ void TGLabel::SetTextFont(TGFont *font, Bool_t global)
    TGGC *gc = pool->FindGC(fNormGC);
 
    if (!global) {
-      if (gc == fgDefaultGC) { // create new GC
+      if (gc == &GetDefaultGC() ) { // create new GC
          gc = pool->GetGC((GCValues_t*)gc->GetAttributes(), kTRUE); // copy ctor.
       }
       fHasOwnFont = kTRUE;
@@ -362,7 +362,7 @@ void TGLabel::SetTextColor(Pixel_t color, Bool_t global)
    TGGC *gc = pool->FindGC(fNormGC);
 
    if (!global) {
-      if (gc == fgDefaultGC) {
+      if (gc == &GetDefaultGC() ) {
          gc = pool->GetGC((GCValues_t*)gc->GetAttributes(), kTRUE); // copy
       }
       fHasOwnFont = kTRUE;
@@ -451,7 +451,7 @@ Bool_t TGLabel::HasOwnFont() const
 }
 
 //______________________________________________________________________________
-void TGLabel::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGLabel::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save a label widget as a C++ statement(s) on output stream out.
 
@@ -490,29 +490,29 @@ void TGLabel::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       if (!GetOptions()) {
          if (fFont->GetFontStruct() == GetDefaultFontStruct()) {
             if (fNormGC == GetDefaultGC()()) {
-               out <<");" << endl;
+               out <<");" << std::endl;
             } else {
-               out << "," << parGC.Data() << ");" << endl;
+               out << "," << parGC.Data() << ");" << std::endl;
             }
          } else {
-            out << "," << parGC.Data() << "," << parFont.Data() << ");" << endl;
+            out << "," << parGC.Data() << "," << parFont.Data() << ");" << std::endl;
          }
       } else {
-         out << "," << parGC.Data() << "," << parFont.Data() << "," << GetOptionString() <<");" << endl;
+         out << "," << parGC.Data() << "," << parFont.Data() << "," << GetOptionString() <<");" << std::endl;
       }
    } else {
-      out << "," << parGC.Data() << "," << parFont.Data() << "," << GetOptionString() << ",ucolor);" << endl;
+      out << "," << parGC.Data() << "," << parFont.Data() << "," << GetOptionString() << ",ucolor);" << std::endl;
    }
    if (option && strstr(option, "keep_names"))
-      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << endl;
+      out << "   " << GetName() << "->SetName(\"" << GetName() << "\");" << std::endl;
 
    if (fDisabled)
-      out << "   " << GetName() << "->Disable();" << endl;
+      out << "   " << GetName() << "->Disable();" << std::endl;
 
-   out << "   " << GetName() << "->SetTextJustify(" <<  GetTextJustify() << ");" << endl;
+   out << "   " << GetName() << "->SetTextJustify(" <<  GetTextJustify() << ");" << std::endl;
    out << "   " << GetName() << "->SetMargins(" << fMLeft << "," << fMRight << ",";
-   out << fMTop << "," << fMBottom << ");" << endl;
-   out << "   " << GetName() << "->SetWrapLength(" << fWrapLength << ");" << endl;
+   out << fMTop << "," << fMBottom << ");" << std::endl;
+   out << "   " << GetName() << "->SetWrapLength(" << fWrapLength << ");" << std::endl;
 
 }
 

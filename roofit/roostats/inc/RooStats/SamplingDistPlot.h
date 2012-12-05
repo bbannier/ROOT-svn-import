@@ -115,7 +115,6 @@ namespace RooStats {
 
     RooList fItems; // holds TH1Fs only
     RooList fOtherItems; // other objects to be drawn like TLine etc.
-    TIterator* fIterator; // TODO remove class variable and instantiate locally as necessary
     RooPlot* fRooPlot;
     Bool_t fLogXaxis;
     Bool_t fLogYaxis;
@@ -129,7 +128,7 @@ namespace RooStats {
 
     void addObject(TObject *obj, Option_t *drawOptions=0); // for TH1Fs only
     void addOtherObject(TObject *obj, Option_t *drawOptions=0);
-    void GetAbsoluteInterval(Float_t &theMin, Float_t &theMax, Float_t &theYMax) const;
+    void GetAbsoluteInterval(Double_t &theMin, Double_t &theMax, Double_t &theYMax) const;
 
     ClassDef(SamplingDistPlot,1)  // Class containing the results of the HybridCalculator
   };

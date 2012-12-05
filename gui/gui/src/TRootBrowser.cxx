@@ -70,12 +70,13 @@
 #include "TEnv.h"
 #include <KeySymbols.h>
 
+#include "RConfigure.h"
+
 #include "TRootBrowser.h"
 #include "TGFileBrowser.h"
 #include "TGInputDialog.h"
 #include "TRootHelpDialog.h"
 #include "HelpText.h"
-
 #include "Getline.h"
 
 #ifdef WIN32
@@ -92,28 +93,6 @@ static const char *gPluginFileTypes[] = {
    "ROOT files",   "*.C",
    "All files",    "*",
    0,              0
-};
-
-enum ENewBrowserMessages {
-   kBrowse = 11011,
-   kOpenFile,
-   kClone,
-   kHelpAbout,
-   kHelpOnBrowser,
-   kHelpOnCanvas,
-   kHelpOnMenus,
-   kHelpOnGraphicsEd,
-   kHelpOnObjects,
-   kHelpOnPS,
-   kHelpOnRemote,
-   kNewEditor,
-   kNewCanvas,
-   kNewHtml,
-   kExecPluginMacro,
-   kExecPluginCmd,
-   kCloseTab,
-   kCloseWindow,
-   kQuitRoot
 };
 
 //_____________________________________________________________________________
@@ -238,7 +217,11 @@ void TRootBrowser::CreateBrowser(const char *name)
 
    fHf = new TGHorizontalFrame(fVf, 100, 100);
    // Tabs & co...
+#if defined(R__HAS_COCOA)
+   fV1 = new TGVerticalFrame(fHf, 252, 100, kFixedWidth);
+#else
    fV1 = new TGVerticalFrame(fHf, 250, 100, kFixedWidth);
+#endif
    fV2 = new TGVerticalFrame(fHf, 600, 100);
    fH1 = new TGHorizontalFrame(fV2, 100, 100);
    fH2 = new TGHorizontalFrame(fV2, 100, 100, kFixedHeight);
@@ -780,7 +763,7 @@ void TRootBrowser::HandleMenu(Int_t id)
          }
          break;
       case kCloseTab:
-         RemoveTab(kRight, fTabRight->GetCurrent());
+         CloseTab(fTabRight->GetCurrent());
          break;
       case kCloseWindow:
          CloseWindow();

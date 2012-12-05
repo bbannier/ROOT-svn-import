@@ -21,6 +21,8 @@
 #include "RooRealVar.h"
 #include "RooFormulaVar.h"
 
+class RooAbsAnaConvPdf;
+
 class RooResolutionModel : public RooAbsPdf {
 public:
 
@@ -30,6 +32,10 @@ public:
   RooResolutionModel(const RooResolutionModel& other, const char* name=0);
   virtual TObject* clone(const char* newname) const = 0 ;
   virtual ~RooResolutionModel();
+
+  virtual RooAbsGenContext* modelGenContext(const RooAbsAnaConvPdf&, const RooArgSet&,
+                                            const RooDataSet*, const RooArgSet*,
+                                            Bool_t) const { return 0; }
 
   Double_t getValV(const RooArgSet* nset=0) const ;
   virtual RooResolutionModel* convolution(RooFormulaVar* basis, RooAbsArg* owner) const ;
@@ -45,7 +51,7 @@ public:
   inline const RooFormulaVar& basis() const { return _basis?*_basis:*identity() ; }
   Bool_t isConvolved() { return _basis ? kTRUE : kFALSE ; }
 
-  virtual void printMultiline(ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent="") const ;
+  virtual void printMultiline(std::ostream& os, Int_t content, Bool_t verbose=kFALSE, TString indent="") const ;
 
   static void cleanup() ;
 

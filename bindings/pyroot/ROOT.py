@@ -2,7 +2,7 @@ from __future__ import generators
 # @(#)root/pyroot:$Id$
 # Author: Wim Lavrijsen (WLavrijsen@lbl.gov)
 # Created: 02/20/03
-# Last: 11/10/10
+# Last: 11/30/12
 
 """PyROOT user module.
 
@@ -121,7 +121,7 @@ class _Configuration( object ):
 
    def __init__( self ):
       self.IgnoreCommandLineOptions = 0
-      self.StartGuiThread = 1
+      self.StartGuiThread = True
       self._gts = []
 
    def __setGTS( self, value ):
@@ -291,7 +291,7 @@ TPad or TPad.cd, etc.
       value.msg == "can't assign to function call":
          sys.stdout.write( """Are you trying to assign a value to a reference return, for example to the
 result of a call to "double& SMatrix<>::operator()(int,int)"? If so, then
-please use operator[] instead, as in e.g. "mymatrix[i,j] = somevalue".
+please use operator[] instead, as in e.g. "mymatrix[i][j] = somevalue".
 """ )
 
  # normal exception processing
@@ -305,7 +305,8 @@ if not '__IPYTHON__' in __builtins__:
 ### call EndOfLineAction after each interactive command (to update display etc.)
 _orig_dhook = sys.displayhook
 def _displayhook( v ):
-   _root.gInterpreter.EndOfLineAction()
+# TODO: EndOfLineAction currently unresolvable (#98656?)
+#   _root.gInterpreter.EndOfLineAction()
    return _orig_dhook( v )
 
 
@@ -476,7 +477,7 @@ class ModuleFacade( types.ModuleType ):
       appc = _root.MakeRootClass( 'PyROOT::TPyROOTApplication' )
       if appc.CreatePyROOTApplication():
          appc.InitROOTGlobals()
-         appc.InitCINTMessageCallback();
+         # TODO Cling equivalent needed: appc.InitCINTMessageCallback();
          appc.InitROOTMessageCallback();
 
       if hasargv and PyConfig.IgnoreCommandLineOptions:
@@ -485,7 +486,7 @@ class ModuleFacade( types.ModuleType ):
     # must be called after gApplication creation:
       if '__IPYTHON__' in __builtins__:
        # IPython's FakeModule hack otherwise prevents usage of python from CINT
-         _root.gROOT.ProcessLine( 'TPython::Exec( "" )' )
+         _root.gROOT.ProcessLine( 'TPython::Exec( "" );' )
          sys.modules[ '__main__' ].__builtins__ = __builtins__
 
     # custom logon file (must be after creation of ROOT globals)

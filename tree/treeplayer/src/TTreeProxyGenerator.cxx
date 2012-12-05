@@ -380,7 +380,9 @@ namespace ROOT {
          AddHeader( cl->GetCollectionProxy()->GetValueClass() );
       }
       Int_t stlType;
-      if (cl->GetCollectionProxy() && (stlType=TClassEdit::IsSTLCont(cl->GetName()))) {
+      if (0 == strcmp(cl->GetName(),"string")) {
+         directive = "#include <string>\n";
+      } else if (cl->GetCollectionProxy() && (stlType=TClassEdit::IsSTLCont(cl->GetName()))) {
          const char *what = "";
          switch(stlType)  {
             case TClassEdit::kVector:   what = "vector"; break;
@@ -1462,7 +1464,45 @@ static TVirtualStreamerInfo *GetBaseClass(TStreamerElement *element)
       if (!element) return;
 
       if (strcmp(element->GetName(),"This")==0) {
-         // Skip the artifical streamer element.
+         TClass *cl = element->GetClassPointer();
+         containerName = cl->GetName();
+         cl = cl->GetCollectionProxy()->GetValueClass();
+         if (!cl) {
+            // Skip the artifical streamer element.
+            return;
+         }
+         // else return;
+
+         // In case the content is a class, move forward
+         AddForward(cl);
+         AddHeader(cl);
+        
+         if (level<=fMaxUnrolling) {
+
+            // See AnalyzeTree for similar code!
+            // TBranchProxyClassDescriptor *cldesc;
+            if (cl && cl->CanSplit()) {
+               // cldesc = new TBranchProxyClassDescriptor(cl->GetName(), cl->GetStreamerInfo(),
+               //                                          branch->GetName(),
+               //                                          isclones, 0 /* non-split object */,
+               //                                          containerName);
+               
+               TVirtualStreamerInfo *info = cl->GetStreamerInfo();
+               TStreamerElement *elem = 0;
+               
+               TString subpath = path;
+               if (subpath.Length()>0) subpath += ".";
+               subpath += dataMemberName;
+               
+               TIter next(info->GetElements());
+               while( (elem = (TStreamerElement*)next()) ) {
+                  AnalyzeElement(branch, elem, level+1, topdesc, subpath.Data());
+               }
+
+               // TBranchProxyClassDescriptor *added = AddClass(cldesc);
+               // if (added) type = added->GetName();
+            }
+         }
          return;
       }
 

@@ -1,6 +1,7 @@
 
 #include <ctime>
 #include <iostream>
+#include <algorithm>
 #include <sys/stat.h>
 #include "TSystem.h"
 #include "TTimeStamp.h"
@@ -8,11 +9,13 @@
 #include "RooStats/HistFactory/Measurement.h"
 #include "RooStats/HistFactory/HistFactoryException.h"
 
+using namespace std;
+
 ClassImp(RooStats::HistFactory::Measurement) ;
 
 
 RooStats::HistFactory::Measurement::Measurement() :
-  fPOI( "" ), fLumi( 1.0 ), fLumiRelErr( .10 ), 
+  fPOI(), fLumi( 1.0 ), fLumiRelErr( .10 ), 
   fBinLow( 0 ), fBinHigh( 1 ), fExportOnly( false )  { ; }
 
 /*
@@ -23,13 +26,85 @@ RooStats::HistFactory::Measurement::Measurement(const Measurement& other) :
   constantParams( other.constantParams ), { ; }
 */
 
-
-
 RooStats::HistFactory::Measurement::Measurement(const char* Name, const char* Title) :
   TNamed( Name, Title ),
-  fPOI( "" ), fLumi( 1.0 ), fLumiRelErr( .10 ), 
+  fPOI(), fLumi( 1.0 ), fLumiRelErr( .10 ), 
   fBinLow( 0 ), fBinHigh( 1 ), fExportOnly( false )  { ; }
 
+
+void RooStats::HistFactory::Measurement::AddConstantParam( const std::string& param ) { 
+  
+  // Check if the parameter is already set constant
+  // We don't need to set it constant twice,
+  // and we issue a warning in case this is a hint
+  // of a possible bug
+
+  if( std::find(fConstantParams.begin(), fConstantParams.end(), param) != fConstantParams.end() ) {
+    std::cout << "Warning: Setting parameter: " << param 
+	      << " to constant, but it is already listed as constant.  "
+	      << "You may ignore this warning."
+	      << std::endl;
+    return;
+  }
+
+  fConstantParams.push_back( param ); 
+
+}
+
+void RooStats::HistFactory::Measurement::SetParamValue( const std::string& param, double value ) {
+
+  // Check if this parameter is already set to a value
+  // If so, issue a warning
+  // (Not sure if we want to throw an exception here, or
+  // issue a warning and move along.  Thoughts?)
+  if( fParamValues.find(param) != fParamValues.end() ) {
+    std::cout << "Warning: Chainging parameter: " << param
+	      << " value from: " << fParamValues[param]
+	      << " to: " << value 
+	      << std::endl;
+  }
+
+  // Store the parameter and its value
+  std::cout << "Setting parameter: " << param
+	    << " value to " << value
+	    << std::endl;
+
+  fParamValues[param] = value;
+
+}
+
+void RooStats::HistFactory::Measurement::AddPreprocessFunction( std::string name, std::string expression, std::string dependencies ) {
+
+  PreprocessFunction func(name, expression, dependencies);
+  AddFunctionObject(func);
+
+}
+
+
+std::vector<std::string> RooStats::HistFactory::Measurement::GetPreprocessFunctions() {
+  std::vector<std::string> PreprocessFunctionExpressions;
+  for( unsigned int i = 0; i < fFunctionObjects.size(); ++i ) {
+    std::string expression = fFunctionObjects.at(i).GetCommand();
+    PreprocessFunctionExpressions.push_back( expression );
+  }
+  return PreprocessFunctionExpressions;
+}
+
+void RooStats::HistFactory::Measurement::AddGammaSyst(std::string syst, double uncert) {
+  fGammaSyst[syst] = uncert;
+}
+
+void RooStats::HistFactory::Measurement::AddLogNormSyst(std::string syst, double uncert) {
+  fLogNormSyst[syst] = uncert;
+}
+
+void RooStats::HistFactory::Measurement::AddUniformSyst(std::string syst) {
+  fUniformSyst[syst] = 1.0; // Is this parameter simply a dummy?
+}
+
+void RooStats::HistFactory::Measurement::AddNoSyst(std::string syst) {
+  fNoSyst[syst] = 1.0; // dummy value
+}
 
 
 bool RooStats::HistFactory::Measurement::HasChannel( std::string ChanName ) {
@@ -78,11 +153,14 @@ RooStats::HistFactory::Channel& RooStats::HistFactory::Measurement::GetChannel( 
 */
 
 void RooStats::HistFactory::Measurement::PrintTree( std::ostream& stream ) {
-
+  
   stream << "Measurement Name: " << GetName()
 	 << "\t OutputFilePrefix: " << fOutputFilePrefix
-	 << "\t POI: " << fPOI
-	 << "\t Lumi: " << fLumi
+	 << "\t POI: ";
+  for(unsigned int i = 0; i < fPOI.size(); ++i) {
+    stream << fPOI.at(i);
+  }
+  stream << "\t Lumi: " << fLumi
 	 << "\t LumiRelErr: " << fLumiRelErr
 	 << "\t BinLow: " << fBinLow
 	 << "\t BinHigh: " << fBinHigh
@@ -98,10 +176,10 @@ void RooStats::HistFactory::Measurement::PrintTree( std::ostream& stream ) {
     stream << std::endl;
   }
 
-  if( fPreprocessFunctions.size() != 0 ) {
+  if( fFunctionObjects.size() != 0 ) {
     stream << "Preprocess Functions: ";
-    for( unsigned int i = 0; i < fPreprocessFunctions.size(); ++i ) {
-      stream << " " << fPreprocessFunctions.at(i);
+    for( unsigned int i = 0; i < fFunctionObjects.size(); ++i ) {
+      stream << " " << fFunctionObjects.at(i).GetCommand();
     }
     stream << std::endl;
   }
@@ -184,7 +262,7 @@ void RooStats::HistFactory::Measurement::PrintXML( std::string Directory, std::s
   xml << "<Combination OutputFilePrefix=\"" << NewOutputPrefix /*OutputFilePrefix*/ << "\" >" << std::endl << std::endl;
 
   // Add the Preprocessed Functions
-  for( unsigned int i = 0; i < fPreprocessFunctions.size(); ++i ) {
+  for( unsigned int i = 0; i < fFunctionObjects.size(); ++i ) {
     RooStats::HistFactory::PreprocessFunction func = fFunctionObjects.at(i);
     xml << "<Function Name=\"" << func.GetName() << "\" "
 	<< "Expression=\""     << func.GetExpression() << "\" "
@@ -212,7 +290,11 @@ void RooStats::HistFactory::Measurement::PrintXML( std::string Directory, std::s
 
 
   // Set the POI
-  xml << "    <POI>" << fPOI << "</POI>  " << std::endl;
+  xml << "    <POI>" ;
+  for(unsigned int i = 0; i < fPOI.size(); ++i) {
+    xml << fPOI.at(i) << " ";
+  } 
+  xml << "</POI>  " << std::endl;
   
   // Set the Constant Parameters
   xml << "    <ParamSetting Const=\"True\">";

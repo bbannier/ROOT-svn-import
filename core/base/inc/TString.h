@@ -196,7 +196,7 @@ private:
 
 protected:
 #ifndef __CINT__
-   Rep_t          fRep;           // String data
+   Rep_t          fRep;           //! String data
 #endif
 
    // Special concatenation constructor
@@ -251,6 +251,7 @@ private:
 public:
    enum EStripType   { kLeading = 0x1, kTrailing = 0x2, kBoth = 0x3 };
    enum ECaseCompare { kExact, kIgnoreCase };
+   static const Ssiz_t kNPOS = ::kNPOS;
 
    TString();                           // Null string
    explicit TString(Ssiz_t ic);         // Suggested capacity
@@ -387,12 +388,12 @@ public:
    TString     &Prepend(const TString &s);
    TString     &Prepend(const TString &s, Ssiz_t n);
    TString     &Prepend(char c, Ssiz_t rep = 1);  // Prepend c rep times
-   istream     &ReadFile(istream &str);      // Read to EOF or null character
-   istream     &ReadLine(istream &str,
+   std::istream     &ReadFile(std::istream &str);      // Read to EOF or null character
+   std::istream     &ReadLine(std::istream &str,
                          Bool_t skipWhite = kTRUE);   // Read to EOF or newline
-   istream     &ReadString(istream &str);             // Read to EOF or null character
-   istream     &ReadToDelim(istream &str, char delim = '\n'); // Read to EOF or delimitor
-   istream     &ReadToken(istream &str);                // Read separated by white space
+   std::istream     &ReadString(std::istream &str);             // Read to EOF or null character
+   std::istream     &ReadToDelim(std::istream &str, char delim = '\n'); // Read to EOF or delimitor
+   std::istream     &ReadToken(std::istream &str);                // Read separated by white space
    TString     &Remove(Ssiz_t pos);                     // Remove pos to end of string
    TString     &Remove(Ssiz_t pos, Ssiz_t n);           // Remove n chars starting at pos
    TString     &Remove(EStripType s, char c);           // Like Strip() but changing string directly
@@ -407,6 +408,7 @@ public:
    TString     &ReplaceAll(const char *s1, Ssiz_t ls1, const char *s2, Ssiz_t ls2);  // Find&Replace all s1 with s2 if any
    void         Resize(Ssiz_t n);                       // Truncate or add blanks as necessary
    TSubString   Strip(EStripType s = kTrailing, char c = ' ') const;
+   TString     &Swap(TString &other); // Swap the contents of this and other without reallocation
    void         ToLower();                              // Change self to lower-case
    void         ToUpper();                              // Change self to upper-case
    TObjArray   *Tokenize(const TString &delim) const;
@@ -435,12 +437,13 @@ public:
 };
 
 // Related global functions
-istream  &operator>>(istream &str,       TString &s);
-ostream  &operator<<(ostream &str, const TString &s);
+std::istream  &operator>>(std::istream &str,       TString &s);
+std::ostream  &operator<<(std::ostream &str, const TString &s);
 #if defined(R__TEMPLATE_OVERLOAD_BUG)
 template <>
 #endif
 TBuffer  &operator>>(TBuffer &buf,       TString *&sp);
+TBuffer  &operator<<(TBuffer &buf, const TString * sp);
 
 TString ToLower(const TString &s);    // Return lower-case version of argument
 TString ToUpper(const TString &s);    // Return upper-case version of argument
@@ -632,6 +635,16 @@ inline TString &TString::ReplaceAll(const char *s1, const TString &s2)
 
 inline TString &TString::ReplaceAll(const char *s1,const char *s2)
 { return ReplaceAll(s1, s1 ? strlen(s1) : 0, s2, s2 ? strlen(s2) : 0); }
+
+inline TString &TString::Swap(TString &other) {
+   // Swap the contents of other and this without reallocation.
+#ifndef __CINT__
+   Rep_t tmp = other.fRep;
+   other.fRep = fRep;
+   fRep = tmp;
+#endif
+   return *this;
+}
 
 inline char &TString::operator()(Ssiz_t i)
 { return GetPointer()[i]; }

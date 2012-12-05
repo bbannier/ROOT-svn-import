@@ -126,6 +126,7 @@ void NuisanceParametersSampler::Refresh() {
 Bool_t ToyMCSampler::fgAlwaysUseMultiGen = kFALSE ;
 
 
+void ToyMCSampler::SetAlwaysUseMultiGen(Bool_t flag) { fgAlwaysUseMultiGen = flag ; }
 
 
 
@@ -247,7 +248,8 @@ RooArgList* ToyMCSampler::EvaluateAllTestStatistics(RooAbsData& data, const RooA
    DetailedOutputAggregator detOutAgg;
    const RooArgList* allTS = EvaluateAllTestStatistics(data, poi, detOutAgg);
    if (!allTS) return 0;
-   return dynamic_cast<RooArgList*>(allTS->snapshot());
+   // no need to delete allTS, it is deleted in destructor of detOutAgg
+   return  dynamic_cast<RooArgList*>(allTS->snapshot());
 }
 
 
@@ -436,14 +438,15 @@ void ToyMCSampler::GenerateGlobalObservables(RooAbsPdf& pdf) const {
       RooSimultaneous* simPdf = dynamic_cast<RooSimultaneous*>( &pdf );
       if (!simPdf) {
          RooDataSet *one = pdf.generate(*fGlobalObservables, 1);
-   
-         const RooArgSet *values = one->get();
-         if (!_allVars) {
-            _allVars = pdf.getVariables();
-         }
-         *_allVars = *values;
-         delete one;
-   
+         if (one) { 
+            const RooArgSet *values = one->get(0);
+            if (!_allVars) {
+               _allVars = pdf.getVariables();
+            }
+            *_allVars = *values;
+            delete one;
+
+         }  
       } else {
    
          if (_pdfList.size() == 0) {
@@ -475,8 +478,8 @@ void ToyMCSampler::GenerateGlobalObservables(RooAbsPdf& pdf) const {
    } else {
    
       // not using multigen for global observables
-      RooDataSet* one = pdf.generate( *fGlobalObservables, 1 );
-      const RooArgSet *values = one->get();
+      RooDataSet* one = pdf.generateSimGlobal( *fGlobalObservables, 1 );
+      const RooArgSet *values = one->get(0);
       RooArgSet* allVars = pdf.getVariables();
       *allVars = *values;
       delete allVars;
@@ -503,9 +506,11 @@ RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& paramPoint, double& weight,
 
 
    // create nuisance parameter points
-   if(!fNuisanceParametersSampler && fPriorNuisance && fNuisancePars)
+   if(!fNuisanceParametersSampler && fPriorNuisance && fNuisancePars) {
       fNuisanceParametersSampler = new NuisanceParametersSampler(fPriorNuisance, fNuisancePars, fNToys, fExpectedNuisancePar);
-
+      if ((fUseMultiGen || fgAlwaysUseMultiGen) &&  fNuisanceParametersSampler )
+         oocoutI((TObject*)NULL,InputArguments) << "Cannot use multigen when nuisance parameters vary for every toy" << endl;
+   }
 
    // generate global observables
    RooArgSet observables(*fObservables);
@@ -532,6 +537,8 @@ RooAbsData* ToyMCSampler::GenerateToyData(RooArgSet& paramPoint, double& weight,
 
       // get nuisance parameter point and weight
       fNuisanceParametersSampler->NextPoint(allVarsMinusParamPoint, weight);
+
+
    }else{
       weight = 1.0;
    }
@@ -565,6 +572,9 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
    int events = forceEvents;
    if(events == 0) events = fNEvents;
 
+   // cannot use multigen when the nuisance parameters change for every toy
+   bool useMultiGen = (fUseMultiGen || fgAlwaysUseMultiGen) && !fNuisanceParametersSampler; 
+
    if(events == 0) {
       if( pdf.canBeExtended() && pdf.expectedEvents(observables) > 0) {
          if(fGenerateBinned) {
@@ -572,7 +582,7 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
             else          data = pdf.generate(observables, AllBinned(), Extended());
          }else{
 	   if(protoData) {
-	     if (fUseMultiGen || fgAlwaysUseMultiGen) {
+	     if (useMultiGen) {
 	       if (!_gs2) { _gs2 = pdf.prepareMultiGen(observables, Extended(), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag), ProtoData(*protoData, true, true)) ; }
 	       data = pdf.generate(*_gs2) ;
 	     } else {
@@ -580,7 +590,7 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
 	     }
 	   }
             else  {
-	      if (fUseMultiGen || fgAlwaysUseMultiGen) {
+	      if (useMultiGen) {
 		if (!_gs1) { _gs1 = pdf.prepareMultiGen(observables, Extended(), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag) ) ; }
 		data = pdf.generate(*_gs1) ;
 	      } else {
@@ -600,14 +610,14 @@ RooAbsData* ToyMCSampler::Generate(RooAbsPdf &pdf, RooArgSet &observables, const
          else          data = pdf.generate(observables, events, AllBinned());
       }else{
 	if(protoData) {
-	  if (fUseMultiGen || fgAlwaysUseMultiGen) {
+	  if (useMultiGen) {
 	    if (!_gs3) { _gs3 = pdf.prepareMultiGen(observables, NumEvents(events), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag), ProtoData(*protoData, true, true)); }
 	    data = pdf.generate(*_gs3) ;
 	  } else {
 	    data = pdf.generate                    (observables, NumEvents(events), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag), ProtoData(*protoData, true, true));
 	  }
 	} else {
-	  if (fUseMultiGen || fgAlwaysUseMultiGen) {	    
+	  if (useMultiGen) {	    
 	    if (!_gs4) { _gs4 = pdf.prepareMultiGen(observables, NumEvents(events), AutoBinned(fGenerateAutoBinned), GenBinned(fGenerateBinnedTag)); }
 	    data = pdf.generate(*_gs4) ;
 	  } else {

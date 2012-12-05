@@ -33,6 +33,9 @@
 #ifndef ROOT_TString
 #include "TString.h"
 #endif
+#ifndef ROOT_TMacro
+#include "TMacro.h"
+#endif
 #ifndef ROOT_MessageTypes
 #include "MessageTypes.h"
 #endif
@@ -133,9 +136,10 @@ class TSelector;
 // 31 -> 32: New log path trasmission
 // 32 -> 33: Development cycle 5.29/04 (fixed worker activation, new startup technology, ...)
 // 33 -> 34: Development cycle 5.33/02 (fix load issue, ...)
+// 34 -> 35: Development cycle 5.99/01 (PLite on workers, ...)
 
 // PROOF magic constants
-const Int_t       kPROOF_Protocol        = 34;            // protocol version number
+const Int_t       kPROOF_Protocol        = 35;            // protocol version number
 const Int_t       kPROOF_Port            = 1093;          // IANA registered PROOF port
 const char* const kPROOF_ConfFile        = "proof.conf";  // default config file
 const char* const kPROOF_ConfDir         = "/usr/local/root";  // default config dir
@@ -313,12 +317,16 @@ private:
    TString      fExp;
    Int_t        fIdx;
    Int_t        fNWrks;
+   Int_t        fLastNWrks;
    static char  fgCr[4];
 public:
-   TProofMergePrg() : fExp(), fIdx(-1), fNWrks(-1) { }
+   TProofMergePrg() : fExp(), fIdx(-1), fNWrks(-1), fLastNWrks(-1) { }
 
-   const char  *Export() { fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
-                           return fExp.Data(); }
+   const char  *Export(Bool_t &changed) {
+                  fExp.Form("%c (%d workers still sending)   ", fgCr[fIdx], fNWrks);
+                  changed = (fLastNWrks != fNWrks || fLastNWrks == -1) ? kTRUE : kFALSE;
+                  fLastNWrks = fNWrks;
+                  return fExp.Data(); }
    void         DecreaseNWrks() { fNWrks--; }
    void         IncreaseNWrks() { fNWrks++; }
    void         IncreaseIdx() { fIdx++; if (fIdx == 4) fIdx = 0; }
@@ -375,11 +383,6 @@ public:
       kFailIfExists        = 0,
       kOverwriteIfExists   = 1,
       kMergeIfExists       = 2
-   };
-   enum EUploadDataSetAnswer {
-      kError               = -1,
-      kDataSetExists       = -2,
-      kFail                = -3
    };
    enum EUploadPackageOpt {
       kUntar               = 0x0,  //Untar over existing dir [default]
@@ -471,12 +474,18 @@ private:
       kBuildAll            = 0,
       kCollectBuildResults = 1
    };
+   enum EParCheckVersionOpt {
+      kDontCheck   = 0,
+      kCheckROOT    = 1,
+      kCheckSVN     = 2
+   };
    enum EProofShowQuotaOpt {
       kPerGroup = 0x1,
       kPerUser = 0x2
    };
 
    Bool_t          fValid;           //is this a valid proof object
+   Bool_t          fTty;             //TRUE if connected to a terminal
    TString         fMaster;          //master server ("" if a master); used in the browser
    TString         fWorkDir;         //current work directory on remote servers
    TString         fGroup;           //PROOF group of this user
@@ -487,6 +496,8 @@ private:
    TList          *fSlaveInfo;       //!list returned by kPROOF_GETSLAVEINFO
    Bool_t          fSendGroupView;   //if true send new group view
    TList          *fActiveSlaves;    //list of active slaves (subset of all slaves)
+   TString         fActiveSlavesSaved;// comma-separated list of active slaves (before last call to
+                                      // SetParallel or Activate/DeactivateWorkers)
    TList          *fInactiveSlaves;  //list of inactive slaves (good but not used for processing)
    TList          *fUniqueSlaves;    //list of all active slaves with unique file systems
    TList          *fAllUniqueSlaves;  //list of all active slaves with unique file systems, including all submasters
@@ -522,6 +533,9 @@ private:
    FILE           *fLogFileW;        //temp file to redirect logs
    FILE           *fLogFileR;        //temp file to read redirected logs
    Bool_t          fLogToWindowOnly; //send log to window only
+   
+   Bool_t          fSaveLogToMacro;  // Whether to save received logs to TMacro fMacroLog (use with care)
+   TMacro          fMacroLog;        // Macro with the saved (last) log
 
    TProofMergePrg  fMergePrg;        //Merging progress
 
@@ -620,8 +634,8 @@ private:
    Int_t    SetParallelSilent(Int_t nodes, Bool_t random = kFALSE);
    void     RecvLogFile(TSocket *s, Int_t size);
    void     NotifyLogMsg(const char *msg, const char *sfx = "\n");
-   Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll);
-   Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0);
+   Int_t    BuildPackage(const char *package, EBuildPackageOpt opt = kBuildAll, Int_t chkveropt = kCheckROOT);
+   Int_t    BuildPackageOnClient(const char *package, Int_t opt = 0, TString *path = 0, Int_t chkveropt = kCheckROOT);
    Int_t    LoadPackage(const char *package, Bool_t notOnClient = kFALSE, TList *loadopts = 0);
    Int_t    LoadPackageOnClient(const char *package, TList *loadopts = 0);
    Int_t    UnloadPackage(const char *package);
@@ -669,7 +683,9 @@ private:
    Int_t    GetNumberOfBadSlaves() const;
 
    Bool_t   IsEndMaster() const { return fEndMaster; }
-   Int_t    ModifyWorkerLists(const char *ord, Bool_t add);
+   Int_t    ModifyWorkerLists(const char *ord, Bool_t add, Bool_t save);
+   void     RestoreActiveList();
+   void     SaveActiveList();
 
    Bool_t   IsSync() const { return fSync; }
    void     InterruptCurrentMonitor();
@@ -728,7 +744,7 @@ protected:
    TSlave *CreateSlave(const char *url, const char *ord,
                        Int_t perf, const char *image, const char *workdir);
    TSlave *CreateSubmaster(const char *url, const char *ord,
-                           const char *image, const char *msd);
+                           const char *image, const char *msd, Int_t nwk = 1);
 
    virtual void SaveWorkerInfo();
 
@@ -737,6 +753,8 @@ protected:
 
    void         SetDSet(TDSet *dset) { fDSet = dset; }
    virtual void ValidateDSet(TDSet *dset);
+   
+   Int_t   VerifyDataSetParallel(const char *uri, const char *optStr);
 
    TPluginHandler *GetProgressDialog() const { return fProgressDialog; }
 
@@ -750,6 +768,8 @@ protected:
    
    // Fast enable/disable feedback from Process
    void SetFeedback(TString &opt, TString &optfb, Int_t action);
+   // Output file handling during Process
+   Int_t HandleOutputOptions(TString &opt, TString &target, Int_t action);
 
    static void *SlaveStartupThread(void *arg);
 
@@ -777,6 +797,12 @@ public:
    Int_t       Ping();
    void        Touch();
    Int_t       Exec(const char *cmd, Bool_t plusMaster = kFALSE);
+   Int_t       Exec(const char *cmd, const char *ord, Bool_t logtomacro = kFALSE);
+   
+   TString     Getenv(const char *env, const char *ord = "0");
+   Int_t       GetRC(const char *RCenv, Int_t &env, const char *ord = "0");
+   Int_t       GetRC(const char *RCenv, Double_t &env, const char *ord = "0");
+   Int_t       GetRC(const char *RCenv, TString &env, const char *ord = "0");
 
    virtual Long64_t Process(TDSet *dset, const char *selector,
                             Option_t *option = "", Long64_t nentries = -1,
@@ -879,7 +905,7 @@ public:
    virtual void ShowDataSetCache(const char *dataset = 0);
    virtual void ClearDataSetCache(const char *dataset = 0);
 
-   void         ShowData();
+   virtual void ShowData();
    void         ClearData(UInt_t what = kUnregistered, const char *dsname = 0);
 
    const char *GetMaster() const { return fMaster; }
@@ -912,11 +938,12 @@ public:
    Float_t     GetRealTime() const { return fRealTime; }
    Float_t     GetCpuTime() const { return fCpuTime; }
 
-   Bool_t      IsLite() const { return (fServType == TProofMgr::kProofLite); }
-   Bool_t      IsProofd() const { return (fServType == TProofMgr::kProofd); }
+   Bool_t      IsLite() const { return (fServType == TProofMgr::kProofLite) ? kTRUE : kFALSE; }
+   Bool_t      IsProofd() const { return (fServType == TProofMgr::kProofd) ? kTRUE : kFALSE; }
    Bool_t      IsFolder() const { return kTRUE; }
    Bool_t      IsMaster() const { return fMasterServ; }
    Bool_t      IsValid() const { return fValid; }
+   Bool_t      IsTty() const { return fTty; }
    Bool_t      IsParallel() const { return GetParallel() > 0 ? kTRUE : kFALSE; }
    Bool_t      IsIdle() const { return (fNotIdle <= 0) ? kTRUE : kFALSE; }
    Bool_t      IsWaiting() const { return fIsWaiting; }
@@ -939,6 +966,7 @@ public:
    TList      *GetInputList();
    TObject    *GetOutput(const char *name);
    TList      *GetOutputList();
+   static TObject *GetOutput(const char *name, TList *out);
 
    void        ShowMissingFiles(TQueryResult *qr = 0);
    TFileCollection *GetMissingFiles(TQueryResult *qr = 0);
@@ -995,6 +1023,8 @@ public:
    void        ShowLog(const char *queryref);
    Bool_t      SendingLogToWindow() const { return fLogToWindowOnly; }
    void        SendLogToWindow(Bool_t mode) { fLogToWindowOnly = mode; }
+   
+   TMacro     *GetMacroLog() { return &fMacroLog; }
 
    void        ResetProgressDialogStatus() { fProgressDialogStarted = kFALSE; }
 
@@ -1015,8 +1045,8 @@ public:
    TProofMgr  *GetManager() { return fManager; }
    void        SetManager(TProofMgr *mgr);
 
-   Int_t       ActivateWorker(const char *ord);
-   Int_t       DeactivateWorker(const char *ord);
+   Int_t       ActivateWorker(const char *ord, Bool_t save = kTRUE);
+   Int_t       DeactivateWorker(const char *ord, Bool_t save = kTRUE);
 
    const char *GetDataPoolUrl() const { return fManager ? fManager->GetMssUrl() : 0; }
    void        SetDataPoolUrl(const char *url) { if (fManager) fManager->SetMssUrl(url); }

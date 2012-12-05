@@ -37,6 +37,11 @@ namespace ROOT {
 
    namespace Fit { 
 
+// use a static variable to get default minimizer options for error def
+// to see if user has changed it later on. If it has not been changed we set 
+// for the likelihood method an error def of 0.5 
+// t.b.d : multiply likelihood by 2 so have same error def definition as chi2 
+      double gDefaultErrorDef = ROOT::Math::MinimizerOptions::DefaultErrorDef();
 
 
 Fitter::Fitter() : 
@@ -358,9 +363,15 @@ bool Fitter::DoLikelihoodFit(const BinData & data, bool extended) {
    }
 
    // logl fit (error should be 0.5) set if different than default values (of 1)
-   if (fConfig.MinimizerOptions().ErrorDef() == ROOT::Math::MinimizerOptions::DefaultErrorDef() ) { 
+   if (fConfig.MinimizerOptions().ErrorDef() == gDefaultErrorDef ) { 
       fConfig.MinimizerOptions().SetErrorDef(0.5);
    }
+
+   if (useWeight && fConfig.MinosErrors() ) {
+      MATH_INFO_MSG("Fitter::DoLikelihoodFit","MINOS errors cannot be computed in weighted likelihood fits");
+      fConfig.SetMinosErrors(false);
+   }
+      
 
    fBinFit = true; 
    fDataSize = data.Size();
@@ -416,6 +427,12 @@ bool Fitter::DoLikelihoodFit(const UnBinData & data, bool extended) {
       return false; 
    }
 
+   if (useWeight && fConfig.MinosErrors() ) {
+      MATH_INFO_MSG("Fitter::DoLikelihoodFit","MINOS errors cannot be computed in weighted likelihood fits");
+      fConfig.SetMinosErrors(false);
+   }
+
+
    fBinFit = false; 
    fDataSize = data.Size();
 
@@ -425,7 +442,7 @@ bool Fitter::DoLikelihoodFit(const UnBinData & data, bool extended) {
 #endif
 
    // logl fit (error should be 0.5) set if different than default values (of 1)
-   if (fConfig.MinimizerOptions().ErrorDef() == ROOT::Math::MinimizerOptions::DefaultErrorDef() ) {
+   if (fConfig.MinimizerOptions().ErrorDef() == gDefaultErrorDef ) {
       fConfig.MinimizerOptions().SetErrorDef(0.5);
    }
 
@@ -479,14 +496,38 @@ bool Fitter::DoLinearFit(const BinData & data ) {
 
 
 bool Fitter::CalculateHessErrors() { 
-   // compute the Minos errors according to configuration
+   // compute the Hesse errors according to configuration
    // set in the parameters and append value in fit result
    if (fObjFunction.get() == 0) { 
-      MATH_ERROR_MSG("Fitter::FitFCN","Objective function has not been set");
+      MATH_ERROR_MSG("Fitter::CalculateHessErrors","Objective function has not been set");
       return false; 
    }
    // assume a fResult pointer always exists
    assert (fResult.get() );
+
+   // need a special treatment in case of weighted likelihood fit 
+   // (not yet implemented) 
+   if (fFitType == 2 && fConfig.UseWeightCorrection() ) { 
+      MATH_ERROR_MSG("Fitter::CalculateHessErrors","Re-computation of Hesse errors not implemented for weighted likelihood fits");
+      MATH_INFO_MSG("Fitter::CalculateHessErrors","Do the Fit using configure option FitConfig::SetParabErrors()");
+      return false;
+   }
+      // if (!fUseGradient ) {
+      // ROOT::Math::FitMethodFunction * fcn = dynamic_cast< ROOT::Math::FitMethodFunction *>(fObjFunction.get());
+      // if (fcn  && fcn->Type() ==  ROOT::Math::FitMethodFunction::kLogLikelihood) { 
+      //    if (!fBinFit) { 
+      //       ROOT::Math::LogLikelihoodFunction * nll = dynamic_cast< ROOT::Math::LogLikelihoodFunction *>(fcn);
+      //       assert(nll); 
+      //       nll->UseSumOfWeightSquare(false);
+      //    } 
+      //    else { 
+      //       ROOT::Math::PoissonLikelihoodFunction * nll = dynamic_cast< ROOT::Math::PoissonLikelihoodFunction *>(fcn);
+      //       assert(nll); 
+      //       nll->UseSumOfWeightSquare(false);
+      //    }   
+      //    // reset fcn in minimizer
+      // }
+
 
    // create minimizer if not done or if name has changed 
    if ( !fMinimizer.get()  || 
@@ -546,6 +587,12 @@ bool Fitter::CalculateMinosErrors() {
        return false; 
    }
 
+   if (fFitType == 2 && fConfig.UseWeightCorrection() ) { 
+      MATH_ERROR_MSG("Fitter::CalculateMinosErrors","Computation of MINOS errors not implemented for weighted likelihood fits");
+      return false;
+   }
+
+
    const std::vector<unsigned int> & ipars = fConfig.MinosParams(); 
    unsigned int n = (ipars.size() > 0) ? ipars.size() : fResult->Parameters().size(); 
    bool ok = false; 
@@ -585,8 +632,8 @@ struct ObjFuncTrait<ROOT::Math::FitMethodGradFunction> {
 };
 
 bool Fitter::DoInitMinimizer() { 
-   //initialize minimizer
-
+   //initialize minimizer by creating it
+   // and set there the objective function 
    // obj function must have been copied before 
    assert(fObjFunction.get() );
 
@@ -685,6 +732,7 @@ void Fitter::DoUpdateFitConfig() {
 
 int Fitter::GetNCallsFromFCN() { 
    // retrieve ncalls from the fit method functions
+   // this function is called when minimizer does not provide a way of returning the nnumber of function calls
    int ncalls = 0;
    if (!fUseGradient) { 
       const ROOT::Math::FitMethodFunction * fcn = dynamic_cast<const ROOT::Math::FitMethodFunction *>(fObjFunction.get());

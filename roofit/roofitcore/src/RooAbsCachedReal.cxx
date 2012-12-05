@@ -145,6 +145,13 @@ RooAbsCachedReal::FuncCacheElem* RooAbsCachedReal::getCache(const RooArgSet* nse
 
   cache = createCache(nset) ;
 
+  // Set cache function data to ADirty since function will need update every time in cache update process
+  RooFIter iarg( cache->hist()->get()->fwdIterator() );
+  RooAbsArg *arg(0);
+  while ( (arg=iarg.next()) ) {
+    arg->setOperMode(ADirty);
+  }
+
   // Check if we have contents registered already in global expensive object cache 
   RooDataHist* htmp = (RooDataHist*) expensiveObjectCache().retrieveObject(cache->hist()->GetName(),RooDataHist::Class(),cache->paramTracker()->parameters()) ;
 
@@ -181,6 +188,10 @@ RooAbsCachedReal::FuncCacheElem::FuncCacheElem(const RooAbsCachedReal& self, con
   // meta object that tracks changes in declared parameters of p.d.f
   // through actualParameters() 
 
+  // Disable source caching by default
+  _cacheSource = kFALSE ;
+  _sourceClone = 0 ;
+
   RooArgSet* nset2 = self.actualObservables(nset?*nset:RooArgSet()) ;
 
   RooArgSet orderedObs ;
@@ -216,6 +227,7 @@ RooAbsCachedReal::FuncCacheElem::FuncCacheElem(const RooAbsCachedReal& self, con
   // makes the correct decisions
   _func->addServerList(*params) ;
 
+
   delete observables ;
   delete params ;
   delete nset2 ;
@@ -223,7 +235,19 @@ RooAbsCachedReal::FuncCacheElem::FuncCacheElem(const RooAbsCachedReal& self, con
 }
 
 
+//_____________________________________________________________________________
+RooAbsCachedReal::FuncCacheElem::~FuncCacheElem()
+{
+  if (_sourceClone) { delete _sourceClone ; }
+  delete _paramTracker ;
+  delete _func ;
+  delete _hist ;
+}
 
+
+
+
+//_____________________________________________________________________________
 TString RooAbsCachedReal::cacheNameSuffix(const RooArgSet& nset) const 
 {
   // Construct unique suffix name for cache p.d.f object 
@@ -279,6 +303,9 @@ RooArgList RooAbsCachedReal::FuncCacheElem::containedArgs(Action)
   RooArgList ret(*func()) ;
 
   ret.add(*_paramTracker) ;
+  if (_sourceClone) {
+    ret.add(*_sourceClone) ;
+  }
   return ret ;
 }
 

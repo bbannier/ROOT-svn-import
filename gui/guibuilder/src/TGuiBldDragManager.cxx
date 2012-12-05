@@ -315,11 +315,12 @@ void TGuiBldMenuDialog::Build()
    while ((argument = (TMethodArg *) next())) {
       // Do not input argument for self object
       if (selfobjpos != argpos) {
-         const char *argname    = CreateArgumentTitle(argument).Data();
-         const char *type       = argument->GetTypeName();
-         TDataType  *datatype   = gROOT->GetType(type);
-         const char *charstar   = "char*";
-         char        basictype[32];
+         TString arg_name = CreateArgumentTitle(argument);
+         const char *argname = arg_name.Data();
+         const char *type = argument->GetTypeName();
+         TDataType  *datatype = gROOT->GetType(type);
+         const char *charstar = "char*";
+         char basictype[32];
 
          if (datatype) {
             strlcpy(basictype, datatype->GetTypeName(), sizeof(basictype));
@@ -3931,6 +3932,7 @@ Bool_t TGuiBldDragManager::HandleMotion(Event_t *event)
             break;
       }
    }
+   DrawGrabRectangles();
    return kTRUE;
 }
 
@@ -5734,7 +5736,7 @@ out:
    fPimpl->fLastPopupAction = kNoneAct;
    fPimpl->fPlacePopup = kTRUE;
 
-   fFrameMenu->PlaceMenu(x, y, kFALSE, kTRUE);
+   fFrameMenu->PlaceMenu(x, y, kTRUE, kTRUE);
 }
 
 //______________________________________________________________________________
@@ -5773,7 +5775,7 @@ void TGuiBldDragManager::Menu4Lasso(Int_t x, Int_t y)
 
    fPimpl->fLastPopupAction = kNoneAct;
    fPimpl->fPlacePopup = kTRUE;
-   fLassoMenu->PlaceMenu(x, y, kFALSE, kTRUE);
+   fLassoMenu->PlaceMenu(x, y, kTRUE, kTRUE);
 }
 
 //______________________________________________________________________________

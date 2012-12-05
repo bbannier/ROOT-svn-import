@@ -83,7 +83,6 @@ public:
    virtual Bool_t Add(TF1 *h1, Double_t c1=1, Option_t *option="");
    void         ClearBinContents();                 // Clears the content of all bins
    void         ChangePartition(Int_t n, Int_t m);  // Sets the number of partition cells to another value
-   virtual TH1 *DrawCopy(Option_t *option="") const;
    Int_t        Fill(Double_t x,Double_t y);
    Int_t        Fill(Double_t x,Double_t y, Double_t w);
    Int_t        Fill(const char* name, Double_t w);
@@ -117,7 +116,7 @@ public:
    Double_t     Integral(Int_t, Int_t, Int_t, Int_t, const Option_t*) const{return 0;}               //MayNotUse
    Double_t     Integral(Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, const Option_t*) const{return 0;} //MayNotUse
    void         Reset(Option_t *option);
-   void         SavePrimitive(ostream& out, Option_t* option = "");
+   void         SavePrimitive(std::ostream& out, Option_t* option = "");
    void         SetBinContent(Int_t bin, Double_t content);
    void         SetBinContent(Int_t, Int_t, Double_t){return;}           //MayNotUse
    void         SetBinContent(Int_t, Int_t, Int_t, Double_t){return;}    //MayNotUse

@@ -139,6 +139,10 @@ int G__call_setup_funcs()
    // Call G__RegisterLibrary() again, after it got called already
    // in G__init_setup_funcs(), because G__scratchall might have been
    // called in between.
+   
+   // Register libCint itself.
+   G__RegisterLibrary( (void (*)()) G__call_setup_funcs);
+   
    // Do a separate loop so we don't re-load because of A->B->A
    // dependencies introduced by autoloading during dictionary
    // initialization
@@ -2504,7 +2508,7 @@ const char *G__cint_version()
 int G__cintrevision(FILE* fp)
 {
    fprintf(fp, "\n");
-   fprintf(fp, "cint : C/C++ interpreter  (mailing list 'cint@root.cern.ch')\n");
+   fprintf(fp, "cint : C/C++ interpreter  (mailing list 'root-cint@cern.ch')\n");
    fprintf(fp, "   Copyright(c) : 1995~2010 Masaharu Goto (gotom@hanno.jp)\n");
    fprintf(fp, "   revision     : %s by M.Goto\n\n", G__cint_version());
 

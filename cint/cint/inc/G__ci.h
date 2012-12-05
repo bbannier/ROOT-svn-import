@@ -7,7 +7,7 @@
  * Description:
  *  C/C++ interpreter header file
  ************************************************************************
- * Copyright(c) 1995~2007  Masaharu Goto (cint@pcroot.cern.ch)
+ * Copyright(c) 1995~2007  Masaharu Goto (root-cint@cern.ch)
  *
  * For the licensing terms see the file COPYING
  *
@@ -1161,6 +1161,7 @@ struct G__comment_info {
 #define G__NOINPUTOPERATOR 0x02
 #define G__USEBYTECOUNT    0x04
 #define G__HASVERSION      0x08
+#define G__HASCUSTOM_STREAMERMEMBER 0x10
 
 struct G__RootSpecial {
   char* deffile;

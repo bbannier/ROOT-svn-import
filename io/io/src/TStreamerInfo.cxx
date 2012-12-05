@@ -357,7 +357,10 @@ void TStreamerInfo::Build()
             dtype = kCharStar;
             dsize = sizeof(char*);
          }
-         if (dmIsPtr && (dtype != kCharStar)) {
+         if (dtype == kOther_t || dtype == kNoType_t) {
+            Error("Build", "%s, unknown type: %s %s\n", GetName(), dmFull, dmName);
+            continue;            
+         } else if (dmIsPtr && (dtype != kCharStar)) {
             if (dmCounter) {
                // data member is pointer to an array of basic types
                element = new TStreamerBasicPointer(dmName, dmTitle, offset, dtype, dm->GetArrayIndex(), dmCounter->GetClass()->GetName(), dmCounter->GetClass()->GetClassVersion(), dmFull);
@@ -379,7 +382,7 @@ void TStreamerInfo::Build()
       } else {
          // try STL container or string
          static const char* full_string_name = "basic_string<char,char_traits<char>,allocator<char> >";
-         if (!strcmp(dmType, "string") || !strcmp(dmType, full_string_name)) {
+         if (!strcmp(dmType, "string") || !strcmp(dmType, "std::string") || !strcmp(dmType, full_string_name)) {
             element = new TStreamerSTLstring(dmName, dmTitle, offset, dmFull, dmIsPtr);
          } else if (dm->IsSTLContainer()) {
             element = new TStreamerSTL(dmName, dmTitle, offset, dmFull, dm->GetTrueTypeName(), dmIsPtr);
@@ -1205,9 +1208,6 @@ void TStreamerInfo::BuildOld()
    TMemberStreamer* streamer = 0;
 
    Int_t sp = sizeof(void*);
-#if defined(R__SGI64)
-   sp = 8;
-#endif
 
    int nBaze = 0;
 
@@ -3054,7 +3054,15 @@ Int_t TStreamerInfo::GetDataMemberOffset(TDataMember *dm, TMemberStreamer *&stre
    char dmbracket[256];
    snprintf(dmbracket,255,"%s[",dm->GetName());
    Int_t offset = kMissing;
-   if (fClass->GetDeclFileLine() < 0) offset = dm->GetOffset();
+   if (!fClass->IsLoaded()) {
+      // If the 'class' is not loaded, we do not have a TClass bootstrap and thus
+      // the 'RealData' might not have enough information because of the lack
+      // of proper ShowMember imlementation.
+      if (! (dm->Property() & kIsStatic) ) {
+         // Give an offset only to non-static members.
+         offset = dm->GetOffset();
+      }
+   }
    TRealData *rdm;
    while ((rdm = (TRealData*)nextr())) {
       char *rdmc = (char*)rdm->GetName();

@@ -80,7 +80,8 @@ public:
           kIsForeign   = BIT(18), kIsEmulation = BIT(19),
           kStartWithTObject = BIT(20),  // see comments for IsStartingWithTObject()
           kWarned      = BIT(21),
-          kHasNameMapNode = BIT(22)
+          kHasNameMapNode = BIT(22),
+          kHasCustomStreamerMember = BIT(23) // The class has a Streamer method and it is implemented by the user.
    };
    enum ENewType { kRealNew = 0, kClassNew, kDummyNew };
 
@@ -128,7 +129,7 @@ private:
    ClassStreamerFunc_t fStreamerFunc;   //Wrapper around this class custom Streamer member function.
    Int_t               fSizeof;         //Sizeof the class.
 
-   mutable Int_t      fCanSplit;        //!Indicates whether this class can be split or not.
+           Int_t      fCanSplit;        //!Indicates whether this class can be split or not.
    mutable Long_t     fProperty;        //!Property
    mutable Bool_t     fVersionUsed;     //!Indicates whether GetClassVersion has been called
 
@@ -195,13 +196,8 @@ private:
    };
 
    // These are the above-referenced hash tables.  (The pointers are null
-   // if no entries have been made.)  There are actually two variants.
-   // In the first, the typedef names are resolved with
-   // TClassEdit::ResolveTypedef; in the second, the class names
-   // are first massaged with TClassEdit::ShortType with kDropStlDefault.
-   // (??? Are the two distinct tables really needed?)
+   // if no entries have been made.)  
    static THashTable* fgClassTypedefHash;
-   static THashTable* fgClassShortTypedefHash;
 
 private:
    TClass(const TClass& tc);
@@ -209,7 +205,7 @@ private:
 
 protected:
    TVirtualStreamerInfo     *FindStreamerInfo(TObjArray* arr, UInt_t checksum) const;
-   static THashTable        *GetClassShortTypedefHash();
+   static THashTable        *GetClassTypedefHash();
 
 public:
    TClass();
@@ -330,6 +326,7 @@ public:
    Int_t              ReadBuffer(TBuffer &b, void *pointer);
    void               RemoveRef(TClassRef *ref); 
    void               ReplaceWith(TClass *newcl, Bool_t recurse = kTRUE) const;
+   void               ResetCaches();
    void               ResetClassInfo(Long_t tagnum);
    void               ResetInstanceCount() { fInstanceCount = fOnHeap = 0; }
    void               ResetMenuList();
@@ -362,6 +359,7 @@ public:
    // Function to retrieve the TClass object and dictionary function
    static void           AddClass(TClass *cl);
    static void           RemoveClass(TClass *cl);
+   static TClass        *GetClassOrAlias(const char *name);
    static TClass        *GetClass(const char *name, Bool_t load = kTRUE, Bool_t silent = kFALSE);
    static TClass        *GetClass(const type_info &typeinfo, Bool_t load = kTRUE, Bool_t silent = kFALSE);
    static VoidFuncPtr_t  GetDict (const char *cname);

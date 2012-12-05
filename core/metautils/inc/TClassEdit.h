@@ -14,6 +14,7 @@
 #define ROOT_TClassEdit
 
 #include "RConfig.h"
+#include "RConfigure.h"
 #include <string>
 #include <vector>
 
@@ -21,6 +22,17 @@
 namespace std {
    using ::string;
    using ::vector;
+}
+#endif
+
+#ifdef R__HAS_CLING
+namespace cling {
+   class Interpreter;
+}
+namespace ROOT {
+   namespace TMetaUtils {
+      class TNormalizedCtxt;
+   }
 }
 #endif
 
@@ -42,7 +54,8 @@ namespace TClassEdit {
       kDropComparator   = 1<<6, /* if the class has a comparator, drops BOTH the comparator and the Allocator */
       kDropAllDefault   = 1<<7, /* Drop default template parameter even in non STL classes */
       kLong64           = 1<<8, /* replace all 'long long' with Long64_t. */
-      kDropStd          = 1<<9  /* Drop any std:: */
+      kDropStd          = 1<<9, /* Drop any std:: */
+      kKeepOuterConst   = 1<<10 /* Make sure to keep the const keyword even outside the template parameters */
    };
 
    enum ESTLType {
@@ -73,6 +86,10 @@ namespace TClassEdit {
       TSplitType(const TSplitType&); // intentionally not implemented
       TSplitType &operator=(const TSplitType &); // intentionally not implemented
    };
+
+#ifdef R__HAS_CLING
+   void        Init(cling::Interpreter &interp,ROOT::TMetaUtils::TNormalizedCtxt &normCtxt);
+#endif
 
    std::string CleanType (const char *typeDesc,int mode = 0,const char **tail=0);
    bool        IsDefAlloc(const char *alloc, const char *classname);

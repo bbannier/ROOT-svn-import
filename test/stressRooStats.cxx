@@ -1,5 +1,3 @@
-// @(#)root/roofitcore:$name:  $:$id$
-// Authors: Wouter Verkerke  November 2007
 
 // C/C++ headers
 #include <string>
@@ -47,25 +45,22 @@ using namespace RooFit ;
 
 //*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
 //                                                                           //
-// RooStats Examples, Wouter Verkerke, Lorenzo Moneta, Ioan Gabriel Bucur    //
+// RooStats Unit Test S.T.R.E.S.S. Suite                                     //
+// Authors: Ioan Gabriel Bucur, Lorenzo Moneta, Wouter Verkerke              //
 //                                                                           //
-//                                                                           //
-//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*_*//
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*//
 
-
-//------------------------------------------------------------------------
-void StatusPrint(const Int_t id, const TString &title, const Int_t status, const Int_t lineWidth)
-{
-   // Print test program number and its title
-   TString header = TString::Format("Test %d : %s ", id, title.Data());
-   cout << left << setw(lineWidth) << setfill('.') << header << " " << (status > 0 ? "OK" : (status < 0 ? "SKIPPED" : "FAILED")) << endl;
-}
 
 //______________________________________________________________________________
 Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t allTests, Bool_t oneTest, Int_t testNumber, Bool_t dryRun, Bool_t doDump, Bool_t doTreeStore)
 {
    // width of lines when printing test results
    const Int_t lineWidth = 120;
+
+   // global test suite status
+   // 0     = all tests passed
+   // n < 0 = n tests failed
+   Int_t testSuiteStatus = 0;
 
    // Save memory directory location
    RooUnitTest::setMemDir(gDirectory) ;
@@ -114,6 +109,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
 
    list<RooUnitTest*> testList;
 
+
    // TEST PLC CONFINT SIMPLE GAUSSIAN : Confidence Level range is (0,1)
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 0.99999)); // boundary case CL -> 1
    testList.push_back(new TestProfileLikelihoodCalculator1(fref, writeRef, verbose, 2 * ROOT::Math::normal_cdf(3) - 1)); // 3 sigma
@@ -128,7 +124,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 100));
    testList.push_back(new TestProfileLikelihoodCalculator2(fref, writeRef, verbose, 800)); // boundary Poisson value
 
-   // TEST PLC CONFINT PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST PLC CONFINT PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 10, 30));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestProfileLikelihoodCalculator3(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
@@ -145,12 +141,12 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    // TEST BC CONFINT SHORTEST SIMPLE POISSON
    testList.push_back(new TestBayesianCalculator2(fref, writeRef, verbose));
 
-   // TEST BC CONFINT CENTRAL PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST BC CONFINT CENTRAL PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
    testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose, 10, 30));
    testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestBayesianCalculator3(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
 
-   // TEST MCMCC CONFINT PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
+   // TEST MCMCC CONFINT PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 10, 30));
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 20, 25));
    testList.push_back(new TestMCMCCalculator(fref, writeRef, verbose, 15, 20, 2 * ROOT::Math::normal_cdf(2) - 1));
@@ -165,28 +161,35 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 10, 0.1));
    testList.push_back(new TestHypoTestCalculator1(fref, writeRef, verbose, 150, 400, 4.0));
 
-   // TEST HTI PRODUCT POISSON : Observed value range is [0,40] for x=s+b and [0,120] for y=2*s*1.2^beta
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 10, 30));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 20, 25));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 10, 30));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 20, 25));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kFrequentist, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 10, 30));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 20, 25));
-   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, HypoTestInverter::kHybrid, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
+   // TEST HTC SIGNIFICANCE 
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kAsymptotic));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kSimpleLR));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kRatioLR));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kFrequentist, kProfileLROneSidedDiscovery));
+   testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose, kHybrid, kProfileLROneSidedDiscovery));
 
+   // TEST HTI PRODUCT POISSON : Observed value range is [0,30] for x=s+b and [0,80] for y=2*s*1.2^beta
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 10, 30));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 20, 25));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kAsymptotic, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kFrequentist, kProfileLR, 10, 30));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kFrequentist, kProfileLR, 20, 25));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kFrequentist, kProfileLR, 15, 20, 2 * normal_cdf(2) - 1));
+   testList.push_back(new TestHypoTestInverter1(fref, writeRef, verbose, kHybrid, kProfileLR, 10, 30));
 
-   //testList.push_back(new TestProfileLikelihoodCalculator4(fref, writeRef, verbose));
-   // testList.push_back(new TestHypoTestCalculator2(fref, writeRef, verbose));
-   //  testList.push_back(new TestHypoTestCalculator3(fref, writeRef, verbose));
-
-   // TEST HYPO TEST CALCULATOR
-
-
+   // TEST HTI S+B+E POISSON : Observed value range is [0,50] for x = e*s+b
+   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, kAsymptotic, kProfileLROneSided, 10));
+   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, kAsymptotic, kProfileLROneSided, 20));
+   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, kFrequentist, kSimpleLR, 10));
+   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, kFrequentist, kSimpleLR, 20));
+   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, kFrequentist, kRatioLR));
+   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, kFrequentist, kProfileLROneSided));
+   testList.push_back(new TestHypoTestInverter2(fref, writeRef, verbose, kHybrid, kSimpleLR));
+ 
+   
    TString suiteType = TString::Format(" Starting S.T.R.E.S.S. %s",
-                                       allTests ? "full suite" : (oneTest ? TString::Format("test %d", testNumber).Data() : "basic suite")
-                                      );
+      allTests ? "full suite" : (oneTest ? TString::Format("test %d", testNumber).Data() : "basic suite")
+   );
 
    cout << "*" << setw(lineWidth - 3) << setfill(' ') << suiteType << " *" << endl;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
@@ -209,7 +212,14 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
                if (doDump) {
                   (*iter)->setDebug(kTRUE);
                }
-               StatusPrint(i, (*iter)->GetName(), (*iter)->isTestAvailable() ? (*iter)->runTest() : -1, lineWidth);
+
+               Bool_t testPassed = (*iter)->runTest();
+               
+               // See convention for testSuiteStatus near the beginning of function
+               if(testPassed == kFALSE) testSuiteStatus--;
+      
+               cout << left << setw(lineWidth) << setfill('.') << TString::Format("Test %d : %s ", i, (*iter)->GetName()) 
+                    << " " << (testPassed ? "OK" : "FAILED" ) << endl;
             }
             delete *iter;
          }
@@ -223,7 +233,18 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    gBenchmark->Stop("stressRooStats");
 
 
-   //Print table with results
+   // Print global test suite status
+   // See convention for testSuiteStatus near the beginning of function
+   cout << setw(lineWidth) << setfill('*') << "" << endl;
+   cout << left << setw(lineWidth) << setfill('.') << "SUMMARY : stressRooStats test suite " << " " 
+        << (testSuiteStatus < 0 ? "FAILED" : "OK") << endl;
+   if (testSuiteStatus < 0) {
+      cout << "         " << -testSuiteStatus << (testSuiteStatus < -1 ? " tests " : " test ") 
+           << "failed" << endl;
+   }
+
+
+   // Print table with results
    Bool_t UNIX = strcmp(gSystem->GetName(), "Unix") == 0;
    cout << setw(lineWidth) << setfill('*') << "" << endl;
    if (UNIX) {
@@ -269,7 +290,7 @@ Int_t stressRooStats(const char* refFile, Bool_t writeRef, Int_t verbose, Bool_t
    delete gBenchmark ;
    gBenchmark = 0 ;
 
-   return 0;
+   return testSuiteStatus;
 }
 
 //_____________________________batch only_____________________
@@ -286,7 +307,8 @@ int main(int argc, const char *argv[])
    Bool_t doDump      = kFALSE;
    Bool_t doTreeStore = kFALSE;
 
-   string refFileName = "http://root.cern.ch/files/stressRooStats_v534_ref.root" ;
+   //string refFileName = "http://root.cern.ch/files/stressRooStats_v534_ref.root" ;
+   string refFileName = "$ROOTSYS/test/stressRooStats_ref.root" ;
 
    // Parse command line arguments
    for (Int_t i = 1 ;  i < argc ; i++) {
@@ -341,27 +363,27 @@ int main(int argc, const char *argv[])
 
    }
 
-   if (doWrite && refFileName.find("http:") == 0) {
+//    if (doWrite && refFileName.find("http:") == 0) {
 
-      // Locate file name part in URL and update refFileName accordingly
-      char* buf = new char[refFileName.size() + 1];
-      strcpy(buf, refFileName.c_str());
-      char *ptr = strrchr(buf, '/');
-      if (!ptr) ptr = strrchr(buf, ':');
-      refFileName = ptr + 1;
-      delete[] buf;
+//       // Locate file name part in URL and update refFileName accordingly
+//       char* buf = new char[refFileName.size() + 1];
+//       strcpy(buf, refFileName.c_str());
+//       char *ptr = strrchr(buf, '/');
+//       if (!ptr) ptr = strrchr(buf, ':');
+//       refFileName = ptr + 1;
+//       delete[] buf;
 
-      cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: "
-           << refFileName << endl;
-   }
+//       cout << "stressRooStats: WARNING running in write mode, but reference file is web file, writing local file instead: "
+//            << refFileName << endl;
+//    }
 
    // Disable caching of complex error function calculation, as we don't
    // want to write out the cache file as part of the validation procedure
    RooMath::cacheCERF(kFALSE) ;
 
    gBenchmark = new TBenchmark();
-   stressRooStats(refFileName.c_str(), doWrite, verbose, allTests, oneTest, testNumber, dryRun, doDump, doTreeStore);
-   return 0;
+
+   return stressRooStats(refFileName.c_str(), doWrite, verbose, allTests, oneTest, testNumber, dryRun, doDump, doTreeStore);
 }
 
 #endif

@@ -38,8 +38,6 @@ public:
    TF3();
    TF3(const char *name, const char *formula, Double_t xmin=0, Double_t xmax=1, Double_t ymin=0,
        Double_t ymax=1, Double_t zmin=0, Double_t zmax=1);
-   TF3(const char *name, void *fcn, Double_t xmin=0, Double_t xmax=1, Double_t ymin=0,
-       Double_t ymax=1, Double_t zmin=0, Double_t zmax=1, Int_t npar=0);
 #ifndef __CINT__
    TF3(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin=0, Double_t xmax=1, Double_t ymin=0,
        Double_t ymax=1, Double_t zmin=0, Double_t zmax=1, Int_t npar=0);
@@ -69,9 +67,12 @@ public:
       fNdim = 3;
    } 
 
+#ifndef R__HAS_CLING
    // constructor used by CINT 
+   TF3(const char *name, void *fcn, Double_t xmin=0, Double_t xmax=1, Double_t ymin=0, Double_t ymax=1, Double_t zmin=0, Double_t zmax=1, Int_t npar=0);
    TF3(const char *name, void *ptr,  Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax, Int_t npar, const char *className ); 
    TF3(const char *name, void *ptr, void *,Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax, Int_t npar, const char *className, const char *methodName = 0);
+#endif
 
    TF3(const TF3 &f3);
    TF3& operator=(const TF3 &rhs);
@@ -82,23 +83,24 @@ public:
    virtual TObject *DrawDerivative(Option_t * ="al") {return 0;}
    virtual TObject *DrawIntegral(Option_t * ="al")   {return 0;}
    virtual void     ExecuteEvent(Int_t event, Int_t px, Int_t py);
-   virtual void     GetMinimumXYZ(Double_t &x, Double_t &y, Double_t &z);
+   virtual Double_t GetMinimumXYZ(Double_t &x, Double_t &y, Double_t &z);
+   virtual Double_t GetMaximumXYZ(Double_t &x, Double_t &y, Double_t &z);
           Int_t     GetNpz() const {return fNpz;}
    virtual void     GetRandom3(Double_t &xrandom, Double_t &yrandom, Double_t &zrandom);
+   using TF1::GetRange; 
    virtual void     GetRange(Double_t &xmin, Double_t &xmax) const;
    virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &xmax, Double_t &ymax) const ;
    virtual void     GetRange(Double_t &xmin, Double_t &ymin, Double_t &zmin, Double_t &xmax, Double_t &ymax, Double_t &zmax) const;
    virtual Double_t GetSave(const Double_t *x);
    virtual Double_t GetZmin() const {return fZmin;}
    virtual Double_t GetZmax() const {return fZmax;}
-   virtual Double_t Integral(Double_t a, Double_t b, const Double_t *params=0, Double_t epsilon=0.000001) {return TF1::Integral(a,b,params,epsilon);}
-   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsilon=0.000001) {return TF1::Integral(ax,bx,ay,by,epsilon);}
-   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=0.000001);
+   using TF2::Integral;
+   virtual Double_t Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsrel=1.e-6);
    virtual Bool_t   IsInside(const Double_t *x) const;
    virtual TH1     *CreateHistogram();
    virtual void     Paint(Option_t *option="");
    virtual void     Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Double_t zmin, Double_t zmax);
-   virtual void     SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void     SetClippingBoxOff(); // *MENU*
    virtual void     SetClippingBoxOn(Double_t xclip=0, Double_t yclip=0, Double_t zclip=0); // *MENU*
    virtual void     SetNpz(Int_t npz=30);
@@ -121,6 +123,10 @@ public:
    virtual Double_t Covariance3XY(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=0.000001) {return CentralMoment3(1,ax,bx,1,ay,by,0,az,bz,epsilon);}
    virtual Double_t Covariance3XZ(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=0.000001) {return CentralMoment3(1,ax,bx,0,ay,by,1,az,bz,epsilon);}
    virtual Double_t Covariance3YZ(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t az, Double_t bz, Double_t epsilon=0.000001) {return CentralMoment3(0,ax,bx,1,ay,by,1,az,bz,epsilon);}
+
+protected: 
+   
+   virtual Double_t FindMinMax(Double_t* x, bool findmax) const; 
    
    ClassDef(TF3,3)  //The Parametric 3-D function
 };

@@ -87,7 +87,7 @@ TAxis::~TAxis()
 }
 
 //______________________________________________________________________________
-TAxis::TAxis(const TAxis &axis) : TNamed(axis), TAttAxis(axis)
+TAxis::TAxis(const TAxis &axis) : TNamed(axis), TAttAxis(axis), fLabels(0)
 {
    // Copy constructor.
 
@@ -620,60 +620,60 @@ void TAxis::RotateTitle(Bool_t rotate)
 }
 
 //______________________________________________________________________________
-void TAxis::SaveAttributes(ostream &out, const char *name, const char *subname)
+void TAxis::SaveAttributes(std::ostream &out, const char *name, const char *subname)
 {
     // Save axis attributes as C++ statement(s) on output stream out
 
    char quote = '"';
    if (strlen(GetTitle())) {
-      out<<"   "<<name<<subname<<"->SetTitle("<<quote<<GetTitle()<<quote<<");"<<endl;
+      out<<"   "<<name<<subname<<"->SetTitle("<<quote<<GetTitle()<<quote<<");"<<std::endl;
    }
    if (fTimeDisplay) {
-      out<<"   "<<name<<subname<<"->SetTimeDisplay(1);"<<endl;
-      out<<"   "<<name<<subname<<"->SetTimeFormat("<<quote<<GetTimeFormat()<<quote<<");"<<endl;
+      out<<"   "<<name<<subname<<"->SetTimeDisplay(1);"<<std::endl;
+      out<<"   "<<name<<subname<<"->SetTimeFormat("<<quote<<GetTimeFormat()<<quote<<");"<<std::endl;
    }
    if (fLabels) {
       TIter next(fLabels);
       TObjString *obj;
       while ((obj=(TObjString*)next())) {
-         out<<"   "<<name<<subname<<"->SetBinLabel("<<obj->GetUniqueID()<<","<<quote<<obj->GetName()<<quote<<");"<<endl;
+         out<<"   "<<name<<subname<<"->SetBinLabel("<<obj->GetUniqueID()<<","<<quote<<obj->GetName()<<quote<<");"<<std::endl;
       }
    }
 
    if (fFirst || fLast) {
-      out<<"   "<<name<<subname<<"->SetRange("<<fFirst<<","<<fLast<<");"<<endl;
+      out<<"   "<<name<<subname<<"->SetRange("<<fFirst<<","<<fLast<<");"<<std::endl;
    }
 
    if (TestBit(kLabelsHori)) {
-      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsHori);"<<endl;
+      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsHori);"<<std::endl;
    }
 
    if (TestBit(kLabelsVert)) {
-      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsVert);"<<endl;
+      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsVert);"<<std::endl;
    }
 
    if (TestBit(kLabelsDown)) {
-      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsDown);"<<endl;
+      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsDown);"<<std::endl;
    }
 
    if (TestBit(kLabelsUp)) {
-      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsUp);"<<endl;
+      out<<"   "<<name<<subname<<"->SetBit(TAxis::kLabelsUp);"<<std::endl;
    }
 
    if (TestBit(kCenterTitle)) {
-      out<<"   "<<name<<subname<<"->CenterTitle(true);"<<endl;
+      out<<"   "<<name<<subname<<"->CenterTitle(true);"<<std::endl;
    }
 
    if (TestBit(kRotateTitle)) {
-      out<<"   "<<name<<subname<<"->RotateTitle(true);"<<endl;
+      out<<"   "<<name<<subname<<"->RotateTitle(true);"<<std::endl;
    }
 
    if (TestBit(kMoreLogLabels)) {
-      out<<"   "<<name<<subname<<"->SetMoreLogLabels();"<<endl;
+      out<<"   "<<name<<subname<<"->SetMoreLogLabels();"<<std::endl;
    }
 
    if (TestBit(kNoExponent)) {
-      out<<"   "<<name<<subname<<"->SetNoExponent();"<<endl;
+      out<<"   "<<name<<subname<<"->SetNoExponent();"<<std::endl;
    }
 
    TAttAxis::SaveAttributes(out,name,subname);
@@ -856,25 +856,36 @@ void TAxis::SetRange(Int_t first, Int_t last)
 {
    //  Set the viewing range for the axis from bin first to last
    //  To set a range using the axis coordinates, use TAxis::SetRangeUser.
-   //  if first<=1 and last>=Nbins or if last < first the range is reset by removing the
-   //  bit TAxis::kAxisRange. In this case the functions TAxis::GetFirst() and TAxis::GetLast()
-   //  will return 1 and Nbins.
-   //  NOTE: If the bit has been set manually by the user in case of no range defined
-   //         GetFirst() and GetLast() will return 0.
 
-   if (last <= 0) last = fNbins;
-   if (last > fNbins) last = fNbins;
-   if (last  < first) { first = 1; last = fNbins; }
-   if (first < 1)     first = 1;
-   if (first == 1 && last == fNbins) {
-      SetBit(kAxisRange,0);
-      fFirst = 0;
-      fLast  = 0;
+   //  If first == last == 0 or if last < first or if the range specified does
+   //  not intersect at all with the maximum available range [0, fNbins + 1],
+   //  then the range is reset by removing the bit TAxis::kAxisRange. In this 
+   //  case the functions TAxis::GetFirst() and TAxis::GetLast() will return 1 
+   //  and fNbins.
+
+   //  If the range specified partially intersects [0, fNbins + 1], then the
+   //  intersection range is set. For instance, if first == -2 and last == fNbins,
+   //  then the set range is [0, fNbins] (fFirst = 0 and fLast = fNbins).
+   // 
+   //  NOTE: for historical reasons, SetRange(0,0) resets the range even though Bin 0 is 
+   //       technically reserved for the underflow; in order to set the range of the axis
+   //       so that it only includes the underflow, use SetRange(a,0), where a < 0
+
+   Int_t nCells = fNbins + 1; // bins + overflow
+
+   // special reset range cases
+   if (last < first || (first < 0 && last < 0) ||
+         (first > nCells && last > nCells) || (first == 0 && last == 0)
+   ) {
+      fFirst = 1;
+      fLast = fNbins;
+      SetBit(kAxisRange, 0);
    } else {
-      SetBit(kAxisRange,1);
-      fFirst = first;
-      fLast  = last;
+      fFirst = std::max(first, 0);
+      fLast = std::min(last, nCells);
+      SetBit(kAxisRange, 1);
    }
+
 }
 
 
@@ -953,13 +964,6 @@ void TAxis::SetTimeFormat(const char *tformat)
 
    TString timeformat = tformat;
 
-   Int_t lnF = timeformat.Length();
-   Int_t idG = timeformat.Index("GMT");
-
-   if (idG) {
-      if (idG+3==lnF) timeformat.Append(Form("%d",TTimeStamp::GetZoneOffset()));
-   }
-
    if (timeformat.Index("%F")>=0 || timeformat.IsNull()) {
       fTimeFormat = timeformat;
       return;
@@ -967,7 +971,7 @@ void TAxis::SetTimeFormat(const char *tformat)
 
    Int_t idF = fTimeFormat.Index("%F");
    if (idF>=0) {
-      lnF = fTimeFormat.Length();
+      Int_t lnF = fTimeFormat.Length();
       TString stringtimeoffset = fTimeFormat(idF,lnF);
       fTimeFormat = tformat;
       fTimeFormat.Append(stringtimeoffset);
@@ -982,13 +986,10 @@ void TAxis::SetTimeFormat(const char *tformat)
 void TAxis::SetTimeOffset(Double_t toffset, Option_t *option)
 {
    // Change the time offset
-   // If option = "gmt" the time offset is treated as a GMT time.
+   // If option = "gmt", set display mode to GMT.
 
    TString opt = option;
    opt.ToLower();
-
-   Bool_t gmt = kFALSE;
-   if (opt.Contains("gmt")) gmt = kTRUE;
 
    char tmp[20];
    time_t timeoff;
@@ -998,20 +999,20 @@ void TAxis::SetTimeOffset(Double_t toffset, Option_t *option)
    fTimeFormat.Append("%F");
 
    timeoff = (time_t)((Long_t)(toffset));
+   // offset is always saved in GMT to allow file transport
+   // to different time zones
    utctis = gmtime(&timeoff);
-
+   
    strftime(tmp,20,"%Y-%m-%d %H:%M:%S",utctis);
    fTimeFormat.Append(tmp);
 
    // append the decimal part of the time offset
    Double_t ds = toffset-(Int_t)toffset;
-   if(ds!= 0) {
-      snprintf(tmp,20,"s%g",ds);
-      fTimeFormat.Append(tmp);
-   }
+   snprintf(tmp,20,"s%g",ds);
+   fTimeFormat.Append(tmp);
 
-   // If the time is GMT, stamp fTimeFormat
-   if (gmt) fTimeFormat.Append(Form(" GMT%d",TTimeStamp::GetZoneOffset()));
+   // add GMT/local option
+   if (opt.Contains("gmt")) fTimeFormat.Append(" GMT");
 }
 
 

@@ -15,11 +15,14 @@
 #ifndef TEXTINPUT_TERMINALDISPLAY_H
 #define TEXTINPUT_TERMINALDISPLAY_H
 
+#include <cstddef>                      // for size_t
+#include <string>                       // for string
+#include <vector>                       // for vector
 #include "textinput/Display.h"
 #include "textinput/Editor.h"
+#include "textinput/Range.h"            // for Range
+#include "textinput/Text.h"             // for Text
 #include "textinput/TextInputContext.h"
-
-struct termios;
 
 namespace textinput {
   class Color;
@@ -69,7 +72,7 @@ namespace textinput {
                                size_t WriteOffset, size_t Requested);
     virtual void SetColor(char CIdx, const Color& C) = 0;
     virtual void WriteRawString(const char* text, size_t len) = 0;
-    virtual void ActOnEOL() {};
+    virtual void ActOnEOL() {}
 
     virtual void EraseToRight() = 0;
 

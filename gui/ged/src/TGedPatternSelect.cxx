@@ -40,6 +40,7 @@
 
 #include "TGResourcePool.h"
 #include "TGedPatternSelect.h"
+#include "RConfigure.h"
 #include "TGToolTip.h"
 #include "TGButton.h"
 #include "Riostream.h"
@@ -464,6 +465,9 @@ Bool_t TGedSelect::HandleButton(Event_t *event)
          if (fPopup) {
             gVirtualX->TranslateCoordinates(fId, gClient->GetDefaultRoot()->GetId(),
                                             0, fHeight, ax, ay, wdummy);
+#ifdef R__HAS_COCOA
+            gVirtualX->SetWMTransientHint(fPopup->GetId(), GetId());
+#endif
             fPopup->PlacePopup(ax, ay, fPopup->GetDefaultWidth(),
                                fPopup->GetDefaultHeight());
          }
@@ -520,7 +524,7 @@ void TGedSelect::DoRedraw()
 
       if (fState == kButtonDown) { ++x; ++y; }
 
-      DrawTriangle(GetShadowGC()(), x, y);
+      DrawTriangle(GetBlackGC()(), x, y);
 
    } else {
 
@@ -549,13 +553,22 @@ void TGedSelect::DrawTriangle(GContext_t gc, Int_t x, Int_t y)
    // Draw small triangle.
 
    Point_t points[3];
-
+   
+#ifdef R__HAS_COCOA
+   points[0].fX = x;
+   points[0].fY = y;
+   points[1].fX = x + 6;
+   points[1].fY = y;
+   points[2].fX = x + 3;
+   points[2].fY = y + 3;
+#else
    points[0].fX = x;
    points[0].fY = y;
    points[1].fX = x + 5;
    points[1].fY = y;
    points[2].fX = x + 2;
    points[2].fY = y + 3;
+#endif
 
    gVirtualX->FillPolygon(fId, gc, points, 3);
 }
@@ -605,6 +618,22 @@ void TGedPatternSelect::DoRedraw()
       w = h * 2;
       if (fState == kButtonDown) { ++x; ++y; }
 
+#ifdef R__HAS_COCOA
+      TGedPatternFrame::SetFillStyle(fDrawGC, 1001);
+
+      Pixel_t white;
+      gClient->GetColorByName("white", white); // white background
+      fDrawGC->SetForeground(white);
+      gVirtualX->FillRectangle(fId, fDrawGC->GetGC(), x + 1, y + 1, w - 1, h - 1);
+
+      if (fPattern != 0) {
+         fDrawGC->SetForeground(0);
+         TGedPatternFrame::SetFillStyle(fDrawGC, fPattern);
+         gVirtualX->FillRectangle(fId, fDrawGC->GetGC(), x + 1, y + 1, w - 1, h - 1);
+      }
+      
+      gVirtualX->DrawRectangle(fId, GetShadowGC()(), x + 1, y + 1, w - 1, h - 1);
+#else
       gVirtualX->DrawRectangle(fId, GetShadowGC()(), x, y, w - 1, h - 1);
 
       TGedPatternFrame::SetFillStyle(fDrawGC, 1001);
@@ -619,6 +648,7 @@ void TGedPatternSelect::DoRedraw()
          TGedPatternFrame::SetFillStyle(fDrawGC, fPattern);
          gVirtualX->FillRectangle(fId, fDrawGC->GetGC(), x + 1, y + 1, w - 2, h - 2);
       }
+#endif
    } else { // sunken rectangle
 
       x = fBorderWidth + 2;
@@ -641,11 +671,11 @@ void TGedPatternSelect::SetPattern(Style_t pattern, Bool_t emit)
 }
 
 //______________________________________________________________________________
-void TGedPatternSelect::SavePrimitive(ostream &out, Option_t * /*= ""*/)
+void TGedPatternSelect::SavePrimitive(std::ostream &out, Option_t * /*= ""*/)
 {
    // Save the pattern select widget as a C++ statement(s) on output stream out
 
    out <<"   TGedPatternSelect *";
    out << GetName() << " = new TGedPatternSelect(" << fParent->GetName()
-       << "," << fPattern << "," << WidgetId() << ");" << endl;
+       << "," << fPattern << "," << WidgetId() << ");" << std::endl;
 }

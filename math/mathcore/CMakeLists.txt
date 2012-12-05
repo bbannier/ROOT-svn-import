@@ -9,12 +9,13 @@ set(MATHCORE_HEADERS TRandom.h
   TRandom1.h TRandom2.h TRandom3.h TVirtualFitter.h TKDTree.h TKDTreeBinning.h TStatistic.h 
   Math/IParamFunction.h Math/IFunction.h Math/ParamFunctor.h Math/Functor.h 
   Math/Minimizer.h Math/MinimizerOptions.h Math/IntegratorOptions.h Math/IOptions.h 
+  Math/BasicMinimizer.h Math/MinimTransformFunction.h Math/MinimTransformVariable.h   
   Math/Integrator.h Math/VirtualIntegrator.h Math/AllIntegrationTypes.h Math/AdaptiveIntegratorMultiDim.h 
   Math/IntegratorMultiDim.h Math/Factory.h Math/FitMethodFunction.h Math/GaussIntegrator.h 
   Math/GaussLegendreIntegrator.h Math/RootFinder.h Math/IRootFinderMethod.h Math/RichardsonDerivator.h 
   Math/BrentMethods.h Math/BrentMinimizer1D.h Math/BrentRootFinder.h Math/DistSampler.h 
   Math/DistSamplerOptions.h Math/GoFTest.h Math/SpecFuncMathCore.h Math/DistFuncMathCore.h
-  Math/KDTree.h Math/TDataPoint.h Math/TDataPointN.h
+  Math/ChebyshevPol.h Math/KDTree.h Math/TDataPoint.h Math/TDataPointN.h
 )
 
 

@@ -32,9 +32,6 @@
 #include "TBranch.h"
 #include "TLeaf.h"
 
-// CINT
-#include "Api.h"
-
 // Standard
 #include <stdexcept>
 #include <string>
@@ -1510,6 +1507,7 @@ namespace {
    }
 
 //- TFN behavior --------------------------------------------------------------
+/* TODO: implement for Cling
    int TFNPyCallback( G__value* res, G__CONST char*, struct G__param* libp, int hash )
    {
    // This is a generic CINT-installable TFN (with N=1,2,3) callback (used to factor
@@ -1575,7 +1573,7 @@ namespace {
          G__Doubleref(&libp->para[2]), 1 );
 
       PyObject* arg4 = BufFac_t::Instance()->PyBuffer_FromMemory(
-         (Double_t*)G__int(libp->para[3]), -1 /* size unknown */ );
+         (Double_t*)G__int(libp->para[3]), -1 ); // size unknown
 
    // perform actual call
       result = PyObject_CallFunction( pyfunc, (char*)"OOOOi",
@@ -1592,6 +1590,8 @@ namespace {
       G__setnull( res );
       return ( 1 || hash || res || libp );
    }
+
+*/
 
 //____________________________________________________________________________
    class TPretendInterpreted: public PyCallable {
@@ -1620,6 +1620,7 @@ namespace {
    };
 
 //____________________________________________________________________________
+/* TODO: implement for Cling
    class TF1InitWithPyFunc : public TPretendInterpreted {
    public:
       TF1InitWithPyFunc( int ntf = 1 ) : TPretendInterpreted( 2 + 2*ntf ) {}
@@ -1730,7 +1731,7 @@ namespace {
 
       virtual PyCallable* Clone() { return new TF3InitWithPyFunc( *this ); }
    };
-
+*/
 
 //- TFunction behavior ---------------------------------------------------------
    PyObject* TFunctionCall( ObjectProxy* self, PyObject* args ) {
@@ -1739,6 +1740,7 @@ namespace {
 
 
 //- TMinuit behavior -----------------------------------------------------------
+/* TODO: implement for Cling
    class TMinuitSetFCN : public TPretendInterpreted {
    public:
       TMinuitSetFCN( int nArgs = 1 ) : TPretendInterpreted( nArgs ) {}
@@ -1825,7 +1827,7 @@ namespace {
          return TMinuitSetFCN::operator()( self, args, 0, 0 );
       }
    };
-
+*/
 
 //- Fit::TFitter behavior ------------------------------------------------------
    PyObject* gFitterPyCallback = 0;
@@ -1924,6 +1926,25 @@ namespace {
    };
 
 
+//- TFile::Get -----------------------------------------------------------------
+   PyObject* TFileGetAttr( PyObject* self, PyObject* attr )
+   {
+   // Pythonization of TFile::Get that raises AttributeError on failure.
+      PyObject* result = CallPyObjMethod( self, "Get", attr );
+      if ( !result )
+         return result;
+
+      if ( !PyObject_IsTrue( result ) ) {
+         PyObject* astr = PyObject_Str( attr );
+         PyErr_Format( PyExc_AttributeError, "TFile object has no attribute \'%s\'",
+                       PyROOT_PyUnicode_AsString( astr ) );
+         Py_DECREF( astr );
+         Py_DECREF( result );
+         return 0;
+      }
+      return result;
+   }
+
 //- simplistic len() functions -------------------------------------------------
    PyObject* ReturnThree( ObjectProxy*, PyObject* ) {
       return PyInt_FromLong( 3 );
@@ -1956,6 +1977,13 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 // for STL containers, and user classes modeled after them
    if ( HasAttrDirect( pyclass, PyStrings::gSize ) )
       Utility::AddToClass( pyclass, "__len__", "size" );
+
+// like-wise, some typical container sizings
+   if ( HasAttrDirect( pyclass, PyStrings::gGetSize ) )
+      Utility::AddToClass( pyclass, "__len__", "GetSize" );
+
+   if ( HasAttrDirect( pyclass, PyStrings::ggetSize ) )
+      Utility::AddToClass( pyclass, "__len__", "getSize" );
 
    if ( HasAttrDirect( pyclass, PyStrings::gBegin ) && HasAttrDirect( pyclass, PyStrings::gEnd ) ) {
    // some classes may not have dicts for their iterators, making begin/end useless
@@ -2038,7 +2066,6 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 
       Utility::AddToClass( pyclass, "count", (PyCFunction) TCollectionCount, METH_O );
 
-      Utility::AddToClass( pyclass, "__len__",  "GetSize" );
       ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)TCollectionIter;
       Utility::AddToClass( pyclass, "__iter__",  (PyCFunction)TCollectionIter, METH_NOARGS );
 
@@ -2222,6 +2249,7 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
    if ( name == "TH1" )       // allow hist *= scalar
       return Utility::AddToClass( pyclass, "__imul__", (PyCFunction) THNIMul, METH_O );
 
+/* TODO: implement for Cling
    if ( name == "TF1" )       // allow instantiation with python callable
       return Utility::AddToClass( pyclass, "__init__", new TF1InitWithPyFunc );
 
@@ -2230,21 +2258,24 @@ Bool_t PyROOT::Pythonize( PyObject* pyclass, const std::string& name )
 
    if ( name == "TF3" )       // allow instantiation with python callable
       return Utility::AddToClass( pyclass, "__init__", new TF3InitWithPyFunc );
+*/
 
    if ( name == "TFunction" ) // allow direct call
       return Utility::AddToClass( pyclass, "__call__", (PyCFunction) TFunctionCall );
 
+/* TODO: implement for Cling
    if ( name == "TMinuit" )   // allow call with python callable
       return Utility::AddToClass( pyclass, "SetFCN", new TMinuitSetFCN );
 
    if ( name == "TFitter" )   // allow call with python callable (this is not correct)
       return Utility::AddToClass( pyclass, "SetFCN", new TMinuitFitterSetFCN );
+*/
 
    if ( name == "Fitter" )    // really Fit::Fitter, allow call with python callable
       return Utility::AddToClass( pyclass, "FitFCN", new TFitterFitFCN );
 
    if ( name == "TFile" )     // allow member-style access to entries in file
-      return Utility::AddToClass( pyclass, "__getattr__", "Get" );
+      return Utility::AddToClass( pyclass, "__getattr__", TFileGetAttr, METH_O );
 
    if ( name.substr(0,8) == "TVector3" ) {
       Utility::AddToClass( pyclass, "__len__", (PyCFunction) ReturnThree, METH_NOARGS );

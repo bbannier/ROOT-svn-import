@@ -481,6 +481,11 @@ void THnSparseArrayChunk::Sumw2()
    // Turn on support of errors
    if (!fSumw2)
       fSumw2 = new TArrayD(fContent->GetSize());
+   // fill the structure with the current content 
+   for (Int_t bin=0; bin < fContent->GetSize(); bin++) {
+      fSumw2->fArray[bin] = fContent->GetAt(bin); 
+   }
+
 }
 
 
@@ -529,9 +534,9 @@ void THnSparseArrayChunk::Sumw2()
 // be retrieved by THnSparse::GetBinContent(linidx, (Int_t*)coord).
 // After the call, coord will contain the bin coordinate of each axis for the bin
 // with linear index linidx. A possible call would be
-//   cout << hs.GetBinContent(0, coord);
-//   cout <<" is the content of bin [x = " << coord[0] "
-//        << " | y = " << coord[1] << "]" << endl;
+//   std::cout << hs.GetBinContent(0, coord);
+//   std::cout <<" is the content of bin [x = " << coord[0] "
+//        << " | y = " << coord[1] << "]" << std::endl;
 //
 // * Efficiency
 // TH1 and TH2 are generally faster than THnSparse for one and two dimensional
@@ -547,8 +552,6 @@ void THnSparseArrayChunk::Sumw2()
 // a THnSparse. See the Projection() members. To only project parts of the
 // histogram, call
 //   THnSparse::GetAxis(12)->SetRange(from_bin, to_bin);
-// See the important remark in THnSparse::IsInRange() when excluding under-
-// and overflow bins!
 //
 // * Internal Representation
 // An entry for a filled bin consists of its n-dimensional coordinates and

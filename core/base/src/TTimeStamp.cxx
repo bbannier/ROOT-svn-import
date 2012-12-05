@@ -54,16 +54,16 @@ ClassImp(TTimeStamp);
 TVirtualMutex *gTimeMutex = 0; // local mutex
 
 //______________________________________________________________________________
-ostream& operator<<(ostream& os, const TTimeStamp& ts)
+std::ostream& operator<<(std::ostream& os, const TTimeStamp& ts)
 {
-   // Write time stamp to ostream.
+   // Write time stamp to std::ostream.
 
    if (os.good()) {
       if (os.tie()) os.tie()->flush(); // instead of opfx
       os << ts.AsString("c");
    }
    // instead of os.osfx()
-   if (os.flags() & ios::unitbuf) os.flush();
+   if (os.flags() & std::ios::unitbuf) os.flush();
    return os;
 }
 
@@ -411,7 +411,18 @@ Int_t TTimeStamp::GetZoneOffset()
 #if defined(R__WINGCC)
    return _timezone;
 #else
+#if !defined(R__FBSD) && !defined(R__OBSD)
    return  timezone;   // unix has extern long int
+#else	 
+   time_t tp = 0;	 
+   time(&tp);	 
+#ifdef _REENTRANT	 
+   struct tm buf;	 
+   return -localtime_r(&tp, &buf)->tm_gmtoff;	 
+#else	 
+   return -localtime(&tp)->tm_gmtoff;	 
+#endif	 
+#endif  
 #endif
 #else
    _tzset();

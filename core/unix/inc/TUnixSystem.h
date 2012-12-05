@@ -37,7 +37,7 @@ typedef void (*SigHandler_t)(ESignals);
 class TUnixSystem : public TSystem {
 
 protected:
-   char          *DynamicPathName(const char *lib, Bool_t quiet = kFALSE);
+   const char    *FindDynamicLibrary(TString &lib, Bool_t quiet = kFALSE);
    const char    *GetLinkedLibraries();
 
    // static functions providing semi-low level interface to raw Unix
@@ -175,6 +175,7 @@ public:
    //---- Environment Manipulation -----------------------------
    const char       *Getenv(const char *name);
    void              Setenv(const char *name, const char *value);
+   void              Unsetenv(const char *name);
 
    //---- System Logging ---------------------------------------
    void              Openlog(const char *name, Int_t options, ELogFacility facility);

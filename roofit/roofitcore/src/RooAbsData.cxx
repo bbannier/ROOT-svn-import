@@ -42,6 +42,7 @@
 #include "RooAbsDataStore.h"
 #include "RooVectorDataStore.h"
 #include "RooTreeDataStore.h"
+#include "RooDataHist.h"
 #include "RooCompositeDataStore.h"
 #include "RooCategory.h"
 
@@ -57,6 +58,8 @@
 #include "TH2.h"
 #include "TH3.h"
 
+
+using namespace std;
 
 ClassImp(RooAbsData)
 ;
@@ -810,7 +813,9 @@ Roo1DTable* RooAbsData::table(const RooArgSet& catSet, const char* cuts, const c
   RooAbsArg* arg ;
   while((arg=(RooAbsArg*)iter->Next())) {
     if (dynamic_cast<RooAbsCategory*>(arg)) {
-      catSet2.add(*arg) ;
+      RooAbsCategory* varsArg = dynamic_cast<RooAbsCategory*>(_vars.find(arg->GetName())) ;
+      if (varsArg != 0) catSet2.add(*varsArg) ;
+      else catSet2.add(*arg) ;
       if (prodName.length()>1) {
 	prodName += " x " ;
       }
@@ -1605,7 +1610,7 @@ TList* RooAbsData::split(const RooAbsCategory& splitCat, Bool_t createEmptyDataS
   // variable exists (can happen with composite datastores)
   Bool_t addWV(kFALSE) ;
   RooRealVar newweight("weight","weight",-1e9,1e9) ;
-  if (isWeighted()) {
+  if (isWeighted() && !IsA()->InheritsFrom(RooDataHist::Class())) {
     subsetVars.add(newweight) ;
     addWV = kTRUE ;
   }

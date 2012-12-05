@@ -78,34 +78,6 @@ TF2::TF2(const char *name,const char *formula, Double_t xmin, Double_t xmax, Dou
    }
 }
 
-//______________________________________________________________________________
-TF2::TF2(const char *name, void *fcn, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar)
-      : TF1(name, fcn, xmin, xmax, npar)
-{
-//*-*-*-*-*-*-*F2 constructor using a pointer to an interpreted function*-*-*
-//*-*          =========================================================
-//*-*
-//*-*   npar is the number of free parameters used by the function
-//*-*
-//*-*  Creates a function of type C between xmin and xmax and ymin,ymax.
-//*-*  The function is defined with npar parameters
-//*-*  fcn must be a function of type:
-//*-*     Double_t fcn(Double_t *x, Double_t *params)
-//*-*
-//*-*  This constructor is called for functions of type C by CINT.
-//*-*
-//*-* WARNING! A function created with this constructor cannot be Cloned.
-//*-*
-//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-
-   fYmin   = ymin;
-   fYmax   = ymax;
-   fNpx    = 30;
-   fNpy    = 30;
-   fNdim   = 2;
-   fContour.Set(0);
-
-}
 
 //______________________________________________________________________________
 TF2::TF2(const char *name, Double_t (*fcn)(Double_t *, Double_t *), Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar)
@@ -178,6 +150,37 @@ TF2::TF2(const char *name, ROOT::Math::ParamFunctor f, Double_t xmin, Double_t x
 
 }
 
+
+// CINT constructors
+#ifndef R__HAS_CLING
+//______________________________________________________________________________
+TF2::TF2(const char *name, void *fcn, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar)
+      : TF1(name, fcn, xmin, xmax, npar)
+{
+//*-*-*-*-*-*-*F2 constructor using a pointer to an interpreted function*-*-*
+//*-*          =========================================================
+//*-*
+//*-*   npar is the number of free parameters used by the function
+//*-*
+//*-*  Creates a function of type C between xmin and xmax and ymin,ymax.
+//*-*  The function is defined with npar parameters
+//*-*  fcn must be a function of type:
+//*-*     Double_t fcn(Double_t *x, Double_t *params)
+//*-*
+//*-*  This constructor is called for functions of type C by CINT.
+//*-*
+//*-* WARNING! A function created with this constructor cannot be Cloned.
+//*-*
+//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+   fYmin   = ymin;
+   fYmax   = ymax;
+   fNpx    = 30;
+   fNpy    = 30;
+   fNdim   = 2;
+   fContour.Set(0);
+
+}
 //______________________________________________________________________________
 TF2::TF2(const char *name, void * ptr, Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Int_t npar, const char *className)
       : TF1(name, ptr, xmin, xmax, npar,className)
@@ -222,6 +225,7 @@ TF2::TF2(const char *name, void * ptr, void *,Double_t xmin, Double_t xmax, Doub
    fContour.Set(0);
 
 }
+#endif // #ifndef R__HAS_CLING
 
 
 //______________________________________________________________________________
@@ -397,87 +401,131 @@ Double_t TF2::GetContourLevel(Int_t level) const
 }
 
 //______________________________________________________________________________
-void TF2::GetMinimumXY(Double_t &x, Double_t &y)
+Double_t TF2::FindMinMax(Double_t *x, Bool_t findmax) const
 {
-// return the X and Y values corresponding to the minimum value of the function
+// return minimum/maximum value of the function
+// To find the minimum on a range, first set this range via the SetRange function
+// If a vector x of coordinate is passed it will be used as starting point for the minimum. 
+// In addition on exit x will contain the coordinate values at the minimuma
+// If x is NULL or x is inifinity or NaN, first, a grid search is performed to find the initial estimate of the 
+// minimum location. The range of the function is divided into fNpx and fNpy
+// sub-ranges. If the function is "good" (or "bad"), these values can be changed
+// by SetNpx and SetNpy functions
+// Then, a minimization is used with starting values found by the grid search
+// The minimizer algorithm used (by default Minuit) can be changed by callinga
+//  ROOT::Math::Minimizer::SetDefaultMinimizerType("..")
+// Other option for the minimizer can be set using the static method of the MinimizerOptions class
+
+   //First do a grid search with step size fNpx and fNpy
+
+   Double_t xx[2]; 
+   Double_t rsign = (findmax) ? -1. : 1.;
+   TF2 & function = const_cast<TF2&>(*this); // needed since EvalPar is not const
+   Double_t xxmin = 0, yymin = 0, zzmin = 0; 
+   if (x == NULL || ( (x!= NULL) && ( !TMath::Finite(x[0]) || !TMath::Finite(x[1]) ) ) ){ 
+      Double_t dx = (fXmax - fXmin)/fNpx;
+      Double_t dy = (fYmax - fYmin)/fNpy;
+      xxmin = fXmin;
+      yymin = fYmin;
+      zzmin = rsign * TMath::Infinity();
+      for (Int_t i=0; i<fNpx; i++){
+         xx[0]=fXmin + (i+0.5)*dx;
+         for (Int_t j=0; j<fNpy; j++){
+            xx[1]=fYmin+(j+0.5)*dy;
+            Double_t zz = function(xx);
+            if (rsign*zz < rsign*zzmin) {xxmin = xx[0], yymin = xx[1]; zzmin = zz;}
+         }
+      }
+      
+      xxmin = TMath::Min(fXmax, xxmin);
+      yymin = TMath::Min(fYmax, yymin);
+   }
+   else {
+      xxmin = x[0]; 
+      yymin = x[1];
+      zzmin = function(xx);
+   }
+   xx[0] = xxmin; 
+   xx[1] = yymin; 
+      
+   double fmin = GetMinMaxNDim(xx,findmax);
+   if (rsign*fmin < rsign*zzmin) { 
+      if (x) {x[0] = xx[0]; x[1] = xx[1]; }
+      return fmin;
+   }
+   // here if minimization failed
+   if (x) { x[0] = xxmin; x[1] = yymin; }
+   return zzmin;
+}
+
+//______________________________________________________________________________
+Double_t TF2::GetMinimumXY(Double_t &x, Double_t &y) const
+{
+// Compute the X and Y values corresponding to the minimum value of the function
+// Return the minimum value of the function
 // To find the minimum on a range, first set this range via the SetRange function
 // Method:
 //   First, a grid search is performed to find the initial estimate of the 
 //   minimum location. The range of the function is divided into fNpx and fNpy
 //   sub-ranges. If the function is "good" (or "bad"), these values can be changed
 //   by SetNpx and SetNpy functions
-//   Then, Minuit minimization is used with starting values found by the grid search
+//   Then, a minimization is used with starting values found by the grid search
+//   The minimizer algorithm used (by default Minuit) can be changed by callinga
+//   ROOT::Math::Minimizer::SetDefaultMinimizerType("..")
+//   Other option for the minimizer can be set using the static method of the MinimizerOptions class
+//
+//   Note that this method will always do first a grid search in contrast to GetMinimum
 
-   //First do a grid search with step size fNpx and fNpy
-   Double_t xx, yy, zz;
-   Double_t dx = (fXmax - fXmin)/fNpx;
-   Double_t dy = (fYmax - fYmin)/fNpy;
-   Double_t xxmin = fXmin;
-   Double_t yymin = fYmin;
-   Double_t zzmin = Eval(xxmin, yymin+dy);
-   for (Int_t i=0; i<fNpx; i++){
-      xx=fXmin + (i+0.5)*dx;
-      for (Int_t j=0; j<fNpy; j++){
-         yy=fYmin+(j+0.5)*dy;
-         zz = Eval(xx, yy);
-         if (zz<zzmin) {xxmin = xx, yymin = yy; zzmin = zz;}
-      }
-   }
-
-   x = TMath::Min(fXmax, xxmin);
-   y = TMath::Min(fYmax, yymin);
-
-   //go to minuit for the final minimization
-   char f[]="TFitter";
-
-   Int_t strdiff = 0;
-   if (TVirtualFitter::GetFitter()){
-      //If the fitter is already set and it's not minuit, delete it and 
-      //create a minuit fitter
-      strdiff = strcmp(TVirtualFitter::GetFitter()->IsA()->GetName(), f);
-      if (strdiff!=0) 
-         delete TVirtualFitter::GetFitter();
-   }
-
-   TVirtualFitter *minuit = TVirtualFitter::Fitter(this, 2);
-   if (!minuit) { 
-      Error("GetMinimumXY", "Cannot create fitter");
-      return;
-   }
-   minuit->Clear();
-   minuit->SetFitMethod("F2Minimizer");
-   Double_t arglist[10];
-   arglist[0]=-1;
-   minuit->ExecuteCommand("SET PRINT", arglist, 1);
-
-   minuit->SetParameter(0, "x", x, 0.1, 0, 0);
-   minuit->SetParameter(1, "y", y, 0.1, 0, 0);
-   arglist[0] = 5;
-   arglist[1] = 1e-5;
-   // minuit->ExecuteCommand("CALL FCN", arglist, 1);
-
-   Int_t fitResult = minuit->ExecuteCommand("MIGRAD", arglist, 0);
-   if (fitResult!=0){
-      //migrad might have not converged
-      Warning("GetMinimumXY", "Abnormal termination of minimization");
-   }
-   Double_t xtemp=minuit->GetParameter(0);
-   Double_t ytemp=minuit->GetParameter(1);
-   if (xtemp>fXmax || xtemp<fXmin || ytemp>fYmax || ytemp<fYmin){
-      //converged to something outside limits, redo with bounds 
-
-      minuit->SetParameter(0, "x", x, 0.1, fXmin, fXmax);
-      minuit->SetParameter(1, "y", y, 0.1, fYmin, fYmax);
-      fitResult = minuit->ExecuteCommand("MIGRAD", arglist, 0);
-      if (fitResult!=0){
-         //migrad might have not converged
-         Warning("GetMinimumXY", "Abnormal termination of minimization");
-      }
-   }
-   x = minuit->GetParameter(0);
-   y = minuit->GetParameter(1);
-
+   double xx[2] = { 0,0 };
+   xx[0] = TMath::QuietNaN();  // to force to do grid search in TF2::FindMinMax
+   double fmin = FindMinMax(xx, false);
+   x = xx[0]; y = xx[1];
+   return fmin;
 }
+
+//______________________________________________________________________________
+Double_t TF2::GetMaximumXY(Double_t &x, Double_t &y) const
+{
+// Compute the X and Y values corresponding to the maximum value of the function
+// Return the maximum value of the function
+//  See TF2::GetMinimumXY
+
+   double xx[2] = { 0,0 };
+   xx[0] = TMath::QuietNaN();  // to force to do grid search in TF2::FindMinMax
+   double fmax = FindMinMax(xx, true);
+   x = xx[0]; y = xx[1];
+   return fmax;
+}
+
+
+//______________________________________________________________________________
+Double_t TF2::GetMinimum(Double_t *x) const
+{
+// return minimum/maximum value of the function
+// To find the minimum on a range, first set this range via the SetRange function
+// If a vector x of coordinate is passed it will be used as starting point for the minimum. 
+// In addition on exit x will contain the coordinate values at the minimuma
+// If x is NULL or x is inifinity or NaN, first, a grid search is performed to find the initial estimate of the 
+// minimum location. The range of the function is divided into fNpx and fNpy
+// sub-ranges. If the function is "good" (or "bad"), these values can be changed
+// by SetNpx and SetNpy functions
+// Then, a minimization is used with starting values found by the grid search
+// The minimizer algorithm used (by default Minuit) can be changed by callinga
+//  ROOT::Math::Minimizer::SetDefaultMinimizerType("..")
+// Other option for the minimizer can be set using the static method of the MinimizerOptions class
+
+   return FindMinMax(x, false); 
+}
+
+//______________________________________________________________________________
+Double_t TF2::GetMaximum(Double_t *x) const
+{
+// return maximum value of the function
+// See TF2::GetMinimum
+
+   return FindMinMax(x, true); 
+}
+
 
 //______________________________________________________________________________
 char *TF2::GetObjectInfo(Int_t px, Int_t py) const
@@ -659,9 +707,10 @@ Double_t TF2::GetSave(const Double_t *xx)
 }
 
 //______________________________________________________________________________
-Double_t TF2::Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsilon)
+Double_t TF2::Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Double_t epsrel)
 {
 // Return Integral of a 2d function in range [ax,bx],[ay,by]
+// with desired relative accuracy (default value of eps is 1.e-9)
 //
    Double_t a[2], b[2];
    a[0] = ax;
@@ -670,12 +719,11 @@ Double_t TF2::Integral(Double_t ax, Double_t bx, Double_t ay, Double_t by, Doubl
    b[1] = by;
    Double_t relerr  = 0;
    Int_t n = 2;
-   Int_t minpts = 2*2+2*n*(n+1)+1; //ie 17
    Int_t maxpts = 20*fNpx*fNpy;
    Int_t nfnevl,ifail;
-   Double_t result = IntegralMultiple(n,a,b,minpts,maxpts,epsilon,relerr,nfnevl,ifail);
+   Double_t result = IntegralMultiple(n,a,b,maxpts,epsrel,epsrel,relerr,nfnevl,ifail);
    if (ifail > 0) {
-      Warning("Integral","failed code=%d, minpts=%d, maxpts=%d, epsilon=%g, nfnevl=%d, relerr=%g ",ifail,minpts,maxpts,epsilon,nfnevl,relerr);
+      Warning("Integral","failed code=%d, maxpts=%d, epsrel=%g, nfnevl=%d, relerr=%g ",ifail,maxpts,epsrel,nfnevl,relerr);
    }
    return result;
 }
@@ -830,74 +878,74 @@ void TF2::Save(Double_t xmin, Double_t xmax, Double_t ymin, Double_t ymax, Doubl
 }
 
 //______________________________________________________________________________
-void TF2::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TF2::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
    char quote = '"';
-   out<<"   "<<endl;
+   out<<"   "<<std::endl;
    if (gROOT->ClassSaved(TF2::Class())) {
       out<<"   ";
    } else {
       out<<"   TF2 *";
    }
    if (!fMethodCall) {
-      out<<GetName()<<" = new TF2("<<quote<<GetName()<<quote<<","<<quote<<GetTitle()<<quote<<","<<fXmin<<","<<fXmax<<","<<fYmin<<","<<fYmax<<");"<<endl;
+      out<<GetName()<<" = new TF2("<<quote<<GetName()<<quote<<","<<quote<<GetTitle()<<quote<<","<<fXmin<<","<<fXmax<<","<<fYmin<<","<<fYmax<<");"<<std::endl;
    } else {
-      out<<GetName()<<" = new TF2("<<quote<<GetName()<<quote<<","<<GetTitle()<<","<<fXmin<<","<<fXmax<<","<<fYmin<<","<<fYmax<<","<<GetNpar()<<");"<<endl;
+      out<<GetName()<<" = new TF2("<<quote<<GetName()<<quote<<","<<GetTitle()<<","<<fXmin<<","<<fXmax<<","<<fYmin<<","<<fYmax<<","<<GetNpar()<<");"<<std::endl;
    }
 
    if (GetFillColor() != 0) {
       if (GetFillColor() > 228) {
          TColor::SaveColor(out, GetFillColor());
-         out<<"   "<<GetName()<<"->SetFillColor(ci);" << endl;
+         out<<"   "<<GetName()<<"->SetFillColor(ci);" << std::endl;
       } else 
-         out<<"   "<<GetName()<<"->SetFillColor("<<GetFillColor()<<");"<<endl;
+         out<<"   "<<GetName()<<"->SetFillColor("<<GetFillColor()<<");"<<std::endl;
    }
    if (GetFillStyle() != 1001) {
-      out<<"   "<<GetName()<<"->SetFillStyle("<<GetFillStyle()<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetFillStyle("<<GetFillStyle()<<");"<<std::endl;
    }
    if (GetMarkerColor() != 1) {
       if (GetMarkerColor() > 228) {
          TColor::SaveColor(out, GetMarkerColor());
-         out<<"   "<<GetName()<<"->SetMarkerColor(ci);" << endl;
+         out<<"   "<<GetName()<<"->SetMarkerColor(ci);" << std::endl;
       } else 
-         out<<"   "<<GetName()<<"->SetMarkerColor("<<GetMarkerColor()<<");"<<endl;
+         out<<"   "<<GetName()<<"->SetMarkerColor("<<GetMarkerColor()<<");"<<std::endl;
    }
    if (GetMarkerStyle() != 1) {
-      out<<"   "<<GetName()<<"->SetMarkerStyle("<<GetMarkerStyle()<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetMarkerStyle("<<GetMarkerStyle()<<");"<<std::endl;
    }
    if (GetMarkerSize() != 1) {
-      out<<"   "<<GetName()<<"->SetMarkerSize("<<GetMarkerSize()<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetMarkerSize("<<GetMarkerSize()<<");"<<std::endl;
    }
    if (GetLineColor() != 1) {
       if (GetLineColor() > 228) {
          TColor::SaveColor(out, GetLineColor());
-         out<<"   "<<GetName()<<"->SetLineColor(ci);" << endl;
+         out<<"   "<<GetName()<<"->SetLineColor(ci);" << std::endl;
       } else 
-         out<<"   "<<GetName()<<"->SetLineColor("<<GetLineColor()<<");"<<endl;
+         out<<"   "<<GetName()<<"->SetLineColor("<<GetLineColor()<<");"<<std::endl;
    }
    if (GetLineWidth() != 4) {
-      out<<"   "<<GetName()<<"->SetLineWidth("<<GetLineWidth()<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetLineWidth("<<GetLineWidth()<<");"<<std::endl;
    }
    if (GetLineStyle() != 1) {
-      out<<"   "<<GetName()<<"->SetLineStyle("<<GetLineStyle()<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetLineStyle("<<GetLineStyle()<<");"<<std::endl;
    }
    if (GetNpx() != 100) {
-      out<<"   "<<GetName()<<"->SetNpx("<<GetNpx()<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetNpx("<<GetNpx()<<");"<<std::endl;
    }
    if (GetChisquare() != 0) {
-      out<<"   "<<GetName()<<"->SetChisquare("<<GetChisquare()<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetChisquare("<<GetChisquare()<<");"<<std::endl;
    }
    Double_t parmin, parmax;
    for (Int_t i=0;i<fNpar;i++) {
-      out<<"   "<<GetName()<<"->SetParameter("<<i<<","<<GetParameter(i)<<");"<<endl;
-      out<<"   "<<GetName()<<"->SetParError("<<i<<","<<GetParError(i)<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetParameter("<<i<<","<<GetParameter(i)<<");"<<std::endl;
+      out<<"   "<<GetName()<<"->SetParError("<<i<<","<<GetParError(i)<<");"<<std::endl;
       GetParLimits(i,parmin,parmax);
-      out<<"   "<<GetName()<<"->SetParLimits("<<i<<","<<parmin<<","<<parmax<<");"<<endl;
+      out<<"   "<<GetName()<<"->SetParLimits("<<i<<","<<parmin<<","<<parmax<<");"<<std::endl;
    }
    out<<"   "<<GetName()<<"->Draw("
-      <<quote<<option<<quote<<");"<<endl;
+      <<quote<<option<<quote<<");"<<std::endl;
 }
 
 

@@ -152,7 +152,8 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    // Explicitly load libMathCore as CINT will not auto load it when using one
    // of its globals. Once moved to Cling, which should work correctly, we
    // can remove this statement.
-   gSystem->Load("libMathCore");
+   if (!gClassTable->GetDict("TRandom"))
+      gSystem->Load("libMathCore");
 
    // Load some frequently used includes
    Int_t includes = gEnv->GetValue("Rint.Includes", 1);
@@ -169,7 +170,7 @@ TRint::TRint(const char *appClassName, Int_t *argc, char **argv, void *options,
    // and you execute your scripts multiple times.
    if (includes > 0) {
       ProcessLine("#include <iostream>", kTRUE);
-      ProcessLine("#include <string>", kTRUE); // for std::string iostream.
+      ProcessLine("#include <string>", kTRUE); // for std::string std::iostream.
       ProcessLine("#include <DllImport.h>", kTRUE);// Defined R__EXTERN
       if (includes > 1) {
          ProcessLine("#include <vector>", kTRUE);  // Needed because std::vector and std::pair are
@@ -383,29 +384,33 @@ void TRint::Run(Bool_t retrn)
                printf("\n");
             Bool_t rootfile = kFALSE;
             
-            if (file->String().EndsWith(".root") || file->String().BeginsWith("file:")) {
-               rootfile = kTRUE;
+            if (file->TestBit(kExpression)) {
+               snprintf(cmd, kMAXPATHLEN+50, "%s", (const char*)file->String());
             } else {
-               FILE *mayberootfile = fopen(file->String(),"rb");
-               if (mayberootfile) {
-                  char header[5];
-                  if (fgets(header,5,mayberootfile)) {
-                     rootfile = strncmp(header,"root",4)==0;
+               if (file->String().EndsWith(".root") || file->String().BeginsWith("file:")) {
+                  rootfile = kTRUE;
+               } else {
+                  FILE *mayberootfile = fopen(file->String(),"rb");
+                  if (mayberootfile) {
+                     char header[5];
+                     if (fgets(header,5,mayberootfile)) {
+                        rootfile = strncmp(header,"root",4)==0;
+                     }
+                     fclose(mayberootfile);
                   }
-                  fclose(mayberootfile);
                }
-            }
-            if (rootfile) {
-               // special trick to be able to open files using UNC path names
-               if (file->String().BeginsWith("\\\\"))
-                  file->String().Prepend("\\\\");
-               file->String().ReplaceAll("\\","/");
-               const char *rfile = (const char*)file->String();
-               Printf("Attaching file %s as _file%d...", rfile, nfile);
-               snprintf(cmd, kMAXPATHLEN+50, "TFile *_file%d = TFile::Open(\"%s\")", nfile++, rfile);
-            } else {
-               Printf("Processing %s...", (const char*)file->String());
-               snprintf(cmd, kMAXPATHLEN+50, ".x %s", (const char*)file->String());
+               if (rootfile) {
+                  // special trick to be able to open files using UNC path names
+                  if (file->String().BeginsWith("\\\\"))
+                     file->String().Prepend("\\\\");
+                  file->String().ReplaceAll("\\","/");
+                  const char *rfile = (const char*)file->String();
+                  Printf("Attaching file %s as _file%d...", rfile, nfile);
+                  snprintf(cmd, kMAXPATHLEN+50, "TFile *_file%d = TFile::Open(\"%s\")", nfile++, rfile);
+               } else {
+                  Printf("Processing %s...", (const char*)file->String());
+                  snprintf(cmd, kMAXPATHLEN+50, ".x %s", (const char*)file->String());
+               }
             }
             Getlinem(kCleanUp, 0);
             Gl_histadd(cmd);
@@ -426,10 +431,6 @@ void TRint::Run(Bool_t retrn)
          }
       } ENDTRY;
 
-      // Allow end-of-file on the terminal to be noticed
-      // after we finish processing the command line input files.
-      fInputHandler->Activate();
-
       if (QuitOpt()) {
          if (retrn) return;
          if (error) {
@@ -441,6 +442,10 @@ void TRint::Run(Bool_t retrn)
          Terminate(retval);
       }
 
+      // Allow end-of-file on the terminal to be noticed
+      // after we finish processing the command line input files.
+      fInputHandler->Activate();
+      
       ClearInputFiles();
 
       if (needGetlinemInit) Getlinem(kInit, GetPrompt());
@@ -698,7 +703,7 @@ Long_t TRint::ProcessRemote(const char *line, Int_t *)
 
 
 //______________________________________________________________________________
-Int_t TRint::TabCompletionHook(char *buf, int *pLoc, ostream& out)
+Int_t TRint::TabCompletionHook(char *buf, int *pLoc, std::ostream& out)
 {
    // Forward tab completion request to our TTabCom::Hook().
    if (gTabCom)

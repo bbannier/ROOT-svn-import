@@ -17,7 +17,7 @@
 #define ROO_NAME_SET
 
 #include "TString.h"
-#include "RooAbsArg.h"
+#include "TObject.h"
 #include "RooPrintable.h"
 class RooArgSet ;
 
@@ -35,17 +35,19 @@ public:
   RooArgSet* select(const RooArgSet& list) const ;
   Bool_t operator==(const RooNameSet& other) ;  
   RooNameSet& operator=(const RooNameSet&) ;
+  Bool_t operator<(const RooNameSet& other) const ;
 
-  virtual void printName(ostream& os) const ;
-  virtual void printTitle(ostream& os) const ;
-  virtual void printClassName(ostream& os) const ;
-  virtual void printValue(ostream& os) const ;
+  virtual void printName(std::ostream& os) const ;
+  virtual void printTitle(std::ostream& os) const ;
+  virtual void printClassName(std::ostream& os) const ;
+  virtual void printValue(std::ostream& os) const ;
 
   inline virtual void Print(Option_t *options= 0) const {
     printStream(defaultPrintStream(),defaultPrintContents(options),defaultPrintStyle(options));
   }
 
   void setNameList(const char* givenList) ;
+  const char* content() const { return _nameList ; }
 
   Int_t _len ;
   char* _nameList ; //[_len]

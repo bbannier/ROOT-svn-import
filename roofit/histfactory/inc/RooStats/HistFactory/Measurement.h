@@ -1,3 +1,12 @@
+// @(#)root/roostats:$Id$
+// Author: George Lewis, Kyle Cranmer
+/*************************************************************************
+ * Copyright (C) 1995-2008, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
 
 #ifndef HISTFACTORY_MEASUREMENT_H
 #define HISTFACTORY_MEASUREMENT_H
@@ -13,7 +22,7 @@
 
 #include "PreprocessFunction.h"
 #include "RooStats/HistFactory/Channel.h"
-
+#include "RooStats/HistFactory/Asimov.h"
 
 namespace RooStats{
 namespace HistFactory {
@@ -33,22 +42,33 @@ public:
   void SetOutputFilePrefix( const std::string& prefix ) { fOutputFilePrefix = prefix; }
   std::string GetOutputFilePrefix() { return fOutputFilePrefix; }
 
-  void SetPOI( const std::string& POI ) { fPOI = POI; }
-  std::string GetPOI() { return fPOI; }
+  void SetPOI( const std::string& POI ) { fPOI.insert( fPOI.begin(), POI ); }
+  void AddPOI( const std::string& POI ) { fPOI.push_back(POI); }
+  std::string GetPOI(unsigned int i=0) { return fPOI.at(i); }
+  std::vector<std::string>& GetPOIList() { return fPOI; }
 
 
-  void AddConstantParam( const std::string& param ) { fConstantParams.push_back( param ); }
+  // Add a parameter to be set as constant
+  // (Similar to ParamSetting method below)
+  void AddConstantParam( const std::string& param );
   void ClearConstantParams() { fConstantParams.clear(); }
   std::vector< std::string >& GetConstantParams() { return fConstantParams; }
 
+  // Set a parameter to a specific value
+  // (And optionally fix it)
+  void SetParamValue( const std::string& param, double value);
+  std::map<std::string, double>& GetParamValues() { return fParamValues; }
+  void ClearParamValues() { fParamValues.clear(); }
+
+  void AddPreprocessFunction( std::string name, std::string expression, std::string dependencies );
   void AddFunctionObject( const RooStats::HistFactory::PreprocessFunction function) { fFunctionObjects.push_back( function ); }
   void SetFunctionObjects( std::vector< RooStats::HistFactory::PreprocessFunction > objects ) { fFunctionObjects = objects; }
   std::vector< RooStats::HistFactory::PreprocessFunction >& GetFunctionObjects() { return fFunctionObjects; }
+  std::vector< std::string > GetPreprocessFunctions();
 
-  void AddPreprocessFunction( const std::string& function ) { fPreprocessFunctions.push_back( function ); }
-  void SetPreprocessFunctions( std::vector< std::string > functions ) { fPreprocessFunctions = functions;  }
-  std::vector< std::string >& GetPreprocessFunctions()  { return fPreprocessFunctions; }
-  void ClearPreprocessFunctions() { fPreprocessFunctions.clear(); }
+  // Get and set Asimov Datasets
+  std::vector< RooStats::HistFactory::Asimov >& GetAsimovDatasets() { return fAsimovDatasets; }
+  void AddAsimovDataset( RooStats::HistFactory::Asimov dataset ) { fAsimovDatasets.push_back(dataset); }
 
   void SetLumi(double Lumi ) { fLumi = Lumi; }
   void SetLumiRelErr( double RelErr ) { fLumiRelErr = RelErr; }
@@ -77,39 +97,50 @@ public:
   void CollectHistograms();
 
 
+  void AddGammaSyst(std::string syst, double uncert);
+  void AddLogNormSyst(std::string syst, double uncert);
+  void AddUniformSyst(std::string syst);
+  void AddNoSyst(std::string syst);
+
   std::map< std::string, double >& GetGammaSyst() { return fGammaSyst; }
   std::map< std::string, double >& GetUniformSyst() { return fUniformSyst; }
   std::map< std::string, double >& GetLogNormSyst() { return fLogNormSyst; }
   std::map< std::string, double >& GetNoSyst() { return fNoSyst; }
 
 
-
 private:
 
+  // Configurables of this measurement
   std::string fOutputFilePrefix;
-  std::string fPOI;
+  std::vector<std::string> fPOI;
+  double fLumi;
+  double fLumiRelErr;
+  int fBinLow;
+  int fBinHigh;
+  bool fExportOnly;
+  std::string fInterpolationScheme;
 
+  // Channels that make up this measurement
   std::vector< RooStats::HistFactory::Channel > fChannels;
-  std::vector< std::string > fConstantParams;
-  std::vector< RooStats::HistFactory::PreprocessFunction > fFunctionObjects;
-  std::vector< std::string > fPreprocessFunctions;
-  //std::vector< std::string > constraintTerms;
 
+  // List of Parameters to be set constant
+  std::vector< std::string > fConstantParams;
+
+  // Map of parameter names to inital values to be set
+  std::map< std::string, double > fParamValues;
+
+  // List of Preprocess Function objects
+  std::vector< RooStats::HistFactory::PreprocessFunction > fFunctionObjects;
+
+  // List of Asimov datasets to generate
+  std::vector< RooStats::HistFactory::Asimov > fAsimovDatasets;
+
+
+  // List of Alternate constraint terms
   std::map< std::string, double > fGammaSyst;
   std::map< std::string, double > fUniformSyst;
   std::map< std::string, double > fLogNormSyst;
   std::map< std::string, double > fNoSyst;
-
-  double fLumi;
-  double fLumiRelErr;
-
-  int fBinLow;
-  int fBinHigh;
-
-  bool fExportOnly;
-  // bool fSaveExtra;
-
-  std::string fInterpolationScheme;
   
   std::string GetDirPath( TDirectory* dir );
 

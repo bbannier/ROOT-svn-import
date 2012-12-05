@@ -73,7 +73,7 @@ MODULES       = build cint/cint core/metautils core/pcre core/clib core/utils \
                 core/textinput core/base core/cont core/meta core/thread \
                 io/io math/mathcore net/net core/zip core/lzma math/matrix \
                 core/newdelete hist/hist tree/tree graf2d/freetype \
-                graf2d/graf graf2d/gpad graf3d/g3d \
+                graf2d/mathtext graf2d/graf graf2d/gpad graf3d/g3d \
                 gui/gui math/minuit hist/histpainter tree/treeplayer \
                 gui/ged tree/treeviewer math/physics graf2d/postscript \
                 core/rint html montecarlo/eg \
@@ -106,13 +106,11 @@ endif
 ifeq ($(PLATFORM),ios)
 MODULES      += graf2d/ios
 endif
-ifeq ($(BUILDVC),yes)
-MODULES      += misc/vc
-endif
 ifeq ($(BUILDCOCOA),yes)
 MODULES      += graf2d/quartz
 MODULES      += graf2d/cocoa
 MODULES      += core/macosx
+MODULES      += rootx
 SYSTEML      += $(MACOSXL)
 SYSTEMO      += $(MACOSXO)
 SYSTEMDO     += $(MACOSXDO)
@@ -223,7 +221,7 @@ MODULES      += math/unuran
 endif
 ifeq ($(BUILDCLING),yes)
 # put cling right behind of CINT; e.g. UTILS need it
-MODULES      := $(subst cint/cint,cint/cint cint/cling,$(MODULES))
+MODULES      := $(subst cint/cint,cint/cint interpreter/llvm interpreter/cling,$(MODULES))
 endif
 ifeq ($(BUILDCINTEX),yes)
 MODULES      += cint/cintex
@@ -233,6 +231,9 @@ MODULES      += roofit/roofitcore roofit/roofit roofit/roostats
 ifeq ($(BUILDXML),yes)
 MODULES      += roofit/histfactory
 endif
+endif
+ifeq ($(BUILDGEOCAD),yes)
+MODULES      += geom/geocad
 endif
 ifeq ($(BUILDGDML),yes)
 MODULES      += geom/gdml
@@ -264,12 +265,6 @@ ifeq ($(BUILDALIEN),yes)
 MODULES      += net/alien
 endif
 endif
-ifeq ($(BUILDCLARENS),yes)
-MODULES      += proof/clarens
-endif
-ifeq ($(BUILDPEAC),yes)
-MODULES      += proof/peac
-endif
 ifneq ($(ARCH),win32)
 MODULES      += net/rpdutils net/rootd proof/proofd proof/pq2 proof/proofbench
 endif
@@ -289,7 +284,7 @@ endif
 -include MyModules.mk   # allow local modules
 
 ifneq ($(findstring $(MAKECMDGOALS),distclean maintainer-clean),)
-MODULES      += misc/vc core/unix core/winnt graf2d/x11 graf2d/x11ttf \
+MODULES      += core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 graf3d/gl graf3d/ftgl graf3d/glew io/rfio io/castor \
                 montecarlo/pythia6 montecarlo/pythia8 misc/table \
                 sql/mysql sql/pgsql sql/sapdb net/srputils graf3d/x3d \
@@ -297,15 +292,15 @@ MODULES      += misc/vc core/unix core/winnt graf2d/x11 graf2d/x11ttf \
                 net/ldap net/krb5auth net/rpdutils net/globusauth \
                 bindings/pyroot bindings/ruby io/gfal misc/minicern \
                 graf2d/qt gui/qtroot gui/qtgsi net/netx net/alien \
-                proof/proofd proof/proofx proof/clarens proof/peac proof/pq2 \
+                proof/proofd proof/proofx proof/pq2 \
                 sql/oracle io/xmlparser math/mathmore cint/reflex cint/cintex \
                 tmva math/genetic io/hdfs graf2d/fitsio roofit/roofitcore \
                 roofit/roofit roofit/roostats roofit/histfactory \
                 math/minuit2 net/monalisa math/fftw sql/odbc math/unuran \
-                geom/gdml graf3d/eve net/glite misc/memstat \
+                geom/geocad geom/gdml graf3d/eve net/glite misc/memstat \
                 math/genvector net/bonjour graf3d/gviz3d graf2d/gviz \
-                proof/proofbench proof/afdsmgrd cint/cling graf2d/ios \
-                graf2d/quartz graf2d/cocoa core/macosx
+                proof/proofbench proof/afdsmgrd interpreter/cling graf2d/ios \
+                graf2d/quartz graf2d/cocoa core/macosx interpreter/llvm
 MODULES      := $(sort $(MODULES))   # removes duplicates
 endif
 
@@ -328,9 +323,6 @@ BOOTLIBS     := -lCore -lCint
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += -lCintex -lReflex
 endif
-ifeq ($(BUILDCLING),yes)
-BOOTLIBS     += -lCling
-endif
 ROOTLIBS     := -lRIO -lHist -lGraf -lGraf3d -lGpad -lTree \
                 -lMatrix -lNet -lThread -lMathCore $(BOOTLIBS)
 RINTLIBS     := -lRint
@@ -340,9 +332,6 @@ NEWLIBS      := $(LPATH)/libNew.lib
 BOOTLIBS     := $(LPATH)/libCore.lib $(LPATH)/libCint.lib
 ifneq ($(ROOTDICTTYPE),cint)
 BOOTLIBS     += $(LPATH)/libCintex.lib $(LPATH)/libReflex.lib
-endif
-ifeq ($(BUILDCLING),yes)
-BOOTLIBS     += $(LPATH)/libCling.lib
 endif
 ROOTLIBS     := $(LPATH)/libRIO.lib $(LPATH)/libHist.lib \
                 $(LPATH)/libGraf.lib $(LPATH)/libGraf3d.lib \
@@ -441,6 +430,8 @@ F77LDFLAGS   := $(LDFLAGS)
 endif
 
 ifeq ($(GCC_MAJOR),3)
+NOUNDEF      := -Wl,--no-undefined
+LDFLAGS      := $(filter-out $(NOUNDEF),$(LDFLAGS))
 ifneq ($(GCC_MINOR),0)
 ifeq ($(F77),g77)
 LIBFRTBEGIN  := $(shell $(F77) -print-file-name=libfrtbegin.a)
@@ -457,7 +448,7 @@ endif
 
 ##### Store SVN revision number #####
 
-ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist),)
+ifeq ($(findstring $(MAKECMDGOALS),clean distclean maintainer-clean dist distsrc),)
 ifeq ($(findstring clean-,$(MAKECMDGOALS)),)
 ifeq ($(shell which svn 2>&1 | sed -ne "s@.*/svn@svn@p"),svn)
 SVNREV  := $(shell bash $(ROOT_SRCDIR)/build/unix/svninfo.sh $(ROOT_SRCDIR))
@@ -510,13 +501,17 @@ ROOTMAP       = etc/system.rootmap
 
 ##### Extra libs needed for "static" target #####
 
-STATICEXTRALIBS = $(PCRELDFLAGS) $(PCRELIB) \
+STATICEXTRALIBS = $(CLINGLIBEXTRA) \
+                  $(PCRELDFLAGS) $(PCRELIB) \
                   $(FREETYPELDFLAGS) $(FREETYPELIB)
 ifneq ($(SSLLIB),)
 STATICEXTRALIBS += $(SSLLIB)
 endif
 ifeq ($(XFTLIB),yes)
 STATICEXTRALIBS += -lXft
+endif
+ifeq ($(BUILDCOCOA),yes)
+STATICEXTRALIBS += -framework Cocoa -framework OpenGL
 endif
 
 ##### libCore #####
@@ -550,9 +545,6 @@ ifeq ($(EXPLICITLINK),yes)
 MAINLIBS     := $(CORELIB) $(CINTLIB)
 ifneq ($(ROOTDICTTYPE),cint)
 MAINLIBS     += $(CINTEXLIB) $(REFLEXLIB)
-endif
-ifeq ($(BUILDCLING),yes)
-MAINLIBS     += $(CLINGLIB)
 endif
 else
 MAINLIBS      =
@@ -648,7 +640,7 @@ $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.c
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.mm
 	$$(MAKEDIR)
 	$$(MAKEDEP) -R -f$$(@:.o=.d) -Y -w 1000 -- $$(CXXFLAGS) -D__cplusplus -- $$<
-	$$(CXX) $$(OPT) $$(CXXFLAGS) -ObjC++ -std=c++11 $$(CXXOUT)$$@ -c $$<
+	$$(CXX) $$(OPT) $$(CXXFLAGS) -ObjC++ $$(CXXOUT)$$@ -c $$<
 
 $(1)/%.o: $(ROOT_SRCDIR)/$(1)/%.f
 	$$(MAKEDIR)
@@ -679,7 +671,7 @@ $(foreach module,$(MODULESGENERIC),$(eval $(call SRCTOOBJ_template,$(module))))
 
 %.o: %.mm
 	$(MAKEDEP) -R -f$*.d -Y -w 1000 -- $(CXXFLAGS) -D__cplusplus -- $<
-	$(CXX) $(OPT) $(CXXFLAGS) -ObjC++ -std=c++11 $(CXXOUT)$@ -c $<
+	$(CXX) $(OPT) $(CXXFLAGS) -ObjC++ $(CXXOUT)$@ -c $<
 
 %.o: %.f
 ifeq ($(F77),f2c)
@@ -828,16 +820,11 @@ endif
 	   touch $@; \
 	fi)
 
-$(CORELIB): $(COREO) $(COREDO) $(CINTLIB) $(CLINGLIB) $(PCREDEP) $(CORELIBDEP)
-ifneq ($(ARCH),alphacxx6)
+$(CORELIB): $(CLINGO) $(COREO) $(COREDO) $(CINTLIB) $(PCREDEP) $(CORELIBDEP)
 	@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
-else
-	@$(MAKELIB) $(PLATFORM) $(LD) "$(CORELDFLAGS)" \
-	   "$(SOFLAGS)" libCore.$(SOEXT) $@ "$(COREO) $(COREDO)" \
-	   "$(CORELIBEXTRA) $(CLINGLIB) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
-endif
+	   "$(SOFLAGS)" libCore.$(SOEXT) $@ \
+	   "$(COREDO) $(COREO) $(CLINGO) $(CLINGLIBEXTRA)" \
+	   "$(CORELIBEXTRA) $(PCRELDFLAGS) $(PCRELIB) $(CRYPTLIBS)"
 
 $(COREMAP): $(RLIBMAP) $(MAKEFILEDEP) $(COREL)
 	$(RLIBMAP) -o $@ -l $(CORELIB) -d $(CORELIBDEPM) -c $(COREL)
@@ -1023,6 +1010,7 @@ distclean:: clean
 	@rm -f bin/*.dll bin/*.exp bin/*.lib bin/*.pdb \
                lib/*.def lib/*.exp lib/*.lib lib/*.dll.a \
                lib/*.so.* *.def .def
+	@rm -f lib/*.pcm
 ifeq ($(PLATFORM),macosx)
 	@rm -f lib/*.dylib
 	@rm -f lib/*.so
@@ -1055,7 +1043,7 @@ endif
 	@rm -rf README/ReleaseNotes
 	@rm -f etc/svninfo.txt
 	@(find . -path '*/daemons' -prune -o -name *.d -exec rm -rf {} \; >/dev/null 2>&1;true)
-	@(find . -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
+	@(find . -path '*/interpreter/llvm/src' -prune -o -name *.o -exec rm -rf {} \; >/dev/null 2>&1;true)
 	-@([ -d test ] && (cd test && $(MAKE) distclean); true)
 
 maintainer-clean:: distclean
@@ -1091,7 +1079,9 @@ changelog:
 releasenotes:
 	@$(MAKERELNOTES)
 
-html: $(ROOTEXE) changelog releasenotes
+ifeq ($(BUILDX11),yes)
+ifeq ($(BUILDASIMAGE),yes)
+html: rootexecs postbin changelog releasenotes
 ifneq ($(USECONFIG),FALSE)
 	@if [ "x`which root.exe`" != "x$(DESTDIR)$(BINDIR)/root.exe" ] \
 	  || [ "`which root.exe`" -ot "bin/root.exe" ]; then \
@@ -1102,6 +1092,14 @@ ifneq ($(USECONFIG),FALSE)
 endif
 	@$(MAKELOGHTML)
 	@$(MAKEHTML)
+else
+html:
+	@echo "Error: Generating the html doc requires to enable the asimage component when running configure." && exit 1
+endif
+else
+html:
+	@echo "Error: Generating the html doc requires to enable the X11 component when running configure." && exit 1
+endif
 
 # Use DESTDIR to set a sandbox prior to calling "make install", e.g.:
 #   ./configure --prefix=/usr/

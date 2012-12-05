@@ -19,11 +19,89 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "BaseSelectionRule.h"
+
 #include <iostream>
 #include <string.h>
-#include "clang/AST/DeclCXX.h"
 
-const clang::CXXRecordDecl *R__SlowRawTypeSearch(const char *input_name, const clang::DeclContext *ctxt = 0);
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
+
+#ifdef _WIN32
+#include "process.h"
+#endif
+#include <sys/stat.h>
+
+
+static const char *R__GetDeclSourceFileName(const clang::Decl* D)
+{
+   clang::SourceLocation SL = D->getLocation();
+   clang::ASTContext& ctx = D->getASTContext();
+   clang::SourceManager& SM = ctx.getSourceManager();
+
+   if (SL.isValid() && SL.isFileID()) {
+      clang::PresumedLoc PLoc = SM.getPresumedLoc(SL);
+      return PLoc.getFilename();
+   }
+   else {
+      return "invalid";
+   }   
+}
+
+#if MATCH_ON_INSTANTIATION_LOCATION
+static const char *R__GetDeclSourceFileName(const clang::ClassTemplateSpecializationDecl *tmpltDecl)
+{
+   clang::SourceLocation SL = tmpltDecl->getPointOfInstantiation();
+   clang::ASTContext& ctx = tmpltDecl->getASTContext();
+   clang::SourceManager& SM = ctx.getSourceManager();
+
+   if (SL.isValid() && SL.isFileID()) {
+      clang::PresumedLoc PLoc = SM.getPresumedLoc(SL);
+      return PLoc.getFilename();
+   }
+   else {
+      return "invalid";
+   }   
+}
+#endif
+
+/******************************************************************
+ * R__matchfilename(srcfilename,filename)
+ ******************************************************************/
+static bool R__match_filename(const char *srcname,const char *filename)
+{
+   if (srcname==0) {
+      return false;
+   }
+   if((strcmp(srcname,filename)==0)) {
+      return true;
+   }
+   
+#ifdef G__WIN32
+   G__FastAllocString i1name(_MAX_PATH);
+   G__FastAllocString fullfile(_MAX_PATH);
+   _fullpath( i1name, srcname, _MAX_PATH );
+   _fullpath( fullfile, filename, _MAX_PATH );
+   if((stricmp(i1name, fullfile)==0)) return 1;
+#else
+   struct stat statBufItem;
+   struct stat statBuf;
+   if (   ( 0 == stat( filename, & statBufItem ) )
+       && ( 0 == stat( srcname, & statBuf ) )
+       && ( statBufItem.st_dev == statBuf.st_dev )     // Files on same device
+       && ( statBufItem.st_ino == statBuf.st_ino )     // Files on same inode (but this is not unique on AFS so we need the next 2 test
+       && ( statBufItem.st_size == statBuf.st_size )   // Files of same size
+       && ( statBufItem.st_mtime == statBuf.st_mtime ) // Files modified at the same time
+       ) {
+      return true;
+   }
+#endif
+   return false;
+}
+
+const clang::CXXRecordDecl *R__ScopeSearch(const char *name, const clang::Type** resultType = 0);
 
 BaseSelectionRule::BaseSelectionRule(long index, BaseSelectionRule::ESelect sel, const std::string& attributeName, const std::string& attributeValue)
    : fIndex(index), fIsSelected(sel),fMatchFound(false),fCXXRecordDecl(0)
@@ -82,7 +160,12 @@ const BaseSelectionRule::AttributesMap_t& BaseSelectionRule::GetAttributes() con
    return fAttributes;
 }
 
-void BaseSelectionRule::PrintAttributes(int level) const
+void BaseSelectionRule::DebugPrint() const
+{
+   Print(std::cout);
+}  
+
+void BaseSelectionRule::PrintAttributes(std::ostream &out, int level) const
 { 
    std::string tabs;
    for (int i = 0; i < level; ++i) {
@@ -91,184 +174,177 @@ void BaseSelectionRule::PrintAttributes(int level) const
    
    if (!fAttributes.empty()) {
       for (AttributesMap_t::const_iterator iter = fAttributes.begin(); iter!=fAttributes.end(); ++iter) {
-         std::cout<<tabs<<iter->first<<" = "<<iter->second<<std::endl;
+         out<<tabs<<iter->first<<" = "<<iter->second<<std::endl;
       }
    }
    else {
-      std::cout<<tabs<<"No attributes"<<std::endl;
+      out<<tabs<<"No attributes"<<std::endl;
    }
 }
 
+void BaseSelectionRule::PrintAttributes(int level) const
+{ 
+   PrintAttributes(std::cout, level);
+}
 
-
-bool BaseSelectionRule::IsSelected (const clang::NamedDecl *decl, const std::string& name, const std::string& prototype, 
-                                    const std::string& file_name, bool& dontCare, bool& noName, bool& file, bool isLinkdef) const
+BaseSelectionRule::EMatchType BaseSelectionRule::Match(const clang::NamedDecl *decl, const std::string& name, 
+                                                       const std::string& prototype, 
+                                                       bool isLinkdef) const
 {
-   /* This method returns true
-    * only if we have a matching selection rule and it says "Select". Otherwise it returns 
-    * false - if we found a matching selection rule and it says "Veto" (noName = false 
-    * and don't Care = false; OR noName = false and don't Care = true - in fact here it is not
-    * necessarily Veto - look isClassSelected() in SelectionRules) or if the selection rule
-    * isn't matching to the Decl (represented here by source file name, name or prototype).
+   /* This method returns whether and how the declaration is matching the rule.
+    * It returns one of:
+    *   kNoMatch : the rule does match the declaration
+    *   kName    : the rule match the declaration by name
+    *   kPattern : the rule match the declaration via a pattern
+    *   kFile    : the declaration's file name is match by the rule (either by name or pattern).
+    * To check whether the rule is accepting or vetoing the declaration see the result of
+    * GetSelected().
+    (
     * We pass as arguments of the method:
-    * name - the name of the Decl
-    * prototype - the prototype of the Decl (if it is function or method, otherwise "")
-    * file_name - name of the source file
-    * dontCare - we set it to true if the selection rule says kDontCare
-    * noName - of this selection rule is not intended for this Decl
-    * file - if we have kNo (veto) because the Decl is declared in other source file
-    * isLinkdef - if the selection rules were generating from a linkdef.h file 
+    *   name - the name of the Decl
+    *   prototype - the prototype of the Decl (if it is function or method, otherwise "")
+    *   file_name - name of the source file
+    *   isLinkdef - if the selection rules were generating from a linkdef.h file 
     */ 
    
-   file = false;
    if (HasAttributeWithName("pattern") || HasAttributeWithName("proto_pattern")) {
       if (fSubPatterns.empty()) {
          std::cout<<"Error - skip?"<<std::endl;
-         noName = true; 
-         return false;
+         return kNoMatch;
       }
    }
-   
+
    std::string name_value;
-   GetAttributeValue("name", name_value);
+   bool has_name_attribute = GetAttributeValue("name", name_value);
    std::string pattern_value;
-   GetAttributeValue("pattern", pattern_value);
+   bool has_pattern_attribute = GetAttributeValue("pattern", pattern_value);
    
-   // do we have matching against the name (or pattern) attribute and if yes - select or veto
-   bool has_name_rule = false;
-   
-   if (GetCXXRecordDecl()) {
+   if (GetCXXRecordDecl() !=0 && GetCXXRecordDecl() != (void*)-1) {
       const clang::CXXRecordDecl *target = GetCXXRecordDecl();
       const clang::CXXRecordDecl *D = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
       if ( target && D && target == llvm::dyn_cast<clang::CXXRecordDecl>( D ) ) {
          //               fprintf(stderr,"DECL MATCH: %s %s\n",name_value.c_str(),name.c_str());
-         has_name_rule = true;
+         const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
+         return kName;
       }
-   } else if (HasAttributeWithName("name")) {
+   } else if (has_name_attribute) {
       if (name_value == name) {
-         has_name_rule = true;
-      } else {
+         const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
+         return kName;
+      } else if ( GetCXXRecordDecl() != (void*)-1 ) {
          // Try a real match!
          
          const clang::CXXRecordDecl *D = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
-         const clang::CXXRecordDecl *target = R__SlowRawTypeSearch(name_value.c_str());
-         if ( target && D && target == llvm::dyn_cast<clang::CXXRecordDecl>( D ) ) {
-//               fprintf(stderr,"DECL MATCH: %s %s\n",name_value.c_str(),name.c_str());
-               has_name_rule = true;
+         const clang::CXXRecordDecl *target = R__ScopeSearch(name_value.c_str());
+         if ( target ) {
+            const_cast<BaseSelectionRule*>(this)->fCXXRecordDecl = target;
+         } else {
+            // If the lookup failed, let's not try it again, so mark the value has invalid.
+            const_cast<BaseSelectionRule*>(this)->fCXXRecordDecl = (clang::CXXRecordDecl*)-1;
          }
-//         if (strstr(name.c_str(),"std::vector") && name_value == "vv") {
-////            if (D) D->dump();
-////            if (target) target->dump();
-//            fprintf(stderr,"\n vector<int> %p %p %p\n",decl,D,target);
-//         }
+         if ( target && D && target == llvm::dyn_cast<clang::CXXRecordDecl>( D ) ) {
+            const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
+            return kName;
+         }
       }
    }
-   if (HasAttributeWithName("pattern") && CheckPattern(name, pattern_value, fSubPatterns, isLinkdef)) {
-      has_name_rule = true;
-   }
-   
-   std::string proto_name_value;
-   GetAttributeValue("proto_name", proto_name_value);
-   std::string proto_pattern_value;
-   GetAttributeValue("proto_pattern", proto_pattern_value);
-   
-   // do we have matching against the proto_name (or proto_pattern)  attribute and if yes - select or veto
-   bool has_proto_rule = false;
-   if (!prototype.empty())
-      has_proto_rule = (HasAttributeWithName("proto_name") && 
-                        (proto_name_value==prototype)) ||
-      (HasAttributeWithName("proto_pattern") && 
-       CheckPattern(prototype, proto_pattern_value, fSubPatterns, isLinkdef));
-   
+
    // do we have matching against the file_name (or file_pattern) attribute and if yes - select or veto
    std::string file_name_value;
-   GetAttributeValue("file_name", file_name_value);
+   bool has_file_name_attribute = GetAttributeValue("file_name", file_name_value);
    std::string file_pattern_value;
-   GetAttributeValue("file_pattern", file_pattern_value);
+   bool has_file_pattern_attribute = GetAttributeValue("file_pattern", file_pattern_value);
    
-   bool has_file_rule;
-   if (file_name.empty()) has_file_rule = false;
-   else {
-      has_file_rule = (HasAttributeWithName("file_name") && 
-                       (file_name_value==file_name)) ||
-      (HasAttributeWithName("file_pattern") && 
-       CheckPattern(file_name, file_pattern_value, fFileSubPatterns, isLinkdef));
-   }
-   
-   
-   if (has_file_rule) {
-      // Reject utility class defined in ClassImp
-      // when using a file based rule
-      if (!strncmp(name.c_str(), "R__Init", 7) ||
-          strstr(name.c_str(), "::R__Init")) {
-         noName = false;
-         dontCare = false;
-         file = true;
-         return false;
+   if ((has_file_name_attribute||has_file_pattern_attribute)) {
+      const char *file_name = R__GetDeclSourceFileName(decl);
+      bool hasFileMatch = ((has_file_name_attribute && 
+           //FIXME It would be much better to cache the rule stat result and compare to the clang::FileEntry
+           (R__match_filename(file_name_value.c_str(),file_name))) 
+          ||
+          (has_file_pattern_attribute && 
+           CheckPattern(file_name, file_pattern_value, fFileSubPatterns, isLinkdef)));
+
+#if MATCH_ON_INSTANTIATION_LOCATION
+      if (!hasFileMatch) {
+         const clang::ClassTemplateSpecializationDecl *tmpltDecl =
+            llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(decl);
+         // Try the instantiation point.
+         if (tmpltDecl) {
+            file_name = R__GetDeclSourceFileName(tmpltDecl);
+            hasFileMatch = ((has_file_name_attribute && 
+                             //FIXME It would be much better to cache the rule stat result and compare to the clang::FileEntry
+                             (R__match_filename(file_name_value.c_str(),file_name))) 
+                            ||
+                            (has_file_pattern_attribute && 
+                             CheckPattern(file_name, file_pattern_value, fFileSubPatterns, isLinkdef)));
+         }
       }
-   }
-   
-   bool otherSourceFile = false;
-   // if file_name is passed and we have file_name or file_pattern attribute but the
-   // passed file_name is different than that in the selection rule than return false (=kNo)
-   if (!file_name.empty() && (HasAttributeWithName("file_name")||HasAttributeWithName("file_pattern")) && !has_file_rule) 
-      otherSourceFile = true;
-   
-   if (otherSourceFile) {
-      noName = false;
-      dontCare = false;
-      file = true;
-      return false;
-   }
-   
-   
-   /* DEBUG
-    if (has_name_rule) {
-    if (HasAttributeWithName("name")) std::cout<<"\n\tname rule found: "<<getAttributeValue("name")<<std::endl;
-    else std::cout<<"\n\tpattern rule found: "<<getAttributeValue("pattern")<<std::endl;
-    }
-    if (has_proto_rule) {
-    if (HasAttributeWithName("proto_name")) std::cout<<"\n\tproto_name rule found: "<<getAttributeValue("proto_name")<<std::endl;
-    else std::cout<<"\n\tproto_pattern rule found: "<<getAttributeValue("proto_pattern")<<std::endl;
-    }
-    if (has_file_rule) {
-    if (HasAttributeWithName("file_name")) std::cout<<"\n\tfile_name rule found: "<<getAttributeValue("file_name")<<std::endl;
-    else std::cout<<"\n\tfile_pattern rule found: "<<getAttributeValue("file_pattern")<<std::endl;
-    }
-    */
-   
-   bool has_rule = ((HasAttributeWithName("file_name") ||
-                     HasAttributeWithName("file_pattern")) && has_file_rule) || /* we have source_file_name */
-   has_name_rule || /* OR we have explicit name rule */
-   has_proto_rule;  /* OR we have explicit prototype rule */
-   
-   
-   // if has_rule is true it means that we have a selection rule match for the Decl (represented here by it's name, 
-   // prototype or source file name)
-   if (has_rule) {
+#endif
+      if (hasFileMatch) {
+         // Reject utility class defined in ClassImp
+         // when using a file based rule
+         if (!strncmp(name.c_str(), "R__Init", 7) ||
+             strstr(name.c_str(), "::R__Init")) {
+            return kNoMatch;
+         }
+         if (has_pattern_attribute) {
+         if (CheckPattern(name, pattern_value, fSubPatterns, isLinkdef)) {
+            const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
+            return kFile;
+         }
+         } else {
+            const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
+            return kFile;
+         }
+      }
       
+      // We have file_name or file_pattern attribute but the
+      // passed file_name is different than that in the selection rule then return no match
+      return kNoMatch;
+   }
+
+
+   if (has_pattern_attribute && CheckPattern(name, pattern_value, fSubPatterns, isLinkdef)) {
       const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
-      
-      noName = false;
-      
-      switch(fIsSelected){
-         case kYes: 
-            return true;
-         case kNo: 
-            dontCare = false;
-            return false;
-         case kDontCare: 
-            dontCare = true;
-            return false;
-         default:
-            return false;
+      return kPattern;
+   }
+   
+#if NOT_WORKING_AND_CURRENTLY_NOT_NEEDED
+   std::string proto_name_value;
+   bool has_proto_name_attribute = GetAttributeValue("proto_name", proto_name_value);
+   std::string proto_pattern_value;
+   bool has_proto_pattern_attribute = GetAttributeValue("proto_pattern", proto_pattern_value);
+   
+   // do we have matching against the proto_name (or proto_pattern)  attribute and if yes - select or veto
+   // The following selects functions on whether the requested prototype exactly matches the
+   // prototype issued by SelectionRules::GetFunctionPrototype which relies on
+   //    ParmVarDecl::getType()->getAsString()
+   // to get the type names.  Currently, this does not print the prototype in the usual
+   // human (written) forms.   For example:
+   //   For Hash have prototype: '(const class TString &)'
+   //   For Hash have prototype: '(const class TString*)'
+   //   For Hash have prototype: '(const char*)'
+   // In addition, the const can legally be in various place in the type name and thus
+   // a string based match will be hard to work out (it would need to normalize both
+   // the user input string and the clang provided string).
+   // Using lookup form cling would be probably be a better choice.
+   if (!prototype.empty()) {
+      if (has_proto_name_attribute && 
+          (proto_name_value==prototype)) {
+         
+         const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
+         return kName;
+      }
+      if (has_proto_pattern_attribute && 
+          CheckPattern(prototype, proto_pattern_value, fSubPatterns, isLinkdef))  {
+         const_cast<BaseSelectionRule*>(this)->SetMatchFound(true);
+         return kPattern; 
       }
    }
-   else { // has_rule = false means that this selection rule isn't valid for our Decl 
-      noName = true;
-      dontCare = false;
-      return false;
-   }
+}
+#endif
+      
+   return kNoMatch;
 }
 
 
@@ -296,12 +372,12 @@ void BaseSelectionRule::ProcessPattern(const std::string& pattern, std::list<std
       if (pos == -1) {
          if (!escape){ // if we don't find a '*', push_back temp (contains the last sub-pattern)
             out.push_back(temp);
-            std::cout<<"1. pushed = "<<temp<<std::endl;
+            // std::cout<<"1. pushed = "<<temp<<std::endl;
          }
          else { // if we don't find a star - add temp to split (in split we keep the previous sub-pattern + the last escaped '*')
             split += temp;
             out.push_back(split);
-            std::cout<<"1. pushed = "<<split<<std::endl;
+            // std::cout<<"1. pushed = "<<split<<std::endl;
          }
          return;
       }
@@ -313,7 +389,7 @@ void BaseSelectionRule::ProcessPattern(const std::string& pattern, std::list<std
             split += temp.substr(0, temp.length()-2);  // add evrything from the beginning of temp till the '\' to split (where we keep the last sub-pattern)
             split += temp.at(pos); // add the '*'
             out.push_back(split);  // push_back() split
-            std::cout<<"3. pushed = "<<split<<std::endl;
+            // std::cout<<"3. pushed = "<<split<<std::endl;
             temp.clear(); // empty temp (the '*' was at the last position of temp, so we don't have anything else to process)
          }
          temp = temp.substr(0, (temp.length()-1)); 
@@ -338,7 +414,7 @@ void BaseSelectionRule::ProcessPattern(const std::string& pattern, std::list<std
             escape = false;
             temp = temp.substr(pos);
             out.push_back(split);
-            std::cout<<"2. pushed = "<<split<<std::endl;
+            // std::cout<<"2. pushed = "<<split<<std::endl;
             // DEBUG std::cout<<"temp = "<<temp<<std::endl;
             split = "";
          }
@@ -371,12 +447,17 @@ bool BaseSelectionRule::EndsWithStar(const std::string& pattern) {
 
 bool BaseSelectionRule::CheckPattern(const std::string& test, const std::string& pattern, const std::list<std::string>& patterns_list, bool isLinkdef)
 {
+   if (pattern == "*" /* && patterns_list.back().size() == 0 */) {
+      // We have the simple pattern '*', it matches everything by definition!
+      return true;
+   }
+
    std::list<std::string>::const_iterator it = patterns_list.begin();
    int pos1 = -1, pos2 = -1, pos_end = -1;
    bool begin = BeginsWithStar(pattern);
    bool end = EndsWithStar(pattern);
    
-   // we first chack if the last sub-pattern is contained in the test string 
+   // we first check if the last sub-pattern is contained in the test string 
    std::string last = patterns_list.back();
    pos_end = test.rfind(last);
    
@@ -453,24 +534,9 @@ bool BaseSelectionRule::GetMatchFound() const
    return fMatchFound;
 }
 
-bool BaseSelectionRule::RequestOnlyTClass() const
+const clang::Type *BaseSelectionRule::GetRequestedType() const
 {
-   return false;
-}
-
-bool BaseSelectionRule::RequestNoStreamer() const
-{
-   return false;
-}
-
-bool BaseSelectionRule::RequestNoInputOperator() const
-{
-   return false;
-}
-
-bool BaseSelectionRule::RequestStreamerInfo() const
-{
-   return false;
+   return fRequestedType;
 }
 
 const clang::CXXRecordDecl *BaseSelectionRule::GetCXXRecordDecl() const
@@ -478,8 +544,9 @@ const clang::CXXRecordDecl *BaseSelectionRule::GetCXXRecordDecl() const
    return fCXXRecordDecl;
 }
 
-void BaseSelectionRule::SetCXXRecordDecl(const clang::CXXRecordDecl *decl)
+void BaseSelectionRule::SetCXXRecordDecl(const clang::CXXRecordDecl *decl, const clang::Type *typeptr)
 {
    fCXXRecordDecl = decl;
+   fRequestedType = typeptr;
 }
 

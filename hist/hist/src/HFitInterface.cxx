@@ -471,7 +471,7 @@ void Init2DGaus(const ROOT::Fit::BinData & data, TF1 * f1)
 
 // filling fit data from TGraph objects
 
-BinData::ErrorType GetDataType(const TGraph * gr, const DataOptions & fitOpt) { 
+BinData::ErrorType GetDataType(const TGraph * gr, DataOptions & fitOpt) { 
    // get type of data for TGraph objects
    double *ex = gr->GetEX();
    double *ey = gr->GetEY();
@@ -486,6 +486,7 @@ BinData::ErrorType GetDataType(const TGraph * gr, const DataOptions & fitOpt) {
       type =  BinData::kNoError; 
    }
    // need to treat case when all errors are zero 
+   // note that by default fitOpt.fCoordError is true
    else if ( ex != 0 && fitOpt.fCoordErrors)  { 
       // check that all errors are not zero
       int i = 0; 
@@ -494,20 +495,30 @@ BinData::ErrorType GetDataType(const TGraph * gr, const DataOptions & fitOpt) {
          ++i;
       }
    }
+   // case of asymmetric errors (by default fAsymErrors is true)
    else if ( ( eyl != 0 && eyh != 0)  && fitOpt.fAsymErrors)  { 
       // check also if that all errors are non zero's
       int i = 0; 
-      bool zeroError = true;
-      while (i < gr->GetN() && zeroError) { 
+      bool zeroErrorX = true;
+      bool zeroErrorY = true;
+      while (i < gr->GetN() && (zeroErrorX || zeroErrorY)) { 
          double e2X = ( gr->GetErrorXlow(i) + gr->GetErrorXhigh(i) );
          double e2Y = eyl[i] + eyh[i];
-         if ( e2X > 0 || e2Y > 0) zeroError = false; 
+         zeroErrorX &= (e2X <= 0); 
+         zeroErrorY &= (e2Y <= 0);
          ++i;
       }
-      if (zeroError) 
+      if (zeroErrorX && zeroErrorY) 
          type = BinData::kNoError;
-      else 
+      else if (!zeroErrorX && zeroErrorY) 
+         type = BinData::kCoordError; 
+      else if (zeroErrorX && !zeroErrorY) {
          type = BinData::kAsymError; 
+         fitOpt.fCoordErrors = false; 
+      }
+      else {
+         type = BinData::kAsymError; 
+      }
    }
 
    // need to look also a case when all errors in y are zero 
@@ -637,6 +648,7 @@ void DoFillData ( BinData  & dv,  const TGraph * gr,  BinData::ErrorType type, T
 
          // skip points with total error = 0
          if ( errorX <=0 && errorY <= 0 ) continue; 
+
          
          if (type == BinData::kAsymError)   { 
             // asymmetric errors 
@@ -661,10 +673,9 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
    const int dim = h1->GetDimension();
    std::vector<double> min(dim);
    std::vector<double> max(dim);
-   
-   const TArray *array(dynamic_cast<const TArray*>(h1));
-   assert(array && "THIS SHOULD NOT HAPPEN!");
-   for ( int i = 0; i < array->GetSize(); ++i ) {
+
+   int ncells = h1->GetNcells(); 
+   for ( int i = 0; i < ncells; ++i ) {
 //       printf("i: %d; OF: %d; UF: %d; C: %f\n"
 //              , i
 //              , h1->IsBinOverflow(i) , h1->IsBinUnderflow(i)
@@ -675,14 +686,14 @@ void FillData(SparseData & dv, const TH1 * h1, TF1 * /*func*/)
          int x,y,z;
          h1->GetBinXYZ(i, x, y, z);
          
-//          cout << "FILLDATA: h1(" << i << ")"
+//          std::cout << "FILLDATA: h1(" << i << ")"
 //               << "[" << h1->GetXaxis()->GetBinLowEdge(x) << "-" << h1->GetXaxis()->GetBinUpEdge(x) << "]";
 //          if ( dim >= 2 )
-//             cout   << "[" << h1->GetYaxis()->GetBinLowEdge(y) << "-" << h1->GetYaxis()->GetBinUpEdge(y) << "]";
+//             std::cout   << "[" << h1->GetYaxis()->GetBinLowEdge(y) << "-" << h1->GetYaxis()->GetBinUpEdge(y) << "]";
 //          if ( dim >= 3 )
-//             cout   << "[" << h1->GetZaxis()->GetBinLowEdge(z) << "-" << h1->GetZaxis()->GetBinUpEdge(z) << "]";
+//             std::cout   << "[" << h1->GetZaxis()->GetBinLowEdge(z) << "-" << h1->GetZaxis()->GetBinUpEdge(z) << "]";
 
-//          cout << h1->GetBinContent(i) << endl;
+//          std::cout << h1->GetBinContent(i) << std::endl;
          
          min[0] = h1->GetXaxis()->GetBinLowEdge(x);
          max[0] = h1->GetXaxis()->GetBinUpEdge(x);
@@ -714,7 +725,7 @@ void FillData(SparseData & dv, const THnBase * h1, TF1 * /*func*/)
       double value = h1->GetBinContent( i, &coord[0] );
       if ( !value ) continue;
 
-//       cout << "FILLDATA(SparseData): h1(" << i << ")";
+//       std::cout << "FILLDATA(SparseData): h1(" << i << ")";
 
       // Exclude underflows and oveflows! (defect behaviour with the TH1*)
       bool insertBox = true;
@@ -729,16 +740,16 @@ void FillData(SparseData & dv, const THnBase * h1, TF1 * /*func*/)
          max[j] = h1->GetAxis(j)->GetBinUpEdge(coord[j]);
       }
       if ( !insertBox ) { 
-//          cout << "NOT INSERTED!"<< endl; 
+//          std::cout << "NOT INSERTED!"<< std::endl; 
          continue; 
       }
 
 //       for ( int j = 0; j < dim; ++j )
 //       {
-//          cout << "[" << h1->GetAxis(j)->GetBinLowEdge(coord[j]) 
+//          std::cout << "[" << h1->GetAxis(j)->GetBinLowEdge(coord[j]) 
 //               << "-" << h1->GetAxis(j)->GetBinUpEdge(coord[j]) << "]";
 //       }
-//       cout << h1->GetBinContent(i) << endl;
+//       std::cout << h1->GetBinContent(i) << std::endl;
 
       dv.Add(min, max, value, h1->GetBinError(i));
    }
@@ -768,7 +779,7 @@ void FillData(BinData & dv, const THnBase * s1, TF1 * func)
    ROOT::Fit::SparseData d(ndim, &xmin[0], &xmax[0]);
    ROOT::Fit::FillData(d, s1, func);
 
-//    cout << "FillData(BinData & dv, const THnBase * s1, TF1 * func) (1)" << endl;
+//    std::cout << "FillData(BinData & dv, const THnBase * s1, TF1 * func) (1)" << std::endl;
 
    // Create the bin data from the sparse data
    d.GetBinDataIntegral(dv);
@@ -788,11 +799,13 @@ void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {
    fitOpt.fErrors1 = (type == BinData::kNoError);
    // set this if we want to have error=1 for points with zero errors (by default they are skipped)
    // fitOpt.fUseEmpty = true;
-   fitOpt.fCoordErrors = (type ==  BinData::kCoordError);
-   fitOpt.fAsymErrors = (type ==  BinData::kAsymError);
+
+   // use coordinate or asym  errors in case option is set  and type is consistent
+   fitOpt.fCoordErrors &= (type ==  BinData::kCoordError) ||  (type ==  BinData::kAsymError) ;
+   fitOpt.fAsymErrors &= (type ==  BinData::kAsymError);
 
 
-   // if sata are filled already check if there are consistent - otherwise do nothing
+   // if data are filled already check if there are consistent - otherwise do nothing
    if (dv.Size() > 0 && dv.NDim() == 1 ) { 
       // check if size is correct otherwise flag an errors 
       if (dv.PointSize() == 2 && type != BinData::kNoError ) {
@@ -804,6 +817,10 @@ void FillData ( BinData  & dv, const TGraph * gr,  TF1 * func ) {
          return;
       }
       if (dv.PointSize() == 4 && type != BinData::kCoordError ) {
+         Error("FillData","Inconsistent TGraph with previous data set- skip all graph data"); 
+         return;
+      }
+      if (dv.PointSize() == 5 && type != BinData::kAsymError ) {
          Error("FillData","Inconsistent TGraph with previous data set- skip all graph data"); 
          return;
       }

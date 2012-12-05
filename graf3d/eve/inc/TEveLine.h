@@ -56,7 +56,8 @@ public:
    void   SetRnrPoints(Bool_t r);
    void   SetSmooth(Bool_t r);
 
-   void   ReduceSegmentLengths(Float_t max);
+   void    ReduceSegmentLengths(Float_t max);
+   Float_t CalculateLineLength() const;
 
    TEveVector GetLineStart() const;
    TEveVector GetLineEnd()   const;
@@ -64,7 +65,7 @@ public:
    virtual const TGPicture* GetListTreeIcon(Bool_t open=kFALSE);
 
    virtual void CopyVizParams(const TEveElement* el);
-   virtual void WriteVizParams(ostream& out, const TString& var);
+   virtual void WriteVizParams(std::ostream& out, const TString& var);
 
    virtual TClass* ProjectedClass(const TEveProjection* p) const;
 

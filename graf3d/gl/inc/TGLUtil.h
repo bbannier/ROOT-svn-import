@@ -19,6 +19,10 @@
 #include "TError.h"
 #endif
 
+#include <vector>
+#include <cmath>
+#include <cassert>
+
 class TString;
 class TGLBoundingBox;
 class TGLCamera;
@@ -28,48 +32,26 @@ class TAttLine;
 
 class GLUtesselator;
 
-#include <vector>
-#include <cmath>
-#include <cassert>
-
-// TODO:Find a better place for these enums - TGLEnum.h?
-// Whole GL viewer should be moved into own namespace
-// probably
-enum EPosition
+namespace Rgl
 {
-   kInFront = 0,
-   kBehind
-};
+   enum EOverlap
+   {
+      kInside = 0,
+      kPartial,
+      kOutside
+   };
+}
 
-enum EOverlap
+enum EGLCoordType
 {
-   kInside = 0,
-   kPartial,
-   kOutside
-};
-
-enum EClipType
-{
-   kClipNone = 0,
-   kClipPlane,
-   kClipBox
-};
-
-enum EManipType
-{
-   kManipTrans = 0,
-   kManipScale,
-   kManipRotate
-};
-
-enum EGLCoordType {
    kGLCartesian,
    kGLPolar,
    kGLCylindrical,
    kGLSpherical
 };
 
-enum EGLPlotType {
+enum EGLPlotType
+{
    kGLLegoPlot,
    kGLSurfacePlot,
    kGLBoxPlot,
@@ -485,7 +467,7 @@ public:
    Int_t Longest() const;
 
    Double_t Aspect() const;
-   EOverlap Overlap(const TGLRect & other) const;
+   Rgl::EOverlap Overlap(const TGLRect & other) const;
 
    ClassDef(TGLRect,0); // GL rect helper/wrapper class
 };
@@ -666,6 +648,7 @@ public:
    // Accesors
    TGLVector3  GetTranslation() const;
    TGLVector3  GetScale() const;
+   Bool_t      IsScalingForRender() const;
 
    void SetBaseVec(Int_t b, Double_t x, Double_t y, Double_t z);
    void SetBaseVec(Int_t b, const TGLVector3& v);
@@ -943,11 +926,16 @@ private:
    static Float_t fgPointSizeScale;
    static Float_t fgLineWidthScale;
 
+   static Float_t fgScreenScalingFactor;
+   static Float_t fgPointLineScalingFactor;
+   static Int_t   fgPickingRadius;
+
    TGLUtil(const TGLUtil&);            // Not implemented.
    TGLUtil& operator=(const TGLUtil&); // Not implemented.
 
 public:
    virtual ~TGLUtil() {}
+   static void InitializeIfNeeded();
 
    // Error checking
    static Int_t  CheckError(const char * loc);
@@ -985,6 +973,13 @@ public:
    static void Color4f(Float_t r, Float_t g, Float_t b, Float_t a);
    static void Color3fv(const Float_t* rgb);
    static void Color4fv(const Float_t* rgba);
+
+   // Coordinate conversion and extra scaling (needed for osx retina)
+   static void    PointToViewport(Int_t& x, Int_t& y);
+   static void    PointToViewport(Int_t& x, Int_t& y, Int_t& w, Int_t& h);
+   static Float_t GetScreenScalingFactor();
+   static Float_t GetPointLineScalingFactor();
+   static Int_t   GetPickingRadius();
 
    static Float_t GetPointSizeScale();
    static void    SetPointSizeScale(Float_t scale);

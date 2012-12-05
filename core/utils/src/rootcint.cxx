@@ -879,7 +879,7 @@ bool CheckInputOperator(G__ClassInfo &cl, int dicttype)
       if (dicttype==0||dicttype==1){
          Error(0,
                "in this version of ROOT, the option '!' used in a linkdef file\n"
-               "       implies the actual existence of customized operator.\n"
+               "       implies the actual existence of customized operators.\n"
                "       The following declaration is now required:\n"
                "   TBuffer &operator<<(TBuffer &,const %s *);\n",cl.Fullname());
       }
@@ -2499,8 +2499,8 @@ void WriteClassInit(G__ClassInfo &cl)
    //--------------------------------------------------------------------------
    // Check if we have any schema evolution rules for this class
    //--------------------------------------------------------------------------
-   SchemaRuleClassMap_t::iterator rulesIt1 = G__ReadRules.find( cl.Fullname() );
-   SchemaRuleClassMap_t::iterator rulesIt2 = G__ReadRawRules.find( cl.Fullname() );
+   SchemaRuleClassMap_t::iterator rulesIt1 = gReadRules.find( cl.Fullname() );
+   SchemaRuleClassMap_t::iterator rulesIt2 = gReadRawRules.find( cl.Fullname() );
 
    MembersTypeMap_t nameTypeMap;
    CreateNameTypeMap( cl, nameTypeMap );
@@ -2508,7 +2508,7 @@ void WriteClassInit(G__ClassInfo &cl)
    //--------------------------------------------------------------------------
    // Process the read rules
    //--------------------------------------------------------------------------
-   if( rulesIt1 != G__ReadRules.end() ) {
+   if( rulesIt1 != gReadRules.end() ) {
       int i = 0;
       (*dictSrcOut) << std::endl;
       (*dictSrcOut) << "   // Schema evolution read functions" << std::endl;
@@ -2536,7 +2536,7 @@ void WriteClassInit(G__ClassInfo &cl)
    //--------------------------------------------------------------------------
    // Process the read raw rules
    //--------------------------------------------------------------------------
-   if( rulesIt2 != G__ReadRawRules.end() ) {
+   if( rulesIt2 != gReadRawRules.end() ) {
       int i = 0;
       (*dictSrcOut) << std::endl;
       (*dictSrcOut) << "   // Schema evolution read raw functions" << std::endl;
@@ -2669,7 +2669,11 @@ void WriteClassInit(G__ClassInfo &cl)
       (*dictSrcOut) << "&" << mappedname.c_str() << "_Dictionary, ";
    }
 
-   (*dictSrcOut) << "isa_proxy, " << cl.RootFlag() << "," << std::endl
+   Int_t rootflag = cl.RootFlag();
+   if (HasCustomStreamerMemberFunction(cl)) {
+      rootflag = rootflag | G__HASCUSTOM_STREAMERMEMBER;
+   }
+   (*dictSrcOut) << "isa_proxy, " << rootflag << "," << std::endl
                  << "                  sizeof(" << csymbol.c_str() << ") );" << std::endl;
    if (HasDefaultConstructor(cl,&args)) {
       (*dictSrcOut) << "      instance.SetNew(&new_" << mappedname.c_str() << ");" << std::endl;
@@ -2728,11 +2732,11 @@ void WriteClassInit(G__ClassInfo &cl)
    //---------------------------------------------------------------------------
    // Pass the schema evolution rules to TGenericClassInfo
    //---------------------------------------------------------------------------
-   if( (rulesIt1 != G__ReadRules.end() && rulesIt1->second.size()>0) || (rulesIt2 != G__ReadRawRules.end()  && rulesIt2->second.size()>0) ) {
+   if( (rulesIt1 != gReadRules.end() && rulesIt1->second.size()>0) || (rulesIt2 != gReadRawRules.end()  && rulesIt2->second.size()>0) ) {
       (*dictSrcOut) << std::endl << "      ROOT::TSchemaHelper* rule;" << std::endl;
    }
 
-   if( rulesIt1 != G__ReadRules.end() ) {
+   if( rulesIt1 != gReadRules.end() ) {
       (*dictSrcOut) << std::endl;
       (*dictSrcOut) << "      // the io read rules" << std::endl;
       (*dictSrcOut) << "      std::vector<ROOT::TSchemaHelper> readrules(";
@@ -2741,7 +2745,7 @@ void WriteClassInit(G__ClassInfo &cl)
       (*dictSrcOut) << "      instance.SetReadRules( readrules );" << std::endl;
    }
 
-   if( rulesIt2 != G__ReadRawRules.end() ) {
+   if( rulesIt2 != gReadRawRules.end() ) {
       (*dictSrcOut) << std::endl;
       (*dictSrcOut) << "      // the io read raw rules" << std::endl;
       (*dictSrcOut) << "      std::vector<ROOT::TSchemaHelper> readrawrules(";
@@ -2813,7 +2817,7 @@ void WriteNamespaceInit(G__ClassInfo &cl)
 
    (*dictSrcOut) << "   namespace ROOT {" << std::endl;
 
-#if !defined(R__SGI) && !defined(R__AIX)
+#if !defined(R__AIX)
    (*dictSrcOut) << "      inline ::ROOT::TGenericClassInfo *GenerateInitInstance();" << std::endl;
 #endif
 
@@ -2824,7 +2828,7 @@ void WriteNamespaceInit(G__ClassInfo &cl)
 
                  << "      // Function generating the singleton type initializer" << std::endl
 
-#if !defined(R__SGI) && !defined(R__AIX)
+#if !defined(R__AIX)
                  << "      inline ::ROOT::TGenericClassInfo *GenerateInitInstance()" << std::endl
                  << "      {" << std::endl
 #else
@@ -4931,7 +4935,7 @@ int main(int argc, char **argv)
    //---------------------------------------------------------------------------
    // Write schema evolution reelated headers and declarations
    //---------------------------------------------------------------------------
-   if( !G__ReadRules.empty() || !G__ReadRawRules.empty() ) {
+   if( !gReadRules.empty() || !gReadRawRules.empty() ) {
       (*dictSrcOut) << "#include \"TBuffer.h\"" << std::endl;
       (*dictSrcOut) << "#include \"TVirtualObject.h\"" << std::endl;
       (*dictSrcOut) << "#include <vector>" << std::endl;
@@ -4999,9 +5003,6 @@ int main(int argc, char **argv)
          if (cl.HasMethod("Streamer")) {
             if (!(cl.RootFlag() & G__NOINPUTOPERATOR)) {
                // We do not write out the input operator anymore, it is a template
-#if defined R__CONCRETE_INPUT_OPERATOR
-               WriteInputOperator(cl);
-#endif
             } else {
                int version = GetClassVersion(cl);
                if (version!=0) {

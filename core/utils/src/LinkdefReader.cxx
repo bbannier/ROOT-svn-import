@@ -13,11 +13,25 @@
 //                                                                      //
 // LinkdefReader                                                        //
 //                                                                      //
+// The following #pragma are currently ignored (not needed for cling):  //
+//      #pragma link spec typedef                                       //
+//      #pragma link spec nestedtypedef                                 //
+//                                                                      //
+// Note: some inconsistency in the way CINT parsed the #pragma:         //
+//   "#pragma link C++ class" is terminated by either a ';' or a newline//
+//      which ever come first and does NOT support line continuation.   //
+//   "#pragma read ..." is terminated by newline but support line       //
+//      continuation (i.e. '\' followed by newline means to also use the//
+//      next line.                                                      //
+//   This was change in CINT to consistently ignore the continuation    //
+//                                                                      //
+//                                                                      //
 //////////////////////////////////////////////////////////////////////////
 
 #include <iostream>
 #include "LinkdefReader.h"
 #include "SelectionRules.h"
+#include "RConversionRuleParser.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,9 +43,22 @@
 #include "clang/Lex/Pragma.h"
 
 #include "cling/Interpreter/CIFactory.h"
+#include "cling/Interpreter/Interpreter.h"
 
 std::map<std::string, LinkdefReader::EPragmaNames> LinkdefReader::fgMapPragmaNames;
 std::map<std::string, LinkdefReader::ECppNames> LinkdefReader::fgMapCppNames;
+
+struct LinkdefReader::Options {
+   Options() : fNoStreamer(0), fNoInputOper(0), fUseByteCount(0), fVersionNumber(-1) {}
+
+   int fNoStreamer;
+   int fNoInputOper;
+   union {
+      int fUseByteCount;
+      int fRequestStreamerInfo;
+   };
+   int fVersionNumber;
+};
 
 /*
  This is a static function - which in our context means it is populated only ones
@@ -41,6 +68,7 @@ void LinkdefReader::PopulatePragmaMap(){
    
    LinkdefReader::fgMapPragmaNames["TClass"] = kClass;
    LinkdefReader::fgMapPragmaNames["class"] = kClass;
+   LinkdefReader::fgMapPragmaNames["namespace"] = kNamespace;
    LinkdefReader::fgMapPragmaNames["function"] = kFunction;
    LinkdefReader::fgMapPragmaNames["global"] = kGlobal;
    LinkdefReader::fgMapPragmaNames["enum"] = kEnum;
@@ -48,12 +76,17 @@ void LinkdefReader::PopulatePragmaMap(){
    LinkdefReader::fgMapPragmaNames["struct"] = kStruct;
    LinkdefReader::fgMapPragmaNames["all"] = kAll;
    LinkdefReader::fgMapPragmaNames["defined_in"] = kDefinedIn;
+   LinkdefReader::fgMapPragmaNames["ioctortype"] = kIOCtorType;
+   LinkdefReader::fgMapPragmaNames["nestedclass"] = kNestedclasses;
    LinkdefReader::fgMapPragmaNames["nestedclasses"] = kNestedclasses;
    LinkdefReader::fgMapPragmaNames["nestedclasses;"] = kNestedclasses;
    LinkdefReader::fgMapPragmaNames["operators"] = kOperators;
    LinkdefReader::fgMapPragmaNames["operator"] = kOperators;
+   // The following are listed here so we can officially ignore them
+   LinkdefReader::fgMapPragmaNames["nestedtypedefs"] = kIgnore;
+   LinkdefReader::fgMapPragmaNames["nestedtypedef"] = kIgnore;
+   LinkdefReader::fgMapPragmaNames["typedef"] = kIgnore;
    // NOTE: need to add
-   // namespace
    // typedef
 }
 
@@ -67,17 +100,31 @@ void LinkdefReader::PopulateCppMap(){
    LinkdefReader::fgMapCppNames["#else"] = kElse;
 }
 
-LinkdefReader::LinkdefReader() : fLine(1), fCount(0) 
+LinkdefReader::LinkdefReader() : fLine(1), fCount(0), fIOCtorTypeCallback(0)
 {
    PopulatePragmaMap();
    PopulateCppMap();
 }
 
 /*
+ * The method records that 'include' has been explicitly requested in the linkdef file
+ * to be added to the dictionary and interpreter.
+ */
+bool LinkdefReader::AddInclude(std::string include)
+{
+   fIncludes += "#include ";
+   fIncludes += include;
+   fIncludes += "\n";
+
+   return true;
+}
+
+
+/*
  * The method that processes the pragma statement.
  * Sometimes I had to do strange things to reflect the strange behavior of rootcint
  */
-bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool linkOn, bool request_only_tclass)
+bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool linkOn, bool request_only_tclass, LinkdefReader::Options *options /* = 0 */)
 {
    
    EPragmaNames name = kUnknown;
@@ -89,7 +136,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
    
    switch (name) {
       case kAll:
-         if(identifier == "globals"){
+         if (identifier == "globals"){
 //            std::cout<<"all enums and variables selection rule to be impl."<<std::endl;
             
             VariableSelectionRule vsr(fCount++);
@@ -147,7 +194,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                }
             }
          }
-         else if (identifier == "classes") {
+         else if (identifier == "classes" || identifier == "namespaces") {
 //            std::cout<<"all classes selection rule to be impl."<<std::endl;
             
             
@@ -181,7 +228,8 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             }
          }
          else {
-            std::cout<<"Warning at line "<<fLine<<" - possibly unimplemented pragma statement"<<std::endl;
+            std::cerr<<"Warning - possibly unimplemented pragma statement: "<<std::endl;
+            return false;
          }
          
          break;
@@ -221,6 +269,9 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
          ClassSelectionRule csr(fCount++), csr2(fCount++);
          csr.SetAttributeValue("pattern","*");
          csr2.SetAttributeValue("pattern","*::*");
+         if (identifier.length() && identifier[0]=='"' && identifier[identifier.length()-1]=='"') {
+            identifier = identifier.substr(1,identifier.length()-2);
+         }
          csr.SetAttributeValue("file_name",identifier);
          csr2.SetAttributeValue("file_name",identifier);
          if (linkOn) {
@@ -231,25 +282,21 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             csr.SetSelected(BaseSelectionRule::kNo);
             csr2.SetSelected(BaseSelectionRule::kNo);
          }
+         csr.SetRequestStreamerInfo(true);
+         csr2.SetRequestStreamerInfo(true);
          fSelectionRules->AddClassSelectionRule(csr);
          fSelectionRules->AddClassSelectionRule(csr2);
          
       }
          break;
          
-      case kEnum:
-      case kGlobal:	    
       case kFunction:
-      case kOperators:
-      case kClass:
-      case kUnion:
-      case kStruct:
-         if (name == kFunction) {
+         {
             bool name_or_proto = false; // if true = name, if flase = proto_name
             if (!ProcessFunctionPrototype(identifier, name_or_proto)) {
                return false;
             }
-//            std::cout<<"function selection rule for "<<identifier<<" ("<<(name_or_proto?"name":"proto_name")<<") to be impl."<<std::endl;
+            //std::cout<<"function selection rule for "<<identifier<<" ("<<(name_or_proto?"name":"proto_name")<<") to be impl."<<std::endl;
             FunctionSelectionRule fsr(fCount++);
             if (linkOn) fsr.SetSelected(BaseSelectionRule::BaseSelectionRule::BaseSelectionRule::kYes);
             else fsr.SetSelected(BaseSelectionRule::kNo);
@@ -264,7 +311,10 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             fSelectionRules->AddFunctionSelectionRule(fsr);
             
          }
-         else if (name == kOperators) {
+         break;
+
+      case kOperators:
+         {
             if(!ProcessOperators(identifier)) // this creates the proto_pattern
                return false;
 //            std::cout<<"function selection rule for "<<identifier<<" (proto_pattern) to be impl."<<std::endl;
@@ -275,7 +325,9 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             fsr.SetAttributeValue("proto_pattern", identifier);
             fSelectionRules->AddFunctionSelectionRule(fsr);
          }
-         else if (name == kGlobal) {
+         break;
+      case kGlobal:
+         {
  //           std::cout<<"variable selection rule for "<<identifier<<" to be impl."<<std::endl;
             VariableSelectionRule vsr(fCount++);
             if (linkOn) vsr.SetSelected(BaseSelectionRule::BaseSelectionRule::BaseSelectionRule::kYes);
@@ -284,7 +336,9 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             else vsr.SetAttributeValue("name", identifier);
             fSelectionRules->AddVariableSelectionRule(vsr);
          }
-         else if (name == kEnum) {
+         break;
+      case kEnum:
+         {
 //            std::cout<<"enum selection rule for "<<identifier<<" to be impl."<<std::endl;
             
             EnumSelectionRule esr(fCount++);
@@ -294,7 +348,12 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             else esr.SetAttributeValue("name", identifier);
             fSelectionRules->AddEnumSelectionRule(esr);
          }
-         else {
+         break;
+      case kClass:
+      case kNamespace:
+      case kUnion:
+      case kStruct:
+         {
 //            std::cout<<"class selection rule for "<<identifier<<" to be impl."<<std::endl;
             
             ClassSelectionRule csr(fCount++);
@@ -317,7 +376,7 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                   len = identifier.length();
                }
             }
-            if (len > 2) { // process the +, -, -! endings of the classes
+            if (len > 1) { // process the +, -, -! endings of the classes
                
                bool ending = false;
                int where = 1;
@@ -325,9 +384,9 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                   char last = identifier.at(len - where);
                   switch ( last ) {
                      case ';': break;
-                     case '+': csr.SetPlus(true); break;
-                     case '!': csr.SetExclamation(true); break;
-                     case '-': csr.SetMinus(true); break;
+                     case '+': csr.SetRequestStreamerInfo(true); break;
+                     case '!': csr.SetRequestNoInputOperator(true); break;
+                     case '-': csr.SetRequestNoStreamer(true); break;
                      case ' ':
                      case '\t': break;
                      default:
@@ -335,11 +394,21 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                   }
                   ++where;
                }
-               if ( csr.HasPlus() && csr.HasMinus() ) {
-                  std::cerr << "Warning: " << identifier << " option + mutual exclusive with -, + prevails\n";
-                  csr.SetMinus(false);
+               if (options) {
+                  if (options->fNoStreamer) csr.SetRequestNoStreamer(true);
+                  if (options->fNoInputOper) csr.SetRequestNoInputOperator(true);
+                  if (options->fRequestStreamerInfo) csr.SetRequestStreamerInfo(true);
+                  if (options->fVersionNumber >= 0) csr.SetRequestedVersionNumber(options->fVersionNumber);
                }
-               identifier.erase(len - (where-2));
+               if ( csr.RequestStreamerInfo() && csr.RequestNoStreamer() ) {
+                  std::cerr << "Warning: " << identifier << " option + mutual exclusive with -, + prevails\n";
+                  csr.SetRequestNoStreamer(false);
+               }
+               if (ending) {
+                  identifier.erase(len - (where-2)); // We 'consumed' one of the class token
+               } else {
+                  identifier.erase(len - (where-1));
+               }
             }
             
             if (linkOn) {
@@ -371,20 +440,23 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
                   fSelectionRules->AddEnumSelectionRule(esr);
                   
                }
-               else {
-                  EnumSelectionRule esr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
-                  esr.SetSelected(BaseSelectionRule::kNo);
-                  esr.SetAttributeValue("pattern", identifier+"::*");
-                  fSelectionRules->AddEnumSelectionRule(esr);
+               // Since the rootcling default is 'off' (we need to explicilty annotate to turn it on), the nested type and function
+               // should be off by default.  Note that anyway, this is not yet relevant since the pcm actually ignore the on/off
+               // request and contains everything (for now).
+               // else {
+               //    EnumSelectionRule esr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
+               //    esr.SetSelected(BaseSelectionRule::kNo);
+               //    esr.SetAttributeValue("pattern", identifier+"::*");
+               //    fSelectionRules->AddEnumSelectionRule(esr);
                   
-                  if (fSelectionRules->GetHasFileNameRule()) {
-                     FunctionSelectionRule fsr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
-                     fsr.SetSelected(BaseSelectionRule::kNo);
-                     std::string value = identifier + "::*";
-                     fsr.SetAttributeValue("pattern", value);
-                     fSelectionRules->AddFunctionSelectionRule(fsr);
-                  }
-               }
+               //    if (fSelectionRules->GetHasFileNameRule()) {
+               //       FunctionSelectionRule fsr(fCount++); // we need this because of implicit/explicit rules - check my notes on rootcint
+               //       fsr.SetSelected(BaseSelectionRule::kNo);
+               //       std::string value = identifier + "::*";
+               //       fsr.SetAttributeValue("pattern", value);
+               //       fSelectionRules->AddFunctionSelectionRule(fsr);
+               //    }
+               // }
             }
             if (IsPatternRule(identifier)) {
                csr.SetAttributeValue("pattern", identifier);
@@ -392,8 +464,17 @@ bool LinkdefReader::AddRule(std::string ruletype, std::string identifier, bool l
             csr.SetAttributeValue("name", identifier);
 
             fSelectionRules->AddClassSelectionRule(csr);
-            //csr.PrintAttributes(3);
+            //csr.PrintAttributes(std::cout,3);
          }
+         break;
+      case kIOCtorType:
+         // #pragma link C++ IOCtorType typename;
+         if (fIOCtorTypeCallback) 
+            fIOCtorTypeCallback(identifier.c_str());
+         break;
+      case kIgnore:
+         // All the pragma that were supported in CINT but are currently not relevant for CLING
+         // (mostly because we do not yet filter the dictionary/pcm).
          break;
       case kUnknown:
          std::cerr<<"Warning unimplemented pragma statement - it does nothing: ";
@@ -409,6 +490,16 @@ bool LinkdefReader::IsPatternRule(const std::string& rule_token)
    int pos = rule_token.find("*");
    if (pos > -1) return true;
    else return false;
+}
+
+/*
+ * The method records that 'include' has been explicitly requested in the linkdef file
+ * to be added to the dictionary and interpreter.
+ */
+bool LinkdefReader::LoadIncludes(cling::Interpreter &interp, std::string &extraIncludes)
+{
+   extraIncludes += fIncludes;
+   return cling::Interpreter::kSuccess == interp.declare(fIncludes);
 }
 
 bool LinkdefReader::ProcessFunctionPrototype(std::string& proto, bool& name)
@@ -444,7 +535,7 @@ bool LinkdefReader::ProcessFunctionPrototype(std::string& proto, bool& name)
       // I don't have to escape the *-s because in rootcint there is no pattern recognition
       int pos3=pos1;
       while (true) {
-         pos3 = proto.find(" ", pos3);
+         pos3 = proto.find("  ", pos3);
          if (pos3 > -1) {
             proto.erase(pos3, 1);
          }
@@ -530,6 +621,14 @@ bool LinkdefReader::ProcessOperators(std::string& pattern)
    return true;
 }
 
+void LinkdefReader::SetIOCtorTypeCallback(IOCtorTypeCallback callback)
+{
+   // Set the callback function to be call for every
+   // #pragma link C++ ioctortype typename;
+
+   fIOCtorTypeCallback = callback;
+}
+
 class LinkdefReaderPragmaHandler : public clang::PragmaHandler {
 protected:
    LinkdefReader &fOwner;
@@ -541,13 +640,98 @@ public:
    {
    }
    
-   void Error(const char *message, const clang::Token &tok) {
+   void Error(const char *message, const clang::Token &tok, bool source = true) {
       
-      std::cerr<<message;
+      std::cerr << message << " at ";
       tok.getLocation().dump(fSourceManager);
-      std::cerr<<'\n';
-      
+      if (source) {
+         std::cerr << ":";
+         std::cerr << fSourceManager.getCharacterData(tok.getLocation());
+      }
+      std::cerr << '\n';
    }
+
+   bool ProcessOptions(LinkdefReader::Options &options,
+                       clang::Preprocessor &PP,
+                       clang::Token &tok)
+   {
+      // Constructor parsing:
+      /*    options=...
+       * possible options:
+       *   nostreamer: set G__NOSTREAMER flag
+       *   noinputoper: set G__NOINPUTOPERATOR flag
+       *   evolution: set G__USEBYTECOUNT flag
+       *   nomap: (ignored by roocling; prevents entry in ROOT's rootmap file)
+       *   stub: (ignored by rootcling was a directly for CINT code generation)
+       *   version(x): sets the version number of the class to x
+       */
+
+      // We assume that the first toke in option or options
+      // assert( tok.getIdentifierInfo()->getName() != "option" or "options")
+
+      PP.Lex(tok);
+      if (tok.is(clang::tok::eod) || tok.isNot(clang::tok::equal)) {
+         Error("Error: the 'options' keyword must be followed by an '='",tok);
+         return false;
+      }
+
+      PP.Lex(tok);
+      while (tok.isNot(clang::tok::eod) && tok.isNot(clang::tok::semi)) 
+      {
+         if (!tok.getIdentifierInfo()) {
+            Error("Error: Malformed version option.",tok);
+          } else if (tok.getIdentifierInfo()->getName() == "nomap") { 
+            // For rlibmap rather than rootcling 
+            // so ignore
+         }
+         else if (tok.getIdentifierInfo()->getName() == "nostreamer") options.fNoStreamer = 1;
+         else if (tok.getIdentifierInfo()->getName() == "noinputoper") options.fNoInputOper = 1;
+         else if (tok.getIdentifierInfo()->getName() == "evolution") options.fRequestStreamerInfo = 1;
+         else if (tok.getIdentifierInfo()->getName() == "stub") {
+            // This was solely for CINT dictionary, ignore for now.
+            // options.fUseStubs = 1;
+         } else if (tok.getIdentifierInfo()->getName() == "version") {
+            clang::Token start = tok;
+            PP.Lex(tok);
+            if (tok.is(clang::tok::eod) || tok.isNot(clang::tok::l_paren)) {
+               Error("Error: missing left parenthesis after version.",start);
+               return false;
+            }
+            PP.Lex(tok);
+            clang::Token number = tok;
+            if (tok.isNot(clang::tok::eod)) PP.Lex(tok);
+            if (tok.is(clang::tok::eod) || tok.isNot(clang::tok::r_paren)) {
+               Error("Error: missing right parenthesis after version.",start);
+               return false;
+            }
+            if (!number.isLiteral()) {
+               std::cerr << "Error: Malformed version option, the value is not a non-negative number!";
+               Error("",tok);
+            }
+            std::string verStr(number.getLiteralData(),number.getLength());
+            bool noDigit       = false;
+            for( std::string::size_type i = 0; i<verStr.size(); ++i )
+               if( !isdigit( verStr[i] ) ) noDigit = true;
+
+            if( noDigit ) {
+               std::cerr << "Error: Malformed version option! \"" << verStr << "\" is not a non-negative number!";
+               Error("",start);
+            } else
+               options.fVersionNumber = atoi( verStr.c_str() );
+         }
+         else {
+            Error("Warning: ignoring unknown #pragma link option=",tok);
+         }
+         PP.Lex(tok);
+         if (tok.is(clang::tok::eod) || tok.isNot(clang::tok::comma)) {
+            // no more options, we are done.
+            break;
+         }
+         PP.Lex(tok);
+      }
+      return true;
+   }
+
 };
 
 class PragmaExtraInclude : public LinkdefReaderPragmaHandler 
@@ -587,19 +771,18 @@ public:
          PP.Lex(tok);
       }
       if (tok.isNot(clang::tok::semi)) {
-         Error("Error: missing ; at end of rule",tok);
+         Error("Error: missing ; at end of rule",tok,false);
          return;
       }
       if (end.is(clang::tok::unknown)) {
-         Error("",tok);
+         Error("Error: Unknown token!",tok);
       } else {
          llvm::StringRef include(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
          
-         std::cerr << "Warning: #pragma extra_include not yet handled: " << include.str() << "\n";
-//         if (!fOwner.AddInclude(include))
-//         {
-//            Error("",tok);
-//         }
+         if (!fOwner.AddInclude(include))
+         {
+            Error("",tok);
+         }
       }      
    }
 };
@@ -623,7 +806,7 @@ public:
       if (Introducer != clang::PIK_HashPragma) return; // only #pragma, not C-style.
       if (!tok.getIdentifierInfo()) return; // must be "link"
       if (tok.getIdentifierInfo()->getName() != "read") return;
-      
+
       PP.Lex(tok);
       //      if (DClient.hasErrorOccured()) {
       //         return;
@@ -646,11 +829,12 @@ public:
       //    return;
       // }
       if (end.is(clang::tok::unknown)) {
-         Error("",tok);
+         Error("Error: unknown token",tok);
       } else {
-         llvm::StringRef include(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
+         llvm::StringRef rule_text(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
          
-         std::cerr << "Warning: #pragma read not yet handled: " << include.str() << "\n";
+         ROOT::ProcessReadPragma( rule_text.str().c_str() );
+         //std::cerr << "Warning: #pragma read not yet handled: " << include.str() << "\n";
          //         if (!fOwner.AddInclude(include))
          //         {
          //            Error("",tok);
@@ -661,6 +845,9 @@ public:
 
 class PragmaLinkCollector : public LinkdefReaderPragmaHandler 
 {
+   // Handles:
+   //  #pragma link [spec] options=... class classname[+-!]
+   //
 public:
    PragmaLinkCollector(LinkdefReader &owner, clang::SourceManager &sm) :
       // This handler only cares about "#pragma link"
@@ -688,17 +875,22 @@ public:
          return;
       }
       bool linkOn;
-      if ((tok.getIdentifierInfo()->getName() == "off")) {
-         linkOn = false;
-      } else if ((tok.getIdentifierInfo()->getName() == "C")) {
-         linkOn = true;
-         PP.Lex(tok);
-         if (tok.is(clang::tok::eod) || tok.isNot(clang::tok::plusplus)) {
-            Error("Error ++ expected after '#pragma link C' at ",tok);
+      if (tok.isAnyIdentifier()) {
+         if ((tok.getIdentifierInfo()->getName() == "off")) {
+            linkOn = false;
+         } else if ((tok.getIdentifierInfo()->getName() == "C")) {
+            linkOn = true;
+            PP.Lex(tok);
+            if (tok.is(clang::tok::eod) || tok.isNot(clang::tok::plusplus)) {
+               Error("Error ++ expected after '#pragma link C' at ",tok);
+               return;
+            }
+         } else {
+            Error("Error #pragma link should be followed by off or C",tok);
             return;
          }
       } else {
-         Error("Error bad #pragma format at",tok);
+         Error("Error bad #pragma format. ",tok);
          return;
       }
       
@@ -709,32 +901,43 @@ public:
       }
       llvm::StringRef type = tok.getIdentifierInfo()->getName();
       
+      LinkdefReader::Options *options = 0;
+      if (type == "options" || type == "option") {
+         options = new LinkdefReader::Options();
+         if (!ProcessOptions(*options,PP,tok)) {
+            return;
+         }
+         if (tok.getIdentifierInfo()) type = tok.getIdentifierInfo()->getName();
+      }
+         
       PP.Lex(tok);
       const char *start = fSourceManager.getCharacterData(tok.getLocation());
       clang::Token end;
       end.startToken(); // Initialize token.
       while (tok.isNot(clang::tok::eod) && tok.isNot(clang::tok::semi)) 
       {
+         // PP.DumpToken(tok, true);
+         // llvm::errs() << "\n";
          end = tok;
          PP.Lex(tok);
       }
       
       if (tok.isNot(clang::tok::semi)) {
-         Error("Error: missing ; at end of rule",tok);
+         Error("Error: missing ; at end of rule",tok,false);
          return;
       }
 
       if (end.is(clang::tok::unknown)) {
-         if (!fOwner.AddRule(type,"",linkOn,false))
+         if (!fOwner.AddRule(type.data(),"",linkOn,false,options))
          {
-            Error("",tok);
+            Error(type.data(),tok, false);
          }
       } else {
          llvm::StringRef identifier(start, fSourceManager.getCharacterData(end.getLocation()) - start + end.getLength());
          
-         if (!fOwner.AddRule(type,identifier,linkOn,false))
+         if (!fOwner.AddRule(type,identifier,linkOn,false,options))
          {
-            Error("",tok);
+            Error(type.data(),tok, false);
          }
       }
 //      do {
@@ -789,7 +992,7 @@ public:
       }
       
       if (tok.isNot(clang::tok::semi)) {
-         Error("Error: missing ; at end of rule",tok);
+         Error("Error: missing ; at end of rule",tok,false);
          return;
       }
       

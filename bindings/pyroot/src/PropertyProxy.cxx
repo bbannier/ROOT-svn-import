@@ -16,9 +16,7 @@
 #include "TGlobal.h"
 #include "TDataType.h"
 #include "TClassEdit.h"
-
-// CINT
-#include "Api.h"
+#include "TInterpreter.h"
 
 
 namespace PyROOT {
@@ -34,7 +32,7 @@ namespace {
          return 0;
 
    // not-initialized or public data accesses through class (e.g. by help())
-      if ( ! address ) {
+      if ( ! address || address == -1 /* Cling error */ ) {
          Py_INCREF( pyprop );
          return (PyObject*)pyprop;
       }
@@ -79,7 +77,7 @@ namespace {
       }
 
       Long_t address = pyprop->GetAddress( pyobj );
-      if ( ! address || PyErr_Occurred() )
+      if ( ! address || address == -1 /* Cling error */ || PyErr_Occurred() )
          return errret;
 
    // for fixed size arrays
@@ -196,10 +194,7 @@ void PyROOT::PropertyProxy::Set( TDataMember* dm )
    fConverter = CreateConverter( fullType, dm->GetMaxIndex( 0 ) );
    fName      = dm->GetName();
 
-   if ( dm->GetClass()->GetClassInfo() ) {
-      fOwnerTagnum = ((G__ClassInfo*)dm->GetClass()->GetClassInfo())->Tagnum();
-      fOwnerIsNamespace = ((G__ClassInfo*)dm->GetClass()->GetClassInfo())->Property() & G__BIT_ISNAMESPACE;
-   }
+   fParent    = (void*)dm->GetClass()->GetClassInfo();
 }
 
 //____________________________________________________________________________
@@ -217,33 +212,14 @@ void PyROOT::PropertyProxy::Set( TGlobal* gbl )
    fConverter = CreateConverter( fullType, gbl->GetMaxIndex( 0 ) );
    fName      = gbl->GetName();
 
-// no owner (global scope)
-   fOwnerTagnum = -1;
-   fOwnerIsNamespace = 0;
+// no parent (global scope)
+   fParent = 0;
 }
-
-//____________________________________________________________________________
-#ifdef PYROOT_USE_REFLEX
-void PyROOT::PropertyProxy::Set( const ROOT::Reflex::Member& mb )
-{
-// initialize from Reflex <mb> info
-   fOffset    = (Long_t)mb.Offset();
-   fProperty  = ( mb.IsStatic()         ? kIsStatic : 0 ) |
-                ( mb.TypeOf().IsEnum()  ? kIsEnum   : 0 ) |
-                ( mb.TypeOf().IsArray() ? kIsArray  : 0 );
-   fConverter = CreateConverter( mb.TypeOf().Name( ROOT::Reflex::SCOPED | ROOT::Reflex::FINAL ) );
-   fName      = mb.Name();
-
-// unknown owner (TODO: handle this case)
-   fOwnerTagnum = -1;
-   fOwnerIsNamespace = 0;
-}
-#endif
 
 //____________________________________________________________________________
 Long_t PyROOT::PropertyProxy::GetAddress( ObjectProxy* pyobj ) {
 // class attributes, global properties
-   if ( (fProperty & kIsStatic) || ( (fOwnerTagnum > -1) && fOwnerIsNamespace ) )
+   if ( (fProperty & kIsStatic) || fParent == 0 )
       return fOffset;
 
 // special case: non-static lookup through class
@@ -264,10 +240,9 @@ Long_t PyROOT::PropertyProxy::GetAddress( ObjectProxy* pyobj ) {
    }
 
    Long_t offset = 0;
-   if ( 0 < fOwnerTagnum ) {
-      Int_t realTagnum = ((G__ClassInfo*)pyobj->ObjectIsA()->GetClassInfo())->Tagnum();
-      if ( fOwnerTagnum != realTagnum )
-         offset = G__isanybase( fOwnerTagnum, realTagnum, (Long_t)obj );
+   if ( fParent != (void*)(pyobj->ObjectIsA()->GetClassInfo()) ) {
+   // TODO: figure out how to do this with Cling ...
+      offset = 0;
    }
 
    return (Long_t)obj + offset + fOffset;

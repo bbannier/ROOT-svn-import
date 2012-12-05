@@ -81,7 +81,7 @@ public:
 //                                                                      //
 // TThreadPoolTask                                                      //
 // This is a supporting class for TThreadPool.                          //
-// It wraps users task objects in order to pass tasks arguments in      // 
+// It wraps users task objects in order to pass tasks arguments in      //
 // type-safe way.                                                       //
 //                                                                      //
 //////////////////////////////////////////////////////////////////////////
@@ -116,7 +116,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 template <class aTask, class aParam>
 class TThreadPool : public TNonCopyable {
-    
+
    typedef TThreadPoolTask<aTask, aParam> task_t;
    typedef std::queue<task_t*>            taskqueue_t;
    typedef std::vector<TThread*>          threads_array_t;
@@ -124,9 +124,13 @@ class TThreadPool : public TNonCopyable {
 public:
    TThreadPool(size_t threadsCount, bool needDbg = false):
       fStopped(false),
+      fSuccessfulTasks(0),
+      fTasksCount(0),
+      fIdleThreads(threadsCount),
       fSilent(!needDbg) {
       fThreadNeeded = new TCondition(&fMutex);
       fThreadAvailable = new TCondition(&fMutex);
+      fAllTasksDone = new TCondition(&fMutexAllTasksDone);
 
       for (size_t i = 0; i < threadsCount; ++i) {
          TThread *pThread = new TThread(&TThreadPool::Executor, this);
@@ -135,6 +139,11 @@ public:
       }
 
       fThreadJoinHelper = new TThread(&TThreadPool::JoinHelper, this);
+
+      if (needDbg) {
+         fThreadMonitor = new TThread(&TThreadPool::Monitor, this);
+         fThreadMonitor->Run();
+      }
    }
 
    ~TThreadPool() {
@@ -149,6 +158,15 @@ public:
 
       delete fThreadNeeded;
       delete fThreadAvailable;
+      delete fAllTasksDone;
+   }
+
+   void AddThread() {
+      TLockGuard lock(&fMutex);
+      TThread *pThread = new TThread(&TThreadPool::Executor, this);
+      fThreads.push_back(pThread);
+      pThread->Run();
+      ++fIdleThreads;
    }
 
    void PushTask(typename TThreadPoolTask<aTask, aParam>::task_t &task, aParam param) {
@@ -193,6 +211,13 @@ public:
       fThreadJoinHelper->Join();
    }
 
+   void Drain() {
+      // This method stops the calling thread until the task queue is empty
+
+      TLockGuard lock(&fMutexAllTasksDone);
+      fAllTasksDone->Wait();
+   }
+
    size_t TasksCount() const {
       return fTasksCount;
    }
@@ -201,41 +226,66 @@ public:
       return fSuccessfulTasks;
    }
 
+   size_t IdleThreads() const {
+      return fIdleThreads;
+   }
+
 private:
+   static void* Monitor(void *arg) {
+      if (NULL == arg)
+         return NULL;
+
+      TThreadPool *pThis = reinterpret_cast<TThreadPool*>(arg);
+      while (true && !pThis->fStopped) {
+         std::stringstream ss;
+         ss
+               << ">>>> Check for tasks."
+               << " Number of Tasks: " << pThis->fTasks.size()
+               << "; Idle threads: " << pThis->IdleThreads();
+         pThis->DbgLog(ss.str());
+         sleep(1);
+      }
+      return NULL;
+   }
+
    static void* Executor(void *arg) {
       TThreadPool *pThis = reinterpret_cast<TThreadPool*>(arg);
 
       while (!pThis->fStopped) {
          task_t *task(NULL);
 
-         std::stringstream ss;
-         ss
-               << ">>>> Check for tasks."
-               << " Number of Tasks: " << pThis->fTasks.size();
-         pThis->DbgLog(ss.str());
-
          // There is a task, let's take it
          {
-            TLockGuard lock(&pThis->fMutex);
             // Find a task to perform
+            TLockGuard lock(&pThis->fMutex);
             if (pThis->fTasks.empty() && !pThis->fStopped) {
                pThis->DbgLog("waiting for a task");
+
+               if (pThis->fThreads.size() == pThis->fIdleThreads) {
+                  TLockGuard l(&pThis->fMutexAllTasksDone);
+                  pThis->fAllTasksDone->Broadcast();
+               }
 
                // No tasks, we wait for a task to come
                pThis->fThreadNeeded->Wait();
 
                pThis->DbgLog("done waiting for tasks");
             }
+         }
 
-            {
-               if (!pThis->fTasks.empty()) {
-                  task = pThis->fTasks.front();
-                  pThis->fTasks.pop();
+         {
+            TLockGuard lock(&pThis->fMutex);
+            if (!pThis->fTasks.empty()) {
+               --pThis->fIdleThreads;
+               task = pThis->fTasks.front();
+               pThis->fTasks.pop();
 
-                  pThis->DbgLog("get the task");
-               }
-               pThis->DbgLog("done Check <<<<");
+               pThis->DbgLog("get the task");
+            } else if (pThis->fThreads.size() == pThis->fIdleThreads) {
+               TLockGuard l(&pThis->fMutexAllTasksDone);
+               pThis->fAllTasksDone->Broadcast();
             }
+            pThis->DbgLog("done Check <<<<");
          }
 
          // Execute the task
@@ -248,6 +298,9 @@ private:
             }
             delete task;
             task = NULL;
+
+            TLockGuard lock(&pThis->fMutex);
+            ++pThis->fIdleThreads;
 
             pThis->DbgLog("Done Running the task");
          }
@@ -287,11 +340,15 @@ private:
    TMutex          fMutex;
    TCondition     *fThreadNeeded;
    TCondition     *fThreadAvailable;
+   TMutex         fMutexAllTasksDone;
+   TCondition     *fAllTasksDone;
    threads_array_t fThreads;
    TThread        *fThreadJoinHelper;
+   TThread        *fThreadMonitor;
    volatile bool   fStopped;
    size_t          fSuccessfulTasks;
    size_t          fTasksCount;
+   size_t          fIdleThreads;
    TMutex          fDbgOutputMutex;
    bool            fSilent; // No DBG messages
 };

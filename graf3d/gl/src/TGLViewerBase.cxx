@@ -26,6 +26,8 @@
 #include "TGLContext.h"
 #include "TGLIncludes.h"
 
+#include "TEnv.h"
+
 #include <algorithm>
 #include <stdexcept>
 
@@ -62,6 +64,9 @@ TGLViewerBase::TGLViewerBase() :
    // Constructor.
 
    fRnrCtx = new TGLRnrCtx(this);
+
+   fWFLineW = gEnv->GetValue("OpenGL.WireframeLineScalingFactor", 1.0);
+   fOLLineW = gEnv->GetValue("OpenGL.OutlineLineScalingFactor", 1.0);
 }
 
 //______________________________________________________________________
@@ -368,7 +373,7 @@ void TGLViewerBase::PreRender()
    {
       TGLSceneInfo         * sinfo = *i;
       const TGLBoundingBox & bbox  = sinfo->GetTransformedBBox();
-      Bool_t visp = (!bbox.IsEmpty() && fCamera->FrustumOverlap(bbox) != kOutside);
+      Bool_t visp = (!bbox.IsEmpty() && fCamera->FrustumOverlap(bbox) != Rgl::kOutside);
       sinfo->ViewCheck(visp);
       if (visp) {
          fRnrCtx->SetSceneInfo(sinfo);

@@ -13,14 +13,6 @@
 class TDataMember;
 class TGlobal;
 
-// Reflex
-#ifdef PYROOT_USE_REFLEX
-#include "Reflex/Member.h"
-#endif
-
-// CINT
-#include "DataMbr.h"
-
 // Standard
 #include <string>
 
@@ -39,9 +31,6 @@ namespace PyROOT {
    public:
       void Set( TDataMember* );
       void Set( TGlobal* );
-#ifdef PYROOT_USE_REFLEX
-      void Set( const ROOT::Reflex::Member& );
-#endif
 
       std::string GetName() { return fName; }
       Long_t GetAddress( ObjectProxy* pyobj /* owner */ );
@@ -51,9 +40,8 @@ namespace PyROOT {
       Long_t       fOffset;
       Long_t       fProperty;
       TConverter*  fConverter;
-      Int_t        fOwnerTagnum;   // TODO: wrap up ...
+      void*        fParent;
       std::string  fName;
-      Int_t        fOwnerIsNamespace;
 
    private:              // private, as the python C-API will handle creation
       PropertyProxy() {}

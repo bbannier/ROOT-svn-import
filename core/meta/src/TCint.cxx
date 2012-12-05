@@ -43,6 +43,7 @@
 #include "THashTable.h"
 #include "RConfigure.h"
 #include "compiledata.h"
+#include "TMemberInspector.h"
 
 #include <vector>
 #include <set>
@@ -423,6 +424,75 @@ void TCint::EndOfLineAction()
 }
 
 //______________________________________________________________________________
+void TCint::InspectMembers(TMemberInspector& insp, void* obj, const TClass* cl)
+{
+   // Visit all members over members, recursing over base classes.
+
+   ClassInfo_t *ci = cl->GetClassInfo();
+
+   if (!ci) return;
+
+   DataMemberInfo_t* dmi = gCint->DataMemberInfo_Factory(ci);
+
+   TString name("*");
+   while (DataMemberInfo_Next(dmi)) {
+      name.Remove(1);
+      name += DataMemberInfo_Name(dmi);
+      if (name == "*G__virtualinfo") continue;
+
+      // skip static members and the member G__virtualinfo inserted by the
+      // CINT RTTI system
+      Long_t prop = DataMemberInfo_Property(dmi) | DataMemberInfo_TypeProperty(dmi);
+      if (prop & (G__BIT_ISSTATIC | G__BIT_ISENUM))
+         continue;
+      Bool_t isPointer =  DataMemberInfo_TypeProperty(dmi) & G__BIT_ISPOINTER;
+
+      // Array handling
+      if (prop & G__BIT_ISARRAY) {
+         int arrdim = DataMemberInfo_ArrayDim(dmi);
+         for (int dim = 0; dim < arrdim; dim++) {
+            int nelem = DataMemberInfo_MaxIndex(dmi, dim);
+            name += TString::Format("[%d]", nelem);
+         }
+      }
+
+      const char* inspname = name;
+      if (!isPointer) {
+         // no '*':
+         ++inspname;
+      }
+      void* maddr = ((char*)obj) + DataMemberInfo_Offset(dmi);
+      insp.Inspect(const_cast<TClass*>(cl), insp.GetParent(), inspname, maddr);
+
+      // If struct member: recurse.
+      if (!isPointer && !(prop & G__BIT_ISFUNDAMENTAL)) {
+         std::string clmName(TClassEdit::ShortType(DataMemberInfo_TypeName(dmi),
+                                                   TClassEdit::kDropTrailStar) );
+         TClass* clm = TClass::GetClass(clmName.c_str());
+         if (clm) {
+            insp.InspectMember(clm, maddr, name);
+         }
+      }
+   } // while next data member
+   DataMemberInfo_Delete(dmi);
+
+   // Iterate over base classes
+   BaseClassInfo_t* bci = BaseClassInfo_Factory(ci);
+   while (BaseClassInfo_Next(bci)) {
+      const char* bclname = BaseClassInfo_Name(bci);
+      TClass* bcl = TClass::GetClass(bclname);
+      void* baddr = ((char*)obj) + BaseClassInfo_Offset(bci);
+      if (bcl) {
+         bcl->CallShowMembers(baddr, insp);
+      } else {
+         Warning("InterpretedShowMembers()", "Unknown class %s", bclname);
+      }
+   }
+   BaseClassInfo_Delete(bci);
+
+}
+
+//______________________________________________________________________________
 Bool_t TCint::IsLoaded(const char* filename) const
 {
    // Return true if the file has already been loaded by cint.
@@ -764,6 +834,18 @@ Int_t TCint::DeleteGlobal(void *obj)
 }
 
 //______________________________________________________________________________
+Int_t TCint::DeleteVariable(const char *name)
+{
+   // Delete a variable name from CINT symbol table so it cannot be accessed
+   // anymore. Returns 1 in case of success and 0 in case object was not in
+   // table.
+
+   R__LOCKGUARD(gCINTMutex);
+
+   return G__deletevariable(name);
+}
+
+//______________________________________________________________________________
 void TCint::SaveContext()
 {
    // Save the current CINT state.
@@ -842,18 +924,32 @@ void TCint::UpdateListOfGlobalFunctions()
          Bool_t needToAdd = kTRUE;
          // first remove if already in list
          TList* listFuncs = ((THashTable*)(gROOT->fGlobalFunctions))->GetListForObject(t.Name());
-         if (listFuncs && (vt = (void*)t.InterfaceMethod())) {
+         if (listFuncs) {
+            vt = (void*)t.InterfaceMethod();
             Long_t prop = -1;
             TIter iFunc(listFuncs);
             TFunction* f = 0;
             Bool_t foundStart = kFALSE;
             while (needToAdd && (f = (TFunction*)iFunc())) {
                if (strcmp(f->GetName(),t.Name())) {
+                  // The function are sorted alphabetically,
+                  // until we get to the first overload, we skip th test
+                  // and then when we get to what is not an overload,
+                  // we can quit.
                   if (foundStart) break;
-                  continue;
+                  else continue;
                }
                foundStart = kTRUE;
-               if (vt == f->InterfaceMethod()) {
+               if (!vt) {
+                  // an interpreted function.
+
+                  // Do not call TFunction::InterfaceMethod in this case
+                  // as it might lead to a spurrious warning message:
+                  //   "Error: non class,struct,union object $bench used with . or ->"
+                  // in case of some user function definition.
+                  needToAdd = (f->Property() & G__BIT_ISCOMPILED)
+                              || !( 0 == strcmp( t.GetMangledName() , f->GetMangledName()) );
+              } else if (vt == f->InterfaceMethod()) {
                   if (prop == -1)
                      prop = t.Property();
                   needToAdd = !((prop & G__BIT_ISCOMPILED)
@@ -1053,6 +1149,14 @@ Bool_t TCint::CheckClassInfo(const char *name, Bool_t autoload /*= kTRUE*/)
 }
 
 //______________________________________________________________________________
+Bool_t TCint::CheckClassTemplate(const char *name)
+{
+   // Return true if there is a class template by the given name ...
+
+   return 0 != G__defined_templateclass( const_cast<char*>(name) );
+}
+
+//______________________________________________________________________________
 void TCint::CreateListOfBaseClasses(TClass *cl)
 {
    // Create list of pointers to base class(es) for TClass cl.
@@ -1157,6 +1261,30 @@ void TCint::CreateListOfMethodArgs(TFunction *m)
          }
       }
    }
+}
+
+//______________________________________________________________________________
+TClass *TCint::GenerateTClass(const char *classname, Bool_t silent /* = kFALSE */)
+{
+   // Generate a TClass for the given class.
+   
+   int version = 1;
+   if (TClassEdit::IsSTLCont(classname)) {
+      version = TClass::GetClass("TVirtualStreamerInfo")->GetClassVersion();
+   }
+   TClass *cl = new TClass(classname, version, 0, 0, -1, -1, silent);
+   cl->SetBit(TClass::kIsEmulation);
+
+   return cl;
+}
+
+//______________________________________________________________________________
+TClass *TCint::GenerateTClass(ClassInfo_t *classinfo, Bool_t silent /* = kFALSE */)
+{
+   // Generate a TClass for the given class.
+
+   G__ClassInfo *info = (G__ClassInfo*)classinfo;
+   return GenerateTClass(info->Fullname(),silent);
 }
 
 //______________________________________________________________________________
@@ -2063,7 +2191,7 @@ void TCint::UpdateClassInfoWork(const char *item, Long_t tagnum)
    // This does the actual work of UpdateClassInfo.
 
    Bool_t load = kFALSE;
-   if (strchr(item,'<') && TClass::GetClassShortTypedefHash()) {
+   if (strchr(item,'<') && TClass::GetClassTypedefHash()) {
       // We have a template which may have duplicates.
 
       TString resolvedItem(
@@ -2077,7 +2205,7 @@ void TCint::UpdateClassInfoWork(const char *item, Long_t tagnum)
       }
 
       if (!load) {
-         TIter next(TClass::GetClassShortTypedefHash()->GetListForObject(resolvedItem));
+         TIter next(TClass::GetClassTypedefHash()->GetListForObject(resolvedItem));
 
          while ( TClass::TNameMapNode* htmp =
               static_cast<TClass::TNameMapNode*> (next()) ) {
@@ -2153,6 +2281,7 @@ const char* TCint::GetSharedLibs()
       TRegexp sovers = "\\.[0-9]+\\.*[0-9]*\\.so";
       TRegexp dyvers = "\\.[0-9]+\\.*[0-9]*\\.dylib";
       TString fname = filename;
+      Ssiz_t idx;
 #endif
       if (!needToSkip &&
            (
@@ -2166,15 +2295,20 @@ const char* TCint::GetSharedLibs()
             (len>4 && (strcasecmp(end-4,".dll") == 0)) ||
             (len>6 && (strcasecmp(end-6,".dylib") == 0)))) {
 #if defined(R__MACOSX)
-         if ((len>5 && fname.Index(sovers) == kNPOS) &&
-             (len>8 && fname.Index(dyvers) == kNPOS)) {
-#endif               
-            if (!fSharedLibs.IsNull())
-               fSharedLibs.Append(" ");
-            fSharedLibs.Append(filename);
-#if defined(R__MACOSX)
+         if (len>5 && (idx = fname.Index(sovers)) != kNPOS) {
+            fname.Remove(idx);
+            fname += ".so";
+            filename = fname;
          }
-#endif
+         if (len>8 && (idx = fname.Index(dyvers)) != kNPOS) {
+            fname.Remove(idx);
+            fname += ".dylib";
+            filename = fname;
+         }
+#endif               
+         if (!fSharedLibs.IsNull())
+            fSharedLibs.Append(" ");
+         fSharedLibs.Append(filename);
       }
 
       cursor.Next();
@@ -2325,11 +2459,11 @@ const char *TCint::GetSTLIncludePath() const
 //                      M I S C
 //______________________________________________________________________________
 
-int TCint::DisplayClass(FILE *fout,char *name,int base,int start) const
+int TCint::DisplayClass(FILE *fout,const char *name,int base,int start) const
 {
    // Interface to CINT function
 
-   return G__display_class(fout,name,base,start);
+   return G__display_class(fout,const_cast<char*>(name),base,start);
 }
 //______________________________________________________________________________
 int TCint::DisplayIncludePath(FILE *fout) const
@@ -2701,13 +2835,6 @@ ClassInfo_t *TCint::ClassInfo_Factory(const char *name) const
    return new G__ClassInfo(name);
 }
 //______________________________________________________________________________
-ClassInfo_t *TCint::ClassInfo_Factory(G__value *pvalue) const
-{
-   // Interface to CINT function
-
-   return new G__ClassInfo(*pvalue);
-}
-//______________________________________________________________________________
 int TCint::ClassInfo_GetMethodNArg(ClassInfo_t *cinfo, const char *method,const char *proto) const
 {
    // Interface to CINT function
@@ -2841,14 +2968,6 @@ Long_t  TCint::ClassInfo_Property(ClassInfo_t *cinfo) const
 
    G__ClassInfo *info = (G__ClassInfo*)cinfo;
    return info->Property();
-}
-//______________________________________________________________________________
-int   TCint::ClassInfo_RootFlag(ClassInfo_t *cinfo) const
-{
-   // Interface to CINT function
-
-   G__ClassInfo *info = (G__ClassInfo*)cinfo;
-   return info->RootFlag();
 }
 //______________________________________________________________________________
 int   TCint::ClassInfo_Size(ClassInfo_t *cinfo) const
@@ -3171,6 +3290,14 @@ MethodInfo_t *TCint::MethodInfo_Factory() const
    return info;
 }
 //______________________________________________________________________________
+MethodInfo_t *TCint::MethodInfo_Factory(ClassInfo_t* clinfo) const
+{
+   // Interface to CINT function
+
+   G__MethodInfo *info = new G__MethodInfo(*(G__ClassInfo*)clinfo);
+   return info;
+}
+//______________________________________________________________________________
 MethodInfo_t *TCint::MethodInfo_FactoryCopy(MethodInfo_t *minfo) const
 {
    // Interface to CINT function
@@ -3303,6 +3430,14 @@ MethodArgInfo_t *TCint::MethodArgInfo_Factory() const
    return info;
 }
 //______________________________________________________________________________
+MethodArgInfo_t *TCint::MethodArgInfo_Factory(MethodInfo_t *minfo) const
+{
+   // Interface to CINT function
+
+   G__MethodArgInfo *info = new G__MethodArgInfo(*(G__MethodInfo*)minfo);
+   return info;
+}
+//______________________________________________________________________________
 MethodArgInfo_t *TCint::MethodArgInfo_FactoryCopy(MethodArgInfo_t *marginfo) const
 {
    // Interface to CINT function
@@ -3359,6 +3494,14 @@ const char *TCint::MethodArgInfo_TypeName(MethodArgInfo_t *marginfo) const
    G__MethodArgInfo *info = (G__MethodArgInfo*)marginfo;
    return info->Type()->Name();
 }
+//______________________________________________________________________________
+const char *TCint::MethodArgInfo_TrueTypeName(MethodArgInfo_t *marginfo) const
+{
+   // Interface to CINT function
+
+   G__MethodArgInfo *info = (G__MethodArgInfo*)marginfo;
+   return info->Type()->TrueName();
+}
 
 
 //______________________________________________________________________________
@@ -3377,14 +3520,6 @@ TypeInfo_t *TCint::TypeInfo_Factory() const
    // Interface to CINT function
 
    G__TypeInfo *info = new G__TypeInfo();
-   return info;
-}
-//______________________________________________________________________________
-TypeInfo_t *TCint::TypeInfo_Factory(G__value *pvalue) const
-{
-   // Interface to CINT function
-
-   G__TypeInfo *info = new G__TypeInfo(*pvalue);
    return info;
 }
 //______________________________________________________________________________
@@ -3494,6 +3629,14 @@ Bool_t  TCint::TypedefInfo_IsValid(TypedefInfo_t *tinfo) const
 
    G__TypedefInfo *info = (G__TypedefInfo*)tinfo;
    return info->IsValid();
+}
+//______________________________________________________________________________
+Int_t  TCint::TypedefInfo_Next(TypedefInfo_t *tinfo) const
+{
+   // Interface to CINT function
+
+   G__TypedefInfo *info = (G__TypedefInfo*)tinfo;
+   return info->Next();
 }
 //______________________________________________________________________________
 Long_t  TCint::TypedefInfo_Property(TypedefInfo_t *tinfo) const

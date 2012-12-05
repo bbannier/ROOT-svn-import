@@ -90,7 +90,6 @@ public:
    virtual Bool_t   Divide(TF1 *h1, Double_t c1=1);
    virtual Bool_t   Divide(const TH1 *h1);
    virtual Bool_t   Divide(const TH1 *h1, const TH1 *h2, Double_t c1=1, Double_t c2=1, Option_t *option=""); // *MENU*
-   virtual TH1     *DrawCopy(Option_t *option="") const;
    virtual Int_t    Fill(Double_t x, Double_t y);
    virtual Int_t    Fill(const char *namex, Double_t y);
    virtual Int_t    Fill(Double_t x, Double_t y, Double_t w);
@@ -107,7 +106,6 @@ public:
    virtual TArrayD *GetBinSumw2() {return &fBinSumw2;}
    virtual const TArrayD *GetBinSumw2() const {return &fBinSumw2;}
    Option_t        *GetErrorOption() const;
-   virtual char    *GetObjectInfo(Int_t px, Int_t py) const;
    virtual void     GetStats(Double_t *stats) const;
    virtual Double_t GetYmin() const {return fYmin;}
    virtual Double_t GetYmax() const {return fYmax;}
@@ -123,7 +121,7 @@ public:
            TH1     *Rebin(Int_t ngroup=2, const char*newname="", const Double_t *xbins=0);
    virtual void     RebinAxis(Double_t x, TAxis *axis);
    virtual void     Reset(Option_t *option="");
-   virtual void     SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void     Scale(Double_t c1=1, Option_t *option="");
    virtual void     SetBinEntries(Int_t bin, Double_t w);
    virtual void     SetBins(Int_t nbins, Double_t xmin, Double_t xmax);

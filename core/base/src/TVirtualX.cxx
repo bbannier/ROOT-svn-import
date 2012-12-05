@@ -189,6 +189,14 @@ void TVirtualX::CopyPixmap(Int_t /*wid*/, Int_t /*xpos*/, Int_t /*ypos*/)
 }
 
 //______________________________________________________________________________
+Double_t TVirtualX::GetOpenGLScalingFactor()
+{
+   //On a HiDPI resolution it can be > 1., this means glViewport should use
+   //scaled width and height.
+   return 1.;
+}
+
+//______________________________________________________________________________
 void TVirtualX::CreateOpenGLContext(Int_t /*wid*/)
 {
    // Creates OpenGL context for window "wid"
@@ -198,6 +206,40 @@ void TVirtualX::CreateOpenGLContext(Int_t /*wid*/)
 void TVirtualX::DeleteOpenGLContext(Int_t /*wid*/)
 {
    // Deletes OpenGL context for window "wid"
+}
+
+//______________________________________________________________________________
+Window_t TVirtualX::CreateOpenGLWindow(Window_t /*parentID*/, UInt_t /*width*/, UInt_t /*height*/, const std::vector<std::pair<UInt_t, Int_t> > &/*format*/)
+{
+   //Create window with special pixel format. Noop everywhere except Cocoa.
+   return Window_t();
+}
+
+//______________________________________________________________________________
+Handle_t TVirtualX::CreateOpenGLContext(Window_t /*windowID*/, Handle_t /*shareWith*/)
+{
+   // Creates OpenGL context for window "windowID".
+   return Handle_t();
+}
+
+//______________________________________________________________________________
+Bool_t TVirtualX::MakeOpenGLContextCurrent(Handle_t /*ctx*/, Window_t /*windowID*/)
+{
+   // Makes context ctx current OpenGL context.
+   return kFALSE;
+}
+
+//______________________________________________________________________________
+Handle_t TVirtualX::GetCurrentOpenGLContext()
+{
+   // Asks OpenGL subsystem about the current OpenGL context.
+   return Handle_t();
+}
+
+//______________________________________________________________________________
+void TVirtualX::FlushOpenGLBuffer(Handle_t /*ctx*/)
+{
+   // Flushes OpenGL buffer.
 }
 
 //______________________________________________________________________________
@@ -267,6 +309,23 @@ void TVirtualX::DrawPolyMarker(Int_t /*n*/, TPoint * /*xy*/)
 //______________________________________________________________________________
 void TVirtualX::DrawText(Int_t /*x*/, Int_t /*y*/, Float_t /*angle*/,
                          Float_t /*mgn*/, const char * /*text*/,
+                         ETextMode /*mode*/)
+{
+   // Draws a text string using current font.
+   //
+   // x,y   - text position
+   // angle - text angle
+   // mgn   - magnification factor
+   // text  - text string
+   // mode  - drawing mode:
+   //         mode = 0 the background is not drawn (kClear)
+   //         mode = 1 the background is drawn (kOpaque)
+
+}
+
+//______________________________________________________________________________
+void TVirtualX::DrawText(Int_t /*x*/, Int_t /*y*/, Float_t /*angle*/,
+                         Float_t /*mgn*/, const wchar_t * /*text*/,
                          ETextMode /*mode*/)
 {
    // Draws a text string using current font.
@@ -362,6 +421,17 @@ void TVirtualX::GetRGB(Int_t /*index*/, Float_t &r, Float_t &g, Float_t &b)
 
 //______________________________________________________________________________
 void TVirtualX::GetTextExtent(UInt_t &w, UInt_t &h, char * /*mess*/)
+{
+   // Returns the size of the specified character string "mess".
+   //
+   // w    - the text width
+   // h    - the text height
+   // mess - the string
+
+   w = h = 0;
+}
+//______________________________________________________________________________
+void TVirtualX::GetTextExtent(UInt_t &w, UInt_t &h, wchar_t * /*mess*/)
 {
    // Returns the size of the specified character string "mess".
    //

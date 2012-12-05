@@ -310,11 +310,13 @@ TString THtml::TFileDefinition::MatchFileSysName(TString& filename, TFileSysEntr
          if (!filename.EndsWith(fsentry->GetName()))
             continue;
          fsentry->GetFullName(filesysname, kTRUE); // get the short version
+         filename = filesysname;
          if (!filename.EndsWith(filesysname)) {
-            filesysname = "";
+            // It's something - let's see whether we find something better
+            // else leave it as plan B. This helps finding Reflex sources.
+            //filesysname = "";
             continue;
          }
-         filename = filesysname;
          fsentry->GetFullName(filesysname, kFALSE); // get the long version
          if (fse) *fse = fsentry;
          break;
@@ -1492,8 +1494,8 @@ void THtml::Convert(const char *filename, const char *title,
    cRealFilename = 0;
 
    // open source file
-   ifstream sourceFile;
-   sourceFile.open(realFilename, ios::in);
+   std::ifstream sourceFile;
+   sourceFile.open(realFilename, std::ios::in);
 
    if (!sourceFile.good()) {
       Error("Convert", "Can't open file '%s' !", realFilename.Data());
@@ -1624,7 +1626,9 @@ void THtml::CreateListOfClasses(const char* filter)
                continue;
             }
             // ignore STL
-            if (classPtr->GetDeclFileName() && !strncmp(classPtr->GetDeclFileName(), "prec_stl/", 9))
+            if (classPtr->GetDeclFileName() && (!strncmp(classPtr->GetDeclFileName(), "prec_stl/", 9) || 
+                                                strstr(classPtr->GetDeclFileName(), "include/c++/") || 
+                                                !strncmp(classPtr->GetDeclFileName(), "/usr/include",12)))
                continue;
             if (skipROOTClasses) {
                if (classPtr->GetSharedLibs() && classPtr->GetSharedLibs()[0]) {
@@ -1679,7 +1683,10 @@ void THtml::CreateListOfClasses(const char* filter)
                } // lib name known
                continue;
             } else {
-               if (matchesSelection && (!classPtr->GetDeclFileName() || !strstr(classPtr->GetDeclFileName(),"prec_stl/")))
+               if (matchesSelection && (!classPtr->GetDeclFileName() || 
+                                        !strstr(classPtr->GetDeclFileName(),"prec_stl/") || 
+                                        !strstr(classPtr->GetDeclFileName(), "include/c++/") || 
+                                        strncmp(classPtr->GetDeclFileName(), "/usr/include",12)))
                   classesDeclFileNotFound.AddLast(classPtr);
                continue;
             }
@@ -2053,7 +2060,7 @@ TClass *THtml::GetClass(const char *name1) const
    // TClassEdit checks are far too slow...
    /*
    if (cl && GetDeclFileName(cl) &&
-       strstr(GetDeclFileName(cl),"prec_stl/"))
+       (strstr(GetDeclFileName(cl),"prec_stl/") || !strstr(classPtr->GetDeclFileName(), "include/c++/") )
       cl = 0;
    */
    TString declFileName;

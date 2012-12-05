@@ -50,6 +50,8 @@
 
 #include <string>
 
+using namespace std;
+
 ClassImp(RooAbsTestStatistic)
 ;
 
@@ -502,7 +504,14 @@ void RooAbsTestStatistic::initSimMode(RooSimultaneous* simpdf, RooAbsData* data,
       _gofArray[n]->setSimCount(_nGof) ;
 
       // Servers may have been redirected between instantiation and (deferred) initialization
-      _gofArray[n]->recursiveRedirectServers(_paramSet) ;
+      RooArgSet* actualParams = pdf->getParameters(dset) ;
+      RooArgSet* selTargetParams = (RooArgSet*) _paramSet.selectCommon(*actualParams) ;
+
+      _gofArray[n]->recursiveRedirectServers(*selTargetParams) ;
+
+      delete selTargetParams ;
+      delete actualParams ;
+
       n++ ;
     } else {
       if ((!dset || (dset->sumEntries()==0. && !processEmptyDataSets()) ) && pdf) {

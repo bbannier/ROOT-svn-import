@@ -33,6 +33,7 @@
 #include "XrdOuc/XrdOucErrInfo.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "XrdSec/XrdSecInterface.hh"
+#include "XrdSys/XrdSysPlugin.hh"
 
 #include "XrdProofdClient.h"
 #include "XrdProofdClientMgr.h"
@@ -71,7 +72,7 @@ void *XrdProofdClientCron(void *p)
       return (void *)0;
    }
    XrdProofdProofServMgr *smgr = mc->fSessionMgr;
-   if (!(mgr)) {
+   if (!(smgr)) {
       TRACE(REQ, "undefined session manager: cannot start");
       return (void *)0;
    }
@@ -93,45 +94,10 @@ void *XrdProofdClientCron(void *p)
             continue;
          }
          // Parse type
-         XrdOucString buf;
+         //XrdOucString buf;
          if (msg.Type() == XrdProofdClientMgr::kClientDisconnect) {
-            // Read admin path and pointer to the client instance
-            XrdOucString adminpath;
-            rc = msg.Get(adminpath);
-            void *cp = 0;
-            rc = (rc == 0) ? msg.Get(&cp) : rc;
-            XrdProofdClient *c = (XrdProofdClient *)cp;
-            int cid = -1;
-            rc = (rc == 0) ? msg.Get(cid) : rc;
-            int pid = -1;
-            rc = (rc == 0) ? msg.Get(pid) : rc;
-            if (rc != 0) {
-               TRACE(XERR, "kClientDisconnect: problems parsing message: '"<<
-                           msg.Buf()<<"'; errno: "<<-rc);
-               continue;
-            }
-            TRACE(DBG, "kClientDisconnect: got: '"<<adminpath<<"', "<<c<<", "<<cid);
-            if (c) {
-               // Reset the corresponding client slot in the list of this client
-               c->ResetClientSlot(cid);
-            } else {
-               TRACE(XERR, "kClientDisconnect: problems getting pointer to client instance: "<<c);
-            }
-
-            // Remove the client admin path
-            if (adminpath != "????") {
-               adminpath.erase(adminpath.rfind("/cid"));
-               if ((rc = XrdProofdAux::RmDir(adminpath.c_str())) != 0) {
-                  TRACE(XERR, "kClientDisconnect: problems removing admin path; errno: "<<-rc);
-                  continue;
-               }
-            }
-
-            // Tell the session manager that a client has gone
-            XPDFORM(buf, "%d", pid);
-            smgr->Pipe()->Post(XrdProofdProofServMgr::kClientDisconnect, buf.c_str());
-            TRACE(DBG,"sending to ProofServMgr: "<<buf);
-
+            // obsolete
+	    TRACE(XERR, "obsolete type: XrdProofdClientMgr::kClientDisconnect");
          } else {
             TRACE(XERR, "unknown type: "<<msg.Type());
             continue;
@@ -151,7 +117,7 @@ void *XrdProofdClientCron(void *p)
 //______________________________________________________________________________
 XrdProofdClientMgr::XrdProofdClientMgr(XrdProofdManager *mgr,
                                        XrdProtocol_Config *pi, XrdSysError *e)
-                  : XrdProofdConfig(pi->ConfigFN, e)
+                  : XrdProofdConfig(pi->ConfigFN, e), fSecPlugin(0)
 {
    // Constructor
    XPDLOC(CMGR, "XrdProofdClientMgr")
@@ -418,6 +384,19 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
          return 0;
       }
       break;
+   case 'L':
+      if (fMgr->SrvType() == kXPD_AnyServer || fMgr->RemotePLite()) {
+         p->SetConnType(kXPD_MasterMaster);
+         needauth = 1;
+         response->SetTag("m2l");
+         p->Request()->login.role[0] = 'm';
+      } else {
+         TRACEP(p, XERR,"PLite submaster mode not allowed - ignoring request");
+         response->Send(kXR_InvalidRequest,
+                             "Server not allowed to be PLite submaster - ignoring request");
+         return 0;
+      }
+      break;
    case 's':
       if (fMgr->SrvType() == kXPD_AnyServer || fMgr->SrvType() == kXPD_MasterWorker) {
          p->SetConnType(kXPD_MasterWorker);
@@ -496,26 +475,22 @@ int XrdProofdClientMgr::Login(XrdProofdProtocol *p)
          response->SendI((kXR_int32)XPROOFD_VERSBIN, (void *)pp, i);
          p->SetStatus((XPD_NEED_MAP | XPD_NEED_AUTH));
          return 0;
-      } else {
-         response->SendI((kXR_int32)XPROOFD_VERSBIN);
-         p->SetStatus(XPD_LOGGEDIN);
-         if (pp)
-            p->SetAuthEntity();
+      } else if (pp) {
+         p->SetAuthEntity();
       }
-   } else {
-      // Check the client at theis point; the XrdProofdClient instance is created
-      // in here, if everything else goes well
-      int rccc = 0;
-      if ((rccc = CheckClient(p, p->UserIn(), emsg)) != 0) {
-         TRACEP(p, XERR, emsg);
-         XErrorCode rcode = (rccc == -2) ? (XErrorCode) kXR_NotAuthorized
-                                         : (XErrorCode) kXR_InvalidRequest;
-         response->Send(rcode, emsg.c_str());
-         return 0;
-      }
-      rc = response->SendI((kXR_int32)XPROOFD_VERSBIN);
-      p->SetStatus(XPD_LOGGEDIN);
    }
+   // Check the client at this point; the XrdProofdClient instance is created
+   // in here, if everything else goes well
+   int rccc = 0;
+   if ((rccc = CheckClient(p, p->UserIn(), emsg)) != 0) {
+      TRACEP(p, XERR, emsg);
+      XErrorCode rcode = (rccc == -2) ? (XErrorCode) kXR_NotAuthorized
+                                       : (XErrorCode) kXR_InvalidRequest;
+      response->Send(rcode, emsg.c_str());
+      return 0;
+   }
+   rc = response->SendI((kXR_int32)XPROOFD_VERSBIN);
+   p->SetStatus(XPD_LOGGEDIN);
 
    // Map the client
    return MapClient(p, 1);
@@ -711,7 +686,7 @@ int XrdProofdClientMgr::MapClient(XrdProofdProtocol *p, bool all)
             TRACEP(p, XERR, msg.c_str());
          }
          // Update counters
-         fNDisconnected--;
+         if(fNDisconnected) fNDisconnected--;
 
       } else {
          // The index of the next free slot will be the unique ID
@@ -803,12 +778,16 @@ int XrdProofdClientMgr::CheckAdminPath(XrdProofdProtocol *p,
    // Create the path now
    XPDFORM(cidpath, "%s/%s/cid", p->Client()->AdminPath(), lid.c_str());
 
-   // Check last access time
-   int rc = 0;
+   // Create disconnected path
+   XrdOucString discpath;
+   XPDFORM(discpath, "%s/%s/disconnected", p->Client()->AdminPath(), lid.c_str());
+
+   // Check last access time of disconnected if available, otherwise cid
    bool expired = false;
    struct stat st;
-   if ((rc = stat(cidpath.c_str(), &st)) != 0 ||
-       (expired = ((int)(time(0) - st.st_atime) > fReconnectTimeOut))) {
+   int rc = stat(discpath.c_str(), &st);
+   if (rc != 0) rc = stat(cidpath.c_str(), &st);
+   if (rc != 0 || (expired = ((int)(time(0) - st.st_atime) > fReconnectTimeOut))) {
       if (expired || (rc != 0 && errno != ENOENT)) {
          // Remove the file
          cidpath.replace("/cid", "");
@@ -1007,27 +986,12 @@ int XrdProofdClientMgr::CheckClients()
                            // during last cycle and it did not do it, so we close
                            // the link
                            xclose = 1;
-                           // This clients looks like disconnected
-                           FILE *fd = fopen(discpath.c_str(), "w");
-                           if (!fd) {
-                              TRACE(XERR, "unable to create path: " <<discpath);
-                           } else {
-                              fclose(fd);
-                           }
                         }
                      }
                   }
                } else {
                   // No id info, clean
                   xrm = 1;
-               }
-               // If too old remove the entry
-               if (xrm) {
-                  discpath.replace("/disconnected", "");
-                  TRACE(DBG, "removing path "<<discpath);
-                  if ((rc = XrdProofdAux::RmDir(discpath.c_str())) != 0) {
-                     TRACE(XERR, "problems removing "<<discpath<<"; error: "<<-rc);
-                  }
                }
                // If inactive since too long, close the associated link
                if (xclose) {
@@ -1045,11 +1009,15 @@ int XrdProofdClientMgr::CheckClients()
                         p->Link()->Close();
                      } else {
                         TRACE(XERR, "protocol or link associated with ID "<<cid<<" are invalid");
+                        xrm = 1;
                      }
                   } else {
                      TRACE(XERR, "could not resolve client id from "<<cidpath);
+                     xrm = 1;
                   }
-
+               }
+               // If too old remove the entry
+               if (xrm) {
                   discpath.replace("/disconnected", "");
                   TRACE(DBG, "removing path "<<discpath);
                   if ((rc = XrdProofdAux::RmDir(discpath.c_str())) != 0) {
@@ -1220,19 +1188,17 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
       return 0;
    }
 
-   // Open the security library
-   void *lh = 0;
-   if (!(lh = dlopen(seclib, RTLD_NOW))) {
-      TRACE(XERR, dlerror()<<" opening shared library "<< seclib);
-      return 0;
+   // Create the plug-in instance
+   if (!(fSecPlugin = new XrdSysPlugin((fEDest ? fEDest : (XrdSysError *)0), seclib))) {
+      TRACE(XERR, "could not create plugin instance for "<<seclib);
+      return (XrdSecService *)0;
    }
 
-   // Get the server object creator
-   XrdSecServLoader_t ep = 0;
-   if (!(ep = (XrdSecServLoader_t)dlsym(lh, "XrdSecgetService"))) {
-      TRACE(XERR, dlerror() <<" finding XrdSecgetService() in "<<seclib);
-      dlclose(lh);
-      return 0;
+   // Get the function
+   XrdSecServLoader_t ep = (XrdSecServLoader_t) fSecPlugin->getPlugin("XrdSecgetService");
+   if (!ep) {
+      TRACE(XERR, "could not find 'XrdSecgetService()' in "<<seclib);
+      return (XrdSecService *)0;
    }
 
    // Extract in a temporary file the directives prefixed "xpd.sec..." (filtering
@@ -1240,7 +1206,7 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    int nd = 0;
    char *rcfn = FilterSecConfig(nd);
    if (!rcfn) {
-      dlclose(lh);
+      SafeDelete(fSecPlugin);
       if (nd == 0) {
          // No directives to be processed
          TRACE(XERR, "no security directives: strong authentication disabled");
@@ -1255,7 +1221,7 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    XrdSecService *cia = 0;
    if (!(cia = (*ep)((fEDest ? fEDest->logger() : (XrdSysLogger *)0), rcfn))) {
       TRACE(XERR, "Unable to create security service object via " << seclib);
-      dlclose(lh);
+      SafeDelete(fSecPlugin);
       unlink(rcfn);
       delete[] rcfn;
       return 0;
@@ -1266,7 +1232,6 @@ XrdSecService *XrdProofdClientMgr::LoadSecurity()
    // Unlink the temporary file and cleanup its path
    unlink(rcfn);
    delete[] rcfn;
-   dlclose(lh);
 
    // All done
    return cia;
@@ -1377,7 +1342,7 @@ XrdProofdClient *XrdProofdClientMgr::GetClient(const char *usr, const char *grp,
          ui.fUser = usr;
          ui.fGroup = grp;
          bool full = (fMgr->SrvType() != kXPD_Worker)  ? 1 : 0;
-         c = new XrdProofdClient(ui, full, fMgr->ChangeOwn(), fEDest, fClntAdminPath.c_str());
+         c = new XrdProofdClient(ui, full, fMgr->ChangeOwn(), fEDest, fClntAdminPath.c_str(), fReconnectTimeOut);
          newclient = 1;
          bool freeclient = 1;
          if (c && c->IsValid()) {

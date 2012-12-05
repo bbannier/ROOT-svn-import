@@ -116,11 +116,11 @@ RooCmdArg Import(const char* state, TH1& histo) ;
 RooCmdArg Import(const std::map<std::string,TH1*>&) ;
 RooCmdArg Import(const char* state, RooDataHist& dhist) ;
 RooCmdArg Import(const std::map<std::string,RooDataHist*>&) ;
-RooCmdArg Import(TH1& histo, Bool_t importDensity=kTRUE) ;
+RooCmdArg Import(TH1& histo, Bool_t importDensity=kFALSE) ;
 
 // RooDataSet::ctor arguments
-RooCmdArg WeightVar(const char* name) ;
-RooCmdArg WeightVar(const RooRealVar& arg) ;
+RooCmdArg WeightVar(const char* name, Bool_t reinterpretAsWeight=kFALSE) ;
+RooCmdArg WeightVar(const RooRealVar& arg, Bool_t reinterpretAsWeight=kFALSE) ;
 RooCmdArg Import(const char* state, RooDataSet& data) ;
 RooCmdArg Import(const std::map<std::string,RooDataSet*>& ) ;
 RooCmdArg Link(const char* state, RooAbsData& data) ;
@@ -255,7 +255,7 @@ RooCmdArg ObjectName(const char* name) ;
 RooCmdArg ClassName(const char* name) ;
 RooCmdArg BaseClassName(const char* name) ;
 RooCmdArg TagName(const char* name) ;
-RooCmdArg OutputStream(ostream& os) ;
+RooCmdArg OutputStream(std::ostream& os) ;
 RooCmdArg Prefix(Bool_t flag) ;
 RooCmdArg Color(Color_t color) ;
 

@@ -39,10 +39,29 @@ templateClassImp(RooCFunction1Ref)
 template<> RooCFunction1Map<double,double>* RooCFunction1Ref<double,double>::_fmap = 0 ;
 template<> RooCFunction1Map<double,int>* RooCFunction1Ref<double,int>::_fmap = 0 ;
 
+template<>
+RooCFunction1Map<double,double>& RooCFunction1Ref<double,double>::fmap()
+ {
+    // Return reference to function pointer-to-name mapping service
+    if (!_fmap) {
+      _fmap = new RooCFunction1Map<double,double> ;
+    }
+    return *_fmap ;
+  }
 
+template<>
+RooCFunction1Map<double,int>& RooCFunction1Ref<double,int>::fmap()
+ {
+    // Return reference to function pointer-to-name mapping service
+    if (!_fmap) {
+      _fmap = new RooCFunction1Map<double,int> ;
+    }
+    return *_fmap ;
+ }
 
 namespace RooFit {
 
+#ifndef R__HAS_CLING
   RooAbsReal* bindFunction(const char* name,void* func,RooAbsReal& x) 
   {
     // This function is for use in CINT, which does not properly handly
@@ -52,7 +71,7 @@ namespace RooFit {
     oocoutE((TObject*)0,InputArguments) << "bindFunction::ERROR No matching RooCFunction1Binding<> class found for function " << RooCintUtils::functionName(func) << endl ;
     return 0 ;
   }
-
+#endif
 
   RooAbsReal* bindFunction(const char* name,CFUNCD1D func,RooAbsReal& x) {
     return new RooCFunction1Binding<Double_t,Double_t>(name,name,func,x) ;
@@ -62,6 +81,7 @@ namespace RooFit {
     return new RooCFunction1Binding<Double_t,Int_t>(name,name,func,x) ;
   }
 
+#ifndef R__HAS_CLING
   RooAbsPdf* bindPdf(const char* name,void* func,RooAbsReal& x) 
   {
     // This function is for use in CINT, which does not properly handly
@@ -71,6 +91,7 @@ namespace RooFit {
     oocoutE((TObject*)0,InputArguments) << "bindFunction::ERROR No matching RooCFunction1PdfBinding<> class found for function " << RooCintUtils::functionName(func) << endl ;
     return 0 ;
   }
+#endif
 
 
   RooAbsPdf* bindPdf(const char* name,CFUNCD1D func,RooAbsReal& x) {

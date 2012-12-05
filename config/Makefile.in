@@ -29,6 +29,7 @@ EXTRA_CFLAGS   := -Iinclude @cflags@
 EXTRA_CXXFLAGS := -Iinclude @cflags@
 EXTRA_LDFLAGS  := @ldflags@
 WINRTDEBUG     := @winrtdebug@
+CTORSINITARRAY := @ctorsinitarray@
 
 GLBPATCHFLAGS  := @glbpatchcflags@
 EXTRA_AUTHFLAGS:= @srpextracflags@ @krb5extracflags@ @glbextracflags@ @sslextracflags@
@@ -60,6 +61,7 @@ XFTLIB         := @enable_xft@
 BUILDCOCOA     := @buildcocoa@
 
 CXX11          := @c++11@
+LIBCXX11       := @libc++11@
 
 EXPLICITLINK   := @explicitlink@
 
@@ -117,6 +119,11 @@ BUILDODBC      := @buildodbc@
 ODBCLIBDIR     := @odbclibdir@
 ODBCCLILIB     := @odbclib@
 ODBCINCDIR     := $(filter-out /usr/include, @odbcincdir@)
+
+BUILDGEOCAD    := @buildgeocad@
+OCCLIBDIR      := @occlibdir@
+OCCLIB         := @occlib@
+OCCINCDIR      := $(filter-out /usr/include, @occincdir@)
 
 BUILDQT        := @buildqt@
 BUILDQTGSI     := @buildqtgsi@
@@ -323,8 +330,9 @@ CINTMAXSTRUCT  := @cintmaxstruct@
 CINTMAXTYPEDEF := @cintmaxtypedef@
 CINTLONGLINE   := @cintlongline@
 
-BUILDCLING     := @buildcling@
+BUILTINLLVM    := @builtinllvm@
 LLVMCONFIG     := @llvmconfig@
+BUILDCLING     := @buildcling@
 
 BUILDCINTEX    := @buildcintex@
 
@@ -334,8 +342,6 @@ BUILDROOFIT    := @buildroofit@
 
 BUILDMINUIT2   := @buildminuit2@
 
-BUILDVC        := @buildvc@
-
 BUILDUNURAN    := @buildunuran@
 
 BUILDGDML      := @buildgdml@
@@ -343,12 +349,6 @@ BUILDGDML      := @buildgdml@
 BUILDTABLE     := @buildtable@
 
 BUILDTMVA      := @buildtmva@
-
-BUILDCLARENS   := @buildclarens@
-CLARENSINC     := $(filter-out -I/usr/include, @clarensincdir@)
-CLARENSLIBS    := @clarenslibs@
-
-BUILDPEAC      := @buildpeac@
 
 BUILDAFDSMGRD  := @buildafdsmgrd@
 AFDSMGRDAPMON  := @afdsmgrdapmon@

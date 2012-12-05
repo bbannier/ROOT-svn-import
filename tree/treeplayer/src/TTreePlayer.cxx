@@ -19,6 +19,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "Riostream.h"
 #include "TTreePlayer.h"
@@ -43,6 +44,7 @@
 #include "TH3.h"
 #include "TPolyMarker.h"
 #include "TPolyMarker3D.h"
+#include "TText.h"
 #include "TDirectory.h"
 #include "TClonesArray.h"
 #include "TClass.h"
@@ -80,6 +82,8 @@
 #include "Foption.h"
 #include "Fit/UnBinData.h"
 #include "Math/MinimizerOptions.h"
+
+
 
 R__EXTERN Foption_t Foption;
 R__EXTERN  TTree *gTree;
@@ -437,6 +441,19 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
    //   if (gPad) gPad->Clear();
    //   return 0;
    //}
+   if (drawflag) {
+      if (gPad) {
+         gPad->DrawFrame(-1.,-1.,1.,1.);
+         TText *text_empty = new TText(0.,0.,"Empty");
+         text_empty->SetTextAlign(22);
+         text_empty->SetTextFont(42);
+         text_empty->SetTextSize(0.1);
+         text_empty->SetTextColor(1);
+         text_empty->Draw();
+      } else {
+         Warning("DrawSelect", "The selected TTree subset is empty.");
+      }
+   }
 
    //*-*- 1-D distribution
    if (fDimension == 1) {
@@ -495,8 +512,8 @@ Long64_t TTreePlayer::DrawSelect(const char *varexp0, const char *selection, Opt
    } else if (optpara || optcandle) {
       if (draw) {
          TObject* para = fSelector->GetObject();
-         TObject *enlist = gDirectory->FindObject("enlist");
          fTree->Draw(">>enlist",selection,"entrylist",nentries,firstentry);
+         TObject *enlist = gDirectory->FindObject("enlist");
          gROOT->ProcessLineFast(Form("TParallelCoord::SetEntryList((TParallelCoord*)0x%lx,(TEntryList*)0x%lx)",
                                      (ULong_t)para, (ULong_t)enlist));
       }
@@ -772,6 +789,12 @@ Int_t TTreePlayer::MakeClass(const char *classname, const char *option)
             if (strncmp(declfile,precstl,precstl_len) == 0) {
                fprintf(fp,"#include <%s>\n",declfile+precstl_len);
                listOfHeaders.Add(new TNamed(cl->GetName(),declfile+precstl_len));
+            } else if (strncmp(declfile,"/usr/include/",13) == 0) {
+               fprintf(fp,"#include <%s>\n",declfile+strlen("/include/c++/"));              
+               listOfHeaders.Add(new TNamed(cl->GetName(),declfile+strlen("/include/c++/")));
+            } else if (strstr(declfile,"/include/c++/") != 0) {
+               fprintf(fp,"#include <%s>\n",declfile+strlen("/include/c++/"));              
+               listOfHeaders.Add(new TNamed(cl->GetName(),declfile+strlen("/include/c++/")));
             } else if (strncmp(declfile,rootinclude,rootinclude_len) == 0) {
                fprintf(fp,"#include <%s>\n",declfile+rootinclude_len);              
                listOfHeaders.Add(new TNamed(cl->GetName(),declfile+rootinclude_len));
@@ -2198,6 +2221,7 @@ Long64_t TTreePlayer::Process(TSelector *selector,Option_t *option, Long64_t nen
       selector->SlaveTerminate();   //<==call user termination function
       selector->Terminate();        //<==call user termination function
    }
+   fTree->SetNotify(0); // Detach the selector from the tree.
    fSelectorUpdate = 0;
    if (gMonitoringWriter)
       gMonitoringWriter->SendProcessingStatus("DONE");
@@ -2286,8 +2310,8 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    UInt_t lenmax = 0;
    UInt_t colDefaultSize = 9;
    UInt_t colPrecision = 9;
-   vector<TString> colFormats;
-   vector<Int_t> colSizes;
+   std::vector<TString> colFormats;
+   std::vector<Int_t> colSizes;
 
    if (opt.Contains("lenmax=")) {
       int start = opt.Index("lenmax=");
@@ -2382,7 +2406,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
    Long64_t entry,entryNumber;
    Int_t i,nch;
    UInt_t ncols = 8;   // by default first 8 columns are printed only
-   ofstream out;
+   std::ofstream out;
    Int_t lenfile = 0;
    char * fname = 0;
    if (fScanRedirect) {
@@ -2396,7 +2420,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
          strlcpy(fname, fTree->GetName(),nch2+10);
          strlcat(fname, "-scan.dat",nch2+10);
       }
-      out.open(fname, ios::out);
+      out.open(fname, std::ios::out);
       if (!out.good ()) {
          if (!lenfile) delete [] fname;
          Error("Scan","Can not open file for redirection");
@@ -2514,7 +2538,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
       onerow += Form(starFormat.Data(),var[ui]->PrintValue(-2));
    }
    if (fScanRedirect)
-      out<<onerow.Data()<<"*"<<endl;
+      out<<onerow.Data()<<"*"<<std::endl;
    else
       printf("%s*\n",onerow.Data());
    onerow = "*    Row   ";
@@ -2524,7 +2548,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
       onerow += Form(numbFormat.Data(),var[ui]->PrintValue(-1));
    }
    if (fScanRedirect)
-      out<<onerow.Data()<<"*"<<endl;
+      out<<onerow.Data()<<"*"<<std::endl;
    else
       printf("%s*\n",onerow.Data());
    onerow = "***********";
@@ -2534,7 +2558,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
       onerow += Form(starFormat.Data(),var[ui]->PrintValue(-2));
    }
    if (fScanRedirect)
-      out<<onerow.Data()<<"*"<<endl;
+      out<<onerow.Data()<<"*"<<std::endl;
    else
       printf("%s*\n",onerow.Data());
 //*-*- loop on all selected entries
@@ -2609,7 +2633,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
          }
          fSelectedRows++;
          if (fScanRedirect)
-            out<<onerow.Data()<<"*"<<endl;
+            out<<onerow.Data()<<"*"<<std::endl;
          else
             printf("%s*\n",onerow.Data());
          if (fTree->GetScanField() > 0 && fSelectedRows > 0) {
@@ -2634,7 +2658,7 @@ Long64_t TTreePlayer::Scan(const char *varexp, const char *selection,
       onerow += Form(starFormat.Data(),var[ui]->PrintValue(-2));
    }
    if (fScanRedirect)
-      out<<onerow.Data()<<"*"<<endl;
+      out<<onerow.Data()<<"*"<<std::endl;
    else
       printf("%s*\n",onerow.Data());
    if (select) Printf("==> %lld selected %s", fSelectedRows,

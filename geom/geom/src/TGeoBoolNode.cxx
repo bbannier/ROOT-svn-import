@@ -317,7 +317,32 @@ void TGeoBoolNode::RegisterMatrices()
 }
 
 //_____________________________________________________________________________
-void TGeoBoolNode::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+Bool_t TGeoBoolNode::ReplaceMatrix(TGeoMatrix *mat, TGeoMatrix *newmat)
+{
+// Replace one of the matrices. Does not work with TGeoIdentity. Returns true
+// if replacement was successful.
+   if (mat==gGeoIdentity || newmat==gGeoIdentity) {
+      Error("ReplaceMatrix", "Matrices should not be gGeoIdentity. Use default matrix constructor to repersent identities.");
+      return kFALSE;
+   }
+   if (!mat || !newmat) {
+      Error("ReplaceMatrix", "Matrices should not be null pointers.");
+      return kFALSE;
+   }
+   Bool_t replaced = kFALSE;
+   if (fLeftMat == mat) {
+      fLeftMat  = newmat;
+      replaced = kTRUE;
+   }
+   if (fRightMat == mat) {
+      fRightMat  = newmat;
+      replaced = kTRUE;
+   }
+   return replaced;
+}   
+       
+//_____________________________________________________________________________
+void TGeoBoolNode::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    fLeft->SavePrimitive(out,option);
@@ -357,7 +382,15 @@ void TGeoBoolNode::Sizeof3D() const
    fLeft->Sizeof3D();
    fRight->Sizeof3D();
 }
+
 ClassImp(TGeoUnion)
+
+//______________________________________________________________________________
+TGeoBoolNode *TGeoUnion::MakeClone() const
+{
+// Make a clone of this. Pointers are preserved.
+   return new TGeoUnion(fLeft, fRight, fLeftMat, fRightMat);
+}   
 
 //______________________________________________________________________________
 void TGeoUnion::Paint(Option_t *option)
@@ -443,23 +476,18 @@ void TGeoUnion::ComputeBBox(Double_t &dx, Double_t &dy, Double_t &dz, Double_t *
    origin[1] = 0.5*(ymin+ymax);
    dz = 0.5*(zmax-zmin);
    origin[2] = 0.5*(zmin+zmax);
-}   
+}
 
 //______________________________________________________________________________
 Bool_t TGeoUnion::Contains(Double_t *point) const
 {
 // Find if a union of two shapes contains a given point
    Double_t local[3];
-   TGeoBoolNode *node = (TGeoBoolNode*)this;
    fLeftMat->MasterToLocal(point, &local[0]);
    Bool_t inside = fLeft->Contains(&local[0]);
-   if (inside) {
-      node->SetSelected(1);
-      return kTRUE;
-   }   
+   if (inside) return kTRUE;
    fRightMat->MasterToLocal(point, &local[0]);
    inside = fRight->Contains(&local[0]);
-   if (inside) node->SetSelected(2);
    return inside;
 }
 
@@ -721,7 +749,7 @@ Double_t TGeoUnion::Safety(Double_t *point, Bool_t in) const
 }   
 
 //_____________________________________________________________________________
-void TGeoUnion::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGeoUnion::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    TGeoBoolNode::SavePrimitive(out,option);
@@ -730,8 +758,8 @@ void TGeoUnion::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out << fRight->GetPointerName() << ",";
    if (!fLeftMat->IsIdentity()) out << fLeftMat->GetPointerName() << ",";
    else                         out << "0,";
-   if (!fRightMat->IsIdentity()) out << fRightMat->GetPointerName() << ");" << endl;
-   else                         out << "0);" << endl;
+   if (!fRightMat->IsIdentity()) out << fRightMat->GetPointerName() << ");" << std::endl;
+   else                         out << "0);" << std::endl;
 }   
 
 //______________________________________________________________________________
@@ -743,6 +771,13 @@ void TGeoUnion::Sizeof3D() const
    
 
 ClassImp(TGeoSubtraction)
+
+//______________________________________________________________________________
+TGeoBoolNode *TGeoSubtraction::MakeClone() const
+{
+// Make a clone of this. Pointers are preserved.
+   return new TGeoSubtraction(fLeft, fRight, fLeftMat, fRightMat);
+}   
 
 //______________________________________________________________________________
 void TGeoSubtraction::Paint(Option_t *option)
@@ -874,14 +909,11 @@ Bool_t TGeoSubtraction::Contains(Double_t *point) const
 {
 // Find if a subtraction of two shapes contains a given point
    Double_t local[3];
-   TGeoBoolNode *node = (TGeoBoolNode*)this;
    fLeftMat->MasterToLocal(point, &local[0]);
    Bool_t inside = fLeft->Contains(&local[0]);
-   if (inside) node->SetSelected(1);
-   else return kFALSE;
+   if (!inside) return kFALSE;
    fRightMat->MasterToLocal(point, &local[0]);
    inside = !fRight->Contains(&local[0]);
-   if (!inside) node->SetSelected(2);
    return inside;
 }
 
@@ -1034,7 +1066,7 @@ Double_t TGeoSubtraction::Safety(Double_t *point, Bool_t in) const
 }   
 
 //_____________________________________________________________________________
-void TGeoSubtraction::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGeoSubtraction::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    TGeoBoolNode::SavePrimitive(out,option);
@@ -1043,8 +1075,8 @@ void TGeoSubtraction::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out << fRight->GetPointerName() << ",";
    if (!fLeftMat->IsIdentity()) out << fLeftMat->GetPointerName() << ",";
    else                         out << "0,";
-   if (!fRightMat->IsIdentity()) out << fRightMat->GetPointerName() << ");" << endl;
-   else                         out << "0);" << endl;
+   if (!fRightMat->IsIdentity()) out << fRightMat->GetPointerName() << ");" << std::endl;
+   else                         out << "0);" << std::endl;
 }   
 
 //______________________________________________________________________________
@@ -1055,6 +1087,13 @@ void TGeoSubtraction::Sizeof3D() const
 }
 
 ClassImp(TGeoIntersection)
+
+//______________________________________________________________________________
+TGeoBoolNode *TGeoIntersection::MakeClone() const
+{
+// Make a clone of this. Pointers are preserved.
+   return new TGeoIntersection(fLeft, fRight, fLeftMat, fRightMat);
+}   
 
 //______________________________________________________________________________
 void TGeoIntersection::Paint(Option_t *option)
@@ -1435,7 +1474,7 @@ Double_t TGeoIntersection::Safety(Double_t *point, Bool_t in) const
 }   
 
 //_____________________________________________________________________________
-void TGeoIntersection::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGeoIntersection::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
 // Save a primitive as a C++ statement(s) on output stream "out".
    TGeoBoolNode::SavePrimitive(out,option);
@@ -1444,8 +1483,8 @@ void TGeoIntersection::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    out << fRight->GetPointerName() << ",";
    if (!fLeftMat->IsIdentity()) out << fLeftMat->GetPointerName() << ",";
    else                         out << "0,";
-   if (!fRightMat->IsIdentity()) out << fRightMat->GetPointerName() << ");" << endl;
-   else                         out << "0);" << endl;
+   if (!fRightMat->IsIdentity()) out << fRightMat->GetPointerName() << ");" << std::endl;
+   else                         out << "0);" << std::endl;
 }   
 
 //______________________________________________________________________________

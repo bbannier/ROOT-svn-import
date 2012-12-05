@@ -43,10 +43,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#if defined(R__SUN) || defined(R__SGI) || defined(R__HPUX) || \
+#if defined(R__SUN) || defined(R__HPUX) || \
     defined(R__AIX) || defined(R__LINUX) || defined(R__SOLARIS) || \
-    defined(R__ALPHA) || defined(R__HIUX) || defined(R__FBSD) || \
-    defined(R__OBSD) || defined(R__MACOSX) || defined(R__HURD)
+    defined(R__HIUX) || defined(R__FBSD) || defined(R__OBSD) || \
+    defined(R__MACOSX) || defined(R__HURD)
 #define HAS_DIRENT
 #endif
 #ifdef HAS_DIRENT
@@ -57,10 +57,9 @@
 #if defined(ULTRIX) || defined(R__SUN)
 #   include <sgtty.h>
 #endif
-#if defined(R__AIX) || defined(R__LINUX) || defined(R__ALPHA) || \
-    defined(R__SGI) || defined(R__HIUX) || defined(R__FBSD) || \
-    defined(R__OBSD) || defined(R__LYNXOS) || defined(R__MACOSX) || \
-    defined(R__HURD)
+#if defined(R__AIX) || defined(R__LINUX) || \
+    defined(R__HIUX) || defined(R__FBSD) || defined(R__OBSD) || \
+    defined(R__LYNXOS) || defined(R__MACOSX) || defined(R__HURD)
 #   include <sys/ioctl.h>
 #endif
 #if defined(R__AIX) || defined(R__SOLARIS)
@@ -71,12 +70,7 @@
 #      define SIGSYS  SIGUNUSED       // SIGSYS does not exist in linux ??
 #   endif
 #endif
-#if defined(R__ALPHA)
-#   include <sys/mount.h>
-#   ifndef R__TRUE64
-   extern "C" int statfs(const char *file, struct statfs *buffer);
-#   endif
-#elif defined(R__MACOSX)
+#if defined(R__MACOSX)
 #   include <mach-o/dyld.h>
 #   include <sys/mount.h>
    extern "C" int statfs(const char *file, struct statfs *buffer);
@@ -98,6 +92,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <sys/time.h>
@@ -119,9 +114,6 @@
 #include <sys/un.h>
 #include <netdb.h>
 #include <fcntl.h>
-#if defined(R__SGI)
-#   include <net/soioctl.h>
-#endif
 #if defined(R__SOLARIS)
 #   include <sys/systeminfo.h>
 #   include <sys/filio.h>
@@ -152,14 +144,11 @@
 #   define HASNOT_INETATON
 #   endif
 #endif
-#if defined(R__ALPHA) && !defined(R__GNU)
-#   define HASNOT_INETATON
-#endif
 #if defined(R__HIUX)
 #   define HASNOT_INETATON
 #endif
 
-#if defined(R__SGI) || defined(R__SOLARIS)
+#if defined(R__SOLARIS)
 #   define HAVE_UTMPX_H
 #   define UTMP_NO_ADDR
 #endif
@@ -182,7 +171,7 @@
 #   endif
 #endif
 
-#if defined(R__ALPHA) || defined(R__AIX) || defined(R__FBSD) || \
+#if defined(R__AIX) || defined(R__FBSD) || \
     defined(R__OBSD) || defined(R__LYNXOS) || \
     (defined(R__MACOSX) && !defined(MAC_OS_X_VERSION_10_5))
 #   define UTMP_NO_ADDR
@@ -621,7 +610,7 @@ void TUnixSystem::SetDisplay()
 
          STRUCT_UTMP *utmp_entry = (STRUCT_UTMP *)SearchUtmpEntry(ReadUtmpFile(), tty);
          if (utmp_entry) {
-            if (utmp_entry->ut_host[0])
+            if (utmp_entry->ut_host[0]) {
                if (strchr(utmp_entry->ut_host, ':')) {
                   Setenv("DISPLAY", utmp_entry->ut_host);
                   Warning("SetDisplay", "DISPLAY not set, setting it to %s",
@@ -633,6 +622,7 @@ void TUnixSystem::SetDisplay()
                   Warning("SetDisplay", "DISPLAY not set, setting it to %s",
                           disp);
                }
+            }
 #ifndef UTMP_NO_ADDR
             else if (utmp_entry->ut_addr) {
                struct hostent *he;
@@ -842,9 +832,7 @@ Int_t TUnixSystem::GetFPEMask()
    fenv_t oldenv;
    fegetenv(&oldenv);
    fesetenv(&oldenv);
-#ifdef __alpha__
-   ULong_t oldmask = ~oldenv;
-#elif __ia64__
+#if __ia64__
    Int_t oldmask = ~oldenv;
 #else
    Int_t oldmask = ~oldenv.__control_word;
@@ -937,7 +925,7 @@ Int_t TUnixSystem::SetFPEMask(Int_t mask)
 
    fenv_t cur;
    fegetenv(&cur);
-#if defined __ia64__ || defined __alpha__
+#if defined __ia64__
    cur &= ~newm;
 #else
    cur.__control_word &= ~newm;
@@ -1290,15 +1278,8 @@ Bool_t TUnixSystem::CheckDescriptors()
    TFileHandler *fh;
    Int_t  fddone = -1;
    Bool_t read   = kFALSE;
-#if defined(R__LINUX) && defined(__alpha__)
-   // TOrdCollectionIter it(...) causes segv ?!?!? Also TIter fails.
-   Int_t cursor = 0;
-   while (cursor < fFileHandler->GetSize()) {
-      fh = (TFileHandler*) fFileHandler->At(cursor++);
-#else
    TOrdCollectionIter it((TOrdCollection*)fFileHandler);
    while ((fh = (TFileHandler*) it.Next())) {
-#endif
       Int_t fd = fh->GetFd();
       if ((fd <= fMaxrfd && fReadready->IsSet(fd) && fddone == -1) ||
           (fddone == fd && read)) {
@@ -1402,8 +1383,9 @@ const char *TUnixSystem::WorkingDirectory()
 {
    // Return working directory.
 
-   if (fWdpath != "")
-      return fWdpath.Data();
+   // don't use cache as user can call chdir() directly somewhere else
+   //if (fWdpath != "")
+   //   return fWdpath.Data();
 
    R__LOCKGUARD2(gSystemMutex);
 
@@ -1772,14 +1754,14 @@ needshell:
    // read first argument
    patbuf0 = "";
    int cnt = 0;
-#if defined(R__ALPHA) || defined(R__AIX)
+#if defined(R__AIX)
 again:
 #endif
    for (ch = fgetc(pf); ch != EOF && ch != ' ' && ch != '\n'; ch = fgetc(pf)) {
       patbuf0.Append(ch);
       cnt++;
    }
-#if defined(R__ALPHA) || defined(R__AIX)
+#if defined(R__AIX)
    // Work around bug timing problem due to delay in forking a large program
    if (cnt == 0 && ch == EOF) goto again;
 #endif
@@ -2054,16 +2036,9 @@ UserGroup_t *TUnixSystem::GetGroupInfo(const char *group)
 //______________________________________________________________________________
 void TUnixSystem::Setenv(const char *name, const char *value)
 {
-   // Set environment variable. The string passed will be owned by
-   // the environment and can not be reused till a "name" is set
-   // again. The solution below will lose the space for the string
-   // in that case, but if this functions is not called thousands
-   // of times that should not be a problem.
+   // Set environment variable.
 
-   char *s = new char [strlen(name)+strlen(value) + 2];
-   sprintf(s, "%s=%s", name, value);
-
-   ::putenv(s);
+   ::setenv(name, value, 1);
 }
 
 //______________________________________________________________________________
@@ -2072,6 +2047,14 @@ const char *TUnixSystem::Getenv(const char *name)
    // Get environment variable.
 
    return ::getenv(name);
+}
+
+//______________________________________________________________________________
+void TUnixSystem::Unsetenv(const char *name)
+{
+   // Unset environment variable.
+
+   ::unsetenv(name);
 }
 
 //---- Processes ---------------------------------------------------------------
@@ -2170,10 +2153,10 @@ void TUnixSystem::StackTrace()
    TString gdbmess = gEnv->GetValue("Root.StacktraceMessage", "");
    gdbmess = gdbmess.Strip();
 
-   cout.flush();
+   std::cout.flush();
    fflush(stdout);
 
-   cerr.flush();
+   std::cerr.flush();
    fflush(stderr);
 
    int fd = STDERR_FILENO;
@@ -2347,7 +2330,7 @@ void TUnixSystem::StackTrace()
 
       // open tmp file for demangled stack trace
       TString tmpf1 = "gdb-backtrace";
-      ofstream file1;
+      std::ofstream file1;
       if (demangle) {
          FILE *f = TempFileName(tmpf1);
          if (f) fclose(f);
@@ -2439,7 +2422,7 @@ void TUnixSystem::StackTrace()
          file1.close();
          snprintf(buffer, sizeof(buffer), "%s %s < %s > %s", filter, cppfiltarg, tmpf1.Data(), tmpf2.Data());
          Exec(buffer);
-         ifstream file2(tmpf2);
+         std::ifstream file2(tmpf2);
          TString line;
          while (file2) {
             line = "";
@@ -2477,101 +2460,6 @@ void TUnixSystem::StackTrace()
               context.sc_pc, name, context.sc_pc - addr);
       write(fd, buffer, ::strlen(buffer));
       rc = exc_virtual_unwind(0, &context);
-   }
-
-#elif defined(HAVE_EXCEPTION_H) && defined(__sgi)     // irix
-   // IRIX stack walk -- like Tru64 but with a little different names.
-   // NB: The guard above is to protect against unrelated <exception.h>
-   //   provided by some compilers (e.g. KCC 4.0f).
-   // NB: libexc.h has trace_back_stack and trace_back_stack_and_print
-   //   but their output isn't pretty and nowhere as complete as ours.
-   char       buffer [340];
-   sigcontext context;
-
-   exc_setjmp(&context);
-   while (context.sc_pc >= 4) {
-      // Do two lookups, one using exception handling tables and
-      // another using _RLD_DLADDR, and use the one with a smaller
-      // offset.  For signal handlers we seem to get things wrong:
-      // _sigtramp's exception range is huge while based on Dl_info
-      // the offset is small -- but both supposedly describe the
-      // same thing.  Go figure.
-      char            *name = 0;
-      const char      *libname = 0;
-      const char      *symname = 0;
-      Elf32_Addr      offset = ~0L;
-
-      // Do the exception/dwarf lookup
-      Elf32_Addr      pc = context.sc_pc;
-      Dwarf_Fde       fde = find_fde_name(&pc, &name);
-      Dwarf_Addr      low_pc = context.sc_pc;
-      Dwarf_Unsigned  udummy;
-      Dwarf_Signed    sdummy;
-      Dwarf_Ptr       pdummy;
-      Dwarf_Off       odummy;
-      Dwarf_Error     err;
-
-      symname = name;
-
-      // Determine offset using exception descriptor range information.
-      if (dwarf_get_fde_range(fde, &low_pc, &udummy, &pdummy, &udummy,
-                              &odummy, &sdummy, &odummy, &err) == DW_DLV_OK)
-         offset = context.sc_pc - low_pc;
-
-      // Now do a dladdr() lookup.  If the found symbol has the same
-      // address, trust the more accurate offset from dladdr();
-      // ignore the looked up mangled symbol name and prefer the
-      // demangled name produced by find_fde_name().  If we find a
-      // smaller offset, trust the dynamic symbol as well.  Always
-      // trust the library name even if we can't match it with an
-      // exact symbol.
-      Elf32_Addr      addr = context.sc_pc;
-      Dl_info         info;
-
-      if (_rld_new_interface (_RLD_DLADDR, addr, &info)) {
-         if (info.dli_fname && info.dli_fname [0])
-            libname = info.dli_fname;
-
-         Elf32_Addr symaddr = (Elf32_Addr) info.dli_saddr;
-         if (symaddr == low_pc)
-            offset = addr - symaddr;
-         else if (info.dli_sname
-                  && info.dli_sname [0]
-                  && addr - symaddr < offset) {
-            offset = addr - symaddr;
-            symname = info.dli_sname;
-         }
-      }
-
-      // Print out the result
-      if (libname && symname)
-         write(fd, buffer, sprintf
-               (buffer, " 0x%012lx %.200s + 0x%lx [%.200s]\n",
-               addr, symname, offset, libname));
-      else if (symname)
-         write(fd, buffer, sprintf
-               (buffer, " 0x%012lx %.200s + 0x%lx\n",
-               addr, symname, offset));
-      else
-         write(fd, buffer, sprintf
-               (buffer, " 0x%012lx <unknown function>\n", addr));
-
-      // Free name from find_fde_name().
-      free(name);
-
-      // Check for termination.  exc_unwind() sets context.sc_pc to
-      // 0 or an error (< 4).  However it seems we can't unwind
-      // through signal stack frames though this is not mentioned in
-      // the docs; it seems that for those we need to check for
-      // changed pc after find_fde_name().  That seems to indicate
-      // end of the post-signal stack frame.  (FIXME: Figure out how
-      // to unwind through signal stack frame, e.g. perhaps using
-      // sigcontext_t's old pc?  Or perhaps we can keep on going
-      // down without doing the symbol lookup?)
-      if (pc != context.sc_pc)
-         break;
-
-      exc_unwind(&context, fde);
    }
 #endif
 }
@@ -3643,8 +3531,8 @@ void TUnixSystem::UnixSignal(ESignals sig, SigHandler_t handler)
       sigact.sa_handler = (void (*)())sighandler;
 #elif defined(R__SOLARIS)
       sigact.sa_handler = sighandler;
-#elif defined(R__SGI) || defined(R__LYNXOS)
-#  if defined(R__SGI64) || (__GNUG__>=3)
+#elif defined(R__LYNXOS)
+#  if (__GNUG__>=3)
       sigact.sa_handler = sighandler;
 #  else
       sigact.sa_handler = (void (*)(...))sighandler;
@@ -3710,8 +3598,8 @@ void TUnixSystem::UnixSigAlarmInterruptsSyscalls(Bool_t set)
       sigact.sa_handler = (void (*)())sighandler;
 #elif defined(R__SOLARIS)
       sigact.sa_handler = sighandler;
-#elif defined(R__SGI) || defined(R__LYNXOS)
-#  if defined(R__SGI64) || (__GNUG__>=3)
+#elif defined(R__LYNXOS)
+#  if (__GNUG__>=3)
       sigact.sa_handler = sighandler;
 #  else
       sigact.sa_handler = (void (*)(...))sighandler;
@@ -4027,7 +3915,7 @@ int TUnixSystem::UnixFSstat(const char *path, Long_t *id, Long_t *bsize,
    // not be stat'ed.
 
    struct statfs statfsbuf;
-#if defined(R__SGI) || (defined(R__SOLARIS) && !defined(R__LINUX))
+#if (defined(R__SOLARIS) && !defined(R__LINUX))
    if (statfs(path, &statfsbuf, sizeof(struct statfs), 0) == 0) {
       *id = statfsbuf.f_fstyp;
       *bsize = statfsbuf.f_bsize;
@@ -4378,8 +4266,11 @@ int TUnixSystem::UnixUnixService(int port, int backlog)
 
    // Assure that socket directory exists
    oldumask = umask(0);
-   ::mkdir(kServerPath, 0777);
+   int res = ::mkdir(kServerPath, 0777);
    umask(oldumask);
+
+   if (res == -1)
+      return -1;
 
    // Socket path
    TString sockpath;
@@ -4623,24 +4514,23 @@ void TUnixSystem::SetDynamicPath(const char *path)
 }
 
 //______________________________________________________________________________
-char *TUnixSystem::DynamicPathName(const char *lib, Bool_t quiet)
+const char *TUnixSystem::FindDynamicLibrary(TString& sLib, Bool_t quiet)
 {
    // Returns the path of a shared library (searches for library in the
    // shared library search path). If no file name extension is provided
-   // it first tries .so, .sl, .dl and then .a (for AIX). The returned string
-   // must be deleted.
+   // it first tries .so, .sl, .dl and then .a (for AIX).
 
-   char *name;
-
-   int ext = 0, len = strlen(lib);
+   TString searchFor = sLib;
 #ifdef __APPLE__
    // On a MAC, a library might not have any extensions, so let's try the raw
    // name first.
-   name = gSystem->Which(GetDynamicPath(), lib, kReadPermission);
-   if (name) {
-      return name;
+   if (gSystem->FindFile(GetDynamicPath(), sLib, kReadPermission)) {
+      return sLib;
    }
+   sLib = searchFor;
 #endif
+   const char* lib = sLib.Data();
+   int len = sLib.Length();
    if (len > 3 && (!strcmp(lib+len-3, ".so")    ||
                    !strcmp(lib+len-3, ".dl")    ||
                    !strcmp(lib+len-4, ".dll")   ||
@@ -4648,44 +4538,32 @@ char *TUnixSystem::DynamicPathName(const char *lib, Bool_t quiet)
                    !strcmp(lib+len-6, ".dylib") ||
                    !strcmp(lib+len-3, ".sl")    ||
                    !strcmp(lib+len-2, ".a"))) {
-      name = gSystem->Which(GetDynamicPath(), lib, kReadPermission);
-      ext  = 1;
-   } else {
-      TString fname;
-      fname.Form("%s.so", lib);
-      name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-      if (!name) {
-         fname.Form("%s.dll", lib);
-         name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-         if (!name) {
-            fname.Form("%s.dylib", lib);
-            name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-            if (!name) {
-               fname.Form("%s.sl", lib);
-               name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-               if (!name) {
-                  fname.Form("%s.dl", lib);
-                  name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-                  if (!name) {
-                     fname.Form("%s.a", lib);
-                     name = gSystem->Which(GetDynamicPath(), fname, kReadPermission);
-                  }
-               }
-            }
-         }
+      if (gSystem->FindFile(GetDynamicPath(), sLib, kReadPermission))
+         return sLib;
+      if (!quiet)
+         Error("FindDynamicLibrary",
+               "%s does not exist in %s", searchFor.Data(), GetDynamicPath());
+      return 0;
+   }
+   static const char* exts[] = {
+      ".so", ".dll", ".dylib", ".sl", ".dl", ".a", 0 };
+   const char** ext = exts;
+   while (*ext) {
+      TString fname(sLib);
+      fname += *ext;
+      ++ext;
+      if (gSystem->FindFile(GetDynamicPath(), fname, kReadPermission)) {
+         sLib.Swap(fname);
+         return sLib;
       }
    }
 
-   if (!name && !quiet) {
-      if (ext)
-         Error("DynamicPathName",
-               "%s does not exist in %s", lib, GetDynamicPath());
-      else
-         Error("DynamicPathName",
-               "%s[.so | .dll | .dylib | .sl | .dl | .a] does not exist in %s", lib, GetDynamicPath());
-   }
+   if (!quiet)
+      Error("FindDynamicLibrary",
+            "%s[.so | .dll | .dylib | .sl | .dl | .a] does not exist in %s",
+            searchFor.Data(), GetDynamicPath());
 
-   return name;
+   return 0;
 }
 
 //______________________________________________________________________________

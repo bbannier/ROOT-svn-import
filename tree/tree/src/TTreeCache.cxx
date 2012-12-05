@@ -265,7 +265,9 @@ TTreeCache::TTreeCache() : TFileCacheRead(),
    fFillTimes(0),
    fFirstTime(kTRUE),
    fFirstEntry(-1),
-   fReadDirectionSet(kFALSE)
+   fReadDirectionSet(kFALSE),
+   fEnabled(kTRUE),
+   fPrefillType(TTreeCache::kNoPrefill)
 {
    // Default Constructor.
 }
@@ -291,7 +293,9 @@ TTreeCache::TTreeCache(TTree *tree, Int_t buffersize) : TFileCacheRead(tree->Get
    fFillTimes(0),
    fFirstTime(kTRUE),                                                        
    fFirstEntry(-1),
-   fReadDirectionSet(kFALSE)
+   fReadDirectionSet(kFALSE),
+   fEnabled(kTRUE),
+   fPrefillType(TTreeCache::kNoPrefill)
 {
    // Constructor.
 
@@ -323,6 +327,12 @@ void TTreeCache::AddBranch(TBranch *b, Bool_t subbranches /*= kFALSE*/)
 
    // Reject branch that are not from the cached tree.
    if (!b || fTree->GetTree() != b->GetTree()) return;
+
+   // Is this the first addition of a branch (and we are learning and we are in
+   // the expected TTree), then prefill the cache.  (We expect that in future
+   // release the Prefill-ing will be the default so we test for that inside the
+   // LearnPrefill call).
+   if (fNbranches == 0 && b->GetReadEntry() == fEntryMin) LearnPrefill();
 
    //Is branch already in the cache?
    Bool_t isNew = kTRUE;
@@ -562,54 +572,57 @@ Bool_t TTreeCache::FillBuffer()
    Long64_t entry = tree->GetReadEntry();
    Long64_t fEntryCurrentMax = 0;
 
-   if (fEnablePrefetching){ //prefetching mode
-      if (fIsLearning){ //learning mode
+   if (fEnablePrefetching) { // Prefetching mode
+      if (fIsLearning) { //  Learning mode
          entry = 0;
       }
-      if (fFirstTime){
+      if (fFirstTime) {
          //try to detect if it is normal or reverse read
          fFirstEntry = entry;
       }
-      else{
+      else {
          if (fFirstEntry == entry) return kFALSE;
-         //set the read direction
+         // Set the read direction
          if (!fReadDirectionSet) {
-            if (entry < fFirstEntry){
+            if (entry < fFirstEntry) {
                fReverseRead = kTRUE;
                fReadDirectionSet = kTRUE;
             }
-            else if (entry > fFirstEntry){
+            else if (entry > fFirstEntry) {
                fReverseRead =kFALSE;
                fReadDirectionSet = kTRUE;
             }
          }
 
-         if (fReverseRead){ 
-            //reverse reading with prefetching
-            if (fEntryCurrent >0 && entry < fEntryNext){
-               //we can prefetch the next buffer
-               if (entry > fEntryCurrent)
+         if (fReverseRead) { 
+            // Reverse reading with prefetching
+            if (fEntryCurrent >0 && entry < fEntryNext) {
+               // We can prefetch the next buffer
+               if (entry >= fEntryCurrent) {
                   entry = fEntryCurrent - tree->GetAutoFlush() * fFillTimes;
+               }
                if (entry < 0) entry = 0;
             }
-            else if (fEntryCurrent >= 0)
-               //we are still reading from the oldest buffer, no need to prefetch a new one
+            else if (fEntryCurrent >= 0) {
+               // We are still reading from the oldest buffer, no need to prefetch a new one
                return kFALSE;
-
+            }
             if (entry < 0) return kFALSE;
             fFirstBuffer = !fFirstBuffer; 
          }
          else {
-            //normal reading with prefetching
-            if (fEnablePrefetching){
-               if (entry < 0 && fEntryNext > 0)
+            // Normal reading with prefetching
+            if (fEnablePrefetching) {
+               if (entry < 0 && fEntryNext > 0) {
                   entry = fEntryCurrent;
-               else if (entry > fEntryCurrent){
-                  if (entry < fEntryNext)
+               } else if (entry >= fEntryCurrent) {
+                  if (entry < fEntryNext) {
                      entry = fEntryNext;
+                  }
                }
                else {
-                  //we are still reading from the oldest buffer, no need to prefetch a new one
+                  // We are still reading from the oldest buffer,
+                  // no need to prefetch a new one
                   return kFALSE;
                }
                fFirstBuffer = !fFirstBuffer;
@@ -635,6 +648,13 @@ Bool_t TTreeCache::FillBuffer()
    if (fEntryCurrent < fEntryMin) fEntryCurrent = fEntryMin;
    if (fEntryMax <= 0) fEntryMax = tree->GetEntries();
    if (fEntryNext > fEntryMax) fEntryNext = fEntryMax;
+
+   if ( fEnablePrefetching ) {
+      if ( entry == fEntryMax ) {
+         // We are at the end, no need to do anything else
+         return kFALSE;
+      }
+   }
 
    // Check if owner has a TEventList set. If yes we optimize for this
    // Special case reading only the baskets containing entries in the
@@ -822,18 +842,15 @@ Bool_t TTreeCache::FillBuffer()
       if (fEntryNext > fEntryMax) fEntryNext = fEntryMax;
    } while (kTRUE);
 
-   //in learning mode clear cache
-   if (fIsLearning) {
-      fEntryNext = -1;
-      fEntryCurrent = -1;
-      TFileCacheRead::Prefetch(0, 0);
-      TFileCacheRead::SecondPrefetch(0, 0);
-      fFirstBuffer = !fFirstBuffer;
-   }
-   if (!fIsLearning && fFirstTime){
-      // first time we add autoFlush entries , after fFillTimes * autoFlush
-      // only in reverse prefetching mode
-      fFirstTime = kFALSE;
+   if (fEnablePrefetching) {
+      if (fIsLearning) {
+         fFirstBuffer = !fFirstBuffer;
+      }
+      if (!fIsLearning && fFirstTime){
+         // First time we add autoFlush entries , after fFillTimes * autoFlush
+         // only in reverse prefetching mode
+         fFirstTime = kFALSE;
+      }
    }
    fIsLearning = kFALSE;
    return kTRUE;
@@ -905,7 +922,7 @@ void TTreeCache::Print(Option_t *option) const
 
    TString opt = option;
    opt.ToLower();
-   printf("******TreeCache statistics for file: %s ******\n",fFile ? fFile->GetName() : "no file set");
+   printf("******TreeCache statistics for tree: %s in file: %s ******\n",fTree ? fTree->GetName() : "no tree set",fFile ? fFile->GetName() : "no file set");
    if (fNbranches <= 0) return;
    printf("Number of branches in the cache ...: %d\n",fNbranches);
    printf("Cache Efficiency ..................: %f\n",GetEfficiency());
@@ -961,7 +978,7 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
    // even if the cache lookup succeeds, because it will try to prefetch the next block 
    // as soon as we start reading from the current block.
 
-   if (TFileCacheRead::ReadBuffer(buf,pos,len) == 1){
+   if (TFileCacheRead::ReadBuffer(buf, pos, len) == 1){
       //call FillBuffer to prefetch next block if necessary
       //(if we are currently reading from the last block available)
       FillBuffer();
@@ -970,7 +987,7 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
    }
 
    //keep on prefetching until request is satisfied
-   while (1){
+   while (1) {
       if(TFileCacheRead::ReadBuffer(buf, pos, len)) {
          break;
       }
@@ -985,8 +1002,8 @@ Int_t TTreeCache::ReadBufferPrefetch(char *buf, Long64_t pos, Int_t len){
 //_____________________________________________________________________________
 Int_t TTreeCache::ReadBuffer(char *buf, Long64_t pos, Int_t len)
 {
-   // Read buffer at position pos.
-   // If pos is in the list of prefetched blocks read from fBuffer.
+   // Read buffer at position pos if the request is in the list of
+   // prefetched blocks read from fBuffer.
    // Otherwise try to fill the cache from the list of selected branches,
    // and recheck if pos is now in the list.
    // Returns 
@@ -994,6 +1011,8 @@ Int_t TTreeCache::ReadBuffer(char *buf, Long64_t pos, Int_t len)
    //     0 in case not in cache,
    //     1 in case read from cache.
    // This function overloads TFileCacheRead::ReadBuffer.
+
+   if (!fEnabled) return 0;
 
    if (fEnablePrefetching)
       return TTreeCache::ReadBufferPrefetch(buf, pos, len);
@@ -1038,6 +1057,22 @@ void TTreeCache::SetEntryRange(Long64_t emin, Long64_t emax)
 }
 
 //_____________________________________________________________________________
+void TTreeCache::SetFile(TFile *file)
+{
+   // Overload to make sure that the object specific
+
+   // The infinite recursion is 'broken' by the fact that
+   // TFile::SetCacheRead remove the entry from fCacheReadMap _before_
+   // calling SetFile (and also by setting fFile to zero before the calling).
+   if (fFile) {
+      TFile *prevFile = fFile;
+      fFile = 0;
+      prevFile->SetCacheRead(0, fTree);
+   }
+   TFileCacheRead::SetFile(file);
+}
+
+//_____________________________________________________________________________
 void TTreeCache::SetLearnEntries(Int_t n)
 {
    // Static function to set the number of entries to be used in learning mode
@@ -1045,6 +1080,18 @@ void TTreeCache::SetLearnEntries(Int_t n)
 
    if (n < 1) n = 1;
    fgLearnEntries = n;
+}
+
+//_____________________________________________________________________________
+void TTreeCache::SetLearnPrefill(TTreeCache::EPrefillType type /* = kNoPrefill */)
+{
+   // Set whether the learning period is started with a prefilling of the
+   // cache and which type of prefilling is used.
+   // The two value currently supported are:
+   //   TTreeCache::kNoPrefill    disable the prefilling
+   //   TTreeCache::kAllBranches  fill the cache with baskets from all branches.
+
+   fPrefillType = type;
 }
 
 //_____________________________________________________________________________
@@ -1119,4 +1166,51 @@ void TTreeCache::UpdateBranches(TTree *tree)
       fBranches->AddAt(b, fNbranches);
       fNbranches++;
    }
+}
+
+//_____________________________________________________________________________
+void TTreeCache::LearnPrefill()
+{
+   // Perform an initial prefetch, attempting to read as much of the learning
+   // phase baskets for all branches at once
+
+   // This is meant for the learning phase
+   if (!fIsLearning) return;
+
+   // This should be called before reading entries, otherwise we'll
+   // always exit here, since TBranch adds itself before reading
+   if (fNbranches > 0) return;
+
+   // Is the LearnPrefill enabled (using an Int_t here to allow for future
+   // extension to alternative Prefilling).
+   if (fPrefillType == kNoPrefill) return;
+
+   // Force only the learn entries to be cached by temporarily setting min/max
+   // to the learning phase entry range
+   // But save all the old values, so we can restore everything to how it was
+   Long64_t eminOld = fEntryMin;
+   Long64_t emaxOld = fEntryMax;
+   Long64_t ecurrentOld = fEntryCurrent;
+   Long64_t enextOld = fEntryNext;
+
+   fEntryMin = fEntryCurrent;
+   fEntryMax = fEntryNext;
+
+   // Add all branches to be cached. This also sets fIsManual, stops learning,
+   // and makes fEntryNext = -1 (which forces a cache fill, which is good)
+   AddBranch("*");
+   fIsManual = kFALSE; // AddBranch sets fIsManual, so we reset it
+
+   // Now, fill the buffer with the learning phase entry range
+   FillBuffer();
+
+   // Leave everything the way we found it
+   fIsLearning = kTRUE;
+   DropBranch("*"); // This doesn't work unless we're already learning
+
+   // Restore entry values
+   fEntryMin = eminOld;
+   fEntryMax = emaxOld;
+   fEntryCurrent = ecurrentOld;
+   fEntryNext = enextOld;
 }

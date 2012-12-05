@@ -200,17 +200,44 @@ Bool_t TROOT::fgMemCheck = kFALSE;
 
 // This local static object initializes the ROOT system
 namespace ROOT {
+#ifdef R__HAS_CLING
+   extern TROOT *gROOTLocal;
+   TROOT *GetROOT1() {
+      if (gROOTLocal)
+         return gROOTLocal;
+      static TROOT root("root", "The ROOT of EVERYTHING");
+      return gROOTLocal;
+   }
+   TROOT *GetROOT2() {
+      static Bool_t initInterpreter = kFALSE;
+      if (!initInterpreter) {
+         initInterpreter = kTRUE;
+         gROOTLocal->InitInterpreter();
+      }
+      return gROOTLocal;
+   }
+   typedef TROOT *(*GetROOTFun_t)();
+   static GetROOTFun_t gGetROOT = &GetROOT1;
+   TROOT *GetROOT() {
+      return (*gGetROOT)();
+   }
+#else
    TROOT *GetROOT() {
       static TROOT root("root", "The ROOT of EVERYTHING");
       return &root;
    }
+#endif
    TString &GetMacroPath() {
       static TString macroPath;
       return macroPath;
    }
 }
 
+#ifndef R__HAS_CLING
 TROOT *gROOT = ROOT::GetROOT();     // The ROOT of EVERYTHING
+#else
+TROOT *ROOT::gROOTLocal = ROOT::GetROOT();
+#endif
 
 // Global debug flag (set to > 0 to get debug output).
 // Can be set either via the interpreter (gDebug is exported to CINT),
@@ -269,14 +296,22 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    // extend the ROOT system without adding permanent dependencies
    // (e.g. the graphics system is initialized via such a function).
 
+#ifndef R__HAS_CLING
    if (fgRootInit) {
+#else
+   if (fgRootInit || ROOT::gROOTLocal) {
+#endif
       //Warning("TROOT", "only one instance of TROOT allowed");
       return;
    }
 
    R__LOCKGUARD2(gROOTMutex);
 
-   gROOT      = this;
+#ifndef R__HAS_CLING
+   gROOT = this;
+#else
+   ROOT::gROOTLocal = this;
+#endif
    gDirectory = 0;
    SetName(name);
    SetTitle(title);
@@ -304,9 +339,7 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fVersionInt      = 0;  // check in TROOT dtor in case TCint fails
    fClasses         = 0;  // might be checked via TCint ctor
 
-#ifdef R__HAS_CLING
-   fInterpreter     = new TCintWithCling("C/C++", "CINT+cling C/C++ Interpreter");
-#else
+#ifndef R__HAS_CLING
    fInterpreter     = new TCint("C/C++", "CINT C/C++ Interpreter");
 #endif
    fConfigOptions   = R__CONFIGUREOPTIONS;
@@ -396,7 +429,9 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    fCleanups->Add(fTasks);    fTasks->SetBit(kMustCleanup);
    fCleanups->Add(fFiles);    fFiles->SetBit(kMustCleanup);
    fCleanups->Add(fClosedObjects); fClosedObjects->SetBit(kMustCleanup);
+#ifndef R__HAS_CLING
    fCleanups->Add(fInterpreter);   fInterpreter->SetBit(kMustCleanup);
+#endif
 
    fExecutingMacro= kFALSE;
    fForceStyle    = kFALSE;
@@ -433,7 +468,9 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    gGXBatch         = new TVirtualX("Batch", "ROOT Interface to batch graphics");
    gVirtualX        = gGXBatch;
 
-#ifdef R__WIN32
+#if defined(R__WIN32)
+   fBatch = kFALSE;
+#elif defined(R__HAS_COCOA)
    fBatch = kFALSE;
 #else
    if (gSystem->Getenv("DISPLAY"))
@@ -452,8 +489,10 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
    // Load and init threads library
    InitThreads();
 
+#ifndef R__HAS_CLING
    // Load RQ_OBJECT.h in interpreter (allows signal/slot programming, like Qt)
    TQObject::LoadRQ_OBJECT();
+#endif
 
    // Set initial/default list of browsable objects
    fBrowsables->Add(fRootFolder, "root");
@@ -463,9 +502,15 @@ TROOT::TROOT(const char *name, const char *title, VoidFuncPtr_t *initfunc)
 
    atexit(CleanUpROOTAtExit);
 
+#ifndef R__HAS_CLING
    fgRootInit = kTRUE;
 
    TClass::ReadRules(); // Read the default customization rules ...
+#endif
+   
+#ifdef R__HAS_CLING
+   ROOT::gGetROOT = &ROOT::GetROOT2;
+#endif
 }
 
 //______________________________________________________________________________
@@ -474,7 +519,11 @@ TROOT::~TROOT()
    // Clean up and free resources used by ROOT (files, network sockets,
    // shared memory segments, etc.).
 
+#ifndef R__HAS_CLING
    if (gROOT == this) {
+#else
+   if (ROOT::gROOTLocal == this) {
+#endif
 
       // Mark the object as invalid, so that we can veto some actions
       // (like autoloading) while we are in the destructor.
@@ -564,7 +613,11 @@ TROOT::~TROOT()
       // Prints memory stats
       TStorage::PrintStatistics();
 
+#ifndef R__HAS_CLING
       gROOT = 0;
+#else
+      ROOT::gROOTLocal = 0;
+#endif
       fgRootInit = kFALSE;
    }
 }
@@ -978,8 +1031,7 @@ static TClass *R__FindSTLClass(const char *name, Bool_t load, Bool_t silent, con
 
    if (load && cl==0) {
       // Create an Emulated class for this container.
-      cl = new TClass(defaultname.c_str(), TClass::GetClass("TVirtualStreamerInfo")->GetClassVersion(), 0, 0, -1, -1, silent );
-      cl->SetBit(TClass::kIsEmulation);
+      cl = gInterpreter->GenerateTClass(defaultname.c_str(), silent);
    }
 
    return cl;
@@ -1424,6 +1476,26 @@ void TROOT::InitThreads()
       }
    }
 }
+
+#ifdef R__HAS_CLING
+//______________________________________________________________________________
+void TROOT::InitInterpreter()
+{
+   // Initialize the interpreter. Should be called only after main(),
+   // to make sure LLVM/Clang is fully initialized.
+
+   fInterpreter = new TCintWithCling("C/C++", "CINT+cling C/C++ Interpreter");
+   fCleanups->Add(fInterpreter);
+   fInterpreter->SetBit(kMustCleanup);
+
+   // Load RQ_OBJECT.h in interpreter (allows signal/slot programming, like Qt)
+   TQObject::LoadRQ_OBJECT();
+
+   fgRootInit = kTRUE;
+
+   TClass::ReadRules(); // Read the default customization rules ...   
+}
+#endif
 
 //______________________________________________________________________________
 TClass *TROOT::LoadClass(const char *requestedname, Bool_t silent) const
@@ -2014,7 +2086,7 @@ void TROOT::IndentLevel()
 {
    // Functions used by ls() to indent an object hierarchy.
 
-   for (int i = 0; i < fgDirLevel; i++) cout.put(' ');
+   for (int i = 0; i < fgDirLevel; i++) std::cout.put(' ');
 }
 
 //______________________________________________________________________________

@@ -145,7 +145,7 @@ public:
    virtual Int_t       Read(const char *name);
    virtual void        RecursiveRemove(TObject *obj);
    virtual void        SaveAs(const char *filename="",Option_t *option="") const; // *MENU*
-   virtual void        SavePrimitive(ostream &out, Option_t *option = "");
+   virtual void        SavePrimitive(std::ostream &out, Option_t *option = "");
    virtual void        SetDrawOption(Option_t *option="");  // *MENU*
    virtual void        SetUniqueID(UInt_t uid);
    virtual void        UseCurrentStyle();
@@ -208,6 +208,8 @@ public:
    static void      SetDtorOnly(void *obj);
    static Bool_t    GetObjectStat();
    static void      SetObjectStat(Bool_t stat);
+
+   friend class TClonesArray; // needs to reset kNotDeleted in fBits
 
    ClassDef(TObject,1)  //Basic ROOT object
 };

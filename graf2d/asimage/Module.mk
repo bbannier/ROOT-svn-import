@@ -95,6 +95,10 @@ ALLMAPS     += $(ASIMAGEMAP) $(ASIMAGEGUIMAP)
 # include all dependency files
 INCLUDEFILES += $(ASIMAGEDEP) $(ASIMAGEGUIDEP)
 
+ifneq ($(BUILDCOCOA),yes)
+ASNEEDX11LIBS = $(XLIBS)
+endif
+
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
 
@@ -132,9 +136,6 @@ else
 			ACFLAGS="$$ACFLAGS -KPIC -erroff=E_WHITE_SPACE_IN_DIRECTIVE"; \
 			MMX="--disable-mmx_optimization"; \
 		fi; \
-		if [ "$(ARCH)" = "sgicc64" ]; then \
-			ACC="$$ACC -mabi=64"; \
-		fi; \
 		if [ "$(ARCH)" = "hpuxia64acc" ]; then \
 			ACC="$$ACC +DD64 -Ae +W863"; \
 		fi; \
@@ -154,6 +155,10 @@ else
 			ACC="$$ACC -m64"; \
 			MMX="--enable-mmx-optimization=no"; \
 		fi; \
+		if [ "$(ARCH)" = "linuxx32gcc" ]; then \
+			ACC="$$ACC -mx32"; \
+			MMX="--enable-mmx-optimization=no"; \
+		fi; \
 		if [ "$(ARCH)" = "linuxicc" ]; then \
 			ACC="$$ACC -m32"; \
 		fi; \
@@ -165,6 +170,10 @@ else
 		fi; \
 		if [ "$(ASPNGINCDIR)" != "" ]; then \
 			PNGINCDIR="--with-png-includes=$(ASPNGINCDIR)"; \
+		fi; \
+		if [ "$(BUILDCOCOA)" = "yes" ]; then \
+			JPEGINCDIR="--without-x --with-builtin-jpeg"; \
+			PNGINCDIR="--with-builtin-png"; \
 		fi; \
 		if [ "$(ASTIFFINCDIR)" = "--with-tiff=no" ]; then \
 			TIFFINCDIR="$(ASTIFFINCDIR)"; \
@@ -213,7 +222,7 @@ $(ASIMAGELIB):  $(ASIMAGEO) $(ASIMAGEDO) $(ASTEPDEP) $(FREETYPEDEP) \
 		   "$(ASIMAGEO) $(ASIMAGEDO)" \
 		   "$(ASIMAGELIBEXTRA) $(ASTEPLIB) \
                     $(FREETYPELDFLAGS) $(FREETYPELIB) \
-		    $(ASEXTRALIBDIR) $(ASEXTRALIB) $(XLIBS)"
+		    $(ASEXTRALIBDIR) $(ASEXTRALIB) $(ASNEEDX11LIBS)"
 
 $(ASIMAGEDS):   $(ASIMAGEH) $(ASIMAGEL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
@@ -232,7 +241,7 @@ $(ASIMAGEGUILIB):  $(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASTEPDEP) $(FREETYPEDEP) \
 		   "$(ASIMAGEGUIO) $(ASIMAGEGUIDO)" \
 		   "$(ASIMAGEGUILIBEXTRA) $(ASTEPLIB) \
                     $(FREETYPELDFLAGS) $(FREETYPELIB) \
-		    $(ASEXTRALIBDIR) $(ASEXTRALIB) $(XLIBS)"
+		    $(ASEXTRALIBDIR) $(ASEXTRALIB) $(ASNEEDX11LIBS)"
 
 $(ASIMAGEGUIDS): $(ASIMAGEGUIH) $(ASIMAGEGUIL) $(ROOTCINTTMPDEP)
 		$(MAKEDIR)
@@ -295,7 +304,7 @@ distclean::     distclean-$(MODNAME)
 
 ##### extra rules ######
 $(ASIMAGEO): $(ASTEPDEP) $(FREETYPEDEP)
-$(ASIMAGEO): CXXFLAGS += $(FREETYPEINC) $(ASTEPDIRI)
+$(ASIMAGEO): CXXFLAGS += $(FREETYPEINC) $(ASTEPDIRI) $(X11INCDIR:%=-I%)
 
 $(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASIMAGEDO): $(ASTEPDEP)
 $(ASIMAGEGUIO) $(ASIMAGEGUIDO) $(ASIMAGEDO): CXXFLAGS += $(ASTEPDIRI)

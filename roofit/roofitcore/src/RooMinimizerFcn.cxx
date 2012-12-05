@@ -38,6 +38,8 @@
 
 #include "RooMinimizer.h"
 
+using namespace std;
+
 RooMinimizerFcn::RooMinimizerFcn(RooAbsReal *funct, RooMinimizer* context,
 			   bool verbose) :
   _funct(funct), _context(context),
@@ -467,7 +469,7 @@ void RooMinimizerFcn::updateFloatVec()
   _floatParamVec.clear() ;
   RooFIter iter = _floatParamList->fwdIterator() ;
   RooAbsArg* arg ;
-  _floatParamVec.reserve(_floatParamList->getSize()) ;
+  _floatParamVec = std::vector<RooAbsArg*>(_floatParamList->getSize()) ;
   Int_t i(0) ;
   while((arg=iter.next())) {
     _floatParamVec[i++] = arg ;
@@ -487,7 +489,7 @@ double RooMinimizerFcn::DoEval(const double *x) const
 
   // Calculate the function for these parameters
   double fvalue = _funct->getVal();
-  if (RooAbsPdf::evalError() || RooAbsReal::numEvalErrors()>0) {
+  if (RooAbsPdf::evalError() || RooAbsReal::numEvalErrors()>0 || fvalue>1e30) {
 
     if (_printEvalErrors>=0) {
 
@@ -515,7 +517,7 @@ double RooMinimizerFcn::DoEval(const double *x) const
     } 
 
     if (_doEvalErrorWall) {
-      fvalue = _maxFCN ;
+      fvalue = _maxFCN+1 ;
     }
 
     RooAbsPdf::clearEvalError() ;

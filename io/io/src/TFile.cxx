@@ -1,4 +1,3 @@
-
 // @(#)root/io:$Id$
 // Author: Rene Brun   28/11/94
 
@@ -117,6 +116,8 @@
 #include "TSchemaRule.h"
 #include "TSchemaRuleSet.h"
 #include "TThreadSlots.h"
+
+using std::sqrt;
 
 Long64_t TFile::fgBytesRead  = 0;
 Long64_t TFile::fgBytesWrite = 0;
@@ -276,7 +277,7 @@ TFile::TFile(const char *fname1, Option_t *option, const char *ftitle, Int_t com
    // it is made a Zombie. One can detect this situation with a code like:
    //    TFile f("file.root");
    //    if (f.IsZombie()) {
-   //       cout << "Error opening file" << endl;
+   //       std::cout << "Error opening file" << std::endl;
    //       exit(-1);
    //    }
    //
@@ -501,17 +502,18 @@ TFile::TFile(const TFile &) : TDirectoryFile(), fInfoCache(0)
 TFile::~TFile()
 {
    // File destructor.
+
    Close();
 
+   SafeDelete(fAsyncHandle);
+   SafeDelete(fCacheRead);
+   SafeDelete(fCacheReadMap);   
+   SafeDelete(fCacheWrite);
    SafeDelete(fProcessIDs);
    SafeDelete(fFree);
    SafeDelete(fArchive);
    SafeDelete(fInfoCache);
    SafeDelete(fOpenPhases);
-   SafeDelete(fAsyncHandle);
-   SafeDelete(fCacheRead);
-   SafeDelete(fCacheReadMap);
-   SafeDelete(fCacheWrite);
 
    R__LOCKGUARD2(gROOTMutex);
    gROOT->GetListOfClosedObjects()->Remove(this);
@@ -649,6 +651,12 @@ void TFile::Init(Bool_t create)
          frombuf(buffer, &fSeekInfo);
          frombuf(buffer, &fNbytesInfo);
       }
+      if (fBEGIN < 0 || fBEGIN > fEND) {
+         // humm fBEGIN is wrong ....
+         Error("Init","file %s has an incorrect header length (%lld) or incorrect end of file length (%lld)",
+               GetName(),fBEGIN,fEND);
+         goto zombie;
+      }
       fSeekDir = fBEGIN;
       //*-*-------------Read Free segments structure if file is writable
       if (fWritable) {
@@ -664,6 +672,12 @@ void TFile::Init(Bool_t create)
       char *buffer_keyloc = 0;
 
       Int_t nbytes = fNbytesName + TDirectoryFile::Sizeof();
+      if ( (nbytes + fBEGIN) > fEND) {
+         // humm fBEGIN is wrong ....
+         Error("Init","file %s has an incorrect header length (%lld) or incorrect end of file length (%lld)",
+              GetName(),fBEGIN+nbytes,fEND);
+         goto zombie;
+      }
       if (nbytes+fBEGIN > kBEGIN+200) {
          delete [] header;
          header       = new char[nbytes];
@@ -862,6 +876,17 @@ void TFile::Close(Option_t *option)
    delete fClassIndex;
    fClassIndex = 0;
 
+   // Finish any concurrent I/O operations before we close the file handles.
+   if (fCacheRead) fCacheRead->Close();
+   {
+      TIter iter(fCacheReadMap);
+      TObject *key = 0;
+      while ((key = iter()) != 0) {
+         TFileCacheRead *cache = dynamic_cast<TFileCacheRead *>(fCacheReadMap->GetValue(key));
+         cache->Close();
+      }
+   }
+      
    // Delete all supported directories structures from memory
    // If gDirectory points to this object or any of the nested
    // TDirectoryFile, TDirectoryFile::Close will induce the proper cd.
@@ -1241,7 +1266,7 @@ TList *TFile::GetStreamerInfoList()
          return 0;
       }
       key->ReadKeyBuffer(buf);
-      list = (TList*)key->ReadObjWithBuffer(buffer);
+      list = dynamic_cast<TList*>(key->ReadObjWithBuffer(buffer));
       if (list) list->SetOwner();
       delete [] buffer;
       delete key;
@@ -1267,7 +1292,7 @@ void TFile::ls(Option_t *option) const
    // then objects on the file.
 
    TROOT::IndentLevel();
-   cout <<ClassName()<<"**\t\t"<<GetName()<<"\t"<<GetTitle()<<endl;
+   std::cout <<ClassName()<<"**\t\t"<<GetName()<<"\t"<<GetTitle()<<std::endl;
    TROOT::IncreaseDirLevel();
    TDirectoryFile::ls(option);
    TROOT::DecreaseDirLevel();
@@ -1307,6 +1332,11 @@ void TFile::MakeFree(Long64_t first, Long64_t last)
    tobuf(buffer, nbytes);
    if (last == fEND-1) fEND = nfirst;
    Seek(nfirst);
+   // We could not update the meta data for this block on the file.
+   // This is not fatal as this only means that we won't get it 'right'
+   // if we ever need to Recover the file before the block is actually
+   // (attempted to be reused.
+   // coverity[unchecked_value] 
    WriteBuffer(psave, nb);
    Flush();
    delete [] psave;
@@ -2062,8 +2092,8 @@ void TFile::SetCacheRead(TFileCacheRead *cache, TObject* tree)
          // The only addition to fCacheReadMap is via an interface that takes
          // a TFileCacheRead* so the C-cast is safe.
          TFileCacheRead* tpf = (TFileCacheRead *)fCacheReadMap->GetValue(tree);
-         if (tpf && tpf->GetFile() == this) tpf->SetFile(0);
          fCacheReadMap->RemoveEntry(tree);
+         if (tpf && tpf->GetFile() == this) tpf->SetFile(0);
       }
    }
    if (cache) cache->SetFile(this);
@@ -2340,7 +2370,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
    //    dirnameProjectSource.cxx // contains all the constructors and destructors implementation.
    // and one header per class that is not nested inside another class.
    // The header file name is the fully qualified name of the class after all the special characters
-   // "<>,:" are replaced by underscored.  For example for pair<edm::Vertex,int> the file name is
+   // "<>,:" are replaced by underscored.  For example for std::pair<edm::Vertex,int> the file name is
    // pair_edm__Vertex_int_.h
    //
    // In the generated classes, map, multimap when the first template parameter is a class
@@ -2528,6 +2558,7 @@ void TFile::MakeProject(const char *dirname, const char * /*classes*/,
       Error("MakeProject","Unable to create the source file %s.",spath.Data());
       return;
    }
+   fprintf(sfp, "namespace std {}\nusing namespace std;\n");
    fprintf(sfp, "#include \"%sProjectHeaders.h\"\n\n",subdirname.Data() );
    if (!genreflex) fprintf(sfp, "#include \"%sLinkDef.h\"\n\n",subdirname.Data() );
    fprintf(sfp, "#include \"%sProjectDict.cxx\"\n\n",subdirname.Data() );
@@ -4579,7 +4610,7 @@ void TFile::CpProgress(Long64_t bytesread, Long64_t size, TStopwatch &watch)
    watch.Stop();
    Double_t lCopy_time = watch.RealTime();
    fprintf(stderr, "| %.02f %% [%.01f MB/s]\r",
-           100.0*(size?(bytesread/size):1), bytesread/lCopy_time/1048576.);
+           100.0*(size?(bytesread/((float)size)):1), bytesread/lCopy_time/1048576.);
    watch.Continue();
 }
 

@@ -13,6 +13,12 @@
 #include <ostream>
 #include <utility>
 
+#ifndef ROOT_RConfigure
+#include "RConfigure.h"
+#endif
+
+#ifndef R__HAS_CLING
+
 #ifndef __MAKECINT__
 #include "Api.h"
 #include "Shadow.h"
@@ -20,9 +26,15 @@
 class G__ClassInfo;
 #endif
 
+#endif
+
 #ifndef R__TSCHEMATYPE_H
 #include "TSchemaType.h"
 #endif
+
+//namespace clang {
+//   class CXXRecordDecl;
+//}
 
 namespace ROOT
 {
@@ -31,8 +43,8 @@ namespace ROOT
    //---------------------------------------------------------------------------
    typedef std::map<std::string, std::string> SchemaRuleMap_t;
    typedef std::map<std::string, std::list<SchemaRuleMap_t> > SchemaRuleClassMap_t;
-   extern SchemaRuleClassMap_t G__ReadRules;
-   extern SchemaRuleClassMap_t G__ReadRawRules;
+   extern SchemaRuleClassMap_t gReadRules;
+   extern SchemaRuleClassMap_t gReadRawRules;
 
    typedef std::map<std::string, ROOT::TSchemaType> MembersTypeMap_t;
    typedef std::map<std::string, std::string> MembersMap_t;
@@ -40,7 +52,11 @@ namespace ROOT
    //---------------------------------------------------------------------------
    // Create the data member name-type map
    //---------------------------------------------------------------------------
-   void CreateNameTypeMap( G__ClassInfo &cl, MembersTypeMap_t& members );
+#ifndef R__HAS_CLING
+  void CreateNameTypeMap( G__ClassInfo &cl, MembersTypeMap_t& members );
+#else
+   //   void CreateNameTypeMap( const clang::CXXRecordDecl &cl, MembersTypeMap_t& members );
+#endif
 
    //---------------------------------------------------------------------------
    // Check if given rule contains references to valid data members
@@ -81,12 +97,12 @@ namespace ROOT
    //---------------------------------------------------------------------------
    // Parse read pragma
    //---------------------------------------------------------------------------
-   void ProcessReadPragma( char* args );
+   void ProcessReadPragma( const char* args );
 
    //---------------------------------------------------------------------------
    // Parse readraw pragma
    //---------------------------------------------------------------------------
-   void ProcessReadRawPragma( char* args );
+   void ProcessReadRawPragma( const char* args );
 }
 #endif // !defined(__CINT__)
 

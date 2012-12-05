@@ -24,6 +24,31 @@
 #include "TVirtualX.h"
 #include "TError.h"
 
+//The special class to perform a selector to stop a -run: method.
+@interface RunStopper : NSObject
+@end
+
+@implementation RunStopper
+
+//We attach this delegate only once, when trying to initialize NSApplication (by calling its -run method).
+//______________________________________________________________________________
+- (void) stopRun
+{
+   [NSApp stop : nil];
+   //This is not enough to stop, from docs:
+   //This method notifies the application that you want to exit the current run loop as soon as it finishes processing the current NSEvent object.
+   //This method does not forcibly exit the current run loop. Instead it sets a flag that the application checks only after it finishes dispatching an actual event object.
+
+
+   //I'm sending a fake event, to stop.
+   NSEvent* stopEvent = [NSEvent otherEventWithType: NSApplicationDefined location: NSMakePoint(0,0) modifierFlags: 0 timestamp: 0.0
+                                 windowNumber: 0 context: nil subtype: 0 data1: 0 data2: 0];
+   [NSApp postEvent : stopEvent atStart : true];
+}
+
+@end
+
+
 //
 //Stuff which I have to copy from TUnixSystem. Find a better way to organize code.
 //Fortunately, this does not violate ODR, but still UGLY.
@@ -82,13 +107,17 @@ namespace ROOT {
 namespace MacOSX {
 namespace Detail {
 
+class NSAppInitializer
+{
+public:
+   NSAppInitializer()
+   {
+      [NSApplication sharedApplication];
+   }
+};
+
 class MacOSXSystem {
 public:
-   enum DescriptorType {
-      kDTWrite,
-      kDTRead
-   };
-
    MacOSXSystem();
    ~MacOSXSystem();
 
@@ -100,8 +129,25 @@ public:
    void UnregisterFileDescriptor(CFFileDescriptorRef fd);
    void CloseFileDescriptors();
 
-   std::map<int, DescriptorType> fFileDescriptors;
-   std::set<CFFileDescriptorRef> fCFFileDescriptors;   
+   enum DescriptorType {
+      kDTWrite,
+      kDTRead
+   };
+
+   //Before I had C++11 and auto, now I have ugly typedefs.
+   typedef std::map<int, unsigned> fd_map_type;
+   typedef fd_map_type::iterator fd_map_iterator;
+   typedef fd_map_type::const_iterator const_fd_map_iterator;
+   
+   fd_map_type fReadFds;
+   fd_map_type fWriteFds;
+   
+   static void RemoveFileDescriptor(fd_map_type &fdTable, int fd);
+   void SetFileDescriptors(const fd_map_type &fdTable, DescriptorType fdType);
+
+   std::set<CFFileDescriptorRef> fCFFileDescriptors;
+   
+   NSAppInitializer fAppStarter;
    const ROOT::MacOSX::Util::AutoreleasePool fPool;
 
    static MacOSXSystem *fgInstance;
@@ -166,22 +212,33 @@ MacOSXSystem::~MacOSXSystem()
 //______________________________________________________________________________
 void MacOSXSystem::AddFileHandler(TFileHandler *fh)
 {
-   //Can throw std::bad_alloc. I'm not allocating any resources here, so I'm not going to catch here.
+   //Can throw std::bad_alloc. I'm not allocating any resources here.
    assert(fh != 0 && "AddFileHandler, fh parameter is null");
-   assert(fFileDescriptors.find(fh->GetFd()) == fFileDescriptors.end() && "AddFileHandler, file descriptor was registered already");
+   
+   if (fh->HasReadInterest())
+      fReadFds[fh->GetFd()]++;
+   
+   //Can we have "duplex" fds?
 
-   fFileDescriptors[fh->GetFd()] = fh->HasReadInterest() ? kDTRead : kDTWrite;
+   if (fh->HasWriteInterest())
+      fWriteFds[fh->GetFd()]++;
 }
 
 //______________________________________________________________________________
 void MacOSXSystem::RemoveFileHandler(TFileHandler *fh)
 {
    //Can not throw.
-   assert(fh != 0 && "RemoveFileHandler, fh parameter is null");
-   std::map<int, DescriptorType>::iterator fdIter = fFileDescriptors.find(fh->GetFd());
 
-   assert(fdIter != fFileDescriptors.end() && "RemoveFileHandler, file handler was not found");
-   fFileDescriptors.erase(fdIter);
+   //ROOT has obvious bugs somewhere: the same fd can be removed MORE times,
+   //than it was added.
+
+   assert(fh != 0 && "RemoveFileHandler, fh parameter is null");
+
+   if (fh->HasReadInterest())
+      RemoveFileDescriptor(fReadFds, fh->GetFd());
+   
+   if (fh->HasWriteInterest())
+      RemoveFileDescriptor(fWriteFds, fh->GetFd());
 }
 
 //______________________________________________________________________________
@@ -193,28 +250,11 @@ bool MacOSXSystem::SetFileDescriptors()
    //return false. Return true if everything is ok.
 
    try {
-      for (std::map<int, DescriptorType>::iterator fdIter = fFileDescriptors.begin(), end = fFileDescriptors.end(); fdIter != end; ++fdIter) {
-         const bool read = fdIter->second == kDTRead;
-         CFFileDescriptorRef fdref = CFFileDescriptorCreate(kCFAllocatorDefault, fdIter->first, false, read ? TMacOSXSystem_ReadCallback : TMacOSXSystem_WriteCallback, 0);
-
-         if (!fdref)
-            throw std::runtime_error("MacOSXSystem::SetFileDescriptors: CFFileDescriptorCreate failed");
-
-         CFFileDescriptorEnableCallBacks(fdref, read ? kCFFileDescriptorReadCallBack : kCFFileDescriptorWriteCallBack);
-      
-         CFRunLoopSourceRef runLoopSource = CFFileDescriptorCreateRunLoopSource(kCFAllocatorDefault, fdref, 0);
-         
-         if (!runLoopSource) {
-            CFRelease(fdref);
-            throw std::runtime_error("MacOSXSystem::SetFileDescriptors: CFFileDescriptorCreateRunLoopSource failed");
-         }
-
-         CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, kCFRunLoopDefaultMode);
-         CFRelease(runLoopSource);
-
-         fCFFileDescriptors.insert(fdref);
-      }
-   } catch (const std::exception &e) {
+      if (fReadFds.size())
+         SetFileDescriptors(fReadFds, kDTRead);
+      if (fWriteFds.size())
+         SetFileDescriptors(fWriteFds, kDTWrite);
+   } catch (const std::exception &) {
       CloseFileDescriptors();
       return false;
    }
@@ -244,6 +284,49 @@ void MacOSXSystem::CloseFileDescriptors()
    fCFFileDescriptors.clear();
 }
 
+//______________________________________________________________________________
+void MacOSXSystem::RemoveFileDescriptor(fd_map_type &fdTable, int fd)
+{
+   fd_map_iterator fdIter = fdTable.find(fd);
+
+   if (fdIter != fdTable   .end()) {
+      assert(fdIter->second != 0 && "RemoveFD, 'dead' descriptor in a table");
+      if (!(fdIter->second - 1))
+         fdTable.erase(fdIter);
+      else
+         --fdIter->second;
+   } else {
+      //I had to comment warning, many thanks to ROOT for this bizarre thing.
+      //::Warning("RemoveFileDescriptor", "Descriptor %d was not found in a table", fd);
+   }
+}
+
+//______________________________________________________________________________
+void MacOSXSystem::SetFileDescriptors(const fd_map_type &fdTable, DescriptorType fdType)
+{
+   for (const_fd_map_iterator fdIter = fdTable.begin(), end = fdTable.end(); fdIter != end; ++fdIter) {
+      const bool read = fdType == kDTRead;
+      CFFileDescriptorRef fdref = CFFileDescriptorCreate(kCFAllocatorDefault, fdIter->first, false, read ? TMacOSXSystem_ReadCallback : TMacOSXSystem_WriteCallback, 0);
+
+      if (!fdref)
+         throw std::runtime_error("MacOSXSystem::SetFileDescriptors: CFFileDescriptorCreate failed");
+
+      CFFileDescriptorEnableCallBacks(fdref, read ? kCFFileDescriptorReadCallBack : kCFFileDescriptorWriteCallBack);
+   
+      CFRunLoopSourceRef runLoopSource = CFFileDescriptorCreateRunLoopSource(kCFAllocatorDefault, fdref, 0);
+      
+      if (!runLoopSource) {
+         CFRelease(fdref);
+         throw std::runtime_error("MacOSXSystem::SetFileDescriptors: CFFileDescriptorCreateRunLoopSource failed");
+      }
+
+      CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, kCFRunLoopDefaultMode);
+      CFRelease(runLoopSource);
+
+      fCFFileDescriptors.insert(fdref);
+   }
+}
+
 }//Detail
 }//MacOSX
 }//ROOT
@@ -256,7 +339,21 @@ ClassImp(TMacOSXSystem)
 TMacOSXSystem::TMacOSXSystem()
                   : fPimpl(new Private::MacOSXSystem)
 {
+   //
+
+   const ROOT::MacOSX::Util::AutoreleasePool pool;
+
    [NSApplication sharedApplication];
+   //Documentation says, that +sharedApplication, initializes the app. But this is not true,
+   //it's still not really initialized, part of initialization is done by -run method.
+
+   //If you call run, it never returns unless app is finished. I have to stop Cocoa's event loop
+   //processing, since we have our own event loop.
+  
+   const ROOT::MacOSX::Util::NSScopeGuard<RunStopper> stopper([[RunStopper alloc] init]);
+
+   [stopper.Get() performSelector : @selector(stopRun) withObject : nil afterDelay : 0.05];//Delay? What it should be?
+   [NSApp run];
 }
 
 //______________________________________________________________________________
@@ -271,21 +368,29 @@ void TMacOSXSystem::ProcessApplicationDefinedEvent(void *e)
    //for file descriptors. This can change in a future.
    NSEvent *event = (NSEvent *)e;
 
-   assert(event != nil && "AddFileActivityEvent, event parameter is nil");
-   assert(event.type == NSApplicationDefined && "AddFileActivityEvent, event parameter has wrong type");
+   assert(event != nil && "ProcessApplicationDefinedEvent, event parameter is nil");
+   assert(event.type == NSApplicationDefined && "ProcessApplicationDefinedEvent, event parameter has wrong type");
    
-   if (event.data2) {
-      gVirtualX->DispatchClientMessage(event.data2);
-   } else {
-      std::map<int, Private::MacOSXSystem::DescriptorType>::iterator fdIter = fPimpl->fFileDescriptors.find(event.data1);
-      assert(fdIter != fPimpl->fFileDescriptors.end() && "WaitForAllEvents, file descriptor from NSEvent not found");
-      if (fdIter->second == Private::MacOSXSystem::kDTRead)
-         fReadready->Set(event.data1);
-      else
-         fWriteready->Set(event.data1);
-      
-      ++fNfd;
+   Private::MacOSXSystem::fd_map_iterator fdIter = fPimpl->fReadFds.find(event.data1);
+   bool descriptorFound = false;
+
+   if (fdIter != fPimpl->fReadFds.end()) {
+      fReadready->Set(event.data1);
+      descriptorFound = true;
    }
+   
+   fdIter = fPimpl->fWriteFds.find(event.data1);
+   if (fdIter != fPimpl->fWriteFds.end()) {
+      fWriteready->Set(event.data1);
+      descriptorFound = true;
+   }
+   
+   if (!descriptorFound) {
+      Error("ProcessApplicationDefinedEvent", "file descriptor %d was not found", int(event.data1));
+      return;
+   }
+   
+   ++fNfd;
 }
 
 //______________________________________________________________________________
@@ -374,14 +479,22 @@ void TMacOSXSystem::DispatchOneEvent(Bool_t pendingOnly)
       nextto = NextTimeOut(kTRUE);
       
       if (pendingOnly) {
-         if (fFileHandler && !fFileHandler->GetSize())
-            return;
+         //if (fFileHandler && !fFileHandler->GetSize())
+         //   return;
          nextto = 0;
          pollOnce = kFALSE;
       }
 
       //Wait for GUI events and for something else, like read/write from stdin/stdout (?).
       WaitEvents(nextto);
+      
+      if (gXDisplay && gXDisplay->Notify()) {
+         gVirtualX->Update(2);
+         gVirtualX->Update(3);
+         if (!pendingOnly) 
+            return;
+      }      
+
       if (pendingOnly)
          return;
    }

@@ -109,9 +109,6 @@ else
 		if [ "$(CC)" = "icc" ]; then \
 			LZMACC="icc -wd188 -wd181 -wd1292 -wd10006 -wd10156 -wd2259 -wd981 -wd128"; \
 		fi; \
-		if [ $(ARCH) = "alphacxx6" ]; then \
-			LZMACC="cc"; \
-		fi; \
 		if [ $(ARCH) = "linux" ]; then \
 			LZMACC="$$LZMACC -m32"; \
 			LZMA_CFLAGS="-m32"; \
@@ -119,6 +116,10 @@ else
 		if [ $(ARCH) = "linuxx8664gcc" ]; then \
 			LZMACC="$$LZMACC -m64"; \
 			LZMA_CFLAGS="-m64"; \
+		fi; \
+		if [ $(ARCH) = "linuxx32gcc" ]; then \
+			LZMACC="$$LZMACC -mx32"; \
+			LZMA_CFLAGS="-mx32"; \
 		fi; \
 		if [ $(ARCH) = "linuxicc" ]; then \
 			LZMACC="$$LZMACC -m32"; \
@@ -149,10 +150,6 @@ else
 		if [ $(ARCH) = "solaris64CC5" ]; then \
 			LZMACC="$$LZMACC -m64"; \
 			LZMA_CFLAGS="-m64"; \
-		fi; \
-		if [ $(ARCH) = "sgicc64" ]; then \
-			LZMACC="cc"; \
-			LZMA_CFLAGS="-64"; \
 		fi; \
 		if [ $(ARCH) = "linuxppc64gcc" ]; then \
 			LZMACC="$$LZMACC -m64"; \

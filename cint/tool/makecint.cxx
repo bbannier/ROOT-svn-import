@@ -8,7 +8,7 @@
  *  This tool creates Makefile for encapsurating arbitrary C/C++ object
  * into Cint as Dynamic Link Library or archived library
  ************************************************************************
- * Copyright(c) 1995~2010  Masaharu Goto (cint@pcroot.cern.ch)
+ * Copyright(c) 1995~2010  Masaharu Goto (root-cint@cern.ch)
  *
  * For the licensing terms see the file COPYING
  *
@@ -143,7 +143,7 @@ void G__printtitle()
 #else
   printf("# makecint : interpreter-compiler for cint (UNIX version)\n");
 #endif
-  printf("# Copyright(c) 1995~2010 Masaharu Goto. Mailing list: cint@pcroot.cern.ch\n");
+  printf("# Copyright(c) 1995~2010 Masaharu Goto. Mailing list: root-cint@cern.ch\n");
   printf("##########################################################################\n");
 }
 
@@ -757,7 +757,7 @@ void G__outputmakefile(int argc,char **argv)
   else if(G__flags & G__ismain) {
 #ifdef _AIX
 TODO!
-  cout << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(DLFCN) G__setup" << G__CFG_OBJEXT << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)";
+  std::cout << "$(OBJECT) : $(CINTLIB) $(READLINEA) $(DLFCN) G__setup" << G__CFG_OBJEXT << " $(COFILES) $(CXXOFILES) $(CIFO) $(CXXIFO)";
  out << "\t";
    if (G__quiet) out << "@";
    out << "$(LD) $(IPATH) $(MACRO) $(CCOPT) -o $(OBJECT) $(CIFO) $(CXXIFO) $(COFILES) $(CXXOFILES) G__setup" << G__CFG_OBJEXT << " $(READLINEA) $(DLFCN) $(LIBS)" 

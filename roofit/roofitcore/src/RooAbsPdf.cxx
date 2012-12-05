@@ -154,6 +154,8 @@
 #include "RooRealIntegral.h"
 #include <string>
 
+using namespace std;
+
 ClassImp(RooAbsPdf) 
 ;
 ClassImp(RooAbsPdf::GenSpec)
@@ -289,7 +291,7 @@ Double_t RooAbsPdf::getValV(const RooArgSet* nset) const
       _value = 0 ;
     } else {
       _value = rawVal / normVal ;
-//       cout << "RooAbsPdf::getValV(" << GetName() << ") writing _value = " << _value << endl ;
+//       cout << "RooAbsPdf::getValV(" << GetName() << ") writing _value = " << rawVal << "/" << normVal << " = " << _value << endl ;
     }
 
     clearValueAndShapeDirty() ; //setValueDirty(kFALSE) ;
@@ -484,6 +486,7 @@ Bool_t RooAbsPdf::syncNormalization(const RooArgSet* nset, Bool_t adjustProxies)
       RooCachedReal* cachedNorm = new RooCachedReal(name.c_str(),name.c_str(),*normInt,*normParams) ;     
       cachedNorm->setInterpolationOrder(_valueCacheIntOrder) ;
       cachedNorm->addOwnedComponents(*normInt) ;
+      cachedNorm->setCacheSource(kTRUE) ;
       _norm = cachedNorm ;
     } else {
       _norm = normInt ;
@@ -1153,7 +1156,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	m.hesse() ;
       }
       
-      if (doSumW2==1) {
+      if (doSumW2==1 && m.getNPar()>0) {
 	
 	// Make list of RooNLLVar components of FCN
 	list<RooNLLVar*> nllComponents ;
@@ -1299,7 +1302,7 @@ RooFitResult* RooAbsPdf::fitTo(RooAbsData& data, const RooLinkedList& cmdList)
 	m.hesse() ;
       }
       
-      if (doSumW2==1) {
+      if (doSumW2==1 && m.getNPar()>0) {
 	
 	// Make list of RooNLLVar components of FCN
 	list<RooNLLVar*> nllComponents ;
@@ -1712,7 +1715,7 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet& whatVars, const RooCmdArg& arg1
   if (protoData) {
     data = generate(whatVars,*protoData,nEvents,verbose,randProto,resampleProto) ;
   } else {
-    data = generate(whatVars,nEvents,verbose,autoBinned,binnedTag,expectedData) ;
+     data = generate(whatVars,nEvents,verbose,autoBinned,binnedTag,expectedData, extended) ;
   }
 
   // Rename dataset to given name if supplied
@@ -1825,7 +1828,7 @@ RooDataSet *RooAbsPdf::generate(RooAbsPdf::GenSpec& spec) const
 
   //Int_t nEvt = spec._extended ? RooRandom::randomGenerator()->Poisson(spec._nGen) : spec._nGen ;
   //Int_t nEvt = spec._extended ? RooRandom::randomGenerator()->Poisson(spec._nGen==0?expectedEvents(spec._whatVars):spec._nGen) : spec._nGen ;
-  Int_t nEvt = spec._nGen==0? Int_t(expectedEvents(spec._whatVars)+0.5) : spec._nGen ;
+  Int_t nEvt = spec._nGen == 0 ? RooRandom::randomGenerator()->Poisson(expectedEvents(spec._whatVars)) : spec._nGen;
   
   
   RooDataSet* ret = generate(*spec._genContext,spec._whatVars,spec._protoData, nEvt,kFALSE,spec._randProto,spec._resampleProto,
@@ -1839,7 +1842,7 @@ RooDataSet *RooAbsPdf::generate(RooAbsPdf::GenSpec& spec) const
 
 
 //_____________________________________________________________________________
-RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t verbose, Bool_t autoBinned, const char* binnedTag, Bool_t expectedData) const 
+RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t verbose, Bool_t autoBinned, const char* binnedTag, Bool_t expectedData, Bool_t extended) const 
 {
   // Generate a new dataset containing the specified variables with
   // events sampled from our distribution. Generate the specified
@@ -1861,7 +1864,7 @@ RooDataSet *RooAbsPdf::generate(const RooArgSet &whatVars, Int_t nEvents, Bool_t
   
   RooDataSet *generated = 0;
   if(0 != context && context->isValid()) {
-    generated= context->generate(nEvents);
+     generated= context->generate(nEvents, kFALSE, extended);
   }
   else {
     coutE(Generation)  << "RooAbsPdf::generate(" << GetName() << ") cannot create a valid context" << endl;
@@ -2115,7 +2118,8 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet& whatVars, const RooCmdAr
   const char* dsetName = pc.getString("dsetName") ;
 
   if (extended) {
-    nEvents = (nEvents==0?Int_t(expectedEvents(&whatVars)+0.5):nEvents) ;
+     //nEvents = (nEvents==0?Int_t(expectedEvents(&whatVars)+0.5):nEvents) ;
+    nEvents = (nEvents==0 ? expectedEvents(&whatVars) :nEvents) ;
     cxcoutI(Generation) << " Extended mode active, number of events generated (" << nEvents << ") is Poisson fluctuation on " 
 			<< GetName() << "::expectedEvents() = " << nEvents << endl ;
     // If Poisson fluctuation results in zero events, stop here
@@ -2166,8 +2170,9 @@ RooDataHist *RooAbsPdf::generateBinned(const RooArgSet &whatVars, Double_t nEven
       delete hist ;
       return 0 ;
     } else {
-      // Don't round in expectedData mode
-      if (expectedData) {
+
+      // Don't round in expectedData or extended mode
+      if (expectedData || extended) {
 	nEvents = expectedEvents(&whatVars) ;
       } else {
 	nEvents = Int_t(expectedEvents(&whatVars)+0.5) ;

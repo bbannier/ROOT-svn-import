@@ -57,7 +57,7 @@ namespace ROOT {
      // TROOT.h header file.
    public:
 #ifdef R__GLOBALSTL
-      typedef map<string, TClassRec*>           IdMap_t;
+      typedef std::map<string, TClassRec*>           IdMap_t;
 #else
       typedef std::map<std::string, TClassRec*> IdMap_t;
 #endif
@@ -208,7 +208,6 @@ void TClassTable::Print(Option_t *option) const
    Printf("class                                 version  bits  initialized");
    Printf("================================================================");
    for (int i = 0; i < fgTally; i++) {
-      if (!fgTable[i]) continue;
       TClassRec *r = fgSortedTable[i];
       if (!r) break;
       n++;
@@ -469,12 +468,13 @@ void TClassTable::PrintTable()
    Printf("\nDefined classes");
    Printf("class                                 version  bits  initialized");
    Printf("================================================================");
-   for (int i = 0; i < fgTally; i++) {
-      if (!fgTable[i]) continue;
+   int last = fgTally;
+   for (int i = 0; i < last; i++) {
       TClassRec *r = fgSortedTable[i];
       if (!r) break;
       n++;
-      if (TClass::GetClass(r->fName, kFALSE)) {
+      // Do not use TClass::GetClass to avoid any risk of autoloading.
+      if (gROOT->GetListOfClasses()->FindObject(r->fName)) {
          ninit++;
          Printf("%-35s %6d %7d       Yes", r->fName, r->fId, r->fBits);
       } else

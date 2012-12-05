@@ -113,7 +113,8 @@ namespace RooStats {
      bool IsTwoSided() const { return fLimitType == twoSided; }
      bool IsOneSidedDiscovery() const { return fLimitType == oneSidedDiscovery; }
 
-     static void SetAlwaysReuseNLL(Bool_t flag) { fgAlwaysReuseNll = flag ; }
+     static void SetAlwaysReuseNLL(Bool_t flag);
+
      void SetReuseNLL(Bool_t flag) { fReuseNll = flag ; }
 
      void SetMinimizer(const char* minimizer){ fMinimizer=minimizer;}
@@ -145,6 +146,10 @@ namespace RooStats {
 	     return fDetailedOutput;
      }
          
+     // set the conditional observables which will be used when creating the NLL
+     // so the pdf's will not be normalized on the conditional observables when computing the NLL 
+     virtual void SetConditionalObservables(const RooArgSet& set) {fConditionalObs.removeAll(); fConditionalObs.add(set);}
+
      virtual void SetVarName(const char* name) { fVarName = name; }
      virtual const TString GetVarName() const {return fVarName;}
 
@@ -160,7 +165,7 @@ namespace RooStats {
    private:
 
       RooAbsPdf* fPdf;
-      RooNLLVar* fNll; //!
+      RooAbsReal* fNll; //! pointer to negative log-likelihood function
       const RooArgSet* fCachedBestFitParams;
       RooAbsData* fLastData;
       //      Double_t fLastMLE;
@@ -172,6 +177,7 @@ namespace RooStats {
       bool fDetailedOutputEnabled;
       bool fDetailedOutputWithErrorsAndPulls;
       RooArgSet* fDetailedOutput; //!
+      RooArgSet fConditionalObs;    // conditional observables 
       
       TString fVarName;
 

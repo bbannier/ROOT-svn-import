@@ -41,7 +41,7 @@
 
 namespace RooStats {
 
-class SimpleLikelihoodRatioTestStat : public TestStatistic {
+   class SimpleLikelihoodRatioTestStat : public TestStatistic {
 
    public:
 
@@ -80,8 +80,8 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          fAltParameters = (RooArgSet*) allAltVars->snapshot();
          delete allAltVars;
 
-	     fDetailedOutputEnabled = false;
-        fDetailedOutput = NULL;
+         fDetailedOutputEnabled = false;
+         fDetailedOutput = NULL;
 
 	 fReuseNll=kFALSE ;
 	 fNllNull=NULL ;
@@ -104,8 +104,8 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          fNullParameters = (RooArgSet*) nullParameters.snapshot();
          fAltParameters = (RooArgSet*) altParameters.snapshot();
 
-	     fDetailedOutputEnabled = false;
-        fDetailedOutput = NULL;
+         fDetailedOutputEnabled = false;
+         fDetailedOutput = NULL;
 
 	 fReuseNll=kFALSE ;
 	 fNllNull=NULL ;
@@ -119,10 +119,16 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
 	 if (fNllNull) delete fNllNull ;
 	 if (fNllAlt) delete fNllAlt ;
 	 if (fDetailedOutput) delete fDetailedOutput;
+         if (!fFirstEval) { 
+            // the pdf have been replaced with new unconstrained ones 
+            delete fNullPdf;
+            delete fAltPdf; 
+         }
       }
 
-     static void SetAlwaysReuseNLL(Bool_t flag) { fAlwaysReuseNll = flag ; }
-     void SetReuseNLL(Bool_t flag) { fReuseNll = flag ; }
+      static void SetAlwaysReuseNLL(Bool_t flag);
+
+      void SetReuseNLL(Bool_t flag) { fReuseNll = flag ; }
 
       //_________________________________________
       void SetNullParameters(const RooArgSet& nullParameters) {
@@ -159,94 +165,13 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
          return ret;
       }
 
+
+      // set the conditional observables which will be used when creating the NLL
+      // so the pdf's will not be normalized on the conditional observables when computing the NLL 
+      virtual void SetConditionalObservables(const RooArgSet& set) {fConditionalObs.removeAll(); fConditionalObs.add(set);}
+
       //______________________________
-      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI) {
-
-         if (fFirstEval && ParamsAreEqual()) {
-            oocoutW(fNullParameters,InputArguments)
-               << "Same RooArgSet used for null and alternate, so you must explicitly SetNullParameters and SetAlternateParameters or the likelihood ratio will always be 1."
-               << std::endl;
-         }
-         fFirstEval = false;
-
-         RooFit::MsgLevel msglevel = RooMsgService::instance().globalKillBelow();
-         RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-
-	 Bool_t reuse = (fReuseNll || fAlwaysReuseNll) ;
-
-	 Bool_t created = kFALSE ;
-	 if (!fNllNull) {
-      RooArgSet* allParams = fNullPdf->getParameters(data);
-	   fNllNull = (RooNLLVar*) fNullPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
-	   delete allParams;
-	   created = kTRUE ;
-	 }
-	 if (reuse && !created) {
-	   fNllNull->setData(data, kFALSE) ;
-	 }
-
-         // make sure we set the variables attached to this nll
-         RooArgSet* attachedSet = fNllNull->getVariables();
-         *attachedSet = *fNullParameters;
-         *attachedSet = nullPOI;
-         double nullNLL = fNllNull->getVal();
-         
-         //cout << std::endl << "SLRTS: null params:" << std::endl;
-         //attachedSet->Print("v");
-         
-
-         if (!reuse) {
-            delete fNllNull ; fNllNull = NULL ;
-         }
-         delete attachedSet;
-
-	 created = kFALSE ;
-	 if (!fNllAlt) {
-      RooArgSet* allParams = fAltPdf->getParameters(data);
-	   fNllAlt = (RooNLLVar*) fAltPdf->createNLL(data, RooFit::CloneData(kFALSE),RooFit::Constrain(*allParams));
-	   delete allParams;
-	   created = kTRUE ;
-	 }
-	 if (reuse && !created) {
-	   fNllAlt->setData(data, kFALSE) ;
-	 }
-         // make sure we set the variables attached to this nll
-         attachedSet = fNllAlt->getVariables();
-         *attachedSet = *fAltParameters;
-         double altNLL = fNllAlt->getVal();
-
-         //cout << std::endl << "SLRTS: alt params:" << std::endl;
-         //attachedSet->Print("v");
-
-
-         //cout << std::endl << "SLRTS null NLL: " << nullNLL << "    alt NLL: " << altNLL << std::endl << std::endl;
-
-
-         if (!reuse) { 
-            delete fNllAlt ; fNllAlt = NULL ;
-         }
-         delete attachedSet;
-
-
-
-         // save this snapshot
-         if( fDetailedOutputEnabled ) {
-            if( !fDetailedOutput ) {
-               fDetailedOutput = new RooArgSet( *(new RooRealVar("nullNLL","null NLL",0)), "detailedOut_SLRTS" );
-               fDetailedOutput->add( *(new RooRealVar("altNLL","alternate NLL",0)) );
-            }
-            fDetailedOutput->setRealValue( "nullNLL", nullNLL );
-            fDetailedOutput->setRealValue( "altNLL", altNLL );
-
-//             cout << std::endl << "STORING THIS AS DETAILED OUTPUT:" << std::endl;
-//             fDetailedOutput->Print("v");
-//             cout << std::endl;
-         }
-
-
-         RooMsgService::instance().setGlobalKillBelow(msglevel);
-         return nullNLL - altNLL;
-      }
+      virtual Double_t Evaluate(RooAbsData& data, RooArgSet& nullPOI);
 
       virtual void EnableDetailedOutput( bool e=true ) { fDetailedOutputEnabled = e; fDetailedOutput = NULL; }
       virtual const RooArgSet* GetDetailedOutput(void) const { return fDetailedOutput; }
@@ -261,19 +186,20 @@ class SimpleLikelihoodRatioTestStat : public TestStatistic {
       RooAbsPdf* fAltPdf;
       RooArgSet* fNullParameters;
       RooArgSet* fAltParameters;
+      RooArgSet fConditionalObs;
       bool fFirstEval;
       
       bool fDetailedOutputEnabled;
       RooArgSet* fDetailedOutput; //!
 
-      RooNLLVar* fNllNull ;  //! transient copy of the null NLL
-      RooNLLVar* fNllAlt ; //!  transient copy of the alt NLL
-      static Bool_t fAlwaysReuseNll ;
+      RooAbsReal* fNllNull ;  //! transient copy of the null NLL
+      RooAbsReal* fNllAlt ; //!  transient copy of the alt NLL
+      static Bool_t fgAlwaysReuseNll ;
       Bool_t fReuseNll ;
 
 
    protected:
-   ClassDef(SimpleLikelihoodRatioTestStat,2)
+   ClassDef(SimpleLikelihoodRatioTestStat,3)
 };
 
 }

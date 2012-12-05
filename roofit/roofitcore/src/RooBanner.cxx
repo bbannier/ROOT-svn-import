@@ -1,7 +1,6 @@
 #include "RooFit.h"
 
 #include "Rtypes.h"
-#include "Rtypes.h"
 #include "Riostream.h"
 
 //////////////////////////////////////////////////////////////////////////////
@@ -11,7 +10,9 @@
 // END_HTML
 //
 
-const char* VTAG="3.54" ;
+using namespace std;
+
+const char* VTAG="3.55" ;
 
 Int_t doBanner()
 

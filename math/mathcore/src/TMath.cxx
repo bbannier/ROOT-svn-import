@@ -35,7 +35,7 @@
 
 
 // Without this macro the THtml doc for TMath can not be generated
-#if !defined(R__ALPHA) && !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
+#if !defined(R__SOLARIS) && !defined(R__ACC) && !defined(R__FBSD)
 NamespaceImp(TMath)
 #endif
 
@@ -431,7 +431,7 @@ Double_t TMath::GamCf(Double_t a,Double_t x)
       del = d*c;
       h   = h*del;
       if (Abs(del-1) < eps) break;
-      //if (i==itmax) cout << "*GamCf(a,x)* a too large or itmax too small" << endl;
+      //if (i==itmax) std::cout << "*GamCf(a,x)* a too large or itmax too small" << std::endl;
    }
    Double_t v = Exp(-x+a*Log(x)-gln)*h;
    return (1-v);
@@ -459,7 +459,7 @@ Double_t TMath::GamSer(Double_t a,Double_t x)
       del  = del*x/ap;
       sum += del;
       if (TMath::Abs(del) < Abs(sum*eps)) break;
-      //if (n==itmax) cout << "*GamSer(a,x)* a too large or itmax too small" << endl;
+      //if (n==itmax) std::cout << "*GamSer(a,x)* a too large or itmax too small" << std::endl;
    }
    Double_t v = sum*Exp(-x+a*Log(x)-gln);
    return v;
@@ -489,18 +489,18 @@ Double_t TMath::Gaus(Double_t x, Double_t mean, Double_t sigma, Bool_t norm)
 }
 
 //______________________________________________________________________________
-Double_t TMath::Landau(Double_t x, Double_t mpv, Double_t sigma, Bool_t norm)
+Double_t TMath::Landau(Double_t x, Double_t mu, Double_t sigma, Bool_t norm)
 {
    // The LANDAU function. 
-   // mpv is a location parameter and correspond approximatly to the most probable value
+   // mu is a location parameter and correspond approximatly to the most probable value
    // and sigma is a scale parameter (not the sigma of the full distribution which is not defined)
-   // Note that for mpv=0 and sigma=1 (default values) the exact location of the maximum of the distribution (most proble value) is at 
-   // x = -0.22278
+   // Note that for mu=0 and sigma=1 (default values) the exact location of the maximum of the distribution 
+   // (most proble value) is at x = -0.22278
    // This function has been adapted from the CERNLIB routine G110 denlan.
    // If norm=kTRUE (default is kFALSE) the result is divided by sigma
 
    if (sigma <= 0) return 0; 
-   Double_t den = ::ROOT::Math::landau_pdf( (x-mpv)/sigma ); 
+   Double_t den = ::ROOT::Math::landau_pdf( (x-mu)/sigma ); 
    if (!norm) return den;
    return den/sigma;
 }

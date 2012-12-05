@@ -44,6 +44,36 @@ VOID_METHOD_ARG0(Interpreter,ClearStack,1)
 VOID_METHOD_ARG0(Interpreter,EndOfLineAction,1)
 VOID_METHOD_ARG0(Interpreter,EnableAutoLoading,1)
 RETURN_METHOD_ARG0(Interpreter,Int_t,InitializeDictionaries)
+// Does not support references:
+//VOID_METHOD_ARG3(Interpreter,InspectMembers,TMemberInspector&, insp, void*, obj, const TClass*,cl,1)
+void _NAME4_(p2,Interpreter,InspectMembers,insp)(void *in)
+{
+   struct tmp {
+      TMemberInspector *par1; void *par2; const TClass *par3;
+   };
+   tmp *p = (tmp*)in;
+   _NAME3_(TGWin32,Interpreter,Proxy)::RealObject()->InspectMembers(*p->par1,p->par2,p->par3);
+}
+
+void TGWin32InterpreterProxy::InspectMembers(TMemberInspector& insp, void* obj, const TClass* cl)
+{
+   DEBUG_PROFILE_PROXY_START(InspectMembers)
+   struct tmp {
+      TMemberInspector *par1; void *par2; const TClass *par3;
+      tmp(TMemberInspector *par1,void *par2,const TClass *par3):par1(par1),par2(par2),par3(par3) {}
+   };
+   fParam = new tmp(&insp,obj,cl);
+   fCallBack = &_NAME4_(p2,Interpreter,InspectMembers,insp);
+   Bool_t batch = ForwardCallBack(1);
+   //   insp = ((tmp*)fParam)->par1;
+   obj = ((tmp*)fParam)->par2;
+   cl = ((tmp*)fParam)->par3;
+   if (!batch) delete fParam;
+   DEBUG_PROFILE_PROXY_STOP(InspectMembers)
+}
+
+RETURN_METHOD_ARG2(Interpreter,TClass*,GenerateTClass,const char *,classname,Bool_t,silent); 
+RETURN_METHOD_ARG2(Interpreter,TClass*,GenerateTClass,ClassInfo_t *,classinfo,Bool_t,silent); 
 RETURN_METHOD_ARG3(Interpreter,Int_t,GenerateDictionary,const char*,classes,const char*,headers,const char*,options); 
 RETURN_METHOD_ARG0(Interpreter,char*,GetPrompt)
 RETURN_METHOD_ARG0(Interpreter,const char*,GetSharedLibs)
@@ -68,6 +98,7 @@ VOID_METHOD_ARG0(Interpreter,ResetGlobals,1)
 VOID_METHOD_ARG1(Interpreter,ResetGlobalVar,void*,obj,1)
 VOID_METHOD_ARG0(Interpreter,RewindDictionary,1)
 RETURN_METHOD_ARG1(Interpreter,Int_t,DeleteGlobal,void*,obj)
+RETURN_METHOD_ARG1(Interpreter,Int_t,DeleteVariable,const char*,name)
 VOID_METHOD_ARG0(Interpreter,SaveContext,1)
 VOID_METHOD_ARG0(Interpreter,SaveGlobalsContext,1)
 VOID_METHOD_ARG0_LOCK(Interpreter,UpdateListOfGlobals)
@@ -75,6 +106,7 @@ VOID_METHOD_ARG0_LOCK(Interpreter,UpdateListOfGlobalFunctions)
 VOID_METHOD_ARG0_LOCK(Interpreter,UpdateListOfTypes)
 VOID_METHOD_ARG2_LOCK(Interpreter,SetClassInfo,TClass*,cl,Bool_t,reload)
 RETURN_METHOD_ARG2(Interpreter,Bool_t,CheckClassInfo,const char*,name,Bool_t,autoload)
+RETURN_METHOD_ARG1(Interpreter,Bool_t,CheckClassTemplate,const char*,name)
 RETURN_METHOD_ARG2(Interpreter,Long_t,Calc,const char*,line,TInterpreter::EErrorCode*,error)
 VOID_METHOD_ARG1_LOCK(Interpreter,CreateListOfBaseClasses,TClass*,cl)
 VOID_METHOD_ARG1_LOCK(Interpreter,CreateListOfDataMembers,TClass*,cl)

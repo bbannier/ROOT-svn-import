@@ -245,7 +245,7 @@ TGraphErrors::TGraphErrors(const char *filename, const char *format, Option_t *o
    Double_t x, y, ex, ey;
    TString fname = filename;
    gSystem->ExpandPathName(fname);
-   ifstream infile(fname.Data());
+   std::ifstream infile(fname.Data());
    if (!infile.good()) {
       MakeZombie();
       Error("TGraphErrors", "Cannot open file: %s, TGraphErrors is Zombie", filename);
@@ -621,6 +621,35 @@ Double_t TGraphErrors::GetErrorYlow(Int_t i) const
    return -1;
 }
 
+//______________________________________________________________________________
+Int_t TGraphErrors::Merge(TCollection* li)
+{
+   // Adds all graphs with errors from the collection to this graph.
+   // Returns the total number of poins in the result or -1 in case of an error.
+
+   TIter next(li);
+   while (TObject* o = next()) {
+      TGraph *g = dynamic_cast<TGraph*>(o);
+      if (!g) {
+         Error("Merge",
+               "Cannot merge - an object which doesn't inherit from TGraph found in the list");
+         return -1;
+      }
+      int n0 = GetN();
+      int n1 = n0+g->GetN();
+      Set(n1);
+      Double_t * x = g->GetX();
+      Double_t * y = g->GetY();
+      Double_t * ex = g->GetEX();
+      Double_t * ey = g->GetEY();
+      for (Int_t i = 0 ; i < g->GetN(); i++) {
+         SetPoint(n0+i, x[i], y[i]);
+         if (ex) fEX[n0+i] = ex[i];
+         if (ey) fEY[n0+i] = ey[i];
+      }
+   }
+   return GetN();
+}
 
 //______________________________________________________________________________
 void TGraphErrors::Print(Option_t *) const
@@ -634,28 +663,28 @@ void TGraphErrors::Print(Option_t *) const
 
 
 //______________________________________________________________________________
-void TGraphErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
+void TGraphErrors::SavePrimitive(std::ostream &out, Option_t *option /*= ""*/)
 {
    // Save primitive as a C++ statement(s) on output stream out
 
    char quote = '"';
-   out << "   " << endl;
+   out << "   " << std::endl;
    if (gROOT->ClassSaved(TGraphErrors::Class())) {
       out << "   ";
    } else {
       out << "   TGraphErrors *";
    }
-   out << "gre = new TGraphErrors(" << fNpoints << ");" << endl;
-   out << "   gre->SetName(" << quote << GetName() << quote << ");" << endl;
-   out << "   gre->SetTitle(" << quote << GetTitle() << quote << ");" << endl;
+   out << "gre = new TGraphErrors(" << fNpoints << ");" << std::endl;
+   out << "   gre->SetName(" << quote << GetName() << quote << ");" << std::endl;
+   out << "   gre->SetTitle(" << quote << GetTitle() << quote << ");" << std::endl;
 
    SaveFillAttributes(out, "gre", 0, 1001);
    SaveLineAttributes(out, "gre", 1, 1, 1);
    SaveMarkerAttributes(out, "gre", 1, 1, 1);
 
    for (Int_t i = 0; i < fNpoints; i++) {
-      out << "   gre->SetPoint(" << i << "," << fX[i] << "," << fY[i] << ");" << endl;
-      out << "   gre->SetPointError(" << i << "," << fEX[i] << "," << fEY[i] << ");" << endl;
+      out << "   gre->SetPoint(" << i << "," << fX[i] << "," << fY[i] << ");" << std::endl;
+      out << "   gre->SetPointError(" << i << "," << fEX[i] << "," << fEY[i] << ");" << std::endl;
    }
 
    static Int_t frameNumber = 0;
@@ -665,8 +694,8 @@ void TGraphErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
       hname += frameNumber;
       fHistogram->SetName(Form("Graph_%s", hname.Data()));
       fHistogram->SavePrimitive(out, "nodraw");
-      out << "   gre->SetHistogram(" << fHistogram->GetName() << ");" << endl;
-      out << "   " << endl;
+      out << "   gre->SetHistogram(" << fHistogram->GetName() << ");" << std::endl;
+      out << "   " << std::endl;
    }
 
    // save list of functions
@@ -675,18 +704,18 @@ void TGraphErrors::SavePrimitive(ostream &out, Option_t *option /*= ""*/)
    while ((obj = next())) {
       obj->SavePrimitive(out, "nodraw");
       if (obj->InheritsFrom("TPaveStats")) {
-         out << "   gre->GetListOfFunctions()->Add(ptstats);" << endl;
-         out << "   ptstats->SetParent(gre->GetListOfFunctions());" << endl;
+         out << "   gre->GetListOfFunctions()->Add(ptstats);" << std::endl;
+         out << "   ptstats->SetParent(gre->GetListOfFunctions());" << std::endl;
       } else {
-         out << "   gre->GetListOfFunctions()->Add(" << obj->GetName() << ");" << endl;
+         out << "   gre->GetListOfFunctions()->Add(" << obj->GetName() << ");" << std::endl;
       }
    }
 
    const char *l = strstr(option, "multigraph");
    if (l) {
-      out << "   multigraph->Add(gre," << quote << l + 10 << quote << ");" << endl;
+      out << "   multigraph->Add(gre," << quote << l + 10 << quote << ");" << std::endl;
    } else {
-      out << "   gre->Draw(" << quote << option << quote << ");" << endl;
+      out << "   gre->Draw(" << quote << option << quote << ");" << std::endl;
    }
 }
 
