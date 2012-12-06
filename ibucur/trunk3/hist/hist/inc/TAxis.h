@@ -56,8 +56,7 @@ private:
 
    Bool_t       HasBinWithoutLabel() const;
    Bool_t       IsAlphanumeric() { return fBits2 & kAlphanumeric; }
-   void         SetAlphanumeric(Bool_t alphanumeric = kTRUE) { fBits2 = alphanumeric ? (fBits2 | kAlphanumeric) : (fBits2 & ~kAlphanumeric); }
-
+   void         SetAlphanumeric(Bool_t alphanumeric = kTRUE); 
 
 public:
    // TAxis status bits

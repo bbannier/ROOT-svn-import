@@ -713,6 +713,19 @@ void TAxis::Set(Int_t nbins, const Double_t *xbins)
 }
 
 //______________________________________________________________________________
+void TAxis::SetAlphanumeric(Bool_t alphanumeric)
+{
+   if (alphanumeric) fBits2 |= kAlphanumeric;
+   else fBits2 &= ~kAlphanumeric;
+
+   // clear underflow and overflow (in an alphanumeric situation they do not make sense)
+   // NOTE: using AddBinContent instead of SetBinContent in order to not change
+   //   the number of entries
+   ((TH1 *)fParent)->ClearUnderflowAndOverflow();
+}
+
+
+//______________________________________________________________________________
 void TAxis::SetDefaults()
 {
    // Set axis default values (from TStyle)
@@ -758,6 +771,12 @@ void TAxis::SetBinLabel(Int_t bin, const char *label)
    obj = new TObjString(label);
    fLabels->Add(obj);
    obj->SetUniqueID((UInt_t)bin);
+
+   // check for Alphanumeric case (labels for each bin)
+   if (fLabels->GetSize() == fNbins) {
+      SetAlphanumeric(kTRUE);
+      SetCanRebin(kTRUE);
+   }
 }
 
 
