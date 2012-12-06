@@ -575,8 +575,8 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
    p->Copy(*hold);
 
 
-   Int_t  nbxold = p->fXaxis.GetNbins();
-   Int_t  nbyold = p->fYaxis.GetNbins();
+//   Int_t  nbxold = p->fXaxis.GetNbins();
+//   Int_t  nbyold = p->fYaxis.GetNbins();
    Int_t  nbins  = axis->GetNbins();
    Double_t xmin = axis->GetXmin();
    Double_t xmax = axis->GetXmax();
@@ -597,18 +597,26 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
    {
       Int_t binx, biny, binz;
       p->GetBinXYZ(ibin, binx, biny, binz);
-      if (binx <= nbxold && biny <= nbyold) {
-         Int_t bin = hold->GetBin(binx, biny, binz);
+      Int_t bin = hold->GetBin(binx, biny, binz);
+
+      if (p->IsBinUnderflow(ibin) || p->IsBinOverflow(ibin)) {      
+         p->UpdateBinContent(ibin, 0.0);
+         p->fBinEntries.fArray[ibin] = 0.0;
+         p->fSumw2.fArray[ibin] = 0.0;
+         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0.0;
+      } else {
+//      if (binx <= nbxold && biny <= nbyold) {
          p->fArray[ibin] = hold->fArray[bin];
          p->fBinEntries.fArray[ibin] = hold->fBinEntries.fArray[bin];
          p->fSumw2.fArray[ibin] = hold->fSumw2.fArray[bin];
          if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = hold->fBinSumw2.fArray[bin];
-      } else {
-         p->fArray[ibin] = 0;
-         p->fBinEntries.fArray[ibin] = 0;
-         p->fSumw2.fArray[ibin] = 0;
-         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0;
       }
+//      } else {
+//         p->fArray[ibin] = 0;
+//         p->fBinEntries.fArray[ibin] = 0;
+//         p->fSumw2.fArray[ibin] = 0;
+//         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0;
+      //}
    }
    delete hold;
 }
