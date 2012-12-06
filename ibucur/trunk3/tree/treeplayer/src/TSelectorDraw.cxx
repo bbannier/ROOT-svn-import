@@ -572,7 +572,7 @@ void TSelectorDraw::Begin(TTree *tree)
          hist->SetMarkerStyle(fTree->GetMarkerStyle());
          hist->SetMarkerColor(fTree->GetMarkerColor());
          hist->SetMarkerSize(fTree->GetMarkerSize());
-         hist->SetCanRebin(canRebin);
+         if (canRebin) hist->SetCanRebin(TH1::kAllAxes);
          if (!hkeep) {
             hist->GetXaxis()->SetTitle(fVar[0]->GetTitle());
             hist->SetBit(kCanDelete);
@@ -659,7 +659,7 @@ void TSelectorDraw::Begin(TTree *tree)
             hp->SetMarkerStyle(fTree->GetMarkerStyle());
             hp->SetMarkerColor(fTree->GetMarkerColor());
             hp->SetMarkerSize(fTree->GetMarkerSize());
-            hp->SetCanRebin(canRebin);
+            if (canRebin) hp->SetCanRebin(TH1::kAllAxes);
          }
          fVar[1]->SetAxis(hp->GetXaxis());
          fObject = hp;
@@ -678,7 +678,7 @@ void TSelectorDraw::Begin(TTree *tree)
             h2->SetMarkerStyle(fTree->GetMarkerStyle());
             h2->SetMarkerColor(fTree->GetMarkerColor());
             h2->SetMarkerSize(fTree->GetMarkerSize());
-            h2->SetCanRebin(canRebin);
+            if (canRebin) h2->SetCanRebin(TH1::kAllAxes);
             if (!hkeep) {
                h2->GetXaxis()->SetTitle(fVar[1]->GetTitle());
                h2->GetYaxis()->SetTitle(fVar[0]->GetTitle());
@@ -793,7 +793,7 @@ void TSelectorDraw::Begin(TTree *tree)
             hp->SetMarkerStyle(fTree->GetMarkerStyle());
             hp->SetMarkerColor(fTree->GetMarkerColor());
             hp->SetMarkerSize(fTree->GetMarkerSize());
-            hp->SetCanRebin(canRebin);
+            if (canRebin) hp->SetCanRebin(TH1::kAllAxes);
          }
          fVar[1]->SetAxis(hp->GetYaxis());
          fVar[2]->SetAxis(hp->GetXaxis());
@@ -812,7 +812,7 @@ void TSelectorDraw::Begin(TTree *tree)
             h2->SetMarkerStyle(fTree->GetMarkerStyle());
             h2->SetMarkerColor(fTree->GetMarkerColor());
             h2->SetMarkerSize(fTree->GetMarkerSize());
-            h2->SetCanRebin(canRebin);
+            if (canRebin) h2->SetCanRebin(TH1::kAllAxes);
             if (!hkeep) {
                h2->GetXaxis()->SetTitle(fVar[1]->GetTitle());
                h2->GetZaxis()->SetTitle(fVar[0]->GetTitle());
@@ -839,7 +839,7 @@ void TSelectorDraw::Begin(TTree *tree)
             h3->SetMarkerStyle(fTree->GetMarkerStyle());
             h3->SetMarkerColor(fTree->GetMarkerColor());
             h3->SetMarkerSize(fTree->GetMarkerSize());
-            h3->SetCanRebin(canRebin);
+            if (canRebin) h3->SetCanRebin(TH1::kAllAxes);
             if (!hkeep) {
                //small correction for the title offsets in x,y to take into account the angles
                Double_t xoffset = h3->GetXaxis()->GetTitleOffset();
