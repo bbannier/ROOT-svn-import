@@ -167,7 +167,7 @@ Int_t TH3::BufferEmpty(Int_t action)
       Reset("ICES");  
       fBuffer = buffer;
    }
-   if (CanRebin() || fXaxis.GetXmax() <= fXaxis.GetXmin() ||
+   if (CanRebinAllAxes() || fXaxis.GetXmax() <= fXaxis.GetXmin() ||
       fYaxis.GetXmax() <= fYaxis.GetXmin() ||
       fZaxis.GetXmax() <= fZaxis.GetXmin()) {
          //find min, max of entries in buffer
@@ -1651,8 +1651,8 @@ Long64_t TH3::Merge(TCollection *list)
    Double_t cu;
    Int_t nbix = fXaxis.GetNbins();
    Int_t nbiy = fYaxis.GetNbins();
-   Bool_t canRebin = CanRebin();
-   SetCanRebin(kFALSE); // reset, otherwise setting the under/overflow will rebin
+   Bool_t canRebin = CanRebinAllAxes();
+   SetCanRebin(TH1::kNoAxis); // reset, otherwise setting the under/overflow will rebin
 
    while ( (h=(TH3*)next()) ) {
       // process only if the histogram has limits; otherwise it was processed before
@@ -1710,7 +1710,7 @@ Long64_t TH3::Merge(TCollection *list)
          }
       }
    }
-   SetCanRebin(canRebin);
+   if (canRebin) SetCanRebin(TH1::kAllAxes);
 
    //copy merged stats
    PutStats(totstats);
