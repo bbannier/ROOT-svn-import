@@ -86,7 +86,7 @@ public:
    TAxis& operator=(const TAxis&);
 
            Bool_t     CanRebin() const { return fBits2 & kCanRebin; }
-           void       SetCanRebin(Bool_t canRebin = kTRUE) { fBits2 = canRebin ? (fBits2 | kCanRebin) : (fBits2 & ~kCanRebin); }
+           void       SetCanRebin(Bool_t canRebin) { fBits2 = canRebin ? (fBits2 | kCanRebin) : (fBits2 & ~kCanRebin); }
            void       CenterLabels(Bool_t center=kTRUE);  // *TOGGLE* *GETTER=GetCenterLabels
            void       CenterTitle(Bool_t center=kTRUE);  // *TOGGLE* *GETTER=GetCenterTitle
    const char        *ChooseTimeFormat(Double_t axislength=0);

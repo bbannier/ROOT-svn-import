@@ -193,7 +193,7 @@ public:
    static  void     AddDirectory(Bool_t add=kTRUE);
    static  Bool_t   AddDirectoryStatus();
    virtual void     Browse(TBrowser *b);
-   virtual Bool_t   CanRebin() const;
+   virtual Bool_t   CanRebinAllAxes() const;
    virtual Double_t Chi2Test(const TH1* h2, Option_t *option = "UU", Double_t *res = 0) const;
    virtual Double_t Chi2TestX(const TH1* h2, Double_t &chi2, Int_t &ndf, Int_t &igood,Option_t *option = "UU",  Double_t *res = 0) const;
    virtual void     ClearUnderflowAndOverflow();

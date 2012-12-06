@@ -249,16 +249,14 @@ void TAxis::ExecuteEvent(Int_t event, Int_t px, Int_t py)
 //______________________________________________________________________________
 Int_t TAxis::FindBin(Double_t x)
 {
-   // Find bin number corresponding to abscissa x
+   // Find bin number corresponding to abscissa x. NOTE: this method does not work with alphanumeric bins !!!
    //
-   // If x is underflow or overflow, attempt to rebin histogram
-   // if the TH1::kCanRebin bit is set otherwise return 0 or fNbins+1
+   // If x is underflow or overflow, attempt to rebin histogram if the TAxis::kCanRebin 
+   // bit is set. Otherwise, return 0 or fNbins+1
 
    Int_t bin;
-   if (IsAlphanumeric()) { 
-      Warning("FindBin","Ignore numeric query on alphanumeric axis - return -1");
-      return -1;
-   }
+   // NOTE: This should not be allowed for Alphanumeric histograms, but it is heavily used (legacy) in the TTreePlayer to fill alphanumeric histograms.
+   if (IsAlphanumeric() && gDebug) Info("FindBin","Numeric query on alphanumeric axis - Sorting the bins or rebinning can alter the correspondence between the label and the bin interval. REMEMBER: With Great Power Comes Great Responsibility !!!");
    if (x < fXmin) {              //*-* underflow
       bin = 0;
       if (fParent == 0) return bin;
@@ -288,7 +286,7 @@ Int_t TAxis::FindBin(const char *label)
    // Find bin number with label.
    // If the List of labels does not exist create it
    // If label is not in the list of labels do the following depending on the
-   // bit TH1::kCanRebin of the parent histogram.
+   // bit TAxis::kCanRebin of the axis.
    //   - if the bit is set add the new label and if the number of labels exceeds
    //      the number of bins, double the number of bins via TH1::LabelsInflate
    //   - if the bit is not set and the histogram has labels in each bin 
@@ -357,7 +355,7 @@ Int_t TAxis::FindFixBin(Double_t x) const
    // Find bin number corresponding to abscissa x
    //
    // Identical to TAxis::FindBin except that if x is an underflow/overflow
-   // no attempt is made to rebin the histogram if TH1::kCanRebin bit is set
+   // no attempt is made to rebin the histogram if TAxis::kCanRebin bit is set
 
    Int_t bin;
    if (x < fXmin) {              //*-* underflow
@@ -745,8 +743,8 @@ void TAxis::SetDefaults()
 void TAxis::SetBinLabel(Int_t bin, const char *label)
 {
    // Set label for bin
-   // In this case we create a label list in the axis but we do not
-   // set the kCanRebin bit.
+   // If no label list exists, it is created. If all the bins have labels, the
+   // axis becomes alphanumeric and rebinnable.
    // New labels will not be added with the Fill method but will end-up in the
    // underflow bin. See documentation of TAxis::FindBin(const char*)
 

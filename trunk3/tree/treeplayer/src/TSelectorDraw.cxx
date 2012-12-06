@@ -1346,7 +1346,7 @@ void TSelectorDraw::TakeAction()
    //__________________________2D scatter plot_______________________
    else if (fAction == 12) {
       TH2 *h2 = (TH2*)fObject;
-      if (h2->CanRebin() && h2->TestBit(kCanDelete)) {
+      if (h2->CanRebinAllAxes() && h2->TestBit(kCanDelete)) {
          for (i = 0; i < fNfill; i++) {
             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
@@ -1517,7 +1517,7 @@ void TSelectorDraw::TakeEstimate()
    //__________________________1-D histogram_______________________
    if (fAction ==  1) {
       TH1 *h1 = (TH1*)fObject;
-      if (h1->CanRebin()) {
+      if (h1->CanRebinAllAxes()) {
          for (i = 0; i < fNfill; i++) {
             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
@@ -1528,7 +1528,7 @@ void TSelectorDraw::TakeEstimate()
    //__________________________2-D histogram_______________________
    } else if (fAction ==  2) {
       TH2 *h2 = (TH2*)fObject;
-      if (h2->CanRebin()) {
+      if (h2->CanRebinAllAxes()) {
          for (i = 0; i < fNfill; i++) {
             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
@@ -1541,7 +1541,7 @@ void TSelectorDraw::TakeEstimate()
    //__________________________Profile histogram_______________________
    } else if (fAction ==  4) {
       TProfile *hp = (TProfile*)fObject;
-      if (hp->CanRebin()) {
+      if (hp->CanRebinAllAxes()) {
          for (i = 0; i < fNfill; i++) {
             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
@@ -1554,7 +1554,7 @@ void TSelectorDraw::TakeEstimate()
    //__________________________2D scatter plot_______________________
    } else if (fAction == 12) {
       TH2 *h2 = (TH2*)fObject;
-      if (h2->CanRebin()) {
+      if (h2->CanRebinAllAxes()) {
          for (i = 0; i < fNfill; i++) {
             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
@@ -1617,7 +1617,7 @@ void TSelectorDraw::TakeEstimate()
    } else if (fAction == 33) {
       TH2 *h2 = (TH2*)fObject;
       Bool_t process2 = kFALSE;
-      if (h2->CanRebin()) {
+      if (h2->CanRebinAllAxes()) {
          if (vminOld[2] == FLT_MAX)
             process2 = kTRUE;
          for (i = 0; i < fValSize && i < 4; i++) {
@@ -1639,7 +1639,7 @@ void TSelectorDraw::TakeEstimate()
       //__________________________3D scatter plot_______________________
    } else if (fAction == 3 || fAction == 13) {
       TH3 *h3 = (TH3*)fObject;
-      if (h3->CanRebin()) {
+      if (h3->CanRebinAllAxes()) {
          for (i = 0; i < fNfill; i++) {
             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
@@ -1691,7 +1691,7 @@ void TSelectorDraw::TakeEstimate()
    //__________________________2D Profile Histogram__________________
    } else if (fAction == 23) {
       TProfile2D *hp = (TProfile2D*)fObject;
-      if (hp->CanRebin()) {
+      if (hp->CanRebinAllAxes()) {
          for (i = 0; i < fNfill; i++) {
             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
@@ -1706,7 +1706,7 @@ void TSelectorDraw::TakeEstimate()
    //__________________________4D scatter plot_______________________
    } else if (fAction == 40) {
       TH3 *h3 = (TH3*)fObject;
-      if (h3->CanRebin()) {
+      if (h3->CanRebinAllAxes()) {
          for (i = 0; i < fValSize && i < 4; i++) {
             fVmin[i] = vminOld[i];
             fVmax[i] = vmaxOld[i];
