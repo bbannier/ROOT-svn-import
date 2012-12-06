@@ -122,7 +122,7 @@ namespace ROOT {
       hist->SetMarkerStyle(fTree->GetMarkerStyle());
       hist->SetMarkerColor(fTree->GetMarkerColor());
       hist->SetMarkerSize(fTree->GetMarkerSize());
-      hist->SetCanRebin(canRebin);
+      if (canRebin) hist->SetCanRebin(TH1::kAllAxes);
       hist->GetXaxis()->SetTitle("var");
       hist->SetBit(kCanDelete);
       hist->SetDirectory(0);

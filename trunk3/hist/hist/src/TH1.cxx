@@ -6135,37 +6135,41 @@ void TH1::Scale(Double_t c1, Option_t *option)
 }
 
 //______________________________________________________________________________
-UInt_t TH1::CanRebin() const
+Bool_t TH1::CanRebin() const
 {
-   // returns the bit mask specifying which axes are rebinnable
-   // if mask is 0, then no axes can be rebinned
- 
-   UInt_t rebinBitMask = kNoAxis;
+   // returns true if all axes are rebinnable
+   Bool_t canRebin = fXaxis.CanRebin();
+   if (GetDimension() > 1) canRebin &= fYaxis.CanRebin();
+   if (GetDimension() > 2) canRebin &= fZaxis.CanRebin();
 
-   if (fXaxis.CanRebin()) rebinBitMask |= kXaxis;
-   if (GetDimension() > 1 && fYaxis.CanRebin()) rebinBitMask |= kYaxis;
-   if (GetDimension() > 2 && fZaxis.CanRebin()) rebinBitMask |= kZaxis;
-
-   return rebinBitMask;
+   return canRebin;
 }
 
 //______________________________________________________________________________
-void TH1::SetCanRebin(UInt_t rebinBitMask) 
+UInt_t TH1::SetCanRebin(UInt_t rebinBitMask) 
 {
    // make the histogram axes rebinnable / not rebinnable according to the bit mask
+   // returns the previous bit mask specifying which axes are rebinnable 
 
+   UInt_t oldRebinBitMask = kNoAxis;
+
+   if (fXaxis.CanRebin()) oldRebinBitMask |= kXaxis;
    if (rebinBitMask & kXaxis) fXaxis.SetCanRebin(kTRUE);
    else fXaxis.SetCanRebin(kFALSE);
 
    if (GetDimension() > 1) {
+      if (fYaxis.CanRebin()) oldRebinBitMask |= kYaxis;
       if (rebinBitMask & kYaxis) fYaxis.SetCanRebin(kTRUE);
       else fYaxis.SetCanRebin(kFALSE);
    }
    
    if (GetDimension() > 2) {
+      if (fZaxis.CanRebin()) oldRebinBitMask |= kZaxis;
       if (rebinBitMask & kZaxis) fZaxis.SetCanRebin(kTRUE);
       else fZaxis.SetCanRebin(kFALSE);
    }
+
+   return oldRebinBitMask;
 }
 
 //______________________________________________________________________________
