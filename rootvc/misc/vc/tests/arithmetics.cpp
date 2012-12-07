@@ -22,7 +22,7 @@
 #include <iostream>
 #include <limits>
 #include <Vc/limits>
-#include "../common/macros.h"
+#include <Vc/common/macros.h>
 
 using namespace Vc;
 
