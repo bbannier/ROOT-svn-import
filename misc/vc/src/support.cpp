@@ -1,6 +1,6 @@
 /*  This file is part of the Vc library.
 
-    Copyright (C) 2010 Matthias Kretz <kretz@kde.org>
+    Copyright (C) 2010-2012 Matthias Kretz <kretz@kde.org>
 
     Vc is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as
@@ -19,11 +19,18 @@
 
 #include <Vc/global.h>
 #include <Vc/cpuid.h>
-#include "common/support.h"
+#include "Vc/common/support.h"
+
+#ifdef VC_MSVC
+#include <intrin.h>
+#endif
 
 namespace Vc
 {
 
+#ifdef VC_GCC
+    __attribute__((target("no-sse2,no-avx")))
+#endif
 bool isImplementationSupported(Implementation impl)
 {
     CpuId::init();
@@ -44,14 +51,21 @@ bool isImplementationSupported(Implementation impl)
         return CpuId::hasSse42();
     case SSE4aImpl:
         return CpuId::hasSse4a();
+    case XopImpl:
+        return isImplementationSupported(Vc::AVXImpl) && CpuId::hasXop();
+    case Fma4Impl:
+        return isImplementationSupported(Vc::AVXImpl) && CpuId::hasFma4();
     case AVXImpl:
-#ifndef VC_NO_XGETBV
         if (CpuId::hasOsxsave() && CpuId::hasAvx()) {
+#if defined(VC_MSVC) && VC_MSVC >= 160040219 // MSVC 2010 SP1 introduced _xgetbv
+            unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
+            return (xcrFeatureMask & 0x6) != 0;
+#elif !defined(VC_NO_XGETBV)
             unsigned int eax;
             asm("xgetbv" : "=a"(eax) : "c"(0) : "edx");
             return (eax & 0x06) == 0x06;
-        }
 #endif
+        }
         return false;
     }
     return false;

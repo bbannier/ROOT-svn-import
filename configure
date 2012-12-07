@@ -6163,6 +6163,58 @@ else
 fi
 result $enable_memstat
 
+if test "$enable_vc" = 'yes'; then
+    ######################################################################
+    #
+    ### echo %%% check for SIMD compiler flags
+    #
+    message "Checking SIMD specific compiler flags"
+    avxcxxflag=""
+    for flag in '-xAVX' '-mavx' '/arch:AVX'; do
+        check_cxxopt $flag
+        if test $cxxopt_result -eq 1; then
+            avxcxxflag=$flag
+            break;
+        fi
+    done
+    ssecxxflags=""
+    for tuples in '-xSSE4.2;-msse4.2' '-xSSE4.1;-msse4.1' '-msse4a' '-xSSSE3;-mssse3' '-xSSE3;-msse3' '-xSSE2;-msse2;/arch:SSE2'; do
+        save_IFS="$IFS"
+        IFS=';'
+        for flag in $tuples; do
+            IFS="$save_IFS"
+            check_cxxopt $flag
+            if test $cxxopt_result -eq 1; then
+                ssecxxflags="$ssecxxflags $flag"
+                break;
+            fi
+        done
+    done
+    ssecxxflags="${ssecxxflags# }"
+    result "$avxcxxflag $ssecxxflags"
+
+    ######################################################################
+    #
+    ### echo %%% check for ABI version compiler flags
+    #
+    message "Checking ABI version compiler flags"
+    abiversioncxxflag=""
+    for flag in '-fabi-version=0' '-fabi-version=4'; do
+        check_cxxopt $flag
+        if test $cxxopt_result -eq 1; then
+            abiversioncxxflag="$flag"
+            break;
+        fi
+    done
+    test -n "$abiversioncxxflag" && result "$abiversioncxxflag" || result 'N/A'
+
+    sed -e "s|@avxcxxflag@|$avxcxxflag|"               \
+        -e "s|@ssecxxflags@|$ssecxxflags|"             \
+        -e "s|@abiversioncxxflag@|$abiversioncxxflag|" \
+        < Makefile.tmp > Makefile.tmpp
+    mv Makefile.tmpp Makefile.tmp
+fi
+
 ######################################################################
 #
 ### echo %%% Check for afdsmgrd support
@@ -6256,7 +6308,7 @@ if test "x$show_pkglist" = "xyes" ; then
     test "x$enable_xml"      = "xyes" && pl="$pl libroot-io-xmlparser"
     test "x$enable_mathmore" = "xyes" && pl="$pl libroot-math-mathmore"
     test "x$enable_unuran"   = "xyes" && pl="$pl libroot-math-unuran"
-    test "x$enable_vc"       = "xyes" && pl="$pl libroot-math-vc"
+    test "x$enable_vc"       = "xyes" && pl="$pl libroot-misc-vc"
     test "x$enable_table"    = "xyes" && pl="$pl libroot-misc-table"
     test "x$enable_ldap"     = "xyes" && pl="$pl libroot-net-ldap"
     test "x$enable_roofit"   = "xyes" && pl="$pl libroot-roofit"
