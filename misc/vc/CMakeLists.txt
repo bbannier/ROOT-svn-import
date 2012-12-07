@@ -1,4 +1,5 @@
 include(cmake/VcMacros.cmake)
+include(cmake/AddTargetProperty.cmake)
 vc_determine_compiler()
 vc_set_preferred_compiler_flags(WARNING_FLAGS BUILDTYPE_FLAGS)
 add_definitions("${Vc_DEFINITIONS}")
@@ -26,7 +27,7 @@ else()
    endif()
 endif()
 add_library(Vc STATIC ${_srcs})
-set_target_properties(Vc PROPERTIES COMPILE_FLAGS ${libvc_compile_flags})
+add_target_property(Vc COMPILE_FLAGS ${libvc_compile_flags})
 
 set_property(GLOBAL APPEND PROPERTY ROOT_EXPORTED_TARGETS Vc)
 
@@ -35,3 +36,12 @@ install(TARGETS Vc RUNTIME DESTINATION bin
                    ARCHIVE DESTINATION lib
                    COMPONENT libraries)
 ROOT_INSTALL_HEADERS(include/)
+
+ROOT_BUILD_OPTION(vc_examples OFF "Build Vc examples")
+if(vc_examples)
+   add_custom_target(other VERBATIM)
+   add_custom_target(Scalar COMMENT "build Vc Scalar code" VERBATIM)
+   add_custom_target(SSE COMMENT "build Vc SSE code" VERBATIM)
+   add_custom_target(AVX COMMENT "build Vc AVX code" VERBATIM)
+   add_subdirectory(examples)
+endif()
