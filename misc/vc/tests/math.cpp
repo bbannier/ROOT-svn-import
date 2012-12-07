@@ -24,7 +24,7 @@
 #include "const.h"
 #include <cmath>
 #include <algorithm>
-#include <common/macros.h>
+#include <Vc/common/macros.h>
 /*}}}*/
 using namespace Vc;
 /*fix isfinite and isnan{{{*/
