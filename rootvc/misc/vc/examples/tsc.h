@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2009-2010 Matthias Kretz <kretz@kde.org>
+    Copyright (C) 2009-2012 Matthias Kretz <kretz@kde.org>
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -37,30 +37,32 @@ class TimeStampCounter
         union Data {
             unsigned long long a;
             unsigned int b[2];
-        } start, end;
+        } m_start, m_end;
 };
 
 inline void TimeStampCounter::Start()
 {
 #ifdef _MSC_VER
-    start.a = __rdtsc();
+	unsigned int tmp;
+    m_start.a = __rdtscp(&tmp);
 #else
-    asm volatile("xor %%eax,%%eax\n\tcpuid\n\trdtsc" : "=a"(start.b[0]), "=d"(start.b[1]) :: "ebx", "ecx" );
+    asm volatile("rdtscp" : "=a"(m_start.b[0]), "=d"(m_start.b[1]) :: "ecx" );
 #endif
 }
 
 inline void TimeStampCounter::Stop()
 {
 #ifdef _MSC_VER
-    end.a = __rdtsc();
+	unsigned int tmp;
+    m_end.a = __rdtscp(&tmp);
 #else
-    asm volatile("xor %%eax,%%eax\n\tcpuid\n\trdtsc" : "=a"(end.b[0]), "=d"(end.b[1]) :: "ebx", "ecx" );
+    asm volatile("rdtscp" : "=a"(m_end.b[0]), "=d"(m_end.b[1]) :: "ecx" );
 #endif
 }
 
 inline unsigned long long TimeStampCounter::Cycles() const
 {
-    return end.a - start.a;
+    return m_end.a - m_start.a;
 }
 
 #endif // TSC_H
