@@ -7,4 +7,6 @@ endif()
 if(table)
   add_subdirectory(table)
 endif()
-
+if(vc)
+  add_subdirectory(vc)
+endif()
