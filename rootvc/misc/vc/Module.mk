@@ -6,72 +6,23 @@ VCVERS       := vc-0.6.70-root
 
 MODDIR       := $(ROOT_SRCDIR)/misc/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
-MODDIRI      := $(MODDIR)/inc
-#VCBUILDDIR   := build/misc/$(MODNAME)
+MODDIRI      := $(MODDIR)/include
+VCBUILDDIR   := build/misc/$(MODNAME)
 
 
 ifeq ($(PLATFORM),win32)
-#VCLIBVCA     := $(call stripsrc,$(MODDIRS)/win32/libVc-0.6.70.lib)
 VCLIBVC      := $(LPATH)/libVc.lib
 else
 VCLIBVC      := $(LPATH)/libVc.a
 endif
 
 VCH          := $(wildcard $(MODDIRI)/Vc/* $(MODDIRI)/Vc/*/*)
-# VCH1          := $(wildcard $(MODDIRI)/Vc/*.h $(MODDIRI)/Vc/*/*.h)
-# VCH2         := $(wildcard $(MODDIRI)/Vc/*.tcc $(MODDIRI)/Vc/*/*.tcc)
-# VCH          := $(VCH1) $(VCH2)
 
 ALLHDRS      += $(patsubst $(MODDIRI)/%,include/%,$(VCH))
-#ALLHDRS      += $(patsubst $(MODDIRI)/%,include/%.tcc,$(VCH2))
 ALLLIBS      += $(VCLIBVC)
 
 ##### local rules #####
 .PHONY:         all-$(MODNAME) clean-$(MODNAME) distclean-$(MODNAME)
-
-
-# include/%.h: $(MODDIRI)/%.h
-# 	@(if [ ! -d "include/Vc" ]; then    \
-# 	   mkdir -p include/Vc;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/avx" ]; then    \
-# 	   mkdir -p include/Vc/avx;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/internal" ]; then    \
-# 	   mkdir -p include/Vc/internal;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/sse" ]; then    \
-# 	   mkdir -p include/Vc/sse;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/common" ]; then    \
-# 	   mkdir -p include/Vc/common;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/scalar" ]; then    \
-# 	   mkdir -p include/Vc/scalar;             \
-# 	fi)
-# 	cp $< $@
-
-# include/%.tcc: $(MODDIRI)/%.tcc
-# 	@(if [ ! -d "include/Vc" ]; then    \
-# 	   mkdir -p include/Vc;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/avx" ]; then    \
-# 	   mkdir -p include/Vc/avx;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/internal" ]; then    \
-# 	   mkdir -p include/Vc/internal;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/sse" ]; then    \
-# 	   mkdir -p include/Vc/sse;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/common" ]; then    \
-# 	   mkdir -p include/Vc/common;             \
-# 	fi)
-# 	@(if [ ! -d "include/Vc/scalar" ]; then    \
-# 	   mkdir -p include/Vc/scalar;             \
-# 	fi)
-# 	cp $< $@
-
 
 include/%: $(MODDIRI)/%
 	@(if [ ! -d "include/Vc" ]; then    \
@@ -79,12 +30,15 @@ include/%: $(MODDIRI)/%
 	fi)
 	cp -r $< $@
 
+escapeflag = $(subst /,_,$(subst :,_,$(subst =,_,$(subst .,_,$(subst -,_,$(1))))))
 
-VCFLAGS      := -DVC_COMPILE_LIB $(OPT) $(CXXFLAGS) -Iinclude/Vc
-VCLIBVCOBJ   := $(patsubst $(MODDIRS)/%.cpp,$(MODDIRS)/%.cpp.o,$(wildcard $(MODDIRS)/*.cpp))
-ifndef AVXFLAGS
-VCLIBVCOBJ   := $(filter-out $(MODDIRS)/avx-%.cpp,$(VCLIBVCOBJ))
+VCFLAGS      := -DVC_COMPILE_LIB $(filter-out -x%,$(filter-out -m%,$(filter-out /arch:%,$(OPT) $(CXXFLAGS)))) $(ABICXXFLAGS)
+VCLIBVCOBJ   := const.cpp cpuid.cpp support.cpp \
+	 $(foreach flag,$(call escapeflag,$(SIMDCXXFLAGS)),trigonometric_$(flag).cpp)
+ifdef AVXCXXFLAG
+VCLIBVCOBJ   += avx_sorthelper.cpp
 endif
+VCLIBVCOBJ   := $(addprefix $(VCBUILDDIR)/,$(addsuffix .o,$(VCLIBVCOBJ)))
 
 $(VCLIBVC): $(VCLIBVCOBJ)
 	$(MAKEDIR)
@@ -92,16 +46,25 @@ $(VCLIBVC): $(VCLIBVCOBJ)
 	@ar r $@ $?
 	@ranlib $@
 
-$(MODDIRS)/avx-%.cpp.o: $(MODDIRS)/avx-%.cpp
+$(VCBUILDDIR)/avx_%.cpp.o: $(MODDIRS)/avx_%.cpp
 	$(MAKEDIR)
 	@echo "Compiling (AVX) $<"
-	@$(CXX) $(VCFLAGS) $(AVXFLAGS) -Iinclude/Vc/avx -c $(CXXOUT)$@ $<
+	@$(CXX) $(VCFLAGS) $(AVXCXXFLAG) -c $(CXXOUT)$@ $<
 
-$(MODDIRS)/%.cpp.o: $(MODDIRS)/%.cpp
+$(VCBUILDDIR)/trigonometric_%.cpp.o: $(MODDIRS)/trigonometric.cpp
 	$(MAKEDIR)
-	@echo "Compiling $<"
-	@$(CXX) $(VCFLAGS) -c $(CXXOUT)$@ $<
+	@for flag in $(SIMDCXXFLAGS); do \
+		if test "$*" = "`echo $$flag|tr '/:=.-' '_____'`"; then \
+			echo "Compiling ($$flag) $<"; \
+			$(CXX) $(VCFLAGS) $$flag -c $(CXXOUT)$@ $<; \
+			break; \
+		fi; \
+	done
 
+$(VCBUILDDIR)/%.cpp.o: $(MODDIRS)/%.cpp
+	$(MAKEDIR)
+	@echo "Compiling $< in $$PWD"
+	@$(CXX) $(VCFLAGS) -c $(CXXOUT)$@ $<
 
 
 all-$(MODNAME): $(VCLIBVC)
@@ -115,4 +78,3 @@ distclean-$(MODNAME): clean-$(MODNAME)
 	@rm -rf include/Vc
 
 distclean:: distclean-$(MODNAME)
-
