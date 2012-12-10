@@ -1,5 +1,5 @@
 target_root=/home/ibucur/root
-source_root=/home/ibucur/rootdev/trunk
+source_root=/home/ibucur/rootdev/trunk3
 
 cd $target_root
 svn update
