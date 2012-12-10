@@ -374,7 +374,8 @@ void TMVA::MethodBDT::DeclareOptions()
       fSepTypeS = "GiniIndex";
    }
    DeclareOptionRef(fMinNodeEvents=0, "nEventsMin", "deprecated !!! Minimum number of events required in a leaf node");
-   DeclareOptionRef(fMinNodeSizeS="5%", "MinNodeSize", "Minimum percentage of training events required in a leaf node (default: Classification: 10%, Regression: 1%)");
+   TString tmp="5%"; if (DoRegression()) tmp="0.2%";
+   DeclareOptionRef(fMinNodeSizeS=tmp, "MinNodeSize", "Minimum percentage of training events required in a leaf node (default: Classification: 5%, Regression: 0.2%)");
    // MinNodeSize:     minimum percentage of training events in a leaf node (leaf criteria, stop splitting)
    DeclareOptionRef(fNCuts, "nCuts", "Number of steps during node cut optimisation");
    DeclareOptionRef(fUseFisherCuts=kFALSE, "UseFisherCuts", "Use multivariate splits using the Fisher criterion");
