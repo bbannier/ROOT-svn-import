@@ -7,7 +7,7 @@ VCVERS       := vc-0.6.70-root
 MODDIR       := $(ROOT_SRCDIR)/misc/$(MODNAME)
 MODDIRS      := $(MODDIR)/src
 MODDIRI      := $(MODDIR)/include
-VCBUILDDIR   := $(MODDIRS)
+VCBUILDDIR   := $(call stripsrc,$(MODDIRS))
 
 
 ifeq ($(PLATFORM),win32)
