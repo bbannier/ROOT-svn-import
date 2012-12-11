@@ -892,12 +892,12 @@ Double_t TFn::GetMaximum(Double_t* min, Double_t* max, Double_t epsilon, Int_t m
 Double_t TFn::GetMinimum(Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
 {
    // Returns the minimum value of the function on the [min, max] subdomain if present, else on the full range
-   return ConfigureAndMinimize(const_cast<TFn*>(this), NULL, min, max, epsilon, maxIter);
+   return ConfigureAndMinimize(this, NULL, min, max, epsilon, maxIter);
 }
 
 
 //______________________________________________________________________________
-Double_t TFn::ConfigureAndMinimize(ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x, Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
+Double_t TFn::ConfigureAndMinimize(const ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x, Double_t* min, Double_t* max, Double_t epsilon, Int_t maxIter) const
 {
    // Perform a N-dimensional minimization on the ranges min and man with precision epsilon using at most 'maxIter' iterations
    // The vector 'x' will contain the initial point on input, the minimum point on output;
