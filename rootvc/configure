@@ -6195,6 +6195,21 @@ if test "$enable_vc" = 'yes'; then
 
     ######################################################################
     #
+    ### echo %%% check for required compiler/assembler workarounds
+    #
+    message "Checking required compiler/assembler workarounds"
+    vcflags=""
+    # with GCC and Open64 check the binutils version. If it's less than 2.18.93 the assembler doesn't know xgetbv
+    as=`${altcxx} -print-prog-name=as`
+    as_version=`${as} --version|head -n1|sed -e 's/^.*)//' -e 's/^.* \([0-9]\+\.[0-9]\+\.[0-9]\+\).*$/\1/'|awk -F. '{print ($1*1000+$2)*1000+$3}'`
+    if test $as_version -lt 2018093; then
+       vcflags="$vcflags -DVC_NO_XGETBV"
+    fi
+
+    test -n "$vcflags" && result "$vcflags" || result 'N/A'
+
+    ######################################################################
+    #
     ### echo %%% check for ABI version compiler flags
     #
     message "Checking ABI version compiler flags"
@@ -6211,6 +6226,7 @@ if test "$enable_vc" = 'yes'; then
     sed -e "s|@avxcxxflag@|$avxcxxflag|"               \
         -e "s|@ssecxxflags@|$ssecxxflags|"             \
         -e "s|@abiversioncxxflag@|$abiversioncxxflag|" \
+        -e "s|@vcflags@|$vcflags|" \
         < Makefile.tmp > Makefile.tmpp
     mv Makefile.tmpp Makefile.tmp
 fi
