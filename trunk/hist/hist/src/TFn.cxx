@@ -875,7 +875,7 @@ Double_t* TFn::GetMinimumX(Double_t* min, Double_t* max, Double_t epsilon, Int_t
    // If min, max are not set, the minimization is performed on the whole range
    // The user is responsible for deleting the array returned
    Double_t* x = new Double_t[fNdim];
-   ConfigureAndMinimize(const_cast<TFn*>(this), x, min, max, epsilon, maxIter);
+   ConfigureAndMinimize(this, x, min, max, epsilon, maxIter);
    return x;
 }
 
