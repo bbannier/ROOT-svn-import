@@ -934,6 +934,33 @@ EOF
     unset cxxopt
 }
 
+invoke_preprocessor() {
+    # This function will try to preprocess a given file. The result is stored in
+    # preprocessor_output, which should be immediately copied, since the
+    # variable will be overwritten at next invocation of this function.
+
+    cat > conftest.h
+    preprocessor_output=
+
+    logmsg " preprocessing"
+    cat <<EOF > conftest.mk
+include ${ac_srcdir}/config/Makefile.${arch}
+CXX = ${altcxx}
+conftest.out: conftest.h
+	\$(CXX) -E \$< -o \$@
+EOF
+
+    $gnumake -f conftest.mk >> $logfile 2>&1
+    if test $? -eq 0 ; then
+        preprocessor_output="`grep '^[^#]' conftest.out`"
+        logmsg " Preprocessing OK"
+    else
+        logmsg " Failed code was"
+        cat conftest.mk $1 >> $logfile
+    fi
+    rm -rf conftest.mk conftest.out conftest.h
+}
+
 #_____________________________________________________________________
 check_symbol() {
     # This function will try to locate a symbol [$1] in a specific
@@ -6166,11 +6193,98 @@ result $enable_memstat
 if test "$enable_vc" = 'yes'; then
     ######################################################################
     #
+    ### echo %%% check for required compiler/assembler workarounds
+    #
+    message "Checking required compiler/assembler workarounds"
+    vcflags=""
+    # with GCC and Open64 check the binutils version. If it's less than 2.18.93 the assembler doesn't know xgetbv
+    as=`${altcxx} -print-prog-name=as`
+    as_version=`${as} --version|head -n1|sed -e 's/^.*)//' -e 's/^.* \([0-9]\+\.[0-9]\+\.[0-9]\+\).*$/\1/'|awk -F. '{print ($1*1000+$2)*1000+$3}'`
+    if test $as_version -lt 2018093; then
+       vcflags="$vcflags -DVC_NO_XGETBV"
+    fi
+    invoke_preprocessor <<EOF
+#define _MAKE_VERSION(A, B, C) A##.##B##.##C
+#define MAKE_VERSION(A, B, C) _MAKE_VERSION(A, B, C)
+#ifdef __INTEL_COMPILER
+ICC
+__INTEL_COMPILER_BUILD_DATE
+#elif defined(__OPENCC__)
+Open64
+#elif defined(__clang__)
+clang
+MAKE_VERSION(__clang_major__, __clang_minor__, __clang_patchlevel__)
+#elif defined(__GNUC__)
+GCC
+MAKE_VERSION(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+#elif defined(_MSC_VER)
+MSVC
+_MSC_FULL_VER
+#else
+UNSUPPORTED_COMPILER
+#endif
+EOF
+    compiler=`echo "$preprocessor_output"|sed '1!d'`
+    compiler_version=`echo "$preprocessor_output"|sed '2!d'|awk -F. '{ print ($1*100+$2)*100+$3 }'`
+    avx_broken=false
+    sse_broken=false
+    xop_broken=false
+    fma4_broken=false
+    case $compiler in
+        ICC)
+            vcflags="$vcflags -diag-disable 913"
+            ;;
+        Open64)
+            avx_broken=true
+            ;;
+        clang)
+            if test $compiler_version -lt 30100; then
+                echo
+                echo "Clang before version 3.1 is unable to compile Vc correctly. Please update clang or disable Vc."
+                exit 1
+            fi
+            ;;
+        GCC)
+            vcflags="$vcflags -Wno-unused-function"
+            if test $compiler_version -lt 40500; then
+                vcflags="$vcflags -Wno-parentheses"
+                if test $compiler_version -lt 40406; then
+                    avx_broken=true
+                    if test $compiler_version -lt 40300; then
+                        sse_broken=true
+                        if test $compiler_version -lt 40200; then
+                            vcflags="$vcflags -fno-strict-aliasing"
+                        fi
+                    fi
+                fi
+            elif test $compiler_version -eq 40600; then
+                avx_broken=true
+            elif test $compiler_version -eq 40700; then
+                vcflags="$vcflags -fno-predictive-commoning"
+            fi
+            if test "x$platform" = "xmacosx" ; then
+                avx_broken=true
+                vcflags="$vcflags -DVC_NO_XGETBV"
+            fi
+            ;;
+        MSVC)
+            vcflags="$vcflags -DNOMINMAX"
+            xop_broken=true
+            fma4_broken=true
+            ;;
+        UNSUPPORTED_COMPILER)
+            ;;
+    esac
+
+    test -n "$vcflags" && result "$vcflags" || result ''
+
+    ######################################################################
+    #
     ### echo %%% check for SIMD compiler flags
     #
     message "Checking SIMD specific compiler flags"
     avxcxxflag=""
-    for flag in '-xAVX' '-mavx' '/arch:AVX'; do
+    $avx_broken || for flag in '-xAVX' '-mavx' '/arch:AVX'; do
         check_cxxopt $flag
         if test $cxxopt_result -eq 1; then
             avxcxxflag=$flag
@@ -6178,7 +6292,7 @@ if test "$enable_vc" = 'yes'; then
         fi
     done
     ssecxxflags=""
-    for tuples in '-xSSE4.2;-msse4.2' '-xSSE4.1;-msse4.1' '-msse4a' '-xSSSE3;-mssse3' '-xSSE3;-msse3' '-xSSE2;-msse2;/arch:SSE2'; do
+    $sse_broken || for tuples in '-xSSE4.2;-msse4.2' '-xSSE4.1;-msse4.1' '-msse4a' '-xSSSE3;-mssse3' '-xSSE3;-msse3' '-xSSE2;-msse2;/arch:SSE2'; do
         save_IFS="$IFS"
         IFS=';'
         for flag in $tuples; do
@@ -6192,21 +6306,6 @@ if test "$enable_vc" = 'yes'; then
     done
     ssecxxflags="${ssecxxflags# }"
     result "$avxcxxflag $ssecxxflags"
-
-    ######################################################################
-    #
-    ### echo %%% check for required compiler/assembler workarounds
-    #
-    message "Checking required compiler/assembler workarounds"
-    vcflags=""
-    # with GCC and Open64 check the binutils version. If it's less than 2.18.93 the assembler doesn't know xgetbv
-    as=`${altcxx} -print-prog-name=as`
-    as_version=`${as} --version|head -n1|sed -e 's/^.*)//' -e 's/^.* \([0-9]\+\.[0-9]\+\.[0-9]\+\).*$/\1/'|awk -F. '{print ($1*1000+$2)*1000+$3}'`
-    if test $as_version -lt 2018093; then
-       vcflags="$vcflags -DVC_NO_XGETBV"
-    fi
-
-    test -n "$vcflags" && result "$vcflags" || result 'N/A'
 
     ######################################################################
     #
