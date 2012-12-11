@@ -48,7 +48,7 @@ $(VCLIBVC): $(VCLIBVCOBJ)
 
 $(VCBUILDDIR)/avx_%.cpp.o: $(MODDIRS)/avx_%.cpp
 	$(MAKEDIR)
-	@echo "Compiling (AVX) $<"
+	@echo "Compiling ($(AVXCXXFLAG)) $<"
 	@$(CXX) $(VCFLAGS) $(AVXCXXFLAG) -c $(CXXOUT)$@ $<
 
 $(VCBUILDDIR)/trigonometric_%.cpp.o: $(MODDIRS)/trigonometric.cpp
@@ -63,7 +63,7 @@ $(VCBUILDDIR)/trigonometric_%.cpp.o: $(MODDIRS)/trigonometric.cpp
 
 $(VCBUILDDIR)/%.cpp.o: $(MODDIRS)/%.cpp
 	$(MAKEDIR)
-	@echo "Compiling $< in $$PWD"
+	@echo "Compiling $<"
 	@$(CXX) $(VCFLAGS) -c $(CXXOUT)$@ $<
 
 
