@@ -48,6 +48,7 @@
 #include "TRandom3.h"
 #include "TH2F.h"
 #include "TH1.h"
+#include "TMath.h"
 
 #include "TMVA/MethodBase.h"
 #include "TMVA/MethodANNBase.h"
@@ -903,8 +904,10 @@ const TMVA::Ranking* TMVA::MethodANNBase::CreateRanking()
       Statistics( TMVA::Types::kTraining, varName, 
                   meanS, meanB, rmsS, rmsB, xmin, xmax );
 
-      avgVal = (meanS + meanB) / 2.0; // change this into a real weighted average
-      if (IsNormalised()) avgVal = 0.5*(1 + gTools().NormVariable( avgVal, GetXmin( ivar ), GetXmax( ivar )));
+      avgVal = (TMath::Abs(meanS) + TMath::Abs(meanB))/2.0;
+      double meanrms = (TMath::Abs(rmsS) + TMath::Abs(rmsB))/2.;
+      if (avgVal<meanrms) avgVal = meanrms;      
+      if (IsNormalised()) avgVal = 0.5*(1 + gTools().NormVariable( avgVal, GetXmin( ivar ), GetXmax( ivar ))); 
 
       for (Int_t j = 0; j < numSynapses; j++) {
          synapse = neuron->PostLinkAt(j);
