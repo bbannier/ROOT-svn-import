@@ -32,7 +32,7 @@ include/%: $(MODDIRI)/%
 
 escapeflag = $(subst /,_,$(subst :,_,$(subst =,_,$(subst .,_,$(subst -,_,$(1))))))
 
-VCFLAGS      := -DVC_COMPILE_LIB $(filter-out -x%,$(filter-out -m%,$(filter-out /arch:%,$(OPT) $(CXXFLAGS)))) $(ABICXXFLAGS)
+VCFLAGS      += -DVC_COMPILE_LIB $(filter-out -x%,$(filter-out -m%,$(filter-out /arch:%,$(OPT) $(CXXFLAGS))))
 VCLIBVCOBJ   := const.cpp cpuid.cpp support.cpp \
 	 $(foreach flag,$(call escapeflag,$(SIMDCXXFLAGS)),trigonometric_$(flag).cpp)
 ifdef AVXCXXFLAG
