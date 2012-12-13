@@ -1,30 +1,7 @@
-Index: minuit2/src/TMinuit2TraceObject.cxx
+Index: hist/hist/inc/TAxis.h
 ===================================================================
---- minuit2/src/TMinuit2TraceObject.cxx	(revision 48013)
-+++ minuit2/src/TMinuit2TraceObject.cxx	(working copy)
-@@ -55,15 +55,15 @@
- 
-    fHistoFval = new TH1D("minuit2_hist_fval","Function Value/iteration",2,0,1);
-    fHistoEdm = new TH1D("minuit2_hist_edm","Edm/iteration",2,0,1);
--   fHistoFval->SetCanRebin(TH1::kAllAxes);
--   fHistoEdm->SetCanRebin(TH1::kAllAxes);
-+   fHistoFval->SetCanExtend(TH1::kAllAxes);
-+   fHistoEdm->SetCanExtend(TH1::kAllAxes);
- 
-    // create histos for all parameters
-    fHistoParList = new TList();
-    for (unsigned int ipar = 0; ipar < state.Params().size(); ++ipar) { 
-       if (state.Parameter(ipar).IsFixed() || state.Parameter(ipar).IsConst() ) continue;
-       TH1D * h1 = new TH1D(TString::Format("minuit2_hist_par%d",ipar),TString::Format("Value of %s/iteration",state.Name(ipar)),2,0,1);
--      h1->SetCanRebin(TH1::kAllAxes);
-+      h1->SetCanExtend(TH1::kAllAxes);
-       fHistoParList->Add(h1);      
-    }
- 
-Index: hist/inc/TAxis.h
-===================================================================
---- hist/inc/TAxis.h	(revision 48013)
-+++ hist/inc/TAxis.h	(working copy)
+--- hist/hist/inc/TAxis.h	(revision 48013)
++++ hist/hist/inc/TAxis.h	(working copy)
 @@ -51,7 +51,7 @@
     // TAxis extra status bits (stored in fBits2)
     enum {
@@ -45,10 +22,10 @@ Index: hist/inc/TAxis.h
             void       CenterLabels(Bool_t center=kTRUE);  // *TOGGLE* *GETTER=GetCenterLabels
             void       CenterTitle(Bool_t center=kTRUE);  // *TOGGLE* *GETTER=GetCenterTitle
     const char        *ChooseTimeFormat(Double_t axislength=0);
-Index: hist/inc/TH1.h
+Index: hist/hist/inc/TH1.h
 ===================================================================
---- hist/inc/TH1.h	(revision 48013)
-+++ hist/inc/TH1.h	(working copy)
+--- hist/hist/inc/TH1.h	(revision 48013)
++++ hist/hist/inc/TH1.h	(working copy)
 @@ -88,7 +88,7 @@
           kPoisson2 = 2   // errors from Poisson interval at 95% CL (~ 2 sigma)            
     };
@@ -101,10 +78,10 @@ Index: hist/inc/TH1.h
     virtual void     SetCellContent(Int_t binx, Int_t biny, Double_t content);
     virtual void     SetCellError(Int_t binx, Int_t biny, Double_t content);
     virtual void     SetContent(const Double_t *content);
-Index: hist/inc/TProfile.h
+Index: hist/hist/inc/TProfile.h
 ===================================================================
---- hist/inc/TProfile.h	(revision 48013)
-+++ hist/inc/TProfile.h	(working copy)
+--- hist/hist/inc/TProfile.h	(revision 48013)
++++ hist/hist/inc/TProfile.h	(working copy)
 @@ -90,6 +90,7 @@
     virtual Bool_t   Divide(TF1 *h1, Double_t c1=1);
     virtual Bool_t   Divide(const TH1 *h1);
@@ -121,10 +98,10 @@ Index: hist/inc/TProfile.h
     virtual void     Reset(Option_t *option="");
     virtual void     SavePrimitive(std::ostream &out, Option_t *option = "");
     virtual void     Scale(Double_t c1=1, Option_t *option="");
-Index: hist/inc/TProfile2D.h
+Index: hist/hist/inc/TProfile2D.h
 ===================================================================
---- hist/inc/TProfile2D.h	(revision 48013)
-+++ hist/inc/TProfile2D.h	(working copy)
+--- hist/hist/inc/TProfile2D.h	(revision 48013)
++++ hist/hist/inc/TProfile2D.h	(working copy)
 @@ -96,6 +96,7 @@
     virtual Bool_t    Divide(TF1 *h1, Double_t c1=1);
     virtual Bool_t    Divide(const TH1 *h1);
@@ -141,10 +118,10 @@ Index: hist/inc/TProfile2D.h
     virtual TProfile2D *Rebin2D(Int_t nxgroup=2, Int_t nygroup=2, const char *newname="");
     virtual TProfile2D *RebinX(Int_t ngroup=2, const char *newname="");
     virtual TProfile2D *RebinY(Int_t ngroup=2, const char *newname="");     
-Index: hist/inc/TProfile3D.h
+Index: hist/hist/inc/TProfile3D.h
 ===================================================================
---- hist/inc/TProfile3D.h	(revision 48013)
-+++ hist/inc/TProfile3D.h	(working copy)
+--- hist/hist/inc/TProfile3D.h	(revision 48013)
++++ hist/hist/inc/TProfile3D.h	(working copy)
 @@ -100,6 +100,7 @@
     virtual Bool_t    Divide(TF1 *h1, Double_t c1=1);
     virtual Bool_t    Divide(const TH1 *h1);
@@ -161,10 +138,10 @@ Index: hist/inc/TProfile3D.h
     virtual void      SavePrimitive(std::ostream &out, Option_t *option = "");
     virtual void      Scale(Double_t c1=1, Option_t *option="");
     virtual void      SetBinEntries(Int_t bin, Double_t w);
-Index: hist/src/TAxis.cxx
+Index: hist/hist/src/TAxis.cxx
 ===================================================================
---- hist/src/TAxis.cxx	(revision 48013)
-+++ hist/src/TAxis.cxx	(working copy)
+--- hist/hist/src/TAxis.cxx	(revision 48013)
++++ hist/hist/src/TAxis.cxx	(working copy)
 @@ -251,23 +251,22 @@
  {
     // Find bin number corresponding to abscissa x. NOTE: this method does not work with alphanumeric bins !!!
@@ -269,10 +246,10 @@ Index: hist/src/TAxis.cxx
     }
  }
  
-Index: hist/src/TH1.cxx
+Index: hist/hist/src/TH1.cxx
 ===================================================================
---- hist/src/TH1.cxx	(revision 48013)
-+++ hist/src/TH1.cxx	(working copy)
+--- hist/hist/src/TH1.cxx	(revision 48013)
++++ hist/hist/src/TH1.cxx	(working copy)
 @@ -284,7 +284,7 @@
  <p>     By default, the bin number is computed using the current axis ranges.
       If the automatic binning option has been set via
@@ -650,10 +627,10 @@ Index: hist/src/TH1.cxx
           while (bin >=  fNcells-1)  LabelsInflate();
        } else {
           if (bin == fNcells-1) UpdateBinContent(bin, content);
-Index: hist/src/TH2.cxx
+Index: hist/hist/src/TH2.cxx
 ===================================================================
---- hist/src/TH2.cxx	(revision 48013)
-+++ hist/src/TH2.cxx	(working copy)
+--- hist/hist/src/TH2.cxx	(revision 48013)
++++ hist/hist/src/TH2.cxx	(working copy)
 @@ -169,7 +169,7 @@
        fBuffer = buffer;
     }
@@ -720,10 +697,10 @@ Index: hist/src/TH2.cxx
  
     delete [] oldBins;
     if (oldErrors) delete [] oldErrors;
-Index: hist/src/TH3.cxx
+Index: hist/hist/src/TH3.cxx
 ===================================================================
---- hist/src/TH3.cxx	(revision 48013)
-+++ hist/src/TH3.cxx	(working copy)
+--- hist/hist/src/TH3.cxx	(revision 48013)
++++ hist/hist/src/TH3.cxx	(working copy)
 @@ -167,7 +167,7 @@
        Reset("ICES");  
        fBuffer = buffer;
@@ -772,10 +749,10 @@ Index: hist/src/TH3.cxx
  
     //copy merged stats
     PutStats(totstats);
-Index: hist/src/TProfile.cxx
+Index: hist/hist/src/TProfile.cxx
 ===================================================================
---- hist/src/TProfile.cxx	(revision 48013)
-+++ hist/src/TProfile.cxx	(working copy)
+--- hist/hist/src/TProfile.cxx	(revision 48013)
++++ hist/hist/src/TProfile.cxx	(working copy)
 @@ -351,7 +351,7 @@
        Reset("ICES"); // reset without deleting the functions
        fBuffer = buffer;
@@ -820,10 +797,10 @@ Index: hist/src/TProfile.cxx
     if ( hold ) {
        fTsumwy  = hold->fTsumwy;
        fTsumwy2 = hold->fTsumwy2;
-Index: hist/src/TProfile2D.cxx
+Index: hist/hist/src/TProfile2D.cxx
 ===================================================================
---- hist/src/TProfile2D.cxx	(revision 48013)
-+++ hist/src/TProfile2D.cxx	(working copy)
+--- hist/hist/src/TProfile2D.cxx	(revision 48013)
++++ hist/hist/src/TProfile2D.cxx	(working copy)
 @@ -289,7 +289,7 @@
        Reset("ICES"); // reset without deleting the functions
        fBuffer = buffer;
@@ -872,10 +849,10 @@ Index: hist/src/TProfile2D.cxx
     if ( hold ) {
        fTsumwz  = hold->fTsumwz;
        fTsumwz2 = hold->fTsumwz2;
-Index: hist/src/TProfile3D.cxx
+Index: hist/hist/src/TProfile3D.cxx
 ===================================================================
---- hist/src/TProfile3D.cxx	(revision 48013)
-+++ hist/src/TProfile3D.cxx	(working copy)
+--- hist/hist/src/TProfile3D.cxx	(revision 48013)
++++ hist/hist/src/TProfile3D.cxx	(working copy)
 @@ -253,7 +253,7 @@
        Reset("ICES"); // reset without deleting the functions
        fBuffer = buffer;
@@ -945,10 +922,10 @@ Index: hist/src/TProfile3D.cxx
     if ( hold ) {
        fTsumwt  = hold->fTsumwt;
        fTsumwt2 = hold->fTsumwt2;
-Index: hist/src/TProfileHelper.h
+Index: hist/hist/src/TProfileHelper.h
 ===================================================================
---- hist/src/TProfileHelper.h	(revision 48013)
-+++ hist/src/TProfileHelper.h	(working copy)
+--- hist/hist/src/TProfileHelper.h	(revision 48013)
++++ hist/hist/src/TProfileHelper.h	(working copy)
 @@ -40,7 +40,7 @@
     static Long64_t Merge(T* p, TCollection *list);
  
@@ -1012,10 +989,33 @@ Index: hist/src/TProfileHelper.h
     if (axis->GetXmin() >= axis->GetXmax()) return 0;
     if (axis->GetNbins() <= 0) return 0;
  
-Index: stressHistogram.cxx
+Index: math/minuit2/src/TMinuit2TraceObject.cxx
 ===================================================================
---- stressHistogram.cxx	(revision 48013)
-+++ stressHistogram.cxx	(working copy)
+--- math/minuit2/src/TMinuit2TraceObject.cxx	(revision 48013)
++++ math/minuit2/src/TMinuit2TraceObject.cxx	(working copy)
+@@ -55,15 +55,15 @@
+ 
+    fHistoFval = new TH1D("minuit2_hist_fval","Function Value/iteration",2,0,1);
+    fHistoEdm = new TH1D("minuit2_hist_edm","Edm/iteration",2,0,1);
+-   fHistoFval->SetCanRebin(TH1::kAllAxes);
+-   fHistoEdm->SetCanRebin(TH1::kAllAxes);
++   fHistoFval->SetCanExtend(TH1::kAllAxes);
++   fHistoEdm->SetCanExtend(TH1::kAllAxes);
+ 
+    // create histos for all parameters
+    fHistoParList = new TList();
+    for (unsigned int ipar = 0; ipar < state.Params().size(); ++ipar) { 
+       if (state.Parameter(ipar).IsFixed() || state.Parameter(ipar).IsConst() ) continue;
+       TH1D * h1 = new TH1D(TString::Format("minuit2_hist_par%d",ipar),TString::Format("Value of %s/iteration",state.Name(ipar)),2,0,1);
+-      h1->SetCanRebin(TH1::kAllAxes);
++      h1->SetCanExtend(TH1::kAllAxes);
+       fHistoParList->Add(h1);      
+    }
+ 
+Index: test/stressHistogram.cxx
+===================================================================
+--- test/stressHistogram.cxx	(revision 48013)
++++ test/stressHistogram.cxx	(working copy)
 @@ -3647,7 +3647,7 @@
     list->Add(h2);
     list->Add(h3);
@@ -1077,10 +1077,10 @@ Index: stressHistogram.cxx
  
     for ( Int_t e = 0; e < nEvents; ++e ) {
        Double_t value = r.Uniform( minRange,  maxRange);
-Index: stressShapes.cxx
+Index: test/stressShapes.cxx
 ===================================================================
---- stressShapes.cxx	(revision 48013)
-+++ stressShapes.cxx	(working copy)
+--- test/stressShapes.cxx	(revision 48013)
++++ test/stressShapes.cxx	(working copy)
 @@ -92,7 +92,7 @@
     for (i=0; i<nvolumes; i++) {
        volume = (TGeoVolume*)(vlist->At(i));
