@@ -139,7 +139,7 @@ accessing the bin numbering information independently of the dimension.</para>
 
 <sect2>
 <title>Rebinning</title>
-<para>At any time, a 1-D histogram can be re-binned via the <emphasis role="bold"
+<para>At any time, a 1-D histogram can be rebinned via the <emphasis role="bold"
 ><code>TH1</code></emphasis><code>::Rebin()</code> method. The rebinning can be performed by
 modifying the original histogram, or in case a name parameter is specified, a new rebinned histogram
 will be created. If there are bin errors stored in the histogram (via <code>Sumw2()</code>), they
@@ -166,6 +166,10 @@ perform rebinning only on a particular axis, one can also use <code>RebinX()</co
 TH2* h = new TH2F("h", "h", 100, 0.0, 1.0, 50, 0.0, 1.0); 
 h-&gt;Rebin2D(); // h now has 50 * 25 bins (52 * 27 cells)
 h-&gt;RebinY(5); // h now has 50 * 5 bins (52 * 7 cells)</programlisting>
+</sect2>
+<sect2>
+<title>Automatic Rebinning</title>
+<para/>
 </sect2>
 </sect1>
 
@@ -204,11 +208,15 @@ h2-&gt;SetBinContent(bin, binContent * 2.0);
 binContent = h3-&gt;GetBinContent(binx, biny, binz);
 h3-&gt;SetBinContent(binx, biny, binz, binContent + 5.0);</programlisting>
 <sect2>
-<title>Automatic Rebinning Option</title>
-<para>By default, the number of bins is computed using the range of the axis. You can change this to
-re-bin automatically by setting the automatic re-binning option:</para>
-<programlisting language="c++"><code>h-&gt;SetBit(TH1::kCanRebin);</code>
-</programlisting>
+<title>Axis Extension</title>
+<para>The methods that change a histogram's content may also automatically extend its axes. This can
+only happen when the histogram's axes are extendable. In order to control the state of an axis as
+extensdable, one must call the  <code>SetCanExtend(Bool_t)</code> method on the respect. The method
+sets the rebinnable state of the axis according to the value of the boolean parameter passed.</para>
+<programlisting language="c++">TH2F h("h2", "h2", 10, 0.0, 1.0, 5, 0.0, 1.0);
+h-&gt;GetXaxis()->SetCanExtend(kTRUE);
+h-&gt;GetYaxis()->SetCanExtend(kFALSE);
+if (h-&gt;GetXaxis()->CanExtend()) h</programlisting>
 <para>Once this is set, the <code>Fill()</code> method will automatically extend the axis range to
 accommodate the new value specified in the <code>Fill()</code> argument. The used method is to
 double the bin size until the new value fits in the range, merging bins two by two. The <emphasis

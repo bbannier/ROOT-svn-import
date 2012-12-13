@@ -605,18 +605,11 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
          p->fSumw2.fArray[ibin] = 0.0;
          if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0.0;
       } else {
-//      if (binx <= nbxold && biny <= nbyold) {
          p->fArray[ibin] = hold->fArray[bin];
          p->fBinEntries.fArray[ibin] = hold->fBinEntries.fArray[bin];
          p->fSumw2.fArray[ibin] = hold->fSumw2.fArray[bin];
          if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = hold->fBinSumw2.fArray[bin];
       }
-//      } else {
-//         p->fArray[ibin] = 0;
-//         p->fBinEntries.fArray[ibin] = 0;
-//         p->fSumw2.fArray[ibin] = 0;
-//         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0;
-      //}
    }
    delete hold;
 }
