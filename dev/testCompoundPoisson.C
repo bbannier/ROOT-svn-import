@@ -4,7 +4,7 @@ void testCompoundPoisson(double mu = 6.0, double a = 0.0, double b = 1.0, int ne
 
 
 
-   TH1D * h1 = new TH1D("h1","h1",200,-1000,1000);
+   TH1D * h1 = new TH1D("h1","h1",200,-300,300);
 
    for (int i = 0; i < nexp; ++i) { 
 
@@ -18,22 +18,27 @@ void testCompoundPoisson(double mu = 6.0, double a = 0.0, double b = 1.0, int ne
    }
 
 //   h1->Draw();
-
-//   double gamma = 3.0 * (a + b) * (a + b) * mu / (b - a) / (b - a);
-//   double beta = (b - a) * (b - a) / (a + b) / 6.0;
-//   std::cout << "gamma " << gamma << " beta " << beta << std::endl; 
-//   std::cout << "mean " << gamma * beta << " variance " << gamma * beta * beta << std::endl;
+//   double mean = (a + b) * mu / 2.0;
+   double mean = (b - a) * mu / 2.0;
+   double variance = (a * b + a * a + b * b) * mu / 3.0;
+   double gamma = mean * mean / variance;
+   double beta = variance / mean;
+   std::cout << "gamma " << gamma << " beta " << beta << std::endl; 
+   std::cout << "mean " << gamma * beta << " variance " << gamma * beta * beta << std::endl;
    std::cout << "mean estimate " << h1->GetMean() << " variance estimate " << h1->GetMeanError() * h1->GetMeanError() * nexp << std::endl;
 
-/*
+
    RooWorkspace w; 
-   w.factory("x[0,1000]");
+   w.factory("x[-300,300]");
    w.var("x")->setVal((a + b) * mu / 2.0); // set to mean
-   w.factory("gamma[0,30000]");
+   w.factory("gamma[0.01,1000]");
    w.var("gamma")->setVal(gamma);
-   w.factory("beta[0,1000]");
+   w.factory("beta[0.01,1000]");
    w.var("beta")->setVal(beta);
-   w.factory("Gamma:g(x,gamma,beta,location[0])");
+   w.factory("a[-300,300]");
+   w.var("a")->setVal(-a);
+   w.factory("Gamma:g(x,gamma,beta,a)");
+   
 
    RooPlot * pl = w.var("x")->frame(); 
    w.pdf("g")->Print();
@@ -42,10 +47,19 @@ void testCompoundPoisson(double mu = 6.0, double a = 0.0, double b = 1.0, int ne
    w.pdf("g")->getVariables()->Print("v");
    w.pdf("g")->plotOn(pl);
 
-//   new TCanvas(); 
-//   pl->Draw("SAME");
+   new TCanvas(); 
+   pl->Draw();
+
    ROOT::Math::MinimizerOptions::SetDefaultMinimizer("Minuit2");
 
+   TF1 * f1 = new TF1("f1","[0]*ROOT::Math::gamma_pdf(x, [1], [2], [3])");
+   f1->SetParameters(nexp, gamma, beta, a);
+   f1->SetLineColor(kRed);
+   h1->Fit(f1,"+");
+
+
+
+/*   
    RooDataSet * d = w.pdf("g")->generate(*w.var("x"), nexp);
 
    TH1D * h2 = new TH1D("h2","h2",200,0,1000);
@@ -56,12 +70,6 @@ void testCompoundPoisson(double mu = 6.0, double a = 0.0, double b = 1.0, int ne
    f0->SetParameters(1000,10,30);   
    f0->SetLineColor(kBlue);
    h2->Fit(f0,"+");
-
-   TF1 * f1 = new TF1("f1","[0]*ROOT::Math::gamma_pdf(x, [1],[2])");
-   f1->SetParameters(1000,7,30);   
-   f1->SetLineColor(kRed);
-   h2->Fit(f1,"+");
-
    TF1 * f2 = new TF1("f2","[0]*ROOT::Math::negative_binomial_pdf(x, [1],[2])");
    f2->SetParameters(1000,0.03,30);
    f2->SetLineColor(kGreen);
