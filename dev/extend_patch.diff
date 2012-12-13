@@ -1090,3 +1090,29 @@ Index: test/stressShapes.cxx
        hlist->Add(hist);
     }   
     Int_t nrays = 100000;
+Index: tutorials/hist/hlabels1.C
+===================================================================
+--- tutorials/hist/hlabels1.C	(revision 48013)
++++ tutorials/hist/hlabels1.C	(working copy)
+@@ -12,7 +12,7 @@
+    TH1F *h = new TH1F("h","test",3,0,3);
+    h->SetStats(0);
+    h->SetFillColor(38);
+-   h->SetCanRebin(TH1::kAllAxes);
++   h->SetCanExtend(TH1::kAllAxes);
+    for (Int_t i=0;i<5000;i++) {
+       Int_t r = gRandom->Rndm()*20;
+       h->Fill(people[r],1);
+Index: tutorials/hist/hlabels2.C
+===================================================================
+--- tutorials/hist/hlabels2.C	(revision 48013)
++++ tutorials/hist/hlabels2.C	(working copy)
+@@ -16,7 +16,7 @@
+    c1->SetLeftMargin(0.15);
+    c1->SetBottomMargin(0.15);
+    TH2F *h = new TH2F("h","test",3,0,3,2,0,2);
+-   h->SetCanRebin(TH1::kAllAxes);
++   h->SetCanExtend(TH1::kAllAxes);
+    h->SetStats(0);
+    gRandom->SetSeed();
+    for (Int_t i=0;i<15000;i++) {
