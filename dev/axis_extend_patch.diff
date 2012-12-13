@@ -1,0 +1,566 @@
+Index: tree/treeplayer/src/TBranchProxyDirector.cxx
+===================================================================
+--- tree/treeplayer/src/TBranchProxyDirector.cxx	(revision 48022)
++++ tree/treeplayer/src/TBranchProxyDirector.cxx	(working copy)
+@@ -88,10 +88,10 @@
+       Int_t nbins = gEnv->GetValue("Hist.Binning.1D.x",100);
+       Double_t vmin=0, vmax=0;
+       Double_t xmin=0, xmax=0;
+-      Bool_t canRebin = kTRUE;
++      Bool_t canExtend = kTRUE;
+       TString opt( options ); 
+       Bool_t optSame = opt.Contains("same");
+-      if (optSame) canRebin = kFALSE;
++      if (optSame) canExtend = kFALSE;
+       
+       if (gPad && optSame) {
+          TListIter np(gPad->GetListOfPrimitives());
+@@ -111,7 +111,7 @@
+       } else {
+          vmin = xmin;
+          vmax = xmax;
+-         if (xmin < xmax) canRebin = kFALSE;
++         if (xmin < xmax) canExtend = kFALSE;
+       }
+       TH1F *hist = new TH1F("htemp","htemp",nbins,vmin,vmax);
+       hist->SetLineColor(fTree->GetLineColor());
+@@ -122,7 +122,7 @@
+       hist->SetMarkerStyle(fTree->GetMarkerStyle());
+       hist->SetMarkerColor(fTree->GetMarkerColor());
+       hist->SetMarkerSize(fTree->GetMarkerSize());
+-      if (canRebin) hist->SetBit(TH1::kCanRebin);
++      if (canExtend) hist->SetCanExtend(TH1::kAllAxes);
+       hist->GetXaxis()->SetTitle("var");
+       hist->SetBit(kCanDelete);
+       hist->SetDirectory(0);
+Index: tree/treeplayer/src/TSelectorDraw.cxx
+===================================================================
+--- tree/treeplayer/src/TSelectorDraw.cxx	(revision 48022)
++++ tree/treeplayer/src/TSelectorDraw.cxx	(working copy)
+@@ -194,8 +194,8 @@
+    //   fOldHistogram     - pointer to hist hname
+    //   elist     - pointer to selection list of hname
+ 
+-   Bool_t canRebin = kTRUE;
+-   if (optSame) canRebin = kFALSE;
++   Bool_t canExtend = kTRUE;
++   if (optSame) canExtend = kFALSE;
+ 
+    Int_t nbinsx = 0, nbinsy = 0, nbinsz = 0;
+    Double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, zmin = 0, zmax = 0;
+@@ -556,7 +556,7 @@
+             fAction   = -1;
+             fVmin[0] = xmin;
+             fVmax[0] = xmax;
+-            if (xmin < xmax) canRebin = kFALSE;
++            if (xmin < xmax) canExtend = kFALSE;
+          }
+       }
+       if (fOldHistogram) {
+@@ -572,7 +572,7 @@
+          hist->SetMarkerStyle(fTree->GetMarkerStyle());
+          hist->SetMarkerColor(fTree->GetMarkerColor());
+          hist->SetMarkerSize(fTree->GetMarkerSize());
+-         if (canRebin)hist->SetBit(TH1::kCanRebin);
++         if (canExtend) hist->SetCanExtend(TH1::kAllAxes);
+          if (!hkeep) {
+             hist->GetXaxis()->SetTitle(fVar[0]->GetTitle());
+             hist->SetBit(kCanDelete);
+@@ -613,7 +613,7 @@
+             fVmax[1] = xmax;
+             fVmin[0] = ymin;
+             fVmax[0] = ymax;
+-            if (xmin < xmax && ymin < ymax) canRebin = kFALSE;
++            if (xmin < xmax && ymin < ymax) canExtend = kFALSE;
+          }
+       }
+       if (profile || opt.Contains("prof")) {
+@@ -626,7 +626,7 @@
+                fAction = -4;
+                fVmin[1] = xmin;
+                fVmax[1] = xmax;
+-               if (xmin < xmax) canRebin = kFALSE;
++               if (xmin < xmax) canExtend = kFALSE;
+             }
+             if (fAction == 2) {
+                //we come here when option = "same prof"
+@@ -659,7 +659,7 @@
+             hp->SetMarkerStyle(fTree->GetMarkerStyle());
+             hp->SetMarkerColor(fTree->GetMarkerColor());
+             hp->SetMarkerSize(fTree->GetMarkerSize());
+-            if (canRebin)hp->SetBit(TH1::kCanRebin);
++            if (canExtend) hp->SetCanExtend(TH1::kAllAxes);
+          }
+          fVar[1]->SetAxis(hp->GetXaxis());
+          fObject = hp;
+@@ -678,7 +678,7 @@
+             h2->SetMarkerStyle(fTree->GetMarkerStyle());
+             h2->SetMarkerColor(fTree->GetMarkerColor());
+             h2->SetMarkerSize(fTree->GetMarkerSize());
+-            if (canRebin)h2->SetBit(TH1::kCanRebin);
++            if (canExtend) h2->SetCanExtend(TH1::kAllAxes);
+             if (!hkeep) {
+                h2->GetXaxis()->SetTitle(fVar[1]->GetTitle());
+                h2->GetYaxis()->SetTitle(fVar[0]->GetTitle());
+@@ -755,7 +755,7 @@
+             fVmax[1] = ymax;
+             fVmin[0] = zmin;
+             fVmax[0] = zmax;
+-            if (xmin < xmax && ymin < ymax && zmin < zmax) canRebin = kFALSE;
++            if (xmin < xmax && ymin < ymax && zmin < zmax) canExtend = kFALSE;
+          }
+       }
+       if ((fDimension == 3) && (profile || opt.Contains("prof"))) {
+@@ -770,7 +770,7 @@
+                fVmax[2] = xmax;
+                fVmin[1] = ymin;
+                fVmax[1] = ymax;
+-               if (xmin < xmax && ymin < ymax) canRebin = kFALSE;
++               if (xmin < xmax && ymin < ymax) canExtend = kFALSE;
+             }
+             if (opt.Contains("profs")) {
+                hp = new TProfile2D(hname, htitle.Data(), fNbins[2], fVmin[2], fVmax[2], fNbins[1], fVmin[1], fVmax[1], "s");
+@@ -793,7 +793,7 @@
+             hp->SetMarkerStyle(fTree->GetMarkerStyle());
+             hp->SetMarkerColor(fTree->GetMarkerColor());
+             hp->SetMarkerSize(fTree->GetMarkerSize());
+-            if (canRebin)hp->SetBit(TH1::kCanRebin);
++            if (canExtend) hp->SetCanExtend(TH1::kAllAxes);
+          }
+          fVar[1]->SetAxis(hp->GetYaxis());
+          fVar[2]->SetAxis(hp->GetXaxis());
+@@ -812,7 +812,7 @@
+             h2->SetMarkerStyle(fTree->GetMarkerStyle());
+             h2->SetMarkerColor(fTree->GetMarkerColor());
+             h2->SetMarkerSize(fTree->GetMarkerSize());
+-            if (canRebin)h2->SetBit(TH1::kCanRebin);
++            if (canExtend) h2->SetCanExtend(TH1::kAllAxes);
+             if (!hkeep) {
+                h2->GetXaxis()->SetTitle(fVar[1]->GetTitle());
+                h2->GetZaxis()->SetTitle(fVar[0]->GetTitle());
+@@ -839,7 +839,7 @@
+             h3->SetMarkerStyle(fTree->GetMarkerStyle());
+             h3->SetMarkerColor(fTree->GetMarkerColor());
+             h3->SetMarkerSize(fTree->GetMarkerSize());
+-            if (canRebin)h3->SetBit(TH1::kCanRebin);
++            if (canExtend) h3->SetCanExtend(TH1::kAllAxes);
+             if (!hkeep) {
+                //small correction for the title offsets in x,y to take into account the angles
+                Double_t xoffset = h3->GetXaxis()->GetTitleOffset();
+@@ -1346,7 +1346,7 @@
+    //__________________________2D scatter plot_______________________
+    else if (fAction == 12) {
+       TH2 *h2 = (TH2*)fObject;
+-      if (h2->TestBit(TH1::kCanRebin) && h2->TestBit(kCanDelete)) {
++      if (h2->CanExtendAllAxes() && h2->TestBit(kCanDelete)) {
+          for (i = 0; i < fNfill; i++) {
+             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
+             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
+@@ -1517,7 +1517,7 @@
+    //__________________________1-D histogram_______________________
+    if (fAction ==  1) {
+       TH1 *h1 = (TH1*)fObject;
+-      if (fObject->TestBit(TH1::kCanRebin)) {
++      if (h1->CanExtendAllAxes()) {
+          for (i = 0; i < fNfill; i++) {
+             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
+             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
+@@ -1528,7 +1528,7 @@
+    //__________________________2-D histogram_______________________
+    } else if (fAction ==  2) {
+       TH2 *h2 = (TH2*)fObject;
+-      if (fObject->TestBit(TH1::kCanRebin)) {
++      if (h2->CanExtendAllAxes()) {
+          for (i = 0; i < fNfill; i++) {
+             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
+             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
+@@ -1541,7 +1541,7 @@
+    //__________________________Profile histogram_______________________
+    } else if (fAction ==  4) {
+       TProfile *hp = (TProfile*)fObject;
+-      if (fObject->TestBit(TH1::kCanRebin)) {
++      if (hp->CanExtendAllAxes()) {
+          for (i = 0; i < fNfill; i++) {
+             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
+             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
+@@ -1554,7 +1554,7 @@
+    //__________________________2D scatter plot_______________________
+    } else if (fAction == 12) {
+       TH2 *h2 = (TH2*)fObject;
+-      if (h2->TestBit(TH1::kCanRebin)) {
++      if (h2->CanExtendAllAxes()) {
+          for (i = 0; i < fNfill; i++) {
+             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
+             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
+@@ -1617,7 +1617,7 @@
+    } else if (fAction == 33) {
+       TH2 *h2 = (TH2*)fObject;
+       Bool_t process2 = kFALSE;
+-      if (h2->TestBit(TH1::kCanRebin)) {
++      if (h2->CanExtendAllAxes()) {
+          if (vminOld[2] == DBL_MAX)
+             process2 = kTRUE;
+          for (i = 0; i < fValSize && i < 4; i++) {
+@@ -1639,7 +1639,7 @@
+       //__________________________3D scatter plot_______________________
+    } else if (fAction == 3 || fAction == 13) {
+       TH3 *h3 = (TH3*)fObject;
+-      if (fObject->TestBit(TH1::kCanRebin)) {
++      if (h3->CanExtendAllAxes()) {
+          for (i = 0; i < fNfill; i++) {
+             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
+             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
+@@ -1691,7 +1691,7 @@
+    //__________________________2D Profile Histogram__________________
+    } else if (fAction == 23) {
+       TProfile2D *hp = (TProfile2D*)fObject;
+-      if (hp->TestBit(TH1::kCanRebin)) {
++      if (hp->CanExtendAllAxes()) {
+          for (i = 0; i < fNfill; i++) {
+             if (fVmin[0] > fVal[0][i]) fVmin[0] = fVal[0][i];
+             if (fVmax[0] < fVal[0][i]) fVmax[0] = fVal[0][i];
+@@ -1706,7 +1706,7 @@
+    //__________________________4D scatter plot_______________________
+    } else if (fAction == 40) {
+       TH3 *h3 = (TH3*)fObject;
+-      if (fObject->TestBit(TH1::kCanRebin)) {
++      if (h3->CanExtendAllAxes()) {
+          for (i = 0; i < fValSize && i < 4; i++) {
+             fVmin[i] = vminOld[i];
+             fVmax[i] = vmaxOld[i];
+Index: tree/treeplayer/src/TTreePlayer.cxx
+===================================================================
+--- tree/treeplayer/src/TTreePlayer.cxx	(revision 48022)
++++ tree/treeplayer/src/TTreePlayer.cxx	(working copy)
+@@ -523,7 +523,7 @@
+       gStyle->SetCanvasPreferGL(pgl);
+    }
+ 
+-   if (fHistogram) fHistogram->ResetBit(TH1::kCanRebin);
++   if (fHistogram) fHistogram->SetCanExtend(TH1::kNoAxis);
+    return fSelectedRows;
+ }
+ 
+Index: geom/geompainter/src/TGeoChecker.cxx
+===================================================================
+--- geom/geompainter/src/TGeoChecker.cxx	(revision 48022)
++++ geom/geompainter/src/TGeoChecker.cxx	(working copy)
+@@ -579,7 +579,7 @@
+    TH1F *h = new TH1F("h","number of boundary crossings per volume",3,0,3);
+    h->SetStats(0);
+    h->SetFillColor(38);
+-   h->SetBit(TH1::kCanRebin);
++   h->SetCanExtend(TH1::kAllAxes);
+    
+    memset(fFlags, 0, nuid*sizeof(Bool_t));
+    for (i=0; i<nuid; i++) {
+@@ -603,7 +603,7 @@
+    TH1F *h1 = new TH1F("h1","percent of time spent per volume",3,0,3);
+    h1->SetStats(0);
+    h1->SetFillColor(38);
+-   h1->SetBit(TH1::kCanRebin);
++   h1->SetCanExtend(TH1::kAllAxes);
+    for (i=0; i<nuid; i++) {
+       vol = fGeoManager->GetVolume(i);
+       if (!vol || !vol->GetNdaughters()) continue;
+Index: gui/ged/src/TH1Editor.cxx
+===================================================================
+--- gui/ged/src/TH1Editor.cxx	(revision 48022)
++++ gui/ged/src/TH1Editor.cxx	(working copy)
+@@ -1698,7 +1698,7 @@
+       fHist->SetBins(nx,fBinHist->GetXaxis()->GetXmin(),
+                      fBinHist->GetXaxis()->GetXmax());
+       fHist->Add(fBinHist);
+-      fHist->ResetBit(TH1::kCanRebin);
++      fHist->SetCanExtend(TH1::kNoAxis);
+       fHist->Rebin(divx[numx]);
+       // fModel=fHist;
+       if (divx[0]!=2) {
+@@ -1760,7 +1760,7 @@
+       fHist->SetBins(nx,fBinHist->GetXaxis()->GetXmin(),
+                      fBinHist->GetXaxis()->GetXmax());
+       fHist->Add(fBinHist);
+-      fHist->ResetBit(TH1::kCanRebin);
++      fHist->SetCanExtend(TH1::kNoAxis);
+       fHist->Rebin(divx[numx]);
+       //fModel=fHist;
+       TAxis* xaxis = fHist->GetXaxis();
+@@ -1828,7 +1828,7 @@
+    Double_t rmin = xaxis->GetBinLowEdge(first);  // recent min in user coords
+    Double_t rmax = xaxis->GetBinUpEdge(last);    // recent max in user coords
+    
+-   ((TH1*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++   ((TH1*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+    ((TH1*)player->GetHistogram())->Reset();
+ 
+    // get new Number of bins
+@@ -1937,7 +1937,7 @@
+    Double_t rmin = xaxis->GetBinLowEdge(first);   // recent min in user coords
+    Double_t rmax = xaxis->GetBinUpEdge(last);     // recent max in user coords
+    
+-   ((TH1*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++   ((TH1*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+    ((TH1*)player->GetHistogram())->Reset();
+ 
+ // Calculate the new number of bins in the complete range
+@@ -2005,7 +2005,7 @@
+       Double_t rmin = xaxis->GetBinLowEdge(first);     // recent min in user coords
+       Double_t rmax = xaxis->GetBinUpEdge(last);       // recent max in user coords
+    
+-      ((TH1*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++      ((TH1*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+       ((TH1*)player->GetHistogram())->Reset();
+  
+       ((TH1*)player->GetHistogram())->SetBins(nx,
+@@ -2052,7 +2052,7 @@
+       Double_t rmin = xaxis->GetBinLowEdge(first);     // recent min in user coords
+       Double_t rmax = xaxis->GetBinUpEdge(last);       // recent max in user coords
+    
+-      ((TH1*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++      ((TH1*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+       ((TH1*)player->GetHistogram())->Reset();
+  
+       ((TH1*)player->GetHistogram())->SetBins(nx,
+@@ -2096,7 +2096,7 @@
+    Double_t rmin = xaxis->GetBinLowEdge(first);     // recent min in user coords
+    Double_t rmax = xaxis->GetBinUpEdge(last);       // recent max in user coords
+    
+-   ((TH1*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++   ((TH1*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+    ((TH1*)player->GetHistogram())->Reset();
+ 
+    ((TH1*)player->GetHistogram())->SetBins(nx,
+Index: gui/ged/src/TH2Editor.cxx
+===================================================================
+--- gui/ged/src/TH2Editor.cxx	(revision 48022)
++++ gui/ged/src/TH2Editor.cxx	(working copy)
+@@ -1580,7 +1580,7 @@
+                      ny,fBinHist->GetYaxis()->GetXmin(),
+                      fBinHist->GetYaxis()->GetXmax());
+       fHist->Add(fBinHist);
+-      fHist->ResetBit(TH1::kCanRebin);
++      fHist->SetCanExtend(TH1::kNoAxis);
+       fHist->Rebin2D(divx[numx], divy[numy]);
+ 
+       //fModel=fHist;
+@@ -1686,7 +1686,7 @@
+                      ny,fBinHist->GetYaxis()->GetXmin(),
+                      fBinHist->GetYaxis()->GetXmax());
+       fHist->Add(fBinHist);
+-      fHist->ResetBit(TH1::kCanRebin);
++      fHist->SetCanExtend(TH1::kNoAxis);
+       fHist->Rebin2D(divx[numx], divy[numy]);
+       //fModel=fHist;
+       if (divx[0]!=2) {
+@@ -1897,7 +1897,7 @@
+    Double_t rminy = yaxis->GetBinLowEdge(firsty);  // recent min in user coords
+    Double_t rmaxy = yaxis->GetBinUpEdge(lasty);    // recent max in user coords
+ 
+-   ((TH2*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++   ((TH2*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+    ((TH2*)player->GetHistogram())->Reset();
+ 
+    // Get new Number of bins
+@@ -2029,7 +2029,7 @@
+    Double_t rminy = yaxis->GetBinLowEdge(firsty);   // recent min in user coords
+    Double_t rmaxy = yaxis->GetBinUpEdge(lasty);     // recent max in user coords
+ 
+-   ((TH2*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++   ((TH2*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+    ((TH2*)player->GetHistogram())->Reset();
+ 
+    // Calculate the new number of bins in the complete range
+@@ -2129,7 +2129,7 @@
+       Double_t rminy = yaxis->GetBinLowEdge(firsty); // recent min in user coords
+       Double_t rmaxy = yaxis->GetBinUpEdge(lasty);   // recent max in user coords
+ 
+-      ((TH2*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++      ((TH2*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+       ((TH2*)player->GetHistogram())->Reset();
+ 
+       ((TH2*)player->GetHistogram())->SetBins(nx, minx-oldXOffset+xOffset,
+@@ -2197,7 +2197,7 @@
+       Double_t rminy = yaxis->GetBinLowEdge(firsty); // recent min in user coords
+       Double_t rmaxy = yaxis->GetBinUpEdge(lasty);   // recent max in user coords
+ 
+-      ((TH2*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++      ((TH2*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+       ((TH2*)player->GetHistogram())->Reset();
+ 
+       ((TH2*)player->GetHistogram())->SetBins(nx,minx-oldXOffset+xOffset,
+@@ -2262,7 +2262,7 @@
+    Double_t rminy = yaxis->GetBinLowEdge(firsty);  // recent min in user coords
+    Double_t rmaxy = yaxis->GetBinUpEdge(lasty);    // recent max in user coords
+ 
+-   ((TH2*)player->GetHistogram())->ResetBit(TH1::kCanRebin);
++   ((TH2*)player->GetHistogram())->SetCanExtend(TH1::kNoAxis);
+    ((TH2*)player->GetHistogram())->Reset();
+ 
+    ((TH2*)player->GetHistogram())->SetBins(nx,minx+xOffset-oldXOffset,
+Index: proof/proofbench/src/TSelEvent.cxx
+===================================================================
+--- proof/proofbench/src/TSelEvent.cxx	(revision 48022)
++++ proof/proofbench/src/TSelEvent.cxx	(working copy)
+@@ -180,7 +180,7 @@
+    fNTracksHist = new TH1F("ntracks_dist","N_{Tracks} per Event"
+                            " Distribution", 100, 50, 150);
+    //enable rebinning
+-   fNTracksHist->SetBit(TH1::kCanRebin);
++   fNTracksHist->SetCanExtend(TH1::kAllAxes);
+    fNTracksHist->SetDirectory(0);
+    fNTracksHist->GetXaxis()->SetTitle("N_{Tracks}");
+    fNTracksHist->GetYaxis()->SetTitle("N_{Events}");
+Index: proof/proofplayer/src/TPerfStats.cxx
+===================================================================
+--- proof/proofplayer/src/TPerfStats.cxx	(revision 48022)
++++ proof/proofplayer/src/TPerfStats.cxx	(working copy)
+@@ -244,7 +244,7 @@
+                            fSlaves, 0, fSlaves);
+       fNodeHist->SetDirectory(0);
+       fNodeHist->SetMinimum(0);
+-      fNodeHist->SetBit(TH1::kCanRebin);
++      fNodeHist->SetCanExtend(TH1::kAllAxes);
+       output->Add(fNodeHist);
+       PDB(kMonitoring,1)
+          Info("TPerfStats", "histo '%s' added to the output list", fNodeHist->GetName());
+@@ -255,7 +255,7 @@
+                               ntime_bins, min_time, time_per_bin);
+       fLatencyHist->SetDirectory(0);
+       fLatencyHist->SetMarkerStyle(4);
+-      fLatencyHist->SetBit(TH1::kCanRebin);
++      fLatencyHist->SetCanExtend(TH1::kAllAxes);
+       output->Add(fLatencyHist);
+       PDB(kMonitoring,1)
+          Info("TPerfStats", "histo '%s' added to the output list", fLatencyHist->GetName());
+@@ -266,7 +266,7 @@
+                                ntime_bins, min_time, time_per_bin);
+       fProcTimeHist->SetDirectory(0);
+       fProcTimeHist->SetMarkerStyle(4);
+-      fProcTimeHist->SetBit(TH1::kCanRebin);
++      fProcTimeHist->SetCanExtend(TH1::kAllAxes);
+       output->Add(fProcTimeHist);
+       PDB(kMonitoring,1)
+          Info("TPerfStats", "histo '%s' added to the output list", fProcTimeHist->GetName());
+@@ -277,7 +277,7 @@
+                               ntime_bins, min_time, time_per_bin);
+       fCpuTimeHist->SetDirectory(0);
+       fCpuTimeHist->SetMarkerStyle(4);
+-      fCpuTimeHist->SetBit(TH1::kCanRebin);
++      fCpuTimeHist->SetCanExtend(TH1::kAllAxes);
+       output->Add(fCpuTimeHist);
+       PDB(kMonitoring,1)
+          Info("TPerfStats", "histo '%s' added to the output list", fCpuTimeHist->GetName());
+Index: proof/proofplayer/src/TProofDraw.cxx
+===================================================================
+--- proof/proofplayer/src/TProofDraw.cxx	(revision 48022)
++++ proof/proofplayer/src/TProofDraw.cxx	(working copy)
+@@ -819,7 +819,7 @@
+             fHistogram->SetBuffer(TH1::GetDefaultBufferSize());
+          if (TNamed *opt = dynamic_cast<TNamed*> (fInput->FindObject("PROOF_OPTIONS"))) {
+             if (strstr(opt->GetTitle(), "rebin"))
+-               fHistogram->SetBit(TH1::kCanRebin);
++               fHistogram->SetCanExtend(TH1::kAllAxes);
+          }
+       }
+       fHistogram->SetDirectory(0);   // take ownership
+@@ -1268,7 +1268,7 @@
+ 
+       if (TNamed *opt = dynamic_cast<TNamed*> (fInput->FindObject("PROOF_OPTIONS"))) {
+          if (strstr(opt->GetTitle(), "rebin"))
+-            fProfile->SetBit(TH1::kCanRebin);
++            fProfile->SetCanExtend(TH1::kAllAxes);
+       }
+       fProfile->SetDirectory(0);   // take ownership
+       fOutput->Add(fProfile);      // release ownership
+@@ -1511,7 +1511,7 @@
+ 
+       if (TNamed *opt = dynamic_cast<TNamed*> (fInput->FindObject("PROOF_OPTIONS"))) {
+          if (strstr(opt->GetTitle(), "rebin"))
+-            fProfile->SetBit(TH1::kCanRebin);
++            fProfile->SetCanExtend(TH1::kAllAxes);
+       }
+       fProfile->SetDirectory(0);   // take ownership
+       fOutput->Add(fProfile);      // release ownership
+@@ -1668,16 +1668,16 @@
+          hist->SetBit(TH1::kNoStats);
+          hist->SetBit(kCanDelete);
+          if (fTreeDrawArgsParser.GetNoParameters() != 6)
+-            hist->SetBit(TH1::kCanRebin);
++            hist->SetCanExtend(TH1::kAllAxes);
+          else
+-            hist->ResetBit(TH1::kCanRebin);
++            hist->SetCanExtend(TH1::kNoAxis);
+ //         if (fTreeDrawArgsParser.GetShouldDraw())    // ?? FIXME
+ //            hist->SetDirectory(0);
+       } else {
+          if (!fTreeDrawArgsParser.GetAdd())
+             hist->Reset();
+       }
+-      if (hist->TestBit(TH1::kCanRebin) && hist->TestBit(kCanDelete)) {
++      if (hist->CanExtendAllAxes() && hist->TestBit(kCanDelete)) {
+          Double_t* xArray = fGraph->GetX();
+          Double_t* yArray = fGraph->GetY();
+          Double_t xmin = *std::min_element(xArray, xArray+fGraph->GetN());
+@@ -1833,9 +1833,9 @@
+             hist->SetBit(TH1::kNoStats);
+             hist->SetBit(kCanDelete);
+             if (fTreeDrawArgsParser.GetNoParameters() != 9)
+-               hist->SetBit(TH1::kCanRebin);
++               hist->SetCanExtend(TH1::kAllAxes);
+             else
+-               hist->ResetBit(TH1::kCanRebin);
++               hist->SetCanExtend(TH1::kNoAxis);
+          } else {
+             checkPrevious = kTRUE;
+             PDB(kDraw,2)
+@@ -1849,7 +1849,7 @@
+ 
+       // Set the ranges; take into account previous histos for 'same' runs
+       Double_t rmin[3], rmax[3];
+-      if (hist->TestBit(TH1::kCanRebin) && hist->TestBit(kCanDelete)) {
++      if (hist->CanExtendAllAxes() && hist->TestBit(kCanDelete)) {
+          rmin[0] = rmax[0] = rmin[1] = rmax[1] = rmin[2] = rmax[2] = 0;
+          if (fPolyMarker3D->Size() > 0) {
+             fPolyMarker3D->GetPoint(0, rmin[0], rmin[1], rmin[2]);
+@@ -1993,9 +1993,9 @@
+          hist->SetBit(TH1::kNoStats);
+          hist->SetBit(kCanDelete);
+          if (fTreeDrawArgsParser.GetNoParameters() != 6)
+-            hist->SetBit(TH1::kCanRebin);
++            hist->SetCanExtend(TH1::kAllAxes);
+          else
+-            hist->ResetBit(TH1::kCanRebin);
++            hist->SetCanExtend(TH1::kNoAxis);
+ 
+ //         if (fTreeDrawArgsParser.GetShouldDraw())         // ?? FIXME
+ //            hist->SetDirectory(0);
+@@ -2018,7 +2018,7 @@
+             if (rmin[2] > i->fZ) rmin[2] = i->fZ;
+          }
+          // in this case we don't care about user-specified limits
+-         if (hist->TestBit(TH1::kCanRebin) && hist->TestBit(kCanDelete)) {
++         if (hist->CanExtendAllAxes() && hist->TestBit(kCanDelete)) {
+             THLimitsFinder::GetLimitsFinder()->FindGoodLimits(hist,
+                            rmin[1], rmax[1], rmin[2], rmax[2]);
+          }
+@@ -2157,9 +2157,9 @@
+          hist->SetBit(TH1::kNoStats);
+          hist->SetBit(kCanDelete);
+          if (fTreeDrawArgsParser.GetNoParameters() != 9)
+-            hist->SetBit(TH1::kCanRebin);
++            hist->SetCanExtend(TH1::kAllAxes);
+          else
+-            hist->ResetBit(TH1::kCanRebin);
++            hist->SetCanExtend(TH1::kNoAxis);
+ 
+ //         if (fTreeDrawArgsParser.GetShouldDraw())          // ?? FIXME
+ //            hist->SetDirectory(0);
+@@ -2186,7 +2186,7 @@
+             if (rmin[3] > i->fT) rmin[3] = i->fT;
+          }
+          // in this case we don't care about user-specified limits
+-         if (hist->TestBit(TH1::kCanRebin) && hist->TestBit(kCanDelete)) {
++         if (hist->CanExtendAllAxes() && hist->TestBit(kCanDelete)) {
+             THLimitsFinder::GetLimitsFinder()->FindGoodLimits(hist,
+                               rmin[1], rmax[1], rmin[2], rmax[2], rmin[3], rmax[3]);
+          }
