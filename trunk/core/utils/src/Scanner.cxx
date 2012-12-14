@@ -14,6 +14,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallSet.h"
+#include "clang/Sema/Sema.h"
+#include "clang/Frontend/CompilerInstance.h"
 
 #include "cling/Interpreter/Interpreter.h"
 extern cling::Interpreter *gInterp;
@@ -790,6 +792,17 @@ bool RScanner::VisitRecordDecl(clang::RecordDecl* D)
       // For the case kDontCare, the rule is just a place holder and we are actually trying to exclude some of its children
       // (this is used only in the selection xml case).
       
+      // Reject the selection of std::pair on the ground that it is trivial
+      // and can easily be recreated from the AST information.
+      if (D->getName() == "pair") {
+         const clang::NamespaceDecl *ctxt = llvm::dyn_cast<clang::NamespaceDecl>(D->getDeclContext())->getCanonicalDecl();
+         if (ctxt && ctxt == fInterpreter.getCI()->getSema().getStdNamespace()) { 
+            if (selected->HasAttributeWithName("file_name") || selected->HasAttributeWithName("file_pattern")) {
+               return true;
+            }
+         }
+      }
+
 #ifdef SELECTION_DEBUG
       if (fVerboseLevel > 3) std::cout<<"\n\tSelected -> true";
 #endif

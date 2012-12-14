@@ -24,18 +24,20 @@
 
 #include "TClingTypeInfo.h"
 
-#include "Property.h"
-#include "TClingProperty.h"
+#include "TDictionary.h"
 #include "Rtypes.h" // for gDebug
 #include "TClassEdit.h"
 #include "TMetaUtils.h"
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/LookupHelper.h"
 #include "cling/Utils/AST.h"
+
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Frontend/CompilerInstance.h"
+
 #include <cstdio>
 #include <string>
 
@@ -99,9 +101,8 @@ const char *TClingTypeInfo::Name() const
    // Note: This *must* be static because we are returning a pointer inside it!
    static std::string buf;
    buf.clear();
-   clang::PrintingPolicy Policy(fInterp->getCI()->getASTContext().
-                                getPrintingPolicy());
-   fQualType.getAsStringInternal(buf, Policy);
+
+   ROOT::TMetaUtils::GetFullyQualifiedTypeName(buf,fQualType,*fInterp);
    return buf.c_str();
 }
 
@@ -113,11 +114,11 @@ long TClingTypeInfo::Property() const
    }
    long property = 0L;
    if (llvm::isa<clang::TypedefType>(*fQualType)) {
-      property |= G__BIT_ISTYPEDEF;
+      property |= kIsTypedef;
    }
    clang::QualType QT = fQualType.getCanonicalType();
    if (QT.isConstQualified()) {
-      property |= G__BIT_ISCONSTANT;
+      property |= kIsConstant;
    }
    while (1) {
       if (QT->isArrayType()) {
@@ -125,14 +126,14 @@ long TClingTypeInfo::Property() const
          continue;
       }
       else if (QT->isReferenceType()) {
-         property |= G__BIT_ISREFERENCE;
+         property |= kIsReference;
          QT = llvm::cast<clang::ReferenceType>(QT)->getPointeeType();
          continue;
       }
       else if (QT->isPointerType()) {
-         property |= G__BIT_ISPOINTER;
+         property |= kIsPointer;
          if (QT.isConstQualified()) {
-            property |= G__BIT_ISPCONSTANT;
+            property |= kIsConstPointer;
          }
          QT = llvm::cast<clang::PointerType>(QT)->getPointeeType();
          continue;
@@ -144,10 +145,34 @@ long TClingTypeInfo::Property() const
       break;
    }
    if (QT->isBuiltinType()) {
-      property |= G__BIT_ISFUNDAMENTAL;
+      property |= kIsFundamental;
    }
    if (QT.isConstQualified()) {
-      property |= G__BIT_ISCONSTANT;
+      property |= kIsConstant;
+   }
+   const clang::TagType *tagQT = llvm::dyn_cast<clang::TagType>(QT.getTypePtr());
+   if (tagQT) {
+      // Note: Now we have class, enum, struct, union only.
+      const clang::TagDecl *TD = llvm::dyn_cast<clang::TagDecl>(tagQT->getDecl());
+      if (TD->isEnum()) {
+         property |= kIsEnum;
+      } else {
+         // Note: Now we have class, struct, union only.
+         const clang::CXXRecordDecl *CRD =
+            llvm::dyn_cast<clang::CXXRecordDecl>(TD);
+         if (CRD->isClass()) {
+            property |= kIsClass;
+         }
+         else if (CRD->isStruct()) {
+            property |= kIsStruct;
+         }
+         else if (CRD->isUnion()) {
+            property |= kIsUnion;
+         }
+         if (CRD->isThisDeclarationADefinition() && CRD->isAbstract()) {
+            property |= kIsAbstract;
+         }
+      }
    }
    return property;
 }
@@ -188,10 +213,10 @@ int TClingTypeInfo::RefType() const
    }
    if (is_ref) {
       if (cnt < 2) {
-         val = G__PARAREFERENCE;
+         val = kParaReference;
       }
       else {
-         val |= G__PARAREF;
+         val |= kParaRef;
       }
    }
    return val;
@@ -264,13 +289,8 @@ const char *TClingTypeInfo::TrueName(const ROOT::TMetaUtils::TNormalizedCtxt &no
    // Note: This *must* be static because we are returning a pointer inside it.
    static std::string buf;
    buf.clear();
-   
-   const clang::ASTContext &ctxt = fInterp->getCI()->getASTContext();
-   clang::PrintingPolicy Policy(ctxt.getPrintingPolicy());
-   
-   clang::QualType normalizedType = cling::utils::Transform::GetPartiallyDesugaredType(ctxt, fQualType, normCtxt.GetTypeToSkip(), true /* fully qualify */); 
-   normalizedType = ROOT::TMetaUtils::AddDefaultParameters(normalizedType, *fInterp, normCtxt);
-   normalizedType.getAsStringInternal(buf,Policy);
+
+   ROOT::TMetaUtils::GetNormalizedName(buf,fQualType, *fInterp, normCtxt);
 
    return buf.c_str();
 }

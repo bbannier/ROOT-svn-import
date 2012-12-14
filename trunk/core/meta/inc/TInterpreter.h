@@ -33,7 +33,7 @@ class TMethod;
 class TObjArray;
 class TVirtualMutex;
 
-R__EXTERN TVirtualMutex *gCINTMutex;
+R__EXTERN TVirtualMutex *gClingMutex;
 
 class TInterpreter : public TNamed {
 
@@ -62,6 +62,8 @@ public:
    virtual Int_t    GetExitCode() const = 0;
    virtual TEnv    *GetMapfile() const { return 0; }
    virtual Int_t    GetMore() const = 0;
+   virtual TClass  *GenerateTClass(const char *classname, Bool_t silent = kFALSE) = 0; 
+   virtual TClass  *GenerateTClass(ClassInfo_t *classinfo, Bool_t silent = kFALSE) = 0; 
    virtual Int_t    GenerateDictionary(const char *classes, const char *includes = 0, const char *options = 0) = 0; 
    virtual char    *GetPrompt() = 0;
    virtual const char *GetSharedLibs() = 0;
@@ -99,6 +101,7 @@ public:
    virtual void     UpdateListOfTypes() = 0;
    virtual void     SetClassInfo(TClass *cl, Bool_t reload = kFALSE) = 0;
    virtual Bool_t   CheckClassInfo(const char *name, Bool_t autoload = kTRUE) = 0;
+   virtual Bool_t   CheckClassTemplate(const char *name) = 0;
    virtual Long_t   Calc(const char *line, EErrorCode* error = 0) = 0;
    virtual void     CreateListOfBaseClasses(TClass *cl) = 0;
    virtual void     CreateListOfDataMembers(TClass *cl) = 0;
@@ -149,7 +152,7 @@ public:
    virtual int    UnloadFile(const char * /* path */) const {return 0;}
    
    
-   // G__CallFunc interface
+   // CallFunc interface
    virtual void   CallFunc_Delete(void * /* func */) const {;}
    virtual void   CallFunc_Exec(CallFunc_t * /* func */, void * /* address */) const {;}
    virtual Long_t    CallFunc_ExecInt(CallFunc_t * /* func */, void * /* address */) const {return 0;}
@@ -172,7 +175,7 @@ public:
    virtual void   CallFunc_SetFuncProto(CallFunc_t * /* func */, ClassInfo_t * /* info */, const char * /* method */, const char * /* proto */, Long_t * /* Offset */) const {;}
 
                
-   // G__ClassInfo interface            
+   // ClassInfo interface            
    virtual Long_t ClassInfo_ClassProperty(ClassInfo_t * /* info */) const {return 0;}
    virtual void   ClassInfo_Delete(ClassInfo_t * /* info */) const {;}
    virtual void   ClassInfo_Delete(ClassInfo_t * /* info */, void * /* arena */) const {;}
@@ -206,7 +209,7 @@ public:
    virtual const char *ClassInfo_TmpltName(ClassInfo_t * /* info */) const {return 0;}
    
                   
-   // G__BaseClassInfo interface            
+   // BaseClassInfo interface            
    virtual void   BaseClassInfo_Delete(BaseClassInfo_t * /* bcinfo */) const {;}
    virtual BaseClassInfo_t  *BaseClassInfo_Factory(ClassInfo_t * /* info */) const {return 0;}
    virtual int    BaseClassInfo_Next(BaseClassInfo_t * /* bcinfo */) const {return 0;}
@@ -218,7 +221,7 @@ public:
    virtual const char *BaseClassInfo_Name(BaseClassInfo_t * /* bcinfo */) const {return 0;}
    virtual const char *BaseClassInfo_TmpltName(BaseClassInfo_t * /* bcinfo */) const {return 0;}
                
-   // G__DataMemberInfo interface            
+   // DataMemberInfo interface            
    virtual int    DataMemberInfo_ArrayDim(DataMemberInfo_t * /* dminfo */) const {return 0;}
    virtual void   DataMemberInfo_Delete(DataMemberInfo_t * /* dminfo */) const {;}
    virtual DataMemberInfo_t  *DataMemberInfo_Factory(ClassInfo_t * /* clinfo */ = 0) const {return 0;}
@@ -236,7 +239,7 @@ public:
    virtual const char *DataMemberInfo_Title(DataMemberInfo_t * /* dminfo */) const {return 0;}
    virtual const char *DataMemberInfo_ValidArrayIndex(DataMemberInfo_t * /* dminfo */) const {return 0;}
                
-   // G__MethodInfo interface            
+   // MethodInfo interface            
    virtual void   MethodInfo_CreateSignature(MethodInfo_t * /* minfo */, TString & /* signature */) const {;}
    virtual void   MethodInfo_Delete(MethodInfo_t * /* minfo */) const {;}
    virtual MethodInfo_t  *MethodInfo_Factory() const {return 0;}
@@ -255,7 +258,7 @@ public:
    virtual const char *MethodInfo_TypeName(MethodInfo_t * /* minfo */) const {return 0;}
    virtual const char *MethodInfo_Title(MethodInfo_t * /* minfo */) const {return 0;}
                
-   // G__MethodArgInfo interface            
+   // MethodArgInfo interface            
    virtual void   MethodArgInfo_Delete(MethodArgInfo_t * /* marginfo */) const {;}
    virtual MethodArgInfo_t  *MethodArgInfo_Factory() const {return 0;}
    virtual MethodArgInfo_t  *MethodArgInfo_Factory(MethodInfo_t * /*minfo*/) const {return 0;}
@@ -269,7 +272,7 @@ public:
    virtual const char *MethodArgInfo_TrueTypeName(MethodArgInfo_t * /* marginfo */) const {return 0;}
 
                   
-   // G__TypeInfo interface            
+   // TypeInfo interface            
    virtual void    TypeInfo_Delete(TypeInfo_t * /* tinfo */) const {;}
    virtual TypeInfo_t *TypeInfo_Factory() const {return 0;}
    virtual TypeInfo_t *TypeInfo_FactoryCopy(TypeInfo_t * /* tinfo */) const {return 0;}
@@ -282,7 +285,7 @@ public:
    virtual const char *TypeInfo_TrueName(TypeInfo_t * /* tinfo */) const {return 0;}
    
                   
-   // G__TypedefInfo interface            
+   // TypedefInfo interface            
    virtual void   TypedefInfo_Delete(TypedefInfo_t * /* tinfo */) const {;}
    virtual TypedefInfo_t  *TypedefInfo_Factory() const {return 0;}
    virtual TypedefInfo_t  *TypedefInfo_FactoryCopy(TypedefInfo_t * /* tinfo */) const {return 0;}
@@ -295,7 +298,7 @@ public:
    virtual const char *TypedefInfo_Name(TypedefInfo_t * /* tinfo */) const {return 0;}
    virtual const char *TypedefInfo_Title(TypedefInfo_t * /* tinfo */) const {return 0;}
 
-   static TInterpreter  *&Instance();
+   static TInterpreter *Instance();
 
    ClassDef(TInterpreter,0)  //ABC defining interface to generic interpreter
 };

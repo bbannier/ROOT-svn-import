@@ -31,11 +31,11 @@ class TObject;
 // Functions used to forward calls from code compiled with no-rtti to code 
 // compiled with rtti.
 extern "C" {
-   void TCintWithCling__UpdateListsOnCommitted(const cling::Transaction&);
-   void TCintWithCling__UpdateListsOnUnloaded(const cling::Transaction&); 
-   TObject* TCintWithCling__GetObjectAddress(const char *Name, void *&LookupCtx);
-   Decl* TCintWithCling__GetObjectDecl(TObject *obj);
-   int TCintWithCling__AutoLoadCallback(const char* className);
+   void TCling__UpdateListsOnCommitted(const cling::Transaction&);
+   void TCling__UpdateListsOnUnloaded(const cling::Transaction&); 
+   TObject* TCling__GetObjectAddress(const char *Name, void *&LookupCtx);
+   Decl* TCling__GetObjectDecl(TObject *obj);
+   int TCling__AutoLoadCallback(const char* className);
 }
 
 TClingCallbacks::TClingCallbacks(cling::Interpreter* interp) 
@@ -104,7 +104,7 @@ bool TClingCallbacks::tryAutoloadInternal(LookupResult &R, Scope *S) {
                                             SemaR.TUScope);
 
      bool lookupSuccess = false;
-     if (TCintWithCling__AutoLoadCallback(Name.getAsString().c_str())) {
+     if (TCling__AutoLoadCallback(Name.getAsString().c_str())) {
        pushedDCAndS.pop();
        cleanupRAII.pop();
        lookupSuccess = SemaR.LookupName(R, S);
@@ -139,6 +139,9 @@ bool TClingCallbacks::tryAutoloadInternal(LookupResult &R, Scope *S) {
 // returns true when declaration is found and no error should be emitted.
 //
 bool TClingCallbacks::tryFindROOTSpecialInternal(LookupResult &R, Scope *S) {
+   // User must be able to redefine the names that come from a file.
+   if (R.isForRedeclaration())
+      return false;
 
    Sema &SemaR = m_Interpreter->getSema();
    ASTContext& C = SemaR.getASTContext();
@@ -153,9 +156,23 @@ bool TClingCallbacks::tryFindROOTSpecialInternal(LookupResult &R, Scope *S) {
       if (!m_Interpreter->isUniqueWrapper(ND->getNameAsString()))
          return false;
 
-   TObject *obj = TCintWithCling__GetObjectAddress(Name.getAsString().c_str(), 
+   TObject *obj = TCling__GetObjectAddress(Name.getAsString().c_str(), 
                                                    fLastLookupCtx);
    if (obj) {
+
+#if defined(R__MUST_REVISIT)
+#if R__MUST_REVISIT(6,2)
+      // Register the address in TCling::fgSetOfSpecials
+      // to speed-up the execution of TCling::RecursiveRemove when 
+      // the object is not a special.
+      // See http://root.cern.ch/viewvc/trunk/core/meta/src/TCint.cxx?view=log#rev18109
+      if (!fgSetOfSpecials) {
+         fgSetOfSpecials = new std::set<TObject*>;
+      }
+      ((std::set<TObject*>*)fgSetOfSpecials)->insert((TObject*)*obj);
+#endif
+#endif
+
      VarDecl *VD = cast_or_null<VarDecl>(utils::Lookup::Named(&SemaR, 
                                                               Name, 
                                                         fROOTSpecialNamespace));
@@ -177,7 +194,7 @@ bool TClingCallbacks::tryFindROOTSpecialInternal(LookupResult &R, Scope *S) {
          // Save state of the PP
          Preprocessor::CleanupAndRestoreCacheRAII cleanupRAII(PP);
 
-         const Decl *TD = TCintWithCling__GetObjectDecl(obj);
+         const Decl *TD = TCling__GetObjectDecl(obj);
          // We will declare the variable as pointer.
          QualType QT = C.getPointerType(C.getTypeDeclType(cast<TypeDecl>(TD)));
          
@@ -201,7 +218,7 @@ bool TClingCallbacks::tryFindROOTSpecialInternal(LookupResult &R, Scope *S) {
          CO.CodeGeneration = 1;
 
          cling::Transaction T(CO, /*llvm::Module=*/0);
-         T.appendUnique(VD);
+         T.append(VD);
          T.setCompleted();
 
          m_Interpreter->codegen(&T);
@@ -225,14 +242,14 @@ void TClingCallbacks::TransactionCommitted(const Transaction &T) {
       const cling::Transaction* T = m_Interpreter->getFirstTransaction();
       while (T) {
          if (T->getState() == cling::Transaction::kCommitted)
-            TCintWithCling__UpdateListsOnCommitted(*T);
+            TCling__UpdateListsOnCommitted(*T);
          T = T->getNext();
       }
 
       fFirstRun = false;
    }
 
-   TCintWithCling__UpdateListsOnCommitted(T);
+   TCling__UpdateListsOnCommitted(T);
 }
 
 // The callback is used to update the list of globals in ROOT.
@@ -241,5 +258,5 @@ void TClingCallbacks::TransactionUnloaded(const Transaction &T) {
    if (!T.size())
       return;
 
-   TCintWithCling__UpdateListsOnUnloaded(T);
+   TCling__UpdateListsOnUnloaded(T);
 }

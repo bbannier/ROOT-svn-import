@@ -2551,16 +2551,18 @@ static void R__WriteDependencyFile(const TString &build_loc, const TString &depf
    TString adddictdep = "echo ";
    R__AddPath(adddictdep,targetname);
    adddictdep += ": ";
+#if defined(R__HAS_CLING_DICTVERSION)
    {
-      char *cintdictversion = gSystem->Which(incPath,"cintdictversion.h");
-      if (cintdictversion) {
-         R__AddPath(adddictdep,cintdictversion);
+      char *clingdictversion = gSystem->Which(incPath,"clingdictversion.h");
+      if (clingdictversion) {
+         R__AddPath(adddictdep,clingdictversion);
          adddictdep += " ";
-         delete [] cintdictversion;
+         delete [] clingdictversion;
       } else {
-         R__AddPath(adddictdep,rootsys+"/include/cintdictversion.h ");
+         R__AddPath(adddictdep,rootsys+"/include/clingdictversion.h ");
       }
    }
+#endif
    {
       char *rootVersion = gSystem->Which(incPath,"RVersion.h");
       if (rootVersion) {
@@ -2920,7 +2922,8 @@ int TSystem::CompileMacro(const char *filename, Option_t *opt,
          TString sub = includes(pos,len);
          sub.Remove(0,3); // Remove ' -I'
          AssignAndDelete( sub, ConcatFileName( WorkingDirectory(), sub ) );
-         sub.Prepend(" -I");
+         sub.Prepend(" -I\"");
+         sub.Append("\"");
          includes.Replace(pos,len,sub);
          pos = rel_inc.Index(includes,&len);
       }

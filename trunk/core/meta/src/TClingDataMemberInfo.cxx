@@ -25,8 +25,7 @@
 
 #include "TClingDataMemberInfo.h"
 
-#include "Property.h"
-#include "TClingProperty.h"
+#include "TDictionary.h"
 #include "TClingTypeInfo.h"
 #include "TMetaUtils.h"
 #include "TClassEdit.h"
@@ -251,7 +250,7 @@ long TClingDataMemberInfo::Offset() const
    }
 
    const Decl *D = GetDecl();
-
+   ASTContext& C = D->getASTContext();
    if (const FieldDecl *FldD = dyn_cast<FieldDecl>(D)) {
       // The current member is a non-static data member.
       clang::ASTContext &Context = FldD->getASTContext();
@@ -261,16 +260,31 @@ long TClingDataMemberInfo::Offset() const
       int64_t offset = Context.toCharUnitsFromBits(bits).getQuantity();
       return static_cast<long>(offset);
    } 
+   else if (const VarDecl *VD = dyn_cast<VarDecl>(D)) {
+      if (VD->getType()->isIntegralType(C) && VD->hasInit() &&
+          VD->checkInitIsICE()) {
+         // FIXME: We might want in future to printout the reason why the eval
+         // failed.
+         APValue* val = VD->evaluateValue();
+         return reinterpret_cast<long>(val->getInt().getRawData());
+      }
+      return reinterpret_cast<long>(fInterp->getAddressOfGlobal(VD));
+   }
    // FIXME: We have to explicitly check for not enum constant because the 
    // implementation of getAddressOfGlobal relies on mangling the name and in 
    // clang there is misbehaviour in MangleContext::shouldMangleDeclName.
-   else if (const VarDecl *VD = dyn_cast<VarDecl>(D))
-      return reinterpret_cast<long>(fInterp->getAddressOfGlobal(VD));
    // enum constants are esentially numbers and don't get addresses. However
    // ROOT expects the address to the enum constant initalizer to be returned.
    else if (const EnumConstantDecl *ECD = dyn_cast<EnumConstantDecl>(D))
+      // The raw data is stored as a long long, so we need to find the 'long'
+      // part.
+#ifdef R__BYTESWAP
+      // In this case at the beginning.
       return reinterpret_cast<long>(ECD->getInitVal().getRawData());
-   
+#else
+      // In this case in the second part.
+      return reinterpret_cast<long>(((char*)ECD->getInitVal().getRawData())+sizeof(long) );
+#endif   
    return -1L;
 }
 
@@ -280,18 +294,27 @@ long TClingDataMemberInfo::Property() const
       return 0L;
    }
    long property = 0L;
-   switch (GetDecl()->getAccess()) {
+   const clang::Decl *declaccess = GetDecl();
+   if (declaccess->getDeclContext()->isTransparentContext()) {
+      declaccess = llvm::dyn_cast<clang::Decl>(declaccess->getDeclContext());
+      if (!declaccess) declaccess = GetDecl();
+   }
+   switch (declaccess->getAccess()) {
       case clang::AS_public:
-         property |= G__BIT_ISPUBLIC;
+         property |= kIsPublic;
          break;
       case clang::AS_protected:
-         property |= G__BIT_ISPROTECTED;
+         property |= kIsProtected;
          break;
       case clang::AS_private:
-         property |= G__BIT_ISPRIVATE;
+         property |= kIsPrivate;
          break;
       case clang::AS_none:
-         // IMPOSSIBLE
+         if (declaccess->getDeclContext()->isNamespace()) {
+            property |= kIsPublic;
+         } else {
+            // IMPOSSIBLE
+         }
          break;
       default:
          // IMPOSSIBLE
@@ -299,38 +322,38 @@ long TClingDataMemberInfo::Property() const
    }
    if (const clang::VarDecl *vard = llvm::dyn_cast<clang::VarDecl>(GetDecl())) {
       if (vard->getStorageClass() == clang::SC_Static) {
-         property |= G__BIT_ISSTATIC;
+         property |= kIsStatic;
       }
    }
    if (llvm::isa<clang::EnumConstantDecl>(GetDecl())) {
       // Enumaration constant are considered to be 'static' data member in
       // the CINT (and thus ROOT) scheme.
-      property |= G__BIT_ISSTATIC;
+      property |= kIsStatic;
    }
    const clang::ValueDecl *vd = llvm::dyn_cast<clang::ValueDecl>(GetDecl());
    clang::QualType qt = vd->getType();
    if (llvm::isa<clang::TypedefType>(qt)) {
-      property |= G__BIT_ISTYPEDEF;
+      property |= kIsTypedef;
    }
    qt = qt.getCanonicalType();
    if (qt.isConstQualified()) {
-      property |= G__BIT_ISCONSTANT;
+      property |= kIsConstant;
    }
    while (1) {
       if (qt->isArrayType()) {
-         property |= G__BIT_ISARRAY;
+         property |= kIsArray;
          qt = llvm::cast<clang::ArrayType>(qt)->getElementType();
          continue;
       }
       else if (qt->isReferenceType()) {
-         property |= G__BIT_ISREFERENCE;
+         property |= kIsReference;
          qt = llvm::cast<clang::ReferenceType>(qt)->getPointeeType();
          continue;
       }
       else if (qt->isPointerType()) {
-         property |= G__BIT_ISPOINTER;
+         property |= kIsPointer;
          if (qt.isConstQualified()) {
-            property |= G__BIT_ISPCONSTANT;
+            property |= kIsConstPointer;
          }
          qt = llvm::cast<clang::PointerType>(qt)->getPointeeType();
          continue;
@@ -342,30 +365,30 @@ long TClingDataMemberInfo::Property() const
       break;
    }
    if (qt->isBuiltinType()) {
-      property |= G__BIT_ISFUNDAMENTAL;
+      property |= kIsFundamental;
    }
    if (qt.isConstQualified()) {
-      property |= G__BIT_ISCONSTANT;
+      property |= kIsConstant;
    }
    const clang::TagType *tt = qt->getAs<clang::TagType>();
    if (tt) {
       const clang::TagDecl *td = tt->getDecl();
       if (td->isClass()) {
-         property |= G__BIT_ISCLASS;
+         property |= kIsClass;
       }
       else if (td->isStruct()) {
-         property |= G__BIT_ISSTRUCT;
+         property |= kIsStruct;
       }
       else if (td->isUnion()) {
-         property |= G__BIT_ISUNION;
+         property |= kIsUnion;
       }
       else if (td->isEnum()) {
-         property |= G__BIT_ISENUM;
+         property |= kIsEnum;
       }
    }
    // We can't be a namespace, can we?
    //   if (dc->isNamespace() && !dc->isTranslationUnit()) {
-   //      property |= G__BIT_ISNAMESPACE;
+   //      property |= kIsNamespace;
    //   }
    return property;
 }
@@ -412,8 +435,6 @@ const char *TClingDataMemberInfo::TypeName() const
    static std::string buf;
    buf.clear();
    if (const clang::ValueDecl *vd = llvm::dyn_cast<clang::ValueDecl>(GetDecl())) {
-      const clang::ASTContext &Ctxt = GetDecl()->getASTContext();
-
       clang::QualType vdType = vd->getType();
       // In CINT's version, the type name returns did *not* include any array
       // information, ROOT's existing code depends on it.
@@ -424,14 +445,8 @@ const char *TClingDataMemberInfo::TypeName() const
       // if (we_need_to_do_the_subst_because_the_class_is_a_template_instance_of_double32_t)
       vdType = ROOT::TMetaUtils::ReSubstTemplateArg(vdType, fClassInfo->GetType() );
 
-      vdType = ROOT::TMetaUtils::GetFullyQualifiedType( vdType, *fInterp );
+      ROOT::TMetaUtils::GetFullyQualifiedTypeName(buf, vdType, *fInterp);
 
-      clang::PrintingPolicy policy(Ctxt.getPrintingPolicy());
-      policy.SuppressScope = false;
-      policy.AnonymousTagLocations = false;
-
-      TClassEdit::TSplitType splitname(vdType.getAsString(policy).c_str(),(TClassEdit::EModType)(TClassEdit::kLong64 | TClassEdit::kDropStd | TClassEdit::kDropStlDefault));
-      splitname.ShortType(buf,TClassEdit::kDropStd | TClassEdit::kDropStlDefault );
       return buf.c_str();
    }
    return 0;
