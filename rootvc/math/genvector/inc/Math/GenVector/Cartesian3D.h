@@ -57,7 +57,7 @@ public :
    /**
       Default constructor  with x=y=z=0 
    */
-   Cartesian3D() : fX(0), fY(0), fZ(0) {  }
+   Cartesian3D() : fX(0.0), fY(0.0), fZ(0.0) {  }
 
    /**
       Constructor from x,y,z coordinates

@@ -59,7 +59,7 @@ public :
    /**
       Default constructor  with x=y=z=m=0 
    */
-   PxPyPzM4D() : fX(0), fY(0), fZ(0), fM(0) { }
+   PxPyPzM4D() : fX(0.0), fY(0.0), fZ(0.0), fM(0.0) { }
 
 
    /**
