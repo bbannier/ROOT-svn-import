@@ -99,6 +99,10 @@ namespace {
 
 
 //- helpers --------------------------------------------------------------------
+namespace PyROOT {
+   PyObject* BindRootGlobal( DataMemberInfo_t* );
+}
+
 namespace {
 
    inline void AddToGlobalScope( const char* label, const char* /* hdr */, TObject* obj, TClass* klass )
@@ -480,7 +484,7 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
       klass = T::ByName( lookup );
    }
 
-   if ( ! (Bool_t)klass && G__defined_templateclass( const_cast< char* >( lookup.c_str() ) ) ) {
+   if ( ! (Bool_t)klass && gInterpreter->CheckClassTemplate( lookup.c_str() ) ) {
    // a "naked" templated class is requested: return callable proxy for instantiations
       PyObject* pytcl = PyObject_GetAttr( gRootModule, PyStrings::gTemplate );
       PyObject* pytemplate = PyObject_CallFunction(
@@ -495,17 +499,19 @@ PyObject* PyROOT::MakeRootClassFromString( const std::string& fullname, PyObject
       return pytemplate;
    }
 
-   if ( ! (Bool_t)klass && G__defined_tagname( lookup.c_str(), 2 ) != -1 ) {
-   // an unloaded namespace is requested
-      PyObject* pyns = CreateNewROOTPythonClass( lookup, NULL );
-
-   // cache the result
-      PyObject_SetAttrString( scope ? scope : gRootModule, (char*)name.c_str(), pyns );
-
-   // done, next step should be a lookup into this namespace
-      Py_XDECREF( scope );
-      return pyns;
-   }
+// TODO: presumably the next portion is no longer needed with Cling (need check)
+//   if ( ! (Bool_t)klass && G__defined_tagname( lookup.c_str(), 2 ) != -1 ) {
+//   // an unloaded namespace is requested
+//      PyObject* pyns = CreateNewROOTPythonClass( lookup, NULL );
+//
+//   // cache the result
+//      PyObject_SetAttrString( scope ? scope : gRootModule, (char*)name.c_str(), pyns );
+//
+//   // done, next step should be a lookup into this namespace
+//    Py_XDECREF( scope );
+//      return pyns;
+//   }
+//
 
    if ( ! (Bool_t)klass ) {   // if so, all options have been exhausted: it doesn't exist as such
       if ( ! scope && fullname.find( "ROOT::" ) == std::string::npos ) { // not already in ROOT::
@@ -642,17 +648,15 @@ PyObject* PyROOT::GetRootGlobalFromString( const std::string& name )
 {
 // try named global variable/enum (first ROOT, then Cling: sync is too slow)
    TGlobal* gb = (TGlobal*)gROOT->GetListOfGlobals( kFALSE )->FindObject( name.c_str() );
-   if ( gb && gb->GetAddress() != (void*)-1 )
+   if ( gb && gb->GetAddress() && gb->GetAddress() != (void*)-1 )
       return BindRootGlobal( gb );
 
-// (CLING) TODO: look into Cling's interactive bits (the following code does
-// not work):
-   ClassInfo_t* gbl = gInterpreter->ClassInfo_Factory();
+   ClassInfo_t* gbl = gInterpreter->ClassInfo_Factory( "" ); // "" == global namespace
    DataMemberInfo_t* dt = gInterpreter->DataMemberInfo_Factory( gbl );
    while ( gInterpreter->DataMemberInfo_Next( dt ) ) {
-      if ( gInterpreter->DataMemberInfo_IsValid( dt ) && gInterpreter->DataMemberInfo_Name( dt ) == name ) {
-         TGlobal g = TGlobal( dt );
-         return BindRootGlobal( &g );
+      if ( gInterpreter->DataMemberInfo_IsValid( dt ) &&
+           gInterpreter->DataMemberInfo_Name( dt ) == name ) {
+         return BindRootGlobal( dt );
       }
    }
 
@@ -759,6 +763,12 @@ PyObject* PyROOT::BindRootObject( void* address, TClass* klass, Bool_t isRef )
 }
 
 //____________________________________________________________________________
+PyObject* PyROOT::BindRootGlobal( DataMemberInfo_t* dmi ) {
+   TGlobal gbl( gInterpreter->DataMemberInfo_FactoryCopy( dmi ) );
+   return BindRootGlobal( &gbl );
+}
+
+//____________________________________________________________________________
 PyObject* PyROOT::BindRootGlobal( TGlobal* gbl )
 {
 // gbl == 0 means global does not exist (rather than gbl is NULL pointer)
@@ -780,9 +790,9 @@ PyObject* PyROOT::BindRootGlobal( TGlobal* gbl )
       return BindRootObject( (void*)gbl->GetAddress(), klass );
    }
 
-   if ( gbl->GetAddress() &&       // check for enums (which are const, not properties)
+   if ( gbl->GetAddress() &&       // check for enums and consts
         (unsigned long)gbl->GetAddress() != (unsigned long)-1 && // Cling (??)
-        ( G__TypeInfo( gbl->GetTypeName() ).Property() & G__BIT_ISENUM ) ) {
+        ( gInterpreter->ClassInfo_IsEnum( gbl->GetTypeName() ) ) ) {
       return PyInt_FromLong( *((int*)gbl->GetAddress()) );
    }
 

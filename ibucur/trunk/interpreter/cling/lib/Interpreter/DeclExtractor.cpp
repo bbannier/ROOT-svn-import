@@ -56,6 +56,8 @@ namespace cling {
       for (DeclStmt::decl_iterator J = DS->decl_begin();
            J != DS->decl_end(); ++J) {
         NamedDecl* ND = dyn_cast<NamedDecl>(*J);
+        if (isa<UsingDirectiveDecl>(*J))
+          continue; // FIXME: Here we should be more elegant.
         if (ND) {
           DeclContext* OldDC = ND->getDeclContext();
 
@@ -69,7 +71,7 @@ namespace cling {
           if (ND->getDeclContext() == ND->getLexicalDeclContext())
             ND->setLexicalDeclContext(DC);
           else 
-            assert("Not implemented: Decl with different lexical context");
+            assert(0 && "Not implemented: Decl with different lexical context");
           ND->setDeclContext(DC);
 
           if (VarDecl* VD = dyn_cast<VarDecl>(ND)) {
@@ -108,7 +110,7 @@ namespace cling {
         }
 
         // Append the new top level decl to the current transaction.
-        getTransaction()->appendUnique(DeclGroupRef(TouchedDecls[i]));
+        getTransaction()->append(DeclGroupRef(TouchedDecls[i]));
       }
     }
 

@@ -7,7 +7,7 @@
 #ifndef CLING_USERINTERFACE_H
 #define CLING_USERINTERFACE_H
 
-#include <cstdlib>
+#include "llvm/ADT/OwningPtr.h"
 
 namespace cling {
   class Interpreter;
@@ -17,7 +17,7 @@ namespace cling {
   ///
   class UserInterface {
   private:
-    MetaProcessor* m_MetaProcessor;
+    llvm::OwningPtr<MetaProcessor> m_MetaProcessor;
 
     ///\brief Prints cling's startup logo
     ///
@@ -26,7 +26,7 @@ namespace cling {
     UserInterface(Interpreter& interp);
     ~UserInterface();
 
-    MetaProcessor* getMetaProcessor() { return m_MetaProcessor; }
+    MetaProcessor* getMetaProcessor() { return m_MetaProcessor.get(); }
 
     ///\brief Drives the interactive prompt talking to the user.
     /// @param[in] nologo - whether to show cling's welcome logo or not

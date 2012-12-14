@@ -189,7 +189,7 @@ namespace cling {
       m_FilesToUncache.insert(OldEntry);
   }
 
-  // Gives us access to the protected members that we  need.
+  // Gives us access to the protected members that we need.
   class DeclContextExt : public DeclContext {
   public:
     static bool removeIfLast(DeclContext* DC, Decl* D) {
@@ -470,6 +470,10 @@ namespace cling {
     // Template instantiations should also not be pushed into scope.
     if (isa<FunctionDecl>(ND) &&
         cast<FunctionDecl>(ND)->isFunctionTemplateSpecialization())
+      return false; 
+
+    // Using directives are not registered onto the scope chain
+    if (isa<UsingDirectiveDecl>(ND))
       return false;
 
     IdentifierResolver::iterator
@@ -505,7 +509,7 @@ namespace cling {
 
     for (Transaction::const_reverse_iterator I = T->rdecls_begin(),
            E = T->rdecls_end(); I != E; ++I) {
-      const DeclGroupRef& DGR = (*I);
+      const DeclGroupRef& DGR = (*I).m_DGR;
 
       for (DeclGroupRef::const_iterator
              Di = DGR.end() - 1, E = DGR.begin() - 1; Di != E; --Di) {

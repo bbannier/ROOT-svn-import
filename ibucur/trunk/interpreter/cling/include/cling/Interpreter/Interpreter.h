@@ -181,6 +181,10 @@ namespace cling {
     ///
     bool m_DynamicLookupEnabled;
 
+    ///\brief Flag toggling the raw input on or off.
+    ///
+    bool m_RawInputEnabled;
+
     ///\brief Interpreter callbacks.
     ///
     llvm::OwningPtr<InterpreterCallbacks> m_Callbacks;
@@ -284,6 +288,16 @@ namespace cling {
     CompilationResult EvaluateInternal(const std::string& input,
                                        const CompilationOptions& CO,
                                        StoredValueRef* V = 0);
+
+    ///\brief Decides whether the input line should be wrapped or not by using
+    /// simple lexing to determine whether it is known that it should be on the
+    /// global scope or not.
+    ///
+    ///\param[in] input - The input being scanned.
+    ///
+    ///\returns true if the input should be wrapped.
+    ///
+    bool ShouldWrapInput(const std::string& input);
 
     ///\brief Wraps a given input.
     ///
@@ -531,11 +545,14 @@ namespace cling {
     const llvm::SmallVectorImpl<LoadedFileInfo*>& getLoadedFiles() const {
       return m_LoadedFiles; }
 
-    void enableDynamicLookup(bool value = true);
-    bool isDynamicLookupEnabled() { return m_DynamicLookupEnabled; }
-
-    bool isPrintingAST() { return m_PrintAST; }
+    bool isPrintingAST() const { return m_PrintAST; }
     void enablePrintAST(bool print = true) { m_PrintAST = print; }
+
+    void enableDynamicLookup(bool value = true);
+    bool isDynamicLookupEnabled() const { return m_DynamicLookupEnabled; }
+
+    bool isRawInputEnabled() const { return m_RawInputEnabled; }
+    void enableRawInput(bool raw = true) { m_RawInputEnabled = raw; }
 
     clang::CompilerInstance* getCI() const;
     const clang::Sema& getSema() const;

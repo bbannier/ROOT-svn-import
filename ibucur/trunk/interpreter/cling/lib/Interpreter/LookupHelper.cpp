@@ -88,8 +88,6 @@ namespace cling {
       // Accept it only if the whole name was parsed.
       if (P.NextToken().getKind() == clang::tok::eof) {
         TypeSourceInfo* TSI = 0;
-        // The QualType returned by the parser is an odd QualType
-        // (type + TypeSourceInfo) and cannot be used directly.
         TheQT = clang::Sema::GetTypeFromParser(Res.get(), &TSI);
       }
     }
@@ -97,7 +95,8 @@ namespace cling {
   }
 
   const Decl* LookupHelper::findScope(llvm::StringRef className,
-                                      const Type** resultType /* = 0 */) const {
+                                      const Type** resultType /* = 0 */,
+                                      bool instantiateTemplate/*=true*/) const {
     //
     //  Some utilities.
     //
@@ -123,11 +122,11 @@ namespace cling {
     //
     //  Prevent failing on an assert in TryAnnotateCXXScopeToken.
     //
-    if (!P.getCurToken().is(clang::tok::identifier) && !P.getCurToken().
-          is(clang::tok::coloncolon) && !(P.getCurToken().is(
-          clang::tok::annot_template_id) && P.NextToken().is(
-          clang::tok::coloncolon)) && !P.getCurToken().is(
-          clang::tok::kw_decltype)) {
+    if (!P.getCurToken().is(clang::tok::identifier) 
+        && !P.getCurToken().is(clang::tok::coloncolon) 
+        && !(P.getCurToken().is(clang::tok::annot_template_id) 
+             && P.NextToken().is(clang::tok::coloncolon)) 
+        && !P.getCurToken().is(clang::tok::kw_decltype)) {
       // error path
       return TheDecl;
     }
@@ -194,15 +193,22 @@ namespace cling {
                   // It is a class, struct, or union.
                   TagDecl* TD = TagTy->getDecl();
                   if (TD) {
-                    // Make sure it is not just forward declared, and
-                    // instantiate any templates.
-                    if (!S.RequireCompleteDeclContext(SS, TD)) {
-                      // Success, type is complete, instantiations have
-                      // been done.
-                      TagDecl* Def = TD->getDefinition();
-                      if (Def) {
-                        TheDecl = Def;
+                    if (instantiateTemplate) {
+                      // Make sure it is not just forward declared, and
+                      // instantiate any templates.
+                      if (!S.RequireCompleteDeclContext(SS, TD)) {
+                        // Success, type is complete, instantiations have
+                        // been done.
+                        TagDecl* Def = TD->getDefinition();
+                        if (Def) {
+                          TheDecl = Def;
+                        }
                       }
+                    } else {
+                      // The user just want to see if the template had 
+                      // already been instantiate and did not mean to force
+                      // one.
+                      TheDecl = TD->getDefinition();
                     }
                   }
                 }
@@ -246,7 +252,8 @@ namespace cling {
       ParsedType T = P.getTypeAnnotation(const_cast<Token&>(P.getCurToken()));
       // Only accept the parse if we consumed all of the name.
       if (P.NextToken().getKind() == clang::tok::eof) {
-        QualType QT = T.get();
+        TypeSourceInfo *TSI = 0;
+        clang::QualType QT = clang::Sema::GetTypeFromParser(T, &TSI);
         if (const EnumType* ET = QT->getAs<EnumType>()) {
            EnumDecl* ED = ET->getDecl();
            TheDecl = ED->getDefinition();
@@ -254,8 +261,92 @@ namespace cling {
         }
       }
     }
-
     return TheDecl;
+  }
+
+  const ClassTemplateDecl* LookupHelper::findClassTemplate(llvm::StringRef Name) const {
+    //
+    //  Find a class template decl given its name.
+    //
+
+    // Humm ... this seems to do the trick ... or does it? or is there a better way?
+
+    // Use P for shortness
+    Parser& P = *m_Parser;
+    Sema& S = P.getActions();
+    ASTContext& Context = S.getASTContext();
+    ParserStateRAII ResetParserState(P);
+    prepareForParsing(Name.str(), 
+                      llvm::StringRef("lookup.class.by.name.file"));
+
+    //
+    //  Prevent failing on an assert in TryAnnotateCXXScopeToken.
+    //
+    if (!P.getCurToken().is(clang::tok::identifier) 
+        && !P.getCurToken().is(clang::tok::coloncolon) 
+        && !(P.getCurToken().is(clang::tok::annot_template_id) 
+             && P.NextToken().is(clang::tok::coloncolon)) 
+        && !P.getCurToken().is(clang::tok::kw_decltype)) {
+      // error path
+      return 0;
+    }
+
+    //
+    //  Now try to parse the name as a type.
+    //
+    if (P.TryAnnotateTypeOrScopeToken(false, false)) {
+      // error path
+      return 0;
+    }
+    DeclContext *where = 0;
+    if (P.getCurToken().getKind() == tok::annot_cxxscope) {
+      CXXScopeSpec SS;
+      S.RestoreNestedNameSpecifierAnnotation(P.getCurToken().getAnnotationValue(),
+                                             P.getCurToken().getAnnotationRange(),
+                                             SS);
+      if (SS.isValid()) {
+        P.ConsumeToken();
+        if (!P.getCurToken().is(clang::tok::identifier)) {
+          return 0;
+        }
+        NestedNameSpecifier *nested = SS.getScopeRep();
+        if (!nested) return 0;
+        switch (nested->getKind()) {
+        case NestedNameSpecifier::Global:
+          where = Context.getTranslationUnitDecl();
+          break;
+        case NestedNameSpecifier::Namespace:
+          where = nested->getAsNamespace();
+          break;
+        case NestedNameSpecifier::NamespaceAlias:
+        case NestedNameSpecifier::Identifier:
+           return 0;
+        case NestedNameSpecifier::TypeSpec:
+        case NestedNameSpecifier::TypeSpecWithTemplate: 
+          {
+            const Type *ntype = nested->getAsType();
+            where = ntype->getAsCXXRecordDecl();
+            if (!where) return 0;
+            break;
+          }
+        };
+      }
+    } else if (P.getCurToken().is(clang::tok::identifier)) {
+      // We have a single indentifier, let's look for it in the
+      // the global scope.
+      where = Context.getTranslationUnitDecl();
+    }
+    if (where) {
+      // Great we now have a scope and something to search for,let's go ahead.
+      for (DeclContext::lookup_result R 
+              = where->lookup(P.getCurToken().getIdentifierInfo());
+           R.first != R.second; ++R.first) {
+        ClassTemplateDecl *theDecl = dyn_cast<ClassTemplateDecl>((*R.first));
+        if (theDecl)
+          return theDecl;
+      }
+    }
+    return 0;
   }
 
   const FunctionDecl* LookupHelper::findFunctionProto(const Decl* scopeDecl,
@@ -324,9 +415,7 @@ namespace cling {
         return TheDecl;
       }
       TypeSourceInfo *TSI = 0;
-      // The QualType returned by the parser is an odd QualType (type + TypeSourceInfo)
-      // and can not be used directly.
-      clang::QualType QT(clang::Sema::GetTypeFromParser(Res.get(),&TSI));
+      clang::QualType QT = clang::Sema::GetTypeFromParser(Res.get(), &TSI);
       QT = QT.getCanonicalType();
       GivenArgTypes.push_back(QT);
       {

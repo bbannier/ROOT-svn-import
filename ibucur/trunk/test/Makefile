@@ -724,7 +724,7 @@ distclean:      clean
 		-@(mv -f stressRooStats_ref.root stressRooStats_ref.root- >/dev/null 2>&1;true)
 		@rm -f $(PROGRAMS) $(EVENTSO) $(EVENTLIB) *Dict.* *.def *.exp \
 		   *.root *.ps *.so *.lib *.dll *.d *.log .def so_locations \
-		   files/*
+		   files/* *.pcm
 		@rm -rf cxx_repository
 		-@(mv -f stressRooStats_ref.root- stressRooStats_ref.root >/dev/null 2>&1;true)
 		-@cd RootShower && $(MAKE) distclean
@@ -744,41 +744,41 @@ MainEvent.$(ObjSuf): Event.h
 
 EventDict.$(SrcSuf): Event.h EventLinkDef.h
 	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
+	$(ROOTCLING) -f $@ -c $^
 
 EventMTDict.$(SrcSuf): EventMT.h EventLinkDef.h
 	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
+	$(ROOTCLING) -f $@ -c $^
 
 Hello.$(ObjSuf): Hello.h
 HelloDict.$(SrcSuf): Hello.h
 	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
+	$(ROOTCLING) -f $@ -c $^
 
 Aclock.$(ObjSuf): Aclock.h
 AclockDict.$(SrcSuf): Aclock.h
 	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
+	$(ROOTCLING) -f $@ -c $^
 
 Tetris.$(ObjSuf): Tetris.h
 TetrisDict.$(SrcSuf): Tetris.h
 	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
+	$(ROOTCLING) -f $@ -c $^
 
 TBench.$(ObjSuf): TBench.h
 TBenchDict.$(SrcSuf): TBench.h benchLinkDef.h
 	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
+	$(ROOTCLING) -f $@ -c $^
 
 guiviewer.$(ObjSuf): guiviewer.h
 guiviewerDict.$(SrcSuf): guiviewer.h guiviewerLinkDef.h
 	@echo "Generating dictionary $@..."
-	$(ROOTCINT) -f $@ -c $^
+	$(ROOTCLING) -f $@ -c $^
 
 stressMathCore.$(ObjSuf): 	TrackMathCore.h
 TrackMathCoreDict.$(SrcSuf): 	TrackMathCore.h TrackMathCoreLinkDef.h
-	@echo "Generating dictionary $@ using rootcint ..."
-	$(ROOTCINT) -f $@ -c $^	
+	@echo "Generating dictionary $@ using rootcling ..."
+	$(ROOTCLING) -f $@ -c $^	
 
 stressProof.$(ObjSuf):	stressProof.$(SrcSuf)
 	$(CXX)  $(CXXFLAGS) -I$(TUTDIR) -c $<
