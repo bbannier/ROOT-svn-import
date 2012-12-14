@@ -29,7 +29,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
 
    JSROOTIO = {};
 
-   JSROOTIO.version = "1.7 2012/11/10";
+   JSROOTIO.version = "1.8 2012/11/28";
 
    JSROOTIO.BIT = function(bits, index) {
       var mask = 1 << index;
@@ -351,9 +351,10 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
          }
       }
       else {
-         o += 2; // skip version
-         o += 4; // skip unique id
-         obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
+         // simply skip empty object...
+         //o += 2; // skip version
+         //o += 4; // skip unique id
+         //obj['fBits'] = JSROOTIO.ntou4(str, o); o += 4;
       }
       return {
          'cln' : class_name,
@@ -593,7 +594,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
 
 (function(){
 
-   var version = "1.9 2012/11/10";
+   var version = "1.11 2012/12/04";
 
    // ctor
    JSROOTIO.TStreamer = function(file) {
@@ -702,14 +703,22 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                      o += 4;
                      break;
                   }
-                  if (pval < 1000000) {
+                  if (pval < 10000000) {
+                     var ro = gFile.GetMappedObject(pval);
+                     if (ro) {
+                        obj[prop] = JSROOTCore.clone(ro);
+                     }
                      o += 4;
                      break;
                   }
                }
                if (JSROOTIO.GetStreamer(classname)) {
                   var clRef = gFile.fStreamerInfo.ReadClass(str, o);
-                  if (clRef && clRef['name']) o = clRef['off'];
+                  if (clRef && clRef['name']) {
+                     o = clRef['off'];
+                     if (clRef['name'] != -1)
+                        classname = clRef['name'];
+                  }
                   obj[prop] = new Object();
                   obj[prop]['_typename'] = 'JSROOTIO.' + classname;
                   o = JSROOTIO.GetStreamer(classname).Stream(obj[prop], str, o);
@@ -1007,7 +1016,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                   break;
             }
          }
-         if (obj['fBits'] && typeof(obj['fBits']) != "undefined") {
+         if (('fBits' in obj) && !('TestBit' in obj)) {
             obj['TestBit'] = function (f) {
                return ((obj['fBits'] & f) != 0);
             };
@@ -1680,7 +1689,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
 
 (function(){
 
-   var version = "1.6 2012/02/24";
+   var version = "1.7 2012/11/28";
 
    if (typeof JSROOTCore != "object") {
       var e1 = new Error("This extension requires JSROOTCore.js");
@@ -2052,7 +2061,7 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
          this.ReadBuffer(key['nbytes'] - key['keyLen'], callback1);
       };
 
-      JSROOTIO.RootFile.prototype.ReadObject = function(obj_name, cycle) {
+      JSROOTIO.RootFile.prototype.ReadObject = function(obj_name, cycle, node_id) {
          // read any object from a root file
          if (findObject(obj_name+cycle)) return;
          var key = this.GetKey(obj_name, cycle);
@@ -2075,6 +2084,9 @@ var kBase = 0, kOffsetL = 20, kOffsetP = 40, kCounter = 6, kCharStar = 7,
                   JSROOTIO.GetStreamer(key['className']).Stream(obj, objbuf['unzipdata'], 0);
                   if (key['className'] == 'TFormula') {
                      JSROOTCore.addFormula(obj);
+                  }
+                  else if (key['className'] == 'TNtuple' || key['className'] == 'TTree') {
+                     displayTree(obj, cycle, node_id);
                   }
                   else {
                      JSROOTCore.addMethods(obj);

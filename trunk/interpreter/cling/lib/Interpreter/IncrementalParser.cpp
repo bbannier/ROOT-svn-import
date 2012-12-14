@@ -203,28 +203,44 @@ namespace cling {
       // We assume that there is no ordering of the calls to HandleXYZ, because
       // in clang they can happen in different order too, eg. coming from 
       // template instatiator and so on.
-      for (Transaction::iterator I = T->decls_begin(), 
-             E = T->decls_end(); I != E; ++I) {
-          for (DeclGroupRef::const_iterator J = I->begin(), L = I->end();
-               J != L; ++J)
-            if (TagDecl* TD = dyn_cast<TagDecl>(*J))
-              if (TD->isThisDeclarationADefinition()) {
-                getCodeGenerator()->HandleTagDeclDefinition(TD);
+      for (Transaction::iterator I = T->decls_begin(), E = T->decls_end(); 
+           I != E; ++I) {
+        if (I->m_Call == Transaction::kCCIHandleTopLevelDecl)
+          getCodeGenerator()->HandleTopLevelDecl(I->m_DGR);
+        else if (I->m_Call == Transaction::kCCIHandleInterestingDecl)
+          getCodeGenerator()->HandleInterestingDecl(I->m_DGR);
+        else if(I->m_Call == Transaction::kCCIHandleTagDeclDefinition) {
+          TagDecl* TD = cast<TagDecl>(I->m_DGR.getSingleDecl());
+          getCodeGenerator()->HandleTagDeclDefinition(TD);
+        }
+        else if (I->m_Call == Transaction::kCCIHandleVTable) {
+          CXXRecordDecl* CXXRD = cast<CXXRecordDecl>(I->m_DGR.getSingleDecl());
+          getCodeGenerator()->HandleVTable(CXXRD, /*isRequired*/true);
+        }
+        else if (I->m_Call
+                 == Transaction::kCCIHandleCXXImplicitFunctionInstantiation) {
+          FunctionDecl* FD = cast<FunctionDecl>(I->m_DGR.getSingleDecl());
+          getCodeGenerator()->HandleCXXImplicitFunctionInstantiation(FD);
+        }
+        else if (I->m_Call
+                 == Transaction::kCCIHandleCXXStaticMemberVarInstantiation) {
+          VarDecl* VD = cast<VarDecl>(I->m_DGR.getSingleDecl());
+          getCodeGenerator()->HandleCXXStaticMemberVarInstantiation(VD);
 
-                if (CXXRecordDecl* CXXRD = dyn_cast<CXXRecordDecl>(TD))
-                  if (CXXRD->isDynamicClass())
-                    getCodeGenerator()->HandleVTable(CXXRD, true);
-            }
-        
-        getCodeGenerator()->HandleTopLevelDecl(*I);
+
+        }
+        else if (I->m_Call == Transaction::kCCINone)
+          ; // We use that internally as delimiter in the Transaction.
+        else
+          llvm_unreachable("We shouldn't have decl without call info.");
       }
       getCodeGenerator()->HandleTranslationUnit(getCI()->getASTContext());
       // run the static initializers that came from codegenning
       if (m_Interpreter->runStaticInitializersOnce()
           >= Interpreter::kExeFirstError) {
-         // Roll back on error in a transformer
-         rollbackTransaction(T);
-         return;
+        // Roll back on error in a transformer
+        rollbackTransaction(T);
+        return;
       }
     }
 
@@ -384,8 +400,6 @@ namespace cling {
            E = S.WeakTopLevelDecls().end(); I != E; ++I) {
       m_Consumer->HandleTopLevelDecl(DeclGroupRef(*I));
     }
-
-    S.PerformPendingInstantiations();
 
     DiagnosticsEngine& Diag = S.getDiagnostics();
     if (Diag.hasErrorOccurred())

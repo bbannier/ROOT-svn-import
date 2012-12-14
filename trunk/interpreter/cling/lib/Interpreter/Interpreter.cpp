@@ -25,6 +25,8 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Parse/ParseDiagnostic.h" // FIXME: remove this back-dependency!
+// when clang is ready.
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
@@ -39,15 +41,6 @@
 using namespace clang;
 
 namespace {
-
-static bool canWrapForCall(const std::string& input_line) {
-   // Whether input_line can be wrapped into a function.
-   // "1" can, "#include <vector>" can't.
-   if (input_line.length() > 1 && input_line[0] == '#') return false;
-   if (input_line.compare(0, strlen("extern "), "extern ") == 0) return false;
-   if (input_line.compare(0, strlen("using "), "using ") == 0) return false;
-   return true;
-}
 
   static cling::Interpreter::ExecutionResult
   ConvertExecutionResult(cling::ExecutionContext::ExecutionResult ExeRes) {
@@ -118,7 +111,8 @@ namespace cling {
 
   Interpreter::Interpreter(int argc, const char* const *argv,
                            const char* llvmdir /*= 0*/) :
-    m_UniqueCounter(0), m_PrintAST(false), m_DynamicLookupEnabled(false) {
+    m_UniqueCounter(0), m_PrintAST(false), m_DynamicLookupEnabled(false), 
+    m_RawInputEnabled(false) {
 
     m_LLVMContext.reset(new llvm::LLVMContext);
     std::vector<unsigned> LeftoverArgsIdx;
@@ -370,6 +364,9 @@ namespace cling {
   Interpreter::CompilationResult
   Interpreter::process(const std::string& input, StoredValueRef* V /* = 0 */,
                        const Decl** D /* = 0 */) {
+    if (isRawInputEnabled())
+      return declare(input, D);
+
     CompilationOptions CO;
     CO.DeclarationExtraction = 1;
     CO.ValuePrinting = CompilationOptions::VPAuto;
@@ -377,7 +374,7 @@ namespace cling {
     CO.DynamicScoping = isDynamicLookupEnabled();
     CO.Debug = isPrintingAST();
 
-    if (!canWrapForCall(input))
+    if (!ShouldWrapInput(input))
       return declare(input, D);
 
     if (EvaluateInternal(input, CO, V) == Interpreter::kFailure) {
@@ -477,6 +474,38 @@ namespace cling {
       return Interpreter::kSuccess;
     return Interpreter::kFailure;
   }
+
+  bool Interpreter::ShouldWrapInput(const std::string& input) {
+    llvm::OwningPtr<llvm::MemoryBuffer> buf;
+    buf.reset(llvm::MemoryBuffer::getMemBuffer(input, "Cling Preparse Buf"));
+    Lexer WrapLexer(SourceLocation(), getSema().getLangOpts(), input.c_str(), 
+                    input.c_str(), input.c_str() + input.size());
+    Token Tok;
+    WrapLexer.Lex(Tok);
+
+    const tok::TokenKind kind = Tok.getKind();
+
+    if (kind == tok::raw_identifier && !Tok.needsCleaning()) {
+      StringRef keyword(Tok.getRawIdentifierData(), Tok.getLength());
+      if (keyword.equals("using"))
+        return false;
+      if (keyword.equals("extern"))
+        return false;
+      if (keyword.equals("namespace"))
+        return false;
+    }
+    else if (kind == tok::hash) {
+      WrapLexer.Lex(Tok);
+      if (Tok.is(tok::raw_identifier) && !Tok.needsCleaning()) {
+        StringRef keyword(Tok.getRawIdentifierData(), Tok.getLength());
+        if (keyword.equals("include"))
+          return false;
+      }
+    }
+
+    return true;
+  }
+
 
   void Interpreter::WrapInput(std::string& input, std::string& fname) {
     fname = createUniqueWrapper();
@@ -788,6 +817,9 @@ namespace cling {
     Diag.setDiagnosticMapping(clang::diag::warn_unused_comparison,
                               clang::diag::MAP_IGNORE, SourceLocation());
     Diag.setDiagnosticMapping(clang::diag::ext_return_has_expr,
+                              clang::diag::MAP_IGNORE, SourceLocation());
+    // Very very ugly. TODO: Revisit and extract out as interpreter arg
+    Diag.setDiagnosticMapping(clang::diag::ext_auto_type_specifier,
                               clang::diag::MAP_IGNORE, SourceLocation());
   }
 

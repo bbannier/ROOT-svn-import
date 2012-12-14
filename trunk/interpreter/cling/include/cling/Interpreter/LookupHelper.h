@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang {
+  class ClassTemplateDecl;
   class Decl;
   class Expr;
   class FunctionDecl;
@@ -54,11 +55,22 @@ namespace cling {
     ///                          namespace, or enum to lookup.
     ///\param [out] resultType - The type of the class, struct, union,
     ///                          or enum to lookup; NULL otherwise.
+    ///\param [in] instantiateTemplate - When true, will attempt to instantiate
+    ///                          a class template satisfying the rquest.
     ///\returns The found declaration or null.
     ///
     const clang::Decl* findScope(llvm::StringRef className,
-                                 const clang::Type** resultType = 0) const;
+                                 const clang::Type** resultType = 0,
+                                 bool instantiateTemplate = true) const;
 
+     
+    ///\brief Lookup a class template declaration by name, starting from 
+    /// the global namespace, also handles struct, union, namespace, and enum.
+    ///
+    ///\param [in] Name   - The name of the class template to lookup.
+    ///\returns The found declaration or null.
+    ///
+    const clang::ClassTemplateDecl* findClassTemplate(llvm::StringRef Name) const;
      
     const clang::FunctionDecl* findFunctionProto(const clang::Decl* scopeDecl,
                                                  llvm::StringRef funcName,
