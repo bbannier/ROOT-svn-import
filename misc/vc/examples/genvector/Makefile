@@ -16,7 +16,13 @@ include $(ROOTSYS)/config/Makefile.config
 # #unroll loop better on gcc > 4
 #CXXFLAGS+= -O3 -g  
 # endif
-CXXFLAGS+= -DUSE_VC
+AVXCXXFLAG     := -mavx
+SIMDCXXFLAGS   := -mavx -msse4.2 -msse4.1 -msse4a -mssse3 -msse3 -msse2
+VCFLAGS        := -fabi-version=0  -Wno-unused-function
+
+CXXFLAGS+= $(VCFLAGS) $(AVXCXXFLAG)
+CXXFLAGS+= -DUSE_VC 
+
 
 LIBS =  -L$(ROOTSYS)/lib -lCore -lCint -lMathCore -lMatrix
 EXTRALIBS += $(ROOTSYS)/lib/libVc.a
