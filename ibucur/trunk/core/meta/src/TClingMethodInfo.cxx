@@ -28,8 +28,7 @@
 #include "TClingCallFunc.h"
 #include "TClingClassInfo.h"
 #include "TClingMethodArgInfo.h"
-#include "Property.h"
-#include "TClingProperty.h"
+#include "TDictionary.h"
 #include "TClingTypeInfo.h"
 #include "TError.h"
 #include "TMetaUtils.h"
@@ -39,6 +38,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
@@ -52,10 +52,48 @@
 
 using namespace clang;
 
+class TClingMethodInfo::SpecIterator
+{
+public:
+   typedef clang::FunctionTemplateDecl::spec_iterator Iterator;
+   
+   SpecIterator(Iterator begin, Iterator end) : fIter(begin), fEnd(end) {}
+   explicit SpecIterator(clang::FunctionTemplateDecl *decl) : fIter(decl->spec_begin()), fEnd(decl->spec_end()) {}
+
+   FunctionDecl *operator* () const { return *fIter; }
+   FunctionDecl *operator-> () const { return *fIter; }
+   SpecIterator & operator++ () { ++fIter; return *this; }
+   SpecIterator 	operator++ (int) {
+      SpecIterator tmp(fIter,fEnd);
+      ++(*this);
+      return tmp;
+   }
+   bool operator!() { return fIter == fEnd; }
+   operator bool() { return fIter != fEnd; }
+
+private:
+
+   Iterator fIter;
+   Iterator fEnd;
+};
+
+TClingMethodInfo::TClingMethodInfo(const TClingMethodInfo &rhs) : 
+   fInterp(rhs.fInterp),
+   fContexts(rhs.fContexts),
+   fFirstTime(rhs.fFirstTime), 
+   fContextIdx(rhs.fContextIdx), 
+   fIter(rhs.fIter),
+   fTitle(rhs.fTitle), 
+   fTemplateSpecIter(rhs.fTemplateSpecIter ? new SpecIterator(*rhs.fTemplateSpecIter) : 0), 
+   fSingleDecl(rhs.fSingleDecl)
+{
+}
+   
+
 TClingMethodInfo::TClingMethodInfo(cling::Interpreter *interp,
                                    TClingClassInfo *ci)
    : fInterp(interp), fFirstTime(true), fContextIdx(0U), fTitle(""), 
-     fSingleDecl(0)
+     fTemplateSpecIter(0), fSingleDecl(0)
 {
    if (!ci || !ci->IsValid()) {
       return;
@@ -71,11 +109,15 @@ TClingMethodInfo::TClingMethodInfo(cling::Interpreter *interp,
 TClingMethodInfo::TClingMethodInfo(cling::Interpreter *interp,
                                    const clang::FunctionDecl *FD) 
    : fInterp(interp), fFirstTime(true), fContextIdx(0U), fTitle(""), 
-     fSingleDecl(FD)
+     fTemplateSpecIter(0), fSingleDecl(FD)
 {
 
 }
 
+TClingMethodInfo::~TClingMethodInfo()
+{
+   delete fTemplateSpecIter;
+}
 
 const clang::FunctionDecl *TClingMethodInfo::GetMethodDecl() const
 {
@@ -85,6 +127,9 @@ const clang::FunctionDecl *TClingMethodInfo::GetMethodDecl() const
 
    if (fSingleDecl)
       return fSingleDecl;
+   
+   if (fTemplateSpecIter)
+      return *(*fTemplateSpecIter);
 
    return llvm::dyn_cast<clang::FunctionDecl>(*fIter);
 }
@@ -122,6 +167,8 @@ void TClingMethodInfo::Init(const clang::FunctionDecl *decl)
    fFirstTime = true;
    fContextIdx = 0U;
    fIter = clang::DeclContext::decl_iterator();
+   delete fTemplateSpecIter;
+   fTemplateSpecIter = 0;
    fSingleDecl = decl;
 }
 
@@ -137,7 +184,9 @@ void *TClingMethodInfo::InterfaceMethod() const
 
 bool TClingMethodInfo::IsValid() const
 {
-   return fSingleDecl ? fSingleDecl : *fIter;
+   if (fSingleDecl) return fSingleDecl;
+   else if (fTemplateSpecIter) return *(*fTemplateSpecIter);
+   return *fIter;
 }
 
 int TClingMethodInfo::NArg() const
@@ -180,7 +229,19 @@ int TClingMethodInfo::InternalNext()
          fFirstTime = false;
       }
       else {
-         ++fIter;
+         if (fTemplateSpecIter) {
+            ++(*fTemplateSpecIter);
+            if ( !(*fTemplateSpecIter) ) {
+               // We reached the end of the template specialization.
+               delete fTemplateSpecIter;
+               fTemplateSpecIter = 0;
+               ++fIter;
+            } else {
+               return 1;
+            }
+         } else {
+            ++fIter;
+         }
       }
       // Fix it if we have gone past the end of the current decl context.
       while (!*fIter) {
@@ -196,6 +257,17 @@ int TClingMethodInfo::InternalNext()
             break;
          }
       }
+
+      clang::FunctionTemplateDecl *templateDecl = 
+         llvm::dyn_cast<clang::FunctionTemplateDecl>(*fIter);
+      if ( templateDecl ) {
+         SpecIterator subiter(templateDecl);
+         if (subiter) {
+            fTemplateSpecIter = new SpecIterator(templateDecl);
+            return 1;
+         }
+      }
+      
       // Return if this decl is a function or method.
       if (llvm::isa<clang::FunctionDecl>(*fIter)) {
          // Iterator is now valid.
@@ -215,31 +287,32 @@ long TClingMethodInfo::Property() const
       return 0L;
    }
    long property = 0L;
-   property |= G__BIT_ISCOMPILED;
+   property |= kIsCompiled;
    const clang::FunctionDecl *fd = GetMethodDecl();
    switch (fd->getAccess()) {
       case clang::AS_public:
-         property |= G__BIT_ISPUBLIC;
+         property |= kIsPublic;
          break;
       case clang::AS_protected:
-         property |= G__BIT_ISPROTECTED;
+         property |= kIsProtected;
          break;
       case clang::AS_private:
-         property |= G__BIT_ISPRIVATE;
+         property |= kIsPrivate;
          break;
       case clang::AS_none:
-         // IMPOSSIBLE
+         if (fd->getDeclContext()->isNamespace()) 
+            property |= kIsPublic;
          break;
       default:
          // IMPOSSIBLE
          break;
    }
    if (fd->getStorageClass() == clang::SC_Static) {
-      property |= G__BIT_ISSTATIC;
+      property |= kIsStatic;
    }
    clang::QualType qt = fd->getResultType().getCanonicalType();
    if (qt.isConstQualified()) {
-      property |= G__BIT_ISCONSTANT;
+      property |= kIsConstant;
    }
    while (1) {
       if (qt->isArrayType()) {
@@ -247,14 +320,14 @@ long TClingMethodInfo::Property() const
          continue;
       }
       else if (qt->isReferenceType()) {
-         property |= G__BIT_ISREFERENCE;
+         property |= kIsReference;
          qt = llvm::cast<clang::ReferenceType>(qt)->getPointeeType();
          continue;
       }
       else if (qt->isPointerType()) {
-         property |= G__BIT_ISPOINTER;
+         property |= kIsPointer;
          if (qt.isConstQualified()) {
-            property |= G__BIT_ISPCONSTANT;
+            property |= kIsConstPointer;
          }
          qt = llvm::cast<clang::PointerType>(qt)->getPointeeType();
          continue;
@@ -266,29 +339,29 @@ long TClingMethodInfo::Property() const
       break;
    }
    if (qt.isConstQualified()) {
-      property |= G__BIT_ISCONSTANT;
+      property |= kIsConstant;
    }
    if (const clang::CXXMethodDecl *md =
             llvm::dyn_cast<clang::CXXMethodDecl>(fd)) {
       if (md->getTypeQualifiers() & clang::Qualifiers::Const) {
-         property |= G__BIT_ISCONSTANT | G__BIT_ISMETHCONSTANT;
+         property |= kIsConstant | kIsConstMethod;
       }
       if (md->isVirtual()) {
-         property |= G__BIT_ISVIRTUAL;
+         property |= kIsVirtual;
       }
       if (md->isPure()) {
-         property |= G__BIT_ISPUREVIRTUAL;
+         property |= kIsPureVirtual;
       }
       if (const clang::CXXConstructorDecl *cd =
                llvm::dyn_cast<clang::CXXConstructorDecl>(md)) {
          if (cd->isExplicit()) {
-            property |= G__BIT_ISEXPLICIT;
+            property |= kIsExplicit;
          }
       }
       else if (const clang::CXXConversionDecl *cd =
                   llvm::dyn_cast<clang::CXXConversionDecl>(md)) {
          if (cd->isExplicit()) {
-            property |= G__BIT_ISEXPLICIT;
+            property |= kIsExplicit;
          }
       }
    }

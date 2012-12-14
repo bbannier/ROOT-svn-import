@@ -27,8 +27,7 @@
 #include "TClassEdit.h"
 #include "TClingBaseClassInfo.h"
 #include "TClingMethodInfo.h"
-#include "Property.h"
-#include "TClingProperty.h"
+#include "TDictionary.h"
 #include "TClingTypeInfo.h"
 #include "TError.h"
 #include "TMetaUtils.h"
@@ -55,20 +54,31 @@
 using namespace clang;
 
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp)
-   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0)
+   : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0),
+     fNMethods(0)
 {
    clang::TranslationUnitDecl *TU =
       interp->getCI()->getASTContext().getTranslationUnitDecl();
    fIter = TU->decls_begin();
    InternalNext();
    fFirstTime = true;
-   fDecl = 0;
+   // CINT had this odd behavior where a ClassInfo created without any argument/input
+   // was set as an iterator that was ready to be iterated on but was set an not IsValid
+   // *BUT* a few routine where using this state as representing the global namespace
+   // (Theses routines includes the GetMethod routines and CallFunc::SetFunc .. but
+   // do not includes many of routines (like Property etc).
+   // To be somewhat backward compatible, let make this state actually valid (i.e.
+   // representing both the ready-for-first-iteration iterator *and* the global namespace)
+   // so that code that was working with CINT (grabbing the default initialized ClassInfo
+   // to look at the global namespace work) is working again (and, yes, things that
+   // use to not work like 'asking' the filename on this will go 'further' but oh well).
+   fDecl = TU;
    fType = 0;
 }
 
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp, const char *name)
    : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0),
-     fTitle("")
+     fTitle(""), fNMethods(0)
 {
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
    const clang::Type *type = 0;
@@ -84,7 +94,7 @@ TClingClassInfo::TClingClassInfo(cling::Interpreter *interp, const char *name)
 TClingClassInfo::TClingClassInfo(cling::Interpreter *interp,
                                  const clang::Type &tag)
    : fInterp(interp), fFirstTime(true), fDescend(false), fDecl(0), fType(0), 
-     fTitle("")
+     fTitle(""), fNMethods(0)
 {
    Init(tag);
 }
@@ -108,36 +118,36 @@ long TClingClassInfo::ClassProperty() const
    const clang::CXXRecordDecl *CRD =
       llvm::dyn_cast<clang::CXXRecordDecl>(fDecl);
    long property = 0L;
-   property |= G__CLS_VALID;
+   property |= kClassIsValid;
    if (CRD->isAbstract()) {
-      property |= G__CLS_ISABSTRACT;
+      property |= kClassIsAbstract;
    }
    if (CRD->hasUserDeclaredConstructor()) {
-      property |= G__CLS_HASEXPLICITCTOR;
+      property |= kClassHasExplicitCtor;
    }
    if (
       !CRD->hasUserDeclaredConstructor() &&
       !CRD->hasTrivialDefaultConstructor()
    ) {
-      property |= G__CLS_HASIMPLICITCTOR;
+      property |= kClassHasImplicitCtor;
    }
    if (
       CRD->hasUserProvidedDefaultConstructor() ||
       !CRD->hasTrivialDefaultConstructor()
    ) {
-      property |= G__CLS_HASDEFAULTCTOR;
+      property |= kClassHasDefaultCtor;
    }
    if (CRD->hasUserDeclaredDestructor()) {
-      property |= G__CLS_HASEXPLICITDTOR;
+      property |= kClassHasExplicitDtor;
    }
    else if (!CRD->hasTrivialDestructor()) {
-      property |= G__CLS_HASIMPLICITDTOR;
+      property |= kClassHasImplicitDtor;
    }
    if (CRD->hasUserDeclaredCopyAssignment()) {
-      property |= G__CLS_HASASSIGNOPR;
+      property |= kClassHasAssignOpr;
    }
    if (CRD->isPolymorphic()) {
-      property |= G__CLS_HASVIRTUAL;
+      property |= kClassHasVirtual;
    }
    return property;
 }
@@ -302,7 +312,8 @@ bool TClingClassInfo::HasDefaultConstructor() const
          if (iter->getNumParams() == 0) {
             return true;
          }
-         if (iter->getNumParams() == 0) {
+         // Most likely just this test is needed.
+         if (iter->getMinRequiredArguments() == 0) {
             return true;
          }
       }
@@ -349,16 +360,11 @@ void TClingClassInfo::Init(const char *name)
    fType = 0;
    fIterStack.clear();
    const cling::LookupHelper& lh = fInterp->getLookupHelper();
-   const clang::Decl *decl = lh.findScope(name);
-   if (!decl) {
+   fDecl = lh.findScope(name,&fType);
+   if (!fDecl) {
       std::string buf = TClassEdit::InsertStd(name);
-      decl = lh.findScope(buf);
+      fDecl = lh.findScope(buf,&fType);
    }
-   fDecl = decl;
-   if (decl) {
-      const clang::RecordDecl *rdecl = llvm::dyn_cast<clang::RecordDecl>(decl);
-      if (rdecl) fType = rdecl->getASTContext().getRecordType(rdecl)->getAs<clang::RecordType>();
-   } 
 }
 
 void TClingClassInfo::Init(int tagnum)
@@ -370,13 +376,17 @@ void TClingClassInfo::Init(int tagnum)
 void TClingClassInfo::Init(const clang::Type &tag)
 {
    fType = &tag;
-   fDecl = fType->getAsCXXRecordDecl();
+   const clang::TagType *tagtype = fType->getAs<clang::TagType>();
+   if (tagtype) 
+      fDecl = tagtype->getDecl();
+   else 
+      fDecl = 0;
    if (!fDecl) {
       clang::QualType qType(fType,0);
       static clang::PrintingPolicy
          printPol(fInterp->getCI()->getLangOpts());
       printPol.SuppressScope = false;
-      Error("TClingClassInfo::Init(const clang::Type&)","The given type %s does not point to a CXXRecordDecl",
+      Error("TClingClassInfo::Init(const clang::Type&)","The given type %s does not point to a clang::Decl",
             qType.getAsString(printPol).c_str());
    }
 }
@@ -406,7 +416,7 @@ bool TClingClassInfo::IsEnum(cling::Interpreter *interp, const char *name)
 {
    // Note: This is a static member function.
    TClingClassInfo info(interp, name);
-   if (info.IsValid() && (info.Property() & G__BIT_ISENUM)) {
+   if (info.IsValid() && (info.Property() & kIsEnum)) {
       return true;
    }
    return false;
@@ -625,16 +635,56 @@ void *TClingClassInfo::New(void *arena) const
    return llvm::GVTOP(val.get().value);
 }
 
+int TClingClassInfo::NMethods() const
+{
+   // Return the number of methods
+   fNMethods = 0;
+   clang::DeclContext *DC = const_cast<clang::DeclContext*>(llvm::cast<clang::DeclContext>(fDecl));
+   llvm::SmallVector<clang::DeclContext *, 2> contexts;
+   DC->collectAllContexts(contexts);
+
+   bool noUpdate = fLastDeclForNMethods.size() == contexts.size();
+   for (unsigned I = 0; noUpdate && I < contexts.size(); ++I) {
+      noUpdate &= (fLastDeclForNMethods[I] && !fLastDeclForNMethods[I]->getNextDeclInContext());
+   }
+   if (noUpdate)
+      return fNMethods;
+
+   // We have a new decl; update the method count.
+   fNMethods = 0;
+   TClingMethodInfo t(fInterp, const_cast<TClingClassInfo*>(this));
+   // This while loop must be identical to TCling::CreateListOfMethods()
+   // (except for the ++fNMethods part, obviously)
+   while (t.Next()) {
+      // if name cannot be obtained no use to put in list
+      if (t.IsValid() && t.Name()) {
+         ++fNMethods;
+      }
+   }
+   // Determine last decl per context as update tag:
+   fLastDeclForNMethods.resize(contexts.size());
+   for (unsigned I = 0; I < contexts.size(); ++I) {
+      DC = contexts[I];
+      clang::Decl* lastDecl = 0;
+      for (clang::DeclContext::decl_iterator iter = DC->decls_begin();
+           *iter; ++iter) {
+         lastDecl = *iter;
+      }
+      fLastDeclForNMethods[I] = lastDecl;
+   }
+   return fNMethods;
+}
+
 long TClingClassInfo::Property() const
 {
    if (!IsValid()) {
       return 0L;
    }
    long property = 0L;
-   property |= G__BIT_ISCPPCOMPILED;
+   property |= kIsCPPCompiled;
    clang::Decl::Kind DK = fDecl->getKind();
    if ((DK == clang::Decl::Namespace) || (DK == clang::Decl::TranslationUnit)) {
-      property |= G__BIT_ISNAMESPACE;
+      property |= kIsNamespace;
       return property;
    }
    // Note: Now we have class, enum, struct, union only.
@@ -643,23 +693,23 @@ long TClingClassInfo::Property() const
       return 0L;
    }
    if (TD->isEnum()) {
-      property |= G__BIT_ISENUM;
+      property |= kIsEnum;
       return property;
    }
    // Note: Now we have class, struct, union only.
    const clang::CXXRecordDecl *CRD =
       llvm::dyn_cast<clang::CXXRecordDecl>(fDecl);
    if (CRD->isClass()) {
-      property |= G__BIT_ISCLASS;
+      property |= kIsClass;
    }
    else if (CRD->isStruct()) {
-      property |= G__BIT_ISSTRUCT;
+      property |= kIsStruct;
    }
    else if (CRD->isUnion()) {
-      property |= G__BIT_ISUNION;
+      property |= kIsUnion;
    }
    if (CRD->isAbstract()) {
-      property |= G__BIT_ISABSTRACT;
+      property |= kIsAbstract;
    }
    return property;
 }
@@ -717,8 +767,9 @@ const char *TClingClassInfo::FileName() const
    if (!IsValid()) {
       return 0;
    }
-   // FIXME: Implement this when rootcling provides the information.
-   return 0;
+   static std::string buf;
+   buf = ROOT::TMetaUtils::GetFileName(GetDecl());
+   return buf.c_str();
 }
 
 const char *TClingClassInfo::FullName(const ROOT::TMetaUtils::TNormalizedCtxt &normCtxt) const

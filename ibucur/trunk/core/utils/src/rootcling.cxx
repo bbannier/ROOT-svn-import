@@ -167,8 +167,6 @@
 #include <memory>
 #include <vector>
 
-#include "cintdictversion.h"
-
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/LookupHelper.h"
 #include "cling/Interpreter/Value.h"
@@ -192,6 +190,8 @@
 
 #if defined(R__WIN32)
 #include "cygpath.h"
+#else
+#include <unistd.h>
 #endif
 
 #ifdef ROOTBUILD
@@ -444,12 +444,9 @@ static void R__GetCurrentDirectory(std::string &output)
 //______________________________________________________________________________
 static std::string R__GetRelocatableHeaderName(const char *header, const std::string &currentDirectory) 
 {
-   // Convert to path relative to $PWD.
+   // Convert to path relative to $PWD
    // If that's not what the caller wants, she should pass -I to rootcint and a
    // different relative path to the header files.
-#ifdef ROOTBUILD
-         // For ROOT, convert module directories like core/base/inc/ to include/
-#endif
 
    std::string result( header );
 
@@ -551,47 +548,6 @@ bool Namespace__HasMethod(const clang::NamespaceDecl *cl, const char* name)
    return false;
 }
 
-llvm::StringRef R__GetFileName(const clang::Decl *decl)
-{
-   // It looks like the template specialization decl actually contains _less_ information
-   // on the location of the code than the decl (in case where there is forward declaration,
-   // that is what the specialization points to.
-   //
-   // const clang::CXXRecordDecl* clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
-   // if (clxx) {
-   //    switch(clxx->getTemplateSpecializationKind()) {
-   //       case clang::TSK_Undeclared:
-   //          // We want the default behavior
-   //          break;
-   //       case clang::TSK_ExplicitInstantiationDeclaration:
-   //       case clang::TSK_ExplicitInstantiationDefinition:
-   //       case clang::TSK_ImplicitInstantiation: {
-   //          // We want the location of the template declaration:
-   //          const clang::ClassTemplateSpecializationDecl *tmplt_specialization = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl> (clxx);
-   //          if (tmplt_specialization) {
-   //             // return R__GetFileName(const_cast< clang::ClassTemplateSpecializationDecl *>(tmplt_specialization)->getSpecializedTemplate());
-   //          }
-   //          break;
-   //       }
-   //       case clang::TSK_ExplicitSpecialization:
-   //          // We want the default behavior
-   //          break;
-   //       default:
-   //          break;
-   //    } 
-   // }   
-   clang::SourceLocation sourceLocation = decl->getLocation();
-   clang::SourceManager& sourceManager = decl->getASTContext().getSourceManager();
-
-   if (sourceLocation.isValid() && sourceLocation.isFileID()) {
-      clang::PresumedLoc PLoc = sourceManager.getPresumedLoc(sourceLocation);
-      return PLoc.getFilename();
-   }
-   else {
-      return "invalid";
-   }
-}
-
 long R__GetLineNumber(const clang::Decl *decl)
 {
    // It looks like the template specialization decl actually contains _less_ information
@@ -623,6 +579,14 @@ long R__GetLineNumber(const clang::Decl *decl)
    // }      
    clang::SourceLocation sourceLocation = decl->getLocation();
    clang::SourceManager& sourceManager = decl->getASTContext().getSourceManager();
+
+  if (!sourceLocation.isValid() ) {
+      return -1;
+   }
+
+   if (!sourceLocation.isFileID()) {
+      sourceLocation = sourceManager.getExpansionRange(sourceLocation).second;
+   }
 
    if (sourceLocation.isValid() && sourceLocation.isFileID()) {
       return sourceManager.getLineNumber(sourceManager.getFileID(sourceLocation),sourceManager.getFileOffset(sourceLocation));
@@ -792,38 +756,11 @@ const clang::CXXRecordDecl *R__ScopeSearch(const char *name, const clang::Type**
    return result;
 }
 
-const clang::Type *R__GetUnderlyingType(clang::QualType type)
-{
-   // Return the base/underlying type of a chain of array or pointers type.
-   // Does not yet support the array and pointer part being intermixed.
-   
-   const clang::Type *rawtype = type.getTypePtr();
-
-   // NOTE: We probably meant isa<clang::ElaboratedType>
-   if (rawtype->isElaboratedTypeSpecifier() ) {
-      rawtype = rawtype->getCanonicalTypeInternal().getTypePtr();
-   }
-   if (rawtype->isArrayType()) {
-      rawtype = type.getTypePtr()->getBaseElementTypeUnsafe ();
-   }   
-   if (rawtype->isPointerType() || rawtype->isReferenceType() ) {
-      //Get to the 'raw' type.
-      clang::QualType pointee;
-      while ( (pointee = rawtype->getPointeeType()) , pointee.getTypePtrOrNull() && pointee.getTypePtr() != rawtype)
-      {
-         rawtype = pointee.getTypePtr();
-      }
-   }
-   if (rawtype->isArrayType()) {
-      rawtype = type.getTypePtr()->getBaseElementTypeUnsafe ();
-   }
-   return rawtype;
-}
 
 
 clang::RecordDecl *R__GetUnderlyingRecordDecl(clang::QualType type)
 {
-   const clang::Type *rawtype = R__GetUnderlyingType(type);
+   const clang::Type *rawtype = ROOT::TMetaUtils::GetUnderlyingType(type);
 
    if (rawtype->isFundamentalType() || rawtype->isEnumeralType()) {
       // not an ojbect.
@@ -1350,7 +1287,7 @@ bool CheckInputOperator(const char *what, const char *proto, const string &fulln
    }
    bool has_input_error = false;
    if (method != 0 && (method->getAccess() == clang::AS_public || method->getAccess() == clang::AS_none) ) {
-      std::string filename = R__GetFileName(method);
+      std::string filename = ROOT::TMetaUtils::GetFileName(method);
       if (strstr(filename.c_str(),"TBuffer.h")!=0 ||
           strstr(filename.c_str(),"Rtypes.h" )!=0) {
 
@@ -2164,7 +2101,7 @@ int ElementStreamer(const clang::NamedDecl &forcontext, const clang::QualType &q
    
    string objType(ShortTypeName(tiName.c_str()));
 
-   const clang::Type *rawtype = R__GetUnderlyingType(clang::QualType(&ti,0));
+   const clang::Type *rawtype = ROOT::TMetaUtils::GetUnderlyingType(clang::QualType(&ti,0));
    string rawname;
    R__GetQualifiedName(rawname, clang::QualType(rawtype,0), forcontext);
    
@@ -2330,7 +2267,7 @@ int STLContainerStreamer(const clang::FieldDecl &m, int rwmode, const cling::Int
    if (stltype!=0) {
       //        fprintf(stderr,"Add %s (%d) which is also %s\n",
       //                m.Type()->Name(), stltype, m.Type()->TrueName() );
-      clang::QualType utype(R__GetUnderlyingType(m.getType()),0);      
+      clang::QualType utype(ROOT::TMetaUtils::GetUnderlyingType(m.getType()),0);      
       RStl::Instance().GenerateTClassFor(utype,interp,normCtxt);
    }
    if (stltype<=0) return 0;
@@ -2895,7 +2832,7 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input, const cling::
 //      delete [] funcname;
 
       if (methodinfo &&
-          R__GetFileName(methodinfo).find("Rtypes.h") == llvm::StringRef::npos) {
+          ROOT::TMetaUtils::GetFileName(methodinfo).find("Rtypes.h") == llvm::StringRef::npos) {
 
          // GetClassVersion was defined in the header file.
          //fprintf(fp, "GetClassVersion((%s *)0x0), ",classname.c_str());
@@ -2906,7 +2843,7 @@ void WriteClassInit(const RScanner::AnnotatedRecordDecl &cl_input, const cling::
       //fprintf(stderr,"DEBUG: %s has value %d\n",classname.c_str(),(int)G__int(G__calc(temporary)));
    }
 
-   std::string filename = R__GetFileName(cl_input);
+   std::string filename = ROOT::TMetaUtils::GetFileName(cl_input);
    if (filename.length() > 0) {
       for (unsigned int i=0; i<filename.length(); i++) {
          if (filename[i]=='\\') filename[i]='/';
@@ -3110,7 +3047,7 @@ void WriteNamespaceInit(const clang::NamespaceDecl *cl)
       (*dictSrcOut) << "0 /*version*/, ";
    }
 
-   std::string filename = R__GetFileName(cl);
+   std::string filename = ROOT::TMetaUtils::GetFileName(cl);
    for (unsigned int i=0; i<filename.length(); i++) {
       if (filename[i]=='\\') filename[i]='/';
    }
@@ -3368,7 +3305,7 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpr
          clang::QualType type = field_iter->getType();
          std::string type_name = type.getAsString(clxx->getASTContext().getPrintingPolicy());
 
-         const clang::Type *underling_type = R__GetUnderlyingType(type);
+         const clang::Type *underling_type = ROOT::TMetaUtils::GetUnderlyingType(type);
          
          // we skip:
          //  - static members
@@ -3577,7 +3514,7 @@ void WriteStreamer(const RScanner::AnnotatedRecordDecl &cl, const cling::Interpr
                         (*dictSrcOut) << "      //R__b.WriteArray(" << field_iter->getName().str() << ", __COUNTER__);";
                      }
                   } else {
-                     if (R__GetQualifiedName(*R__GetUnderlyingType(field_iter->getType()),**field_iter) == "TClonesArray") {
+                     if (R__GetQualifiedName(*ROOT::TMetaUtils::GetUnderlyingType(field_iter->getType()),**field_iter) == "TClonesArray") {
                         (*dictSrcOut) << "      " << field_iter->getName().str() << "->Streamer(R__b);" << std::endl;
                      } else {
                         if (i == 0) {
@@ -3704,7 +3641,7 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Inte
 
    string a;
    string clName;
-   TMetaUtils::GetCppName(clName, R__GetFileName(cl.GetRecordDecl()).str().c_str());
+   TMetaUtils::GetCppName(clName, ROOT::TMetaUtils::GetFileName(cl.GetRecordDecl()).str().c_str());
    int version = GetClassVersion(cl.GetRecordDecl());
    if (version == 0) return;
    if (version < 0 && !(cl.RequestStreamerInfo()) ) return;
@@ -3746,7 +3683,7 @@ void WritePointersSTL(const RScanner::AnnotatedRecordDecl &cl, const cling::Inte
       if (k!=0) {
          //          fprintf(stderr,"Add %s which is also",m.Type()->Name());
          //          fprintf(stderr," %s\n",R__TrueName(**field_iter) );
-         clang::QualType utype(R__GetUnderlyingType(field_iter->getType()),0);
+         clang::QualType utype(ROOT::TMetaUtils::GetUnderlyingType(field_iter->getType()),0);
          RStl::Instance().GenerateTClassFor(utype, interp, normCtxt);
       }      
    }
@@ -3873,14 +3810,14 @@ void WriteClassCode(const RScanner::AnnotatedRecordDecl &cl, const cling::Interp
 }
 
 //______________________________________________________________________________
-void GenerateLinkdef(int *argc, char **argv, int iv, std::string &code_for_parser)
+void GenerateLinkdef(int *argc, char **argv, int firstInputFile, std::string &code_for_parser)
 {
    code_for_parser += "#ifdef __CINT__\n\n";
    code_for_parser += "#pragma link off all globals;\n";
    code_for_parser += "#pragma link off all classes;\n";
    code_for_parser += "#pragma link off all functions;\n\n";
 
-   for (int i = iv; i < *argc; i++) {
+   for (int i = firstInputFile; i < *argc; i++) {
       char *s, trail[3];
       int   nostr = 0, noinp = 0, bcnt = 0, l = strlen(argv[i])-1;
       for (int j = 0; j < 3; j++) {
@@ -4029,38 +3966,37 @@ void StrcpyArgWithEsc(string& escaped, const char *original)
    escaped = CopyArg( original );
 }
 
-string dictsrc;
-
+std::string gDictsrcForCleanup;
 //______________________________________________________________________________
 void CleanupOnExit(int code)
 {
    // Removes tmp files, and (if code!=0) output files.
 
    if (code) {
-      if (!dictsrc.empty()) {
-         unlink(dictsrc.c_str());
+      if (!gDictsrcForCleanup.empty()) {
+         unlink(gDictsrcForCleanup.c_str());
          // also remove the .d file belonging to dictsrc
-         size_t posExt=dictsrc.rfind('.');
+         size_t posExt=gDictsrcForCleanup.rfind('.');
          if (posExt!=string::npos) {
-            dictsrc.replace(posExt, dictsrc.length(), ".d");
-            unlink(dictsrc.c_str());
+            gDictsrcForCleanup.replace(posExt, gDictsrcForCleanup.length(), ".d");
+            unlink(gDictsrcForCleanup.c_str());
          }
       }
    }
    // also remove the .def file created by CINT.
    {
-      size_t posExt=dictsrc.rfind('.');
+      size_t posExt=gDictsrcForCleanup.rfind('.');
       if (posExt!=string::npos) {
-         dictsrc.replace(posExt, dictsrc.length(), ".def");
-         unlink(dictsrc.c_str());
+         gDictsrcForCleanup.replace(posExt, gDictsrcForCleanup.length(), ".def");
+         unlink(gDictsrcForCleanup.c_str());
 
-         size_t posSlash=dictsrc.rfind('/');
+         size_t posSlash=gDictsrcForCleanup.rfind('/');
          if (posSlash==string::npos) {
-            posSlash=dictsrc.rfind('\\');
+            posSlash=gDictsrcForCleanup.rfind('\\');
          }
          if (posSlash!=string::npos) {
-            dictsrc.replace(0,posSlash+1,"");
-            unlink(dictsrc.c_str());
+            gDictsrcForCleanup.replace(0,posSlash+1,"");
+            unlink(gDictsrcForCleanup.c_str());
          }
       }
    }
@@ -4125,7 +4061,7 @@ static ESourceFileKind GetSourceFileKind(const char* filename)
 
 //______________________________________________________________________________
 static int GenerateModule(const char* dictSrcFile, const std::vector<std::string>& args,
-                          const std::string &currentDirectory)
+                          const std::string & /* currentDirectory */)
 {
    // Generate the clang module given the arguments.
    // Returns != 0 on error.
@@ -4197,9 +4133,10 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
    (*dictSrcOut) << 
       "      0 };\n"
       "      static bool sInitialized = false;\n"
-      "      if (!sInitialized) {\n;"
-      "        TCintWithCling__RegisterModule(\"" << dictname << "\",\n"
-      "          headers, includePaths, macroDefines, macroUndefines);\n"
+      "      if (!sInitialized) {\n"
+      "        TCling__RegisterModule(\"" << dictname << "\",\n"
+      "          headers, includePaths, macroDefines, macroUndefines,\n"
+      "          TriggerDictionaryInitalization_" << dictname << ");\n"
       "        sInitialized = true;\n"
       "      }\n"
       "    }\n"
@@ -4213,7 +4150,9 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
 
    clang::CompilerInstance* CI = gInterp->getCI();
 
-// Note: need to resolve _where_ to create the pcm
+   // Note: need to resolve _where_ to create the pcm
+   // We default in a lib subdirectory (for the ROOT build)
+   // otherwise we put it in the same directory as the dictionary file (for ACLiC)
    std::string dictDir = "lib/";
 #ifdef WIN32
    struct _stati64 finfo;
@@ -4226,11 +4165,15 @@ static int GenerateModule(const char* dictSrcFile, const std::vector<std::string
    struct stat finfo;
    if (stat(dictDir.c_str(), &finfo) < 0 ||
        !S_ISDIR(finfo.st_mode)) {
-      dictDir = "./";
+      dictDir = llvm::sys::path::parent_path(dictSrcFile);
+      if (dictDir.empty()) {
+         dictDir = "./";
+      } else {
+         dictDir += "/";
+      }
    }
-   
 #endif
-   
+
    CI->getPreprocessor().getHeaderSearchInfo().setModuleCachePath(dictDir.c_str());
    std::string moduleFile = dictDir + ROOT::TMetaUtils::GetModuleFileName(dictname.c_str());
    clang::Module* module = 0;
@@ -4299,9 +4242,9 @@ int main(int argc, char **argv)
       return 1;
    }
 
-   char dictname[1024];
-   int i, ic, ifl, force;
-   int icc = 0;
+   std::string dictname;
+   std::string dictpathname;
+   int ic, force;
    bool requestAllSymbols = false; // Would be set to true is we decide to support an option like --deep.
 
    std::string currentDirectory;
@@ -4342,7 +4285,6 @@ int main(int argc, char **argv)
 
    const char* libprefix = "--lib-list-prefix=";
 
-   ifl = 0;
    while (ic < argc && strncmp(argv[ic], "-",1)==0
           && strcmp(argv[ic], "-f")!=0 ) {
       if (!strcmp(argv[ic], "-l")) {
@@ -4398,7 +4340,6 @@ int main(int argc, char **argv)
    }
 #endif
 
-   string header("");
    if (ic < argc && (strstr(argv[ic],".C")  || strstr(argv[ic],".cpp") ||
        strstr(argv[ic],".cp") || strstr(argv[ic],".cxx") ||
        strstr(argv[ic],".cc") || strstr(argv[ic],".c++"))) {
@@ -4410,7 +4351,7 @@ int main(int argc, char **argv)
             return 1;
          }
       }
-      //string header( argv[ic] );
+      string header( argv[ic] );
       header = argv[ic];
       int loc = strrchr(argv[ic],'.') - argv[ic];
       header[loc+1] = 'h';
@@ -4436,46 +4377,30 @@ int main(int argc, char **argv)
          }
       }
 
-      dictsrc=argv[ic];
-      fp = fopen(argv[ic], "w");
-      if (fp) fclose(fp);    // make sure file is created and empty
-      ifl = ic;
-      ic++;
-
       // remove possible pathname to get the dictionary name
-      if (strlen(argv[ifl]) > (sizeof(dictname)-1)) {
+      if (strlen(argv[ic]) > (PATH_MAX-1)) {
          Error(0, "rootcint: dictionary name too long (more than %d characters): %s\n",
-               sizeof(dictname)-1,argv[ifl]);
+               (PATH_MAX-1),argv[ic]);
          CleanupOnExit(1);
          return 1;
       }
-      strncpy(dictname, argv[ifl], sizeof(dictname)-1);
-      char *p = 0;
-      // find the right part of then name.
-      for (p = dictname + strlen(dictname)-1;p!=dictname;--p) {
-         if (*p =='/' ||  *p =='\\') {
-            *p = 0;
-            break;
-         }
-      }
-      if (!p)
-         p = dictname;
-      else if (p != dictname) {
-         p++;
-         memmove(dictname, p, strlen(p)+1);
-      }
+
+      gDictsrcForCleanup = argv[ic];
+      dictpathname = argv[ic];
+      dictname = llvm::sys::path::filename(dictpathname);
+   
+      fp = fopen(argv[ic], "w");
+      if (fp) fclose(fp);    // make sure file is created and empty
+      ic++;
+
    } else if (!strcmp(argv[1], "-?") || !strcmp(argv[1], "-h")) {
       fprintf(stderr, "%s\n", help);
       return 1;
    } else {
       ic = 1;
       if (force) ic = 2;
-      ifl = 0;
    }
    
-   int iv, il;
-   std::vector<std::string> path;
-
    std::vector<std::string> clingArgs;
    clingArgs.push_back(argv[0]);
    clingArgs.push_back("-I.");
@@ -4489,43 +4414,32 @@ int main(int argc, char **argv)
 #if !defined(ROOTBUILD) && defined(ROOTINCDIR)
    SetRootSys();
 #endif
-   path.push_back(std::string("-I") + TMetaUtils::GetROOTIncludeDir(ROOTBUILDVAL));
-
 
    if (ic < argc && !strcmp(argv[ic], "-c")) {
-      icc++;
-      if (ifl) {
+      // Simply ignore the -c options.
+      ic++;
+   }
+
+   while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
+      if (strcmp("+P", argv[ic]) == 0 ||
+          strcmp("+V", argv[ic]) == 0 ||
+          strcmp("+STUB", argv[ic]) == 0) {
+         // break when we see positional options
+         break;
+      }
+      if (strcmp("-pipe", argv[ic])!=0 && strcmp("-pthread", argv[ic])!=0) {
+         // filter out undesirable options
+         if (strcmp("-fPIC", argv[ic]) && strcmp("-fpic", argv[ic])
+             && strcmp("-p", argv[ic])) 
+            {    
+               clingArgs.push_back(argv[ic]);
+            }
          ic++;
-
-         while (ic < argc && (*argv[ic] == '-' || *argv[ic] == '+')) {
-            if (strcmp("+P", argv[ic]) == 0 ||
-                strcmp("+V", argv[ic]) == 0 ||
-                strcmp("+STUB", argv[ic]) == 0) {
-               // break when we see positional options
-               break;
-            }
-            if (strcmp("-pipe", argv[ic])!=0 && strcmp("-pthread", argv[ic])!=0) {
-               // filter out undesirable options
-               if (strcmp("-fPIC", argv[ic]) && strcmp("-fpic", argv[ic])
-                   && strcmp("-p", argv[ic])) {
-                  clingArgs.push_back(argv[ic]);
-               }
-               ic++;
-            } else {
-               ic++;
-            }
-         }
-
-         for (i = 0; i < (int)path.size(); i++) {
-            clingArgs.push_back(path[i].c_str());
-         }
       } else {
-         Error(0, "%s: option -c can only be used when an output file has been specified\n", argv[0]);
-         return 1;
+         ic++;
       }
    }
-   iv = 0;
-   il = 0;
+   clingArgs.push_back(std::string("-I") + TMetaUtils::GetROOTIncludeDir(ROOTBUILDVAL));
 
    std::vector<std::string> pcmArgs;
    for (size_t parg = 0, n = clingArgs.size(); parg < n; ++parg) {
@@ -4534,39 +4448,55 @@ int main(int argc, char **argv)
    }
 
    // cling-only arguments
-   clingArgs.push_back("-fsyntax-only");
-   std::string interpInclude
-      = TMetaUtils::GetInterpreterExtraIncludePath(ROOTBUILDVAL);
+   std::string interpInclude = TMetaUtils::GetInterpreterExtraIncludePath(ROOTBUILDVAL);
    clingArgs.push_back(interpInclude);
-
+   clingArgs.push_back("-D__ROOTCLING__");
+   clingArgs.push_back("-fsyntax-only");
+   
    std::vector<const char*> clingArgsC;
    for (size_t iclingArgs = 0, nclingArgs = clingArgs.size();
         iclingArgs < nclingArgs; ++iclingArgs) {
       clingArgsC.push_back(clingArgs[iclingArgs].c_str());
    }
 
+#ifdef R__LLVMRESOURCEDIR
+   gResourceDir = R__LLVMRESOURCEDIR;
+#else
    gResourceDir = TMetaUtils::GetLLVMResourceDir(ROOTBUILDVAL);
+#endif
    cling::Interpreter interp(clingArgsC.size(), &clingArgsC[0],
                              gResourceDir.c_str());
-   interp.declare("namespace std {} using namespace std;");
+   if (interp.declare("namespace std {} using namespace std;") != cling::Interpreter::kSuccess
+// CINT uses to define a few header implicitly, we need to do it explicitly.
+       || interp.declare("#include <assert.h>\n"
+                         "#include <stdlib.h>\n"
+                         "#include <stddef.h>\n"
+                         "#include <math.h>\n"
+                         "#include <string.h>\n"
+                         ) != cling::Interpreter::kSuccess
 #ifdef ROOTBUILD
-   interp.declare("#include \"include/Rtypes.h\"");
-   interp.declare("#include \"include/TClingRuntime.h\"");
-   interp.declare("#include \"include/TObject.h\"");
+       || interp.declare("#include \"Rtypes.h\"") != cling::Interpreter::kSuccess
+       || interp.declare("#include \"TClingRuntime.h\"") != cling::Interpreter::kSuccess
+       || interp.declare("#include \"TObject.h\"") != cling::Interpreter::kSuccess
 #else
 # ifndef ROOTINCDIR
-   interp.declare("#include \"Rtypes.h\"");
-   interp.declare("#include \"TClingRuntime.h\"");
-   interp.declare("#include \"TObject.h\"");
+       || interp.declare("#include \"Rtypes.h\"") != cling::Interpreter::kSuccess
+       || interp.declare("#include \"TClingRuntime.h\"") != cling::Interpreter::kSuccess
+       || interp.declare("#include \"TObject.h\"") != cling::Interpreter::kSuccess
 # else
-   interp.declare("#include \"" ROOTINCDIR "/Rtypes.h\"");
-   interp.declare("#include \"" ROOTINCDIR "/TClingRuntime.h\"");
-   interp.declare("#include \"" ROOTINCDIR "/TObject.h\"");
+       || interp.declare("#include \"" ROOTINCDIR "/Rtypes.h\"") != cling::Interpreter::kSuccess
+       || interp.declare("#include \"" ROOTINCDIR "/TClingRuntime.h\"") != cling::Interpreter::kSuccess
+       || interp.declare("#include \"" ROOTINCDIR "/TObject.h\"") != cling::Interpreter::kSuccess
 # endif
 #endif
+       ) {
+      // There was an error.
+      Error(0,"Error loading the default header files.");
+      CleanupOnExit(1);
+      return 1;
+   }
+       
    gInterp = &interp;
-
-   
 
    // For the list of 'opaque' typedef to also include string, we have to include it now.
    interp.declare("#include <string>");
@@ -4648,12 +4578,14 @@ int main(int argc, char **argv)
    std::string interpPragmaSource;
    std::string includeForSource;
    string esc_arg;
-   for (i = ic; i < argc; i++) {
-      if (!iv && *argv[i] != '-' && *argv[i] != '+') {
-         iv = i;
+   int firstInputFile = 0;
+   int linkdefLoc = 0;
+   for (int i = ic; i < argc; i++) {
+      if (!firstInputFile && *argv[i] != '-' && *argv[i] != '+') {
+         firstInputFile = i;
       }
       if (R__IsSelectionFile(argv[i])) {
-         il = i;
+         linkdefLoc = i;
          if (i != argc-1) {
             Error(0, "%s: %s must be last file on command line\n", argv[0], argv[i]);
             return 1;
@@ -4665,17 +4597,32 @@ int main(int argc, char **argv)
       }
       if (strcmp("-pipe", argv[ic])!=0) {
          // filter out undesirable options
-         string argkeep;
-            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
-         StrcpyArg(argkeep, argv[i]);
          
          if (*argv[i] != '-' && *argv[i] != '+') {
             // Looks like a file
+
+            bool isSelectionFile = R__IsSelectionFile(argv[i]);
+
+            string argkeep;
+            // coverity[tainted_data] The OS should already limit the argument size, so we are safe here
+            if (!isSelectionFile) StrcpyArg(argkeep, argv[i]);
+            std::string header( isSelectionFile ? argv[i] : R__GetRelocatableHeaderName( argv[i], currentDirectory ) );
+            // Strip any trailing + which is only used by GeneratedLinkdef.h which currently 
+            // use directly argv.
+            if (header[header.length()-1]=='+') {
+               header.erase(header.length()-1);
+            }
+            
+            // We are 'normalizing' the file in two different way.  StrcpyArg (from rootcint)
+            // strip just the ROOTBUILD part (i.e. $PWD/package/module/inc) while
+            // R__GetRelocatableHeaderName also $PWD.
+            // R__GetRelocatableHeaderName is likely to be too aggressive and the 
+            // ROOTBUILD part should really be removed by changing the ROOT makefile
+            // to pass -I and path relative to the include path.
             if (cling::Interpreter::kSuccess 
-                == interp.declare(std::string("#include \"") + argv[i] + "\"")) {
-               interpPragmaSource += std::string("#include \"") + argv[i] + "\"\n";
-               std::string header( R__GetRelocatableHeaderName( argv[i], currentDirectory ) );
-               if (!R__IsSelectionFile(argv[i])) 
+                == interp.declare(std::string("#include \"") + header + "\"")) {
+               interpPragmaSource += std::string("#include \"") + header + "\"\n";
+               if (!isSelectionFile) 
                   includeForSource += std::string("#include \"") + header + "\"\n";
                pcmArgs.push_back(header);
             } else {
@@ -4688,37 +4635,39 @@ int main(int argc, char **argv)
       }
    }
 
-   if (!iv) {
+   if (!firstInputFile) {
       Error(0, "%s: no input files specified\n", argv[0]);
       CleanupOnExit(1);
       return 1;
    }
 
-   if (!il) {
+   if (!linkdefLoc) {
       // Generate autolinkdef
-      GenerateLinkdef(&argc, argv, iv, interpPragmaSource);
+      GenerateLinkdef(&argc, argv, firstInputFile, interpPragmaSource);
    }
 
    // make name of dict include file "aapDict.cxx" -> "aapDict.h"
-   std::string dictheader( argv[ifl] );
-   size_t pos = dictheader.rfind('.');
-   dictheader.erase(pos);
-   dictheader.append(".h");
-   
+   std::string dictheader( dictpathname );
+   if (!dictheader.empty()) {
+      size_t pos = dictheader.rfind('.');
+      if (pos != std::string::npos) dictheader.erase(pos);
+      dictheader.append(".h");
+   }
    std::string inclf(dictname);
-   pos = inclf.rfind('.');
-   inclf.erase(pos);
-   inclf.append(".h");
-   
+   if (!inclf.empty()) {
+      size_t pos = inclf.rfind('.');
+      if (pos != std::string::npos) inclf.erase(pos);
+      inclf.append(".h");
+   }
    // Check if code goes to stdout or rootcling file
    std::ofstream fileout;
    std::ofstream headerout;
-   if (ifl) {
-      fileout.open(argv[ifl]);
+   if (!dictpathname.empty()) {
+      fileout.open(dictpathname.c_str());
       dictSrcOut = &fileout;
       if (!(*dictSrcOut)) {
          Error(0, "rootcint: failed to open %s in main\n",
-               argv[ifl]);
+               dictpathname.c_str());
          CleanupOnExit(1);
          return 1;
       }
@@ -4735,21 +4684,23 @@ int main(int argc, char **argv)
       dictHdrOut = &std::cout;
    }
    
-   string main_dictname(argv[ifl]);
-   size_t dh = main_dictname.rfind('.');
-   if (dh != std::string::npos) {
-      main_dictname.erase(dh);
+   string main_dictname(dictpathname);
+   {
+      size_t dh = main_dictname.rfind('.');
+      if (dh != std::string::npos) {
+         main_dictname.erase(dh);
+      }
+      // Need to replace all the characters not allowed in a symbol ...
+      std::string main_dictname_copy(main_dictname);
+      TMetaUtils::GetCppName(main_dictname, main_dictname_copy.c_str());
    }
-   // Need to replace all the characters not allowed in a symbol ...
-   std::string main_dictname_copy(main_dictname);
-   TMetaUtils::GetCppName(main_dictname, main_dictname_copy.c_str());
 
    time_t t = time(0);
    (*dictSrcOut) << "//"  << std::endl
                  << "// File generated by " << argv[0] << " at " << ctime(&t) << std::endl
                  << "// Do NOT change. Changes will be lost next time file is generated" << std::endl
                  << "//" << std::endl << std::endl
-
+      
                  << "#define R__DICTIONARY_FILENAME " << main_dictname << std::endl
                  << "#include \"" << inclf << "\"\n"
                  << std::endl;
@@ -4763,12 +4714,12 @@ int main(int argc, char **argv)
    //---------------------------------------------------------------------------
 
    string linkdefFilename;
-   if (!il) {
+   if (!linkdefLoc) {
       linkdefFilename = "in memory";
    } else {
-      bool found = Which(interp, argv[il], linkdefFilename);
+      bool found = Which(interp, argv[linkdefLoc], linkdefFilename);
       if (!found) {
-         Error(0, "%s: cannot open linkdef file %s\n", argv[0], argv[il]);
+         Error(0, "%s: cannot open linkdef file %s\n", argv[0], argv[linkdefLoc]);
          CleanupOnExit(1);
          return 1;
       }
@@ -4779,7 +4730,7 @@ int main(int argc, char **argv)
 
    if (requestAllSymbols) {
       selectionRules.SetDeep(true);
-   } else if (!il) {
+   } else if (!linkdefLoc) {
       // There is no linkdef file, we added the 'default' #pragma to 
       // interpPragmaSource.
 
@@ -4795,8 +4746,11 @@ int main(int argc, char **argv)
          Info(0,"#pragma successfully parsed.\n");
       }
 
-      ldefr.LoadIncludes(interp,extraIncludes);
-
+      if (!ldefr.LoadIncludes(interp,extraIncludes)) {
+         Error(0,"Error loading the #pragma extra_include.");
+         CleanupOnExit(1);
+         return 1;
+      }
    } else if (R__IsSelectionXml(linkdefFilename.c_str())) {
 
       selectionRules.SetSelectionFileType(SelectionRules::kSelectionXMLFile);
@@ -4843,7 +4797,11 @@ int main(int argc, char **argv)
          Info(0,"Linkdef file successfully parsed.\n");
       }
 
-      ldefr.LoadIncludes(interp,extraIncludes);
+      if(! ldefr.LoadIncludes(interp,extraIncludes) ) {
+         Error(0,"Error loading the #pragma extra_include.");
+         CleanupOnExit(1);
+         return 1;
+      }
    } else {
 
       Error(0,"Unrecognized selection file: %s",linkdefFilename.c_str());
@@ -5028,14 +4986,20 @@ int main(int argc, char **argv)
    
    // Now we have done all our looping and thus all the possible 
    // annotation, let's write the pcms.
-   if (strstr(dictname,"rootcint_") != dictname) {
-      // Modules only for "regular" dictionaries, not for cintdlls
-      // pcmArgs does not need any of the 'extra' include (entered via
-      // #pragma) as those are needed only for compilation.
-      // However CINT was essentially treating them the same as any other
-      // so we may have to put them here too ... maybe.
-      GenerateModule(dictname, pcmArgs, currentDirectory);
-   }
+
+   // pcmArgs does not need any of the 'extra' include (entered via
+   // #pragma) as those are needed only for compilation.
+   // However CINT was essentially treating them the same as any other
+   // so we may have to put them here too ... maybe.
+
+   // Until the module are actually enabled in ROOT, we need to register
+   // the 'current' directory to make it relocatable (i.e. have a way
+   // to find the headers).
+   string incCurDir = "-I";
+   incCurDir += currentDirectory;
+   pcmArgs.push_back(incCurDir);
+   
+   GenerateModule(dictpathname.c_str(), pcmArgs, currentDirectory);
 
    // Now that CINT is not longer there to write the header file,
    // write one and include in there a few things for backward 
@@ -5052,10 +5016,11 @@ int main(int argc, char **argv)
    (*dictHdrOut) << "#include <stdlib.h>\n";
    (*dictHdrOut) << "#include <math.h>\n";
    (*dictHdrOut) << "#include <string.h>\n";
+   (*dictHdrOut) << "#include <assert.h>\n";
    (*dictHdrOut) << "#define G__DICTIONARY\n";
    (*dictHdrOut) << "#include \"RConfig.h\"\n"
                  << "#include \"TClass.h\"\n"
-                 << "#include \"TCintWithCling.h\"\n"
+                 << "#include \"TCling.h\"\n"
                  << "#include \"TBuffer.h\"\n"
                  << "#include \"TMemberInspector.h\"\n"
                  << "#include \"TError.h\"\n\n"

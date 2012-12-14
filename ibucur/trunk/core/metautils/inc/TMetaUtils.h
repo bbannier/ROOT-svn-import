@@ -60,6 +60,9 @@ namespace ROOT {
       // Return the ROOT include directory
       std::string GetROOTIncludeDir(bool rootbuild);
 
+      // Return the header file to be included to declare the Decl
+      llvm::StringRef GetFileName(const clang::Decl *decl);
+
       // Return the dictionary file name for a module
       std::string GetModuleFileName(const char* moduleName);
 
@@ -84,6 +87,10 @@ namespace ROOT {
       // Return the type with all parts fully qualified (most typedefs),
       // including template arguments.
       clang::QualType GetFullyQualifiedType(const clang::QualType &type, const cling::Interpreter &interpreter);
+
+      // Return the type with all parts fully qualified (most typedefs),
+      // including template arguments.
+      void GetFullyQualifiedTypeName(std::string &name, const clang::QualType &type, const cling::Interpreter &interpreter);
 
       // Return the type name normalized for ROOT,
       // keeping only the ROOT opaque typedef (Double32_t, etc.) and
@@ -116,7 +123,10 @@ namespace ROOT {
       // ClassDef(MyClass, 1) // class comment
       //
       llvm::StringRef GetClassComment(const clang::CXXRecordDecl &decl, clang::SourceLocation *loc, const cling::Interpreter &interpreter);
-      
+
+      // Return the base/underlying type of a chain of array or pointers type.
+      const clang::Type *GetUnderlyingType(clang::QualType type);
+
       // Scans the redeclaration chain for a definition of the redeclarable which
       // is annotated.
       //

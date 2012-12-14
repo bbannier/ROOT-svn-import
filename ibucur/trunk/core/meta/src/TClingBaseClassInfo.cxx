@@ -26,9 +26,7 @@
 #include "TClingBaseClassInfo.h"
 
 #include "TClingClassInfo.h"
-#include "Property.h"
-#include "TClingProperty.h"
-
+#include "TDictionary.h"
 #include "TMetaUtils.h"
 
 #include "cling/Interpreter/Interpreter.h"
@@ -55,6 +53,9 @@ TClingBaseClassInfo::TClingBaseClassInfo(cling::Interpreter* interp,
       return;
    }
    fClassInfo = new TClingClassInfo(*ci);
+   if (!fClassInfo->GetDecl()) {
+      return;
+   }
    const clang::CXXRecordDecl* CRD =
       llvm::dyn_cast<clang::CXXRecordDecl>(fClassInfo->GetDecl());
    if (!CRD) {
@@ -248,20 +249,20 @@ long TClingBaseClassInfo::Property() const
    }
    long property = 0L;
    if (fIter->isVirtual()) {
-      property |= G__BIT_ISVIRTUALBASE;
+      property |= kIsVirtualBase;
    }
    if (fDecl == fClassInfo->GetDecl()) {
-      property |= G__BIT_ISDIRECTINHERIT;
+      property |= kIsDirectInherit;
    }
    switch (fIter->getAccessSpecifier()) {
       case clang::AS_public:
-         property |= G__BIT_ISPUBLIC;
+         property |= kIsPublic;
          break;
       case clang::AS_protected:
-         property |= G__BIT_ISPROTECTED;
+         property |= kIsProtected;
          break;
       case clang::AS_private:
-         property |= G__BIT_ISPRIVATE;
+         property |= kIsPrivate;
          break;
       case clang::AS_none:
          // IMPOSSIBLE

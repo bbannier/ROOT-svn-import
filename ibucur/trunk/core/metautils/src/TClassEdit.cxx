@@ -10,10 +10,6 @@
 #include "Rstrstream.h"
 #include <set>
 
-#ifndef R__HAS_CLING
-// CINT's API.
-#include "Api.h"
-#else
 #include "llvm/ADT/SmallSet.h"
 
 #include "clang/Frontend/CompilerInstance.h"
@@ -31,19 +27,14 @@ namespace {
    ROOT::TMetaUtils::TNormalizedCtxt *gNormalizedCtxt = 0;
 }
 
-#endif
-
 namespace std {} using namespace std;
 
-#ifndef R__HAS_CLING
-#else
 //______________________________________________________________________________
 void TClassEdit::Init(cling::Interpreter &interpreter,ROOT::TMetaUtils::TNormalizedCtxt &normCtxt)
 {
    gInterpreter = &interpreter;
    gNormalizedCtxt = &normCtxt;
 }
-#endif
 
 //______________________________________________________________________________
 TClassEdit::TSplitType::TSplitType(const char *type2split, EModType mode) : fName(type2split), fNestedLocation(0)
@@ -130,7 +121,13 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
    //      {for (int i=0;i<narg;i++) fprintf(stderr,"calling ShortType %d for %s with %d %s \n",
    //                                        mode,typeDesc,i,arglist[i].c_str());
    //      }
-   if (fElements[narg-1].empty() == false && fElements[narg-1][0]=='*') {
+   if (fElements[narg-1].empty() == false &&
+       (fElements[narg-1][0]=='*' 
+        || fElements[narg-1][0]=='&' 
+        || 0 == fElements[narg-1].compare(0,6,"const*") 
+        || 0 == fElements[narg-1].compare(0,6,"const&") 
+        )
+       ) {
       if ((mode&1)==0) tailLoc = narg-1;
       narg--;
    }
@@ -251,12 +248,6 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
       std::string nonDefName = answ;
       // "superlong" because tLong might turn fName into an even longer name
       std::string nameSuperLong = fName;
-#ifndef R__HAS_CLING
-      G__TypedefInfo td;
-      td.Init(nameSuperLong.c_str());
-      if (td.IsValid())
-         nameSuperLong = td.TrueName();
-#else
       if (gInterpreter) {
          const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
          clang::QualType t = lh.findType(nameSuperLong);
@@ -266,18 +257,12 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
                dest.getAsStringInternal(nameSuperLong,gInterpreter->getCI()->getASTContext().getPrintingPolicy());
          }
       }
-#endif
       while (++nargNonDefault < narg) {
          // If T<a> is a "typedef" (aka default template params)
          // to T<a,b> then we can strip the "b".
          const char* closeTemplate = " >";
          if (nonDefName[nonDefName.length() - 1] != '>')
             ++closeTemplate;
-#ifndef R__HAS_CLING
-         td.Init((nonDefName + closeTemplate).c_str());
-         if (td.IsValid() && nameSuperLong == td.TrueName())
-            break;
-#else
          if (gInterpreter) {
             const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
             clang::QualType t = lh.findType((nonDefName + closeTemplate).c_str());
@@ -287,7 +272,6 @@ void TClassEdit::TSplitType::ShortType(std::string &answ, int mode)
                   break;
             }
          }
-#endif
          if (nargNonDefault>1) nonDefName += ",";
          nonDefName += fElements[nargNonDefault];
       }
@@ -527,8 +511,12 @@ int TClassEdit::GetSplit(const char *type, vector<string>& output, int &nestedLo
    output.clear();
    if (strlen(type)==0) return 0;
   
-   string full( mode & kLong64 ? TClassEdit::GetLong64_Name( CleanType(type, 1 /* keepInnerConst */) )
-               : CleanType(type, 1 /* keepInnerConst */) );
+   int cleantypeMode = 1 /* keepInnerConst */;
+   if (mode & kKeepOuterConst) {
+      cleantypeMode = 0; /* remove only the outer class keyword */
+   }
+   string full( mode & kLong64 ? TClassEdit::GetLong64_Name( CleanType(type, cleantypeMode) )
+               : CleanType(type, cleantypeMode) );
    if ( mode & kDropStd && strncmp( full.c_str(), "std::", 5) == 0) {
       full.erase(0,5);
    }
@@ -539,11 +527,43 @@ int TClassEdit::GetSplit(const char *type, vector<string>& output, int &nestedLo
    const unsigned int tlen( full.size() );
    if ( tlen > 0 ) {
       const char *starloc = t + tlen - 1;
-      if ( (*starloc)=='*' ) {
-         while( (*(starloc-1))=='*' ) { starloc--; }
+      bool hasconst = false;
+      if ( (*starloc)=='t' 
+          && (starloc-t) > 5 && 0 == strncmp((starloc-5),"const",5) 
+          && ( (*(starloc-6)) == ' ' || (*(starloc-6)) == '*' || (*(starloc-6)) == '&') ) {
+         // we are ending on a const.
+         starloc -= 4;
+         if ((*starloc-1)==' ') {
+            // Take the space too.
+            starloc--;
+         }
+         hasconst = true;
+      }
+      if ( hasconst || (*starloc)=='*' || (*starloc)=='&' ) {
+         while( (*(starloc-1))=='*' || (*(starloc-1))=='&' || (*(starloc-1))=='t') { 
+            if ( (*(starloc-1))=='t' ) {
+               if ( (starloc-1-t) > 5 && 0 == strncmp((starloc-5),"const",5)
+                   && ( (*(starloc-6)) == ' ' || (*(starloc-6)) == '*' || (*(starloc-6)) == '&') ) {
+                  // we have a const.
+                  starloc -= 5;
+                  if ((*starloc-1)==' ') {
+                     // Take the space too.
+                     starloc--;
+                  }
+               } else {
+                  break;
+               }
+            } else {
+               starloc--;
+            }
+         }
          stars = starloc;
          const unsigned int starlen = strlen(starloc);
          full.erase(tlen-starlen,starlen);
+      } else if (hasconst) {
+         stars = starloc;
+         const unsigned int starlen = strlen(starloc);
+         full.erase(tlen-starlen,starlen);         
       }
    }
 
@@ -656,7 +676,7 @@ string TClassEdit::CleanType(const char *typeDesc, int mode, const char **tail)
       
       if (*c == '<')   lev++;
       if (lev==0 && !isalnum(*c)) {
-         if (!strchr("*:_$ []-@",*c)) break;
+         if (!strchr("*&:_$ []-@",*c)) break;
       }
       if (c[0]=='>' && result.size() && result[result.size()-1]=='>') result+=" ";
 
@@ -748,7 +768,7 @@ bool TClassEdit::IsVectorBool(const char *name) {
 
    return ( TClassEdit::STLKind( splitname.fElements[0].c_str() ) == TClassEdit::kVector)
       && ( splitname.fElements[1] == "bool" || splitname.fElements[1]=="Bool_t");
-};
+}
 
 //______________________________________________________________________________
 namespace {
@@ -806,13 +826,6 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
                      tname += 5;
                      break;
                   } else {
-#ifndef R__HAS_CLING
-                     G__ClassInfo info(base.c_str());
-                     if (!info.IsLoaded()) {
-                        // the nesting namespace is not declared
-                        return tname;
-                     }
-#else
                      if (gInterpreter) {
                         const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
                         if (!lh.findScope(base.c_str(),0)) {                        
@@ -820,7 +833,6 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
                            return tname;
                         }
                      }
-#endif
                   }
                   // Consume the 2nd semi colon
                   ++k;
@@ -832,11 +844,6 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
       // We have a very simple type
 
       if (resolveAll || ShouldReplace(tname)) {
-#ifndef R__HAS_CLING
-         G__TypedefInfo t;
-         t.Init(tname);
-         if (t.IsValid()) return t.TrueName();
-#else
          if (gInterpreter) {
             const cling::LookupHelper& lh = gInterpreter->getLookupHelper();
             clang::QualType t = lh.findType(tname);
@@ -860,7 +867,6 @@ string TClassEdit::ResolveTypedef(const char *tname, bool resolveAll)
                }
             }
          }
-#endif
       }
       return tname;
    }
