@@ -12,7 +12,6 @@ namespace RooStats {
       virtual ~CombinedDataSet() {}
       CombinedDataSet(std::vector<RooDataSet*> dataSets);      
 
-   private:
        struct DataSetInfo {
          Int_t firstIdx;
          Int_t lastIdx;
@@ -21,6 +20,7 @@ namespace RooStats {
          Bool_t rowMajor;
       };
 
+   private:
      CombinedDataSet() {} // hide default constructor (needed for I/O)
       CombinedDataSet(const CombinedDataSet& rhs); // disallow copy constructor
       CombinedDataSet& operator=(const CombinedDataSet& rhs); // disallow assignment operator
