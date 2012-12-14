@@ -40,7 +40,7 @@ public:
    static Long64_t Merge(T* p, TCollection *list);
 
    template <typename T>
-   static T* RebinAxis(T* p, Double_t x, TAxis *axis);
+   static T* ExtendAxis(T* p, Double_t x, TAxis *axis);
 
    template <typename T>
    static void Scale(T* p, Double_t c1, Option_t * option);
@@ -338,8 +338,8 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
    for (Int_t i=0;i<TH1::kNstat;i++) {totstats[i] = stats[i] = 0;}
    p->GetStats(totstats);
    Double_t nentries = p->GetEntries();
-   Bool_t canRebin=p->TestBit(TH1::kCanRebin);
-   p->ResetBit(TH1::kCanRebin); // reset, otherwise setting the under/overflow will rebin
+   Bool_t canExtend = p->CanExtendAllAxes();
+   p->SetCanExtend(TH1::kNoAxis); // reset, otherwise setting the under/overflow will extend the axis 
 
    while ( (h=static_cast<T*>(next())) ) {
       // process only if the histogram has limits; otherwise it was processed before
@@ -357,7 +357,7 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
                // histogram have different limits:
                // find global bin number in p given the x,y,z axis bin numbers in h
                // in case of nont equal axes
-               // we can use FindBin on p axes because kCanRebin bit of p has been reset before 
+               // we can use FindBin on p axes because SetCanExtend(TH1::kNoAxis) has been called 
                if ( h->GetW()[hbin] != 0 && (h->IsBinUnderflow(hbin) || h->IsBinOverflow(hbin)) ) {
                   // reject cases where underflow/overflow are there and bin content is not zero
                   Error("TProfileHelper::Merge", "Cannot merge profiles - they have"
@@ -384,7 +384,7 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
          }
       }
    }
-   if (canRebin) p->SetBit(TH1::kCanRebin);
+   if (canExtend) p->SetCanExtend(TH1::kAllAxes);
 
    //copy merged stats
    p->PutStats(totstats);
@@ -397,19 +397,19 @@ Long64_t TProfileHelper::Merge(T* p, TCollection *li) {
 }
 
 template <typename T>
-T* TProfileHelper::RebinAxis(T* p, Double_t x, TAxis *axis)
+T* TProfileHelper::ExtendAxis(T* p, Double_t x, TAxis *axis)
 {
 // Profile histogram is resized along axis such that x is in the axis range.
 // The new axis limits are recomputed by doubling iteratively
 // the current axis range until the specified value x is within the limits.
 // The algorithm makes a copy of the histogram, then loops on all bins
-// of the old histogram to fill the rebinned histogram.
+// of the old histogram to fill the extended histogram.
 // Takes into account errors (Sumw2) if any.
-// The bit kCanRebin must be set before invoking this function.
-//  Ex:  h->SetBit(TH1::kCanRebin);
+// The axis must be extendable before invoking this function.
+// Ex: h->GetXaxis()->SetCanExtend(kTRUE)
 
 
-   if (!p->TestBit(TH1::kCanRebin)) return 0;
+   if (!p->CanExtendAllAxes()) return 0;
    if (axis->GetXmin() >= axis->GetXmax()) return 0;
    if (axis->GetNbins() <= 0) return 0;
 
@@ -575,8 +575,8 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
    p->Copy(*hold);
 
 
-   Int_t  nbxold = p->fXaxis.GetNbins();
-   Int_t  nbyold = p->fYaxis.GetNbins();
+//   Int_t  nbxold = p->fXaxis.GetNbins();
+//   Int_t  nbyold = p->fYaxis.GetNbins();
    Int_t  nbins  = axis->GetNbins();
    Double_t xmin = axis->GetXmin();
    Double_t xmax = axis->GetXmax();
@@ -597,17 +597,18 @@ void TProfileHelper::LabelsInflate(T* p, Option_t *ax)
    {
       Int_t binx, biny, binz;
       p->GetBinXYZ(ibin, binx, biny, binz);
-      if (binx <= nbxold && biny <= nbyold) {
-         Int_t bin = hold->GetBin(binx, biny, binz);
+      Int_t bin = hold->GetBin(binx, biny, binz);
+
+      if (p->IsBinUnderflow(ibin) || p->IsBinOverflow(ibin)) {      
+         p->UpdateBinContent(ibin, 0.0);
+         p->fBinEntries.fArray[ibin] = 0.0;
+         p->fSumw2.fArray[ibin] = 0.0;
+         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0.0;
+      } else {
          p->fArray[ibin] = hold->fArray[bin];
          p->fBinEntries.fArray[ibin] = hold->fBinEntries.fArray[bin];
          p->fSumw2.fArray[ibin] = hold->fSumw2.fArray[bin];
          if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = hold->fBinSumw2.fArray[bin];
-      } else {
-         p->fArray[ibin] = 0;
-         p->fBinEntries.fArray[ibin] = 0;
-         p->fSumw2.fArray[ibin] = 0;
-         if (p->fBinSumw2.fN) p->fBinSumw2.fArray[ibin] = 0;
       }
    }
    delete hold;
