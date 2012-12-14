@@ -47,7 +47,7 @@ public :
    /**
       Default constructor  with x=y=0 
    */
-   Cartesian2D() : fX(0), fY(0)  {  }
+   Cartesian2D() : fX(0.0), fY(0.0)  {  }
 
    /**
       Constructor from x,y  coordinates

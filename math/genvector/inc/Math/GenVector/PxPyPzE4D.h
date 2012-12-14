@@ -54,7 +54,7 @@ public :
    /**
       Default constructor  with x=y=z=t=0 
    */
-   PxPyPzE4D() : fX(0), fY(0), fZ(0), fT(0) { }
+   PxPyPzE4D() : fX(0.0), fY(0.0), fZ(0.0), fT(0.0) { }
 
 
    /**
