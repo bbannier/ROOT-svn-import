@@ -87,7 +87,9 @@ typedef ROOT::Math::XYZVector VecType;
 typedef TLorentzVector VecType;
 #else
 #include "Math/Vector4D.h"
+#include <Vc/Allocator>
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<Double_type> > VecType;
+Vc_DECLARE_ALLOCATOR(VecType)
 #endif
 
 #ifndef USE_TVECTOR
@@ -144,7 +146,6 @@ TestVector<Vector>::TestVector() :
    
    fTest(0)
 {
-
    std::cout << "ccreate the vector " << std::endl;
 
    // create list of vectors and fill them
