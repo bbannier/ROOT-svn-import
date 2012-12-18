@@ -23,6 +23,7 @@
 #include <cassert>
 
 //#define USE_VC
+//#undef USE_VC
 #ifdef USE_VC
 #include "Vc/Vc"
 typedef Vc::double_v Double_type;
@@ -97,11 +98,14 @@ typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<Double_type> > VecType;
 
 #endif
 
-#ifdef USE_VC
-const int N = 1000000/Vc::double_v::Size;
-#else
-const int N = 1000000;
-#endif
+const int NLOOP = 10000;
+const int N = 10000;
+
+// #ifdef USE_VC
+// const int N = 100000/Vc::double_v::Size;
+// #else
+// const int N = 100000;
+// #endif
 
 
 template<class Vector>
@@ -122,8 +126,11 @@ public:
 
 private:
 
-   std::vector<Vector> vlist;
-   std::vector<Double_type> scale;
+//   std::vector<Vector> vlist;
+//   std::vector<Double_type> scale;
+   Vector vlist[N];
+   Double_type scale[N];
+
    double fTime[10]; // timing results
    int  fTest;
 };
@@ -132,10 +139,13 @@ private:
 
 template<class Vector>
 TestVector<Vector>::TestVector() :
-   vlist(std::vector<Vector>(N) ),
-   scale(std::vector<Double_type>(N) ),
+   // vlist(std::vector<Vector>(N) ),
+   // scale(std::vector<Double_type>(N) ),
+   
    fTest(0)
 {
+
+   std::cout << "ccreate the vector " << std::endl;
 
    // create list of vectors and fill them
 
@@ -161,7 +171,7 @@ void TestVector<Vector>::Add()
    TStopwatch w;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 1; i< N; ++i) {
          Vector v3 = vlist[i-1] + vlist[i];
          s += VSUM(v3);
@@ -181,7 +191,7 @@ void TestVector<Vector>::Add2()
    Vector v3;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 0; i< N; ++i) {
          v3 += vlist[i];
          s += VSUM(v3);
@@ -200,7 +210,7 @@ void TestVector<Vector>::Sub()
    TStopwatch w;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 1; i< N; ++i) {
          Vector v3 = vlist[i-1] - vlist[i];
          s += VSUM(v3);
@@ -220,7 +230,7 @@ void TestVector<Vector>::Sub2()
    Vector v3;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 0; i< N; ++i) {
          v3 -= vlist[i];
          s += VSUM(v3);
@@ -240,7 +250,7 @@ void TestVector<Vector>::Scale()
    TStopwatch w;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 1; i< N; ++i) {
          Vector v3 = scale[i]*vlist[i];
          s += VSUM(v3);
@@ -260,7 +270,7 @@ void TestVector<Vector>::Scale2()
    Vector v3;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 0; i< N; ++i) {
          v3 = vlist[i];
          v3 *= scale[i];
@@ -280,7 +290,7 @@ void TestVector<Vector>::Divide()
    TStopwatch w;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 1; i< N; ++i) {
          Vector v3 = vlist[i]/scale[i];
          s += VSUM(v3);
@@ -300,7 +310,7 @@ void TestVector<Vector>::Divide2()
    Vector v3;
    w.Start();
    Double_type s(0.0);
-   for (int l = 0; l<100; ++l) {
+   for (int l = 0; l<NLOOP; ++l) {
       for (int i = 0; i< N; ++i) {
          v3 = vlist[i];
          v3 /= scale[i];
