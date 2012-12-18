@@ -159,7 +159,6 @@ TMVA::MethodBDT::MethodBDT( const TString& jobName,
    , fTransitionPoint(0)
    , fShrinkage(0)
    , fBaggedGradBoost(kFALSE)
-   , fSampleFraction(0)
    , fSumOfWeights(0)
    , fMinNodeEvents(0)
    , fMinNodeSize(5)
@@ -213,7 +212,6 @@ TMVA::MethodBDT::MethodBDT( DataSetInfo& theData,
    , fTransitionPoint(0)
    , fShrinkage(0)
    , fBaggedGradBoost(kFALSE)
-   , fSampleFraction(0)
    , fSumOfWeights(0)
    , fMinNodeEvents(0)
    , fMinNodeSize(5)
@@ -336,13 +334,12 @@ void TMVA::MethodBDT::DeclareOptions()
    AddPreDefVal(TString("Exponential"));
 
    DeclareOptionRef(fBaggedGradBoost=kFALSE, "UseBaggedGrad","Use only a random subsample of all events for growing the trees in each iteration. (Only valid for GradBoost)");
-   DeclareOptionRef(fSampleFraction=0.6, "GradBaggingFraction","Defines the fraction of events to be used in each iteration when UseBaggedGrad=kTRUE. (Only valid for GradBoost)");
    DeclareOptionRef(fShrinkage=1.0, "Shrinkage", "Learning rate for GradBoost algorithm");
    DeclareOptionRef(fAdaBoostBeta=.5, "AdaBoostBeta", "Learning rate  for AdaBoost algorithm");
    DeclareOptionRef(fRandomisedTrees,"UseRandomisedTrees","Choose at each node splitting a random set of variables");
    DeclareOptionRef(fUseNvars,"UseNvars","Number of variables used if randomised tree option is chosen");
    DeclareOptionRef(fUsePoissonNvars,"UsePoissonNvars", "Interpret \"UseNvars\" not as fixed number but as mean of a Possion distribution in each split");
-   DeclareOptionRef(fUseNTrainEvents,"UseNTrainEvents","Number of randomly picked training events used in randomised (and bagged) trees");
+   DeclareOptionRef(fSampleSizeFraction=1.,"BaggedSampleFraction","Relative size of bagged event sample to original size of the data sample (used whenever bagging is used (i.e. UseBaggedGrad, Bagging,)" );
 
 
    DeclareOptionRef(fUseWeightedTrees=kTRUE, "UseWeightedTrees",
@@ -389,7 +386,7 @@ void TMVA::MethodBDT::DeclareOptions()
    AddPreDefVal(TString("CostComplexity"));
    DeclareOptionRef(fPruneBeforeBoost=kFALSE, "PruneBeforeBoost", "Flag to prune the tree before applying boosting algorithm");
    DeclareOptionRef(fFValidationEvents=0.5, "PruningValFraction", "Fraction of events to use for optimizing automatic pruning.");
-   DeclareOptionRef(fNNodesMax=100000,"NNodesMax","Max number of nodes in tree");
+   DeclareOptionRef(fNNodesMax=3,"NNodesMax","Max number of nodes in tree (defauts to 50 for regression)");
    if (DoRegression()) {
       DeclareOptionRef(fMaxDepth=50,"MaxDepth","Max depth of the decision tree allowed");
    }else{
@@ -408,7 +405,10 @@ void TMVA::MethodBDT::DeclareOptions()
 
 void TMVA::MethodBDT::DeclareCompatibilityOptions() {
    MethodBase::DeclareCompatibilityOptions();
-   DeclareOptionRef(fSampleSizeFraction=1.0,"SampleSizeFraction","Relative size of bagged event sample to original size of the data sample" );
+   DeclareOptionRef(fSampleSizeFraction=0.6, "GradBaggingFraction","Defines the fraction of events to be used in each iteration when UseBaggedGrad=kTRUE. (Only valid for GradBoost)");
+   DeclareOptionRef(fSampleSizeFraction=0.6, "GradBaggingFraction","Defines the fraction of events to be used in each iteration when UseBaggedGrad=kTRUE. (Only valid for GradBoost)");
+   DeclareOptionRef(fUseNTrainEvents,"UseNTrainEvents","Number of randomly picked training events used in randomised (and bagged) trees");
+
 
 }
 
@@ -445,6 +445,13 @@ void TMVA::MethodBDT::ProcessOptions()
    if (fAutomatic && fPruneMethod==DecisionTree::kExpectedErrorPruning){
       Log() << kFATAL 
             <<  "Sorry autmoatic pruning strength determination is not implemented yet for ExpectedErrorPruning" << Endl;
+   }
+
+   if (fUseNTrainEvents){
+      Log() << kWARNING << "You are using a DEPRECATED option of setting the explicit number of events \n"
+            << "for bagged event samples. This sould be replaced by the option ** BaggedSampleFraction ** \n"
+            << "which specifies the fraction of the training sample events used in each bagged sample"<< Endl;
+      fSampleSizeFraction  = fUseNTrainEvents/Data()->GetNTrainingEvents();
    }
 
 
@@ -601,8 +608,6 @@ void TMVA::MethodBDT::Init( void )
    //   fUseNvars        =  (GetNvar()>12) ? UInt_t(GetNvar()/8) : TMath::Max(UInt_t(2),UInt_t(GetNvar()/3));
    fUseNvars        =  UInt_t(TMath::Sqrt(GetNvar())+0.6);
    fUsePoissonNvars = kTRUE;
-   if(DataInfo().GetNClasses()!=0) //workaround for multiclass application
-      fUseNTrainEvents = Data()->GetNTrainingEvents();
    fNNodesMax       = 1000000;
    fShrinkage       = 1.0;
    fSumOfWeights    = 0.0;
@@ -1222,14 +1227,14 @@ void TMVA::MethodBDT::Train()
 //_______________________________________________________________________
 void TMVA::MethodBDT::GetRandomSubSample()
 {
-   // fills fEventSample with fSampleFraction*NEvents random training events
+   // fills fEventSample with fSampleSizeFraction*NEvents random training events
    UInt_t nevents = fEventSample.size();
    
    if (!fSubSample.empty()) fSubSample.clear();
    TRandom3 *trandom   = new TRandom3(fForest.size()+1);
 
    for (UInt_t ievt=0; ievt<nevents; ievt++) { // recreate new random subsample
-      if(trandom->Rndm()<fSampleFraction)
+      if(trandom->Rndm()<fSampleSizeFraction)
          fSubSample.push_back(fEventSample[ievt]);
    }
 }
@@ -1893,7 +1898,7 @@ Double_t TMVA::MethodBDT::Bagging( vector<const TMVA::Event*>& eventSample, Int_
    Double_t newSumw=0;
    Double_t newWeight;
    TRandom3 *trandom   = new TRandom3(iTree);
-   Double_t eventFraction = fUseNTrainEvents/Data()->GetNTrainingEvents();
+   Double_t eventFraction = fSampleSizeFraction;
    for (std::vector<const TMVA::Event*>::const_iterator e=eventSample.begin(); e!=eventSample.end();e++) {
       newWeight = trandom->PoissonD(eventFraction);
       (*e)->SetBoostWeight(newWeight);
