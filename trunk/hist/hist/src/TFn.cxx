@@ -338,7 +338,6 @@ TFn::TFn() :
    fType(EMPTY), 
    fFormula(), 
    fFunctor(), 
-   fCintFunc(NULL), 
    fMethodCall(NULL)
 {
    // TFn default constructor.
@@ -352,7 +351,6 @@ TFn::TFn(const char* name, const char* formula, Double_t* min, Double_t* max) :
    fType(FORMULA),
    fFormula(name, formula),
    fFunctor(),
-   fCintFunc(NULL),
    fMethodCall(NULL)
 {
    // TFn constructor using a formula definition.
@@ -368,7 +366,6 @@ TFn::TFn(const char* name, UInt_t ndim, Double_t* min, Double_t* max, UInt_t npa
    fType(INTERPRETER_FUNCTOR),
    fFormula(),
    fFunctor(),
-   fCintFunc(NULL),
    fMethodCall(NULL)
 {
    /**
@@ -407,7 +404,6 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(Double_t *, Double_t *),
    TNamed(name, "TFn created from a pointer to a real function"),
    fParent(NULL),
    fType(FUNCTOR),
-   fCintFunc(NULL),
    fFormula(),
    fFunctor(fcn),
    fMethodCall(NULL)
@@ -432,7 +428,6 @@ TFn::TFn(const char *name, UInt_t ndim, Double_t (*fcn)(const Double_t*, const D
    TNamed(name, "TFn created from a pointer to a real function"),
    fParent(NULL),
    fType(FUNCTOR),
-   fCintFunc(NULL),
    fFormula(),
    fFunctor(ROOT::Math::ParamFunctor(fcn)),
    fMethodCall(NULL)
@@ -460,7 +455,6 @@ TFn::TFn(const char* name, UInt_t ndim, ROOT::Math::ParamFunctor f, Double_t* mi
    fType(FUNCTOR),
    fFormula(),
    fFunctor(f),
-   fCintFunc(NULL),
    fMethodCall(NULL)
 {
    /** 
@@ -511,8 +505,7 @@ TFn::TFn(const TFn &rhs, const char* name) :
    fParent(rhs.fParent),
    fType(rhs.fType),
    fFormula(rhs.fFormula),
-   fFunctor(rhs.fFunctor),
-   fCintFunc(rhs.fCintFunc)
+   fFunctor(rhs.fFunctor)
 {
    // TFn copy constructor.
    if (name) SetName(name);
@@ -622,11 +615,8 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
       UpdateCintAddresses(x, params); 
       fMethodCall->Execute(result);
       // else             result = const_cast<TFn*>(this)->GetSave(x);
-   } else if (fType == INTERPRETER_CLASS) {   
-      UpdateCintAddresses(x, params); 
-      fMethodCall->Execute(fCintFunc, result);
-      // else             result = const_cast<TFn*>(this)->GetSave(x);
    }
+
    return result;
 }
 

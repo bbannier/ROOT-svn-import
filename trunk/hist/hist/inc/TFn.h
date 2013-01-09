@@ -66,12 +66,11 @@ private:
 
    TObject     *fParent;  //!Parent object hooking this function (if one)
 
-   enum EFunctor { FORMULA, FUNCTOR, INTERPRETER_FUNCTOR, INTERPRETER_CLASS, EMPTY }; // type of construction parameter
+   enum EFunctor { FORMULA, FUNCTOR, INTERPRETER_FUNCTOR, EMPTY }; // type of construction parameter
    EFunctor fType;
 
    TFormula fFormula;    //!TFormula in case of standard function 
    ROOT::Math::ParamFunctor fFunctor;   //! Functor object to wrap any C++ callable object
-   void* fCintFunc;   //!Pointer to interpreted function class
    TMethodCall* fMethodCall; //!Pointer to MethodCall in case of interpreted function
 
    mutable ROOT::Math::DistSampler* fSampler;
@@ -103,7 +102,6 @@ public:
       fType(FUNCTOR),
       fFormula(),
       fFunctor(ROOT::Math::ParamFunctor(f)),
-      fCintFunc(NULL),
       fMethodCall(NULL)
    {
       StoreFunctor(name);
@@ -125,7 +123,6 @@ public:
       fType(FUNCTOR),
       fFormula(),
       fFunctor(ROOT::Math::ParamFunctor(p, memFn)),
-      fCintFunc(NULL),
       fMethodCall(NULL)
    {
       StoreFunctor(name);
