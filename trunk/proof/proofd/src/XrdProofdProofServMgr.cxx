@@ -11,7 +11,7 @@
 
 //////////////////////////////////////////////////////////////////////////
 //                                                                      //
-// XrdProofdProofServMgr                                                  //
+// XrdProofdProofServMgr                                                //
 //                                                                      //
 // Author: G. Ganis, CERN, 2008                                         //
 //                                                                      //
@@ -2962,6 +2962,9 @@ int XrdProofdProofServMgr::Destroy(XrdProofdProtocol *p)
    p->Client()->TerminateSessions(kXPD_AnyServer, xpsref,
                                   msg.c_str(), Pipe(), fMgr->ChangeOwn());
 
+   // Add to destroyed list
+   fDestroyTimes[p] = time(0);
+
    // Notify to user
    response->Send();
 
@@ -3979,8 +3982,16 @@ int XrdProofdProofServMgr::CreateProofServRootRc(XrdProofdProtocol *p,
          rc += (*ii)->fUrl;
          rc += " opt:";
          rc += (*ii)->fOpts;
+         rc += " ";
+         rc += (*ii)->fObscure;
       }
       fprintf(frc, "%s\n", rc.c_str());
+   }
+
+   // If applicable, add staging requests repository directive initiator
+   if (strlen(fMgr->StageReqRepo()) > 0) {
+      fprintf(frc, "# Dataset staging requests repository\n");
+      fprintf(frc, "Proof.DataSetStagingRequests: %s\n", fMgr->StageReqRepo());
    }
 
    // If applicable, add datadir location
@@ -4647,12 +4658,17 @@ void XrdProofdProofServMgr::BroadcastClusterInfo()
       }
       si++;
    }
-   XPDPRT("tot: "<<tot<<", act: "<<act);
-   // Now propagate
-   si = fActiveSessions.begin();
-   while (si != fActiveSessions.end()) {
-      if ((*si)->Status() == kXPD_running) (*si)->SendClusterInfo(tot, act);
-      si++;
+   if (tot > 0) {
+      XPDPRT("tot: "<<tot<<", act: "<<act);
+      // Now propagate to master or sub-masters
+      si = fActiveSessions.begin();
+      while (si != fActiveSessions.end()) {
+         if ((*si)->Status() == kXPD_running &&
+            (*si)->SrvType() != kXPD_Worker) (*si)->SendClusterInfo(tot, act);
+         si++;
+      }
+   } else {
+      TRACE(DBG, "No master or submaster controlled by this manager");
    }
 }
 
@@ -4702,6 +4718,30 @@ void XrdProofdProofServMgr::SetReconnectTime(bool on)
    } else {
       fReconnectTime = -1;
    }
+}
+
+//__________________________________________________________________________
+bool XrdProofdProofServMgr::Alive(XrdProofdProtocol* p)
+{
+   // Check destroyed status
+   //
+
+   XrdSysMutexHelper mhp(fMutex);
+
+   bool alive = true;
+   int now = time(0);
+   std::map<XrdProofdProtocol*,int>::iterator iter = fDestroyTimes.begin();
+   while (iter != fDestroyTimes.end()) {
+      int rect = now - iter->second;
+      if (rect < fReconnectTimeOut) {
+         if (p == iter->first) alive = false;
+      } else {
+         fDestroyTimes.erase(iter);
+      }
+      iter++;
+   }
+
+   return alive;
 }
 
 //__________________________________________________________________________

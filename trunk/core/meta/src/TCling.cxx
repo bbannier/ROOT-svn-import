@@ -1,4 +1,4 @@
-// @(#)root/meta:$Id: TCling.cxx -1   $
+// @(#)root/meta:$Id$
 // vim: sw=3 ts=3 expandtab foldmethod=indent
 
 /*************************************************************************
@@ -162,8 +162,8 @@ void TCling__RegisterModule(const char* modulename,
       return;
    }
 
-   if (gCint) {
-      ((TCling*)gCint)->RegisterModule(modulename,
+   if (gCling) {
+      ((TCling*)gCling)->RegisterModule(modulename,
                                                headers,
                                                includePaths,
                                                macroDefines,
@@ -249,7 +249,7 @@ static void TCling__UpdateClassInfo(TagDecl* TD)
 extern "C" 
 void TCling__UpdateListsOnCommitted(const cling::Transaction &T) {
    TCollection *listOfSmth = 0;
-   cling::Interpreter* interp = ((TCling*)gCint)->GetInterpreter();
+   cling::Interpreter* interp = ((TCling*)gCling)->GetInterpreter();
    for(cling::Transaction::const_iterator I = T.decls_begin(), E = T.decls_end();
        I != E; ++I)
       for (DeclGroupRef::const_iterator DI = I->m_DGR.begin(), 
@@ -361,7 +361,7 @@ extern "C" const Decl* TCling__GetObjectDecl(TObject *obj) {
 extern "C" int TCling__AutoLoadCallback(const char* className)
 {
    string cls(className);
-   return gCint->AutoLoad(cls.c_str());
+   return gCling->AutoLoad(cls.c_str());
 }
 
 //______________________________________________________________________________
@@ -405,7 +405,7 @@ void* autoloadCallback(const std::string& mangled_name)
    }
    //fprintf(stderr, "name: '%s'\n", name.c_str());
    // Now we have the class or namespace name, so do the lookup.
-   TString libs = gCint->GetClassSharedLibs(name.c_str());
+   TString libs = gCling->GetClassSharedLibs(name.c_str());
    if (libs.IsNull()) {
       // Not found in the map, all done.
       return 0;
@@ -652,28 +652,21 @@ TCling::TCling(const char *name, const char *title)
    // Don't check whether modules' files exist.
    fInterpreter->getCI()->getPreprocessorOpts().DisablePCHValidation = true;
 
-   // Set the patch for searching for modules
-#ifndef ROOTINCDIR
-   TString dictDir = getenv("ROOTSYS");
-   dictDir += "/lib";
-#else // ROOTINCDIR
-   TString dictDir = ROOTLIBDIR;
-#endif // ROOTINCDIR
-   clang::HeaderSearch& HS = fInterpreter->getCI()->getPreprocessor().getHeaderSearchInfo();
-   HS.setModuleCachePath(dictDir.Data());
-
    fMetaProcessor = new cling::MetaProcessor(*fInterpreter);
 
-   fInterpreter->declare("namespace std {} using namespace std;");
-
    // For the list to also include string, we have to include it now.
-   fInterpreter->declare("#include \"Rtypes.h\"\n#include <string>");
+   fInterpreter->declare("#include \"Rtypes.h\"\n"
+                         "#include <string>\n"
+                         "using namespace std;");
 
-   // During the loading of the first modules, RegisterModule which can calls Info
-   // which needs the TClass for TCling, which in turns need the 'dictionary'
-   // information to be loaded:
-   fInterpreter->declare("#include \"TCling.h\"");
-  
+   // parseForModule does not yet codegen for inlines within a namespace
+   // So for now, parse explicitly a few header containing very widely
+   // used inline function wihtin namespace
+   fInterpreter->declare("#include \"TString.h\"\n"
+                         "#include \"TMath.h\"\n"
+                         "#include <cstring>\n" // for std::strstr for roottest/root/meta/drawing
+                         "#include <iomanip>\n");
+
    // We are now ready (enough is loaded) to init the list of opaque typedefs.
    fNormalizedCtxt = new ROOT::TMetaUtils::TNormalizedCtxt(fInterpreter->getLookupHelper());
 
@@ -723,7 +716,7 @@ TCling::~TCling()
    delete fTemporaries;
    delete fNormalizedCtxt;
    delete fInterpreter;
-   gCint = 0;
+   gCling = 0;
 #if defined(R__MUST_REVISIT)
 #if R__MUST_REVISIT(6,2)
    Warning("~TCling", "Interface not available yet.");
@@ -799,7 +792,7 @@ void TCling::RegisterModule(const char* modulename,
       if (posAssign != kNPOS) {
          macroPP[posAssign] = ' ';
       }
-      fInterpreter->parse(macroPP.Data());
+      fInterpreter->parseForModule(macroPP.Data());
    }
    for (const char** macroU = macroUndefines; *macroU; ++macroU) {
       TString macroPP("#undef ");
@@ -809,7 +802,7 @@ void TCling::RegisterModule(const char* modulename,
       if (posAssign != kNPOS) {
          macroPP[posAssign] = ' ';
       }
-      fInterpreter->parse(macroPP.Data());
+      fInterpreter->parseForModule(macroPP.Data());
    }
 
    // Assemble search path:   
@@ -847,10 +840,12 @@ void TCling::RegisterModule(const char* modulename,
    }
 
    if (!gSystem->FindFile(searchPath, pcmFileName)) {
-      Error("RegisterModule", "cannot find dictionary module %s in %s",
+      ::Error("TCintWithCling::RegisterModule", "cannot find dictionary module %s in %s",
             ROOT::TMetaUtils::GetModuleFileName(modulename).c_str(), searchPath.Data());
    } else {
-      if (gDebug > 5) Info("RegisterModule", "Loading PCM %s", pcmFileName.Data());
+      if (gDebug > 5) {
+         ::Info("TCintWithCling::RegisterModule", "Loading PCM %s", pcmFileName.Data());
+      }
       clang::CompilerInstance* CI = fInterpreter->getCI();
       ROOT::TMetaUtils::declareModuleMap(CI, pcmFileName, headers);
    }
@@ -860,8 +855,10 @@ void TCling::RegisterModule(const char* modulename,
      oldValue = SetClassAutoloading(false);
 
    for (const char** hdr = headers; *hdr; ++hdr) {
-      if (gDebug > 5) Info("RegisterModule", "   #including %s...", *hdr);
-      fInterpreter->parse(TString::Format("#include \"%s\"", *hdr).Data());
+      if (gDebug > 5) {
+         ::Info("TCintWithCling::RegisterModule", "   #including %s...", *hdr);
+      }
+      fInterpreter->parseForModule(TString::Format("#include \"%s\"", *hdr).Data());
    }
 
    if (fClingCallbacks)
@@ -1275,12 +1272,12 @@ Int_t TCling::InitializeDictionaries()
       le = gModuleHeaderInfoBuffer->end();
    for (; li != le; ++li) {
       // process buffered module registrations
-      ((TCling*)gCint)->RegisterModule(li->fModuleName,
-                                               li->fHeaders,
-                                               li->fIncludePaths,
-                                               li->fMacroDefines,
-                                               li->fMacroUndefines,
-                                               li->fTriggerFunc);
+      ((TCling*)gCling)->RegisterModule(li->fModuleName,
+                                        li->fHeaders,
+                                        li->fIncludePaths,
+                                        li->fMacroDefines,
+                                        li->fMacroUndefines,
+                                        li->fTriggerFunc);
    }
    gModuleHeaderInfoBuffer->clear();
 
@@ -3385,6 +3382,13 @@ MethodInfo_t* TCling::CallFunc_FactoryMethod(CallFunc_t* func) const
 {
    TClingCallFunc* f = (TClingCallFunc*) func;
    return (MethodInfo_t*) f->FactoryMethod();
+}
+
+//______________________________________________________________________________
+void TCling::CallFunc_IgnoreExtraArgs(CallFunc_t* func, bool ignore) const
+{
+   TClingCallFunc* f = (TClingCallFunc*) func;
+   f->IgnoreExtraArgs(ignore);
 }
 
 //______________________________________________________________________________

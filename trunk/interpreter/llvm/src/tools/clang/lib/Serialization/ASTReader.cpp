@@ -557,7 +557,7 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
 
   // Set or check the various bits in the IdentifierInfo structure.
   // Token IDs are read-only.
-  if (HasRevertedTokenIDToIdentifier)
+  if (HasRevertedTokenIDToIdentifier && II->getTokenID() != tok::identifier)
     II->RevertTokenIDToIdentifier();
   II->setObjCOrBuiltinID(ObjCOrBuiltinID);
   assert(II->isExtensionToken() == ExtensionToken &&
@@ -4967,7 +4967,7 @@ namespace {
       ASTDeclContextNameLookupTrait::data_type Data = *Pos;
       for (; Data.first != Data.second; ++Data.first) {
         NamedDecl *ND = This->Reader.GetLocalDeclAs<NamedDecl>(M, *Data.first);
-        if (!ND)
+        if (!ND || This->Reader.isDeclInFlight(ND))
           continue;
 
         if (ND->getDeclName() != This->Name) {

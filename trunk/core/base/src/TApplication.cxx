@@ -45,6 +45,8 @@
 #include "TBrowser.h"
 #include "TUrl.h"
 
+#include <stdlib.h>
+
 #if defined(R__MACOSX) && (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
 #include "TGIOS.h"
 #endif
@@ -73,6 +75,13 @@ Bool_t TIdleTimer::Notify()
 
 
 ClassImp(TApplication)
+
+static void CallCloseFiles()
+{
+  // Insure that the files, canvases and sockets are closed.
+
+  gROOT->CloseFiles();
+}
 
 //______________________________________________________________________________
 TApplication::TApplication() :
@@ -126,6 +135,10 @@ TApplication::TApplication(const char *appClassName, Int_t *argc, char **argv,
    if (!gSystem)
       ::Fatal("TApplication::TApplication", "gSystem not initialized");
 
+   if (!gApplication) {
+      // If we are the first TApplication register the atexit)
+      atexit(CallCloseFiles);
+   }
    gApplication = this;
    gROOT->SetApplication(this);
    gROOT->SetName(appClassName);
@@ -205,6 +218,18 @@ TApplication::~TApplication()
    if (fUseMemstat) {
       ProcessLine("TMemStat::Close()");
       fUseMemstat = kFALSE;
+   }
+
+   // Reduce the risk of the files or sockets being closed after the
+   // end of 'main' (or more exactly before the library start being
+   // unloaded).
+   if (fgApplications == 0 || fgApplications->FirstLink() == 0 ) {
+      if (gROOT) {
+         gROOT->CloseFiles();
+      }
+      if (gInterpreter) {
+         gInterpreter->ResetGlobals();
+      }
    }
 }
 

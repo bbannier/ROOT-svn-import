@@ -396,13 +396,24 @@ TProofServLogHandlerGuard::~TProofServLogHandlerGuard()
 
 //--- Special timer to control delayed shutdowns ----------------------------//
 //______________________________________________________________________________
+TShutdownTimer::TShutdownTimer(TProofServ *p, Int_t delay)
+               : TTimer(delay, kFALSE), fProofServ(p)
+{
+   // Construtor
+
+   fTimeout = gEnv->GetValue("ProofServ.ShutdownTimeout", 20);
+   // Backward compaitibility: until 5.32 the variable was called ProofServ.ShutdonwTimeout
+   fTimeout = gEnv->GetValue("ProofServ.ShutdonwTimeout", fTimeout);
+}
+
+//______________________________________________________________________________
 Bool_t TShutdownTimer::Notify()
 {
    // Handle expiration of the shutdown timer. In the case of low activity the
    // process will be aborted.
 
    if (gDebug > 0)
-      Info ("Notify","checking activity on the input socket");
+      printf("TShutdownTimer::Notify: checking activity on the input socket\n");
 
    // Check activity on the socket
    TSocket *xs = 0;
@@ -411,22 +422,20 @@ Bool_t TShutdownTimer::Notify()
       TTimeStamp ts = xs->GetLastUsage();
       Long_t dt = (Long_t)(now.GetSec() - ts.GetSec()) * 1000 +
                   (Long_t)(now.GetNanoSec() - ts.GetNanoSec()) / 1000000 ;
-      Int_t to = gEnv->GetValue("ProofServ.ShutdownTimeout", 20);
-      // Backward compaitibility: until 5.32 the variable was called ProofServ.ShutdonwTimeout
-      to = gEnv->GetValue("ProofServ.ShutdonwTimeout", to);
-      if (dt > to * 60000) {
-         Printf("TShutdownTimer::Notify: input socket: %p: did not show any activity"
-                         " during the last %d mins: aborting", xs, to);
+      if (dt > fTimeout * 60000) {
+         printf("TShutdownTimer::Notify: input socket: %p: did not show any activity"
+                         " during the last %d mins: aborting\n", xs, fTimeout);
          // At this point we lost our controller: we need to abort to avoid
          // hidden timeouts or loops
          gSystem->Abort();
       } else {
          if (gDebug > 0)
-            Info("Notify", "input socket: %p: show activity"
-                           " %ld secs ago", xs, dt / 60000);
+            printf("TShutdownTimer::Notify: input socket: %p: show activity"
+                   " %ld secs ago\n", xs, dt / 60000);
       }
    }
-   Start(-1, kFALSE);
+   // Needed for the next shot
+   Reset();
    return kTRUE;
 }
 
@@ -672,6 +681,7 @@ TProofServ::TProofServ(Int_t *argc, char **argv, FILE *flog)
    fIdleTOTimer     = 0;
 
    fDataSetManager  = 0; // Initialized in Setup()
+   fDataSetStgRepo  = 0; // Initialized in Setup()
 
    fInputHandler    = 0;
 
@@ -999,6 +1009,8 @@ TProofServ::~TProofServ()
    SafeDelete(fCacheLock);
    SafeDelete(fQueryLock);
    SafeDelete(fGlobalPackageDirList);
+   SafeDelete(fDataSetManager);
+   SafeDelete(fDataSetStgRepo);
    close(fLogFileDes);
 }
 
@@ -3104,7 +3116,7 @@ Int_t TProofServ::SetupCommon()
       // Create 'queries' locker instance and lock it
       fQueryLock = new TProofLockPath(TString::Format("%s/%s%s-%s",
                        gSystem->TempDirectory(),
-                       kPROOF_QueryLockFile, fTopSessionTag.Data(),
+                       kPROOF_QueryLockFile, fSessionTag.Data(),
                        TString(fQueryDir).ReplaceAll("/","%").Data()));
       fQueryLock->Lock();
       // Create the query manager
@@ -3179,6 +3191,27 @@ Int_t TProofServ::SetupCommon()
             Warning("SetupCommon", "default dataset manager plug-in initialization failed");
             SafeDelete(fDataSetManager);
          }
+      }
+      // Dataset manager for staging requests
+      TString dsReqCfg = gEnv->GetValue("Proof.DataSetStagingRequests", "");
+      if (!dsReqCfg.IsNull()) {
+         TPMERegexp reReqDir("(^| )dir:([^ ]+)( |$)");
+
+         if (reReqDir.Match(dsReqCfg) == 4) {
+            fDataSetStgRepo = new TDataSetManagerFile("_stage_", "_stage_",
+              Form("dir:%s perms:open", reReqDir[2].Data()));
+            if (fDataSetStgRepo &&
+               fDataSetStgRepo->TestBit(TObject::kInvalidObject)) {
+               Warning("SetupCommon",
+                  "failed init of dataset staging requests repository");
+               SafeDelete(fDataSetStgRepo);
+            }
+         } else {
+            Warning("SetupCommon",
+              "specify, with dir:<path>, a valid path for staging requests");
+         }
+      } else if (gProofDebugLevel > 0) {
+         Warning("SetupCommon", "no repository for staging requests available");
       }
    }
 
@@ -6606,6 +6639,9 @@ Int_t TProofServ::HandleDataSets(TMessage *mess, TString *slb)
    TString dsUser, dsGroup, dsName, dsTree, uri, opt;
    Int_t rc = 0;
 
+   // Invalid characters in dataset URI
+   TPMERegexp reInvalid("[^A-Za-z0-9._-]");  // from ParseUri
+
    // Message type
    Int_t type = 0;
    (*mess) >> type;
@@ -6644,6 +6680,100 @@ Int_t TProofServ::HandleDataSets(TMessage *mess, TString *slb)
                Info("HandleDataSets", "dataset registration not allowed");
                if (slb) slb->Form("%d notallowed", type);
                return -1;
+            }
+         }
+         break;
+
+      case TProof::kRequestStaging:
+         {
+            (*mess) >> uri;  // TString
+
+            if (!fDataSetStgRepo) {
+               Error("HandleDataSets",
+                  "no dataset staging request repository available");
+               return -1;
+            }
+
+            // Transform input URI in a valid dataset name
+            TString validUri = uri;
+            while (reInvalid.Substitute(validUri, "_")) {}
+
+            // Check if dataset exists beforehand: if it does, staging has
+            // already been requested
+            if (fDataSetStgRepo->ExistsDataSet(validUri.Data())) {
+               Warning("HandleDataSet", "staging of %s already requested",
+                  uri.Data());
+               return -1;
+            }
+
+            // Try to get dataset from current manager
+            TFileCollection *fc = fDataSetManager->GetDataSet(uri.Data());
+            if (!fc || (fc->GetNFiles() == 0)) {
+               Error("HandleDataSets", "empty dataset or no dataset returned");
+               if (fc) delete fc;
+               return -1;
+            }
+
+            // Reset all staged bits and remove unnecessary URLs (all but last)
+            TIter it(fc->GetList());
+            TFileInfo *fi;
+            while ((fi = dynamic_cast<TFileInfo *>(it.Next()))) {
+               fi->ResetBit(TFileInfo::kStaged);
+               Int_t nToErase = fi->GetNUrls() - 1;
+               for (Int_t i=0; i<nToErase; i++)
+                  fi->RemoveUrlAt(0);
+            }
+
+            fc->Update();  // absolutely necessary
+
+            // Save request
+            fDataSetStgRepo->ParseUri(validUri, &dsGroup, &dsUser, &dsName);
+            if (fDataSetStgRepo->WriteDataSet(dsGroup, dsUser,
+               dsName, fc) == 0) {
+               // Error, can't save dataset
+               Error("HandleDataSet",
+                  "can't register staging request for %s", uri.Data());
+               delete fc;
+               return -1;
+            }
+
+            Info("HandleDataSets",
+               "Staging request registered for %s", uri.Data());
+
+            delete fc;
+            return 0;  // success (-1 == failure)
+         }
+         break;
+
+      case TProof::kStagingStatus:
+         {
+            (*mess) >> uri;  // TString
+
+            if (!fDataSetStgRepo) {
+               Error("HandleDataSets",
+                  "no dataset staging request repository available");
+               return -1;
+            }
+
+            // TODO what is slb?
+            //if (slb) slb->Form("%d %s %s", type, uri.Data(), opt.Data());
+
+            // Transform URI in a valid dataset name
+            TString validUri = uri;
+            while (reInvalid.Substitute(validUri, "_")) {}
+
+            // Get the list
+            TFileCollection *fc = fDataSetStgRepo->GetDataSet(validUri.Data());
+            if (fc) {
+               fSocket->SendObject(fc, kMESS_OK);
+               delete fc;
+               return 0;
+            }
+            else {
+               // No such dataset: not an error, but don't send message
+               Info("HandleDataSets", "no pending staging request for %s",
+                  validUri.Data());
+               return 0;
             }
          }
          break;

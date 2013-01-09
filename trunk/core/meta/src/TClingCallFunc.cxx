@@ -292,6 +292,11 @@ long TClingCallFunc::ExecInt(void *address) const
    args.insert(args.end(), fArgs.begin(), fArgs.end());
    cling::Value val;
    Invoke(args, &val);
+   if (val.type->isVoidType()) {
+      // CINT was silently return 0 in this case,
+      // for now emulate this behavior for backward compatibility ...
+      return 0;
+   }
    return val.simplisticCastAs<long>();
 }
 
@@ -743,15 +748,17 @@ TClingCallFunc::Invoke(const std::vector<llvm::GenericValue> &ArgValues,
    if (num_given_args < min_args) {
       // Not all required arguments given.
       Error("TClingCallFunc::Invoke",
-            "Not enough function arguments given (min: %u max:%u, given: %lu)",
-            min_args, num_params, num_given_args);
+            "Not enough function arguments given to %s (min: %u max:%u, given: %lu)",
+            fMethod->Name(), min_args, num_params, num_given_args);
       return;
    }
    else if (num_given_args > num_params) {
-      Error("TClingCallFunc::Invoke",
-            "Too many function arguments given (min: %u max: %u, given: %lu)",
-            min_args, num_params, num_given_args);
-      return;
+      if (!fIgnoreExtraArgs) {
+         Error("TClingCallFunc::Invoke",
+               "Too many function arguments given to %s (min: %u max: %u, given: %lu)",
+               fMethod->Name(), min_args, num_params, num_given_args);
+         return;
+      }
    }
 
    // This will be the arguments actually passed to the JIT function.

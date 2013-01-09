@@ -82,6 +82,7 @@
 #include "TUrl.h"
 #include "TFileCollection.h"
 #include "TDataSetManager.h"
+#include "TDataSetManagerFile.h"
 #include "TMacro.h"
 #include "TSelector.h"
 
@@ -10957,6 +10958,89 @@ TList* TProof::FindDataSets(const char* /*searchString*/, const char* /*optStr*/
 }
 
 //______________________________________________________________________________
+Bool_t TProof::RequestStagingDataSet(const char *dataset)
+{
+   // Allows users to request staging of a particular dataset. Requests are
+   // saved in a special dataset repository and must be honored by the endpoint.
+
+   if (fProtocol < 35) {
+      Error("RequestStagingDataSet",
+         "functionality not supported by the server");
+      return kFALSE;
+   }
+
+   TMessage mess(kPROOF_DATASETS);
+   mess << Int_t(kRequestStaging);
+   mess << TString(dataset);
+   Broadcast(mess);
+
+   Collect();
+   if (fStatus != 0) {
+      Error("RequestStagingDataSet", "staging request was unsuccessful");
+      return kFALSE;
+   }
+
+   return kTRUE;
+}
+
+//______________________________________________________________________________
+TFileCollection *TProof::GetStagingStatusDataSet(const char *dataset)
+{
+   // Obtains a TFileCollection showing the staging status of the specified
+   // dataset. A valid dataset manager and dataset staging requests repository
+   // must be present on the endpoint.
+
+   if (fProtocol < 35) {
+      Error("GetStagingStatusDataSet",
+         "functionality not supported by the server");
+      return NULL;
+   }
+
+   TMessage nameMess(kPROOF_DATASETS);
+   nameMess << Int_t(kStagingStatus);
+   nameMess << TString(dataset);
+   if (Broadcast(nameMess) < 0) {
+      Error("StagingStatusDataSet", "sending request failed");
+      return NULL;
+   }
+
+   Collect(kActive, fCollectTimeout);
+   TFileCollection *fc = NULL;
+
+   if (fStatus < 0) {
+      Error("StagingStatusDataSet", "problem processing the request");
+   }
+   else if (fStatus == 0) {
+      TMessage *retMess = (TMessage *)fRecvMessages->First();
+      if (retMess && (retMess->What() == kMESS_OK)) {
+         fc = (TFileCollection *)(
+           retMess->ReadObject(TFileCollection::Class()) );
+         if (!fc)
+            Error("StagingStatusDataSet", "error reading list of files");
+      }
+      else { 
+         Error("StagingStatusDataSet",
+            "response message not found or wrong type (%p)", retMess);
+      }
+   }
+   //else {}
+
+   return fc;
+}
+
+//______________________________________________________________________________
+void TProof::ShowStagingStatusDataSet(const char *dataset, const char *opt)
+{
+   // Like GetStagingStatusDataSet, but displays results immediately
+
+   TFileCollection *fc = GetStagingStatusDataSet(dataset);
+   if (fc) {
+      fc->Print(opt);
+      delete fc;
+   }
+}
+
+//______________________________________________________________________________
 Int_t TProof::VerifyDataSet(const char *uri, const char *optStr)
 {
    // Verify if all files in the specified dataset are available.
@@ -11264,7 +11348,7 @@ Int_t TProof::ModifyWorkerLists(const char *ord, Bool_t add, Bool_t save)
          TString oo(ord), o;
          Int_t from = 0;
          while(oo.Tokenize(o, from, ","))
-            ords->Add(new TObjString(o));
+            if (o.BeginsWith(gProofServ->GetOrdinal())) ords->Add(new TObjString(o));
       }
       // We do not need to send forward 
       fw = kFALSE;

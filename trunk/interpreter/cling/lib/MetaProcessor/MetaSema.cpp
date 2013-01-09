@@ -13,6 +13,7 @@
 
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Serialization/ASTReader.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
@@ -123,7 +124,23 @@ namespace cling {
       llvm::outs() << (*I).first->getName();
       llvm::outs() << "\n";
     }
-
+    /* Only available in clang's trunk:
+    clang::ASTReader* Reader = m_Interpreter.getCI()->getModuleManager();
+    const clang::serialization::ModuleManager& ModMan
+      = Reader->getModuleManager();
+    for (clang::serialization::ModuleManager::ModuleConstIterator I
+           = ModMan.begin(), E = ModMan.end(); I != E; ++I) {
+      typedef
+        std::vector<llvm::PointerIntPair<const clang::FileEntry*, 1, bool> >
+        InputFiles_t;
+      const InputFiles_t& InputFiles = (*I)->InputFilesLoaded;
+      for (InputFiles_t::const_iterator IFI = InputFiles.begin(),
+             IFE = InputFiles.end(); IFI != IFE; ++IFI) {
+        llvm::outs() << IFI->getPointer()->getName();
+        llvm::outs() << "\n";
+      }
+    }
+    */
   }
 
   void MetaSema::actOnfilesCommand() const {
@@ -164,8 +181,10 @@ namespace cling {
   
   void MetaSema::actOnShellCommand(llvm::StringRef commandLine) const {
     llvm::StringRef trimmed(commandLine.trim(" \t\n\v\f\r "));
-    if (!trimmed.empty())
-       (void)std::system(trimmed.str().c_str());
+    if (!trimmed.empty()) {
+       int ret = std::system(trimmed.str().c_str());
+       (void) ret; // Silence warning unused return result of system.
+    }
   }
 
 } // end namespace cling

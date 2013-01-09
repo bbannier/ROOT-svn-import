@@ -214,6 +214,18 @@ namespace cling {
     }
     CI->getTarget().setForcedLangOptions(CI->getLangOpts());
     SetClingTargetLangOpts(CI->getLangOpts(), CI->getTarget());
+    if (CI->getTarget().getTriple().getOS() == llvm::Triple::Cygwin) {
+      // clang "forgets" the basic arch part needed by winnt.h:
+      if (CI->getTarget().getTriple().getArch() == llvm::Triple::x86) {
+        CI->getInvocation().getPreprocessorOpts().addMacroDef("_X86_=1");
+      } else if (CI->getTarget().getTriple().getArch()
+                 == llvm::Triple::x86_64) {
+        CI->getInvocation().getPreprocessorOpts().addMacroDef("__x86_64=1");
+      } else {
+        llvm::errs() << "Warning: unhandled target architecture "
+                     << CI->getTarget().getTriple().getArchName() << '\n';
+      }
+    }
 
     // Set up source and file managers
     CI->createFileManager();
@@ -248,6 +260,9 @@ namespace cling {
     // CI->getCodeGenOpts().DebugInfo = 1; // want debug info
     // CI->getCodeGenOpts().EmitDeclMetadata = 1; // For unloading, for later
     CI->getCodeGenOpts().OptimizationLevel = 0; // see pure SSA, that comes out
+    CI->getCodeGenOpts().CXXCtorDtorAliases = 0; // aliasing the complete
+                                                 // ctor to the base ctor causes
+                                                 // the JIT to crash
     // When asserts are on, TURN ON not compare the VerifyModule
     assert(CI->getCodeGenOpts().VerifyModule = 1);
     return CI;

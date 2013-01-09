@@ -309,8 +309,8 @@ static bool CXXRecordDecl__FindOrdinaryMember(const clang::CXXBaseSpecifier *Spe
    const clang::FieldDecl *found = R__GetDataMemberFromAll(*clxx,(const char*)Name);
    if (found) {
       // Humm, this is somewhat bad (well really bad), oh well.
-      // Let's hope Paths never things its own those (it should not as far as I can tell).
-      Path.Decls.first  = (clang::NamedDecl**)found;
+      // Let's hope Paths never thinks it owns those (it should not as far as I can tell).
+      Path.Decls.first  = reinterpret_cast<clang::NamedDecl**>(const_cast<clang::FieldDecl*>(found));
       Path.Decls.second = 0;
       return true;
    }
@@ -342,7 +342,7 @@ static const clang::FieldDecl *R__GetDataMemberFromAllParents(const clang::CXXRe
    clang::CXXBasePaths Paths;
    Paths.setOrigin(const_cast<clang::CXXRecordDecl*>(&cl));
    if (cl.lookupInBases(&CXXRecordDecl__FindOrdinaryMember,
-                        (void*) what,
+                        (void*) const_cast<char*>(what),
                         Paths) )
    {
       clang::CXXBasePaths::paths_iterator iter = Paths.begin();
@@ -567,7 +567,7 @@ llvm::StringRef ROOT::TMetaUtils::GetFileName(const clang::Decl *decl)
 
    // It looks like the template specialization decl actually contains _less_ information
    // on the location of the code than the decl (in case where there is forward declaration,
-   // that is what the specialization points to.
+   // that is what the specialization points to).
    //
    // const clang::CXXRecordDecl* clxx = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
    // if (clxx) {
@@ -1036,6 +1036,10 @@ clang::Module* ROOT::TMetaUtils::declareModuleMap(clang::CompilerInstance* CI,
    clang::Preprocessor& PP = CI->getPreprocessor();
    clang::ModuleMap& ModuleMap = PP.getHeaderSearchInfo().getModuleMap();
 
+   // Set the patch for searching for modules
+   clang::HeaderSearch& HS = CI->getPreprocessor().getHeaderSearchInfo();
+   HS.setModuleCachePath(llvm::sys::path::parent_path(moduleFileName));
+
    llvm::StringRef moduleName = llvm::sys::path::filename(moduleFileName);
    moduleName = llvm::sys::path::stem(moduleName);
 
@@ -1139,21 +1143,21 @@ llvm::StringRef ROOT::TMetaUtils::GetComment(const clang::Decl &decl, clang::Sou
    // Eg. void f() //comment 
    //     {}
    if (!decl.hasBody())
-      while (*commentStart !=';' && *commentStart != '\n' && *commentStart != '\r')
+      while (*commentStart !=';' && *commentStart != '\n' && *commentStart != '\r' && *commentStart != '\0')
          ++commentStart;
 
    // Eat up the last char of the declaration if wasn't newline or comment terminator
-   if (*commentStart != '\n' && *commentStart != '\r' && *commentStart != '{')
+   if (*commentStart != '\n' && *commentStart != '\r' && *commentStart != '{' && *commentStart != '\0')
       ++commentStart;
 
    // Now skip the spaces and beginning of comments.
    while ( (isspace(*commentStart) || *commentStart == '/') 
-           && *commentStart != '\n' && *commentStart != '\r') {
+           && *commentStart != '\n' && *commentStart != '\r' && *commentStart != '\0') {
       ++commentStart;
    }
 
    const char* commentEnd = commentStart;
-   while (*commentEnd != '\n' && *commentEnd != '\r' && *commentEnd != '{') {
+   while (*commentEnd != '\n' && *commentEnd != '\r' && *commentEnd != '{' && *commentStart != '\0') {
       ++commentEnd;
    }
 

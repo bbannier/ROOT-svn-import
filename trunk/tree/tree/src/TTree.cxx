@@ -914,10 +914,10 @@ void TTree::AddBranchToCache(TBranch *b, Bool_t subbranches)
 //______________________________________________________________________________
 void TTree::DropBranchFromCache(const char*bname, Bool_t subbranches)
 {
-   // Add branch with name bname to the Tree cache.
-   // If bname="*" all branches are added to the cache.
+   // Remove the branch with name 'bname' from the Tree cache.
+   // If bname="*" all branches are removed from the cache.
    // if subbranches is true all the branches of the subbranches are
-   // also put to the cache.
+   // also removed from the cache.
 
    TFile *f = GetCurrentFile();
    if (!f) return;
@@ -928,9 +928,9 @@ void TTree::DropBranchFromCache(const char*bname, Bool_t subbranches)
 //______________________________________________________________________________
 void TTree::DropBranchFromCache(TBranch *b, Bool_t subbranches)
 {
-   // Add branch b to the Tree cache.
+   // Remove the branch b from the Tree cache.
    // if subbranches is true all the branches of the subbranches are
-   // also put to the cache.
+   // also removed from the cache.
 
    TFile *f = GetCurrentFile();
    if (!f) return;
@@ -3378,7 +3378,7 @@ void TTree::Delete(Option_t* option /* = "" */)
    }
 
    // Delete object from CINT symbol table so it can not be used anymore.
-   gCint->DeleteGlobal(this);
+   gCling->DeleteGlobal(this);
 
    // Warning: We have intentional invalidated this object while inside a member function!
    delete this;
@@ -6424,13 +6424,22 @@ Long64_t TTree::ReadStream(std::istream& inputStream, const char *branchDescript
       if (branchDescriptor) nch = strlen(branchDescriptor);
       // branch Descriptor is null, read its definition from the first line in the file
       if (!nch) {
-         in.getline(bd, 100000, newline);
-         if (!in.good()) {
-            delete [] bdname;
-            delete [] bd;
-            Error("ReadStream","Error reading stream");
-            return 0;
-         }
+         do {
+            in.getline(bd, 100000, newline);
+            if (!in.good()) {
+               delete [] bdname;
+               delete [] bd;
+               Error("ReadStream","Error reading stream");
+               return 0;
+            }
+            char *cursor = bd;
+            while( isspace(*cursor) && *cursor != '\n' && *cursor != '\0') {
+               ++cursor;
+            }
+            if (*cursor != '#' && *cursor != '\n' && *cursor != '\0') {
+               break;
+            }
+         } while (true);
          ++nlines;
          nch = strlen(bd);
       } else {
@@ -6443,7 +6452,13 @@ Long64_t TTree::ReadStream(std::istream& inputStream, const char *branchDescript
       char *bdcur = bd;
       TString desc="", olddesc="F";
       char bdelim = ':';
-      if(delimiter != ' ') bdelim = delimiter;
+      if(delimiter != ' ') {
+         bdelim = delimiter;
+         if (strchr(bdcur,bdelim)==0 && strchr(bdcur,':') != 0) {
+            // revert to the default
+            bdelim = ':';
+         }
+      }
       while (bdcur) {
          char *colon = strchr(bdcur,bdelim);
          if (colon) *colon = 0;
@@ -7475,13 +7490,15 @@ void TTree::SetDirectory(TDirectory* dir)
       // Delete or move the file cache if it points to this Tree
       TFile *file = fDirectory->GetFile();
       if (file) {
-         TFileCacheRead *pf = file->GetCacheRead(this);
-         file->SetCacheRead(0,this);
-         TFile *newfile = dir ? dir->GetFile() : 0;
-         if (newfile) {
-            newfile->SetCacheRead(pf,this);
-         } else {
-            delete pf;
+         TTreeCache *pf = dynamic_cast<TTreeCache*>(file->GetCacheRead(this));
+         if (pf && pf->GetTree() == this) {
+            file->SetCacheRead(0,this);
+            TFile *newfile = dir ? dir->GetFile() : 0;
+            if (newfile) {
+               newfile->SetCacheRead(pf,this);
+            } else {
+               delete pf;
+            }
          }
       }
    }
