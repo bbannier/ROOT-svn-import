@@ -21,7 +21,7 @@ namespace RooStats {
       };
 
    private:
-     CombinedDataSet() {} // hide default constructor (needed for I/O)
+      CombinedDataSet() {} // hide default constructor (needed for I/O)
       CombinedDataSet(const CombinedDataSet& rhs); // disallow copy constructor
       CombinedDataSet& operator=(const CombinedDataSet& rhs); // disallow assignment operator
 
