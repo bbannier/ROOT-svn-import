@@ -612,7 +612,7 @@ Double_t TFn::DoEvalPar(const Double_t *x, const Double_t *params) const
       if (!func->fFunctor.Empty()) result = func->fFunctor((Double_t*)x,(Double_t*)params);
       // else          result = const_cast<TFn*>(this)->GetSave(x);
    } else if (fType == INTERPRETER_FUNCTOR) {
-      UpdateCintAddresses(x, params); 
+      UpdateParamPtrs(x, params); 
       fMethodCall->Execute(result);
       // else             result = const_cast<TFn*>(this)->GetSave(x);
    }
@@ -935,14 +935,16 @@ Double_t TFn::DoParameterDerivative(const Double_t* x, const Double_t* params, U
 
 
 //______________________________________________________________________________
-void TFn::UpdateCintAddresses(const Double_t *x, const Double_t *params) const
+void TFn::UpdateParamPtrs(const Double_t *x, const Double_t *params) const
 {
-   // Initialize parameters addresses in case of CINT function.
-   Long_t args[2];
-   args[0] = (Long_t)x;
-   if (params) args[1] = (Long_t)params;
-   else        args[1] = (Long_t)fParams;
-   fMethodCall->SetParamPtrs(args);
+   // Initialize parameters addresses in case of interpreted function.
+   if (fMethodCall) {
+      Long_t args[2];
+      args[0] = (Long_t)x;
+      if (params) args[1] = (Long_t)params;
+      else        args[1] = (Long_t)fParams;
+      fMethodCall->SetParamPtrs(args);
+   }
 }
 
 
