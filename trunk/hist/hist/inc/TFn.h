@@ -47,7 +47,6 @@ class TFn : public TNamed, public ROOT::Math::IParametricGradFunctionMultiDim, p
 private:
    void Init(UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0, Double_t* params = NULL, Double_t* parMin = NULL, Double_t* parMax = NULL, Double_t* parErrors = NULL); // initalization function
    void StoreFunctor(const char *name);
-   void ConfigureCintClass(const char *name, void * ptr, const char * cname, const char * fname);
    Double_t ConfigureAndMinimize(const ROOT::Math::IBaseFunctionMultiDim* func, Double_t* x = NULL, Double_t* min = NULL, Double_t* max = NULL, Double_t epsilon = 1e-10, Int_t maxIter = 1000) const;
    void UpdateCintAddresses(const Double_t* x, const Double_t* params = NULL) const;
 
@@ -81,7 +80,6 @@ public:
    TFn();
    TFn(const char* name, const char* formula, Double_t* min, Double_t* max);
    TFn(const char* name, UInt_t ndim, Double_t* min, Double_t* max, UInt_t npar = 0);
-   TFn(const char* name, UInt_t ndim, void* fcn, Double_t* min, Double_t* max, UInt_t npar = 0);
 #ifndef __CINT__
    // TODO: determine if there is still a reason to keep these constructors
 //   TFn(const char* name, UInt_t ndim, Double_t (*fcn)(Double_t*, Double_t*), Double_t* min, Double_t* max, UInt_t npar = 0);
@@ -90,9 +88,6 @@ public:
 
    // Constructors using functors (compiled mode only)
    TFn(const char *name, UInt_t ndim, ROOT::Math::ParamFunctor f, Double_t* min, Double_t* max, UInt_t npar = 0);
-   // constructors used by CINT
-   TFn(const char *name, UInt_t ndim, void *ptr, Double_t* min, Double_t* max, UInt_t npar, const char *className );
-   TFn(const char *name, UInt_t ndim, void *ptr, void *, Double_t* min, Double_t* max, UInt_t npar, const char *className, const char *methodName = 0);
 
    // Template constructors from any C++ callable object, defining "Double_t operator() (Double_t*, Double_t*)".
    // The class name is not needed when using compile code, while it is required when using
