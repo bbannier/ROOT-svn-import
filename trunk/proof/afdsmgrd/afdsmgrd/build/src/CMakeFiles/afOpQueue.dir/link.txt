@@ -1,0 +1,2 @@
+/bin/ar cr libafOpQueue.a  CMakeFiles/afOpQueue.dir/afOpQueue.cc.o CMakeFiles/afOpQueue.dir/sqlite3.c.o
+/bin/ranlib libafOpQueue.a

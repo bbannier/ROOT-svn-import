@@ -1,0 +1,2 @@
+/bin/ar cr libafNotify.a  CMakeFiles/afNotify.dir/afNotify.cc.o
+/bin/ranlib libafNotify.a

@@ -1,0 +1,80 @@
+#!/bin/bash
+
+#
+# afverify-xrd-rm.sh -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Wrapper around xrd rm command. Outputs OK on success, FAIL if for some reason
+# the command can not be launched or terminated abruptly.
+#
+
+# Get the configuration variables from the first configuration file found
+declare -a CONF_FILES
+CONF_FILES=(
+  "@DIR_ETC@/sysconfig/afdsmgrd" \
+  "@DIR_ETC@/default/afdsmgrd" \
+  "/etc/sysconfig/afdsmgrd" \
+  "/etc/default/afdsmgrd" \
+  "$HOME/.afdsmgrd.cf"
+)
+
+for CF in "${CONF_FILES[@]}"; do
+  if [ -r "$CF" ]; then
+    source "$CF"
+    break
+  fi
+done
+
+# Classic xrootd (in EXTCMD_LIBS) and ROOT environment variables
+export LD_LIBRARY_PATH="$AFDSMGRD_EXTCMD_LIBS:$ROOTSYS/lib:$LD_LIBRARY_PATH"
+export PATH="$ROOTSYS/bin:$AFDSMGRD_EXTCMD_PATH:$PATH"
+
+# Command goes here
+export URL="$1"
+
+# URL parts
+export HOSTPORT
+export FILENAME
+export REMAIN
+export CLEANURL
+
+# Split into host:port, filename and anchor; note that queries (?...) are not
+# supported!
+if [[ "$URL" =~ ^root://([^/]+)/([^\#\?]+)(.*)?$ ]]; then
+  HOSTPORT=${BASH_REMATCH[1]}
+  FILENAME=${BASH_REMATCH[2]}
+  REMAIN=${BASH_REMATCH[3]}
+  CLEANURL="root://$HOSTPORT/$FILENAME"
+else
+  echo "FAIL $URL Reason: cant_parse_url"
+  exit 0
+fi
+
+# Launch xrd
+export TMPOUT=$(mktemp /tmp/.afverifier-xrd-rm-XXXXX)
+xrd $HOSTPORT rm $FILENAME > $TMPOUT 2>&1
+export CODE=$?
+export XRDCODE
+
+# Uncomment for debug
+#cat $TMPOUT
+
+if [ $CODE == 0 ]; then
+  XRDCODE=$(grep '^Error ' $TMPOUT 2>&1 | \
+    perl -ne '/^Error\s+([0-9]+)/; print "$1\n"')
+  if [ "$XRDCODE" != "" ]; then
+    echo "FAIL $CLEANURL Reason: xrd_err_$XRDCODE"
+  else
+    grep 'to any server' $TMPOUT > /dev/null 2>&1
+    if [ $? == 0 ]; then
+      echo "FAIL $CLEANURL Reason: server_down"
+    else
+      echo "OK $CLEANURL"
+    fi
+  fi
+else
+  echo "FAIL $CLEANURL Reason: exit_code_$CODE"
+fi
+
+rm $TMPOUT

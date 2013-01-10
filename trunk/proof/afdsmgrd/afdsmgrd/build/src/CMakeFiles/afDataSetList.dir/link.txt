@@ -1,0 +1,2 @@
+/bin/ar cr libafDataSetList.a  CMakeFiles/afDataSetList.dir/afDataSetList.cc.o
+/bin/ranlib libafDataSetList.a

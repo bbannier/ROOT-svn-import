@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afLog.h
+iostream
+-
+fstream
+-
+time.h
+-
+string.h
+-
+stdlib.h
+-
+stdarg.h
+-
+libgen.h
+-
+
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afResMon.cc
+afResMon.h
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afResMon.h
+
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afResMon.h
+fstream
+-
+unistd.h
+-
+sys/time.h
+-
+sys/resource.h
+-
+string.h
+-
+stdio.h
+-
+afLog.h
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afLog.h
+

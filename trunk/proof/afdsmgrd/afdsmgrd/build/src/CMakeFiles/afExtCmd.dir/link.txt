@@ -1,0 +1,2 @@
+/bin/ar cr libafExtCmd.a  CMakeFiles/afExtCmd.dir/afExtCmd.cc.o
+/bin/ranlib libafExtCmd.a

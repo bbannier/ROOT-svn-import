@@ -1,0 +1,77 @@
+#!/bin/bash
+
+#
+# afdsmgrd-xrd-stage-verify.sh -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# This script uses the same environment variables defined in sysconfig file of
+# afdsmgrd to set the environment for ROOT and launch it with the given
+# parameters.
+#
+# First of all, file is downloaded by means of the xrdstagetool utility. If the
+# download succeeds, ROOT is called with a proper macro to check file's
+# integrity.
+#
+# It has been created to overcome a "problem" with setuid programs like
+# afdsmgrd: in these programs, LD_LIBRARY_PATH is unset right after changing
+# privileges to avoid unprivileged user to change the environment that may
+# potentially affect the execution of the daemon as a privileged user.
+#
+
+# Get the configuration variables from the first configuration file found
+declare -a CONF_FILES
+CONF_FILES=(
+  "@DIR_ETC@/sysconfig/afdsmgrd" \
+  "@DIR_ETC@/default/afdsmgrd" \
+  "/etc/sysconfig/afdsmgrd" \
+  "/etc/default/afdsmgrd" \
+  "$HOME/.afdsmgrd.cf"
+)
+
+for CF in "${CONF_FILES[@]}"; do
+  if [ -r "$CF" ]; then
+    source "$CF"
+    break
+  fi
+done
+
+# Classic ROOT environment variables
+export LD_LIBRARY_PATH="$AFDSMGRD_EXTCMD_LIBS:$ROOTSYS/lib:$LD_LIBRARY_PATH"
+export PATH="$ROOTSYS/bin:$AFDSMGRD_EXTCMD_PATH:$PATH"
+
+# Arguments: first one is the URL to stage, second is the tree name (opt.)
+URL="$1"
+TREE="$2"
+
+# Disable ROOT history (http://root.cern.ch/download/doc/2GettingStarted.pdf)
+export ROOT_HIST=0
+
+# Split URL into host:port, filename and anchor; note that queries (?...) aren't
+# supported!
+if [[ "$URL" =~ ^root://([^/]+)/([^\#\?]+)(.*)?$ ]]; then
+  HOSTPORT=${BASH_REMATCH[1]}
+  FILENAME=${BASH_REMATCH[2]}
+  REMAIN=${BASH_REMATCH[3]}
+  CLEANURL="root://$HOSTPORT/$FILENAME"
+else
+  echo "FAIL $URL Reason: cant_parse_url"
+  exit 0
+fi
+
+# Call xrdstagetool
+xrdstagetool -d 0 $CLEANURL | grep '^OK[ \t]' > /dev/null 2>&1
+
+if [ $? == 0 ]; then
+  # Status is OK: verify the file
+  if [ -e "@DIR_LIBEXEC@"/afdsmgrd-macros/Verify.C ]; then
+    exec root.exe -b -q \
+      "@DIR_LIBEXEC@"/afdsmgrd-macros/Verify.C'("'$URL'", "'$TREE'")'
+  else
+    exec root.exe -b -q \
+      $ROOTSYS/etc/proof/afdsmgrd-macros/Verify.C'("'$URL'", "'$TREE'")'
+  fi
+fi
+
+# Here, status is failed: report it
+echo "FAIL $CLEANURL"

@@ -1,0 +1,2 @@
+/bin/ar cr libafResMon.a  CMakeFiles/afResMon.dir/afResMon.cc.o
+/bin/ranlib libafResMon.a

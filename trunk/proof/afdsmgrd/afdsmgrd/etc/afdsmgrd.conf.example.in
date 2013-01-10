@@ -1,0 +1,102 @@
+#
+# afdsmgrd.cf.example - example configuration file for afdsmgrd.
+#
+# by Dario Berzano <dario.berzano@cern.ch>
+#
+# afdsmgrd is able to parse variables and needs to read the xpd.datasetsrc
+# directive(s), so it is a good idea to merge this configuration with PROOF's
+# one.
+#
+
+# Configuration file for afdsmgrd supports environment variables: in this
+# example we set PMASTER to the PROOF master and xrootd redirector
+set PMASTER=pmaster.to.infn.it
+
+# This is the standard PROOF directive that tells PROOF where to find the
+# datasets repository. For now afdsmgrd only supports dataset sources of type
+# "file", which means on a local filesystem. The syntax is:
+#
+# xpd.datasetsrc file url:<local_path> mss:<redir_path:port> opt:<opts> <rw=1>
+#
+# where some opts are: Cq (check quota), Av (allow verify), Ar (allow register).
+# Options can be prefixed with a minus to exclude them.
+xpd.datasetsrc file url:/pool/datasets mss:root://$PMASTER:1094 opt:Cq:Av:Ar: rw=1
+
+# Regex and substitution pattern that will be used to translate the URLs. The
+# regex is interpreted as extended, and substitution pattern interprets
+# "dollar" substitutions from $1 to $9. If the n-th submatch (as in $n) is not
+# defined in regex, it will be substituted with "<?>"; instead, if the n-th
+# submatch did not match anything, it will be just an empty string
+dsmgrd.urlregex alien://(.*)$ root://$PMASTER/$1
+
+# Additional matching regular expressions (up to 4) can be specified using the
+# same syntax; numbering of additional regexs starts from 2. Regexs are used
+# in the same order they appear here: if a regex does not match (or is not set)
+# the next one is tested
+#dsmgrd.urlregex2 root://myserver.cern.ch/(.*)$ root://$PMASTER/$1
+# ...up to dsmgrd.urlregex4
+
+# At each loop the transfer queue is checked: sleep time between each loop, in
+# seconds
+dsmgrd.sleepsecs 30
+
+# Every certain number of loops the information in the transfer queue is
+# synchronized with the information inside the datasets
+dsmgrd.scandseveryloops 10
+
+# Maximum number of parallel staging commands to launch. For consistency, set it
+# to the number of servers * the number of parallel transfers for each server
+# (see oss.xfr). To accommodate some delay betwen a transfer's end and the
+# beginning of a new transfer, think about adding some "overbooking"
+dsmgrd.parallelxfrs 30
+
+# Custom command to stage and verify a single file. $URLTOSTAGE will be
+# substituted with the file's URL when staging: URLs with anchors are supported.
+# Another variable, $TREENAME, will be substituted with the default tree to
+# look for.
+#
+# The default command is a script that runs in sequence xrdstagetool, then if
+# everything is fine it runs the macros/Verify.C macro to gather meta
+# information on the staged file.
+dsmgrd.stagecmd @DIR_LIBEXEC@/afdsmgrd-xrd-stage-verify.sh "$URLTOSTAGE" "$TREENAME"
+
+# Timeout on staging command, expressed in seconds: after this timeout, the
+# command is considered failed and it is killed (in first place with SIGSTOP,
+# then if it is unresponsive with SIGKILL). It defaults to zero, which means
+# "no timeout", i.e. external command may run forever, if no value is
+# specified. A recommended value of 30 minutes is given in this example.
+dsmgrd.cmdtimeoutsecs 1800
+
+# Set this to a number above zero to tell the daemon to mark files as corrupted
+# after a certain number of either download or verification failures. A value of
+# zero tells the daemon to retry forever.
+#dsmgrd.corruptafterfails 0
+
+#
+# Notification plugin: MonALISA (ApMon)
+#
+
+# Path to the notification plugin library: in this case, ApMon is used, but
+# custom plugins may be easily written as well
+dsmgrd.notifyplugin @DIR_LIB@/libafdsmgrd_notify_apmon.so
+
+# This variable tells the ApMon notification plugin how to contact one or more
+# MonALISA server(s) to activate monitoring via ApMon. It supports two kinds of
+# URLs:
+#
+#   http[s]://host/path/configuration_file.conf
+#   apmon://[:password@]monalisahost[:8884]
+#
+# This means that you may pass either a file where to fetch the list of servers
+# or directly a single server.
+#
+# If the variable is not set, yet the plugin is loaded, MonALISA monitoring is
+# inhibited until a valid configuration variable is set.
+#dsmgrd.apmonurl apmon://alibox.to.infn.it
+
+# Since MonALISA organizes information in "clusters" and "hosts", here you can
+# specify what to use as cluster prefix for monitoring datasets information and
+# daemon status. If this variable is not set, MonALISA monitoring is inhibited.
+# Please note that the suffix "_datasets" or "_status" is appended for each of
+# the two types of monitoring.
+#dsmgrd.apmonprefix PROOF::TAF::STORAGE

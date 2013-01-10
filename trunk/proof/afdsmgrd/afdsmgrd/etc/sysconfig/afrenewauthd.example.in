@@ -1,0 +1,31 @@
+#
+# sysconfig/afrenewauthd.example -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Configuration options to launch the afrenewauthd daemon
+#
+
+# Full path to the afdsmgrd executable
+export AFRENEWAUTHD_PROG=@DIR_LIBEXEC@/afrenewauth
+
+# AliEn utilities path
+export AFRENEWAUTHD_PATH=/opt/aaf/alien/api/bin
+
+# AliEn libraries path
+export AFRENEWAUTHD_LIBS=/opt/aaf/alien/api/lib
+
+# The log file (purged at every restart)
+export AFRENEWAUTHD_LOGFILE=/tmp/afrenewauthd.log
+
+# The PID file
+export AFRENEWAUTHD_PIDFILE=/tmp/afrenewauthd.pid
+
+# Unprivileged user that launches the authentication daemon
+export AFRENEWAUTHD_USER=aaf
+
+# AliEn username
+export AFRENEWAUTHD_ALIEN_UNAME=proof
+
+# Check and renew if needed every ... secs
+export AFRENEWAUTHD_RENEW_SLEEP_SEC=60

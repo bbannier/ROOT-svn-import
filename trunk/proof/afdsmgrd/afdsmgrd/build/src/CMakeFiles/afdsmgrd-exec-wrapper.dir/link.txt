@@ -1,0 +1,1 @@
+/usr/lib64/ccache/c++   -O3 -DNDEBUG -fPIC    CMakeFiles/afdsmgrd-exec-wrapper.dir/execwrapper.cc.o  -o afdsmgrd-exec-wrapper -rdynamic -L/home/ibucur/rootdev/trunk/lib 

@@ -1,0 +1,2 @@
+/bin/ar cr libafRegex.a  CMakeFiles/afRegex.dir/afRegex.cc.o
+/bin/ranlib libafRegex.a

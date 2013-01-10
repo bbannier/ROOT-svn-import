@@ -1,0 +1,140 @@
+#!/bin/bash
+
+#
+# afrenewauth -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Continuously renews the AliEn authentication token and Grid proxy.
+#
+# Usage:
+#
+#   afrenewauth \
+#     [-p <pidfile>] \
+#     [-l <logfile>] \
+#     [-s <check_renew_every_sec>] \
+#     [-u <alien_user>]
+#
+# If pidfile is not provided, it defaults to /tmp/afrenewauth.pid. If logfile
+# is not provided, output is on stdout.
+#
+
+#
+# External libraries and global variables
+#
+
+# Load library functions
+source `dirname $0`/aflib
+
+# Don't be quiet!
+export QUIET=0
+
+# True if program caught a termination event
+export TERM=0
+
+# Timeout (in seconds) between two consecutive renewals
+export RENEW_SLEEP_SEC=1800
+
+# Pid file
+export PIDFILE="/tmp/afrenewauth.pid"
+
+# Log file
+export LOGFILE=""
+
+# Retry on error after X sec: base value (may not be zero): it will be doubled
+# after each consecutive error, then reset on success
+export RETRY_MIN_SEC=2
+
+# Current value of sleep seconds before retry
+export RETRY_SEC=$RETRY_MIN_SEC
+
+# Maximum number of seconds to retry
+export RETRY_MAX_SEC=200
+
+# Terminating function
+function TermHandler() {
+  prn -i "Termination signal caught"
+  TERM=1
+}
+
+# The main function
+function Main() {
+
+  trap TermHandler SIGINT
+  trap TermHandler SIGTERM
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -p)
+        PIDFILE="$2"
+        shift
+      ;;
+      -l)
+        LOGFILE="$2" # overrides aflib
+        shift
+      ;;
+      -s)
+        RENEW_SLEEP_SEC="$2"
+        shift
+      ;;
+      -u)
+        ALIEN_UNAME="$2" #overrides aflib
+        shift
+      ;;
+    esac    
+    shift
+  done
+
+  echo $$ > "$PIDFILE"
+
+  prn -i "AliEn authentication daemon launched"
+  prn -i "My pid is $$ (saved on $PIDFILE)"
+  prn -i "Checking authentication renewal every $RENEW_SLEEP_SEC seconds"
+  prn -i "AliEn user to authenticate: $ALIEN_UNAME"
+
+  # Check if all utilities are in PATH
+  Init
+  if [ $? != 0 ]; then
+    prn -f "Initialization failed"
+    exit 2
+  fi
+
+  # Automatic authentication loop
+  local CONSEC_ERRS=0
+  local M
+
+  while [ $TERM != 1 ]; do
+    AutoAuth
+    if [ $? == 0 ]; then
+      CONSEC_ERRS=0
+      sleep $RENEW_SLEEP_SEC
+    else
+      if [ $CONSEC_ERRS == 0 ]; then
+        # First time: reset sleep to initial value
+        RETRY_SEC=$RETRY_MIN_SEC
+      elif [ $RETRY_SEC != $RETRY_MAX_SEC ]; then
+        # Maximum not reached: double value
+        let RETRY_SEC=RETRY_SEC*2
+        if [ $RETRY_SEC -gt $RETRY_MAX_SEC ]; then
+          # Overpassed maximum: set to cap
+          RETRY_SEC=$RETRY_MAX_SEC
+        fi
+      fi
+      let CONSEC_ERRS++
+      if [ $CONSEC_ERRS == 1 ]; then
+        prn -e "Authentication failed, retrying after $RETRY_SEC seconds"
+      else
+        M="Authentication failed $CONSEC_ERRS times in a row,"
+        M="$M retrying in $RETRY_SEC seconds"
+        prn -e "$M"
+        sleep $RETRY_SEC
+      fi
+    fi
+  done
+
+  rm -f "$PIDFILE"
+
+}
+
+# Entry point
+Main $@

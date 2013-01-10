@@ -1,0 +1,162 @@
+#!/bin/bash
+
+#
+# afxfr -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Transfer files using AliEn to the destination pool.
+#
+# This script is intended to be run by another daemon, of which it inherits the
+# full environment. However, it is written to be self-contained, so there's no
+# need to have a particular environment to run it.
+#
+# === PARAMS ===
+#
+# afxfr is invoked by xrootd with the following parameters:
+#
+#   afxfr <LFN> <local_destination>
+#
+# Where:
+#
+#  - LFN is the Logical File Name without the leading alien://, e.g.:
+#    /alien/alice/cern.ch/user/d/dberzano/MeoniPt/AliESDs-00198.root
+#  - local_destination is the full destination path on the local disk, that
+#    includes the destination file name
+#
+# === EXIT CODES ===
+#
+# If the execution terminates correctly, it returns zero. Nonzero exit codes
+# indicate the following failures:
+#
+#  -  1 : uncorrect command line syntax
+#  -  2 : some required programs are missing in PATH
+#  -  3 : alien_cp command failed
+#
+# See the file aflib for other exit codes >= 10.
+#
+
+# Loads library functions
+source `dirname $0`/aflib
+
+# Debug line, can be removed...
+#echo "[`Datime`] $0 invoked with args: $@" >> /home/xrd/scratch/afxfr.log
+
+#
+# Functions
+#
+
+# Copy $1 (full AliEn URL) to $2 (full path in local filesystem).
+function Copy() {
+  local SRC="$1"
+  local DEST="$2"
+  local TMPDEST
+
+  # Check if DEST already has the .anew extension
+  local IDX=${#DEST}
+  let IDX-=5
+  if [ "${DEST:IDX}" == ".anew" ]; then
+    TMPDEST="$DEST"
+  else
+    TMPDEST="$DEST.anew"
+  fi
+
+  # Remove any eventually previous failure indicator
+  rm -f "$DEST.fail"
+
+  # Eventually creates the destination directory
+  mkdir -p `dirname $DEST`
+  if [ $? != 0 ]; then
+    prn -e "Creation of destination directory failed"
+    return 1
+  fi
+
+  local TMPLOG=`mktemp /tmp/afxfr-alien_cp-XXXXX`
+  alien_cp -s "$SRC" "$TMPDEST" > "$TMPLOG" 2>&1
+  if [ $? == 0 ] && [ -e "$TMPDEST" ]; then
+    # Copy went right
+    rm "$TMPLOG"
+    if [ "$TMPDEST" != "$DEST" ]; then
+      mv "$TMPDEST" "$DEST"
+    fi
+    return 0
+  else
+    # Copy went bad: output from alien_cp is only shown if an error occured
+    rm -f "$TMPDEST"
+    touch "$DEST.fail"
+    prn -e "Output of alien_cp follows:"
+    local L
+    cat "$TMPLOG" | while read L
+    do
+      prn -e ">> $L"
+    done
+    rm "$TMPLOG"
+  fi
+  return 1
+}
+
+# Entry point of the program
+function Main() {
+
+  # Checks for parameters
+  if [ "$1" == "" ] || [ "$2" == "" ]; then
+    prn -e "Usage: $0 <LFN> <PFN> [<RID>]"
+    exit 1
+  else
+    # Takes care of removing double slashes to avoid problems with alien_cp.
+    # This only makes sense if run manually, because frm_pstgd already does
+    # that!
+    local LFN=`PurgeSlashes "$1"`
+    local PFN=`PurgeSlashes "$2"`
+    LFN=`ConvertToAliEnPath "$LFN"`
+    if [ "$3" == "-t" ]; then
+      # Only date and time (useful if run manually)
+      export DATIME="1"
+      export LABEL=""
+    elif [ "$3" != "" ]; then
+      # Only custom label
+      export LABEL="$3"
+      export DATIME="0"
+    else
+      # Create a unique label based on PID and a random number, to distinguish
+      # overlapped outputs in logfiles via, e.g, a grep
+      export LABEL="`printf '%05d-%05d' $$ $RANDOM`"
+      export DATIME="0"
+    fi
+  fi
+
+  # Check if all utilities are in PATH
+  Init
+  if [ $? != 0 ]; then
+    prn -f "Initialization failed"
+    exit 2
+  fi
+
+  # Prints an initial message
+  prn -i "Starting transfer procedure for:"
+  prn -i ">> Src: $LFN"
+  prn -i ">> Dst: $PFN"
+
+  # Automatic authentication
+  AutoAuth
+  local R=$?
+  if [ $R != 0 ]; then
+    exit $R
+  fi
+
+  # Invoke the copy command
+  Copy "$LFN" "$PFN"
+  if [ $? == 0 ]; then
+    prn -o "Copy succeeded"
+    exit 0
+  else
+    prn -e "Copy using alien_cp failed"
+    exit 3
+  fi
+}
+
+#
+# Entry point
+#
+
+Main $@

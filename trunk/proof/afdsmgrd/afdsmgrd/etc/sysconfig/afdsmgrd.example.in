@@ -1,0 +1,50 @@
+#
+# sysconfig/afdsmgrd.example -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Configuration options to launch the afdsmgrd daemon.
+#
+
+# Full path to the afdsmgrd executable
+export AFDSMGRD_PROG=@DIR_BIN@/afdsmgrd
+
+# The configuration file - configuration may be shared with xrootd, cmsd and
+# proof without conflicts
+export AFDSMGRD_CONF=@DIR_ETC@/afdsmgrd.conf
+
+# Root of your ROOT installation directory
+export ROOTSYS=@ROOTSYS@
+
+# Extra library paths for afdsmgrd -- used for instance to locate external
+# plugins. This list does not include ROOT libraries, which are automatically
+# added by means of the ROOTSYS variable
+export AFDSMGRD_LIBS=/opt/aaf/alien/api/lib
+
+# Extra libraries for external staging command
+export AFDSMGRD_EXTCMD_LIBS=/opt/aaf/alien/api/lib
+
+# Extra path for external staging command
+export AFDSMGRD_EXTCMD_PATH=/opt/aaf/alien/api/bin
+
+# Path where to find helper executables for the stager daemon
+export AFDSMGRD_LIBEXEC=@DIR_LIBEXEC@
+
+# The log directory
+export AFDSMGRD_LOGDIR=@DIR_VAR@/log/afdsmgrd
+
+# The log file
+export AFDSMGRD_LOGFILE=$AFDSMGRD_LOGDIR/afdsmgrd.log
+
+# The PID file
+export AFDSMGRD_PIDFILE=@DIR_VAR@/run/afdsmgrd.pid
+
+# Unprivileged user that launches the daemon
+export AFDSMGRD_USER=aaf
+
+# Files created by the init.d script will belong to AFDSMGRD_USER and this group
+export AFDSMGRD_GROUP=aaf
+
+# Choose the log level amongst: debug, low, normal, high, urgent. All messages
+# below the chosen log level won't be shown
+export AFDSMGRD_LOGLEVEL=low

@@ -1,0 +1,2 @@
+/bin/ar cr libafConfig.a  CMakeFiles/afConfig.dir/afConfig.cc.o
+/bin/ranlib libafConfig.a

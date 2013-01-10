@@ -1,0 +1,40 @@
+#!/bin/bash
+
+#
+# afdsmgrd-root.sh -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# This script uses the same environment variables defined in sysconfig file of
+# afdsmgrd to set the environment for ROOT and launch it with the given
+# parameters.
+#
+# It has been created to overcome a "problem" with setuid programs like
+# afdsmgrd: in these programs, LD_LIBRARY_PATH is unset right after changing
+# privileges to avoid unprivileged user to change the environment that may
+# potentially affect the execution of the daemon as a privileged user.
+#
+
+# Get the configuration variables from the first configuration file found
+declare -a CONF_FILES
+CONF_FILES=(
+  "/usr/local/etc/sysconfig/afdsmgrd" \
+  "/usr/local/etc/default/afdsmgrd" \
+  "/etc/sysconfig/afdsmgrd" \
+  "/etc/default/afdsmgrd" \
+  "$HOME/.afdsmgrd.cf"
+)
+
+for CF in "${CONF_FILES[@]}"; do
+  if [ -r "$CF" ]; then
+    source "$CF"
+    break
+  fi
+done
+
+# Classic ROOT environment variables
+export LD_LIBRARY_PATH="$AFDSMGRD_EXTCMD_LIBS:$ROOTSYS/lib:$LD_LIBRARY_PATH"
+export PATH="$ROOTSYS/bin:$AFDSMGRD_EXTCMD_PATH:$PATH"
+
+# Replace current shell with ROOT
+exec root.exe "$@"

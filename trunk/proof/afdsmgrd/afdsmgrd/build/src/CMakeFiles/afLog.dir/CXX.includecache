@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afLog.cc
+afLog.h
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afLog.h
+
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/src/afLog.h
+iostream
+-
+fstream
+-
+time.h
+-
+string.h
+-
+stdlib.h
+-
+stdarg.h
+-
+libgen.h
+-
+

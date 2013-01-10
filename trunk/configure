@@ -54,6 +54,7 @@ options="                    \
    enable_builtin_lzma       \
    enable_builtin_llvm       \
    enable_cxx11              \
+   enable_libcxx11           \
    enable_castor             \
    enable_chirp              \
    enable_cocoa              \
@@ -139,6 +140,7 @@ done
 for c in $options ; do eval ${c}_explicit="" ; done
 
 enable_cxx11=no
+enable_libcxx11=no
 enable_cocoa=
 enable_afs=no
 enable_alloc=no
@@ -1500,7 +1502,8 @@ enable/disable options, prefix with either --enable- or --disable-
   builtin-zlib       Build included libz, or use system libz
   builtin-lzma       Build included liblzma, or use system liblzma
   builtin-llvm       Build included libclang, or use system libclang
-  c++11              Build using C++11 compatible mode, requires gcc > 4.7.x or clang
+  cxx11              Build using C++11 compatible mode, requires gcc > 4.7.x or clang
+  libcxx11           Build using libc++, requires cxx11 option (MacOS X only, for the time being)
   castor             CASTOR support, requires libshift from CASTOR >= 1.5.2
   chirp              Chirp filesystem support, requires cctools >= 3.2.2
   cocoa              Use native Cocoa/Quartz graphics backend (MacOS X only)
@@ -2321,6 +2324,24 @@ if test "x$enable_cxx11" = "xyes"; then
     else
 	usecxx11="define"
 	result "yes"
+    fi
+fi
+
+######################################################################
+#
+### echo %%% libc++ - compile and link using libc++ (need OSX and cxx11 option)
+#
+# needs gcc > 4.7.x or clang
+uselibcxx11="undef"
+if test "x$enable_cxx11" = "xyes" && test "x$enable_libcxx11" = "xyes" ; then
+    message "Checking whether libc++ is supported"
+    check_cxxopt -std=c++11 -stdlib=libc++
+    if test $cxxopt_result -eq 0 ; then
+        enable_libcxx11="no"
+        result "no"
+    else
+        uselibcxx11="define"
+        result "yes"
     fi
 fi
 
@@ -6751,6 +6772,7 @@ sed -e "s|@srcdir@|$ac_srcdir|"                 \
     -e "s|@buildglite@|$enable_glite|"          \
     -e "s|@buildcocoa@|$enable_cocoa|"          \
     -e "s|@c++11@|$enable_cxx11|"               \
+    -e "s|@libc++11@|$enable_libcxx11|"         \
     < Makefile.tmp > $MAKEOUT
 rm -f Makefile.tmp
 
@@ -6802,8 +6824,9 @@ sed \
     -e "s|@hasxft@|$hasxft|"               \
     -e "s|@hascocoa@|$hascocoa|"           \
     -e "s|@usec++11@|$usecxx11|"           \
-    -e "s|@hasllvm@|$hasllvm|"           \
-    -e "s|@llvmdir@|$llvmdir|"           \
+    -e "s|@uselibc++11@|$uselibcxx11|"     \
+    -e "s|@hasllvm@|$hasllvm|"             \
+    -e "s|@llvmdir@|$llvmdir|"             \
     < RConfigure.tmp > RConfigure-out.tmp
 rm -f RConfigure.tmp
 

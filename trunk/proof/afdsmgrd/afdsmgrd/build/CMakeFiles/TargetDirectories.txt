@@ -1,0 +1,12 @@
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afConfig.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afDataSetList.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afExtCmd.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afLog.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afNotify.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afOpQueue.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afRegex.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afResMon.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afdsmgrd.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afdsmgrd-exec-wrapper.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/src/CMakeFiles/afverifier.real.dir
+/home/ibucur/root/proof/afdsmgrd/afdsmgrd/build/CMakeFiles/uninstall.dir

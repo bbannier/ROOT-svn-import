@@ -1,0 +1,56 @@
+#
+# afverifier.conf.example - example configuration file for afverifier.
+#
+# by Dario Berzano <dario.berzano@cern.ch>
+#
+# See configuration of afdsmgrd or even PROOF for more information.
+#
+
+# Variable with name of redirector
+set PMASTER=pmaster.to.infn.it
+
+# Standard PROOF dataset source
+xpd.datasetsrc file url:/pool/datasets mss:root://$PMASTER:1094 opt:Cq:Av:Ar: rw=1
+
+# Originating URL will be converted to a destination URL (e.g, a redirector
+# URL) according to the following regular expressions: the first one that
+# matches is used. Regexs are tested in the same order they appear here.
+# Apart from the first one, additional regexs are numbered from 2 to 4
+verifier.urlregex alien://(.*)$ root://$PMASTER/$1
+#dsmgrd.urlregex2 root://myserver.cern.ch/(.*)$ root://$PMASTER/$1
+
+# Sleep between each queue check
+verifier.sleepsecs 6
+
+# Verified data on queue is saved on datasets every X seconds
+verifier.scandseveryloops 10
+
+# Parallel verifications: there is no upper limit, and it has been proven to
+# handle thousands of elements. It is however better to keep this number not too
+# high and to lower the "sleepsecs"
+verifier.parallelverifies 800
+
+# Command that performs the file verification -- variables will be substituted.
+# With current distribution, you may choose between two different methods:
+#
+# 1) ROOT macro with option to do only locate (0) or rescan metadata (1)
+#verifier.verifycmd @DIR_LIBEXEC@/afdsmgrd-root.sh -b -q @DIR_LIBEXEC@/afdsmgrd-macros/LocateVerifyXrd.C'("$REDIRURL", "$TREENAME", 0)'
+#
+# 2) External script that wraps "xrd locateall" (way faster and lighter): it
+#    also performs a zipfile check directly on the server that has the file,
+#    avoiding useless network transfers, but SSH without password must be
+#    allowed. Pass the xrootd namespace or prefix (oss.localroot) with option
+#    --xrd-prefix
+verifier.verifycmd @DIR_LIBEXEC@/afverifier-xrd-locate.sh "$REDIRURL" --xrd-prefix /pool/my/namespace
+#
+# 3) Same thing as 2) but without zip check. Note that --no-zipcheck is the
+#    second argument and cannot be swapped with the first one. Namespace is not
+#    passed, so the default (/) will be used
+#verifier.verifycmd @DIR_LIBEXEC@/afverifier-xrd-locate.sh "$REDIRURL" --no-zipcheck
+
+# Command that performs the file removal on corrupted files, if requested by
+# the user on command line (-x)
+verifier.erasecmd @DIR_LIBEXEC@/afverifier-xrd-rm.sh "$REDIRURL"
+
+# Maximum number of failures tolerated: verifications are failed after that
+verifier.maxfailures 3

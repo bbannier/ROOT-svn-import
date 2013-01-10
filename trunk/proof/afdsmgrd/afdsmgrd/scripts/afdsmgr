@@ -1,0 +1,193 @@
+#!/bin/bash
+
+#
+# afdsmgr -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Wrapper to interactively launch afdsmgrd, the dataset stager daemon. Options
+# normally read from a config file are passed as command-line parameters
+# instead.
+#
+# Many instances of afdsmgr(d) can be launched at the same time without any
+# problem.
+#
+
+#
+# Global Variables of afdsmgrd: they will be put in the configuration file
+#
+
+export AFDSMGRD_DSSRC='/tmp/proof_dataset_source'
+export AFDSMGRD_SLEEPSECS=20
+export AFDSMGRD_SCANDSEVERYLOOPS=15
+export AFDSMGRD_PARALLELXFRS=20
+export AFDSMGRD_CMDTIMEOUTSECS=1800
+export AFDSMGRD_CORRUPTAFTERFAILS=4
+export AFDSMGRD_URLREGEX='^(.*)$'
+export AFDSMGRD_URLSUBST='$1'
+export AFDSMGRD_STAGECMD='/bin/false "$URLTOSTAGE" "$TREENAME"'
+export AFDSMGRD_LOGLEVEL='normal'
+
+#
+# Functions
+#
+
+# Generates the configuration file for afdsmgrd. Output should be redirected to
+# a file
+function GenConf() {
+  cat <<_EOF_
+xpd.datasetsrc file url:$AFDSMGRD_DSSRC mss:root://boh.boh:1094 opt:Cq:Av:Ar: rw=1
+dsmgrd.urlregex $AFDSMGRD_URLREGEX $AFDSMGRD_URLSUBST
+dsmgrd.sleepsecs $AFDSMGRD_SLEEPSECS
+dsmgrd.scandseveryloops $AFDSMGRD_SCANDSEVERYLOOPS
+dsmgrd.parallelxfrs $AFDSMGRD_PARALLELXFRS
+dsmgrd.stagecmd $AFDSMGRD_STAGECMD
+dsmgrd.cmdtimeoutsecs $AFDSMGRD_CMDTIMEOUTSECS
+dsmgrd.corruptafterfails $AFDSMGRD_CORRUPTAFTERFAILS
+_EOF_
+}
+
+# The main function
+function Main() {
+
+  local Prog Args
+
+  Prog=`basename "$0"`
+  Args=$(getopt -o 'd:s:y:p:c:t:f:r:u:l:' \
+    --long 'datasetsrc:,sleepsecs:,scandseveryloops:,parallelxfrs:,stagecmd:,\
+    cmdtimeoutsecs:,corruptafterfails:,urlregex:,urlsubst:,loglevel:,\
+    rootsys:' \
+    -n"$Prog" -- "$@")
+  [ $? == 0 ] || return 1
+
+  eval set -- "$Args"
+
+  while [ "$1" != '--' ] ; do
+
+    case "$1" in
+
+      --datasetsrc|-d)
+        AFDSMGRD_DSSRC="$2"
+        shift 2
+      ;;
+
+      --sleepsecs|-s)
+        AFDSMGRD_SLEEPSECS="$2"
+        shift 2
+      ;;
+
+      --scandseveryloops|-y)
+        AFDSMGRD_SCANDSEVERYLOOPS="$2"
+        shift 2
+      ;;
+
+      --parallelxfrs|-p)
+        AFDSMGRD_PARALLELXFRS="$2"
+        shift 2
+      ;;
+
+      --stagecmd|-c)
+        AFDSMGRD_STAGECMD="$2"
+        shift 2
+      ;;
+
+      --cmdtimeoutsecs|-t)
+        AFDSMGRD_CMDTIMEOUTSECS="$2"
+        shift 2
+      ;;
+
+      --corruptafterfails|-f)
+        AFDSMGRD_CORRUPTAFTERFAILS="$2"
+        shift 2
+      ;;
+
+      --urlregex|-r)
+        AFDSMGRD_URLREGEX="$2"
+        shift 2
+      ;;
+
+      --urlsubst|-u)
+        AFDSMGRD_URLSUBST="$2"
+        shift 2
+      ;;
+
+      --loglevel|-l)
+        AFDSMGRD_LOGLEVEL="$2"
+        shift 2
+      ;;
+
+      --rootsys)
+        source "$2"/bin/thisroot.sh
+        if [ $? != 0 ] ; then
+          echo 'Error while loading ROOT environment!' >&2
+          return 1
+        fi
+        shift 2
+      ;;
+
+      *)
+        echo "Skipping unknown option: $1"
+        shift 1
+      ;;
+
+    esac
+
+  done
+
+  shift 1  # skip '--'
+  #echo "Remaining options: $@"
+
+  #
+  # Preparing environment in /tmp
+  #
+
+  local WorkDir ConfFile PidFile RetVal
+
+  # Making working directory
+  WorkDir="/tmp/afdsmgr-$$"
+  mkdir -p "$WorkDir"
+  if [ $? != 0 ] ; then
+    echo "Cannot create working directory $WorkDir" >&2
+    return 1
+  fi
+
+  # Generating configuration file
+  ConfFile="$WorkDir/afdsmgrd.conf"
+  GenConf > "$ConfFile"
+
+  # Pid file
+  PidFile="$WorkDir/afdsmgrd.pid"
+
+  # Binary path is the path of current executable
+  local PathBin=`dirname "$0"`
+  PathBin=`readlink -m "$PathBin"`
+
+  # Auto-detect if installed along with ROOT
+  if [ -e "$PathBin/thisroot.csh" ] ; then
+    echo 'This version of afdsmgrd was shipped with ROOT' >&2
+    PathLib=`readlink -m "$PathBin/../etc/proof/lib"`
+    PathLibexec=`readlink -m "$PathBin/../etc/proof"`
+  else
+    echo 'This version of afdsmgrd was not shipped with ROOT' >&2
+    PathLib=`readlink -m "$PathBin/../lib"`
+    PathLibexec=`readlink -m "$PathBin/../libexec"`
+  fi
+
+  # Execute afdsmgrd
+  "$PathBin"/afdsmgrd -p "$PidFile" -c "$ConfFile" -e "$PathLibexec" \
+    -d "$AFDSMGRD_LOGLEVEL"
+  RetVal=$?
+  echo "afdsmgrd ended with exit code $RetVal"
+
+  # Cleaning up
+  rm -rf "$WorkDir"
+
+  return $RetVal
+
+}
+
+#
+# Entry point
+#
+
+Main "$@" || exit $?

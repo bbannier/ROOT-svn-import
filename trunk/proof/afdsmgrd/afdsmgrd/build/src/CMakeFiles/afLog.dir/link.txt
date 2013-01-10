@@ -1,0 +1,2 @@
+/bin/ar cr libafLog.a  CMakeFiles/afLog.dir/afLog.cc.o
+/bin/ranlib libafLog.a

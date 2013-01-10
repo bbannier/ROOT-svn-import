@@ -1,0 +1,296 @@
+#!/bin/bash
+
+#
+# aflib -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Library functions for the MSS interface between xrootd and AliEn.
+#
+# === EXIT CODES ===
+#
+# These are the return values of some functions that must be passed to the shell
+# by the main program in order to be caught.
+#
+#  - 10 : timeout for alien-token-init
+#  - 11 : cannot obtain a token
+#  - 20 : timeout for xrdgsiproxy
+#  - 21 : cannot obtain a proxy
+#
+# === UNLOCKING THE PRIVATE KEY ===
+#
+# The assumption of automatic authentication is that the private key is saved
+# unlocked, i.e. not encrypted i.e. not passphrase-protected.
+#
+# To unprotect a private key, do something like:
+#
+# $ cd ~/.globus
+# $ mv userkey.pem userkey-protected.pem
+# $ openssl rsa -in userkey-protected.pem -out userkey.pem
+# $ chmod 0400 *.pem
+#
+
+#
+# Global variables
+#
+
+# Pool prefix mapped to the AliEn root directory: this variable must be escaped
+# like in a regular expression, so that for instance "/" becomes "\/"!
+export POOL_PREFIX="\/pool\/alien"
+
+# Location of the AliEn binaries
+export ALIEN_BIN="/opt/alien/api/bin"
+
+# The username on AliEn (it is usually "proof" for service certificates)
+export ALIEN_UNAME="proof"
+
+# Location of the AliEn token
+export TOKEN="/tmp/gclient_token_$UID"
+
+# Location of the Grid x509 proxy
+export PROXY="/tmp/x509up_u$UID"
+
+# Location of the AliEn environment
+export ALIEN_ENV="/tmp/gclient_env_$UID"
+
+# Log file; if empty, output on stdout
+export LOGFILE=""
+
+# Expiration "tolerance": check if token or proxy will expire within the next X
+# seconds. This is useful because it may take a long time between the AliEn LFN
+# query and the subsequent transfer. There are two different values for proxy
+# and token because they usually have different durations. The default values
+# are very big because of usually common server downtimes: it's 23h for token
+# and 11h for the proxy
+export TOL_TOKEN=82800
+export TOL_PROXY=39600
+
+# This script waits for other instances of xrdgsiproxy and alien-token-init to
+# quit before asking for a new token, in order to avoid conflicts and multiple
+# requests, and to enable multithreading in file transfer. However, these
+# commands may get stuck for whatever reason: here we set the maximum number of
+# seconds this script waits for other instances to terminate before giving up
+# and terminating with an error
+export MAXWAIT=60
+
+# Number of tries to get the token or the proxy
+export TRIES=3
+
+# Custom variables are now eventually loaded
+export CUSTOM_CONF="`dirname $0`/afconf"
+if [ -r "$CUSTOM_CONF" ]; then
+  source "$CUSTOM_CONF"
+fi
+unset CUSTOM_CONF
+
+#
+# Library functions
+#
+
+# Tells if AliEn token will be expired after TOL_TOKEN seconds (gives a better
+# control than alien-token-info)
+function IsTokenExpiring() {
+  if [ -e "$ALIEN_ENV" ] && [ -e "$TOKEN" ]; then
+    # These times are Unix timestamps (no timezone-dependant) in seconds
+    local EXP=`grep '^Expiretime = ' $TOKEN | cut -b14-`
+    local NOW=`date +%s`
+    let EXP=EXP-TOL_TOKEN
+    if [ $EXP -gt $NOW ]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Tells if Grid proxy will be expired after TOL_PROXY seconds - since it is a
+# standard x509 certificate, we can directly ask openssl, because it returns 1
+# both when the proxy is not found or when it is expiring
+function IsProxyExpiring() {
+  openssl x509 -in "$PROXY" -noout -checkend $TOL_PROXY > /dev/null 2>&1
+  return $?
+}
+
+# Obtains a new AliEn token. It tries three times before giving up upon errors
+function TokenInit() {
+  for ((I=0; $I < $TRIES; I++)); do
+    alien-token-init $ALIEN_UNAME > /dev/null 2>&1
+    if [ $? == 0 ]; then
+      source "$ALIEN_ENV"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Obtains a new Grid proxy. It tries three times before giving up upon errors
+function ProxyInit() {
+  for ((I=0; $I < $TRIES; I++)); do
+    xrdgsiproxy init > /dev/null 2>&1
+    IsProxyExpiring
+    if [ $? == 0 ]; then
+      source "$ALIEN_ENV"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Wait until the specified command has finished its execution
+function Wait() {
+  local COUNT=0
+  while [ 1 ]; do
+    ps U $UID | grep -v grep | grep "$1" > /dev/null 2>&1
+    if [ $? == 0 ]; then
+      if [ $COUNT -ge $MAXWAIT ]; then
+        return 1
+      elif [ $COUNT == 0 ]; then
+        prn -i "Waiting maximum $MAXWAIT seconds for another instance of $1" \
+               "to finish"
+      fi
+      sleep 1
+      let COUNT++
+    else
+      return 0
+    fi
+  done
+}
+
+# Converts a path of a "virtual" AliEn folder to an AliEn URL
+function ConvertToAliEnPath() {
+  echo "$1" | perl -ne "s/^$POOL_PREFIX\/"'(.*)$/alien\:\/\/\/$1/; print $_'
+}
+
+# Strips the initial pool prefix from the given path
+function StripPoolPrefix() {
+  echo "$1" | perl -ne "/^$POOL_PREFIX(.*)/"'; print "$1\n"'
+}
+
+# Echo function with prefixes. If QUIET envvar is set to 1 output is not
+# printed; if LOGFILE is not set, output is on stdout
+function prn() {
+  if [ "$QUIET" == 1 ]; then
+    return
+  fi
+
+  local PARAM="$1"
+  shift
+  local STR="$@"
+
+  local PREF
+
+  case $PARAM in
+    -i) PREF="I" ;;
+    -e) PREF="E" ;;
+    -w) PREF="W" ;;
+    -o) PREF="O" ;;
+    -f) PREF="F" ;;
+  esac
+
+  if [ "$DATIME" != "0" ]; then
+    PREF="$PREF-[`Datime`]"
+  fi
+
+  if [ "$LABEL" != "" ]; then
+    PREF="$PREF-[$LABEL]"
+  fi
+
+  if [ "$LOGFILE" == "" ]; then
+    echo "$PREF $STR"
+  else
+    echo "$PREF $STR" >> "$LOGFILE"
+  fi
+}
+
+# This function performs automatic authentication. Messages are printed, i.e.
+# this function is not "silent". If something goes wrong, return error should
+# be properly caught.
+function AutoAuth() {
+
+  # Before checking token, wait for possible other instances of alien-token-init
+  # to terminate
+  Wait alien-token-init
+  if [ $? != 0 ]; then
+    prn -e "Timeout reached"
+    return 10
+  fi
+
+  # Checks if token is going to expire soon: in this case, request a new one
+  IsTokenExpiring
+  if [ $? != 0 ]; then
+    prn -i "Token is expiring soon or does not exist: requesting a new one"
+    TokenInit
+    if [ $? != 0 ]; then
+      prn -e "Cannot obtain a new token"
+      return 11
+    else
+      prn -o "New token obtained"
+    fi
+  else
+    prn -i "Reusing existing token"
+    source "$ALIEN_ENV"
+  fi
+
+  # Before checking proxy, wait for possible other instances of xrdgsiproxy to
+  # terminate
+  Wait xrdgsiproxy
+  if [ $? != 0 ]; then
+    prn -e "Timeout reached"
+    return 20
+  fi
+
+  # Checks if proxy is going to expire soon: in this case, request a new one
+  IsProxyExpiring
+  if [ $? != 0 ]; then
+    prn -i "Proxy is expiring soon or does not exist: requesting a new one"
+    ProxyInit
+    if [ $? != 0 ]; then
+      prn -e "Cannot obtain a new proxy"
+      return 21
+    else
+      prn -o "New proxy obtained"
+    fi
+  else
+    prn -i "Reusing existing proxy"
+  fi
+
+  return 0
+}
+
+# Common init function that only does a couple of checks inside PATH, and
+# prevents asking if the AliEn client should be recompiled
+function Init() {
+  export GSHELL_NO_GCC=1
+  export PATH="$ALIEN_BIN:$PATH"
+  local REQ=( alien_cp alien-token-init xrdgsiproxy alien_whereis alien_ls \
+    openssl )
+  local R
+  local ERR=0
+  for R in ${REQ[*]}; do
+    which $R > /dev/null 2>&1
+    if [ $? != 0 ]; then
+      prn -e "$R is missing in PATH"
+      let ERR++
+    fi
+  done
+  return $ERR
+}
+
+# Eliminates double slashes and trailing slash too
+function PurgeSlashes() {
+  local STR="$1"
+  local NEWSTR=""
+  while [ 1 ]; do
+    NEWSTR=`echo "$STR" | perl -ne 's/\/\//\//g; print $_'`
+    if [ "$NEWSTR" == "$STR" ]; then
+      break
+    fi
+    STR="$NEWSTR"
+  done
+  echo $STR | perl -ne 's/(.*)\/$/$1/; print $_'
+}
+
+# SQL-like date and time
+function Datime() {
+  #date +'%Y-%m-%d %H:%M:%S'
+  date +'%Y%m%d-%H%M%S'
+}

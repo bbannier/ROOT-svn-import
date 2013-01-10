@@ -1,0 +1,42 @@
+#!/bin/bash
+
+#
+# afverifier -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# Wrapper around executable afverifier.real to set some environment variables
+# (like ROOT ones, or xrootd's). Variables are taken from afdsmgrd startup conf
+# file.
+#
+
+# Get the configuration variables from the first configuration file found
+declare -a CONF_FILES
+CONF_FILES=(
+  "@DIR_ETC@/sysconfig/afdsmgrd" \
+  "@DIR_ETC@/default/afdsmgrd" \
+  "/etc/sysconfig/afdsmgrd" \
+  "/etc/default/afdsmgrd" \
+  "$HOME/.afdsmgrd.cf"
+)
+
+for CF in "${CONF_FILES[@]}"; do
+  if [ -r "$CF" ]; then
+    source "$CF"
+    break
+  fi
+done
+
+# Classic ROOT environment variables, plus "extra" ones (usually, AliEn+xrootd)
+export LD_LIBRARY_PATH="$AFDSMGRD_EXTCMD_LIBS:$ROOTSYS/lib:$LD_LIBRARY_PATH"
+export PATH="$ROOTSYS/bin:$AFDSMGRD_EXTCMD_PATH:$PATH"
+
+# The real binary (same name with ".real" appended)
+export AFVERIFIER_REALBIN="$0".real
+
+# The default configuration file
+export AFVERIFIER_CONF=$(dirname "$AFDSMGRD_CONF")/afverifier.conf
+
+# Current process is substituted with the real afverifier. Additional parameters
+# are passed to the executable. These might include and override -c and -e
+exec "$AFVERIFIER_REALBIN" -c "$AFVERIFIER_CONF" -e "$AFDSMGRD_LIBEXEC" "$@"

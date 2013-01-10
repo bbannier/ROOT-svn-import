@@ -1,0 +1,106 @@
+#!/bin/bash
+
+#
+# afmss -- by Dario Berzano <dario.berzano@cern.ch>
+#
+# This file is part of afdsmgrd -- see http://code.google.com/p/afdsmgrd
+#
+# MSS interface between xrootd and AliEn.
+#
+# === EXIT CODES ===
+#
+# The return value is unimportant because xrootd needs the number to be echoed,
+# and not properly returned.
+#
+
+# Load library functions
+source `dirname $0`/aflib
+
+# Debug line, can be removed...
+#echo "[`Datime`] $0 invoked with args: $@" >> /home/xrd/scratch/afmss.log
+
+# The main function
+function Main() {
+
+  # The output must be quiet!
+  export QUIET=1
+
+  # Check if all utilities are in PATH
+  Init
+  if [ $? != 0 ]; then
+    prn -f "Initialization failed"
+    exit 2
+  fi
+
+  # Automatic authentication
+  AutoAuth
+  local R=$?
+  if [ $R != 0 ]; then
+    exit $R
+  fi
+
+  # Get file name
+  LFN=`PurgeSlashes $2`
+
+  case $1 in
+    statx)
+      Statx "$LFN"
+    ;;
+    *)
+      NotImplemented
+    ;;
+  esac
+
+}
+
+function Statx() {
+  # Get the AliEn file name by removing the pool prefix
+  local LFN=`StripPoolPrefix $1`
+
+  # Check if the AliEn file exists and is not a dir (whereis fails on dirs)
+  alien_whereis $LFN 2>&1 | grep "The file " > /dev/null
+  if [ "$?" != 0 ]; then
+    echo 1
+    return
+  fi
+
+  # Do a ls
+  local OUT=`alien_ls -ln "$LFN" 2> /dev/null`
+
+  # File might be not a file, i.e. a collection
+  local FTYPE=`echo $OUT|cut -b1-1`
+  if [ "$FTYPE" != "-" ]; then
+    echo 2
+    return
+  else
+    FTYPE="f"
+  fi
+
+  # File info
+  local PERM=`echo $OUT|cut -b2-10`
+  local NLINK=1
+  local FUID=0
+  local FGID=0
+
+  # Maybe fix it? This goes to atime, mtime and ctime
+  local TM=0
+
+  local SZ=`echo $OUT|cut -d' ' -f4`
+  local BLKSZ=1024
+  local NBLKS
+
+  # Not important, but must ceil it, not floor it, maybe fix it?
+  let NBLKS=SZ/BLKSZ+1
+
+  # Output in proper format (-> p.44 ofs manual)
+  echo 0
+  echo "$FTYPE $PERM $NLINK $FUID $FGID $TM $TM $TM $SZ $BLKSZ $NBLKS"
+}
+
+# Only statx is implemented. Every other function falls back here and fails
+function NotImplemented() {
+  echo 1
+}
+
+# Entry point
+Main $@
