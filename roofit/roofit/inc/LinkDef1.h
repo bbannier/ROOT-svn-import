@@ -24,6 +24,7 @@
 #pragma link C++ class RooGExpModel+ ;
 #pragma link C++ class RooHistConstraint+ ;
 #pragma link C++ class RooKeysPdf+ ;
+#pragma link C++ class RooParamKeysPdf+ ;
 #pragma link C++ class RooNDKeysPdf+ ;
 #pragma link C++ class RooLandau+ ;
 #pragma link C++ class RooNonCPEigenDecay+ ;
