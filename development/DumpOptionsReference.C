@@ -19,6 +19,8 @@
 #include "TSystem.h"
 #include "TTree.h"
 
+#include "TMVA/Config.h"
+
 void DumpOptionsReference()
 {
    std::cout << "Start DumpOptionsReference" << std::endl
@@ -53,27 +55,34 @@ void DumpOptionsReference()
    factory->AddVariable( "var4", 'F' );
 
    TFile *input(0);
-    TString fname = "../tmva/test/tmva_example.root";
-    if (!gSystem->AccessPathName( fname )) {
+   char* TMVAPath = getenv ("TMVASYS");
+   if (TMVAPath!=NULL)
+      printf ("Using TMVA installed in: %s\n",TMVAPath);
+   else {
+      printf ("ERROR: could not read environment variable TMVASYS. Is it set properly?\n");
+      return 0;
+   }    
+   TString fname = Form("%s/test/tmva_example.root",TMVAPath);
+   if (!gSystem->AccessPathName( fname )) {
        // first we try to find tmva_example.root in the local directory
-       std::cout << "--- DumpOptionsReference    : Accessing " << fname << std::endl;
-       input = TFile::Open( fname );
-    } 
-    if (!input) {
-       std::cout << "ERROR: could not open data file" << std::endl;
-       exit(1);
-    }
-
-    TTree *signal     = (TTree*)input->Get("TreeS");
-    TTree *background = (TTree*)input->Get("TreeB");
-
-    // ====== register trees ====================================================
-    //
-    // the following method is the prefered one:
-    // you can add an arbitrary number of signal or background trees
-    factory->AddSignalTree    ( signal,     1 );
-    factory->AddBackgroundTree( background, 1 );
-       
+      std::cout << "--- DumpOptionsReference    : Accessing " << fname << std::endl;
+      input = TFile::Open( fname );
+   } 
+   if (!input) {
+      std::cout << "ERROR: could not open data file" << std::endl;
+      exit(1);
+   }
+   
+   TTree *signal     = (TTree*)input->Get("TreeS");
+   TTree *background = (TTree*)input->Get("TreeB");
+   
+   // ====== register trees ====================================================
+   //
+   // the following method is the prefered one:
+   // you can add an arbitrary number of signal or background trees
+   factory->AddSignalTree    ( signal,     1 );
+   factory->AddBackgroundTree( background, 1 );
+   
    // This would set individual event weights (the variables defined in the 
    // expression need to exist in the original TTree)
    //    for signal    : factory->SetSignalWeightExpression("weight1*weight2");

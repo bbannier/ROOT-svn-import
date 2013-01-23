@@ -6,7 +6,7 @@
 # Python script: CreatePythonRef.py                                              #
 #                                                                                #
 # Creation of reference html pages for configuration options and                 #
-# MVA method tuning                                                              #
+# MVA method tuning and the .tex input files for the UsersGuide                  #
 #                                                                                #
 # It requires prior creation of the reference text files via running:            #
 #                                                                                #
@@ -345,7 +345,8 @@ def abort():
     sys.exit(1)
 
 def getTMVAVersion():
-    reldir = 'tmva'
+#    reldir = 'tmva'
+    reldir = os.environ['TMVASYS']
     for i in range(4):
         if os.path.isdir( reldir ):
             v = reldir + '/inc/TMVA/Version.h'
@@ -634,7 +635,7 @@ def main():
 
     sys.stdout = oldstdout
     print 'Created output file: %s' % outfname
-
+    print 'LaTex output should have been writting to optiontables/'
 # ----------------------------------------------------------
 
 if __name__ == "__main__":
