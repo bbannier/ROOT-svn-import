@@ -299,7 +299,7 @@ class Option:
         lbreak = ''
         if not lastElement: lbreak = '\\\\'
         s = '%25s  &  %s  &  %15s  &  %s  &  %s %s' % (self.opt, array, self.val, pstr, self.info, lbreak)
-        print s.replace('_','\_').replace('#','\#').replace('^','**').replace('>','$>$').replace('<','$<$')
+        print s.replace('_','\_').replace('#','\#').replace('^','**').replace('>','$>$').replace('<','$<$').replace('%','\%')
 
 
     def printOptionHtml( self, num, lightCol, darkCol ):
