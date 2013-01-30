@@ -109,6 +109,10 @@ For this element there is no sublemenents so the setting will only have local ef
           HistoName         CDATA            #IMPLIED
           InputFile         CDATA            #IMPLIED
           HistoPath         CDATA            #IMPLIED
+	  HandleZeroBins    CDATA            #IMPLIED
+	  McWeightHistoName CDATA            #IMPLIED
+	  McWeightHistoPath CDATA            #IMPLIED
+	  McWeightInputFile CDATA            #IMPLIED
 > 
 
 <!ELEMENT HistoSys EMPTY>
