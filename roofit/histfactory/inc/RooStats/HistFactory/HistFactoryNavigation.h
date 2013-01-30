@@ -25,6 +25,7 @@ namespace RooStats {
 			    const std::string& WorkspaceName="combined",
 			    const std::string& ModelConfigName="ModelConfig");
       HistFactoryNavigation(RooAbsPdf* model, RooArgSet* observables);
+      HistFactoryNavigation(RooAbsPdf* model, RooAbsData* data);
 
       virtual ~HistFactoryNavigation() {} 
 
@@ -74,10 +75,13 @@ namespace RooStats {
       THStack* GetChannelStack(const std::string& channel, const std::string& name="");
 
       // Draw a stack of the channel, and include data if the pointer is supplied
-      void DrawChannel(const std::string& channel, RooDataSet* data=NULL);
+      void DrawChannel(const std::string& channel, RooDataSet* data=NULL, bool DrawLegend=false);
 
       // Get the RooAbsReal function for a given sample in a given channel
       RooAbsReal* SampleFunction(const std::string& channel, const std::string& sample);
+
+      // Get the Nominal (input values) function for a given channel and sample
+      RooAbsReal* GetNominalNode(const std::string& channel, const std::string& sample);
 
       // Get the set of observables for a given channel
       RooArgSet* GetObservableSet(const std::string& channel);
@@ -108,6 +112,9 @@ namespace RooStats {
 
       //
       RooAbsPdf* GetChannelPdf(const std::string& channel);
+
+      // Set the color of drawn samples
+      void SetColor(const std::string& sample, int color) { fColorMap[sample]=color; }
 
 
       std::vector< std::string > GetChannelSampleList(const std::string& channel);
@@ -183,6 +190,9 @@ namespace RooStats {
       // Map of Map of Channel, Sample names to Function Nodes
       // Used by doing: fChannelSampleFunctionMap["MyChannel"]["MySample"]
       std::map< std::string, std::map< std::string, RooAbsReal*> > fChannelSampleFunctionMap;
+
+      // Color map for printing samples
+      std::map<std::string, int> fColorMap;
 
       // Internal method implementation of finding a daughter node
       // from a parent node (looping over all generations)

@@ -138,6 +138,8 @@ void RooStats::HistFactory::HistoSys::writeToFile( const std::string& FileName,
 	      << std::endl;
     throw hf_exc();
   }
+  std::string hLowName = std::string(histLow->GetName()) + "_" + GetName() + "_low";
+  histLow->SetName( hLowName.c_str() );
   histLow->Write();
   fInputFileLow = FileName;
   fHistoPathLow = DirName;
@@ -151,6 +153,8 @@ void RooStats::HistFactory::HistoSys::writeToFile( const std::string& FileName,
 	      << std::endl;
     throw hf_exc();
   }
+  std::string hHighName = std::string(histHigh->GetName()) + "_" + GetName() + "_high";
+  histHigh->SetName( hHighName.c_str() );
   histHigh->Write();
   fInputFileHigh = FileName;
   fHistoPathHigh = DirName;
@@ -199,6 +203,8 @@ void RooStats::HistFactory::ShapeSys::writeToFile( const std::string& FileName,
 	      << std::endl;
     throw hf_exc();
   }
+  std::string hShapeName = std::string(histError->GetName()) + "_" + GetName() + "_error";
+  histError->SetName( hShapeName.c_str() );
   histError->Write();
   fInputFile = FileName;
   fHistoPath = DirName;
@@ -361,10 +367,17 @@ void RooStats::HistFactory::StatErrorConfig::PrintXML( std::ostream& xml ) {
 
 
 // Stat Error
+RooStats::HistFactory::StatError::StatError() : fActivate(false), fUseHisto(false), 
+						fHandleZeroBins(false), fhError(NULL), 
+						fhMcWeight(NULL) {;}
+
 TH1* RooStats::HistFactory::StatError::GetErrorHist() {
   return (TH1*) fhError.GetObject();
 }
 
+TH1* RooStats::HistFactory::StatError::GetMcWeightHist() {
+  return (TH1*) fhMcWeight.GetObject();
+}
 
 void RooStats::HistFactory::StatError::Print( std::ostream& stream ) {
   stream << "\t \t Activate: " << fActivate
@@ -387,7 +400,6 @@ void RooStats::HistFactory::StatError::PrintXML( std::ostream& xml ) {
   }
 
 }
-
 
 void RooStats::HistFactory::StatError::writeToFile( const std::string& OutputFileName, 
 						    const std::string& DirName ) {

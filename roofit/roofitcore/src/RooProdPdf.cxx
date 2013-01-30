@@ -2011,7 +2011,6 @@ RooAbsGenContext* RooProdPdf::genContext(const RooArgSet &vars, const RooDataSet
 }
 
 
-
 //_____________________________________________________________________________
 Int_t RooProdPdf::getGenerator(const RooArgSet& directVars, RooArgSet &generateVars, Bool_t staticInitOK) const
 {

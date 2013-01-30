@@ -73,7 +73,6 @@ public:
   std::string GetName() { return fName; }
   void SetName(const std::string& Name) { fName = Name; }
   
-
   std::string GetInputFile() { return fInputFile; }
   void SetInputFile(const std::string& InputFile) { fInputFile = InputFile; }
 
@@ -130,7 +129,6 @@ protected:
 
   bool fNormalizeByTheory;
   bool fStatErrorActivate;
-
 
   // The Nominal Shape
   TRef fhNominal;

@@ -433,7 +433,9 @@ void RooStats::HistFactory::FitModelAndPlot(const std::string& MeasurementName,
   delete [] y_arr_nll;
     
   // Finally, restore the initial values
-  combined->loadSnapshot("InitialValues");
+  // This may be turned off to check with
+  // previous versions
+  //combined->loadSnapshot("InitialValues");
     
 }
 

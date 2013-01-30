@@ -19,7 +19,7 @@ HF_PREPAREHISTFACTORY := bin/prepareHistFactory
 
 ##### tf_makeworkspace.exe #####
 
-HF_MAKEWORKSPACEEXES   := $(MODDIRS)/MakeModelAndMeasurements.cxx
+HF_MAKEWORKSPACEEXES   := $(MODDIRS)/hist2workspace.cxx
 HF_MAKEWORKSPACEEXEO   := $(call stripsrc,$(HF_MAKEWORKSPACEEXES:.cxx=.o))
 HF_MAKEWORKSPACEEXEDEP := $(HF_MAKEWORKSPACEEXEO:.o=.d)
 
@@ -65,7 +65,7 @@ HISTFACTORYDH   := $(HISTFACTORYDS:.cxx=.h)
 
 HISTFACTORYH    := $(filter-out $(MODDIRI)/LinkDef%,$(wildcard $(MODDIRI)/RooStats/HistFactory/*.h))
 HISTFACTORYS    := $(filter-out $(MODDIRS)/G__%,$(wildcard $(MODDIRS)/*.cxx))
-HISTFACTORYO    := $(call stripsrc,$(HISTFACTORYS:.cxx=.o))
+HISTFACTORYO    := $(filter-out roofit/histfactory/src/hist2workspace.o, $(call stripsrc,$(HISTFACTORYS:.cxx=.o)))
 
 
 HISTFACTORYDEP  := $(HISTFACTORYO:.o=.d) $(HISTFACTORYDO:.o=.d)
@@ -94,6 +94,7 @@ include/RooStats/HistFactory/%.h:    $(HISTFACTORYDIRI)/RooStats/HistFactory/%.h
 
 $(HISTFACTORYLIB): $(HISTFACTORYO) $(HISTFACTORYDO) $(ORDER_) $(MAINLIBS) \
                 $(HISTFACTORYLIBDEP) 
+		echo "histfactorylib"
 		@$(MAKELIB) $(PLATFORM) $(LD) "$(LDFLAGS)" \
 		   "$(SOFLAGS)" libHistFactory.$(SOEXT) $@ \
 		   "$(HISTFACTORYO) $(HISTFACTORYDO)" \
@@ -110,6 +111,7 @@ $(HISTFACTORYMAP): $(RLIBMAP) $(MAKEFILEDEP) $(HISTFACTORYL)
 
 $(HF_MAKEWORKSPACEEXE): $(HF_MAKEWORKSPACEEXEO) $(ROOTLIBSDEP) $(RINTLIB) \
                 $(HISTFACTORYLIBDEPM) $(HF_PREPAREHISTFACTORY) $(HISTFACTORYLIB)
+		echo "amkeworkspacexe"
 		$(LD) $(LDFLAGS) -o $@ $(HF_MAKEWORKSPACEEXEO) $(ROOTICON) \
 		   $(ROOTULIBS) $(RPATH) $(ROOTLIBS) $(RINTLIBS) $(HF_LIBS) \
 		   $(SYSLIBS)

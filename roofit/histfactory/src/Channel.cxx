@@ -196,7 +196,6 @@ void RooStats::HistFactory::Channel::CollectHistograms() {
   // and collect all necessary histograms
 
   // Get the Data Histogram:
-
   if( fData.GetInputFile() != "" ) {
     fData.SetHisto( GetHistogram(fData.GetInputFile(), 
 				 fData.GetHistoPath(),
@@ -216,7 +215,6 @@ void RooStats::HistFactory::Channel::CollectHistograms() {
 
     RooStats::HistFactory::Sample& sample = fSamples.at( sampItr );
 
-
     // Get the nominal histogram:
     std::cout << "Collecting Nominal Histogram" << std::endl;
     TH1* Nominal =  GetHistogram(sample.GetInputFile(),
@@ -225,18 +223,35 @@ void RooStats::HistFactory::Channel::CollectHistograms() {
 
     sample.SetHisto( Nominal );
 
-
     // Get the StatError Histogram (if necessary)
     if( sample.GetStatError().GetUseHisto() ) {
+      std::cout << "Get Stat Error Histogram" << std::endl;
       sample.GetStatError().SetErrorHist( GetHistogram(sample.GetStatError().GetInputFile(),
 						       sample.GetStatError().GetHistoPath(),
 						       sample.GetStatError().GetHistoName()) );
     }
 
-      
-    // Get the HistoSys Variations:
-    for( unsigned int histoSysItr = 0; histoSysItr < sample.GetHistoSysList().size(); ++histoSysItr ) {
+    if( sample.GetStatError().GetHandleZeroBins() ) {
+      std::cout << "Get Stat MC Weight Histogram" << std::endl;
 
+      TH1* McWeightHist = NULL;
+      
+      // If the name is given, we get the histogram
+      // Otherwise, it stays as NULL and HistoToWorkspaceFactory
+      // will use the 'average' in the NULL case (to be implemented)
+      if( sample.GetStatError().GetMcWeightHistoName() != "" ) {
+	McWeightHist = GetHistogram(sample.GetStatError().GetMcWeightInputFile(),
+				    sample.GetStatError().GetMcWeightHistoPath(),
+				    sample.GetStatError().GetMcWeightHistoName());
+      }
+      
+      sample.GetStatError().SetMcWeightHist(McWeightHist);
+      
+    }
+
+    // Get the HistoSys Variations:
+    for(unsigned int histoSysItr=0; histoSysItr < sample.GetHistoSysList().size(); ++histoSysItr) {
+      
       RooStats::HistFactory::HistoSys& histoSys = sample.GetHistoSysList().at( histoSysItr );
 	
       histoSys.SetHistoLow( GetHistogram(histoSys.GetInputFileLow(), 
@@ -422,15 +437,25 @@ bool RooStats::HistFactory::Channel::CheckHistograms() {
 
 
 
-TH1* RooStats::HistFactory::Channel::GetHistogram(std::string InputFile, std::string HistoPath, std::string HistoName) {
+TH1* RooStats::HistFactory::Channel::GetHistogram(std::string InputFile, 
+						  std::string HistoPath, 
+						  std::string HistoName) {
+
+  if(HistoName=="") {
+    std::cout << "Cannot Get Histogram: Histo is empty" << std::endl;
+    throw hf_exc();
+  }
+
+  if(InputFile=="") {
+    std::cout << "Cannot Get Histogram: InputFile is empty" << std::endl;
+    throw hf_exc();
+  }
 
   std::cout << "Getting histogram. "  
 	    << " InputFile " << InputFile
 	    << " HistoPath " << HistoPath
 	    << " HistoName " << HistoName
 	    << std::endl;
-
-  //  TFile* file = TFile::Open( InputFile.c_str() );
 
   TFile* inFile = TFile::Open( InputFile.c_str() );
   if( !inFile ) {

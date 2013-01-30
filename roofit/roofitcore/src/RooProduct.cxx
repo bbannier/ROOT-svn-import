@@ -382,6 +382,53 @@ Double_t RooProduct::evaluate() const
 }
 
 
+//_____________________________________________________________________________
+void RooProduct::addNode(RooAbsArg* node) {
+
+  // First, we add this node as a server
+  addServer(*node, true, false);
+
+  // Then add it to the RooAbsReal or RooCategory list
+  if (dynamic_cast<RooAbsReal*>(node)) {
+    _compRSet.add(*node) ;
+  } else if (dynamic_cast<RooAbsCategory*>(node)) {
+    _compCSet.add(*node) ;
+  } else {
+    coutE(InputArguments) << "RooProduct::addNode(" << GetName() << ") ERROR: component " << node->GetName()
+			  << " is not of type RooAbsReal or RooAbsCategory" << endl ;
+    RooErrorHandler::softAbort() ;
+  }
+  
+  // I think this is the right thing to do...?
+  clearValueAndShapeDirty();
+
+}
+
+
+//_____________________________________________________________________________
+void RooProduct::removeNode(RooAbsArg* node) {
+
+  // First, we add this node as a server
+  removeServer(*node);
+
+  // Then add it to the RooAbsReal or RooCategory list
+  if (dynamic_cast<RooAbsReal*>(node)) {
+    _compRSet.remove(*node) ;
+  } else if (dynamic_cast<RooAbsCategory*>(node)) {
+    _compCSet.remove(*node) ;
+  } else {
+    coutE(InputArguments) << "RooProduct::removeNode(" << GetName() << ") ERROR: component " << node->GetName()
+			  << " is not of type RooAbsReal or RooAbsCategory" << endl ;
+    RooErrorHandler::softAbort() ;
+  }
+  
+  // I think this is the right thing to do...?
+  clearValueAndShapeDirty();
+
+
+  return;
+  
+}
 
 //_____________________________________________________________________________
 std::list<Double_t>* RooProduct::binBoundaries(RooAbsRealLValue& obs, Double_t xlo, Double_t xhi) const

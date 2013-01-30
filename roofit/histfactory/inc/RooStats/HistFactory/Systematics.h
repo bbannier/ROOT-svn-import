@@ -308,8 +308,7 @@ namespace HistFactory {
 
   public:
 
-    StatError() : fActivate(false), fUseHisto(false), fhError(NULL) {;}
-
+    StatError();
     void Print(std::ostream& = std::cout);  
     void PrintXML(std::ostream&);
     void writeToFile( const std::string& FileName, const std::string& DirName );
@@ -329,20 +328,42 @@ namespace HistFactory {
     void SetHistoPath( const std::string& HistoPath ) { fHistoPath = HistoPath; }
     std::string GetHistoPath() { return fHistoPath; }
 
-
     TH1* GetErrorHist();
     void SetErrorHist(TH1* Error) { fhError = Error; }
+
+    void SetHandleZeroBins( bool HandleZeroBins ) { fHandleZeroBins=HandleZeroBins; }
+    bool GetHandleZeroBins() { return fHandleZeroBins; }
+    
+    void SetMcWeightInputFile( const std::string& McWeightInputFile ) { fMcWeightInputFile = McWeightInputFile; }
+    std::string GetMcWeightInputFile() { return fMcWeightInputFile; }
+
+    void SetMcWeightHistoName( const std::string& McWeightHistoName ) { fMcWeightHistoName = McWeightHistoName; }
+    std::string GetMcWeightHistoName() { return fMcWeightHistoName; }
+
+    void SetMcWeightHistoPath( const std::string& McWeightHistoPath ) { fMcWeightHistoPath = McWeightHistoPath; }
+    std::string GetMcWeightHistoPath() { return fMcWeightHistoPath; }
+
+    TH1* GetMcWeightHist();
+    void SetMcWeightHist(TH1* McWeight) { fhMcWeight = McWeight; }
 
   protected:
 
     bool fActivate;
     bool fUseHisto; // Use an external histogram for the errors 
+    bool fHandleZeroBins;
     std::string fInputFile;
     std::string fHistoName;
     std::string fHistoPath;
 
     // The histogram holding the error
     TRef fhError;
+
+    std::string fMcWeightInputFile;
+    std::string fMcWeightHistoName;
+    std::string fMcWeightHistoPath;
+
+    // The histogram holding the mc scale
+    TRef fhMcWeight;
 
   };
 

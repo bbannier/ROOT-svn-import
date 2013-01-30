@@ -85,7 +85,13 @@ namespace RooStats{
 			   std::map<std::string,double> logNormSyst, 
 			   std::map<std::string,double> noSyst);
 
-      void LinInterpWithConstraint(RooWorkspace* proto, TH1* nominal, std::vector<HistoSys>,  
+      std::string CreateNominalHistAndObservables(RooWorkspace* proto, 
+						  Sample& sample, 
+						  std::string prefix);
+
+
+      void LinInterpWithConstraint(RooWorkspace* proto, const std::string& nomHistName, 
+				   std::vector<HistoSys>,  
 				   std::string prefix, std::string productPrefix, 
 				   std::string systTerm, 
 				   std::vector<std::string>& likelihoodTermNames);
@@ -95,7 +101,15 @@ namespace RooStats{
       void MakeTotalExpected(RooWorkspace* proto, std::string totName, 
 			     std::vector<std::string>& syst_x_expectedPrefixNames,
 			     std::vector<std::string>& normByNames);
-    
+
+      RooAbsReal* GetMcWeightFunction(RooWorkspace*, const std::string&,
+				      const RooArgList&, RooStats::HistFactory::Sample&);
+
+	/*
+      std::string AddZeroBinUncertainties(RooWorkspace*, std::string nominalNodeName,
+					  std::vector<std::string>& constraintTermNames,
+					  RooStats::HistFactory::Sample samp, std::string chan);
+	*/
       RooDataSet* MergeDataSets(RooWorkspace* combined,
 				std::vector<RooWorkspace*> wspace_vec, 
 				std::vector<std::string> channel_names, 
@@ -103,8 +117,11 @@ namespace RooStats{
 				RooArgList obsList,
 				RooCategory* channelCat);
 
-      void ProcessExpectedHisto(TH1* hist, RooWorkspace* proto, std::string prefix, 
+      /*
+      void ProcessExpectedHisto(const std::string& nomHistName, RooWorkspace* proto, 
+				std::string prefix, 
 				std::string productPrefix, std::string systTerm );
+      */
 
       void SetObsToExpected(RooWorkspace* proto, std::string obsPrefix, std::string expPrefix, 
 			    int lowBin, int highBin);

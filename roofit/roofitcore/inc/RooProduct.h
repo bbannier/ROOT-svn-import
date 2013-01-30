@@ -44,6 +44,9 @@ public:
   virtual Double_t analyticalIntegral(Int_t code, const char* rangeName=0) const;
 
 
+  void addNode(RooAbsArg* node);
+  void removeNode(RooAbsArg* node);
+
   RooArgSet components() { RooArgSet tmp(_compRSet) ; tmp.add(_compCSet) ; return tmp ; }
 
   virtual ~RooProduct() ;

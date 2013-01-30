@@ -349,6 +349,12 @@ RooArgList ParamHistFunc::createParamSet(RooWorkspace& w, const std::string& Pre
       VarNameStream << Prefix << "_bin_" << i;
       std::string VarName = VarNameStream.str();
 
+      // If the var already exists, we don't remake it
+      if( w.var(VarName.c_str()) != NULL ) {
+	paramSet.add( *w.var(VarName.c_str()) );
+	continue;
+      }
+
       RooRealVar gamma( VarName.c_str(), VarName.c_str(), 1.0 ); 
       // "Hard-Code" a minimum of 0.0
       gamma.setMin( 0.0 );
