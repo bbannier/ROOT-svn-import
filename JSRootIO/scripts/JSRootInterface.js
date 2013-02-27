@@ -7,7 +7,7 @@
 // source_dir is the variable defining where to take the scripts and the list tree icons
 // To use the local ones (e.g. when checking out the files in a web server), just let it
 // empty: var source_dir = "";
-var source_dir = "http://root.cern.ch/js/";
+var source_dir = "";
 var gFile;
 var obj_list = new Array();
 var obj_index = 0;
@@ -127,6 +127,7 @@ function showDirectory(dir_name, cycle, dir_id) {
 function displayObject(obj, cycle, idx) {
    if (!obj['_typename'].match(/\bTH1/) &&
        !obj['_typename'].match(/\bTH2/) &&
+       !obj['_typename'].match(/\bTH3/) &&
        obj['_typename'] != 'JSROOTIO.TGraph' &&
        obj['_typename'] != 'JSROOTIO.TCanvas' &&
        obj['_typename'] != 'JSROOTIO.TF1' &&
@@ -146,10 +147,13 @@ function AssertPrerequisites(andThen) {
       // if JSROOTIO is not defined, then dynamically load the required scripts and open the file
       loadScript('http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js', function() {
       loadScript('http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js', function() {
+      loadScript(source_dir+'scripts/jquery.mousewheel.js', function() {
       loadScript(source_dir+'scripts/dtree.js', function() {
       loadScript(source_dir+'scripts/rawinflate.js', function() {
       loadScript(source_dir+'scripts/JSRootCore.js', function() {
       loadScript('http://d3js.org/d3.v2.min.js', function() {
+      loadScript(source_dir+'scripts/three.js', function() {
+      loadScript(source_dir+'fonts/helvetiker_regular.typeface.js', function() {
       loadScript(source_dir+'scripts/JSRootD3Painter.js', function() { 
       loadScript(source_dir+'scripts/JSRootIOEvolution.js', function() {
          if (andThen) {
@@ -160,12 +164,11 @@ function AssertPrerequisites(andThen) {
             var url = $("#urlToLoad").val();
             if (url == "" || url == " ") return;
             $("#status").append("load: " + url + "<br/>");
-            ResetUI();
             gFile = new JSROOTIO.RootFile(url);
-            $('#report').append("</body></html>");
-            $('#report').addClass("ui-accordion ui-accordion-icons ui-widget ui-helper-reset");
          }
-      }) }) }) }) }) }) }) });
+         $('#report').append("</body></html>");
+         $('#report').addClass("ui-accordion ui-accordion-icons ui-widget ui-helper-reset");
+      }) }) }) }) }) }) }) }) }) }) });
       return true;
    }
    return false;
@@ -202,7 +205,6 @@ function ReadFile() {
    }
    gFile = null;
    gFile = new JSROOTIO.RootFile(url);
-   $('#report').append("</body></html>");
 };
 
 function ResetUI() {
