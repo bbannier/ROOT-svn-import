@@ -894,7 +894,6 @@ function doubleTap(elem, speed, distance) {
       var w = element.width(), h = w * 0.6666666;
       var render_to = '#histogram' + idx;
       d3.select(render_to).style("background-color", 'white');
-      d3.select(render_to).style("width", "100%");
 
       var svg = d3.select(render_to).append("svg")
                   .attr("width", w)
@@ -2135,6 +2134,574 @@ function doubleTap(elem, speed, distance) {
          this.drawStat(vis, histo);
    };
 
+   JSROOTPainter.drawHistogram2D3D = function(vis, pad, histo, hframe) {
+      var i, logx = false, logy = false, logz = false, gridx = false, gridy = false, girdz = false;
+      var opt = histo['fOption'].toLowerCase();
+      if (pad && typeof(pad) != 'undefined') {
+         logx = pad['fLogx'];
+         logy = pad['fLogy'];
+         logz = pad['fLogz'];
+         gridx = pad['fGridx'];
+         gridy = pad['fGridy'];
+         gridz = pad['fGridz'];
+      }
+      var fillcolor = root_colors[histo['fFillColor']];
+      var linecolor = root_colors[histo['fLineColor']];
+      if (histo['fFillColor'] == 0) {
+         fillcolor = '#4572A7';
+      }
+      if (histo['fLineColor'] == 0) {
+         linecolor = '#4572A7';
+      }
+      var nbinsx = histo['fXaxis']['fNbins'];
+      var nbinsy = histo['fYaxis']['fNbins'];
+      var scalex = (histo['fXaxis']['fXmax'] - histo['fXaxis']['fXmin']) /
+                    histo['fXaxis']['fNbins'];
+      var scaley = (histo['fYaxis']['fXmax'] - histo['fYaxis']['fXmin']) /
+                    histo['fYaxis']['fNbins'];
+      var maxbin = -1e32, minbin = 1e32;
+      maxbin = d3.max(histo['fArray']);
+      minbin = d3.min(histo['fArray']);
+      var bins = new Array();
+      for (i=0; i<nbinsx; ++i) {
+         for (var j=0; j<nbinsy; ++j) {
+            var bin_content = histo.getBinContent(i, j);
+            if (bin_content > minbin) {
+               var point = {
+                  x:histo['fXaxis']['fXmin'] + (i*scalex),
+                  y:histo['fYaxis']['fXmin'] + (j*scaley),
+                  z:bin_content
+               };
+               bins.push(point);
+            }
+         }
+      }
+      var w = vis.attr("width"), h = vis.attr("height"), size = 100;
+      if (logx) {
+         var tx = d3.scale.log().domain([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]).range([-size, size]);
+         var utx = d3.scale.log().domain([-size, size]).range([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]);
+      } else {
+         var tx = d3.scale.linear().domain([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]).range([-size, size]);
+         var utx = d3.scale.linear().domain([-size, size]).range([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]);
+      }
+      if (logy) {
+         var ty = d3.scale.log().domain([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]).range([-size, size]);
+         var uty = d3.scale.log().domain([-size, size]).range([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]);
+      } else {
+         var ty = d3.scale.linear().domain([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]).range([-size, size]);
+         var uty = d3.scale.linear().domain([-size, size]).range([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]);
+      }
+      if (logz) {
+         var tz = d3.scale.log().domain([minbin, Math.ceil( maxbin/10 )*10]).range([0, size*2]);
+         var utz = d3.scale.log().domain([0, size*2]).range([minbin, Math.ceil( maxbin/10 )*10]);
+      } else {
+         var tz = d3.scale.linear().domain([minbin, Math.ceil( maxbin/10 )*10]).range([0, size*2]);
+         var utz = d3.scale.linear().domain([0, size*2]).range([minbin, Math.ceil( maxbin/10 )*10]);
+      }
+      
+      // three.js 3D drawing
+      var scene = new THREE.Scene();
+      
+      var parent = new THREE.Object3D();
+      parent.rotation.x = 30 * Math.PI / 180;
+      parent.rotation.y = 30 * Math.PI / 180;
+      scene.add( parent );
+      
+      var wireMaterial = new THREE.MeshBasicMaterial( {
+         color: 0x000000,
+         wireframe: true,
+         wireframeLinewidth: 0.5,
+         side: THREE.DoubleSide } );
+      
+      var cubeMaterial = new THREE.MeshLambertMaterial( {
+         color: 0x666666,
+         transparent: true,
+         opacity: 0.1,
+         side: THREE.DoubleSide } );
+      
+      // create a new mesh with
+      // cube geometry
+      var cube = THREE.SceneUtils.createMultiMaterialObject(
+         new THREE.CubeGeometry( size*2, size*2, size*2 ),
+         [ wireMaterial, cubeMaterial ] );
+      cube.position.y = size;
+      
+      // add the cube to the scene
+      parent.add( cube );
+      
+      var textMaterial = new THREE.MeshBasicMaterial( { color: 0x333333 } );
+      
+      // add the calibration vectors and texts
+      var geometry = new THREE.Geometry();
+      var imax, istep, len = 3, plen, sin45 = Math.sin(45);
+      var text3d, text;
+      for ( i = tx( histo['fXaxis']['fXmin'] ), imax = tx( histo['fXaxis']['fXmax'] ), istep = Math.round( imax/20 ); i <= imax; i+=istep ) {
+         plen = ( ( Math.round(i) % (size/2) ) ? len : len + 2) * sin45;
+         if ( Math.round(i) % (size/2) == 0 ) {
+            text3d = new THREE.TextGeometry( utx( i ), {
+               size: 5,
+               height: 0,
+               curveSegments: 10
+            });
+            
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( i, -10, size+plen );
+            parent.add( text );
+            
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( i, -10, -size-plen );
+            text.rotation.y = Math.PI;
+            parent.add( text );
+         }
+         geometry.vertices.push( new THREE.Vector3( i, 0, size ) );
+         geometry.vertices.push( new THREE.Vector3( i, -plen, size+plen ) );
+         geometry.vertices.push( new THREE.Vector3( i, 0, -size ) );
+         geometry.vertices.push( new THREE.Vector3( i, -plen, -size-plen ) );
+      }
+      for ( i = ty( histo['fYaxis']['fXmin'] ), imax = ty( histo['fYaxis']['fXmax'] ), istep = Math.round( imax/20 ); i <= imax; i+=istep ) {
+         plen = ( ( Math.round(i) % (size/2) ) ? len : len + 2) * sin45;
+         if ( Math.round(i) % (size/2) == 0 ) {
+            text3d = new THREE.TextGeometry( uty( i ), {
+               size: 5,
+               height: 0,
+               curveSegments: 10
+            });
+            
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( size+plen, -10, i );
+            text.rotation.y = Math.PI/2;
+            parent.add( text );
+            
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( -size-plen, -10, i );
+            text.rotation.y = -Math.PI/2;
+            parent.add( text );
+         }
+         geometry.vertices.push( new THREE.Vector3( size, 0, i ) );
+         geometry.vertices.push( new THREE.Vector3( size+plen, -plen, i ) );
+         geometry.vertices.push( new THREE.Vector3( -size, 0, i ) );
+         geometry.vertices.push( new THREE.Vector3( -size-plen, -plen, i ) );
+      }
+      for ( i = tz( minbin ), imax = tz( Math.ceil( maxbin/10 )*10 ), istep = Math.round( imax/20 ); i <= imax; i+=istep ) {
+         plen = ( ( Math.round(i) % (size/2) ) ? len : len + 2) * sin45;
+         if ( Math.round(i) % (size/2) == 0 ) {
+            text3d = new THREE.TextGeometry( utz( i ), {
+               size: 5,
+               height: 0,
+               curveSegments: 10
+            });
+            
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( size+plen+1, i-2.5, size+plen+1 );
+            text.rotation.y = -Math.PI/4;
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( size+plen+1, i-2.5, -size-plen-1 );
+            text.rotation.y = Math.PI/4;
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( -size-plen-1, i-2.5, size+plen+1 );
+            text.rotation.y = -Math.PI*3/4;
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( -size-plen-1, i-2.5, -size-plen-1 );
+            text.rotation.y = Math.PI*3/4;
+            parent.add( text );
+         }
+         geometry.vertices.push( new THREE.Vector3( size, i, size ) );
+         geometry.vertices.push( new THREE.Vector3( size+plen, i, size+plen ) );
+         geometry.vertices.push( new THREE.Vector3( size, i, -size ) );
+         geometry.vertices.push( new THREE.Vector3( size+plen, i, -size-plen ) );
+         geometry.vertices.push( new THREE.Vector3( -size, i, size ) );
+         geometry.vertices.push( new THREE.Vector3( -size-plen, i, size+plen ) );
+         geometry.vertices.push( new THREE.Vector3( -size, i, -size ) );
+         geometry.vertices.push( new THREE.Vector3( -size-plen, i, -size-plen ) );
+      }
+
+      // add the calibration lines
+      var lineMaterial = new THREE.LineBasicMaterial( { color: 0x000000 } );
+      var line = new THREE.Line( geometry, lineMaterial );
+      line.type = THREE.LinePieces;
+      parent.add( line );
+
+      // create the bin cubes
+      var constx = (size*2 / histo['fXaxis']['fNbins']) / maxbin;
+      var consty = (size*2 / histo['fYaxis']['fNbins']) / maxbin;
+
+      var optFlag = ( opt.indexOf('colz') != -1 || opt.indexOf('col') != -1 );
+      var binMaterial = new THREE.MeshBasicMaterial( { color: 0xDDDDDD } );
+      var bin, wei;
+      for ( i = 0; i < bins.length; ++i ) {
+         wei = tz( optFlag ? maxbin : bins[i].z );
+         bin = THREE.SceneUtils.createMultiMaterialObject(
+            new THREE.CubeGeometry( size/20, wei, size/20 ),
+            [ wireMaterial, binMaterial ] );
+         bin.position.x = tx( bins[i].x ) + (scalex/2) - (bins[i].z*constx/2);
+         bin.position.y = wei/2;
+         bin.position.z = -(ty( bins[i].y ) + (scaley/2) - (bins[i].z*consty/2));
+         parent.add( bin );
+      }
+      
+      /*// create a point light
+      var pointLight =
+        new THREE.PointLight(0xFFFFFF);
+
+      // set its position
+      pointLight.position.x = 10;
+      pointLight.position.y = 50;
+      pointLight.position.z = 130;
+
+      // add to the scene
+      scene.add(pointLight);*/
+
+      var camera = new THREE.PerspectiveCamera( 45, w / h, 1, 1000 );
+      camera.position.set( 0, size/2, 500 );
+      camera.lookat = cube;
+      scene.add( camera );
+      
+      // var renderer = new THREE.WebGLRenderer();
+      var renderer = new THREE.CanvasRenderer();
+      renderer.setSize( w, h );
+      $( vis[0][0] ).hide().parent().append( renderer.domElement );
+      renderer.render( scene, camera );
+
+      /*// rotation animate
+      (function animate() {
+         parent.rotation.y += 0.01;
+         renderer.render(scene, camera);
+
+         // use setTimeout to hold the speed and release CPU loading
+         window.setTimeout(function() {
+            histo.animateID = window.requestAnimationFrame( animate );
+         }, 10);
+      })();*/
+
+      // mouse interactive functions
+      var mouseX, mouseY, mouseDowned = false;
+      $( renderer.domElement ).mousedown(function(e) {
+         e.preventDefault();
+         mouseX = e.pageX;
+         mouseY = e.pageY;
+         mouseDowned = true;
+      }).mousemove(function(e) {
+         if ( mouseDowned ) {
+            // 'e.which' doesn't work on Firefox and IE, hope it'll be fixed.
+            // http://bugs.jquery.com/ticket/12742
+            if ( e.which == 0 ) {
+               mouseDowned = false;
+               return;
+            }
+            var moveX = e.pageX - mouseX;
+            var moveY = e.pageY - mouseY;
+            // limited X rotate in -45 to 135 deg
+            if ( (moveY > 0 && parent.rotation.x < Math.PI*3/4) ||
+                  (moveY < 0 &&  parent.rotation.x > -Math.PI/4) ) {
+               parent.rotation.x += moveY*0.02;
+            }
+            parent.rotation.y += moveX*0.02;
+            renderer.render( scene, camera );
+            mouseX = e.pageX;
+            mouseY = e.pageY;
+         }
+      }).mouseup(function(e) {
+         mouseDowned = false;
+      }).mousewheel(function(e, d) {
+         e.preventDefault();
+         camera.position.z += d * 20;
+         renderer.render( scene, camera );
+      });
+   }
+
+   JSROOTPainter.drawHistogram3D = function(vis, pad, histo, hframe) {
+      var i, logx = false, logy = false, logz = false, gridx = false, gridy = false, gridz = false;
+      var opt = histo['fOption'].toLowerCase();
+      if (pad && typeof(pad) != 'undefined') {
+         logx = pad['fLogx'];
+         logy = pad['fLogy'];
+         logz = pad['fLogz'];
+         gridx = pad['fGridx'];
+         gridy = pad['fGridy'];
+         gridz = pad['fGridz'];
+      }
+      var fillcolor = root_colors[histo['fFillColor']];
+      var linecolor = root_colors[histo['fLineColor']];
+      if (histo['fFillColor'] == 0) {
+         fillcolor = '#4572A7';
+      }
+      if (histo['fLineColor'] == 0) {
+         linecolor = '#4572A7';
+      }
+      var nbinsx = histo['fXaxis']['fNbins'];
+      var nbinsy = histo['fYaxis']['fNbins'];
+      var nbinsz = histo['fZaxis']['fNbins'];
+      var scalex = (histo['fXaxis']['fXmax'] - histo['fXaxis']['fXmin']) /
+                    histo['fXaxis']['fNbins'];
+      var scaley = (histo['fYaxis']['fXmax'] - histo['fYaxis']['fXmin']) /
+                    histo['fYaxis']['fNbins'];
+      var scalez = (histo['fZaxis']['fXmax'] - histo['fZaxis']['fXmin']) /
+                    histo['fZaxis']['fNbins'];
+      var maxbin = -1e32, minbin = 1e32;
+      maxbin = d3.max(histo['fArray']);
+      minbin = d3.min(histo['fArray']);
+      var bins = new Array();
+      for (i=0; i<=nbinsx+2; ++i) {
+         for (var j=0; j<nbinsy+2; ++j) {
+            for (var k=0; k<nbinsz+2; ++k) {
+               var bin_content = histo.getBinContent(i, j, k);
+               if (bin_content > minbin) {
+                  var point = {
+                     x:histo['fXaxis']['fXmin'] + (i*scalex),
+                     y:histo['fYaxis']['fXmin'] + (j*scaley),
+                     z:histo['fZaxis']['fXmin'] + (k*scalez),
+                     n:bin_content
+                  };
+                  bins.push(point);
+               }
+            }
+         }
+      }
+      var w = vis.attr("width"), h = vis.attr("height"), size = 100;
+      if (logx) {
+         var tx = d3.scale.log().domain([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]).range([-size, size]);
+         var utx = d3.scale.log().domain([-size, size]).range([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]);
+      } else {
+         var tx = d3.scale.linear().domain([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]).range([-size, size]);
+         var utx = d3.scale.linear().domain([-size, size]).range([histo['fXaxis']['fXmin'], histo['fXaxis']['fXmax']]);
+      }
+      if (logy) {
+         var ty = d3.scale.log().domain([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]).range([-size, size]);
+         var uty = d3.scale.log().domain([-size, size]).range([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]);
+      } else {
+         var ty = d3.scale.linear().domain([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]).range([-size, size]);
+         var uty = d3.scale.linear().domain([-size, size]).range([histo['fYaxis']['fXmin'], histo['fYaxis']['fXmax']]);
+      }
+      if (logz) {
+         var tz = d3.scale.log().domain([histo['fZaxis']['fXmin'], histo['fZaxis']['fXmax']]).range([-size, size]);
+         var utz = d3.scale.log().domain([-size, size]).range([histo['fZaxis']['fXmin'], histo['fZaxis']['fXmax']]);
+      } else {
+         var tz = d3.scale.linear().domain([histo['fZaxis']['fXmin'], histo['fZaxis']['fXmax']]).range([-size, size]);
+         var utz = d3.scale.linear().domain([-size, size]).range([histo['fZaxis']['fXmin'], histo['fZaxis']['fXmax']]);
+      }
+      
+      // three.js 3D drawing
+      var scene = new THREE.Scene();
+
+      var parent = new THREE.Object3D();
+      parent.rotation.x = 30 * Math.PI / 180;
+      parent.rotation.y = 30 * Math.PI / 180;
+      scene.add( parent );
+
+      var wireMaterial = new THREE.MeshBasicMaterial( {
+         color: 0x000000,
+         wireframe: true,
+         wireframeLinewidth: 0.5,
+         side: THREE.DoubleSide } );
+
+      var cubeMaterial = new THREE.MeshLambertMaterial( {
+         color: 0x666666,
+         transparent: true,
+         opacity: 0.1,
+         side: THREE.DoubleSide } );      
+
+      // create a new mesh with
+      // cube geometry
+      var cube = THREE.SceneUtils.createMultiMaterialObject(
+         new THREE.CubeGeometry( size*2, size*2, size*2 ),
+         [ wireMaterial, cubeMaterial ] );
+
+      // add the cube to the scene
+      parent.add( cube );
+
+      var textMaterial = new THREE.MeshBasicMaterial( { color: 0x333333 } );
+
+      // add the calibration vectors and texts
+      var geometry = new THREE.Geometry();
+      var imax, istep, len = 3, plen, sin45 = Math.sin(45);
+      var text3d, text;
+      for ( i = tx( histo['fXaxis']['fXmin'] ), imax = tx( histo['fXaxis']['fXmax'] ), istep = Math.round( imax/20 ); i <= imax; i+=istep ) {
+         plen = ( ( Math.round(i) % (size/2) ) ? len : len + 2) * sin45;
+         if ( Math.round(i) % (size/2) == 0 ) {
+            text3d = new THREE.TextGeometry( utx( i ), {
+               size: 5,
+               height: 0,
+               curveSegments: 10
+            });
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( i, -size-10, size+plen );
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( i, -size-10, -size-plen );
+            text.rotation.y = Math.PI;
+            parent.add( text );
+         }
+         geometry.vertices.push( new THREE.Vector3( i, -size, size ) );
+         geometry.vertices.push( new THREE.Vector3( i, -size-plen, size+plen ) );
+         geometry.vertices.push( new THREE.Vector3( i, -size, -size ) );
+         geometry.vertices.push( new THREE.Vector3( i, -size-plen, -size-plen ) );
+      }
+      for ( i = ty( histo['fYaxis']['fXmin'] ), imax = ty( histo['fYaxis']['fXmax'] ), istep = Math.round( imax/20 ); i <= imax; i+=istep ) {
+         plen = ( ( Math.round(i) % (size/2) ) ? len : len + 2) * sin45;
+         if ( Math.round(i) % (size/2) == 0 ) {
+            text3d = new THREE.TextGeometry( uty( -i ), {
+               size: 5,
+               height: 0,
+               curveSegments: 10
+            });
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( size+plen, -size-10, i );
+            text.rotation.y = Math.PI/2;
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( -size-plen, -size-10, i );
+            text.rotation.y = -Math.PI/2;
+            parent.add( text );
+         }
+         geometry.vertices.push( new THREE.Vector3( size, -size, i ) );
+         geometry.vertices.push( new THREE.Vector3( size+plen, -size-plen, i ) );
+         geometry.vertices.push( new THREE.Vector3( -size, -size, i ) );
+         geometry.vertices.push( new THREE.Vector3( -size-plen, -size-plen, i ) );
+      }
+      for ( i = tz( histo['fZaxis']['fXmin'] ), imax = tz( histo['fZaxis']['fXmax'] ), istep = Math.round( imax/20 ); i <= imax; i+=istep ) {
+         plen = ( ( Math.round(i) % (size/2) ) ? len : len + 2) * sin45;
+         if ( Math.round(i) % (size/2) == 0 ) {
+            text3d = new THREE.TextGeometry( utz( i ), {
+               size: 5,
+               height: 0,
+               curveSegments: 10
+            });
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( size+plen+1, i-2.5, size+plen+1 );
+            text.rotation.y = -Math.PI/4;
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( size+plen+1, i-2.5, -size-plen-1 );
+            text.rotation.y = Math.PI/4;
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( -size-plen-1, i-2.5, size+plen+1 );
+            text.rotation.y = -Math.PI*3/4;
+            parent.add( text );
+
+            text = new THREE.Mesh( text3d, textMaterial );
+            text.position.set( -size-plen-1, i-2.5, -size-plen-1 );
+            text.rotation.y = Math.PI*3/4;
+            parent.add( text );
+         }
+         geometry.vertices.push( new THREE.Vector3( size, i, size ) );
+         geometry.vertices.push( new THREE.Vector3( size+plen, i, size+plen ) );
+         geometry.vertices.push( new THREE.Vector3( size, i, -size ) );
+         geometry.vertices.push( new THREE.Vector3( size+plen, i, -size-plen ) );
+         geometry.vertices.push( new THREE.Vector3( -size, i, size ) );
+         geometry.vertices.push( new THREE.Vector3( -size-plen, i, size+plen ) );
+         geometry.vertices.push( new THREE.Vector3( -size, i, -size ) );
+         geometry.vertices.push( new THREE.Vector3( -size-plen, i, -size-plen ) );
+      }
+
+      // add the calibration lines
+      var lineMaterial = new THREE.LineBasicMaterial( { color: 0x000000 } );
+      var line = new THREE.Line( geometry, lineMaterial );
+      line.type = THREE.LinePieces;
+      parent.add( line );
+
+      // create the bin cubes
+      var constx = (size*2 / histo['fXaxis']['fNbins']) / maxbin;
+      var consty = (size*2 / histo['fYaxis']['fNbins']) / maxbin;
+      var constz = (size*2 / histo['fZaxis']['fNbins']) / maxbin;
+
+      var optFlag = ( opt.indexOf('colz') != -1 || opt.indexOf('col') != -1 );
+      var binMaterial = new THREE.MeshLambertMaterial( { color: 0xDDDDDD } );
+      var bin, wei;
+      for ( i = 0; i < bins.length; ++i ) {
+         wei = ( optFlag ? maxbin : bins[i].n );
+         bin = THREE.SceneUtils.createMultiMaterialObject(
+            new THREE.CubeGeometry( wei * constx, wei * constz, wei * consty),
+            [ wireMaterial, binMaterial ] );
+         bin.position.x = tx( bins[i].x ) + (scalex/2) - (bins[i].n*constx/2);
+         bin.position.y = tz( bins[i].z ) + (scalez/2) - (bins[i].n*constz/2);
+         bin.position.z = -(ty( bins[i].y ) + (scaley/2) - (bins[i].n*consty/2));
+         parent.add( bin );
+      }
+      
+      /*// create a point light
+      var pointLight =
+        new THREE.PointLight(0xFFFFFF);
+
+      // set its position
+      pointLight.position.x = 10;
+      pointLight.position.y = 50;
+      pointLight.position.z = 130;
+
+      // add to the scene
+      scene.add(pointLight);*/
+
+      var camera = new THREE.PerspectiveCamera( 45, w / h, 1, 1000 );
+      camera.position.set( 0, 0, 500 );
+      camera.lookat = cube;
+      scene.add( camera );
+      
+      // var renderer = new THREE.WebGLRenderer();
+      var renderer = new THREE.CanvasRenderer();
+      renderer.setSize( w, h );
+      $( vis[0][0] ).hide().parent().append( renderer.domElement );
+      renderer.render( scene, camera );
+
+      /*// rotation animate
+      (function animate() {
+         parent.rotation.y += 0.01;
+         renderer.render(scene, camera);
+
+         // use setTimeout to hold the speed and release CPU loading
+         window.setTimeout(function() {
+            histo.animateID = window.requestAnimationFrame( animate );
+         }, 10);
+      })();*/
+
+      // mouse interactive functions
+      var mouseX, mouseY, mouseDowned = false;
+      $( renderer.domElement ).mousedown(function(e) {
+         e.preventDefault();
+         mouseX = e.pageX;
+         mouseY = e.pageY;
+         mouseDowned = true;
+      }).mousemove(function(e) {
+         if ( mouseDowned ) {
+            // 'e.which' doesn't work on Firefox and IE, hope it'll be fixed.
+            // http://bugs.jquery.com/ticket/12742
+            if ( e.which == 0 ) {
+               mouseDowned = false;
+               return;
+            }
+            var moveX = e.pageX - mouseX;
+            var moveY = e.pageY - mouseY;
+            // limited X rotate in -45 to 135 deg
+            if ( (moveY > 0 && parent.rotation.x < Math.PI*3/4) ||
+                  (moveY < 0 &&  parent.rotation.x > -Math.PI/4) ) {
+               parent.rotation.x += moveY*0.02;
+            }
+            parent.rotation.y += moveX*0.02;
+            renderer.render( scene, camera );
+            mouseX = e.pageX;
+            mouseY = e.pageY;
+         }
+      }).mouseup(function(e) {
+         mouseDowned = false;
+      }).mousewheel(function(e, d) {
+         e.preventDefault();
+         camera.position.z += d * 20;
+         renderer.render( scene, camera );
+      });
+   }
+
    JSROOTPainter.drawLegend = function(vis, pad, pave) {
       var x = pave['fX1NDC'] * vis.attr("width")
       var y = vis.attr("height") - pave['fY1NDC'] * vis.attr("height");
@@ -2293,7 +2860,19 @@ function doubleTap(elem, speed, distance) {
             JSROOTPainter.drawHistogram1D(svg, null, obj, null);
          }
          else if (obj['_typename'].match(/\bTH2/)) {
+            $('<div><input type="checkbox" id="view3d" /><label for="view3d">View in 3D</label></div>')
+               .css('padding', '10px').css('position', 'absolute').insertBefore( svg[0][0] );
+            $('#view3d').click(function(e) {
+               if ( $(this).prop('checked') ) {
+                  JSROOTPainter.drawHistogram2D3D(svg, null, obj, null);
+               } else {
+                  $( svg[0][0] ).show().parent().find('canvas').detach();
+               }
+            });
             JSROOTPainter.drawHistogram2D(svg, null, obj, null);
+         }
+         else if (obj['_typename'].match(/\bTH3/)) {
+            JSROOTPainter.drawHistogram3D(svg, null, obj, null);
          }
          else if (obj['_typename'].match(/\bTProfile/)) {
             JSROOTPainter.drawProfile(svg, null, obj, null);
@@ -3007,6 +3586,7 @@ function doubleTap(elem, speed, distance) {
          var node_img = source_dir+'img/page.gif';
          if (keys[i]['className'].match(/\bTH1/)  ||
              keys[i]['className'].match(/\bTH2/)  ||
+             keys[i]['className'].match(/\bTH3/)  ||
              keys[i]['className'] == 'TGraph') {
             tree_link = "javascript: showObject('"+keys[i]['name']+"',"+keys[i]['cycle']+");";
             node_img = source_dir+'img/graphical.png';
