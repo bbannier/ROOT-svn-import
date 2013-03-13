@@ -1,4 +1,5 @@
 // @(#)root/roostats:$Id$
+// Authors: Sven Kreiss          23/05/2012
 // Authors: Kevin Belasco        17/06/2009
 // Authors: Kyle Cranmer         17/06/2009
 /*************************************************************************
@@ -34,6 +35,9 @@ END_HTML
 
 #ifndef ROOSTATS_MCMCIntervalPlot
 #include "RooStats/MCMCIntervalPlot.h"
+#endif
+#ifndef ROOSTATS_RooStatsUtils
+#include "RooStats/RooStatsUtils.h"
 #endif
 #include <iostream>
 #ifndef ROOT_TROOT
@@ -585,7 +589,7 @@ void* MCMCIntervalPlot::DrawPosteriorKeysProduct(const Option_t* options)
    return NULL;
 }
 
-void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar)
+TGraph* MCMCIntervalPlot::GetChainScatterWalk(RooRealVar& xVar, RooRealVar& yVar)
 {
    const MarkovChain* markovChain = fInterval->GetChain();
 
@@ -624,6 +628,7 @@ void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar)
    Bool_t isEmpty = (title.CompareTo("") == 0);
 
    TGraph* walk = new TGraph(size - burnInSteps, x, y);
+   walk->SetName( Form("scatter_%s_Vs_%s", xVar.GetName(), yVar.GetName()) );
    if (isEmpty)
       walk->SetTitle(Form("2-D Scatter Plot of Markov chain for %s, %s",
                xVar.GetName(), yVar.GetName()));
@@ -637,23 +642,7 @@ void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar)
    walk->SetLineColor(kGray);
    walk->SetMarkerStyle(6);
    walk->SetMarkerColor(kViolet);
-   walk->Draw("A,L,P,same");
-
-   TGraph* burnIn = NULL;
-   if (burnInX != NULL && burnInY != NULL) {
-      burnIn = new TGraph(burnInSteps - 1, burnInX, burnInY);
-      burnIn->SetLineColor(kPink);
-      burnIn->SetMarkerStyle(6);
-      burnIn->SetMarkerColor(kPink);
-      burnIn->Draw("L,P,same");
-   }
-
-   TGraph* first = new TGraph(1, &firstX, &firstY);
-   first->SetLineColor(kGreen);
-   first->SetMarkerStyle(3);
-   first->SetMarkerSize(2);
-   first->SetMarkerColor(kGreen);
-   first->Draw("L,P,same");
+   //walk->Draw("A,L,P,same");
 
    //walkCanvas->Update();
    delete [] x;
@@ -663,24 +652,152 @@ void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar)
    //delete walk;
    //delete burnIn;
    //delete first;
+   
+   return walk;
+}
+TGraph* MCMCIntervalPlot::GetChainScatterBurnIn(RooRealVar& xVar, RooRealVar& yVar)
+{
+   const MarkovChain* markovChain = fInterval->GetChain();
+
+   Int_t size = markovChain->Size();
+   Int_t burnInSteps;
+   if (fShowBurnIn)
+      burnInSteps = fInterval->GetNumBurnInSteps();
+   else
+      burnInSteps = 0;
+
+   Double_t* x = new Double_t[size - burnInSteps];
+   Double_t* y = new Double_t[size - burnInSteps];
+   Double_t* burnInX = NULL;
+   Double_t* burnInY = NULL;
+   if (burnInSteps > 0) {
+      burnInX = new Double_t[burnInSteps];
+      burnInY = new Double_t[burnInSteps];
+   }
+   Double_t firstX;
+   Double_t firstY;
+
+   for (Int_t i = burnInSteps; i < size; i++) {
+      x[i - burnInSteps] = markovChain->Get(i)->getRealValue(xVar.GetName());
+      y[i - burnInSteps] = markovChain->Get(i)->getRealValue(yVar.GetName());
+   }
+
+   for (Int_t i = 0; i < burnInSteps; i++) {
+      burnInX[i] = markovChain->Get(i)->getRealValue(xVar.GetName());
+      burnInY[i] = markovChain->Get(i)->getRealValue(yVar.GetName());
+   }
+
+   firstX = markovChain->Get(0)->getRealValue(xVar.GetName());
+   firstY = markovChain->Get(0)->getRealValue(yVar.GetName());
+
+   TGraph* burnIn = NULL;
+   if (burnInX != NULL && burnInY != NULL) {
+      burnIn = new TGraph(burnInSteps - 1, burnInX, burnInY);
+      burnIn->SetLineColor(kPink);
+      burnIn->SetMarkerStyle(6);
+      burnIn->SetMarkerColor(kPink);
+      //burnIn->Draw("L,P,same");
+   }
+
+   //walkCanvas->Update();
+   delete [] x;
+   delete [] y;
+   if (burnInX != NULL) delete [] burnInX;
+   if (burnInY != NULL) delete [] burnInY;
+   //delete walk;
+   //delete burnIn;
+   //delete first;
+   
+   return burnIn;
+}
+TGraph* MCMCIntervalPlot::GetChainScatterFirstPoint(RooRealVar& xVar, RooRealVar& yVar)
+{
+   const MarkovChain* markovChain = fInterval->GetChain();
+
+   Int_t size = markovChain->Size();
+   Int_t burnInSteps;
+   if (fShowBurnIn)
+      burnInSteps = fInterval->GetNumBurnInSteps();
+   else
+      burnInSteps = 0;
+
+   Double_t* x = new Double_t[size - burnInSteps];
+   Double_t* y = new Double_t[size - burnInSteps];
+   Double_t* burnInX = NULL;
+   Double_t* burnInY = NULL;
+   if (burnInSteps > 0) {
+      burnInX = new Double_t[burnInSteps];
+      burnInY = new Double_t[burnInSteps];
+   }
+   Double_t firstX;
+   Double_t firstY;
+
+   for (Int_t i = burnInSteps; i < size; i++) {
+      x[i - burnInSteps] = markovChain->Get(i)->getRealValue(xVar.GetName());
+      y[i - burnInSteps] = markovChain->Get(i)->getRealValue(yVar.GetName());
+   }
+
+   for (Int_t i = 0; i < burnInSteps; i++) {
+      burnInX[i] = markovChain->Get(i)->getRealValue(xVar.GetName());
+      burnInY[i] = markovChain->Get(i)->getRealValue(yVar.GetName());
+   }
+
+   firstX = markovChain->Get(0)->getRealValue(xVar.GetName());
+   firstY = markovChain->Get(0)->getRealValue(yVar.GetName());
+
+   TGraph* first = new TGraph(1, &firstX, &firstY);
+   first->SetLineColor(kGreen);
+   first->SetMarkerStyle(3);
+   first->SetMarkerSize(2);
+   first->SetMarkerColor(kGreen);
+   //first->Draw("L,P,same");
+
+   //walkCanvas->Update();
+   delete [] x;
+   delete [] y;
+   if (burnInX != NULL) delete [] burnInX;
+   if (burnInY != NULL) delete [] burnInY;
+   //delete walk;
+   //delete burnIn;
+   //delete first;
+   
+   return first;
+}
+void MCMCIntervalPlot::DrawChainScatter(RooRealVar& xVar, RooRealVar& yVar) {
+   GetChainScatterWalk( xVar, yVar )->Draw("A,L,P,same");
+   
+   TGraph* tg = GetChainScatterBurnIn( xVar, yVar );
+   if(tg) tg->Draw("L,P,same");
+   
+   GetChainScatterFirstPoint( xVar, yVar )->Draw("L,P,same");
 }
 
 
 
 
 
-TH2* MCMCIntervalPlot::GetHist2D(RooRealVar& xVar, RooRealVar& yVar, int xBins, int yBins)
+
+TH2* MCMCIntervalPlot::GetHist2D(RooRealVar& xVar, RooRealVar& yVar)
 {
-   if( xBins < 0 ) xBins = xVar.getBins();
-   if( yBins < 0 ) yBins = yVar.getBins();
-
    const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
 
-   TH2F *h = data->createHistogram( xVar, yVar, xBins, yBins );
+   TString hName( "distribution2D_" );
+   hName += xVar.GetName();
+   hName += "_Vs_";
+   hName += yVar.GetName();
+   TH2F *h = new TH2F(hName, hName, 
+      xVar.getBins(), xVar.getMin(), xVar.getMax(),
+      yVar.getBins(), yVar.getMin(), yVar.getMax()
+   );
+   const RooArgSet* entry;
+   for (Int_t i = fInterval->GetNumBurnInSteps(); i < markovChain->Size(); i++) {
+      entry = markovChain->Get(i);
+      h->Fill( entry->getRealValue(xVar.GetName()), entry->getRealValue(yVar.GetName()), markovChain->Weight() );
+   }
+   //cout << "INFO -- GetHist1D(): Entries in Posterior: "<<h->GetEntries()<<", Integral: "<<h->Integral()<<endl;
    h->GetXaxis()->SetTitle( xVar.GetName() );
    h->GetYaxis()->SetTitle( yVar.GetName() );
-   h->Scale( 1./ h->Integral() );
+   h->GetZaxis()->SetTitle( "Distribution" );
    return h;
 }
 
@@ -688,12 +805,16 @@ TH2* MCMCIntervalPlot::GetHist2D(RooRealVar& xVar, RooRealVar& yVar, int xBins, 
 TH1* MCMCIntervalPlot::GetHist1D(RooRealVar& var)
 {
    const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
 
    TString hName( "distribution_" );
    hName += var.GetName();
    TH1F *h = new TH1F(hName, hName, var.getBins(), var.getMin(), var.getMax());
-   data->fillHistogram( h, var );
+   const RooArgSet* entry;
+   for (Int_t i = fInterval->GetNumBurnInSteps(); i < markovChain->Size(); i++) {
+      entry = markovChain->Get(i);
+      h->Fill( entry->getRealValue(var.GetName()), markovChain->Weight() );
+   }
+   //cout << "INFO -- GetHist1D(): Entries in Posterior: "<<h->GetEntries()<<", Integral: "<<h->Integral()<<endl;
    h->GetXaxis()->SetTitle( var.GetName() );
    h->GetYaxis()->SetTitle( "Distribution" );
    return h;
@@ -701,159 +822,173 @@ TH1* MCMCIntervalPlot::GetHist1D(RooRealVar& var)
 TH1* MCMCIntervalPlot::GetHist1DSlice(RooRealVar& var, RooRealVar& sliceVar, double sliceMin, double sliceMax)
 {
    const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
 
    TString hName( "distribution_" );
    hName += var.GetName();
    TH1F *h = new TH1F(hName, hName, var.getBins(), var.getMin(), var.getMax());
-   data->fillHistogram( h, var, TString::Format("%s>%f && %s<%f", sliceVar.GetName(), sliceMin, sliceVar.GetName(), sliceMax) );
+   const RooArgSet* entry;
+   for (Int_t i = fInterval->GetNumBurnInSteps(); i < markovChain->Size(); i++) {
+      entry = markovChain->Get(i);
+      if( entry->getRealValue(sliceVar.GetName()) < sliceMin ) continue;
+      if( entry->getRealValue(sliceVar.GetName()) > sliceMax ) continue;
+      h->Fill( entry->getRealValue(var.GetName()), markovChain->Weight() );
+   }
    h->GetXaxis()->SetTitle( var.GetName() );
    h->GetYaxis()->SetTitle( "Distribution" );
    return h;
 }
-TH1* MCMCIntervalPlot::GetHist1DSliceNormalized(RooRealVar& var, RooRealVar& sliceVar, double sliceMin, double sliceMax)
+
+
+
+
+
+
+
+TH1* MCMCIntervalPlot::GetMinNLLHist1D(RooRealVar& xVar, bool subtractMinNLL)
 {
    const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
 
-   TString hName( "distribution_" );
-   hName += var.GetName();
-   TH1F *h = new TH1F(hName, hName, var.getBins(), var.getMin(), var.getMax());
-   data->fillHistogram( h, var, TString::Format("%s>%f && %s<%f", sliceVar.GetName(), sliceMin, sliceVar.GetName(), sliceMax) );
-   h->GetXaxis()->SetTitle( var.GetName() );
-   h->GetYaxis()->SetTitle( "Distribution" );
-   h->Scale( 1./ h->Integral() );
-   return h;
-}
-
-
-
-
-
-
-
-TH1* MCMCIntervalPlot::GetMaxNLLHist1D(RooRealVar& xVar)
-{
-   const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
-
-   TH1F *h = new TH1F( "maxNLLHist", "Max NLL per Bin", 
+   TString hName( "minNLLHist_" );
+   hName += xVar.GetName();
+   // This needs double precision when subtractMinNLL is not used
+   TH1D *h = new TH1D( hName, "Minimum NLL per Bin",
       xVar.getBins(), xVar.getMin(), xVar.getMax()
    );
    h->GetXaxis()->SetTitle( xVar.GetName() );
+   h->GetYaxis()->SetTitle( "Minimum NLL per Bin" );
+   // initialize bin values
+   for( int i=0; i < h->GetNbinsX()+2; i++ ) h->SetBinContent( i, -1.0 );
 
-   for( int i=0; i < data->numEntries(); i++ ) {
-      xVar.setVal( data->get(i)->getRealValue(xVar.GetName()) );
+   double minNLL = TMath::Infinity();
+   double maxNLL = -TMath::Infinity();
+   for( int i=fInterval->GetNumBurnInSteps(); i < markovChain->Size(); i++ ) {
       double nll = markovChain->NLL(i);
-      //cout << "x: " << xVar.getVal() << " \ty: " << yVar.getVal() << " \tnll: " << nll << endl;
-      if( nll > h->GetBinContent(xVar.getVal()) ) {
-         h->SetBinContent(xVar.getVal(), nll);
+      if( nll < minNLL ) minNLL = nll;
+      if( nll > maxNLL ) maxNLL = nll;
+   }
+   //cout << "minNLL = " << minNLL << endl;
+   
+   for( int i=fInterval->GetNumBurnInSteps(); i < markovChain->Size(); i++ ) {
+      xVar.setVal( markovChain->Get(i)->getRealValue(xVar.GetName()) );
+      double nll = markovChain->NLL(i);
+      if( subtractMinNLL ) nll -= minNLL;
+      //cout << "x: " << xVar.getVal() << " \tnll: " << nll << " \tbin: " << h->GetBinContent( h->FindBin(xVar.getVal()) ) << endl;
+      if( h->GetBinContent( h->FindBin(xVar.getVal()) ) > nll  ||
+          h->GetBinContent( h->FindBin(xVar.getVal()) ) == -1.0
+      ) {
+         h->SetBinContent( h->FindBin(xVar.getVal()), nll);
       }
+   }
+
+   // set unset bins to maxNLL
+   for( int i=0; i < h->GetNbinsX()+2; i++ ) {
+      if( h->GetBinContent(i) == -1.0 ) h->SetBinContent( i, subtractMinNLL ? maxNLL-minNLL : maxNLL );
    }
 
    return h;
 }
 
-
-TH1* MCMCIntervalPlot::GetMaxLikelihoodHist1D(RooRealVar& xVar)
+TH2* MCMCIntervalPlot::GetMinNLLHist2D(RooRealVar& xVar, RooRealVar& yVar, bool subtractMinNLL)
 {
    const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
 
-   TH1F *h = new TH1F( "maxLHist", "Maximum Likelihood per Bin", 
-      xVar.getBins(), xVar.getMin(), xVar.getMax()
-   );
-   h->GetXaxis()->SetTitle( xVar.GetName() );
-
-   for( int i=0; i < data->numEntries(); i++ ) {
-      xVar.setVal( data->get(i)->getRealValue(xVar.GetName()) );
-      double nll = markovChain->NLL(i);
-      double L = exp(-nll);
-      //cout << "x: " << xVar.getVal() << " \ty: " << yVar.getVal() << "\tNLL: " << nll << " \tL: " << L << endl;
-      if( L > h->GetBinContent( h->FindBin(xVar.getVal())) ) {
-         h->SetBinContent( h->FindBin(xVar.getVal()), L);
-      }
-   }
-
-   return h;
-}
-
-
-
-TH2* MCMCIntervalPlot::GetMaxNLLHist2D(RooRealVar& xVar, RooRealVar& yVar)
-{
-   const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
-
-   TH2F *h = new TH2F( "maxNLLHist", "Maximum NLL per Bin", 
+   TString hName( "minNLLHist2D_" );
+   hName += xVar.GetName();
+   hName += "_Vs_";
+   hName += yVar.GetName();
+   // This needs double precision when subtractMinNLL is not used
+   TH2D *h = new TH2D( hName, "Minimum NLL per Bin",
       xVar.getBins(), xVar.getMin(), xVar.getMax(),
       yVar.getBins(), yVar.getMin(), yVar.getMax()
    );
    h->GetXaxis()->SetTitle( xVar.GetName() );
    h->GetYaxis()->SetTitle( yVar.GetName() );
+   h->GetZaxis()->SetTitle( "Minimum NLL per Bin" );
+   // initialize bin values
+   for( int i=0; i < (h->GetNbinsX()+2)*(h->GetNbinsY()+2); i++ ) h->SetBinContent( i, -1.0 );
 
-   for( int i=0; i < data->numEntries(); i++ ) {
-      xVar.setVal( data->get(i)->getRealValue(xVar.GetName()) );
-      yVar.setVal( data->get(i)->getRealValue(yVar.GetName()) );
+   double minNLL = TMath::Infinity();
+   double maxNLL = -TMath::Infinity();
+   for( int i=fInterval->GetNumBurnInSteps(); i < markovChain->Size(); i++ ) {
       double nll = markovChain->NLL(i);
-      //cout << "x: " << xVar.getVal() << " \ty: " << yVar.getVal() << " \tnll: " << nll << endl;
-      if( nll > h->GetBinContent(xVar.getVal(), yVar.getVal()) ) {
-         h->SetBinContent(xVar.getVal(), yVar.getVal(), nll);
+      if( nll < minNLL ) minNLL = nll;
+      if( nll > maxNLL ) maxNLL = nll;
+   }
+   //cout << "minNLL = " << minNLL << endl;
+   
+   for( int i=fInterval->GetNumBurnInSteps(); i < markovChain->Size(); i++ ) {
+      xVar.setVal( markovChain->Get(i)->getRealValue(xVar.GetName()) );
+      yVar.setVal( markovChain->Get(i)->getRealValue(yVar.GetName()) );
+      double nll = markovChain->NLL(i);
+      if( subtractMinNLL ) nll -= minNLL;
+      //cout << "x: " << xVar.getVal() << " \tnll: " << nll << " \tbin: " << h->GetBinContent( h->FindBin(xVar.getVal()) ) << endl;
+      if( h->GetBinContent( h->FindBin(xVar.getVal(),yVar.getVal()) ) > nll  ||
+          h->GetBinContent( h->FindBin(xVar.getVal(),yVar.getVal()) ) == -1.0
+      ) {
+         h->SetBinContent( h->FindBin(xVar.getVal(),yVar.getVal()), nll);
       }
    }
 
+   // set unset bins to maxNLL
+   for( int i=0; i < (h->GetNbinsX()+2)*(h->GetNbinsY()+2); i++ ) {
+      if( h->GetBinContent(i) == -1.0 ) h->SetBinContent( i, subtractMinNLL ? maxNLL-minNLL : maxNLL );
+   }
+
    return h;
+}
+
+TH1* MCMCIntervalPlot::GetMaxLikelihoodHist1D(RooRealVar& xVar)
+{
+   // Cannot calculate exp(-nll) in most cases because it is numerically
+   // infinite. But we can get minNLL histogram with subtracted global minNLL
+   // and then take the exponential.
+   
+   TH1* h = GetMinNLLHist1D( xVar );
+   return MaxLFromNLLHist( h );
 }
 
 
 TH2* MCMCIntervalPlot::GetMaxLikelihoodHist2D(RooRealVar& xVar, RooRealVar& yVar)
 {
-   const MarkovChain* markovChain = fInterval->GetChain();
-   const RooDataSet* data = markovChain->GetAsConstDataSet();
-
-   TH2F *h = new TH2F( "maxLHist", "Maximum Likelihood per Bin", 
-      xVar.getBins(), xVar.getMin(), xVar.getMax(),
-      yVar.getBins(), yVar.getMin(), yVar.getMax()
-   );
-   h->GetXaxis()->SetTitle( xVar.GetName() );
-   h->GetYaxis()->SetTitle( yVar.GetName() );
-
-   for( int i=0; i < data->numEntries(); i++ ) {
-      xVar.setVal( data->get(i)->getRealValue(xVar.GetName()) );
-      yVar.setVal( data->get(i)->getRealValue(yVar.GetName()) );
-      double nll = markovChain->NLL(i);
-      double L = exp(-nll);
-      //cout << "x: " << xVar.getVal() << " \ty: " << yVar.getVal() << "\tNLL: " << nll << " \tL: " << L << endl;
-      if( L > h->GetBinContent( h->FindBin(xVar.getVal(), yVar.getVal())) ) {
-         h->SetBinContent( h->FindBin(xVar.getVal(), yVar.getVal()), L);
-      }
-   }
-
-   return h;
+   // Cannot calculate exp(-nll) in most cases because it is numerically
+   // infinite. But we can get minNLL histogram with subtracted global minNLL
+   // and then take the exponential.
+   
+   TH2* h = GetMinNLLHist2D( xVar,yVar );
+   return (TH2*)MaxLFromNLLHist( h );
 }
 
 
 
 
-
-void MCMCIntervalPlot::DrawParameterVsTime(RooRealVar& param)
+TGraph* MCMCIntervalPlot::GetParameterVsTime(RooRealVar& param, int samplingPoints)
 {
    const MarkovChain* markovChain = fInterval->GetChain();
    Int_t size = markovChain->Size();
-   Int_t numEntries = 2 * size;
+
+   if( samplingPoints == -1 ) samplingPoints = size;
+   
+   Int_t numEntries = 2 * samplingPoints;
    Double_t* value = new Double_t[numEntries];
    Double_t* time = new Double_t[numEntries];
-   Double_t val;
-   Int_t weight;
+
    Int_t t = 0;
+   Int_t iLastDownsampled = -1;
    for (Int_t i = 0; i < size; i++) {
-      val = markovChain->Get(i)->getRealValue(param.GetName());
-      weight = (Int_t)markovChain->Weight();
-      value[2*i] = val;
-      value[2*i + 1] = val;
-      time[2*i] = t;
+      Double_t val = markovChain->Get(i)->getRealValue(param.GetName());
+      Int_t weight = (Int_t)markovChain->Weight();
+
+      Int_t iDownsampled = floor(i * ((double)samplingPoints/(double)size));
+      if( iDownsampled >= iLastDownsampled ) {
+         value[2*iDownsampled] = val;
+         value[2*iDownsampled + 1] = val;
+         time[2*iDownsampled] = t;
+         time[2*iDownsampled + 1] = t+weight;
+         
+         iLastDownsampled = iDownsampled;
+      }
+
       t += weight;
-      time[2*i + 1] = t;
    }
 
    TString title(GetTitle());
@@ -866,48 +1001,67 @@ void MCMCIntervalPlot::DrawParameterVsTime(RooRealVar& param)
       paramGraph->SetTitle(GetTitle());
    paramGraph->GetXaxis()->SetTitle("Time (discrete steps)");
    paramGraph->GetYaxis()->SetTitle(param.GetName());
-   //paramGraph->SetLineColor(fLineColor);
-   paramGraph->Draw("A,L,same");
    delete [] value; 
    delete [] time; 
-   //gPad->Update();
+   
+   return paramGraph;
+}
+void MCMCIntervalPlot::DrawParameterVsTime(RooRealVar& param, int samplingPoints)
+{
+   GetParameterVsTime(param, samplingPoints)->Draw("A,L,same");
 }
 
-void MCMCIntervalPlot::DrawNLLVsTime()
+
+
+
+TGraph* MCMCIntervalPlot::GetNLLVsTime(int samplingPoints)
 {
    const MarkovChain* markovChain = fInterval->GetChain();
    Int_t size = markovChain->Size();
-   Int_t numEntries = 2 * size;
-   Double_t* nllValue = new Double_t[numEntries];
+
+   if( samplingPoints == -1 ) samplingPoints = size;
+   
+   Int_t numEntries = 2 * samplingPoints;
+   Double_t* value = new Double_t[numEntries];
    Double_t* time = new Double_t[numEntries];
-   Double_t nll;
-   Int_t weight;
+
    Int_t t = 0;
+   Int_t iLastDownsampled = -1;
    for (Int_t i = 0; i < size; i++) {
-      nll = markovChain->NLL(i);
-      weight = (Int_t)markovChain->Weight();
-      nllValue[2*i] = nll;
-      nllValue[2*i + 1] = nll;
-      time[2*i] = t;
+      Double_t val = markovChain->NLL(i);
+      Int_t weight = (Int_t)markovChain->Weight();
+
+      Int_t iDownsampled = floor(i * ((double)samplingPoints/(double)size));
+      if( iDownsampled >= iLastDownsampled ) {
+         value[2*iDownsampled] = val;
+         value[2*iDownsampled + 1] = val;
+         time[2*iDownsampled] = t;
+         time[2*iDownsampled + 1] = t+weight;
+         
+         iLastDownsampled = iDownsampled;
+      }
+
       t += weight;
-      time[2*i + 1] = t;
    }
 
    TString title(GetTitle());
    Bool_t isEmpty = (title.CompareTo("") == 0);
 
-   TGraph* nllGraph = new TGraph(numEntries, time, nllValue);
+   TGraph* nllGraph = new TGraph(numEntries, time, value);
    if (isEmpty)
       nllGraph->SetTitle("NLL value vs. time in Markov chain");
    else
       nllGraph->SetTitle(GetTitle());
    nllGraph->GetXaxis()->SetTitle("Time (discrete steps)");
    nllGraph->GetYaxis()->SetTitle("NLL (-log(likelihood))");
-   //nllGraph->SetLineColor(fLineColor);
-   nllGraph->Draw("A,L,same");
-   //gPad->Update();
-   delete [] nllValue; 
+   delete [] value; 
    delete [] time; 
+   
+   return nllGraph;
+}
+void MCMCIntervalPlot::DrawNLLVsTime(int samplingPoints)
+{
+   GetNLLVsTime(samplingPoints)->Draw("A,L,same");
 }
 
 void MCMCIntervalPlot::DrawNLLHist(const Option_t* options)
@@ -975,3 +1129,10 @@ void MCMCIntervalPlot::DrawWeightHist(const Option_t* options)
   //chain.Draw("_MarkovChain_local_nll");
 ////////////////////////////////////////////////////////////////////
 */
+
+
+
+
+
+
+

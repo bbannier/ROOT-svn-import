@@ -40,6 +40,7 @@ for simple problems, but it scales to much more complicated cases.
 #include "RooStats/ProposalHelper.h"
 #include "RooStats/ProposalHelper.h"
 #include "RooFitResult.h"
+#include "RooRandom.h"
 
 
 using namespace RooFit;
@@ -48,7 +49,10 @@ using namespace RooStats;
 void StandardBayesianMCMCDemo(const char* infile = "",
 		      const char* workspaceName = "combined",
 		      const char* modelConfigName = "ModelConfig",
-		      const char* dataName = "obsData"){
+		      const char* dataName = "obsData")
+{
+
+  RooRandom::randomGenerator()->SetSeed( 0 );
 
   /////////////////////////////////////////////////////////////
   // First part is just to access a user-defined file 
@@ -127,7 +131,21 @@ void StandardBayesianMCMCDemo(const char* infile = "",
   */
   
   // this proposal function seems fairly robust
-  SequentialProposal sp(0.1);
+  //SequentialProposal sp(0.1);
+  // [#1] INFO:Eval -- Proposal acceptance rate: 20.0123%
+  // [#1] INFO:Eval -- Number of steps in chain: 200123
+  // 
+  // 95% interval on SigXsecOverSM is : [0, 2.15359] 
+  //
+  // Use importance factor 3 on parametersOfInterest
+  //SequentialProposal sp(1, *mc->GetParametersOfInterest(), 3);
+  // Factor 3:
+  // [#1] INFO:Eval -- Proposal acceptance rate: 18.0398%
+  // [#1] INFO:Eval -- Number of steps in chain: 180398
+  // 
+  // 95% interval on SigXsecOverSM is : [0, 2.15503] 
+  SequentialProposal sp(1, *mc->GetParametersOfInterest(), 3);
+
   /////////////////////////////////////////////
   // create and use the MCMCCalculator
   // to find and plot the 95% credible interval
@@ -138,7 +156,7 @@ void StandardBayesianMCMCDemo(const char* infile = "",
   //  mcmc.SetProposalFunction(*pf);
   mcmc.SetProposalFunction(sp);
   mcmc.SetNumIters(1000000);         // Metropolis-Hastings algorithm iterations
-  mcmc.SetNumBurnInSteps(50);       // first N steps to be ignored as burn-in
+  mcmc.SetNumBurnInSteps(20000);       // first N steps to be ignored as burn-in
 
   // default is the shortest interval.  here use central
   mcmc.SetLeftSideTailFraction(0); // for one-sided Bayesian interval

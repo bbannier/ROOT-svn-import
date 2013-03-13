@@ -28,7 +28,8 @@ class SequentialProposal : public ProposalFunction {
 
    public:
    SequentialProposal() : RooStats::ProposalFunction(), fDivisor(0) {}
-      SequentialProposal(double divisor) ;
+      SequentialProposal(double divisor);
+      SequentialProposal(double divisor, const RooArgSet& importantVariables, int importanceFactor);
 
       // Populate xPrime with a new proposed point
       virtual void Propose(RooArgSet& xPrime, RooArgSet& x);
@@ -47,8 +48,10 @@ class SequentialProposal : public ProposalFunction {
       ClassDef(SequentialProposal,1) // A concrete implementation of ProposalFunction, that uniformly samples the parameter space.
 
     private:
-
       double fDivisor;
+
+      const RooArgSet* fImportantVariables;
+      int fImportanceFactor;
 };
 
 } 

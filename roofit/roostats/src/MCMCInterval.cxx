@@ -706,7 +706,8 @@ void MCMCInterval::DetermineTailFractionInterval()
       x = fChain->Get(fVector[i])->getRealValue(name);
       w = fChain->Weight();
 
-      if( leftTailCutoff-leftTailSum > w ) {
+      if (TMath::Abs(leftTailSum + w - leftTailCutoff) <
+          TMath::Abs(leftTailSum - leftTailCutoff)) {
          // moving the lower limit to x would bring us closer to the desired
          // left tail size
          ll = x;
@@ -720,7 +721,8 @@ void MCMCInterval::DetermineTailFractionInterval()
       x = fChain->Get(fVector[i])->getRealValue(name);
       w = fChain->Weight();
 
-      if( rightTailCutoff-rightTailSum > w ) {
+      if (TMath::Abs(rightTailSum + w - rightTailCutoff) <
+          TMath::Abs(rightTailSum - rightTailCutoff)) {
          // moving the lower limit to x would bring us closer to the desired
          // left tail size
          ul = x;
@@ -1524,3 +1526,32 @@ Bool_t MCMCInterval::CheckParameters(const RooArgSet& parameterPoint) const
    }
    return kTRUE;
 }
+
+
+void MCMCInterval::SetNumBurnInForFractionOfEntries( double frac ) {
+   int entries = 0;
+   for( int i=0; i < fChain->Size(); i++ ) entries += fChain->Weight(i);
+   int targetBurnInEntries = (int)(frac*entries);
+   int burnInEntries = 0;
+   for( int i=0; i < fChain->Size(); i++ ) {
+      burnInEntries += fChain->Weight(i);
+      if( burnInEntries >= targetBurnInEntries ) {
+         SetNumBurnInSteps( i );
+         break;
+      }
+   }
+}
+
+void MCMCInterval::SetNumBurnInForNumEntries( int entries ) {
+   int burnInEntries = 0;
+   for( int i=0; i < fChain->Size(); i++ ) {
+      burnInEntries += fChain->Weight(i);
+      if( burnInEntries >= entries ) {
+         SetNumBurnInSteps( i );
+         break;
+      }
+   }
+}
+
+
+
