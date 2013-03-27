@@ -105,8 +105,22 @@ Double_t SamplingDistPlot::AddSamplingDistribution(const SamplingDistribution *s
    TString options(drawOptions);
    options.ToUpper();
 
-   Double_t xmin = *(std::min_element(fSamplingDistr.begin(), fSamplingDistr.end()));
-   Double_t xmax = *(std::max_element(fSamplingDistr.begin(), fSamplingDistr.end()));
+
+   Double_t xmin(TMath::Infinity()), xmax(-TMath::Infinity()); 
+   // remove cases where xmin and xmax are +/- inf
+   for( unsigned int i=0; i < fSamplingDistr.size(); i++ ) {
+      if( fSamplingDistr[i] < xmin  &&  fSamplingDistr[i] != -TMath::Infinity() ) {
+         xmin = fSamplingDistr[i];
+      }
+      if( fSamplingDistr[i] > xmax  &&  fSamplingDistr[i] != TMath::Infinity() ) {
+         xmax = fSamplingDistr[i];
+      }
+   }
+   if( xmin >= xmax ) {
+      coutW(Plotting) << "Could not determine xmin and xmax of sampling distribution that was given to plot." << endl;
+      xmin = -1.0;
+      xmax = 1.0;
+   }
    
    // add 1.5 bins left and right
    assert(fBins > 1);
@@ -263,7 +277,7 @@ void SamplingDistPlot::Draw(Option_t * /*options */) {
 
    ApplyDefaultStyle();
 
-   Float_t theMin(0.), theMax(0.), theYMin(NaN), theYMax(0.);
+   Double_t theMin(0.), theMax(0.), theYMin(NaN), theYMax(0.);
    GetAbsoluteInterval(theMin, theMax, theYMax);
    if( !IsNaN(fXMin) ) theMin = fXMin;
    if( !IsNaN(fXMax) ) theMax = fXMax;
@@ -362,11 +376,11 @@ void SamplingDistPlot::ApplyDefaultStyle(void) {
 }
 
 //_____________________________________________________________________________
-void SamplingDistPlot::GetAbsoluteInterval(Float_t &theMin, Float_t &theMax, Float_t &theYMax) const
+void SamplingDistPlot::GetAbsoluteInterval(Double_t &theMin, Double_t &theMax, Double_t &theYMax) const
 {
-  Float_t tmpmin = 999.;
-  Float_t tmpmax = -999.;
-  Float_t tmpYmax = -999.;
+   Double_t tmpmin = TMath::Infinity();
+   Double_t tmpmax = -TMath::Infinity();
+   Double_t tmpYmax = -TMath::Infinity();
 
 
   fIterator->Reset();
